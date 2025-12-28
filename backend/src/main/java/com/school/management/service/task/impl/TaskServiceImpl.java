@@ -1174,6 +1174,7 @@ public class TaskServiceImpl extends ServiceImpl<TaskMapper, Task> implements Ta
     }
 
     @Override
+    @Transactional(readOnly = true)
     public TaskDetailDTO getTaskDetail(Long taskId) {
         // 1. 查询任务基本信息
         Task task = taskMapper.selectById(taskId);
@@ -1187,6 +1188,15 @@ public class TaskServiceImpl extends ServiceImpl<TaskMapper, Task> implements Ta
                 .eq(TaskAssignee::getTaskId, taskId)
         );
 
+        // 2.1. 批量查询所有审批记录并按submissionId分组（避免N+1查询）
+        Map<Long, List<TaskApprovalRecord>> approvalRecordsBySubmissionId =
+            taskApprovalRecordMapper.selectList(
+                new LambdaQueryWrapper<TaskApprovalRecord>()
+                    .eq(TaskApprovalRecord::getTaskId, taskId)
+                    .orderByAsc(TaskApprovalRecord::getNodeOrder)
+            ).stream()
+            .collect(Collectors.groupingBy(TaskApprovalRecord::getSubmissionId));
+
         // 3. 按系部分组
         Map<Long, List<TaskAssignee>> deptMap = assignees.stream()
             .collect(Collectors.groupingBy(TaskAssignee::getDepartmentId));
@@ -1196,10 +1206,20 @@ public class TaskServiceImpl extends ServiceImpl<TaskMapper, Task> implements Ta
         detail.setTask(task);
 
         // 5. 构建审批流程配置（按系部）
+        // 5.1. 批量查询所有审批配置并按部门分组（避免循环查询）
+        List<TaskApprovalConfig> allConfigs = approvalConfigMapper.selectList(
+            new LambdaQueryWrapper<TaskApprovalConfig>()
+                .eq(TaskApprovalConfig::getTaskId, taskId)
+                .orderByAsc(TaskApprovalConfig::getApprovalLevel)
+        );
+
+        Map<Long, List<TaskApprovalConfig>> configsByDept = allConfigs.stream()
+            .collect(Collectors.groupingBy(TaskApprovalConfig::getDepartmentId));
+
         List<TaskDetailDTO.DepartmentApprovalFlowDTO> approvalFlows = new ArrayList<>();
         for (Long deptId : deptMap.keySet()) {
-            List<TaskApprovalConfig> configs = approvalConfigMapper.selectByTaskAndDept(taskId, deptId);
-            if (configs != null && !configs.isEmpty()) {
+            List<TaskApprovalConfig> configs = configsByDept.getOrDefault(deptId, Collections.emptyList());
+            if (!configs.isEmpty()) {
                 TaskDetailDTO.DepartmentApprovalFlowDTO flowDTO = new TaskDetailDTO.DepartmentApprovalFlowDTO();
                 flowDTO.setDepartmentId(deptId);
                 flowDTO.setDepartmentName(configs.get(0).getDepartmentName());
@@ -1229,20 +1249,26 @@ public class TaskServiceImpl extends ServiceImpl<TaskMapper, Task> implements Ta
             Long deptId = entry.getKey();
             List<TaskAssignee> deptAssignees = entry.getValue();
 
+            // 防御性检查：确保部门执行人列表不为空
+            if (deptAssignees.isEmpty()) {
+                log.warn("Empty department assignee list for deptId: {}, taskId: {}", deptId, taskId);
+                continue;
+            }
+
             TaskDetailDTO.DepartmentAssigneesDTO deptDTO = new TaskDetailDTO.DepartmentAssigneesDTO();
             deptDTO.setDepartmentId(deptId);
             deptDTO.setDepartmentName(deptAssignees.get(0).getDepartmentName());
             deptDTO.setTotalCount(deptAssignees.size());
 
-            // 统计已完成人数
+            // 统计已完成人数（使用TaskStatus枚举）
             int completedCount = (int) deptAssignees.stream()
-                .filter(a -> a.getStatus() != null && a.getStatus() == 3)
+                .filter(a -> a.getStatus() != null && a.getStatus().equals(TaskStatus.COMPLETED.getCode()))
                 .count();
             deptDTO.setCompletedCount(completedCount);
 
-            // 构建执行人详情列表
+            // 构建执行人详情列表（传入审批记录Map避免N+1查询）
             List<TaskDetailDTO.TaskAssigneeDetailDTO> assigneeDetails = deptAssignees.stream()
-                .map(this::buildAssigneeDetail)
+                .map(assignee -> buildAssigneeDetail(assignee, approvalRecordsBySubmissionId))
                 .collect(Collectors.toList());
             deptDTO.setAssignees(assigneeDetails);
 
@@ -1250,21 +1276,17 @@ public class TaskServiceImpl extends ServiceImpl<TaskMapper, Task> implements Ta
         }
         detail.setAssigneesByDepartment(assigneesByDept);
 
-        // 7. 统计信息
+        // 7. 统计信息（优化为单次遍历）
+        Map<Integer, Long> statusCounts = assignees.stream()
+            .filter(a -> a.getStatus() != null)
+            .collect(Collectors.groupingBy(TaskAssignee::getStatus, Collectors.counting()));
+
         TaskStatisticsDTO statistics = new TaskStatisticsDTO();
         statistics.setTotalCount((long) assignees.size());
-        statistics.setCompletedCount((long) assignees.stream()
-            .filter(a -> a.getStatus() != null && a.getStatus() == 3)
-            .count());
-        statistics.setPendingCount((long) assignees.stream()
-            .filter(a -> a.getStatus() != null && a.getStatus() == 0)
-            .count());
-        statistics.setInProgressCount((long) assignees.stream()
-            .filter(a -> a.getStatus() != null && a.getStatus() == 1)
-            .count());
-        statistics.setSubmittedCount((long) assignees.stream()
-            .filter(a -> a.getStatus() != null && a.getStatus() == 2)
-            .count());
+        statistics.setCompletedCount(statusCounts.getOrDefault(TaskStatus.COMPLETED.getCode(), 0L));
+        statistics.setPendingCount(statusCounts.getOrDefault(TaskStatus.PENDING.getCode(), 0L));
+        statistics.setInProgressCount(statusCounts.getOrDefault(TaskStatus.IN_PROGRESS.getCode(), 0L));
+        statistics.setSubmittedCount(statusCounts.getOrDefault(TaskStatus.SUBMITTED.getCode(), 0L));
         detail.setStatistics(statistics);
 
         return detail;
@@ -1285,14 +1307,16 @@ public class TaskServiceImpl extends ServiceImpl<TaskMapper, Task> implements Ta
     }
 
     /**
-     * 构建执行人详情
+     * 构建执行人详情（传入审批记录Map避免N+1查询）
      */
-    private TaskDetailDTO.TaskAssigneeDetailDTO buildAssigneeDetail(TaskAssignee assignee) {
+    private TaskDetailDTO.TaskAssigneeDetailDTO buildAssigneeDetail(
+            TaskAssignee assignee,
+            Map<Long, List<TaskApprovalRecord>> approvalRecordsMap) {
         TaskDetailDTO.TaskAssigneeDetailDTO detail = new TaskDetailDTO.TaskAssigneeDetailDTO();
         detail.setAssigneeId(assignee.getAssigneeId());
         detail.setAssigneeName(assignee.getAssigneeName());
         detail.setStatus(assignee.getStatus());
-        detail.setStatusText(getStatusText(assignee.getStatus()));
+        detail.setStatusText(TaskStatus.getDescByCode(assignee.getStatus()));
         detail.setCurrentApprovalLevel(assignee.getCurrentApprovalLevel());
 
         // 解析审批配置（从Map转换为List<ApprovalConfigDTO>）
@@ -1304,10 +1328,21 @@ public class TaskServiceImpl extends ServiceImpl<TaskMapper, Task> implements Ta
                 List<ApprovalConfigDTO> configDTOs = levelsList.stream()
                     .map(map -> {
                         ApprovalConfigDTO dto = new ApprovalConfigDTO();
-                        dto.setLevel(((Number) map.get("level")).intValue());
-                        dto.setApproverId(((Number) map.get("approverId")).longValue());
+
+                        // 改进类型转换的null安全性
+                        Object levelObj = map.get("level");
+                        if (levelObj instanceof Number) {
+                            dto.setLevel(((Number) levelObj).intValue());
+                        }
+
+                        Object approverIdObj = map.get("approverId");
+                        if (approverIdObj instanceof Number) {
+                            dto.setApproverId(((Number) approverIdObj).longValue());
+                        }
+
                         dto.setApproverName((String) map.get("approverName"));
                         dto.setApproverRole((String) map.get("approverRole"));
+
                         return dto;
                     })
                     .collect(Collectors.toList());
@@ -1315,15 +1350,13 @@ public class TaskServiceImpl extends ServiceImpl<TaskMapper, Task> implements Ta
             }
         }
 
-        // 查询该执行人的审批记录
-        List<TaskApprovalRecord> records = taskApprovalRecordMapper.selectList(
-            new LambdaQueryWrapper<TaskApprovalRecord>()
-                .eq(TaskApprovalRecord::getTaskId, assignee.getTaskId())
-                .eq(TaskApprovalRecord::getSubmissionId, assignee.getId())
-                .orderByAsc(TaskApprovalRecord::getNodeOrder)
+        // 从Map中获取审批记录（避免N+1查询）
+        List<TaskApprovalRecord> records = approvalRecordsMap.getOrDefault(
+            assignee.getId(),
+            Collections.emptyList()
         );
 
-        if (records != null && !records.isEmpty()) {
+        if (!records.isEmpty()) {
             List<TaskDetailDTO.ApprovalRecordDTO> recordDTOs = records.stream()
                 .map(record -> {
                     TaskDetailDTO.ApprovalRecordDTO dto = new TaskDetailDTO.ApprovalRecordDTO();
@@ -1346,21 +1379,4 @@ public class TaskServiceImpl extends ServiceImpl<TaskMapper, Task> implements Ta
         return detail;
     }
 
-    /**
-     * 获取状态文本
-     */
-    private String getStatusText(Integer status) {
-        if (status == null) {
-            return "未知";
-        }
-
-        Map<Integer, String> statusMap = new HashMap<>();
-        statusMap.put(0, "待接收");
-        statusMap.put(1, "进行中");
-        statusMap.put(2, "待审核");
-        statusMap.put(3, "已完成");
-        statusMap.put(4, "已打回");
-
-        return statusMap.getOrDefault(status, "未知");
-    }
 }
