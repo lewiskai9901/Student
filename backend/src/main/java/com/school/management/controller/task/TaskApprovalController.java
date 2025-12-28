@@ -22,7 +22,7 @@ import java.util.List;
 @Slf4j
 @Tag(name = "任务审批", description = "任务审批相关接口")
 @RestController
-@RequestMapping("/task/approvals")
+@RequestMapping("/api/tasks/approvals")
 @RequiredArgsConstructor
 public class TaskApprovalController {
 
