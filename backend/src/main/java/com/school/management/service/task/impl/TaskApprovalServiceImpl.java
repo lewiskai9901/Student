@@ -1,6 +1,7 @@
 package com.school.management.service.task.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.school.management.dto.task.TaskApprovalDTO;
 import com.school.management.dto.task.TaskApproveRequest;
 import com.school.management.dto.task.TaskSubmitRequest;
 import com.school.management.entity.User;
@@ -12,10 +13,12 @@ import com.school.management.service.task.TaskApprovalService;
 import com.school.management.util.SecurityUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.BeanUtils;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -38,21 +41,21 @@ public class TaskApprovalServiceImpl implements TaskApprovalService {
 
     @Override
     @Transactional(rollbackFor = Exception.class)
-    public Long submitTask(TaskSubmitRequest request) {
+    public void submitTask(Long taskId, TaskSubmitRequest request) {
         Long currentUserId = SecurityUtils.getCurrentUserId();
         if (currentUserId == null) {
             throw new BusinessException("用户未登录");
         }
 
         // 1. 查询任务
-        Task task = taskMapper.selectById(request.getTaskId());
+        Task task = taskMapper.selectById(taskId);
         if (task == null) {
             throw new BusinessException("任务不存在");
         }
 
         // 2. 查询当前用户的任务执行人记录
         LambdaQueryWrapper<TaskAssignee> assigneeWrapper = new LambdaQueryWrapper<>();
-        assigneeWrapper.eq(TaskAssignee::getTaskId, request.getTaskId())
+        assigneeWrapper.eq(TaskAssignee::getTaskId, taskId)
                 .eq(TaskAssignee::getAssigneeId, currentUserId);
         TaskAssignee assignee = taskAssigneeMapper.selectOne(assigneeWrapper);
 
@@ -74,7 +77,7 @@ public class TaskApprovalServiceImpl implements TaskApprovalService {
 
         // 4. 创建提交记录
         TaskSubmission submission = new TaskSubmission();
-        submission.setTaskId(request.getTaskId());
+        submission.setTaskId(taskId);
         submission.setTaskAssigneeId(assignee.getId());
         submission.setSubmitterId(currentUserId);
         submission.setSubmitterName(submitterName);
@@ -88,7 +91,7 @@ public class TaskApprovalServiceImpl implements TaskApprovalService {
 
         // 5. 查询审批配置，确定是否需要审批以及审批级别
         LambdaQueryWrapper<TaskApprovalConfig> configWrapper = new LambdaQueryWrapper<>();
-        configWrapper.eq(TaskApprovalConfig::getTaskId, request.getTaskId())
+        configWrapper.eq(TaskApprovalConfig::getTaskId, taskId)
                 .eq(TaskApprovalConfig::getDepartmentId, assignee.getDepartmentId())
                 .orderByAsc(TaskApprovalConfig::getApprovalLevel);
         List<TaskApprovalConfig> configs = taskApprovalConfigMapper.selectList(configWrapper);
@@ -104,12 +107,12 @@ public class TaskApprovalServiceImpl implements TaskApprovalService {
             submission.setReviewStatus(2); // 通过
             taskSubmissionMapper.updateById(submission);
 
-            log.info("任务提交成功（无需审批），任务ID: {}, 执行人: {}", request.getTaskId(), currentUserId);
+            log.info("任务提交成功（无需审批），任务ID: {}, 执行人: {}", taskId, currentUserId);
         } else {
             // 需要审批，更新执行人状态为待审核
             assignee.setStatus(2); // 待审核
             assignee.setSubmittedAt(LocalDateTime.now());
-            assignee.setCurrentApprovalLevel(0);
+            assignee.setCurrentApprovalLevel(1); // 设置为1，进入第一级审批
             taskAssigneeMapper.updateById(assignee);
 
             submission.setReviewStatus(1); // 审核中
@@ -117,56 +120,58 @@ public class TaskApprovalServiceImpl implements TaskApprovalService {
 
             // 6. 创建第一级审批记录
             TaskApprovalConfig firstLevelConfig = configs.get(0);
-            createApprovalRecord(submission.getId(), request.getTaskId(), assignee.getId(),
+            createApprovalRecord(submission.getId(), taskId, assignee.getId(),
                     firstLevelConfig, 1);
 
             log.info("任务提交成功（等待审批），任务ID: {}, 执行人: {}, 审批级别: {}",
-                    request.getTaskId(), currentUserId, configs.size());
+                    taskId, currentUserId, configs.size());
         }
 
-        return submission.getId();
+        // 7. 更新任务整体状态
+        updateTaskOverallStatus(taskId);
     }
 
     @Override
     @Transactional(rollbackFor = Exception.class)
-    public void approveTask(TaskApproveRequest request) {
+    public void approveTask(Long recordId, TaskApproveRequest request) {
         Long currentUserId = SecurityUtils.getCurrentUserId();
         if (currentUserId == null) {
             throw new BusinessException("用户未登录");
         }
 
-        // 1. 查询提交记录
+        // 1. 查询审批记录
+        TaskApprovalRecord currentRecord = taskApprovalRecordMapper.selectById(recordId);
+        if (currentRecord == null) {
+            throw new BusinessException("审批记录不存在");
+        }
+
+        // 2. 验证审批状态
+        if (currentRecord.getApprovalStatus() != 0) {
+            throw new BusinessException("该审批记录已处理，请勿重复审批");
+        }
+
+        // 3. 验证审批人权限
+        if (!currentRecord.getApproverId().equals(currentUserId)) {
+            throw new BusinessException("您不是当前节点的审批人");
+        }
+
+        // 4. 查询提交记录
         TaskSubmission submission = taskSubmissionMapper.selectById(request.getSubmissionId());
         if (submission == null) {
             throw new BusinessException("提交记录不存在");
         }
 
-        // 2. 查询任务执行人记录
+        // 5. 查询任务执行人记录
         TaskAssignee assignee = taskAssigneeMapper.selectById(submission.getTaskAssigneeId());
         if (assignee == null) {
             throw new BusinessException("任务执行人记录不存在");
         }
 
-        // 3. 查询当前待审批的记录
-        LambdaQueryWrapper<TaskApprovalRecord> recordWrapper = new LambdaQueryWrapper<>();
-        recordWrapper.eq(TaskApprovalRecord::getSubmissionId, request.getSubmissionId())
-                .eq(TaskApprovalRecord::getApprovalStatus, 0); // 待审批
-        TaskApprovalRecord currentRecord = taskApprovalRecordMapper.selectOne(recordWrapper);
-
-        if (currentRecord == null) {
-            throw new BusinessException("没有待审批的记录");
-        }
-
-        // 4. 验证审批人权限
-        if (!currentRecord.getApproverId().equals(currentUserId)) {
-            throw new BusinessException("您不是当前节点的审批人");
-        }
-
-        // 5. 获取用户信息
+        // 6. 获取用户信息
         User user = userMapper.selectById(currentUserId);
         String approverName = user != null ? user.getRealName() : "未知";
 
-        // 6. 更新审批记录
+        // 7. 更新审批记录
         currentRecord.setApprovalStatus(request.getAction()); // 1-通过, 2-打回
         currentRecord.setApprovalComment(request.getComment());
         currentRecord.setApprovalTime(LocalDateTime.now());
@@ -180,7 +185,7 @@ public class TaskApprovalServiceImpl implements TaskApprovalService {
 
         taskApprovalRecordMapper.updateById(currentRecord);
 
-        // 7. 根据审批结果处理
+        // 8. 根据审批结果处理
         if (request.getAction() == 2) {
             // 打回，更新执行人和提交记录状态
             assignee.setStatus(4); // 已打回
@@ -199,57 +204,178 @@ public class TaskApprovalServiceImpl implements TaskApprovalService {
             log.info("任务审批打回，任务ID: {}, 审批人: {}, 审批级别: {}",
                     request.getTaskId(), currentUserId, currentRecord.getNodeOrder());
         } else {
-            // 通过，检查是否还有下一级审批
-            Integer currentLevel = currentRecord.getNodeOrder();
-            LambdaQueryWrapper<TaskApprovalConfig> configWrapper = new LambdaQueryWrapper<>();
-            configWrapper.eq(TaskApprovalConfig::getTaskId, request.getTaskId())
-                    .eq(TaskApprovalConfig::getDepartmentId, assignee.getDepartmentId())
-                    .eq(TaskApprovalConfig::getApprovalLevel, currentLevel + 1);
-            TaskApprovalConfig nextLevelConfig = taskApprovalConfigMapper.selectOne(configWrapper);
-
-            if (nextLevelConfig != null) {
-                // 还有下一级审批，创建下一级审批记录
-                createApprovalRecord(submission.getId(), request.getTaskId(), assignee.getId(),
-                        nextLevelConfig, currentLevel + 1);
-
-                assignee.setCurrentApprovalLevel(currentLevel + 1);
-                taskAssigneeMapper.updateById(assignee);
-
-                log.info("任务审批通过，进入下一级审批，任务ID: {}, 审批人: {}, 当前级别: {}, 下一级别: {}",
-                        request.getTaskId(), currentUserId, currentLevel, currentLevel + 1);
-            } else {
-                // 没有下一级审批，任务完成
-                assignee.setStatus(3); // 已完成
-                assignee.setCompletedAt(LocalDateTime.now());
-                assignee.setCurrentApprovalLevel(currentLevel);
-                taskAssigneeMapper.updateById(assignee);
-
-                submission.setReviewStatus(2); // 通过
-                submission.setFinalReviewerId(currentUserId);
-                submission.setFinalReviewerName(approverName);
-                submission.setFinalReviewComment(request.getComment());
-                submission.setFinalReviewedAt(LocalDateTime.now());
-                taskSubmissionMapper.updateById(submission);
-
-                log.info("任务审批完成，任务ID: {}, 最终审批人: {}, 审批级别: {}",
-                        request.getTaskId(), currentUserId, currentLevel);
-            }
+            // 通过，处理审批流程
+            handleApprovalPassed(assignee, currentRecord);
         }
+
+        // 9. 更新任务整体状态
+        updateTaskOverallStatus(request.getTaskId());
     }
 
     @Override
-    public Long getPendingApprovalCount() {
-        Long currentUserId = SecurityUtils.getCurrentUserId();
-        if (currentUserId == null) {
-            return 0L;
+    public List<TaskApprovalDTO> getMyPendingApprovals(Long userId) {
+        // 查询当前用户待审批的记录
+        LambdaQueryWrapper<TaskApprovalRecord> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(TaskApprovalRecord::getApproverId, userId)
+                .eq(TaskApprovalRecord::getApprovalStatus, 0) // 待审批
+                .orderByDesc(TaskApprovalRecord::getCreatedAt);
+        List<TaskApprovalRecord> records = taskApprovalRecordMapper.selectList(wrapper);
+
+        List<TaskApprovalDTO> result = new ArrayList<>();
+        for (TaskApprovalRecord record : records) {
+            TaskApprovalDTO dto = new TaskApprovalDTO();
+            dto.setRecordId(record.getId());
+            dto.setTaskId(record.getTaskId());
+            dto.setSubmissionId(record.getSubmissionId());
+            dto.setNodeName(record.getNodeName());
+            dto.setNodeOrder(record.getNodeOrder());
+            dto.setApproverRole(record.getApproverRole());
+
+            // 查询任务信息
+            Task task = taskMapper.selectById(record.getTaskId());
+            if (task != null) {
+                dto.setTaskCode(task.getTaskCode());
+                dto.setTitle(task.getTitle());
+                dto.setDescription(task.getDescription());
+                dto.setPriority(task.getPriority());
+                dto.setDeadline(task.getDueDate());
+                dto.setPriorityText(getPriorityText(task.getPriority()));
+            }
+
+            // 查询提交记录信息
+            TaskSubmission submission = taskSubmissionMapper.selectById(record.getSubmissionId());
+            if (submission != null) {
+                dto.setSubmitterId(submission.getSubmitterId());
+                dto.setSubmitterName(submission.getSubmitterName());
+                dto.setContent(submission.getContent());
+                dto.setSubmittedAt(submission.getSubmittedAt());
+
+                // 查询执行人信息获取部门
+                TaskAssignee assignee = taskAssigneeMapper.selectById(submission.getTaskAssigneeId());
+                if (assignee != null) {
+                    dto.setDepartmentId(assignee.getDepartmentId());
+                    dto.setDepartmentName(assignee.getDepartmentName());
+                }
+            }
+
+            result.add(dto);
         }
 
-        // 查询当前用户待审批的记录数
-        LambdaQueryWrapper<TaskApprovalRecord> wrapper = new LambdaQueryWrapper<>();
-        wrapper.eq(TaskApprovalRecord::getApproverId, currentUserId)
-                .eq(TaskApprovalRecord::getApprovalStatus, 0); // 待审批
+        return result;
+    }
 
-        return taskApprovalRecordMapper.selectCount(wrapper);
+    /**
+     * 处理审批通过的逻辑
+     *
+     * @param assignee      任务执行人
+     * @param currentRecord 当前审批记录
+     */
+    private void handleApprovalPassed(TaskAssignee assignee, TaskApprovalRecord currentRecord) {
+        Long currentUserId = SecurityUtils.getCurrentUserId();
+        User user = userMapper.selectById(currentUserId);
+        String approverName = user != null ? user.getRealName() : "未知";
+
+        Integer currentLevel = currentRecord.getNodeOrder();
+        Long taskId = currentRecord.getTaskId();
+        Long submissionId = currentRecord.getSubmissionId();
+
+        // 查询审批配置，判断是否还有下一级审批
+        LambdaQueryWrapper<TaskApprovalConfig> configWrapper = new LambdaQueryWrapper<>();
+        configWrapper.eq(TaskApprovalConfig::getTaskId, taskId)
+                .eq(TaskApprovalConfig::getDepartmentId, assignee.getDepartmentId())
+                .eq(TaskApprovalConfig::getApprovalLevel, currentLevel + 1);
+        TaskApprovalConfig nextLevelConfig = taskApprovalConfigMapper.selectOne(configWrapper);
+
+        TaskSubmission submission = taskSubmissionMapper.selectById(submissionId);
+
+        if (nextLevelConfig != null) {
+            // 还有下一级审批，创建下一级审批记录
+            createApprovalRecord(submissionId, taskId, assignee.getId(),
+                    nextLevelConfig, currentLevel + 1);
+
+            assignee.setCurrentApprovalLevel(currentLevel + 1);
+            taskAssigneeMapper.updateById(assignee);
+
+            log.info("任务审批通过，进入下一级审批，任务ID: {}, 审批人: {}, 当前级别: {}, 下一级别: {}",
+                    taskId, currentUserId, currentLevel, currentLevel + 1);
+        } else {
+            // 没有下一级审批，任务完成
+            assignee.setStatus(3); // 已完成
+            assignee.setCompletedAt(LocalDateTime.now());
+            assignee.setCurrentApprovalLevel(currentLevel);
+            taskAssigneeMapper.updateById(assignee);
+
+            submission.setReviewStatus(2); // 通过
+            submission.setFinalReviewerId(currentUserId);
+            submission.setFinalReviewerName(approverName);
+            submission.setFinalReviewComment(currentRecord.getApprovalComment());
+            submission.setFinalReviewedAt(LocalDateTime.now());
+            taskSubmissionMapper.updateById(submission);
+
+            log.info("任务审批完成，任务ID: {}, 最终审批人: {}, 审批级别: {}",
+                    taskId, currentUserId, currentLevel);
+        }
+    }
+
+    /**
+     * 更新任务的整体状态
+     *
+     * @param taskId 任务ID
+     */
+    private void updateTaskOverallStatus(Long taskId) {
+        // 1. 查询该任务的所有执行人
+        LambdaQueryWrapper<TaskAssignee> assigneeWrapper = new LambdaQueryWrapper<>();
+        assigneeWrapper.eq(TaskAssignee::getTaskId, taskId);
+        List<TaskAssignee> assignees = taskAssigneeMapper.selectList(assigneeWrapper);
+
+        if (assignees.isEmpty()) {
+            return;
+        }
+
+        // 2. 判断是否全部完成
+        boolean allCompleted = assignees.stream()
+                .allMatch(assignee -> assignee.getStatus() == 3); // 已完成
+
+        // 3. 判断是否有人在进行中
+        boolean anyInProgress = assignees.stream()
+                .anyMatch(assignee -> assignee.getStatus() == 1 || assignee.getStatus() == 2); // 进行中或待审核
+
+        // 4. 更新任务整体状态
+        Task task = taskMapper.selectById(taskId);
+        if (task != null) {
+            if (allCompleted) {
+                task.setStatus(3); // 已完成
+            } else if (anyInProgress) {
+                task.setStatus(1); // 进行中
+            } else {
+                task.setStatus(0); // 待接收
+            }
+            taskMapper.updateById(task);
+
+            log.debug("更新任务整体状态，任务ID: {}, 新状态: {}", taskId, task.getStatus());
+        }
+    }
+
+    /**
+     * 获取优先级文本
+     *
+     * @param priority 优先级
+     * @return 优先级文本
+     */
+    private String getPriorityText(Integer priority) {
+        if (priority == null) {
+            return "未知";
+        }
+        switch (priority) {
+            case 1:
+                return "紧急";
+            case 2:
+                return "普通";
+            case 3:
+                return "低";
+            default:
+                return "未知";
+        }
     }
 
     /**
