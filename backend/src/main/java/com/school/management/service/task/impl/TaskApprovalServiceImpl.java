@@ -16,10 +16,12 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeanUtils;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.StringUtils;
 
 import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.List;
+import java.util.*;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 /**
  * 任务审批服务实现类
@@ -50,7 +52,7 @@ public class TaskApprovalServiceImpl implements TaskApprovalService {
         // 1. 查询任务
         Task task = taskMapper.selectById(taskId);
         if (task == null) {
-            throw new BusinessException("任务不存在");
+            throw new BusinessException(String.format("任务不存在，任务ID: %d", taskId));
         }
 
         // 2. 查询当前用户的任务执行人记录
@@ -72,8 +74,7 @@ public class TaskApprovalServiceImpl implements TaskApprovalService {
         }
 
         // 3. 获取用户信息
-        User user = userMapper.selectById(currentUserId);
-        String submitterName = user != null ? user.getRealName() : "未知";
+        String submitterName = getUserRealName(currentUserId);
 
         // 4. 创建提交记录
         TaskSubmission submission = new TaskSubmission();
@@ -90,9 +91,14 @@ public class TaskApprovalServiceImpl implements TaskApprovalService {
         taskSubmissionMapper.insert(submission);
 
         // 5. 查询审批配置，确定是否需要审批以及审批级别
+        Long departmentId = assignee.getDepartmentId();
+        if (departmentId == null) {
+            throw new BusinessException("执行人未关联部门，无法查询审批配置");
+        }
+
         LambdaQueryWrapper<TaskApprovalConfig> configWrapper = new LambdaQueryWrapper<>();
         configWrapper.eq(TaskApprovalConfig::getTaskId, taskId)
-                .eq(TaskApprovalConfig::getDepartmentId, assignee.getDepartmentId())
+                .eq(TaskApprovalConfig::getDepartmentId, departmentId)
                 .orderByAsc(TaskApprovalConfig::getApprovalLevel);
         List<TaskApprovalConfig> configs = taskApprovalConfigMapper.selectList(configWrapper);
 
@@ -142,7 +148,7 @@ public class TaskApprovalServiceImpl implements TaskApprovalService {
         // 1. 查询审批记录
         TaskApprovalRecord currentRecord = taskApprovalRecordMapper.selectById(recordId);
         if (currentRecord == null) {
-            throw new BusinessException("审批记录不存在");
+            throw new BusinessException(String.format("审批记录不存在，记录ID: %d", recordId));
         }
 
         // 2. 验证审批状态
@@ -158,18 +164,17 @@ public class TaskApprovalServiceImpl implements TaskApprovalService {
         // 4. 查询提交记录
         TaskSubmission submission = taskSubmissionMapper.selectById(request.getSubmissionId());
         if (submission == null) {
-            throw new BusinessException("提交记录不存在");
+            throw new BusinessException(String.format("提交记录不存在，提交ID: %d", request.getSubmissionId()));
         }
 
         // 5. 查询任务执行人记录
         TaskAssignee assignee = taskAssigneeMapper.selectById(submission.getTaskAssigneeId());
         if (assignee == null) {
-            throw new BusinessException("任务执行人记录不存在");
+            throw new BusinessException(String.format("任务执行人记录不存在，执行人ID: %d", submission.getTaskAssigneeId()));
         }
 
         // 6. 获取用户信息
-        User user = userMapper.selectById(currentUserId);
-        String approverName = user != null ? user.getRealName() : "未知";
+        String approverName = getUserRealName(currentUserId);
 
         // 7. 更新审批记录
         currentRecord.setApprovalStatus(request.getAction()); // 1-通过, 2-打回
@@ -178,7 +183,13 @@ public class TaskApprovalServiceImpl implements TaskApprovalService {
         currentRecord.setApproverName(approverName);
 
         if (request.getAction() == 2) {
-            // 打回
+            // 打回时，打回原因和打回节点应为必填
+            if (!StringUtils.hasText(request.getComment())) {
+                throw new BusinessException("打回时必须填写打回原因");
+            }
+            if (!StringUtils.hasText(request.getRejectToNode())) {
+                throw new BusinessException("打回时必须指定打回节点");
+            }
             currentRecord.setRejectToNode(request.getRejectToNode());
             currentRecord.setRejectReason(request.getComment());
         }
@@ -214,13 +225,39 @@ public class TaskApprovalServiceImpl implements TaskApprovalService {
 
     @Override
     public List<TaskApprovalDTO> getMyPendingApprovals(Long userId) {
-        // 查询当前用户待审批的记录
+        // 1. 查询当前用户待审批的记录
         LambdaQueryWrapper<TaskApprovalRecord> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(TaskApprovalRecord::getApproverId, userId)
                 .eq(TaskApprovalRecord::getApprovalStatus, 0) // 待审批
                 .orderByDesc(TaskApprovalRecord::getCreatedAt);
         List<TaskApprovalRecord> records = taskApprovalRecordMapper.selectList(wrapper);
 
+        if (records.isEmpty()) {
+            return new ArrayList<>();
+        }
+
+        // 2. 批量查询相关数据
+        Set<Long> taskIds = records.stream()
+                .map(TaskApprovalRecord::getTaskId)
+                .collect(Collectors.toSet());
+        Set<Long> submissionIds = records.stream()
+                .map(TaskApprovalRecord::getSubmissionId)
+                .collect(Collectors.toSet());
+
+        Map<Long, Task> taskMap = taskMapper.selectBatchIds(taskIds).stream()
+                .collect(Collectors.toMap(Task::getId, Function.identity()));
+
+        Map<Long, TaskSubmission> submissionMap = taskSubmissionMapper.selectBatchIds(submissionIds).stream()
+                .collect(Collectors.toMap(TaskSubmission::getId, Function.identity()));
+
+        Set<Long> assigneeIds = submissionMap.values().stream()
+                .map(TaskSubmission::getTaskAssigneeId)
+                .collect(Collectors.toSet());
+
+        Map<Long, TaskAssignee> assigneeMap = taskAssigneeMapper.selectBatchIds(assigneeIds).stream()
+                .collect(Collectors.toMap(TaskAssignee::getId, Function.identity()));
+
+        // 3. 组装DTO（现在只需要Map查询，非常快）
         List<TaskApprovalDTO> result = new ArrayList<>();
         for (TaskApprovalRecord record : records) {
             TaskApprovalDTO dto = new TaskApprovalDTO();
@@ -231,8 +268,8 @@ public class TaskApprovalServiceImpl implements TaskApprovalService {
             dto.setNodeOrder(record.getNodeOrder());
             dto.setApproverRole(record.getApproverRole());
 
-            // 查询任务信息
-            Task task = taskMapper.selectById(record.getTaskId());
+            // 从Map中获取数据，而不是再次查询数据库
+            Task task = taskMap.get(record.getTaskId());
             if (task != null) {
                 dto.setTaskCode(task.getTaskCode());
                 dto.setTitle(task.getTitle());
@@ -242,16 +279,16 @@ public class TaskApprovalServiceImpl implements TaskApprovalService {
                 dto.setPriorityText(getPriorityText(task.getPriority()));
             }
 
-            // 查询提交记录信息
-            TaskSubmission submission = taskSubmissionMapper.selectById(record.getSubmissionId());
+            // 从Map中获取提交记录信息
+            TaskSubmission submission = submissionMap.get(record.getSubmissionId());
             if (submission != null) {
                 dto.setSubmitterId(submission.getSubmitterId());
                 dto.setSubmitterName(submission.getSubmitterName());
                 dto.setContent(submission.getContent());
                 dto.setSubmittedAt(submission.getSubmittedAt());
 
-                // 查询执行人信息获取部门
-                TaskAssignee assignee = taskAssigneeMapper.selectById(submission.getTaskAssigneeId());
+                // 从Map中获取执行人信息
+                TaskAssignee assignee = assigneeMap.get(submission.getTaskAssigneeId());
                 if (assignee != null) {
                     dto.setDepartmentId(assignee.getDepartmentId());
                     dto.setDepartmentName(assignee.getDepartmentName());
@@ -272,8 +309,7 @@ public class TaskApprovalServiceImpl implements TaskApprovalService {
      */
     private void handleApprovalPassed(TaskAssignee assignee, TaskApprovalRecord currentRecord) {
         Long currentUserId = SecurityUtils.getCurrentUserId();
-        User user = userMapper.selectById(currentUserId);
-        String approverName = user != null ? user.getRealName() : "未知";
+        String approverName = getUserRealName(currentUserId);
 
         Integer currentLevel = currentRecord.getNodeOrder();
         Long taskId = currentRecord.getTaskId();
@@ -403,5 +439,19 @@ public class TaskApprovalServiceImpl implements TaskApprovalService {
 
         log.debug("创建审批记录，提交ID: {}, 审批人: {}, 审批级别: {}",
                 submissionId, config.getApproverName(), nodeOrder);
+    }
+
+    /**
+     * 获取用户真实姓名
+     *
+     * @param userId 用户ID
+     * @return 用户真实姓名，如果用户不存在返回"未知"
+     */
+    private String getUserRealName(Long userId) {
+        if (userId == null) {
+            return "未知";
+        }
+        User user = userMapper.selectById(userId);
+        return user != null ? user.getRealName() : "未知";
     }
 }

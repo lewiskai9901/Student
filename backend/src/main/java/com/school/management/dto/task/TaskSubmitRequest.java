@@ -1,5 +1,7 @@
 package com.school.management.dto.task;
 
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Size;
 import lombok.Data;
 
 import java.util.List;
@@ -13,6 +15,8 @@ public class TaskSubmitRequest {
     /**
      * 完成情况说明
      */
+    @NotBlank(message = "完成情况说明不能为空")
+    @Size(max = 2000, message = "完成情况说明不能超过2000字")
     private String content;
 
     /**
