@@ -1,0 +1,1 @@
+import{h as t}from"./index-e20b943e.js";function e(e){return t.get(`/deduction-items/type/${e}`)}function n(e){return t.get(`/deduction-items/type/${e}/enabled`)}function i(e){return t.post("/deduction-items",e)}function u(e,n){return t.put(`/deduction-items/${e}`,n)}function d(e){return t.delete(`/deduction-items/${e}`)}export{n as a,i as c,d,e as g,u};

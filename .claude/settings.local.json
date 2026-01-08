@@ -1,0 +1,31 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(\"C:\\Program Files\\MySQL\\MySQL Server 8.0\\bin\\mysql.exe\" -u root -p123456 student_management -e \"SELECT p.id, p.permission_code, p.permission_name FROM role_permissions rp JOIN permissions p ON rp.permission_id = p.id WHERE rp.role_id = 1 AND p.permission_code LIKE ''student:%'' ORDER BY p.permission_code LIMIT 20;\")",
+      "Bash(\"C:\\Program Files\\MySQL\\MySQL Server 8.0\\bin\\mysql.exe\" -u root -p123456 student_management -e \"SELECT p.id, p.permission_code, p.permission_name FROM role_permissions rp JOIN permissions p ON rp.permission_id = p.id WHERE rp.role_id = 1 AND p.permission_code LIKE ''student:department%'';\")",
+      "Bash(\"C:\\Program Files\\MySQL\\MySQL Server 8.0\\bin\\mysql.exe\" -u root -p123456 student_management -e \"SELECT id, permission_code, permission_name FROM permissions WHERE permission_code LIKE ''student:department%'' ORDER BY id;\")",
+      "Bash(\"C:\\Program Files\\MySQL\\MySQL Server 8.0\\bin\\mysql.exe\" -u root -p123456 student_management -e \"\n-- 查看权限的parent_id结构\nSELECT id, permission_code, permission_name FROM permissions WHERE permission_code IN (''student'', ''student:manage'') ORDER BY id;\n\")",
+      "Bash(\"C:\\Program Files\\MySQL\\MySQL Server 8.0\\bin\\mysql.exe\" -u root -p123456 student_management -e \"SELECT p.id, p.permission_code, p.permission_name FROM role_permissions rp JOIN permissions p ON rp.permission_id = p.id WHERE rp.role_id = 1 AND p.permission_code LIKE ''quantification%'';\")",
+      "Bash(\"C:\\Program Files\\MySQL\\MySQL Server 8.0\\bin\\mysql.exe\" -u root -p123456 student_management -e \"SELECT p.id, p.permission_code, p.permission_name FROM role_permissions rp JOIN permissions p ON rp.permission_id = p.id WHERE rp.role_id = 1 AND p.permission_code LIKE ''system:%'';\")",
+      "Bash(\"C:\\Program Files\\MySQL\\MySQL Server 8.0\\bin\\mysql.exe\" -u root -p123456 student_management -e \"SELECT p.permission_code, p.permission_name FROM role_permissions rp JOIN permissions p ON rp.permission_id = p.id WHERE rp.role_id = 1 AND (p.permission_code LIKE ''system:role%'' OR p.permission_code LIKE ''system:department%'' OR p.permission_code LIKE ''system:permission%'') ORDER BY p.permission_code;\")",
+      "Bash(\"C:\\Program Files\\MySQL\\MySQL Server 8.0\\bin\\mysql.exe\" -u root -p123456 student_management -e \"SELECT COUNT(*) as student_count FROM students;\")",
+      "Bash(\"C:\\Program Files\\MySQL\\MySQL Server 8.0\\bin\\mysql.exe\" -u root -p123456 student_management -e \"SELECT COUNT(*) as class_count FROM classes;\")",
+      "Bash(JAVA_HOME=\"/c/Program Files/Java/jdk-17\" PATH=\"/c/Program Files/Java/jdk-17/bin:$PATH\" mvn spring-boot:run -DskipTests)",
+      "Bash(timeout 30 bash -c \"while ! netstat -ano 2>/dev/null | grep '':8080'' | grep ''LISTENING'' > /dev/null 2>&1; do sleep 2; done\")",
+      "Bash(\"C:\\Program Files\\MySQL\\MySQL Server 8.0\\bin\\mysql.exe\" -u root -p123456 student_management -e \"SELECT id, student_no, user_id FROM students LIMIT 5;\")",
+      "Bash(\"C:\\Program Files\\MySQL\\MySQL Server 8.0\\bin\\mysql.exe\" -u root -p123456 student_management -e \"SELECT u.real_name, s.student_no FROM students s JOIN users u ON s.user_id = u.id LIMIT 5;\")",
+      "Bash(\"C:\\Program Files\\MySQL\\MySQL Server 8.0\\bin\\mysql.exe\" -u root -p123456 student_management -e \"SELECT id, dept_name, dept_code, deleted FROM departments WHERE dept_name LIKE ''%教务%'';\")",
+      "Bash(\"C:\\Program Files\\MySQL\\MySQL Server 8.0\\bin\\mysql.exe\" -u root -p123456 student_management -e \"SELECT id, dept_name, dept_code, deleted, status FROM departments ORDER BY id;\")",
+      "Bash(\"C:\\Program Files\\MySQL\\MySQL Server 8.0\\bin\\mysql.exe\" -u root -p123456 student_management -e \"SELECT id, dept_name, dept_code, parent_id FROM departments WHERE parent_id = 2 AND deleted = 0;\")",
+      "Bash(\"C:\\Program Files\\MySQL\\MySQL Server 8.0\\bin\\mysql.exe\" -u root -p123456 student_management -e \"SELECT p.permission_code FROM role_permissions rp JOIN permissions p ON rp.permission_id = p.id WHERE rp.role_id = 1 AND p.permission_code LIKE ''%department%delete%'';\")",
+      "Bash(\"C:\\Program Files\\MySQL\\MySQL Server 8.0\\bin\\mysql.exe\" -u root -p123456 student_management -e \"SELECT id, dept_name, dept_code, deleted, status FROM departments WHERE id IN (1973778771945275393, 1973780826730610689, 1973780826730610690) OR dept_code IN (''1'', ''01'', ''TEST_DEL'');\")",
+      "Bash(\"C:\\Program Files\\MySQL\\MySQL Server 8.0\\bin\\mysql.exe\" -u root -p123456 student_management -e \"DESC students;\")",
+      "Bash(\"C:\\Program Files\\MySQL\\MySQL Server 8.0\\bin\\mysql.exe\" -u root -p123456 student_management -e \"ALTER TABLE students ADD COLUMN major_id BIGINT NULL COMMENT ''专业ID'' AFTER class_id, ADD INDEX idx_major_id (major_id);\")",
+      "Bash(curl -s -X GET \"http://localhost:8080/api/users?pageNum=1&pageSize=10\" -H \"Authorization: Bearer eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxIiwiaWF0IjoxNzM1NDYwODAwLCJleHAiOjE3MzU1NDcyMDB9.test\")",
+      "Bash(curl:*)"
+    ],
+    "deny": [],
+    "ask": []
+  },
+  "forceLoginMethod": "claudeai"
+}
