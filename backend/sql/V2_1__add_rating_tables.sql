@@ -64,18 +64,58 @@ CREATE TABLE IF NOT EXISTS `rating_results` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='评价结果表';
 
 -- ============================================================
--- 更新 semesters 表，添加缺失的字段
+-- 更新 semesters 表，添加缺失的字段 (MySQL 5.7 兼容)
 -- ============================================================
 
--- 添加 start_year 字段（如果不存在）
-ALTER TABLE `semesters`
-ADD COLUMN IF NOT EXISTS `start_year` INT DEFAULT NULL COMMENT '开始年份' AFTER `end_date`;
+-- 使用存储过程安全添加列
+DELIMITER //
 
--- 添加 semester_type 字段（如果不存在）
-ALTER TABLE `semesters`
-ADD COLUMN IF NOT EXISTS `semester_type` INT DEFAULT NULL COMMENT '学期类型: 1第一学期 2第二学期' AFTER `start_year`;
+DROP PROCEDURE IF EXISTS add_column_if_not_exists//
 
--- 创建索引（如果不存在）
-CREATE INDEX IF NOT EXISTS `idx_semester_code` ON `semesters`(`semester_code`);
-CREATE INDEX IF NOT EXISTS `idx_is_current` ON `semesters`(`is_current`);
-CREATE INDEX IF NOT EXISTS `idx_start_year` ON `semesters`(`start_year`);
+CREATE PROCEDURE add_column_if_not_exists()
+BEGIN
+    -- 添加 start_year 字段
+    IF NOT EXISTS (
+        SELECT * FROM INFORMATION_SCHEMA.COLUMNS
+        WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'semesters' AND COLUMN_NAME = 'start_year'
+    ) THEN
+        ALTER TABLE `semesters` ADD COLUMN `start_year` INT DEFAULT NULL COMMENT '开始年份' AFTER `end_date`;
+    END IF;
+
+    -- 添加 semester_type 字段
+    IF NOT EXISTS (
+        SELECT * FROM INFORMATION_SCHEMA.COLUMNS
+        WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'semesters' AND COLUMN_NAME = 'semester_type'
+    ) THEN
+        ALTER TABLE `semesters` ADD COLUMN `semester_type` INT DEFAULT NULL COMMENT '学期类型: 1第一学期 2第二学期' AFTER `start_year`;
+    END IF;
+
+    -- 添加索引 idx_semester_code
+    IF NOT EXISTS (
+        SELECT * FROM INFORMATION_SCHEMA.STATISTICS
+        WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'semesters' AND INDEX_NAME = 'idx_semester_code'
+    ) THEN
+        CREATE INDEX `idx_semester_code` ON `semesters`(`semester_code`);
+    END IF;
+
+    -- 添加索引 idx_is_current
+    IF NOT EXISTS (
+        SELECT * FROM INFORMATION_SCHEMA.STATISTICS
+        WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'semesters' AND INDEX_NAME = 'idx_is_current'
+    ) THEN
+        CREATE INDEX `idx_is_current` ON `semesters`(`is_current`);
+    END IF;
+
+    -- 添加索引 idx_start_year
+    IF NOT EXISTS (
+        SELECT * FROM INFORMATION_SCHEMA.STATISTICS
+        WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'semesters' AND INDEX_NAME = 'idx_start_year'
+    ) THEN
+        CREATE INDEX `idx_start_year` ON `semesters`(`start_year`);
+    END IF;
+END//
+
+DELIMITER ;
+
+CALL add_column_if_not_exists();
+DROP PROCEDURE IF EXISTS add_column_if_not_exists;
