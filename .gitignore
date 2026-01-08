@@ -3,6 +3,8 @@ backend/target/
 backend/out/
 frontend/dist/
 frontend/node_modules/
+miniprogram/node_modules/
+miniprogram/dist/
 miniprogram/miniprogram_npm/
 
 # IDE文件

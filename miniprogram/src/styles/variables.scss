@@ -1,0 +1,157 @@
+// ==================== 现代设计系统变量 ====================
+
+// 品牌色 - 采用更高级的紫蓝渐变色系
+$brand-primary: #6366F1;      // 主品牌色 (Indigo)
+$brand-primary-light: #818CF8;
+$brand-primary-dark: #4F46E5;
+$brand-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+$brand-gradient-light: linear-gradient(135deg, #a8b4f4 0%, #b8a4d9 100%);
+
+// 功能色
+$color-success: #10B981;      // 翡翠绿
+$color-warning: #F59E0B;      // 琥珀黄
+$color-error: #EF4444;        // 玫瑰红
+$color-info: #6B7280;         // 中性灰
+
+// 渐变色组
+$gradient-blue: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+$gradient-green: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+$gradient-orange: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+$gradient-purple: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+$gradient-cyan: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+$gradient-sunset: linear-gradient(135deg, #fa709a 0%, #fee140 100%);
+
+// 文字颜色 - 更柔和的层次
+$text-primary: #1F2937;       // 主要文字
+$text-secondary: #4B5563;     // 次要文字
+$text-tertiary: #9CA3AF;      // 辅助文字
+$text-quaternary: #D1D5DB;    // 禁用文字
+$text-white: #FFFFFF;
+
+// 背景色
+$bg-page: #F8FAFC;            // 页面背景
+$bg-card: #FFFFFF;            // 卡片背景
+$bg-hover: #F3F4F6;           // 悬浮背景
+$bg-active: #E5E7EB;          // 激活背景
+$bg-mask: rgba(0, 0, 0, 0.5); // 遮罩层
+
+// 边框色
+$border-light: #F3F4F6;
+$border-base: #E5E7EB;
+$border-dark: #D1D5DB;
+
+// 阴影 - 更柔和的多层阴影
+$shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+$shadow-base: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+$shadow-md: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+$shadow-lg: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+$shadow-xl: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+$shadow-inner: inset 0 2px 4px 0 rgba(0, 0, 0, 0.06);
+
+// 品牌阴影 (带颜色)
+$shadow-brand: 0 10px 40px -10px rgba(99, 102, 241, 0.5);
+$shadow-success: 0 10px 40px -10px rgba(16, 185, 129, 0.5);
+$shadow-warning: 0 10px 40px -10px rgba(245, 158, 11, 0.5);
+$shadow-error: 0 10px 40px -10px rgba(239, 68, 68, 0.5);
+
+// 字体大小 - 更清晰的层级
+$font-size-xs: 20rpx;         // 辅助文字
+$font-size-sm: 24rpx;         // 小型文字
+$font-size-base: 28rpx;       // 正文
+$font-size-md: 32rpx;         // 中等标题
+$font-size-lg: 36rpx;         // 大标题
+$font-size-xl: 44rpx;         // 特大标题
+$font-size-2xl: 56rpx;        // 超大标题
+$font-size-3xl: 72rpx;        // 数字展示
+
+// 字重
+$font-weight-normal: 400;
+$font-weight-medium: 500;
+$font-weight-semibold: 600;
+$font-weight-bold: 700;
+
+// 行高
+$line-height-tight: 1.25;
+$line-height-base: 1.5;
+$line-height-relaxed: 1.75;
+
+// 圆角 - 更圆润的设计
+$radius-xs: 8rpx;
+$radius-sm: 12rpx;
+$radius-base: 16rpx;
+$radius-md: 20rpx;
+$radius-lg: 28rpx;
+$radius-xl: 36rpx;
+$radius-2xl: 48rpx;
+$radius-full: 9999rpx;
+
+// 间距系统
+$space-1: 4rpx;
+$space-2: 8rpx;
+$space-3: 12rpx;
+$space-4: 16rpx;
+$space-5: 20rpx;
+$space-6: 24rpx;
+$space-8: 32rpx;
+$space-10: 40rpx;
+$space-12: 48rpx;
+$space-16: 64rpx;
+$space-20: 80rpx;
+$space-24: 96rpx;
+
+// 动画时长
+$duration-fast: 150ms;
+$duration-base: 300ms;
+$duration-slow: 500ms;
+
+// 动画曲线
+$ease-in: cubic-bezier(0.4, 0, 1, 1);
+$ease-out: cubic-bezier(0, 0, 0.2, 1);
+$ease-in-out: cubic-bezier(0.4, 0, 0.2, 1);
+$ease-bounce: cubic-bezier(0.68, -0.55, 0.265, 1.55);
+
+// 毛玻璃效果
+$blur-sm: blur(8rpx);
+$blur-base: blur(16rpx);
+$blur-lg: blur(24rpx);
+
+// ==================== uview-plus 主题变量覆盖 ====================
+$u-primary: $brand-primary;
+$u-warning: $color-warning;
+$u-success: $color-success;
+$u-error: $color-error;
+$u-info: $color-info;
+
+$u-primary-dark: $brand-primary-dark;
+$u-warning-dark: darken($color-warning, 10%);
+$u-success-dark: darken($color-success, 10%);
+$u-error-dark: darken($color-error, 10%);
+$u-info-dark: darken($color-info, 10%);
+
+$u-primary-disabled: lighten($brand-primary, 25%);
+$u-warning-disabled: lighten($color-warning, 25%);
+$u-success-disabled: lighten($color-success, 25%);
+$u-error-disabled: lighten($color-error, 25%);
+$u-info-disabled: lighten($color-info, 25%);
+
+$u-primary-light: #EEF2FF;
+$u-warning-light: #FFFBEB;
+$u-success-light: #ECFDF5;
+$u-error-light: #FEF2F2;
+$u-info-light: #F9FAFB;
+
+$u-main-color: $text-primary;
+$u-content-color: $text-secondary;
+$u-tips-color: $text-tertiary;
+$u-light-color: $text-quaternary;
+
+$u-border-color: $border-base;
+$u-bg-color: $bg-page;
+
+$u-font-size-xs: $font-size-xs;
+$u-font-size-sm: $font-size-sm;
+$u-font-size-md: $font-size-base;
+$u-font-size-lg: $font-size-md;
+$u-font-size-xl: $font-size-lg;
+
+$u-default-unit: rpx;
