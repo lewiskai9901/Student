@@ -8,6 +8,8 @@ export * from './access'
 export * from './student'
 export * from './dormitory'
 export * from './task'
+export * from './user'
+export * from './semester'
 
 // 通用响应类型
 export interface ApiResponse<T> {

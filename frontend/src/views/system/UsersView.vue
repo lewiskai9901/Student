@@ -194,13 +194,13 @@
                 @click="handleStatusChange(row)"
                 :class="[
                   'relative inline-flex h-5 w-9 items-center rounded-full transition-colors',
-                  row.status === 1 ? 'bg-blue-600' : 'bg-gray-300'
+                  (row.status === '启用' || row.status === 1) ? 'bg-blue-600' : 'bg-gray-300'
                 ]"
               >
                 <span
                   :class="[
                     'inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform',
-                    row.status === 1 ? 'translate-x-4' : 'translate-x-0.5'
+                    (row.status === '启用' || row.status === 1) ? 'translate-x-4' : 'translate-x-0.5'
                   ]"
                 />
               </button>
@@ -534,20 +534,24 @@ import {
 } from 'lucide-vue-next'
 import UserDataScopeManager from '@/components/user/UserDataScopeManager.vue'
 import StatCard from '@/components/design-system/cards/StatCard.vue'
+// V2 DDD API
 import {
   getUserPage,
   createUser,
   updateUser,
   deleteUser,
   batchDeleteUsers,
-  resetUserPassword,
+  resetPassword,
   updateUserStatus,
-  getUserRoles,
-  assignUserRoles,
-  type User,
-  type UserQueryParams,
-  type UserFormData
-} from '@/api/user'
+  getUserRoleIds,
+  assignRoles
+} from '@/api/v2/user'
+import type {
+  User,
+  UserQueryParams,
+  UserFormData,
+  UserListItem
+} from '@/types/v2/user'
 import { getAllRoles, type Role } from '@/api/role'
 import { useConfigStore } from '@/stores/config'
 
@@ -561,21 +565,21 @@ const dataScopeDialogVisible = ref(false)
 const isEdit = ref(false)
 const selectedIds = ref<number[]>([])
 const currentUserId = ref<number>()
-const currentUserForScope = ref<User | null>(null)
+const currentUserForScope = ref<UserListItem | null>(null)
 
 const queryParams = reactive<UserQueryParams>({
   pageNum: 1,
   pageSize: configStore.defaultPageSize
 })
 
-const userList = ref<User[]>([])
+const userList = ref<UserListItem[]>([])
 const total = ref(0)
 const allRoles = ref<Role[]>([])
 const selectedRoleIds = ref<number[]>([])
 
-// 统计数据
-const enabledCount = computed(() => userList.value.filter(u => u.status === 1).length)
-const disabledCount = computed(() => userList.value.filter(u => u.status === 2).length)
+// 统计数据 - 支持 V2 字符串状态和 V1 数字状态
+const enabledCount = computed(() => userList.value.filter(u => u.status === '启用' || u.status === 1).length)
+const disabledCount = computed(() => userList.value.filter(u => u.status === '禁用' || u.status === 2).length)
 const todayLoginCount = ref(0)
 
 const formData = reactive<UserFormData>({
@@ -646,7 +650,7 @@ const handleSelectAll = (event: Event) => {
   }
 }
 
-const handleSelectRow = (row: User) => {
+const handleSelectRow = (row: UserListItem) => {
   const id = typeof row.id === 'string' ? parseInt(row.id) : row.id
   const index = selectedIds.value.indexOf(id)
   if (index > -1) {
@@ -670,7 +674,7 @@ const handleAdd = () => {
   dialogVisible.value = true
 }
 
-const handleEdit = async (row: User) => {
+const handleEdit = async (row: UserListItem) => {
   if (!row.id) {
     ElMessage.error('用户ID无效')
     return
@@ -682,7 +686,7 @@ const handleEdit = async (row: User) => {
     phone: row.phone,
     employeeNo: row.employeeNo,
     gender: row.gender,
-    status: row.status
+    status: row.status === '启用' ? 1 : row.status === '禁用' ? 2 : row.status
   })
   currentUserId.value = typeof row.id === 'string' ? parseInt(row.id) : row.id
   dialogVisible.value = true
@@ -724,7 +728,7 @@ const handleSubmit = async () => {
   }
 }
 
-const handleDelete = async (row: User) => {
+const handleDelete = async (row: UserListItem) => {
   if (!row.id) return
   const userId = typeof row.id === 'string' ? parseInt(row.id) : row.id
   try {
@@ -749,13 +753,15 @@ const handleBatchDelete = async () => {
   }
 }
 
-const handleStatusChange = async (row: User) => {
+const handleStatusChange = async (row: UserListItem) => {
   if (!row.id) return
   const userId = typeof row.id === 'string' ? parseInt(row.id) : row.id
-  const newStatus = row.status === 1 ? 2 : 1
+  // V2 API 使用字符串状态: '启用', '禁用'
+  const isEnabled = row.status === '启用' || row.status === 1
+  const newStatus = isEnabled ? 2 : 1
   try {
     await updateUserStatus(userId, newStatus)
-    row.status = newStatus
+    row.status = newStatus === 1 ? '启用' : '禁用'
     ElMessage.success('状态已更新')
   } catch (error: any) {
     ElMessage.error(error.message || '更新失败')
@@ -763,24 +769,24 @@ const handleStatusChange = async (row: User) => {
   }
 }
 
-const handleResetPassword = async (row: User) => {
+const handleResetPassword = async (row: UserListItem) => {
   if (!row.id) return
   const userId = typeof row.id === 'string' ? parseInt(row.id) : row.id
   try {
     await ElMessageBox.confirm(`确定要重置用户"${row.realName}"的密码吗?`, '重置密码', { type: 'warning' })
-    await resetUserPassword(userId)
+    await resetPassword(userId)
     ElMessage.success('密码重置成功')
   } catch (error: any) {
     if (error !== 'cancel') ElMessage.error(error.message || '重置失败')
   }
 }
 
-const handleAssignRoles = async (row: User) => {
+const handleAssignRoles = async (row: UserListItem) => {
   if (!row.id) return
   const userId = typeof row.id === 'string' ? parseInt(row.id) : row.id
   try {
     currentUserId.value = userId
-    const roleIds = await getUserRoles(userId)
+    const roleIds = await getUserRoleIds(userId)
     selectedRoleIds.value = roleIds
     roleDialogVisible.value = true
   } catch (error) {
@@ -792,7 +798,7 @@ const handleRoleSubmit = async () => {
   if (!currentUserId.value) return
   try {
     roleSubmitLoading.value = true
-    await assignUserRoles(currentUserId.value, selectedRoleIds.value)
+    await assignRoles(currentUserId.value, selectedRoleIds.value)
     ElMessage.success('角色分配成功')
     roleDialogVisible.value = false
     loadUserList()
@@ -803,7 +809,7 @@ const handleRoleSubmit = async () => {
   }
 }
 
-const handleDataScope = (row: User) => {
+const handleDataScope = (row: UserListItem) => {
   currentUserForScope.value = row
   dataScopeDialogVisible.value = true
 }
