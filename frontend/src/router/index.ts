@@ -876,6 +876,17 @@ const routes: RouteRecordRaw[] = [
               permission: 'system:announcement:view',
               order: 7
             }
+          },
+          {
+            path: '/system/semesters',
+            name: 'SystemSemesters',
+            component: () => import('@/views/system/SemesterView.vue'),
+            meta: {
+              title: '学期管理',
+              requiresAuth: true,
+              permission: 'system:semester:view',
+              order: 8
+            }
           }
         ]
       },
