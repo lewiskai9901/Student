@@ -1,0 +1,93 @@
+name: Generate API Documentation
+
+on:
+  push:
+    branches: [ master, main ]
+    paths:
+      - 'backend/src/main/java/**'
+      - 'backend/pom.xml'
+  workflow_dispatch:
+
+env:
+  JAVA_VERSION: '17'
+
+jobs:
+  generate-docs:
+    name: Generate API Documentation
+    runs-on: ubuntu-latest
+
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: test123
+          MYSQL_DATABASE: student_management_test
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=3
+
+      redis:
+        image: redis:7
+        ports:
+          - 6379:6379
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up JDK ${{ env.JAVA_VERSION }}
+        uses: actions/setup-java@v4
+        with:
+          java-version: ${{ env.JAVA_VERSION }}
+          distribution: 'temurin'
+          cache: maven
+
+      - name: Build application
+        working-directory: ./backend
+        run: mvn package -DskipTests -B
+
+      - name: Start application
+        working-directory: ./backend
+        env:
+          DB_HOST: localhost
+          DB_PORT: 3306
+          DB_NAME: student_management_test
+          DB_USERNAME: root
+          DB_PASSWORD: test123
+          REDIS_HOST: localhost
+          REDIS_PORT: 6379
+          JWT_SECRET: test-jwt-secret-key-for-api-docs-generation-64-chars-long
+        run: |
+          java -jar target/*.jar &
+          sleep 30
+          curl --retry 10 --retry-delay 5 http://localhost:8080/api/actuator/health
+
+      - name: Download OpenAPI spec
+        run: |
+          mkdir -p docs/api/generated
+          curl -o docs/api/generated/openapi.json http://localhost:8080/api/v3/api-docs
+          curl -o docs/api/generated/openapi.yaml http://localhost:8080/api/v3/api-docs.yaml
+
+      - name: Generate HTML documentation
+        run: |
+          npx @redocly/cli build-docs docs/api/generated/openapi.json \
+            --output docs/api/generated/index.html \
+            --title "学生管理系统 API 文档"
+
+      - name: Upload documentation artifacts
+        uses: actions/upload-artifact@v3
+        with:
+          name: api-documentation
+          path: docs/api/generated/
+
+      - name: Deploy to GitHub Pages
+        if: github.ref == 'refs/heads/master' || github.ref == 'refs/heads/main'
+        uses: peaceiris/actions-gh-pages@v3
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: docs/api/generated
+          destination_dir: api-docs

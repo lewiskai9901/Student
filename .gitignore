@@ -1,0 +1,60 @@
+# 编译文件
+backend/target/
+backend/out/
+frontend/dist/
+frontend/node_modules/
+miniprogram/miniprogram_npm/
+
+# IDE文件
+.idea/
+.vscode/
+*.iml
+*.swp
+*.swo
+*~
+
+# 日志文件
+*.log
+logs/
+backend/logs/
+backend/*.log
+frontend/*.log
+
+# 临时文件
+*.tmp
+*.tmp.*
+*.temp
+*.cache
+*.class
+GeneratePassword.java
+
+# 系统文件
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# 环境配置
+.env
+.env.local
+.env.*.local
+.env.production
+.env.prod
+
+# 数据库备份
+*.sql.bak
+*.sql.gz
+backup_*.sql
+backup_*.tar.gz
+student_management_backup_*.tar.gz
+
+# 其他
+.history/
+archive/
+
+# 上传文件
+uploads/
+
+# 敏感配置
+token.txt
+application-secret.yml
+application-local.yml
