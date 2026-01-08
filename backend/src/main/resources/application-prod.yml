@@ -1,0 +1,116 @@
+# ============================================
+# 生产环境配置
+# ============================================
+# 部署前必须设置以下环境变量:
+# - DB_HOST, DB_PORT, DB_NAME, DB_USERNAME, DB_PASSWORD
+# - REDIS_HOST, REDIS_PORT, REDIS_PASSWORD
+# - JWT_SECRET (至少64字节随机字符串)
+# - CORS_ALLOWED_ORIGINS (允许的前端域名，逗号分隔)
+# ============================================
+
+server:
+  port: ${SERVER_PORT:8080}
+  servlet:
+    context-path: /api
+  # 生产环境安全配置
+  error:
+    include-message: never
+    include-stacktrace: never
+    include-exception: false
+
+spring:
+  # 数据源配置 - 必须通过环境变量设置
+  datasource:
+    url: jdbc:mysql://${DB_HOST}:${DB_PORT:3306}/${DB_NAME}?useUnicode=true&characterEncoding=utf8&useSSL=true&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=false
+    username: ${DB_USERNAME}
+    password: ${DB_PASSWORD}
+    druid:
+      initial-size: 10
+      min-idle: 10
+      max-active: 100
+      max-wait: 10000
+      # 连接泄漏检测 - 生产环境安全配置
+      # 保持连接泄漏检测开启，但禁止记录堆栈信息（防止内部代码结构泄露）
+      remove-abandoned: true
+      remove-abandoned-timeout: 1800
+      log-abandoned: false  # ⚠️ 生产环境禁用堆栈日志，防止安全信息泄露
+      # 生产环境禁用Druid监控页面
+      stat-view-servlet:
+        enabled: false
+      web-stat-filter:
+        enabled: false
+
+  # Redis配置 - 必须通过环境变量设置
+  data:
+    redis:
+      host: ${REDIS_HOST}
+      port: ${REDIS_PORT:6379}
+      password: ${REDIS_PASSWORD}
+      database: 0
+      timeout: 3000ms
+      lettuce:
+        pool:
+          max-active: 16
+          max-idle: 8
+          min-idle: 4
+          max-wait: 3000ms
+
+# 日志配置 - 生产环境
+logging:
+  level:
+    root: WARN
+    com.school.management: INFO
+    org.springframework.security: WARN
+    org.springframework.web: WARN
+  file:
+    name: ${LOG_PATH:/var/log/student-management}/app.log
+  logback:
+    rollingpolicy:
+      max-file-size: 100MB
+      max-history: 30
+      total-size-cap: 3GB
+
+# JWT配置 - 生产环境必须使用强密钥
+jwt:
+  secret-key: ${JWT_SECRET}
+  access-token-expiration: ${JWT_ACCESS_EXPIRATION:7200000}    # 2小时
+  refresh-token-expiration: ${JWT_REFRESH_EXPIRATION:2592000000} # 30天
+
+# 文件存储配置
+file:
+  upload:
+    path: ${FILE_UPLOAD_PATH:/opt/student-management/uploads/}
+    url-prefix: ${FILE_URL_PREFIX}
+    max-size: 10485760
+    allowed-types: jpg,jpeg,png,gif,pdf,doc,docx,xls,xlsx
+
+# 微信小程序配置
+wechat:
+  miniapp:
+    appid: ${WECHAT_MINIAPP_APPID:}
+    secret: ${WECHAT_MINIAPP_SECRET:}
+
+# CORS配置 - 生产环境必须配置实际域名
+cors:
+  allowed-origins: ${CORS_ALLOWED_ORIGINS:https://your-domain.com}
+  allowed-methods: GET,POST,PUT,DELETE,OPTIONS,PATCH
+  allowed-headers: Authorization,Content-Type,Accept,X-Requested-With,Cache-Control
+  allow-credentials: true
+  max-age: 3600
+
+# SpringDoc - 生产环境禁用
+springdoc:
+  api-docs:
+    enabled: false
+  swagger-ui:
+    enabled: false
+
+# Actuator - 生产环境仅暴露健康检查
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health
+  endpoint:
+    health:
+      show-details: never

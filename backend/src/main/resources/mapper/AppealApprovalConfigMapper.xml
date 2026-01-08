@@ -1,0 +1,81 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.school.management.mapper.AppealApprovalConfigMapper">
+
+    <resultMap id="BaseResultMap" type="com.school.management.entity.AppealApprovalConfig">
+        <id column="id" property="id"/>
+        <result column="appeal_config_id" property="appealConfigId"/>
+        <result column="step_order" property="stepOrder"/>
+        <result column="step_name" property="stepName"/>
+        <result column="approver_type" property="approverType"/>
+        <result column="approver_role_code" property="approverRoleCode"/>
+        <result column="approver_user_id" property="approverUserId"/>
+        <result column="approver_dept_code" property="approverDeptCode"/>
+        <result column="sign_mode" property="signMode"/>
+        <result column="is_required" property="isRequired"/>
+        <result column="trigger_condition" property="triggerCondition"/>
+        <result column="timeout_hours" property="timeoutHours"/>
+        <result column="timeout_action" property="timeoutAction"/>
+        <result column="remind_interval_hours" property="remindIntervalHours"/>
+        <result column="created_at" property="createdAt"/>
+        <result column="updated_at" property="updatedAt"/>
+    </resultMap>
+
+    <sql id="Base_Column_List">
+        id, appeal_config_id, step_order, step_name, approver_type, approver_role_code,
+        approver_user_id, approver_dept_code, sign_mode, is_required, trigger_condition,
+        timeout_hours, timeout_action, remind_interval_hours, created_at, updated_at
+    </sql>
+
+    <!-- 查询申诉配置的审批流 -->
+    <select id="selectByAppealConfigId" resultMap="BaseResultMap">
+        SELECT
+        <include refid="Base_Column_List"/>
+        FROM appeal_approval_configs
+        WHERE appeal_config_id = #{appealConfigId}
+        ORDER BY step_order ASC
+    </select>
+
+    <!-- 查询申诉配置的必须审批步骤 -->
+    <select id="selectRequiredSteps" resultMap="BaseResultMap">
+        SELECT
+        <include refid="Base_Column_List"/>
+        FROM appeal_approval_configs
+        WHERE appeal_config_id = #{appealConfigId}
+        AND is_required = 1
+        ORDER BY step_order ASC
+    </select>
+
+    <!-- 查询申诉配置的可选审批步骤 -->
+    <select id="selectOptionalSteps" resultMap="BaseResultMap">
+        SELECT
+        <include refid="Base_Column_List"/>
+        FROM appeal_approval_configs
+        WHERE appeal_config_id = #{appealConfigId}
+        AND is_required = 0
+        ORDER BY step_order ASC
+    </select>
+
+    <!-- 批量插入审批流配置 -->
+    <insert id="batchInsert">
+        INSERT INTO appeal_approval_configs
+        (appeal_config_id, step_order, step_name, approver_type, approver_role_code,
+        approver_user_id, approver_dept_code, sign_mode, is_required, trigger_condition,
+        timeout_hours, timeout_action, remind_interval_hours, created_at, updated_at)
+        VALUES
+        <foreach collection="configs" item="item" separator=",">
+            (#{item.appealConfigId}, #{item.stepOrder}, #{item.stepName}, #{item.approverType},
+            #{item.approverRoleCode}, #{item.approverUserId}, #{item.approverDeptCode},
+            #{item.signMode}, #{item.isRequired}, #{item.triggerCondition},
+            #{item.timeoutHours}, #{item.timeoutAction}, #{item.remindIntervalHours}, NOW(), NOW())
+        </foreach>
+    </insert>
+
+    <!-- 删除申诉配置的所有审批流 -->
+    <delete id="deleteByAppealConfigId">
+        DELETE
+        FROM appeal_approval_configs
+        WHERE appeal_config_id = #{appealConfigId}
+    </delete>
+
+</mapper>

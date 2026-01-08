@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.school.management.mapper.ClassDormitoryBindingMapper">
+
+    <!-- 基础结果映射 -->
+    <resultMap id="BaseResultMap" type="com.school.management.entity.ClassDormitoryBinding">
+        <id column="id" property="id"/>
+        <result column="class_id" property="classId"/>
+        <result column="dormitory_id" property="dormitoryId"/>
+        <result column="student_count" property="studentCount"/>
+        <result column="created_time" property="createdTime"/>
+        <result column="updated_time" property="updatedTime"/>
+    </resultMap>
+
+    <!-- 基础列 -->
+    <sql id="Base_Column_List">
+        id, class_id, dormitory_id, student_count, created_time, updated_time
+    </sql>
+
+    <!-- 根据班级ID查询宿舍关联列表 -->
+    <select id="selectByClassId" resultMap="BaseResultMap">
+        SELECT <include refid="Base_Column_List"/>
+        FROM class_dormitory_bindings
+        WHERE class_id = #{classId}
+    </select>
+
+    <!-- 根据宿舍ID查询班级关联列表 -->
+    <select id="selectByDormitoryId" resultMap="BaseResultMap">
+        SELECT <include refid="Base_Column_List"/>
+        FROM class_dormitory_bindings
+        WHERE dormitory_id = #{dormitoryId}
+    </select>
+
+    <!-- 批量插入关联 -->
+    <insert id="batchInsert">
+        INSERT INTO class_dormitory_bindings (id, class_id, dormitory_id, student_count, created_time, updated_time)
+        VALUES
+        <foreach collection="bindings" item="item" separator=",">
+            (#{item.id}, #{item.classId}, #{item.dormitoryId}, #{item.studentCount}, #{item.createdTime}, #{item.updatedTime})
+        </foreach>
+    </insert>
+
+    <!-- 根据班级ID删除所有关联 -->
+    <delete id="deleteByClassId">
+        DELETE FROM class_dormitory_bindings
+        WHERE class_id = #{classId}
+    </delete>
+
+</mapper>

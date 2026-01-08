@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.school.management.infrastructure.persistence.access.RolePermissionMapper">
+
+    <resultMap id="RolePermissionResultMap" type="com.school.management.infrastructure.persistence.access.RolePermissionPO">
+        <id column="id" property="id"/>
+        <result column="role_id" property="roleId"/>
+        <result column="permission_id" property="permissionId"/>
+        <result column="created_at" property="createdAt"/>
+        <result column="deleted" property="deleted"/>
+    </resultMap>
+
+    <!-- 按角色ID查询权限关联 -->
+    <select id="selectByRoleId" resultMap="RolePermissionResultMap">
+        SELECT * FROM role_permissions
+        WHERE role_id = #{roleId}
+        AND deleted = 0
+    </select>
+
+    <!-- 按权限ID查询角色关联 -->
+    <select id="selectByPermissionId" resultMap="RolePermissionResultMap">
+        SELECT * FROM role_permissions
+        WHERE permission_id = #{permissionId}
+        AND deleted = 0
+    </select>
+
+    <!-- 查询角色的权限ID列表 -->
+    <select id="selectPermissionIdsByRoleId" resultType="java.lang.Long">
+        SELECT permission_id FROM role_permissions
+        WHERE role_id = #{roleId}
+        AND deleted = 0
+    </select>
+
+    <!-- 查询拥有某权限的角色ID列表 -->
+    <select id="selectRoleIdsByPermissionId" resultType="java.lang.Long">
+        SELECT role_id FROM role_permissions
+        WHERE permission_id = #{permissionId}
+        AND deleted = 0
+    </select>
+
+    <!-- 批量插入角色权限关联 -->
+    <insert id="batchInsert" parameterType="java.util.List">
+        INSERT INTO role_permissions (id, role_id, permission_id, created_at, deleted)
+        VALUES
+        <foreach collection="list" item="item" separator=",">
+            (#{item.id}, #{item.roleId}, #{item.permissionId}, #{item.createdAt}, 0)
+        </foreach>
+    </insert>
+
+    <!-- 删除角色的所有权限关联 -->
+    <update id="deleteByRoleId">
+        UPDATE role_permissions
+        SET deleted = 1
+        WHERE role_id = #{roleId}
+    </update>
+
+    <!-- 删除特定的角色权限关联 -->
+    <update id="deleteByRoleIdAndPermissionId">
+        UPDATE role_permissions
+        SET deleted = 1
+        WHERE role_id = #{roleId}
+        AND permission_id = #{permissionId}
+    </update>
+
+</mapper>

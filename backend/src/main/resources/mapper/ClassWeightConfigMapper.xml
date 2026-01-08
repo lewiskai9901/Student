@@ -1,0 +1,120 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.school.management.mapper.ClassWeightConfigMapper">
+
+    <!-- 基础结果映射 -->
+    <resultMap id="BaseResultMap" type="com.school.management.entity.ClassWeightConfig">
+        <id column="id" property="id"/>
+        <result column="config_name" property="configName"/>
+        <result column="config_code" property="configCode"/>
+        <result column="semester_id" property="semesterId"/>
+        <result column="weight_mode" property="weightMode"/>
+        <result column="enable_weight" property="enableWeight"/>
+        <result column="use_fixed_standard" property="useFixedStandard"/>
+        <result column="min_weight" property="minWeight"/>
+        <result column="max_weight" property="maxWeight"/>
+        <result column="enable_weight_limit" property="enableWeightLimit"/>
+        <result column="segment_rules" property="segmentRules"/>
+        <result column="apply_to_all" property="applyToAll"/>
+        <result column="apply_scope" property="applyScope"/>
+        <result column="effective_date" property="effectiveDate"/>
+        <result column="expire_date" property="expireDate"/>
+        <result column="is_default" property="isDefault"/>
+        <result column="standard_size_mode" property="standardSizeMode"/>
+        <result column="standard_size" property="standardSize"/>
+        <result column="range_departments" property="rangeDepartments"/>
+        <result column="range_grades" property="rangeGrades"/>
+        <result column="range_classes" property="rangeClasses"/>
+        <result column="status" property="status"/>
+        <result column="description" property="description"/>
+        <result column="created_by" property="createdBy"/>
+        <result column="created_at" property="createdAt"/>
+        <result column="updated_at" property="updatedAt"/>
+    </resultMap>
+
+    <!-- 基础字段列表 -->
+    <sql id="Base_Column_List">
+        id, config_name, config_code, semester_id, weight_mode, enable_weight, use_fixed_standard,
+        min_weight, max_weight, enable_weight_limit, segment_rules, apply_to_all, apply_scope,
+        effective_date, expire_date, is_default, standard_size_mode, standard_size,
+        range_departments, range_grades, range_classes,
+        status, description, created_by, created_at, updated_at
+    </sql>
+
+    <!-- 根据配置编码查询配置 -->
+    <select id="selectByConfigCode" resultMap="BaseResultMap">
+        SELECT
+        <include refid="Base_Column_List"/>
+        FROM class_weight_configs
+        WHERE config_code = #{configCode}
+        AND deleted = 0
+    </select>
+
+    <!-- 查询有效的加权配置 -->
+    <select id="selectEffectiveConfigs" resultMap="BaseResultMap">
+        SELECT
+        <include refid="Base_Column_List"/>
+        FROM class_weight_configs
+        WHERE status = 1
+        AND deleted = 0
+        AND (effective_date IS NULL OR effective_date &lt;= #{currentDate})
+        AND (expire_date IS NULL OR expire_date &gt;= #{currentDate})
+        <if test="applyScope != null">
+            AND apply_scope = #{applyScope}
+        </if>
+        ORDER BY is_default DESC, created_at DESC
+    </select>
+
+    <!-- 查询班级的加权配置（优先匹配班级、年级、院系范围，最后是全局配置） -->
+    <select id="selectConfigForClass" resultMap="BaseResultMap">
+        SELECT
+        <include refid="Base_Column_List"/>
+        FROM class_weight_configs
+        WHERE status = 1
+        AND deleted = 0
+        AND (effective_date IS NULL OR effective_date &lt;= #{currentDate})
+        AND (expire_date IS NULL OR expire_date &gt;= #{currentDate})
+        AND (
+            apply_to_all = 1
+            OR (range_classes IS NOT NULL AND JSON_CONTAINS(range_classes, CAST(#{classId} AS JSON)))
+            OR (range_grades IS NOT NULL AND JSON_CONTAINS(range_grades, CAST(#{gradeId} AS JSON)))
+            OR (range_departments IS NOT NULL AND JSON_CONTAINS(range_departments, CAST(#{departmentId} AS JSON)))
+        )
+        ORDER BY
+            CASE
+                WHEN range_classes IS NOT NULL AND JSON_CONTAINS(range_classes, CAST(#{classId} AS JSON)) THEN 1
+                WHEN range_grades IS NOT NULL AND JSON_CONTAINS(range_grades, CAST(#{gradeId} AS JSON)) THEN 2
+                WHEN range_departments IS NOT NULL AND JSON_CONTAINS(range_departments, CAST(#{departmentId} AS JSON)) THEN 3
+                ELSE 4
+            END,
+            is_default DESC,
+            created_at DESC
+        LIMIT 1
+    </select>
+
+    <!-- 检查配置编码是否存在 -->
+    <select id="checkConfigCodeExists" resultType="int">
+        SELECT COUNT(*)
+        FROM class_weight_configs
+        WHERE config_code = #{configCode}
+        AND deleted = 0
+        <if test="excludeId != null">
+            AND id != #{excludeId}
+        </if>
+    </select>
+
+    <!-- 查询默认配置 -->
+    <select id="selectDefaultConfig" resultMap="BaseResultMap">
+        SELECT
+        <include refid="Base_Column_List"/>
+        FROM class_weight_configs
+        WHERE status = 1
+        AND deleted = 0
+        AND is_default = 1
+        AND (effective_date IS NULL OR effective_date &lt;= #{currentDate})
+        AND (expire_date IS NULL OR expire_date &gt;= #{currentDate})
+        ORDER BY created_at DESC
+        LIMIT 1
+    </select>
+
+</mapper>

@@ -1,0 +1,77 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.school.management.mapper.CheckTaskAssignmentMapper">
+
+    <resultMap id="BaseResultMap" type="com.school.management.entity.CheckTaskAssignment">
+        <id column="id" property="id"/>
+        <result column="daily_check_id" property="dailyCheckId"/>
+        <result column="plan_id" property="planId"/>
+        <result column="user_id" property="userId"/>
+        <result column="category_ids" property="categoryIds"/>
+        <result column="class_ids" property="classIds"/>
+        <result column="status" property="status"/>
+        <result column="notified" property="notified"/>
+        <result column="notified_at" property="notifiedAt"/>
+        <result column="started_at" property="startedAt"/>
+        <result column="completed_at" property="completedAt"/>
+        <result column="created_at" property="createdAt"/>
+        <result column="user_name" property="userName"/>
+        <result column="check_name" property="checkName"/>
+        <result column="check_date" property="checkDate"/>
+        <result column="plan_name" property="planName"/>
+    </resultMap>
+
+    <select id="selectPageByUserId" resultMap="BaseResultMap">
+        SELECT
+            t.*,
+            u.real_name as user_name,
+            dc.check_name,
+            dc.check_date,
+            p.plan_name
+        FROM check_task_assignments t
+        LEFT JOIN users u ON t.user_id = u.id
+        LEFT JOIN daily_checks dc ON t.daily_check_id = dc.id
+        LEFT JOIN check_plans p ON t.plan_id = p.id
+        WHERE t.user_id = #{userId}
+        <if test="status != null">
+            AND t.status = #{status}
+        </if>
+        <if test="planId != null">
+            AND t.plan_id = #{planId}
+        </if>
+        ORDER BY t.created_at DESC
+    </select>
+
+    <select id="selectByDailyCheckId" resultMap="BaseResultMap">
+        SELECT
+            t.*,
+            u.real_name as user_name
+        FROM check_task_assignments t
+        LEFT JOIN users u ON t.user_id = u.id
+        WHERE t.daily_check_id = #{dailyCheckId}
+        ORDER BY t.created_at
+    </select>
+
+    <select id="selectByDailyCheckIdAndUserId" resultMap="BaseResultMap">
+        SELECT
+            t.*,
+            u.real_name as user_name,
+            dc.check_name,
+            dc.check_date,
+            p.plan_name
+        FROM check_task_assignments t
+        LEFT JOIN users u ON t.user_id = u.id
+        LEFT JOIN daily_checks dc ON t.daily_check_id = dc.id
+        LEFT JOIN check_plans p ON t.plan_id = p.id
+        WHERE t.daily_check_id = #{dailyCheckId}
+          AND t.user_id = #{userId}
+    </select>
+
+    <select id="countPendingByUserId" resultType="int">
+        SELECT COUNT(*)
+        FROM check_task_assignments
+        WHERE user_id = #{userId}
+          AND status = 0
+    </select>
+
+</mapper>

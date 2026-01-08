@@ -1,0 +1,227 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.school.management.mapper.record.CheckRecordDeductionMapper">
+
+    <resultMap id="BaseResultMap" type="com.school.management.entity.record.CheckRecordDeductionNew">
+        <id column="id" property="id"/>
+        <result column="record_id" property="recordId"/>
+        <result column="class_stat_id" property="classStatId"/>
+        <result column="category_stat_id" property="categoryStatId"/>
+        <result column="daily_check_detail_id" property="dailyCheckDetailId"/>
+        <result column="class_id" property="classId"/>
+        <result column="class_name" property="className"/>
+        <result column="category_id" property="categoryId"/>
+        <result column="category_name" property="categoryName"/>
+        <result column="check_round" property="checkRound"/>
+        <result column="deduction_item_id" property="deductionItemId"/>
+        <result column="deduction_item_code" property="deductionItemCode"/>
+        <result column="deduction_item_name" property="deductionItemName"/>
+        <result column="deduct_mode" property="deductMode"/>
+        <result column="base_score" property="baseScore"/>
+        <result column="per_person_score" property="perPersonScore"/>
+        <result column="min_score" property="minScore"/>
+        <result column="max_score_limit" property="maxScoreLimit"/>
+        <result column="actual_score" property="actualScore"/>
+        <result column="person_count" property="personCount"/>
+        <result column="student_ids" property="studentIds"/>
+        <result column="student_names" property="studentNames"/>
+        <result column="link_type" property="linkType"/>
+        <result column="link_id" property="linkId"/>
+        <result column="link_code" property="linkCode"/>
+        <result column="link_name" property="linkName"/>
+        <result column="photo_urls" property="photoUrls"/>
+        <result column="photo_count" property="photoCount"/>
+        <result column="remark" property="remark"/>
+        <result column="checker_id" property="checkerId"/>
+        <result column="checker_name" property="checkerName"/>
+        <result column="check_time" property="checkTime"/>
+        <result column="appeal_status" property="appealStatus"/>
+        <result column="appeal_id" property="appealId"/>
+        <result column="appeal_result_remark" property="appealResultRemark"/>
+        <result column="is_revised" property="isRevised"/>
+        <result column="original_score" property="originalScore"/>
+        <result column="revised_score" property="revisedScore"/>
+        <result column="revision_time" property="revisionTime"/>
+        <result column="revision_reason" property="revisionReason"/>
+        <result column="created_at" property="createdAt"/>
+        <result column="updated_at" property="updatedAt"/>
+    </resultMap>
+
+    <sql id="Base_Column_List">
+        id, record_id, class_stat_id, category_stat_id, daily_check_detail_id,
+        class_id, class_name, category_id, category_name, check_round,
+        deduction_item_id, deduction_item_code, deduction_item_name,
+        deduct_mode, base_score, per_person_score, min_score, max_score_limit, actual_score,
+        person_count, student_ids, student_names,
+        link_type, link_id, link_code, link_name,
+        photo_urls, photo_count, remark,
+        checker_id, checker_name, check_time,
+        appeal_status, appeal_id, appeal_result_remark,
+        is_revised, original_score, revised_score, revision_time, revision_reason,
+        created_at, updated_at
+    </sql>
+
+    <!-- 根据检查记录ID查询 -->
+    <select id="selectByRecordId" resultMap="BaseResultMap">
+        SELECT <include refid="Base_Column_List"/>
+        FROM check_record_deductions_new
+        WHERE record_id = #{recordId}
+        ORDER BY class_id, check_round, category_id, id
+    </select>
+
+    <!-- 根据班级统计ID查询 -->
+    <select id="selectByClassStatId" resultMap="BaseResultMap">
+        SELECT <include refid="Base_Column_List"/>
+        FROM check_record_deductions_new
+        WHERE class_stat_id = #{classStatId}
+        ORDER BY check_round, category_id, id
+    </select>
+
+    <!-- 根据类别统计ID查询 -->
+    <select id="selectByCategoryStatId" resultMap="BaseResultMap">
+        SELECT <include refid="Base_Column_List"/>
+        FROM check_record_deductions_new
+        WHERE category_stat_id = #{categoryStatId}
+        ORDER BY id
+    </select>
+
+    <!-- 根据检查记录和班级查询 -->
+    <select id="selectByRecordAndClass" resultMap="BaseResultMap">
+        SELECT <include refid="Base_Column_List"/>
+        FROM check_record_deductions_new
+        WHERE record_id = #{recordId} AND class_id = #{classId}
+        ORDER BY check_round, category_id, id
+    </select>
+
+    <!-- 分页查询扣分明细 -->
+    <select id="selectDeductionPage" resultMap="BaseResultMap">
+        SELECT <include refid="Base_Column_List"/>
+        FROM check_record_deductions_new
+        WHERE 1=1
+        <if test="recordId != null">
+            AND record_id = #{recordId}
+        </if>
+        <if test="classId != null">
+            AND class_id = #{classId}
+        </if>
+        <if test="categoryId != null">
+            AND category_id = #{categoryId}
+        </if>
+        <if test="appealStatus != null">
+            AND appeal_status = #{appealStatus}
+        </if>
+        ORDER BY check_round, category_id, id
+    </select>
+
+    <!-- 根据学生查询 -->
+    <select id="selectByStudent" resultMap="BaseResultMap">
+        SELECT <include refid="Base_Column_List"/>
+        FROM check_record_deductions_new
+        WHERE record_id = #{recordId}
+        AND FIND_IN_SET(#{studentId}, student_ids)
+        ORDER BY check_round, category_id, id
+    </select>
+
+    <!-- 根据关联对象查询 -->
+    <select id="selectByLink" resultMap="BaseResultMap">
+        SELECT <include refid="Base_Column_List"/>
+        FROM check_record_deductions_new
+        WHERE record_id = #{recordId}
+        AND link_type = #{linkType}
+        AND link_id = #{linkId}
+        ORDER BY check_round, category_id, id
+    </select>
+
+    <!-- 查询待申诉的扣分明细 -->
+    <select id="selectPendingAppeals" resultMap="BaseResultMap">
+        SELECT <include refid="Base_Column_List"/>
+        FROM check_record_deductions_new
+        WHERE record_id = #{recordId}
+        AND appeal_status = 1
+        ORDER BY class_id, id
+    </select>
+
+    <!-- 更新申诉状态 -->
+    <update id="updateAppealStatus">
+        UPDATE check_record_deductions_new
+        SET appeal_status = #{appealStatus},
+            appeal_id = #{appealId},
+            appeal_result_remark = #{appealResultRemark},
+            updated_at = NOW()
+        WHERE id = #{deductionId}
+    </update>
+
+    <!-- 修订扣分 -->
+    <update id="reviseDeduction">
+        UPDATE check_record_deductions_new
+        SET is_revised = 1,
+            original_score = actual_score,
+            revised_score = #{revisedScore},
+            actual_score = #{revisedScore},
+            revision_time = NOW(),
+            revision_reason = #{revisionReason},
+            updated_at = NOW()
+        WHERE id = #{id}
+    </update>
+
+    <!-- 批量插入 -->
+    <insert id="batchInsert">
+        INSERT INTO check_record_deductions_new (
+            id, record_id, class_stat_id, category_stat_id, daily_check_detail_id,
+            class_id, class_name, category_id, category_name, check_round,
+            deduction_item_id, deduction_item_code, deduction_item_name,
+            deduct_mode, base_score, per_person_score, min_score, max_score_limit, actual_score,
+            person_count, student_ids, student_names,
+            link_type, link_id, link_code, link_name,
+            photo_urls, photo_count, remark,
+            checker_id, checker_name, check_time,
+            appeal_status, appeal_id, appeal_result_remark,
+            is_revised, original_score, revised_score, revision_time, revision_reason,
+            created_at, updated_at
+        ) VALUES
+        <foreach collection="list" item="item" separator=",">
+            (
+                #{item.id}, #{item.recordId}, #{item.classStatId}, #{item.categoryStatId}, #{item.dailyCheckDetailId},
+                #{item.classId}, #{item.className}, #{item.categoryId}, #{item.categoryName}, #{item.checkRound},
+                #{item.deductionItemId}, #{item.deductionItemCode}, #{item.deductionItemName},
+                #{item.deductMode}, #{item.baseScore}, #{item.perPersonScore}, #{item.minScore}, #{item.maxScoreLimit}, #{item.actualScore},
+                #{item.personCount}, #{item.studentIds}, #{item.studentNames},
+                #{item.linkType}, #{item.linkId}, #{item.linkCode}, #{item.linkName},
+                #{item.photoUrls}, #{item.photoCount}, #{item.remark},
+                #{item.checkerId}, #{item.checkerName}, #{item.checkTime},
+                #{item.appealStatus}, #{item.appealId}, #{item.appealResultRemark},
+                #{item.isRevised}, #{item.originalScore}, #{item.revisedScore}, #{item.revisionTime}, #{item.revisionReason},
+                NOW(), NOW()
+            )
+        </foreach>
+    </insert>
+
+    <!-- 删除指定检查记录的所有扣分明细 -->
+    <delete id="deleteByRecordId">
+        DELETE FROM check_record_deductions_new
+        WHERE record_id = #{recordId}
+    </delete>
+
+    <!-- 统计班级扣分项数量 -->
+    <select id="countByClass" resultType="int">
+        SELECT COUNT(*)
+        FROM check_record_deductions_new
+        WHERE record_id = #{recordId} AND class_id = #{classId}
+    </select>
+
+    <!-- 计算班级在某次检查中的总扣分 -->
+    <select id="sumActualScoreByRecordAndClass" resultType="java.math.BigDecimal">
+        SELECT COALESCE(SUM(actual_score), 0)
+        FROM check_record_deductions_new
+        WHERE record_id = #{recordId} AND class_id = #{classId}
+    </select>
+
+    <!-- 更新扣分明细的实际扣分 -->
+    <update id="updateActualScore">
+        UPDATE check_record_deductions_new
+        SET actual_score = #{actualScore},
+            updated_at = NOW()
+        WHERE id = #{deductionId}
+    </update>
+
+</mapper>

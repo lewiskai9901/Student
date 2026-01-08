@@ -1,0 +1,165 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.school.management.mapper.record.CheckRecordAppealMapper">
+
+    <resultMap id="BaseResultMap" type="com.school.management.entity.record.CheckRecordAppealNew">
+        <id column="id" property="id"/>
+        <result column="record_id" property="recordId"/>
+        <result column="deduction_id" property="deductionId"/>
+        <result column="class_id" property="classId"/>
+        <result column="appellant_id" property="appellantId"/>
+        <result column="appellant_name" property="appellantName"/>
+        <result column="appellant_role" property="appellantRole"/>
+        <result column="appeal_reason" property="appealReason"/>
+        <result column="appeal_evidence" property="appealEvidence"/>
+        <result column="status" property="status"/>
+        <result column="handler_id" property="handlerId"/>
+        <result column="handler_name" property="handlerName"/>
+        <result column="handle_time" property="handleTime"/>
+        <result column="handle_result" property="handleResult"/>
+        <result column="original_score" property="originalScore"/>
+        <result column="adjusted_score" property="adjustedScore"/>
+        <result column="created_at" property="createdAt"/>
+        <result column="updated_at" property="updatedAt"/>
+    </resultMap>
+
+    <sql id="Base_Column_List">
+        id, record_id, deduction_id, class_id,
+        appellant_id, appellant_name, appellant_role,
+        appeal_reason, appeal_evidence,
+        status, handler_id, handler_name, handle_time, handle_result,
+        original_score, adjusted_score,
+        created_at, updated_at
+    </sql>
+
+    <!-- 根据检查记录ID查询 -->
+    <select id="selectByRecordId" resultMap="BaseResultMap">
+        SELECT <include refid="Base_Column_List"/>
+        FROM check_record_appeals_new
+        WHERE record_id = #{recordId}
+        ORDER BY created_at DESC
+    </select>
+
+    <!-- 根据扣分明细ID查询 -->
+    <select id="selectByDeductionId" resultMap="BaseResultMap">
+        SELECT <include refid="Base_Column_List"/>
+        FROM check_record_appeals_new
+        WHERE deduction_id = #{deductionId}
+        ORDER BY created_at DESC
+        LIMIT 1
+    </select>
+
+    <!-- 根据班级查询 -->
+    <select id="selectByClass" resultMap="BaseResultMap">
+        SELECT <include refid="Base_Column_List"/>
+        FROM check_record_appeals_new
+        WHERE record_id = #{recordId} AND class_id = #{classId}
+        ORDER BY created_at DESC
+    </select>
+
+    <!-- 分页查询申诉列表 -->
+    <select id="selectAppealPage" resultMap="BaseResultMap">
+        SELECT <include refid="Base_Column_List"/>
+        FROM check_record_appeals_new
+        WHERE 1=1
+        <if test="recordId != null">
+            AND record_id = #{recordId}
+        </if>
+        <if test="classId != null">
+            AND class_id = #{classId}
+        </if>
+        <if test="status != null">
+            AND status = #{status}
+        </if>
+        <if test="appellantRole != null and appellantRole != ''">
+            AND appellant_role = #{appellantRole}
+        </if>
+        ORDER BY
+            CASE WHEN status IN (0, 1) THEN 0 ELSE 1 END,
+            created_at DESC
+    </select>
+
+    <!-- 查询待处理申诉 -->
+    <select id="selectPendingAppeals" resultMap="BaseResultMap">
+        SELECT <include refid="Base_Column_List"/>
+        FROM check_record_appeals_new
+        WHERE record_id = #{recordId} AND status IN (0, 1)
+        ORDER BY created_at ASC
+    </select>
+
+    <!-- 查询申诉人历史 -->
+    <select id="selectByAppellant" resultMap="BaseResultMap">
+        SELECT <include refid="Base_Column_List"/>
+        FROM check_record_appeals_new
+        WHERE appellant_id = #{appellantId}
+        ORDER BY created_at DESC
+        <if test="limit != null">
+            LIMIT #{limit}
+        </if>
+    </select>
+
+    <!-- 查询处理人历史 -->
+    <select id="selectByHandler" resultMap="BaseResultMap">
+        SELECT <include refid="Base_Column_List"/>
+        FROM check_record_appeals_new
+        WHERE handler_id = #{handlerId}
+        ORDER BY handle_time DESC
+        <if test="limit != null">
+            LIMIT #{limit}
+        </if>
+    </select>
+
+    <!-- 开始处理 -->
+    <update id="startProcessing">
+        UPDATE check_record_appeals_new
+        SET status = 1,
+            handler_id = #{handlerId},
+            handler_name = #{handlerName},
+            updated_at = NOW()
+        WHERE id = #{appealId} AND status = 0
+    </update>
+
+    <!-- 通过申诉 -->
+    <update id="approveAppeal">
+        UPDATE check_record_appeals_new
+        SET status = 2,
+            handler_id = #{handlerId},
+            handler_name = #{handlerName},
+            handle_time = NOW(),
+            handle_result = #{handleResult},
+            adjusted_score = #{adjustedScore},
+            updated_at = NOW()
+        WHERE id = #{id}
+    </update>
+
+    <!-- 驳回申诉 -->
+    <update id="rejectAppeal">
+        UPDATE check_record_appeals_new
+        SET status = 3,
+            handler_id = #{handlerId},
+            handler_name = #{handlerName},
+            handle_time = NOW(),
+            handle_result = #{handleResult},
+            updated_at = NOW()
+        WHERE id = #{id}
+    </update>
+
+    <!-- 统计申诉数量 -->
+    <select id="countByRecord" resultType="int">
+        SELECT COUNT(*)
+        FROM check_record_appeals_new
+        WHERE record_id = #{recordId}
+        <if test="status != null">
+            AND status = #{status}
+        </if>
+    </select>
+
+    <!-- 检查是否存在申诉 -->
+    <select id="existsByDeductionId" resultType="boolean">
+        SELECT EXISTS(
+            SELECT 1 FROM check_record_appeals_new
+            WHERE deduction_id = #{deductionId}
+        )
+    </select>
+
+</mapper>

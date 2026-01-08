@@ -1,0 +1,137 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.school.management.mapper.DormitoryBuildingMapper">
+
+    <!-- 结果映射 -->
+    <resultMap id="BuildingResponseMap" type="com.school.management.dto.DormitoryBuildingResponse">
+        <id column="id" property="id"/>
+        <result column="building_no" property="buildingNo"/>
+        <result column="building_name" property="buildingName"/>
+        <result column="building_type" property="buildingType"/>
+        <result column="floor_count" property="floorCount"/>
+        <result column="rooms_per_floor" property="roomsPerFloor"/>
+        <result column="room_number_format" property="roomNumberFormat"/>
+        <result column="location" property="location"/>
+        <result column="supervisor_id" property="supervisorId"/>
+        <result column="supervisor_name" property="supervisorName"/>
+        <result column="notes" property="notes"/>
+        <result column="status" property="status"/>
+        <result column="total_rooms" property="totalRooms"/>
+        <result column="total_beds" property="totalBeds"/>
+        <result column="occupied_beds" property="occupiedBeds"/>
+        <result column="created_at" property="createdAt"/>
+        <result column="updated_at" property="updatedAt"/>
+    </resultMap>
+
+    <!-- 分页查询宿舍楼 -->
+    <select id="selectBuildingPage" resultMap="BuildingResponseMap">
+        SELECT
+            b.id,
+            b.building_no,
+            b.building_name,
+            b.building_type,
+            b.total_floors as floor_count,
+            0 as rooms_per_floor,
+            NULL as room_number_format,
+            b.location,
+            b.manager_id as supervisor_id,
+            NULL as supervisor_name,
+            b.description as notes,
+            b.status,
+            0 as total_rooms,
+            0 as total_beds,
+            0 as occupied_beds,
+            b.created_at,
+            b.updated_at
+        FROM buildings b
+        WHERE b.deleted = 0
+        <if test="request.buildingNo != null and request.buildingNo != ''">
+            AND b.building_no LIKE CONCAT('%', #{request.buildingNo}, '%')
+        </if>
+        <if test="request.buildingName != null and request.buildingName != ''">
+            AND b.building_name LIKE CONCAT('%', #{request.buildingName}, '%')
+        </if>
+        <if test="request.buildingType != null">
+            AND b.building_type = #{request.buildingType}
+        </if>
+        <if test="request.status != null">
+            AND b.status = #{request.status}
+        </if>
+        <if test="request.supervisorId != null">
+            AND b.supervisor_id = #{request.supervisorId}
+        </if>
+        ORDER BY b.building_no ASC, b.created_at DESC
+    </select>
+
+    <!-- 根据楼号查询 -->
+    <select id="selectByBuildingNo" resultType="com.school.management.entity.DormitoryBuilding">
+        SELECT * FROM buildings
+        WHERE building_no = #{buildingNo}
+        AND deleted = 0
+        LIMIT 1
+    </select>
+
+    <!-- 检查楼号是否存在 -->
+    <select id="countByBuildingNo" resultType="int">
+        SELECT COUNT(*)
+        FROM buildings
+        WHERE building_no = #{buildingNo}
+        AND deleted = 0
+        <if test="excludeId != null">
+            AND id != #{excludeId}
+        </if>
+    </select>
+
+    <!-- 根据宿舍类型查询 -->
+    <select id="selectByBuildingType" resultMap="BuildingResponseMap">
+        SELECT
+            b.id,
+            b.building_no,
+            b.building_name,
+            b.building_type,
+            b.total_floors as floor_count,
+            0 as rooms_per_floor,
+            NULL as room_number_format,
+            b.location,
+            b.manager_id as supervisor_id,
+            NULL as supervisor_name,
+            b.description as notes,
+            b.status,
+            0 as total_rooms,
+            0 as total_beds,
+            0 as occupied_beds,
+            b.created_at,
+            b.updated_at
+        FROM buildings b
+        WHERE b.building_type = #{buildingType}
+        AND b.deleted = 0
+        ORDER BY b.building_no ASC
+    </select>
+
+    <!-- 获取所有正常状态的宿舍楼 -->
+    <select id="selectAllNormal" resultMap="BuildingResponseMap">
+        SELECT
+            b.id,
+            b.building_no,
+            b.building_name,
+            b.building_type,
+            b.total_floors as floor_count,
+            0 as rooms_per_floor,
+            NULL as room_number_format,
+            b.location,
+            b.manager_id as supervisor_id,
+            NULL as supervisor_name,
+            b.description as notes,
+            b.status,
+            0 as total_rooms,
+            0 as total_beds,
+            0 as occupied_beds,
+            b.created_at,
+            b.updated_at
+        FROM buildings b
+        WHERE b.status = 1
+        AND b.deleted = 0
+        ORDER BY b.building_no ASC
+    </select>
+
+</mapper>

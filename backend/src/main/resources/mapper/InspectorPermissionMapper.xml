@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.school.management.mapper.InspectorPermissionMapper">
+
+    <resultMap id="BaseResultMap" type="com.school.management.entity.InspectorPermission">
+        <id column="id" property="id"/>
+        <result column="inspector_id" property="inspectorId"/>
+        <result column="plan_id" property="planId"/>
+        <result column="user_id" property="userId"/>
+        <result column="category_id" property="categoryId"/>
+        <result column="category_name" property="categoryName"/>
+        <result column="class_ids" property="classIds"/>
+        <result column="created_at" property="createdAt"/>
+    </resultMap>
+
+    <select id="selectByInspectorId" resultMap="BaseResultMap">
+        SELECT * FROM inspector_permissions
+        WHERE inspector_id = #{inspectorId}
+        ORDER BY created_at
+    </select>
+
+    <select id="selectByPlanIdAndUserId" resultMap="BaseResultMap">
+        SELECT * FROM inspector_permissions
+        WHERE plan_id = #{planId}
+          AND user_id = #{userId}
+        ORDER BY created_at
+    </select>
+
+    <delete id="deleteByInspectorId">
+        DELETE FROM inspector_permissions
+        WHERE inspector_id = #{inspectorId}
+    </delete>
+
+    <select id="selectByPlanId" resultMap="BaseResultMap">
+        SELECT * FROM inspector_permissions
+        WHERE plan_id = #{planId}
+        ORDER BY user_id, created_at
+    </select>
+
+</mapper>

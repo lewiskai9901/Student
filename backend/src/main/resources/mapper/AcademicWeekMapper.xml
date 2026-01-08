@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.school.management.mapper.AcademicWeekMapper">
+
+    <!-- 根据学期ID查询教学周列表 -->
+    <select id="selectBySemesterId" resultType="com.school.management.entity.AcademicWeek">
+        SELECT *
+        FROM academic_week
+        WHERE semester_id = #{semesterId}
+          AND deleted = 0
+        ORDER BY week_number
+    </select>
+
+    <!-- 根据日期查询教学周 -->
+    <select id="selectByDate" resultType="com.school.management.entity.AcademicWeek">
+        SELECT *
+        FROM academic_week
+        WHERE #{date} BETWEEN start_date AND end_date
+          AND deleted = 0
+        LIMIT 1
+    </select>
+
+    <!-- 获取当前教学周 -->
+    <select id="selectCurrentWeek" resultType="com.school.management.entity.AcademicWeek">
+        SELECT *
+        FROM academic_week
+        WHERE is_current = 1
+          AND deleted = 0
+        LIMIT 1
+    </select>
+
+    <!-- 取消所有教学周的当前状态 -->
+    <update id="cancelAllCurrent">
+        UPDATE academic_week
+        SET is_current = 0
+        WHERE is_current = 1
+          AND deleted = 0
+    </update>
+
+</mapper>

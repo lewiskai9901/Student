@@ -1,0 +1,132 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.school.management.mapper.CheckPlanMapper">
+
+    <!-- 基础结果映射 -->
+    <resultMap id="BaseResultMap" type="com.school.management.entity.CheckPlan">
+        <id column="id" property="id"/>
+        <result column="plan_code" property="planCode"/>
+        <result column="plan_name" property="planName"/>
+        <result column="description" property="description"/>
+        <result column="template_id" property="templateId"/>
+        <result column="template_name" property="templateName"/>
+        <result column="template_snapshot" property="templateSnapshot"/>
+        <result column="start_date" property="startDate"/>
+        <result column="end_date" property="endDate"/>
+        <result column="weight_config_id" property="weightConfigId"/>
+        <result column="enable_weight" property="enableWeight"/>
+        <result column="custom_standard_size" property="customStandardSize"/>
+        <result column="status" property="status"/>
+        <result column="total_checks" property="totalChecks"/>
+        <result column="total_records" property="totalRecords"/>
+        <result column="total_deduction_score" property="totalDeductionScore"/>
+        <result column="rating_config_id" property="ratingConfigId"/>
+        <result column="statistics_config" property="statisticsConfig"/>
+        <result column="target_scope_type" property="targetScopeType"/>
+        <result column="target_scope_config" property="targetScopeConfig"/>
+        <result column="created_by" property="createdBy"/>
+        <result column="creator_name" property="creatorName"/>
+        <result column="created_at" property="createdAt"/>
+        <result column="updated_at" property="updatedAt"/>
+        <result column="deleted" property="deleted"/>
+    </resultMap>
+
+    <!-- 列表VO结果映射 -->
+    <resultMap id="ListVOResultMap" type="com.school.management.dto.response.CheckPlanListVO">
+        <id column="id" property="id"/>
+        <result column="plan_code" property="planCode"/>
+        <result column="plan_name" property="planName"/>
+        <result column="description" property="description"/>
+        <result column="template_name" property="templateName"/>
+        <result column="start_date" property="startDate"/>
+        <result column="end_date" property="endDate"/>
+        <result column="status" property="status"/>
+        <result column="total_checks" property="totalChecks"/>
+        <result column="total_records" property="totalRecords"/>
+        <result column="total_deduction_score" property="totalDeductionScore"/>
+        <result column="enable_weight" property="enableWeight"/>
+        <result column="creator_name" property="creatorName"/>
+        <result column="created_at" property="createdAt"/>
+    </resultMap>
+
+    <!-- 基础字段列表 -->
+    <sql id="Base_Column_List">
+        id, plan_code, plan_name, description, template_id, template_name, template_snapshot,
+        start_date, end_date, weight_config_id, enable_weight, custom_standard_size,
+        status, total_checks, total_records, total_deduction_score,
+        rating_config_id, statistics_config,
+        created_by, creator_name, created_at, updated_at, deleted
+    </sql>
+
+    <!-- 分页查询检查计划列表 -->
+    <select id="selectPlanPage" resultMap="ListVOResultMap">
+        SELECT
+            p.id, p.plan_code, p.plan_name, p.description, p.template_name,
+            p.start_date, p.end_date, p.status,
+            p.total_checks, p.total_records, p.total_deduction_score,
+            p.enable_weight, p.creator_name, p.created_at
+        FROM check_plans p
+        WHERE p.deleted = 0
+        <if test="query.planName != null and query.planName != ''">
+            AND p.plan_name LIKE CONCAT('%', #{query.planName}, '%')
+        </if>
+        <if test="query.templateId != null">
+            AND p.template_id = #{query.templateId}
+        </if>
+        <if test="query.status != null">
+            AND p.status = #{query.status}
+        </if>
+        <if test="query.startDateFrom != null">
+            AND p.start_date &gt;= #{query.startDateFrom}
+        </if>
+        <if test="query.startDateTo != null">
+            AND p.start_date &lt;= #{query.startDateTo}
+        </if>
+        ORDER BY p.created_at DESC
+    </select>
+
+    <!-- 根据ID查询计划详情(带关联信息) -->
+    <select id="selectPlanWithDetails" resultMap="BaseResultMap">
+        SELECT
+            p.*,
+            w.config_name as weight_config_name
+        FROM check_plans p
+        LEFT JOIN class_weight_configs w ON p.weight_config_id = w.id
+        WHERE p.id = #{id}
+        AND p.deleted = 0
+    </select>
+
+    <!-- 查询计划统计数据 -->
+    <select id="selectPlanStatistics" resultType="com.school.management.dto.response.CheckPlanStatisticsVO">
+        SELECT
+            COUNT(*) as totalPlans,
+            SUM(CASE WHEN status = 0 THEN 1 ELSE 0 END) as draftCount,
+            SUM(CASE WHEN status = 1 THEN 1 ELSE 0 END) as inProgressCount,
+            SUM(CASE WHEN status = 2 THEN 1 ELSE 0 END) as finishedCount,
+            SUM(CASE WHEN status = 3 THEN 1 ELSE 0 END) as archivedCount,
+            COALESCE(SUM(total_checks), 0) as totalChecks,
+            COALESCE(SUM(total_records), 0) as totalRecords,
+            COALESCE(SUM(total_deduction_score), 0) as totalDeductionScore
+        FROM check_plans
+        WHERE deleted = 0
+    </select>
+
+    <!-- 更新计划统计数据 -->
+    <update id="updatePlanStatistics">
+        UPDATE check_plans p
+        SET
+            p.total_checks = (SELECT COUNT(*) FROM daily_checks WHERE plan_id = #{planId} AND deleted = 0),
+            p.total_records = (SELECT COUNT(*) FROM check_records_new WHERE plan_id = #{planId} AND deleted = 0),
+            p.total_deduction_score = (SELECT COALESCE(SUM(total_deduction_score), 0) FROM check_records_new WHERE plan_id = #{planId} AND deleted = 0),
+            p.updated_at = NOW()
+        WHERE p.id = #{planId}
+    </update>
+
+    <!-- 查询今日已创建的计划数量(用于生成序号) -->
+    <select id="countTodayPlans" resultType="java.lang.Integer">
+        SELECT COUNT(*)
+        FROM check_plans
+        WHERE plan_code LIKE CONCAT(#{datePrefix}, '%')
+    </select>
+
+</mapper>

@@ -1,0 +1,309 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.school.management.mapper.StudentMapper">
+
+    <!-- 学生响应结果映射 -->
+    <resultMap id="StudentResponseResultMap" type="com.school.management.dto.StudentResponse">
+        <id column="id" property="id"/>
+        <result column="student_no" property="studentNo"/>
+        <result column="id_card_type" property="idCardType"/>
+        <result column="ethnicity" property="ethnicity"/>
+        <result column="political_status" property="politicalStatus"/>
+        <result column="user_id" property="userId"/>
+        <result column="username" property="username"/>
+        <result column="real_name" property="realName"/>
+        <result column="phone" property="phone"/>
+        <result column="gender" property="gender"/>
+        <result column="identity_card" property="idCard"/>
+        <result column="birth_date" property="birthDate"/>
+        <result column="class_id" property="classId"/>
+        <result column="class_name" property="className"/>
+        <result column="grade_id" property="gradeId"/>
+        <result column="grade_name" property="gradeName"/>
+        <result column="grade_level" property="gradeLevel"/>
+        <result column="major_id" property="majorId"/>
+        <result column="major_name" property="majorName"/>
+        <result column="education_level" property="educationLevel"/>
+        <result column="study_length" property="studyLength"/>
+        <result column="degree_type" property="degreeType"/>
+        <result column="admission_date" property="admissionDate"/>
+        <result column="graduation_date" property="graduationDate"/>
+        <result column="student_status" property="studentStatus"/>
+        <result column="guardian_name" property="guardianName"/>
+        <result column="guardian_phone" property="guardianPhone"/>
+        <result column="guardian_relation" property="guardianRelation"/>
+        <result column="father_name" property="fatherName"/>
+        <result column="father_id_card" property="fatherIdCard"/>
+        <result column="father_phone" property="fatherPhone"/>
+        <result column="mother_name" property="motherName"/>
+        <result column="mother_id_card" property="motherIdCard"/>
+        <result column="mother_phone" property="motherPhone"/>
+        <result column="guardian_id_card" property="guardianIdCard"/>
+        <result column="home_address" property="homeAddress"/>
+        <result column="hukou_province" property="hukouProvince"/>
+        <result column="hukou_city" property="hukouCity"/>
+        <result column="hukou_district" property="hukouDistrict"/>
+        <result column="hukou_address" property="hukouAddress"/>
+        <result column="hukou_type" property="hukouType"/>
+        <result column="postal_code" property="postalCode"/>
+        <result column="is_poverty_registered" property="isPovertyRegistered"/>
+        <result column="financial_aid_type" property="financialAidType"/>
+        <result column="dormitory_id" property="dormitoryId"/>
+        <result column="building_no" property="buildingNo"/>
+        <result column="building_name" property="buildingName"/>
+        <result column="room_no" property="roomNo"/>
+        <result column="bed_number" property="bedNumber"/>
+        <result column="created_at" property="createdAt"/>
+        <result column="updated_at" property="updatedAt"/>
+    </resultMap>
+
+    <!-- 基础查询字段 -->
+    <sql id="BaseSelectColumns">
+        s.id,
+        s.student_no,
+        s.id_card_type,
+        s.ethnicity,
+        s.political_status,
+        s.user_id,
+        COALESCE(u.username, s.student_no) as username,
+        u.real_name,
+        u.phone,
+        u.gender,
+        u.identity_card,
+        u.birth_date,
+        s.class_id,
+        c.class_name,
+        s.grade_id,
+        g.grade_name,
+        COALESCE(g.grade_level, c.grade_level) as grade_level,
+        s.major_id,
+        m.major_name,
+        s.education_level,
+        s.study_length,
+        s.degree_type,
+        s.admission_date,
+        s.graduation_date,
+        s.student_status,
+        s.guardian_name,
+        s.guardian_phone,
+        s.guardian_relation,
+        s.father_name,
+        s.father_id_card,
+        s.father_phone,
+        s.mother_name,
+        s.mother_id_card,
+        s.mother_phone,
+        s.guardian_id_card,
+        s.home_address,
+        s.hukou_province,
+        s.hukou_city,
+        s.hukou_district,
+        s.hukou_address,
+        s.hukou_type,
+        s.postal_code,
+        s.is_poverty_registered,
+        s.financial_aid_type,
+        s.dormitory_id,
+        b.building_no as building_no,
+        b.building_name as building_name,
+        d.dormitory_no as room_no,
+        s.bed_number,
+        s.created_at,
+        s.updated_at
+    </sql>
+
+    <!-- 基础查询表关联 -->
+    <sql id="BaseJoins">
+        FROM students s
+        LEFT JOIN users u ON s.user_id = u.id AND u.deleted = 0
+        LEFT JOIN classes c ON s.class_id = c.id AND c.deleted = 0
+        LEFT JOIN grades g ON s.grade_id = g.id AND g.deleted = 0
+        LEFT JOIN majors m ON s.major_id = m.id AND m.deleted = 0
+        LEFT JOIN dormitories d ON s.dormitory_id = d.id AND d.deleted = 0
+        LEFT JOIN buildings b ON d.building_id = b.id AND b.deleted = 0
+    </sql>
+
+    <!-- 查询条件 -->
+    <sql id="QueryConditions">
+        <where>
+            s.deleted = 0
+            <if test="req.studentNo != null and req.studentNo != ''">
+                AND s.student_no LIKE CONCAT('%', #{req.studentNo}, '%')
+            </if>
+            <if test="req.realName != null and req.realName != ''">
+                AND u.real_name LIKE CONCAT('%', #{req.realName}, '%')
+            </if>
+            <if test="req.classId != null">
+                AND s.class_id = #{req.classId}
+            </if>
+            <if test="req.gradeId != null">
+                AND s.grade_id = #{req.gradeId}
+            </if>
+            <if test="req.gradeLevel != null">
+                AND (g.grade_level = #{req.gradeLevel} OR c.grade_level = #{req.gradeLevel})
+            </if>
+            <if test="req.studentStatus != null">
+                AND s.student_status = #{req.studentStatus}
+            </if>
+            <if test="req.gender != null">
+                AND u.gender = #{req.gender}
+            </if>
+            <if test="req.dormitoryId != null">
+                AND s.dormitory_id = #{req.dormitoryId}
+            </if>
+            <if test="req.admissionDateStart != null">
+                AND s.admission_date >= #{req.admissionDateStart}
+            </if>
+            <if test="req.admissionDateEnd != null">
+                AND s.admission_date &lt;= #{req.admissionDateEnd}
+            </if>
+            <!-- 数据权限过滤: 班级ID列表 -->
+            <if test="req.classIds != null and req.classIds.size() > 0">
+                AND s.class_id IN
+                <foreach collection="req.classIds" item="cid" open="(" separator="," close=")">
+                    #{cid}
+                </foreach>
+            </if>
+            <!-- 数据权限过滤: 部门ID列表 -->
+            <if test="req.departmentIds != null and req.departmentIds.size() > 0">
+                AND c.department_id IN
+                <foreach collection="req.departmentIds" item="did" open="(" separator="," close=")">
+                    #{did}
+                </foreach>
+            </if>
+            <!-- 数据权限过滤: 仅本人(学生角色) -->
+            <if test="req.selfUserId != null">
+                AND s.user_id = #{req.selfUserId}
+            </if>
+        </where>
+    </sql>
+
+    <!-- 分页查询学生信息 -->
+    <select id="selectStudentPage" resultMap="StudentResponseResultMap">
+        SELECT
+        <include refid="BaseSelectColumns"/>
+        <include refid="BaseJoins"/>
+        <include refid="QueryConditions"/>
+        ORDER BY s.created_at DESC
+    </select>
+
+    <!-- 根据ID获取学生详细信息 -->
+    <select id="selectStudentById" resultMap="StudentResponseResultMap">
+        SELECT
+        <include refid="BaseSelectColumns"/>
+        <include refid="BaseJoins"/>
+        WHERE s.deleted = 0
+        AND s.id = #{id}
+    </select>
+
+    <!-- 根据学号获取学生信息 -->
+    <select id="selectStudentByNo" resultMap="StudentResponseResultMap">
+        SELECT
+        <include refid="BaseSelectColumns"/>
+        <include refid="BaseJoins"/>
+        WHERE s.deleted = 0
+        AND s.student_no = #{studentNo}
+    </select>
+
+    <!-- 根据用户ID获取学生信息 -->
+    <select id="selectStudentByUserId" resultMap="StudentResponseResultMap">
+        SELECT
+        <include refid="BaseSelectColumns"/>
+        <include refid="BaseJoins"/>
+        WHERE s.deleted = 0
+        AND s.user_id = #{userId}
+    </select>
+
+    <!-- 统计班级学生数量 -->
+    <select id="countStudentsByClassId" resultType="java.lang.Integer">
+        SELECT COUNT(*)
+        FROM students s
+        WHERE s.class_id = #{classId}
+        AND s.deleted = 0
+        AND s.student_status = 1
+    </select>
+
+    <!-- 统计宿舍学生数量 -->
+    <select id="countStudentsByDormitoryId" resultType="java.lang.Integer">
+        SELECT COUNT(*)
+        FROM students s
+        WHERE s.dormitory_id = #{dormitoryId}
+        AND s.deleted = 0
+        AND s.student_status = 1
+    </select>
+
+    <!-- 清空指定宿舍内所有学生的宿舍信息 -->
+    <update id="clearDormitoryByDormitoryId">
+        UPDATE students
+        SET dormitory_id = NULL,
+            bed_number = NULL,
+            updated_at = NOW()
+        WHERE dormitory_id = #{dormitoryId}
+        AND deleted = 0
+    </update>
+
+    <!-- 清空指定宿舍楼内所有学生的宿舍信息 -->
+    <update id="clearDormitoryByBuildingId">
+        UPDATE students s
+        INNER JOIN dormitories d ON s.dormitory_id = d.id
+        SET s.dormitory_id = NULL,
+            s.bed_number = NULL,
+            s.updated_at = NOW()
+        WHERE d.building_id = #{buildingId}
+        AND s.deleted = 0
+        AND d.deleted = 0
+    </update>
+
+    <!-- 根据班级ID查询学生列表 -->
+    <select id="selectByClassId" resultMap="StudentResponseResultMap">
+        SELECT
+        <include refid="BaseSelectColumns"/>
+        <include refid="BaseJoins"/>
+        WHERE s.deleted = 0
+        AND s.class_id = #{classId}
+        AND s.student_status = 1
+        ORDER BY s.student_no ASC
+    </select>
+
+    <!-- 快捷录入 - 搜索学生 -->
+    <select id="searchStudentsForQuickEntry" resultType="com.school.management.dto.quickentry.QuickEntryStudentDTO">
+        SELECT
+            s.id,
+            s.user_id AS userId,
+            s.student_no AS studentNo,
+            u.real_name AS realName,
+            s.class_id AS classId,
+            c.class_name AS className,
+            m.major_name AS majorName,
+            dept.dept_name AS departmentName,
+            u.avatar
+        FROM students s
+        LEFT JOIN users u ON s.user_id = u.id AND u.deleted = 0
+        LEFT JOIN classes c ON s.class_id = c.id AND c.deleted = 0
+        LEFT JOIN majors m ON s.major_id = m.id AND m.deleted = 0
+        LEFT JOIN departments dept ON c.department_id = dept.id AND dept.deleted = 0
+        WHERE s.deleted = 0
+        AND s.student_status = 1
+        <if test="classIds != null and classIds.size() > 0">
+            AND s.class_id IN
+            <foreach collection="classIds" item="cid" open="(" separator="," close=")">
+                #{cid}
+            </foreach>
+        </if>
+        <if test="keyword != null and keyword != ''">
+            AND (
+                u.real_name LIKE CONCAT('%', #{keyword}, '%')
+                OR s.student_no LIKE CONCAT('%', #{keyword}, '%')
+            )
+        </if>
+        ORDER BY
+            CASE WHEN u.real_name = #{keyword} THEN 0
+                 WHEN u.real_name LIKE CONCAT(#{keyword}, '%') THEN 1
+                 WHEN s.student_no = #{keyword} THEN 2
+                 WHEN s.student_no LIKE CONCAT(#{keyword}, '%') THEN 3
+                 ELSE 4 END,
+            s.student_no ASC
+        LIMIT #{limit}
+    </select>
+
+</mapper>

@@ -1,0 +1,14 @@
+package com.school.management.interfaces.rest.organization;
+
+import lombok.Data;
+
+/**
+ * Request DTO for assigning leaders to a grade.
+ */
+@Data
+public class AssignGradeLeaderRequest {
+    private Long directorId;
+    private String directorName;
+    private Long counselorId;
+    private String counselorName;
+}

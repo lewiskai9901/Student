@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.school.management.infrastructure.persistence.inspection.InspectionTemplateMapper">
+
+    <resultMap id="TemplateResultMap" type="com.school.management.infrastructure.persistence.inspection.InspectionTemplatePO">
+        <id column="id" property="id"/>
+        <result column="template_code" property="templateCode"/>
+        <result column="template_name" property="templateName"/>
+        <result column="description" property="description"/>
+        <result column="template_scope" property="templateScope"/>
+        <result column="org_unit_id" property="orgUnitId"/>
+        <result column="base_score" property="baseScore"/>
+        <result column="status" property="status"/>
+        <result column="version" property="version"/>
+        <result column="is_default" property="isDefault"/>
+        <result column="created_by" property="createdBy"/>
+        <result column="created_at" property="createdAt"/>
+        <result column="updated_at" property="updatedAt"/>
+        <result column="deleted" property="deleted"/>
+    </resultMap>
+
+    <!-- 查询默认模板 -->
+    <select id="selectDefault" resultMap="TemplateResultMap">
+        SELECT * FROM inspection_templates
+        WHERE is_default = 1
+        AND status = 'PUBLISHED'
+        AND deleted = 0
+        LIMIT 1
+    </select>
+
+    <!-- 按状态查询模板 -->
+    <select id="selectByStatus" resultMap="TemplateResultMap">
+        SELECT * FROM inspection_templates
+        WHERE status = #{status}
+        AND deleted = 0
+        ORDER BY created_at DESC
+    </select>
+
+    <!-- 按组织范围查询模板 -->
+    <select id="selectByOrgUnitId" resultMap="TemplateResultMap">
+        SELECT * FROM inspection_templates
+        WHERE org_unit_id = #{orgUnitId}
+        AND deleted = 0
+        ORDER BY created_at DESC
+    </select>
+
+    <!-- 查询已发布的模板 -->
+    <select id="selectPublished" resultMap="TemplateResultMap">
+        SELECT * FROM inspection_templates
+        WHERE status = 'PUBLISHED'
+        AND deleted = 0
+        ORDER BY is_default DESC, created_at DESC
+    </select>
+
+</mapper>

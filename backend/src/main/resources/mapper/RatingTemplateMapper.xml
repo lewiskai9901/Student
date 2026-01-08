@@ -1,0 +1,104 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.school.management.mapper.RatingTemplateMapper">
+
+    <!-- 分页查询评级模板 -->
+    <select id="selectTemplatePage" resultType="java.util.Map">
+        SELECT
+            rt.id,
+            rt.template_name,
+            rt.template_code,
+            rt.description,
+            rt.check_template_id,
+            ct.template_name as check_template_name,
+            ct.template_code as check_template_code,
+            rt.is_default,
+            rt.status,
+            rt.created_at,
+            rt.updated_at,
+            COUNT(DISTINCT rr.id) as rule_count
+        FROM rating_templates rt
+        LEFT JOIN check_templates ct ON rt.check_template_id = ct.id AND ct.deleted = 0
+        LEFT JOIN rating_rules rr ON rt.id = rr.rating_template_id AND rr.deleted = 0
+        <where>
+            rt.deleted = 0
+            <if test="query.templateName != null and query.templateName != ''">
+                AND rt.template_name LIKE CONCAT('%', #{query.templateName}, '%')
+            </if>
+            <if test="query.templateCode != null and query.templateCode != ''">
+                AND rt.template_code LIKE CONCAT('%', #{query.templateCode}, '%')
+            </if>
+            <if test="query.checkTemplateId != null">
+                AND rt.check_template_id = #{query.checkTemplateId}
+            </if>
+            <if test="query.status != null">
+                AND rt.status = #{query.status}
+            </if>
+            <if test="query.isDefault != null">
+                AND rt.is_default = #{query.isDefault}
+            </if>
+        </where>
+        GROUP BY rt.id
+        ORDER BY rt.is_default DESC, rt.created_at DESC
+    </select>
+
+    <!-- 获取评级模板详细信息 -->
+    <select id="selectTemplateDetail" resultType="java.util.Map">
+        SELECT
+            rt.*,
+            ct.template_name as check_template_name,
+            ct.template_code as check_template_code
+        FROM rating_templates rt
+        LEFT JOIN check_templates ct ON rt.check_template_id = ct.id AND ct.deleted = 0
+        WHERE rt.deleted = 0
+        AND rt.id = #{id}
+    </select>
+
+    <!-- 根据检查模板ID查询评级模板列表 -->
+    <select id="selectByCheckTemplateId" resultType="com.school.management.entity.RatingTemplate">
+        SELECT *
+        FROM rating_templates
+        WHERE deleted = 0
+        AND check_template_id = #{checkTemplateId}
+        AND status = 1
+        ORDER BY is_default DESC, created_at DESC
+    </select>
+
+    <!-- 根据模板编码查询 -->
+    <select id="selectByTemplateCode" resultType="com.school.management.entity.RatingTemplate">
+        SELECT *
+        FROM rating_templates
+        WHERE deleted = 0
+        AND template_code = #{templateCode}
+        LIMIT 1
+    </select>
+
+    <!-- 获取默认评级模板 -->
+    <select id="selectDefaultTemplate" resultType="com.school.management.entity.RatingTemplate">
+        SELECT *
+        FROM rating_templates
+        WHERE deleted = 0
+        AND is_default = 1
+        AND status = 1
+        LIMIT 1
+    </select>
+
+    <!-- 设置默认模板 -->
+    <update id="setDefaultTemplate">
+        UPDATE rating_templates
+        SET is_default = 1,
+            updated_at = NOW()
+        WHERE deleted = 0
+        AND id = #{id}
+    </update>
+
+    <!-- 清空所有默认标记 -->
+    <update id="clearAllDefaultFlags">
+        UPDATE rating_templates
+        SET is_default = 0,
+            updated_at = NOW()
+        WHERE deleted = 0
+        AND is_default = 1
+    </update>
+
+</mapper>

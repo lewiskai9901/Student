@@ -1,0 +1,57 @@
+# Rollback Configuration Profile
+# Use this profile to quickly disable V2 features: --spring.profiles.active=rollback
+
+# Disable all V2 API features
+feature:
+  toggles:
+    v2-rating-api:
+      enabled: false
+      description: "V2 Rating API (DDD)"
+    v2-task-api:
+      enabled: false
+      description: "V2 Task API (DDD)"
+    v2-inspection-api:
+      enabled: false
+      description: "V2 Inspection API (DDD)"
+    v2-organization-api:
+      enabled: false
+      description: "V2 Organization API (DDD)"
+    cqrs-read-model:
+      enabled: false
+      description: "CQRS Read Model optimization"
+    performance-monitoring:
+      enabled: true
+      description: "Performance monitoring (keep enabled for diagnostics)"
+    event-sourcing:
+      enabled: false
+      description: "Event sourcing features"
+
+# Disable CQRS read model, fall back to standard queries
+cqrs:
+  read-model:
+    enabled: false
+
+# Performance monitoring - keep enabled for rollback diagnosis
+performance:
+  monitor:
+    enabled: true
+    slow-threshold-ms: 200
+
+# Logging for rollback diagnostics
+logging:
+  level:
+    com.school.management.interfaces.rest: WARN
+    com.school.management.application: WARN
+    com.school.management.domain: WARN
+    com.school.management.infrastructure: WARN
+    # Keep V1 logging enabled
+    com.school.management.controller: INFO
+    com.school.management.service: INFO
+
+# Cache configuration - reduce TTL during rollback for faster updates
+spring:
+  cache:
+    type: redis
+  data:
+    redis:
+      timeout: 3000ms

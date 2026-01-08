@@ -1,0 +1,57 @@
+# 开发环境配置
+# 注意: 所有敏感配置都应通过环境变量设置，不要硬编码密码
+# 首次使用请复制 .env.example 到 .env 并配置您的本地环境
+
+spring:
+  datasource:
+    url: jdbc:mysql://${DB_HOST:localhost}:${DB_PORT:3306}/${DB_NAME:student_management}?useUnicode=true&characterEncoding=UTF-8&useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true
+    username: ${DB_USERNAME:root}
+    password: ${DB_PASSWORD:}
+    druid:
+      stat-view-servlet:
+        enabled: true
+        url-pattern: /druid/*
+        login-username: ${DRUID_USERNAME:admin}
+        login-password: ${DRUID_PASSWORD:}
+      web-stat-filter:
+        enabled: true
+
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+      password: ${REDIS_PASSWORD:}
+      database: 0
+
+# 日志配置
+logging:
+  level:
+    root: INFO
+    com.school.management: DEBUG
+  file:
+    name: logs/student-management-dev.log
+
+# JWT配置 - 必须通过环境变量设置
+jwt:
+  secret: ${JWT_SECRET:}
+  expiration: 86400000  # 24小时（开发环境延长）
+
+# 开发工具
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,env,beans,loggers
+  endpoint:
+    health:
+      show-details: always
+
+# 微信公众号配置
+wechat:
+  app-id: 你的AppID          # 在微信公众平台获取
+  app-secret: 你的AppSecret  # 在微信公众平台获取
+  share-base-url: http://localhost:3000
+  template:
+    enabled: true            # 启用推送功能
+    announcement-template-id:   # 公告模板ID，在公众号后台获取
+    notification-template-id:   # 通报模板ID，在公众号后台获取

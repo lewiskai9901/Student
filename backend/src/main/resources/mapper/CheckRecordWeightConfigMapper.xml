@@ -1,0 +1,162 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.school.management.mapper.CheckRecordWeightConfigMapper">
+
+    <!-- 根据记录ID查询所有加权配置（树形结构） -->
+    <select id="selectConfigTreeByRecordId" resultType="java.util.Map">
+        SELECT
+            crwc.id,
+            crwc.record_id,
+            crwc.config_level,
+            crwc.parent_id,
+            crwc.category_id,
+            crwc.item_id,
+            crwc.target_name,
+            crwc.weight_config_id,
+            cwc.config_name as weight_config_name,
+            crwc.is_inherited,
+            crwc.weight_enabled,
+            crwc.weight_config_snapshot,
+            crwc.created_at,
+            crwc.updated_at
+        FROM check_record_weight_configs crwc
+        LEFT JOIN class_weight_configs cwc ON crwc.weight_config_id = cwc.id AND cwc.deleted = 0
+        WHERE crwc.deleted = 0
+        AND crwc.record_id = #{recordId}
+        ORDER BY
+            CASE crwc.config_level
+                WHEN 'RECORD' THEN 1
+                WHEN 'CATEGORY' THEN 2
+                WHEN 'ITEM' THEN 3
+            END,
+            crwc.category_id,
+            crwc.item_id
+    </select>
+
+    <!-- 获取生效的加权配置（处理3级继承逻辑） -->
+    <select id="selectEffectiveConfig" resultType="java.util.Map">
+        SELECT
+            crwc.id,
+            crwc.record_id,
+            crwc.config_level,
+            crwc.weight_config_id,
+            crwc.is_inherited,
+            crwc.weight_enabled,
+            crwc.weight_config_snapshot
+        FROM check_record_weight_configs crwc
+        WHERE crwc.deleted = 0
+        AND crwc.record_id = #{recordId}
+        AND (
+            <if test="itemId != null">
+                -- ITEM级别配置
+                (crwc.config_level = 'ITEM' AND crwc.item_id = #{itemId} AND crwc.is_inherited = 0)
+                OR
+            </if>
+            <if test="categoryId != null">
+                -- CATEGORY级别配置
+                (crwc.config_level = 'CATEGORY' AND crwc.category_id = #{categoryId} AND crwc.is_inherited = 0)
+                OR
+            </if>
+            -- RECORD级别配置（兜底）
+            (crwc.config_level = 'RECORD')
+        )
+        ORDER BY
+            CASE crwc.config_level
+                WHEN 'ITEM' THEN 1
+                WHEN 'CATEGORY' THEN 2
+                WHEN 'RECORD' THEN 3
+            END
+        LIMIT 1
+    </select>
+
+    <!-- 根据记录ID和层级查询配置 -->
+    <select id="selectByRecordIdAndLevel" resultType="com.school.management.entity.CheckRecordWeightConfig">
+        SELECT *
+        FROM check_record_weight_configs
+        WHERE deleted = 0
+        AND record_id = #{recordId}
+        AND config_level = #{configLevel}
+        ORDER BY created_at ASC
+    </select>
+
+    <!-- 批量插入加权配置 -->
+    <insert id="batchInsert" parameterType="java.util.List">
+        INSERT INTO check_record_weight_configs (
+            id,
+            record_id,
+            config_level,
+            parent_id,
+            category_id,
+            item_id,
+            target_name,
+            weight_config_id,
+            is_inherited,
+            weight_enabled,
+            weight_config_snapshot,
+            created_at,
+            updated_at,
+            deleted
+        ) VALUES
+        <foreach collection="configs" item="item" separator=",">
+            (
+                #{item.id},
+                #{item.recordId},
+                #{item.configLevel},
+                #{item.parentId},
+                #{item.categoryId},
+                #{item.itemId},
+                #{item.targetName},
+                #{item.weightConfigId},
+                #{item.isInherited},
+                #{item.weightEnabled},
+                #{item.weightConfigSnapshot},
+                NOW(),
+                NOW(),
+                0
+            )
+        </foreach>
+    </insert>
+
+    <!-- 根据记录ID删除所有配置 -->
+    <update id="deleteByRecordId">
+        UPDATE check_record_weight_configs
+        SET deleted = 1,
+            updated_at = NOW()
+        WHERE record_id = #{recordId}
+        AND deleted = 0
+    </update>
+
+    <!-- 查询记录级别配置 -->
+    <select id="selectRecordLevelConfig" resultType="com.school.management.entity.CheckRecordWeightConfig">
+        SELECT *
+        FROM check_record_weight_configs
+        WHERE deleted = 0
+        AND record_id = #{recordId}
+        AND config_level = 'RECORD'
+        LIMIT 1
+    </select>
+
+    <!-- 查询类别级别配置列表 -->
+    <select id="selectCategoryLevelConfigs" resultType="com.school.management.entity.CheckRecordWeightConfig">
+        SELECT *
+        FROM check_record_weight_configs
+        WHERE deleted = 0
+        AND record_id = #{recordId}
+        AND config_level = 'CATEGORY'
+        ORDER BY category_id ASC
+    </select>
+
+    <!-- 查询检查项级别配置列表 -->
+    <select id="selectItemLevelConfigs" resultType="com.school.management.entity.CheckRecordWeightConfig">
+        SELECT *
+        FROM check_record_weight_configs
+        WHERE deleted = 0
+        AND record_id = #{recordId}
+        AND config_level = 'ITEM'
+        <if test="categoryId != null">
+            AND category_id = #{categoryId}
+        </if>
+        ORDER BY category_id ASC, item_id ASC
+    </select>
+
+</mapper>

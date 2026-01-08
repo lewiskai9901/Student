@@ -1,0 +1,134 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.school.management.mapper.evaluation.StudentEvaluationDetailMapper">
+
+    <!-- 结果映射 -->
+    <resultMap id="BaseResultMap" type="com.school.management.entity.evaluation.StudentEvaluationDetail">
+        <id column="id" property="id"/>
+        <result column="result_id" property="resultId"/>
+        <result column="evaluation_period_id" property="evaluationPeriodId"/>
+        <result column="student_id" property="studentId"/>
+        <result column="detail_type" property="detailType"/>
+        <result column="evaluation_dimension" property="evaluationDimension"/>
+        <result column="score_category" property="scoreCategory"/>
+        <result column="source_type" property="sourceType"/>
+        <result column="source_id" property="sourceId"/>
+        <result column="source_code" property="sourceCode"/>
+        <result column="source_name" property="sourceName"/>
+        <result column="source_date" property="sourceDate"/>
+        <result column="score" property="score"/>
+        <result column="score_before_cap" property="scoreBeforeCap"/>
+        <result column="is_capped" property="isCapped"/>
+        <result column="cap_reason" property="capReason"/>
+        <result column="behavior_type_id" property="behaviorTypeId"/>
+        <result column="behavior_type_code" property="behaviorTypeCode"/>
+        <result column="confirmed" property="confirmed"/>
+        <result column="excluded" property="excluded"/>
+        <result column="exclude_reason" property="excludeReason"/>
+        <result column="remarks" property="remarks"/>
+        <result column="created_at" property="createdAt"/>
+    </resultMap>
+
+    <!-- 基础列 -->
+    <sql id="Base_Column_List">
+        id, result_id, evaluation_period_id, student_id, detail_type,
+        evaluation_dimension, score_category, source_type, source_id,
+        source_code, source_name, source_date, score, score_before_cap,
+        is_capped, cap_reason, behavior_type_id, behavior_type_code,
+        confirmed, excluded, exclude_reason, remarks, created_at
+    </sql>
+
+    <!-- 根据结果ID查询明细列表 -->
+    <select id="selectByResultId" resultMap="BaseResultMap">
+        SELECT <include refid="Base_Column_List"/>
+        FROM student_evaluation_details
+        WHERE result_id = #{resultId}
+        ORDER BY evaluation_dimension, score_category, created_at
+    </select>
+
+    <!-- 根据结果ID和维度查询明细 -->
+    <select id="selectByResultIdAndDimension" resultMap="BaseResultMap">
+        SELECT <include refid="Base_Column_List"/>
+        FROM student_evaluation_details
+        WHERE result_id = #{resultId}
+        AND evaluation_dimension = #{dimension}
+        ORDER BY score_category, created_at
+    </select>
+
+    <!-- 统计各维度得分汇总 -->
+    <select id="selectDimensionSummary" resultType="java.util.Map">
+        SELECT
+            evaluation_dimension,
+            score_category,
+            COUNT(*) as item_count,
+            SUM(score) as total_score,
+            SUM(CASE WHEN is_capped = 1 THEN 1 ELSE 0 END) as capped_count
+        FROM student_evaluation_details
+        WHERE result_id = #{resultId}
+        AND excluded = 0
+        GROUP BY evaluation_dimension, score_category
+        ORDER BY evaluation_dimension, score_category
+    </select>
+
+    <!-- 根据来源类型查询明细 -->
+    <select id="selectBySourceType" resultMap="BaseResultMap">
+        SELECT <include refid="Base_Column_List"/>
+        FROM student_evaluation_details
+        WHERE result_id = #{resultId}
+        AND source_type = #{sourceType}
+        ORDER BY source_date DESC, created_at DESC
+    </select>
+
+    <!-- 批量插入明细 -->
+    <insert id="batchInsert">
+        INSERT INTO student_evaluation_details (
+            id, result_id, evaluation_period_id, student_id, detail_type,
+            evaluation_dimension, score_category, source_type, source_id,
+            source_code, source_name, source_date, score, score_before_cap,
+            is_capped, cap_reason, behavior_type_id, behavior_type_code,
+            confirmed, excluded, exclude_reason, remarks, created_at
+        ) VALUES
+        <foreach collection="details" item="item" separator=",">
+            (
+                #{item.id}, #{item.resultId}, #{item.evaluationPeriodId},
+                #{item.studentId}, #{item.detailType}, #{item.evaluationDimension},
+                #{item.scoreCategory}, #{item.sourceType}, #{item.sourceId},
+                #{item.sourceCode}, #{item.sourceName}, #{item.sourceDate},
+                #{item.score}, #{item.scoreBeforeCap}, #{item.isCapped},
+                #{item.capReason}, #{item.behaviorTypeId}, #{item.behaviorTypeCode},
+                #{item.confirmed}, #{item.excluded}, #{item.excludeReason},
+                #{item.remarks}, NOW()
+            )
+        </foreach>
+    </insert>
+
+    <!-- 删除结果的所有明细 -->
+    <delete id="deleteByResultId">
+        DELETE FROM student_evaluation_details WHERE result_id = #{resultId}
+    </delete>
+
+    <!-- 根据结果ID和维度查询明细（返回Map） -->
+    <select id="selectByResultAndDimension" resultType="java.util.Map">
+        SELECT
+            d.id,
+            d.detail_type as detailType,
+            d.score_category as scoreCategory,
+            d.source_type as sourceType,
+            d.source_name as itemName,
+            d.source_code as itemCode,
+            d.source_date as sourceDate,
+            d.score,
+            d.score_before_cap as scoreBeforeCap,
+            d.is_capped as isCapped,
+            d.cap_reason as capReason,
+            d.remarks as remark,
+            d.confirmed,
+            d.excluded
+        FROM student_evaluation_details d
+        WHERE d.result_id = #{resultId}
+        AND d.evaluation_dimension = #{dimension}
+        AND d.excluded = 0
+        ORDER BY d.score_category, d.source_date DESC, d.created_at DESC
+    </select>
+
+</mapper>

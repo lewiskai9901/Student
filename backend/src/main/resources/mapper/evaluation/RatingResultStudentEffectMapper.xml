@@ -1,0 +1,70 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.school.management.mapper.evaluation.RatingResultStudentEffectMapper">
+
+    <!-- 基础结果映射 -->
+    <resultMap id="BaseResultMap" type="com.school.management.entity.evaluation.RatingResultStudentEffect">
+        <id column="id" property="id"/>
+        <result column="rating_result_id" property="ratingResultId"/>
+        <result column="record_id" property="recordId"/>
+        <result column="check_date" property="checkDate"/>
+        <result column="rating_template_id" property="ratingTemplateId"/>
+        <result column="rating_template_name" property="ratingTemplateName"/>
+        <result column="level_id" property="levelId"/>
+        <result column="level_name" property="levelName"/>
+        <result column="level_code" property="levelCode"/>
+        <result column="target_type" property="targetType"/>
+        <result column="target_id" property="targetId"/>
+        <result column="target_name" property="targetName"/>
+        <result column="student_id" property="studentId"/>
+        <result column="student_no" property="studentNo"/>
+        <result column="student_name" property="studentName"/>
+        <result column="student_dormitory_id" property="studentDormitoryId"/>
+        <result column="student_dormitory_no" property="studentDormitoryNo"/>
+        <result column="student_role" property="studentRole"/>
+        <result column="evaluation_effect_type" property="evaluationEffectType"/>
+        <result column="evaluation_dimension" property="evaluationDimension"/>
+        <result column="evaluation_base_score" property="evaluationBaseScore"/>
+        <result column="evaluation_extra_score" property="evaluationExtraScore"/>
+        <result column="evaluation_total_score" property="evaluationTotalScore"/>
+        <result column="synced_to_evaluation" property="syncedToEvaluation"/>
+        <result column="sync_time" property="syncTime"/>
+        <result column="evaluation_period_id" property="evaluationPeriodId"/>
+        <result column="created_at" property="createdAt"/>
+        <result column="updated_at" property="updatedAt"/>
+    </resultMap>
+
+    <!-- 根据学生ID和日期范围查询评级影响 -->
+    <select id="selectByStudentAndDateRange" resultMap="BaseResultMap">
+        SELECT * FROM rating_result_student_effects
+        WHERE student_id = #{studentId}
+        AND check_date BETWEEN #{startDate} AND #{endDate}
+        ORDER BY check_date DESC, id
+    </select>
+
+    <!-- 根据学生ID和维度查询评级影响 -->
+    <select id="selectByStudentAndDimension" resultMap="BaseResultMap">
+        SELECT * FROM rating_result_student_effects
+        WHERE student_id = #{studentId}
+        AND check_date BETWEEN #{startDate} AND #{endDate}
+        AND evaluation_dimension = #{dimension}
+        ORDER BY check_date DESC, id
+    </select>
+
+    <!-- 根据评级结果ID查询学生影响 -->
+    <select id="selectByRatingResultId" resultMap="BaseResultMap">
+        SELECT * FROM rating_result_student_effects
+        WHERE rating_result_id = #{ratingResultId}
+        ORDER BY student_no, id
+    </select>
+
+    <!-- 更新同步状态 -->
+    <update id="updateSyncStatus">
+        UPDATE rating_result_student_effects
+        SET synced_to_evaluation = 1,
+            sync_time = NOW(),
+            evaluation_period_id = #{evaluationPeriodId}
+        WHERE id = #{id}
+    </update>
+
+</mapper>

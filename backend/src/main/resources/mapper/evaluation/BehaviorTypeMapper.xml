@@ -1,0 +1,95 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.school.management.mapper.evaluation.BehaviorTypeMapper">
+
+    <!-- 通用查询映射结果 -->
+    <resultMap id="BaseResultMap" type="com.school.management.entity.evaluation.BehaviorType">
+        <id column="id" property="id"/>
+        <result column="behavior_code" property="behaviorCode"/>
+        <result column="behavior_name" property="behaviorName"/>
+        <result column="behavior_category" property="behaviorCategory"/>
+        <result column="behavior_nature" property="behaviorNature"/>
+        <result column="default_affect_scope" property="defaultAffectScope"/>
+        <result column="description" property="description"/>
+        <result column="sort_order" property="sortOrder"/>
+        <result column="status" property="status"/>
+        <result column="created_by" property="createdBy"/>
+        <result column="created_at" property="createdAt"/>
+        <result column="updated_by" property="updatedBy"/>
+        <result column="updated_at" property="updatedAt"/>
+        <result column="deleted" property="deleted"/>
+    </resultMap>
+
+    <!-- 分页查询行为类型 -->
+    <select id="selectBehaviorTypePage" resultType="java.util.Map">
+        SELECT
+            bt.id,
+            bt.behavior_code AS behaviorCode,
+            bt.behavior_name AS behaviorName,
+            bt.behavior_category AS behaviorCategory,
+            bt.behavior_nature AS behaviorNature,
+            bt.default_affect_scope AS defaultAffectScope,
+            bt.description,
+            bt.sort_order AS sortOrder,
+            bt.status,
+            bt.created_at AS createdAt,
+            (SELECT COUNT(*) FROM behavior_evaluation_effects bee WHERE bee.behavior_type_id = bt.id AND bee.deleted = 0) AS effectCount
+        FROM behavior_types bt
+        WHERE bt.deleted = 0
+        <if test="query.behaviorCode != null and query.behaviorCode != ''">
+            AND bt.behavior_code LIKE CONCAT('%', #{query.behaviorCode}, '%')
+        </if>
+        <if test="query.behaviorName != null and query.behaviorName != ''">
+            AND bt.behavior_name LIKE CONCAT('%', #{query.behaviorName}, '%')
+        </if>
+        <if test="query.behaviorCategory != null and query.behaviorCategory != ''">
+            AND bt.behavior_category = #{query.behaviorCategory}
+        </if>
+        <if test="query.behaviorNature != null">
+            AND bt.behavior_nature = #{query.behaviorNature}
+        </if>
+        <if test="query.status != null">
+            AND bt.status = #{query.status}
+        </if>
+        ORDER BY bt.sort_order, bt.id
+    </select>
+
+    <!-- 根据类别查询 -->
+    <select id="selectByCategory" resultMap="BaseResultMap">
+        SELECT * FROM behavior_types
+        WHERE deleted = 0 AND status = 1 AND behavior_category = #{category}
+        ORDER BY sort_order, id
+    </select>
+
+    <!-- 根据行为性质查询 -->
+    <select id="selectByNature" resultMap="BaseResultMap">
+        SELECT * FROM behavior_types
+        WHERE deleted = 0 AND status = 1 AND behavior_nature = #{nature}
+        ORDER BY sort_order, id
+    </select>
+
+    <!-- 查询行为类型详情(含映射规则) -->
+    <select id="selectDetailById" resultType="java.util.Map">
+        SELECT
+            bt.id,
+            bt.behavior_code AS behaviorCode,
+            bt.behavior_name AS behaviorName,
+            bt.behavior_category AS behaviorCategory,
+            bt.behavior_nature AS behaviorNature,
+            bt.default_affect_scope AS defaultAffectScope,
+            bt.description,
+            bt.sort_order AS sortOrder,
+            bt.status,
+            bt.created_at AS createdAt,
+            bt.updated_at AS updatedAt
+        FROM behavior_types bt
+        WHERE bt.id = #{id} AND bt.deleted = 0
+    </select>
+
+    <!-- 根据编码查询 -->
+    <select id="selectByCode" resultMap="BaseResultMap">
+        SELECT * FROM behavior_types
+        WHERE deleted = 0 AND behavior_code = #{code}
+    </select>
+
+</mapper>

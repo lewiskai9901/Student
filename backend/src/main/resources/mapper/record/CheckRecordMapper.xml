@@ -1,0 +1,165 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.school.management.mapper.record.CheckRecordMapper">
+
+    <resultMap id="BaseResultMap" type="com.school.management.entity.record.CheckRecordNew">
+        <id column="id" property="id"/>
+        <result column="plan_id" property="planId"/>
+        <result column="record_code" property="recordCode"/>
+        <result column="daily_check_id" property="dailyCheckId"/>
+        <result column="check_name" property="checkName"/>
+        <result column="check_date" property="checkDate"/>
+        <result column="check_type" property="checkType"/>
+        <result column="checker_id" property="checkerId"/>
+        <result column="checker_name" property="checkerName"/>
+        <result column="template_id" property="templateId"/>
+        <result column="template_name" property="templateName"/>
+        <result column="template_snapshot" property="templateSnapshot"/>
+        <result column="total_classes" property="totalClasses"/>
+        <result column="total_deduction_count" property="totalDeductionCount"/>
+        <result column="total_deduction_score" property="totalDeductionScore"/>
+        <result column="avg_score" property="avgScore"/>
+        <result column="max_score" property="maxScore"/>
+        <result column="min_score" property="minScore"/>
+        <result column="status" property="status"/>
+        <result column="publish_time" property="publishTime"/>
+        <result column="archive_time" property="archiveTime"/>
+        <result column="total_appeal_count" property="totalAppealCount"/>
+        <result column="appeal_pending_count" property="appealPendingCount"/>
+        <result column="appeal_approved_count" property="appealApprovedCount"/>
+        <result column="appeal_rejected_count" property="appealRejectedCount"/>
+        <result column="snapshot_version" property="snapshotVersion"/>
+        <result column="snapshot_created_at" property="snapshotCreatedAt"/>
+        <result column="last_recalc_at" property="lastRecalcAt"/>
+        <result column="recalc_reason" property="recalcReason"/>
+        <result column="description" property="description"/>
+        <result column="remarks" property="remarks"/>
+        <result column="created_by" property="createdBy"/>
+        <result column="created_at" property="createdAt"/>
+        <result column="updated_at" property="updatedAt"/>
+        <result column="deleted" property="deleted"/>
+    </resultMap>
+
+    <sql id="Base_Column_List">
+        id, plan_id, record_code, daily_check_id, check_name, check_date, check_type,
+        checker_id, checker_name, template_id, template_name, template_snapshot,
+        total_classes, total_deduction_count, total_deduction_score, avg_score, max_score, min_score,
+        status, publish_time, archive_time,
+        total_appeal_count, appeal_pending_count, appeal_approved_count, appeal_rejected_count,
+        snapshot_version, snapshot_created_at, last_recalc_at, recalc_reason,
+        description, remarks, created_by, created_at, updated_at, deleted
+    </sql>
+
+    <!-- 分页查询检查记录 -->
+    <select id="selectRecordPage" resultMap="BaseResultMap">
+        SELECT <include refid="Base_Column_List"/>
+        FROM check_records_new
+        WHERE deleted = 0
+        <if test="checkName != null and checkName != ''">
+            AND check_name LIKE CONCAT('%', #{checkName}, '%')
+        </if>
+        <if test="checkDateStart != null">
+            AND check_date &gt;= #{checkDateStart}
+        </if>
+        <if test="checkDateEnd != null">
+            AND check_date &lt;= #{checkDateEnd}
+        </if>
+        <if test="status != null">
+            AND status = #{status}
+        </if>
+        <if test="checkType != null">
+            AND check_type = #{checkType}
+        </if>
+        <if test="planId != null">
+            AND plan_id = #{planId}
+        </if>
+        <!-- 数据权限过滤: 班级ID列表(通过check_record_class_stats关联过滤) -->
+        <if test="classIds != null and classIds.size() > 0">
+            AND EXISTS (
+                SELECT 1 FROM check_record_class_stats cs
+                WHERE cs.record_id = check_records_new.id
+                AND cs.class_id IN <foreach collection="classIds" item="cid" open="(" separator="," close=")">#{cid}</foreach>
+            )
+        </if>
+        ORDER BY check_date DESC, created_at DESC
+    </select>
+
+    <!-- 根据日常检查ID查询 -->
+    <select id="selectByDailyCheckId" resultMap="BaseResultMap">
+        SELECT <include refid="Base_Column_List"/>
+        FROM check_records_new
+        WHERE daily_check_id = #{dailyCheckId}
+        AND deleted = 0
+        LIMIT 1
+    </select>
+
+    <!-- 根据日期范围查询 -->
+    <select id="selectByDateRange" resultMap="BaseResultMap">
+        SELECT <include refid="Base_Column_List"/>
+        FROM check_records_new
+        WHERE check_date BETWEEN #{startDate} AND #{endDate}
+        AND deleted = 0
+        ORDER BY check_date DESC
+    </select>
+
+    <!-- 更新申诉统计 -->
+    <update id="updateAppealStats">
+        UPDATE check_records_new r
+        SET
+            total_appeal_count = (
+                SELECT COUNT(*) FROM check_record_appeals_new a
+                WHERE a.record_id = r.id
+            ),
+            appeal_pending_count = (
+                SELECT COUNT(*) FROM check_record_appeals_new a
+                WHERE a.record_id = r.id AND a.status IN (0, 1)
+            ),
+            appeal_approved_count = (
+                SELECT COUNT(*) FROM check_record_appeals_new a
+                WHERE a.record_id = r.id AND a.status = 2
+            ),
+            appeal_rejected_count = (
+                SELECT COUNT(*) FROM check_record_appeals_new a
+                WHERE a.record_id = r.id AND a.status = 3
+            ),
+            updated_at = NOW()
+        WHERE r.id = #{recordId}
+    </update>
+
+    <!-- 重新计算总分 -->
+    <update id="recalculateTotalScore">
+        UPDATE check_records_new r
+        SET
+            total_deduction_count = (
+                SELECT COUNT(*) FROM check_record_deductions_new d WHERE d.record_id = r.id
+            ),
+            total_deduction_score = (
+                SELECT COALESCE(SUM(d.actual_score), 0) FROM check_record_deductions_new d WHERE d.record_id = r.id
+            ),
+            avg_score = (
+                SELECT COALESCE(AVG(cs.total_score), 0) FROM check_record_class_stats_new cs WHERE cs.record_id = r.id
+            ),
+            max_score = (
+                SELECT COALESCE(MAX(cs.total_score), 0) FROM check_record_class_stats_new cs WHERE cs.record_id = r.id
+            ),
+            min_score = (
+                SELECT COALESCE(MIN(cs.total_score), 0) FROM check_record_class_stats_new cs WHERE cs.record_id = r.id
+            ),
+            last_recalc_at = NOW(),
+            snapshot_version = snapshot_version + 1,
+            updated_at = NOW()
+        WHERE r.id = #{recordId}
+    </update>
+
+    <!-- 生成记录编号 -->
+    <select id="generateRecordCode" resultType="string">
+        SELECT CONCAT('CR', DATE_FORMAT(#{checkDate}, '%Y%m%d'),
+            LPAD(COALESCE(
+                (SELECT MAX(CAST(SUBSTRING(record_code, 11) AS UNSIGNED)) + 1
+                 FROM check_records_new
+                 WHERE record_code LIKE CONCAT('CR', DATE_FORMAT(#{checkDate}, '%Y%m%d'), '%')),
+                1
+            ), 3, '0'))
+    </select>
+
+</mapper>

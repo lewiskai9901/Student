@@ -1,0 +1,127 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.school.management.mapper.MajorMapper">
+
+    <!-- 基础结果映射 -->
+    <resultMap id="BaseResultMap" type="com.school.management.entity.Major">
+        <id column="id" property="id"/>
+        <result column="major_name" property="majorName"/>
+        <result column="major_code" property="majorCode"/>
+        <result column="department_id" property="departmentId"/>
+        <result column="description" property="description"/>
+        <result column="status" property="status"/>
+        <result column="deleted" property="deleted"/>
+        <result column="created_at" property="createdAt"/>
+        <result column="updated_at" property="updatedAt"/>
+        <result column="department_name" property="departmentName"/>
+    </resultMap>
+
+    <!-- 分页查询专业列表 -->
+    <select id="selectMajorPage" resultMap="BaseResultMap">
+        SELECT
+            m.id,
+            m.major_name,
+            m.major_code,
+            m.department_id,
+            d.dept_name as department_name,
+            m.description,
+            m.status,
+            CASE m.status
+                WHEN 1 THEN '启用'
+                WHEN 0 THEN '禁用'
+                ELSE '未知'
+            END as status_name,
+            m.created_at,
+            m.updated_at
+        FROM majors m
+        LEFT JOIN departments d ON m.department_id = d.id
+        WHERE m.deleted = 0
+        <if test="params.majorName != null and params.majorName != ''">
+            AND m.major_name LIKE CONCAT('%', #{params.majorName}, '%')
+        </if>
+        <if test="params.majorCode != null and params.majorCode != ''">
+            AND m.major_code LIKE CONCAT('%', #{params.majorCode}, '%')
+        </if>
+        <if test="params.departmentId != null">
+            AND m.department_id = #{params.departmentId}
+        </if>
+        <if test="params.status != null">
+            AND m.status = #{params.status}
+        </if>
+        ORDER BY m.created_at DESC
+    </select>
+
+    <!-- 根据部门ID查询专业列表 -->
+    <select id="selectByDepartmentId" resultMap="BaseResultMap">
+        SELECT
+            m.id,
+            m.major_name,
+            m.major_code,
+            m.department_id,
+            d.dept_name as department_name,
+            m.description,
+            m.status,
+            CASE m.status
+                WHEN 1 THEN '启用'
+                WHEN 0 THEN '禁用'
+                ELSE '未知'
+            END as status_name,
+            m.created_at,
+            m.updated_at
+        FROM majors m
+        LEFT JOIN departments d ON m.department_id = d.id
+        WHERE m.deleted = 0
+          AND m.department_id = #{departmentId}
+          AND m.status = 1
+        ORDER BY m.major_name ASC
+    </select>
+
+    <!-- 查询所有启用的专业 -->
+    <select id="selectAllEnabled" resultMap="BaseResultMap">
+        SELECT
+            m.id,
+            m.major_name,
+            m.major_code,
+            m.department_id,
+            d.dept_name as department_name,
+            m.description,
+            m.status,
+            CASE m.status
+                WHEN 1 THEN '启用'
+                WHEN 0 THEN '禁用'
+                ELSE '未知'
+            END as status_name,
+            m.created_at,
+            m.updated_at
+        FROM majors m
+        LEFT JOIN departments d ON m.department_id = d.id
+        WHERE m.deleted = 0
+          AND m.status = 1
+        ORDER BY m.major_name ASC
+    </select>
+
+    <!-- 根据ID查询专业详情 -->
+    <select id="selectMajorById" resultMap="BaseResultMap">
+        SELECT
+            m.id,
+            m.major_name,
+            m.major_code,
+            m.department_id,
+            d.dept_name as department_name,
+            m.description,
+            m.status,
+            CASE m.status
+                WHEN 1 THEN '启用'
+                WHEN 0 THEN '禁用'
+                ELSE '未知'
+            END as status_name,
+            m.created_at,
+            m.updated_at
+        FROM majors m
+        LEFT JOIN departments d ON m.department_id = d.id
+        WHERE m.deleted = 0
+          AND m.id = #{id}
+    </select>
+
+</mapper>

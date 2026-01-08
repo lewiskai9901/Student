@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.school.management.infrastructure.persistence.organization.OrgUnitMapper">
+
+    <resultMap id="OrgUnitResultMap" type="com.school.management.infrastructure.persistence.organization.OrgUnitPO">
+        <id column="id" property="id"/>
+        <result column="org_code" property="orgCode"/>
+        <result column="org_name" property="orgName"/>
+        <result column="org_type" property="orgType"/>
+        <result column="parent_id" property="parentId"/>
+        <result column="tree_path" property="treePath"/>
+        <result column="tree_level" property="treeLevel"/>
+        <result column="sort_order" property="sortOrder"/>
+        <result column="is_enabled" property="isEnabled"/>
+        <result column="created_at" property="createdAt"/>
+        <result column="updated_at" property="updatedAt"/>
+        <result column="deleted" property="deleted"/>
+    </resultMap>
+
+    <!-- 查询所有根节点 -->
+    <select id="selectRoots" resultMap="OrgUnitResultMap">
+        SELECT * FROM org_units
+        WHERE parent_id IS NULL
+        AND deleted = 0
+        ORDER BY sort_order
+    </select>
+
+    <!-- 查询直接子节点 -->
+    <select id="selectChildren" resultMap="OrgUnitResultMap">
+        SELECT * FROM org_units
+        WHERE parent_id = #{parentId}
+        AND deleted = 0
+        ORDER BY sort_order
+    </select>
+
+    <!-- 按类型查询组织 -->
+    <select id="selectByType" resultMap="OrgUnitResultMap">
+        SELECT * FROM org_units
+        WHERE org_type = #{orgType}
+        AND deleted = 0
+        ORDER BY tree_level, sort_order
+    </select>
+
+    <!-- 按父ID和类型查询 -->
+    <select id="selectByParentIdAndType" resultMap="OrgUnitResultMap">
+        SELECT * FROM org_units
+        WHERE parent_id = #{parentId}
+        AND org_type = #{orgType}
+        AND deleted = 0
+        ORDER BY sort_order
+    </select>
+
+    <!-- 获取祖先路径 -->
+    <select id="selectAncestors" resultMap="OrgUnitResultMap">
+        SELECT * FROM org_units
+        WHERE FIND_IN_SET(id, #{ancestorIds})
+        AND deleted = 0
+        ORDER BY tree_level
+    </select>
+
+</mapper>

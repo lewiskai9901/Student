@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.school.management.casbin.mapper.PermissionAuditLogMapper">
+
+    <!-- 根据时间范围查询 -->
+    <select id="selectByTimeRange" resultType="com.school.management.casbin.entity.PermissionAuditLog">
+        SELECT *
+        FROM permission_audit_log
+        WHERE operation_time BETWEEN #{startTime} AND #{endTime}
+        ORDER BY operation_time DESC
+    </select>
+
+    <!-- 根据目标查询 -->
+    <select id="selectByTarget" resultType="com.school.management.casbin.entity.PermissionAuditLog">
+        SELECT *
+        FROM permission_audit_log
+        WHERE target_type = #{targetType}
+          AND target_id = #{targetId}
+        ORDER BY operation_time DESC
+    </select>
+
+</mapper>

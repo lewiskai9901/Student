@@ -1,0 +1,411 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.school.management.mapper.DormitoryMapper">
+
+    <!-- 结果映射 -->
+    <resultMap id="DormitoryResponseMap" type="com.school.management.dto.DormitoryResponse">
+        <id column="id" property="id"/>
+        <result column="building_id" property="buildingId"/>
+        <result column="department_id" property="departmentId"/>
+        <result column="department_name" property="departmentName"/>
+        <result column="assigned_class_ids" property="assignedClassIds"/>
+        <result column="assigned_class_names" property="assignedClassNames"/>
+        <result column="dormitory_no" property="dormitoryNo"/>
+        <result column="building_name" property="buildingName"/>
+        <result column="building_no" property="buildingNo"/>
+        <result column="dormitory_type" property="dormitoryType"/>
+        <result column="floor_number" property="floorNumber"/>
+        <result column="room_usage_type" property="roomUsageType"/>
+        <result column="bed_capacity" property="bedCapacity"/>
+        <result column="room_type" property="roomType"/>
+        <result column="room_type_name" property="roomTypeName"/>
+        <result column="gender_type" property="genderType"/>
+        <result column="gender_type_name" property="genderTypeName"/>
+        <result column="max_capacity" property="maxCapacity"/>
+        <result column="current_count" property="currentCount"/>
+        <result column="occupied_beds" property="occupiedBeds"/>
+        <result column="status" property="status"/>
+        <result column="status_name" property="statusName"/>
+        <result column="created_at" property="createdAt"/>
+        <result column="updated_at" property="updatedAt"/>
+    </resultMap>
+
+    <!-- 分页查询宿舍 -->
+    <select id="selectDormitoryPage" resultMap="DormitoryResponseMap">
+        SELECT d.id, d.building_id, d.dormitory_no,
+               b.building_name, b.building_no,
+               bd.dormitory_type,
+               d.floor_number,
+               d.room_usage_type,
+               d.bed_capacity,
+               d.room_type,
+               CASE d.room_type
+                   WHEN 1 THEN '四人间'
+                   WHEN 2 THEN '六人间'
+                   WHEN 3 THEN '八人间'
+                   ELSE '未知'
+               END as room_type_name,
+               d.gender_type,
+               CASE d.gender_type
+                   WHEN 1 THEN '男生宿舍'
+                   WHEN 2 THEN '女生宿舍'
+                   WHEN 3 THEN '混合宿舍'
+                   ELSE '未知'
+               END as gender_type_name,
+               d.bed_count as max_capacity,
+               d.occupied_beds as current_count,
+               d.occupied_beds,
+               d.status,
+               CASE d.status
+                   WHEN 1 THEN '正常'
+                   WHEN 2 THEN '维修'
+                   WHEN 3 THEN '停用'
+                   ELSE '未知'
+               END as status_name,
+               d.created_at, d.updated_at
+        FROM dormitories d
+        LEFT JOIN buildings b ON d.building_id = b.id AND b.deleted = 0
+        LEFT JOIN building_dormitories bd ON d.building_id = bd.building_id
+        WHERE d.deleted = 0
+        <if test="req.dormitoryNo != null and req.dormitoryNo != ''">
+            AND d.dormitory_no LIKE CONCAT('%', #{req.dormitoryNo}, '%')
+        </if>
+        <if test="req.buildingId != null">
+            AND d.building_id = #{req.buildingId}
+        </if>
+        <if test="req.buildingName != null and req.buildingName != ''">
+            AND b.building_name LIKE CONCAT('%', #{req.buildingName}, '%')
+        </if>
+        <if test="req.floorNumber != null">
+            AND d.floor_number = #{req.floorNumber}
+        </if>
+        <if test="req.roomType != null">
+            AND d.room_type = #{req.roomType}
+        </if>
+        <if test="req.genderType != null">
+            AND d.gender_type = #{req.genderType}
+        </if>
+        <if test="req.status != null">
+            AND d.status = #{req.status}
+        </if>
+        <!-- 数据权限过滤: 楼栋ID列表 -->
+        <if test="req.buildingIds != null and req.buildingIds.size() > 0">
+            AND d.building_id IN <foreach collection="req.buildingIds" item="bid" open="(" separator="," close=")">#{bid}</foreach>
+        </if>
+        <!-- 数据权限过滤: 班级ID列表(通过学生分配过滤) -->
+        <if test="req.classIds != null and req.classIds.size() > 0">
+            AND EXISTS (
+                SELECT 1 FROM student_dormitory sd
+                INNER JOIN students s ON sd.student_id = s.id
+                WHERE sd.dormitory_id = d.id
+                AND s.class_id IN <foreach collection="req.classIds" item="cid" open="(" separator="," close=")">#{cid}</foreach>
+                AND sd.deleted = 0 AND s.deleted = 0
+            )
+        </if>
+        <choose>
+            <when test="req.sortBy == 'buildingName'">
+                <choose>
+                    <when test="req.sortOrder == 'ASC'">ORDER BY b.building_name ASC, d.floor_number ASC, d.dormitory_no ASC</when>
+                    <otherwise>ORDER BY b.building_name DESC, d.floor_number ASC, d.dormitory_no ASC</otherwise>
+                </choose>
+            </when>
+            <when test="req.sortBy == 'dormitoryNo'">
+                <choose>
+                    <when test="req.sortOrder == 'ASC'">ORDER BY d.dormitory_no ASC</when>
+                    <otherwise>ORDER BY d.dormitory_no DESC</otherwise>
+                </choose>
+            </when>
+            <otherwise>
+                <choose>
+                    <when test="req.sortOrder == 'ASC'">ORDER BY d.created_at ASC</when>
+                    <otherwise>ORDER BY d.created_at DESC</otherwise>
+                </choose>
+            </otherwise>
+        </choose>
+    </select>
+
+    <!-- 根据ID获取宿舍详情(包含关联数据) -->
+    <select id="selectDormitoryDetailById" resultMap="DormitoryResponseMap">
+        SELECT d.id, d.building_id, d.dormitory_no,
+               b.building_name, b.building_no,
+               bd.dormitory_type,
+               d.floor_number,
+               d.room_usage_type,
+               d.bed_capacity,
+               d.room_type,
+               CASE d.room_type
+                   WHEN 1 THEN '四人间'
+                   WHEN 2 THEN '六人间'
+                   WHEN 3 THEN '八人间'
+                   ELSE '未知'
+               END as room_type_name,
+               d.gender_type,
+               CASE d.gender_type
+                   WHEN 1 THEN '男生宿舍'
+                   WHEN 2 THEN '女生宿舍'
+                   WHEN 3 THEN '混合宿舍'
+                   ELSE '未知'
+               END as gender_type_name,
+               d.bed_count as max_capacity,
+               d.occupied_beds as current_count,
+               d.occupied_beds,
+               d.status,
+               CASE d.status
+                   WHEN 1 THEN '正常'
+                   WHEN 2 THEN '维修'
+                   WHEN 3 THEN '停用'
+                   ELSE '未知'
+               END as status_name,
+               (SELECT GROUP_CONCAT(DISTINCT cdb.class_id ORDER BY cdb.class_id)
+                FROM class_dormitory_bindings cdb
+                WHERE cdb.dormitory_id = d.id) as assigned_class_ids,
+               (SELECT GROUP_CONCAT(DISTINCT c.class_name ORDER BY c.class_name SEPARATOR ', ')
+                FROM class_dormitory_bindings cdb
+                LEFT JOIN classes c ON cdb.class_id = c.id AND c.deleted = 0
+                WHERE cdb.dormitory_id = d.id) as assigned_class_names,
+               d.created_at, d.updated_at
+        FROM dormitories d
+        LEFT JOIN buildings b ON d.building_id = b.id AND b.deleted = 0
+        LEFT JOIN building_dormitories bd ON d.building_id = bd.building_id
+        WHERE d.id = #{id}
+        AND d.deleted = 0
+        LIMIT 1
+    </select>
+
+    <!-- 根据宿舍编号获取宿舍 -->
+    <select id="selectByDormitoryNo" resultType="com.school.management.entity.Dormitory">
+        SELECT id, building_id, dormitory_no, floor_number, room_type,
+               bed_count, occupied_beds, gender_type, supervisor_id,
+               facilities, notes, status, created_at, updated_at, created_by, updated_by
+        FROM dormitories
+        WHERE dormitory_no = #{dormitoryNo}
+        AND deleted = 0
+        LIMIT 1
+    </select>
+
+    <!-- 检查宿舍编号是否存在(在指定楼宇内) -->
+    <select id="countByDormitoryNo" resultType="java.lang.Integer">
+        SELECT COUNT(*)
+        FROM dormitories
+        WHERE building_id = #{buildingId}
+        AND dormitory_no = #{dormitoryNo}
+        AND deleted = 0
+        <if test="excludeId != null">
+            AND id != #{excludeId}
+        </if>
+    </select>
+
+    <!-- 根据楼栋ID查询宿舍列表 -->
+    <select id="selectByBuildingId" resultMap="DormitoryResponseMap">
+        SELECT d.id, d.building_id, d.department_id, d.dormitory_no,
+               b.building_name, b.building_no,
+               dept.dept_name as department_name,
+               d.floor_number, d.room_type,
+               d.bed_capacity,
+               d.occupied_beds,
+               CASE d.room_type
+                   WHEN 1 THEN '四人间'
+                   WHEN 2 THEN '六人间'
+                   WHEN 3 THEN '八人间'
+                   ELSE '未知'
+               END as room_type_name,
+               d.gender_type,
+               CASE d.gender_type
+                   WHEN 1 THEN '男生宿舍'
+                   WHEN 2 THEN '女生宿舍'
+                   WHEN 3 THEN '混合宿舍'
+                   ELSE '未知'
+               END as gender_type_name,
+               d.bed_count as max_capacity, d.occupied_beds as current_count,
+               d.status,
+               CASE d.status
+                   WHEN 1 THEN '正常'
+                   WHEN 0 THEN '停用'
+                   ELSE '未知'
+               END as status_name,
+               d.created_at, d.updated_at
+        FROM dormitories d
+        LEFT JOIN buildings b ON d.building_id = b.id AND b.deleted = 0
+        LEFT JOIN departments dept ON d.department_id = dept.id AND dept.deleted = 0
+        WHERE d.deleted = 0
+        AND d.building_id = #{buildingId}
+        ORDER BY d.floor_number ASC, d.dormitory_no ASC
+    </select>
+
+    <!-- 根据性别类型查询宿舍列表 -->
+    <select id="selectByGenderType" resultMap="DormitoryResponseMap">
+        SELECT d.id, d.building_id, d.dormitory_no,
+               b.building_name, b.building_no,
+               d.floor_number, d.room_type,
+               CASE d.room_type
+                   WHEN 1 THEN '四人间'
+                   WHEN 2 THEN '六人间'
+                   WHEN 3 THEN '八人间'
+                   ELSE '未知'
+               END as room_type_name,
+               d.gender_type,
+               CASE d.gender_type
+                   WHEN 1 THEN '男生宿舍'
+                   WHEN 2 THEN '女生宿舍'
+                   WHEN 3 THEN '混合宿舍'
+                   ELSE '未知'
+               END as gender_type_name,
+               d.bed_count as max_capacity, d.occupied_beds as current_count,
+               d.status,
+               CASE d.status
+                   WHEN 1 THEN '正常'
+                   WHEN 0 THEN '停用'
+                   ELSE '未知'
+               END as status_name,
+               d.created_at, d.updated_at
+        FROM dormitories d
+        LEFT JOIN buildings b ON d.building_id = b.id AND b.deleted = 0
+        WHERE d.deleted = 0
+        AND d.gender_type = #{genderType}
+        AND d.status = 1
+        ORDER BY b.building_name ASC, d.floor_number ASC, d.dormitory_no ASC
+    </select>
+
+    <!-- 根据部门ID查询宿舍列表 -->
+    <select id="selectByDepartmentId" resultMap="DormitoryResponseMap">
+        SELECT d.id, d.building_id, d.department_id, d.dormitory_no,
+               b.building_name, b.building_no,
+               dept.dept_name as department_name,
+               GROUP_CONCAT(DISTINCT cdb.class_id ORDER BY cdb.class_id) as assigned_class_ids,
+               GROUP_CONCAT(DISTINCT c.class_name ORDER BY c.class_name SEPARATOR ', ') as assigned_class_names,
+               d.floor_number, d.room_type,
+               d.bed_capacity,
+               d.occupied_beds,
+               CASE d.room_type
+                   WHEN 1 THEN '四人间'
+                   WHEN 2 THEN '六人间'
+                   WHEN 3 THEN '八人间'
+                   ELSE '未知'
+               END as room_type_name,
+               d.gender_type,
+               CASE d.gender_type
+                   WHEN 1 THEN '男生宿舍'
+                   WHEN 2 THEN '女生宿舍'
+                   WHEN 3 THEN '混合宿舍'
+                   ELSE '未知'
+               END as gender_type_name,
+               d.bed_count as max_capacity, d.occupied_beds as current_count,
+               d.status,
+               CASE d.status
+                   WHEN 1 THEN '正常'
+                   WHEN 0 THEN '停用'
+                   ELSE '未知'
+               END as status_name,
+               d.created_at, d.updated_at
+        FROM dormitories d
+        LEFT JOIN buildings b ON d.building_id = b.id AND b.deleted = 0
+        LEFT JOIN departments dept ON d.department_id = dept.id AND dept.deleted = 0
+        LEFT JOIN class_dormitory_bindings cdb ON d.id = cdb.dormitory_id
+        LEFT JOIN classes c ON cdb.class_id = c.id AND c.deleted = 0
+        WHERE d.deleted = 0
+        AND d.department_id = #{departmentId}
+        AND d.status = 1
+        GROUP BY d.id, d.building_id, d.department_id, d.dormitory_no,
+                 b.building_name, b.building_no, dept.dept_name,
+                 d.floor_number, d.room_type, d.bed_capacity, d.occupied_beds,
+                 d.gender_type, d.bed_count, d.status, d.created_at, d.updated_at
+        ORDER BY b.building_name ASC, d.floor_number ASC, d.dormitory_no ASC
+    </select>
+
+    <!-- 查询有空床位的宿舍 -->
+    <select id="selectAvailableDormitories" resultMap="DormitoryResponseMap">
+        SELECT d.id, d.building_id, d.dormitory_no,
+               b.building_name, b.building_no,
+               d.floor_number, d.room_type,
+               CASE d.room_type
+                   WHEN 1 THEN '四人间'
+                   WHEN 2 THEN '六人间'
+                   WHEN 3 THEN '八人间'
+                   ELSE '未知'
+               END as room_type_name,
+               d.gender_type,
+               CASE d.gender_type
+                   WHEN 1 THEN '男生宿舍'
+                   WHEN 2 THEN '女生宿舍'
+                   WHEN 3 THEN '混合宿舍'
+                   ELSE '未知'
+               END as gender_type_name,
+               d.bed_count as max_capacity, d.occupied_beds as current_count,
+               d.status,
+               CASE d.status
+                   WHEN 1 THEN '正常'
+                   WHEN 0 THEN '停用'
+                   ELSE '未知'
+               END as status_name,
+               d.created_at, d.updated_at
+        FROM dormitories d
+        LEFT JOIN buildings b ON d.building_id = b.id AND b.deleted = 0
+        WHERE d.deleted = 0
+        AND d.status = 1
+        AND d.occupied_beds <![CDATA[<]]> d.bed_count
+        <if test="genderType != null">
+            AND d.gender_type = #{genderType}
+        </if>
+        ORDER BY b.building_name ASC, d.floor_number ASC
+    </select>
+
+    <!-- 获取所有正常状态的宿舍 -->
+    <select id="selectAllNormal" resultMap="DormitoryResponseMap">
+        SELECT d.id, d.building_id, d.dormitory_no,
+               b.building_name, b.building_no,
+               d.floor_number, d.room_type,
+               CASE d.room_type
+                   WHEN 1 THEN '四人间'
+                   WHEN 2 THEN '六人间'
+                   WHEN 3 THEN '八人间'
+                   ELSE '未知'
+               END as room_type_name,
+               d.gender_type,
+               CASE d.gender_type
+                   WHEN 1 THEN '男生宿舍'
+                   WHEN 2 THEN '女生宿舍'
+                   WHEN 3 THEN '混合宿舍'
+                   ELSE '未知'
+               END as gender_type_name,
+               d.bed_count as max_capacity, d.occupied_beds as current_count,
+               d.status,
+               CASE d.status
+                   WHEN 1 THEN '正常'
+                   WHEN 0 THEN '停用'
+                   ELSE '未知'
+               END as status_name,
+               d.created_at, d.updated_at
+        FROM dormitories d
+        LEFT JOIN buildings b ON d.building_id = b.id AND b.deleted = 0
+        WHERE d.deleted = 0
+        AND d.status = 1
+        ORDER BY b.building_name ASC, d.floor_number ASC, d.dormitory_no ASC
+    </select>
+
+    <!-- 更新宿舍已占用床位数 -->
+    <update id="updateOccupiedBeds">
+        UPDATE dormitories
+        SET occupied_beds = #{occupiedBeds}, updated_at = NOW()
+        WHERE id = #{dormitoryId}
+        AND deleted = 0
+    </update>
+
+    <!-- 统计宿舍楼内学生总数 -->
+    <select id="countStudentsByBuildingId" resultType="int">
+        SELECT COUNT(*)
+        FROM students s
+        INNER JOIN dormitories d ON s.dormitory_id = d.id
+        WHERE d.building_id = #{buildingId}
+        AND s.deleted = 0
+        AND d.deleted = 0
+    </select>
+
+    <!-- 删除宿舍楼下的所有房间 -->
+    <update id="deleteByBuildingId">
+        UPDATE dormitories
+        SET deleted = 1, updated_at = NOW()
+        WHERE building_id = #{buildingId}
+        AND deleted = 0
+    </update>
+
+</mapper>

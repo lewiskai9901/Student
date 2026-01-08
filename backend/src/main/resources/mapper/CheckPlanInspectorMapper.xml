@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.school.management.mapper.CheckPlanInspectorMapper">
+
+    <resultMap id="BaseResultMap" type="com.school.management.entity.CheckPlanInspector">
+        <id column="id" property="id"/>
+        <result column="plan_id" property="planId"/>
+        <result column="user_id" property="userId"/>
+        <result column="status" property="status"/>
+        <result column="remark" property="remark"/>
+        <result column="created_at" property="createdAt"/>
+        <result column="created_by" property="createdBy"/>
+        <result column="updated_at" property="updatedAt"/>
+        <result column="deleted" property="deleted"/>
+        <result column="user_name" property="userName"/>
+        <result column="username" property="username"/>
+        <result column="department_name" property="departmentName"/>
+    </resultMap>
+
+    <select id="selectByPlanIdWithUser" resultMap="BaseResultMap">
+        SELECT
+            i.*,
+            u.real_name as user_name,
+            u.username,
+            d.dept_name as department_name
+        FROM check_plan_inspectors i
+        LEFT JOIN users u ON i.user_id = u.id AND u.deleted = 0
+        LEFT JOIN departments d ON u.department_id = d.id AND d.deleted = 0
+        WHERE i.plan_id = #{planId}
+          AND i.deleted = 0
+        ORDER BY i.created_at DESC
+    </select>
+
+    <select id="countByPlanIdAndUserId" resultType="int">
+        SELECT COUNT(*)
+        FROM check_plan_inspectors
+        WHERE plan_id = #{planId}
+          AND user_id = #{userId}
+          AND deleted = 0
+    </select>
+
+</mapper>

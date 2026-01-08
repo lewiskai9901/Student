@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.school.management.mapper.CategoryWeightRuleMapper">
+
+    <resultMap id="BaseResultMap" type="com.school.management.entity.CategoryWeightRule">
+        <id column="id" property="id"/>
+        <result column="weight_config_id" property="weightConfigId"/>
+        <result column="category_id" property="categoryId"/>
+        <result column="enable_weight" property="enableWeight"/>
+        <result column="custom_min_weight" property="customMinWeight"/>
+        <result column="custom_max_weight" property="customMaxWeight"/>
+        <result column="weight_coefficient" property="weightCoefficient"/>
+        <result column="description" property="description"/>
+        <result column="created_at" property="createdAt"/>
+        <result column="updated_at" property="updatedAt"/>
+    </resultMap>
+
+    <sql id="Base_Column_List">
+        id, weight_config_id, category_id, enable_weight, custom_min_weight,
+        custom_max_weight, weight_coefficient, description, created_at, updated_at
+    </sql>
+
+    <!-- 查询配置的所有类别规则 -->
+    <select id="selectByConfigId" resultMap="BaseResultMap">
+        SELECT
+        <include refid="Base_Column_List"/>
+        FROM category_weight_rules
+        WHERE weight_config_id = #{weightConfigId}
+        ORDER BY category_id ASC
+    </select>
+
+    <!-- 查询类别的加权规则 -->
+    <select id="selectByConfigAndCategory" resultMap="BaseResultMap">
+        SELECT
+        <include refid="Base_Column_List"/>
+        FROM category_weight_rules
+        WHERE weight_config_id = #{weightConfigId}
+        AND category_id = #{categoryId}
+        LIMIT 1
+    </select>
+
+    <!-- 批量插入类别规则 -->
+    <insert id="batchInsert">
+        INSERT INTO category_weight_rules
+        (weight_config_id, category_id, enable_weight, custom_min_weight, custom_max_weight,
+        weight_coefficient, description, created_at, updated_at)
+        VALUES
+        <foreach collection="rules" item="item" separator=",">
+            (#{item.weightConfigId}, #{item.categoryId}, #{item.enableWeight},
+            #{item.customMinWeight}, #{item.customMaxWeight}, #{item.weightCoefficient},
+            #{item.description}, NOW(), NOW())
+        </foreach>
+    </insert>
+
+    <!-- 删除配置的所有类别规则 -->
+    <delete id="deleteByConfigId">
+        DELETE
+        FROM category_weight_rules
+        WHERE weight_config_id = #{weightConfigId}
+    </delete>
+
+</mapper>

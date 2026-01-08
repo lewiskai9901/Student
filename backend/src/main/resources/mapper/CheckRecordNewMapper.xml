@@ -1,0 +1,223 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.school.management.mapper.CheckRecordNewMapper">
+
+    <!-- 基础查询字段 -->
+    <sql id="BaseSelectColumns">
+        cr.id,
+        cr.record_code,
+        cr.check_name,
+        cr.check_date,
+        cr.check_type,
+        cr.template_id,
+        ct.template_name,
+        cr.rating_template_id,
+        rt.template_name as rating_template_name,
+        cr.status,
+        cr.total_classes,
+        cr.total_items,
+        cr.total_deduct,
+        cr.drafted_at,
+        cr.submitted_at,
+        cr.reviewed_at,
+        cr.published_at,
+        cr.archived_at,
+        cr.remarks,
+        cr.created_by,
+        u.real_name as creator_name,
+        cr.created_at,
+        cr.updated_at
+    </sql>
+
+    <!-- 基础表关联 -->
+    <sql id="BaseJoins">
+        FROM check_records cr
+        LEFT JOIN check_templates ct ON cr.template_id = ct.id AND ct.deleted = 0
+        LEFT JOIN rating_templates rt ON cr.rating_template_id = rt.id AND rt.deleted = 0
+        LEFT JOIN users u ON cr.created_by = u.id AND u.deleted = 0
+    </sql>
+
+    <!-- 查询条件 -->
+    <sql id="QueryConditions">
+        <where>
+            cr.deleted = 0
+            <if test="query.recordCode != null and query.recordCode != ''">
+                AND cr.record_code LIKE CONCAT('%', #{query.recordCode}, '%')
+            </if>
+            <if test="query.checkName != null and query.checkName != ''">
+                AND cr.check_name LIKE CONCAT('%', #{query.checkName}, '%')
+            </if>
+            <if test="query.checkType != null">
+                AND cr.check_type = #{query.checkType}
+            </if>
+            <if test="query.status != null">
+                AND cr.status = #{query.status}
+            </if>
+            <if test="query.templateId != null">
+                AND cr.template_id = #{query.templateId}
+            </if>
+            <if test="query.ratingTemplateId != null">
+                AND cr.rating_template_id = #{query.ratingTemplateId}
+            </if>
+            <if test="query.checkDateStart != null">
+                AND cr.check_date >= #{query.checkDateStart}
+            </if>
+            <if test="query.checkDateEnd != null">
+                AND cr.check_date &lt;= #{query.checkDateEnd}
+            </if>
+            <if test="query.createdBy != null">
+                AND cr.created_by = #{query.createdBy}
+            </if>
+        </where>
+    </sql>
+
+    <!-- 分页查询检查记录 -->
+    <select id="selectCheckRecordPage" resultType="java.util.Map">
+        SELECT
+        <include refid="BaseSelectColumns"/>
+        <include refid="BaseJoins"/>
+        <include refid="QueryConditions"/>
+        ORDER BY cr.check_date DESC, cr.created_at DESC
+    </select>
+
+    <!-- 获取检查记录详细信息 -->
+    <select id="selectCheckRecordDetail" resultType="java.util.Map">
+        SELECT
+            cr.*,
+            ct.template_name,
+            ct.template_code,
+            rt.template_name as rating_template_name,
+            rt.template_code as rating_template_code,
+            u.real_name as creator_name,
+            u2.real_name as submitter_name,
+            u3.real_name as reviewer_name,
+            u4.real_name as publisher_name
+        FROM check_records cr
+        LEFT JOIN check_templates ct ON cr.template_id = ct.id AND ct.deleted = 0
+        LEFT JOIN rating_templates rt ON cr.rating_template_id = rt.id AND rt.deleted = 0
+        LEFT JOIN users u ON cr.created_by = u.id AND u.deleted = 0
+        LEFT JOIN users u2 ON cr.submitted_by = u2.id AND u2.deleted = 0
+        LEFT JOIN users u3 ON cr.reviewed_by = u3.id AND u3.deleted = 0
+        LEFT JOIN users u4 ON cr.published_by = u4.id AND u4.deleted = 0
+        WHERE cr.deleted = 0
+        AND cr.id = #{id}
+    </select>
+
+    <!-- 获取检查记录统计信息 -->
+    <select id="selectCheckRecordStatistics" resultType="java.util.Map">
+        SELECT
+            COUNT(DISTINCT ccs.class_id) as total_classes,
+            COUNT(DISTINCT cri.id) as total_items,
+            COALESCE(SUM(ccs.total_deduct), 0) as total_original_deduct,
+            COALESCE(SUM(ccs.weighted_deduct), 0) as total_weighted_deduct,
+            COUNT(DISTINCT CASE WHEN cri.appeal_status = 1 THEN cri.id END) as pending_appeals,
+            COUNT(DISTINCT CASE WHEN cri.appeal_status = 2 THEN cri.id END) as approved_appeals,
+            COUNT(DISTINCT CASE WHEN cri.appeal_status = 3 THEN cri.id END) as rejected_appeals,
+            COUNT(DISTINCT CASE WHEN cri.is_temporary = 1 THEN cri.id END) as temporary_items
+        FROM check_records cr
+        LEFT JOIN check_record_class_stats ccs ON cr.id = ccs.record_id AND ccs.deleted = 0
+        LEFT JOIN check_record_items cri ON cr.id = cri.record_id AND cri.deleted = 0
+        WHERE cr.deleted = 0
+        AND cr.id = #{recordId}
+    </select>
+
+    <!-- 获取班级得分排名列表 -->
+    <select id="selectClassScoreRanking" resultType="java.util.Map">
+        SELECT
+            ccs.id,
+            ccs.record_id,
+            ccs.class_id,
+            c.class_name,
+            c.grade_level,
+            ccs.total_deduct,
+            ccs.weighted_deduct,
+            ccs.final_score,
+            ccs.class_rank,
+            ccs.grade_rank,
+            ccs.class_size,
+            ccs.deduct_item_count,
+            ccs.rating_code,
+            ccs.rating_name,
+            d.dept_name as department_name
+        FROM check_record_class_stats ccs
+        LEFT JOIN classes c ON ccs.class_id = c.id AND c.deleted = 0
+        LEFT JOIN departments d ON c.department_id = d.id AND d.deleted = 0
+        WHERE ccs.deleted = 0
+        AND ccs.record_id = #{recordId}
+        ORDER BY ccs.final_score DESC, ccs.weighted_deduct ASC
+    </select>
+
+    <!-- 批量更新记录状态 -->
+    <update id="batchUpdateStatus">
+        UPDATE check_records
+        SET status = #{status},
+            updated_at = NOW()
+        <if test="status == 1">
+            , submitted_at = NOW()
+            , submitted_by = #{userId}
+        </if>
+        <if test="status == 2">
+            , reviewed_at = NOW()
+            , reviewed_by = #{userId}
+        </if>
+        <if test="status == 3">
+            , published_at = NOW()
+            , published_by = #{userId}
+        </if>
+        <if test="status == 4">
+            , archived_at = NOW()
+            , archived_by = #{userId}
+        </if>
+        WHERE deleted = 0
+        AND id IN
+        <foreach collection="recordIds" item="id" open="(" separator="," close=")">
+            #{id}
+        </foreach>
+    </update>
+
+    <!-- 根据模板ID查询检查记录数量 -->
+    <select id="countByTemplateId" resultType="java.lang.Integer">
+        SELECT COUNT(*)
+        FROM check_records
+        WHERE template_id = #{templateId}
+        AND deleted = 0
+    </select>
+
+    <!-- 根据评级模板ID查询检查记录数量 -->
+    <select id="countByRatingTemplateId" resultType="java.lang.Integer">
+        SELECT COUNT(*)
+        FROM check_records
+        WHERE rating_template_id = #{ratingTemplateId}
+        AND deleted = 0
+    </select>
+
+    <!-- 获取检查记录概览 -->
+    <select id="selectCheckRecordOverview" resultType="java.util.Map">
+        SELECT
+            cr.id,
+            cr.record_code,
+            cr.check_name,
+            cr.check_date,
+            cr.status,
+            cr.total_classes,
+            cr.total_items,
+            cr.total_deduct,
+            ct.template_name
+        FROM check_records cr
+        LEFT JOIN check_templates ct ON cr.template_id = ct.id AND ct.deleted = 0
+        <where>
+            cr.deleted = 0
+            <if test="query.checkType != null">
+                AND cr.check_type = #{query.checkType}
+            </if>
+            <if test="query.status != null">
+                AND cr.status = #{query.status}
+            </if>
+            <if test="query.limit != null">
+                LIMIT #{query.limit}
+            </if>
+        </where>
+        ORDER BY cr.check_date DESC
+    </select>
+
+</mapper>

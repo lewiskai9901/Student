@@ -1,0 +1,119 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.school.management.mapper.evaluation.HonorTypeMapper">
+
+    <!-- 基础结果映射 -->
+    <resultMap id="BaseResultMap" type="com.school.management.entity.evaluation.HonorType">
+        <id column="id" property="id"/>
+        <result column="type_code" property="typeCode"/>
+        <result column="type_name" property="typeName"/>
+        <result column="category" property="category"/>
+        <result column="evaluation_dimension" property="evaluationDimension"/>
+        <result column="description" property="description"/>
+        <result column="required_attachments" property="requiredAttachments"/>
+        <result column="sort_order" property="sortOrder"/>
+        <result column="status" property="status"/>
+        <result column="created_by" property="createdBy"/>
+        <result column="created_at" property="createdAt"/>
+        <result column="updated_by" property="updatedBy"/>
+        <result column="updated_at" property="updatedAt"/>
+        <result column="deleted" property="deleted"/>
+    </resultMap>
+
+    <!-- 查询所有启用的荣誉类型 -->
+    <select id="selectAllEnabled" resultMap="BaseResultMap">
+        SELECT * FROM honor_types
+        WHERE status = 1 AND deleted = 0
+        ORDER BY sort_order, id
+    </select>
+
+    <!-- 根据类别查询 -->
+    <select id="selectByCategory" resultMap="BaseResultMap">
+        SELECT * FROM honor_types
+        WHERE category = #{category}
+        AND status = 1
+        AND deleted = 0
+        ORDER BY sort_order, id
+    </select>
+
+    <!-- 根据编码查询 -->
+    <select id="selectByCode" resultMap="BaseResultMap">
+        SELECT * FROM honor_types
+        WHERE type_code = #{code}
+        AND deleted = 0
+        LIMIT 1
+    </select>
+
+    <!-- 查询荣誉类型详情(含等级配置) -->
+    <select id="selectDetailById" resultType="java.util.Map">
+        SELECT
+            ht.id,
+            ht.type_code AS typeCode,
+            ht.type_name AS typeName,
+            ht.category,
+            ht.evaluation_dimension AS evaluationDimension,
+            ht.description,
+            ht.required_attachments AS requiredAttachments,
+            ht.sort_order AS sortOrder,
+            ht.status,
+            ht.created_at AS createdAt,
+            ht.updated_at AS updatedAt,
+            (
+                SELECT JSON_ARRAYAGG(
+                    JSON_OBJECT(
+                        'id', hlc.id,
+                        'levelCode', hlc.level_code,
+                        'levelName', hlc.level_name,
+                        'rankCode', hlc.rank_code,
+                        'rankName', hlc.rank_name,
+                        'score', hlc.score,
+                        'maxCount', hlc.max_count,
+                        'priority', hlc.priority,
+                        'sortOrder', hlc.sort_order,
+                        'status', hlc.status
+                    )
+                )
+                FROM honor_level_configs hlc
+                WHERE hlc.honor_type_id = ht.id
+                AND hlc.deleted = 0
+                ORDER BY hlc.priority DESC, hlc.sort_order
+            ) AS levelConfigs
+        FROM honor_types ht
+        WHERE ht.id = #{id}
+        AND ht.deleted = 0
+    </select>
+
+    <!-- 查询可用的荣誉类型（用于申报选择） -->
+    <select id="selectAvailableTypes" resultType="java.util.Map">
+        SELECT
+            ht.id,
+            ht.type_code AS typeCode,
+            ht.type_name AS typeName,
+            ht.category,
+            ht.evaluation_dimension AS evaluationDimension,
+            ht.description,
+            ht.required_attachments AS requiredAttachments,
+            (
+                SELECT JSON_ARRAYAGG(
+                    JSON_OBJECT(
+                        'id', hlc.id,
+                        'levelCode', hlc.level_code,
+                        'levelName', hlc.level_name,
+                        'rankCode', hlc.rank_code,
+                        'rankName', hlc.rank_name,
+                        'score', hlc.score
+                    )
+                )
+                FROM honor_level_configs hlc
+                WHERE hlc.honor_type_id = ht.id
+                AND hlc.status = 1
+                AND hlc.deleted = 0
+                ORDER BY hlc.priority DESC
+            ) AS levelConfigs
+        FROM honor_types ht
+        WHERE ht.status = 1
+        AND ht.deleted = 0
+        ORDER BY ht.category, ht.sort_order, ht.id
+    </select>
+
+</mapper>

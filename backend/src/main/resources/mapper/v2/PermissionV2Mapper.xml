@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.school.management.infrastructure.persistence.access.PermissionMapper">
+
+    <resultMap id="PermissionResultMap" type="com.school.management.infrastructure.persistence.access.PermissionPO">
+        <id column="id" property="id"/>
+        <result column="permission_code" property="permissionCode"/>
+        <result column="permission_name" property="permissionName"/>
+        <result column="description" property="description"/>
+        <result column="resource" property="resource"/>
+        <result column="action" property="action"/>
+        <result column="type" property="type"/>
+        <result column="parent_id" property="parentId"/>
+        <result column="sort_order" property="sortOrder"/>
+        <result column="is_enabled" property="isEnabled"/>
+        <result column="created_at" property="createdAt"/>
+        <result column="updated_at" property="updatedAt"/>
+        <result column="deleted" property="deleted"/>
+    </resultMap>
+
+    <!-- 按类型查询权限 -->
+    <select id="selectByType" resultMap="PermissionResultMap">
+        SELECT * FROM permissions
+        WHERE type = #{type}
+        AND deleted = 0
+        ORDER BY sort_order
+    </select>
+
+    <!-- 查询根权限（无父级） -->
+    <select id="selectRoots" resultMap="PermissionResultMap">
+        SELECT * FROM permissions
+        WHERE parent_id IS NULL
+        AND deleted = 0
+        ORDER BY sort_order
+    </select>
+
+    <!-- 查询子权限 -->
+    <select id="selectByParentId" resultMap="PermissionResultMap">
+        SELECT * FROM permissions
+        WHERE parent_id = #{parentId}
+        AND deleted = 0
+        ORDER BY sort_order
+    </select>
+
+    <!-- 按资源和动作查询 -->
+    <select id="selectByResourceAndAction" resultMap="PermissionResultMap">
+        SELECT * FROM permissions
+        WHERE resource = #{resource}
+        AND action = #{action}
+        AND deleted = 0
+        LIMIT 1
+    </select>
+
+    <!-- 按ID列表批量查询 -->
+    <select id="selectByIds" resultMap="PermissionResultMap">
+        SELECT * FROM permissions
+        WHERE id IN
+        <foreach collection="ids" item="id" open="(" separator="," close=")">
+            #{id}
+        </foreach>
+        AND deleted = 0
+        ORDER BY sort_order
+    </select>
+
+</mapper>

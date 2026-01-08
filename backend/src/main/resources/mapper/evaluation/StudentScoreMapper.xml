@@ -1,0 +1,301 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.school.management.mapper.evaluation.StudentScoreMapper">
+
+    <!-- 分页查询成绩 -->
+    <select id="selectScorePage" resultType="java.util.Map">
+        SELECT
+            ss.id,
+            ss.student_id,
+            ss.course_id,
+            ss.semester_id,
+            ss.usual_score,
+            ss.midterm_score,
+            ss.final_score,
+            ss.total_score,
+            ss.credit,
+            ss.gpa,
+            ss.status,
+            ss.is_locked,
+            ss.created_at,
+            s.student_no,
+            u.real_name as student_name,
+            c.class_name,
+            co.course_code,
+            co.course_name,
+            co.course_type,
+            sem.semester_name
+        FROM student_scores ss
+        LEFT JOIN students s ON ss.student_id = s.id
+        LEFT JOIN users u ON s.user_id = u.id
+        LEFT JOIN classes c ON s.class_id = c.id
+        LEFT JOIN courses co ON ss.course_id = co.id
+        LEFT JOIN semesters sem ON ss.semester_id = sem.id
+        WHERE ss.deleted = 0
+        <if test="query.studentName != null and query.studentName != ''">
+            AND u.real_name LIKE CONCAT('%', #{query.studentName}, '%')
+        </if>
+        <if test="query.studentNo != null and query.studentNo != ''">
+            AND s.student_no LIKE CONCAT('%', #{query.studentNo}, '%')
+        </if>
+        <if test="query.courseId != null">
+            AND ss.course_id = #{query.courseId}
+        </if>
+        <if test="query.semesterId != null">
+            AND ss.semester_id = #{query.semesterId}
+        </if>
+        <if test="query.classId != null">
+            AND s.class_id = #{query.classId}
+        </if>
+        <if test="query.status != null">
+            AND ss.status = #{query.status}
+        </if>
+        ORDER BY s.student_no, co.course_code
+    </select>
+
+    <!-- 查询学生某学期的所有成绩 -->
+    <select id="selectByStudentAndSemester" resultType="java.util.Map">
+        SELECT
+            ss.id,
+            ss.course_id,
+            ss.usual_score as usualScore,
+            ss.midterm_score as midtermScore,
+            ss.final_score as finalScore,
+            ss.total_score as totalScore,
+            ss.credit,
+            ss.gpa,
+            ss.status,
+            co.course_code as courseCode,
+            co.course_name as courseName,
+            co.course_type as courseType
+        FROM student_scores ss
+        LEFT JOIN courses co ON ss.course_id = co.id
+        WHERE ss.student_id = #{studentId}
+        AND ss.semester_id = #{semesterId}
+        AND ss.deleted = 0
+        ORDER BY co.course_code
+    </select>
+
+    <!-- 查询班级某课程的成绩列表 -->
+    <select id="selectByClassAndCourse" resultType="java.util.Map">
+        SELECT
+            ss.id,
+            ss.student_id,
+            ss.usual_score,
+            ss.midterm_score,
+            ss.final_score,
+            ss.total_score,
+            ss.gpa,
+            s.student_no,
+            u.real_name as student_name
+        FROM student_scores ss
+        LEFT JOIN students s ON ss.student_id = s.id
+        LEFT JOIN users u ON s.user_id = u.id
+        WHERE s.class_id = #{classId}
+        AND ss.course_id = #{courseId}
+        AND ss.semester_id = #{semesterId}
+        AND ss.deleted = 0
+        ORDER BY ss.final_score DESC
+    </select>
+
+    <!-- 批量插入成绩 -->
+    <insert id="batchInsert">
+        INSERT INTO student_scores (student_id, course_id, semester_id, usual_score, midterm_score, final_score, total_score, credit, gpa, status)
+        VALUES
+        <foreach collection="scores" item="score" separator=",">
+            (#{score.studentId}, #{score.courseId}, #{score.semesterId}, #{score.usualScore}, #{score.midtermScore}, #{score.finalScore}, #{score.totalScore}, #{score.credit}, #{score.gpa}, #{score.status})
+        </foreach>
+    </insert>
+
+    <!-- 批量更新成绩 -->
+    <update id="batchUpdate">
+        <foreach collection="scores" item="score" separator=";">
+            UPDATE student_scores
+            SET usual_score = #{score.usualScore},
+                midterm_score = #{score.midtermScore},
+                final_score = #{score.finalScore},
+                total_score = #{score.totalScore},
+                gpa = #{score.gpa},
+                updated_at = NOW()
+            WHERE id = #{score.id}
+        </foreach>
+    </update>
+
+    <!-- 计算学生学期成绩汇总 -->
+    <select id="calculateSemesterSummary" resultType="java.util.Map">
+        SELECT
+            COUNT(*) as course_count,
+            SUM(credit) as total_credit,
+            AVG(final_score) as avg_score,
+            SUM(credit * gpa) / SUM(credit) as weighted_gpa,
+            SUM(credit * final_score) / SUM(credit) as weighted_avg
+        FROM student_scores
+        WHERE student_id = #{studentId}
+        AND semester_id = #{semesterId}
+        AND status = 1
+        AND deleted = 0
+    </select>
+
+    <!-- 统计班级成绩 -->
+    <select id="selectClassScoreStatistics" resultType="java.util.Map">
+        SELECT
+            COUNT(DISTINCT ss.student_id) as student_count,
+            AVG(ss.final_score) as avg_score,
+            MAX(ss.final_score) as max_score,
+            MIN(ss.final_score) as min_score,
+            SUM(CASE WHEN ss.final_score >= 60 THEN 1 ELSE 0 END) as pass_count,
+            SUM(CASE WHEN ss.final_score >= 60 THEN 1 ELSE 0 END) * 100.0 / COUNT(*) as pass_rate
+        FROM student_scores ss
+        LEFT JOIN students s ON ss.student_id = s.id
+        WHERE s.class_id = #{classId}
+        AND ss.semester_id = #{semesterId}
+        AND ss.deleted = 0
+    </select>
+
+    <!-- 查询成绩详情 -->
+    <select id="selectDetailById" resultType="java.util.Map">
+        SELECT
+            ss.id,
+            ss.student_id,
+            ss.course_id,
+            ss.semester_id,
+            ss.usual_score,
+            ss.midterm_score,
+            ss.final_score,
+            ss.total_score,
+            ss.credit,
+            ss.gpa,
+            ss.status,
+            ss.is_locked,
+            ss.remark,
+            ss.created_at,
+            ss.updated_at,
+            s.student_no,
+            u.real_name as student_name,
+            c.id as class_id,
+            c.class_name,
+            co.course_code,
+            co.course_name,
+            co.course_type,
+            sem.semester_name,
+            sem.academic_year
+        FROM student_scores ss
+        LEFT JOIN students s ON ss.student_id = s.id
+        LEFT JOIN users u ON s.user_id = u.id
+        LEFT JOIN classes c ON s.class_id = c.id
+        LEFT JOIN courses co ON ss.course_id = co.id
+        LEFT JOIN semesters sem ON ss.semester_id = sem.id
+        WHERE ss.id = #{id}
+        AND ss.deleted = 0
+    </select>
+
+    <!-- 根据学生和课程查询成绩 -->
+    <select id="selectByStudentAndCourse" resultType="com.school.management.entity.evaluation.StudentScore">
+        SELECT * FROM student_scores
+        WHERE student_id = #{studentId}
+        AND course_id = #{courseId}
+        AND semester_id = #{semesterId}
+        AND deleted = 0
+        LIMIT 1
+    </select>
+
+    <!-- 统计班级课程成绩 -->
+    <select id="selectClassStatistics" resultType="java.util.Map">
+        SELECT
+            COUNT(*) as total_count,
+            AVG(ss.final_score) as avg_score,
+            MAX(ss.final_score) as max_score,
+            MIN(ss.final_score) as min_score,
+            SUM(CASE WHEN ss.final_score >= 90 THEN 1 ELSE 0 END) as excellent_count,
+            SUM(CASE WHEN ss.final_score >= 80 AND ss.final_score &lt; 90 THEN 1 ELSE 0 END) as good_count,
+            SUM(CASE WHEN ss.final_score >= 70 AND ss.final_score &lt; 80 THEN 1 ELSE 0 END) as medium_count,
+            SUM(CASE WHEN ss.final_score >= 60 AND ss.final_score &lt; 70 THEN 1 ELSE 0 END) as pass_count,
+            SUM(CASE WHEN ss.final_score &lt; 60 THEN 1 ELSE 0 END) as fail_count
+        FROM student_scores ss
+        LEFT JOIN students s ON ss.student_id = s.id
+        WHERE s.class_id = #{classId}
+        <if test="courseId != null">
+            AND ss.course_id = #{courseId}
+        </if>
+        AND ss.semester_id = #{semesterId}
+        AND ss.deleted = 0
+    </select>
+
+    <!-- 查询课程成绩排名 -->
+    <select id="selectCourseRanking" resultType="java.util.Map">
+        SELECT
+            ss.id,
+            ss.final_score,
+            ss.gpa,
+            s.student_no,
+            u.real_name as student_name,
+            c.class_name,
+            @rank := @rank + 1 as ranking
+        FROM student_scores ss
+        LEFT JOIN students s ON ss.student_id = s.id
+        LEFT JOIN users u ON s.user_id = u.id
+        LEFT JOIN classes c ON s.class_id = c.id
+        CROSS JOIN (SELECT @rank := 0) r
+        WHERE ss.course_id = #{courseId}
+        AND ss.semester_id = #{semesterId}
+        AND ss.deleted = 0
+        ORDER BY ss.final_score DESC
+        LIMIT #{limit}
+    </select>
+
+    <!-- 导出班级成绩 -->
+    <select id="selectForExport" resultType="java.util.Map">
+        SELECT
+            s.student_no as '学号',
+            u.real_name as '姓名',
+            c.class_name as '班级',
+            co.course_name as '课程名称',
+            co.course_type as '课程类型',
+            ss.credit as '学分',
+            ss.usual_score as '平时成绩',
+            ss.midterm_score as '期中成绩',
+            ss.final_score as '期末成绩',
+            ss.total_score as '总评成绩',
+            ss.gpa as 'GPA'
+        FROM student_scores ss
+        LEFT JOIN students s ON ss.student_id = s.id
+        LEFT JOIN users u ON s.user_id = u.id
+        LEFT JOIN classes c ON s.class_id = c.id
+        LEFT JOIN courses co ON ss.course_id = co.id
+        WHERE s.class_id = #{classId}
+        AND ss.semester_id = #{semesterId}
+        AND ss.deleted = 0
+        ORDER BY s.student_no, co.course_code
+    </select>
+
+    <!-- 统计学生学期成绩数量 -->
+    <select id="countByStudentAndSemester" resultType="int">
+        SELECT COUNT(*) FROM student_scores
+        WHERE student_id = #{studentId}
+        AND semester_id = #{semesterId}
+        AND deleted = 0
+    </select>
+
+    <!-- 锁定成绩 -->
+    <update id="lockBySemesterAndCourse">
+        UPDATE student_scores
+        SET is_locked = 1, updated_at = NOW()
+        WHERE semester_id = #{semesterId}
+        <if test="courseId != null">
+            AND course_id = #{courseId}
+        </if>
+        AND deleted = 0
+    </update>
+
+    <!-- 解锁成绩 -->
+    <update id="unlockBySemesterAndCourse">
+        UPDATE student_scores
+        SET is_locked = 0, updated_at = NOW()
+        WHERE semester_id = #{semesterId}
+        <if test="courseId != null">
+            AND course_id = #{courseId}
+        </if>
+        AND deleted = 0
+    </update>
+
+</mapper>

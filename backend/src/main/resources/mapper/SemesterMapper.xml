@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.school.management.mapper.SemesterMapper">
+
+    <!-- 根据学期编码查询学期 -->
+    <select id="selectBySemesterCode" resultType="com.school.management.entity.Semester">
+        SELECT *
+        FROM semesters
+        WHERE semester_code = #{semesterCode}
+          AND deleted = 0
+    </select>
+
+    <!-- 获取当前学期 -->
+    <select id="selectCurrentSemester" resultType="com.school.management.entity.Semester">
+        SELECT *
+        FROM semesters
+        WHERE is_current = 1
+          AND deleted = 0
+        LIMIT 1
+    </select>
+
+    <!-- 取消所有学期的当前状态 -->
+    <update id="cancelAllCurrent">
+        UPDATE semesters
+        SET is_current = 0
+        WHERE is_current = 1
+          AND deleted = 0
+    </update>
+
+</mapper>

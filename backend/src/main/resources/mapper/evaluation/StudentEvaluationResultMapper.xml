@@ -1,0 +1,358 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.school.management.mapper.evaluation.StudentEvaluationResultMapper">
+
+    <!-- 通用查询映射结果 -->
+    <resultMap id="BaseResultMap" type="com.school.management.entity.evaluation.StudentEvaluationResult">
+        <id column="id" property="id"/>
+        <result column="evaluation_period_id" property="evaluationPeriodId"/>
+        <result column="semester_id" property="semesterId"/>
+        <result column="student_id" property="studentId"/>
+        <result column="student_no" property="studentNo"/>
+        <result column="student_name" property="studentName"/>
+        <result column="class_id" property="classId"/>
+        <result column="class_name" property="className"/>
+        <result column="grade_id" property="gradeId"/>
+        <result column="department_id" property="departmentId"/>
+        <result column="moral_base_score" property="moralBaseScore"/>
+        <result column="moral_bonus_score" property="moralBonusScore"/>
+        <result column="moral_deduct_score" property="moralDeductScore"/>
+        <result column="moral_total_score" property="moralTotalScore"/>
+        <result column="moral_weighted_score" property="moralWeightedScore"/>
+        <result column="intellectual_base_score" property="intellectualBaseScore"/>
+        <result column="intellectual_bonus_score" property="intellectualBonusScore"/>
+        <result column="intellectual_deduct_score" property="intellectualDeductScore"/>
+        <result column="intellectual_total_score" property="intellectualTotalScore"/>
+        <result column="intellectual_weighted_score" property="intellectualWeightedScore"/>
+        <result column="physical_base_score" property="physicalBaseScore"/>
+        <result column="physical_bonus_score" property="physicalBonusScore"/>
+        <result column="physical_deduct_score" property="physicalDeductScore"/>
+        <result column="physical_total_score" property="physicalTotalScore"/>
+        <result column="physical_weighted_score" property="physicalWeightedScore"/>
+        <result column="aesthetic_base_score" property="aestheticBaseScore"/>
+        <result column="aesthetic_bonus_score" property="aestheticBonusScore"/>
+        <result column="aesthetic_deduct_score" property="aestheticDeductScore"/>
+        <result column="aesthetic_total_score" property="aestheticTotalScore"/>
+        <result column="aesthetic_weighted_score" property="aestheticWeightedScore"/>
+        <result column="labor_base_score" property="laborBaseScore"/>
+        <result column="labor_bonus_score" property="laborBonusScore"/>
+        <result column="labor_deduct_score" property="laborDeductScore"/>
+        <result column="labor_total_score" property="laborTotalScore"/>
+        <result column="labor_weighted_score" property="laborWeightedScore"/>
+        <result column="development_base_score" property="developmentBaseScore"/>
+        <result column="development_bonus_score" property="developmentBonusScore"/>
+        <result column="development_deduct_score" property="developmentDeductScore"/>
+        <result column="development_total_score" property="developmentTotalScore"/>
+        <result column="development_weighted_score" property="developmentWeightedScore"/>
+        <result column="total_score" property="totalScore"/>
+        <result column="class_rank" property="classRank"/>
+        <result column="class_total" property="classTotal"/>
+        <result column="grade_rank" property="gradeRank"/>
+        <result column="grade_total" property="gradeTotal"/>
+        <result column="department_rank" property="departmentRank"/>
+        <result column="department_total" property="departmentTotal"/>
+        <result column="has_punishment" property="hasPunishment"/>
+        <result column="punishment_type" property="punishmentType"/>
+        <result column="punishment_effect" property="punishmentEffect"/>
+        <result column="status" property="status"/>
+        <result column="version" property="version"/>
+        <result column="calculated_at" property="calculatedAt"/>
+        <result column="reviewed_by" property="reviewedBy"/>
+        <result column="reviewed_at" property="reviewedAt"/>
+        <result column="remarks" property="remarks"/>
+        <result column="created_at" property="createdAt"/>
+        <result column="updated_at" property="updatedAt"/>
+    </resultMap>
+
+    <!-- 分页查询综测结果 -->
+    <select id="selectResultPage" resultType="java.util.Map">
+        SELECT
+            ser.id,
+            ser.student_id AS studentId,
+            ser.student_no AS studentNo,
+            ser.student_name AS studentName,
+            ser.class_id AS classId,
+            ser.class_name AS className,
+            ser.moral_total_score AS moralTotalScore,
+            ser.moral_weighted_score AS moralWeightedScore,
+            ser.intellectual_total_score AS intellectualTotalScore,
+            ser.intellectual_weighted_score AS intellectualWeightedScore,
+            ser.physical_total_score AS physicalTotalScore,
+            ser.physical_weighted_score AS physicalWeightedScore,
+            ser.aesthetic_total_score AS aestheticTotalScore,
+            ser.aesthetic_weighted_score AS aestheticWeightedScore,
+            ser.labor_total_score AS laborTotalScore,
+            ser.labor_weighted_score AS laborWeightedScore,
+            ser.development_total_score AS developmentTotalScore,
+            ser.development_weighted_score AS developmentWeightedScore,
+            ser.total_score AS totalScore,
+            ser.class_rank AS classRank,
+            ser.class_total AS classTotal,
+            ser.grade_rank AS gradeRank,
+            ser.has_punishment AS hasPunishment,
+            ser.status,
+            ser.calculated_at AS calculatedAt
+        FROM student_evaluation_results ser
+        WHERE ser.evaluation_period_id = #{query.periodId}
+        <if test="query.studentNo != null and query.studentNo != ''">
+            AND ser.student_no LIKE CONCAT('%', #{query.studentNo}, '%')
+        </if>
+        <if test="query.studentName != null and query.studentName != ''">
+            AND ser.student_name LIKE CONCAT('%', #{query.studentName}, '%')
+        </if>
+        <if test="query.classId != null">
+            AND ser.class_id = #{query.classId}
+        </if>
+        <if test="query.gradeId != null">
+            AND ser.grade_id = #{query.gradeId}
+        </if>
+        <if test="query.departmentId != null">
+            AND ser.department_id = #{query.departmentId}
+        </if>
+        <if test="query.status != null">
+            AND ser.status = #{query.status}
+        </if>
+        ORDER BY
+        <choose>
+            <when test="query.orderBy == 'totalScore'">ser.total_score DESC</when>
+            <when test="query.orderBy == 'classRank'">ser.class_rank ASC</when>
+            <otherwise>ser.class_name, ser.class_rank ASC</otherwise>
+        </choose>
+    </select>
+
+    <!-- 根据周期和学生查询结果 -->
+    <select id="selectByPeriodAndStudent" resultMap="BaseResultMap">
+        SELECT * FROM student_evaluation_results
+        WHERE evaluation_period_id = #{periodId} AND student_id = #{studentId}
+    </select>
+
+    <!-- 查询学生的综测历史 -->
+    <select id="selectStudentHistory" resultType="java.util.Map">
+        SELECT
+            ser.id,
+            ep.period_name AS periodName,
+            ep.academic_year AS academicYear,
+            ep.semester_type AS semesterType,
+            ser.total_score AS totalScore,
+            ser.class_rank AS classRank,
+            ser.class_total AS classTotal,
+            ser.moral_weighted_score AS moralWeightedScore,
+            ser.intellectual_weighted_score AS intellectualWeightedScore,
+            ser.physical_weighted_score AS physicalWeightedScore,
+            ser.aesthetic_weighted_score AS aestheticWeightedScore,
+            ser.labor_weighted_score AS laborWeightedScore,
+            ser.development_weighted_score AS developmentWeightedScore,
+            ser.status,
+            ser.calculated_at AS calculatedAt
+        FROM student_evaluation_results ser
+        JOIN evaluation_periods ep ON ser.evaluation_period_id = ep.id
+        WHERE ser.student_id = #{studentId}
+        ORDER BY ep.academic_year DESC, ep.semester_type DESC
+    </select>
+
+    <!-- 查询班级综测结果列表 -->
+    <select id="selectByPeriodAndClass" resultMap="BaseResultMap">
+        SELECT * FROM student_evaluation_results
+        WHERE evaluation_period_id = #{periodId} AND class_id = #{classId}
+        ORDER BY total_score DESC
+    </select>
+
+    <!-- 计算班级排名 -->
+    <update id="calculateClassRank">
+        UPDATE student_evaluation_results ser
+        JOIN (
+            SELECT id,
+                   RANK() OVER (PARTITION BY class_id ORDER BY total_score DESC) as rank_num,
+                   COUNT(*) OVER (PARTITION BY class_id) as total_num
+            FROM student_evaluation_results
+            WHERE evaluation_period_id = #{periodId} AND class_id = #{classId}
+        ) ranked ON ser.id = ranked.id
+        SET ser.class_rank = ranked.rank_num,
+            ser.class_total = ranked.total_num
+        WHERE ser.evaluation_period_id = #{periodId} AND ser.class_id = #{classId}
+    </update>
+
+    <!-- 计算年级排名 -->
+    <update id="calculateGradeRank">
+        UPDATE student_evaluation_results ser
+        JOIN (
+            SELECT id,
+                   RANK() OVER (PARTITION BY grade_id ORDER BY total_score DESC) as rank_num,
+                   COUNT(*) OVER (PARTITION BY grade_id) as total_num
+            FROM student_evaluation_results
+            WHERE evaluation_period_id = #{periodId} AND grade_id = #{gradeId}
+        ) ranked ON ser.id = ranked.id
+        SET ser.grade_rank = ranked.rank_num,
+            ser.grade_total = ranked.total_num
+        WHERE ser.evaluation_period_id = #{periodId} AND ser.grade_id = #{gradeId}
+    </update>
+
+    <!-- 计算系部排名 -->
+    <update id="calculateDepartmentRank">
+        UPDATE student_evaluation_results ser
+        JOIN (
+            SELECT id,
+                   RANK() OVER (PARTITION BY department_id ORDER BY total_score DESC) as rank_num,
+                   COUNT(*) OVER (PARTITION BY department_id) as total_num
+            FROM student_evaluation_results
+            WHERE evaluation_period_id = #{periodId} AND department_id = #{departmentId}
+        ) ranked ON ser.id = ranked.id
+        SET ser.department_rank = ranked.rank_num,
+            ser.department_total = ranked.total_num
+        WHERE ser.evaluation_period_id = #{periodId} AND ser.department_id = #{departmentId}
+    </update>
+
+    <!-- 查询综测结果详情 -->
+    <select id="selectDetailById" resultType="java.util.Map">
+        SELECT
+            ser.*,
+            ep.period_name AS periodName,
+            ep.academic_year AS academicYear,
+            (SELECT COUNT(*) FROM student_evaluation_details sed WHERE sed.result_id = ser.id) AS detailCount
+        FROM student_evaluation_results ser
+        JOIN evaluation_periods ep ON ser.evaluation_period_id = ep.id
+        WHERE ser.id = #{id}
+    </select>
+
+    <!-- 批量更新状态 -->
+    <update id="batchUpdateStatus">
+        UPDATE student_evaluation_results
+        SET status = #{status}, updated_at = NOW()
+        WHERE id IN
+        <foreach collection="ids" item="id" open="(" separator="," close=")">
+            #{id}
+        </foreach>
+    </update>
+
+    <!-- 统计班级综测数据 -->
+    <select id="selectClassStatistics" resultType="java.util.Map">
+        SELECT
+            COUNT(*) AS totalCount,
+            AVG(total_score) AS avgScore,
+            MAX(total_score) AS maxScore,
+            MIN(total_score) AS minScore,
+            AVG(moral_weighted_score) AS avgMoralScore,
+            AVG(intellectual_weighted_score) AS avgIntellectualScore,
+            AVG(physical_weighted_score) AS avgPhysicalScore,
+            AVG(aesthetic_weighted_score) AS avgAestheticScore,
+            AVG(labor_weighted_score) AS avgLaborScore,
+            AVG(development_weighted_score) AS avgDevelopmentScore
+        FROM student_evaluation_results
+        WHERE evaluation_period_id = #{periodId} AND class_id = #{classId}
+    </select>
+
+    <!-- 统计年级综测数据 -->
+    <select id="selectGradeStatistics" resultType="java.util.Map">
+        SELECT
+            COUNT(*) AS totalCount,
+            AVG(total_score) AS avgScore,
+            MAX(total_score) AS maxScore,
+            MIN(total_score) AS minScore
+        FROM student_evaluation_results
+        WHERE evaluation_period_id = #{periodId} AND grade_id = #{gradeId}
+    </select>
+
+    <!-- 根据学生和周期查询 -->
+    <select id="selectByStudentAndPeriod" resultMap="BaseResultMap">
+        SELECT * FROM student_evaluation_results
+        WHERE student_id = #{studentId}
+        AND evaluation_period_id = #{periodId}
+        LIMIT 1
+    </select>
+
+    <!-- 查询班级综测排名 -->
+    <select id="selectClassRanking" resultType="java.util.Map">
+        SELECT
+            ser.id,
+            ser.student_no as studentNo,
+            ser.student_name as studentName,
+            ser.moral_total_score as moralScore,
+            ser.intellectual_total_score as intellectualScore,
+            ser.physical_total_score as physicalScore,
+            ser.aesthetic_total_score as aestheticScore,
+            ser.labor_total_score as laborScore,
+            ser.development_total_score as developmentScore,
+            ser.total_score as totalScore,
+            ser.class_rank as classRank
+        FROM student_evaluation_results ser
+        WHERE ser.evaluation_period_id = #{periodId}
+        AND ser.class_id = #{classId}
+        ORDER BY ser.class_rank
+    </select>
+
+    <!-- 查询年级综测排名 -->
+    <select id="selectGradeRanking" resultType="java.util.Map">
+        SELECT
+            ser.id,
+            ser.student_no as studentNo,
+            ser.student_name as studentName,
+            ser.class_name as className,
+            ser.moral_total_score as moralScore,
+            ser.intellectual_total_score as intellectualScore,
+            ser.physical_total_score as physicalScore,
+            ser.aesthetic_total_score as aestheticScore,
+            ser.labor_total_score as laborScore,
+            ser.development_total_score as developmentScore,
+            ser.total_score as totalScore,
+            ser.grade_rank as gradeRank
+        FROM student_evaluation_results ser
+        WHERE ser.evaluation_period_id = #{periodId}
+        AND ser.grade_id = #{gradeId}
+        ORDER BY ser.grade_rank
+        <if test="limit != null">
+            LIMIT #{limit}
+        </if>
+    </select>
+
+    <!-- 统计周期综测数据 -->
+    <select id="selectPeriodStatistics" resultType="java.util.Map">
+        SELECT
+            COUNT(*) as totalCount,
+            ROUND(AVG(moral_total_score), 2) as avgMoral,
+            ROUND(AVG(intellectual_total_score), 2) as avgIntellectual,
+            ROUND(AVG(physical_total_score), 2) as avgPhysical,
+            ROUND(AVG(aesthetic_total_score), 2) as avgAesthetic,
+            ROUND(AVG(labor_total_score), 2) as avgLabor,
+            ROUND(AVG(development_total_score), 2) as avgDevelopment,
+            ROUND(AVG(total_score), 2) as avgTotal,
+            MAX(total_score) as maxTotal,
+            MIN(total_score) as minTotal,
+            SUM(CASE WHEN status >= 1 THEN 1 ELSE 0 END) as calculatedCount,
+            SUM(CASE WHEN status >= 3 THEN 1 ELSE 0 END) as reviewedCount
+        FROM student_evaluation_results
+        WHERE evaluation_period_id = #{periodId}
+    </select>
+
+    <!-- 导出综测结果 -->
+    <select id="selectForExport" resultType="java.util.Map">
+        SELECT
+            ser.student_no as studentNo,
+            ser.student_name as studentName,
+            ser.class_name as className,
+            ser.moral_total_score as moralScore,
+            ser.intellectual_total_score as intellectualScore,
+            ser.physical_total_score as physicalScore,
+            ser.aesthetic_total_score as aestheticScore,
+            ser.labor_total_score as laborScore,
+            ser.development_total_score as developmentScore,
+            ser.total_score as totalScore,
+            ser.class_rank as classRank,
+            ser.grade_rank as gradeRank,
+            CASE ser.status
+                WHEN 0 THEN '待计算'
+                WHEN 1 THEN '已计算'
+                WHEN 2 THEN '待审核'
+                WHEN 3 THEN '已审核'
+                WHEN 4 THEN '公示中'
+                WHEN 5 THEN '已生效'
+                WHEN 6 THEN '已归档'
+            END as statusText
+        FROM student_evaluation_results ser
+        WHERE ser.evaluation_period_id = #{periodId}
+        <if test="classId != null">
+            AND ser.class_id = #{classId}
+        </if>
+        ORDER BY ser.class_name, ser.class_rank
+    </select>
+
+</mapper>

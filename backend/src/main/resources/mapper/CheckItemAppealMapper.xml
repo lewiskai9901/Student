@@ -1,0 +1,375 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.school.management.mapper.CheckItemAppealMapper">
+
+    <!-- 基础结果映射 -->
+    <resultMap id="BaseResultMap" type="com.school.management.entity.CheckItemAppeal">
+        <id column="id" property="id"/>
+        <result column="appeal_code" property="appealCode"/>
+        <result column="record_id" property="recordId"/>
+        <result column="record_code" property="recordCode"/>
+        <result column="class_stat_id" property="classStatId"/>
+        <result column="item_id" property="itemId"/>
+        <result column="class_id" property="classId"/>
+        <result column="class_name" property="className"/>
+        <result column="grade_id" property="gradeId"/>
+        <result column="category_id" property="categoryId"/>
+        <result column="category_name" property="categoryName"/>
+        <result column="item_name" property="itemName"/>
+        <!-- 使用COALESCE兼容新旧字段 -->
+        <result column="original_deduct_score" property="originalScore"/>
+        <result column="link_info" property="linkInfo"/>
+        <result column="original_photo_urls" property="originalPhotoUrls"/>
+        <result column="original_remark" property="originalRemark"/>
+        <result column="appeal_type" property="appealType"/>
+        <result column="appeal_reason" property="appealReason"/>
+        <result column="expected_score" property="expectedScore"/>
+        <result column="evidence_urls" property="evidenceUrls"/>
+        <!-- 使用COALESCE兼容新旧字段 -->
+        <result column="appealer_id" property="appellantId"/>
+        <result column="appealer_name" property="appellantName"/>
+        <result column="appellant_role" property="appellantRole"/>
+        <result column="appeal_time" property="appealTime"/>
+        <result column="appeal_deadline" property="appealDeadline"/>
+        <result column="status" property="status"/>
+        <result column="current_step" property="currentStep"/>
+        <result column="final_reviewer_id" property="finalReviewerId"/>
+        <result column="final_reviewer_name" property="finalReviewerName"/>
+        <result column="final_review_time" property="finalReviewTime"/>
+        <result column="final_review_opinion" property="finalReviewOpinion"/>
+        <result column="adjusted_score" property="adjustedScore"/>
+        <result column="score_change" property="scoreChange"/>
+        <result column="publicity_start_time" property="publicityStartTime"/>
+        <result column="publicity_end_time" property="publicityEndTime"/>
+        <result column="publicity_days" property="publicityDays"/>
+        <result column="effective_time" property="effectiveTime"/>
+        <result column="approval_flow_snapshot" property="approvalFlowSnapshot"/>
+        <result column="created_at" property="createdAt"/>
+        <result column="updated_at" property="updatedAt"/>
+    </resultMap>
+
+    <!-- 带关联信息的结果映射(与BaseResultMap相同,保留以兼容现有代码) -->
+    <resultMap id="DetailResultMap" type="com.school.management.entity.CheckItemAppeal" extends="BaseResultMap">
+    </resultMap>
+
+    <!-- 基础字段列表 -->
+    <sql id="Base_Column_List">
+        id, appeal_code, record_id, record_code, class_stat_id, item_id,
+        class_id, class_name, grade_id,
+        category_id, category_name, item_name,
+        COALESCE(original_deduct_score, original_score) as original_deduct_score,
+        link_info, original_photo_urls, original_remark,
+        appeal_type, appeal_reason, expected_score, evidence_urls,
+        COALESCE(appealer_id, appellant_id) as appealer_id,
+        COALESCE(appealer_name, appellant_name) as appealer_name,
+        appellant_role, appeal_time, appeal_deadline,
+        status, current_step,
+        final_reviewer_id, final_reviewer_name, final_review_time, final_review_opinion,
+        adjusted_score, score_change,
+        publicity_start_time, publicity_end_time, publicity_days, effective_time,
+        approval_flow_snapshot,
+        created_at, updated_at
+    </sql>
+
+    <!-- 带关联信息的字段列表 -->
+    <sql id="Detail_Column_List">
+        a.id, a.appeal_code, a.record_id, a.record_code, a.class_stat_id, a.item_id,
+        a.class_id, a.class_name, a.grade_id,
+        a.category_id, a.category_name, a.item_name,
+        COALESCE(a.original_deduct_score, a.original_score) as original_deduct_score,
+        a.link_info, a.original_photo_urls, a.original_remark,
+        a.appeal_type, a.appeal_reason, a.expected_score, a.evidence_urls,
+        COALESCE(a.appealer_id, a.appellant_id) as appealer_id,
+        COALESCE(a.appealer_name, a.appellant_name, u.real_name) as appealer_name,
+        a.appellant_role, a.appeal_time, a.appeal_deadline,
+        a.status, a.current_step,
+        a.final_reviewer_id, a.final_reviewer_name, a.final_review_time, a.final_review_opinion,
+        a.adjusted_score, a.score_change,
+        a.publicity_start_time, a.publicity_end_time, a.publicity_days, a.effective_time,
+        a.approval_flow_snapshot,
+        a.created_at, a.updated_at
+    </sql>
+
+    <!-- 查询条件 -->
+    <sql id="Query_Conditions">
+        <where>
+            1=1
+            <if test="gradeId != null">
+                AND a.grade_id = #{gradeId}
+            </if>
+            <if test="classId != null">
+                AND a.class_id = #{classId}
+            </if>
+            <if test="appellantId != null">
+                AND a.appellant_id = #{appellantId}
+            </if>
+            <if test="status != null">
+                AND a.status = #{status}
+            </if>
+            <if test="appealType != null">
+                AND a.appeal_type = #{appealType}
+            </if>
+            <if test="startTime != null">
+                AND a.created_at &gt;= #{startTime}
+            </if>
+            <if test="endTime != null">
+                AND a.created_at &lt;= #{endTime}
+            </if>
+            <if test="keyword != null and keyword != ''">
+                AND (a.appeal_code LIKE CONCAT('%', #{keyword}, '%')
+                OR a.appellant_name LIKE CONCAT('%', #{keyword}, '%')
+                OR a.class_name LIKE CONCAT('%', #{keyword}, '%'))
+            </if>
+        </where>
+    </sql>
+
+    <!-- 分页查询申诉列表(带关联信息) -->
+    <select id="selectAppealPageWithDetails" resultMap="DetailResultMap">
+        SELECT
+        <include refid="Detail_Column_List"/>
+        FROM check_item_appeals a
+        LEFT JOIN users u ON COALESCE(a.appealer_id, a.appellant_id) = u.id
+        <include refid="Query_Conditions"/>
+        ORDER BY a.created_at DESC
+    </select>
+
+    <!-- 根据ID查询申诉详情(带所有关联信息) -->
+    <select id="selectAppealWithFullDetails" resultMap="DetailResultMap">
+        SELECT
+        <include refid="Detail_Column_List"/>
+        FROM check_item_appeals a
+        LEFT JOIN users u ON COALESCE(a.appealer_id, a.appellant_id) = u.id
+        WHERE a.id = #{id}
+    </select>
+
+    <!-- 根据申诉编号查询申诉 -->
+    <select id="selectByAppealCode" resultMap="BaseResultMap">
+        SELECT
+        <include refid="Base_Column_List"/>
+        FROM check_item_appeals
+        WHERE appeal_code = #{appealCode}
+    </select>
+
+    <!-- 查询待审核的申诉列表(指定审批人) -->
+    <select id="selectPendingAppealsByApprover" resultMap="DetailResultMap">
+        SELECT
+        <include refid="Detail_Column_List"/>
+        FROM check_item_appeals a
+        LEFT JOIN users u ON COALESCE(a.appealer_id, a.appellant_id) = u.id
+        WHERE a.status = 1
+        ORDER BY a.created_at ASC
+    </select>
+
+    <!-- 查询公示中的申诉列表 -->
+    <select id="selectPublicityAppeals" resultMap="DetailResultMap">
+        SELECT
+        <include refid="Detail_Column_List"/>
+        FROM check_item_appeals a
+        LEFT JOIN users u ON COALESCE(a.appealer_id, a.appellant_id) = u.id
+        WHERE a.status = 6
+        ORDER BY a.publicity_end_time ASC
+    </select>
+
+    <!-- 查询公示期已结束的申诉列表 -->
+    <select id="selectPublicityEndedAppeals" resultMap="BaseResultMap">
+        SELECT
+        <include refid="Base_Column_List"/>
+        FROM check_item_appeals
+        WHERE status = 6
+        AND publicity_end_time &lt;= #{currentTime}
+    </select>
+
+    <!-- 查询超时未审批的申诉列表 -->
+    <select id="selectTimeoutAppeals" resultMap="DetailResultMap">
+        SELECT
+        <include refid="Detail_Column_List"/>
+        FROM check_item_appeals a
+        WHERE a.status = 1
+        AND TIMESTAMPDIFF(HOUR, a.appeal_time, NOW()) > #{timeoutHours}
+    </select>
+
+    <!-- 查询班级的申诉历史 -->
+    <select id="selectAppealHistoryByClass" resultMap="DetailResultMap">
+        SELECT
+        <include refid="Detail_Column_List"/>
+        FROM check_item_appeals a
+        LEFT JOIN users u ON COALESCE(a.appealer_id, a.appellant_id) = u.id
+        WHERE a.class_id = #{classId}
+        ORDER BY a.created_at DESC
+        <if test="limit != null">
+            LIMIT #{limit}
+        </if>
+    </select>
+
+    <!-- 查询检查记录的申诉列表 -->
+    <select id="selectAppealsByRecordId" resultMap="DetailResultMap">
+        SELECT
+        <include refid="Detail_Column_List"/>
+        FROM check_item_appeals a
+        LEFT JOIN users u ON COALESCE(a.appealer_id, a.appellant_id) = u.id
+        WHERE a.record_id = #{recordId}
+        ORDER BY a.created_at DESC
+    </select>
+
+    <!-- 查询扣分明细的申诉记录 -->
+    <select id="selectByItemId" resultMap="BaseResultMap">
+        SELECT
+        <include refid="Base_Column_List"/>
+        FROM check_item_appeals
+        WHERE item_id = #{itemId}
+        ORDER BY created_at DESC
+        LIMIT 1
+    </select>
+
+    <!-- 统计申诉数据(按状态) -->
+    <select id="statisticsAppealsByStatus" resultType="map">
+        SELECT
+        status,
+        COUNT(*) as count,
+        COALESCE(SUM(score_change), 0) as total_score_change,
+        COALESCE(AVG(score_change), 0) as avg_score_change
+        FROM check_item_appeals
+        <where>
+            1=1
+            <if test="gradeId != null">
+                AND grade_id = #{gradeId}
+            </if>
+            <if test="classId != null">
+                AND class_id = #{classId}
+            </if>
+            <if test="startTime != null">
+                AND created_at &gt;= #{startTime}
+            </if>
+            <if test="endTime != null">
+                AND created_at &lt;= #{endTime}
+            </if>
+        </where>
+        GROUP BY status
+    </select>
+
+    <!-- 统计申诉数据(按类型) -->
+    <select id="statisticsAppealsByType" resultType="map">
+        SELECT
+        appeal_type,
+        COUNT(*) as count,
+        SUM(CASE WHEN status = 2 THEN 1 ELSE 0 END) as approved_count,
+        SUM(CASE WHEN status = 3 THEN 1 ELSE 0 END) as rejected_count
+        FROM check_item_appeals
+        <where>
+            1=1
+            <if test="gradeId != null">
+                AND grade_id = #{gradeId}
+            </if>
+            <if test="classId != null">
+                AND class_id = #{classId}
+            </if>
+            <if test="startTime != null">
+                AND created_at &gt;= #{startTime}
+            </if>
+            <if test="endTime != null">
+                AND created_at &lt;= #{endTime}
+            </if>
+        </where>
+        GROUP BY appeal_type
+    </select>
+
+    <!-- 统计审批人的审批数据 -->
+    <select id="statisticsApprovalsByApprover" resultType="map">
+        SELECT
+        COUNT(*) as total_count,
+        SUM(CASE WHEN r.approval_status = 2 THEN 1 ELSE 0 END) as approved_count,
+        SUM(CASE WHEN r.approval_status = 3 THEN 1 ELSE 0 END) as rejected_count,
+        AVG(TIMESTAMPDIFF(HOUR, r.received_time, r.approval_time)) as avg_hours
+        FROM appeal_approval_records r
+        WHERE r.approver_id = #{approverId}
+        AND r.approval_status IN (2, 3)
+        <if test="startTime != null">
+            AND r.approval_time &gt;= #{startTime}
+        </if>
+        <if test="endTime != null">
+            AND r.approval_time &lt;= #{endTime}
+        </if>
+    </select>
+
+    <!-- 批量更新申诉状态 -->
+    <update id="batchUpdateStatus">
+        UPDATE check_item_appeals
+        SET status = #{status},
+        updated_at = NOW()
+        WHERE id IN
+        <foreach collection="appealIds" item="id" open="(" separator="," close=")">
+            #{id}
+        </foreach>
+    </update>
+
+    <!-- 更新申诉审批步骤 -->
+    <update id="updateApprovalStep">
+        UPDATE check_item_appeals
+        SET current_step = #{currentStep},
+            updated_at   = NOW()
+        WHERE id = #{appealId}
+    </update>
+
+    <!-- 检查扣分明细是否已有申诉 -->
+    <select id="checkItemHasAppeal" resultType="int">
+        SELECT COUNT(*)
+        FROM check_item_appeals
+        WHERE item_id = #{itemId}
+        <if test="excludeStatuses != null and excludeStatuses.size() > 0">
+            AND status NOT IN
+            <foreach collection="excludeStatuses" item="status" open="(" separator="," close=")">
+                #{status}
+            </foreach>
+        </if>
+    </select>
+
+    <!-- 根据范围查询申诉数据(用于统计) -->
+    <select id="selectAppealsByScope" resultType="com.school.management.entity.CheckItemAppeal">
+        SELECT *
+        FROM check_item_appeals
+        WHERE deleted = 0
+        <choose>
+            <when test="scope == 'class'">
+                AND class_id = #{scopeId}
+            </when>
+            <when test="scope == 'grade'">
+                AND grade_id = #{scopeId}
+            </when>
+            <!-- school范围查询所有 -->
+        </choose>
+        <if test="period != null and period != ''">
+            <choose>
+                <when test="period == 'today'">
+                    AND DATE(created_at) = CURDATE()
+                </when>
+                <when test="period == 'week'">
+                    AND created_at >= DATE_SUB(NOW(), INTERVAL 7 DAY)
+                </when>
+                <when test="period == 'month'">
+                    AND created_at >= DATE_SUB(NOW(), INTERVAL 30 DAY)
+                </when>
+                <when test="period == 'semester'">
+                    AND created_at >= DATE_SUB(NOW(), INTERVAL 6 MONTH)
+                </when>
+            </choose>
+        </if>
+        ORDER BY created_at DESC
+    </select>
+
+    <!-- 统计年级申诉数据(按时间段) -->
+    <select id="statisticsAppealsByGradeAndTime" resultType="map">
+        SELECT
+            COUNT(*) as totalCount,
+            SUM(CASE WHEN status = 2 THEN 1 ELSE 0 END) as approvedCount,
+            COALESCE(SUM(CASE WHEN status = 2 THEN ABS(score_change) ELSE 0 END), 0) as totalScoreAdjustment
+        FROM check_item_appeals
+        WHERE grade_id = #{gradeId}
+        <if test="startTime != null">
+            AND created_at &gt;= #{startTime}
+        </if>
+        <if test="endTime != null">
+            AND created_at &lt;= #{endTime}
+        </if>
+    </select>
+
+</mapper>
