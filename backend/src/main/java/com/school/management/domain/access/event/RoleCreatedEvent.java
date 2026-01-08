@@ -1,14 +1,14 @@
 package com.school.management.domain.access.event;
 
 import com.school.management.domain.access.model.Role;
-import com.school.management.domain.shared.event.DomainEvent;
+import com.school.management.domain.shared.event.BaseDomainEvent;
 import lombok.Getter;
 
 /**
  * Event raised when a new role is created.
  */
 @Getter
-public class RoleCreatedEvent extends DomainEvent {
+public class RoleCreatedEvent extends BaseDomainEvent {
 
     private final String roleCode;
     private final String roleName;

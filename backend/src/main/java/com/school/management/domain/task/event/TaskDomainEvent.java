@@ -2,7 +2,7 @@ package com.school.management.domain.task.event;
 
 import com.school.management.domain.shared.event.DomainEvent;
 
-import java.time.Instant;
+import java.time.LocalDateTime;
 import java.util.UUID;
 
 /**
@@ -11,33 +11,31 @@ import java.util.UUID;
 public abstract class TaskDomainEvent implements DomainEvent {
 
     private final String eventId;
-    private final Instant occurredOn;
+    private final LocalDateTime occurredOn;
     private final Long taskId;
     private final String taskCode;
 
     protected TaskDomainEvent(Long taskId, String taskCode) {
         this.eventId = UUID.randomUUID().toString();
-        this.occurredOn = Instant.now();
+        this.occurredOn = LocalDateTime.now();
         this.taskId = taskId;
         this.taskCode = taskCode;
     }
 
-    @Override
     public String getEventId() {
         return eventId;
     }
 
     @Override
-    public Instant getOccurredOn() {
+    public LocalDateTime occurredOn() {
         return occurredOn;
     }
 
     @Override
-    public String getAggregateId() {
+    public String aggregateId() {
         return taskId != null ? taskId.toString() : null;
     }
 
-    @Override
     public String getAggregateType() {
         return "Task";
     }

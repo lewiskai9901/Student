@@ -1,12 +1,12 @@
 package com.school.management.domain.organization.event;
 
 import com.school.management.domain.organization.model.SchoolClass;
-import com.school.management.domain.shared.event.DomainEvent;
+import com.school.management.domain.shared.event.BaseDomainEvent;
 
 /**
  * 班级创建事件
  */
-public class ClassCreatedEvent extends DomainEvent {
+public class ClassCreatedEvent extends BaseDomainEvent {
 
     private final Long classId;
     private final String classCode;

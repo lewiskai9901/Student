@@ -1,13 +1,13 @@
 package com.school.management.domain.access.event;
 
-import com.school.management.domain.shared.event.DomainEvent;
+import com.school.management.domain.shared.event.BaseDomainEvent;
 import lombok.Getter;
 
 /**
  * Event raised when a role is assigned to a user.
  */
 @Getter
-public class UserRoleAssignedEvent extends DomainEvent {
+public class UserRoleAssignedEvent extends BaseDomainEvent {
 
     private final Long userId;
     private final Long roleId;

@@ -2,12 +2,12 @@ package com.school.management.domain.organization.event;
 
 import com.school.management.domain.organization.model.ClassStatus;
 import com.school.management.domain.organization.model.SchoolClass;
-import com.school.management.domain.shared.event.DomainEvent;
+import com.school.management.domain.shared.event.BaseDomainEvent;
 
 /**
  * 班级状态变更事件
  */
-public class ClassStatusChangedEvent extends DomainEvent {
+public class ClassStatusChangedEvent extends BaseDomainEvent {
 
     private final Long classId;
     private final String classCode;

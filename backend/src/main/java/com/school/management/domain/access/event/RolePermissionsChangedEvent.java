@@ -1,7 +1,7 @@
 package com.school.management.domain.access.event;
 
 import com.school.management.domain.access.model.Role;
-import com.school.management.domain.shared.event.DomainEvent;
+import com.school.management.domain.shared.event.BaseDomainEvent;
 import lombok.Getter;
 
 import java.util.HashSet;
@@ -11,7 +11,7 @@ import java.util.Set;
  * Event raised when role permissions are changed.
  */
 @Getter
-public class RolePermissionsChangedEvent extends DomainEvent {
+public class RolePermissionsChangedEvent extends BaseDomainEvent {
 
     private final String roleCode;
     private final Set<Long> addedPermissions;

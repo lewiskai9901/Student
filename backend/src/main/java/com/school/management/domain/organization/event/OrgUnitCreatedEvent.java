@@ -2,12 +2,12 @@ package com.school.management.domain.organization.event;
 
 import com.school.management.domain.organization.model.OrgUnit;
 import com.school.management.domain.organization.model.OrgUnitType;
-import com.school.management.domain.shared.event.DomainEvent;
+import com.school.management.domain.shared.event.BaseDomainEvent;
 
 /**
  * Domain event raised when an organization unit is created.
  */
-public class OrgUnitCreatedEvent extends DomainEvent {
+public class OrgUnitCreatedEvent extends BaseDomainEvent {
 
     private final Long orgUnitId;
     private final String unitCode;
