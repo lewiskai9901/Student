@@ -91,6 +91,27 @@ export default defineConfig({
             if (id.includes('@wangeditor')) {
               return 'editor'
             }
+            // TinyMCE 富文本编辑器
+            if (id.includes('tinymce')) {
+              return 'tinymce'
+            }
+
+            // ===== 中型依赖拆分 =====
+            // 图标库 - 按需拆分避免全量打包
+            if (id.includes('lucide-vue-next')) {
+              return 'icons-lucide'
+            }
+            if (id.includes('@heroicons')) {
+              return 'icons-heroicons'
+            }
+            // Markdown 解析
+            if (id.includes('marked') || id.includes('dompurify')) {
+              return 'markdown'
+            }
+            // 拖拽库
+            if (id.includes('vuedraggable') || id.includes('sortablejs')) {
+              return 'draggable'
+            }
 
             // ===== 核心框架拆分 =====
             // Element Plus UI库
