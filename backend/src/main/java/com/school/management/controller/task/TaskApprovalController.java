@@ -17,10 +17,14 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
 /**
- * 任务审批控制器
+ * 任务审批控制器 (V1 - 已弃用)
+ *
+ * @deprecated 使用 V2 API {@link com.school.management.interfaces.rest.task.TaskController} 替代
+ *             V2 API 路径: /api/v2/tasks/{id}/approve
  */
+@Deprecated(since = "2.0.0", forRemoval = false)
 @Slf4j
-@Tag(name = "任务审批", description = "任务审批相关接口")
+@Tag(name = "任务审批 (已弃用)", description = "任务审批 - 请使用 /api/v2/tasks")
 @RestController
 @RequestMapping("/api/tasks/approvals")
 @RequiredArgsConstructor

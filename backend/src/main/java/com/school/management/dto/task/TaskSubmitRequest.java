@@ -13,6 +13,11 @@ import java.util.List;
 public class TaskSubmitRequest {
 
     /**
+     * 任务ID
+     */
+    private Long taskId;
+
+    /**
      * 完成情况说明
      */
     @NotBlank(message = "完成情况说明不能为空")

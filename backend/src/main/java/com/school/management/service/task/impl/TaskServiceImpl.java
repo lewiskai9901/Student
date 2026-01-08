@@ -1064,7 +1064,23 @@ public class TaskServiceImpl extends ServiceImpl<TaskMapper, Task> implements Ta
             return true;
         }
 
-        // TODO: 相同部门的管理员可以查看（需要获取用户的部门和角色信息）
+        // 相同部门的管理员可以查看
+        User currentUser = userMapper.selectById(userId);
+        if (currentUser != null && currentUser.getDepartmentId() != null) {
+            // 检查用户是否是部门管理员（通过角色判断）
+            boolean isDeptAdmin = currentUser.getRoles() != null &&
+                    currentUser.getRoles().stream()
+                            .anyMatch(role -> role.getRoleCode() != null &&
+                                    (role.getRoleCode().contains("admin") ||
+                                     role.getRoleCode().contains("manager") ||
+                                     role.getRoleCode().contains("leader")));
+
+            // 部门管理员可以查看本部门的任务
+            if (isDeptAdmin && task.getDepartmentId() != null &&
+                    task.getDepartmentId().equals(currentUser.getDepartmentId())) {
+                return true;
+            }
+        }
 
         return false;
     }

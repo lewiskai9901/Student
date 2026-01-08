@@ -13,9 +13,13 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 /**
- * 任务管理控制器
+ * 任务管理控制器 (V1 - 已弃用)
+ *
+ * @deprecated 使用 V2 API {@link com.school.management.interfaces.rest.task.TaskController} 替代
+ *             V2 API 路径: /api/v2/tasks
  */
-@Tag(name = "任务管理", description = "任务的创建、分配、提交、审批等操作")
+@Deprecated(since = "2.0.0", forRemoval = false)
+@Tag(name = "任务管理 (已弃用)", description = "任务管理 - 请使用 /api/v2/tasks")
 @RestController
 @RequestMapping("/task/tasks")
 @RequiredArgsConstructor
