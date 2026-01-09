@@ -312,6 +312,22 @@
                 <groupId>org.jacoco</groupId>
                 <artifactId>jacoco-maven-plugin</artifactId>
                 <version>0.8.11</version>
+                <configuration>
+                    <!-- 排除不需要测试覆盖的类 -->
+                    <excludes>
+                        <exclude>**/config/**</exclude>
+                        <exclude>**/dto/**</exclude>
+                        <exclude>**/entity/**</exclude>
+                        <exclude>**/*PO.class</exclude>
+                        <exclude>**/*DTO.class</exclude>
+                        <exclude>**/*Request.class</exclude>
+                        <exclude>**/*Response.class</exclude>
+                        <exclude>**/*Command.class</exclude>
+                        <exclude>**/*Query.class</exclude>
+                        <exclude>**/valueobject/**</exclude>
+                        <exclude>**/exception/**</exclude>
+                    </excludes>
+                </configuration>
                 <executions>
                     <execution>
                         <id>prepare-agent</id>
@@ -336,8 +352,15 @@
                                 <rule>
                                     <element>BUNDLE</element>
                                     <limits>
+                                        <!-- 行覆盖率要求 15% (逐步提升) -->
                                         <limit>
                                             <counter>LINE</counter>
+                                            <value>COVEREDRATIO</value>
+                                            <minimum>0.15</minimum>
+                                        </limit>
+                                        <!-- 分支覆盖率要求 10% -->
+                                        <limit>
+                                            <counter>BRANCH</counter>
                                             <value>COVEREDRATIO</value>
                                             <minimum>0.10</minimum>
                                         </limit>
