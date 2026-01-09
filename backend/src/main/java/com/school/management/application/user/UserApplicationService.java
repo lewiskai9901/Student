@@ -8,6 +8,7 @@ import com.school.management.domain.user.model.valueobject.UserType;
 import com.school.management.domain.user.repository.UserRepository;
 import com.school.management.exception.BusinessException;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -33,7 +34,8 @@ public class UserApplicationService {
     private final PasswordEncoder passwordEncoder;
     private final DomainEventPublisher eventPublisher;
 
-    private static final String DEFAULT_PASSWORD = "123456";
+    @Value("${app.security.default-password:Pwd@123456}")
+    private String defaultPassword;
 
     // ==================== 用户创建 ====================
 
@@ -51,7 +53,7 @@ public class UserApplicationService {
 
         // 加密密码
         String encodedPassword = passwordEncoder.encode(
-                command.getPassword() != null ? command.getPassword() : DEFAULT_PASSWORD
+                command.getPassword() != null ? command.getPassword() : defaultPassword
         );
 
         // 创建用户聚合
@@ -171,7 +173,7 @@ public class UserApplicationService {
 
         User user = getUserOrThrow(userId);
 
-        String newPassword = DEFAULT_PASSWORD;
+        String newPassword = defaultPassword;
         String encodedPassword = passwordEncoder.encode(newPassword);
         user.resetPassword(encodedPassword);
 
