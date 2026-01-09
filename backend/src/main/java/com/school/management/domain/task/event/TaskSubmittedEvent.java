@@ -38,4 +38,18 @@ public class TaskSubmittedEvent extends TaskDomainEvent {
     public Long getSubmissionId() {
         return submissionId;
     }
+
+    /**
+     * Alias for getSubmittedBy for compatibility.
+     */
+    public Long getSubmitterId() {
+        return submittedBy;
+    }
+
+    /**
+     * Alias for getSubmittedByName for compatibility.
+     */
+    public String getSubmitterName() {
+        return submittedByName;
+    }
 }

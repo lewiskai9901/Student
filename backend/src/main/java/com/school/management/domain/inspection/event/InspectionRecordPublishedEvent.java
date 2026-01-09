@@ -1,7 +1,7 @@
 package com.school.management.domain.inspection.event;
 
 import com.school.management.domain.inspection.model.InspectionRecord;
-import com.school.management.domain.shared.event.DomainEvent;
+import com.school.management.domain.shared.event.BaseDomainEvent;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -9,7 +9,7 @@ import java.time.LocalDateTime;
 /**
  * Domain event raised when an inspection record is published.
  */
-public class InspectionRecordPublishedEvent extends DomainEvent {
+public class InspectionRecordPublishedEvent extends BaseDomainEvent {
 
     private final Long recordId;
     private final String recordCode;

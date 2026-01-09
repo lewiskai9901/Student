@@ -38,4 +38,25 @@ public class TaskApprovedEvent extends TaskDomainEvent {
     public String getReviewerName() {
         return reviewerName;
     }
+
+    /**
+     * Alias for getReviewerId for compatibility.
+     */
+    public Long getApproverId() {
+        return reviewerId;
+    }
+
+    /**
+     * Alias for getReviewerName for compatibility.
+     */
+    public String getApproverName() {
+        return reviewerName;
+    }
+
+    /**
+     * Returns the approval comment (currently null).
+     */
+    public String getComment() {
+        return null;
+    }
 }

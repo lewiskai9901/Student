@@ -1,11 +1,11 @@
 package com.school.management.domain.student.event;
 
-import com.school.management.domain.shared.event.DomainEvent;
+import com.school.management.domain.shared.event.BaseDomainEvent;
 
 /**
  * 学生信息更新事件
  */
-public class StudentUpdatedEvent extends DomainEvent {
+public class StudentUpdatedEvent extends BaseDomainEvent {
 
     private final String studentNo;
     private final String studentName;

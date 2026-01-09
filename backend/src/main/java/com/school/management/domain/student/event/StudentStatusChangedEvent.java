@@ -1,12 +1,12 @@
 package com.school.management.domain.student.event;
 
-import com.school.management.domain.shared.event.DomainEvent;
+import com.school.management.domain.shared.event.BaseDomainEvent;
 import com.school.management.domain.student.model.valueobject.StudentStatus;
 
 /**
  * 学籍状态变更事件
  */
-public class StudentStatusChangedEvent extends DomainEvent {
+public class StudentStatusChangedEvent extends BaseDomainEvent {
 
     private final String studentNo;
     private final StudentStatus oldStatus;

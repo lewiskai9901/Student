@@ -2,12 +2,12 @@ package com.school.management.domain.inspection.event;
 
 import com.school.management.domain.inspection.model.InspectionTemplate;
 import com.school.management.domain.inspection.model.TemplateScope;
-import com.school.management.domain.shared.event.DomainEvent;
+import com.school.management.domain.shared.event.BaseDomainEvent;
 
 /**
  * Domain event raised when an inspection template is created.
  */
-public class InspectionTemplateCreatedEvent extends DomainEvent {
+public class InspectionTemplateCreatedEvent extends BaseDomainEvent {
 
     private final Long templateId;
     private final String templateCode;

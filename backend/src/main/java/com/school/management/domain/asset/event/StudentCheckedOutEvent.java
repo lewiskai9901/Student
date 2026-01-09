@@ -1,11 +1,11 @@
 package com.school.management.domain.asset.event;
 
-import com.school.management.domain.shared.event.DomainEvent;
+import com.school.management.domain.shared.event.BaseDomainEvent;
 
 /**
  * 学生退宿事件
  */
-public class StudentCheckedOutEvent extends DomainEvent {
+public class StudentCheckedOutEvent extends BaseDomainEvent {
 
     private final Long studentId;
     private final String studentName;

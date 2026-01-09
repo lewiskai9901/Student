@@ -2,14 +2,14 @@ package com.school.management.domain.organization.event;
 
 import com.school.management.domain.organization.model.SchoolClass;
 import com.school.management.domain.organization.model.TeacherAssignment;
-import com.school.management.domain.shared.event.DomainEvent;
+import com.school.management.domain.shared.event.BaseDomainEvent;
 
 import java.time.LocalDate;
 
 /**
  * 教师任职分配事件
  */
-public class TeacherAssignedEvent extends DomainEvent {
+public class TeacherAssignedEvent extends BaseDomainEvent {
 
     private final Long classId;
     private final String classCode;

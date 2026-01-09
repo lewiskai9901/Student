@@ -2,12 +2,12 @@ package com.school.management.domain.inspection.event;
 
 import com.school.management.domain.inspection.model.Appeal;
 import com.school.management.domain.inspection.model.AppealStatus;
-import com.school.management.domain.shared.event.DomainEvent;
+import com.school.management.domain.shared.event.BaseDomainEvent;
 
 /**
  * Domain event raised when an appeal status changes.
  */
-public class AppealStatusChangedEvent extends DomainEvent {
+public class AppealStatusChangedEvent extends BaseDomainEvent {
 
     private final Long appealId;
     private final String appealCode;

@@ -1,11 +1,11 @@
 package com.school.management.domain.asset.event;
 
-import com.school.management.domain.shared.event.DomainEvent;
+import com.school.management.domain.shared.event.BaseDomainEvent;
 
 /**
  * 宿舍创建事件
  */
-public class DormitoryCreatedEvent extends DomainEvent {
+public class DormitoryCreatedEvent extends BaseDomainEvent {
 
     private final String dormitoryNo;
     private final Long buildingId;

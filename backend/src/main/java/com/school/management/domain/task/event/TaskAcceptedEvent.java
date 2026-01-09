@@ -30,4 +30,11 @@ public class TaskAcceptedEvent extends TaskDomainEvent {
     public String getAcceptedByName() {
         return acceptedByName;
     }
+
+    /**
+     * Alias for getAcceptedBy for compatibility.
+     */
+    public Long getAssigneeId() {
+        return acceptedBy;
+    }
 }

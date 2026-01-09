@@ -44,4 +44,18 @@ public class TaskRejectedEvent extends TaskDomainEvent {
     public String getReason() {
         return reason;
     }
+
+    /**
+     * Alias for getReviewerId for compatibility.
+     */
+    public Long getApproverId() {
+        return reviewerId;
+    }
+
+    /**
+     * Alias for getReviewerName for compatibility.
+     */
+    public String getApproverName() {
+        return reviewerName;
+    }
 }
