@@ -44,13 +44,14 @@ spring:
       filters: stat,slf4j
       connection-properties: druid.stat.mergeSql=true;druid.stat.slowSqlMillis=2000  # 慢SQL阈值从5秒降低到2秒
 
-      # 统计配置 - 仅开发环境启用，生产环境建议禁用或使用强密码
+      # 统计配置 - 默认禁用，仅开发环境按需启用
       stat-view-servlet:
-        enabled: ${DRUID_MONITOR_ENABLED:true}        # 生产环境设置为false
+        enabled: ${DRUID_MONITOR_ENABLED:false}       # 默认禁用，开发环境可设置为true
         url-pattern: /druid/*                         # 监控页面访问路径
         reset-enable: false                           # 禁止重置统计数据
-        login-username: ${DRUID_MONITOR_USER:druid_admin}  # 监控页面登录用户名
-        login-password: ${DRUID_MONITOR_PWD:DruidMonitor@2024!Secure}  # 监控页面登录密码
+        login-username: ${DRUID_MONITOR_USER:}        # 必须通过环境变量配置
+        login-password: ${DRUID_MONITOR_PWD:}         # 必须通过环境变量配置
+        allow: ${DRUID_MONITOR_ALLOW:127.0.0.1}       # IP白名单，仅允许本地访问
 
       # Web监控配置
       web-stat-filter:
