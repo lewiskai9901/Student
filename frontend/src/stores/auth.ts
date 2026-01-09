@@ -3,6 +3,7 @@ import { ref, computed } from 'vue'
 import type { LoginRequest, LoginResponse } from '@/types/auth'
 import { login, logout, refreshToken, getCurrentUser } from '@/api/auth'
 import { removeToken, getToken, setToken, isTokenExpired } from '@/utils/token'
+import { tokenStorage } from '@/utils/tokenStorage'
 
 export const useAuthStore = defineStore('auth', () => {
   // 状态
@@ -28,10 +29,10 @@ export const useAuthStore = defineStore('auth', () => {
       user.value = userInfo
       permissions.value = userInfo.permissions
 
-      // 保存到本地存储
+      // 保存到安全存储
       setToken(accessToken)
-      localStorage.setItem('refreshToken', newRefreshToken)
-      localStorage.setItem('userInfo', JSON.stringify(userInfo))
+      tokenStorage.setRefreshToken(newRefreshToken)
+      tokenStorage.setUserInfo(userInfo)
 
       return response
     } catch (error) {
@@ -55,10 +56,8 @@ export const useAuthStore = defineStore('auth', () => {
       user.value = null
       permissions.value = []
 
-      // 清除本地存储
-      removeToken()
-      localStorage.removeItem('refreshToken')
-      localStorage.removeItem('userInfo')
+      // 清除安全存储
+      tokenStorage.clearAll()
     }
   }
 
@@ -76,7 +75,7 @@ export const useAuthStore = defineStore('auth', () => {
       refreshTokenValue.value = newRefreshToken
 
       setToken(accessToken)
-      localStorage.setItem('refreshToken', newRefreshToken)
+      tokenStorage.setRefreshToken(newRefreshToken)
 
       return response
     } catch (error) {
@@ -92,7 +91,7 @@ export const useAuthStore = defineStore('auth', () => {
       const userInfo = await getCurrentUser()
       user.value = userInfo
       permissions.value = userInfo.permissions
-      localStorage.setItem('userInfo', JSON.stringify(userInfo))
+      tokenStorage.setUserInfo(userInfo)
       return userInfo
     } catch (error) {
       console.error('获取用户信息失败:', error)
@@ -113,13 +112,13 @@ export const useAuthStore = defineStore('auth', () => {
   // 初始化认证状态
   const initAuth = () => {
     const savedToken = getToken()
-    const savedRefreshToken = localStorage.getItem('refreshToken')
-    const savedUserInfo = localStorage.getItem('userInfo')
+    const savedRefreshToken = tokenStorage.getRefreshToken()
+    const savedUserInfo = tokenStorage.getUserInfo<LoginResponse['userInfo']>()
 
     if (savedToken && savedRefreshToken && savedUserInfo) {
       token.value = savedToken
       refreshTokenValue.value = savedRefreshToken
-      user.value = JSON.parse(savedUserInfo)
+      user.value = savedUserInfo
       permissions.value = user.value?.permissions || []
     }
   }

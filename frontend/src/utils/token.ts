@@ -1,17 +1,18 @@
 // Token管理工具
+// 使用 tokenStorage 进行安全存储
 
-const TOKEN_KEY = 'access_token'
+import { tokenStorage } from './tokenStorage'
 
 export function getToken(): string | null {
-  return localStorage.getItem(TOKEN_KEY)
+  return tokenStorage.getAccessToken()
 }
 
 export function setToken(token: string): void {
-  localStorage.setItem(TOKEN_KEY, token)
+  tokenStorage.setAccessToken(token)
 }
 
 export function removeToken(): void {
-  localStorage.removeItem(TOKEN_KEY)
+  tokenStorage.clearAll()
 }
 
 /**
