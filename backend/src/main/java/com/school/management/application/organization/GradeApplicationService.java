@@ -7,6 +7,7 @@ import com.school.management.application.organization.query.GradeDTO;
 import com.school.management.domain.organization.model.Grade;
 import com.school.management.domain.organization.model.GradeStatus;
 import com.school.management.domain.organization.repository.GradeRepository;
+import com.school.management.domain.organization.repository.SchoolClassRepository;
 import com.school.management.domain.shared.event.DomainEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -22,11 +23,14 @@ import java.util.stream.Collectors;
 public class GradeApplicationService {
 
     private final GradeRepository gradeRepository;
+    private final SchoolClassRepository schoolClassRepository;
     private final DomainEventPublisher eventPublisher;
 
     public GradeApplicationService(GradeRepository gradeRepository,
+                                   SchoolClassRepository schoolClassRepository,
                                    DomainEventPublisher eventPublisher) {
         this.gradeRepository = gradeRepository;
+        this.schoolClassRepository = schoolClassRepository;
         this.eventPublisher = eventPublisher;
     }
 
@@ -220,8 +224,12 @@ public class GradeApplicationService {
         Grade grade = gradeRepository.findById(id)
             .orElseThrow(() -> new IllegalArgumentException("年级不存在: " + id));
 
-        // TODO: 检查年级下是否有班级，如果有则不能删除
-        // 这需要注入 SchoolClassRepository 来检查
+        // 检查年级下是否有班级
+        int classCount = schoolClassRepository.countByGradeId(id);
+        if (classCount > 0) {
+            throw new IllegalStateException(
+                String.format("无法删除年级: 该年级下还有 %d 个班级", classCount));
+        }
 
         gradeRepository.deleteById(id);
     }

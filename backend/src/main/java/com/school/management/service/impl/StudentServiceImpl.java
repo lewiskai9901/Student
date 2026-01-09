@@ -894,7 +894,36 @@ public class StudentServiceImpl extends ServiceImpl<StudentMapper, Student> impl
 
         for (java.util.Map<String, Object> row : data) {
             try {
-                // TODO: 实现具体的导入逻辑
+                // 从Map中提取数据创建学生
+                String studentNo = getStringValue(row, "学号");
+                String realName = getStringValue(row, "姓名");
+                String genderStr = getStringValue(row, "性别");
+                String className = getStringValue(row, "班级");
+
+                if (studentNo.isEmpty() || realName.isEmpty()) {
+                    throw new BusinessException("学号和姓名不能为空");
+                }
+
+                // 查找班级ID
+                com.school.management.entity.Class clazz = classMapper.selectOne(
+                    new LambdaQueryWrapper<com.school.management.entity.Class>()
+                        .eq(com.school.management.entity.Class::getClassName, className)
+                        .eq(com.school.management.entity.Class::getDeleted, 0));
+                if (clazz == null) {
+                    throw new BusinessException("班级"" + className + ""不存在");
+                }
+
+                StudentCreateRequest request = new StudentCreateRequest();
+                request.setStudentNo(studentNo);
+                request.setRealName(realName);
+                request.setGender("男".equals(genderStr) ? 1 : 2);
+                request.setClassId(clazz.getId());
+                request.setUsername(studentNo);
+                request.setPassword("123456");
+                request.setPhone(getStringValue(row, "联系方式"));
+                request.setIdCard(getStringValue(row, "身份证号"));
+
+                createStudent(request);
                 successCount++;
             } catch (Exception e) {
                 failCount++;
@@ -934,5 +963,14 @@ public class StudentServiceImpl extends ServiceImpl<StudentMapper, Student> impl
         }
 
         return ExcelUtils.exportExcel(headers, rows, "导入失败数据");
+    }
+
+    /**
+     * 从Map中获取字符串值
+     */
+    private String getStringValue(java.util.Map<String, Object> row, String key) {
+        Object value = row.get(key);
+        return value != null ? value.toString().trim() : "";
+    }
     }
 }
