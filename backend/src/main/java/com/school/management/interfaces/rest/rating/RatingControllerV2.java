@@ -17,7 +17,7 @@ import java.util.stream.Collectors;
 /**
  * V2 REST controller for rating management.
  */
-@RestController
+@RestController("ratingControllerV2")
 @RequestMapping("/v2/ratings")
 @Tag(name = "Ratings V2", description = "Rating management API (V2)")
 @RequiredArgsConstructor

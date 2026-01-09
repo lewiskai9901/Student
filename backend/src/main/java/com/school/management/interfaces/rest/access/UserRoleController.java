@@ -18,7 +18,7 @@ import java.util.stream.Collectors;
 /**
  * REST controller for user role assignment.
  */
-@RestController
+@RestController("userRoleControllerV2")
 @RequestMapping("/v2/users")
 @Tag(name = "User Roles", description = "User role assignment API")
 public class UserRoleController {

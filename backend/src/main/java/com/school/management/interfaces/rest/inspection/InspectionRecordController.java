@@ -19,7 +19,7 @@ import java.util.stream.Collectors;
 /**
  * REST controller for inspection records.
  */
-@RestController
+@RestController("inspectionRecordControllerV2")
 @RequestMapping("/v2/inspection-records")
 @Tag(name = "Inspection Records", description = "Inspection record management API")
 public class InspectionRecordController {

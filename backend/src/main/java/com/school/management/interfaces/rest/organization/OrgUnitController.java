@@ -23,7 +23,7 @@ import java.util.List;
  */
 @Slf4j
 @Tag(name = "Organization Units", description = "Organization unit management API")
-@RestController
+@RestController("orgUnitControllerV2")
 @RequestMapping("/v2/org-units")
 public class OrgUnitController {
 

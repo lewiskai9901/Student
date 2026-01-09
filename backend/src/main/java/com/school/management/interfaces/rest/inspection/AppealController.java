@@ -26,7 +26,7 @@ import java.util.stream.Collectors;
  */
 @Slf4j
 @Tag(name = "Appeals", description = "Appeal management API with state machine workflow")
-@RestController
+@RestController("appealControllerV2")
 @RequestMapping("/v2/appeals")
 public class AppealController {
 
