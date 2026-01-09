@@ -35,8 +35,8 @@ public class WechatServiceImpl implements WechatService {
 
     private final WechatConfigService wechatConfigService;
     private final StringRedisTemplate redisTemplate;
+    private final ObjectMapper objectMapper;
     private final RestTemplate restTemplate = new RestTemplate();
-    private final ObjectMapper objectMapper = new ObjectMapper();
 
     private static final String ACCESS_TOKEN_KEY = "wechat:access_token";
     private static final String JSAPI_TICKET_KEY = "wechat:jsapi_ticket";

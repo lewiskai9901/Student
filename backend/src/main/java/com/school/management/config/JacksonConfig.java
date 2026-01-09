@@ -1,38 +1,43 @@
 package com.school.management.config;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
+import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.module.SimpleModule;
-import com.fasterxml.jackson.databind.ser.std.ToStringSerializer;
+import com.fasterxml.jackson.databind.SerializationFeature;
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.http.converter.json.Jackson2ObjectMapperBuilder;
+import org.springframework.context.annotation.Primary;
 
 /**
- * Jackson配置类
- * 解决Long类型精度丢失问题
- *
- * @author system
- * @since 1.0.0
+ * Jackson ObjectMapper 配置类
+ * 提供全局共享的 ObjectMapper Bean，避免重复创建实例
  */
 @Configuration
 public class JacksonConfig {
 
     /**
-     * 配置Jackson ObjectMapper
-     * 将Long类型序列化为String,避免JavaScript精度丢失
+     * 创建全局共享的 ObjectMapper Bean
+     * 配置了常用的序列化/反序列化选项
+     *
+     * @return 配置好的 ObjectMapper 实例
      */
     @Bean
-    public ObjectMapper jacksonObjectMapper(Jackson2ObjectMapperBuilder builder) {
-        ObjectMapper objectMapper = builder.createXmlMapper(false).build();
+    @Primary
+    public ObjectMapper objectMapper() {
+        ObjectMapper mapper = new ObjectMapper();
 
-        // 创建SimpleModule,注册Long类型的序列化器
-        SimpleModule simpleModule = new SimpleModule();
-        // 将Long和long类型序列化为String
-        simpleModule.addSerializer(Long.class, ToStringSerializer.instance);
-        simpleModule.addSerializer(Long.TYPE, ToStringSerializer.instance);
+        // 注册 Java 8 时间模块
+        mapper.registerModule(new JavaTimeModule());
 
-        objectMapper.registerModule(simpleModule);
+        // 序列化配置
+        mapper.disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
+        mapper.disable(SerializationFeature.FAIL_ON_EMPTY_BEANS);
+        mapper.setSerializationInclusion(JsonInclude.Include.NON_NULL);
 
-        return objectMapper;
+        // 反序列化配置
+        mapper.disable(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES);
+
+        return mapper;
     }
 }

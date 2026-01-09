@@ -37,7 +37,7 @@ public class WechatPushServiceImpl implements WechatPushService {
     private final WechatService wechatService;
     private final WechatPushRecordMapper pushRecordMapper;
     private final UserMapper userMapper;
-    private final ObjectMapper objectMapper = new ObjectMapper();
+    private final ObjectMapper objectMapper;
 
     private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
 
