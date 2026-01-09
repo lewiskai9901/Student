@@ -39,13 +39,16 @@ public class SecurityHeadersConfig implements Filter {
         // httpResponse.setHeader("Strict-Transport-Security", "max-age=31536000; includeSubDomains");
 
         // Content-Security-Policy: 内容安全策略
+        // 注意: 移除了 'unsafe-eval'，但保留 'unsafe-inline' 以兼容 Element Plus 等 UI 框架
         httpResponse.setHeader("Content-Security-Policy",
                 "default-src 'self'; " +
-                "script-src 'self' 'unsafe-inline' 'unsafe-eval'; " +
+                "script-src 'self' 'unsafe-inline'; " +  // 移除 unsafe-eval，保留 unsafe-inline
                 "style-src 'self' 'unsafe-inline'; " +
                 "img-src 'self' data: https:; " +
                 "font-src 'self' data:; " +
-                "connect-src 'self' http://localhost:* https:;");
+                "connect-src 'self' https://api.weixin.qq.com; " +  // 限制连接目标
+                "frame-ancestors 'none'; " +  // 防止点击劫持
+                "form-action 'self'");  // 限制表单提交目标
 
         // Referrer-Policy: 控制Referer头信息
         httpResponse.setHeader("Referrer-Policy", "strict-origin-when-cross-origin");
