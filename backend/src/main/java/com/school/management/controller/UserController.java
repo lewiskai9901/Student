@@ -20,16 +20,19 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
 /**
- * 用户管理控制器
+ * 用户管理控制器 (V1 - 已弃用)
  *
  * @author system
  * @since 1.0.0
+ * @deprecated 使用 V2 API {@link com.school.management.interfaces.rest.user.UserController} 替代
+ *             V2 API 路径: /api/v2/users
  */
+@Deprecated(since = "2.0.0", forRemoval = false)
 @Slf4j
 @RestController
 @RequestMapping("/users")
 @RequiredArgsConstructor
-@Tag(name = "用户管理", description = "用户管理相关接口")
+@Tag(name = "用户管理 (已弃用)", description = "用户管理相关接口 - 请使用 /api/v2/users")
 public class UserController {
 
     private final UserService userService;
