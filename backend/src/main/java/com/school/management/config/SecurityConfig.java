@@ -2,9 +2,12 @@ package com.school.management.config;
 
 import com.school.management.security.CustomUserDetailsService;
 import com.school.management.security.JwtAuthenticationFilter;
+import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.core.env.Environment;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.AuthenticationProvider;
 import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
@@ -32,6 +35,7 @@ import java.util.List;
  * @author system
  * @since 1.0.0
  */
+@Slf4j
 @Configuration
 @EnableWebSecurity
 @EnableMethodSecurity(prePostEnabled = true)
@@ -40,6 +44,28 @@ public class SecurityConfig {
 
     private final CustomUserDetailsService userDetailsService;
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
+    private final Environment environment;
+
+    /**
+     * 启动时验证安全配置
+     */
+    @PostConstruct
+    public void validateSecurityConfiguration() {
+        boolean isProduction = Arrays.asList(environment.getActiveProfiles()).contains("prod")
+                || Arrays.asList(environment.getActiveProfiles()).contains("production");
+
+        String corsOrigins = System.getenv("CORS_ALLOWED_ORIGINS");
+
+        if (isProduction) {
+            if (corsOrigins == null || corsOrigins.isBlank()) {
+                log.warn("【安全警告】生产环境未配置 CORS_ALLOWED_ORIGINS！请设置允许的跨域来源");
+            } else if (corsOrigins.contains("localhost") || corsOrigins.contains("127.0.0.1")) {
+                log.warn("【安全警告】生产环境 CORS 配置包含 localhost，这可能是配置错误");
+            } else {
+                log.info("CORS 配置验证通过，允许的来源: {}", corsOrigins);
+            }
+        }
+    }
 
     /**
      * 密码编码器
