@@ -123,9 +123,9 @@ logging:
   pattern:
     console: '%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{50} - %msg%n'
 
-# JWT配置
+# JWT配置 - 必须通过环境变量配置 JWT_SECRET
 jwt:
-  secret-key: ${JWT_SECRET:student-management-system-jwt-secret-key-2024-base64-encoded-long-enough-for-hs512-algorithm-requirement}
+  secret-key: ${JWT_SECRET}  # 至少64字节，用于HS512算法
   access-token-expiration: ${JWT_ACCESS_EXPIRATION:7200000} # 2小时(毫秒)
   refresh-token-expiration: ${JWT_REFRESH_EXPIRATION:2592000000} # 30天(毫秒)
 
