@@ -1,7 +1,7 @@
 package com.school.management.controller;
 
 import com.school.management.aspect.PerformanceMonitorAspect;
-import com.school.management.common.Result;
+import com.school.management.common.result.Result;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;

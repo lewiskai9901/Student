@@ -17,9 +17,9 @@ import java.util.stream.Collectors;
 /**
  * V2 REST controller for task management.
  */
-@RestController
-@RequestMapping("/v2/tasks")
-@Tag(name = "Tasks V2", description = "Task management API (V2)")
+@RestController("taskControllerV2Alt")
+@RequestMapping("/v2/tasks-alt")
+@Tag(name = "Tasks V2 Alt", description = "Task management API (V2) - Alternative")
 @RequiredArgsConstructor
 public class TaskControllerV2 {
 

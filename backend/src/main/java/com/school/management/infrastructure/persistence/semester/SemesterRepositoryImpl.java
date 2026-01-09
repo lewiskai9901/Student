@@ -103,6 +103,13 @@ public class SemesterRepositoryImpl implements SemesterRepository {
     }
 
     @Override
+    public void delete(Semester semester) {
+        if (semester != null && semester.getId() != null) {
+            semesterMapper.deleteById(semester.getId());
+        }
+    }
+
+    @Override
     public void deleteById(Long id) {
         semesterMapper.deleteById(id);
     }

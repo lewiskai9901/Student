@@ -16,9 +16,9 @@ import java.util.stream.Collectors;
 @Repository
 public class GradeRepositoryImpl implements GradeRepository {
 
-    private final GradeMapper gradeMapper;
+    private final GradePersistenceMapper gradeMapper;
 
-    public GradeRepositoryImpl(GradeMapper gradeMapper) {
+    public GradeRepositoryImpl(GradePersistenceMapper gradeMapper) {
         this.gradeMapper = gradeMapper;
     }
 

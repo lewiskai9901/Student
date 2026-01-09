@@ -1,7 +1,7 @@
 package com.school.management.security;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.school.management.common.Result;
+import com.school.management.common.result.Result;
 import com.school.management.config.FeatureToggleConfig;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;

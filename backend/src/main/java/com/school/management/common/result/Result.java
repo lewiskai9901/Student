@@ -77,4 +77,18 @@ public class Result<T> {
     public static <T> Result<T> error(ResultCode resultCode) {
         return new Result<>(resultCode.getCode(), resultCode.getMessage(), null, System.currentTimeMillis());
     }
+
+    /**
+     * 失败响应（自定义码和消息）- 别名方法
+     */
+    public static <T> Result<T> fail(int code, String message) {
+        return new Result<>(code, message, null, System.currentTimeMillis());
+    }
+
+    /**
+     * 失败响应（自定义消息）- 别名方法
+     */
+    public static <T> Result<T> fail(String message) {
+        return new Result<>(ResultCode.ERROR.getCode(), message, null, System.currentTimeMillis());
+    }
 }

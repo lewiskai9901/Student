@@ -16,10 +16,10 @@ import java.util.stream.Collectors;
 @Repository
 public class MajorRepositoryImpl implements MajorRepository {
 
-    private final MajorMapper majorMapper;
-    private final MajorDirectionMapper directionMapper;
+    private final MajorPersistenceMapper majorMapper;
+    private final MajorDirectionPersistenceMapper directionMapper;
 
-    public MajorRepositoryImpl(MajorMapper majorMapper, MajorDirectionMapper directionMapper) {
+    public MajorRepositoryImpl(MajorPersistenceMapper majorMapper, MajorDirectionPersistenceMapper directionMapper) {
         this.majorMapper = majorMapper;
         this.directionMapper = directionMapper;
     }

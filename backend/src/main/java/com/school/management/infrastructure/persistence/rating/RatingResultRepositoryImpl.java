@@ -17,9 +17,9 @@ import java.util.stream.Collectors;
 @Repository
 public class RatingResultRepositoryImpl implements RatingResultRepository {
 
-    private final RatingResultMapper resultMapper;
+    private final RatingResultPersistenceMapper resultMapper;
 
-    public RatingResultRepositoryImpl(RatingResultMapper resultMapper) {
+    public RatingResultRepositoryImpl(RatingResultPersistenceMapper resultMapper) {
         this.resultMapper = resultMapper;
     }
 

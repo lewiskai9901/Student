@@ -16,9 +16,9 @@ import java.util.stream.Collectors;
 @Repository
 public class RatingConfigRepositoryImpl implements RatingConfigRepository {
 
-    private final RatingConfigMapper configMapper;
+    private final RatingConfigPersistenceMapper configMapper;
 
-    public RatingConfigRepositoryImpl(RatingConfigMapper configMapper) {
+    public RatingConfigRepositoryImpl(RatingConfigPersistenceMapper configMapper) {
         this.configMapper = configMapper;
     }
 

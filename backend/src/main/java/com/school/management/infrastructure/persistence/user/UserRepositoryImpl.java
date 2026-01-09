@@ -119,6 +119,13 @@ public class UserRepositoryImpl implements UserRepository {
     }
 
     @Override
+    public void delete(User user) {
+        if (user != null && user.getId() != null) {
+            userMapper.deleteById(user.getId());
+        }
+    }
+
+    @Override
     public void deleteById(Long id) {
         userMapper.deleteById(id);
     }

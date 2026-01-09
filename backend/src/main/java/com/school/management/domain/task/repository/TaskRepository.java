@@ -1,7 +1,9 @@
 package com.school.management.domain.task.repository;
 
-import com.school.management.domain.task.model.Task;
-import com.school.management.domain.task.model.TaskStatus;
+import com.school.management.domain.task.model.aggregate.Task;
+import com.school.management.domain.task.model.valueobject.TaskPriority;
+import com.school.management.domain.task.model.valueobject.TaskStatus;
+import lombok.Data;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -93,6 +95,58 @@ public interface TaskRepository {
     List<Task> findPendingApprovalByUserId(Long approverId);
 
     /**
+     * Finds tasks pending approval for a user (alias).
+     *
+     * @param approverId the approver user ID
+     * @return list of tasks pending the user's approval
+     */
+    default List<Task> findPendingApprovalByApproverId(Long approverId) {
+        return findPendingApprovalByUserId(approverId);
+    }
+
+    /**
+     * Finds pending tasks for an assignee.
+     *
+     * @param assigneeId the assignee user ID
+     * @return list of pending tasks
+     */
+    List<Task> findPendingByAssigneeId(Long assigneeId);
+
+    /**
+     * Finds in-progress tasks for an assignee.
+     *
+     * @param assigneeId the assignee user ID
+     * @return list of in-progress tasks
+     */
+    List<Task> findInProgressByAssigneeId(Long assigneeId);
+
+    /**
+     * Finds overdue tasks (alias for findOverdueTasks).
+     *
+     * @param now current time
+     * @return list of overdue tasks
+     */
+    default List<Task> findOverdue(LocalDateTime now) {
+        return findOverdueTasks(now);
+    }
+
+    /**
+     * Counts tasks by department.
+     *
+     * @param departmentId the department ID
+     * @return count of tasks in the department
+     */
+    long countByDepartmentId(Long departmentId);
+
+    /**
+     * Checks if a task exists with the given task code.
+     *
+     * @param taskCode the task code
+     * @return true if exists
+     */
+    boolean existsByTaskCode(String taskCode);
+
+    /**
      * Counts tasks by status for a user.
      *
      * @param userId the user ID (as assignee)
@@ -130,4 +184,38 @@ public interface TaskRepository {
      * @return the next ID value
      */
     Long nextId();
+
+    /**
+     * Finds tasks by criteria with pagination.
+     *
+     * @param criteria the query criteria
+     * @param pageNum the page number (1-based)
+     * @param pageSize the page size
+     * @return list of matching tasks
+     */
+    List<Task> findByPage(TaskQueryCriteria criteria, int pageNum, int pageSize);
+
+    /**
+     * Counts tasks matching the criteria.
+     *
+     * @param criteria the query criteria
+     * @return count of matching tasks
+     */
+    long countByCriteria(TaskQueryCriteria criteria);
+
+    /**
+     * Query criteria for task searches.
+     */
+    @Data
+    class TaskQueryCriteria {
+        private String keyword;
+        private Long assignerId;
+        private Long assigneeId;
+        private Long departmentId;
+        private TaskStatus status;
+        private TaskPriority priority;
+        private LocalDateTime dueDateFrom;
+        private LocalDateTime dueDateTo;
+        private Boolean overdue;
+    }
 }

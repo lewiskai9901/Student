@@ -125,7 +125,7 @@ public class Task extends AggregateRoot<Long> {
     /**
      * 接受任务
      */
-    public void accept(Long assigneeId) {
+    public void accept(Long assigneeId, String assigneeName) {
         if (!status.canAccept()) {
             throw new BusinessException("任务状态不允许接受: " + status.getName());
         }
@@ -134,11 +134,19 @@ public class Task extends AggregateRoot<Long> {
         this.acceptedAt = LocalDateTime.now();
         this.updatedAt = LocalDateTime.now();
 
-        registerEvent(new TaskAcceptedEvent(
-                String.valueOf(getId()),
+        registerEvent(TaskAcceptedEvent.of(
+                getId(),
                 taskCode,
-                assigneeId
+                assigneeId,
+                assigneeName
         ));
+    }
+
+    /**
+     * 接受任务（无名称版本，向后兼容）
+     */
+    public void accept(Long assigneeId) {
+        accept(assigneeId, null);
     }
 
     /**
@@ -162,11 +170,12 @@ public class Task extends AggregateRoot<Long> {
         this.submittedAt = LocalDateTime.now();
         this.updatedAt = LocalDateTime.now();
 
-        registerEvent(new TaskSubmittedEvent(
-                String.valueOf(getId()),
+        registerEvent(TaskSubmittedEvent.of(
+                getId(),
                 taskCode,
                 submitterId,
-                submitterName
+                submitterName,
+                submission.getId()
         ));
 
         return submission;
@@ -184,12 +193,12 @@ public class Task extends AggregateRoot<Long> {
         this.completedAt = LocalDateTime.now();
         this.updatedAt = LocalDateTime.now();
 
-        registerEvent(new TaskApprovedEvent(
-                String.valueOf(getId()),
+        registerEvent(TaskApprovedEvent.of(
+                getId(),
                 taskCode,
+                null, // assigneeId - not available in this context
                 approverId,
-                approverName,
-                comment
+                approverName
         ));
     }
 
@@ -204,9 +213,10 @@ public class Task extends AggregateRoot<Long> {
         this.status = TaskStatus.REJECTED;
         this.updatedAt = LocalDateTime.now();
 
-        registerEvent(new TaskRejectedEvent(
-                String.valueOf(getId()),
+        registerEvent(TaskRejectedEvent.of(
+                getId(),
                 taskCode,
+                null, // assigneeId - not available in this context
                 approverId,
                 approverName,
                 reason

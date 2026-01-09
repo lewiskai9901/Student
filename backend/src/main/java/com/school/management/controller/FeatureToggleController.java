@@ -1,6 +1,6 @@
 package com.school.management.controller;
 
-import com.school.management.common.Result;
+import com.school.management.common.result.Result;
 import com.school.management.config.FeatureToggleConfig;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
