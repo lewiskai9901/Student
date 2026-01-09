@@ -8,10 +8,10 @@ import org.apache.ibatis.annotations.Select;
 import java.util.List;
 
 /**
- * 专业方向 Mapper
+ * 专业方向 Mapper (DDD infrastructure layer)
  */
 @Mapper
-public interface MajorDirectionMapper extends BaseMapper<MajorDirectionPO> {
+public interface MajorDirectionPersistenceMapper extends BaseMapper<MajorDirectionPO> {
 
     @Select("SELECT * FROM major_directions WHERE major_id = #{majorId} AND deleted = 0 ORDER BY id")
     List<MajorDirectionPO> findByMajorId(@Param("majorId") Long majorId);

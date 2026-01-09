@@ -8,10 +8,10 @@ import org.apache.ibatis.annotations.Select;
 import java.util.List;
 
 /**
- * 评价配置 Mapper
+ * 评价配置 Mapper (DDD infrastructure layer)
  */
 @Mapper
-public interface RatingConfigMapper extends BaseMapper<RatingConfigPO> {
+public interface RatingConfigPersistenceMapper extends BaseMapper<RatingConfigPO> {
 
     /**
      * 根据检查计划ID查找配置

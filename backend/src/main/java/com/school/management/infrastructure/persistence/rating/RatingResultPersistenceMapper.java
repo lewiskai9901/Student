@@ -9,10 +9,10 @@ import java.time.LocalDate;
 import java.util.List;
 
 /**
- * 评价结果 Mapper
+ * 评价结果 Mapper (DDD infrastructure layer)
  */
 @Mapper
-public interface RatingResultMapper extends BaseMapper<RatingResultPO> {
+public interface RatingResultPersistenceMapper extends BaseMapper<RatingResultPO> {
 
     /**
      * 根据评价配置ID查找结果

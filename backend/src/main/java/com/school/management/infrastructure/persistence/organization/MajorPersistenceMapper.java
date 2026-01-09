@@ -8,10 +8,10 @@ import org.apache.ibatis.annotations.Select;
 import java.util.List;
 
 /**
- * 专业 Mapper
+ * 专业 Mapper (DDD infrastructure layer)
  */
 @Mapper
-public interface MajorMapper extends BaseMapper<MajorPO> {
+public interface MajorPersistenceMapper extends BaseMapper<MajorPO> {
 
     @Select("SELECT * FROM majors WHERE major_code = #{majorCode} AND deleted = 0")
     MajorPO findByMajorCode(@Param("majorCode") String majorCode);

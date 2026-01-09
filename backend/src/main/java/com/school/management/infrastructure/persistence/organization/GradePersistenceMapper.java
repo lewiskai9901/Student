@@ -8,11 +8,11 @@ import org.apache.ibatis.annotations.Select;
 import java.util.List;
 
 /**
- * MyBatis mapper for Grade persistence.
+ * MyBatis mapper for Grade persistence (DDD infrastructure layer).
  * Maps to the existing 'grades' table.
  */
 @Mapper
-public interface GradeMapper extends BaseMapper<GradePO> {
+public interface GradePersistenceMapper extends BaseMapper<GradePO> {
 
     /**
      * Find by grade code.
