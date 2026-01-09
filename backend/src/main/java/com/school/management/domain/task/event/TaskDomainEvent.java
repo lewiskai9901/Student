@@ -1,43 +1,20 @@
 package com.school.management.domain.task.event;
 
-import com.school.management.domain.shared.event.DomainEvent;
-
-import java.time.LocalDateTime;
-import java.util.UUID;
+import com.school.management.domain.shared.event.BaseDomainEvent;
 
 /**
  * Base class for task domain events.
+ * Extends BaseDomainEvent to reuse common event functionality.
  */
-public abstract class TaskDomainEvent implements DomainEvent {
+public abstract class TaskDomainEvent extends BaseDomainEvent {
 
-    private final String eventId;
-    private final LocalDateTime occurredOn;
     private final Long taskId;
     private final String taskCode;
 
     protected TaskDomainEvent(Long taskId, String taskCode) {
-        this.eventId = UUID.randomUUID().toString();
-        this.occurredOn = LocalDateTime.now();
+        super("Task", taskId);
         this.taskId = taskId;
         this.taskCode = taskCode;
-    }
-
-    public String getEventId() {
-        return eventId;
-    }
-
-    @Override
-    public LocalDateTime occurredOn() {
-        return occurredOn;
-    }
-
-    @Override
-    public String aggregateId() {
-        return taskId != null ? taskId.toString() : null;
-    }
-
-    public String getAggregateType() {
-        return "Task";
     }
 
     public Long getTaskId() {

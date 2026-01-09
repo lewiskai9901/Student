@@ -1,42 +1,33 @@
 package com.school.management.domain.rating.event;
 
-import com.school.management.domain.shared.event.DomainEvent;
-
-import java.time.Instant;
-import java.util.UUID;
+import com.school.management.domain.shared.event.BaseDomainEvent;
 
 /**
  * Base class for rating domain events.
+ * Extends BaseDomainEvent to reuse common event functionality.
  */
-public abstract class RatingDomainEvent implements DomainEvent {
+public abstract class RatingDomainEvent extends BaseDomainEvent {
 
-    private final String eventId;
-    private final Instant occurredOn;
     private final Long resultId;
     private final Long ratingConfigId;
     private final Long classId;
 
     protected RatingDomainEvent(Long resultId, Long ratingConfigId, Long classId) {
-        this.eventId = UUID.randomUUID().toString();
-        this.occurredOn = Instant.now();
+        super("RatingResult", resultId);
         this.resultId = resultId;
         this.ratingConfigId = ratingConfigId;
         this.classId = classId;
     }
 
-    @Override
-    public String getEventId() { return eventId; }
+    public Long getResultId() {
+        return resultId;
+    }
 
-    @Override
-    public Instant getOccurredOn() { return occurredOn; }
+    public Long getRatingConfigId() {
+        return ratingConfigId;
+    }
 
-    @Override
-    public String getAggregateId() { return resultId != null ? resultId.toString() : null; }
-
-    @Override
-    public String getAggregateType() { return "RatingResult"; }
-
-    public Long getResultId() { return resultId; }
-    public Long getRatingConfigId() { return ratingConfigId; }
-    public Long getClassId() { return classId; }
+    public Long getClassId() {
+        return classId;
+    }
 }
