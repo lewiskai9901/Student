@@ -488,35 +488,55 @@
       </Transition>
     </Teleport>
 
-    <!-- 数据权限配置对话框 -->
+    <!-- 数据权限配置对话框 V2 -->
     <Teleport to="body">
       <Transition name="modal">
         <div v-if="dataPermissionDialogVisible" class="fixed inset-0 z-50 flex items-center justify-center">
           <div class="fixed inset-0 bg-black/50" @click="dataPermissionDialogVisible = false"></div>
-          <div class="relative w-full max-w-lg rounded-lg bg-white shadow-xl">
+          <div class="relative w-full max-w-2xl rounded-lg bg-white shadow-xl">
             <div class="flex items-center justify-between border-b border-gray-200 px-6 py-4">
               <h3 class="text-lg font-medium text-gray-900">配置数据权限 - {{ currentRoleName }}</h3>
               <button @click="dataPermissionDialogVisible = false" class="rounded p-1 hover:bg-gray-100">
                 <X class="h-5 w-5 text-gray-500" />
               </button>
             </div>
-            <div class="max-h-96 overflow-y-auto p-6">
-              <div class="space-y-4">
-                <div v-for="perm in dataPermissions" :key="perm.moduleCode" class="rounded-lg border border-gray-200 p-4">
-                  <div class="flex items-center justify-between">
-                    <span class="font-medium text-gray-900">{{ perm.moduleName }}</span>
-                    <select
-                      v-model="perm.dataScope"
-                      class="h-9 w-40 rounded-lg border border-gray-300 px-3 text-sm focus:border-blue-500 focus:outline-none"
-                    >
-                      <option v-for="opt in DATA_SCOPE_OPTIONS" :key="opt.value" :value="opt.value">
-                        {{ opt.label }}
-                      </option>
-                    </select>
+            <div class="max-h-[500px] overflow-y-auto p-6">
+              <div class="space-y-6">
+                <!-- 按领域分组显示模块 -->
+                <div v-for="(modules, domain) in groupedModules" :key="domain" class="rounded-lg border border-gray-200">
+                  <div class="flex items-center gap-2 border-b border-gray-100 bg-gray-50 px-4 py-3">
+                    <component :is="getDomainIcon(domain)" class="h-5 w-5 text-gray-600" />
+                    <span class="font-medium text-gray-900">{{ getDomainLabel(domain) }}</span>
+                  </div>
+                  <div class="divide-y divide-gray-100">
+                    <div v-for="module in modules" :key="module.code" class="flex items-center justify-between px-4 py-3">
+                      <span class="text-sm text-gray-700">{{ module.name }}</span>
+                      <div class="flex items-center gap-2">
+                        <select
+                          :value="getModuleScope(module.code)"
+                          @change="setModuleScope(module.code, ($event.target as HTMLSelectElement).value)"
+                          class="h-8 w-36 rounded-lg border border-gray-300 px-2 text-sm focus:border-blue-500 focus:outline-none"
+                        >
+                          <option v-for="scope in dataScopeOptions" :key="scope.code" :value="scope.code">
+                            {{ scope.name }}
+                          </option>
+                        </select>
+                        <!-- 自定义范围选择按钮 -->
+                        <button
+                          v-if="getModuleScope(module.code) === 'custom'"
+                          @click="openCustomScopeDialog(module.code)"
+                          class="inline-flex h-8 items-center gap-1 rounded-lg border border-blue-300 bg-blue-50 px-2 text-xs text-blue-600 hover:bg-blue-100"
+                        >
+                          <Settings class="h-3.5 w-3.5" />
+                          选择 ({{ getCustomScopeCount(module.code) }})
+                        </button>
+                      </div>
+                    </div>
                   </div>
                 </div>
-                <div v-if="dataPermissions.length === 0" class="py-8 text-center text-gray-500">
-                  加载中...
+                <div v-if="Object.keys(groupedModules).length === 0" class="py-8 text-center text-gray-500">
+                  <Loader2 class="mx-auto h-6 w-6 animate-spin text-gray-400" />
+                  <p class="mt-2">加载中...</p>
                 </div>
               </div>
             </div>
@@ -534,6 +554,50 @@
               >
                 <Loader2 v-if="dataPermissionSubmitLoading" class="h-4 w-4 animate-spin" />
                 保存
+              </button>
+            </div>
+          </div>
+        </div>
+      </Transition>
+    </Teleport>
+
+    <!-- 自定义范围选择对话框 -->
+    <Teleport to="body">
+      <Transition name="modal">
+        <div v-if="customScopeDialogVisible" class="fixed inset-0 z-[60] flex items-center justify-center">
+          <div class="fixed inset-0 bg-black/50" @click="customScopeDialogVisible = false"></div>
+          <div class="relative w-full max-w-md rounded-lg bg-white shadow-xl">
+            <div class="flex items-center justify-between border-b border-gray-200 px-6 py-4">
+              <h3 class="text-lg font-medium text-gray-900">选择可访问的组织单元</h3>
+              <button @click="customScopeDialogVisible = false" class="rounded p-1 hover:bg-gray-100">
+                <X class="h-5 w-5 text-gray-500" />
+              </button>
+            </div>
+            <div class="max-h-80 overflow-y-auto p-6">
+              <p class="mb-4 text-sm text-gray-500">
+                请选择该角色可以访问的组织单元（部门/年级/班级）。
+              </p>
+              <div class="rounded-lg border border-gray-200 p-4">
+                <p class="text-center text-gray-400">
+                  组织树选择器（待实现）
+                </p>
+                <p class="mt-2 text-center text-xs text-gray-400">
+                  需要集成组织架构树组件
+                </p>
+              </div>
+            </div>
+            <div class="flex items-center justify-end gap-3 border-t border-gray-200 px-6 py-4">
+              <button
+                @click="customScopeDialogVisible = false"
+                class="h-9 rounded-lg border border-gray-300 px-4 text-sm font-medium text-gray-700 hover:bg-gray-50"
+              >
+                取消
+              </button>
+              <button
+                @click="confirmCustomScope"
+                class="inline-flex h-9 items-center gap-1.5 rounded-lg bg-blue-600 px-4 text-sm font-medium text-white hover:bg-blue-700"
+              >
+                确定
               </button>
             </div>
           </div>
@@ -588,15 +652,21 @@ import {
   enableRole,
   disableRole,
   DATA_SCOPE_OPTIONS,
-  getRoleDataPermissions,
-  saveRoleDataPermissions,
-  type RoleResponse,
-  type RoleDataPermission
+  getRoleDataPermissionsV2,
+  saveRoleDataPermissionsV2,
+  getDataModulesV2,
+  getDataScopesV2,
+  type RoleResponse
 } from '@/api/v2/access'
 import type {
   CreateRoleRequest,
   UpdateRoleRequest,
-  RoleQueryParams
+  RoleQueryParams,
+  RolePermissionConfig,
+  ModulePermission,
+  GroupedModules,
+  DataScopeOption,
+  DomainConfig
 } from '@/types/v2/access'
 
 const loading = ref(false)
@@ -606,12 +676,18 @@ const dataPermissionSubmitLoading = ref(false)
 const dialogVisible = ref(false)
 const permissionDialogVisible = ref(false)
 const dataPermissionDialogVisible = ref(false)
+const customScopeDialogVisible = ref(false)
 const isEdit = ref(false)
 const currentRoleName = ref('')
-const dataPermissions = ref<RoleDataPermission[]>([])
 const selectedIds = ref<number[]>([])
 const currentRoleId = ref<number>()
 const expandedModules = ref<string[]>([])
+
+// V2 数据权限相关状态
+const groupedModules = ref<GroupedModules>({})
+const dataScopeOptions = ref<DataScopeOption[]>([])
+const rolePermissionConfig = ref<RolePermissionConfig | null>(null)
+const currentCustomScopeModule = ref<string>('')
 
 // 查询参数 - V2 类型
 interface LocalRoleQueryParams extends RoleQueryParams {
@@ -897,24 +973,112 @@ const handlePermissionSubmit = async () => {
   }
 }
 
-// 数据权限相关
+// ==================== V2 数据权限相关 ====================
+
+// 领域配置
+const domainLabels: Record<string, string> = {
+  organization: '组织管理',
+  inspection: '量化检查',
+  evaluation: '评价管理',
+  task: '任务管理'
+}
+
+// 获取领域标签
+const getDomainLabel = (domain: string): string => {
+  return domainLabels[domain] || domain
+}
+
+// 获取领域图标
+const getDomainIcon = (domain: string) => {
+  const icons: Record<string, any> = {
+    organization: Building2,
+    inspection: CheckSquare,
+    evaluation: BarChart3,
+    task: BookOpen
+  }
+  return icons[domain] || Folder
+}
+
+// 获取模块的当前范围
+const getModuleScope = (moduleCode: string): string => {
+  if (!rolePermissionConfig.value) return 'self'
+  const mp = rolePermissionConfig.value.modulePermissions.find(p => p.moduleCode === moduleCode)
+  return mp?.scopeCode || 'self'
+}
+
+// 设置模块的范围
+const setModuleScope = (moduleCode: string, scopeCode: string) => {
+  if (!rolePermissionConfig.value) return
+  const mp = rolePermissionConfig.value.modulePermissions.find(p => p.moduleCode === moduleCode)
+  if (mp) {
+    mp.scopeCode = scopeCode
+    // 如果不是自定义范围，清空自定义组织单元
+    if (scopeCode !== 'custom') {
+      mp.customOrgUnitIds = undefined
+    }
+  }
+}
+
+// 获取模块的自定义范围数量
+const getCustomScopeCount = (moduleCode: string): number => {
+  if (!rolePermissionConfig.value) return 0
+  const mp = rolePermissionConfig.value.modulePermissions.find(p => p.moduleCode === moduleCode)
+  return mp?.customOrgUnitIds?.length || 0
+}
+
+// 打开自定义范围选择对话框
+const openCustomScopeDialog = (moduleCode: string) => {
+  currentCustomScopeModule.value = moduleCode
+  customScopeDialogVisible.value = true
+}
+
+// 确认自定义范围选择
+const confirmCustomScope = () => {
+  // TODO: 从组织树获取选中的组织单元ID
+  customScopeDialogVisible.value = false
+  ElMessage.info('自定义范围选择功能待完善')
+}
+
+// 加载数据权限元数据
+const loadDataPermissionMeta = async () => {
+  try {
+    const [modules, scopes] = await Promise.all([
+      getDataModulesV2(),
+      getDataScopesV2()
+    ])
+    groupedModules.value = modules
+    dataScopeOptions.value = scopes
+  } catch (error) {
+    console.error('加载数据权限元数据失败:', error)
+  }
+}
+
+// 打开数据权限配置对话框
 const handleDataPermissions = async (row: RoleResponse) => {
   try {
     currentRoleId.value = row.id
     currentRoleName.value = row.roleName
-    const permissions = await getRoleDataPermissions(row.id)
-    dataPermissions.value = permissions
+
+    // 确保元数据已加载
+    if (Object.keys(groupedModules.value).length === 0) {
+      await loadDataPermissionMeta()
+    }
+
+    // 加载角色的数据权限配置
+    const config = await getRoleDataPermissionsV2(row.id)
+    rolePermissionConfig.value = config
     dataPermissionDialogVisible.value = true
   } catch (error) {
     ElMessage.error('加载数据权限失败')
   }
 }
 
+// 保存数据权限配置
 const handleDataPermissionSubmit = async () => {
-  if (!currentRoleId.value) return
+  if (!currentRoleId.value || !rolePermissionConfig.value) return
   try {
     dataPermissionSubmitLoading.value = true
-    await saveRoleDataPermissions(currentRoleId.value, dataPermissions.value)
+    await saveRoleDataPermissionsV2(currentRoleId.value, rolePermissionConfig.value)
     ElMessage.success('数据权限保存成功')
     dataPermissionDialogVisible.value = false
   } catch (error: any) {
@@ -927,6 +1091,8 @@ const handleDataPermissionSubmit = async () => {
 onMounted(() => {
   loadRoleList()
   loadPermissionTree()
+  // 预加载数据权限元数据
+  loadDataPermissionMeta()
 })
 </script>
 
