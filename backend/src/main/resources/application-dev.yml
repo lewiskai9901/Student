@@ -31,10 +31,11 @@ logging:
   file:
     name: logs/student-management-dev.log
 
-# JWT配置 - 必须通过环境变量设置
+# JWT配置 - 开发环境使用固定密钥
 jwt:
-  secret: ${JWT_SECRET:}
-  expiration: 86400000  # 24小时（开发环境延长）
+  secret-key: dev-secret-key-for-local-development-must-be-at-least-64-bytes-long-for-hs512
+  access-token-expiration: 86400000  # 24小时（开发环境延长）
+  refresh-token-expiration: 2592000000  # 30天
 
 # 开发工具
 management:

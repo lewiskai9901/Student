@@ -4,11 +4,15 @@ import jakarta.annotation.PostConstruct;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.core.env.Environment;
+import lombok.RequiredArgsConstructor;
 
+import java.util.Arrays;
 import java.util.Set;
 
 @Slf4j
 @Configuration
+@RequiredArgsConstructor
 public class SecurityValidationConfig {
 
     private static final Set<String> FORBIDDEN_PASSWORDS = Set.of(
@@ -16,11 +20,19 @@ public class SecurityValidationConfig {
         "123456789", "12345678", "1234567890", "qwerty"
     );
 
+    private final Environment environment;
+
     @Value("${spring.datasource.password:}")
     private String dbPassword;
 
     @PostConstruct
     public void validateOnStartup() {
+        // 开发环境跳过密码强度验证
+        boolean isDev = Arrays.asList(environment.getActiveProfiles()).contains("dev");
+        if (isDev) {
+            log.warn("Security validation skipped in dev profile");
+            return;
+        }
         validateDatabasePassword(dbPassword);
         log.info("Security validation passed: database password is not a default value");
     }

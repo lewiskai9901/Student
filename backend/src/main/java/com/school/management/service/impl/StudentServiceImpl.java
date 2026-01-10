@@ -910,7 +910,7 @@ public class StudentServiceImpl extends ServiceImpl<StudentMapper, Student> impl
                         .eq(com.school.management.entity.Class::getClassName, className)
                         .eq(com.school.management.entity.Class::getDeleted, 0));
                 if (clazz == null) {
-                    throw new BusinessException("班级"" + className + ""不存在");
+                    throw new BusinessException("班级[" + className + "]不存在");
                 }
 
                 StudentCreateRequest request = new StudentCreateRequest();
@@ -971,6 +971,5 @@ public class StudentServiceImpl extends ServiceImpl<StudentMapper, Student> impl
     private String getStringValue(java.util.Map<String, Object> row, String key) {
         Object value = row.get(key);
         return value != null ? value.toString().trim() : "";
-    }
     }
 }
