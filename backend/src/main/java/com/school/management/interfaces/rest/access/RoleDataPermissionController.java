@@ -16,7 +16,7 @@ import java.util.Map;
  * V2 角色数据权限管理控制器
  */
 @RestController
-@RequestMapping("/api/v2/roles")
+@RequestMapping("/v2/roles")
 @RequiredArgsConstructor
 @Tag(name = "角色数据权限管理 V2", description = "V2 API - 角色数据权限配置，支持DDD对齐模块和自定义范围")
 public class RoleDataPermissionController {
@@ -25,7 +25,7 @@ public class RoleDataPermissionController {
 
     @GetMapping("/{roleId}/data-permissions")
     @Operation(summary = "获取角色数据权限配置")
-    @PreAuthorize("hasAuthority('system:role:query') or hasAuthority('system:role:edit')")
+    @PreAuthorize("hasAuthority('system:role:view') or hasAuthority('system:role:edit')")
     public ApiResponse<RoleDataPermissionDTO.RolePermissionConfig> getPermissions(@PathVariable Long roleId) {
         return ApiResponse.success(service.getRolePermissionConfigV2(roleId));
     }
@@ -42,14 +42,14 @@ public class RoleDataPermissionController {
 
     @GetMapping("/data-permissions/modules")
     @Operation(summary = "获取所有数据模块列表（按领域分组）")
-    @PreAuthorize("hasAuthority('system:role:query') or hasAuthority('system:role:edit')")
+    @PreAuthorize("hasAuthority('system:role:view') or hasAuthority('system:role:edit')")
     public ApiResponse<Map<String, List<Map<String, String>>>> getModules() {
         return ApiResponse.success(service.getAllModulesV2());
     }
 
     @GetMapping("/data-permissions/scopes")
     @Operation(summary = "获取所有数据范围选项")
-    @PreAuthorize("hasAuthority('system:role:query') or hasAuthority('system:role:edit')")
+    @PreAuthorize("hasAuthority('system:role:view') or hasAuthority('system:role:edit')")
     public ApiResponse<List<Map<String, String>>> getScopes() {
         return ApiResponse.success(service.getAllScopesV2());
     }

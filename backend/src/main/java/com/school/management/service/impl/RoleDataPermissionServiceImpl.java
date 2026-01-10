@@ -111,7 +111,7 @@ public class RoleDataPermissionServiceImpl implements RoleDataPermissionService 
     public RoleDataPermissionDTO.RolePermissionConfig getRolePermissionConfigV2(Long roleId) {
         // 获取角色信息
         Role role = roleMapper.selectById(roleId);
-        String roleName = role != null ? role.getName() : "";
+        String roleName = role != null ? role.getRoleName() : "";
 
         // 获取所有模块权限
         List<RoleDataPermission> existingPermissions = roleDataPermissionMapper.selectByRoleId(roleId);
