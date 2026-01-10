@@ -1,8 +1,8 @@
 package com.school.management.service.impl;
 
+import com.school.management.domain.access.model.DataScope;
 import com.school.management.entity.RoleDataPermission;
 import com.school.management.entity.Student;
-import com.school.management.enums.DataScope;
 import com.school.management.mapper.ClassMapper;
 import com.school.management.mapper.RoleDataPermissionMapper;
 import com.school.management.mapper.StudentMapper;

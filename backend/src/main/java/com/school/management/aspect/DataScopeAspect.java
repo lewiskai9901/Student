@@ -41,11 +41,11 @@ public class DataScopeAspect {
         }
 
         // 获取数据范围 - 使用完全限定名避免与注解冲突
-        com.school.management.enums.DataScope scope = dataPermissionService.getDataScope(dataScope.module());
+        com.school.management.domain.access.model.DataScope scope = dataPermissionService.getDataScope(dataScope.module());
         log.debug("User {} data scope for module {}: {}", user.getUsername(), dataScope.module(), scope);
 
         // 全部数据权限,不需要过滤
-        if (scope == com.school.management.enums.DataScope.ALL) {
+        if (scope == com.school.management.domain.access.model.DataScope.ALL) {
             return;
         }
 

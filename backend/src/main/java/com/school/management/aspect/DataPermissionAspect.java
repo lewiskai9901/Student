@@ -1,7 +1,7 @@
 package com.school.management.aspect;
 
 import com.school.management.annotation.DataPermission;
-import com.school.management.enums.DataScope;
+import com.school.management.domain.access.model.DataScope;
 import com.school.management.security.CustomUserDetails;
 import com.school.management.service.DataPermissionService;
 import com.school.management.util.SecurityUtils;

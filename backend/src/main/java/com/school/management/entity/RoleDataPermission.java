@@ -1,7 +1,7 @@
 package com.school.management.entity;
 
 import com.baomidou.mybatisplus.annotation.TableName;
-import com.school.management.enums.DataScope;
+import com.school.management.domain.access.model.DataScope;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 

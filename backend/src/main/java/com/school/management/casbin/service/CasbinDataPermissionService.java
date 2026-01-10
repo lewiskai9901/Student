@@ -1,8 +1,8 @@
 package com.school.management.casbin.service;
 
 import com.school.management.casbin.dto.ScopeAssignmentDTO;
+import com.school.management.domain.access.model.DataScope;
 import com.school.management.entity.Student;
-import com.school.management.enums.DataScope;
 import com.school.management.mapper.StudentMapper;
 import com.school.management.security.CustomUserDetails;
 import com.school.management.service.DataPermissionService;

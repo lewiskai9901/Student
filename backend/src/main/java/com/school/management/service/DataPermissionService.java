@@ -1,6 +1,6 @@
 package com.school.management.service;
 
-import com.school.management.enums.DataScope;
+import com.school.management.domain.access.model.DataScope;
 
 import java.util.List;
 
