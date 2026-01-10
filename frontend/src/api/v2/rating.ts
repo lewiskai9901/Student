@@ -800,16 +800,6 @@ export const RATING_TYPE_LABELS: Record<string, string> = {
 }
 
 /**
- * 划分方式标签
- */
-export const DIVISION_METHOD_LABELS: Record<string, string> = {
-  TOP_N: '前N名',
-  TOP_PERCENT: '前N%',
-  BOTTOM_N: '后N名',
-  BOTTOM_PERCENT: '后N%'
-}
-
-/**
  * 状态标签
  */
 export const RATING_STATUS_LABELS: Record<string, string> = {
@@ -1714,21 +1704,7 @@ export function exportStatistics(params: {
   return http.get<string>('/rating/statistics/export', { params })
 }
 
-// ==================== 常量 ====================
-
-export const PERIOD_TYPES = {
-  WEEK: 'WEEK',
-  MONTH: 'MONTH',
-  QUARTER: 'QUARTER',
-  YEAR: 'YEAR'
-} as const
-
-export const PERIOD_TYPE_LABELS: Record<string, string> = {
-  WEEK: '周',
-  MONTH: '月',
-  QUARTER: '季度',
-  YEAR: '年'
-}
+// ==================== 常量 (已在上方定义) ====================
 
 export const TREND_GRANULARITIES = {
   DAY: 'DAY',
