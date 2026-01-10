@@ -227,11 +227,14 @@ public class Student extends AggregateRoot<Long> {
         this.remark = remark;
         this.updatedAt = LocalDateTime.now();
 
-        registerEvent(new StudentUpdatedEvent(
-                this.getId().toString(),
-                this.studentNo,
-                this.name
-        ));
+        // 只有在已持久化（有ID）时才注册更新事件
+        if (this.getId() != null) {
+            registerEvent(new StudentUpdatedEvent(
+                    this.getId().toString(),
+                    this.studentNo,
+                    this.name
+            ));
+        }
     }
 
     /**

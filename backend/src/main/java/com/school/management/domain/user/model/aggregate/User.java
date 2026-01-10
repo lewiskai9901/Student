@@ -259,11 +259,14 @@ public class User extends AggregateRoot<Long> {
         this.departmentId = departmentId;
         this.updatedAt = LocalDateTime.now();
 
-        registerEvent(new UserUpdatedEvent(
-                this.getId().toString(),
-                this.username,
-                this.realName
-        ));
+        // 只有在已持久化（有ID）时才注册更新事件
+        if (this.getId() != null) {
+            registerEvent(new UserUpdatedEvent(
+                    this.getId().toString(),
+                    this.username,
+                    this.realName
+            ));
+        }
     }
 
     /**
