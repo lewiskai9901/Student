@@ -175,15 +175,15 @@
             <td class="px-4 py-3">
               <span class="rounded bg-gray-100 px-2 py-0.5 font-mono text-xs text-gray-600">{{ row.roleCode }}</span>
             </td>
-            <td class="max-w-xs truncate px-4 py-3 text-gray-600">{{ row.roleDesc || '-' }}</td>
-            <td class="px-4 py-3 text-center text-gray-600">{{ row.sortOrder ?? 0 }}</td>
+            <td class="max-w-xs truncate px-4 py-3 text-gray-600">{{ row.description || '-' }}</td>
+            <td class="px-4 py-3 text-center text-gray-600">{{ row.level ?? 0 }}</td>
             <td class="px-4 py-3 text-center">
               <span
                 :class="[
                   'rounded-full px-2 py-0.5 text-xs font-medium',
-                  row.status === 1 ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
+                  row.isEnabled !== false ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
                 ]"
-              >{{ row.status === 1 ? '启用' : '禁用' }}</span>
+              >{{ row.isEnabled !== false ? '启用' : '禁用' }}</span>
             </td>
             <td class="px-4 py-3 text-sm text-gray-500">{{ row.createdAt || '-' }}</td>
             <td class="px-4 py-3">
@@ -312,7 +312,7 @@
                 <div>
                   <label class="mb-1 block text-sm text-gray-700">角色描述</label>
                   <textarea
-                    v-model="formData.roleDesc"
+                    v-model="formData.description"
                     rows="3"
                     placeholder="请输入角色描述"
                     class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none"
@@ -575,23 +575,33 @@ import {
   BookOpen,
   Home
 } from 'lucide-vue-next'
+// V2 DDD API
 import {
-  getRolePage,
+  getRolesPage,
   createRole,
   updateRole,
   deleteRole,
   batchDeleteRoles,
-  getRolePermissions,
-  assignRolePermissions,
+  getRolePermissionIds,
+  setRolePermissions,
+  getPermissionTree,
+  enableRole,
+  disableRole,
+  DATA_SCOPE_OPTIONS,
+  type RoleResponse
+} from '@/api/v2/access'
+import type {
+  CreateRoleRequest,
+  UpdateRoleRequest,
+  RoleQueryParams
+} from '@/types/v2/access'
+
+// 数据权限相关（暂用V1接口）
+import {
   getRoleDataPermissions,
   saveRoleDataPermissions,
-  DATA_SCOPE_OPTIONS,
-  type Role,
-  type RoleQueryParams,
-  type RoleFormData,
   type RoleDataPermission
 } from '@/api/role'
-import { getPermissionTree } from '@/api/permission'
 
 const loading = ref(false)
 const submitLoading = ref(false)
@@ -607,25 +617,43 @@ const selectedIds = ref<number[]>([])
 const currentRoleId = ref<number>()
 const expandedModules = ref<string[]>([])
 
-const queryParams = reactive<RoleQueryParams>({
+// 查询参数 - V2 类型
+interface LocalRoleQueryParams extends RoleQueryParams {
+  pageNum: number
+  pageSize: number
+  roleName?: string
+  roleCode?: string
+  status?: number
+}
+
+const queryParams = reactive<LocalRoleQueryParams>({
   pageNum: 1,
   pageSize: 10
 })
 
-const roleList = ref<Role[]>([])
+const roleList = ref<RoleResponse[]>([])
 const total = ref(0)
 const permissionTree = ref<any[]>([])
 const selectedPermissionIds = ref<number[]>([])
 
-// 统计数据
-const enabledCount = computed(() => roleList.value.filter(r => r.status === 1).length)
-const disabledCount = computed(() => roleList.value.filter(r => r.status === 0).length)
-const systemRoleCount = computed(() => roleList.value.filter(r => r.roleCode?.startsWith('SYSTEM')).length)
+// 统计数据 - 适配 V2 RoleResponse (isEnabled: boolean)
+const enabledCount = computed(() => roleList.value.filter(r => r.isEnabled !== false).length)
+const disabledCount = computed(() => roleList.value.filter(r => r.isEnabled === false).length)
+const systemRoleCount = computed(() => roleList.value.filter(r => r.isSystem === true).length)
+
+// 表单数据 - V2 字段
+interface RoleFormData {
+  roleName: string
+  roleCode: string
+  description: string
+  sortOrder: number
+  status: number  // 前端兼容: 1=启用, 0=禁用
+}
 
 const formData = reactive<RoleFormData>({
   roleName: '',
   roleCode: '',
-  roleDesc: '',
+  description: '',
   sortOrder: 0,
   status: 1
 })
@@ -692,7 +720,11 @@ const getAllPermissionIds = (permissions: any[]): number[] => {
 const loadRoleList = async () => {
   loading.value = true
   try {
-    const res = await getRolePage(queryParams)
+    const res = await getRolesPage({
+      pageNum: queryParams.pageNum,
+      pageSize: queryParams.pageSize,
+      roleType: queryParams.roleType
+    })
     roleList.value = res.records
     total.value = res.total
   } catch (error) {
@@ -724,21 +756,27 @@ const handleSelectAll = (e: Event) => {
   selectedIds.value = (e.target as HTMLInputElement).checked ? roleList.value.map(r => r.id) : []
 }
 
-const handleSelectRow = (row: Role) => {
+const handleSelectRow = (row: RoleResponse) => {
   const idx = selectedIds.value.indexOf(row.id)
   idx > -1 ? selectedIds.value.splice(idx, 1) : selectedIds.value.push(row.id)
 }
 
 const handleAdd = () => {
   isEdit.value = false
-  Object.assign(formData, { roleName: '', roleCode: '', roleDesc: '', sortOrder: 0, status: 1 })
+  Object.assign(formData, { roleName: '', roleCode: '', description: '', sortOrder: 0, status: 1 })
   dialogVisible.value = true
 }
 
-const handleEdit = (row: Role) => {
+const handleEdit = (row: RoleResponse) => {
   isEdit.value = true
   currentRoleId.value = row.id
-  Object.assign(formData, { roleName: row.roleName, roleCode: row.roleCode, roleDesc: row.roleDesc, sortOrder: row.sortOrder || 0, status: row.status })
+  Object.assign(formData, {
+    roleName: row.roleName,
+    roleCode: row.roleCode,
+    description: row.description || '',
+    sortOrder: row.level || 0,
+    status: row.isEnabled !== false ? 1 : 0
+  })
   dialogVisible.value = true
 }
 
@@ -750,10 +788,29 @@ const handleSubmit = async () => {
   try {
     submitLoading.value = true
     if (isEdit.value && currentRoleId.value) {
-      await updateRole(currentRoleId.value, formData)
+      // V2 更新请求
+      const updateData: UpdateRoleRequest = {
+        roleName: formData.roleName,
+        description: formData.description,
+        level: formData.sortOrder
+      }
+      await updateRole(currentRoleId.value, updateData)
+      // 处理启用/禁用状态
+      if (formData.status === 1) {
+        await enableRole(currentRoleId.value)
+      } else {
+        await disableRole(currentRoleId.value)
+      }
       ElMessage.success('更新成功')
     } else {
-      await createRole(formData)
+      // V2 创建请求
+      const createData: CreateRoleRequest = {
+        roleCode: formData.roleCode,
+        roleName: formData.roleName,
+        description: formData.description,
+        level: formData.sortOrder
+      }
+      await createRole(createData)
       ElMessage.success('创建成功')
     }
     dialogVisible.value = false
@@ -765,7 +822,7 @@ const handleSubmit = async () => {
   }
 }
 
-const handleDelete = async (row: Role) => {
+const handleDelete = async (row: RoleResponse) => {
   try {
     await ElMessageBox.confirm(`确定删除角色"${row.roleName}"吗?`, '删除确认', { type: 'warning' })
     await deleteRole(row.id)
@@ -788,10 +845,11 @@ const handleBatchDelete = async () => {
   }
 }
 
-const handleAssignPermissions = async (row: Role) => {
+const handleAssignPermissions = async (row: RoleResponse) => {
   try {
     currentRoleId.value = row.id
-    const ids = await getRolePermissions(row.id)
+    // V2 API 获取角色权限ID
+    const ids = await getRolePermissionIds(row.id)
     selectedPermissionIds.value = ids
     permissionDialogVisible.value = true
   } catch (error) {
@@ -831,7 +889,8 @@ const handlePermissionSubmit = async () => {
   if (!currentRoleId.value) return
   try {
     permissionSubmitLoading.value = true
-    await assignRolePermissions(currentRoleId.value, selectedPermissionIds.value)
+    // V2 API 设置角色权限
+    await setRolePermissions(currentRoleId.value, selectedPermissionIds.value)
     ElMessage.success('权限分配成功')
     permissionDialogVisible.value = false
     loadRoleList()
@@ -843,7 +902,7 @@ const handlePermissionSubmit = async () => {
 }
 
 // 数据权限相关
-const handleDataPermissions = async (row: Role) => {
+const handleDataPermissions = async (row: RoleResponse) => {
   try {
     currentRoleId.value = row.id
     currentRoleName.value = row.roleName
