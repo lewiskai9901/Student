@@ -152,6 +152,32 @@ com.school.management/
 - CORS configured for multiple origins
 - Password encoding with BCrypt
 
+**Data Permission Architecture (V2):**
+数据权限系统采用DDD架构，支持细粒度的模块级数据访问控制。
+
+- **DataScope枚举** (`domain/access/model/DataScope.java`):
+  - `ALL` - 全部数据
+  - `DEPARTMENT_AND_BELOW` - 本部门及以下
+  - `DEPARTMENT` - 仅本部门
+  - `GRADE` - 本年级
+  - `CLASS` - 仅本班级
+  - `CUSTOM` - 自定义范围
+  - `SELF` - 仅本人
+
+- **DataModule枚举** (`domain/access/model/DataModule.java`):
+  - Organization领域: `org_unit`, `student`, `dormitory`, `classroom`
+  - Inspection领域: `inspection_template`, `inspection_record`, `appeal`
+  - Evaluation领域: `rating`
+  - Task领域: `task`
+
+- **V2 API端点**:
+  - `GET /api/v2/roles/{roleId}/data-permissions` - 获取角色数据权限配置
+  - `PUT /api/v2/roles/{roleId}/data-permissions` - 更新角色数据权限配置
+  - `GET /api/v2/roles/data-permissions/modules` - 获取所有数据模块（按领域分组）
+  - `GET /api/v2/roles/data-permissions/scopes` - 获取所有数据范围选项
+
+- **自定义范围**: 通过`role_custom_scope`表存储角色对特定模块的自定义组织单元访问权限
+
 **Database Access:**
 - MyBatis Plus 3.5.7 with automatic CRUD
 - Druid connection pool with monitoring
