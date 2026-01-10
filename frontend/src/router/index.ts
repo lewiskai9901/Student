@@ -38,6 +38,7 @@ const routes: RouteRecordRaw[] = [
       requiresAuth: true
     },
     children: [
+      // ==================== 首页 (order: 1) ====================
       {
         path: '/dashboard',
         name: 'Dashboard',
@@ -60,33 +61,34 @@ const routes: RouteRecordRaw[] = [
           hidden: true
         }
       },
-      // 学生事务模块
+
+      // ==================== 组织管理 /organization (order: 2) - Organization领域 ====================
       {
-        path: '/student-affairs',
-        name: 'StudentAffairs',
-        redirect: '/student-affairs/students',
+        path: '/organization',
+        name: 'Organization',
+        redirect: '/organization/units',
         meta: {
-          title: '学生事务',
-          icon: 'User',
+          title: '组织管理',
+          icon: 'OfficeBuilding',
           requiresAuth: true,
           order: 2,
-          group: 'student-affairs'
+          group: 'organization'
         },
         children: [
           {
-            path: '/student-affairs/students',
-            name: 'Students',
-            component: () => import('@/views/student/StudentList.vue'),
+            path: '/organization/units',
+            name: 'OrgUnits',
+            component: () => import('@/views/system/DepartmentsView.vue'),
             meta: {
-              title: '学生管理',
+              title: '组织架构',
               requiresAuth: true,
-              permission: 'student:info:view',
+              permission: 'system:department:view',
               order: 1
             }
           },
           {
-            path: '/student-affairs/classes',
-            name: 'Classes',
+            path: '/organization/classes',
+            name: 'OrgClasses',
             component: () => import('@/views/class/ClassList.vue'),
             meta: {
               title: '班级管理',
@@ -96,228 +98,163 @@ const routes: RouteRecordRaw[] = [
             }
           },
           {
-            path: '/student-affairs/departments',
-            name: 'Departments',
-            component: () => import('@/views/system/DepartmentsView.vue'),
+            path: '/organization/students',
+            name: 'OrgStudents',
+            component: () => import('@/views/student/StudentList.vue'),
             meta: {
-              title: '部门管理',
+              title: '学生管理',
               requiresAuth: true,
-              permission: 'system:department:view',
+              permission: 'student:info:view',
               order: 3
             }
           },
-        ]
-      },
-      // 保持旧路由兼容性 - 学生事务重定向
-      {
-        path: '/students',
-        redirect: '/student-affairs/students',
-        meta: { hidden: true }
-      },
-      {
-        path: '/classes',
-        redirect: '/student-affairs/classes',
-        meta: { hidden: true }
-      },
-      // 任务管理模块
-      {
-        path: '/task',
-        name: 'TaskManagement',
-        redirect: '/task/list',
-        meta: {
-          title: '任务管理',
-          icon: 'Tickets',
-          requiresAuth: true,
-          order: 3,
-          group: 'task'
-        },
-        children: [
+          // 年级专业子菜单
           {
-            path: '/task/list',
-            name: 'TaskList',
-            component: () => import('@/views/task/TaskList.vue'),
+            path: '/organization/academic',
+            name: 'OrgAcademic',
+            redirect: '/organization/academic/grades',
             meta: {
-              title: '任务列表',
+              title: '年级专业',
               requiresAuth: true,
-              permission: 'task:list',
-              order: 1
-            }
-          },
-          {
-            path: '/task/my',
-            name: 'MyTask',
-            component: () => import('@/views/task/MyTask.vue'),
-            meta: {
-              title: '我的任务',
-              requiresAuth: true,
-              permission: 'task:my',
-              order: 2
-            }
-          },
-          {
-            path: '/task/approval',
-            name: 'TaskApproval',
-            component: () => import('@/views/task/TaskApproval.vue'),
-            meta: {
-              title: '任务审批',
-              requiresAuth: true,
-              permission: 'task:approve',
-              order: 3
-            }
-          },
-          {
-            path: '/task/workflow',
-            name: 'WorkflowTemplate',
-            component: () => import('@/views/task/WorkflowTemplate.vue'),
-            meta: {
-              title: '流程模板',
-              requiresAuth: true,
-              permission: 'task:workflow:manage',
               order: 4
-            }
+            },
+            children: [
+              {
+                path: '/organization/academic/grades',
+                name: 'OrgGrades',
+                component: () => import('@/views/quantification/GradeManagement.vue'),
+                meta: {
+                  title: '年级管理',
+                  requiresAuth: true,
+                  permission: 'quantification:grade:view',
+                  order: 1
+                }
+              },
+              {
+                path: '/organization/academic/majors',
+                name: 'OrgMajors',
+                component: () => import('@/views/major/MajorList.vue'),
+                meta: {
+                  title: '专业管理',
+                  requiresAuth: true,
+                  permission: 'major:list',
+                  order: 2
+                }
+              }
+            ]
           },
+          // 宿舍管理子菜单
           {
-            path: '/task/workflow/:id/design',
-            name: 'WorkflowDesigner',
-            component: () => import('@/views/task/WorkflowDesigner.vue'),
+            path: '/organization/dormitory',
+            name: 'OrgDormitory',
+            redirect: '/organization/dormitory/buildings',
             meta: {
-              title: '流程设计',
+              title: '宿舍管理',
               requiresAuth: true,
-              permission: 'task:workflow:manage',
-              hidden: true
-            }
+              order: 5
+            },
+            children: [
+              {
+                path: '/organization/dormitory/buildings',
+                name: 'OrgDormitoryBuildings',
+                component: () => import('@/views/dormitory/DormitoryBuildingManagement.vue'),
+                meta: {
+                  title: '宿舍楼管理',
+                  requiresAuth: true,
+                  permission: 'student:dormitory:view',
+                  order: 1
+                }
+              },
+              {
+                path: '/organization/dormitory/rooms',
+                name: 'OrgDormitoryRooms',
+                component: () => import('@/views/dormitory/DormitoryList.vue'),
+                meta: {
+                  title: '宿舍房间管理',
+                  requiresAuth: true,
+                  permission: 'student:dormitory:view',
+                  order: 2
+                }
+              },
+              {
+                path: '/organization/dormitory/overview',
+                name: 'OrgDormitoryOverview',
+                component: () => import('@/views/dormitory/DormitoryOverview.vue'),
+                meta: {
+                  title: '宿舍总览',
+                  requiresAuth: true,
+                  permission: 'student:dormitory:view',
+                  order: 3
+                }
+              },
+              {
+                path: '/organization/dormitory/building-assignments',
+                name: 'OrgBuildingDepartmentAssignment',
+                component: () => import('@/views/dormitory/BuildingDepartmentAssignment.vue'),
+                meta: {
+                  title: '院系分配',
+                  requiresAuth: true,
+                  permission: 'system:dormitory_building:view',
+                  order: 4,
+                  hidden: true  // 已废弃：院系分配功能已整合到宿舍楼管理中
+                }
+              }
+            ]
+          },
+          // 教学设施子菜单
+          {
+            path: '/organization/teaching',
+            name: 'OrgTeaching',
+            redirect: '/organization/teaching/buildings',
+            meta: {
+              title: '教学设施',
+              requiresAuth: true,
+              order: 6
+            },
+            children: [
+              {
+                path: '/organization/teaching/buildings',
+                name: 'OrgTeachingBuildings',
+                component: () => import('@/views/teaching/BuildingManagement.vue'),
+                meta: {
+                  title: '教学楼管理',
+                  requiresAuth: true,
+                  permission: 'teaching:building:list',
+                  order: 1
+                }
+              },
+              {
+                path: '/organization/teaching/classrooms',
+                name: 'OrgTeachingClassrooms',
+                component: () => import('@/views/teaching/ClassroomManagement.vue'),
+                meta: {
+                  title: '教室管理',
+                  requiresAuth: true,
+                  permission: 'teaching:classroom:list',
+                  order: 2
+                }
+              }
+            ]
           }
         ]
       },
-      // 基础设施模块 - 宿舍管理
+
+      // ==================== 量化检查 /inspection (order: 3) - Inspection领域 ====================
       {
-        path: '/dormitory',
-        name: 'Dormitory',
-        redirect: '/dormitory/buildings',
-        meta: {
-          title: '宿舍管理',
-          icon: 'HomeFilled',
-          requiresAuth: true,
-          order: 4,
-          group: 'infrastructure'
-        },
-        children: [
-          {
-            path: '/dormitory/buildings',
-            name: 'DormitoryBuildings',
-            component: () => import('@/views/dormitory/DormitoryBuildingManagement.vue'),
-            meta: {
-              title: '宿舍楼管理',
-              requiresAuth: true,
-              permission: 'student:dormitory:view',
-              order: 1
-            }
-          },
-          {
-            path: '/dormitory/rooms',
-            name: 'DormitoryRooms',
-            component: () => import('@/views/dormitory/DormitoryList.vue'),
-            meta: {
-              title: '宿舍房间管理',
-              requiresAuth: true,
-              permission: 'student:dormitory:view',
-              order: 2
-            }
-          },
-          {
-            path: '/dormitory/overview',
-            name: 'DormitoryOverview',
-            component: () => import('@/views/dormitory/DormitoryOverview.vue'),
-            meta: {
-              title: '宿舍总览',
-              requiresAuth: true,
-              permission: 'student:dormitory:view',
-              order: 3
-            }
-          },
-          {
-            path: '/dormitory/building-assignments',
-            name: 'BuildingDepartmentAssignment',
-            component: () => import('@/views/dormitory/BuildingDepartmentAssignment.vue'),
-            meta: {
-              title: '院系分配',
-              requiresAuth: true,
-              permission: 'system:dormitory_building:view',
-              order: 4,
-              hidden: true  // 已废弃：院系分配功能已整合到宿舍楼管理中
-            }
-          }
-        ]
-      },
-      // 教学管理模块
-      {
-        path: '/academic',
-        name: 'Academic',
-        redirect: '/academic/grades',
-        meta: {
-          title: '教学管理',
-          icon: 'Reading',
-          requiresAuth: true,
-          order: 5,
-          group: 'academic'
-        },
-        children: [
-          {
-            path: '/academic/grades',
-            name: 'Grades',
-            component: () => import('@/views/quantification/GradeManagement.vue'),
-            meta: {
-              title: '年级管理',
-              requiresAuth: true,
-              permission: 'quantification:grade:view',
-              order: 1
-            }
-          },
-          {
-            path: '/academic/majors',
-            name: 'Majors',
-            component: () => import('@/views/major/MajorList.vue'),
-            meta: {
-              title: '专业管理',
-              requiresAuth: true,
-              permission: 'major:list',
-              order: 2
-            }
-          },
-        ]
-      },
-      // 保持旧路由兼容性 - 重定向
-      {
-        path: '/majors',
-        redirect: '/academic/majors',
-        meta: { hidden: true }
-      },
-      {
-        path: '/major-directions',
-        redirect: '/academic/majors',
-        meta: { hidden: true }
-      },
-      {
-        path: '/grades',
-        redirect: '/academic/grades',
-        meta: { hidden: true }
-      },
-      // 量化检查模块 - 日常操作
-      {
-        path: '/quantification',
-        name: 'Quantification',
-        redirect: '/quantification/templates',
+        path: '/inspection',
+        name: 'Inspection',
+        redirect: '/inspection/templates',
         meta: {
           title: '量化检查',
           icon: 'DocumentChecked',
           requiresAuth: true,
-          order: 6,
-          group: 'quantification'
+          order: 3,
+          group: 'inspection'
         },
         children: [
           {
-            path: '/quantification/config',
-            name: 'QuantificationUnified',
+            path: '/inspection/config',
+            name: 'InspectionConfig',
             component: () => import('@/views/quantification/QuantificationUnifiedView.vue'),
             meta: {
               title: '量化配置',
@@ -327,8 +264,8 @@ const routes: RouteRecordRaw[] = [
             }
           },
           {
-            path: '/quantification/check-plan',
-            name: 'CheckPlanList',
+            path: '/inspection/check-plan',
+            name: 'InspectionCheckPlanList',
             component: () => import('@/views/quantification/CheckPlanListView.vue'),
             meta: {
               title: '检查计划',
@@ -338,8 +275,8 @@ const routes: RouteRecordRaw[] = [
             }
           },
           {
-            path: '/quantification/check-plan/create',
-            name: 'CheckPlanCreate',
+            path: '/inspection/check-plan/create',
+            name: 'InspectionCheckPlanCreate',
             component: () => import('@/views/quantification/CheckPlanCreateView.vue'),
             meta: {
               title: '新建检查计划',
@@ -349,8 +286,8 @@ const routes: RouteRecordRaw[] = [
             }
           },
           {
-            path: '/quantification/check-plan/:id',
-            name: 'CheckPlanDetail',
+            path: '/inspection/check-plan/:id',
+            name: 'InspectionCheckPlanDetail',
             component: () => import('@/views/quantification/CheckPlanDetailView.vue'),
             meta: {
               title: '检查计划详情',
@@ -360,8 +297,8 @@ const routes: RouteRecordRaw[] = [
             }
           },
           {
-            path: '/quantification/check-plan/:id/smart-statistics',
-            name: 'SmartStatistics',
+            path: '/inspection/check-plan/:id/smart-statistics',
+            name: 'InspectionSmartStatistics',
             component: () => import('@/views/quantification/SmartStatisticsView.vue'),
             meta: {
               title: '智能统计分析',
@@ -371,8 +308,8 @@ const routes: RouteRecordRaw[] = [
             }
           },
           {
-            path: '/quantification/check-plan/:planId/rating-frequency',
-            name: 'RatingFrequency',
+            path: '/inspection/check-plan/:planId/rating-frequency',
+            name: 'InspectionRatingFrequency',
             component: () => import('@/views/quantification/components/rating/RatingFrequencyView.vue'),
             meta: {
               title: '评级频次统计',
@@ -382,8 +319,8 @@ const routes: RouteRecordRaw[] = [
             }
           },
           {
-            path: '/quantification/check-plan/:planId/rating-audit',
-            name: 'RatingAudit',
+            path: '/inspection/check-plan/:planId/rating-audit',
+            name: 'InspectionRatingAudit',
             component: () => import('@/views/quantification/components/rating/RatingAuditView.vue'),
             meta: {
               title: '评级审核管理',
@@ -393,8 +330,8 @@ const routes: RouteRecordRaw[] = [
             }
           },
           {
-            path: '/quantification/daily-checks',
-            name: 'DailyChecks',
+            path: '/inspection/daily-checks',
+            name: 'InspectionDailyChecks',
             component: () => import('@/views/quantification/DailyCheckView.vue'),
             meta: {
               title: '日常检查',
@@ -405,8 +342,8 @@ const routes: RouteRecordRaw[] = [
             }
           },
           {
-            path: '/quantification/check-record-v3',
-            name: 'CheckRecord',
+            path: '/inspection/check-record-v3',
+            name: 'InspectionCheckRecord',
             component: () => import('@/views/quantification/CheckRecordListView.vue'),
             meta: {
               title: '检查记录',
@@ -418,8 +355,8 @@ const routes: RouteRecordRaw[] = [
             }
           },
           {
-            path: '/quantification/check-record-v3/:id',
-            name: 'CheckRecordDetail',
+            path: '/inspection/check-record-v3/:id',
+            name: 'InspectionCheckRecordDetail',
             component: () => import('@/views/quantification/CheckRecordDetailView.vue'),
             meta: {
               title: '检查记录详情',
@@ -429,8 +366,8 @@ const routes: RouteRecordRaw[] = [
             }
           },
           {
-            path: '/quantification/check-record/:id',
-            name: 'CheckRecordDetailLegacy',  // 旧版路由，保持兼容性
+            path: '/inspection/check-record/:id',
+            name: 'InspectionCheckRecordDetailLegacy',  // 旧版路由，保持兼容性
             component: () => import('@/views/quantification/CheckRecordDetailView.vue'),
             meta: {
               title: '检查记录详情',
@@ -440,8 +377,8 @@ const routes: RouteRecordRaw[] = [
             }
           },
           {
-            path: '/quantification/check-record-v3/:id/my-class',
-            name: 'CheckRecordMyClass',
+            path: '/inspection/check-record-v3/:id/my-class',
+            name: 'InspectionCheckRecordMyClass',
             component: () => import('@/views/quantification/CheckRecordMyClassView.vue'),
             meta: {
               title: '本班检查详情',
@@ -451,8 +388,8 @@ const routes: RouteRecordRaw[] = [
             }
           },
           {
-            path: '/quantification/appeals-v3',
-            name: 'AppealManagementV3',
+            path: '/inspection/appeals-v3',
+            name: 'InspectionAppealManagement',
             component: () => import('@/views/quantification/AppealManagement.vue'),
             meta: {
               title: '申诉管理',
@@ -463,8 +400,8 @@ const routes: RouteRecordRaw[] = [
             }
           },
           {
-            path: '/quantification/check-record-scoring',
-            name: 'CheckRecordScoring',
+            path: '/inspection/check-record-scoring',
+            name: 'InspectionCheckRecordScoring',
             component: () => import('@/views/quantification/CheckRecordScoring.vue'),
             meta: {
               title: '检查打分',
@@ -474,8 +411,8 @@ const routes: RouteRecordRaw[] = [
             }
           },
           {
-            path: '/quantification/analysis-configs',
-            name: 'AnalysisConfigList',
+            path: '/inspection/analysis-configs',
+            name: 'InspectionAnalysisConfigList',
             component: () => import('@/views/quantification/AnalysisConfigListView.vue'),
             meta: {
               title: '统计分析配置',
@@ -486,8 +423,8 @@ const routes: RouteRecordRaw[] = [
             }
           },
           {
-            path: '/quantification/analysis/:configId',
-            name: 'AnalysisResult',
+            path: '/inspection/analysis/:configId',
+            name: 'InspectionAnalysisResult',
             component: () => import('@/views/quantification/AnalysisResultView.vue'),
             meta: {
               title: '分析结果',
@@ -497,8 +434,8 @@ const routes: RouteRecordRaw[] = [
             }
           },
           {
-            path: '/quantification/analysis/snapshot/:snapshotId',
-            name: 'AnalysisSnapshot',
+            path: '/inspection/analysis/snapshot/:snapshotId',
+            name: 'InspectionAnalysisSnapshot',
             component: () => import('@/views/quantification/AnalysisResultView.vue'),
             meta: {
               title: '历史快照',
@@ -508,8 +445,8 @@ const routes: RouteRecordRaw[] = [
             }
           },
           {
-            path: '/quantification/my-tasks',
-            name: 'MyCheckTasks',
+            path: '/inspection/my-tasks',
+            name: 'InspectionMyCheckTasks',
             component: () => import('@/views/quantification/MyCheckTasksView.vue'),
             meta: {
               title: '我的检查任务',
@@ -518,8 +455,8 @@ const routes: RouteRecordRaw[] = [
             }
           },
           {
-            path: '/quantification/notification/:id/edit',
-            name: 'NotificationEdit',
+            path: '/inspection/notification/:id/edit',
+            name: 'InspectionNotificationEdit',
             component: () => import('@/views/quantification/NotificationEditView.vue'),
             meta: {
               title: '编辑通报',
@@ -529,8 +466,8 @@ const routes: RouteRecordRaw[] = [
             }
           },
           {
-            path: '/quantification/rating-statistics',
-            name: 'RatingStatisticsCenter',
+            path: '/inspection/rating-statistics',
+            name: 'InspectionRatingStatisticsCenter',
             component: () => import('@/views/quantification/RatingStatisticsCenter.vue'),
             meta: {
               title: '评级统计中心',
@@ -541,8 +478,8 @@ const routes: RouteRecordRaw[] = [
             }
           },
           {
-            path: '/quantification/badge-management',
-            name: 'RatingBadgeManagement',
+            path: '/inspection/badge-management',
+            name: 'InspectionRatingBadgeManagement',
             component: () => import('@/views/quantification/RatingBadgeManagement.vue'),
             meta: {
               title: '荣誉徽章管理',
@@ -553,8 +490,8 @@ const routes: RouteRecordRaw[] = [
             }
           },
           {
-            path: '/quantification/class-honor/:classId?',
-            name: 'ClassHonorDisplay',
+            path: '/inspection/class-honor/:classId?',
+            name: 'InspectionClassHonorDisplay',
             component: () => import('@/views/quantification/ClassHonorDisplay.vue'),
             meta: {
               title: '班级荣誉展示',
@@ -566,7 +503,8 @@ const routes: RouteRecordRaw[] = [
           }
         ]
       },
-      // 综合素质测评模块
+
+      // ==================== 综合测评 /evaluation (order: 4) ====================
       {
         path: '/evaluation',
         name: 'Evaluation',
@@ -575,7 +513,7 @@ const routes: RouteRecordRaw[] = [
           title: '综合测评',
           icon: 'DataAnalysis',
           requiresAuth: true,
-          order: 7,
+          order: 4,
           group: 'evaluation'
         },
         children: [
@@ -691,70 +629,154 @@ const routes: RouteRecordRaw[] = [
           }
         ]
       },
-      // 基础设施模块 - 教学设施
+
+      // ==================== 任务管理 /task (order: 5) ====================
       {
-        path: '/teaching',
-        name: 'Teaching',
-        redirect: '/teaching/buildings',
+        path: '/task',
+        name: 'TaskManagement',
+        redirect: '/task/list',
         meta: {
-          title: '教学设施',
-          icon: 'Management',
+          title: '任务管理',
+          icon: 'Tickets',
           requiresAuth: true,
-          order: 8,
-          group: 'infrastructure'
+          order: 5,
+          group: 'task'
         },
         children: [
           {
-            path: '/teaching/buildings',
-            name: 'TeachingBuildings',
-            component: () => import('@/views/teaching/BuildingManagement.vue'),
+            path: '/task/list',
+            name: 'TaskList',
+            component: () => import('@/views/task/TaskList.vue'),
             meta: {
-              title: '教学楼管理',
+              title: '任务列表',
               requiresAuth: true,
-              permission: 'teaching:building:list',
+              permission: 'task:list',
               order: 1
             }
           },
           {
-            path: '/teaching/classrooms',
-            name: 'TeachingClassrooms',
-            component: () => import('@/views/teaching/ClassroomManagement.vue'),
+            path: '/task/my',
+            name: 'MyTask',
+            component: () => import('@/views/task/MyTask.vue'),
             meta: {
-              title: '教室管理',
+              title: '我的任务',
               requiresAuth: true,
-              permission: 'teaching:classroom:list',
+              permission: 'task:my',
               order: 2
+            }
+          },
+          {
+            path: '/task/approval',
+            name: 'TaskApproval',
+            component: () => import('@/views/task/TaskApproval.vue'),
+            meta: {
+              title: '任务审批',
+              requiresAuth: true,
+              permission: 'task:approve',
+              order: 3
+            }
+          },
+          {
+            path: '/task/workflow',
+            name: 'WorkflowTemplate',
+            component: () => import('@/views/task/WorkflowTemplate.vue'),
+            meta: {
+              title: '流程模板',
+              requiresAuth: true,
+              permission: 'task:workflow:manage',
+              order: 4
+            }
+          },
+          {
+            path: '/task/workflow/:id/design',
+            name: 'WorkflowDesigner',
+            component: () => import('@/views/task/WorkflowDesigner.vue'),
+            meta: {
+              title: '流程设计',
+              requiresAuth: true,
+              permission: 'task:workflow:manage',
+              hidden: true
             }
           }
         ]
       },
-      // 系统配置模块
+
+      // ==================== 权限管理 /access (order: 6) - Access领域 ====================
       {
-        path: '/config',
-        name: 'Config',
-        redirect: '/config/weight',
+        path: '/access',
+        name: 'Access',
+        redirect: '/access/users',
         meta: {
-          title: '系统配置',
-          icon: 'Tools',
+          title: '权限管理',
+          icon: 'Lock',
           requiresAuth: true,
-          order: 8,
-          group: 'config'
+          order: 6,
+          group: 'access'
         },
         children: [
           {
-            path: '/config/quantification',
-            name: 'QuantificationConfigRedirect',
-            redirect: '/quantification/config',
+            path: '/access/users',
+            name: 'AccessUsers',
+            component: () => import('@/views/system/UsersView.vue'),
             meta: {
-              title: '量化配置',
-              hidden: true,
+              title: '用户管理',
               requiresAuth: true,
+              permission: 'system:user:view',
               order: 1
             }
           },
           {
-            path: '/config/weight',
-            name: 'WeightConfig',
+            path: '/access/roles',
+            name: 'AccessRoles',
+            component: () => import('@/views/system/RolesView.vue'),
+            meta: {
+              title: '角色管理',
+              requiresAuth: true,
+              permission: 'system:role:view',
+              order: 2
+            }
+          },
+          {
+            path: '/access/permissions',
+            name: 'AccessPermissions',
+            component: () => import('@/views/system/PermissionsView.vue'),
+            meta: {
+              title: '权限管理',
+              requiresAuth: true,
+              permission: 'system:permission:view',
+              order: 3
+            }
+          }
+        ]
+      },
+
+      // ==================== 系统设置 /settings (order: 7) ====================
+      {
+        path: '/settings',
+        name: 'Settings',
+        redirect: '/settings/configs',
+        meta: {
+          title: '系统设置',
+          icon: 'Setting',
+          requiresAuth: true,
+          order: 7,
+          group: 'settings'
+        },
+        children: [
+          {
+            path: '/settings/configs',
+            name: 'SettingsConfigs',
+            component: () => import('@/views/system/SystemConfigsView.vue'),
+            meta: {
+              title: '系统配置',
+              requiresAuth: true,
+              permission: 'system:config:view',
+              order: 1
+            }
+          },
+          {
+            path: '/settings/weight',
+            name: 'SettingsWeightConfig',
             component: () => import('@/views/quantification/WeightConfigManagement.vue'),
             meta: {
               title: '加权配置',
@@ -763,20 +785,54 @@ const routes: RouteRecordRaw[] = [
               order: 2
             }
           },
+          {
+            path: '/settings/semesters',
+            name: 'SettingsSemesters',
+            component: () => import('@/views/system/SemesterView.vue'),
+            meta: {
+              title: '学期管理',
+              requiresAuth: true,
+              permission: 'system:semester:view',
+              order: 3
+            }
+          },
+          {
+            path: '/settings/announcements',
+            name: 'SettingsAnnouncements',
+            component: () => import('@/views/system/AnnouncementsView.vue'),
+            meta: {
+              title: '公告管理',
+              requiresAuth: true,
+              permission: 'system:announcement:view',
+              order: 4
+            }
+          },
+          {
+            path: '/settings/operation-logs',
+            name: 'SettingsOperationLogs',
+            component: () => import('@/views/system/OperationLogsView.vue'),
+            meta: {
+              title: '操作日志',
+              requiresAuth: true,
+              permission: 'system:operlog:view',
+              order: 5
+            }
+          },
+          {
+            path: '/settings/buildings',
+            name: 'SettingsBuildings',
+            component: () => import('@/views/system/BuildingsView.vue'),
+            meta: {
+              title: '楼宇管理',
+              requiresAuth: true,
+              permission: 'system:building:view',
+              order: 6
+            }
+          }
         ]
       },
-      // 保持旧路由兼容性 - 量化配置重定向
-      {
-        path: '/quantification/config',
-        redirect: '/config/quantification',
-        meta: { hidden: true }
-      },
-      {
-        path: '/quantification/weight-config',
-        redirect: '/config/weight',
-        meta: { hidden: true }
-      },
-      // 测试页面 - 仅在开发环境可用
+
+      // ==================== 测试页面 - 仅在开发环境可用 ====================
       ...(import.meta.env.DEV ? [{
         path: '/test/pagination',
         name: 'PaginationTest',
@@ -787,156 +843,347 @@ const routes: RouteRecordRaw[] = [
           hidden: true // 不显示在菜单中
         }
       }] : []),
-      // 系统管理模块
+
+      // ==================== 向后兼容重定向 ====================
+
+      // 学生事务重定向到组织管理
       {
-        path: '/system',
-        name: 'System',
-        redirect: '/system/users',
-        meta: {
-          title: '系统管理',
-          icon: 'Setting',
-          requiresAuth: true,
-          order: 9,
-          group: 'system'
-        },
-        children: [
-          {
-            path: '/system/users',
-            name: 'SystemUsers',
-            component: () => import('@/views/system/UsersView.vue'),
-            meta: {
-              title: '用户管理',
-              requiresAuth: true,
-              permission: 'system:user:view',
-              order: 1
-            }
-          },
-          {
-            path: '/system/roles',
-            name: 'SystemRoles',
-            component: () => import('@/views/system/RolesView.vue'),
-            meta: {
-              title: '角色管理',
-              requiresAuth: true,
-              permission: 'system:role:view',
-              order: 2
-            }
-          },
-          {
-            path: '/system/buildings',
-            name: 'SystemBuildings',
-            component: () => import('@/views/system/BuildingsView.vue'),
-            meta: {
-              title: '楼宇管理',
-              requiresAuth: true,
-              permission: 'system:building:view',
-              order: 3
-            }
-          },
-          {
-            path: '/system/permissions',
-            name: 'SystemPermissions',
-            component: () => import('@/views/system/PermissionsView.vue'),
-            meta: {
-              title: '权限管理',
-              requiresAuth: true,
-              permission: 'system:permission:view',
-              order: 4
-            }
-          },
-          {
-            path: '/system/operation-logs',
-            name: 'SystemOperationLogs',
-            component: () => import('@/views/system/OperationLogsView.vue'),
-            meta: {
-              title: '操作日志',
-              requiresAuth: true,
-              permission: 'system:operlog:view',
-              order: 5
-            }
-          },
-          {
-            path: '/system/configs',
-            name: 'SystemConfigs',
-            component: () => import('@/views/system/SystemConfigsView.vue'),
-            meta: {
-              title: '系统配置',
-              requiresAuth: true,
-              permission: 'system:config:view',
-              order: 6
-            }
-          },
-          {
-            path: '/system/announcements',
-            name: 'SystemAnnouncements',
-            component: () => import('@/views/system/AnnouncementsView.vue'),
-            meta: {
-              title: '公告管理',
-              requiresAuth: true,
-              permission: 'system:announcement:view',
-              order: 7
-            }
-          },
-          {
-            path: '/system/semesters',
-            name: 'SystemSemesters',
-            component: () => import('@/views/system/SemesterView.vue'),
-            meta: {
-              title: '学期管理',
-              requiresAuth: true,
-              permission: 'system:semester:view',
-              order: 8
-            }
-          }
-        ]
-      },
-      // 部门管理旧路由重定向到学生事务
-      {
-        path: '/system/departments',
-        redirect: '/student-affairs/departments',
+        path: '/student-affairs',
+        redirect: '/organization/students',
         meta: { hidden: true }
       },
-      // V2 Access模块路由别名 (与后端DDD架构对齐)
+      {
+        path: '/student-affairs/students',
+        redirect: '/organization/students',
+        meta: { hidden: true }
+      },
+      {
+        path: '/student-affairs/classes',
+        redirect: '/organization/classes',
+        meta: { hidden: true }
+      },
+      {
+        path: '/student-affairs/departments',
+        redirect: '/organization/units',
+        meta: { hidden: true }
+      },
+      {
+        path: '/students',
+        redirect: '/organization/students',
+        meta: { hidden: true }
+      },
+      {
+        path: '/classes',
+        redirect: '/organization/classes',
+        meta: { hidden: true }
+      },
+
+      // 宿舍管理重定向
+      {
+        path: '/dormitory',
+        redirect: '/organization/dormitory/buildings',
+        meta: { hidden: true }
+      },
+      {
+        path: '/dormitory/buildings',
+        redirect: '/organization/dormitory/buildings',
+        meta: { hidden: true }
+      },
+      {
+        path: '/dormitory/rooms',
+        redirect: '/organization/dormitory/rooms',
+        meta: { hidden: true }
+      },
+      {
+        path: '/dormitory/overview',
+        redirect: '/organization/dormitory/overview',
+        meta: { hidden: true }
+      },
+      {
+        path: '/dormitory/building-assignments',
+        redirect: '/organization/dormitory/building-assignments',
+        meta: { hidden: true }
+      },
+
+      // 教学管理重定向
+      {
+        path: '/academic',
+        redirect: '/organization/academic/grades',
+        meta: { hidden: true }
+      },
+      {
+        path: '/academic/grades',
+        redirect: '/organization/academic/grades',
+        meta: { hidden: true }
+      },
+      {
+        path: '/academic/majors',
+        redirect: '/organization/academic/majors',
+        meta: { hidden: true }
+      },
+      {
+        path: '/majors',
+        redirect: '/organization/academic/majors',
+        meta: { hidden: true }
+      },
+      {
+        path: '/major-directions',
+        redirect: '/organization/academic/majors',
+        meta: { hidden: true }
+      },
+      {
+        path: '/grades',
+        redirect: '/organization/academic/grades',
+        meta: { hidden: true }
+      },
+
+      // 教学设施重定向
+      {
+        path: '/teaching',
+        redirect: '/organization/teaching/buildings',
+        meta: { hidden: true }
+      },
+      {
+        path: '/teaching/buildings',
+        redirect: '/organization/teaching/buildings',
+        meta: { hidden: true }
+      },
+      {
+        path: '/teaching/classrooms',
+        redirect: '/organization/teaching/classrooms',
+        meta: { hidden: true }
+      },
+
+      // 量化检查重定向到inspection
+      {
+        path: '/quantification',
+        redirect: '/inspection/config',
+        meta: { hidden: true }
+      },
+      {
+        path: '/quantification/config',
+        redirect: '/inspection/config',
+        meta: { hidden: true }
+      },
+      {
+        path: '/quantification/check-plan',
+        redirect: '/inspection/check-plan',
+        meta: { hidden: true }
+      },
+      {
+        path: '/quantification/check-plan/create',
+        redirect: '/inspection/check-plan/create',
+        meta: { hidden: true }
+      },
+      {
+        path: '/quantification/check-plan/:id',
+        redirect: (to) => `/inspection/check-plan/${to.params.id}`,
+        meta: { hidden: true }
+      },
+      {
+        path: '/quantification/check-plan/:id/smart-statistics',
+        redirect: (to) => `/inspection/check-plan/${to.params.id}/smart-statistics`,
+        meta: { hidden: true }
+      },
+      {
+        path: '/quantification/check-plan/:planId/rating-frequency',
+        redirect: (to) => `/inspection/check-plan/${to.params.planId}/rating-frequency`,
+        meta: { hidden: true }
+      },
+      {
+        path: '/quantification/check-plan/:planId/rating-audit',
+        redirect: (to) => `/inspection/check-plan/${to.params.planId}/rating-audit`,
+        meta: { hidden: true }
+      },
+      {
+        path: '/quantification/daily-checks',
+        redirect: '/inspection/daily-checks',
+        meta: { hidden: true }
+      },
+      {
+        path: '/quantification/check-record-v3',
+        redirect: '/inspection/check-record-v3',
+        meta: { hidden: true }
+      },
+      {
+        path: '/quantification/check-record-v3/:id',
+        redirect: (to) => `/inspection/check-record-v3/${to.params.id}`,
+        meta: { hidden: true }
+      },
+      {
+        path: '/quantification/check-record/:id',
+        redirect: (to) => `/inspection/check-record/${to.params.id}`,
+        meta: { hidden: true }
+      },
+      {
+        path: '/quantification/check-record-v3/:id/my-class',
+        redirect: (to) => `/inspection/check-record-v3/${to.params.id}/my-class`,
+        meta: { hidden: true }
+      },
+      {
+        path: '/quantification/appeals-v3',
+        redirect: '/inspection/appeals-v3',
+        meta: { hidden: true }
+      },
+      {
+        path: '/quantification/check-record-scoring',
+        redirect: '/inspection/check-record-scoring',
+        meta: { hidden: true }
+      },
+      {
+        path: '/quantification/analysis-configs',
+        redirect: '/inspection/analysis-configs',
+        meta: { hidden: true }
+      },
+      {
+        path: '/quantification/analysis/:configId',
+        redirect: (to) => `/inspection/analysis/${to.params.configId}`,
+        meta: { hidden: true }
+      },
+      {
+        path: '/quantification/analysis/snapshot/:snapshotId',
+        redirect: (to) => `/inspection/analysis/snapshot/${to.params.snapshotId}`,
+        meta: { hidden: true }
+      },
+      {
+        path: '/quantification/my-tasks',
+        redirect: '/inspection/my-tasks',
+        meta: { hidden: true }
+      },
+      {
+        path: '/quantification/notification/:id/edit',
+        redirect: (to) => `/inspection/notification/${to.params.id}/edit`,
+        meta: { hidden: true }
+      },
+      {
+        path: '/quantification/rating-statistics',
+        redirect: '/inspection/rating-statistics',
+        meta: { hidden: true }
+      },
+      {
+        path: '/quantification/badge-management',
+        redirect: '/inspection/badge-management',
+        meta: { hidden: true }
+      },
+      {
+        path: '/quantification/class-honor/:classId?',
+        redirect: (to) => `/inspection/class-honor${to.params.classId ? '/' + to.params.classId : ''}`,
+        meta: { hidden: true }
+      },
+      {
+        path: '/quantification/weight-config',
+        redirect: '/settings/weight',
+        meta: { hidden: true }
+      },
+
+      // 系统管理重定向到access或settings
+      {
+        path: '/system',
+        redirect: '/access/users',
+        meta: { hidden: true }
+      },
+      {
+        path: '/system/users',
+        redirect: '/access/users',
+        meta: { hidden: true }
+      },
+      {
+        path: '/system/roles',
+        redirect: '/access/roles',
+        meta: { hidden: true }
+      },
+      {
+        path: '/system/permissions',
+        redirect: '/access/permissions',
+        meta: { hidden: true }
+      },
+      {
+        path: '/system/departments',
+        redirect: '/organization/units',
+        meta: { hidden: true }
+      },
+      {
+        path: '/system/configs',
+        redirect: '/settings/configs',
+        meta: { hidden: true }
+      },
+      {
+        path: '/system/operation-logs',
+        redirect: '/settings/operation-logs',
+        meta: { hidden: true }
+      },
+      {
+        path: '/system/announcements',
+        redirect: '/settings/announcements',
+        meta: { hidden: true }
+      },
+      {
+        path: '/system/semesters',
+        redirect: '/settings/semesters',
+        meta: { hidden: true }
+      },
+      {
+        path: '/system/buildings',
+        redirect: '/settings/buildings',
+        meta: { hidden: true }
+      },
+
+      // 配置模块重定向
+      {
+        path: '/config',
+        redirect: '/settings/weight',
+        meta: { hidden: true }
+      },
+      {
+        path: '/config/quantification',
+        redirect: '/inspection/config',
+        meta: { hidden: true }
+      },
+      {
+        path: '/config/weight',
+        redirect: '/settings/weight',
+        meta: { hidden: true }
+      },
+
+      // V2 API路由别名 (与后端DDD架构对齐)
       {
         path: '/v2/access/roles',
-        redirect: '/system/roles',
+        redirect: '/access/roles',
         meta: { hidden: true }
       },
       {
         path: '/v2/access/permissions',
-        redirect: '/system/permissions',
+        redirect: '/access/permissions',
         meta: { hidden: true }
       },
-      // V2 Organization模块路由别名
       {
         path: '/v2/organization/classes',
-        redirect: '/student-affairs/classes',
+        redirect: '/organization/classes',
         meta: { hidden: true }
       },
       {
         path: '/v2/org-units',
-        redirect: '/student-affairs/departments',
+        redirect: '/organization/units',
         meta: { hidden: true }
       },
       {
         path: '/v2/grades',
-        redirect: '/academic/grades',
+        redirect: '/organization/academic/grades',
         meta: { hidden: true }
       },
-      // V2 Inspection模块路由别名
       {
         path: '/v2/inspection-templates',
-        redirect: '/quantification/config',
+        redirect: '/inspection/config',
         meta: { hidden: true }
       },
       {
         path: '/v2/inspection-records',
-        redirect: '/quantification/check-record-v3',
+        redirect: '/inspection/check-record-v3',
         meta: { hidden: true }
       },
       {
         path: '/v2/appeals',
-        redirect: '/quantification/appeals-v3',
+        redirect: '/inspection/appeals-v3',
         meta: { hidden: true }
       }
     ]
