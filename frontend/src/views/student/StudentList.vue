@@ -57,7 +57,7 @@
         <div class="w-40">
           <label class="mb-1 block text-xs font-medium text-gray-600">姓名</label>
           <input
-            v-model="searchForm.realName"
+            v-model="searchForm.name"
             type="text"
             placeholder="请输入姓名"
             class="h-9 w-full rounded-md border border-gray-300 px-3 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
@@ -91,14 +91,15 @@
         <div class="w-28">
           <label class="mb-1 block text-xs font-medium text-gray-600">状态</label>
           <select
-            v-model="searchForm.studentStatus"
+            v-model="searchForm.status"
             class="h-9 w-full rounded-md border border-gray-300 bg-white px-3 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
           >
-            <option :value="null">全部</option>
-            <option :value="1">在校</option>
-            <option :value="2">休学</option>
+            <option :value="undefined">全部</option>
+            <option :value="0">在读</option>
+            <option :value="1">休学</option>
+            <option :value="2">退学</option>
             <option :value="3">毕业</option>
-            <option :value="4">退学</option>
+            <option :value="4">转学</option>
           </select>
         </div>
         <button
@@ -208,7 +209,7 @@
                 <span class="font-mono text-sm text-gray-900">{{ row.studentNo }}</span>
               </td>
               <td class="px-4 py-3">
-                <span class="text-sm font-medium text-gray-900">{{ row.realName }}</span>
+                <span class="text-sm font-medium text-gray-900">{{ row.name }}</span>
               </td>
               <td class="px-4 py-3">
                 <span
@@ -244,13 +245,13 @@
               <td class="px-4 py-3">
                 <span
                   class="inline-flex items-center rounded px-2 py-0.5 text-xs font-medium"
-                  :class="getStatusClass(row.studentStatus)"
+                  :class="getStatusClass(row.status)"
                 >
-                  {{ getStatusText(row.studentStatus) }}
+                  {{ getStatusText(row.status) }}
                 </span>
               </td>
               <td class="px-4 py-3 text-sm text-gray-600">
-                {{ formatDate(row.admissionDate) }}
+                {{ formatDate(row.enrollmentDate) }}
               </td>
               <td class="px-4 py-3 text-right">
                 <div class="flex items-center justify-end gap-1">
@@ -497,7 +498,14 @@ import {
 } from 'lucide-vue-next'
 import { useAuthStore } from '@/stores/auth'
 import { formatDate } from '@/utils/date'
-import { getStudentPage, deleteStudent, deleteStudents } from '@/api/student'
+// V2 DDD API
+import {
+  getStudents,
+  deleteStudent,
+  deleteStudents
+} from '@/api/v2/student'
+import type { Student, StudentQueryParams, StudentStatus } from '@/types/v2/student'
+import { StudentStatusMap } from '@/types/v2/student'
 import { getClassList } from '@/api/class'
 import { getAllGrades } from '@/api/grade'
 import type { Grade } from '@/api/grade'
@@ -506,7 +514,6 @@ import StudentForm from '@/components/student/StudentForm.vue'
 import { StatCard } from '@/components/design-system'
 import StudentImport from '@/components/student/StudentImport.vue'
 import StudentExport from '@/components/student/StudentExport.vue'
-import type { Student } from '@/types/student'
 
 const route = useRoute()
 const authStore = useAuthStore()
@@ -525,13 +532,13 @@ const stats = reactive({
   newThisMonth: 0
 })
 
-// 搜索表单
-const searchForm = reactive<any>({
+// 搜索表单 - V2 字段名
+const searchForm = reactive<StudentQueryParams>({
   studentNo: '',
-  realName: '',
-  gradeId: null,
-  classId: null,
-  studentStatus: null
+  name: '',  // V2: name 代替 realName
+  gradeId: undefined,
+  classId: undefined,
+  status: undefined  // V2: status 代替 studentStatus
 })
 
 // 分页参数
@@ -599,44 +606,40 @@ const exportDialogVisible = ref(false)
 const editMode = ref<'add' | 'edit'>('add')
 const currentStudentId = ref<number | null>(null)
 
-// 获取状态样式类
-const getStatusClass = (status: number) => {
-  const classMap: Record<number, string> = {
-    1: 'bg-green-50 text-green-700',
-    2: 'bg-amber-50 text-amber-700',
-    3: 'bg-gray-100 text-gray-700',
-    4: 'bg-red-50 text-red-700'
+// 获取状态样式类 - V2 状态值: 0=在读, 1=休学, 2=退学, 3=毕业, 4=转学
+const getStatusClass = (status: StudentStatus) => {
+  const classMap: Record<StudentStatus, string> = {
+    0: 'bg-green-50 text-green-700',    // 在读
+    1: 'bg-amber-50 text-amber-700',    // 休学
+    2: 'bg-red-50 text-red-700',        // 退学
+    3: 'bg-blue-50 text-blue-700',      // 毕业
+    4: 'bg-purple-50 text-purple-700'   // 转学
   }
   return classMap[status] || 'bg-gray-100 text-gray-700'
 }
 
-// 获取状态文本
-const getStatusText = (status: number) => {
-  const statusMap: Record<number, string> = {
-    1: '在校',
-    2: '休学',
-    3: '毕业',
-    4: '退学'
-  }
-  return statusMap[status] || '未知'
+// 获取状态文本 - 使用 V2 StudentStatusMap
+const getStatusText = (status: StudentStatus) => {
+  return StudentStatusMap[status] || '未知'
 }
 
-// 加载学生列表
+// 加载学生列表 - V2 API
 const loadStudentList = async () => {
   loading.value = true
   try {
-    const params: any = {
+    const params: StudentQueryParams = {
       pageNum: pagination.pageNum,
       pageSize: pagination.pageSize
     }
 
+    // V2 字段名: name, status
     if (searchForm.studentNo) params.studentNo = searchForm.studentNo
-    if (searchForm.realName) params.realName = searchForm.realName
+    if (searchForm.name) params.name = searchForm.name
     if (searchForm.gradeId) params.gradeId = searchForm.gradeId
     if (searchForm.classId) params.classId = searchForm.classId
-    if (searchForm.studentStatus) params.studentStatus = searchForm.studentStatus
+    if (searchForm.status !== undefined) params.status = searchForm.status
 
-    const response = await getStudentPage(params)
+    const response = await getStudents(params)
     studentList.value = response.records || []
     total.value = response.total || 0
 
@@ -682,17 +685,17 @@ const handleSearch = () => {
 
 // 年级改变时,清空班级选择
 const handleGradeChange = () => {
-  searchForm.classId = null
+  searchForm.classId = undefined
 }
 
-// 重置
+// 重置 - V2 字段名
 const handleReset = () => {
   Object.assign(searchForm, {
     studentNo: '',
-    realName: '',
-    gradeId: null,
-    classId: null,
-    studentStatus: null
+    name: '',           // V2: name 代替 realName
+    gradeId: undefined,
+    classId: undefined,
+    status: undefined   // V2: status 代替 studentStatus
   })
   pagination.pageNum = 1
   loadStudentList()
@@ -718,11 +721,11 @@ const handleEdit = (row: Student) => {
   editDialogVisible.value = true
 }
 
-// 删除
+// 删除 - V2: 使用 row.name
 const handleDelete = async (row: Student) => {
   try {
     await ElMessageBox.confirm(
-      `确定要删除学生 "${row.realName}" 吗？此操作不可恢复！`,
+      `确定要删除学生 "${row.name}" 吗？此操作不可恢复！`,
       '删除确认',
       {
         confirmButtonText: '确定删除',
