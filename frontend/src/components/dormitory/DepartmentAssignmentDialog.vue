@@ -206,8 +206,9 @@
 import { ref, computed, watch, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
 import { X, Loader2, Building2, Layers } from 'lucide-vue-next'
-import { getDormitoriesByBuildingId, batchUpdateDepartment, batchUpdateDepartmentByFloor } from '@/api/dormitory'
-import { getAllEnabledDepartments } from '@/api/department'
+// V2 DDD API
+import { getDormitoriesByBuilding, batchUpdateDepartment, batchUpdateDepartmentByFloor } from '@/api/v2/dormitory'
+import { getOrgUnitsByType } from '@/api/v2/organization'
 
 // Props
 const props = defineProps<{
@@ -320,16 +321,20 @@ const getDepartmentName = (deptId: number) => {
   return dept?.deptName || '未知院系'
 }
 
-// 加载数据
+// 加载数据 - V2 API
 const loadData = async () => {
   loading.value = true
   try {
     const [roomsRes, deptsRes] = await Promise.all([
-      getDormitoriesByBuildingId(props.buildingId),
-      getAllEnabledDepartments()
+      getDormitoriesByBuilding(props.buildingId),
+      getOrgUnitsByType('DEPARTMENT')
     ])
     rooms.value = roomsRes || []
-    departmentOptions.value = deptsRes || []
+    // V2: unitName → deptName (兼容显示)
+    departmentOptions.value = (deptsRes || []).map((d: any) => ({
+      id: d.id,
+      deptName: d.unitName
+    }))
   } catch (error: any) {
     ElMessage.error(error.message || '加载数据失败')
   } finally {

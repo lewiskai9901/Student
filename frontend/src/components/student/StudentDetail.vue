@@ -23,17 +23,17 @@
           <!-- 头像和基本信息 -->
           <div class="flex items-start gap-4 border-b border-gray-100 pb-4 mb-4">
             <div class="flex h-16 w-16 items-center justify-center rounded-full bg-blue-100 text-xl font-semibold text-blue-600">
-              {{ studentInfo.realName?.charAt(0) || '?' }}
+              {{ studentInfo.name?.charAt(0) || '?' }}
             </div>
             <div class="flex-1">
-              <h2 class="text-lg font-semibold text-gray-900">{{ studentInfo.realName }}</h2>
+              <h2 class="text-lg font-semibold text-gray-900">{{ studentInfo.name }}</h2>
               <p class="mt-0.5 text-sm text-gray-500">学号: {{ studentInfo.studentNo }}</p>
               <div class="mt-2 flex items-center gap-2">
                 <span
                   class="inline-flex items-center rounded px-2 py-0.5 text-xs font-medium"
-                  :class="getStatusClass(studentInfo.studentStatus)"
+                  :class="getStatusClass(studentInfo.status)"
                 >
-                  {{ getStatusText(studentInfo.studentStatus) }}
+                  {{ getStatusText(studentInfo.status) }}
                 </span>
                 <span
                   :class="[
@@ -94,10 +94,10 @@
           <div v-if="activeTab === 'basic'" class="space-y-4">
             <div class="grid grid-cols-1 gap-4 sm:grid-cols-3">
               <InfoItem label="学号" :value="studentInfo.studentNo" />
-              <InfoItem label="姓名" :value="studentInfo.realName" />
+              <InfoItem label="姓名" :value="studentInfo.name" />
               <InfoItem label="性别" :value="studentInfo.gender === 1 ? '男' : '女'" />
               <InfoItem label="证件类型" :value="studentInfo.idCardType || '身份证'" />
-              <InfoItem label="身份证号" :value="maskIdCard(studentInfo.identityCard)" />
+              <InfoItem label="身份证号" :value="maskIdCard(studentInfo.idCard)" />
               <InfoItem label="出生日期" :value="formatDate(studentInfo.birthDate)" />
               <InfoItem label="民族" :value="studentInfo.ethnicity" />
               <InfoItem label="政治面貌" :value="studentInfo.politicalStatus" />
@@ -108,15 +108,15 @@
           <!-- 学籍信息 -->
           <div v-if="activeTab === 'academic'" class="space-y-4">
             <div class="grid grid-cols-1 gap-4 sm:grid-cols-3">
-              <InfoItem label="招生年度" :value="formatDate(studentInfo.admissionDate)" />
+              <InfoItem label="招生年度" :value="formatDate(studentInfo.enrollmentDate)" />
               <InfoItem label="年级" :value="studentInfo.gradeName || (studentInfo.gradeLevel ? `${studentInfo.gradeLevel}级` : '-')" />
               <InfoItem label="专业" :value="studentInfo.majorName" />
               <InfoItem label="班级" :value="studentInfo.className" />
               <InfoItem label="层次" :value="studentInfo.educationLevel" />
               <InfoItem label="学制" :value="studentInfo.studyLength" />
               <InfoItem label="入学前学历" :value="studentInfo.degreeType" />
-              <InfoItem label="学生状态" :value="getStatusText(studentInfo.studentStatus)" />
-              <InfoItem label="预计毕业日期" :value="formatDate(studentInfo.graduationDate)" />
+              <InfoItem label="学生状态" :value="getStatusText(studentInfo.status)" />
+              <InfoItem label="预计毕业日期" :value="formatDate(studentInfo.expectedGraduationDate)" />
             </div>
           </div>
 
@@ -264,9 +264,11 @@ import { ref, onMounted, h } from 'vue'
 import { ElMessage } from 'element-plus'
 import { useAuthStore } from '@/stores/auth'
 import { formatDate, formatDateTime } from '@/utils/date'
-import { getStudentById } from '@/api/student'
+// V2 DDD API
+import { getStudent } from '@/api/v2/student'
 import { getStudentDormitoryHistory } from '@/api/studentDormitory'
-import type { Student } from '@/types/student'
+import type { Student } from '@/types/v2/student'
+import { StudentStatusMap } from '@/types/v2/student'
 import type { StudentDormitory } from '@/types/studentDormitory'
 
 // 信息项组件
@@ -310,28 +312,21 @@ const studentInfo = ref<Student | null>(null)
 const dormitoryHistory = ref<StudentDormitory[]>([])
 const showHistory = ref(false)
 
-// 获取状态样式类
+// 获取状态样式类 - V2: 0=在读, 1=休学, 2=退学, 3=毕业, 4=转学
 const getStatusClass = (status: number) => {
   const classMap: Record<number, string> = {
-    1: 'bg-green-50 text-green-700',
-    2: 'bg-amber-50 text-amber-700',
-    3: 'bg-gray-100 text-gray-700',
-    4: 'bg-red-50 text-red-700',
-    5: 'bg-purple-50 text-purple-700'
+    0: 'bg-green-50 text-green-700',
+    1: 'bg-amber-50 text-amber-700',
+    2: 'bg-gray-100 text-gray-700',
+    3: 'bg-red-50 text-red-700',
+    4: 'bg-purple-50 text-purple-700'
   }
   return classMap[status] || 'bg-gray-100 text-gray-700'
 }
 
-// 获取状态文本
+// 获取状态文本 - V2 使用 StudentStatusMap
 const getStatusText = (status: number) => {
-  const statusMap: Record<number, string> = {
-    1: '在读',
-    2: '休学',
-    3: '退学',
-    4: '毕业',
-    5: '转学'
-  }
-  return statusMap[status] || '未知'
+  return StudentStatusMap[status as keyof typeof StudentStatusMap] || '未知'
 }
 
 // 脱敏身份证号
@@ -374,13 +369,13 @@ const loadDormitoryHistory = async () => {
   }
 }
 
-// 加载学生详情
+// 加载学生详情 - V2 API
 const loadStudentDetail = async () => {
   if (!props.studentId) return
 
   loading.value = true
   try {
-    const response = await getStudentById(props.studentId)
+    const response = await getStudent(props.studentId)
     studentInfo.value = response
   } catch (error: any) {
     console.error('加载学生详情失败:', error)

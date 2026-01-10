@@ -153,8 +153,9 @@
 import { ref, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
 import { Loader2, Building2, Users } from 'lucide-vue-next'
-import { getDormitoryDetail } from '@/api/dormitory'
-import type { Dormitory, StudentSimpleInfo } from '@/types/dormitory'
+// V2 DDD API
+import { getDormitory } from '@/api/v2/dormitory'
+import type { Dormitory, StudentSimpleInfo } from '@/types/v2/dormitory'
 
 interface Props {
   dormitoryId: number | null
@@ -243,7 +244,7 @@ const loadDormitoryDetail = async () => {
 
   loading.value = true
   try {
-    const data = await getDormitoryDetail(props.dormitoryId)
+    const data = await getDormitory(props.dormitoryId)
     dormitoryInfo.value = data
   } catch (error: any) {
     ElMessage.error(error.message || '加载宿舍详情失败')

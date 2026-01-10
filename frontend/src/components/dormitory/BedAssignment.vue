@@ -184,8 +184,9 @@ import { ref, reactive, onMounted, computed } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Loader2, BedDouble, UserPlus, UserMinus, X, Search, Info, CheckCircle, Users } from 'lucide-vue-next'
 import { formatDate } from '@/utils/date'
-import { getDormitoryDetail, getBedAllocations, assignBed, releaseBed } from '@/api/dormitory'
-import { getStudentPage } from '@/api/student'
+// V2 DDD API
+import { getDormitory, getBedAllocations, assignBed, releaseBed } from '@/api/v2/dormitory'
+import { getStudents } from '@/api/v2/student'
 
 interface Props {
   dormitoryId: number | null
@@ -232,7 +233,7 @@ const loadDormitoryInfo = async () => {
 
   loading.value = true
   try {
-    dormitoryInfo.value = await getDormitoryDetail(props.dormitoryId)
+    dormitoryInfo.value = await getDormitory(props.dormitoryId)
     const allocations = await getBedAllocations(props.dormitoryId)
     bedList.value = allocations || []
     await loadAvailableStudents()
@@ -276,13 +277,14 @@ const loadAvailableStudents = async () => {
       return
     }
 
-    const result = await getStudentPage({
+    // V2: status=0 表示在读
+    const result = await getStudents({
       pageNum: 1,
       pageSize: 1000,
-      studentStatus: 1
+      status: 0
     })
 
-    let students = result.records.filter((s: any) => !s.dormitoryId)
+    let students = (result.records || []).filter((s: any) => !s.dormitoryId)
 
     // 按性别过滤
     if (dormitoryType === 1) {
@@ -297,9 +299,10 @@ const loadAvailableStudents = async () => {
       return allowedClassIds.includes(String(s.classId))
     })
 
+    // V2: realName → name
     availableStudents.value = students.map((s: any) => ({
       id: s.id,
-      name: s.realName,
+      name: s.name,
       studentNo: s.studentNo,
       gender: s.gender,
       className: s.className

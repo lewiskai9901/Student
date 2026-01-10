@@ -381,8 +381,8 @@ import {
   Wrench,
   XCircle
 } from 'lucide-vue-next'
-import { getDormitoryDetail, createDormitory, updateDormitory, getBedAllocations, getDormitoryList } from '@/api/dormitory'
-import { getBuildingList } from '@/api/building'
+// V2 DDD API
+import { getDormitory, createDormitory, updateDormitory, getBedAllocations, getDormitories, getAllEnabledBuildings } from '@/api/v2/dormitory'
 
 interface Props {
   mode: 'add' | 'edit'
@@ -523,25 +523,27 @@ const suggestedRoomNo = computed(() => {
   return `${formData.floor}${String(floorRooms.length + 1).padStart(2, '0')}`
 })
 
-// 加载宿舍楼列表
+// 加载宿舍楼列表 - V2 API
 const loadBuildingList = async () => {
   try {
-    const res = await getBuildingList({ pageNum: 1, pageSize: 1000 })
-    buildingList.value = res.records || []
+    // V2: 使用 getAllEnabledBuildings，筛选宿舍楼类型 (2)
+    const res = await getAllEnabledBuildings(2)
+    buildingList.value = res || []
   } catch (error: any) {
     console.error('加载宿舍楼列表失败:', error)
     ElMessage.error('加载宿舍楼列表失败')
   }
 }
 
-// 加载楼栋的房间列表
+// 加载楼栋的房间列表 - V2 API
 const loadBuildingRooms = async (buildingId: number) => {
   try {
     const building = buildingList.value.find(b => b.id === buildingId)
     const buildingName = building?.buildingName || building?.buildingNo
 
-    const res = await getDormitoryList({
-      buildingName: buildingName,
+    // V2: 使用 getDormitories 替代 getDormitoryList
+    const res = await getDormitories({
+      buildingId: buildingId,
       pageNum: 1,
       pageSize: 1000
     })
@@ -552,13 +554,13 @@ const loadBuildingRooms = async (buildingId: number) => {
   }
 }
 
-// 加载宿舍详情
+// 加载宿舍详情 - V2 API
 const loadDormitoryDetail = async () => {
   if (!props.dormitoryId) return
 
   loading.value = true
   try {
-    const detail = await getDormitoryDetail(props.dormitoryId)
+    const detail = await getDormitory(props.dormitoryId)
 
     let buildingId = detail.buildingId
     if (!buildingId && (detail.buildingName || detail.dormitoryNo)) {
