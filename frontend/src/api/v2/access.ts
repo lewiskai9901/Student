@@ -357,3 +357,50 @@ export function getRoleDataPermissions(id: number): Promise<RoleDataPermission[]
 export function saveRoleDataPermissions(id: number, permissions: RoleDataPermission[]): Promise<void> {
   return http.post(`/roles/${id}/data-permissions`, permissions)
 }
+
+// ==================== V2 数据权限 API ====================
+
+import type {
+  DataModuleInfo,
+  DataScopeOption,
+  RolePermissionConfig,
+  GroupedModules
+} from '@/types/v2/access'
+
+/**
+ * V2: 获取角色数据权限配置
+ */
+export function getRoleDataPermissionsV2(roleId: number): Promise<RolePermissionConfig> {
+  return http.get<RolePermissionConfig>(`${ROLE_URL}/${roleId}/data-permissions`)
+}
+
+/**
+ * V2: 保存角色数据权限配置
+ */
+export function saveRoleDataPermissionsV2(roleId: number, config: RolePermissionConfig): Promise<void> {
+  return http.put(`${ROLE_URL}/${roleId}/data-permissions`, config)
+}
+
+/**
+ * V2: 获取所有数据模块（按领域分组）
+ */
+export function getDataModulesV2(): Promise<GroupedModules> {
+  return http.get<GroupedModules>(`${ROLE_URL}/data-permissions/modules`)
+}
+
+/**
+ * V2: 获取所有数据范围选项
+ */
+export function getDataScopesV2(): Promise<DataScopeOption[]> {
+  return http.get<DataScopeOption[]>(`${ROLE_URL}/data-permissions/scopes`)
+}
+
+/**
+ * V2 数据权限 API 对象
+ */
+export const roleDataPermissionApiV2 = {
+  getConfig: getRoleDataPermissionsV2,
+  saveConfig: saveRoleDataPermissionsV2,
+  getModules: getDataModulesV2,
+  getScopes: getDataScopesV2
+}

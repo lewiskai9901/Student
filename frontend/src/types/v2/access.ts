@@ -166,3 +166,56 @@ export const PermissionTypeConfig: Record<PermissionType, { label: string; icon:
   API: { label: '接口', icon: 'Connection' },
   DATA: { label: '数据', icon: 'Document' }
 }
+
+// ==================== V2 数据权限类型 ====================
+
+/**
+ * 数据模块信息
+ */
+export interface DataModuleInfo {
+  code: string
+  name: string
+  domain: string
+}
+
+/**
+ * 数据范围选项
+ */
+export interface DataScopeOption {
+  code: string
+  name: string
+  intCode: string
+}
+
+/**
+ * 模块权限配置
+ */
+export interface ModulePermission {
+  moduleCode: string
+  scopeCode: string
+  customOrgUnitIds?: number[]
+}
+
+/**
+ * 角色数据权限完整配置
+ */
+export interface RolePermissionConfig {
+  roleId: number
+  roleName: string
+  modulePermissions: ModulePermission[]
+}
+
+/**
+ * 按领域分组的模块列表
+ */
+export type GroupedModules = Record<string, DataModuleInfo[]>
+
+/**
+ * 领域显示配置
+ */
+export const DomainConfig: Record<string, { label: string; icon: string }> = {
+  organization: { label: '组织管理', icon: 'OfficeBuilding' },
+  inspection: { label: '量化检查', icon: 'DocumentChecked' },
+  evaluation: { label: '评价管理', icon: 'Medal' },
+  task: { label: '任务管理', icon: 'Tickets' }
+}
