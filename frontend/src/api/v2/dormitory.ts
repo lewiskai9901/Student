@@ -448,3 +448,21 @@ export const buildingApi = {
   getAllEnabled: getAllEnabledBuildings,
   exists: existsBuildingNo
 }
+
+// ==================== 宿舍楼管理 (兼容) ====================
+
+export function updateDormitoryBuilding(id: number, data: any): Promise<void> {
+  return http.put(`/dormitory/buildings/${id}`, data)
+}
+
+export function assignManagers(buildingId: number, managerIds: number[]): Promise<void> {
+  return http.post(`/dormitory/buildings/${buildingId}/managers`, { managerIds })
+}
+
+export function removeManager(buildingId: number, managerId: number): Promise<void> {
+  return http.delete(`/dormitory/buildings/${buildingId}/managers/${managerId}`)
+}
+
+export function getUsersWithDormitoryPermission(): Promise<any[]> {
+  return http.get('/users', { params: { pageNum: 1, pageSize: 1000 } }).then((res: any) => res.records || [])
+}

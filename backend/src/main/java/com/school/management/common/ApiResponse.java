@@ -9,7 +9,9 @@ import java.time.LocalDateTime;
  *
  * @author system
  * @since 1.0.0
+ * @deprecated 使用 {@link com.school.management.common.result.Result} 替代
  */
+@Deprecated(since = "2.0.0", forRemoval = true)
 @Data
 public class ApiResponse<T> {
 

@@ -258,3 +258,7 @@ export const systemMessageApi = {
   markAsRead: markMessageAsRead,
   markAllAsRead: markAllMessagesAsRead
 }
+
+// 兼容别名
+export const getTaskCardDetail = getTaskDetail
+export const getTaskList = getTasks

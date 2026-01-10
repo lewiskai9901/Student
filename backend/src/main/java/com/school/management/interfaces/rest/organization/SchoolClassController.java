@@ -240,6 +240,40 @@ public class SchoolClassController {
         return Result.success(schoolClassRepository.existsByClassCode(classCode));
     }
 
+    @DeleteMapping("/batch")
+    @Operation(summary = "批量删除班级")
+    public Result<Integer> batchDeleteClasses(@RequestBody List<Long> ids) {
+        if (ids == null || ids.isEmpty()) {
+            return Result.error("请选择要删除的班级");
+        }
+
+        int deletedCount = 0;
+        for (Long id : ids) {
+            if (schoolClassRepository.findById(id).isPresent()) {
+                schoolClassRepository.deleteById(id);
+                deletedCount++;
+            }
+        }
+
+        return Result.success(deletedCount);
+    }
+
+    @PostMapping("/{id}/teachers/{teacherId}/end")
+    @Operation(summary = "结束教师任职")
+    public Result<Void> endTeacherAssignment(
+            @PathVariable Long id,
+            @PathVariable Long teacherId,
+            @RequestParam String role) {
+        return schoolClassRepository.findById(id)
+                .map(schoolClass -> {
+                    TeacherAssignment.TeacherRole teacherRole = TeacherAssignment.TeacherRole.valueOf(role);
+                    schoolClass.endTeacherAssignment(teacherId, teacherRole);
+                    schoolClassRepository.save(schoolClass);
+                    return Result.<Void>success(null);
+                })
+                .orElse(Result.error("班级不存在"));
+    }
+
     // ==================== 辅助方法 ====================
 
     private Long getCurrentUserId() {

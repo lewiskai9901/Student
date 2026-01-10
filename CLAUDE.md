@@ -176,13 +176,39 @@ src/
 └── router/v2.ts         # V2 路由配置
 ```
 
-**V2 路由:**
-- `/v2/organization/units` - 组织架构管理
-- `/v2/organization/classes` - 班级管理
-- `/v2/inspection/templates` - 检查模板
-- `/v2/inspection/records` - 检查记录
-- `/v2/access/roles` - 角色管理
-- `/v2/access/permissions` - 权限管理
+**DDD对齐导航结构 (2026-01更新):**
+```
+/ (MainLayout)
+├── /dashboard (首页, order: 1)
+├── /organization (组织管理, order: 2) ← Organization领域
+│   ├── /organization/units - 组织架构
+│   ├── /organization/classes - 班级管理
+│   ├── /organization/students - 学生管理
+│   ├── /organization/academic/* - 年级专业
+│   ├── /organization/dormitory/* - 宿舍管理
+│   └── /organization/teaching/* - 教学设施
+├── /inspection (量化检查, order: 3) ← Inspection领域
+│   ├── /inspection/config - 量化配置
+│   ├── /inspection/plans - 检查计划
+│   ├── /inspection/appeals - 申诉管理
+│   └── /inspection/* - 其他检查功能
+├── /evaluation (综合测评, order: 4)
+├── /task (任务管理, order: 5)
+├── /access (权限管理, order: 6) ← Access领域
+│   ├── /access/users - 用户管理
+│   ├── /access/roles - 角色管理
+│   └── /access/permissions - 权限管理
+└── /settings (系统设置, order: 7)
+    ├── /settings/configs - 系统配置
+    ├── /settings/weight - 加权配置
+    └── /settings/* - 其他设置
+```
+
+**向后兼容重定向:**
+- `/student-affairs/*` → `/organization/*`
+- `/dormitory/*` → `/organization/dormitory/*`
+- `/quantification/*` → `/inspection/*`
+- `/system/*` → `/access/*` 或 `/settings/*`
 
 **V1 Structure:**
 - `src/api/`: Axios HTTP client modules (organized by domain)
