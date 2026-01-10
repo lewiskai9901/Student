@@ -566,24 +566,72 @@
       <Transition name="modal">
         <div v-if="customScopeDialogVisible" class="fixed inset-0 z-[60] flex items-center justify-center">
           <div class="fixed inset-0 bg-black/50" @click="customScopeDialogVisible = false"></div>
-          <div class="relative w-full max-w-md rounded-lg bg-white shadow-xl">
+          <div class="relative w-full max-w-lg rounded-lg bg-white shadow-xl">
             <div class="flex items-center justify-between border-b border-gray-200 px-6 py-4">
               <h3 class="text-lg font-medium text-gray-900">选择可访问的组织单元</h3>
               <button @click="customScopeDialogVisible = false" class="rounded p-1 hover:bg-gray-100">
                 <X class="h-5 w-5 text-gray-500" />
               </button>
             </div>
-            <div class="max-h-80 overflow-y-auto p-6">
+            <div class="p-6">
               <p class="mb-4 text-sm text-gray-500">
                 请选择该角色可以访问的组织单元（部门/年级/班级）。
               </p>
-              <div class="rounded-lg border border-gray-200 p-4">
-                <p class="text-center text-gray-400">
-                  组织树选择器（待实现）
-                </p>
-                <p class="mt-2 text-center text-xs text-gray-400">
-                  需要集成组织架构树组件
-                </p>
+              <!-- 快捷操作 -->
+              <div class="mb-3 flex gap-2">
+                <button
+                  @click="handleExpandAllOrg"
+                  class="inline-flex h-7 items-center gap-1 rounded border border-gray-300 px-2 text-xs text-gray-600 hover:bg-gray-50"
+                >
+                  <FolderOpen class="h-3.5 w-3.5" />
+                  展开全部
+                </button>
+                <button
+                  @click="handleCollapseAllOrg"
+                  class="inline-flex h-7 items-center gap-1 rounded border border-gray-300 px-2 text-xs text-gray-600 hover:bg-gray-50"
+                >
+                  <Folder class="h-3.5 w-3.5" />
+                  折叠全部
+                </button>
+                <button
+                  @click="handleSelectAllOrg"
+                  class="inline-flex h-7 items-center gap-1 rounded border border-gray-300 px-2 text-xs text-gray-600 hover:bg-gray-50"
+                >
+                  <CheckSquare class="h-3.5 w-3.5" />
+                  全选
+                </button>
+                <button
+                  @click="handleClearAllOrg"
+                  class="inline-flex h-7 items-center gap-1 rounded border border-gray-300 px-2 text-xs text-gray-600 hover:bg-gray-50"
+                >
+                  <Square class="h-3.5 w-3.5" />
+                  清空
+                </button>
+              </div>
+              <!-- 组织树选择器 -->
+              <div class="max-h-72 overflow-y-auto rounded-lg border border-gray-200 bg-gray-50 p-3">
+                <div v-if="orgTreeLoading" class="py-8 text-center">
+                  <Loader2 class="mx-auto h-6 w-6 animate-spin text-gray-400" />
+                  <p class="mt-2 text-sm text-gray-500">加载组织架构...</p>
+                </div>
+                <div v-else-if="orgTreeData.length === 0" class="py-8 text-center text-gray-500">
+                  <Building2 class="mx-auto h-8 w-8 text-gray-300" />
+                  <p class="mt-2 text-sm">暂无组织架构数据</p>
+                </div>
+                <div v-else>
+                  <OrgTreeNode
+                    v-for="node in orgTreeData"
+                    :key="node.id"
+                    :node="node"
+                    :selected-ids="selectedOrgUnitIds"
+                    :expanded-keys="expandedOrgKeys"
+                    @toggle="toggleOrgNode"
+                    @check="handleOrgNodeCheck"
+                  />
+                </div>
+              </div>
+              <div class="mt-3 text-sm text-gray-500">
+                已选择 <span class="font-medium text-blue-600">{{ selectedOrgUnitIds.length }}</span> 个组织单元
               </div>
             </div>
             <div class="flex items-center justify-end gap-3 border-t border-gray-200 px-6 py-4">
@@ -658,6 +706,9 @@ import {
   getDataScopesV2,
   type RoleResponse
 } from '@/api/v2/access'
+import { getOrgUnitTree } from '@/api/v2/organization'
+import type { OrgUnitTreeNode } from '@/types/v2'
+import OrgTreeNode from '@/components/common/OrgTreeNode.vue'
 import type {
   CreateRoleRequest,
   UpdateRoleRequest,
@@ -688,6 +739,12 @@ const groupedModules = ref<GroupedModules>({})
 const dataScopeOptions = ref<DataScopeOption[]>([])
 const rolePermissionConfig = ref<RolePermissionConfig | null>(null)
 const currentCustomScopeModule = ref<string>('')
+
+// 自定义范围相关状态
+const orgTreeData = ref<OrgUnitTreeNode[]>([])
+const orgTreeLoading = ref(false)
+const selectedOrgUnitIds = ref<number[]>([])
+const expandedOrgKeys = ref<number[]>([])
 
 // 查询参数 - V2 类型
 interface LocalRoleQueryParams extends RoleQueryParams {
@@ -1026,17 +1083,119 @@ const getCustomScopeCount = (moduleCode: string): number => {
   return mp?.customOrgUnitIds?.length || 0
 }
 
+// 加载组织架构树
+const loadOrgTree = async () => {
+  if (orgTreeData.value.length > 0) return // 已加载则跳过
+  try {
+    orgTreeLoading.value = true
+    orgTreeData.value = await getOrgUnitTree()
+    // 默认展开第一层
+    expandedOrgKeys.value = orgTreeData.value.map(n => n.id)
+  } catch (error) {
+    console.error('加载组织架构失败:', error)
+    ElMessage.error('加载组织架构失败')
+  } finally {
+    orgTreeLoading.value = false
+  }
+}
+
+// 获取所有组织单元ID（用于全选）
+const getAllOrgIds = (nodes: OrgUnitTreeNode[]): number[] => {
+  const ids: number[] = []
+  const traverse = (list: OrgUnitTreeNode[]) => {
+    list.forEach(node => {
+      ids.push(node.id)
+      if (node.children?.length) traverse(node.children)
+    })
+  }
+  traverse(nodes)
+  return ids
+}
+
+// 获取所有可展开的节点ID
+const getAllExpandableIds = (nodes: OrgUnitTreeNode[]): number[] => {
+  const ids: number[] = []
+  const traverse = (list: OrgUnitTreeNode[]) => {
+    list.forEach(node => {
+      if (node.children?.length) {
+        ids.push(node.id)
+        traverse(node.children)
+      }
+    })
+  }
+  traverse(nodes)
+  return ids
+}
+
 // 打开自定义范围选择对话框
-const openCustomScopeDialog = (moduleCode: string) => {
+const openCustomScopeDialog = async (moduleCode: string) => {
   currentCustomScopeModule.value = moduleCode
+  // 加载组织树
+  await loadOrgTree()
+  // 加载当前模块已选中的组织单元
+  if (rolePermissionConfig.value) {
+    const mp = rolePermissionConfig.value.modulePermissions.find(p => p.moduleCode === moduleCode)
+    selectedOrgUnitIds.value = mp?.customOrgUnitIds ? [...mp.customOrgUnitIds] : []
+  }
   customScopeDialogVisible.value = true
+}
+
+// 切换节点展开状态
+const toggleOrgNode = (id: number) => {
+  const idx = expandedOrgKeys.value.indexOf(id)
+  if (idx > -1) {
+    expandedOrgKeys.value.splice(idx, 1)
+  } else {
+    expandedOrgKeys.value.push(id)
+  }
+}
+
+// 处理节点选中
+const handleOrgNodeCheck = (id: number, checked: boolean) => {
+  if (checked) {
+    if (!selectedOrgUnitIds.value.includes(id)) {
+      selectedOrgUnitIds.value.push(id)
+    }
+  } else {
+    const idx = selectedOrgUnitIds.value.indexOf(id)
+    if (idx > -1) {
+      selectedOrgUnitIds.value.splice(idx, 1)
+    }
+  }
+}
+
+// 展开所有节点
+const handleExpandAllOrg = () => {
+  expandedOrgKeys.value = getAllExpandableIds(orgTreeData.value)
+}
+
+// 折叠所有节点
+const handleCollapseAllOrg = () => {
+  expandedOrgKeys.value = []
+}
+
+// 全选所有节点
+const handleSelectAllOrg = () => {
+  selectedOrgUnitIds.value = getAllOrgIds(orgTreeData.value)
+}
+
+// 清空选择
+const handleClearAllOrg = () => {
+  selectedOrgUnitIds.value = []
 }
 
 // 确认自定义范围选择
 const confirmCustomScope = () => {
-  // TODO: 从组织树获取选中的组织单元ID
+  if (!rolePermissionConfig.value) return
+  // 保存选中的组织单元到当前模块配置
+  const mp = rolePermissionConfig.value.modulePermissions.find(
+    p => p.moduleCode === currentCustomScopeModule.value
+  )
+  if (mp) {
+    mp.customOrgUnitIds = [...selectedOrgUnitIds.value]
+  }
   customScopeDialogVisible.value = false
-  ElMessage.info('自定义范围选择功能待完善')
+  ElMessage.success(`已选择 ${selectedOrgUnitIds.value.length} 个组织单元`)
 }
 
 // 加载数据权限元数据
