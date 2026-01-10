@@ -506,9 +506,10 @@ import {
 } from '@/api/v2/student'
 import type { Student, StudentQueryParams, StudentStatus } from '@/types/v2/student'
 import { StudentStatusMap } from '@/types/v2/student'
-import { getClassList } from '@/api/class'
-import { getAllGrades } from '@/api/grade'
-import type { Grade } from '@/api/grade'
+// V2 班级和年级 API
+import { getClasses } from '@/api/v2/organization'
+import type { SchoolClass } from '@/types/v2'
+import { getAllGrades, type Grade } from '@/api/grade'
 import StudentDetail from '@/components/student/StudentDetail.vue'
 import StudentForm from '@/components/student/StudentForm.vue'
 import { StatCard } from '@/components/design-system'
@@ -551,7 +552,7 @@ const pagination = reactive({
 const studentList = ref<Student[]>([])
 const total = ref(0)
 const selectedRows = ref<Student[]>([])
-const classList = ref<any[]>([])
+const classList = ref<SchoolClass[]>([])
 const gradeList = ref<Grade[]>([])
 
 // 计算总页数
@@ -590,12 +591,17 @@ const isAllSelected = computed(() => {
   return studentList.value.length > 0 && selectedRows.value.length === studentList.value.length
 })
 
-// 根据选择的年级过滤班级列表
+// 根据选择的年级过滤班级列表 - V2: 通过 enrollmentYear 关联
 const filteredClassList = computed(() => {
   if (!searchForm.gradeId) {
     return classList.value
   }
-  return classList.value.filter(item => item.gradeId === searchForm.gradeId)
+  // V2: 先找到选中年级的 enrollmentYear，再过滤班级
+  const selectedGrade = gradeList.value.find(g => g.id === searchForm.gradeId)
+  if (!selectedGrade) {
+    return classList.value
+  }
+  return classList.value.filter(item => item.enrollmentYear === selectedGrade.enrollmentYear)
 })
 
 // 弹窗控制
@@ -656,11 +662,11 @@ const loadStudentList = async () => {
   }
 }
 
-// 加载班级列表
+// 加载班级列表 - V2 API
 const loadClassList = async () => {
   try {
-    // 传入足够大的 pageSize 以获取所有班级
-    const response = await getClassList({ pageNum: 1, pageSize: 1000 })
+    // V2: 传入足够大的 pageSize 以获取所有班级
+    const response = await getClasses({ pageNum: 1, pageSize: 1000 })
     classList.value = response.records || []
   } catch (error: any) {
     console.error('加载班级列表失败:', error)

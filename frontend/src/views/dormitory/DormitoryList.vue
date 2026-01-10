@@ -455,14 +455,15 @@ import {
   DoorOpen
 } from 'lucide-vue-next'
 import { useAuthStore } from '@/stores/auth'
-import { getDormitoryList, deleteDormitory, batchDeleteDormitories, exportDormitories } from '@/api/dormitory'
-import { getAllEnabledBuildings } from '@/api/building'
-import type { Building } from '@/types/building'
+import { getDormitories, deleteDormitory, deleteDormitories, getAllEnabledBuildings } from '@/api/v2/dormitory'
+// 导出功能暂无V2端点
+import { exportDormitories } from '@/api/dormitory'
+import type { Building } from '@/types/v2/dormitory'
 import { exportExcel } from '@/utils/export'
 import DormitoryDetail from '@/components/dormitory/DormitoryDetail.vue'
 import DormitoryForm from '@/components/dormitory/DormitoryForm.vue'
 import BedAssignment from '@/components/dormitory/BedAssignment.vue'
-import type { Dormitory, DormitoryQueryParams } from '@/types/dormitory'
+import type { Dormitory, DormitoryQueryParams } from '@/types/v2/dormitory'
 
 const authStore = useAuthStore()
 
@@ -623,7 +624,7 @@ const getGenderTypeClass = (type: number) => {
 const loadDormitoryList = async () => {
   loading.value = true
   try {
-    const response = await getDormitoryList({
+    const response = await getDormitories({
       ...searchForm,
       pageNum: pagination.pageNum,
       pageSize: pagination.pageSize
@@ -772,7 +773,7 @@ const handleBatchDelete = async () => {
     )
 
     const ids = selectedRows.value.map(item => item.id)
-    await batchDeleteDormitories(ids)
+    await deleteDormitories(ids)
     ElMessage.success('批量删除成功')
     selectedRows.value = []
     loadDormitoryList()

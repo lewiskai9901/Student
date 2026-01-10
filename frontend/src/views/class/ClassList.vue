@@ -18,46 +18,37 @@
     <div class="mb-4 rounded-lg border border-gray-200 bg-white p-4">
       <div class="flex flex-wrap items-end gap-3">
         <div class="w-40">
-          <label class="mb-1 block text-xs font-medium text-gray-600">班级名称</label>
+          <label class="mb-1 block text-xs font-medium text-gray-600">关键词</label>
           <input
-            v-model="searchForm.className"
+            v-model="searchForm.keyword"
             type="text"
-            placeholder="请输入班级名称"
+            placeholder="班级名称/编码"
             class="h-9 w-full rounded-md border border-gray-300 px-3 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
           />
         </div>
         <div class="w-40">
-          <label class="mb-1 block text-xs font-medium text-gray-600">所属部门</label>
+          <label class="mb-1 block text-xs font-medium text-gray-600">所属组织</label>
           <select
-            v-model="searchForm.departmentId"
+            v-model="searchForm.orgUnitId"
             class="h-9 w-full rounded-md border border-gray-300 bg-white px-3 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
           >
-            <option :value="null">全部部门</option>
-            <option v-for="item in departmentList" :key="item.id" :value="item.id">
-              {{ item.departmentName }}
+            <option :value="undefined">全部组织</option>
+            <option v-for="item in orgUnitList" :key="item.id" :value="item.id">
+              {{ item.unitName }}
             </option>
           </select>
         </div>
-        <div class="w-40">
-          <label class="mb-1 block text-xs font-medium text-gray-600">年级</label>
+        <div class="w-32">
+          <label class="mb-1 block text-xs font-medium text-gray-600">入学年份</label>
           <select
-            v-model="searchForm.gradeId"
+            v-model="searchForm.enrollmentYear"
             class="h-9 w-full rounded-md border border-gray-300 bg-white px-3 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
           >
-            <option :value="null">全部年级</option>
-            <option v-for="grade in gradeList" :key="grade.id" :value="grade.id">
-              {{ grade.gradeName }}
+            <option :value="undefined">全部年份</option>
+            <option v-for="year in [2024, 2023, 2022, 2021, 2020]" :key="year" :value="year">
+              {{ year }}级
             </option>
           </select>
-        </div>
-        <div class="w-36">
-          <label class="mb-1 block text-xs font-medium text-gray-600">班主任</label>
-          <input
-            v-model="searchForm.teacherName"
-            type="text"
-            placeholder="班主任姓名"
-            class="h-9 w-full rounded-md border border-gray-300 px-3 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-          />
         </div>
         <div class="w-28">
           <label class="mb-1 block text-xs font-medium text-gray-600">状态</label>
@@ -65,10 +56,11 @@
             v-model="searchForm.status"
             class="h-9 w-full rounded-md border border-gray-300 bg-white px-3 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
           >
-            <option :value="null">全部</option>
-            <option :value="1">正常</option>
-            <option :value="2">停招</option>
-            <option :value="3">毕业</option>
+            <option :value="undefined">全部</option>
+            <option value="PREPARING">筹建中</option>
+            <option value="ACTIVE">在读中</option>
+            <option value="GRADUATED">已毕业</option>
+            <option value="DISSOLVED">已撤销</option>
           </select>
         </div>
         <button
@@ -173,30 +165,27 @@
                 </div>
               </td>
               <td class="px-4 py-3 text-sm text-gray-600">
-                {{ row.departmentName || '-' }}
+                {{ row.orgUnitName || '-' }}
               </td>
               <td class="px-4 py-3 text-sm text-gray-900">
-                {{ row.gradeName || row.grade || '-' }}
+                {{ row.gradeLevel ? `${row.gradeLevel}年级` : '-' }}
               </td>
               <td class="px-4 py-3">
                 <div class="flex flex-col gap-0.5">
-                  <span class="text-sm text-gray-900">{{ row.majorName || '-' }}</span>
-                  <div v-if="row.educationSystem || row.skillLevel" class="flex gap-1">
-                    <span v-if="row.educationSystem" class="rounded bg-gray-100 px-1.5 py-0.5 text-xs text-gray-600">
-                      {{ row.educationSystem }}
-                    </span>
-                    <span v-if="row.skillLevel" class="rounded bg-green-50 px-1.5 py-0.5 text-xs text-green-700">
-                      {{ row.skillLevel }}
+                  <span class="text-sm text-gray-900">{{ row.majorDirectionName || '-' }}</span>
+                  <div v-if="row.schoolingYears" class="flex gap-1">
+                    <span class="rounded bg-gray-100 px-1.5 py-0.5 text-xs text-gray-600">
+                      {{ row.schoolingYears }}年制
                     </span>
                   </div>
                 </div>
               </td>
               <td class="px-4 py-3">
-                <div v-if="row.teacherName" class="flex items-center gap-2">
+                <div v-if="row.headTeacher?.teacherName" class="flex items-center gap-2">
                   <div class="flex h-7 w-7 items-center justify-center rounded-full bg-blue-100 text-xs font-medium text-blue-600">
-                    {{ row.teacherName.charAt(0) }}
+                    {{ row.headTeacher.teacherName.charAt(0) }}
                   </div>
-                  <span class="text-sm text-gray-900">{{ row.teacherName }}</span>
+                  <span class="text-sm text-gray-900">{{ row.headTeacher.teacherName }}</span>
                 </div>
                 <span v-else class="text-sm text-gray-400">未分配</span>
               </td>
@@ -207,9 +196,9 @@
                   @click="handleViewStudents(row)"
                 >
                   <Users class="h-3 w-3" />
-                  {{ row.studentCount || 0 }}
+                  {{ row.currentSize || 0 }}
                 </button>
-                <span v-else class="text-sm text-gray-600">{{ row.studentCount || 0 }}</span>
+                <span v-else class="text-sm text-gray-600">{{ row.currentSize || 0 }}</span>
               </td>
               <td class="px-4 py-3">
                 <span
@@ -471,18 +460,21 @@ import {
   CheckCircle,
   PauseCircle,
   Award,
-  Building,
-  Home
+  Building
 } from 'lucide-vue-next'
 import { useAuthStore } from '@/stores/auth'
-import { getClassList, getDepartmentList, deleteClass, batchDeleteClasses, exportClasses, assignTeacher, getTeacherList, getClassDormitories, addDormitory, removeDormitory, getDormitoryList } from '@/api/class'
+import { getClasses, deleteClass, assignHeadTeacher, getOrgUnitTree } from '@/api/v2/organization'
+import { getAllUsers } from '@/api/v2/user'
+// 班级-宿舍关联操作暂无V2端点，保留V1
+import { batchDeleteClasses, exportClasses, getClassDormitories, addDormitory, removeDormitory, getDormitoryList } from '@/api/class'
 import { getAllGrades } from '@/api/grade'
 import type { Grade } from '@/api/grade'
 import { exportExcel } from '@/utils/export'
 import ClassDetail from '@/components/class/ClassDetail.vue'
 import ClassForm from '@/components/class/ClassForm.vue'
 import ClassDormitoryAssignmentDialog from '@/components/class/ClassDormitoryAssignmentDialog.vue'
-import type { Class, ClassQueryParams, ClassDormitoryInfo } from '@/types/class'
+import type { SchoolClass, ClassQueryParams, ClassStatus, ClassStatusConfig as StatusConfig, OrgUnitTreeNode } from '@/types/v2'
+import type { ClassDormitoryInfo } from '@/types/class'
 
 const router = useRouter()
 const authStore = useAuthStore()
@@ -502,12 +494,12 @@ const stats = reactive({
 })
 
 // 搜索表单
-const searchForm = reactive<ClassQueryParams & { gradeId?: number | null }>({
-  className: '',
-  departmentId: null,
+const searchForm = reactive<ClassQueryParams & { gradeId?: number | null; keyword?: string }>({
+  keyword: '',
+  orgUnitId: undefined,
   gradeId: null,
-  teacherName: '',
-  status: null
+  enrollmentYear: undefined,
+  status: undefined
 })
 
 // 分页参数
@@ -517,10 +509,10 @@ const pagination = reactive({
 })
 
 // 数据
-const classList = ref<Class[]>([])
+const classList = ref<SchoolClass[]>([])
 const total = ref(0)
-const selectedRows = ref<Class[]>([])
-const departmentList = ref<any[]>([])
+const selectedRows = ref<SchoolClass[]>([])
+const orgUnitList = ref<OrgUnitTreeNode[]>([])
 const teacherList = ref<any[]>([])
 const gradeList = ref<Grade[]>([])
 
@@ -592,31 +584,29 @@ const availableDormitories = computed(() => {
   return allDormitories.value.filter(d => !assignedIds.has(d.id))
 })
 
+// 状态配置
+const statusConfig: Record<ClassStatus, { label: string; class: string }> = {
+  PREPARING: { label: '筹建中', class: 'bg-gray-100 text-gray-700' },
+  ACTIVE: { label: '在读中', class: 'bg-green-50 text-green-700' },
+  GRADUATED: { label: '已毕业', class: 'bg-blue-50 text-blue-700' },
+  DISSOLVED: { label: '已撤销', class: 'bg-red-50 text-red-700' }
+}
+
 // 获取状态样式类
-const getStatusClass = (status: number) => {
-  const classMap: Record<number, string> = {
-    1: 'bg-green-50 text-green-700',
-    2: 'bg-amber-50 text-amber-700',
-    3: 'bg-gray-100 text-gray-700'
-  }
-  return classMap[status] || 'bg-gray-100 text-gray-700'
+const getStatusClass = (status: ClassStatus) => {
+  return statusConfig[status]?.class || 'bg-gray-100 text-gray-700'
 }
 
 // 获取状态文本
-const getStatusText = (status: number) => {
-  const statusMap: Record<number, string> = {
-    1: '正常',
-    2: '停招',
-    3: '毕业'
-  }
-  return statusMap[status] || '未知'
+const getStatusText = (status: ClassStatus) => {
+  return statusConfig[status]?.label || '未知'
 }
 
 // 加载班级列表
 const loadClassList = async () => {
   loading.value = true
   try {
-    const response = await getClassList({
+    const response = await getClasses({
       ...searchForm,
       pageNum: pagination.pageNum,
       pageSize: pagination.pageSize
@@ -626,10 +616,10 @@ const loadClassList = async () => {
     total.value = response.total || 0
 
     // 计算统计数据
-    stats.active = classList.value.filter(c => c.status === 1).length
-    stats.stopped = classList.value.filter(c => c.status === 2).length
-    stats.graduated = classList.value.filter(c => c.status === 3).length
-    stats.totalStudents = classList.value.reduce((sum, c) => sum + (c.studentCount || 0), 0)
+    stats.active = classList.value.filter(c => c.status === 'ACTIVE').length
+    stats.stopped = classList.value.filter(c => c.status === 'PREPARING').length
+    stats.graduated = classList.value.filter(c => c.status === 'GRADUATED').length
+    stats.totalStudents = classList.value.reduce((sum, c) => sum + (c.currentSize || 0), 0)
   } catch (error: any) {
     const message = error.response?.data?.message || '加载班级列表失败，请稍后重试'
     ElMessage.error(message)
@@ -638,13 +628,13 @@ const loadClassList = async () => {
   }
 }
 
-// 加载部门列表
-const loadDepartmentList = async () => {
+// 加载组织单元列表
+const loadOrgUnitList = async () => {
   try {
-    const response = await getDepartmentList()
-    departmentList.value = response || []
+    const response = await getOrgUnitTree()
+    orgUnitList.value = response || []
   } catch (error: any) {
-    console.error('加载部门列表失败:', error)
+    console.error('加载组织单元列表失败:', error)
   }
 }
 
@@ -658,10 +648,10 @@ const loadGradeList = async () => {
   }
 }
 
-// 加载教师列表
+// 加载教师列表 - V2 API
 const loadTeacherList = async () => {
   try {
-    const response = await getTeacherList()
+    const response = await getAllUsers()
     teacherList.value = response || []
   } catch (error: any) {
     console.error('加载教师列表失败:', error)
@@ -677,11 +667,11 @@ const handleSearch = () => {
 // 重置
 const handleReset = () => {
   Object.assign(searchForm, {
-    className: '',
-    departmentId: null,
+    keyword: '',
+    orgUnitId: undefined,
     gradeId: null,
-    teacherName: '',
-    status: null
+    enrollmentYear: undefined,
+    status: undefined
   })
   pagination.pageNum = 1
   loadClassList()
@@ -695,20 +685,20 @@ const handleAdd = () => {
 }
 
 // 查看详情
-const handleView = (row: Class) => {
+const handleView = (row: SchoolClass) => {
   currentClassId.value = row.id
   detailDialogVisible.value = true
 }
 
 // 编辑
-const handleEdit = (row: Class) => {
+const handleEdit = (row: SchoolClass) => {
   editMode.value = 'edit'
   currentClassId.value = row.id
   editDialogVisible.value = true
 }
 
 // 查看学生
-const handleViewStudents = (row: Class) => {
+const handleViewStudents = (row: SchoolClass) => {
   router.push({
     path: '/students',
     query: {
@@ -719,7 +709,7 @@ const handleViewStudents = (row: Class) => {
 }
 
 // 删除
-const handleDelete = async (row: Class) => {
+const handleDelete = async (row: SchoolClass) => {
   try {
     await ElMessageBox.confirm(
       `确定要删除班级 "${row.className}" 吗？此操作不可恢复！`,
@@ -797,7 +787,7 @@ const handleSelectAll = (e: Event) => {
 }
 
 // 选中/取消选中行
-const handleSelectRow = (row: Class) => {
+const handleSelectRow = (row: SchoolClass) => {
   const index = selectedRows.value.findIndex(s => s.id === row.id)
   if (index === -1) {
     selectedRows.value.push(row)
@@ -831,10 +821,10 @@ const handleEditClose = () => {
 }
 
 // 设置班主任
-const handleSetTeacher = async (row: Class) => {
+const handleSetTeacher = async (row: SchoolClass) => {
   currentClassId.value = row.id
   currentClassName.value = row.className
-  teacherForm.teacherId = row.teacherId || null
+  teacherForm.teacherId = row.headTeacher?.teacherId || null
   await loadTeacherList()
   teacherDialogVisible.value = true
 }
@@ -853,7 +843,12 @@ const handleTeacherSubmit = async () => {
 
   submitting.value = true
   try {
-    await assignTeacher(currentClassId.value, teacherForm.teacherId)
+    // 获取教师姓名
+    const teacher = teacherList.value.find(t => t.id === teacherForm.teacherId)
+    await assignHeadTeacher(currentClassId.value, {
+      teacherId: teacherForm.teacherId!,
+      teacherName: teacher?.realName || ''
+    })
     ElMessage.success('设置班主任成功')
     teacherDialogVisible.value = false
     loadClassList()
@@ -873,10 +868,10 @@ const handleEditSuccess = () => {
 }
 
 // 打开宿舍管理弹窗
-const handleManageDormitory = (row: Class) => {
+const handleManageDormitory = (row: SchoolClass) => {
   currentClassId.value = row.id
   currentClassName.value = row.className
-  currentDepartmentId.value = row.departmentId || null
+  currentDepartmentId.value = row.orgUnitId || null
   dormitoryDialogVisible.value = true
 }
 
@@ -964,7 +959,7 @@ const handleDormitoryClose = () => {
 // 初始化
 onMounted(() => {
   loadClassList()
-  loadDepartmentList()
+  loadOrgUnitList()
   loadGradeList()
 })
 </script>

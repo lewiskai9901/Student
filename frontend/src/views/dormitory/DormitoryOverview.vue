@@ -940,9 +940,9 @@ import {
   ChevronRight
 } from 'lucide-vue-next'
 import DormitoryCard from '@/components/dormitory/DormitoryCard.vue'
-import { getDormitoryList } from '@/api/dormitory'
-import { getStudentPage } from '@/api/student'
-import { assignStudentToDormitory, removeStudentFromDormitory, swapStudentDormitory } from '@/api/dormitory'
+// V2 DDD API
+import { getDormitories, assignStudentToDormitory, removeStudentFromDormitory, swapStudentDormitory } from '@/api/v2/dormitory'
+import { getStudents } from '@/api/v2/student'
 
 // 加载状态
 const loading = ref(false)
@@ -1372,11 +1372,11 @@ const getOccupancyBarColor = (room: any) => {
   return 'bg-emerald-500'
 }
 
-// 加载房间列表
+// 加载房间列表 - V2 API
 const loadRoomList = async () => {
   loading.value = true
   try {
-    const response = await getDormitoryList({ pageNum: 1, pageSize: 1000 })
+    const response = await getDormitories({ pageNum: 1, pageSize: 1000 })
     roomList.value = response.records || []
   } catch (error: any) {
     ElMessage.error(error.response?.data?.message || '加载宿舍列表失败')
@@ -1394,13 +1394,14 @@ const searchStudentsWithRoom = async (query: string) => {
 
   searchLoading.value = true
   try {
-    const response = await getStudentPage({
-      realName: query,
-      hasRoom: true,
+    // V2: name 代替 realName
+    const response = await getStudents({
+      name: query,
       pageNum: 1,
       pageSize: 20
     })
-    studentsWithRoom.value = response.records || []
+    // V2 暂无 hasRoom 过滤，前端过滤有宿舍的学生
+    studentsWithRoom.value = (response.records || []).filter((s: any) => s.dormitoryId)
   } catch {
     // 搜索失败
   } finally {
@@ -1463,7 +1464,8 @@ const handleAddStudent = async (room: any) => {
       return
     }
 
-    const response = await getStudentPage({
+    // V2 API
+    const response = await getStudents({
       pageNum: 1,
       pageSize: 500
     })
