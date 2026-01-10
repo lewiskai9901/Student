@@ -1,7 +1,10 @@
 package com.school.management.service;
 
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
-import com.school.management.dto.*;
+import com.school.management.dto.UserCreateRequest;
+import com.school.management.dto.UserQueryRequest;
+import com.school.management.dto.UserResponse;
+import com.school.management.dto.UserUpdateRequest;
 
 import java.util.List;
 

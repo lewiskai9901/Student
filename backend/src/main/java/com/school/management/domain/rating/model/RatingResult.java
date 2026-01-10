@@ -1,7 +1,12 @@
 package com.school.management.domain.rating.model;
 
 import com.school.management.domain.shared.AggregateRoot;
-import com.school.management.domain.rating.event.*;
+import com.school.management.domain.rating.event.RatingApprovedEvent;
+import com.school.management.domain.rating.event.RatingCalculatedEvent;
+import com.school.management.domain.rating.event.RatingPublishedEvent;
+import com.school.management.domain.rating.event.RatingRejectedEvent;
+import com.school.management.domain.rating.event.RatingRevokedEvent;
+import com.school.management.domain.rating.event.RatingSubmittedEvent;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
