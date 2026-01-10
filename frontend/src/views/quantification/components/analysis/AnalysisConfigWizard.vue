@@ -326,10 +326,10 @@
 import { ref, reactive, computed, watch, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
 import type { FormInstance, FormRules } from 'element-plus'
-import { getCheckPlanPage, getPlanTargetScope, getPlanTargetClasses, type CheckPlanListVO } from '@/api/checkPlan'
-import { getDepartmentTree, type Department } from '@/api/department'
-import { getGradePage, type Grade } from '@/api/grade'
-import { getClassList } from '@/api/class'
+import { getCheckPlanPage, getPlanTargetScope, getPlanTargetClasses, type CheckPlanListVO } from '@/api/v2/quantification'
+import { getDepartmentTree, type Department } from '@/api/v2/organization'
+import { getGradePage, type Grade } from '@/api/v2/organization'
+import { getClassList } from '@/api/v2/organization'
 import type { Class } from '@/types/class'
 import {
   getConfigDetail,
@@ -337,7 +337,7 @@ import {
   updateConfig,
   type AnalysisConfig,
   type AnalysisMetric
-} from '@/api/analysisConfig'
+} from '@/api/v2/quantification-extra'
 
 // Props & Emits
 const props = defineProps<{

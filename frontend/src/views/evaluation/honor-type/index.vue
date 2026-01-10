@@ -232,7 +232,7 @@
 import { ref, reactive, onMounted } from 'vue'
 import { Plus, X, ChevronLeft, ChevronRight } from 'lucide-vue-next'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { pageHonorTypes, getHonorTypeDetail, createHonorType, updateHonorType, deleteHonorType, type HonorType, type HonorLevelConfig } from '@/api/evaluation'
+import { pageHonorTypes, getHonorTypeDetail, createHonorType, updateHonorType, deleteHonorType, type HonorType, type HonorLevelConfig } from '@/api/v2/evaluation'
 
 const categoryOptions = [
   { value: 'COMPETITION', label: '竞赛' },

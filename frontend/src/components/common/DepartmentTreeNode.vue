@@ -50,7 +50,7 @@
 
 <script setup lang="ts">
 import { computed } from 'vue'
-import type { DepartmentResponse } from '@/api/department'
+import type { DepartmentResponse } from '@/api/v2/organization'
 
 const props = defineProps<{
   department: DepartmentResponse

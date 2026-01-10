@@ -215,10 +215,10 @@ import {
   convertDailyCheck,
   deleteCheckRecord,
   publishCheckRecord
-} from '@/api/checkRecord'
-import type { CheckRecord } from '@/api/checkRecord'
-import { getCheckPlanPage } from '@/api/checkPlan'
-import type { CheckPlanListVO } from '@/api/checkPlan'
+} from '@/api/v2/quantification'
+import type { CheckRecord } from '@/api/v2/quantification'
+import { getCheckPlanPage } from '@/api/v2/quantification'
+import type { CheckPlanListVO } from '@/api/v2/quantification'
 import { useAuthStore } from '@/stores/auth'
 
 const router = useRouter()

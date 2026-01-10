@@ -226,7 +226,7 @@ import {
   ClockIcon,
   ArrowTopRightOnSquareIcon
 } from '@heroicons/vue/24/outline'
-import type { TaskAssigneeDTO } from '@/api/task'
+import type { TaskAssigneeDTO } from '@/api/v2/task'
 
 const props = defineProps<{
   assignees: TaskAssigneeDTO[]

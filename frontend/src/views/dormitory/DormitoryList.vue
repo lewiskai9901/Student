@@ -457,7 +457,7 @@ import {
 import { useAuthStore } from '@/stores/auth'
 import { getDormitories, deleteDormitory, deleteDormitories, getAllEnabledBuildings } from '@/api/v2/dormitory'
 // 导出功能暂无V2端点
-import { exportDormitories } from '@/api/dormitory'
+import { exportDormitories } from '@/api/v2/dormitory'
 import type { Building } from '@/types/v2/dormitory'
 import { exportExcel } from '@/utils/export'
 import DormitoryDetail from '@/components/dormitory/DormitoryDetail.vue'

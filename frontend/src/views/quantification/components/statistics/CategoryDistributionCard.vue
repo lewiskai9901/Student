@@ -56,7 +56,7 @@ import type { ECharts } from 'echarts/core'
 
 use([PieChart, CanvasRenderer, TooltipComponent, LegendComponent])
 import * as echarts from 'echarts/core'
-import type { CategoryStatsDetailVO } from '@/api/smartStatistics'
+import type { CategoryStatsDetailVO } from '@/api/v2/quantification-extra'
 
 interface Props {
   title?: string

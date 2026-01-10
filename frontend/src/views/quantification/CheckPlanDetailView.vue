@@ -857,19 +857,19 @@ import {
   getPlanTargetClasses,
   PLAN_STATUS,
   PLAN_STATUS_LABELS
-} from '@/api/checkPlan'
-import type { CheckPlanVO, TemplateSnapshot, SnapshotCategory } from '@/api/checkPlan'
+} from '@/api/v2/quantification'
+import type { CheckPlanVO, TemplateSnapshot, SnapshotCategory } from '@/api/v2/quantification'
 import { http } from '@/utils/request'
 import {
   getCheckRecordsList,
   deleteCheckRecord,
   publishCheckRecord,
   exportCheckRecord
-} from '@/api/checkRecord'
-import type { CheckRecord } from '@/api/checkRecord'
-import { getClassList, type Class } from '@/api/class'
-import { getAllEnabledDepartments, type DepartmentResponse } from '@/api/department'
-import { getAllGrades, type Grade } from '@/api/grade'
+} from '@/api/v2/quantification'
+import type { CheckRecord } from '@/api/v2/quantification'
+import { getClassList, type Class } from '@/api/v2/organization'
+import { getAllEnabledDepartments, type DepartmentResponse } from '@/api/v2/organization'
+import { getAllGrades, type Grade } from '@/api/v2/organization'
 import { useAuthStore } from '@/stores/auth'
 import StatisticsDialog from './components/statistics/StatisticsDialog.vue'
 import PlanAnalysisTab from './components/PlanAnalysisTab.vue'
@@ -887,8 +887,8 @@ import {
   type InspectorCreateRequest,
   type InspectorUpdateRequest,
   type PermissionConfig
-} from '@/api/inspector'
-import { getSimpleUserList, type SimpleUser } from '@/api/user'
+} from '@/api/v2/quantification-extra'
+import { getSimpleUserList, type SimpleUser } from '@/api/v2/user'
 
 const authStore = useAuthStore()
 const hasPermission = (permission: string) => authStore.hasPermission(permission)

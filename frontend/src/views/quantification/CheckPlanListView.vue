@@ -272,8 +272,8 @@ import {
   deleteCheckPlan,
   PLAN_STATUS,
   PLAN_STATUS_LABELS
-} from '@/api/checkPlan'
-import type { CheckPlanListVO, CheckPlanStatisticsVO } from '@/api/checkPlan'
+} from '@/api/v2/quantification'
+import type { CheckPlanListVO, CheckPlanStatisticsVO } from '@/api/v2/quantification'
 
 const router = useRouter()
 

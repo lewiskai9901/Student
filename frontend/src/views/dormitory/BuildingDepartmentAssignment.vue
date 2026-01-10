@@ -303,9 +303,9 @@ import {
   deleteBuildingDepartmentAssignment,
   enableBuildingDepartmentAssignment,
   disableBuildingDepartmentAssignment
-} from '@/api/buildingDepartmentAssignment'
-import { getDormitoryBuildingList } from '@/api/dormitoryBuilding'
-import { getAllEnabledDepartments } from '@/api/department'
+} from '@/api/v2/dormitory'
+import { getDormitoryBuildingList } from '@/api/v2/dormitory'
+import { getAllEnabledDepartments } from '@/api/v2/organization'
 import type { BuildingDepartmentAssignment } from '@/types/buildingDepartmentAssignment'
 
 // 查询表单

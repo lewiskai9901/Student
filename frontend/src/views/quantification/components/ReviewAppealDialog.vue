@@ -93,7 +93,7 @@
 import { ref, reactive, watch, computed } from 'vue'
 import { ElMessage } from 'element-plus'
 import type { FormInstance, FormRules } from 'element-plus'
-import { reviewAppeal, type AppealResponse, type AppealReviewRequest } from '@/api/dailyCheckScoring'
+import { reviewAppeal, type AppealResponse, type AppealReviewRequest } from '@/api/v2/quantification-extra'
 import { useAuthStore } from '@/stores/auth'
 
 const props = defineProps<{

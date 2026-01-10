@@ -305,8 +305,8 @@ import {
   type RoundAnalysisVO,
   type ClassTrackingVO,
   type TopItemVO
-} from '@/api/smartStatistics'
-import { exportClassRanking } from '@/api/checkPlanRating'
+} from '@/api/v2/quantification-extra'
+import { exportClassRanking } from '@/api/v2/rating'
 import { downloadBlob, getFilenameFromContentDisposition } from '@/utils/export'
 
 const route = useRoute()

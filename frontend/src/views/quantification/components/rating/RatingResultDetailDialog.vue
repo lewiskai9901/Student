@@ -66,7 +66,7 @@
 <script setup lang="ts">
 import { ref, watch } from 'vue'
 import { ElMessage } from 'element-plus'
-import { getRatingResultDetail, type RatingResultVO } from '@/api/checkPlanRatingResult'
+import { getRatingResultDetail, type RatingResultVO } from '@/api/v2/rating'
 
 // Props
 const props = defineProps<{

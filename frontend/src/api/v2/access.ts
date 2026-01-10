@@ -327,3 +327,33 @@ export const DATA_SCOPE_OPTIONS = [
   { value: 4, label: '本班级' },
   { value: 5, label: '仅本人' }
 ]
+
+// ==================== 数据权限 API (V1兼容) ====================
+
+/**
+ * 角色数据权限配置
+ */
+export interface RoleDataPermission {
+  moduleCode: string
+  moduleName: string
+  dataScope: number
+  dataScopeName?: string
+  customDeptIds?: string
+  customClassIds?: string
+}
+
+/**
+ * 获取角色的数据权限配置
+ * @deprecated 使用V1接口，待迁移到V2
+ */
+export function getRoleDataPermissions(id: number): Promise<RoleDataPermission[]> {
+  return http.get<RoleDataPermission[]>(`/roles/${id}/data-permissions`)
+}
+
+/**
+ * 保存角色的数据权限配置
+ * @deprecated 使用V1接口，待迁移到V2
+ */
+export function saveRoleDataPermissions(id: number, permissions: RoleDataPermission[]): Promise<void> {
+  return http.post(`/roles/${id}/data-permissions`, permissions)
+}

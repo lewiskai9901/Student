@@ -214,9 +214,9 @@ import {
   FileText, ListChecks, Plus, Star, RotateCcw, MousePointerClick
 } from 'lucide-vue-next'
 import { useAuthStore } from '@/stores/auth'
-import { getAllCategories } from '@/api/quantification'
-import { getDeductionItemsByTypeId } from '@/api/deductionItems'
-import { getCheckTemplatePage } from '@/api/checkTemplates'
+import { getAllCategories } from '@/api/v2/quantification'
+import { getDeductionItemsByTypeId } from '@/api/v2/quantification'
+import { getCheckTemplatePage } from '@/api/v2/quantification'
 import TemplatePanel from './components/panels/TemplatePanel.vue'
 import CategoryPanel from './components/panels/CategoryPanel.vue'
 import DeductionPanel from './components/panels/DeductionPanel.vue'

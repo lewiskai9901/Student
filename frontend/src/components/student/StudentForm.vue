@@ -437,10 +437,11 @@
 <script setup lang="ts">
 import { ref, reactive, computed, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
-import { getStudentById, createStudent, updateStudent } from '@/api/student'
-import { getClassList } from '@/api/class'
-import { getAllGrades } from '@/api/grade'
-import { getDirectionsByYear } from '@/api/gradeMajorDirection'
+import { getStudent, createStudent, updateStudent } from '@/api/v2/student'
+import { getClassList } from '@/api/v2/organization'
+// 年级和专业方向暂保留V1
+import { getAllGrades } from '@/api/v2/organization'
+import { getDirectionsByYear } from '@/api/v2/gradeMajorDirection'
 
 interface Props {
   mode: 'add' | 'edit'
@@ -644,7 +645,7 @@ const loadStudentDetail = async () => {
 
   loading.value = true
   try {
-    const student = await getStudentById(props.studentId)
+    const student = await getStudent(props.studentId)
     Object.assign(formData, student)
     // 如果有年级，加载对应的专业配置
     if (formData.gradeId) {

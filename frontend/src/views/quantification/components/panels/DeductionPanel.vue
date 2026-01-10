@@ -229,7 +229,7 @@ import { ElMessage, ElMessageBox } from 'element-plus'
 import { X, ListChecks, Loader2 } from 'lucide-vue-next'
 import {
   createDeductionItem, updateDeductionItem, deleteDeductionItem
-} from '@/api/deductionItems'
+} from '@/api/v2/quantification'
 
 const props = defineProps<{
   deduction: any

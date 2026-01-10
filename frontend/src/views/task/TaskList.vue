@@ -210,7 +210,7 @@
 <script setup lang="ts">
 import { ref, reactive, onMounted } from 'vue'
 import { Clock, Play, CheckCircle2, FileCheck, TrendingUp } from 'lucide-vue-next'
-import { getTaskList, getTaskStatistics, type TaskDTO, type TaskStatisticsDTO } from '@/api/task'
+import { getTaskList, getTaskStatistics, type TaskDTO, type TaskStatisticsDTO } from '@/api/v2/task'
 import TaskCreateDialog from './components/TaskCreateDialog.vue'
 import TaskDetailDialog from './components/TaskDetailDialog.vue'
 import StatCard from '@/components/design-system/cards/StatCard.vue'

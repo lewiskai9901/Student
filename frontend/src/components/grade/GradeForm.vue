@@ -60,8 +60,8 @@
 import { ref, reactive, watch } from 'vue'
 import { ElMessage, ElDatePicker } from 'element-plus'
 import { X } from 'lucide-vue-next'
-import { createGrade, updateGrade } from '@/api/grade'
-import type { Grade } from '@/api/grade'
+import { createGrade, updateGrade } from '@/api/v2/organization'
+import type { Grade } from '@/api/v2/organization'
 
 interface Props { modelValue: boolean, formData: Partial<Grade>, isEdit: boolean }
 const props = defineProps<Props>()

@@ -466,9 +466,9 @@
 
 <script setup lang="ts">
 import { ref, reactive, onMounted } from 'vue'
-import { listAppeals, reviewAppeal } from '@/api/appeal'
-import { getAllGrades } from '@/api/grade'
-import { getAllClasses } from '@/api/class'
+import { listAppeals, reviewAppeal } from '@/api/v2/appeal'
+import { getAllGrades } from '@/api/v2/organization'
+import { getAllClasses } from '@/api/v2/organization'
 import { ElMessage } from 'element-plus'
 import { useAuthStore } from '@/stores/auth'
 import {
@@ -486,7 +486,7 @@ import {
   MessageSquare,
   Image as ImageIcon
 } from 'lucide-vue-next'
-import { getAppeal } from '@/api/appeal'
+import { getAppeal } from '@/api/v2/appeal'
 
 const props = defineProps<{
   queryType: 'my' | 'all'

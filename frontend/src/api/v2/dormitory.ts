@@ -255,6 +255,155 @@ export function existsBuildingNo(buildingNo: string, excludeId?: number): Promis
   return http.get<boolean>(`${BUILDING_URL}/exists`, { params: { buildingNo, excludeId } })
 }
 
+// ==================== 导出与统计 ====================
+
+/**
+ * 导出宿舍数据
+ */
+export function exportDormitories(params?: DormitoryQueryParams): Promise<Blob> {
+  return http.get<Blob>('/dormitory/rooms/export', { params, responseType: 'blob' })
+}
+
+/**
+ * 获取宿舍入住统计
+ */
+export function getDormitoryOccupancyStats(): Promise<any> {
+  return http.get('/dormitory/rooms/occupancy-stats')
+}
+
+/**
+ * 获取宿舍管理员列表
+ */
+export function getDormitoryManagerList(): Promise<any[]> {
+  return http.get('/dormitory-managers')
+}
+
+// ==================== 学生宿舍历史 ====================
+
+export interface StudentDormitoryHistory {
+  id: number
+  studentId: number
+  dormitoryId: number
+  dormitoryName: string
+  buildingName: string
+  roomNo: string
+  bedNumber: number
+  checkInDate: string
+  checkOutDate?: string
+  status: string
+}
+
+/**
+ * 获取学生宿舍历史
+ */
+export function getStudentDormitoryHistory(studentId: number): Promise<StudentDormitoryHistory[]> {
+  return http.get<StudentDormitoryHistory[]>(`/student-dormitory/history/${studentId}`)
+}
+
+// ==================== 楼宇院系分配 ====================
+
+export interface BuildingDepartmentAssignment {
+  id: number
+  buildingId: number
+  buildingName: string
+  departmentId: number
+  departmentName: string
+  floorStart?: number
+  floorEnd?: number
+  roomCount?: number
+  status?: number
+  createdAt?: string
+}
+
+export interface BuildingDepartmentAssignmentQueryParams {
+  pageNum?: number
+  pageSize?: number
+  buildingId?: number
+  departmentId?: number
+  status?: number
+}
+
+/**
+ * 分页查询分配列表
+ */
+export function getBuildingDepartmentAssignmentList(params?: BuildingDepartmentAssignmentQueryParams): Promise<{ records: BuildingDepartmentAssignment[]; total: number }> {
+  return http.get('/dormitory/building-assignments', { params })
+}
+
+/**
+ * 获取分配详情
+ */
+export function getBuildingDepartmentAssignmentDetail(id: number): Promise<BuildingDepartmentAssignment> {
+  return http.get<BuildingDepartmentAssignment>(`/dormitory/building-assignments/${id}`)
+}
+
+/**
+ * 根据宿舍楼ID查询分配的院系
+ */
+export function getAssignmentsByBuildingId(buildingId: number): Promise<BuildingDepartmentAssignment[]> {
+  return http.get<BuildingDepartmentAssignment[]>(`/dormitory/building-assignments/building/${buildingId}`)
+}
+
+/**
+ * 创建楼宇院系分配
+ */
+export function createBuildingDepartmentAssignment(data: { buildingId: number; departmentId: number; floorStart?: number; floorEnd?: number }): Promise<BuildingDepartmentAssignment> {
+  return http.post('/dormitory/building-assignments', data)
+}
+
+/**
+ * 更新楼宇院系分配
+ */
+export function updateBuildingDepartmentAssignment(data: { id: number; floorStart?: number; floorEnd?: number }): Promise<BuildingDepartmentAssignment> {
+  return http.put('/dormitory/building-assignments', data)
+}
+
+/**
+ * 删除楼宇院系分配
+ */
+export function deleteBuildingDepartmentAssignment(id: number): Promise<void> {
+  return http.delete(`/dormitory/building-assignments/${id}`)
+}
+
+/**
+ * 启用分配
+ */
+export function enableBuildingDepartmentAssignment(id: number): Promise<void> {
+  return http.put(`/dormitory/building-assignments/${id}/enable`)
+}
+
+/**
+ * 禁用分配
+ */
+export function disableBuildingDepartmentAssignment(id: number): Promise<void> {
+  return http.put(`/dormitory/building-assignments/${id}/disable`)
+}
+
+// ==================== 宿舍楼宇管理 ====================
+
+/**
+ * 获取宿舍楼宇列表
+ */
+export function getDormitoryBuildingList(params?: any): Promise<{ records: Building[]; total: number }> {
+  return http.get('/dormitory/buildings', { params })
+}
+
+/**
+ * 获取所有启用的宿舍楼宇
+ */
+export function getAllEnabledDormitoryBuildings(): Promise<Building[]> {
+  return http.get<Building[]>('/dormitory/buildings/enabled')
+}
+
+// ==================== V1 兼容别名 ====================
+
+export const getDormitoryList = getDormitories
+export const getDormitoryDetail = getDormitory
+export const getBuildingList = getBuildings
+export const getBuildingDetail = getBuilding
+export const checkBuildingNoExists = existsBuildingNo
+export const getDormitoriesByBuildingId = getDormitoriesByBuilding
+
 // ==================== API 对象封装（供 Store 使用） ====================
 
 /**

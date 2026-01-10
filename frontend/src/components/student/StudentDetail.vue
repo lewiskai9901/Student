@@ -266,7 +266,7 @@ import { useAuthStore } from '@/stores/auth'
 import { formatDate, formatDateTime } from '@/utils/date'
 // V2 DDD API
 import { getStudent } from '@/api/v2/student'
-import { getStudentDormitoryHistory } from '@/api/studentDormitory'
+import { getStudentDormitoryHistory } from '@/api/v2/dormitory'
 import type { Student } from '@/types/v2/student'
 import { StudentStatusMap } from '@/types/v2/student'
 import type { StudentDormitory } from '@/types/studentDormitory'

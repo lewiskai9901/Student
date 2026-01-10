@@ -199,9 +199,9 @@
 import { ref, reactive, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Plus, FileSpreadsheet, Upload, Download, X, ChevronLeft, ChevronRight } from 'lucide-vue-next'
-import { pageScores, inputScore, updateScore, deleteScore, batchInputScores, listAllSemesters, getCoursesBySemester, type StudentScore, type Semester, type Course } from '@/api/evaluation'
-import { getAllClasses } from '@/api/class'
-import { getStudentPage } from '@/api/student'
+import { pageScores, inputScore, updateScore, deleteScore, batchInputScores, listAllSemesters, getCoursesBySemester, type StudentScore, type Semester, type Course } from '@/api/v2/evaluation'
+import { getAllClasses } from '@/api/v2/organization'
+import { getStudents } from '@/api/v2/student'
 
 const queryParams = reactive({ pageNum: 1, pageSize: 10, studentNo: '', studentName: '', courseId: undefined as number | undefined, classId: undefined as number | undefined, semesterId: undefined as number | undefined })
 const loading = ref(false), tableData = ref<StudentScore[]>([]), total = ref(0), dialogVisible = ref(false), dialogType = ref<'add' | 'edit'>('add'), submitLoading = ref(false)
@@ -224,7 +224,7 @@ const handleSearch = () => { queryParams.pageNum = 1; fetchData() }
 const handleReset = () => { queryParams.studentNo = ''; queryParams.studentName = ''; queryParams.courseId = undefined; queryParams.classId = undefined; queryParams.semesterId = undefined; handleSearch() }
 
 const searchStudents = async () => {
-  if (studentSearch.value.length >= 2) { try { const res = await getStudentPage({ pageNum: 1, pageSize: 10, keyword: studentSearch.value }); studentOptions.value = (res.records || []).map((s: any) => ({ id: s.id, studentNo: s.studentNo, realName: s.realName || s.name })) } catch { studentOptions.value = [] } }
+  if (studentSearch.value.length >= 2) { try { const res = await getStudents({ pageNum: 1, pageSize: 10, keyword: studentSearch.value }); studentOptions.value = (res.records || []).map((s: any) => ({ id: s.id, studentNo: s.studentNo, realName: s.realName || s.name })) } catch { studentOptions.value = [] } }
   else { studentOptions.value = [] }
 }
 const selectStudent = (opt: { id: number; studentNo: string; realName: string }) => { formData.studentId = opt.id; selectedStudentName.value = `${opt.studentNo} - ${opt.realName}`; studentOptions.value = []; studentSearch.value = '' }
@@ -247,7 +247,7 @@ const resetForm = () => { formData.id = undefined; formData.studentId = undefine
 const handleBatchInput = () => { batchStudents.value = []; batchDialogVisible.value = true }
 const loadBatchStudents = async () => {
   if (!batchClassId.value) { batchStudents.value = []; return }
-  try { const res = await getStudentPage({ pageNum: 1, pageSize: 100, classId: batchClassId.value }); batchStudents.value = (res.records || []).map((s: any) => ({ id: s.id, studentNo: s.studentNo, realName: s.realName || s.name, usualScore: undefined, midtermScore: undefined, finalScore: undefined, totalScore: undefined })) } catch { batchStudents.value = [] }
+  try { const res = await getStudents({ pageNum: 1, pageSize: 100, classId: batchClassId.value }); batchStudents.value = (res.records || []).map((s: any) => ({ id: s.id, studentNo: s.studentNo, realName: s.realName || s.name, usualScore: undefined, midtermScore: undefined, finalScore: undefined, totalScore: undefined })) } catch { batchStudents.value = [] }
 }
 const handleBatchSubmit = async () => {
   if (!batchCourseId.value || !batchSemesterId.value) { ElMessage.warning('请选择课程和学期'); return }

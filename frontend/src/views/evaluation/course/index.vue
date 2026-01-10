@@ -185,8 +185,8 @@
 import { ref, reactive, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Plus, Upload, X, ChevronLeft, ChevronRight } from 'lucide-vue-next'
-import { pageCourses, createCourse, updateCourse, deleteCourse, listAllSemesters, type Course, type Semester } from '@/api/evaluation'
-import { getDepartmentList } from '@/api/class'
+import { pageCourses, createCourse, updateCourse, deleteCourse, listAllSemesters, type Course, type Semester } from '@/api/v2/evaluation'
+import { getDepartmentList } from '@/api/v2/organization'
 
 const queryParams = reactive({ pageNum: 1, pageSize: 10, courseCode: '', courseName: '', courseType: '', semesterId: undefined as number | undefined })
 const loading = ref(false), tableData = ref<Course[]>([]), total = ref(0), dialogVisible = ref(false), dialogType = ref<'add' | 'edit'>('add'), submitLoading = ref(false)

@@ -191,11 +191,9 @@ import {
   createClass,
   updateClass,
   getDepartmentList
-} from '@/api/class'
-import { getAllGrades } from '@/api/grade'
-import { getDirectionsByYear } from '@/api/gradeMajorDirection'
-import type { GradeMajorDirection } from '@/api/gradeMajorDirection'
-import type { Grade } from '@/api/grade'
+} from '@/api/v2/organization'
+import { getDirectionsByYear } from '@/api/v2/gradeMajorDirection'
+import type { GradeMajorDirection } from '@/api/v2/gradeMajorDirection'
 
 interface Props {
   mode: 'add' | 'edit'

@@ -208,7 +208,7 @@
 <script setup lang="ts">
 import { ref, reactive, onMounted, computed } from 'vue'
 import { InboxIcon } from '@heroicons/vue/24/outline'
-import { getMyTasks, acceptTask, type TaskDTO } from '@/api/task'
+import { getMyTasks, acceptTask, type TaskDTO } from '@/api/v2/task'
 import TaskDetailDialog from './components/TaskDetailDialog.vue'
 
 // 状态标签

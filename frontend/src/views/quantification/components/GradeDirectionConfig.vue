@@ -211,10 +211,10 @@ import {
   addDirectionToGrade,
   updateGradeMajorDirection,
   deleteGradeMajorDirection
-} from '@/api/gradeMajorDirection'
-import { getAllEnabledMajors } from '@/api/major'
-import { getDirectionsByMajor } from '@/api/majorDirection'
-import type { GradeMajorDirection } from '@/api/gradeMajorDirection'
+} from '@/api/v2/gradeMajorDirection'
+import { getAllEnabledMajors } from '@/api/v2/major'
+import { getDirectionsByMajor } from '@/api/v2/majorDirection'
+import type { GradeMajorDirection } from '@/api/v2/gradeMajorDirection'
 
 interface Props {
   gradeId: number

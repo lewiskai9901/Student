@@ -791,9 +791,9 @@ import {
   getCheckTemplatePage,
   type CheckTemplateResponse,
   type CheckTemplateCreateRequest
-} from '@/api/checkTemplates'
-import { getAllEnabledTypes } from '@/api/quantification'
-import { getEnabledDeductionItemsByTypeId } from '@/api/deductionItems'
+} from '@/api/v2/quantification'
+import { getAllEnabledTypes } from '@/api/v2/quantification'
+import { getEnabledDeductionItemsByTypeId } from '@/api/v2/quantification'
 import { useAuthStore } from '@/stores/auth'
 
 // 权限检查

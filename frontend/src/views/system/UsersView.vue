@@ -552,7 +552,8 @@ import type {
   UserFormData,
   UserListItem
 } from '@/types/v2/user'
-import { getAllRoles, type Role } from '@/api/role'
+import { getAllRoles } from '@/api/v2/access'
+import type { RoleResponse as Role } from '@/api/v2/access'
 import { useConfigStore } from '@/stores/config'
 
 const configStore = useConfigStore()

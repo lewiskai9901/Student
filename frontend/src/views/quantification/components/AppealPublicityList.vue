@@ -95,7 +95,7 @@
 
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted } from 'vue'
-import { getPublicityAppeals } from '@/api/appeal'
+import { getPublicityAppeals } from '@/api/v2/appeal'
 import { ElMessage } from 'element-plus'
 import {
   Megaphone,

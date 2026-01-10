@@ -13,7 +13,7 @@ import type { ECharts } from 'echarts/core'
 
 use([BarChart, CanvasRenderer, GridComponent, TooltipComponent])
 import * as echarts from 'echarts/core'
-import type { ClassRanking } from '@/api/checkPlanStatistics'
+import type { ClassRanking } from '@/api/v2/quantification-extra'
 
 const props = defineProps<{
   data: ClassRanking[]

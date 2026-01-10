@@ -537,8 +537,8 @@ import {
   updateBuilding,
   deleteBuilding,
   checkBuildingNoExists
-} from '@/api/building'
-import { getAllEnabledDepartments, type DepartmentResponse } from '@/api/department'
+} from '@/api/v2/dormitory'
+import { getAllEnabledDepartments, type DepartmentResponse } from '@/api/v2/organization'
 import type { Building, BuildingQueryParams, BuildingFormData } from '@/types/building'
 import { buildingTypeOptions, buildingStatusOptions } from '@/types/building'
 

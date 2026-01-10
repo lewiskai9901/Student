@@ -71,7 +71,7 @@
 </template>
 
 <script setup lang="ts">
-import type { ClassRanking } from '@/api/checkPlanStatistics'
+import type { ClassRanking } from '@/api/v2/quantification-extra'
 
 defineProps<{
   data: ClassRanking[]

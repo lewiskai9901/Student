@@ -123,9 +123,9 @@
 import { ref, reactive, computed, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
 import { WarningFilled, Warning, User, Check, Plus } from '@element-plus/icons-vue'
-import { getEnabledDeductionItemsByTypeId, type DeductionItem } from '@/api/deductionItems'
-import type { ScoringDetailRequest } from '@/api/checkRecords'
-import { uploadFiles, type FileUploadResponse } from '@/api/file'
+import { getEnabledDeductionItemsByTypeId, type DeductionItem } from '@/api/v2/quantification'
+import type { ScoringDetailRequest } from '@/api/v2/quantification-extra'
+import { uploadFiles, type FileUploadResponse } from '@/api/v2/file'
 
 interface Props {
   categoryId: number

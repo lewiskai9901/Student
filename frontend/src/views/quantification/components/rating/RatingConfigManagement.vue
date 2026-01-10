@@ -115,7 +115,7 @@ import {
   deleteRatingConfig,
   toggleRatingConfigEnabled,
   type RatingConfigVO
-} from '@/api/checkPlanRatingConfig'
+} from '@/api/v2/rating'
 import RatingConfigDialog from './RatingConfigDialog.vue'
 
 // Props

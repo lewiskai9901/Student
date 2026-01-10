@@ -13,7 +13,7 @@ import type { ECharts } from 'echarts/core'
 
 use([PieChart, CanvasRenderer, TooltipComponent, LegendComponent])
 import * as echarts from 'echarts/core'
-import type { DistributionItem } from '@/api/analysisConfig'
+import type { DistributionItem } from '@/api/v2/quantification-extra'
 
 const props = defineProps<{
   data: DistributionItem[] | null

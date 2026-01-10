@@ -532,7 +532,7 @@ import {
   assignManagers,
   removeManager,
   getUsersWithDormitoryPermission
-} from '@/api/dormitoryBuilding'
+} from '@/api/v2/dormitory'
 import type {
   BuildingDormitory,
   BuildingDormitoryQueryParams,

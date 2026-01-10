@@ -79,7 +79,7 @@
 <script setup lang="ts">
 import { ref, reactive, watch } from 'vue'
 import { ElMessage, type FormInstance, type FormRules } from 'element-plus'
-import { checkAndGrantBadges, type BadgeGrantResultVO } from '@/api/ratingBadge'
+import { checkAndGrantBadges, type BadgeGrantResultVO } from '@/api/v2/rating'
 
 // Props
 const props = defineProps<{

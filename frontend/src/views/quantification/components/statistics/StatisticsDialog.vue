@@ -157,7 +157,7 @@ import {
   type CategoryStatistics,
   type ItemStatistics,
   type TrendData
-} from '@/api/checkPlanStatistics'
+} from '@/api/v2/quantification-extra'
 
 const props = defineProps<{
   planId: string | number

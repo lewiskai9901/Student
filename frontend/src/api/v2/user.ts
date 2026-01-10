@@ -217,3 +217,153 @@ export const userApi = {
 }
 
 export default userApi
+
+// ==================== 数据范围管理 API ====================
+
+/**
+ * 数据范围类型
+ */
+export interface ScopeType {
+  code: string
+  name: string
+  level: number
+}
+
+/**
+ * 用户数据范围DTO
+ */
+export interface UserDataScopeDTO {
+  id: number
+  userId: number
+  username?: string
+  realName?: string
+  scopeType: string
+  scopeTypeName?: string
+  scopeId: number
+  scopeName?: string
+  includeChildren: number
+  createdAt?: string
+  createdBy?: number
+  createdByName?: string
+}
+
+/**
+ * 添加数据范围请求
+ */
+export interface AddScopeRequest {
+  userId: number
+  scopeType: string
+  scopeId: number
+  includeChildren?: number
+}
+
+/**
+ * 批量添加数据范围请求
+ */
+export interface BatchAddScopeRequest {
+  userId: number
+  scopes: Array<{
+    scopeType: string
+    scopeId: number
+    includeChildren?: number
+  }>
+}
+
+const DATA_SCOPE_URL = '/user-data-scopes'
+
+/**
+ * 获取用户的数据范围列表
+ */
+export function getUserDataScopes(userId: number): Promise<UserDataScopeDTO[]> {
+  return http.get<UserDataScopeDTO[]>(`${DATA_SCOPE_URL}/user/${userId}`)
+}
+
+/**
+ * 添加用户数据范围
+ */
+export function addUserDataScope(data: AddScopeRequest): Promise<UserDataScopeDTO> {
+  return http.post<UserDataScopeDTO>(DATA_SCOPE_URL, data)
+}
+
+/**
+ * 批量添加用户数据范围
+ */
+export function batchAddUserDataScopes(data: BatchAddScopeRequest): Promise<UserDataScopeDTO[]> {
+  return http.post<UserDataScopeDTO[]>(`${DATA_SCOPE_URL}/batch`, data)
+}
+
+/**
+ * 删除用户数据范围
+ */
+export function deleteUserDataScope(id: number): Promise<void> {
+  return http.delete(`${DATA_SCOPE_URL}/${id}`)
+}
+
+/**
+ * 批量删除用户数据范围
+ */
+export function batchDeleteUserDataScopes(ids: number[]): Promise<void> {
+  return http.delete(`${DATA_SCOPE_URL}/batch`, { data: { ids } })
+}
+
+/**
+ * 删除用户所有数据范围
+ */
+export function deleteAllUserDataScopes(userId: number): Promise<void> {
+  return http.delete(`${DATA_SCOPE_URL}/user/${userId}`)
+}
+
+/**
+ * 获取拥有指定范围的用户列表
+ */
+export function getUsersByScopeTypeAndId(scopeType: string, scopeId: number): Promise<UserDataScopeDTO[]> {
+  return http.get<UserDataScopeDTO[]>(`${DATA_SCOPE_URL}/scope`, {
+    params: { scopeType, scopeId }
+  })
+}
+
+/**
+ * 检查用户是否有指定范围的权限
+ */
+export function checkUserScope(userId: number, scopeType: string, scopeId: number): Promise<boolean> {
+  return http.get<boolean>(`${DATA_SCOPE_URL}/check`, {
+    params: { userId, scopeType, scopeId }
+  })
+}
+
+/**
+ * 获取用户可访问的班级ID列表
+ */
+export function getAccessibleClassIds(userId: number): Promise<number[]> {
+  return http.get<number[]>(`${DATA_SCOPE_URL}/accessible/classes/${userId}`)
+}
+
+/**
+ * 获取所有范围类型
+ */
+export function getScopeTypes(): Promise<ScopeType[]> {
+  return http.get<ScopeType[]>(`${DATA_SCOPE_URL}/scope-types`)
+}
+
+/**
+ * 数据范围 API 对象
+ */
+export const userDataScopeApi = {
+  getUserScopes: getUserDataScopes,
+  addScope: addUserDataScope,
+  batchAddScopes: batchAddUserDataScopes,
+  deleteScope: deleteUserDataScope,
+  batchDeleteScopes: batchDeleteUserDataScopes,
+  deleteAllScopes: deleteAllUserDataScopes,
+  getUsersByScope: getUsersByScopeTypeAndId,
+  checkScope: checkUserScope,
+  getAccessibleClasses: getAccessibleClassIds,
+  getScopeTypes
+}
+
+// ==================== V1 兼容别名 ====================
+
+export const getUserDetail = getUser
+export const resetUserPassword = resetPassword
+export const getUserRoles = getUserRoleIds
+export const assignUserRoles = assignRoles

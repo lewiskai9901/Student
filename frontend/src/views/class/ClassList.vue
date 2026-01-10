@@ -463,18 +463,15 @@ import {
   Building
 } from 'lucide-vue-next'
 import { useAuthStore } from '@/stores/auth'
-import { getClasses, deleteClass, assignHeadTeacher, getOrgUnitTree } from '@/api/v2/organization'
+import { getClasses, deleteClass, assignHeadTeacher, getOrgUnitTree, batchDeleteClasses } from '@/api/v2/organization'
 import { getAllUsers } from '@/api/v2/user'
-// 班级-宿舍关联操作暂无V2端点，保留V1
-import { batchDeleteClasses, exportClasses, getClassDormitories, addDormitory, removeDormitory, getDormitoryList } from '@/api/class'
-import { getAllGrades } from '@/api/grade'
-import type { Grade } from '@/api/grade'
+import { exportClasses, getClassDormitories, addDormitory, removeDormitory, getDormitoryList } from '@/api/v2/organization'
+import type { ClassDormitoryInfo } from '@/api/v2/organization'
 import { exportExcel } from '@/utils/export'
 import ClassDetail from '@/components/class/ClassDetail.vue'
 import ClassForm from '@/components/class/ClassForm.vue'
 import ClassDormitoryAssignmentDialog from '@/components/class/ClassDormitoryAssignmentDialog.vue'
 import type { SchoolClass, ClassQueryParams, ClassStatus, ClassStatusConfig as StatusConfig, OrgUnitTreeNode } from '@/types/v2'
-import type { ClassDormitoryInfo } from '@/types/class'
 
 const router = useRouter()
 const authStore = useAuthStore()

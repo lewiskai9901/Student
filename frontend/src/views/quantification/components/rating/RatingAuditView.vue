@@ -332,7 +332,7 @@ import {
   type RatingResultVO,
   type RatingRuleVO,
   type RatingLevelVO
-} from '@/api/checkPlanRating'
+} from '@/api/v2/rating'
 import { downloadBlob, getFilenameFromContentDisposition } from '@/utils/export'
 
 const route = useRoute()

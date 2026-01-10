@@ -269,8 +269,8 @@
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue'
 import { XMarkIcon } from '@heroicons/vue/24/outline'
-import { getTaskDetail, getTaskCardDetail, acceptTask, submitTask, approveTask, getTaskProgress, type TaskDTO, type TaskDetailDTO, type TaskProgressNodeDTO, type TaskAssigneeDTO } from '@/api/task'
-import { getRejectableNodes, getProcessProgress, type RejectableNode, type ProcessProgress } from '@/api/task/workflow'
+import { getTaskDetail, getTaskCardDetail, acceptTask, submitTask, approveTask, getTaskProgress, type TaskDTO, type TaskDetailDTO, type TaskProgressNodeDTO, type TaskAssigneeDTO } from '@/api/v2/task'
+import { getRejectableNodes, getProcessProgress, type RejectableNode, type ProcessProgress } from '@/api/v2/task/workflow'
 import { useAuthStore } from '@/stores/auth'
 import TaskProgressTimeline from './TaskProgressTimeline.vue'
 import AttachmentPreview from './AttachmentPreview.vue'

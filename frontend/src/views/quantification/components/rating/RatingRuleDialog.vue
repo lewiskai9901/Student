@@ -219,7 +219,7 @@ import {
   type RatingRuleVO,
   type RatingRuleCreateDTO,
   type RatingLevelDTO
-} from '@/api/checkPlanRating'
+} from '@/api/v2/rating'
 
 const props = defineProps<{
   visible: boolean

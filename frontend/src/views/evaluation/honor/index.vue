@@ -270,7 +270,7 @@
 import { ref, reactive, onMounted } from 'vue'
 import { Plus, X, ChevronLeft, ChevronRight, Check } from 'lucide-vue-next'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { pageHonorApplications, getHonorApplicationDetail, submitHonorApplication, withdrawHonorApplication, classReviewHonorApplication, departmentReviewHonorApplication, schoolReviewHonorApplication, batchReviewHonorApplications, type HonorApplication, type HonorType } from '@/api/evaluation'
+import { pageHonorApplications, getHonorApplicationDetail, submitHonorApplication, withdrawHonorApplication, classReviewHonorApplication, departmentReviewHonorApplication, schoolReviewHonorApplication, batchReviewHonorApplications, type HonorApplication, type HonorType } from '@/api/v2/evaluation'
 
 const queryParams = reactive({ pageNum: 1, pageSize: 10, studentNo: '', studentName: '', honorTypeId: undefined as number | undefined, status: undefined as number | undefined })
 const loading = ref(false)

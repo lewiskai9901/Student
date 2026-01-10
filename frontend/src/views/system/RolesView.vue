@@ -588,20 +588,16 @@ import {
   enableRole,
   disableRole,
   DATA_SCOPE_OPTIONS,
-  type RoleResponse
+  getRoleDataPermissions,
+  saveRoleDataPermissions,
+  type RoleResponse,
+  type RoleDataPermission
 } from '@/api/v2/access'
 import type {
   CreateRoleRequest,
   UpdateRoleRequest,
   RoleQueryParams
 } from '@/types/v2/access'
-
-// 数据权限相关（暂用V1接口）
-import {
-  getRoleDataPermissions,
-  saveRoleDataPermissions,
-  type RoleDataPermission
-} from '@/api/role'
 
 const loading = ref(false)
 const submitLoading = ref(false)

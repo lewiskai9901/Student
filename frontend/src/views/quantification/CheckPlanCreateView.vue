@@ -533,12 +533,12 @@ import {
   BarChart3, Search, Inbox, Settings, CheckCircle, ArrowDown, Target,
   Users, Building2, GraduationCap, XCircle, Globe, Layers
 } from 'lucide-vue-next'
-import { createCheckPlan } from '@/api/checkPlan'
-import type { CheckPlanCreateRequest, TargetScopeConfig } from '@/api/checkPlan'
-import { getAllCheckTemplates } from '@/api/checkTemplates'
-import { getDepartmentTree } from '@/api/department'
-import { getGradePage } from '@/api/grade'
-import { getClassList } from '@/api/class'
+import { createCheckPlan } from '@/api/v2/quantification'
+import type { CheckPlanCreateRequest, TargetScopeConfig } from '@/api/v2/quantification'
+import { getAllCheckTemplates } from '@/api/v2/quantification'
+import { getDepartmentTree } from '@/api/v2/organization'
+import { getGradePage } from '@/api/v2/organization'
+import { getClassList } from '@/api/v2/organization'
 import { http } from '@/utils/request'
 
 // 颜色池

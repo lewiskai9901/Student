@@ -204,9 +204,9 @@ import {
   addDirectionToYear,
   deleteGradeMajorDirection,
   batchDeleteGradeMajorDirections
-} from '@/api/gradeMajorDirection'
-import { getAllEnabledMajors } from '@/api/major'
-import { getDirectionsByMajor, type MajorDirection } from '@/api/majorDirection'
+} from '@/api/v2/gradeMajorDirection'
+import { getAllEnabledMajors } from '@/api/v2/major'
+import { getDirectionsByMajor, type MajorDirection } from '@/api/v2/majorDirection'
 
 interface Props {
   gradeId: number

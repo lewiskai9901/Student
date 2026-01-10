@@ -470,8 +470,8 @@ import {
   createClassroom,
   updateClassroom,
   deleteClassroom
-} from '@/api/teaching'
-import { getAllEnabledBuildings } from '@/api/building'
+} from '@/api/v2/teaching'
+import { getAllEnabledBuildings } from '@/api/v2/dormitory'
 import type { Building as BuildingType } from '@/types/building'
 
 const authStore = useAuthStore()

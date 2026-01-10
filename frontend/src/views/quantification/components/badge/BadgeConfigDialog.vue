@@ -172,9 +172,9 @@ import {
   type RatingBadgeVO,
   type RatingBadgeCreateDTO,
   BADGE_LEVEL_COLORS
-} from '@/api/ratingBadge'
-import { getRatingRulesByPlan } from '@/api/checkPlanRating'
-import { getRatingLevelsByRule } from '@/api/checkPlanRating'
+} from '@/api/v2/rating'
+import { getRatingRulesByPlan } from '@/api/v2/rating'
+import { getRatingLevelsByRule } from '@/api/v2/rating'
 
 // Props
 const props = defineProps<{

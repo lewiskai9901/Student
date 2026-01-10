@@ -331,9 +331,8 @@ import {
   getPermissionTree,
   createPermission,
   updatePermission,
-  deletePermission,
-  type Permission as PermissionType
-} from '@/api/permission'
+  deletePermission
+} from '@/api/v2/access'
 
 interface Permission {
   id: number

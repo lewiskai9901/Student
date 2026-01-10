@@ -474,9 +474,9 @@ import {
   MessageSquare,
   Plus
 } from 'lucide-vue-next'
-import { getMyClassDetail } from '@/api/checkRecord'
-import type { CheckRecordDetail, ClassStats } from '@/api/checkRecord'
-import { createAppeal } from '@/api/appeal'
+import { getMyClassDetail } from '@/api/v2/quantification'
+import type { CheckRecordDetail, ClassStats } from '@/api/v2/quantification'
+import { createAppeal } from '@/api/v2/appeal'
 
 const route = useRoute()
 const router = useRouter()

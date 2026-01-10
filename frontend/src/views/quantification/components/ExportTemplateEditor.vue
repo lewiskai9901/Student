@@ -640,7 +640,7 @@ import {
   type ExportTemplateDTO,
   type ExportTemplateRequest,
   type ColumnConfig
-} from '@/api/exportTemplate'
+} from '@/api/v2/exportTemplate'
 
 const props = defineProps<{
   modelValue: boolean

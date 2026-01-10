@@ -176,7 +176,7 @@
 import { ref, reactive, onMounted } from 'vue'
 import { Plus, X, ChevronLeft, ChevronRight } from 'lucide-vue-next'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { pageBehaviorTypes, createBehaviorType, updateBehaviorType, deleteBehaviorType, type BehaviorType } from '@/api/evaluation'
+import { pageBehaviorTypes, createBehaviorType, updateBehaviorType, deleteBehaviorType, type BehaviorType } from '@/api/v2/evaluation'
 
 const categoryOptions = [
   { value: 'ATTENDANCE', label: '考勤' },

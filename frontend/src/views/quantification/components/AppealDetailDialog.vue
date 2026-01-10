@@ -96,7 +96,7 @@
 
 <script setup lang="ts">
 import { computed } from 'vue'
-import type { AppealResponse } from '@/api/dailyCheckScoring'
+import type { AppealResponse } from '@/api/v2/quantification-extra'
 
 const props = defineProps<{
   modelValue: boolean

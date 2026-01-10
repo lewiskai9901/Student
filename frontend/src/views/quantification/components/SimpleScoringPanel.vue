@@ -151,7 +151,7 @@
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue'
 import { Minus, Plus, X, Camera, MessageSquare } from 'lucide-vue-next'
-import type { DeductionItem } from '@/api/deductionItems'
+import type { DeductionItem } from '@/api/v2/quantification'
 
 interface Props {
   item: DeductionItem

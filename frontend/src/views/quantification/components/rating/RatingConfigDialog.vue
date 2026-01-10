@@ -377,13 +377,13 @@ import {
   type RatingConfigCreateDTO,
   type RatingConfigUpdateDTO,
   type RatingRankingSourceDTO
-} from '@/api/checkPlanRatingConfig'
+} from '@/api/v2/rating'
 import {
   getCheckPlanDetail,
   parseTemplateSnapshot,
   type SnapshotCategory,
   type SnapshotDeductionItem
-} from '@/api/checkPlan'
+} from '@/api/v2/quantification'
 
 // Props
 const props = defineProps<{

@@ -213,7 +213,7 @@
 
 <script setup lang="ts">
 import { ref, reactive, onMounted } from 'vue'
-import { getPendingAppeals, reviewAppeal } from '@/api/appeal'
+import { getPendingAppeals, reviewAppeal } from '@/api/v2/appeal'
 import { ElMessage } from 'element-plus'
 import {
   AlertCircle,

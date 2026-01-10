@@ -168,7 +168,7 @@
 import { ref, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Plus, X, Building2, Home, AlertCircle } from 'lucide-vue-next'
-import { getClassDetail, getClassClassroom, getClassDormitories, assignClassroom, removeClassroom, removeDormitory, getClassroomList } from '@/api/class'
+import { getClassDetail, getClassClassroom, getClassDormitories, assignClassroom, removeClassroom, removeDormitory, getClassroomList } from '@/api/v2/organization'
 import ClassDormitoryAssignmentDialog from './ClassDormitoryAssignmentDialog.vue'
 
 interface Props { classId: number | null }

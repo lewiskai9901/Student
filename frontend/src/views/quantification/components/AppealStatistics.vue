@@ -231,8 +231,8 @@
 
 <script setup lang="ts">
 import { ref, reactive, onMounted, onBeforeUnmount } from 'vue'
-import { getAppealStatistics } from '@/api/appeal'
-import { getAllGrades } from '@/api/grade'
+import { getAppealStatistics } from '@/api/v2/appeal'
+import { getAllGrades } from '@/api/v2/organization'
 import { ElMessage } from 'element-plus'
 import {
   FileText,

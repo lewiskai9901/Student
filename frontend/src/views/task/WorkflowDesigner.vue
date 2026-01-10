@@ -65,7 +65,7 @@ import {
   updateWorkflowTemplate,
   deployWorkflowTemplate,
   type WorkflowTemplateDTO
-} from '@/api/task/workflow'
+} from '@/api/v2/task/workflow'
 
 const route = useRoute()
 const router = useRouter()

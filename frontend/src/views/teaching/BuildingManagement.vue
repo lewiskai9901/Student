@@ -422,7 +422,7 @@ import {
   createBuilding,
   updateBuilding,
   deleteBuilding
-} from '@/api/teaching'
+} from '@/api/v2/teaching'
 
 const authStore = useAuthStore()
 const hasPermission = (permission: string) => authStore.hasPermission(permission)

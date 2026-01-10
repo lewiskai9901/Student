@@ -220,7 +220,7 @@
 import { ref, computed, watch, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
 import { X, Loader2, Building2, Layers, Home } from 'lucide-vue-next'
-import { getDormitoriesByDepartment, addDormitory, removeDormitory, getClassDormitories } from '@/api/class'
+import { getDormitoriesByDepartment, addDormitory, removeDormitory, getClassDormitories } from '@/api/v2/organization'
 
 // Props
 const props = defineProps<{

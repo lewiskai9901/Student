@@ -1,3 +1,8 @@
+/**
+ * 综测评价 API - DDD架构适配
+ *
+ * 整合综测周期、荣誉类型、课程成绩、行为记录等
+ */
 import { http } from '@/utils/request'
 import type { PageResult } from '@/types'
 
