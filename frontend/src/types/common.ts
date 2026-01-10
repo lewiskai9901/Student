@@ -1,3 +1,13 @@
+/**
+ * 通用类型定义
+ *
+ * 注意: ApiResponse 和 PageResult 在 @/types/v2 中有对应版本
+ * - PageResult -> PageResponse (字段一致)
+ * - PageRequest -> PageParams (字段一致)
+ *
+ * MenuItem 和 RouteMeta 为前端通用类型，无需迁移
+ */
+
 // 通用类型定义
 
 export interface ApiResponse<T = any> {

@@ -1,3 +1,16 @@
+/**
+ * @deprecated 请使用 @/types/v2/organization 中的 SchoolClass 类型
+ * V1 类型保留用于兼容旧组件，新开发请使用 V2 类型
+ *
+ * 主要变更:
+ * - Class -> SchoolClass
+ * - departmentId -> orgUnitId
+ * - status: number -> status: ClassStatus (字符串枚举)
+ * - teacherId/teacherName -> teacherAssignments 数组
+ *
+ * 注意: ClassDormitoryInfo 暂无 V2 替代，继续使用本文件
+ */
+
 // 班级相关类型定义
 
 export interface Class {

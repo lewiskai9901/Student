@@ -1,3 +1,15 @@
+/**
+ * @deprecated 请使用 @/types/v2/student 中的类型定义
+ * V1 类型保留用于兼容旧组件，新开发请使用 V2 类型
+ *
+ * 主要变更:
+ * - realName -> name
+ * - admissionDate -> enrollmentDate
+ * - studentStatus -> status (使用枚举类型)
+ * - genderName -> genderText
+ * - studentStatusName -> statusText
+ */
+
 // 学生相关类型定义
 
 export interface Student {

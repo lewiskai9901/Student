@@ -1,3 +1,14 @@
+/**
+ * @deprecated 请使用 @/types/v2/dormitory 中的类型定义
+ * V1 类型保留用于兼容旧组件，新开发请使用 V2 类型
+ *
+ * 主要变更:
+ * - 使用 DormitoryStatus, GenderType, RoomUsageType 枚举
+ * - Building 增加 buildingType 和更多字段
+ * - 新增 BedAllocation 替代 BedInfo
+ * - 新增批量操作请求类型
+ */
+
 // 宿舍相关类型定义
 
 // 学生简单信息(用于宿舍详情中的学生列表)
