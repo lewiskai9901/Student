@@ -91,13 +91,12 @@ service.interceptors.response.use(
       const errorMessage = data?.message || ''
 
       // 判断是否是认证相关错误（token过期、无效等）
+      // 注意：403 "没有权限访问该资源" 是权限不足，不是认证错误，不应触发登出
       const isAuthError = status === 401 ||
         (status === 403 && (
           errorMessage.includes('token') ||
           errorMessage.includes('登录') ||
-          errorMessage.includes('认证') ||
-          errorMessage.includes('授权') ||
-          errorMessage === '没有权限访问该资源'
+          errorMessage.includes('认证')
         ))
 
       if (isAuthError) {

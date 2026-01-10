@@ -745,9 +745,9 @@ export function batchApproveRatingResults(resultIds: (string | number)[], approv
 }
 
 /**
- * 发布评级结果
+ * 发布量化评级结果
  */
-export function publishRatingResult(id: string | number) {
+export function publishQuantRatingResult(id: string | number) {
   return http.put(`/quantification/rating/result/${id}/publish`)
 }
 
@@ -780,9 +780,9 @@ export function getRatingResultPage(params: RatingResultQueryDTO) {
 }
 
 /**
- * 获取班级的评级历史
+ * 获取班级的量化评级历史
  */
-export function getClassRatingHistory(classId: string | number, ratingConfigId?: string | number) {
+export function getQuantClassRatingHistory(classId: string | number, ratingConfigId?: string | number) {
   return http.get<RatingResultVO[]>(`/quantification/rating/result/class/${classId}`, {
     params: { ratingConfigId }
   })

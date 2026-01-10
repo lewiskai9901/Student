@@ -684,7 +684,7 @@ export const deleteWeightConfig = (id: number) => {
 }
 
 // 设置默认加权配置
-export const setDefaultConfig = (id: number) => {
+export const setDefaultWeightConfig = (id: number) => {
   return http.put(`/quantification/weight-config/configs/${id}/default`)
 }
 

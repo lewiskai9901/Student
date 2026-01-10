@@ -556,7 +556,7 @@ import {
   createWeightConfig,
   updateWeightConfig,
   deleteWeightConfig,
-  setDefaultConfig
+  setDefaultWeightConfig
 } from '@/api/v2/quantification-extra'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import {
@@ -759,7 +759,7 @@ const handleEdit = (row: any) => {
 // 设置默认
 const handleSetDefault = async (row: any) => {
   try {
-    await setDefaultConfig(row.id)
+    await setDefaultWeightConfig(row.id)
     ElMessage.success('设置默认成功')
     loadConfigs()
   } catch (error) {
