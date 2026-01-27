@@ -38,6 +38,12 @@ export * from './teacherDashboard'
 // 系部排名
 export * from './departmentRanking'
 
+// 整改工单
+export * from './correctiveAction'
+
+// 学生行为
+export * from './behavior'
+
 // 导出命名空间便于按模块调用
 import * as organizationApi from './organization'
 import * as inspectionApi from './inspection'
@@ -51,6 +57,8 @@ import * as inspectionSessionApiModule from './inspectionSession'
 import * as bonusItemApiModule from './bonusItem'
 import * as teacherDashboardApiModule from './teacherDashboard'
 import * as departmentRankingApiModule from './departmentRanking'
+import * as correctiveActionApiModule from './correctiveAction'
+import * as behaviorApiModule from './behavior'
 
 export const v2Api = {
   organization: organizationApi,
@@ -64,7 +72,9 @@ export const v2Api = {
   inspectionSession: inspectionSessionApiModule,
   bonusItem: bonusItemApiModule,
   teacherDashboard: teacherDashboardApiModule,
-  departmentRanking: departmentRankingApiModule
+  departmentRanking: departmentRankingApiModule,
+  correctiveAction: correctiveActionApiModule,
+  behavior: behaviorApiModule
 }
 
 export default v2Api

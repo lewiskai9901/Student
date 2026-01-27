@@ -458,6 +458,30 @@ const routes: RouteRecordRaw[] = [
               permission: 'quantification:rating:view',
               order: 10
             }
+          },
+          {
+            path: '/inspection/corrective-actions',
+            name: 'InspectionCorrectiveActions',
+            component: () => import('@/views/inspection/CorrectiveActionListView.vue'),
+            meta: {
+              title: '整改工单',
+              icon: 'Tickets',
+              requiresAuth: true,
+              permission: 'corrective:action:view',
+              order: 11
+            }
+          },
+          {
+            path: '/inspection/behavior-records',
+            name: 'InspectionBehaviorRecords',
+            component: () => import('@/views/inspection/BehaviorRecordListView.vue'),
+            meta: {
+              title: '学生行为',
+              icon: 'User',
+              requiresAuth: true,
+              permission: 'behavior:record:view',
+              order: 12
+            }
           }
         ]
       },
