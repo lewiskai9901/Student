@@ -14,6 +14,8 @@ export * from './myClass'
 export * from './inspectionSession'
 export * from './corrective'
 export * from './behavior'
+export * from './schedule'
+export * from './analytics'
 
 // 通用响应类型
 export interface ApiResponse<T> {

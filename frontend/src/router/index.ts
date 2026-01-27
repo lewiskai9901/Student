@@ -482,6 +482,42 @@ const routes: RouteRecordRaw[] = [
               permission: 'behavior:record:view',
               order: 12
             }
+          },
+          {
+            path: '/inspection/schedule',
+            name: 'InspectionSchedule',
+            component: () => import('@/views/inspection/ScheduleManagementView.vue'),
+            meta: {
+              title: '自动排班',
+              icon: 'Calendar',
+              requiresAuth: true,
+              permission: 'schedule:policy:view',
+              order: 13
+            }
+          },
+          {
+            path: '/inspection/data-analytics',
+            name: 'InspectionDataAnalytics',
+            component: () => import('@/views/inspection/DataAnalyticsCenterView.vue'),
+            meta: {
+              title: '数据分析',
+              icon: 'DataAnalysis',
+              requiresAuth: true,
+              permission: 'analytics:view',
+              order: 14
+            }
+          },
+          {
+            path: '/inspection/export-center',
+            name: 'InspectionExportCenter',
+            component: () => import('@/views/inspection/ExportCenterView.vue'),
+            meta: {
+              title: '导出中心',
+              icon: 'Download',
+              requiresAuth: true,
+              permission: 'inspection:export:view',
+              order: 15
+            }
           }
         ]
       },
