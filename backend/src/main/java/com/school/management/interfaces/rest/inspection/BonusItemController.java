@@ -20,7 +20,7 @@ import java.util.stream.Collectors;
  * REST controller for bonus item management.
  */
 @RestController
-@RequestMapping("/v2/inspection/bonus-items")
+@RequestMapping("/inspection/bonus-items")
 @Tag(name = "Bonus Items", description = "Bonus item configuration API")
 public class BonusItemController {
 

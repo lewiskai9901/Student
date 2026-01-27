@@ -1,6 +1,5 @@
 package com.school.management.security;
 
-import com.school.management.entity.User;
 import lombok.Data;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
@@ -11,8 +10,7 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 /**
- * 自定义用户详情 - 主构造函数使用基本类型，不依赖任何实体类。
- * 保留 entity.User 构造函数供V1代码使用，Phase 2删除V1后移除。
+ * 自定义用户详情 - 使用基本类型，不依赖任何实体类
  */
 @Data
 public class CustomUserDetails implements UserDetails {
@@ -44,16 +42,6 @@ public class CustomUserDetails implements UserDetails {
         this.userType = userType;
         this.roles = roles;
         this.permissions = permissions;
-    }
-
-    /**
-     * V1 backwards-compatible constructor. Remove after Phase 2 V1 deletion.
-     */
-    @Deprecated
-    public CustomUserDetails(User user, List<String> roles, List<String> permissions) {
-        this(user.getId(), user.getUsername(), user.getPassword(), user.getRealName(),
-             user.getStatus(), user.getOrgUnitId(), user.getClassId(), user.getUserType(),
-             roles, permissions);
     }
 
     @Override

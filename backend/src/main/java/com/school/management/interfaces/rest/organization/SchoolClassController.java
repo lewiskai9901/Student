@@ -31,8 +31,8 @@ import java.util.stream.Collectors;
  * 班级管理 REST API (V2 - DDD架构)
  */
 @Slf4j
-@RestController("schoolClassControllerV2")
-@RequestMapping("/v2/organization/classes")
+@RestController("schoolClassController")
+@RequestMapping("/organization/classes")
 @RequiredArgsConstructor
 @Tag(name = "班级管理V2", description = "DDD架构的班级管理接口")
 public class SchoolClassController {

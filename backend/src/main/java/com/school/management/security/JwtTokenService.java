@@ -77,7 +77,7 @@ public class JwtTokenService {
         }
 
         // 初始化Token加密密钥（使用JWT密钥派生）
-        com.school.management.util.TokenEncryptionUtil.initKey(jwtSecret + ":token-encryption");
+        com.school.management.common.util.TokenEncryptionUtil.initKey(jwtSecret + ":token-encryption");
         log.info("JWT密钥配置验证通过，Token加密已启用");
     }
 
@@ -116,7 +116,7 @@ public class JwtTokenService {
         try {
             String key = "refresh_token:" + userId;
             // 使用AES-GCM加密Token后存储
-            String encryptedToken = com.school.management.util.TokenEncryptionUtil.encrypt(refreshToken);
+            String encryptedToken = com.school.management.common.util.TokenEncryptionUtil.encrypt(refreshToken);
             redisTemplate.opsForValue().set(key, encryptedToken, refreshExpiration, TimeUnit.MILLISECONDS);
             log.debug("刷新令牌已加密存储: userId={}", userId);
         } catch (Exception e) {
@@ -223,7 +223,7 @@ public class JwtTokenService {
                 return false;
             }
             // 解密存储的Token后比较
-            String storedToken = com.school.management.util.TokenEncryptionUtil.decrypt(encryptedStoredToken);
+            String storedToken = com.school.management.common.util.TokenEncryptionUtil.decrypt(encryptedStoredToken);
             return refreshToken.equals(storedToken);
 
         } catch (JwtException | IllegalArgumentException e) {

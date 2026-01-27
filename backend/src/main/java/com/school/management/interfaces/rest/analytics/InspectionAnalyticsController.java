@@ -12,7 +12,7 @@ import org.springframework.web.bind.annotation.*;
 import java.time.LocalDate;
 
 @RestController
-@RequestMapping("/v2/inspection/analytics")
+@RequestMapping("/inspection/analytics")
 @Tag(name = "Inspection Analytics V4", description = "量化检查数据分析接口")
 @RequiredArgsConstructor
 public class InspectionAnalyticsController {

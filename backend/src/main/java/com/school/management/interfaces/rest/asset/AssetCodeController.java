@@ -16,7 +16,7 @@ import java.util.Map;
  */
 @Tag(name = "资产编码", description = "资产编码和二维码管理接口")
 @RestController
-@RequestMapping("/v2/asset-codes")
+@RequestMapping("/asset-codes")
 @RequiredArgsConstructor
 public class AssetCodeController {
 

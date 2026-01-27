@@ -20,7 +20,7 @@ import java.util.List;
  * 提供班主任/教师班级管理工作台API
  */
 @RestController
-@RequestMapping("/v2/my-class")
+@RequestMapping("/my-class")
 @RequiredArgsConstructor
 @Tag(name = "我的班级", description = "班主任/教师班级管理工作台")
 public class MyClassController {

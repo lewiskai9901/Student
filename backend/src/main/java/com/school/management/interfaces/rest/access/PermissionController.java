@@ -17,7 +17,7 @@ import java.util.stream.Collectors;
  * REST controller for permission management.
  */
 @RestController("dddPermissionController")
-@RequestMapping("/v2/permissions")
+@RequestMapping("/permissions")
 @Tag(name = "Permissions V2", description = "Permission management API (DDD)")
 public class PermissionController {
 

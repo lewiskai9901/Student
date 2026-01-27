@@ -130,7 +130,7 @@ public class SecurityConfig {
                                 new AntPathRequestMatcher("/system/configs/public/**"),  // 公开的系统配置接口
                                 // 已移除: /druid/** Druid监控需要认证，配置在DruidConfig中
                                 new AntPathRequestMatcher("/dmn-api/**"),                // Flowable DMN API
-                                new AntPathRequestMatcher("/v2/teaching/**")             // 教务管理API（开发测试用）
+                                new AntPathRequestMatcher("/teaching/**")                // 教务管理API（开发测试用）
                         ).permitAll()
 
                         // 所有其他请求需要认证

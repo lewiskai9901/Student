@@ -23,7 +23,7 @@ import java.util.stream.Collectors;
  * REST controller for V4 inspection sessions.
  */
 @RestController
-@RequestMapping("/v2/inspection/sessions")
+@RequestMapping("/inspection/sessions")
 @Tag(name = "Inspection Sessions V4", description = "V4 inspection session management API")
 public class InspectionSessionController {
 

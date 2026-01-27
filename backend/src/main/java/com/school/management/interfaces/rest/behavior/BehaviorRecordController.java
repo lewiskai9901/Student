@@ -17,7 +17,7 @@ import java.util.Map;
 import java.util.stream.Collectors;
 
 @RestController
-@RequestMapping("/v2/behavior-records")
+@RequestMapping("/behavior-records")
 @Tag(name = "Behavior Records", description = "学生行为记录管理")
 public class BehaviorRecordController {
 

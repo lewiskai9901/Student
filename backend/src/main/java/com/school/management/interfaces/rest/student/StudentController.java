@@ -21,8 +21,8 @@ import java.util.List;
  * 学生管理 REST API控制器 (DDD架构)
  */
 @Tag(name = "Student Management V2", description = "学生管理API - DDD架构")
-@RestController("studentControllerV2")
-@RequestMapping("/v2/students")
+@RestController("studentController")
+@RequestMapping("/students")
 @RequiredArgsConstructor
 public class StudentController {
 

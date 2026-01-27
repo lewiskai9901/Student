@@ -18,7 +18,7 @@ import java.util.Map;
 import java.util.stream.Collectors;
 
 @RestController
-@RequestMapping("/v2/corrective-actions")
+@RequestMapping("/corrective-actions")
 @Tag(name = "Corrective Actions", description = "整改工单管理")
 public class CorrectiveActionController {
 

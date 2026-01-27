@@ -22,7 +22,7 @@ import java.util.Map;
  */
 @Tag(name = "资产审批", description = "资产审批管理接口")
 @RestController
-@RequestMapping("/v2/asset-approvals")
+@RequestMapping("/asset-approvals")
 @RequiredArgsConstructor
 public class AssetApprovalController {
 

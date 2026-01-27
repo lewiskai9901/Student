@@ -17,7 +17,7 @@ import java.util.Map;
  * REST controller for teacher dashboard data.
  */
 @RestController
-@RequestMapping("/v2/teacher-dashboard")
+@RequestMapping("/teacher-dashboard")
 @Tag(name = "Teacher Dashboard", description = "Teacher dashboard query API")
 public class TeacherDashboardController {
 

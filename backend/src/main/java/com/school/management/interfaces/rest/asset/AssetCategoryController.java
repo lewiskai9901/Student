@@ -18,7 +18,7 @@ import java.util.List;
  */
 @Tag(name = "资产分类管理", description = "资产分类的增删改查")
 @RestController
-@RequestMapping("/v2/asset/categories")
+@RequestMapping("/asset/categories")
 @RequiredArgsConstructor
 public class AssetCategoryController {
 

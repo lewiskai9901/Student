@@ -23,7 +23,7 @@ import java.util.List;
  */
 @Tag(name = "资产借用管理", description = "资产借用、领用、归还等操作")
 @RestController
-@RequestMapping("/v2/asset-borrows")
+@RequestMapping("/asset-borrows")
 @RequiredArgsConstructor
 public class AssetBorrowController {
 

@@ -20,7 +20,7 @@ import java.util.Map;
  */
 @Tag(name = "资产折旧", description = "资产折旧管理接口")
 @RestController
-@RequestMapping("/v2/asset-depreciation")
+@RequestMapping("/asset-depreciation")
 @RequiredArgsConstructor
 public class AssetDepreciationController {
 

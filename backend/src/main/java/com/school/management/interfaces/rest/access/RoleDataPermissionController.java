@@ -16,7 +16,7 @@ import java.util.Map;
  * V2 角色数据权限管理控制器 (DDD架构)
  */
 @RestController
-@RequestMapping("/v2/roles")
+@RequestMapping("/roles")
 @RequiredArgsConstructor
 @Tag(name = "角色数据权限管理 V2", description = "V2 API - 角色数据权限配置，支持DDD对齐模块和自定义范围")
 public class RoleDataPermissionController {

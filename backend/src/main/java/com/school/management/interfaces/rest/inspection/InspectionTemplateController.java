@@ -18,8 +18,8 @@ import java.util.stream.Collectors;
 /**
  * REST controller for inspection templates.
  */
-@RestController("inspectionTemplateControllerV2")
-@RequestMapping("/v2/inspection-templates")
+@RestController("inspectionTemplateController")
+@RequestMapping("/inspection-templates")
 @Tag(name = "Inspection Templates", description = "Inspection template management API")
 public class InspectionTemplateController {
 

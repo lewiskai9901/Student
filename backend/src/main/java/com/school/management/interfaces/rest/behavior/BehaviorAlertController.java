@@ -14,7 +14,7 @@ import java.util.Map;
 import java.util.stream.Collectors;
 
 @RestController
-@RequestMapping("/v2/behavior-alerts")
+@RequestMapping("/behavior-alerts")
 @Tag(name = "Behavior Alerts", description = "学生行为预警管理")
 public class BehaviorAlertController {
 

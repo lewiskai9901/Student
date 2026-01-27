@@ -16,7 +16,7 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 @RestController
-@RequestMapping("/v2/inspection/export")
+@RequestMapping("/inspection/export")
 @Tag(name = "Inspection Export V4", description = "量化检查数据导出接口")
 @RequiredArgsConstructor
 public class InspectionExportController {

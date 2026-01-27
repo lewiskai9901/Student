@@ -19,7 +19,7 @@ import java.util.stream.Collectors;
  */
 @Tag(name = "系统模块管理", description = "系统模块树查询接口")
 @RestController
-@RequestMapping("/v2/system-modules")
+@RequestMapping("/system-modules")
 @RequiredArgsConstructor
 public class SystemModuleController {
 

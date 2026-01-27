@@ -26,8 +26,8 @@ import java.util.stream.Collectors;
  */
 @Slf4j
 @Tag(name = "User Management V2", description = "用户管理API - DDD架构")
-@RestController("userControllerV2")
-@RequestMapping("/v2/users")
+@RestController("userController")
+@RequestMapping("/users")
 @RequiredArgsConstructor
 public class UserController {
 

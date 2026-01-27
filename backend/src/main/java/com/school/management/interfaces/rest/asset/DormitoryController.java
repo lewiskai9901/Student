@@ -22,8 +22,8 @@ import java.util.List;
  * 宿舍管理 REST API控制器 (DDD架构)
  */
 @Tag(name = "Dormitory Management V2", description = "宿舍管理API - DDD架构")
-@RestController("dormitoryControllerV2")
-@RequestMapping("/v2/dormitory/rooms")
+@RestController("dormitoryController")
+@RequestMapping("/dormitory/rooms")
 @RequiredArgsConstructor
 public class DormitoryController {
 

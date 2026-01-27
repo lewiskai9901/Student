@@ -21,7 +21,7 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 @RestController
-@RequestMapping("/v2/schedule")
+@RequestMapping("/schedule")
 @Tag(name = "Schedule Management V4", description = "排班管理接口")
 @RequiredArgsConstructor
 public class ScheduleController {

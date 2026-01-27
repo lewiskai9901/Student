@@ -26,8 +26,8 @@ import java.util.stream.Collectors;
  */
 @Slf4j
 @Tag(name = "Semester Domain API", description = "学期管理API - 纯DDD架构")
-@RestController("semesterDomainControllerV2")
-@RequestMapping("/v2/domain/semesters")
+@RestController("semesterDomainController")
+@RequestMapping("/domain/semesters")
 @RequiredArgsConstructor
 public class SemesterDomainController {
 

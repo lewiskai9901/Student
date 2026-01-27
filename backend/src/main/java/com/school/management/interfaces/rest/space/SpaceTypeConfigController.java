@@ -17,7 +17,7 @@ import java.util.Map;
  */
 @Slf4j
 @RestController
-@RequestMapping("/v2/space-type-configs")
+@RequestMapping("/space-type-configs")
 @RequiredArgsConstructor
 @Tag(name = "场所类型配置", description = "管理可配置的场所类型")
 public class SpaceTypeConfigController {

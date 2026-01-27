@@ -24,8 +24,8 @@ import java.util.List;
  */
 @Slf4j
 @Tag(name = "Grades", description = "Grade management API")
-@RestController("gradeControllerV2")
-@RequestMapping("/v2/grades")
+@RestController("gradeController")
+@RequestMapping("/grades")
 public class GradeController {
 
     private final GradeApplicationService gradeService;

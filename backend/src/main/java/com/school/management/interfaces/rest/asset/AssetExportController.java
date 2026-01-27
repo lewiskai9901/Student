@@ -22,7 +22,7 @@ import java.io.IOException;
 @Tag(name = "资产导入导出", description = "资产的Excel导入、导出、模板下载")
 @Slf4j
 @RestController
-@RequestMapping("/v2/assets/excel")
+@RequestMapping("/assets/excel")
 @RequiredArgsConstructor
 public class AssetExportController {
 

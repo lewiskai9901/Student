@@ -19,7 +19,7 @@ import java.util.Map;
  */
 @Tag(name = "资产预警", description = "资产预警管理接口")
 @RestController
-@RequestMapping("/v2/asset-alerts")
+@RequestMapping("/asset-alerts")
 @RequiredArgsConstructor
 public class AssetAlertController {
 

@@ -36,7 +36,7 @@ import java.util.Map;
  */
 @Slf4j
 @RestController
-@RequestMapping("/v2/spaces")
+@RequestMapping("/spaces")
 @RequiredArgsConstructor
 @Tag(name = "场所管理", description = "统一场所管理API，包括校区、楼宇、楼层、房间等")
 public class SpaceController {

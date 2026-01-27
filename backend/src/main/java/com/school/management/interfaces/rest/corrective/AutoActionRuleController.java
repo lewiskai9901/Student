@@ -12,7 +12,7 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 @RestController
-@RequestMapping("/v2/corrective-actions/rules")
+@RequestMapping("/corrective-actions/rules")
 @Tag(name = "Auto Action Rules", description = "自动创建规则管理")
 public class AutoActionRuleController {
 

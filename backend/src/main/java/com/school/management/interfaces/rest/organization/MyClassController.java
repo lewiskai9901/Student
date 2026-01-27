@@ -25,8 +25,8 @@ import java.util.List;
  */
 @Slf4j
 @Tag(name = "我的班级", description = "班主任/教师班级管理工作台")
-@RestController("myClassControllerV2")
-@RequestMapping("/v2/myclass")
+@RestController("myClassController")
+@RequestMapping("/myclass")
 public class MyClassController {
 
     private final MyClassApplicationService myClassService;

@@ -19,7 +19,7 @@ import java.util.stream.Collectors;
  * REST controller for role management.
  */
 @RestController("dddRoleController")
-@RequestMapping("/v2/roles")
+@RequestMapping("/roles")
 @Tag(name = "Roles V2", description = "Role management API (DDD)")
 public class RoleController {
 

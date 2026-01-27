@@ -19,7 +19,7 @@ import java.util.stream.Collectors;
  * REST controller for department ranking queries.
  */
 @RestController
-@RequestMapping("/v2/inspection/department-ranking")
+@RequestMapping("/inspection/department-ranking")
 @Tag(name = "Department Ranking", description = "Department ranking query API")
 public class DepartmentRankingController {
 

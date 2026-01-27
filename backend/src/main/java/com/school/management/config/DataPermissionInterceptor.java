@@ -1,6 +1,6 @@
 package com.school.management.config;
 
-import com.school.management.util.DataPermissionContextHolder;
+import com.school.management.common.util.DataPermissionContextHolder;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.ibatis.executor.statement.StatementHandler;
 import org.apache.ibatis.mapping.BoundSql;

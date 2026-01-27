@@ -30,8 +30,8 @@ import java.util.stream.Collectors;
  */
 @Slf4j
 @Tag(name = "Semester Management V2", description = "学期管理API - DDD架构")
-@RestController("semesterControllerV2")
-@RequestMapping("/v2/semesters")
+@RestController("semesterController")
+@RequestMapping("/semesters")
 @RequiredArgsConstructor
 public class SemesterController {
 

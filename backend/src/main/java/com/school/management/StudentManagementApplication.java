@@ -19,7 +19,7 @@ import org.springframework.transaction.annotation.EnableTransactionManagement;
 @EnableAsync
 @EnableTransactionManagement
 @EnableScheduling
-@MapperScan({"com.school.management.mapper", "com.school.management.casbin.mapper"})
+@MapperScan({"com.school.management.infrastructure.persistence", "com.school.management.infrastructure.external", "com.school.management.infrastructure.audit"})
 public class StudentManagementApplication {
 
     public static void main(String[] args) {

@@ -24,7 +24,7 @@ import java.util.List;
  */
 @Tag(name = "固定资产管理", description = "资产的增删改查、调拨、报废、维修等操作")
 @RestController
-@RequestMapping("/v2/assets")
+@RequestMapping("/assets")
 @RequiredArgsConstructor
 public class AssetController {
 

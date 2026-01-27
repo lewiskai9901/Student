@@ -24,8 +24,8 @@ import java.util.List;
  */
 @Slf4j
 @Tag(name = "Organization Units", description = "Organization unit management API")
-@RestController("orgUnitControllerV2")
-@RequestMapping("/v2/org-units")
+@RestController("orgUnitController")
+@RequestMapping("/org-units")
 public class OrgUnitController {
 
     private final OrgUnitApplicationService orgUnitService;

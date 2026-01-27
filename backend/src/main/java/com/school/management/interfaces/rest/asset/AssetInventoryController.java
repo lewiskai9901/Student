@@ -20,7 +20,7 @@ import java.time.LocalDate;
  */
 @Tag(name = "资产盘点", description = "资产盘点管理接口")
 @RestController
-@RequestMapping("/v2/asset-inventories")
+@RequestMapping("/asset-inventories")
 @RequiredArgsConstructor
 public class AssetInventoryController {
 

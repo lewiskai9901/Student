@@ -16,7 +16,7 @@ import java.util.List;
  * REST controller for querying physical spaces during inspection.
  */
 @RestController
-@RequestMapping("/v2/inspection/spaces")
+@RequestMapping("/inspection/spaces")
 @Tag(name = "Inspection Spaces", description = "Space query API for inspection workflows")
 public class SpaceQueryController {
 
