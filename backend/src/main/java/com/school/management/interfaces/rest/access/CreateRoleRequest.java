@@ -1,6 +1,6 @@
 package com.school.management.interfaces.rest.access;
 
-import com.school.management.casbin.model.DataScope;
+import com.school.management.domain.access.model.DataScope;
 import com.school.management.domain.access.model.RoleType;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;

@@ -1,25 +1,22 @@
 package com.school.management.application.myclass;
 
-import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.school.management.application.myclass.query.DormitoryDistributionDTO;
 import com.school.management.application.myclass.query.MyClassDTO;
 import com.school.management.application.myclass.query.MyClassOverviewDTO;
 import com.school.management.application.myclass.query.MyClassStudentDTO;
 import com.school.management.domain.organization.model.SchoolClass;
-import com.school.management.domain.organization.model.TeacherAssignment;
 import com.school.management.domain.organization.repository.SchoolClassRepository;
+import com.school.management.domain.space.model.aggregate.Space;
+import com.school.management.domain.space.model.entity.SpaceClassAssignment;
+import com.school.management.domain.space.model.entity.SpaceOccupant;
+import com.school.management.domain.space.model.valueobject.GenderType;
+import com.school.management.domain.space.repository.SpaceClassAssignmentRepository;
+import com.school.management.domain.space.repository.SpaceOccupantRepository;
+import com.school.management.domain.space.repository.SpaceRepository;
 import com.school.management.domain.student.model.aggregate.Student;
+import com.school.management.domain.student.model.valueobject.Gender;
+import com.school.management.domain.student.model.valueobject.StudentStatus;
 import com.school.management.domain.student.repository.StudentRepository;
-import com.school.management.dto.StudentResponse;
-import com.school.management.entity.Building;
-import com.school.management.entity.ClassDormitory;
-import com.school.management.entity.Dormitory;
-import com.school.management.mapper.BuildingMapper;
-import com.school.management.mapper.ClassDormitoryMapper;
-import com.school.management.mapper.DormitoryMapper;
-import com.school.management.mapper.StudentMapper;
-import com.school.management.service.StudentDormitoryService;
-import com.school.management.dto.StudentDormitoryResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -37,11 +34,9 @@ public class MyClassApplicationService {
 
     private final SchoolClassRepository schoolClassRepository;
     private final StudentRepository studentRepository;
-    private final StudentMapper studentMapper;
-    private final ClassDormitoryMapper classDormitoryMapper;
-    private final DormitoryMapper dormitoryMapper;
-    private final BuildingMapper buildingMapper;
-    private final StudentDormitoryService studentDormitoryService;
+    private final SpaceClassAssignmentRepository spaceClassAssignmentRepository;
+    private final SpaceRepository spaceRepository;
+    private final SpaceOccupantRepository spaceOccupantRepository;
 
     /**
      * 获取当前用户管理的班级列表
@@ -66,17 +61,17 @@ public class MyClassApplicationService {
 
         // 获取学生统计
         long studentCount = studentRepository.countByClassId(classId);
-        
-        // 使用mapper查询性别统计
-        Long maleCount = studentMapper.countByClassIdAndGender(classId, "男");
-        Long femaleCount = studentMapper.countByClassIdAndGender(classId, "女");
+
+        // 使用DDD仓储按性别统计
+        long maleCount = studentRepository.countByClassIdAndGender(classId, Gender.MALE);
+        long femaleCount = studentRepository.countByClassIdAndGender(classId, Gender.FEMALE);
 
         return MyClassOverviewDTO.builder()
             .classId(classId)
             .className(schoolClass.getClassName())
             .studentCount((int) studentCount)
-            .maleCount(maleCount != null ? maleCount.intValue() : 0)
-            .femaleCount(femaleCount != null ? femaleCount.intValue() : 0)
+            .maleCount((int) maleCount)
+            .femaleCount((int) femaleCount)
             .classRank(0) // TODO: 从检查记录服务获取
             .totalClasses(0)
             .averageScore(0.0)
@@ -93,13 +88,13 @@ public class MyClassApplicationService {
     public List<MyClassStudentDTO> getClassStudents(Long classId, Long userId, String keyword, String status) {
         validateAccess(classId, userId);
 
-        // 使用V1 StudentMapper获取完整数据（包含宿舍信息）
-        List<StudentResponse> students = studentMapper.selectByClassId(classId);
+        // 使用DDD StudentRepository获取学生
+        List<Student> students = studentRepository.findByClassId(classId);
 
         return students.stream()
             .filter(s -> {
                 if (keyword != null && !keyword.isEmpty()) {
-                    String name = s.getRealName() != null ? s.getRealName() : "";
+                    String name = s.getName() != null ? s.getName() : "";
                     String studentNo = s.getStudentNo() != null ? s.getStudentNo() : "";
                     return name.contains(keyword) || studentNo.contains(keyword);
                 }
@@ -107,143 +102,142 @@ public class MyClassApplicationService {
             })
             .filter(s -> {
                 if (status != null && !status.isEmpty()) {
-                    Integer studentStatus = s.getStudentStatus();
-                    // status: 1在读 2休学 3退学 4毕业 5转学
-                    return studentStatus != null && studentStatus.toString().equals(status);
+                    StudentStatus studentStatus = s.getStatus();
+                    // status code: 1在读 2休学 3退学 4毕业 5开除
+                    return studentStatus != null && String.valueOf(studentStatus.getCode()).equals(status);
                 }
                 return true;
             })
-            .map(this::toStudentDTOFromResponse)
+            .map(this::toStudentDTOFromDomain)
             .collect(Collectors.toList());
     }
 
     /**
      * 获取班级宿舍分布
-     * 改进: 从班级-宿舍绑定关系查询，显示所有分配给班级的宿舍（包括空宿舍）
+     * 使用DDD Space领域: SpaceClassAssignment查询班级-宿舍绑定, Space获取房间/楼栋信息, SpaceOccupant获取入住学生
      */
     public List<DormitoryDistributionDTO> getDormitoryDistribution(Long classId, Long userId) {
         log.info("获取班级宿舍分布 - classId: {}, userId: {}", classId, userId);
         validateAccess(classId, userId);
 
-        // 1. 查询班级-宿舍绑定关系
-        QueryWrapper<ClassDormitory> bindingQuery = new QueryWrapper<>();
-        bindingQuery.eq("class_id", classId);
-        List<ClassDormitory> bindings = classDormitoryMapper.selectList(bindingQuery);
+        // 1. 查询班级的场所分配关系 (SpaceClassAssignment)
+        List<SpaceClassAssignment> assignments = spaceClassAssignmentRepository.findByClassId(classId);
 
-        log.info("班级 {} 的宿舍绑定记录数: {}", classId, bindings.size());
-        if (!bindings.isEmpty()) {
-            log.info("绑定的宿舍ID列表: {}", bindings.stream()
-                .map(ClassDormitory::getDormitoryId)
+        log.info("班级 {} 的场所分配记录数: {}", classId, assignments.size());
+        if (!assignments.isEmpty()) {
+            log.info("分配的场所ID列表: {}", assignments.stream()
+                .map(SpaceClassAssignment::getSpaceId)
                 .collect(Collectors.toList()));
         }
 
-        if (bindings.isEmpty()) {
-            log.warn("班级 {} 没有绑定任何宿舍", classId);
+        if (assignments.isEmpty()) {
+            log.warn("班级 {} 没有分配任何宿舍场所", classId);
             return new ArrayList<>();
         }
 
-        // 2. 获取所有宿舍ID
-        List<Long> dormitoryIds = bindings.stream()
-            .map(ClassDormitory::getDormitoryId)
+        // 2. 获取所有分配的场所(房间)
+        List<Long> spaceIds = assignments.stream()
+            .map(SpaceClassAssignment::getSpaceId)
             .collect(Collectors.toList());
 
-        // 3. 查询宿舍详情
-        List<Dormitory> dormitories = dormitoryMapper.selectBatchIds(dormitoryIds);
-        log.info("查询到宿舍数量: {}", dormitories.size());
-        for (Dormitory d : dormitories) {
-            log.info("宿舍详情: id={}, dormitoryNo={}, buildingId={}", d.getId(), d.getDormitoryNo(), d.getBuildingId());
+        Map<Long, Space> spaceMap = new HashMap<>();
+        for (Long spaceId : spaceIds) {
+            spaceRepository.findById(spaceId).ifPresent(space -> spaceMap.put(spaceId, space));
         }
-        Map<Long, Dormitory> dormitoryMap = dormitories.stream()
-            .collect(Collectors.toMap(Dormitory::getId, d -> d));
+        log.info("查询到宿舍场所数量: {}", spaceMap.size());
 
-        // 4. 查询所有相关楼栋
-        Set<Long> buildingIds = dormitories.stream()
-            .map(Dormitory::getBuildingId)
+        if (spaceMap.isEmpty()) {
+            log.warn("未找到有效的宿舍场所");
+            return new ArrayList<>();
+        }
+
+        // 3. 收集所有楼栋ID，查询楼栋(building)信息
+        Set<Long> buildingIds = spaceMap.values().stream()
+            .map(Space::getBuildingId)
             .filter(Objects::nonNull)
             .collect(Collectors.toSet());
-        Map<Long, Building> buildingMap = new HashMap<>();
-        if (!buildingIds.isEmpty()) {
-            List<Building> buildings = buildingMapper.selectBatchIds(buildingIds);
-            buildingMap = buildings.stream()
-                .collect(Collectors.toMap(Building::getId, b -> b));
+
+        Map<Long, Space> buildingMap = new HashMap<>();
+        for (Long buildingId : buildingIds) {
+            spaceRepository.findById(buildingId).ifPresent(building -> buildingMap.put(buildingId, building));
         }
 
-        // 5. 查询每个宿舍的入住学生
-        Map<Long, List<StudentDormitoryResponse>> studentsByDormitory = new HashMap<>();
-        for (Long dormitoryId : dormitoryIds) {
+        // 4. 查询每个宿舍(space)的在住学生
+        Map<Long, List<SpaceOccupant>> occupantsBySpace = new HashMap<>();
+        for (Long spaceId : spaceIds) {
             try {
-                List<StudentDormitoryResponse> students = studentDormitoryService.getCurrentByDormitoryId(dormitoryId);
-                studentsByDormitory.put(dormitoryId, students);
+                List<SpaceOccupant> occupants = spaceOccupantRepository.findActiveBySpaceId(spaceId);
+                occupantsBySpace.put(spaceId, occupants);
             } catch (Exception e) {
-                log.warn("Failed to load students for dormitory {}: {}", dormitoryId, e.getMessage());
-                studentsByDormitory.put(dormitoryId, new ArrayList<>());
+                log.warn("Failed to load occupants for space {}: {}", spaceId, e.getMessage());
+                occupantsBySpace.put(spaceId, new ArrayList<>());
             }
         }
 
-        // 6. 按楼栋分组组装结果
-        Map<Long, List<Dormitory>> dormitoriesByBuilding = dormitories.stream()
-            .filter(d -> d.getBuildingId() != null)
-            .collect(Collectors.groupingBy(Dormitory::getBuildingId));
+        // 5. 按楼栋分组
+        Map<Long, List<Space>> roomsByBuilding = spaceMap.values().stream()
+            .filter(s -> s.getBuildingId() != null)
+            .collect(Collectors.groupingBy(Space::getBuildingId));
 
-        log.info("按楼栋分组后的楼栋数量: {}", dormitoriesByBuilding.size());
+        log.info("按楼栋分组后的楼栋数量: {}", roomsByBuilding.size());
 
-        // 处理没有buildingId的宿舍 - 归入"未知楼栋"
-        List<Dormitory> dormitoriesWithoutBuilding = dormitories.stream()
-            .filter(d -> d.getBuildingId() == null)
+        // 处理没有buildingId的场所 - 归入"未知楼栋"
+        List<Space> roomsWithoutBuilding = spaceMap.values().stream()
+            .filter(s -> s.getBuildingId() == null)
             .collect(Collectors.toList());
 
-        if (!dormitoriesWithoutBuilding.isEmpty()) {
-            log.warn("有 {} 个宿舍没有buildingId，将归入'未知楼栋'", dormitoriesWithoutBuilding.size());
-            dormitoriesByBuilding.put(0L, dormitoriesWithoutBuilding);
+        if (!roomsWithoutBuilding.isEmpty()) {
+            log.warn("有 {} 个宿舍场所没有buildingId，将归入'未知楼栋'", roomsWithoutBuilding.size());
+            roomsByBuilding.put(0L, roomsWithoutBuilding);
         }
 
-        if (dormitoriesByBuilding.isEmpty()) {
+        if (roomsByBuilding.isEmpty()) {
             log.warn("没有任何宿舍数据可供显示");
         }
 
+        // 6. 组装结果
         List<DormitoryDistributionDTO> result = new ArrayList<>();
-        Map<Long, Building> finalBuildingMap = buildingMap;
 
-        for (Map.Entry<Long, List<Dormitory>> entry : dormitoriesByBuilding.entrySet()) {
+        for (Map.Entry<Long, List<Space>> entry : roomsByBuilding.entrySet()) {
             Long buildingId = entry.getKey();
-            List<Dormitory> buildingDormitories = entry.getValue();
-            Building building = finalBuildingMap.get(buildingId);
+            List<Space> buildingRooms = entry.getValue();
+            Space building = buildingMap.get(buildingId);
 
-            String buildingName = building != null ? building.getBuildingName() : "未知楼栋";
+            String buildingName = building != null ? building.getSpaceName() : "未知楼栋";
 
-            // 推断楼栋类型（从宿舍性别类型）
+            // 推断楼栋类型（从房间性别类型）
             String buildingType = "MIXED";
-            Set<Integer> genderTypes = buildingDormitories.stream()
-                .map(Dormitory::getGenderType)
+            Set<GenderType> genderTypes = buildingRooms.stream()
+                .map(Space::getGenderType)
                 .filter(Objects::nonNull)
                 .collect(Collectors.toSet());
             if (genderTypes.size() == 1) {
-                Integer gt = genderTypes.iterator().next();
-                if (gt == 1) buildingType = "MALE";
-                else if (gt == 2) buildingType = "FEMALE";
+                GenderType gt = genderTypes.iterator().next();
+                if (gt == GenderType.MALE) buildingType = "MALE";
+                else if (gt == GenderType.FEMALE) buildingType = "FEMALE";
             }
 
             // 组装房间列表
             List<DormitoryDistributionDTO.DormitoryRoomDTO> rooms = new ArrayList<>();
             int totalStudents = 0;
 
-            for (Dormitory dorm : buildingDormitories) {
-                List<StudentDormitoryResponse> dormStudents = studentsByDormitory.getOrDefault(dorm.getId(), new ArrayList<>());
-                totalStudents += dormStudents.size();
+            for (Space room : buildingRooms) {
+                List<SpaceOccupant> roomOccupants = occupantsBySpace.getOrDefault(room.getId(), new ArrayList<>());
+                totalStudents += roomOccupants.size();
 
-                List<DormitoryDistributionDTO.StudentBedDTO> studentBeds = dormStudents.stream()
-                    .map(s -> DormitoryDistributionDTO.StudentBedDTO.builder()
-                        .id(s.getStudentId())
-                        .name(s.getStudentName())
-                        .bedNo(s.getBedNumber())
+                List<DormitoryDistributionDTO.StudentBedDTO> studentBeds = roomOccupants.stream()
+                    .map(o -> DormitoryDistributionDTO.StudentBedDTO.builder()
+                        .id(o.getOccupantId())
+                        .name(o.getOccupantName())
+                        .bedNo(o.getPositionNo() != null ? String.valueOf(o.getPositionNo()) : null)
                         .build())
                     .collect(Collectors.toList());
 
                 rooms.add(DormitoryDistributionDTO.DormitoryRoomDTO.builder()
-                    .dormitoryId(dorm.getId())
-                    .roomNo(dorm.getDormitoryNo())
-                    .floor(dorm.getFloorNumber())
-                    .studentCount(dormStudents.size())
+                    .dormitoryId(room.getId())
+                    .roomNo(room.getRoomNo())
+                    .floor(room.getFloorNumber())
+                    .studentCount(roomOccupants.size())
                     .students(studentBeds)
                     .build());
             }
@@ -290,42 +284,60 @@ public class MyClassApplicationService {
             .build();
     }
 
-    private MyClassStudentDTO toStudentDTOFromResponse(StudentResponse s) {
-        // 构建宿舍显示名称
+    /**
+     * 从DDD Student domain对象转换为MyClassStudentDTO
+     */
+    private MyClassStudentDTO toStudentDTOFromDomain(Student s) {
+        // 构建宿舍显示名称 - 需要查询宿舍Space信息
         String dormitoryName = null;
-        if (s.getBuildingName() != null && s.getRoomNo() != null) {
-            dormitoryName = s.getBuildingName() + " " + s.getRoomNo();
-        } else if (s.getRoomNo() != null) {
-            dormitoryName = s.getRoomNo();
+        if (s.getDormitoryId() != null) {
+            try {
+                Optional<Space> dormSpace = spaceRepository.findById(s.getDormitoryId());
+                if (dormSpace.isPresent()) {
+                    Space space = dormSpace.get();
+                    if (space.getBuildingId() != null) {
+                        Optional<Space> buildingSpace = spaceRepository.findById(space.getBuildingId());
+                        if (buildingSpace.isPresent()) {
+                            dormitoryName = buildingSpace.get().getSpaceName() + " " + space.getRoomNo();
+                        } else {
+                            dormitoryName = space.getRoomNo();
+                        }
+                    } else {
+                        dormitoryName = space.getRoomNo() != null ? space.getRoomNo() : space.getSpaceName();
+                    }
+                }
+            } catch (Exception e) {
+                log.debug("查询宿舍信息失败: dormitoryId={}, error={}", s.getDormitoryId(), e.getMessage());
+            }
         }
 
-        // 状态映射: 1在读 2休学 3退学 4毕业 5转学
+        // 状态映射
         String status = "ENROLLED";
-        if (s.getStudentStatus() != null) {
-            switch (s.getStudentStatus()) {
-                case 1: status = "ENROLLED"; break;
-                case 2: status = "SUSPENDED"; break;
-                case 3: status = "DROPPED_OUT"; break;
-                case 4: status = "GRADUATED"; break;
-                case 5: status = "TRANSFERRED"; break;
+        if (s.getStatus() != null) {
+            switch (s.getStatus()) {
+                case STUDYING: status = "ENROLLED"; break;
+                case SUSPENDED: status = "SUSPENDED"; break;
+                case WITHDRAWN: status = "DROPPED_OUT"; break;
+                case GRADUATED: status = "GRADUATED"; break;
+                case EXPELLED: status = "TRANSFERRED"; break;
                 default: status = "ENROLLED";
             }
         }
 
-        // 性别转换: 1男 2女 -> 男/女
+        // 性别转换
         String gender = null;
         if (s.getGender() != null) {
-            gender = s.getGender() == 1 ? "男" : (s.getGender() == 2 ? "女" : null);
+            gender = s.getGender().getDescription();
         }
 
         return MyClassStudentDTO.builder()
             .id(s.getId())
             .studentNo(s.getStudentNo())
-            .name(s.getRealName())
+            .name(s.getName())
             .gender(gender)
             .phone(s.getPhone())
             .dormitoryName(dormitoryName)
-            .bedNo(s.getBedNumber())
+            .bedNo(s.getBedNumber() != null ? String.valueOf(s.getBedNumber()) : null)
             .status(status)
             .build();
     }

@@ -1,6 +1,6 @@
 package com.school.management.domain.access.model;
 
-import com.school.management.casbin.model.DataScope;
+import com.school.management.domain.access.model.DataScope;
 import com.school.management.domain.access.event.RoleCreatedEvent;
 import com.school.management.domain.access.event.RolePermissionsChangedEvent;
 import com.school.management.domain.shared.AggregateRoot;

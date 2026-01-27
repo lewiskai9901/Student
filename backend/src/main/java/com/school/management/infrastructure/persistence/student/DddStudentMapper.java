@@ -104,4 +104,12 @@ public interface DddStudentMapper extends BaseMapper<StudentPO> {
      */
     @Select("SELECT COUNT(*) FROM students WHERE deleted = 0")
     long countAll();
+
+    /**
+     * 统计班级中指定性别的学生数量
+     * @param classId 班级ID
+     * @param gender 性别代码 (1=男, 2=女)
+     */
+    @Select("SELECT COUNT(*) FROM students s LEFT JOIN users u ON s.user_id = u.id WHERE s.class_id = #{classId} AND u.gender = #{gender} AND s.deleted = 0")
+    long countByClassIdAndGender(@Param("classId") Long classId, @Param("gender") Integer gender);
 }

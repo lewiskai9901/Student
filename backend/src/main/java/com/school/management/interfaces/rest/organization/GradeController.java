@@ -7,7 +7,7 @@ import com.school.management.application.organization.command.UpdateGradeCommand
 import com.school.management.application.organization.query.GradeDTO;
 import com.school.management.common.result.Result;
 import com.school.management.domain.organization.model.GradeStatus;
-import com.school.management.util.SecurityUtils;
+import com.school.management.common.util.SecurityUtils;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;

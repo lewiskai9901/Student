@@ -1,6 +1,6 @@
 package com.school.management.infrastructure.access;
 
-import com.school.management.casbin.model.DataScope;
+import com.school.management.domain.access.model.DataScope;
 import com.school.management.domain.access.model.*;
 import com.school.management.domain.access.repository.PermissionRepository;
 import com.school.management.domain.access.repository.RoleRepository;

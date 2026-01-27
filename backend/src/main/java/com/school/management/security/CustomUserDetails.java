@@ -11,10 +11,8 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 /**
- * 自定义用户详情
- *
- * @author system
- * @since 1.0.0
+ * 自定义用户详情 - 主构造函数使用基本类型，不依赖任何实体类。
+ * 保留 entity.User 构造函数供V1代码使用，Phase 2删除V1后移除。
  */
 @Data
 public class CustomUserDetails implements UserDetails {
@@ -33,29 +31,33 @@ public class CustomUserDetails implements UserDetails {
     private Integer userType;
     private String gradeLevel;
 
-    public CustomUserDetails(User user, List<String> roles, List<String> permissions) {
-        this.userId = user.getId();
-        this.username = user.getUsername();
-        this.password = user.getPassword();
-        this.realName = user.getRealName();
-        this.status = user.getStatus();
+    public CustomUserDetails(Long userId, String username, String password, String realName,
+                             Integer status, Long orgUnitId, Long classId, Integer userType,
+                             List<String> roles, List<String> permissions) {
+        this.userId = userId;
+        this.username = username;
+        this.password = password;
+        this.realName = realName;
+        this.status = status;
+        this.orgUnitId = orgUnitId;
+        this.classId = classId;
+        this.userType = userType;
         this.roles = roles;
         this.permissions = permissions;
-        // 数据权限字段
-        this.orgUnitId = user.getOrgUnitId();
-        this.classId = user.getClassId();
-        this.userType = user.getUserType();
     }
 
-    public CustomUserDetails(User user, List<String> roles, List<String> permissions,
-                             String gradeLevel) {
-        this(user, roles, permissions);
-        this.gradeLevel = gradeLevel;
+    /**
+     * V1 backwards-compatible constructor. Remove after Phase 2 V1 deletion.
+     */
+    @Deprecated
+    public CustomUserDetails(User user, List<String> roles, List<String> permissions) {
+        this(user.getId(), user.getUsername(), user.getPassword(), user.getRealName(),
+             user.getStatus(), user.getOrgUnitId(), user.getClassId(), user.getUserType(),
+             roles, permissions);
     }
 
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
-        // 合并角色和权限
         List<GrantedAuthority> authorities = roles.stream()
                 .map(role -> new SimpleGrantedAuthority("ROLE_" + role))
                 .collect(Collectors.toList());
@@ -85,7 +87,7 @@ public class CustomUserDetails implements UserDetails {
 
     @Override
     public boolean isAccountNonLocked() {
-        return status == 1; // 1表示启用状态
+        return status != null && status == 1;
     }
 
     @Override
@@ -95,34 +97,21 @@ public class CustomUserDetails implements UserDetails {
 
     @Override
     public boolean isEnabled() {
-        return status == 1;
+        return status != null && status == 1;
     }
 
-    /**
-     * 检查是否有指定角色
-     */
     public boolean hasRole(String role) {
         return roles.contains(role);
     }
 
-    /**
-     * 检查是否有指定权限
-     */
     public boolean hasPermission(String permission) {
         return permissions.contains(permission);
     }
 
-    /**
-     * 获取用户ID
-     */
     public Long getId() {
         return userId;
     }
 
-    /**
-     * 获取组织单元名称（用于审批等业务场景）
-     * 注：当前返回空字符串，后续可通过缓存或查询获取实际名称
-     */
     public String getOrgUnitName() {
         return "";
     }

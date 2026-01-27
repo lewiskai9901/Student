@@ -3,17 +3,13 @@ package com.school.management.application.events;
 import com.school.management.domain.organization.event.*;
 import com.school.management.infrastructure.event.DomainEventStore;
 import com.school.management.infrastructure.external.NotificationService;
-import com.school.management.service.OperationLogService;
-import com.school.management.entity.OperationLog;
+import com.school.management.infrastructure.audit.AuditLogService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.event.EventListener;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Component;
 
-import java.time.LocalDateTime;
-import java.util.Collections;
 
 /**
  * 组织管理领域事件处理器
@@ -29,7 +25,7 @@ public class OrganizationEventHandler {
 
     private final DomainEventStore eventStore;
     private final NotificationService notificationService;
-    private final OperationLogService operationLogService;
+    private final AuditLogService auditLogService;
 
     /**
      * 处理组织单元创建事件
@@ -209,16 +205,9 @@ public class OrganizationEventHandler {
      */
     private void saveOperationLog(String operationType, String targetType, Long targetId, String description) {
         try {
-            OperationLog operationLog = new OperationLog();
-            operationLog.setOperationType(operationType);
-            operationLog.setOperationModule(targetType);
-            operationLog.setOperationName(description);
-            operationLog.setUserId(0L); // 系统操作
-            operationLog.setUsername("SYSTEM");
-            operationLog.setRealName("系统");
-            operationLogService.saveLog(operationLog);
+            auditLogService.logCreate(targetType, targetId != null ? String.valueOf(targetId) : "", description, null, description);
         } catch (Exception e) {
-            OrganizationEventHandler.log.warn("保存操作日志失败: {}", e.getMessage());
+            log.warn("保存操作日志失败: {}", e.getMessage());
         }
     }
 }

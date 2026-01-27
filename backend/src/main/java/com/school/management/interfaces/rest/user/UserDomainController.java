@@ -1,6 +1,6 @@
 package com.school.management.interfaces.rest.user;
 
-import com.school.management.annotation.OperationLog;
+import com.school.management.infrastructure.audit.annotation.OperationLog;
 import com.school.management.application.user.UserApplicationService;
 import com.school.management.application.user.command.CreateUserCommand;
 import com.school.management.application.user.command.UpdateUserCommand;

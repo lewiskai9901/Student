@@ -1,38 +1,32 @@
 package com.school.management.infrastructure.external.impl;
 
-import com.school.management.dto.wechat.TemplateMessageDTO;
-import com.school.management.entity.task.SystemMessage;
-import com.school.management.entity.User;
 import com.school.management.infrastructure.external.NotificationService;
-import com.school.management.mapper.task.SystemMessageMapper;
-import com.school.management.mapper.UserMapper;
-import com.school.management.service.WechatService;
+import com.school.management.infrastructure.external.SystemMessageDomainMapper;
+import com.school.management.infrastructure.external.SystemMessagePO;
+import com.school.management.infrastructure.persistence.user.UserDomainMapper;
+import com.school.management.infrastructure.persistence.user.UserPO;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
-import java.time.LocalDateTime;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
 /**
  * 通知服务实现
- * 支持站内消息、微信模板消息和短信发送
+ * 支持站内消息和短信发送
+ *
+ * TODO: 微信模板消息功能待DDD迁移后重新集成（原WechatService + TemplateMessageDTO属于V1层）
  */
 @Slf4j
 @Service("dddNotificationService")
 @RequiredArgsConstructor
 public class NotificationServiceImpl implements NotificationService {
 
-    private final SystemMessageMapper systemMessageMapper;
-    private final UserMapper userMapper;
-
-    @Autowired(required = false)
-    private WechatService wechatService;
+    private final SystemMessageDomainMapper systemMessageDomainMapper;
+    private final UserDomainMapper userDomainMapper;
 
     @Value("${sms.enabled:false}")
     private boolean smsEnabled;
@@ -47,14 +41,14 @@ public class NotificationServiceImpl implements NotificationService {
     @Async
     public void sendInAppMessage(Long userId, String title, String content, String type) {
         try {
-            SystemMessage message = new SystemMessage();
+            SystemMessagePO message = new SystemMessagePO();
             message.setReceiverId(userId);
             message.setTitle(title);
             message.setContent(content);
             message.setMessageType(type);
             message.setIsRead(0);  // 0-未读, 1-已读
 
-            systemMessageMapper.insert(message);
+            systemMessageDomainMapper.insert(message);
             log.debug("Sent in-app message to user {}: {}", userId, title);
         } catch (Exception e) {
             log.error("Failed to send in-app message to user {}", userId, e);
@@ -73,43 +67,17 @@ public class NotificationServiceImpl implements NotificationService {
     @Async
     public void sendWechatTemplate(Long userId, String templateId, Map<String, String> data, String url) {
         try {
-            // 检查微信服务是否可用
-            if (wechatService == null || !wechatService.isConfigured()) {
-                log.debug("微信服务未配置，跳过微信通知: userId={}", userId);
-                return;
-            }
-
-            // 获取用户的OpenID
-            User user = userMapper.selectById(userId);
+            // 获取用户信息检查微信绑定状态
+            UserPO user = userDomainMapper.selectById(userId);
             if (user == null || user.getWechatOpenid() == null || user.getWechatOpenid().isEmpty()) {
                 log.debug("用户未绑定微信，跳过微信通知: userId={}", userId);
                 return;
             }
 
-            // 构建模板消息
-            Map<String, TemplateMessageDTO.TemplateData> templateData = new HashMap<>();
-            if (data != null) {
-                data.forEach((key, value) ->
-                        templateData.put(key, new TemplateMessageDTO.TemplateData(value)));
-            }
-
-            TemplateMessageDTO message = TemplateMessageDTO.builder()
-                    .touser(user.getWechatOpenid())
-                    .template_id(templateId)
-                    .url(url)
-                    .data(templateData)
-                    .build();
-
-            // 发送模板消息
-            Map<String, Object> result = wechatService.sendTemplateMessage(message);
-            Integer errcode = (Integer) result.get("errcode");
-
-            if (errcode != null && errcode == 0) {
-                log.info("微信模板消息发送成功: userId={}, templateId={}", userId, templateId);
-            } else {
-                log.warn("微信模板消息发送失败: userId={}, templateId={}, result={}",
-                        userId, templateId, result);
-            }
+            // TODO: 微信模板消息发送待DDD迁移后重新集成
+            // 原实现依赖V1的 WechatService 和 TemplateMessageDTO
+            // 需要在DDD基础设施层创建对应的微信服务接口和实现
+            log.info("微信模板消息发送暂未实现（DDD迁移中）: userId={}, templateId={}", userId, templateId);
         } catch (Exception e) {
             log.error("发送微信模板消息异常: userId={}", userId, e);
         }

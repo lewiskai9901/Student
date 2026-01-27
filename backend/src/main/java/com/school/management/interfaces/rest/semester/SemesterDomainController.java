@@ -1,6 +1,6 @@
 package com.school.management.interfaces.rest.semester;
 
-import com.school.management.annotation.OperationLog;
+import com.school.management.infrastructure.audit.annotation.OperationLog;
 import com.school.management.application.semester.SemesterApplicationService;
 import com.school.management.application.semester.command.CreateSemesterCommand;
 import com.school.management.application.semester.command.UpdateSemesterCommand;

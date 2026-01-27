@@ -4,8 +4,8 @@ import com.school.management.domain.organization.model.ClassStatus;
 import com.school.management.domain.organization.model.SchoolClass;
 import com.school.management.domain.organization.model.TeacherAssignment;
 import com.school.management.domain.organization.repository.SchoolClassRepository;
-import com.school.management.entity.User;
-import com.school.management.mapper.UserMapper;
+import com.school.management.infrastructure.persistence.user.UserDomainMapper;
+import com.school.management.infrastructure.persistence.user.UserPO;
 import org.springframework.stereotype.Repository;
 
 import java.time.LocalDate;
@@ -22,11 +22,11 @@ import java.util.stream.Collectors;
 public class SchoolClassRepositoryImpl implements SchoolClassRepository {
 
     private final SchoolClassMapper classMapper;
-    private final UserMapper userMapper;
+    private final UserDomainMapper userDomainMapper;
 
-    public SchoolClassRepositoryImpl(SchoolClassMapper classMapper, UserMapper userMapper) {
+    public SchoolClassRepositoryImpl(SchoolClassMapper classMapper, UserDomainMapper userDomainMapper) {
         this.classMapper = classMapper;
-        this.userMapper = userMapper;
+        this.userDomainMapper = userDomainMapper;
     }
 
     @Override
@@ -256,7 +256,7 @@ public class SchoolClassRepositoryImpl implements SchoolClassRepository {
         if (teacherId == null) {
             return null;
         }
-        User user = userMapper.selectById(teacherId);
+        UserPO user = userDomainMapper.selectById(teacherId);
         return user != null ? user.getRealName() : null;
     }
 

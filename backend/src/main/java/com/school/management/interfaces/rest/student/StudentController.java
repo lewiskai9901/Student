@@ -6,27 +6,15 @@ import com.school.management.application.student.query.StudentDTO;
 import com.school.management.application.student.query.StudentQueryCriteria;
 import com.school.management.common.PageResult;
 import com.school.management.common.result.Result;
-import com.school.management.dto.StudentQueryRequest;
-import com.school.management.dto.StudentResponse;
 import com.school.management.interfaces.rest.student.dto.EnrollStudentRequest;
 import com.school.management.interfaces.rest.student.dto.UpdateStudentRequest;
-import com.school.management.service.StudentService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.MediaType;
-import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
-import org.springframework.web.multipart.MultipartFile;
 
-import java.io.IOException;
-import java.net.URLEncoder;
-import java.nio.charset.StandardCharsets;
-import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
 import java.util.List;
 
 /**
@@ -39,7 +27,6 @@ import java.util.List;
 public class StudentController {
 
     private final StudentApplicationService studentService;
-    private final StudentService studentServiceV1; // V1服务，用于导入导出等功能
 
     // ==================== 基础CRUD ====================
 
@@ -301,96 +288,6 @@ public class StudentController {
         return Result.success(count);
     }
 
-    // ==================== 搜索、导入导出 (委托V1服务) ====================
-
-    @Operation(summary = "快速搜索学生")
-    @GetMapping("/search")
-    @PreAuthorize("hasAuthority('student:info:view')")
-    public Result<List<StudentResponse>> searchStudents(
-            @Parameter(description = "关键字") @RequestParam String keyword,
-            @Parameter(description = "班级ID") @RequestParam(required = false) Long classId,
-            @Parameter(description = "限制数量") @RequestParam(defaultValue = "10") Integer limit) {
-        List<StudentResponse> result = studentServiceV1.searchStudents(keyword, classId, limit);
-        return Result.success(result);
-    }
-
-    @Operation(summary = "统计宿舍学生数量")
-    @GetMapping("/count/by-dormitory")
-    @PreAuthorize("hasAuthority('student:info:view')")
-    public Result<Integer> countByDormitory(
-            @Parameter(description = "宿舍ID") @RequestParam Long dormitoryId) {
-        Integer count = studentServiceV1.countStudentsByDormitoryId(dormitoryId);
-        return Result.success(count);
-    }
-
-    @Operation(summary = "重置学生密码")
-    @PatchMapping("/{id}/reset-password")
-    @PreAuthorize("hasAuthority('student:update')")
-    public Result<Void> resetPassword(
-            @Parameter(description = "学生ID") @PathVariable Long id,
-            @RequestBody java.util.Map<String, String> request) {
-        String newPassword = request.get("newPassword");
-        studentServiceV1.resetPassword(id, newPassword);
-        return Result.success();
-    }
-
-    @Operation(summary = "导出学生数据")
-    @GetMapping("/export")
-    @PreAuthorize("hasAuthority('student:info:export')")
-    public ResponseEntity<byte[]> exportStudents(StudentQueryRequest request) throws IOException {
-        byte[] data = studentServiceV1.exportStudents(request);
-        String filename = "学生数据_" + LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMddHHmmss")) + ".xlsx";
-        return ResponseEntity.ok()
-                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=" + URLEncoder.encode(filename, StandardCharsets.UTF_8))
-                .contentType(MediaType.APPLICATION_OCTET_STREAM)
-                .body(data);
-    }
-
-    @Operation(summary = "下载导入模板")
-    @GetMapping("/template")
-    @PreAuthorize("hasAuthority('student:info:import')")
-    public ResponseEntity<byte[]> downloadTemplate() throws IOException {
-        byte[] data = studentServiceV1.getImportTemplate();
-        String filename = "学生导入模板.xlsx";
-        return ResponseEntity.ok()
-                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=" + URLEncoder.encode(filename, StandardCharsets.UTF_8))
-                .contentType(MediaType.APPLICATION_OCTET_STREAM)
-                .body(data);
-    }
-
-    @Operation(summary = "导入学生数据")
-    @PostMapping("/import")
-    @PreAuthorize("hasAuthority('student:info:import')")
-    public Result<String> importStudents(@RequestParam("file") MultipartFile file) throws IOException {
-        String result = studentServiceV1.importStudents(file);
-        return Result.success(result);
-    }
-
-    @Operation(summary = "预览导入数据")
-    @PostMapping("/import/preview")
-    @PreAuthorize("hasAuthority('student:info:import')")
-    public Result<Object> previewImportData(@RequestParam("file") MultipartFile file) throws IOException {
-        Object result = studentServiceV1.previewImportData(file);
-        return Result.success(result);
-    }
-
-    @Operation(summary = "确认导入数据")
-    @PostMapping("/import/confirm")
-    @PreAuthorize("hasAuthority('student:info:import')")
-    public Result<Object> confirmImport(@RequestBody List<java.util.Map<String, Object>> data) throws IOException {
-        Object result = studentServiceV1.confirmImport(data);
-        return Result.success(result);
-    }
-
-    @Operation(summary = "导出导入失败的数据")
-    @PostMapping("/import/export-failed")
-    @PreAuthorize("hasAuthority('student:info:import')")
-    public ResponseEntity<byte[]> exportFailedData(@RequestBody List<java.util.Map<String, Object>> data) throws IOException {
-        byte[] result = studentServiceV1.exportFailedData(data);
-        String filename = "导入失败数据_" + LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMddHHmmss")) + ".xlsx";
-        return ResponseEntity.ok()
-                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=" + URLEncoder.encode(filename, StandardCharsets.UTF_8))
-                .contentType(MediaType.APPLICATION_OCTET_STREAM)
-                .body(result);
-    }
+    // NOTE: Import/export and search functionality will be re-added via DDD application services.
+    // V1 StudentService dependency has been removed.
 }

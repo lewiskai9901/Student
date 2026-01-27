@@ -1,6 +1,6 @@
 package com.school.management.application.access;
 
-import com.school.management.casbin.model.DataScope;
+import com.school.management.domain.access.model.DataScope;
 import com.school.management.domain.access.model.RoleType;
 import lombok.Builder;
 import lombok.Data;

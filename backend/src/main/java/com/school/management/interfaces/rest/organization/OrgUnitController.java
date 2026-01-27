@@ -8,7 +8,7 @@ import com.school.management.application.organization.query.OrgUnitTreeDTO;
 import com.school.management.common.result.Result;
 import com.school.management.domain.organization.model.OrgUnitType;
 import com.school.management.domain.organization.model.UnitCategory;
-import com.school.management.util.SecurityUtils;
+import com.school.management.common.util.SecurityUtils;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;

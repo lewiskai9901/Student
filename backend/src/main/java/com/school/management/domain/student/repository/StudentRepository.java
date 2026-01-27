@@ -2,6 +2,7 @@ package com.school.management.domain.student.repository;
 
 import com.school.management.domain.shared.Repository;
 import com.school.management.domain.student.model.aggregate.Student;
+import com.school.management.domain.student.model.valueobject.Gender;
 import com.school.management.domain.student.model.valueobject.StudentStatus;
 
 import java.util.List;
@@ -56,6 +57,13 @@ public interface StudentRepository extends Repository<Student, Long> {
      * 统计班级在读学生数量
      */
     long countActiveByClassId(Long classId);
+
+    /**
+     * 统计班级中指定性别的学生数量
+     * @param classId 班级ID
+     * @param gender 性别枚举
+     */
+    long countByClassIdAndGender(Long classId, Gender gender);
 
     /**
      * 分页查询

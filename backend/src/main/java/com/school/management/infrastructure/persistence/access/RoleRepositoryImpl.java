@@ -1,6 +1,6 @@
 package com.school.management.infrastructure.persistence.access;
 
-import com.school.management.casbin.model.DataScope;
+import com.school.management.domain.access.model.DataScope;
 import com.school.management.domain.access.model.Role;
 import com.school.management.domain.access.model.RoleType;
 import com.school.management.domain.access.repository.RoleRepository;

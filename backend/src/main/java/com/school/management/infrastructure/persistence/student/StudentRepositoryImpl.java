@@ -101,6 +101,11 @@ public class StudentRepositoryImpl implements StudentRepository {
     }
 
     @Override
+    public long countByClassIdAndGender(Long classId, Gender gender) {
+        return studentMapper.countByClassIdAndGender(classId, gender.getCode());
+    }
+
+    @Override
     public List<Student> findByPage(StudentQueryCriteria criteria, int pageNum, int pageSize) {
         int offset = (pageNum - 1) * pageSize;
 

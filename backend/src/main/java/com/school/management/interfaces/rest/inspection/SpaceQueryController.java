@@ -1,10 +1,10 @@
 package com.school.management.interfaces.rest.inspection;
 
 import com.school.management.common.result.Result;
-import com.school.management.mapper.BuildingMapper;
-import com.school.management.mapper.DormitoryMapper;
-import com.school.management.entity.Building;
-import com.school.management.entity.Dormitory;
+import com.school.management.domain.asset.model.aggregate.Building;
+import com.school.management.domain.asset.model.aggregate.Dormitory;
+import com.school.management.domain.asset.repository.BuildingRepository;
+import com.school.management.domain.asset.repository.DormitoryRepository;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -20,19 +20,19 @@ import java.util.List;
 @Tag(name = "Inspection Spaces", description = "Space query API for inspection workflows")
 public class SpaceQueryController {
 
-    private final BuildingMapper buildingMapper;
-    private final DormitoryMapper dormitoryMapper;
+    private final BuildingRepository buildingRepository;
+    private final DormitoryRepository dormitoryRepository;
 
-    public SpaceQueryController(BuildingMapper buildingMapper, DormitoryMapper dormitoryMapper) {
-        this.buildingMapper = buildingMapper;
-        this.dormitoryMapper = dormitoryMapper;
+    public SpaceQueryController(BuildingRepository buildingRepository, DormitoryRepository dormitoryRepository) {
+        this.buildingRepository = buildingRepository;
+        this.dormitoryRepository = dormitoryRepository;
     }
 
     @GetMapping("/buildings")
     @Operation(summary = "List all buildings for inspection")
     @PreAuthorize("hasAuthority('inspection:record:view')")
     public Result<List<Building>> getBuildings() {
-        List<Building> buildings = buildingMapper.selectList(null);
+        List<Building> buildings = buildingRepository.findAllActive();
         return Result.success(buildings);
     }
 
@@ -42,17 +42,19 @@ public class SpaceQueryController {
     public Result<List<Dormitory>> getRooms(
             @RequestParam(required = false) Long buildingId,
             @RequestParam(required = false) Integer floor) {
-        // Simple query - fetch dormitories with optional building/floor filter
-        var wrapper = new com.baomidou.mybatisplus.core.conditions.query.QueryWrapper<Dormitory>();
-        if (buildingId != null) {
-            wrapper.eq("building_id", buildingId);
+        List<Dormitory> rooms;
+        if (buildingId != null && floor != null) {
+            rooms = dormitoryRepository.findByBuildingIdAndFloor(buildingId, floor);
+        } else if (buildingId != null) {
+            rooms = dormitoryRepository.findByBuildingId(buildingId);
+        } else {
+            // No building filter - use page query with criteria
+            DormitoryRepository.DormitoryQueryCriteria criteria = new DormitoryRepository.DormitoryQueryCriteria();
+            if (floor != null) {
+                criteria.setFloorNumber(floor);
+            }
+            rooms = dormitoryRepository.findByPage(criteria, 1, 1000);
         }
-        if (floor != null) {
-            wrapper.eq("floor", floor);
-        }
-        wrapper.eq("deleted", 0);
-        wrapper.orderByAsc("room_no");
-        List<Dormitory> rooms = dormitoryMapper.selectList(wrapper);
         return Result.success(rooms);
     }
 }

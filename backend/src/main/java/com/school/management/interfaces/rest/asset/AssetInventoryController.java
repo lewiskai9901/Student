@@ -5,7 +5,7 @@ import com.school.management.application.asset.AssetInventoryApplicationService;
 import com.school.management.application.asset.command.CreateInventoryCommand;
 import com.school.management.application.asset.query.AssetInventoryDTO;
 import com.school.management.common.result.Result;
-import com.school.management.util.SecurityUtils;
+import com.school.management.common.util.SecurityUtils;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;

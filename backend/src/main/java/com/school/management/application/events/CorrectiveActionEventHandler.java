@@ -7,8 +7,7 @@ import com.school.management.domain.corrective.repository.AutoActionRuleReposito
 import com.school.management.domain.inspection.event.SessionPublishedEvent;
 import com.school.management.infrastructure.event.DomainEventStore;
 import com.school.management.infrastructure.external.NotificationService;
-import com.school.management.service.OperationLogService;
-import com.school.management.entity.OperationLog;
+import com.school.management.infrastructure.audit.AuditLogService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.event.EventListener;
@@ -24,7 +23,7 @@ public class CorrectiveActionEventHandler {
 
     private final DomainEventStore eventStore;
     private final NotificationService notificationService;
-    private final OperationLogService operationLogService;
+    private final AuditLogService auditLogService;
     private final AutoActionRuleRepository ruleRepository;
 
     @Async
@@ -142,14 +141,7 @@ public class CorrectiveActionEventHandler {
 
     private void saveOperationLog(String operationType, String targetType, Long targetId, String description) {
         try {
-            OperationLog operationLog = new OperationLog();
-            operationLog.setOperationType(operationType);
-            operationLog.setOperationModule(targetType);
-            operationLog.setOperationName(description);
-            operationLog.setUserId(0L);
-            operationLog.setUsername("SYSTEM");
-            operationLog.setRealName("系统");
-            operationLogService.saveLog(operationLog);
+            auditLogService.logCreate(targetType, targetId != null ? String.valueOf(targetId) : "", description, null, description);
         } catch (Exception e) {
             log.warn("保存操作日志失败: {}", e.getMessage());
         }

@@ -3,12 +3,13 @@ package com.school.management.interfaces.rest.organization;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.school.management.common.result.Result;
+import com.school.management.common.util.SecurityUtils;
 import com.school.management.domain.organization.model.ClassStatus;
+import com.school.management.domain.organization.model.OrgUnit;
 import com.school.management.domain.organization.model.SchoolClass;
 import com.school.management.domain.organization.model.TeacherAssignment;
+import com.school.management.domain.organization.repository.OrgUnitRepository;
 import com.school.management.domain.organization.repository.SchoolClassRepository;
-import com.school.management.entity.Department;
-import com.school.management.mapper.DepartmentMapper;
 import com.school.management.infrastructure.persistence.organization.MajorDirectionPersistenceMapper;
 import com.school.management.infrastructure.persistence.organization.MajorDirectionPO;
 import com.school.management.infrastructure.persistence.organization.MajorPersistenceMapper;
@@ -18,11 +19,11 @@ import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -37,7 +38,7 @@ import java.util.stream.Collectors;
 public class SchoolClassController {
 
     private final SchoolClassRepository schoolClassRepository;
-    private final DepartmentMapper departmentMapper;
+    private final OrgUnitRepository orgUnitRepository;
     private final MajorDirectionPersistenceMapper majorDirectionMapper;
     private final MajorPersistenceMapper majorMapper;
 
@@ -322,10 +323,7 @@ public class SchoolClassController {
 
     private Long getCurrentUserId() {
         try {
-            Object principal = SecurityContextHolder.getContext().getAuthentication().getPrincipal();
-            if (principal instanceof com.school.management.security.CustomUserDetails) {
-                return ((com.school.management.security.CustomUserDetails) principal).getId();
-            }
+            return SecurityUtils.getCurrentUserId();
         } catch (Exception e) {
             log.warn("Cannot get current user id", e);
         }
@@ -335,21 +333,24 @@ public class SchoolClassController {
     private Map<Long, String> getOrgUnitNameMap(List<SchoolClass> classes) {
         Set<Long> orgUnitIds = classes.stream()
                 .map(SchoolClass::getOrgUnitId)
-                .filter(id -> id != null)
+                .filter(Objects::nonNull)
                 .collect(Collectors.toSet());
         if (orgUnitIds.isEmpty()) {
             return Map.of();
         }
-        return departmentMapper.selectBatchIds(orgUnitIds).stream()
-                .collect(Collectors.toMap(Department::getId, Department::getDeptName, (a, b) -> a));
+        return orgUnitIds.stream()
+                .map(id -> orgUnitRepository.findById(id).orElse(null))
+                .filter(Objects::nonNull)
+                .collect(Collectors.toMap(OrgUnit::getId, OrgUnit::getUnitName, (a, b) -> a));
     }
 
     private String getOrgUnitName(Long orgUnitId) {
         if (orgUnitId == null) {
             return null;
         }
-        Department dept = departmentMapper.selectById(orgUnitId);
-        return dept != null ? dept.getDeptName() : null;
+        return orgUnitRepository.findById(orgUnitId)
+                .map(OrgUnit::getUnitName)
+                .orElse(null);
     }
 
     /**

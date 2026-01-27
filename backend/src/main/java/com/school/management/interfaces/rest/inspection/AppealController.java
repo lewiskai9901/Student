@@ -5,13 +5,11 @@ import com.school.management.domain.inspection.model.Appeal;
 import com.school.management.domain.inspection.model.AppealStatus;
 import com.school.management.domain.inspection.repository.AppealRepository;
 import com.school.management.domain.shared.event.DomainEventPublisher;
-import com.school.management.service.DailyCheckService;
-import com.school.management.util.SecurityUtils;
+import com.school.management.common.util.SecurityUtils;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
@@ -32,9 +30,6 @@ public class AppealController {
 
     private final AppealRepository appealRepository;
     private final DomainEventPublisher eventPublisher;
-
-    @Autowired(required = false)
-    private DailyCheckService dailyCheckService;
 
     public AppealController(AppealRepository appealRepository,
                            DomainEventPublisher eventPublisher) {

@@ -10,15 +10,15 @@ import com.school.management.domain.asset.model.valueobject.*;
 import com.school.management.domain.asset.repository.BuildingRepository;
 import com.school.management.domain.asset.repository.DormitoryRepository;
 import com.school.management.domain.shared.event.DomainEventPublisher;
-import com.school.management.entity.ClassDormitoryBinding;
-import com.school.management.entity.User;
 import com.school.management.exception.BusinessException;
+import com.school.management.infrastructure.persistence.asset.ClassDormitoryBindingDomainMapper;
+import com.school.management.infrastructure.persistence.asset.ClassDormitoryBindingPO;
 import com.school.management.infrastructure.persistence.organization.OrgUnitMapper;
 import com.school.management.infrastructure.persistence.organization.OrgUnitPO;
-import com.school.management.mapper.ClassDormitoryBindingMapper;
-import com.school.management.mapper.ClassMapper;
-import com.school.management.mapper.UserMapper;
-import com.school.management.dto.ClassResponse;
+import com.school.management.infrastructure.persistence.organization.SchoolClassMapper;
+import com.school.management.infrastructure.persistence.organization.SchoolClassPO;
+import com.school.management.infrastructure.persistence.user.UserDomainMapper;
+import com.school.management.infrastructure.persistence.user.UserPO;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -38,9 +38,9 @@ public class AssetApplicationService {
     private final BuildingRepository buildingRepository;
     private final DormitoryRepository dormitoryRepository;
     private final DomainEventPublisher eventPublisher;
-    private final ClassDormitoryBindingMapper classDormitoryBindingMapper;
-    private final ClassMapper classMapper;
-    private final UserMapper userMapper;
+    private final ClassDormitoryBindingDomainMapper classDormitoryBindingMapper;
+    private final SchoolClassMapper schoolClassMapper;
+    private final UserDomainMapper userDomainMapper;
     private final OrgUnitMapper orgUnitMapper;
 
     // ============ 楼宇管理 ============
@@ -368,33 +368,33 @@ public class AssetApplicationService {
         String classTeacherPhones = null;
 
         if (dormitory.getId() != null) {
-            List<ClassDormitoryBinding> bindings = classDormitoryBindingMapper.selectByDormitoryId(dormitory.getId());
+            List<ClassDormitoryBindingPO> bindings = classDormitoryBindingMapper.selectByDormitoryId(dormitory.getId());
             if (bindings != null && !bindings.isEmpty()) {
                 List<Long> classIds = bindings.stream()
-                        .map(ClassDormitoryBinding::getClassId)
+                        .map(ClassDormitoryBindingPO::getClassId)
                         .distinct()
                         .collect(Collectors.toList());
 
-                // 获取班级详情（包含班主任信息）
-                List<ClassResponse> classes = classMapper.selectClassResponseByIds(classIds);
+                // 获取班级详情（使用DDD基础设施层SchoolClassMapper）
+                List<SchoolClassPO> classes = schoolClassMapper.selectBatchIds(classIds);
                 if (classes != null && !classes.isEmpty()) {
                     assignedClassIds = classes.stream()
                             .map(c -> String.valueOf(c.getId()))
                             .collect(Collectors.joining(","));
                     assignedClassNames = classes.stream()
-                            .map(ClassResponse::getClassName)
+                            .map(SchoolClassPO::getClassName)
                             .collect(Collectors.joining(", "));
 
                     // 获取班主任信息
                     Set<Long> teacherIds = classes.stream()
-                            .map(ClassResponse::getTeacherId)
+                            .map(SchoolClassPO::getTeacherId)
                             .filter(Objects::nonNull)
                             .collect(Collectors.toSet());
 
                     if (!teacherIds.isEmpty()) {
-                        List<User> teachers = new ArrayList<>();
+                        List<UserPO> teachers = new ArrayList<>();
                         for (Long teacherId : teacherIds) {
-                            User teacher = userMapper.selectById(teacherId);
+                            UserPO teacher = userDomainMapper.selectById(teacherId);
                             if (teacher != null) {
                                 teachers.add(teacher);
                             }
@@ -402,12 +402,12 @@ public class AssetApplicationService {
 
                         if (!teachers.isEmpty()) {
                             classTeacherNames = teachers.stream()
-                                    .map(User::getRealName)
+                                    .map(UserPO::getRealName)
                                     .filter(Objects::nonNull)
                                     .distinct()
                                     .collect(Collectors.joining(", "));
                             classTeacherPhones = teachers.stream()
-                                    .map(User::getPhone)
+                                    .map(UserPO::getPhone)
                                     .filter(Objects::nonNull)
                                     .distinct()
                                     .collect(Collectors.joining(", "));
