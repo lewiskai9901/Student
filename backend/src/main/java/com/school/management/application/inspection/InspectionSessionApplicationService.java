@@ -2,6 +2,7 @@ package com.school.management.application.inspection;
 
 import com.school.management.application.inspection.command.*;
 import com.school.management.domain.inspection.model.*;
+import com.school.management.domain.inspection.repository.BonusItemRepository;
 import com.school.management.domain.inspection.repository.ClassInspectionRecordRepository;
 import com.school.management.domain.inspection.repository.InspectionSessionRepository;
 import com.school.management.domain.inspection.repository.InspectionTemplateRepository;
@@ -29,6 +30,7 @@ public class InspectionSessionApplicationService {
     private final InspectionSessionRepository sessionRepository;
     private final ClassInspectionRecordRepository classRecordRepository;
     private final InspectionTemplateRepository templateRepository;
+    private final BonusItemRepository bonusItemRepository;
     private final SpaceToOrgResolver spaceToOrgResolver;
     private final DomainEventPublisher eventPublisher;
 
@@ -36,11 +38,13 @@ public class InspectionSessionApplicationService {
             InspectionSessionRepository sessionRepository,
             ClassInspectionRecordRepository classRecordRepository,
             InspectionTemplateRepository templateRepository,
+            BonusItemRepository bonusItemRepository,
             SpaceToOrgResolver spaceToOrgResolver,
             DomainEventPublisher eventPublisher) {
         this.sessionRepository = sessionRepository;
         this.classRecordRepository = classRecordRepository;
         this.templateRepository = templateRepository;
+        this.bonusItemRepository = bonusItemRepository;
         this.spaceToOrgResolver = spaceToOrgResolver;
         this.eventPublisher = eventPublisher;
     }
@@ -68,6 +72,7 @@ public class InspectionSessionApplicationService {
             command.getInputMode() != null ? command.getInputMode() : InputMode.SPACE_FIRST,
             command.getScoringMode() != null ? command.getScoringMode() : ScoringMode.DEDUCTION_ONLY,
             command.getBaseScore() != null ? command.getBaseScore() : 100,
+            command.getInspectionLevel() != null ? command.getInspectionLevel() : InspectionLevel.CLASS,
             command.getInspectorId(),
             command.getInspectorName(),
             command.getCreatedBy()
@@ -320,6 +325,47 @@ public class InspectionSessionApplicationService {
     @Transactional(readOnly = true)
     public List<InspectionSession> listSessionsByDateRange(LocalDate startDate, LocalDate endDate) {
         return sessionRepository.findByDateRange(startDate, endDate);
+    }
+
+    /**
+     * Records a bonus for a class within a session.
+     * Only allowed in DUAL_TRACK scoring mode.
+     */
+    public ClassInspectionRecord recordBonus(RecordBonusCommand command) {
+        InspectionSession session = getSessionOrThrow(command.getSessionId());
+        ensureSessionEditable(session);
+
+        if (session.getScoringMode() != ScoringMode.DUAL_TRACK) {
+            throw new IllegalStateException("Bonus recording is only allowed in DUAL_TRACK scoring mode");
+        }
+
+        if (session.getStatus() == SessionStatus.CREATED) {
+            session.startInspection();
+            sessionRepository.save(session);
+        }
+
+        // Validate bonus item exists
+        BonusItem bonusItem = bonusItemRepository.findById(command.getBonusItemId())
+            .orElseThrow(() -> new IllegalArgumentException("Bonus item not found: " + command.getBonusItemId()));
+
+        ClassInspectionRecord classRecord = classRecordRepository
+            .findBySessionIdAndClassId(command.getSessionId(), command.getClassId())
+            .orElseThrow(() -> new IllegalArgumentException(
+                "Class record not found for session " + command.getSessionId() + " and class " + command.getClassId()));
+
+        InspectionBonus bonus = InspectionBonus.builder()
+            .sessionId(session.getId())
+            .classRecordId(classRecord.getId())
+            .classId(command.getClassId())
+            .bonusItemId(command.getBonusItemId())
+            .bonusScore(command.getBonusScore())
+            .reason(command.getReason())
+            .recordedBy(command.getRecordedBy())
+            .build();
+
+        classRecord.addBonus(bonus);
+        classRecordRepository.save(classRecord);
+        return classRecord;
     }
 
     // ==================== Private Helpers ====================

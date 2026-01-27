@@ -23,6 +23,7 @@ public class InspectionSession extends AggregateRoot<Long> {
     private InputMode inputMode;
     private ScoringMode scoringMode;
     private Integer baseScore;
+    private InspectionLevel inspectionLevel;
     private SessionStatus status;
     private Long inspectorId;
     private String inspectorName;
@@ -46,6 +47,7 @@ public class InspectionSession extends AggregateRoot<Long> {
         this.inputMode = builder.inputMode != null ? builder.inputMode : InputMode.SPACE_FIRST;
         this.scoringMode = builder.scoringMode != null ? builder.scoringMode : ScoringMode.DEDUCTION_ONLY;
         this.baseScore = builder.baseScore != null ? builder.baseScore : 100;
+        this.inspectionLevel = builder.inspectionLevel != null ? builder.inspectionLevel : InspectionLevel.CLASS;
         this.status = builder.status != null ? builder.status : SessionStatus.CREATED;
         this.inspectorId = builder.inspectorId;
         this.inspectorName = builder.inspectorName;
@@ -67,6 +69,7 @@ public class InspectionSession extends AggregateRoot<Long> {
                                             Integer templateVersion, LocalDate inspectionDate,
                                             String inspectionPeriod, InputMode inputMode,
                                             ScoringMode scoringMode, Integer baseScore,
+                                            InspectionLevel inspectionLevel,
                                             Long inspectorId, String inspectorName,
                                             Long createdBy) {
         return builder()
@@ -78,6 +81,7 @@ public class InspectionSession extends AggregateRoot<Long> {
             .inputMode(inputMode)
             .scoringMode(scoringMode)
             .baseScore(baseScore)
+            .inspectionLevel(inspectionLevel)
             .inspectorId(inspectorId)
             .inspectorName(inspectorName)
             .createdBy(createdBy)
@@ -188,6 +192,10 @@ public class InspectionSession extends AggregateRoot<Long> {
         return baseScore;
     }
 
+    public InspectionLevel getInspectionLevel() {
+        return inspectionLevel;
+    }
+
     public SessionStatus getStatus() {
         return status;
     }
@@ -235,6 +243,7 @@ public class InspectionSession extends AggregateRoot<Long> {
         private InputMode inputMode;
         private ScoringMode scoringMode;
         private Integer baseScore;
+        private InspectionLevel inspectionLevel;
         private SessionStatus status;
         private Long inspectorId;
         private String inspectorName;
@@ -253,6 +262,7 @@ public class InspectionSession extends AggregateRoot<Long> {
         public Builder inputMode(InputMode inputMode) { this.inputMode = inputMode; return this; }
         public Builder scoringMode(ScoringMode scoringMode) { this.scoringMode = scoringMode; return this; }
         public Builder baseScore(Integer baseScore) { this.baseScore = baseScore; return this; }
+        public Builder inspectionLevel(InspectionLevel inspectionLevel) { this.inspectionLevel = inspectionLevel; return this; }
         public Builder status(SessionStatus status) { this.status = status; return this; }
         public Builder inspectorId(Long inspectorId) { this.inspectorId = inspectorId; return this; }
         public Builder inspectorName(String inspectorName) { this.inspectorName = inspectorName; return this; }

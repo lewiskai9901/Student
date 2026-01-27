@@ -18,4 +18,5 @@ public class CreateSessionRequest {
     private String inputMode;
     private String scoringMode;
     private Integer baseScore;
+    private String inspectionLevel;
 }

@@ -18,6 +18,7 @@ public class SessionResponse {
     private String inputMode;
     private String scoringMode;
     private Integer baseScore;
+    private String inspectionLevel;
     private String status;
     private Long inspectorId;
     private String inspectorName;
@@ -37,6 +38,7 @@ public class SessionResponse {
         r.setInputMode(session.getInputMode().name());
         r.setScoringMode(session.getScoringMode().name());
         r.setBaseScore(session.getBaseScore());
+        r.setInspectionLevel(session.getInspectionLevel() != null ? session.getInspectionLevel().name() : "CLASS");
         r.setStatus(session.getStatus().name());
         r.setInspectorId(session.getInspectorId());
         r.setInspectorName(session.getInspectorName());

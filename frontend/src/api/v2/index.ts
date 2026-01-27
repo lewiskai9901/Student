@@ -29,6 +29,15 @@ export * from './semester'
 // V4 检查会话
 export * from './inspectionSession'
 
+// 加分项配置
+export * from './bonusItem'
+
+// 班主任工作台
+export * from './teacherDashboard'
+
+// 系部排名
+export * from './departmentRanking'
+
 // 导出命名空间便于按模块调用
 import * as organizationApi from './organization'
 import * as inspectionApi from './inspection'
@@ -39,6 +48,9 @@ import * as taskApiModule from './task'
 import * as userApiModule from './user'
 import * as semesterApiModule from './semester'
 import * as inspectionSessionApiModule from './inspectionSession'
+import * as bonusItemApiModule from './bonusItem'
+import * as teacherDashboardApiModule from './teacherDashboard'
+import * as departmentRankingApiModule from './departmentRanking'
 
 export const v2Api = {
   organization: organizationApi,
@@ -49,7 +61,10 @@ export const v2Api = {
   task: taskApiModule,
   user: userApiModule,
   semester: semesterApiModule,
-  inspectionSession: inspectionSessionApiModule
+  inspectionSession: inspectionSessionApiModule,
+  bonusItem: bonusItemApiModule,
+  teacherDashboard: teacherDashboardApiModule,
+  departmentRanking: departmentRankingApiModule
 }
 
 export default v2Api

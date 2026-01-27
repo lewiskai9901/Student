@@ -9,6 +9,8 @@ import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
+
+
 /**
  * MyBatis Plus implementation of InspectionSessionRepository.
  */
@@ -93,6 +95,20 @@ public class InspectionSessionRepositoryImpl implements InspectionSessionReposit
         return sessionMapper.findBySessionCode(sessionCode) != null;
     }
 
+    @Override
+    public List<InspectionSession> findByInspectionLevel(InspectionLevel level) {
+        return sessionMapper.findByInspectionLevel(level.name()).stream()
+            .map(this::toDomain)
+            .collect(Collectors.toList());
+    }
+
+    @Override
+    public List<InspectionSession> findPublishedByDateRange(LocalDate startDate, LocalDate endDate) {
+        return sessionMapper.findPublishedByDateRange(startDate, endDate).stream()
+            .map(this::toDomain)
+            .collect(Collectors.toList());
+    }
+
     // ==================== Mapping Methods ====================
 
     private InspectionSessionPO toPO(InspectionSession domain) {
@@ -106,6 +122,7 @@ public class InspectionSessionRepositoryImpl implements InspectionSessionReposit
         po.setInputMode(domain.getInputMode().name());
         po.setScoringMode(domain.getScoringMode().name());
         po.setBaseScore(domain.getBaseScore());
+        po.setInspectionLevel(domain.getInspectionLevel() != null ? domain.getInspectionLevel().name() : "CLASS");
         po.setStatus(domain.getStatus().name());
         po.setInspectorId(domain.getInspectorId());
         po.setInspectorName(domain.getInspectorName());
@@ -128,6 +145,7 @@ public class InspectionSessionRepositoryImpl implements InspectionSessionReposit
             .inputMode(InputMode.valueOf(po.getInputMode()))
             .scoringMode(ScoringMode.valueOf(po.getScoringMode()))
             .baseScore(po.getBaseScore())
+            .inspectionLevel(po.getInspectionLevel() != null ? InspectionLevel.valueOf(po.getInspectionLevel()) : InspectionLevel.CLASS)
             .status(SessionStatus.valueOf(po.getStatus()))
             .inspectorId(po.getInspectorId())
             .inspectorName(po.getInspectorName())

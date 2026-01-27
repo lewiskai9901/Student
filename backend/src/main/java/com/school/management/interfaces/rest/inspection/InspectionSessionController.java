@@ -5,6 +5,7 @@ import com.school.management.application.inspection.command.*;
 import com.school.management.common.result.Result;
 import com.school.management.domain.inspection.model.*;
 import com.school.management.interfaces.rest.inspection.dto.*;
+import com.school.management.interfaces.rest.inspection.dto.RecordBonusRequest;
 import com.school.management.security.JwtTokenService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -47,6 +48,7 @@ public class InspectionSessionController {
             .inputMode(request.getInputMode() != null ? InputMode.valueOf(request.getInputMode()) : null)
             .scoringMode(request.getScoringMode() != null ? ScoringMode.valueOf(request.getScoringMode()) : null)
             .baseScore(request.getBaseScore())
+            .inspectionLevel(request.getInspectionLevel() != null ? InspectionLevel.valueOf(request.getInspectionLevel()) : null)
             .inspectorId(getCurrentUserId())
             .inspectorName(getCurrentUserName())
             .createdBy(getCurrentUserId())
@@ -176,6 +178,26 @@ public class InspectionSessionController {
     public Result<ChecklistProgressResponse> getChecklistProgress(@PathVariable Long id) {
         Map<String, Object> progress = sessionService.getChecklistProgress(id);
         return Result.success(ChecklistProgressResponse.from(progress));
+    }
+
+    @PostMapping("/{id}/bonuses")
+    @Operation(summary = "Record a bonus for a class in DUAL_TRACK mode")
+    @PreAuthorize("hasAuthority('inspection:record:edit')")
+    public Result<ClassRecordResponse> recordBonus(
+            @PathVariable Long id,
+            @Valid @RequestBody RecordBonusRequest request) {
+
+        RecordBonusCommand command = RecordBonusCommand.builder()
+            .sessionId(id)
+            .classId(request.getClassId())
+            .bonusItemId(request.getBonusItemId())
+            .bonusScore(request.getBonusScore())
+            .reason(request.getReason())
+            .recordedBy(getCurrentUserId())
+            .build();
+
+        ClassInspectionRecord record = sessionService.recordBonus(command);
+        return Result.success(ClassRecordResponse.fromDomain(record));
     }
 
     @PatchMapping("/{id}/status")

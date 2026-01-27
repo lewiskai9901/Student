@@ -31,10 +31,12 @@ public class ClassInspectionRecord extends AggregateRoot<Long> {
 
     private List<InspectionDeduction> deductions;
     private List<ChecklistResponse> checklistResponses;
+    private List<InspectionBonus> bonuses;
 
     protected ClassInspectionRecord() {
         this.deductions = new ArrayList<>();
         this.checklistResponses = new ArrayList<>();
+        this.bonuses = new ArrayList<>();
         this.totalDeduction = BigDecimal.ZERO;
         this.bonusScore = BigDecimal.ZERO;
         this.finalScore = BigDecimal.ZERO;
@@ -56,6 +58,7 @@ public class ClassInspectionRecord extends AggregateRoot<Long> {
         this.createdAt = builder.createdAt != null ? builder.createdAt : LocalDateTime.now();
         this.deductions = builder.deductions != null ? new ArrayList<>(builder.deductions) : new ArrayList<>();
         this.checklistResponses = builder.checklistResponses != null ? new ArrayList<>(builder.checklistResponses) : new ArrayList<>();
+        this.bonuses = builder.bonuses != null ? new ArrayList<>(builder.bonuses) : new ArrayList<>();
     }
 
     /**
@@ -101,6 +104,18 @@ public class ClassInspectionRecord extends AggregateRoot<Long> {
     }
 
     /**
+     * Adds a bonus to this class record.
+     */
+    public InspectionBonus addBonus(InspectionBonus bonus) {
+        this.bonuses.add(bonus);
+        recalculateScores();
+        if (this.status == ClassRecordStatus.PENDING) {
+            this.status = ClassRecordStatus.RECORDING;
+        }
+        return bonus;
+    }
+
+    /**
      * Marks this record as completed.
      */
     public void complete() {
@@ -109,7 +124,8 @@ public class ClassInspectionRecord extends AggregateRoot<Long> {
     }
 
     /**
-     * Recalculates totalDeduction and finalScore based on deductions and checklist auto-deductions.
+     * Recalculates totalDeduction, bonusScore, and finalScore based on
+     * deductions, checklist auto-deductions, and bonuses.
      */
     public void recalculateScores() {
         BigDecimal deductionSum = deductions.stream()
@@ -121,6 +137,11 @@ public class ClassInspectionRecord extends AggregateRoot<Long> {
             .reduce(BigDecimal.ZERO, BigDecimal::add);
 
         this.totalDeduction = deductionSum.add(checklistDeductionSum);
+
+        this.bonusScore = bonuses.stream()
+            .map(InspectionBonus::getBonusScore)
+            .reduce(BigDecimal.ZERO, BigDecimal::add);
+
         this.finalScore = new BigDecimal(this.baseScore)
             .subtract(this.totalDeduction)
             .add(this.bonusScore);
@@ -144,6 +165,7 @@ public class ClassInspectionRecord extends AggregateRoot<Long> {
     public LocalDateTime getCreatedAt() { return createdAt; }
     public List<InspectionDeduction> getDeductions() { return Collections.unmodifiableList(deductions); }
     public List<ChecklistResponse> getChecklistResponses() { return Collections.unmodifiableList(checklistResponses); }
+    public List<InspectionBonus> getBonuses() { return Collections.unmodifiableList(bonuses); }
 
     /**
      * Internal method for repository reconstruction of deductions.
@@ -157,6 +179,13 @@ public class ClassInspectionRecord extends AggregateRoot<Long> {
      */
     public void loadChecklistResponses(List<ChecklistResponse> responses) {
         this.checklistResponses = new ArrayList<>(responses);
+    }
+
+    /**
+     * Internal method for repository reconstruction of bonuses.
+     */
+    public void loadBonuses(List<InspectionBonus> bonuses) {
+        this.bonuses = new ArrayList<>(bonuses);
     }
 
     // Builder
@@ -178,6 +207,7 @@ public class ClassInspectionRecord extends AggregateRoot<Long> {
         private LocalDateTime createdAt;
         private List<InspectionDeduction> deductions;
         private List<ChecklistResponse> checklistResponses;
+        private List<InspectionBonus> bonuses;
 
         public Builder id(Long id) { this.id = id; return this; }
         public Builder sessionId(Long sessionId) { this.sessionId = sessionId; return this; }
@@ -194,6 +224,7 @@ public class ClassInspectionRecord extends AggregateRoot<Long> {
         public Builder createdAt(LocalDateTime createdAt) { this.createdAt = createdAt; return this; }
         public Builder deductions(List<InspectionDeduction> deductions) { this.deductions = deductions; return this; }
         public Builder checklistResponses(List<ChecklistResponse> checklistResponses) { this.checklistResponses = checklistResponses; return this; }
+        public Builder bonuses(List<InspectionBonus> bonuses) { this.bonuses = bonuses; return this; }
 
         public ClassInspectionRecord build() {
             return new ClassInspectionRecord(this);

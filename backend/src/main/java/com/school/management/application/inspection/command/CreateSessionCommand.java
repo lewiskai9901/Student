@@ -1,6 +1,7 @@
 package com.school.management.application.inspection.command;
 
 import com.school.management.domain.inspection.model.InputMode;
+import com.school.management.domain.inspection.model.InspectionLevel;
 import com.school.management.domain.inspection.model.ScoringMode;
 import lombok.Builder;
 import lombok.Data;
@@ -16,6 +17,7 @@ public class CreateSessionCommand {
     private InputMode inputMode;
     private ScoringMode scoringMode;
     private Integer baseScore;
+    private InspectionLevel inspectionLevel;
     private Long inspectorId;
     private String inspectorName;
     private Long createdBy;

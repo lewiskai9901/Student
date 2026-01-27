@@ -9,7 +9,8 @@ import type {
   SpaceDeductionRequest,
   PersonDeductionRequest,
   BatchChecklistRequest,
-  ChecklistProgress
+  ChecklistProgress,
+  RecordBonusRequest
 } from '@/types/v2/inspectionSession'
 
 const SESSION_URL = '/v2/inspection/sessions'
@@ -63,6 +64,10 @@ export function publishSession(sessionId: number): Promise<InspectionSession> {
   })
 }
 
+export function recordBonus(sessionId: number, data: RecordBonusRequest): Promise<ClassInspectionRecord> {
+  return http.post<ClassInspectionRecord>(`${SESSION_URL}/${sessionId}/bonuses`, data)
+}
+
 // ==================== Space API ====================
 
 export interface BuildingInfo {
@@ -103,6 +108,7 @@ export const inspectionSessionApi = {
   getChecklistProgress,
   submit: submitSession,
   publish: publishSession,
+  recordBonus,
   getBuildings,
   getRooms
 }

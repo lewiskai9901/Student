@@ -1,6 +1,7 @@
 package com.school.management.interfaces.rest.inspection.dto;
 
 import com.school.management.domain.inspection.model.ClassInspectionRecord;
+import com.school.management.domain.inspection.model.InspectionBonus;
 import com.school.management.domain.inspection.model.InspectionDeduction;
 import lombok.Data;
 
@@ -27,6 +28,16 @@ public class ClassRecordResponse {
     private int checklistResponseCount;
     private LocalDateTime createdAt;
     private List<DeductionItem> deductions;
+    private List<BonusRecord> bonuses;
+
+    @Data
+    public static class BonusRecord {
+        private Long id;
+        private Long bonusItemId;
+        private BigDecimal bonusScore;
+        private String reason;
+        private LocalDateTime createdAt;
+    }
 
     @Data
     public static class DeductionItem {
@@ -61,7 +72,20 @@ public class ClassRecordResponse {
         r.setDeductions(record.getDeductions().stream()
             .map(ClassRecordResponse::toDeductionItem)
             .collect(Collectors.toList()));
+        r.setBonuses(record.getBonuses().stream()
+            .map(ClassRecordResponse::toBonusRecord)
+            .collect(Collectors.toList()));
         return r;
+    }
+
+    private static BonusRecord toBonusRecord(InspectionBonus b) {
+        BonusRecord record = new BonusRecord();
+        record.setId(b.getId());
+        record.setBonusItemId(b.getBonusItemId());
+        record.setBonusScore(b.getBonusScore());
+        record.setReason(b.getReason());
+        record.setCreatedAt(b.getCreatedAt());
+        return record;
     }
 
     private static DeductionItem toDeductionItem(InspectionDeduction d) {

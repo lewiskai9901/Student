@@ -32,6 +32,8 @@ public class InspectionSessionPO {
 
     private Integer baseScore;
 
+    private String inspectionLevel;
+
     private String status;
 
     private Long inspectorId;

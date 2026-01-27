@@ -1,10 +1,12 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import {
   TrendingDown, TrendingUp, Minus, Award, AlertCircle, Clock,
   BarChart3, User, ChevronRight, ArrowUpRight, ArrowDownRight,
   FileWarning, Shield, Eye, MessageSquare, ExternalLink, Target
 } from 'lucide-vue-next'
+import { getOverview, getDeductions, getTopIssues, getStudentViolations, getImprovement } from '@/api/v2/teacherDashboard'
+import type { TopIssueItem, StudentViolationItem, ImprovementData, DeductionDetailRecord } from '@/types/v2/inspectionSession'
 
 // ─── Types ───
 interface TrendPoint {
@@ -13,7 +15,7 @@ interface TrendPoint {
   gradeAvg: number
 }
 
-interface TopIssue {
+interface TopIssueDisplay {
   rank: number
   issueName: string
   occurrenceCount: number
@@ -39,53 +41,115 @@ interface StudentAlert {
   riskLevel: 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL'
 }
 
-// ─── Mock Data ───
+// ─── Date helpers ───
+function getWeekRange(): { start: string; end: string } {
+  const now = new Date()
+  const day = now.getDay() || 7
+  const monday = new Date(now)
+  monday.setDate(now.getDate() - day + 1)
+  const sunday = new Date(monday)
+  sunday.setDate(monday.getDate() + 6)
+  return {
+    start: monday.toISOString().slice(0, 10),
+    end: sunday.toISOString().slice(0, 10)
+  }
+}
+
+function getPreviousWeekRange(): { start: string; end: string } {
+  const now = new Date()
+  const day = now.getDay() || 7
+  const monday = new Date(now)
+  monday.setDate(now.getDate() - day + 1 - 7)
+  const sunday = new Date(monday)
+  sunday.setDate(monday.getDate() + 6)
+  return {
+    start: monday.toISOString().slice(0, 10),
+    end: sunday.toISOString().slice(0, 10)
+  }
+}
+
+// ─── Reactive State ───
+// TODO: Replace classId with actual class from user context / route params
+const classId = ref<number>(0)
+const loading = ref(false)
+const dateRangeMode = ref<'week' | 'month' | 'semester'>('week')
+
 const overview = ref({
-  className: '2024级计算机2班',
-  teacherName: '李老师',
-  weeklyDeduction: 8.5,
-  weeklyDiff: -2.5,
-  gradeRanking: 3,
-  totalClassesInGrade: 42,
-  rankingChange: 2,
-  currentRating: '良好',
-  ratingStars: 4,
-  pendingActions: 1,
-  pendingAppeals: 1,
+  className: '',
+  teacherName: '',
+  weeklyDeduction: 0,
+  weeklyDiff: 0,
+  gradeRanking: 0,
+  totalClassesInGrade: 0,
+  rankingChange: 0,
+  currentRating: '待评',
+  ratingStars: 0,
+  pendingActions: 0,
+  pendingAppeals: 0,
 })
 
-const trendData: TrendPoint[] = [
-  { week: '第1周', myScore: 15, gradeAvg: 12 },
-  { week: '第2周', myScore: 12, gradeAvg: 11.5 },
-  { week: '第3周', myScore: 11, gradeAvg: 11 },
-  { week: '第4周', myScore: 8.5, gradeAvg: 10.5 },
-]
+const trendData = ref<TrendPoint[]>([])
 
-const categoryDistribution = [
-  { name: '卫生', myValue: 4.5, avgValue: 5.0, max: 10 },
-  { name: '纪律', myValue: 2.0, avgValue: 3.0, max: 10 },
-  { name: '考勤', myValue: 1.0, avgValue: 1.5, max: 10 },
-  { name: '宿舍', myValue: 1.0, avgValue: 2.0, max: 10 },
-  { name: '其他', myValue: 0, avgValue: 0.5, max: 10 },
-]
+const categoryDistribution = ref<{ name: string; myValue: number; avgValue: number; max: number }[]>([])
 
-const topIssues: TopIssue[] = [
-  { rank: 1, issueName: '宿舍地面不洁', occurrenceCount: 5, totalDeduction: 10, trend: 'persistent', maxCount: 5 },
-  { rank: 2, issueName: '迟到', occurrenceCount: 3, totalDeduction: 6, trend: 'improving', maxCount: 5 },
-  { rank: 3, issueName: '物品乱放', occurrenceCount: 3, totalDeduction: 3, trend: 'improving', maxCount: 5 },
-  { rank: 4, issueName: '被褥未叠', occurrenceCount: 2, totalDeduction: 2, trend: 'significantly_improved', maxCount: 5 },
-  { rank: 5, issueName: '课间打闹', occurrenceCount: 1, totalDeduction: 2, trend: 'new', maxCount: 5 },
-]
+const topIssues = ref<TopIssueDisplay[]>([])
 
-const pendingActions: PendingAction[] = [
-  { id: 1, title: '301宿舍地面不洁', severity: 'SEVERE', dueDate: '2026-01-28', daysTillDue: 1 },
-  { id: 2, title: '教室黑板未擦', severity: 'MINOR', dueDate: '2026-01-29', daysTillDue: 2 },
-]
+const pendingActions = ref<PendingAction[]>([])
 
-const studentAlerts: StudentAlert[] = [
-  { studentId: 10001, studentName: '张三', violationCount: 3, violationTypes: ['迟到', '迟到', '宿舍卫生'], trend: 'worsening', riskLevel: 'HIGH' },
-  { studentId: 10005, studentName: '王五', violationCount: 2, violationTypes: ['吸烟', '打闹'], trend: 'worsening', riskLevel: 'MEDIUM' },
-]
+const studentAlerts = ref<StudentAlert[]>([])
+
+// ─── Data Fetching ───
+async function fetchDashboardData() {
+  if (!classId.value) return
+  loading.value = true
+  try {
+    const week = getWeekRange()
+    const prevWeek = getPreviousWeekRange()
+
+    const [overviewData, topIssuesData, studentData, improvementData] = await Promise.all([
+      getOverview(classId.value, week.start, week.end),
+      getTopIssues(classId.value, week.start, week.end, 5),
+      getStudentViolations(classId.value, week.start, week.end),
+      getImprovement(classId.value, week.start, week.end, prevWeek.start, prevWeek.end)
+    ])
+
+    // Map overview
+    overview.value.weeklyDeduction = overviewData.weeklyDeduction ?? 0
+    overview.value.weeklyDiff = improvementData.change ?? 0
+
+    // Map top issues
+    const maxCount = Math.max(...topIssuesData.map(i => i.occurrenceCount), 1)
+    topIssues.value = topIssuesData.map((item, idx) => ({
+      rank: idx + 1,
+      issueName: item.issueName,
+      occurrenceCount: item.occurrenceCount,
+      totalDeduction: item.totalDeduction,
+      trend: 'persistent' as const,
+      maxCount
+    }))
+
+    // Map student violations to alerts
+    studentAlerts.value = studentData.map(s => ({
+      studentId: s.studentId,
+      studentName: s.studentName,
+      violationCount: s.violationCount,
+      violationTypes: s.violationTypes,
+      trend: 'worsening' as const,
+      riskLevel: s.violationCount >= 3 ? 'HIGH' as const : 'MEDIUM' as const
+    }))
+  } catch (e) {
+    console.error('Failed to fetch dashboard data:', e)
+  } finally {
+    loading.value = false
+  }
+}
+
+onMounted(() => {
+  // If classId is available (e.g., from route or user context), fetch data
+  if (classId.value) {
+    fetchDashboardData()
+  }
+})
 
 // ─── Computed ───
 const statCards = computed(() => [
@@ -191,10 +255,14 @@ function trendY(val: number) {
           <p class="mt-1 text-sm text-gray-500">{{ overview.className }} | 班主任: {{ overview.teacherName }}</p>
         </div>
         <div class="flex items-center gap-2">
-          <select class="h-9 rounded-lg border border-gray-300 px-3 text-sm text-gray-700 focus:border-blue-500 focus:outline-none">
-            <option>本周</option>
-            <option>本月</option>
-            <option>本学期</option>
+          <select
+            v-model="dateRangeMode"
+            class="h-9 rounded-lg border border-gray-300 px-3 text-sm text-gray-700 focus:border-blue-500 focus:outline-none"
+            @change="fetchDashboardData"
+          >
+            <option value="week">本周</option>
+            <option value="month">本月</option>
+            <option value="semester">本学期</option>
           </select>
         </div>
       </div>

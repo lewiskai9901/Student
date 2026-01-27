@@ -1,5 +1,6 @@
 package com.school.management.domain.inspection.repository;
 
+import com.school.management.domain.inspection.model.InspectionLevel;
 import com.school.management.domain.inspection.model.InspectionSession;
 import com.school.management.domain.inspection.model.SessionStatus;
 import com.school.management.domain.shared.Repository;
@@ -24,4 +25,8 @@ public interface InspectionSessionRepository extends Repository<InspectionSessio
     List<InspectionSession> findByInspectorId(Long inspectorId);
 
     boolean existsBySessionCode(String sessionCode);
+
+    List<InspectionSession> findByInspectionLevel(InspectionLevel level);
+
+    List<InspectionSession> findPublishedByDateRange(LocalDate startDate, LocalDate endDate);
 }

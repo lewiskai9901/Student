@@ -7,6 +7,7 @@ import com.school.management.domain.inspection.repository.ClassInspectionRecordR
 import org.springframework.stereotype.Repository;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -14,7 +15,7 @@ import java.util.stream.Collectors;
 
 /**
  * MyBatis Plus implementation of ClassInspectionRecordRepository.
- * Handles aggregate reconstruction including child entities (deductions + checklist responses).
+ * Handles aggregate reconstruction including child entities (deductions + checklist responses + bonuses).
  */
 @Repository
 public class ClassInspectionRecordRepositoryImpl implements ClassInspectionRecordRepository {
@@ -22,16 +23,19 @@ public class ClassInspectionRecordRepositoryImpl implements ClassInspectionRecor
     private final ClassInspectionRecordMapper recordMapper;
     private final InspectionDeductionMapper deductionMapper;
     private final ChecklistResponseMapper checklistMapper;
+    private final InspectionBonusMapper bonusMapper;
     private final ObjectMapper objectMapper;
 
     public ClassInspectionRecordRepositoryImpl(
             ClassInspectionRecordMapper recordMapper,
             InspectionDeductionMapper deductionMapper,
             ChecklistResponseMapper checklistMapper,
+            InspectionBonusMapper bonusMapper,
             ObjectMapper objectMapper) {
         this.recordMapper = recordMapper;
         this.deductionMapper = deductionMapper;
         this.checklistMapper = checklistMapper;
+        this.bonusMapper = bonusMapper;
         this.objectMapper = objectMapper;
     }
 
@@ -65,6 +69,17 @@ public class ClassInspectionRecordRepositoryImpl implements ClassInspectionRecor
                 response.setId(cPO.getId());
             } else {
                 checklistMapper.updateById(cPO);
+            }
+        }
+
+        // Save bonuses
+        for (InspectionBonus bonus : aggregate.getBonuses()) {
+            InspectionBonusPO bPO = toBonusPO(bonus, aggregate.getId(), aggregate.getSessionId());
+            if (bonus.getId() == null) {
+                bonusMapper.insert(bPO);
+                bonus.setId(bPO.getId());
+            } else {
+                bonusMapper.updateById(bPO);
             }
         }
 
@@ -106,6 +121,20 @@ public class ClassInspectionRecordRepositoryImpl implements ClassInspectionRecor
     @Override
     public int countBySessionId(Long sessionId) {
         return recordMapper.countBySessionId(sessionId);
+    }
+
+    @Override
+    public List<ClassInspectionRecord> findByClassIdAndDateRange(Long classId, LocalDate start, LocalDate end) {
+        return recordMapper.findByClassIdAndDateRange(classId, start, end).stream()
+            .map(this::toDomain)
+            .collect(Collectors.toList());
+    }
+
+    @Override
+    public List<ClassInspectionRecord> findByClassIdOrderByCreatedAtDesc(Long classId, int limit) {
+        return recordMapper.findByClassIdOrderByCreatedAtDesc(classId, limit).stream()
+            .map(this::toDomain)
+            .collect(Collectors.toList());
     }
 
     // ==================== Mapping Methods ====================
@@ -157,6 +186,13 @@ public class ClassInspectionRecordRepositoryImpl implements ClassInspectionRecor
             .map(this::toChecklistDomain)
             .collect(Collectors.toList());
         record.loadChecklistResponses(responses);
+
+        // Load bonuses
+        List<InspectionBonusPO> bonusPOs = bonusMapper.findByClassRecordId(po.getId());
+        List<InspectionBonus> bonuses = bonusPOs.stream()
+            .map(this::toBonusDomain)
+            .collect(Collectors.toList());
+        record.loadBonuses(bonuses);
 
         return record;
     }
@@ -231,6 +267,34 @@ public class ClassInspectionRecordRepositoryImpl implements ClassInspectionRecor
             .result(ChecklistResult.valueOf(po.getResult()))
             .autoDeduction(po.getAutoDeduction())
             .inspectorNote(po.getInspectorNote())
+            .createdAt(po.getCreatedAt())
+            .build();
+    }
+
+    private InspectionBonusPO toBonusPO(InspectionBonus domain, Long classRecordId, Long sessionId) {
+        InspectionBonusPO po = new InspectionBonusPO();
+        po.setId(domain.getId());
+        po.setClassRecordId(classRecordId);
+        po.setSessionId(sessionId);
+        po.setClassId(domain.getClassId());
+        po.setBonusItemId(domain.getBonusItemId());
+        po.setBonusScore(domain.getBonusScore());
+        po.setReason(domain.getReason());
+        po.setRecordedBy(domain.getRecordedBy());
+        po.setCreatedAt(domain.getCreatedAt());
+        return po;
+    }
+
+    private InspectionBonus toBonusDomain(InspectionBonusPO po) {
+        return InspectionBonus.builder()
+            .id(po.getId())
+            .classRecordId(po.getClassRecordId())
+            .sessionId(po.getSessionId())
+            .classId(po.getClassId())
+            .bonusItemId(po.getBonusItemId())
+            .bonusScore(po.getBonusScore())
+            .reason(po.getReason())
+            .recordedBy(po.getRecordedBy())
             .createdAt(po.getCreatedAt())
             .build();
     }

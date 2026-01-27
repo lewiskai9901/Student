@@ -9,6 +9,8 @@ export type ScoringMode = 'DEDUCTION_ONLY' | 'BASE_SCORE' | 'DUAL_TRACK'
 export type ChecklistResult = 'PASS' | 'FAIL' | 'NA'
 export type SpaceType = 'DORMITORY' | 'CLASSROOM' | 'NONE'
 export type InputSource = 'CHECKLIST_FAIL' | 'FREE_DEDUCTION' | 'SPACE_RESOLVED' | 'PERSON_RESOLVED'
+export type BonusMode = 'FIXED' | 'PROGRESSIVE' | 'IMPROVEMENT'
+export type InspectionLevel = 'CLASS' | 'DEPARTMENT' | 'SPECIAL'
 
 // ==================== Session ====================
 
@@ -22,6 +24,7 @@ export interface InspectionSession {
   inputMode: InputMode
   scoringMode: ScoringMode
   baseScore: number
+  inspectionLevel: InspectionLevel
   status: SessionStatus
   inspectorId: number
   inspectorName: string
@@ -38,6 +41,108 @@ export interface CreateSessionRequest {
   inputMode?: InputMode
   scoringMode?: ScoringMode
   baseScore?: number
+  inspectionLevel?: InspectionLevel
+}
+
+// ==================== Bonus Item ====================
+
+export interface BonusItem {
+  id: number
+  categoryId: number
+  itemName: string
+  bonusMode: BonusMode
+  fixedBonus: number | null
+  progressiveConfig: string | null
+  improvementCoefficient: number | null
+  description: string | null
+  sortOrder: number
+  enabled: boolean
+}
+
+export interface CreateBonusItemRequest {
+  categoryId: number
+  itemName: string
+  bonusMode: string
+  fixedBonus?: number
+  progressiveConfig?: string
+  improvementCoefficient?: number
+  description?: string
+  sortOrder?: number
+}
+
+export interface InspectionBonusRecord {
+  id: number
+  classRecordId: number
+  sessionId: number
+  classId: number
+  bonusItemId: number
+  bonusScore: number
+  reason: string | null
+  recordedBy: number | null
+  createdAt: string
+}
+
+export interface RecordBonusRequest {
+  classId: number
+  bonusItemId: number
+  bonusScore: number
+  reason?: string
+}
+
+// ==================== Teacher Dashboard ====================
+
+export interface TeacherOverview {
+  classId: number
+  weeklyDeduction: number
+  weeklyBonus: number
+  recordCount: number
+}
+
+export interface DeductionDetailRecord {
+  id: number
+  sessionId: number
+  itemName: string
+  categoryName: string
+  spaceType: string | null
+  spaceName: string | null
+  personCount: number | null
+  deductionAmount: number
+  remark: string | null
+  createdAt: string
+}
+
+export interface TopIssueItem {
+  issueName: string
+  occurrenceCount: number
+  totalDeduction: number
+  categoryName: string
+}
+
+export interface StudentViolationItem {
+  studentId: number
+  studentName: string
+  violationCount: number
+  totalDeduction: number
+  violationTypes: string[]
+}
+
+export interface ImprovementData {
+  currentDeduction: number
+  previousDeduction: number
+  change: number
+  changePercent: number
+  improved: boolean
+}
+
+// ==================== Department Ranking ====================
+
+export interface DepartmentRankingItem {
+  orgUnitId: number
+  orgUnitName: string
+  averageClassScore: number
+  classCount: number
+  compositeScore: number
+  ranking: number
 }
 
 // ==================== Class Record ====================
