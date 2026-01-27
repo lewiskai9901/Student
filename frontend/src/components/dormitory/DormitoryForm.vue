@@ -382,7 +382,7 @@ import {
   XCircle
 } from 'lucide-vue-next'
 // V2 DDD API
-import { getDormitory, createDormitory, updateDormitory, getBedAllocations, getDormitories, getAllEnabledBuildings } from '@/api/v2/dormitory'
+import { getDormitory, createDormitory, updateDormitory, getBedAllocations, getDormitories, getAllEnabledBuildings } from '@/api/dormitory'
 
 interface Props {
   mode: 'add' | 'edit'

@@ -84,7 +84,7 @@
 
 <script setup lang="ts">
 import { computed } from 'vue'
-import type { SpaceDTO } from '@/types/v2/space'
+import type { SpaceDTO } from '@/types/space'
 import RoomCard from './RoomCard.vue'
 
 const props = defineProps<{

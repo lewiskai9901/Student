@@ -465,15 +465,15 @@ import {
   Building
 } from 'lucide-vue-next'
 import { useAuthStore } from '@/stores/auth'
-import { getClasses, deleteClass, assignHeadTeacher, getOrgUnitTree, batchDeleteClasses, getAllGrades, type Grade } from '@/api/v2/organization'
-import { getAllUsers } from '@/api/v2/user'
-import { exportClasses, getClassDormitories, addDormitory, removeDormitory, getDormitoryList } from '@/api/v2/organization'
-import type { ClassDormitoryInfo } from '@/api/v2/organization'
+import { getClasses, deleteClass, assignHeadTeacher, getOrgUnitTree, batchDeleteClasses, getAllGrades, type Grade } from '@/api/organization'
+import { getAllUsers } from '@/api/user'
+import { exportClasses, getClassDormitories, addDormitory, removeDormitory, getDormitoryList } from '@/api/organization'
+import type { ClassDormitoryInfo } from '@/api/organization'
 import { exportExcel } from '@/utils/export'
 import ClassDetail from '@/components/class/ClassDetail.vue'
 import ClassForm from '@/components/class/ClassForm.vue'
 import ClassDormitoryAssignmentDialog from '@/components/class/ClassDormitoryAssignmentDialog.vue'
-import type { SchoolClass, ClassQueryParams, ClassStatus, ClassStatusConfig as StatusConfig, OrgUnitTreeNode } from '@/types/v2'
+import type { SchoolClass, ClassQueryParams, ClassStatus, ClassStatusConfig as StatusConfig, OrgUnitTreeNode } from '@/types'
 
 const router = useRouter()
 const authStore = useAuthStore()

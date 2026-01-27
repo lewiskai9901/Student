@@ -290,9 +290,9 @@
 <script setup lang="ts">
 import { ref, reactive, computed, onMounted } from 'vue'
 import { ElMessage, ElMessageBox, type FormInstance, type FormRules } from 'element-plus'
-import { scheduleApi, semesterApi } from '@/api/v2/teaching'
-import type { CourseSchedule, ScheduleEntry, Semester } from '@/types/v2/teaching'
-import { WEEKDAYS, DEFAULT_PERIODS } from '@/types/v2/teaching'
+import { scheduleApi, semesterApi } from '@/api/teaching'
+import type { CourseSchedule, ScheduleEntry, Semester } from '@/types/teaching'
+import { WEEKDAYS, DEFAULT_PERIODS } from '@/types/teaching'
 
 // 状态
 const loading = ref(false)

@@ -57,7 +57,7 @@
 </template>
 
 <script setup lang="ts">
-import type { ItemStatistics } from '@/api/v2/quantification-extra'
+import type { ItemStatistics } from '@/api/quantification-extra'
 
 defineProps<{
   data: ItemStatistics[]

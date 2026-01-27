@@ -143,7 +143,7 @@
 <script setup lang="ts">
 import { ref, reactive, onMounted } from 'vue'
 import { ElMessage, type FormInstance, type FormRules } from 'element-plus'
-import { getCurrentUser, updateProfile, changePassword } from '@/api/v2/auth'
+import { getCurrentUser, updateProfile, changePassword } from '@/api/auth'
 import type { UserInfo } from '@/types/auth'
 import { useAuthStore } from '@/stores/auth'
 

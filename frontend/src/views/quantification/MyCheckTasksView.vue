@@ -155,7 +155,7 @@ import {
   completeTask,
   getPendingTaskCount,
   type CheckTaskAssignment
-} from '@/api/v2/quantification-extra'
+} from '@/api/quantification-extra'
 
 const router = useRouter()
 

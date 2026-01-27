@@ -277,7 +277,7 @@ import {
   PieChart
 } from 'lucide-vue-next'
 import { useAuthStore } from '@/stores/auth'
-import { getDashboardStatistics, type DashboardStatistics, type ChartDataItem, type CategoryItem, type RecentCheckRecord } from '@/api/v2/dashboard'
+import { getDashboardStatistics, type DashboardStatistics, type ChartDataItem, type CategoryItem, type RecentCheckRecord } from '@/api/dashboard'
 import StatCard from '@/components/design-system/cards/StatCard.vue'
 
 const router = useRouter()

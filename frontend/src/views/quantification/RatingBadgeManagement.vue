@@ -150,8 +150,8 @@ import {
   type RatingBadgeVO,
   BADGE_LEVEL_LABELS,
   BADGE_LEVEL_COLORS
-} from '@/api/v2/rating'
-import { getCheckPlanPage } from '@/api/v2/quantification'
+} from '@/api/rating'
+import { getCheckPlanPage } from '@/api/quantification'
 import BadgeConfigDialog from './components/badge/BadgeConfigDialog.vue'
 import AutoGrantDialog from './components/badge/AutoGrantDialog.vue'
 

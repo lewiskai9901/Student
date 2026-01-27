@@ -6,14 +6,14 @@ import { ref, computed, watch } from 'vue'
 import { ElMessage } from 'element-plus'
 import { User, Close, Calendar, Coin, Box, Tag } from '@element-plus/icons-vue'
 import type { FormInstance, FormRules } from 'element-plus'
-import { assetApi } from '@/api/v2/asset'
+import { assetApi } from '@/api/asset'
 import type {
   Asset,
   AssetCategory,
   CreateAssetRequest,
   UpdateAssetRequest
-} from '@/types/v2/asset'
-import { ManagementMode, ManagementModeMap } from '@/types/v2/asset'
+} from '@/types/asset'
+import { ManagementMode, ManagementModeMap } from '@/types/asset'
 import LocationSelector from './LocationSelector.vue'
 import UserSelector from '@/components/common/UserSelector.vue'
 

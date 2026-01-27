@@ -241,12 +241,12 @@ import {
   exportFile,
   type ExportTemplateDTO,
   type ExportPreviewDTO
-} from '@/api/v2/exportTemplate'
-import { getAllEnabledDepartments } from '@/api/v2/organization'
-import { getAllGrades } from '@/api/v2/organization'
-import { getClassList } from '@/api/v2/organization'
-import { getDailyCheckById } from '@/api/v2/quantification'
-import { getCheckPlanDetail } from '@/api/v2/quantification'
+} from '@/api/exportTemplate'
+import { getAllEnabledDepartments } from '@/api/organization'
+import { getAllGrades } from '@/api/organization'
+import { getClassList } from '@/api/organization'
+import { getDailyCheckById } from '@/api/quantification'
+import { getCheckPlanDetail } from '@/api/quantification'
 
 interface RoundInfo {
   roundNumber: number

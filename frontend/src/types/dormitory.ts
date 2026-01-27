@@ -1,17 +1,60 @@
 /**
- * @deprecated 请使用 @/types/v2/dormitory 中的类型定义
- * V1 类型保留用于兼容旧组件，新开发请使用 V2 类型
- *
- * 主要变更:
- * - 使用 DormitoryStatus, GenderType, RoomUsageType 枚举
- * - Building 增加 buildingType 和更多字段
- * - 新增 BedAllocation 替代 BedInfo
- * - 新增批量操作请求类型
+ * 宿舍管理类型定义 - DDD架构适配
  */
 
-// 宿舍相关类型定义
+// ==================== 枚举类型 ====================
 
-// 学生简单信息(用于宿舍详情中的学生列表)
+/**
+ * 宿舍状态
+ */
+export type DormitoryStatus = 0 | 1
+
+export const DormitoryStatusMap: Record<DormitoryStatus, string> = {
+  0: '停用',
+  1: '正常'
+}
+
+/**
+ * 性别类型
+ */
+export type GenderType = 1 | 2 | 3
+
+export const GenderTypeMap: Record<GenderType, string> = {
+  1: '男',
+  2: '女',
+  3: '混合'
+}
+
+/**
+ * 房间用途类型
+ */
+export type RoomUsageType = 1 | 2 | 3 | 4 | 5 | 6
+
+export const RoomUsageTypeMap: Record<RoomUsageType, string> = {
+  1: '学生宿舍',
+  2: '教职工宿舍',
+  3: '配电室',
+  4: '卫生间',
+  5: '杂物间',
+  6: '其他'
+}
+
+/**
+ * 楼宇类型
+ */
+export type BuildingType = 1 | 2 | 3
+
+export const BuildingTypeMap: Record<BuildingType, string> = {
+  1: '教学楼',
+  2: '宿舍楼',
+  3: '办公楼'
+}
+
+// ==================== 实体类型 ====================
+
+/**
+ * 学生简单信息
+ */
 export interface StudentSimpleInfo {
   id: number
   studentNo: string
@@ -20,103 +63,223 @@ export interface StudentSimpleInfo {
   className?: string
 }
 
+/**
+ * 宿舍实体
+ */
 export interface Dormitory {
-  id: number
-  buildingId?: number
+  id: number | string
+  buildingId: number | string
+  buildingName?: string
   buildingNo?: string
-  buildingName?: string  // 楼宇名称
-  dormitoryNo: string  // 房间号
-  roomNo?: string // 房间号(前端使用,兼容字段)
-  floor?: number // 楼层
-  floorNumber?: number // 楼层号
-  roomUsageType: number // 房间用途类型: 1学生宿舍 2教职工宿舍 3配电室 4卫生间 5杂物间 6其他
-  roomUsageTypeName?: string // 房间用途类型名称
-  bedCapacity: number // 床位容量规格: 4/6/8等数字
-  roomType?: number // 已废弃
-  roomTypeName?: string // 已废弃
-  bedCount?: number // 实际床位数
-  occupiedBeds?: number // 已占用床位数
-  maxOccupancy?: number // 最大容纳人数
-  currentOccupancy?: number // 当前入住人数
-  availableBeds?: number // 可用床位数
-  genderType?: number // 性别类型(从宿舍楼自动继承): 1男 2女 3混合
+  orgUnitId?: number | string
+  orgUnitName?: string
+  dormitoryNo: string
+  roomNo?: string
+  floorNumber: number
+  floor?: number
+  roomUsageType: RoomUsageType
+  roomUsageTypeName?: string
+  bedCapacity: number
+  bedCount: number
+  occupiedBeds: number
+  genderType: GenderType
   genderTypeName?: string
-  dormitoryType?: number // 宿舍楼类型
-  dormitoryTypeName?: string
-  assignedClassIds?: string // 绑定的班级ID列表(逗号分隔)
-  assignedClassNames?: string // 绑定的班级名称列表
-  supervisorId?: number
-  supervisorName?: string
   facilities?: string
   notes?: string
-  status: number
+  status: DormitoryStatus
   statusName?: string
-  students?: StudentSimpleInfo[] // 宿舍内的学生列表
+  assignedClassIds?: string
+  assignedClassNames?: string
+  classTeacherNames?: string
+  classTeacherPhones?: string
+  dormitoryType?: number
+  dormitoryTypeName?: string
+  maxOccupancy?: number
+  maxCapacity?: number
+  currentOccupancy?: number
+  currentCount?: number
+  students?: StudentSimpleInfo[]
   createdAt?: string
   updatedAt?: string
 }
 
+/**
+ * 楼宇实体
+ */
+export interface Building {
+  id: number
+  buildingNo: string
+  buildingName: string
+  buildingType: BuildingType
+  buildingTypeName?: string
+  floorCount: number
+  genderType?: GenderType
+  genderTypeName?: string
+  description?: string
+  status: number
+  statusName?: string
+  createdAt?: string
+  updatedAt?: string
+}
+
+/**
+ * 床位分配信息
+ */
+export interface BedAllocation {
+  bedNumber: string
+  studentId?: number
+  studentNo?: string
+  studentName?: string
+  className?: string
+  isOccupied: boolean
+}
+
+// ==================== 请求类型 ====================
+
+/**
+ * 创建宿舍请求
+ */
+export interface CreateDormitoryRequest {
+  buildingId: number | string
+  orgUnitId?: number | string
+  dormitoryNo: string
+  floorNumber: number
+  roomUsageType: RoomUsageType
+  bedCapacity: number
+  bedCount?: number
+  genderType?: GenderType
+  facilities?: string
+  notes?: string
+  status?: DormitoryStatus
+}
+
+/**
+ * 更新宿舍请求
+ */
+export interface UpdateDormitoryRequest extends Partial<CreateDormitoryRequest> {
+  id?: number
+}
+
+/**
+ * 宿舍查询参数
+ */
 export interface DormitoryQueryParams {
-  buildingName?: string | null
   dormitoryNo?: string
-  floorNumber?: number | null
-  roomType?: number | null
-  status?: number | null
+  buildingId?: number
+  buildingName?: string
+  floorNumber?: number
+  roomType?: number
+  genderType?: GenderType
+  supervisorId?: number
+  status?: DormitoryStatus
+  buildingIds?: number[]
+  classIds?: number[]
+  sortBy?: string
+  sortOrder?: 'asc' | 'desc'
   pageNum?: number
   pageSize?: number
 }
 
-export interface DormitoryFormData {
-  buildingId: number | null
-  dormitoryNo: string  // 房间号
-  floor?: number
-  floorNumber: number
-  roomUsageType: number // 房间用途类型: 1学生宿舍 2教职工宿舍 3配电室 4卫生间 5杂物间 6其他
-  bedCapacity: number // 床位容量: 4/6/8或自定义数字
-  roomType?: number // 已废弃
-  totalBeds?: number
-  managerId?: number | null
-  facilities?: string
-  status: number
-  notes?: string
+/**
+ * 批量创建宿舍请求
+ */
+export interface BatchCreateDormitoryRequest {
+  buildingId: number
+  startFloor: number
+  endFloor: number
+  roomsPerFloor: number
+  roomUsageType: RoomUsageType
+  bedCapacity: number
+  genderType?: GenderType
+  roomNoPrefix?: string
+  startRoomNo?: number
 }
 
-// 房间用途类型选项
-export const roomUsageTypeOptions = [
-  { label: '学生宿舍', value: 1 },
-  { label: '教职工宿舍', value: 2 },
-  { label: '配电室', value: 3 },
-  { label: '卫生间', value: 4 },
-  { label: '杂物间', value: 5 },
-  { label: '其他', value: 6 }
-]
-
-// 床位容量选项
-export const bedCapacityOptions = [
-  { label: '4人间', value: 4 },
-  { label: '6人间', value: 6 },
-  { label: '8人间', value: 8 },
-  { label: '自定义', value: 0 } // 0表示需要手动输入
-]
-
-export interface Building {
-  id: number
-  buildingName: string
-  totalFloors: number
-  totalRooms: number
-  managerId?: number
-  managerName?: string
-  status: number
-  description?: string
-  createdAt: string
-}
-
-export interface BedInfo {
-  id: number
+/**
+ * 分配学生到宿舍请求
+ */
+export interface AssignStudentRequest {
+  studentId: number
   dormitoryId: number
-  bedNo: string
-  studentId?: number
-  studentName?: string
-  status: number
-  assignedAt?: string
+  bedNumber?: string
+}
+
+/**
+ * 交换学生宿舍请求
+ */
+export interface SwapStudentsRequest {
+  studentAId: number
+  studentBId: number
+}
+
+/**
+ * 批量更新组织单元分配请求
+ * 注意: dormitoryIds 使用 string[] 以避免大整数(snowflake ID)精度丢失
+ */
+export interface BatchUpdateOrgUnitRequest {
+  dormitoryIds: (number | string)[]
+  orgUnitId?: number | null
+}
+
+/**
+ * 按楼层批量更新组织单元请求
+ */
+export interface BatchUpdateOrgUnitByFloorRequest {
+  buildingId: number
+  floor: number
+  orgUnitId?: number | null
+}
+
+// 别名（兼容API命名）
+export type BatchUpdateDepartmentRequest = BatchUpdateOrgUnitRequest
+export type BatchUpdateDepartmentByFloorRequest = BatchUpdateOrgUnitByFloorRequest
+
+/**
+ * 创建楼宇请求
+ */
+export interface CreateBuildingRequest {
+  buildingNo: string
+  buildingName: string
+  buildingType: BuildingType
+  floorCount: number
+  genderType?: GenderType
+  description?: string
+  status?: number
+}
+
+/**
+ * 更新楼宇请求
+ */
+export interface UpdateBuildingRequest extends Partial<CreateBuildingRequest> {
+  id?: number
+}
+
+/**
+ * 楼宇查询参数
+ */
+export interface BuildingQueryParams {
+  buildingNo?: string
+  buildingName?: string
+  buildingType?: BuildingType
+  status?: number
+  pageNum?: number
+  pageSize?: number
+}
+
+// ==================== 统计类型 ====================
+
+/**
+ * 宿舍统计
+ */
+export interface DormitoryStatistics {
+  totalRooms: number
+  totalBeds: number
+  occupiedBeds: number
+  availableBeds: number
+  occupancyRate: number
+  byBuilding: Record<string, {
+    total: number
+    occupied: number
+  }>
+  byGender: Record<string, number>
 }

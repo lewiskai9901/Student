@@ -6,7 +6,7 @@
 import { ref, computed, watch } from 'vue'
 import { ElMessage } from 'element-plus'
 import { Printer, Download } from '@element-plus/icons-vue'
-import { assetCodeApi, type LabelData } from '@/api/v2/assetCode'
+import { assetCodeApi, type LabelData } from '@/api/assetCode'
 
 // Props
 const props = defineProps<{

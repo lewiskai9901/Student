@@ -185,8 +185,8 @@ import { ElMessage, ElMessageBox } from 'element-plus'
 import { Loader2, BedDouble, UserPlus, UserMinus, X, Search, Info, CheckCircle, Users } from 'lucide-vue-next'
 import { formatDate } from '@/utils/date'
 // V2 DDD API
-import { getDormitory, getBedAllocations, assignBed, releaseBed } from '@/api/v2/dormitory'
-import { getStudents } from '@/api/v2/student'
+import { getDormitory, getBedAllocations, assignBed, releaseBed } from '@/api/dormitory'
+import { getStudents } from '@/api/student'
 
 interface Props {
   dormitoryId: number | null

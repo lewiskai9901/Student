@@ -487,11 +487,11 @@ import { ElMessage, ElMessageBox } from 'element-plus'
 import { FolderOpen, ListChecks, CheckCircle, XCircle, Plus, Pencil, Trash2, X, Loader2 } from 'lucide-vue-next'
 import { useAuthStore } from '@/stores/auth'
 import type { CheckCategory } from '@/types/quantification'
-import { getAllCategories, createCategory, updateCategory, deleteCategory } from '@/api/v2/quantification'
+import { getAllCategories, createCategory, updateCategory, deleteCategory } from '@/api/quantification'
 import {
   getDeductionItemsByTypeId, getDeductionItemById,
   createDeductionItem as createDeductItem, updateDeductionItem as updateDeductItem, deleteDeductionItem as deleteDeductItem
-} from '@/api/v2/quantification'
+} from '@/api/quantification'
 
 const authStore = useAuthStore()
 const hasPermission = (permission: string) => authStore.hasPermission(permission)

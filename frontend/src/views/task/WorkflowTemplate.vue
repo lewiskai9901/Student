@@ -409,9 +409,9 @@ import {
   type WorkflowTemplateDTO,
   type WorkflowTemplateRequest,
   type UserTaskNode
-} from '@/api/v2/task/workflow'
-import { getSimpleUserList, type SimpleUser } from '@/api/v2/user'
-import { getAllRoles, type RoleResponse as Role } from '@/api/v2/access'
+} from '@/api/task/workflow'
+import { getSimpleUserList, type SimpleUser } from '@/api/user'
+import { getAllRoles, type RoleResponse as Role } from '@/api/access'
 
 // 审批节点接口
 interface ApproverNode {

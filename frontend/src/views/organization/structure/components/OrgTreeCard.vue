@@ -160,7 +160,7 @@ import {
   Pencil,
   Trash2
 } from 'lucide-vue-next'
-import type { DepartmentResponse } from '@/api/v2/organization'
+import type { DepartmentResponse } from '@/api/organization'
 
 interface Props {
   department: DepartmentResponse

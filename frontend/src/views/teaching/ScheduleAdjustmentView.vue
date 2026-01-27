@@ -321,9 +321,9 @@
 <script setup lang="ts">
 import { ref, reactive, onMounted } from 'vue'
 import { ElMessage, ElMessageBox, type FormInstance, type FormRules } from 'element-plus'
-import { adjustmentApi } from '@/api/v2/teaching'
-import type { ScheduleAdjustment, ScheduleEntry } from '@/types/v2/teaching'
-import { WEEKDAYS, DEFAULT_PERIODS } from '@/types/v2/teaching'
+import { adjustmentApi } from '@/api/teaching'
+import type { ScheduleAdjustment, ScheduleEntry } from '@/types/teaching'
+import { WEEKDAYS, DEFAULT_PERIODS } from '@/types/teaching'
 
 // 状态
 const loading = ref(false)

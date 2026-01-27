@@ -144,10 +144,10 @@
 import { ref, computed, watch } from 'vue'
 import { ElMessage } from 'element-plus'
 import { OfficeBuilding } from '@element-plus/icons-vue'
-import { batchAssignOrgUnit, batchAssignClass } from '@/api/v2/space'
-import { getClassList } from '@/api/v2/organization'
-import type { SpaceDTO, BuildingType, RoomType } from '@/types/v2/space'
-import { getRoomTypeName, ROOM_TYPE_ALLOCATION_RULES } from '@/types/v2/space'
+import { batchAssignOrgUnit, batchAssignClass } from '@/api/space'
+import { getClassList } from '@/api/organization'
+import type { SpaceDTO, BuildingType, RoomType } from '@/types/space'
+import { getRoomTypeName, ROOM_TYPE_ALLOCATION_RULES } from '@/types/space'
 
 const props = defineProps<{
   visible: boolean

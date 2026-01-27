@@ -129,8 +129,8 @@
 
 <script setup lang="ts">
 import { ref, computed, watch, onMounted } from 'vue'
-import { getDepartmentTree, type DepartmentResponse } from '@/api/v2/organization'
-import { getUsersByOrgUnit, getUsersWithDepartments, type User } from '@/api/v2/user'
+import { getDepartmentTree, type DepartmentResponse } from '@/api/organization'
+import { getUsersByOrgUnit, getUsersWithDepartments, type User } from '@/api/user'
 import DepartmentTreeNode from './DepartmentTreeNode.vue'
 
 interface SelectedUser {

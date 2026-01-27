@@ -137,8 +137,8 @@ import {
   Check,
   AlertTriangle
 } from 'lucide-vue-next'
-import { getAllClasses, type SchoolClass } from '@/api/v2/organization'
-import { assignClassToClassroom, type ClassroomWithDetails } from '@/api/v2/teaching'
+import { getAllClasses, type SchoolClass } from '@/api/organization'
+import { assignClassToClassroom, type ClassroomWithDetails } from '@/api/teaching'
 
 const props = defineProps<{
   visible: boolean

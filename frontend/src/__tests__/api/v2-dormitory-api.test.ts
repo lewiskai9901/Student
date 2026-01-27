@@ -41,7 +41,7 @@ import {
   getAllEnabledBuildings,
   dormitoryApi,
   buildingApi
-} from '@/api/v2/dormitory'
+} from '@/api/dormitory'
 
 const mockedHttp = vi.mocked(http)
 
@@ -55,7 +55,7 @@ describe('V2 Dormitory API', () => {
 
   describe('Dormitory CRUD', () => {
     describe('getDormitories', () => {
-      it('should call GET /v2/dormitory/rooms with params', async () => {
+      it('should call GET /dormitory/rooms with params', async () => {
         const mockResponse = {
           records: [{ id: 1, dormitoryNo: '101', buildingId: 1 }],
           total: 1,
@@ -68,25 +68,25 @@ describe('V2 Dormitory API', () => {
         const params = { pageNum: 1, pageSize: 10, buildingId: 1 }
         const result = await getDormitories(params)
 
-        expect(mockedHttp.get).toHaveBeenCalledWith('/v2/dormitory/rooms', { params })
+        expect(mockedHttp.get).toHaveBeenCalledWith('/dormitory/rooms', { params })
         expect(result).toEqual(mockResponse)
       })
     })
 
     describe('getDormitory', () => {
-      it('should call GET /v2/dormitory/rooms/:id', async () => {
+      it('should call GET /dormitory/rooms/:id', async () => {
         const mockDormitory = { id: 1, dormitoryNo: '101', bedCapacity: 6 }
         mockedHttp.get.mockResolvedValue(mockDormitory)
 
         const result = await getDormitory(1)
 
-        expect(mockedHttp.get).toHaveBeenCalledWith('/v2/dormitory/rooms/1')
+        expect(mockedHttp.get).toHaveBeenCalledWith('/dormitory/rooms/1')
         expect(result).toEqual(mockDormitory)
       })
     })
 
     describe('createDormitory', () => {
-      it('should call POST /v2/dormitory/rooms with data', async () => {
+      it('should call POST /dormitory/rooms with data', async () => {
         mockedHttp.post.mockResolvedValue(1)
 
         const data = {
@@ -98,29 +98,29 @@ describe('V2 Dormitory API', () => {
         }
         const result = await createDormitory(data)
 
-        expect(mockedHttp.post).toHaveBeenCalledWith('/v2/dormitory/rooms', data)
+        expect(mockedHttp.post).toHaveBeenCalledWith('/dormitory/rooms', data)
         expect(result).toBe(1)
       })
     })
 
     describe('updateDormitory', () => {
-      it('should call PUT /v2/dormitory/rooms/:id with data', async () => {
+      it('should call PUT /dormitory/rooms/:id with data', async () => {
         mockedHttp.put.mockResolvedValue(undefined)
 
         const data = { bedCapacity: 8 }
         await updateDormitory(1, data)
 
-        expect(mockedHttp.put).toHaveBeenCalledWith('/v2/dormitory/rooms/1', data)
+        expect(mockedHttp.put).toHaveBeenCalledWith('/dormitory/rooms/1', data)
       })
     })
 
     describe('deleteDormitory', () => {
-      it('should call DELETE /v2/dormitory/rooms/:id with force=false', async () => {
+      it('should call DELETE /dormitory/rooms/:id with force=false', async () => {
         mockedHttp.delete.mockResolvedValue(undefined)
 
         await deleteDormitory(1)
 
-        expect(mockedHttp.delete).toHaveBeenCalledWith('/v2/dormitory/rooms/1', { params: { force: false } })
+        expect(mockedHttp.delete).toHaveBeenCalledWith('/dormitory/rooms/1', { params: { force: false } })
       })
 
       it('should call DELETE with force=true when specified', async () => {
@@ -128,22 +128,22 @@ describe('V2 Dormitory API', () => {
 
         await deleteDormitory(1, true)
 
-        expect(mockedHttp.delete).toHaveBeenCalledWith('/v2/dormitory/rooms/1', { params: { force: true } })
+        expect(mockedHttp.delete).toHaveBeenCalledWith('/dormitory/rooms/1', { params: { force: true } })
       })
     })
 
     describe('deleteDormitories', () => {
-      it('should call DELETE /v2/dormitory/rooms/batch with ids', async () => {
+      it('should call DELETE /dormitory/rooms/batch with ids', async () => {
         mockedHttp.delete.mockResolvedValue(undefined)
 
         await deleteDormitories([1, 2, 3])
 
-        expect(mockedHttp.delete).toHaveBeenCalledWith('/v2/dormitory/rooms/batch', { data: [1, 2, 3] })
+        expect(mockedHttp.delete).toHaveBeenCalledWith('/dormitory/rooms/batch', { data: [1, 2, 3] })
       })
     })
 
     describe('batchCreateDormitories', () => {
-      it('should call POST /v2/dormitory/rooms/batch with data', async () => {
+      it('should call POST /dormitory/rooms/batch with data', async () => {
         mockedHttp.post.mockResolvedValue(10)
 
         const data = {
@@ -155,7 +155,7 @@ describe('V2 Dormitory API', () => {
         }
         const result = await batchCreateDormitories(data)
 
-        expect(mockedHttp.post).toHaveBeenCalledWith('/v2/dormitory/rooms/batch', data)
+        expect(mockedHttp.post).toHaveBeenCalledWith('/dormitory/rooms/batch', data)
         expect(result).toBe(10)
       })
     })
@@ -163,60 +163,60 @@ describe('V2 Dormitory API', () => {
 
   describe('Dormitory Query', () => {
     describe('getDormitoriesByBuilding', () => {
-      it('should call GET /v2/dormitory/rooms/by-building/:buildingId', async () => {
+      it('should call GET /dormitory/rooms/by-building/:buildingId', async () => {
         const mockDormitories = [{ id: 1, dormitoryNo: '101' }]
         mockedHttp.get.mockResolvedValue(mockDormitories)
 
         const result = await getDormitoriesByBuilding(1)
 
-        expect(mockedHttp.get).toHaveBeenCalledWith('/v2/dormitory/rooms/by-building/1')
+        expect(mockedHttp.get).toHaveBeenCalledWith('/dormitory/rooms/by-building/1')
         expect(result).toEqual(mockDormitories)
       })
     })
 
     describe('getDormitoriesByGender', () => {
-      it('should call GET /v2/dormitory/rooms/by-gender/:genderType', async () => {
+      it('should call GET /dormitory/rooms/by-gender/:genderType', async () => {
         const mockDormitories = [{ id: 1, genderType: 1 }]
         mockedHttp.get.mockResolvedValue(mockDormitories)
 
         const result = await getDormitoriesByGender(1)
 
-        expect(mockedHttp.get).toHaveBeenCalledWith('/v2/dormitory/rooms/by-gender/1')
+        expect(mockedHttp.get).toHaveBeenCalledWith('/dormitory/rooms/by-gender/1')
         expect(result).toEqual(mockDormitories)
       })
     })
 
     describe('getDormitoriesByDepartment', () => {
-      it('should call GET /v2/dormitory/rooms/by-department with params', async () => {
+      it('should call GET /dormitory/rooms/by-department with params', async () => {
         const mockDormitories = [{ id: 1 }]
         mockedHttp.get.mockResolvedValue(mockDormitories)
 
         const result = await getDormitoriesByDepartment(100)
 
-        expect(mockedHttp.get).toHaveBeenCalledWith('/v2/dormitory/rooms/by-department', { params: { departmentId: 100 } })
+        expect(mockedHttp.get).toHaveBeenCalledWith('/dormitory/rooms/by-department', { params: { departmentId: 100 } })
         expect(result).toEqual(mockDormitories)
       })
     })
 
     describe('getAvailableDormitories', () => {
-      it('should call GET /v2/dormitory/rooms/available', async () => {
+      it('should call GET /dormitory/rooms/available', async () => {
         const mockDormitories = [{ id: 1, occupiedBeds: 2, bedCapacity: 6 }]
         mockedHttp.get.mockResolvedValue(mockDormitories)
 
         const result = await getAvailableDormitories(1)
 
-        expect(mockedHttp.get).toHaveBeenCalledWith('/v2/dormitory/rooms/available', { params: { genderType: 1 } })
+        expect(mockedHttp.get).toHaveBeenCalledWith('/dormitory/rooms/available', { params: { genderType: 1 } })
         expect(result).toEqual(mockDormitories)
       })
     })
 
     describe('existsDormitoryNo', () => {
-      it('should call GET /v2/dormitory/rooms/exists with params', async () => {
+      it('should call GET /dormitory/rooms/exists with params', async () => {
         mockedHttp.get.mockResolvedValue(false)
 
         const result = await existsDormitoryNo(1, '101')
 
-        expect(mockedHttp.get).toHaveBeenCalledWith('/v2/dormitory/rooms/exists', {
+        expect(mockedHttp.get).toHaveBeenCalledWith('/dormitory/rooms/exists', {
           params: { buildingId: 1, dormitoryNo: '101', excludeId: undefined }
         })
         expect(result).toBe(false)
@@ -226,39 +226,39 @@ describe('V2 Dormitory API', () => {
 
   describe('Dormitory Status', () => {
     describe('updateDormitoryStatus', () => {
-      it('should call PATCH /v2/dormitory/rooms/:id/status', async () => {
+      it('should call PATCH /dormitory/rooms/:id/status', async () => {
         mockedHttp.patch.mockResolvedValue(undefined)
 
         await updateDormitoryStatus(1, 2)
 
-        expect(mockedHttp.patch).toHaveBeenCalledWith('/v2/dormitory/rooms/1/status', null, { params: { status: 2 } })
+        expect(mockedHttp.patch).toHaveBeenCalledWith('/dormitory/rooms/1/status', null, { params: { status: 2 } })
       })
     })
   })
 
   describe('Bed Management', () => {
     describe('assignBed', () => {
-      it('should call POST /v2/dormitory/rooms/:id/assign-bed', async () => {
+      it('should call POST /dormitory/rooms/:id/assign-bed', async () => {
         mockedHttp.post.mockResolvedValue(undefined)
 
         await assignBed(1, 100)
 
-        expect(mockedHttp.post).toHaveBeenCalledWith('/v2/dormitory/rooms/1/assign-bed', null, { params: { studentId: 100 } })
+        expect(mockedHttp.post).toHaveBeenCalledWith('/dormitory/rooms/1/assign-bed', null, { params: { studentId: 100 } })
       })
     })
 
     describe('releaseBed', () => {
-      it('should call POST /v2/dormitory/rooms/:id/release-bed', async () => {
+      it('should call POST /dormitory/rooms/:id/release-bed', async () => {
         mockedHttp.post.mockResolvedValue(undefined)
 
         await releaseBed(1, 100)
 
-        expect(mockedHttp.post).toHaveBeenCalledWith('/v2/dormitory/rooms/1/release-bed', null, { params: { studentId: 100 } })
+        expect(mockedHttp.post).toHaveBeenCalledWith('/dormitory/rooms/1/release-bed', null, { params: { studentId: 100 } })
       })
     })
 
     describe('getBedAllocations', () => {
-      it('should call GET /v2/dormitory/rooms/:id/bed-allocations', async () => {
+      it('should call GET /dormitory/rooms/:id/bed-allocations', async () => {
         const mockAllocations = [
           { bedNumber: '1', isAssigned: true, studentId: 100, studentName: '张三' }
         ]
@@ -266,53 +266,53 @@ describe('V2 Dormitory API', () => {
 
         const result = await getBedAllocations(1)
 
-        expect(mockedHttp.get).toHaveBeenCalledWith('/v2/dormitory/rooms/1/bed-allocations')
+        expect(mockedHttp.get).toHaveBeenCalledWith('/dormitory/rooms/1/bed-allocations')
         expect(result).toEqual(mockAllocations)
       })
     })
 
     describe('assignStudentToDormitory', () => {
-      it('should call POST /v2/dormitory/rooms/assign-student', async () => {
+      it('should call POST /dormitory/rooms/assign-student', async () => {
         mockedHttp.post.mockResolvedValue(undefined)
 
         const data = { studentId: 100, dormitoryId: 1, bedNo: '1' }
         await assignStudentToDormitory(data)
 
-        expect(mockedHttp.post).toHaveBeenCalledWith('/v2/dormitory/rooms/assign-student', data)
+        expect(mockedHttp.post).toHaveBeenCalledWith('/dormitory/rooms/assign-student', data)
       })
     })
 
     describe('removeStudentFromDormitory', () => {
-      it('should call DELETE /v2/dormitory/rooms/remove-student/:studentId', async () => {
+      it('should call DELETE /dormitory/rooms/remove-student/:studentId', async () => {
         mockedHttp.delete.mockResolvedValue(undefined)
 
         await removeStudentFromDormitory(100)
 
-        expect(mockedHttp.delete).toHaveBeenCalledWith('/v2/dormitory/rooms/remove-student/100')
+        expect(mockedHttp.delete).toHaveBeenCalledWith('/dormitory/rooms/remove-student/100')
       })
     })
 
     describe('swapStudentDormitory', () => {
-      it('should call POST /v2/dormitory/rooms/swap-students', async () => {
+      it('should call POST /dormitory/rooms/swap-students', async () => {
         mockedHttp.post.mockResolvedValue(undefined)
 
         const data = { studentId1: 100, studentId2: 101 }
         await swapStudentDormitory(data)
 
-        expect(mockedHttp.post).toHaveBeenCalledWith('/v2/dormitory/rooms/swap-students', data)
+        expect(mockedHttp.post).toHaveBeenCalledWith('/dormitory/rooms/swap-students', data)
       })
     })
   })
 
   describe('Batch Operations', () => {
     describe('batchUpdateDepartment', () => {
-      it('should call PUT /v2/dormitory/rooms/batch-department', async () => {
+      it('should call PUT /dormitory/rooms/batch-department', async () => {
         mockedHttp.put.mockResolvedValue(5)
 
         const data = { dormitoryIds: [1, 2, 3], departmentId: 100 }
         const result = await batchUpdateDepartment(data)
 
-        expect(mockedHttp.put).toHaveBeenCalledWith('/v2/dormitory/rooms/batch-department', data)
+        expect(mockedHttp.put).toHaveBeenCalledWith('/dormitory/rooms/batch-department', data)
         expect(result).toBe(5)
       })
     })

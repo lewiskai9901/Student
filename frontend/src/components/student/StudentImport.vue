@@ -314,8 +314,8 @@ import {
   Download,
   Loader2
 } from 'lucide-vue-next'
-import { downloadImportTemplate, importStudents } from '@/api/v2/student'
-import { getClassList } from '@/api/v2/organization'
+import { downloadImportTemplate, importStudents } from '@/api/student'
+import { getClassList } from '@/api/organization'
 import * as XLSX from 'xlsx'
 
 const emit = defineEmits(['close', 'success'])

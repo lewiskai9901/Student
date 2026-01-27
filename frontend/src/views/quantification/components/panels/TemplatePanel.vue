@@ -167,7 +167,7 @@ import {
 } from 'lucide-vue-next'
 import {
   createCheckTemplate, updateCheckTemplate, deleteCheckTemplate
-} from '@/api/v2/quantification'
+} from '@/api/quantification'
 
 const props = defineProps<{
   template: any

@@ -1466,42 +1466,42 @@ const routes: RouteRecordRaw[] = [
 
       // V2 API路由别名 (与后端DDD架构对齐)
       {
-        path: '/v2/access/roles',
+        path: '/access/roles',
         redirect: '/access/roles',
         meta: { hidden: true }
       },
       {
-        path: '/v2/access/permissions',
+        path: '/access/permissions',
         redirect: '/access/permissions',
         meta: { hidden: true }
       },
       {
-        path: '/v2/organization/classes',
+        path: '/organization/classes',
         redirect: '/organization/classes',
         meta: { hidden: true }
       },
       {
-        path: '/v2/org-units',
+        path: '/org-units',
         redirect: '/organization/units',
         meta: { hidden: true }
       },
       {
-        path: '/v2/grades',
+        path: '/grades',
         redirect: '/organization/grades',
         meta: { hidden: true }
       },
       {
-        path: '/v2/inspection-templates',
+        path: '/inspection-templates',
         redirect: '/inspection/config',
         meta: { hidden: true }
       },
       {
-        path: '/v2/inspection-records',
+        path: '/inspection-records',
         redirect: '/inspection/check-record-v3',
         meta: { hidden: true }
       },
       {
-        path: '/v2/appeals',
+        path: '/appeals',
         redirect: '/inspection/appeals-v3',
         meta: { hidden: true }
       }

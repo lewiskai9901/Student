@@ -915,10 +915,10 @@ import {
   getDataModulesV2,
   getDataScopesV2,
   type RoleResponse
-} from '@/api/v2/access'
-import { getOrgUnitTree, getAllGrades, getAllClasses, type Grade, type SchoolClass } from '@/api/v2/organization'
-import type { OrgUnitTreeNode } from '@/types/v2'
-import type { CustomScope } from '@/types/v2/access'
+} from '@/api/access'
+import { getOrgUnitTree, getAllGrades, getAllClasses, type Grade, type SchoolClass } from '@/api/organization'
+import type { OrgUnitTreeNode } from '@/types'
+import type { CustomScope } from '@/types/access'
 import OrgTreeNode from '@/components/common/OrgTreeNode.vue'
 import type {
   CreateRoleRequest,
@@ -929,7 +929,7 @@ import type {
   GroupedModules,
   DataScopeOption,
   DomainConfig
-} from '@/types/v2/access'
+} from '@/types/access'
 
 const loading = ref(false)
 const submitLoading = ref(false)

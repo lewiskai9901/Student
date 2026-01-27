@@ -179,7 +179,7 @@
 import { ref, reactive, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Plus, X, ChevronLeft, ChevronRight } from 'lucide-vue-next'
-import { pageSemesters, createSemester, updateSemester, deleteSemester, setCurrentSemester, type Semester } from '@/api/v2/evaluation'
+import { pageSemesters, createSemester, updateSemester, deleteSemester, setCurrentSemester, type Semester } from '@/api/evaluation'
 
 const queryParams = reactive({ pageNum: 1, pageSize: 10, semesterCode: '', semesterName: '', academicYear: '', semesterType: undefined as number | undefined, status: undefined as number | undefined })
 const loading = ref(false), tableData = ref<Semester[]>([]), total = ref(0), dialogVisible = ref(false), dialogType = ref<'add' | 'edit'>('add'), submitLoading = ref(false)

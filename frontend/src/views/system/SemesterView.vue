@@ -377,8 +377,8 @@ import {
   endSemester,
   reactivateSemester,
   generateSemesterCode
-} from '@/api/v2/semester'
-import type { Semester, CreateSemesterRequest, UpdateSemesterRequest } from '@/types/v2/semester'
+} from '@/api/semester'
+import type { Semester, CreateSemesterRequest, UpdateSemesterRequest } from '@/types/semester'
 
 const loading = ref(false)
 const submitLoading = ref(false)

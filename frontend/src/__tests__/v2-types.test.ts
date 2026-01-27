@@ -20,7 +20,7 @@ import type {
   // Common types
   PageResponse,
   PageParams
-} from '@/types/v2'
+} from '@/types'
 import {
   StudentStatusMap,
   GenderMap,
@@ -28,7 +28,7 @@ import {
   DormitoryStatusMap,
   GenderTypeMap,
   RoomUsageTypeMap
-} from '@/types/v2'
+} from '@/types'
 
 /**
  * V2 类型定义测试

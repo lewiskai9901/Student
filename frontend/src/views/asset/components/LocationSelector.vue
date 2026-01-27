@@ -6,9 +6,9 @@
 import { ref, computed, watch, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
 import { Location, OfficeBuilding } from '@element-plus/icons-vue'
-import { getSpaceTree } from '@/api/v2/space'
-import type { SpaceDTO, RoomType } from '@/types/v2/space'
-import { getRoomTypeName } from '@/types/v2/space'
+import { getSpaceTree } from '@/api/space'
+import type { SpaceDTO, RoomType } from '@/types/space'
+import { getRoomTypeName } from '@/types/space'
 
 const props = defineProps<{
   locationType: string

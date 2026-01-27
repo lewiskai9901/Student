@@ -16,13 +16,13 @@ import {
   getClassRecords as apiGetClassRecords,
   getBuildings as apiGetBuildings,
   getRooms as apiGetRooms,
-} from '@/api/v2/inspectionSession'
+} from '@/api/inspectionSession'
 import type {
   InspectionSession,
   ClassInspectionRecord,
   SpaceDeductionRequest,
   PersonDeductionRequest,
-} from '@/types/v2/inspectionSession'
+} from '@/types/inspectionSession'
 
 const route = useRoute()
 

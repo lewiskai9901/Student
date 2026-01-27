@@ -372,7 +372,7 @@
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue'
 import { Check, X, Minus, Plus, Scale, Users, Camera, MessageSquare, Search, UserPlus } from 'lucide-vue-next'
-import type { DeductionItem } from '@/api/v2/quantification'
+import type { DeductionItem } from '@/api/quantification'
 import http from '@/utils/request'
 import PhotoUploader from './PhotoUploader.vue'
 import RemarkEditor from './RemarkEditor.vue'

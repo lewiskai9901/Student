@@ -152,7 +152,7 @@
 <script setup lang="ts">
 import { ref, reactive, onMounted } from 'vue'
 import { Clock, CheckCircle2, XCircle, BadgeCheck } from 'lucide-vue-next'
-import { getMyPendingApprovals, approveTaskByRecord, type TaskApprovalDTO } from '@/api/v2/task/approval'
+import { getMyPendingApprovals, approveTaskByRecord, type TaskApprovalDTO } from '@/api/task/approval'
 import StatCard from '@/components/design-system/cards/StatCard.vue'
 import TaskDetailDialog from './components/TaskDetailDialog.vue'
 

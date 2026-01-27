@@ -153,9 +153,9 @@
 import { computed, ref } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Edit, Delete } from '@element-plus/icons-vue'
-import { deleteSpace } from '@/api/v2/space'
-import type { SpaceDTO, SpaceStatus } from '@/types/v2/space'
-import { getRoomTypeName, getStatusClass } from '@/types/v2/space'
+import { deleteSpace } from '@/api/space'
+import type { SpaceDTO, SpaceStatus } from '@/types/space'
+import { getRoomTypeName, getStatusClass } from '@/types/space'
 import SpaceFormDialog from './SpaceFormDialog.vue'
 
 const props = defineProps<{

@@ -108,8 +108,8 @@ import { ref, computed, watch } from 'vue'
 import type { FormInstance, FormRules } from 'element-plus'
 import { ElMessage } from 'element-plus'
 import { House } from '@element-plus/icons-vue'
-import { checkIn } from '@/api/v2/space'
-import type { OccupantType, CheckInRequest } from '@/types/v2/space'
+import { checkIn } from '@/api/space'
+import type { OccupantType, CheckInRequest } from '@/types/space'
 import request from '@/utils/request'
 
 const props = defineProps<{

@@ -18,7 +18,7 @@ import type { ECharts } from 'echarts/core'
 
 use([LineChart, CanvasRenderer, GridComponent, TooltipComponent, LegendComponent, AxisPointerComponent])
 import * as echarts from 'echarts/core'
-import type { RatingTrendVO } from '@/api/v2/rating'
+import type { RatingTrendVO } from '@/api/rating'
 
 // Props
 const props = withDefaults(

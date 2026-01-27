@@ -189,10 +189,10 @@ import {
   Tickets,
   Loading
 } from '@element-plus/icons-vue'
-import { getSpaceTree } from '@/api/v2/space'
-import { getOrgUnits } from '@/api/v2/organization'
-import type { SpaceDTO, BuildingType } from '@/types/v2/space'
-import { getBuildingTypeName } from '@/types/v2/space'
+import { getSpaceTree } from '@/api/space'
+import { getOrgUnits } from '@/api/organization'
+import type { SpaceDTO, BuildingType } from '@/types/space'
+import { getBuildingTypeName } from '@/types/space'
 import BuildingAllocationCard from './components/BuildingAllocationCard.vue'
 import FloorPlanView from './components/FloorPlanView.vue'
 import AllocationLegend from './components/AllocationLegend.vue'

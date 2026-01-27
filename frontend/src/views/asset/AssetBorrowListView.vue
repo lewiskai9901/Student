@@ -17,9 +17,9 @@ import {
   FileText,
   XCircle
 } from 'lucide-vue-next'
-import { assetBorrowApi } from '@/api/v2/assetBorrow'
-import type { AssetBorrow, BorrowStatistics } from '@/types/v2/asset'
-import { BorrowType, BorrowTypeMap, BorrowStatus, BorrowStatusMap } from '@/types/v2/asset'
+import { assetBorrowApi } from '@/api/assetBorrow'
+import type { AssetBorrow, BorrowStatistics } from '@/types/asset'
+import { BorrowType, BorrowTypeMap, BorrowStatus, BorrowStatusMap } from '@/types/asset'
 import AssetReturnDialog from './components/AssetReturnDialog.vue'
 
 // 设计系统组件

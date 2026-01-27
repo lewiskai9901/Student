@@ -24,9 +24,9 @@ import {
   getInventoryStatistics,
   completeInventory,
   cancelInventory
-} from '@/api/v2/assetInventory'
-import type { AssetInventory, InventoryStatistics } from '@/types/v2/asset'
-import { InventoryStatus, InventoryStatusMap } from '@/types/v2/asset'
+} from '@/api/assetInventory'
+import type { AssetInventory, InventoryStatistics } from '@/types/asset'
+import { InventoryStatus, InventoryStatusMap } from '@/types/asset'
 import AssetInventoryCreateDialog from './components/AssetInventoryCreateDialog.vue'
 import AssetInventoryDetailDialog from './components/AssetInventoryDetailDialog.vue'
 

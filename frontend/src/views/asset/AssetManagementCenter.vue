@@ -20,7 +20,7 @@ import {
   Download,
   Printer
 } from '@element-plus/icons-vue'
-import { assetApi } from '@/api/v2/asset'
+import { assetApi } from '@/api/asset'
 import type {
   Asset,
   AssetCategory,
@@ -29,8 +29,8 @@ import type {
   BatchCreateResult,
   BatchTransferResult,
   ImportResult
-} from '@/types/v2/asset'
-import { AssetStatus, AssetStatusMap, LocationTypeMap, ManagementMode, ManagementModeMap } from '@/types/v2/asset'
+} from '@/types/asset'
+import { AssetStatus, AssetStatusMap, LocationTypeMap, ManagementMode, ManagementModeMap } from '@/types/asset'
 import AssetFormDialog from './components/AssetFormDialog.vue'
 import AssetTransferDialog from './components/AssetTransferDialog.vue'
 import AssetDetailDrawer from './components/AssetDetailDrawer.vue'

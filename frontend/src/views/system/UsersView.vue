@@ -507,15 +507,15 @@ import {
   updateUserStatus,
   getUserRoleIds,
   assignRoles
-} from '@/api/v2/user'
+} from '@/api/user'
 import type {
   User,
   UserQueryParams,
   UserFormData,
   UserListItem
-} from '@/types/v2/user'
-import { getAllRoles } from '@/api/v2/access'
-import type { RoleResponse as Role } from '@/api/v2/access'
+} from '@/types/user'
+import { getAllRoles } from '@/api/access'
+import type { RoleResponse as Role } from '@/api/access'
 import { useConfigStore } from '@/stores/config'
 
 const configStore = useConfigStore()

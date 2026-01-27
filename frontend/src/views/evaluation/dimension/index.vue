@@ -169,7 +169,7 @@
 import { ref, reactive, computed, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
 import { X, AlertTriangle } from 'lucide-vue-next'
-import { listAllDimensions, updateDimension, type EvaluationDimension } from '@/api/v2/evaluation'
+import { listAllDimensions, updateDimension, type EvaluationDimension } from '@/api/evaluation'
 
 const dimensionList = ref<EvaluationDimension[]>([])
 const loading = ref(false)

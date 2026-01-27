@@ -79,8 +79,8 @@ import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { User, Trophy, DataAnalysis, ArrowRight, School } from '@element-plus/icons-vue'
-import { getMyClasses } from '@/api/v2/myClass'
-import type { MyClassItem } from '@/types/v2/myClass'
+import { getMyClasses } from '@/api/myClass'
+import type { MyClassItem } from '@/types/myClass'
 import MiniTrendChart from './components/MiniTrendChart.vue'
 
 const router = useRouter()

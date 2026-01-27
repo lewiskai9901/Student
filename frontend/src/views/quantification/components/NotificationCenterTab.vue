@@ -184,7 +184,7 @@ import {
   Loader2, RefreshCw, Trash2, FileEdit, Pencil
 } from 'lucide-vue-next'
 import ExportTemplateTab from './ExportTemplateTab.vue'
-import { getExportTemplatesByPlan } from '@/api/v2/exportTemplate'
+import { getExportTemplatesByPlan } from '@/api/exportTemplate'
 import {
   generateNotification,
   getNotificationHistory,
@@ -193,7 +193,7 @@ import {
   deleteNotification,
   getPublishStatusText,
   type NotificationRecord
-} from '@/api/v2/notification'
+} from '@/api/notification'
 
 const router = useRouter()
 

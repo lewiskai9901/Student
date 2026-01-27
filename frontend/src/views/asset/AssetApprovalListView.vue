@@ -7,14 +7,14 @@ import { ref, computed, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Refresh } from '@element-plus/icons-vue'
 import { CheckCircle, XCircle, Eye, ClipboardCheck, FileText, Clock } from 'lucide-vue-next'
-import { assetApprovalApi } from '@/api/v2/assetApproval'
-import type { AssetApproval } from '@/types/v2/asset'
+import { assetApprovalApi } from '@/api/assetApproval'
+import type { AssetApproval } from '@/types/asset'
 import {
   ApprovalType,
   ApprovalTypeMap,
   ApprovalStatus,
   ApprovalStatusMap
-} from '@/types/v2/asset'
+} from '@/types/asset'
 
 // 设计系统组件
 import EmptyState from '@/components/design-system/feedback/EmptyState.vue'

@@ -179,9 +179,9 @@ import {
   type NotificationGenerateResultVO,
   NOTIFICATION_TYPE_LABELS,
   NOTIFICATION_TYPE_DESCRIPTIONS
-} from '@/api/v2/rating'
-import { getCheckPlanPage } from '@/api/v2/quantification'
-import { getRatingRulesByPlan, getRatingLevelsByRule } from '@/api/v2/rating'
+} from '@/api/rating'
+import { getCheckPlanPage } from '@/api/quantification'
+import { getRatingRulesByPlan, getRatingLevelsByRule } from '@/api/rating'
 
 // Props
 const props = defineProps<{

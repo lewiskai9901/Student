@@ -166,8 +166,8 @@
 import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
 import { ElMessage } from 'element-plus'
 import { Upload, Trash2, RefreshCw, Loader2, Mouse, ZoomIn, ZoomOut, RotateCcw, Maximize2 } from 'lucide-vue-next'
-import { uploadImage } from '@/api/v2/upload'
-import { uploadFile as uploadFileApi } from '@/api/v2/file'
+import { uploadImage } from '@/api/upload'
+import { uploadFile as uploadFileApi } from '@/api/file'
 
 interface Props {
   /** 当前媒体URL */

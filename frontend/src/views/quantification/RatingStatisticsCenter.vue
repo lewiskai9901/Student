@@ -265,9 +265,9 @@ import {
   exportStatistics,
   type RatingFrequencyStatisticsVO,
   type LevelFrequencyVO
-} from '@/api/v2/rating'
-import { getCheckPlanPage } from '@/api/v2/quantification'
-import { getRatingRulesByPlan } from '@/api/v2/rating'
+} from '@/api/rating'
+import { getCheckPlanPage } from '@/api/quantification'
+import { getRatingRulesByPlan } from '@/api/rating'
 
 // 响应式数据
 const statistics = ref<RatingFrequencyStatisticsVO>()

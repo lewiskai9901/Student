@@ -7,14 +7,14 @@ import { ref, computed, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Refresh } from '@element-plus/icons-vue'
 import { Bell, CheckCircle, Eye, AlertTriangle, Clock, ShieldAlert, Package, AlertOctagon } from 'lucide-vue-next'
-import { assetAlertApi } from '@/api/v2/assetAlert'
-import type { AssetAlert } from '@/types/v2/asset'
+import { assetAlertApi } from '@/api/assetAlert'
+import type { AssetAlert } from '@/types/asset'
 import {
   AlertType,
   AlertTypeMap,
   AlertLevel,
   AlertLevelMap
-} from '@/types/v2/asset'
+} from '@/types/asset'
 
 // 设计系统组件
 import StatCard from '@/components/design-system/cards/StatCard.vue'

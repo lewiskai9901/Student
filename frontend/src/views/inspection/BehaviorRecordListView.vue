@@ -192,14 +192,14 @@ import { Plus } from '@element-plus/icons-vue'
 import {
   listByClass, createBehaviorRecord, acknowledgeBehaviorRecord, resolveBehaviorRecord, getStudentProfile,
   listAlertsByClass, getUnhandledAlertCount, markAlertRead, handleAlert
-} from '@/api/v2/behavior'
+} from '@/api/behavior'
 import type {
   BehaviorRecord, CreateBehaviorRecordRequest, BehaviorProfile, BehaviorAlert,
   BehaviorType, BehaviorCategory, BehaviorStatus, AlertType
-} from '@/types/v2/behavior'
+} from '@/types/behavior'
 import {
   BehaviorTypeConfig, BehaviorStatusConfig, BehaviorCategoryConfig, AlertTypeConfig
-} from '@/types/v2/behavior'
+} from '@/types/behavior'
 
 const loading = ref(false)
 const submitting = ref(false)

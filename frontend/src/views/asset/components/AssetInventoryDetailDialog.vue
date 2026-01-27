@@ -2,9 +2,9 @@
 import { ref, watch, computed } from 'vue'
 import { ElMessage } from 'element-plus'
 import { Check, Warning, CircleCheck, CircleClose, Search } from '@element-plus/icons-vue'
-import { getInventory, updateInventoryDetail } from '@/api/v2/assetInventory'
-import type { AssetInventory, AssetInventoryDetail, UpdateInventoryDetailRequest } from '@/types/v2/asset'
-import { InventoryStatus, InventoryResultType, InventoryResultTypeMap } from '@/types/v2/asset'
+import { getInventory, updateInventoryDetail } from '@/api/assetInventory'
+import type { AssetInventory, AssetInventoryDetail, UpdateInventoryDetailRequest } from '@/types/asset'
+import { InventoryStatus, InventoryResultType, InventoryResultTypeMap } from '@/types/asset'
 
 const props = defineProps<{
   visible: boolean

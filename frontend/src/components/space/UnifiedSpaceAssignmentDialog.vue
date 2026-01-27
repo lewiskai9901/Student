@@ -407,10 +407,10 @@ import {
   Package,
   MoreHorizontal
 } from 'lucide-vue-next'
-import { querySpaces, batchAssignOrgUnit } from '@/api/v2/space'
-import { getOrgUnitsByType } from '@/api/v2/organization'
-import type { SpaceDTO, RoomType } from '@/types/v2/space'
-import { ROOM_TYPE_CONFIG, getRoomTypeConfig } from '@/types/v2/space'
+import { querySpaces, batchAssignOrgUnit } from '@/api/space'
+import { getOrgUnitsByType } from '@/api/organization'
+import type { SpaceDTO, RoomType } from '@/types/space'
+import { ROOM_TYPE_CONFIG, getRoomTypeConfig } from '@/types/space'
 
 // Props
 const props = defineProps<{

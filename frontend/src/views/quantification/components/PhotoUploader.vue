@@ -181,7 +181,7 @@
 import { ref, computed, watch } from 'vue'
 import { ElMessage } from 'element-plus'
 import { Camera, X, Plus, Info, ChevronLeft, ChevronRight } from 'lucide-vue-next'
-import { getUploadUrl } from '@/api/v2/upload'
+import { getUploadUrl } from '@/api/upload'
 import { getToken } from '@/utils/token'
 
 interface Props {

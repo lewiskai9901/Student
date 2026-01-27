@@ -190,7 +190,7 @@
 import { ref, reactive, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Plus, X, ChevronDown, ChevronLeft, ChevronRight } from 'lucide-vue-next'
-import { pagePeriods, createPeriod, updatePeriod, deletePeriod, startDataCollection, startApplication, startReview, startPublicity, finishPeriod, lockPeriod, unlockPeriod, listAllSemesters, type EvaluationPeriod, type Semester } from '@/api/v2/evaluation'
+import { pagePeriods, createPeriod, updatePeriod, deletePeriod, startDataCollection, startApplication, startReview, startPublicity, finishPeriod, lockPeriod, unlockPeriod, listAllSemesters, type EvaluationPeriod, type Semester } from '@/api/evaluation'
 
 const vClickOutside = { mounted(el: any, binding: any) { el._clickOutside = (e: Event) => { if (!el.contains(e.target)) binding.value() }; document.addEventListener('click', el._clickOutside) }, unmounted(el: any) { document.removeEventListener('click', el._clickOutside) } }
 

@@ -100,7 +100,7 @@ import {
   SCORE_SOURCE_LABELS,
   DIVISION_METHOD_LABELS,
   type RatingRuleVO
-} from '@/api/v2/rating'
+} from '@/api/rating'
 import RatingRuleDialog from './RatingRuleDialog.vue'
 
 const props = defineProps<{

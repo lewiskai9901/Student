@@ -261,8 +261,8 @@
 <script setup lang="ts">
 import { ref, reactive, computed, onMounted } from 'vue'
 import { ElMessage, ElMessageBox, type FormInstance, type FormRules } from 'element-plus'
-import { curriculumPlanApi, courseApi } from '@/api/v2/teaching'
-import type { CurriculumPlan, PlanCourse, Course, CurriculumPlanQueryParams } from '@/types/v2/teaching'
+import { curriculumPlanApi, courseApi } from '@/api/teaching'
+import type { CurriculumPlan, PlanCourse, Course, CurriculumPlanQueryParams } from '@/types/teaching'
 
 // 状态
 const loading = ref(false)

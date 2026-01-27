@@ -2,10 +2,10 @@
 import { ref, reactive, computed, watch } from 'vue'
 import { ElMessage } from 'element-plus'
 import type { FormInstance, FormRules } from 'element-plus'
-import { createInventory } from '@/api/v2/assetInventory'
-import { getCategoryTree } from '@/api/v2/asset'
-import type { CreateInventoryRequest, AssetCategory } from '@/types/v2/asset'
-import { InventoryScopeType, InventoryScopeTypeMap } from '@/types/v2/asset'
+import { createInventory } from '@/api/assetInventory'
+import { getCategoryTree } from '@/api/asset'
+import type { CreateInventoryRequest, AssetCategory } from '@/types/asset'
+import { InventoryScopeType, InventoryScopeTypeMap } from '@/types/asset'
 
 const props = defineProps<{
   visible: boolean

@@ -13,7 +13,7 @@ import type { ECharts } from 'echarts/core'
 
 use([PieChart, CanvasRenderer, TooltipComponent, LegendComponent])
 import * as echarts from 'echarts/core'
-import type { CategoryStatistics } from '@/api/v2/quantification-extra'
+import type { CategoryStatistics } from '@/api/quantification-extra'
 
 const props = defineProps<{
   data: CategoryStatistics[]

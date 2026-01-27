@@ -75,8 +75,8 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { Check } from '@element-plus/icons-vue'
-import type { SpaceDTO, RoomType } from '@/types/v2/space'
-import { getRoomTypeName, ROOM_TYPE_ALLOCATION_RULES } from '@/types/v2/space'
+import type { SpaceDTO, RoomType } from '@/types/space'
+import { getRoomTypeName, ROOM_TYPE_ALLOCATION_RULES } from '@/types/space'
 
 const props = defineProps<{
   room: SpaceDTO

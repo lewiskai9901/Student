@@ -5,8 +5,8 @@ import {
   BarChart3, User, ChevronRight, ArrowUpRight, ArrowDownRight,
   FileWarning, Shield, Eye, MessageSquare, ExternalLink, Target
 } from 'lucide-vue-next'
-import { getOverview, getDeductions, getTopIssues, getStudentViolations, getImprovement } from '@/api/v2/teacherDashboard'
-import type { TopIssueItem, StudentViolationItem, ImprovementData, DeductionDetailRecord } from '@/types/v2/inspectionSession'
+import { getOverview, getDeductions, getTopIssues, getStudentViolations, getImprovement } from '@/api/teacherDashboard'
+import type { TopIssueItem, StudentViolationItem, ImprovementData, DeductionDetailRecord } from '@/types/inspectionSession'
 
 // ─── Types ───
 interface TrendPoint {

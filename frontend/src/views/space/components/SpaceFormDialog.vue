@@ -205,9 +205,9 @@
 <script setup lang="ts">
 import { ref, computed, watch, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
-import { createSpace, updateSpace } from '@/api/v2/space'
-import type { SpaceDTO, SpaceType, RoomType, BuildingType, CreateSpaceRequest, GenderType } from '@/types/v2/space'
-import { getClassList } from '@/api/v2/organization'
+import { createSpace, updateSpace } from '@/api/space'
+import type { SpaceDTO, SpaceType, RoomType, BuildingType, CreateSpaceRequest, GenderType } from '@/types/space'
+import { getClassList } from '@/api/organization'
 
 const props = defineProps<{
   visible: boolean

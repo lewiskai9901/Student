@@ -81,7 +81,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { ArrowRight, CircleCheckFilled, CircleCloseFilled, RemoveFilled, InfoFilled } from '@element-plus/icons-vue'
-import type { RoundComparisonVO } from '@/api/v2/quantification-extra'
+import type { RoundComparisonVO } from '@/api/quantification-extra'
 
 interface Props {
   title?: string

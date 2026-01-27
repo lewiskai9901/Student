@@ -778,8 +778,8 @@
 import { ref, computed, onMounted } from 'vue'
 import { ElMessage, ElMessageBox, type FormInstance, type FormRules } from 'element-plus'
 import { ArrowLeft, ArrowRight, Setting, List, Calendar, InfoFilled, Plus, Clock } from '@element-plus/icons-vue'
-import { academicYearApi, semesterApi, academicEventApi } from '@/api/v2/teaching'
-import type { AcademicYear, Semester, TeachingWeek, AcademicEvent } from '@/types/v2/teaching'
+import { academicYearApi, semesterApi, academicEventApi } from '@/api/teaching'
+import type { AcademicYear, Semester, TeachingWeek, AcademicEvent } from '@/types/teaching'
 
 const academicYears = ref<AcademicYear[]>([])
 const currentYearId = ref<number>()

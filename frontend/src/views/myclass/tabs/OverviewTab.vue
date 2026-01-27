@@ -182,8 +182,8 @@ import {
   BarChart3,
   ChevronRight
 } from 'lucide-vue-next'
-import { getClassOverview } from '@/api/v2/myClass'
-import type { MyClassOverview, RecentCheckRecord } from '@/types/v2/myClass'
+import { getClassOverview } from '@/api/myClass'
+import type { MyClassOverview, RecentCheckRecord } from '@/types/myClass'
 import TrendChart from '../components/TrendChart.vue'
 
 const props = defineProps<{

@@ -27,7 +27,7 @@ import {
   assignDormitory,
   transferClass,
   studentApi
-} from '@/api/v2/student'
+} from '@/api/student'
 
 import {
   getOrgUnits,
@@ -50,7 +50,7 @@ import {
   assignHeadTeacher,
   orgUnitApi,
   schoolClassApi
-} from '@/api/v2/organization'
+} from '@/api/organization'
 
 const mockedHttp = vi.mocked(http)
 
@@ -65,7 +65,7 @@ describe('V2 API', () => {
 
   describe('Student API', () => {
     describe('getStudents', () => {
-      it('should call GET /v2/students with params', async () => {
+      it('should call GET /students with params', async () => {
         const mockResponse = {
           records: [{ id: 1, name: '张三', studentNo: '2024001' }],
           total: 1,
@@ -78,7 +78,7 @@ describe('V2 API', () => {
         const params = { pageNum: 1, pageSize: 10, status: 0 }
         const result = await getStudents(params)
 
-        expect(mockedHttp.get).toHaveBeenCalledWith('/v2/students', { params })
+        expect(mockedHttp.get).toHaveBeenCalledWith('/students', { params })
         expect(result).toEqual(mockResponse)
       })
 
@@ -88,36 +88,36 @@ describe('V2 API', () => {
 
         await getStudents()
 
-        expect(mockedHttp.get).toHaveBeenCalledWith('/v2/students', { params: undefined })
+        expect(mockedHttp.get).toHaveBeenCalledWith('/students', { params: undefined })
       })
     })
 
     describe('getStudent', () => {
-      it('should call GET /v2/students/:id', async () => {
+      it('should call GET /students/:id', async () => {
         const mockStudent = { id: 1, name: '张三', studentNo: '2024001', status: 0 }
         mockedHttp.get.mockResolvedValue(mockStudent)
 
         const result = await getStudent(1)
 
-        expect(mockedHttp.get).toHaveBeenCalledWith('/v2/students/1')
+        expect(mockedHttp.get).toHaveBeenCalledWith('/students/1')
         expect(result).toEqual(mockStudent)
       })
     })
 
     describe('getStudentByNo', () => {
-      it('should call GET /v2/students/by-no/:studentNo', async () => {
+      it('should call GET /students/by-no/:studentNo', async () => {
         const mockStudent = { id: 1, name: '张三', studentNo: '2024001' }
         mockedHttp.get.mockResolvedValue(mockStudent)
 
         const result = await getStudentByNo('2024001')
 
-        expect(mockedHttp.get).toHaveBeenCalledWith('/v2/students/by-no/2024001')
+        expect(mockedHttp.get).toHaveBeenCalledWith('/students/by-no/2024001')
         expect(result).toEqual(mockStudent)
       })
     })
 
     describe('createStudent', () => {
-      it('should call POST /v2/students with data', async () => {
+      it('should call POST /students with data', async () => {
         mockedHttp.post.mockResolvedValue(1)
 
         const data = {
@@ -128,62 +128,62 @@ describe('V2 API', () => {
         }
         const result = await createStudent(data)
 
-        expect(mockedHttp.post).toHaveBeenCalledWith('/v2/students', data)
+        expect(mockedHttp.post).toHaveBeenCalledWith('/students', data)
         expect(result).toBe(1)
       })
     })
 
     describe('updateStudent', () => {
-      it('should call PUT /v2/students/:id with data', async () => {
+      it('should call PUT /students/:id with data', async () => {
         mockedHttp.put.mockResolvedValue(undefined)
 
         const data = { name: '李四', phone: '13800138000' }
         await updateStudent(1, data)
 
-        expect(mockedHttp.put).toHaveBeenCalledWith('/v2/students/1', data)
+        expect(mockedHttp.put).toHaveBeenCalledWith('/students/1', data)
       })
     })
 
     describe('deleteStudent', () => {
-      it('should call DELETE /v2/students/:id', async () => {
+      it('should call DELETE /students/:id', async () => {
         mockedHttp.delete.mockResolvedValue(undefined)
 
         await deleteStudent(1)
 
-        expect(mockedHttp.delete).toHaveBeenCalledWith('/v2/students/1')
+        expect(mockedHttp.delete).toHaveBeenCalledWith('/students/1')
       })
     })
 
     describe('deleteStudents', () => {
-      it('should call DELETE /v2/students/batch with ids', async () => {
+      it('should call DELETE /students/batch with ids', async () => {
         mockedHttp.delete.mockResolvedValue(undefined)
 
         await deleteStudents([1, 2, 3])
 
-        expect(mockedHttp.delete).toHaveBeenCalledWith('/v2/students/batch', { data: [1, 2, 3] })
+        expect(mockedHttp.delete).toHaveBeenCalledWith('/students/batch', { data: [1, 2, 3] })
       })
     })
 
     describe('searchStudents', () => {
-      it('should call GET /v2/students/search with params', async () => {
+      it('should call GET /students/search with params', async () => {
         const mockStudents = [{ id: 1, name: '张三' }]
         mockedHttp.get.mockResolvedValue(mockStudents)
 
         const params = { keyword: '张', limit: 10 }
         const result = await searchStudents(params)
 
-        expect(mockedHttp.get).toHaveBeenCalledWith('/v2/students/search', { params })
+        expect(mockedHttp.get).toHaveBeenCalledWith('/students/search', { params })
         expect(result).toEqual(mockStudents)
       })
     })
 
     describe('existsStudentNo', () => {
-      it('should call GET /v2/students/exists with studentNo', async () => {
+      it('should call GET /students/exists with studentNo', async () => {
         mockedHttp.get.mockResolvedValue(false)
 
         const result = await existsStudentNo('2024001')
 
-        expect(mockedHttp.get).toHaveBeenCalledWith('/v2/students/exists', {
+        expect(mockedHttp.get).toHaveBeenCalledWith('/students/exists', {
           params: { studentNo: '2024001', excludeId: undefined }
         })
         expect(result).toBe(false)
@@ -194,43 +194,43 @@ describe('V2 API', () => {
 
         await existsStudentNo('2024001', 1)
 
-        expect(mockedHttp.get).toHaveBeenCalledWith('/v2/students/exists', {
+        expect(mockedHttp.get).toHaveBeenCalledWith('/students/exists', {
           params: { studentNo: '2024001', excludeId: 1 }
         })
       })
     })
 
     describe('updateStudentStatus', () => {
-      it('should call PATCH /v2/students/:id/status with status', async () => {
+      it('should call PATCH /students/:id/status with status', async () => {
         mockedHttp.patch.mockResolvedValue(undefined)
 
         await updateStudentStatus(1, 1)
 
-        expect(mockedHttp.patch).toHaveBeenCalledWith('/v2/students/1/status', null, {
+        expect(mockedHttp.patch).toHaveBeenCalledWith('/students/1/status', null, {
           params: { status: 1 }
         })
       })
     })
 
     describe('assignDormitory', () => {
-      it('should call PATCH /v2/students/:id/dormitory with data', async () => {
+      it('should call PATCH /students/:id/dormitory with data', async () => {
         mockedHttp.patch.mockResolvedValue(undefined)
 
         await assignDormitory(1, { dormitoryId: 101, bedNo: '1' })
 
-        expect(mockedHttp.patch).toHaveBeenCalledWith('/v2/students/1/dormitory', null, {
+        expect(mockedHttp.patch).toHaveBeenCalledWith('/students/1/dormitory', null, {
           params: { dormitoryId: 101, bedNo: '1' }
         })
       })
     })
 
     describe('transferClass', () => {
-      it('should call PATCH /v2/students/:id/transfer with newClassId', async () => {
+      it('should call PATCH /students/:id/transfer with newClassId', async () => {
         mockedHttp.patch.mockResolvedValue(undefined)
 
         await transferClass(1, 2)
 
-        expect(mockedHttp.patch).toHaveBeenCalledWith('/v2/students/1/transfer', null, {
+        expect(mockedHttp.patch).toHaveBeenCalledWith('/students/1/transfer', null, {
           params: { newClassId: 2 }
         })
       })
@@ -257,105 +257,105 @@ describe('V2 API', () => {
   describe('Organization API', () => {
     describe('OrgUnit API', () => {
       describe('getOrgUnits', () => {
-        it('should call GET /v2/org-units', async () => {
+        it('should call GET /org-units', async () => {
           const mockUnits = [{ id: 1, unitCode: 'CS', unitName: '计算机学院' }]
           mockedHttp.get.mockResolvedValue(mockUnits)
 
           const result = await getOrgUnits()
 
-          expect(mockedHttp.get).toHaveBeenCalledWith('/v2/org-units')
+          expect(mockedHttp.get).toHaveBeenCalledWith('/org-units')
           expect(result).toEqual(mockUnits)
         })
       })
 
       describe('getOrgUnitTree', () => {
-        it('should call GET /v2/org-units/tree', async () => {
+        it('should call GET /org-units/tree', async () => {
           const mockTree = [{ id: 1, unitName: '学校', children: [] }]
           mockedHttp.get.mockResolvedValue(mockTree)
 
           const result = await getOrgUnitTree()
 
-          expect(mockedHttp.get).toHaveBeenCalledWith('/v2/org-units/tree')
+          expect(mockedHttp.get).toHaveBeenCalledWith('/org-units/tree')
           expect(result).toEqual(mockTree)
         })
       })
 
       describe('getOrgUnit', () => {
-        it('should call GET /v2/org-units/:id', async () => {
+        it('should call GET /org-units/:id', async () => {
           const mockUnit = { id: 1, unitCode: 'CS', unitName: '计算机学院' }
           mockedHttp.get.mockResolvedValue(mockUnit)
 
           const result = await getOrgUnit(1)
 
-          expect(mockedHttp.get).toHaveBeenCalledWith('/v2/org-units/1')
+          expect(mockedHttp.get).toHaveBeenCalledWith('/org-units/1')
           expect(result).toEqual(mockUnit)
         })
       })
 
       describe('createOrgUnit', () => {
-        it('should call POST /v2/org-units with data', async () => {
+        it('should call POST /org-units with data', async () => {
           const mockUnit = { id: 1, unitCode: 'CS', unitName: '计算机学院' }
           mockedHttp.post.mockResolvedValue(mockUnit)
 
           const data = { unitCode: 'CS', unitName: '计算机学院', unitType: 'COLLEGE' as const }
           const result = await createOrgUnit(data)
 
-          expect(mockedHttp.post).toHaveBeenCalledWith('/v2/org-units', data)
+          expect(mockedHttp.post).toHaveBeenCalledWith('/org-units', data)
           expect(result).toEqual(mockUnit)
         })
       })
 
       describe('updateOrgUnit', () => {
-        it('should call PUT /v2/org-units/:id with data', async () => {
+        it('should call PUT /org-units/:id with data', async () => {
           const mockUnit = { id: 1, unitCode: 'CS', unitName: '计算机科学学院' }
           mockedHttp.put.mockResolvedValue(mockUnit)
 
           const data = { unitName: '计算机科学学院' }
           const result = await updateOrgUnit(1, data)
 
-          expect(mockedHttp.put).toHaveBeenCalledWith('/v2/org-units/1', data)
+          expect(mockedHttp.put).toHaveBeenCalledWith('/org-units/1', data)
           expect(result).toEqual(mockUnit)
         })
       })
 
       describe('deleteOrgUnit', () => {
-        it('should call DELETE /v2/org-units/:id', async () => {
+        it('should call DELETE /org-units/:id', async () => {
           mockedHttp.delete.mockResolvedValue(undefined)
 
           await deleteOrgUnit(1)
 
-          expect(mockedHttp.delete).toHaveBeenCalledWith('/v2/org-units/1')
+          expect(mockedHttp.delete).toHaveBeenCalledWith('/org-units/1')
         })
       })
 
       describe('enableOrgUnit', () => {
-        it('should call PUT /v2/org-units/:id/enable', async () => {
+        it('should call PUT /org-units/:id/enable', async () => {
           mockedHttp.put.mockResolvedValue(undefined)
 
           await enableOrgUnit(1)
 
-          expect(mockedHttp.put).toHaveBeenCalledWith('/v2/org-units/1/enable')
+          expect(mockedHttp.put).toHaveBeenCalledWith('/org-units/1/enable')
         })
       })
 
       describe('disableOrgUnit', () => {
-        it('should call PUT /v2/org-units/:id/disable', async () => {
+        it('should call PUT /org-units/:id/disable', async () => {
           mockedHttp.put.mockResolvedValue(undefined)
 
           await disableOrgUnit(1)
 
-          expect(mockedHttp.put).toHaveBeenCalledWith('/v2/org-units/1/disable')
+          expect(mockedHttp.put).toHaveBeenCalledWith('/org-units/1/disable')
         })
       })
 
       describe('getOrgUnitsByType', () => {
-        it('should call GET /v2/org-units/by-type/:type', async () => {
+        it('should call GET /org-units/by-type/:type', async () => {
           const mockUnits = [{ id: 1, unitType: 'DEPARTMENT' }]
           mockedHttp.get.mockResolvedValue(mockUnits)
 
           const result = await getOrgUnitsByType('DEPARTMENT')
 
-          expect(mockedHttp.get).toHaveBeenCalledWith('/v2/org-units/by-type/DEPARTMENT')
+          expect(mockedHttp.get).toHaveBeenCalledWith('/org-units/by-type/DEPARTMENT')
           expect(result).toEqual(mockUnits)
         })
       })
@@ -377,7 +377,7 @@ describe('V2 API', () => {
 
     describe('Class API', () => {
       describe('getClasses', () => {
-        it('should call GET /v2/organization/classes with params', async () => {
+        it('should call GET /organization/classes with params', async () => {
           const mockResponse = {
             records: [{ id: 1, className: '计算机1班' }],
             total: 1,
@@ -390,25 +390,25 @@ describe('V2 API', () => {
           const params = { pageNum: 1, pageSize: 10, status: 'ACTIVE' as const }
           const result = await getClasses(params)
 
-          expect(mockedHttp.get).toHaveBeenCalledWith('/v2/organization/classes', { params })
+          expect(mockedHttp.get).toHaveBeenCalledWith('/organization/classes', { params })
           expect(result).toEqual(mockResponse)
         })
       })
 
       describe('getClass', () => {
-        it('should call GET /v2/organization/classes/:id', async () => {
+        it('should call GET /organization/classes/:id', async () => {
           const mockClass = { id: 1, className: '计算机1班', status: 'ACTIVE' }
           mockedHttp.get.mockResolvedValue(mockClass)
 
           const result = await getClass(1)
 
-          expect(mockedHttp.get).toHaveBeenCalledWith('/v2/organization/classes/1')
+          expect(mockedHttp.get).toHaveBeenCalledWith('/organization/classes/1')
           expect(result).toEqual(mockClass)
         })
       })
 
       describe('createClass', () => {
-        it('should call POST /v2/organization/classes with data', async () => {
+        it('should call POST /organization/classes with data', async () => {
           const mockClass = { id: 1, className: '计算机2班' }
           mockedHttp.post.mockResolvedValue(mockClass)
 
@@ -421,72 +421,72 @@ describe('V2 API', () => {
           }
           const result = await createClass(data)
 
-          expect(mockedHttp.post).toHaveBeenCalledWith('/v2/organization/classes', data)
+          expect(mockedHttp.post).toHaveBeenCalledWith('/organization/classes', data)
           expect(result).toEqual(mockClass)
         })
       })
 
       describe('updateClass', () => {
-        it('should call PUT /v2/organization/classes/:id with data', async () => {
+        it('should call PUT /organization/classes/:id with data', async () => {
           const mockClass = { id: 1, className: '计算机2班(更新)' }
           mockedHttp.put.mockResolvedValue(mockClass)
 
           const data = { className: '计算机2班(更新)' }
           const result = await updateClass(1, data)
 
-          expect(mockedHttp.put).toHaveBeenCalledWith('/v2/organization/classes/1', data)
+          expect(mockedHttp.put).toHaveBeenCalledWith('/organization/classes/1', data)
           expect(result).toEqual(mockClass)
         })
       })
 
       describe('deleteClass', () => {
-        it('should call DELETE /v2/organization/classes/:id', async () => {
+        it('should call DELETE /organization/classes/:id', async () => {
           mockedHttp.delete.mockResolvedValue(undefined)
 
           await deleteClass(1)
 
-          expect(mockedHttp.delete).toHaveBeenCalledWith('/v2/organization/classes/1')
+          expect(mockedHttp.delete).toHaveBeenCalledWith('/organization/classes/1')
         })
       })
 
       describe('activateClass', () => {
-        it('should call POST /v2/organization/classes/:id/activate', async () => {
+        it('should call POST /organization/classes/:id/activate', async () => {
           mockedHttp.post.mockResolvedValue(undefined)
 
           await activateClass(1)
 
-          expect(mockedHttp.post).toHaveBeenCalledWith('/v2/organization/classes/1/activate')
+          expect(mockedHttp.post).toHaveBeenCalledWith('/organization/classes/1/activate')
         })
       })
 
       describe('graduateClass', () => {
-        it('should call POST /v2/organization/classes/:id/graduate', async () => {
+        it('should call POST /organization/classes/:id/graduate', async () => {
           mockedHttp.post.mockResolvedValue(undefined)
 
           await graduateClass(1)
 
-          expect(mockedHttp.post).toHaveBeenCalledWith('/v2/organization/classes/1/graduate')
+          expect(mockedHttp.post).toHaveBeenCalledWith('/organization/classes/1/graduate')
         })
       })
 
       describe('dissolveClass', () => {
-        it('should call POST /v2/organization/classes/:id/dissolve', async () => {
+        it('should call POST /organization/classes/:id/dissolve', async () => {
           mockedHttp.post.mockResolvedValue(undefined)
 
           await dissolveClass(1)
 
-          expect(mockedHttp.post).toHaveBeenCalledWith('/v2/organization/classes/1/dissolve')
+          expect(mockedHttp.post).toHaveBeenCalledWith('/organization/classes/1/dissolve')
         })
       })
 
       describe('assignHeadTeacher', () => {
-        it('should call POST /v2/organization/classes/:id/head-teacher with data', async () => {
+        it('should call POST /organization/classes/:id/head-teacher with data', async () => {
           mockedHttp.post.mockResolvedValue(undefined)
 
           const data = { teacherId: 100 }
           await assignHeadTeacher(1, data)
 
-          expect(mockedHttp.post).toHaveBeenCalledWith('/v2/organization/classes/1/head-teacher', data)
+          expect(mockedHttp.post).toHaveBeenCalledWith('/organization/classes/1/head-teacher', data)
         })
       })
 

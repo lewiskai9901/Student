@@ -80,9 +80,9 @@
 import { ref, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
 import { Refresh } from '@element-plus/icons-vue'
-import { createExportTask, listExportTasks } from '@/api/v2/inspectionExport'
-import type { ExportTask, ExportStatus, ExportFormat } from '@/types/v2/analytics'
-import { ExportStatusConfig } from '@/types/v2/analytics'
+import { createExportTask, listExportTasks } from '@/api/inspectionExport'
+import type { ExportTask, ExportStatus, ExportFormat } from '@/types/analytics'
+import { ExportStatusConfig } from '@/types/analytics'
 
 const loading = ref(false)
 const creating = ref(false)

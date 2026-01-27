@@ -699,9 +699,9 @@ import {
   Package
 } from 'lucide-vue-next'
 import { useRouter } from 'vue-router'
-import { assetApi } from '@/api/v2/asset'
-import type { Asset } from '@/types/v2/asset'
-import { AssetStatus, AssetStatusMap } from '@/types/v2/asset'
+import { assetApi } from '@/api/asset'
+import type { Asset } from '@/types/asset'
+import { AssetStatus, AssetStatusMap } from '@/types/asset'
 import {
   getDormitory,
   updateDormitory,
@@ -710,9 +710,9 @@ import {
   updateDormitoryStatus,
   swapStudentDormitory,
   getStudentDormitoryHistory
-} from '@/api/v2/dormitory'
-import { searchStudents as searchStudentsApi, getStudents } from '@/api/v2/student'
-import type { Dormitory } from '@/types/v2/dormitory'
+} from '@/api/dormitory'
+import { searchStudents as searchStudentsApi, getStudents } from '@/api/student'
+import type { Dormitory } from '@/types/dormitory'
 
 interface Props {
   dormitoryId: number | null

@@ -104,7 +104,7 @@
 
 <script setup lang="ts">
 import { ref } from 'vue'
-import type { DepartmentAssigneesDTO, TaskAssigneeDetailDTO } from '@/api/v2/task'
+import type { DepartmentAssigneesDTO, TaskAssigneeDetailDTO } from '@/api/task'
 
 defineProps<{
   assigneesByDepartment: DepartmentAssigneesDTO[]

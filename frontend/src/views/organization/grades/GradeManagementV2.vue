@@ -99,10 +99,10 @@ import { GraduationCap } from 'lucide-vue-next'
 import GradeSelector from './components/GradeSelector.vue'
 import MajorConfigPanel from './components/MajorConfigPanel.vue'
 import GradeForm from '@/components/grade/GradeForm.vue'
-import { getGradePage, deleteGrade } from '@/api/v2/organization'
-import { getDirectionsByYear } from '@/api/v2/gradeMajorDirection'
-import { getAllEnabledMajors } from '@/api/v2/major'
-import { getDirectionsByMajor } from '@/api/v2/majorDirection'
+import { getGradePage, deleteGrade } from '@/api/organization'
+import { getDirectionsByYear } from '@/api/gradeMajorDirection'
+import { getAllEnabledMajors } from '@/api/major'
+import { getDirectionsByMajor } from '@/api/majorDirection'
 
 // 主题色配置
 const themeColors = {

@@ -141,9 +141,9 @@ import { ref, computed, watch, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
 import { Search, Download } from '@element-plus/icons-vue'
 import { useDebounceFn } from '@vueuse/core'
-import { getClassStudents } from '@/api/v2/myClass'
-import type { MyClassStudent } from '@/types/v2/myClass'
-import { StudentStatusConfig } from '@/types/v2/myClass'
+import { getClassStudents } from '@/api/myClass'
+import type { MyClassStudent } from '@/types/myClass'
+import { StudentStatusConfig } from '@/types/myClass'
 
 const props = defineProps<{
   classId: string | number

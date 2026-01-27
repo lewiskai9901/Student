@@ -11,7 +11,7 @@ import { GridComponent, TooltipComponent } from 'echarts/components'
 import { CanvasRenderer } from 'echarts/renderers'
 import type { ECharts } from 'echarts/core'
 import * as echarts from 'echarts/core'
-import type { ScoreTrendItem } from '@/types/v2/myClass'
+import type { ScoreTrendItem } from '@/types/myClass'
 
 // Register ECharts components
 use([LineChart, GridComponent, TooltipComponent, CanvasRenderer])

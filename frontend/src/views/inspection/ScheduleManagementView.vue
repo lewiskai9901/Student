@@ -171,9 +171,9 @@
 import { ref, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Plus } from '@element-plus/icons-vue'
-import { listPolicies, createPolicy, enablePolicy, disablePolicy, deletePolicy, listExecutions, triggerExecution } from '@/api/v2/schedule'
-import type { SchedulePolicy, ScheduleExecution, CreatePolicyRequest, PolicyType, RotationAlgorithm, ExecutionStatus } from '@/types/v2/schedule'
-import { PolicyTypeConfig, RotationAlgorithmConfig, ExecutionStatusConfig } from '@/types/v2/schedule'
+import { listPolicies, createPolicy, enablePolicy, disablePolicy, deletePolicy, listExecutions, triggerExecution } from '@/api/schedule'
+import type { SchedulePolicy, ScheduleExecution, CreatePolicyRequest, PolicyType, RotationAlgorithm, ExecutionStatus } from '@/types/schedule'
+import { PolicyTypeConfig, RotationAlgorithmConfig, ExecutionStatusConfig } from '@/types/schedule'
 
 const activeTab = ref('policies')
 const loadingPolicies = ref(false)

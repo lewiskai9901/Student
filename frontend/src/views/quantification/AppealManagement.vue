@@ -118,7 +118,7 @@ import AppealPendingList from './components/AppealPendingList.vue'
 import AppealPublicityList from './components/AppealPublicityList.vue'
 import AppealStatistics from './components/AppealStatistics.vue'
 import { useAuthStore } from '@/stores/auth'
-import { getAppealSummary } from '@/api/v2/appeal'
+import { getAppealSummary } from '@/api/appeal'
 
 const authStore = useAuthStore()
 const activeTab = ref('my')

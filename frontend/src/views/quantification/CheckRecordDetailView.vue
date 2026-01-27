@@ -1236,14 +1236,14 @@ import {
   LayoutList, Trophy, Scale, Info, AlertTriangle, Send, BarChart3, Eye,
   RefreshCw, MapPin, FileText
 } from 'lucide-vue-next'
-import { getCheckRecordDetail, getClassRanking, getWeightConfigTree } from '@/api/v2/quantification'
-import { createAppeal, getClassAppealHistory } from '@/api/v2/appeal'
-import type { ClassStats, CheckRecordCategoryStatsDTO, DeductionDetail } from '@/api/v2/quantification'
+import { getCheckRecordDetail, getClassRanking, getWeightConfigTree } from '@/api/quantification'
+import { createAppeal, getClassAppealHistory } from '@/api/appeal'
+import type { ClassStats, CheckRecordCategoryStatsDTO, DeductionDetail } from '@/api/quantification'
 import WeightConfigDetailDialog from '@/components/quantification/WeightConfigDetailDialog.vue'
 import WeightConfigTreeDialog from '@/components/quantification/WeightConfigTreeDialog.vue'
 import ClassWeightConfigView from '@/components/quantification/ClassWeightConfigView.vue'
 import RatingResultCard from './components/rating/RatingResultCard.vue'
-import { getRatingConfigsByPlan, type RatingConfigVO } from '@/api/v2/rating'
+import { getRatingConfigsByPlan, type RatingConfigVO } from '@/api/rating'
 
 const route = useRoute()
 const router = useRouter()

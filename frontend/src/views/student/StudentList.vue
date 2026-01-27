@@ -503,13 +503,13 @@ import {
   getStudents,
   deleteStudent,
   deleteStudents
-} from '@/api/v2/student'
-import type { Student, StudentQueryParams, StudentStatus } from '@/types/v2/student'
-import { StudentStatusMap } from '@/types/v2/student'
+} from '@/api/student'
+import type { Student, StudentQueryParams, StudentStatus } from '@/types/student'
+import { StudentStatusMap } from '@/types/student'
 // V2 班级和年级 API
-import { getClasses } from '@/api/v2/organization'
-import type { SchoolClass } from '@/types/v2'
-import { getAllGrades, type Grade } from '@/api/v2/organization'
+import { getClasses } from '@/api/organization'
+import type { SchoolClass } from '@/types'
+import { getAllGrades, type Grade } from '@/api/organization'
 import StudentDetail from '@/components/student/StudentDetail.vue'
 import StudentForm from '@/components/student/StudentForm.vue'
 import { StatCard } from '@/components/design-system'

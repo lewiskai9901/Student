@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from 'vitest'
-import { usePagination } from '@/composables/v2/usePagination'
+import { usePagination } from '@/composables/usePagination'
 import { nextTick } from 'vue'
 
 /**

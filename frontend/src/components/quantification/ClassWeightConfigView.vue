@@ -277,7 +277,7 @@ import {
   Scale, ChevronDown, ArrowRight, Info,
   Sparkles, ClipboardCheck, BookOpen, Moon, AlertCircle
 } from 'lucide-vue-next'
-import type { ClassStats, CheckRecordCategoryStatsDTO, DeductionDetail } from '@/api/v2/quantification'
+import type { ClassStats, CheckRecordCategoryStatsDTO, DeductionDetail } from '@/api/quantification'
 
 // 多配置加权信息接口
 interface MultiWeightConfigInfo {

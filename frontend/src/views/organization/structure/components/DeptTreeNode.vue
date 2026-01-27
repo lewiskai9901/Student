@@ -74,7 +74,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { School, Building2, ChevronRight, Plus, Pencil, Trash2, Ban, Check } from 'lucide-vue-next'
-import type { DepartmentResponse } from '@/api/v2/organization'
+import type { DepartmentResponse } from '@/api/organization'
 
 interface Props {
   dept: DepartmentResponse

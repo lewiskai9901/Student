@@ -154,8 +154,8 @@ import { ref, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
 import { Loader2, Building2, Users } from 'lucide-vue-next'
 // V2 DDD API
-import { getDormitory } from '@/api/v2/dormitory'
-import type { Dormitory, StudentSimpleInfo } from '@/types/v2/dormitory'
+import { getDormitory } from '@/api/dormitory'
+import type { Dormitory, StudentSimpleInfo } from '@/types/dormitory'
 
 interface Props {
   dormitoryId: number | null

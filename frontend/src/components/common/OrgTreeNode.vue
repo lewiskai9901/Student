@@ -59,7 +59,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { ChevronRight, Building2, Users, GraduationCap, Home, Folder } from 'lucide-vue-next'
-import type { OrgUnitTreeNode } from '@/types/v2'
+import type { OrgUnitTreeNode } from '@/types'
 
 const props = defineProps<{
   node: OrgUnitTreeNode

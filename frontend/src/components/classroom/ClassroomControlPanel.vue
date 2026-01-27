@@ -290,16 +290,16 @@ import {
   Package
 } from 'lucide-vue-next'
 import { useRouter } from 'vue-router'
-import { assetApi } from '@/api/v2/asset'
-import type { Asset } from '@/types/v2/asset'
-import { AssetStatus, AssetStatusMap } from '@/types/v2/asset'
+import { assetApi } from '@/api/asset'
+import type { Asset } from '@/types/asset'
+import { AssetStatus, AssetStatusMap } from '@/types/asset'
 import {
   getClassroomById,
   updateClassroom,
   deleteClassroom,
   unassignClassFromClassroom,
   type ClassroomWithDetails
-} from '@/api/v2/teaching'
+} from '@/api/teaching'
 
 const props = defineProps<{
   classroomId: number | null

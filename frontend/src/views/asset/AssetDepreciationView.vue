@@ -11,7 +11,7 @@ import {
   assetDepreciationApi,
   type AssetDepreciationDTO,
   DepreciationMethodMap
-} from '@/api/v2/assetDepreciation'
+} from '@/api/assetDepreciation'
 
 // 设计系统组件
 import StatCard from '@/components/design-system/cards/StatCard.vue'

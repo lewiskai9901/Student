@@ -557,7 +557,7 @@ import {
   updateWeightConfig,
   deleteWeightConfig,
   setDefaultWeightConfig
-} from '@/api/v2/quantification-extra'
+} from '@/api/quantification-extra'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import {
   Scale,

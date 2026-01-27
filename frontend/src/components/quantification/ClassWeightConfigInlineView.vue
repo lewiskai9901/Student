@@ -220,8 +220,8 @@
 
 <script setup lang="ts">
 import { ref, watch, onMounted, computed, markRaw, type Component } from 'vue'
-import { getWeightConfigTree } from '@/api/v2/quantification'
-import type { ClassStats } from '@/api/v2/quantification'
+import { getWeightConfigTree } from '@/api/quantification'
+import type { ClassStats } from '@/api/quantification'
 import { ElMessage } from 'element-plus'
 import {
   Scale, ArrowRight, Layers, GitBranch, ChevronDown, Info,

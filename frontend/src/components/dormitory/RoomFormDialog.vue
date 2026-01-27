@@ -179,7 +179,7 @@ import { ref, reactive, computed, watch } from 'vue'
 import { ElMessage } from 'element-plus'
 import { X, Loader2 } from 'lucide-vue-next'
 // V2 DDD API
-import { createDormitory } from '@/api/v2/dormitory'
+import { createDormitory } from '@/api/dormitory'
 // 房间类型选项暂保留从 V1 types 导入
 import { roomUsageTypeOptions, bedCapacityOptions } from '@/types/dormitory'
 

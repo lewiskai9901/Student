@@ -1,7 +1,7 @@
 /**
  * 通用类型定义
  *
- * 注意: ApiResponse 和 PageResult 在 @/types/v2 中有对应版本
+ * 注意: ApiResponse 和 PageResult 在 @/types 中有对应版本
  * - PageResult -> PageResponse (字段一致)
  * - PageRequest -> PageParams (字段一致)
  *

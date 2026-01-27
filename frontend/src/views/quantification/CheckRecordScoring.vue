@@ -533,8 +533,8 @@ import {
 } from 'lucide-vue-next'
 import http from '@/utils/request'
 import { useAuthStore } from '@/stores/auth'
-import { getEnabledDeductionItemsByTypeId, type DeductionItem } from '@/api/v2/quantification'
-import { getWeightConfig, calculateWeightedScore, type ClassWeightConfig, type ClassWeightResult } from '@/api/v2/quantification-extra'
+import { getEnabledDeductionItemsByTypeId, type DeductionItem } from '@/api/quantification'
+import { getWeightConfig, calculateWeightedScore, type ClassWeightConfig, type ClassWeightResult } from '@/api/quantification-extra'
 import DeductionCard from './components/DeductionCard.vue'
 import QuickEntryDialog from '@/components/quantification/QuickEntryDialog.vue'
 

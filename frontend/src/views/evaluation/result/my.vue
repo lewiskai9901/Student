@@ -187,7 +187,7 @@ import type { ECharts } from 'echarts/core'
 
 use([RadarChart, CanvasRenderer, RadarComponent, TooltipComponent, LegendComponent])
 import * as echarts from 'echarts/core'
-import { getMyEvaluationResult, type EvaluationPeriod } from '@/api/v2/evaluation'
+import { getMyEvaluationResult, type EvaluationPeriod } from '@/api/evaluation'
 
 const selectedPeriodId = ref<number>()
 const periodList = ref<EvaluationPeriod[]>([])

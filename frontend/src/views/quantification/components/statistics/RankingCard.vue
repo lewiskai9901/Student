@@ -93,7 +93,7 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
 import { ArrowRight, Top, Bottom, Minus, WarningFilled } from '@element-plus/icons-vue'
-import type { SmartClassRankingVO } from '@/api/v2/quantification-extra'
+import type { SmartClassRankingVO } from '@/api/quantification-extra'
 
 interface Props {
   title?: string

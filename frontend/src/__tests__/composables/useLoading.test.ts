@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest'
-import { useLoading, useSimpleLoading } from '@/composables/v2/useLoading'
+import { useLoading, useSimpleLoading } from '@/composables/useLoading'
 
 /**
  * useLoading Composable 测试

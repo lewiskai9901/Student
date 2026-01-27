@@ -316,8 +316,8 @@ import {
 import {
   getGradePage,
   deleteGrade
-} from '@/api/v2/organization'
-import { getDirectionsByYear } from '@/api/v2/gradeMajorDirection'
+} from '@/api/organization'
+import { getDirectionsByYear } from '@/api/gradeMajorDirection'
 import GradeForm from '@/components/grade/GradeForm.vue'
 import GradeDirectionConfigDrag from './components/GradeDirectionConfigDrag.vue'
 

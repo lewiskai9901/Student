@@ -1,5 +1,5 @@
 /**
- * @deprecated 请使用 @/types/v2/organization 中的 SchoolClass 类型
+ * @deprecated 请使用 @/types/organization 中的 SchoolClass 类型
  * V1 类型保留用于兼容旧组件，新开发请使用 V2 类型
  *
  * 主要变更:

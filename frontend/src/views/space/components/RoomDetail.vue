@@ -304,9 +304,9 @@
 import { ref, computed, watch, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Edit, Delete, ArrowDown, Plus, Refresh, Loading, User, Phone } from '@element-plus/icons-vue'
-import { deleteSpace, changeSpaceStatus, getOccupants, getOccupantHistory, checkOut } from '@/api/v2/space'
-import type { SpaceDTO, SpaceOccupantDTO, SpaceStatus, RoomType, OccupantType } from '@/types/v2/space'
-import { getRoomTypeName, getStatusClass, getOccupantTypeName } from '@/types/v2/space'
+import { deleteSpace, changeSpaceStatus, getOccupants, getOccupantHistory, checkOut } from '@/api/space'
+import type { SpaceDTO, SpaceOccupantDTO, SpaceStatus, RoomType, OccupantType } from '@/types/space'
+import { getRoomTypeName, getStatusClass, getOccupantTypeName } from '@/types/space'
 import SpaceFormDialog from './SpaceFormDialog.vue'
 import CheckInDialog from './CheckInDialog.vue'
 

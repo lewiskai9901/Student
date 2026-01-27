@@ -6,9 +6,9 @@ import { ref, computed, watch } from 'vue'
 import { ElMessage } from 'element-plus'
 import { Box, User, Calendar, Document, Check } from '@element-plus/icons-vue'
 import type { FormInstance, FormRules } from 'element-plus'
-import { assetBorrowApi } from '@/api/v2/assetBorrow'
-import type { Asset, CreateBorrowRequest } from '@/types/v2/asset'
-import { BorrowType, BorrowTypeMap, ManagementMode, ManagementModeMap } from '@/types/v2/asset'
+import { assetBorrowApi } from '@/api/assetBorrow'
+import type { Asset, CreateBorrowRequest } from '@/types/asset'
+import { BorrowType, BorrowTypeMap, ManagementMode, ManagementModeMap } from '@/types/asset'
 import UserSelector from '@/components/common/UserSelector.vue'
 
 const props = defineProps<{

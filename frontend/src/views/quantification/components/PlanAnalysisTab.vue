@@ -172,7 +172,7 @@ import {
   getSnapshots,
   type AnalysisConfig,
   type AnalysisSnapshot
-} from '@/api/v2/quantification-extra'
+} from '@/api/quantification-extra'
 import { formatDateTime } from '@/utils/date'
 import AnalysisConfigWizard from './analysis/AnalysisConfigWizard.vue'
 

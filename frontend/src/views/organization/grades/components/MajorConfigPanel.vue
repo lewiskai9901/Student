@@ -206,7 +206,7 @@ import {
   addDirectionToYear,
   deleteGradeMajorDirection,
   batchDeleteGradeMajorDirections
-} from '@/api/v2/gradeMajorDirection'
+} from '@/api/gradeMajorDirection'
 
 interface Props {
   grade: any

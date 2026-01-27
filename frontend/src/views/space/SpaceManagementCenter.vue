@@ -175,9 +175,9 @@ import {
   Share
 } from '@element-plus/icons-vue'
 
-import { getSpaceTree } from '@/api/v2/space'
-import type { SpaceDTO, SpaceType, BuildingType } from '@/types/v2/space'
-import { getStatusClass } from '@/types/v2/space'
+import { getSpaceTree } from '@/api/space'
+import type { SpaceDTO, SpaceType, BuildingType } from '@/types/space'
+import { getStatusClass } from '@/types/space'
 
 const router = useRouter()
 

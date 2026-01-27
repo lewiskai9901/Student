@@ -180,7 +180,7 @@
 import { ref, reactive, watch, computed } from 'vue'
 import { ElMessage } from 'element-plus'
 import { School, Building2, X, Loader2 } from 'lucide-vue-next'
-import { createClassroom, updateClassroom, type ClassroomWithDetails } from '@/api/v2/teaching'
+import { createClassroom, updateClassroom, type ClassroomWithDetails } from '@/api/teaching'
 import type { Classroom } from '@/types/teaching'
 
 const props = defineProps<{

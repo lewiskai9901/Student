@@ -265,10 +265,10 @@ import { ElMessage } from 'element-plus'
 import { useAuthStore } from '@/stores/auth'
 import { formatDate, formatDateTime } from '@/utils/date'
 // V2 DDD API
-import { getStudent } from '@/api/v2/student'
-import { getStudentDormitoryHistory } from '@/api/v2/dormitory'
-import type { Student } from '@/types/v2/student'
-import { StudentStatusMap } from '@/types/v2/student'
+import { getStudent } from '@/api/student'
+import { getStudentDormitoryHistory } from '@/api/dormitory'
+import type { Student } from '@/types/student'
+import { StudentStatusMap } from '@/types/student'
 import type { StudentDormitory } from '@/types/studentDormitory'
 
 // 信息项组件

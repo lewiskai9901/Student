@@ -78,7 +78,7 @@
 
 <script setup lang="ts">
 import { ref, computed } from 'vue'
-import type { ClassRankingItem } from '@/api/v2/quantification-extra'
+import type { ClassRankingItem } from '@/api/quantification-extra'
 
 const props = defineProps<{
   data: ClassRankingItem[] | null

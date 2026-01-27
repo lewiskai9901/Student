@@ -255,7 +255,7 @@ import {
   updateDepartmentStatus,
   type DepartmentCreateRequest,
   type DepartmentResponse
-} from '@/api/v2/organization'
+} from '@/api/organization'
 
 interface FlatDepartment extends DepartmentResponse {
   level: number

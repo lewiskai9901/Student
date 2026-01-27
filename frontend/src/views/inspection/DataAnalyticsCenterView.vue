@@ -101,7 +101,7 @@
 <script setup lang="ts">
 import { ref, reactive, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
-import { getClassRanking, getViolationDistribution, getInspectorWorkload, getDepartmentComparison } from '@/api/v2/inspectionAnalytics'
+import { getClassRanking, getViolationDistribution, getInspectorWorkload, getDepartmentComparison } from '@/api/inspectionAnalytics'
 
 const today = new Date()
 const thirtyDaysAgo = new Date(today)

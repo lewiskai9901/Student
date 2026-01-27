@@ -180,13 +180,13 @@ import {
   publishNotification,
   downloadNotification,
   type NotificationRecord
-} from '@/api/v2/notification'
+} from '@/api/notification'
 import {
   initWechatShare,
   isWechatBrowser,
   copyShareLink,
   getShareInfo
-} from '@/api/v2/wechat'
+} from '@/api/wechat'
 
 const route = useRoute()
 const router = useRouter()

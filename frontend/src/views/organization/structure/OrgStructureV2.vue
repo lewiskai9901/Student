@@ -141,7 +141,7 @@ import {
   deleteDepartment,
   updateDepartmentStatus,
   type DepartmentResponse
-} from '@/api/v2/organization'
+} from '@/api/organization'
 
 const loading = ref(false)
 const deptTree = ref<DepartmentResponse[]>([])

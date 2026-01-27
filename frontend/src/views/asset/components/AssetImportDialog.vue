@@ -6,8 +6,8 @@ import { ref, computed, watch } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Upload, Download, Check, Warning, Document, Close } from '@element-plus/icons-vue'
 import type { UploadInstance, UploadFile, UploadRawFile } from 'element-plus'
-import { assetApi } from '@/api/v2/asset'
-import type { ImportResult } from '@/types/v2/asset'
+import { assetApi } from '@/api/asset'
+import type { ImportResult } from '@/types/asset'
 
 const props = defineProps<{
   visible: boolean

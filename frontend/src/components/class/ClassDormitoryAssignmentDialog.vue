@@ -370,7 +370,7 @@ import {
   ChevronDown,
   Check
 } from 'lucide-vue-next'
-import { getDormitoriesByOrgUnit, addDormitory, removeDormitory, getClassesByOrgUnit } from '@/api/v2/organization'
+import { getDormitoriesByOrgUnit, addDormitory, removeDormitory, getClassesByOrgUnit } from '@/api/organization'
 
 // Props - 使用 string | number 因为大数字 ID 可能超过 JS 安全整数范围
 const props = defineProps<{

@@ -65,8 +65,8 @@
 
 <script setup lang="ts">
 import { computed } from 'vue'
-import type { SpaceDTO, BuildingType } from '@/types/v2/space'
-import { getBuildingTypeName } from '@/types/v2/space'
+import type { SpaceDTO, BuildingType } from '@/types/space'
+import { getBuildingTypeName } from '@/types/space'
 
 const props = defineProps<{
   building: SpaceDTO

@@ -332,7 +332,7 @@ import {
   createPermission,
   updatePermission,
   deletePermission
-} from '@/api/v2/access'
+} from '@/api/access'
 
 interface Permission {
   id: number

@@ -13,7 +13,7 @@ import type { ECharts } from 'echarts/core'
 
 use([LineChart, CanvasRenderer, GridComponent, TooltipComponent])
 import * as echarts from 'echarts/core'
-import type { TrendPoint } from '@/api/v2/quantification-extra'
+import type { TrendPoint } from '@/api/quantification-extra'
 
 const props = defineProps<{
   data: TrendPoint[] | null

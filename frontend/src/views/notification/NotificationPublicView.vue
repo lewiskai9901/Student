@@ -49,8 +49,8 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
-import { getNotificationPublic } from '@/api/v2/notification'
-import { initWechatShare, isWechatBrowser } from '@/api/v2/wechat'
+import { getNotificationPublic } from '@/api/notification'
+import { initWechatShare, isWechatBrowser } from '@/api/wechat'
 import DOMPurify from 'dompurify'
 
 const route = useRoute()

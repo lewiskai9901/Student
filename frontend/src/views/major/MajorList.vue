@@ -768,15 +768,15 @@ import {
   ArrowDown
 } from 'lucide-vue-next'
 import { useAuthStore } from '@/stores/auth'
-import { getMajorList, addMajor, updateMajor, deleteMajor } from '@/api/v2/major'
+import { getMajorList, addMajor, updateMajor, deleteMajor } from '@/api/major'
 import {
   getDirectionsByMajor,
   addMajorDirection,
   updateMajorDirection,
   deleteMajorDirection,
   type MajorDirection
-} from '@/api/v2/majorDirection'
-import { getDepartmentList } from '@/api/v2/organization'
+} from '@/api/majorDirection'
+import { getDepartmentList } from '@/api/organization'
 import type { Major, MajorQueryParams, MajorFormData } from '@/types/major'
 
 const authStore = useAuthStore()

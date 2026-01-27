@@ -252,10 +252,10 @@
 import { ref, reactive, onMounted, watch } from 'vue'
 import { ElMessage } from 'element-plus'
 import { WarningFilled, Edit, UserFilled, CircleCheckFilled, Camera, Plus } from '@element-plus/icons-vue'
-import { getEnabledDeductionItemsByTypeId, type DeductionItem } from '@/api/v2/quantification'
-import type { ScoringDetailRequest } from '@/api/v2/quantification-extra'
-import { searchStudents as searchStudentsApi } from '@/api/v2/student'
-import { getUploadUrl } from '@/api/v2/upload'
+import { getEnabledDeductionItemsByTypeId, type DeductionItem } from '@/api/quantification'
+import type { ScoringDetailRequest } from '@/api/quantification-extra'
+import { searchStudents as searchStudentsApi } from '@/api/student'
+import { getUploadUrl } from '@/api/upload'
 import { getToken } from '@/utils/token'
 
 // Props接口定义 - 使用 string | number 类型避免大ID精度丢失

@@ -223,7 +223,7 @@ import { ElMessage, ElMessageBox } from 'element-plus'
 import {
   Plus, Search, Edit, Delete, CopyDocument, Star, Clock, DataAnalysis, ArrowDown
 } from '@element-plus/icons-vue'
-import { getCheckPlanPage, type CheckPlan } from '@/api/v2/quantification'
+import { getCheckPlanPage, type CheckPlan } from '@/api/quantification'
 import {
   getConfigPage,
   deleteConfig,
@@ -233,7 +233,7 @@ import {
   getSnapshots,
   type AnalysisConfig,
   type AnalysisSnapshot
-} from '@/api/v2/quantification-extra'
+} from '@/api/quantification-extra'
 import { formatDateTime } from '@/utils/date'
 import AnalysisConfigWizard from './components/analysis/AnalysisConfigWizard.vue'
 

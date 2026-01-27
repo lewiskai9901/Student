@@ -245,8 +245,8 @@ import {
   revokeRatingResult,
   type RatingResultVO,
   type RatingResultQueryDTO
-} from '@/api/v2/rating'
-import { getRatingConfigsByPlan, type RatingConfigVO } from '@/api/v2/rating'
+} from '@/api/rating'
+import { getRatingConfigsByPlan, type RatingConfigVO } from '@/api/rating'
 import RatingResultDetailDialog from './RatingResultDetailDialog.vue'
 
 // Props

@@ -207,8 +207,8 @@
 import { ref, reactive, computed, onMounted } from 'vue'
 import { RefreshCw, ArrowUpDown, Download, X, ChevronLeft, ChevronRight } from 'lucide-vue-next'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { pageEvaluationResults, getEvaluationResultDetail, calculateClassEvaluation, calculateRankings, recalculateEvaluation, pagePeriods, type EvaluationResult, type EvaluationPeriod } from '@/api/v2/evaluation'
-import { getAllClasses } from '@/api/v2/organization'
+import { pageEvaluationResults, getEvaluationResultDetail, calculateClassEvaluation, calculateRankings, recalculateEvaluation, pagePeriods, type EvaluationResult, type EvaluationPeriod } from '@/api/evaluation'
+import { getAllClasses } from '@/api/organization'
 
 const queryParams = reactive({ pageNum: 1, pageSize: 10, periodId: undefined as number | undefined, studentNo: '', studentName: '', classId: undefined as number | undefined })
 const loading = ref(false)

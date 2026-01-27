@@ -148,9 +148,9 @@
 <script setup lang="ts">
 import { ref, reactive, watch, onMounted } from 'vue'
 import { XMarkIcon, InformationCircleIcon } from '@heroicons/vue/24/outline'
-import { createTask, type TaskCreateRequest } from '@/api/v2/task'
-import { getEnabledTemplates, type WorkflowTemplateDTO } from '@/api/v2/task/workflow'
-import { getSimpleUserList, type SimpleUser } from '@/api/v2/user'
+import { createTask, type TaskCreateRequest } from '@/api/task'
+import { getEnabledTemplates, type WorkflowTemplateDTO } from '@/api/task/workflow'
+import { getSimpleUserList, type SimpleUser } from '@/api/user'
 import UserSelector from '@/components/common/UserSelector.vue'
 
 const props = defineProps<{

@@ -87,7 +87,7 @@ import {
   getExportTemplate,
   deleteExportTemplate,
   type ExportTemplateDTO
-} from '@/api/v2/exportTemplate'
+} from '@/api/exportTemplate'
 
 const props = defineProps<{
   planId: string | number

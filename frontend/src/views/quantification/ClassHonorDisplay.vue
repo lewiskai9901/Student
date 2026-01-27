@@ -248,15 +248,15 @@ import {
   type ClassBadgeRecordVO,
   BADGE_LEVEL_LABELS,
   BADGE_LEVEL_COLORS
-} from '@/api/v2/rating'
+} from '@/api/rating'
 import {
   getClassHistory,
   getRatingTrend,
   type ClassRatingHistoryVO,
   type RatingTrendVO
-} from '@/api/v2/rating'
-import { getClassList } from '@/api/v2/organization'
-import { getCheckPlanPage } from '@/api/v2/quantification'
+} from '@/api/rating'
+import { getClassList } from '@/api/organization'
+import { getCheckPlanPage } from '@/api/quantification'
 import RatingTrendChart from './components/charts/RatingTrendChart.vue'
 import BadgeDetailDialog from './components/badge/BadgeDetailDialog.vue'
 

@@ -231,10 +231,10 @@ import {
   getScopeTypeName as getTypeName,
   type ScopeAssignmentDTO,
   type ScopeTypeCode
-} from '@/api/v2/quantification-extra'
-import { getDepartmentTree } from '@/api/v2/organization'
-import { getAllGrades } from '@/api/v2/organization'
-import { getAllClasses } from '@/api/v2/organization'
+} from '@/api/quantification-extra'
+import { getDepartmentTree } from '@/api/organization'
+import { getAllGrades } from '@/api/organization'
+import { getAllClasses } from '@/api/organization'
 
 const props = defineProps<{
   userId: number

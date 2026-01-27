@@ -318,8 +318,8 @@ import {
   type ClassDormitoryBinding,
   type ClassInfo,
   type DepartmentDormitoryStatistics
-} from '@/api/v2/departmentDormitory'
-import type { Dormitory } from '@/types/v2/dormitory'
+} from '@/api/departmentDormitory'
+import type { Dormitory } from '@/types/dormitory'
 
 // State
 const loading = ref(false)

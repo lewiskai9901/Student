@@ -129,7 +129,7 @@ import {
   type RatingRuleVO,
   type RatingResultVO,
   type RatingStatisticsVO
-} from '@/api/v2/rating'
+} from '@/api/rating'
 import { downloadBlob, getFilenameFromContentDisposition } from '@/utils/export'
 
 const props = defineProps<{

@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { mount } from '@vue/test-utils'
-import StatusTag from '@/components/v2/StatusTag.vue'
+import StatusTag from '@/components/StatusTag.vue'
 import ElementPlus from 'element-plus'
 
 /**

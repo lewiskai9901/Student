@@ -310,9 +310,9 @@ import {
   PERIOD_TYPE_LABELS,
   type RatingFrequencyVO,
   type RatingFrequencySummaryVO
-} from '@/api/v2/rating'
+} from '@/api/rating'
 import { downloadBlob, getFilenameFromContentDisposition } from '@/utils/export'
-import { getRatingRulesByPlanId, type RatingRuleVO } from '@/api/v2/rating'
+import { getRatingRulesByPlanId, type RatingRuleVO } from '@/api/rating'
 
 const route = useRoute()
 const router = useRouter()

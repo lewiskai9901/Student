@@ -63,7 +63,7 @@ import {
   calculateDailyRating,
   type RatingResultVO,
   type RatingStatisticsVO
-} from '@/api/v2/rating'
+} from '@/api/rating'
 
 const props = defineProps<{
   checkRecordId?: string | number

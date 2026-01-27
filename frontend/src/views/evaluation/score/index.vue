@@ -199,9 +199,9 @@
 import { ref, reactive, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Plus, FileSpreadsheet, Upload, Download, X, ChevronLeft, ChevronRight } from 'lucide-vue-next'
-import { pageScores, inputScore, updateScore, deleteScore, batchInputScores, listAllSemesters, getCoursesBySemester, type StudentScore, type Semester, type Course } from '@/api/v2/evaluation'
-import { getAllClasses } from '@/api/v2/organization'
-import { getStudents } from '@/api/v2/student'
+import { pageScores, inputScore, updateScore, deleteScore, batchInputScores, listAllSemesters, getCoursesBySemester, type StudentScore, type Semester, type Course } from '@/api/evaluation'
+import { getAllClasses } from '@/api/organization'
+import { getStudents } from '@/api/student'
 
 const queryParams = reactive({ pageNum: 1, pageSize: 10, studentNo: '', studentName: '', courseId: undefined as number | undefined, classId: undefined as number | undefined, semesterId: undefined as number | undefined })
 const loading = ref(false), tableData = ref<StudentScore[]>([]), total = ref(0), dialogVisible = ref(false), dialogType = ref<'add' | 'edit'>('add'), submitLoading = ref(false)

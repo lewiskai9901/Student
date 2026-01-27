@@ -325,8 +325,8 @@
 <script setup lang="ts">
 import { ref, reactive, onMounted } from 'vue'
 import { ElMessage, ElMessageBox, type FormInstance, type FormRules } from 'element-plus'
-import { examApi, semesterApi, courseApi } from '@/api/v2/teaching'
-import type { ExamBatch, ExamArrangement, Semester, Course, ExamBatchQueryParams } from '@/types/v2/teaching'
+import { examApi, semesterApi, courseApi } from '@/api/teaching'
+import type { ExamBatch, ExamArrangement, Semester, Course, ExamBatchQueryParams } from '@/types/teaching'
 
 // 状态
 const loading = ref(false)

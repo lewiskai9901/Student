@@ -449,11 +449,11 @@
 <script setup lang="ts">
 import { ref, reactive, computed, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
-import { getStudent, createStudent, updateStudent } from '@/api/v2/student'
-import { getClassList, getOrgUnitTree } from '@/api/v2/organization'
+import { getStudent, createStudent, updateStudent } from '@/api/student'
+import { getClassList, getOrgUnitTree } from '@/api/organization'
 // 年级和专业方向暂保留V1
-import { getAllGrades } from '@/api/v2/organization'
-import { getDirectionsByYear } from '@/api/v2/gradeMajorDirection'
+import { getAllGrades } from '@/api/organization'
+import { getDirectionsByYear } from '@/api/gradeMajorDirection'
 
 interface Props {
   mode: 'add' | 'edit'

@@ -260,7 +260,7 @@ import {
   checkQuickEntryDuplicate,
   type QuickEntryDeductionItemDTO,
   type QuickEntryStudentDTO
-} from '@/api/v2/quickEntry'
+} from '@/api/quickEntry'
 
 // 待提交项
 interface PendingItem {

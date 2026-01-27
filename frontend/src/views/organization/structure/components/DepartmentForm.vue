@@ -100,7 +100,7 @@
 import { ref, reactive, computed, watch } from 'vue'
 import { ElMessage, type FormInstance, type FormRules } from 'element-plus'
 import { Building2, Hash } from 'lucide-vue-next'
-import { orgUnitApi, type DepartmentResponse } from '@/api/v2/organization'
+import { orgUnitApi, type DepartmentResponse } from '@/api/organization'
 
 interface Props {
   visible: boolean

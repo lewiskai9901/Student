@@ -97,7 +97,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { School, Home, Building } from 'lucide-vue-next'
-import type { DeductionItem } from '@/api/v2/quantification'
+import type { DeductionItem } from '@/api/quantification'
 import SimpleScoringPanel from './SimpleScoringPanel.vue'
 
 interface ClassInfo {

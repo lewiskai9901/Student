@@ -147,8 +147,8 @@
 <script setup lang="ts">
 import { ref, watch } from 'vue'
 import { Medal, TrendCharts, Trophy } from '@element-plus/icons-vue'
-import type { ClassBadgeRecordVO } from '@/api/v2/rating'
-import { BADGE_LEVEL_LABELS } from '@/api/v2/rating'
+import type { ClassBadgeRecordVO } from '@/api/rating'
+import { BADGE_LEVEL_LABELS } from '@/api/rating'
 
 // Props
 const props = defineProps<{

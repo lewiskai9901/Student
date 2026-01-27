@@ -17,9 +17,9 @@ import {
   Package,
   Layers
 } from 'lucide-vue-next'
-import { assetApi } from '@/api/v2/asset'
-import type { AssetCategory, CreateCategoryRequest } from '@/types/v2/asset'
-import { CategoryType, CategoryTypeMap, ManagementMode, ManagementModeMap } from '@/types/v2/asset'
+import { assetApi } from '@/api/asset'
+import type { AssetCategory, CreateCategoryRequest } from '@/types/asset'
+import { CategoryType, CategoryTypeMap, ManagementMode, ManagementModeMap } from '@/types/asset'
 
 // 设计系统组件
 import EmptyState from '@/components/design-system/feedback/EmptyState.vue'

@@ -114,7 +114,7 @@
 import { ref, reactive, watch } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { X, FolderOpen, Info, Loader2 } from 'lucide-vue-next'
-import { createCategory, updateCategory, deleteCategory } from '@/api/v2/quantification'
+import { createCategory, updateCategory, deleteCategory } from '@/api/quantification'
 
 const props = defineProps<{
   category: any

@@ -143,14 +143,14 @@
 import { ref, computed, watch } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { User, Search, Check, Loading } from '@element-plus/icons-vue'
-import { getClassStudents } from '@/api/v2/myClass'
+import { getClassStudents } from '@/api/myClass'
 import {
   getStudentsByDormitoryId,
   checkIn,
   checkOut,
   type StudentDormitoryResponse
-} from '@/api/v2/studentDormitory'
-import type { MyClassStudent } from '@/types/v2/myClass'
+} from '@/api/studentDormitory'
+import type { MyClassStudent } from '@/types/myClass'
 
 // Props & Emits
 const props = defineProps<{

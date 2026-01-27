@@ -365,8 +365,8 @@ import {
   ChevronDown,
   Check
 } from 'lucide-vue-next'
-import { getDormitoriesByBuilding, batchUpdateDepartment } from '@/api/v2/dormitory'
-import { getOrgUnitsByType } from '@/api/v2/organization'
+import { getDormitoriesByBuilding, batchUpdateDepartment } from '@/api/dormitory'
+import { getOrgUnitsByType } from '@/api/organization'
 
 // Props
 const props = defineProps<{

@@ -6,9 +6,9 @@ import { ref, computed, watch } from 'vue'
 import { ElMessage } from 'element-plus'
 import { Check, Tools, Money } from '@element-plus/icons-vue'
 import type { FormInstance, FormRules } from 'element-plus'
-import { assetApi } from '@/api/v2/asset'
-import type { AssetMaintenance, CompleteMaintenanceRequest } from '@/types/v2/asset'
-import { MaintenanceType } from '@/types/v2/asset'
+import { assetApi } from '@/api/asset'
+import type { AssetMaintenance, CompleteMaintenanceRequest } from '@/types/asset'
+import { MaintenanceType } from '@/types/asset'
 
 const props = defineProps<{
   visible: boolean

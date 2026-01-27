@@ -228,9 +228,9 @@
 import { ref, computed, onMounted, watch } from 'vue'
 import { ElMessage } from 'element-plus'
 import { Building, Users, LayoutGrid, List, UserPlus, Edit } from 'lucide-vue-next'
-import { getClassDormitoryDistribution } from '@/api/v2/myClass'
-import { getDormitory } from '@/api/v2/dormitory'
-import type { DormitoryDistribution, DormitoryRoom, DormitoryStudent } from '@/types/v2/myClass'
+import { getClassDormitoryDistribution } from '@/api/myClass'
+import { getDormitory } from '@/api/dormitory'
+import type { DormitoryDistribution, DormitoryRoom, DormitoryStudent } from '@/types/myClass'
 import StudentBedAssignmentDialog from '@/components/dormitory/StudentBedAssignmentDialog.vue'
 import { useAuthStore } from '@/stores/auth'
 

@@ -1,145 +1,275 @@
 /**
- * @deprecated 请使用 @/types/v2/student 中的类型定义
- * V1 类型保留用于兼容旧组件，新开发请使用 V2 类型
- *
- * 主要变更:
- * - realName -> name
- * - admissionDate -> enrollmentDate
- * - studentStatus -> status (使用枚举类型)
- * - genderName -> genderText
- * - studentStatusName -> statusText
+ * 学生管理类型定义 - DDD架构适配
  */
 
-// 学生相关类型定义
+// ==================== 枚举类型 ====================
 
+/**
+ * 学生状态
+ */
+export type StudentStatus = 0 | 1 | 2 | 3 | 4
+
+export const StudentStatusMap: Record<StudentStatus, string> = {
+  0: '在读',
+  1: '休学',
+  2: '退学',
+  3: '毕业',
+  4: '转学'
+}
+
+/**
+ * 性别
+ */
+export type Gender = 1 | 2
+
+export const GenderMap: Record<Gender, string> = {
+  1: '男',
+  2: '女'
+}
+
+// ==================== 实体类型 ====================
+
+/**
+ * 学生实体 - V2 DDD架构字段名
+ */
 export interface Student {
   id: number
   studentNo: string
-  idCardType?: string  // 证件类型
-  ethnicity?: string  // 民族
-  politicalStatus?: string  // 政治面貌
-  userId: number
-  username: string
-  realName: string
+  userId?: number
+  username?: string
+
+  // V2 使用 name 代替 realName
+  name: string
   phone?: string
-  gender: number
-  genderName: string
+  email?: string
+  gender: Gender
+  // V2 使用 genderText 代替 genderName
+  genderText?: string
+  idCard?: string
+  idCardType?: string
+  ethnicity?: string
+  politicalStatus?: string
   birthDate?: string
-  identityCard?: string
-  classId: number
+  nativePlace?: string
+  avatarUrl?: string
+
+  // 班级信息
+  classId?: number
   className?: string
   gradeId?: number
   gradeName?: string
   gradeLevel?: number
   majorId?: number
   majorName?: string
-  educationLevel?: string  // 专业级别/层次
-  studyLength?: string  // 学制
-  degreeType?: string  // 学历
-  admissionDate: string
-  graduationDate?: string
-  studentStatus: number
-  studentStatusName: string
+  majorDirectionId?: number
+
+  // 学籍信息
+  educationLevel?: string
+  studyLength?: string
+  degreeType?: string
+  // V2 使用 enrollmentDate 代替 admissionDate
+  enrollmentDate?: string
+  expectedGraduationDate?: string
+  // V2 使用 status 代替 studentStatus
+  status: StudentStatus
+  // V2 使用 statusText 代替 studentStatusName
+  statusText?: string
+
+  // 宿舍信息
+  dormitoryId?: number
+  dormitoryName?: string
+  buildingNo?: string
+  buildingName?: string
+  roomNo?: string
+  bedNumber?: number | string
+
+  // 家庭信息
+  homeAddress?: string
+  hukouProvince?: string
+  hukouCity?: string
+  hukouDistrict?: string
+  hukouAddress?: string
+  hukouType?: string
+  postalCode?: string
+
+  // 紧急联系人 (V2 使用)
+  emergencyContact?: string
+  emergencyPhone?: string
+
+  // 监护人信息 (兼容扩展字段)
   guardianName?: string
   guardianPhone?: string
   guardianRelation?: string
-  fatherName?: string  // 父亲姓名
-  fatherIdCard?: string  // 父亲身份证号
-  fatherPhone?: string  // 父亲电话
-  motherName?: string  // 母亲姓名
-  motherIdCard?: string  // 母亲身份证号
-  motherPhone?: string  // 母亲电话
-  guardianIdCard?: string  // 监护人身份证号
-  emergencyContact?: string
-  emergencyPhone?: string
-  nativePlace?: string
-  homeAddress?: string
-  hukouProvince?: string  // 户口所在地-省
-  hukouCity?: string  // 户口所在地-市
-  hukouDistrict?: string  // 户口所在地-区
-  hukouAddress?: string  // 户口详细地址
-  hukouType?: string  // 户口性质
-  postalCode?: string  // 邮政编码
-  isPovertyRegistered?: number  // 是否建档立卡
-  financialAidType?: string  // 资助申请类型
-  dormitoryId?: number
-  buildingNo?: string  // 楼号
-  buildingName?: string  // 楼宇名称
-  roomNo?: string
-  bedNumber?: string
-  remark?: string
+  guardianIdCard?: string
+  fatherName?: string
+  fatherIdCard?: string
+  fatherPhone?: string
+  motherName?: string
+  motherIdCard?: string
+  motherPhone?: string
+
+  // 其他信息
+  isPovertyRegistered?: number
+  financialAidType?: string
   healthStatus?: string
   allergies?: string
   specialNotes?: string
-  createdAt: string
-  updatedAt: string
+  remark?: string
+
+  // 时间戳
+  createdAt?: string
+  updatedAt?: string
 }
 
-export interface StudentQueryRequest {
+// ==================== 请求类型 ====================
+
+/**
+ * 创建学生请求 - V2 DDD架构字段名
+ */
+export interface CreateStudentRequest {
   studentNo?: string
-  realName?: string
+  username?: string
+  password?: string
+  // V2 使用 name 代替 realName
+  name: string
+  phone?: string
+  email?: string
+  gender: Gender
+  idCard?: string
+  idCardType?: string
+  ethnicity?: string
+  politicalStatus?: string
+  birthDate?: string
+  nativePlace?: string
+
+  // 班级信息
+  classId?: number
+  gradeId?: number
+  majorId?: number
+  majorDirectionId?: number
+
+  // 学籍信息
+  educationLevel?: string
+  studyLength?: string
+  degreeType?: string
+  // V2 使用 enrollmentDate 代替 admissionDate
+  enrollmentDate?: string
+  expectedGraduationDate?: string
+  // V2 使用 status 代替 studentStatus
+  status?: StudentStatus
+  entryLevel?: string
+  educationSystem?: string
+  graduatedSchool?: string
+
+  // 宿舍信息
+  dormitoryId?: number
+  bedNumber?: number | string
+
+  // 家庭信息
+  homeAddress?: string
+  hukouProvince?: string
+  hukouCity?: string
+  hukouDistrict?: string
+  hukouAddress?: string
+  hukouType?: string
+  postalCode?: string
+
+  // 紧急联系人
+  emergencyContact?: string
+  emergencyPhone?: string
+
+  // 监护人信息
+  guardianName?: string
+  guardianPhone?: string
+  guardianRelation?: string
+  guardianIdCard?: string
+  fatherName?: string
+  fatherIdCard?: string
+  fatherPhone?: string
+  motherName?: string
+  motherIdCard?: string
+  motherPhone?: string
+
+  // 其他信息
+  isPovertyRegistered?: number
+  financialAidType?: string
+  healthStatus?: string
+  allergies?: string
+  specialNotes?: string
+  remark?: string
+}
+
+/**
+ * 更新学生请求
+ */
+export interface UpdateStudentRequest extends Partial<CreateStudentRequest> {
+  id?: number
+}
+
+/**
+ * 学生查询参数 - V2 DDD架构字段名
+ */
+export interface StudentQueryParams {
+  studentNo?: string
+  // V2 使用 name 代替 realName (keyword 用于综合搜索)
+  name?: string
+  keyword?: string
   classId?: number
   gradeId?: number
   gradeLevel?: number
-  studentStatus?: number
-  gender?: number
+  // V2 使用 status 代替 studentStatus
+  status?: StudentStatus
+  gender?: Gender
   dormitoryId?: number
-  hasRoom?: boolean
-  admissionDateStart?: string
-  admissionDateEnd?: string
-  pageNum: number
-  pageSize: number
+  enrollmentDateStart?: string
+  enrollmentDateEnd?: string
+  pageNum?: number
+  pageSize?: number
+  classIds?: number[]
+  orgUnitIds?: number[]
+  selfUserId?: number
 }
 
-export interface StudentCreateRequest {
-  studentNo: string
-  idCardType?: string  // 证件类型
-  ethnicity?: string  // 民族
-  politicalStatus?: string  // 政治面貌
-  username: string
-  password: string
-  realName: string
-  phone?: string
-  gender: number
-  birthDate?: string
-  identityCard?: string
-  classId: number
-  gradeId?: number
-  majorId?: number
-  educationLevel?: string  // 专业级别/层次
-  studyLength?: string  // 学制
-  degreeType?: string  // 学历
-  admissionDate: string
-  guardianName?: string
-  guardianPhone?: string
-  guardianRelation?: string
-  fatherName?: string  // 父亲姓名
-  fatherIdCard?: string  // 父亲身份证号
-  fatherPhone?: string  // 父亲电话
-  motherName?: string  // 母亲姓名
-  motherIdCard?: string  // 母亲身份证号
-  motherPhone?: string  // 母亲电话
-  guardianIdCard?: string  // 监护人身份证号
-  emergencyContact?: string
-  emergencyPhone?: string
-  homeAddress?: string
-  hukouProvince?: string  // 户口所在地-省
-  hukouCity?: string  // 户口所在地-市
-  hukouDistrict?: string  // 户口所在地-区
-  hukouAddress?: string  // 户口详细地址
-  hukouType?: string  // 户口性质
-  postalCode?: string  // 邮政编码
-  isPovertyRegistered?: number  // 是否建档立卡
-  financialAidType?: string  // 资助申请类型
-  dormitoryId?: number
+/**
+ * 学生搜索参数
+ */
+export interface StudentSearchParams {
+  keyword: string
+  classId?: number
+  limit?: number
+}
+
+/**
+ * 分配宿舍请求
+ */
+export interface AssignDormitoryRequest {
+  dormitoryId: number
   bedNumber?: string
-  healthStatus?: string
-  allergies?: string
-  specialNotes?: string
 }
 
-export interface StudentUpdateRequest extends Omit<StudentCreateRequest, 'username' | 'password'> {
-  id: number
-  graduationDate?: string
-  studentStatus: number
+/**
+ * 重置密码请求
+ */
+export interface ResetPasswordRequest {
+  newPassword: string
+}
+
+// ==================== 统计类型 ====================
+
+/**
+ * 学生统计
+ */
+export interface StudentStatistics {
+  total: number
+  active: number
+  suspended: number
+  withdrawn: number
+  graduated: number
+  transferred: number
+  byGender: {
+    male: number
+    female: number
+  }
+  byGrade: Record<string, number>
+  byClass: Record<string, number>
 }

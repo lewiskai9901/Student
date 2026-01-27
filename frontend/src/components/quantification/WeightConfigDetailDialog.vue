@@ -217,7 +217,7 @@
 
 <script setup lang="ts">
 import { ref, watch } from 'vue'
-import { getWeightConfigDetail } from '@/api/v2/quantification'
+import { getWeightConfigDetail } from '@/api/quantification'
 import { ElMessage } from 'element-plus'
 
 interface SegmentRule {

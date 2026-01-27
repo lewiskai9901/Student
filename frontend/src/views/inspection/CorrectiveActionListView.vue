@@ -169,9 +169,9 @@
 import { ref, computed, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
 import { Plus } from '@element-plus/icons-vue'
-import { listActions, createAction, startAction, resolveAction, verifyAction, getActionStatistics } from '@/api/v2/correctiveAction'
-import type { CorrectiveAction, CreateActionRequest, ActionStatus, ActionSeverity, ActionCategory, ActionSource } from '@/types/v2/corrective'
-import { ActionStatusConfig, ActionSeverityConfig, ActionCategoryConfig, ActionSourceConfig } from '@/types/v2/corrective'
+import { listActions, createAction, startAction, resolveAction, verifyAction, getActionStatistics } from '@/api/correctiveAction'
+import type { CorrectiveAction, CreateActionRequest, ActionStatus, ActionSeverity, ActionCategory, ActionSource } from '@/types/corrective'
+import { ActionStatusConfig, ActionSeverityConfig, ActionCategoryConfig, ActionSourceConfig } from '@/types/corrective'
 
 const loading = ref(false)
 const submitting = ref(false)

@@ -630,12 +630,12 @@ import ExportDialog from './components/ExportDialog.vue'
 import {
   getDailyCheckPage, createDailyCheck, updateDailyCheck, deleteDailyCheck, getDailyCheckById, updateCheckStatus,
   type DailyCheckResponse, type DailyCheckCreateRequest, type CheckTargetItem, type CheckCategoryItem
-} from '@/api/v2/quantification'
-import { getAllCheckTemplates, getCheckTemplateById, type CheckTemplateResponse } from '@/api/v2/quantification'
-import { getClassList, type Class } from '@/api/v2/organization'
-import { getAllEnabledDepartments, type DepartmentResponse } from '@/api/v2/organization'
-import { getAllGrades, type Grade } from '@/api/v2/organization'
-import { getCheckPlanPage, getPlanTargetClasses, type CheckPlanListVO } from '@/api/v2/quantification'
+} from '@/api/quantification'
+import { getAllCheckTemplates, getCheckTemplateById, type CheckTemplateResponse } from '@/api/quantification'
+import { getClassList, type Class } from '@/api/organization'
+import { getAllEnabledDepartments, type DepartmentResponse } from '@/api/organization'
+import { getAllGrades, type Grade } from '@/api/organization'
+import { getCheckPlanPage, getPlanTargetClasses, type CheckPlanListVO } from '@/api/quantification'
 import { useAuthStore } from '@/stores/auth'
 
 const router = useRouter()
