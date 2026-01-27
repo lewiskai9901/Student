@@ -1,11 +1,30 @@
 <script setup lang="ts">
-import { ref, computed, watch } from 'vue'
+import { ref, computed, watch, onMounted } from 'vue'
+import { useRoute } from 'vue-router'
 import {
   ArrowLeft, Save, Send, Building2, Users, ClipboardCheck, LayoutGrid,
   Search, Camera, Check, X, AlertTriangle, ChevronRight, ChevronDown,
   MapPin, Trash2, Edit, Plus, ScanLine, Loader2
 } from 'lucide-vue-next'
 import { ElMessage, ElProgress } from 'element-plus'
+import {
+  getSession as apiGetSession,
+  submitSession as apiSubmitSession,
+  recordSpaceDeduction as apiRecordSpaceDeduction,
+  recordPersonDeduction as apiRecordPersonDeduction,
+  submitChecklistResponses as apiSubmitChecklistResponses,
+  getClassRecords as apiGetClassRecords,
+  getBuildings as apiGetBuildings,
+  getRooms as apiGetRooms,
+} from '@/api/v2/inspectionSession'
+import type {
+  InspectionSession,
+  ClassInspectionRecord,
+  SpaceDeductionRequest,
+  PersonDeductionRequest,
+} from '@/types/v2/inspectionSession'
+
+const route = useRoute()
 
 // ─── Types ───
 type InputMode = 'SPACE_FIRST' | 'PERSON_FIRST' | 'CHECKLIST' | 'ORG_FIRST'
@@ -77,12 +96,17 @@ interface ChecklistItemState {
 
 // ─── State ───
 const inputMode = ref<InputMode>('SPACE_FIRST')
-const sessionStatus = ref(1) // 1=进行中
+const loading = ref(false)
 const saving = ref(false)
 
+// Session state (V4 API)
+const session = ref<InspectionSession | null>(null)
+const classRecords = ref<ClassInspectionRecord[]>([])
+
 // Space mode state
+const buildings = ref<BuildingInfo[]>([])
 const selectedBuilding = ref(0)
-const selectedFloor = ref(3)
+const selectedFloor = ref(1)
 const selectedRoom = ref<RoomInfo | null>(null)
 const showDeductionPanel = ref(false)
 const selectedCategory = ref(0)
@@ -100,48 +124,7 @@ const searching = ref(false)
 const checklistRoomIndex = ref(0)
 const checklistItems = ref<ChecklistItemState[]>([])
 
-// ─── Mock Data ───
-const buildings: BuildingInfo[] = [
-  {
-    buildingId: 1, buildingName: '1号宿舍楼',
-    floors: [
-      {
-        floor: 3, rooms: [
-          { spaceId: 301, spaceNo: '301', spaceType: 'DORMITORY', classes: [{ classId: 1, className: '计算机2班', studentCount: 6 }], status: 'pass', deductionScore: 0, deductionCount: 0 },
-          { spaceId: 302, spaceNo: '302', spaceType: 'DORMITORY', classes: [{ classId: 1, className: '计算机2班', studentCount: 4 }, { classId: 2, className: '软件1班', studentCount: 2 }], status: 'pass', deductionScore: 0, deductionCount: 0 },
-          { spaceId: 303, spaceNo: '303', spaceType: 'DORMITORY', classes: [{ classId: 2, className: '软件1班', studentCount: 6 }], status: 'has_issues', deductionScore: 2, deductionCount: 1 },
-          { spaceId: 304, spaceNo: '304', spaceType: 'DORMITORY', classes: [{ classId: 3, className: '电商1班', studentCount: 6 }], status: 'unchecked', deductionScore: 0, deductionCount: 0 },
-          { spaceId: 305, spaceNo: '305', spaceType: 'DORMITORY', classes: [{ classId: 3, className: '电商1班', studentCount: 4 }, { classId: 4, className: '会计1班', studentCount: 2 }], status: 'unchecked', deductionScore: 0, deductionCount: 0 },
-          { spaceId: 306, spaceNo: '306', spaceType: 'DORMITORY', classes: [{ classId: 4, className: '会计1班', studentCount: 6 }], status: 'unchecked', deductionScore: 0, deductionCount: 0 },
-          { spaceId: 307, spaceNo: '307', spaceType: 'DORMITORY', classes: [{ classId: 5, className: '物流1班', studentCount: 6 }], status: 'has_issues', deductionScore: 3, deductionCount: 2 },
-          { spaceId: 308, spaceNo: '308', spaceType: 'DORMITORY', classes: [{ classId: 5, className: '物流1班', studentCount: 6 }], status: 'unchecked', deductionScore: 0, deductionCount: 0 },
-        ]
-      },
-      {
-        floor: 4, rooms: [
-          { spaceId: 401, spaceNo: '401', spaceType: 'DORMITORY', classes: [{ classId: 6, className: '计算机3班', studentCount: 6 }], status: 'unchecked', deductionScore: 0, deductionCount: 0 },
-          { spaceId: 402, spaceNo: '402', spaceType: 'DORMITORY', classes: [{ classId: 6, className: '计算机3班', studentCount: 6 }], status: 'unchecked', deductionScore: 0, deductionCount: 0 },
-          { spaceId: 403, spaceNo: '403', spaceType: 'DORMITORY', classes: [{ classId: 7, className: '软件2班', studentCount: 6 }], status: 'unchecked', deductionScore: 0, deductionCount: 0 },
-          { spaceId: 404, spaceNo: '404', spaceType: 'DORMITORY', classes: [{ classId: 7, className: '软件2班', studentCount: 6 }], status: 'unchecked', deductionScore: 0, deductionCount: 0 },
-        ]
-      },
-      {
-        floor: 5, rooms: [
-          { spaceId: 501, spaceNo: '501', spaceType: 'DORMITORY', classes: [{ classId: 8, className: '电商2班', studentCount: 6 }], status: 'unchecked', deductionScore: 0, deductionCount: 0 },
-          { spaceId: 502, spaceNo: '502', spaceType: 'DORMITORY', classes: [{ classId: 8, className: '电商2班', studentCount: 6 }], status: 'unchecked', deductionScore: 0, deductionCount: 0 },
-        ]
-      }
-    ]
-  },
-  {
-    buildingId: 2, buildingName: '2号宿舍楼',
-    floors: [
-      { floor: 1, rooms: [] },
-      { floor: 2, rooms: [] }
-    ]
-  }
-]
-
+// ─── Mock Data (template/category APIs not yet in V4 Phase 1) ───
 const categories: CategoryInfo[] = [
   {
     categoryId: 1, categoryName: '卫生检查', items: [
@@ -168,8 +151,86 @@ const mockStudents: StudentResult[] = [
   { studentId: 10004, name: '张磊', studentNo: '2024010022', className: '计算机2班', gradeName: '2024级', orgUnitName: '信息工程系' },
 ]
 
+// ─── Lifecycle ───
+onMounted(async () => {
+  loading.value = true
+  try {
+    // Load session if ID provided via route query
+    const sid = route.query.sessionId as string
+    if (sid) {
+      session.value = await apiGetSession(Number(sid))
+    }
+
+    // Load buildings and rooms from API
+    await loadBuildings()
+
+    // If session exists, load class records to reflect existing deductions
+    if (session.value) {
+      await loadClassRecords()
+    }
+  } catch (e: any) {
+    ElMessage.error('初始化失败: ' + (e.message || '未知错误'))
+  } finally {
+    loading.value = false
+  }
+})
+
+async function loadBuildings() {
+  try {
+    const apiBuildings = await apiGetBuildings()
+    const result: BuildingInfo[] = []
+
+    for (const b of apiBuildings) {
+      const apiRooms = await apiGetRooms({ buildingId: b.id })
+
+      // Group rooms by floor
+      const floorMap = new Map<number, RoomInfo[]>()
+      for (const r of apiRooms) {
+        const floor = r.floor
+        if (!floorMap.has(floor)) floorMap.set(floor, [])
+        floorMap.get(floor)!.push({
+          spaceId: r.id,
+          spaceNo: r.roomNo,
+          spaceType: 'DORMITORY',
+          classes: [],
+          status: 'unchecked',
+          deductionScore: 0,
+          deductionCount: 0,
+        })
+      }
+
+      // Build floor list (include empty floors from floorCount)
+      const floors: FloorInfo[] = []
+      const maxFloor = b.floorCount || Math.max(0, ...Array.from(floorMap.keys()))
+      for (let f = 1; f <= maxFloor; f++) {
+        floors.push({ floor: f, rooms: floorMap.get(f) || [] })
+      }
+
+      result.push({ buildingId: b.id, buildingName: b.buildingName, floors })
+    }
+
+    buildings.value = result
+    if (result.length > 0) {
+      selectedBuilding.value = 0
+      const firstFloorWithRooms = result[0].floors.find(f => f.rooms.length > 0)
+      selectedFloor.value = firstFloorWithRooms?.floor || result[0].floors[0]?.floor || 1
+    }
+  } catch {
+    ElMessage.error('加载楼栋数据失败')
+  }
+}
+
+async function loadClassRecords() {
+  if (!session.value) return
+  try {
+    classRecords.value = await apiGetClassRecords(session.value.id)
+  } catch {
+    // Non-fatal — no existing records yet
+  }
+}
+
 // ─── Computed ───
-const currentBuilding = computed(() => buildings[selectedBuilding.value])
+const currentBuilding = computed(() => buildings.value[selectedBuilding.value])
 const currentFloor = computed(() => currentBuilding.value?.floors.find(f => f.floor === selectedFloor.value))
 const currentRooms = computed(() => currentFloor.value?.rooms || [])
 
@@ -194,11 +255,7 @@ const checklistProgress = computed(() => {
   }
 })
 
-const recentEntries = ref<RecordedEntry[]>([
-  { id: 1, time: '08:07', target: '303', className: '软件1班', itemName: '地面不洁', score: -2 },
-  { id: 2, time: '08:15', target: '307', className: '物流1班', itemName: '被褥未叠', score: -1.5 },
-  { id: 3, time: '08:15', target: '307', className: '物流1班', itemName: '垃圾未倒', score: -1.5 },
-])
+const recentEntries = ref<RecordedEntry[]>([])
 
 // ─── Methods ───
 const modeOptions = [
@@ -228,22 +285,43 @@ function markRoomPass() {
   }
 }
 
-function applyDeduction(item: DeductionItem) {
-  if (selectedRoom.value) {
-    selectedRoom.value.status = 'has_issues'
-    selectedRoom.value.deductionScore += (item.fixedScore || 0)
-    selectedRoom.value.deductionCount += 1
-    const className = selectedRoom.value.classes.map(c => c.className).join(', ')
-    recentEntries.value.unshift({
-      id: Date.now(),
-      time: new Date().toTimeString().slice(0, 5),
-      target: selectedRoom.value.spaceNo,
-      className,
-      itemName: item.itemName,
-      score: -(item.fixedScore || 0)
-    })
-    ElMessage.success(`${selectedRoom.value.spaceNo} - ${item.itemName} 已记录`)
+async function applyDeduction(item: DeductionItem) {
+  if (!selectedRoom.value) return
+
+  // Call V4 API if session exists
+  if (session.value) {
+    try {
+      const request: SpaceDeductionRequest = {
+        spaceType: 'DORMITORY',
+        spaceId: selectedRoom.value.spaceId,
+        spaceName: selectedRoom.value.spaceNo,
+        deductionItemId: item.id,
+        itemName: item.itemName,
+        categoryName: categories[selectedCategory.value]?.categoryName,
+        deductionAmount: item.fixedScore || 0,
+      }
+      const records = await apiRecordSpaceDeduction(session.value.id, request)
+      classRecords.value = records
+    } catch (e: any) {
+      ElMessage.error('录入失败: ' + (e.message || '未知错误'))
+      return
+    }
   }
+
+  // Update local UI state
+  selectedRoom.value.status = 'has_issues'
+  selectedRoom.value.deductionScore += (item.fixedScore || 0)
+  selectedRoom.value.deductionCount += 1
+  const className = selectedRoom.value.classes.map(c => c.className).join(', ') || '-'
+  recentEntries.value.unshift({
+    id: Date.now(),
+    time: new Date().toTimeString().slice(0, 5),
+    target: selectedRoom.value.spaceNo,
+    className,
+    itemName: item.itemName,
+    score: -(item.fixedScore || 0)
+  })
+  ElMessage.success(`${selectedRoom.value.spaceNo} - ${item.itemName} 已记录`)
 }
 
 function searchStudents() {
@@ -252,6 +330,7 @@ function searchStudents() {
     return
   }
   searching.value = true
+  // TODO: Replace with student search API when available
   setTimeout(() => {
     searchResults.value = mockStudents.filter(s =>
       s.name.includes(searchKeyword.value) || s.studentNo.includes(searchKeyword.value)
@@ -270,10 +349,31 @@ function isStudentSelected(id: number) {
   return selectedStudents.value.some(s => s.studentId === id)
 }
 
-function confirmPersonDeduction() {
+async function confirmPersonDeduction() {
   if (!selectedStudents.value.length || !personItemId.value) return
   const item = categories.flatMap(c => c.items).find(i => i.id === personItemId.value)
   if (!item) return
+
+  // Call V4 API if session exists
+  if (session.value) {
+    try {
+      const request: PersonDeductionRequest = {
+        studentIds: selectedStudents.value.map(s => s.studentId),
+        studentNames: selectedStudents.value.map(s => s.name),
+        deductionItemId: item.id,
+        itemName: item.itemName,
+        categoryName: categories.find(c => c.items.some(i => i.id === item.id))?.categoryName,
+        deductionAmount: item.fixedScore || 0,
+      }
+      const records = await apiRecordPersonDeduction(session.value.id, request)
+      classRecords.value = records
+    } catch (e: any) {
+      ElMessage.error('录入失败: ' + (e.message || '未知错误'))
+      return
+    }
+  }
+
+  // Update local UI
   const groups = new Map<string, StudentResult[]>()
   selectedStudents.value.forEach(s => {
     if (!groups.has(s.className)) groups.set(s.className, [])
@@ -331,10 +431,24 @@ watch(searchKeyword, () => {
 
 function handleSave() {
   saving.value = true
+  // In V4, deductions are persisted immediately via API calls
   setTimeout(() => {
     saving.value = false
-    ElMessage.success('暂存成功')
-  }, 800)
+    ElMessage.success('数据已自动保存')
+  }, 500)
+}
+
+async function handleSubmit() {
+  if (!session.value) {
+    ElMessage.warning('未创建检查会话，无法提交')
+    return
+  }
+  try {
+    session.value = await apiSubmitSession(session.value.id)
+    ElMessage.success('检查已提交')
+  } catch (e: any) {
+    ElMessage.error('提交失败: ' + (e.message || '未知错误'))
+  }
 }
 
 function getRoomCardClass(room: RoomInfo) {
@@ -357,7 +471,9 @@ function getRoomCardClass(room: RoomInfo) {
           </button>
           <div>
             <h1 class="text-lg font-semibold text-gray-900">宿舍卫生检查</h1>
-            <p class="text-xs text-gray-500">2026年1月27日 | 检查员: 王检查员</p>
+            <p class="text-xs text-gray-500">
+              {{ session ? `会话: ${session.sessionCode} | ${session.inspectionDate}` : '未关联检查会话' }}
+            </p>
           </div>
         </div>
         <div class="flex items-center gap-3">
@@ -369,7 +485,10 @@ function getRoomCardClass(room: RoomInfo) {
             <span v-if="!saving">暂存</span>
             <Loader2 v-else class="h-4 w-4 animate-spin" />
           </button>
-          <button class="flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 active:bg-blue-800">
+          <button
+            class="flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 active:bg-blue-800"
+            @click="handleSubmit"
+          >
             <Send class="h-4 w-4" />
             提交检查
           </button>
@@ -428,6 +547,9 @@ function getRoomCardClass(room: RoomInfo) {
         <div class="w-60 flex-shrink-0 overflow-y-auto border-r border-gray-200 bg-white">
           <div class="p-4">
             <h3 class="mb-3 text-xs font-semibold uppercase tracking-wider text-gray-500">楼栋导航</h3>
+            <div v-if="loading" class="flex items-center justify-center py-8">
+              <Loader2 class="h-6 w-6 animate-spin text-blue-500" />
+            </div>
             <div v-for="(building, bIdx) in buildings" :key="building.buildingId" class="mb-2">
               <button
                 :class="[
@@ -491,7 +613,13 @@ function getRoomCardClass(room: RoomInfo) {
             </h2>
             <span class="text-xs text-gray-500">点击房间快速录入</span>
           </div>
-          <div class="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
+          <div v-if="loading" class="flex items-center justify-center py-16">
+            <Loader2 class="h-8 w-8 animate-spin text-blue-500" />
+          </div>
+          <div v-else-if="currentRooms.length === 0" class="flex items-center justify-center py-16 text-gray-400">
+            当前楼层无房间数据
+          </div>
+          <div v-else class="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
             <div
               v-for="room in currentRooms"
               :key="room.spaceId"
@@ -549,7 +677,9 @@ function getRoomCardClass(room: RoomInfo) {
               <div>
                 <h3 class="text-base font-semibold text-gray-900">{{ selectedRoom.spaceNo }}号宿舍</h3>
                 <p class="mt-0.5 text-xs text-gray-500">
-                  {{ selectedRoom.classes.map(c => `${c.className}(${c.studentCount}人)`).join(' + ') }}
+                  {{ selectedRoom.classes.length > 0
+                    ? selectedRoom.classes.map(c => `${c.className}(${c.studentCount}人)`).join(' + ')
+                    : '班级信息将在录入扣分后自动解析' }}
                 </p>
               </div>
               <button class="rounded-lg p-1.5 text-gray-400 hover:bg-gray-100" @click="showDeductionPanel = false">
@@ -813,7 +943,7 @@ function getRoomCardClass(room: RoomInfo) {
                   {{ currentRooms[checklistRoomIndex]?.spaceNo }}号宿舍
                 </h2>
                 <p class="mt-0.5 text-xs text-gray-500">
-                  {{ currentRooms[checklistRoomIndex]?.classes.map(c => c.className).join(' + ') }}
+                  {{ currentRooms[checklistRoomIndex]?.classes.map(c => c.className).join(' + ') || '班级信息待解析' }}
                 </p>
               </div>
               <button

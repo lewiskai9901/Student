@@ -26,6 +26,9 @@ export * from './user'
 // 学期管理
 export * from './semester'
 
+// V4 检查会话
+export * from './inspectionSession'
+
 // 导出命名空间便于按模块调用
 import * as organizationApi from './organization'
 import * as inspectionApi from './inspection'
@@ -35,6 +38,7 @@ import * as dormitoryApiModule from './dormitory'
 import * as taskApiModule from './task'
 import * as userApiModule from './user'
 import * as semesterApiModule from './semester'
+import * as inspectionSessionApiModule from './inspectionSession'
 
 export const v2Api = {
   organization: organizationApi,
@@ -44,7 +48,8 @@ export const v2Api = {
   dormitory: dormitoryApiModule,
   task: taskApiModule,
   user: userApiModule,
-  semester: semesterApiModule
+  semester: semesterApiModule,
+  inspectionSession: inspectionSessionApiModule
 }
 
 export default v2Api
