@@ -26,7 +26,7 @@ export interface User {
   employeeNo?: string
   gender?: number
   birthDate?: string
-  departmentId?: number | string
+  orgUnitId?: number | string
   classId?: number | string
   managedClassId?: number | string
   userType?: UserType
@@ -54,7 +54,7 @@ export interface CreateUserRequest {
   gender?: number
   birthDate?: string
   idCard?: string
-  departmentId?: number
+  orgUnitId?: number
   userType?: number
   roleIds?: number[]
 }
@@ -70,7 +70,7 @@ export interface UpdateUserRequest {
   gender?: number
   birthDate?: string
   idCard?: string
-  departmentId?: number
+  orgUnitId?: number
   roleIds?: number[]
 }
 
@@ -83,7 +83,7 @@ export interface UserQueryParams {
   username?: string
   realName?: string
   phone?: string
-  departmentId?: number
+  orgUnitId?: number
   status?: number
 }
 
@@ -94,7 +94,7 @@ export interface SimpleUser {
   id: number | string
   username: string
   realName: string
-  departmentName?: string
+  orgUnitName?: string
 }
 
 /**
@@ -110,7 +110,7 @@ export interface UserFormData {
   gender?: number
   birthDate?: string
   identityCard?: string
-  departmentId?: number
+  orgUnitId?: number
   status?: number
   password?: string
 }
@@ -119,6 +119,6 @@ export interface UserFormData {
  * 用户列表响应（带额外字段）
  */
 export interface UserListItem extends User {
-  departmentName?: string
+  orgUnitName?: string
   roleNames?: string[]
 }

@@ -6,8 +6,8 @@
     <resultMap id="DormitoryResponseMap" type="com.school.management.dto.DormitoryResponse">
         <id column="id" property="id"/>
         <result column="building_id" property="buildingId"/>
-        <result column="department_id" property="departmentId"/>
-        <result column="department_name" property="departmentName"/>
+        <result column="org_unit_id" property="orgUnitId"/>
+        <result column="org_unit_name" property="orgUnitName"/>
         <result column="assigned_class_ids" property="assignedClassIds"/>
         <result column="assigned_class_names" property="assignedClassNames"/>
         <result column="dormitory_no" property="dormitoryNo"/>
@@ -197,9 +197,9 @@
 
     <!-- 根据楼栋ID查询宿舍列表 -->
     <select id="selectByBuildingId" resultMap="DormitoryResponseMap">
-        SELECT d.id, d.building_id, d.department_id, d.dormitory_no,
+        SELECT d.id, d.building_id, d.org_unit_id, d.dormitory_no,
                b.building_name, b.building_no,
-               dept.dept_name as department_name,
+               o.unit_name as org_unit_name,
                d.floor_number, d.room_type,
                d.bed_capacity,
                d.occupied_beds,
@@ -226,7 +226,7 @@
                d.created_at, d.updated_at
         FROM dormitories d
         LEFT JOIN buildings b ON d.building_id = b.id AND b.deleted = 0
-        LEFT JOIN departments dept ON d.department_id = dept.id AND dept.deleted = 0
+        LEFT JOIN org_units o ON d.org_unit_id = o.id AND o.deleted = 0
         WHERE d.deleted = 0
         AND d.building_id = #{buildingId}
         ORDER BY d.floor_number ASC, d.dormitory_no ASC
@@ -266,11 +266,11 @@
         ORDER BY b.building_name ASC, d.floor_number ASC, d.dormitory_no ASC
     </select>
 
-    <!-- 根据部门ID查询宿舍列表 -->
-    <select id="selectByDepartmentId" resultMap="DormitoryResponseMap">
-        SELECT d.id, d.building_id, d.department_id, d.dormitory_no,
+    <!-- 根据组织单元ID查询宿舍列表 -->
+    <select id="selectByOrgUnitId" resultMap="DormitoryResponseMap">
+        SELECT d.id, d.building_id, d.org_unit_id, d.dormitory_no,
                b.building_name, b.building_no,
-               dept.dept_name as department_name,
+               o.unit_name as org_unit_name,
                GROUP_CONCAT(DISTINCT cdb.class_id ORDER BY cdb.class_id) as assigned_class_ids,
                GROUP_CONCAT(DISTINCT c.class_name ORDER BY c.class_name SEPARATOR ', ') as assigned_class_names,
                d.floor_number, d.room_type,
@@ -299,14 +299,14 @@
                d.created_at, d.updated_at
         FROM dormitories d
         LEFT JOIN buildings b ON d.building_id = b.id AND b.deleted = 0
-        LEFT JOIN departments dept ON d.department_id = dept.id AND dept.deleted = 0
+        LEFT JOIN org_units o ON d.org_unit_id = o.id AND o.deleted = 0
         LEFT JOIN class_dormitory_bindings cdb ON d.id = cdb.dormitory_id
         LEFT JOIN classes c ON cdb.class_id = c.id AND c.deleted = 0
         WHERE d.deleted = 0
-        AND d.department_id = #{departmentId}
+        AND d.org_unit_id = #{orgUnitId}
         AND d.status = 1
-        GROUP BY d.id, d.building_id, d.department_id, d.dormitory_no,
-                 b.building_name, b.building_no, dept.dept_name,
+        GROUP BY d.id, d.building_id, d.org_unit_id, d.dormitory_no,
+                 b.building_name, b.building_no, o.unit_name,
                  d.floor_number, d.room_type, d.bed_capacity, d.occupied_beds,
                  d.gender_type, d.bed_count, d.status, d.created_at, d.updated_at
         ORDER BY b.building_name ASC, d.floor_number ASC, d.dormitory_no ASC

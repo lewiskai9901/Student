@@ -24,14 +24,14 @@ public interface BuildingDepartmentAssignmentMapper extends BaseMapper<BuildingD
      *
      * @param page 分页对象
      * @param buildingId 宿舍楼ID
-     * @param departmentId 院系ID
+     * @param orgUnitId 院系ID
      * @param status 状态
      * @return 分配列表
      */
     IPage<BuildingDepartmentAssignment> selectAssignmentPageWithDetails(
             Page<BuildingDepartmentAssignment> page,
             @Param("buildingId") Long buildingId,
-            @Param("departmentId") Long departmentId,
+            @Param("orgUnitId") Long orgUnitId,
             @Param("status") Integer status
     );
 
@@ -44,18 +44,18 @@ public interface BuildingDepartmentAssignmentMapper extends BaseMapper<BuildingD
     List<BuildingDepartmentAssignment> selectByBuildingId(@Param("buildingId") Long buildingId);
 
     /**
-     * 根据院系ID查询所有分配的宿舍楼
+     * 根据组织单元ID查询所有分配的宿舍楼
      *
-     * @param departmentId 院系ID
+     * @param orgUnitId 组织单元ID
      * @return 分配列表
      */
-    List<BuildingDepartmentAssignment> selectByDepartmentId(@Param("departmentId") Long departmentId);
+    List<BuildingDepartmentAssignment> selectByOrgUnitId(@Param("orgUnitId") Long orgUnitId);
 
     /**
      * 检查楼层范围是否有冲突
      *
      * @param buildingId 宿舍楼ID
-     * @param departmentId 院系ID
+     * @param orgUnitId 院系ID
      * @param floorStart 起始楼层
      * @param floorEnd 结束楼层
      * @param excludeId 排除的ID（用于更新时检查）
@@ -63,7 +63,7 @@ public interface BuildingDepartmentAssignmentMapper extends BaseMapper<BuildingD
      */
     int checkFloorConflict(
             @Param("buildingId") Long buildingId,
-            @Param("departmentId") Long departmentId,
+            @Param("orgUnitId") Long orgUnitId,
             @Param("floorStart") Integer floorStart,
             @Param("floorEnd") Integer floorEnd,
             @Param("excludeId") Long excludeId

@@ -32,7 +32,7 @@ public class CreateUserRequest {
 
     private String idCard;
 
-    private Long departmentId;
+    private Long orgUnitId;
 
     private Integer userType;
 

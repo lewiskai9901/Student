@@ -196,8 +196,8 @@ public class UserServiceImpl implements UserService {
         if (request.getStatus() != null) {
             queryWrapper.eq(User::getStatus, request.getStatus());
         }
-        if (request.getDepartmentId() != null) {
-            queryWrapper.eq(User::getDepartmentId, request.getDepartmentId());
+        if (request.getOrgUnitId() != null) {
+            queryWrapper.eq(User::getOrgUnitId, request.getOrgUnitId());
         }
         if (request.getClassId() != null) {
             queryWrapper.eq(User::getClassId, request.getClassId());
@@ -397,7 +397,7 @@ public class UserServiceImpl implements UserService {
                 .avatar(user.getAvatar())
                 .gender(user.getGender())
                 .status(user.getStatus())
-                .departmentId(user.getDepartmentId())
+                .orgUnitId(user.getOrgUnitId())
                 .classId(user.getClassId())
                 .employeeNo(user.getEmployeeNo())
                 .userType(user.getUserType())
@@ -435,11 +435,11 @@ public class UserServiceImpl implements UserService {
         List<String> permissions = userMapper.findPermissionCodesByUserId(user.getId());
         builder.permissions(permissions);
 
-        // 查询部门信息
-        if (user.getDepartmentId() != null) {
-            Department department = departmentMapper.selectById(user.getDepartmentId());
+        // 查询组织单元信息
+        if (user.getOrgUnitId() != null) {
+            Department department = departmentMapper.selectById(user.getOrgUnitId());
             if (department != null) {
-                builder.departmentName(department.getDeptName());
+                builder.orgUnitName(department.getDeptName());
             }
         }
 
@@ -486,20 +486,20 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
-    public List<UserResponse> getUsersByDepartment(Long departmentId, Boolean includeChildren, String keyword) {
-        List<Long> departmentIds = new ArrayList<>();
-        departmentIds.add(departmentId);
+    public List<UserResponse> getUsersByOrgUnit(Long orgUnitId, Boolean includeChildren, String keyword) {
+        List<Long> orgUnitIds = new ArrayList<>();
+        orgUnitIds.add(orgUnitId);
 
-        // 如果需要包含子部门，递归获取所有子部门ID
+        // 如果需要包含下级组织，递归获取所有下级组织ID
         if (Boolean.TRUE.equals(includeChildren)) {
-            collectChildDepartmentIds(departmentId, departmentIds);
+            collectChildOrgUnitIds(orgUnitId, orgUnitIds);
         }
 
         // 构建查询条件
         LambdaQueryWrapper<User> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(User::getDeleted, 0)
                .eq(User::getStatus, 1) // 只查询启用的用户
-               .in(User::getDepartmentId, departmentIds);
+               .in(User::getOrgUnitId, orgUnitIds);
 
         // 关键词搜索
         if (StrUtil.isNotBlank(keyword)) {
@@ -517,9 +517,9 @@ public class UserServiceImpl implements UserService {
     }
 
     /**
-     * 递归收集子部门ID
+     * 递归收集下级组织单元ID
      */
-    private void collectChildDepartmentIds(Long parentId, List<Long> result) {
+    private void collectChildOrgUnitIds(Long parentId, List<Long> result) {
         List<Department> children = departmentMapper.selectList(
                 new LambdaQueryWrapper<Department>()
                         .eq(Department::getParentId, parentId)
@@ -529,12 +529,12 @@ public class UserServiceImpl implements UserService {
 
         for (Department child : children) {
             result.add(child.getId());
-            collectChildDepartmentIds(child.getId(), result);
+            collectChildOrgUnitIds(child.getId(), result);
         }
     }
 
     @Override
-    public List<UserResponse> getUsersWithDepartments(String keyword) {
+    public List<UserResponse> getUsersWithOrgUnits(String keyword) {
         LambdaQueryWrapper<User> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(User::getDeleted, 0)
                .eq(User::getStatus, 1); // 只查询启用的用户
@@ -548,7 +548,7 @@ public class UserServiceImpl implements UserService {
             );
         }
 
-        wrapper.orderByAsc(User::getDepartmentId)
+        wrapper.orderByAsc(User::getOrgUnitId)
                .orderByAsc(User::getRealName)
                .last("LIMIT 200"); // 限制返回数量
 

@@ -97,7 +97,7 @@ export interface HonorApplication {
   studentNo?: string
   studentName?: string
   className?: string
-  departmentName?: string
+  orgUnitName?: string
   honorTypeName?: string
   periodName?: string
 }
@@ -111,12 +111,12 @@ export interface Course {
   credit?: number
   hours?: number
   semesterId?: number
-  departmentId?: number
+  orgUnitId?: number
   teacherName?: string
   description?: string
   status?: number
   // 关联信息
-  departmentName?: string
+  orgUnitName?: string
   semesterName?: string
 }
 
@@ -292,7 +292,7 @@ export function pageHonorApplications(params: {
   honorTypeId?: number
   status?: number
   classId?: number
-  departmentId?: number
+  orgUnitId?: number
 }) {
   return http.get<PageResult<HonorApplication>>('/evaluation/honor-applications', { params })
 }
@@ -409,7 +409,7 @@ export function pageCourses(params: {
   courseName?: string
   courseType?: string
   semesterId?: number
-  departmentId?: number
+  orgUnitId?: number
   status?: number
 }) {
   return http.get<PageResult<Course>>('/evaluation/courses', { params })
@@ -553,7 +553,7 @@ export function pageEvaluationResults(params: {
   studentName?: string
   studentNo?: string
   classId?: number
-  departmentId?: number
+  orgUnitId?: number
 }) {
   return http.get<PageResult<EvaluationResult>>('/evaluation/results', { params })
 }

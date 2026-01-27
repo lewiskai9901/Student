@@ -44,10 +44,10 @@ public class BuildingServiceImpl implements BuildingService {
         Page<Building> page = new Page<>(pageNum, pageSize);
         IPage<Building> result = buildingMapper.selectBuildingPage(page, buildingType, buildingNo, buildingName, status);
 
-        // 为每个楼宇加载部门ID列表
+        // 为每个楼宇加载组织单元ID列表
         result.getRecords().forEach(building -> {
-            List<Long> departmentIds = buildingDepartmentService.getDepartmentIdsByBuildingId(building.getId());
-            building.setDepartmentIds(departmentIds);
+            List<Long> orgUnitIds = buildingDepartmentService.getOrgUnitIdsByBuildingId(building.getId());
+            building.setOrgUnitIds(orgUnitIds);
         });
 
         return result;
@@ -60,9 +60,9 @@ public class BuildingServiceImpl implements BuildingService {
             throw new BusinessException("楼宇不存在");
         }
 
-        // 加载部门关联信息
-        List<Long> departmentIds = buildingDepartmentService.getDepartmentIdsByBuildingId(id);
-        building.setDepartmentIds(departmentIds);
+        // 加载组织单元关联信息
+        List<Long> orgUnitIds = buildingDepartmentService.getOrgUnitIdsByBuildingId(id);
+        building.setOrgUnitIds(orgUnitIds);
 
         return building;
     }
@@ -99,9 +99,9 @@ public class BuildingServiceImpl implements BuildingService {
             log.info("自动创建教学楼扩展记录: buildingId={}", building.getId());
         }
 
-        // 3. 关联部门（如果有）
-        if (request.getDepartmentIds() != null && !request.getDepartmentIds().isEmpty()) {
-            buildingDepartmentService.assignDepartments(building.getId(), request.getDepartmentIds());
+        // 3. 关联组织单元（如果有）
+        if (request.getOrgUnitIds() != null && !request.getOrgUnitIds().isEmpty()) {
+            buildingDepartmentService.assignOrgUnits(building.getId(), request.getOrgUnitIds());
         }
 
         log.info("创建楼宇成功: {}", building.getId());
@@ -133,9 +133,9 @@ public class BuildingServiceImpl implements BuildingService {
         building.setUpdatedBy(SecurityUtils.getCurrentUserId());
         buildingMapper.updateById(building);
 
-        // 更新部门关联
-        if (request.getDepartmentIds() != null) {
-            buildingDepartmentService.assignDepartments(id, request.getDepartmentIds());
+        // 更新组织单元关联
+        if (request.getOrgUnitIds() != null) {
+            buildingDepartmentService.assignOrgUnits(id, request.getOrgUnitIds());
         }
 
         log.info("更新楼宇成功: {}", id);

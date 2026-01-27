@@ -170,37 +170,49 @@
                 </select>
               </div>
               <div>
+                <label class="mb-1.5 block text-sm font-medium text-gray-700">所属部门</label>
+                <select
+                  v-model="formData.orgUnitId"
+                  class="h-9 w-full rounded-md border border-gray-300 bg-white px-3 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                  @change="handleDepartmentChange"
+                >
+                  <option :value="null">请选择部门</option>
+                  <option v-for="item in departmentList" :key="item.id" :value="item.id">{{ item.unitName }}</option>
+                </select>
+              </div>
+              <div>
                 <label class="mb-1.5 block text-sm font-medium text-gray-700">班级</label>
                 <select
                   v-model="formData.classId"
                   class="h-9 w-full rounded-md border border-gray-300 bg-white px-3 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                  :disabled="!formData.orgUnitId"
                 >
-                  <option :value="null">请选择班级</option>
+                  <option :value="null">{{ formData.orgUnitId ? '请选择班级' : '请先选择部门' }}</option>
                   <option v-for="item in filteredClassList" :key="item.id" :value="item.id">{{ item.className }}</option>
                 </select>
               </div>
               <div>
                 <label class="mb-1.5 block text-sm font-medium text-gray-700">
                   层次
+                  <span class="ml-1 text-xs font-normal text-gray-400">（可修改）</span>
                 </label>
                 <input
                   v-model="formData.educationLevel"
                   type="text"
-                  readonly
-                  :placeholder="formData.majorDirectionId ? '' : '选择专业后自动填充'"
-                  class="h-9 w-full rounded-md border border-gray-300 bg-gray-50 px-3 text-sm text-gray-700"
+                  :placeholder="formData.majorDirectionId ? '可根据实际情况修改' : '选择专业后自动填充，可自定义'"
+                  class="h-9 w-full rounded-md border border-gray-300 px-3 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
                 />
               </div>
               <div>
                 <label class="mb-1.5 block text-sm font-medium text-gray-700">
                   学制
+                  <span class="ml-1 text-xs font-normal text-gray-400">（可修改）</span>
                 </label>
                 <input
                   v-model="formData.studyLength"
                   type="text"
-                  readonly
-                  :placeholder="formData.majorDirectionId ? '' : '选择专业后自动填充'"
-                  class="h-9 w-full rounded-md border border-gray-300 bg-gray-50 px-3 text-sm text-gray-700"
+                  :placeholder="formData.majorDirectionId ? '可根据实际情况修改' : '选择专业后自动填充，可自定义'"
+                  class="h-9 w-full rounded-md border border-gray-300 px-3 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
                 />
               </div>
               <div>
@@ -438,7 +450,7 @@
 import { ref, reactive, computed, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
 import { getStudent, createStudent, updateStudent } from '@/api/v2/student'
-import { getClassList } from '@/api/v2/organization'
+import { getClassList, getOrgUnitTree } from '@/api/v2/organization'
 // 年级和专业方向暂保留V1
 import { getAllGrades } from '@/api/v2/organization'
 import { getDirectionsByYear } from '@/api/v2/gradeMajorDirection'
@@ -486,20 +498,30 @@ const submitting = ref(false)
 const gradeList = ref<any[]>([])
 const classList = ref<any[]>([])
 const gradeDirections = ref<any[]>([])
+const departmentList = ref<any[]>([])
 
-// 根据选中年级过滤的班级列表
+// 扁平化部门树为列表（只保留教学单位）
+const flattenDepartments = (nodes: any[], result: any[] = []): any[] => {
+  for (const node of nodes) {
+    // 只添加教学单位（ACADEMIC）或 DEPARTMENT 类型
+    if (node.unitCategory === 'ACADEMIC' || node.unitType === 'DEPARTMENT') {
+      result.push(node)
+    }
+    if (node.children && node.children.length > 0) {
+      flattenDepartments(node.children, result)
+    }
+  }
+  return result
+}
+
+// 根据选中部门过滤的班级列表
 const filteredClassList = computed(() => {
-  if (!formData.gradeId) return classList.value
-  // 找到选中的年级信息
-  const selectedGrade = gradeList.value.find(g => g.id === formData.gradeId)
-  if (!selectedGrade) return classList.value
-  // 根据班级的grade_id或enrollment_year过滤
+  // 必须先选择部门才能显示班级
+  if (!formData.orgUnitId) return []
+
+  // 根据部门（orgUnitId）过滤班级
   return classList.value.filter(c => {
-    // 优先使用grade_id匹配（需要转换类型，因为可能是字符串或数字）
-    if (Number(c.gradeId) === Number(formData.gradeId)) return true
-    // 其次使用enrollment_year匹配
-    if (Number(c.enrollmentYear) === Number(selectedGrade.enrollmentYear)) return true
-    return false
+    return Number(c.orgUnitId) === Number(formData.orgUnitId)
   })
 })
 
@@ -523,6 +545,7 @@ const formData = reactive<any>({
   postalCode: '',
   isPovertyRegistered: 0,
   financialAidType: '',
+  orgUnitId: null,
   gradeId: null,
   classId: null,
   majorId: null,
@@ -550,6 +573,12 @@ const formData = reactive<any>({
 
 // 错误信息
 const errors = reactive<Record<string, string>>({})
+
+// 部门变更处理
+const handleDepartmentChange = () => {
+  // 清空班级选择
+  formData.classId = null
+}
 
 // 年级变更处理
 const handleGradeChange = async () => {
@@ -622,6 +651,16 @@ const validateForm = () => {
 }
 
 // 加载数据
+const loadDepartmentListData = async () => {
+  try {
+    const tree = await getOrgUnitTree()
+    // 扁平化部门树，只保留教学单位
+    departmentList.value = flattenDepartments(tree || [])
+  } catch (error) {
+    console.error('加载部门列表失败:', error)
+  }
+}
+
 const loadGradeListData = async () => {
   try {
     const response = await getAllGrades()
@@ -633,8 +672,9 @@ const loadGradeListData = async () => {
 
 const loadClassListData = async () => {
   try {
-    const response = await getClassList({ pageNum: 1, pageSize: 1000 })
-    classList.value = response.records || []
+    // getClassList 已经返回 records 数组，不需要再访问 .records
+    const classes = await getClassList({ pageNum: 1, pageSize: 1000 })
+    classList.value = classes || []
   } catch (error) {
     console.error('加载班级列表失败:', error)
   }
@@ -694,6 +734,7 @@ const handleSubmit = async () => {
 }
 
 onMounted(() => {
+  loadDepartmentListData()
   loadGradeListData()
   loadClassListData()
   loadStudentDetail()

@@ -4,8 +4,11 @@ import com.school.management.domain.organization.model.ClassStatus;
 import com.school.management.domain.organization.model.SchoolClass;
 import com.school.management.domain.organization.model.TeacherAssignment;
 import com.school.management.domain.organization.repository.SchoolClassRepository;
+import com.school.management.entity.User;
+import com.school.management.mapper.UserMapper;
 import org.springframework.stereotype.Repository;
 
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -19,9 +22,11 @@ import java.util.stream.Collectors;
 public class SchoolClassRepositoryImpl implements SchoolClassRepository {
 
     private final SchoolClassMapper classMapper;
+    private final UserMapper userMapper;
 
-    public SchoolClassRepositoryImpl(SchoolClassMapper classMapper) {
+    public SchoolClassRepositoryImpl(SchoolClassMapper classMapper, UserMapper userMapper) {
         this.classMapper = classMapper;
+        this.userMapper = userMapper;
     }
 
     @Override
@@ -72,8 +77,8 @@ public class SchoolClassRepositoryImpl implements SchoolClassRepository {
 
     @Override
     public List<SchoolClass> findByOrgUnitId(Long orgUnitId) {
-        // orgUnitId maps to departmentId in actual table
-        return classMapper.findByDepartmentId(orgUnitId).stream()
+        // orgUnitId maps to org_unit_id column in actual table
+        return classMapper.findByOrgUnitId(orgUnitId).stream()
             .map(this::toDomain)
             .collect(Collectors.toList());
     }
@@ -108,7 +113,7 @@ public class SchoolClassRepositoryImpl implements SchoolClassRepository {
 
     @Override
     public List<SchoolClass> findByOrgUnitIdAndEnrollmentYear(Long orgUnitId, Integer enrollmentYear) {
-        return classMapper.findByDepartmentId(orgUnitId).stream()
+        return classMapper.findByOrgUnitId(orgUnitId).stream()
             .filter(po -> enrollmentYear.equals(po.getEnrollmentYear()))
             .map(this::toDomain)
             .collect(Collectors.toList());
@@ -116,6 +121,14 @@ public class SchoolClassRepositoryImpl implements SchoolClassRepository {
 
     @Override
     public List<SchoolClass> findByHeadTeacherId(Long teacherId) {
+        return classMapper.findByTeacherId(teacherId).stream()
+            .map(this::toDomain)
+            .collect(Collectors.toList());
+    }
+
+    @Override
+    public List<SchoolClass> findByTeacherId(Long teacherId) {
+        // 与 findByHeadTeacherId 实现相同，查询班主任或副班主任管理的班级
         return classMapper.findByTeacherId(teacherId).stream()
             .map(this::toDomain)
             .collect(Collectors.toList());
@@ -136,7 +149,7 @@ public class SchoolClassRepositoryImpl implements SchoolClassRepository {
 
     @Override
     public int countByOrgUnitId(Long orgUnitId) {
-        return classMapper.countByDepartmentId(orgUnitId);
+        return classMapper.countByOrgUnitId(orgUnitId);
     }
 
     @Override
@@ -158,13 +171,25 @@ public class SchoolClassRepositoryImpl implements SchoolClassRepository {
         po.setId(domain.getId());
         po.setClassCode(domain.getClassCode());
         po.setClassName(domain.getClassName());
-        po.setDepartmentId(domain.getOrgUnitId());
+        po.setOrgUnitId(domain.getOrgUnitId());
         po.setGradeId(domain.getGradeId());
         po.setEnrollmentYear(domain.getEnrollmentYear());
         po.setGradeLevel(domain.getGradeLevel());
         po.setMajorDirectionId(domain.getMajorDirectionId());
         po.setStudentCount(domain.getCurrentSize());
         po.setStatus(toDbStatus(domain.getStatus()));
+
+        // 保存班主任信息
+        domain.getCurrentHeadTeacher().ifPresent(teacher ->
+            po.setTeacherId(teacher.getTeacherId())
+        );
+
+        // 保存副班主任信息（取第一个副班主任）
+        List<TeacherAssignment> deputies = domain.getCurrentDeputyHeadTeachers();
+        if (!deputies.isEmpty()) {
+            po.setAssistantTeacherId(deputies.get(0).getTeacherId());
+        }
+
         return po;
     }
 
@@ -176,12 +201,41 @@ public class SchoolClassRepositoryImpl implements SchoolClassRepository {
             gradeLevel = 1;
         }
 
+        // 加载教师任职信息
+        List<TeacherAssignment> teacherAssignments = new ArrayList<>();
+
+        // 加载班主任
+        if (po.getTeacherId() != null) {
+            String teacherName = getTeacherName(po.getTeacherId());
+            if (teacherName != null) {
+                teacherAssignments.add(TeacherAssignment.create(
+                    po.getTeacherId(),
+                    teacherName,
+                    TeacherAssignment.TeacherRole.HEAD_TEACHER,
+                    LocalDate.now() // 默认日期，实际应该从数据库读取
+                ));
+            }
+        }
+
+        // 加载副班主任
+        if (po.getAssistantTeacherId() != null) {
+            String assistantName = getTeacherName(po.getAssistantTeacherId());
+            if (assistantName != null) {
+                teacherAssignments.add(TeacherAssignment.create(
+                    po.getAssistantTeacherId(),
+                    assistantName,
+                    TeacherAssignment.TeacherRole.DEPUTY_HEAD_TEACHER,
+                    LocalDate.now()
+                ));
+            }
+        }
+
         return SchoolClass.builder()
             .id(po.getId())
             .classCode(po.getClassCode())
             .className(po.getClassName())
             .shortName(null) // Not in database
-            .orgUnitId(po.getDepartmentId())
+            .orgUnitId(po.getOrgUnitId())
             .gradeId(po.getGradeId())
             .enrollmentYear(po.getEnrollmentYear())
             .gradeLevel(gradeLevel)
@@ -190,9 +244,20 @@ public class SchoolClassRepositoryImpl implements SchoolClassRepository {
             .standardSize(45) // Default, not in database
             .currentSize(po.getStudentCount() != null ? po.getStudentCount() : 0)
             .status(fromDbStatus(po.getStatus()))
-            .teacherAssignments(new ArrayList<>()) // Not loaded from DB
+            .teacherAssignments(teacherAssignments)
             .sortOrder(0) // Not in database
             .build();
+    }
+
+    /**
+     * 根据用户ID获取教师姓名
+     */
+    private String getTeacherName(Long teacherId) {
+        if (teacherId == null) {
+            return null;
+        }
+        User user = userMapper.selectById(teacherId);
+        return user != null ? user.getRealName() : null;
     }
 
     private Integer toDbStatus(ClassStatus status) {

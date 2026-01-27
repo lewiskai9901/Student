@@ -14,41 +14,49 @@ public enum ScopeType {
     /**
      * 全部数据
      */
-    ALL("ALL", "全部数据", "scope:*"),
+    ALL("ALL", "全部数据", "scope:*", 1),
 
     /**
      * 指定部门
      */
-    DEPT("DEPT", "指定部门", "scope:dept:"),
-
-    /**
-     * 指定年级
-     */
-    GRADE("GRADE", "指定年级", "scope:grade:"),
+    DEPT("DEPT", "指定部门", "scope:dept:", 2),
 
     /**
      * 部门+年级交叉
      */
-    DEPT_GRADE("DEPT_GRADE", "部门+年级", "scope:dept_grade:"),
+    DEPT_GRADE("DEPT_GRADE", "部门+年级", "scope:dept_grade:", 3),
+
+    /**
+     * 指定年级
+     */
+    GRADE("GRADE", "指定年级", "scope:grade:", 4),
 
     /**
      * 指定班级
      */
-    CLASS("CLASS", "指定班级", "scope:class:"),
+    CLASS("CLASS", "指定班级", "scope:class:", 5),
 
     /**
      * 仅本人数据
      */
-    SELF("SELF", "仅本人", "scope:self");
+    SELF("SELF", "仅本人", "scope:self", 6),
+
+    /**
+     * @deprecated 为兼容旧代码保留，请使用DEPT
+     */
+    @Deprecated
+    DEPARTMENT("DEPARTMENT", "指定部门", "scope:dept:", 2);
 
     private final String code;
     private final String name;
     private final String prefix;
+    private final int level;
 
-    ScopeType(String code, String name, String prefix) {
+    ScopeType(String code, String name, String prefix, int level) {
         this.code = code;
         this.name = name;
         this.prefix = prefix;
+        this.level = level;
     }
 
     /**

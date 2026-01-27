@@ -2,6 +2,7 @@ package com.school.management.infrastructure.persistence.organization;
 
 import com.school.management.domain.organization.model.OrgUnit;
 import com.school.management.domain.organization.model.OrgUnitType;
+import com.school.management.domain.organization.model.UnitCategory;
 import com.school.management.domain.organization.repository.OrgUnitRepository;
 import org.springframework.stereotype.Repository;
 
@@ -143,13 +144,30 @@ public class OrgUnitRepositoryImpl implements OrgUnitRepository {
             .collect(Collectors.toList());
     }
 
+    @Override
+    public List<OrgUnit> findByUnitCategory(UnitCategory unitCategory) {
+        return orgUnitMapper.findByUnitCategory(unitCategory.getCode()).stream()
+            .map(this::toDomain)
+            .collect(Collectors.toList());
+    }
+
     // Conversion methods
     private OrgUnit toDomain(OrgUnitPO po) {
+        // 解析unitCategory
+        UnitCategory category = UnitCategory.ACADEMIC; // 默认为教学单位
+        if (po.getUnitCategory() != null) {
+            category = UnitCategory.fromCode(po.getUnitCategory());
+        }
+
+        // 解析unitType
+        OrgUnitType unitType = parseUnitType(po.getUnitType(), po.getDeptLevel());
+
         return OrgUnit.builder()
             .id(po.getId())
             .unitCode(po.getDeptCode())
             .unitName(po.getDeptName())
-            .unitType(OrgUnitType.DEPARTMENT) // Default type since not in DB
+            .unitType(unitType)
+            .unitCategory(category)
             .parentId(po.getParentId())
             .treePath(po.getDeptPath())
             .treeLevel(po.getDeptLevel() != null ? po.getDeptLevel() : 0)
@@ -159,6 +177,28 @@ public class OrgUnitRepositoryImpl implements OrgUnitRepository {
             .enabled(po.getStatus() != null && po.getStatus() == 1)
             .createdBy(null) // Not tracked in departments
             .build();
+    }
+
+    /**
+     * 解析unitType字符串为枚举值
+     */
+    private OrgUnitType parseUnitType(String unitTypeStr, Integer deptLevel) {
+        if (unitTypeStr != null && !unitTypeStr.isEmpty()) {
+            try {
+                return OrgUnitType.valueOf(unitTypeStr.toUpperCase());
+            } catch (IllegalArgumentException e) {
+                // 如果无法解析，根据层级推断
+            }
+        }
+        // 根据层级推断类型
+        if (deptLevel == null) return OrgUnitType.DEPARTMENT;
+        return switch (deptLevel) {
+            case 1 -> OrgUnitType.SCHOOL;
+            case 2 -> OrgUnitType.COLLEGE;
+            case 3 -> OrgUnitType.DEPARTMENT;
+            case 4 -> OrgUnitType.TEACHING_GROUP;
+            default -> OrgUnitType.DEPARTMENT;
+        };
     }
 
     private OrgUnitPO toPO(OrgUnit domain) {
@@ -173,6 +213,14 @@ public class OrgUnitRepositoryImpl implements OrgUnitRepository {
         po.setLeaderId(domain.getLeaderId());
         po.setSortOrder(domain.getSortOrder());
         po.setStatus(domain.isEnabled() ? 1 : 0);
+        // 保存unitType
+        if (domain.getUnitType() != null) {
+            po.setUnitType(domain.getUnitType().name());
+        }
+        // 保存unitCategory
+        if (domain.getUnitCategory() != null) {
+            po.setUnitCategory(domain.getUnitCategory().getCode());
+        }
         return po;
     }
 }

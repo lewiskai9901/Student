@@ -1,9 +1,10 @@
 package com.school.management.infrastructure.persistence.access;
 
-import com.school.management.domain.access.model.DataScope;
+import com.school.management.casbin.model.DataScope;
 import com.school.management.domain.access.model.Role;
 import com.school.management.domain.access.model.RoleType;
 import com.school.management.domain.access.repository.RoleRepository;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Repository;
 
 import java.util.HashSet;
@@ -15,6 +16,7 @@ import java.util.stream.Collectors;
 /**
  * MyBatis Plus implementation of RoleRepository.
  */
+@Slf4j
 @Repository
 public class RoleRepositoryImpl implements RoleRepository {
 
@@ -44,6 +46,7 @@ public class RoleRepositoryImpl implements RoleRepository {
 
     private void saveRolePermissions(Role role) {
         if (role.getId() == null) {
+            log.warn("saveRolePermissions: role.getId() is null, skipping");
             return;
         }
 
@@ -52,6 +55,9 @@ public class RoleRepositoryImpl implements RoleRepository {
         Set<Long> currentSet = new HashSet<>(currentPermissionIds);
         Set<Long> newSet = role.getPermissionIds();
 
+        log.info("saveRolePermissions: roleId={}, currentDB={}, newFromRole={}",
+            role.getId(), currentSet.size(), newSet.size());
+
         // Find permissions to add
         Set<Long> toAdd = new HashSet<>(newSet);
         toAdd.removeAll(currentSet);
@@ -59,6 +65,8 @@ public class RoleRepositoryImpl implements RoleRepository {
         // Find permissions to remove
         Set<Long> toRemove = new HashSet<>(currentSet);
         toRemove.removeAll(newSet);
+
+        log.info("saveRolePermissions: toAdd={}, toRemove={}", toAdd.size(), toRemove.size());
 
         // Add new permissions
         for (Long permissionId : toAdd) {
@@ -72,6 +80,8 @@ public class RoleRepositoryImpl implements RoleRepository {
         for (Long permissionId : toRemove) {
             rolePermissionMapper.deleteByRoleIdAndPermissionId(role.getId(), permissionId);
         }
+
+        log.info("saveRolePermissions: completed for roleId={}", role.getId());
     }
 
     @Override

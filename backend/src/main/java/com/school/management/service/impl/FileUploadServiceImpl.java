@@ -42,10 +42,26 @@ public class FileUploadServiceImpl implements FileUploadService {
     // 默认最大文件大小 5MB(当配置不存在时使用)
     private static final long DEFAULT_MAX_FILE_SIZE = 5 * 1024 * 1024;
 
-    // 允许的文件扩展名
+    // 允许的图片文件扩展名
     private static final List<String> ALLOWED_EXTENSIONS = Arrays.asList(
             ".jpg", ".jpeg", ".png", ".gif", ".webp"
     );
+
+    // 允许的字体文件扩展名
+    private static final List<String> ALLOWED_FONT_EXTENSIONS = Arrays.asList(
+            ".ttf", ".woff", ".woff2"
+    );
+
+    // 允许的字体 Content-Type
+    private static final List<String> ALLOWED_FONT_CONTENT_TYPES = Arrays.asList(
+            "font/ttf", "font/woff", "font/woff2",
+            "application/x-font-ttf", "application/x-font-truetype",
+            "application/font-woff", "application/font-woff2",
+            "application/octet-stream" // 部分浏览器可能发送这个类型
+    );
+
+    // 默认最大字体文件大小 10MB
+    private static final long DEFAULT_MAX_FONT_SIZE = 10 * 1024 * 1024;
 
     // 图片文件魔数（用于验证真实文件类型）
     private static final Map<String, byte[]> IMAGE_MAGIC_BYTES = Map.of(
@@ -257,5 +273,77 @@ public class FileUploadServiceImpl implements FileUploadService {
 
         // 保存文件
         file.transferTo(path.toFile());
+    }
+
+    @Override
+    public String uploadFont(MultipartFile file) {
+        // 1. 验证字体文件
+        validateFontFile(file);
+
+        // 2. 生成文件路径
+        String relativePath = generateFontFilePath(file);
+
+        // 3. 保存文件
+        String fullPath = uploadBasePath + File.separator + relativePath;
+        try {
+            saveFile(file, fullPath);
+        } catch (IOException e) {
+            log.error("字体文件保存失败: {}", e.getMessage(), e);
+            throw new BusinessException("字体文件保存失败，请稍后重试");
+        }
+
+        // 4. 返回访问URL
+        String url = urlPrefix + "/" + relativePath.replace("\\", "/");
+        log.info("字体文件上传成功: {} -> {}", file.getOriginalFilename(), url);
+        return url;
+    }
+
+    /**
+     * 验证字体文件
+     */
+    private void validateFontFile(MultipartFile file) {
+        if (file == null || file.isEmpty()) {
+            throw new BusinessException("文件不能为空");
+        }
+
+        // 验证文件名
+        String originalFilename = file.getOriginalFilename();
+        if (originalFilename == null || originalFilename.contains("..") || originalFilename.contains("/") || originalFilename.contains("\\")) {
+            throw new BusinessException("非法的文件名");
+        }
+
+        // 验证文件扩展名
+        String extension = getFileExtension(originalFilename).toLowerCase();
+        if (!ALLOWED_FONT_EXTENSIONS.contains(extension)) {
+            throw new BusinessException("不支持的字体格式,仅支持: ttf, woff, woff2");
+        }
+
+        // 验证 Content-Type (字体文件类型检测较宽松)
+        String contentType = file.getContentType();
+        if (contentType != null && !ALLOWED_FONT_CONTENT_TYPES.contains(contentType.toLowerCase())) {
+            log.warn("字体文件Content-Type不匹配: {}, filename: {}", contentType, originalFilename);
+            // 对于字体文件,我们主要依赖扩展名验证,不强制检查Content-Type
+        }
+
+        // 验证文件大小
+        if (file.getSize() > DEFAULT_MAX_FONT_SIZE) {
+            throw new BusinessException("字体文件不能超过10MB");
+        }
+    }
+
+    /**
+     * 生成字体文件路径
+     * 格式: fonts/uuid.ttf
+     */
+    private String generateFontFilePath(MultipartFile file) {
+        // 生成唯一文件名
+        String originalFilename = file.getOriginalFilename();
+        String extension = "";
+        if (originalFilename != null && originalFilename.contains(".")) {
+            extension = originalFilename.substring(originalFilename.lastIndexOf("."));
+        }
+        String filename = UUID.randomUUID().toString() + extension;
+
+        return "fonts" + File.separator + filename;
     }
 }

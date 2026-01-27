@@ -66,9 +66,9 @@ public class StudentEvaluationResult implements Serializable {
     private Long gradeId;
 
     /**
-     * 系部ID
+     * 组织单元ID
      */
-    private Long departmentId;
+    private Long orgUnitId;
 
     // ==================== 德育 ====================
 
@@ -260,14 +260,14 @@ public class StudentEvaluationResult implements Serializable {
     private Integer gradeTotal;
 
     /**
-     * 系部排名
+     * 组织单元排名
      */
-    private Integer departmentRank;
+    private Integer orgUnitRank;
 
     /**
-     * 系部参评人数
+     * 组织单元参评人数
      */
-    private Integer departmentTotal;
+    private Integer orgUnitTotal;
 
     // ==================== 处分影响 ====================
 

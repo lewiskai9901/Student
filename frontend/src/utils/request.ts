@@ -46,13 +46,20 @@ function handleAuthExpired() {
   }
 }
 
+// 不需要添加Authorization header的请求路径
+const noAuthPaths = ['/auth/login', '/auth/refresh']
+
 // 请求拦截器
 service.interceptors.request.use(
   (config) => {
     const authStore = useAuthStore()
 
-    // 添加认证token
-    if (authStore.token) {
+    // 对于登录和刷新token请求，不添加Authorization header
+    const requestUrl = config.url || ''
+    const shouldSkipAuth = noAuthPaths.some(path => requestUrl.includes(path))
+
+    // 添加认证token（排除登录和刷新请求）
+    if (authStore.token && !shouldSkipAuth) {
       config.headers.Authorization = `Bearer ${authStore.token}`
     }
 

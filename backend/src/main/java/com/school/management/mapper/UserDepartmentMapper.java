@@ -18,32 +18,32 @@ import java.util.List;
 public interface UserDepartmentMapper extends BaseMapper<UserDepartment> {
 
     /**
-     * 根据用户ID查询部门ID列表
+     * 根据用户ID查询组织单元ID列表
      *
      * @param userId 用户ID
-     * @return 部门ID列表
+     * @return 组织单元ID列表
      */
-    @Select("SELECT department_id FROM user_departments WHERE user_id = #{userId}")
-    List<Long> selectDepartmentIdsByUserId(@Param("userId") Long userId);
+    @Select("SELECT org_unit_id FROM user_departments WHERE user_id = #{userId}")
+    List<Long> selectOrgUnitIdsByUserId(@Param("userId") Long userId);
 
     /**
-     * 根据用户ID查询用户部门关联信息
+     * 根据用户ID查询用户组织单元关联信息
      *
      * @param userId 用户ID
-     * @return 用户部门关联列表
+     * @return 用户组织单元关联列表
      */
-    @Select("SELECT ud.*, d.dept_name as departmentName " +
+    @Select("SELECT ud.*, ou.name as orgUnitName " +
             "FROM user_departments ud " +
-            "LEFT JOIN departments d ON ud.department_id = d.id " +
+            "LEFT JOIN org_units ou ON ud.org_unit_id = ou.id " +
             "WHERE ud.user_id = #{userId}")
     List<UserDepartment> selectByUserId(@Param("userId") Long userId);
 
     /**
-     * 根据部门ID查询用户ID列表
+     * 根据组织单元ID查询用户ID列表
      *
-     * @param departmentId 部门ID
+     * @param orgUnitId 组织单元ID
      * @return 用户ID列表
      */
-    @Select("SELECT user_id FROM user_departments WHERE department_id = #{departmentId}")
-    List<Long> selectUserIdsByDepartmentId(@Param("departmentId") Long departmentId);
+    @Select("SELECT user_id FROM user_departments WHERE org_unit_id = #{orgUnitId}")
+    List<Long> selectUserIdsByOrgUnitId(@Param("orgUnitId") Long orgUnitId);
 }

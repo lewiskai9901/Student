@@ -28,10 +28,8 @@ public class CustomUserDetails implements UserDetails {
     private List<String> permissions;
 
     // 数据权限相关字段
-    private Long departmentId;
+    private Long orgUnitId;
     private Long classId;
-    private Long managedClassId;
-    private List<Long> managedClassIds;
     private Integer userType;
     private String gradeLevel;
 
@@ -44,16 +42,14 @@ public class CustomUserDetails implements UserDetails {
         this.roles = roles;
         this.permissions = permissions;
         // 数据权限字段
-        this.departmentId = user.getDepartmentId();
+        this.orgUnitId = user.getOrgUnitId();
         this.classId = user.getClassId();
-        this.managedClassId = user.getManagedClassId();
         this.userType = user.getUserType();
     }
 
     public CustomUserDetails(User user, List<String> roles, List<String> permissions,
-                             List<Long> managedClassIds, String gradeLevel) {
+                             String gradeLevel) {
         this(user, roles, permissions);
-        this.managedClassIds = managedClassIds;
         this.gradeLevel = gradeLevel;
     }
 
@@ -121,5 +117,13 @@ public class CustomUserDetails implements UserDetails {
      */
     public Long getId() {
         return userId;
+    }
+
+    /**
+     * 获取组织单元名称（用于审批等业务场景）
+     * 注：当前返回空字符串，后续可通过缓存或查询获取实际名称
+     */
+    public String getOrgUnitName() {
+        return "";
     }
 }

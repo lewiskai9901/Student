@@ -33,14 +33,14 @@ public class TaskAssigneeDTO implements Serializable {
     private String assigneeName;
 
     /**
-     * 部门ID
+     * 组织单元ID
      */
-    private Long departmentId;
+    private Long orgUnitId;
 
     /**
-     * 部门名称
+     * 组织单元名称
      */
-    private String departmentName;
+    private String orgUnitName;
 
     /**
      * 状态

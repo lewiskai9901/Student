@@ -52,7 +52,7 @@ public class EvaluationResultController {
             @Parameter(description = "学生姓名") @RequestParam(required = false) String studentName,
             @Parameter(description = "学号") @RequestParam(required = false) String studentNo,
             @Parameter(description = "班级ID") @RequestParam(required = false) Long classId,
-            @Parameter(description = "院系ID") @RequestParam(required = false) Long departmentId) {
+            @Parameter(description = "组织单元ID") @RequestParam(required = false) Long orgUnitId) {
 
         log.info("分页查询综测结果: pageNum={}, pageSize={}, periodId={}", pageNum, pageSize, periodId);
 
@@ -62,7 +62,7 @@ public class EvaluationResultController {
         query.put("studentName", studentName);
         query.put("studentNo", studentNo);
         query.put("classId", classId);
-        query.put("departmentId", departmentId);
+        query.put("orgUnitId", orgUnitId);
 
         Page<Map<String, Object>> result = resultService.pageResults(page, query);
         return Result.success(PageResult.from(result));

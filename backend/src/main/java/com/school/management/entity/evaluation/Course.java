@@ -51,9 +51,9 @@ public class Course implements Serializable {
     private Integer totalHours;
 
     /**
-     * 开课系部
+     * 开课组织单元
      */
-    private Long departmentId;
+    private Long orgUnitId;
 
     /**
      * 课程描述

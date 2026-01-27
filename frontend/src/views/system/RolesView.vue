@@ -159,7 +159,7 @@
             <td class="px-4 py-3">
               <input
                 type="checkbox"
-                :checked="selectedIds.includes(row.id)"
+                :checked="isRoleSelected(row.id)"
                 @change="handleSelectRow(row)"
                 class="h-4 w-4 rounded border-gray-300"
               />
@@ -437,7 +437,7 @@
                       <div class="flex items-center gap-2">
                         <input
                           type="checkbox"
-                          :checked="selectedPermissionIds.includes(permission.id)"
+                          :checked="isPermissionSelected(permission.id)"
                           @change="handlePermissionCheck(permission.id)"
                           class="h-4 w-4 rounded border-gray-300"
                         />
@@ -451,12 +451,12 @@
                         >
                           <input
                             type="checkbox"
-                            :checked="selectedPermissionIds.includes(child.id)"
+                            :checked="isPermissionSelected(child.id)"
                             @change="handlePermissionCheck(child.id)"
                             class="h-4 w-4 rounded border-gray-300"
                           />
                           <span class="text-gray-700">{{ child.permissionName }}</span>
-                          <span class="rounded bg-gray-100 px-1 py-0.5 text-xs text-gray-500">{{ child.permissionCode }}</span>
+                          
                         </div>
                       </div>
                     </template>
@@ -488,72 +488,281 @@
       </Transition>
     </Teleport>
 
-    <!-- 数据权限配置对话框 V2 -->
+    <!-- 数据权限配置对话框 V3 - 卡片式设计 -->
     <Teleport to="body">
       <Transition name="modal">
         <div v-if="dataPermissionDialogVisible" class="fixed inset-0 z-50 flex items-center justify-center">
           <div class="fixed inset-0 bg-black/50" @click="dataPermissionDialogVisible = false"></div>
-          <div class="relative w-full max-w-2xl rounded-lg bg-white shadow-xl">
-            <div class="flex items-center justify-between border-b border-gray-200 px-6 py-4">
-              <h3 class="text-lg font-medium text-gray-900">配置数据权限 - {{ currentRoleName }}</h3>
-              <button @click="dataPermissionDialogVisible = false" class="rounded p-1 hover:bg-gray-100">
-                <X class="h-5 w-5 text-gray-500" />
+          <div class="relative w-full max-w-3xl rounded-xl bg-white shadow-2xl">
+            <!-- 头部 -->
+            <div class="flex items-center justify-between border-b border-gray-100 px-6 py-4">
+              <div class="flex items-center gap-3">
+                <div class="flex h-10 w-10 items-center justify-center rounded-lg bg-gradient-to-br from-blue-500 to-blue-600">
+                  <Shield class="h-5 w-5 text-white" />
+                </div>
+                <div>
+                  <h3 class="text-lg font-semibold text-gray-900">数据权限配置</h3>
+                  <p class="text-sm text-gray-500">{{ currentRoleName }}</p>
+                </div>
+              </div>
+              <button @click="dataPermissionDialogVisible = false" class="rounded-lg p-2 text-gray-400 hover:bg-gray-100 hover:text-gray-600">
+                <X class="h-5 w-5" />
               </button>
             </div>
+
+            <!-- 快捷操作 -->
+            <div class="flex items-center gap-2 border-b border-gray-100 bg-gray-50/50 px-6 py-3">
+              <span class="text-sm text-gray-500">快捷设置：</span>
+              <button
+                v-for="opt in quickScopeOptions"
+                :key="opt.code"
+                @click="batchSetScope(opt.code)"
+                class="rounded-full border border-gray-200 bg-white px-3 py-1 text-xs font-medium text-gray-600 transition hover:border-blue-300 hover:bg-blue-50 hover:text-blue-600"
+              >
+                {{ opt.label }}
+              </button>
+            </div>
+
+            <!-- 模块卡片列表 -->
             <div class="max-h-[500px] overflow-y-auto p-6">
-              <div class="space-y-6">
-                <!-- 按领域分组显示模块 -->
-                <div v-for="(modules, domain) in groupedModules" :key="domain" class="rounded-lg border border-gray-200">
-                  <div class="flex items-center gap-2 border-b border-gray-100 bg-gray-50 px-4 py-3">
-                    <component :is="getDomainIcon(domain)" class="h-5 w-5 text-gray-600" />
-                    <span class="font-medium text-gray-900">{{ getDomainLabel(domain) }}</span>
-                  </div>
-                  <div class="divide-y divide-gray-100">
-                    <div v-for="module in modules" :key="module.code" class="flex items-center justify-between px-4 py-3">
-                      <span class="text-sm text-gray-700">{{ module.name }}</span>
+              <div v-for="(modules, domain) in groupedModules" :key="domain" class="mb-6 last:mb-0">
+                <!-- 领域标题 -->
+                <div class="mb-3 flex items-center gap-2">
+                  <component :is="getDomainIcon(domain)" class="h-4 w-4 text-gray-400" />
+                  <span class="text-sm font-medium text-gray-500">{{ getDomainLabel(domain) }}</span>
+                </div>
+
+                <!-- 模块卡片 -->
+                <div class="space-y-3">
+                  <div
+                    v-for="module in modules"
+                    :key="module.code"
+                    class="rounded-lg border border-gray-200 bg-white transition-shadow hover:shadow-sm"
+                    :class="{ 'ring-2 ring-blue-500 ring-offset-1': expandedCustomModule === module.code }"
+                  >
+                    <!-- 卡片头部 -->
+                    <div class="flex items-center justify-between px-4 py-3">
+                      <div class="flex items-center gap-3">
+                        <div class="flex h-8 w-8 items-center justify-center rounded-lg bg-gray-100">
+                          <component :is="getModuleIcon(module.code)" class="h-4 w-4 text-gray-500" />
+                        </div>
+                        <span class="font-medium text-gray-900">{{ module.name }}</span>
+                      </div>
+
+                      <!-- 范围选择下拉 -->
                       <div class="flex items-center gap-2">
                         <select
                           :value="getModuleScope(module.code)"
-                          @change="setModuleScope(module.code, ($event.target as HTMLSelectElement).value)"
-                          class="h-8 w-36 rounded-lg border border-gray-300 px-2 text-sm focus:border-blue-500 focus:outline-none"
+                          @change="handleScopeChange(module.code, ($event.target as HTMLSelectElement).value)"
+                          class="h-9 rounded-lg border border-gray-200 bg-white px-3 pr-8 text-sm font-medium text-gray-700 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
                         >
                           <option v-for="scope in dataScopeOptions" :key="scope.code" :value="scope.code">
                             {{ scope.name }}
                           </option>
                         </select>
-                        <!-- 自定义范围选择按钮 -->
+
+                        <!-- 自定义范围展开按钮 -->
                         <button
                           v-if="getModuleScope(module.code) === 'custom'"
-                          @click="openCustomScopeDialog(module.code)"
-                          class="inline-flex h-8 items-center gap-1 rounded-lg border border-blue-300 bg-blue-50 px-2 text-xs text-blue-600 hover:bg-blue-100"
+                          @click="toggleCustomScopeInline(module.code)"
+                          class="flex h-9 items-center gap-1.5 rounded-lg px-3 text-sm font-medium transition"
+                          :class="expandedCustomModule === module.code
+                            ? 'bg-blue-600 text-white'
+                            : 'bg-blue-50 text-blue-600 hover:bg-blue-100'"
                         >
-                          <Settings class="h-3.5 w-3.5" />
-                          选择 ({{ getCustomScopeCount(module.code) }})
+                          <span>已选 {{ getCustomScopeCount(module.code) }} 项</span>
+                          <ChevronDown
+                            class="h-4 w-4 transition-transform"
+                            :class="{ 'rotate-180': expandedCustomModule === module.code }"
+                          />
                         </button>
                       </div>
                     </div>
+
+                    <!-- 自定义范围选择器（展开时显示） -->
+                    <Transition name="expand">
+                      <div v-if="expandedCustomModule === module.code && getModuleScope(module.code) === 'custom'" class="border-t border-gray-100 bg-gray-50/50 p-4">
+                        <!-- 统一树形选择器 -->
+                        <div class="mb-3 flex items-center justify-between">
+                          <span class="text-sm text-gray-600">选择可访问的数据范围</span>
+                          <div class="flex items-center gap-2">
+                            <button @click="handleExpandAllScope" class="rounded border border-gray-200 bg-white px-2 py-1 text-xs text-gray-600 hover:bg-gray-50">
+                              全部展开
+                            </button>
+                            <button @click="handleCollapseAllScope" class="rounded border border-gray-200 bg-white px-2 py-1 text-xs text-gray-600 hover:bg-gray-50">
+                              全部折叠
+                            </button>
+                            <button @click="handleClearScope" class="rounded border border-gray-200 bg-white px-2 py-1 text-xs text-gray-600 hover:bg-gray-50">
+                              清空选择
+                            </button>
+                          </div>
+                        </div>
+
+                        <!-- 树形选择区域 -->
+                        <div class="max-h-64 overflow-y-auto rounded-lg border border-gray-200 bg-white">
+                          <div v-if="unifiedTreeLoading" class="flex items-center justify-center py-8">
+                            <Loader2 class="h-6 w-6 animate-spin text-gray-400" />
+                          </div>
+                          <div v-else-if="unifiedTreeData.length === 0" class="py-8 text-center text-sm text-gray-500">
+                            暂无数据
+                          </div>
+                          <div v-else class="p-3">
+                            <!-- 统一树形结构 -->
+                            <div v-for="org in unifiedTreeData" :key="'org-' + org.id" class="mb-2 last:mb-0">
+                              <!-- 组织单元节点 -->
+                              <div class="flex items-center gap-2 rounded-lg px-2 py-1.5 hover:bg-gray-50">
+                                <button
+                                  @click="toggleUnifiedNode('org', org.id)"
+                                  class="flex h-5 w-5 items-center justify-center rounded text-gray-400 hover:bg-gray-200"
+                                >
+                                  <ChevronDown
+                                    v-if="org.children?.length || org.grades?.length"
+                                    class="h-4 w-4 transition-transform"
+                                    :class="{ '-rotate-90': !isUnifiedNodeExpanded('org', org.id) }"
+                                  />
+                                </button>
+                                <input
+                                  type="checkbox"
+                                  :checked="isNodeSelected('org', org.id)"
+                                  @change="toggleNodeSelection('org', org.id)"
+                                  class="h-4 w-4 rounded border-gray-300 text-blue-600"
+                                />
+                                <Building2 class="h-4 w-4 text-blue-500" />
+                                <span class="text-sm font-medium text-gray-700">{{ org.name }}</span>
+                                <span class="text-xs text-gray-400">组织单元</span>
+                              </div>
+
+                              <!-- 子组织单元和年级 -->
+                              <div v-if="isUnifiedNodeExpanded('org', org.id)" class="ml-7 border-l border-gray-200 pl-3">
+                                <!-- 子组织单元 -->
+                                <template v-if="org.children?.length">
+                                  <div v-for="child in org.children" :key="'org-' + child.id" class="mt-1">
+                                    <div class="flex items-center gap-2 rounded-lg px-2 py-1.5 hover:bg-gray-50">
+                                      <button
+                                        @click="toggleUnifiedNode('org', child.id)"
+                                        class="flex h-5 w-5 items-center justify-center rounded text-gray-400 hover:bg-gray-200"
+                                      >
+                                        <ChevronDown
+                                          v-if="child.children?.length"
+                                          class="h-4 w-4 transition-transform"
+                                          :class="{ '-rotate-90': !isUnifiedNodeExpanded('org', child.id) }"
+                                        />
+                                      </button>
+                                      <input
+                                        type="checkbox"
+                                        :checked="isNodeSelected('org', child.id)"
+                                        @change="toggleNodeSelection('org', child.id)"
+                                        class="h-4 w-4 rounded border-gray-300 text-blue-600"
+                                      />
+                                      <Building2 class="h-4 w-4 text-blue-400" />
+                                      <span class="text-sm text-gray-600">{{ child.name }}</span>
+                                    </div>
+                                  </div>
+                                </template>
+
+                                <!-- 年级节点 -->
+                                <template v-if="org.grades?.length">
+                                  <div v-for="grade in org.grades" :key="'grade-' + grade.id" class="mt-1">
+                                    <div class="flex items-center gap-2 rounded-lg px-2 py-1.5 hover:bg-gray-50">
+                                      <button
+                                        @click="toggleUnifiedNode('grade', grade.id)"
+                                        class="flex h-5 w-5 items-center justify-center rounded text-gray-400 hover:bg-gray-200"
+                                      >
+                                        <ChevronDown
+                                          v-if="grade.classes?.length"
+                                          class="h-4 w-4 transition-transform"
+                                          :class="{ '-rotate-90': !isUnifiedNodeExpanded('grade', grade.id) }"
+                                        />
+                                      </button>
+                                      <input
+                                        type="checkbox"
+                                        :checked="isNodeSelected('grade', grade.id)"
+                                        @change="toggleNodeSelection('grade', grade.id)"
+                                        class="h-4 w-4 rounded border-gray-300 text-green-600"
+                                      />
+                                      <GraduationCap class="h-4 w-4 text-green-500" />
+                                      <span class="text-sm text-gray-600">{{ grade.name }}</span>
+                                      <span class="text-xs text-gray-400">年级</span>
+                                    </div>
+
+                                    <!-- 班级节点 -->
+                                    <div v-if="isUnifiedNodeExpanded('grade', grade.id) && grade.classes?.length" class="ml-7 border-l border-gray-200 pl-3">
+                                      <div v-for="cls in grade.classes" :key="'class-' + cls.id" class="mt-1">
+                                        <div class="flex items-center gap-2 rounded-lg px-2 py-1.5 hover:bg-gray-50">
+                                          <div class="h-5 w-5"></div>
+                                          <input
+                                            type="checkbox"
+                                            :checked="isNodeSelected('class', cls.id)"
+                                            @change="toggleNodeSelection('class', cls.id)"
+                                            class="h-4 w-4 rounded border-gray-300 text-orange-600"
+                                          />
+                                          <Users class="h-4 w-4 text-orange-500" />
+                                          <span class="text-sm text-gray-600">{{ cls.name }}</span>
+                                          <span class="text-xs text-gray-400">班级</span>
+                                        </div>
+                                      </div>
+                                    </div>
+                                  </div>
+                                </template>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+
+                        <!-- 选择统计 -->
+                        <div class="mt-3 flex items-center justify-between rounded-lg bg-blue-50 px-3 py-2">
+                          <div class="flex items-center gap-4 text-xs">
+                            <span class="flex items-center gap-1">
+                              <Building2 class="h-3.5 w-3.5 text-blue-500" />
+                              <span class="text-gray-600">组织单元:</span>
+                              <span class="font-semibold text-blue-600">{{ selectedOrgUnitIds.length }}</span>
+                            </span>
+                            <span class="flex items-center gap-1">
+                              <GraduationCap class="h-3.5 w-3.5 text-green-500" />
+                              <span class="text-gray-600">年级:</span>
+                              <span class="font-semibold text-green-600">{{ selectedGradeIds.length }}</span>
+                            </span>
+                            <span class="flex items-center gap-1">
+                              <Users class="h-3.5 w-3.5 text-orange-500" />
+                              <span class="text-gray-600">班级:</span>
+                              <span class="font-semibold text-orange-600">{{ selectedClassIds.length }}</span>
+                            </span>
+                          </div>
+                          <button
+                            @click="confirmInlineCustomScope"
+                            class="rounded-lg bg-blue-600 px-4 py-1.5 text-xs font-medium text-white hover:bg-blue-700"
+                          >
+                            确认选择
+                          </button>
+                        </div>
+                      </div>
+                    </Transition>
                   </div>
                 </div>
-                <div v-if="Object.keys(groupedModules).length === 0" class="py-8 text-center text-gray-500">
-                  <Loader2 class="mx-auto h-6 w-6 animate-spin text-gray-400" />
-                  <p class="mt-2">加载中...</p>
-                </div>
+              </div>
+
+              <!-- 空状态 -->
+              <div v-if="Object.keys(groupedModules).length === 0" class="py-12 text-center">
+                <Loader2 class="mx-auto h-8 w-8 animate-spin text-gray-300" />
+                <p class="mt-3 text-sm text-gray-500">加载中...</p>
               </div>
             </div>
-            <div class="flex items-center justify-end gap-3 border-t border-gray-200 px-6 py-4">
+
+            <!-- 底部操作栏 -->
+            <div class="flex items-center justify-end gap-3 border-t border-gray-100 bg-gray-50/50 px-6 py-4">
               <button
                 @click="dataPermissionDialogVisible = false"
-                class="h-9 rounded-lg border border-gray-300 px-4 text-sm font-medium text-gray-700 hover:bg-gray-50"
+                class="h-10 rounded-lg border border-gray-200 bg-white px-5 text-sm font-medium text-gray-700 hover:bg-gray-50"
               >
                 取消
               </button>
               <button
                 @click="handleDataPermissionSubmit"
                 :disabled="dataPermissionSubmitLoading"
-                class="inline-flex h-9 items-center gap-1.5 rounded-lg bg-blue-600 px-4 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
+                class="inline-flex h-10 items-center gap-2 rounded-lg bg-blue-600 px-5 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
               >
                 <Loader2 v-if="dataPermissionSubmitLoading" class="h-4 w-4 animate-spin" />
-                保存
+                保存配置
               </button>
             </div>
           </div>
@@ -685,7 +894,8 @@ import {
   GraduationCap,
   Building2,
   BookOpen,
-  Home
+  Home,
+  ChevronDown
 } from 'lucide-vue-next'
 // V2 DDD API
 import {
@@ -706,8 +916,9 @@ import {
   getDataScopesV2,
   type RoleResponse
 } from '@/api/v2/access'
-import { getOrgUnitTree } from '@/api/v2/organization'
+import { getOrgUnitTree, getAllGrades, getAllClasses, type Grade, type SchoolClass } from '@/api/v2/organization'
 import type { OrgUnitTreeNode } from '@/types/v2'
+import type { CustomScope } from '@/types/v2/access'
 import OrgTreeNode from '@/components/common/OrgTreeNode.vue'
 import type {
   CreateRoleRequest,
@@ -730,8 +941,8 @@ const dataPermissionDialogVisible = ref(false)
 const customScopeDialogVisible = ref(false)
 const isEdit = ref(false)
 const currentRoleName = ref('')
-const selectedIds = ref<number[]>([])
-const currentRoleId = ref<number>()
+const selectedIds = ref<(string | number)[]>([])
+const currentRoleId = ref<string | number>()
 const expandedModules = ref<string[]>([])
 
 // V2 数据权限相关状态
@@ -745,6 +956,35 @@ const orgTreeData = ref<OrgUnitTreeNode[]>([])
 const orgTreeLoading = ref(false)
 const selectedOrgUnitIds = ref<number[]>([])
 const expandedOrgKeys = ref<number[]>([])
+const expandedCustomModule = ref<string>('') // 当前展开的自定义范围模块
+
+// 多维度自定义范围状态
+const customScopeTab = ref<'org' | 'grade' | 'class'>('org')
+const gradesData = ref<Grade[]>([])
+const classesData = ref<SchoolClass[]>([])
+const gradesLoading = ref(false)
+const classesLoading = ref(false)
+const selectedGradeIds = ref<number[]>([])
+const selectedClassIds = ref<number[]>([])
+const classFilterGradeId = ref<number | null>(null) // 班级筛选的年级
+
+// V3 统一树形结构状态
+interface UnifiedTreeNode {
+  id: number
+  name: string
+  children?: UnifiedTreeNode[]
+  grades?: { id: number; name: string; classes?: { id: number; name: string }[] }[]
+}
+const unifiedTreeData = ref<UnifiedTreeNode[]>([])
+const unifiedTreeLoading = ref(false)
+const unifiedExpandedNodes = ref<Set<string>>(new Set())
+
+// 快捷设置选项
+const quickScopeOptions = [
+  { code: 'all', label: '全部数据' },
+  { code: 'department_and_below', label: '本部门及以下' },
+  { code: 'self', label: '仅本人' }
+]
 
 // 查询参数 - V2 类型
 interface LocalRoleQueryParams extends RoleQueryParams {
@@ -763,7 +1003,7 @@ const queryParams = reactive<LocalRoleQueryParams>({
 const roleList = ref<RoleResponse[]>([])
 const total = ref(0)
 const permissionTree = ref<any[]>([])
-const selectedPermissionIds = ref<number[]>([])
+const selectedPermissionIds = ref<(string | number)[]>([])
 
 // 统计数据 - 适配 V2 RoleResponse (isEnabled: boolean)
 const enabledCount = computed(() => roleList.value.filter(r => r.isEnabled !== false).length)
@@ -798,9 +1038,17 @@ const moduleConfig: Record<string, { name: string }> = {
   system: { name: '系统管理' },
   quantification: { name: '量化管理' },
   major: { name: '专业管理' },
-  building: { name: '楼宇管理' },
+  building: { name: '楼栋管理' },
   classroom: { name: '教室管理' },
-  dormitory: { name: '宿舍管理' }
+  dormitory: { name: '宿舍管理' },
+  evaluation: { name: '综合测评' },
+  task: { name: '任务管理' },
+  workflow: { name: '流程管理' },
+  scope: { name: '数据范围管理' },
+  wechat: { name: '微信管理' },
+  grade: { name: '年级管理' },
+  teaching: { name: '教学管理' },
+  test: { name: '测试权限' }
 }
 
 interface PermissionModule {
@@ -820,6 +1068,7 @@ const permissionModules = computed<PermissionModule[]>(() => {
     moduleMap.get(code)!.push(p)
   })
   const modules: PermissionModule[] = []
+  const selectedIdStrings = selectedPermissionIds.value.map(String)
   moduleMap.forEach((permissions, code) => {
     const config = moduleConfig[code] || { name: code }
     const allIds = getAllPermissionIds(permissions)
@@ -828,14 +1077,14 @@ const permissionModules = computed<PermissionModule[]>(() => {
       name: config.name,
       count: allIds.length,
       permissions,
-      checked: allIds.every(id => selectedPermissionIds.value.includes(id))
+      checked: allIds.every(id => selectedIdStrings.includes(String(id)))
     })
   })
   return modules.sort((a, b) => a.name.localeCompare(b.name, 'zh-CN'))
 })
 
-const getAllPermissionIds = (permissions: any[]): number[] => {
-  const ids: number[] = []
+const getAllPermissionIds = (permissions: any[]): (string | number)[] => {
+  const ids: (string | number)[] = []
   const traverse = (perms: any[]) => {
     perms.forEach(p => {
       ids.push(p.id)
@@ -881,12 +1130,17 @@ const resetQuery = () => {
   loadRoleList()
 }
 
+// 检查角色ID是否已选中（处理字符串/数字混合比较）
+const isRoleSelected = (id: string | number): boolean => {
+  return selectedIds.value.some(sid => String(sid) === String(id))
+}
+
 const handleSelectAll = (e: Event) => {
   selectedIds.value = (e.target as HTMLInputElement).checked ? roleList.value.map(r => r.id) : []
 }
 
 const handleSelectRow = (row: RoleResponse) => {
-  const idx = selectedIds.value.indexOf(row.id)
+  const idx = selectedIds.value.findIndex(sid => String(sid) === String(row.id))
   idx > -1 ? selectedIds.value.splice(idx, 1) : selectedIds.value.push(row.id)
 }
 
@@ -1002,15 +1256,22 @@ const handleUncheckAll = () => { selectedPermissionIds.value = [] }
 
 const handleModuleCheck = (module: PermissionModule) => {
   const allIds = getAllPermissionIds(module.permissions)
+  const allIdStrings = allIds.map(String)
   if (module.checked) {
-    selectedPermissionIds.value = selectedPermissionIds.value.filter(id => !allIds.includes(id))
+    selectedPermissionIds.value = selectedPermissionIds.value.filter(id => !allIdStrings.includes(String(id)))
   } else {
-    selectedPermissionIds.value.push(...allIds.filter(id => !selectedPermissionIds.value.includes(id)))
+    const selectedIdStrings = selectedPermissionIds.value.map(String)
+    selectedPermissionIds.value.push(...allIds.filter(id => !selectedIdStrings.includes(String(id))))
   }
 }
 
-const handlePermissionCheck = (id: number) => {
-  const idx = selectedPermissionIds.value.indexOf(id)
+// 检查权限ID是否已选中（处理字符串/数字混合比较）
+const isPermissionSelected = (id: string | number): boolean => {
+  return selectedPermissionIds.value.some(pid => String(pid) === String(id))
+}
+
+const handlePermissionCheck = (id: string | number) => {
+  const idx = selectedPermissionIds.value.findIndex(pid => String(pid) === String(id))
   idx > -1 ? selectedPermissionIds.value.splice(idx, 1) : selectedPermissionIds.value.push(id)
 }
 
@@ -1076,11 +1337,156 @@ const setModuleScope = (moduleCode: string, scopeCode: string) => {
   }
 }
 
-// 获取模块的自定义范围数量
+// 处理单选按钮范围变更
+const handleScopeChange = async (moduleCode: string, scopeCode: string) => {
+  setModuleScope(moduleCode, scopeCode)
+  // 如果选择自定义范围，自动展开内联选择器
+  if (scopeCode === 'custom') {
+    expandedCustomModule.value = moduleCode
+    customScopeTab.value = 'org' // 默认显示组织单元tab
+
+    // 构建统一树形结构（内联选择器使用 unifiedTreeData）
+    if (unifiedTreeData.value.length === 0) {
+      await buildUnifiedTree()
+    }
+
+    // 加载当前模块已选中的范围（多维度）
+    const scope = getCustomScopeDetail(moduleCode)
+    selectedOrgUnitIds.value = scope.orgUnitIds ? [...scope.orgUnitIds] : []
+    selectedGradeIds.value = scope.gradeIds ? [...scope.gradeIds] : []
+    selectedClassIds.value = scope.classIds ? [...scope.classIds] : []
+  } else {
+    // 如果切换到其他范围，关闭内联选择器
+    if (expandedCustomModule.value === moduleCode) {
+      expandedCustomModule.value = ''
+    }
+  }
+}
+
+// 批量设置所有模块的范围
+const batchSetScope = (scopeCode: string) => {
+  if (!rolePermissionConfig.value) return
+  rolePermissionConfig.value.modulePermissions.forEach(mp => {
+    mp.scopeCode = scopeCode
+    if (scopeCode !== 'custom') {
+      mp.customOrgUnitIds = undefined
+    }
+  })
+  // 关闭任何展开的自定义选择器
+  expandedCustomModule.value = ''
+  ElMessage.success(`已将所有模块设为"${dataScopeOptions.value.find(s => s.code === scopeCode)?.name || scopeCode}"`)
+}
+
+// 切换内联自定义范围选择器（多维度）
+const toggleCustomScopeInline = async (moduleCode: string) => {
+  if (expandedCustomModule.value === moduleCode) {
+    // 已展开则折叠
+    expandedCustomModule.value = ''
+  } else {
+    // 展开新的
+    expandedCustomModule.value = moduleCode
+
+    // 构建统一树形结构
+    if (unifiedTreeData.value.length === 0) {
+      await buildUnifiedTree()
+    }
+
+    // 加载当前模块已选中的范围（多维度）
+    const scope = getCustomScopeDetail(moduleCode)
+    selectedOrgUnitIds.value = scope.orgUnitIds ? [...scope.orgUnitIds] : []
+    selectedGradeIds.value = scope.gradeIds ? [...scope.gradeIds] : []
+    selectedClassIds.value = scope.classIds ? [...scope.classIds] : []
+  }
+}
+
+// 确认内联自定义范围选择（多维度）
+const confirmInlineCustomScope = () => {
+  if (!rolePermissionConfig.value || !expandedCustomModule.value) return
+  // 保存选中的范围到当前模块配置（多维度）
+  const mp = rolePermissionConfig.value.modulePermissions.find(
+    p => p.moduleCode === expandedCustomModule.value
+  )
+  if (mp) {
+    // 使用新的多维度结构
+    mp.customScope = {
+      orgUnitIds: selectedOrgUnitIds.value.length > 0 ? [...selectedOrgUnitIds.value] : undefined,
+      gradeIds: selectedGradeIds.value.length > 0 ? [...selectedGradeIds.value] : undefined,
+      classIds: selectedClassIds.value.length > 0 ? [...selectedClassIds.value] : undefined
+    }
+    // 清理旧字段
+    mp.customOrgUnitIds = undefined
+  }
+  const total = selectedOrgUnitIds.value.length + selectedGradeIds.value.length + selectedClassIds.value.length
+  ElMessage.success(`已选择 ${total} 个范围项`)
+  expandedCustomModule.value = ''
+}
+
+// 处理年级选中
+const handleGradeCheck = (gradeId: number, checked: boolean) => {
+  if (checked) {
+    if (!selectedGradeIds.value.includes(gradeId)) {
+      selectedGradeIds.value.push(gradeId)
+    }
+  } else {
+    const idx = selectedGradeIds.value.indexOf(gradeId)
+    if (idx > -1) selectedGradeIds.value.splice(idx, 1)
+  }
+}
+
+// 处理班级选中
+const handleClassCheck = (classId: number, checked: boolean) => {
+  if (checked) {
+    if (!selectedClassIds.value.includes(classId)) {
+      selectedClassIds.value.push(classId)
+    }
+  } else {
+    const idx = selectedClassIds.value.indexOf(classId)
+    if (idx > -1) selectedClassIds.value.splice(idx, 1)
+  }
+}
+
+// 全选/清空年级
+const handleSelectAllGrades = () => {
+  selectedGradeIds.value = gradesData.value.map(g => g.id!).filter(id => id !== undefined)
+}
+const handleClearAllGrades = () => {
+  selectedGradeIds.value = []
+}
+
+// 全选/清空班级
+const handleSelectAllClasses = () => {
+  selectedClassIds.value = filteredClasses.value.map(c => c.id!).filter(id => id !== undefined)
+}
+const handleClearAllClasses = () => {
+  selectedClassIds.value = []
+}
+
+// 获取模块的自定义范围数量（多维度总计）
 const getCustomScopeCount = (moduleCode: string): number => {
   if (!rolePermissionConfig.value) return 0
   const mp = rolePermissionConfig.value.modulePermissions.find(p => p.moduleCode === moduleCode)
-  return mp?.customOrgUnitIds?.length || 0
+  if (!mp) return 0
+  // 新版多维度结构
+  if (mp.customScope) {
+    const { orgUnitIds = [], gradeIds = [], classIds = [] } = mp.customScope
+    return orgUnitIds.length + gradeIds.length + classIds.length
+  }
+  // 旧版兼容
+  return mp.customOrgUnitIds?.length || 0
+}
+
+// 获取模块的自定义范围明细
+const getCustomScopeDetail = (moduleCode: string): CustomScope => {
+  if (!rolePermissionConfig.value) return {}
+  const mp = rolePermissionConfig.value.modulePermissions.find(p => p.moduleCode === moduleCode)
+  if (!mp) return {}
+  // 新版多维度结构
+  if (mp.customScope) return mp.customScope
+  // 旧版兼容
+  if (mp.customOrgUnitIds?.length) {
+    return { orgUnitIds: mp.customOrgUnitIds }
+  }
+  return {}
 }
 
 // 加载组织架构树
@@ -1098,6 +1504,38 @@ const loadOrgTree = async () => {
     orgTreeLoading.value = false
   }
 }
+
+// 加载年级列表
+const loadGrades = async () => {
+  if (gradesData.value.length > 0) return
+  try {
+    gradesLoading.value = true
+    gradesData.value = await getAllGrades()
+  } catch (error) {
+    console.error('加载年级失败:', error)
+  } finally {
+    gradesLoading.value = false
+  }
+}
+
+// 加载班级列表
+const loadClasses = async () => {
+  if (classesData.value.length > 0) return
+  try {
+    classesLoading.value = true
+    classesData.value = await getAllClasses()
+  } catch (error) {
+    console.error('加载班级失败:', error)
+  } finally {
+    classesLoading.value = false
+  }
+}
+
+// 筛选后的班级列表
+const filteredClasses = computed(() => {
+  if (!classFilterGradeId.value) return classesData.value
+  return classesData.value.filter(c => c.gradeId === classFilterGradeId.value)
+})
 
 // 获取所有组织单元ID（用于全选）
 const getAllOrgIds = (nodes: OrgUnitTreeNode[]): number[] => {
@@ -1198,6 +1636,152 @@ const confirmCustomScope = () => {
   ElMessage.success(`已选择 ${selectedOrgUnitIds.value.length} 个组织单元`)
 }
 
+// ==================== V3 统一树形结构相关 ====================
+
+// 构建统一树形结构
+const buildUnifiedTree = async () => {
+  unifiedTreeLoading.value = true
+  try {
+    // 并行加载所有数据
+    const [orgTree, grades, classes] = await Promise.all([
+      getOrgUnitTree(),
+      getAllGrades(),
+      getAllClasses()
+    ])
+
+    // 将年级和班级按年级分组
+    const gradeMap = new Map<number, { id: number; name: string; classes: { id: number; name: string }[] }>()
+    for (const grade of grades) {
+      if (grade.id) {
+        gradeMap.set(grade.id, {
+          id: grade.id,
+          name: grade.gradeName || `${grade.enrollmentYear}级`,
+          classes: []
+        })
+      }
+    }
+
+    // 将班级添加到对应年级
+    for (const cls of classes) {
+      if (cls.gradeId && gradeMap.has(cls.gradeId)) {
+        gradeMap.get(cls.gradeId)!.classes.push({
+          id: cls.id!,
+          name: cls.className || ''
+        })
+      }
+    }
+
+    // 构建统一树
+    const buildNode = (org: any): UnifiedTreeNode => {
+      const node: UnifiedTreeNode = {
+        id: org.id,
+        name: org.unitName || org.name || org.orgName, // 优先使用 unitName (V2 API格式)
+        children: org.children?.map(buildNode),
+        grades: Array.from(gradeMap.values()) // 每个组织单元都显示所有年级
+      }
+      return node
+    }
+
+    unifiedTreeData.value = orgTree.map(buildNode)
+
+    // 默认展开第一层
+    for (const org of unifiedTreeData.value) {
+      unifiedExpandedNodes.value.add(`org-${org.id}`)
+    }
+  } catch (error) {
+    console.error('构建统一树失败:', error)
+  } finally {
+    unifiedTreeLoading.value = false
+  }
+}
+
+// 切换节点展开/折叠
+const toggleUnifiedNode = (type: 'org' | 'grade', id: number) => {
+  const key = `${type}-${id}`
+  if (unifiedExpandedNodes.value.has(key)) {
+    unifiedExpandedNodes.value.delete(key)
+  } else {
+    unifiedExpandedNodes.value.add(key)
+  }
+}
+
+// 检查节点是否展开
+const isUnifiedNodeExpanded = (type: 'org' | 'grade', id: number): boolean => {
+  return unifiedExpandedNodes.value.has(`${type}-${id}`)
+}
+
+// 检查节点是否选中
+const isNodeSelected = (type: 'org' | 'grade' | 'class', id: number): boolean => {
+  switch (type) {
+    case 'org': return selectedOrgUnitIds.value.includes(id)
+    case 'grade': return selectedGradeIds.value.includes(id)
+    case 'class': return selectedClassIds.value.includes(id)
+  }
+}
+
+// 切换节点选中状态
+const toggleNodeSelection = (type: 'org' | 'grade' | 'class', id: number) => {
+  let arr: number[]
+  switch (type) {
+    case 'org': arr = selectedOrgUnitIds.value; break
+    case 'grade': arr = selectedGradeIds.value; break
+    case 'class': arr = selectedClassIds.value; break
+  }
+
+  const idx = arr.indexOf(id)
+  if (idx === -1) {
+    arr.push(id)
+  } else {
+    arr.splice(idx, 1)
+  }
+}
+
+// 全部展开
+const handleExpandAllScope = () => {
+  const expandAll = (nodes: UnifiedTreeNode[]) => {
+    for (const node of nodes) {
+      unifiedExpandedNodes.value.add(`org-${node.id}`)
+      if (node.children) expandAll(node.children)
+      if (node.grades) {
+        for (const grade of node.grades) {
+          unifiedExpandedNodes.value.add(`grade-${grade.id}`)
+        }
+      }
+    }
+  }
+  expandAll(unifiedTreeData.value)
+}
+
+// 全部折叠
+const handleCollapseAllScope = () => {
+  unifiedExpandedNodes.value.clear()
+}
+
+// 清空选择
+const handleClearScope = () => {
+  selectedOrgUnitIds.value = []
+  selectedGradeIds.value = []
+  selectedClassIds.value = []
+}
+
+// 获取模块图标
+const getModuleIcon = (moduleCode: string) => {
+  const icons: Record<string, any> = {
+    student: Users,
+    class: Users,
+    grade: GraduationCap,
+    inspection: BarChart3,
+    template: BookOpen,
+    record: BarChart3,
+    appeal: Settings,
+    department: Building2,
+    org_unit: Building2,
+    rating: BarChart3,
+    task: Settings
+  }
+  return icons[moduleCode] || Settings
+}
+
 // 加载数据权限元数据
 const loadDataPermissionMeta = async () => {
   try {
@@ -1258,4 +1842,20 @@ onMounted(() => {
 <style scoped>
 .modal-enter-active, .modal-leave-active { transition: opacity 0.2s ease; }
 .modal-enter-from, .modal-leave-to { opacity: 0; }
+
+/* 展开动画 */
+.expand-enter-active, .expand-leave-active {
+  transition: all 0.3s ease;
+  overflow: hidden;
+}
+.expand-enter-from, .expand-leave-to {
+  opacity: 0;
+  max-height: 0;
+  padding-top: 0;
+  padding-bottom: 0;
+}
+.expand-enter-to, .expand-leave-from {
+  opacity: 1;
+  max-height: 500px;
+}
 </style>

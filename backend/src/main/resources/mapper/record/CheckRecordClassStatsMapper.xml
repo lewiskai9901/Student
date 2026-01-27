@@ -9,8 +9,8 @@
         <result column="class_name" property="className"/>
         <result column="grade_id" property="gradeId"/>
         <result column="grade_name" property="gradeName"/>
-        <result column="department_id" property="departmentId"/>
-        <result column="department_name" property="departmentName"/>
+        <result column="org_unit_id" property="orgUnitId"/>
+        <result column="department_name" property="orgUnitName"/>
         <result column="teacher_id" property="teacherId"/>
         <result column="teacher_name" property="teacherName"/>
         <result column="teacher_phone" property="teacherPhone"/>
@@ -24,7 +24,7 @@
         <result column="other_score" property="otherScore"/>
         <result column="overall_ranking" property="overallRanking"/>
         <result column="grade_ranking" property="gradeRanking"/>
-        <result column="department_ranking" property="departmentRanking"/>
+        <result column="department_ranking" property="orgUnitRanking"/>
         <result column="score_level" property="scoreLevel"/>
         <result column="appeal_count" property="appealCount"/>
         <result column="appeal_approved" property="appealApproved"/>
@@ -37,7 +37,7 @@
     </resultMap>
 
     <sql id="Base_Column_List">
-        id, record_id, class_id, class_name, grade_id, grade_name, department_id, department_name,
+        id, record_id, class_id, class_name, grade_id, grade_name, org_unit_id, department_name,
         teacher_id, teacher_name, teacher_phone, class_size,
         deduction_count, total_score, hygiene_score, discipline_score, attendance_score, dormitory_score, other_score,
         overall_ranking, grade_ranking, department_ranking, score_level,
@@ -61,11 +61,11 @@
         LIMIT 1
     </select>
 
-    <!-- 按院系查询 -->
-    <select id="selectByDepartment" resultMap="BaseResultMap">
+    <!-- 按组织单元查询（原按院系） -->
+    <select id="selectByOrgUnit" resultMap="BaseResultMap">
         SELECT <include refid="Base_Column_List"/>
         FROM check_record_class_stats_new
-        WHERE record_id = #{recordId} AND department_id = #{departmentId}
+        WHERE record_id = #{recordId} AND org_unit_id = #{orgUnitId}
         ORDER BY total_score DESC
     </select>
 
@@ -95,7 +95,7 @@
             SELECT id,
                    ROW_NUMBER() OVER (ORDER BY total_score ASC) as overall_rank,
                    ROW_NUMBER() OVER (PARTITION BY grade_id ORDER BY total_score ASC) as grade_rank,
-                   ROW_NUMBER() OVER (PARTITION BY department_id ORDER BY total_score ASC) as dept_rank
+                   ROW_NUMBER() OVER (PARTITION BY org_unit_id ORDER BY total_score ASC) as dept_rank
             FROM check_record_class_stats_new
             WHERE record_id = #{recordId}
         ) r ON cs.id = r.id
@@ -168,7 +168,7 @@
     <!-- 批量插入 -->
     <insert id="batchInsert">
         INSERT INTO check_record_class_stats_new (
-            id, record_id, class_id, class_name, grade_id, grade_name, department_id, department_name,
+            id, record_id, class_id, class_name, grade_id, grade_name, org_unit_id, department_name,
             teacher_id, teacher_name, teacher_phone, class_size,
             deduction_count, total_score, hygiene_score, discipline_score, attendance_score, dormitory_score, other_score,
             overall_ranking, grade_ranking, department_ranking, score_level,
@@ -178,11 +178,11 @@
         <foreach collection="list" item="item" separator=",">
             (
                 #{item.id}, #{item.recordId}, #{item.classId}, #{item.className},
-                #{item.gradeId}, #{item.gradeName}, #{item.departmentId}, #{item.departmentName},
+                #{item.gradeId}, #{item.gradeName}, #{item.orgUnitId}, #{item.orgUnitName},
                 #{item.teacherId}, #{item.teacherName}, #{item.teacherPhone}, #{item.classSize},
                 #{item.deductionCount}, #{item.totalScore}, #{item.hygieneScore}, #{item.disciplineScore},
                 #{item.attendanceScore}, #{item.dormitoryScore}, #{item.otherScore},
-                #{item.overallRanking}, #{item.gradeRanking}, #{item.departmentRanking}, #{item.scoreLevel},
+                #{item.overallRanking}, #{item.gradeRanking}, #{item.orgUnitRanking}, #{item.scoreLevel},
                 #{item.appealCount}, #{item.appealApproved}, #{item.appealPending},
                 #{item.vsAvgDiff}, #{item.vsLastDiff}, #{item.trend},
                 NOW(), NOW()

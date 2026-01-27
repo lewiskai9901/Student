@@ -109,8 +109,8 @@ public class ScopeHierarchyCache {
                 }
 
                 // 添加部门父范围
-                if (cls.getDepartmentId() != null) {
-                    String deptScope = ScopeType.DEPT.buildExpression(cls.getDepartmentId());
+                if (cls.getOrgUnitId() != null) {
+                    String deptScope = ScopeType.DEPT.buildExpression(cls.getOrgUnitId());
                     parents.add(deptScope);
 
                     // 更新部门的包含关系
@@ -119,9 +119,9 @@ public class ScopeHierarchyCache {
                 }
 
                 // 添加部门+年级交叉范围
-                if (cls.getDepartmentId() != null && cls.getGradeId() != null) {
+                if (cls.getOrgUnitId() != null && cls.getGradeId() != null) {
                     String deptGradeScope = ScopeType.DEPT_GRADE.buildExpression(
-                            cls.getDepartmentId(), cls.getGradeId());
+                            cls.getOrgUnitId(), cls.getGradeId());
                     parents.add(deptGradeScope);
 
                     // 更新部门+年级的包含关系

@@ -53,8 +53,8 @@ export interface Dormitory {
   buildingId: number
   buildingName?: string
   buildingNo?: string
-  departmentId?: number
-  departmentName?: string
+  orgUnitId?: number
+  orgUnitName?: string
   dormitoryNo: string
   roomNo?: string
   floorNumber: number
@@ -112,7 +112,7 @@ export interface BedAllocation {
 
 export interface CreateDormitoryRequest {
   buildingId: number
-  departmentId?: number
+  orgUnitId?: number
   dormitoryNo: string
   floorNumber: number
   roomUsageType: RoomUsageType
@@ -168,15 +168,15 @@ export interface SwapStudentsRequest {
   studentBId: number
 }
 
-export interface BatchUpdateDepartmentRequest {
+export interface BatchUpdateOrgUnitRequest {
   dormitoryIds: number[]
-  departmentId?: number
+  orgUnitId?: number
 }
 
-export interface BatchUpdateDepartmentByFloorRequest {
+export interface BatchUpdateOrgUnitByFloorRequest {
   buildingId: number
   floor: number
-  departmentId?: number
+  orgUnitId?: number
 }
 
 export interface CreateBuildingRequest {
@@ -217,12 +217,12 @@ export interface StudentDormitoryHistory {
   status: string
 }
 
-export interface BuildingDepartmentAssignment {
+export interface BuildingOrgUnitAssignment {
   id: number
   buildingId: number
   buildingName: string
-  departmentId: number
-  departmentName: string
+  orgUnitId: number
+  orgUnitName: string
   floorStart?: number
   floorEnd?: number
   roomCount?: number
@@ -230,11 +230,11 @@ export interface BuildingDepartmentAssignment {
   createdAt?: string
 }
 
-export interface BuildingDepartmentAssignmentQueryParams {
+export interface BuildingOrgUnitAssignmentQueryParams {
   pageNum?: number
   pageSize?: number
   buildingId?: number
-  departmentId?: number
+  orgUnitId?: number
   status?: number
 }
 

@@ -1515,11 +1515,11 @@ export interface LevelFrequencyVO {
 }
 
 /**
- * 院系对比VO
+ * 组织单元对比VO
  */
-export interface DepartmentComparisonVO {
-  departmentId: number | string
-  departmentName: string
+export interface OrgUnitComparisonVO {
+  orgUnitId: number | string
+  orgUnitName: string
   totalClasses: number
   awardedClasses: number
   totalFrequency: number
@@ -1542,7 +1542,7 @@ export interface RatingFrequencyStatisticsVO {
   totalClasses: number
   overallAwardRate: number
   levelStatistics: LevelFrequencyVO[]
-  departmentComparison: DepartmentComparisonVO[]
+  orgUnitComparison: OrgUnitComparisonVO[]
 }
 
 /**
@@ -1651,16 +1651,16 @@ export function getClassesByLevel(params: {
 }
 
 /**
- * 获取院系对比数据
+ * 获取组织单元对比数据
  */
-export function getDepartmentComparison(params: {
+export function getOrgUnitComparison(params: {
   checkPlanId: number | string
   ruleId?: number | string
   levelIds?: (number | string)[]
   periodStart?: string
   periodEnd?: string
 }) {
-  return http.get<DepartmentComparisonVO[]>('/rating/statistics/department/comparison', {
+  return http.get<OrgUnitComparisonVO[]>('/rating/statistics/org-unit/comparison', {
     params
   })
 }

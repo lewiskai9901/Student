@@ -95,13 +95,13 @@ public interface CheckRecordService {
     CheckRecordClassStatsDTO getClassStatsDetail(Long classStatId);
 
     /**
-     * 按院系获取班级统计
+     * 按组织单元获取班级统计（原按院系获取）
      *
      * @param recordId 记录ID
-     * @param departmentId 院系ID
+     * @param orgUnitId 组织单元ID（原院系ID）
      * @return 班级统计列表
      */
-    List<CheckRecordClassStatsDTO> getClassStatsByDepartment(Long recordId, Long departmentId);
+    List<CheckRecordClassStatsDTO> getClassStatsByOrgUnit(Long recordId, Long orgUnitId);
 
     /**
      * 按年级获取班级统计
@@ -134,11 +134,11 @@ public interface CheckRecordService {
      *
      * @param recordId 记录ID
      * @param sortBy 排序方式：weighted=加权分数, original=原始分数
-     * @param departmentId 院系ID筛选（可选）
+     * @param orgUnitId 组织单元ID筛选（原院系ID，可选）
      * @param gradeLevel 年级筛选（可选）
      * @return 排名后的班级统计列表
      */
-    List<CheckRecordClassStatsDTO> getClassRankingWithWeight(Long recordId, String sortBy, Long departmentId, Integer gradeLevel);
+    List<CheckRecordClassStatsDTO> getClassRankingWithWeight(Long recordId, String sortBy, Long orgUnitId, Integer gradeLevel);
 
     /**
      * 获取检查记录的加权配置详情

@@ -21,4 +21,16 @@ public class UpdateClassRequest {
 
     @Schema(description = "排序号", example = "1")
     private Integer sortOrder;
+
+    @Schema(description = "所属组织单元ID（部门）")
+    private Long orgUnitId;
+
+    @Schema(description = "年级ID")
+    private Long gradeId;
+
+    @Schema(description = "专业方向ID")
+    private Long majorDirectionId;
+
+    @Schema(description = "状态：PREPARING-筹建中，ACTIVE-正常招生")
+    private String status;
 }

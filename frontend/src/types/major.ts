@@ -4,8 +4,8 @@ export interface Major {
   id: number
   majorName: string
   majorCode: string
-  departmentId: number
-  departmentName?: string
+  orgUnitId: number
+  orgUnitName?: string
   description?: string
   status: number
   statusName?: string
@@ -16,7 +16,7 @@ export interface Major {
 export interface MajorQueryParams {
   majorName?: string
   majorCode?: string
-  departmentId?: number | null
+  orgUnitId?: number | null
   status?: number | null
   pageNum?: number
   pageSize?: number
@@ -25,7 +25,7 @@ export interface MajorQueryParams {
 export interface MajorFormData {
   majorName: string
   majorCode: string
-  departmentId: number | null
+  orgUnitId: number | null
   description?: string
   status: number
 }

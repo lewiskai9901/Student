@@ -16,7 +16,7 @@ public class StudentQueryCriteria {
 
     private String keyword;
     private Long classId;
-    private Long departmentId;
+    private Long orgUnitId;
     private Integer gradeLevel;
     private Integer status;
     private Long dormitoryId;

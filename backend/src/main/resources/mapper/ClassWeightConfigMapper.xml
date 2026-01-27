@@ -78,13 +78,13 @@
             apply_to_all = 1
             OR (range_classes IS NOT NULL AND JSON_CONTAINS(range_classes, CAST(#{classId} AS JSON)))
             OR (range_grades IS NOT NULL AND JSON_CONTAINS(range_grades, CAST(#{gradeId} AS JSON)))
-            OR (range_departments IS NOT NULL AND JSON_CONTAINS(range_departments, CAST(#{departmentId} AS JSON)))
+            OR (range_departments IS NOT NULL AND JSON_CONTAINS(range_departments, CAST(#{orgUnitId} AS JSON)))
         )
         ORDER BY
             CASE
                 WHEN range_classes IS NOT NULL AND JSON_CONTAINS(range_classes, CAST(#{classId} AS JSON)) THEN 1
                 WHEN range_grades IS NOT NULL AND JSON_CONTAINS(range_grades, CAST(#{gradeId} AS JSON)) THEN 2
-                WHEN range_departments IS NOT NULL AND JSON_CONTAINS(range_departments, CAST(#{departmentId} AS JSON)) THEN 3
+                WHEN range_departments IS NOT NULL AND JSON_CONTAINS(range_departments, CAST(#{orgUnitId} AS JSON)) THEN 3
                 ELSE 4
             END,
             is_default DESC,

@@ -115,7 +115,7 @@
         <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div>
             <label class="block text-sm font-medium text-gray-500 mb-1">所属部门</label>
-            <div class="text-gray-900">{{ userInfo.department?.departmentName || '-' }}</div>
+            <div class="text-gray-900">{{ userInfo.orgUnit?.orgUnitName || '-' }}</div>
           </div>
           <div>
             <label class="block text-sm font-medium text-gray-500 mb-1">所属班级</label>

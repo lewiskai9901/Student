@@ -73,7 +73,7 @@ public class BuildingRequest {
     private Integer status;
 
     /**
-     * 关联部门ID列表
+     * 关联组织单元ID列表
      */
-    private List<Long> departmentIds;
+    private List<Long> orgUnitIds;
 }

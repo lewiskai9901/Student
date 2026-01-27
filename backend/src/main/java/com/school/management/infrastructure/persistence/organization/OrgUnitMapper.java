@@ -49,4 +49,10 @@ public interface OrgUnitMapper extends BaseMapper<OrgUnitPO> {
      */
     @Select("SELECT * FROM departments WHERE parent_id = #{parentId} AND deleted = 0 ORDER BY sort_order")
     List<OrgUnitPO> findByParentId(@Param("parentId") Long parentId);
+
+    /**
+     * Find by unit category (functional, academic, administrative).
+     */
+    @Select("SELECT * FROM departments WHERE unit_category = #{unitCategory} AND status = 1 AND deleted = 0 ORDER BY sort_order")
+    List<OrgUnitPO> findByUnitCategory(@Param("unitCategory") String unitCategory);
 }

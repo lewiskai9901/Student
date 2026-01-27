@@ -69,16 +69,16 @@ public class Building extends BaseEntity {
     private String buildingTypeName;
 
     /**
-     * 关联部门ID列表(非数据库字段)
+     * 关联组织单元ID列表(非数据库字段)
      */
     @TableField(exist = false)
-    private java.util.List<Long> departmentIds;
+    private java.util.List<Long> orgUnitIds;
 
     /**
-     * 关联部门名称列表(非数据库字段) - SQL返回的是逗号分隔的字符串
+     * 关联组织单元名称列表(非数据库字段) - SQL返回的是逗号分隔的字符串
      */
     @TableField(exist = false)
-    private String departmentNames;
+    private String orgUnitNames;
 
     /**
      * 获取楼宇类型名称

@@ -53,6 +53,11 @@ public interface SchoolClassRepository extends Repository<SchoolClass, Long> {
     List<SchoolClass> findByHeadTeacherId(Long teacherId);
 
     /**
+     * 根据教师ID查找其管理的班级（班主任或副班主任）
+     */
+    List<SchoolClass> findByTeacherId(Long teacherId);
+
+    /**
      * 根据专业方向ID查找班级
      */
     List<SchoolClass> findByMajorDirectionId(Long majorDirectionId);

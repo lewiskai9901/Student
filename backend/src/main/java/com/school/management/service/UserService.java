@@ -131,20 +131,20 @@ public interface UserService {
     List<UserResponse> getSimpleUserList(String keyword);
 
     /**
-     * 按部门获取用户列表
+     * 按组织单元获取用户列表
      *
-     * @param departmentId    部门ID
-     * @param includeChildren 是否包含子部门
+     * @param orgUnitId       组织单元ID
+     * @param includeChildren 是否包含下级组织
      * @param keyword         搜索关键词
      * @return 用户列表
      */
-    List<UserResponse> getUsersByDepartment(Long departmentId, Boolean includeChildren, String keyword);
+    List<UserResponse> getUsersByOrgUnit(Long orgUnitId, Boolean includeChildren, String keyword);
 
     /**
-     * 获取带部门信息的用户列表
+     * 获取带组织单元信息的用户列表
      *
      * @param keyword 搜索关键词
      * @return 用户列表
      */
-    List<UserResponse> getUsersWithDepartments(String keyword);
+    List<UserResponse> getUsersWithOrgUnits(String keyword);
 }

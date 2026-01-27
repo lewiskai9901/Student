@@ -1,0 +1,110 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.school.management.infrastructure.persistence.space.SpaceOccupantMapper">
+
+    <!-- 基础结果映射 -->
+    <resultMap id="BaseResultMap" type="com.school.management.infrastructure.persistence.space.SpaceOccupantPO">
+        <id column="id" property="id"/>
+        <result column="space_id" property="spaceId"/>
+        <result column="occupant_type" property="occupantType"/>
+        <result column="occupant_id" property="occupantId"/>
+        <result column="position_no" property="positionNo"/>
+        <result column="check_in_date" property="checkInDate"/>
+        <result column="check_out_date" property="checkOutDate"/>
+        <result column="status" property="status"/>
+        <result column="remark" property="remark"/>
+        <result column="created_at" property="createdAt"/>
+        <result column="updated_at" property="updatedAt"/>
+    </resultMap>
+
+    <!-- 带关联信息的结果映射 -->
+    <resultMap id="WithRelationsResultMap" type="com.school.management.infrastructure.persistence.space.SpaceOccupantPO"
+               extends="BaseResultMap">
+        <result column="occupant_name" property="occupantName"/>
+        <result column="occupant_no" property="occupantNo"/>
+        <result column="space_name" property="spaceName"/>
+    </resultMap>
+
+    <!-- 查询场所的在住占用者（带关联信息） -->
+    <select id="selectActiveBySpaceId" resultMap="WithRelationsResultMap">
+        SELECT o.*,
+               CASE
+                   WHEN o.occupant_type = 'STUDENT' THEN (SELECT u.real_name FROM students s JOIN users u ON s.user_id = u.id WHERE s.id = o.occupant_id)
+                   ELSE (SELECT real_name FROM users WHERE id = o.occupant_id)
+               END AS occupant_name,
+               CASE
+                   WHEN o.occupant_type = 'STUDENT' THEN (SELECT student_no FROM students WHERE id = o.occupant_id)
+                   ELSE (SELECT username FROM users WHERE id = o.occupant_id)
+               END AS occupant_no
+        FROM space_occupant o
+        WHERE o.space_id = #{spaceId} AND o.status = 1
+        ORDER BY o.position_no
+    </select>
+
+    <!-- 查询场所的所有占用记录 -->
+    <select id="selectAllBySpaceId" resultMap="WithRelationsResultMap">
+        SELECT o.*,
+               CASE
+                   WHEN o.occupant_type = 'STUDENT' THEN (SELECT u.real_name FROM students s JOIN users u ON s.user_id = u.id WHERE s.id = o.occupant_id)
+                   ELSE (SELECT real_name FROM users WHERE id = o.occupant_id)
+               END AS occupant_name,
+               CASE
+                   WHEN o.occupant_type = 'STUDENT' THEN (SELECT student_no FROM students WHERE id = o.occupant_id)
+                   ELSE (SELECT username FROM users WHERE id = o.occupant_id)
+               END AS occupant_no
+        FROM space_occupant o
+        WHERE o.space_id = #{spaceId}
+        ORDER BY o.status DESC, o.check_in_date DESC
+    </select>
+
+    <!-- 根据占用者查找在住记录 -->
+    <select id="selectActiveByOccupant" resultMap="WithRelationsResultMap">
+        SELECT o.*,
+               s.space_name
+        FROM space_occupant o
+        LEFT JOIN space s ON o.space_id = s.id
+        WHERE o.occupant_type = #{occupantType}
+          AND o.occupant_id = #{occupantId}
+          AND o.status = 1
+    </select>
+
+    <!-- 根据位置查找在住占用者 -->
+    <select id="selectActiveByPosition" resultMap="WithRelationsResultMap">
+        SELECT o.*,
+               CASE
+                   WHEN o.occupant_type = 'STUDENT' THEN (SELECT u.real_name FROM students s JOIN users u ON s.user_id = u.id WHERE s.id = o.occupant_id)
+                   ELSE (SELECT real_name FROM users WHERE id = o.occupant_id)
+               END AS occupant_name,
+               CASE
+                   WHEN o.occupant_type = 'STUDENT' THEN (SELECT student_no FROM students WHERE id = o.occupant_id)
+                   ELSE (SELECT username FROM users WHERE id = o.occupant_id)
+               END AS occupant_no
+        FROM space_occupant o
+        WHERE o.space_id = #{spaceId}
+          AND o.position_no = #{positionNo}
+          AND o.status = 1
+    </select>
+
+    <!-- 统计场所在住人数 -->
+    <select id="countActiveBySpaceId" resultType="int">
+        SELECT COUNT(*)
+        FROM space_occupant
+        WHERE space_id = #{spaceId} AND status = 1
+    </select>
+
+    <!-- 获取已占用的位置列表 -->
+    <select id="selectOccupiedPositions" resultType="int">
+        SELECT position_no
+        FROM space_occupant
+        WHERE space_id = #{spaceId} AND status = 1 AND position_no IS NOT NULL
+        ORDER BY position_no
+    </select>
+
+    <!-- 批量退出 -->
+    <update id="batchCheckOut">
+        UPDATE space_occupant
+        SET status = 0, check_out_date = CURRENT_DATE, updated_at = NOW()
+        WHERE space_id = #{spaceId} AND status = 1
+    </update>
+
+</mapper>

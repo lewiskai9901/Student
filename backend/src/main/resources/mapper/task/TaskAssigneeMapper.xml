@@ -4,7 +4,7 @@
 
     <!-- Base column list for reusability -->
     <sql id="Base_Column_List">
-        id, task_id, assignee_id, assignee_name, department_id, department_name,
+        id, task_id, assignee_id, assignee_name, org_unit_id, department_name,
         approval_config, status, accepted_at, submitted_at, completed_at,
         process_instance_id, current_approval_level, created_at, updated_at
     </sql>
@@ -14,8 +14,8 @@
         <result column="task_id" property="taskId"/>
         <result column="assignee_id" property="assigneeId"/>
         <result column="assignee_name" property="assigneeName"/>
-        <result column="department_id" property="departmentId"/>
-        <result column="department_name" property="departmentName"/>
+        <result column="org_unit_id" property="orgUnitId"/>
+        <result column="department_name" property="orgUnitName"/>
         <result column="approval_config" property="approvalConfig" typeHandler="com.baomidou.mybatisplus.extension.handlers.JacksonTypeHandler"/>
         <result column="status" property="status"/>
         <result column="accepted_at" property="acceptedAt"/>
@@ -29,12 +29,12 @@
 
     <insert id="batchInsert">
         INSERT INTO task_assignees
-        (id, task_id, assignee_id, assignee_name, department_id, department_name,
+        (id, task_id, assignee_id, assignee_name, org_unit_id, department_name,
          approval_config, status, current_approval_level, created_at, updated_at)
         VALUES
         <foreach collection="assignees" item="item" separator=",">
             (#{item.id}, #{item.taskId}, #{item.assigneeId}, #{item.assigneeName},
-             #{item.departmentId}, #{item.departmentName},
+             #{item.orgUnitId}, #{item.orgUnitName},
              #{item.approvalConfig,typeHandler=com.baomidou.mybatisplus.extension.handlers.JacksonTypeHandler},
              #{item.status}, #{item.currentApprovalLevel}, NOW(), NOW())
         </foreach>

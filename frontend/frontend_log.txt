@@ -1,0 +1,37 @@
+
+> student-management-frontend@1.0.0 dev
+> vite
+
+Port 3000 is in use, trying another one...
+Port 3001 is in use, trying another one...
+
+  [32m[1mVITE[22m v4.5.14[39m  [2mready in [0m[1m15944[22m[2m[0m ms[22m
+
+  [32m➜[39m  [1mLocal[22m:   [36mhttp://localhost:[1m3002[22m/[39m
+[2m  [32m➜[39m  [1mNetwork[22m[2m: use [22m[1m--host[22m[2m to expose[22m
+(node:16620) [MODULE_TYPELESS_PACKAGE_JSON] Warning: Module type of file:///D:/%E5%AD%A6%E7%94%9F%E7%AE%A1%E7%90%86%E7%B3%BB%E7%BB%9F/frontend/postcss.config.js is not specified and it doesn't parse as CommonJS.
+Reparsing as ES module because module syntax was detected. This incurs a performance overhead.
+To eliminate this warning, add "type": "module" to D:\学生管理系统\frontend\package.json.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:16620) [DEP0060] DeprecationWarning: The `util._extend` API is deprecated. Please use Object.assign() instead.
+[2m22:59:03[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/assets/styles/globals.css, /src/views/space/SpaceManagementCenter.vue, /src/views/space/components/BuildingDetail.vue, /src/views/space/components/FloorDetail.vue, /src/views/space/components/CampusDetail.vue, /src/views/space/components/RoomDetail.vue, /src/views/space/components/SpaceFormDialog.vue, /src/views/space/components/CheckInDialog.vue[22m
+[2m23:05:01[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/views/space/SpaceManagementCenter.vue, /src/assets/styles/globals.css[22m
+[2m23:26:40[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/views/space/components/RoomDetail.vue, /src/assets/styles/globals.css[22m
+[2m23:26:55[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/views/space/components/RoomDetail.vue, /src/assets/styles/globals.css[22m
+[2m23:27:39[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/views/space/components/CheckInDialog.vue, /src/assets/styles/globals.css[22m
+[2m00:05:28[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/views/space/components/CheckInDialog.vue, /src/assets/styles/globals.css[22m
+[2m01:29:20[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/views/space/components/RoomDetail.vue, /src/assets/styles/globals.css[22m
+[2m01:29:39[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/views/space/components/RoomDetail.vue, /src/assets/styles/globals.css[22m
+[2m01:32:16[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/assets/styles/globals.css, /src/views/space/SpaceManagementCenter.vue, /src/views/space/components/FloorDetail.vue, /src/views/space/components/RoomDetail.vue, /src/views/space/components/BuildingDetail.vue, /src/views/space/components/CampusDetail.vue, /src/views/space/components/SpaceFormDialog.vue[22m
+[2m01:33:21[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/assets/styles/globals.css, /src/views/space/SpaceManagementCenter.vue, /src/views/space/components/FloorDetail.vue, /src/views/space/components/RoomDetail.vue, /src/views/space/components/BuildingDetail.vue, /src/views/space/components/CampusDetail.vue, /src/views/space/components/SpaceFormDialog.vue[22m
+[2m01:33:33[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/assets/styles/globals.css, /src/views/space/SpaceManagementCenter.vue, /src/views/space/components/FloorDetail.vue, /src/views/space/components/RoomDetail.vue, /src/views/space/components/BuildingDetail.vue, /src/views/space/components/CampusDetail.vue, /src/views/space/components/SpaceFormDialog.vue[22m
+[2m01:33:42[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/assets/styles/globals.css, /src/views/space/SpaceManagementCenter.vue, /src/views/space/components/FloorDetail.vue, /src/views/space/components/RoomDetail.vue, /src/views/space/components/BuildingDetail.vue, /src/views/space/components/CampusDetail.vue, /src/views/space/components/SpaceFormDialog.vue[22m
+[2m01:33:50[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/assets/styles/globals.css, /src/views/space/SpaceManagementCenter.vue, /src/views/space/components/FloorDetail.vue, /src/views/space/components/RoomDetail.vue, /src/views/space/components/BuildingDetail.vue, /src/views/space/components/CampusDetail.vue, /src/views/space/components/SpaceFormDialog.vue[22m
+[2m01:34:00[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/assets/styles/globals.css, /src/views/space/SpaceManagementCenter.vue, /src/views/space/components/FloorDetail.vue, /src/views/space/components/RoomDetail.vue, /src/views/space/components/BuildingDetail.vue, /src/views/space/components/CampusDetail.vue, /src/views/space/components/SpaceFormDialog.vue[22m
+[2m01:34:20[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/assets/styles/globals.css, /src/views/space/SpaceManagementCenter.vue, /src/views/space/components/BuildingDetail.vue, /src/views/space/components/FloorDetail.vue, /src/views/space/components/CampusDetail.vue, /src/views/space/components/RoomDetail.vue, /src/views/space/components/SpaceFormDialog.vue, /src/views/space/components/CheckInDialog.vue[22m
+[2m01:34:32[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/assets/styles/globals.css, /src/views/space/SpaceManagementCenter.vue, /src/views/space/components/BuildingDetail.vue, /src/views/space/components/FloorDetail.vue, /src/views/space/components/CampusDetail.vue, /src/views/space/components/RoomDetail.vue, /src/views/space/components/SpaceFormDialog.vue, /src/views/space/components/CheckInDialog.vue[22m
+[2m01:34:52[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/views/space/components/SpaceFormDialog.vue, /src/assets/styles/globals.css[22m
+[2m01:35:03[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/views/space/components/SpaceFormDialog.vue, /src/assets/styles/globals.css[22m
+[2m01:35:15[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/views/space/components/SpaceFormDialog.vue, /src/assets/styles/globals.css[22m
+[2m01:35:26[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/views/space/components/SpaceFormDialog.vue, /src/assets/styles/globals.css[22m
+[2m01:35:40[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/views/space/components/SpaceFormDialog.vue, /src/assets/styles/globals.css[22m

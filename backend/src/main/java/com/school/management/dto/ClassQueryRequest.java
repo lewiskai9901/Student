@@ -37,9 +37,9 @@ public class ClassQueryRequest extends BaseQueryRequest {
     private Long gradeId;
 
     /**
-     * 所属部门ID
+     * 所属组织单元ID
      */
-    private Long departmentId;
+    private Long orgUnitId;
 
     /**
      * 班主任ID
@@ -69,9 +69,9 @@ public class ClassQueryRequest extends BaseQueryRequest {
     private List<Long> classIds;
 
     /**
-     * 部门ID列表(数据权限过滤用)
+     * 组织单元ID列表(数据权限过滤用)
      */
-    private List<Long> departmentIds;
+    private List<Long> orgUnitIds;
 
     /**
      * 排序字段

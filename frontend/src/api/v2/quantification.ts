@@ -411,7 +411,7 @@ export interface CheckPlanStatisticsVO {
 
 export interface TargetScopeConfig {
   scopeType: string
-  departmentIds?: number[]
+  orgUnitIds?: number[]
   gradeIds?: number[]
   classIds?: number[]
 }
@@ -602,8 +602,8 @@ export function updateCheckStatus(id: string | number, status: number): Promise<
 export interface CheckTargetItem {
   classId: number
   className: string
-  departmentId?: number
-  departmentName?: string
+  orgUnitId?: number
+  orgUnitName?: string
   gradeId?: number
   gradeName?: string
 }
@@ -750,7 +750,7 @@ export interface CheckRecordCategoryStatsDTO {
 export interface ClassStats {
   classId: number
   className: string
-  departmentName?: string
+  orgUnitName?: string
   gradeName?: string
   totalScore: number
   deductionScore: number

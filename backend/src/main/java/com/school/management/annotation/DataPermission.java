@@ -22,9 +22,9 @@ public @interface DataPermission {
     String classField() default "classIds";
 
     /**
-     * 部门字段名(用于设置departmentIds过滤)
+     * 组织单元字段名(用于设置orgUnitIds过滤)
      */
-    String deptField() default "departmentIds";
+    String deptField() default "orgUnitIds";
 
     /**
      * 是否检查单条数据访问权限

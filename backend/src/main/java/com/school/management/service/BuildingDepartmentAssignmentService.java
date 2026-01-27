@@ -22,12 +22,12 @@ public interface BuildingDepartmentAssignmentService {
      * @param pageNum 页码
      * @param pageSize 每页数量
      * @param buildingId 宿舍楼ID
-     * @param departmentId 院系ID
+     * @param orgUnitId 院系ID
      * @param status 状态
      * @return 分页结果
      */
     IPage<BuildingDepartmentAssignment> page(Integer pageNum, Integer pageSize,
-                                              Long buildingId, Long departmentId, Integer status);
+                                              Long buildingId, Long orgUnitId, Integer status);
 
     /**
      * 根据ID获取分配信息
@@ -76,12 +76,12 @@ public interface BuildingDepartmentAssignmentService {
     List<BuildingDepartmentAssignment> getByBuildingId(Long buildingId);
 
     /**
-     * 根据院系ID获取所有分配的宿舍楼
+     * 根据组织单元ID获取所有分配的宿舍楼
      *
-     * @param departmentId 院系ID
+     * @param orgUnitId 组织单元ID
      * @return 分配列表
      */
-    List<BuildingDepartmentAssignment> getByDepartmentId(Long departmentId);
+    List<BuildingDepartmentAssignment> getByOrgUnitId(Long orgUnitId);
 
     /**
      * 根据宿舍楼ID和楼层获取分配的院系
@@ -96,13 +96,13 @@ public interface BuildingDepartmentAssignmentService {
      * 检查是否存在楼层冲突
      *
      * @param buildingId 宿舍楼ID
-     * @param departmentId 院系ID
+     * @param orgUnitId 院系ID
      * @param floorStart 起始楼层
      * @param floorEnd 结束楼层
      * @param excludeId 排除的ID
      * @return 是否存在冲突
      */
-    boolean hasFloorConflict(Long buildingId, Long departmentId,
+    boolean hasFloorConflict(Long buildingId, Long orgUnitId,
                             Integer floorStart, Integer floorEnd, Long excludeId);
 
     /**

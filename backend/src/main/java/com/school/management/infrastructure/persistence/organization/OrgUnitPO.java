@@ -76,6 +76,16 @@ public class OrgUnitPO {
      */
     private Integer status;
 
+    /**
+     * 组织类别: academic, functional, administrative
+     */
+    private String unitCategory;
+
+    /**
+     * 组织类型: school, department, major, grade, class, student_affairs, etc.
+     */
+    private String unitType;
+
     private LocalDateTime createdAt;
 
     private LocalDateTime updatedAt;

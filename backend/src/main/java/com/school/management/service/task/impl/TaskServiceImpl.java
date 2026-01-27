@@ -44,7 +44,7 @@ public class TaskServiceImpl extends ServiceImpl<TaskMapper, Task> implements Ta
     private final UserMapper userMapper;
 
     @Override
-    public IPage<TaskDTO> pageQuery(TaskQueryRequest request, Long currentUserId, Long departmentId) {
+    public IPage<TaskDTO> pageQuery(TaskQueryRequest request, Long currentUserId, Long orgUnitId) {
         Page<Task> page = new Page<>(request.getPageNum(), request.getPageSize());
 
         LambdaQueryWrapper<Task> wrapper = new LambdaQueryWrapper<>();
@@ -66,8 +66,8 @@ public class TaskServiceImpl extends ServiceImpl<TaskMapper, Task> implements Ta
         }
 
         // 部门筛选(本部门可见)
-        if (departmentId != null) {
-            wrapper.eq(Task::getDepartmentId, departmentId);
+        if (orgUnitId != null) {
+            wrapper.eq(Task::getOrgUnitId, orgUnitId);
         }
 
         // 我的任务
@@ -221,19 +221,19 @@ public class TaskServiceImpl extends ServiceImpl<TaskMapper, Task> implements Ta
         log.info("任务主记录创建成功: taskId={}, taskCode={}", task.getId(), task.getTaskCode());
 
         // 3. 按系部分组执行人
-        Map<Long, List<User>> deptAssigneeMap = groupAssigneesByDepartment(assigneeIds);
+        Map<Long, List<User>> deptAssigneeMap = groupAssigneesByOrgUnit(assigneeIds);
         log.info("执行人按系部分组: 共{}个系部", deptAssigneeMap.size());
 
         // 4. 保存审批配置到task_approval_configs表
         if (request.getApprovalConfigs() != null && !request.getApprovalConfigs().isEmpty()) {
             List<TaskApprovalConfig> approvalConfigs = new ArrayList<>();
-            for (DepartmentApprovalConfigDTO deptConfig : request.getApprovalConfigs()) {
+            for (OrgUnitApprovalConfigDTO deptConfig : request.getApprovalConfigs()) {
                 if (deptConfig.getLevels() != null) {
                     for (ApprovalConfigDTO level : deptConfig.getLevels()) {
                         TaskApprovalConfig config = new TaskApprovalConfig();
                         config.setTaskId(task.getId());
-                        config.setDepartmentId(deptConfig.getDepartmentId());
-                        config.setDepartmentName(deptConfig.getDepartmentName());
+                        config.setOrgUnitId(deptConfig.getOrgUnitId());
+                        config.setOrgUnitName(deptConfig.getOrgUnitName());
                         config.setApprovalLevel(level.getLevel());
                         config.setApproverId(level.getApproverId());
                         config.setApproverName(level.getApproverName());
@@ -266,19 +266,19 @@ public class TaskServiceImpl extends ServiceImpl<TaskMapper, Task> implements Ta
                 assignee.setTaskId(task.getId());
                 assignee.setAssigneeId(user.getId());
                 assignee.setAssigneeName(user.getRealName() != null ? user.getRealName() : user.getUsername());
-                assignee.setDepartmentId(deptId);
+                assignee.setOrgUnitId(deptId);
 
                 // 获取部门名称（从第一个用户的部门信息或审批配置中获取）
                 String deptName = null;
                 if (request.getApprovalConfigs() != null) {
-                    for (DepartmentApprovalConfigDTO deptConfig : request.getApprovalConfigs()) {
-                        if (deptConfig.getDepartmentId().equals(deptId)) {
-                            deptName = deptConfig.getDepartmentName();
+                    for (OrgUnitApprovalConfigDTO deptConfig : request.getApprovalConfigs()) {
+                        if (deptConfig.getOrgUnitId().equals(deptId)) {
+                            deptName = deptConfig.getOrgUnitName();
                             break;
                         }
                     }
                 }
-                assignee.setDepartmentName(deptName);
+                assignee.setOrgUnitName(deptName);
 
                 assignee.setApprovalConfig(approvalConfigMap);
                 assignee.setStatus(0); // 待接收
@@ -690,15 +690,15 @@ public class TaskServiceImpl extends ServiceImpl<TaskMapper, Task> implements Ta
     @Override
     @org.springframework.cache.annotation.Cacheable(
         value = "taskStatistics",
-        key = "#userId + ':' + (#departmentId != null ? #departmentId : 'null')",
+        key = "#userId + ':' + (#orgUnitId != null ? #orgUnitId : 'null')",
         unless = "#result == null"
     )
-    public TaskStatisticsDTO getStatistics(Long userId, Long departmentId) {
-        log.debug("查询任务统计（未使用缓存）: userId={}, departmentId={}", userId, departmentId);
+    public TaskStatisticsDTO getStatistics(Long userId, Long orgUnitId) {
+        log.debug("查询任务统计（未使用缓存）: userId={}, orgUnitId={}", userId, orgUnitId);
         TaskStatisticsDTO dto = new TaskStatisticsDTO();
 
         // 统计各状态数量
-        List<Map<String, Object>> statusCounts = taskMapper.countByStatus(departmentId);
+        List<Map<String, Object>> statusCounts = taskMapper.countByStatus(orgUnitId);
         long total = 0;
         for (Map<String, Object> item : statusCounts) {
             Integer status = ((Number) item.get("status")).intValue();
@@ -717,7 +717,7 @@ public class TaskServiceImpl extends ServiceImpl<TaskMapper, Task> implements Ta
         dto.setTotalCount(total);
 
         // 统计超期数量
-        dto.setOverdueCount(taskMapper.countOverdue(departmentId));
+        dto.setOverdueCount(taskMapper.countOverdue(orgUnitId));
 
         // 计算完成率和超期率
         if (total > 0) {
@@ -1066,7 +1066,7 @@ public class TaskServiceImpl extends ServiceImpl<TaskMapper, Task> implements Ta
 
         // 相同部门的管理员可以查看
         User currentUser = userMapper.selectById(userId);
-        if (currentUser != null && currentUser.getDepartmentId() != null) {
+        if (currentUser != null && currentUser.getOrgUnitId() != null) {
             // 检查用户是否是部门管理员（通过角色判断）
             boolean isDeptAdmin = currentUser.getRoles() != null &&
                     currentUser.getRoles().stream()
@@ -1076,8 +1076,8 @@ public class TaskServiceImpl extends ServiceImpl<TaskMapper, Task> implements Ta
                                      role.getRoleCode().contains("leader")));
 
             // 部门管理员可以查看本部门的任务
-            if (isDeptAdmin && task.getDepartmentId() != null &&
-                    task.getDepartmentId().equals(currentUser.getDepartmentId())) {
+            if (isDeptAdmin && task.getOrgUnitId() != null &&
+                    task.getOrgUnitId().equals(currentUser.getOrgUnitId())) {
                 return true;
             }
         }
@@ -1121,7 +1121,7 @@ public class TaskServiceImpl extends ServiceImpl<TaskMapper, Task> implements Ta
     /**
      * 按系部分组执行人
      */
-    private Map<Long, List<User>> groupAssigneesByDepartment(List<Long> assigneeIds) {
+    private Map<Long, List<User>> groupAssigneesByOrgUnit(List<Long> assigneeIds) {
         log.debug("开始按系部分组执行人，assigneeIds: {}", assigneeIds);
 
         if (assigneeIds == null || assigneeIds.isEmpty()) {
@@ -1146,7 +1146,7 @@ public class TaskServiceImpl extends ServiceImpl<TaskMapper, Task> implements Ta
 
         // 检查是否有用户没有部门
         List<User> usersWithoutDept = users.stream()
-            .filter(user -> user.getDepartmentId() == null)
+            .filter(user -> user.getOrgUnitId() == null)
             .collect(Collectors.toList());
 
         if (!usersWithoutDept.isEmpty()) {
@@ -1158,7 +1158,7 @@ public class TaskServiceImpl extends ServiceImpl<TaskMapper, Task> implements Ta
 
         // 按部门分组
         Map<Long, List<User>> deptMap = users.stream()
-            .collect(Collectors.groupingBy(User::getDepartmentId));
+            .collect(Collectors.groupingBy(User::getOrgUnitId));
 
         log.debug("执行人按系部分组完成: {}", deptMap.keySet());
         return deptMap;
@@ -1215,7 +1215,7 @@ public class TaskServiceImpl extends ServiceImpl<TaskMapper, Task> implements Ta
 
         // 3. 按系部分组
         Map<Long, List<TaskAssignee>> deptMap = assignees.stream()
-            .collect(Collectors.groupingBy(TaskAssignee::getDepartmentId));
+            .collect(Collectors.groupingBy(TaskAssignee::getOrgUnitId));
 
         // 4. 构建返回数据
         TaskDetailDTO detail = new TaskDetailDTO();
@@ -1230,15 +1230,15 @@ public class TaskServiceImpl extends ServiceImpl<TaskMapper, Task> implements Ta
         );
 
         Map<Long, List<TaskApprovalConfig>> configsByDept = allConfigs.stream()
-            .collect(Collectors.groupingBy(TaskApprovalConfig::getDepartmentId));
+            .collect(Collectors.groupingBy(TaskApprovalConfig::getOrgUnitId));
 
-        List<TaskDetailDTO.DepartmentApprovalFlowDTO> approvalFlows = new ArrayList<>();
+        List<TaskDetailDTO.OrgUnitApprovalFlowDTO> approvalFlows = new ArrayList<>();
         for (Long deptId : deptMap.keySet()) {
             List<TaskApprovalConfig> configs = configsByDept.getOrDefault(deptId, Collections.emptyList());
             if (!configs.isEmpty()) {
-                TaskDetailDTO.DepartmentApprovalFlowDTO flowDTO = new TaskDetailDTO.DepartmentApprovalFlowDTO();
-                flowDTO.setDepartmentId(deptId);
-                flowDTO.setDepartmentName(configs.get(0).getDepartmentName());
+                TaskDetailDTO.OrgUnitApprovalFlowDTO flowDTO = new TaskDetailDTO.OrgUnitApprovalFlowDTO();
+                flowDTO.setOrgUnitId(deptId);
+                flowDTO.setOrgUnitName(configs.get(0).getOrgUnitName());
 
                 // 构建流程链
                 List<ApprovalConfigDTO> configDTOs = configs.stream()
@@ -1260,20 +1260,20 @@ public class TaskServiceImpl extends ServiceImpl<TaskMapper, Task> implements Ta
         detail.setApprovalFlows(approvalFlows);
 
         // 6. 构建执行人列表（按系部）
-        List<TaskDetailDTO.DepartmentAssigneesDTO> assigneesByDept = new ArrayList<>();
+        List<TaskDetailDTO.OrgUnitAssigneesDTO> assigneesByDept = new ArrayList<>();
         for (Map.Entry<Long, List<TaskAssignee>> entry : deptMap.entrySet()) {
             Long deptId = entry.getKey();
             List<TaskAssignee> deptAssignees = entry.getValue();
 
             // 防御性检查：确保部门执行人列表不为空
             if (deptAssignees.isEmpty()) {
-                log.warn("Empty department assignee list for deptId: {}, taskId: {}", deptId, taskId);
+                log.warn("Empty org unit assignee list for deptId: {}, taskId: {}", deptId, taskId);
                 continue;
             }
 
-            TaskDetailDTO.DepartmentAssigneesDTO deptDTO = new TaskDetailDTO.DepartmentAssigneesDTO();
-            deptDTO.setDepartmentId(deptId);
-            deptDTO.setDepartmentName(deptAssignees.get(0).getDepartmentName());
+            TaskDetailDTO.OrgUnitAssigneesDTO deptDTO = new TaskDetailDTO.OrgUnitAssigneesDTO();
+            deptDTO.setOrgUnitId(deptId);
+            deptDTO.setOrgUnitName(deptAssignees.get(0).getOrgUnitName());
             deptDTO.setTotalCount(deptAssignees.size());
 
             // 统计已完成人数（使用TaskStatus枚举）
@@ -1290,7 +1290,7 @@ public class TaskServiceImpl extends ServiceImpl<TaskMapper, Task> implements Ta
 
             assigneesByDept.add(deptDTO);
         }
-        detail.setAssigneesByDepartment(assigneesByDept);
+        detail.setAssigneesByOrgUnit(assigneesByDept);
 
         // 7. 统计信息（优化为单次遍历）
         Map<Integer, Long> statusCounts = assignees.stream()

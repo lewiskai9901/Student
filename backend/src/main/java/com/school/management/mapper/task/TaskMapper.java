@@ -40,10 +40,10 @@ public interface TaskMapper extends BaseMapper<Task> {
     @Select("<script>" +
             "SELECT status, COUNT(1) as count FROM tasks " +
             "WHERE deleted = 0 " +
-            "<if test='departmentId != null'>AND department_id = #{departmentId}</if> " +
+            "<if test='orgUnitId != null'>AND org_unit_id = #{orgUnitId}</if> " +
             "GROUP BY status" +
             "</script>")
-    List<Map<String, Object>> countByStatus(@Param("departmentId") Long departmentId);
+    List<Map<String, Object>> countByStatus(@Param("orgUnitId") Long orgUnitId);
 
     /**
      * 统计超期任务数量
@@ -54,7 +54,7 @@ public interface TaskMapper extends BaseMapper<Task> {
             "AND status NOT IN (3, 5) " +
             "AND due_date IS NOT NULL " +
             "AND due_date &lt; NOW() " +
-            "<if test='departmentId != null'>AND department_id = #{departmentId}</if>" +
+            "<if test='orgUnitId != null'>AND org_unit_id = #{orgUnitId}</if>" +
             "</script>")
-    Long countOverdue(@Param("departmentId") Long departmentId);
+    Long countOverdue(@Param("orgUnitId") Long orgUnitId);
 }

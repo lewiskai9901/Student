@@ -55,9 +55,9 @@ public class Task extends BaseEntity {
     private Integer assignType;
 
     /**
-     * 部门ID(任务所属部门)
+     * 组织单元ID(任务所属组织单元)
      */
-    private Long departmentId;
+    private Long orgUnitId;
 
     /**
      * 截止时间

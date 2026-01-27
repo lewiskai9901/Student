@@ -14,9 +14,10 @@ import type {
   UpdateClassRequest,
   AssignHeadTeacherRequest,
   ClassQueryParams,
-  ClassStatus
+  ClassStatus,
+  SystemModule,
+  PageResponse
 } from '@/types/v2'
-import type { PageResponse } from '@/types/v2'
 
 // 后端API路径
 const ORG_UNIT_URL = '/v2/org-units'
@@ -189,9 +190,12 @@ export function endTeacherAssignment(classId: number, teacherId: number, role: s
 
 /**
  * 获取组织单元下的班级
+ * @param orgUnitId 支持 number 或 string 类型（大数字ID需要使用 string 避免精度丢失）
  */
-export function getClassesByOrgUnit(orgUnitId: number): Promise<SchoolClass[]> {
-  return http.get<SchoolClass[]>(`${ORG_UNIT_URL}/${orgUnitId}/classes`)
+export function getClassesByOrgUnit(orgUnitId: number | string): Promise<SchoolClass[]> {
+  return http.get(`${CLASS_URL}`, {
+    params: { orgUnitId, pageNum: 1, pageSize: 1000 }
+  }).then((res: any) => res.records || [])
 }
 
 /**
@@ -292,8 +296,9 @@ export function getClassClassroom(classId: number): Promise<any> {
 
 /**
  * 为班级添加宿舍
+ * @param classId 支持 number 或 string 类型（大数字ID需要使用 string 避免精度丢失）
  */
-export function addClassDormitory(classId: number, dormitoryId: number, allocatedBeds: number): Promise<void> {
+export function addClassDormitory(classId: number | string, dormitoryId: number | string, allocatedBeds: number): Promise<void> {
   return http.post(`/classes/${classId}/dormitories`, null, {
     params: { dormitoryId, allocatedBeds }
   })
@@ -301,25 +306,27 @@ export function addClassDormitory(classId: number, dormitoryId: number, allocate
 
 /**
  * 移除班级宿舍
+ * @param classId 支持 number 或 string 类型（大数字ID需要使用 string 避免精度丢失）
  */
-export function removeClassDormitory(classId: number, dormitoryId: number): Promise<void> {
+export function removeClassDormitory(classId: number | string, dormitoryId: number | string): Promise<void> {
   return http.delete(`/classes/${classId}/dormitories/${dormitoryId}`)
 }
 
 /**
  * 获取班级的宿舍列表
  */
-export function getClassDormitories(classId: number): Promise<ClassDormitoryInfo[]> {
+export function getClassDormitories(classId: number | string): Promise<ClassDormitoryInfo[]> {
   return http.get<ClassDormitoryInfo[]>(`/classes/${classId}/dormitories`)
 }
 
 /**
- * 根据部门ID获取宿舍列表
+ * 根据组织单元ID获取宿舍列表
+ * @param orgUnitId 支持 number 或 string 类型（大数字ID需要使用 string 避免精度丢失）
  */
-export function getDormitoriesByDepartment(departmentId: number): Promise<any> {
+export function getDormitoriesByOrgUnit(orgUnitId: number | string): Promise<any[]> {
   return http.get('/v2/dormitory/rooms', {
-    params: { departmentId }
-  })
+    params: { orgUnitId, pageNum: 1, pageSize: 1000 }
+  }).then((res: any) => res.records || [])
 }
 
 /**
@@ -359,9 +366,9 @@ export function getTeacherList(): Promise<any[]> {
 /**
  * 获取专业列表
  */
-export function getMajorList(departmentId?: number): Promise<any[]> {
+export function getMajorList(orgUnitId?: number): Promise<any[]> {
   return http.get('/majors', {
-    params: departmentId ? { departmentId } : undefined
+    params: orgUnitId ? { orgUnitId } : undefined
   })
 }
 
@@ -435,10 +442,15 @@ export interface DepartmentResponse {
   id: number
   unitCode: string
   unitName: string
+  deptName?: string  // 别名，兼容旧代码
   unitType: string
-  parentId: number
+  unitCategory?: string  // ACADEMIC | FUNCTIONAL | ADMINISTRATIVE
+  parentId: number | null
   leaderId?: number
+  leaderName?: string
   deputyLeaderIds?: number[]
+  phone?: string
+  email?: string
   sortOrder: number
   isEnabled: boolean
   createdAt: string
@@ -450,6 +462,7 @@ export interface DepartmentCreateRequest {
   unitCode: string
   unitName: string
   unitType?: string
+  unitCategory?: string  // ACADEMIC | FUNCTIONAL | ADMINISTRATIVE
   parentId?: number
   leaderId?: number
   deputyLeaderIds?: number[]
@@ -602,6 +615,48 @@ export const getAllGrades = (): Promise<Grade[]> => http.get<Grade[]>(GRADE_URL)
 export const assignGradeLeaders = (id: number, data: { directorId?: number; counselorId?: number }): Promise<Grade> =>
   http.put<Grade>(`${GRADE_URL}/${id}/leaders`, data)
 
+// ==================== 系统模块 API ====================
+
+const SYSTEM_MODULE_URL = '/v2/system-modules'
+
+/**
+ * 获取系统模块树
+ */
+export function getSystemModuleTree(): Promise<SystemModule[]> {
+  return http.get<SystemModule[]>(`${SYSTEM_MODULE_URL}/tree`)
+}
+
+/**
+ * 获取所有系统模块（平铺）
+ */
+export function getAllSystemModules(): Promise<SystemModule[]> {
+  return http.get<SystemModule[]>(SYSTEM_MODULE_URL)
+}
+
+/**
+ * 获取顶级系统模块
+ */
+export function getTopLevelModules(): Promise<SystemModule[]> {
+  return http.get<SystemModule[]>(`${SYSTEM_MODULE_URL}/top-level`)
+}
+
+/**
+ * 获取子模块
+ */
+export function getChildModules(parentCode: string): Promise<SystemModule[]> {
+  return http.get<SystemModule[]>(`${SYSTEM_MODULE_URL}/${parentCode}/children`)
+}
+
+/**
+ * 系统模块 API 对象
+ */
+export const systemModuleApi = {
+  getTree: getSystemModuleTree,
+  getAll: getAllSystemModules,
+  getTopLevel: getTopLevelModules,
+  getChildren: getChildModules
+}
+
 // ==================== V1 兼容别名 ====================
 // 保持向后兼容，逐步迁移后删除
 
@@ -610,3 +665,19 @@ export const removeDormitory = removeClassDormitory
 export const getDepartmentList = getOrgUnitTree
 export const listDepartments = getDepartmentTree
 export const existsDeptCode = (_code: string, _excludeId?: number) => Promise.resolve(false)
+
+// ==================== 类型重导出 ====================
+export type {
+  OrgUnit,
+  OrgUnitTreeNode,
+  CreateOrgUnitRequest,
+  UpdateOrgUnitRequest,
+  SchoolClass,
+  CreateClassRequest,
+  UpdateClassRequest,
+  AssignHeadTeacherRequest,
+  ClassQueryParams,
+  ClassStatus,
+  SystemModule,
+  PageResponse
+} from '@/types/v2'

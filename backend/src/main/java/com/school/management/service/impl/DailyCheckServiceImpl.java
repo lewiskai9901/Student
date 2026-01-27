@@ -602,7 +602,7 @@ public class DailyCheckServiceImpl implements DailyCheckService {
                 }
             } else if (target.getTargetType() == 3) {
                 // targetType=3: 选择的院系
-                List<com.school.management.dto.ClassResponse> deptClasses = classMapper.selectByDepartmentId(target.getTargetId());
+                List<com.school.management.dto.ClassResponse> deptClasses = classMapper.selectByOrgUnitId(target.getTargetId());
                 for (com.school.management.dto.ClassResponse cls : deptClasses) {
                     classIdSet.add(cls.getId());
                     classNameMap.put(cls.getId(), cls.getClassName());
@@ -621,8 +621,8 @@ public class DailyCheckServiceImpl implements DailyCheckService {
                         classInfo.setClassName(cls.getClassName());
                         classInfo.setGradeId(cls.getGradeId());
                         classInfo.setGradeName(cls.getGrade());  // 如"2023级"
-                        classInfo.setDepartmentId(cls.getDepartmentId());
-                        classInfo.setDepartmentName(cls.getDepartmentName());
+                        classInfo.setOrgUnitId(cls.getOrgUnitId());
+                        classInfo.setOrgUnitName(cls.getOrgUnitName());
                         classInfo.setStudentCount(cls.getStudentCount());
                         return classInfo;
                     })

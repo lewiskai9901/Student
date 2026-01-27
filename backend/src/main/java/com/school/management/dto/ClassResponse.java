@@ -40,14 +40,14 @@ public class ClassResponse {
     private Long gradeId;
 
     /**
-     * 所属部门ID
+     * 所属组织单元ID
      */
-    private Long departmentId;
+    private Long orgUnitId;
 
     /**
-     * 部门名称
+     * 组织单元名称
      */
-    private String departmentName;
+    private String orgUnitName;
 
     /**
      * 专业ID

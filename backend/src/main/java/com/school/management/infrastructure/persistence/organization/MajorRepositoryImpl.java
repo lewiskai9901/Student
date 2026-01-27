@@ -165,14 +165,11 @@ public class MajorRepositoryImpl implements MajorRepository {
         po.setId(domain.getId());
         po.setMajorCode(domain.getMajorCode());
         po.setMajorName(domain.getMajorName());
-        po.setDepartmentId(domain.getOrgUnitId());
+        po.setOrgUnitId(domain.getOrgUnitId());
         po.setDescription(domain.getDescription());
-        po.setSortOrder(domain.getSortOrder());
         po.setStatus(domain.isEnabled() ? 1 : 0);
         po.setCreatedAt(domain.getCreatedAt());
         po.setUpdatedAt(domain.getUpdatedAt());
-        po.setCreatedBy(domain.getCreatedBy());
-        po.setUpdatedBy(domain.getUpdatedBy());
         return po;
     }
 
@@ -186,12 +183,12 @@ public class MajorRepositoryImpl implements MajorRepository {
             .id(po.getId())
             .majorCode(po.getMajorCode())
             .majorName(po.getMajorName())
-            .orgUnitId(po.getDepartmentId())
+            .orgUnitId(po.getOrgUnitId())
             .description(po.getDescription())
             .directions(directions)
             .enabled(po.getStatus() != null && po.getStatus() == 1)
-            .sortOrder(po.getSortOrder() != null ? po.getSortOrder() : 0)
-            .createdBy(po.getCreatedBy())
+            .sortOrder(0)
+            .createdBy(null)
             .build();
     }
 
@@ -209,7 +206,6 @@ public class MajorRepositoryImpl implements MajorRepository {
         po.setPhase2Level(domain.getPhase2Level());
         po.setPhase2Years(domain.getPhase2Years());
         po.setRemarks(domain.getRemarks());
-        po.setStatus(domain.isEnabled() != null && domain.isEnabled() ? 1 : 0);
         po.setCreatedAt(domain.getCreatedAt());
         po.setUpdatedAt(domain.getUpdatedAt());
         return po;
@@ -228,7 +224,7 @@ public class MajorRepositoryImpl implements MajorRepository {
             po.getPhase2Level(),
             po.getPhase2Years(),
             po.getRemarks(),
-            po.getStatus() != null && po.getStatus() == 1,
+            true,  // 默认启用
             po.getCreatedAt(),
             po.getUpdatedAt()
         );

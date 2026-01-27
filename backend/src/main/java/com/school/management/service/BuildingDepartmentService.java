@@ -21,26 +21,26 @@ public interface BuildingDepartmentService {
     List<BuildingDepartment> getByBuildingId(Long buildingId);
 
     /**
-     * 根据楼宇ID查询部门ID列表
+     * 根据楼宇ID查询组织单元ID列表
      *
      * @param buildingId 楼宇ID
-     * @return 部门ID列表
+     * @return 组织单元ID列表
      */
-    List<Long> getDepartmentIdsByBuildingId(Long buildingId);
+    List<Long> getOrgUnitIdsByBuildingId(Long buildingId);
 
     /**
-     * 为楼宇分配部门
+     * 为楼宇分配组织单元
      *
      * @param buildingId 楼宇ID
-     * @param departmentIds 部门ID列表
+     * @param orgUnitIds 组织单元ID列表
      */
-    void assignDepartments(Long buildingId, List<Long> departmentIds);
+    void assignOrgUnits(Long buildingId, List<Long> orgUnitIds);
 
     /**
-     * 移除楼宇的部门
+     * 移除楼宇的组织单元
      *
      * @param buildingId 楼宇ID
-     * @param departmentId 部门ID
+     * @param orgUnitId 组织单元ID
      */
-    void removeDepartment(Long buildingId, Long departmentId);
+    void removeOrgUnit(Long buildingId, Long orgUnitId);
 }

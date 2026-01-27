@@ -95,16 +95,45 @@ public class SystemConfigServiceImpl extends ServiceImpl<SystemConfigMapper, Sys
 
                 SystemConfig config = this.getOne(wrapper);
                 if (config != null) {
+                    // 更新现有配置
                     config.setConfigValue(value);
                     this.updateById(config);
                 } else {
-                    log.warn("配置键不存在: {}", key);
+                    // 配置不存在，创建新配置
+                    log.info("配置键不存在，创建新配置: {}", key);
+                    SystemConfig newConfig = new SystemConfig();
+                    newConfig.setConfigKey(key);
+                    newConfig.setConfigValue(value);
+                    // 根据 key 前缀自动设置 configGroup
+                    String group = inferConfigGroup(key);
+                    newConfig.setConfigGroup(group);
+                    newConfig.setConfigType("string");
+                    newConfig.setConfigLabel(key);
+                    newConfig.setIsSystem(0);
+                    newConfig.setStatus(1);
+                    newConfig.setDeleted(0);
+                    this.save(newConfig);
                 }
             }
             return true;
         } catch (Exception e) {
             log.error("批量更新配置失败", e);
             throw new BusinessException("批量更新配置失败");
+        }
+    }
+
+    /**
+     * 根据配置键推断配置组
+     */
+    private String inferConfigGroup(String configKey) {
+        if (configKey.startsWith("system.")) {
+            return "system";
+        } else if (configKey.startsWith("business.")) {
+            return "business";
+        } else if (configKey.startsWith("ui.")) {
+            return "ui";
+        } else {
+            return "other";
         }
     }
 

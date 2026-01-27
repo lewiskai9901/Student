@@ -63,8 +63,8 @@ public class DailyScoringInitResponse {
         private String className;
         private Long gradeId;
         private String gradeName;
-        private Long departmentId;
-        private String departmentName;
+        private Long orgUnitId;
+        private String orgUnitName;
         private Integer studentCount;
     }
 

@@ -357,7 +357,7 @@
                   <div class="user-details">
                     <span class="user-name">{{ user.realName }}</span>
                     <span class="user-meta">@{{ user.username }}</span>
-                    <span v-if="user.departmentName" class="user-dept">{{ user.departmentName }}</span>
+                    <span v-if="user.orgUnitName" class="user-dept">{{ user.orgUnitName }}</span>
                   </div>
                   <div v-if="inspectorForm.userId === user.id" class="check-icon">
                     <Check :size="18" />
@@ -1073,7 +1073,7 @@ const availableGrades = computed(() => {
 const availableDepartments = computed(() => {
   if (planTargetClasses.value.length > 0) {
     // 从目标班级中提取院系ID
-    const deptIds = new Set(planTargetClasses.value.map(c => c.departmentId))
+    const deptIds = new Set(planTargetClasses.value.map(c => c.orgUnitId))
     return departmentList.value.filter(d => deptIds.has(d.id))
   }
   return departmentList.value
@@ -1687,7 +1687,7 @@ const loadPlanTargetClasses = async () => {
     planTargetClasses.value = (res || []).map((c: any) => ({
       ...c,
       id: typeof c.id === 'string' ? parseInt(c.id, 10) : c.id,
-      departmentId: typeof c.departmentId === 'string' ? parseInt(c.departmentId, 10) : c.departmentId,
+      departmentId: typeof c.orgUnitId === 'string' ? parseInt(c.orgUnitId, 10) : c.orgUnitId,
       gradeId: typeof c.gradeId === 'string' ? parseInt(c.gradeId, 10) : c.gradeId
     }))
   } catch (e) {

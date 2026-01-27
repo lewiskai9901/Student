@@ -44,14 +44,14 @@ public class CheckRecordClassStatsDTO {
     private String gradeName;
 
     /**
-     * 院系ID
+     * 组织单元ID
      */
-    private Long departmentId;
+    private Long orgUnitId;
 
     /**
-     * 院系名称
+     * 组织单元名称
      */
-    private String departmentName;
+    private String orgUnitName;
 
     // ==================== 班主任信息 ====================
 
@@ -127,9 +127,9 @@ public class CheckRecordClassStatsDTO {
     private Integer gradeRanking;
 
     /**
-     * 院系排名
+     * 组织单元排名
      */
-    private Integer departmentRanking;
+    private Integer orgUnitRanking;
 
     /**
      * 评分等级
@@ -346,9 +346,9 @@ public class CheckRecordClassStatsDTO {
     private Integer weightedGradeRanking;
 
     /**
-     * 加权后院系排名
+     * 加权后组织单元排名
      */
-    private Integer weightedDepartmentRanking;
+    private Integer weightedOrgUnitRanking;
 
     // ==================== 关联数据 ====================
 

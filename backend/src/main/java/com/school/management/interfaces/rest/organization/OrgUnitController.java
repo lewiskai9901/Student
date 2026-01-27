@@ -7,6 +7,7 @@ import com.school.management.application.organization.query.OrgUnitDTO;
 import com.school.management.application.organization.query.OrgUnitTreeDTO;
 import com.school.management.common.result.Result;
 import com.school.management.domain.organization.model.OrgUnitType;
+import com.school.management.domain.organization.model.UnitCategory;
 import com.school.management.util.SecurityUtils;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -41,6 +42,7 @@ public class OrgUnitController {
             .unitCode(request.getUnitCode())
             .unitName(request.getUnitName())
             .unitType(request.getUnitType())
+            .unitCategory(request.getUnitCategory())
             .parentId(request.getParentId())
             .createdBy(getCurrentUserId())
             .build();
@@ -57,6 +59,7 @@ public class OrgUnitController {
             @RequestBody UpdateOrgUnitRequest request) {
         UpdateOrgUnitCommand command = UpdateOrgUnitCommand.builder()
             .unitName(request.getUnitName())
+            .unitCategory(request.getUnitCategory())
             .leaderId(request.getLeaderId())
             .deputyLeaderIds(request.getDeputyLeaderIds())
             .sortOrder(request.getSortOrder())
@@ -78,7 +81,7 @@ public class OrgUnitController {
 
     @Operation(summary = "Get organization tree", description = "Gets the complete organization tree")
     @GetMapping("/tree")
-    @PreAuthorize("hasAuthority('system:department:view')")
+    @PreAuthorize("hasAuthority('system:department:view') or hasAuthority('system:role:edit') or hasAuthority('system:role:view')")
     public Result<List<OrgUnitTreeDTO>> getOrgUnitTree() {
         List<OrgUnitTreeDTO> result = orgUnitService.getOrgUnitTree();
         return Result.success(result);
@@ -91,6 +94,30 @@ public class OrgUnitController {
             @Parameter(description = "Organization type") @PathVariable OrgUnitType type) {
         List<OrgUnitDTO> result = orgUnitService.getOrgUnitsByType(type);
         return Result.success(result);
+    }
+
+    @Operation(summary = "Get by category", description = "Gets organization units by category (functional, academic, administrative)")
+    @GetMapping
+    @PreAuthorize("hasAuthority('system:department:view') or hasAuthority('system:org:view')")
+    public Result<List<OrgUnitDTO>> getByCategory(
+            @Parameter(description = "Organization category") @RequestParam(required = false) String unitCategory) {
+        if (unitCategory != null && !unitCategory.isEmpty()) {
+            UnitCategory category = UnitCategory.fromCode(unitCategory);
+            List<OrgUnitDTO> result = orgUnitService.getOrgUnitsByCategory(category);
+            return Result.success(result);
+        }
+        // If no category specified, return all
+        return Result.success(orgUnitService.getOrgUnitTree().stream()
+            .map(tree -> {
+                OrgUnitDTO dto = new OrgUnitDTO();
+                dto.setId(tree.getId());
+                dto.setUnitCode(tree.getUnitCode());
+                dto.setUnitName(tree.getUnitName());
+                dto.setUnitType(tree.getUnitType());
+                dto.setEnabled(tree.getEnabled());
+                return dto;
+            })
+            .collect(java.util.stream.Collectors.toList()));
     }
 
     @Operation(summary = "Get children", description = "Gets children of an organization unit")

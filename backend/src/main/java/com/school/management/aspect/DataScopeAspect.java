@@ -41,11 +41,11 @@ public class DataScopeAspect {
         }
 
         // 获取数据范围 - 使用完全限定名避免与注解冲突
-        com.school.management.domain.access.model.DataScope scope = dataPermissionService.getDataScope(dataScope.module());
+        com.school.management.casbin.model.DataScope scope = dataPermissionService.getDataScope(dataScope.module());
         log.debug("User {} data scope for module {}: {}", user.getUsername(), dataScope.module(), scope);
 
         // 全部数据权限,不需要过滤
-        if (scope == com.school.management.domain.access.model.DataScope.ALL) {
+        if (scope == com.school.management.casbin.model.DataScope.ALL) {
             return;
         }
 
@@ -54,13 +54,14 @@ public class DataScopeAspect {
 
         switch (scope) {
             case DEPARTMENT:
-                if (StringUtils.hasText(dataScope.deptAlias()) && user.getDepartmentId() != null) {
-                    sql.append(String.format(" AND %s.id = %d", dataScope.deptAlias(), user.getDepartmentId()));
+            case DEPARTMENT_AND_BELOW:
+                if (StringUtils.hasText(dataScope.deptAlias()) && user.getOrgUnitId() != null) {
+                    sql.append(String.format(" AND %s.id = %d", dataScope.deptAlias(), user.getOrgUnitId()));
                 }
                 break;
 
-            case GRADE:
-                // 本年级:通过班级表过滤
+            case CUSTOM:
+                // 自定义范围 - 通过Casbin获取可访问的班级
                 if (StringUtils.hasText(dataScope.classAlias())) {
                     List<Long> classIds = dataPermissionService.getAccessibleClassIds(dataScope.module());
                     if (classIds != null && !classIds.isEmpty()) {
@@ -68,18 +69,6 @@ public class DataScopeAspect {
                         sql.append(String.format(" AND %s.id IN (%s)", dataScope.classAlias(), ids));
                     } else {
                         // 没有可访问的班级,返回空结果
-                        sql.append(" AND 1=0");
-                    }
-                }
-                break;
-
-            case CLASS:
-                if (StringUtils.hasText(dataScope.classAlias())) {
-                    List<Long> classIds = dataPermissionService.getAccessibleClassIds(dataScope.module());
-                    if (classIds != null && !classIds.isEmpty()) {
-                        String ids = classIds.stream().map(String::valueOf).collect(Collectors.joining(","));
-                        sql.append(String.format(" AND %s.id IN (%s)", dataScope.classAlias(), ids));
-                    } else {
                         sql.append(" AND 1=0");
                     }
                 }

@@ -417,27 +417,60 @@ public class AuthServiceImpl implements AuthService {
                 .status(userDetails.getStatus())
                 .roles(userDetails.getRoles())
                 .permissions(userDetails.getPermissions())
-                .department(buildDepartmentInfo(user.getDepartmentId()))
+                .orgUnit(buildOrgUnitInfo(user.getOrgUnitId()))
                 .classInfo(buildClassInfo(user.getClassId()))
+                .assignedClasses(buildAssignedClasses(userDetails.getUserId()))
                 .build();
     }
 
     /**
-     * 构建部门信息
+     * 构建用户分配的班级列表（班主任/副班主任）
      */
-    private LoginResponse.UserInfo.DepartmentInfo buildDepartmentInfo(Long departmentId) {
-        if (departmentId == null) {
+    private List<LoginResponse.UserInfo.AssignedClass> buildAssignedClasses(Long userId) {
+        if (userId == null) {
             return null;
         }
 
-        Department department = departmentMapper.selectById(departmentId);
+        List<ClassResponse> classes = classMapper.selectByTeacherId(userId);
+        if (classes == null || classes.isEmpty()) {
+            return null;
+        }
+
+        return classes.stream()
+                .map(c -> {
+                    String role;
+                    if (userId.equals(c.getTeacherId())) {
+                        role = "HEAD_TEACHER";
+                    } else if (userId.equals(c.getAssistantTeacherId())) {
+                        role = "DEPUTY_HEAD_TEACHER";
+                    } else {
+                        role = "SUBJECT_TEACHER";
+                    }
+                    return LoginResponse.UserInfo.AssignedClass.builder()
+                            .id(c.getId())
+                            .className(c.getClassName())
+                            .role(role)
+                            .build();
+                })
+                .collect(java.util.stream.Collectors.toList());
+    }
+
+    /**
+     * 构建组织单元信息
+     */
+    private LoginResponse.UserInfo.OrgUnitInfo buildOrgUnitInfo(Long orgUnitId) {
+        if (orgUnitId == null) {
+            return null;
+        }
+
+        Department department = departmentMapper.selectById(orgUnitId);
         if (department == null) {
             return null;
         }
 
-        return LoginResponse.UserInfo.DepartmentInfo.builder()
-                .departmentId(departmentId)
-                .departmentName(department.getDeptName())
+        return LoginResponse.UserInfo.OrgUnitInfo.builder()
+                .orgUnitId(orgUnitId)
+                .orgUnitName(department.getDeptName())
                 .build();
     }
 

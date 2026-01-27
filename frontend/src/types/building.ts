@@ -14,9 +14,9 @@ export interface Building {
   status: number
   roomCount?: number
   buildingTypeName?: string
-  // 部门关联字段
-  departmentIds?: number[]
-  departmentNames?: string | string[]  // 后端返回字符串(GROUP_CONCAT),前端需要转换为数组
+  // 组织单元关联字段
+  orgUnitIds?: number[]
+  orgUnitNames?: string | string[]  // 后端返回字符串(GROUP_CONCAT),前端需要转换为数组
   createdAt?: string
   updatedAt?: string
   createdBy?: number
@@ -43,8 +43,8 @@ export interface BuildingFormData {
   managerId?: number
   description?: string
   status: number
-  // 部门关联
-  departmentIds?: number[]
+  // 组织单元关联
+  orgUnitIds?: number[]
 }
 
 // 楼宇类型选项

@@ -57,16 +57,16 @@ public class BuildingDTO {
     @Schema(description = "状态: 0-停用, 1-启用")
     private Integer status;
 
-    @Schema(description = "关联部门ID列表")
-    private List<Long> departmentIds;
+    @Schema(description = "关联组织单元ID列表")
+    private List<Long> orgUnitIds;
 
     // ========== 关联字段 ==========
 
     @Schema(description = "楼宇类型名称")
     private String buildingTypeName;
 
-    @Schema(description = "关联部门名称列表")
-    private List<String> departmentNames;
+    @Schema(description = "关联组织单元名称列表")
+    private List<String> orgUnitNames;
 
     @Schema(description = "房间数量")
     private Integer roomCount;

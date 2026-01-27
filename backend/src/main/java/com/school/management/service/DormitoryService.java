@@ -88,12 +88,12 @@ public interface DormitoryService {
     List<DormitoryResponse> getDormitoriesByGenderType(Integer genderType);
 
     /**
-     * 根据部门ID查询宿舍列表
+     * 根据组织单元ID查询宿舍列表
      *
-     * @param departmentId 部门ID
+     * @param orgUnitId 组织单元ID
      * @return 宿舍列表
      */
-    List<DormitoryResponse> getDormitoriesByDepartmentId(Long departmentId);
+    List<DormitoryResponse> getDormitoriesByOrgUnitId(Long orgUnitId);
 
     /**
      * 查询有空床位的宿舍
@@ -177,21 +177,21 @@ public interface DormitoryService {
     int batchCreateDormitories(com.school.management.dto.DormitoryBatchCreateRequest request);
 
     /**
-     * 批量更新宿舍房间的院系分配
+     * 批量更新宿舍房间的组织单元分配
      *
      * @param dormitoryIds 宿舍ID列表
-     * @param departmentId 院系ID（null表示取消分配）
+     * @param orgUnitId 组织单元ID（null表示取消分配）
      * @return 更新的宿舍数量
      */
-    int batchUpdateDepartment(List<Long> dormitoryIds, Long departmentId);
+    int batchUpdateOrgUnit(List<Long> dormitoryIds, Long orgUnitId);
 
     /**
-     * 按楼层批量更新院系分配
+     * 按楼层批量更新组织单元分配
      *
      * @param buildingId 楼宇ID
      * @param floor 楼层号
-     * @param departmentId 院系ID（null表示取消分配）
+     * @param orgUnitId 组织单元ID（null表示取消分配）
      * @return 更新的宿舍数量
      */
-    int batchUpdateDepartmentByFloor(Long buildingId, Integer floor, Long departmentId);
+    int batchUpdateOrgUnitByFloor(Long buildingId, Integer floor, Long orgUnitId);
 }

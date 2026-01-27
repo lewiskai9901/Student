@@ -64,7 +64,7 @@ public class AnalysisConfig extends BaseEntity {
     /**
      * 院系ID（当targetType为ORGANIZATION时使用）
      */
-    private Long departmentId;
+    private Long orgUnitId;
 
     /**
      * 班级ID（当targetType为ORGANIZATION时使用）

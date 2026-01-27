@@ -429,9 +429,9 @@ public class DormitoryServiceImpl extends ServiceImpl<DormitoryMapper, Dormitory
     }
 
     @Override
-    public List<DormitoryResponse> getDormitoriesByDepartmentId(Long departmentId) {
-        log.info("根据部门ID查询宿舍列表: {}", departmentId);
-        return dormitoryMapper.selectByDepartmentId(departmentId);
+    public List<DormitoryResponse> getDormitoriesByOrgUnitId(Long orgUnitId) {
+        log.info("根据组织单元ID查询宿舍列表: {}", orgUnitId);
+        return dormitoryMapper.selectByOrgUnitId(orgUnitId);
     }
 
     @Override
@@ -777,7 +777,7 @@ public class DormitoryServiceImpl extends ServiceImpl<DormitoryMapper, Dormitory
         }
 
         // 4. 获取楼宇关联的部门列表
-        List<Long> buildingDeptIds = buildingDepartmentMapper.selectDepartmentIdsByBuildingId(buildingId);
+        List<Long> buildingDeptIds = buildingDepartmentMapper.selectOrgUnitIdsByBuildingId(buildingId);
         if (buildingDeptIds.isEmpty()) {
             throw new BusinessException("该楼宇未关联任何部门，请先配置楼宇部门");
         }
@@ -794,16 +794,16 @@ public class DormitoryServiceImpl extends ServiceImpl<DormitoryMapper, Dormitory
         List<Long> deptIds = new ArrayList<>();
 
         // 1. 班级部门
-        if (clazz.getDepartmentId() != null) {
-            deptIds.add(clazz.getDepartmentId());
+        if (clazz.getOrgUnitId() != null) {
+            deptIds.add(clazz.getOrgUnitId());
         }
 
         // 2. 专业部门
         if (clazz.getMajorId() != null) {
             Major major = majorMapper.selectById(clazz.getMajorId());
-            if (major != null && major.getDepartmentId() != null) {
-                if (!deptIds.contains(major.getDepartmentId())) {
-                    deptIds.add(major.getDepartmentId());
+            if (major != null && major.getOrgUnitId() != null) {
+                if (!deptIds.contains(major.getOrgUnitId())) {
+                    deptIds.add(major.getOrgUnitId());
                 }
             }
         }
@@ -903,37 +903,37 @@ public class DormitoryServiceImpl extends ServiceImpl<DormitoryMapper, Dormitory
 
     @Override
     @Transactional(rollbackFor = Exception.class)
-    public int batchUpdateDepartment(List<Long> dormitoryIds, Long departmentId) {
+    public int batchUpdateOrgUnit(List<Long> dormitoryIds, Long orgUnitId) {
         if (dormitoryIds == null || dormitoryIds.isEmpty()) {
             return 0;
         }
 
-        log.info("批量更新宿舍院系分配: dormitoryIds={}, departmentId={}", dormitoryIds, departmentId);
+        log.info("批量更新宿舍组织单元分配: dormitoryIds={}, orgUnitId={}", dormitoryIds, orgUnitId);
 
         int count = 0;
         for (Long dormitoryId : dormitoryIds) {
             Dormitory dormitory = dormitoryMapper.selectById(dormitoryId);
             if (dormitory != null && dormitory.getDeleted() == 0) {
-                dormitory.setDepartmentId(departmentId);
+                dormitory.setOrgUnitId(orgUnitId);
                 dormitory.setUpdatedAt(LocalDateTime.now());
                 dormitoryMapper.updateById(dormitory);
                 count++;
             }
         }
 
-        log.info("批量更新宿舍院系分配完成: 更新数量={}", count);
+        log.info("批量更新宿舍组织单元分配完成: 更新数量={}", count);
         return count;
     }
 
     @Override
     @Transactional(rollbackFor = Exception.class)
-    public int batchUpdateDepartmentByFloor(Long buildingId, Integer floor, Long departmentId) {
+    public int batchUpdateOrgUnitByFloor(Long buildingId, Integer floor, Long orgUnitId) {
         if (buildingId == null || floor == null) {
             return 0;
         }
 
-        log.info("按楼层批量更新院系分配: buildingId={}, floor={}, departmentId={}",
-                buildingId, floor, departmentId);
+        log.info("按楼层批量更新组织单元分配: buildingId={}, floor={}, orgUnitId={}",
+                buildingId, floor, orgUnitId);
 
         // 查询该楼层的所有宿舍
         com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<Dormitory> wrapper =
@@ -949,13 +949,13 @@ public class DormitoryServiceImpl extends ServiceImpl<DormitoryMapper, Dormitory
 
         int count = 0;
         for (Dormitory dormitory : dormitories) {
-            dormitory.setDepartmentId(departmentId);
+            dormitory.setOrgUnitId(orgUnitId);
             dormitory.setUpdatedAt(LocalDateTime.now());
             dormitoryMapper.updateById(dormitory);
             count++;
         }
 
-        log.info("按楼层批量更新院系分配完成: 更新数量={}", count);
+        log.info("按楼层批量更新组织单元分配完成: 更新数量={}", count);
         return count;
     }
 }

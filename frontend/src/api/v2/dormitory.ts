@@ -94,10 +94,10 @@ export function getDormitoriesByGender(genderType: number): Promise<Dormitory[]>
 }
 
 /**
- * 根据部门ID获取宿舍列表
+ * 根据组织单元ID获取宿舍列表
  */
-export function getDormitoriesByDepartment(departmentId: number): Promise<Dormitory[]> {
-  return http.get<Dormitory[]>(`${DORMITORY_URL}/by-department`, { params: { departmentId } })
+export function getDormitoriesByOrgUnit(orgUnitId: number): Promise<Dormitory[]> {
+  return http.get<Dormitory[]>(`${DORMITORY_URL}/by-org-unit`, { params: { orgUnitId } })
 }
 
 /**
@@ -191,14 +191,14 @@ export function swapStudentDormitory(data: SwapStudentsRequest): Promise<void> {
 // ==================== 批量操作 ====================
 
 /**
- * 批量更新院系分配
+ * 批量更新部门分配
  */
 export function batchUpdateDepartment(data: BatchUpdateDepartmentRequest): Promise<number> {
   return http.put<number>(`${DORMITORY_URL}/batch-department`, data)
 }
 
 /**
- * 按楼层批量更新院系分配
+ * 按楼层批量更新部门分配
  */
 export function batchUpdateDepartmentByFloor(data: BatchUpdateDepartmentByFloorRequest): Promise<number> {
   return http.put<number>(`${DORMITORY_URL}/batch-department-by-floor`, data)
@@ -300,14 +300,14 @@ export function getStudentDormitoryHistory(studentId: number): Promise<StudentDo
   return http.get<StudentDormitoryHistory[]>(`/student-dormitory/history/${studentId}`)
 }
 
-// ==================== 楼宇院系分配 ====================
+// ==================== 楼宇部门分配 ====================
 
-export interface BuildingDepartmentAssignment {
+export interface BuildingOrgUnitAssignment {
   id: number
   buildingId: number
   buildingName: string
-  departmentId: number
-  departmentName: string
+  orgUnitId: number
+  orgUnitName: string
   floorStart?: number
   floorEnd?: number
   roomCount?: number
@@ -315,67 +315,67 @@ export interface BuildingDepartmentAssignment {
   createdAt?: string
 }
 
-export interface BuildingDepartmentAssignmentQueryParams {
+export interface BuildingOrgUnitAssignmentQueryParams {
   pageNum?: number
   pageSize?: number
   buildingId?: number
-  departmentId?: number
+  orgUnitId?: number
   status?: number
 }
 
 /**
  * 分页查询分配列表
  */
-export function getBuildingDepartmentAssignmentList(params?: BuildingDepartmentAssignmentQueryParams): Promise<{ records: BuildingDepartmentAssignment[]; total: number }> {
+export function getBuildingOrgUnitAssignmentList(params?: BuildingOrgUnitAssignmentQueryParams): Promise<{ records: BuildingOrgUnitAssignment[]; total: number }> {
   return http.get('/dormitory/building-assignments', { params })
 }
 
 /**
  * 获取分配详情
  */
-export function getBuildingDepartmentAssignmentDetail(id: number): Promise<BuildingDepartmentAssignment> {
-  return http.get<BuildingDepartmentAssignment>(`/dormitory/building-assignments/${id}`)
+export function getBuildingOrgUnitAssignmentDetail(id: number): Promise<BuildingOrgUnitAssignment> {
+  return http.get<BuildingOrgUnitAssignment>(`/dormitory/building-assignments/${id}`)
 }
 
 /**
- * 根据宿舍楼ID查询分配的院系
+ * 根据宿舍楼ID查询分配的组织单元
  */
-export function getAssignmentsByBuildingId(buildingId: number): Promise<BuildingDepartmentAssignment[]> {
-  return http.get<BuildingDepartmentAssignment[]>(`/dormitory/building-assignments/building/${buildingId}`)
+export function getAssignmentsByBuildingId(buildingId: number): Promise<BuildingOrgUnitAssignment[]> {
+  return http.get<BuildingOrgUnitAssignment[]>(`/dormitory/building-assignments/building/${buildingId}`)
 }
 
 /**
- * 创建楼宇院系分配
+ * 创建楼宇组织单元分配
  */
-export function createBuildingDepartmentAssignment(data: { buildingId: number; departmentId: number; floorStart?: number; floorEnd?: number }): Promise<BuildingDepartmentAssignment> {
+export function createBuildingOrgUnitAssignment(data: { buildingId: number; orgUnitId: number; floorStart?: number; floorEnd?: number }): Promise<BuildingOrgUnitAssignment> {
   return http.post('/dormitory/building-assignments', data)
 }
 
 /**
- * 更新楼宇院系分配
+ * 更新楼宇组织单元分配
  */
-export function updateBuildingDepartmentAssignment(data: { id: number; floorStart?: number; floorEnd?: number }): Promise<BuildingDepartmentAssignment> {
+export function updateBuildingOrgUnitAssignment(data: { id: number; floorStart?: number; floorEnd?: number }): Promise<BuildingOrgUnitAssignment> {
   return http.put('/dormitory/building-assignments', data)
 }
 
 /**
- * 删除楼宇院系分配
+ * 删除楼宇组织单元分配
  */
-export function deleteBuildingDepartmentAssignment(id: number): Promise<void> {
+export function deleteBuildingOrgUnitAssignment(id: number): Promise<void> {
   return http.delete(`/dormitory/building-assignments/${id}`)
 }
 
 /**
  * 启用分配
  */
-export function enableBuildingDepartmentAssignment(id: number): Promise<void> {
+export function enableBuildingOrgUnitAssignment(id: number): Promise<void> {
   return http.put(`/dormitory/building-assignments/${id}/enable`)
 }
 
 /**
  * 禁用分配
  */
-export function disableBuildingDepartmentAssignment(id: number): Promise<void> {
+export function disableBuildingOrgUnitAssignment(id: number): Promise<void> {
   return http.put(`/dormitory/building-assignments/${id}/disable`)
 }
 
@@ -419,7 +419,7 @@ export const dormitoryApi = {
   batchCreate: batchCreateDormitories,
   getByBuilding: getDormitoriesByBuilding,
   getByGender: getDormitoriesByGender,
-  getByDepartment: getDormitoriesByDepartment,
+  getByOrgUnit: getDormitoriesByOrgUnit,
   getAvailable: getAvailableDormitories,
   getBySupervisor: getDormitoriesBySupervisor,
   getAllNormal: getAllNormalDormitories,

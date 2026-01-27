@@ -135,4 +135,10 @@ public class GradeMajorDirection {
      */
     @TableField(exist = false)
     private String majorCode;
+
+    /**
+     * 所属组织单元ID(非数据库字段,来自majors表的org_unit_id)
+     */
+    @TableField(exist = false)
+    private Long orgUnitId;
 }

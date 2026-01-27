@@ -62,7 +62,7 @@ public class UserApplicationService {
                 encodedPassword,
                 command.getRealName(),
                 command.getUserType() != null ? UserType.fromCode(command.getUserType()) : UserType.TEACHER,
-                command.getDepartmentId()
+                command.getOrgUnitId()
         );
 
         // 设置可选信息
@@ -74,7 +74,7 @@ public class UserApplicationService {
                 command.getGender(),
                 command.getBirthDate(),
                 command.getIdCard(),
-                command.getDepartmentId()
+                command.getOrgUnitId()
         );
 
         // 分配角色
@@ -112,7 +112,7 @@ public class UserApplicationService {
                 command.getGender(),
                 command.getBirthDate(),
                 command.getIdCard(),
-                command.getDepartmentId()
+                command.getOrgUnitId()
         );
 
         // 更新角色
@@ -248,11 +248,11 @@ public class UserApplicationService {
     }
 
     /**
-     * 根据部门获取用户列表
+     * 根据组织单元获取用户列表
      */
     @Transactional(readOnly = true)
-    public List<User> getUsersByDepartment(Long departmentId) {
-        return userRepository.findByDepartmentId(departmentId);
+    public List<User> getUsersByOrgUnit(Long orgUnitId) {
+        return userRepository.findByOrgUnitId(orgUnitId);
     }
 
     /**
@@ -271,16 +271,16 @@ public class UserApplicationService {
      */
     @Transactional(readOnly = true)
     public List<User> getUsersPage(int page, int size, String username, String realName,
-                                   String phone, Long departmentId, Integer status) {
-        return userRepository.findPagedWithConditions(page, size, username, realName, phone, departmentId, status);
+                                   String phone, Long orgUnitId, Integer status) {
+        return userRepository.findPagedWithConditions(page, size, username, realName, phone, orgUnitId, status);
     }
 
     /**
      * 条件统计用户总数
      */
     @Transactional(readOnly = true)
-    public long countUsers(String username, String realName, String phone, Long departmentId, Integer status) {
-        return userRepository.countWithConditions(username, realName, phone, departmentId, status);
+    public long countUsers(String username, String realName, String phone, Long orgUnitId, Integer status) {
+        return userRepository.countWithConditions(username, realName, phone, orgUnitId, status);
     }
 
     /**

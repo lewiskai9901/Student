@@ -184,7 +184,7 @@ import { createDormitory } from '@/api/v2/dormitory'
 import { roomUsageTypeOptions, bedCapacityOptions } from '@/types/dormitory'
 
 interface Props {
-  buildingId: number
+  buildingId: number | string
   buildingName: string
   buildingNo?: string
   dormitoryType: number
@@ -320,10 +320,10 @@ const handleSubmit = async () => {
       buildingId: props.buildingId,
       dormitoryNo: formData.dormitoryNo,
       floorNumber: formData.floorNumber,
-      roomUsageType: formData.roomUsageType,
+      roomUsageType: formData.roomUsageType as 1 | 2 | 3 | 4 | 5 | 6,
       bedCapacity: finalBedCapacity,
-      status: formData.status,
-      notes: formData.notes
+      genderType: autoGenderType.value as 1 | 2 | 3,
+      notes: formData.notes || undefined
     })
 
     ElMessage.success('新增房间成功')

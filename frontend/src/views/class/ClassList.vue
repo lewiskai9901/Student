@@ -172,20 +172,23 @@
               </td>
               <td class="px-4 py-3">
                 <div class="flex flex-col gap-0.5">
-                  <span class="text-sm text-gray-900">{{ row.majorDirectionName || '-' }}</span>
-                  <div v-if="row.schoolingYears" class="flex gap-1">
-                    <span class="rounded bg-gray-100 px-1.5 py-0.5 text-xs text-gray-600">
+                  <span class="text-sm text-gray-900">{{ row.majorName || '-' }}</span>
+                  <div class="flex gap-1 flex-wrap">
+                    <span v-if="row.majorDirectionName" class="rounded bg-blue-50 px-1.5 py-0.5 text-xs text-blue-600">
+                      {{ row.majorDirectionName }}
+                    </span>
+                    <span v-if="row.schoolingYears" class="rounded bg-gray-100 px-1.5 py-0.5 text-xs text-gray-600">
                       {{ row.schoolingYears }}年制
                     </span>
                   </div>
                 </div>
               </td>
               <td class="px-4 py-3">
-                <div v-if="row.headTeacher?.teacherName" class="flex items-center gap-2">
+                <div v-if="row.headTeacherName || row.teacherName" class="flex items-center gap-2">
                   <div class="flex h-7 w-7 items-center justify-center rounded-full bg-blue-100 text-xs font-medium text-blue-600">
-                    {{ row.headTeacher.teacherName.charAt(0) }}
+                    {{ (row.headTeacherName || row.teacherName).charAt(0) }}
                   </div>
-                  <span class="text-sm text-gray-900">{{ row.headTeacher.teacherName }}</span>
+                  <span class="text-sm text-gray-900">{{ row.headTeacherName || row.teacherName }}</span>
                 </div>
                 <span v-else class="text-sm text-gray-400">未分配</span>
               </td>
@@ -337,8 +340,8 @@
     <Teleport to="body">
       <Transition name="modal">
         <div v-if="detailDialogVisible" class="fixed inset-0 z-50 flex items-center justify-center p-4">
-          <div class="fixed inset-0 bg-black/40" @click="handleDetailClose" />
-          <div class="relative z-10 w-full max-w-3xl max-h-[90vh] overflow-hidden rounded-lg bg-white shadow-xl">
+          <div class="absolute inset-0 bg-black/50" @click="handleDetailClose" />
+          <div class="relative w-full max-w-3xl max-h-[90vh] overflow-hidden rounded-lg bg-white shadow-xl">
             <div class="flex items-center justify-between border-b px-6 py-4">
               <h2 class="text-lg font-semibold text-gray-900">班级详情</h2>
               <button class="rounded p-1.5 text-gray-400 hover:bg-gray-100 hover:text-gray-600" @click="handleDetailClose">
@@ -357,8 +360,8 @@
     <Teleport to="body">
       <Transition name="modal">
         <div v-if="editDialogVisible" class="fixed inset-0 z-50 flex items-center justify-center p-4">
-          <div class="fixed inset-0 bg-black/40" @click="handleEditClose" />
-          <div class="relative z-10 w-full max-w-2xl max-h-[90vh] overflow-hidden rounded-lg bg-white shadow-xl">
+          <div class="absolute inset-0 bg-black/50" @click="handleEditClose" />
+          <div class="relative w-full max-w-2xl max-h-[90vh] overflow-hidden rounded-lg bg-white shadow-xl">
             <div class="flex items-center justify-between border-b px-6 py-4">
               <h2 class="text-lg font-semibold text-gray-900">{{ editMode === 'add' ? '新增班级' : '编辑班级' }}</h2>
               <button class="rounded p-1.5 text-gray-400 hover:bg-gray-100 hover:text-gray-600" @click="handleEditClose">
@@ -377,8 +380,8 @@
     <Teleport to="body">
       <Transition name="modal">
         <div v-if="teacherDialogVisible" class="fixed inset-0 z-50 flex items-center justify-center p-4">
-          <div class="fixed inset-0 bg-black/40" @click="handleTeacherClose" />
-          <div class="relative z-10 w-full max-w-md rounded-lg bg-white p-6 shadow-xl">
+          <div class="absolute inset-0 bg-black/50" @click="handleTeacherClose" />
+          <div class="relative w-full max-w-md rounded-lg bg-white p-6 shadow-xl">
             <div class="mb-6 flex items-center justify-between">
               <h2 class="text-lg font-semibold text-gray-900">设置班主任</h2>
               <button class="rounded p-1.5 text-gray-400 hover:bg-gray-100 hover:text-gray-600" @click="handleTeacherClose">
@@ -431,9 +434,8 @@
     <!-- 宿舍管理弹窗 -->
     <ClassDormitoryAssignmentDialog
       v-model:visible="dormitoryDialogVisible"
-      :class-id="currentClassId || 0"
-      :class-name="currentClassName"
       :department-id="currentDepartmentId || 0"
+      :department-name="currentDepartmentName"
       @success="loadClassList"
     />
   </div>
@@ -463,7 +465,7 @@ import {
   Building
 } from 'lucide-vue-next'
 import { useAuthStore } from '@/stores/auth'
-import { getClasses, deleteClass, assignHeadTeacher, getOrgUnitTree, batchDeleteClasses } from '@/api/v2/organization'
+import { getClasses, deleteClass, assignHeadTeacher, getOrgUnitTree, batchDeleteClasses, getAllGrades, type Grade } from '@/api/v2/organization'
 import { getAllUsers } from '@/api/v2/user'
 import { exportClasses, getClassDormitories, addDormitory, removeDormitory, getDormitoryList } from '@/api/v2/organization'
 import type { ClassDormitoryInfo } from '@/api/v2/organization'
@@ -557,6 +559,7 @@ const editMode = ref<'add' | 'edit'>('add')
 const currentClassId = ref<number | null>(null)
 const currentClassName = ref('')
 const currentDepartmentId = ref<number | null>(null)
+const currentDepartmentName = ref('')
 const submitting = ref(false)
 
 // 设置班主任表单
@@ -821,7 +824,7 @@ const handleEditClose = () => {
 const handleSetTeacher = async (row: SchoolClass) => {
   currentClassId.value = row.id
   currentClassName.value = row.className
-  teacherForm.teacherId = row.headTeacher?.teacherId || null
+  teacherForm.teacherId = row.headTeacherId || row.teacherId || null
   await loadTeacherList()
   teacherDialogVisible.value = true
 }
@@ -869,6 +872,7 @@ const handleManageDormitory = (row: SchoolClass) => {
   currentClassId.value = row.id
   currentClassName.value = row.className
   currentDepartmentId.value = row.orgUnitId || null
+  currentDepartmentName.value = row.orgUnitName || '未知部门'
   dormitoryDialogVisible.value = true
 }
 

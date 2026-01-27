@@ -192,7 +192,7 @@
                       INNER JOIN dept_tree dt ON d.parent_id = dt.id
                       WHERE d.deleted = 0
                   )
-                  SELECT 1 FROM dept_tree WHERE id = c.department_id
+                  SELECT 1 FROM dept_tree WHERE id = c.org_unit_id
               )
           )
     </select>

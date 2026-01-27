@@ -68,9 +68,9 @@ public class UserPO {
     private String idCard;
 
     /**
-     * 部门ID
+     * 组织单元ID
      */
-    private Long departmentId;
+    private Long orgUnitId;
 
     /**
      * 班级ID
@@ -148,8 +148,8 @@ public class UserPO {
     // ==================== 关联字段（非数据库字段） ====================
 
     /**
-     * 部门名称（JOIN 查询时使用）
+     * 组织单元名称（JOIN 查询时使用）
      */
     @TableField(exist = false)
-    private String departmentName;
+    private String orgUnitName;
 }

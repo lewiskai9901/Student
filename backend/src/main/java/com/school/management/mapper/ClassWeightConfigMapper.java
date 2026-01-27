@@ -45,14 +45,14 @@ public interface ClassWeightConfigMapper extends BaseMapper<ClassWeightConfig> {
      *
      * @param classId 班级ID
      * @param gradeId 年级ID
-     * @param departmentId 部门ID
+     * @param orgUnitId 组织单元ID
      * @param currentDate 当前日期
      * @return 配置
      */
     ClassWeightConfig selectConfigForClass(
             @Param("classId") Long classId,
             @Param("gradeId") Long gradeId,
-            @Param("departmentId") Long departmentId,
+            @Param("orgUnitId") Long orgUnitId,
             @Param("currentDate") LocalDate currentDate
     );
 

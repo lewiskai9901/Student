@@ -24,9 +24,9 @@ public class BuildingDepartmentAssignment extends BaseEntity {
     private Long buildingId;
 
     /**
-     * 院系ID
+     * 组织单元ID
      */
-    private Long departmentId;
+    private Long orgUnitId;
 
     /**
      * 起始楼层(NULL表示全楼)
@@ -72,10 +72,10 @@ public class BuildingDepartmentAssignment extends BaseEntity {
     private String buildingName;
 
     /**
-     * 院系名称
+     * 组织单元名称
      */
     @TableField(exist = false)
-    private String departmentName;
+    private String orgUnitName;
 
     /**
      * 楼层范围描述

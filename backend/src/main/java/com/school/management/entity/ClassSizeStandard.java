@@ -29,7 +29,7 @@ public class ClassSizeStandard {
     /**
      * 院系ID
      */
-    private Long departmentId;
+    private Long orgUnitId;
 
     /**
      * 年级等级
@@ -117,7 +117,7 @@ public class ClassSizeStandard {
      * 院系名称
      */
     @TableField(exist = false)
-    private String departmentName;
+    private String orgUnitName;
 
     /**
      * 年级名称

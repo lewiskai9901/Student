@@ -2,7 +2,7 @@ package com.school.management.entity;
 
 import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableName;
-import com.school.management.enums.ScopeType;
+import com.school.management.casbin.enums.ScopeType;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
@@ -18,7 +18,10 @@ import lombok.Builder;
  * @author system
  * @version 3.0.0
  * @since 2024-01-01
+ * @deprecated 用户级数据范围已废弃，请使用角色级数据权限配置
+ *             迁移说明：数据权限现在通过 role_data_permissions 和 role_custom_scope 表在角色级别配置
  */
+@Deprecated(since = "4.0.0", forRemoval = true)
 @Data
 @Builder
 @NoArgsConstructor

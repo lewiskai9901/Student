@@ -526,7 +526,7 @@ public class QuickEntryServiceImpl implements QuickEntryService {
                 }
             } else if (target.getTargetType() == 3) {
                 // 院系
-                List<com.school.management.dto.ClassResponse> deptClasses = classMapper.selectByDepartmentId(target.getTargetId());
+                List<com.school.management.dto.ClassResponse> deptClasses = classMapper.selectByOrgUnitId(target.getTargetId());
                 for (com.school.management.dto.ClassResponse cls : deptClasses) {
                     classIds.add(cls.getId());
                 }

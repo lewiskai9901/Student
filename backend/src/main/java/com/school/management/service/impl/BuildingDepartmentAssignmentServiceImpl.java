@@ -41,9 +41,9 @@ public class BuildingDepartmentAssignmentServiceImpl implements BuildingDepartme
 
     @Override
     public IPage<BuildingDepartmentAssignment> page(Integer pageNum, Integer pageSize,
-                                                     Long buildingId, Long departmentId, Integer status) {
+                                                     Long buildingId, Long orgUnitId, Integer status) {
         Page<BuildingDepartmentAssignment> page = new Page<>(pageNum, pageSize);
-        return assignmentMapper.selectAssignmentPageWithDetails(page, buildingId, departmentId, status);
+        return assignmentMapper.selectAssignmentPageWithDetails(page, buildingId, orgUnitId, status);
     }
 
     @Override
@@ -67,16 +67,16 @@ public class BuildingDepartmentAssignmentServiceImpl implements BuildingDepartme
             throw new BusinessException("宿舍楼不存在");
         }
 
-        // 3. 验证院系是否存在
-        Department department = departmentMapper.selectById(request.getDepartmentId());
+        // 3. 验证组织单元是否存在
+        Department department = departmentMapper.selectById(request.getOrgUnitId());
         if (department == null || department.getDeleted() == 1) {
-            throw new BusinessException("院系不存在");
+            throw new BusinessException("组织单元不存在");
         }
 
-        // 4. 检查楼层冲突（同一宿舍楼的同一院系，楼层范围不能重叠）
-        if (hasFloorConflict(request.getBuildingId(), request.getDepartmentId(),
+        // 4. 检查楼层冲突（同一宿舍楼的同一组织单元，楼层范围不能重叠）
+        if (hasFloorConflict(request.getBuildingId(), request.getOrgUnitId(),
                 request.getFloorStart(), request.getFloorEnd(), null)) {
-            throw new BusinessException("该院系在此宿舍楼的楼层范围已存在分配，请检查楼层范围");
+            throw new BusinessException("该组织单元在此宿舍楼的楼层范围已存在分配，请检查楼层范围");
         }
 
         // 5. 创建分配记录
@@ -93,8 +93,8 @@ public class BuildingDepartmentAssignmentServiceImpl implements BuildingDepartme
         assignment.setUpdatedBy(currentUserId);
 
         assignmentMapper.insert(assignment);
-        log.info("创建宿舍楼-院系分配成功: buildingId={}, departmentId={}, id={}",
-                request.getBuildingId(), request.getDepartmentId(), assignment.getId());
+        log.info("创建宿舍楼-组织单元分配成功: buildingId={}, orgUnitId={}, id={}",
+                request.getBuildingId(), request.getOrgUnitId(), assignment.getId());
 
         return assignment;
     }
@@ -112,9 +112,9 @@ public class BuildingDepartmentAssignmentServiceImpl implements BuildingDepartme
         Integer floorStart = request.getFloorStart() != null ? request.getFloorStart() : existing.getFloorStart();
         Integer floorEnd = request.getFloorEnd() != null ? request.getFloorEnd() : existing.getFloorEnd();
 
-        if (hasFloorConflict(existing.getBuildingId(), existing.getDepartmentId(),
+        if (hasFloorConflict(existing.getBuildingId(), existing.getOrgUnitId(),
                 floorStart, floorEnd, request.getId())) {
-            throw new BusinessException("该院系在此宿舍楼的楼层范围与其他分配冲突");
+            throw new BusinessException("该组织单元在此宿舍楼的楼层范围与其他分配冲突");
         }
 
         // 4. 更新记录
@@ -177,8 +177,8 @@ public class BuildingDepartmentAssignmentServiceImpl implements BuildingDepartme
     }
 
     @Override
-    public List<BuildingDepartmentAssignment> getByDepartmentId(Long departmentId) {
-        return assignmentMapper.selectByDepartmentId(departmentId);
+    public List<BuildingDepartmentAssignment> getByOrgUnitId(Long orgUnitId) {
+        return assignmentMapper.selectByOrgUnitId(orgUnitId);
     }
 
     @Override
@@ -187,10 +187,10 @@ public class BuildingDepartmentAssignmentServiceImpl implements BuildingDepartme
     }
 
     @Override
-    public boolean hasFloorConflict(Long buildingId, Long departmentId,
+    public boolean hasFloorConflict(Long buildingId, Long orgUnitId,
                                     Integer floorStart, Integer floorEnd, Long excludeId) {
         int conflictCount = assignmentMapper.checkFloorConflict(
-                buildingId, departmentId, floorStart, floorEnd, excludeId);
+                buildingId, orgUnitId, floorStart, floorEnd, excludeId);
         return conflictCount > 0;
     }
 

@@ -59,9 +59,9 @@ public class CreateUserCommand {
     private String idCard;
 
     /**
-     * 部门ID
+     * 组织单元ID
      */
-    private Long departmentId;
+    private Long orgUnitId;
 
     /**
      * 用户类型: 1管理员 2教师 3学生

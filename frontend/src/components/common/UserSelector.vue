@@ -5,7 +5,7 @@
       <div class="w-1/3 border border-gray-200 rounded-lg bg-white">
         <div class="p-3 border-b border-gray-200">
           <input
-            v-model="departmentSearch"
+            v-model="orgUnitSearch"
             type="text"
             placeholder="搜索部门..."
             class="w-full h-8 px-3 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500"
@@ -19,7 +19,7 @@
           >
             <DepartmentTreeNode
               :department="dept"
-              :selected-id="selectedDepartmentId"
+              :selected-id="selectedOrgUnitId"
               :expanded-ids="expandedDeptIds"
               @select="selectDepartment"
               @toggle="toggleDepartment"
@@ -40,7 +40,7 @@
             placeholder="搜索用户..."
             class="flex-1 h-8 px-3 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500"
           />
-          <label v-if="selectedDepartmentId" class="flex items-center gap-1 text-sm text-gray-600">
+          <label v-if="selectedOrgUnitId" class="flex items-center gap-1 text-sm text-gray-600">
             <input
               v-model="includeChildren"
               type="checkbox"
@@ -55,7 +55,7 @@
           </div>
           <div v-else-if="userList.length === 0" class="flex items-center justify-center h-full">
             <span class="text-sm text-gray-400">
-              {{ selectedDepartmentId ? '该部门暂无用户' : '请先选择部门' }}
+              {{ selectedOrgUnitId ? '该部门暂无用户' : '请先选择部门' }}
             </span>
           </div>
           <div v-else class="divide-y divide-gray-100">
@@ -83,7 +83,7 @@
               />
               <div class="ml-3 flex-1">
                 <span class="text-sm font-medium text-gray-900">{{ user.realName }}</span>
-                <span class="ml-2 text-xs text-gray-500">{{ user.departmentName || '未分配部门' }}</span>
+                <span class="ml-2 text-xs text-gray-500">{{ user.orgUnitName || '未分配部门' }}</span>
               </div>
             </label>
           </div>
@@ -130,13 +130,13 @@
 <script setup lang="ts">
 import { ref, computed, watch, onMounted } from 'vue'
 import { getDepartmentTree, type DepartmentResponse } from '@/api/v2/organization'
-import { getUsersByDepartment, getUsersWithDepartments, type User } from '@/api/v2/user'
+import { getUsersByOrgUnit, getUsersWithDepartments, type User } from '@/api/v2/user'
 import DepartmentTreeNode from './DepartmentTreeNode.vue'
 
 interface SelectedUser {
   id: string | number
   realName: string
-  departmentName?: string
+  orgUnitName?: string
 }
 
 const props = withDefaults(defineProps<{
@@ -157,8 +157,8 @@ const emit = defineEmits<{
 
 // 部门相关
 const departments = ref<DepartmentResponse[]>([])
-const departmentSearch = ref('')
-const selectedDepartmentId = ref<number | string | null>(null)
+const orgUnitSearch = ref('')
+const selectedOrgUnitId = ref<number | string | null>(null)
 const expandedDeptIds = ref<Set<number | string>>(new Set())
 const includeChildren = ref(false)
 
@@ -170,10 +170,10 @@ const loading = ref(false)
 
 // 过滤后的部门列表
 const filteredDepartments = computed(() => {
-  if (!departmentSearch.value) {
+  if (!orgUnitSearch.value) {
     return departments.value
   }
-  const keyword = departmentSearch.value.toLowerCase()
+  const keyword = orgUnitSearch.value.toLowerCase()
   return filterDepartments(departments.value, keyword)
 })
 
@@ -181,7 +181,9 @@ const filteredDepartments = computed(() => {
 function filterDepartments(depts: DepartmentResponse[], keyword: string): DepartmentResponse[] {
   const result: DepartmentResponse[] = []
   for (const dept of depts) {
-    const nameMatch = dept.deptName.toLowerCase().includes(keyword)
+    // 兼容 unitName 和 deptName 字段
+    const deptName = dept.unitName || dept.deptName || ''
+    const nameMatch = deptName.toLowerCase().includes(keyword)
     const filteredChildren = dept.children ? filterDepartments(dept.children, keyword) : []
 
     if (nameMatch || filteredChildren.length > 0) {
@@ -210,9 +212,9 @@ async function loadDepartments() {
 async function loadUsers() {
   loading.value = true
   try {
-    if (selectedDepartmentId.value) {
-      const data = await getUsersByDepartment(
-        selectedDepartmentId.value,
+    if (selectedOrgUnitId.value) {
+      const data = await getUsersByOrgUnit(
+        selectedOrgUnitId.value,
         includeChildren.value,
         userSearch.value || undefined
       )
@@ -241,7 +243,7 @@ function filterExcluded(users: User[]): User[] {
 
 // 选择部门
 function selectDepartment(deptId: number | string) {
-  selectedDepartmentId.value = deptId
+  selectedOrgUnitId.value = deptId
 }
 
 // 切换部门展开状态
@@ -263,7 +265,7 @@ function selectUser(user: User) {
   selectedUsers.value = [{
     id: user.id,
     realName: user.realName,
-    departmentName: user.departmentName
+    orgUnitName: user.orgUnitName
   }]
   emitChange()
 }
@@ -280,7 +282,7 @@ function toggleUser(user: User) {
     selectedUsers.value.push({
       id: user.id,
       realName: user.realName,
-      departmentName: user.departmentName
+      orgUnitName: user.orgUnitName
     })
   }
   emitChange()
@@ -312,7 +314,7 @@ function emitChange() {
 }
 
 // 监听部门选择变化
-watch([selectedDepartmentId, includeChildren], () => {
+watch([selectedOrgUnitId, includeChildren], () => {
   loadUsers()
 })
 

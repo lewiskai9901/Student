@@ -37,8 +37,8 @@ public class UserUpdateRequest {
     @Schema(description = "用户状态: 1-启用 0-禁用", example = "1")
     private Integer status;
 
-    @Schema(description = "部门ID")
-    private Long departmentId;
+    @Schema(description = "组织单元ID")
+    private Long orgUnitId;
 
     @Schema(description = "班级ID")
     private Long classId;

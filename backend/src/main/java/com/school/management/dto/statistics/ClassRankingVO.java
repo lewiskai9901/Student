@@ -38,14 +38,14 @@ public class ClassRankingVO {
     private String gradeName;
 
     /**
-     * 部门ID
+     * 组织单元ID
      */
-    private Long departmentId;
+    private Long orgUnitId;
 
     /**
-     * 部门名称
+     * 组织单元名称
      */
-    private String departmentName;
+    private String orgUnitName;
 
     /**
      * 班主任ID

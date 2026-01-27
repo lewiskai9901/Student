@@ -46,9 +46,9 @@ public class TaskQueryRequest {
     private Long assigneeId;
 
     /**
-     * 部门ID
+     * 组织单元ID
      */
-    private Long departmentId;
+    private Long orgUnitId;
 
     /**
      * 创建时间-开始

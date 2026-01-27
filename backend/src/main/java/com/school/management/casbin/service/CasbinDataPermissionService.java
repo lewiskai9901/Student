@@ -1,7 +1,7 @@
 package com.school.management.casbin.service;
 
 import com.school.management.casbin.dto.ScopeAssignmentDTO;
-import com.school.management.domain.access.model.DataScope;
+import com.school.management.casbin.model.DataScope;
 import com.school.management.entity.Student;
 import com.school.management.mapper.StudentMapper;
 import com.school.management.security.CustomUserDetails;
@@ -114,8 +114,8 @@ public class CasbinDataPermissionService implements DataPermissionService {
 
         if (scopes == null || scopes.isEmpty()) {
             // 没有配置数据范围,返回用户所属部门
-            if (userDetails.getDepartmentId() != null) {
-                return Collections.singletonList(userDetails.getDepartmentId());
+            if (userDetails.getOrgUnitId() != null) {
+                return Collections.singletonList(userDetails.getOrgUnitId());
             }
             return Collections.emptyList();
         }
@@ -152,8 +152,8 @@ public class CasbinDataPermissionService implements DataPermissionService {
         }
 
         if (deptIds.isEmpty()) {
-            if (userDetails.getDepartmentId() != null) {
-                return Collections.singletonList(userDetails.getDepartmentId());
+            if (userDetails.getOrgUnitId() != null) {
+                return Collections.singletonList(userDetails.getOrgUnitId());
             }
             return Collections.emptyList();
         }

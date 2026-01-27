@@ -32,18 +32,18 @@ public class BuildingDepartmentServiceImpl implements BuildingDepartmentService 
     }
 
     @Override
-    public List<Long> getDepartmentIdsByBuildingId(Long buildingId) {
-        return buildingDepartmentMapper.selectDepartmentIdsByBuildingId(buildingId);
+    public List<Long> getOrgUnitIdsByBuildingId(Long buildingId) {
+        return buildingDepartmentMapper.selectOrgUnitIdsByBuildingId(buildingId);
     }
 
     @Override
     @Transactional(rollbackFor = Exception.class)
-    public void assignDepartments(Long buildingId, List<Long> departmentIds) {
-        // 如果部门列表为空或null，清空所有关联
-        if (departmentIds == null || departmentIds.isEmpty()) {
+    public void assignOrgUnits(Long buildingId, List<Long> orgUnitIds) {
+        // 如果组织单元列表为空或null，清空所有关联
+        if (orgUnitIds == null || orgUnitIds.isEmpty()) {
             buildingDepartmentMapper.delete(new QueryWrapper<BuildingDepartment>()
                 .eq("building_id", buildingId));
-            log.info("清空楼宇 {} 的所有部门关联", buildingId);
+            log.info("清空楼宇 {} 的所有组织单元关联", buildingId);
             return;
         }
 
@@ -53,24 +53,24 @@ public class BuildingDepartmentServiceImpl implements BuildingDepartmentService 
 
         // 批量插入新关联
         Long currentUserId = SecurityUtils.getCurrentUserId();
-        for (Long deptId : departmentIds) {
+        for (Long orgUnitId : orgUnitIds) {
             BuildingDepartment bd = new BuildingDepartment();
             bd.setBuildingId(buildingId);
-            bd.setDepartmentId(deptId);
+            bd.setOrgUnitId(orgUnitId);
             bd.setCreatedBy(currentUserId);
             buildingDepartmentMapper.insert(bd);
         }
 
-        log.info("为楼宇 {} 分配了 {} 个部门", buildingId, departmentIds.size());
+        log.info("为楼宇 {} 分配了 {} 个组织单元", buildingId, orgUnitIds.size());
     }
 
     @Override
     @Transactional(rollbackFor = Exception.class)
-    public void removeDepartment(Long buildingId, Long departmentId) {
+    public void removeOrgUnit(Long buildingId, Long orgUnitId) {
         buildingDepartmentMapper.delete(new QueryWrapper<BuildingDepartment>()
             .eq("building_id", buildingId)
-            .eq("department_id", departmentId));
+            .eq("org_unit_id", orgUnitId));
 
-        log.info("移除楼宇 {} 的部门 {}", buildingId, departmentId);
+        log.info("移除楼宇 {} 的组织单元 {}", buildingId, orgUnitId);
     }
 }

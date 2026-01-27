@@ -2,6 +2,7 @@ package com.school.management.domain.organization.repository;
 
 import com.school.management.domain.organization.model.OrgUnit;
 import com.school.management.domain.organization.model.OrgUnitType;
+import com.school.management.domain.organization.model.UnitCategory;
 import com.school.management.domain.shared.Repository;
 
 import java.util.List;
@@ -28,6 +29,14 @@ public interface OrgUnitRepository extends Repository<OrgUnit, Long> {
      * @return list of matching org units
      */
     List<OrgUnit> findByUnitType(OrgUnitType unitType);
+
+    /**
+     * Finds all organization units by category.
+     *
+     * @param unitCategory the category to filter by (ACADEMIC, FUNCTIONAL, ADMINISTRATIVE)
+     * @return list of matching org units
+     */
+    List<OrgUnit> findByUnitCategory(UnitCategory unitCategory);
 
     /**
      * Finds all children of a parent organization unit.

@@ -25,7 +25,7 @@ public interface MajorDirectionPersistenceMapper extends BaseMapper<MajorDirecti
     @Select("SELECT COUNT(*) FROM major_directions WHERE major_id = #{majorId} AND deleted = 0")
     int countByMajorId(@Param("majorId") Long majorId);
 
-    @Select("SELECT m.department_id FROM major_directions md " +
+    @Select("SELECT m.org_unit_id FROM major_directions md " +
             "JOIN majors m ON md.major_id = m.id " +
             "WHERE md.id = #{directionId} AND md.deleted = 0 AND m.deleted = 0")
     Long findOrgUnitIdByDirectionId(@Param("directionId") Long directionId);

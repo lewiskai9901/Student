@@ -683,7 +683,7 @@ public class EvaluationCalculationServiceImpl implements EvaluationCalculationSe
                 com.school.management.entity.Class clazz = classMapper.selectById(student.getClassId());
                 if (clazz != null) {
                     result.setClassName(clazz.getClassName());
-                    result.setDepartmentId(clazz.getDepartmentId());
+                    result.setOrgUnitId(clazz.getOrgUnitId());
                 }
             }
         }

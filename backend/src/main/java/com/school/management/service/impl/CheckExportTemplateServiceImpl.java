@@ -225,10 +225,10 @@ public class CheckExportTemplateServiceImpl implements CheckExportTemplateServic
 
         // 按部门统计
         Set<Long> departments = records.stream()
-                .map(ExportPreviewDTO.StudentRecordDTO::getDepartmentId)
+                .map(ExportPreviewDTO.StudentRecordDTO::getOrgUnitId)
                 .filter(Objects::nonNull)
                 .collect(Collectors.toSet());
-        preview.setDepartmentCount(departments.size());
+        preview.setOrgUnitCount(departments.size());
 
         // 班级统计列表
         List<ExportPreviewDTO.ClassStatDTO> classStats = new ArrayList<>();
@@ -237,8 +237,8 @@ public class CheckExportTemplateServiceImpl implements CheckExportTemplateServic
             ExportPreviewDTO.ClassStatDTO stat = new ExportPreviewDTO.ClassStatDTO();
             stat.setClassId(classId);
             stat.setClassName(first.getClassName());
-            stat.setDepartmentId(first.getDepartmentId());
-            stat.setDepartmentName(first.getDepartmentName());
+            stat.setOrgUnitId(first.getOrgUnitId());
+            stat.setOrgUnitName(first.getOrgUnitName());
             stat.setGradeId(first.getGradeId());
             stat.setGradeName(first.getGradeName());
             stat.setStudentCount(classRecords.size());
@@ -246,13 +246,13 @@ public class CheckExportTemplateServiceImpl implements CheckExportTemplateServic
         });
         // 按部门、年级、班级排序
         classStats.sort(Comparator
-                .comparing(ExportPreviewDTO.ClassStatDTO::getDepartmentName, Comparator.nullsLast(String::compareTo))
+                .comparing(ExportPreviewDTO.ClassStatDTO::getOrgUnitName, Comparator.nullsLast(String::compareTo))
                 .thenComparing(ExportPreviewDTO.ClassStatDTO::getGradeName, Comparator.nullsLast(Comparator.reverseOrder()))
                 .thenComparing(ExportPreviewDTO.ClassStatDTO::getClassName, Comparator.nullsLast(String::compareTo)));
         preview.setClassStats(classStats);
 
         // 分组数据
-        List<ExportPreviewDTO.DepartmentGroupDTO> groupedData = groupRecords(records);
+        List<ExportPreviewDTO.OrgUnitGroupDTO> groupedData = groupRecords(records);
         preview.setGroupedData(groupedData);
 
         // 渲染HTML预览（支持多表格）
@@ -453,18 +453,18 @@ public class CheckExportTemplateServiceImpl implements CheckExportTemplateServic
             classMapper.selectBatchIds(classIds).forEach(c -> classMap.put(c.getId(), c));
         }
 
-        // 收集部门和年级ID
-        Set<Long> departmentIds = new HashSet<>();
+        // 收集组织单元和年级ID
+        Set<Long> orgUnitIds = new HashSet<>();
         Set<Long> gradeIds = new HashSet<>();
         classMap.values().forEach(c -> {
-            if (c.getDepartmentId() != null) departmentIds.add(c.getDepartmentId());
+            if (c.getOrgUnitId() != null) orgUnitIds.add(c.getOrgUnitId());
             if (c.getGradeId() != null) gradeIds.add(c.getGradeId());
         });
 
-        // 查询部门信息
+        // 查询组织单元信息
         Map<Long, Department> departmentMap = new HashMap<>();
-        if (!departmentIds.isEmpty()) {
-            departmentMapper.selectBatchIds(departmentIds).forEach(d -> departmentMap.put(d.getId(), d));
+        if (!orgUnitIds.isEmpty()) {
+            departmentMapper.selectBatchIds(orgUnitIds).forEach(d -> departmentMap.put(d.getId(), d));
         }
 
         // 查询年级信息
@@ -504,7 +504,7 @@ public class CheckExportTemplateServiceImpl implements CheckExportTemplateServic
 
         for (DailyCheckDetail detail : details) {
             com.school.management.entity.Class classInfo = classMap.get(detail.getClassId());
-            Department dept = classInfo != null ? departmentMap.get(classInfo.getDepartmentId()) : null;
+            Department dept = classInfo != null ? departmentMap.get(classInfo.getOrgUnitId()) : null;
             Grade grade = classInfo != null ? gradeMap.get(classInfo.getGradeId()) : null;
 
             // 判断扣分模式：1=固定扣分, 2=按人数扣分, 3=区间扣分
@@ -572,8 +572,8 @@ public class CheckExportTemplateServiceImpl implements CheckExportTemplateServic
                     // 班级/年级/部门信息
                     record.setClassId(detail.getClassId());
                     record.setClassName(classInfo != null ? classInfo.getClassName() : "");
-                    record.setDepartmentId(classInfo != null ? classInfo.getDepartmentId() : null);
-                    record.setDepartmentName(dept != null ? dept.getDeptName() : "");
+                    record.setOrgUnitId(classInfo != null ? classInfo.getOrgUnitId() : null);
+                    record.setOrgUnitName(dept != null ? dept.getDeptName() : "");
                     record.setGradeId(classInfo != null ? classInfo.getGradeId() : null);
                     record.setGradeName(grade != null ? grade.getGradeName() : "");
                     record.setHeadTeacher(classInfo != null ? classInfo.getTeacherName() : "");
@@ -620,8 +620,8 @@ public class CheckExportTemplateServiceImpl implements CheckExportTemplateServic
                 // 班级/年级/部门信息
                 record.setClassId(detail.getClassId());
                 record.setClassName(classInfo != null ? classInfo.getClassName() : "");
-                record.setDepartmentId(classInfo != null ? classInfo.getDepartmentId() : null);
-                record.setDepartmentName(dept != null ? dept.getDeptName() : "");
+                record.setOrgUnitId(classInfo != null ? classInfo.getOrgUnitId() : null);
+                record.setOrgUnitName(dept != null ? dept.getDeptName() : "");
                 record.setGradeId(classInfo != null ? classInfo.getGradeId() : null);
                 record.setGradeName(grade != null ? grade.getGradeName() : "");
                 record.setHeadTeacher(classInfo != null ? classInfo.getTeacherName() : "");
@@ -704,7 +704,7 @@ public class CheckExportTemplateServiceImpl implements CheckExportTemplateServic
 
         // 排序
         records.sort(Comparator
-                .comparing(ExportPreviewDTO.StudentRecordDTO::getDepartmentName, Comparator.nullsLast(String::compareTo))
+                .comparing(ExportPreviewDTO.StudentRecordDTO::getOrgUnitName, Comparator.nullsLast(String::compareTo))
                 .thenComparing(ExportPreviewDTO.StudentRecordDTO::getGradeName, Comparator.nullsLast(Comparator.reverseOrder()))
                 .thenComparing(ExportPreviewDTO.StudentRecordDTO::getClassName, Comparator.nullsLast(String::compareTo))
                 .thenComparing(ExportPreviewDTO.StudentRecordDTO::getStudentNo, Comparator.nullsLast(String::compareTo)));
@@ -715,19 +715,19 @@ public class CheckExportTemplateServiceImpl implements CheckExportTemplateServic
     /**
      * 按部门→年级→班级分组
      */
-    private List<ExportPreviewDTO.DepartmentGroupDTO> groupRecords(List<ExportPreviewDTO.StudentRecordDTO> records) {
-        Map<Long, ExportPreviewDTO.DepartmentGroupDTO> deptMap = new LinkedHashMap<>();
+    private List<ExportPreviewDTO.OrgUnitGroupDTO> groupRecords(List<ExportPreviewDTO.StudentRecordDTO> records) {
+        Map<Long, ExportPreviewDTO.OrgUnitGroupDTO> deptMap = new LinkedHashMap<>();
 
         for (ExportPreviewDTO.StudentRecordDTO record : records) {
-            Long deptId = record.getDepartmentId() != null ? record.getDepartmentId() : 0L;
+            Long deptId = record.getOrgUnitId() != null ? record.getOrgUnitId() : 0L;
             Long gradeId = record.getGradeId() != null ? record.getGradeId() : 0L;
             Long classId = record.getClassId() != null ? record.getClassId() : 0L;
 
             // 获取或创建部门分组
-            ExportPreviewDTO.DepartmentGroupDTO deptGroup = deptMap.computeIfAbsent(deptId, id -> {
-                ExportPreviewDTO.DepartmentGroupDTO g = new ExportPreviewDTO.DepartmentGroupDTO();
-                g.setDepartmentId(id);
-                g.setDepartmentName(record.getDepartmentName());
+            ExportPreviewDTO.OrgUnitGroupDTO deptGroup = deptMap.computeIfAbsent(deptId, id -> {
+                ExportPreviewDTO.OrgUnitGroupDTO g = new ExportPreviewDTO.OrgUnitGroupDTO();
+                g.setOrgUnitId(id);
+                g.setOrgUnitName(record.getOrgUnitName());
                 g.setTotalCount(0);
                 g.setGrades(new ArrayList<>());
                 return g;
@@ -956,8 +956,8 @@ public class CheckExportTemplateServiceImpl implements CheckExportTemplateServic
 
             for (ExportPreviewDTO.StudentRecordDTO record : records) {
                 // 部门分组头
-                if (Boolean.TRUE.equals(showDept) && !Objects.equals(currentDept, record.getDepartmentName())) {
-                    currentDept = record.getDepartmentName();
+                if (Boolean.TRUE.equals(showDept) && !Objects.equals(currentDept, record.getOrgUnitName())) {
+                    currentDept = record.getOrgUnitName();
                     currentGrade = null;
                     currentClass = null;
                     html.append("<tr><td colspan=\"").append(columns.size())
@@ -1310,7 +1310,7 @@ public class CheckExportTemplateServiceImpl implements CheckExportTemplateServic
             case "gender" -> record.getGender() != null ? record.getGender() : "";
             case "className" -> record.getClassName() != null ? record.getClassName() : "";
             case "gradeName" -> record.getGradeName() != null ? record.getGradeName() : "";
-            case "departmentName" -> record.getDepartmentName() != null ? record.getDepartmentName() : "";
+            case "orgUnitName" -> record.getOrgUnitName() != null ? record.getOrgUnitName() : "";
             case "headTeacher" -> record.getHeadTeacher() != null ? record.getHeadTeacher() : "";
             case "buildingName" -> record.getBuildingName() != null ? record.getBuildingName() : "";
             case "roomNo" -> record.getRoomNo() != null ? record.getRoomNo() : "";

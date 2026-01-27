@@ -36,12 +36,12 @@ public class StandardSizeDTO implements Serializable {
     /**
      * 部门ID
      */
-    private Long departmentId;
+    private Long orgUnitId;
 
     /**
      * 部门名称
      */
-    private String departmentName;
+    private String orgUnitName;
 
     /**
      * 年级级别(10=高一,11=高二,12=高三,null=全部年级)

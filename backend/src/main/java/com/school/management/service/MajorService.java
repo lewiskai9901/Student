@@ -19,9 +19,9 @@ public interface MajorService {
     IPage<Major> getMajorPage(MajorQueryRequest request);
 
     /**
-     * 根据部门ID查询专业列表
+     * 根据组织单元ID查询专业列表
      */
-    List<Major> getMajorsByDepartmentId(Long departmentId);
+    List<Major> getMajorsByOrgUnitId(Long orgUnitId);
 
     /**
      * 查询所有启用的专业

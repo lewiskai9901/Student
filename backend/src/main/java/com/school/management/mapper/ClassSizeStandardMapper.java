@@ -21,13 +21,13 @@ public interface ClassSizeStandardMapper extends BaseMapper<ClassSizeStandard> {
      * 查询标准人数(按优先级: 学期+部门+年级 > 学期+部门 > 学期 > 系统默认)
      *
      * @param semesterId 学期ID
-     * @param departmentId 部门ID
+     * @param orgUnitId 组织单元ID
      * @param gradeLevel 年级级别
      * @return 标准人数
      */
     ClassSizeStandard selectStandardSize(
             @Param("semesterId") Long semesterId,
-            @Param("departmentId") Long departmentId,
+            @Param("orgUnitId") Long orgUnitId,
             @Param("gradeLevel") Integer gradeLevel
     );
 

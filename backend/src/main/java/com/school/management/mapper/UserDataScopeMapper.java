@@ -13,8 +13,11 @@ import java.util.List;
  *
  * @author system
  * @version 3.0.0
+ * @deprecated 用户级数据范围已废弃，请使用角色级数据权限配置
  */
+@Deprecated(since = "4.0.0", forRemoval = true)
 @Mapper
+@SuppressWarnings("deprecation")
 public interface UserDataScopeMapper extends BaseMapper<UserDataScope> {
 
     /**

@@ -137,7 +137,7 @@
             >
               <div class="flex-1 min-w-0">
                 <div class="font-medium truncate">{{ cls.className }}</div>
-                <div class="text-xs opacity-75 truncate">{{ cls.gradeName || cls.departmentName || '-' }}</div>
+                <div class="text-xs opacity-75 truncate">{{ cls.gradeName || cls.orgUnitName || '-' }}</div>
               </div>
               <span
                 v-if="cls.totalScore > 0"
@@ -730,7 +730,7 @@
                 </div>
                 <div class="min-w-0">
                   <div class="font-semibold text-slate-800 truncate">{{ item.className }}</div>
-                  <div class="text-xs text-slate-400 truncate">{{ item.gradeName || item.departmentName || '-' }}</div>
+                  <div class="text-xs text-slate-400 truncate">{{ item.gradeName || item.orgUnitName || '-' }}</div>
                 </div>
               </div>
 
@@ -1262,8 +1262,8 @@ const filterGrade = ref<string>('')
 const departmentOptions = computed(() => {
   const depts = new Map<string, string>()
   classList.value.forEach(cls => {
-    if (cls.departmentId && cls.departmentName) {
-      depts.set(String(cls.departmentId), cls.departmentName)
+    if (cls.orgUnitId && cls.orgUnitName) {
+      depts.set(String(cls.orgUnitId), cls.orgUnitName)
     }
   })
   return Array.from(depts.entries()).map(([value, label]) => ({ value, label }))
@@ -1285,7 +1285,7 @@ const filteredClassList = computed(() => {
   let filtered = classList.value
 
   if (filterDepartment.value) {
-    filtered = filtered.filter(cls => String(cls.departmentId) === filterDepartment.value)
+    filtered = filtered.filter(cls => String(cls.orgUnitId) === filterDepartment.value)
   }
 
   if (filterGrade.value) {

@@ -52,11 +52,11 @@ public class UserResponse {
     @Schema(description = "状态描述")
     private String statusName;
 
-    @Schema(description = "部门ID")
-    private Long departmentId;
+    @Schema(description = "组织单元ID")
+    private Long orgUnitId;
 
-    @Schema(description = "部门名称")
-    private String departmentName;
+    @Schema(description = "组织单元名称")
+    private String orgUnitName;
 
     @Schema(description = "班级ID")
     private Long classId;

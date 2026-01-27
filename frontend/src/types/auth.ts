@@ -14,6 +14,16 @@ export interface LoginResponse {
   userInfo: UserInfo
 }
 
+// 班级角色类型
+export type ClassRole = 'HEAD_TEACHER' | 'DEPUTY_HEAD_TEACHER' | 'SUBJECT_TEACHER' | 'COUNSELOR'
+
+// 分配的班级信息
+export interface AssignedClass {
+  id: number
+  className: string
+  role: ClassRole
+}
+
 export interface UserInfo {
   userId: string
   id?: number
@@ -28,14 +38,16 @@ export interface UserInfo {
   roles: string[]
   permissions: string[]
   lastLoginTime?: string
-  department?: {
-    departmentId: string
-    departmentName: string
+  orgUnit?: {
+    orgUnitId: string
+    orgUnitName: string
   }
   classInfo?: {
     classId: string
     className: string
   }
+  // 用户分配的班级列表（用于"我的班级"等功能的菜单权限控制）
+  assignedClasses?: AssignedClass[]
 }
 
 export interface RefreshTokenRequest {

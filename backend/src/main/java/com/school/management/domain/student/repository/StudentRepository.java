@@ -73,7 +73,7 @@ public interface StudentRepository extends Repository<Student, Long> {
     class StudentQueryCriteria {
         private String keyword;
         private Long classId;
-        private Long departmentId;
+        private Long orgUnitId;
         private Integer gradeLevel;
         private StudentStatus status;
         private Long dormitoryId;
@@ -82,8 +82,8 @@ public interface StudentRepository extends Repository<Student, Long> {
         public void setKeyword(String keyword) { this.keyword = keyword; }
         public Long getClassId() { return classId; }
         public void setClassId(Long classId) { this.classId = classId; }
-        public Long getDepartmentId() { return departmentId; }
-        public void setDepartmentId(Long departmentId) { this.departmentId = departmentId; }
+        public Long getOrgUnitId() { return orgUnitId; }
+        public void setOrgUnitId(Long orgUnitId) { this.orgUnitId = orgUnitId; }
         public Integer getGradeLevel() { return gradeLevel; }
         public void setGradeLevel(Integer gradeLevel) { this.gradeLevel = gradeLevel; }
         public StudentStatus getStatus() { return status; }

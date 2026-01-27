@@ -27,4 +27,10 @@ public interface RoleDataPermissionMapper extends BaseMapper<RoleDataPermission>
      * 根据角色ID查询所有数据权限配置
      */
     List<RoleDataPermission> selectByRoleId(@Param("roleId") Long roleId);
+    /**
+     * 根据角色ID物理删除数据权限配置（绕过逻辑删除）
+     */
+    @org.apache.ibatis.annotations.Delete("DELETE FROM role_data_permissions WHERE role_id = #{roleId}")
+    int physicalDeleteByRoleId(@Param("roleId") Long roleId);
+
 }

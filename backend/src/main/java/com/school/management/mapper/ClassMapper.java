@@ -48,12 +48,12 @@ public interface ClassMapper extends BaseMapper<Class> {
     Integer countByClassCode(@Param("classCode") String classCode, @Param("excludeId") Long excludeId);
 
     /**
-     * 根据部门ID查询班级列表
+     * 根据组织单元ID查询班级列表
      *
-     * @param departmentId 部门ID
+     * @param orgUnitId 组织单元ID
      * @return 班级列表
      */
-    List<ClassResponse> selectByDepartmentId(@Param("departmentId") Long departmentId);
+    List<ClassResponse> selectByOrgUnitId(@Param("orgUnitId") Long orgUnitId);
 
     /**
      * 根据班主任ID查询班级列表
@@ -140,12 +140,12 @@ public interface ClassMapper extends BaseMapper<Class> {
     // ==================== 数据权限相关查询 ====================
 
     /**
-     * 根据部门ID列表查询班级ID列表
+     * 根据组织单元ID列表查询班级ID列表
      *
-     * @param departmentIds 部门ID列表
+     * @param orgUnitIds 组织单元ID列表
      * @return 班级ID列表
      */
-    List<Long> selectIdsByDepartmentIds(@Param("departmentIds") List<Long> departmentIds);
+    List<Long> selectIdsByOrgUnitIds(@Param("orgUnitIds") List<Long> orgUnitIds);
 
     /**
      * 根据年级ID列表查询班级ID列表

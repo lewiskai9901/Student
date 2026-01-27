@@ -6,12 +6,13 @@
 export type PermissionType = 'MENU' | 'BUTTON' | 'API' | 'DATA'
 
 // 权限
+// 注意: id 和 parentId 为 string | number 类型，因为 Snowflake ID 超过 JavaScript 的 MAX_SAFE_INTEGER
 export interface Permission {
-  id: number
+  id: string | number
   permissionCode: string
   permissionName: string
   type: PermissionType
-  parentId: number | null
+  parentId: string | number | null
   path?: string
   icon?: string
   sortOrder: number
@@ -57,8 +58,9 @@ export type RoleType =
 export type DataScope = 'ALL' | 'DEPARTMENT_AND_BELOW' | 'DEPARTMENT' | 'CUSTOM' | 'SELF'
 
 // 角色
+// 注意: id 为 string | number 类型，因为 Snowflake ID 超过 JavaScript 的 MAX_SAFE_INTEGER
 export interface Role {
-  id: number
+  id: string | number
   roleCode: string
   roleName: string
   roleType: RoleType
@@ -66,7 +68,7 @@ export interface Role {
   level: number
   description?: string
   enabled: boolean
-  permissionIds: number[]
+  permissionIds: (string | number)[]
   permissions?: Permission[]
   createdAt: string
   updatedAt: string
@@ -185,6 +187,21 @@ export interface DataScopeOption {
   code: string
   name: string
   intCode: string
+  /** 是否已废弃 */
+  deprecated?: boolean
+}
+
+/**
+ * 自定义范围配置（多维度）
+ * 支持组织单元、年级、班级三个维度的独立选择
+ */
+export interface CustomScope {
+  /** 组织单元ID列表（部门/学院） */
+  orgUnitIds?: number[]
+  /** 年级ID列表 */
+  gradeIds?: number[]
+  /** 班级ID列表 */
+  classIds?: number[]
 }
 
 /**
@@ -193,6 +210,9 @@ export interface DataScopeOption {
 export interface ModulePermission {
   moduleCode: string
   scopeCode: string
+  /** 自定义范围配置（多维度） */
+  customScope?: CustomScope
+  /** @deprecated 使用 customScope.orgUnitIds 代替 */
   customOrgUnitIds?: number[]
 }
 
@@ -200,7 +220,7 @@ export interface ModulePermission {
  * 角色数据权限完整配置
  */
 export interface RolePermissionConfig {
-  roleId: number
+  roleId: string | number
   roleName: string
   modulePermissions: ModulePermission[]
 }

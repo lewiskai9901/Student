@@ -93,10 +93,10 @@ export function getUserByUsername(username: string): Promise<User> {
 }
 
 /**
- * 根据部门获取用户列表
+ * 根据组织单元获取用户列表
  */
-export function getUsersByDepartment(departmentId: number | string): Promise<User[]> {
-  return http.get<User[]>(`${USER_URL}/by-department/${departmentId}`)
+export function getUsersByOrgUnit(orgUnitId: number | string): Promise<User[]> {
+  return http.get<User[]>(`${USER_URL}/by-org-unit/${orgUnitId}`)
 }
 
 /**
@@ -196,7 +196,7 @@ export const userApi = {
   batchDelete: batchDeleteUsers,
   getById: getUser,
   getByUsername: getUserByUsername,
-  getByDepartment: getUsersByDepartment,
+  getByOrgUnit: getUsersByOrgUnit,
   checkUsernameExists,
 
   // 状态

@@ -25,10 +25,10 @@ public class BuildingDepartmentAssignmentCreateRequest implements Serializable {
     private Long buildingId;
 
     /**
-     * 院系ID
+     * 组织单元ID
      */
-    @NotNull(message = "院系ID不能为空")
-    private Long departmentId;
+    @NotNull(message = "组织单元ID不能为空")
+    private Long orgUnitId;
 
     /**
      * 起始楼层(null表示全楼)

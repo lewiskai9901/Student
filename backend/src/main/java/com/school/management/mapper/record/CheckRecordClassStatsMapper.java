@@ -41,15 +41,15 @@ public interface CheckRecordClassStatsMapper extends BaseMapper<CheckRecordClass
     );
 
     /**
-     * 按院系分组查询班级统计
+     * 按组织单元分组查询班级统计（原按院系）
      *
      * @param recordId 检查记录ID
-     * @param departmentId 院系ID
+     * @param orgUnitId 组织单元ID（原院系ID）
      * @return 班级统计列表
      */
-    List<CheckRecordClassStatsNew> selectByDepartment(
+    List<CheckRecordClassStatsNew> selectByOrgUnit(
             @Param("recordId") Long recordId,
-            @Param("departmentId") Long departmentId
+            @Param("orgUnitId") Long orgUnitId
     );
 
     /**

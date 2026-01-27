@@ -10,6 +10,7 @@ export * from './dormitory'
 export * from './task'
 export * from './user'
 export * from './semester'
+export * from './myClass'
 
 // 通用响应类型
 export interface ApiResponse<T> {

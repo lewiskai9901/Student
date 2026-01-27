@@ -57,14 +57,14 @@ public interface UserRepository extends Repository<User, Long> {
     boolean existsByUsernameAndIdNot(String username, Long excludeId);
 
     /**
-     * 根据部门ID查找用户列表
+     * 根据组织单元ID查找用户列表
      */
-    List<User> findByDepartmentId(Long departmentId);
+    List<User> findByOrgUnitId(Long orgUnitId);
 
     /**
-     * 根据部门ID列表查找用户列表
+     * 根据组织单元ID列表查找用户列表
      */
-    List<User> findByDepartmentIdIn(List<Long> departmentIds);
+    List<User> findByOrgUnitIdIn(List<Long> orgUnitIds);
 
     /**
      * 删除用户
@@ -90,13 +90,13 @@ public interface UserRepository extends Repository<User, Long> {
      * 条件分页查询用户
      */
     List<User> findPagedWithConditions(int page, int size, String username, String realName,
-                                       String phone, Long departmentId, Integer status);
+                                       String phone, Long orgUnitId, Integer status);
 
     /**
      * 条件统计用户总数
      */
     long countWithConditions(String username, String realName, String phone,
-                            Long departmentId, Integer status);
+                            Long orgUnitId, Integer status);
 
     /**
      * 获取简单用户列表

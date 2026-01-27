@@ -147,11 +147,11 @@ public class AnalysisResultDTO {
         @Schema(description = "年级名称")
         private String gradeName;
 
-        @Schema(description = "部门ID")
-        private Long departmentId;
+        @Schema(description = "组织单元ID（原部门ID）")
+        private Long orgUnitId;
 
-        @Schema(description = "部门名称")
-        private String departmentName;
+        @Schema(description = "组织单元名称（原部门名称）")
+        private String orgUnitName;
 
         @Schema(description = "班主任姓名")
         private String teacherName;

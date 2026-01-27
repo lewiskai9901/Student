@@ -71,20 +71,14 @@ public class User extends BaseEntity {
     private String idCard;
 
     /**
-     * 部门ID
+     * 组织单元ID
      */
-    private Long departmentId;
+    private Long orgUnitId;
 
     /**
      * 班级ID
      */
     private Long classId;
-
-    /**
-     * 管理的班级ID
-     */
-    private Long managedClassId;
-
     /**
      * 用户类型:1-管理员,2-教师,3-学生
      */

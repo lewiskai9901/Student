@@ -5,6 +5,11 @@ package com.school.management.domain.student.model.valueobject;
  */
 public enum Gender {
     /**
+     * 未知
+     */
+    UNKNOWN(0, "未知"),
+
+    /**
      * 男
      */
     MALE(1, "男"),

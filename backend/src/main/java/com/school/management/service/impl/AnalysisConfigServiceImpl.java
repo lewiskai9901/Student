@@ -215,7 +215,7 @@ public class AnalysisConfigServiceImpl extends ServiceImpl<AnalysisConfigMapper,
                 }
                 break;
             case "ORGANIZATION":
-                if (dto.getDepartmentId() == null && dto.getClassId() == null) {
+                if (dto.getOrgUnitId() == null && dto.getClassId() == null) {
                     throw new BusinessException("请选择院系或班级");
                 }
                 break;
@@ -291,7 +291,7 @@ public class AnalysisConfigServiceImpl extends ServiceImpl<AnalysisConfigMapper,
             case "SINGLE_CHECK":
                 return config.getCheckRecordId();
             case "ORGANIZATION":
-                return config.getDepartmentId() != null ? config.getDepartmentId() : config.getClassId();
+                return config.getOrgUnitId() != null ? config.getOrgUnitId() : config.getClassId();
             default:
                 return null;
         }

@@ -52,12 +52,12 @@ public class ClassBadgeRecord {
     /**
      * 院系ID
      */
-    private Long departmentId;
+    private Long orgUnitId;
 
     /**
      * 院系名称（冗余）
      */
-    private String departmentName;
+    private String orgUnitName;
 
     /**
      * 授予时间

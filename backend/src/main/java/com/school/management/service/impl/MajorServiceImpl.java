@@ -37,18 +37,18 @@ public class MajorServiceImpl implements MajorService {
         Major params = new Major();
         params.setMajorName(request.getMajorName());
         params.setMajorCode(request.getMajorCode());
-        params.setDepartmentId(request.getDepartmentId());
+        params.setOrgUnitId(request.getOrgUnitId());
         params.setStatus(request.getStatus());
 
         return majorMapper.selectMajorPage(page, params);
     }
 
     @Override
-    @Cacheable(value = "majors", key = "'department:' + #departmentId")
+    @Cacheable(value = "majors", key = "'orgUnit:' + #orgUnitId")
     @Transactional(readOnly = true)
-    public List<Major> getMajorsByDepartmentId(Long departmentId) {
-        log.debug("从数据库查询专业(按部门ID): {}", departmentId);
-        return majorMapper.selectByDepartmentId(departmentId);
+    public List<Major> getMajorsByOrgUnitId(Long orgUnitId) {
+        log.debug("从数据库查询专业(按组织单元ID): {}", orgUnitId);
+        return majorMapper.selectByOrgUnitId(orgUnitId);
     }
 
     @Override

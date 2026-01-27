@@ -4,8 +4,8 @@
  * 宿舍楼信息
  */
 export interface BuildingDormitory {
-  id: number
-  buildingId: number
+  id: number | string
+  buildingId: number | string
   buildingNo?: string
   buildingName?: string
   buildingLocation?: string
@@ -24,9 +24,9 @@ export interface BuildingDormitory {
   managerIds?: number[]
   managerNames?: string[]
   managers?: ManagerInfo[]
-  // 部门信息
-  departmentIds?: number[]
-  departmentNames?: string[]
+  // 组织单元信息
+  orgUnitIds?: number[]
+  orgUnitNames?: string[]
   createdAt?: string
   updatedAt?: string
   createdBy?: number
@@ -41,7 +41,7 @@ export interface ManagerInfo {
   userId: number
   username: string
   realName: string
-  departmentName?: string
+  orgUnitName?: string
   assignedAt?: string
 }
 

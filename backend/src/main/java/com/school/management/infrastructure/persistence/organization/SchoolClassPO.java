@@ -32,9 +32,9 @@ public class SchoolClassPO {
     private Integer gradeLevel;
 
     /**
-     * 所属部门ID
+     * 所属组织单元ID
      */
-    private Long departmentId;
+    private Long orgUnitId;
 
     /**
      * 年级ID

@@ -29,9 +29,9 @@ public interface CourseMapper extends BaseMapper<Course> {
     Course selectByCode(@Param("code") String code);
 
     /**
-     * 查询系部的课程列表
+     * 查询组织单元的课程列表
      */
-    List<Course> selectByDepartmentId(@Param("departmentId") Long departmentId);
+    List<Course> selectByOrgUnitId(@Param("orgUnitId") Long orgUnitId);
 
     /**
      * 根据类型查询课程

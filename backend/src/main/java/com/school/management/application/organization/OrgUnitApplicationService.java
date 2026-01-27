@@ -6,6 +6,7 @@ import com.school.management.application.organization.query.OrgUnitDTO;
 import com.school.management.application.organization.query.OrgUnitTreeDTO;
 import com.school.management.domain.organization.model.OrgUnit;
 import com.school.management.domain.organization.model.OrgUnitType;
+import com.school.management.domain.organization.model.UnitCategory;
 import com.school.management.domain.organization.repository.OrgUnitRepository;
 import com.school.management.domain.organization.service.OrgUnitDomainService;
 import com.school.management.domain.shared.event.DomainEventPublisher;
@@ -67,6 +68,7 @@ public class OrgUnitApplicationService {
 
         orgUnit.update(
             command.getUnitName(),
+            command.getUnitCategory(),
             command.getLeaderId(),
             command.getDeputyLeaderIds(),
             command.getSortOrder(),
@@ -98,6 +100,16 @@ public class OrgUnitApplicationService {
     @Transactional(readOnly = true)
     public List<OrgUnitDTO> getOrgUnitsByType(OrgUnitType unitType) {
         return orgUnitRepository.findByUnitType(unitType).stream()
+            .map(this::toDTO)
+            .collect(Collectors.toList());
+    }
+
+    /**
+     * Gets organization units by category (ACADEMIC, FUNCTIONAL, ADMINISTRATIVE).
+     */
+    @Transactional(readOnly = true)
+    public List<OrgUnitDTO> getOrgUnitsByCategory(UnitCategory unitCategory) {
+        return orgUnitRepository.findByUnitCategory(unitCategory).stream()
             .map(this::toDTO)
             .collect(Collectors.toList());
     }
@@ -176,6 +188,7 @@ public class OrgUnitApplicationService {
         dto.setUnitCode(orgUnit.getUnitCode());
         dto.setUnitName(orgUnit.getUnitName());
         dto.setUnitType(orgUnit.getUnitType());
+        dto.setUnitCategory(orgUnit.getUnitCategory());
         dto.setParentId(orgUnit.getParentId());
         dto.setTreePath(orgUnit.getTreePath());
         dto.setTreeLevel(orgUnit.getTreeLevel());
@@ -192,6 +205,7 @@ public class OrgUnitApplicationService {
         dto.setUnitCode(orgUnit.getUnitCode());
         dto.setUnitName(orgUnit.getUnitName());
         dto.setUnitType(orgUnit.getUnitType());
+        dto.setUnitCategory(orgUnit.getUnitCategory());
         dto.setLeaderId(orgUnit.getLeaderId());
         dto.setEnabled(orgUnit.isEnabled());
         dto.setChildren(new ArrayList<>());

@@ -72,14 +72,14 @@ public class StudentRelationshipSnapshot implements Serializable {
     private String gradeName;
 
     /**
-     * 系部ID
+     * 组织单元ID
      */
-    private Long departmentId;
+    private Long orgUnitId;
 
     /**
-     * 系部名称
+     * 组织单元名称
      */
-    private String departmentName;
+    private String orgUnitName;
 
     /**
      * 宿舍ID

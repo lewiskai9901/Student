@@ -17,7 +17,11 @@ public class DormitoryPO {
 
     private Long buildingId;
 
-    private Long departmentId;
+    /**
+     * 组织单元ID（部门）- 允许更新为null以支持取消分配
+     */
+    @TableField(updateStrategy = FieldStrategy.IGNORED)
+    private Long orgUnitId;
 
     private String dormitoryNo;
 

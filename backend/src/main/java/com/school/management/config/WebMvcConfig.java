@@ -45,7 +45,8 @@ public class WebMvcConfig implements WebMvcConfigurer {
                         }
 
                         // 如果是API请求,不处理,返回null让Spring Security和Controller处理
-                        if (resourcePath.startsWith("api/")) {
+                        // 注意: resourcePath可能是api/xxx或v2/xxx(取决于请求路径)
+                        if (resourcePath.startsWith("api/") || resourcePath.startsWith("v2/")) {
                             return null;
                         }
 

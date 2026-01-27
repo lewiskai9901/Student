@@ -50,9 +50,9 @@ public class TaskCreateRequest {
     private List<Long> targetIds;
 
     /**
-     * 部门ID(批量分配时可选)
+     * 组织单元ID(批量分配时可选)
      */
-    private Long departmentId;
+    private Long orgUnitId;
 
     /**
      * 截止时间
@@ -70,7 +70,7 @@ public class TaskCreateRequest {
      */
     @Valid
     @NotEmpty(message = "审批配置不能为空")
-    private List<DepartmentApprovalConfigDTO> approvalConfigs;
+    private List<OrgUnitApprovalConfigDTO> approvalConfigs;
 
     /**
      * 任务附件ID列表

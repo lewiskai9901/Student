@@ -19,8 +19,8 @@ export interface Class {
   classCode: string
   gradeLevel: number
   gradeId?: number
-  departmentId: number
-  departmentName: string
+  orgUnitId: number
+  orgUnitName: string
   majorId?: number
   majorName?: string
   majorDirectionId?: number
@@ -48,7 +48,7 @@ export interface Class {
 
 export interface ClassQueryParams {
   className?: string
-  departmentId?: number | null
+  orgUnitId?: number | null
   majorId?: number | null
   teacherName?: string
   status?: number | null
@@ -60,7 +60,7 @@ export interface ClassFormData {
   className: string
   classCode: string
   gradeLevel: number | null
-  departmentId: number | null
+  orgUnitId: number | null
   majorId?: number | null
   teacherId?: number | null
   assistantTeacherId?: number | null

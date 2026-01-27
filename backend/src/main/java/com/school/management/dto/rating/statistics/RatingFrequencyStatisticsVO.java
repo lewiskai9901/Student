@@ -37,7 +37,7 @@ public class RatingFrequencyStatisticsVO {
     private List<LevelFrequencyVO> levelStatistics;
 
     // 院系对比
-    private List<DepartmentComparisonVO> departmentComparison;
+    private List<OrgUnitComparisonVO> orgUnitComparison;
 
     // 计算时间
     private String calculatedAt;        // 统计计算时间
@@ -65,9 +65,9 @@ public class RatingFrequencyStatisticsVO {
      * 院系对比VO
      */
     @Data
-    public static class DepartmentComparisonVO {
-        private Long departmentId;
-        private String departmentName;
+    public static class OrgUnitComparisonVO {
+        private Long orgUnitId;
+        private String orgUnitName;
         private Integer classCount;        // 该院系班级数
         private Integer excellentCount;    // 获得优秀的班级数
         private BigDecimal excellentRate;  // 优秀率
@@ -81,7 +81,7 @@ public class RatingFrequencyStatisticsVO {
     public static class ClassFrequencySimpleVO {
         private Long classId;
         private String className;
-        private String departmentName;
+        private String orgUnitName;
         private Integer frequency;         // 获得次数
         private BigDecimal rate;           // 获得率
         private Integer ranking;           // 排名

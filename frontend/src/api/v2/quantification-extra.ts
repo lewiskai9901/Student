@@ -87,8 +87,8 @@ export interface FilterConditions {
  * 目标配置
  */
 export interface TargetConfig {
-  departmentIds?: number[]
-  includeDepartmentChildren?: boolean
+  orgUnitIds?: number[]
+  includeOrgUnitChildren?: boolean
   gradeIds?: number[]
   classIds?: number[]
   excludeClassIds?: number[]
@@ -246,8 +246,8 @@ export interface ClassRankingItem {
   className: string
   gradeId?: number
   gradeName?: string
-  departmentId?: number
-  departmentName?: string
+  orgUnitId?: number
+  orgUnitName?: string
   teacherName?: string
   checkCount: number
   expectedCheckCount: number
@@ -1368,8 +1368,8 @@ export interface SmartClassRankingVO {
   className: string
   gradeId: number
   gradeName: string
-  departmentId?: number
-  departmentName?: string
+  orgUnitId?: number
+  orgUnitName?: string
   teacherId?: number
   teacherName?: string
   studentCount?: number
@@ -1383,7 +1383,7 @@ export interface SmartClassRankingVO {
   normalizedScore?: number
   ranking: number
   gradeRanking?: number
-  departmentRanking?: number
+  orgUnitRanking?: number
   scoreLevel: string
   vsAvg: number
   vsGradeAvg?: number
@@ -1539,7 +1539,7 @@ export interface SmartStatisticsFilters {
   endDate?: string
   classIds?: number[]
   gradeIds?: number[]
-  departmentIds?: number[]
+  orgUnitIds?: number[]
   categoryIds?: number[]
   compareMode?: 'total' | 'average' | 'normalized' | 'weighted'
   includePartial?: boolean
@@ -1575,7 +1575,7 @@ export function getSmartRanking(planId: number | string, params?: {
   includePartial?: boolean
   classIds?: number[]
   gradeIds?: number[]
-  departmentIds?: number[]
+  orgUnitIds?: number[]
   sortBy?: string
   sortOrder?: string
   pageNum?: number

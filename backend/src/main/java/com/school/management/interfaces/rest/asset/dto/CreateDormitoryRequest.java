@@ -39,9 +39,9 @@ public class CreateDormitoryRequest {
     private Integer genderType;
 
     /**
-     * 所属部门ID
+     * 所属组织单元ID
      */
-    private Long departmentId;
+    private Long orgUnitId;
 
     /**
      * 设施信息

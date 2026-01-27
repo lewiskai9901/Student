@@ -37,9 +37,9 @@ public class InspectorDTO {
     private String username;
 
     /**
-     * 部门名称
+     * 组织单元名称（原部门名称）
      */
-    private String departmentName;
+    private String orgUnitName;
 
     /**
      * 状态：1启用 0禁用
@@ -78,12 +78,12 @@ public class InspectorDTO {
         this.username = username;
     }
 
-    public String getDepartmentName() {
-        return departmentName;
+    public String getOrgUnitName() {
+        return orgUnitName;
     }
 
-    public void setDepartmentName(String departmentName) {
-        this.departmentName = departmentName;
+    public void setOrgUnitName(String orgUnitName) {
+        this.orgUnitName = orgUnitName;
     }
 
     /**

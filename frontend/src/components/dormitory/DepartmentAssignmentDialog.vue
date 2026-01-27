@@ -3,198 +3,347 @@
     <Transition name="modal">
       <div v-if="visible" class="fixed inset-0 z-50 flex items-center justify-center">
         <div class="fixed inset-0 bg-black/50" @click="handleClose"></div>
-        <div class="relative flex max-h-[90vh] w-full max-w-5xl flex-col rounded-lg bg-white shadow-xl">
+        <div class="relative flex max-h-[90vh] w-full max-w-6xl flex-col rounded-xl bg-white shadow-2xl">
           <!-- 头部 -->
           <div class="flex items-center justify-between border-b border-gray-200 px-6 py-4">
             <div>
-              <h3 class="text-lg font-semibold text-gray-900">{{ buildingName }} - 院系分配</h3>
-              <p class="mt-0.5 text-sm text-gray-500">点击楼层标签可整层分配，点击单个房间可单独分配</p>
+              <h3 class="text-lg font-semibold text-gray-900">{{ buildingName }} - 宿舍分配给部门</h3>
+              <p class="mt-0.5 text-sm text-gray-500">从左侧选择宿舍，拖拽或点击箭头分配到右侧部门</p>
             </div>
-            <button @click="handleClose" class="rounded p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-600">
+            <button @click="handleClose" class="rounded-lg p-2 text-gray-400 hover:bg-gray-100 hover:text-gray-600">
               <X class="h-5 w-5" />
             </button>
           </div>
 
-          <!-- 院系选择器和图例 -->
-          <div class="border-b border-gray-200 bg-gray-50 px-6 py-3">
-            <div class="flex flex-wrap items-center gap-4">
-              <div class="flex items-center gap-2">
-                <label class="text-sm font-medium text-gray-700">选择院系：</label>
-                <select
-                  v-model="selectedDepartmentId"
-                  class="h-9 w-48 rounded-lg border border-gray-300 px-3 text-sm focus:border-blue-500 focus:outline-none"
-                >
-                  <option :value="null">取消分配</option>
-                  <option v-for="dept in departmentOptions" :key="dept.id" :value="dept.id">
-                    {{ dept.deptName }}
-                  </option>
-                </select>
-              </div>
-              <div class="flex items-center gap-4 text-xs">
-                <span class="font-medium text-gray-600">图例：</span>
-                <div class="flex items-center gap-1">
-                  <div class="h-3 w-3 rounded border border-gray-300 bg-white"></div>
-                  <span class="text-gray-600">未分配</span>
-                </div>
-                <div class="flex items-center gap-1">
-                  <div class="h-3 w-3 rounded bg-blue-500"></div>
-                  <span class="text-gray-600">已分配</span>
-                </div>
-                <div class="flex items-center gap-1">
-                  <div class="h-3 w-3 rounded bg-emerald-500"></div>
-                  <span class="text-gray-600">当前选中院系</span>
-                </div>
-              </div>
-              <div class="ml-auto text-sm text-gray-500">
-                共 {{ totalRooms }} 间 | 已分配 {{ assignedRooms }} 间
-              </div>
-            </div>
-          </div>
-
-          <!-- 楼层内容 -->
-          <div class="flex-1 overflow-y-auto p-6">
-            <div v-if="loading" class="py-20 text-center">
-              <Loader2 class="mx-auto h-8 w-8 animate-spin text-blue-500" />
-              <p class="mt-2 text-sm text-gray-500">加载中...</p>
-            </div>
-
-            <div v-else-if="floorData.length > 0" class="space-y-2">
-              <div
-                v-for="floor in floorData"
-                :key="floor.floor"
-                class="overflow-hidden rounded-lg border border-gray-200 bg-white"
-              >
-                <!-- 楼层标题（可点击整层分配） -->
-                <div
-                  class="flex cursor-pointer items-center justify-between bg-gradient-to-r from-gray-50 to-white px-4 py-2 transition-colors hover:from-blue-50 hover:to-blue-25"
-                  @click="handleFloorClick(floor.floor)"
-                >
-                  <div class="flex items-center gap-3">
-                    <div class="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-100 text-sm font-bold text-blue-700">
-                      {{ floor.floor }}F
-                    </div>
-                    <span class="text-sm font-medium text-gray-700">
-                      {{ floor.rooms.length }} 间房间
-                    </span>
-                    <span class="text-xs text-gray-400">|</span>
-                    <span class="text-xs text-gray-500">
-                      已分配 {{ floor.assignedCount }} 间
+          <!-- 主体：双面板布局 -->
+          <div class="flex flex-1 overflow-hidden">
+            <!-- 左侧：宿舍列表 -->
+            <div class="flex w-1/2 flex-col border-r border-gray-200">
+              <!-- 左侧头部 -->
+              <div class="border-b border-gray-100 bg-gray-50 px-4 py-3">
+                <div class="flex items-center justify-between">
+                  <div class="flex items-center gap-2">
+                    <DoorOpen class="h-5 w-5 text-teal-600" />
+                    <span class="font-medium text-gray-900">宿舍房间</span>
+                    <span class="rounded-full bg-gray-200 px-2 py-0.5 text-xs text-gray-600">
+                      {{ rooms.length }} 间
                     </span>
                   </div>
                   <div class="flex items-center gap-2">
                     <button
-                      @click.stop="handleFloorClick(floor.floor)"
-                      class="inline-flex items-center gap-1 rounded-lg border border-blue-200 bg-blue-50 px-3 py-1 text-xs font-medium text-blue-600 transition-colors hover:bg-blue-100"
+                      @click="selectAllUnassigned"
+                      class="text-xs text-blue-600 hover:text-blue-700"
                     >
-                      <Layers class="h-3.5 w-3.5" />
-                      整层分配
+                      选择全部未分配
+                    </button>
+                    <span class="text-gray-300">|</span>
+                    <button
+                      @click="clearSelection"
+                      class="text-xs text-gray-500 hover:text-gray-700"
+                    >
+                      清除选择
                     </button>
                   </div>
                 </div>
-
-                <!-- 房间列表 -->
-                <div class="flex flex-wrap gap-2 border-t border-gray-100 p-3">
-                  <div
-                    v-for="room in floor.rooms"
-                    :key="room.id"
-                    class="group relative cursor-pointer rounded-lg border-2 px-3 py-2 text-center transition-all hover:shadow-md"
-                    :class="getRoomClass(room)"
-                    @click="handleRoomClick(room)"
+                <!-- 筛选 -->
+                <div class="mt-2 flex items-center gap-2">
+                  <select
+                    v-model="filterFloor"
+                    class="h-8 rounded-lg border border-gray-200 px-2 text-sm focus:border-teal-500 focus:outline-none"
                   >
-                    <div class="text-sm font-medium" :class="getRoomTextClass(room)">
-                      {{ room.dormitoryNo || room.roomNo }}
-                    </div>
-                    <div class="text-[10px]" :class="getRoomSubTextClass(room)">
-                      {{ room.departmentName || '未分配' }}
-                    </div>
-                    <!-- 悬浮提示 -->
-                    <div class="pointer-events-none absolute bottom-full left-1/2 z-10 mb-2 hidden -translate-x-1/2 whitespace-nowrap rounded-lg bg-gray-900 px-3 py-2 text-xs text-white shadow-lg group-hover:block">
-                      <div class="font-medium">{{ room.dormitoryNo || room.roomNo }}</div>
-                      <div class="mt-1 text-gray-300">
-                        {{ room.bedCount || room.maxOccupancy || 0 }}人间 · {{ room.occupiedBeds || room.currentOccupancy || 0 }}人入住
+                    <option :value="null">全部楼层</option>
+                    <option v-for="floor in floorList" :key="floor" :value="floor">
+                      {{ floor }}层
+                    </option>
+                  </select>
+                  <select
+                    v-model="filterAssigned"
+                    class="h-8 rounded-lg border border-gray-200 px-2 text-sm focus:border-teal-500 focus:outline-none"
+                  >
+                    <option value="all">全部状态</option>
+                    <option value="unassigned">未分配</option>
+                    <option value="assigned">已分配</option>
+                  </select>
+                </div>
+              </div>
+
+              <!-- 左侧内容：房间列表（紧凑布局） -->
+              <div class="flex-1 overflow-y-auto p-3">
+                <div v-if="loading" class="flex items-center justify-center py-20">
+                  <Loader2 class="h-8 w-8 animate-spin text-teal-500" />
+                </div>
+
+                <div v-else-if="filteredRooms.length === 0" class="py-20 text-center text-gray-400">
+                  <DoorOpen class="mx-auto h-12 w-12" />
+                  <p class="mt-2">暂无宿舍房间</p>
+                </div>
+
+                <div v-else class="space-y-2">
+                  <div
+                    v-for="floor in groupedRooms"
+                    :key="floor.floor"
+                    class="rounded-lg border border-gray-200 bg-white"
+                  >
+                    <!-- 楼层标题（紧凑） -->
+                    <div
+                      class="flex cursor-pointer items-center justify-between bg-gray-50 px-2 py-1.5"
+                      @click="toggleFloorSelection(floor.floor)"
+                    >
+                      <div class="flex items-center gap-1.5">
+                        <input
+                          type="checkbox"
+                          :checked="isFloorSelected(floor.floor)"
+                          :indeterminate="isFloorIndeterminate(floor.floor)"
+                          class="h-3.5 w-3.5 rounded border-gray-300 text-teal-600 focus:ring-teal-500"
+                          @click.stop="toggleFloorSelection(floor.floor)"
+                        />
+                        <span class="rounded bg-teal-100 px-1.5 py-0.5 text-[10px] font-bold text-teal-700">
+                          {{ floor.floor }}F
+                        </span>
+                        <span class="text-xs text-gray-500">{{ floor.rooms.length }}间</span>
                       </div>
-                      <div v-if="room.departmentName" class="mt-1 text-emerald-400">
-                        院系: {{ room.departmentName }}
+                      <div class="flex items-center gap-1.5 text-[10px]">
+                        <span class="text-blue-600">{{ floor.assignedCount }}已分</span>
+                        <span class="text-gray-400">{{ floor.rooms.length - floor.assignedCount }}未分</span>
                       </div>
-                      <div class="absolute left-1/2 top-full -translate-x-1/2 border-4 border-transparent border-t-gray-900"></div>
+                    </div>
+
+                    <!-- 房间标签（紧凑网格） -->
+                    <div class="flex flex-wrap gap-1 p-2">
+                      <div
+                        v-for="room in floor.rooms"
+                        :key="room.id"
+                        :draggable="true"
+                        class="group relative cursor-pointer select-none rounded px-1.5 py-0.5 text-xs font-medium transition-all"
+                        :class="getRoomTagClass(room)"
+                        :title="getRoomTooltip(room)"
+                        @dragstart="handleDragStart($event, room)"
+                        @dragend="handleDragEnd"
+                        @click="toggleRoomSelection(room.id)"
+                      >
+                        {{ room.dormitoryNo || room.roomNo }}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- 左侧底部：已选择提示 -->
+              <div v-if="selectedRoomIds.length > 0" class="border-t border-gray-200 bg-teal-50 px-4 py-3">
+                <div class="flex items-center justify-between">
+                  <span class="text-sm text-teal-700">
+                    已选择 <strong>{{ selectedRoomIds.length }}</strong> 间宿舍
+                  </span>
+                  <button
+                    @click="clearSelection"
+                    class="text-xs text-teal-600 hover:text-teal-700"
+                  >
+                    清除选择
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <!-- 中间：箭头操作区 -->
+            <div class="flex w-16 flex-col items-center justify-center gap-3 bg-gray-50">
+              <button
+                @click="assignToSelectedDepartment"
+                :disabled="selectedRoomIds.length === 0 || !targetDepartmentId"
+                class="flex h-10 w-10 items-center justify-center rounded-full bg-teal-600 text-white shadow-lg transition-all hover:bg-teal-700 disabled:cursor-not-allowed disabled:bg-gray-300 disabled:shadow-none"
+                title="分配到选中部门"
+              >
+                <ChevronRight class="h-5 w-5" />
+              </button>
+              <button
+                @click="unassignSelected"
+                :disabled="selectedRoomIds.length === 0"
+                class="flex h-10 w-10 items-center justify-center rounded-full border-2 border-gray-300 bg-white text-gray-500 transition-all hover:border-red-300 hover:bg-red-50 hover:text-red-500 disabled:cursor-not-allowed disabled:opacity-50"
+                title="取消分配"
+              >
+                <ChevronLeft class="h-5 w-5" />
+              </button>
+            </div>
+
+            <!-- 右侧：部门列表 -->
+            <div class="flex w-1/2 flex-col">
+              <!-- 右侧头部 -->
+              <div class="border-b border-gray-100 bg-gray-50 px-4 py-3">
+                <div class="flex items-center gap-2">
+                  <Building2 class="h-5 w-5 text-blue-600" />
+                  <span class="font-medium text-gray-900">部门</span>
+                  <span class="rounded-full bg-gray-200 px-2 py-0.5 text-xs text-gray-600">
+                    {{ departmentOptions.length }} 个
+                  </span>
+                </div>
+                <p class="mt-1 text-xs text-gray-500">点击部门展开宿舍列表，拖放宿舍到部门区域完成分配</p>
+              </div>
+
+              <!-- 右侧内容：部门卡片 -->
+              <div class="flex-1 overflow-y-auto">
+                <!-- 未分配区域（固定在顶部） -->
+                <div
+                  class="sticky top-0 z-10 bg-white p-3 pb-2"
+                  @dragover.prevent="handleDragOverUnassigned"
+                  @dragleave="handleDragLeaveUnassigned"
+                  @drop="handleDropToUnassigned"
+                >
+                  <div
+                    class="rounded-lg border-2 border-dashed transition-all"
+                    :class="[
+                      dragOverUnassigned ? 'border-red-400 bg-red-50 scale-[1.01] shadow-lg' : 'border-gray-300 bg-gray-50 hover:border-gray-400'
+                    ]"
+                  >
+                    <div class="flex items-center justify-center gap-2 px-3 py-2">
+                      <div class="flex h-7 w-7 items-center justify-center rounded-lg bg-gray-200 text-gray-500">
+                        <X class="h-4 w-4" />
+                      </div>
+                      <div>
+                        <div class="text-sm font-medium text-gray-600">未分配</div>
+                        <div class="text-[10px] text-gray-400">
+                          拖拽到此处取消分配 | {{ unassignedRoomsCount }} 间
+                        </div>
+                      </div>
+                    </div>
+                    <!-- 拖放提示 -->
+                    <div
+                      v-if="isDragging && dragOverUnassigned"
+                      class="pointer-events-none border-t border-red-200 bg-red-100 py-1.5 text-center text-xs font-medium text-red-600"
+                    >
+                      松开鼠标取消分配
+                    </div>
+                  </div>
+                </div>
+
+                <div class="space-y-2 px-3 pb-3">
+                  <div
+                    v-for="dept in departmentOptions"
+                    :key="dept.id"
+                    class="rounded-lg border-2 transition-all"
+                    :class="[
+                      getDepartmentCardClass(dept.id),
+                      dragOverDeptId === dept.id ? 'scale-[1.01] border-teal-500 bg-teal-50 shadow-lg' : ''
+                    ]"
+                    @dragover.prevent="handleDragOver($event, dept.id)"
+                    @dragleave="handleDragLeave"
+                    @drop="handleDrop($event, dept.id)"
+                  >
+                    <!-- 部门头部（可点击选中/展开） -->
+                    <div
+                      class="flex cursor-pointer items-center justify-between px-3 py-2"
+                      @click="toggleDepartmentExpand(dept.id)"
+                    >
+                      <div class="flex items-center gap-2">
+                        <div
+                          class="flex h-8 w-8 items-center justify-center rounded-lg text-sm font-bold"
+                          :class="targetDepartmentId === dept.id ? 'bg-blue-600 text-white' : 'bg-blue-100 text-blue-600'"
+                        >
+                          {{ dept.deptName.charAt(0) }}
+                        </div>
+                        <div>
+                          <div class="text-sm font-medium text-gray-900">{{ dept.deptName }}</div>
+                          <div class="text-[10px] text-gray-500">
+                            {{ getDepartmentRoomCount(dept.id) }} 间宿舍
+                          </div>
+                        </div>
+                      </div>
+                      <div class="flex items-center gap-2">
+                        <div v-if="targetDepartmentId === dept.id" class="flex items-center gap-1 rounded-full bg-blue-100 px-2 py-0.5 text-blue-600">
+                          <Check class="h-3.5 w-3.5" />
+                          <span class="text-[10px] font-medium">目标</span>
+                        </div>
+                        <component
+                          :is="expandedDeptIds.includes(dept.id) ? ChevronUp : ChevronDown"
+                          class="h-4 w-4 text-gray-400"
+                        />
+                      </div>
+                    </div>
+
+                    <!-- 展开的宿舍列表（按楼层分组显示） -->
+                    <div
+                      v-if="expandedDeptIds.includes(dept.id)"
+                      class="border-t border-gray-100 bg-gray-50/50"
+                    >
+                      <div v-if="getDepartmentRoomsByFloor(dept.id).length > 0" class="space-y-0.5">
+                        <!-- 按楼层分组 -->
+                        <div
+                          v-for="floor in getDepartmentRoomsByFloor(dept.id)"
+                          :key="floor.floor"
+                          class="border-b border-gray-100 last:border-b-0"
+                        >
+                          <!-- 楼层标题 -->
+                          <div class="flex items-center gap-2 bg-blue-50/50 px-2 py-1">
+                            <span class="rounded bg-blue-200 px-1.5 py-0.5 text-[10px] font-bold text-blue-700">
+                              {{ floor.floor }}F
+                            </span>
+                            <span class="text-[10px] text-gray-500">{{ floor.rooms.length }}间</span>
+                          </div>
+                          <!-- 该楼层宿舍列表 -->
+                          <div class="flex flex-wrap gap-1 p-1.5">
+                            <div
+                              v-for="room in floor.rooms"
+                              :key="room.id"
+                              :draggable="true"
+                              class="cursor-pointer rounded bg-blue-100 px-1.5 py-0.5 text-xs font-medium text-blue-700 transition-colors hover:bg-blue-200"
+                              :class="isRoomSelected(room.id) ? 'ring-2 ring-teal-400 ring-offset-1 bg-teal-500 text-white' : ''"
+                              :title="getRoomTooltip(room)"
+                              @dragstart="handleDragStart($event, room)"
+                              @dragend="handleDragEnd"
+                              @click.stop="toggleRoomSelection(room.id)"
+                            >
+                              {{ room.dormitoryNo || room.roomNo }}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                      <div v-else class="py-2 text-center text-xs text-gray-400">
+                        暂无宿舍
+                      </div>
+                    </div>
+
+                    <!-- 拖放提示 -->
+                    <div
+                      v-if="isDragging && dragOverDeptId === dept.id"
+                      class="pointer-events-none border-t border-teal-200 bg-teal-100 py-2 text-center text-xs font-medium text-teal-600"
+                    >
+                      松开鼠标完成分配
                     </div>
                   </div>
                 </div>
               </div>
             </div>
-
-            <div v-else class="py-20 text-center">
-              <Building2 class="mx-auto h-12 w-12 text-gray-300" />
-              <p class="mt-2 text-sm text-gray-500">该楼宇暂无宿舍房间</p>
-            </div>
           </div>
 
           <!-- 底部 -->
-          <div class="flex items-center justify-between border-t border-gray-200 px-6 py-4">
-            <div class="text-sm text-gray-500">
-              <span v-if="selectedRooms.length > 0">
-                已选择 <strong class="text-blue-600">{{ selectedRooms.length }}</strong> 间房间
-              </span>
-              <span v-else>点击房间或楼层进行分配</span>
+          <div class="flex items-center justify-between border-t border-gray-200 bg-gray-50 px-6 py-4">
+            <div class="flex items-center gap-4 text-sm text-gray-500">
+              <div class="flex items-center gap-2">
+                <div class="h-3 w-3 rounded border border-gray-300 bg-white"></div>
+                <span>未分配</span>
+              </div>
+              <div class="flex items-center gap-2">
+                <div class="h-3 w-3 rounded bg-blue-400"></div>
+                <span>已分配</span>
+              </div>
+              <div class="flex items-center gap-2">
+                <div class="h-3 w-3 rounded bg-teal-500"></div>
+                <span>选中</span>
+              </div>
+              <div class="flex items-center gap-2">
+                <div class="h-3 w-3 rounded bg-orange-300 opacity-60"></div>
+                <span>锁定</span>
+              </div>
             </div>
             <div class="flex items-center gap-3">
+              <span class="text-sm text-gray-500">
+                共 {{ rooms.length }} 间 | 已分配 {{ assignedRoomsCount }} 间
+              </span>
               <button
                 @click="handleClose"
-                class="h-9 rounded-lg border border-gray-300 px-4 text-sm font-medium text-gray-700 hover:bg-gray-50"
+                class="h-9 rounded-lg border border-gray-300 bg-white px-4 text-sm font-medium text-gray-700 hover:bg-gray-50"
               >
                 关闭
               </button>
             </div>
-          </div>
-        </div>
-      </div>
-    </Transition>
-  </Teleport>
-
-  <!-- 确认分配对话框 -->
-  <Teleport to="body">
-    <Transition name="modal">
-      <div v-if="confirmDialogVisible" class="fixed inset-0 z-[60] flex items-center justify-center">
-        <div class="fixed inset-0 bg-black/50" @click="confirmDialogVisible = false"></div>
-        <div class="relative w-full max-w-md rounded-lg bg-white p-6 shadow-xl">
-          <div class="mb-4 flex items-center gap-3">
-            <div class="flex h-10 w-10 items-center justify-center rounded-full bg-blue-100">
-              <Building2 class="h-5 w-5 text-blue-600" />
-            </div>
-            <div>
-              <h4 class="text-lg font-semibold text-gray-900">确认分配</h4>
-              <p class="text-sm text-gray-500">{{ confirmMessage }}</p>
-            </div>
-          </div>
-
-          <div class="mb-6 rounded-lg bg-gray-50 p-4">
-            <div class="mb-2 text-sm text-gray-600">
-              <strong>目标院系：</strong>
-              <span :class="selectedDepartmentId ? 'text-blue-600' : 'text-amber-600'">
-                {{ selectedDepartmentId ? getDepartmentName(selectedDepartmentId) : '取消分配' }}
-              </span>
-            </div>
-            <div class="text-sm text-gray-600">
-              <strong>受影响房间：</strong>
-              <span class="text-gray-900">{{ pendingRoomIds.length }} 间</span>
-            </div>
-          </div>
-
-          <div class="flex justify-end gap-3">
-            <button
-              @click="confirmDialogVisible = false"
-              class="h-9 rounded-lg border border-gray-300 px-4 text-sm font-medium text-gray-700 hover:bg-gray-50"
-            >
-              取消
-            </button>
-            <button
-              @click="handleConfirmAssign"
-              :disabled="submitLoading"
-              class="inline-flex h-9 items-center gap-2 rounded-lg bg-blue-600 px-4 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
-            >
-              <Loader2 v-if="submitLoading" class="h-4 w-4 animate-spin" />
-              确认分配
-            </button>
           </div>
         </div>
       </div>
@@ -205,9 +354,18 @@
 <script setup lang="ts">
 import { ref, computed, watch, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
-import { X, Loader2, Building2, Layers } from 'lucide-vue-next'
-// V2 DDD API
-import { getDormitoriesByBuilding, batchUpdateDepartment, batchUpdateDepartmentByFloor } from '@/api/v2/dormitory'
+import {
+  X,
+  Loader2,
+  Building2,
+  DoorOpen,
+  ChevronRight,
+  ChevronLeft,
+  ChevronUp,
+  ChevronDown,
+  Check
+} from 'lucide-vue-next'
+import { getDormitoriesByBuilding, batchUpdateDepartment } from '@/api/v2/dormitory'
 import { getOrgUnitsByType } from '@/api/v2/organization'
 
 // Props
@@ -220,56 +378,74 @@ const props = defineProps<{
 // Emits
 const emit = defineEmits<{
   (e: 'update:visible', value: boolean): void
+  (e: 'close'): void
   (e: 'success'): void
 }>()
 
 // 状态
 const loading = ref(false)
-const submitLoading = ref(false)
 const rooms = ref<any[]>([])
 const departmentOptions = ref<Array<{ id: number; deptName: string }>>([])
-const selectedDepartmentId = ref<number | null>(null)
-const selectedRooms = ref<number[]>([])
 
-// 确认对话框
-const confirmDialogVisible = ref(false)
-const confirmMessage = ref('')
-const pendingRoomIds = ref<number[]>([])
-const pendingFloor = ref<number | null>(null)
+// 选择状态 - 使用string避免大整数精度丢失
+const selectedRoomIds = ref<(number | string)[]>([])
+const targetDepartmentId = ref<number | null>(null)
+const expandedDeptIds = ref<number[]>([])
+
+// 筛选状态
+const filterFloor = ref<number | null>(null)
+const filterAssigned = ref<'all' | 'unassigned' | 'assigned'>('all')
+
+// 拖拽状态
+const isDragging = ref(false)
+const dragOverDeptId = ref<number | null>(null)
+const dragOverUnassigned = ref(false)
+const draggedRoomIds = ref<number[]>([])
 
 // 计算属性
-const totalRooms = computed(() => rooms.value.length)
-const assignedRooms = computed(() => rooms.value.filter(r => r.departmentId).length)
-
-// 按楼层分组数据
-const floorData = computed(() => {
-  const floorMap = new Map<number, {
-    floor: number
-    rooms: any[]
-    assignedCount: number
-  }>()
-
+const floorList = computed(() => {
+  const floors = new Set<number>()
   rooms.value.forEach(room => {
+    const floor = room.floorNumber || room.floor || 1
+    floors.add(floor)
+  })
+  return Array.from(floors).sort((a, b) => a - b)
+})
+
+const filteredRooms = computed(() => {
+  let result = [...rooms.value]
+
+  if (filterFloor.value !== null) {
+    result = result.filter(r => (r.floorNumber || r.floor || 1) === filterFloor.value)
+  }
+
+  if (filterAssigned.value === 'unassigned') {
+    result = result.filter(r => !r.orgUnitId)
+  } else if (filterAssigned.value === 'assigned') {
+    result = result.filter(r => r.orgUnitId)
+  }
+
+  return result
+})
+
+const groupedRooms = computed(() => {
+  const floorMap = new Map<number, { floor: number; rooms: any[]; assignedCount: number }>()
+
+  filteredRooms.value.forEach(room => {
     const floorNum = room.floorNumber || room.floor || 1
     if (!floorMap.has(floorNum)) {
-      floorMap.set(floorNum, {
-        floor: floorNum,
-        rooms: [],
-        assignedCount: 0
-      })
+      floorMap.set(floorNum, { floor: floorNum, rooms: [], assignedCount: 0 })
     }
     const floor = floorMap.get(floorNum)!
     floor.rooms.push(room)
-    if (room.departmentId) {
+    if (room.orgUnitId) {
       floor.assignedCount++
     }
   })
 
-  // 排序：楼层从高到低
   const result = Array.from(floorMap.values())
   result.sort((a, b) => b.floor - a.floor)
 
-  // 每层房间按房间号排序
   result.forEach(floor => {
     floor.rooms.sort((a, b) => {
       const aNo = a.dormitoryNo || a.roomNo || ''
@@ -281,47 +457,10 @@ const floorData = computed(() => {
   return result
 })
 
-// 获取房间样式类
-const getRoomClass = (room: any) => {
-  // 如果该房间的院系等于当前选中的院系
-  if (room.departmentId && room.departmentId === selectedDepartmentId.value) {
-    return 'border-emerald-400 bg-emerald-100 hover:border-emerald-500'
-  }
-  // 如果房间已分配院系
-  if (room.departmentId) {
-    return 'border-blue-300 bg-blue-100 hover:border-blue-400'
-  }
-  // 未分配
-  return 'border-gray-300 bg-white hover:border-blue-400'
-}
+const assignedRoomsCount = computed(() => rooms.value.filter(r => r.orgUnitId).length)
+const unassignedRoomsCount = computed(() => rooms.value.filter(r => !r.orgUnitId).length)
 
-const getRoomTextClass = (room: any) => {
-  if (room.departmentId && room.departmentId === selectedDepartmentId.value) {
-    return 'text-emerald-700'
-  }
-  if (room.departmentId) {
-    return 'text-blue-700'
-  }
-  return 'text-gray-700'
-}
-
-const getRoomSubTextClass = (room: any) => {
-  if (room.departmentId && room.departmentId === selectedDepartmentId.value) {
-    return 'text-emerald-600'
-  }
-  if (room.departmentId) {
-    return 'text-blue-600'
-  }
-  return 'text-gray-500'
-}
-
-// 获取院系名称
-const getDepartmentName = (deptId: number) => {
-  const dept = departmentOptions.value.find(d => d.id === deptId)
-  return dept?.deptName || '未知院系'
-}
-
-// 加载数据 - V2 API
+// 方法
 const loadData = async () => {
   loading.value = true
   try {
@@ -330,7 +469,6 @@ const loadData = async () => {
       getOrgUnitsByType('DEPARTMENT')
     ])
     rooms.value = roomsRes || []
-    // V2: unitName → deptName (兼容显示)
     departmentOptions.value = (deptsRes || []).map((d: any) => ({
       id: d.id,
       deptName: d.unitName
@@ -342,73 +480,393 @@ const loadData = async () => {
   }
 }
 
-// 点击楼层（整层分配）
-const handleFloorClick = (floor: number) => {
-  const floorRooms = rooms.value.filter(r => (r.floorNumber || r.floor || 1) === floor)
-  if (floorRooms.length === 0) {
-    ElMessage.warning('该楼层没有房间')
+// 判断房间是否可以被选中
+// 规则：当选中了目标部门时，已分配给其他部门的宿舍不可选中（需要先取消分配）
+const canSelectRoom = (room: any): boolean => {
+  // 如果没有选择目标部门，所有房间都可选（用于取消分配操作）
+  if (!targetDepartmentId.value) return true
+
+  // 未分配的房间可选（可以分配给目标部门）
+  if (!room.orgUnitId) return true
+
+  // 已分配给目标部门的房间可选（可以取消分配）
+  if (room.orgUnitId === targetDepartmentId.value) return true
+
+  // 已分配给其他部门的房间不可选
+  return false
+}
+
+// 获取房间被锁定的原因
+const getRoomLockedReason = (room: any): string | null => {
+  if (!targetDepartmentId.value || !room.orgUnitId) return null
+  if (room.orgUnitId === targetDepartmentId.value) return null
+
+  const deptName = departmentOptions.value.find(d => d.id === room.orgUnitId)?.deptName || '其他部门'
+  return `已分配给${deptName}，需先取消分配`
+}
+
+// 选择操作 - 保持ID原始类型，避免精度丢失
+const toggleRoomSelection = (roomId: number | string) => {
+  const room = rooms.value.find(r => String(r.id) === String(roomId))
+
+  // 检查是否可以选中
+  if (room && !canSelectRoom(room)) {
+    const reason = getRoomLockedReason(room)
+    ElMessage.warning(reason || '该宿舍已分配给其他部门，不可选中')
     return
   }
 
-  pendingFloor.value = floor
-  pendingRoomIds.value = floorRooms.map(r => r.id)
-  confirmMessage.value = `将 ${floor} 楼的 ${floorRooms.length} 间房间分配给选定院系`
-  confirmDialogVisible.value = true
-}
-
-// 点击单个房间
-const handleRoomClick = (room: any) => {
-  pendingFloor.value = null
-  pendingRoomIds.value = [room.id]
-  confirmMessage.value = `将房间 ${room.dormitoryNo || room.roomNo} 分配给选定院系`
-  confirmDialogVisible.value = true
-}
-
-// 确认分配
-const handleConfirmAssign = async () => {
-  submitLoading.value = true
-  try {
-    if (pendingFloor.value !== null) {
-      // 按楼层分配
-      await batchUpdateDepartmentByFloor({
-        buildingId: props.buildingId,
-        floor: pendingFloor.value,
-        departmentId: selectedDepartmentId.value
-      })
-    } else {
-      // 单个或多个房间分配
-      await batchUpdateDepartment({
-        dormitoryIds: pendingRoomIds.value,
-        departmentId: selectedDepartmentId.value
-      })
-    }
-
-    ElMessage.success('分配成功')
-    confirmDialogVisible.value = false
-
-    // 重新加载数据
-    await loadData()
-    emit('success')
-  } catch (error: any) {
-    ElMessage.error(error.message || '分配失败')
-  } finally {
-    submitLoading.value = false
+  const idStr = String(roomId)
+  const index = selectedRoomIds.value.findIndex(id => String(id) === idStr)
+  if (index === -1) {
+    selectedRoomIds.value.push(roomId)
+  } else {
+    selectedRoomIds.value.splice(index, 1)
   }
 }
 
-// 关闭对话框
-const handleClose = () => {
-  emit('update:visible', false)
+const toggleFloorSelection = (floor: number) => {
+  // 只处理可以选中的房间
+  const floorRooms = rooms.value.filter(r => (r.floorNumber || r.floor || 1) === floor)
+  const selectableRoomIds = floorRooms.filter(r => canSelectRoom(r)).map(r => r.id)
+
+  if (selectableRoomIds.length === 0) {
+    ElMessage.warning('该楼层没有可选中的宿舍')
+    return
+  }
+
+  const allSelected = selectableRoomIds.every(id => selectedRoomIds.value.some(sid => String(sid) === String(id)))
+
+  if (allSelected) {
+    // 取消选择该层所有可选房间
+    const floorIdStrs = selectableRoomIds.map(id => String(id))
+    selectedRoomIds.value = selectedRoomIds.value.filter(id => !floorIdStrs.includes(String(id)))
+  } else {
+    // 选中该层所有可选房间
+    selectableRoomIds.forEach(id => {
+      if (!selectedRoomIds.value.some(sid => String(sid) === String(id))) {
+        selectedRoomIds.value.push(id)
+      }
+    })
+  }
 }
 
-// 监听visible变化
+const isFloorSelected = (floor: number) => {
+  const floorRoomIds = rooms.value
+    .filter(r => (r.floorNumber || r.floor || 1) === floor)
+    .map(r => r.id)
+  return floorRoomIds.length > 0 && floorRoomIds.every(id => selectedRoomIds.value.some(sid => String(sid) === String(id)))
+}
+
+const isFloorIndeterminate = (floor: number) => {
+  const floorRoomIds = rooms.value
+    .filter(r => (r.floorNumber || r.floor || 1) === floor)
+    .map(r => r.id)
+  const selectedCount = floorRoomIds.filter(id => selectedRoomIds.value.some(sid => String(sid) === String(id))).length
+  return selectedCount > 0 && selectedCount < floorRoomIds.length
+}
+
+const selectAllUnassigned = () => {
+  const unassignedIds = rooms.value.filter(r => !r.orgUnitId).map(r => r.id)
+  selectedRoomIds.value = unassignedIds
+}
+
+const clearSelection = () => {
+  selectedRoomIds.value = []
+}
+
+// 检查房间是否选中 - 使用字符串比较避免精度丢失
+const isRoomSelected = (roomId: number | string) => {
+  return selectedRoomIds.value.some(id => String(id) === String(roomId))
+}
+
+const selectDepartment = (deptId: number) => {
+  targetDepartmentId.value = targetDepartmentId.value === deptId ? null : deptId
+}
+
+const toggleDepartmentExpand = (deptId: number) => {
+  const index = expandedDeptIds.value.indexOf(deptId)
+  if (index === -1) {
+    expandedDeptIds.value.push(deptId)
+    // 同时选中该部门作为目标
+    targetDepartmentId.value = deptId
+  } else {
+    expandedDeptIds.value.splice(index, 1)
+  }
+}
+
+// 部门相关
+const getDepartmentRoomCount = (deptId: number) => {
+  return rooms.value.filter(r => r.orgUnitId === deptId).length
+}
+
+const getDepartmentRooms = (deptId: number) => {
+  return rooms.value.filter(r => r.orgUnitId === deptId)
+}
+
+// 获取部门下按楼层分组的宿舍
+const getDepartmentRoomsByFloor = (deptId: number) => {
+  const deptRooms = rooms.value.filter(r => r.orgUnitId === deptId)
+  if (deptRooms.length === 0) return []
+
+  const floorMap = new Map<number, { floor: number; rooms: any[] }>()
+
+  deptRooms.forEach(room => {
+    const floorNum = room.floorNumber || room.floor || 1
+    if (!floorMap.has(floorNum)) {
+      floorMap.set(floorNum, { floor: floorNum, rooms: [] })
+    }
+    floorMap.get(floorNum)!.rooms.push(room)
+  })
+
+  const result = Array.from(floorMap.values())
+  // 按楼层从高到低排序
+  result.sort((a, b) => b.floor - a.floor)
+
+  // 每层内按房间号排序
+  result.forEach(floor => {
+    floor.rooms.sort((a, b) => {
+      const aNo = a.dormitoryNo || a.roomNo || ''
+      const bNo = b.dormitoryNo || b.roomNo || ''
+      return aNo.localeCompare(bNo, 'zh-CN', { numeric: true })
+    })
+  })
+
+  return result
+}
+
+// 拖拽操作
+const handleDragStart = (event: DragEvent, room: any) => {
+  isDragging.value = true
+
+  // 如果拖拽的房间不在选中列表中，只拖拽当前房间
+  if (isRoomSelected(room.id)) {
+    draggedRoomIds.value = [...selectedRoomIds.value] as number[]
+  } else {
+    draggedRoomIds.value = [room.id]
+  }
+
+  // 设置拖拽数据
+  event.dataTransfer?.setData('text/plain', JSON.stringify(draggedRoomIds.value))
+}
+
+const handleDragEnd = () => {
+  isDragging.value = false
+  dragOverDeptId.value = null
+  dragOverUnassigned.value = false
+  draggedRoomIds.value = []
+}
+
+const handleDragOver = (event: DragEvent, deptId: number) => {
+  event.preventDefault()
+  dragOverDeptId.value = deptId
+  dragOverUnassigned.value = false
+}
+
+const handleDragLeave = (event: DragEvent) => {
+  // 检查是否真的离开了容器（而不是移动到子元素）
+  const target = event.currentTarget as HTMLElement
+  const relatedTarget = event.relatedTarget as HTMLElement
+  if (target && relatedTarget && target.contains(relatedTarget)) {
+    return // 仍在容器内，不处理
+  }
+  dragOverDeptId.value = null
+}
+
+const handleDrop = async (event: DragEvent, deptId: number) => {
+  event.preventDefault()
+  dragOverDeptId.value = null
+  isDragging.value = false
+
+  if (draggedRoomIds.value.length === 0) return
+
+  await assignRoomsToDepartment(draggedRoomIds.value, deptId)
+  draggedRoomIds.value = []
+}
+
+// 未分配区域拖拽处理
+const handleDragOverUnassigned = (event: DragEvent) => {
+  event.preventDefault()
+  dragOverUnassigned.value = true
+  dragOverDeptId.value = null
+}
+
+const handleDragLeaveUnassigned = (event: DragEvent) => {
+  // 检查是否真的离开了容器（而不是移动到子元素）
+  const target = event.currentTarget as HTMLElement
+  const relatedTarget = event.relatedTarget as HTMLElement
+  if (target && relatedTarget && target.contains(relatedTarget)) {
+    return // 仍在容器内，不处理
+  }
+  dragOverUnassigned.value = false
+}
+
+const handleDropToUnassigned = async (event: DragEvent) => {
+  event.preventDefault()
+  dragOverUnassigned.value = false
+  isDragging.value = false
+
+  if (draggedRoomIds.value.length === 0) return
+
+  // 只取消已分配的宿舍
+  const assignedRoomIds = draggedRoomIds.value.filter(id => {
+    const room = rooms.value.find(r => String(r.id) === String(id))
+    return room && room.orgUnitId
+  })
+
+  if (assignedRoomIds.length === 0) {
+    ElMessage.warning('所选宿舍都未分配，无需取消')
+    draggedRoomIds.value = []
+    return
+  }
+
+  await assignRoomsToDepartment(assignedRoomIds, null)
+  draggedRoomIds.value = []
+}
+
+// 分配操作
+const assignToSelectedDepartment = async () => {
+  if (selectedRoomIds.value.length === 0 || !targetDepartmentId.value) return
+  await assignRoomsToDepartment(selectedRoomIds.value, targetDepartmentId.value)
+}
+
+const unassignSelected = async () => {
+  if (selectedRoomIds.value.length === 0) return
+  await assignRoomsToDepartment(selectedRoomIds.value, null)
+}
+
+// 标记是否有数据变更
+const hasChanges = ref(false)
+
+const assignRoomsToDepartment = async (roomIds: (number | string)[], deptId: number | null) => {
+  try {
+    // 将ID转换为字符串，避免大整数精度丢失
+    // 后端BatchUpdateDepartmentRequest接收List<String>
+    const stringIds = roomIds.map(id => String(id))
+    await batchUpdateDepartment({
+      dormitoryIds: stringIds,
+      orgUnitId: deptId
+    })
+
+    // 更新本地数据
+    const deptName = deptId
+      ? departmentOptions.value.find(d => d.id === deptId)?.deptName
+      : null
+
+    const roomIdStrs = roomIds.map(id => String(id))
+    rooms.value = rooms.value.map(room => {
+      if (roomIdStrs.includes(String(room.id))) {
+        return {
+          ...room,
+          orgUnitId: deptId,
+          orgUnitName: deptName
+        }
+      }
+      return room
+    })
+
+    // 清除选择
+    selectedRoomIds.value = selectedRoomIds.value.filter(id => !roomIdStrs.includes(String(id)))
+
+    // 标记有数据变更
+    hasChanges.value = true
+
+    ElMessage.success(deptId ? `成功分配 ${roomIds.length} 间宿舍` : `成功取消 ${roomIds.length} 间宿舍的分配`)
+    // 不再立即触发 success，让用户可以继续操作
+    // emit('success')
+  } catch (error: any) {
+    ElMessage.error(error.message || '操作失败')
+  }
+}
+
+// 样式
+const getRoomTagClass = (room: any) => {
+  // 已选中状态
+  if (isRoomSelected(room.id)) {
+    return 'bg-teal-500 text-white ring-2 ring-teal-300 ring-offset-1'
+  }
+
+  // 不可选中状态（已分配给其他部门）
+  if (!canSelectRoom(room)) {
+    return 'bg-orange-100 text-orange-400 cursor-not-allowed opacity-60'
+  }
+
+  // 已分配状态
+  if (room.orgUnitId) {
+    return 'bg-blue-100 text-blue-700 hover:bg-blue-200'
+  }
+
+  // 未分配状态
+  return 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+}
+
+const getRoomTooltip = (room: any) => {
+  const roomNo = room.dormitoryNo || room.roomNo
+  const beds = room.bedCount || room.maxOccupancy || 0
+  const occupied = room.occupiedBeds || room.currentOccupancy || 0
+  const dept = room.orgUnitName || '未分配'
+
+  // 如果不可选，显示锁定原因
+  const lockedReason = getRoomLockedReason(room)
+  if (lockedReason) {
+    return `${roomNo} | ${lockedReason}`
+  }
+
+  return `${roomNo} | ${beds}人间 | 入住${occupied}人 | ${dept}`
+}
+
+const getRoomCardClass = (room: any) => {
+  if (room.orgUnitId) {
+    return 'border-blue-300 bg-blue-50 hover:border-blue-400'
+  }
+  return 'border-gray-200 bg-white hover:border-teal-400'
+}
+
+const getRoomTextClass = (room: any) => {
+  if (room.orgUnitId) {
+    return 'text-blue-700'
+  }
+  return 'text-gray-700'
+}
+
+const getDepartmentCardClass = (deptId: number) => {
+  if (targetDepartmentId.value === deptId) {
+    return 'border-blue-500 bg-blue-50 cursor-pointer'
+  }
+  return 'border-gray-200 bg-white hover:border-blue-300 cursor-pointer'
+}
+
+// 关闭
+const handleClose = () => {
+  emit('update:visible', false)
+  emit('close')
+  // 如果有数据变更，通知父组件刷新
+  if (hasChanges.value) {
+    emit('success')
+    hasChanges.value = false
+  }
+}
+
+// 监听
 watch(() => props.visible, (val) => {
   if (val) {
     loadData()
+    selectedRoomIds.value = []
+    targetDepartmentId.value = null
+    expandedDeptIds.value = []
+    hasChanges.value = false  // 重置变更标记
   }
 })
 
-// 组件挂载时加载数据
+// 当目标部门改变时，清除无效的选择
+watch(targetDepartmentId, () => {
+  // 过滤掉不再可选的房间
+  selectedRoomIds.value = selectedRoomIds.value.filter(id => {
+    const room = rooms.value.find(r => String(r.id) === String(id))
+    return room && canSelectRoom(room)
+  })
+})
+
 onMounted(() => {
   if (props.visible) {
     loadData()

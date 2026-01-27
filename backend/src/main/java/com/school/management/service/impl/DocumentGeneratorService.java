@@ -863,7 +863,7 @@ public class DocumentGeneratorService {
             case "gender" -> record.getGender() != null ? record.getGender() : "";
             case "className" -> record.getClassName() != null ? record.getClassName() : "";
             case "gradeName" -> record.getGradeName() != null ? record.getGradeName() : "";
-            case "departmentName" -> record.getDepartmentName() != null ? record.getDepartmentName() : "";
+            case "orgUnitName" -> record.getOrgUnitName() != null ? record.getOrgUnitName() : "";
             case "buildingName" -> record.getBuildingName() != null ? record.getBuildingName() : "";
             case "roomNo" -> record.getRoomNo() != null ? record.getRoomNo() : "";
             case "categoryName" -> record.getCategoryName() != null ? record.getCategoryName() : "";

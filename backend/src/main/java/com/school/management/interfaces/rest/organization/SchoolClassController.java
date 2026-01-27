@@ -7,6 +7,12 @@ import com.school.management.domain.organization.model.ClassStatus;
 import com.school.management.domain.organization.model.SchoolClass;
 import com.school.management.domain.organization.model.TeacherAssignment;
 import com.school.management.domain.organization.repository.SchoolClassRepository;
+import com.school.management.entity.Department;
+import com.school.management.mapper.DepartmentMapper;
+import com.school.management.infrastructure.persistence.organization.MajorDirectionPersistenceMapper;
+import com.school.management.infrastructure.persistence.organization.MajorDirectionPO;
+import com.school.management.infrastructure.persistence.organization.MajorPersistenceMapper;
+import com.school.management.infrastructure.persistence.organization.MajorPO;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -16,6 +22,8 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 /**
@@ -29,6 +37,9 @@ import java.util.stream.Collectors;
 public class SchoolClassController {
 
     private final SchoolClassRepository schoolClassRepository;
+    private final DepartmentMapper departmentMapper;
+    private final MajorDirectionPersistenceMapper majorDirectionMapper;
+    private final MajorPersistenceMapper majorMapper;
 
     @GetMapping
     @Operation(summary = "获取班级列表")
@@ -70,8 +81,15 @@ public class SchoolClassController {
         int total = classes.size();
         int fromIndex = (pageNum - 1) * pageSize;
         int toIndex = Math.min(fromIndex + pageSize, total);
-        List<SchoolClassResponse> pageData = classes.subList(fromIndex, toIndex).stream()
-                .map(this::toResponse)
+        List<SchoolClass> pageClasses = classes.subList(fromIndex, toIndex);
+
+        // 批量获取组织单元名称
+        Map<Long, String> orgUnitNameMap = getOrgUnitNameMap(pageClasses);
+        // 批量获取专业信息（专业名称和专业方向名称）
+        Map<Long, MajorInfo> majorInfoMap = getMajorInfoMap(pageClasses);
+
+        List<SchoolClassResponse> pageData = pageClasses.stream()
+                .map(c -> toResponse(c, orgUnitNameMap.get(c.getOrgUnitId()), majorInfoMap.get(c.getMajorDirectionId())))
                 .collect(Collectors.toList());
 
         Page<SchoolClassResponse> page = new Page<>(pageNum, pageSize, total);
@@ -84,7 +102,7 @@ public class SchoolClassController {
     @Operation(summary = "获取班级详情")
     public Result<SchoolClassResponse> getClass(@PathVariable Long id) {
         return schoolClassRepository.findById(id)
-                .map(this::toResponse)
+                .map(c -> toResponse(c, getOrgUnitName(c.getOrgUnitId()), getMajorInfo(c.getMajorDirectionId())))
                 .map(Result::success)
                 .orElse(Result.error("班级不存在"));
     }
@@ -93,7 +111,7 @@ public class SchoolClassController {
     @Operation(summary = "根据编码获取班级")
     public Result<SchoolClassResponse> getClassByCode(@PathVariable String classCode) {
         return schoolClassRepository.findByClassCode(classCode)
-                .map(this::toResponse)
+                .map(c -> toResponse(c, getOrgUnitName(c.getOrgUnitId()), getMajorInfo(c.getMajorDirectionId())))
                 .map(Result::success)
                 .orElse(Result.error("班级不存在"));
     }
@@ -122,8 +140,13 @@ public class SchoolClassController {
             schoolClass.updateInfo(null, request.getShortName(), request.getStandardSize(), null, currentUserId);
         }
 
+        // 如果请求状态为ACTIVE(1)，则激活班级
+        if (request.getStatus() != null && request.getStatus() == 1) {
+            schoolClass.activate(currentUserId);
+        }
+
         SchoolClass saved = schoolClassRepository.save(schoolClass);
-        return Result.success(toResponse(saved));
+        return Result.success(toResponse(saved, getOrgUnitName(saved.getOrgUnitId()), getMajorInfo(saved.getMajorDirectionId())));
     }
 
     @PutMapping("/{id}")
@@ -131,16 +154,31 @@ public class SchoolClassController {
     public Result<SchoolClassResponse> updateClass(@PathVariable Long id, @RequestBody UpdateClassRequest request) {
         return schoolClassRepository.findById(id)
                 .map(schoolClass -> {
+                    Long currentUserId = getCurrentUserId();
+                    // 更新基本信息
                     schoolClass.updateInfo(
                             request.getClassName(),
                             request.getShortName(),
                             request.getStandardSize(),
                             request.getSortOrder(),
-                            getCurrentUserId()
+                            currentUserId
                     );
+                    // 更新组织关联信息（部门、年级、专业方向）
+                    schoolClass.updateOrganization(
+                            request.getOrgUnitId(),
+                            request.getGradeId(),
+                            request.getMajorDirectionId(),
+                            currentUserId
+                    );
+                    // 更新状态
+                    if (request.getStatus() != null) {
+                        if ("ACTIVE".equals(request.getStatus()) && schoolClass.getStatus() == ClassStatus.PREPARING) {
+                            schoolClass.activate(currentUserId);
+                        }
+                    }
                     return schoolClassRepository.save(schoolClass);
                 })
-                .map(this::toResponse)
+                .map(c -> toResponse(c, getOrgUnitName(c.getOrgUnitId()), getMajorInfo(c.getMajorDirectionId())))
                 .map(Result::success)
                 .orElse(Result.error("班级不存在"));
     }
@@ -219,8 +257,11 @@ public class SchoolClassController {
     @GetMapping("/head-teacher/{teacherId}")
     @Operation(summary = "获取班主任管理的班级")
     public Result<List<SchoolClassResponse>> getClassesByHeadTeacher(@PathVariable Long teacherId) {
-        List<SchoolClassResponse> classes = schoolClassRepository.findByHeadTeacherId(teacherId).stream()
-                .map(this::toResponse)
+        List<SchoolClass> classList = schoolClassRepository.findByHeadTeacherId(teacherId);
+        Map<Long, String> orgUnitNameMap = getOrgUnitNameMap(classList);
+        Map<Long, MajorInfo> majorInfoMap = getMajorInfoMap(classList);
+        List<SchoolClassResponse> classes = classList.stream()
+                .map(c -> toResponse(c, orgUnitNameMap.get(c.getOrgUnitId()), majorInfoMap.get(c.getMajorDirectionId())))
                 .collect(Collectors.toList());
         return Result.success(classes);
     }
@@ -228,8 +269,11 @@ public class SchoolClassController {
     @GetMapping("/graduating")
     @Operation(summary = "获取即将毕业的班级")
     public Result<List<SchoolClassResponse>> getGraduatingClasses(@RequestParam Integer year) {
-        List<SchoolClassResponse> classes = schoolClassRepository.findGraduatingClasses(year).stream()
-                .map(this::toResponse)
+        List<SchoolClass> classList = schoolClassRepository.findGraduatingClasses(year);
+        Map<Long, String> orgUnitNameMap = getOrgUnitNameMap(classList);
+        Map<Long, MajorInfo> majorInfoMap = getMajorInfoMap(classList);
+        List<SchoolClassResponse> classes = classList.stream()
+                .map(c -> toResponse(c, orgUnitNameMap.get(c.getOrgUnitId()), majorInfoMap.get(c.getMajorDirectionId())))
                 .collect(Collectors.toList());
         return Result.success(classes);
     }
@@ -288,17 +332,119 @@ public class SchoolClassController {
         return null;
     }
 
-    private SchoolClassResponse toResponse(SchoolClass schoolClass) {
+    private Map<Long, String> getOrgUnitNameMap(List<SchoolClass> classes) {
+        Set<Long> orgUnitIds = classes.stream()
+                .map(SchoolClass::getOrgUnitId)
+                .filter(id -> id != null)
+                .collect(Collectors.toSet());
+        if (orgUnitIds.isEmpty()) {
+            return Map.of();
+        }
+        return departmentMapper.selectBatchIds(orgUnitIds).stream()
+                .collect(Collectors.toMap(Department::getId, Department::getDeptName, (a, b) -> a));
+    }
+
+    private String getOrgUnitName(Long orgUnitId) {
+        if (orgUnitId == null) {
+            return null;
+        }
+        Department dept = departmentMapper.selectById(orgUnitId);
+        return dept != null ? dept.getDeptName() : null;
+    }
+
+    /**
+     * 专业信息（包含专业名称、专业方向名称和正确的学制）
+     */
+    private record MajorInfo(String majorName, String directionName, Integer schoolingYears) {}
+
+    /**
+     * 计算正确的学制
+     * 如果是分段注册，学制 = 第一阶段年数 + 第二阶段年数
+     * 否则使用 years 字段
+     */
+    private Integer calculateSchoolingYears(MajorDirectionPO direction) {
+        if (direction == null) {
+            return null;
+        }
+        // 如果是分段注册，计算总学制
+        if (direction.getIsSegmented() != null && direction.getIsSegmented() == 1) {
+            int phase1 = direction.getPhase1Years() != null ? direction.getPhase1Years() : 0;
+            int phase2 = direction.getPhase2Years() != null ? direction.getPhase2Years() : 0;
+            return phase1 + phase2;
+        }
+        return direction.getYears();
+    }
+
+    private Map<Long, MajorInfo> getMajorInfoMap(List<SchoolClass> classes) {
+        Set<Long> directionIds = classes.stream()
+                .map(SchoolClass::getMajorDirectionId)
+                .filter(id -> id != null)
+                .collect(Collectors.toSet());
+        if (directionIds.isEmpty()) {
+            return Map.of();
+        }
+
+        // 获取专业方向信息
+        List<MajorDirectionPO> directions = majorDirectionMapper.selectBatchIds(directionIds);
+
+        // 获取关联的专业ID
+        Set<Long> majorIds = directions.stream()
+                .map(MajorDirectionPO::getMajorId)
+                .filter(id -> id != null)
+                .collect(Collectors.toSet());
+
+        // 获取专业名称映射
+        Map<Long, String> majorNameMap = majorIds.isEmpty() ? Map.of() :
+                majorMapper.selectBatchIds(majorIds).stream()
+                        .collect(Collectors.toMap(MajorPO::getId, MajorPO::getMajorName, (a, b) -> a));
+
+        // 构建专业方向ID -> MajorInfo 映射
+        return directions.stream()
+                .collect(Collectors.toMap(
+                        MajorDirectionPO::getId,
+                        d -> new MajorInfo(
+                                majorNameMap.get(d.getMajorId()),
+                                d.getDirectionName(),
+                                calculateSchoolingYears(d)
+                        ),
+                        (a, b) -> a
+                ));
+    }
+
+    private MajorInfo getMajorInfo(Long majorDirectionId) {
+        if (majorDirectionId == null) {
+            return new MajorInfo(null, null, null);
+        }
+        MajorDirectionPO direction = majorDirectionMapper.selectById(majorDirectionId);
+        if (direction == null) {
+            return new MajorInfo(null, null, null);
+        }
+        String majorName = null;
+        if (direction.getMajorId() != null) {
+            MajorPO major = majorMapper.selectById(direction.getMajorId());
+            majorName = major != null ? major.getMajorName() : null;
+        }
+        return new MajorInfo(majorName, direction.getDirectionName(), calculateSchoolingYears(direction));
+    }
+
+    private SchoolClassResponse toResponse(SchoolClass schoolClass, String orgUnitName, MajorInfo majorInfo) {
         SchoolClassResponse response = new SchoolClassResponse();
         response.setId(schoolClass.getId());
         response.setClassCode(schoolClass.getClassCode());
         response.setClassName(schoolClass.getClassName());
         response.setShortName(schoolClass.getShortName());
         response.setOrgUnitId(schoolClass.getOrgUnitId());
+        response.setOrgUnitName(orgUnitName);
         response.setEnrollmentYear(schoolClass.getEnrollmentYear());
         response.setGradeLevel(schoolClass.getGradeLevel());
+        response.setGradeId(schoolClass.getGradeId());
         response.setMajorDirectionId(schoolClass.getMajorDirectionId());
-        response.setSchoolingYears(schoolClass.getSchoolingYears());
+        response.setMajorName(majorInfo != null ? majorInfo.majorName() : null);
+        response.setMajorDirectionName(majorInfo != null ? majorInfo.directionName() : null);
+        // 优先使用从专业方向计算出的学制（分段注册会计算总学制）
+        response.setSchoolingYears(majorInfo != null && majorInfo.schoolingYears() != null
+                ? majorInfo.schoolingYears()
+                : schoolClass.getSchoolingYears());
         response.setStandardSize(schoolClass.getStandardSize());
         response.setCurrentSize(schoolClass.getCurrentSize());
         response.setStatus(schoolClass.getStatus().name());

@@ -21,12 +21,12 @@ public class TaskDetailDTO {
     /**
      * 审批流程配置（按系部）
      */
-    private List<DepartmentApprovalFlowDTO> approvalFlows;
+    private List<OrgUnitApprovalFlowDTO> approvalFlows;
 
     /**
      * 执行人列表（按系部分组）
      */
-    private List<DepartmentAssigneesDTO> assigneesByDepartment;
+    private List<OrgUnitAssigneesDTO> assigneesByOrgUnit;
 
     /**
      * 统计信息
@@ -34,22 +34,22 @@ public class TaskDetailDTO {
     private TaskStatisticsDTO statistics;
 
     /**
-     * 部门审批流程DTO
+     * 组织单元审批流程DTO
      */
     @Data
-    public static class DepartmentApprovalFlowDTO {
-        private Long departmentId;
-        private String departmentName;
+    public static class OrgUnitApprovalFlowDTO {
+        private Long orgUnitId;
+        private String orgUnitName;
         private String flowChain; // 如: "班主任提交 → 张主任(系领导) → 王处长(学工处)"
     }
 
     /**
-     * 部门执行人列表DTO
+     * 组织单元执行人列表DTO
      */
     @Data
-    public static class DepartmentAssigneesDTO {
-        private Long departmentId;
-        private String departmentName;
+    public static class OrgUnitAssigneesDTO {
+        private Long orgUnitId;
+        private String orgUnitName;
         private Integer totalCount;
         private Integer completedCount;
         private List<TaskAssigneeDetailDTO> assignees;

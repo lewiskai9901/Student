@@ -184,7 +184,7 @@
               </button>
             </div>
             <div class="grid grid-cols-1 gap-4 sm:grid-cols-4">
-              <InfoItem label="楼宇名称" :value="studentInfo.buildingName" />
+              <InfoItem label="楼栋名称" :value="studentInfo.buildingName" />
               <InfoItem label="楼号" :value="studentInfo.buildingNo" />
               <InfoItem label="房间号" :value="studentInfo.roomNo" />
               <InfoItem label="床位号" :value="studentInfo.bedNumber" />
@@ -197,7 +197,7 @@
                 <table class="min-w-full divide-y divide-gray-200">
                   <thead class="bg-gray-50">
                     <tr>
-                      <th class="px-3 py-2 text-left text-xs font-medium text-gray-500">楼宇</th>
+                      <th class="px-3 py-2 text-left text-xs font-medium text-gray-500">楼栋</th>
                       <th class="px-3 py-2 text-left text-xs font-medium text-gray-500">房间号</th>
                       <th class="px-3 py-2 text-left text-xs font-medium text-gray-500">床位</th>
                       <th class="px-3 py-2 text-left text-xs font-medium text-gray-500">入住日期</th>

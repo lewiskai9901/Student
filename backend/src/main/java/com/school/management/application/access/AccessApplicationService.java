@@ -8,10 +8,14 @@ import com.school.management.domain.access.repository.UserRoleRepository;
 import com.school.management.domain.access.service.AuthorizationService;
 import com.school.management.domain.shared.event.DomainEvent;
 import com.school.management.domain.shared.event.DomainEventPublisher;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -19,6 +23,7 @@ import java.util.stream.Collectors;
 /**
  * Application service for access control operations.
  */
+@Slf4j
 @Service
 @Transactional
 public class AccessApplicationService {
@@ -103,10 +108,59 @@ public class AccessApplicationService {
 
     /**
      * Gets permission tree (hierarchical).
+     * Builds a tree structure with children properly nested.
      */
     @Transactional(readOnly = true)
     public List<Permission> getPermissionTree() {
-        return permissionRepository.findRoots();
+        // Get all enabled permissions
+        List<Permission> allPermissions = permissionRepository.findAllEnabled();
+
+        // Build tree structure
+        return buildPermissionTree(allPermissions);
+    }
+
+    /**
+     * Builds a permission tree from a flat list.
+     */
+    private List<Permission> buildPermissionTree(List<Permission> permissions) {
+        if (permissions == null || permissions.isEmpty()) {
+            return new ArrayList<>();
+        }
+
+        // Create a map for quick lookup
+        Map<Long, Permission> permissionMap = new HashMap<>();
+        for (Permission permission : permissions) {
+            permissionMap.put(permission.getId(), permission);
+            permission.setChildren(new ArrayList<>()); // Initialize children list
+        }
+
+        // Build tree by linking children to parents
+        List<Permission> roots = new ArrayList<>();
+        for (Permission permission : permissions) {
+            Long parentId = permission.getParentId();
+            if (parentId == null || parentId == 0L) {
+                // This is a root permission
+                roots.add(permission);
+            } else {
+                // Find parent and add as child
+                Permission parent = permissionMap.get(parentId);
+                if (parent != null) {
+                    parent.getChildren().add(permission);
+                } else {
+                    // Parent not found, treat as root
+                    roots.add(permission);
+                }
+            }
+        }
+
+        // Sort roots by sortOrder
+        roots.sort((a, b) -> {
+            Integer orderA = a.getSortOrder() != null ? a.getSortOrder() : 0;
+            Integer orderB = b.getSortOrder() != null ? b.getSortOrder() : 0;
+            return orderA.compareTo(orderB);
+        });
+
+        return roots;
     }
 
     /**
@@ -202,11 +256,20 @@ public class AccessApplicationService {
      * Grants permissions to a role.
      */
     public Role grantPermissions(Long roleId, Set<Long> permissionIds) {
+        log.info("grantPermissions called: roleId={}, permissionIds count={}", roleId, permissionIds != null ? permissionIds.size() : 0);
+
         Role role = roleRepository.findById(roleId)
             .orElseThrow(() -> new IllegalArgumentException("Role not found: " + roleId));
 
+        log.info("Role found: {} ({}), isSystem={}, current permissions count={}",
+            role.getRoleName(), role.getRoleCode(), role.getIsSystem(), role.getPermissionIds().size());
+
         role.setPermissions(permissionIds);
+        log.info("After setPermissions, role has {} permissions", role.getPermissionIds().size());
+
         role = roleRepository.save(role);
+        log.info("Role saved, returned permissions count={}", role.getPermissionIds().size());
+
         publishEvents(role);
 
         // Refresh cache for all users with this role

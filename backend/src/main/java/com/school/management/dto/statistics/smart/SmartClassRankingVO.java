@@ -41,14 +41,14 @@ public class SmartClassRankingVO {
     private String gradeName;
 
     /**
-     * 部门ID
+     * 组织单元ID
      */
-    private Long departmentId;
+    private Long orgUnitId;
 
     /**
-     * 部门名称
+     * 组织单元名称
      */
-    private String departmentName;
+    private String orgUnitName;
 
     /**
      * 班主任ID
@@ -122,9 +122,9 @@ public class SmartClassRankingVO {
     private Integer gradeRanking;
 
     /**
-     * 部门内排名
+     * 组织单元内排名
      */
-    private Integer departmentRanking;
+    private Integer orgUnitRanking;
 
     /**
      * 等级：优秀/良好/中等/较差

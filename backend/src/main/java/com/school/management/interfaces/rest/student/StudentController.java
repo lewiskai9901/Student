@@ -49,7 +49,7 @@ public class StudentController {
     public Result<PageResult<StudentDTO>> getStudents(
             @Parameter(description = "关键字") @RequestParam(required = false) String keyword,
             @Parameter(description = "班级ID") @RequestParam(required = false) Long classId,
-            @Parameter(description = "部门ID") @RequestParam(required = false) Long departmentId,
+            @Parameter(description = "组织单元ID") @RequestParam(required = false) Long orgUnitId,
             @Parameter(description = "年级") @RequestParam(required = false) Integer gradeLevel,
             @Parameter(description = "宿舍ID") @RequestParam(required = false) Long dormitoryId,
             @Parameter(description = "状态") @RequestParam(required = false) Integer studentStatus,
@@ -59,7 +59,7 @@ public class StudentController {
         StudentQueryCriteria criteria = new StudentQueryCriteria();
         criteria.setKeyword(keyword);
         criteria.setClassId(classId);
-        criteria.setDepartmentId(departmentId);
+        criteria.setOrgUnitId(orgUnitId);
         criteria.setGradeLevel(gradeLevel);
         criteria.setDormitoryId(dormitoryId);
         criteria.setStatus(studentStatus);

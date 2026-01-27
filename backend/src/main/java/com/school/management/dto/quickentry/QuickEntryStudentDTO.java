@@ -47,9 +47,9 @@ public class QuickEntryStudentDTO {
     private String majorName;
 
     /**
-     * 院系名称
+     * 组织单元名称（原院系名称）
      */
-    private String departmentName;
+    private String orgUnitName;
 
     /**
      * 头像URL

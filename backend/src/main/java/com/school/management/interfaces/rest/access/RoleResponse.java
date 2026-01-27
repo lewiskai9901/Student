@@ -1,6 +1,8 @@
 package com.school.management.interfaces.rest.access;
 
-import com.school.management.domain.access.model.DataScope;
+import com.fasterxml.jackson.databind.annotation.JsonSerialize;
+import com.fasterxml.jackson.databind.ser.std.ToStringSerializer;
+import com.school.management.casbin.model.DataScope;
 import com.school.management.domain.access.model.RoleType;
 import lombok.Data;
 
@@ -13,6 +15,7 @@ import java.util.Set;
 @Data
 public class RoleResponse {
 
+    @JsonSerialize(using = ToStringSerializer.class)
     private Long id;
 
     private String roleCode;
@@ -31,6 +34,7 @@ public class RoleResponse {
 
     private DataScope dataScope;
 
+    @JsonSerialize(contentUsing = ToStringSerializer.class)
     private Set<Long> permissionIds;
 
     private LocalDateTime createdAt;

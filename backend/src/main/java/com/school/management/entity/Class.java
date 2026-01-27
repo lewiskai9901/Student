@@ -34,9 +34,9 @@ public class Class extends BaseEntity {
     private Integer gradeLevel;
 
     /**
-     * 所属部门ID
+     * 所属组织单元ID
      */
-    private Long departmentId;
+    private Long orgUnitId;
 
     /**
      * 年级ID
@@ -102,16 +102,16 @@ public class Class extends BaseEntity {
     // ========== 关联字段（非数据库字段） ==========
 
     /**
-     * 部门名称(关联查询)
+     * 组织单元名称(关联查询)
      */
     @TableField(exist = false)
-    private String departmentName;
+    private String orgUnitName;
 
     /**
-     * 部门信息(关联查询)
+     * 组织单元信息(关联查询)
      */
     @TableField(exist = false)
-    private Department department;
+    private Department orgUnit;
 
     /**
      * 专业信息(关联查询)

@@ -6,7 +6,7 @@
     <resultMap id="BaseResultMap" type="com.school.management.entity.BuildingDepartmentAssignment">
         <id column="id" property="id"/>
         <result column="building_id" property="buildingId"/>
-        <result column="department_id" property="departmentId"/>
+        <result column="org_unit_id" property="orgUnitId"/>
         <result column="floor_start" property="floorStart"/>
         <result column="floor_end" property="floorEnd"/>
         <result column="allocated_rooms" property="allocatedRooms"/>
@@ -24,23 +24,23 @@
     <!-- 带关联信息的结果映射 -->
     <resultMap id="DetailResultMap" type="com.school.management.entity.BuildingDepartmentAssignment" extends="BaseResultMap">
         <result column="building_name" property="buildingName"/>
-        <result column="department_name" property="departmentName"/>
+        <result column="org_unit_name" property="orgUnitName"/>
     </resultMap>
 
     <!-- 基础字段列表 -->
     <sql id="Base_Column_List">
-        id, building_id, department_id, floor_start, floor_end,
+        id, building_id, org_unit_id, floor_start, floor_end,
         allocated_rooms, allocated_beds, priority, status, notes,
         created_at, updated_at, created_by, updated_by, deleted
     </sql>
 
     <!-- 带关联信息的字段列表 -->
     <sql id="Detail_Column_List">
-        a.id, a.building_id, a.department_id, a.floor_start, a.floor_end,
+        a.id, a.building_id, a.org_unit_id, a.floor_start, a.floor_end,
         a.allocated_rooms, a.allocated_beds, a.priority, a.status, a.notes,
         a.created_at, a.updated_at, a.created_by, a.updated_by, a.deleted,
         b.building_name,
-        d.dept_name as department_name
+        o.unit_name as org_unit_name
     </sql>
 
     <!-- 分页查询分配列表（带关联信息） -->
@@ -49,14 +49,14 @@
         <include refid="Detail_Column_List"/>
         FROM building_department_assignments a
         LEFT JOIN dormitory_buildings b ON a.building_id = b.id AND b.deleted = 0
-        LEFT JOIN departments d ON a.department_id = d.id AND d.deleted = 0
+        LEFT JOIN org_units o ON a.org_unit_id = o.id AND o.deleted = 0
         <where>
             a.deleted = 0
             <if test="buildingId != null">
                 AND a.building_id = #{buildingId}
             </if>
-            <if test="departmentId != null">
-                AND a.department_id = #{departmentId}
+            <if test="orgUnitId != null">
+                AND a.org_unit_id = #{orgUnitId}
             </if>
             <if test="status != null">
                 AND a.status = #{status}
@@ -71,21 +71,21 @@
         <include refid="Detail_Column_List"/>
         FROM building_department_assignments a
         LEFT JOIN dormitory_buildings b ON a.building_id = b.id AND b.deleted = 0
-        LEFT JOIN departments d ON a.department_id = d.id AND d.deleted = 0
+        LEFT JOIN org_units o ON a.org_unit_id = o.id AND o.deleted = 0
         WHERE a.building_id = #{buildingId}
           AND a.deleted = 0
           AND a.status = 1
         ORDER BY a.priority DESC, a.floor_start ASC
     </select>
 
-    <!-- 根据院系ID查询所有分配的宿舍楼 -->
-    <select id="selectByDepartmentId" resultMap="DetailResultMap">
+    <!-- 根据组织单元ID查询所有分配的宿舍楼 -->
+    <select id="selectByOrgUnitId" resultMap="DetailResultMap">
         SELECT
         <include refid="Detail_Column_List"/>
         FROM building_department_assignments a
         LEFT JOIN dormitory_buildings b ON a.building_id = b.id AND b.deleted = 0
-        LEFT JOIN departments d ON a.department_id = d.id AND d.deleted = 0
-        WHERE a.department_id = #{departmentId}
+        LEFT JOIN org_units o ON a.org_unit_id = o.id AND o.deleted = 0
+        WHERE a.org_unit_id = #{orgUnitId}
           AND a.deleted = 0
           AND a.status = 1
         ORDER BY b.building_name ASC, a.floor_start ASC
@@ -96,7 +96,7 @@
         SELECT COUNT(*)
         FROM building_department_assignments
         WHERE building_id = #{buildingId}
-          AND department_id = #{departmentId}
+          AND org_unit_id = #{orgUnitId}
           AND deleted = 0
           AND status = 1
           <if test="excludeId != null">
@@ -120,7 +120,7 @@
         <include refid="Detail_Column_List"/>
         FROM building_department_assignments a
         LEFT JOIN dormitory_buildings b ON a.building_id = b.id AND b.deleted = 0
-        LEFT JOIN departments d ON a.department_id = d.id AND d.deleted = 0
+        LEFT JOIN org_units o ON a.org_unit_id = o.id AND o.deleted = 0
         WHERE a.building_id = #{buildingId}
           AND a.deleted = 0
           AND a.status = 1

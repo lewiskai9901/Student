@@ -21,9 +21,9 @@ public interface MajorMapper extends BaseMapper<Major> {
     IPage<Major> selectMajorPage(Page<Major> page, @Param("params") Major params);
 
     /**
-     * 根据部门ID查询专业列表
+     * 根据组织单元ID查询专业列表
      */
-    List<Major> selectByDepartmentId(@Param("departmentId") Long departmentId);
+    List<Major> selectByOrgUnitId(@Param("orgUnitId") Long orgUnitId);
 
     /**
      * 查询所有启用的专业

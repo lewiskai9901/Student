@@ -111,7 +111,7 @@ public class DashboardReadModel {
                     COALESCE(AVG(dc.final_score), 0) as avg_score,
                     COUNT(dc.id) as check_count
                 FROM class c
-                LEFT JOIN department d ON c.department_id = d.id
+                LEFT JOIN department d ON c.org_unit_id = d.id
                 LEFT JOIN daily_check dc ON dc.class_id = c.id
                     AND dc.check_date BETWEEN ? AND ?
                     AND dc.deleted = 0
@@ -125,7 +125,7 @@ public class DashboardReadModel {
                 (rs, rowNum) -> ClassRanking.builder()
                     .classId(rs.getLong("class_id"))
                     .className(rs.getString("class_name"))
-                    .departmentName(rs.getString("department_name"))
+                    .orgUnitName(rs.getString("department_name"))
                     .averageScore(rs.getBigDecimal("avg_score"))
                     .checkCount(rs.getInt("check_count"))
                     .ranking(rowNum + 1)
@@ -136,25 +136,25 @@ public class DashboardReadModel {
     }
 
     /**
-     * Gets department statistics.
+     * Gets org unit statistics.
      *
-     * @return list of department stats
+     * @return list of org unit stats
      */
     @Cacheable(value = CacheConfig.CACHE_STATISTICS, key = "'dashboard:departments'")
-    public List<DepartmentStats> getDepartmentStats() {
-        log.debug("Loading department statistics from database");
+    public List<OrgUnitStats> getOrgUnitStats() {
+        log.debug("Loading org unit statistics from database");
 
         String sql = """
             SELECT
-                d.id as department_id,
+                d.id as org_unit_id,
                 d.name as department_name,
                 COUNT(DISTINCT c.id) as class_count,
                 COUNT(DISTINCT s.id) as student_count,
                 COUNT(DISTINCT u.id) as user_count
             FROM department d
-            LEFT JOIN class c ON c.department_id = d.id AND c.deleted = 0
+            LEFT JOIN class c ON c.org_unit_id = d.id AND c.deleted = 0
             LEFT JOIN student s ON s.class_id = c.id AND s.deleted = 0
-            LEFT JOIN user_department ud ON ud.department_id = d.id
+            LEFT JOIN user_department ud ON ud.org_unit_id = d.id
             LEFT JOIN user u ON u.id = ud.user_id AND u.deleted = 0 AND u.status = 1
             WHERE d.deleted = 0
             GROUP BY d.id, d.name
@@ -162,9 +162,9 @@ public class DashboardReadModel {
             """;
 
         return jdbcTemplate.query(sql,
-            (rs, rowNum) -> DepartmentStats.builder()
-                .departmentId(rs.getLong("department_id"))
-                .departmentName(rs.getString("department_name"))
+            (rs, rowNum) -> OrgUnitStats.builder()
+                .orgUnitId(rs.getLong("org_unit_id"))
+                .orgUnitName(rs.getString("department_name"))
                 .classCount(rs.getInt("class_count"))
                 .studentCount(rs.getInt("student_count"))
                 .userCount(rs.getInt("user_count"))
@@ -263,7 +263,7 @@ public class DashboardReadModel {
     public static class ClassRanking {
         private Long classId;
         private String className;
-        private String departmentName;
+        private String orgUnitName;
         private BigDecimal averageScore;
         private int checkCount;
         private int ranking;
@@ -271,9 +271,9 @@ public class DashboardReadModel {
 
     @Data
     @Builder
-    public static class DepartmentStats {
-        private Long departmentId;
-        private String departmentName;
+    public static class OrgUnitStats {
+        private Long orgUnitId;
+        private String orgUnitName;
         private int classCount;
         private int studentCount;
         private int userCount;

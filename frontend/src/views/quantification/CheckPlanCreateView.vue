@@ -68,7 +68,7 @@
         </div>
 
         <!-- 按院系 -->
-        <div v-if="targetScopeType === 'department'" class="scope-select-area">
+        <div v-if="targetScopeType === 'orgUnit'" class="scope-select-area">
           <div class="select-label">
             <Building2 :size="12" />
             选择院系
@@ -78,15 +78,15 @@
               v-for="dept in flatDepartments"
               :key="dept.id"
               class="select-chip"
-              :class="{ selected: selectedDepartmentIds.includes(dept.id) }"
-              @click="toggleDepartment(dept.id)"
+              :class="{ selected: selectedOrgUnitIds.includes(dept.id) }"
+              @click="toggleOrgUnit(dept.id)"
             >
-              <CheckCircle v-if="selectedDepartmentIds.includes(dept.id)" :size="12" />
-              <span>{{ dept.deptName }}</span>
+              <CheckCircle v-if="selectedOrgUnitIds.includes(dept.id)" :size="12" />
+              <span>{{ dept.unitName }}</span>
             </div>
           </div>
-          <div class="select-info" v-if="selectedDepartmentIds.length > 0">
-            已选 {{ selectedDepartmentIds.length }} 个院系，涵盖 {{ filteredClasses.length }} 个班级
+          <div class="select-info" v-if="selectedOrgUnitIds.length > 0">
+            已选 {{ selectedOrgUnitIds.length }} 个院系，涵盖 {{ filteredClasses.length }} 个班级
           </div>
         </div>
 
@@ -126,10 +126,10 @@
                   v-for="dept in flatDepartments"
                   :key="dept.id"
                   class="select-chip small"
-                  :class="{ selected: customFilterDeptIds.includes(dept.id) }"
-                  @click="toggleCustomFilterDept(dept.id)"
+                  :class="{ selected: customFilterOrgUnitIds.includes(dept.id) }"
+                  @click="toggleCustomFilterOrgUnit(dept.id)"
                 >
-                  <span>{{ dept.deptName }}</span>
+                  <span>{{ dept.unitName }}</span>
                 </div>
               </div>
             </div>
@@ -550,7 +550,7 @@ const SCHEME_COLORS = [
 // 目标范围类型选项
 const scopeTypeOptions = [
   { value: 'all', label: '全部班级', icon: Globe },
-  { value: 'department', label: '按院系', icon: Building2 },
+  { value: 'orgUnit', label: '按院系', icon: Building2 },
   { value: 'grade', label: '按年级', icon: GraduationCap },
   { value: 'custom', label: '自定义', icon: Layers }
 ]
@@ -607,13 +607,13 @@ const targetScopeType = ref('all')  // all/department/grade/custom
 const departments = ref<any[]>([])
 const grades = ref<any[]>([])
 const classes = ref<any[]>([])
-const selectedDepartmentIds = ref<(string | number)[]>([])
+const selectedOrgUnitIds = ref<(string | number)[]>([])
 const selectedGradeIds = ref<(string | number)[]>([])
 const selectedClassIds = ref<(string | number)[]>([])
 const excludeClassIds = ref<(string | number)[]>([])
 const loadingTargetData = ref(false)
 // 自定义模式下的筛选条件
-const customFilterDeptIds = ref<(string | number)[]>([])
+const customFilterOrgUnitIds = ref<(string | number)[]>([])
 const customFilterGradeIds = ref<(string | number)[]>([])
 
 // 加权配置映射
@@ -703,7 +703,7 @@ const loadTargetData = async () => {
 }
 
 // 递归获取部门及其所有子部门ID
-const getAllDescendantDeptIds = (deptId: string | number, deptTree: any[]): (string | number)[] => {
+const getAllDescendantOrgUnitIds = (deptId: string | number, deptTree: any[]): (string | number)[] => {
   const result: (string | number)[] = [deptId]
   const findAndCollect = (items: any[]) => {
     for (const item of items) {
@@ -731,10 +731,10 @@ const getAllDescendantDeptIds = (deptId: string | number, deptTree: any[]): (str
 }
 
 // 获取所有选中部门及其子部门的ID集合
-const allSelectedDeptIds = computed(() => {
+const allSelectedOrgUnitIds = computed(() => {
   const allIds = new Set<string | number>()
-  selectedDepartmentIds.value.forEach(deptId => {
-    getAllDescendantDeptIds(deptId, departments.value).forEach(id => allIds.add(id))
+  selectedOrgUnitIds.value.forEach(deptId => {
+    getAllDescendantOrgUnitIds(deptId, departments.value).forEach(id => allIds.add(id))
   })
   return allIds
 })
@@ -742,9 +742,9 @@ const allSelectedDeptIds = computed(() => {
 // 获取过滤后的班级列表（根据选择的院系和年级，包含子部门）
 const filteredClasses = computed(() => {
   let result = classes.value
-  if (targetScopeType.value === 'department' && selectedDepartmentIds.value.length > 0) {
+  if (targetScopeType.value === 'department' && selectedOrgUnitIds.value.length > 0) {
     // 使用包含子部门的ID集合进行过滤
-    result = result.filter(c => allSelectedDeptIds.value.has(c.departmentId))
+    result = result.filter(c => allSelectedOrgUnitIds.value.has(c.orgUnitId))
   }
   if (targetScopeType.value === 'grade' && selectedGradeIds.value.length > 0) {
     result = result.filter(c => selectedGradeIds.value.includes(c.gradeId))
@@ -770,8 +770,8 @@ const flatDepartments = computed(() => {
 // 自定义模式下筛选后的班级列表
 const customFilteredClasses = computed(() => {
   let result = classes.value
-  if (customFilterDeptIds.value.length > 0) {
-    result = result.filter(c => customFilterDeptIds.value.includes(c.departmentId))
+  if (customFilterOrgUnitIds.value.length > 0) {
+    result = result.filter(c => customFilterOrgUnitIds.value.includes(c.orgUnitId))
   }
   if (customFilterGradeIds.value.length > 0) {
     result = result.filter(c => customFilterGradeIds.value.includes(c.gradeId))
@@ -781,21 +781,21 @@ const customFilteredClasses = computed(() => {
 
 // 目标范围类型变更
 const onTargetScopeTypeChange = () => {
-  selectedDepartmentIds.value = []
+  selectedOrgUnitIds.value = []
   selectedGradeIds.value = []
   selectedClassIds.value = []
   excludeClassIds.value = []
-  customFilterDeptIds.value = []
+  customFilterOrgUnitIds.value = []
   customFilterGradeIds.value = []
 }
 
 // 切换院系选择
-const toggleDepartment = (id: string | number) => {
-  const idx = selectedDepartmentIds.value.indexOf(id)
+const toggleOrgUnit = (id: string | number) => {
+  const idx = selectedOrgUnitIds.value.indexOf(id)
   if (idx >= 0) {
-    selectedDepartmentIds.value.splice(idx, 1)
+    selectedOrgUnitIds.value.splice(idx, 1)
   } else {
-    selectedDepartmentIds.value.push(id)
+    selectedOrgUnitIds.value.push(id)
   }
   excludeClassIds.value = []
 }
@@ -832,12 +832,12 @@ const toggleExcludeClass = (id: string | number) => {
 }
 
 // 自定义模式-切换院系筛选
-const toggleCustomFilterDept = (id: string | number) => {
-  const idx = customFilterDeptIds.value.indexOf(id)
+const toggleCustomFilterOrgUnit = (id: string | number) => {
+  const idx = customFilterOrgUnitIds.value.indexOf(id)
   if (idx >= 0) {
-    customFilterDeptIds.value.splice(idx, 1)
+    customFilterOrgUnitIds.value.splice(idx, 1)
   } else {
-    customFilterDeptIds.value.push(id)
+    customFilterOrgUnitIds.value.push(id)
   }
 }
 
@@ -1085,9 +1085,9 @@ const handleSubmit = async () => {
 
     // 构建目标范围配置
     let scopeConfig: TargetScopeConfig | undefined
-    if (targetScopeType.value === 'department' && selectedDepartmentIds.value.length > 0) {
+    if (targetScopeType.value === 'department' && selectedOrgUnitIds.value.length > 0) {
       scopeConfig = {
-        departmentIds: selectedDepartmentIds.value,
+        orgUnitIds: selectedOrgUnitIds.value,
         excludeClassIds: excludeClassIds.value.length > 0 ? excludeClassIds.value : undefined
       }
     } else if (targetScopeType.value === 'grade' && selectedGradeIds.value.length > 0) {

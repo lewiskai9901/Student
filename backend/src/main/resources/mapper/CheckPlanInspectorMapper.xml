@@ -22,10 +22,10 @@
             i.*,
             u.real_name as user_name,
             u.username,
-            d.dept_name as department_name
+            o.unit_name as department_name
         FROM check_plan_inspectors i
         LEFT JOIN users u ON i.user_id = u.id AND u.deleted = 0
-        LEFT JOIN departments d ON u.department_id = d.id AND d.deleted = 0
+        LEFT JOIN org_units o ON u.org_unit_id = o.id AND d.deleted = 0
         WHERE i.plan_id = #{planId}
           AND i.deleted = 0
         ORDER BY i.created_at DESC

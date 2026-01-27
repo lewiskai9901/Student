@@ -11,7 +11,7 @@ import lombok.Data;
 public class CreateDormitoryCommand {
 
     private Long buildingId;
-    private Long departmentId;
+    private Long orgUnitId;
     private String dormitoryNo;
     private Integer floorNumber;
     private Integer roomUsageType;

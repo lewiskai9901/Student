@@ -5,7 +5,7 @@
     <resultMap id="BaseResultMap" type="com.school.management.entity.ClassSizeStandard">
         <id column="id" property="id"/>
         <result column="semester_id" property="semesterId"/>
-        <result column="department_id" property="departmentId"/>
+        <result column="org_unit_id" property="orgUnitId"/>
         <result column="grade_level" property="gradeLevel"/>
         <result column="standard_size" property="standardSize"/>
         <result column="locked" property="locked"/>
@@ -18,7 +18,7 @@
     </resultMap>
 
     <sql id="Base_Column_List">
-        id, semester_id, department_id, grade_level, standard_size, locked,
+        id, semester_id, org_unit_id, grade_level, standard_size, locked,
         calculation_method, locked_at, locked_by, remark, created_at, updated_at
     </sql>
 
@@ -29,15 +29,15 @@
         FROM class_size_standards
         WHERE semester_id = #{semesterId}
         AND (
-        (department_id = #{departmentId} AND grade_level = #{gradeLevel})
-        OR (department_id = #{departmentId} AND grade_level IS NULL)
-        OR (department_id IS NULL AND grade_level IS NULL)
+        (org_unit_id = #{orgUnitId} AND grade_level = #{gradeLevel})
+        OR (org_unit_id = #{orgUnitId} AND grade_level IS NULL)
+        OR (org_unit_id IS NULL AND grade_level IS NULL)
         )
         ORDER BY
         CASE
-        WHEN department_id IS NOT NULL AND grade_level IS NOT NULL THEN 1
-        WHEN department_id IS NOT NULL AND grade_level IS NULL THEN 2
-        WHEN department_id IS NULL AND grade_level IS NULL THEN 3
+        WHEN org_unit_id IS NOT NULL AND grade_level IS NOT NULL THEN 1
+        WHEN org_unit_id IS NOT NULL AND grade_level IS NULL THEN 2
+        WHEN org_unit_id IS NULL AND grade_level IS NULL THEN 3
         ELSE 4
         END,
         created_at DESC
@@ -51,7 +51,7 @@
         FROM class_size_standards
         WHERE semester_id = #{semesterId}
         ORDER BY
-        department_id NULLS LAST,
+        org_unit_id NULLS LAST,
         grade_level NULLS LAST,
         created_at DESC
     </select>

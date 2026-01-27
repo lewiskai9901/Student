@@ -1,6 +1,8 @@
 package com.school.management.entity;
 
 import com.baomidou.mybatisplus.annotation.*;
+import com.fasterxml.jackson.databind.annotation.JsonSerialize;
+import com.fasterxml.jackson.databind.ser.std.ToStringSerializer;
 import lombok.Data;
 
 import java.time.LocalDateTime;
@@ -16,6 +18,7 @@ public class Major {
      * 主键ID
      */
     @TableId(value = "id", type = IdType.AUTO)
+    @JsonSerialize(using = ToStringSerializer.class)
     private Long id;
 
     /**
@@ -29,9 +32,10 @@ public class Major {
     private String majorCode;
 
     /**
-     * 所属部门ID
+     * 所属组织单元ID
      */
-    private Long departmentId;
+    @JsonSerialize(using = ToStringSerializer.class)
+    private Long orgUnitId;
 
     /**
      * 专业描述
@@ -62,8 +66,8 @@ public class Major {
     private LocalDateTime updatedAt;
 
     /**
-     * 部门名称(非数据库字段)
+     * 组织单元名称(非数据库字段)
      */
     @TableField(exist = false)
-    private String departmentName;
+    private String orgUnitName;
 }

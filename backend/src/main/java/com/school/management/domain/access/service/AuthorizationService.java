@@ -1,6 +1,6 @@
 package com.school.management.domain.access.service;
 
-import com.school.management.domain.access.model.DataScope;
+import com.school.management.casbin.model.DataScope;
 
 import java.util.List;
 import java.util.Set;

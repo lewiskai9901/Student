@@ -22,7 +22,7 @@ public class ClassBadgeRecordVO {
 
     private Long classId;
     private String className;
-    private String departmentName;
+    private String orgUnitName;
     private String gradeName;
 
     private LocalDateTime grantedAt;

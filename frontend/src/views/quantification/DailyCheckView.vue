@@ -704,7 +704,7 @@ const selectedClassIds = computed(() => {
       gradeClasses.forEach(c => classIdSet.add(c.id))
     } else if (target.targetType === 3) {
       // 选择的院系 - 找出该院系下的所有班级
-      const deptClasses = classesToUse.filter(c => c.departmentId === target.targetId)
+      const deptClasses = classesToUse.filter(c => c.orgUnitId === target.targetId)
       deptClasses.forEach(c => classIdSet.add(c.id))
     }
   }
@@ -804,7 +804,7 @@ const availableGrades = computed(() => {
 const availableDepartments = computed(() => {
   if (selectedPlanId.value && planTargetClasses.value.length > 0) {
     // 从目标班级中提取院系ID
-    const deptIdSet = new Set(planTargetClasses.value.map(c => c.departmentId))
+    const deptIdSet = new Set(planTargetClasses.value.map(c => c.orgUnitId))
     return departmentList.value.filter(d => deptIdSet.has(d.id))
   }
   return departmentList.value

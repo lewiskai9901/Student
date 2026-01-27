@@ -1,12 +1,12 @@
 /**
- * 宿舍楼-院系分配类型定义
+ * 宿舍楼-组织单元分配类型定义
  */
 
-// 宿舍楼-院系分配实体
-export interface BuildingDepartmentAssignment {
+// 宿舍楼-组织单元分配实体
+export interface BuildingOrgUnitAssignment {
   id: number
   buildingId: number
-  departmentId: number
+  orgUnitId: number
   floorStart?: number | null
   floorEnd?: number | null
   allocatedRooms?: number | null
@@ -20,23 +20,23 @@ export interface BuildingDepartmentAssignment {
   updatedBy?: number
   // 关联字段
   buildingName?: string
-  departmentName?: string
+  orgUnitName?: string
   floorRangeDesc?: string
 }
 
 // 查询参数
-export interface BuildingDepartmentAssignmentQueryParams {
+export interface BuildingOrgUnitAssignmentQueryParams {
   pageNum?: number
   pageSize?: number
   buildingId?: number
-  departmentId?: number
+  orgUnitId?: number
   status?: number
 }
 
 // 创建请求
-export interface BuildingDepartmentAssignmentCreateRequest {
+export interface BuildingOrgUnitAssignmentCreateRequest {
   buildingId: number
-  departmentId: number
+  orgUnitId: number
   floorStart?: number | null
   floorEnd?: number | null
   allocatedRooms?: number | null
@@ -46,7 +46,7 @@ export interface BuildingDepartmentAssignmentCreateRequest {
 }
 
 // 更新请求
-export interface BuildingDepartmentAssignmentUpdateRequest {
+export interface BuildingOrgUnitAssignmentUpdateRequest {
   id: number
   floorStart?: number | null
   floorEnd?: number | null

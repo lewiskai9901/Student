@@ -1,3 +1,9 @@
+<!--
+  @deprecated 此组件已废弃
+  用户级数据范围配置已废弃，请使用角色级数据权限配置
+  数据权限现在通过 RolesView.vue 中的角色数据权限配置功能管理
+  此组件将在未来版本中删除
+-->
 <template>
   <div class="user-data-scope-manager">
     <!-- 标题和操作栏 -->

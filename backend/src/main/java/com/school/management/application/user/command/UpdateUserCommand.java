@@ -49,9 +49,9 @@ public class UpdateUserCommand {
     private String idCard;
 
     /**
-     * 部门ID
+     * 组织单元ID
      */
-    private Long departmentId;
+    private Long orgUnitId;
 
     /**
      * 角色ID列表

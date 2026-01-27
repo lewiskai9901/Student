@@ -37,10 +37,10 @@ public class ClassCreateRequest {
     private Long gradeId;
 
     /**
-     * 所属部门ID
+     * 所属组织单元ID
      */
-    @NotNull(message = "所属部门不能为空")
-    private Long departmentId;
+    @NotNull(message = "所属组织单元不能为空")
+    private Long orgUnitId;
 
     /**
      * 专业ID

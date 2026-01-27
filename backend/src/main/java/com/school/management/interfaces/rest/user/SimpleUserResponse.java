@@ -12,7 +12,7 @@ public class SimpleUserResponse {
     private Long id;
     private String username;
     private String realName;
-    private String departmentName;
+    private String orgUnitName;
 
     /**
      * 从领域模型转换
@@ -26,7 +26,7 @@ public class SimpleUserResponse {
         response.setId(user.getId());
         response.setUsername(user.getUsername());
         response.setRealName(user.getRealName());
-        response.setDepartmentName(user.getDepartmentName());
+        response.setOrgUnitName(user.getOrgUnitName());
 
         return response;
     }

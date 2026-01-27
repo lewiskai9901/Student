@@ -55,7 +55,7 @@ public class SmartStatisticsFilters {
     /**
      * 部门ID列表
      */
-    private List<Long> departmentIds;
+    private List<Long> orgUnitIds;
 
     /**
      * 检查类别ID列表

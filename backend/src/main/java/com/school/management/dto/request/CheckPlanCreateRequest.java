@@ -120,9 +120,9 @@ public class CheckPlanCreateRequest implements Serializable {
         private static final long serialVersionUID = 1L;
 
         /**
-         * 院系ID列表
+         * 组织单元ID列表（原院系ID列表）
          */
-        private List<Long> departmentIds;
+        private List<Long> orgUnitIds;
 
         /**
          * 年级ID列表

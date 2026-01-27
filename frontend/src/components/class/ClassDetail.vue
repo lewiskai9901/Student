@@ -16,7 +16,7 @@
             <div><span class="text-sm text-gray-500">班级名称:</span><span class="ml-2 text-sm text-gray-900">{{ classInfo.className }}</span></div>
             <div><span class="text-sm text-gray-500">班级编码:</span><span class="ml-2 text-sm text-gray-900">{{ classInfo.classCode }}</span></div>
             <div><span class="text-sm text-gray-500">年级:</span><span class="ml-2 text-sm text-gray-900">{{ classInfo.grade }}</span></div>
-            <div><span class="text-sm text-gray-500">所属部门:</span><span class="ml-2 text-sm text-gray-900">{{ classInfo.departmentName }}</span></div>
+            <div><span class="text-sm text-gray-500">所属部门:</span><span class="ml-2 text-sm text-gray-900">{{ classInfo.orgUnitName }}</span></div>
             <div><span class="text-sm text-gray-500">专业:</span><span class="ml-2 text-sm text-gray-900">{{ classInfo.majorName }}</span></div>
             <div><span class="text-sm text-gray-500">班主任:</span><span class="ml-2 text-sm text-gray-900">{{ classInfo.teacherName || '未分配' }}</span></div>
             <div><span class="text-sm text-gray-500">学生人数:</span><span class="ml-2 text-sm text-gray-900">{{ classInfo.studentCount }}人</span></div>
@@ -71,7 +71,7 @@
               <thead class="bg-gray-50">
                 <tr>
                   <th class="px-3 py-2 text-left text-xs font-medium text-gray-500">楼号</th>
-                  <th class="px-3 py-2 text-left text-xs font-medium text-gray-500">楼宇名称</th>
+                  <th class="px-3 py-2 text-left text-xs font-medium text-gray-500">楼栋名称</th>
                   <th class="px-3 py-2 text-left text-xs font-medium text-gray-500">房间号</th>
                   <th class="px-3 py-2 text-left text-xs font-medium text-gray-500">楼层</th>
                   <th class="px-3 py-2 text-left text-xs font-medium text-gray-500">容量</th>
@@ -156,9 +156,8 @@
     <!-- 宿舍分配对话框 -->
     <ClassDormitoryAssignmentDialog
       v-model:visible="dormitoryDialogVisible"
-      :class-id="classId!"
-      :class-name="classInfo?.className || ''"
-      :department-id="classInfo?.departmentId || 0"
+      :department-id="classInfo?.orgUnitId || 0"
+      :department-name="classInfo?.orgUnitName || '未知部门'"
       @success="loadDormitories"
     />
   </div>
@@ -241,8 +240,8 @@ const handleRemoveClassroom = async () => {
 }
 
 const showAddDormitoryDialog = () => {
-  if (!classInfo.value?.departmentId) {
-    ElMessage.warning('班级所属部门信息缺失')
+  if (!classInfo.value?.orgUnitId) {
+    ElMessage.warning('班级所属组织单元信息缺失')
     return
   }
   dormitoryDialogVisible.value = true

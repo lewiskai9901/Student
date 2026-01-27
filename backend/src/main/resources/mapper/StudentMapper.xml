@@ -164,10 +164,10 @@
                     #{cid}
                 </foreach>
             </if>
-            <!-- 数据权限过滤: 部门ID列表 -->
-            <if test="req.departmentIds != null and req.departmentIds.size() > 0">
-                AND c.department_id IN
-                <foreach collection="req.departmentIds" item="did" open="(" separator="," close=")">
+            <!-- 数据权限过滤: 组织单元ID列表 -->
+            <if test="req.orgUnitIds != null and req.orgUnitIds.size() > 0">
+                AND c.org_unit_id IN
+                <foreach collection="req.orgUnitIds" item="did" open="(" separator="," close=")">
                     #{did}
                 </foreach>
             </if>
@@ -261,7 +261,6 @@
         <include refid="BaseJoins"/>
         WHERE s.deleted = 0
         AND s.class_id = #{classId}
-        AND s.student_status = 1
         ORDER BY s.student_no ASC
     </select>
 
@@ -275,13 +274,13 @@
             s.class_id AS classId,
             c.class_name AS className,
             m.major_name AS majorName,
-            dept.dept_name AS departmentName,
+            o.unit_name AS departmentName,
             u.avatar
         FROM students s
         LEFT JOIN users u ON s.user_id = u.id AND u.deleted = 0
         LEFT JOIN classes c ON s.class_id = c.id AND c.deleted = 0
         LEFT JOIN majors m ON s.major_id = m.id AND m.deleted = 0
-        LEFT JOIN departments dept ON c.department_id = dept.id AND dept.deleted = 0
+        LEFT JOIN org_units o ON c.org_unit_id = o.id AND dept.deleted = 0
         WHERE s.deleted = 0
         AND s.student_status = 1
         <if test="classIds != null and classIds.size() > 0">
@@ -295,6 +294,43 @@
                 u.real_name LIKE CONCAT('%', #{keyword}, '%')
                 OR s.student_no LIKE CONCAT('%', #{keyword}, '%')
             )
+        </if>
+        ORDER BY
+            CASE WHEN u.real_name = #{keyword} THEN 0
+                 WHEN u.real_name LIKE CONCAT(#{keyword}, '%') THEN 1
+                 WHEN s.student_no = #{keyword} THEN 2
+                 WHEN s.student_no LIKE CONCAT(#{keyword}, '%') THEN 3
+                 ELSE 4 END,
+            s.student_no ASC
+        LIMIT #{limit}
+    </select>
+
+    <!-- 统计班级学生数量（按性别） -->
+    <select id="countByClassIdAndGender" resultType="java.lang.Long">
+        SELECT COUNT(*)
+        FROM students s
+        LEFT JOIN users u ON s.user_id = u.id AND u.deleted = 0
+        WHERE s.class_id = #{classId}
+        AND s.deleted = 0
+        AND s.student_status = 1
+        AND u.gender = #{gender}
+    </select>
+
+    <!-- 简单搜索学生（用于选择器，不使用分页） -->
+    <select id="searchStudentsSimple" resultMap="StudentResponseResultMap">
+        SELECT
+        <include refid="BaseSelectColumns"/>
+        <include refid="BaseJoins"/>
+        WHERE s.deleted = 0
+        AND s.student_status = 1
+        <if test="keyword != null and keyword != ''">
+            AND (
+                u.real_name LIKE CONCAT('%', #{keyword}, '%')
+                OR s.student_no LIKE CONCAT('%', #{keyword}, '%')
+            )
+        </if>
+        <if test="classId != null">
+            AND s.class_id = #{classId}
         </if>
         ORDER BY
             CASE WHEN u.real_name = #{keyword} THEN 0

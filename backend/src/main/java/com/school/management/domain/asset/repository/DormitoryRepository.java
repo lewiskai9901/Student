@@ -29,9 +29,9 @@ public interface DormitoryRepository extends Repository<Dormitory, Long> {
     List<Dormitory> findByBuildingIdAndFloor(Long buildingId, Integer floorNumber);
 
     /**
-     * 根据部门ID查询
+     * 根据组织单元ID查询
      */
-    List<Dormitory> findByDepartmentId(Long departmentId);
+    List<Dormitory> findByOrgUnitId(Long orgUnitId);
 
     /**
      * 查询有空床位的宿舍
@@ -49,9 +49,9 @@ public interface DormitoryRepository extends Repository<Dormitory, Long> {
     long countByBuildingId(Long buildingId);
 
     /**
-     * 统计部门的宿舍数量
+     * 统计组织单元的宿舍数量
      */
-    long countByDepartmentId(Long departmentId);
+    long countByOrgUnitId(Long orgUnitId);
 
     /**
      * 分页查询
@@ -69,7 +69,7 @@ public interface DormitoryRepository extends Repository<Dormitory, Long> {
     class DormitoryQueryCriteria {
         private String keyword;
         private Long buildingId;
-        private Long departmentId;
+        private Long orgUnitId;
         private Integer floorNumber;
         private GenderType genderType;
         private DormitoryStatus status;
@@ -79,8 +79,8 @@ public interface DormitoryRepository extends Repository<Dormitory, Long> {
         public void setKeyword(String keyword) { this.keyword = keyword; }
         public Long getBuildingId() { return buildingId; }
         public void setBuildingId(Long buildingId) { this.buildingId = buildingId; }
-        public Long getDepartmentId() { return departmentId; }
-        public void setDepartmentId(Long departmentId) { this.departmentId = departmentId; }
+        public Long getOrgUnitId() { return orgUnitId; }
+        public void setOrgUnitId(Long orgUnitId) { this.orgUnitId = orgUnitId; }
         public Integer getFloorNumber() { return floorNumber; }
         public void setFloorNumber(Integer floorNumber) { this.floorNumber = floorNumber; }
         public GenderType getGenderType() { return genderType; }

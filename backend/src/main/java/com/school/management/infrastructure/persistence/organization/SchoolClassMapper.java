@@ -27,10 +27,10 @@ public interface SchoolClassMapper extends BaseMapper<SchoolClassPO> {
     SchoolClassPO findByClassCode(@Param("code") String code);
 
     /**
-     * Find by department ID.
+     * Find by org unit ID.
      */
-    @Select("SELECT * FROM classes WHERE department_id = #{departmentId} AND deleted = 0 ORDER BY class_code")
-    List<SchoolClassPO> findByDepartmentId(@Param("departmentId") Long departmentId);
+    @Select("SELECT * FROM classes WHERE org_unit_id = #{orgUnitId} AND deleted = 0 ORDER BY class_code")
+    List<SchoolClassPO> findByOrgUnitId(@Param("orgUnitId") Long orgUnitId);
 
     /**
      * Find by teacher ID (head teacher).
@@ -45,10 +45,10 @@ public interface SchoolClassMapper extends BaseMapper<SchoolClassPO> {
     List<SchoolClassPO> findByEnrollmentYear(@Param("year") Integer year);
 
     /**
-     * Count by department ID.
+     * Count by org unit ID.
      */
-    @Select("SELECT COUNT(*) FROM classes WHERE department_id = #{departmentId} AND deleted = 0")
-    int countByDepartmentId(@Param("departmentId") Long departmentId);
+    @Select("SELECT COUNT(*) FROM classes WHERE org_unit_id = #{orgUnitId} AND deleted = 0")
+    int countByOrgUnitId(@Param("orgUnitId") Long orgUnitId);
 
     /**
      * Count by status.

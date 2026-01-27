@@ -30,9 +30,9 @@ public class UserDepartment {
     private Long userId;
 
     /**
-     * 部门ID
+     * 组织单元ID
      */
-    private Long departmentId;
+    private Long orgUnitId;
 
     /**
      * 是否主部门: 0-否, 1-是
@@ -52,10 +52,10 @@ public class UserDepartment {
     // ========== 关联字段(非数据库字段) ==========
 
     /**
-     * 部门名称 (关联查询获取)
+     * 组织单元名称 (关联查询获取)
      */
     @TableField(exist = false)
-    private String departmentName;
+    private String orgUnitName;
 
     /**
      * 用户名称 (关联查询获取)

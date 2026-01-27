@@ -70,4 +70,20 @@ public class FileUploadController {
         }
         return Result.success(results);
     }
+
+    /**
+     * 上传字体文件
+     * 支持 .ttf, .woff, .woff2 格式
+     */
+    @PostMapping("/font")
+    @Operation(summary = "上传字体文件", description = "上传字体文件,支持 ttf/woff/woff2 格式")
+    public Result<Map<String, String>> uploadFont(@RequestParam("file") MultipartFile file) {
+        log.info("接收到字体上传请求: {}", file.getOriginalFilename());
+
+        String url = fileUploadService.uploadFont(file);
+        Map<String, String> result = new HashMap<>();
+        result.put("url", url);
+        result.put("name", file.getOriginalFilename());
+        return Result.success(result);
+    }
 }

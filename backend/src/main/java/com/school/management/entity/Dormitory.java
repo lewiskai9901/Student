@@ -22,9 +22,9 @@ public class Dormitory extends BaseEntity {
     private Long buildingId;
 
     /**
-     * 所属部门ID
+     * 所属组织单元ID
      */
-    private Long departmentId;
+    private Long orgUnitId;
 
     /**
      * 房间号 (唯一)
@@ -97,8 +97,8 @@ public class Dormitory extends BaseEntity {
     private String buildingNo;
 
     /**
-     * 部门名称 (关联查询获取)
+     * 组织单元名称 (关联查询获取)
      */
     @TableField(exist = false)
-    private String departmentName;
+    private String orgUnitName;
 }

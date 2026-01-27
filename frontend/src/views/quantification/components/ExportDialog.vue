@@ -139,7 +139,7 @@
                   class="class-checkbox"
                 >
                   {{ cls.className }}
-                  <span class="class-dept">{{ cls.departmentName }} / {{ cls.gradeName }}</span>
+                  <span class="class-dept">{{ cls.orgUnitName }} / {{ cls.gradeName }}</span>
                 </el-checkbox>
               </el-checkbox-group>
             </div>
@@ -288,8 +288,8 @@ const grades = ref<Array<{ id: string | number; gradeName: string }>>([])
 const classes = ref<Array<{
   id: string | number
   className: string
-  departmentId?: string | number
-  departmentName?: string
+  orgUnitId?: string | number
+  orgUnitName?: string
   gradeId?: string | number
   gradeName?: string
 }>>([])
@@ -300,7 +300,7 @@ const selectedClassIds = ref<(string | number)[]>([])
 // 过滤后的班级
 const filteredClasses = computed(() => {
   return classes.value.filter(cls => {
-    if (filterDepartmentId.value && cls.departmentId !== filterDepartmentId.value) {
+    if (filterDepartmentId.value && cls.orgUnitId !== filterDepartmentId.value) {
       return false
     }
     if (filterGradeId.value && cls.gradeId !== filterGradeId.value) {
@@ -427,8 +427,8 @@ const loadBaseData = async () => {
     classes.value = (classRes?.list || classRes || []).map((c: any) => ({
       id: c.id,
       className: c.className,
-      departmentId: c.departmentId,
-      departmentName: c.departmentName,
+      orgUnitId: c.orgUnitId,
+      orgUnitName: c.orgUnitName,
       gradeId: c.gradeId,
       gradeName: c.gradeName
     }))

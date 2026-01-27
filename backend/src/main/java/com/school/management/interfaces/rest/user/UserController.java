@@ -186,23 +186,23 @@ public class UserController {
         return Result.success(users);
     }
 
-    @Operation(summary = "按部门获取用户列表")
-    @GetMapping("/by-department/{departmentId}")
-    public Result<List<UserResponse>> getUsersByDepartment(
-            @Parameter(description = "部门ID") @PathVariable Long departmentId,
-            @Parameter(description = "是否包含子部门用户") @RequestParam(defaultValue = "false") Boolean includeChildren,
+    @Operation(summary = "按组织单元获取用户列表")
+    @GetMapping("/by-org-unit/{orgUnitId}")
+    public Result<List<UserResponse>> getUsersByOrgUnit(
+            @Parameter(description = "组织单元ID") @PathVariable Long orgUnitId,
+            @Parameter(description = "是否包含子组织单元用户") @RequestParam(defaultValue = "false") Boolean includeChildren,
             @Parameter(description = "搜索关键词") @RequestParam(required = false) String keyword) {
-        log.info("V2 按部门获取用户: departmentId={}, includeChildren={}, keyword={}",
-                departmentId, includeChildren, keyword);
-        List<UserResponse> users = userService.getUsersByDepartment(departmentId, includeChildren, keyword);
+        log.info("V2 按组织单元获取用户: orgUnitId={}, includeChildren={}, keyword={}",
+                orgUnitId, includeChildren, keyword);
+        List<UserResponse> users = userService.getUsersByOrgUnit(orgUnitId, includeChildren, keyword);
         return Result.success(users);
     }
 
-    @Operation(summary = "获取带部门信息的用户列表")
-    @GetMapping("/with-departments")
-    public Result<List<UserResponse>> getUsersWithDepartments(
+    @Operation(summary = "获取带组织单元信息的用户列表")
+    @GetMapping("/with-org-units")
+    public Result<List<UserResponse>> getUsersWithOrgUnits(
             @Parameter(description = "搜索关键词") @RequestParam(required = false) String keyword) {
-        List<UserResponse> users = userService.getUsersWithDepartments(keyword);
+        List<UserResponse> users = userService.getUsersWithOrgUnits(keyword);
         return Result.success(users);
     }
 }

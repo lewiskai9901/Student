@@ -1,5 +1,6 @@
 package com.school.management.application.organization.command;
 
+import com.school.management.domain.organization.model.UnitCategory;
 import lombok.Builder;
 import lombok.Data;
 
@@ -13,6 +14,7 @@ import java.util.List;
 public class UpdateOrgUnitCommand {
 
     private String unitName;
+    private UnitCategory unitCategory;
     private Long leaderId;
     private List<Long> deputyLeaderIds;
     private Integer sortOrder;

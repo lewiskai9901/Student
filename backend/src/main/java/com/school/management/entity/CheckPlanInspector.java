@@ -73,10 +73,10 @@ public class CheckPlanInspector {
     private String username;
 
     /**
-     * 部门名称（关联查询）
+     * 组织单元名称（关联查询，原部门名称）
      */
     @TableField(exist = false)
-    private String departmentName;
+    private String orgUnitName;
 
     // 手动添加getter方法，以避免Lombok注解处理器问题
     public String getUserName() {
@@ -95,11 +95,11 @@ public class CheckPlanInspector {
         this.username = username;
     }
 
-    public String getDepartmentName() {
-        return departmentName;
+    public String getOrgUnitName() {
+        return orgUnitName;
     }
 
-    public void setDepartmentName(String departmentName) {
-        this.departmentName = departmentName;
+    public void setOrgUnitName(String orgUnitName) {
+        this.orgUnitName = orgUnitName;
     }
 }

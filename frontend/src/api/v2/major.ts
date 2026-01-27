@@ -15,9 +15,9 @@ export const getAllEnabledMajors = () => {
   return http.get<Major[]>('/majors/enabled')
 }
 
-// 根据部门ID获取专业列表
-export const getMajorsByDepartment = (departmentId: number) => {
-  return http.get<Major[]>(`/majors/department/${departmentId}`)
+// 根据组织单元ID获取专业列表
+export const getMajorsByOrgUnit = (orgUnitId: number) => {
+  return http.get<Major[]>(`/majors/org-unit/${orgUnitId}`)
 }
 
 // 获取专业详情

@@ -3,8 +3,10 @@ package com.school.management.domain.access.model;
 import com.school.management.domain.shared.Entity;
 import lombok.Builder;
 import lombok.Getter;
+import lombok.Setter;
 
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Objects;
 
 /**
@@ -31,6 +33,10 @@ public class Permission extends Entity<Long> {
     private String path;
     private String component;
     private String icon;
+
+    // Children for tree structure (not persisted, used for tree building)
+    @Setter
+    private List<Permission> children;
 
     protected Permission() {}
 

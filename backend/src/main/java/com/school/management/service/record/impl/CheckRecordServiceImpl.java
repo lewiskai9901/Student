@@ -455,21 +455,21 @@ public class CheckRecordServiceImpl implements CheckRecordService {
                     .collect(Collectors.toMap(CheckCategory::getId, c -> c));
         }
 
-        // 批量查询部门信息
+        // 批量查询组织单元信息
         if (!classIds.isEmpty()) {
-            Set<Long> departmentIds = context.classMap.values().stream()
-                    .map(Class::getDepartmentId)
+            Set<Long> orgUnitIds = context.classMap.values().stream()
+                    .map(Class::getOrgUnitId)
                     .filter(Objects::nonNull)
                     .collect(Collectors.toSet());
 
-            if (!departmentIds.isEmpty()) {
-                List<Department> departmentList = departmentMapper.selectBatchIds(departmentIds);
+            if (!orgUnitIds.isEmpty()) {
+                List<Department> departmentList = departmentMapper.selectBatchIds(orgUnitIds);
                 context.departmentMap = departmentList.stream()
                         .collect(Collectors.toMap(Department::getId, d -> d));
             }
         }
 
-        log.info("上下文加载完成: {}个班级, {}个班主任, {}个类别, {}个部门",
+        log.info("上下文加载完成: {}个班级, {}个班主任, {}个类别, {}个组织单元",
                 context.classMap.size(), context.teacherMap.size(), context.categoryMap.size(), context.departmentMap.size());
 
         return context;
@@ -504,13 +504,13 @@ public class CheckRecordServiceImpl implements CheckRecordService {
         stats.setClassName(classInfo.getClassName());
         stats.setGradeId(classInfo.getGradeLevel() != null ? Long.valueOf(classInfo.getGradeLevel()) : null);
         stats.setGradeName(classInfo.getGradeLevel() != null ? classInfo.getGradeLevel() + "级" : null);
-        stats.setDepartmentId(classInfo.getDepartmentId());
+        stats.setOrgUnitId(classInfo.getOrgUnitId());
 
-        // 设置部门名称
-        if (classInfo.getDepartmentId() != null) {
-            Department department = context.getDepartmentMap().get(classInfo.getDepartmentId());
+        // 设置组织单元名称（原部门名称）
+        if (classInfo.getOrgUnitId() != null) {
+            Department department = context.getDepartmentMap().get(classInfo.getOrgUnitId());
             if (department != null) {
-                stats.setDepartmentName(department.getDeptName());
+                stats.setOrgUnitName(department.getDeptName());
             }
         }
         // 班级人数：优先使用Class表的studentCount，若为空或0则从students表实时统计
@@ -762,16 +762,16 @@ public class CheckRecordServiceImpl implements CheckRecordService {
             }
         }
 
-        // 院系内排名
+        // 组织单元内排名（原院系内排名）
         Map<Long, List<CheckRecordClassStatsNew>> deptMap = allClassStats.stream()
-                .filter(s -> s.getDepartmentId() != null)
-                .collect(Collectors.groupingBy(CheckRecordClassStatsNew::getDepartmentId));
+                .filter(s -> s.getOrgUnitId() != null)
+                .collect(Collectors.groupingBy(CheckRecordClassStatsNew::getOrgUnitId));
 
         for (List<CheckRecordClassStatsNew> deptStats : deptMap.values()) {
             deptStats.sort(Comparator.comparing(CheckRecordClassStatsNew::getTotalScore));
             for (int i = 0; i < deptStats.size(); i++) {
                 CheckRecordClassStatsNew stat = deptStats.get(i);
-                stat.setDepartmentRanking(i + 1);
+                stat.setOrgUnitRanking(i + 1);
                 classStatsMapper.updateById(stat);
             }
         }
@@ -892,8 +892,8 @@ public class CheckRecordServiceImpl implements CheckRecordService {
     }
 
     @Override
-    public List<CheckRecordClassStatsDTO> getClassStatsByDepartment(Long recordId, Long departmentId) {
-        List<CheckRecordClassStatsNew> stats = classStatsMapper.selectByDepartment(recordId, departmentId);
+    public List<CheckRecordClassStatsDTO> getClassStatsByOrgUnit(Long recordId, Long orgUnitId) {
+        List<CheckRecordClassStatsNew> stats = classStatsMapper.selectByOrgUnit(recordId, orgUnitId);
         return stats.stream()
                 .map(this::convertClassStatsToDTO)
                 .collect(Collectors.toList());
@@ -1021,7 +1021,7 @@ public class CheckRecordServiceImpl implements CheckRecordService {
     }
 
     @Override
-    public List<CheckRecordClassStatsDTO> getClassRankingWithWeight(Long recordId, String sortBy, Long departmentId, Integer gradeLevel) {
+    public List<CheckRecordClassStatsDTO> getClassRankingWithWeight(Long recordId, String sortBy, Long orgUnitId, Integer gradeLevel) {
         // 1. 获取检查记录信息
         CheckRecordNew record = checkRecordMapper.selectById(recordId);
         if (record == null) {
@@ -1031,10 +1031,10 @@ public class CheckRecordServiceImpl implements CheckRecordService {
         // 2. 获取班级统计列表
         List<CheckRecordClassStatsNew> stats = classStatsMapper.selectByRecordId(recordId);
 
-        // 3. 筛选院系和年级
-        if (departmentId != null) {
+        // 3. 筛选组织单元和年级
+        if (orgUnitId != null) {
             stats = stats.stream()
-                    .filter(s -> departmentId.equals(s.getDepartmentId()))
+                    .filter(s -> orgUnitId.equals(s.getOrgUnitId()))
                     .collect(Collectors.toList());
         }
         if (gradeLevel != null) {

@@ -296,8 +296,8 @@ public class SmartStatisticsServiceImpl implements SmartStatisticsService {
                     .className(first.getClassName())
                     .gradeId(first.getGradeId())
                     .gradeName(first.getGradeName())
-                    .departmentId(first.getDepartmentId())
-                    .departmentName(first.getDepartmentName())
+                    .orgUnitId(first.getOrgUnitId())
+                    .orgUnitName(first.getOrgUnitName())
                     .teacherId(first.getTeacherId())
                     .teacherName(first.getTeacherName())
                     .studentCount(first.getClassSize())
@@ -955,15 +955,15 @@ public class SmartStatisticsServiceImpl implements SmartStatisticsService {
                 return classIds.size();
             }
 
-            // 如果是按部门或年级，需要查询班级数
-            List<Integer> departmentIds = (List<Integer>) config.get("departmentIds");
+            // 如果是按组织单元或年级，需要查询班级数
+            List<Integer> orgUnitIds = (List<Integer>) config.get("orgUnitIds");
             List<Integer> gradeIds = (List<Integer>) config.get("gradeIds");
 
             LambdaQueryWrapper<com.school.management.entity.Class> wrapper = new LambdaQueryWrapper<>();
             wrapper.eq(com.school.management.entity.Class::getStatus, 1);
 
-            if (departmentIds != null && !departmentIds.isEmpty()) {
-                wrapper.in(com.school.management.entity.Class::getDepartmentId, departmentIds);
+            if (orgUnitIds != null && !orgUnitIds.isEmpty()) {
+                wrapper.in(com.school.management.entity.Class::getOrgUnitId, orgUnitIds);
             }
             if (gradeIds != null && !gradeIds.isEmpty()) {
                 wrapper.in(com.school.management.entity.Class::getGradeId, gradeIds);

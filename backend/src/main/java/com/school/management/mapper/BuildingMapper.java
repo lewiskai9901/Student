@@ -38,9 +38,9 @@ public interface BuildingMapper extends BaseMapper<Building> {
             "  WHEN 2 THEN '宿舍楼' " +
             "  WHEN 3 THEN '办公楼' " +
             "  ELSE '未知' END as buildingTypeName, " +
-            "(SELECT GROUP_CONCAT(DISTINCT d.dept_name) FROM building_departments bd " +
-            "  JOIN departments d ON bd.department_id = d.id " +
-            "  WHERE bd.building_id = b.id) as departmentNames " +
+            "(SELECT GROUP_CONCAT(DISTINCT o.unit_name) FROM building_departments bd " +
+            "  JOIN org_units o ON bd.org_unit_id = o.id " +
+            "  WHERE bd.building_id = b.id) as orgUnitNames " +
             "FROM buildings b " +
             "WHERE b.deleted = 0 " +
             "<if test='buildingType != null'> AND b.building_type = #{buildingType} </if>" +

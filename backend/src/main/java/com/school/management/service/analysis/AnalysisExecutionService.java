@@ -283,9 +283,9 @@ public class AnalysisExecutionService {
                         targetConfig.get("ids"),
                         new TypeReference<List<Long>>() {}
                 );
-            } else if (targetConfig.get("departmentIds") != null) {
+            } else if (targetConfig.get("orgUnitIds") != null) {
                 targetIds = objectMapper.convertValue(
-                        targetConfig.get("departmentIds"),
+                        targetConfig.get("orgUnitIds"),
                         new TypeReference<List<Long>>() {}
                 );
             } else if (targetConfig.get("gradeIds") != null) {
@@ -312,7 +312,7 @@ public class AnalysisExecutionService {
         switch (targetType) {
             case "department":
                 return stats.stream()
-                        .filter(s -> finalTargetIds.contains(s.getDepartmentId()))
+                        .filter(s -> finalTargetIds.contains(s.getOrgUnitId()))
                         .collect(Collectors.toList());
             case "grade":
                 return stats.stream()
@@ -388,8 +388,8 @@ public class AnalysisExecutionService {
             agg.setClassName(first.getClassName());
             agg.setGradeId(first.getGradeId());
             agg.setGradeName(first.getGradeName());
-            agg.setDepartmentId(first.getDepartmentId());
-            agg.setDepartmentName(first.getDepartmentName());
+            agg.setOrgUnitId(first.getOrgUnitId());
+            agg.setOrgUnitName(first.getOrgUnitName());
             agg.setTeacherName(first.getTeacherName());
         }
 
@@ -537,14 +537,14 @@ public class AnalysisExecutionService {
             }
         }
 
-        // 按院系分组计算院系排名
+        // 按组织单元分组计算排名（原院系排名）
         Map<Long, List<ClassAggregation>> byDept = includedClasses.stream()
-                .collect(Collectors.groupingBy(ClassAggregation::getDepartmentId));
+                .collect(Collectors.groupingBy(ClassAggregation::getOrgUnitId));
 
         for (List<ClassAggregation> deptClasses : byDept.values()) {
             int deptRank = 1;
             for (ClassAggregation agg : deptClasses) {
-                agg.setDepartmentRanking(deptRank++);
+                agg.setOrgUnitRanking(deptRank++);
             }
         }
     }
@@ -715,8 +715,8 @@ public class AnalysisExecutionService {
         private String className;
         private Long gradeId;
         private String gradeName;
-        private Long departmentId;
-        private String departmentName;
+        private Long orgUnitId;
+        private String orgUnitName;
         private String teacherName;
 
         private int checkCount;
@@ -730,7 +730,7 @@ public class AnalysisExecutionService {
 
         private Integer overallRanking;
         private Integer gradeRanking;
-        private Integer departmentRanking;
+        private Integer orgUnitRanking;
 
         private boolean missingFilled;
         private boolean excluded;

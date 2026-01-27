@@ -1,9 +1,12 @@
 package com.school.management.interfaces.rest.access;
 
+import com.fasterxml.jackson.databind.annotation.JsonSerialize;
+import com.fasterxml.jackson.databind.ser.std.ToStringSerializer;
 import com.school.management.domain.access.model.PermissionType;
 import lombok.Data;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 /**
  * Response DTO for permission information.
@@ -11,6 +14,7 @@ import java.time.LocalDateTime;
 @Data
 public class PermissionResponse {
 
+    @JsonSerialize(using = ToStringSerializer.class)
     private Long id;
 
     private String permissionCode;
@@ -25,6 +29,7 @@ public class PermissionResponse {
 
     private PermissionType type;
 
+    @JsonSerialize(using = ToStringSerializer.class)
     private Long parentId;
 
     private Integer sortOrder;
@@ -32,4 +37,7 @@ public class PermissionResponse {
     private Boolean isEnabled;
 
     private LocalDateTime createdAt;
+
+    // Children for tree structure
+    private List<PermissionResponse> children;
 }

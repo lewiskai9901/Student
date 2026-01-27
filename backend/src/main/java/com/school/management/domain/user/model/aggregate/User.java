@@ -70,19 +70,14 @@ public class User extends AggregateRoot<Long> {
     private String idCard;
 
     /**
-     * 部门ID
+     * 组织单元ID
      */
-    private Long departmentId;
+    private Long orgUnitId;
 
     /**
      * 班级ID
      */
     private Long classId;
-
-    /**
-     * 管理的班级ID
-     */
-    private Long managedClassId;
 
     /**
      * 用户类型
@@ -125,9 +120,9 @@ public class User extends AggregateRoot<Long> {
     private List<Long> roleIds = new ArrayList<>();
 
     /**
-     * 部门名称（查询时填充，非持久化字段）
+     * 组织单元名称（查询时填充，非持久化字段）
      */
-    private String departmentName;
+    private String orgUnitName;
 
     /**
      * 角色名称列表（查询时填充，非持久化字段）
@@ -155,14 +150,14 @@ public class User extends AggregateRoot<Long> {
             String encodedPassword,
             String realName,
             UserType userType,
-            Long departmentId
+            Long orgUnitId
     ) {
         User user = new User();
         user.username = username;
         user.password = encodedPassword;
         user.realName = realName;
         user.userType = userType;
-        user.departmentId = departmentId;
+        user.orgUnitId = orgUnitId;
         user.status = UserStatus.ENABLED;
         user.allowMultipleDevices = false;
         user.createdAt = LocalDateTime.now();
@@ -194,9 +189,8 @@ public class User extends AggregateRoot<Long> {
             Integer gender,
             LocalDate birthDate,
             String idCard,
-            Long departmentId,
+            Long orgUnitId,
             Long classId,
-            Long managedClassId,
             UserType userType,
             UserStatus status,
             LocalDateTime lastLoginTime,
@@ -220,9 +214,8 @@ public class User extends AggregateRoot<Long> {
         user.gender = gender;
         user.birthDate = birthDate;
         user.idCard = idCard;
-        user.departmentId = departmentId;
+        user.orgUnitId = orgUnitId;
         user.classId = classId;
-        user.managedClassId = managedClassId;
         user.userType = userType;
         user.status = status;
         user.lastLoginTime = lastLoginTime;
@@ -247,7 +240,7 @@ public class User extends AggregateRoot<Long> {
             Integer gender,
             LocalDate birthDate,
             String idCard,
-            Long departmentId
+            Long orgUnitId
     ) {
         this.realName = realName;
         this.phone = phone;
@@ -256,7 +249,7 @@ public class User extends AggregateRoot<Long> {
         this.gender = gender;
         this.birthDate = birthDate;
         this.idCard = idCard;
-        this.departmentId = departmentId;
+        this.orgUnitId = orgUnitId;
         this.updatedAt = LocalDateTime.now();
 
         // 只有在已持久化（有ID）时才注册更新事件
@@ -356,14 +349,6 @@ public class User extends AggregateRoot<Long> {
     }
 
     /**
-     * 分配班级管理
-     */
-    public void assignManagedClass(Long classId) {
-        this.managedClassId = classId;
-        this.updatedAt = LocalDateTime.now();
-    }
-
-    /**
      * 分配角色
      */
     public void assignRoles(List<Long> roleIds) {
@@ -398,9 +383,8 @@ public class User extends AggregateRoot<Long> {
     public Integer getGender() { return gender; }
     public LocalDate getBirthDate() { return birthDate; }
     public String getIdCard() { return idCard; }
-    public Long getDepartmentId() { return departmentId; }
+    public Long getOrgUnitId() { return orgUnitId; }
     public Long getClassId() { return classId; }
-    public Long getManagedClassId() { return managedClassId; }
     public UserType getUserType() { return userType; }
     public UserStatus getStatus() { return status; }
     public LocalDateTime getLastLoginTime() { return lastLoginTime; }
@@ -417,8 +401,8 @@ public class User extends AggregateRoot<Long> {
     }
 
     // 关联字段的 Getter 和 Setter
-    public String getDepartmentName() { return departmentName; }
-    public void setDepartmentName(String departmentName) { this.departmentName = departmentName; }
+    public String getOrgUnitName() { return orgUnitName; }
+    public void setOrgUnitName(String orgUnitName) { this.orgUnitName = orgUnitName; }
     public List<String> getRoleNames() { return roleNames; }
     public void setRoleNames(List<String> roleNames) { this.roleNames = roleNames != null ? roleNames : new ArrayList<>(); }
 }

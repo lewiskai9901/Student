@@ -13,12 +13,12 @@ import java.util.List;
 public interface UserDepartmentService {
 
     /**
-     * 根据用户ID查询部门ID列表
+     * 根据用户ID查询组织单元ID列表
      *
      * @param userId 用户ID
-     * @return 部门ID列表
+     * @return 组织单元ID列表
      */
-    List<Long> getDepartmentIdsByUserId(Long userId);
+    List<Long> getOrgUnitIdsByUserId(Long userId);
 
     /**
      * 根据用户ID查询用户部门关联列表
@@ -32,24 +32,24 @@ public interface UserDepartmentService {
      * 为用户分配部门
      *
      * @param userId 用户ID
-     * @param departmentIds 部门ID列表
-     * @param primaryDeptId 主部门ID
+     * @param orgUnitIds 组织单元ID列表
+     * @param primaryDeptId 主组织单元ID
      */
-    void assignDepartments(Long userId, List<Long> departmentIds, Long primaryDeptId);
+    void assignDepartments(Long userId, List<Long> orgUnitIds, Long primaryDeptId);
 
     /**
      * 移除用户的部门
      *
      * @param userId 用户ID
-     * @param departmentId 部门ID
+     * @param orgUnitId 组织单元ID
      */
-    void removeDepartment(Long userId, Long departmentId);
+    void removeDepartment(Long userId, Long orgUnitId);
 
     /**
      * 设置主部门
      *
      * @param userId 用户ID
-     * @param departmentId 部门ID
+     * @param orgUnitId 组织单元ID
      */
-    void setPrimaryDepartment(Long userId, Long departmentId);
+    void setPrimaryDepartment(Long userId, Long orgUnitId);
 }

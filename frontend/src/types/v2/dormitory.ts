@@ -67,12 +67,12 @@ export interface StudentSimpleInfo {
  * 宿舍实体
  */
 export interface Dormitory {
-  id: number
-  buildingId: number
+  id: number | string
+  buildingId: number | string
   buildingName?: string
   buildingNo?: string
-  departmentId?: number
-  departmentName?: string
+  orgUnitId?: number | string
+  orgUnitName?: string
   dormitoryNo: string
   roomNo?: string
   floorNumber: number
@@ -90,6 +90,8 @@ export interface Dormitory {
   statusName?: string
   assignedClassIds?: string
   assignedClassNames?: string
+  classTeacherNames?: string
+  classTeacherPhones?: string
   dormitoryType?: number
   dormitoryTypeName?: string
   maxOccupancy?: number
@@ -138,8 +140,8 @@ export interface BedAllocation {
  * 创建宿舍请求
  */
 export interface CreateDormitoryRequest {
-  buildingId: number
-  departmentId?: number
+  buildingId: number | string
+  orgUnitId?: number | string
   dormitoryNo: string
   floorNumber: number
   roomUsageType: RoomUsageType
@@ -211,21 +213,26 @@ export interface SwapStudentsRequest {
 }
 
 /**
- * 批量更新部门分配请求
+ * 批量更新组织单元分配请求
+ * 注意: dormitoryIds 使用 string[] 以避免大整数(snowflake ID)精度丢失
  */
-export interface BatchUpdateDepartmentRequest {
-  dormitoryIds: number[]
-  departmentId?: number
+export interface BatchUpdateOrgUnitRequest {
+  dormitoryIds: (number | string)[]
+  orgUnitId?: number | null
 }
 
 /**
- * 按楼层批量更新部门请求
+ * 按楼层批量更新组织单元请求
  */
-export interface BatchUpdateDepartmentByFloorRequest {
+export interface BatchUpdateOrgUnitByFloorRequest {
   buildingId: number
   floor: number
-  departmentId?: number
+  orgUnitId?: number | null
 }
+
+// 别名（兼容API命名）
+export type BatchUpdateDepartmentRequest = BatchUpdateOrgUnitRequest
+export type BatchUpdateDepartmentByFloorRequest = BatchUpdateOrgUnitByFloorRequest
 
 /**
  * 创建楼宇请求

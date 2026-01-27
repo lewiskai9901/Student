@@ -1,6 +1,8 @@
 package com.school.management.infrastructure.persistence.user;
 
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
+import org.apache.ibatis.annotations.Delete;
+import org.apache.ibatis.annotations.Insert;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 import org.apache.ibatis.annotations.Select;
@@ -56,22 +58,22 @@ public interface UserDomainMapper extends BaseMapper<UserPO> {
     boolean existsByUsernameAndIdNot(@Param("username") String username, @Param("excludeId") Long excludeId);
 
     /**
-     * 根据部门ID查找用户
+     * 根据组织单元ID查找用户
      */
-    @Select("SELECT * FROM users WHERE department_id = #{departmentId} AND deleted = 0")
-    List<UserPO> findByDepartmentId(@Param("departmentId") Long departmentId);
+    @Select("SELECT * FROM users WHERE org_unit_id = #{orgUnitId} AND deleted = 0")
+    List<UserPO> findByOrgUnitId(@Param("orgUnitId") Long orgUnitId);
 
     /**
-     * 根据部门ID列表查找用户
+     * 根据组织单元ID列表查找用户
      */
     @Select("<script>" +
-            "SELECT * FROM users WHERE department_id IN " +
-            "<foreach collection='departmentIds' item='id' open='(' separator=',' close=')'>" +
+            "SELECT * FROM users WHERE org_unit_id IN " +
+            "<foreach collection='orgUnitIds' item='id' open='(' separator=',' close=')'>" +
             "#{id}" +
             "</foreach>" +
             " AND deleted = 0" +
             "</script>")
-    List<UserPO> findByDepartmentIdIn(@Param("departmentIds") List<Long> departmentIds);
+    List<UserPO> findByOrgUnitIdIn(@Param("orgUnitIds") List<Long> orgUnitIds);
 
     /**
      * 分页查询用户
@@ -100,9 +102,9 @@ public interface UserDomainMapper extends BaseMapper<UserPO> {
      * 条件分页查询用户
      */
     @Select("<script>" +
-            "SELECT u.*, d.department_name " +
+            "SELECT u.*, d.dept_name AS org_unit_name " +
             "FROM users u " +
-            "LEFT JOIN departments d ON u.department_id = d.id " +
+            "LEFT JOIN departments d ON u.org_unit_id = d.id " +
             "WHERE u.deleted = 0 " +
             "<if test='username != null and username != \"\"'>" +
             "AND u.username LIKE CONCAT('%', #{username}, '%') " +
@@ -113,8 +115,8 @@ public interface UserDomainMapper extends BaseMapper<UserPO> {
             "<if test='phone != null and phone != \"\"'>" +
             "AND u.phone LIKE CONCAT('%', #{phone}, '%') " +
             "</if>" +
-            "<if test='departmentId != null'>" +
-            "AND u.department_id = #{departmentId} " +
+            "<if test='orgUnitId != null'>" +
+            "AND u.org_unit_id = #{orgUnitId} " +
             "</if>" +
             "<if test='status != null'>" +
             "AND u.status = #{status} " +
@@ -128,7 +130,7 @@ public interface UserDomainMapper extends BaseMapper<UserPO> {
             @Param("username") String username,
             @Param("realName") String realName,
             @Param("phone") String phone,
-            @Param("departmentId") Long departmentId,
+            @Param("orgUnitId") Long orgUnitId,
             @Param("status") Integer status);
 
     /**
@@ -145,8 +147,8 @@ public interface UserDomainMapper extends BaseMapper<UserPO> {
             "<if test='phone != null and phone != \"\"'>" +
             "AND u.phone LIKE CONCAT('%', #{phone}, '%') " +
             "</if>" +
-            "<if test='departmentId != null'>" +
-            "AND u.department_id = #{departmentId} " +
+            "<if test='orgUnitId != null'>" +
+            "AND u.org_unit_id = #{orgUnitId} " +
             "</if>" +
             "<if test='status != null'>" +
             "AND u.status = #{status} " +
@@ -156,18 +158,44 @@ public interface UserDomainMapper extends BaseMapper<UserPO> {
             @Param("username") String username,
             @Param("realName") String realName,
             @Param("phone") String phone,
-            @Param("departmentId") Long departmentId,
+            @Param("orgUnitId") Long orgUnitId,
             @Param("status") Integer status);
 
     /**
      * 获取简单用户列表（用于选择器）
      */
     @Select("<script>" +
-            "SELECT id, username, real_name, department_id FROM users WHERE deleted = 0 AND status = 1 " +
+            "SELECT id, username, real_name, org_unit_id FROM users WHERE deleted = 0 AND status = 1 " +
             "<if test='keyword != null and keyword != \"\"'>" +
             "AND (username LIKE CONCAT('%', #{keyword}, '%') OR real_name LIKE CONCAT('%', #{keyword}, '%')) " +
             "</if>" +
             "ORDER BY created_at DESC LIMIT 100" +
             "</script>")
     List<UserPO> findSimpleList(@Param("keyword") String keyword);
+
+    /**
+     * 根据用户ID查询角色ID列表
+     */
+    @Select("SELECT role_id FROM user_roles WHERE user_id = #{userId}")
+    List<Long> findRoleIdsByUserId(@Param("userId") Long userId);
+
+    /**
+     * 根据用户ID查询角色名称列表
+     */
+    @Select("SELECT r.role_name FROM user_roles ur " +
+            "JOIN roles r ON ur.role_id = r.id " +
+            "WHERE ur.user_id = #{userId} AND r.deleted = 0")
+    List<String> findRoleNamesByUserId(@Param("userId") Long userId);
+
+    /**
+     * 删除用户的所有角色关联
+     */
+    @Delete("DELETE FROM user_roles WHERE user_id = #{userId}")
+    void deleteUserRoles(@Param("userId") Long userId);
+
+    /**
+     * 插入用户角色关联
+     */
+    @Insert("INSERT INTO user_roles (user_id, role_id, created_at) VALUES (#{userId}, #{roleId}, NOW())")
+    void insertUserRole(@Param("userId") Long userId, @Param("roleId") Long roleId);
 }

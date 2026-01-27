@@ -4,17 +4,34 @@
  */
 import type { RouteRecordRaw } from 'vue-router'
 import type { MenuItem } from '@/types/common'
+import type { UserInfo } from '@/types/auth'
+
+/**
+ * 菜单生成选项
+ */
+export interface MenuGeneratorOptions {
+  /** 权限检查函数 */
+  authCheck: (permission?: string) => boolean
+  /** 当前用户信息（用于检查 requiresClass 等条件） */
+  userInfo?: UserInfo | null
+}
 
 /**
  * 从路由配置生成菜单项
  * @param routes 路由配置数组
- * @param authCheck 权限检查函数
+ * @param options 菜单生成选项（包含权限检查函数和用户信息）
  * @returns 菜单项数组
  */
 export function generateMenuFromRoutes(
   routes: RouteRecordRaw[],
-  authCheck: (permission?: string) => boolean
+  options: MenuGeneratorOptions | ((permission?: string) => boolean)
 ): MenuItem[] {
+  // 支持旧的函数签名以保持向后兼容
+  const opts: MenuGeneratorOptions = typeof options === 'function'
+    ? { authCheck: options }
+    : options
+
+  const { authCheck, userInfo } = opts
   const menuItems: MenuItem[] = []
 
   for (const route of routes) {
@@ -26,6 +43,13 @@ export function generateMenuFromRoutes(
     // 检查权限
     if (route.meta?.permission && !authCheck(route.meta.permission as string)) {
       continue
+    }
+
+    // 检查是否需要分配班级
+    if (route.meta?.requiresClass) {
+      if (!userInfo?.assignedClasses?.length) {
+        continue
+      }
     }
 
     // 构建菜单项
@@ -41,7 +65,7 @@ export function generateMenuFromRoutes(
 
     // 递归处理子路由
     if (route.children && route.children.length > 0) {
-      const children = generateMenuFromRoutes(route.children, authCheck)
+      const children = generateMenuFromRoutes(route.children, opts)
       if (children.length > 0) {
         menuItem.children = children
       }

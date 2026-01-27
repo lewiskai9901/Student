@@ -50,32 +50,32 @@ public class BuildingDormitoryServiceImpl implements BuildingDormitoryService {
         log.info("查询宿舍楼列表 - 用户ID: {}, 是否超管: {}", userId, isSuperAdmin);
 
         // 3. 构建数据权限过滤条件
-        List<Long> departmentIds = null;
+        List<Long> orgUnitIds = null;
         List<Long> managedBuildingIds = null;
 
         if (!isSuperAdmin) {
-            // 获取用户的所有部门
-            departmentIds = userDepartmentMapper.selectDepartmentIdsByUserId(userId);
+            // 获取用户的所有组织单元
+            orgUnitIds = userDepartmentMapper.selectOrgUnitIdsByUserId(userId);
 
             // 获取用户管理的楼宇
             managedBuildingIds = managerMapper.selectBuildingIdsByUserId(userId);
 
-            log.info("非超管权限过滤 - 部门IDs: {}, 管理楼宇IDs: {}", departmentIds, managedBuildingIds);
+            log.info("非超管权限过滤 - 组织单元IDs: {}, 管理楼宇IDs: {}", orgUnitIds, managedBuildingIds);
 
-            // 如果用户既没有部门也不是任何楼宇的管理员，返回空结果
-            if ((departmentIds == null || departmentIds.isEmpty()) &&
+            // 如果用户既没有组织单元也不是任何楼宇的管理员，返回空结果
+            if ((orgUnitIds == null || orgUnitIds.isEmpty()) &&
                 (managedBuildingIds == null || managedBuildingIds.isEmpty())) {
-                log.warn("用户{}既无部门也不是楼宇管理员,返回空结果", userId);
+                log.warn("用户{}既无组织单元也不是楼宇管理员,返回空结果", userId);
                 return new Page<>(pageNum, pageSize);
             }
         }
 
         // 4. 分页查询
         Page<BuildingDormitory> page = new Page<>(pageNum, pageSize);
-        log.info("执行查询 - buildingName: {}, dormitoryType: {}, departmentIds: {}, managedBuildingIds: {}",
-            buildingName, dormitoryType, departmentIds, managedBuildingIds);
+        log.info("执行查询 - buildingName: {}, dormitoryType: {}, orgUnitIds: {}, managedBuildingIds: {}",
+            buildingName, dormitoryType, orgUnitIds, managedBuildingIds);
         IPage<BuildingDormitory> result = buildingDormitoryMapper.selectDormitoryBuildingPage(
-            page, buildingName, dormitoryType, departmentIds, managedBuildingIds
+            page, buildingName, dormitoryType, orgUnitIds, managedBuildingIds
         );
         log.info("查询结果 - 总数: {}, 当前页记录数: {}", result.getTotal(), result.getRecords().size());
 

@@ -36,10 +36,10 @@ export interface TaskApprovalDTO {
   nodeOrder: number
   /** 审批人角色 */
   approverRole?: string
-  /** 部门ID */
-  departmentId?: number
-  /** 部门名称 */
-  departmentName?: string
+  /** 组织单元ID */
+  orgUnitId?: number
+  /** 组织单元名称 */
+  orgUnitName?: string
   /** 截止时间 */
   deadline?: string
 }

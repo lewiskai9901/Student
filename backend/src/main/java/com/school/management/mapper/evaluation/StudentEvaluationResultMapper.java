@@ -49,9 +49,9 @@ public interface StudentEvaluationResultMapper extends BaseMapper<StudentEvaluat
     void calculateGradeRank(@Param("periodId") Long periodId, @Param("gradeId") Long gradeId);
 
     /**
-     * 计算系部排名
+     * 计算组织单元排名
      */
-    void calculateDepartmentRank(@Param("periodId") Long periodId, @Param("departmentId") Long departmentId);
+    void calculateOrgUnitRank(@Param("periodId") Long periodId, @Param("orgUnitId") Long orgUnitId);
 
     /**
      * 查询综测结果详情(含明细统计)

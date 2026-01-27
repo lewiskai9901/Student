@@ -360,21 +360,8 @@ public class StudentServiceImpl extends ServiceImpl<StudentMapper, Student> impl
     public List<StudentResponse> searchStudents(String keyword, Long classId, Integer limit) {
         log.info("快速搜索学生: keyword={}, classId={}, limit={}", keyword, classId, limit);
 
-        // 构建查询请求
-        StudentQueryRequest request = new StudentQueryRequest();
-        request.setRealName(keyword);  // 使用realName字段进行搜索
-        request.setClassId(classId);
-        request.setPageNum(1);
-        request.setPageSize(limit);
-
-        // 应用班主任权限过滤
-        applyClassTeacherFilter(request);
-
-        // 执行查询
-        Page<StudentResponse> page = new Page<>(1, limit);
-        IPage<StudentResponse> result = studentMapper.selectStudentPage(page, request);
-
-        return result.getRecords();
+        // 使用简单搜索方法（不使用分页，直接LIMIT）
+        return studentMapper.searchStudentsSimple(keyword, classId, limit);
     }
 
     @Override
@@ -817,10 +804,10 @@ public class StudentServiceImpl extends ServiceImpl<StudentMapper, Student> impl
                 log.info("班主任用户 {} 管理班级: {}", SecurityUtils.getCurrentUserId(), managedClassIds);
                 request.setClassId(managedClassIds.get(0));
             } else {
-                // 管理多个班级的情况(暂不支持,取第一个)
-                log.warn("班主任用户 {} 管理了多个班级 {},目前仅显示第一个班级的学生",
-                        SecurityUtils.getCurrentUserId(), managedClassIds);
-                request.setClassId(managedClassIds.get(0));
+                // 管理多个班级,设置classIds列表过滤
+                log.info("班主任用户 {} 管理多个班级: {}", SecurityUtils.getCurrentUserId(), managedClassIds);
+                request.setClassIds(managedClassIds);
+                request.setClassId(null); // 清除单个classId
             }
         }
     }

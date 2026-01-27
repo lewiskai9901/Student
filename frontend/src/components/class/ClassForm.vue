@@ -13,6 +13,7 @@
         </div>
         <div class="p-4">
           <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
+            <!-- 第一行：年级 + 部门（必须先选择） -->
             <div>
               <label class="mb-1.5 block text-sm font-medium text-gray-700">
                 年级 <span class="text-red-500">*</span>
@@ -32,22 +33,42 @@
             </div>
             <div>
               <label class="mb-1.5 block text-sm font-medium text-gray-700">
+                所属部门 <span class="text-red-500">*</span>
+              </label>
+              <select
+                v-model="formData.orgUnitId"
+                class="h-9 w-full rounded-md border border-gray-300 bg-white px-3 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                :class="{ 'border-red-500': errors.orgUnitId }"
+                @change="handleDepartmentChange"
+              >
+                <option :value="null">请选择部门</option>
+                <option v-for="item in departmentList" :key="item.id" :value="item.id">
+                  {{ item.displayName || item.unitName }}
+                </option>
+              </select>
+              <p v-if="errors.orgUnitId" class="mt-1 text-xs text-red-500">{{ errors.orgUnitId }}</p>
+            </div>
+            <!-- 第二行：专业方向（依赖年级和部门） -->
+            <div class="md:col-span-2">
+              <label class="mb-1.5 block text-sm font-medium text-gray-700">
                 专业方向 <span class="text-red-500">*</span>
+                <span v-if="directionLoading" class="ml-2 text-xs text-gray-400">加载中...</span>
               </label>
               <select
                 v-model="formData.majorDirectionId"
                 class="h-9 w-full rounded-md border border-gray-300 bg-white px-3 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 disabled:bg-gray-50 disabled:text-gray-500"
                 :class="{ 'border-red-500': errors.majorDirectionId }"
-                :disabled="!formData.gradeId"
+                :disabled="!formData.gradeId || !formData.orgUnitId || directionLoading"
                 @change="handleDirectionChange"
               >
-                <option :value="null">{{ formData.gradeId ? '请选择专业方向' : '请先选择年级' }}</option>
-                <option v-for="item in directionList" :key="item.majorDirectionId" :value="item.majorDirectionId">
+                <option :value="null">{{ directionLoading ? '加载中...' : getDirectionPlaceholder }}</option>
+                <option v-for="item in filteredDirectionList" :key="item.majorDirectionId" :value="item.majorDirectionId">
                   {{ item.majorName }} - {{ item.directionName || `${getYearsDisplayForItem(item)}${item.level || ''}` }}
                 </option>
               </select>
               <p v-if="errors.majorDirectionId" class="mt-1 text-xs text-red-500">{{ errors.majorDirectionId }}</p>
             </div>
+            <!-- 第三行：班级序号 + 班级名称 -->
             <div>
               <label class="mb-1.5 block text-sm font-medium text-gray-700">
                 班级序号 <span class="text-red-500">*</span>
@@ -76,22 +97,7 @@
               />
               <p class="mt-1 text-xs text-gray-500">格式: {{ classNamePreview }}</p>
             </div>
-            <div>
-              <label class="mb-1.5 block text-sm font-medium text-gray-700">
-                所属部门 <span class="text-red-500">*</span>
-              </label>
-              <select
-                v-model="formData.departmentId"
-                class="h-9 w-full rounded-md border border-gray-300 bg-white px-3 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                :class="{ 'border-red-500': errors.departmentId }"
-              >
-                <option :value="null">请选择部门</option>
-                <option v-for="item in departmentList" :key="item.id" :value="item.id">
-                  {{ item.deptName || item.departmentName }}
-                </option>
-              </select>
-              <p v-if="errors.departmentId" class="mt-1 text-xs text-red-500">{{ errors.departmentId }}</p>
-            </div>
+            <!-- 第四行：班级类型 + 状态 -->
             <div>
               <label class="mb-1.5 block text-sm font-medium text-gray-700">
                 班级类型 <span class="text-red-500">*</span>
@@ -190,7 +196,9 @@ import {
   getClassDetail,
   createClass,
   updateClass,
-  getDepartmentList
+  getDepartmentList,
+  getAllGrades,
+  type Grade
 } from '@/api/v2/organization'
 import { getDirectionsByYear } from '@/api/v2/gradeMajorDirection'
 import type { GradeMajorDirection } from '@/api/v2/gradeMajorDirection'
@@ -209,10 +217,27 @@ const emit = defineEmits<{
 
 const loading = ref(false)
 const submitting = ref(false)
+const directionLoading = ref(false)  // 专业方向加载状态（避免全表单刷新）
 const departmentList = ref<any[]>([])
 const gradeList = ref<Grade[]>([])
 const directionList = ref<GradeMajorDirection[]>([])
 const selectedDirection = ref<GradeMajorDirection | null>(null)
+
+// 扁平化树形结构为列表（用于部门下拉框）
+const flattenTree = (nodes: any[], level = 0): any[] => {
+  const result: any[] = []
+  for (const node of nodes) {
+    result.push({
+      ...node,
+      level,
+      displayName: level > 0 ? '　'.repeat(level) + node.unitName : node.unitName
+    })
+    if (node.children && node.children.length > 0) {
+      result.push(...flattenTree(node.children, level + 1))
+    }
+  }
+  return result
+}
 
 const formData = reactive({
   gradeId: null as number | null,
@@ -222,7 +247,7 @@ const formData = reactive({
   classSequence: null as number | null,
   className: '',
   classCode: '',  // 后端必填: 班级编码
-  departmentId: null as number | null,
+  orgUnitId: null as number | null,
   enrollmentYear: null as number | null,
   graduationYear: null as number | null,  // 后端必填: 毕业年份
   classType: 1 as number,  // 后端必填: 班级类型 1普通班 2重点班 3实验班
@@ -265,6 +290,37 @@ const computedLevelDisplay = computed(() => {
   return direction.level || '-'
 })
 
+// 专业方向下拉框占位文字
+const getDirectionPlaceholder = computed(() => {
+  if (!formData.gradeId && !formData.orgUnitId) {
+    return '请先选择年级和部门'
+  }
+  if (!formData.gradeId) {
+    return '请先选择年级'
+  }
+  if (!formData.orgUnitId) {
+    return '请先选择部门'
+  }
+  if (filteredDirectionList.value.length === 0 && directionList.value.length > 0) {
+    return '该部门下暂无可选专业方向'
+  }
+  return '请选择专业方向'
+})
+
+// 根据所选部门过滤专业方向列表
+const filteredDirectionList = computed(() => {
+  if (!formData.orgUnitId) {
+    return directionList.value
+  }
+  // 过滤出属于所选部门的专业方向
+  return directionList.value.filter(item => {
+    // 如果专业方向有 orgUnitId，则必须匹配选中的部门
+    // 如果没有 orgUnitId，则显示所有（兼容旧数据）
+    // 编辑模式下，始终包含当前已选择的专业方向（避免因部门不匹配被过滤掉）
+    return !item.orgUnitId || item.orgUnitId === formData.orgUnitId || item.majorDirectionId === formData.majorDirectionId
+  })
+})
+
 // 班级名称预览
 const classNamePreview = computed(() => {
   if (!selectedDirection.value || !formData.classSequence) {
@@ -298,8 +354,8 @@ const validateForm = () => {
     isValid = false
   }
 
-  if (!formData.departmentId) {
-    errors.departmentId = '请选择部门'
+  if (!formData.orgUnitId) {
+    errors.orgUnitId = '请选择部门'
     isValid = false
   }
 
@@ -316,13 +372,38 @@ const loadGradeList = async () => {
   }
 }
 
-// 加载部门列表
+// 加载部门列表（扁平化树形结构，只显示教学单位）
 const loadDepartmentList = async () => {
   try {
-    const data = await getDepartmentList()
-    departmentList.value = data || []
+    const treeData = await getDepartmentList()
+    // 扁平化树形结构
+    const flatList = flattenTree(treeData || [])
+    // 只保留教学单位（academic/ACADEMIC），职能部门（functional）和行政单位（administrative）不能管理班级
+    departmentList.value = flatList.filter(item => {
+      const category = (item.unitCategory || '').toLowerCase()
+      // 只允许教学单位或未设置类别的（默认当作教学单位）
+      return category === 'academic' || category === '' || !item.unitCategory
+    })
   } catch (error) {
     console.error('加载部门列表失败:', error)
+  }
+}
+
+// 部门变更处理 - 切换部门时清空专业方向选择
+const handleDepartmentChange = () => {
+  // 部门变更后，如果当前选中的专业方向不属于新部门，则清空
+  if (formData.majorDirectionId) {
+    const currentDirection = directionList.value.find(d => d.majorDirectionId === formData.majorDirectionId)
+    if (currentDirection && currentDirection.orgUnitId && currentDirection.orgUnitId !== formData.orgUnitId) {
+      // 当前选中的专业方向不属于新选择的部门，清空选择
+      formData.majorDirectionId = null
+      formData.majorId = null
+      formData.classSequence = null
+      formData.className = ''
+      formData.classCode = ''
+      formData.graduationYear = null
+      selectedDirection.value = null
+    }
   }
 }
 
@@ -351,16 +432,16 @@ const handleGradeChange = async () => {
   formData.enrollmentYear = grade.enrollmentYear
   formData.gradeLevel = grade.gradeLevel
 
-  // 使用入学年份加载该年级的专业方向列表
+  // 使用入学年份加载该年级的专业方向列表（使用局部loading避免表单抖动）
   try {
-    loading.value = true
+    directionLoading.value = true
     const data = await getDirectionsByYear(grade.enrollmentYear)
     directionList.value = data || []
   } catch (error) {
     console.error('加载专业方向列表失败:', error)
     ElMessage.error('加载专业方向列表失败')
   } finally {
-    loading.value = false
+    directionLoading.value = false
   }
 }
 
@@ -483,7 +564,7 @@ const loadClassDetail = async () => {
     formData.classSequence = data.classSequence || null
     formData.className = data.className || ''
     formData.classCode = data.classCode || ''
-    formData.departmentId = data.departmentId || null
+    formData.orgUnitId = data.orgUnitId || null
     formData.enrollmentYear = data.enrollmentYear || null
     formData.graduationYear = data.graduationYear || null
     formData.classType = data.classType || 1
@@ -559,7 +640,7 @@ const handleSubmit = async () => {
       classCode: classCode,
       gradeLevel: gradeLevel,
       gradeId: formData.gradeId,
-      departmentId: formData.departmentId,
+      orgUnitId: formData.orgUnitId,
       majorId: formData.majorId,
       majorDirectionId: formData.majorDirectionId,
       teacherId: formData.teacherId,

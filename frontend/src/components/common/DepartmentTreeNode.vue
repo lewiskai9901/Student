@@ -30,7 +30,7 @@
       </svg>
 
       <!-- 部门名称 -->
-      <span class="text-sm text-gray-700 truncate">{{ department.deptName }}</span>
+      <span class="text-sm text-gray-700 truncate">{{ department.unitName || department.deptName }}</span>
     </div>
 
     <!-- 子部门 -->

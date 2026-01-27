@@ -116,7 +116,7 @@ public class CheckPlan extends BaseEntity {
 
     /**
      * 目标范围配置(JSON格式)
-     * 格式: {departmentIds:[], gradeIds:[], classIds:[], excludeClassIds:[]}
+     * 格式: {orgUnitIds:[], gradeIds:[], classIds:[], excludeClassIds:[]}
      */
     private String targetScopeConfig;
 

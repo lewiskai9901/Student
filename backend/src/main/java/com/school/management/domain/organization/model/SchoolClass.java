@@ -28,7 +28,7 @@ import java.util.stream.Collectors;
  * 移除的冗余字段（应从关联实体获取）：
  * - enrollmentYear: 从Grade获取
  * - majorId: 从MajorDirection获取
- * - departmentId: 从Major获取
+ * - orgUnitId: 从Major获取
  */
 public class SchoolClass extends AggregateRoot<Long> {
 
@@ -174,6 +174,23 @@ public class SchoolClass extends AggregateRoot<Long> {
         }
         if (sortOrder != null) {
             this.sortOrder = sortOrder;
+        }
+        this.updatedBy = updatedBy;
+        this.updatedAt = LocalDateTime.now();
+    }
+
+    /**
+     * 更新班级组织关联信息
+     */
+    public void updateOrganization(Long orgUnitId, Long gradeId, Long majorDirectionId, Long updatedBy) {
+        if (orgUnitId != null) {
+            this.orgUnitId = orgUnitId;
+        }
+        if (gradeId != null) {
+            this.gradeId = gradeId;
+        }
+        if (majorDirectionId != null) {
+            this.majorDirectionId = majorDirectionId;
         }
         this.updatedBy = updatedBy;
         this.updatedAt = LocalDateTime.now();

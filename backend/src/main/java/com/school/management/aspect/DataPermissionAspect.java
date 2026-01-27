@@ -1,7 +1,7 @@
 package com.school.management.aspect;
 
 import com.school.management.annotation.DataPermission;
-import com.school.management.domain.access.model.DataScope;
+import com.school.management.casbin.model.DataScope;
 import com.school.management.security.CustomUserDetails;
 import com.school.management.service.DataPermissionService;
 import com.school.management.util.SecurityUtils;
@@ -80,23 +80,16 @@ public class DataPermissionAspect {
         try {
             switch (dataScope) {
                 case DEPARTMENT:
+                case DEPARTMENT_AND_BELOW:
                     // 本部门数据
                     setFieldValue(request, deptField,
-                            userDetails.getDepartmentId() != null
-                                ? Collections.singletonList(userDetails.getDepartmentId())
+                            userDetails.getOrgUnitId() != null
+                                ? Collections.singletonList(userDetails.getOrgUnitId())
                                 : Collections.emptyList());
                     break;
 
-                case GRADE:
-                    // 本年级数据 - 通过班级过滤
-                    List<Long> gradeClassIds = dataPermissionService.getAccessibleClassIds(moduleCode);
-                    if (gradeClassIds != null) {
-                        setFieldValue(request, classField, gradeClassIds);
-                    }
-                    break;
-
-                case CLASS:
-                    // 本班级数据
+                case CUSTOM:
+                    // 自定义范围 - 通过Casbin获取可访问的班级
                     List<Long> classIds = dataPermissionService.getAccessibleClassIds(moduleCode);
                     if (classIds != null) {
                         setFieldValue(request, classField, classIds);

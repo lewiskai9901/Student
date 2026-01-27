@@ -9,7 +9,6 @@ import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Service;
 
-import java.util.Collections;
 import java.util.List;
 
 /**
@@ -51,7 +50,7 @@ public class CustomUserDetailsService implements UserDetailsService {
 
         // 注意：managedClassIds 和 gradeLevel 不再预加载
         // 数据权限通过 DataPermissionServiceImpl 动态查询
-        return new CustomUserDetails(user, roles, permissions, Collections.emptyList(), null);
+        return new CustomUserDetails(user, roles, permissions);
     }
 
     /**
@@ -68,6 +67,6 @@ public class CustomUserDetailsService implements UserDetailsService {
 
         // 注意：managedClassIds 和 gradeLevel 不再预加载
         // 数据权限通过 DataPermissionServiceImpl 动态查询
-        return new CustomUserDetails(user, roles, permissions, Collections.emptyList(), null);
+        return new CustomUserDetails(user, roles, permissions);
     }
 }

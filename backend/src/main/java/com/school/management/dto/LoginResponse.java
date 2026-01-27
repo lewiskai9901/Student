@@ -73,24 +73,27 @@ public class LoginResponse {
         @Schema(description = "权限列表")
         private List<String> permissions;
 
-        @Schema(description = "部门信息")
-        private DepartmentInfo department;
+        @Schema(description = "组织单元信息")
+        private OrgUnitInfo orgUnit;
 
         @Schema(description = "班级信息")
         private ClassInfo classInfo;
+
+        @Schema(description = "用户分配的班级列表（班主任/副班主任等）")
+        private List<AssignedClass> assignedClasses;
 
         @Data
         @Builder
         @NoArgsConstructor
         @AllArgsConstructor
-        @Schema(description = "部门信息")
-        public static class DepartmentInfo {
+        @Schema(description = "组织单元信息")
+        public static class OrgUnitInfo {
 
-            @Schema(description = "部门ID")
-            private Long departmentId;
+            @Schema(description = "组织单元ID")
+            private Long orgUnitId;
 
-            @Schema(description = "部门名称")
-            private String departmentName;
+            @Schema(description = "组织单元名称")
+            private String orgUnitName;
         }
 
         @Data
@@ -105,6 +108,23 @@ public class LoginResponse {
 
             @Schema(description = "班级名称")
             private String className;
+        }
+
+        @Data
+        @Builder
+        @NoArgsConstructor
+        @AllArgsConstructor
+        @Schema(description = "分配的班级信息")
+        public static class AssignedClass {
+
+            @Schema(description = "班级ID")
+            private Long id;
+
+            @Schema(description = "班级名称")
+            private String className;
+
+            @Schema(description = "角色: HEAD_TEACHER/DEPUTY_HEAD_TEACHER/SUBJECT_TEACHER/COUNSELOR")
+            private String role;
         }
     }
 }

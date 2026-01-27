@@ -95,7 +95,7 @@ public class GradeController {
 
     @Operation(summary = "Get all grades", description = "Gets all grades ordered by enrollment year")
     @GetMapping
-    @PreAuthorize("hasAuthority('system:grade:view')")
+    @PreAuthorize("hasAuthority('system:grade:view') or hasAuthority('system:role:edit') or hasAuthority('system:role:view')")
     public Result<List<GradeDTO>> getAllGrades() {
         List<GradeDTO> result = gradeService.getAllGrades();
         return Result.success(result);

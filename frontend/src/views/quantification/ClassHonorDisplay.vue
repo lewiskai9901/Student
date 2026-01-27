@@ -6,7 +6,7 @@
         <div class="banner-content">
           <h1 class="class-name">{{ classInfo?.className }}</h1>
           <p class="class-info">
-            {{ classInfo?.gradeName }} | {{ classInfo?.departmentName }}
+            {{ classInfo?.gradeName }} | {{ classInfo?.orgUnitName }}
           </p>
         </div>
         <div class="banner-stats">

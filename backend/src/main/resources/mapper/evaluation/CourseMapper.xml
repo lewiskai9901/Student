@@ -12,15 +12,15 @@
             c.credit,
             c.hours,
             c.semester_id,
-            c.department_id,
+            c.org_unit_id,
             c.teacher_name,
             c.description,
             c.status,
             c.created_at,
-            d.dept_name as department_name,
+            o.unit_name as org_unit_name,
             s.semester_name
         FROM courses c
-        LEFT JOIN departments d ON c.department_id = d.id
+        LEFT JOIN org_units o ON c.org_unit_id = o.id
         LEFT JOIN semesters s ON c.semester_id = s.id
         WHERE c.deleted = 0
         <if test="query.courseCode != null and query.courseCode != ''">
@@ -35,8 +35,8 @@
         <if test="query.semesterId != null">
             AND c.semester_id = #{query.semesterId}
         </if>
-        <if test="query.departmentId != null">
-            AND c.department_id = #{query.departmentId}
+        <if test="query.orgUnitId != null">
+            AND c.org_unit_id = #{query.orgUnitId}
         </if>
         <if test="query.status != null">
             AND c.status = #{query.status}
@@ -52,10 +52,10 @@
         LIMIT 1
     </select>
 
-    <!-- 根据系部查询 -->
-    <select id="selectByDepartmentId" resultType="com.school.management.entity.evaluation.Course">
+    <!-- 根据组织单元查询 -->
+    <select id="selectByOrgUnitId" resultType="com.school.management.entity.evaluation.Course">
         SELECT * FROM courses
-        WHERE department_id = #{departmentId}
+        WHERE org_unit_id = #{orgUnitId}
         AND status = 1
         AND deleted = 0
         ORDER BY course_code
@@ -80,17 +80,17 @@
             c.credit,
             c.hours,
             c.semester_id,
-            c.department_id,
+            c.org_unit_id,
             c.teacher_name,
             c.description,
             c.status,
             c.created_at,
             c.updated_at,
-            d.dept_name as department_name,
+            o.unit_name as org_unit_name,
             s.semester_name,
             s.academic_year
         FROM courses c
-        LEFT JOIN departments d ON c.department_id = d.id
+        LEFT JOIN org_units o ON c.org_unit_id = o.id
         LEFT JOIN semesters s ON c.semester_id = s.id
         WHERE c.id = #{id}
         AND c.deleted = 0

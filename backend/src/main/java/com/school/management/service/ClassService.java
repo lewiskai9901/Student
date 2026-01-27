@@ -71,12 +71,12 @@ public interface ClassService {
     IPage<ClassResponse> getClassPage(ClassQueryRequest request);
 
     /**
-     * 根据部门ID查询班级列表
+     * 根据组织单元ID查询班级列表
      *
-     * @param departmentId 部门ID
+     * @param orgUnitId 组织单元ID
      * @return 班级列表
      */
-    List<ClassResponse> getClassesByDepartmentId(Long departmentId);
+    List<ClassResponse> getClassesByOrgUnitId(Long orgUnitId);
 
     /**
      * 根据班主任ID查询班级列表

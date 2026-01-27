@@ -48,9 +48,9 @@ public class ClassVO {
     private Long majorDirectionId;
 
     /**
-     * 部门ID
+     * 组织单元ID
      */
-    private Long departmentId;
+    private Long orgUnitId;
 
     /**
      * 班主任ID
@@ -90,9 +90,9 @@ public class ClassVO {
     private String majorDirectionName;
 
     /**
-     * 部门名称
+     * 组织单元名称
      */
-    private String departmentName;
+    private String orgUnitName;
 
     /**
      * 班主任姓名

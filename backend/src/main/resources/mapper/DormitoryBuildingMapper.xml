@@ -38,9 +38,9 @@
             NULL as supervisor_name,
             b.description as notes,
             b.status,
-            0 as total_rooms,
-            0 as total_beds,
-            0 as occupied_beds,
+            COALESCE((SELECT COUNT(*) FROM dormitories d WHERE d.building_id = b.id AND d.deleted = 0), 0) as total_rooms,
+            COALESCE((SELECT SUM(d.bed_capacity) FROM dormitories d WHERE d.building_id = b.id AND d.deleted = 0), 0) as total_beds,
+            COALESCE((SELECT SUM(d.occupied_beds) FROM dormitories d WHERE d.building_id = b.id AND d.deleted = 0), 0) as occupied_beds,
             b.created_at,
             b.updated_at
         FROM buildings b
@@ -97,9 +97,9 @@
             NULL as supervisor_name,
             b.description as notes,
             b.status,
-            0 as total_rooms,
-            0 as total_beds,
-            0 as occupied_beds,
+            COALESCE((SELECT COUNT(*) FROM dormitories d WHERE d.building_id = b.id AND d.deleted = 0), 0) as total_rooms,
+            COALESCE((SELECT SUM(d.bed_capacity) FROM dormitories d WHERE d.building_id = b.id AND d.deleted = 0), 0) as total_beds,
+            COALESCE((SELECT SUM(d.occupied_beds) FROM dormitories d WHERE d.building_id = b.id AND d.deleted = 0), 0) as occupied_beds,
             b.created_at,
             b.updated_at
         FROM buildings b
@@ -123,9 +123,9 @@
             NULL as supervisor_name,
             b.description as notes,
             b.status,
-            0 as total_rooms,
-            0 as total_beds,
-            0 as occupied_beds,
+            COALESCE((SELECT COUNT(*) FROM dormitories d WHERE d.building_id = b.id AND d.deleted = 0), 0) as total_rooms,
+            COALESCE((SELECT SUM(d.bed_capacity) FROM dormitories d WHERE d.building_id = b.id AND d.deleted = 0), 0) as total_beds,
+            COALESCE((SELECT SUM(d.occupied_beds) FROM dormitories d WHERE d.building_id = b.id AND d.deleted = 0), 0) as occupied_beds,
             b.created_at,
             b.updated_at
         FROM buildings b

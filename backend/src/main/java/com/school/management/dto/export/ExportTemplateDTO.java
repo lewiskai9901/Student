@@ -135,7 +135,7 @@ public class ExportTemplateDTO {
         private Boolean enabled;
 
         /**
-         * 分组层级字段列表（如：["departmentName", "gradeName", "className"]）
+         * 分组层级字段列表（如：["orgUnitName", "gradeName", "className"]）
          * 这些列自动使用 rowspan 合并
          */
         private List<String> hierarchyLevels;

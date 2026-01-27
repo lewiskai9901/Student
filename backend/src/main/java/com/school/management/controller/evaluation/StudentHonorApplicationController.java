@@ -47,7 +47,7 @@ public class StudentHonorApplicationController {
             @Parameter(description = "荣誉类型ID") @RequestParam(required = false) Long honorTypeId,
             @Parameter(description = "状态") @RequestParam(required = false) Integer status,
             @Parameter(description = "班级ID") @RequestParam(required = false) Long classId,
-            @Parameter(description = "院系ID") @RequestParam(required = false) Long departmentId) {
+            @Parameter(description = "组织单元ID") @RequestParam(required = false) Long orgUnitId) {
 
         log.info("分页查询荣誉申报: pageNum={}, pageSize={}", pageNum, pageSize);
 
@@ -59,7 +59,7 @@ public class StudentHonorApplicationController {
         query.put("honorTypeId", honorTypeId);
         query.put("status", status);
         query.put("classId", classId);
-        query.put("departmentId", departmentId);
+        query.put("orgUnitId", orgUnitId);
 
         Page<Map<String, Object>> result = applicationService.pageApplications(page, query);
         return Result.success(PageResult.from(result));

@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.school.management.infrastructure.persistence.asset.AssetInventoryDetailMapper">
+
+    <resultMap id="DetailResultMap" type="com.school.management.infrastructure.persistence.asset.AssetInventoryDetailPO">
+        <id column="id" property="id"/>
+        <result column="inventory_id" property="inventoryId"/>
+        <result column="asset_id" property="assetId"/>
+        <result column="expected_quantity" property="expectedQuantity"/>
+        <result column="actual_quantity" property="actualQuantity"/>
+        <result column="difference" property="difference"/>
+        <result column="result_type" property="resultType"/>
+        <result column="check_time" property="checkTime"/>
+        <result column="checker_id" property="checkerId"/>
+        <result column="checker_name" property="checkerName"/>
+        <result column="remark" property="remark"/>
+        <result column="asset_code" property="assetCode"/>
+        <result column="asset_name" property="assetName"/>
+        <result column="location_name" property="locationName"/>
+    </resultMap>
+
+    <select id="selectByInventoryIdWithAsset" resultMap="DetailResultMap">
+        SELECT d.*,
+               a.asset_code,
+               a.asset_name,
+               a.location_name
+        FROM asset_inventory_detail d
+        LEFT JOIN asset a ON d.asset_id = a.id
+        WHERE d.inventory_id = #{inventoryId}
+        ORDER BY d.id
+    </select>
+
+    <insert id="batchInsert">
+        INSERT INTO asset_inventory_detail (inventory_id, asset_id, expected_quantity)
+        VALUES
+        <foreach collection="list" item="item" separator=",">
+            (#{item.inventoryId}, #{item.assetId}, #{item.expectedQuantity})
+        </foreach>
+    </insert>
+
+</mapper>

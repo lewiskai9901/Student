@@ -201,7 +201,7 @@ export interface StudentQueryParams {
   pageNum?: number
   pageSize?: number
   classIds?: number[]
-  departmentIds?: number[]
+  orgUnitIds?: number[]
   selfUserId?: number
 }
 

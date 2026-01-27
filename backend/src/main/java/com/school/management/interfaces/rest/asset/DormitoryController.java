@@ -8,6 +8,7 @@ import com.school.management.common.result.Result;
 import com.school.management.interfaces.rest.asset.dto.CreateDormitoryRequest;
 import com.school.management.interfaces.rest.asset.dto.CheckInRequest;
 import com.school.management.interfaces.rest.asset.dto.CheckOutRequest;
+import com.school.management.interfaces.rest.asset.dto.BatchUpdateDepartmentRequest;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -36,7 +37,7 @@ public class DormitoryController {
     public Result<PageResult<DormitoryDTO>> getDormitories(
             @Parameter(description = "关键字") @RequestParam(required = false) String keyword,
             @Parameter(description = "楼宇ID") @RequestParam(required = false) Long buildingId,
-            @Parameter(description = "部门ID") @RequestParam(required = false) Long departmentId,
+            @Parameter(description = "组织单元ID") @RequestParam(required = false) Long orgUnitId,
             @Parameter(description = "性别类型") @RequestParam(required = false) Integer genderType,
             @Parameter(description = "状态") @RequestParam(required = false) Integer status,
             @Parameter(description = "是否有空床") @RequestParam(required = false) Boolean hasAvailableBeds,
@@ -44,7 +45,7 @@ public class DormitoryController {
             @Parameter(description = "每页数量") @RequestParam(defaultValue = "10") Integer pageSize) {
 
         PageResult<DormitoryDTO> result = assetService.findDormitoriesByPage(
-                keyword, buildingId, departmentId, genderType, status, hasAvailableBeds, pageNum, pageSize);
+                keyword, buildingId, orgUnitId, genderType, status, hasAvailableBeds, pageNum, pageSize);
         return Result.success(result);
     }
 
@@ -77,7 +78,7 @@ public class DormitoryController {
                 .roomUsageType(request.getRoomUsageType())
                 .bedCapacity(request.getBedCapacity())
                 .genderType(request.getGenderType())
-                .departmentId(request.getDepartmentId())
+                .orgUnitId(request.getOrgUnitId())
                 .facilities(request.getFacilities())
                 .notes(request.getNotes())
                 .build();
@@ -85,6 +86,20 @@ public class DormitoryController {
         Long id = assetService.createDormitory(command);
         return Result.success(id);
     }
+
+    // ==================== 批量操作 ====================
+    // 注意: 批量操作端点需要放在 /{id} 端点之前，避免Spring MVC路由冲突
+
+    @Operation(summary = "批量更新宿舍部门分配")
+    @PutMapping(value = "/batch-department")
+    @PreAuthorize("hasAuthority('dormitory:update')")
+    public Result<Integer> batchUpdateDepartment(@RequestBody BatchUpdateDepartmentRequest request) {
+        // 使用getDormitoryIdsAsLong()处理字符串类型的大整数ID
+        int count = assetService.batchUpdateDepartment(request.getDormitoryIdsAsLong(), request.getOrgUnitId());
+        return Result.success(count);
+    }
+
+    // ==================== 单个宿舍操作 ====================
 
     @Operation(summary = "更新宿舍")
     @PutMapping("/{id}")
@@ -99,7 +114,7 @@ public class DormitoryController {
                 .roomUsageType(request.getRoomUsageType())
                 .bedCapacity(request.getBedCapacity())
                 .genderType(request.getGenderType())
-                .departmentId(request.getDepartmentId())
+                .orgUnitId(request.getOrgUnitId())
                 .facilities(request.getFacilities())
                 .notes(request.getNotes())
                 .build();

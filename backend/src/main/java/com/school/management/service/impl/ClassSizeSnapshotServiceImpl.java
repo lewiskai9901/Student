@@ -204,13 +204,13 @@ public class ClassSizeSnapshotServiceImpl extends ServiceImpl<ClassSizeSnapshotM
 
             ClassSizeStandard standard = standardMapper.selectStandardSize(
                     semesterId,
-                    clazz.getDepartmentId(),
+                    clazz.getOrgUnitId(),
                     clazz.getGradeLevel()
             );
 
             if (standard != null && standard.getStandardSize() != null) {
-                log.debug("获取到班级标准人数: classId={}, departmentId={}, gradeLevel={}, semesterId={}, standardSize={}",
-                        clazz.getId(), clazz.getDepartmentId(), clazz.getGradeLevel(), semesterId, standard.getStandardSize());
+                log.debug("获取到班级标准人数: classId={}, orgUnitId={}, gradeLevel={}, semesterId={}, standardSize={}",
+                        clazz.getId(), clazz.getOrgUnitId(), clazz.getGradeLevel(), semesterId, standard.getStandardSize());
                 return standard.getStandardSize();
             }
 

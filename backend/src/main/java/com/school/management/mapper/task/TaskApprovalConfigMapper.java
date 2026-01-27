@@ -18,20 +18,20 @@ import java.util.List;
 public interface TaskApprovalConfigMapper extends BaseMapper<TaskApprovalConfig> {
 
     /**
-     * 根据任务ID和系部ID查询审批配置
+     * 根据任务ID和组织单元ID查询审批配置
      *
      * @param taskId 任务ID
-     * @param departmentId 系部ID
+     * @param orgUnitId 组织单元ID
      * @return 审批配置列表（按审批级别升序）
      */
     List<TaskApprovalConfig> selectByTaskAndDept(@Param("taskId") Long taskId,
-                                                  @Param("departmentId") Long departmentId);
+                                                  @Param("orgUnitId") Long orgUnitId);
 
     /**
-     * 根据任务ID查询所有审批配置（按系部、级别分组）
+     * 根据任务ID查询所有审批配置（按组织单元、级别分组）
      *
      * @param taskId 任务ID
-     * @return 审批配置列表（按系部ID、审批级别升序）
+     * @return 审批配置列表（按组织单元ID、审批级别升序）
      */
     List<TaskApprovalConfig> selectByTaskId(@Param("taskId") Long taskId);
 

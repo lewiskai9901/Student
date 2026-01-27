@@ -9,8 +9,8 @@
         <result column="class_code" property="classCode"/>
         <result column="grade_level" property="gradeLevel"/>
         <result column="grade_id" property="gradeId"/>
-        <result column="department_id" property="departmentId"/>
-        <result column="department_name" property="departmentName"/>
+        <result column="org_unit_id" property="orgUnitId"/>
+        <result column="org_unit_name" property="orgUnitName"/>
         <result column="major_id" property="majorId"/>
         <result column="major_name" property="majorName"/>
         <result column="major_direction_id" property="majorDirectionId"/>
@@ -36,7 +36,7 @@
     <!-- 分页查询班级 -->
     <select id="selectClassPage" resultMap="ClassResponseMap">
         SELECT c.id, c.class_name, c.class_code, c.grade_level, c.grade_id,
-               c.department_id, d.dept_name as department_name,
+               c.org_unit_id, o.unit_name as org_unit_name,
                c.major_id, m.major_name as major_name,
                c.major_direction_id, md.direction_name as major_direction_name,
                CONCAT(c.enrollment_year, '级') as grade,
@@ -59,7 +59,7 @@
                END as status_name,
                c.created_at, c.updated_at
         FROM classes c
-        LEFT JOIN departments d ON c.department_id = d.id
+        LEFT JOIN org_units o ON c.org_unit_id = o.id
         LEFT JOIN majors m ON c.major_id = m.id
         LEFT JOIN major_directions md ON c.major_direction_id = md.id
         LEFT JOIN users t ON c.teacher_id = t.id
@@ -77,8 +77,8 @@
         <if test="req.gradeId != null">
             AND c.grade_id = #{req.gradeId}
         </if>
-        <if test="req.departmentId != null">
-            AND c.department_id = #{req.departmentId}
+        <if test="req.orgUnitId != null">
+            AND c.org_unit_id = #{req.orgUnitId}
         </if>
         <if test="req.teacherId != null">
             AND c.teacher_id = #{req.teacherId}
@@ -96,9 +96,9 @@
         <if test="req.classIds != null and req.classIds.size() > 0">
             AND c.id IN <foreach collection="req.classIds" item="cid" open="(" separator="," close=")">#{cid}</foreach>
         </if>
-        <!-- 数据权限过滤: 部门ID列表 -->
-        <if test="req.departmentIds != null and req.departmentIds.size() > 0">
-            AND c.department_id IN <foreach collection="req.departmentIds" item="did" open="(" separator="," close=")">#{did}</foreach>
+        <!-- 数据权限过滤: 组织单元ID列表 -->
+        <if test="req.orgUnitIds != null and req.orgUnitIds.size() > 0">
+            AND c.org_unit_id IN <foreach collection="req.orgUnitIds" item="did" open="(" separator="," close=")">#{did}</foreach>
         </if>
         <choose>
             <when test="req.sortBy == 'gradeLevel'">
@@ -130,7 +130,7 @@
 
     <!-- 根据班级编码获取班级 -->
     <select id="selectByClassCode" resultType="com.school.management.entity.Class">
-        SELECT id, class_name, class_code, grade_level, department_id, teacher_id, assistant_teacher_id,
+        SELECT id, class_name, class_code, grade_level, org_unit_id, teacher_id, assistant_teacher_id,
                student_count, classroom_location, enrollment_year, graduation_year, class_type, status,
                created_at, updated_at
         FROM classes
@@ -150,10 +150,10 @@
         </if>
     </select>
 
-    <!-- 根据部门ID查询班级列表 -->
-    <select id="selectByDepartmentId" resultMap="ClassResponseMap">
+    <!-- 根据组织单元ID查询班级列表 -->
+    <select id="selectByOrgUnitId" resultMap="ClassResponseMap">
         SELECT c.id, c.class_name, c.class_code, c.grade_level, c.grade_id,
-               c.department_id, d.dept_name as department_name,
+               c.org_unit_id, o.unit_name as org_unit_name,
                c.major_id, m.major_name as major_name,
                c.major_direction_id, md.direction_name as major_direction_name,
                CONCAT(c.enrollment_year, '级') as grade,
@@ -176,13 +176,13 @@
                END as status_name,
                c.created_at, c.updated_at
         FROM classes c
-        LEFT JOIN departments d ON c.department_id = d.id
+        LEFT JOIN org_units o ON c.org_unit_id = o.id
         LEFT JOIN majors m ON c.major_id = m.id
         LEFT JOIN major_directions md ON c.major_direction_id = md.id
         LEFT JOIN users t ON c.teacher_id = t.id
         LEFT JOIN users at ON c.assistant_teacher_id = at.id
         WHERE c.deleted = 0
-        AND c.department_id = #{departmentId}
+        AND c.org_unit_id = #{orgUnitId}
         AND c.status = 1
         ORDER BY c.grade_level ASC, c.class_name ASC
     </select>
@@ -190,7 +190,7 @@
     <!-- 根据班主任ID查询班级列表 -->
     <select id="selectByTeacherId" resultMap="ClassResponseMap">
         SELECT c.id, c.class_name, c.class_code, c.grade_level, c.grade_id,
-               c.department_id, d.dept_name as department_name,
+               c.org_unit_id, o.unit_name as org_unit_name,
                c.major_id, m.major_name as major_name,
                c.major_direction_id, md.direction_name as major_direction_name,
                CONCAT(c.enrollment_year, '级') as grade,
@@ -213,7 +213,7 @@
                END as status_name,
                c.created_at, c.updated_at
         FROM classes c
-        LEFT JOIN departments d ON c.department_id = d.id
+        LEFT JOIN org_units o ON c.org_unit_id = o.id
         LEFT JOIN majors m ON c.major_id = m.id
         LEFT JOIN major_directions md ON c.major_direction_id = md.id
         LEFT JOIN users t ON c.teacher_id = t.id
@@ -226,7 +226,7 @@
     <!-- 根据年级查询班级列表 -->
     <select id="selectByGradeLevel" resultMap="ClassResponseMap">
         SELECT c.id, c.class_name, c.class_code, c.grade_level, c.grade_id,
-               c.department_id, d.dept_name as department_name,
+               c.org_unit_id, o.unit_name as org_unit_name,
                c.major_id, m.major_name as major_name,
                c.major_direction_id, md.direction_name as major_direction_name,
                CONCAT(c.enrollment_year, '级') as grade,
@@ -249,7 +249,7 @@
                END as status_name,
                c.created_at, c.updated_at
         FROM classes c
-        LEFT JOIN departments d ON c.department_id = d.id
+        LEFT JOIN org_units o ON c.org_unit_id = o.id
         LEFT JOIN majors m ON c.major_id = m.id
         LEFT JOIN major_directions md ON c.major_direction_id = md.id
         LEFT JOIN users t ON c.teacher_id = t.id
@@ -263,7 +263,7 @@
     <!-- 根据入学年份查询班级列表 -->
     <select id="selectByEnrollmentYear" resultMap="ClassResponseMap">
         SELECT c.id, c.class_name, c.class_code, c.grade_level, c.grade_id,
-               c.department_id, d.dept_name as department_name,
+               c.org_unit_id, o.unit_name as org_unit_name,
                c.major_id, m.major_name as major_name,
                c.major_direction_id, md.direction_name as major_direction_name,
                CONCAT(c.enrollment_year, '级') as grade,
@@ -286,7 +286,7 @@
                END as status_name,
                c.created_at, c.updated_at
         FROM classes c
-        LEFT JOIN departments d ON c.department_id = d.id
+        LEFT JOIN org_units o ON c.org_unit_id = o.id
         LEFT JOIN majors m ON c.major_id = m.id
         LEFT JOIN major_directions md ON c.major_direction_id = md.id
         LEFT JOIN users t ON c.teacher_id = t.id
@@ -300,7 +300,7 @@
     <!-- 获取所有启用的班级 -->
     <select id="selectAllEnabled" resultMap="ClassResponseMap">
         SELECT c.id, c.class_name, c.class_code, c.grade_level, c.grade_id,
-               c.department_id, d.dept_name as department_name,
+               c.org_unit_id, o.unit_name as org_unit_name,
                c.major_id, m.major_name as major_name,
                c.major_direction_id, md.direction_name as major_direction_name,
                CONCAT(c.enrollment_year, '级') as grade,
@@ -323,7 +323,7 @@
                END as status_name,
                c.created_at, c.updated_at
         FROM classes c
-        LEFT JOIN departments d ON c.department_id = d.id
+        LEFT JOIN org_units o ON c.org_unit_id = o.id
         LEFT JOIN majors m ON c.major_id = m.id
         LEFT JOIN major_directions md ON c.major_direction_id = md.id
         LEFT JOIN users t ON c.teacher_id = t.id
@@ -376,7 +376,7 @@
     <!-- 根据ID查询班级详情（包含关联数据和实时学生数量） -->
     <select id="selectClassResponseById" resultMap="ClassResponseMap">
         SELECT c.id, c.class_name, c.class_code, c.grade_level, c.grade_id,
-               c.department_id, d.dept_name as department_name,
+               c.org_unit_id, o.unit_name as org_unit_name,
                c.major_id, m.major_name as major_name,
                c.major_direction_id, md.direction_name as major_direction_name,
                CONCAT(c.enrollment_year, '级') as grade,
@@ -399,7 +399,7 @@
                END as status_name,
                c.created_at, c.updated_at
         FROM classes c
-        LEFT JOIN departments d ON c.department_id = d.id
+        LEFT JOIN org_units o ON c.org_unit_id = o.id
         LEFT JOIN majors m ON c.major_id = m.id
         LEFT JOIN major_directions md ON c.major_direction_id = md.id
         LEFT JOIN users t ON c.teacher_id = t.id
@@ -411,7 +411,7 @@
     <!-- 根据ID列表批量查询班级详情 -->
     <select id="selectClassResponseByIds" resultMap="ClassResponseMap">
         SELECT c.id, c.class_name, c.class_code, c.grade_level, c.grade_id,
-               c.department_id, d.dept_name as department_name,
+               c.org_unit_id, o.unit_name as org_unit_name,
                c.major_id, m.major_name as major_name,
                c.major_direction_id, md.direction_name as major_direction_name,
                CONCAT(c.enrollment_year, '级') as grade,
@@ -434,25 +434,25 @@
                END as status_name,
                c.created_at, c.updated_at
         FROM classes c
-        LEFT JOIN departments d ON c.department_id = d.id
+        LEFT JOIN org_units o ON c.org_unit_id = o.id
         LEFT JOIN majors m ON c.major_id = m.id
         LEFT JOIN major_directions md ON c.major_direction_id = md.id
         LEFT JOIN users t ON c.teacher_id = t.id
         LEFT JOIN users at ON c.assistant_teacher_id = at.id
         WHERE c.deleted = 0
         AND c.id IN <foreach collection="ids" item="id" open="(" separator="," close=")">#{id}</foreach>
-        ORDER BY c.enrollment_year DESC, c.department_id ASC, c.class_name ASC
+        ORDER BY c.enrollment_year DESC, c.org_unit_id ASC, c.class_name ASC
     </select>
 
     <!-- ==================== 数据权限相关查询 ==================== -->
 
-    <!-- 根据部门ID列表查询班级ID列表 -->
-    <select id="selectIdsByDepartmentIds" resultType="java.lang.Long">
+    <!-- 根据组织单元ID列表查询班级ID列表 -->
+    <select id="selectIdsByOrgUnitIds" resultType="java.lang.Long">
         SELECT id
         FROM classes
         WHERE deleted = 0
         AND status = 1
-        AND department_id IN <foreach collection="departmentIds" item="deptId" open="(" separator="," close=")">#{deptId}</foreach>
+        AND org_unit_id IN <foreach collection="orgUnitIds" item="deptId" open="(" separator="," close=")">#{deptId}</foreach>
     </select>
 
     <!-- 根据年级ID列表查询班级ID列表 -->

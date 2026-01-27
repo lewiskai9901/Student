@@ -24,12 +24,18 @@ public interface BuildingDormitoryMapper extends BaseMapper<BuildingDormitory> {
      * @param page 分页对象
      * @param buildingName 楼宇名称
      * @param dormitoryType 宿舍类型
-     * @param departmentIds 部门ID列表（数据权限过滤）
+     * @param orgUnitIds 组织单元ID列表（数据权限过滤）
      * @param managedBuildingIds 用户管理的楼宇ID列表（数据权限过滤）
      * @return 分页结果
      */
     @Select("<script>" +
-            "SELECT bd.*, b.building_name, b.building_no, b.total_floors, b.status, b.location " +
+            "SELECT bd.id, bd.building_id, bd.dormitory_type, " +
+            "  COALESCE((SELECT COUNT(*) FROM dormitories d WHERE d.building_id = bd.building_id AND d.deleted = 0), 0) as total_rooms, " +
+            "  COALESCE((SELECT SUM(d.bed_capacity) FROM dormitories d WHERE d.building_id = bd.building_id AND d.deleted = 0), 0) as total_beds, " +
+            "  COALESCE((SELECT SUM(d.occupied_beds) FROM dormitories d WHERE d.building_id = bd.building_id AND d.deleted = 0), 0) as occupied_beds, " +
+            "  bd.occupied_rooms, bd.management_rules, bd.visiting_hours, bd.facilities, " +
+            "  bd.created_at, bd.updated_at, bd.created_by, bd.updated_by, " +
+            "  b.building_name, b.building_no, b.total_floors, b.status, b.location " +
             "FROM building_dormitories bd " +
             "INNER JOIN buildings b ON bd.building_id = b.id AND b.deleted = 0 AND b.building_type = 2 " +
             "WHERE 1=1 " +
@@ -39,13 +45,13 @@ public interface BuildingDormitoryMapper extends BaseMapper<BuildingDormitory> {
             "<if test='dormitoryType != null'> " +
             "  AND bd.dormitory_type = #{dormitoryType} " +
             "</if>" +
-            "<if test='departmentIds != null and departmentIds.size() > 0'> " +
+            "<if test='orgUnitIds != null and orgUnitIds.size() > 0'> " +
             "  AND EXISTS (" +
             "    SELECT 1 FROM building_departments bd2 " +
             "    WHERE bd2.building_id = bd.building_id " +
-            "    AND bd2.department_id IN " +
-            "    <foreach collection='departmentIds' item='deptId' open='(' separator=',' close=')'>" +
-            "      #{deptId}" +
+            "    AND bd2.org_unit_id IN " +
+            "    <foreach collection='orgUnitIds' item='orgUnitId' open='(' separator=',' close=')'>" +
+            "      #{orgUnitId}" +
             "    </foreach>" +
             "  ) " +
             "</if>" +
@@ -61,7 +67,7 @@ public interface BuildingDormitoryMapper extends BaseMapper<BuildingDormitory> {
             Page<BuildingDormitory> page,
             @Param("buildingName") String buildingName,
             @Param("dormitoryType") Integer dormitoryType,
-            @Param("departmentIds") java.util.List<Long> departmentIds,
+            @Param("orgUnitIds") java.util.List<Long> orgUnitIds,
             @Param("managedBuildingIds") java.util.List<Long> managedBuildingIds
     );
 

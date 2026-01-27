@@ -62,6 +62,43 @@ const routes: RouteRecordRaw[] = [
         }
       },
 
+      // ==================== 我的班级 /my-class (order: 1.5) ====================
+      {
+        path: '/my-class',
+        name: 'MyClass',
+        redirect: '/my-class/list',
+        meta: {
+          title: '我的班级',
+          icon: 'School',
+          requiresAuth: true,
+          requiresClass: true, // 需要有分配班级才显示
+          order: 1.5,
+          group: 'main'
+        },
+        children: [
+          {
+            path: '/my-class/list',
+            name: 'MyClassList',
+            component: () => import('@/views/myclass/MyClassListView.vue'),
+            meta: {
+              title: '班级列表',
+              requiresAuth: true,
+              hidden: true
+            }
+          },
+          {
+            path: '/my-class/:classId',
+            name: 'MyClassDetail',
+            component: () => import('@/views/myclass/MyClassDetailView.vue'),
+            meta: {
+              title: '班级详情',
+              requiresAuth: true,
+              hidden: true
+            }
+          }
+        ]
+      },
+
       // ==================== 组织管理 /organization (order: 2) - Organization领域 ====================
       {
         path: '/organization',
@@ -78,7 +115,7 @@ const routes: RouteRecordRaw[] = [
           {
             path: '/organization/units',
             name: 'OrgUnits',
-            component: () => import('@/views/system/DepartmentsView.vue'),
+            component: () => import('@/views/organization/structure/OrgStructureV2.vue'),
             meta: {
               title: '组织架构',
               requiresAuth: true,
@@ -108,130 +145,51 @@ const routes: RouteRecordRaw[] = [
               order: 3
             }
           },
-          // 年级专业子菜单
+          // 年级管理 (V2 重设计版本)
           {
-            path: '/organization/academic',
-            name: 'OrgAcademic',
-            redirect: '/organization/academic/grades',
+            path: '/organization/grades',
+            name: 'OrgGrades',
+            component: () => import('@/views/organization/grades/GradeManagementV2.vue'),
             meta: {
-              title: '年级专业',
+              title: '年级管理',
               requiresAuth: true,
+              permission: 'quantification:grade:view',
               order: 4
-            },
-            children: [
-              {
-                path: '/organization/academic/grades',
-                name: 'OrgGrades',
-                component: () => import('@/views/quantification/GradeManagement.vue'),
-                meta: {
-                  title: '年级管理',
-                  requiresAuth: true,
-                  permission: 'quantification:grade:view',
-                  order: 1
-                }
-              },
-              {
-                path: '/organization/academic/majors',
-                name: 'OrgMajors',
-                component: () => import('@/views/major/MajorList.vue'),
-                meta: {
-                  title: '专业管理',
-                  requiresAuth: true,
-                  permission: 'major:list',
-                  order: 2
-                }
-              }
-            ]
+            }
           },
-          // 宿舍管理子菜单
+          // 专业管理
+          {
+            path: '/organization/majors',
+            name: 'OrgMajors',
+            component: () => import('@/views/major/MajorList.vue'),
+            meta: {
+              title: '专业管理',
+              requiresAuth: true,
+              permission: 'major:list',
+              order: 5
+            }
+          },
+          // 宿舍管理和教学设施已整合到场所管理中心 (/space/center)
+          // 保留部门宿舍管理（特定用途）
           {
             path: '/organization/dormitory',
             name: 'OrgDormitory',
-            redirect: '/organization/dormitory/buildings',
+            redirect: '/space/center',  // 重定向到场所管理中心
             meta: {
               title: '宿舍管理',
               requiresAuth: true,
-              order: 5
+              hidden: true  // 隐藏菜单，已整合到场所管理中心
             },
             children: [
               {
-                path: '/organization/dormitory/buildings',
-                name: 'OrgDormitoryBuildings',
-                component: () => import('@/views/dormitory/DormitoryBuildingManagement.vue'),
+                path: '/organization/dormitory/department',
+                name: 'DepartmentDormitory',
+                component: () => import('@/views/dormitory/DepartmentDormitoryView.vue'),
                 meta: {
-                  title: '宿舍楼管理',
+                  title: '部门宿舍管理',
                   requiresAuth: true,
-                  permission: 'student:dormitory:view',
-                  order: 1
-                }
-              },
-              {
-                path: '/organization/dormitory/rooms',
-                name: 'OrgDormitoryRooms',
-                component: () => import('@/views/dormitory/DormitoryList.vue'),
-                meta: {
-                  title: '宿舍房间管理',
-                  requiresAuth: true,
-                  permission: 'student:dormitory:view',
-                  order: 2
-                }
-              },
-              {
-                path: '/organization/dormitory/overview',
-                name: 'OrgDormitoryOverview',
-                component: () => import('@/views/dormitory/DormitoryOverview.vue'),
-                meta: {
-                  title: '宿舍总览',
-                  requiresAuth: true,
-                  permission: 'student:dormitory:view',
-                  order: 3
-                }
-              },
-              {
-                path: '/organization/dormitory/building-assignments',
-                name: 'OrgBuildingDepartmentAssignment',
-                component: () => import('@/views/dormitory/BuildingDepartmentAssignment.vue'),
-                meta: {
-                  title: '院系分配',
-                  requiresAuth: true,
-                  permission: 'system:dormitory_building:view',
-                  order: 4,
-                  hidden: true  // 已废弃：院系分配功能已整合到宿舍楼管理中
-                }
-              }
-            ]
-          },
-          // 教学设施子菜单
-          {
-            path: '/organization/teaching',
-            name: 'OrgTeaching',
-            redirect: '/organization/teaching/buildings',
-            meta: {
-              title: '教学设施',
-              requiresAuth: true,
-              order: 6
-            },
-            children: [
-              {
-                path: '/organization/teaching/buildings',
-                name: 'OrgTeachingBuildings',
-                component: () => import('@/views/teaching/BuildingManagement.vue'),
-                meta: {
-                  title: '教学楼管理',
-                  requiresAuth: true,
-                  permission: 'teaching:building:list',
-                  order: 1
-                }
-              },
-              {
-                path: '/organization/teaching/classrooms',
-                name: 'OrgTeachingClassrooms',
-                component: () => import('@/views/teaching/ClassroomManagement.vue'),
-                meta: {
-                  title: '教室管理',
-                  requiresAuth: true,
-                  permission: 'teaching:classroom:list',
-                  order: 2
+                  permission: 'dormitory:department:view',
+                  hidden: true  // 暂时隐藏，后续可根据需求决定是否保留
                 }
               }
             ]
@@ -630,6 +588,102 @@ const routes: RouteRecordRaw[] = [
         ]
       },
 
+      // ==================== 教务管理 /teaching (order: 4.5) - Teaching领域 ====================
+      {
+        path: '/teaching',
+        name: 'Teaching',
+        redirect: '/teaching/calendar',
+        meta: {
+          title: '教务管理',
+          icon: 'Reading',
+          requiresAuth: true,
+          order: 4.5,
+          group: 'teaching'
+        },
+        children: [
+          {
+            path: '/teaching/calendar',
+            name: 'TeachingCalendar',
+            component: () => import('@/views/teaching/AcademicCalendarView.vue'),
+            meta: {
+              title: '校历管理',
+              requiresAuth: true,
+              order: 1
+            }
+          },
+          {
+            path: '/teaching/courses',
+            name: 'TeachingCourses',
+            component: () => import('@/views/teaching/CourseListView.vue'),
+            meta: {
+              title: '课程管理',
+              requiresAuth: true,
+              order: 2
+            }
+          },
+          {
+            path: '/teaching/curriculum-plans',
+            name: 'TeachingCurriculumPlans',
+            component: () => import('@/views/teaching/CurriculumPlanView.vue'),
+            meta: {
+              title: '培养方案',
+              requiresAuth: true,
+              order: 3
+            }
+          },
+          {
+            path: '/teaching/tasks',
+            name: 'TeachingTasks',
+            component: () => import('@/views/teaching/TeachingTaskView.vue'),
+            meta: {
+              title: '教学任务',
+              requiresAuth: true,
+              order: 4
+            }
+          },
+          {
+            path: '/teaching/schedules',
+            name: 'TeachingSchedules',
+            component: () => import('@/views/teaching/ScheduleView.vue'),
+            meta: {
+              title: '排课管理',
+              requiresAuth: true,
+              order: 5
+            }
+          },
+          {
+            path: '/teaching/adjustments',
+            name: 'TeachingAdjustments',
+            component: () => import('@/views/teaching/ScheduleAdjustmentView.vue'),
+            meta: {
+              title: '调课管理',
+              requiresAuth: true,
+              order: 6
+            }
+          },
+          {
+            path: '/teaching/examinations',
+            name: 'TeachingExaminations',
+            component: () => import('@/views/teaching/ExaminationView.vue'),
+            meta: {
+              title: '考试管理',
+              requiresAuth: true,
+              order: 7
+            }
+          },
+          {
+            path: '/teaching/grades',
+            name: 'TeachingGrades',
+            component: () => import('@/views/teaching/GradeView.vue'),
+            meta: {
+              title: '成绩管理',
+              requiresAuth: true,
+              order: 8
+            }
+          }
+        ]
+      },
+
       // ==================== 任务管理 /task (order: 5) ====================
       {
         path: '/task',
@@ -775,6 +829,17 @@ const routes: RouteRecordRaw[] = [
             }
           },
           {
+            path: '/settings/login-customization',
+            name: 'SettingsLoginCustomization',
+            component: () => import('@/views/settings/LoginCustomization.vue'),
+            meta: {
+              title: '登录页自定义',
+              requiresAuth: true,
+              permission: 'system:config:edit',
+              order: 1.5
+            }
+          },
+          {
             path: '/settings/weight',
             name: 'SettingsWeightConfig',
             component: () => import('@/views/quantification/WeightConfigManagement.vue'),
@@ -818,31 +883,173 @@ const routes: RouteRecordRaw[] = [
               order: 5
             }
           },
+          // 楼宇管理已整合到场所管理中心 (/space/center)
           {
             path: '/settings/buildings',
-            name: 'SettingsBuildings',
-            component: () => import('@/views/system/BuildingsView.vue'),
+            redirect: '/space/center',
             meta: {
-              title: '楼宇管理',
+              hidden: true  // 已整合到场所管理中心
+            }
+          }
+        ]
+      },
+
+      // ==================== 场所管理 /space (order: 2.5) - Space领域 ====================
+      // 统一管理所有场所：校区、楼宇（宿舍楼/教学楼/办公楼）、楼层、房间（宿舍/教室/办公室等）
+      {
+        path: '/space',
+        name: 'Space',
+        redirect: '/space/center',
+        meta: {
+          title: '场所管理',
+          icon: 'OfficeBuilding',
+          requiresAuth: true,
+          order: 2.5,  // 放在组织管理之后，量化检查之前
+          group: 'space'
+        },
+        children: [
+          {
+            path: '/space/center',
+            name: 'SpaceManagementCenter',
+            component: () => import('@/views/space/SpaceManagementCenter.vue'),
+            meta: {
+              title: '场所管理中心',
               requiresAuth: true,
-              permission: 'system:building:view',
+              permission: 'space:view',
+              order: 1
+            }
+          },
+          {
+            path: '/space/allocation',
+            name: 'SpaceAllocationCenter',
+            component: () => import('@/views/space/allocation/SpaceAllocationCenter.vue'),
+            meta: {
+              title: '场所分配中心',
+              requiresAuth: true,
+              permission: 'space:view',
+              order: 2
+            }
+          }
+        ]
+      },
+
+      // ==================== 资产管理 /asset (order: 8) - Asset领域 ====================
+      {
+        path: '/asset',
+        name: 'Asset',
+        redirect: '/asset/center',
+        meta: {
+          title: '资产管理',
+          icon: 'Box',
+          requiresAuth: true,
+          order: 8,
+          group: 'asset'
+        },
+        children: [
+          {
+            path: '/asset/center',
+            name: 'AssetManagementCenter',
+            component: () => import('@/views/asset/AssetManagementCenter.vue'),
+            meta: {
+              title: '资产台账',
+              requiresAuth: true,
+              permission: 'asset:list',
+              order: 1
+            }
+          },
+          {
+            path: '/asset/categories',
+            name: 'AssetCategories',
+            component: () => import('@/views/asset/AssetCategoryView.vue'),
+            meta: {
+              title: '分类管理',
+              requiresAuth: true,
+              permission: 'asset:category:list',
+              order: 2
+            }
+          },
+          {
+            path: '/asset/inventory',
+            name: 'AssetInventory',
+            component: () => import('@/views/asset/AssetInventoryView.vue'),
+            meta: {
+              title: '资产盘点',
+              requiresAuth: true,
+              permission: 'asset:inventory:list',
+              order: 3
+            }
+          },
+          {
+            path: '/asset/borrows',
+            name: 'AssetBorrowList',
+            component: () => import('@/views/asset/AssetBorrowListView.vue'),
+            meta: {
+              title: '借用管理',
+              requiresAuth: true,
+              permission: 'asset:borrow:list',
+              order: 4
+            }
+          },
+          {
+            path: '/asset/maintenance',
+            name: 'AssetMaintenance',
+            component: () => import('@/views/asset/AssetMaintenanceListView.vue'),
+            meta: {
+              title: '维修管理',
+              requiresAuth: true,
+              permission: 'asset:manage',
+              order: 5
+            }
+          },
+          {
+            path: '/asset/approvals',
+            name: 'AssetApprovalList',
+            component: () => import('@/views/asset/AssetApprovalListView.vue'),
+            meta: {
+              title: '审批管理',
+              requiresAuth: true,
+              permission: 'asset:list',
               order: 6
+            }
+          },
+          {
+            path: '/asset/alerts',
+            name: 'AssetAlertList',
+            component: () => import('@/views/asset/AssetAlertListView.vue'),
+            meta: {
+              title: '预警中心',
+              requiresAuth: true,
+              permission: 'asset:list',
+              order: 7
+            }
+          },
+          {
+            path: '/asset/depreciation',
+            name: 'AssetDepreciation',
+            component: () => import('@/views/asset/AssetDepreciationView.vue'),
+            meta: {
+              title: '折旧管理',
+              requiresAuth: true,
+              permission: 'asset:list',
+              order: 8
             }
           }
         ]
       },
 
       // ==================== 测试页面 - 仅在开发环境可用 ====================
-      ...(import.meta.env.DEV ? [{
-        path: '/test/pagination',
-        name: 'PaginationTest',
-        component: () => import('@/views/test/PaginationTest.vue'),
-        meta: {
-          title: '分页测试',
-          requiresAuth: true, // 开发环境也需要登录
-          hidden: true // 不显示在菜单中
+      ...(import.meta.env.DEV ? [
+        {
+          path: '/test/pagination',
+          name: 'PaginationTest',
+          component: () => import('@/views/test/PaginationTest.vue'),
+          meta: {
+            title: '分页测试',
+            requiresAuth: true,
+            hidden: true
+          }
         }
-      }] : []),
+      ] : []),
 
       // ==================== 向后兼容重定向 ====================
 
@@ -878,79 +1085,131 @@ const routes: RouteRecordRaw[] = [
         meta: { hidden: true }
       },
 
-      // 宿舍管理重定向
+      // 宿舍管理重定向 - 统一到场所管理中心
       {
         path: '/dormitory',
-        redirect: '/organization/dormitory/buildings',
+        redirect: '/space/center',
         meta: { hidden: true }
       },
       {
         path: '/dormitory/buildings',
-        redirect: '/organization/dormitory/buildings',
+        redirect: '/space/center',
         meta: { hidden: true }
       },
       {
         path: '/dormitory/rooms',
-        redirect: '/organization/dormitory/rooms',
+        redirect: '/space/center',
         meta: { hidden: true }
       },
       {
         path: '/dormitory/overview',
-        redirect: '/organization/dormitory/overview',
+        redirect: '/space/center',
         meta: { hidden: true }
       },
       {
         path: '/dormitory/building-assignments',
-        redirect: '/organization/dormitory/building-assignments',
+        redirect: '/space/center',
+        meta: { hidden: true }
+      },
+      {
+        path: '/organization/dormitory/center',
+        redirect: '/space/center',
+        meta: { hidden: true }
+      },
+      {
+        path: '/organization/dormitory/buildings',
+        redirect: '/space/center',
+        meta: { hidden: true }
+      },
+      {
+        path: '/organization/dormitory/rooms',
+        redirect: '/space/center',
+        meta: { hidden: true }
+      },
+      {
+        path: '/organization/dormitory/overview',
+        redirect: '/space/center',
+        meta: { hidden: true }
+      },
+      {
+        path: '/organization/dormitory/building-assignments',
+        redirect: '/space/center',
         meta: { hidden: true }
       },
 
       // 教学管理重定向
       {
         path: '/academic',
-        redirect: '/organization/academic/grades',
+        redirect: '/organization/grades',
+        meta: { hidden: true }
+      },
+      // 旧的 academic 路径重定向
+      {
+        path: '/organization/academic',
+        redirect: '/organization/grades',
+        meta: { hidden: true }
+      },
+      {
+        path: '/organization/academic/grades',
+        redirect: '/organization/grades',
+        meta: { hidden: true }
+      },
+      {
+        path: '/organization/academic/majors',
+        redirect: '/organization/majors',
         meta: { hidden: true }
       },
       {
         path: '/academic/grades',
-        redirect: '/organization/academic/grades',
+        redirect: '/organization/grades',
         meta: { hidden: true }
       },
       {
         path: '/academic/majors',
-        redirect: '/organization/academic/majors',
+        redirect: '/organization/majors',
         meta: { hidden: true }
       },
       {
         path: '/majors',
-        redirect: '/organization/academic/majors',
+        redirect: '/organization/majors',
         meta: { hidden: true }
       },
       {
         path: '/major-directions',
-        redirect: '/organization/academic/majors',
+        redirect: '/organization/majors',
         meta: { hidden: true }
       },
       {
         path: '/grades',
-        redirect: '/organization/academic/grades',
+        redirect: '/organization/grades',
         meta: { hidden: true }
       },
 
-      // 教学设施重定向
+      // 教学设施重定向 - 统一到场所管理中心
+      // 注意：/teaching 是教务管理模块，不在此处重定向
       {
-        path: '/teaching',
-        redirect: '/organization/teaching/buildings',
+        path: '/facility/buildings',
+        redirect: '/space/center',
         meta: { hidden: true }
       },
       {
-        path: '/teaching/buildings',
-        redirect: '/organization/teaching/buildings',
+        path: '/facility/classrooms',
+        redirect: '/space/center',
         meta: { hidden: true }
       },
       {
-        path: '/teaching/classrooms',
-        redirect: '/organization/teaching/classrooms',
+        path: '/organization/teaching/buildings',
+        redirect: '/space/center',
+        meta: { hidden: true }
+      },
+      {
+        path: '/organization/teaching/classrooms',
+        redirect: '/space/center',
+        meta: { hidden: true }
+      },
+      {
+        path: '/organization/teaching/classroom-center',
+        redirect: '/space/center',
         meta: { hidden: true }
       },
 
@@ -1168,7 +1427,7 @@ const routes: RouteRecordRaw[] = [
       },
       {
         path: '/v2/grades',
-        redirect: '/organization/academic/grades',
+        redirect: '/organization/grades',
         meta: { hidden: true }
       },
       {

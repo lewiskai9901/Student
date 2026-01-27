@@ -15,7 +15,7 @@ public interface TaskService extends IService<Task> {
     /**
      * 分页查询任务
      */
-    IPage<TaskDTO> pageQuery(TaskQueryRequest request, Long currentUserId, Long departmentId);
+    IPage<TaskDTO> pageQuery(TaskQueryRequest request, Long currentUserId, Long orgUnitId);
 
     /**
      * 获取任务详情
@@ -60,7 +60,7 @@ public interface TaskService extends IService<Task> {
     /**
      * 获取任务统计
      */
-    TaskStatisticsDTO getStatistics(Long userId, Long departmentId);
+    TaskStatisticsDTO getStatistics(Long userId, Long orgUnitId);
 
     /**
      * 转换为DTO

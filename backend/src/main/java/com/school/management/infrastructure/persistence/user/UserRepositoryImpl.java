@@ -34,6 +34,16 @@ public class UserRepositoryImpl implements UserRepository {
             userMapper.updateById(po);
         }
 
+        // 保存角色关联
+        if (user.getId() != null && user.getRoleIds() != null) {
+            // 先删除旧的角色关联
+            userMapper.deleteUserRoles(user.getId());
+            // 再插入新的角色关联
+            for (Long roleId : user.getRoleIds()) {
+                userMapper.insertUserRole(user.getId(), roleId);
+            }
+        }
+
         return user;
     }
 
@@ -43,7 +53,12 @@ public class UserRepositoryImpl implements UserRepository {
         if (po == null) {
             return Optional.empty();
         }
-        return Optional.of(toDomain(po));
+        User user = toDomain(po);
+        if (po.getId() != null) {
+            List<Long> roleIds = userMapper.findRoleIdsByUserId(po.getId());
+            user.assignRoles(roleIds);
+        }
+        return Optional.of(user);
     }
 
     @Override
@@ -52,7 +67,12 @@ public class UserRepositoryImpl implements UserRepository {
         if (po == null) {
             return Optional.empty();
         }
-        return Optional.of(toDomain(po));
+        User user = toDomain(po);
+        if (po.getId() != null) {
+            List<Long> roleIds = userMapper.findRoleIdsByUserId(po.getId());
+            user.assignRoles(roleIds);
+        }
+        return Optional.of(user);
     }
 
     @Override
@@ -61,7 +81,12 @@ public class UserRepositoryImpl implements UserRepository {
         if (po == null) {
             return Optional.empty();
         }
-        return Optional.of(toDomain(po));
+        User user = toDomain(po);
+        if (po.getId() != null) {
+            List<Long> roleIds = userMapper.findRoleIdsByUserId(po.getId());
+            user.assignRoles(roleIds);
+        }
+        return Optional.of(user);
     }
 
     @Override
@@ -70,7 +95,12 @@ public class UserRepositoryImpl implements UserRepository {
         if (po == null) {
             return Optional.empty();
         }
-        return Optional.of(toDomain(po));
+        User user = toDomain(po);
+        if (po.getId() != null) {
+            List<Long> roleIds = userMapper.findRoleIdsByUserId(po.getId());
+            user.assignRoles(roleIds);
+        }
+        return Optional.of(user);
     }
 
     @Override
@@ -79,7 +109,12 @@ public class UserRepositoryImpl implements UserRepository {
         if (po == null) {
             return Optional.empty();
         }
-        return Optional.of(toDomain(po));
+        User user = toDomain(po);
+        if (po.getId() != null) {
+            List<Long> roleIds = userMapper.findRoleIdsByUserId(po.getId());
+            user.assignRoles(roleIds);
+        }
+        return Optional.of(user);
     }
 
     @Override
@@ -88,7 +123,12 @@ public class UserRepositoryImpl implements UserRepository {
         if (po == null) {
             return Optional.empty();
         }
-        return Optional.of(toDomain(po));
+        User user = toDomain(po);
+        if (po.getId() != null) {
+            List<Long> roleIds = userMapper.findRoleIdsByUserId(po.getId());
+            user.assignRoles(roleIds);
+        }
+        return Optional.of(user);
     }
 
     @Override
@@ -102,18 +142,18 @@ public class UserRepositoryImpl implements UserRepository {
     }
 
     @Override
-    public List<User> findByDepartmentId(Long departmentId) {
-        return userMapper.findByDepartmentId(departmentId).stream()
+    public List<User> findByOrgUnitId(Long orgUnitId) {
+        return userMapper.findByOrgUnitId(orgUnitId).stream()
                 .map(this::toDomain)
                 .collect(Collectors.toList());
     }
 
     @Override
-    public List<User> findByDepartmentIdIn(List<Long> departmentIds) {
-        if (departmentIds == null || departmentIds.isEmpty()) {
+    public List<User> findByOrgUnitIdIn(List<Long> orgUnitIds) {
+        if (orgUnitIds == null || orgUnitIds.isEmpty()) {
             return new ArrayList<>();
         }
-        return userMapper.findByDepartmentIdIn(departmentIds).stream()
+        return userMapper.findByOrgUnitIdIn(orgUnitIds).stream()
                 .map(this::toDomain)
                 .collect(Collectors.toList());
     }
@@ -152,18 +192,18 @@ public class UserRepositoryImpl implements UserRepository {
 
     @Override
     public List<User> findPagedWithConditions(int page, int size, String username, String realName,
-                                              String phone, Long departmentId, Integer status) {
+                                              String phone, Long orgUnitId, Integer status) {
         int offset = (page - 1) * size;
-        return userMapper.findPagedWithConditions(offset, size, username, realName, phone, departmentId, status)
+        return userMapper.findPagedWithConditions(offset, size, username, realName, phone, orgUnitId, status)
                 .stream()
-                .map(this::toDomainWithDepartment)
+                .map(this::toDomainWithOrgUnitAndRoles)
                 .collect(Collectors.toList());
     }
 
     @Override
     public long countWithConditions(String username, String realName, String phone,
-                                    Long departmentId, Integer status) {
-        return userMapper.countWithConditions(username, realName, phone, departmentId, status);
+                                    Long orgUnitId, Integer status) {
+        return userMapper.countWithConditions(username, realName, phone, orgUnitId, status);
     }
 
     @Override
@@ -195,9 +235,8 @@ public class UserRepositoryImpl implements UserRepository {
         po.setGender(domain.getGender());
         po.setBirthDate(domain.getBirthDate());
         po.setIdCard(domain.getIdCard());
-        po.setDepartmentId(domain.getDepartmentId());
+        po.setOrgUnitId(domain.getOrgUnitId());
         po.setClassId(domain.getClassId());
-        po.setManagedClassId(domain.getManagedClassId());
         po.setUserType(domain.getUserType() != null ? domain.getUserType().getCode() : null);
         po.setStatus(domain.getStatus() != null ? domain.getStatus().getCode() : null);
         po.setLastLoginTime(domain.getLastLoginTime());
@@ -223,9 +262,8 @@ public class UserRepositoryImpl implements UserRepository {
                 po.getGender(),
                 po.getBirthDate(),
                 po.getIdCard(),
-                po.getDepartmentId(),
+                po.getOrgUnitId(),
                 po.getClassId(),
-                po.getManagedClassId(),
                 po.getUserType() != null ? UserType.fromCode(po.getUserType()) : null,
                 po.getStatus() != null ? UserStatus.fromCode(po.getStatus()) : null,
                 po.getLastLoginTime(),
@@ -239,11 +277,22 @@ public class UserRepositoryImpl implements UserRepository {
         );
     }
 
-    private User toDomainWithDepartment(UserPO po) {
+    private User toDomainWithOrgUnitAndRoles(UserPO po) {
+        User user = toDomainWithOrgUnit(po);
+        if (po.getId() != null) {
+            List<Long> roleIds = userMapper.findRoleIdsByUserId(po.getId());
+            List<String> roleNames = userMapper.findRoleNamesByUserId(po.getId());
+            user.assignRoles(roleIds);
+            user.setRoleNames(roleNames);
+        }
+        return user;
+    }
+
+    private User toDomainWithOrgUnit(UserPO po) {
         User user = toDomain(po);
-        // 设置部门名称（从JOIN查询获取）
-        if (po.getDepartmentName() != null) {
-            user.setDepartmentName(po.getDepartmentName());
+        // 设置组织单元名称（从JOIN查询获取）
+        if (po.getOrgUnitName() != null) {
+            user.setOrgUnitName(po.getOrgUnitName());
         }
         return user;
     }

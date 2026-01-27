@@ -34,7 +34,7 @@ public class ExportPreviewDTO {
     /**
      * 涉及部门数
      */
-    private Integer departmentCount;
+    private Integer orgUnitCount;
 
     /**
      * 按班级统计（用于导出时选择班级）
@@ -44,7 +44,7 @@ public class ExportPreviewDTO {
     /**
      * 分组后的数据（用于预览）
      */
-    private List<DepartmentGroupDTO> groupedData;
+    private List<OrgUnitGroupDTO> groupedData;
 
     /**
      * 渲染后的HTML（用于预览）
@@ -58,8 +58,8 @@ public class ExportPreviewDTO {
     public static class ClassStatDTO {
         private Long classId;
         private String className;
-        private Long departmentId;
-        private String departmentName;
+        private Long orgUnitId;
+        private String orgUnitName;
         private Long gradeId;
         private String gradeName;
         private Integer studentCount;
@@ -69,9 +69,9 @@ public class ExportPreviewDTO {
      * 部门分组
      */
     @Data
-    public static class DepartmentGroupDTO {
-        private Long departmentId;
-        private String departmentName;
+    public static class OrgUnitGroupDTO {
+        private Long orgUnitId;
+        private String orgUnitName;
         private Integer totalCount;
         private List<GradeGroupDTO> grades;
     }
@@ -111,8 +111,8 @@ public class ExportPreviewDTO {
         private String className;
         private Long gradeId;
         private String gradeName;
-        private Long departmentId;
-        private String departmentName;
+        private Long orgUnitId;
+        private String orgUnitName;
         private String headTeacher;
 
         // 宿舍/教室共用字段（根据 relationType 区分）

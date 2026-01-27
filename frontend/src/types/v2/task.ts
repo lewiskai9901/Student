@@ -89,8 +89,8 @@ export interface TaskAssignee {
   taskId: number
   assigneeId: number
   assigneeName: string
-  departmentId?: number
-  departmentName?: string
+  orgUnitId?: number
+  orgUnitName?: string
   status: TaskStatus
   statusText?: string
   acceptedAt?: string
@@ -133,8 +133,8 @@ export interface Task {
   assignType: AssignType
   assigneeId?: number
   assigneeName?: string
-  departmentId?: number
-  departmentName?: string
+  orgUnitId?: number
+  orgUnitName?: string
   assignees?: TaskAssignee[]
   totalAssignees?: number
   submittedAssignees?: number
@@ -214,16 +214,16 @@ export interface WorkflowTemplate {
 export interface ApprovalLevelConfig {
   level: number
   name: string
-  approverType: 'role' | 'user' | 'department'
+  approverType: 'role' | 'user' | 'orgUnit'
   approverIds?: number[]
 }
 
 /**
- * 部门审批配置
+ * 组织单元审批配置
  */
-export interface DepartmentApprovalConfig {
-  departmentId: number
-  departmentName?: string
+export interface OrgUnitApprovalConfig {
+  orgUnitId: number
+  orgUnitName?: string
   approverConfigs: ApproverConfig[]
 }
 
@@ -248,10 +248,10 @@ export interface CreateTaskRequest {
   assignType: AssignType
   assigneeId?: number
   targetIds?: number[]
-  departmentId?: number
+  orgUnitId?: number
   dueDate?: string
   workflowTemplateId: number
-  approvalConfigs: DepartmentApprovalConfig[]
+  approvalConfigs: OrgUnitApprovalConfig[]
   attachmentIds?: number[]
 }
 
@@ -264,7 +264,7 @@ export interface TaskQueryParams {
   priority?: TaskPriority
   assignerId?: number
   assigneeId?: number
-  departmentId?: number
+  orgUnitId?: number
   startTime?: string
   endTime?: string
   dueStartTime?: string

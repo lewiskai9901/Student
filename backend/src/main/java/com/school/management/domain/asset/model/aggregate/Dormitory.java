@@ -21,7 +21,7 @@ import java.time.LocalDateTime;
 public class Dormitory extends AggregateRoot<Long> {
 
     private Long buildingId;
-    private Long departmentId;
+    private Long orgUnitId;
     private String dormitoryNo;
     private Integer floorNumber;
     private RoomUsageType roomUsageType;
@@ -69,7 +69,7 @@ public class Dormitory extends AggregateRoot<Long> {
     /**
      * 从持久化重建
      */
-    public static Dormitory reconstruct(Long id, Long buildingId, Long departmentId,
+    public static Dormitory reconstruct(Long id, Long buildingId, Long orgUnitId,
                                          String dormitoryNo, Integer floorNumber,
                                          RoomUsageType roomUsageType, Integer bedCapacity,
                                          Integer bedCount, Integer occupiedBeds,
@@ -79,7 +79,7 @@ public class Dormitory extends AggregateRoot<Long> {
         Dormitory dormitory = new Dormitory();
         dormitory.setId(id);
         dormitory.buildingId = buildingId;
-        dormitory.departmentId = departmentId;
+        dormitory.orgUnitId = orgUnitId;
         dormitory.dormitoryNo = dormitoryNo;
         dormitory.floorNumber = floorNumber;
         dormitory.roomUsageType = roomUsageType;
@@ -162,10 +162,18 @@ public class Dormitory extends AggregateRoot<Long> {
     }
 
     /**
-     * 分配给部门
+     * 分配给组织单元
      */
-    public void assignToDepartment(Long departmentId) {
-        this.departmentId = departmentId;
+    public void assignToOrgUnit(Long orgUnitId) {
+        this.orgUnitId = orgUnitId;
+        this.updatedAt = LocalDateTime.now();
+    }
+
+    /**
+     * 取消组织单元分配
+     */
+    public void removeFromOrgUnit() {
+        this.orgUnitId = null;
         this.updatedAt = LocalDateTime.now();
     }
 

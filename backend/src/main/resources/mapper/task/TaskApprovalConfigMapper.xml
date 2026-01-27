@@ -4,15 +4,15 @@
 
     <!-- Base column list for reusability -->
     <sql id="Base_Column_List">
-        id, task_id, department_id, department_name, approval_level,
+        id, task_id, org_unit_id, department_name, approval_level,
         approver_id, approver_name, approver_role, created_at, updated_at
     </sql>
 
     <resultMap id="BaseResultMap" type="com.school.management.entity.task.TaskApprovalConfig">
         <id column="id" property="id"/>
         <result column="task_id" property="taskId"/>
-        <result column="department_id" property="departmentId"/>
-        <result column="department_name" property="departmentName"/>
+        <result column="org_unit_id" property="orgUnitId"/>
+        <result column="department_name" property="orgUnitName"/>
         <result column="approval_level" property="approvalLevel"/>
         <result column="approver_id" property="approverId"/>
         <result column="approver_name" property="approverName"/>
@@ -25,7 +25,7 @@
         SELECT
         <include refid="Base_Column_List"/>
         FROM task_approval_configs
-        WHERE task_id = #{taskId} AND department_id = #{departmentId}
+        WHERE task_id = #{taskId} AND org_unit_id = #{orgUnitId}
         ORDER BY approval_level ASC
     </select>
 
@@ -34,15 +34,15 @@
         <include refid="Base_Column_List"/>
         FROM task_approval_configs
         WHERE task_id = #{taskId}
-        ORDER BY department_id ASC, approval_level ASC
+        ORDER BY org_unit_id ASC, approval_level ASC
     </select>
 
     <insert id="batchInsert">
         INSERT INTO task_approval_configs
-        (id, task_id, department_id, department_name, approval_level, approver_id, approver_name, approver_role, created_at, updated_at)
+        (id, task_id, org_unit_id, department_name, approval_level, approver_id, approver_name, approver_role, created_at, updated_at)
         VALUES
         <foreach collection="configs" item="item" separator=",">
-            (#{item.id}, #{item.taskId}, #{item.departmentId}, #{item.departmentName},
+            (#{item.id}, #{item.taskId}, #{item.orgUnitId}, #{item.orgUnitName},
              #{item.approvalLevel}, #{item.approverId}, #{item.approverName}, #{item.approverRole}, NOW(), NOW())
         </foreach>
     </insert>

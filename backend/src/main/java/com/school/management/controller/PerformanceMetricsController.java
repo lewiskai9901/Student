@@ -16,7 +16,7 @@ import java.util.stream.Collectors;
  * REST controller for performance metrics.
  */
 @RestController
-@RequestMapping("/api/v2/performance")
+@RequestMapping("/v2/performance")
 @RequiredArgsConstructor
 @Tag(name = "Performance Metrics", description = "Performance monitoring and metrics API")
 public class PerformanceMetricsController {

@@ -91,14 +91,14 @@ public class TaskApprovalServiceImpl implements TaskApprovalService {
         taskSubmissionMapper.insert(submission);
 
         // 5. 查询审批配置，确定是否需要审批以及审批级别
-        Long departmentId = assignee.getDepartmentId();
-        if (departmentId == null) {
+        Long orgUnitId = assignee.getOrgUnitId();
+        if (orgUnitId == null) {
             throw new BusinessException("执行人未关联部门，无法查询审批配置");
         }
 
         LambdaQueryWrapper<TaskApprovalConfig> configWrapper = new LambdaQueryWrapper<>();
         configWrapper.eq(TaskApprovalConfig::getTaskId, taskId)
-                .eq(TaskApprovalConfig::getDepartmentId, departmentId)
+                .eq(TaskApprovalConfig::getOrgUnitId, orgUnitId)
                 .orderByAsc(TaskApprovalConfig::getApprovalLevel);
         List<TaskApprovalConfig> configs = taskApprovalConfigMapper.selectList(configWrapper);
 
@@ -290,8 +290,8 @@ public class TaskApprovalServiceImpl implements TaskApprovalService {
                 // 从Map中获取执行人信息
                 TaskAssignee assignee = assigneeMap.get(submission.getTaskAssigneeId());
                 if (assignee != null) {
-                    dto.setDepartmentId(assignee.getDepartmentId());
-                    dto.setDepartmentName(assignee.getDepartmentName());
+                    dto.setOrgUnitId(assignee.getOrgUnitId());
+                    dto.setOrgUnitName(assignee.getOrgUnitName());
                 }
             }
 
@@ -318,7 +318,7 @@ public class TaskApprovalServiceImpl implements TaskApprovalService {
         // 查询审批配置，判断是否还有下一级审批
         LambdaQueryWrapper<TaskApprovalConfig> configWrapper = new LambdaQueryWrapper<>();
         configWrapper.eq(TaskApprovalConfig::getTaskId, taskId)
-                .eq(TaskApprovalConfig::getDepartmentId, assignee.getDepartmentId())
+                .eq(TaskApprovalConfig::getOrgUnitId, assignee.getOrgUnitId())
                 .eq(TaskApprovalConfig::getApprovalLevel, currentLevel + 1);
         TaskApprovalConfig nextLevelConfig = taskApprovalConfigMapper.selectOne(configWrapper);
 

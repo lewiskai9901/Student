@@ -2,8 +2,58 @@
  * 组织管理模块类型定义 - DDD架构适配
  */
 
+// 组织类别
+export type UnitCategory = 'ACADEMIC' | 'FUNCTIONAL' | 'ADMINISTRATIVE'
+
 // 组织单元类型
-export type OrgUnitType = 'SCHOOL' | 'COLLEGE' | 'DEPARTMENT' | 'TEACHING_GROUP'
+export type OrgUnitType =
+  // 教学单位
+  | 'SCHOOL'
+  | 'DEPARTMENT'
+  | 'MAJOR'
+  | 'GRADE'
+  | 'CLASS'
+  // 职能部门
+  | 'STUDENT_AFFAIRS'
+  | 'ACADEMIC_AFFAIRS'
+  | 'LOGISTICS'
+  | 'FINANCE'
+  | 'GENERAL_OFFICE'
+  | 'HR'
+  // 行政单位
+  | 'ADMIN_DEPT'
+  // 兼容旧类型
+  | 'COLLEGE'
+  | 'TEACHING_GROUP'
+
+// 范围类型
+export type ScopeType = 'all' | 'custom'
+
+// 系统模块
+export interface SystemModule {
+  id: string
+  moduleCode: string
+  moduleName: string
+  moduleDesc?: string
+  parentCode?: string
+  icon?: string
+  sortOrder: number
+  isEnabled: boolean
+  children?: SystemModule[]
+}
+
+// 组织类别配置
+export const UnitCategoryConfig: Record<UnitCategory, { label: string; color: string }> = {
+  ACADEMIC: { label: '教学单位', color: '#409EFF' },
+  FUNCTIONAL: { label: '职能部门', color: '#67C23A' },
+  ADMINISTRATIVE: { label: '行政单位', color: '#E6A23C' }
+}
+
+// 范围类型配置
+export const ScopeTypeConfig: Record<ScopeType, { label: string }> = {
+  all: { label: '全校范围' },
+  custom: { label: '自定义范围' }
+}
 
 // 组织单元
 export interface OrgUnit {
@@ -11,6 +61,7 @@ export interface OrgUnit {
   unitCode: string
   unitName: string
   unitType: OrgUnitType
+  unitCategory?: UnitCategory
   parentId: number | null
   treePath: string
   treeLevel: number
@@ -35,6 +86,7 @@ export interface CreateOrgUnitRequest {
   unitCode: string
   unitName: string
   unitType: OrgUnitType
+  unitCategory?: UnitCategory
   parentId?: number
   leaderId?: number
   deputyLeaderIds?: number[]
@@ -44,6 +96,7 @@ export interface CreateOrgUnitRequest {
 // 更新组织单元请求
 export interface UpdateOrgUnitRequest {
   unitName?: string
+  unitCategory?: string  // ACADEMIC | FUNCTIONAL | ADMINISTRATIVE
   leaderId?: number
   deputyLeaderIds?: number[]
   sortOrder?: number
@@ -75,8 +128,10 @@ export interface SchoolClass {
   orgUnitName?: string
   enrollmentYear: number
   gradeLevel: number
+  gradeId?: number  // 年级ID，用于关联年级表
   majorDirectionId?: number
-  majorDirectionName?: string
+  majorName?: string  // 专业名称
+  majorDirectionName?: string  // 专业方向名称（学制类型）
   schoolingYears: number
   standardSize: number
   currentSize: number

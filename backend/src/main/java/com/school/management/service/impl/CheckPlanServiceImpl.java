@@ -404,9 +404,9 @@ public class CheckPlanServiceImpl extends ServiceImpl<CheckPlanMapper, CheckPlan
 
             switch (scopeType) {
                 case "department":
-                    // 按院系筛选（包含子部门，支持字符串或数字类型的ID）
+                    // 按组织单元筛选（包含子部门，支持字符串或数字类型的ID）
                     @SuppressWarnings("unchecked")
-                    List<?> deptIds = (List<?>) scopeConfig.get("departmentIds");
+                    List<?> deptIds = (List<?>) scopeConfig.get("orgUnitIds");
                     if (deptIds != null && !deptIds.isEmpty()) {
                         // 获取所有选中部门及其所有子部门ID
                         Set<Long> allDeptIds = new HashSet<>();
@@ -420,7 +420,7 @@ public class CheckPlanServiceImpl extends ServiceImpl<CheckPlanMapper, CheckPlan
                         }
                         log.info("部门筛选: 原始部门数={}, 包含子部门后总数={}", deptIds.size(), allDeptIds.size());
                         filteredClasses = allClasses.stream()
-                                .filter(c -> c.getDepartmentId() != null && allDeptIds.contains(c.getDepartmentId()))
+                                .filter(c -> c.getOrgUnitId() != null && allDeptIds.contains(c.getOrgUnitId()))
                                 .collect(Collectors.toList());
                     }
                     break;

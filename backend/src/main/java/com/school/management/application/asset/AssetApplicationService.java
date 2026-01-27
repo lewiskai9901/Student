@@ -10,13 +10,21 @@ import com.school.management.domain.asset.model.valueobject.*;
 import com.school.management.domain.asset.repository.BuildingRepository;
 import com.school.management.domain.asset.repository.DormitoryRepository;
 import com.school.management.domain.shared.event.DomainEventPublisher;
+import com.school.management.entity.ClassDormitoryBinding;
+import com.school.management.entity.User;
 import com.school.management.exception.BusinessException;
+import com.school.management.infrastructure.persistence.organization.OrgUnitMapper;
+import com.school.management.infrastructure.persistence.organization.OrgUnitPO;
+import com.school.management.mapper.ClassDormitoryBindingMapper;
+import com.school.management.mapper.ClassMapper;
+import com.school.management.mapper.UserMapper;
+import com.school.management.dto.ClassResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.List;
+import java.util.*;
 import java.util.stream.Collectors;
 
 /**
@@ -30,6 +38,10 @@ public class AssetApplicationService {
     private final BuildingRepository buildingRepository;
     private final DormitoryRepository dormitoryRepository;
     private final DomainEventPublisher eventPublisher;
+    private final ClassDormitoryBindingMapper classDormitoryBindingMapper;
+    private final ClassMapper classMapper;
+    private final UserMapper userMapper;
+    private final OrgUnitMapper orgUnitMapper;
 
     // ============ 楼宇管理 ============
 
@@ -152,8 +164,8 @@ public class AssetApplicationService {
                 command.getGenderType() != null ? GenderType.fromCode(command.getGenderType()) : null
         );
 
-        if (command.getDepartmentId() != null) {
-            dormitory.assignToDepartment(command.getDepartmentId());
+        if (command.getOrgUnitId() != null) {
+            dormitory.assignToOrgUnit(command.getOrgUnitId());
         }
         if (command.getFacilities() != null || command.getNotes() != null) {
             dormitory.updateInfo(
@@ -188,8 +200,8 @@ public class AssetApplicationService {
                 command.getNotes()
         );
 
-        if (command.getDepartmentId() != null) {
-            dormitory.assignToDepartment(command.getDepartmentId());
+        if (command.getOrgUnitId() != null) {
+            dormitory.assignToOrgUnit(command.getOrgUnitId());
         }
 
         dormitoryRepository.save(dormitory);
@@ -222,13 +234,13 @@ public class AssetApplicationService {
     }
 
     public PageResult<DormitoryDTO> findDormitoriesByPage(String keyword, Long buildingId,
-                                                           Long departmentId, Integer genderType,
+                                                           Long orgUnitId, Integer genderType,
                                                            Integer status, Boolean hasAvailableBeds,
                                                            int pageNum, int pageSize) {
         DormitoryRepository.DormitoryQueryCriteria criteria = new DormitoryRepository.DormitoryQueryCriteria();
         criteria.setKeyword(keyword);
         criteria.setBuildingId(buildingId);
-        criteria.setDepartmentId(departmentId);
+        criteria.setOrgUnitId(orgUnitId);
         if (genderType != null) {
             criteria.setGenderType(GenderType.fromCode(genderType));
         }
@@ -278,6 +290,36 @@ public class AssetApplicationService {
         log.info("学生退宿成功: {} <- {}", command.getStudentId(), command.getDormitoryId());
     }
 
+    // ============ 批量操作 ============
+
+    @Transactional
+    public int batchUpdateDepartment(List<Long> dormitoryIds, Long orgUnitId) {
+        if (dormitoryIds == null || dormitoryIds.isEmpty()) {
+            return 0;
+        }
+
+        int count = 0;
+        for (Long dormitoryId : dormitoryIds) {
+            try {
+                Dormitory dormitory = dormitoryRepository.findById(dormitoryId).orElse(null);
+                if (dormitory != null) {
+                    if (orgUnitId != null) {
+                        dormitory.assignToOrgUnit(orgUnitId);
+                    } else {
+                        dormitory.removeFromOrgUnit();
+                    }
+                    dormitoryRepository.save(dormitory);
+                    count++;
+                }
+            } catch (Exception e) {
+                log.error("更新宿舍部门失败: dormitoryId={}, orgUnitId={}", dormitoryId, orgUnitId, e);
+            }
+        }
+
+        log.info("批量更新宿舍部门完成: {} 间", count);
+        return count;
+    }
+
     // ============ 转换方法 ============
 
     private BuildingDTO toBuildingDTO(Building building) {
@@ -299,11 +341,94 @@ public class AssetApplicationService {
     }
 
     private DormitoryDTO toDormitoryDTO(Dormitory dormitory) {
+        // 获取楼栋信息
+        String buildingNo = null;
+        String buildingName = null;
+        if (dormitory.getBuildingId() != null) {
+            Building building = buildingRepository.findById(dormitory.getBuildingId()).orElse(null);
+            if (building != null) {
+                buildingNo = building.getBuildingNo();
+                buildingName = building.getBuildingName();
+            }
+        }
+
+        // 获取组织单元名称
+        String orgUnitName = null;
+        if (dormitory.getOrgUnitId() != null) {
+            OrgUnitPO orgUnit = orgUnitMapper.selectById(dormitory.getOrgUnitId());
+            if (orgUnit != null) {
+                orgUnitName = orgUnit.getDeptName();
+            }
+        }
+
+        // 获取班级绑定信息及班主任信息
+        String assignedClassIds = null;
+        String assignedClassNames = null;
+        String classTeacherNames = null;
+        String classTeacherPhones = null;
+
+        if (dormitory.getId() != null) {
+            List<ClassDormitoryBinding> bindings = classDormitoryBindingMapper.selectByDormitoryId(dormitory.getId());
+            if (bindings != null && !bindings.isEmpty()) {
+                List<Long> classIds = bindings.stream()
+                        .map(ClassDormitoryBinding::getClassId)
+                        .distinct()
+                        .collect(Collectors.toList());
+
+                // 获取班级详情（包含班主任信息）
+                List<ClassResponse> classes = classMapper.selectClassResponseByIds(classIds);
+                if (classes != null && !classes.isEmpty()) {
+                    assignedClassIds = classes.stream()
+                            .map(c -> String.valueOf(c.getId()))
+                            .collect(Collectors.joining(","));
+                    assignedClassNames = classes.stream()
+                            .map(ClassResponse::getClassName)
+                            .collect(Collectors.joining(", "));
+
+                    // 获取班主任信息
+                    Set<Long> teacherIds = classes.stream()
+                            .map(ClassResponse::getTeacherId)
+                            .filter(Objects::nonNull)
+                            .collect(Collectors.toSet());
+
+                    if (!teacherIds.isEmpty()) {
+                        List<User> teachers = new ArrayList<>();
+                        for (Long teacherId : teacherIds) {
+                            User teacher = userMapper.selectById(teacherId);
+                            if (teacher != null) {
+                                teachers.add(teacher);
+                            }
+                        }
+
+                        if (!teachers.isEmpty()) {
+                            classTeacherNames = teachers.stream()
+                                    .map(User::getRealName)
+                                    .filter(Objects::nonNull)
+                                    .distinct()
+                                    .collect(Collectors.joining(", "));
+                            classTeacherPhones = teachers.stream()
+                                    .map(User::getPhone)
+                                    .filter(Objects::nonNull)
+                                    .distinct()
+                                    .collect(Collectors.joining(", "));
+                        }
+                    }
+                }
+            }
+        }
+
         return DormitoryDTO.builder()
                 .id(dormitory.getId())
                 .buildingId(dormitory.getBuildingId())
-                .departmentId(dormitory.getDepartmentId())
+                .buildingNo(buildingNo)
+                .buildingName(buildingName)
+                .orgUnitId(dormitory.getOrgUnitId())
+                .orgUnitName(orgUnitName)
                 .dormitoryNo(dormitory.getDormitoryNo())
+                .assignedClassIds(assignedClassIds)
+                .assignedClassNames(assignedClassNames)
+                .classTeacherNames(classTeacherNames)
+                .classTeacherPhones(classTeacherPhones)
                 .floorNumber(dormitory.getFloorNumber())
                 .roomUsageType(dormitory.getRoomUsageType() != null ? dormitory.getRoomUsageType().getCode() : null)
                 .roomUsageTypeName(dormitory.getRoomUsageType() != null ? dormitory.getRoomUsageType().getName() : null)

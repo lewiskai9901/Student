@@ -1,5 +1,12 @@
 /**
- * 宿舍管理模块 API
+ * @deprecated 此文件已弃用，请使用 @/api/v2/dormitory 代替
+ *
+ * 宿舍管理模块 API - 已迁移到 V2 API
+ *
+ * 迁移说明:
+ * - 所有 API 已统一到 @/api/v2/dormitory.ts
+ * - 此文件保留仅为向后兼容，将在后续版本移除
+ * - 新代码请直接使用: import { ... } from '@/api/v2/dormitory'
  */
 import { http } from '@/shared/utils/request'
 import type { PageResponse } from '@/shared/types'
@@ -66,8 +73,8 @@ export function getDormitoriesByGender(genderType: number): Promise<Dormitory[]>
   return http.get<Dormitory[]>(`${DORMITORY_URL}/by-gender/${genderType}`)
 }
 
-export function getDormitoriesByDepartment(departmentId: number): Promise<Dormitory[]> {
-  return http.get<Dormitory[]>(`${DORMITORY_URL}/by-department`, { params: { departmentId } })
+export function getDormitoriesByOrgUnit(orgUnitId: number): Promise<Dormitory[]> {
+  return http.get<Dormitory[]>(`${DORMITORY_URL}/by-org-unit`, { params: { orgUnitId } })
 }
 
 export function getAvailableDormitories(genderType?: number): Promise<Dormitory[]> {
@@ -125,7 +132,7 @@ export function swapStudentDormitory(data: SwapStudentsRequest): Promise<void> {
 // ==================== 批量操作 ====================
 
 export function batchUpdateDepartment(data: BatchUpdateDepartmentRequest): Promise<number> {
-  return http.put<number>(`${DORMITORY_URL}/batch-department`, data)
+  return http.put<number>(`${DORMITORY_URL}/batch/department`, data)
 }
 
 export function batchUpdateDepartmentByFloor(data: BatchUpdateDepartmentByFloorRequest): Promise<number> {
@@ -247,7 +254,7 @@ export const dormitoryApi = {
   batchCreate: batchCreateDormitories,
   getByBuilding: getDormitoriesByBuilding,
   getByGender: getDormitoriesByGender,
-  getByDepartment: getDormitoriesByDepartment,
+  getByOrgUnit: getDormitoriesByOrgUnit,
   getAvailable: getAvailableDormitories,
   getBySupervisor: getDormitoriesBySupervisor,
   getAllNormal: getAllNormalDormitories,

@@ -68,8 +68,8 @@ public class DormitoryRepositoryImpl implements DormitoryRepository {
     }
 
     @Override
-    public List<Dormitory> findByDepartmentId(Long departmentId) {
-        return dormitoryMapper.selectByDepartmentId(departmentId).stream()
+    public List<Dormitory> findByOrgUnitId(Long orgUnitId) {
+        return dormitoryMapper.selectByOrgUnitId(orgUnitId).stream()
                 .map(this::toDomain)
                 .collect(Collectors.toList());
     }
@@ -93,8 +93,8 @@ public class DormitoryRepositoryImpl implements DormitoryRepository {
     }
 
     @Override
-    public long countByDepartmentId(Long departmentId) {
-        return dormitoryMapper.countByDepartmentId(departmentId);
+    public long countByOrgUnitId(Long orgUnitId) {
+        return dormitoryMapper.countByOrgUnitId(orgUnitId);
     }
 
     @Override
@@ -126,8 +126,8 @@ public class DormitoryRepositoryImpl implements DormitoryRepository {
             wrapper.eq(DormitoryPO::getBuildingId, criteria.getBuildingId());
         }
 
-        if (criteria.getDepartmentId() != null) {
-            wrapper.eq(DormitoryPO::getDepartmentId, criteria.getDepartmentId());
+        if (criteria.getOrgUnitId() != null) {
+            wrapper.eq(DormitoryPO::getOrgUnitId, criteria.getOrgUnitId());
         }
 
         if (criteria.getFloorNumber() != null) {
@@ -153,7 +153,7 @@ public class DormitoryRepositoryImpl implements DormitoryRepository {
         DormitoryPO po = new DormitoryPO();
         po.setId(dormitory.getId());
         po.setBuildingId(dormitory.getBuildingId());
-        po.setDepartmentId(dormitory.getDepartmentId());
+        po.setOrgUnitId(dormitory.getOrgUnitId());
         po.setDormitoryNo(dormitory.getDormitoryNo());
         po.setFloorNumber(dormitory.getFloorNumber());
         po.setRoomUsageType(dormitory.getRoomUsageType() != null ? dormitory.getRoomUsageType().getCode() : null);
@@ -173,7 +173,7 @@ public class DormitoryRepositoryImpl implements DormitoryRepository {
         return Dormitory.reconstruct(
                 po.getId(),
                 po.getBuildingId(),
-                po.getDepartmentId(),
+                po.getOrgUnitId(),
                 po.getDormitoryNo(),
                 po.getFloorNumber(),
                 po.getRoomUsageType() != null ? RoomUsageType.fromCode(po.getRoomUsageType()) : null,

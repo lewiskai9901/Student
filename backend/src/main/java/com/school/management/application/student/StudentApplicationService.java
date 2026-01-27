@@ -306,7 +306,7 @@ public class StudentApplicationService {
         StudentRepository.StudentQueryCriteria repoCriteria = new StudentRepository.StudentQueryCriteria();
         repoCriteria.setKeyword(criteria.getKeyword());
         repoCriteria.setClassId(criteria.getClassId());
-        repoCriteria.setDepartmentId(criteria.getDepartmentId());
+        repoCriteria.setOrgUnitId(criteria.getOrgUnitId());
         repoCriteria.setGradeLevel(criteria.getGradeLevel());
         repoCriteria.setDormitoryId(criteria.getDormitoryId());
         if (criteria.getStatus() != null) {

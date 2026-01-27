@@ -12,7 +12,9 @@ import java.util.Objects;
 
 /**
  * OrgUnit Aggregate Root.
- * Represents an organizational unit in the tree structure (school -> college -> department -> teaching group).
+ * Represents an organizational unit in the tree structure.
+ * Supports both academic units (school -> department -> major -> class)
+ * and functional departments (student_affairs, academic_affairs, etc.)
  */
 public class OrgUnit extends AggregateRoot<Long> {
 
@@ -20,6 +22,7 @@ public class OrgUnit extends AggregateRoot<Long> {
     private String unitCode;
     private String unitName;
     private OrgUnitType unitType;
+    private UnitCategory unitCategory;  // 组织类别: ACADEMIC, FUNCTIONAL, ADMINISTRATIVE
     private Long parentId;
     private String treePath;
     private Integer treeLevel;
@@ -41,6 +44,7 @@ public class OrgUnit extends AggregateRoot<Long> {
         this.unitCode = Objects.requireNonNull(builder.unitCode, "unitCode cannot be null");
         this.unitName = Objects.requireNonNull(builder.unitName, "unitName cannot be null");
         this.unitType = Objects.requireNonNull(builder.unitType, "unitType cannot be null");
+        this.unitCategory = builder.unitCategory != null ? builder.unitCategory : UnitCategory.ACADEMIC;
         this.parentId = builder.parentId;
         this.treePath = builder.treePath;
         this.treeLevel = builder.treeLevel != null ? builder.treeLevel : 1;
@@ -77,10 +81,13 @@ public class OrgUnit extends AggregateRoot<Long> {
     /**
      * Updates the organization unit information.
      */
-    public void update(String unitName, Long leaderId, List<Long> deputyLeaderIds,
+    public void update(String unitName, UnitCategory unitCategory, Long leaderId, List<Long> deputyLeaderIds,
                        Integer sortOrder, Long updatedBy) {
         if (unitName != null && !unitName.isBlank()) {
             this.unitName = unitName;
+        }
+        if (unitCategory != null) {
+            this.unitCategory = unitCategory;
         }
         this.leaderId = leaderId;
         this.deputyLeaderIds = deputyLeaderIds != null
@@ -192,6 +199,31 @@ public class OrgUnit extends AggregateRoot<Long> {
         return unitType;
     }
 
+    public UnitCategory getUnitCategory() {
+        return unitCategory;
+    }
+
+    /**
+     * Checks if this is an academic unit (school, department, major, class, etc.)
+     */
+    public boolean isAcademic() {
+        return unitCategory == UnitCategory.ACADEMIC;
+    }
+
+    /**
+     * Checks if this is a functional department (student_affairs, academic_affairs, etc.)
+     */
+    public boolean isFunctional() {
+        return unitCategory == UnitCategory.FUNCTIONAL;
+    }
+
+    /**
+     * Checks if this is an administrative unit
+     */
+    public boolean isAdministrative() {
+        return unitCategory == UnitCategory.ADMINISTRATIVE;
+    }
+
     public Long getParentId() {
         return parentId;
     }
@@ -246,6 +278,7 @@ public class OrgUnit extends AggregateRoot<Long> {
         private String unitCode;
         private String unitName;
         private OrgUnitType unitType;
+        private UnitCategory unitCategory;
         private Long parentId;
         private String treePath;
         private Integer treeLevel;
@@ -272,6 +305,11 @@ public class OrgUnit extends AggregateRoot<Long> {
 
         public Builder unitType(OrgUnitType unitType) {
             this.unitType = unitType;
+            return this;
+        }
+
+        public Builder unitCategory(UnitCategory unitCategory) {
+            this.unitCategory = unitCategory;
             return this;
         }
 

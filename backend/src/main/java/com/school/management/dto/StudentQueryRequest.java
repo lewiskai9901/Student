@@ -80,9 +80,9 @@ public class StudentQueryRequest {
     private List<Long> classIds;
 
     /**
-     * 部门ID列表(数据权限过滤用)
+     * 组织单元ID列表(数据权限过滤用)
      */
-    private List<Long> departmentIds;
+    private List<Long> orgUnitIds;
 
     /**
      * 仅查询自己的数据(学生角色用)

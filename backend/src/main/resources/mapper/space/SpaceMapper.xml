@@ -1,0 +1,343 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.school.management.infrastructure.persistence.space.SpaceMapper">
+
+    <!-- 基础结果映射 -->
+    <resultMap id="BaseResultMap" type="com.school.management.infrastructure.persistence.space.SpacePO">
+        <id column="id" property="id"/>
+        <result column="space_code" property="spaceCode"/>
+        <result column="space_name" property="spaceName"/>
+        <result column="space_type" property="spaceType"/>
+        <result column="room_type" property="roomType"/>
+        <result column="building_type" property="buildingType"/>
+        <result column="building_no" property="buildingNo"/>
+        <result column="room_no" property="roomNo"/>
+        <result column="parent_id" property="parentId"/>
+        <result column="path" property="path"/>
+        <result column="level" property="level"/>
+        <result column="campus_id" property="campusId"/>
+        <result column="building_id" property="buildingId"/>
+        <result column="floor_number" property="floorNumber"/>
+        <result column="capacity" property="capacity"/>
+        <result column="current_occupancy" property="currentOccupancy"/>
+        <result column="org_unit_id" property="orgUnitId"/>
+        <result column="class_id" property="classId"/>
+        <result column="responsible_user_id" property="responsibleUserId"/>
+        <result column="gender_type" property="genderType"/>
+        <result column="status" property="status"/>
+        <result column="attributes" property="attributes"/>
+        <result column="description" property="description"/>
+        <result column="created_by" property="createdBy"/>
+        <result column="created_at" property="createdAt"/>
+        <result column="updated_by" property="updatedBy"/>
+        <result column="updated_at" property="updatedAt"/>
+        <result column="deleted" property="deleted"/>
+    </resultMap>
+
+    <!-- 带关联信息的结果映射 -->
+    <resultMap id="WithRelationsResultMap" type="com.school.management.infrastructure.persistence.space.SpacePO"
+               extends="BaseResultMap">
+        <result column="parent_name" property="parentName"/>
+        <result column="campus_name" property="campusName"/>
+        <result column="building_name" property="buildingName"/>
+        <result column="parent_building_no" property="parentBuildingNo"/>
+        <result column="floor_id" property="floorId"/>
+        <result column="floor_name" property="floorName"/>
+        <result column="org_unit_name" property="orgUnitName"/>
+        <result column="class_name" property="className"/>
+        <result column="class_teacher_id" property="classTeacherId"/>
+        <result column="class_teacher_name" property="classTeacherName"/>
+        <result column="class_teacher_phone" property="classTeacherPhone"/>
+        <result column="responsible_user_name" property="responsibleUserName"/>
+    </resultMap>
+
+    <!-- 基础列 -->
+    <sql id="Base_Column_List">
+        id, space_code, space_name, space_type, room_type, building_type, building_no, room_no,
+        parent_id, path, level, campus_id, building_id, floor_number,
+        capacity, current_occupancy, org_unit_id, class_id, responsible_user_id,
+        gender_type, status, attributes, description, created_by, created_at, updated_by, updated_at, deleted
+    </sql>
+
+    <!-- 根据ID查询（带关联信息） -->
+    <select id="selectByIdWithRelations" resultMap="WithRelationsResultMap">
+        SELECT s.*,
+               p.space_name AS parent_name,
+               camp.space_name AS campus_name,
+               b.space_name AS building_name,
+               b.building_no AS parent_building_no,
+               f.id AS floor_id,
+               f.space_name AS floor_name,
+               o.unit_name AS org_unit_name,
+               cls.class_name AS class_name,
+               cls.teacher_id AS class_teacher_id,
+               t.real_name AS class_teacher_name,
+               t.phone AS class_teacher_phone,
+               u.real_name AS responsible_user_name
+        FROM space s
+        LEFT JOIN space p ON s.parent_id = p.id
+        LEFT JOIN space camp ON s.campus_id = camp.id
+        LEFT JOIN space b ON s.building_id = b.id
+        LEFT JOIN space f ON s.parent_id = f.id AND f.space_type = 'FLOOR'
+        LEFT JOIN org_units o ON s.org_unit_id = o.id
+        LEFT JOIN classes cls ON s.class_id = cls.id
+        LEFT JOIN users t ON cls.teacher_id = t.id
+        LEFT JOIN users u ON s.responsible_user_id = u.id
+        WHERE s.id = #{id} AND s.deleted = 0
+    </select>
+
+    <!-- 根据编码查询 -->
+    <select id="selectByCode" resultMap="BaseResultMap">
+        SELECT <include refid="Base_Column_List"/>
+        FROM space
+        WHERE space_code = #{spaceCode} AND deleted = 0
+    </select>
+
+    <!-- 查询子节点 -->
+    <select id="selectChildren" resultMap="WithRelationsResultMap">
+        SELECT s.*,
+               o.unit_name AS org_unit_name
+        FROM space s
+        LEFT JOIN org_units o ON s.org_unit_id = o.id
+        WHERE s.parent_id = #{parentId} AND s.deleted = 0
+        ORDER BY s.space_type, s.floor_number, s.space_code
+    </select>
+
+    <!-- 查询所有校区 -->
+    <select id="selectAllCampuses" resultMap="BaseResultMap">
+        SELECT <include refid="Base_Column_List"/>
+        FROM space
+        WHERE space_type = 'CAMPUS' AND deleted = 0
+        ORDER BY space_code
+    </select>
+
+    <!-- 查询所有楼宇 -->
+    <select id="selectAllBuildings" resultMap="WithRelationsResultMap">
+        SELECT s.*,
+               c.space_name AS campus_name,
+               (SELECT COUNT(*) FROM space f WHERE f.building_id = s.id AND f.space_type = 'FLOOR' AND f.deleted = 0) AS total_floors
+        FROM space s
+        LEFT JOIN space c ON s.campus_id = c.id
+        WHERE s.space_type = 'BUILDING' AND s.deleted = 0
+        <if test="buildingType != null">
+            AND s.building_type = #{buildingType}
+        </if>
+        <if test="status != null">
+            AND s.status = #{status}
+        </if>
+        ORDER BY s.space_code
+    </select>
+
+    <!-- 查询楼宇的楼层 -->
+    <select id="selectFloorsByBuildingId" resultMap="BaseResultMap">
+        SELECT <include refid="Base_Column_List"/>
+        FROM space
+        WHERE building_id = #{buildingId} AND space_type = 'FLOOR' AND deleted = 0
+        ORDER BY floor_number
+    </select>
+
+    <!-- 查询楼宇的房间 -->
+    <select id="selectRoomsByBuildingId" resultMap="WithRelationsResultMap">
+        SELECT s.*,
+               b.building_no AS parent_building_no,
+               f.id AS floor_id,
+               f.space_name AS floor_name,
+               o.unit_name AS org_unit_name,
+               cls.class_name AS class_name,
+               cls.teacher_id AS class_teacher_id,
+               t.real_name AS class_teacher_name,
+               t.phone AS class_teacher_phone
+        FROM space s
+        LEFT JOIN space b ON s.building_id = b.id
+        LEFT JOIN space f ON s.parent_id = f.id AND f.space_type = 'FLOOR'
+        LEFT JOIN org_units o ON s.org_unit_id = o.id
+        LEFT JOIN classes cls ON s.class_id = cls.id
+        LEFT JOIN users t ON cls.teacher_id = t.id
+        WHERE s.building_id = #{buildingId} AND s.space_type = 'ROOM' AND s.deleted = 0
+        <if test="roomType != null">
+            AND s.room_type = #{roomType}
+        </if>
+        <if test="floorNumber != null">
+            AND s.floor_number = #{floorNumber}
+        </if>
+        ORDER BY s.floor_number, s.space_code
+    </select>
+
+    <!-- 按条件查询 -->
+    <select id="selectByConditions" resultMap="WithRelationsResultMap">
+        SELECT s.*,
+               b.space_name AS building_name,
+               b.space_code AS building_code,
+               b.building_no AS parent_building_no,
+               f.id AS floor_id,
+               f.space_name AS floor_name,
+               o.unit_name AS org_unit_name,
+               cls.class_name AS class_name,
+               cls.teacher_id AS class_teacher_id,
+               t.real_name AS class_teacher_name,
+               t.phone AS class_teacher_phone
+        FROM space s
+        LEFT JOIN space b ON s.building_id = b.id
+        LEFT JOIN space f ON s.parent_id = f.id AND f.space_type = 'FLOOR'
+        LEFT JOIN org_units o ON s.org_unit_id = o.id
+        LEFT JOIN classes cls ON s.class_id = cls.id
+        LEFT JOIN users t ON cls.teacher_id = t.id
+        WHERE s.deleted = 0
+        <if test="spaceType != null">
+            AND s.space_type = #{spaceType}
+        </if>
+        <if test="roomType != null">
+            AND s.room_type = #{roomType}
+        </if>
+        <if test="buildingType != null">
+            AND s.building_type = #{buildingType}
+        </if>
+        <if test="buildingId != null">
+            AND s.building_id = #{buildingId}
+        </if>
+        <if test="floorNumber != null">
+            AND s.floor_number = #{floorNumber}
+        </if>
+        <if test="orgUnitId != null">
+            AND s.org_unit_id = #{orgUnitId}
+        </if>
+        <if test="status != null">
+            AND s.status = #{status}
+        </if>
+        <if test="keyword != null and keyword != ''">
+            AND (s.space_code LIKE CONCAT('%', #{keyword}, '%')
+                 OR s.space_name LIKE CONCAT('%', #{keyword}, '%'))
+        </if>
+        ORDER BY s.building_id, s.floor_number, s.space_code
+        LIMIT #{offset}, #{limit}
+    </select>
+
+    <!-- 统计数量 -->
+    <select id="countByConditions" resultType="long">
+        SELECT COUNT(*)
+        FROM space s
+        WHERE s.deleted = 0
+        <if test="spaceType != null">
+            AND s.space_type = #{spaceType}
+        </if>
+        <if test="roomType != null">
+            AND s.room_type = #{roomType}
+        </if>
+        <if test="buildingType != null">
+            AND s.building_type = #{buildingType}
+        </if>
+        <if test="buildingId != null">
+            AND s.building_id = #{buildingId}
+        </if>
+        <if test="floorNumber != null">
+            AND s.floor_number = #{floorNumber}
+        </if>
+        <if test="orgUnitId != null">
+            AND s.org_unit_id = #{orgUnitId}
+        </if>
+        <if test="status != null">
+            AND s.status = #{status}
+        </if>
+        <if test="keyword != null and keyword != ''">
+            AND (s.space_code LIKE CONCAT('%', #{keyword}, '%')
+                 OR s.space_name LIKE CONCAT('%', #{keyword}, '%'))
+        </if>
+    </select>
+
+    <!-- 按路径前缀查询 -->
+    <select id="selectByPathPrefix" resultMap="BaseResultMap">
+        SELECT <include refid="Base_Column_List"/>
+        FROM space
+        WHERE path LIKE CONCAT(#{pathPrefix}, '%') AND deleted = 0
+        ORDER BY level, space_code
+    </select>
+
+    <!-- 按组织单元查询 -->
+    <select id="selectByOrgUnitId" resultMap="WithRelationsResultMap">
+        SELECT s.*,
+               b.space_name AS building_name,
+               b.building_no AS parent_building_no,
+               f.id AS floor_id,
+               f.space_name AS floor_name,
+               cls.class_name AS class_name,
+               cls.teacher_id AS class_teacher_id,
+               t.real_name AS class_teacher_name,
+               t.phone AS class_teacher_phone
+        FROM space s
+        LEFT JOIN space b ON s.building_id = b.id
+        LEFT JOIN space f ON s.parent_id = f.id AND f.space_type = 'FLOOR'
+        LEFT JOIN classes cls ON s.class_id = cls.id
+        LEFT JOIN users t ON cls.teacher_id = t.id
+        WHERE s.org_unit_id = #{orgUnitId} AND s.deleted = 0
+        ORDER BY s.building_id, s.floor_number, s.space_code
+    </select>
+
+    <!-- 更新占用数 -->
+    <update id="updateOccupancy">
+        UPDATE space
+        SET current_occupancy = #{occupancy}, updated_at = NOW()
+        WHERE id = #{id}
+    </update>
+
+    <!-- 批量更新组织单元 -->
+    <update id="batchUpdateOrgUnit">
+        UPDATE space
+        SET org_unit_id = #{orgUnitId}, updated_at = NOW()
+        WHERE id IN
+        <foreach collection="ids" item="id" open="(" separator="," close=")">
+            #{id}
+        </foreach>
+    </update>
+
+    <!-- 检查是否有子节点 -->
+    <select id="countChildren" resultType="int">
+        SELECT COUNT(*)
+        FROM space
+        WHERE parent_id = #{parentId} AND deleted = 0
+    </select>
+
+    <!-- 获取祖先链 -->
+    <select id="selectAncestors" resultMap="BaseResultMap">
+        SELECT <include refid="Base_Column_List"/>
+        FROM space
+        WHERE FIND_IN_SET(id, REPLACE(REPLACE(#{path}, '/', ','), ',,', ','))
+        AND deleted = 0
+        ORDER BY level
+    </select>
+
+    <!-- 获取楼宇统计 -->
+    <select id="selectBuildingStats" resultType="map">
+        SELECT
+            (SELECT COUNT(*) FROM space WHERE building_id = #{buildingId} AND space_type = 'FLOOR' AND deleted = 0) AS totalFloors,
+            (SELECT COUNT(*) FROM space WHERE building_id = #{buildingId} AND space_type = 'ROOM' AND deleted = 0) AS totalRooms,
+            (SELECT COALESCE(SUM(capacity), 0) FROM space WHERE building_id = #{buildingId} AND space_type = 'ROOM' AND deleted = 0) AS totalCapacity,
+            (SELECT COALESCE(SUM(current_occupancy), 0) FROM space WHERE building_id = #{buildingId} AND space_type = 'ROOM' AND deleted = 0) AS totalOccupancy
+    </select>
+
+    <!-- 统计校区内的楼号数量（用于唯一性校验） -->
+    <select id="countByBuildingNoInCampus" resultType="int">
+        SELECT COUNT(*)
+        FROM space
+        WHERE building_no = #{buildingNo}
+          AND campus_id = #{campusId}
+          AND space_type = 'BUILDING'
+          AND deleted = 0
+        <if test="excludeId != null">
+          AND id != #{excludeId}
+        </if>
+    </select>
+
+    <!-- 统计楼栋内的房间号数量（用于唯一性校验） -->
+    <select id="countByRoomNoInBuilding" resultType="int">
+        SELECT COUNT(*)
+        FROM space
+        WHERE room_no = #{roomNo}
+          AND building_id = #{buildingId}
+          AND space_type = 'ROOM'
+          AND deleted = 0
+        <if test="excludeId != null">
+          AND id != #{excludeId}
+        </if>
+    </select>
+
+</mapper>

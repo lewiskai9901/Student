@@ -53,27 +53,66 @@
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
                 </svg>
               </button>
-              <!-- 子菜单 - 优化 -->
+              <!-- 子菜单 - 支持三级菜单 -->
               <div
                 v-if="!isCollapse"
                 v-show="openSubmenus.includes(item.path)"
                 class="mt-1 ml-2 space-y-0.5 border-l-2 border-gray-100 pl-2"
               >
-                <router-link
-                  v-for="child in item.children"
-                  :key="child.path"
-                  :to="child.path"
-                  :class="[
-                    'relative flex items-center gap-3 pl-9 pr-3 py-2.5 rounded-xl text-sm transition-all duration-200',
-                    currentRoute === child.path
-                      ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-semibold shadow-lg shadow-blue-500/30'
-                      : 'text-gray-600 hover:bg-gradient-to-r hover:from-gray-50 hover:to-gray-100/50 hover:text-gray-900'
-                  ]"
-                >
-                  <!-- 激活指示器 -->
-                  <div v-if="currentRoute === child.path" class="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-6 bg-white rounded-r-full"></div>
-                  <span>{{ child.title }}</span>
-                </router-link>
+                <template v-for="child in item.children" :key="child.path">
+                  <!-- 三级菜单：子项有children -->
+                  <div v-if="child.children && child.children.length > 0">
+                    <button
+                      @click="toggleSubmenu(child.path)"
+                      :class="[
+                        'group relative w-full flex items-center gap-2 pl-9 pr-3 py-2 rounded-xl text-sm transition-all duration-200',
+                        isSubmenuActive(child) ? 'bg-blue-50/50 text-blue-700 font-medium' : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+                      ]"
+                    >
+                      <span class="flex-1 text-left">{{ child.title }}</span>
+                      <svg
+                        :class="['w-3.5 h-3.5 transition-all duration-300 text-gray-400', openSubmenus.includes(child.path) ? 'rotate-180 text-blue-600' : '']"
+                        fill="none" stroke="currentColor" viewBox="0 0 24 24"
+                      >
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                      </svg>
+                    </button>
+                    <!-- 三级子菜单 -->
+                    <div
+                      v-show="openSubmenus.includes(child.path)"
+                      class="mt-0.5 ml-3 space-y-0.5 border-l border-gray-100 pl-2"
+                    >
+                      <router-link
+                        v-for="grandChild in child.children"
+                        :key="grandChild.path"
+                        :to="grandChild.path"
+                        :class="[
+                          'relative flex items-center gap-2 pl-6 pr-3 py-2 rounded-lg text-sm transition-all duration-200',
+                          currentRoute === grandChild.path
+                            ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-semibold shadow-md shadow-blue-500/20'
+                            : 'text-gray-500 hover:bg-gray-50 hover:text-gray-900'
+                        ]"
+                      >
+                        <span>{{ grandChild.title }}</span>
+                      </router-link>
+                    </div>
+                  </div>
+                  <!-- 二级菜单：子项无children -->
+                  <router-link
+                    v-else
+                    :to="child.path"
+                    :class="[
+                      'relative flex items-center gap-3 pl-9 pr-3 py-2.5 rounded-xl text-sm transition-all duration-200',
+                      currentRoute === child.path
+                        ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-semibold shadow-lg shadow-blue-500/30'
+                        : 'text-gray-600 hover:bg-gradient-to-r hover:from-gray-50 hover:to-gray-100/50 hover:text-gray-900'
+                    ]"
+                  >
+                    <!-- 激活指示器 -->
+                    <div v-if="currentRoute === child.path" class="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-6 bg-white rounded-r-full"></div>
+                    <span>{{ child.title }}</span>
+                  </router-link>
+                </template>
               </div>
             </div>
 
@@ -271,9 +310,17 @@ const userStore = authStore
 const currentRoute = computed(() => route.path)
 
 // 判断子菜单是否有活跃项
-const isSubmenuActive = (item: MenuItem) => {
+const isSubmenuActive = (item: MenuItem): boolean => {
   if (!item.children) return false
-  return item.children.some(child => currentRoute.value === child.path)
+  return item.children.some(child => {
+    // 直接匹配
+    if (currentRoute.value === child.path) return true
+    // 递归检查子菜单
+    if (child.children && child.children.length > 0) {
+      return isSubmenuActive(child)
+    }
+    return false
+  })
 }
 
 // 从路由自动生成菜单
@@ -284,7 +331,10 @@ const menuList = computed<MenuItem[]>(() => {
   }
   const menus = generateMenuFromRoutes(
     mainRoute.children,
-    (permission) => authStore.hasPermission(permission || '')
+    {
+      authCheck: (permission) => authStore.hasPermission(permission || ''),
+      userInfo: authStore.user
+    }
   )
   return sortMenuItems(menus)
 })
@@ -409,12 +459,30 @@ onMounted(async () => {
   document.addEventListener('click', handleClickOutside)
   await configStore.refreshConfig()
 
-  // 自动展开当前路由所在的子菜单
+  // 自动展开当前路由所在的子菜单（支持三级菜单）
   menuList.value.forEach(item => {
-    if (item.children && item.children.some(child => currentRoute.value === child.path)) {
-      if (!openSubmenus.value.includes(item.path)) {
-        openSubmenus.value.push(item.path)
+    if (item.children) {
+      // 检查二级菜单
+      const directMatch = item.children.some(child => currentRoute.value === child.path)
+      if (directMatch) {
+        if (!openSubmenus.value.includes(item.path)) {
+          openSubmenus.value.push(item.path)
+        }
+        return
       }
+      // 检查三级菜单
+      item.children.forEach(child => {
+        if (child.children && child.children.some(grandChild => currentRoute.value === grandChild.path)) {
+          // 展开一级菜单
+          if (!openSubmenus.value.includes(item.path)) {
+            openSubmenus.value.push(item.path)
+          }
+          // 展开二级菜单
+          if (!openSubmenus.value.includes(child.path)) {
+            openSubmenus.value.push(child.path)
+          }
+        }
+      })
     }
   })
 })

@@ -13,7 +13,7 @@
         <result column="class_id" property="classId"/>
         <result column="class_name" property="className"/>
         <result column="grade_id" property="gradeId"/>
-        <result column="department_id" property="departmentId"/>
+        <result column="org_unit_id" property="orgUnitId"/>
         <result column="moral_base_score" property="moralBaseScore"/>
         <result column="moral_bonus_score" property="moralBonusScore"/>
         <result column="moral_deduct_score" property="moralDeductScore"/>
@@ -49,8 +49,8 @@
         <result column="class_total" property="classTotal"/>
         <result column="grade_rank" property="gradeRank"/>
         <result column="grade_total" property="gradeTotal"/>
-        <result column="department_rank" property="departmentRank"/>
-        <result column="department_total" property="departmentTotal"/>
+        <result column="org_unit_rank" property="orgUnitRank"/>
+        <result column="org_unit_total" property="orgUnitTotal"/>
         <result column="has_punishment" property="hasPunishment"/>
         <result column="punishment_type" property="punishmentType"/>
         <result column="punishment_effect" property="punishmentEffect"/>
@@ -106,8 +106,8 @@
         <if test="query.gradeId != null">
             AND ser.grade_id = #{query.gradeId}
         </if>
-        <if test="query.departmentId != null">
-            AND ser.department_id = #{query.departmentId}
+        <if test="query.orgUnitId != null">
+            AND ser.org_unit_id = #{query.orgUnitId}
         </if>
         <if test="query.status != null">
             AND ser.status = #{query.status}
@@ -187,19 +187,19 @@
         WHERE ser.evaluation_period_id = #{periodId} AND ser.grade_id = #{gradeId}
     </update>
 
-    <!-- 计算系部排名 -->
-    <update id="calculateDepartmentRank">
+    <!-- 计算组织单元排名 -->
+    <update id="calculateOrgUnitRank">
         UPDATE student_evaluation_results ser
         JOIN (
             SELECT id,
-                   RANK() OVER (PARTITION BY department_id ORDER BY total_score DESC) as rank_num,
-                   COUNT(*) OVER (PARTITION BY department_id) as total_num
+                   RANK() OVER (PARTITION BY org_unit_id ORDER BY total_score DESC) as rank_num,
+                   COUNT(*) OVER (PARTITION BY org_unit_id) as total_num
             FROM student_evaluation_results
-            WHERE evaluation_period_id = #{periodId} AND department_id = #{departmentId}
+            WHERE evaluation_period_id = #{periodId} AND org_unit_id = #{orgUnitId}
         ) ranked ON ser.id = ranked.id
-        SET ser.department_rank = ranked.rank_num,
-            ser.department_total = ranked.total_num
-        WHERE ser.evaluation_period_id = #{periodId} AND ser.department_id = #{departmentId}
+        SET ser.org_unit_rank = ranked.rank_num,
+            ser.org_unit_total = ranked.total_num
+        WHERE ser.evaluation_period_id = #{periodId} AND ser.org_unit_id = #{orgUnitId}
     </update>
 
     <!-- 查询综测结果详情 -->

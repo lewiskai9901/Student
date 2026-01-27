@@ -34,3 +34,23 @@ export function getUploadUrl(): string {
   const baseURL = import.meta.env.VITE_API_BASE_URL || '/api'
   return `${baseURL}/upload/image`
 }
+
+/**
+ * 上传字体文件
+ */
+export function uploadFont(file: File): Promise<{ url: string; name: string }> {
+  const formData = new FormData()
+  formData.append('file', file)
+
+  return http.post<{ url: string; name: string }>('/upload/font', formData, {
+    headers: { 'Content-Type': 'multipart/form-data' }
+  })
+}
+
+/**
+ * 获取字体上传URL (用于el-upload组件)
+ */
+export function getFontUploadUrl(): string {
+  const baseURL = import.meta.env.VITE_API_BASE_URL || '/api'
+  return `${baseURL}/upload/font`
+}

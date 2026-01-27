@@ -1,7 +1,7 @@
 package com.school.management.dto;
 
-import com.school.management.domain.access.model.DataModule;
-import com.school.management.domain.access.model.DataScope;
+import com.school.management.casbin.model.DataModule;
+import com.school.management.casbin.model.DataScope;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -98,6 +98,45 @@ public class RoleDataPermissionDTO {
     }
 
     /**
+     * V2 API: 自定义范围配置（多维度）
+     */
+    @Data
+    @NoArgsConstructor
+    @AllArgsConstructor
+    @Builder
+    @Schema(description = "自定义范围配置，支持组织单元、年级、班级三个维度")
+    public static class CustomScope {
+        @Schema(description = "组织单元ID列表（部门/学院）")
+        private List<Long> orgUnitIds;
+
+        @Schema(description = "年级ID列表")
+        private List<Long> gradeIds;
+
+        @Schema(description = "班级ID列表")
+        private List<Long> classIds;
+
+        /**
+         * 检查是否为空（三个维度都没有选择）
+         */
+        public boolean isEmpty() {
+            return (orgUnitIds == null || orgUnitIds.isEmpty())
+                    && (gradeIds == null || gradeIds.isEmpty())
+                    && (classIds == null || classIds.isEmpty());
+        }
+
+        /**
+         * 获取选中的总数
+         */
+        public int getTotalCount() {
+            int count = 0;
+            if (orgUnitIds != null) count += orgUnitIds.size();
+            if (gradeIds != null) count += gradeIds.size();
+            if (classIds != null) count += classIds.size();
+            return count;
+        }
+    }
+
+    /**
      * V2 API: 模块权限配置
      */
     @Data
@@ -111,7 +150,12 @@ public class RoleDataPermissionDTO {
         @Schema(description = "数据范围代码", example = "all")
         private String scopeCode;
 
-        @Schema(description = "自定义组织单元ID列表(当scope为custom时有效)")
+        @Schema(description = "自定义范围配置（当scopeCode为custom时有效）")
+        private CustomScope customScope;
+
+        // V1 兼容字段，已废弃
+        @Deprecated
+        @Schema(description = "自定义组织单元ID列表(已废弃，使用customScope)", hidden = true)
         private List<Long> customOrgUnitIds;
 
         /**
@@ -126,6 +170,22 @@ public class RoleDataPermissionDTO {
          */
         public DataScope getScope() {
             return DataScope.fromCode(scopeCode);
+        }
+
+        /**
+         * 获取有效的CustomScope（兼容V1）
+         */
+        public CustomScope getEffectiveCustomScope() {
+            if (customScope != null) {
+                return customScope;
+            }
+            // V1兼容：将customOrgUnitIds转换为新格式
+            if (customOrgUnitIds != null && !customOrgUnitIds.isEmpty()) {
+                return CustomScope.builder()
+                        .orgUnitIds(customOrgUnitIds)
+                        .build();
+            }
+            return null;
         }
     }
 

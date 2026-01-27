@@ -105,4 +105,27 @@ public interface StudentMapper extends BaseMapper<Student> {
             @Param("classIds") List<Long> classIds,
             @Param("limit") Integer limit
     );
+
+    /**
+     * 统计班级学生数量（按性别）
+     *
+     * @param classId 班级ID
+     * @param gender 性别（男/女）
+     * @return 学生数量
+     */
+    Long countByClassIdAndGender(@Param("classId") Long classId, @Param("gender") String gender);
+
+    /**
+     * 简单搜索学生（用于选择器，不使用分页）
+     *
+     * @param keyword 搜索关键词（姓名或学号）
+     * @param classId 班级ID（可选）
+     * @param limit   返回数量限制
+     * @return 学生列表
+     */
+    List<StudentResponse> searchStudentsSimple(
+            @Param("keyword") String keyword,
+            @Param("classId") Long classId,
+            @Param("limit") Integer limit
+    );
 }

@@ -342,10 +342,10 @@ public class CasbinScopeService {
             String scopeExpression = ScopeType.CLASS.getPrefix() + clazz.getId();
             // 班级的父范围是部门+年级（如果有）
             String parentScope = null;
-            if (clazz.getDepartmentId() != null && clazz.getGradeId() != null) {
-                parentScope = ScopeType.DEPT_GRADE.getPrefix() + clazz.getDepartmentId() + ":" + clazz.getGradeId();
-            } else if (clazz.getDepartmentId() != null) {
-                parentScope = ScopeType.DEPT.getPrefix() + clazz.getDepartmentId();
+            if (clazz.getOrgUnitId() != null && clazz.getGradeId() != null) {
+                parentScope = ScopeType.DEPT_GRADE.getPrefix() + clazz.getOrgUnitId() + ":" + clazz.getGradeId();
+            } else if (clazz.getOrgUnitId() != null) {
+                parentScope = ScopeType.DEPT.getPrefix() + clazz.getOrgUnitId();
             } else if (clazz.getGradeId() != null) {
                 parentScope = ScopeType.GRADE.getPrefix() + clazz.getGradeId();
             }

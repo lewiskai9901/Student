@@ -18,4 +18,13 @@ public interface FileUploadService {
      * @throws com.school.management.exception.BusinessException 上传失败时抛出业务异常
      */
     String uploadImage(MultipartFile file);
+
+    /**
+     * 上传字体文件
+     *
+     * @param file 字体文件 (支持 .ttf, .woff, .woff2)
+     * @return 字体文件访问URL
+     * @throws com.school.management.exception.BusinessException 上传失败时抛出业务异常
+     */
+    String uploadFont(MultipartFile file);
 }

@@ -1,7 +1,7 @@
 package com.school.management.service;
 
-import com.school.management.domain.access.model.DataModule;
-import com.school.management.domain.access.model.DataScope;
+import com.school.management.casbin.model.DataModule;
+import com.school.management.casbin.model.DataScope;
 import com.school.management.dto.RoleDataPermissionDTO;
 
 import java.util.List;

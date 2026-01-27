@@ -17,7 +17,7 @@ public class ClassFrequencyDetailVO {
 
     private Long classId;
     private String className;
-    private String departmentName;
+    private String orgUnitName;
     private String gradeName;
 
     // 频次统计

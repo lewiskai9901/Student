@@ -37,10 +37,16 @@ public class SchoolClassResponse {
     @Schema(description = "年级级别")
     private Integer gradeLevel;
 
+    @Schema(description = "年级ID")
+    private Long gradeId;
+
     @Schema(description = "专业方向ID")
     private Long majorDirectionId;
 
-    @Schema(description = "专业方向名称")
+    @Schema(description = "专业名称")
+    private String majorName;
+
+    @Schema(description = "专业方向名称（学制类型，如3+2高级工）")
     private String majorDirectionName;
 
     @Schema(description = "学制（年）")

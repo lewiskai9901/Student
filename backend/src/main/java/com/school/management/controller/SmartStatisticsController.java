@@ -65,7 +65,7 @@ public class SmartStatisticsController {
             @Parameter(description = "是否包含部分检查的班级") @RequestParam(defaultValue = "false") Boolean includePartial,
             @Parameter(description = "班级ID列表") @RequestParam(required = false) List<Long> classIds,
             @Parameter(description = "年级ID列表") @RequestParam(required = false) List<Long> gradeIds,
-            @Parameter(description = "部门ID列表") @RequestParam(required = false) List<Long> departmentIds,
+            @Parameter(description = "组织单元ID列表（原部门ID）") @RequestParam(required = false) List<Long> orgUnitIds,
             @Parameter(description = "排序字段") @RequestParam(required = false) String sortBy,
             @Parameter(description = "排序方向: asc/desc") @RequestParam(defaultValue = "asc") String sortOrder,
             @Parameter(description = "页码") @RequestParam(defaultValue = "1") Integer pageNum,
@@ -79,7 +79,7 @@ public class SmartStatisticsController {
                 .includePartial(includePartial)
                 .classIds(classIds)
                 .gradeIds(gradeIds)
-                .departmentIds(departmentIds)
+                .orgUnitIds(orgUnitIds)
                 .sortBy(sortBy)
                 .sortOrder(sortOrder)
                 .pageNum(pageNum)

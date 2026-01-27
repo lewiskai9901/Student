@@ -50,14 +50,14 @@ public class CheckRecordClassStatsNew {
     private String gradeName;
 
     /**
-     * 院系ID
+     * 组织单元ID（原院系ID）
      */
-    private Long departmentId;
+    private Long orgUnitId;
 
     /**
-     * 院系名称（快照）
+     * 组织单元名称（快照，原院系名称）
      */
-    private String departmentName;
+    private String orgUnitName;
 
     // ==================== 班主任信息快照 ====================
 
@@ -135,9 +135,9 @@ public class CheckRecordClassStatsNew {
     private Integer gradeRanking;
 
     /**
-     * 院系排名
+     * 组织单元排名（原院系排名）
      */
-    private Integer departmentRanking;
+    private Integer orgUnitRanking;
 
     // ==================== 评级 ====================
 

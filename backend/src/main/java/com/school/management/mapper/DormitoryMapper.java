@@ -73,12 +73,12 @@ public interface DormitoryMapper extends BaseMapper<Dormitory> {
     List<DormitoryResponse> selectByGenderType(@Param("genderType") Integer genderType);
 
     /**
-     * 根据部门ID查询宿舍列表
+     * 根据组织单元ID查询宿舍列表
      *
-     * @param departmentId 部门ID
+     * @param orgUnitId 组织单元ID
      * @return 宿舍列表
      */
-    List<DormitoryResponse> selectByDepartmentId(@Param("departmentId") Long departmentId);
+    List<DormitoryResponse> selectByOrgUnitId(@Param("orgUnitId") Long orgUnitId);
 
     /**
      * 查询有空床位的宿舍

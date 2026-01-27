@@ -14,10 +14,24 @@ public class DormitoryDTO {
 
     private Long id;
     private Long buildingId;
+    private String buildingNo;
     private String buildingName;
-    private Long departmentId;
-    private String departmentName;
+    private Long orgUnitId;
+    private String orgUnitName;
     private String dormitoryNo;
+
+    // 宿舍管理员信息
+    private Long supervisorId;
+    private String supervisorName;
+
+    // 指定班级信息
+    private String assignedClassIds;
+    private String assignedClassNames;
+
+    // 班主任信息（从入住学生的班级获取）
+    private String classTeacherNames;
+    private String classTeacherPhones;
+
     private Integer floorNumber;
     private Integer roomUsageType;
     private String roomUsageTypeName;

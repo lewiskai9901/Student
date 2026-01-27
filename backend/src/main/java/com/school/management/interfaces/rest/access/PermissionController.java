@@ -122,6 +122,14 @@ public class PermissionController {
         response.setSortOrder(permission.getSortOrder());
         response.setIsEnabled(permission.getIsEnabled());
         response.setCreatedAt(permission.getCreatedAt());
+
+        // Recursively convert children
+        if (permission.getChildren() != null && !permission.getChildren().isEmpty()) {
+            response.setChildren(permission.getChildren().stream()
+                .map(this::toResponse)
+                .collect(Collectors.toList()));
+        }
+
         return response;
     }
 }

@@ -22,8 +22,8 @@ public interface AssetDormitoryMapper extends BaseMapper<DormitoryPO> {
     @Select("SELECT * FROM dormitories WHERE building_id = #{buildingId} AND floor_number = #{floorNumber} AND deleted = 0")
     List<DormitoryPO> selectByBuildingIdAndFloor(@Param("buildingId") Long buildingId, @Param("floorNumber") Integer floorNumber);
 
-    @Select("SELECT * FROM dormitories WHERE department_id = #{departmentId} AND deleted = 0")
-    List<DormitoryPO> selectByDepartmentId(@Param("departmentId") Long departmentId);
+    @Select("SELECT * FROM dormitories WHERE org_unit_id = #{orgUnitId} AND deleted = 0")
+    List<DormitoryPO> selectByOrgUnitId(@Param("orgUnitId") Long orgUnitId);
 
     @Select("SELECT * FROM dormitories WHERE building_id = #{buildingId} AND gender_type = #{genderType} " +
             "AND status = 1 AND bed_count > occupied_beds AND deleted = 0")
@@ -35,6 +35,6 @@ public interface AssetDormitoryMapper extends BaseMapper<DormitoryPO> {
     @Select("SELECT COUNT(*) FROM dormitories WHERE building_id = #{buildingId} AND deleted = 0")
     long countByBuildingId(@Param("buildingId") Long buildingId);
 
-    @Select("SELECT COUNT(*) FROM dormitories WHERE department_id = #{departmentId} AND deleted = 0")
-    long countByDepartmentId(@Param("departmentId") Long departmentId);
+    @Select("SELECT COUNT(*) FROM dormitories WHERE org_unit_id = #{orgUnitId} AND deleted = 0")
+    long countByOrgUnitId(@Param("orgUnitId") Long orgUnitId);
 }

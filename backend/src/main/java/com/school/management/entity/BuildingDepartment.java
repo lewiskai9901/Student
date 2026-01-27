@@ -30,9 +30,9 @@ public class BuildingDepartment {
     private Long buildingId;
 
     /**
-     * 部门ID
+     * 组织单元ID
      */
-    private Long departmentId;
+    private Long orgUnitId;
 
     /**
      * 创建时间
@@ -47,10 +47,10 @@ public class BuildingDepartment {
     // ========== 关联字段(非数据库字段) ==========
 
     /**
-     * 部门名称 (关联查询获取)
+     * 组织单元名称 (关联查询获取)
      */
     @TableField(exist = false)
-    private String departmentName;
+    private String orgUnitName;
 
     /**
      * 楼宇名称 (关联查询获取)

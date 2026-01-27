@@ -6,7 +6,7 @@ import lombok.Data;
 import lombok.EqualsAndHashCode;
 
 /**
- * 任务审批配置实体（按系部分别配置审批人）
+ * 任务审批配置实体（按组织单元分别配置审批人）
  */
 @Data
 @EqualsAndHashCode(callSuper = true)
@@ -19,14 +19,14 @@ public class TaskApprovalConfig extends BaseEntity {
     private Long taskId;
 
     /**
-     * 系部ID
+     * 组织单元ID
      */
-    private Long departmentId;
+    private Long orgUnitId;
 
     /**
-     * 系部名称
+     * 组织单元名称
      */
-    private String departmentName;
+    private String orgUnitName;
 
     /**
      * 审批级别: 1-第一级, 2-第二级, 3-第三级...

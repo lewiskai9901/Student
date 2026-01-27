@@ -45,7 +45,7 @@ public class CourseController {
             @Parameter(description = "课程名称") @RequestParam(required = false) String courseName,
             @Parameter(description = "课程类型") @RequestParam(required = false) String courseType,
             @Parameter(description = "学期ID") @RequestParam(required = false) Long semesterId,
-            @Parameter(description = "系部ID") @RequestParam(required = false) Long departmentId,
+            @Parameter(description = "组织单元ID") @RequestParam(required = false) Long orgUnitId,
             @Parameter(description = "状态") @RequestParam(required = false) Integer status) {
 
         log.info("分页查询课程: pageNum={}, pageSize={}", pageNum, pageSize);
@@ -56,7 +56,7 @@ public class CourseController {
         query.put("courseName", courseName);
         query.put("courseType", courseType);
         query.put("semesterId", semesterId);
-        query.put("departmentId", departmentId);
+        query.put("orgUnitId", orgUnitId);
         query.put("status", status);
 
         Page<Map<String, Object>> result = courseService.pageCourses(page, query);

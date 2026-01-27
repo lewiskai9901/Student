@@ -16,13 +16,13 @@ public interface MajorPersistenceMapper extends BaseMapper<MajorPO> {
     @Select("SELECT * FROM majors WHERE major_code = #{majorCode} AND deleted = 0")
     MajorPO findByMajorCode(@Param("majorCode") String majorCode);
 
-    @Select("SELECT * FROM majors WHERE department_id = #{orgUnitId} AND deleted = 0 ORDER BY sort_order, id")
+    @Select("SELECT * FROM majors WHERE org_unit_id = #{orgUnitId} AND deleted = 0 ORDER BY sort_order, id")
     List<MajorPO> findByDepartmentId(@Param("orgUnitId") Long orgUnitId);
 
     @Select("SELECT * FROM majors WHERE status = 1 AND deleted = 0 ORDER BY sort_order, id")
     List<MajorPO> findAllEnabled();
 
-    @Select("SELECT COUNT(*) FROM majors WHERE department_id = #{orgUnitId} AND deleted = 0")
+    @Select("SELECT COUNT(*) FROM majors WHERE org_unit_id = #{orgUnitId} AND deleted = 0")
     int countByDepartmentId(@Param("orgUnitId") Long orgUnitId);
 
     @Select("SELECT COUNT(*) FROM majors WHERE major_code = #{majorCode} AND deleted = 0")

@@ -26,6 +26,7 @@
         <result column="direction_code" property="directionCode"/>
         <result column="major_id" property="majorId"/>
         <result column="major_code" property="majorCode"/>
+        <result column="org_unit_id" property="orgUnitId"/>
     </resultMap>
 
     <!-- 分页查询学年专业方向关联列表 -->
@@ -65,6 +66,7 @@
             m.id as major_id,
             m.major_name,
             m.major_code,
+            m.org_unit_id,
             md.level,
             md.years,
             md.is_segmented,

@@ -23,7 +23,7 @@ export interface AnalysisConfig {
   scopeConfig?: ScopeConfig
 
   // 目标配置
-  targetType: 'all' | 'department' | 'grade' | 'custom'
+  targetType: 'all' | 'orgUnit' | 'grade' | 'custom'
   targetConfig?: TargetConfig
 
   // 更新模式
@@ -87,8 +87,8 @@ export interface FilterConditions {
  * 目标配置
  */
 export interface TargetConfig {
-  departmentIds?: number[]
-  includeDepartmentChildren?: boolean
+  orgUnitIds?: number[]
+  includeOrgUnitChildren?: boolean
   gradeIds?: number[]
   classIds?: number[]
   excludeClassIds?: number[]
@@ -129,7 +129,7 @@ export interface AnalysisMetric {
   sourceCategoryIds?: number[]
   sourceItemIds?: number[]
   aggregation?: 'sum' | 'avg' | 'max' | 'min' | 'count'
-  groupBy?: 'class' | 'grade' | 'department' | 'category' | 'date'
+  groupBy?: 'class' | 'grade' | 'orgUnit' | 'category' | 'date'
   customFormula?: string
   displayFormat?: string
   decimalPlaces?: number
@@ -163,7 +163,7 @@ export type MetricType =
   | 'class_ranking'
   | 'category_distribution'
   | 'grade_comparison'
-  | 'department_comparison'
+  | 'orgUnit_comparison'
   | 'custom'
 
 /**
@@ -246,8 +246,8 @@ export interface ClassRankingItem {
   className: string
   gradeId?: number
   gradeName?: string
-  departmentId?: number
-  departmentName?: string
+  orgUnitId?: number
+  orgUnitName?: string
   teacherName?: string
   checkCount: number
   expectedCheckCount: number
@@ -971,7 +971,7 @@ export interface InspectorDTO {
   userId: number
   userName: string
   username: string
-  departmentName: string
+  orgUnitName: string
   status: number
   remark: string
   permissions: PermissionDTO[]
@@ -1368,8 +1368,8 @@ export interface SmartClassRankingVO {
   className: string
   gradeId: number
   gradeName: string
-  departmentId?: number
-  departmentName?: string
+  orgUnitId?: number
+  orgUnitName?: string
   teacherId?: number
   teacherName?: string
   studentCount?: number
@@ -1383,7 +1383,7 @@ export interface SmartClassRankingVO {
   normalizedScore?: number
   ranking: number
   gradeRanking?: number
-  departmentRanking?: number
+  orgUnitRanking?: number
   scoreLevel: string
   vsAvg: number
   vsGradeAvg?: number
@@ -1539,7 +1539,7 @@ export interface SmartStatisticsFilters {
   endDate?: string
   classIds?: number[]
   gradeIds?: number[]
-  departmentIds?: number[]
+  orgUnitIds?: number[]
   categoryIds?: number[]
   compareMode?: 'total' | 'average' | 'normalized' | 'weighted'
   includePartial?: boolean
@@ -1575,7 +1575,7 @@ export function getSmartRanking(planId: number | string, params?: {
   includePartial?: boolean
   classIds?: number[]
   gradeIds?: number[]
-  departmentIds?: number[]
+  orgUnitIds?: number[]
   sortBy?: string
   sortOrder?: string
   pageNum?: number

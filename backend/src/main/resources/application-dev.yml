@@ -6,7 +6,7 @@ spring:
   datasource:
     url: jdbc:mysql://${DB_HOST:localhost}:${DB_PORT:3306}/${DB_NAME:student_management}?useUnicode=true&characterEncoding=UTF-8&useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true
     username: ${DB_USERNAME:root}
-    password: ${DB_PASSWORD:}
+    password: ${DB_PASSWORD:123456}
     druid:
       stat-view-servlet:
         enabled: true
@@ -36,6 +36,10 @@ jwt:
   secret-key: dev-secret-key-for-local-development-must-be-at-least-64-bytes-long-for-hs512
   access-token-expiration: 86400000  # 24小时（开发环境延长）
   refresh-token-expiration: 2592000000  # 30天
+
+# Casbin配置 - 启用 Casbin 作为唯一数据权限引擎
+casbin:
+  enabled: true
 
 # 开发工具
 management:

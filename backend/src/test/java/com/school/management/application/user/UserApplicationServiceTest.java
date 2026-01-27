@@ -71,9 +71,8 @@ class UserApplicationServiceTest {
                 1, // male
                 LocalDate.of(1990, 1, 1),
                 "110101199001011234",
-                1L, // departmentId
+                1L, // orgUnitId
                 null, // classId
-                null, // managedClassId
                 UserType.TEACHER,
                 UserStatus.ENABLED,
                 null, // lastLoginTime
@@ -94,7 +93,7 @@ class UserApplicationServiceTest {
                 "encodedPassword",
                 "禁用用户",
                 null, null, null, null, null, null, null,
-                1L, null, null,
+                1L, null,
                 UserType.TEACHER,
                 UserStatus.DISABLED,
                 null, null, LocalDateTime.now(), null, false,
@@ -120,7 +119,7 @@ class UserApplicationServiceTest {
                     .realName("测试用户")
                     .phone("13800138001")
                     .email("testuser@example.com")
-                    .departmentId(1L)
+                    .orgUnitId(1L)
                     .userType(2) // TEACHER
                     .build();
 
@@ -151,7 +150,7 @@ class UserApplicationServiceTest {
                     .username("testuser")
                     .password(null) // 使用默认密码
                     .realName("测试用户")
-                    .departmentId(1L)
+                    .orgUnitId(1L)
                     .build();
 
             when(userRepository.existsByUsername("testuser")).thenReturn(false);
@@ -178,7 +177,7 @@ class UserApplicationServiceTest {
                     .username("testuser")
                     .password("password123")
                     .realName("测试用户")
-                    .departmentId(1L)
+                    .orgUnitId(1L)
                     .roleIds(Arrays.asList(1L, 2L))
                     .build();
 
@@ -234,7 +233,7 @@ class UserApplicationServiceTest {
                     .realName("新姓名")
                     .phone("13900139001")
                     .email("newemail@example.com")
-                    .departmentId(2L)
+                    .orgUnitId(2L)
                     .build();
 
             when(userRepository.findById(1L)).thenReturn(Optional.of(existingUser));
@@ -509,15 +508,15 @@ class UserApplicationServiceTest {
         }
 
         @Test
-        @DisplayName("应根据部门获取用户列表")
-        void shouldGetUsersByDepartment() {
+        @DisplayName("应根据组织单元获取用户列表")
+        void shouldGetUsersByOrgUnit() {
             // Given
             User user1 = createTestUser(1L, "user1", "用户1");
             User user2 = createTestUser(2L, "user2", "用户2");
-            when(userRepository.findByDepartmentId(1L)).thenReturn(Arrays.asList(user1, user2));
+            when(userRepository.findByOrgUnitId(1L)).thenReturn(Arrays.asList(user1, user2));
 
             // When
-            List<User> result = service.getUsersByDepartment(1L);
+            List<User> result = service.getUsersByOrgUnit(1L);
 
             // Then
             assertThat(result).hasSize(2);
@@ -682,7 +681,7 @@ class UserApplicationServiceTest {
             User user = User.reconstruct(
                     1L, "testuser", "password", "测试用户",
                     null, null, null, null, null, null, null,
-                    1L, null, null,
+                    1L, null,
                     UserType.TEACHER, UserStatus.ENABLED,
                     null, null, LocalDateTime.now(),
                     "wechat_openid_123", // 已绑定微信

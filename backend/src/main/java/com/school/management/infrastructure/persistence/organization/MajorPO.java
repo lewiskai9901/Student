@@ -27,19 +27,15 @@ public class MajorPO {
     private String majorCode;
 
     /**
-     * 所属部门ID（映射到OrgUnit）
+     * 所属组织单元ID（映射到OrgUnit）
      */
-    private Long departmentId;
+    @TableField("org_unit_id")
+    private Long orgUnitId;
 
     /**
      * 专业描述
      */
     private String description;
-
-    /**
-     * 排序号
-     */
-    private Integer sortOrder;
 
     /**
      * 状态(0-禁用 1-启用)
@@ -63,14 +59,4 @@ public class MajorPO {
      */
     @TableField(fill = FieldFill.INSERT_UPDATE)
     private LocalDateTime updatedAt;
-
-    /**
-     * 创建人ID
-     */
-    private Long createdBy;
-
-    /**
-     * 更新人ID
-     */
-    private Long updatedBy;
 }

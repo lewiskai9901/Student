@@ -18,42 +18,42 @@ import java.util.List;
 public interface BuildingDepartmentMapper extends BaseMapper<BuildingDepartment> {
 
     /**
-     * 根据楼宇ID查询部门列表
+     * 根据楼宇ID查询组织单元列表
      *
      * @param buildingId 楼宇ID
-     * @return 部门列表
+     * @return 组织单元列表
      */
-    @Select("SELECT bd.*, d.dept_name as departmentName " +
+    @Select("SELECT bd.*, o.unit_name as orgUnitName " +
             "FROM building_departments bd " +
-            "INNER JOIN departments d ON bd.department_id = d.id " +
+            "INNER JOIN org_units o ON bd.org_unit_id = o.id " +
             "WHERE bd.building_id = #{buildingId}")
     List<BuildingDepartment> selectByBuildingId(@Param("buildingId") Long buildingId);
 
     /**
-     * 根据楼宇ID查询部门ID列表
+     * 根据楼宇ID查询组织单元ID列表
      *
      * @param buildingId 楼宇ID
-     * @return 部门ID列表
+     * @return 组织单元ID列表
      */
-    @Select("SELECT department_id FROM building_departments WHERE building_id = #{buildingId}")
-    List<Long> selectDepartmentIdsByBuildingId(@Param("buildingId") Long buildingId);
+    @Select("SELECT org_unit_id FROM building_departments WHERE building_id = #{buildingId}")
+    List<Long> selectOrgUnitIdsByBuildingId(@Param("buildingId") Long buildingId);
 
     /**
-     * 根据部门ID查询楼宇ID列表
+     * 根据组织单元ID查询楼宇ID列表
      *
-     * @param departmentId 部门ID
+     * @param orgUnitId 组织单元ID
      * @return 楼宇ID列表
      */
-    @Select("SELECT building_id FROM building_departments WHERE department_id = #{departmentId}")
-    List<Long> selectBuildingIdsByDepartmentId(@Param("departmentId") Long departmentId);
+    @Select("SELECT building_id FROM building_departments WHERE org_unit_id = #{orgUnitId}")
+    List<Long> selectBuildingIdsByOrgUnitId(@Param("orgUnitId") Long orgUnitId);
 
     /**
-     * 检查楼宇是否关联了指定部门
+     * 检查楼宇是否关联了指定组织单元
      *
      * @param buildingId 楼宇ID
-     * @param departmentId 部门ID
+     * @param orgUnitId 组织单元ID
      * @return 是否关联
      */
-    @Select("SELECT COUNT(*) > 0 FROM building_departments WHERE building_id = #{buildingId} AND department_id = #{departmentId}")
-    boolean exists(@Param("buildingId") Long buildingId, @Param("departmentId") Long departmentId);
+    @Select("SELECT COUNT(*) > 0 FROM building_departments WHERE building_id = #{buildingId} AND org_unit_id = #{orgUnitId}")
+    boolean exists(@Param("buildingId") Long buildingId, @Param("orgUnitId") Long orgUnitId);
 }

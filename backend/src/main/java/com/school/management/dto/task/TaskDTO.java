@@ -83,15 +83,15 @@ public class TaskDTO implements Serializable {
     private String assigneeName;
 
     /**
-     * 部门ID
+     * 组织单元ID
      */
     @JsonSerialize(using = ToStringSerializer.class)
-    private Long departmentId;
+    private Long orgUnitId;
 
     /**
-     * 部门名称
+     * 组织单元名称
      */
-    private String departmentName;
+    private String orgUnitName;
 
     /**
      * 目标执行人列表

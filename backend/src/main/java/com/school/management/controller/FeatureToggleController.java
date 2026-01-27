@@ -16,7 +16,7 @@ import java.util.stream.Collectors;
  * REST controller for managing feature toggles.
  */
 @RestController
-@RequestMapping("/api/v2/features")
+@RequestMapping("/v2/features")
 @RequiredArgsConstructor
 @Tag(name = "Feature Toggles", description = "Feature toggle management API")
 public class FeatureToggleController {

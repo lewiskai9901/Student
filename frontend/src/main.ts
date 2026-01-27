@@ -15,13 +15,10 @@ import '@/styles/design-tokens.css'
 import '@/assets/styles/globals.css'
 // 保留原有样式（暂时兼容）
 import '@/assets/styles/index.scss'
-// 引入设计系统插件
-import DesignSystemPlugin from '@/plugins/design-system'
 
 const app = createApp(App)
 
 app.use(createPinia())
-app.use(DesignSystemPlugin)
 
 // 初始化认证状态
 const authStore = useAuthStore()

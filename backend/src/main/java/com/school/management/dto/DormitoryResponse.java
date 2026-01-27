@@ -25,9 +25,9 @@ public class DormitoryResponse {
     private Long buildingId;
 
     /**
-     * 所属部门ID
+     * 所属组织单元ID
      */
-    private Long departmentId;
+    private Long orgUnitId;
 
     /**
      * 房间号
@@ -50,9 +50,9 @@ public class DormitoryResponse {
     private String buildingNo;
 
     /**
-     * 部门名称
+     * 组织单元名称
      */
-    private String departmentName;
+    private String orgUnitName;
 
     /**
      * 已分配的班级ID列表（逗号分隔，支持混合宿舍）

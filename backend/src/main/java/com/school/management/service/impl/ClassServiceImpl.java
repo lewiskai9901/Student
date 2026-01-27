@@ -57,7 +57,7 @@ public class ClassServiceImpl extends ServiceImpl<ClassMapper, Class> implements
         clazz.setClassName(request.getClassName());
         clazz.setClassCode(request.getClassCode());
         clazz.setGradeLevel(request.getGradeLevel());
-        clazz.setDepartmentId(request.getDepartmentId());
+        clazz.setOrgUnitId(request.getOrgUnitId());
         clazz.setMajorId(request.getMajorId());
         clazz.setTeacherId(request.getTeacherId());
         clazz.setAssistantTeacherId(request.getAssistantTeacherId());
@@ -95,7 +95,7 @@ public class ClassServiceImpl extends ServiceImpl<ClassMapper, Class> implements
         clazz.setClassName(request.getClassName());
         clazz.setClassCode(request.getClassCode());
         clazz.setGradeLevel(request.getGradeLevel());
-        clazz.setDepartmentId(request.getDepartmentId());
+        clazz.setOrgUnitId(request.getOrgUnitId());
         clazz.setMajorId(request.getMajorId());
         clazz.setTeacherId(request.getTeacherId());
         clazz.setAssistantTeacherId(request.getAssistantTeacherId());
@@ -183,7 +183,7 @@ public class ClassServiceImpl extends ServiceImpl<ClassMapper, Class> implements
         response.setClassCode(clazz.getClassCode());
         response.setGradeLevel(clazz.getGradeLevel());
         response.setGradeId(clazz.getGradeId());
-        response.setDepartmentId(clazz.getDepartmentId());
+        response.setOrgUnitId(clazz.getOrgUnitId());
         response.setMajorId(clazz.getMajorId());
         response.setMajorDirectionId(clazz.getMajorDirectionId());
         response.setTeacherId(clazz.getTeacherId());
@@ -205,7 +205,7 @@ public class ClassServiceImpl extends ServiceImpl<ClassMapper, Class> implements
     }
 
     @Override
-    @DataPermission(module = "class", classField = "classIds", deptField = "departmentIds")
+    @DataPermission(module = "class", classField = "classIds", deptField = "orgUnitIds")
     public IPage<ClassResponse> getClassPage(ClassQueryRequest request) {
         // 数据权限过滤由AOP自动处理
         Page<ClassResponse> page = new Page<>(request.getPageNum(), request.getPageSize());
@@ -213,8 +213,8 @@ public class ClassServiceImpl extends ServiceImpl<ClassMapper, Class> implements
     }
 
     @Override
-    public List<ClassResponse> getClassesByDepartmentId(Long departmentId) {
-        return classMapper.selectByDepartmentId(departmentId);
+    public List<ClassResponse> getClassesByOrgUnitId(Long orgUnitId) {
+        return classMapper.selectByOrgUnitId(orgUnitId);
     }
 
     @Override

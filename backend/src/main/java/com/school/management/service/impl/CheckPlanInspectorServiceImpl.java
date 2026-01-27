@@ -274,8 +274,8 @@ public class CheckPlanInspectorServiceImpl implements CheckPlanInspectorService 
         if (inspector.getUsername() != null) {
             dto.setUsername(inspector.getUsername());
         }
-        if (inspector.getDepartmentName() != null) {
-            dto.setDepartmentName(inspector.getDepartmentName());
+        if (inspector.getOrgUnitName() != null) {
+            dto.setOrgUnitName(inspector.getOrgUnitName());
         }
         dto.setStatus(inspector.getStatus());
         dto.setRemark(inspector.getRemark());

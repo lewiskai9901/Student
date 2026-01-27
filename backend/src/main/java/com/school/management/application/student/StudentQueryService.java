@@ -83,11 +83,11 @@ public class StudentQueryService {
     }
 
     /**
-     * 根据部门ID获取学生列表
+     * 根据组织单元ID获取学生列表
      */
-    public List<StudentDTO> findByDepartmentId(Long departmentId) {
+    public List<StudentDTO> findByOrgUnitId(Long orgUnitId) {
         StudentRepository.StudentQueryCriteria criteria = new StudentRepository.StudentQueryCriteria();
-        criteria.setDepartmentId(departmentId);
+        criteria.setOrgUnitId(orgUnitId);
         return studentRepository.findByPage(criteria, 1, Integer.MAX_VALUE).stream()
                 .map(this::toDTO)
                 .collect(Collectors.toList());
@@ -165,7 +165,7 @@ public class StudentQueryService {
         StudentRepository.StudentQueryCriteria repoCriteria = new StudentRepository.StudentQueryCriteria();
         repoCriteria.setKeyword(criteria.getKeyword());
         repoCriteria.setClassId(criteria.getClassId());
-        repoCriteria.setDepartmentId(criteria.getDepartmentId());
+        repoCriteria.setOrgUnitId(criteria.getOrgUnitId());
         repoCriteria.setGradeLevel(criteria.getGradeLevel());
         repoCriteria.setDormitoryId(criteria.getDormitoryId());
         if (criteria.getStatus() != null) {

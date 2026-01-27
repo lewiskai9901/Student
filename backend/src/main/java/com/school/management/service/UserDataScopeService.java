@@ -3,7 +3,7 @@ package com.school.management.service;
 import com.school.management.dto.UserDataScopeDTO;
 import com.school.management.dto.request.UserDataScopeRequest;
 import com.school.management.entity.UserDataScope;
-import com.school.management.enums.ScopeType;
+import com.school.management.casbin.enums.ScopeType;
 
 import java.util.List;
 import java.util.Set;
@@ -18,7 +18,10 @@ import java.util.Set;
  *
  * @author system
  * @version 3.0.0
+ * @deprecated 用户级数据范围已废弃，请使用角色级数据权限配置 {@link com.school.management.service.RoleDataPermissionService}
+ *             迁移说明：数据权限现在通过 role_data_permissions 和 role_custom_scope 表在角色级别配置
  */
+@Deprecated(since = "4.0.0", forRemoval = true)
 public interface UserDataScopeService {
 
     // ==================== 基础CRUD ====================

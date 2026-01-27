@@ -88,9 +88,10 @@ export function disablePermission(id: number): Promise<void> {
 
 /**
  * 角色响应类型（后端返回格式）
+ * 注意: id 为 string 类型，因为 Snowflake ID 超过 JavaScript 的 MAX_SAFE_INTEGER
  */
 export interface RoleResponse {
-  id: number
+  id: string | number  // 后端序列化为字符串，防止精度丢失
   roleCode: string
   roleName: string
   description?: string
@@ -99,7 +100,7 @@ export interface RoleResponse {
   isSystem?: boolean
   isEnabled?: boolean
   dataScope?: number
-  permissionIds?: number[]
+  permissionIds?: (string | number)[]  // 权限ID也可能是字符串
   createdAt?: string
 }
 
@@ -137,7 +138,7 @@ export function getAllRoles(): Promise<RoleResponse[]> {
 /**
  * 获取角色详情
  */
-export function getRole(id: number): Promise<RoleResponse> {
+export function getRole(id: string | number): Promise<RoleResponse> {
   return http.get<RoleResponse>(`${ROLE_URL}/${id}`)
 }
 
@@ -151,63 +152,63 @@ export function createRole(data: CreateRoleRequest): Promise<RoleResponse> {
 /**
  * 更新角色
  */
-export function updateRole(id: number, data: UpdateRoleRequest): Promise<RoleResponse> {
+export function updateRole(id: string | number, data: UpdateRoleRequest): Promise<RoleResponse> {
   return http.put<RoleResponse>(`${ROLE_URL}/${id}`, data)
 }
 
 /**
  * 删除角色
  */
-export function deleteRole(id: number): Promise<void> {
+export function deleteRole(id: string | number): Promise<void> {
   return http.delete(`${ROLE_URL}/${id}`)
 }
 
 /**
  * 批量删除角色
  */
-export function batchDeleteRoles(ids: number[]): Promise<void[]> {
+export function batchDeleteRoles(ids: (string | number)[]): Promise<void[]> {
   return Promise.all(ids.map(id => deleteRole(id)))
 }
 
 /**
  * 启用角色
  */
-export function enableRole(id: number): Promise<void> {
+export function enableRole(id: string | number): Promise<void> {
   return http.post(`${ROLE_URL}/${id}/enable`)
 }
 
 /**
  * 禁用角色
  */
-export function disableRole(id: number): Promise<void> {
+export function disableRole(id: string | number): Promise<void> {
   return http.post(`${ROLE_URL}/${id}/disable`)
 }
 
 /**
  * 设置角色权限
  */
-export function setRolePermissions(id: number, permissionIds: number[]): Promise<RoleResponse> {
+export function setRolePermissions(id: string | number, permissionIds: (string | number)[]): Promise<RoleResponse> {
   return http.put<RoleResponse>(`${ROLE_URL}/${id}/permissions`, { permissionIds })
 }
 
 /**
  * 获取角色权限ID列表
  */
-export function getRolePermissionIds(id: number): Promise<number[]> {
+export function getRolePermissionIds(id: string | number): Promise<(string | number)[]> {
   return getRole(id).then(role => role.permissionIds || [])
 }
 
 /**
  * 获取角色权限详情
  */
-export function getRolePermissions(id: number): Promise<Permission[]> {
+export function getRolePermissions(id: string | number): Promise<Permission[]> {
   return http.get<Permission[]>(`${ROLE_URL}/${id}/permissions`)
 }
 
 /**
  * 获取角色下的用户
  */
-export function getRoleUsers(id: number, params?: PageParams): Promise<PageResponse<UserRole>> {
+export function getRoleUsers(id: string | number, params?: PageParams): Promise<PageResponse<UserRole>> {
   return http.get<PageResponse<UserRole>>(`${ROLE_URL}/${id}/users`, { params })
 }
 
@@ -370,14 +371,14 @@ import type {
 /**
  * V2: 获取角色数据权限配置
  */
-export function getRoleDataPermissionsV2(roleId: number): Promise<RolePermissionConfig> {
+export function getRoleDataPermissionsV2(roleId: string | number): Promise<RolePermissionConfig> {
   return http.get<RolePermissionConfig>(`${ROLE_URL}/${roleId}/data-permissions`)
 }
 
 /**
  * V2: 保存角色数据权限配置
  */
-export function saveRoleDataPermissionsV2(roleId: number, config: RolePermissionConfig): Promise<void> {
+export function saveRoleDataPermissionsV2(roleId: string | number, config: RolePermissionConfig): Promise<void> {
   return http.put(`${ROLE_URL}/${roleId}/data-permissions`, config)
 }
 
@@ -403,4 +404,43 @@ export const roleDataPermissionApiV2 = {
   saveConfig: saveRoleDataPermissionsV2,
   getModules: getDataModulesV2,
   getScopes: getDataScopesV2
+}
+
+// ==================== 系统模块 API ====================
+
+/**
+ * 系统模块
+ */
+export interface SystemModule {
+  id: string
+  moduleCode: string
+  moduleName: string
+  moduleDesc?: string
+  parentCode?: string
+  icon?: string
+  sortOrder: number
+  isEnabled: boolean
+  children?: SystemModule[]
+}
+
+/**
+ * 获取系统模块树
+ */
+export function getSystemModuleTree(): Promise<SystemModule[]> {
+  return http.get<SystemModule[]>('/v2/system-modules/tree')
+}
+
+/**
+ * 获取所有启用的模块（平铺列表）
+ */
+export function getAllSystemModules(): Promise<SystemModule[]> {
+  return http.get<SystemModule[]>('/v2/system-modules')
+}
+
+/**
+ * 系统模块 API 对象
+ */
+export const systemModuleApi = {
+  getTree: getSystemModuleTree,
+  getAll: getAllSystemModules
 }

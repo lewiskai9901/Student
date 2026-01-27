@@ -25,7 +25,7 @@ public class UpdateUserRequest {
 
     private String idCard;
 
-    private Long departmentId;
+    private Long orgUnitId;
 
     private List<Long> roleIds;
 }

@@ -44,9 +44,9 @@ public class BuildingDepartmentAssignmentController {
             @Parameter(description = "页码") @RequestParam(defaultValue = "1") Integer pageNum,
             @Parameter(description = "每页数量") @RequestParam(defaultValue = "10") Integer pageSize,
             @Parameter(description = "宿舍楼ID") @RequestParam(required = false) Long buildingId,
-            @Parameter(description = "院系ID") @RequestParam(required = false) Long departmentId,
+            @Parameter(description = "院系ID") @RequestParam(required = false) Long orgUnitId,
             @Parameter(description = "状态") @RequestParam(required = false) Integer status) {
-        IPage<BuildingDepartmentAssignment> page = assignmentService.page(pageNum, pageSize, buildingId, departmentId, status);
+        IPage<BuildingDepartmentAssignment> page = assignmentService.page(pageNum, pageSize, buildingId, orgUnitId, status);
         return Result.success(PageResult.from(page));
     }
 
@@ -73,14 +73,14 @@ public class BuildingDepartmentAssignmentController {
     }
 
     /**
-     * 根据院系ID查询分配的宿舍楼
+     * 根据组织单元ID查询分配的宿舍楼
      */
-    @GetMapping("/department/{departmentId}")
-    @Operation(summary = "查询院系分配的宿舍楼", description = "根据院系ID查询所有分配的宿舍楼")
+    @GetMapping("/org-unit/{orgUnitId}")
+    @Operation(summary = "查询组织单元分配的宿舍楼", description = "根据组织单元ID查询所有分配的宿舍楼")
     @PreAuthorize("hasAnyAuthority('system:dormitory_building:view', 'student:dormitory:view')")
-    public Result<List<BuildingDepartmentAssignment>> getByDepartmentId(
-            @Parameter(description = "院系ID") @PathVariable Long departmentId) {
-        return Result.success(assignmentService.getByDepartmentId(departmentId));
+    public Result<List<BuildingDepartmentAssignment>> getByOrgUnitId(
+            @Parameter(description = "组织单元ID") @PathVariable Long orgUnitId) {
+        return Result.success(assignmentService.getByOrgUnitId(orgUnitId));
     }
 
     /**
@@ -169,11 +169,11 @@ public class BuildingDepartmentAssignmentController {
     @PreAuthorize("hasAuthority('system:dormitory_building:view')")
     public Result<Boolean> checkConflict(
             @Parameter(description = "宿舍楼ID") @RequestParam Long buildingId,
-            @Parameter(description = "院系ID") @RequestParam Long departmentId,
+            @Parameter(description = "院系ID") @RequestParam Long orgUnitId,
             @Parameter(description = "起始楼层") @RequestParam(required = false) Integer floorStart,
             @Parameter(description = "结束楼层") @RequestParam(required = false) Integer floorEnd,
             @Parameter(description = "排除的ID") @RequestParam(required = false) Long excludeId) {
-        boolean hasConflict = assignmentService.hasFloorConflict(buildingId, departmentId, floorStart, floorEnd, excludeId);
+        boolean hasConflict = assignmentService.hasFloorConflict(buildingId, orgUnitId, floorStart, floorEnd, excludeId);
         return Result.success(hasConflict);
     }
 }

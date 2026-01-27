@@ -7,6 +7,7 @@ export interface GradeMajorDirection {
   majorId?: number           // 专业ID
   majorCode?: string         // 专业编码
   directionCode?: string     // 方向编码（用于生成班级编码）
+  orgUnitId?: number      // 所属组织单元ID（来自majors表）
   remarks?: string
   createdAt?: string
   updatedAt?: string

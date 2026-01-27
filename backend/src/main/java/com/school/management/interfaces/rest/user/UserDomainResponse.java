@@ -22,9 +22,8 @@ public class UserDomainResponse {
     private String employeeNo;
     private Integer gender;
     private LocalDate birthDate;
-    private Long departmentId;
+    private Long orgUnitId;
     private Long classId;
-    private Long managedClassId;
     private String userType;
     private String status;
     private LocalDateTime lastLoginTime;
@@ -33,7 +32,7 @@ public class UserDomainResponse {
     private boolean wechatBound;
     private boolean allowMultipleDevices;
     private List<Long> roleIds;
-    private String departmentName;
+    private String orgUnitName;
     private List<String> roleNames;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
@@ -56,9 +55,8 @@ public class UserDomainResponse {
         response.setEmployeeNo(user.getEmployeeNo());
         response.setGender(user.getGender());
         response.setBirthDate(user.getBirthDate());
-        response.setDepartmentId(user.getDepartmentId());
+        response.setOrgUnitId(user.getOrgUnitId());
         response.setClassId(user.getClassId());
-        response.setManagedClassId(user.getManagedClassId());
         response.setUserType(user.getUserType() != null ? user.getUserType().getDescription() : null);
         response.setStatus(user.getStatus() != null ? user.getStatus().getDescription() : null);
         response.setLastLoginTime(user.getLastLoginTime());
@@ -67,7 +65,7 @@ public class UserDomainResponse {
         response.setWechatBound(user.getWechatOpenid() != null && !user.getWechatOpenid().isEmpty());
         response.setAllowMultipleDevices(user.isAllowMultipleDevices());
         response.setRoleIds(user.getRoleIds());
-        response.setDepartmentName(user.getDepartmentName());
+        response.setOrgUnitName(user.getOrgUnitName());
         response.setRoleNames(user.getRoleNames());
         response.setCreatedAt(user.getCreatedAt());
         response.setUpdatedAt(user.getUpdatedAt());

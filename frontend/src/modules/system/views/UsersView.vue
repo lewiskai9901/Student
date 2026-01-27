@@ -188,7 +188,7 @@
               </template>
               <span v-else class="text-gray-400">-</span>
             </td>
-            <td class="px-4 py-3 text-gray-600">{{ row.departmentName || '-' }}</td>
+            <td class="px-4 py-3 text-gray-600">{{ row.orgUnitName || '-' }}</td>
             <td class="px-4 py-3 text-center">
               <button
                 @click="handleStatusChange(row)"
@@ -222,13 +222,7 @@
                 >
                   <Shield class="h-4 w-4" />
                 </button>
-                <button
-                  @click="handleDataScope(row)"
-                  class="rounded p-1.5 text-gray-500 hover:bg-purple-50 hover:text-purple-600"
-                  title="数据范围"
-                >
-                  <Database class="h-4 w-4" />
-                </button>
+                <!-- 数据范围按钮已移除 - 数据权限现在在角色级别配置 -->
                 <button
                   @click="handleResetPassword(row)"
                   class="rounded p-1.5 text-gray-500 hover:bg-amber-50 hover:text-amber-600"
@@ -473,39 +467,7 @@
       </Transition>
     </Teleport>
 
-    <!-- 数据范围对话框 -->
-    <Teleport to="body">
-      <Transition name="modal">
-        <div v-if="dataScopeDialogVisible" class="fixed inset-0 z-50 flex items-center justify-center">
-          <div class="fixed inset-0 bg-black/50" @click="dataScopeDialogVisible = false"></div>
-          <div class="relative w-full max-w-2xl rounded-xl bg-white shadow-xl">
-            <div class="flex items-center justify-between border-b border-gray-200 px-6 py-4">
-              <div>
-                <h3 class="text-lg font-semibold text-gray-900">管理数据范围</h3>
-                <p class="text-sm text-gray-500 mt-0.5">用户: {{ currentUserForScope?.realName || currentUserForScope?.username }}</p>
-              </div>
-              <button @click="dataScopeDialogVisible = false" class="rounded p-1 hover:bg-gray-100">
-                <X class="h-5 w-5 text-gray-500" />
-              </button>
-            </div>
-            <div class="p-6">
-              <UserDataScopeManager
-                v-if="currentUserForScope"
-                :user-id="currentUserForScope.id"
-              />
-            </div>
-            <div class="flex justify-end border-t border-gray-200 px-6 py-4">
-              <button
-                @click="dataScopeDialogVisible = false"
-                class="h-9 rounded-lg bg-gray-100 px-4 text-sm font-medium text-gray-700 hover:bg-gray-200"
-              >
-                关闭
-              </button>
-            </div>
-          </div>
-        </div>
-      </Transition>
-    </Teleport>
+    <!-- 数据范围对话框已移除 - 数据权限现在在角色级别配置 -->
   </div>
 </template>
 
@@ -532,7 +494,7 @@ import {
   ChevronsLeft,
   ChevronsRight
 } from 'lucide-vue-next'
-import UserDataScopeManager from '@/components/user/UserDataScopeManager.vue'
+// UserDataScopeManager 已移除 - 数据权限现在在角色级别配置
 import StatCard from '@/components/design-system/cards/StatCard.vue'
 // V2 DDD API
 import {
@@ -562,11 +524,10 @@ const submitLoading = ref(false)
 const roleSubmitLoading = ref(false)
 const dialogVisible = ref(false)
 const roleDialogVisible = ref(false)
-const dataScopeDialogVisible = ref(false)
+// dataScopeDialogVisible 已移除 - 数据权限现在在角色级别配置
 const isEdit = ref(false)
 const selectedIds = ref<number[]>([])
 const currentUserId = ref<number>()
-const currentUserForScope = ref<UserListItem | null>(null)
 
 const queryParams = reactive<UserQueryParams>({
   pageNum: 1,
@@ -810,10 +771,7 @@ const handleRoleSubmit = async () => {
   }
 }
 
-const handleDataScope = (row: UserListItem) => {
-  currentUserForScope.value = row
-  dataScopeDialogVisible.value = true
-}
+// handleDataScope 已移除 - 数据权限现在在角色级别配置
 
 onMounted(() => {
   loadUserList()

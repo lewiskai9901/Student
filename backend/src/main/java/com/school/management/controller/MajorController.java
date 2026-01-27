@@ -49,13 +49,13 @@ public class MajorController {
     }
 
     /**
-     * 根据部门ID查询专业列表
+     * 根据组织单元ID查询专业列表
      */
-    @GetMapping("/department/{departmentId}")
+    @GetMapping("/org-unit/{orgUnitId}")
     @PreAuthorize("hasAuthority('major:list')")
-    public Result<List<Major>> getMajorsByDepartmentId(@PathVariable Long departmentId) {
-        log.info("根据部门ID查询专业列表: {}", departmentId);
-        List<Major> majors = majorService.getMajorsByDepartmentId(departmentId);
+    public Result<List<Major>> getMajorsByOrgUnitId(@PathVariable Long orgUnitId) {
+        log.info("根据组织单元ID查询专业列表: {}", orgUnitId);
+        List<Major> majors = majorService.getMajorsByOrgUnitId(orgUnitId);
         return Result.success(majors);
     }
 

@@ -665,7 +665,7 @@ const moduleConfig: Record<string, { name: string }> = {
   system: { name: '系统管理' },
   quantification: { name: '量化管理' },
   major: { name: '专业管理' },
-  building: { name: '楼宇管理' },
+  building: { name: '楼栋管理' },
   classroom: { name: '教室管理' },
   dormitory: { name: '宿舍管理' }
 }

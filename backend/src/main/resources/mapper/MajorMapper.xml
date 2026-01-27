@@ -8,13 +8,13 @@
         <id column="id" property="id"/>
         <result column="major_name" property="majorName"/>
         <result column="major_code" property="majorCode"/>
-        <result column="department_id" property="departmentId"/>
+        <result column="org_unit_id" property="orgUnitId"/>
         <result column="description" property="description"/>
         <result column="status" property="status"/>
         <result column="deleted" property="deleted"/>
         <result column="created_at" property="createdAt"/>
         <result column="updated_at" property="updatedAt"/>
-        <result column="department_name" property="departmentName"/>
+        <result column="org_unit_name" property="orgUnitName"/>
     </resultMap>
 
     <!-- 分页查询专业列表 -->
@@ -23,8 +23,8 @@
             m.id,
             m.major_name,
             m.major_code,
-            m.department_id,
-            d.dept_name as department_name,
+            m.org_unit_id,
+            o.unit_name as org_unit_name,
             m.description,
             m.status,
             CASE m.status
@@ -35,7 +35,7 @@
             m.created_at,
             m.updated_at
         FROM majors m
-        LEFT JOIN departments d ON m.department_id = d.id
+        LEFT JOIN org_units o ON m.org_unit_id = o.id
         WHERE m.deleted = 0
         <if test="params.majorName != null and params.majorName != ''">
             AND m.major_name LIKE CONCAT('%', #{params.majorName}, '%')
@@ -43,8 +43,8 @@
         <if test="params.majorCode != null and params.majorCode != ''">
             AND m.major_code LIKE CONCAT('%', #{params.majorCode}, '%')
         </if>
-        <if test="params.departmentId != null">
-            AND m.department_id = #{params.departmentId}
+        <if test="params.orgUnitId != null">
+            AND m.org_unit_id = #{params.orgUnitId}
         </if>
         <if test="params.status != null">
             AND m.status = #{params.status}
@@ -52,14 +52,14 @@
         ORDER BY m.created_at DESC
     </select>
 
-    <!-- 根据部门ID查询专业列表 -->
-    <select id="selectByDepartmentId" resultMap="BaseResultMap">
+    <!-- 根据组织单元ID查询专业列表 -->
+    <select id="selectByOrgUnitId" resultMap="BaseResultMap">
         SELECT
             m.id,
             m.major_name,
             m.major_code,
-            m.department_id,
-            d.dept_name as department_name,
+            m.org_unit_id,
+            o.unit_name as org_unit_name,
             m.description,
             m.status,
             CASE m.status
@@ -70,9 +70,9 @@
             m.created_at,
             m.updated_at
         FROM majors m
-        LEFT JOIN departments d ON m.department_id = d.id
+        LEFT JOIN org_units o ON m.org_unit_id = o.id
         WHERE m.deleted = 0
-          AND m.department_id = #{departmentId}
+          AND m.org_unit_id = #{orgUnitId}
           AND m.status = 1
         ORDER BY m.major_name ASC
     </select>
@@ -83,8 +83,8 @@
             m.id,
             m.major_name,
             m.major_code,
-            m.department_id,
-            d.dept_name as department_name,
+            m.org_unit_id,
+            o.unit_name as org_unit_name,
             m.description,
             m.status,
             CASE m.status
@@ -95,7 +95,7 @@
             m.created_at,
             m.updated_at
         FROM majors m
-        LEFT JOIN departments d ON m.department_id = d.id
+        LEFT JOIN org_units o ON m.org_unit_id = o.id
         WHERE m.deleted = 0
           AND m.status = 1
         ORDER BY m.major_name ASC
@@ -107,8 +107,8 @@
             m.id,
             m.major_name,
             m.major_code,
-            m.department_id,
-            d.dept_name as department_name,
+            m.org_unit_id,
+            o.unit_name as org_unit_name,
             m.description,
             m.status,
             CASE m.status
@@ -119,7 +119,7 @@
             m.created_at,
             m.updated_at
         FROM majors m
-        LEFT JOIN departments d ON m.department_id = d.id
+        LEFT JOIN org_units o ON m.org_unit_id = o.id
         WHERE m.deleted = 0
           AND m.id = #{id}
     </select>

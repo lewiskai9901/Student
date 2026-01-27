@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.school.management.infrastructure.persistence.asset.AssetMaintenanceMapper">
+
+    <resultMap id="MaintenanceResultMap" type="com.school.management.infrastructure.persistence.asset.AssetMaintenancePO">
+        <id column="id" property="id"/>
+        <result column="asset_id" property="assetId"/>
+        <result column="maintenance_type" property="maintenanceType"/>
+        <result column="fault_desc" property="faultDesc"/>
+        <result column="start_date" property="startDate"/>
+        <result column="end_date" property="endDate"/>
+        <result column="cost" property="cost"/>
+        <result column="maintainer" property="maintainer"/>
+        <result column="result" property="result"/>
+        <result column="status" property="status"/>
+        <result column="created_by" property="createdBy"/>
+        <result column="created_at" property="createdAt"/>
+        <result column="updated_at" property="updatedAt"/>
+        <result column="asset_code" property="assetCode"/>
+        <result column="asset_name" property="assetName"/>
+    </resultMap>
+
+    <select id="selectPageWithAsset" resultMap="MaintenanceResultMap">
+        SELECT m.*,
+               a.asset_code,
+               a.asset_name
+        FROM asset_maintenance m
+        LEFT JOIN asset a ON m.asset_id = a.id
+        WHERE 1=1
+        <if test="assetId != null">
+            AND m.asset_id = #{assetId}
+        </if>
+        <if test="maintenanceType != null">
+            AND m.maintenance_type = #{maintenanceType}
+        </if>
+        <if test="status != null">
+            AND m.status = #{status}
+        </if>
+        ORDER BY m.created_at DESC
+    </select>
+
+</mapper>

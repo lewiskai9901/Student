@@ -85,7 +85,7 @@ public class MetricCalculationEngine {
                 data = calculateGradeComparison(metric, context);
                 break;
             case "department_comparison":
-                data = calculateDepartmentComparison(metric, context);
+                data = calculateOrgUnitComparison(metric, context);
                 break;
             default:
                 log.warn("不支持的指标类型: {}", metricType);
@@ -270,7 +270,7 @@ public class MetricCalculationEngine {
         switch (groupBy) {
             case "department":
                 grouped = included.stream()
-                        .collect(Collectors.groupingBy(ClassAggregation::getDepartmentName));
+                        .collect(Collectors.groupingBy(ClassAggregation::getOrgUnitName));
                 break;
             case "grade":
             default:
@@ -372,8 +372,8 @@ public class MetricCalculationEngine {
                     .className(agg.getClassName())
                     .gradeId(agg.getGradeId())
                     .gradeName(agg.getGradeName())
-                    .departmentId(agg.getDepartmentId())
-                    .departmentName(agg.getDepartmentName())
+                    .orgUnitId(agg.getOrgUnitId())
+                    .orgUnitName(agg.getOrgUnitName())
                     .teacherName(agg.getTeacherName())
                     .checkCount(agg.getCheckCount())
                     .expectedCheckCount(agg.getExpectedCheckCount())
@@ -471,9 +471,9 @@ public class MetricCalculationEngine {
     }
 
     /**
-     * 计算院系对比
+     * 计算组织单元对比（原院系对比）
      */
-    private List<DistributionItemDTO> calculateDepartmentComparison(AnalysisMetric metric, AnalysisContext context) {
+    private List<DistributionItemDTO> calculateOrgUnitComparison(AnalysisMetric metric, AnalysisContext context) {
         metric.setGroupBy("department");
         return calculateDistribution(metric, context);
     }

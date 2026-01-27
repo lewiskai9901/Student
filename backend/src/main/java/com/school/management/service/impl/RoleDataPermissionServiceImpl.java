@@ -1,10 +1,7 @@
 package com.school.management.service.impl;
 
-import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
-import com.school.management.domain.access.model.DataModule;
-import com.school.management.domain.access.model.DataScope;
-import com.school.management.domain.access.model.RoleCustomScope;
-import com.school.management.domain.access.repository.RoleCustomScopeRepository;
+import com.school.management.casbin.model.DataModule;
+import com.school.management.casbin.model.DataScope;
 import com.school.management.dto.RoleDataPermissionDTO;
 import com.school.management.entity.Role;
 import com.school.management.entity.RoleDataPermission;
@@ -21,6 +18,9 @@ import java.util.stream.Collectors;
 
 /**
  * 角色数据权限服务实现
+ *
+ * 重构后：自定义范围功能通过 Casbin g2 策略管理
+ * 本服务仅管理基础的数据范围配置
  */
 @Slf4j
 @Service
@@ -29,7 +29,6 @@ public class RoleDataPermissionServiceImpl implements RoleDataPermissionService 
 
     private final RoleDataPermissionMapper roleDataPermissionMapper;
     private final RoleMapper roleMapper;
-    private final RoleCustomScopeRepository customScopeRepository;
 
     @Override
     public List<RoleDataPermissionDTO> getRoleDataPermissions(Long roleId) {
@@ -65,9 +64,7 @@ public class RoleDataPermissionServiceImpl implements RoleDataPermissionService 
         log.info("保存角色数据权限: roleId={}, permissions={}", roleId, permissions.size());
 
         // 删除原有配置
-        LambdaQueryWrapper<RoleDataPermission> deleteWrapper = new LambdaQueryWrapper<>();
-        deleteWrapper.eq(RoleDataPermission::getRoleId, roleId);
-        roleDataPermissionMapper.delete(deleteWrapper);
+        roleDataPermissionMapper.physicalDeleteByRoleId(roleId);
 
         // 插入新配置
         for (RoleDataPermissionDTO dto : permissions) {
@@ -118,14 +115,6 @@ public class RoleDataPermissionServiceImpl implements RoleDataPermissionService 
         Map<String, RoleDataPermission> permissionMap = existingPermissions.stream()
                 .collect(Collectors.toMap(RoleDataPermission::getModuleCode, p -> p, (a, b) -> a));
 
-        // 获取自定义范围
-        List<RoleCustomScope> customScopes = customScopeRepository.findByRoleId(roleId);
-        Map<String, List<Long>> customScopeMap = customScopes.stream()
-                .collect(Collectors.groupingBy(
-                        RoleCustomScope::getModuleCode,
-                        Collectors.mapping(RoleCustomScope::getOrgUnitId, Collectors.toList())
-                ));
-
         // 构建模块权限列表
         List<RoleDataPermissionDTO.ModulePermission> modulePermissions = new ArrayList<>();
         for (DataModule module : DataModule.values()) {
@@ -140,7 +129,11 @@ public class RoleDataPermissionServiceImpl implements RoleDataPermissionService 
             RoleDataPermissionDTO.ModulePermission mp = new RoleDataPermissionDTO.ModulePermission();
             mp.setModuleCode(module.getCode());
             mp.setScopeCode(scopeCode);
-            mp.setCustomOrgUnitIds(customScopeMap.get(module.getCode()));
+
+            // 自定义范围通过 Casbin 用户范围分配管理
+            // 使用 CasbinScopeService.getUserScopes() 获取
+            mp.setCustomScope(null);
+            mp.setCustomOrgUnitIds(null);
 
             modulePermissions.add(mp);
         }
@@ -163,12 +156,7 @@ public class RoleDataPermissionServiceImpl implements RoleDataPermissionService 
         }
 
         // 删除原有配置
-        LambdaQueryWrapper<RoleDataPermission> deleteWrapper = new LambdaQueryWrapper<>();
-        deleteWrapper.eq(RoleDataPermission::getRoleId, roleId);
-        roleDataPermissionMapper.delete(deleteWrapper);
-
-        // 删除原有自定义范围
-        customScopeRepository.deleteByRoleId(roleId);
+        roleDataPermissionMapper.physicalDeleteByRoleId(roleId);
 
         // 保存新配置
         for (RoleDataPermissionDTO.ModulePermission mp : config.getModulePermissions()) {
@@ -185,9 +173,11 @@ public class RoleDataPermissionServiceImpl implements RoleDataPermissionService 
             entity.setDataScope(scope.getIntCode());
             roleDataPermissionMapper.insert(entity);
 
-            // 如果是自定义范围，保存组织单元列表
-            if (scope == DataScope.CUSTOM && mp.getCustomOrgUnitIds() != null && !mp.getCustomOrgUnitIds().isEmpty()) {
-                customScopeRepository.saveAll(roleId, mp.getModuleCode(), mp.getCustomOrgUnitIds());
+            // 自定义范围配置说明:
+            // 自定义范围现在通过 Casbin 用户范围分配管理
+            // 使用 POST /api/casbin/scope/assign 分配用户的数据范围
+            if (scope == DataScope.CUSTOM) {
+                log.info("自定义范围请通过 Casbin API 配置: roleId={}, module={}", roleId, mp.getModuleCode());
             }
         }
 

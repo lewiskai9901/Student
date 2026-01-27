@@ -227,7 +227,7 @@ public class ClassWeightServiceImpl implements ClassWeightService {
         // 层级3: 查询全局标准人数配置(按优先级: 学期+部门+年级 > 学期+部门 > 学期)
         ClassSizeStandard standard = standardMapper.selectStandardSize(
                 semesterId,
-                clazz.getDepartmentId(),
+                clazz.getOrgUnitId(),
                 clazz.getGradeLevel()
         );
 
@@ -244,8 +244,8 @@ public class ClassWeightServiceImpl implements ClassWeightService {
             log.info("配置为动态模式,将实时计算平均人数");
         }
 
-        // 层级4: 实时计算同年级同部门的平均人数
-        Integer avgSize = calculateAverageClassSize(clazz.getDepartmentId(), clazz.getGradeLevel());
+        // 层级4: 实时计算同年级同组织单元的平均人数
+        Integer avgSize = calculateAverageClassSize(clazz.getOrgUnitId(), clazz.getGradeLevel());
         log.info("使用实时计算的平均人数: {}", avgSize);
         return avgSize;
     }
@@ -308,7 +308,7 @@ public class ClassWeightServiceImpl implements ClassWeightService {
         ClassWeightConfig config = weightConfigMapper.selectConfigForClass(
                 classId,
                 clazz.getGradeLevel() != null ? clazz.getGradeLevel().longValue() : null,
-                clazz.getDepartmentId(),
+                clazz.getOrgUnitId(),
                 currentDate
         );
 
@@ -535,17 +535,17 @@ public class ClassWeightServiceImpl implements ClassWeightService {
     /**
      * 计算平均班级人数
      */
-    private Integer calculateAverageClassSize(Long departmentId, Integer gradeLevel) {
-        // 查询同部门同年级的所有班级
+    private Integer calculateAverageClassSize(Long orgUnitId, Integer gradeLevel) {
+        // 查询同组织单元同年级的所有班级
         List<com.school.management.entity.Class> classes = classMapper.selectList(
                 new LambdaQueryWrapper<com.school.management.entity.Class>()
-                        .eq(com.school.management.entity.Class::getDepartmentId, departmentId)
+                        .eq(com.school.management.entity.Class::getOrgUnitId, orgUnitId)
                         .eq(com.school.management.entity.Class::getGradeLevel, gradeLevel)
                         .eq(com.school.management.entity.Class::getDeleted, 0)
         );
 
         if (classes.isEmpty()) {
-            log.warn("未找到同部门同年级的班级,使用默认值40");
+            log.warn("未找到同组织单元同年级的班级,使用默认值40");
             return 40; // 默认值
         }
 
@@ -561,8 +561,8 @@ public class ClassWeightServiceImpl implements ClassWeightService {
                 .orElse(40.0);
 
         int result = (int) Math.round(average);
-        log.info("计算平均班级人数: 部门={}, 年级={}, 班级数={}, 平均人数={}",
-                departmentId, gradeLevel, classes.size(), result);
+        log.info("计算平均班级人数: 组织单元={}, 年级={}, 班级数={}, 平均人数={}",
+                orgUnitId, gradeLevel, classes.size(), result);
 
         return result;
     }
@@ -621,18 +621,18 @@ public class ClassWeightServiceImpl implements ClassWeightService {
             ObjectMapper objectMapper = new ObjectMapper();
             java.util.Set<Long> classIdSet = new java.util.HashSet<>(); // 使用Set自动去重
 
-            // 1. 解析并收集部门范围内的班级
+            // 1. 解析并收集组织单元范围内的班级
             if (config.getRangeDepartments() != null && !config.getRangeDepartments().trim().isEmpty()) {
-                JsonNode departmentIds = objectMapper.readTree(config.getRangeDepartments());
-                for (JsonNode deptIdNode : departmentIds) {
-                    Long deptId = deptIdNode.asLong();
-                    List<com.school.management.entity.Class> deptClasses = classMapper.selectList(
+                JsonNode orgUnitIds = objectMapper.readTree(config.getRangeDepartments());
+                for (JsonNode orgUnitIdNode : orgUnitIds) {
+                    Long orgUnitId = orgUnitIdNode.asLong();
+                    List<com.school.management.entity.Class> orgUnitClasses = classMapper.selectList(
                             new LambdaQueryWrapper<com.school.management.entity.Class>()
-                                    .eq(com.school.management.entity.Class::getDepartmentId, deptId)
+                                    .eq(com.school.management.entity.Class::getOrgUnitId, orgUnitId)
                                     .eq(com.school.management.entity.Class::getDeleted, 0)
                     );
-                    deptClasses.forEach(c -> classIdSet.add(c.getId()));
-                    log.info("部门 {} 收集到 {} 个班级", deptId, deptClasses.size());
+                    orgUnitClasses.forEach(c -> classIdSet.add(c.getId()));
+                    log.info("组织单元 {} 收集到 {} 个班级", orgUnitId, orgUnitClasses.size());
                 }
             }
 

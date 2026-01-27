@@ -35,8 +35,8 @@ export interface TaskDTO {
   assignType: number
   assigneeId?: string
   assigneeName?: string
-  departmentId?: string
-  departmentName?: string
+  orgUnitId?: string
+  orgUnitName?: string
   dueDate?: string
   overdue?: boolean
   acceptedAt?: string
@@ -70,8 +70,8 @@ export interface TaskAssigneeDTO {
   taskId: string
   assigneeId: string
   assigneeName: string
-  departmentId?: string
-  departmentName?: string
+  orgUnitId?: string
+  orgUnitName?: string
   status: number
   statusText: string
   acceptedAt?: string
@@ -159,15 +159,15 @@ export interface TaskStatisticsDTO {
 // 卡片式任务详情DTO
 export interface TaskDetailDTO {
   task: TaskDTO
-  assigneesByDepartment: DepartmentAssigneesDTO[]
-  approvalFlows: DepartmentApprovalFlowDTO[]
+  assigneesByOrgUnit: OrgUnitAssigneesDTO[]
+  approvalFlows: OrgUnitApprovalFlowDTO[]
   statistics: TaskStatisticsDTO
 }
 
-// 系部执行人分组
-export interface DepartmentAssigneesDTO {
-  departmentId: string
-  departmentName: string
+// 组织单元执行人分组
+export interface OrgUnitAssigneesDTO {
+  orgUnitId: string
+  orgUnitName: string
   totalCount: number
   completedCount: number
   assignees: TaskAssigneeDetailDTO[]
@@ -201,10 +201,10 @@ export interface ApprovalRecordDTO {
   approvalTime?: string
 }
 
-// 系部审批流程配置
-export interface DepartmentApprovalFlowDTO {
-  departmentId: string
-  departmentName: string
+// 组织单元审批流程配置
+export interface OrgUnitApprovalFlowDTO {
+  orgUnitId: string
+  orgUnitName: string
   flowChain: string
 }
 
@@ -225,7 +225,7 @@ export interface TaskCreateRequest {
   priority?: number
   assignType: number
   assigneeIds?: string[]
-  departmentIds?: string[]
+  orgUnitIds?: string[]
   dueDate?: string
   workflowTemplateId?: string
   attachmentIds?: string[]
@@ -309,7 +309,7 @@ export function getTaskProgress(id: string | number) {
   return http.get<TaskProgressNodeDTO[]>(`/task/tasks/${id}/progress`)
 }
 
-// 获取卡片式任务详情（按系部分组展示执行人）
+// 获取卡片式任务详情（按组织单元分组展示执行人）
 export function getTaskCardDetail(id: string | number) {
   return http.get<TaskDetailDTO>(`/task/tasks/${id}/detail`)
 }

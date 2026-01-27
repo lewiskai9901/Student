@@ -399,20 +399,20 @@ public class NotificationReportServiceImpl implements NotificationReportService 
             classMapper.selectBatchIds(classIds).forEach(c -> classMap.put(c.getId(), c));
         }
 
-        // 收集部门、年级和班主任ID
-        Set<Long> departmentIds = new HashSet<>();
+        // 收集组织单元、年级和班主任ID
+        Set<Long> orgUnitIds = new HashSet<>();
         Set<Long> gradeIds = new HashSet<>();
         Set<Long> teacherIds = new HashSet<>();
         classMap.values().forEach(c -> {
-            if (c.getDepartmentId() != null) departmentIds.add(c.getDepartmentId());
+            if (c.getOrgUnitId() != null) orgUnitIds.add(c.getOrgUnitId());
             if (c.getGradeId() != null) gradeIds.add(c.getGradeId());
             if (c.getTeacherId() != null) teacherIds.add(c.getTeacherId());
         });
 
-        // 查询部门信息
+        // 查询组织单元信息
         Map<Long, Department> departmentMap = new HashMap<>();
-        if (!departmentIds.isEmpty()) {
-            departmentMapper.selectBatchIds(departmentIds).forEach(d -> departmentMap.put(d.getId(), d));
+        if (!orgUnitIds.isEmpty()) {
+            departmentMapper.selectBatchIds(orgUnitIds).forEach(d -> departmentMap.put(d.getId(), d));
         }
 
         // 查询年级信息
@@ -441,7 +441,7 @@ public class NotificationReportServiceImpl implements NotificationReportService 
                     : new String[0];
 
             com.school.management.entity.Class classInfo = classMap.get(detail.getClassId());
-            Department dept = classInfo != null ? departmentMap.get(classInfo.getDepartmentId()) : null;
+            Department dept = classInfo != null ? departmentMap.get(classInfo.getOrgUnitId()) : null;
             Grade grade = classInfo != null ? gradeMap.get(classInfo.getGradeId()) : null;
             User teacher = classInfo != null && classInfo.getTeacherId() != null ? teacherMap.get(classInfo.getTeacherId()) : null;
 
@@ -454,8 +454,8 @@ public class NotificationReportServiceImpl implements NotificationReportService 
                 record.setStudentName(i < studentNameArray.length ? studentNameArray[i].trim() : "");
                 record.setClassId(detail.getClassId());
                 record.setClassName(classInfo != null ? classInfo.getClassName() : "");
-                record.setDepartmentId(classInfo != null ? classInfo.getDepartmentId() : null);
-                record.setDepartmentName(dept != null ? dept.getDeptName() : "");
+                record.setOrgUnitId(classInfo != null ? classInfo.getOrgUnitId() : null);
+                record.setOrgUnitName(dept != null ? dept.getDeptName() : "");
                 record.setGradeId(classInfo != null ? classInfo.getGradeId() : null);
                 record.setGradeName(grade != null ? grade.getGradeName() : "");
                 record.setHeadTeacher(teacher != null ? teacher.getRealName() : "");
@@ -481,7 +481,7 @@ public class NotificationReportServiceImpl implements NotificationReportService 
 
         // 排序
         records.sort(Comparator
-                .comparing(ExportPreviewDTO.StudentRecordDTO::getDepartmentName, Comparator.nullsLast(String::compareTo))
+                .comparing(ExportPreviewDTO.StudentRecordDTO::getOrgUnitName, Comparator.nullsLast(String::compareTo))
                 .thenComparing(ExportPreviewDTO.StudentRecordDTO::getGradeName, Comparator.nullsLast(Comparator.reverseOrder()))
                 .thenComparing(ExportPreviewDTO.StudentRecordDTO::getClassName, Comparator.nullsLast(String::compareTo))
                 .thenComparing(ExportPreviewDTO.StudentRecordDTO::getStudentNo, Comparator.nullsLast(String::compareTo)));
@@ -516,8 +516,8 @@ public class NotificationReportServiceImpl implements NotificationReportService 
                 merged.setStudentName(first.getStudentName());
                 merged.setClassId(first.getClassId());
                 merged.setClassName(first.getClassName());
-                merged.setDepartmentId(first.getDepartmentId());
-                merged.setDepartmentName(first.getDepartmentName());
+                merged.setOrgUnitId(first.getOrgUnitId());
+                merged.setOrgUnitName(first.getOrgUnitName());
                 merged.setGradeId(first.getGradeId());
                 merged.setGradeName(first.getGradeName());
 
@@ -544,7 +544,7 @@ public class NotificationReportServiceImpl implements NotificationReportService 
 
         // 重新排序
         mergedRecords.sort(Comparator
-                .comparing(ExportPreviewDTO.StudentRecordDTO::getDepartmentName, Comparator.nullsLast(String::compareTo))
+                .comparing(ExportPreviewDTO.StudentRecordDTO::getOrgUnitName, Comparator.nullsLast(String::compareTo))
                 .thenComparing(ExportPreviewDTO.StudentRecordDTO::getGradeName, Comparator.nullsLast(Comparator.reverseOrder()))
                 .thenComparing(ExportPreviewDTO.StudentRecordDTO::getClassName, Comparator.nullsLast(String::compareTo))
                 .thenComparing(ExportPreviewDTO.StudentRecordDTO::getStudentNo, Comparator.nullsLast(String::compareTo)));
@@ -723,8 +723,8 @@ public class NotificationReportServiceImpl implements NotificationReportService 
             int index = 0;
 
             for (ExportPreviewDTO.StudentRecordDTO record : records) {
-                if (Boolean.TRUE.equals(showDept) && !Objects.equals(currentDept, record.getDepartmentName())) {
-                    currentDept = record.getDepartmentName();
+                if (Boolean.TRUE.equals(showDept) && !Objects.equals(currentDept, record.getOrgUnitName())) {
+                    currentDept = record.getOrgUnitName();
                     currentGrade = null;
                     currentClass = null;
                     html.append("<tr><td colspan=\"").append(columns.size())
@@ -1226,7 +1226,7 @@ public class NotificationReportServiceImpl implements NotificationReportService 
             case "gender" -> record.getGender() != null ? record.getGender() : "";
             case "className" -> record.getClassName() != null ? record.getClassName() : "";
             case "gradeName" -> record.getGradeName() != null ? record.getGradeName() : "";
-            case "departmentName" -> record.getDepartmentName() != null ? record.getDepartmentName() : "";
+            case "orgUnitName" -> record.getOrgUnitName() != null ? record.getOrgUnitName() : "";
             case "headTeacher" -> record.getHeadTeacher() != null ? record.getHeadTeacher() : "";
             case "buildingName" -> record.getBuildingName() != null ? record.getBuildingName() : "";
             case "roomNo", "dormitoryNo" -> record.getRoomNo() != null ? record.getRoomNo() : "";

@@ -604,8 +604,8 @@ const gradeOptions = computed(() => {
 const departmentOptions = computed(() => {
   const deptMap = new Map<string, { id: string; name: string }>()
   initData.targetClasses?.forEach((cls: any) => {
-    if (cls.departmentId && cls.departmentName) {
-      deptMap.set(String(cls.departmentId), { id: String(cls.departmentId), name: cls.departmentName })
+    if (cls.orgUnitId && cls.orgUnitName) {
+      deptMap.set(String(cls.orgUnitId), { id: String(cls.orgUnitId), name: cls.orgUnitName })
     }
   })
   return Array.from(deptMap.values()).sort((a, b) => a.name.localeCompare(b.name, 'zh-CN'))
@@ -618,7 +618,7 @@ const filteredClasses = computed(() => {
     result = result.filter((cls: any) => String(cls.gradeId) === filterGrade.value)
   }
   if (filterDepartment.value) {
-    result = result.filter((cls: any) => String(cls.departmentId) === filterDepartment.value)
+    result = result.filter((cls: any) => String(cls.orgUnitId) === filterDepartment.value)
   }
   return result
 })
@@ -654,8 +654,8 @@ const linkDepartmentOptions = computed(() => {
   const deptMap = new Map<string, { id: string; name: string }>()
   linkResource.classResources.forEach((cr: any) => {
     const classItem = initData.targetClasses?.find((c: any) => c.classId === cr.classId)
-    if (classItem?.departmentId && classItem?.departmentName) {
-      deptMap.set(String(classItem.departmentId), { id: String(classItem.departmentId), name: classItem.departmentName })
+    if (classItem?.orgUnitId && classItem?.orgUnitName) {
+      deptMap.set(String(classItem.orgUnitId), { id: String(classItem.orgUnitId), name: classItem.orgUnitName })
     }
   })
   return Array.from(deptMap.values()).sort((a, b) => a.name.localeCompare(b.name, 'zh-CN'))
@@ -674,7 +674,7 @@ const linkClassOptions = computed(() => {
 
     // 应用年级和部门筛选
     if (filterLinkGrade.value && String(classItem.gradeId) !== filterLinkGrade.value) return
-    if (filterLinkDepartment.value && String(classItem.departmentId) !== filterLinkDepartment.value) return
+    if (filterLinkDepartment.value && String(classItem.orgUnitId) !== filterLinkDepartment.value) return
 
     classMap.set(String(cr.classId), { id: String(cr.classId), name: classItem.className })
   })
@@ -694,7 +694,7 @@ const linkBuildingOptions = computed(() => {
 
     // 应用年级、部门、班级筛选
     if (filterLinkGrade.value && String(classItem.gradeId) !== filterLinkGrade.value) return
-    if (filterLinkDepartment.value && String(classItem.departmentId) !== filterLinkDepartment.value) return
+    if (filterLinkDepartment.value && String(classItem.orgUnitId) !== filterLinkDepartment.value) return
     if (filterLinkClass.value && String(cr.classId) !== filterLinkClass.value) return
 
     if (linkResource.linkType === 1) {
@@ -724,7 +724,7 @@ const filteredLinkResourcesByBuilding = computed(() => {
 
     // 应用筛选
     if (filterLinkGrade.value && String(classItem.gradeId) !== filterLinkGrade.value) return
-    if (filterLinkDepartment.value && String(classItem.departmentId) !== filterLinkDepartment.value) return
+    if (filterLinkDepartment.value && String(classItem.orgUnitId) !== filterLinkDepartment.value) return
     if (filterLinkClass.value && String(cr.classId) !== filterLinkClass.value) return
 
     const className = classItem.className || `班级${cr.classId}`

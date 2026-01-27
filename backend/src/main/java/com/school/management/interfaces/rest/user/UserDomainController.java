@@ -53,7 +53,7 @@ public class UserDomainController {
                 .gender(request.getGender())
                 .birthDate(request.getBirthDate())
                 .idCard(request.getIdCard())
-                .departmentId(request.getDepartmentId())
+                .orgUnitId(request.getOrgUnitId())
                 .userType(request.getUserType())
                 .roleIds(request.getRoleIds())
                 .createdBy(getCurrentUserId())
@@ -80,7 +80,7 @@ public class UserDomainController {
                 .gender(request.getGender())
                 .birthDate(request.getBirthDate())
                 .idCard(request.getIdCard())
-                .departmentId(request.getDepartmentId())
+                .orgUnitId(request.getOrgUnitId())
                 .roleIds(request.getRoleIds())
                 .updatedBy(getCurrentUserId())
                 .build();
@@ -122,16 +122,16 @@ public class UserDomainController {
             @Parameter(description = "用户名") @RequestParam(required = false) String username,
             @Parameter(description = "姓名") @RequestParam(required = false) String realName,
             @Parameter(description = "手机号") @RequestParam(required = false) String phone,
-            @Parameter(description = "部门ID") @RequestParam(required = false) Long departmentId,
+            @Parameter(description = "组织单元ID") @RequestParam(required = false) Long orgUnitId,
             @Parameter(description = "状态") @RequestParam(required = false) Integer status) {
 
         List<UserDomainResponse> users = userApplicationService
-                .getUsersPage(pageNum, pageSize, username, realName, phone, departmentId, status)
+                .getUsersPage(pageNum, pageSize, username, realName, phone, orgUnitId, status)
                 .stream()
                 .map(UserDomainResponse::fromDomain)
                 .collect(Collectors.toList());
 
-        long total = userApplicationService.countUsers(username, realName, phone, departmentId, status);
+        long total = userApplicationService.countUsers(username, realName, phone, orgUnitId, status);
 
         return Result.success(new PageResponse(users, total, pageSize, pageNum));
     }
@@ -178,12 +178,12 @@ public class UserDomainController {
                 .orElse(Result.error("用户不存在"));
     }
 
-    @Operation(summary = "根据部门获取用户列表")
-    @GetMapping("/by-department/{departmentId}")
+    @Operation(summary = "根据组织单元获取用户列表")
+    @GetMapping("/by-org-unit/{orgUnitId}")
     @PreAuthorize("hasAuthority('system:user:view')")
-    public Result<List<UserDomainResponse>> getUsersByDepartment(
-            @Parameter(description = "部门ID") @PathVariable Long departmentId) {
-        List<UserDomainResponse> users = userApplicationService.getUsersByDepartment(departmentId)
+    public Result<List<UserDomainResponse>> getUsersByOrgUnit(
+            @Parameter(description = "组织单元ID") @PathVariable Long orgUnitId) {
+        List<UserDomainResponse> users = userApplicationService.getUsersByOrgUnit(orgUnitId)
                 .stream()
                 .map(UserDomainResponse::fromDomain)
                 .collect(Collectors.toList());

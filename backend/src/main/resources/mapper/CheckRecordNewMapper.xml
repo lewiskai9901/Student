@@ -138,10 +138,10 @@
             ccs.deduct_item_count,
             ccs.rating_code,
             ccs.rating_name,
-            d.dept_name as department_name
+            o.unit_name as department_name
         FROM check_record_class_stats ccs
         LEFT JOIN classes c ON ccs.class_id = c.id AND c.deleted = 0
-        LEFT JOIN departments d ON c.department_id = d.id AND d.deleted = 0
+        LEFT JOIN org_units o ON c.org_unit_id = o.id AND d.deleted = 0
         WHERE ccs.deleted = 0
         AND ccs.record_id = #{recordId}
         ORDER BY ccs.final_score DESC, ccs.weighted_deduct ASC

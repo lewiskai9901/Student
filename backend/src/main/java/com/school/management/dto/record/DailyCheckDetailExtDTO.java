@@ -49,14 +49,14 @@ public class DailyCheckDetailExtDTO {
     private String gradeName;
 
     /**
-     * 院系ID
+     * 组织单元ID（原院系ID）
      */
-    private Long departmentId;
+    private Long orgUnitId;
 
     /**
-     * 院系名称
+     * 组织单元名称（原院系名称）
      */
-    private String departmentName;
+    private String orgUnitName;
 
     /**
      * 班主任ID

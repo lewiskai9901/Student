@@ -48,7 +48,7 @@ public class AnalysisConfigDTO {
     @Schema(description = "目标类型: all-全部, department-部门, grade-年级, custom-自定义")
     private String targetType = "all";
 
-    @Schema(description = "目标配置(Map形式，支持departmentIds, gradeIds, classIds等)")
+    @Schema(description = "目标配置(Map形式，支持orgUnitIds, gradeIds, classIds等)")
     private Map<String, Object> targetConfig;
 
     // ==================== 更新模式 ====================
@@ -127,7 +127,7 @@ public class AnalysisConfigDTO {
     private Long checkRecordId;
 
     @Schema(description = "部门ID(旧版兼容)")
-    private Long departmentId;
+    private Long orgUnitId;
 
     @Schema(description = "班级ID(旧版兼容)")
     private Long classId;
@@ -228,10 +228,10 @@ public class AnalysisConfigDTO {
     @Schema(description = "目标配置")
     public static class TargetConfigDTO {
         @Schema(description = "部门ID列表")
-        private List<Long> departmentIds;
+        private List<Long> orgUnitIds;
 
         @Schema(description = "是否包含子部门")
-        private Boolean includeDepartmentChildren = true;
+        private Boolean includeOrgUnitChildren = true;
 
         @Schema(description = "年级ID列表")
         private List<Long> gradeIds;

@@ -21,9 +21,9 @@ public class MajorQueryRequest extends BaseQueryRequest {
     private String majorCode;
 
     /**
-     * 所属部门ID
+     * 所属组织单元ID
      */
-    private Long departmentId;
+    private Long orgUnitId;
 
     /**
      * 状态

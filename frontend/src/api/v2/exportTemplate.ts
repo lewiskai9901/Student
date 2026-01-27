@@ -35,7 +35,7 @@ export interface TableConfig {
   title?: string  // 表格标题
   showTitle?: boolean  // 是否显示标题
   columns?: ColumnConfig[]
-  showDepartmentHeader?: boolean
+  showOrgUnitHeader?: boolean
   showGradeHeader?: boolean
   showClassHeader?: boolean
   mergeMode?: string
@@ -117,8 +117,8 @@ export interface StudentRecordDTO {
   className?: string
   gradeId?: string | number
   gradeName?: string
-  departmentId?: string | number
-  departmentName?: string
+  orgUnitId?: string | number
+  orgUnitName?: string
   dormitoryNo?: string
   deductionItemId?: string | number
   deductionItemName?: string
@@ -132,8 +132,8 @@ export interface StudentRecordDTO {
 export interface ClassStatDTO {
   classId: string | number
   className?: string
-  departmentId?: string | number
-  departmentName?: string
+  orgUnitId?: string | number
+  orgUnitName?: string
   gradeId?: string | number
   gradeName?: string
   studentCount: number
@@ -155,10 +155,10 @@ export interface GradeGroupDTO {
   classes: ClassGroupDTO[]
 }
 
-// 部门分组
-export interface DepartmentGroupDTO {
-  departmentId: string | number
-  departmentName?: string
+// 组织单元分组
+export interface OrgUnitGroupDTO {
+  orgUnitId: string | number
+  orgUnitName?: string
   totalCount: number
   grades: GradeGroupDTO[]
 }
@@ -169,9 +169,9 @@ export interface ExportPreviewDTO {
   checkName?: string
   totalCount: number
   classCount: number
-  departmentCount: number
+  orgUnitCount: number
   classStats?: ClassStatDTO[]
-  groupedData?: DepartmentGroupDTO[]
+  groupedData?: OrgUnitGroupDTO[]
   renderedHtml?: string
 }
 
@@ -227,7 +227,7 @@ export const AVAILABLE_FIELDS: ColumnConfig[] = [
   { field: 'studentName', label: '姓名', width: 80, align: 'center', groupable: false },
   { field: 'gender', label: '性别', width: 60, align: 'center', groupable: false },
   // 可分组字段（适合作为层级）
-  { field: 'departmentName', label: '院系', width: 120, align: 'center', groupable: true },
+  { field: 'orgUnitName', label: '组织单元', width: 120, align: 'center', groupable: true },
   { field: 'gradeName', label: '年级', width: 100, align: 'center', groupable: true },
   { field: 'className', label: '班级', width: 120, align: 'center', groupable: true },
   { field: 'headTeacher', label: '班主任', width: 80, align: 'center', groupable: true },

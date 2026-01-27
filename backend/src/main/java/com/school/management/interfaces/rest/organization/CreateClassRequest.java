@@ -42,4 +42,7 @@ public class CreateClassRequest {
 
     @Schema(description = "标准班级人数", example = "50")
     private Integer standardSize;
+
+    @Schema(description = "班级状态 (0=筹建中, 1=在读中, 2=已毕业, 3=已撤销)", example = "1")
+    private Integer status;
 }
