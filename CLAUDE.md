@@ -4,12 +4,12 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-This is a **Student Management System (学生管理系统)** built with Spring Boot 3.2 + Vue.js 3 + TypeScript. It's a modern education information platform featuring student information management, quantification check system 2.0, dormitory management, and WeChat miniprogram support.
+This is a **Student Management System (学生管理系统)** built with Spring Boot 3.2 + Vue.js 3 + TypeScript. It's a modern education information platform featuring student information management, V4 inspection system with auto scheduling and analytics, dormitory management, and WeChat miniprogram support.
 
 **Key Features:**
 - RBAC-based user permission management with JWT authentication (access + refresh tokens)
 - Student information management with Excel import/export
-- Quantification check system 2.0 with scoring templates, deduction items, appeals
+- V4 inspection system with session-based architecture, corrective actions, auto scheduling, analytics, and data export
 - Department/Class/Dormitory/Classroom organization management
 - WeChat miniprogram integration (in development)
 
@@ -82,7 +82,7 @@ npm run lint
 mysql -u root -p -e "CREATE DATABASE student_management CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;"
 
 # Import schema and initial data
-mysql -u root -p student_management < database/schema/complete_schema.sql
+mysql -u root -p student_management < database/schema/complete_schema_v2.sql
 mysql -u root -p student_management < database/init/init_data.sql
 ```
 
@@ -97,11 +97,11 @@ scripts\backup-database.bat
 
 ## Architecture
 
-### Backend Architecture (V2 - DDD)
+### Backend Architecture (DDD)
 
-本项目采用 **DDD (Domain-Driven Design)** 架构，V1和V2 API并行运行。
+本项目采用 **DDD (Domain-Driven Design)** 六边形架构。
 
-**DDD 六边形架构包结构:**
+**包结构:**
 ```
 com.school.management/
 ├── domain/                    # 领域层 - 核心业务逻辑
@@ -110,6 +110,10 @@ com.school.management/
 │   │   ├── repository/       # 仓储接口
 │   │   └── event/            # 领域事件
 │   ├── inspection/           # 量化检查领域
+│   │   ├── model/            # 检查领域模型
+│   │   ├── repository/       # 仓储接口
+│   │   ├── saga/             # Saga编排 (跨聚合工作流)
+│   │   └── export/           # 数据导出
 │   ├── access/               # 权限管理领域
 │   └── shared/               # 共享内核 (Entity, AggregateRoot, ValueObject)
 ├── application/              # 应用层 - 用例编排
@@ -117,33 +121,19 @@ com.school.management/
 │   ├── inspection/           # 量化检查应用服务
 │   └── access/               # 权限管理应用服务
 ├── infrastructure/           # 基础设施层 - 技术实现
-│   └── persistence/          # 持久化实现 (Repository实现, Mapper, PO)
+│   ├── persistence/          # 持久化实现 (Repository实现, Mapper, PO)
+│   ├── cache/                # 缓存实现
+│   └── event/                # 事件发布实现
 └── interfaces/               # 接口层 - API端点
-    └── rest/                 # REST控制器 (/v2/*)
+    └── rest/                 # REST控制器
 ```
 
-**V2 API端点:**
-- `/api/v2/org-units` - 组织单元管理
-- `/api/v2/organization/classes` - 班级管理
-- `/api/v2/permissions` - 权限管理
-- `/api/v2/roles` - 角色管理
-- `/api/v2/inspection-templates` - 检查模板管理
-
-### Backend Architecture (V1 - 传统分层)
-
-**Layered Structure:**
-- **Controller Layer** (`controller/`): HTTP request handling, parameter validation, RESTful APIs
-- **Service Layer** (`service/`): Business logic, transaction management
-- **Mapper Layer** (`mapper/`): MyBatis data access (with XML in `resources/mapper/`)
-- **Entity Layer** (`entity/`): Database entities (JPA annotations + MyBatis Plus)
-- **DTO Layer** (`dto/`): Data Transfer Objects for API requests/responses
-- **Security** (`security/`): JWT authentication, Spring Security configuration
-- **Config** (`config/`): Application configuration beans
-
-**Key Packages:**
-- `com.school.management.security`: JWT token service, authentication filter, custom user details
-- `com.school.management.exception`: Business exceptions, global exception handler
-- `com.school.management.common`: Common response wrappers (`Result`, `ApiResponse`, `PageResult`)
+**API端点:**
+- `/api/org-units` - 组织单元管理
+- `/api/organization/classes` - 班级管理
+- `/api/permissions` - 权限管理
+- `/api/roles` - 角色管理
+- `/api/inspection-templates` - 检查模板管理
 
 **Security Architecture:**
 - Dual-token JWT system (access token: 2h, refresh token: 30d)
@@ -152,7 +142,7 @@ com.school.management/
 - CORS configured for multiple origins
 - Password encoding with BCrypt
 
-**Data Permission Architecture (V2):**
+**Data Permission Architecture:**
 数据权限系统采用DDD架构，支持细粒度的模块级数据访问控制。
 
 - **DataScope枚举** (`domain/access/model/DataScope.java`):
@@ -170,13 +160,18 @@ com.school.management/
   - Evaluation领域: `rating`
   - Task领域: `task`
 
-- **V2 API端点**:
-  - `GET /api/v2/roles/{roleId}/data-permissions` - 获取角色数据权限配置
-  - `PUT /api/v2/roles/{roleId}/data-permissions` - 更新角色数据权限配置
-  - `GET /api/v2/roles/data-permissions/modules` - 获取所有数据模块（按领域分组）
-  - `GET /api/v2/roles/data-permissions/scopes` - 获取所有数据范围选项
+- **API端点**:
+  - `GET /api/roles/{roleId}/data-permissions` - 获取角色数据权限配置
+  - `PUT /api/roles/{roleId}/data-permissions` - 更新角色数据权限配置
+  - `GET /api/roles/data-permissions/modules` - 获取所有数据模块（按领域分组）
+  - `GET /api/roles/data-permissions/scopes` - 获取所有数据范围选项
 
 - **自定义范围**: 通过`role_custom_scope`表存储角色对特定模块的自定义组织单元访问权限
+
+**Key Packages:**
+- `com.school.management.domain.access`: Data permissions, roles, authentication domain models
+- `com.school.management.infrastructure.cache`: Caching infrastructure
+- `com.school.management.infrastructure.event`: Domain event publishing infrastructure
 
 **Database Access:**
 - MyBatis Plus 3.5.7 with automatic CRUD
@@ -186,23 +181,26 @@ com.school.management/
 
 ### Frontend Architecture
 
-**V2 DDD适配结构:**
+**Frontend Structure:**
 ```
 src/
-├── api/v2/              # V2 API模块
+├── api/                 # API模块
 │   ├── organization.ts  # 组织管理API (orgUnitApi, schoolClassApi)
 │   ├── inspection.ts    # 量化检查API (templateApi, recordApi, appealApi)
 │   └── access.ts        # 权限管理API (permissionApi, roleApi)
-├── types/v2/            # V2 TypeScript类型定义
-├── stores/v2/           # V2 Pinia状态管理
-├── views/v2/            # V2 视图组件
+├── types/               # TypeScript类型定义
+├── stores/              # Pinia状态管理
+├── views/               # 视图组件
 │   ├── organization/    # OrgUnitsView, SchoolClassesView
 │   ├── inspection/      # TemplateListView, RecordListView, AppealListView
 │   └── access/          # RoleListView, PermissionListView
-└── router/v2.ts         # V2 路由配置
+├── components/          # Reusable UI components
+├── layouts/             # Layout components (MainLayout)
+├── router/              # Vue Router (index.ts) with permission guards
+└── utils/               # Utility functions
 ```
 
-**DDD对齐导航结构 (2026-01更新):**
+**DDD对齐导航结构:**
 ```
 / (MainLayout)
 ├── /dashboard (首页, order: 1)
@@ -230,22 +228,6 @@ src/
     └── /settings/* - 其他设置
 ```
 
-**向后兼容重定向:**
-- `/student-affairs/*` → `/organization/*`
-- `/dormitory/*` → `/organization/dormitory/*`
-- `/quantification/*` → `/inspection/*`
-- `/system/*` → `/access/*` 或 `/settings/*`
-
-**V1 Structure:**
-- `src/api/`: Axios HTTP client modules (organized by domain)
-- `src/stores/`: Pinia state management (auth, user, app state)
-- `src/router/`: Vue Router with permission guards
-- `src/views/`: Page components (organized by feature)
-- `src/components/`: Reusable UI components
-- `src/layouts/`: Layout components (MainLayout)
-- `src/types/`: TypeScript type definitions
-- `src/utils/`: Utility functions
-
 **State Management:**
 - Pinia stores for authentication (`stores/auth.ts`)
 - Token stored in localStorage
@@ -268,23 +250,17 @@ src/
 4. On token expiry, frontend auto-refreshes using `/api/auth/refresh`
 5. Logout calls `/api/auth/logout` → token added to Redis blacklist
 
-### Quantification System 2.0
+### V4 Inspection System
 
-The quantification check system has evolved through multiple versions. Current V3 implementation:
+The inspection system uses a session-based architecture (V4) with the following capabilities:
+- **Inspection Sessions**: Session-based check management with configurable templates
+- **Corrective Actions**: Track and manage corrective actions linked to inspection findings
+- **Student Behavior**: Record and analyze student behavior patterns
+- **Auto Scheduling**: Automated scheduling of inspection sessions
+- **Analytics**: Inspection data analytics and department ranking
+- **Data Export**: Export inspection data for reporting
 
-**Key Entities:**
-- `CheckTemplate`: Check templates with deduction items
-- `DailyCheck`: Daily check records with scoring
-- `DeductionItem`: Configurable deduction rules (fixed/per-person/range scoring)
-- `CheckItemAppeal`: Appeal management for disputed scores
-
-**Deduction Modes:**
-1. **FIXED_DEDUCT**: Fixed score deduction
-2. **PER_PERSON_DEDUCT**: Deduction multiplied by number of people
-3. **SCORE_RANGE**: Configurable score ranges
-
-**Deprecated:**
-- `_deprecated_v1/` packages contain old quantification logic (DO NOT USE)
+Key domain packages: `domain/inspection/saga/` for cross-aggregate workflow orchestration, `domain/inspection/export/` for data export logic.
 
 ### MyBatis Plus Configuration
 
@@ -342,7 +318,7 @@ taskkill /PID <PID> /F
 - Use Lombok annotations (`@Data`, `@Builder`, `@Slf4j`)
 - Service methods should be transactional: `@Transactional`
 - Controller methods use `@PreAuthorize` for permission checks
-- DTOs for API input/output, Entities for database
+- Domain models in `domain/*/model/`, persistence objects in `infrastructure/persistence/`
 
 **Frontend:**
 - Use Composition API with `<script setup>`
@@ -367,6 +343,6 @@ Comprehensive documentation is organized in `docs/`:
 - **Design:** `docs/design/` - Architecture, database, API specs, security
 - **Development:** `docs/development/` - Coding standards, testing guide
 - **Deployment:** `docs/deployment/` - Deployment guides, backup strategies
-- **Features:** `docs/features/quantification-v2/` - Quantification system 2.0 docs
+- **Features:** `docs/features/` - Feature-specific documentation
 
 Refer to `README.md` and `PROJECT_NAVIGATION_STANDARD.md` for complete project navigation.
