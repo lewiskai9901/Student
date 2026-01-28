@@ -27,7 +27,7 @@ public class InspectionAnalyticsReadModel {
         String sql = "SELECT cr.class_id, cr.class_name, " +
                 "AVG(cr.final_score) as avg_score, " +
                 "COUNT(cr.id) as check_count " +
-                "FROM inspection_class_records cr " +
+                "FROM class_inspection_records cr " +
                 "JOIN inspection_sessions s ON cr.session_id = s.id " +
                 "WHERE s.status = 'PUBLISHED' " +
                 "AND s.inspection_date BETWEEN ? AND ? " +
@@ -49,9 +49,9 @@ public class InspectionAnalyticsReadModel {
     public List<Map<String, Object>> getViolationDistribution(LocalDate startDate, LocalDate endDate) {
         String sql = "SELECT dd.item_name, " +
                 "COUNT(dd.id) as occurrence_count, " +
-                "SUM(dd.deducted_score) as total_deduction " +
-                "FROM inspection_deduction_details dd " +
-                "JOIN inspection_class_records cr ON dd.class_record_id = cr.id " +
+                "SUM(dd.deduction_amount) as total_deduction " +
+                "FROM inspection_deductions dd " +
+                "JOIN class_inspection_records cr ON dd.class_record_id = cr.id " +
                 "JOIN inspection_sessions s ON cr.session_id = s.id " +
                 "WHERE s.status = 'PUBLISHED' " +
                 "AND s.inspection_date BETWEEN ? AND ? " +
@@ -76,7 +76,7 @@ public class InspectionAnalyticsReadModel {
                 "COUNT(DISTINCT s.id) as session_count, " +
                 "COUNT(DISTINCT cr.class_id) as class_count " +
                 "FROM inspection_sessions s " +
-                "LEFT JOIN inspection_class_records cr ON cr.session_id = s.id AND cr.deleted = 0 " +
+                "LEFT JOIN class_inspection_records cr ON cr.session_id = s.id AND cr.deleted = 0 " +
                 "WHERE s.status = 'PUBLISHED' " +
                 "AND s.inspection_date BETWEEN ? AND ? " +
                 "AND s.deleted = 0 " +
@@ -95,16 +95,16 @@ public class InspectionAnalyticsReadModel {
      * Returns list of maps with departmentId, departmentName, avgScore, classCount.
      */
     public List<Map<String, Object>> getDepartmentComparison(LocalDate startDate, LocalDate endDate) {
-        String sql = "SELECT cr.department_id, cr.department_name, " +
+        String sql = "SELECT cr.org_unit_id, cr.org_unit_name, " +
                 "AVG(cr.final_score) as avg_score, " +
                 "COUNT(DISTINCT cr.class_id) as class_count, " +
                 "COUNT(cr.id) as record_count " +
-                "FROM inspection_class_records cr " +
+                "FROM class_inspection_records cr " +
                 "JOIN inspection_sessions s ON cr.session_id = s.id " +
                 "WHERE s.status = 'PUBLISHED' " +
                 "AND s.inspection_date BETWEEN ? AND ? " +
                 "AND cr.deleted = 0 AND s.deleted = 0 " +
-                "GROUP BY cr.department_id, cr.department_name " +
+                "GROUP BY cr.org_unit_id, cr.org_unit_name " +
                 "ORDER BY avg_score DESC";
         try {
             return jdbcTemplate.queryForList(sql, startDate, endDate);

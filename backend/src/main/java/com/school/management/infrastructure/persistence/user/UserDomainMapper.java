@@ -197,6 +197,12 @@ public interface UserDomainMapper extends BaseMapper<UserPO> {
     List<String> findPermissionCodesByUserId(@Param("userId") Long userId);
 
     /**
+     * 获取系统中所有权限代码（用于超级管理员）
+     */
+    @Select("SELECT DISTINCT permission_code FROM permissions WHERE permission_code IS NOT NULL")
+    List<String> findAllPermissionCodes();
+
+    /**
      * 根据用户ID查询角色名称列表
      */
     @Select("SELECT r.role_name FROM user_roles ur " +

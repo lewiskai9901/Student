@@ -32,9 +32,16 @@ public class CustomUserDetailsService implements UserDetailsService {
         }
 
         List<String> roles = userDomainMapper.findRoleCodesByUserId(user.getId());
-        List<String> permissions = userDomainMapper.findPermissionCodesByUserId(user.getId());
+        // SUPER_ADMIN角色自动获取系统所有权限
+        List<String> permissions;
+        if (roles.contains("SUPER_ADMIN")) {
+            permissions = userDomainMapper.findAllPermissionCodes();
+            log.debug("用户 {} 是超级管理员，加载全部 {} 个权限", username, permissions.size());
+        } else {
+            permissions = userDomainMapper.findPermissionCodesByUserId(user.getId());
+        }
 
-        log.debug("用户 {} 拥有角色: {}, 权限: {}", username, roles, permissions);
+        log.debug("用户 {} 拥有角色: {}, 权限数: {}", username, roles, permissions.size());
 
         return new CustomUserDetails(
                 user.getId(), user.getUsername(), user.getPassword(), user.getRealName(),
@@ -49,7 +56,13 @@ public class CustomUserDetailsService implements UserDetailsService {
         }
 
         List<String> roles = userDomainMapper.findRoleCodesByUserId(user.getId());
-        List<String> permissions = userDomainMapper.findPermissionCodesByUserId(user.getId());
+        // SUPER_ADMIN角色自动获取系统所有权限
+        List<String> permissions;
+        if (roles.contains("SUPER_ADMIN")) {
+            permissions = userDomainMapper.findAllPermissionCodes();
+        } else {
+            permissions = userDomainMapper.findPermissionCodesByUserId(user.getId());
+        }
 
         return new CustomUserDetails(
                 user.getId(), user.getUsername(), user.getPassword(), user.getRealName(),
