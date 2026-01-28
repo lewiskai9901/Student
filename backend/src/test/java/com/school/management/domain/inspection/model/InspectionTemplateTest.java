@@ -1,5 +1,6 @@
 package com.school.management.domain.inspection.model;
 
+import com.school.management.domain.inspection.event.InspectionTemplateCreatedEvent;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -8,10 +9,14 @@ import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
 
 /**
- * 检查模板聚合根单元测试
- * 测试检查模板的创建、发布、归档、分类管理等功能
+ * Comprehensive unit tests for the InspectionTemplate aggregate root.
+ *
+ * Covers: creation with valid/invalid data, category management,
+ * lifecycle transitions (DRAFT -> PUBLISHED -> ARCHIVED),
+ * default template assignment, total base score calculation,
+ * domain event registration, and builder construction.
  */
-@DisplayName("检查模板聚合根测试")
+@DisplayName("InspectionTemplate Aggregate Root")
 class InspectionTemplateTest {
 
     private static final Long CREATOR_ID = 1L;
@@ -27,8 +32,8 @@ class InspectionTemplateTest {
     private InspectionTemplate createValidTemplate() {
         return InspectionTemplate.create(
             "TPL001",
-            "日常检查模板",
-            "用于日常班级量化检查",
+            "Daily Inspection Template",
+            "Used for daily class quantification checks",
             TemplateScope.GLOBAL,
             null,
             CREATOR_ID
@@ -46,16 +51,17 @@ class InspectionTemplateTest {
     }
 
     @Nested
-    @DisplayName("创建模板测试")
+    @DisplayName("Creation")
     class CreateTemplateTest {
 
         @Test
-        @DisplayName("成功创建模板")
+        @DisplayName("should create template with valid data and DRAFT status")
         void shouldCreateTemplateSuccessfully() {
+            // then
             assertNotNull(template);
             assertEquals("TPL001", template.getTemplateCode());
-            assertEquals("日常检查模板", template.getTemplateName());
-            assertEquals("用于日常班级量化检查", template.getDescription());
+            assertEquals("Daily Inspection Template", template.getTemplateName());
+            assertEquals("Used for daily class quantification checks", template.getDescription());
             assertEquals(TemplateScope.GLOBAL, template.getScope());
             assertNull(template.getApplicableOrgUnitId());
             assertEquals(TemplateStatus.DRAFT, template.getStatus());
@@ -63,35 +69,63 @@ class InspectionTemplateTest {
             assertEquals(1, template.getCurrentVersion());
             assertEquals(CREATOR_ID, template.getCreatedBy());
             assertNotNull(template.getCreatedAt());
-            assertFalse(template.getDomainEvents().isEmpty());
+            assertTrue(template.getCategories().isEmpty());
         }
 
         @Test
-        @DisplayName("创建部门范围的模板")
+        @DisplayName("should register InspectionTemplateCreatedEvent on creation")
+        void shouldRegisterCreatedEvent() {
+            // then
+            assertFalse(template.getDomainEvents().isEmpty());
+            assertEquals(1, template.getDomainEvents().size());
+            assertInstanceOf(InspectionTemplateCreatedEvent.class, template.getDomainEvents().get(0));
+        }
+
+        @Test
+        @DisplayName("should create department-scoped template with org unit ID")
         void shouldCreateDepartmentScopeTemplate() {
+            // when
             InspectionTemplate deptTemplate = InspectionTemplate.create(
                 "TPL002",
-                "系部检查模板",
-                "信息技术系专用模板",
+                "Department Template",
+                "IT department specific template",
                 TemplateScope.DEPARTMENT,
                 ORG_UNIT_ID,
                 CREATOR_ID
             );
 
+            // then
             assertEquals(TemplateScope.DEPARTMENT, deptTemplate.getScope());
             assertEquals(ORG_UNIT_ID, deptTemplate.getApplicableOrgUnitId());
         }
 
         @Test
-        @DisplayName("创建模板时缺少编码应抛出异常")
+        @DisplayName("should create grade-scoped template")
+        void shouldCreateGradeScopeTemplate() {
+            // when
+            InspectionTemplate gradeTemplate = InspectionTemplate.create(
+                "TPL003",
+                "Grade Template",
+                null,
+                TemplateScope.GRADE,
+                ORG_UNIT_ID,
+                CREATOR_ID
+            );
+
+            // then
+            assertEquals(TemplateScope.GRADE, gradeTemplate.getScope());
+        }
+
+        @Test
+        @DisplayName("should throw NullPointerException when template code is null")
         void shouldFailWhenTemplateCodeIsNull() {
             assertThrows(NullPointerException.class, () ->
-                InspectionTemplate.create(null, "日常检查模板", null, TemplateScope.GLOBAL, null, CREATOR_ID)
+                InspectionTemplate.create(null, "Template", null, TemplateScope.GLOBAL, null, CREATOR_ID)
             );
         }
 
         @Test
-        @DisplayName("创建模板时缺少名称应抛出异常")
+        @DisplayName("should throw NullPointerException when template name is null")
         void shouldFailWhenTemplateNameIsNull() {
             assertThrows(NullPointerException.class, () ->
                 InspectionTemplate.create("TPL001", null, null, TemplateScope.GLOBAL, null, CREATOR_ID)
@@ -99,160 +133,364 @@ class InspectionTemplateTest {
         }
 
         @Test
-        @DisplayName("创建模板时编码为空字符串应抛出异常")
+        @DisplayName("should throw IllegalArgumentException when template code is blank")
         void shouldFailWhenTemplateCodeIsBlank() {
             assertThrows(IllegalArgumentException.class, () ->
-                InspectionTemplate.create("  ", "日常检查模板", null, TemplateScope.GLOBAL, null, CREATOR_ID)
+                InspectionTemplate.create("  ", "Template", null, TemplateScope.GLOBAL, null, CREATOR_ID)
             );
         }
 
         @Test
-        @DisplayName("创建模板时编码过长应抛出异常")
+        @DisplayName("should throw IllegalArgumentException when template code exceeds 50 characters")
         void shouldFailWhenTemplateCodeTooLong() {
             String longCode = "A".repeat(51);
             assertThrows(IllegalArgumentException.class, () ->
-                InspectionTemplate.create(longCode, "日常检查模板", null, TemplateScope.GLOBAL, null, CREATOR_ID)
+                InspectionTemplate.create(longCode, "Template", null, TemplateScope.GLOBAL, null, CREATOR_ID)
             );
         }
 
         @Test
-        @DisplayName("创建模板时名称过长应抛出异常")
+        @DisplayName("should accept template code of exactly 50 characters")
+        void shouldAcceptTemplateCodeAtMaxLength() {
+            String maxCode = "A".repeat(50);
+            InspectionTemplate t = InspectionTemplate.create(
+                maxCode, "Template", null, TemplateScope.GLOBAL, null, CREATOR_ID
+            );
+            assertEquals(maxCode, t.getTemplateCode());
+        }
+
+        @Test
+        @DisplayName("should throw IllegalArgumentException when template name exceeds 100 characters")
         void shouldFailWhenTemplateNameTooLong() {
             String longName = "A".repeat(101);
             assertThrows(IllegalArgumentException.class, () ->
                 InspectionTemplate.create("TPL001", longName, null, TemplateScope.GLOBAL, null, CREATOR_ID)
             );
         }
-    }
-
-    @Nested
-    @DisplayName("分类管理测试")
-    class CategoryManagementTest {
 
         @Test
-        @DisplayName("添加分类到草稿模板")
-        void shouldAddCategoryToDraftTemplate() {
-            InspectionCategory category = createTestCategory(1L, "纪律", 20);
-
-            template.addCategory(category);
-
-            assertEquals(1, template.getCategories().size());
-            assertEquals("纪律", template.getCategories().get(0).getCategoryName());
+        @DisplayName("should accept template name of exactly 100 characters")
+        void shouldAcceptTemplateNameAtMaxLength() {
+            String maxName = "A".repeat(100);
+            InspectionTemplate t = InspectionTemplate.create(
+                "TPL001", maxName, null, TemplateScope.GLOBAL, null, CREATOR_ID
+            );
+            assertEquals(maxName, t.getTemplateName());
         }
 
         @Test
-        @DisplayName("不能向已发布模板添加分类")
-        void shouldFailToAddCategoryToPublishedTemplate() {
-            InspectionCategory category = createTestCategory(1L, "纪律", 20);
+        @DisplayName("should allow null description")
+        void shouldAllowNullDescription() {
+            InspectionTemplate t = InspectionTemplate.create(
+                "TPL001", "Template", null, TemplateScope.GLOBAL, null, CREATOR_ID
+            );
+            assertNull(t.getDescription());
+        }
+    }
+
+    @Nested
+    @DisplayName("Category Management")
+    class CategoryManagementTest {
+
+        @Test
+        @DisplayName("should add category to DRAFT template")
+        void shouldAddCategoryToDraftTemplate() {
+            // given
+            InspectionCategory category = createTestCategory(1L, "Discipline", 20);
+
+            // when
             template.addCategory(category);
+
+            // then
+            assertEquals(1, template.getCategories().size());
+            assertEquals("Discipline", template.getCategories().get(0).getCategoryName());
+        }
+
+        @Test
+        @DisplayName("should add multiple categories to DRAFT template")
+        void shouldAddMultipleCategoriesToDraftTemplate() {
+            // when
+            template.addCategory(createTestCategory(1L, "Discipline", 20));
+            template.addCategory(createTestCategory(2L, "Hygiene", 30));
+            template.addCategory(createTestCategory(3L, "Study", 50));
+
+            // then
+            assertEquals(3, template.getCategories().size());
+        }
+
+        @Test
+        @DisplayName("should throw IllegalStateException when adding category to PUBLISHED template")
+        void shouldFailToAddCategoryToPublishedTemplate() {
+            // given
+            template.addCategory(createTestCategory(1L, "Discipline", 20));
             template.publish();
 
-            InspectionCategory newCategory = createTestCategory(2L, "卫生", 30);
-            assertThrows(IllegalStateException.class, () ->
+            // when/then
+            InspectionCategory newCategory = createTestCategory(2L, "Hygiene", 30);
+            IllegalStateException ex = assertThrows(IllegalStateException.class, () ->
                 template.addCategory(newCategory)
+            );
+            assertTrue(ex.getMessage().contains("non-draft"));
+        }
+
+        @Test
+        @DisplayName("should throw IllegalStateException when adding category to ARCHIVED template")
+        void shouldFailToAddCategoryToArchivedTemplate() {
+            // given
+            template.archive();
+
+            // when/then
+            InspectionCategory category = createTestCategory(1L, "Discipline", 20);
+            assertThrows(IllegalStateException.class, () ->
+                template.addCategory(category)
             );
         }
 
         @Test
-        @DisplayName("从草稿模板移除分类")
+        @DisplayName("should remove category from DRAFT template")
         void shouldRemoveCategoryFromDraftTemplate() {
-            InspectionCategory category = createTestCategory(1L, "纪律", 20);
-            template.addCategory(category);
+            // given
+            template.addCategory(createTestCategory(1L, "Discipline", 20));
 
+            // when
             template.removeCategory(1L);
 
+            // then
             assertTrue(template.getCategories().isEmpty());
         }
 
         @Test
-        @DisplayName("不能从已发布模板移除分类")
+        @DisplayName("should only remove matching category ID")
+        void shouldOnlyRemoveMatchingCategoryId() {
+            // given
+            template.addCategory(createTestCategory(1L, "Discipline", 20));
+            template.addCategory(createTestCategory(2L, "Hygiene", 30));
+
+            // when
+            template.removeCategory(1L);
+
+            // then
+            assertEquals(1, template.getCategories().size());
+            assertEquals("Hygiene", template.getCategories().get(0).getCategoryName());
+        }
+
+        @Test
+        @DisplayName("should throw IllegalStateException when removing category from PUBLISHED template")
         void shouldFailToRemoveCategoryFromPublishedTemplate() {
-            InspectionCategory category = createTestCategory(1L, "纪律", 20);
-            template.addCategory(category);
+            // given
+            template.addCategory(createTestCategory(1L, "Discipline", 20));
             template.publish();
 
+            // when/then
             assertThrows(IllegalStateException.class, () ->
                 template.removeCategory(1L)
             );
         }
 
         @Test
-        @DisplayName("计算模板总基础分")
-        void shouldCalculateTotalBaseScore() {
-            template.addCategory(createTestCategory(1L, "纪律", 20));
-            template.addCategory(createTestCategory(2L, "卫生", 30));
-            template.addCategory(createTestCategory(3L, "学习", 50));
+        @DisplayName("should throw IllegalStateException when removing category from ARCHIVED template")
+        void shouldFailToRemoveCategoryFromArchivedTemplate() {
+            // given
+            template.addCategory(createTestCategory(1L, "Discipline", 20));
+            template.archive();
 
-            assertEquals(100, template.calculateTotalBaseScore());
-        }
-    }
-
-    @Nested
-    @DisplayName("发布模板测试")
-    class PublishTemplateTest {
-
-        @Test
-        @DisplayName("成功发布有分类的模板")
-        void shouldPublishTemplateWithCategories() {
-            template.addCategory(createTestCategory(1L, "纪律", 20));
-
-            template.publish();
-
-            assertEquals(TemplateStatus.PUBLISHED, template.getStatus());
-            assertEquals(2, template.getCurrentVersion());
-        }
-
-        @Test
-        @DisplayName("不能发布没有分类的模板")
-        void shouldFailToPublishTemplateWithoutCategories() {
+            // when/then
             assertThrows(IllegalStateException.class, () ->
-                template.publish()
+                template.removeCategory(1L)
+            );
+        }
+
+        @Test
+        @DisplayName("should return unmodifiable categories list")
+        void shouldReturnUnmodifiableCategoriesList() {
+            // given
+            template.addCategory(createTestCategory(1L, "Discipline", 20));
+
+            // when/then
+            assertThrows(UnsupportedOperationException.class, () ->
+                template.getCategories().add(createTestCategory(2L, "Extra", 10))
             );
         }
     }
 
     @Nested
-    @DisplayName("归档模板测试")
-    class ArchiveTemplateTest {
+    @DisplayName("calculateTotalBaseScore")
+    class CalculateTotalBaseScoreTest {
 
         @Test
-        @DisplayName("归档模板")
-        void shouldArchiveTemplate() {
-            template.addCategory(createTestCategory(1L, "纪律", 20));
-            template.publish();
+        @DisplayName("should return sum of all category base scores")
+        void shouldCalculateTotalBaseScore() {
+            // given
+            template.addCategory(createTestCategory(1L, "Discipline", 20));
+            template.addCategory(createTestCategory(2L, "Hygiene", 30));
+            template.addCategory(createTestCategory(3L, "Study", 50));
 
-            template.archive();
+            // when
+            int total = template.calculateTotalBaseScore();
 
-            assertEquals(TemplateStatus.ARCHIVED, template.getStatus());
+            // then
+            assertEquals(100, total);
         }
 
         @Test
-        @DisplayName("可以归档草稿模板")
-        void shouldArchiveDraftTemplate() {
-            template.archive();
+        @DisplayName("should return zero when no categories exist")
+        void shouldReturnZeroWhenNoCategories() {
+            // when
+            int total = template.calculateTotalBaseScore();
 
-            assertEquals(TemplateStatus.ARCHIVED, template.getStatus());
+            // then
+            assertEquals(0, total);
+        }
+
+        @Test
+        @DisplayName("should return single category score when only one category exists")
+        void shouldReturnSingleCategoryScore() {
+            // given
+            template.addCategory(createTestCategory(1L, "Discipline", 45));
+
+            // when
+            int total = template.calculateTotalBaseScore();
+
+            // then
+            assertEquals(45, total);
         }
     }
 
     @Nested
-    @DisplayName("设置默认模板测试")
+    @DisplayName("Publishing")
+    class PublishTemplateTest {
+
+        @Test
+        @DisplayName("should transition from DRAFT to PUBLISHED and increment version")
+        void shouldPublishTemplateWithCategories() {
+            // given
+            template.addCategory(createTestCategory(1L, "Discipline", 20));
+
+            // when
+            template.publish();
+
+            // then
+            assertEquals(TemplateStatus.PUBLISHED, template.getStatus());
+            assertEquals(2, template.getCurrentVersion());
+        }
+
+        @Test
+        @DisplayName("should throw IllegalStateException when publishing without categories")
+        void shouldFailToPublishTemplateWithoutCategories() {
+            // when/then
+            IllegalStateException ex = assertThrows(IllegalStateException.class, () ->
+                template.publish()
+            );
+            assertTrue(ex.getMessage().contains("without categories"));
+        }
+
+        @Test
+        @DisplayName("should increment version on each publish")
+        void shouldIncrementVersionOnPublish() {
+            // given
+            template.addCategory(createTestCategory(1L, "Discipline", 20));
+            assertEquals(1, template.getCurrentVersion());
+
+            // when
+            template.publish();
+
+            // then
+            assertEquals(2, template.getCurrentVersion());
+        }
+
+        @Test
+        @DisplayName("should update the updatedAt timestamp on publish")
+        void shouldUpdateTimestampOnPublish() {
+            // given
+            template.addCategory(createTestCategory(1L, "Discipline", 20));
+            var beforePublish = template.getUpdatedAt();
+
+            // when
+            template.publish();
+
+            // then
+            assertNotNull(template.getUpdatedAt());
+            assertTrue(template.getUpdatedAt().compareTo(beforePublish) >= 0);
+        }
+    }
+
+    @Nested
+    @DisplayName("Archiving")
+    class ArchiveTemplateTest {
+
+        @Test
+        @DisplayName("should archive a PUBLISHED template")
+        void shouldArchivePublishedTemplate() {
+            // given
+            template.addCategory(createTestCategory(1L, "Discipline", 20));
+            template.publish();
+
+            // when
+            template.archive();
+
+            // then
+            assertEquals(TemplateStatus.ARCHIVED, template.getStatus());
+        }
+
+        @Test
+        @DisplayName("should archive a DRAFT template")
+        void shouldArchiveDraftTemplate() {
+            // when
+            template.archive();
+
+            // then
+            assertEquals(TemplateStatus.ARCHIVED, template.getStatus());
+        }
+
+        @Test
+        @DisplayName("should update updatedAt timestamp on archive")
+        void shouldUpdateTimestampOnArchive() {
+            // given
+            var before = template.getUpdatedAt();
+
+            // when
+            template.archive();
+
+            // then
+            assertTrue(template.getUpdatedAt().compareTo(before) >= 0);
+        }
+    }
+
+    @Nested
+    @DisplayName("Set As Default")
     class SetDefaultTemplateTest {
 
         @Test
-        @DisplayName("设置已发布模板为默认")
+        @DisplayName("should set PUBLISHED template as default")
         void shouldSetPublishedTemplateAsDefault() {
-            template.addCategory(createTestCategory(1L, "纪律", 20));
+            // given
+            template.addCategory(createTestCategory(1L, "Discipline", 20));
             template.publish();
 
+            // when
             template.setAsDefault();
 
+            // then
             assertTrue(template.isDefault());
         }
 
         @Test
-        @DisplayName("不能将未发布模板设为默认")
+        @DisplayName("should throw IllegalStateException when setting DRAFT template as default")
         void shouldFailToSetDraftTemplateAsDefault() {
+            // when/then
+            IllegalStateException ex = assertThrows(IllegalStateException.class, () ->
+                template.setAsDefault()
+            );
+            assertTrue(ex.getMessage().contains("published"));
+        }
+
+        @Test
+        @DisplayName("should throw IllegalStateException when setting ARCHIVED template as default")
+        void shouldFailToSetArchivedTemplateAsDefault() {
+            // given
+            template.archive();
+
+            // when/then
             assertThrows(IllegalStateException.class, () ->
                 template.setAsDefault()
             );
@@ -260,48 +498,65 @@ class InspectionTemplateTest {
     }
 
     @Nested
-    @DisplayName("更新模板信息测试")
+    @DisplayName("Update Info")
     class UpdateTemplateInfoTest {
 
         @Test
-        @DisplayName("更新模板信息")
+        @DisplayName("should update name and description")
         void shouldUpdateTemplateInfo() {
-            template.updateInfo("新的检查模板名称", "新的描述");
+            // when
+            template.updateInfo("New Template Name", "New description");
 
-            assertEquals("新的检查模板名称", template.getTemplateName());
-            assertEquals("新的描述", template.getDescription());
+            // then
+            assertEquals("New Template Name", template.getTemplateName());
+            assertEquals("New description", template.getDescription());
         }
 
         @Test
-        @DisplayName("更新时空名称保持原值")
+        @DisplayName("should keep original name when updated with blank string")
         void shouldKeepOriginalNameWhenUpdateWithBlank() {
-            template.updateInfo("", "新的描述");
+            // when
+            template.updateInfo("", "New description");
 
-            assertEquals("日常检查模板", template.getTemplateName());
-            assertEquals("新的描述", template.getDescription());
+            // then
+            assertEquals("Daily Inspection Template", template.getTemplateName());
+            assertEquals("New description", template.getDescription());
         }
 
         @Test
-        @DisplayName("更新时null名称保持原值")
+        @DisplayName("should keep original name when updated with null")
         void shouldKeepOriginalNameWhenUpdateWithNull() {
-            template.updateInfo(null, "新的描述");
+            // when
+            template.updateInfo(null, "New description");
 
-            assertEquals("日常检查模板", template.getTemplateName());
+            // then
+            assertEquals("Daily Inspection Template", template.getTemplateName());
+        }
+
+        @Test
+        @DisplayName("should allow setting description to null")
+        void shouldAllowNullDescription() {
+            // when
+            template.updateInfo("Name", null);
+
+            // then
+            assertNull(template.getDescription());
         }
     }
 
     @Nested
-    @DisplayName("Builder测试")
+    @DisplayName("Builder")
     class BuilderTest {
 
         @Test
-        @DisplayName("使用Builder构建完整对象")
+        @DisplayName("should build template with all fields via Builder")
         void shouldBuildTemplateWithAllFields() {
+            // when
             InspectionTemplate built = InspectionTemplate.builder()
                 .id(1L)
                 .templateCode("TPL001")
-                .templateName("日常检查模板")
-                .description("描述")
+                .templateName("Daily Inspection")
+                .description("Description")
                 .scope(TemplateScope.GLOBAL)
                 .applicableOrgUnitId(null)
                 .isDefault(false)
@@ -310,9 +565,69 @@ class InspectionTemplateTest {
                 .createdBy(CREATOR_ID)
                 .build();
 
+            // then
             assertEquals(1L, built.getId());
             assertEquals("TPL001", built.getTemplateCode());
+            assertEquals("Daily Inspection", built.getTemplateName());
             assertEquals(TemplateStatus.DRAFT, built.getStatus());
+            assertFalse(built.isDefault());
+            assertEquals(1, built.getCurrentVersion());
+        }
+
+        @Test
+        @DisplayName("should use defaults when optional builder fields are omitted")
+        void shouldUseDefaultsForOptionalFields() {
+            // when
+            InspectionTemplate built = InspectionTemplate.builder()
+                .templateCode("TPL001")
+                .templateName("Template")
+                .build();
+
+            // then
+            assertEquals(TemplateScope.GLOBAL, built.getScope());
+            assertFalse(built.isDefault());
+            assertEquals(1, built.getCurrentVersion());
+            assertEquals(TemplateStatus.DRAFT, built.getStatus());
+            assertTrue(built.getCategories().isEmpty());
+        }
+    }
+
+    @Nested
+    @DisplayName("Domain Events")
+    class DomainEventTest {
+
+        @Test
+        @DisplayName("should register event on creation via factory method")
+        void shouldRegisterEventOnCreate() {
+            // then (template created in setUp)
+            assertEquals(1, template.getDomainEvents().size());
+            assertInstanceOf(InspectionTemplateCreatedEvent.class, template.getDomainEvents().get(0));
+        }
+
+        @Test
+        @DisplayName("should clear domain events")
+        void shouldClearDomainEvents() {
+            // given
+            assertFalse(template.getDomainEvents().isEmpty());
+
+            // when
+            template.clearDomainEvents();
+
+            // then
+            assertTrue(template.getDomainEvents().isEmpty());
+        }
+
+        @Test
+        @DisplayName("builder-constructed template should not have domain events")
+        void builderShouldNotRegisterEvents() {
+            // when
+            InspectionTemplate built = InspectionTemplate.builder()
+                .templateCode("TPL001")
+                .templateName("Template")
+                .build();
+
+            // then
+            assertTrue(built.getDomainEvents().isEmpty());
         }
     }
 }

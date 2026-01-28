@@ -125,7 +125,7 @@ class OrgUnitTest {
         void shouldUpdateOrgUnitSuccessfully() {
             List<Long> deputyLeaderIds = Arrays.asList(200L, 300L);
 
-            orgUnit.update("信息工程系", LEADER_ID, deputyLeaderIds, 10, 2L);
+            orgUnit.update("信息工程系", null, LEADER_ID, deputyLeaderIds, 10, 2L);
 
             assertEquals("信息工程系", orgUnit.getUnitName());
             assertEquals(LEADER_ID, orgUnit.getLeaderId());
@@ -138,7 +138,7 @@ class OrgUnitTest {
         @Test
         @DisplayName("更新时空名称保持原值")
         void shouldKeepOriginalNameWhenUpdateWithBlank() {
-            orgUnit.update("", LEADER_ID, null, null, 2L);
+            orgUnit.update("", null, LEADER_ID, null, null, 2L);
 
             assertEquals("信息技术系", orgUnit.getUnitName());
         }
@@ -146,7 +146,7 @@ class OrgUnitTest {
         @Test
         @DisplayName("更新时null名称保持原值")
         void shouldKeepOriginalNameWhenUpdateWithNull() {
-            orgUnit.update(null, LEADER_ID, null, null, 2L);
+            orgUnit.update(null, null, LEADER_ID, null, null, 2L);
 
             assertEquals("信息技术系", orgUnit.getUnitName());
         }
