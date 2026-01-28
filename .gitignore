@@ -51,7 +51,7 @@ student_management_backup_*.tar.gz
 
 # 其他
 .history/
-archive/
+/archive/
 backups/
 
 # 上传文件

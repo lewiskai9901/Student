@@ -1,6 +1,6 @@
 # 学生管理系统
 
-基于 Spring Boot 3.2 + Vue.js 3.4 + TypeScript 的现代化学生管理系统，支持学生信息管理、量化检查2.0、班级宿舍管理等功能，并包含微信小程序端。
+基于 Spring Boot 3.2 + Vue.js 3.4 + TypeScript 的现代化学生管理系统，采用 DDD 六边形架构，支持学生信息管理、V4检查系统（自动排程/分析/导出）、资产管理、宿舍管理等功能。
 
 ## 📋 目录
 
@@ -15,10 +15,11 @@
 
 ### 后端技术
 - **框架**: Spring Boot 3.2+
-- **架构**: DDD (Domain-Driven Design) 六边形架构 (V2 API)
+- **架构**: DDD (Domain-Driven Design) 六边形架构
 - **数据库**: MySQL 8.0+
 - **ORM**: MyBatis Plus 3.5+
-- **安全认证**: Spring Security + JWT + Casbin
+- **安全认证**: Spring Security + JWT
+- **缓存**: Redis
 - **文档**: Swagger 3.0 (OpenAPI)
 - **构建工具**: Maven
 - **Java版本**: JDK 17+
@@ -40,102 +41,88 @@
 
 ```
 学生管理系统/
-├── backend/                    # 后端项目 (Spring Boot)
+├── backend/                    # 后端项目 (Spring Boot DDD架构)
 ├── frontend/                   # 前端项目 (Vue 3 + TypeScript)
-├── miniprogram/                # 微信小程序
-├── docs/                       # 📚 项目文档（标准化组织）
-│   ├── design/                 # 设计文档
-│   │   ├── architecture.md             # 技术架构设计
-│   │   ├── database-design.md          # 数据库设计
-│   │   ├── api-specification.md        # API接口规范
-│   │   ├── frontend-architecture.md    # 前端架构设计
-│   │   ├── miniprogram-design.md       # 小程序设计
-│   │   └── security-design.md          # 安全设计方案
-│   ├── development/            # 开发文档
-│   │   ├── coding-standards.md         # 开发规范
-│   │   └── testing-guide.md            # 测试指南
-│   ├── deployment/             # 部署文档
-│   │   ├── deployment-basic.md         # 基础部署指南
-│   │   ├── deployment-checklist.md     # 部署检查清单
-│   │   └── database-backup.md          # 数据库备份方案
-│   ├── api/                    # API文档
-│   │   ├── swagger-guide.md            # Swagger使用指南
-│   │   └── api-examples.md             # API调用示例
-│   ├── optimization/           # 优化文档
-│   │   ├── session-2-summary.md        # 优化会话2总结
-│   │   ├── future-plans.md             # 未来优化计划
-│   │   └── overall-summary.md          # 优化总览
-│   └── features/               # 功能文档
-│       ├── quantification-v2/          # 量化系统2.0
-│       │   ├── README.md
-│       │   ├── quickstart.md
-│       │   ├── development-report.md
-│       │   └── delivery-summary.md
-│       └── miniprogram/                # 小程序功能
 ├── database/                   # 数据库脚本
-│   ├── schema/                 # 表结构
-│   ├── migrations/             # 迁移脚本
+│   ├── schema/                 # 表结构 (complete_schema_v2.sql)
 │   └── init/                   # 初始化数据
+├── docs/                       # 项目文档
+│   ├── design/                 # 设计文档
+│   ├── features/               # 功能文档
+│   ├── plans/                  # 历史规划文档
+│   ├── architecture/           # 架构文档
+│   └── standards/              # 编码标准
 ├── scripts/                    # 工具脚本
-│   ├── backup-database.bat     # Windows数据库备份
-│   ├── backup-database.sh      # Linux/Mac数据库备份
-│   ├── start-backend.bat       # 启动后端（Windows）
-│   └── start-frontend.bat      # 启动前端（Windows）
-├── archive/                    # 历史文档归档
-│   ├── 2024-Q4/                # 2024年第四季度归档
-│   │   ├── 修复记录/
-│   │   ├── 重构记录/
-│   │   ├── 测试报告/
-│   │   └── 开发记录/
-├── .env.example                # 环境变量示例
-├── .env.production             # 生产环境配置
-├── PROJECT_NAVIGATION_STANDARD.md  # 项目导航规范
 └── README.md                   # 本文档
 ```
 
-## 🏗️ V2 API 架构 (DDD)
+## 🏗️ 系统架构 (DDD)
 
-项目采用 **V1 (传统分层) + V2 (DDD六边形架构)** 并行架构，新功能优先使用V2 API。
+项目采用 **DDD 六边形架构**，所有代码遵循领域驱动设计原则。
 
-### V2 后端架构
+### 后端架构
 ```
 com.school.management/
 ├── domain/                    # 领域层 - 核心业务逻辑
-│   ├── organization/          # 组织管理领域 (OrgUnit, SchoolClass)
-│   ├── inspection/            # 量化检查领域 (Template, Record, Appeal)
-│   ├── access/                # 权限管理领域 (Permission, Role)
+│   ├── organization/          # 组织管理领域 (OrgUnit, SchoolClass, Student)
+│   ├── inspection/            # 量化检查领域 (Template, Session, Record, Appeal)
+│   ├── access/                # 权限管理领域 (Permission, Role, DataPermission)
+│   ├── asset/                 # 资产管理领域
 │   └── shared/                # 共享内核 (Entity, AggregateRoot, ValueObject)
-├── application/              # 应用层 - 用例编排 (ApplicationService)
-├── infrastructure/           # 基础设施层 - 技术实现 (Repository实现, Mapper)
-└── interfaces/               # 接口层 - REST控制器 (/api/v2/*)
+├── application/              # 应用层 - 用例编排
+│   ├── organization/         # 组织管理应用服务
+│   ├── inspection/           # 检查应用服务 (saga/, export/)
+│   ├── access/               # 权限应用服务
+│   └── asset/                # 资产应用服务
+├── infrastructure/           # 基础设施层 - 技术实现
+│   ├── persistence/          # 持久化 (Repository实现, Mapper, PO)
+│   ├── cache/                # Redis缓存
+│   ├── event/                # 领域事件发布
+│   └── audit/                # 审计日志
+└── interfaces/               # 接口层 - REST控制器
+    └── rest/                 # REST API端点
 ```
 
-### V2 API端点
-| 模块 | 端点 | 说明 |
+### 核心API端点
+| 领域 | 端点 | 说明 |
 |------|------|------|
-| 组织管理 | `/api/v2/org-units` | 组织单元管理（部门、系部等） |
-| 组织管理 | `/api/v2/organization/classes` | 班级管理 |
-| 权限管理 | `/api/v2/permissions` | 权限管理 |
-| 权限管理 | `/api/v2/roles` | 角色管理 |
-| 量化检查 | `/api/v2/inspection-templates` | 检查模板管理 |
+| 组织管理 | `/api/org-units` | 组织单元管理（部门、系部等） |
+| 组织管理 | `/api/organization/classes` | 班级管理 |
+| 组织管理 | `/api/students` | 学生管理 |
+| 权限管理 | `/api/permissions` | 权限管理 |
+| 权限管理 | `/api/roles` | 角色管理 |
+| 量化检查 | `/api/inspection-templates` | 检查模板管理 |
+| 量化检查 | `/api/inspection-sessions` | 检查会话管理 |
+| 量化检查 | `/api/export-center` | 数据导出中心 |
+| 资产管理 | `/api/assets` | 资产管理 |
 
-### V2 前端结构
+### 前端结构
 ```
 frontend/src/
-├── api/v2/              # V2 API模块 (organization.ts, inspection.ts, access.ts)
-├── types/v2/            # V2 TypeScript类型定义
-├── stores/v2/           # V2 Pinia状态管理
-├── views/v2/            # V2 视图组件
-└── router/v2.ts         # V2 路由配置
+├── api/                 # API模块 (organization.ts, inspection.ts, access.ts)
+├── types/               # TypeScript类型定义
+├── stores/              # Pinia状态管理
+├── views/               # 视图组件
+│   ├── organization/    # 组织管理视图
+│   ├── inspection/      # 检查管理视图
+│   ├── access/          # 权限管理视图
+│   └── asset/           # 资产管理视图
+├── components/          # 可复用UI组件
+├── layouts/             # 布局组件
+├── router/              # Vue Router (权限守卫)
+└── composables/         # 组合式函数
 ```
 
-### V2 前端路由
-- `/v2/organization/units` - 组织架构管理
-- `/v2/organization/classes` - 班级管理
-- `/v2/inspection/templates` - 检查模板
-- `/v2/inspection/records` - 检查记录
-- `/v2/access/roles` - 角色管理
-- `/v2/access/permissions` - 权限管理
+### 前端路由
+- `/organization/units` - 组织架构管理
+- `/organization/classes` - 班级管理
+- `/organization/students` - 学生管理
+- `/inspection/config` - 量化配置
+- `/inspection/plans` - 检查计划
+- `/inspection/appeals` - 申诉管理
+- `/access/users` - 用户管理
+- `/access/roles` - 角色管理
+- `/access/permissions` - 权限管理
 
 ## ✨ 核心功能
 
@@ -160,38 +147,63 @@ frontend/src/
 - ✅ 宿舍管理（床位分配、入住管理）
 - ✅ 教室管理（教室分配、容量管理）
 
-### 4. 量化检查系统 2.0 🔥
+### 4. V4 量化检查系统
 - ✅ **检查模板配置**
-  - 检查类型管理（宿舍、教室、纪律、卫生等）
+  - 检查分类管理（宿舍、教室、纪律、卫生等）
   - 扣分项配置（固定扣分、人次扣分、区间扣分）
-  - 关联资源配置（宿舍、教室）
+  - 加分项配置（固定加分、递进加分）
 
-- ✅ **检查记录管理 V3**
-  - 打分界面优化（卡片式UI、实时保存）
-  - 照片上传功能
-  - 备注功能
-  - 学生关联功能
-  - 检查记录列表（分页、筛选、导出）
-  - 检查详情查看
+- ✅ **会话式检查管理**
+  - 检查会话创建与发布
+  - 班级检查记录（扣分明细、加分记录）
+  - 检查清单响应
 
-- ✅ **统计分析**
-  - 班级排名统计
-  - 检查类型统计
-  - 时间维度统计
-  - 得分趋势分析
+- ✅ **Saga编排**
+  - 检查完成自动触发评级计算
+  - 评级完成自动触发通知
+
+- ✅ **自动排程**
+  - 排程策略配置（轮换算法、检查员池）
+  - 自动执行与会话创建
+
+- ✅ **数据分析**
+  - 班级排名与部门排名
+  - 分析快照（按日/周/月）
+  - 趋势分析
+
+- ✅ **数据导出中心**
+  - 扣分明细导出
+  - 评级报表导出
+  - 统计报表导出
 
 - ✅ **申诉管理**
-  - 申诉提交
-  - 申诉审核
-  - 申诉记录查询
+  - 两级审核流程
+  - 申诉记录追踪
 
-### 5. 系统功能
-- ✅ 数据字典管理
-- ✅ 操作日志记录
-- ✅ 异常处理机制
+- ✅ **纠正行动**
+  - 自动规则触发
+  - 行动跟踪与验证
+
+- ✅ **学生行为**
+  - 行为记录追踪
+  - 行为预警系统
+
+### 5. 资产管理
+- ✅ 资产台账（编码、分类、位置）
+- ✅ 资产借用与归还
+- ✅ 资产盘点（盘盈/盘亏）
+- ✅ 资产折旧管理
+- ✅ 资产维修记录
+- ✅ 资产审批流程
+- ✅ 资产预警
+
+### 6. 系统功能
+- ✅ 操作日志与审计日志
+- ✅ 异常处理机制（领域异常分类）
 - ✅ 参数验证框架
 - ✅ 统一响应格式
-- ✅ 文件上传管理
+- ✅ Redis缓存（模板/排名/分析）
+- ✅ 系统消息通知
 
 ## 🚀 快速开始
 
@@ -209,7 +221,7 @@ mysql -u root -p
 CREATE DATABASE student_management CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
 # 执行初始化脚本
-mysql -u root -p student_management < database/schema/complete_schema.sql
+mysql -u root -p student_management < database/schema/complete_schema_v2.sql
 mysql -u root -p student_management < database/init/init_data.sql
 ```
 
@@ -260,106 +272,70 @@ start-frontend.bat   # Windows
 
 ## 📚 开发文档
 
-> 📌 **文档已重新组织**: 所有文档已按照 [项目导航规范](./PROJECT_NAVIGATION_STANDARD.md) 进行标准化整理
+### 设计文档 (`docs/design/`)
+- [V4检查系统综合设计](./docs/design/quantification-v4-comprehensive-redesign.md) - V4检查架构
+- [数据库设计](./docs/design/database-v2-ddd.md) - DDD数据库设计
+- [统计分析设计](./docs/design/statistics-analysis-redesign.md) - 统计分析架构
 
-### 🎨 设计文档 (`docs/design/`)
-- [技术架构设计](./docs/design/architecture.md) - 系统技术架构和技术选型说明
-- [数据库设计](./docs/design/database-design.md) - 数据库表结构、关系和索引设计
-- [API接口规范](./docs/design/api-specification.md) - RESTful API接口标准和规范
-- [前端架构设计](./docs/design/frontend-architecture.md) - 前端架构、组件和状态管理设计
-- [小程序设计](./docs/design/miniprogram-design.md) - 微信小程序架构和功能设计
-- [安全设计方案](./docs/design/security-design.md) - 安全机制、权限控制和数据保护
+### 架构文档 (`docs/architecture/`)
+- [数据权限V4](./docs/architecture/data-permission-v4.md) - 数据权限架构
+- [DDD前端架构](./docs/architecture/DDD_FRONTEND_ARCHITECTURE.md) - 前端DDD对齐
 
-### 💻 开发文档 (`docs/development/`)
-- [开发规范](./docs/development/coding-standards.md) - 代码规范、Git规范和开发流程
+### 标准文档 (`docs/standards/`)
+- [API命名规范](./docs/standards/api-naming.md) - API接口命名标准
+- [编码风格](./docs/standards/coding-style.md) - 代码规范
+- [DDD分层标准](./docs/standards/ddd-layers.md) - 领域驱动分层规范
 
-### 🚀 部署文档 (`docs/deployment/`)
-- [基础部署指南](./docs/deployment/deployment-basic.md) - 开发和生产环境部署说明
-- [部署检查清单](./docs/deployment/deployment-checklist.md) - 部署前后检查项
-- [数据库备份方案](./docs/deployment/database-backup.md) - 自动化备份配置和恢复流程
+### 功能文档 (`docs/features/`)
+- [导出中心设计](./docs/features/export-center-design.md) - 数据导出中心
+- [检查计划集成设计](./docs/features/check-plan-integrated-system-design.md) - 检查计划系统
 
-### 📡 API文档 (`docs/api/`)
-- **Swagger UI**: `http://localhost:8080/swagger-ui/index.html` (在线交互式文档)
-- **OpenAPI JSON**: `http://localhost:8080/v3/api-docs` (API规范定义)
-- API使用示例和最佳实践 (待完善)
-
-### ⚡ 优化文档 (`docs/optimization/`)
-- [优化会话2总结](./docs/optimization/session-2-summary.md) - JWT安全、数据库备份、Sass更新、Swagger集成等
-- [未来优化计划](./docs/optimization/future-plans.md) - 待实施的性能和架构优化建议
-- [优化总览](./docs/optimization/overall-summary.md) - 所有优化工作的综合总结
-
-### ✨ 功能文档 (`docs/features/`)
-- **量化检查系统2.0** (`docs/features/quantification-v2/`)
-  - 模块说明、快速开始、开发报告、交付总结
-- **小程序功能** (待完善)
+### API文档
+- **Swagger UI**: `http://localhost:8080/api/swagger-ui.html`
+- **OpenAPI JSON**: `http://localhost:8080/api/v3/api-docs`
 
 ## 📊 项目状态
 
 ### 已完成功能 ✅
 
 #### 基础功能
-- [x] 用户权限管理系统（RBAC）
+- [x] 用户权限管理系统（RBAC + 数据权限）
 - [x] JWT双令牌认证机制
 - [x] 学生信息管理
-- [x] 部门管理（树形结构）
+- [x] 组织架构管理（树形结构、层级关系）
 - [x] 班级管理
-- [x] 宿舍管理
-- [x] 教室管理
+- [x] 空间管理（宿舍、教室统一）
+- [x] 年级/专业/专业方向管理
 
-#### 量化检查系统 2.0
-- [x] 检查模板配置
-- [x] 扣分项配置（三种模式）
-- [x] 检查记录V3（自动保存）
-- [x] 照片上传功能
-- [x] 备注功能
-- [x] 学生关联功能
-- [x] 统计分析功能
-- [x] 申诉管理系统
+#### V4量化检查系统
+- [x] 检查模板配置（分类、扣分项、加分项）
+- [x] 会话式检查管理
+- [x] Saga编排（自动评级+通知）
+- [x] 自动排程（策略轮换）
+- [x] 数据分析与快照
+- [x] 导出中心（3种场景）
+- [x] 申诉管理（两级审核）
+- [x] 纠正行动与自动规则
+- [x] 学生行为记录与预警
 
-#### 前端优化
-- [x] 用户列表性能优化
-- [x] 检查记录列表优化
-- [x] 卡片式打分界面
-- [x] 响应式布局
-- [x] UI/UX优化
+#### 资产管理
+- [x] 资产台账与分类
+- [x] 借用/归还/盘点/折旧/维修/审批/预警
 
 ### 最近更新 🔄
-**2026年1月2日 - DDD架构重构**
-- ✅ 完成V2 API DDD六边形架构实现
-- ✅ 实现组织管理领域 (OrgUnit, SchoolClass)
-- ✅ 实现权限管理领域 (Permission, Role)
-- ✅ 实现量化检查领域 (InspectionTemplate)
-- ✅ 前后端V2 API联调完成
-- ✅ Casbin权限系统集成
-- ✅ 完整的集成测试和性能测试
-
-**2025年11月18日 - 项目导航与规范优化**
-- ✅ 建立项目导航规范标准 (PROJECT_NAVIGATION_STANDARD.md)
-- ✅ 重组文档目录结构 (docs/design, docs/deployment, docs/optimization等)
-- ✅ 更新主README文档导航链接
-- ✅ 集成Swagger/OpenAPI 3.0文档系统
-- ✅ 增强全局异常处理 (新增10+异常处理器)
-- ✅ 实施JWT安全加固 (64字节安全密钥)
-- ✅ 部署数据库自动备份系统
-- ✅ 修复Sass依赖警告 (更新至1.94.1)
-
-**2025年11月3日 - 量化系统优化**
-- ✅ 修复人次扣分模式输入框不显示人数的问题
-- ✅ 修复固定扣分模式点击没有选中UI变化的问题
-- ✅ 优化项目文档结构
-- ✅ 整理和归档历史文档
+**2026年1月28日 - 全面DDD重构完成**
+- ✅ 删除全部V1遗留代码（~730文件）
+- ✅ 完成纯DDD六边形架构迁移
+- ✅ 实现V4检查系统全部功能（Saga、排程、分析、导出、纠正行动、行为追踪）
+- ✅ 前端结构扁平化（去除v2子目录）
+- ✅ 完整数据库Schema重建（36张V4新增表）
+- ✅ 421个单元测试全部通过
+- ✅ 权重双模式（标准加权平均 + 分类权重）
+- ✅ Redis缓存集成（模板/排名/分析）
 
 ### 进行中功能 🚧
 - [ ] 小程序功能开发
-- [ ] 数据导出优化
 - [ ] 移动端适配
-
-### 计划功能 📋
-- [ ] 消息通知系统
-- [ ] 成绩管理模块
-- [ ] 课程表管理
-- [ ] 考勤管理
-- [ ] 数据大屏展示
 
 ## 🔧 技术特点
 
@@ -393,8 +369,7 @@ start-frontend.bat   # Windows
 
 ---
 
-**版本**: v2.2.0
-**更新时间**: 2026年1月2日
+**版本**: v2.0.0-ddd-only
+**更新时间**: 2026年1月28日
 **开发状态**: 持续开发中 🚀
-**架构**: V1 + V2 (DDD) 并行 ✅
-**文档组织**: 已标准化 ✅
+**架构**: 纯DDD六边形架构 ✅
