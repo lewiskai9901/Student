@@ -54,6 +54,11 @@ student_management_backup_*.tar.gz
 /archive/
 backups/
 
+# 部署包/编译产物
+deploy/package/backend/*.jar
+deploy/package/frontend/
+*.jar
+
 # 上传文件
 uploads/
 
