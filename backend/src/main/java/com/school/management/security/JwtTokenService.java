@@ -4,7 +4,8 @@ import cn.hutool.core.util.StrUtil;
 import io.jsonwebtoken.*;
 import io.jsonwebtoken.security.Keys;
 import jakarta.annotation.PostConstruct;
-import lombok.extern.slf4j.Slf4j;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.env.Environment;
 import org.springframework.data.redis.core.RedisTemplate;
@@ -25,9 +26,10 @@ import java.util.concurrent.TimeUnit;
  * @author system
  * @since 1.0.0
  */
-@Slf4j
 @Component
 public class JwtTokenService {
+
+    private static final Logger log = LoggerFactory.getLogger(JwtTokenService.class);
 
     @Value("${jwt.secret-key}")
     private String jwtSecret;

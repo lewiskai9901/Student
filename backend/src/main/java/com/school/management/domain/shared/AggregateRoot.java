@@ -13,11 +13,22 @@ import java.util.List;
  *
  * @param <ID> the type of the aggregate identifier
  */
-public abstract class AggregateRoot<ID extends Serializable> extends Entity<ID> {
+public abstract class AggregateRoot<ID extends Serializable> implements Entity<ID> {
+
+    protected ID id;
 
     private final List<DomainEvent> domainEvents = new ArrayList<>();
 
     private Long version;
+
+    @Override
+    public ID getId() {
+        return id;
+    }
+
+    public void setId(ID id) {
+        this.id = id;
+    }
 
     /**
      * Registers a domain event to be published when the aggregate is saved.

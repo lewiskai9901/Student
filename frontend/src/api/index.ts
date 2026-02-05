@@ -35,7 +35,10 @@ export * from './bonusItem'
 // 班主任工作台
 export * from './teacherDashboard'
 
-// 系部排名
+// 组织排名 (新)
+export * from './orgRanking'
+
+// 系部排名 (已废弃，使用 orgRanking)
 export * from './departmentRanking'
 
 // 整改工单
@@ -65,6 +68,7 @@ import * as semesterApiModule from './semester'
 import * as inspectionSessionApiModule from './inspectionSession'
 import * as bonusItemApiModule from './bonusItem'
 import * as teacherDashboardApiModule from './teacherDashboard'
+import * as orgRankingApiModule from './orgRanking'
 import * as departmentRankingApiModule from './departmentRanking'
 import * as correctiveActionApiModule from './correctiveAction'
 import * as behaviorApiModule from './behavior'
@@ -84,6 +88,8 @@ export const v2Api = {
   inspectionSession: inspectionSessionApiModule,
   bonusItem: bonusItemApiModule,
   teacherDashboard: teacherDashboardApiModule,
+  orgRanking: orgRankingApiModule,
+  /** @deprecated 使用 orgRanking */
   departmentRanking: departmentRankingApiModule,
   correctiveAction: correctiveActionApiModule,
   behavior: behaviorApiModule,

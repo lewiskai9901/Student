@@ -3,15 +3,15 @@
     <!-- 页面标题 -->
     <div class="mb-6">
       <h1 class="text-xl font-semibold text-gray-900">组织架构</h1>
-      <p class="mt-1 text-sm text-gray-500">管理学校的部门与院系组织结构</p>
+      <p class="mt-1 text-sm text-gray-500">管理学校的组织与院系结构</p>
     </div>
 
     <!-- 统计卡片 -->
     <div class="mb-6 grid grid-cols-2 gap-4 lg:grid-cols-4">
-      <StatCard title="部门总数" :value="stats.total" :icon="Building2" subtitle="全部组织单元" color="blue" />
+      <StatCard title="组织总数" :value="stats.total" :icon="Building2" subtitle="全部组织单元" color="blue" />
       <StatCard title="已启用" :value="stats.enabled" :icon="CheckCircle" subtitle="正常运行" color="emerald" />
       <StatCard title="已禁用" :value="stats.disabled" :icon="XCircle" subtitle="暂停使用" color="orange" />
-      <StatCard title="院系数" :value="stats.academic" :icon="GraduationCap" subtitle="教学部门" color="purple" />
+      <StatCard title="院系数" :value="stats.academic" :icon="GraduationCap" subtitle="教学组织" color="purple" />
     </div>
 
     <!-- 搜索和操作区域 -->
@@ -22,7 +22,7 @@
           <input
             v-model="searchKeyword"
             type="text"
-            placeholder="部门名称/编码"
+            placeholder="组织名称/编码"
             class="h-9 w-full rounded-md border border-gray-300 px-3 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
             @keyup.enter="handleSearch"
           />
@@ -56,7 +56,7 @@
           @click="handleAdd"
         >
           <Plus class="mr-1.5 inline-block h-4 w-4" />
-          新增部门
+          新增组织
         </button>
       </div>
     </div>
@@ -65,7 +65,7 @@
     <div class="rounded-lg border border-gray-200 bg-white">
       <div class="flex items-center justify-between border-b border-gray-200 px-4 py-3">
         <div class="flex items-center gap-2">
-          <span class="text-sm font-medium text-gray-900">部门列表</span>
+          <span class="text-sm font-medium text-gray-900">组织列表</span>
           <span class="rounded bg-gray-100 px-2 py-0.5 text-xs text-gray-600">{{ stats.total }} 个</span>
         </div>
       </div>
@@ -80,8 +80,8 @@
         <table class="w-full">
           <thead>
             <tr class="border-b border-gray-200 bg-gray-50">
-              <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">部门名称</th>
-              <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">部门编码</th>
+              <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">组织名称</th>
+              <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">组织编码</th>
               <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">类别</th>
               <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">负责人</th>
               <th class="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase">状态</th>
@@ -107,12 +107,12 @@
         <!-- 空状态 -->
         <div v-if="filteredData.length === 0" class="flex flex-col items-center justify-center py-16">
           <Building2 class="h-12 w-12 text-gray-300" />
-          <p class="mt-3 text-sm text-gray-500">暂无部门数据</p>
+          <p class="mt-3 text-sm text-gray-500">暂无组织数据</p>
           <button
             class="mt-4 rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
             @click="handleAdd"
           >
-            创建部门
+            创建组织
           </button>
         </div>
       </div>
@@ -291,7 +291,7 @@ const handleDelete = async (dept: DepartmentResponse) => {
   try {
     await ElMessageBox.confirm(
       dept.children?.length
-        ? `确定删除"${dept.unitName}"及其子部门吗？`
+        ? `确定删除"${dept.unitName}"及其子组织吗？`
         : `确定删除"${dept.unitName}"吗？`,
       '提示',
       { type: 'warning' }

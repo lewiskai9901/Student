@@ -1,0 +1,482 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lumina | 视觉冲击版</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@300;800&display=swap');
+
+        :root {
+            --bg-color: #ffffff;
+            --text-primary: #111111;
+            --accent-blue: #0044ff;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Montserrat', sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-primary);
+            overflow-x: hidden;
+        }
+
+        /* --- 导航 --- */
+        nav {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            padding: 30px 60px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            z-index: 1000;
+            mix-blend-mode: difference; /* 让导航栏在黑白背景下自动反色 */
+            color: white;
+        }
+
+        .logo { font-weight: 800; font-size: 1.8rem; letter-spacing: -1px; }
+        .menu { font-weight: 300; font-size: 1rem; letter-spacing: 2px; cursor: pointer; }
+
+        /* --- 第一屏：侧脸视觉冲击 (Hero) --- */
+        .hero-section {
+            position: relative;
+            height: 100vh;
+            width: 100%;
+            overflow: hidden;
+            display: flex;
+            align-items: center;
+        }
+
+        /* 背景大图 - 侧脸 */
+        .hero-bg {
+            position: absolute;
+            top: 0;
+            right: 0;
+            width: 55%; /* 调整宽度，平衡构图 */
+            height: 100%; 
+            object-fit: cover;
+            object-position: center center;
+            z-index: -1;
+            will-change: transform;
+            /* 移除面部遮罩，仅保留极边缘的羽化，确保人物绝对清晰 */
+            mask-image: linear-gradient(to right, transparent 0%, black 5%);
+            -webkit-mask-image: linear-gradient(to right, transparent 0%, black 5%);
+        }
+
+        .hero-content {
+            padding-left: 8vw;
+            z-index: 10;
+        }
+
+        .hero-title {
+            font-size: 8vw; /* 响应式超大字体 */
+            font-weight: 800;
+            line-height: 0.9;
+            color: #000;
+            margin-bottom: 20px;
+            opacity: 0;
+            transform: translateY(50px);
+            animation: fadeUp 1s cubic-bezier(0.2, 1, 0.3, 1) forwards 0.5s;
+        }
+
+        .hero-subtitle {
+            font-size: 1.5rem;
+            font-weight: 300;
+            letter-spacing: 5px;
+            color: #555;
+            opacity: 0;
+            transform: translateY(30px);
+            animation: fadeUp 1s cubic-bezier(0.2, 1, 0.3, 1) forwards 0.8s;
+        }
+
+        @keyframes fadeUp {
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* --- 第二屏：飞机起飞交互 (Plane) --- */
+        .plane-section {
+            position: relative;
+            height: 150vh; /* 增加高度以延长滚动行程 */
+            background: linear-gradient(to bottom, #ffffff 0%, #f0f8ff 100%);
+            overflow: hidden;
+            display: flex;
+            justify-content: center;
+            align-items: flex-start; /* 内容靠上 */
+            padding-top: 150px;
+        }
+
+        .plane-text {
+            text-align: center;
+            z-index: 5;
+            position: relative;
+        }
+
+        .plane-text h2 {
+            font-size: 4rem;
+            margin-bottom: 20px;
+            background: linear-gradient(45deg, #000, var(--accent-blue));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .plane-text p {
+            font-size: 1.2rem;
+            color: #666;
+            max-width: 600px;
+            margin: 0 auto;
+        }
+
+        /* 飞机图片容器 */
+        .plane-container {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none; /* 允许点击穿透 */
+            z-index: 1;
+        }
+
+        .plane-img {
+            position: absolute;
+            width: 1300px; /* 尺寸再次微调，确保霸气 */
+            left: 50%;
+            bottom: -1100px; /* 调整初始位置，让机头先露出来 */
+            transform: translateX(-50%);
+            will-change: transform;
+            /* 添加高级投影，营造悬浮感 */
+            filter: drop-shadow(0 100px 150px rgba(0, 0, 0, 0.5));
+        }
+
+        /* --- 第三屏：极简留白 --- */
+        .minimal-section {
+            height: 80vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: #fff;
+        }
+        
+        .minimal-card {
+            width: 80%;
+            max-width: 1000px;
+            height: 400px;
+            background: #f9f9f9;
+            display: flex;
+            align-items: center;
+            justify-content: space-around;
+            border-radius: 30px;
+            box-shadow: 0 30px 60px rgba(0,0,0,0.05);
+        }
+        
+        .stat { text-align: center; }
+        .stat h3 { font-size: 4rem; font-weight: 800; color: #111; }
+        .stat p { font-size: 1rem; color: #888; letter-spacing: 2px; text-transform: uppercase; margin-top: 10px;}
+        
+        /* 滚动提示 */
+        .scroll-hint {
+            position: absolute;
+            bottom: 40px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 0.8rem;
+            letter-spacing: 3px;
+            animation: bounce 2s infinite;
+            opacity: 0.5;
+        }
+        
+        @keyframes bounce {
+            0%, 20%, 50%, 80%, 100% {transform: translateX(-50%) translateY(0);}
+            40% {transform: translateX(-50%) translateY(-10px);}
+            60% {transform: translateX(-50%) translateY(-5px);}
+        }
+
+    </style>
+</head>
+<body>
+
+    <nav>
+        <div class="logo">Lumina.</div>
+        <div class="menu">MENU</div>
+    </nav>
+
+    <!-- 第一屏：侧脸视觉 -->
+    <header class="hero-section">
+        <div class="hero-content">
+            <h1 class="hero-title">PURE<br>AESTHETICS</h1>
+            <p class="hero-subtitle">重塑感官 · 极致未来</p>
+        </div>
+        <!-- 侧脸大图：更换为极高清、光线明亮的欧美女性侧脸，无遮挡 -->
+        <img src="https://images.unsplash.com/photo-1531746020798-e6953c6e8e04?q=80&w=2000&auto=format&fit=crop" alt="Beauty Profile" class="hero-bg" id="heroImg">
+        
+        <div class="scroll-hint">SCROLL TO EXPLORE</div>
+    </header>
+
+    <!-- 第二屏：飞机起飞交互 -->
+    <section class="plane-section" id="planeSection">
+        <div class="plane-text">
+            <h2>ASCENSION</h2>
+            <p>当速度突破界限，设计便拥有了飞行的灵魂。</p>
+        </div>
+        
+        <div class="plane-container">
+            <!-- 终极版：参考波音/空客宽体客机设计，工业级光影渲染 -->
+            <svg class="plane-img" id="planeImg" viewBox="0 0 1000 1800" xmlns="http://www.w3.org/2000/svg">
+                <defs>
+                    <!-- 1. 机身蒙皮：模拟航空铝材的圆柱体高光与反光 -->
+                    <linearGradient id="fuselageReal" x1="0%" y1="0%" x2="100%" y2="0%">
+                        <stop offset="0%" stop-color="#546e7a"/>   <!-- 左侧暗部 -->
+                        <stop offset="15%" stop-color="#cfd8dc"/>  <!-- 左侧反光 -->
+                        <stop offset="40%" stop-color="#ffffff"/>  <!-- 主高光 (顶光) -->
+                        <stop offset="60%" stop-color="#eceff1"/>  <!-- 中间调 -->
+                        <stop offset="85%" stop-color="#90a4ae"/>  <!-- 右侧阴影 -->
+                        <stop offset="100%" stop-color="#455a64"/> <!-- 右侧暗部 -->
+                    </linearGradient>
+                    
+                    <!-- 2. 机翼蒙皮：带前缘高光的金属质感 -->
+                    <linearGradient id="wingReal" x1="0%" y1="0%" x2="0%" y2="100%">
+                        <stop offset="0%" stop-color="#eceff1"/>   <!-- 前缘高光 -->
+                        <stop offset="30%" stop-color="#cfd8dc"/>
+                        <stop offset="100%" stop-color="#90a4ae"/> <!-- 后缘阴影 -->
+                    </linearGradient>
+
+                    <!-- 3. 引擎整流罩：环形光影 -->
+                    <linearGradient id="engineCase" x1="0%" y1="0%" x2="100%" y2="0%">
+                        <stop offset="0%" stop-color="#455a64"/>
+                        <stop offset="20%" stop-color="#ffffff"/>
+                        <stop offset="80%" stop-color="#ffffff"/>
+                        <stop offset="100%" stop-color="#455a64"/>
+                    </linearGradient>
+
+                    <!-- 4. 进气口金属环 -->
+                    <linearGradient id="intakeLip" x1="0%" y1="0%" x2="100%" y2="0%">
+                        <stop offset="0%" stop-color="#78909c"/>
+                        <stop offset="50%" stop-color="#ffffff"/>
+                        <stop offset="100%" stop-color="#78909c"/>
+                    </linearGradient>
+
+                    <!-- 5. 驾驶舱玻璃：模拟光学玻璃的深邃与反光 -->
+                    <linearGradient id="cockpitGlass" x1="0%" y1="0%" x2="0%" y2="100%">
+                        <stop offset="0%" stop-color="#263238"/>
+                        <stop offset="50%" stop-color="#37474f"/>
+                        <stop offset="100%" stop-color="#546e7a"/>
+                    </linearGradient>
+
+                    <!-- 6. 真实投影 (Drop Shadow) -->
+                    <filter id="realShadow" x="-50%" y="-50%" width="200%" height="200%">
+                        <feGaussianBlur in="SourceAlpha" stdDeviation="10"/>
+                        <feOffset dx="0" dy="15" result="offsetblur"/>
+                        <feComponentTransfer>
+                            <feFuncA type="linear" slope="0.3"/>
+                        </feComponentTransfer>
+                        <feMerge> 
+                            <feMergeNode in="offsetblur"/>
+                            <feMergeNode in="SourceGraphic"/> 
+                        </feMerge>
+                    </filter>
+                </defs>
+                
+                <!-- 飞机主体组 (居中) -->
+                <g transform="translate(500, 800)" filter="url(#realShadow)">
+                    
+                    <!-- 1. 机翼 (Wings) - 后掠翼设计 -->
+                    <!-- 左翼 -->
+                    <path d="M-110 -150 L-500 250 L-500 380 L-140 280 Z" fill="url(#wingReal)" stroke="#b0bec5" stroke-width="1"/>
+                    <!-- 右翼 -->
+                    <path d="M110 -150 L500 250 L500 380 L140 280 Z" fill="url(#wingReal)" stroke="#b0bec5" stroke-width="1"/>
+                    
+                    <!-- 机翼细节：襟翼线条 -->
+                    <line x1="-480" y1="360" x2="-140" y2="280" stroke="#78909c" stroke-width="2" opacity="0.6"/>
+                    <line x1="480" y1="360" x2="140" y2="280" stroke="#78909c" stroke-width="2" opacity="0.6"/>
+
+                    <!-- 2. 水平尾翼 (Horizontal Stabilizers) -->
+                    <path d="M-60 600 L-260 780 L-260 850 L-50 750 Z" fill="url(#wingReal)" stroke="#b0bec5" stroke-width="1"/>
+                    <path d="M60 600 L260 780 L260 850 L50 750 Z" fill="url(#wingReal)" stroke="#b0bec5" stroke-width="1"/>
+                    
+                    <!-- 3. 引擎 (Engines) - 高涵道比涡扇 -->
+                    <!-- 挂架 (Pylons) -->
+                    <path d="M-220 150 L-220 250 L-260 250 L-260 150 Z" fill="#78909c"/>
+                    <path d="M220 150 L220 250 L260 250 L260 150 Z" fill="#78909c"/>
+
+                    <!-- 左引擎 -->
+                    <g transform="translate(-240, 240)">
+                        <rect x="-55" y="-70" width="110" height="180" rx="35" fill="url(#engineCase)" stroke="#546e7a" stroke-width="1"/>
+                        <circle cx="0" cy="0" r="48" fill="none" stroke="url(#intakeLip)" stroke-width="6"/> <!-- 进气口银环 -->
+                        <circle cx="0" cy="0" r="45" fill="#102027"/> <!-- 内部黑洞 -->
+                        <circle cx="0" cy="0" r="12" fill="#eceff1"/> <!-- 螺旋桨帽 -->
+                        <!-- 扇叶暗示 -->
+                        <path d="M0 0 L0 -40" stroke="#37474f" stroke-width="3" transform="rotate(0)"/>
+                        <path d="M0 0 L0 -40" stroke="#37474f" stroke-width="3" transform="rotate(45)"/>
+                        <path d="M0 0 L0 -40" stroke="#37474f" stroke-width="3" transform="rotate(90)"/>
+                        <path d="M0 0 L0 -40" stroke="#37474f" stroke-width="3" transform="rotate(135)"/>
+                        <path d="M0 0 L0 -40" stroke="#37474f" stroke-width="3" transform="rotate(180)"/>
+                        <path d="M0 0 L0 -40" stroke="#37474f" stroke-width="3" transform="rotate(225)"/>
+                        <path d="M0 0 L0 -40" stroke="#37474f" stroke-width="3" transform="rotate(270)"/>
+                        <path d="M0 0 L0 -40" stroke="#37474f" stroke-width="3" transform="rotate(315)"/>
+                    </g>
+
+                    <!-- 右引擎 -->
+                    <g transform="translate(240, 240)">
+                        <rect x="-55" y="-70" width="110" height="180" rx="35" fill="url(#engineCase)" stroke="#546e7a" stroke-width="1"/>
+                        <circle cx="0" cy="0" r="48" fill="none" stroke="url(#intakeLip)" stroke-width="6"/>
+                        <circle cx="0" cy="0" r="45" fill="#102027"/>
+                        <circle cx="0" cy="0" r="12" fill="#eceff1"/>
+                        <path d="M0 0 L0 -40" stroke="#37474f" stroke-width="3" transform="rotate(0)"/>
+                        <path d="M0 0 L0 -40" stroke="#37474f" stroke-width="3" transform="rotate(45)"/>
+                        <path d="M0 0 L0 -40" stroke="#37474f" stroke-width="3" transform="rotate(90)"/>
+                        <path d="M0 0 L0 -40" stroke="#37474f" stroke-width="3" transform="rotate(135)"/>
+                        <path d="M0 0 L0 -40" stroke="#37474f" stroke-width="3" transform="rotate(180)"/>
+                        <path d="M0 0 L0 -40" stroke="#37474f" stroke-width="3" transform="rotate(225)"/>
+                        <path d="M0 0 L0 -40" stroke="#37474f" stroke-width="3" transform="rotate(270)"/>
+                        <path d="M0 0 L0 -40" stroke="#37474f" stroke-width="3" transform="rotate(315)"/>
+                    </g>
+                    
+                    <!-- 4. 机身 (Fuselage) - 宽体客机造型 -->
+                    <path d="M0 -550 
+                             C120 -550 140 -400 140 0 
+                             L140 750 
+                             C140 900 40 980 0 1000 
+                             C-40 980 -140 900 -140 750 
+                             L-140 0 
+                             C-140 -400 -120 -550 0 -550 Z" 
+                          fill="url(#fuselageReal)" />
+                    
+                    <!-- 驾驶舱 (Cockpit) - 现代客机四窗布局 -->
+                    <path d="M-50 -420 Q-25 -450 0 -450 Q25 -450 50 -420 Q50 -390 30 -380 Q0 -370 -30 -380 Q-50 -390 -50 -420 Z" fill="url(#cockpitGlass)" stroke="#cfd8dc" stroke-width="2"/>
+                    
+                    <!-- 客舱窗户 (Windows) -->
+                    <line x1="0" y1="-300" x2="0" y2="600" stroke="#37474f" stroke-width="4" stroke-dasharray="8, 25" opacity="0.7"/>
+
+                    <!-- 垂直尾翼 (Vertical Stabilizer) -->
+                    <path d="M0 700 L0 950" stroke="url(#fuselageReal)" stroke-width="20" stroke-linecap="round"/>
+
+                    <!-- 涂装细节 -->
+                    <path d="M-140 0 Q-140 400 -100 800" stroke="#0277bd" stroke-width="3" fill="none" opacity="0.6"/>
+                    <path d="M140 0 Q140 400 100 800" stroke="#0277bd" stroke-width="3" fill="none" opacity="0.6"/>
+                </g>
+            </svg>
+                        <feComposite in="SourceGraphic" in2="blur" operator="over"/>
+                    </filter>
+                </defs>
+                
+                <!-- 科技背景圈 (HUD) -->
+                <g opacity="0.4">
+                    <circle cx="500" cy="600" r="450" fill="none" stroke="#0044ff" stroke-width="1" stroke-dasharray="20,10"/>
+                    <circle cx="500" cy="600" r="380" fill="none" stroke="#0044ff" stroke-width="0.5"/>
+                    <path d="M500 100 L500 1300" stroke="#0044ff" stroke-width="1" stroke-dasharray="5,5"/>
+                    <path d="M100 600 L900 600" stroke="#0044ff" stroke-width="1" stroke-dasharray="5,5"/>
+                </g>
+
+                <!-- 飞机主体组 -->
+                <g transform="translate(500, 600)">
+                    <!-- 机翼 (后掠翼) -->
+                    <path d="M-80 -150 L-480 300 L-480 400 L-120 250 Z" fill="url(#wingGrad)" stroke="#95a5a6" stroke-width="1"/>
+                    <path d="M80 -150 L480 300 L480 400 L120 250 Z" fill="url(#wingGrad)" stroke="#95a5a6" stroke-width="1"/>
+                    <!-- 机翼细节线 -->
+                    <line x1="-300" y1="100" x2="-480" y2="300" stroke="#bdc3c7" stroke-width="1"/>
+                    <line x1="300" y1="100" x2="480" y2="300" stroke="#bdc3c7" stroke-width="1"/>
+                    
+                    <!-- 尾翼 (水平安定面) -->
+                    <path d="M-50 450 L-200 600 L-200 650 L-40 550 Z" fill="url(#wingGrad)" stroke="#95a5a6" stroke-width="1"/>
+                    <path d="M50 450 L200 600 L200 650 L40 550 Z" fill="url(#wingGrad)" stroke="#95a5a6" stroke-width="1"/>
+                    
+                    <!-- 引擎 (带内部细节) -->
+                    <g transform="translate(-200, 180)">
+                        <rect x="-35" y="-50" width="70" height="120" rx="15" fill="#ecf0f1" stroke="#7f8c8d" stroke-width="2"/>
+                        <circle cx="0" cy="70" r="28" fill="#34495e" stroke="#0044ff" stroke-width="2"/>
+                        <circle cx="0" cy="70" r="12" fill="#000"/> <!-- 涡轮中心 -->
+                        <circle cx="0" cy="70" r="25" fill="none" stroke="#00ccff" stroke-width="2" opacity="0.6" stroke-dasharray="2,4"/> <!-- 扇叶暗示 -->
+                        <circle cx="0" cy="70" r="15" fill="#00ccff" filter="url(#blueGlow)" opacity="0.6"/> <!-- 核心光效 -->
+                    </g>
+                    <g transform="translate(200, 180)">
+                        <rect x="-35" y="-50" width="70" height="120" rx="15" fill="#ecf0f1" stroke="#7f8c8d" stroke-width="2"/>
+                        <circle cx="0" cy="70" r="28" fill="#34495e" stroke="#0044ff" stroke-width="2"/>
+                        <circle cx="0" cy="70" r="12" fill="#000"/>
+                        <circle cx="0" cy="70" r="25" fill="none" stroke="#00ccff" stroke-width="2" opacity="0.6" stroke-dasharray="2,4"/>
+                        <circle cx="0" cy="70" r="15" fill="#00ccff" filter="url(#blueGlow)" opacity="0.6"/>
+                    </g>
+                    
+                    <!-- 机身 (Fuselage) - 更加修长且立体 -->
+                    <path d="M0 -450 C70 -450 100 -350 100 0 L100 550 C100 680 20 750 0 780 C-20 750 -100 680 -100 550 L-100 0 C-100 -350 -70 -450 0 -450 Z" fill="url(#fuselageGrad)" stroke="#7f8c8d" stroke-width="1"/>
+                    
+                    <!-- 垂直尾翼 (Vertical Stabilizer) -->
+                    <path d="M0 500 L0 750" stroke="#bdc3c7" stroke-width="6" stroke-linecap="round"/>
+                    
+                    <!-- 驾驶舱 (Cockpit) -->
+                    <path d="M-35 -360 C-35 -380 35 -380 35 -360 C35 -340 -35 -340 -35 -360" fill="url(#glassGrad)" stroke="#bdc3c7" stroke-width="2"/>
+                    
+                    <!-- 客舱窗户 (Windows) -->
+                    <line x1="0" y1="-250" x2="0" y2="400" stroke="#bdc3c7" stroke-width="1" stroke-dasharray="5, 15"/>
+                    
+                    <!-- 科技标注 -->
+                    <line x1="120" y1="0" x2="200" y2="0" stroke="#0044ff" stroke-width="1"/>
+                    <text x="210" y="5" font-family="monospace" font-size="18" fill="#0044ff" opacity="0.8">BODY: TITANIUM</text>
+                    
+                    <line x1="-120" y1="550" x2="-250" y2="550" stroke="#0044ff" stroke-width="1"/>
+                    <text x="-380" y="555" font-family="monospace" font-size="18" fill="#0044ff" opacity="0.8">TAIL: STABILIZED</text>
+                </g>
+            </svg>
+        </div>
+    </section>
+
+    <!-- 第三屏：数据展示 -->
+    <section class="minimal-section">
+        <div class="minimal-card">
+            <div class="stat">
+                <h3>0.1s</h3>
+                <p>Response Time</p>
+            </div>
+            <div class="stat">
+                <h3>4K</h3>
+                <p>Resolution</p>
+            </div>
+            <div class="stat">
+                <h3>∞</h3>
+                <p>Possibilities</p>
+            </div>
+        </div>
+    </section>
+
+    <script>
+        const heroImg = document.getElementById('heroImg');
+        const planeSection = document.getElementById('planeSection');
+        const planeImg = document.getElementById('planeImg');
+
+        window.addEventListener('scroll', () => {
+            const scrollY = window.pageYOffset;
+            const windowHeight = window.innerHeight;
+
+            // 1. 侧脸图视差效果 (Parallax)
+            // 图片随滚动缓慢移动，产生深度感
+            if (scrollY < windowHeight) {
+                heroImg.style.transform = `translateY(${scrollY * 0.4}px)`;
+            }
+
+            // 2. 飞机起飞交互
+            // 计算飞机区域相对于视口的位置
+            const planeRect = planeSection.getBoundingClientRect();
+            
+            // 当飞机区域进入视口时
+            if (planeRect.top < windowHeight && planeRect.bottom > 0) {
+                // 计算滚动的进度 (0 到 1 之间)
+                // 这里的逻辑是：随着页面向下滚，飞机向上飞
+                // 我们利用 planeRect.top (它会随着向下滚动变小) 来控制飞机的 translateY
+                
+                // 调整系数 0.8 控制飞行速度
+                const flyOffset = (windowHeight - planeRect.top) * 0.8;
+                
+                // 应用变换：向上移动 (负值) 并稍微旋转
+                // 新的矢量图默认朝上，无需旋转，直接起飞
+                planeImg.style.transform = `translate(-50%, -${flyOffset}px)`;
+            }
+        });
+    </script>
+</body>
+</html>

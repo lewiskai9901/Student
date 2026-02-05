@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>无界画廊 | Boundless</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@300;700&display=swap');
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Noto Sans SC', sans-serif;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            overflow: hidden;
+            background-color: #1a1a1a;
+        }
+
+        .container {
+            display: flex;
+            width: 90vw;
+            max-width: 1200px;
+        }
+
+        .panel {
+            background-size: cover;
+            background-position: center;
+            background-repeat: no-repeat;
+            height: 80vh;
+            border-radius: 50px;
+            color: #fff;
+            cursor: pointer;
+            flex: 0.5; /* 默认收缩状态 */
+            margin: 10px;
+            position: relative;
+            transition: flex 0.7s cubic-bezier(0.05, 0.6, 0.4, 0.9); /* 弹性动画曲线 */
+            overflow: hidden;
+        }
+
+        /* 遮罩层，让文字更清晰 */
+        .panel::before {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(to top, rgba(0,0,0,0.8) 0%, transparent 60%);
+            opacity: 0;
+            transition: opacity 0.5s ease-in;
+        }
+
+        .panel.active {
+            flex: 5; /* 激活时展开 */
+        }
+
+        .panel.active::before {
+            opacity: 1;
+        }
+
+        .panel h3 {
+            font-size: 24px;
+            position: absolute;
+            bottom: 20px;
+            left: 20px;
+            margin: 0;
+            opacity: 0; /* 默认隐藏文字 */
+            transition: opacity 0.3s ease-in 0.4s; /* 延迟显示 */
+            z-index: 2;
+            white-space: nowrap;
+        }
+
+        .panel.active h3 {
+            opacity: 1;
+        }
+
+        /* 不同的背景图 - 使用 Unsplash 随机图 */
+        .panel:nth-of-type(1) { background-image: url('https://images.unsplash.com/photo-1558979158-65a1eaa08691?ixlib=rb-1.2.1&auto=format&fit=crop&w=1350&q=80'); }
+        .panel:nth-of-type(2) { background-image: url('https://images.unsplash.com/photo-1572276596237-5db2c3e16c5d?ixlib=rb-1.2.1&auto=format&fit=crop&w=1350&q=80'); }
+        .panel:nth-of-type(3) { background-image: url('https://images.unsplash.com/photo-1507525428034-b723cf961d3e?ixlib=rb-1.2.1&auto=format&fit=crop&w=1353&q=80'); }
+        .panel:nth-of-type(4) { background-image: url('https://images.unsplash.com/photo-1551009175-8a68da93d5f9?ixlib=rb-1.2.1&auto=format&fit=crop&w=1351&q=80'); }
+        .panel:nth-of-type(5) { background-image: url('https://images.unsplash.com/photo-1549880338-65ddcdfd017b?ixlib=rb-1.2.1&auto=format&fit=crop&w=1350&q=80'); }
+
+        /* 移动端适配 */
+        @media (max-width: 480px) {
+            .container { width: 100vw; }
+            .panel:nth-of-type(4), .panel:nth-of-type(5) { display: none; } /* 小屏隐藏部分 */
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="panel active">
+            <h3>探索 · 未知领域</h3>
+        </div>
+        <div class="panel">
+            <h3>森林 · 静谧之声</h3>
+        </div>
+        <div class="panel">
+            <h3>海洋 · 深蓝梦境</h3>
+        </div>
+        <div class="panel">
+            <h3>城市 · 霓虹脉动</h3>
+        </div>
+        <div class="panel">
+            <h3>山脉 · 巅峰之上</h3>
+        </div>
+    </div>
+
+    <script>
+        const panels = document.querySelectorAll('.panel');
+
+        panels.forEach(panel => {
+            panel.addEventListener('click', () => {
+                removeActiveClasses();
+                panel.classList.add('active');
+            });
+        });
+
+        function removeActiveClasses() {
+            panels.forEach(panel => {
+                panel.classList.remove('active');
+            });
+        }
+    </script>
+</body>
+</html>

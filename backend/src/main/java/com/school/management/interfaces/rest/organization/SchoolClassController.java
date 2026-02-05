@@ -17,8 +17,8 @@ import com.school.management.infrastructure.persistence.organization.MajorPO;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -30,17 +30,27 @@ import java.util.stream.Collectors;
 /**
  * 班级管理 REST API (V2 - DDD架构)
  */
-@Slf4j
 @RestController("schoolClassController")
 @RequestMapping("/organization/classes")
-@RequiredArgsConstructor
 @Tag(name = "班级管理V2", description = "DDD架构的班级管理接口")
 public class SchoolClassController {
+
+    private static final Logger log = LoggerFactory.getLogger(SchoolClassController.class);
 
     private final SchoolClassRepository schoolClassRepository;
     private final OrgUnitRepository orgUnitRepository;
     private final MajorDirectionPersistenceMapper majorDirectionMapper;
     private final MajorPersistenceMapper majorMapper;
+
+    public SchoolClassController(SchoolClassRepository schoolClassRepository,
+                                 OrgUnitRepository orgUnitRepository,
+                                 MajorDirectionPersistenceMapper majorDirectionMapper,
+                                 MajorPersistenceMapper majorMapper) {
+        this.schoolClassRepository = schoolClassRepository;
+        this.orgUnitRepository = orgUnitRepository;
+        this.majorDirectionMapper = majorDirectionMapper;
+        this.majorMapper = majorMapper;
+    }
 
     @GetMapping
     @Operation(summary = "获取班级列表")

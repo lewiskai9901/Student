@@ -1,8 +1,6 @@
 package com.school.management.domain.space.model.entity;
 
 import com.school.management.domain.shared.Entity;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
 
 import java.time.LocalDateTime;
 
@@ -10,9 +8,7 @@ import java.time.LocalDateTime;
  * 场所-班级分配实体
  * 支持一个场所分配给多个班级的场景（如部门分配宿舍给多个班级）
  */
-@Getter
-@NoArgsConstructor
-public class SpaceClassAssignment extends Entity {
+public class SpaceClassAssignment implements Entity<Long> {
 
     private Long id;
     private Long spaceId;
@@ -26,6 +22,23 @@ public class SpaceClassAssignment extends Entity {
     private LocalDateTime assignedAt;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
+
+    public SpaceClassAssignment() {}
+
+    // Getters
+    @Override
+    public Long getId() { return id; }
+    public Long getSpaceId() { return spaceId; }
+    public Long getClassId() { return classId; }
+    public Long getOrgUnitId() { return orgUnitId; }
+    public Integer getAssignedBeds() { return assignedBeds; }
+    public Integer getPriority() { return priority; }
+    public boolean isEnabled() { return enabled; }
+    public String getRemark() { return remark; }
+    public Long getAssignedBy() { return assignedBy; }
+    public LocalDateTime getAssignedAt() { return assignedAt; }
+    public LocalDateTime getCreatedAt() { return createdAt; }
+    public LocalDateTime getUpdatedAt() { return updatedAt; }
 
     /**
      * 创建新的场所-班级分配

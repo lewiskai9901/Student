@@ -139,7 +139,7 @@
             <th class="px-4 py-3 text-left text-sm font-medium text-gray-900">姓名</th>
             <th class="px-4 py-3 text-left text-sm font-medium text-gray-900">手机号</th>
             <th class="px-4 py-3 text-left text-sm font-medium text-gray-900">角色</th>
-            <th class="px-4 py-3 text-left text-sm font-medium text-gray-900">部门</th>
+            <th class="px-4 py-3 text-left text-sm font-medium text-gray-900">组织</th>
             <th class="px-4 py-3 text-center text-sm font-medium text-gray-900">状态</th>
             <th class="px-4 py-3 text-left text-sm font-medium text-gray-900">最后登录</th>
             <th class="px-4 py-3 text-center text-sm font-medium text-gray-900">操作</th>

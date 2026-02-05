@@ -12,8 +12,8 @@ import java.util.Optional;
 import java.util.stream.Collectors;
 
 /**
- * MyBatis Plus implementation of OrgUnitRepository.
- * Maps to the existing 'departments' table.
+ * 组织单元仓储实现
+ * 映射到 org_units 表
  */
 @Repository
 public class OrgUnitRepositoryImpl implements OrgUnitRepository {
@@ -61,14 +61,13 @@ public class OrgUnitRepositoryImpl implements OrgUnitRepository {
 
     @Override
     public Optional<OrgUnit> findByUnitCode(String unitCode) {
-        OrgUnitPO po = orgUnitMapper.findByDeptCode(unitCode);
+        OrgUnitPO po = orgUnitMapper.findByUnitCode(unitCode);
         return Optional.ofNullable(po).map(this::toDomain);
     }
 
     @Override
     public List<OrgUnit> findByUnitType(OrgUnitType unitType) {
-        // Departments table doesn't have unit_type, return all enabled
-        return orgUnitMapper.findAllEnabled().stream()
+        return orgUnitMapper.findByUnitType(unitType.name()).stream()
             .map(this::toDomain)
             .collect(Collectors.toList());
     }
@@ -121,7 +120,7 @@ public class OrgUnitRepositoryImpl implements OrgUnitRepository {
 
     @Override
     public boolean existsByUnitCode(String unitCode) {
-        return orgUnitMapper.findByDeptCode(unitCode) != null;
+        return orgUnitMapper.findByUnitCode(unitCode) != null;
     }
 
     @Override
@@ -151,38 +150,39 @@ public class OrgUnitRepositoryImpl implements OrgUnitRepository {
             .collect(Collectors.toList());
     }
 
-    // Conversion methods
+    // ==================== 转换方法 ====================
+
     private OrgUnit toDomain(OrgUnitPO po) {
-        // 解析unitCategory
+        // 解析 unitCategory
         UnitCategory category = UnitCategory.ACADEMIC; // 默认为教学单位
         if (po.getUnitCategory() != null) {
             category = UnitCategory.fromCode(po.getUnitCategory());
         }
 
-        // 解析unitType
-        OrgUnitType unitType = parseUnitType(po.getUnitType(), po.getDeptLevel());
+        // 解析 unitType
+        OrgUnitType unitType = parseUnitType(po.getUnitType(), po.getTreeLevel());
 
         return OrgUnit.builder()
             .id(po.getId())
-            .unitCode(po.getDeptCode())
-            .unitName(po.getDeptName())
+            .unitCode(po.getUnitCode())
+            .unitName(po.getUnitName())
             .unitType(unitType)
             .unitCategory(category)
             .parentId(po.getParentId())
-            .treePath(po.getDeptPath())
-            .treeLevel(po.getDeptLevel() != null ? po.getDeptLevel() : 0)
+            .treePath(po.getTreePath())
+            .treeLevel(po.getTreeLevel() != null ? po.getTreeLevel() : 0)
             .leaderId(po.getLeaderId())
-            .deputyLeaderIds(new ArrayList<>()) // Not in departments table
+            .deputyLeaderIds(parseDeputyLeaderIds(po.getDeputyLeaderIds()))
             .sortOrder(po.getSortOrder() != null ? po.getSortOrder() : 0)
             .enabled(po.getStatus() != null && po.getStatus() == 1)
-            .createdBy(null) // Not tracked in departments
+            .createdBy(po.getCreatedBy())
             .build();
     }
 
     /**
-     * 解析unitType字符串为枚举值
+     * 解析 unitType 字符串为枚举值
      */
-    private OrgUnitType parseUnitType(String unitTypeStr, Integer deptLevel) {
+    private OrgUnitType parseUnitType(String unitTypeStr, Integer treeLevel) {
         if (unitTypeStr != null && !unitTypeStr.isEmpty()) {
             try {
                 return OrgUnitType.valueOf(unitTypeStr.toUpperCase());
@@ -191,8 +191,8 @@ public class OrgUnitRepositoryImpl implements OrgUnitRepository {
             }
         }
         // 根据层级推断类型
-        if (deptLevel == null) return OrgUnitType.DEPARTMENT;
-        return switch (deptLevel) {
+        if (treeLevel == null) return OrgUnitType.DEPARTMENT;
+        return switch (treeLevel) {
             case 1 -> OrgUnitType.SCHOOL;
             case 2 -> OrgUnitType.COLLEGE;
             case 3 -> OrgUnitType.DEPARTMENT;
@@ -201,26 +201,56 @@ public class OrgUnitRepositoryImpl implements OrgUnitRepository {
         };
     }
 
+    /**
+     * 解析副职ID列表JSON
+     */
+    private List<Long> parseDeputyLeaderIds(String json) {
+        if (json == null || json.isEmpty()) {
+            return new ArrayList<>();
+        }
+        // 简单JSON解析，假设格式为 [1,2,3]
+        try {
+            json = json.replace("[", "").replace("]", "").trim();
+            if (json.isEmpty()) {
+                return new ArrayList<>();
+            }
+            List<Long> ids = new ArrayList<>();
+            for (String idStr : json.split(",")) {
+                ids.add(Long.parseLong(idStr.trim()));
+            }
+            return ids;
+        } catch (Exception e) {
+            return new ArrayList<>();
+        }
+    }
+
     private OrgUnitPO toPO(OrgUnit domain) {
         OrgUnitPO po = new OrgUnitPO();
         po.setId(domain.getId());
-        po.setDeptCode(domain.getUnitCode());
-        po.setDeptName(domain.getUnitName());
-        po.setDeptDesc(null); // Description not in domain
+        po.setUnitCode(domain.getUnitCode());
+        po.setUnitName(domain.getUnitName());
         po.setParentId(domain.getParentId());
-        po.setDeptLevel(domain.getTreeLevel());
-        po.setDeptPath(domain.getTreePath());
+        po.setTreeLevel(domain.getTreeLevel());
+        po.setTreePath(domain.getTreePath());
         po.setLeaderId(domain.getLeaderId());
         po.setSortOrder(domain.getSortOrder());
         po.setStatus(domain.isEnabled() ? 1 : 0);
-        // 保存unitType
+
+        // 保存 unitType
         if (domain.getUnitType() != null) {
             po.setUnitType(domain.getUnitType().name());
         }
-        // 保存unitCategory
+
+        // 保存 unitCategory
         if (domain.getUnitCategory() != null) {
             po.setUnitCategory(domain.getUnitCategory().getCode());
         }
+
+        // 保存副职ID列表
+        if (domain.getDeputyLeaderIds() != null && !domain.getDeputyLeaderIds().isEmpty()) {
+            po.setDeputyLeaderIds(domain.getDeputyLeaderIds().toString());
+        }
+
         return po;
     }
 }

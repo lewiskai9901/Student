@@ -1,0 +1,1877 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>计分系统完整设计 - 策略→打分→计算</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #f0f2f5; }
+
+        .page-nav {
+            background: #fff;
+            padding: 12px 24px;
+            border-bottom: 1px solid #e8e8e8;
+            display: flex;
+            gap: 8px;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+        .nav-btn {
+            padding: 8px 20px;
+            border: 1px solid #e0e0e0;
+            background: #fff;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.2s;
+        }
+        .nav-btn:hover { border-color: #5b5fc7; color: #5b5fc7; }
+        .nav-btn.active { background: #5b5fc7; color: #fff; border-color: #5b5fc7; }
+
+        .page-section { display: none; padding: 24px; }
+        .page-section.active { display: block; }
+
+        .section-title {
+            font-size: 20px;
+            font-weight: 600;
+            color: #1a1a2e;
+            margin-bottom: 8px;
+        }
+        .section-desc {
+            color: #666;
+            font-size: 14px;
+            margin-bottom: 24px;
+        }
+
+        /* 流程图 */
+        .flow-chart {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 16px;
+            padding: 32px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 12px;
+            margin-bottom: 32px;
+        }
+        .flow-step {
+            background: rgba(255,255,255,0.95);
+            padding: 20px 32px;
+            border-radius: 12px;
+            text-align: center;
+            min-width: 160px;
+        }
+        .flow-step-num {
+            width: 28px;
+            height: 28px;
+            background: #5b5fc7;
+            color: #fff;
+            border-radius: 50%;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+            font-weight: 600;
+            margin-bottom: 8px;
+        }
+        .flow-step-title { font-size: 16px; font-weight: 600; color: #1a1a2e; }
+        .flow-step-desc { font-size: 12px; color: #666; margin-top: 4px; }
+        .flow-arrow {
+            color: rgba(255,255,255,0.8);
+            font-size: 24px;
+        }
+
+        /* 策略卡片 */
+        .strategy-group {
+            margin-bottom: 24px;
+        }
+        .strategy-group-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 12px 16px;
+            background: #f5f6f8;
+            border-radius: 8px;
+            margin-bottom: 12px;
+            cursor: pointer;
+        }
+        .strategy-group-title {
+            font-size: 14px;
+            font-weight: 600;
+            color: #333;
+        }
+        .strategy-group-badge {
+            font-size: 12px;
+            color: #666;
+            background: #fff;
+            padding: 2px 10px;
+            border-radius: 10px;
+        }
+        .strategy-group-toggle {
+            color: #999;
+            font-size: 12px;
+        }
+        .strategy-group-content {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+            gap: 12px;
+        }
+        .strategy-group.collapsed .strategy-group-content { display: none; }
+        .strategy-group.collapsed .strategy-group-toggle::after { content: '展开'; }
+        .strategy-group:not(.collapsed) .strategy-group-toggle::after { content: '收起'; }
+
+        .strategy-card {
+            background: #fff;
+            border: 2px solid #e8e8e8;
+            border-radius: 10px;
+            padding: 16px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .strategy-card:hover { border-color: #c0c0ff; transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.08); }
+        .strategy-card.selected { border-color: #5b5fc7; background: #f8f8ff; }
+        .strategy-card-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+        .strategy-card-name { font-size: 15px; font-weight: 600; color: #1a1a2e; }
+        .strategy-card-tag {
+            font-size: 11px;
+            padding: 2px 8px;
+            border-radius: 4px;
+            background: #f0f0f0;
+            color: #666;
+        }
+        .strategy-card-tag.common { background: #e6f7ff; color: #1890ff; }
+        .strategy-card-tag.advanced { background: #fff7e6; color: #fa8c16; }
+        .strategy-card-desc { font-size: 13px; color: #666; margin-bottom: 10px; line-height: 1.5; }
+        .strategy-card-formula {
+            font-size: 12px;
+            color: #999;
+            background: #f9f9f9;
+            padding: 8px 10px;
+            border-radius: 6px;
+            font-family: 'Monaco', 'Consolas', monospace;
+        }
+        .strategy-card-check {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            width: 20px;
+            height: 20px;
+            background: #5b5fc7;
+            color: #fff;
+            border-radius: 50%;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+        }
+        .strategy-card.selected .strategy-card-check { display: flex; }
+        .strategy-card { position: relative; }
+
+        /* 对话框 */
+        .dialog-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.5);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            display: none;
+        }
+        .dialog-overlay.active { display: flex; }
+        .dialog {
+            background: #fff;
+            border-radius: 12px;
+            width: 90%;
+            max-width: 800px;
+            max-height: 90vh;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+        .dialog-header {
+            padding: 16px 24px;
+            border-bottom: 1px solid #f0f0f0;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        .dialog-title { font-size: 18px; font-weight: 600; color: #1a1a2e; }
+        .dialog-close {
+            width: 32px;
+            height: 32px;
+            border: none;
+            background: #f5f5f5;
+            border-radius: 50%;
+            cursor: pointer;
+            font-size: 18px;
+            color: #666;
+        }
+        .dialog-close:hover { background: #eee; }
+        .dialog-body {
+            flex: 1;
+            overflow-y: auto;
+            padding: 24px;
+        }
+        .dialog-footer {
+            padding: 16px 24px;
+            border-top: 1px solid #f0f0f0;
+            display: flex;
+            justify-content: flex-end;
+            gap: 12px;
+        }
+
+        /* 步骤条 */
+        .steps {
+            display: flex;
+            margin-bottom: 24px;
+            background: #f5f6f8;
+            border-radius: 8px;
+            padding: 4px;
+        }
+        .step {
+            flex: 1;
+            padding: 12px 16px;
+            text-align: center;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .step-num {
+            display: inline-block;
+            width: 24px;
+            height: 24px;
+            background: #ddd;
+            color: #666;
+            border-radius: 50%;
+            font-size: 13px;
+            line-height: 24px;
+            margin-right: 8px;
+        }
+        .step-text { font-size: 14px; color: #666; }
+        .step.active { background: #fff; box-shadow: 0 2px 8px rgba(0,0,0,0.08); }
+        .step.active .step-num { background: #5b5fc7; color: #fff; }
+        .step.active .step-text { color: #1a1a2e; font-weight: 500; }
+        .step.done .step-num { background: #52c41a; color: #fff; }
+
+        .step-content { display: none; }
+        .step-content.active { display: block; }
+
+        /* 表单样式 */
+        .form-section {
+            margin-bottom: 24px;
+        }
+        .form-section-title {
+            font-size: 13px;
+            color: #999;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 16px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid #f0f0f0;
+        }
+        .form-row {
+            display: flex;
+            gap: 16px;
+            margin-bottom: 16px;
+        }
+        .form-field {
+            flex: 1;
+        }
+        .form-label {
+            font-size: 13px;
+            color: #333;
+            margin-bottom: 6px;
+            display: block;
+        }
+        .form-label.required::after { content: ' *'; color: #ff4d4f; }
+        .form-input {
+            width: 100%;
+            padding: 10px 12px;
+            border: 1px solid #e0e0e0;
+            border-radius: 6px;
+            font-size: 14px;
+            transition: border-color 0.2s;
+        }
+        .form-input:focus { border-color: #5b5fc7; outline: none; }
+        .form-textarea {
+            width: 100%;
+            padding: 10px 12px;
+            border: 1px solid #e0e0e0;
+            border-radius: 6px;
+            font-size: 14px;
+            min-height: 80px;
+            resize: vertical;
+        }
+        .form-hint {
+            font-size: 12px;
+            color: #999;
+            margin-top: 4px;
+        }
+
+        /* 策略选择网格 */
+        .strategy-select-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 10px;
+            margin-bottom: 16px;
+        }
+        .strategy-select-item {
+            padding: 14px 12px;
+            border: 2px solid #e8e8e8;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.15s;
+            text-align: center;
+        }
+        .strategy-select-item:hover { border-color: #c0c0ff; background: #fafaff; }
+        .strategy-select-item.selected { border-color: #5b5fc7; background: #f0f0ff; }
+        .strategy-select-item.disabled { opacity: 0.5; cursor: not-allowed; }
+        .strategy-select-name { font-size: 14px; font-weight: 500; color: #1a1a2e; }
+        .strategy-select-desc { font-size: 11px; color: #888; margin-top: 2px; }
+
+        /* 折叠高级选项 */
+        .advanced-toggle {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 12px 0;
+            cursor: pointer;
+            color: #5b5fc7;
+            font-size: 13px;
+        }
+        .advanced-toggle:hover { color: #4547a9; }
+        .advanced-content {
+            display: none;
+            padding: 16px;
+            background: #f9f9fb;
+            border-radius: 8px;
+            margin-bottom: 16px;
+        }
+        .advanced-content.expanded { display: block; }
+
+        /* 打分方式预览 */
+        .input-preview {
+            background: #f5f6f8;
+            border-radius: 8px;
+            padding: 20px;
+            margin-top: 16px;
+        }
+        .input-preview-title {
+            font-size: 13px;
+            color: #666;
+            margin-bottom: 12px;
+        }
+        .input-preview-content {
+            background: #fff;
+            border-radius: 8px;
+            padding: 16px;
+            border: 1px solid #e8e8e8;
+        }
+
+        /* 打分方式卡片 */
+        .input-type-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 12px;
+        }
+        .input-type-card {
+            border: 2px solid #e8e8e8;
+            border-radius: 10px;
+            padding: 16px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .input-type-card:hover { border-color: #c0c0ff; }
+        .input-type-card.selected { border-color: #5b5fc7; background: #f8f8ff; }
+        .input-type-card.recommended { border-color: #52c41a; }
+        .input-type-card.recommended::before {
+            content: '推荐';
+            position: absolute;
+            top: -8px;
+            right: 12px;
+            background: #52c41a;
+            color: #fff;
+            font-size: 11px;
+            padding: 2px 8px;
+            border-radius: 4px;
+        }
+        .input-type-card { position: relative; }
+        .input-type-name { font-size: 15px; font-weight: 600; color: #1a1a2e; margin-bottom: 4px; }
+        .input-type-desc { font-size: 12px; color: #666; margin-bottom: 12px; }
+        .input-type-demo {
+            background: #f5f5f5;
+            border-radius: 6px;
+            padding: 12px;
+            min-height: 50px;
+        }
+
+        /* 分值配置表格 */
+        .score-config-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        .score-config-table th {
+            text-align: left;
+            padding: 10px 12px;
+            background: #f5f6f8;
+            font-size: 13px;
+            font-weight: 500;
+            color: #666;
+        }
+        .score-config-table td {
+            padding: 10px 12px;
+            border-bottom: 1px solid #f0f0f0;
+        }
+        .score-config-table input {
+            padding: 8px 10px;
+            border: 1px solid #e0e0e0;
+            border-radius: 4px;
+            font-size: 14px;
+            width: 100%;
+        }
+        .score-config-table input:focus {
+            border-color: #5b5fc7;
+            outline: none;
+        }
+        .add-option-btn {
+            color: #5b5fc7;
+            font-size: 13px;
+            cursor: pointer;
+            padding: 8px 0;
+            display: inline-block;
+        }
+        .add-option-btn:hover { color: #4547a9; }
+        .remove-btn {
+            color: #ff4d4f;
+            cursor: pointer;
+            font-size: 18px;
+        }
+
+        /* 开关 */
+        .switch-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 12px 0;
+            border-bottom: 1px solid #f5f5f5;
+        }
+        .switch-row:last-child { border-bottom: none; }
+        .switch-label { font-size: 14px; color: #333; }
+        .switch-desc { font-size: 12px; color: #999; margin-top: 2px; }
+        .switch {
+            width: 44px;
+            height: 24px;
+            background: #ddd;
+            border-radius: 12px;
+            position: relative;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .switch::after {
+            content: '';
+            position: absolute;
+            width: 20px;
+            height: 20px;
+            background: #fff;
+            border-radius: 50%;
+            top: 2px;
+            left: 2px;
+            transition: all 0.2s;
+        }
+        .switch.on { background: #5b5fc7; }
+        .switch.on::after { left: 22px; }
+
+        /* 按钮 */
+        .btn {
+            padding: 10px 24px;
+            border-radius: 6px;
+            font-size: 14px;
+            cursor: pointer;
+            border: none;
+            transition: all 0.2s;
+        }
+        .btn-default { background: #f5f5f5; color: #666; }
+        .btn-default:hover { background: #eee; }
+        .btn-primary { background: #5b5fc7; color: #fff; }
+        .btn-primary:hover { background: #4a4eb3; }
+        .btn-outline { background: #fff; border: 1px solid #d0d0d0; color: #666; }
+        .btn-outline:hover { border-color: #5b5fc7; color: #5b5fc7; }
+
+        /* 数据模型图 */
+        .model-diagram {
+            background: #fff;
+            border-radius: 12px;
+            padding: 24px;
+            margin-bottom: 24px;
+        }
+        .model-box {
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            margin-bottom: 16px;
+            overflow: hidden;
+        }
+        .model-box-header {
+            background: #5b5fc7;
+            color: #fff;
+            padding: 10px 16px;
+            font-weight: 600;
+        }
+        .model-box-content {
+            padding: 16px;
+        }
+        .model-field {
+            display: flex;
+            align-items: center;
+            padding: 6px 0;
+            font-size: 13px;
+        }
+        .model-field-name {
+            font-weight: 500;
+            color: #333;
+            min-width: 140px;
+        }
+        .model-field-type {
+            color: #1890ff;
+            font-family: 'Monaco', monospace;
+            font-size: 12px;
+            background: #e6f7ff;
+            padding: 2px 8px;
+            border-radius: 4px;
+            margin-right: 8px;
+        }
+        .model-field-desc {
+            color: #999;
+            font-size: 12px;
+        }
+        .model-arrow {
+            text-align: center;
+            padding: 8px;
+            color: #999;
+            font-size: 20px;
+        }
+
+        /* 表格样式 */
+        .info-table {
+            width: 100%;
+            border-collapse: collapse;
+            background: #fff;
+            border-radius: 8px;
+            overflow: hidden;
+            margin-bottom: 24px;
+        }
+        .info-table th {
+            background: #f5f6f8;
+            padding: 12px 16px;
+            text-align: left;
+            font-size: 13px;
+            font-weight: 600;
+            color: #333;
+            border-bottom: 1px solid #e8e8e8;
+        }
+        .info-table td {
+            padding: 12px 16px;
+            font-size: 13px;
+            color: #666;
+            border-bottom: 1px solid #f0f0f0;
+        }
+        .info-table tr:last-child td { border-bottom: none; }
+        .info-table code {
+            background: #f5f5f5;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-family: 'Monaco', monospace;
+            font-size: 12px;
+        }
+
+        /* 标签 */
+        .tag {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            margin-right: 4px;
+        }
+        .tag-blue { background: #e6f7ff; color: #1890ff; }
+        .tag-green { background: #f6ffed; color: #52c41a; }
+        .tag-orange { background: #fff7e6; color: #fa8c16; }
+        .tag-purple { background: #f9f0ff; color: #722ed1; }
+        .tag-red { background: #fff1f0; color: #ff4d4f; }
+    </style>
+</head>
+<body>
+    <div class="page-nav">
+        <button class="nav-btn active" onclick="showPage('overview')">系统概览</button>
+        <button class="nav-btn" onclick="showPage('strategies')">策略详解</button>
+        <button class="nav-btn" onclick="showPage('template-form')">新增模板</button>
+        <button class="nav-btn" onclick="showPage('item-form')">新增检查项</button>
+        <button class="nav-btn" onclick="showPage('data-model')">数据模型</button>
+    </div>
+
+    <!-- 系统概览 -->
+    <div class="page-section active" id="page-overview">
+        <h1 class="section-title">计分系统完整设计</h1>
+        <p class="section-desc">从策略选择 → 打分方式 → 分数计算的完整流程</p>
+
+        <div class="flow-chart">
+            <div class="flow-step">
+                <div class="flow-step-num">1</div>
+                <div class="flow-step-title">选择计分策略</div>
+                <div class="flow-step-desc">模板级别配置</div>
+            </div>
+            <div class="flow-arrow">→</div>
+            <div class="flow-step">
+                <div class="flow-step-num">2</div>
+                <div class="flow-step-title">配置打分方式</div>
+                <div class="flow-step-desc">检查项级别配置</div>
+            </div>
+            <div class="flow-arrow">→</div>
+            <div class="flow-step">
+                <div class="flow-step-num">3</div>
+                <div class="flow-step-title">执行检查打分</div>
+                <div class="flow-step-desc">检查员操作</div>
+            </div>
+            <div class="flow-arrow">→</div>
+            <div class="flow-step">
+                <div class="flow-step-num">4</div>
+                <div class="flow-step-title">自动计算得分</div>
+                <div class="flow-step-desc">系统自动处理</div>
+            </div>
+        </div>
+
+        <h2 style="font-size: 16px; margin-bottom: 16px; color: #1a1a2e;">策略分类总览</h2>
+
+        <table class="info-table">
+            <thead>
+                <tr>
+                    <th style="width: 120px;">分类</th>
+                    <th style="width: 200px;">包含策略</th>
+                    <th>说明</th>
+                    <th style="width: 100px;">默认显示</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><span class="tag tag-blue">基础策略</span></td>
+                    <td>扣分制、加分制、基准分制、清单制</td>
+                    <td>最常用的4种基础计分方式</td>
+                    <td>显示</td>
+                </tr>
+                <tr>
+                    <td><span class="tag tag-green">等级策略</span></td>
+                    <td>等级制、星级制、合格制、评语制</td>
+                    <td>直接评定等级而非数值</td>
+                    <td>显示</td>
+                </tr>
+                <tr>
+                    <td><span class="tag tag-orange">高级策略</span></td>
+                    <td>阶梯计分、累进计分、倍率计分、封顶保底、一票否决、门槛制</td>
+                    <td>复杂业务场景的高级规则</td>
+                    <td>折叠</td>
+                </tr>
+                <tr>
+                    <td><span class="tag tag-purple">时间策略</span></td>
+                    <td>时间衰减、滚动计算、趋势加成、周期重置</td>
+                    <td>考虑时间因素的计分</td>
+                    <td>折叠</td>
+                </tr>
+                <tr>
+                    <td><span class="tag tag-red">相对策略</span></td>
+                    <td>排名计分、强制分布、标准分、百分位</td>
+                    <td>相对于群体的计分</td>
+                    <td>折叠</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <h2 style="font-size: 16px; margin-bottom: 16px; color: #1a1a2e;">打分方式映射</h2>
+
+        <table class="info-table">
+            <thead>
+                <tr>
+                    <th style="width: 140px;">打分方式</th>
+                    <th style="width: 200px;">检查员操作</th>
+                    <th>适用策略</th>
+                    <th style="width: 150px;">UI组件</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><strong>数值输入</strong></td>
+                    <td>输入具体扣/加分数值</td>
+                    <td>扣分制、加分制、基准分制</td>
+                    <td><code>InputNumber</code></td>
+                </tr>
+                <tr>
+                    <td><strong>档位选择</strong></td>
+                    <td>选择预设的严重程度档位</td>
+                    <td>阶梯计分、等级制</td>
+                    <td><code>RadioGroup</code></td>
+                </tr>
+                <tr>
+                    <td><strong>勾选完成</strong></td>
+                    <td>勾选是否完成/合格</td>
+                    <td>清单制、合格制、一票否决</td>
+                    <td><code>Checkbox</code></td>
+                </tr>
+                <tr>
+                    <td><strong>计数输入</strong></td>
+                    <td>输入次数/数量</td>
+                    <td>累进计分、倍率计分</td>
+                    <td><code>Counter</code></td>
+                </tr>
+                <tr>
+                    <td><strong>星级点选</strong></td>
+                    <td>点击1-5颗星</td>
+                    <td>星级制</td>
+                    <td><code>Rate</code></td>
+                </tr>
+                <tr>
+                    <td><strong>等级选择</strong></td>
+                    <td>选择A/B/C/D等级</td>
+                    <td>等级制、强制分布</td>
+                    <td><code>Select/Card</code></td>
+                </tr>
+                <tr>
+                    <td><strong>评语选择</strong></td>
+                    <td>选择优/良/中/差</td>
+                    <td>评语制</td>
+                    <td><code>RadioCard</code></td>
+                </tr>
+                <tr>
+                    <td><strong>排名输入</strong></td>
+                    <td>输入名次</td>
+                    <td>排名计分</td>
+                    <td><code>InputNumber</code></td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <!-- 策略详解 -->
+    <div class="page-section" id="page-strategies">
+        <h1 class="section-title">所有计分策略详解</h1>
+        <p class="section-desc">点击策略卡片查看详细配置</p>
+
+        <!-- 基础策略 -->
+        <div class="strategy-group">
+            <div class="strategy-group-header">
+                <div>
+                    <span class="strategy-group-title">基础策略</span>
+                    <span class="strategy-group-badge">4个</span>
+                </div>
+                <span class="strategy-group-toggle"></span>
+            </div>
+            <div class="strategy-group-content">
+                <div class="strategy-card selected">
+                    <span class="strategy-card-check">✓</span>
+                    <div class="strategy-card-header">
+                        <span class="strategy-card-name">扣分制</span>
+                        <span class="strategy-card-tag common">常用</span>
+                    </div>
+                    <div class="strategy-card-desc">从基准分开始，发现问题扣除相应分数</div>
+                    <div class="strategy-card-formula">得分 = 基准分 - Σ扣分</div>
+                </div>
+                <div class="strategy-card">
+                    <div class="strategy-card-header">
+                        <span class="strategy-card-name">加分制</span>
+                        <span class="strategy-card-tag common">常用</span>
+                    </div>
+                    <div class="strategy-card-desc">从0分开始，完成项目累加分数</div>
+                    <div class="strategy-card-formula">得分 = 0 + Σ加分</div>
+                </div>
+                <div class="strategy-card">
+                    <div class="strategy-card-header">
+                        <span class="strategy-card-name">基准分制</span>
+                        <span class="strategy-card-tag common">常用</span>
+                    </div>
+                    <div class="strategy-card-desc">从基准分开始，可加可减</div>
+                    <div class="strategy-card-formula">得分 = 基准分 ± Σ调整分</div>
+                </div>
+                <div class="strategy-card">
+                    <div class="strategy-card-header">
+                        <span class="strategy-card-name">清单制</span>
+                        <span class="strategy-card-tag common">常用</span>
+                    </div>
+                    <div class="strategy-card-desc">按完成率计算，适合任务清单</div>
+                    <div class="strategy-card-formula">得分 = 完成数 / 总数 × 100</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 等级策略 -->
+        <div class="strategy-group">
+            <div class="strategy-group-header">
+                <div>
+                    <span class="strategy-group-title">等级策略</span>
+                    <span class="strategy-group-badge">4个</span>
+                </div>
+                <span class="strategy-group-toggle"></span>
+            </div>
+            <div class="strategy-group-content">
+                <div class="strategy-card">
+                    <div class="strategy-card-header">
+                        <span class="strategy-card-name">等级制</span>
+                        <span class="strategy-card-tag common">常用</span>
+                    </div>
+                    <div class="strategy-card-desc">直接评定A/B/C/D/E等级</div>
+                    <div class="strategy-card-formula">等级 → 预设分数映射</div>
+                </div>
+                <div class="strategy-card">
+                    <div class="strategy-card-header">
+                        <span class="strategy-card-name">星级制</span>
+                        <span class="strategy-card-tag common">常用</span>
+                    </div>
+                    <div class="strategy-card-desc">1-5星评定，直观易用</div>
+                    <div class="strategy-card-formula">得分 = 星数 × 20</div>
+                </div>
+                <div class="strategy-card">
+                    <div class="strategy-card-header">
+                        <span class="strategy-card-name">合格制</span>
+                        <span class="strategy-card-tag common">常用</span>
+                    </div>
+                    <div class="strategy-card-desc">二元判断：合格/不合格</div>
+                    <div class="strategy-card-formula">合格=100, 不合格=0</div>
+                </div>
+                <div class="strategy-card">
+                    <div class="strategy-card-header">
+                        <span class="strategy-card-name">评语制</span>
+                        <span class="strategy-card-tag">通用</span>
+                    </div>
+                    <div class="strategy-card-desc">优/良/中/差文字评定</div>
+                    <div class="strategy-card-formula">优=90,良=75,中=60,差=40</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 高级策略 -->
+        <div class="strategy-group collapsed">
+            <div class="strategy-group-header" onclick="this.parentElement.classList.toggle('collapsed')">
+                <div>
+                    <span class="strategy-group-title">高级策略</span>
+                    <span class="strategy-group-badge">6个 · 折叠</span>
+                </div>
+                <span class="strategy-group-toggle"></span>
+            </div>
+            <div class="strategy-group-content">
+                <div class="strategy-card">
+                    <div class="strategy-card-header">
+                        <span class="strategy-card-name">阶梯计分</span>
+                        <span class="strategy-card-tag advanced">高级</span>
+                    </div>
+                    <div class="strategy-card-desc">不同严重程度对应不同扣分档位</div>
+                    <div class="strategy-card-formula">轻微-1, 一般-3, 严重-5, 特别严重-10</div>
+                </div>
+                <div class="strategy-card">
+                    <div class="strategy-card-header">
+                        <span class="strategy-card-name">累进计分</span>
+                        <span class="strategy-card-tag advanced">高级</span>
+                    </div>
+                    <div class="strategy-card-desc">累计次数影响分值，惩罚屡教不改</div>
+                    <div class="strategy-card-formula">第n次扣分 = 基础分 × 2^(n-1)</div>
+                </div>
+                <div class="strategy-card">
+                    <div class="strategy-card-header">
+                        <span class="strategy-card-name">倍率计分</span>
+                        <span class="strategy-card-tag advanced">高级</span>
+                    </div>
+                    <div class="strategy-card-desc">特殊时期/情况放大或缩小分值</div>
+                    <div class="strategy-card-formula">实际扣分 = 基础扣分 × 倍率</div>
+                </div>
+                <div class="strategy-card">
+                    <div class="strategy-card-header">
+                        <span class="strategy-card-name">封顶保底</span>
+                        <span class="strategy-card-tag advanced">高级</span>
+                    </div>
+                    <div class="strategy-card-desc">设置分数上限和下限</div>
+                    <div class="strategy-card-formula">得分 = max(min(原始分, 上限), 下限)</div>
+                </div>
+                <div class="strategy-card">
+                    <div class="strategy-card-header">
+                        <span class="strategy-card-name">一票否决</span>
+                        <span class="strategy-card-tag advanced">高级</span>
+                    </div>
+                    <div class="strategy-card-desc">触发关键项直接不合格</div>
+                    <div class="strategy-card-formula">触发否决项 → 总分=0</div>
+                </div>
+                <div class="strategy-card">
+                    <div class="strategy-card-header">
+                        <span class="strategy-card-name">门槛制</span>
+                        <span class="strategy-card-tag advanced">高级</span>
+                    </div>
+                    <div class="strategy-card-desc">必须达到门槛才参与评定</div>
+                    <div class="strategy-card-formula">出勤率 < 80% → 不参评</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 时间策略 -->
+        <div class="strategy-group collapsed">
+            <div class="strategy-group-header" onclick="this.parentElement.classList.toggle('collapsed')">
+                <div>
+                    <span class="strategy-group-title">时间策略</span>
+                    <span class="strategy-group-badge">4个 · 折叠</span>
+                </div>
+                <span class="strategy-group-toggle"></span>
+            </div>
+            <div class="strategy-group-content">
+                <div class="strategy-card">
+                    <div class="strategy-card-header">
+                        <span class="strategy-card-name">时间衰减</span>
+                        <span class="strategy-card-tag advanced">高级</span>
+                    </div>
+                    <div class="strategy-card-desc">历史分数随时间降低权重</div>
+                    <div class="strategy-card-formula">本周×1.0 + 上周×0.8 + 上上周×0.6</div>
+                </div>
+                <div class="strategy-card">
+                    <div class="strategy-card-header">
+                        <span class="strategy-card-name">滚动计算</span>
+                        <span class="strategy-card-tag advanced">高级</span>
+                    </div>
+                    <div class="strategy-card-desc">取最近N期的平均分</div>
+                    <div class="strategy-card-formula">得分 = (W1+W2+W3+W4) / 4</div>
+                </div>
+                <div class="strategy-card">
+                    <div class="strategy-card-header">
+                        <span class="strategy-card-name">趋势加成</span>
+                        <span class="strategy-card-tag advanced">高级</span>
+                    </div>
+                    <div class="strategy-card-desc">考虑进步/退步趋势</div>
+                    <div class="strategy-card-formula">环比上升+3分, 环比下降-2分</div>
+                </div>
+                <div class="strategy-card">
+                    <div class="strategy-card-header">
+                        <span class="strategy-card-name">周期重置</span>
+                        <span class="strategy-card-tag advanced">高级</span>
+                    </div>
+                    <div class="strategy-card-desc">周期性从基准分重新开始</div>
+                    <div class="strategy-card-formula">每月1号重置为100分</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 相对策略 -->
+        <div class="strategy-group collapsed">
+            <div class="strategy-group-header" onclick="this.parentElement.classList.toggle('collapsed')">
+                <div>
+                    <span class="strategy-group-title">相对策略</span>
+                    <span class="strategy-group-badge">4个 · 折叠</span>
+                </div>
+                <span class="strategy-group-toggle"></span>
+            </div>
+            <div class="strategy-group-content">
+                <div class="strategy-card">
+                    <div class="strategy-card-header">
+                        <span class="strategy-card-name">排名计分</span>
+                        <span class="strategy-card-tag advanced">高级</span>
+                    </div>
+                    <div class="strategy-card-desc">根据排名确定分数</div>
+                    <div class="strategy-card-formula">第1=100, 第2=95, 第3=90...</div>
+                </div>
+                <div class="strategy-card">
+                    <div class="strategy-card-header">
+                        <span class="strategy-card-name">强制分布</span>
+                        <span class="strategy-card-tag advanced">高级</span>
+                    </div>
+                    <div class="strategy-card-desc">按比例强制分配等级</div>
+                    <div class="strategy-card-formula">A(10%) B(20%) C(40%) D(20%) E(10%)</div>
+                </div>
+                <div class="strategy-card">
+                    <div class="strategy-card-header">
+                        <span class="strategy-card-name">标准分</span>
+                        <span class="strategy-card-tag advanced">高级</span>
+                    </div>
+                    <div class="strategy-card-desc">相对于平均值的标准分</div>
+                    <div class="strategy-card-formula">Z = (原始分-均值)/标准差×10+50</div>
+                </div>
+                <div class="strategy-card">
+                    <div class="strategy-card-header">
+                        <span class="strategy-card-name">百分位</span>
+                        <span class="strategy-card-tag advanced">高级</span>
+                    </div>
+                    <div class="strategy-card-desc">超过多少人的百分比</div>
+                    <div class="strategy-card-formula">超过80%的人 = 80分</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 组合策略 -->
+        <div class="strategy-group collapsed">
+            <div class="strategy-group-header" onclick="this.parentElement.classList.toggle('collapsed')">
+                <div>
+                    <span class="strategy-group-title">组合/特殊策略</span>
+                    <span class="strategy-group-badge">5个 · 折叠</span>
+                </div>
+                <span class="strategy-group-toggle"></span>
+            </div>
+            <div class="strategy-group-content">
+                <div class="strategy-card">
+                    <div class="strategy-card-header">
+                        <span class="strategy-card-name">连续奖惩</span>
+                        <span class="strategy-card-tag advanced">高级</span>
+                    </div>
+                    <div class="strategy-card-desc">连续达标/不达标触发奖惩</div>
+                    <div class="strategy-card-formula">连续5天满分+5, 连续3天不及格-10</div>
+                </div>
+                <div class="strategy-card">
+                    <div class="strategy-card-header">
+                        <span class="strategy-card-name">多维组合</span>
+                        <span class="strategy-card-tag advanced">高级</span>
+                    </div>
+                    <div class="strategy-card-desc">多个维度独立计分再汇总</div>
+                    <div class="strategy-card-formula">过程分×40% + 结果分×60%</div>
+                </div>
+                <div class="strategy-card">
+                    <div class="strategy-card-header">
+                        <span class="strategy-card-name">条件触发</span>
+                        <span class="strategy-card-tag advanced">高级</span>
+                    </div>
+                    <div class="strategy-card-desc">满足条件才应用某规则</div>
+                    <div class="strategy-card-formula">基础分 + (达标 ? 奖励 : 0)</div>
+                </div>
+                <div class="strategy-card">
+                    <div class="strategy-card-header">
+                        <span class="strategy-card-name">抽查计分</span>
+                        <span class="strategy-card-tag advanced">高级</span>
+                    </div>
+                    <div class="strategy-card-desc">随机抽查，抽中才计入</div>
+                    <div class="strategy-card-formula">抽中项计入，未抽中忽略</div>
+                </div>
+                <div class="strategy-card">
+                    <div class="strategy-card-header">
+                        <span class="strategy-card-name">互评计分</span>
+                        <span class="strategy-card-tag advanced">高级</span>
+                    </div>
+                    <div class="strategy-card-desc">多人评分取平均或去极值</div>
+                    <div class="strategy-card-formula">去掉最高最低取平均</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 新增模板表单 -->
+    <div class="page-section" id="page-template-form">
+        <h1 class="section-title">新增检查模板</h1>
+        <p class="section-desc">分步骤配置模板的基本信息和计分策略</p>
+
+        <div style="max-width: 900px; margin: 0 auto;">
+            <!-- 步骤条 -->
+            <div class="steps">
+                <div class="step active" onclick="showStep(1)">
+                    <span class="step-num">1</span>
+                    <span class="step-text">基本信息</span>
+                </div>
+                <div class="step" onclick="showStep(2)">
+                    <span class="step-num">2</span>
+                    <span class="step-text">计分策略</span>
+                </div>
+                <div class="step" onclick="showStep(3)">
+                    <span class="step-num">3</span>
+                    <span class="step-text">策略参数</span>
+                </div>
+                <div class="step" onclick="showStep(4)">
+                    <span class="step-num">4</span>
+                    <span class="step-text">高级规则</span>
+                </div>
+            </div>
+
+            <!-- 步骤1：基本信息 -->
+            <div class="step-content active" id="step-1">
+                <div style="background: #fff; padding: 24px; border-radius: 12px;">
+                    <div class="form-section">
+                        <div class="form-section-title">基本信息</div>
+                        <div class="form-row">
+                            <div class="form-field">
+                                <label class="form-label required">模板名称</label>
+                                <input class="form-input" placeholder="如：日常卫生检查模板">
+                            </div>
+                            <div class="form-field" style="flex: 0.5;">
+                                <label class="form-label required">模板编码</label>
+                                <input class="form-input" placeholder="DAILY-001">
+                            </div>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-field">
+                                <label class="form-label">模板描述</label>
+                                <textarea class="form-textarea" placeholder="描述该模板的用途和适用场景"></textarea>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div style="display: flex; justify-content: flex-end; gap: 12px; margin-top: 24px;">
+                        <button class="btn btn-primary" onclick="showStep(2)">下一步：选择计分策略</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 步骤2：计分策略 -->
+            <div class="step-content" id="step-2">
+                <div style="background: #fff; padding: 24px; border-radius: 12px;">
+                    <div class="form-section">
+                        <div class="form-section-title">选择主计分策略</div>
+                        <div class="strategy-select-grid">
+                            <div class="strategy-select-item selected">
+                                <div class="strategy-select-name">扣分制</div>
+                                <div class="strategy-select-desc">从基准分扣除</div>
+                            </div>
+                            <div class="strategy-select-item">
+                                <div class="strategy-select-name">加分制</div>
+                                <div class="strategy-select-desc">从0分累加</div>
+                            </div>
+                            <div class="strategy-select-item">
+                                <div class="strategy-select-name">基准分制</div>
+                                <div class="strategy-select-desc">可加可减</div>
+                            </div>
+                            <div class="strategy-select-item">
+                                <div class="strategy-select-name">清单制</div>
+                                <div class="strategy-select-desc">完成率计算</div>
+                            </div>
+                        </div>
+
+                        <div class="strategy-select-grid">
+                            <div class="strategy-select-item">
+                                <div class="strategy-select-name">等级制</div>
+                                <div class="strategy-select-desc">A/B/C/D评定</div>
+                            </div>
+                            <div class="strategy-select-item">
+                                <div class="strategy-select-name">星级制</div>
+                                <div class="strategy-select-desc">1-5星评定</div>
+                            </div>
+                            <div class="strategy-select-item">
+                                <div class="strategy-select-name">合格制</div>
+                                <div class="strategy-select-desc">合格/不合格</div>
+                            </div>
+                            <div class="strategy-select-item">
+                                <div class="strategy-select-name">评语制</div>
+                                <div class="strategy-select-desc">优/良/中/差</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="advanced-toggle" onclick="toggleAdvanced('strategy-advanced')">
+                        <span>▶</span> 更多高级策略（阶梯/累进/倍率/时间衰减等）
+                    </div>
+                    <div class="advanced-content" id="strategy-advanced">
+                        <div class="form-section-title">高级策略</div>
+                        <div class="strategy-select-grid">
+                            <div class="strategy-select-item">
+                                <div class="strategy-select-name">阶梯计分</div>
+                                <div class="strategy-select-desc">分档位扣分</div>
+                            </div>
+                            <div class="strategy-select-item">
+                                <div class="strategy-select-name">累进计分</div>
+                                <div class="strategy-select-desc">按次数递增</div>
+                            </div>
+                            <div class="strategy-select-item">
+                                <div class="strategy-select-name">倍率计分</div>
+                                <div class="strategy-select-desc">特殊时期加倍</div>
+                            </div>
+                            <div class="strategy-select-item">
+                                <div class="strategy-select-name">排名计分</div>
+                                <div class="strategy-select-desc">按名次给分</div>
+                            </div>
+                        </div>
+                        <div class="form-section-title" style="margin-top: 16px;">时间策略</div>
+                        <div class="strategy-select-grid">
+                            <div class="strategy-select-item">
+                                <div class="strategy-select-name">时间衰减</div>
+                                <div class="strategy-select-desc">历史权重递减</div>
+                            </div>
+                            <div class="strategy-select-item">
+                                <div class="strategy-select-name">滚动计算</div>
+                                <div class="strategy-select-desc">取N期平均</div>
+                            </div>
+                            <div class="strategy-select-item">
+                                <div class="strategy-select-name">趋势加成</div>
+                                <div class="strategy-select-desc">进步奖励</div>
+                            </div>
+                            <div class="strategy-select-item">
+                                <div class="strategy-select-name">强制分布</div>
+                                <div class="strategy-select-desc">比例限制</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div style="display: flex; justify-content: space-between; margin-top: 24px;">
+                        <button class="btn btn-default" onclick="showStep(1)">上一步</button>
+                        <button class="btn btn-primary" onclick="showStep(3)">下一步：配置参数</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 步骤3：策略参数 -->
+            <div class="step-content" id="step-3">
+                <div style="background: #fff; padding: 24px; border-radius: 12px;">
+                    <div class="form-section">
+                        <div class="form-section-title">扣分制参数配置</div>
+                        <div class="form-row">
+                            <div class="form-field" style="flex: 0.3;">
+                                <label class="form-label required">基准分</label>
+                                <input class="form-input" type="number" value="100">
+                                <div class="form-hint">检查对象的初始分数</div>
+                            </div>
+                            <div class="form-field" style="flex: 0.3;">
+                                <label class="form-label">最低分</label>
+                                <input class="form-input" type="number" value="0" placeholder="无下限">
+                                <div class="form-hint">分数下限保护</div>
+                            </div>
+                            <div class="form-field" style="flex: 0.3;">
+                                <label class="form-label">最高分</label>
+                                <input class="form-input" type="number" value="100" placeholder="无上限">
+                                <div class="form-hint">分数上限保护</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="form-section">
+                        <div class="form-section-title">默认打分方式</div>
+                        <div class="form-hint" style="margin-bottom: 12px;">选择检查项默认使用的打分方式（可在检查项中单独覆盖）</div>
+                        <div class="strategy-select-grid" style="grid-template-columns: repeat(3, 1fr);">
+                            <div class="strategy-select-item selected">
+                                <div class="strategy-select-name">数值输入</div>
+                                <div class="strategy-select-desc">输入扣分数值</div>
+                            </div>
+                            <div class="strategy-select-item">
+                                <div class="strategy-select-name">档位选择</div>
+                                <div class="strategy-select-desc">选择预设档位</div>
+                            </div>
+                            <div class="strategy-select-item">
+                                <div class="strategy-select-name">勾选完成</div>
+                                <div class="strategy-select-desc">是/否判断</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div style="display: flex; justify-content: space-between; margin-top: 24px;">
+                        <button class="btn btn-default" onclick="showStep(2)">上一步</button>
+                        <button class="btn btn-primary" onclick="showStep(4)">下一步：高级规则</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 步骤4：高级规则 -->
+            <div class="step-content" id="step-4">
+                <div style="background: #fff; padding: 24px; border-radius: 12px;">
+                    <div class="form-section">
+                        <div class="form-section-title">叠加规则（可选）</div>
+                        <div class="form-hint" style="margin-bottom: 16px;">在主策略基础上叠加的额外规则</div>
+
+                        <div class="switch-row">
+                            <div>
+                                <div class="switch-label">启用封顶保底</div>
+                                <div class="switch-desc">单项扣分设置上限，防止单项扣分过多</div>
+                            </div>
+                            <div class="switch on" onclick="this.classList.toggle('on')"></div>
+                        </div>
+
+                        <div class="switch-row">
+                            <div>
+                                <div class="switch-label">启用一票否决</div>
+                                <div class="switch-desc">关键项触发直接不合格</div>
+                            </div>
+                            <div class="switch" onclick="this.classList.toggle('on')"></div>
+                        </div>
+
+                        <div class="switch-row">
+                            <div>
+                                <div class="switch-label">启用累进计分</div>
+                                <div class="switch-desc">同一问题重复出现，扣分递增</div>
+                            </div>
+                            <div class="switch" onclick="this.classList.toggle('on')"></div>
+                        </div>
+
+                        <div class="switch-row">
+                            <div>
+                                <div class="switch-label">启用连续奖惩</div>
+                                <div class="switch-desc">连续达标/不达标触发额外奖惩</div>
+                            </div>
+                            <div class="switch" onclick="this.classList.toggle('on')"></div>
+                        </div>
+
+                        <div class="switch-row">
+                            <div>
+                                <div class="switch-label">启用时间衰减</div>
+                                <div class="switch-desc">历史分数权重随时间降低</div>
+                            </div>
+                            <div class="switch" onclick="this.classList.toggle('on')"></div>
+                        </div>
+                    </div>
+
+                    <div style="display: flex; justify-content: space-between; margin-top: 24px;">
+                        <button class="btn btn-default" onclick="showStep(3)">上一步</button>
+                        <button class="btn btn-primary">完成创建</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 新增检查项表单 -->
+    <div class="page-section" id="page-item-form">
+        <h1 class="section-title">新增检查项</h1>
+        <p class="section-desc">配置检查项的打分方式和分值规则</p>
+
+        <div style="max-width: 900px; margin: 0 auto; display: flex; gap: 24px;">
+            <!-- 左侧表单 -->
+            <div style="flex: 1;">
+                <div style="background: #fff; padding: 24px; border-radius: 12px;">
+                    <!-- 基本信息 -->
+                    <div class="form-section">
+                        <div class="form-section-title">基本信息</div>
+                        <div class="form-row">
+                            <div class="form-field">
+                                <label class="form-label required">检查项名称</label>
+                                <input class="form-input" placeholder="如：地面清洁">
+                            </div>
+                            <div class="form-field" style="flex: 0.4;">
+                                <label class="form-label required">编码</label>
+                                <input class="form-input" placeholder="HYG001">
+                            </div>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-field">
+                                <label class="form-label">检查标准</label>
+                                <textarea class="form-textarea" placeholder="描述该检查项的具体标准和要求"></textarea>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 打分方式 -->
+                    <div class="form-section">
+                        <div class="form-section-title">打分方式</div>
+                        <div class="input-type-grid">
+                            <div class="input-type-card selected recommended">
+                                <div class="input-type-name">数值输入</div>
+                                <div class="input-type-desc">直接输入扣分数值</div>
+                                <div class="input-type-demo">
+                                    <input type="number" value="-2" style="width: 80px; padding: 8px; border: 1px solid #ddd; border-radius: 4px; text-align: center;">
+                                </div>
+                            </div>
+                            <div class="input-type-card">
+                                <div class="input-type-name">档位选择</div>
+                                <div class="input-type-desc">选择预设严重程度</div>
+                                <div class="input-type-demo" style="font-size: 12px;">
+                                    <label style="display: block; margin-bottom: 4px;"><input type="radio" name="demo1" checked> 轻微 (-1)</label>
+                                    <label style="display: block; margin-bottom: 4px;"><input type="radio" name="demo1"> 一般 (-3)</label>
+                                    <label style="display: block;"><input type="radio" name="demo1"> 严重 (-5)</label>
+                                </div>
+                            </div>
+                            <div class="input-type-card">
+                                <div class="input-type-name">勾选完成</div>
+                                <div class="input-type-desc">是/否判断</div>
+                                <div class="input-type-demo" style="text-align: center;">
+                                    <label style="display: inline-flex; align-items: center; gap: 8px; font-size: 14px;">
+                                        <input type="checkbox" style="width: 20px; height: 20px;"> 存在问题
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="advanced-toggle" onclick="toggleAdvanced('input-advanced')">
+                            <span>▶</span> 更多打分方式（星级/等级/计数等）
+                        </div>
+                        <div class="advanced-content" id="input-advanced">
+                            <div class="input-type-grid">
+                                <div class="input-type-card">
+                                    <div class="input-type-name">星级评定</div>
+                                    <div class="input-type-desc">1-5星评分</div>
+                                    <div class="input-type-demo" style="text-align: center; font-size: 20px; color: #fadb14;">
+                                        ★★★★☆
+                                    </div>
+                                </div>
+                                <div class="input-type-card">
+                                    <div class="input-type-name">等级评定</div>
+                                    <div class="input-type-desc">A/B/C/D等级</div>
+                                    <div class="input-type-demo" style="display: flex; gap: 4px; justify-content: center;">
+                                        <span style="padding: 4px 12px; background: #52c41a; color: #fff; border-radius: 4px; font-size: 12px;">A</span>
+                                        <span style="padding: 4px 12px; background: #f0f0f0; border-radius: 4px; font-size: 12px;">B</span>
+                                        <span style="padding: 4px 12px; background: #f0f0f0; border-radius: 4px; font-size: 12px;">C</span>
+                                        <span style="padding: 4px 12px; background: #f0f0f0; border-radius: 4px; font-size: 12px;">D</span>
+                                    </div>
+                                </div>
+                                <div class="input-type-card">
+                                    <div class="input-type-name">计数输入</div>
+                                    <div class="input-type-desc">输入违规次数</div>
+                                    <div class="input-type-demo" style="display: flex; align-items: center; justify-content: center; gap: 8px;">
+                                        <button style="width: 28px; height: 28px; border: 1px solid #ddd; background: #fff; border-radius: 4px;">-</button>
+                                        <span style="font-size: 18px; font-weight: 600;">3</span>
+                                        <button style="width: 28px; height: 28px; border: 1px solid #ddd; background: #fff; border-radius: 4px;">+</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 分值配置 -->
+                    <div class="form-section">
+                        <div class="form-section-title">分值配置</div>
+                        <table class="score-config-table">
+                            <thead>
+                                <tr>
+                                    <th>选项名称</th>
+                                    <th style="width: 100px;">分值</th>
+                                    <th style="width: 60px;"></th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td><input value="合格" placeholder="选项名称"></td>
+                                    <td><input type="number" value="0" style="text-align: center;"></td>
+                                    <td><span class="remove-btn">×</span></td>
+                                </tr>
+                                <tr>
+                                    <td><input value="轻微问题" placeholder="选项名称"></td>
+                                    <td><input type="number" value="-1" style="text-align: center;"></td>
+                                    <td><span class="remove-btn">×</span></td>
+                                </tr>
+                                <tr>
+                                    <td><input value="一般问题" placeholder="选项名称"></td>
+                                    <td><input type="number" value="-3" style="text-align: center;"></td>
+                                    <td><span class="remove-btn">×</span></td>
+                                </tr>
+                                <tr>
+                                    <td><input value="严重问题" placeholder="选项名称"></td>
+                                    <td><input type="number" value="-5" style="text-align: center;"></td>
+                                    <td><span class="remove-btn">×</span></td>
+                                </tr>
+                            </tbody>
+                        </table>
+                        <span class="add-option-btn">+ 添加选项</span>
+                    </div>
+
+                    <!-- 高级规则 -->
+                    <div class="form-section">
+                        <div class="form-section-title">高级规则</div>
+                        <div class="switch-row">
+                            <div>
+                                <div class="switch-label">一票否决项</div>
+                                <div class="switch-desc">触发此项直接判定不合格</div>
+                            </div>
+                            <div class="switch" onclick="this.classList.toggle('on')"></div>
+                        </div>
+                        <div class="switch-row">
+                            <div>
+                                <div class="switch-label">启用累进计分</div>
+                                <div class="switch-desc">重复违规扣分递增</div>
+                            </div>
+                            <div class="switch" onclick="this.classList.toggle('on')"></div>
+                        </div>
+                        <div class="switch-row">
+                            <div>
+                                <div class="switch-label">单项封顶</div>
+                                <div class="switch-desc">此项最多扣10分</div>
+                            </div>
+                            <div class="switch on" onclick="this.classList.toggle('on')"></div>
+                        </div>
+                    </div>
+
+                    <!-- 附加要求 -->
+                    <div class="form-section">
+                        <div class="form-section-title">附加要求</div>
+                        <div class="switch-row">
+                            <div>
+                                <div class="switch-label">可关联个人</div>
+                                <div class="switch-desc">允许关联到具体学生</div>
+                            </div>
+                            <div class="switch on" onclick="this.classList.toggle('on')"></div>
+                        </div>
+                        <div class="switch-row">
+                            <div>
+                                <div class="switch-label">需要拍照</div>
+                                <div class="switch-desc">要求上传照片作为证据</div>
+                            </div>
+                            <div class="switch" onclick="this.classList.toggle('on')"></div>
+                        </div>
+                        <div class="switch-row">
+                            <div>
+                                <div class="switch-label">需要备注</div>
+                                <div class="switch-desc">要求填写备注说明</div>
+                            </div>
+                            <div class="switch" onclick="this.classList.toggle('on')"></div>
+                        </div>
+                    </div>
+
+                    <div style="display: flex; justify-content: flex-end; gap: 12px; margin-top: 24px;">
+                        <button class="btn btn-default">取消</button>
+                        <button class="btn btn-primary">保存检查项</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 右侧预览 -->
+            <div style="width: 320px;">
+                <div style="background: #fff; padding: 20px; border-radius: 12px; position: sticky; top: 80px;">
+                    <div style="font-size: 14px; font-weight: 600; color: #333; margin-bottom: 16px;">打分预览</div>
+                    <div style="background: #f5f6f8; border-radius: 8px; padding: 16px;">
+                        <div style="font-size: 14px; font-weight: 500; color: #1a1a2e; margin-bottom: 4px;">地面清洁</div>
+                        <div style="font-size: 12px; color: #888; margin-bottom: 12px;">HYG001</div>
+
+                        <div style="background: #fff; border-radius: 6px; padding: 12px; border: 1px solid #e8e8e8;">
+                            <div style="font-size: 12px; color: #666; margin-bottom: 8px;">选择检查结果：</div>
+                            <div style="display: flex; flex-direction: column; gap: 8px;">
+                                <label style="display: flex; align-items: center; gap: 8px; padding: 8px 12px; background: #f0fff0; border-radius: 4px; cursor: pointer; font-size: 13px;">
+                                    <input type="radio" name="preview" checked>
+                                    <span>合格</span>
+                                    <span style="margin-left: auto; color: #52c41a;">0</span>
+                                </label>
+                                <label style="display: flex; align-items: center; gap: 8px; padding: 8px 12px; background: #fffbe6; border-radius: 4px; cursor: pointer; font-size: 13px;">
+                                    <input type="radio" name="preview">
+                                    <span>轻微问题</span>
+                                    <span style="margin-left: auto; color: #fa8c16;">-1</span>
+                                </label>
+                                <label style="display: flex; align-items: center; gap: 8px; padding: 8px 12px; background: #fff7e6; border-radius: 4px; cursor: pointer; font-size: 13px;">
+                                    <input type="radio" name="preview">
+                                    <span>一般问题</span>
+                                    <span style="margin-left: auto; color: #fa541c;">-3</span>
+                                </label>
+                                <label style="display: flex; align-items: center; gap: 8px; padding: 8px 12px; background: #fff1f0; border-radius: 4px; cursor: pointer; font-size: 13px;">
+                                    <input type="radio" name="preview">
+                                    <span>严重问题</span>
+                                    <span style="margin-left: auto; color: #ff4d4f;">-5</span>
+                                </label>
+                            </div>
+                        </div>
+
+                        <div style="margin-top: 12px; padding-top: 12px; border-top: 1px solid #e8e8e8;">
+                            <div style="font-size: 12px; color: #666; margin-bottom: 8px;">附加操作：</div>
+                            <div style="display: flex; gap: 8px;">
+                                <span style="padding: 4px 10px; background: #e6f7ff; color: #1890ff; border-radius: 4px; font-size: 12px;">可关联个人</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div style="margin-top: 16px; padding: 12px; background: #f9f9fb; border-radius: 6px;">
+                        <div style="font-size: 12px; color: #666;">计分公式</div>
+                        <div style="font-size: 13px; color: #333; margin-top: 4px; font-family: Monaco, monospace;">
+                            得分 = 100 + 选择分值
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 数据模型 -->
+    <div class="page-section" id="page-data-model">
+        <h1 class="section-title">数据模型设计</h1>
+        <p class="section-desc">计分系统的完整数据结构</p>
+
+        <div style="max-width: 800px; margin: 0 auto;">
+            <div class="model-diagram">
+                <div class="model-box">
+                    <div class="model-box-header">Template 检查模板</div>
+                    <div class="model-box-content">
+                        <div class="model-field">
+                            <span class="model-field-name">id</span>
+                            <span class="model-field-type">Long</span>
+                            <span class="model-field-desc">主键</span>
+                        </div>
+                        <div class="model-field">
+                            <span class="model-field-name">templateName</span>
+                            <span class="model-field-type">String</span>
+                            <span class="model-field-desc">模板名称</span>
+                        </div>
+                        <div class="model-field">
+                            <span class="model-field-name">templateCode</span>
+                            <span class="model-field-type">String</span>
+                            <span class="model-field-desc">模板编码</span>
+                        </div>
+                        <div class="model-field">
+                            <span class="model-field-name">scoringStrategy</span>
+                            <span class="model-field-type">Enum</span>
+                            <span class="model-field-desc">主计分策略</span>
+                        </div>
+                        <div class="model-field">
+                            <span class="model-field-name">baseScore</span>
+                            <span class="model-field-type">Integer</span>
+                            <span class="model-field-desc">基准分</span>
+                        </div>
+                        <div class="model-field">
+                            <span class="model-field-name">minScore</span>
+                            <span class="model-field-type">Integer</span>
+                            <span class="model-field-desc">最低分（封底）</span>
+                        </div>
+                        <div class="model-field">
+                            <span class="model-field-name">maxScore</span>
+                            <span class="model-field-type">Integer</span>
+                            <span class="model-field-desc">最高分（封顶）</span>
+                        </div>
+                        <div class="model-field">
+                            <span class="model-field-name">defaultInputType</span>
+                            <span class="model-field-type">Enum</span>
+                            <span class="model-field-desc">默认打分方式</span>
+                        </div>
+                        <div class="model-field">
+                            <span class="model-field-name">advancedRules</span>
+                            <span class="model-field-type">JSON</span>
+                            <span class="model-field-desc">高级规则配置</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="model-arrow">↓ 1:N</div>
+
+                <div class="model-box">
+                    <div class="model-box-header">TemplateCategory 检查类别</div>
+                    <div class="model-box-content">
+                        <div class="model-field">
+                            <span class="model-field-name">id</span>
+                            <span class="model-field-type">Long</span>
+                            <span class="model-field-desc">主键</span>
+                        </div>
+                        <div class="model-field">
+                            <span class="model-field-name">templateId</span>
+                            <span class="model-field-type">Long</span>
+                            <span class="model-field-desc">所属模板</span>
+                        </div>
+                        <div class="model-field">
+                            <span class="model-field-name">categoryName</span>
+                            <span class="model-field-type">String</span>
+                            <span class="model-field-desc">类别名称</span>
+                        </div>
+                        <div class="model-field">
+                            <span class="model-field-name">weight</span>
+                            <span class="model-field-type">Integer</span>
+                            <span class="model-field-desc">权重百分比</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="model-arrow">↓ 1:N</div>
+
+                <div class="model-box">
+                    <div class="model-box-header">TemplateScoreItem 检查项</div>
+                    <div class="model-box-content">
+                        <div class="model-field">
+                            <span class="model-field-name">id</span>
+                            <span class="model-field-type">Long</span>
+                            <span class="model-field-desc">主键</span>
+                        </div>
+                        <div class="model-field">
+                            <span class="model-field-name">categoryId</span>
+                            <span class="model-field-type">Long</span>
+                            <span class="model-field-desc">所属类别</span>
+                        </div>
+                        <div class="model-field">
+                            <span class="model-field-name">itemName</span>
+                            <span class="model-field-type">String</span>
+                            <span class="model-field-desc">检查项名称</span>
+                        </div>
+                        <div class="model-field">
+                            <span class="model-field-name">itemCode</span>
+                            <span class="model-field-type">String</span>
+                            <span class="model-field-desc">检查项编码</span>
+                        </div>
+                        <div class="model-field">
+                            <span class="model-field-name">inputType</span>
+                            <span class="model-field-type">Enum</span>
+                            <span class="model-field-desc">打分方式</span>
+                        </div>
+                        <div class="model-field">
+                            <span class="model-field-name">scoreOptions</span>
+                            <span class="model-field-type">JSON</span>
+                            <span class="model-field-desc">分值选项配置</span>
+                        </div>
+                        <div class="model-field">
+                            <span class="model-field-name">isVeto</span>
+                            <span class="model-field-type">Boolean</span>
+                            <span class="model-field-desc">是否一票否决</span>
+                        </div>
+                        <div class="model-field">
+                            <span class="model-field-name">maxDeduction</span>
+                            <span class="model-field-type">Integer</span>
+                            <span class="model-field-desc">单项封顶</span>
+                        </div>
+                        <div class="model-field">
+                            <span class="model-field-name">progressiveRule</span>
+                            <span class="model-field-type">JSON</span>
+                            <span class="model-field-desc">累进规则</span>
+                        </div>
+                        <div class="model-field">
+                            <span class="model-field-name">canLinkIndividual</span>
+                            <span class="model-field-type">Boolean</span>
+                            <span class="model-field-desc">可关联个人</span>
+                        </div>
+                        <div class="model-field">
+                            <span class="model-field-name">requiresPhoto</span>
+                            <span class="model-field-type">Boolean</span>
+                            <span class="model-field-desc">需要拍照</span>
+                        </div>
+                        <div class="model-field">
+                            <span class="model-field-name">requiresRemark</span>
+                            <span class="model-field-type">Boolean</span>
+                            <span class="model-field-desc">需要备注</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <h2 style="font-size: 16px; margin: 24px 0 16px; color: #1a1a2e;">枚举定义</h2>
+
+            <table class="info-table">
+                <thead>
+                    <tr>
+                        <th>枚举</th>
+                        <th>值</th>
+                        <th>说明</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td rowspan="8"><strong>ScoringStrategy</strong><br>计分策略</td>
+                        <td><code>DEDUCTION</code></td>
+                        <td>扣分制</td>
+                    </tr>
+                    <tr>
+                        <td><code>ADDITION</code></td>
+                        <td>加分制</td>
+                    </tr>
+                    <tr>
+                        <td><code>BASE_SCORE</code></td>
+                        <td>基准分制</td>
+                    </tr>
+                    <tr>
+                        <td><code>CHECKLIST</code></td>
+                        <td>清单制</td>
+                    </tr>
+                    <tr>
+                        <td><code>GRADE</code></td>
+                        <td>等级制</td>
+                    </tr>
+                    <tr>
+                        <td><code>STAR_RATING</code></td>
+                        <td>星级制</td>
+                    </tr>
+                    <tr>
+                        <td><code>PASS_FAIL</code></td>
+                        <td>合格制</td>
+                    </tr>
+                    <tr>
+                        <td><code>STEPPED</code></td>
+                        <td>阶梯计分</td>
+                    </tr>
+                    <tr>
+                        <td rowspan="6"><strong>InputType</strong><br>打分方式</td>
+                        <td><code>NUMERIC</code></td>
+                        <td>数值输入</td>
+                    </tr>
+                    <tr>
+                        <td><code>OPTIONS</code></td>
+                        <td>档位选择</td>
+                    </tr>
+                    <tr>
+                        <td><code>CHECKBOX</code></td>
+                        <td>勾选完成</td>
+                    </tr>
+                    <tr>
+                        <td><code>COUNTER</code></td>
+                        <td>计数输入</td>
+                    </tr>
+                    <tr>
+                        <td><code>STAR</code></td>
+                        <td>星级点选</td>
+                    </tr>
+                    <tr>
+                        <td><code>GRADE</code></td>
+                        <td>等级选择</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <h2 style="font-size: 16px; margin: 24px 0 16px; color: #1a1a2e;">JSON配置示例</h2>
+
+            <div style="background: #1a1a2e; color: #a0e0a0; padding: 20px; border-radius: 8px; font-family: Monaco, monospace; font-size: 13px; line-height: 1.6; overflow-x: auto;">
+<pre>// scoreOptions - 分值选项配置
+{
+  "options": [
+    { "label": "合格", "value": 0 },
+    { "label": "轻微问题", "value": -1 },
+    { "label": "一般问题", "value": -3 },
+    { "label": "严重问题", "value": -5 }
+  ]
+}
+
+// progressiveRule - 累进规则配置
+{
+  "enabled": true,
+  "baseValue": -1,
+  "multiplier": 2,  // 每次翻倍
+  "maxTimes": 5     // 最多累计5次
+}
+
+// advancedRules - 高级规则配置
+{
+  "capEnabled": true,
+  "capMin": 0,
+  "capMax": 100,
+  "vetoEnabled": true,
+  "progressiveEnabled": false,
+  "consecutiveReward": {
+    "enabled": true,
+    "days": 5,
+    "bonus": 5
+  },
+  "timeDecay": {
+    "enabled": false,
+    "weights": [1.0, 0.8, 0.6, 0.4]
+  }
+}</pre>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function showPage(pageId) {
+            document.querySelectorAll('.page-section').forEach(p => p.classList.remove('active'));
+            document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+
+            document.getElementById('page-' + pageId).classList.add('active');
+            event.target.classList.add('active');
+        }
+
+        function showStep(stepNum) {
+            document.querySelectorAll('.step').forEach((s, i) => {
+                s.classList.remove('active');
+                if (i < stepNum - 1) s.classList.add('done');
+                else s.classList.remove('done');
+                if (i === stepNum - 1) s.classList.add('active');
+            });
+            document.querySelectorAll('.step-content').forEach((c, i) => {
+                c.classList.toggle('active', i === stepNum - 1);
+            });
+        }
+
+        function toggleAdvanced(id) {
+            const content = document.getElementById(id);
+            const toggle = content.previousElementSibling;
+            content.classList.toggle('expanded');
+            toggle.querySelector('span').textContent = content.classList.contains('expanded') ? '▼' : '▶';
+        }
+
+        // 策略选择交互
+        document.addEventListener('click', function(e) {
+            if (e.target.closest('.strategy-select-item') && !e.target.closest('.strategy-select-item').classList.contains('disabled')) {
+                const grid = e.target.closest('.strategy-select-grid');
+                grid.querySelectorAll('.strategy-select-item').forEach(i => i.classList.remove('selected'));
+                e.target.closest('.strategy-select-item').classList.add('selected');
+            }
+
+            if (e.target.closest('.input-type-card')) {
+                document.querySelectorAll('.input-type-card').forEach(c => c.classList.remove('selected'));
+                e.target.closest('.input-type-card').classList.add('selected');
+            }
+
+            if (e.target.closest('.strategy-card')) {
+                const group = e.target.closest('.strategy-group-content');
+                group.querySelectorAll('.strategy-card').forEach(c => c.classList.remove('selected'));
+                e.target.closest('.strategy-card').classList.add('selected');
+            }
+        });
+    </script>
+</body>
+</html>

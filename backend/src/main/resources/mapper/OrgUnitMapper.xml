@@ -4,16 +4,21 @@
 
     <resultMap id="OrgUnitResultMap" type="com.school.management.infrastructure.persistence.organization.OrgUnitPO">
         <id column="id" property="id"/>
-        <result column="org_code" property="orgCode"/>
-        <result column="org_name" property="orgName"/>
-        <result column="org_type" property="orgType"/>
+        <result column="unit_code" property="unitCode"/>
+        <result column="unit_name" property="unitName"/>
+        <result column="unit_type" property="unitType"/>
+        <result column="unit_category" property="unitCategory"/>
         <result column="parent_id" property="parentId"/>
         <result column="tree_path" property="treePath"/>
         <result column="tree_level" property="treeLevel"/>
+        <result column="leader_id" property="leaderId"/>
+        <result column="deputy_leader_ids" property="deputyLeaderIds"/>
         <result column="sort_order" property="sortOrder"/>
-        <result column="is_enabled" property="isEnabled"/>
+        <result column="status" property="status"/>
         <result column="created_at" property="createdAt"/>
         <result column="updated_at" property="updatedAt"/>
+        <result column="created_by" property="createdBy"/>
+        <result column="updated_by" property="updatedBy"/>
         <result column="deleted" property="deleted"/>
     </resultMap>
 
@@ -36,7 +41,7 @@
     <!-- 按类型查询组织 -->
     <select id="selectByType" resultMap="OrgUnitResultMap">
         SELECT * FROM org_units
-        WHERE org_type = #{orgType}
+        WHERE unit_type = #{unitType}
         AND deleted = 0
         ORDER BY tree_level, sort_order
     </select>
@@ -45,7 +50,7 @@
     <select id="selectByParentIdAndType" resultMap="OrgUnitResultMap">
         SELECT * FROM org_units
         WHERE parent_id = #{parentId}
-        AND org_type = #{orgType}
+        AND unit_type = #{unitType}
         AND deleted = 0
         ORDER BY sort_order
     </select>
@@ -56,6 +61,15 @@
         WHERE FIND_IN_SET(id, #{ancestorIds})
         AND deleted = 0
         ORDER BY tree_level
+    </select>
+
+    <!-- 按组织类别查询 -->
+    <select id="selectByCategory" resultMap="OrgUnitResultMap">
+        SELECT * FROM org_units
+        WHERE unit_category = #{unitCategory}
+        AND status = 1
+        AND deleted = 0
+        ORDER BY sort_order
     </select>
 
 </mapper>

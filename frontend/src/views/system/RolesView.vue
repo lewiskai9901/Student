@@ -784,7 +784,7 @@
             </div>
             <div class="p-6">
               <p class="mb-4 text-sm text-gray-500">
-                请选择该角色可以访问的组织单元（部门/年级/班级）。
+                请选择该角色可以访问的组织单元（组织/年级/班级）。
               </p>
               <!-- 快捷操作 -->
               <div class="mb-3 flex gap-2">
@@ -914,6 +914,13 @@ import {
   saveRoleDataPermissionsV2,
   getDataModulesV2,
   getDataScopesV2,
+  // V5 API
+  getDataModulesV5,
+  getDataScopesV5,
+  getScopeItemTypesV5,
+  searchScopeItemsV5,
+  getRoleDataPermissionsV5,
+  saveRoleDataPermissionsV5,
   type RoleResponse
 } from '@/api/access'
 import { getOrgUnitTree, getAllGrades, getAllClasses, type Grade, type SchoolClass } from '@/api/organization'
@@ -928,7 +935,14 @@ import type {
   ModulePermission,
   GroupedModules,
   DataScopeOption,
-  DomainConfig
+  DomainConfig,
+  // V5 types
+  DomainModulesV5,
+  ScopeTypeV5,
+  ScopeItemTypeV5,
+  ScopeItemV5,
+  RoleModulePermissionV5,
+  SavePermissionCommandV5
 } from '@/types/access'
 
 const loading = ref(false)
@@ -979,10 +993,17 @@ const unifiedTreeData = ref<UnifiedTreeNode[]>([])
 const unifiedTreeLoading = ref(false)
 const unifiedExpandedNodes = ref<Set<string>>(new Set())
 
+// ==================== V5 数据权限状态 ====================
+const useV5Api = ref(true) // 使用V5 API (可切换)
+const v5Modules = ref<DomainModulesV5[]>([])
+const v5Scopes = ref<ScopeTypeV5[]>([])
+const v5ScopeItemTypes = ref<ScopeItemTypeV5[]>([])
+const v5RolePermissions = ref<RoleModulePermissionV5[]>([])
+
 // 快捷设置选项
 const quickScopeOptions = [
   { code: 'all', label: '全部数据' },
-  { code: 'department_and_below', label: '本部门及以下' },
+  { code: 'department_and_below', label: '本组织及以下' },
   { code: 'self', label: '仅本人' }
 ]
 
@@ -1785,12 +1806,38 @@ const getModuleIcon = (moduleCode: string) => {
 // 加载数据权限元数据
 const loadDataPermissionMeta = async () => {
   try {
-    const [modules, scopes] = await Promise.all([
-      getDataModulesV2(),
-      getDataScopesV2()
-    ])
-    groupedModules.value = modules
-    dataScopeOptions.value = scopes
+    if (useV5Api.value) {
+      // V5 API
+      const [modules, scopes, itemTypes] = await Promise.all([
+        getDataModulesV5(),
+        getDataScopesV5(),
+        getScopeItemTypesV5()
+      ])
+      v5Modules.value = modules
+      v5Scopes.value = scopes
+      v5ScopeItemTypes.value = itemTypes
+      // 转换为V2格式以兼容现有UI
+      groupedModules.value = modules.reduce((acc, domain) => {
+        acc[domain.domainCode] = domain.modules.map(m => ({
+          code: m.code,
+          name: m.name,
+          domainCode: domain.domainCode
+        }))
+        return acc
+      }, {} as Record<string, any[]>)
+      dataScopeOptions.value = scopes.map(s => ({
+        code: s.code.toLowerCase(),
+        name: s.name
+      }))
+    } else {
+      // V2 API
+      const [modules, scopes] = await Promise.all([
+        getDataModulesV2(),
+        getDataScopesV2()
+      ])
+      groupedModules.value = modules
+      dataScopeOptions.value = scopes
+    }
   } catch (error) {
     console.error('加载数据权限元数据失败:', error)
   }
@@ -1807,9 +1854,30 @@ const handleDataPermissions = async (row: RoleResponse) => {
       await loadDataPermissionMeta()
     }
 
-    // 加载角色的数据权限配置
-    const config = await getRoleDataPermissionsV2(row.id)
-    rolePermissionConfig.value = config
+    if (useV5Api.value) {
+      // V5 API - 加载角色的数据权限配置
+      const permissions = await getRoleDataPermissionsV5(row.id)
+      v5RolePermissions.value = permissions
+      // 转换为V2格式以兼容现有UI
+      rolePermissionConfig.value = {
+        roleId: row.id,
+        roleName: row.roleName,
+        modulePermissions: permissions.map(p => ({
+          moduleCode: p.moduleCode,
+          scopeCode: p.scopeCode.toLowerCase(),
+          scopeItems: p.scopeItems?.map(item => ({
+            itemTypeCode: item.itemTypeCode,
+            scopeId: item.scopeId,
+            scopeName: item.scopeName,
+            includeChildren: item.includeChildren
+          }))
+        }))
+      }
+    } else {
+      // V2 API
+      const config = await getRoleDataPermissionsV2(row.id)
+      rolePermissionConfig.value = config
+    }
     dataPermissionDialogVisible.value = true
   } catch (error) {
     ElMessage.error('加载数据权限失败')
@@ -1821,7 +1889,55 @@ const handleDataPermissionSubmit = async () => {
   if (!currentRoleId.value || !rolePermissionConfig.value) return
   try {
     dataPermissionSubmitLoading.value = true
-    await saveRoleDataPermissionsV2(currentRoleId.value, rolePermissionConfig.value)
+
+    if (useV5Api.value) {
+      // V5 API - 转换为V5格式保存
+      const commands: SavePermissionCommandV5[] = rolePermissionConfig.value.modulePermissions.map(mp => {
+        const scopeItems: ScopeItemV5[] = []
+
+        // 转换customScope到scopeItems
+        if (mp.scopeCode === 'custom' && mp.customScope) {
+          const { orgUnitIds = [], gradeIds = [], classIds = [] } = mp.customScope
+
+          orgUnitIds.forEach(id => {
+            scopeItems.push({
+              scopeId: id,
+              scopeName: '', // 名称由后端填充
+              itemTypeCode: 'ORG_UNIT',
+              includeChildren: true
+            })
+          })
+
+          gradeIds.forEach(id => {
+            scopeItems.push({
+              scopeId: id,
+              scopeName: '',
+              itemTypeCode: 'GRADE'
+            })
+          })
+
+          classIds.forEach(id => {
+            scopeItems.push({
+              scopeId: id,
+              scopeName: '',
+              itemTypeCode: 'CLASS'
+            })
+          })
+        }
+
+        return {
+          moduleCode: mp.moduleCode,
+          scopeCode: mp.scopeCode.toUpperCase(),
+          scopeItems: scopeItems.length > 0 ? scopeItems : undefined
+        }
+      })
+
+      await saveRoleDataPermissionsV5(currentRoleId.value, commands)
+    } else {
+      // V2 API
+      await saveRoleDataPermissionsV2(currentRoleId.value, rolePermissionConfig.value)
+    }
+
     ElMessage.success('数据权限保存成功')
     dataPermissionDialogVisible.value = false
   } catch (error: any) {

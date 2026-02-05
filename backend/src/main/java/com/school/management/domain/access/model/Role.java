@@ -4,8 +4,6 @@ import com.school.management.domain.access.model.DataScope;
 import com.school.management.domain.access.event.RoleCreatedEvent;
 import com.school.management.domain.access.event.RolePermissionsChangedEvent;
 import com.school.management.domain.shared.AggregateRoot;
-import lombok.Builder;
-import lombok.Getter;
 
 import java.time.LocalDateTime;
 import java.util.*;
@@ -13,7 +11,6 @@ import java.util.*;
 /**
  * Role aggregate root representing a role with associated permissions.
  */
-@Getter
 public class Role extends AggregateRoot<Long> {
 
     private Long id;
@@ -35,7 +32,6 @@ public class Role extends AggregateRoot<Long> {
         this.permissionIds = new HashSet<>();
     }
 
-    @Builder
     public Role(Long id, String roleCode, String roleName, String description,
                 RoleType roleType, Integer level, Boolean isSystem, Boolean isEnabled,
                 Long createdBy, Set<Long> permissionIds, DataScope dataScope) {
@@ -190,5 +186,53 @@ public class Role extends AggregateRoot<Long> {
 
     public Set<Long> getPermissionIds() {
         return Collections.unmodifiableSet(permissionIds);
+    }
+
+    // Manual getters
+    public String getRoleCode() { return roleCode; }
+    public String getRoleName() { return roleName; }
+    public String getDescription() { return description; }
+    public RoleType getRoleType() { return roleType; }
+    public Integer getLevel() { return level; }
+    public Boolean getIsSystem() { return isSystem; }
+    public Boolean getIsEnabled() { return isEnabled; }
+    public LocalDateTime getCreatedAt() { return createdAt; }
+    public LocalDateTime getUpdatedAt() { return updatedAt; }
+    public Long getCreatedBy() { return createdBy; }
+    public DataScope getDataScope() { return dataScope; }
+
+    // Builder pattern
+    public static RoleBuilder builder() {
+        return new RoleBuilder();
+    }
+
+    public static class RoleBuilder {
+        private Long id;
+        private String roleCode;
+        private String roleName;
+        private String description;
+        private RoleType roleType;
+        private Integer level;
+        private Boolean isSystem;
+        private Boolean isEnabled;
+        private Long createdBy;
+        private Set<Long> permissionIds;
+        private DataScope dataScope;
+
+        public RoleBuilder id(Long id) { this.id = id; return this; }
+        public RoleBuilder roleCode(String roleCode) { this.roleCode = roleCode; return this; }
+        public RoleBuilder roleName(String roleName) { this.roleName = roleName; return this; }
+        public RoleBuilder description(String description) { this.description = description; return this; }
+        public RoleBuilder roleType(RoleType roleType) { this.roleType = roleType; return this; }
+        public RoleBuilder level(Integer level) { this.level = level; return this; }
+        public RoleBuilder isSystem(Boolean isSystem) { this.isSystem = isSystem; return this; }
+        public RoleBuilder isEnabled(Boolean isEnabled) { this.isEnabled = isEnabled; return this; }
+        public RoleBuilder createdBy(Long createdBy) { this.createdBy = createdBy; return this; }
+        public RoleBuilder permissionIds(Set<Long> permissionIds) { this.permissionIds = permissionIds; return this; }
+        public RoleBuilder dataScope(DataScope dataScope) { this.dataScope = dataScope; return this; }
+
+        public Role build() {
+            return new Role(id, roleCode, roleName, description, roleType, level, isSystem, isEnabled, createdBy, permissionIds, dataScope);
+        }
     }
 }

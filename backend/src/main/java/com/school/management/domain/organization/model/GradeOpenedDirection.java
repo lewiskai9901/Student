@@ -13,7 +13,7 @@ import java.util.Objects;
  * - 班级的 majorDirectionId 必须在该年级开设的专业方向列表中
  * - 同一年级不能重复开设同一专业方向
  */
-public class GradeOpenedDirection extends Entity<Long> {
+public class GradeOpenedDirection implements Entity<Long> {
 
     private Long id;
 

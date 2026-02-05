@@ -67,12 +67,12 @@ public class SpaceRepositoryImpl implements SpaceRepository {
     }
 
     @Override
-    public boolean existsByBuildingNoInCampus(String buildingNo, Long campusId, Long excludeId) {
+    public boolean existsByBuildingNoInCampus(Integer buildingNo, Long campusId, Long excludeId) {
         return spaceMapper.countByBuildingNoInCampus(buildingNo, campusId, excludeId) > 0;
     }
 
     @Override
-    public boolean existsByRoomNoInBuilding(String roomNo, Long buildingId, Long excludeId) {
+    public boolean existsByRoomNoInBuilding(Integer roomNo, Long buildingId, Long excludeId) {
         return spaceMapper.countByRoomNoInBuilding(roomNo, buildingId, excludeId) > 0;
     }
 
@@ -231,10 +231,12 @@ public class SpaceRepositoryImpl implements SpaceRepository {
         po.setSpaceCode(space.getSpaceCode());
         po.setSpaceName(space.getSpaceName());
         po.setSpaceType(space.getSpaceType().name());
+        po.setCategoryId(space.getCategoryId());  // V10: 分类ID
         po.setRoomType(space.getRoomType() != null ? space.getRoomType().name() : null);
         po.setBuildingType(space.getBuildingType() != null ? space.getBuildingType().name() : null);
         po.setBuildingNo(space.getBuildingNo());
         po.setRoomNo(space.getRoomNo());
+        po.setFloorCount(space.getFloorCount());  // V10: 楼层数
         po.setParentId(space.getParentId());
         po.setPath(space.getPath() != null ? space.getPath().getValue() : null);
         po.setLevel(space.getLevel());
@@ -264,10 +266,12 @@ public class SpaceRepositoryImpl implements SpaceRepository {
             po.getSpaceCode(),
             po.getSpaceName(),
             SpaceType.valueOf(po.getSpaceType()),
+            po.getCategoryId(),  // V10: 分类ID
             po.getRoomType() != null ? RoomType.valueOf(po.getRoomType()) : null,
             po.getBuildingType() != null ? BuildingType.valueOf(po.getBuildingType()) : null,
             po.getBuildingNo(),
             po.getRoomNo(),
+            po.getFloorCount(),  // V10: 楼层数
             po.getParentId(),
             po.getPath(),
             po.getLevel(),

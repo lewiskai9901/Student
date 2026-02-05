@@ -114,7 +114,7 @@
       <div class="p-6">
         <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div>
-            <label class="block text-sm font-medium text-gray-500 mb-1">所属部门</label>
+            <label class="block text-sm font-medium text-gray-500 mb-1">所属组织</label>
             <div class="text-gray-900">{{ userInfo.orgUnit?.orgUnitName || '-' }}</div>
           </div>
           <div>

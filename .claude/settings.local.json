@@ -22,7 +22,14 @@
       "Bash(\"C:\\Program Files\\MySQL\\MySQL Server 8.0\\bin\\mysql.exe\" -u root -p123456 student_management -e \"DESC students;\")",
       "Bash(\"C:\\Program Files\\MySQL\\MySQL Server 8.0\\bin\\mysql.exe\" -u root -p123456 student_management -e \"ALTER TABLE students ADD COLUMN major_id BIGINT NULL COMMENT ''专业ID'' AFTER class_id, ADD INDEX idx_major_id (major_id);\")",
       "Bash(curl -s -X GET \"http://localhost:8080/api/users?pageNum=1&pageSize=10\" -H \"Authorization: Bearer eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxIiwiaWF0IjoxNzM1NDYwODAwLCJleHAiOjE3MzU1NDcyMDB9.test\")",
-      "Bash(curl:*)"
+      "Bash(curl:*)",
+      "Bash(node --version:*)",
+      "Bash(npm:*)",
+      "Bash(npx --version)",
+      "Bash(npm --version:*)",
+      "Bash(npx:*)",
+      "Bash(claude --chrome --version:*)",
+      "Bash(claude --version:*)"
     ],
     "deny": [],
     "ask": []

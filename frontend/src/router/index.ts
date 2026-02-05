@@ -119,7 +119,7 @@ const routes: RouteRecordRaw[] = [
             meta: {
               title: '组织架构',
               requiresAuth: true,
-              permission: 'system:department:view',
+              permission: 'system:org:view',
               order: 1
             }
           },
@@ -170,11 +170,11 @@ const routes: RouteRecordRaw[] = [
             }
           },
           // 宿舍管理和教学设施已整合到场所管理中心 (/space/center)
-          // 保留部门宿舍管理（特定用途）
+          // 保留组织宿舍管理（特定用途）
           {
             path: '/organization/dormitory',
             name: 'OrgDormitory',
-            redirect: '/space/center',  // 重定向到场所管理中心
+            redirect: '/space/management',  // 重定向到场所管理中心
             meta: {
               title: '宿舍管理',
               requiresAuth: true,
@@ -186,9 +186,9 @@ const routes: RouteRecordRaw[] = [
                 name: 'DepartmentDormitory',
                 component: () => import('@/views/dormitory/DepartmentDormitoryView.vue'),
                 meta: {
-                  title: '部门宿舍管理',
+                  title: '组织宿舍管理',
                   requiresAuth: true,
-                  permission: 'dormitory:department:view',
+                  permission: 'dormitory:org:view',
                   hidden: true  // 暂时隐藏，后续可根据需求决定是否保留
                 }
               }
@@ -198,10 +198,11 @@ const routes: RouteRecordRaw[] = [
       },
 
       // ==================== 量化检查 /inspection (order: 3) - Inspection领域 ====================
+      // V6重构：只保留V6路由，V4旧版路由全部隐藏
       {
         path: '/inspection',
         name: 'Inspection',
-        redirect: '/inspection/templates',
+        redirect: '/inspection/v6/projects',  // 默认跳转到V6检查项目
         meta: {
           title: '量化检查',
           icon: 'DocumentChecked',
@@ -210,313 +211,156 @@ const routes: RouteRecordRaw[] = [
           group: 'inspection'
         },
         children: [
+          // ==================== V6检查系统（当前主版本） ====================
           {
-            path: '/inspection/config',
-            name: 'InspectionConfig',
-            component: () => import('@/views/quantification/QuantificationUnifiedView.vue'),
+            path: '/inspection/v6/projects',
+            name: 'V6InspectionProjects',
+            component: () => import('@/views/inspection/v6/ProjectList.vue'),
             meta: {
-              title: '量化配置',
+              title: '检查项目',
+              icon: 'Folder',
               requiresAuth: true,
-              permission: 'quantification:config:view',
+              permission: 'inspection:project:view',
               order: 1
             }
           },
           {
-            path: '/inspection/check-plan',
-            name: 'InspectionCheckPlanList',
-            component: () => import('@/views/quantification/CheckPlanListView.vue'),
+            path: '/inspection/v6/projects/create',
+            name: 'V6InspectionProjectCreate',
+            component: () => import('@/views/inspection/v6/ProjectCreate.vue'),
             meta: {
-              title: '检查计划',
+              title: '创建检查项目',
+              hidden: true,
               requiresAuth: true,
-              permission: 'quantification:plan:view',
+              permission: 'inspection:project:create'
+            }
+          },
+          {
+            path: '/inspection/v6/projects/:id',
+            name: 'V6InspectionProjectDetail',
+            component: () => import('@/views/inspection/v6/ProjectDetail.vue'),
+            meta: {
+              title: '项目详情',
+              hidden: true,
+              requiresAuth: true,
+              permission: 'inspection:project:view'
+            }
+          },
+          {
+            path: '/inspection/v6/projects/:id/config',
+            name: 'V6InspectionProjectConfig',
+            component: () => import('@/views/inspection/v6/ProjectConfig.vue'),
+            meta: {
+              title: '项目配置',
+              hidden: true,
+              requiresAuth: true,
+              permission: 'inspection:project:update'
+            }
+          },
+          {
+            path: '/inspection/v6/tasks',
+            name: 'V6InspectionTasks',
+            component: () => import('@/views/inspection/v6/TaskList.vue'),
+            meta: {
+              title: '检查任务',
+              icon: 'List',
+              requiresAuth: true,
+              permission: 'inspection:task:view',
               order: 2
             }
           },
           {
-            path: '/inspection/check-plan/create',
-            name: 'InspectionCheckPlanCreate',
-            component: () => import('@/views/quantification/CheckPlanCreateView.vue'),
+            path: '/inspection/v6/tasks/:id',
+            name: 'V6InspectionTaskDetail',
+            component: () => import('@/views/inspection/v6/TaskDetail.vue'),
             meta: {
-              title: '新建检查计划',
+              title: '任务详情',
               hidden: true,
               requiresAuth: true,
-              permission: 'quantification:plan:add'
+              permission: 'inspection:task:view'
             }
           },
           {
-            path: '/inspection/check-plan/:id',
-            name: 'InspectionCheckPlanDetail',
-            component: () => import('@/views/quantification/CheckPlanDetailView.vue'),
+            path: '/inspection/v6/tasks/:id/execute',
+            name: 'V6InspectionTaskExecute',
+            component: () => import('@/views/inspection/v6/TaskExecute.vue'),
             meta: {
-              title: '检查计划详情',
+              title: '执行检查',
               hidden: true,
               requiresAuth: true,
-              permission: 'quantification:plan:view'
+              permission: 'inspection:task:execute'
             }
           },
           {
-            path: '/inspection/check-plan/:id/smart-statistics',
-            name: 'InspectionSmartStatistics',
-            component: () => import('@/views/quantification/SmartStatisticsView.vue'),
+            path: '/inspection/v6/my-tasks',
+            name: 'V6InspectionMyTasks',
+            component: () => import('@/views/inspection/v6/MyTasks.vue'),
             meta: {
-              title: '智能统计分析',
-              hidden: true,
+              title: '我的任务',
+              icon: 'User',
               requiresAuth: true,
-              permission: 'quantification:record:view'
+              permission: 'inspection:task:execute',
+              order: 3
             }
           },
           {
-            path: '/inspection/check-plan/:planId/rating-frequency',
-            name: 'InspectionRatingFrequency',
-            component: () => import('@/views/quantification/components/rating/RatingFrequencyView.vue'),
+            path: '/inspection/v6/summary',
+            name: 'V6InspectionSummary',
+            component: () => import('@/views/inspection/v6/SummaryDashboard.vue'),
             meta: {
-              title: '评级频次统计',
-              hidden: true,
+              title: '汇总统计',
+              icon: 'DataLine',
               requiresAuth: true,
-              permission: 'quantification:rating:view'
+              permission: 'inspection:summary:view',
+              order: 4
             }
           },
           {
-            path: '/inspection/check-plan/:planId/rating-audit',
-            name: 'InspectionRatingAudit',
-            component: () => import('@/views/quantification/components/rating/RatingAuditView.vue'),
+            path: '/inspection/v6/ranking',
+            name: 'V6InspectionRanking',
+            component: () => import('@/views/inspection/v6/RankingView.vue'),
             meta: {
-              title: '评级审核管理',
-              hidden: true,
+              title: '排名榜',
+              icon: 'Trophy',
               requiresAuth: true,
-              permission: 'quantification:rating:approve'
-            }
-          },
-          {
-            path: '/inspection/daily-checks',
-            name: 'InspectionDailyChecks',
-            component: () => import('@/views/quantification/DailyCheckView.vue'),
-            meta: {
-              title: '日常检查',
-              requiresAuth: true,
-              permission: 'quantification:check:view',
-              order: 3,
-              hidden: true  // 已整合到检查计划详情页中
-            }
-          },
-          {
-            path: '/inspection/check-record-v3',
-            name: 'InspectionCheckRecord',
-            component: () => import('@/views/quantification/CheckRecordListView.vue'),
-            meta: {
-              title: '检查记录',
-              icon: 'Notebook',
-              requiresAuth: true,
-              permission: 'quantification:record:v3:list',
-              order: 4,
-              hidden: true  // 已整合到检查计划详情页中
-            }
-          },
-          {
-            path: '/inspection/check-record-v3/:id',
-            name: 'InspectionCheckRecordDetail',
-            component: () => import('@/views/quantification/CheckRecordDetailView.vue'),
-            meta: {
-              title: '检查记录详情',
-              hidden: true,
-              requiresAuth: true,
-              permission: 'quantification:record:v3:detail'
-            }
-          },
-          {
-            path: '/inspection/check-record/:id',
-            name: 'InspectionCheckRecordDetailLegacy',  // 旧版路由，保持兼容性
-            component: () => import('@/views/quantification/CheckRecordDetailView.vue'),
-            meta: {
-              title: '检查记录详情',
-              hidden: true,
-              requiresAuth: true,
-              permission: 'quantification:record:view'
-            }
-          },
-          {
-            path: '/inspection/check-record-v3/:id/my-class',
-            name: 'InspectionCheckRecordMyClass',
-            component: () => import('@/views/quantification/CheckRecordMyClassView.vue'),
-            meta: {
-              title: '本班检查详情',
-              hidden: true,
-              requiresAuth: true,
-              permission: 'quantification:record:v3:my-class'
-            }
-          },
-          {
-            path: '/inspection/appeals-v3',
-            name: 'InspectionAppealManagement',
-            component: () => import('@/views/quantification/AppealManagement.vue'),
-            meta: {
-              title: '申诉管理',
-              icon: 'ChatDotRound',
-              requiresAuth: true,
-              permission: 'quantification:appeal:v3:view',
+              permission: 'inspection:summary:view',
               order: 5
             }
           },
           {
-            path: '/inspection/check-record-scoring',
-            name: 'InspectionCheckRecordScoring',
-            component: () => import('@/views/quantification/CheckRecordScoring.vue'),
+            path: '/inspection/v6/scoring-strategies',
+            name: 'V6ScoringStrategyManagement',
+            component: () => import('@/views/inspection/v6/ScoringStrategyManagement.vue'),
             meta: {
-              title: '检查打分',
-              hidden: true,
+              title: '打分策略',
+              icon: 'SetUp',
               requiresAuth: true,
-              permission: 'quantification:check:score'
-            }
-          },
-          {
-            path: '/inspection/analysis-configs',
-            name: 'InspectionAnalysisConfigList',
-            component: () => import('@/views/quantification/AnalysisConfigListView.vue'),
-            meta: {
-              title: '统计分析配置',
-              hidden: true, // 已集成到检查计划详情页，隐藏菜单入口
-              requiresAuth: true,
-              permission: 'quantification:statistics:view',
+              permission: 'inspection:config:view',
               order: 6
             }
           },
           {
-            path: '/inspection/analysis/:configId',
-            name: 'InspectionAnalysisResult',
-            component: () => import('@/views/quantification/AnalysisResultView.vue'),
+            path: '/inspection/v6/templates',
+            name: 'V6TemplateManagement',
+            component: () => import('@/views/inspection/v6/TemplateManagement.vue'),
             meta: {
-              title: '分析结果',
-              hidden: true,
+              title: '模板配置',
+              icon: 'Document',
               requiresAuth: true,
-              permission: 'quantification:statistics:view'
-            }
-          },
-          {
-            path: '/inspection/analysis/snapshot/:snapshotId',
-            name: 'InspectionAnalysisSnapshot',
-            component: () => import('@/views/quantification/AnalysisResultView.vue'),
-            meta: {
-              title: '历史快照',
-              hidden: true,
-              requiresAuth: true,
-              permission: 'quantification:statistics:view'
-            }
-          },
-          {
-            path: '/inspection/my-tasks',
-            name: 'InspectionMyCheckTasks',
-            component: () => import('@/views/quantification/MyCheckTasksView.vue'),
-            meta: {
-              title: '我的检查任务',
-              requiresAuth: true,
+              permission: 'inspection:template:view',
               order: 7
             }
           },
           {
-            path: '/inspection/notification/:id/edit',
-            name: 'InspectionNotificationEdit',
-            component: () => import('@/views/quantification/NotificationEditView.vue'),
+            path: '/inspection/v6/corrective-actions',
+            name: 'V6CorrectiveActionManagement',
+            component: () => import('@/views/inspection/v6/CorrectiveActionManagement.vue'),
             meta: {
-              title: '编辑通报',
-              hidden: true,
+              title: '整改管理',
+              icon: 'Edit',
               requiresAuth: true,
-              permission: 'quantification:plan:edit'
-            }
-          },
-          {
-            path: '/inspection/rating-statistics',
-            name: 'InspectionRatingStatisticsCenter',
-            component: () => import('@/views/quantification/RatingStatisticsCenter.vue'),
-            meta: {
-              title: '评级统计中心',
-              icon: 'TrendCharts',
-              requiresAuth: true,
-              permission: 'quantification:rating:view',
+              permission: 'inspection:corrective:view',
               order: 8
-            }
-          },
-          {
-            path: '/inspection/badge-management',
-            name: 'InspectionRatingBadgeManagement',
-            component: () => import('@/views/quantification/RatingBadgeManagement.vue'),
-            meta: {
-              title: '荣誉徽章管理',
-              icon: 'Medal',
-              requiresAuth: true,
-              permission: 'quantification:badge:manage',
-              order: 9
-            }
-          },
-          {
-            path: '/inspection/class-honor/:classId?',
-            name: 'InspectionClassHonorDisplay',
-            component: () => import('@/views/quantification/ClassHonorDisplay.vue'),
-            meta: {
-              title: '班级荣誉展示',
-              icon: 'Trophy',
-              requiresAuth: true,
-              permission: 'quantification:rating:view',
-              order: 10
-            }
-          },
-          {
-            path: '/inspection/corrective-actions',
-            name: 'InspectionCorrectiveActions',
-            component: () => import('@/views/inspection/CorrectiveActionListView.vue'),
-            meta: {
-              title: '整改工单',
-              icon: 'Tickets',
-              requiresAuth: true,
-              permission: 'corrective:action:view',
-              order: 11
-            }
-          },
-          {
-            path: '/inspection/behavior-records',
-            name: 'InspectionBehaviorRecords',
-            component: () => import('@/views/inspection/BehaviorRecordListView.vue'),
-            meta: {
-              title: '学生行为',
-              icon: 'User',
-              requiresAuth: true,
-              permission: 'behavior:record:view',
-              order: 12
-            }
-          },
-          {
-            path: '/inspection/schedule',
-            name: 'InspectionSchedule',
-            component: () => import('@/views/inspection/ScheduleManagementView.vue'),
-            meta: {
-              title: '自动排班',
-              icon: 'Calendar',
-              requiresAuth: true,
-              permission: 'schedule:policy:view',
-              order: 13
-            }
-          },
-          {
-            path: '/inspection/data-analytics',
-            name: 'InspectionDataAnalytics',
-            component: () => import('@/views/inspection/DataAnalyticsCenterView.vue'),
-            meta: {
-              title: '数据分析',
-              icon: 'DataAnalysis',
-              requiresAuth: true,
-              permission: 'analytics:view',
-              order: 14
-            }
-          },
-          {
-            path: '/inspection/export-center',
-            name: 'InspectionExportCenter',
-            component: () => import('@/views/inspection/ExportCenterView.vue'),
-            meta: {
-              title: '导出中心',
-              icon: 'Download',
-              requiresAuth: true,
-              permission: 'inspection:export:view',
-              order: 15
             }
           }
         ]
@@ -900,17 +744,6 @@ const routes: RouteRecordRaw[] = [
             }
           },
           {
-            path: '/settings/weight',
-            name: 'SettingsWeightConfig',
-            component: () => import('@/views/quantification/WeightConfigManagement.vue'),
-            meta: {
-              title: '加权配置',
-              requiresAuth: true,
-              permission: 'quantification:weight:config',
-              order: 2
-            }
-          },
-          {
             path: '/settings/semesters',
             name: 'SettingsSemesters',
             component: () => import('@/views/system/SemesterView.vue'),
@@ -943,10 +776,78 @@ const routes: RouteRecordRaw[] = [
               order: 5
             }
           },
+          // V6 类型配置
+          {
+            path: '/settings/org-types',
+            name: 'SettingsOrgTypes',
+            component: () => import('@/views/system/OrgTypeConfig.vue'),
+            meta: {
+              title: '组织类型配置',
+              requiresAuth: true,
+              permission: 'system:org:view',
+              order: 6
+            }
+          },
+          {
+            path: '/settings/space-types',
+            name: 'SettingsSpaceTypes',
+            component: () => import('@/views/system/UniversalSpaceTypeConfig.vue'),
+            meta: {
+              title: '空间类型配置',
+              requiresAuth: true,
+              permission: 'system:space-type:view',
+              order: 7
+            }
+          },
+          {
+            path: '/settings/user-types',
+            name: 'SettingsUserTypes',
+            component: () => import('@/views/system/UserTypeConfig.vue'),
+            meta: {
+              title: '用户类型配置',
+              requiresAuth: true,
+              permission: 'system:user:view',
+              order: 8
+            }
+          },
+          // V6 计分系统配置
+          {
+            path: '/settings/scoring-strategies',
+            name: 'SettingsScoringStrategies',
+            component: () => import('@/views/system/ScoringStrategyConfig.vue'),
+            meta: {
+              title: '计分策略配置',
+              requiresAuth: true,
+              permission: 'inspection:config:view',
+              order: 9
+            }
+          },
+          {
+            path: '/settings/input-types',
+            name: 'SettingsInputTypes',
+            component: () => import('@/views/system/InputTypeConfig.vue'),
+            meta: {
+              title: '打分方式配置',
+              requiresAuth: true,
+              permission: 'inspection:config:view',
+              order: 10
+            }
+          },
+          {
+            path: '/settings/calculation-rules',
+            name: 'SettingsCalculationRules',
+            component: () => import('@/views/system/CalculationRuleConfig.vue'),
+            meta: {
+              title: '计算规则配置',
+              requiresAuth: true,
+              permission: 'inspection:config:view',
+              order: 11
+            }
+          },
           // 楼宇管理已整合到场所管理中心 (/space/center)
           {
             path: '/settings/buildings',
-            redirect: '/space/center',
+            redirect: '/space/management',
             meta: {
               hidden: true  // 已整合到场所管理中心
             }
@@ -959,9 +860,9 @@ const routes: RouteRecordRaw[] = [
       {
         path: '/space',
         name: 'Space',
-        redirect: '/space/center',
+        redirect: '/space/management',
         meta: {
-          title: '场所管理',
+          title: '空间管理',
           icon: 'OfficeBuilding',
           requiresAuth: true,
           order: 2.5,  // 放在组织管理之后，量化检查之前
@@ -969,11 +870,11 @@ const routes: RouteRecordRaw[] = [
         },
         children: [
           {
-            path: '/space/center',
-            name: 'SpaceManagementCenter',
-            component: () => import('@/views/space/SpaceManagementCenter.vue'),
+            path: '/space/management',
+            name: 'UniversalSpaceManagement',
+            component: () => import('@/views/space/UniversalSpaceManagement.vue'),
             meta: {
-              title: '场所管理中心',
+              title: '空间管理',
               requiresAuth: true,
               permission: 'space:view',
               order: 1
@@ -981,13 +882,21 @@ const routes: RouteRecordRaw[] = [
           },
           {
             path: '/space/allocation',
-            name: 'SpaceAllocationCenter',
-            component: () => import('@/views/space/allocation/SpaceAllocationCenter.vue'),
+            name: 'SpaceAllocation',
+            redirect: '/space/management',
             meta: {
-              title: '场所分配中心',
+              title: '空间分配',
               requiresAuth: true,
-              permission: 'space:view',
-              order: 2
+              hidden: true  // 重定向到新版空间管理
+            }
+          },
+          // 旧版路由重定向到新版
+          {
+            path: '/space/center',
+            name: 'SpaceCenter',
+            redirect: '/space/management',
+            meta: {
+              hidden: true
             }
           }
         ]
@@ -1148,52 +1057,52 @@ const routes: RouteRecordRaw[] = [
       // 宿舍管理重定向 - 统一到场所管理中心
       {
         path: '/dormitory',
-        redirect: '/space/center',
+        redirect: '/space/management',
         meta: { hidden: true }
       },
       {
         path: '/dormitory/buildings',
-        redirect: '/space/center',
+        redirect: '/space/management',
         meta: { hidden: true }
       },
       {
         path: '/dormitory/rooms',
-        redirect: '/space/center',
+        redirect: '/space/management',
         meta: { hidden: true }
       },
       {
         path: '/dormitory/overview',
-        redirect: '/space/center',
+        redirect: '/space/management',
         meta: { hidden: true }
       },
       {
         path: '/dormitory/building-assignments',
-        redirect: '/space/center',
+        redirect: '/space/management',
         meta: { hidden: true }
       },
       {
         path: '/organization/dormitory/center',
-        redirect: '/space/center',
+        redirect: '/space/management',
         meta: { hidden: true }
       },
       {
         path: '/organization/dormitory/buildings',
-        redirect: '/space/center',
+        redirect: '/space/management',
         meta: { hidden: true }
       },
       {
         path: '/organization/dormitory/rooms',
-        redirect: '/space/center',
+        redirect: '/space/management',
         meta: { hidden: true }
       },
       {
         path: '/organization/dormitory/overview',
-        redirect: '/space/center',
+        redirect: '/space/management',
         meta: { hidden: true }
       },
       {
         path: '/organization/dormitory/building-assignments',
-        redirect: '/space/center',
+        redirect: '/space/management',
         meta: { hidden: true }
       },
 
@@ -1249,149 +1158,54 @@ const routes: RouteRecordRaw[] = [
       // 注意：/teaching 是教务管理模块，不在此处重定向
       {
         path: '/facility/buildings',
-        redirect: '/space/center',
+        redirect: '/space/management',
         meta: { hidden: true }
       },
       {
         path: '/facility/classrooms',
-        redirect: '/space/center',
+        redirect: '/space/management',
         meta: { hidden: true }
       },
       {
         path: '/organization/teaching/buildings',
-        redirect: '/space/center',
+        redirect: '/space/management',
         meta: { hidden: true }
       },
       {
         path: '/organization/teaching/classrooms',
-        redirect: '/space/center',
+        redirect: '/space/management',
         meta: { hidden: true }
       },
       {
         path: '/organization/teaching/classroom-center',
-        redirect: '/space/center',
+        redirect: '/space/management',
         meta: { hidden: true }
       },
 
-      // 量化检查重定向到inspection
+      // 量化检查重定向到V6版inspection
       {
         path: '/quantification',
-        redirect: '/inspection/config',
+        redirect: '/inspection/v6/projects',
         meta: { hidden: true }
       },
       {
         path: '/quantification/config',
-        redirect: '/inspection/config',
+        redirect: '/inspection/v6/templates',
         meta: { hidden: true }
       },
       {
         path: '/quantification/check-plan',
-        redirect: '/inspection/check-plan',
-        meta: { hidden: true }
-      },
-      {
-        path: '/quantification/check-plan/create',
-        redirect: '/inspection/check-plan/create',
-        meta: { hidden: true }
-      },
-      {
-        path: '/quantification/check-plan/:id',
-        redirect: (to) => `/inspection/check-plan/${to.params.id}`,
-        meta: { hidden: true }
-      },
-      {
-        path: '/quantification/check-plan/:id/smart-statistics',
-        redirect: (to) => `/inspection/check-plan/${to.params.id}/smart-statistics`,
-        meta: { hidden: true }
-      },
-      {
-        path: '/quantification/check-plan/:planId/rating-frequency',
-        redirect: (to) => `/inspection/check-plan/${to.params.planId}/rating-frequency`,
-        meta: { hidden: true }
-      },
-      {
-        path: '/quantification/check-plan/:planId/rating-audit',
-        redirect: (to) => `/inspection/check-plan/${to.params.planId}/rating-audit`,
-        meta: { hidden: true }
-      },
-      {
-        path: '/quantification/daily-checks',
-        redirect: '/inspection/daily-checks',
-        meta: { hidden: true }
-      },
-      {
-        path: '/quantification/check-record-v3',
-        redirect: '/inspection/check-record-v3',
-        meta: { hidden: true }
-      },
-      {
-        path: '/quantification/check-record-v3/:id',
-        redirect: (to) => `/inspection/check-record-v3/${to.params.id}`,
-        meta: { hidden: true }
-      },
-      {
-        path: '/quantification/check-record/:id',
-        redirect: (to) => `/inspection/check-record/${to.params.id}`,
-        meta: { hidden: true }
-      },
-      {
-        path: '/quantification/check-record-v3/:id/my-class',
-        redirect: (to) => `/inspection/check-record-v3/${to.params.id}/my-class`,
-        meta: { hidden: true }
-      },
-      {
-        path: '/quantification/appeals-v3',
-        redirect: '/inspection/appeals-v3',
-        meta: { hidden: true }
-      },
-      {
-        path: '/quantification/check-record-scoring',
-        redirect: '/inspection/check-record-scoring',
-        meta: { hidden: true }
-      },
-      {
-        path: '/quantification/analysis-configs',
-        redirect: '/inspection/analysis-configs',
-        meta: { hidden: true }
-      },
-      {
-        path: '/quantification/analysis/:configId',
-        redirect: (to) => `/inspection/analysis/${to.params.configId}`,
-        meta: { hidden: true }
-      },
-      {
-        path: '/quantification/analysis/snapshot/:snapshotId',
-        redirect: (to) => `/inspection/analysis/snapshot/${to.params.snapshotId}`,
+        redirect: '/inspection/v6/projects',
         meta: { hidden: true }
       },
       {
         path: '/quantification/my-tasks',
-        redirect: '/inspection/my-tasks',
+        redirect: '/inspection/v6/my-tasks',
         meta: { hidden: true }
       },
       {
-        path: '/quantification/notification/:id/edit',
-        redirect: (to) => `/inspection/notification/${to.params.id}/edit`,
-        meta: { hidden: true }
-      },
-      {
-        path: '/quantification/rating-statistics',
-        redirect: '/inspection/rating-statistics',
-        meta: { hidden: true }
-      },
-      {
-        path: '/quantification/badge-management',
-        redirect: '/inspection/badge-management',
-        meta: { hidden: true }
-      },
-      {
-        path: '/quantification/class-honor/:classId?',
-        redirect: (to) => `/inspection/class-honor${to.params.classId ? '/' + to.params.classId : ''}`,
-        meta: { hidden: true }
-      },
-      {
-        path: '/quantification/weight-config',
-        redirect: '/settings/weight',
+        path: '/inspection/config',
+        redirect: '/inspection/v6/templates',
         meta: { hidden: true }
       },
 
@@ -1492,17 +1306,17 @@ const routes: RouteRecordRaw[] = [
       },
       {
         path: '/inspection-templates',
-        redirect: '/inspection/config',
+        redirect: '/inspection/v6/templates',
         meta: { hidden: true }
       },
       {
         path: '/inspection-records',
-        redirect: '/inspection/check-record-v3',
+        redirect: '/inspection/v6/tasks',
         meta: { hidden: true }
       },
       {
         path: '/appeals',
-        redirect: '/inspection/appeals-v3',
+        redirect: '/inspection/v6/corrective-actions',
         meta: { hidden: true }
       }
     ]

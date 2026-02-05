@@ -130,7 +130,7 @@
                 />
               </th>
               <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">班级名称</th>
-              <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">所属部门</th>
+              <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">所属组织</th>
               <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">年级</th>
               <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">专业</th>
               <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">班主任</th>
@@ -872,7 +872,7 @@ const handleManageDormitory = (row: SchoolClass) => {
   currentClassId.value = row.id
   currentClassName.value = row.className
   currentDepartmentId.value = row.orgUnitId || null
-  currentDepartmentName.value = row.orgUnitName || '未知部门'
+  currentDepartmentName.value = row.orgUnitName || '未知组织'
   dormitoryDialogVisible.value = true
 }
 

@@ -22,6 +22,8 @@
 
     <properties>
         <java.version>17</java.version>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
         <mybatis-plus.version>3.5.7</mybatis-plus.version>
         <druid.version>1.2.20</druid.version>
         <hutool.version>5.8.22</hutool.version>
@@ -31,6 +33,7 @@
         <knife4j.version>4.3.0</knife4j.version>
         <lombok.version>1.18.30</lombok.version>
         <flowable.version>7.0.1</flowable.version>
+        <graalvm.version>23.1.2</graalvm.version>
     </properties>
 
     <dependencies>
@@ -218,6 +221,19 @@
             <version>3.5.2</version>
         </dependency>
 
+        <!-- GraalJS for JavaScript formula engine -->
+        <dependency>
+            <groupId>org.graalvm.polyglot</groupId>
+            <artifactId>polyglot</artifactId>
+            <version>${graalvm.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.graalvm.polyglot</groupId>
+            <artifactId>js</artifactId>
+            <version>${graalvm.version}</version>
+            <type>pom</type>
+        </dependency>
+
         <!-- Flowable Workflow Engine -->
         <dependency>
             <groupId>org.flowable</groupId>
@@ -296,6 +312,7 @@
                 <configuration>
                     <source>17</source>
                     <target>17</target>
+                    <encoding>UTF-8</encoding>
                     <annotationProcessorPaths>
                         <path>
                             <groupId>org.projectlombok</groupId>
@@ -315,7 +332,9 @@
                     </annotationProcessorPaths>
                     <compilerArgs>
                         <arg>-Amapstruct.defaultComponentModel=spring</arg>
+                        <arg>-parameters</arg>
                     </compilerArgs>
+                    <proc>full</proc>
                 </configuration>
             </plugin>
 

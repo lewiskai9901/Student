@@ -967,7 +967,7 @@ const loadDirections = async (majorId: number) => {
   }
 }
 
-// 加载部门列表
+// 加载组织列表
 const loadDepartmentList = async () => {
   try {
     const response = await getDepartmentList()
@@ -990,7 +990,7 @@ const loadDepartmentList = async () => {
     }
     departmentList.value = flattenTree(response || [])
   } catch (error) {
-    console.error('加载部门列表失败:', error)
+    console.error('加载组织列表失败:', error)
   }
 }
 

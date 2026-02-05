@@ -6,9 +6,13 @@
 import { ref, computed, watch, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
 import { Location, OfficeBuilding } from '@element-plus/icons-vue'
-import { getSpaceTree } from '@/api/space'
-import type { SpaceDTO, RoomType } from '@/types/space'
+import { universalSpaceApi } from '@/api/universalSpace'
+import type { SpaceTreeNode } from '@/types/universalSpace'
+import type { RoomType } from '@/types/space'
 import { getRoomTypeName } from '@/types/space'
+
+// 使用新的空间树节点类型
+type SpaceDTO = SpaceTreeNode
 
 const props = defineProps<{
   locationType: string
@@ -53,7 +57,7 @@ const cascaderProps = {
 async function loadSpaceTree() {
   loading.value = true
   try {
-    const data = await getSpaceTree(undefined, false)
+    const data = await universalSpaceApi.getTree()
     spaceTree.value = data || []
   } catch (error) {
     console.error('加载场所树失败:', error)

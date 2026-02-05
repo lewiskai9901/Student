@@ -7,7 +7,7 @@
         <div class="flex items-center justify-between">
           <h2 class="flex items-center gap-2 text-lg font-semibold text-gray-900">
             <Building2 class="h-5 w-5 text-teal-600" />
-            部门宿舍
+            组织宿舍
           </h2>
           <button
             @click="refreshData"
@@ -32,7 +32,7 @@
         <!-- Stats -->
         <div class="mt-3 grid grid-cols-2 gap-2">
           <div class="rounded-lg bg-teal-50 px-3 py-2">
-            <div class="text-xs text-teal-600">部门宿舍</div>
+            <div class="text-xs text-teal-600">组织宿舍</div>
             <div class="text-lg font-bold text-teal-700">{{ statistics.totalDormitories }}</div>
           </div>
           <div class="rounded-lg bg-blue-50 px-3 py-2">
@@ -49,7 +49,7 @@
         </div>
         <div v-else-if="filteredDormitories.length === 0" class="px-4 py-12 text-center text-gray-400">
           <DoorOpen class="mx-auto h-10 w-10" />
-          <p class="mt-2 text-sm">暂无分配给部门的宿舍</p>
+          <p class="mt-2 text-sm">暂无分配给组织的宿舍</p>
           <p class="mt-1 text-xs">请联系宿舍管理员分配</p>
         </div>
         <div v-else class="divide-y divide-gray-100">
@@ -113,7 +113,7 @@
           <div>
             <h2 class="text-xl font-semibold text-gray-900">班级宿舍分配</h2>
             <p class="mt-1 text-sm text-gray-500">
-              将部门宿舍分配给各班级使用
+              将组织宿舍分配给各班级使用
             </p>
           </div>
           <div class="flex items-center gap-2">
@@ -130,7 +130,7 @@
         <div class="mb-6">
           <h3 class="mb-4 flex items-center gap-2 text-sm font-medium text-gray-700">
             <GraduationCap class="h-4 w-4" />
-            部门班级
+            组织班级
           </h3>
 
           <div v-if="classLoading" class="flex items-center justify-center py-8">

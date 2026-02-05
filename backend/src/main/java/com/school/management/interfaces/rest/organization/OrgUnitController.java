@@ -72,7 +72,7 @@ public class OrgUnitController {
 
     @Operation(summary = "Get organization unit", description = "Gets an organization unit by ID")
     @GetMapping("/{id}")
-    @PreAuthorize("hasAuthority('system:department:view')")
+    @PreAuthorize("hasAuthority('system:org:view')")
     public Result<OrgUnitDTO> getOrgUnit(
             @Parameter(description = "Organization unit ID") @PathVariable Long id) {
         OrgUnitDTO result = orgUnitService.getOrgUnit(id);
@@ -81,7 +81,7 @@ public class OrgUnitController {
 
     @Operation(summary = "Get organization tree", description = "Gets the complete organization tree")
     @GetMapping("/tree")
-    @PreAuthorize("hasAuthority('system:department:view') or hasAuthority('system:role:edit') or hasAuthority('system:role:view')")
+    @PreAuthorize("hasAuthority('system:org:view') or hasAuthority('system:role:edit') or hasAuthority('system:role:view')")
     public Result<List<OrgUnitTreeDTO>> getOrgUnitTree() {
         List<OrgUnitTreeDTO> result = orgUnitService.getOrgUnitTree();
         return Result.success(result);
@@ -89,7 +89,7 @@ public class OrgUnitController {
 
     @Operation(summary = "Get by type", description = "Gets organization units by type")
     @GetMapping("/by-type/{type}")
-    @PreAuthorize("hasAuthority('system:department:view')")
+    @PreAuthorize("hasAuthority('system:org:view')")
     public Result<List<OrgUnitDTO>> getByType(
             @Parameter(description = "Organization type") @PathVariable OrgUnitType type) {
         List<OrgUnitDTO> result = orgUnitService.getOrgUnitsByType(type);
@@ -98,7 +98,7 @@ public class OrgUnitController {
 
     @Operation(summary = "Get by category", description = "Gets organization units by category (functional, academic, administrative)")
     @GetMapping
-    @PreAuthorize("hasAuthority('system:department:view') or hasAuthority('system:org:view')")
+    @PreAuthorize("hasAuthority('system:org:view')")
     public Result<List<OrgUnitDTO>> getByCategory(
             @Parameter(description = "Organization category") @RequestParam(required = false) String unitCategory) {
         if (unitCategory != null && !unitCategory.isEmpty()) {
@@ -122,7 +122,7 @@ public class OrgUnitController {
 
     @Operation(summary = "Get children", description = "Gets children of an organization unit")
     @GetMapping("/{id}/children")
-    @PreAuthorize("hasAuthority('system:department:view')")
+    @PreAuthorize("hasAuthority('system:org:view')")
     public Result<List<OrgUnitDTO>> getChildren(
             @Parameter(description = "Parent ID") @PathVariable Long id) {
         List<OrgUnitDTO> result = orgUnitService.getChildren(id);

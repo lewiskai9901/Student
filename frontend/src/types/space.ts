@@ -63,13 +63,16 @@ export interface SpaceDTO {
   spaceCode: string
   spaceName: string
   spaceType: SpaceType
-  roomType?: RoomType
-  buildingType?: BuildingType
+  categoryId?: number           // V10: 分类ID
+  categoryName?: string         // V10: 分类名称
+  roomType?: RoomType           // 兼容旧字段
+  buildingType?: BuildingType   // 兼容旧字段
 
-  // 楼号和房间号
-  buildingNo?: string         // 楼号（BUILDING类型）
-  roomNo?: string             // 房间号（ROOM类型）
-  parentBuildingNo?: string   // 所属楼栋的楼号（房间查询时用）
+  // 楼号和房间号（V10: 改为数字类型）
+  buildingNo?: number           // 楼号（数字）- BUILDING类型
+  roomNo?: number               // 房间号（数字）- ROOM类型
+  floorCount?: number           // 楼层数 - BUILDING类型
+  parentBuildingNo?: number     // 所属楼栋的楼号（房间查询时用）
 
   // 层级
   parentId?: number
@@ -232,10 +235,12 @@ export interface CreateSpaceRequest {
   spaceType: SpaceType
   spaceCode?: string
   spaceName: string
-  roomType?: RoomType
-  buildingType?: BuildingType
-  buildingNo?: string       // 楼号（仅BUILDING类型）
-  roomNo?: string           // 房间号（仅ROOM类型）
+  categoryId?: number         // V10: 分类ID
+  roomType?: RoomType         // 兼容旧字段
+  buildingType?: BuildingType // 兼容旧字段
+  buildingNo?: number         // V10: 楼号（数字，仅BUILDING类型）
+  roomNo?: number             // V10: 房间号（数字，仅ROOM类型）
+  floorCount?: number         // V10: 楼层数（仅BUILDING类型）
   parentId?: number
   floorNumber?: number
   capacity?: number
@@ -251,8 +256,10 @@ export interface CreateSpaceRequest {
 export interface UpdateSpaceRequest {
   spaceName?: string
   description?: string
-  buildingNo?: string       // 楼号（仅BUILDING类型）
-  roomNo?: string           // 房间号（仅ROOM类型）
+  categoryId?: number         // V10: 分类ID
+  buildingNo?: number         // V10: 楼号（数字，仅BUILDING类型）
+  roomNo?: number             // V10: 房间号（数字，仅ROOM类型）
+  floorCount?: number         // V10: 楼层数（仅BUILDING类型）
   capacity?: number
   orgUnitId?: number
   classId?: number

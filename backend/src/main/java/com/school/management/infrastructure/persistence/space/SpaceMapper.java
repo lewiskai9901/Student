@@ -113,16 +113,16 @@ public interface SpaceMapper extends BaseMapper<SpacePO> {
     Map<String, Object> selectBuildingStats(@Param("buildingId") Long buildingId);
 
     /**
-     * 统计校区内的楼号数量
+     * 统计校区内的楼号数量（V10: 使用Integer）
      */
-    int countByBuildingNoInCampus(@Param("buildingNo") String buildingNo,
+    int countByBuildingNoInCampus(@Param("buildingNo") Integer buildingNo,
                                    @Param("campusId") Long campusId,
                                    @Param("excludeId") Long excludeId);
 
     /**
-     * 统计楼栋内的房间号数量
+     * 统计楼栋内的房间号数量（V10: 使用Integer）
      */
-    int countByRoomNoInBuilding(@Param("roomNo") String roomNo,
+    int countByRoomNoInBuilding(@Param("roomNo") Integer roomNo,
                                  @Param("buildingId") Long buildingId,
                                  @Param("excludeId") Long excludeId);
 }

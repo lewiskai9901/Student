@@ -1,0 +1,1051 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>表单设计方案对比</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #f0f2f5; padding: 20px; }
+
+        .page-header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .page-header h1 { font-size: 24px; color: #1a1a2e; margin-bottom: 8px; }
+        .page-header p { color: #666; font-size: 14px; }
+
+        .version-selector {
+            display: flex;
+            justify-content: center;
+            gap: 12px;
+            margin-bottom: 30px;
+        }
+        .version-btn {
+            padding: 10px 24px;
+            border: 2px solid #e0e0e0;
+            background: #fff;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            transition: all 0.2s;
+        }
+        .version-btn:hover { border-color: #5b5fc7; color: #5b5fc7; }
+        .version-btn.active { border-color: #5b5fc7; background: #5b5fc7; color: #fff; }
+
+        .version-container { display: none; }
+        .version-container.active { display: block; }
+
+        .version-tag {
+            display: inline-block;
+            background: #5b5fc7;
+            color: #fff;
+            padding: 6px 16px;
+            border-radius: 16px;
+            font-size: 13px;
+            margin-bottom: 20px;
+        }
+
+        .dialog-mock {
+            max-width: 640px;
+            margin: 0 auto 40px;
+            background: #fff;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+        .dialog-header {
+            padding: 16px 20px;
+            border-bottom: 1px solid #f0f0f0;
+            font-size: 16px;
+            font-weight: 600;
+            color: #1a1a2e;
+        }
+        .dialog-body { padding: 20px; }
+        .dialog-footer {
+            padding: 16px 20px;
+            border-top: 1px solid #f0f0f0;
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+        }
+        .btn {
+            padding: 8px 20px;
+            border-radius: 6px;
+            font-size: 14px;
+            cursor: pointer;
+            border: none;
+        }
+        .btn-default { background: #f5f5f5; color: #666; }
+        .btn-primary { background: #5b5fc7; color: #fff; }
+
+        /* ============ 版本1：紧凑卡片网格型 ============ */
+        .v1-row {
+            display: flex;
+            gap: 16px;
+            margin-bottom: 16px;
+        }
+        .v1-field {
+            flex: 1;
+        }
+        .v1-field.full { flex: none; width: 100%; }
+        .v1-label {
+            font-size: 13px;
+            color: #666;
+            margin-bottom: 6px;
+            display: block;
+        }
+        .v1-label.required::after { content: ' *'; color: #ff4d4f; }
+        .v1-input {
+            width: 100%;
+            padding: 10px 12px;
+            border: 1px solid #e0e0e0;
+            border-radius: 6px;
+            font-size: 14px;
+        }
+        .v1-input:focus { border-color: #5b5fc7; outline: none; }
+        .v1-textarea {
+            width: 100%;
+            padding: 10px 12px;
+            border: 1px solid #e0e0e0;
+            border-radius: 6px;
+            font-size: 14px;
+            resize: vertical;
+            min-height: 60px;
+        }
+
+        .v1-card-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 10px;
+        }
+        .v1-card {
+            padding: 12px;
+            border: 2px solid #e8e8e8;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.15s;
+        }
+        .v1-card:hover { border-color: #c0c0ff; background: #fafaff; }
+        .v1-card.selected { border-color: #5b5fc7; background: #f0f0ff; }
+        .v1-card-title { font-size: 14px; font-weight: 500; color: #1a1a2e; }
+        .v1-card-desc { font-size: 12px; color: #888; margin-top: 2px; }
+
+        .v1-color-row {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+        .v1-color-dot {
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            cursor: pointer;
+            border: 2px solid transparent;
+            transition: all 0.15s;
+        }
+        .v1-color-dot:hover { transform: scale(1.1); }
+        .v1-color-dot.selected { border-color: #333; box-shadow: 0 0 0 2px #fff, 0 0 0 4px currentColor; }
+
+        .v1-check-row {
+            display: flex;
+            gap: 16px;
+            flex-wrap: wrap;
+        }
+        .v1-check-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            padding: 8px 12px;
+            border: 1px solid #e0e0e0;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 13px;
+            transition: all 0.15s;
+        }
+        .v1-check-item:hover { border-color: #5b5fc7; }
+        .v1-check-item.checked { border-color: #5b5fc7; background: #f0f0ff; }
+        .v1-checkbox {
+            width: 16px;
+            height: 16px;
+            accent-color: #5b5fc7;
+        }
+
+        /* ============ 版本2：双栏紧凑型 ============ */
+        .v2-form {
+            display: grid;
+            grid-template-columns: 100px 1fr;
+            gap: 12px 16px;
+            align-items: start;
+        }
+        .v2-label {
+            font-size: 13px;
+            color: #666;
+            text-align: right;
+            line-height: 36px;
+        }
+        .v2-label.required::after { content: ' *'; color: #ff4d4f; }
+        .v2-label.top { line-height: 1.4; padding-top: 8px; }
+        .v2-control { }
+        .v2-input {
+            width: 100%;
+            padding: 8px 12px;
+            border: 1px solid #e0e0e0;
+            border-radius: 6px;
+            font-size: 14px;
+        }
+        .v2-input:focus { border-color: #5b5fc7; outline: none; }
+
+        .v2-pills {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+        .v2-pill {
+            padding: 8px 16px;
+            border: 1px solid #e0e0e0;
+            border-radius: 20px;
+            font-size: 13px;
+            cursor: pointer;
+            transition: all 0.15s;
+            background: #fff;
+        }
+        .v2-pill:hover { border-color: #5b5fc7; }
+        .v2-pill.selected { border-color: #5b5fc7; background: #5b5fc7; color: #fff; }
+        .v2-pill-desc {
+            font-size: 11px;
+            color: #999;
+            margin-left: 4px;
+        }
+        .v2-pill.selected .v2-pill-desc { color: rgba(255,255,255,0.8); }
+
+        .v2-inline-group {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+        }
+        .v2-inline-input {
+            width: 80px;
+            padding: 8px 12px;
+            border: 1px solid #e0e0e0;
+            border-radius: 6px;
+            font-size: 14px;
+            text-align: center;
+        }
+        .v2-unit { font-size: 13px; color: #666; }
+
+        .v2-color-bar {
+            display: flex;
+            gap: 6px;
+        }
+        .v2-color-chip {
+            width: 32px;
+            height: 32px;
+            border-radius: 6px;
+            cursor: pointer;
+            border: 2px solid transparent;
+            transition: all 0.15s;
+        }
+        .v2-color-chip:hover { transform: scale(1.05); }
+        .v2-color-chip.selected { border-color: #333; }
+
+        .v2-toggle-group {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+        .v2-toggle {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            cursor: pointer;
+            font-size: 13px;
+        }
+        .v2-toggle-switch {
+            width: 36px;
+            height: 20px;
+            background: #ddd;
+            border-radius: 10px;
+            position: relative;
+            transition: all 0.2s;
+        }
+        .v2-toggle-switch::after {
+            content: '';
+            position: absolute;
+            width: 16px;
+            height: 16px;
+            background: #fff;
+            border-radius: 50%;
+            top: 2px;
+            left: 2px;
+            transition: all 0.2s;
+        }
+        .v2-toggle.active .v2-toggle-switch {
+            background: #5b5fc7;
+        }
+        .v2-toggle.active .v2-toggle-switch::after {
+            left: 18px;
+        }
+
+        /* ============ 版本3：分区卡片型 ============ */
+        .v3-section {
+            margin-bottom: 20px;
+        }
+        .v3-section:last-child { margin-bottom: 0; }
+        .v3-section-title {
+            font-size: 12px;
+            color: #999;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 12px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid #f0f0f0;
+        }
+
+        .v3-field-row {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 12px;
+        }
+        .v3-field-row:last-child { margin-bottom: 0; }
+        .v3-field {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .v3-field-label {
+            font-size: 13px;
+            color: #666;
+            white-space: nowrap;
+            min-width: 60px;
+        }
+        .v3-field-label.required::after { content: '*'; color: #ff4d4f; margin-left: 2px; }
+        .v3-field-input {
+            flex: 1;
+            padding: 8px 12px;
+            border: 1px solid #e0e0e0;
+            border-radius: 6px;
+            font-size: 14px;
+        }
+        .v3-field-input:focus { border-color: #5b5fc7; outline: none; }
+
+        .v3-option-bar {
+            display: flex;
+            background: #f5f5f5;
+            border-radius: 8px;
+            padding: 4px;
+            gap: 4px;
+        }
+        .v3-option-item {
+            flex: 1;
+            text-align: center;
+            padding: 10px 8px;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.15s;
+            font-size: 13px;
+        }
+        .v3-option-item:hover { background: #fff; }
+        .v3-option-item.selected { background: #fff; box-shadow: 0 1px 3px rgba(0,0,0,0.1); color: #5b5fc7; font-weight: 500; }
+        .v3-option-hint { font-size: 11px; color: #999; display: block; margin-top: 2px; }
+        .v3-option-item.selected .v3-option-hint { color: #8888cc; }
+
+        .v3-color-strip {
+            display: flex;
+            gap: 6px;
+        }
+        .v3-color-block {
+            width: 36px;
+            height: 24px;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: all 0.15s;
+            border: 2px solid transparent;
+        }
+        .v3-color-block:hover { transform: scaleY(1.2); }
+        .v3-color-block.selected { border-color: #333; transform: scaleY(1.3); }
+
+        .v3-tag-group {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+        .v3-tag {
+            padding: 6px 14px;
+            background: #f5f5f5;
+            border-radius: 4px;
+            font-size: 13px;
+            cursor: pointer;
+            transition: all 0.15s;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .v3-tag:hover { background: #e8e8ff; }
+        .v3-tag.selected { background: #5b5fc7; color: #fff; }
+        .v3-tag-check {
+            width: 14px;
+            height: 14px;
+            border: 1px solid #ccc;
+            border-radius: 3px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 10px;
+        }
+        .v3-tag.selected .v3-tag-check { border-color: #fff; background: rgba(255,255,255,0.3); }
+
+        .v3-inline-row {
+            display: flex;
+            gap: 20px;
+            align-items: center;
+        }
+        .v3-inline-field {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .v3-inline-label { font-size: 13px; color: #666; }
+        .v3-inline-input {
+            width: 70px;
+            padding: 6px 10px;
+            border: 1px solid #e0e0e0;
+            border-radius: 4px;
+            font-size: 14px;
+            text-align: center;
+        }
+
+        .description-block {
+            margin-top: 20px;
+            padding: 16px;
+            background: #f9f9f9;
+            border-radius: 8px;
+        }
+        .description-block h4 {
+            font-size: 14px;
+            color: #333;
+            margin-bottom: 8px;
+        }
+        .description-block ul {
+            font-size: 13px;
+            color: #666;
+            padding-left: 20px;
+        }
+        .description-block li { margin-bottom: 4px; }
+    </style>
+</head>
+<body>
+    <div class="page-header">
+        <h1>表单设计方案选择</h1>
+        <p>3种不同风格的左右布局表单设计，点击切换查看</p>
+    </div>
+
+    <div class="version-selector">
+        <button class="version-btn active" onclick="showVersion(1)">方案1：紧凑卡片网格</button>
+        <button class="version-btn" onclick="showVersion(2)">方案2：双栏胶囊标签</button>
+        <button class="version-btn" onclick="showVersion(3)">方案3：分区横向选择</button>
+    </div>
+
+    <!-- ============ 版本1：紧凑卡片网格型 ============ -->
+    <div class="version-container active" id="version1">
+        <div style="text-align: center;">
+            <span class="version-tag">方案1：紧凑卡片网格型</span>
+        </div>
+
+        <!-- 模板表单 -->
+        <div class="dialog-mock">
+            <div class="dialog-header">新增模板</div>
+            <div class="dialog-body">
+                <div class="v1-row">
+                    <div class="v1-field">
+                        <label class="v1-label required">模板名称</label>
+                        <input class="v1-input" placeholder="输入模板名称">
+                    </div>
+                    <div class="v1-field">
+                        <label class="v1-label required">模板编码</label>
+                        <input class="v1-input" placeholder="如: DAILY-001">
+                    </div>
+                </div>
+
+                <div class="v1-row">
+                    <div class="v1-field full">
+                        <label class="v1-label required">计分策略</label>
+                        <div class="v1-card-grid">
+                            <div class="v1-card selected">
+                                <div class="v1-card-title">扣分制</div>
+                                <div class="v1-card-desc">从基准分扣除</div>
+                            </div>
+                            <div class="v1-card">
+                                <div class="v1-card-title">加分制</div>
+                                <div class="v1-card-desc">从0分累加</div>
+                            </div>
+                            <div class="v1-card">
+                                <div class="v1-card-title">基准分制</div>
+                                <div class="v1-card-desc">可加可减</div>
+                            </div>
+                            <div class="v1-card">
+                                <div class="v1-card-title">清单制</div>
+                                <div class="v1-card-desc">完成率计算</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="v1-row">
+                    <div class="v1-field full">
+                        <label class="v1-label">描述说明</label>
+                        <textarea class="v1-textarea" placeholder="模板用途说明（可选）"></textarea>
+                    </div>
+                </div>
+            </div>
+            <div class="dialog-footer">
+                <button class="btn btn-default">取消</button>
+                <button class="btn btn-primary">保存</button>
+            </div>
+        </div>
+
+        <!-- 类别表单 -->
+        <div class="dialog-mock">
+            <div class="dialog-header">添加类别</div>
+            <div class="dialog-body">
+                <div class="v1-row">
+                    <div class="v1-field">
+                        <label class="v1-label required">类别名称</label>
+                        <input class="v1-input" placeholder="如: 卫生类">
+                    </div>
+                    <div class="v1-field">
+                        <label class="v1-label required">类别编码</label>
+                        <input class="v1-input" placeholder="如: HYGIENE">
+                    </div>
+                </div>
+
+                <div class="v1-row">
+                    <div class="v1-field">
+                        <label class="v1-label">标识颜色</label>
+                        <div class="v1-color-row">
+                            <div class="v1-color-dot selected" style="background: #5470c6;"></div>
+                            <div class="v1-color-dot" style="background: #91cc75;"></div>
+                            <div class="v1-color-dot" style="background: #fac858;"></div>
+                            <div class="v1-color-dot" style="background: #ee6666;"></div>
+                            <div class="v1-color-dot" style="background: #73c0de;"></div>
+                            <div class="v1-color-dot" style="background: #9a60b4;"></div>
+                            <div class="v1-color-dot" style="background: #fc8452;"></div>
+                            <div class="v1-color-dot" style="background: #ea7ccc;"></div>
+                        </div>
+                    </div>
+                    <div class="v1-field" style="flex: 0.5;">
+                        <label class="v1-label">权重</label>
+                        <input class="v1-input" value="25" style="width: 80px;"> <span style="color: #666;">%</span>
+                    </div>
+                    <div class="v1-field" style="flex: 0.5;">
+                        <label class="v1-label">排序</label>
+                        <input class="v1-input" value="1" style="width: 60px;">
+                    </div>
+                </div>
+            </div>
+            <div class="dialog-footer">
+                <button class="btn btn-default">取消</button>
+                <button class="btn btn-primary">保存</button>
+            </div>
+        </div>
+
+        <!-- 检查项表单 -->
+        <div class="dialog-mock">
+            <div class="dialog-header">添加检查项</div>
+            <div class="dialog-body">
+                <div class="v1-row">
+                    <div class="v1-field">
+                        <label class="v1-label required">检查项名称</label>
+                        <input class="v1-input" placeholder="如: 地面清洁">
+                    </div>
+                    <div class="v1-field" style="flex: 0.5;">
+                        <label class="v1-label required">编码</label>
+                        <input class="v1-input" placeholder="HYG001">
+                    </div>
+                </div>
+
+                <div class="v1-row">
+                    <div class="v1-field full">
+                        <label class="v1-label required">输入方式</label>
+                        <div class="v1-card-grid" style="grid-template-columns: repeat(3, 1fr);">
+                            <div class="v1-card selected">
+                                <div class="v1-card-title">选项</div>
+                                <div class="v1-card-desc">单选/多选</div>
+                            </div>
+                            <div class="v1-card">
+                                <div class="v1-card-title">计数</div>
+                                <div class="v1-card-desc">按数量计分</div>
+                            </div>
+                            <div class="v1-card">
+                                <div class="v1-card-title">勾选</div>
+                                <div class="v1-card-desc">是/否判断</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="v1-row">
+                    <div class="v1-field full">
+                        <label class="v1-label">附加要求</label>
+                        <div class="v1-check-row">
+                            <label class="v1-check-item checked">
+                                <input type="checkbox" class="v1-checkbox" checked> 可关联个人
+                            </label>
+                            <label class="v1-check-item">
+                                <input type="checkbox" class="v1-checkbox"> 需要拍照
+                            </label>
+                            <label class="v1-check-item">
+                                <input type="checkbox" class="v1-checkbox"> 需要备注
+                            </label>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="v1-row">
+                    <div class="v1-field full">
+                        <label class="v1-label">描述说明</label>
+                        <textarea class="v1-textarea" placeholder="检查标准（可选）"></textarea>
+                    </div>
+                </div>
+            </div>
+            <div class="dialog-footer">
+                <button class="btn btn-default">取消</button>
+                <button class="btn btn-primary">保存</button>
+            </div>
+        </div>
+
+        <div class="description-block" style="max-width: 640px; margin: 0 auto;">
+            <h4>方案1特点</h4>
+            <ul>
+                <li>选项使用2x2网格卡片，信息紧凑且直观</li>
+                <li>左右双栏布局，字段并排显示</li>
+                <li>颜色选择用圆点，复选框用带边框的标签</li>
+                <li>适合选项较多、需要展示描述的场景</li>
+            </ul>
+        </div>
+    </div>
+
+    <!-- ============ 版本2：双栏胶囊标签型 ============ -->
+    <div class="version-container" id="version2">
+        <div style="text-align: center;">
+            <span class="version-tag">方案2：双栏胶囊标签型</span>
+        </div>
+
+        <!-- 模板表单 -->
+        <div class="dialog-mock">
+            <div class="dialog-header">新增模板</div>
+            <div class="dialog-body">
+                <div class="v2-form">
+                    <label class="v2-label required">模板名称</label>
+                    <div class="v2-control">
+                        <input class="v2-input" placeholder="输入模板名称">
+                    </div>
+
+                    <label class="v2-label required">模板编码</label>
+                    <div class="v2-control">
+                        <input class="v2-input" placeholder="如: DAILY-001">
+                    </div>
+
+                    <label class="v2-label required top">计分策略</label>
+                    <div class="v2-control">
+                        <div class="v2-pills">
+                            <span class="v2-pill selected">扣分制<span class="v2-pill-desc">从基准分扣除</span></span>
+                            <span class="v2-pill">加分制<span class="v2-pill-desc">从0分累加</span></span>
+                            <span class="v2-pill">基准分制<span class="v2-pill-desc">可加可减</span></span>
+                            <span class="v2-pill">清单制<span class="v2-pill-desc">完成率</span></span>
+                        </div>
+                    </div>
+
+                    <label class="v2-label top">描述说明</label>
+                    <div class="v2-control">
+                        <textarea class="v2-input" style="min-height: 60px; resize: vertical;" placeholder="模板用途说明（可选）"></textarea>
+                    </div>
+                </div>
+            </div>
+            <div class="dialog-footer">
+                <button class="btn btn-default">取消</button>
+                <button class="btn btn-primary">保存</button>
+            </div>
+        </div>
+
+        <!-- 类别表单 -->
+        <div class="dialog-mock">
+            <div class="dialog-header">添加类别</div>
+            <div class="dialog-body">
+                <div class="v2-form">
+                    <label class="v2-label required">类别名称</label>
+                    <div class="v2-control">
+                        <input class="v2-input" placeholder="如: 卫生类">
+                    </div>
+
+                    <label class="v2-label required">类别编码</label>
+                    <div class="v2-control">
+                        <input class="v2-input" placeholder="如: HYGIENE">
+                    </div>
+
+                    <label class="v2-label">标识颜色</label>
+                    <div class="v2-control">
+                        <div class="v2-color-bar">
+                            <div class="v2-color-chip selected" style="background: #5470c6;"></div>
+                            <div class="v2-color-chip" style="background: #91cc75;"></div>
+                            <div class="v2-color-chip" style="background: #fac858;"></div>
+                            <div class="v2-color-chip" style="background: #ee6666;"></div>
+                            <div class="v2-color-chip" style="background: #73c0de;"></div>
+                            <div class="v2-color-chip" style="background: #9a60b4;"></div>
+                            <div class="v2-color-chip" style="background: #fc8452;"></div>
+                            <div class="v2-color-chip" style="background: #ea7ccc;"></div>
+                        </div>
+                    </div>
+
+                    <label class="v2-label">权重/排序</label>
+                    <div class="v2-control">
+                        <div class="v2-inline-group">
+                            <input class="v2-inline-input" value="25">
+                            <span class="v2-unit">%</span>
+                            <span style="color: #ddd; margin: 0 8px;">|</span>
+                            <span class="v2-unit">排序</span>
+                            <input class="v2-inline-input" value="1" style="width: 50px;">
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="dialog-footer">
+                <button class="btn btn-default">取消</button>
+                <button class="btn btn-primary">保存</button>
+            </div>
+        </div>
+
+        <!-- 检查项表单 -->
+        <div class="dialog-mock">
+            <div class="dialog-header">添加检查项</div>
+            <div class="dialog-body">
+                <div class="v2-form">
+                    <label class="v2-label required">检查项名称</label>
+                    <div class="v2-control">
+                        <input class="v2-input" placeholder="如: 地面清洁">
+                    </div>
+
+                    <label class="v2-label required">编码</label>
+                    <div class="v2-control">
+                        <input class="v2-input" placeholder="HYG001" style="width: 150px;">
+                    </div>
+
+                    <label class="v2-label required top">输入方式</label>
+                    <div class="v2-control">
+                        <div class="v2-pills">
+                            <span class="v2-pill selected">选项<span class="v2-pill-desc">单选/多选</span></span>
+                            <span class="v2-pill">计数<span class="v2-pill-desc">按数量</span></span>
+                            <span class="v2-pill">勾选<span class="v2-pill-desc">是/否</span></span>
+                        </div>
+                    </div>
+
+                    <label class="v2-label top">附加要求</label>
+                    <div class="v2-control">
+                        <div class="v2-toggle-group">
+                            <label class="v2-toggle active">
+                                <span class="v2-toggle-switch"></span>
+                                可关联个人
+                            </label>
+                            <label class="v2-toggle">
+                                <span class="v2-toggle-switch"></span>
+                                需要拍照
+                            </label>
+                            <label class="v2-toggle">
+                                <span class="v2-toggle-switch"></span>
+                                需要备注
+                            </label>
+                        </div>
+                    </div>
+
+                    <label class="v2-label top">描述说明</label>
+                    <div class="v2-control">
+                        <textarea class="v2-input" style="min-height: 60px; resize: vertical;" placeholder="检查标准（可选）"></textarea>
+                    </div>
+                </div>
+            </div>
+            <div class="dialog-footer">
+                <button class="btn btn-default">取消</button>
+                <button class="btn btn-primary">保存</button>
+            </div>
+        </div>
+
+        <div class="description-block" style="max-width: 640px; margin: 0 auto;">
+            <h4>方案2特点</h4>
+            <ul>
+                <li>严格左右双栏：标签固定宽度右对齐，控件左对齐</li>
+                <li>选项使用胶囊标签（pill），带描述文字</li>
+                <li>颜色选择用方形色块，更现代</li>
+                <li>开关选项用toggle样式，状态更明显</li>
+                <li>适合需要清晰对齐、表单较长的场景</li>
+            </ul>
+        </div>
+    </div>
+
+    <!-- ============ 版本3：分区横向选择型 ============ -->
+    <div class="version-container" id="version3">
+        <div style="text-align: center;">
+            <span class="version-tag">方案3：分区横向选择型</span>
+        </div>
+
+        <!-- 模板表单 -->
+        <div class="dialog-mock">
+            <div class="dialog-header">新增模板</div>
+            <div class="dialog-body">
+                <div class="v3-section">
+                    <div class="v3-section-title">基本信息</div>
+                    <div class="v3-field-row">
+                        <div class="v3-field">
+                            <label class="v3-field-label required">名称</label>
+                            <input class="v3-field-input" placeholder="输入模板名称">
+                        </div>
+                        <div class="v3-field" style="flex: 0.6;">
+                            <label class="v3-field-label required">编码</label>
+                            <input class="v3-field-input" placeholder="DAILY-001">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="v3-section">
+                    <div class="v3-section-title">计分策略</div>
+                    <div class="v3-option-bar">
+                        <div class="v3-option-item selected">
+                            扣分制
+                            <span class="v3-option-hint">从基准分扣除</span>
+                        </div>
+                        <div class="v3-option-item">
+                            加分制
+                            <span class="v3-option-hint">从0分累加</span>
+                        </div>
+                        <div class="v3-option-item">
+                            基准分制
+                            <span class="v3-option-hint">可加可减</span>
+                        </div>
+                        <div class="v3-option-item">
+                            清单制
+                            <span class="v3-option-hint">完成率</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="v3-section">
+                    <div class="v3-section-title">描述 (可选)</div>
+                    <textarea class="v3-field-input" style="width: 100%; min-height: 60px; resize: vertical;" placeholder="模板用途说明"></textarea>
+                </div>
+            </div>
+            <div class="dialog-footer">
+                <button class="btn btn-default">取消</button>
+                <button class="btn btn-primary">保存</button>
+            </div>
+        </div>
+
+        <!-- 类别表单 -->
+        <div class="dialog-mock">
+            <div class="dialog-header">添加类别</div>
+            <div class="dialog-body">
+                <div class="v3-section">
+                    <div class="v3-section-title">基本信息</div>
+                    <div class="v3-field-row">
+                        <div class="v3-field">
+                            <label class="v3-field-label required">名称</label>
+                            <input class="v3-field-input" placeholder="如: 卫生类">
+                        </div>
+                        <div class="v3-field" style="flex: 0.6;">
+                            <label class="v3-field-label required">编码</label>
+                            <input class="v3-field-input" placeholder="HYGIENE">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="v3-section">
+                    <div class="v3-section-title">外观与排序</div>
+                    <div class="v3-field-row">
+                        <div class="v3-field" style="flex: 2;">
+                            <label class="v3-field-label">颜色</label>
+                            <div class="v3-color-strip">
+                                <div class="v3-color-block selected" style="background: #5470c6;"></div>
+                                <div class="v3-color-block" style="background: #91cc75;"></div>
+                                <div class="v3-color-block" style="background: #fac858;"></div>
+                                <div class="v3-color-block" style="background: #ee6666;"></div>
+                                <div class="v3-color-block" style="background: #73c0de;"></div>
+                                <div class="v3-color-block" style="background: #9a60b4;"></div>
+                                <div class="v3-color-block" style="background: #fc8452;"></div>
+                            </div>
+                        </div>
+                        <div class="v3-inline-row" style="flex: 1;">
+                            <div class="v3-inline-field">
+                                <span class="v3-inline-label">权重</span>
+                                <input class="v3-inline-input" value="25">%
+                            </div>
+                            <div class="v3-inline-field">
+                                <span class="v3-inline-label">排序</span>
+                                <input class="v3-inline-input" value="1" style="width: 50px;">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="dialog-footer">
+                <button class="btn btn-default">取消</button>
+                <button class="btn btn-primary">保存</button>
+            </div>
+        </div>
+
+        <!-- 检查项表单 -->
+        <div class="dialog-mock">
+            <div class="dialog-header">添加检查项</div>
+            <div class="dialog-body">
+                <div class="v3-section">
+                    <div class="v3-section-title">基本信息</div>
+                    <div class="v3-field-row">
+                        <div class="v3-field">
+                            <label class="v3-field-label required">名称</label>
+                            <input class="v3-field-input" placeholder="如: 地面清洁">
+                        </div>
+                        <div class="v3-field" style="flex: 0.4;">
+                            <label class="v3-field-label required">编码</label>
+                            <input class="v3-field-input" placeholder="HYG001">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="v3-section">
+                    <div class="v3-section-title">输入方式</div>
+                    <div class="v3-option-bar">
+                        <div class="v3-option-item selected">
+                            选项
+                            <span class="v3-option-hint">单选/多选</span>
+                        </div>
+                        <div class="v3-option-item">
+                            计数
+                            <span class="v3-option-hint">按数量计分</span>
+                        </div>
+                        <div class="v3-option-item">
+                            勾选
+                            <span class="v3-option-hint">是/否判断</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="v3-section">
+                    <div class="v3-section-title">附加要求</div>
+                    <div class="v3-tag-group">
+                        <span class="v3-tag selected">
+                            <span class="v3-tag-check">✓</span>
+                            可关联个人
+                        </span>
+                        <span class="v3-tag">
+                            <span class="v3-tag-check"></span>
+                            需要拍照
+                        </span>
+                        <span class="v3-tag">
+                            <span class="v3-tag-check"></span>
+                            需要备注
+                        </span>
+                    </div>
+                </div>
+
+                <div class="v3-section">
+                    <div class="v3-section-title">描述 (可选)</div>
+                    <textarea class="v3-field-input" style="width: 100%; min-height: 60px; resize: vertical;" placeholder="检查标准说明"></textarea>
+                </div>
+            </div>
+            <div class="dialog-footer">
+                <button class="btn btn-default">取消</button>
+                <button class="btn btn-primary">保存</button>
+            </div>
+        </div>
+
+        <div class="description-block" style="max-width: 640px; margin: 0 auto;">
+            <h4>方案3特点</h4>
+            <ul>
+                <li>按功能分区，每区有标题，结构清晰</li>
+                <li>选项使用横向选择栏，带灰色背景，选中高亮</li>
+                <li>颜色选择用扁平长方形，hover时有动画</li>
+                <li>复选框用可点击标签，带勾选框</li>
+                <li>适合功能模块多、需要分组展示的场景</li>
+            </ul>
+        </div>
+    </div>
+
+    <script>
+        function showVersion(num) {
+            // 切换按钮状态
+            document.querySelectorAll('.version-btn').forEach((btn, i) => {
+                btn.classList.toggle('active', i === num - 1);
+            });
+
+            // 切换内容显示
+            document.querySelectorAll('.version-container').forEach((container, i) => {
+                container.classList.toggle('active', i === num - 1);
+            });
+        }
+
+        // 添加交互效果
+        document.addEventListener('click', function(e) {
+            // 卡片选择
+            if (e.target.closest('.v1-card')) {
+                const grid = e.target.closest('.v1-card-grid');
+                grid.querySelectorAll('.v1-card').forEach(c => c.classList.remove('selected'));
+                e.target.closest('.v1-card').classList.add('selected');
+            }
+
+            // 颜色选择 v1
+            if (e.target.classList.contains('v1-color-dot')) {
+                const row = e.target.closest('.v1-color-row');
+                row.querySelectorAll('.v1-color-dot').forEach(c => c.classList.remove('selected'));
+                e.target.classList.add('selected');
+            }
+
+            // 复选框标签 v1
+            if (e.target.closest('.v1-check-item')) {
+                const item = e.target.closest('.v1-check-item');
+                const checkbox = item.querySelector('.v1-checkbox');
+                if (e.target !== checkbox) {
+                    checkbox.checked = !checkbox.checked;
+                }
+                item.classList.toggle('checked', checkbox.checked);
+            }
+
+            // 胶囊选择 v2
+            if (e.target.closest('.v2-pill')) {
+                const pills = e.target.closest('.v2-pills');
+                pills.querySelectorAll('.v2-pill').forEach(p => p.classList.remove('selected'));
+                e.target.closest('.v2-pill').classList.add('selected');
+            }
+
+            // 颜色选择 v2
+            if (e.target.classList.contains('v2-color-chip')) {
+                const bar = e.target.closest('.v2-color-bar');
+                bar.querySelectorAll('.v2-color-chip').forEach(c => c.classList.remove('selected'));
+                e.target.classList.add('selected');
+            }
+
+            // 开关切换 v2
+            if (e.target.closest('.v2-toggle')) {
+                e.target.closest('.v2-toggle').classList.toggle('active');
+            }
+
+            // 选项栏 v3
+            if (e.target.closest('.v3-option-item')) {
+                const bar = e.target.closest('.v3-option-bar');
+                bar.querySelectorAll('.v3-option-item').forEach(o => o.classList.remove('selected'));
+                e.target.closest('.v3-option-item').classList.add('selected');
+            }
+
+            // 颜色选择 v3
+            if (e.target.classList.contains('v3-color-block')) {
+                const strip = e.target.closest('.v3-color-strip');
+                strip.querySelectorAll('.v3-color-block').forEach(c => c.classList.remove('selected'));
+                e.target.classList.add('selected');
+            }
+
+            // 标签选择 v3
+            if (e.target.closest('.v3-tag')) {
+                e.target.closest('.v3-tag').classList.toggle('selected');
+            }
+        });
+    </script>
+</body>
+</html>

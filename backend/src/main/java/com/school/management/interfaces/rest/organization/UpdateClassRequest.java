@@ -1,36 +1,54 @@
 package com.school.management.interfaces.rest.organization;
 
 import io.swagger.v3.oas.annotations.media.Schema;
-import lombok.Data;
 
 /**
- * 更新班级请求
+ * Update class request
  */
-@Data
-@Schema(description = "更新班级请求")
+@Schema(description = "Update class request")
 public class UpdateClassRequest {
 
-    @Schema(description = "班级名称", example = "2024级计算机科学1班")
+    @Schema(description = "Class name", example = "2024 Computer Science Class 1")
     private String className;
 
-    @Schema(description = "班级简称", example = "计科1班")
+    @Schema(description = "Short name", example = "CS-1")
     private String shortName;
 
-    @Schema(description = "标准班级人数", example = "50")
+    @Schema(description = "Standard class size", example = "50")
     private Integer standardSize;
 
-    @Schema(description = "排序号", example = "1")
+    @Schema(description = "Sort order", example = "1")
     private Integer sortOrder;
 
-    @Schema(description = "所属组织单元ID（部门）")
+    @Schema(description = "Organization unit ID")
     private Long orgUnitId;
 
-    @Schema(description = "年级ID")
+    @Schema(description = "Grade ID")
     private Long gradeId;
 
-    @Schema(description = "专业方向ID")
+    @Schema(description = "Major direction ID")
     private Long majorDirectionId;
 
-    @Schema(description = "状态：PREPARING-筹建中，ACTIVE-正常招生")
+    @Schema(description = "Status: PREPARING, ACTIVE")
     private String status;
+
+    // Getters
+    public String getClassName() { return className; }
+    public String getShortName() { return shortName; }
+    public Integer getStandardSize() { return standardSize; }
+    public Integer getSortOrder() { return sortOrder; }
+    public Long getOrgUnitId() { return orgUnitId; }
+    public Long getGradeId() { return gradeId; }
+    public Long getMajorDirectionId() { return majorDirectionId; }
+    public String getStatus() { return status; }
+
+    // Setters
+    public void setClassName(String className) { this.className = className; }
+    public void setShortName(String shortName) { this.shortName = shortName; }
+    public void setStandardSize(Integer standardSize) { this.standardSize = standardSize; }
+    public void setSortOrder(Integer sortOrder) { this.sortOrder = sortOrder; }
+    public void setOrgUnitId(Long orgUnitId) { this.orgUnitId = orgUnitId; }
+    public void setGradeId(Long gradeId) { this.gradeId = gradeId; }
+    public void setMajorDirectionId(Long majorDirectionId) { this.majorDirectionId = majorDirectionId; }
+    public void setStatus(String status) { this.status = status; }
 }

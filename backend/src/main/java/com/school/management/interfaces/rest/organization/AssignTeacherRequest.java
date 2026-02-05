@@ -3,20 +3,26 @@ package com.school.management.interfaces.rest.organization;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
-import lombok.Data;
 
 /**
- * 分配教师请求
+ * Assign teacher request
  */
-@Data
-@Schema(description = "分配教师请求")
+@Schema(description = "Assign teacher request")
 public class AssignTeacherRequest {
 
-    @NotNull(message = "教师ID不能为空")
-    @Schema(description = "教师ID", required = true)
+    @NotNull(message = "Teacher ID required")
+    @Schema(description = "Teacher ID", required = true)
     private Long teacherId;
 
-    @NotBlank(message = "教师姓名不能为空")
-    @Schema(description = "教师姓名", required = true, example = "张老师")
+    @NotBlank(message = "Teacher name required")
+    @Schema(description = "Teacher name", required = true, example = "Teacher Zhang")
     private String teacherName;
+
+    // Getters
+    public Long getTeacherId() { return teacherId; }
+    public String getTeacherName() { return teacherName; }
+
+    // Setters
+    public void setTeacherId(Long teacherId) { this.teacherId = teacherId; }
+    public void setTeacherName(String teacherName) { this.teacherName = teacherName; }
 }

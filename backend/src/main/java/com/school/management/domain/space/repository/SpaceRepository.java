@@ -35,14 +35,14 @@ public interface SpaceRepository {
     boolean existsByCode(String spaceCode);
 
     /**
-     * 检查校区内楼号是否存在
+     * 检查校区内楼号是否存在（V10: 使用Integer）
      */
-    boolean existsByBuildingNoInCampus(String buildingNo, Long campusId, Long excludeId);
+    boolean existsByBuildingNoInCampus(Integer buildingNo, Long campusId, Long excludeId);
 
     /**
-     * 检查楼栋内房间号是否存在
+     * 检查楼栋内房间号是否存在（V10: 使用Integer）
      */
-    boolean existsByRoomNoInBuilding(String roomNo, Long buildingId, Long excludeId);
+    boolean existsByRoomNoInBuilding(Integer roomNo, Long buildingId, Long excludeId);
 
     /**
      * 删除场所（逻辑删除）

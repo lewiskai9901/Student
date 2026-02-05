@@ -28,6 +28,14 @@ public enum SpaceStatus {
         throw new IllegalArgumentException("Invalid space status code: " + code);
     }
 
+    public static SpaceStatus fromValue(int value) {
+        return fromCode(value);
+    }
+
+    public int getValue() {
+        return code;
+    }
+
     public boolean isAvailable() {
         return this == NORMAL;
     }

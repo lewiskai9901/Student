@@ -8,7 +8,7 @@ import java.time.LocalDateTime;
  * BehaviorAlert Entity.
  * Represents an alert triggered by student behavior patterns (frequency, severity, trends).
  */
-public class BehaviorAlert extends Entity<Long> {
+public class BehaviorAlert implements Entity<Long> {
 
     private Long id;
     private Long studentId;

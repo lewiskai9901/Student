@@ -105,25 +105,41 @@ public class InspectionCacheService {
     // ========== Ranking Cache ==========
 
     /**
-     * 获取或加载部门排名数据。
+     * 获取或加载组织排名数据。
      *
      * @param dateRange 日期范围标识 (如 "2026-01-01_2026-01-31")
      * @param loader    数据加载函数
      * @param <T>       返回类型
      * @return 排名数据
      */
-    public <T> T getOrLoadDepartmentRanking(String dateRange, Supplier<T> loader) {
-        return getOrLoad("ranking:department:" + dateRange, RANKING_TTL, loader);
+    public <T> T getOrLoadOrgRanking(String dateRange, Supplier<T> loader) {
+        return getOrLoad("ranking:org:" + dateRange, RANKING_TTL, loader);
     }
 
     /**
-     * 缓存部门排名数据。
+     * 缓存组织排名数据。
      *
      * @param dateRange 日期范围标识
      * @param ranking   排名数据
      */
+    public void cacheOrgRanking(String dateRange, Object ranking) {
+        put("ranking:org:" + dateRange, ranking, RANKING_TTL);
+    }
+
+    /**
+     * @deprecated 使用 {@link #getOrLoadOrgRanking} 代替
+     */
+    @Deprecated
+    public <T> T getOrLoadDepartmentRanking(String dateRange, Supplier<T> loader) {
+        return getOrLoadOrgRanking(dateRange, loader);
+    }
+
+    /**
+     * @deprecated 使用 {@link #cacheOrgRanking} 代替
+     */
+    @Deprecated
     public void cacheDepartmentRanking(String dateRange, Object ranking) {
-        put("ranking:department:" + dateRange, ranking, RANKING_TTL);
+        cacheOrgRanking(dateRange, ranking);
     }
 
     /**

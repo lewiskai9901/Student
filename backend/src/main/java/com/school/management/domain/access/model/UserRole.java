@@ -10,7 +10,7 @@ import java.time.LocalDateTime;
  * UserRole entity representing the assignment of a role to a user.
  */
 @Getter
-public class UserRole extends Entity<Long> {
+public class UserRole implements Entity<Long> {
 
     private Long id;
     private Long userId;

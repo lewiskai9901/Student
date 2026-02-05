@@ -1,7 +1,7 @@
 package com.school.management.infrastructure.cache;
 
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 
@@ -21,12 +21,16 @@ import java.util.function.Supplier;
  *   <li>Pattern-based key deletion</li>
  * </ul>
  */
-@Slf4j
 @Service
-@RequiredArgsConstructor
 public class CacheService {
 
+    private static final Logger log = LoggerFactory.getLogger(CacheService.class);
+
     private final RedisTemplate<String, Object> redisTemplate;
+
+    public CacheService(RedisTemplate<String, Object> redisTemplate) {
+        this.redisTemplate = redisTemplate;
+    }
 
     private static final String KEY_PREFIX = "sms:";
 

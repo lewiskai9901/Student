@@ -1,0 +1,457 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>量化模板配置 - 版本3：极简紧凑型</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #f0f2f5; }
+
+        .page { padding: 12px; }
+
+        /* 顶部工具栏 */
+        .toolbar {
+            display: flex; align-items: center; gap: 12px;
+            background: #fff; padding: 10px 16px; border-radius: 8px;
+            margin-bottom: 12px; box-shadow: 0 1px 2px rgba(0,0,0,0.06);
+        }
+        .toolbar-title { font-size: 15px; font-weight: 600; color: #1a1a2e; white-space: nowrap; }
+        .toolbar-divider { width: 1px; height: 20px; background: #e0e0e0; }
+        .template-select {
+            padding: 6px 10px; border: 1px solid #e0e0e0; border-radius: 4px;
+            font-size: 13px; min-width: 160px; background: #fff;
+        }
+        .toolbar-stats {
+            display: flex; gap: 16px; margin-left: auto;
+        }
+        .stat-chip {
+            display: flex; align-items: center; gap: 4px;
+            font-size: 12px; color: #666;
+        }
+        .stat-chip .num { font-weight: 600; color: #5b5fc7; }
+        .toolbar-actions { display: flex; gap: 6px; }
+        .btn {
+            padding: 6px 12px; border-radius: 4px; font-size: 12px; cursor: pointer;
+            border: none; white-space: nowrap;
+        }
+        .btn-primary { background: #5b5fc7; color: #fff; }
+        .btn-ghost { background: transparent; color: #5b5fc7; }
+        .btn-ghost:hover { background: #f0f0ff; }
+
+        /* 类别标签栏 */
+        .category-tabs {
+            display: flex; gap: 8px; margin-bottom: 12px; overflow-x: auto;
+            padding-bottom: 4px;
+        }
+        .category-tab {
+            display: flex; align-items: center; gap: 6px;
+            padding: 8px 14px; background: #fff; border-radius: 6px;
+            cursor: pointer; white-space: nowrap; transition: all 0.2s;
+            border: 1px solid transparent;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.06);
+        }
+        .category-tab:hover { border-color: #5b5fc7; }
+        .category-tab.active { background: #5b5fc7; color: #fff; }
+        .category-tab .icon { font-size: 14px; }
+        .category-tab .name { font-size: 13px; font-weight: 500; }
+        .category-tab .count {
+            padding: 1px 6px; background: rgba(0,0,0,0.08); border-radius: 10px;
+            font-size: 11px;
+        }
+        .category-tab.active .count { background: rgba(255,255,255,0.2); }
+        .category-tab .weight { font-size: 11px; opacity: 0.7; }
+        .add-tab {
+            padding: 8px 12px; background: #fff; border-radius: 6px;
+            border: 1px dashed #d0d0d0; cursor: pointer; color: #8c8c8c;
+            font-size: 13px;
+        }
+        .add-tab:hover { border-color: #5b5fc7; color: #5b5fc7; }
+
+        /* 扣分项列表 */
+        .items-panel {
+            background: #fff; border-radius: 8px;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.06);
+        }
+        .panel-header {
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 10px 14px; border-bottom: 1px solid #f0f0f0;
+        }
+        .panel-title { font-size: 13px; font-weight: 500; color: #666; }
+        .panel-actions { display: flex; gap: 8px; }
+        .search-box {
+            padding: 4px 10px; border: 1px solid #e0e0e0; border-radius: 4px;
+            font-size: 12px; width: 160px;
+        }
+
+        /* 紧凑列表 */
+        .items-list { }
+        .item-row {
+            display: flex; align-items: center; padding: 10px 14px;
+            border-bottom: 1px solid #f5f5f5; gap: 12px;
+            transition: background 0.15s;
+        }
+        .item-row:hover { background: #fafbfc; }
+        .item-row:last-child { border-bottom: none; }
+
+        .item-index {
+            width: 24px; height: 24px; background: #f5f5f5; border-radius: 4px;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 11px; color: #8c8c8c; flex-shrink: 0;
+        }
+        .item-main { flex: 1; min-width: 0; }
+        .item-name-row { display: flex; align-items: center; gap: 8px; }
+        .item-name { font-size: 13px; font-weight: 500; color: #1a1a2e; }
+        .item-code { font-size: 11px; color: #8c8c8c; }
+        .item-desc {
+            font-size: 11px; color: #8c8c8c; margin-top: 2px;
+            white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+        }
+
+        .item-score {
+            padding: 3px 10px; border-radius: 4px; font-size: 13px; font-weight: 600;
+            flex-shrink: 0;
+        }
+        .item-score.deduct { background: #fff1f0; color: #ff4d4f; }
+        .item-score.add { background: #f6ffed; color: #52c41a; }
+
+        .item-mode {
+            padding: 2px 8px; background: #f5f5f5; border-radius: 3px;
+            font-size: 11px; color: #666; flex-shrink: 0;
+        }
+
+        .item-features {
+            display: flex; gap: 4px; flex-shrink: 0;
+        }
+        .feature-dot {
+            width: 6px; height: 6px; border-radius: 50%;
+            background: #d9d9d9;
+        }
+        .feature-dot.active { background: #52c41a; }
+        .feature-dot[title]:hover { cursor: help; }
+
+        .item-status {
+            width: 32px; height: 18px; border-radius: 9px;
+            background: #52c41a; position: relative; cursor: pointer;
+            flex-shrink: 0;
+        }
+        .item-status::after {
+            content: ''; position: absolute; width: 14px; height: 14px;
+            background: #fff; border-radius: 50%; top: 2px; right: 2px;
+            transition: all 0.2s;
+        }
+        .item-status.off { background: #d9d9d9; }
+        .item-status.off::after { right: auto; left: 2px; }
+
+        .item-actions {
+            display: flex; gap: 4px; flex-shrink: 0; opacity: 0;
+            transition: opacity 0.15s;
+        }
+        .item-row:hover .item-actions { opacity: 1; }
+        .action-btn {
+            width: 24px; height: 24px; border: none; background: transparent;
+            cursor: pointer; border-radius: 4px; font-size: 12px; color: #8c8c8c;
+        }
+        .action-btn:hover { background: #f0f0f0; color: #5b5fc7; }
+        .action-btn.danger:hover { color: #ff4d4f; }
+
+        /* 添加行 */
+        .add-item-row {
+            padding: 10px 14px; border-top: 1px solid #f0f0f0;
+        }
+        .add-item-btn {
+            display: flex; align-items: center; justify-content: center; gap: 4px;
+            padding: 8px; border: 1px dashed #d0d0d0; border-radius: 4px;
+            color: #8c8c8c; cursor: pointer; font-size: 12px;
+            transition: all 0.2s;
+        }
+        .add-item-btn:hover { border-color: #5b5fc7; color: #5b5fc7; background: #f8f9ff; }
+
+        /* 底部状态栏 */
+        .status-bar {
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 8px 14px; background: #fafbfc; border-top: 1px solid #f0f0f0;
+            font-size: 11px; color: #8c8c8c;
+        }
+
+        /* 版本标签 */
+        .version-tag {
+            position: fixed; top: 12px; right: 12px;
+            background: #fa8c16; color: #fff; padding: 6px 14px;
+            border-radius: 16px; font-size: 13px; font-weight: 500;
+            box-shadow: 0 2px 8px rgba(250,140,22,0.3); z-index: 100;
+        }
+
+        /* 图例 */
+        .legend {
+            display: flex; gap: 12px; align-items: center;
+        }
+        .legend-item {
+            display: flex; align-items: center; gap: 4px; font-size: 11px; color: #8c8c8c;
+        }
+    </style>
+</head>
+<body>
+    <div class="version-tag">版本3：极简紧凑型</div>
+
+    <div class="page">
+        <!-- 顶部工具栏 -->
+        <div class="toolbar">
+            <span class="toolbar-title">模板配置</span>
+            <div class="toolbar-divider"></div>
+            <select class="template-select">
+                <option>DailyCheckTemplate</option>
+                <option>WeeklyTemplate</option>
+            </select>
+            <div class="toolbar-stats">
+                <div class="stat-chip"><span class="num">4</span> 类别</div>
+                <div class="stat-chip"><span class="num">28</span> 扣分项</div>
+                <div class="stat-chip"><span class="num">25</span> 启用</div>
+            </div>
+            <div class="toolbar-actions">
+                <button class="btn btn-ghost">导入</button>
+                <button class="btn btn-ghost">导出</button>
+            </div>
+        </div>
+
+        <!-- 类别标签栏 -->
+        <div class="category-tabs">
+            <div class="category-tab active">
+                <span class="icon">🧹</span>
+                <span class="name">卫生类</span>
+                <span class="count">8</span>
+                <span class="weight">30%</span>
+            </div>
+            <div class="category-tab">
+                <span class="icon">📚</span>
+                <span class="name">纪律类</span>
+                <span class="count">12</span>
+                <span class="weight">40%</span>
+            </div>
+            <div class="category-tab">
+                <span class="icon">🌟</span>
+                <span class="name">文明类</span>
+                <span class="count">5</span>
+                <span class="weight">20%</span>
+            </div>
+            <div class="category-tab">
+                <span class="icon">⚠️</span>
+                <span class="name">安全类</span>
+                <span class="count">3</span>
+                <span class="weight">10%</span>
+            </div>
+            <div class="add-tab">+ 类别</div>
+        </div>
+
+        <!-- 扣分项面板 -->
+        <div class="items-panel">
+            <div class="panel-header">
+                <span class="panel-title">卫生类 · 扣分项列表</span>
+                <div class="panel-actions">
+                    <input class="search-box" placeholder="搜索扣分项...">
+                    <button class="btn btn-primary">+ 添加</button>
+                </div>
+            </div>
+
+            <div class="items-list">
+                <div class="item-row">
+                    <div class="item-index">1</div>
+                    <div class="item-main">
+                        <div class="item-name-row">
+                            <span class="item-name">地面不清洁</span>
+                            <span class="item-code">HYG001</span>
+                        </div>
+                        <div class="item-desc">教室或宿舍地面有明显垃圾、污渍</div>
+                    </div>
+                    <div class="item-score deduct">-2</div>
+                    <div class="item-mode">扣分</div>
+                    <div class="item-features">
+                        <div class="feature-dot active" title="可关联个人"></div>
+                        <div class="feature-dot" title="需要拍照"></div>
+                        <div class="feature-dot" title="需要备注"></div>
+                    </div>
+                    <div class="item-status"></div>
+                    <div class="item-actions">
+                        <button class="action-btn" title="编辑">✏️</button>
+                        <button class="action-btn danger" title="删除">🗑️</button>
+                    </div>
+                </div>
+
+                <div class="item-row">
+                    <div class="item-index">2</div>
+                    <div class="item-main">
+                        <div class="item-name-row">
+                            <span class="item-name">桌椅摆放不整齐</span>
+                            <span class="item-code">HYG002</span>
+                        </div>
+                        <div class="item-desc">课桌椅未按要求整齐排放</div>
+                    </div>
+                    <div class="item-score deduct">-1</div>
+                    <div class="item-mode">扣分</div>
+                    <div class="item-features">
+                        <div class="feature-dot" title="可关联个人"></div>
+                        <div class="feature-dot" title="需要拍照"></div>
+                        <div class="feature-dot" title="需要备注"></div>
+                    </div>
+                    <div class="item-status"></div>
+                    <div class="item-actions">
+                        <button class="action-btn" title="编辑">✏️</button>
+                        <button class="action-btn danger" title="删除">🗑️</button>
+                    </div>
+                </div>
+
+                <div class="item-row">
+                    <div class="item-index">3</div>
+                    <div class="item-main">
+                        <div class="item-name-row">
+                            <span class="item-name">垃圾未及时清理</span>
+                            <span class="item-code">HYG003</span>
+                        </div>
+                        <div class="item-desc">垃圾桶满溢或未按时清理</div>
+                    </div>
+                    <div class="item-score deduct">-2</div>
+                    <div class="item-mode">扣分</div>
+                    <div class="item-features">
+                        <div class="feature-dot" title="可关联个人"></div>
+                        <div class="feature-dot active" title="需要拍照"></div>
+                        <div class="feature-dot" title="需要备注"></div>
+                    </div>
+                    <div class="item-status off"></div>
+                    <div class="item-actions">
+                        <button class="action-btn" title="编辑">✏️</button>
+                        <button class="action-btn danger" title="删除">🗑️</button>
+                    </div>
+                </div>
+
+                <div class="item-row">
+                    <div class="item-index">4</div>
+                    <div class="item-main">
+                        <div class="item-name-row">
+                            <span class="item-name">窗户未擦拭</span>
+                            <span class="item-code">HYG004</span>
+                        </div>
+                        <div class="item-desc">窗户玻璃有明显灰尘或污渍</div>
+                    </div>
+                    <div class="item-score deduct">-1</div>
+                    <div class="item-mode">扣分</div>
+                    <div class="item-features">
+                        <div class="feature-dot" title="可关联个人"></div>
+                        <div class="feature-dot" title="需要拍照"></div>
+                        <div class="feature-dot" title="需要备注"></div>
+                    </div>
+                    <div class="item-status"></div>
+                    <div class="item-actions">
+                        <button class="action-btn" title="编辑">✏️</button>
+                        <button class="action-btn danger" title="删除">🗑️</button>
+                    </div>
+                </div>
+
+                <div class="item-row">
+                    <div class="item-index">5</div>
+                    <div class="item-main">
+                        <div class="item-name-row">
+                            <span class="item-name">黑板未擦干净</span>
+                            <span class="item-code">HYG005</span>
+                        </div>
+                        <div class="item-desc">黑板留有上节课板书痕迹</div>
+                    </div>
+                    <div class="item-score deduct">-1</div>
+                    <div class="item-mode">扣分</div>
+                    <div class="item-features">
+                        <div class="feature-dot active" title="可关联个人"></div>
+                        <div class="feature-dot" title="需要拍照"></div>
+                        <div class="feature-dot" title="需要备注"></div>
+                    </div>
+                    <div class="item-status"></div>
+                    <div class="item-actions">
+                        <button class="action-btn" title="编辑">✏️</button>
+                        <button class="action-btn danger" title="删除">🗑️</button>
+                    </div>
+                </div>
+
+                <div class="item-row">
+                    <div class="item-index">6</div>
+                    <div class="item-main">
+                        <div class="item-name-row">
+                            <span class="item-name">卫生工具摆放不规范</span>
+                            <span class="item-code">HYG006</span>
+                        </div>
+                        <div class="item-desc">扫帚、拖把等工具未放在指定位置</div>
+                    </div>
+                    <div class="item-score deduct">-1</div>
+                    <div class="item-mode">扣分</div>
+                    <div class="item-features">
+                        <div class="feature-dot" title="可关联个人"></div>
+                        <div class="feature-dot" title="需要拍照"></div>
+                        <div class="feature-dot" title="需要备注"></div>
+                    </div>
+                    <div class="item-status"></div>
+                    <div class="item-actions">
+                        <button class="action-btn" title="编辑">✏️</button>
+                        <button class="action-btn danger" title="删除">🗑️</button>
+                    </div>
+                </div>
+
+                <div class="item-row">
+                    <div class="item-index">7</div>
+                    <div class="item-main">
+                        <div class="item-name-row">
+                            <span class="item-name">教室走廊不整洁</span>
+                            <span class="item-code">HYG007</span>
+                        </div>
+                        <div class="item-desc">走廊有杂物或垃圾</div>
+                    </div>
+                    <div class="item-score deduct">-1</div>
+                    <div class="item-mode">扣分</div>
+                    <div class="item-features">
+                        <div class="feature-dot" title="可关联个人"></div>
+                        <div class="feature-dot" title="需要拍照"></div>
+                        <div class="feature-dot active" title="需要备注"></div>
+                    </div>
+                    <div class="item-status"></div>
+                    <div class="item-actions">
+                        <button class="action-btn" title="编辑">✏️</button>
+                        <button class="action-btn danger" title="删除">🗑️</button>
+                    </div>
+                </div>
+
+                <div class="item-row">
+                    <div class="item-index">8</div>
+                    <div class="item-main">
+                        <div class="item-name-row">
+                            <span class="item-name">个人物品乱放</span>
+                            <span class="item-code">HYG008</span>
+                        </div>
+                        <div class="item-desc">书包、水杯等个人物品未整齐摆放</div>
+                    </div>
+                    <div class="item-score deduct">-1</div>
+                    <div class="item-mode">按人</div>
+                    <div class="item-features">
+                        <div class="feature-dot active" title="可关联个人"></div>
+                        <div class="feature-dot" title="需要拍照"></div>
+                        <div class="feature-dot" title="需要备注"></div>
+                    </div>
+                    <div class="item-status"></div>
+                    <div class="item-actions">
+                        <button class="action-btn" title="编辑">✏️</button>
+                        <button class="action-btn danger" title="删除">🗑️</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="add-item-row">
+                <div class="add-item-btn">+ 添加扣分项</div>
+            </div>
+
+            <div class="status-bar">
+                <div class="legend">
+                    <div class="legend-item"><div class="feature-dot active"></div> 可关联个人</div>
+                    <div class="legend-item"><div class="feature-dot active"></div> 需要拍照</div>
+                    <div class="legend-item"><div class="feature-dot active"></div> 需要备注</div>
+                </div>
+                <span>共 8 项 · 启用 7 项 · 最大扣分 -10</span>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

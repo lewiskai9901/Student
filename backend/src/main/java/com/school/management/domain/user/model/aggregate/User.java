@@ -80,9 +80,19 @@ public class User extends AggregateRoot<Long> {
     private Long classId;
 
     /**
-     * 用户类型
+     * 用户类型（旧）
      */
     private UserType userType;
+
+    /**
+     * 用户类型编码（新，引用 user_types 表）
+     */
+    private String userTypeCode;
+
+    /**
+     * 主组织关系ID
+     */
+    private Long primaryOrgRelationId;
 
     /**
      * 状态
@@ -190,8 +200,10 @@ public class User extends AggregateRoot<Long> {
             LocalDate birthDate,
             String idCard,
             Long orgUnitId,
+            Long primaryOrgRelationId,
             Long classId,
             UserType userType,
+            String userTypeCode,
             UserStatus status,
             LocalDateTime lastLoginTime,
             String lastLoginIp,
@@ -215,8 +227,10 @@ public class User extends AggregateRoot<Long> {
         user.birthDate = birthDate;
         user.idCard = idCard;
         user.orgUnitId = orgUnitId;
+        user.primaryOrgRelationId = primaryOrgRelationId;
         user.classId = classId;
         user.userType = userType;
+        user.userTypeCode = userTypeCode;
         user.status = status;
         user.lastLoginTime = lastLoginTime;
         user.lastLoginIp = lastLoginIp;
@@ -386,6 +400,8 @@ public class User extends AggregateRoot<Long> {
     public Long getOrgUnitId() { return orgUnitId; }
     public Long getClassId() { return classId; }
     public UserType getUserType() { return userType; }
+    public String getUserTypeCode() { return userTypeCode; }
+    public Long getPrimaryOrgRelationId() { return primaryOrgRelationId; }
     public UserStatus getStatus() { return status; }
     public LocalDateTime getLastLoginTime() { return lastLoginTime; }
     public String getLastLoginIp() { return lastLoginIp; }

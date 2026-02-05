@@ -3,46 +3,68 @@ package com.school.management.interfaces.rest.organization;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
-import lombok.Data;
 
 /**
- * 创建班级请求
+ * Create class request
  */
-@Data
-@Schema(description = "创建班级请求")
+@Schema(description = "Create class request")
 public class CreateClassRequest {
 
-    @NotBlank(message = "班级编码不能为空")
-    @Schema(description = "班级编码", required = true, example = "2024-CS-01")
+    @NotBlank(message = "Class code required")
+    @Schema(description = "Class code", required = true, example = "2024-CS-01")
     private String classCode;
 
-    @NotBlank(message = "班级名称不能为空")
-    @Schema(description = "班级名称", required = true, example = "2024级计算机科学1班")
+    @NotBlank(message = "Class name required")
+    @Schema(description = "Class name", required = true, example = "2024 Computer Science Class 1")
     private String className;
 
-    @Schema(description = "班级简称", example = "计科1班")
+    @Schema(description = "Short name", example = "CS-1")
     private String shortName;
 
-    @NotNull(message = "所属组织单元ID不能为空")
-    @Schema(description = "所属组织单元ID", required = true)
+    @NotNull(message = "OrgUnit ID required")
+    @Schema(description = "Organization unit ID", required = true)
     private Long orgUnitId;
 
-    @NotNull(message = "入学年份不能为空")
-    @Schema(description = "入学年份", required = true, example = "2024")
+    @NotNull(message = "Enrollment year required")
+    @Schema(description = "Enrollment year", required = true, example = "2024")
     private Integer enrollmentYear;
 
-    @Schema(description = "年级级别", example = "1")
+    @Schema(description = "Grade level", example = "1")
     private Integer gradeLevel;
 
-    @Schema(description = "专业方向ID")
+    @Schema(description = "Major direction ID")
     private Long majorDirectionId;
 
-    @Schema(description = "学制（年）", example = "4")
+    @Schema(description = "Schooling years", example = "4")
     private Integer schoolingYears;
 
-    @Schema(description = "标准班级人数", example = "50")
+    @Schema(description = "Standard class size", example = "50")
     private Integer standardSize;
 
-    @Schema(description = "班级状态 (0=筹建中, 1=在读中, 2=已毕业, 3=已撤销)", example = "1")
+    @Schema(description = "Class status (0=preparing, 1=active, 2=graduated, 3=cancelled)", example = "1")
     private Integer status;
+
+    // Getters
+    public String getClassCode() { return classCode; }
+    public String getClassName() { return className; }
+    public String getShortName() { return shortName; }
+    public Long getOrgUnitId() { return orgUnitId; }
+    public Integer getEnrollmentYear() { return enrollmentYear; }
+    public Integer getGradeLevel() { return gradeLevel; }
+    public Long getMajorDirectionId() { return majorDirectionId; }
+    public Integer getSchoolingYears() { return schoolingYears; }
+    public Integer getStandardSize() { return standardSize; }
+    public Integer getStatus() { return status; }
+
+    // Setters
+    public void setClassCode(String classCode) { this.classCode = classCode; }
+    public void setClassName(String className) { this.className = className; }
+    public void setShortName(String shortName) { this.shortName = shortName; }
+    public void setOrgUnitId(Long orgUnitId) { this.orgUnitId = orgUnitId; }
+    public void setEnrollmentYear(Integer enrollmentYear) { this.enrollmentYear = enrollmentYear; }
+    public void setGradeLevel(Integer gradeLevel) { this.gradeLevel = gradeLevel; }
+    public void setMajorDirectionId(Long majorDirectionId) { this.majorDirectionId = majorDirectionId; }
+    public void setSchoolingYears(Integer schoolingYears) { this.schoolingYears = schoolingYears; }
+    public void setStandardSize(Integer standardSize) { this.standardSize = standardSize; }
+    public void setStatus(Integer status) { this.status = status; }
 }

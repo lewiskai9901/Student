@@ -10,7 +10,7 @@ import java.util.Objects;
  * 属于 Major 聚合，表示同一专业的不同培养层次
  * 例如：计算机应用专业 -> 3+2高级工班、5年制技师班
  */
-public class MajorDirection extends Entity<Long> {
+public class MajorDirection implements Entity<Long> {
 
     private Long id;
 

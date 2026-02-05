@@ -1,0 +1,1179 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>计分系统配置 - 系统设置</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #f0f2f5;
+            color: #1a1a2e;
+        }
+
+        .page-container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        /* 页面头部 */
+        .page-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 20px;
+        }
+        .page-title {
+            font-size: 22px;
+            font-weight: 600;
+        }
+        .page-desc {
+            font-size: 14px;
+            color: #8c8c8c;
+            margin-top: 4px;
+        }
+
+        /* 按钮 */
+        .btn {
+            padding: 8px 20px;
+            border-radius: 8px;
+            font-size: 14px;
+            cursor: pointer;
+            border: none;
+            transition: all 0.2s;
+        }
+        .btn-primary {
+            background: #5b5fc7;
+            color: #fff;
+        }
+        .btn-primary:hover {
+            background: #4a4eb8;
+        }
+        .btn-outline {
+            background: #fff;
+            border: 1px solid #d9d9d9;
+            color: #666;
+        }
+        .btn-outline:hover {
+            border-color: #5b5fc7;
+            color: #5b5fc7;
+        }
+        .btn-text {
+            background: transparent;
+            color: #5b5fc7;
+            padding: 6px 12px;
+        }
+        .btn-text:hover {
+            background: #f0f0ff;
+        }
+        .btn-danger {
+            color: #ff4d4f;
+        }
+        .btn-sm {
+            padding: 6px 14px;
+            font-size: 13px;
+        }
+
+        /* 标签页 */
+        .tabs-container {
+            background: #fff;
+            border-radius: 12px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+            overflow: hidden;
+        }
+        .tabs-header {
+            display: flex;
+            border-bottom: 1px solid #f0f0f0;
+            background: #fafafa;
+        }
+        .tab-item {
+            padding: 16px 28px;
+            font-size: 14px;
+            color: #666;
+            cursor: pointer;
+            border-bottom: 2px solid transparent;
+            transition: all 0.2s;
+            font-weight: 500;
+        }
+        .tab-item:hover {
+            color: #5b5fc7;
+            background: #fff;
+        }
+        .tab-item.active {
+            color: #5b5fc7;
+            border-bottom-color: #5b5fc7;
+            background: #fff;
+        }
+        .tabs-content {
+            padding: 24px;
+        }
+
+        /* 工具栏 */
+        .toolbar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 20px;
+        }
+        .toolbar-left {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        .search-input {
+            width: 280px;
+            padding: 8px 14px;
+            border: 1px solid #d9d9d9;
+            border-radius: 8px;
+            font-size: 14px;
+        }
+        .search-input:focus {
+            outline: none;
+            border-color: #5b5fc7;
+        }
+        .filter-select {
+            padding: 8px 14px;
+            border: 1px solid #d9d9d9;
+            border-radius: 8px;
+            font-size: 14px;
+            background: #fff;
+        }
+
+        /* 卡片网格 */
+        .card-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+            gap: 16px;
+        }
+
+        /* 配置卡片 */
+        .config-card {
+            background: #fff;
+            border: 1px solid #e8e8e8;
+            border-radius: 12px;
+            padding: 20px;
+            transition: all 0.2s;
+        }
+        .config-card:hover {
+            border-color: #d0d0ff;
+            box-shadow: 0 4px 12px rgba(91,95,199,0.08);
+        }
+        .config-card.system {
+            border-left: 4px solid #5b5fc7;
+        }
+        .config-card.custom {
+            border-left: 4px solid #52c41a;
+        }
+
+        .card-header {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            margin-bottom: 12px;
+        }
+        .card-title {
+            font-size: 16px;
+            font-weight: 600;
+        }
+        .card-code {
+            font-size: 12px;
+            color: #8c8c8c;
+            margin-top: 2px;
+            font-family: 'Monaco', 'Consolas', monospace;
+        }
+        .card-badge {
+            padding: 4px 10px;
+            border-radius: 6px;
+            font-size: 11px;
+            font-weight: 500;
+        }
+        .badge-system {
+            background: #e8e8ff;
+            color: #5b5fc7;
+        }
+        .badge-custom {
+            background: #f6ffed;
+            color: #52c41a;
+        }
+        .badge-disabled {
+            background: #f5f5f5;
+            color: #8c8c8c;
+        }
+
+        .card-desc {
+            font-size: 13px;
+            color: #666;
+            margin-bottom: 14px;
+            line-height: 1.5;
+        }
+
+        .card-formula {
+            background: #f8f9fa;
+            border-radius: 8px;
+            padding: 12px;
+            margin-bottom: 14px;
+            font-family: 'Monaco', 'Consolas', monospace;
+            font-size: 12px;
+            color: #5b5fc7;
+        }
+
+        .card-meta {
+            display: flex;
+            gap: 16px;
+            margin-bottom: 14px;
+        }
+        .meta-item {
+            font-size: 12px;
+            color: #8c8c8c;
+        }
+        .meta-item span {
+            color: #333;
+            font-weight: 500;
+        }
+
+        .card-tags {
+            display: flex;
+            gap: 6px;
+            flex-wrap: wrap;
+            margin-bottom: 14px;
+        }
+        .card-tag {
+            padding: 4px 10px;
+            background: #f5f5f5;
+            border-radius: 4px;
+            font-size: 11px;
+            color: #666;
+        }
+
+        .card-footer {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding-top: 14px;
+            border-top: 1px solid #f0f0f0;
+        }
+        .card-status {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 12px;
+        }
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+        }
+        .status-dot.active {
+            background: #52c41a;
+        }
+        .status-dot.inactive {
+            background: #d9d9d9;
+        }
+        .card-actions {
+            display: flex;
+            gap: 4px;
+        }
+
+        /* 空状态 */
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: #8c8c8c;
+        }
+        .empty-icon {
+            font-size: 48px;
+            margin-bottom: 16px;
+            opacity: 0.5;
+        }
+        .empty-text {
+            font-size: 14px;
+            margin-bottom: 16px;
+        }
+
+        /* 编辑对话框 */
+        .dialog-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.5);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+        }
+        .dialog {
+            width: 100%;
+            max-width: 720px;
+            background: #fff;
+            border-radius: 16px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            overflow: hidden;
+        }
+        .dialog-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 20px 24px;
+            border-bottom: 1px solid #f0f0f0;
+        }
+        .dialog-title {
+            font-size: 18px;
+            font-weight: 600;
+        }
+        .dialog-close {
+            width: 32px;
+            height: 32px;
+            border: none;
+            background: #f5f5f5;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 18px;
+            color: #666;
+        }
+        .dialog-body {
+            padding: 24px;
+            max-height: 60vh;
+            overflow-y: auto;
+        }
+        .dialog-footer {
+            display: flex;
+            justify-content: flex-end;
+            gap: 12px;
+            padding: 16px 24px;
+            border-top: 1px solid #f0f0f0;
+            background: #fafafa;
+        }
+
+        /* 表单 */
+        .form-row {
+            display: flex;
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+        .form-group {
+            flex: 1;
+        }
+        .form-group.full {
+            flex: none;
+            width: 100%;
+        }
+        .form-label {
+            display: block;
+            font-size: 13px;
+            font-weight: 500;
+            color: #333;
+            margin-bottom: 8px;
+        }
+        .form-label .required {
+            color: #ff4d4f;
+            margin-left: 4px;
+        }
+        .form-input {
+            width: 100%;
+            padding: 10px 12px;
+            border: 1px solid #d9d9d9;
+            border-radius: 8px;
+            font-size: 14px;
+            transition: all 0.2s;
+        }
+        .form-input:focus {
+            outline: none;
+            border-color: #5b5fc7;
+            box-shadow: 0 0 0 3px rgba(91,95,199,0.1);
+        }
+        .form-textarea {
+            min-height: 80px;
+            resize: vertical;
+        }
+        .form-hint {
+            font-size: 12px;
+            color: #8c8c8c;
+            margin-top: 4px;
+        }
+
+        /* 公式编辑器 */
+        .formula-editor {
+            border: 1px solid #e8e8e8;
+            border-radius: 10px;
+            overflow: hidden;
+        }
+        .formula-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 10px 14px;
+            background: #fafafa;
+            border-bottom: 1px solid #e8e8e8;
+        }
+        .formula-title {
+            font-size: 13px;
+            font-weight: 500;
+        }
+        .formula-body {
+            display: flex;
+        }
+        .formula-code {
+            flex: 1;
+            min-height: 150px;
+            padding: 12px;
+            border: none;
+            font-family: 'Monaco', 'Consolas', monospace;
+            font-size: 13px;
+            line-height: 1.6;
+            resize: none;
+            background: #1e1e2e;
+            color: #a6e3a1;
+        }
+        .formula-sidebar {
+            width: 180px;
+            border-left: 1px solid #e8e8e8;
+            max-height: 200px;
+            overflow-y: auto;
+            background: #fafafa;
+        }
+        .sidebar-section {
+            padding: 10px;
+            border-bottom: 1px solid #f0f0f0;
+        }
+        .sidebar-title {
+            font-size: 10px;
+            font-weight: 600;
+            color: #8c8c8c;
+            margin-bottom: 6px;
+            text-transform: uppercase;
+        }
+        .sidebar-item {
+            padding: 4px 6px;
+            border-radius: 4px;
+            font-size: 11px;
+            cursor: pointer;
+        }
+        .sidebar-item:hover {
+            background: #e8e8ff;
+            color: #5b5fc7;
+        }
+        .sidebar-item code {
+            font-family: 'Monaco', 'Consolas', monospace;
+        }
+
+        /* 版本标签 */
+        .version-tag {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: linear-gradient(135deg, #5b5fc7 0%, #7c3aed 100%);
+            color: #fff;
+            padding: 10px 20px;
+            border-radius: 25px;
+            font-size: 14px;
+            font-weight: 500;
+            box-shadow: 0 4px 15px rgba(91,95,199,0.3);
+            z-index: 100;
+        }
+
+        .hidden { display: none !important; }
+    </style>
+</head>
+<body>
+    <div class="version-tag">系统配置 UI</div>
+
+    <div class="page-container">
+        <!-- 页面头部 -->
+        <div class="page-header">
+            <div>
+                <div class="page-title">计分系统配置</div>
+                <div class="page-desc">管理计分策略、打分方式和计算规则</div>
+            </div>
+        </div>
+
+        <!-- 标签页容器 -->
+        <div class="tabs-container">
+            <div class="tabs-header">
+                <div class="tab-item active" onclick="showTab('strategies')">计分策略</div>
+                <div class="tab-item" onclick="showTab('inputTypes')">打分方式</div>
+                <div class="tab-item" onclick="showTab('rules')">计算规则</div>
+                <div class="tab-item" onclick="showTab('functions')">内置函数</div>
+                <div class="tab-item" onclick="showTab('variables')">内置变量</div>
+            </div>
+
+            <div class="tabs-content">
+                <!-- 计分策略 -->
+                <div id="tab-strategies" class="tab-panel">
+                    <div class="toolbar">
+                        <div class="toolbar-left">
+                            <input type="text" class="search-input" placeholder="搜索策略名称或代码...">
+                            <select class="filter-select">
+                                <option value="">全部分类</option>
+                                <option value="basic">基础策略</option>
+                                <option value="grade">等级策略</option>
+                                <option value="advanced">高级策略</option>
+                                <option value="time">时间策略</option>
+                            </select>
+                        </div>
+                        <button class="btn btn-primary" onclick="showDialog('strategy')">新建策略</button>
+                    </div>
+
+                    <div class="card-grid">
+                        <!-- 系统策略 -->
+                        <div class="config-card system">
+                            <div class="card-header">
+                                <div>
+                                    <div class="card-title">扣分制</div>
+                                    <div class="card-code">DEDUCTION</div>
+                                </div>
+                                <span class="card-badge badge-system">系统内置</span>
+                            </div>
+                            <div class="card-desc">从基准分开始扣除，得分不低于0。适用于日常行为规范检查。</div>
+                            <div class="card-formula">得分 = 基准分 - Σ扣分</div>
+                            <div class="card-meta">
+                                <div class="meta-item">分类: <span>基础策略</span></div>
+                                <div class="meta-item">使用次数: <span>128</span></div>
+                            </div>
+                            <div class="card-tags">
+                                <span class="card-tag">NUMERIC</span>
+                                <span class="card-tag">OPTIONS</span>
+                                <span class="card-tag">CHECKBOX</span>
+                            </div>
+                            <div class="card-footer">
+                                <div class="card-status">
+                                    <span class="status-dot active"></span>
+                                    <span>已启用</span>
+                                </div>
+                                <div class="card-actions">
+                                    <button class="btn btn-text btn-sm">查看</button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="config-card system">
+                            <div class="card-header">
+                                <div>
+                                    <div class="card-title">加分制</div>
+                                    <div class="card-code">ADDITION</div>
+                                </div>
+                                <span class="card-badge badge-system">系统内置</span>
+                            </div>
+                            <div class="card-desc">从0分开始累加，有上限限制。适用于奖励性评价。</div>
+                            <div class="card-formula">得分 = Σ加分</div>
+                            <div class="card-meta">
+                                <div class="meta-item">分类: <span>基础策略</span></div>
+                                <div class="meta-item">使用次数: <span>45</span></div>
+                            </div>
+                            <div class="card-tags">
+                                <span class="card-tag">NUMERIC</span>
+                                <span class="card-tag">OPTIONS</span>
+                            </div>
+                            <div class="card-footer">
+                                <div class="card-status">
+                                    <span class="status-dot active"></span>
+                                    <span>已启用</span>
+                                </div>
+                                <div class="card-actions">
+                                    <button class="btn btn-text btn-sm">查看</button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="config-card system">
+                            <div class="card-header">
+                                <div>
+                                    <div class="card-title">星级制</div>
+                                    <div class="card-code">STAR_RATING</div>
+                                </div>
+                                <span class="card-badge badge-system">系统内置</span>
+                            </div>
+                            <div class="card-desc">1-5星评定，每星20分。适用于主观评价场景。</div>
+                            <div class="card-formula">得分 = 星数 × 20</div>
+                            <div class="card-meta">
+                                <div class="meta-item">分类: <span>等级策略</span></div>
+                                <div class="meta-item">使用次数: <span>32</span></div>
+                            </div>
+                            <div class="card-tags">
+                                <span class="card-tag">STAR</span>
+                            </div>
+                            <div class="card-footer">
+                                <div class="card-status">
+                                    <span class="status-dot active"></span>
+                                    <span>已启用</span>
+                                </div>
+                                <div class="card-actions">
+                                    <button class="btn btn-text btn-sm">查看</button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 自定义策略 -->
+                        <div class="config-card custom">
+                            <div class="card-header">
+                                <div>
+                                    <div class="card-title">宿舍卫生专用</div>
+                                    <div class="card-code">DORM_HYGIENE</div>
+                                </div>
+                                <span class="card-badge badge-custom">自定义</span>
+                            </div>
+                            <div class="card-desc">宿舍卫生检查专用策略，基准分80，加入物品摆放加权。</div>
+                            <div class="card-formula">得分 = 80 - Σ扣分 + 物品加分×1.2</div>
+                            <div class="card-meta">
+                                <div class="meta-item">分类: <span>基础策略</span></div>
+                                <div class="meta-item">使用次数: <span>12</span></div>
+                            </div>
+                            <div class="card-tags">
+                                <span class="card-tag">NUMERIC</span>
+                                <span class="card-tag">OPTIONS</span>
+                            </div>
+                            <div class="card-footer">
+                                <div class="card-status">
+                                    <span class="status-dot active"></span>
+                                    <span>已启用</span>
+                                </div>
+                                <div class="card-actions">
+                                    <button class="btn btn-text btn-sm">编辑</button>
+                                    <button class="btn btn-text btn-sm btn-danger">删除</button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="config-card system">
+                            <div class="card-header">
+                                <div>
+                                    <div class="card-title">阶梯计分</div>
+                                    <div class="card-code">STEPPED</div>
+                                </div>
+                                <span class="card-badge badge-system">系统内置</span>
+                            </div>
+                            <div class="card-desc">按档位分级扣分，不同严重程度对应不同扣分值。</div>
+                            <div class="card-formula">轻微-1, 一般-3, 严重-5</div>
+                            <div class="card-meta">
+                                <div class="meta-item">分类: <span>高级策略</span></div>
+                                <div class="meta-item">使用次数: <span>67</span></div>
+                            </div>
+                            <div class="card-tags">
+                                <span class="card-tag">NUMERIC</span>
+                                <span class="card-tag">OPTIONS</span>
+                            </div>
+                            <div class="card-footer">
+                                <div class="card-status">
+                                    <span class="status-dot active"></span>
+                                    <span>已启用</span>
+                                </div>
+                                <div class="card-actions">
+                                    <button class="btn btn-text btn-sm">查看</button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="config-card system">
+                            <div class="card-header">
+                                <div>
+                                    <div class="card-title">累进计分</div>
+                                    <div class="card-code">PROGRESSIVE</div>
+                                </div>
+                                <span class="card-badge badge-system">系统内置</span>
+                            </div>
+                            <div class="card-desc">按次数递增扣分，重复违规惩罚加重。</div>
+                            <div class="card-formula">第n次 = 基础 × 2^(n-1)</div>
+                            <div class="card-meta">
+                                <div class="meta-item">分类: <span>高级策略</span></div>
+                                <div class="meta-item">使用次数: <span>23</span></div>
+                            </div>
+                            <div class="card-tags">
+                                <span class="card-tag">NUMERIC</span>
+                                <span class="card-tag">COUNT</span>
+                            </div>
+                            <div class="card-footer">
+                                <div class="card-status">
+                                    <span class="status-dot active"></span>
+                                    <span>已启用</span>
+                                </div>
+                                <div class="card-actions">
+                                    <button class="btn btn-text btn-sm">查看</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 打分方式 -->
+                <div id="tab-inputTypes" class="tab-panel hidden">
+                    <div class="toolbar">
+                        <div class="toolbar-left">
+                            <input type="text" class="search-input" placeholder="搜索打分方式...">
+                            <select class="filter-select">
+                                <option value="">全部分类</option>
+                                <option value="basic">基础</option>
+                                <option value="extended">扩展</option>
+                            </select>
+                        </div>
+                        <button class="btn btn-primary" onclick="showDialog('inputType')">新建打分方式</button>
+                    </div>
+
+                    <div class="card-grid">
+                        <div class="config-card system">
+                            <div class="card-header">
+                                <div>
+                                    <div class="card-title">数值输入</div>
+                                    <div class="card-code">NUMERIC</div>
+                                </div>
+                                <span class="card-badge badge-system">系统内置</span>
+                            </div>
+                            <div class="card-desc">直接输入具体分数值，支持小数。</div>
+                            <div class="card-meta">
+                                <div class="meta-item">组件: <span>number</span></div>
+                                <div class="meta-item">值类型: <span>number</span></div>
+                            </div>
+                            <div class="card-tags">
+                                <span class="card-tag">min: 0</span>
+                                <span class="card-tag">max: 100</span>
+                                <span class="card-tag">step: 1</span>
+                            </div>
+                            <div class="card-footer">
+                                <div class="card-status">
+                                    <span class="status-dot active"></span>
+                                    <span>已启用</span>
+                                </div>
+                                <div class="card-actions">
+                                    <button class="btn btn-text btn-sm">查看</button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="config-card system">
+                            <div class="card-header">
+                                <div>
+                                    <div class="card-title">档位选择</div>
+                                    <div class="card-code">OPTIONS</div>
+                                </div>
+                                <span class="card-badge badge-system">系统内置</span>
+                            </div>
+                            <div class="card-desc">选择预设的分值档位，如轻微/一般/严重。</div>
+                            <div class="card-meta">
+                                <div class="meta-item">组件: <span>select</span></div>
+                                <div class="meta-item">值类型: <span>number</span></div>
+                            </div>
+                            <div class="card-tags">
+                                <span class="card-tag">可自定义选项</span>
+                            </div>
+                            <div class="card-footer">
+                                <div class="card-status">
+                                    <span class="status-dot active"></span>
+                                    <span>已启用</span>
+                                </div>
+                                <div class="card-actions">
+                                    <button class="btn btn-text btn-sm">查看</button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="config-card system">
+                            <div class="card-header">
+                                <div>
+                                    <div class="card-title">星级点选</div>
+                                    <div class="card-code">STAR</div>
+                                </div>
+                                <span class="card-badge badge-system">系统内置</span>
+                            </div>
+                            <div class="card-desc">1-5星评分，支持半星。</div>
+                            <div class="card-meta">
+                                <div class="meta-item">组件: <span>star</span></div>
+                                <div class="meta-item">值类型: <span>number</span></div>
+                            </div>
+                            <div class="card-tags">
+                                <span class="card-tag">max: 5</span>
+                                <span class="card-tag">半星: 支持</span>
+                            </div>
+                            <div class="card-footer">
+                                <div class="card-status">
+                                    <span class="status-dot active"></span>
+                                    <span>已启用</span>
+                                </div>
+                                <div class="card-actions">
+                                    <button class="btn btn-text btn-sm">查看</button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="config-card custom">
+                            <div class="card-header">
+                                <div>
+                                    <div class="card-title">10分制评分</div>
+                                    <div class="card-code">SCORE_10</div>
+                                </div>
+                                <span class="card-badge badge-custom">自定义</span>
+                            </div>
+                            <div class="card-desc">1-10分评分，适用于综合评价。</div>
+                            <div class="card-meta">
+                                <div class="meta-item">组件: <span>slider</span></div>
+                                <div class="meta-item">值类型: <span>number</span></div>
+                            </div>
+                            <div class="card-tags">
+                                <span class="card-tag">min: 1</span>
+                                <span class="card-tag">max: 10</span>
+                            </div>
+                            <div class="card-footer">
+                                <div class="card-status">
+                                    <span class="status-dot active"></span>
+                                    <span>已启用</span>
+                                </div>
+                                <div class="card-actions">
+                                    <button class="btn btn-text btn-sm">编辑</button>
+                                    <button class="btn btn-text btn-sm btn-danger">删除</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 计算规则 -->
+                <div id="tab-rules" class="tab-panel hidden">
+                    <div class="toolbar">
+                        <div class="toolbar-left">
+                            <input type="text" class="search-input" placeholder="搜索规则...">
+                        </div>
+                        <button class="btn btn-primary" onclick="showDialog('rule')">新建规则</button>
+                    </div>
+
+                    <div class="card-grid">
+                        <div class="config-card system">
+                            <div class="card-header">
+                                <div>
+                                    <div class="card-title">分数封顶</div>
+                                    <div class="card-code">CEILING</div>
+                                </div>
+                                <span class="card-badge badge-system">系统内置</span>
+                            </div>
+                            <div class="card-desc">限制最高得分，超过则取最高分。</div>
+                            <div class="card-formula">if (score > maxScore) return maxScore</div>
+                            <div class="card-meta">
+                                <div class="meta-item">类型: <span>ceiling</span></div>
+                                <div class="meta-item">优先级: <span>10</span></div>
+                            </div>
+                            <div class="card-footer">
+                                <div class="card-status">
+                                    <span class="status-dot active"></span>
+                                    <span>已启用</span>
+                                </div>
+                                <div class="card-actions">
+                                    <button class="btn btn-text btn-sm">查看</button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="config-card system">
+                            <div class="card-header">
+                                <div>
+                                    <div class="card-title">一票否决</div>
+                                    <div class="card-code">VETO</div>
+                                </div>
+                                <span class="card-badge badge-system">系统内置</span>
+                            </div>
+                            <div class="card-desc">触发条件则直接归零。</div>
+                            <div class="card-formula">if (hasVetoItem) return 0</div>
+                            <div class="card-meta">
+                                <div class="meta-item">类型: <span>veto</span></div>
+                                <div class="meta-item">优先级: <span>1</span></div>
+                            </div>
+                            <div class="card-footer">
+                                <div class="card-status">
+                                    <span class="status-dot active"></span>
+                                    <span>已启用</span>
+                                </div>
+                                <div class="card-actions">
+                                    <button class="btn btn-text btn-sm">查看</button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="config-card system">
+                            <div class="card-header">
+                                <div>
+                                    <div class="card-title">累进惩罚</div>
+                                    <div class="card-code">PROGRESSIVE_PENALTY</div>
+                                </div>
+                                <span class="card-badge badge-system">系统内置</span>
+                            </div>
+                            <div class="card-desc">重复违规时，扣分按倍率递增。</div>
+                            <div class="card-formula">deduction × multiplier^(count-1)</div>
+                            <div class="card-meta">
+                                <div class="meta-item">类型: <span>progressive</span></div>
+                                <div class="meta-item">优先级: <span>30</span></div>
+                            </div>
+                            <div class="card-footer">
+                                <div class="card-status">
+                                    <span class="status-dot active"></span>
+                                    <span>已启用</span>
+                                </div>
+                                <div class="card-actions">
+                                    <button class="btn btn-text btn-sm">查看</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 内置函数 -->
+                <div id="tab-functions" class="tab-panel hidden">
+                    <div class="toolbar">
+                        <div class="toolbar-left">
+                            <input type="text" class="search-input" placeholder="搜索函数...">
+                            <select class="filter-select">
+                                <option value="">全部分类</option>
+                                <option value="math">数学函数</option>
+                                <option value="array">数组函数</option>
+                                <option value="logic">逻辑函数</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="card-grid">
+                        <div class="config-card system">
+                            <div class="card-header">
+                                <div>
+                                    <div class="card-title">sum</div>
+                                    <div class="card-code">求和</div>
+                                </div>
+                                <span class="card-badge badge-system">数学</span>
+                            </div>
+                            <div class="card-desc">计算数组中所有元素的总和。</div>
+                            <div class="card-formula">sum([1, 2, 3]) → 6</div>
+                            <div class="card-meta">
+                                <div class="meta-item">参数: <span>array</span></div>
+                                <div class="meta-item">返回: <span>number</span></div>
+                            </div>
+                        </div>
+
+                        <div class="config-card system">
+                            <div class="card-header">
+                                <div>
+                                    <div class="card-title">average</div>
+                                    <div class="card-code">平均值</div>
+                                </div>
+                                <span class="card-badge badge-system">数学</span>
+                            </div>
+                            <div class="card-desc">计算数组的平均值。</div>
+                            <div class="card-formula">average([60, 70, 80]) → 70</div>
+                            <div class="card-meta">
+                                <div class="meta-item">参数: <span>array</span></div>
+                                <div class="meta-item">返回: <span>number</span></div>
+                            </div>
+                        </div>
+
+                        <div class="config-card system">
+                            <div class="card-header">
+                                <div>
+                                    <div class="card-title">clamp</div>
+                                    <div class="card-code">限制范围</div>
+                                </div>
+                                <span class="card-badge badge-system">数学</span>
+                            </div>
+                            <div class="card-desc">将值限制在指定范围内。</div>
+                            <div class="card-formula">clamp(150, 0, 100) → 100</div>
+                            <div class="card-meta">
+                                <div class="meta-item">参数: <span>value, min, max</span></div>
+                                <div class="meta-item">返回: <span>number</span></div>
+                            </div>
+                        </div>
+
+                        <div class="config-card system">
+                            <div class="card-header">
+                                <div>
+                                    <div class="card-title">iif</div>
+                                    <div class="card-code">条件判断</div>
+                                </div>
+                                <span class="card-badge badge-system">逻辑</span>
+                            </div>
+                            <div class="card-desc">根据条件返回不同值。</div>
+                            <div class="card-formula">iif(true, 100, 0) → 100</div>
+                            <div class="card-meta">
+                                <div class="meta-item">参数: <span>cond, t, f</span></div>
+                                <div class="meta-item">返回: <span>any</span></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 内置变量 -->
+                <div id="tab-variables" class="tab-panel hidden">
+                    <div class="toolbar">
+                        <div class="toolbar-left">
+                            <input type="text" class="search-input" placeholder="搜索变量...">
+                            <select class="filter-select">
+                                <option value="">全部分类</option>
+                                <option value="score">分数相关</option>
+                                <option value="count">计数相关</option>
+                                <option value="time">时间相关</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="card-grid">
+                        <div class="config-card system">
+                            <div class="card-header">
+                                <div>
+                                    <div class="card-title">ctx.baseScore</div>
+                                    <div class="card-code">基准分</div>
+                                </div>
+                                <span class="card-badge badge-system">分数</span>
+                            </div>
+                            <div class="card-desc">模板设置的基准分数，默认100。</div>
+                            <div class="card-meta">
+                                <div class="meta-item">类型: <span>number</span></div>
+                            </div>
+                        </div>
+
+                        <div class="config-card system">
+                            <div class="card-header">
+                                <div>
+                                    <div class="card-title">ctx.deductions</div>
+                                    <div class="card-code">扣分列表</div>
+                                </div>
+                                <span class="card-badge badge-system">分数</span>
+                            </div>
+                            <div class="card-desc">所有扣分项的分值数组。</div>
+                            <div class="card-meta">
+                                <div class="meta-item">类型: <span>array</span></div>
+                            </div>
+                        </div>
+
+                        <div class="config-card system">
+                            <div class="card-header">
+                                <div>
+                                    <div class="card-title">ctx.occurrenceCount</div>
+                                    <div class="card-code">发生次数</div>
+                                </div>
+                                <span class="card-badge badge-system">计数</span>
+                            </div>
+                            <div class="card-desc">同一问题的发生次数，用于累进计算。</div>
+                            <div class="card-meta">
+                                <div class="meta-item">类型: <span>number</span></div>
+                            </div>
+                        </div>
+
+                        <div class="config-card system">
+                            <div class="card-header">
+                                <div>
+                                    <div class="card-title">ctx.value</div>
+                                    <div class="card-code">输入值</div>
+                                </div>
+                                <span class="card-badge badge-system">输入</span>
+                            </div>
+                            <div class="card-desc">当前检查项的输入值。</div>
+                            <div class="card-meta">
+                                <div class="meta-item">类型: <span>any</span></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 新建策略对话框 -->
+    <div id="strategyDialog" class="dialog-overlay hidden">
+        <div class="dialog">
+            <div class="dialog-header">
+                <div class="dialog-title">新建计分策略</div>
+                <button class="dialog-close" onclick="hideDialog()">×</button>
+            </div>
+            <div class="dialog-body">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label">策略名称<span class="required">*</span></label>
+                        <input type="text" class="form-input" placeholder="请输入策略名称">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">策略代码<span class="required">*</span></label>
+                        <input type="text" class="form-input" placeholder="如: CUSTOM_SCORE">
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label">策略分类</label>
+                        <select class="form-input">
+                            <option value="basic">基础策略</option>
+                            <option value="grade">等级策略</option>
+                            <option value="advanced">高级策略</option>
+                            <option value="time">时间策略</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">公式说明</label>
+                        <input type="text" class="form-input" placeholder="如: 得分 = 基准分 - Σ扣分">
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group full">
+                        <label class="form-label">策略描述</label>
+                        <textarea class="form-input form-textarea" placeholder="请输入策略描述"></textarea>
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group full">
+                        <label class="form-label">计分公式<span class="required">*</span></label>
+                        <div class="formula-editor">
+                            <div class="formula-header">
+                                <span class="formula-title">JavaScript 公式</span>
+                                <button class="btn btn-outline btn-sm">验证</button>
+                            </div>
+                            <div class="formula-body">
+                                <textarea class="formula-code">// 在此编写计分公式
+// ctx 包含所有可用变量
+const baseScore = ctx.baseScore || 100;
+const deductions = sum(ctx.deductions);
+
+return Math.max(0, baseScore - deductions);</textarea>
+                                <div class="formula-sidebar">
+                                    <div class="sidebar-section">
+                                        <div class="sidebar-title">函数</div>
+                                        <div class="sidebar-item"><code>sum()</code></div>
+                                        <div class="sidebar-item"><code>average()</code></div>
+                                        <div class="sidebar-item"><code>clamp()</code></div>
+                                    </div>
+                                    <div class="sidebar-section">
+                                        <div class="sidebar-title">变量</div>
+                                        <div class="sidebar-item"><code>ctx.baseScore</code></div>
+                                        <div class="sidebar-item"><code>ctx.deductions</code></div>
+                                        <div class="sidebar-item"><code>ctx.additions</code></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="dialog-footer">
+                <button class="btn btn-outline" onclick="hideDialog()">取消</button>
+                <button class="btn btn-primary">保存</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function showTab(tabName) {
+            // 隐藏所有标签页内容
+            document.querySelectorAll('.tab-panel').forEach(panel => {
+                panel.classList.add('hidden');
+            });
+            // 显示当前标签页
+            document.getElementById('tab-' + tabName).classList.remove('hidden');
+
+            // 更新标签页状态
+            document.querySelectorAll('.tab-item').forEach(item => {
+                item.classList.remove('active');
+            });
+            event.target.classList.add('active');
+        }
+
+        function showDialog(type) {
+            document.getElementById('strategyDialog').classList.remove('hidden');
+        }
+
+        function hideDialog() {
+            document.getElementById('strategyDialog').classList.add('hidden');
+        }
+    </script>
+</body>
+</html>

@@ -323,7 +323,7 @@ export const userRoleApi = {
 // 数据权限选项
 export const DATA_SCOPE_OPTIONS = [
   { value: 1, label: '全部数据' },
-  { value: 2, label: '本部门' },
+  { value: 2, label: '本组织' },
   { value: 3, label: '本年级' },
   { value: 4, label: '本班级' },
   { value: 5, label: '仅本人' }
@@ -362,11 +362,28 @@ export function saveRoleDataPermissions(id: number, permissions: RoleDataPermiss
 // ==================== V2 数据权限 API ====================
 
 import type {
-  DataModuleInfo,
   DataScopeOption,
   RolePermissionConfig,
-  GroupedModules
+  GroupedModules,
+  DomainWithModules,
+  // V5 types
+  DomainModulesV5,
+  ScopeTypeV5,
+  ScopeItemTypeV5,
+  ScopeItemV5,
+  RoleModulePermissionV5,
+  SavePermissionCommandV5
 } from '@/types/access'
+
+// Re-export V5 types for consumers
+export type {
+  DomainModulesV5,
+  ScopeTypeV5,
+  ScopeItemTypeV5,
+  ScopeItemV5,
+  RoleModulePermissionV5,
+  SavePermissionCommandV5
+}
 
 /**
  * V2: 获取角色数据权限配置
@@ -404,6 +421,71 @@ export const roleDataPermissionApiV2 = {
   saveConfig: saveRoleDataPermissionsV2,
   getModules: getDataModulesV2,
   getScopes: getDataScopesV2
+}
+
+// ==================== V5 数据权限 API ====================
+
+/**
+ * V5: 获取所有数据模块（按领域分组）
+ */
+export function getDataModulesV5(): Promise<DomainModulesV5[]> {
+  return http.get<DomainModulesV5[]>(`${ROLE_URL}/data-permissions/v5/modules`)
+}
+
+/**
+ * V5: 获取所有数据范围类型
+ */
+export function getDataScopesV5(): Promise<ScopeTypeV5[]> {
+  return http.get<ScopeTypeV5[]>(`${ROLE_URL}/data-permissions/v5/scopes`)
+}
+
+/**
+ * V5: 获取所有范围项类型
+ */
+export function getScopeItemTypesV5(): Promise<ScopeItemTypeV5[]> {
+  return http.get<ScopeItemTypeV5[]>(`${ROLE_URL}/data-permissions/v5/scope-item-types`)
+}
+
+/**
+ * V5: 搜索自定义范围可选项
+ */
+export function searchScopeItemsV5(
+  itemTypeCode: string,
+  keyword: string = '',
+  limit: number = 20
+): Promise<ScopeItemV5[]> {
+  return http.get<ScopeItemV5[]>(`${ROLE_URL}/data-permissions/v5/scope-items`, {
+    params: { itemTypeCode, keyword, limit }
+  })
+}
+
+/**
+ * V5: 获取角色数据权限配置
+ */
+export function getRoleDataPermissionsV5(roleId: string | number): Promise<RoleModulePermissionV5[]> {
+  return http.get<RoleModulePermissionV5[]>(`${ROLE_URL}/${roleId}/data-permissions/v5`)
+}
+
+/**
+ * V5: 保存角色数据权限配置
+ */
+export function saveRoleDataPermissionsV5(
+  roleId: string | number,
+  commands: SavePermissionCommandV5[]
+): Promise<void> {
+  return http.put(`${ROLE_URL}/${roleId}/data-permissions/v5`, commands)
+}
+
+/**
+ * V5 数据权限 API 对象
+ */
+export const roleDataPermissionApiV5 = {
+  getModules: getDataModulesV5,
+  getScopes: getDataScopesV5,
+  getScopeItemTypes: getScopeItemTypesV5,
+  searchScopeItems: searchScopeItemsV5,
+  getConfig: getRoleDataPermissionsV5,
+  saveConfig: saveRoleDataPermissionsV5
 }
 
 // ==================== 系统模块 API ====================

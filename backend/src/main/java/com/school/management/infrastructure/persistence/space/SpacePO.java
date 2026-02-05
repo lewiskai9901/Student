@@ -18,12 +18,15 @@ public class SpacePO {
     private String spaceCode;
     private String spaceName;
     private String spaceType;
-    private String roomType;
-    private String buildingType;
+    private Long categoryId;              // V10: 分类ID
+    private String spaceTypeCode;         // 兼容旧字段
+    private String roomType;              // 兼容旧字段
+    private String buildingType;          // 兼容旧字段
 
-    // 楼号和房间号
-    private String buildingNo;      // 楼号（如 1, A, 甲）- BUILDING类型
-    private String roomNo;          // 房间号（如 101, 302）- ROOM类型
+    // 楼号和房间号（V10: 改为数字类型）
+    private Integer buildingNo;           // 楼号（数字）- BUILDING类型
+    private Integer roomNo;               // 房间号（数字）- ROOM类型
+    private Integer floorCount;           // 楼层数 - BUILDING类型
 
     private Long parentId;
     private String path;
@@ -38,6 +41,8 @@ public class SpacePO {
 
     @TableField(updateStrategy = FieldStrategy.IGNORED)
     private Long orgUnitId;
+
+    private Long primaryOrgRelationId;
 
     @TableField(updateStrategy = FieldStrategy.IGNORED)
     private Long classId;              // 归属班级ID

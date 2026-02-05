@@ -10,7 +10,7 @@ import java.time.LocalDateTime;
  * Represents a point-in-time snapshot of analytics data such as class rankings,
  * department trends, inspector workload, or violation distributions.
  */
-public class AnalyticsSnapshot extends Entity<Long> {
+public class AnalyticsSnapshot implements Entity<Long> {
 
     private Long id;
     private SnapshotType snapshotType;
@@ -58,7 +58,6 @@ public class AnalyticsSnapshot extends Entity<Long> {
         return id;
     }
 
-    @Override
     public void setId(Long id) {
         this.id = id;
     }

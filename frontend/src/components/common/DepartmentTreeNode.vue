@@ -29,11 +29,11 @@
         <path d="M2 6a2 2 0 012-2h5l2 2h5a2 2 0 012 2v6a2 2 0 01-2 2H4a2 2 0 01-2-2V6z" />
       </svg>
 
-      <!-- 部门名称 -->
+      <!-- 组织名称 -->
       <span class="text-sm text-gray-700 truncate">{{ department.unitName || department.deptName }}</span>
     </div>
 
-    <!-- 子部门 -->
+    <!-- 子组织 -->
     <div v-if="hasChildren && isExpanded" class="pl-4">
       <DepartmentTreeNode
         v-for="child in department.children"

@@ -8,7 +8,7 @@
           <input
             v-model="searchKeyword"
             type="text"
-            placeholder="搜索部门名称或编码"
+            placeholder="搜索组织名称或编码"
             class="h-9 w-full rounded-lg border border-gray-300 pl-10 pr-4 text-sm focus:border-blue-500 focus:outline-none"
             @keyup.enter="handleSearch"
           />
@@ -34,7 +34,7 @@
             class="inline-flex h-9 items-center gap-1.5 rounded-lg bg-blue-600 px-4 text-sm font-medium text-white hover:bg-blue-700"
           >
             <Plus class="h-4 w-4" />
-            新增部门
+            新增组织
           </button>
         </div>
       </div>
@@ -44,7 +44,7 @@
     <div class="rounded-lg border border-gray-200 bg-white">
       <div class="flex items-center justify-between border-b border-gray-200 px-4 py-3">
         <div class="flex items-center gap-2">
-          <span class="font-medium text-gray-900">部门列表</span>
+          <span class="font-medium text-gray-900">组织列表</span>
           <span class="rounded bg-gray-100 px-2 py-0.5 text-xs text-gray-600">树形结构</span>
         </div>
       </div>
@@ -52,8 +52,8 @@
       <table class="w-full">
         <thead>
           <tr class="border-b border-gray-200 bg-gray-50">
-            <th class="px-4 py-3 text-left text-sm font-medium text-gray-900">部门编码</th>
-            <th class="px-4 py-3 text-left text-sm font-medium text-gray-900">部门名称</th>
+            <th class="px-4 py-3 text-left text-sm font-medium text-gray-900">组织编码</th>
+            <th class="px-4 py-3 text-left text-sm font-medium text-gray-900">组织名称</th>
             <th class="px-4 py-3 text-left text-sm font-medium text-gray-900">负责人</th>
             <th class="px-4 py-3 text-left text-sm font-medium text-gray-900">联系电话</th>
             <th class="px-4 py-3 text-left text-sm font-medium text-gray-900">邮箱</th>
@@ -165,33 +165,33 @@
               <div class="grid grid-cols-2 gap-4">
                 <div>
                   <label class="mb-1 block text-sm text-gray-700">
-                    部门编码 <span class="text-red-500">*</span>
+                    组织编码 <span class="text-red-500">*</span>
                   </label>
                   <input
                     v-model="formData.unitCode"
                     type="text"
-                    placeholder="请输入部门编码"
+                    placeholder="请输入组织编码"
                     class="h-9 w-full rounded-lg border border-gray-300 px-3 text-sm focus:border-blue-500 focus:outline-none"
                   />
                 </div>
                 <div>
                   <label class="mb-1 block text-sm text-gray-700">
-                    部门名称 <span class="text-red-500">*</span>
+                    组织名称 <span class="text-red-500">*</span>
                   </label>
                   <input
                     v-model="formData.unitName"
                     type="text"
-                    placeholder="请输入部门名称"
+                    placeholder="请输入组织名称"
                     class="h-9 w-full rounded-lg border border-gray-300 px-3 text-sm focus:border-blue-500 focus:outline-none"
                   />
                 </div>
                 <div class="col-span-2">
-                  <label class="mb-1 block text-sm text-gray-700">上级部门</label>
+                  <label class="mb-1 block text-sm text-gray-700">上级组织</label>
                   <select
                     v-model="formData.parentId"
                     class="h-9 w-full rounded-lg border border-gray-300 px-3 text-sm focus:border-blue-500 focus:outline-none"
                   >
-                    <option :value="undefined">顶级部门</option>
+                    <option :value="undefined">顶级组织</option>
                     <option
                       v-for="dept in departmentOptions"
                       :key="dept.id"
@@ -271,7 +271,7 @@ const expandedIds = ref<Set<number>>(new Set())
 const searchKeyword = ref('')
 
 const dialogVisible = ref(false)
-const dialogTitle = ref('新增部门')
+const dialogTitle = ref('新增组织')
 const isEdit = ref(false)
 const currentId = ref<number>()
 
@@ -357,7 +357,7 @@ const handleSearch = () => {
 
 const handleAdd = () => {
   isEdit.value = false
-  dialogTitle.value = '新增部门'
+  dialogTitle.value = '新增组织'
   resetForm()
   dialogVisible.value = true
 }
@@ -365,7 +365,7 @@ const handleAdd = () => {
 const handleEdit = (row: FlatDepartment) => {
   isEdit.value = true
   currentId.value = row.id
-  dialogTitle.value = '编辑部门'
+  dialogTitle.value = '编辑组织'
   Object.assign(formData, {
     unitCode: row.unitCode,
     unitName: row.unitName,
@@ -377,7 +377,7 @@ const handleEdit = (row: FlatDepartment) => {
 
 const handleDelete = async (row: FlatDepartment) => {
   try {
-    await ElMessageBox.confirm(`确定删除部门"${row.unitName}"吗?`, '删除确认', { type: 'warning' })
+    await ElMessageBox.confirm(`确定删除组织"${row.unitName}"吗?`, '删除确认', { type: 'warning' })
     await deleteDepartment(row.id)
     ElMessage.success('删除成功')
     searchKeyword.value = ''

@@ -1,7 +1,7 @@
 <template>
   <el-dialog
     :model-value="visible"
-    :title="isEdit ? '编辑部门' : '新建部门'"
+    :title="isEdit ? '编辑组织' : '新建组织'"
     width="520px"
     :close-on-click-modal="false"
     @update:model-value="$emit('update:visible', $event)"
@@ -14,11 +14,11 @@
       label-width="80px"
       class="department-form"
     >
-      <!-- 部门名称 -->
-      <el-form-item label="部门名称" prop="unitName">
+      <!-- 组织名称 -->
+      <el-form-item label="组织名称" prop="unitName">
         <el-input
           v-model="formData.unitName"
-          placeholder="请输入部门名称"
+          placeholder="请输入组织名称"
           maxlength="50"
           show-word-limit
         >
@@ -28,11 +28,11 @@
         </el-input>
       </el-form-item>
 
-      <!-- 部门编码 -->
-      <el-form-item label="部门编码" :prop="isEdit ? '' : 'unitCode'">
+      <!-- 组织编码 -->
+      <el-form-item label="组织编码" :prop="isEdit ? '' : 'unitCode'">
         <el-input
           v-model="formData.unitCode"
-          :placeholder="isEdit ? '' : '请输入部门编码'"
+          :placeholder="isEdit ? '' : '请输入组织编码'"
           :disabled="isEdit"
           maxlength="30"
         >
@@ -43,8 +43,8 @@
         <div v-if="!isEdit" class="mt-1 text-xs text-gray-400">编码用于系统标识，建议使用字母、数字、下划线</div>
       </el-form-item>
 
-      <!-- 部门类别 -->
-      <el-form-item label="部门类别" prop="unitCategory">
+      <!-- 组织类别 -->
+      <el-form-item label="组织类别" prop="unitCategory">
         <el-radio-group v-model="formData.unitCategory">
           <el-radio value="ACADEMIC">教学单位</el-radio>
           <el-radio value="FUNCTIONAL">职能部门</el-radio>
@@ -52,13 +52,13 @@
         </el-radio-group>
       </el-form-item>
 
-      <!-- 上级部门 -->
-      <el-form-item label="上级部门" prop="parentId">
+      <!-- 上级组织 -->
+      <el-form-item label="上级组织" prop="parentId">
         <el-tree-select
           v-model="formData.parentId"
           :data="parentOptions"
           :props="treeProps"
-          placeholder="请选择上级部门（留空为顶级部门）"
+          placeholder="请选择上级组织（留空为顶级组织）"
           clearable
           check-strictly
           :render-after-expand="false"
@@ -89,7 +89,7 @@
       <div class="flex items-center justify-end gap-3">
         <el-button @click="$emit('update:visible', false)">取消</el-button>
         <el-button type="primary" :loading="loading" @click="handleSubmit">
-          {{ isEdit ? '保存修改' : '创建部门' }}
+          {{ isEdit ? '保存修改' : '创建组织' }}
         </el-button>
       </div>
     </template>
@@ -166,11 +166,11 @@ const parentOptions = computed(() => {
 // 表单验证规则
 const rules: FormRules = {
   unitName: [
-    { required: true, message: '请输入部门名称', trigger: 'blur' },
-    { min: 2, max: 50, message: '部门名称长度为2-50个字符', trigger: 'blur' },
+    { required: true, message: '请输入组织名称', trigger: 'blur' },
+    { min: 2, max: 50, message: '组织名称长度为2-50个字符', trigger: 'blur' },
   ],
   unitCode: [
-    { required: true, message: '请输入部门编码', trigger: 'blur' },
+    { required: true, message: '请输入组织编码', trigger: 'blur' },
     { pattern: /^[a-zA-Z0-9_]+$/, message: '编码只能包含字母、数字、下划线', trigger: 'blur' },
   ],
 }
@@ -217,21 +217,21 @@ const handleSubmit = async () => {
   loading.value = true
   try {
     if (isEdit.value && props.department) {
-      // 更新部门
+      // 更新组织
       await orgUnitApi.update(props.department.id, {
         unitName: formData.unitName,
         unitCategory: formData.unitCategory as any,
       })
-      ElMessage.success('部门更新成功')
+      ElMessage.success('组织更新成功')
     } else {
-      // 创建部门
+      // 创建组织
       await orgUnitApi.create({
         unitName: formData.unitName,
         unitCode: formData.unitCode,
         unitCategory: formData.unitCategory as any,
         parentId: formData.parentId || undefined,
       })
-      ElMessage.success('部门创建成功')
+      ElMessage.success('组织创建成功')
     }
 
     emit('update:visible', false)

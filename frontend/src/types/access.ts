@@ -144,7 +144,7 @@ export interface PermissionQueryParams {
 export const RoleTypeConfig: Record<RoleType, { label: string; level: number; color: string }> = {
   SUPER_ADMIN: { label: '超级管理员', level: 0, color: '#F56C6C' },
   SYSTEM_ADMIN: { label: '系统管理员', level: 1, color: '#E6A23C' },
-  DEPT_ADMIN: { label: '部门管理员', level: 2, color: '#409EFF' },
+  DEPT_ADMIN: { label: '组织管理员', level: 2, color: '#409EFF' },
   GRADE_DIRECTOR: { label: '年级主任', level: 3, color: '#67C23A' },
   CLASS_TEACHER: { label: '班主任', level: 4, color: '#909399' },
   INSPECTOR: { label: '检查员', level: 5, color: '#909399' },
@@ -155,8 +155,8 @@ export const RoleTypeConfig: Record<RoleType, { label: string; level: number; co
 // 数据范围显示配置
 export const DataScopeConfig: Record<DataScope, { label: string; description: string }> = {
   ALL: { label: '全部数据', description: '可查看所有数据' },
-  DEPARTMENT_AND_BELOW: { label: '部门及以下', description: '可查看本部门及下级部门数据' },
-  DEPARTMENT: { label: '本部门', description: '仅可查看本部门数据' },
+  DEPARTMENT_AND_BELOW: { label: '组织及以下', description: '可查看本组织及下级组织数据' },
+  DEPARTMENT: { label: '本组织', description: '仅可查看本组织数据' },
   CUSTOM: { label: '自定义', description: '根据配置查看指定范围数据' },
   SELF: { label: '仅自己', description: '仅可查看自己的数据' }
 }
@@ -175,33 +175,38 @@ export const PermissionTypeConfig: Record<PermissionType, { label: string; icon:
  * 数据模块信息
  */
 export interface DataModuleInfo {
-  code: string
-  name: string
-  domain: string
+  moduleCode: string
+  moduleName: string
+  domainCode: string
+  domainName?: string
 }
 
 /**
  * 数据范围选项
  */
 export interface DataScopeOption {
-  code: string
-  name: string
-  intCode: string
-  /** 是否已废弃 */
-  deprecated?: boolean
+  scopeCode: string
+  scopeName: string
+  sortOrder?: number
 }
 
 /**
- * 自定义范围配置（多维度）
- * 支持组织单元、年级、班级三个维度的独立选择
+ * 范围项类型（用于CUSTOM范围配置）
  */
-export interface CustomScope {
-  /** 组织单元ID列表（部门/学院） */
-  orgUnitIds?: number[]
-  /** 年级ID列表 */
-  gradeIds?: number[]
-  /** 班级ID列表 */
-  classIds?: number[]
+export interface ScopeItemType {
+  itemTypeCode: string
+  itemTypeName: string
+  supportChildren: boolean
+}
+
+/**
+ * 自定义范围项
+ */
+export interface ScopeItem {
+  itemTypeCode: string      // ORG_UNIT, CLASS, GRADE, BUILDING
+  scopeId: number           // 对应实体的ID
+  scopeName: string         // 对应实体的名称（用于显示）
+  includeChildren: boolean  // 是否包含下级（仅组织支持）
 }
 
 /**
@@ -210,10 +215,24 @@ export interface CustomScope {
 export interface ModulePermission {
   moduleCode: string
   scopeCode: string
-  /** 自定义范围配置（多维度） */
+  /** 自定义范围项列表（当scopeCode为CUSTOM时使用） */
+  scopeItems?: ScopeItem[]
+  /** 自定义范围（多维度：组织单元、年级、班级） */
   customScope?: CustomScope
-  /** @deprecated 使用 customScope.orgUnitIds 代替 */
+  /** @deprecated 使用 customScope.orgUnitIds 替代 */
   customOrgUnitIds?: number[]
+}
+
+/**
+ * 自定义范围（多维度）
+ */
+export interface CustomScope {
+  /** 选中的组织单元ID列表 */
+  orgUnitIds?: number[]
+  /** 选中的年级ID列表 */
+  gradeIds?: number[]
+  /** 选中的班级ID列表 */
+  classIds?: number[]
 }
 
 /**
@@ -226,16 +245,130 @@ export interface RolePermissionConfig {
 }
 
 /**
- * 按领域分组的模块列表
+ * 领域及其模块
  */
-export type GroupedModules = Record<string, DataModuleInfo[]>
+export interface DomainWithModules {
+  domainCode: string
+  domainName: string
+  modules: DataModuleInfo[]
+}
+
+/**
+ * 按领域分组的模块列表（数组形式）
+ */
+export type GroupedModules = DomainWithModules[]
 
 /**
  * 领域显示配置
  */
 export const DomainConfig: Record<string, { label: string; icon: string }> = {
   organization: { label: '组织管理', icon: 'OfficeBuilding' },
+  space: { label: '场地管理', icon: 'Place' },
   inspection: { label: '量化检查', icon: 'DocumentChecked' },
-  evaluation: { label: '评价管理', icon: 'Medal' },
-  task: { label: '任务管理', icon: 'Tickets' }
+  access: { label: '权限管理', icon: 'Lock' }
+}
+
+// ==================== V5 数据权限类型 ====================
+
+/**
+ * V5 领域模块分组
+ */
+export interface DomainModulesV5 {
+  domainCode: string
+  domainName: string
+  modules: { code: string; name: string }[]
+}
+
+/**
+ * V5 数据范围类型
+ */
+export interface ScopeTypeV5 {
+  code: string
+  name: string
+  description: string
+  level: number
+  calcType: 'NONE' | 'USER_ORG' | 'USER_ORG_TREE' | 'CUSTOM_CONFIG' | 'CREATOR'
+}
+
+/**
+ * V5 范围项类型
+ */
+export interface ScopeItemTypeV5 {
+  code: string
+  name: string
+  supportChildren: boolean
+  referenceTable: string
+  applicableModules: string[]
+}
+
+/**
+ * V5 范围项
+ */
+export interface ScopeItemV5 {
+  scopeId: number
+  scopeName: string
+  itemTypeCode: string
+  includeChildren?: boolean
+}
+
+/**
+ * V5 角色模块权限配置
+ */
+export interface RoleModulePermissionV5 {
+  moduleCode: string
+  moduleName: string
+  domainCode: string
+  scopeCode: string
+  scopeItems: ScopeItemV5[]
+}
+
+/**
+ * V5 保存权限命令
+ */
+export interface SavePermissionCommandV5 {
+  moduleCode: string
+  scopeCode: string
+  scopeItems?: ScopeItemV5[]
+}
+
+/**
+ * V5 数据模块定义
+ */
+export interface DataModuleV5 {
+  code: string
+  name: string
+  domain: string
+  description: string
+}
+
+/**
+ * V5 合并后的数据范围（多角色融合结果）
+ */
+export interface MergedDataScopeV5 {
+  moduleCode: string
+  effectiveScope: DataScope
+  scopeItems: ScopeItemV5[]
+  isAllAccess: boolean
+}
+
+/**
+ * V5 数据范围配置显示
+ */
+export const DataScopeV5Config: Record<DataScope, { label: string; description: string; level: number; color: string }> = {
+  ALL: { label: '全部数据', description: '可访问系统中所有数据', level: 100, color: '#F56C6C' },
+  DEPARTMENT_AND_BELOW: { label: '本组织及下级', description: '可访问本组织及其所有下级组织的数据', level: 80, color: '#E6A23C' },
+  DEPARTMENT: { label: '仅本组织', description: '仅可访问本组织的数据', level: 60, color: '#409EFF' },
+  CUSTOM: { label: '自定义范围', description: '根据配置的具体组织/班级等范围访问数据', level: 40, color: '#67C23A' },
+  SELF: { label: '仅本人', description: '仅可访问自己创建或负责的数据', level: 20, color: '#909399' }
+}
+
+/**
+ * V5 范围项类型配置
+ */
+export const ScopeItemTypeV5Config: Record<string, { label: string; icon: string }> = {
+  ORG_UNIT: { label: '组织单元', icon: 'OfficeBuilding' },
+  CLASS: { label: '班级', icon: 'Collection' },
+  GRADE: { label: '年级', icon: 'Memo' },
+  BUILDING: { label: '楼栋', icon: 'House' },
+  MAJOR: { label: '专业', icon: 'Reading' }
 }

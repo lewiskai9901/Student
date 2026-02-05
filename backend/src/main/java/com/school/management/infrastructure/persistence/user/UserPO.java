@@ -1,7 +1,6 @@
 package com.school.management.infrastructure.persistence.user;
 
 import com.baomidou.mybatisplus.annotation.*;
-import lombok.Data;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -9,147 +8,104 @@ import java.time.LocalDateTime;
 /**
  * 用户持久化对象
  */
-@Data
 @TableName("users")
 public class UserPO {
 
     @TableId(type = IdType.ASSIGN_ID)
     private Long id;
-
-    /**
-     * 用户名
-     */
     private String username;
-
-    /**
-     * 密码
-     */
     private String password;
-
-    /**
-     * 真实姓名
-     */
     private String realName;
-
-    /**
-     * 手机号
-     */
     private String phone;
-
-    /**
-     * 邮箱
-     */
     private String email;
-
-    /**
-     * 头像
-     */
     private String avatar;
-
-    /**
-     * 工号
-     */
     private String employeeNo;
-
-    /**
-     * 性别: 1男 2女
-     */
     private Integer gender;
-
-    /**
-     * 出生日期
-     */
     private LocalDate birthDate;
-
-    /**
-     * 身份证号
-     */
     @TableField("identity_card")
     private String idCard;
-
-    /**
-     * 组织单元ID
-     */
     private Long orgUnitId;
-
-    /**
-     * 班级ID
-     */
+    private Long primaryOrgRelationId;
     private Long classId;
-
-    /**
-     * 管理的班级ID
-     */
     private Long managedClassId;
-
-    /**
-     * 用户类型:1-管理员,2-教师,3-学生
-     */
     private Integer userType;
-
-    /**
-     * 状态: 1启用 0禁用
-     */
+    private String userTypeCode;
     private Integer status;
-
-    /**
-     * 最后登录时间
-     */
     private LocalDateTime lastLoginTime;
-
-    /**
-     * 最后登录IP
-     */
     private String lastLoginIp;
-
-    /**
-     * 密码修改时间
-     */
     private LocalDateTime passwordChangedAt;
-
-    /**
-     * 微信OpenID
-     */
     private String wechatOpenid;
-
-    /**
-     * 是否允许多设备登录
-     */
     private Integer allowMultipleDevices;
-
-    /**
-     * 创建时间
-     */
     @TableField(fill = FieldFill.INSERT)
     private LocalDateTime createdAt;
-
-    /**
-     * 更新时间
-     */
     @TableField(fill = FieldFill.INSERT_UPDATE)
     private LocalDateTime updatedAt;
-
-    /**
-     * 创建人
-     */
     private Long createdBy;
-
-    /**
-     * 更新人
-     */
     private Long updatedBy;
-
-    /**
-     * 是否删除
-     */
     @TableLogic
     private Integer deleted;
-
-    // ==================== 关联字段（非数据库字段） ====================
-
-    /**
-     * 组织单元名称（JOIN 查询时使用）
-     */
     @TableField(exist = false)
     private String orgUnitName;
+
+    // Getters
+    public Long getId() { return id; }
+    public String getUsername() { return username; }
+    public String getPassword() { return password; }
+    public String getRealName() { return realName; }
+    public String getPhone() { return phone; }
+    public String getEmail() { return email; }
+    public String getAvatar() { return avatar; }
+    public String getEmployeeNo() { return employeeNo; }
+    public Integer getGender() { return gender; }
+    public LocalDate getBirthDate() { return birthDate; }
+    public String getIdCard() { return idCard; }
+    public Long getOrgUnitId() { return orgUnitId; }
+    public Long getPrimaryOrgRelationId() { return primaryOrgRelationId; }
+    public Long getClassId() { return classId; }
+    public Long getManagedClassId() { return managedClassId; }
+    public Integer getUserType() { return userType; }
+    public String getUserTypeCode() { return userTypeCode; }
+    public Integer getStatus() { return status; }
+    public LocalDateTime getLastLoginTime() { return lastLoginTime; }
+    public String getLastLoginIp() { return lastLoginIp; }
+    public LocalDateTime getPasswordChangedAt() { return passwordChangedAt; }
+    public String getWechatOpenid() { return wechatOpenid; }
+    public Integer getAllowMultipleDevices() { return allowMultipleDevices; }
+    public LocalDateTime getCreatedAt() { return createdAt; }
+    public LocalDateTime getUpdatedAt() { return updatedAt; }
+    public Long getCreatedBy() { return createdBy; }
+    public Long getUpdatedBy() { return updatedBy; }
+    public Integer getDeleted() { return deleted; }
+    public String getOrgUnitName() { return orgUnitName; }
+
+    // Setters
+    public void setId(Long id) { this.id = id; }
+    public void setUsername(String username) { this.username = username; }
+    public void setPassword(String password) { this.password = password; }
+    public void setRealName(String realName) { this.realName = realName; }
+    public void setPhone(String phone) { this.phone = phone; }
+    public void setEmail(String email) { this.email = email; }
+    public void setAvatar(String avatar) { this.avatar = avatar; }
+    public void setEmployeeNo(String employeeNo) { this.employeeNo = employeeNo; }
+    public void setGender(Integer gender) { this.gender = gender; }
+    public void setBirthDate(LocalDate birthDate) { this.birthDate = birthDate; }
+    public void setIdCard(String idCard) { this.idCard = idCard; }
+    public void setOrgUnitId(Long orgUnitId) { this.orgUnitId = orgUnitId; }
+    public void setPrimaryOrgRelationId(Long primaryOrgRelationId) { this.primaryOrgRelationId = primaryOrgRelationId; }
+    public void setClassId(Long classId) { this.classId = classId; }
+    public void setManagedClassId(Long managedClassId) { this.managedClassId = managedClassId; }
+    public void setUserType(Integer userType) { this.userType = userType; }
+    public void setUserTypeCode(String userTypeCode) { this.userTypeCode = userTypeCode; }
+    public void setStatus(Integer status) { this.status = status; }
+    public void setLastLoginTime(LocalDateTime lastLoginTime) { this.lastLoginTime = lastLoginTime; }
+    public void setLastLoginIp(String lastLoginIp) { this.lastLoginIp = lastLoginIp; }
+    public void setPasswordChangedAt(LocalDateTime passwordChangedAt) { this.passwordChangedAt = passwordChangedAt; }
+    public void setWechatOpenid(String wechatOpenid) { this.wechatOpenid = wechatOpenid; }
+    public void setAllowMultipleDevices(Integer allowMultipleDevices) { this.allowMultipleDevices = allowMultipleDevices; }
+    public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
+    public void setUpdatedAt(LocalDateTime updatedAt) { this.updatedAt = updatedAt; }
+    public void setCreatedBy(Long createdBy) { this.createdBy = createdBy; }
+    public void setUpdatedBy(Long updatedBy) { this.updatedBy = updatedBy; }
+    public void setDeleted(Integer deleted) { this.deleted = deleted; }
+    public void setOrgUnitName(String orgUnitName) { this.orgUnitName = orgUnitName; }
 }

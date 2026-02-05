@@ -5,7 +5,8 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.school.management.domain.schedule.model.*;
 import com.school.management.domain.schedule.repository.ScheduleExecutionRepository;
-import lombok.extern.slf4j.Slf4j;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Repository;
 
 import java.time.LocalDate;
@@ -17,10 +18,10 @@ import java.util.stream.Collectors;
 /**
  * MyBatis Plus implementation of ScheduleExecutionRepository.
  */
-@Slf4j
 @Repository
 public class ScheduleExecutionRepositoryImpl implements ScheduleExecutionRepository {
 
+    private static final Logger log = LoggerFactory.getLogger(ScheduleExecutionRepositoryImpl.class);
     private static final ObjectMapper JSON = new ObjectMapper();
 
     private final ScheduleExecutionMapper executionMapper;

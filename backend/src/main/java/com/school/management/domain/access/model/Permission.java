@@ -14,7 +14,7 @@ import java.util.Objects;
  * Permissions follow the pattern: resource:action (e.g., "user:create", "inspection:view")
  */
 @Getter
-public class Permission extends Entity<Long> {
+public class Permission implements Entity<Long> {
 
     private Long id;
     private String permissionCode;

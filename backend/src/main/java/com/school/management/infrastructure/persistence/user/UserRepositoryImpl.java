@@ -236,8 +236,10 @@ public class UserRepositoryImpl implements UserRepository {
         po.setBirthDate(domain.getBirthDate());
         po.setIdCard(domain.getIdCard());
         po.setOrgUnitId(domain.getOrgUnitId());
+        po.setPrimaryOrgRelationId(domain.getPrimaryOrgRelationId());
         po.setClassId(domain.getClassId());
         po.setUserType(domain.getUserType() != null ? domain.getUserType().getCode() : null);
+        po.setUserTypeCode(domain.getUserTypeCode());
         po.setStatus(domain.getStatus() != null ? domain.getStatus().getCode() : null);
         po.setLastLoginTime(domain.getLastLoginTime());
         po.setLastLoginIp(domain.getLastLoginIp());
@@ -263,8 +265,10 @@ public class UserRepositoryImpl implements UserRepository {
                 po.getBirthDate(),
                 po.getIdCard(),
                 po.getOrgUnitId(),
+                po.getPrimaryOrgRelationId(),
                 po.getClassId(),
                 po.getUserType() != null ? UserType.fromCode(po.getUserType()) : null,
+                po.getUserTypeCode(),
                 po.getStatus() != null ? UserStatus.fromCode(po.getStatus()) : null,
                 po.getLastLoginTime(),
                 po.getLastLoginIp(),
