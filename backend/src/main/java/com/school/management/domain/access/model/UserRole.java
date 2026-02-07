@@ -25,15 +25,16 @@ public class UserRole implements Entity<Long> {
 
     @Builder
     public UserRole(Long id, Long userId, Long roleId, Long orgUnitId,
-                    Long assignedBy, LocalDateTime expiresAt) {
+                    LocalDateTime assignedAt, Long assignedBy, LocalDateTime expiresAt,
+                    Boolean isActive) {
         this.id = id;
         this.userId = userId;
         this.roleId = roleId;
         this.orgUnitId = orgUnitId;
-        this.assignedAt = LocalDateTime.now();
+        this.assignedAt = assignedAt != null ? assignedAt : LocalDateTime.now();
         this.assignedBy = assignedBy;
         this.expiresAt = expiresAt;
-        this.isActive = true;
+        this.isActive = isActive != null ? isActive : true;
     }
 
     /**
