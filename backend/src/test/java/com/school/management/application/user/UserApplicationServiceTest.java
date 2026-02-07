@@ -72,12 +72,14 @@ class UserApplicationServiceTest {
                 LocalDate.of(1990, 1, 1),
                 "110101199001011234",
                 1L, // orgUnitId
+                null, // primaryOrgRelationId
                 null, // classId
                 UserType.TEACHER,
+                null, // userTypeCode
                 UserStatus.ENABLED,
                 null, // lastLoginTime
                 null, // lastLoginIp
-                LocalDateTime.now(),
+                null, // passwordChangedAt
                 null, // wechatOpenid
                 false, // allowMultipleDevices
                 Arrays.asList(1L, 2L), // roleIds
@@ -93,10 +95,11 @@ class UserApplicationServiceTest {
                 "encodedPassword",
                 "禁用用户",
                 null, null, null, null, null, null, null,
-                1L, null,
+                1L, null, null,
                 UserType.TEACHER,
+                null, // userTypeCode
                 UserStatus.DISABLED,
-                null, null, LocalDateTime.now(), null, false,
+                null, null, null, null, false,
                 Collections.emptyList(),
                 LocalDateTime.now(),
                 LocalDateTime.now()
@@ -681,9 +684,10 @@ class UserApplicationServiceTest {
             User user = User.reconstruct(
                     1L, "testuser", "password", "测试用户",
                     null, null, null, null, null, null, null,
-                    1L, null,
-                    UserType.TEACHER, UserStatus.ENABLED,
-                    null, null, LocalDateTime.now(),
+                    1L, null, null,
+                    UserType.TEACHER, null,
+                    UserStatus.ENABLED,
+                    null, null, null,
                     "wechat_openid_123", // 已绑定微信
                     false, Collections.emptyList(),
                     LocalDateTime.now(), LocalDateTime.now()
