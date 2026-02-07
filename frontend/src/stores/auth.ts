@@ -2,7 +2,7 @@ import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import type { LoginRequest, LoginResponse } from '@/types/auth'
 import { login, logout, refreshToken, getCurrentUser } from '@/api/auth'
-import { removeToken, getToken, setToken, isTokenExpired } from '@/utils/token'
+import { getToken, setToken, isTokenExpired } from '@/utils/token'
 import { tokenStorage } from '@/utils/tokenStorage'
 
 export const useAuthStore = defineStore('auth', () => {

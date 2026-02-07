@@ -98,7 +98,7 @@ public class InspectionDetail implements Entity<Long> {
                 .itemName(itemName)
                 .scope(DetailScope.WHOLE)
                 .scoringMode(ScoringMode.DEDUCTION)
-                .score(score.negate().abs().negate()) // 确保为负数
+                .score(score.abs().negate()) // 确保为负数
                 .quantity(quantity)
                 .remark(remark)
                 .createdBy(createdBy)
@@ -126,7 +126,7 @@ public class InspectionDetail implements Entity<Long> {
                 .individualId(individualId)
                 .individualName(individualName)
                 .scoringMode(ScoringMode.DEDUCTION)
-                .score(score.negate().abs().negate()) // 确保为负数
+                .score(score.abs().negate()) // 确保为负数
                 .quantity(quantity)
                 .remark(remark)
                 .createdBy(createdBy)

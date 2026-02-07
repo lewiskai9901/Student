@@ -3,6 +3,7 @@ package com.school.management.domain.inspection.model.v6;
 import com.school.management.domain.shared.Entity;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.LocalDateTime;
 
 /**
@@ -200,7 +201,7 @@ public class InspectionTarget implements Entity<Long> {
         if (this.finalScore == null || this.weightRatio == null) {
             return BigDecimal.ZERO;
         }
-        return this.finalScore.multiply(this.weightRatio).divide(new BigDecimal("100"), 2, BigDecimal.ROUND_HALF_UP);
+        return this.finalScore.multiply(this.weightRatio).divide(new BigDecimal("100"), 2, RoundingMode.HALF_UP);
     }
 
     // Getters

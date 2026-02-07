@@ -230,8 +230,8 @@ public class UserDomainController {
     @OperationLog(module = "system", type = "update", name = "重置用户密码")
     public Result<String> resetPassword(@Parameter(description = "用户ID") @PathVariable Long id) {
         log.info("DDD 重置用户密码: {}", id);
-        String newPassword = userApplicationService.resetPassword(id);
-        return Result.success(newPassword);
+        userApplicationService.resetPassword(id);
+        return Result.success("密码已重置成功");
     }
 
     // ==================== 角色操作 ====================

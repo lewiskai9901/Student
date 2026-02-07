@@ -86,15 +86,11 @@ public class InspectionTaskApplicationService {
         InspectionTask task = taskRepository.findById(taskId)
                 .orElseThrow(() -> new IllegalArgumentException("任务不存在: " + taskId));
 
+        // Validate and mutate domain state
         task.claim(inspectorId, inspectorName);
 
-        // 使用乐观锁领取
-        boolean claimed = taskRepository.claimTask(taskId, inspectorId, inspectorName);
-        if (!claimed) {
-            throw new IllegalStateException("任务领取失败，可能已被其他人领取");
-        }
-
-        return taskRepository.findById(taskId).orElse(task);
+        // Persist the domain state change via save
+        return taskRepository.save(task);
     }
 
     /**

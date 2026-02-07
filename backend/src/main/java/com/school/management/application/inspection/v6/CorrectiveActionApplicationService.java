@@ -11,6 +11,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
+import java.util.UUID;
 import java.util.concurrent.atomic.AtomicLong;
 
 /**
@@ -22,7 +23,7 @@ import java.util.concurrent.atomic.AtomicLong;
 public class CorrectiveActionApplicationService {
 
     private final CorrectiveActionRepository correctiveActionRepository;
-    private final AtomicLong codeSequence = new AtomicLong(0);
+    private final AtomicLong codeSequence = new AtomicLong(System.currentTimeMillis() % 100000);
 
     /**
      * 创建整改记录
@@ -170,8 +171,9 @@ public class CorrectiveActionApplicationService {
 
     private String generateActionCode() {
         String dateStr = LocalDate.now().format(DateTimeFormatter.ofPattern("yyyyMMdd"));
-        long seq = codeSequence.incrementAndGet() % 10000;
-        return String.format("CA%s%04d", dateStr, seq);
+        long seq = codeSequence.incrementAndGet();
+        String uniqueSuffix = UUID.randomUUID().toString().substring(0, 4);
+        return String.format("CA%s%04d%s", dateStr, seq % 10000, uniqueSuffix);
     }
 
     public record CorrectiveActionStats(long pending, long submitted, long verified, long rejected) {

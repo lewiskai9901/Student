@@ -1,1 +1,0 @@
-import{s as a}from"./index-e20b943e.js";const e=e=>a.get(`/grade-major-directions/year/${e}`),r=e=>a.post("/grade-major-directions",e),d=e=>a.delete(`/grade-major-directions/${e}`),o=e=>a.delete("/grade-major-directions/batch",{data:e});export{r as a,o as b,d,e as g};

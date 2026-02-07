@@ -105,8 +105,7 @@ public class SchoolClassRepositoryImpl implements SchoolClassRepository {
     @Override
     public List<SchoolClass> findByStatus(ClassStatus status) {
         Integer dbStatus = toDbStatus(status);
-        return classMapper.findAllEnabled().stream()
-            .filter(po -> dbStatus.equals(po.getStatus()))
+        return classMapper.findByStatus(dbStatus).stream()
             .map(this::toDomain)
             .collect(Collectors.toList());
     }
@@ -136,8 +135,7 @@ public class SchoolClassRepositoryImpl implements SchoolClassRepository {
 
     @Override
     public List<SchoolClass> findByMajorDirectionId(Long majorDirectionId) {
-        return classMapper.findAllEnabled().stream()
-            .filter(po -> majorDirectionId.equals(po.getMajorDirectionId()))
+        return classMapper.findByMajorDirectionId(majorDirectionId).stream()
             .map(this::toDomain)
             .collect(Collectors.toList());
     }
@@ -159,9 +157,7 @@ public class SchoolClassRepositoryImpl implements SchoolClassRepository {
 
     @Override
     public List<SchoolClass> findGraduatingClasses(Integer graduationYear) {
-        // Filter by graduation year from all classes
-        return classMapper.findAllEnabled().stream()
-            .filter(po -> graduationYear.equals(po.getGraduationYear()))
+        return classMapper.findByGraduationYear(graduationYear).stream()
             .map(this::toDomain)
             .collect(Collectors.toList());
     }

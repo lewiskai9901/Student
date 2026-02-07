@@ -136,6 +136,7 @@ export const useConfigStore = defineStore('config', () => {
   // 加载状态
   const loading = ref(false)
   const loaded = ref(false)
+  let loadingPromise: Promise<void> | null = null
 
   /**
    * 从后端加载系统配置
@@ -147,11 +148,12 @@ export const useConfigStore = defineStore('config', () => {
     }
 
     // 如果正在加载，等待加载完成
-    if (loading.value) {
-      return
+    if (loading.value && loadingPromise) {
+      return loadingPromise
     }
 
     loading.value = true
+    loadingPromise = (async () => {
     try {
       // 从后端获取 system 分组的配置（使用公开API，无需认证）
       const systemConfigs = await http.get('/system/configs/public/system')
@@ -370,7 +372,11 @@ export const useConfigStore = defineStore('config', () => {
       // 使用默认值，不影响系统运行
     } finally {
       loading.value = false
+      loadingPromise = null
     }
+    })()
+
+    return loadingPromise
   }
 
   /**

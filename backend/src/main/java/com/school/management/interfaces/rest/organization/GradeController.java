@@ -168,10 +168,13 @@ public class GradeController {
      */
     private Long getCurrentUserId() {
         try {
-            return SecurityUtils.getCurrentUserId();
+            Long userId = SecurityUtils.getCurrentUserId();
+            if (userId != null) {
+                return userId;
+            }
         } catch (Exception e) {
-            log.warn("无法从安全上下文获取用户ID，使用默认值: {}", e.getMessage());
-            return 1L;
+            log.warn("无法从安全上下文获取用户ID: {}", e.getMessage());
         }
+        throw new RuntimeException("无法获取当前用户ID，请确保已登录");
     }
 }

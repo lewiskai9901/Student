@@ -26,6 +26,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.UUID;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.stream.Collectors;
 
 /**
@@ -35,6 +37,8 @@ import java.util.stream.Collectors;
 @Service
 @RequiredArgsConstructor
 public class SpaceApplicationService {
+
+    private static final AtomicLong CODE_SEQUENCE = new AtomicLong(System.currentTimeMillis());
 
     private final SpaceRepository spaceRepository;
     private final SpaceOccupantRepository occupantRepository;
@@ -62,8 +66,9 @@ public class SpaceApplicationService {
             case BUILDING:
                 Space campus = getParentSpace(command.getParentId(), SpaceType.CAMPUS);
                 // 校验楼号唯一性
-                if (command.getBuildingNo() != null &&
-                    spaceRepository.existsByBuildingNoInCampus(command.getBuildingNo(), campus.getId(), null)) {
+                Integer buildingNoInt = parseInteger(command.getBuildingNo());
+                if (buildingNoInt != null &&
+                    spaceRepository.existsByBuildingNoInCampus(buildingNoInt, campus.getId(), null)) {
                     throw new BusinessException("该校区内楼号\"" + command.getBuildingNo() + "\"已存在");
                 }
                 String buildingCode = command.getSpaceCode() != null ? command.getSpaceCode()
@@ -83,8 +88,9 @@ public class SpaceApplicationService {
             case ROOM:
                 Space floor = getParentSpace(command.getParentId(), SpaceType.FLOOR);
                 // 校验房间号唯一性（同一楼栋内）
-                if (command.getRoomNo() != null && floor.getBuildingId() != null &&
-                    spaceRepository.existsByRoomNoInBuilding(command.getRoomNo(), floor.getBuildingId(), null)) {
+                Integer roomNoInt = parseInteger(command.getRoomNo());
+                if (roomNoInt != null && floor.getBuildingId() != null &&
+                    spaceRepository.existsByRoomNoInBuilding(roomNoInt, floor.getBuildingId(), null)) {
                     throw new BusinessException("该楼栋内房间号\"" + command.getRoomNo() + "\"已存在");
                 }
                 String roomCode = command.getSpaceCode() != null ? command.getSpaceCode()
@@ -138,22 +144,24 @@ public class SpaceApplicationService {
             space.updateInfo(command.getSpaceName(), command.getDescription());
         }
         // 更新楼号（仅BUILDING类型）
-        if (command.getBuildingNo() != null && !command.getBuildingNo().equals(space.getBuildingNo())) {
+        Integer updateBuildingNo = parseInteger(command.getBuildingNo());
+        if (updateBuildingNo != null && !updateBuildingNo.equals(space.getBuildingNo())) {
             // 校验楼号唯一性
             if (space.getCampusId() != null &&
-                spaceRepository.existsByBuildingNoInCampus(command.getBuildingNo(), space.getCampusId(), space.getId())) {
+                spaceRepository.existsByBuildingNoInCampus(updateBuildingNo, space.getCampusId(), space.getId())) {
                 throw new BusinessException("该校区内楼号\"" + command.getBuildingNo() + "\"已存在");
             }
-            space.updateBuildingNo(command.getBuildingNo());
+            space.updateBuildingNo(updateBuildingNo);
         }
         // 更新房间号（仅ROOM类型）
-        if (command.getRoomNo() != null && !command.getRoomNo().equals(space.getRoomNo())) {
+        Integer updateRoomNo = parseInteger(command.getRoomNo());
+        if (updateRoomNo != null && !updateRoomNo.equals(space.getRoomNo())) {
             // 校验房间号唯一性
             if (space.getBuildingId() != null &&
-                spaceRepository.existsByRoomNoInBuilding(command.getRoomNo(), space.getBuildingId(), space.getId())) {
+                spaceRepository.existsByRoomNoInBuilding(updateRoomNo, space.getBuildingId(), space.getId())) {
                 throw new BusinessException("该楼栋内房间号\"" + command.getRoomNo() + "\"已存在");
             }
-            space.updateRoomNo(command.getRoomNo());
+            space.updateRoomNo(updateRoomNo);
         }
         if (command.getCapacity() != null) {
             space.updateCapacity(command.getCapacity());
@@ -548,15 +556,32 @@ public class SpaceApplicationService {
         return parent;
     }
 
+    /**
+     * 安全地将字符串解析为整数
+     */
+    private Integer parseInteger(String value) {
+        if (value == null || value.trim().isEmpty()) {
+            return null;
+        }
+        try {
+            return Integer.parseInt(value.trim());
+        } catch (NumberFormatException e) {
+            return null;
+        }
+    }
+
     private String generateCode(String prefix) {
-        // 简单的编码生成，实际应使用序列或UUID
-        return prefix + "-" + System.currentTimeMillis() % 100000;
+        return prefix + "-" + UUID.randomUUID().toString().substring(0, 8);
     }
 
     private String generateRoomCode(Space floor) {
-        // 基于楼层生成房间编码
-        String buildingCode = floor.getPath().getAncestorIds().get(1).toString();
-        return floor.getFloorNumber() + String.format("%02d", System.currentTimeMillis() % 100);
+        // 基于楼层生成房间编码，使用AtomicLong保证唯一性
+        List<Long> ancestorIds = floor.getPath() != null ? floor.getPath().getAncestorIds() : List.of();
+        String buildingCode = ancestorIds.size() > 1
+            ? ancestorIds.get(1).toString()
+            : "0";
+        long seq = CODE_SEQUENCE.incrementAndGet() % 10000;
+        return buildingCode + "-" + floor.getFloorNumber() + String.format("%04d", seq);
     }
 
     private SpaceDTO toDTO(Space space) {
@@ -568,8 +593,8 @@ public class SpaceApplicationService {
         dto.setRoomType(space.getRoomType() != null ? space.getRoomType().name() : null);
         dto.setBuildingType(space.getBuildingType() != null ? space.getBuildingType().name() : null);
         // 楼号和房间号
-        dto.setBuildingNo(space.getBuildingNo());
-        dto.setRoomNo(space.getRoomNo());
+        dto.setBuildingNo(space.getBuildingNo() != null ? String.valueOf(space.getBuildingNo()) : null);
+        dto.setRoomNo(space.getRoomNo() != null ? String.valueOf(space.getRoomNo()) : null);
         dto.setParentId(space.getParentId());
         dto.setPath(space.getPath() != null ? space.getPath().getValue() : null);
         dto.setLevel(space.getLevel());
@@ -627,8 +652,8 @@ public class SpaceApplicationService {
         dto.setRoomType(po.getRoomType());
         dto.setBuildingType(po.getBuildingType());
         // 楼号和房间号
-        dto.setBuildingNo(po.getBuildingNo());
-        dto.setRoomNo(po.getRoomNo());
+        dto.setBuildingNo(po.getBuildingNo() != null ? String.valueOf(po.getBuildingNo()) : null);
+        dto.setRoomNo(po.getRoomNo() != null ? String.valueOf(po.getRoomNo()) : null);
         dto.setParentBuildingNo(po.getParentBuildingNo());
         dto.setParentId(po.getParentId());
         dto.setParentName(po.getParentName());

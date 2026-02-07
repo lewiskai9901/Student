@@ -126,12 +126,26 @@ public class OrgUnitApplicationService {
 
     /**
      * Gets the complete organization tree.
+     * Loads all org units in a single query and builds the tree in memory
+     * to avoid N+1 queries when recursively fetching children.
      */
     @Transactional(readOnly = true)
     public List<OrgUnitTreeDTO> getOrgUnitTree() {
-        List<OrgUnit> roots = orgUnitRepository.findRoots();
+        // Load all org units in one query
+        List<OrgUnit> allUnits = orgUnitRepository.findAll();
+
+        // Group by parentId for efficient child lookup
+        Map<Long, List<OrgUnit>> childrenMap = allUnits.stream()
+            .filter(u -> u.getParentId() != null)
+            .collect(Collectors.groupingBy(OrgUnit::getParentId));
+
+        // Find roots (units with no parent)
+        List<OrgUnit> roots = allUnits.stream()
+            .filter(u -> u.getParentId() == null)
+            .collect(Collectors.toList());
+
         return roots.stream()
-            .map(this::buildTree)
+            .map(root -> buildTreeFromMap(root, childrenMap))
             .collect(Collectors.toList());
     }
 
@@ -173,6 +187,22 @@ public class OrgUnitApplicationService {
     }
 
     // Helper methods
+
+    /**
+     * Builds a tree node from a pre-loaded children map (no additional DB queries).
+     */
+    private OrgUnitTreeDTO buildTreeFromMap(OrgUnit orgUnit, Map<Long, List<OrgUnit>> childrenMap) {
+        OrgUnitTreeDTO dto = toTreeDTO(orgUnit);
+        List<OrgUnit> children = childrenMap.getOrDefault(orgUnit.getId(), List.of());
+        dto.setChildren(children.stream()
+            .map(child -> buildTreeFromMap(child, childrenMap))
+            .collect(Collectors.toList()));
+        return dto;
+    }
+
+    /**
+     * @deprecated Use {@link #buildTreeFromMap} which avoids N+1 queries.
+     */
     private OrgUnitTreeDTO buildTree(OrgUnit orgUnit) {
         OrgUnitTreeDTO dto = toTreeDTO(orgUnit);
         List<OrgUnit> children = orgUnitRepository.findByParentId(orgUnit.getId());

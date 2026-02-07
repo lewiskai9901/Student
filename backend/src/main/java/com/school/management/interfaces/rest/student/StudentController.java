@@ -11,6 +11,7 @@ import com.school.management.interfaces.rest.student.dto.UpdateStudentRequest;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
@@ -78,7 +79,7 @@ public class StudentController {
     @Operation(summary = "创建学生(入学)")
     @PostMapping
     @PreAuthorize("hasAuthority('student:create')")
-    public Result<Long> createStudent(@RequestBody EnrollStudentRequest request) {
+    public Result<Long> createStudent(@Valid @RequestBody EnrollStudentRequest request) {
         EnrollStudentCommand command = EnrollStudentCommand.builder()
                 .studentNo(request.getStudentNo())
                 .name(request.getName())
@@ -106,7 +107,7 @@ public class StudentController {
     @PreAuthorize("hasAuthority('student:update')")
     public Result<Void> updateStudent(
             @Parameter(description = "学生ID") @PathVariable Long id,
-            @RequestBody UpdateStudentRequest request) {
+            @Valid @RequestBody UpdateStudentRequest request) {
         UpdateStudentCommand command = UpdateStudentCommand.builder()
                 .id(id)
                 .studentNo(request.getStudentNo())

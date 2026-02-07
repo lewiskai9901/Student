@@ -16,7 +16,7 @@ import java.util.Map;
  */
 @Getter
 @NoArgsConstructor
-public class Space extends AggregateRoot {
+public class Space extends AggregateRoot<Long> {
 
     private Long id;
     private String spaceCode;

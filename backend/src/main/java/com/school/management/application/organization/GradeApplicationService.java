@@ -249,7 +249,7 @@ public class GradeApplicationService {
         dto.setCounselorName(grade.getCounselorName());
         dto.setStandardClassSize(grade.getStandardClassSize());
         dto.setStatus(grade.getStatus());
-        dto.setStatusDisplayName(grade.getStatus().getDisplayName());
+        dto.setStatusDisplayName(grade.getStatus() != null ? grade.getStatus().getDisplayName() : null);
         dto.setSortOrder(grade.getSortOrder());
         dto.setRemarks(grade.getRemarks());
         dto.setCreatedAt(grade.getCreatedAt());

@@ -109,7 +109,7 @@ export interface RoleResponse {
  * 注意: V2 API 返回数组，需要前端分页
  */
 export function getRoles(params?: RoleQueryParams): Promise<RoleResponse[]> {
-  return http.get<RoleResponse[]>(ROLE_URL, { params: { roleType: params?.roleType } })
+  return http.get<RoleResponse[]>(ROLE_URL, { params: { roleType: params?.roleType, enabled: params?.enabled, keyword: params?.keyword } })
 }
 
 /**
@@ -489,40 +489,6 @@ export const roleDataPermissionApiV5 = {
 }
 
 // ==================== 系统模块 API ====================
-
-/**
- * 系统模块
- */
-export interface SystemModule {
-  id: string
-  moduleCode: string
-  moduleName: string
-  moduleDesc?: string
-  parentCode?: string
-  icon?: string
-  sortOrder: number
-  isEnabled: boolean
-  children?: SystemModule[]
-}
-
-/**
- * 获取系统模块树
- */
-export function getSystemModuleTree(): Promise<SystemModule[]> {
-  return http.get<SystemModule[]>('/system-modules/tree')
-}
-
-/**
- * 获取所有启用的模块（平铺列表）
- */
-export function getAllSystemModules(): Promise<SystemModule[]> {
-  return http.get<SystemModule[]>('/system-modules')
-}
-
-/**
- * 系统模块 API 对象
- */
-export const systemModuleApi = {
-  getTree: getSystemModuleTree,
-  getAll: getAllSystemModules
-}
+// NOTE: SystemModule interface, getSystemModuleTree, getAllSystemModules, and systemModuleApi
+// are defined in api/organization.ts (the canonical location for organization-related APIs).
+// Import them from there instead of duplicating here.

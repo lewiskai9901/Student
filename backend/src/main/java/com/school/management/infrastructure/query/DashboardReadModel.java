@@ -45,19 +45,19 @@ public class DashboardReadModel {
 
         // Student count
         Long studentCount = jdbcTemplate.queryForObject(
-            "SELECT COUNT(*) FROM student WHERE deleted = 0",
+            "SELECT COUNT(*) FROM students WHERE deleted = 0",
             Long.class
         );
 
         // Class count
         Long classCount = jdbcTemplate.queryForObject(
-            "SELECT COUNT(*) FROM class WHERE deleted = 0",
+            "SELECT COUNT(*) FROM classes WHERE deleted = 0",
             Long.class
         );
 
         // User count
         Long userCount = jdbcTemplate.queryForObject(
-            "SELECT COUNT(*) FROM user WHERE deleted = 0 AND status = 1",
+            "SELECT COUNT(*) FROM users WHERE deleted = 0 AND status = 1",
             Long.class
         );
 
@@ -110,8 +110,8 @@ public class DashboardReadModel {
                     d.name as department_name,
                     COALESCE(AVG(dc.final_score), 0) as avg_score,
                     COUNT(dc.id) as check_count
-                FROM class c
-                LEFT JOIN department d ON c.org_unit_id = d.id
+                FROM classes c
+                LEFT JOIN org_units d ON c.org_unit_id = d.id
                 LEFT JOIN daily_check dc ON dc.class_id = c.id
                     AND dc.check_date BETWEEN ? AND ?
                     AND dc.deleted = 0
@@ -151,11 +151,11 @@ public class DashboardReadModel {
                 COUNT(DISTINCT c.id) as class_count,
                 COUNT(DISTINCT s.id) as student_count,
                 COUNT(DISTINCT u.id) as user_count
-            FROM department d
-            LEFT JOIN class c ON c.org_unit_id = d.id AND c.deleted = 0
-            LEFT JOIN student s ON s.class_id = c.id AND s.deleted = 0
-            LEFT JOIN user_department ud ON ud.org_unit_id = d.id
-            LEFT JOIN user u ON u.id = ud.user_id AND u.deleted = 0 AND u.status = 1
+            FROM org_units d
+            LEFT JOIN classes c ON c.org_unit_id = d.id AND c.deleted = 0
+            LEFT JOIN students s ON s.class_id = c.id AND s.deleted = 0
+            LEFT JOIN user_org_relations ud ON ud.org_unit_id = d.id
+            LEFT JOIN users u ON u.id = ud.user_id AND u.deleted = 0 AND u.status = 1
             WHERE d.deleted = 0
             GROUP BY d.id, d.name
             ORDER BY d.name
@@ -191,8 +191,8 @@ public class DashboardReadModel {
                     u.real_name as actor_name,
                     dc.created_at as activity_time
                 FROM daily_check dc
-                JOIN class c ON dc.class_id = c.id
-                JOIN user u ON dc.inspector_id = u.id
+                JOIN classes c ON dc.class_id = c.id
+                JOIN users u ON dc.inspector_id = u.id
                 WHERE dc.deleted = 0
                 ORDER BY dc.created_at DESC
                 LIMIT ?)
@@ -204,8 +204,8 @@ public class DashboardReadModel {
                     a.created_at as activity_time
                 FROM check_item_appeal a
                 JOIN daily_check dc ON a.daily_check_id = dc.id
-                JOIN class c ON dc.class_id = c.id
-                JOIN user u ON a.created_by = u.id
+                JOIN classes c ON dc.class_id = c.id
+                JOIN users u ON a.created_by = u.id
                 WHERE a.deleted = 0
                 ORDER BY a.created_at DESC
                 LIMIT ?)
@@ -216,7 +216,7 @@ public class DashboardReadModel {
                     u.real_name as actor_name,
                     t.created_at as activity_time
                 FROM task t
-                JOIN user u ON t.created_by = u.id
+                JOIN users u ON t.created_by = u.id
                 WHERE t.deleted = 0
                 ORDER BY t.created_at DESC
                 LIMIT ?)

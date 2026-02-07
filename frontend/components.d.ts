@@ -142,6 +142,7 @@ declare module 'vue' {
     StudentExport: typeof import('./src/components/student/StudentExport.vue')['default']
     StudentForm: typeof import('./src/components/student/StudentForm.vue')['default']
     StudentImport: typeof import('./src/components/student/StudentImport.vue')['default']
+    StudentList: typeof import('./src/components/StudentList.vue')['default']
     UserDataScopeManager: typeof import('./src/components/user/UserDataScopeManager.vue')['default']
     UserOrgRelationManager: typeof import('./src/components/relation/UserOrgRelationManager.vue')['default']
     UserSelector: typeof import('./src/components/common/UserSelector.vue')['default']

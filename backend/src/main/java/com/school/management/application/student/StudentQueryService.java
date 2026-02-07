@@ -25,6 +25,12 @@ import java.util.stream.Collectors;
 @Transactional(readOnly = true)
 public class StudentQueryService {
 
+    /**
+     * Maximum page size for unpaginated list queries to avoid loading
+     * excessive data into memory (e.g., Integer.MAX_VALUE).
+     */
+    private static final int MAX_UNPAGINATED_SIZE = 10000;
+
     private final StudentRepository studentRepository;
 
     /**
@@ -88,7 +94,7 @@ public class StudentQueryService {
     public List<StudentDTO> findByOrgUnitId(Long orgUnitId) {
         StudentRepository.StudentQueryCriteria criteria = new StudentRepository.StudentQueryCriteria();
         criteria.setOrgUnitId(orgUnitId);
-        return studentRepository.findByPage(criteria, 1, Integer.MAX_VALUE).stream()
+        return studentRepository.findByPage(criteria, 1, MAX_UNPAGINATED_SIZE).stream()
                 .map(this::toDTO)
                 .collect(Collectors.toList());
     }
@@ -99,7 +105,7 @@ public class StudentQueryService {
     public List<StudentDTO> findByStatus(StudentStatus status) {
         StudentRepository.StudentQueryCriteria criteria = new StudentRepository.StudentQueryCriteria();
         criteria.setStatus(status);
-        return studentRepository.findByPage(criteria, 1, Integer.MAX_VALUE).stream()
+        return studentRepository.findByPage(criteria, 1, MAX_UNPAGINATED_SIZE).stream()
                 .map(this::toDTO)
                 .collect(Collectors.toList());
     }

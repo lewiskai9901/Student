@@ -144,7 +144,7 @@ public class OrgUnit extends AggregateRoot<Long> {
      * Checks if this unit is an ancestor of another unit.
      */
     public boolean isAncestorOf(OrgUnit other) {
-        if (other == null || other.getTreePath() == null) {
+        if (other == null || other.getTreePath() == null || this.treePath == null) {
             return false;
         }
         return other.getTreePath().startsWith(this.treePath)
@@ -241,7 +241,7 @@ public class OrgUnit extends AggregateRoot<Long> {
     }
 
     public List<Long> getDeputyLeaderIds() {
-        return Collections.unmodifiableList(deputyLeaderIds);
+        return deputyLeaderIds != null ? Collections.unmodifiableList(deputyLeaderIds) : Collections.emptyList();
     }
 
     public Integer getSortOrder() {

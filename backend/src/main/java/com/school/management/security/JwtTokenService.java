@@ -263,9 +263,9 @@ public class JwtTokenService {
             String key = "blacklist_token:" + token;
             return Boolean.TRUE.equals(redisTemplate.hasKey(key));
         } catch (Exception e) {
-            // Redis不可用时,假设token不在黑名单中
-            log.warn("Redis连接失败,跳过token黑名单检查: {}", e.getMessage());
-            return false;
+            // Redis不可用时,安全优先：假设token在黑名单中，拒绝访问
+            log.error("Redis连接失败,安全优先拒绝token: {}", e.getMessage());
+            return true;
         }
     }
 

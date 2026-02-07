@@ -225,7 +225,7 @@ public class InspectionProject extends AggregateRoot<Long> {
         return projectName;
     }
 
-    public void setProjectName(String projectName) {
+    void setProjectName(String projectName) {
         this.projectName = projectName;
     }
 
@@ -233,7 +233,15 @@ public class InspectionProject extends AggregateRoot<Long> {
         return description;
     }
 
-    public void setDescription(String description) {
+    /**
+     * 更新项目描述
+     */
+    public void updateDescription(String description) {
+        this.description = description;
+        this.updatedAt = LocalDateTime.now();
+    }
+
+    void setDescription(String description) {
         this.description = description;
     }
 
@@ -317,7 +325,7 @@ public class InspectionProject extends AggregateRoot<Long> {
         return totalTasks;
     }
 
-    public void setTotalTasks(Integer totalTasks) {
+    void setTotalTasks(Integer totalTasks) {
         this.totalTasks = totalTasks;
     }
 

@@ -89,7 +89,7 @@ public class BehaviorRecord extends AggregateRoot<Long> {
                                                      BehaviorSource source, Long sourceId,
                                                      BehaviorCategory category, String title,
                                                      BigDecimal amount, Long recordedBy) {
-        return builder()
+        BehaviorRecord record = builder()
                 .studentId(studentId)
                 .classId(classId)
                 .behaviorType(BehaviorType.COMMENDATION)
@@ -102,6 +102,9 @@ public class BehaviorRecord extends AggregateRoot<Long> {
                 .recordedBy(recordedBy)
                 .recordedAt(LocalDateTime.now())
                 .build();
+
+        record.registerEvent(new BehaviorRecordedEvent(record));
+        return record;
     }
 
     /**

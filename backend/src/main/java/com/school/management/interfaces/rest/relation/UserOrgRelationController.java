@@ -4,6 +4,7 @@ import com.school.management.application.relation.UserOrgRelationApplicationServ
 import com.school.management.application.relation.UserOrgRelationApplicationService.AddRelationCommand;
 import com.school.management.application.relation.UserOrgRelationApplicationService.UpdateRelationCommand;
 import com.school.management.domain.relation.model.entity.UserOrgRelation;
+import com.school.management.common.util.SecurityUtils;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.http.ResponseEntity;
@@ -107,8 +108,11 @@ public class UserOrgRelationController {
         command.setWeightRatio(request.getWeightRatio());
         command.setSortOrder(request.getSortOrder());
         command.setRemark(request.getRemark());
-        // TODO: 从SecurityContext获取当前用户ID
-        command.setOperatorId(1L);
+        Long currentUserId = SecurityUtils.getCurrentUserId();
+        if (currentUserId == null) {
+            throw new RuntimeException("无法获取当前用户ID");
+        }
+        command.setOperatorId(currentUserId);
 
         UserOrgRelation relation = service.addRelation(command);
         return ResponseEntity.ok(toResponse(relation));

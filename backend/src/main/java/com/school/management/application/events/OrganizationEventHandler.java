@@ -45,7 +45,7 @@ public class OrganizationEventHandler {
 
         // 发送通知给管理员
         notificationService.sendInAppMessage(
-                1L, // 系统管理员ID
+                1L, // TODO: hardcoded userId=1, should resolve actual admin userId from context
                 "组织单元创建",
                 String.format("新组织单元 [%s] 已创建", event.getUnitName()),
                 NotificationService.MessageType.SYSTEM_NOTICE
@@ -81,7 +81,7 @@ public class OrganizationEventHandler {
         // 发送通知给系部管理员
         if (event.getOrgUnitId() != null) {
             notificationService.sendInAppMessage(
-                    1L, // 系部管理员ID（实际应该从部门获取管理员）
+                    1L, // TODO: hardcoded userId=1, should resolve department admin userId from org unit
                     "新班级创建",
                     String.format("新班级 [%s] 已在您的部门下创建", event.getClassName()),
                     NotificationService.MessageType.SYSTEM_NOTICE
@@ -145,7 +145,7 @@ public class OrganizationEventHandler {
 
         // 发送毕业通知给班主任
         notificationService.sendInAppMessage(
-                1L, // 班主任ID（实际应该从班级获取）
+                1L, // TODO: hardcoded userId=1, should resolve class teacher userId from class context
                 "班级毕业通知",
                 String.format("班级 [%s] 已完成毕业流程，学生状态已更新", event.getClassName()),
                 NotificationService.MessageType.SYSTEM_NOTICE
@@ -168,7 +168,7 @@ public class OrganizationEventHandler {
 
         // 发送开班通知给相关人员
         notificationService.sendInAppMessage(
-                1L, // 系部管理员ID
+                1L, // TODO: hardcoded userId=1, should resolve department admin userId from context
                 "班级激活通知",
                 String.format("班级 [%s] 已激活并可正常使用", event.getClassName()),
                 NotificationService.MessageType.SYSTEM_NOTICE

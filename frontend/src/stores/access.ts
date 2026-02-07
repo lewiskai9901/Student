@@ -53,21 +53,21 @@ export const useAccessStore = defineStore('access-v2', () => {
 
   // 按类型过滤角色
   const rolesByType = computed(() => {
-    return (type: RoleType) => roles.value.filter(r => r.type === type)
+    return (type: RoleType) => roles.value.filter(r => r.roleType === type)
   })
 
   // 系统角色
   const systemRoles = computed(() =>
     roles.value.filter(r =>
-      r.type === 'SUPER_ADMIN' ||
-      r.type === 'SYSTEM_ADMIN' ||
-      r.type === 'DEPT_ADMIN'
+      r.roleType === 'SUPER_ADMIN' ||
+      r.roleType === 'SYSTEM_ADMIN' ||
+      r.roleType === 'DEPT_ADMIN'
     )
   )
 
   // 自定义角色
   const customRoles = computed(() =>
-    roles.value.filter(r => r.type === 'CUSTOM')
+    roles.value.filter(r => r.roleType === 'CUSTOM')
   )
 
   // ==================== 权限操作 ====================
@@ -325,7 +325,7 @@ export const useAccessStore = defineStore('access-v2', () => {
     userId: number,
     roleIds: number[]
   ) => {
-    const result = await userRoleApi.setRoles(userId, { roleIds })
+    const result = await userRoleApi.setRoles(userId, { roleAssignments: roleIds.map(roleId => ({ roleId })) })
     await getUserRoles(userId)
     return result
   }

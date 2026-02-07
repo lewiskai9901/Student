@@ -1264,7 +1264,7 @@ const routes: RouteRecordRaw[] = [
       // 配置模块重定向
       {
         path: '/config',
-        redirect: '/settings/weight',
+        redirect: '/settings/configs',
         meta: { hidden: true }
       },
       {
@@ -1274,26 +1274,10 @@ const routes: RouteRecordRaw[] = [
       },
       {
         path: '/config/weight',
-        redirect: '/settings/weight',
+        redirect: '/settings/configs',
         meta: { hidden: true }
       },
 
-      // V2 API路由别名 (与后端DDD架构对齐)
-      {
-        path: '/access/roles',
-        redirect: '/access/roles',
-        meta: { hidden: true }
-      },
-      {
-        path: '/access/permissions',
-        redirect: '/access/permissions',
-        meta: { hidden: true }
-      },
-      {
-        path: '/organization/classes',
-        redirect: '/organization/classes',
-        meta: { hidden: true }
-      },
       {
         path: '/org-units',
         redirect: '/organization/units',

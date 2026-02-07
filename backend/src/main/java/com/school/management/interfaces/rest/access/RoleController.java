@@ -106,7 +106,7 @@ public class RoleController {
     @PreAuthorize("hasAuthority('system:role:edit')")
     public Result<RoleResponse> setRolePermissions(
             @PathVariable Long id,
-            @RequestBody SetPermissionsRequest request) {
+            @Valid @RequestBody SetPermissionsRequest request) {
 
         Role role = accessService.grantPermissions(id, request.getPermissionIds());
         return Result.success(toResponse(role));

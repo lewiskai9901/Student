@@ -154,11 +154,13 @@ public class Semester extends AggregateRoot<Long> {
         this.endDate = endDate;
         this.updatedAt = LocalDateTime.now();
 
-        registerEvent(new SemesterUpdatedEvent(
-                this.getId().toString(),
-                semesterName,
-                this.semesterCode
-        ));
+        if (this.getId() != null) {
+            registerEvent(new SemesterUpdatedEvent(
+                    this.getId().toString(),
+                    semesterName,
+                    this.semesterCode
+            ));
+        }
     }
 
     /**
@@ -172,11 +174,13 @@ public class Semester extends AggregateRoot<Long> {
         this.isCurrent = true;
         this.updatedAt = LocalDateTime.now();
 
-        registerEvent(new SemesterActivatedEvent(
-                this.getId().toString(),
-                this.semesterName,
-                this.semesterCode
-        ));
+        if (this.getId() != null) {
+            registerEvent(new SemesterActivatedEvent(
+                    this.getId().toString(),
+                    this.semesterName,
+                    this.semesterCode
+            ));
+        }
     }
 
     /**
@@ -202,11 +206,13 @@ public class Semester extends AggregateRoot<Long> {
         this.status = SemesterStatus.ENDED;
         this.updatedAt = LocalDateTime.now();
 
-        registerEvent(new SemesterEndedEvent(
-                this.getId().toString(),
-                this.semesterName,
-                this.semesterCode
-        ));
+        if (this.getId() != null) {
+            registerEvent(new SemesterEndedEvent(
+                    this.getId().toString(),
+                    this.semesterName,
+                    this.semesterCode
+            ));
+        }
     }
 
     /**

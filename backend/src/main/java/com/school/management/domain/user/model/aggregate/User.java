@@ -287,12 +287,14 @@ public class User extends AggregateRoot<Long> {
         this.status = UserStatus.ENABLED;
         this.updatedAt = LocalDateTime.now();
 
-        registerEvent(new UserStatusChangedEvent(
-                this.getId().toString(),
-                this.username,
-                oldStatus,
-                this.status
-        ));
+        if (this.getId() != null) {
+            registerEvent(new UserStatusChangedEvent(
+                    this.getId().toString(),
+                    this.username,
+                    oldStatus,
+                    this.status
+            ));
+        }
     }
 
     /**
@@ -306,12 +308,14 @@ public class User extends AggregateRoot<Long> {
         this.status = UserStatus.DISABLED;
         this.updatedAt = LocalDateTime.now();
 
-        registerEvent(new UserStatusChangedEvent(
-                this.getId().toString(),
-                this.username,
-                oldStatus,
-                this.status
-        ));
+        if (this.getId() != null) {
+            registerEvent(new UserStatusChangedEvent(
+                    this.getId().toString(),
+                    this.username,
+                    oldStatus,
+                    this.status
+            ));
+        }
     }
 
     /**

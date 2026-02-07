@@ -118,8 +118,8 @@ mybatis-plus:
 # 日志配置
 logging:
   level:
-    com.school.management: DEBUG
-    org.springframework.security: DEBUG
+    com.school.management: INFO
+    org.springframework.security: INFO
   pattern:
     console: '%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{50} - %msg%n'
 

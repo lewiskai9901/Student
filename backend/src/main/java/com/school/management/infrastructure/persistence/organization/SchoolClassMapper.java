@@ -67,4 +67,22 @@ public interface SchoolClassMapper extends BaseMapper<SchoolClassPO> {
      */
     @Select("SELECT COUNT(*) FROM classes WHERE grade_id = #{gradeId} AND deleted = 0")
     int countByGradeId(@Param("gradeId") Long gradeId);
+
+    /**
+     * Find by status.
+     */
+    @Select("SELECT * FROM classes WHERE status = #{status} AND deleted = 0 ORDER BY class_code")
+    List<SchoolClassPO> findByStatus(@Param("status") Integer status);
+
+    /**
+     * Find by major direction ID.
+     */
+    @Select("SELECT * FROM classes WHERE major_direction_id = #{majorDirectionId} AND deleted = 0 ORDER BY class_code")
+    List<SchoolClassPO> findByMajorDirectionId(@Param("majorDirectionId") Long majorDirectionId);
+
+    /**
+     * Find by graduation year.
+     */
+    @Select("SELECT * FROM classes WHERE graduation_year = #{graduationYear} AND deleted = 0 ORDER BY class_code")
+    List<SchoolClassPO> findByGraduationYear(@Param("graduationYear") Integer graduationYear);
 }

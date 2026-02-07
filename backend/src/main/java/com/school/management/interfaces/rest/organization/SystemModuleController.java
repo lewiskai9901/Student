@@ -6,6 +6,7 @@ import com.school.management.domain.organization.model.SystemModule;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -27,6 +28,7 @@ public class SystemModuleController {
 
     @Operation(summary = "获取模块树形结构")
     @GetMapping("/tree")
+    @PreAuthorize("isAuthenticated()")
     public ApiResponse<List<SystemModuleResponse>> getModuleTree() {
         List<SystemModule> modules = systemModuleService.getModuleTree();
         List<SystemModuleResponse> response = modules.stream()
@@ -37,6 +39,7 @@ public class SystemModuleController {
 
     @Operation(summary = "获取所有启用的模块（平铺列表）")
     @GetMapping
+    @PreAuthorize("isAuthenticated()")
     public ApiResponse<List<SystemModuleResponse>> getAllModules() {
         List<SystemModule> modules = systemModuleService.getAllEnabledModules();
         List<SystemModuleResponse> response = modules.stream()
@@ -47,6 +50,7 @@ public class SystemModuleController {
 
     @Operation(summary = "获取顶级模块")
     @GetMapping("/top-level")
+    @PreAuthorize("isAuthenticated()")
     public ApiResponse<List<SystemModuleResponse>> getTopLevelModules() {
         List<SystemModule> modules = systemModuleService.getTopLevelModules();
         List<SystemModuleResponse> response = modules.stream()
@@ -57,6 +61,7 @@ public class SystemModuleController {
 
     @Operation(summary = "获取子模块")
     @GetMapping("/{parentCode}/children")
+    @PreAuthorize("isAuthenticated()")
     public ApiResponse<List<SystemModuleResponse>> getChildModules(@PathVariable String parentCode) {
         List<SystemModule> modules = systemModuleService.getChildModules(parentCode);
         List<SystemModuleResponse> response = modules.stream()

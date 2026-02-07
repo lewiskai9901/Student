@@ -143,27 +143,32 @@ public class DataPermissionInterceptor implements Interceptor {
         StringBuilder condition = new StringBuilder();
         String alias = annotation.tableAlias().isEmpty() ? "" : annotation.tableAlias() + ".";
 
+        // 安全校验：对数值型ID进行严格校验，防止SQL注入
+        Long safeOrgUnitId = userContext.getOrgUnitId();
+        Long safeUserId = userContext.getUserId();
+        String safeOrgUnitPath = sanitizePath(userContext.getOrgUnitPath());
+
         switch (scope) {
             case DEPARTMENT:
                 // 仅本部门
-                String orgField = moduleConfig.getOrgUnitField();
-                if (orgField == null) orgField = annotation.orgUnitField();
-                condition.append(alias).append(orgField).append(" = ").append(userContext.getOrgUnitId());
+                String orgField = sanitizeColumnName(moduleConfig.getOrgUnitField());
+                if (orgField == null) orgField = sanitizeColumnName(annotation.orgUnitField());
+                condition.append(alias).append(orgField).append(" = ").append(safeOrgUnitId);
                 break;
 
             case DEPARTMENT_AND_BELOW:
                 // 本部门及下级
-                orgField = moduleConfig.getOrgUnitField();
-                if (orgField == null) orgField = annotation.orgUnitField();
+                orgField = sanitizeColumnName(moduleConfig.getOrgUnitField());
+                if (orgField == null) orgField = sanitizeColumnName(annotation.orgUnitField());
                 // 使用org_unit_path进行前缀匹配
-                if (userContext.getOrgUnitPath() != null) {
+                if (safeOrgUnitPath != null) {
                     condition.append("(")
                             .append(alias).append(orgField).append(" IN (")
                             .append("SELECT id FROM org_units WHERE path LIKE '")
-                            .append(userContext.getOrgUnitPath()).append("%'")
+                            .append(safeOrgUnitPath).append("%'")
                             .append("))");
                 } else {
-                    condition.append(alias).append(orgField).append(" = ").append(userContext.getOrgUnitId());
+                    condition.append(alias).append(orgField).append(" = ").append(safeOrgUnitId);
                 }
                 break;
 
@@ -174,9 +179,9 @@ public class DataPermissionInterceptor implements Interceptor {
 
             case SELF:
                 // 仅本人
-                String creatorField = moduleConfig.getCreatorField();
-                if (creatorField == null) creatorField = annotation.creatorField();
-                condition.append(alias).append(creatorField).append(" = ").append(userContext.getUserId());
+                String creatorField = sanitizeColumnName(moduleConfig.getCreatorField());
+                if (creatorField == null) creatorField = sanitizeColumnName(annotation.creatorField());
+                condition.append(alias).append(creatorField).append(" = ").append(safeUserId);
                 break;
 
             default:
@@ -185,14 +190,32 @@ public class DataPermissionInterceptor implements Interceptor {
 
         // 如果同时有SELF权限，添加OR条件
         if (mergedScope.isHasSelfScope() && scope != DataScope.SELF) {
-            String creatorField = moduleConfig.getCreatorField();
-            if (creatorField == null) creatorField = annotation.creatorField();
+            String creatorField = sanitizeColumnName(moduleConfig.getCreatorField());
+            if (creatorField == null) creatorField = sanitizeColumnName(annotation.creatorField());
             condition.insert(0, "(");
-            condition.append(" OR ").append(alias).append(creatorField).append(" = ").append(userContext.getUserId());
+            condition.append(" OR ").append(alias).append(creatorField).append(" = ").append(safeUserId);
             condition.append(")");
         }
 
         return condition.toString();
+    }
+
+    /**
+     * 清理路径字符串，防止SQL注入
+     */
+    private String sanitizePath(String path) {
+        if (path == null) return null;
+        // 路径只允许数字、斜杠和短横线
+        return path.replaceAll("[^0-9/\\-]", "");
+    }
+
+    /**
+     * 清理列名，只允许合法的标识符字符
+     */
+    private String sanitizeColumnName(String columnName) {
+        if (columnName == null) return null;
+        // 列名只允许字母、数字和下划线
+        return columnName.replaceAll("[^a-zA-Z0-9_]", "");
     }
 
     /**

@@ -45,7 +45,7 @@ public class StudentEventHandler {
         // 发送通知给班主任
         if (event.getClassId() != null) {
             notificationService.sendInAppMessage(
-                    1L, // 班主任ID（实际应该从班级获取）
+                    1L, // TODO: hardcoded userId=1, should be resolved from class teacher context
                     "新生入学通知",
                     String.format("学生 [%s] 已加入您的班级", event.getStudentName()),
                     NotificationService.MessageType.SYSTEM_NOTICE
@@ -109,7 +109,7 @@ public class StudentEventHandler {
             case GRADUATED:
                 log.info("Student {} graduated", studentNo);
                 notificationService.sendInAppMessage(
-                        1L, // 学生ID（实际应该从事件获取）
+                        1L, // TODO: hardcoded userId=1, should resolve actual student userId from event
                         "毕业通知",
                         "恭喜您已完成学业，祝前程似锦！",
                         NotificationService.MessageType.SYSTEM_NOTICE
@@ -119,7 +119,7 @@ public class StudentEventHandler {
             case SUSPENDED:
                 log.info("Student {} suspended", studentNo);
                 notificationService.sendInAppMessage(
-                        1L, // 班主任ID
+                        1L, // TODO: hardcoded userId=1, should resolve class teacher userId from context
                         "休学通知",
                         String.format("学生 [%s] 已办理休学手续", studentNo),
                         NotificationService.MessageType.SYSTEM_NOTICE
@@ -129,7 +129,7 @@ public class StudentEventHandler {
             case WITHDRAWN:
                 log.info("Student {} withdrawn", studentNo);
                 notificationService.sendInAppMessage(
-                        1L, // 班主任ID
+                        1L, // TODO: hardcoded userId=1, should resolve class teacher userId from context
                         "退学通知",
                         String.format("学生 [%s] 已办理退学手续", studentNo),
                         NotificationService.MessageType.SYSTEM_NOTICE
@@ -139,7 +139,7 @@ public class StudentEventHandler {
             case EXPELLED:
                 log.info("Student {} expelled", studentNo);
                 notificationService.sendInAppMessage(
-                        1L, // 班主任ID
+                        1L, // TODO: hardcoded userId=1, should resolve class teacher userId from context
                         "开除通知",
                         String.format("学生 [%s] 已被开除学籍", studentNo),
                         NotificationService.MessageType.SYSTEM_NOTICE

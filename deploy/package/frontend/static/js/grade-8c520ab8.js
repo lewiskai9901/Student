@@ -1,1 +1,0 @@
-import{s as a}from"./index-e20b943e.js";const i=i=>a.get("/quantification/grades",{params:i}),t=i=>a.post("/quantification/grades",i),s=i=>a.put(`/quantification/grades/${i.id}`,i),e=i=>a.delete(`/quantification/grades/${i}`),n=()=>a.get("/quantification/grades/all");export{i as a,t as c,e as d,n as g,s as u};

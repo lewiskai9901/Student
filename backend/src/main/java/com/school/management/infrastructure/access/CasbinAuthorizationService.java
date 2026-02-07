@@ -14,12 +14,11 @@ import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 
 import java.util.*;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 
 /**
  * Casbin-based implementation of AuthorizationService.
- * Uses in-memory caching for performance with cache invalidation on changes.
+ * Uses Spring @Cacheable for performance with cache invalidation on changes.
  */
 @Service
 public class CasbinAuthorizationService implements AuthorizationService {
@@ -30,11 +29,6 @@ public class CasbinAuthorizationService implements AuthorizationService {
     private final RoleRepository roleRepository;
     private final PermissionRepository permissionRepository;
     private final OrgUnitRepository orgUnitRepository;
-
-    // In-memory cache for user permissions
-    private final Map<Long, Set<String>> userPermissionCache = new ConcurrentHashMap<>();
-    private final Map<Long, Set<String>> userRoleCache = new ConcurrentHashMap<>();
-    private final Map<Long, DataScope> userDataScopeCache = new ConcurrentHashMap<>();
 
     public CasbinAuthorizationService(
             UserRoleRepository userRoleRepository,
@@ -103,12 +97,6 @@ public class CasbinAuthorizationService implements AuthorizationService {
     @Override
     @Cacheable(value = "userPermissions", key = "#userId")
     public Set<String> getPermissions(Long userId) {
-        // Check cache first
-        Set<String> cached = userPermissionCache.get(userId);
-        if (cached != null) {
-            return cached;
-        }
-
         // Load from database
         Set<String> permissions = new HashSet<>();
 
@@ -119,7 +107,6 @@ public class CasbinAuthorizationService implements AuthorizationService {
             .collect(Collectors.toList());
 
         if (roleIds.isEmpty()) {
-            userPermissionCache.put(userId, permissions);
             return permissions;
         }
 
@@ -150,19 +137,12 @@ public class CasbinAuthorizationService implements AuthorizationService {
             permissions.add("*");
         }
 
-        userPermissionCache.put(userId, permissions);
         return permissions;
     }
 
     @Override
     @Cacheable(value = "userRoles", key = "#userId")
     public Set<String> getRoles(Long userId) {
-        // Check cache first
-        Set<String> cached = userRoleCache.get(userId);
-        if (cached != null) {
-            return cached;
-        }
-
         // Load from database
         List<UserRole> userRoles = userRoleRepository.findActiveByUserId(userId);
         List<Long> roleIds = userRoles.stream()
@@ -179,19 +159,12 @@ public class CasbinAuthorizationService implements AuthorizationService {
             }
         }
 
-        userRoleCache.put(userId, roleCodes);
         return roleCodes;
     }
 
     @Override
     @Cacheable(value = "userDataScope", key = "#userId")
     public DataScope getDataScope(Long userId) {
-        // Check cache first
-        DataScope cached = userDataScopeCache.get(userId);
-        if (cached != null) {
-            return cached;
-        }
-
         // Get user's roles and find the broadest data scope
         List<UserRole> userRoles = userRoleRepository.findActiveByUserId(userId);
         List<Long> roleIds = userRoles.stream()
@@ -209,7 +182,6 @@ public class CasbinAuthorizationService implements AuthorizationService {
             }
         }
 
-        userDataScopeCache.put(userId, broadestScope);
         return broadestScope;
     }
 
@@ -260,18 +232,12 @@ public class CasbinAuthorizationService implements AuthorizationService {
     @Override
     @CacheEvict(value = {"userPermissions", "userRoles", "userDataScope"}, key = "#userId")
     public void refreshCache(Long userId) {
-        userPermissionCache.remove(userId);
-        userRoleCache.remove(userId);
-        userDataScopeCache.remove(userId);
         log.info("Refreshed permission cache for user: {}", userId);
     }
 
     @Override
     @CacheEvict(value = {"userPermissions", "userRoles", "userDataScope"}, allEntries = true)
     public void refreshAllCache() {
-        userPermissionCache.clear();
-        userRoleCache.clear();
-        userDataScopeCache.clear();
         log.info("Refreshed all permission caches");
     }
 

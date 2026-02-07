@@ -2,11 +2,14 @@ package com.school.management.infrastructure.cache;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.data.redis.core.Cursor;
 import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.data.redis.core.ScanOptions;
 import org.springframework.stereotype.Service;
 
 import java.time.Duration;
 import java.util.Collection;
+import java.util.HashSet;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Supplier;
@@ -104,13 +107,14 @@ public class CacheService {
 
     /**
      * Removes all values matching a pattern.
+     * Uses SCAN instead of KEYS to avoid blocking Redis on large datasets.
      *
      * @param pattern key pattern (e.g., "user:*")
      */
     public void evictByPattern(String pattern) {
         String fullPattern = KEY_PREFIX + pattern;
-        Set<String> keys = redisTemplate.keys(fullPattern);
-        if (keys != null && !keys.isEmpty()) {
+        Set<String> keys = scanKeys(fullPattern);
+        if (!keys.isEmpty()) {
             redisTemplate.delete(keys);
             log.debug("Cache evict pattern: {}, count: {}", pattern, keys.size());
         }
@@ -163,13 +167,32 @@ public class CacheService {
 
     /**
      * Clears all cache entries with the application prefix.
+     * Uses SCAN instead of KEYS to avoid blocking Redis on large datasets.
      */
     public void clearAll() {
-        Set<String> keys = redisTemplate.keys(KEY_PREFIX + "*");
-        if (keys != null && !keys.isEmpty()) {
+        Set<String> keys = scanKeys(KEY_PREFIX + "*");
+        if (!keys.isEmpty()) {
             redisTemplate.delete(keys);
             log.info("Cache cleared: {} keys", keys.size());
         }
+    }
+
+    /**
+     * Scans for keys matching the given pattern using SCAN command.
+     * This is preferred over KEYS as it does not block the Redis server.
+     *
+     * @param pattern the key pattern to match
+     * @return set of matching keys
+     */
+    private Set<String> scanKeys(String pattern) {
+        Set<String> keys = new HashSet<>();
+        ScanOptions options = ScanOptions.scanOptions().match(pattern).count(100).build();
+        try (Cursor<String> cursor = redisTemplate.scan(options)) {
+            while (cursor.hasNext()) {
+                keys.add(cursor.next());
+            }
+        }
+        return keys;
     }
 
     // ========== Convenience Methods for Common Caches ==========

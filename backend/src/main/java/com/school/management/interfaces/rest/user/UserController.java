@@ -189,8 +189,8 @@ public class UserController {
     public Result<String> resetPassword(
             @Parameter(description = "用户ID") @PathVariable Long id) {
         log.info("V2 重置用户密码: {}", id);
-        String newPassword = userApplicationService.resetPassword(id);
-        return Result.success(newPassword);
+        userApplicationService.resetPassword(id);
+        return Result.success("密码已重置成功");
     }
 
     // ==================== 角色操作 ====================
@@ -210,7 +210,7 @@ public class UserController {
     @OperationLog(module = "system", type = "update", name = "分配用户角色")
     public Result<Void> assignRoles(
             @Parameter(description = "用户ID") @PathVariable Long id,
-            @RequestBody List<Long> roleIds) {
+            @Valid @RequestBody List<Long> roleIds) {
         log.info("V2 为用户分配角色: {} -> {}", id, roleIds);
         userApplicationService.assignRoles(id, roleIds);
         return Result.success();

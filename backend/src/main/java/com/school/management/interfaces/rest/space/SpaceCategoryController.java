@@ -5,7 +5,7 @@ import com.school.management.application.space.command.CreateSpaceCategoryComman
 import com.school.management.application.space.command.UpdateSpaceCategoryCommand;
 import com.school.management.application.space.query.SpaceCategoryDTO;
 import com.school.management.common.result.Result;
-import com.school.management.config.SecurityUtils;
+import com.school.management.common.util.SecurityUtils;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;

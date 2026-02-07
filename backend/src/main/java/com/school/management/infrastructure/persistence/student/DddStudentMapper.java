@@ -35,7 +35,7 @@ public interface DddStudentMapper extends BaseMapper<StudentPO> {
     /**
      * 根据身份证号查询
      */
-    @Select(BASE_JOIN_SELECT + " WHERE u.identity_card = #{idCard} AND s.deleted = 0")
+    @Select(BASE_JOIN_SELECT + " WHERE u.identity_card = #{idCard} AND s.deleted = 0 AND u.deleted = 0")
     StudentPO selectByIdCard(@Param("idCard") String idCard);
 
     /**
@@ -84,7 +84,7 @@ public interface DddStudentMapper extends BaseMapper<StudentPO> {
     /**
      * 检查身份证号是否存在
      */
-    @Select("SELECT COUNT(*) FROM students s LEFT JOIN users u ON s.user_id = u.id WHERE u.identity_card = #{idCard} AND s.deleted = 0")
+    @Select("SELECT COUNT(*) FROM students s LEFT JOIN users u ON s.user_id = u.id WHERE u.identity_card = #{idCard} AND s.deleted = 0 AND u.deleted = 0")
     long countByIdCard(@Param("idCard") String idCard);
 
     /**
@@ -104,6 +104,19 @@ public interface DddStudentMapper extends BaseMapper<StudentPO> {
      */
     @Select("SELECT COUNT(*) FROM students WHERE deleted = 0")
     long countAll();
+
+    /**
+     * 按关键字统计学生数量
+     */
+    @Select("""
+        SELECT COUNT(*) FROM students s
+        LEFT JOIN users u ON s.user_id = u.id
+        WHERE s.deleted = 0
+        AND (s.student_no LIKE CONCAT('%', #{keyword}, '%')
+             OR u.real_name LIKE CONCAT('%', #{keyword}, '%')
+             OR u.phone LIKE CONCAT('%', #{keyword}, '%'))
+        """)
+    long countByKeyword(@Param("keyword") String keyword);
 
     /**
      * 统计班级中指定性别的学生数量

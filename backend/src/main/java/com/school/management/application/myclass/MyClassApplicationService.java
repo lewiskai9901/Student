@@ -17,6 +17,7 @@ import com.school.management.domain.student.model.aggregate.Student;
 import com.school.management.domain.student.model.valueobject.Gender;
 import com.school.management.domain.student.model.valueobject.StudentStatus;
 import com.school.management.domain.student.repository.StudentRepository;
+import com.school.management.exception.BusinessException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -54,7 +55,7 @@ public class MyClassApplicationService {
      */
     public MyClassOverviewDTO getClassOverview(Long classId, Long userId) {
         SchoolClass schoolClass = schoolClassRepository.findById(classId)
-            .orElseThrow(() -> new RuntimeException("班级不存在"));
+            .orElseThrow(() -> new BusinessException("班级不存在"));
 
         // 验证用户有权限访问该班级
         validateAccess(classId, userId);
@@ -235,7 +236,7 @@ public class MyClassApplicationService {
 
                 rooms.add(DormitoryDistributionDTO.DormitoryRoomDTO.builder()
                     .dormitoryId(room.getId())
-                    .roomNo(room.getRoomNo())
+                    .roomNo(room.getRoomNo() != null ? String.valueOf(room.getRoomNo()) : null)
                     .floor(room.getFloorNumber())
                     .studentCount(roomOccupants.size())
                     .students(studentBeds)
@@ -300,10 +301,10 @@ public class MyClassApplicationService {
                         if (buildingSpace.isPresent()) {
                             dormitoryName = buildingSpace.get().getSpaceName() + " " + space.getRoomNo();
                         } else {
-                            dormitoryName = space.getRoomNo();
+                            dormitoryName = String.valueOf(space.getRoomNo());
                         }
                     } else {
-                        dormitoryName = space.getRoomNo() != null ? space.getRoomNo() : space.getSpaceName();
+                        dormitoryName = space.getRoomNo() != null ? String.valueOf(space.getRoomNo()) : space.getSpaceName();
                     }
                 }
             } catch (Exception e) {
@@ -319,7 +320,7 @@ public class MyClassApplicationService {
                 case SUSPENDED: status = "SUSPENDED"; break;
                 case WITHDRAWN: status = "DROPPED_OUT"; break;
                 case GRADUATED: status = "GRADUATED"; break;
-                case EXPELLED: status = "TRANSFERRED"; break;
+                case EXPELLED: status = "EXPELLED"; break;
                 default: status = "ENROLLED";
             }
         }
@@ -347,7 +348,7 @@ public class MyClassApplicationService {
         boolean hasAccess = userClasses.stream()
             .anyMatch(c -> c.getId().equals(classId));
         if (!hasAccess) {
-            throw new RuntimeException("无权访问该班级");
+            throw new BusinessException("无权访问该班级");
         }
     }
 }

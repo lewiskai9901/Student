@@ -117,8 +117,10 @@ public class UserRoleRepositoryImpl implements UserRoleRepository {
             .userId(po.getUserId())
             .roleId(po.getRoleId())
             .orgUnitId(po.getOrgUnitId())
+            .assignedAt(po.getAssignedAt())
             .assignedBy(po.getAssignedBy())
             .expiresAt(po.getExpiresAt())
+            .isActive(po.getIsActive())
             .build();
     }
 }

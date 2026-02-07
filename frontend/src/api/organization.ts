@@ -377,8 +377,7 @@ export function getMajorList(orgUnitId?: number): Promise<any[]> {
  */
 export function assignTeacher(classId: number, teacherId: number | null): Promise<void> {
   return http.post(`${CLASS_URL}/${classId}/head-teacher`, {
-    teacherId,
-    teacherName: ''
+    teacherId
   })
 }
 
@@ -593,7 +592,7 @@ export interface GradeCreateRequest {
 export const listGrades = (params?: GradeQuery): Promise<Grade[]> => http.get<Grade[]>(GRADE_URL, { params })
 
 export const getGradePage = (params: GradeQuery & { pageNum: number; pageSize: number }) => {
-  return http.get<Grade[]>(GRADE_URL).then(grades => {
+  return http.get<Grade[]>(GRADE_URL, { params }).then(grades => {
     const start = (params.pageNum - 1) * params.pageSize
     const end = start + params.pageSize
     return { records: grades.slice(start, end), total: grades.length, current: params.pageNum, size: params.pageSize }

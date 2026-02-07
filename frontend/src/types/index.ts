@@ -3,7 +3,7 @@
  */
 
 export * from './organization'
-export * from './inspection'
+// export * from './inspection' // TODO: type definitions not yet implemented
 export * from './access'
 export * from './student'
 export * from './dormitory'
@@ -11,9 +11,9 @@ export * from './task'
 export * from './user'
 export * from './semester'
 export * from './myClass'
-export * from './inspectionSession'
-export * from './corrective'
-export * from './behavior'
+// export * from './inspectionSession' // TODO: type definitions not yet implemented
+// export * from './corrective' // TODO: type definitions not yet implemented
+// export * from './behavior' // TODO: type definitions not yet implemented
 export * from './schedule'
 export * from './analytics'
 

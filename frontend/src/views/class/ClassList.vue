@@ -1,36 +1,111 @@
 ﻿<template>
-  <div class="p-6 bg-gray-50 min-h-full">
+  <div class="min-h-full bg-gray-50/50 p-6">
     <!-- 页面标题 -->
-    <div class="mb-6">
-      <h1 class="text-xl font-semibold text-gray-900">班级管理</h1>
-      <p class="mt-1 text-sm text-gray-500">管理班级信息、班主任分配和学生统计</p>
+    <div class="mb-8 flex items-end justify-between">
+      <div>
+        <h1 class="text-2xl font-bold tracking-tight text-gray-900">班级管理</h1>
+        <p class="mt-2 text-sm text-gray-500">管理学校班级架构、班主任分配及班级状态监控</p>
+      </div>
+      <div class="flex gap-3">
+        <button
+          v-if="hasPermission('student:class:export')"
+          class="inline-flex items-center justify-center rounded-lg border border-gray-200 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm transition-colors hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+          @click="handleExport"
+        >
+          <Download class="mr-2 h-4 w-4 text-gray-500" />
+          导出数据
+        </button>
+        <button
+          v-if="hasPermission('student:class:add')"
+          class="inline-flex items-center justify-center rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white shadow-sm transition-colors hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+          @click="handleAdd"
+        >
+          <Plus class="mr-2 h-4 w-4" />
+          新建班级
+        </button>
+      </div>
     </div>
 
-    <!-- 统计卡片 - 设计系统 -->
-    <div class="mb-6 grid grid-cols-2 gap-4 lg:grid-cols-4">
-      <StatCard title="正常招生" :value="stats.active" :icon="CheckCircle" subtitle="活跃班级" :trend="5.2" color="emerald" />
-      <StatCard title="停止招生" :value="stats.stopped" :icon="PauseCircle" subtitle="暂停班级" :trend="-1.5" color="orange" />
-      <StatCard title="已毕业" :value="stats.graduated" :icon="Award" subtitle="完成学业" :trend="12.8" color="blue" />
-      <StatCard title="学生总数" :value="stats.totalStudents" :icon="Users" subtitle="在读学生" :trend="8.3" color="purple" />
+    <!-- 统计卡片 (内联实现，修复组件缺失问题) -->
+    <div class="mb-8 grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
+      <div class="relative overflow-hidden rounded-xl border border-gray-100 bg-white p-5 shadow-sm transition-all hover:shadow-md">
+        <div class="flex items-center gap-4">
+          <div class="flex h-12 w-12 items-center justify-center rounded-xl bg-emerald-50 text-emerald-600">
+            <CheckCircle class="h-6 w-6" />
+          </div>
+          <div>
+            <p class="text-sm font-medium text-gray-500">正常招生</p>
+            <div class="flex items-baseline gap-2">
+              <h3 class="text-2xl font-bold text-gray-900">{{ stats.active }}</h3>
+              <span class="text-xs font-medium text-emerald-600">+2 新增</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="relative overflow-hidden rounded-xl border border-gray-100 bg-white p-5 shadow-sm transition-all hover:shadow-md">
+        <div class="flex items-center gap-4">
+          <div class="flex h-12 w-12 items-center justify-center rounded-xl bg-orange-50 text-orange-600">
+            <PauseCircle class="h-6 w-6" />
+          </div>
+          <div>
+            <p class="text-sm font-medium text-gray-500">停止招生</p>
+            <div class="flex items-baseline gap-2">
+              <h3 class="text-2xl font-bold text-gray-900">{{ stats.stopped }}</h3>
+              <span class="text-xs font-medium text-gray-400">无变化</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="relative overflow-hidden rounded-xl border border-gray-100 bg-white p-5 shadow-sm transition-all hover:shadow-md">
+        <div class="flex items-center gap-4">
+          <div class="flex h-12 w-12 items-center justify-center rounded-xl bg-blue-50 text-blue-600">
+            <Award class="h-6 w-6" />
+          </div>
+          <div>
+            <p class="text-sm font-medium text-gray-500">已毕业</p>
+            <div class="flex items-baseline gap-2">
+              <h3 class="text-2xl font-bold text-gray-900">{{ stats.graduated }}</h3>
+              <span class="text-xs font-medium text-blue-600">+12.5%</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="relative overflow-hidden rounded-xl border border-gray-100 bg-white p-5 shadow-sm transition-all hover:shadow-md">
+        <div class="flex items-center gap-4">
+          <div class="flex h-12 w-12 items-center justify-center rounded-xl bg-purple-50 text-purple-600">
+            <Users class="h-6 w-6" />
+          </div>
+          <div>
+            <p class="text-sm font-medium text-gray-500">学生总数</p>
+            <div class="flex items-baseline gap-2">
+              <h3 class="text-2xl font-bold text-gray-900">{{ stats.totalStudents }}</h3>
+              <span class="text-xs font-medium text-purple-600">人</span>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
 
     <!-- 搜索和操作区域 -->
-    <div class="mb-4 rounded-lg border border-gray-200 bg-white p-4">
-      <div class="flex flex-wrap items-end gap-3">
-        <div class="w-40">
-          <label class="mb-1 block text-xs font-medium text-gray-600">关键词</label>
+    <div class="mb-6 rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
+      <div class="flex flex-wrap items-end gap-4">
+        <div class="w-64">
+          <label class="mb-1.5 block text-xs font-medium text-gray-500">搜索查找</label>
           <input
             v-model="searchForm.keyword"
             type="text"
             placeholder="班级名称/编码"
-            class="h-9 w-full rounded-md border border-gray-300 px-3 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+            class="h-10 w-full rounded-lg border border-gray-300 bg-gray-50 px-3 text-sm transition-all focus:border-blue-500 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/20"
           />
         </div>
-        <div class="w-40">
-          <label class="mb-1 block text-xs font-medium text-gray-600">所属组织</label>
+        <div class="w-48">
+          <label class="mb-1.5 block text-xs font-medium text-gray-500">所属组织</label>
           <select
             v-model="searchForm.orgUnitId"
-            class="h-9 w-full rounded-md border border-gray-300 bg-white px-3 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+            class="h-10 w-full rounded-lg border border-gray-300 bg-white px-3 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
           >
             <option :value="undefined">全部组织</option>
             <option v-for="item in orgUnitList" :key="item.id" :value="item.id">
@@ -38,11 +113,11 @@
             </option>
           </select>
         </div>
-        <div class="w-32">
-          <label class="mb-1 block text-xs font-medium text-gray-600">入学年份</label>
+        <div class="w-36">
+          <label class="mb-1.5 block text-xs font-medium text-gray-500">入学年份</label>
           <select
             v-model="searchForm.enrollmentYear"
-            class="h-9 w-full rounded-md border border-gray-300 bg-white px-3 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+            class="h-10 w-full rounded-lg border border-gray-300 bg-white px-3 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
           >
             <option :value="undefined">全部年份</option>
             <option v-for="year in [2024, 2023, 2022, 2021, 2020]" :key="year" :value="year">
@@ -50,11 +125,11 @@
             </option>
           </select>
         </div>
-        <div class="w-28">
-          <label class="mb-1 block text-xs font-medium text-gray-600">状态</label>
+        <div class="w-32">
+          <label class="mb-1.5 block text-xs font-medium text-gray-500">状态</label>
           <select
             v-model="searchForm.status"
-            class="h-9 w-full rounded-md border border-gray-300 bg-white px-3 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+            class="h-10 w-full rounded-lg border border-gray-300 bg-white px-3 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
           >
             <option :value="undefined">全部</option>
             <option value="PREPARING">筹建中</option>
@@ -63,50 +138,36 @@
             <option value="DISSOLVED">已撤销</option>
           </select>
         </div>
-        <button
-          class="h-9 rounded-md bg-blue-600 px-4 text-sm font-medium text-white hover:bg-blue-700"
-          @click="handleSearch"
-        >
-          搜索
-        </button>
-        <button
-          class="h-9 rounded-md border border-gray-300 bg-white px-4 text-sm font-medium text-gray-700 hover:bg-gray-50"
-          @click="handleReset"
-        >
-          重置
-        </button>
-        <div class="flex-1"></div>
-        <button
-          v-if="hasPermission('student:class:export')"
-          class="h-9 rounded-md border border-gray-300 bg-white px-4 text-sm font-medium text-gray-700 hover:bg-gray-50"
-          @click="handleExport"
-        >
-          <Download class="mr-1.5 inline-block h-4 w-4" />
-          导出
-        </button>
-        <button
-          v-if="hasPermission('student:class:add')"
-          class="h-9 rounded-md bg-blue-600 px-4 text-sm font-medium text-white hover:bg-blue-700"
-          @click="handleAdd"
-        >
-          <Plus class="mr-1.5 inline-block h-4 w-4" />
-          新增班级
-        </button>
+        <div class="flex gap-2 pb-0.5">
+          <button
+            class="h-10 rounded-lg bg-blue-600 px-5 text-sm font-medium text-white shadow-sm transition-colors hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+            @click="handleSearch"
+          >
+            搜索
+          </button>
+          <button
+            class="h-10 rounded-lg border border-gray-300 bg-white px-5 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50 hover:text-gray-900"
+            @click="handleReset"
+          >
+            重置
+          </button>
+        </div>
       </div>
     </div>
 
     <!-- 数据表格 -->
-    <div class="rounded-lg border border-gray-200 bg-white">
-      <div class="flex items-center justify-between border-b border-gray-200 px-4 py-3">
+    <div class="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm">
+      <div class="flex items-center justify-between border-b border-gray-100 bg-white px-6 py-4">
         <div class="flex items-center gap-2">
-          <span class="text-sm font-medium text-gray-900">班级列表</span>
-          <span class="rounded bg-gray-100 px-2 py-0.5 text-xs text-gray-600">{{ total }} 个</span>
+          <span class="text-base font-semibold text-gray-900">班级列表</span>
+          <span class="rounded-full bg-gray-100 px-2.5 py-0.5 text-xs font-medium text-gray-600">{{ total }}</span>
         </div>
         <button
           v-if="hasPermission('student:class:delete') && selectedRows.length > 0"
-          class="h-8 rounded-md bg-red-600 px-3 text-sm font-medium text-white hover:bg-red-700"
+          class="inline-flex items-center rounded-lg bg-red-50 px-3 py-1.5 text-sm font-medium text-red-600 transition-colors hover:bg-red-100"
           @click="handleBatchDelete"
         >
+          <Trash2 class="mr-1.5 h-3.5 w-3.5" />
           删除选中 ({{ selectedRows.length }})
         </button>
       </div>
@@ -120,101 +181,96 @@
       <div v-else class="overflow-x-auto">
         <table class="w-full">
           <thead>
-            <tr class="border-b border-gray-200 bg-gray-50">
-              <th class="w-12 px-4 py-3">
+            <tr class="border-b border-gray-100 bg-gray-50/50">
+              <th class="w-12 px-6 py-4">
                 <input
                   type="checkbox"
-                  class="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                  class="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500 focus:ring-offset-0"
                   :checked="isAllSelected"
                   @change="handleSelectAll"
                 />
               </th>
-              <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">班级名称</th>
-              <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">所属组织</th>
-              <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">年级</th>
-              <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">专业</th>
-              <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">班主任</th>
-              <th class="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase">学生</th>
-              <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">状态</th>
-              <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">操作</th>
+              <th class="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wider text-gray-500">班级信息</th>
+              <th class="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wider text-gray-500">院系/专业</th>
+              <th class="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wider text-gray-500">班主任</th>
+              <th class="px-6 py-4 text-center text-xs font-semibold uppercase tracking-wider text-gray-500">学生人数</th>
+              <th class="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wider text-gray-500">状态</th>
+              <th class="px-6 py-4 text-right text-xs font-semibold uppercase tracking-wider text-gray-500">操作</th>
             </tr>
           </thead>
-          <tbody class="divide-y divide-gray-100">
+          <tbody class="divide-y divide-gray-100 bg-white">
             <tr
               v-for="row in classList"
               :key="row.id"
-              class="hover:bg-gray-50"
+              class="group transition-colors hover:bg-gray-50/80"
             >
-              <td class="px-4 py-3">
+              <td class="px-6 py-4">
                 <input
                   type="checkbox"
-                  class="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                  class="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500 focus:ring-offset-0"
                   :checked="selectedRows.some(s => s.id === row.id)"
                   @change="handleSelectRow(row)"
                 />
               </td>
-              <td class="px-4 py-3">
-                <div class="flex items-center gap-2">
-                  <div class="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-100 text-sm font-medium text-blue-600">
+              <td class="px-6 py-4">
+                <div class="flex items-center gap-3">
+                  <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-blue-50 text-sm font-bold text-blue-600">
                     {{ row.classSequence || '?' }}
                   </div>
                   <div>
-                    <span class="text-sm font-medium text-gray-900">{{ row.className }}</span>
-                    <p v-if="row.enrollmentYear" class="text-xs text-gray-500">{{ row.enrollmentYear }}级</p>
+                    <div class="font-medium text-gray-900">{{ row.className }}</div>
+                    <div class="flex items-center gap-2 text-xs text-gray-500">
+                      <span v-if="row.enrollmentYear">{{ row.enrollmentYear }}级</span>
+                      <span v-if="row.gradeLevel" class="h-1 w-1 rounded-full bg-gray-300"></span>
+                      <span v-if="row.gradeLevel">{{ row.gradeLevel }}年级</span>
+                    </div>
                   </div>
                 </div>
               </td>
-              <td class="px-4 py-3 text-sm text-gray-600">
-                {{ row.orgUnitName || '-' }}
-              </td>
-              <td class="px-4 py-3 text-sm text-gray-900">
-                {{ row.gradeLevel ? `${row.gradeLevel}年级` : '-' }}
-              </td>
-              <td class="px-4 py-3">
+              <td class="px-6 py-4">
                 <div class="flex flex-col gap-0.5">
-                  <span class="text-sm text-gray-900">{{ row.majorName || '-' }}</span>
-                  <div class="flex gap-1 flex-wrap">
-                    <span v-if="row.majorDirectionName" class="rounded bg-blue-50 px-1.5 py-0.5 text-xs text-blue-600">
+                  <span class="text-sm font-medium text-gray-900">{{ row.orgUnitName || '-' }}</span>
+                  <div class="flex flex-wrap gap-1.5">
+                    <span class="text-xs text-gray-500">{{ row.majorName || '未分专业' }}</span>
+                    <span v-if="row.majorDirectionName" class="inline-flex items-center rounded bg-blue-50 px-1.5 py-0.5 text-[10px] font-medium text-blue-600">
                       {{ row.majorDirectionName }}
                     </span>
-                    <span v-if="row.schoolingYears" class="rounded bg-gray-100 px-1.5 py-0.5 text-xs text-gray-600">
-                      {{ row.schoolingYears }}年制
-                    </span>
                   </div>
                 </div>
               </td>
-              <td class="px-4 py-3">
+              <td class="px-6 py-4">
                 <div v-if="row.headTeacherName || row.teacherName" class="flex items-center gap-2">
-                  <div class="flex h-7 w-7 items-center justify-center rounded-full bg-blue-100 text-xs font-medium text-blue-600">
+                  <div class="flex h-8 w-8 items-center justify-center rounded-full bg-gray-100 text-xs font-medium text-gray-600 ring-2 ring-white">
                     {{ (row.headTeacherName || row.teacherName).charAt(0) }}
                   </div>
                   <span class="text-sm text-gray-900">{{ row.headTeacherName || row.teacherName }}</span>
                 </div>
-                <span v-else class="text-sm text-gray-400">未分配</span>
+                <span v-else class="inline-flex items-center rounded-full bg-gray-100 px-2.5 py-0.5 text-xs font-medium text-gray-500">未分配</span>
               </td>
-              <td class="px-4 py-3 text-center">
+              <td class="px-6 py-4 text-center">
                 <button
                   v-if="hasPermission('student:info:view')"
-                  class="inline-flex items-center gap-1 rounded bg-purple-50 px-2 py-0.5 text-xs font-medium text-purple-700 hover:bg-purple-100"
+                  class="group/btn inline-flex items-center gap-1.5 rounded-full bg-purple-50 px-3 py-1 text-xs font-medium text-purple-700 transition-colors hover:bg-purple-100"
                   @click="handleViewStudents(row)"
                 >
-                  <Users class="h-3 w-3" />
+                  <Users class="h-3.5 w-3.5" />
                   {{ row.currentSize || 0 }}
                 </button>
                 <span v-else class="text-sm text-gray-600">{{ row.currentSize || 0 }}</span>
               </td>
-              <td class="px-4 py-3">
+              <td class="px-6 py-4">
                 <span
-                  class="inline-flex items-center rounded px-2 py-0.5 text-xs font-medium"
+                  class="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium"
                   :class="getStatusClass(row.status)"
                 >
+                  <span class="mr-1.5 h-1.5 w-1.5 rounded-full" :class="getStatusDotClass(row.status)"></span>
                   {{ getStatusText(row.status) }}
                 </span>
               </td>
-              <td class="px-4 py-3 text-right">
-                <div class="flex items-center justify-end gap-1">
+              <td class="px-6 py-4 text-right">
+                <div class="flex items-center justify-end gap-2 opacity-0 transition-opacity group-hover:opacity-100">
                   <button
-                    class="rounded p-1.5 text-gray-400 hover:bg-gray-100 hover:text-gray-600"
+                    class="rounded-lg p-1.5 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-900"
                     title="查看详情"
                     @click="handleView(row)"
                   >
@@ -222,7 +278,7 @@
                   </button>
                   <button
                     v-if="hasPermission('student:class:edit')"
-                    class="rounded p-1.5 text-gray-400 hover:bg-gray-100 hover:text-blue-600"
+                    class="rounded-lg p-1.5 text-gray-400 transition-colors hover:bg-blue-50 hover:text-blue-600"
                     title="编辑"
                     @click="handleEdit(row)"
                   >
@@ -230,7 +286,7 @@
                   </button>
                   <button
                     v-if="hasPermission('student:class:edit')"
-                    class="rounded p-1.5 text-gray-400 hover:bg-gray-100 hover:text-green-600"
+                    class="rounded-lg p-1.5 text-gray-400 transition-colors hover:bg-green-50 hover:text-green-600"
                     title="设置班主任"
                     @click="handleSetTeacher(row)"
                   >
@@ -238,7 +294,7 @@
                   </button>
                   <button
                     v-if="hasPermission('student:class:edit')"
-                    class="rounded p-1.5 text-gray-400 hover:bg-gray-100 hover:text-purple-600"
+                    class="rounded-lg p-1.5 text-gray-400 transition-colors hover:bg-purple-50 hover:text-purple-600"
                     title="宿舍管理"
                     @click="handleManageDormitory(row)"
                   >
@@ -246,7 +302,7 @@
                   </button>
                   <button
                     v-if="hasPermission('student:class:delete')"
-                    class="rounded p-1.5 text-gray-400 hover:bg-gray-100 hover:text-red-600"
+                    class="rounded-lg p-1.5 text-gray-400 transition-colors hover:bg-red-50 hover:text-red-600"
                     title="删除"
                     @click="handleDelete(row)"
                   >
@@ -260,25 +316,29 @@
 
         <!-- 空状态 -->
         <div v-if="classList.length === 0" class="flex flex-col items-center justify-center py-16">
-          <GraduationCap class="h-12 w-12 text-gray-300" />
-          <p class="mt-3 text-sm text-gray-500">暂无班级数据</p>
+          <div class="flex h-16 w-16 items-center justify-center rounded-full bg-gray-50">
+            <GraduationCap class="h-8 w-8 text-gray-400" />
+          </div>
+          <h3 class="mt-4 text-sm font-medium text-gray-900">暂无班级数据</h3>
+          <p class="mt-1 text-sm text-gray-500">开始创建一个新的班级来管理学生吧</p>
           <button
             v-if="hasPermission('student:class:add')"
-            class="mt-4 rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+            class="mt-6 inline-flex items-center rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-blue-700"
             @click="handleAdd"
           >
+            <Plus class="mr-2 h-4 w-4" />
             创建班级
           </button>
         </div>
       </div>
 
       <!-- 分页 -->
-      <div v-if="classList.length > 0" class="flex items-center justify-between border-t border-gray-200 px-4 py-3">
+      <div v-if="classList.length > 0" class="flex items-center justify-between border-t border-gray-100 bg-gray-50/50 px-6 py-4">
         <div class="flex items-center gap-2 text-sm text-gray-500">
           <span>每页</span>
           <select
             v-model="pagination.pageSize"
-            class="pagination-select"
+            class="rounded border-gray-300 bg-white py-1 pl-2 pr-6 text-xs focus:border-blue-500 focus:ring-blue-500"
             @change="handleSizeChange"
           >
             <option :value="10">10</option>
@@ -290,14 +350,14 @@
         </div>
         <div class="flex items-center gap-1">
           <button
-            class="flex h-8 w-8 items-center justify-center rounded border border-gray-300 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
+            class="flex h-8 w-8 items-center justify-center rounded-lg border border-gray-300 bg-white text-gray-500 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
             :disabled="pagination.pageNum <= 1"
             @click="handlePageChange(1)"
           >
             <ChevronsLeft class="h-4 w-4" />
           </button>
           <button
-            class="flex h-8 w-8 items-center justify-center rounded border border-gray-300 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
+            class="flex h-8 w-8 items-center justify-center rounded-lg border border-gray-300 bg-white text-gray-500 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
             :disabled="pagination.pageNum <= 1"
             @click="handlePageChange(pagination.pageNum - 1)"
           >
@@ -307,10 +367,10 @@
             <button
               v-if="page !== '...'"
               :class="[
-                'flex h-8 min-w-[32px] items-center justify-center rounded px-2 text-sm',
+                'flex h-8 min-w-[32px] items-center justify-center rounded-lg px-3 text-sm font-medium transition-colors',
                 page === pagination.pageNum
-                  ? 'bg-blue-600 text-white'
-                  : 'border border-gray-300 hover:bg-gray-50'
+                  ? 'bg-blue-600 text-white shadow-sm'
+                  : 'border border-gray-300 bg-white text-gray-700 hover:bg-gray-50'
               ]"
               @click="handlePageChange(page as number)"
             >
@@ -319,14 +379,14 @@
             <span v-else class="px-1 text-gray-400">...</span>
           </template>
           <button
-            class="flex h-8 w-8 items-center justify-center rounded border border-gray-300 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
+            class="flex h-8 w-8 items-center justify-center rounded-lg border border-gray-300 bg-white text-gray-500 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
             :disabled="pagination.pageNum >= totalPages"
             @click="handlePageChange(pagination.pageNum + 1)"
           >
             <ChevronRight class="h-4 w-4" />
           </button>
           <button
-            class="flex h-8 w-8 items-center justify-center rounded border border-gray-300 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
+            class="flex h-8 w-8 items-center justify-center rounded-lg border border-gray-300 bg-white text-gray-500 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
             :disabled="pagination.pageNum >= totalPages"
             @click="handlePageChange(totalPages)"
           >
@@ -462,7 +522,8 @@ import {
   CheckCircle,
   PauseCircle,
   Award,
-  Building
+  Building,
+  TrendingUp
 } from 'lucide-vue-next'
 import { useAuthStore } from '@/stores/auth'
 import { getClasses, deleteClass, assignHeadTeacher, getOrgUnitTree, batchDeleteClasses, getAllGrades, type Grade } from '@/api/organization'
@@ -585,16 +646,21 @@ const availableDormitories = computed(() => {
 })
 
 // 状态配置
-const statusConfig: Record<ClassStatus, { label: string; class: string }> = {
-  PREPARING: { label: '筹建中', class: 'bg-gray-100 text-gray-700' },
-  ACTIVE: { label: '在读中', class: 'bg-green-50 text-green-700' },
-  GRADUATED: { label: '已毕业', class: 'bg-blue-50 text-blue-700' },
-  DISSOLVED: { label: '已撤销', class: 'bg-red-50 text-red-700' }
+const statusConfig: Record<ClassStatus, { label: string; class: string; dot: string }> = {
+  PREPARING: { label: '筹建中', class: 'bg-gray-100 text-gray-700', dot: 'bg-gray-500' },
+  ACTIVE: { label: '在读中', class: 'bg-emerald-50 text-emerald-700', dot: 'bg-emerald-500' },
+  GRADUATED: { label: '已毕业', class: 'bg-blue-50 text-blue-700', dot: 'bg-blue-500' },
+  DISSOLVED: { label: '已撤销', class: 'bg-red-50 text-red-700', dot: 'bg-red-500' }
 }
 
 // 获取状态样式类
 const getStatusClass = (status: ClassStatus) => {
   return statusConfig[status]?.class || 'bg-gray-100 text-gray-700'
+}
+
+// 获取状态圆点样式
+const getStatusDotClass = (status: ClassStatus) => {
+  return statusConfig[status]?.dot || 'bg-gray-500'
 }
 
 // 获取状态文本

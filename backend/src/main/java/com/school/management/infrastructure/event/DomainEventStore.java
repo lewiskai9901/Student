@@ -198,6 +198,25 @@ public class DomainEventStore {
     }
 
     /**
+     * Retrieves a stored event by its event ID.
+     *
+     * @param eventId the event ID
+     * @return the stored event, if found
+     */
+    public Optional<StoredEvent> findByEventId(String eventId) {
+        String sql = """
+            SELECT id, event_id, event_type, aggregate_type, aggregate_id,
+                   aggregate_version, payload, metadata, occurred_at, created_at
+            FROM domain_events
+            WHERE event_id = ?
+            LIMIT 1
+            """;
+
+        List<StoredEvent> events = jdbcTemplate.query(sql, new StoredEventRowMapper(), eventId);
+        return events.isEmpty() ? Optional.empty() : Optional.of(events.get(0));
+    }
+
+    /**
      * Deserializes a stored event payload to a domain event.
      *
      * @param storedEvent the stored event
@@ -249,8 +268,8 @@ public class DomainEventStore {
                     rs.getInt("aggregate_version"),
                     rs.getString("payload"),
                     rs.getString("metadata"),
-                    rs.getTimestamp("occurred_at").toInstant(),
-                    rs.getTimestamp("created_at").toLocalDateTime()
+                    rs.getTimestamp("occurred_at") != null ? rs.getTimestamp("occurred_at").toInstant() : Instant.now(),
+                    rs.getTimestamp("created_at") != null ? rs.getTimestamp("created_at").toLocalDateTime() : LocalDateTime.now()
             );
         }
     }

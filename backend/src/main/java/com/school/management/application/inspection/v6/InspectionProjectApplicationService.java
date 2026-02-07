@@ -14,6 +14,7 @@ import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.Optional;
+import java.util.concurrent.ThreadLocalRandom;
 
 /**
  * V6检查项目应用服务
@@ -47,7 +48,7 @@ public class InspectionProjectApplicationService {
                 command.getCreatedBy()
         );
 
-        project.setDescription(command.getDescription());
+        project.updateDescription(command.getDescription());
 
         return projectRepository.save(project);
     }
@@ -194,7 +195,7 @@ public class InspectionProjectApplicationService {
     private String generateProjectCode() {
         String prefix = "PRJ";
         String date = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMdd"));
-        String random = String.format("%04d", (int) (Math.random() * 10000));
+        String random = String.format("%04d", ThreadLocalRandom.current().nextInt(10000));
         return prefix + date + random;
     }
 

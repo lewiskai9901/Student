@@ -125,7 +125,9 @@ public class StudentRepositoryImpl implements StudentRepository {
 
     @Override
     public long countByCriteria(StudentQueryCriteria criteria) {
-        // 简化实现：返回总数
+        if (StringUtils.hasText(criteria.getKeyword())) {
+            return studentMapper.countByKeyword(criteria.getKeyword());
+        }
         return studentMapper.countAll();
     }
 

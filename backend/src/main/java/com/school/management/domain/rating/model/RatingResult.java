@@ -80,8 +80,9 @@ public class RatingResult extends AggregateRoot<Long> {
         result.createdAt = LocalDateTime.now();
         result.updatedAt = result.createdAt;
 
+        // Note: getId() is null before persistence; event consumers must handle null resultId
         result.registerEvent(RatingCalculatedEvent.of(
-            result.getId(), ratingConfigId, classId, className, ranking, finalScore, awarded));
+            null, ratingConfigId, classId, className, ranking, finalScore, awarded));
 
         return result;
     }

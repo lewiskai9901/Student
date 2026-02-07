@@ -193,7 +193,9 @@ public class MajorDirection implements Entity<Long> {
      */
     public String getLevelDisplay() {
         if (segmented != null && segmented) {
-            return phase1Level + " → " + phase2Level;
+            String p1 = phase1Level != null ? phase1Level : "";
+            String p2 = phase2Level != null ? phase2Level : "";
+            return p1 + " → " + p2;
         }
         return level;
     }
@@ -203,9 +205,11 @@ public class MajorDirection implements Entity<Long> {
      */
     public String getYearsDisplay() {
         if (segmented != null && segmented) {
-            return phase1Years + "+" + phase2Years + "年";
+            int p1 = phase1Years != null ? phase1Years : 0;
+            int p2 = phase2Years != null ? phase2Years : 0;
+            return p1 + "+" + p2 + "年";
         }
-        return years + "年";
+        return (years != null ? years : 0) + "年";
     }
 
     private void validate() {

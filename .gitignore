@@ -6,6 +6,9 @@ frontend/node_modules/
 miniprogram/node_modules/
 miniprogram/dist/
 miniprogram/miniprogram_npm/
+**/node_modules/
+**/target/
+**/dist/
 
 # IDE文件
 .idea/
@@ -28,6 +31,10 @@ frontend/*.log
 *.temp
 *.cache
 *.class
+*.bak
+*.orig
+NUL
+nul
 GeneratePassword.java
 
 # 系统文件
@@ -49,23 +56,29 @@ backup_*.sql
 backup_*.tar.gz
 student_management_backup_*.tar.gz
 
-# 其他
-.history/
-/archive/
+# 备份目录
 backups/
+/archive/
+.history/
 
 # 部署包/编译产物
-deploy/package/backend/*.jar
-deploy/package/frontend/
+deploy/package/
 *.jar
 
 # 上传文件
 uploads/
 
+# 测试产物
+test-results/
+playwright-report/
+coverage/
+
 # 敏感配置
 token.txt
+test_token.txt
 application-secret.yml
 application-local.yml
-backend/nul
-frontend/nul
-nul
+
+# 禁用代码目录
+backend/_disabled_sources/
+backend/temp_disabled/

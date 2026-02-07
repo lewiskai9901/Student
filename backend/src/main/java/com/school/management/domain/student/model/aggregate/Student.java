@@ -281,13 +281,15 @@ public class Student extends AggregateRoot<Long> {
         this.status = newStatus;
         this.updatedAt = LocalDateTime.now();
 
-        registerEvent(new StudentStatusChangedEvent(
-                this.getId().toString(),
-                this.studentNo,
-                oldStatus,
-                newStatus,
-                reason
-        ));
+        if (this.getId() != null) {
+            registerEvent(new StudentStatusChangedEvent(
+                    this.getId().toString(),
+                    this.studentNo,
+                    oldStatus,
+                    newStatus,
+                    reason
+            ));
+        }
     }
 
     /**

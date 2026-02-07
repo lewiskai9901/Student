@@ -140,9 +140,12 @@ public class OutboxProcessor {
      * Finds the stored event by event ID.
      */
     private DomainEventStore.StoredEvent findStoredEvent(String eventId) {
-        // We need to query by event_id - for now, use a simple approach
-        // In production, you might want to add a findByEventId method to DomainEventStore
-        return null; // The event is already stored; outbox is just for tracking publication
+        try {
+            return eventStore.findByEventId(eventId).orElse(null);
+        } catch (Exception e) {
+            log.warn("Failed to find stored event: eventId={}, error={}", eventId, e.getMessage());
+            return null;
+        }
     }
 
     /**

@@ -147,12 +147,15 @@ public class InspectionExecutionApplicationService {
         InspectionDetail saved = detailRepository.save(detail);
 
         // 计算分数变化并更新目标
-        BigDecimal scoreDiff = saved.getTotalScore().subtract(oldTotalScore);
-        if (scoreDiff.compareTo(BigDecimal.ZERO) != 0) {
-            if (saved.getScoringMode() == ScoringMode.DEDUCTION) {
-                // 扣分变化：负数变大表示扣分减少，需要减少扣分总计
-                targetRepository.addDeduction(saved.getTargetId(), scoreDiff.negate());
-            } else if (saved.getScoringMode() == ScoringMode.ADDITION) {
+        if (saved.getScoringMode() == ScoringMode.DEDUCTION) {
+            // deduction_total stores positive values; compute delta using abs to stay consistent
+            BigDecimal deductionDiff = saved.getTotalScore().abs().subtract(oldTotalScore.abs());
+            if (deductionDiff.compareTo(BigDecimal.ZERO) != 0) {
+                targetRepository.addDeduction(saved.getTargetId(), deductionDiff);
+            }
+        } else if (saved.getScoringMode() == ScoringMode.ADDITION) {
+            BigDecimal scoreDiff = saved.getTotalScore().subtract(oldTotalScore);
+            if (scoreDiff.compareTo(BigDecimal.ZERO) != 0) {
                 targetRepository.addBonus(saved.getTargetId(), scoreDiff);
             }
         }

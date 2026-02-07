@@ -123,10 +123,12 @@ public class RoleRepositoryImpl implements RoleRepository {
 
     @Override
     public List<Role> findByRoleType(RoleType roleType) {
-        // The database doesn't have role_type column, filter in memory
+        // The database doesn't have role_type column, so we must filter in memory.
+        // Optimization: first filter using lightweight toDomain (no permission loading),
+        // then load permissions only for matched roles.
         return roleMapper.findAll().stream()
+            .filter(po -> inferRoleType(po.getRoleCode()) == roleType)
             .map(this::toDomainWithPermissions)
-            .filter(r -> r.getRoleType() == roleType)
             .collect(Collectors.toList());
     }
 
@@ -139,10 +141,12 @@ public class RoleRepositoryImpl implements RoleRepository {
 
     @Override
     public List<Role> findSystemRoles() {
-        // The database doesn't have is_system column, filter by role_code pattern
+        // The database doesn't have is_system column, filter by role_code pattern.
+        // Optimization: filter on PO level first to avoid loading permissions for non-system roles.
         return roleMapper.findAll().stream()
+            .filter(po -> po.getRoleCode() != null &&
+                (po.getRoleCode().startsWith("ROLE_ADMIN") || po.getRoleCode().equals("admin")))
             .map(this::toDomainWithPermissions)
-            .filter(r -> r.getIsSystem() != null && r.getIsSystem())
             .collect(Collectors.toList());
     }
 
