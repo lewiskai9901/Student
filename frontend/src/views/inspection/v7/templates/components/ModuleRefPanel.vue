@@ -40,7 +40,7 @@ async function loadRefs() {
     for (const r of refs.value) {
       if (!templateNames.value.has(r.moduleTemplateId)) {
         try {
-          const tpl = await inspTemplateApi.getTemplate(r.moduleTemplateId)
+          const tpl = await inspTemplateApi.getById(r.moduleTemplateId)
           templateNames.value.set(r.moduleTemplateId, tpl)
         } catch { /* ignore */ }
       }
@@ -54,11 +54,11 @@ async function openPicker() {
   showPicker.value = true
   pickerLoading.value = true
   try {
-    const result = await inspTemplateApi.getTemplates({ page: 1, size: 100 })
+    const result = await inspTemplateApi.getList({ page: 1, size: 100 })
     // Filter out self and already-referenced templates
-    const existingIds = new Set(refs.value.map(r => r.moduleTemplateId))
-    existingIds.add(props.templateId)
-    availableTemplates.value = result.records.filter(t => !existingIds.has(t.id))
+    const existingIds = new Set(refs.value.map(r => Number(r.moduleTemplateId)))
+    existingIds.add(Number(props.templateId))
+    availableTemplates.value = result.records.filter(t => !existingIds.has(Number(t.id)))
   } finally {
     pickerLoading.value = false
   }
@@ -83,7 +83,8 @@ async function addRef(moduleTemplate: InspTemplate) {
 async function updateWeight(refItem: TemplateModuleRef, newWeight: number) {
   try {
     await templateModuleRefApi.update(props.templateId, refItem.id, { weight: newWeight })
-    refItem.weight = newWeight
+    const original = refs.value.find(r => r.id === refItem.id)
+    if (original) original.weight = newWeight
   } catch (e: any) {
     ElMessage.error(e.message || '更新权重失败')
   }

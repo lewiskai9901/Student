@@ -26,6 +26,7 @@ public class InspTemplateApplicationService {
     private final TemplateVersionRepository versionRepository;
     private final TemplateSectionRepository sectionRepository;
     private final TemplateItemRepository itemRepository;
+    private final TemplateModuleRefRepository moduleRefRepository;
     private final SpringDomainEventPublisher eventPublisher;
     private final ObjectMapper objectMapper;
 
@@ -93,9 +94,10 @@ public class InspTemplateApplicationService {
 
         List<TemplateSection> sections = sectionRepository.findByTemplateId(id);
         List<TemplateItem> items = itemRepository.findByTemplateId(id);
+        List<TemplateModuleRef> moduleRefs = moduleRefRepository.findByCompositeTemplateId(id);
 
-        if (sections.isEmpty()) {
-            throw new IllegalArgumentException("模板至少需要一个分区才能发布");
+        if (sections.isEmpty() && moduleRefs.isEmpty()) {
+            throw new IllegalArgumentException("模板至少需要一个分区或子模板引用才能发布");
         }
 
         // Build structure snapshot
@@ -104,6 +106,7 @@ public class InspTemplateApplicationService {
             Map<String, Object> structure = new HashMap<>();
             structure.put("sections", sections);
             structure.put("items", items);
+            structure.put("moduleRefs", moduleRefs);
             structureSnapshot = objectMapper.writeValueAsString(structure);
         } catch (Exception e) {
             throw new RuntimeException("序列化模板结构失败", e);

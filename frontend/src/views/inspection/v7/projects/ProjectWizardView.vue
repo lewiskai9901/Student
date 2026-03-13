@@ -5,6 +5,7 @@ import { ElMessage } from 'element-plus'
 import { useInspExecutionStore } from '@/stores/insp/inspExecutionStore'
 import { useInspTemplateStore } from '@/stores/insp/inspTemplateStore'
 import { templateModuleRefApi } from '@/api/insp/templateModuleRef'
+import { inspTemplateApi } from '@/api/insp/template'
 import type { InspTemplate, TemplateModuleRef } from '@/types/insp/template'
 import { TargetTypeConfig, type TargetType } from '@/types/insp/enums'
 
@@ -17,6 +18,7 @@ const submitting = ref(false)
 const templates = ref<InspTemplate[]>([])
 const moduleRefs = ref<TemplateModuleRef[]>([])
 const loadingRefs = ref(false)
+const moduleTemplateCache = ref<Map<number, InspTemplate>>(new Map())
 
 const steps = [
   { title: '基本信息', description: '项目名称和描述' },
@@ -87,11 +89,14 @@ const selectedTemplate = computed(() =>
 )
 
 function getTemplateName(templateId: number): string {
-  return templates.value.find(t => t.id === templateId)?.templateName ?? `模板#${templateId}`
+  return templates.value.find(t => Number(t.id) === Number(templateId))?.templateName
+    ?? moduleTemplateCache.value.get(Number(templateId))?.templateName
+    ?? `模板#${templateId}`
 }
 
 function getTemplateTargetType(templateId: number): TargetType | undefined {
-  return templates.value.find(t => t.id === templateId)?.targetType
+  return templates.value.find(t => Number(t.id) === Number(templateId))?.targetType
+    ?? moduleTemplateCache.value.get(Number(templateId))?.targetType
 }
 
 watch(() => form.templateId, async (newId) => {
@@ -100,6 +105,16 @@ watch(() => form.templateId, async (newId) => {
   loadingRefs.value = true
   try {
     moduleRefs.value = await templateModuleRefApi.list(newId)
+    // Load template details for module refs not in published list
+    for (const r of moduleRefs.value) {
+      const mid = Number(r.moduleTemplateId)
+      if (!templates.value.find(t => Number(t.id) === mid) && !moduleTemplateCache.value.has(mid)) {
+        try {
+          const tpl = await inspTemplateApi.getById(mid)
+          moduleTemplateCache.value.set(mid, tpl)
+        } catch { /* ignore */ }
+      }
+    }
   } catch { /* ignore */ }
   loadingRefs.value = false
 })
