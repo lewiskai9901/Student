@@ -89,6 +89,8 @@ public class InspSubmissionRepositoryImpl implements InspSubmissionRepository {
         po.setCheckinTime(d.getCheckinTime());
         po.setSyncVersion(d.getSyncVersion());
         po.setCompletedAt(d.getCompletedAt());
+        po.setClosedAt(d.getClosedAt());
+        po.setClosedReason(d.getClosedReason());
         po.setCreatedAt(d.getCreatedAt());
         po.setUpdatedAt(d.getUpdatedAt());
         return po;
@@ -122,6 +124,8 @@ public class InspSubmissionRepositoryImpl implements InspSubmissionRepository {
                 .checkinTime(po.getCheckinTime())
                 .syncVersion(po.getSyncVersion())
                 .completedAt(po.getCompletedAt())
+                .closedAt(po.getClosedAt())
+                .closedReason(po.getClosedReason())
                 .createdAt(po.getCreatedAt())
                 .updatedAt(po.getUpdatedAt()));
     }

@@ -1117,6 +1117,18 @@ const routes: RouteRecordRaw[] = [
             }
           },
           {
+            path: '/system/event-types',
+            name: 'EventTypeConfig',
+            component: () => import('@/views/system/EventTypeConfigView.vue'),
+            meta: {
+              title: '事件类型',
+              icon: 'Bell',
+              requiresAuth: true,
+              permission: 'settings:event-types',
+              order: 6.5
+            }
+          },
+          {
             path: '/system/configs',
             name: 'SystemConfigs',
             component: () => import('@/views/system/SystemConfigsView.vue'),

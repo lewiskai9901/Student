@@ -37,6 +37,7 @@ public class InspProjectPO {
     private Boolean calibrationEnabled;
     private String calibrationMethod;
     private String splitStrategy;
+    private String scoringConfigSnapshot;
     private String status;
     private Long createdBy;
     private LocalDateTime createdAt;

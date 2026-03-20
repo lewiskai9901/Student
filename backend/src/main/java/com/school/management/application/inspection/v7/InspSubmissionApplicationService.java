@@ -1,9 +1,11 @@
 package com.school.management.application.inspection.v7;
 
+import com.school.management.application.event.EntityEventApplicationService;
 import com.school.management.domain.inspection.model.v7.execution.*;
 import com.school.management.domain.inspection.model.v7.scoring.*;
 import com.school.management.domain.inspection.repository.v7.*;
 import com.school.management.infrastructure.event.SpringDomainEventPublisher;
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -12,6 +14,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 @Slf4j
@@ -27,6 +30,7 @@ public class InspSubmissionApplicationService {
     private final ScoreAggregationService scoreAggregationService;
     private final SpringDomainEventPublisher eventPublisher;
     private final ObjectMapper objectMapper;
+    private final EntityEventApplicationService entityEventApplicationService;
 
     // ========== Submission CRUD ==========
 
@@ -114,6 +118,9 @@ public class InspSubmissionApplicationService {
         eventPublisher.publishAll(saved.getDomainEvents());
         saved.clearDomainEvents();
 
+        // 发布 EntityEvent 数据流：INSP_VIOLATION 和 INSP_GRADE
+        publishInspectionEvents(saved, details, project);
+
         // 更新 task 的 completedTargets
         updateTaskCompletedCount(task);
 
@@ -129,6 +136,74 @@ public class InspSubmissionApplicationService {
                                               BigDecimal bonusTotal, String scoreBreakdown,
                                               String grade, Boolean passed) {
         return completeSubmission(id);
+    }
+
+    /**
+     * 发布检查相关的 EntityEvent：
+     * - INSP_VIOLATION: 每条违规记录（VIOLATION_RECORD 类型字段）
+     * - INSP_GRADE: 提交整体的评分事件（主体=检查目标）
+     */
+    private void publishInspectionEvents(InspSubmission submission,
+                                          List<SubmissionDetail> details,
+                                          InspProject project) {
+        String sourceRefType = "INSP_SUBMISSION";
+        Long sourceRefId = submission.getId();
+        String sourceModule = "INSPECTION_V7";
+
+        // 1. 遍历 details，发布 INSP_VIOLATION 事件
+        for (SubmissionDetail detail : details) {
+            if (!"VIOLATION_RECORD".equals(detail.getItemType())) continue;
+            String responseValue = detail.getResponseValue();
+            if (responseValue == null || responseValue.isBlank()) continue;
+            try {
+                // responseValue 是 JSON 数组，每项包含违规学生信息
+                List<Map<String, Object>> records = objectMapper.readValue(
+                        responseValue, new TypeReference<List<Map<String, Object>>>() {});
+                for (Map<String, Object> record : records) {
+                    Object studentId = record.get("studentId");
+                    Object studentName = record.get("studentName");
+                    if (studentId == null) continue;
+                    Long sid = Long.valueOf(studentId.toString());
+                    String sname = studentName != null ? studentName.toString() : "未知";
+                    String payload = objectMapper.writeValueAsString(record);
+                    entityEventApplicationService.createEvent(
+                            "student", sid, sname,
+                            "INSP_VIOLATION", "违规记录",
+                            payload, sourceModule,
+                            sourceRefType, sourceRefId,
+                            "inspection,violation", null, null
+                    );
+                }
+            } catch (Exception e) {
+                log.warn("解析 VIOLATION_RECORD responseValue 失败，submissionId={}, detailId={}: {}",
+                        submission.getId(), detail.getId(), e.getMessage());
+            }
+        }
+
+        // 2. 发布 INSP_GRADE 事件（主体=检查目标）
+        try {
+            String targetType = submission.getTargetType() != null
+                    ? submission.getTargetType().name().toLowerCase() : "unknown";
+            Long targetId = submission.getTargetId();
+            String targetName = submission.getTargetName() != null ? submission.getTargetName() : "";
+            Map<String, Object> gradePayload = Map.of(
+                    "projectId", project.getId() != null ? project.getId() : 0,
+                    "projectName", project.getProjectName() != null ? project.getProjectName() : "",
+                    "score", submission.getFinalScore() != null ? submission.getFinalScore() : BigDecimal.ZERO,
+                    "grade", submission.getGrade() != null ? submission.getGrade() : "",
+                    "passed", Boolean.TRUE.equals(submission.getPassed())
+            );
+            String gradePayloadJson = objectMapper.writeValueAsString(gradePayload);
+            entityEventApplicationService.createEvent(
+                    targetType, targetId, targetName,
+                    "INSP_GRADE", "检查评分",
+                    gradePayloadJson, sourceModule,
+                    sourceRefType, sourceRefId,
+                    "inspection,grade", null, null
+            );
+        } catch (Exception e) {
+            log.warn("发布 INSP_GRADE 事件失败，submissionId={}: {}", submission.getId(), e.getMessage());
+        }
     }
 
     /**

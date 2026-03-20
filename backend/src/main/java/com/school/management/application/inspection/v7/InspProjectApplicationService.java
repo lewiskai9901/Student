@@ -1,9 +1,12 @@
 package com.school.management.application.inspection.v7;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.school.management.domain.inspection.model.v7.execution.*;
+import com.school.management.domain.inspection.model.v7.scoring.ScoringProfile;
 import com.school.management.domain.inspection.repository.v7.InspProjectRepository;
 import com.school.management.domain.inspection.repository.v7.ProjectInspectorRepository;
 import com.school.management.domain.inspection.repository.v7.ProjectScoreRepository;
+import com.school.management.domain.inspection.repository.v7.ScoringProfileRepository;
 import com.school.management.infrastructure.event.SpringDomainEventPublisher;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.annotation.Lazy;
@@ -13,7 +16,9 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.ThreadLocalRandom;
 
@@ -25,15 +30,21 @@ public class InspProjectApplicationService {
     private final ProjectInspectorRepository inspectorRepository;
     private final ProjectScoreRepository scoreRepository;
     private final SpringDomainEventPublisher eventPublisher;
+    private final ScoringProfileRepository scoringProfileRepository;
+    private final ObjectMapper objectMapper;
 
     public InspProjectApplicationService(InspProjectRepository projectRepository,
                                           ProjectInspectorRepository inspectorRepository,
                                           ProjectScoreRepository scoreRepository,
-                                          SpringDomainEventPublisher eventPublisher) {
+                                          SpringDomainEventPublisher eventPublisher,
+                                          ScoringProfileRepository scoringProfileRepository,
+                                          ObjectMapper objectMapper) {
         this.projectRepository = projectRepository;
         this.inspectorRepository = inspectorRepository;
         this.scoreRepository = scoreRepository;
         this.eventPublisher = eventPublisher;
+        this.scoringProfileRepository = scoringProfileRepository;
+        this.objectMapper = objectMapper;
     }
 
     // ========== Project CRUD ==========
@@ -107,6 +118,36 @@ public class InspProjectApplicationService {
         }
         if (project.getStartDate() == null) {
             throw new IllegalStateException("请先设置开始日期");
+        }
+
+        // 锁定评分配置快照
+        try {
+            Long rootSectionId = project.getRootSectionId();
+            if (rootSectionId != null) {
+                scoringProfileRepository.findBySectionId(rootSectionId).ifPresent(profile -> {
+                    try {
+                        Map<String, Object> snapshotMap = new HashMap<>();
+                        snapshotMap.put("profileId", profile.getId());
+                        snapshotMap.put("sectionId", profile.getSectionId());
+                        snapshotMap.put("maxScore", profile.getMaxScore());
+                        snapshotMap.put("minScore", profile.getMinScore());
+                        snapshotMap.put("precisionDigits", profile.getPrecisionDigits());
+                        snapshotMap.put("multiRaterMode", profile.getMultiRaterMode());
+                        snapshotMap.put("calibrationEnabled", profile.getCalibrationEnabled());
+                        snapshotMap.put("calibrationMethod", profile.getCalibrationMethod());
+                        snapshotMap.put("trendFactorEnabled", profile.getTrendFactorEnabled());
+                        snapshotMap.put("decayEnabled", profile.getDecayEnabled());
+                        snapshotMap.put("decayMode", profile.getDecayMode());
+                        snapshotMap.put("snapshotAt", LocalDateTime.now().toString());
+                        String snapshot = objectMapper.writeValueAsString(snapshotMap);
+                        project.lockScoringConfig(snapshot);
+                    } catch (Exception e) {
+                        log.warn("序列化评分配置快照失败，projectId={}: {}", project.getId(), e.getMessage());
+                    }
+                });
+            }
+        } catch (Exception e) {
+            log.warn("锁定评分配置快照过程中出错，projectId={}: {}", project.getId(), e.getMessage());
         }
 
         project.publish(templateVersionId);

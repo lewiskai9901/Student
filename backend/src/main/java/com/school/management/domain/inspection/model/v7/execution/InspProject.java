@@ -44,6 +44,7 @@ public class InspProject extends AggregateRoot<Long> {
     private Boolean calibrationEnabled;
     private String calibrationMethod;    // Z_SCORE, MIN_MAX, PERCENTILE_RANK
     private String splitStrategy;        // NONE, BY_TARGET, BY_SECTION, MANUAL
+    private String scoringConfigSnapshot; // JSON 快照，发布时锁定
     private ProjectStatus status;
     private Long createdBy;
     private LocalDateTime createdAt;
@@ -77,6 +78,7 @@ public class InspProject extends AggregateRoot<Long> {
         this.calibrationEnabled = builder.calibrationEnabled != null ? builder.calibrationEnabled : false;
         this.calibrationMethod = builder.calibrationMethod;
         this.splitStrategy = builder.splitStrategy != null ? builder.splitStrategy : "NONE";
+        this.scoringConfigSnapshot = builder.scoringConfigSnapshot;
         this.reviewRequired = builder.reviewRequired != null ? builder.reviewRequired : true;
         this.autoPublish = builder.autoPublish != null ? builder.autoPublish : false;
         this.status = builder.status != null ? builder.status : ProjectStatus.DRAFT;
@@ -147,6 +149,14 @@ public class InspProject extends AggregateRoot<Long> {
         this.updatedAt = LocalDateTime.now();
     }
 
+    /**
+     * 锁定评分配置快照（发布时调用）
+     */
+    public void lockScoringConfig(String snapshot) {
+        this.scoringConfigSnapshot = snapshot;
+        this.updatedAt = LocalDateTime.now();
+    }
+
     public void updateInfo(String projectName, Long rootSectionId, Long scoringProfileId,
                            ScopeType scopeType, String scopeConfig,
                            LocalDate startDate, LocalDate endDate,
@@ -213,6 +223,7 @@ public class InspProject extends AggregateRoot<Long> {
     public Boolean getCalibrationEnabled() { return calibrationEnabled; }
     public String getCalibrationMethod() { return calibrationMethod; }
     public String getSplitStrategy() { return splitStrategy; }
+    public String getScoringConfigSnapshot() { return scoringConfigSnapshot; }
     public ProjectStatus getStatus() { return status; }
     public Long getCreatedBy() { return createdBy; }
     public LocalDateTime getCreatedAt() { return createdAt; }
@@ -251,6 +262,7 @@ public class InspProject extends AggregateRoot<Long> {
         private Boolean calibrationEnabled;
         private String calibrationMethod;
         private String splitStrategy;
+        private String scoringConfigSnapshot;
         private ProjectStatus status;
         private Long createdBy;
         private LocalDateTime createdAt;
@@ -282,6 +294,7 @@ public class InspProject extends AggregateRoot<Long> {
         public Builder calibrationEnabled(Boolean calibrationEnabled) { this.calibrationEnabled = calibrationEnabled; return this; }
         public Builder calibrationMethod(String calibrationMethod) { this.calibrationMethod = calibrationMethod; return this; }
         public Builder splitStrategy(String splitStrategy) { this.splitStrategy = splitStrategy; return this; }
+        public Builder scoringConfigSnapshot(String scoringConfigSnapshot) { this.scoringConfigSnapshot = scoringConfigSnapshot; return this; }
         public Builder status(ProjectStatus status) { this.status = status; return this; }
         public Builder createdBy(Long createdBy) { this.createdBy = createdBy; return this; }
         public Builder createdAt(LocalDateTime createdAt) { this.createdAt = createdAt; return this; }

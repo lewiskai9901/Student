@@ -1,35 +1,32 @@
 <script setup lang="ts">
 /**
- * TaskExecutionView - Design B
+ * TaskExecutionView — V7 打分界面（重写版）
  *
- * Layout:
- *   [Top bar]       back + task name + task code + status actions
- *   [Root targets]  horizontal pills filtered from submissions' rootTargetId
- *   [Section tabs]  first-level sections (direct children of root)
- *   [Left | Right]  target list sidebar  |  scoring form
- *   [Bottom bar]    save draft + submit target
+ * 布局：
+ *   顶部导航栏：返回 + 任务信息 + 任务操作
+ *   主体两栏：
+ *     左：分区导航（section nav）+ 完成进度指示
+ *     右：顶部目标选择器 + 字段列表（按 scoringMode 渲染不同控件）+ 底部实时得分
  */
 import { ref, computed, onMounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import {
   ArrowLeft, Play, Send, Lock, SkipForward, Check, X,
-  AlertTriangle, ChevronLeft, ChevronRight, ChevronDown,
+  AlertTriangle, ChevronLeft, ChevronRight, Plus, Minus,
+  Flag, Star,
 } from 'lucide-vue-next'
 import { useInspExecutionStore } from '@/stores/insp/inspExecutionStore'
 import {
-  TaskStatusConfig, type TaskStatus,
-  SubmissionStatusConfig, type SubmissionStatus,
+  TaskStatusConfig, SubmissionStatusConfig, ScoringModeConfig, TargetTypeConfig,
+  type TaskStatus, type SubmissionStatus, type ScoringMode,
 } from '@/types/insp/enums'
 import type { InspTask, InspSubmission, SubmissionDetail } from '@/types/insp/project'
 import type { TemplateSection } from '@/types/insp/template'
-import { useSubmissionScoring, MODE_LABEL, MODE_TAG_TYPE } from '@/composables/insp/useSubmissionScoring'
-import { useConditionLogicState } from '@/composables/insp/useConditionLogicState'
 import { getProject } from '@/api/insp/project'
 import { inspTemplateApi } from '@/api/insp/template'
-import ScoringItemRow from './components/ScoringItemRow.vue'
-import PersonScoreGrid from './components/PersonScoreGrid.vue'
 import ViolationRecordInput from './components/ViolationRecordInput.vue'
+import PersonScoreGrid from './components/PersonScoreGrid.vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -39,259 +36,149 @@ const taskId = Number(route.params.id)
 // ==================== Core State ====================
 
 const loading = ref(false)
+const detailLoading = ref(false)
 const task = ref<InspTask | null>(null)
 const submissions = ref<InspSubmission[]>([])
 const selectedSubmission = ref<InspSubmission | null>(null)
 const details = ref<SubmissionDetail[]>([])
-
-// Section tree state
 const allSections = ref<TemplateSection[]>([])
 const rootSectionId = ref<number | null>(null)
 
-// Selection state
-const selectedRootTargetId = ref<number | null>(null)
+// Active first-level section
 const activeSectionId = ref<number | null>(null)
 
-// Collapsible sub-section state
-const collapsedSections = ref<Set<string>>(new Set())
+// Per-detail input state
+const numberInputs = ref<Record<number, number>>({})
+const selectInputs = ref<Record<number, string>>({})
+const textInputs = ref<Record<number, string>>({})
 
 const isEditable = computed(() => selectedSubmission.value?.status === 'IN_PROGRESS')
 
-// ==================== Composables ====================
+// ==================== Section Nav (left panel) ====================
 
-const sectionConditions = computed(() => store.sectionConditions)
-
-const conditionLogic = useConditionLogicState(details, sectionConditions, ref({}))
-
-const scoring = useSubmissionScoring(
-  details,
-  store,
-  conditionLogic.getScoreOverride,
-  conditionLogic.isItemDisabled,
-  conditionLogic.isItemVisible,
+/** First-level sections = direct children of root */
+const firstLevelSections = computed(() =>
+  allSections.value.filter(s => s.parentSectionId === rootSectionId.value),
 )
 
-scoring.setConditionRequiredFn(conditionLogic.isItemConditionallyRequired)
-
-// ==================== Root Targets ====================
-
-interface RootTarget {
-  id: number | null
-  name: string
-  count: number
-  completedCount: number
+/** For each first-level section: how many submissions belong to it? */
+function getSectionSubmissions(sectionId: number): InspSubmission[] {
+  return submissions.value.filter(s => s.sectionId === sectionId)
 }
 
-const rootTargets = computed<RootTarget[]>(() => {
-  const map = new Map<number | null, { name: string; count: number; completed: number }>()
-  for (const sub of submissions.value) {
-    const key = sub.rootTargetId
-    if (!map.has(key)) {
-      map.set(key, {
-        name: sub.rootTargetName || '(未分组)',
-        count: 0,
-        completed: 0,
-      })
-    }
-    const entry = map.get(key)!
-    entry.count++
-    if (sub.status === 'COMPLETED' || sub.status === 'SKIPPED') {
-      entry.completed++
-    }
-  }
-  return Array.from(map, ([id, v]) => ({
-    id,
-    name: v.name,
-    count: v.count,
-    completedCount: v.completed,
-  }))
-})
-
-// ==================== First-level Sections ====================
-
-const firstLevelSections = computed(() => {
-  if (!rootSectionId.value) return []
-  return allSections.value.filter(s => s.parentSectionId === rootSectionId.value)
-})
-
-// ==================== Filtered Submissions ====================
-
-/** Submissions filtered by both root target and section */
-const filteredSubmissions = computed(() => {
-  let filtered = submissions.value
-
-  // Filter by root target
-  if (selectedRootTargetId.value !== null || rootTargets.value.length > 0) {
-    filtered = filtered.filter(s => s.rootTargetId === selectedRootTargetId.value)
-  }
-
-  // Filter by active section
-  if (activeSectionId.value) {
-    filtered = filtered.filter(s => s.sectionId === activeSectionId.value)
-  }
-
-  return filtered
-})
-
-// ==================== Overview Tab ====================
-
-/** "Overview" is a virtual tab with id = 0. Real tabs are first-level sections. */
-const OVERVIEW_TAB_ID = 0
-
-const activeSectionTab = computed({
-  get: () => activeSectionId.value ?? OVERVIEW_TAB_ID,
-  set: (val: number) => {
-    activeSectionId.value = val === OVERVIEW_TAB_ID ? null : val
-    // When switching section tab, auto-clear selected submission
-    selectedSubmission.value = null
-    details.value = []
-  },
-})
-
-// ==================== Form: section + child sections ====================
-
-/**
- * Build the form structure for the selected submission.
- * The form shows:
- *   - All items from the active section
- *   - Items from child sections that have NO targetType (they inherit the parent target)
- * Sub-sections are rendered as collapsible group headers.
- */
-interface FormGroup {
-  sectionId: number | null
-  sectionName: string
-  isSubSection: boolean
-  regularItems: SubmissionDetail[]
-  personScoreItems: SubmissionDetail[]
-  violationRecordItems: SubmissionDetail[]
+function getSectionProgress(sectionId: number): { done: number; total: number } {
+  const subs = getSectionSubmissions(sectionId)
+  const done = subs.filter(s => s.status === 'COMPLETED' || s.status === 'SKIPPED').length
+  return { done, total: subs.length }
 }
 
-const formGroups = computed<FormGroup[]>(() => {
-  if (!selectedSubmission.value || details.value.length === 0) return []
+/** Status icon for section: ● done (green) ◐ in-progress (blue) ○ not started (gray) */
+function getSectionIcon(sectionId: number): 'done' | 'partial' | 'empty' {
+  const { done, total } = getSectionProgress(sectionId)
+  if (total === 0) return 'empty'
+  if (done === total) return 'done'
+  if (done > 0) return 'partial'
+  return 'empty'
+}
 
-  const visible = scoring.visibleDetails.value
+// ==================== Targets in right panel ====================
 
-  // Group by sectionId (which maps to either the active section or its child sections)
-  const sectionMap = new Map<number | null, SubmissionDetail[]>()
-  for (const d of visible) {
-    const key = d.sectionId
-    if (!sectionMap.has(key)) sectionMap.set(key, [])
-    sectionMap.get(key)!.push(d)
-  }
-
-  // Build ordered groups. The active section items come first, then child sections sorted by sortOrder.
-  const groups: FormGroup[] = []
-
-  // Find child sections (sections whose parentSectionId = activeSectionId and have no targetType)
-  const childSections = activeSectionId.value
-    ? allSections.value
-        .filter(s => s.parentSectionId === activeSectionId.value && !s.targetType)
-        .sort((a, b) => a.sortOrder - b.sortOrder)
-    : []
-
-  // Items directly under the active section
-  const directItems = sectionMap.get(activeSectionId.value) || []
-  // Also collect items whose sectionId matches the active section by sectionName fallback
-  const activeSectionName = activeSectionId.value
-    ? allSections.value.find(s => s.id === activeSectionId.value)?.sectionName
-    : null
-
-  // Items that don't match any known child section go to the main group
-  const childSectionIds = new Set(childSections.map(s => s.id))
-  const mainItems = visible.filter(d => {
-    // Include if directly under active section or has no section assignment
-    if (d.sectionId === activeSectionId.value || d.sectionId === null) return true
-    if (!childSectionIds.has(d.sectionId!)) {
-      // Item belongs to a section that is not a direct child - check by name
-      if (d.sectionName === activeSectionName) return true
-    }
-    return false
-  })
-
-  if (mainItems.length > 0) {
-    groups.push(buildFormGroup(null, activeSectionName || '检查项', false, mainItems))
-  }
-
-  // Child section groups
-  for (const cs of childSections) {
-    const csItems = visible.filter(d => d.sectionId === cs.id || d.sectionName === cs.sectionName)
-    if (csItems.length > 0) {
-      groups.push(buildFormGroup(cs.id, cs.sectionName, true, csItems))
-    }
-  }
-
-  // If we have items not yet assigned to any group, put them in an "Other" group
-  const assignedIds = new Set(groups.flatMap(g => [
-    ...g.regularItems.map(d => d.id),
-    ...g.personScoreItems.map(d => d.id),
-    ...g.violationRecordItems.map(d => d.id),
-  ]))
-  const unassigned = visible.filter(d => !assignedIds.has(d.id))
-  if (unassigned.length > 0) {
-    groups.push(buildFormGroup(null, '其他', true, unassigned))
-  }
-
-  return groups
+/** Submissions for the currently active section */
+const sectionSubmissions = computed(() => {
+  if (!activeSectionId.value) return submissions.value
+  return submissions.value.filter(s => s.sectionId === activeSectionId.value)
 })
-
-function buildFormGroup(
-  sectionId: number | null,
-  name: string,
-  isSubSection: boolean,
-  items: SubmissionDetail[],
-): FormGroup {
-  return {
-    sectionId,
-    sectionName: name,
-    isSubSection,
-    regularItems: items.filter(d => d.itemType !== 'PERSON_SCORE' && d.itemType !== 'VIOLATION_RECORD'),
-    personScoreItems: items.filter(d => d.itemType === 'PERSON_SCORE'),
-    violationRecordItems: items.filter(d => d.itemType === 'VIOLATION_RECORD'),
-  }
-}
-
-function toggleSectionCollapse(sectionName: string) {
-  if (collapsedSections.value.has(sectionName)) {
-    collapsedSections.value.delete(sectionName)
-  } else {
-    collapsedSections.value.add(sectionName)
-  }
-}
-
-function isSectionCollapsed(sectionName: string): boolean {
-  return collapsedSections.value.has(sectionName)
-}
-
-// ==================== Navigation ====================
 
 const currentTargetIndex = computed(() => {
   if (!selectedSubmission.value) return -1
-  return filteredSubmissions.value.findIndex(s => s.id === selectedSubmission.value!.id)
+  return sectionSubmissions.value.findIndex(s => s.id === selectedSubmission.value!.id)
 })
 
-const hasPrevTarget = computed(() => currentTargetIndex.value > 0)
-const hasNextTarget = computed(() =>
-  currentTargetIndex.value >= 0 && currentTargetIndex.value < filteredSubmissions.value.length - 1,
+const hasPrev = computed(() => currentTargetIndex.value > 0)
+const hasNext = computed(() =>
+  currentTargetIndex.value >= 0 && currentTargetIndex.value < sectionSubmissions.value.length - 1,
 )
 
-function goToPrevTarget() {
-  if (hasPrevTarget.value) {
-    selectSubmission(filteredSubmissions.value[currentTargetIndex.value - 1])
-  }
+function goToPrev() {
+  if (hasPrev.value) selectSubmission(sectionSubmissions.value[currentTargetIndex.value - 1])
+}
+function goToNext() {
+  if (hasNext.value) selectSubmission(sectionSubmissions.value[currentTargetIndex.value + 1])
 }
 
-function goToNextTarget() {
-  if (hasNextTarget.value) {
-    selectSubmission(filteredSubmissions.value[currentTargetIndex.value + 1])
-  }
+// ==================== Scoring State & Helpers ====================
+
+function parseScoringConfig(detail: SubmissionDetail): any {
+  if (!detail.scoringConfig) return {}
+  try { return JSON.parse(detail.scoringConfig) } catch { return {} }
 }
 
-// ==================== Task Progress ====================
+function resolveMode(detail: SubmissionDetail): ScoringMode | null {
+  return detail.scoringMode || null
+}
 
-const progressText = computed(() => {
-  if (!task.value) return ''
-  const done = task.value.completedTargets + task.value.skippedTargets
-  return `${done}/${task.value.totalTargets}`
+function isNonScoring(detail: SubmissionDetail): boolean {
+  return !detail.scoringMode || detail.itemType === 'PERSON_SCORE' || detail.itemType === 'VIOLATION_RECORD'
+}
+
+/** Real-time score summary for selected submission */
+const scoreSummary = computed(() => {
+  const scoreable = details.value.filter(d => d.scoringMode && d.itemType !== 'PERSON_SCORE' && d.itemType !== 'VIOLATION_RECORD')
+  let scored = 0
+  let totalMax = 0
+  let earned = 0
+  let deductions = 0
+  let bonuses = 0
+  let passCount = 0
+  let failCount = 0
+
+  for (const d of scoreable) {
+    const cfg = parseScoringConfig(d)
+    const mode = d.scoringMode!
+    const maxPts: number = cfg.maxScore ?? cfg.baseScore ?? cfg.maxDeduction ?? 10
+
+    totalMax += maxPts
+    const inputVal = numberInputs.value[d.id]
+
+    if (inputVal !== undefined) {
+      scored++
+      if (mode === 'DEDUCTION') {
+        const deduct = Math.abs(inputVal)
+        deductions += deduct
+        earned += Math.max(0, maxPts - deduct)
+      } else if (mode === 'PASS_FAIL') {
+        const sel = selectInputs.value[d.id]
+        if (sel === 'PASS') { passCount++; earned += maxPts }
+        else if (sel === 'FAIL') { failCount++ }
+        else { scored-- }
+      } else if (mode === 'ADDITION') {
+        bonuses += inputVal
+        earned += inputVal
+      } else {
+        earned += inputVal
+      }
+    }
+  }
+
+  // PASS_FAIL counted via selectInputs - fixup scored count
+  const passFailItems = scoreable.filter(d => d.scoringMode === 'PASS_FAIL')
+  const passFailScored = passFailItems.filter(d => selectInputs.value[d.id] !== undefined).length
+  const otherItems = scoreable.filter(d => d.scoringMode !== 'PASS_FAIL')
+  const otherScored = otherItems.filter(d => numberInputs.value[d.id] !== undefined).length
+  const realScored = passFailScored + otherScored
+
+  const finalScore = Math.min(100, Math.max(0, earned))
+
+  return {
+    total: scoreable.length,
+    scored: realScored,
+    finalScore,
+    maxScore: totalMax,
+    deductions,
+    bonuses,
+    passCount,
+    failCount,
+  }
 })
 
 function getGrade(score: number): string {
@@ -305,10 +192,179 @@ function getGrade(score: number): string {
 
 function getGradeColor(grade: string): string {
   const c: Record<string, string> = {
-    'A+': '#10b981', A: '#22c55e', B: '#3b82f6', C: '#f59e0b', D: '#ef4444', F: '#dc2626',
+    'A+': '#10b981', A: '#10b981', B: '#1a6dff', C: '#f59e0b', D: '#ef4444', F: '#dc2626',
   }
   return c[grade] || '#6b7280'
 }
+
+// ==================== Deduction button groups ====================
+
+/** Generate deduction buttons based on scoringConfig.maxDeduction */
+function getDeductionSteps(detail: SubmissionDetail): number[] {
+  const cfg = parseScoringConfig(detail)
+  const max = cfg.maxDeduction ?? cfg.maxScore ?? 5
+  const step = cfg.step ?? 1
+  const steps: number[] = [0]
+  for (let i = step; i <= max; i += step) steps.push(-i)
+  return steps
+}
+
+/** Generate addition buttons */
+function getAdditionSteps(detail: SubmissionDetail): number[] {
+  const cfg = parseScoringConfig(detail)
+  const max = cfg.maxBonus ?? cfg.maxScore ?? 5
+  const step = cfg.step ?? 1
+  const steps: number[] = []
+  for (let i = 0; i <= max; i += step) steps.push(i)
+  return steps
+}
+
+/** Grade levels config */
+function getGradeLevels(detail: SubmissionDetail): Array<{ label: string; score: number }> {
+  const cfg = parseScoringConfig(detail)
+  if (cfg.levels && Array.isArray(cfg.levels)) return cfg.levels
+  return [
+    { label: '优', score: 100 },
+    { label: '良', score: 80 },
+    { label: '中', score: 60 },
+    { label: '差', score: 40 },
+  ]
+}
+
+/** Direct score range */
+function getDirectRange(detail: SubmissionDetail): { min: number; max: number } {
+  const cfg = parseScoringConfig(detail)
+  return { min: cfg.minScore ?? 0, max: cfg.maxScore ?? 100 }
+}
+
+/** Rating scale max stars */
+function getRatingMax(detail: SubmissionDetail): number {
+  const cfg = parseScoringConfig(detail)
+  return cfg.maxStars ?? cfg.maxRating ?? 5
+}
+
+/** Cumulative config */
+function getCumulativeConfig(detail: SubmissionDetail): { countLabel: string; scorePerUnit: number } {
+  const cfg = parseScoringConfig(detail)
+  return { countLabel: cfg.countLabel ?? '次', scorePerUnit: cfg.scorePerUnit ?? 1 }
+}
+
+// ==================== Input handlers ====================
+
+async function handleDeductionSelect(detail: SubmissionDetail, val: number) {
+  numberInputs.value[detail.id] = val
+  try {
+    await store.updateDetailResponse(detail.id, {
+      responseValue: String(val),
+      scoringMode: 'DEDUCTION',
+      score: val,
+    })
+  } catch { /* silent */ }
+}
+
+async function handlePassFail(detail: SubmissionDetail, val: 'PASS' | 'FAIL') {
+  selectInputs.value[detail.id] = val
+  const score = val === 'PASS' ? (parseScoringConfig(detail).maxScore ?? 10) : 0
+  try {
+    await store.updateDetailResponse(detail.id, {
+      responseValue: val,
+      scoringMode: 'PASS_FAIL',
+      score,
+    })
+  } catch { /* silent */ }
+}
+
+async function handleGradeSelect(detail: SubmissionDetail, label: string, score: number) {
+  selectInputs.value[detail.id] = label
+  numberInputs.value[detail.id] = score
+  try {
+    await store.updateDetailResponse(detail.id, {
+      responseValue: label,
+      scoringMode: detail.scoringMode!,
+      score,
+    })
+  } catch { /* silent */ }
+}
+
+async function handleDirectInput(detail: SubmissionDetail, val: number) {
+  numberInputs.value[detail.id] = val
+  try {
+    await store.updateDetailResponse(detail.id, {
+      responseValue: String(val),
+      scoringMode: 'DIRECT',
+      score: val,
+    })
+  } catch { /* silent */ }
+}
+
+async function handleRatingScale(detail: SubmissionDetail, stars: number) {
+  numberInputs.value[detail.id] = stars
+  const cfg = parseScoringConfig(detail)
+  const maxScore = cfg.maxScore ?? 100
+  const maxStars = getRatingMax(detail)
+  const score = Math.round((stars / maxStars) * maxScore)
+  try {
+    await store.updateDetailResponse(detail.id, {
+      responseValue: String(stars),
+      scoringMode: 'RATING_SCALE',
+      score,
+    })
+  } catch { /* silent */ }
+}
+
+function handleCumulativeChange(detail: SubmissionDetail, delta: number) {
+  const cur = numberInputs.value[detail.id] ?? 0
+  const next = Math.max(0, cur + delta)
+  numberInputs.value[detail.id] = next
+  const cfg = getCumulativeConfig(detail)
+  const score = next * cfg.scorePerUnit
+  store.updateDetailResponse(detail.id, {
+    responseValue: String(next),
+    scoringMode: 'CUMULATIVE',
+    score,
+  }).catch(() => {})
+}
+
+async function handleTextInput(detail: SubmissionDetail, val: string) {
+  textInputs.value[detail.id] = val
+}
+
+async function saveTextInput(detail: SubmissionDetail) {
+  const val = textInputs.value[detail.id] ?? ''
+  try {
+    await store.updateDetailResponse(detail.id, {
+      responseValue: val,
+      score: undefined,
+    })
+  } catch { /* silent */ }
+}
+
+// ==================== Init inputs from existing response ====================
+
+function initInputs(list: SubmissionDetail[]) {
+  for (const d of list) {
+    if (!d.responseValue) continue
+    const mode = d.scoringMode
+    if (mode === 'PASS_FAIL') {
+      selectInputs.value[d.id] = d.responseValue
+    } else if (mode === 'LEVEL' || mode === 'SCORE_TABLE' || mode === 'TIERED_DEDUCTION') {
+      selectInputs.value[d.id] = d.responseValue
+      if (d.score != null) numberInputs.value[d.id] = d.score
+    } else if (mode === 'DEDUCTION' || mode === 'ADDITION' || mode === 'DIRECT'
+              || mode === 'CUMULATIVE' || mode === 'RATING_SCALE') {
+      const n = parseFloat(d.responseValue)
+      if (!isNaN(n)) numberInputs.value[d.id] = n
+    } else if (!mode) {
+      textInputs.value[d.id] = d.responseValue
+    }
+  }
+}
+
+// ==================== Section active section targetType ====================
+
+const activeSectionInfo = computed(() =>
+  allSections.value.find(s => s.id === activeSectionId.value) ?? null,
+)
 
 // ==================== Data Loading ====================
 
@@ -318,24 +374,17 @@ async function loadData() {
     task.value = await store.loadTask(taskId)
     submissions.value = await store.loadSubmissions(taskId)
 
-    // Load section tree from project's root section
     if (task.value) {
-      await store.loadSectionConditions(task.value.projectId)
       try {
         const project = await getProject(task.value.projectId)
         if (project.rootSectionId) {
           rootSectionId.value = project.rootSectionId
           allSections.value = await inspTemplateApi.getSections(project.rootSectionId)
         }
-      } catch { /* ignore section tree load failure */ }
+      } catch { /* ignore */ }
     }
 
-    // Auto-select first root target
-    if (rootTargets.value.length > 0 && selectedRootTargetId.value === null) {
-      selectedRootTargetId.value = rootTargets.value[0].id
-    }
-
-    // Auto-select first section tab
+    // Auto-select first section
     if (firstLevelSections.value.length > 0 && !activeSectionId.value) {
       activeSectionId.value = firstLevelSections.value[0].id
     }
@@ -348,22 +397,27 @@ async function loadData() {
 
 async function selectSubmission(sub: InspSubmission) {
   selectedSubmission.value = sub
-  collapsedSections.value.clear()
+  numberInputs.value = {}
+  selectInputs.value = {}
+  textInputs.value = {}
+  detailLoading.value = true
   try {
     const list = await store.loadDetails(sub.id)
     details.value = list
-    scoring.initInputsFromDetails(list)
+    initInputs(list)
   } catch (e: any) {
     ElMessage.error(e.message || '加载明细失败')
+  } finally {
+    detailLoading.value = false
   }
 }
 
-async function reloadSubmissions(selectId?: number) {
-  const updatedSubs = await store.loadSubmissions(taskId)
-  submissions.value = updatedSubs
+async function reloadAll(keepSelected = true) {
+  const prevId = selectedSubmission.value?.id
+  submissions.value = await store.loadSubmissions(taskId)
   task.value = await store.loadTask(taskId)
-  if (selectId) {
-    const updated = updatedSubs.find(s => s.id === selectId)
+  if (keepSelected && prevId) {
+    const updated = submissions.value.find(s => s.id === prevId)
     if (updated) selectedSubmission.value = updated
   }
 }
@@ -374,7 +428,7 @@ async function handleStartTask() {
   try {
     await store.startTask(taskId)
     ElMessage.success('任务已开始')
-    loadData()
+    await loadData()
   } catch (e: any) {
     ElMessage.error(e.message || '操作失败')
   }
@@ -382,162 +436,125 @@ async function handleStartTask() {
 
 async function handleSubmitTask() {
   try {
-    await ElMessageBox.confirm('提交此检查任务?', '确认', { type: 'warning' })
+    await ElMessageBox.confirm('确认提交此检查任务？提交后不可修改。', '提交确认', { type: 'warning' })
     await store.submitTask(taskId)
     ElMessage.success('任务已提交')
-    loadData()
+    await reloadAll(false)
   } catch { /* cancelled */ }
 }
 
-async function handleCompleteSubmission() {
-  if (!selectedSubmission.value) return
-  const s = scoring.scoreSummary.value
-  const unscored = s.total - s.scored
-  if (unscored > 0) {
-    ElMessage.warning(`还有 ${unscored} 项未评分`)
-    return
-  }
-  for (const d of scoring.scoreableDetails.value) {
-    const err = scoring.validateDetail(d)
-    if (err) {
-      ElMessage.warning(`${d.itemName}: ${err}`)
-      return
-    }
-  }
-  try {
-    const grade = getGrade(s.finalScore)
-    await store.completeSubmission(selectedSubmission.value.id, {
-      baseScore: s.baseScore,
-      finalScore: s.finalScore,
-      deductionTotal: s.deductions,
-      bonusTotal: s.bonuses,
-      scoreBreakdown: JSON.stringify({
-        passCount: s.passCount, failCount: s.failCount,
-        deductions: s.deductions, bonuses: s.bonuses, flagged: s.flagged,
-      }),
-      grade,
-      passed: s.finalScore >= 60,
-    })
-    ElMessage.success(`完成! 得分: ${s.finalScore} (${grade})`)
-    await reloadSubmissions(selectedSubmission.value.id)
-    details.value = await store.loadDetails(selectedSubmission.value.id)
-  } catch (e: any) {
-    ElMessage.error(e.message || '完成失败')
-  }
-}
-
-async function handleSaveDraft() {
-  if (!selectedSubmission.value) return
-  try {
-    // Save the current form data as a JSON string
-    const formData = JSON.stringify({
-      numberInputs: scoring.numberInputs.value,
-      selectInputs: scoring.selectInputs.value,
-      multiInputs: scoring.multiInputs.value,
-      remarkInputs: scoring.remarkInputs.value,
-    })
-    await store.saveFormData(selectedSubmission.value.id, { formData })
-    ElMessage.success('草稿已保存')
-  } catch (e: any) {
-    ElMessage.error(e.message || '保存失败')
-  }
-}
-
-// ==================== Submission Actions ====================
-
-async function handleLockSubmission(sub: InspSubmission) {
-  try {
-    await store.lockSubmission(sub.id)
-    ElMessage.success('已锁定')
-    await reloadSubmissions(sub.id)
-  } catch (e: any) {
-    ElMessage.error(e.message || '锁定失败')
-  }
-}
+// ==================== Submission Lifecycle ====================
 
 async function handleStartFilling(sub: InspSubmission) {
   try {
     await store.startFillingSubmission(sub.id)
     ElMessage.success('开始打分')
-    await reloadSubmissions(sub.id)
-    await selectSubmission({ ...sub, status: 'IN_PROGRESS' } as InspSubmission)
+    await reloadAll()
+    const updated = submissions.value.find(s => s.id === sub.id)
+    if (updated) await selectSubmission(updated)
   } catch (e: any) {
     ElMessage.error(e.message || '操作失败')
   }
 }
 
-async function handleSkipSubmission(sub: InspSubmission) {
+async function handleLock(sub: InspSubmission) {
   try {
-    await ElMessageBox.confirm('确定跳过此对象?', '确认', { type: 'warning' })
+    await store.lockSubmission(sub.id)
+    ElMessage.success('已锁定')
+    await reloadAll()
+  } catch (e: any) {
+    ElMessage.error(e.message || '锁定失败')
+  }
+}
+
+async function handleSkip(sub: InspSubmission) {
+  try {
+    await ElMessageBox.confirm('确定跳过此检查对象？', '确认', { type: 'warning' })
     await store.skipSubmission(sub.id)
     ElMessage.success('已跳过')
-    await reloadSubmissions()
+    await reloadAll()
     selectedSubmission.value = null
     details.value = []
   } catch { /* cancelled */ }
+}
+
+async function handleComplete() {
+  if (!selectedSubmission.value) return
+  const s = scoreSummary.value
+  if (s.scored < s.total) {
+    ElMessage.warning(`还有 ${s.total - s.scored} 项未评分`)
+    return
+  }
+  const grade = getGrade(s.finalScore)
+  try {
+    await store.completeSubmission(selectedSubmission.value.id, {
+      baseScore: s.maxScore,
+      finalScore: s.finalScore,
+      deductionTotal: s.deductions,
+      bonusTotal: s.bonuses,
+      scoreBreakdown: JSON.stringify({
+        passCount: s.passCount,
+        failCount: s.failCount,
+        deductions: s.deductions,
+        bonuses: s.bonuses,
+      }),
+      grade,
+      passed: s.finalScore >= 60,
+    })
+    ElMessage.success(`完成！得分 ${s.finalScore}（${grade}）`)
+    await reloadAll()
+  } catch (e: any) {
+    ElMessage.error(e.message || '完成失败')
+  }
 }
 
 function goBack() {
   router.push('/inspection/v7/tasks')
 }
 
-// ==================== ScoringItemRow Event Handlers ====================
+// ==================== Computed: items split by type ====================
 
-function onUpdateNumberInput(detailId: number, value: number) {
-  scoring.numberInputs.value[detailId] = value
-}
+const regularItems = computed(() =>
+  details.value.filter(d => d.itemType !== 'PERSON_SCORE' && d.itemType !== 'VIOLATION_RECORD'),
+)
+const personScoreItems = computed(() =>
+  details.value.filter(d => d.itemType === 'PERSON_SCORE'),
+)
+const violationItems = computed(() =>
+  details.value.filter(d => d.itemType === 'VIOLATION_RECORD'),
+)
 
-function onUpdateMultiInput(detailId: number, key: string, value: number) {
-  if (!scoring.multiInputs.value[detailId]) {
-    scoring.multiInputs.value[detailId] = {}
-  }
-  scoring.multiInputs.value[detailId][key] = value
-}
-
-function onUpdateRemarkInput(detailId: number, value: string) {
-  scoring.remarkInputs.value[detailId] = value
-}
-
-// ==================== PERSON_SCORE support ====================
-const personScoreValues = ref<Record<number, Record<number, number>>>({})
-
-function onPersonScoreUpdate(detailId: number, val: Record<number, number>) {
-  personScoreValues.value[detailId] = val
-  const detail = details.value.find(d => d.id === detailId)
-  if (detail) {
-    scoring.numberInputs.value[detailId] = Object.values(val).length > 0
-      ? Object.values(val).reduce((a, b) => a + b, 0) / Object.values(val).length
-      : 0
-  }
-}
+const progressText = computed(() => {
+  if (!task.value) return ''
+  const done = task.value.completedTargets + task.value.skippedTargets
+  return `${done}/${task.value.totalTargets}`
+})
 
 // ==================== Watchers ====================
 
-// When root target changes, reset section tab and selection
-watch(selectedRootTargetId, () => {
+watch(activeSectionId, () => {
   selectedSubmission.value = null
   details.value = []
+  numberInputs.value = {}
+  selectInputs.value = {}
+  textInputs.value = {}
 })
 
 onMounted(() => loadData())
 </script>
 
 <template>
-  <div class="flex flex-col h-full bg-gray-50" v-loading="loading">
-    <!-- ===== Top Bar ===== -->
-    <div class="flex items-center justify-between px-5 py-3 bg-white border-b shadow-sm">
-      <div class="flex items-center gap-3">
-        <button
-          class="flex items-center justify-center w-8 h-8 rounded-lg text-gray-500 hover:bg-gray-100 hover:text-gray-700 transition-colors"
-          @click="goBack"
-        >
-          <ArrowLeft class="w-4 h-4" />
+  <div class="exec-root" v-loading="loading">
+
+    <!-- ===== TOP BAR ===== -->
+    <div class="topbar">
+      <div class="topbar-left">
+        <button class="back-btn" @click="goBack">
+          <ArrowLeft :size="16" />
         </button>
-        <div>
-          <div class="flex items-center gap-2">
-            <h1 class="text-base font-semibold text-gray-900">
-              {{ task?.taskCode || '...' }}
-            </h1>
+        <div class="topbar-info">
+          <div class="topbar-title">
+            <span class="task-code">{{ task?.taskCode || '—' }}</span>
             <el-tag
               v-if="task"
               :type="(TaskStatusConfig[task.status as TaskStatus]?.type as any)"
@@ -547,385 +564,990 @@ onMounted(() => loadData())
               {{ TaskStatusConfig[task.status as TaskStatus]?.label }}
             </el-tag>
           </div>
-          <p v-if="task" class="text-xs text-gray-400 mt-0.5">
-            {{ task.taskDate }} | {{ task.inspectorName || '-' }}
-          </p>
+          <div class="topbar-sub" v-if="task">
+            {{ task.taskDate }}
+            <span v-if="task.inspectorName">· {{ task.inspectorName }}</span>
+            <span class="progress-text">进度 {{ progressText }}</span>
+          </div>
         </div>
       </div>
-      <div class="flex items-center gap-2" v-if="task">
-        <el-button v-if="task.status === 'CLAIMED'" type="primary" size="small" @click="handleStartTask">
-          <Play class="w-3.5 h-3.5 mr-1" />开始检查
+      <div class="topbar-actions" v-if="task">
+        <el-button
+          v-if="task.status === 'CLAIMED'"
+          type="primary" size="small"
+          @click="handleStartTask"
+        >
+          <Play :size="13" class="btn-icon" />开始检查
         </el-button>
-        <el-button v-if="task.status === 'IN_PROGRESS'" type="warning" size="small" @click="handleSubmitTask">
-          <Send class="w-3.5 h-3.5 mr-1" />提交任务
+        <el-button
+          v-if="task.status === 'IN_PROGRESS'"
+          type="warning" size="small"
+          @click="handleSubmitTask"
+        >
+          <Send :size="13" class="btn-icon" />提交任务
         </el-button>
       </div>
     </div>
 
-    <!-- ===== Root Target Bar ===== -->
-    <div
-      v-if="rootTargets.length > 1"
-      class="flex items-center gap-3 px-5 py-2.5 bg-white border-b"
-    >
-      <span class="text-xs text-gray-400 shrink-0">根目标:</span>
-      <div class="flex items-center gap-1.5 flex-wrap">
-        <button
-          v-for="rt in rootTargets"
-          :key="rt.id ?? 'null'"
-          class="inline-flex items-center gap-1.5 px-3 py-1 text-xs font-medium rounded-full border transition-all duration-150"
-          :class="selectedRootTargetId === rt.id
-            ? 'bg-blue-500 text-white border-blue-500 shadow-sm'
-            : 'bg-white text-gray-600 border-gray-200 hover:border-blue-300 hover:text-blue-600'"
-          @click="selectedRootTargetId = rt.id"
-        >
-          <span>{{ rt.name }}</span>
-          <span
-            class="inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full text-[10px] font-bold"
-            :class="selectedRootTargetId === rt.id
-              ? 'bg-blue-400/40 text-white'
-              : 'bg-gray-100 text-gray-500'"
-          >{{ rt.completedCount }}/{{ rt.count }}</span>
-        </button>
-      </div>
-      <div class="ml-auto text-xs text-gray-500 shrink-0">
-        进度 {{ progressText }}
-      </div>
-    </div>
-    <!-- Single root target or no root targets: just show progress -->
-    <div v-else class="flex items-center justify-between px-5 py-2 bg-white border-b">
-      <span v-if="rootTargets.length === 1" class="text-xs text-gray-500">
-        {{ rootTargets[0].name }}
-      </span>
-      <span v-else class="text-xs text-gray-400">--</span>
-      <span class="text-xs text-gray-500">进度 {{ progressText }}</span>
-    </div>
+    <!-- ===== MAIN BODY ===== -->
+    <div class="main-body">
 
-    <!-- ===== Section Tabs ===== -->
-    <div v-if="firstLevelSections.length > 0" class="bg-white border-b">
-      <div class="flex items-center px-5 gap-0.5 overflow-x-auto">
-        <button
-          v-for="section in firstLevelSections"
-          :key="section.id"
-          class="relative px-4 py-2.5 text-sm font-medium whitespace-nowrap transition-colors"
-          :class="activeSectionTab === section.id
-            ? 'text-blue-600'
-            : 'text-gray-500 hover:text-gray-700'"
-          @click="activeSectionTab = section.id"
+      <!-- ===== LEFT: SECTION NAV ===== -->
+      <div class="section-nav">
+        <div class="section-nav-header">分区导航</div>
+        <div
+          v-for="sec in firstLevelSections"
+          :key="sec.id"
+          class="section-item"
+          :class="{ active: activeSectionId === sec.id }"
+          @click="activeSectionId = sec.id"
         >
-          {{ section.sectionName }}
-          <!-- Active indicator -->
+          <!-- Status indicator -->
           <span
-            v-if="activeSectionTab === section.id"
-            class="absolute bottom-0 left-2 right-2 h-0.5 bg-blue-500 rounded-full"
+            class="sec-dot"
+            :class="{
+              'sec-dot--done':    getSectionIcon(sec.id) === 'done',
+              'sec-dot--partial': getSectionIcon(sec.id) === 'partial',
+              'sec-dot--empty':   getSectionIcon(sec.id) === 'empty',
+            }"
           />
-        </button>
-      </div>
-    </div>
-
-    <!-- ===== Main Content: Left sidebar + Right form ===== -->
-    <div class="flex flex-1 min-h-0">
-      <!-- Left: Target List -->
-      <div class="w-64 shrink-0 bg-white border-r flex flex-col">
-        <div class="px-3 py-2.5 border-b bg-gray-50/80">
-          <span class="text-xs font-semibold text-gray-500 uppercase tracking-wide">
-            检查对象 ({{ filteredSubmissions.length }})
-          </span>
+          <div class="sec-label-wrap">
+            <span class="sec-name">{{ sec.sectionName }}</span>
+            <span class="sec-prog">
+              {{ getSectionProgress(sec.id).done }}/{{ getSectionProgress(sec.id).total }}
+            </span>
+          </div>
         </div>
-        <div class="flex-1 overflow-y-auto">
-          <div
-            v-for="sub in filteredSubmissions"
-            :key="sub.id"
-            class="px-3 py-2.5 cursor-pointer border-l-2 transition-all duration-150"
-            :class="selectedSubmission?.id === sub.id
-              ? 'border-l-blue-500 bg-blue-50/70'
-              : 'border-l-transparent hover:bg-gray-50'"
-            @click="selectSubmission(sub)"
+        <div v-if="firstLevelSections.length === 0" class="section-empty">
+          暂无分区
+        </div>
+      </div>
+
+      <!-- ===== RIGHT: SCORING PANEL ===== -->
+      <div class="scoring-panel">
+
+        <!-- === Section header row === -->
+        <div class="section-header-row" v-if="activeSectionInfo">
+          <span class="sec-header-name">{{ activeSectionInfo.sectionName }}</span>
+          <el-tag
+            v-if="activeSectionInfo.targetType"
+            size="small"
+            type="info"
+            effect="plain"
           >
-            <div class="flex items-center justify-between gap-2">
-              <span
-                class="text-sm font-medium truncate"
-                :class="selectedSubmission?.id === sub.id ? 'text-blue-700' : 'text-gray-700'"
-              >{{ sub.targetName }}</span>
-              <span
-                class="shrink-0 w-1.5 h-1.5 rounded-full"
-                :class="{
-                  'bg-green-400': sub.status === 'COMPLETED',
-                  'bg-blue-400': sub.status === 'IN_PROGRESS',
-                  'bg-yellow-400': sub.status === 'SKIPPED',
-                  'bg-gray-300': sub.status === 'PENDING' || sub.status === 'LOCKED',
-                }"
+            {{ TargetTypeConfig[activeSectionInfo.targetType]?.label ?? activeSectionInfo.targetType }}
+          </el-tag>
+        </div>
+
+        <!-- === Target pill selector === -->
+        <div class="target-row">
+          <div class="target-pills">
+            <button
+              v-for="sub in sectionSubmissions"
+              :key="sub.id"
+              class="target-pill"
+              :class="{
+                'target-pill--active':     selectedSubmission?.id === sub.id,
+                'target-pill--completed':  sub.status === 'COMPLETED',
+                'target-pill--skipped':    sub.status === 'SKIPPED',
+                'target-pill--inprogress': sub.status === 'IN_PROGRESS',
+              }"
+              @click="selectSubmission(sub)"
+            >
+              <Check v-if="sub.status === 'COMPLETED'" :size="11" class="pill-check" />
+              {{ sub.targetName }}
+            </button>
+            <span v-if="sectionSubmissions.length === 0" class="target-empty-hint">
+              本分区暂无检查对象
+            </span>
+          </div>
+          <div class="target-nav">
+            <button class="nav-btn" :disabled="!hasPrev" @click="goToPrev">
+              <ChevronLeft :size="14" />
+            </button>
+            <span class="nav-count">
+              {{ currentTargetIndex >= 0 ? currentTargetIndex + 1 : '-' }}
+              /
+              {{ sectionSubmissions.length }}
+            </span>
+            <button class="nav-btn" :disabled="!hasNext" @click="goToNext">
+              <ChevronRight :size="14" />
+            </button>
+          </div>
+        </div>
+
+        <!-- === Scoring form area === -->
+        <div class="form-area" v-loading="detailLoading">
+
+          <!-- Empty / pre-start state -->
+          <div v-if="!selectedSubmission" class="form-placeholder">
+            <ChevronLeft :size="28" class="ph-icon" />
+            <p>请在上方选择检查对象开始打分</p>
+          </div>
+
+          <!-- Pre-filling prompt -->
+          <div
+            v-else-if="selectedSubmission.status === 'PENDING' || selectedSubmission.status === 'LOCKED'"
+            class="form-prestart"
+          >
+            <div class="prestart-actions">
+              <el-button
+                v-if="selectedSubmission.status === 'PENDING'"
+                size="small"
+                @click="handleLock(selectedSubmission)"
+              >
+                <Lock :size="13" class="btn-icon" />锁定
+              </el-button>
+              <el-button type="primary" size="small" @click="handleStartFilling(selectedSubmission)">
+                <Play :size="13" class="btn-icon" />开始打分
+              </el-button>
+              <el-button size="small" @click="handleSkip(selectedSubmission)">
+                <SkipForward :size="13" class="btn-icon" />跳过
+              </el-button>
+            </div>
+            <p class="prestart-hint">点击「开始打分」加载检查项</p>
+          </div>
+
+          <!-- Actual scoring form -->
+          <div v-else class="field-list">
+
+            <!-- Regular scoring items -->
+            <div
+              v-for="detail in regularItems"
+              :key="detail.id"
+              class="field-card"
+            >
+              <div class="field-header">
+                <span class="field-name">{{ detail.itemName }}</span>
+                <el-tag
+                  v-if="detail.scoringMode"
+                  size="small"
+                  effect="plain"
+                  :type="detail.scoringMode === 'DEDUCTION' ? 'danger'
+                       : detail.scoringMode === 'ADDITION' ? 'success'
+                       : detail.scoringMode === 'PASS_FAIL' ? ''
+                       : 'warning'"
+                >
+                  {{ ScoringModeConfig[detail.scoringMode]?.label ?? detail.scoringMode }}
+                </el-tag>
+                <el-tag v-else size="small" type="info" effect="plain">采集</el-tag>
+              </div>
+
+              <!-- DEDUCTION: button group [0][-1][-2]... -->
+              <div v-if="detail.scoringMode === 'DEDUCTION'" class="ctrl-row">
+                <button
+                  v-for="step in getDeductionSteps(detail)"
+                  :key="step"
+                  class="score-btn"
+                  :class="{
+                    'score-btn--active': numberInputs[detail.id] === step,
+                    'score-btn--zero':   step === 0,
+                    'score-btn--neg':    step < 0,
+                  }"
+                  :disabled="!isEditable"
+                  @click="handleDeductionSelect(detail, step)"
+                >
+                  {{ step === 0 ? '0' : step }}
+                </button>
+              </div>
+
+              <!-- ADDITION: button group [0][+1][+2]... -->
+              <div v-else-if="detail.scoringMode === 'ADDITION'" class="ctrl-row">
+                <button
+                  v-for="step in getAdditionSteps(detail)"
+                  :key="step"
+                  class="score-btn score-btn--pos"
+                  :class="{ 'score-btn--active': numberInputs[detail.id] === step }"
+                  :disabled="!isEditable"
+                  @click="handleDeductionSelect(detail, step)"
+                >
+                  {{ step === 0 ? '0' : `+${step}` }}
+                </button>
+              </div>
+
+              <!-- PASS_FAIL: 通过 / 不通过 -->
+              <div v-else-if="detail.scoringMode === 'PASS_FAIL'" class="ctrl-row">
+                <button
+                  class="pf-btn pf-btn--pass"
+                  :class="{ 'pf-btn--active': selectInputs[detail.id] === 'PASS' }"
+                  :disabled="!isEditable"
+                  @click="handlePassFail(detail, 'PASS')"
+                >
+                  <Check :size="13" /> 通过
+                </button>
+                <button
+                  class="pf-btn pf-btn--fail"
+                  :class="{ 'pf-btn--active': selectInputs[detail.id] === 'FAIL' }"
+                  :disabled="!isEditable"
+                  @click="handlePassFail(detail, 'FAIL')"
+                >
+                  <X :size="13" /> 不通过
+                </button>
+              </div>
+
+              <!-- LEVEL / SCORE_TABLE / TIERED_DEDUCTION: pill grade selector -->
+              <div
+                v-else-if="detail.scoringMode === 'LEVEL' || detail.scoringMode === 'SCORE_TABLE' || detail.scoringMode === 'TIERED_DEDUCTION'"
+                class="ctrl-row"
+              >
+                <button
+                  v-for="lv in getGradeLevels(detail)"
+                  :key="lv.label"
+                  class="grade-btn"
+                  :class="{ 'grade-btn--active': selectInputs[detail.id] === lv.label }"
+                  :disabled="!isEditable"
+                  @click="handleGradeSelect(detail, lv.label, lv.score)"
+                >
+                  {{ lv.label }}
+                  <span class="grade-score">{{ lv.score }}</span>
+                </button>
+              </div>
+
+              <!-- DIRECT: number input + range hint -->
+              <div v-else-if="detail.scoringMode === 'DIRECT'" class="ctrl-row ctrl-row--direct">
+                <el-input-number
+                  v-model="numberInputs[detail.id]"
+                  :min="getDirectRange(detail).min"
+                  :max="getDirectRange(detail).max"
+                  :disabled="!isEditable"
+                  size="small"
+                  style="width: 120px"
+                  @change="(val: number) => handleDirectInput(detail, val)"
+                />
+                <span class="range-hint">范围 {{ getDirectRange(detail).min }}–{{ getDirectRange(detail).max }}</span>
+              </div>
+
+              <!-- RATING_SCALE: star buttons -->
+              <div v-else-if="detail.scoringMode === 'RATING_SCALE'" class="ctrl-row">
+                <button
+                  v-for="n in getRatingMax(detail)"
+                  :key="n"
+                  class="star-btn"
+                  :class="{ 'star-btn--active': (numberInputs[detail.id] ?? 0) >= n }"
+                  :disabled="!isEditable"
+                  @click="handleRatingScale(detail, n)"
+                >
+                  <Star :size="18" />
+                </button>
+                <span class="star-val" v-if="numberInputs[detail.id] !== undefined">
+                  {{ numberInputs[detail.id] }}/{{ getRatingMax(detail) }}
+                </span>
+              </div>
+
+              <!-- CUMULATIVE: +/- counter -->
+              <div v-else-if="detail.scoringMode === 'CUMULATIVE'" class="ctrl-row ctrl-row--cumulative">
+                <button class="counter-btn" :disabled="!isEditable" @click="handleCumulativeChange(detail, -1)">
+                  <Minus :size="14" />
+                </button>
+                <span class="counter-val">{{ numberInputs[detail.id] ?? 0 }}</span>
+                <button class="counter-btn" :disabled="!isEditable" @click="handleCumulativeChange(detail, 1)">
+                  <Plus :size="14" />
+                </button>
+                <span class="counter-unit">{{ getCumulativeConfig(detail).countLabel }}</span>
+              </div>
+
+              <!-- Other scoring modes: show numeric input -->
+              <div
+                v-else-if="detail.scoringMode && !['DEDUCTION','ADDITION','PASS_FAIL','LEVEL','SCORE_TABLE','TIERED_DEDUCTION','DIRECT','RATING_SCALE','CUMULATIVE'].includes(detail.scoringMode)"
+                class="ctrl-row ctrl-row--direct"
+              >
+                <el-input-number
+                  v-model="numberInputs[detail.id]"
+                  :min="0"
+                  :max="100"
+                  :disabled="!isEditable"
+                  size="small"
+                  style="width: 120px"
+                  @change="(val: number) => handleDirectInput(detail, val)"
+                />
+                <span class="range-hint">{{ ScoringModeConfig[detail.scoringMode!]?.label }}</span>
+              </div>
+
+              <!-- Non-scoring capture items -->
+              <div v-else-if="!detail.scoringMode" class="ctrl-row ctrl-row--capture">
+                <el-input
+                  v-model="textInputs[detail.id]"
+                  :disabled="!isEditable"
+                  size="small"
+                  placeholder="请填写..."
+                  clearable
+                  @blur="saveTextInput(detail)"
+                />
+              </div>
+
+            </div>
+            <!-- /regular items -->
+
+            <!-- PERSON_SCORE items -->
+            <div v-for="detail in personScoreItems" :key="'ps-' + detail.id" class="field-card">
+              <div class="field-header">
+                <span class="field-name">{{ detail.itemName }}</span>
+                <el-tag size="small" type="info" effect="plain">逐人评分</el-tag>
+              </div>
+              <PersonScoreGrid
+                v-if="selectedSubmission"
+                :target-type="selectedSubmission.targetType"
+                :target-id="selectedSubmission.targetId"
+                :detail-id="detail.id"
+                :disabled="!isEditable"
               />
             </div>
-            <div class="text-xs text-gray-400 mt-0.5">
-              <template v-if="sub.finalScore != null">
-                <span class="font-semibold" :style="{ color: getGradeColor(sub.grade || '') }">
-                  {{ sub.finalScore }}分
-                </span>
-                <span class="ml-1 opacity-70">{{ sub.grade }}</span>
-              </template>
-              <template v-else>
-                {{ SubmissionStatusConfig[sub.status as SubmissionStatus]?.label }}
-              </template>
+
+            <!-- VIOLATION_RECORD items -->
+            <div v-for="detail in violationItems" :key="'vr-' + detail.id" class="field-card field-card--violation">
+              <div class="field-header">
+                <span class="field-name">{{ detail.itemName }}</span>
+                <el-tag size="small" type="warning" effect="plain">违纪记录</el-tag>
+              </div>
+              <ViolationRecordInput
+                v-if="selectedSubmission"
+                :submission-id="selectedSubmission.id"
+                :detail-id="detail.id"
+                :section-id="detail.sectionId ?? 0"
+                :item-id="detail.templateItemId"
+                :disabled="!isEditable"
+              />
             </div>
+
+            <!-- Empty items state -->
+            <div v-if="details.length === 0" class="form-placeholder">
+              <p>暂无检查项</p>
+            </div>
+
           </div>
-          <div
-            v-if="filteredSubmissions.length === 0"
-            class="px-4 py-8 text-center text-sm text-gray-400"
-          >
-            暂无检查对象
+          <!-- /field-list -->
+        </div>
+        <!-- /form-area -->
+
+        <!-- === Bottom score bar === -->
+        <div
+          v-if="selectedSubmission && (isEditable || selectedSubmission.status === 'COMPLETED')"
+          class="score-bar"
+        >
+          <div class="score-bar-left">
+            <span
+              class="score-value"
+              :style="{ color: getGradeColor(getGrade(scoreSummary.finalScore)) }"
+            >
+              {{ scoreSummary.finalScore }}
+            </span>
+            <span class="score-sep">/</span>
+            <span class="score-max">{{ scoreSummary.maxScore }}</span>
+            <span
+              class="score-grade"
+              :style="{ color: getGradeColor(getGrade(scoreSummary.finalScore)) }"
+            >
+              {{ getGrade(scoreSummary.finalScore) }}
+            </span>
+          </div>
+          <div class="score-bar-stats">
+            <span v-if="scoreSummary.passCount > 0" class="stat-pass">
+              <Check :size="11" /> {{ scoreSummary.passCount }}
+            </span>
+            <span v-if="scoreSummary.failCount > 0" class="stat-fail">
+              <X :size="11" /> {{ scoreSummary.failCount }}
+            </span>
+            <span v-if="scoreSummary.deductions > 0" class="stat-deduct">
+              -{{ scoreSummary.deductions }}
+            </span>
+            <span v-if="scoreSummary.bonuses > 0" class="stat-bonus">
+              +{{ scoreSummary.bonuses }}
+            </span>
+          </div>
+          <div class="score-bar-progress">
+            {{ scoreSummary.scored }}/{{ scoreSummary.total }} 已评分
+          </div>
+          <div class="score-bar-actions" v-if="isEditable">
+            <el-button
+              type="primary" size="small"
+              :disabled="scoreSummary.scored < scoreSummary.total"
+              @click="handleComplete"
+            >
+              <Check :size="13" class="btn-icon" />
+              提交 ({{ scoreSummary.scored }}/{{ scoreSummary.total }})
+            </el-button>
+            <el-button size="small" @click="handleSkip(selectedSubmission!)">
+              <SkipForward :size="13" class="btn-icon" />跳过
+            </el-button>
           </div>
         </div>
+
       </div>
-
-      <!-- Right: Scoring Panel -->
-      <div class="flex-1 flex flex-col min-w-0">
-        <template v-if="selectedSubmission">
-          <!-- Submission Header -->
-          <div class="flex items-center justify-between px-5 py-3 bg-white border-b">
-            <div class="flex items-center gap-3 min-w-0">
-              <h2 class="text-base font-semibold text-gray-800 truncate">
-                <span v-if="activeSectionId" class="text-gray-400 font-normal">
-                  {{ allSections.find(s => s.id === activeSectionId)?.sectionName }} &gt;
-                </span>
-                {{ selectedSubmission.targetName }}
-              </h2>
-            </div>
-            <div class="flex items-center gap-2 shrink-0">
-              <!-- Before scoring: action buttons -->
-              <template v-if="selectedSubmission.status === 'PENDING' || selectedSubmission.status === 'LOCKED'">
-                <el-button
-                  v-if="selectedSubmission.status === 'PENDING'"
-                  size="small" @click="handleLockSubmission(selectedSubmission)"
-                ><Lock class="w-3.5 h-3.5 mr-1" />锁定</el-button>
-                <el-button size="small" type="primary" @click="handleStartFilling(selectedSubmission)">
-                  <Play class="w-3.5 h-3.5 mr-1" />开始打分
-                </el-button>
-                <el-button size="small" @click="handleSkipSubmission(selectedSubmission)">
-                  <SkipForward class="w-3.5 h-3.5 mr-1" />跳过
-                </el-button>
-              </template>
-              <!-- During scoring: quick actions dropdown -->
-              <template v-if="isEditable">
-                <el-dropdown trigger="click" size="small">
-                  <el-button size="small">
-                    快捷操作 <el-icon class="ml-1"><arrow-down /></el-icon>
-                  </el-button>
-                  <template #dropdown>
-                    <el-dropdown-menu>
-                      <el-dropdown-item @click="scoring.markAllPass">全部通过 (PASS_FAIL)</el-dropdown-item>
-                      <el-dropdown-item @click="scoring.markAllDeductionZero">不扣分 (DEDUCTION)</el-dropdown-item>
-                      <el-dropdown-item @click="scoring.markAllDirectPerfect">满分 (DIRECT/LEVEL等)</el-dropdown-item>
-                    </el-dropdown-menu>
-                  </template>
-                </el-dropdown>
-              </template>
-            </div>
-          </div>
-
-          <!-- Score Summary Bar (visible when in scoring or completed) -->
-          <div
-            v-if="isEditable || selectedSubmission.status === 'COMPLETED'"
-            class="flex items-center gap-5 px-5 py-2 bg-white border-b"
-          >
-            <div class="flex items-baseline gap-1">
-              <span class="text-2xl font-bold tabular-nums" :style="{ color: getGradeColor(getGrade(scoring.scoreSummary.value.finalScore)) }">
-                {{ scoring.scoreSummary.value.finalScore }}
-              </span>
-              <span class="text-sm font-semibold" :style="{ color: getGradeColor(getGrade(scoring.scoreSummary.value.finalScore)) }">
-                {{ getGrade(scoring.scoreSummary.value.finalScore) }}
-              </span>
-            </div>
-            <div class="h-6 w-px bg-gray-200" />
-            <div class="flex items-center gap-4 text-xs text-gray-500">
-              <span class="text-green-600">
-                <Check class="w-3 h-3 inline -mt-px" /> {{ scoring.scoreSummary.value.passCount }}
-              </span>
-              <span class="text-red-500">
-                <X class="w-3 h-3 inline -mt-px" /> {{ scoring.scoreSummary.value.failCount }}
-              </span>
-              <span class="text-red-400">-{{ scoring.scoreSummary.value.deductions }}</span>
-              <span v-if="scoring.scoreSummary.value.bonuses > 0" class="text-emerald-500">+{{ scoring.scoreSummary.value.bonuses }}</span>
-              <span v-if="scoring.scoreSummary.value.flagged > 0" class="text-orange-500">
-                <AlertTriangle class="w-3 h-3 inline -mt-px" /> {{ scoring.scoreSummary.value.flagged }}
-              </span>
-            </div>
-            <div class="ml-auto text-xs text-gray-400">
-              {{ scoring.scoreSummary.value.scored }}/{{ scoring.scoreSummary.value.total }} 已评分
-            </div>
-          </div>
-
-          <!-- Scoring Form -->
-          <div class="flex-1 overflow-y-auto px-5 py-4">
-            <div v-if="formGroups.length > 0" class="space-y-5">
-              <div v-for="(group, gi) in formGroups" :key="gi">
-                <!-- Sub-section collapsible header -->
-                <div
-                  v-if="group.isSubSection"
-                  class="flex items-center gap-2 px-3 py-2 bg-gray-100 rounded-lg cursor-pointer select-none mb-2"
-                  @click="toggleSectionCollapse(group.sectionName)"
-                >
-                  <component
-                    :is="isSectionCollapsed(group.sectionName) ? ChevronRight : ChevronDown"
-                    class="w-4 h-4 text-gray-400"
-                  />
-                  <span class="text-sm font-semibold text-gray-600">{{ group.sectionName }}</span>
-                  <span class="text-xs text-gray-400">({{ group.regularItems.length + group.personScoreItems.length + group.violationRecordItems.length }}项)</span>
-                </div>
-
-                <!-- Non sub-section: just a subtle label if not the only group -->
-                <div
-                  v-else-if="formGroups.length > 1"
-                  class="flex items-center gap-2 mb-2 pb-1 border-b border-gray-200"
-                >
-                  <span class="text-sm font-semibold text-gray-700">{{ group.sectionName }}</span>
-                  <span class="text-xs text-gray-400">({{ group.regularItems.length }}项)</span>
-                </div>
-
-                <!-- Content (collapsible for sub-sections) -->
-                <div v-if="!group.isSubSection || !isSectionCollapsed(group.sectionName)" class="space-y-4">
-                  <!-- Regular scoring items -->
-                  <div v-if="group.regularItems.length > 0" class="space-y-1">
-                    <ScoringItemRow
-                      v-for="detail in group.regularItems"
-                      :key="detail.id"
-                      :detail="detail"
-                      :editable="isEditable"
-                      :resolve-mode="scoring.resolveMode"
-                      :get-scoring-params="scoring.getScoringParams"
-                      :get-max-score-for-mode="scoring.getMaxScoreForMode"
-                      :format-score="scoring.formatScore"
-                      :score-color="scoring.scoreColor"
-                      :row-bg="scoring.rowBg"
-                      :needs-remark="scoring.needsRemark"
-                      :is-non-scoring="scoring.isNonScoring"
-                      :scoring-in-progress="scoring.scoringInProgress.value"
-                      :number-inputs="scoring.numberInputs.value"
-                      :remark-inputs="scoring.remarkInputs.value"
-                      :select-inputs="scoring.selectInputs.value"
-                      :multi-inputs="scoring.multiInputs.value"
-                      :mode-label-map="MODE_LABEL"
-                      :mode-tag-type-map="MODE_TAG_TYPE"
-                      :is-disabled="conditionLogic.isItemDisabled(detail)"
-                      @pass-fail="scoring.handlePassFail"
-                      @deduction="scoring.handleDeduction"
-                      @addition="scoring.handleAddition"
-                      @direct="scoring.handleDirect"
-                      @level="scoring.handleLevel"
-                      @score-table="scoring.handleScoreTable"
-                      @cumulative="scoring.handleCumulative"
-                      @tiered-deduction="scoring.handleTieredDeduction"
-                      @rating-scale="scoring.handleRatingScale"
-                      @weighted-multi="scoring.handleWeightedMulti"
-                      @risk-matrix="scoring.handleRiskMatrix"
-                      @threshold="scoring.handleThreshold"
-                      @formula="scoring.handleFormula"
-                      @toggle-flag="scoring.toggleFlag"
-                      @remark-change="scoring.handleRemarkChange"
-                      @update:number-input="onUpdateNumberInput"
-                      @update:multi-input="onUpdateMultiInput"
-                      @update:remark-input="onUpdateRemarkInput"
-                    />
-                  </div>
-
-                  <!-- PERSON_SCORE items -->
-                  <div v-for="detail in group.personScoreItems" :key="'ps-' + detail.id">
-                    <div class="flex items-center gap-2 mb-2 pb-1 border-b border-gray-200">
-                      <span class="text-sm font-semibold text-gray-700">{{ detail.itemName }}</span>
-                      <el-tag size="small" type="info" effect="plain">逐人评分</el-tag>
-                    </div>
-                    <PersonScoreGrid
-                      v-if="selectedSubmission"
-                      :target-type="selectedSubmission.targetType"
-                      :target-id="selectedSubmission.targetId"
-                      :detail-id="detail.id"
-                      :disabled="!isEditable"
-                    />
-                  </div>
-
-                  <!-- VIOLATION_RECORD items -->
-                  <div v-for="detail in group.violationRecordItems" :key="'vr-' + detail.id">
-                    <div class="flex items-center gap-2 mb-2 pb-1 border-b border-gray-200">
-                      <span class="text-sm font-semibold text-gray-700">{{ detail.itemName }}</span>
-                      <el-tag size="small" type="warning" effect="plain">违纪记录</el-tag>
-                    </div>
-                    <ViolationRecordInput
-                      v-if="selectedSubmission"
-                      :submission-id="selectedSubmission.id"
-                      :detail-id="detail.id"
-                      :section-id="detail.sectionId || 0"
-                      :item-id="detail.templateItemId"
-                      :disabled="!isEditable"
-                    />
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <!-- Empty state for scoring form -->
-            <div
-              v-else-if="details.length === 0 && selectedSubmission.status !== 'PENDING'"
-              class="text-center text-sm text-gray-400 py-12"
-            >
-              暂无检查项
-            </div>
-
-            <!-- Pre-scoring prompt -->
-            <div
-              v-else-if="selectedSubmission.status === 'PENDING' || selectedSubmission.status === 'LOCKED'"
-              class="flex flex-col items-center justify-center py-16 text-gray-400"
-            >
-              <Play class="w-10 h-10 mb-3 text-gray-300" />
-              <p class="text-sm">点击上方「开始打分」按钮开始评分</p>
-            </div>
-          </div>
-
-          <!-- Bottom Bar: Navigation + Actions -->
-          <div class="flex items-center justify-between px-5 py-3 bg-white border-t">
-            <div class="flex items-center gap-2">
-              <el-button size="small" :disabled="!hasPrevTarget" @click="goToPrevTarget">
-                <ChevronLeft class="w-3.5 h-3.5 mr-1" />上一个
-              </el-button>
-              <span class="text-xs text-gray-400 tabular-nums">
-                {{ currentTargetIndex + 1 }} / {{ filteredSubmissions.length }}
-              </span>
-              <el-button size="small" :disabled="!hasNextTarget" @click="goToNextTarget">
-                下一个<ChevronRight class="w-3.5 h-3.5 ml-1" />
-              </el-button>
-            </div>
-            <div class="flex items-center gap-2">
-              <el-button
-                v-if="isEditable"
-                size="small"
-                @click="handleSaveDraft"
-              >
-                保存草稿
-              </el-button>
-              <el-button
-                v-if="isEditable"
-                type="primary"
-                size="small"
-                :disabled="scoring.scoreSummary.value.total !== scoring.scoreSummary.value.scored"
-                @click="handleCompleteSubmission"
-              >
-                <Check class="w-3.5 h-3.5 mr-1" />
-                提交此目标 ({{ scoring.scoreSummary.value.scored }}/{{ scoring.scoreSummary.value.total }})
-              </el-button>
-            </div>
-          </div>
-        </template>
-
-        <!-- No submission selected -->
-        <template v-else>
-          <div class="flex-1 flex items-center justify-center">
-            <div class="text-center text-gray-400">
-              <div class="w-16 h-16 mx-auto mb-4 rounded-full bg-gray-100 flex items-center justify-center">
-                <ChevronLeft class="w-6 h-6" />
-              </div>
-              <p class="text-sm">请在左侧选择检查对象开始打分</p>
-            </div>
-          </div>
-        </template>
-      </div>
+      <!-- /scoring-panel -->
     </div>
+    <!-- /main-body -->
   </div>
 </template>
+
+<style scoped>
+/* ===== Root ===== */
+.exec-root {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  background: #f5f6fa;
+  font-size: 12px;
+  color: #1f2937;
+}
+
+/* ===== Top Bar ===== */
+.topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 20px;
+  height: 52px;
+  background: #fff;
+  border-bottom: 1px solid #e5e7eb;
+  flex-shrink: 0;
+}
+
+.topbar-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.back-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: #6b7280;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.back-btn:hover { background: #f3f4f6; color: #374151; }
+
+.topbar-info { display: flex; flex-direction: column; gap: 2px; }
+
+.topbar-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.task-code {
+  font-size: 13px;
+  font-weight: 600;
+  color: #111827;
+}
+
+.topbar-sub {
+  font-size: 11px;
+  color: #9ca3af;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.progress-text {
+  margin-left: 8px;
+  color: #6b7280;
+}
+
+.topbar-actions { display: flex; align-items: center; gap: 8px; }
+
+.btn-icon { margin-right: 4px; }
+
+/* ===== Main Body ===== */
+.main-body {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+}
+
+/* ===== Left Section Nav ===== */
+.section-nav {
+  width: 180px;
+  flex-shrink: 0;
+  background: #fff;
+  border-right: 1px solid #e5e7eb;
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+}
+
+.section-nav-header {
+  padding: 10px 12px 8px;
+  font-size: 10px;
+  font-weight: 600;
+  color: #9ca3af;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  border-bottom: 1px solid #f3f4f6;
+}
+
+.section-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 12px;
+  cursor: pointer;
+  border-left: 2px solid transparent;
+  transition: all 0.15s;
+}
+.section-item:hover { background: #f9fafb; }
+.section-item.active {
+  border-left-color: #1a6dff;
+  background: #eff6ff;
+}
+.section-item.active .sec-name { color: #1a6dff; font-weight: 600; }
+
+.sec-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.sec-dot--done    { background: #10b981; }
+.sec-dot--partial { background: #1a6dff; }
+.sec-dot--empty   { background: #d1d5db; }
+
+.sec-label-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+}
+
+.sec-name {
+  font-size: 12px;
+  font-weight: 500;
+  color: #374151;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.sec-prog {
+  font-size: 10px;
+  color: #9ca3af;
+}
+
+.section-empty {
+  padding: 16px 12px;
+  font-size: 11px;
+  color: #d1d5db;
+  text-align: center;
+}
+
+/* ===== Right Scoring Panel ===== */
+.scoring-panel {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  overflow: hidden;
+}
+
+/* Section header row */
+.section-header-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 20px 8px;
+  background: #fff;
+  border-bottom: 1px solid #f3f4f6;
+  flex-shrink: 0;
+}
+
+.sec-header-name {
+  font-size: 13px;
+  font-weight: 600;
+  color: #111827;
+}
+
+/* Target pill row */
+.target-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 8px 20px;
+  background: #fff;
+  border-bottom: 1px solid #e5e7eb;
+  flex-shrink: 0;
+}
+
+.target-pills {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  flex: 1;
+}
+
+.target-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  border-radius: 20px;
+  border: 1px solid #e5e7eb;
+  background: #f9fafb;
+  font-size: 12px;
+  color: #6b7280;
+  cursor: pointer;
+  transition: all 0.15s;
+  white-space: nowrap;
+}
+.target-pill:hover { border-color: #93c5fd; color: #1a6dff; }
+
+.target-pill--active {
+  border-color: #1a6dff;
+  background: #eff6ff;
+  color: #1a6dff;
+  font-weight: 600;
+}
+
+.target-pill--completed {
+  border-color: #6ee7b7;
+  background: #f0fdf4;
+  color: #059669;
+}
+.target-pill--completed.target-pill--active {
+  border-color: #10b981;
+  background: #d1fae5;
+}
+
+.target-pill--inprogress {
+  border-color: #93c5fd;
+  background: #eff6ff;
+  color: #1d4ed8;
+}
+
+.target-pill--skipped {
+  border-color: #fcd34d;
+  color: #b45309;
+  background: #fffbeb;
+}
+
+.pill-check { flex-shrink: 0; }
+
+.target-empty-hint {
+  font-size: 11px;
+  color: #d1d5db;
+  padding: 4px 0;
+}
+
+.target-nav {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.nav-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+  background: #fff;
+  color: #6b7280;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.nav-btn:hover:not(:disabled) { border-color: #1a6dff; color: #1a6dff; }
+.nav-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+.nav-count {
+  font-size: 11px;
+  color: #9ca3af;
+  min-width: 36px;
+  text-align: center;
+  tabular-nums: true;
+}
+
+/* Form area */
+.form-area {
+  flex: 1;
+  overflow-y: auto;
+  padding: 16px 20px;
+}
+
+.form-placeholder {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 200px;
+  color: #d1d5db;
+  gap: 8px;
+}
+.ph-icon { color: #e5e7eb; }
+.form-placeholder p { font-size: 12px; }
+
+.form-prestart {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  padding-top: 40px;
+}
+.prestart-actions { display: flex; gap: 8px; }
+.prestart-hint { font-size: 11px; color: #9ca3af; }
+
+.field-list { display: flex; flex-direction: column; gap: 10px; }
+
+/* Field card */
+.field-card {
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  padding: 12px 14px;
+  transition: box-shadow 0.15s;
+}
+.field-card:hover { box-shadow: 0 1px 6px rgba(0,0,0,0.06); }
+
+.field-card--violation {
+  background: #fffdf0;
+  border-color: #fde68a;
+}
+
+.field-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.field-name {
+  font-size: 13px;
+  font-weight: 600;
+  color: #1f2937;
+  flex: 1;
+}
+
+/* Controls row */
+.ctrl-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.ctrl-row--direct {
+  align-items: center;
+  gap: 10px;
+}
+
+.ctrl-row--capture {
+  display: block;
+}
+
+.ctrl-row--cumulative {
+  gap: 8px;
+}
+
+.range-hint {
+  font-size: 11px;
+  color: #9ca3af;
+}
+
+/* Score buttons (deduction/addition) */
+.score-btn {
+  min-width: 38px;
+  height: 32px;
+  padding: 0 8px;
+  border-radius: 6px;
+  border: 1px solid #e5e7eb;
+  background: #f9fafb;
+  font-size: 12px;
+  font-weight: 500;
+  color: #374151;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.score-btn:hover:not(:disabled) { border-color: #1a6dff; color: #1a6dff; }
+.score-btn:disabled { opacity: 0.45; cursor: not-allowed; }
+
+.score-btn--active {
+  background: #1a6dff;
+  border-color: #1a6dff;
+  color: #fff !important;
+}
+
+.score-btn--zero { }
+
+.score-btn--neg { color: #ef4444; border-color: #fca5a5; background: #fff5f5; }
+.score-btn--neg:hover:not(:disabled) { background: #ef4444; border-color: #ef4444; color: #fff; }
+.score-btn--neg.score-btn--active { background: #ef4444; border-color: #ef4444; color: #fff; }
+
+.score-btn--pos { color: #10b981; border-color: #6ee7b7; background: #f0fdf4; }
+.score-btn--pos:hover:not(:disabled) { background: #10b981; border-color: #10b981; color: #fff; }
+.score-btn--pos.score-btn--active { background: #10b981; border-color: #10b981; color: #fff; }
+
+/* Pass/Fail buttons */
+.pf-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 6px 18px;
+  border-radius: 20px;
+  border: 1.5px solid;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.pf-btn:disabled { opacity: 0.45; cursor: not-allowed; }
+
+.pf-btn--pass {
+  border-color: #6ee7b7;
+  color: #059669;
+  background: #f0fdf4;
+}
+.pf-btn--pass:hover:not(:disabled) { background: #10b981; color: #fff; border-color: #10b981; }
+.pf-btn--pass.pf-btn--active { background: #10b981; color: #fff; border-color: #10b981; }
+
+.pf-btn--fail {
+  border-color: #fca5a5;
+  color: #dc2626;
+  background: #fff5f5;
+}
+.pf-btn--fail:hover:not(:disabled) { background: #ef4444; color: #fff; border-color: #ef4444; }
+.pf-btn--fail.pf-btn--active { background: #ef4444; color: #fff; border-color: #ef4444; }
+
+/* Grade buttons */
+.grade-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 5px 14px;
+  border-radius: 20px;
+  border: 1px solid #e5e7eb;
+  background: #f9fafb;
+  font-size: 12px;
+  font-weight: 500;
+  color: #374151;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.grade-btn:hover:not(:disabled) { border-color: #93c5fd; color: #1a6dff; }
+.grade-btn:disabled { opacity: 0.45; cursor: not-allowed; }
+.grade-btn--active { background: #1a6dff; border-color: #1a6dff; color: #fff; }
+.grade-btn--active .grade-score { color: rgba(255,255,255,0.75); }
+
+.grade-score {
+  font-size: 10px;
+  color: #9ca3af;
+  font-weight: 400;
+}
+
+/* Star buttons */
+.star-btn {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  padding: 2px;
+  color: #d1d5db;
+  transition: color 0.1s;
+}
+.star-btn:hover:not(:disabled) { color: #f59e0b; }
+.star-btn--active { color: #f59e0b; }
+.star-btn:disabled { opacity: 0.45; cursor: not-allowed; }
+
+.star-val {
+  font-size: 11px;
+  color: #9ca3af;
+  margin-left: 4px;
+}
+
+/* Cumulative counter */
+.counter-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  border: 1px solid #e5e7eb;
+  background: #f9fafb;
+  color: #374151;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.counter-btn:hover:not(:disabled) { border-color: #1a6dff; color: #1a6dff; }
+.counter-btn:disabled { opacity: 0.45; cursor: not-allowed; }
+
+.counter-val {
+  font-size: 16px;
+  font-weight: 600;
+  color: #111827;
+  min-width: 28px;
+  text-align: center;
+}
+
+.counter-unit {
+  font-size: 11px;
+  color: #9ca3af;
+}
+
+/* ===== Score Bar ===== */
+.score-bar {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 10px 20px;
+  background: #fff;
+  border-top: 1px solid #e5e7eb;
+  flex-shrink: 0;
+}
+
+.score-bar-left {
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+}
+
+.score-value {
+  font-size: 26px;
+  font-weight: 700;
+  line-height: 1;
+  tabular-nums: true;
+}
+
+.score-sep, .score-max {
+  font-size: 14px;
+  color: #9ca3af;
+}
+
+.score-grade {
+  font-size: 14px;
+  font-weight: 700;
+  margin-left: 4px;
+}
+
+.score-bar-stats {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 11px;
+}
+
+.stat-pass  { color: #10b981; display: flex; align-items: center; gap: 3px; }
+.stat-fail  { color: #ef4444; display: flex; align-items: center; gap: 3px; }
+.stat-deduct { color: #ef4444; }
+.stat-bonus  { color: #10b981; }
+
+.score-bar-progress {
+  font-size: 11px;
+  color: #9ca3af;
+  margin-left: auto;
+}
+
+.score-bar-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+</style>

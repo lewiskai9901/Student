@@ -38,6 +38,8 @@ public class InspSubmissionPO {
     private LocalDateTime checkinTime;
     private Integer syncVersion;
     private LocalDateTime completedAt;
+    private LocalDateTime closedAt;
+    private String closedReason;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 

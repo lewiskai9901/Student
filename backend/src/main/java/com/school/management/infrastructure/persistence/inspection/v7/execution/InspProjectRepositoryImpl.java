@@ -87,6 +87,7 @@ public class InspProjectRepositoryImpl implements InspProjectRepository {
         po.setCalibrationEnabled(d.getCalibrationEnabled());
         po.setCalibrationMethod(d.getCalibrationMethod());
         po.setSplitStrategy(d.getSplitStrategy());
+        po.setScoringConfigSnapshot(d.getScoringConfigSnapshot());
         po.setStatus(d.getStatus() != null ? d.getStatus().name() : null);
         po.setCreatedBy(d.getCreatedBy());
         po.setCreatedAt(d.getCreatedAt());
@@ -122,6 +123,7 @@ public class InspProjectRepositoryImpl implements InspProjectRepository {
                 .calibrationEnabled(po.getCalibrationEnabled())
                 .calibrationMethod(po.getCalibrationMethod())
                 .splitStrategy(po.getSplitStrategy())
+                .scoringConfigSnapshot(po.getScoringConfigSnapshot())
                 .status(po.getStatus() != null ? ProjectStatus.valueOf(po.getStatus()) : null)
                 .createdBy(po.getCreatedBy())
                 .createdAt(po.getCreatedAt())

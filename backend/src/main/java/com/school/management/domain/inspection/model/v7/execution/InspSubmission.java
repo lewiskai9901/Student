@@ -39,6 +39,8 @@ public class InspSubmission extends AggregateRoot<Long> {
     private LocalDateTime checkinTime;
     private Integer syncVersion;
     private LocalDateTime completedAt;
+    private LocalDateTime closedAt;
+    private String closedReason;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 
@@ -72,6 +74,8 @@ public class InspSubmission extends AggregateRoot<Long> {
         this.checkinTime = builder.checkinTime;
         this.syncVersion = builder.syncVersion != null ? builder.syncVersion : 1;
         this.completedAt = builder.completedAt;
+        this.closedAt = builder.closedAt;
+        this.closedReason = builder.closedReason;
         this.createdAt = builder.createdAt != null ? builder.createdAt : LocalDateTime.now();
         this.updatedAt = builder.updatedAt;
     }
@@ -187,6 +191,16 @@ public class InspSubmission extends AggregateRoot<Long> {
         this.updatedAt = LocalDateTime.now();
     }
 
+    /**
+     * CONTINUOUS 模式自动关闭（不改状态，仅标记 closedAt）
+     * 调度器在 continuousEnd 时间后调用此方法。
+     */
+    public void autoClose() {
+        this.closedAt = LocalDateTime.now();
+        this.closedReason = "AUTO_CLOSED";
+        this.updatedAt = LocalDateTime.now();
+    }
+
     // Getters
     @Override
     public Long getId() { return id; }
@@ -219,6 +233,8 @@ public class InspSubmission extends AggregateRoot<Long> {
     public LocalDateTime getCheckinTime() { return checkinTime; }
     public Integer getSyncVersion() { return syncVersion; }
     public LocalDateTime getCompletedAt() { return completedAt; }
+    public LocalDateTime getClosedAt() { return closedAt; }
+    public String getClosedReason() { return closedReason; }
     public LocalDateTime getCreatedAt() { return createdAt; }
     public LocalDateTime getUpdatedAt() { return updatedAt; }
 
@@ -251,6 +267,8 @@ public class InspSubmission extends AggregateRoot<Long> {
         private LocalDateTime checkinTime;
         private Integer syncVersion;
         private LocalDateTime completedAt;
+        private LocalDateTime closedAt;
+        private String closedReason;
         private LocalDateTime createdAt;
         private LocalDateTime updatedAt;
 
@@ -280,6 +298,8 @@ public class InspSubmission extends AggregateRoot<Long> {
         public Builder checkinTime(LocalDateTime checkinTime) { this.checkinTime = checkinTime; return this; }
         public Builder syncVersion(Integer syncVersion) { this.syncVersion = syncVersion; return this; }
         public Builder completedAt(LocalDateTime completedAt) { this.completedAt = completedAt; return this; }
+        public Builder closedAt(LocalDateTime closedAt) { this.closedAt = closedAt; return this; }
+        public Builder closedReason(String closedReason) { this.closedReason = closedReason; return this; }
         public Builder createdAt(LocalDateTime createdAt) { this.createdAt = createdAt; return this; }
         public Builder updatedAt(LocalDateTime updatedAt) { this.updatedAt = updatedAt; return this; }
 
