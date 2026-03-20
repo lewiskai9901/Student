@@ -5,6 +5,7 @@ import com.school.management.domain.event.model.EntityEventRelation;
 import com.school.management.domain.event.repository.EntityEventRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -21,6 +22,7 @@ import java.util.Map;
 public class EntityEventApplicationService {
 
     private final EntityEventRepository eventRepository;
+    private final ApplicationEventPublisher applicationEventPublisher;
 
     /**
      * 创建事件
@@ -72,6 +74,11 @@ public class EntityEventApplicationService {
 
         EntityEvent saved = eventRepository.save(event);
         log.info("Created entity event: {} for {}/{}", eventType, subjectType, subjectId);
+
+        // 发布 Spring Application Event，触发异步通知处理
+        applicationEventPublisher.publishEvent(new EntityEventCreatedNotification(
+                saved.getId(), subjectType, subjectId, subjectName, eventType, eventLabel));
+
         return saved;
     }
 
