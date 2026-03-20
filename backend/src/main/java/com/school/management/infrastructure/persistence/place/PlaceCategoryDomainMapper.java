@@ -1,28 +1,28 @@
-package com.school.management.infrastructure.persistence.space;
+package com.school.management.infrastructure.persistence.place;
 
-import com.school.management.domain.space.model.entity.SpaceCategory;
-import com.school.management.domain.space.model.valueobject.SpaceLevel;
+import com.school.management.domain.place.model.entity.PlaceCategory;
+import com.school.management.domain.place.model.valueobject.PlaceLevel;
 import org.springframework.stereotype.Component;
 
 /**
  * 空间分类领域对象与持久化对象映射器
  */
 @Component
-public class SpaceCategoryDomainMapper {
+public class PlaceCategoryDomainMapper {
 
     /**
      * PO -> 领域对象
      */
-    public SpaceCategory toDomain(SpaceCategoryPO po) {
+    public PlaceCategory toDomain(PlaceCategoryPO po) {
         if (po == null) {
             return null;
         }
 
-        SpaceLevel applyToLevel = po.getApplyToLevel() != null
-            ? SpaceLevel.valueOf(po.getApplyToLevel())
+        PlaceLevel applyToLevel = po.getApplyToLevel() != null
+            ? PlaceLevel.valueOf(po.getApplyToLevel())
             : null;
 
-        return SpaceCategory.reconstitute(
+        return PlaceCategory.reconstitute(
             po.getId(),
             po.getCategoryCode(),
             po.getCategoryName(),
@@ -50,12 +50,12 @@ public class SpaceCategoryDomainMapper {
     /**
      * 领域对象 -> PO
      */
-    public SpaceCategoryPO toPO(SpaceCategory category) {
+    public PlaceCategoryPO toPO(PlaceCategory category) {
         if (category == null) {
             return null;
         }
 
-        SpaceCategoryPO po = new SpaceCategoryPO();
+        PlaceCategoryPO po = new PlaceCategoryPO();
         po.setId(category.getId());
         po.setCategoryCode(category.getCategoryCode());
         po.setCategoryName(category.getCategoryName());

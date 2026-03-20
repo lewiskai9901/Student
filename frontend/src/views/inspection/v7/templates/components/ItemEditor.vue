@@ -3,7 +3,7 @@ import { ref, watch, computed, reactive, nextTick } from 'vue'
 import {
   Save, HelpCircle, Plus, Trash2,
   BarChart3, Clipboard, Info, ShieldCheck, Zap,
-  GripVertical, AlertTriangle, ChevronDown,
+  GripVertical, AlertTriangle,
 } from 'lucide-vue-next'
 import {
   ItemTypeConfig, ItemTypeGroups, type ItemType,
@@ -27,21 +27,8 @@ const emit = defineEmits<{
 // ==================== Refs ====================
 const itemNameInput = ref<HTMLInputElement | null>(null)
 
-// ==================== Accordion State ====================
-const expandedSections = ref<Set<string>>(new Set(['info']))
-
-function toggleSection(key: string) {
-  if (expandedSections.value.has(key)) {
-    expandedSections.value.delete(key)
-  } else {
-    expandedSections.value.add(key)
-  }
-  expandedSections.value = new Set(expandedSections.value) // trigger reactivity
-}
-
-function isSectionOpen(key: string) {
-  return expandedSections.value.has(key)
-}
+// ==================== Tab State ====================
+const activeTab = ref<'scoring' | 'validation' | 'condition'>('scoring')
 
 // ==================== Form State ====================
 
@@ -445,10 +432,7 @@ function serializeValidationRules(): string {
 
 function addRule() {
   validationRulesList.value.push({ type: 'required', message: '' })
-  if (!expandedSections.value.has('validation')) {
-    expandedSections.value.add('validation')
-    expandedSections.value = new Set(expandedSections.value)
-  }
+  activeTab.value = 'validation'
 }
 
 function removeRule(idx: number) {
@@ -536,8 +520,8 @@ watch(() => props.item, (item) => {
       parseScoringConfig(item.scoringConfig || '{}')
     }
     parseValidationRules(item.validationRules || '[]')
-    // Reset accordion: open info section
-    expandedSections.value = new Set(['info'])
+    // Reset tab to scoring
+    activeTab.value = 'scoring'
 
     // Auto-focus name input for newly added items (empty name)
     if (!item.itemName) {
@@ -732,45 +716,80 @@ const scoringFromResponseSet = computed(() =>
     <!-- ═══════ Scrollable Body ═══════ -->
     <div class="ie-body">
 
-      <!-- ── 1. 基本信息 ── -->
-      <div class="ie-acc" :class="{ open: isSectionOpen('info') }">
-        <button class="ie-acc-head" @click="toggleSection('info')">
-          <span class="ie-acc-title">基本信息</span>
-          <ChevronDown :size="14" class="ie-acc-arrow" />
-        </button>
-        <div v-if="isSectionOpen('info')" class="ie-acc-body">
-          <div class="ie-fld">
-            <label>名称 <span class="ie-req">*</span></label>
-            <input ref="itemNameInput" v-model="form.itemName" placeholder="检查项名称" />
-          </div>
+      <!-- ── 基本信息 ── -->
+      <div class="ie-section">
+        <div class="ie-fld">
+          <label>名称 <span class="ie-req">*</span></label>
+          <input ref="itemNameInput" v-model="form.itemName" placeholder="检查项名称" />
+        </div>
+        <div class="ie-row-2">
           <div class="ie-fld">
             <label>描述</label>
-            <textarea v-model="form.description" rows="2" placeholder="可选的补充说明" />
+            <input v-model="form.description" placeholder="可选" />
           </div>
           <div class="ie-fld">
             <label>帮助提示</label>
-            <textarea v-model="form.helpContent" rows="2" placeholder="检查员填写时看到的提示" />
+            <input v-model="form.helpContent" placeholder="检查员看到的提示" />
           </div>
         </div>
       </div>
 
-      <!-- ── 2. 评分配置（评分项）── -->
-      <template v-if="itemCategory === 'scored'">
-        <!-- Response set binding -->
-        <div v-if="needsResponseSet" class="ie-acc" :class="{ open: isSectionOpen('rs') }">
-          <button class="ie-acc-head" @click="toggleSection('rs')">
-            <span class="ie-acc-title">选项集</span>
-            <span v-if="form.responseSetId" class="ie-acc-tag blue">已绑定</span>
-            <ChevronDown :size="14" class="ie-acc-arrow" />
+      <!-- ── Tab 导航 ── -->
+      <div class="ie-tabs">
+        <!-- 评分项: 评分配置 tab -->
+        <template v-if="itemCategory === 'scored'">
+          <button
+            :class="['ie-tab', activeTab === 'scoring' && 'active']"
+            @click="activeTab = 'scoring'"
+          >
+            <BarChart3 :size="12" />
+            评分配置
+            <span v-if="!scoringFromResponseSet" class="ie-tab-tag">{{ ScoringModeConfig[scoring.mode]?.label }}</span>
           </button>
-          <div v-if="isSectionOpen('rs')" class="ie-acc-body">
+        </template>
+        <!-- 采集项: 输入类型 tab（复用 scoring 位置）-->
+        <template v-if="itemCategory === 'capture'">
+          <button
+            :class="['ie-tab', activeTab === 'scoring' && 'active']"
+            @click="activeTab = 'scoring'"
+          >
+            <Clipboard :size="12" />
+            输入类型
+            <span class="ie-tab-tag green">{{ ItemTypeConfig[form.itemType]?.label }}</span>
+          </button>
+        </template>
+        <button
+          :class="['ie-tab', activeTab === 'validation' && 'active']"
+          @click="activeTab = 'validation'"
+        >
+          <ShieldCheck :size="12" />
+          验证规则
+          <span v-if="validationRulesList.length > 0" class="ie-tab-count">{{ validationRulesList.length }}</span>
+        </button>
+        <button
+          :class="['ie-tab', activeTab === 'condition' && 'active']"
+          @click="activeTab = 'condition'"
+        >
+          <Zap :size="12" />
+          条件逻辑
+          <span v-if="form.conditionLogic" class="ie-tab-dot" />
+        </button>
+      </div>
+
+      <!-- ── Tab 内容 ── -->
+      <div class="ie-tab-content">
+
+        <!-- Tab: 评分配置（评分项）-->
+        <div v-if="activeTab === 'scoring' && itemCategory === 'scored'" class="ie-tab-pane">
+          <!-- Response set binding -->
+          <template v-if="needsResponseSet">
             <div class="ie-fld">
+              <label>选项集</label>
               <select v-model="form.responseSetId" class="ie-select">
                 <option :value="null">-- 不使用选项集 --</option>
                 <option v-for="rs in responseSets" :key="rs.id" :value="rs.id">{{ rs.setName }}</option>
               </select>
             </div>
-            <!-- Preview -->
             <div v-if="scoringFromResponseSet" class="ie-rs-preview">
               <div v-for="opt in rsOptions" :key="opt.id" class="ie-rs-row">
                 <div class="ie-rs-label">
@@ -782,71 +801,198 @@ const scoringFromResponseSet = computed(() =>
               </div>
             </div>
             <div v-else-if="form.responseSetId && rsOptionsLoading" class="ie-muted">加载选项中...</div>
-          </div>
-        </div>
-
-        <!-- Scoring mode (only when NOT driven by response set) -->
-        <div v-if="!scoringFromResponseSet" class="ie-acc" :class="{ open: isSectionOpen('scoring') }">
-          <button class="ie-acc-head" @click="toggleSection('scoring')">
-            <span class="ie-acc-title">评分配置</span>
-            <span class="ie-acc-tag blue">{{ ScoringModeConfig[scoring.mode]?.label }}</span>
-            <ChevronDown :size="14" class="ie-acc-arrow" />
-          </button>
-          <div v-if="isSectionOpen('scoring')" class="ie-acc-body">
-            <!-- Scoring summary + open dialog button -->
-            <div class="ie-scoring-row">
-              <span class="ie-scoring-summary">{{ scoringSummary }}</span>
-              <button class="ie-btn-sm" @click="showScoringDialog = true">编辑</button>
-            </div>
-          </div>
-        </div>
-      </template>
-
-      <!-- ── 2b. 输入类型（采集项）── -->
-      <template v-if="itemCategory === 'capture'">
-        <div class="ie-acc" :class="{ open: isSectionOpen('capture') }">
-          <button class="ie-acc-head" @click="toggleSection('capture')">
-            <span class="ie-acc-title">输入类型</span>
-            <span class="ie-acc-tag green">{{ ItemTypeConfig[form.itemType]?.label }}</span>
-            <ChevronDown :size="14" class="ie-acc-arrow" />
-          </button>
-          <div v-if="isSectionOpen('capture')" class="ie-acc-body">
+          </template>
+          <!-- Scoring mode inline (when NOT driven by response set) -->
+          <template v-if="!scoringFromResponseSet">
+            <!-- Mode selector -->
             <div class="ie-fld">
-              <select v-model="form.itemType" class="ie-select">
-                <optgroup v-for="group in ItemTypeGroups" :key="group" :label="group">
-                  <option
-                    v-for="(info, key) in ItemTypeConfig"
-                    :key="key"
-                    v-show="info.group === group"
-                    :value="key"
-                  >{{ info.label }}</option>
-                </optgroup>
-              </select>
+              <label>评分模式</label>
+              <div class="ie-mode-grid">
+                <button v-for="(cfg, key) in ScoringModeConfig" :key="key"
+                  :class="['ie-mode-chip', scoring.mode === key && 'active']"
+                  @click="scoring.mode = key as any">{{ cfg.label }}</button>
+              </div>
+              <div class="ie-desc-box"><Info :size="11" /><span>{{ ScoringModeConfig[scoring.mode]?.description }}</span></div>
             </div>
-            <div v-if="ItemTypeConfig[form.itemType]?.description" class="ie-desc-box">
-              <Info :size="11" />
-              <span>{{ ItemTypeConfig[form.itemType].description }}</span>
+            <!-- Mode params inline -->
+            <div class="ie-params">
+              <!-- PASS_FAIL -->
+              <template v-if="scoring.mode === 'PASS_FAIL'">
+                <div class="ie-row-2">
+                  <div class="ie-fld"><label>通过得分</label><input v-model.number="scoring.passScore" type="number" /></div>
+                  <div class="ie-fld"><label>不通过扣分</label><input v-model.number="scoring.failScore" type="number" :max="0" /></div>
+                </div>
+              </template>
+              <!-- DEDUCTION -->
+              <template v-if="scoring.mode === 'DEDUCTION'">
+                <div class="ie-row-2">
+                  <div class="ie-fld"><label>最大扣分</label><input v-model.number="scoring.maxDeduction" type="number" :max="0" /></div>
+                  <div class="ie-fld"><label>步长</label><input v-model.number="scoring.deductionStep" type="number" :min="1" /></div>
+                </div>
+              </template>
+              <!-- ADDITION -->
+              <template v-if="scoring.mode === 'ADDITION'">
+                <div class="ie-row-2">
+                  <div class="ie-fld"><label>最大加分</label><input v-model.number="scoring.maxBonus" type="number" :min="1" /></div>
+                  <div class="ie-fld"><label>步长</label><input v-model.number="scoring.bonusStep" type="number" :min="1" /></div>
+                </div>
+              </template>
+              <!-- DIRECT -->
+              <template v-if="scoring.mode === 'DIRECT'">
+                <div class="ie-row-2">
+                  <div class="ie-fld"><label>最低分</label><input v-model.number="scoring.minScore" type="number" /></div>
+                  <div class="ie-fld"><label>最高分</label><input v-model.number="scoring.maxScore" type="number" /></div>
+                </div>
+              </template>
+              <!-- LEVEL -->
+              <template v-if="scoring.mode === 'LEVEL'">
+                <div class="ie-list-head">
+                  <label>等级列表</label>
+                  <div class="ie-presets">
+                    <button @click="scoring.levels = [{label:'优',score:10},{label:'良',score:7},{label:'中',score:4},{label:'差',score:0}]">优良中差</button>
+                    <button @click="scoring.levels = [{label:'A',score:10},{label:'B',score:7},{label:'C',score:4},{label:'D',score:0}]">ABCD</button>
+                  </div>
+                </div>
+                <div class="ie-list">
+                  <div v-for="(lv, i) in scoring.levels" :key="i" class="ie-list-row">
+                    <input v-model="lv.label" class="ie-list-input w-flex" placeholder="标签" />
+                    <input v-model.number="lv.score" type="number" class="ie-list-input w-60" placeholder="分值" />
+                    <button class="ie-btn-icon-del" @click="scoring.levels.splice(i, 1)"><Trash2 :size="11" /></button>
+                  </div>
+                </div>
+                <button class="ie-link-btn" @click="scoring.levels.push({ label: '', score: 0 })"><Plus :size="11" /> 添加</button>
+              </template>
+              <!-- SCORE_TABLE -->
+              <template v-if="scoring.mode === 'SCORE_TABLE'">
+                <div class="ie-list">
+                  <div v-for="(opt, i) in scoring.options" :key="i" class="ie-list-row">
+                    <input v-model="opt.label" class="ie-list-input w-flex" placeholder="档位名" />
+                    <input v-model.number="opt.score" type="number" class="ie-list-input w-60" placeholder="分值" />
+                    <button class="ie-btn-icon-del" @click="scoring.options.splice(i, 1)"><Trash2 :size="11" /></button>
+                  </div>
+                </div>
+                <button class="ie-link-btn" @click="scoring.options.push({ label: '', description: '', score: 0 })"><Plus :size="11" /> 添加</button>
+              </template>
+              <!-- CUMULATIVE -->
+              <template v-if="scoring.mode === 'CUMULATIVE'">
+                <div class="ie-row-2">
+                  <div class="ie-fld"><label>每次分值</label><input v-model.number="scoring.scorePerCount" type="number" /></div>
+                  <div class="ie-fld"><label>最大次数</label><input v-model.number="scoring.maxCount" type="number" :min="1" /></div>
+                </div>
+              </template>
+              <!-- TIERED_DEDUCTION -->
+              <template v-if="scoring.mode === 'TIERED_DEDUCTION'">
+                <div class="ie-list">
+                  <div v-for="(t, i) in scoring.tiers" :key="i" class="ie-list-row">
+                    <input v-model="t.label" class="ie-list-input w-flex" placeholder="档位名" />
+                    <input v-model.number="t.score" type="number" :max="0" class="ie-list-input w-60" placeholder="扣分" />
+                    <button class="ie-btn-icon-del" @click="scoring.tiers.splice(i, 1)"><Trash2 :size="11" /></button>
+                  </div>
+                </div>
+                <button class="ie-link-btn" @click="scoring.tiers.push({ label: '', score: 0 })"><Plus :size="11" /> 添加</button>
+              </template>
+              <!-- RATING_SCALE -->
+              <template v-if="scoring.mode === 'RATING_SCALE'">
+                <div class="ie-row-2">
+                  <div class="ie-fld"><label>最大星数</label><input v-model.number="scoring.maxStars" type="number" :min="3" :max="10" /></div>
+                  <div class="ie-fld"><label>每星分值</label><input v-model.number="scoring.scorePerStar" type="number" :min="1" /></div>
+                </div>
+                <div class="ie-calc">满分 = {{ scoring.maxStars }} × {{ scoring.scorePerStar }} = <strong>{{ scoring.maxStars * scoring.scorePerStar }}</strong></div>
+              </template>
+              <!-- WEIGHTED_MULTI -->
+              <template v-if="scoring.mode === 'WEIGHTED_MULTI'">
+                <div class="ie-list">
+                  <div v-for="(dim, i) in scoring.dimensions" :key="i" class="ie-list-row">
+                    <input v-model="dim.label" class="ie-list-input w-flex" placeholder="名称" />
+                    <input v-model.number="dim.weight" type="number" class="ie-list-input w-50" placeholder="%" />
+                    <span class="ie-unit">%</span>
+                    <button class="ie-btn-icon-del" @click="scoring.dimensions.splice(i, 1)"><Trash2 :size="11" /></button>
+                  </div>
+                </div>
+                <button class="ie-link-btn" @click="scoring.dimensions.push({ key: `dim${scoring.dimensions.length+1}`, label: '', weight: 0, maxScore: 10 })"><Plus :size="11" /> 添加</button>
+              </template>
+              <!-- THRESHOLD -->
+              <template v-if="scoring.mode === 'THRESHOLD'">
+                <div class="ie-fld" style="max-width:120px"><label>单位</label><input v-model="scoring.unit" placeholder="°C" /></div>
+                <div class="ie-list">
+                  <div v-for="(th, i) in scoring.thresholds" :key="i" class="ie-list-row">
+                    <span class="ie-unit">≤</span>
+                    <input v-model.number="th.max" type="number" class="ie-list-input w-60" :placeholder="i === scoring.thresholds.length - 1 ? '∞' : 'max'" />
+                    <input v-model="th.label" class="ie-list-input w-flex" placeholder="标签" />
+                    <input v-model.number="th.score" type="number" class="ie-list-input w-60" placeholder="分值" />
+                    <button class="ie-btn-icon-del" @click="scoring.thresholds.splice(i, 1)"><Trash2 :size="11" /></button>
+                  </div>
+                </div>
+                <button class="ie-link-btn" @click="scoring.thresholds.push({ max: null, label: '', score: 0 })"><Plus :size="11" /> 添加</button>
+              </template>
+              <!-- FORMULA -->
+              <template v-if="scoring.mode === 'FORMULA'">
+                <div class="ie-fld">
+                  <label>公式类型</label>
+                  <select v-model="scoring.formulaType" class="ie-select">
+                    <option value="ratio">比值</option>
+                    <option value="difference">差值</option>
+                    <option value="percentage">百分比</option>
+                    <option value="compliance_rate">达标率</option>
+                  </select>
+                </div>
+                <div class="ie-row-2">
+                  <div class="ie-fld"><label>最高分</label><input v-model.number="scoring.formulaMaxScore" type="number" /></div>
+                  <div class="ie-fld"><label>最低分</label><input v-model.number="scoring.formulaMinScore" type="number" /></div>
+                </div>
+              </template>
+              <!-- RISK_MATRIX -->
+              <template v-if="scoring.mode === 'RISK_MATRIX'">
+                <label class="ie-fld-label">可能性</label>
+                <div class="ie-list">
+                  <div v-for="(p, i) in scoring.probabilities" :key="'p'+i" class="ie-list-row">
+                    <input v-model="p.label" class="ie-list-input w-flex" placeholder="标签" />
+                    <input v-model.number="p.value" type="number" class="ie-list-input w-60" />
+                    <button class="ie-btn-icon-del" @click="scoring.probabilities.splice(i, 1)"><Trash2 :size="11" /></button>
+                  </div>
+                </div>
+                <label class="ie-fld-label">影响</label>
+                <div class="ie-list">
+                  <div v-for="(imp, i) in scoring.impacts" :key="'i'+i" class="ie-list-row">
+                    <input v-model="imp.label" class="ie-list-input w-flex" placeholder="标签" />
+                    <input v-model.number="imp.value" type="number" class="ie-list-input w-60" />
+                    <button class="ie-btn-icon-del" @click="scoring.impacts.splice(i, 1)"><Trash2 :size="11" /></button>
+                  </div>
+                </div>
+              </template>
             </div>
-            <!-- Response set for choice-type capture -->
-            <div v-if="captureNeedsResponseSet" class="ie-fld">
-              <label>选项集</label>
-              <select v-model="form.responseSetId" class="ie-select">
-                <option :value="null">-- 不使用选项集 --</option>
-                <option v-for="rs in responseSets" :key="rs.id" :value="rs.id">{{ rs.setName }}</option>
-              </select>
-            </div>
+          </template>
+        </div>
+
+        <!-- Tab: 输入类型（采集项）-->
+        <div v-if="activeTab === 'scoring' && itemCategory === 'capture'" class="ie-tab-pane">
+          <div class="ie-fld">
+            <select v-model="form.itemType" class="ie-select">
+              <optgroup v-for="group in ItemTypeGroups" :key="group" :label="group">
+                <option
+                  v-for="(info, key) in ItemTypeConfig"
+                  :key="key"
+                  v-show="info.group === group"
+                  :value="key"
+                >{{ info.label }}</option>
+              </optgroup>
+            </select>
+          </div>
+          <div v-if="ItemTypeConfig[form.itemType]?.description" class="ie-desc-box">
+            <Info :size="11" />
+            <span>{{ ItemTypeConfig[form.itemType].description }}</span>
+          </div>
+          <div v-if="captureNeedsResponseSet" class="ie-fld">
+            <label>选项集</label>
+            <select v-model="form.responseSetId" class="ie-select">
+              <option :value="null">-- 不使用选项集 --</option>
+              <option v-for="rs in responseSets" :key="rs.id" :value="rs.id">{{ rs.setName }}</option>
+            </select>
           </div>
         </div>
-      </template>
 
-      <!-- ── 3. 验证规则 ── -->
-      <div class="ie-acc" :class="{ open: isSectionOpen('validation') }">
-        <button class="ie-acc-head" @click="toggleSection('validation')">
-          <span class="ie-acc-title">验证规则</span>
-          <span v-if="validationRulesList.length > 0" class="ie-acc-count">{{ validationRulesList.length }}</span>
-          <ChevronDown :size="14" class="ie-acc-arrow" />
-        </button>
-        <div v-if="isSectionOpen('validation')" class="ie-acc-body">
+        <!-- Tab: 验证规则 -->
+        <div v-if="activeTab === 'validation'" class="ie-tab-pane">
           <div v-if="validationRulesList.length === 0" class="ie-muted">暂无验证规则</div>
           <div v-for="(rule, idx) in validationRulesList" :key="idx" class="ie-rule">
             <div class="ie-rule-top">
@@ -875,316 +1021,79 @@ const scoringFromResponseSet = computed(() =>
           </div>
           <button class="ie-link-btn" @click="addRule"><Plus :size="12" /> 添加规则</button>
         </div>
-      </div>
 
-      <!-- ── 4. 条件逻辑 ── -->
-      <div class="ie-acc" :class="{ open: isSectionOpen('condition') }">
-        <button class="ie-acc-head" @click="toggleSection('condition')">
-          <span class="ie-acc-title">条件逻辑</span>
-          <span v-if="form.conditionLogic" class="ie-acc-tag orange">已配置</span>
-          <ChevronDown :size="14" class="ie-acc-arrow" />
-        </button>
-        <div v-if="isSectionOpen('condition')" class="ie-acc-body">
+        <!-- Tab: 条件逻辑 -->
+        <div v-if="activeTab === 'condition'" class="ie-tab-pane">
           <ConditionBuilder
             v-model="form.conditionLogic"
             :all-items="conditionItems"
             :target-label="form.itemName"
           />
         </div>
-      </div>
 
+      </div>
     </div>
 
-    <!-- ═══════ Scoring Config Dialog ═══════ -->
-    <Teleport to="body">
-      <Transition name="ie-modal">
-        <div v-if="showScoringDialog" class="ie-mask" @mousedown="onMaskMouseDown" @click="onMaskClick">
-          <div class="ie-dialog">
-            <div class="ie-dialog-head">
-              <h3>评分配置</h3>
-              <button class="ie-dialog-close" @click="showScoringDialog = false">&times;</button>
-            </div>
-            <div class="ie-dialog-body">
-              <!-- Mode selector -->
-              <div class="ie-fld">
-                <label>评分模式</label>
-                <div class="ie-mode-grid">
-                  <button
-                    v-for="(cfg, key) in ScoringModeConfig" :key="key"
-                    :class="['ie-mode-chip', scoring.mode === key && 'active']"
-                    @click="scoring.mode = key as any"
-                  >
-                    {{ cfg.label }}
-                  </button>
-                </div>
-                <div class="ie-desc-box">
-                  <Info :size="11" />
-                  <span>{{ ScoringModeConfig[scoring.mode]?.description }}</span>
-                </div>
-              </div>
-
-              <!-- Mode-specific params -->
-              <div class="ie-params">
-                <!-- PASS_FAIL -->
-                <template v-if="scoring.mode === 'PASS_FAIL'">
-                  <div class="ie-row-2">
-                    <div class="ie-fld"><label>通过得分</label><input v-model.number="scoring.passScore" type="number" /></div>
-                    <div class="ie-fld"><label>不通过扣分</label><input v-model.number="scoring.failScore" type="number" :max="0" /></div>
-                  </div>
-                </template>
-
-                <!-- DEDUCTION -->
-                <template v-if="scoring.mode === 'DEDUCTION'">
-                  <div class="ie-row-2">
-                    <div class="ie-fld"><label>最大扣分</label><input v-model.number="scoring.maxDeduction" type="number" :max="0" /></div>
-                    <div class="ie-fld"><label>步长</label><input v-model.number="scoring.deductionStep" type="number" :min="1" /></div>
-                  </div>
-                </template>
-
-                <!-- ADDITION -->
-                <template v-if="scoring.mode === 'ADDITION'">
-                  <div class="ie-row-2">
-                    <div class="ie-fld"><label>最大加分</label><input v-model.number="scoring.maxBonus" type="number" :min="1" /></div>
-                    <div class="ie-fld"><label>步长</label><input v-model.number="scoring.bonusStep" type="number" :min="1" /></div>
-                  </div>
-                </template>
-
-                <!-- DIRECT -->
-                <template v-if="scoring.mode === 'DIRECT'">
-                  <div class="ie-row-2">
-                    <div class="ie-fld"><label>最低分</label><input v-model.number="scoring.minScore" type="number" /></div>
-                    <div class="ie-fld"><label>最高分</label><input v-model.number="scoring.maxScore" type="number" /></div>
-                  </div>
-                  <div v-if="scoring.minScore >= scoring.maxScore" class="ie-alert">
-                    <AlertTriangle :size="12" /> 最低分必须小于最高分
-                  </div>
-                </template>
-
-                <!-- LEVEL -->
-                <template v-if="scoring.mode === 'LEVEL'">
-                  <div class="ie-list-head">
-                    <label>等级列表</label>
-                    <div class="ie-presets">
-                      <button @click="scoring.levels = [{label:'优',score:10},{label:'良',score:7},{label:'中',score:4},{label:'差',score:0}]">优良中差</button>
-                      <button @click="scoring.levels = [{label:'A',score:10},{label:'B',score:7},{label:'C',score:4},{label:'D',score:0}]">ABCD</button>
-                      <button @click="scoring.levels = [{label:'1级',score:2},{label:'2级',score:4},{label:'3级',score:6},{label:'4级',score:8},{label:'5级',score:10}]">1-5级</button>
-                    </div>
-                  </div>
-                  <div class="ie-list">
-                    <div v-for="(lv, i) in scoring.levels" :key="i" class="ie-list-row">
-                      <input v-model="lv.label" class="ie-list-input w-flex" placeholder="标签" />
-                      <input v-model.number="lv.score" type="number" class="ie-list-input w-60" placeholder="分值" />
-                      <button class="ie-btn-icon-del" @click="scoring.levels.splice(i, 1)"><Trash2 :size="12" /></button>
-                    </div>
-                  </div>
-                  <button class="ie-link-btn" @click="scoring.levels.push({ label: '', score: 0 })"><Plus :size="12" /> 添加等级</button>
-                </template>
-
-                <!-- SCORE_TABLE -->
-                <template v-if="scoring.mode === 'SCORE_TABLE'">
-                  <label class="ie-fld-label">评分档位</label>
-                  <div class="ie-list">
-                    <div v-for="(opt, i) in scoring.options" :key="i" class="ie-opt-card">
-                      <div class="ie-opt-top">
-                        <input v-model="opt.label" class="ie-list-input w-flex" placeholder="档位名" />
-                        <input v-model.number="opt.score" type="number" class="ie-list-input w-60" placeholder="分值" />
-                        <button class="ie-btn-icon-del" @click="scoring.options.splice(i, 1)"><Trash2 :size="12" /></button>
-                      </div>
-                      <input v-model="opt.description" class="ie-list-input-full" placeholder="描述..." />
-                    </div>
-                  </div>
-                  <button class="ie-link-btn" @click="scoring.options.push({ label: '', description: '', score: 0 })"><Plus :size="12" /> 添加档位</button>
-                </template>
-
-                <!-- CUMULATIVE -->
-                <template v-if="scoring.mode === 'CUMULATIVE'">
-                  <div class="ie-fld"><label>标签名</label><input v-model="scoring.cumulativeLabel" placeholder="如: 违规次数" /></div>
-                  <div class="ie-row-2">
-                    <div class="ie-fld"><label>每次分值</label><input v-model.number="scoring.scorePerCount" type="number" /></div>
-                    <div class="ie-fld"><label>最大次数</label><input v-model.number="scoring.maxCount" type="number" :min="1" /></div>
-                  </div>
-                </template>
-
-                <!-- TIERED_DEDUCTION -->
-                <template v-if="scoring.mode === 'TIERED_DEDUCTION'">
-                  <div class="ie-list-head">
-                    <label>扣分档位</label>
-                    <div class="ie-presets">
-                      <button @click="scoring.tiers = [{label:'轻微',score:-1},{label:'一般',score:-3},{label:'严重',score:-5},{label:'重大',score:-10}]">预设</button>
-                    </div>
-                  </div>
-                  <div class="ie-list">
-                    <div v-for="(t, i) in scoring.tiers" :key="i" class="ie-list-row">
-                      <input v-model="t.label" class="ie-list-input w-flex" placeholder="档位名" />
-                      <input v-model.number="t.score" type="number" :max="0" class="ie-list-input w-60" placeholder="扣分" />
-                      <button class="ie-btn-icon-del" @click="scoring.tiers.splice(i, 1)"><Trash2 :size="12" /></button>
-                    </div>
-                  </div>
-                  <button class="ie-link-btn" @click="scoring.tiers.push({ label: '', score: 0 })"><Plus :size="12" /> 添加档位</button>
-                </template>
-
-                <!-- RATING_SCALE -->
-                <template v-if="scoring.mode === 'RATING_SCALE'">
-                  <div class="ie-row-2">
-                    <div class="ie-fld"><label>最大星数 (3-10)</label><input v-model.number="scoring.maxStars" type="number" :min="3" :max="10" /></div>
-                    <div class="ie-fld"><label>每星分值</label><input v-model.number="scoring.scorePerStar" type="number" :min="1" /></div>
-                  </div>
-                  <div class="ie-calc">满分 = {{ scoring.maxStars }} × {{ scoring.scorePerStar }} = <strong>{{ scoring.maxStars * scoring.scorePerStar }}</strong></div>
-                </template>
-
-                <!-- WEIGHTED_MULTI -->
-                <template v-if="scoring.mode === 'WEIGHTED_MULTI'">
-                  <div class="ie-fld" style="max-width:120px"><label>总分</label><input v-model.number="scoring.weightedMultiMaxScore" type="number" :min="1" /></div>
-                  <div class="ie-list-head">
-                    <label>子维度</label>
-                    <span :class="['ie-weight-tag', scoring.dimensions.reduce((s,d)=>s+d.weight,0) === 100 ? 'ok' : 'bad']">
-                      {{ scoring.dimensions.reduce((s,d)=>s+d.weight,0) }}%
-                    </span>
-                  </div>
-                  <div class="ie-list">
-                    <div v-for="(dim, i) in scoring.dimensions" :key="i" class="ie-list-row">
-                      <input v-model="dim.key" class="ie-list-input w-60" placeholder="key" />
-                      <input v-model="dim.label" class="ie-list-input w-flex" placeholder="名称" />
-                      <input v-model.number="dim.weight" type="number" class="ie-list-input w-50" placeholder="%" />
-                      <span class="ie-unit">%</span>
-                      <input v-model.number="dim.maxScore" type="number" class="ie-list-input w-50" placeholder="满分" />
-                      <button class="ie-btn-icon-del" @click="scoring.dimensions.splice(i, 1)"><Trash2 :size="12" /></button>
-                    </div>
-                  </div>
-                  <button class="ie-link-btn" @click="scoring.dimensions.push({ key: `dim${scoring.dimensions.length+1}`, label: '', weight: 0, maxScore: 10 })"><Plus :size="12" /> 添加维度</button>
-                </template>
-
-                <!-- RISK_MATRIX -->
-                <template v-if="scoring.mode === 'RISK_MATRIX'">
-                  <label class="ie-fld-label">可能性级别</label>
-                  <div class="ie-list">
-                    <div v-for="(p, i) in scoring.probabilities" :key="'p'+i" class="ie-list-row">
-                      <input v-model="p.label" class="ie-list-input w-flex" placeholder="标签" />
-                      <input v-model.number="p.value" type="number" class="ie-list-input w-60" placeholder="值" />
-                      <button class="ie-btn-icon-del" @click="scoring.probabilities.splice(i, 1)"><Trash2 :size="12" /></button>
-                    </div>
-                  </div>
-                  <button class="ie-link-btn" @click="scoring.probabilities.push({ label: '', value: scoring.probabilities.length + 1 })"><Plus :size="12" /> 添加</button>
-                  <div class="ie-divider" />
-                  <label class="ie-fld-label">影响级别</label>
-                  <div class="ie-list">
-                    <div v-for="(imp, i) in scoring.impacts" :key="'i'+i" class="ie-list-row">
-                      <input v-model="imp.label" class="ie-list-input w-flex" placeholder="标签" />
-                      <input v-model.number="imp.value" type="number" class="ie-list-input w-60" placeholder="值" />
-                      <button class="ie-btn-icon-del" @click="scoring.impacts.splice(i, 1)"><Trash2 :size="12" /></button>
-                    </div>
-                  </div>
-                  <button class="ie-link-btn" @click="scoring.impacts.push({ label: '', value: scoring.impacts.length + 1 })"><Plus :size="12" /> 添加</button>
-                </template>
-
-                <!-- THRESHOLD -->
-                <template v-if="scoring.mode === 'THRESHOLD'">
-                  <div class="ie-fld" style="max-width:140px"><label>单位</label><input v-model="scoring.unit" placeholder="如: °C, dB" /></div>
-                  <label class="ie-fld-label">阈值区间</label>
-                  <div class="ie-list">
-                    <div v-for="(th, i) in scoring.thresholds" :key="i" class="ie-list-row">
-                      <span class="ie-unit">≤</span>
-                      <input v-model.number="th.max" type="number" class="ie-list-input w-60" :placeholder="i === scoring.thresholds.length - 1 ? '∞' : 'max'" />
-                      <input v-model="th.label" class="ie-list-input w-flex" placeholder="标签" />
-                      <input v-model.number="th.score" type="number" class="ie-list-input w-60" placeholder="分值" />
-                      <button class="ie-btn-icon-del" @click="scoring.thresholds.splice(i, 1)"><Trash2 :size="12" /></button>
-                    </div>
-                  </div>
-                  <button class="ie-link-btn" @click="scoring.thresholds.push({ max: null, label: '', score: 0 })"><Plus :size="12" /> 添加区间</button>
-                </template>
-
-                <!-- FORMULA -->
-                <template v-if="scoring.mode === 'FORMULA'">
-                  <div class="ie-fld">
-                    <label>公式类型</label>
-                    <select v-model="scoring.formulaType" class="ie-select">
-                      <option value="ratio">比值 (actual / standard × max)</option>
-                      <option value="difference">差值 (max - |actual - standard|)</option>
-                      <option value="percentage">百分比 (actual / total × max)</option>
-                      <option value="compliance_rate">达标率 (compliant / total × max)</option>
-                    </select>
-                  </div>
-                  <div class="ie-row-2">
-                    <div class="ie-fld"><label>最高分</label><input v-model.number="scoring.formulaMaxScore" type="number" :min="1" /></div>
-                    <div class="ie-fld"><label>最低分</label><input v-model.number="scoring.formulaMinScore" type="number" :min="0" /></div>
-                  </div>
-                  <label class="ie-fld-label">输入参数</label>
-                  <div class="ie-list">
-                    <div v-for="(inp, i) in scoring.formulaInputs" :key="i" class="ie-list-row">
-                      <input v-model="inp.key" class="ie-list-input w-flex" placeholder="key" />
-                      <input v-model="inp.label" class="ie-list-input w-flex" placeholder="标签" />
-                      <button class="ie-btn-icon-del" @click="scoring.formulaInputs.splice(i, 1)"><Trash2 :size="12" /></button>
-                    </div>
-                  </div>
-                  <button class="ie-link-btn" @click="scoring.formulaInputs.push({ key: '', label: '' })"><Plus :size="12" /> 添加参数</button>
-                </template>
-              </div>
-            </div>
-            <div class="ie-dialog-foot">
-              <button class="ie-btn-ghost" @click="showScoringDialog = false">关闭</button>
-            </div>
-          </div>
-        </div>
-      </Transition>
-    </Teleport>
   </div>
 </template>
 
 <style scoped>
 /* ═══════ Root ═══════ */
-.ie-root { display:flex; flex-direction:column; height:100%; background:#f8f9fb; border-left:1px solid #e8ecf0; }
+.ie-root { display:flex; flex-direction:column; height:100%; }
 
 /* ═══════ Header ═══════ */
-.ie-header { display:flex; align-items:center; justify-content:space-between; padding:10px 14px; background:#fff; border-bottom:1px solid #e8ecf0; }
-.ie-header-left { display:flex; align-items:center; gap:8px; }
-.ie-header-right { display:flex; align-items:center; gap:6px; }
+.ie-header { display:flex; align-items:center; justify-content:space-between; padding:6px 10px; border-bottom:1px solid #e8ecf0; }
+.ie-header-left { display:flex; align-items:center; gap:6px; }
+.ie-header-right { display:flex; align-items:center; gap:4px; }
 
-.ie-badge { display:inline-flex; align-items:center; gap:4px; padding:3px 8px; border-radius:5px; font-size:11px; font-weight:600; border:1px solid; }
-.ie-code { font-family:monospace; font-size:11px; color:#8c95a3; }
+.ie-badge { display:inline-flex; align-items:center; gap:3px; padding:2px 6px; border-radius:4px; font-size:10px; font-weight:600; border:1px solid; }
+.ie-code { font-family:monospace; font-size:10px; color:#8c95a3; }
 
-.ie-btn-primary { display:inline-flex; align-items:center; gap:4px; padding:5px 12px; background:#1a6dff; color:#fff; border:none; border-radius:6px; font-size:12px; font-weight:500; cursor:pointer; transition:background 0.15s; }
+.ie-btn-primary { display:inline-flex; align-items:center; gap:3px; padding:3px 10px; background:#1a6dff; color:#fff; border:none; border-radius:5px; font-size:11px; font-weight:500; cursor:pointer; }
 .ie-btn-primary:hover { background:#1558d6; }
-.ie-btn-ghost { padding:5px 12px; background:none; border:1px solid #dce1e8; border-radius:6px; font-size:12px; color:#5a6474; cursor:pointer; transition:background 0.15s; }
+.ie-btn-ghost { padding:3px 10px; background:none; border:1px solid #dce1e8; border-radius:5px; font-size:11px; color:#5a6474; cursor:pointer; }
 .ie-btn-ghost:hover { background:#f4f6f9; }
-.ie-btn-sm { padding:3px 10px; background:none; border:1px solid #dce1e8; border-radius:5px; font-size:11px; color:#1a6dff; cursor:pointer; font-weight:500; transition:all 0.15s; }
-.ie-btn-sm:hover { background:#f0f4ff; border-color:#1a6dff40; }
+.ie-btn-sm { padding:2px 8px; background:none; border:1px solid #dce1e8; border-radius:4px; font-size:10px; color:#1a6dff; cursor:pointer; font-weight:500; }
+.ie-btn-sm:hover { background:#f0f4ff; }
 
 /* ═══════ Scrollable body ═══════ */
-.ie-body { flex:1; overflow-y:auto; padding:8px 12px; display:flex; flex-direction:column; gap:4px; }
+.ie-body { flex:1; overflow-y:auto; padding:8px 10px; display:flex; flex-direction:column; gap:6px; min-height:0; }
 
-/* ═══════ Accordion ═══════ */
-.ie-acc { background:#fff; border:1px solid #e8ecf0; border-radius:8px; overflow:hidden; transition:border-color 0.15s; }
-.ie-acc.open { border-color:#d0d5dd; }
+/* ═══════ Basic info section ═══════ */
+.ie-section { border:1px solid #e8ecf0; border-radius:6px; padding:8px; display:flex; flex-direction:column; gap:6px; background:#fff; }
 
-.ie-acc-head { display:flex; align-items:center; gap:8px; width:100%; padding:9px 12px; background:none; border:none; cursor:pointer; text-align:left; transition:background 0.1s; }
-.ie-acc-head:hover { background:#f8f9fb; }
-.ie-acc-title { flex:1; font-size:12px; font-weight:600; color:#1e2a3a; }
-.ie-acc-arrow { color:#8c95a3; transition:transform 0.2s; flex-shrink:0; }
-.ie-acc.open .ie-acc-arrow { transform:rotate(180deg); }
-.ie-acc-tag { font-size:10px; font-weight:500; padding:1px 6px; border-radius:4px; }
-.ie-acc-tag.blue { color:#1a6dff; background:#eff6ff; }
-.ie-acc-tag.green { color:#059669; background:#ecfdf5; }
-.ie-acc-tag.orange { color:#d97706; background:#fffbeb; }
-.ie-acc-count { font-size:10px; font-weight:600; color:#fff; background:#1a6dff; padding:0 5px; border-radius:8px; min-width:16px; text-align:center; line-height:16px; }
+/* ═══════ Tabs ═══════ */
+.ie-tabs { display:flex; gap:0; background:#fff; border:1px solid #e8ecf0; border-radius:6px 6px 0 0; border-bottom:none; overflow:hidden; flex-shrink:0; }
 
-.ie-acc-body { padding:10px 12px; border-top:1px solid #f0f2f5; display:flex; flex-direction:column; gap:10px; }
+.ie-tab { flex:1; display:inline-flex; align-items:center; justify-content:center; gap:3px; padding:5px 4px; font-size:10px; font-weight:500; color:#8c95a3; background:none; border:none; border-bottom:2px solid transparent; cursor:pointer; transition:all 0.12s; white-space:nowrap; }
+.ie-tab:hover { color:#5a6474; background:#f8f9fb; }
+.ie-tab.active { color:#1a6dff; border-bottom-color:#1a6dff; font-weight:600; }
+
+.ie-tab-tag { font-size:9px; font-weight:500; padding:1px 5px; border-radius:3px; color:#1a6dff; background:#eff6ff; }
+.ie-tab-tag.green { color:#059669; background:#ecfdf5; }
+.ie-tab-count { font-size:9px; font-weight:600; color:#fff; background:#1a6dff; padding:0 4px; border-radius:7px; min-width:14px; text-align:center; line-height:14px; }
+.ie-tab-dot { width:6px; height:6px; border-radius:50%; background:#f59e0b; flex-shrink:0; }
+
+/* ═══════ Tab content ═══════ */
+.ie-tab-content { background:#fff; border:1px solid #e8ecf0; border-top:1px solid #e8ecf0; border-radius:0 0 6px 6px; flex:1; min-height:0; overflow-y:auto; }
+.ie-tab-pane { padding:8px; display:flex; flex-direction:column; gap:6px; }
 
 /* ═══════ Form fields ═══════ */
-.ie-fld { display:flex; flex-direction:column; gap:4px; }
+.ie-fld { display:flex; flex-direction:column; gap:2px; }
 .ie-fld label, .ie-fld-label { font-size:11px; font-weight:500; color:#5a6474; }
-.ie-fld input, .ie-fld textarea { width:100%; border:1px solid #dce1e8; border-radius:6px; padding:6px 10px; font-size:12px; outline:none; transition:border-color 0.2s, box-shadow 0.2s; color:#1e2a3a; background:#fff; resize:vertical; }
+.ie-fld input, .ie-fld textarea { width:100%; border:1px solid #dce1e8; border-radius:5px; padding:4px 8px; font-size:12px; outline:none; transition:border-color 0.15s; color:#1e2a3a; background:#fff; resize:vertical; }
 .ie-fld input::placeholder, .ie-fld textarea::placeholder { color:#b8c0cc; }
-.ie-fld input:focus, .ie-fld textarea:focus { border-color:#7aadff; box-shadow:0 0 0 2px rgba(26,109,255,0.08); }
+.ie-fld input:focus, .ie-fld textarea:focus { border-color:#7aadff; box-shadow:0 0 0 2px rgba(26,109,255,0.06); }
 .ie-req { color:#ef4444; }
-.ie-muted { font-size:11px; color:#8c95a3; text-align:center; padding:8px 0; }
+.ie-muted { font-size:10px; color:#8c95a3; text-align:center; padding:4px 0; }
 
-.ie-select { width:100%; border:1px solid #dce1e8; border-radius:6px; padding:6px 10px; font-size:12px; outline:none; color:#1e2a3a; background:#fff; cursor:pointer; appearance:none;
+.ie-select { width:100%; border:1px solid #dce1e8; border-radius:5px; padding:4px 8px; font-size:12px; outline:none; color:#1e2a3a; background:#fff; cursor:pointer; appearance:none;
   background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%239ca3af' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
-  background-repeat:no-repeat; background-position:right 8px center; padding-right:28px; }
-.ie-select:focus { border-color:#7aadff; box-shadow:0 0 0 2px rgba(26,109,255,0.08); }
-.ie-select-sm { padding:4px 8px; font-size:11px; }
+  background-repeat:no-repeat; background-position:right 6px center; padding-right:24px; }
+.ie-select:focus { border-color:#7aadff; box-shadow:0 0 0 2px rgba(26,109,255,0.06); }
+.ie-select-sm { padding:3px 6px; font-size:10px; }
 
-.ie-row-2 { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+.ie-row-2 { display:grid; grid-template-columns:1fr 1fr; gap:6px; }
 .ie-unit { font-size:11px; color:#8c95a3; flex-shrink:0; }
 
 .ie-desc-box { display:flex; align-items:flex-start; gap:5px; font-size:11px; color:#5a6474; padding:6px 8px; background:#f8f9fb; border-radius:6px; line-height:1.4; }
@@ -1216,14 +1125,13 @@ const scoringFromResponseSet = computed(() =>
 .ie-link-btn:hover { color:#1558d6; }
 
 /* ═══════ Modal Dialog ═══════ */
-.ie-mask { position:fixed; inset:0; z-index:1000; display:flex; align-items:center; justify-content:center; background:rgba(15,23,42,0.4); backdrop-filter:blur(2px); }
-.ie-dialog { width:560px; max-height:80vh; background:#fff; border-radius:14px; box-shadow:0 24px 64px rgba(0,0,0,0.18); display:flex; flex-direction:column; overflow:hidden; }
-.ie-dialog-head { display:flex; align-items:center; justify-content:space-between; padding:18px 24px 0; }
-.ie-dialog-head h3 { font-size:15px; font-weight:600; color:#1e2a3a; margin:0; }
-.ie-dialog-close { background:none; border:none; font-size:22px; color:#b8c0cc; cursor:pointer; padding:0 4px; line-height:1; }
-.ie-dialog-close:hover { color:#5a6474; }
-.ie-dialog-body { flex:1; overflow-y:auto; padding:16px 24px; display:flex; flex-direction:column; gap:14px; }
-.ie-dialog-foot { display:flex; justify-content:flex-end; gap:10px; padding:12px 24px; border-top:1px solid #f0f2f5; }
+.ie-mask { position:fixed; inset:0; z-index:1000; display:flex; align-items:center; justify-content:center; background:rgba(15,23,42,0.35); backdrop-filter:blur(1px); }
+.ie-dialog { width:480px; max-height:80vh; background:#fff; border-radius:10px; box-shadow:0 16px 48px rgba(0,0,0,0.15); display:flex; flex-direction:column; overflow:hidden; }
+.ie-dialog-head { display:flex; align-items:center; justify-content:space-between; padding:10px 14px; border-bottom:1px solid #f0f1f3; }
+.ie-dialog-head h3 { font-size:13px; font-weight:600; color:#1e2a3a; margin:0; }
+.ie-dialog-close { background:none; border:none; font-size:18px; color:#9ca3af; cursor:pointer; line-height:1; }
+.ie-dialog-body { flex:1; overflow-y:auto; padding:10px 14px; display:flex; flex-direction:column; gap:8px; }
+.ie-dialog-foot { display:flex; justify-content:flex-end; gap:6px; padding:6px 14px 10px; border-top:1px solid #f0f2f5; }
 
 .ie-modal-enter-active { transition:all 0.2s ease-out; }
 .ie-modal-leave-active { transition:all 0.15s ease-in; }

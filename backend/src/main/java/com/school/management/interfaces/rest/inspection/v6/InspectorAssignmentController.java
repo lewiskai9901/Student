@@ -7,7 +7,8 @@ import com.school.management.infrastructure.persistence.inspection.v6.TaskInspec
 import com.school.management.security.CustomUserDetails;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import org.springframework.security.access.prepost.PreAuthorize;
+import com.school.management.infrastructure.casbin.CasbinAccess;
+import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
@@ -17,6 +18,7 @@ import java.util.stream.Collectors;
 /**
  * V6检查员分配控制器
  */
+@RequiredArgsConstructor
 @Tag(name = "V6检查员分配", description = "V6检查员分配管理接口")
 @RestController
 @RequestMapping("/v6/inspector-assignments")
@@ -24,15 +26,11 @@ public class InspectorAssignmentController {
 
     private final InspectorAssignmentService assignmentService;
 
-    public InspectorAssignmentController(InspectorAssignmentService assignmentService) {
-        this.assignmentService = assignmentService;
-    }
-
     // ========== 项目检查员配置 ==========
 
     @Operation(summary = "获取项目检查员配置")
     @GetMapping("/projects/{projectId}/inspectors")
-    @PreAuthorize("hasAuthority('inspection:project:view')")
+    @CasbinAccess(resource = "inspection:project", action = "view")
     public Result<List<InspectorConfigResponse>> getProjectInspectors(@PathVariable Long projectId) {
         List<ProjectInspectorConfigPO> configs = assignmentService.getProjectInspectors(projectId);
         return Result.success(configs.stream().map(this::toConfigResponse).collect(Collectors.toList()));
@@ -40,7 +38,7 @@ public class InspectorAssignmentController {
 
     @Operation(summary = "添加项目检查员")
     @PostMapping("/projects/{projectId}/inspectors")
-    @PreAuthorize("hasAuthority('inspection:project:update')")
+    @CasbinAccess(resource = "inspection:project", action = "update")
     public Result<InspectorConfigResponse> addProjectInspector(
             @PathVariable Long projectId,
             @RequestBody AddInspectorRequest request,
@@ -56,7 +54,7 @@ public class InspectorAssignmentController {
 
     @Operation(summary = "批量添加项目检查员")
     @PostMapping("/projects/{projectId}/inspectors/batch")
-    @PreAuthorize("hasAuthority('inspection:project:update')")
+    @CasbinAccess(resource = "inspection:project", action = "update")
     public Result<Void> addProjectInspectors(
             @PathVariable Long projectId,
             @RequestBody List<InspectorAssignmentService.InspectorConfig> inspectors,
@@ -68,7 +66,7 @@ public class InspectorAssignmentController {
 
     @Operation(summary = "移除项目检查员")
     @DeleteMapping("/projects/{projectId}/inspectors/{inspectorId}")
-    @PreAuthorize("hasAuthority('inspection:project:update')")
+    @CasbinAccess(resource = "inspection:project", action = "update")
     public Result<Void> removeProjectInspector(
             @PathVariable Long projectId,
             @PathVariable Long inspectorId) {
@@ -81,7 +79,7 @@ public class InspectorAssignmentController {
 
     @Operation(summary = "获取任务检查员分配")
     @GetMapping("/tasks/{taskId}/inspectors")
-    @PreAuthorize("hasAuthority('inspection:task:view')")
+    @CasbinAccess(resource = "inspection:task", action = "view")
     public Result<List<AssignmentResponse>> getTaskAssignments(@PathVariable Long taskId) {
         List<TaskInspectorAssignmentPO> assignments = assignmentService.getTaskAssignments(taskId);
         return Result.success(assignments.stream().map(this::toAssignmentResponse).collect(Collectors.toList()));
@@ -89,7 +87,7 @@ public class InspectorAssignmentController {
 
     @Operation(summary = "分配检查员到任务")
     @PostMapping("/tasks/{taskId}/inspectors")
-    @PreAuthorize("hasAuthority('inspection:task:assign')")
+    @CasbinAccess(resource = "inspection:task", action = "assign")
     public Result<AssignmentResponse> assignInspector(
             @PathVariable Long taskId,
             @RequestBody AssignInspectorRequest request,
@@ -104,7 +102,7 @@ public class InspectorAssignmentController {
 
     @Operation(summary = "批量分配检查员")
     @PostMapping("/tasks/{taskId}/inspectors/batch")
-    @PreAuthorize("hasAuthority('inspection:task:assign')")
+    @CasbinAccess(resource = "inspection:task", action = "assign")
     public Result<Void> assignInspectors(
             @PathVariable Long taskId,
             @RequestBody List<InspectorAssignmentService.InspectorAssignment> assignments,
@@ -116,7 +114,7 @@ public class InspectorAssignmentController {
 
     @Operation(summary = "接受任务分配")
     @PostMapping("/assignments/{id}/accept")
-    @PreAuthorize("hasAuthority('inspection:task:execute')")
+    @CasbinAccess(resource = "inspection:task", action = "execute")
     public Result<Void> acceptAssignment(@PathVariable Long id) {
         assignmentService.acceptAssignment(id);
         return Result.success();
@@ -124,7 +122,7 @@ public class InspectorAssignmentController {
 
     @Operation(summary = "拒绝任务分配")
     @PostMapping("/assignments/{id}/decline")
-    @PreAuthorize("hasAuthority('inspection:task:execute')")
+    @CasbinAccess(resource = "inspection:task", action = "execute")
     public Result<Void> declineAssignment(@PathVariable Long id) {
         assignmentService.declineAssignment(id);
         return Result.success();
@@ -132,7 +130,7 @@ public class InspectorAssignmentController {
 
     @Operation(summary = "自动分配检查员")
     @PostMapping("/tasks/{taskId}/auto-assign")
-    @PreAuthorize("hasAuthority('inspection:task:assign')")
+    @CasbinAccess(resource = "inspection:task", action = "assign")
     public Result<Void> autoAssignInspectors(
             @PathVariable Long taskId,
             @RequestParam Long projectId,

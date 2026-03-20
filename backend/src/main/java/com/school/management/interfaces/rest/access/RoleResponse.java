@@ -3,7 +3,6 @@ package com.school.management.interfaces.rest.access;
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import com.fasterxml.jackson.databind.ser.std.ToStringSerializer;
 import com.school.management.domain.access.model.DataScope;
-import com.school.management.domain.access.model.RoleType;
 import lombok.Data;
 
 import java.time.LocalDateTime;
@@ -24,7 +23,7 @@ public class RoleResponse {
 
     private String description;
 
-    private RoleType roleType;
+    private String roleType;
 
     private Integer level;
 

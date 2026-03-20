@@ -8,6 +8,6 @@ import org.apache.ibatis.annotations.Select;
 @Mapper
 public interface ScoringProfileMapper extends BaseMapper<ScoringProfilePO> {
 
-    @Select("SELECT * FROM insp_scoring_profiles WHERE template_id = #{templateId} AND deleted = 0")
-    ScoringProfilePO findByTemplateId(@Param("templateId") Long templateId);
+    @Select("SELECT * FROM insp_scoring_profiles WHERE section_id = #{sectionId} AND deleted = 0")
+    ScoringProfilePO findBySectionId(@Param("sectionId") Long sectionId);
 }

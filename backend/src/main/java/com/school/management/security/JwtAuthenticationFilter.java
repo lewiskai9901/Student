@@ -5,6 +5,10 @@ import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import com.school.management.infrastructure.access.UserContext;
+import com.school.management.infrastructure.access.UserContextHolder;
+import com.school.management.infrastructure.tenant.TenantContext;
+import com.school.management.infrastructure.tenant.TenantContextHolder;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -14,6 +18,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
+import java.util.HashSet;
 
 /**
  * JWT认证过滤器
@@ -70,7 +75,25 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 // 设置到安全上下文
                 SecurityContextHolder.getContext().setAuthentication(authentication);
 
-                log.debug("用户 {} 认证成功", userDetails.getUsername());
+                // 填充 TenantContext
+                Long tenantId = userDetails.getTenantId() != null ? userDetails.getTenantId() : 1L;
+                TenantContextHolder.setContext(new TenantContext(tenantId, null));
+
+                // 填充 UserContext（数据权限拦截器依赖）
+                UserContext userContext = UserContext.builder()
+                        .userId(userDetails.getUserId())
+                        .username(userDetails.getUsername())
+                        .orgUnitId(userDetails.getOrgUnitId())
+                        .orgUnitPath(userDetails.getOrgUnitPath())
+                        .roleIds(userDetails.getRoleIds())
+                        .roleCodes(new HashSet<>(userDetails.getRoles()))
+                        .scopedRoles(userDetails.getScopedRoles())
+                        .tenantId(tenantId)
+                        .superAdmin(userDetails.getRoles().contains("SUPER_ADMIN"))
+                        .build();
+                UserContextHolder.setContext(userContext);
+
+                log.debug("用户 {} 认证成功, UserContext已填充: orgUnitId={}, tenantId={}", userDetails.getUsername(), userDetails.getOrgUnitId(), tenantId);
 
             } catch (Exception e) {
                 log.error("JWT认证失败: {}", e.getMessage());
@@ -78,7 +101,12 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             }
         }
 
-        filterChain.doFilter(request, response);
+        try {
+            filterChain.doFilter(request, response);
+        } finally {
+            UserContextHolder.clear();
+            TenantContextHolder.clear();
+        }
     }
 
     /**

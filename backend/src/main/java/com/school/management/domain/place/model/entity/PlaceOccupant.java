@@ -1,6 +1,6 @@
-package com.school.management.domain.space.model.entity;
+package com.school.management.domain.place.model.entity;
 
-import com.school.management.domain.space.model.valueobject.OccupantType;
+import com.school.management.domain.place.model.valueobject.OccupantType;
 import com.school.management.exception.BusinessException;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -14,10 +14,10 @@ import java.time.LocalDateTime;
  */
 @Getter
 @NoArgsConstructor
-public class SpaceOccupant {
+public class PlaceOccupant {
 
     private Long id;
-    private Long spaceId;
+    private Long placeId;
     private OccupantType occupantType;
     private Long occupantId;
     private Integer positionNo;
@@ -35,10 +35,10 @@ public class SpaceOccupant {
     /**
      * 创建占用记录
      */
-    public static SpaceOccupant create(Long spaceId, OccupantType occupantType,
+    public static PlaceOccupant create(Long placeId, OccupantType occupantType,
                                        Long occupantId, Integer positionNo) {
-        SpaceOccupant occupant = new SpaceOccupant();
-        occupant.spaceId = spaceId;
+        PlaceOccupant occupant = new PlaceOccupant();
+        occupant.placeId = placeId;
         occupant.occupantType = occupantType;
         occupant.occupantId = occupantId;
         occupant.positionNo = positionNo;
@@ -51,14 +51,14 @@ public class SpaceOccupant {
     /**
      * 从持久化数据重建
      */
-    public static SpaceOccupant reconstitute(Long id, Long spaceId, OccupantType occupantType,
+    public static PlaceOccupant reconstitute(Long id, Long placeId, OccupantType occupantType,
                                              Long occupantId, Integer positionNo,
                                              LocalDate checkInDate, LocalDate checkOutDate,
                                              Integer status, String remark,
                                              LocalDateTime createdAt, LocalDateTime updatedAt) {
-        SpaceOccupant occupant = new SpaceOccupant();
+        PlaceOccupant occupant = new PlaceOccupant();
         occupant.id = id;
-        occupant.spaceId = spaceId;
+        occupant.placeId = placeId;
         occupant.occupantType = occupantType;
         occupant.occupantId = occupantId;
         occupant.positionNo = positionNo;

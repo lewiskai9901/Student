@@ -38,5 +38,9 @@ public enum ItemType {
     // 评分专用
     RATING,
     PASS_FAIL,
-    CHECKLIST;
+    CHECKLIST,
+
+    // 关联实体（V62）
+    PERSON_SCORE,        // 逐人评分
+    VIOLATION_RECORD;    // 违纪记录
 }

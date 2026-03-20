@@ -1,11 +1,11 @@
-package com.school.management.infrastructure.persistence.space;
+package com.school.management.infrastructure.persistence.place;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.school.management.domain.space.model.aggregate.Space;
-import com.school.management.domain.space.model.valueobject.*;
-import com.school.management.domain.space.repository.SpaceRepository;
+import com.school.management.domain.place.model.aggregate.Place;
+import com.school.management.domain.place.model.valueobject.*;
+import com.school.management.domain.place.repository.PlaceRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Repository;
@@ -19,203 +19,203 @@ import java.util.stream.Collectors;
 @Slf4j
 @Repository
 @RequiredArgsConstructor
-public class SpaceRepositoryImpl implements SpaceRepository {
+public class PlaceRepositoryImpl implements PlaceRepository {
 
-    private final SpaceMapper spaceMapper;
+    private final PlaceMapper placeMapper;
     private final ObjectMapper objectMapper;
 
     @Override
-    public Space save(Space space) {
-        SpacePO po = toPO(space);
-        if (space.getId() == null) {
-            spaceMapper.insert(po);
-            space.setId(po.getId());
+    public Place save(Place place) {
+        PlacePO po = toPO(place);
+        if (place.getId() == null) {
+            placeMapper.insert(po);
+            place.setId(po.getId());
             // 更新路径
-            if (space.getParentId() != null) {
-                SpacePO parent = spaceMapper.selectById(space.getParentId());
+            if (place.getParentId() != null) {
+                PlacePO parent = placeMapper.selectById(place.getParentId());
                 String newPath = (parent != null ? parent.getPath() : "/") + po.getId() + "/";
                 po.setPath(newPath);
-                spaceMapper.updateById(po);
-                space.updatePath(SpacePath.of(newPath));
+                placeMapper.updateById(po);
+                place.updatePath(PlacePath.of(newPath));
             } else {
                 String newPath = "/" + po.getId() + "/";
                 po.setPath(newPath);
-                spaceMapper.updateById(po);
-                space.updatePath(SpacePath.of(newPath));
+                placeMapper.updateById(po);
+                place.updatePath(PlacePath.of(newPath));
             }
         } else {
-            spaceMapper.updateById(po);
+            placeMapper.updateById(po);
         }
-        return space;
+        return place;
     }
 
     @Override
-    public Optional<Space> findById(Long id) {
-        SpacePO po = spaceMapper.selectByIdWithRelations(id);
+    public Optional<Place> findById(Long id) {
+        PlacePO po = placeMapper.selectByIdWithRelations(id);
         return Optional.ofNullable(po).map(this::toDomain);
     }
 
     @Override
-    public Optional<Space> findByCode(String spaceCode) {
-        SpacePO po = spaceMapper.selectByCode(spaceCode);
+    public Optional<Place> findByCode(String placeCode) {
+        PlacePO po = placeMapper.selectByCode(placeCode);
         return Optional.ofNullable(po).map(this::toDomain);
     }
 
     @Override
-    public boolean existsByCode(String spaceCode) {
-        return spaceMapper.selectByCode(spaceCode) != null;
+    public boolean existsByCode(String placeCode) {
+        return placeMapper.selectByCode(placeCode) != null;
     }
 
     @Override
     public boolean existsByBuildingNoInCampus(Integer buildingNo, Long campusId, Long excludeId) {
-        return spaceMapper.countByBuildingNoInCampus(buildingNo, campusId, excludeId) > 0;
+        return placeMapper.countByBuildingNoInCampus(buildingNo, campusId, excludeId) > 0;
     }
 
     @Override
     public boolean existsByRoomNoInBuilding(Integer roomNo, Long buildingId, Long excludeId) {
-        return spaceMapper.countByRoomNoInBuilding(roomNo, buildingId, excludeId) > 0;
+        return placeMapper.countByRoomNoInBuilding(roomNo, buildingId, excludeId) > 0;
     }
 
     @Override
     public void delete(Long id) {
-        SpacePO po = new SpacePO();
+        PlacePO po = new PlacePO();
         po.setId(id);
         po.setDeleted(1);
-        spaceMapper.updateById(po);
+        placeMapper.updateById(po);
     }
 
     @Override
-    public List<Space> findAllCampuses() {
-        return spaceMapper.selectAllCampuses().stream()
+    public List<Place> findAllCampuses() {
+        return placeMapper.selectAllCampuses().stream()
             .map(this::toDomain)
             .collect(Collectors.toList());
     }
 
     @Override
-    public List<Space> findAllBuildings(BuildingType buildingType, SpaceStatus status) {
+    public List<Place> findAllBuildings(BuildingType buildingType, PlaceStatus status) {
         String bt = buildingType != null ? buildingType.name() : null;
         Integer st = status != null ? status.getCode() : null;
-        return spaceMapper.selectAllBuildings(bt, st).stream()
+        return placeMapper.selectAllBuildings(bt, st).stream()
             .map(this::toDomain)
             .collect(Collectors.toList());
     }
 
     @Override
-    public List<Space> findChildren(Long parentId) {
-        return spaceMapper.selectChildren(parentId).stream()
+    public List<Place> findChildren(Long parentId) {
+        return placeMapper.selectChildren(parentId).stream()
             .map(this::toDomain)
             .collect(Collectors.toList());
     }
 
     @Override
-    public List<Space> findFloorsByBuildingId(Long buildingId) {
-        return spaceMapper.selectFloorsByBuildingId(buildingId).stream()
+    public List<Place> findFloorsByBuildingId(Long buildingId) {
+        return placeMapper.selectFloorsByBuildingId(buildingId).stream()
             .map(this::toDomain)
             .collect(Collectors.toList());
     }
 
     @Override
-    public List<Space> findRoomsByBuildingId(Long buildingId, RoomType roomType, Integer floorNumber) {
+    public List<Place> findRoomsByBuildingId(Long buildingId, RoomType roomType, Integer floorNumber) {
         String rt = roomType != null ? roomType.name() : null;
-        return spaceMapper.selectRoomsByBuildingId(buildingId, rt, floorNumber).stream()
+        return placeMapper.selectRoomsByBuildingId(buildingId, rt, floorNumber).stream()
             .map(this::toDomain)
             .collect(Collectors.toList());
     }
 
     @Override
-    public List<Space> findRoomsByFloorId(Long floorId) {
-        return spaceMapper.selectChildren(floorId).stream()
-            .filter(po -> "ROOM".equals(po.getSpaceType()))
+    public List<Place> findRoomsByFloorId(Long floorId) {
+        return placeMapper.selectChildren(floorId).stream()
+            .filter(po -> "ROOM".equals(po.getPlaceType()))
             .map(this::toDomain)
             .collect(Collectors.toList());
     }
 
     @Override
-    public List<Space> findRoomsByType(RoomType roomType, Long buildingId, SpaceStatus status) {
+    public List<Place> findRoomsByType(RoomType roomType, Long buildingId, PlaceStatus status) {
         String rt = roomType != null ? roomType.name() : null;
         Integer st = status != null ? status.getCode() : null;
-        return spaceMapper.selectByConditions("ROOM", rt, null, buildingId, null, null, st, null, 0, Integer.MAX_VALUE)
+        return placeMapper.selectByConditions("ROOM", rt, null, buildingId, null, null, st, null, 0, Integer.MAX_VALUE)
             .stream()
             .map(this::toDomain)
             .collect(Collectors.toList());
     }
 
     @Override
-    public List<Space> findByOrgUnitId(Long orgUnitId) {
-        return spaceMapper.selectByOrgUnitId(orgUnitId).stream()
+    public List<Place> findByOrgUnitId(Long orgUnitId) {
+        return placeMapper.selectByOrgUnitId(orgUnitId).stream()
             .map(this::toDomain)
             .collect(Collectors.toList());
     }
 
     @Override
-    public List<Space> findByPathPrefix(String pathPrefix) {
-        return spaceMapper.selectByPathPrefix(pathPrefix).stream()
+    public List<Place> findByPathPrefix(String pathPrefix) {
+        return placeMapper.selectByPathPrefix(pathPrefix).stream()
             .map(this::toDomain)
             .collect(Collectors.toList());
     }
 
     @Override
-    public List<Space> findByConditions(SpaceType spaceType, RoomType roomType, BuildingType buildingType,
+    public List<Place> findByConditions(PlaceType placeType, RoomType roomType, BuildingType buildingType,
                                          Long buildingId, Integer floorNumber, Long orgUnitId,
-                                         SpaceStatus status, String keyword, int offset, int limit) {
-        String st = spaceType != null ? spaceType.name() : null;
+                                         PlaceStatus status, String keyword, int offset, int limit) {
+        String st = placeType != null ? placeType.name() : null;
         String rt = roomType != null ? roomType.name() : null;
         String bt = buildingType != null ? buildingType.name() : null;
         Integer statusCode = status != null ? status.getCode() : null;
 
-        return spaceMapper.selectByConditions(st, rt, bt, buildingId, floorNumber, orgUnitId, statusCode, keyword, offset, limit)
+        return placeMapper.selectByConditions(st, rt, bt, buildingId, floorNumber, orgUnitId, statusCode, keyword, offset, limit)
             .stream()
             .map(this::toDomain)
             .collect(Collectors.toList());
     }
 
     @Override
-    public long countByConditions(SpaceType spaceType, RoomType roomType, BuildingType buildingType,
+    public long countByConditions(PlaceType placeType, RoomType roomType, BuildingType buildingType,
                                   Long buildingId, Integer floorNumber, Long orgUnitId,
-                                  SpaceStatus status, String keyword) {
-        String st = spaceType != null ? spaceType.name() : null;
+                                  PlaceStatus status, String keyword) {
+        String st = placeType != null ? placeType.name() : null;
         String rt = roomType != null ? roomType.name() : null;
         String bt = buildingType != null ? buildingType.name() : null;
         Integer statusCode = status != null ? status.getCode() : null;
 
-        return spaceMapper.countByConditions(st, rt, bt, buildingId, floorNumber, orgUnitId, statusCode, keyword);
+        return placeMapper.countByConditions(st, rt, bt, buildingId, floorNumber, orgUnitId, statusCode, keyword);
     }
 
     @Override
-    public void updateOccupancy(Long spaceId, int occupancy) {
-        spaceMapper.updateOccupancy(spaceId, occupancy);
+    public void updateOccupancy(Long placeId, int occupancy) {
+        placeMapper.updateOccupancy(placeId, occupancy);
     }
 
     @Override
-    public void batchUpdateOrgUnit(List<Long> spaceIds, Long orgUnitId) {
-        if (spaceIds != null && !spaceIds.isEmpty()) {
-            spaceMapper.batchUpdateOrgUnit(spaceIds, orgUnitId);
+    public void batchUpdateOrgUnit(List<Long> placeIds, Long orgUnitId) {
+        if (placeIds != null && !placeIds.isEmpty()) {
+            placeMapper.batchUpdateOrgUnit(placeIds, orgUnitId);
         }
     }
 
     @Override
     public boolean hasChildren(Long parentId) {
-        return spaceMapper.countChildren(parentId) > 0;
+        return placeMapper.countChildren(parentId) > 0;
     }
 
     @Override
-    public List<Space> findAncestors(Long spaceId) {
-        Optional<Space> space = findById(spaceId);
-        if (space.isEmpty() || space.get().getPath() == null) {
+    public List<Place> findAncestors(Long placeId) {
+        Optional<Place> place = findById(placeId);
+        if (place.isEmpty() || place.get().getPath() == null) {
             return Collections.emptyList();
         }
-        return spaceMapper.selectAncestors(space.get().getPath().getValue()).stream()
+        return placeMapper.selectAncestors(place.get().getPath().getValue()).stream()
             .map(this::toDomain)
             .collect(Collectors.toList());
     }
 
     @Override
-    public SpaceBuildingStats getBuildingStats(Long buildingId) {
-        Map<String, Object> stats = spaceMapper.selectBuildingStats(buildingId);
+    public PlaceBuildingStats getBuildingStats(Long buildingId) {
+        Map<String, Object> stats = placeMapper.selectBuildingStats(buildingId);
         if (stats == null) {
-            return new SpaceBuildingStatsImpl(0, 0, 0, 0);
+            return new PlaceBuildingStatsImpl(0, 0, 0, 0);
         }
-        return new SpaceBuildingStatsImpl(
+        return new PlaceBuildingStatsImpl(
             ((Number) stats.getOrDefault("totalFloors", 0)).intValue(),
             ((Number) stats.getOrDefault("totalRooms", 0)).intValue(),
             ((Number) stats.getOrDefault("totalCapacity", 0)).intValue(),
@@ -223,49 +223,61 @@ public class SpaceRepositoryImpl implements SpaceRepository {
         );
     }
 
+    @Override
+    public boolean incrementOccupancyIfAvailable(Long placeId, int increment) {
+        int affectedRows = placeMapper.incrementOccupancyIfAvailable(placeId, increment);
+        return affectedRows > 0;
+    }
+
+    @Override
+    public boolean decrementOccupancy(Long placeId, int decrement) {
+        int affectedRows = placeMapper.decrementOccupancy(placeId, decrement);
+        return affectedRows > 0;
+    }
+
     // ========== 转换方法 ==========
 
-    private SpacePO toPO(Space space) {
-        SpacePO po = new SpacePO();
-        po.setId(space.getId());
-        po.setSpaceCode(space.getSpaceCode());
-        po.setSpaceName(space.getSpaceName());
-        po.setSpaceType(space.getSpaceType().name());
-        po.setCategoryId(space.getCategoryId());  // V10: 分类ID
-        po.setRoomType(space.getRoomType() != null ? space.getRoomType().name() : null);
-        po.setBuildingType(space.getBuildingType() != null ? space.getBuildingType().name() : null);
-        po.setBuildingNo(space.getBuildingNo());
-        po.setRoomNo(space.getRoomNo());
-        po.setFloorCount(space.getFloorCount());  // V10: 楼层数
-        po.setParentId(space.getParentId());
-        po.setPath(space.getPath() != null ? space.getPath().getValue() : null);
-        po.setLevel(space.getLevel());
-        po.setCampusId(space.getCampusId());
-        po.setBuildingId(space.getBuildingId());
-        po.setFloorNumber(space.getFloorNumber());
-        po.setCapacity(space.getMaxCapacity());
-        po.setCurrentOccupancy(space.getCurrentOccupancy());
-        po.setOrgUnitId(space.getOrgUnitId());
-        po.setClassId(space.getClassId());
-        po.setResponsibleUserId(space.getResponsibleUserId());
-        po.setGenderType(space.getGenderType() != null ? space.getGenderType().getCode() : 0);
-        po.setStatus(space.getStatus().getCode());
-        po.setAttributes(toJson(space.getAttributes()));
-        po.setDescription(space.getDescription());
-        po.setCreatedBy(space.getCreatedBy());
-        po.setCreatedAt(space.getCreatedAt());
-        po.setUpdatedBy(space.getUpdatedBy());
-        po.setUpdatedAt(space.getUpdatedAt());
+    private PlacePO toPO(Place place) {
+        PlacePO po = new PlacePO();
+        po.setId(place.getId());
+        po.setPlaceCode(place.getPlaceCode());
+        po.setPlaceName(place.getPlaceName());
+        po.setPlaceType(place.getPlaceType().name());
+        po.setCategoryId(place.getCategoryId());  // V10: 分类ID
+        po.setRoomType(place.getRoomType() != null ? place.getRoomType().name() : null);
+        po.setBuildingType(place.getBuildingType() != null ? place.getBuildingType().name() : null);
+        po.setBuildingNo(place.getBuildingNo());
+        po.setRoomNo(place.getRoomNo());
+        po.setFloorCount(place.getFloorCount());  // V10: 楼层数
+        po.setParentId(place.getParentId());
+        po.setPath(place.getPath() != null ? place.getPath().getValue() : null);
+        po.setLevel(place.getLevel());
+        po.setCampusId(place.getCampusId());
+        po.setBuildingId(place.getBuildingId());
+        po.setFloorNumber(place.getFloorNumber());
+        po.setCapacity(place.getMaxCapacity());
+        po.setCurrentOccupancy(place.getCurrentOccupancy());
+        po.setOrgUnitId(place.getOrgUnitId());
+        po.setClassId(place.getClassId());
+        po.setResponsibleUserId(place.getResponsibleUserId());
+        po.setGenderType(place.getGenderType() != null ? place.getGenderType().getCode() : 0);
+        po.setStatus(place.getStatus().getCode());
+        po.setAttributes(toJson(place.getAttributes()));
+        po.setDescription(place.getDescription());
+        po.setCreatedBy(place.getCreatedBy());
+        po.setCreatedAt(place.getCreatedAt());
+        po.setUpdatedBy(place.getUpdatedBy());
+        po.setUpdatedAt(place.getUpdatedAt());
         po.setDeleted(0);
         return po;
     }
 
-    private Space toDomain(SpacePO po) {
-        return Space.reconstitute(
+    private Place toDomain(PlacePO po) {
+        return Place.reconstitute(
             po.getId(),
-            po.getSpaceCode(),
-            po.getSpaceName(),
-            SpaceType.valueOf(po.getSpaceType()),
+            po.getPlaceCode(),
+            po.getPlaceName(),
+            PlaceType.valueOf(po.getPlaceType()),
             po.getCategoryId(),  // V10: 分类ID
             po.getRoomType() != null ? RoomType.valueOf(po.getRoomType()) : null,
             po.getBuildingType() != null ? BuildingType.valueOf(po.getBuildingType()) : null,
@@ -284,7 +296,7 @@ public class SpaceRepositoryImpl implements SpaceRepository {
             po.getClassId(),
             po.getResponsibleUserId(),
             GenderType.fromCode(po.getGenderType()),
-            SpaceStatus.fromCode(po.getStatus() != null ? po.getStatus() : 1),
+            PlaceStatus.fromCode(po.getStatus() != null ? po.getStatus() : 1),
             fromJson(po.getAttributes()),
             po.getDescription(),
             po.getCreatedBy(),
@@ -321,13 +333,13 @@ public class SpaceRepositoryImpl implements SpaceRepository {
     /**
      * 楼宇统计实现
      */
-    private static class SpaceBuildingStatsImpl implements SpaceBuildingStats {
+    private static class PlaceBuildingStatsImpl implements PlaceBuildingStats {
         private final int totalFloors;
         private final int totalRooms;
         private final int totalCapacity;
         private final int totalOccupancy;
 
-        SpaceBuildingStatsImpl(int totalFloors, int totalRooms, int totalCapacity, int totalOccupancy) {
+        PlaceBuildingStatsImpl(int totalFloors, int totalRooms, int totalCapacity, int totalOccupancy) {
             this.totalFloors = totalFloors;
             this.totalRooms = totalRooms;
             this.totalCapacity = totalCapacity;

@@ -1,6 +1,7 @@
 package com.school.management.interfaces.rest.access;
 
 import com.school.management.common.result.Result;
+import com.school.management.infrastructure.activity.annotation.AuditEvent;
 import com.school.management.infrastructure.persistence.user.UserDomainMapper;
 import com.school.management.infrastructure.persistence.user.UserPO;
 import com.school.management.interfaces.rest.access.dto.LoginRequest;
@@ -41,6 +42,7 @@ public class AuthController {
 
     @PostMapping("/login")
     @Operation(summary = "用户登录")
+    @AuditEvent(module = "access", action = "LOGIN", resourceType = "AUTH", label = "用户登录")
     public Result<LoginResponse> login(@Valid @RequestBody LoginRequest request, HttpServletRequest httpRequest) {
         log.info("用户登录请求: {}", request.getUsername());
 
@@ -82,6 +84,7 @@ public class AuthController {
 
     @PostMapping("/refresh")
     @Operation(summary = "刷新令牌")
+    @AuditEvent(module = "access", action = "UPDATE", resourceType = "AUTH", label = "刷新令牌")
     public Result<LoginResponse> refresh(@Valid @RequestBody RefreshTokenRequest request) {
         String refreshToken = request.getRefreshToken();
 
@@ -111,6 +114,7 @@ public class AuthController {
 
     @PostMapping("/logout")
     @Operation(summary = "退出登录")
+    @AuditEvent(module = "access", action = "LOGOUT", resourceType = "AUTH", label = "退出登录")
     public Result<Void> logout(@RequestBody(required = false) LogoutRequest request, HttpServletRequest httpRequest) {
         String token = getTokenFromRequest(httpRequest);
         if (token != null) {
@@ -178,7 +182,7 @@ public class AuthController {
                 .roles(userDetails.getRoles())
                 .permissions(userDetails.getPermissions())
                 .orgUnitId(userDetails.getOrgUnitId())
-                .classId(userDetails.getClassId())
+                .tenantId(userDetails.getTenantId())
                 .build();
     }
 

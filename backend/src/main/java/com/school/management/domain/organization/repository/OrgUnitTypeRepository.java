@@ -1,6 +1,6 @@
 package com.school.management.domain.organization.repository;
 
-import com.school.management.domain.organization.model.entity.OrgUnitTypeEntity;
+import com.school.management.domain.organization.model.entity.OrgType;
 
 import java.util.List;
 import java.util.Optional;
@@ -10,68 +10,27 @@ import java.util.Optional;
  */
 public interface OrgUnitTypeRepository {
 
-    /**
-     * 保存组织类型
-     */
-    OrgUnitTypeEntity save(OrgUnitTypeEntity orgUnitType);
+    OrgType save(OrgType orgType);
 
-    /**
-     * 根据ID查询
-     */
-    Optional<OrgUnitTypeEntity> findById(Long id);
+    Optional<OrgType> findById(Long id);
 
-    /**
-     * 根据类型编码查询
-     */
-    Optional<OrgUnitTypeEntity> findByTypeCode(String typeCode);
+    Optional<OrgType> findByTypeCode(String typeCode);
 
-    /**
-     * 查询所有组织类型
-     */
-    List<OrgUnitTypeEntity> findAll();
+    List<OrgType> findAll();
 
-    /**
-     * 查询所有启用的类型
-     */
-    List<OrgUnitTypeEntity> findAllEnabled();
+    List<OrgType> findAllEnabled();
 
-    /**
-     * 根据父类型编码查询子类型
-     */
-    List<OrgUnitTypeEntity> findByParentTypeCode(String parentTypeCode);
+    List<OrgType> findByParentTypeCode(String parentTypeCode);
 
-    /**
-     * 查询顶级类型
-     */
-    List<OrgUnitTypeEntity> findTopLevelTypes();
+    List<OrgType> findTopLevelTypes();
 
-    /**
-     * 查询教学单位类型
-     */
-    List<OrgUnitTypeEntity> findAcademicTypes();
+    List<OrgType> findByCategory(String category);
 
-    /**
-     * 查询职能部门类型
-     */
-    List<OrgUnitTypeEntity> findFunctionalTypes();
+    List<OrgType> findByFeature(String featureKey);
 
-    /**
-     * 查询可检查的类型
-     */
-    List<OrgUnitTypeEntity> findInspectableTypes();
-
-    /**
-     * 检查类型编码是否存在
-     */
     boolean existsByTypeCode(String typeCode);
 
-    /**
-     * 检查类型是否被使用
-     */
     boolean isTypeInUse(String typeCode);
 
-    /**
-     * 根据ID删除
-     */
     void deleteById(Long id);
 }

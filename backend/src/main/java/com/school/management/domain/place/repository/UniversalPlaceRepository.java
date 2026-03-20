@@ -1,6 +1,6 @@
-package com.school.management.domain.space.repository;
+package com.school.management.domain.place.repository;
 
-import com.school.management.domain.space.model.aggregate.UniversalSpace;
+import com.school.management.domain.place.model.aggregate.UniversalPlace;
 
 import java.util.List;
 import java.util.Optional;
@@ -8,67 +8,84 @@ import java.util.Optional;
 /**
  * 通用空间仓储接口
  */
-public interface UniversalSpaceRepository {
+public interface UniversalPlaceRepository {
 
     /**
      * 保存空间
      */
-    UniversalSpace save(UniversalSpace space);
+    UniversalPlace save(UniversalPlace place);
 
     /**
      * 根据ID查询
      */
-    Optional<UniversalSpace> findById(Long id);
+    Optional<UniversalPlace> findById(Long id);
 
     /**
      * 根据空间编码查询
      */
-    Optional<UniversalSpace> findBySpaceCode(String spaceCode);
+    Optional<UniversalPlace> findByPlaceCode(String placeCode);
 
     /**
      * 查询所有空间
      */
-    List<UniversalSpace> findAll();
+    List<UniversalPlace> findAll();
 
     /**
      * 查询所有根空间
      */
-    List<UniversalSpace> findAllRoots();
+    List<UniversalPlace> findAllRoots();
 
     /**
      * 查询子空间
      */
-    List<UniversalSpace> findChildren(Long parentId);
+    List<UniversalPlace> findChildren(Long parentId);
+
+    /**
+     * 根据父ID查询（别名，与findChildren相同）
+     */
+    default List<UniversalPlace> findByParentId(Long parentId) {
+        return findChildren(parentId);
+    }
 
     /**
      * 查询所有后代空间
      */
-    List<UniversalSpace> findDescendants(Long ancestorId);
+    List<UniversalPlace> findDescendants(Long ancestorId);
 
     /**
      * 根据路径前缀查询所有后代
      */
-    List<UniversalSpace> findByPathPrefix(String pathPrefix);
+    List<UniversalPlace> findByPathPrefix(String pathPrefix);
 
     /**
      * 根据类型查询
      */
-    List<UniversalSpace> findByTypeCode(String typeCode);
+    List<UniversalPlace> findByTypeCode(String typeCode);
 
     /**
      * 根据组织单元查询
      */
-    List<UniversalSpace> findByOrgUnitId(Long orgUnitId);
+    List<UniversalPlace> findByOrgUnitId(Long orgUnitId);
 
     /**
      * 根据负责人查询
      */
-    List<UniversalSpace> findByResponsibleUserId(Long userId);
+    List<UniversalPlace> findByResponsibleUserId(Long userId);
 
     /**
      * 检查空间编码是否存在
      */
-    boolean existsBySpaceCode(String spaceCode);
+    boolean existsByPlaceCode(String placeCode);
+
+    /**
+     * 统计同父节点下相同编号的数量
+     */
+    int countByParentIdAndPlaceCode(Long parentId, String placeCode);
+
+    /**
+     * 统计根节点中相同编号的数量
+     */
+    int countRootByPlaceCode(String placeCode);
 
     /**
      * 根据ID删除
@@ -93,17 +110,17 @@ public interface UniversalSpaceRepository {
     /**
      * 分页查询
      */
-    List<UniversalSpace> findPage(SpaceQueryCriteria criteria, int page, int size);
+    List<UniversalPlace> findPage(PlaceQueryCriteria criteria, int page, int size);
 
     /**
      * 统计符合条件的数量
      */
-    long count(SpaceQueryCriteria criteria);
+    long count(PlaceQueryCriteria criteria);
 
     /**
      * 查询条件
      */
-    class SpaceQueryCriteria {
+    class PlaceQueryCriteria {
         private String typeCode;
         private Long parentId;
         private Long orgUnitId;

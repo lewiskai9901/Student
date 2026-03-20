@@ -2,7 +2,6 @@ package com.school.management.infrastructure.persistence.access;
 
 import com.school.management.domain.access.model.DataScope;
 import com.school.management.domain.access.model.Role;
-import com.school.management.domain.access.model.RoleType;
 import com.school.management.domain.access.repository.RoleRepository;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Repository;
@@ -122,12 +121,9 @@ public class RoleRepositoryImpl implements RoleRepository {
     }
 
     @Override
-    public List<Role> findByRoleType(RoleType roleType) {
-        // The database doesn't have role_type column, so we must filter in memory.
-        // Optimization: first filter using lightweight toDomain (no permission loading),
-        // then load permissions only for matched roles.
+    public List<Role> findByRoleType(String roleType) {
         return roleMapper.findAll().stream()
-            .filter(po -> inferRoleType(po.getRoleCode()) == roleType)
+            .filter(po -> roleType.equals(po.getRoleType()))
             .map(this::toDomainWithPermissions)
             .collect(Collectors.toList());
     }
@@ -177,9 +173,11 @@ public class RoleRepositoryImpl implements RoleRepository {
         po.setId(domain.getId());
         po.setRoleName(domain.getRoleName());
         po.setRoleCode(domain.getRoleCode());
+        po.setRoleType(domain.getRoleType());
         po.setRoleDesc(domain.getDescription());
         po.setSortOrder(domain.getLevel()); // Use level as sortOrder
         po.setStatus(domain.getIsEnabled() ? 1 : 0);
+        po.setTenantId(domain.getTenantId());
         po.setCreatedAt(domain.getCreatedAt());
         po.setUpdatedAt(domain.getUpdatedAt());
         return po;
@@ -188,12 +186,9 @@ public class RoleRepositoryImpl implements RoleRepository {
     private Role toDomainWithPermissions(RolePO po) {
         List<Long> permissionIds = rolePermissionMapper.findPermissionIdsByRoleId(po.getId());
 
-        // Determine role type from role code pattern
-        RoleType roleType = inferRoleType(po.getRoleCode());
+        String roleType = po.getRoleType() != null ? po.getRoleType() : "CUSTOM";
 
-        // Determine if system role (usually admin or with specific prefix)
-        boolean isSystem = po.getRoleCode() != null &&
-            (po.getRoleCode().startsWith("ROLE_ADMIN") || po.getRoleCode().equals("admin"));
+        boolean isSystem = "SUPER_ADMIN".equals(roleType) || "SYSTEM_ADMIN".equals(roleType);
 
         return Role.builder()
             .id(po.getId())
@@ -204,24 +199,10 @@ public class RoleRepositoryImpl implements RoleRepository {
             .level(po.getSortOrder() != null ? po.getSortOrder() : 0)
             .isSystem(isSystem)
             .isEnabled(po.getStatus() != null && po.getStatus() == 1)
-            .createdBy(null) // Not stored in database
+            .createdBy(null)
             .permissionIds(new HashSet<>(permissionIds))
-            .dataScope(DataScope.ALL) // Default to ALL since not stored in database
+            .dataScope(DataScope.ALL)
+            .tenantId(po.getTenantId())
             .build();
-    }
-
-    /**
-     * Infer role type from role code.
-     */
-    private RoleType inferRoleType(String roleCode) {
-        if (roleCode == null) return RoleType.CUSTOM;
-        String code = roleCode.toLowerCase();
-        if (code.contains("super_admin") || code.equals("admin")) return RoleType.SUPER_ADMIN;
-        if (code.contains("admin")) return RoleType.SYSTEM_ADMIN;
-        if (code.contains("dept") || code.contains("department")) return RoleType.DEPT_ADMIN;
-        if (code.contains("grade") || code.contains("director")) return RoleType.GRADE_DIRECTOR;
-        if (code.contains("class") || code.contains("teacher")) return RoleType.CLASS_TEACHER;
-        if (code.contains("inspector") || code.contains("check")) return RoleType.INSPECTOR;
-        return RoleType.CUSTOM;
     }
 }

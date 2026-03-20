@@ -1,7 +1,7 @@
-package com.school.management.infrastructure.persistence.space;
+package com.school.management.infrastructure.persistence.place;
 
-import com.school.management.domain.space.model.entity.SpaceClassAssignment;
-import com.school.management.domain.space.repository.SpaceClassAssignmentRepository;
+import com.school.management.domain.place.model.entity.PlaceClassAssignment;
+import com.school.management.domain.place.repository.PlaceClassAssignmentRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Repository;
@@ -16,13 +16,13 @@ import java.util.stream.Collectors;
 @Slf4j
 @Repository
 @RequiredArgsConstructor
-public class SpaceClassAssignmentRepositoryImpl implements SpaceClassAssignmentRepository {
+public class PlaceClassAssignmentRepositoryImpl implements PlaceClassAssignmentRepository {
 
-    private final SpaceClassAssignmentMapper mapper;
+    private final PlaceClassAssignmentMapper mapper;
 
     @Override
-    public SpaceClassAssignment save(SpaceClassAssignment assignment) {
-        SpaceClassAssignmentPO po = toPO(assignment);
+    public PlaceClassAssignment save(PlaceClassAssignment assignment) {
+        PlaceClassAssignmentPO po = toPO(assignment);
         if (assignment.getId() == null) {
             mapper.insert(po);
             assignment.setId(po.getId());
@@ -33,35 +33,35 @@ public class SpaceClassAssignmentRepositoryImpl implements SpaceClassAssignmentR
     }
 
     @Override
-    public Optional<SpaceClassAssignment> findById(Long id) {
-        SpaceClassAssignmentPO po = mapper.selectById(id);
+    public Optional<PlaceClassAssignment> findById(Long id) {
+        PlaceClassAssignmentPO po = mapper.selectById(id);
         return Optional.ofNullable(po).map(this::toDomain);
     }
 
     @Override
-    public List<SpaceClassAssignment> findBySpaceId(Long spaceId) {
-        return mapper.selectBySpaceIdWithRelations(spaceId).stream()
+    public List<PlaceClassAssignment> findByPlaceId(Long placeId) {
+        return mapper.selectByPlaceIdWithRelations(placeId).stream()
             .map(this::toDomain)
             .collect(Collectors.toList());
     }
 
     @Override
-    public List<SpaceClassAssignment> findByClassId(Long classId) {
+    public List<PlaceClassAssignment> findByClassId(Long classId) {
         return mapper.selectByClassIdWithRelations(classId).stream()
             .map(this::toDomain)
             .collect(Collectors.toList());
     }
 
     @Override
-    public List<SpaceClassAssignment> findByOrgUnitId(Long orgUnitId) {
+    public List<PlaceClassAssignment> findByOrgUnitId(Long orgUnitId) {
         return mapper.selectByOrgUnitIdWithRelations(orgUnitId).stream()
             .map(this::toDomain)
             .collect(Collectors.toList());
     }
 
     @Override
-    public Optional<SpaceClassAssignment> findBySpaceIdAndClassId(Long spaceId, Long classId) {
-        SpaceClassAssignmentPO po = mapper.selectBySpaceIdAndClassId(spaceId, classId);
+    public Optional<PlaceClassAssignment> findByPlaceIdAndClassId(Long placeId, Long classId) {
+        PlaceClassAssignmentPO po = mapper.selectByPlaceIdAndClassId(placeId, classId);
         return Optional.ofNullable(po).map(this::toDomain);
     }
 
@@ -71,8 +71,8 @@ public class SpaceClassAssignmentRepositoryImpl implements SpaceClassAssignmentR
     }
 
     @Override
-    public void deleteBySpaceId(Long spaceId) {
-        mapper.deleteBySpaceId(spaceId);
+    public void deleteByPlaceId(Long placeId) {
+        mapper.deleteByPlaceId(placeId);
     }
 
     @Override
@@ -81,13 +81,13 @@ public class SpaceClassAssignmentRepositoryImpl implements SpaceClassAssignmentR
     }
 
     @Override
-    public boolean existsBySpaceIdAndClassId(Long spaceId, Long classId) {
-        return mapper.checkExists(spaceId, classId) > 0;
+    public boolean existsByPlaceIdAndClassId(Long placeId, Long classId) {
+        return mapper.checkExists(placeId, classId) > 0;
     }
 
     @Override
-    public int countBySpaceId(Long spaceId) {
-        return mapper.countBySpaceId(spaceId);
+    public int countByPlaceId(Long placeId) {
+        return mapper.countByPlaceId(placeId);
     }
 
     @Override
@@ -96,11 +96,11 @@ public class SpaceClassAssignmentRepositoryImpl implements SpaceClassAssignmentR
     }
 
     @Override
-    public void batchSave(List<SpaceClassAssignment> assignments) {
+    public void batchSave(List<PlaceClassAssignment> assignments) {
         if (assignments == null || assignments.isEmpty()) {
             return;
         }
-        List<SpaceClassAssignmentPO> poList = assignments.stream()
+        List<PlaceClassAssignmentPO> poList = assignments.stream()
             .map(this::toPO)
             .collect(Collectors.toList());
         mapper.batchInsert(poList);
@@ -112,10 +112,10 @@ public class SpaceClassAssignmentRepositoryImpl implements SpaceClassAssignmentR
 
     // ========== 转换方法 ==========
 
-    private SpaceClassAssignmentPO toPO(SpaceClassAssignment assignment) {
-        SpaceClassAssignmentPO po = new SpaceClassAssignmentPO();
+    private PlaceClassAssignmentPO toPO(PlaceClassAssignment assignment) {
+        PlaceClassAssignmentPO po = new PlaceClassAssignmentPO();
         po.setId(assignment.getId());
-        po.setSpaceId(assignment.getSpaceId());
+        po.setPlaceId(assignment.getPlaceId());
         po.setClassId(assignment.getClassId());
         po.setOrgUnitId(assignment.getOrgUnitId());
         po.setAssignedBeds(assignment.getAssignedBeds());
@@ -129,10 +129,10 @@ public class SpaceClassAssignmentRepositoryImpl implements SpaceClassAssignmentR
         return po;
     }
 
-    private SpaceClassAssignment toDomain(SpaceClassAssignmentPO po) {
-        return SpaceClassAssignment.reconstitute(
+    private PlaceClassAssignment toDomain(PlaceClassAssignmentPO po) {
+        return PlaceClassAssignment.reconstitute(
             po.getId(),
-            po.getSpaceId(),
+            po.getPlaceId(),
             po.getClassId(),
             po.getOrgUnitId(),
             po.getAssignedBeds(),

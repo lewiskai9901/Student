@@ -2,7 +2,6 @@ package com.school.management.infrastructure.persistence.user;
 
 import com.school.management.domain.user.model.aggregate.User;
 import com.school.management.domain.user.model.valueobject.UserStatus;
-import com.school.management.domain.user.model.valueobject.UserType;
 import com.school.management.domain.user.repository.UserRepository;
 import org.springframework.stereotype.Repository;
 
@@ -161,13 +160,13 @@ public class UserRepositoryImpl implements UserRepository {
     @Override
     public void delete(User user) {
         if (user != null && user.getId() != null) {
-            userMapper.deleteById(user.getId());
+            userMapper.softDeleteById(Long.parseLong(user.getId().toString()));
         }
     }
 
     @Override
     public void deleteById(Long id) {
-        userMapper.deleteById(id);
+        userMapper.softDeleteById(id);
     }
 
     @Override
@@ -209,13 +208,23 @@ public class UserRepositoryImpl implements UserRepository {
     @Override
     public List<User> findSimpleList(String keyword) {
         return userMapper.findSimpleList(keyword).stream()
-                .map(this::toDomain)
+                .map(this::toDomainWithOrgUnit)
                 .collect(Collectors.toList());
     }
 
     @Override
     public List<User> findAllUsers() {
         return userMapper.findAllPaged(0, 10000).stream()
+                .map(this::toDomain)
+                .collect(Collectors.toList());
+    }
+
+    @Override
+    public List<User> findByIds(List<Long> ids) {
+        if (ids == null || ids.isEmpty()) {
+            return new ArrayList<>();
+        }
+        return userMapper.selectBatchIds(ids).stream()
                 .map(this::toDomain)
                 .collect(Collectors.toList());
     }
@@ -235,10 +244,7 @@ public class UserRepositoryImpl implements UserRepository {
         po.setGender(domain.getGender());
         po.setBirthDate(domain.getBirthDate());
         po.setIdCard(domain.getIdCard());
-        po.setOrgUnitId(domain.getOrgUnitId());
-        po.setPrimaryOrgRelationId(domain.getPrimaryOrgRelationId());
-        po.setClassId(domain.getClassId());
-        po.setUserType(domain.getUserType() != null ? domain.getUserType().getCode() : null);
+        po.setPrimaryOrgUnitId(domain.getPrimaryOrgUnitId());
         po.setUserTypeCode(domain.getUserTypeCode());
         po.setStatus(domain.getStatus() != null ? domain.getStatus().getCode() : null);
         po.setLastLoginTime(domain.getLastLoginTime());
@@ -264,10 +270,7 @@ public class UserRepositoryImpl implements UserRepository {
                 po.getGender(),
                 po.getBirthDate(),
                 po.getIdCard(),
-                po.getOrgUnitId(),
-                po.getPrimaryOrgRelationId(),
-                po.getClassId(),
-                po.getUserType() != null ? UserType.fromCode(po.getUserType()) : null,
+                po.getPrimaryOrgUnitId(),
                 po.getUserTypeCode(),
                 po.getStatus() != null ? UserStatus.fromCode(po.getStatus()) : null,
                 po.getLastLoginTime(),
@@ -294,7 +297,10 @@ public class UserRepositoryImpl implements UserRepository {
 
     private User toDomainWithOrgUnit(UserPO po) {
         User user = toDomain(po);
-        // 设置组织单元名称（从JOIN查询获取）
+        // 设置组织单元信息（从JOIN查询获取）
+        if (po.getOrgUnitId() != null) {
+            user.setOrgUnitId(po.getOrgUnitId());
+        }
         if (po.getOrgUnitName() != null) {
             user.setOrgUnitName(po.getOrgUnitName());
         }

@@ -89,7 +89,7 @@ export interface UpdateItemParams {
 /**
  * 获取模板完整扣分项结构
  */
-export function getTemplateItems(templateId: number) {
+export function getTemplateItems(templateId: number | string) {
   return request<TemplateCategory[]>({
     url: `/v6/template-items/templates/${templateId}`,
     method: 'get'
@@ -99,7 +99,7 @@ export function getTemplateItems(templateId: number) {
 /**
  * 获取模板类别列表
  */
-export function getCategories(templateId: number) {
+export function getCategories(templateId: number | string) {
   return request<TemplateCategory[]>({
     url: `/v6/template-items/templates/${templateId}/categories`,
     method: 'get'
@@ -120,7 +120,7 @@ export function createCategory(data: CreateCategoryParams) {
 /**
  * 更新类别
  */
-export function updateCategory(categoryId: number, data: UpdateCategoryParams) {
+export function updateCategory(categoryId: number | string, data: UpdateCategoryParams) {
   return request({
     url: `/v6/template-items/categories/${categoryId}`,
     method: 'put',
@@ -131,7 +131,7 @@ export function updateCategory(categoryId: number, data: UpdateCategoryParams) {
 /**
  * 删除类别
  */
-export function deleteCategory(categoryId: number) {
+export function deleteCategory(categoryId: number | string) {
   return request({
     url: `/v6/template-items/categories/${categoryId}`,
     method: 'delete'
@@ -141,7 +141,7 @@ export function deleteCategory(categoryId: number) {
 /**
  * 获取类别下的扣分项
  */
-export function getItemsByCategory(categoryId: number) {
+export function getItemsByCategory(categoryId: number | string) {
   return request<TemplateScoreItem[]>({
     url: `/v6/template-items/categories/${categoryId}/items`,
     method: 'get'
@@ -162,7 +162,7 @@ export function createItem(data: CreateItemParams) {
 /**
  * 更新扣分项
  */
-export function updateItem(itemId: number, data: UpdateItemParams) {
+export function updateItem(itemId: number | string, data: UpdateItemParams) {
   return request({
     url: `/v6/template-items/items/${itemId}`,
     method: 'put',
@@ -173,7 +173,7 @@ export function updateItem(itemId: number, data: UpdateItemParams) {
 /**
  * 删除扣分项
  */
-export function deleteItem(itemId: number) {
+export function deleteItem(itemId: number | string) {
   return request({
     url: `/v6/template-items/items/${itemId}`,
     method: 'delete'

@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>V7 量化检查平台 - 完整流程图</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: -apple-system, 'Microsoft YaHei', sans-serif; background: #f5f7fa; color: #333; }
+  .header { background: linear-gradient(135deg, #4f46e5, #7c3aed); color: #fff; padding: 24px 40px; }
+  .header h1 { font-size: 24px; font-weight: 600; }
+  .header p { opacity: 0.85; margin-top: 6px; font-size: 14px; }
+  .container { max-width: 1400px; margin: 0 auto; padding: 24px; }
+  .section { background: #fff; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.08); margin-bottom: 24px; overflow: hidden; }
+  .section-title { padding: 16px 24px; font-size: 16px; font-weight: 600; border-bottom: 1px solid #e5e7eb; display: flex; align-items: center; gap: 8px; }
+  .section-body { padding: 16px 24px; overflow-x: auto; }
+  .legend { display: flex; flex-wrap: wrap; gap: 16px; padding: 16px 24px; background: #f9fafb; border-radius: 12px; margin-bottom: 24px; }
+  .legend-item { display: flex; align-items: center; gap: 6px; font-size: 13px; }
+  .legend-color { width: 14px; height: 14px; border-radius: 3px; }
+  .mermaid { display: flex; justify-content: center; }
+  .mermaid svg { max-width: 100%; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>V7 量化检查平台 - 完整业务流程图</h1>
+  <p>涵盖 6 个角色、7 个阶段、5 条状态机的端到端检查流程</p>
+</div>
+
+<div class="container">
+
+<div class="legend">
+  <div class="legend-item"><div class="legend-color" style="background:#4f46e5"></div> 管理员/模板设计者</div>
+  <div class="legend-item"><div class="legend-color" style="background:#059669"></div> 检查员</div>
+  <div class="legend-item"><div class="legend-color" style="background:#d97706"></div> 审核员</div>
+  <div class="legend-item"><div class="legend-color" style="background:#dc2626"></div> 整改负责人</div>
+  <div class="legend-item"><div class="legend-color" style="background:#7c3aed"></div> 整改管理员</div>
+  <div class="legend-item"><div class="legend-color" style="background:#0284c7"></div> 数据分析/管理层</div>
+  <div class="legend-item"><div class="legend-color" style="background:#6b7280"></div> 系统自动</div>
+</div>
+
+<!-- 主流程图 -->
+<div class="section">
+  <div class="section-title">一、端到端主流程</div>
+  <div class="section-body">
+    <div class="mermaid">
+flowchart TB
+    subgraph phase1["<b>阶段一：基础配置</b> &nbsp;👤 管理员"]
+        direction TB
+        A1["创建模板分类<br/>(宿舍检查/教室检查)"] --> A2["创建选项集<br/>(合格不合格/1-5分)"]
+        A2 --> A3["配置问题分类<br/>(卫生/纪律/安全)"]
+        A3 --> A4["配置假日日历<br/>(节假日跳过)"]
+        A4 --> A5["配置通知规则<br/>(任务提醒/逾期提醒)"]
+    end
+
+    subgraph phase2["<b>阶段二：模板设计</b> &nbsp;👤 管理员"]
+        direction TB
+        B1["创建检查模板(草稿)"] --> B2["添加分区<br/>(卫生/纪律/安全)"]
+        B2 --> B3["添加检查项<br/>(22种类型：文本/拍照/选择...)"]
+        B3 --> B4["绑定选项集<br/>为选择类检查项配置选项"]
+        B4 --> B5{"预览确认?"}
+        B5 -- 修改 --> B2
+        B5 -- 确认 --> B6["发布模板 ✅<br/>DRAFT → PUBLISHED"]
+    end
+
+    subgraph phase3["<b>阶段三：评分配置</b> &nbsp;👤 管理员"]
+        direction TB
+        C1["创建评分配置<br/>绑定模板, 基础分100"] --> C2["添加评分维度<br/>(卫生40%/纪律30%/安全30%)"]
+        C2 --> C3["添加等级带<br/>A:90+ / B:80-89 / C:70-79"]
+        C3 --> C4["添加计算规则<br/>(扣分/加分规则)"]
+    end
+
+    subgraph phase4["<b>阶段四：项目管理</b> &nbsp;👤 管理员"]
+        direction TB
+        D1["创建检查项目(草稿)<br/>选择模板+评分配置"] --> D2["配置检查范围<br/>(哪些组织/场所)"]
+        D2 --> D3["配置检查周期<br/>(每日/每周/每月)"]
+        D3 --> D4["配置分配模式<br/>(自由领取/指定/轮询)"]
+        D4 --> D5["配置是否需要审核"]
+        D5 --> D6["添加检查员池<br/>(分配检查员+审核员)"]
+        D6 --> D7["发布项目 ✅<br/>DRAFT → PUBLISHED"]
+        D7 --> D8(("系统自动<br/>生成任务"))
+    end
+
+    subgraph phase5["<b>阶段五：任务执行</b> &nbsp;👤 检查员"]
+        direction TB
+        E1["查看可领取任务"] --> E2["领取任务<br/>PENDING → CLAIMED"]
+        E2 --> E3["开始执行<br/>CLAIMED → IN_PROGRESS"]
+        E3 --> E4["逐项填写检查结果"]
+        E4 --> E5["上传证据<br/>(拍照/视频/GPS)"]
+        E5 --> E6["标记问题项 Flag"]
+        E6 --> E7["提交任务<br/>IN_PROGRESS → SUBMITTED"]
+    end
+
+    subgraph phase6["<b>阶段六：审核</b> &nbsp;👤 审核员"]
+        direction TB
+        F1["查看待审核任务"] --> F2["审核检查数据<br/>查看标记项+证据"]
+        F2 --> F3{"审核结果?"}
+        F3 -- 通过 --> F4["发布 ✅<br/>SUBMITTED → PUBLISHED"]
+        F3 -- 退回 --> F5["退回修改<br/>附退回意见"]
+        F5 -.-> E3
+    end
+
+    subgraph phase7["<b>阶段七：整改闭环</b>"]
+        direction TB
+        G1["创建整改案例<br/>(手动/自动触发)"] --> G2["分配负责人<br/>👤整改管理员<br/>OPEN → ASSIGNED"]
+        G2 --> G3["执行整改<br/>👤整改负责人<br/>ASSIGNED → IN_PROGRESS"]
+        G3 --> G4["提交整改结果+证据<br/>IN_PROGRESS → SUBMITTED"]
+        G4 --> G5{"验证结果?<br/>👤整改管理员"}
+        G5 -- 通过 --> G6["关闭案例 ✅<br/>VERIFIED → CLOSED"]
+        G5 -- 驳回 --> G7["退回重做<br/>→ REJECTED"]
+        G7 --> G3
+        G5 -- 升级 --> G8["升级处理<br/>→ ESCALATED"]
+    end
+
+    subgraph phase8["<b>阶段八：数据分析</b> &nbsp;👤 管理层"]
+        direction TB
+        H1["平台总览仪表盘"] --> H2["日排名 & 趋势分析"]
+        H2 --> H3["整改统计<br/>(逾期/关闭率)"]
+        H3 --> H4["检查员绩效"]
+        H4 --> H5["问题频率帕累托图"]
+    end
+
+    phase1 --> phase2
+    phase2 --> phase3
+    phase3 --> phase4
+    phase4 --> phase5
+    phase5 --> phase6
+    F4 --> phase7
+    phase7 --> phase8
+
+    style phase1 fill:#eef2ff,stroke:#4f46e5,stroke-width:2px
+    style phase2 fill:#eef2ff,stroke:#4f46e5,stroke-width:2px
+    style phase3 fill:#eef2ff,stroke:#4f46e5,stroke-width:2px
+    style phase4 fill:#eef2ff,stroke:#4f46e5,stroke-width:2px
+    style phase5 fill:#ecfdf5,stroke:#059669,stroke-width:2px
+    style phase6 fill:#fffbeb,stroke:#d97706,stroke-width:2px
+    style phase7 fill:#fef2f2,stroke:#dc2626,stroke-width:2px
+    style phase8 fill:#eff6ff,stroke:#0284c7,stroke-width:2px
+    </div>
+  </div>
+</div>
+
+<!-- 任务状态机 -->
+<div class="section">
+  <div class="section-title">二、任务状态机</div>
+  <div class="section-body">
+    <div class="mermaid">
+stateDiagram-v2
+    [*] --> PENDING: 系统自动生成
+    PENDING --> CLAIMED: 检查员领取
+    PENDING --> CANCELLED: 管理员取消
+    PENDING --> EXPIRED: 超时未领取
+    CLAIMED --> IN_PROGRESS: 开始执行
+    CLAIMED --> CANCELLED: 管理员取消
+    IN_PROGRESS --> SUBMITTED: 提交检查结果
+    IN_PROGRESS --> CANCELLED: 管理员取消
+    SUBMITTED --> UNDER_REVIEW: 进入审核(需审核时)
+    SUBMITTED --> PUBLISHED: 自动发布(无需审核)
+    UNDER_REVIEW --> PUBLISHED: 审核通过
+    UNDER_REVIEW --> IN_PROGRESS: 审核退回
+    PUBLISHED --> [*]
+    CANCELLED --> [*]
+    EXPIRED --> [*]
+
+    state PENDING { }
+    state CLAIMED { }
+    state IN_PROGRESS { }
+    state SUBMITTED { }
+    state UNDER_REVIEW { }
+    state PUBLISHED { }
+    </div>
+  </div>
+</div>
+
+<!-- 整改状态机 -->
+<div class="section">
+  <div class="section-title">三、整改案例状态机</div>
+  <div class="section-body">
+    <div class="mermaid">
+stateDiagram-v2
+    [*] --> OPEN: 创建整改案例
+    OPEN --> ASSIGNED: 分配负责人
+    ASSIGNED --> IN_PROGRESS: 开始整改
+    IN_PROGRESS --> SUBMITTED: 提交整改结果
+    SUBMITTED --> VERIFIED: 验证通过
+    SUBMITTED --> REJECTED: 验证驳回
+    REJECTED --> IN_PROGRESS: 重新整改
+    VERIFIED --> CLOSED: 关闭案例
+
+    OPEN --> ESCALATED: 紧急升级
+    ASSIGNED --> ESCALATED: 紧急升级
+    IN_PROGRESS --> ESCALATED: 紧急升级
+    SUBMITTED --> ESCALATED: 紧急升级
+
+    CLOSED --> EFFECTIVENESS_CHECK: 有效性复查
+    EFFECTIVENESS_CHECK --> EFFECTIVENESS_CONFIRMED: 确认有效
+    EFFECTIVENESS_CHECK --> EFFECTIVENESS_FAILED: 无效(重开)
+
+    CLOSED --> [*]
+    ESCALATED --> [*]
+    EFFECTIVENESS_CONFIRMED --> [*]
+    </div>
+  </div>
+</div>
+
+<!-- 角色权限矩阵 -->
+<div class="section">
+  <div class="section-title">四、角色 × 功能矩阵</div>
+  <div class="section-body">
+    <div class="mermaid">
+block-beta
+    columns 8
+    space header1["模板\n设计"] header2["评分\n配置"] header3["项目\n管理"] header4["任务\n执行"] header5["审核"] header6["整改"] header7["数据\n分析"]
+
+    role1["管理员"]:1 a1["创建\n编辑\n发布"]:1 a2["创建\n维度\n规则"]:1 a3["创建\n配置\n发布"]:1 a4["指派\n取消"]:1 space:1 a6["分配\n验证\n关闭"]:1 a7["全部\n报表"]:1
+
+    role2["检查员"]:1 space:1 space:1 space:1 b4["领取\n执行\n提交"]:1 space:1 b6["创建\n案例"]:1 space:1
+
+    role3["审核员"]:1 space:1 space:1 space:1 space:1 c5["审核\n通过\n退回"]:1 space:1 space:1
+
+    role4["整改\n负责人"]:1 space:1 space:1 space:1 space:1 space:1 d6["执行\n提交\n证据"]:1 space:1
+
+    role5["管理层"]:1 space:1 space:1 space:1 space:1 space:1 space:1 e7["查看\n导出"]:1
+
+    style a1 fill:#eef2ff,stroke:#4f46e5
+    style a2 fill:#eef2ff,stroke:#4f46e5
+    style a3 fill:#eef2ff,stroke:#4f46e5
+    style a4 fill:#eef2ff,stroke:#4f46e5
+    style a6 fill:#f5f3ff,stroke:#7c3aed
+    style a7 fill:#eff6ff,stroke:#0284c7
+    style b4 fill:#ecfdf5,stroke:#059669
+    style b6 fill:#ecfdf5,stroke:#059669
+    style c5 fill:#fffbeb,stroke:#d97706
+    style d6 fill:#fef2f2,stroke:#dc2626
+    style e7 fill:#eff6ff,stroke:#0284c7
+    </div>
+  </div>
+</div>
+
+<!-- 检查员执行详细流程 -->
+<div class="section">
+  <div class="section-title">五、检查员执行详细流程（任务执行页）</div>
+  <div class="section-body">
+    <div class="mermaid">
+flowchart LR
+    subgraph task["任务执行"]
+        direction TB
+        T1["进入任务执行页<br/>查看检查目标列表"] --> T2["选择第一个目标<br/>(如: 101宿舍)"]
+        T2 --> T3["系统创建提交记录<br/>PENDING → LOCKED"]
+        T3 --> T4["开始填写<br/>LOCKED → IN_PROGRESS"]
+        T4 --> T5["逐项填写"]
+    end
+
+    subgraph items["填写检查项"]
+        direction TB
+        I1["文本项: 输入文字"]
+        I2["数字项: 输入分数"]
+        I3["选择项: 选择选项<br/>(合格/不合格)"]
+        I4["拍照项: 拍照上传"]
+        I5["签名项: 手写签名"]
+        I6["GPS项: 自动定位"]
+    end
+
+    subgraph actions["操作"]
+        direction TB
+        A1["标记Flag<br/>(发现问题)"]
+        A2["添加备注"]
+        A3["上传证据<br/>(照片/视频)"]
+    end
+
+    subgraph complete["完成"]
+        direction TB
+        C1{"所有项填完?"}
+        C2["完成该目标<br/>IN_PROGRESS → COMPLETED"]
+        C3["跳过该目标<br/>→ SKIPPED"]
+        C4["进入下一个目标"]
+        C5["全部完成<br/>提交任务"]
+    end
+
+    T5 --> items
+    items --> actions
+    actions --> C1
+    C1 -- 是 --> C2
+    C1 -- 跳过 --> C3
+    C2 --> C4
+    C3 --> C4
+    C4 --> T2
+    C4 -- 最后一个 --> C5
+    </div>
+  </div>
+</div>
+
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+<script>
+  mermaid.initialize({
+    startOnLoad: true,
+    theme: 'base',
+    themeVariables: {
+      primaryColor: '#eef2ff',
+      primaryTextColor: '#1e1b4b',
+      primaryBorderColor: '#4f46e5',
+      lineColor: '#6b7280',
+      secondaryColor: '#f0fdf4',
+      tertiaryColor: '#fffbeb',
+      fontSize: '14px'
+    },
+    flowchart: {
+      htmlLabels: true,
+      curve: 'basis',
+      nodeSpacing: 30,
+      rankSpacing: 40,
+      padding: 12
+    },
+    stateDiagram: {
+      fontSize: 13
+    }
+  });
+</script>
+
+</body>
+</html>

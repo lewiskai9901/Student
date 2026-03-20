@@ -7,7 +7,7 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
-import org.springframework.security.access.prepost.PreAuthorize;
+import com.school.management.infrastructure.casbin.CasbinAccess;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -29,28 +29,28 @@ public class RoleDataPermissionController {
 
     @GetMapping("/data-permissions/v5/modules")
     @Operation(summary = "获取所有数据模块（V5按领域分组）")
-    @PreAuthorize("hasAuthority('system:role:view') or hasAuthority('system:role:edit')")
+    @CasbinAccess(resource = "system:role", action = "view")
     public Result<List<DomainModulesDTO>> getModulesV5() {
         return Result.success(dataPermissionService.getAllModulesGroupedByDomain());
     }
 
     @GetMapping("/data-permissions/v5/scopes")
     @Operation(summary = "获取所有数据范围类型（V5）")
-    @PreAuthorize("hasAuthority('system:role:view') or hasAuthority('system:role:edit')")
+    @CasbinAccess(resource = "system:role", action = "view")
     public Result<List<ScopeTypeDTO>> getScopesV5() {
         return Result.success(dataPermissionService.getAllScopeTypes());
     }
 
     @GetMapping("/data-permissions/v5/scope-item-types")
     @Operation(summary = "获取所有范围项类型（V5）")
-    @PreAuthorize("hasAuthority('system:role:view') or hasAuthority('system:role:edit')")
+    @CasbinAccess(resource = "system:role", action = "view")
     public Result<List<ScopeItemTypeDTO>> getScopeItemTypes() {
         return Result.success(dataPermissionService.getAllScopeItemTypes());
     }
 
     @GetMapping("/data-permissions/v5/scope-items")
     @Operation(summary = "搜索自定义范围可选项（V5）")
-    @PreAuthorize("hasAuthority('system:role:view') or hasAuthority('system:role:edit')")
+    @CasbinAccess(resource = "system:role", action = "view")
     public Result<List<ScopeItemDTO>> searchScopeItems(
             @Parameter(description = "范围项类型代码") @RequestParam String itemTypeCode,
             @Parameter(description = "搜索关键字") @RequestParam(defaultValue = "") String keyword,
@@ -60,34 +60,94 @@ public class RoleDataPermissionController {
 
     @GetMapping("/{roleId}/data-permissions/v5")
     @Operation(summary = "获取角色数据权限配置（V5）")
-    @PreAuthorize("hasAuthority('system:role:view') or hasAuthority('system:role:edit')")
+    @CasbinAccess(resource = "system:role", action = "view")
     public Result<List<RoleModulePermissionDTO>> getPermissionsV5(@PathVariable Long roleId) {
-        return Result.success(dataPermissionService.getRoleDataPermissionsV5(roleId));
+        return Result.success(dataPermissionService.getRoleDataPermissions(roleId));
     }
 
     @PutMapping("/{roleId}/data-permissions/v5")
     @Operation(summary = "保存角色数据权限配置（V5）")
-    @PreAuthorize("hasAuthority('system:role:edit')")
+    @CasbinAccess(resource = "system:role", action = "edit")
     public Result<Void> savePermissionsV5(
             @PathVariable Long roleId,
             @RequestBody List<SavePermissionCommand> commands) {
-        dataPermissionService.saveRoleDataPermissionsV5(roleId, commands);
+        dataPermissionService.saveRoleDataPermissions(roleId, commands);
         return Result.success(null);
     }
 
-    // ==================== Legacy API Endpoints (backward compatibility) ====================
+    // ==================== Clean API Endpoints (no version suffix) ====================
+
+    @GetMapping("/{roleId}/data-permissions")
+    @Operation(summary = "获取角色数据权限配置")
+    @CasbinAccess(resource = "system:role", action = "view")
+    public Result<RolePermissionConfigDTO> getPermissions(@PathVariable Long roleId) {
+        List<RoleModulePermissionDTO> modules = dataPermissionService.getRoleDataPermissions(roleId);
+        // Wrap into RolePermissionConfig format matching frontend expectations
+        RolePermissionConfigDTO config = new RolePermissionConfigDTO();
+        config.setRoleId(roleId);
+        config.setRoleName("");
+        config.setModulePermissions(modules.stream()
+                .map(m -> {
+                    ModulePermissionDTO mp = new ModulePermissionDTO();
+                    mp.setModuleCode(m.getModuleCode());
+                    mp.setScopeCode(m.getScopeCode());
+                    mp.setScopeItems(m.getScopeItems());
+                    return mp;
+                })
+                .collect(java.util.stream.Collectors.toList()));
+        return Result.success(config);
+    }
+
+    @PutMapping("/{roleId}/data-permissions")
+    @Operation(summary = "保存角色数据权限配置")
+    @CasbinAccess(resource = "system:role", action = "edit")
+    public Result<Void> savePermissions(
+            @PathVariable Long roleId,
+            @RequestBody RolePermissionConfigDTO config) {
+        List<SavePermissionCommand> commands = config.getModulePermissions().stream()
+                .map(mp -> new SavePermissionCommand(mp.getModuleCode(), mp.getScopeCode(), mp.getScopeItems()))
+                .collect(java.util.stream.Collectors.toList());
+        dataPermissionService.saveRoleDataPermissions(roleId, commands);
+        return Result.success(null);
+    }
+
+    @GetMapping("/data-permissions/scopes")
+    @Operation(summary = "获取所有数据范围选项")
+    @CasbinAccess(resource = "system:role", action = "view")
+    public Result<List<DataScopeOptionDTO>> getScopes() {
+        return Result.success(dataPermissionService.getAllScopeTypes().stream()
+                .map(s -> new DataScopeOptionDTO(s.getCode(), s.getName(), s.getDescription()))
+                .collect(java.util.stream.Collectors.toList()));
+    }
 
     @GetMapping("/data-permissions/modules")
     @Operation(summary = "获取所有数据模块列表（按领域分组）- Legacy")
-    @PreAuthorize("hasAuthority('system:role:view') or hasAuthority('system:role:edit')")
+    @CasbinAccess(resource = "system:role", action = "view")
     public Result<Map<String, List<Map<String, String>>>> getModules() {
         return Result.success(dataPermissionService.getAllModules());
     }
 
-    @GetMapping("/data-permissions/scopes")
-    @Operation(summary = "获取所有数据范围选项 - Legacy")
-    @PreAuthorize("hasAuthority('system:role:view') or hasAuthority('system:role:edit')")
-    public Result<List<Map<String, String>>> getScopes() {
-        return Result.success(dataPermissionService.getAllScopes());
+    // ==================== DTO for frontend contract ====================
+
+    @lombok.Data
+    public static class RolePermissionConfigDTO {
+        private Long roleId;
+        private String roleName;
+        private List<ModulePermissionDTO> modulePermissions;
+    }
+
+    @lombok.Data
+    public static class ModulePermissionDTO {
+        private String moduleCode;
+        private String scopeCode;
+        private List<DataPermissionApplicationService.ScopeItemDTO> scopeItems;
+    }
+
+    @lombok.Data
+    @lombok.AllArgsConstructor
+    public static class DataScopeOptionDTO {
+        private String scopeCode;
+        private String scopeName;
+        private String description;
     }
 }

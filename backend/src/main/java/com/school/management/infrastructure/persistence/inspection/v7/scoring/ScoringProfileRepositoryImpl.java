@@ -36,8 +36,8 @@ public class ScoringProfileRepositoryImpl implements ScoringProfileRepository {
     }
 
     @Override
-    public Optional<ScoringProfile> findByTemplateId(Long templateId) {
-        ScoringProfilePO po = mapper.findByTemplateId(templateId);
+    public Optional<ScoringProfile> findBySectionId(Long sectionId) {
+        ScoringProfilePO po = mapper.findBySectionId(sectionId);
         return Optional.ofNullable(po).map(this::toDomain);
     }
 
@@ -57,7 +57,7 @@ public class ScoringProfileRepositoryImpl implements ScoringProfileRepository {
         ScoringProfilePO po = new ScoringProfilePO();
         po.setId(d.getId());
         po.setTenantId(d.getTenantId() != null ? d.getTenantId() : 0L);
-        po.setTemplateId(d.getTemplateId());
+        po.setSectionId(d.getSectionId());
         po.setMaxScore(d.getMaxScore());
         po.setMinScore(d.getMinScore());
         po.setPrecisionDigits(d.getPrecisionDigits());
@@ -94,7 +94,7 @@ public class ScoringProfileRepositoryImpl implements ScoringProfileRepository {
         return ScoringProfile.reconstruct(ScoringProfile.builder()
                 .id(po.getId())
                 .tenantId(po.getTenantId())
-                .templateId(po.getTemplateId())
+                .sectionId(po.getSectionId())
                 .maxScore(po.getMaxScore())
                 .minScore(po.getMinScore())
                 .precisionDigits(po.getPrecisionDigits())

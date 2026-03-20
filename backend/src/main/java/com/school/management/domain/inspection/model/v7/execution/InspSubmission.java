@@ -16,9 +16,12 @@ public class InspSubmission extends AggregateRoot<Long> {
     private Long id;
     private Long tenantId;
     private Long taskId;
+    private Long sectionId;              // 所属一级分区（有targetType的）
     private TargetType targetType;
     private Long targetId;
     private String targetName;
+    private Long rootTargetId;
+    private String rootTargetName;
     private Long orgUnitId;
     private String orgUnitName;
     private BigDecimal weightRatio;
@@ -46,9 +49,12 @@ public class InspSubmission extends AggregateRoot<Long> {
         this.id = builder.id;
         this.tenantId = builder.tenantId;
         this.taskId = builder.taskId;
+        this.sectionId = builder.sectionId;
         this.targetType = builder.targetType;
         this.targetId = builder.targetId;
         this.targetName = builder.targetName;
+        this.rootTargetId = builder.rootTargetId;
+        this.rootTargetName = builder.rootTargetName;
         this.orgUnitId = builder.orgUnitId;
         this.orgUnitName = builder.orgUnitName;
         this.weightRatio = builder.weightRatio != null ? builder.weightRatio : BigDecimal.ONE;
@@ -154,6 +160,23 @@ public class InspSubmission extends AggregateRoot<Long> {
     }
 
     /**
+     * 重算分数（不改变状态，用于级联重算场景）
+     * 可在 COMPLETED 状态下调用，更新分数字段。
+     */
+    public void recalculate(BigDecimal baseScore, BigDecimal finalScore,
+                            BigDecimal deductionTotal, BigDecimal bonusTotal,
+                            String scoreBreakdown, String grade, Boolean passed) {
+        this.baseScore = baseScore;
+        this.finalScore = finalScore;
+        this.deductionTotal = deductionTotal != null ? deductionTotal : BigDecimal.ZERO;
+        this.bonusTotal = bonusTotal != null ? bonusTotal : BigDecimal.ZERO;
+        this.scoreBreakdown = scoreBreakdown;
+        this.grade = grade;
+        this.passed = passed;
+        this.updatedAt = LocalDateTime.now();
+    }
+
+    /**
      * 跳过提交 — PENDING/LOCKED → SKIPPED
      */
     public void skip() {
@@ -173,9 +196,12 @@ public class InspSubmission extends AggregateRoot<Long> {
 
     public Long getTenantId() { return tenantId; }
     public Long getTaskId() { return taskId; }
+    public Long getSectionId() { return sectionId; }
     public TargetType getTargetType() { return targetType; }
     public Long getTargetId() { return targetId; }
     public String getTargetName() { return targetName; }
+    public Long getRootTargetId() { return rootTargetId; }
+    public String getRootTargetName() { return rootTargetName; }
     public Long getOrgUnitId() { return orgUnitId; }
     public String getOrgUnitName() { return orgUnitName; }
     public BigDecimal getWeightRatio() { return weightRatio; }
@@ -202,9 +228,12 @@ public class InspSubmission extends AggregateRoot<Long> {
         private Long id;
         private Long tenantId;
         private Long taskId;
+        private Long sectionId;
         private TargetType targetType;
         private Long targetId;
         private String targetName;
+        private Long rootTargetId;
+        private String rootTargetName;
         private Long orgUnitId;
         private String orgUnitName;
         private BigDecimal weightRatio;
@@ -228,9 +257,12 @@ public class InspSubmission extends AggregateRoot<Long> {
         public Builder id(Long id) { this.id = id; return this; }
         public Builder tenantId(Long tenantId) { this.tenantId = tenantId; return this; }
         public Builder taskId(Long taskId) { this.taskId = taskId; return this; }
+        public Builder sectionId(Long sectionId) { this.sectionId = sectionId; return this; }
         public Builder targetType(TargetType targetType) { this.targetType = targetType; return this; }
         public Builder targetId(Long targetId) { this.targetId = targetId; return this; }
         public Builder targetName(String targetName) { this.targetName = targetName; return this; }
+        public Builder rootTargetId(Long rootTargetId) { this.rootTargetId = rootTargetId; return this; }
+        public Builder rootTargetName(String rootTargetName) { this.rootTargetName = rootTargetName; return this; }
         public Builder orgUnitId(Long orgUnitId) { this.orgUnitId = orgUnitId; return this; }
         public Builder orgUnitName(String orgUnitName) { this.orgUnitName = orgUnitName; return this; }
         public Builder weightRatio(BigDecimal weightRatio) { this.weightRatio = weightRatio; return this; }

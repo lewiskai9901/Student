@@ -15,9 +15,12 @@ public class InspSubmissionPO {
 
     private Long tenantId;
     private Long taskId;
+    private Long sectionId;
     private String targetType;
     private Long targetId;
     private String targetName;
+    private Long rootTargetId;
+    private String rootTargetName;
     private Long orgUnitId;
     private String orgUnitName;
     private BigDecimal weightRatio;

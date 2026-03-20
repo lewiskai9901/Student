@@ -3,103 +3,131 @@ package com.school.management.interfaces.rest.access;
 import com.school.management.application.access.AccessApplicationService;
 import com.school.management.common.result.Result;
 import com.school.management.domain.access.model.Role;
+import com.school.management.domain.access.model.ScopeType;
 import com.school.management.domain.access.model.UserRole;
-import com.school.management.security.JwtTokenService;
+import com.school.management.common.util.SecurityUtils;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
-import org.springframework.security.access.prepost.PreAuthorize;
+import lombok.RequiredArgsConstructor;
+import com.school.management.infrastructure.casbin.CasbinAccess;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.List;
-import java.util.Set;
+import java.util.*;
 import java.util.stream.Collectors;
 
 /**
- * REST controller for user role assignment.
+ * REST controller for user role assignment with scope support.
  */
+@RequiredArgsConstructor
 @RestController("userRoleController")
 @RequestMapping("/users")
 @Tag(name = "User Roles", description = "User role assignment API")
 public class UserRoleController {
 
     private final AccessApplicationService accessService;
-    private final JwtTokenService jwtTokenService;
-
-    public UserRoleController(AccessApplicationService accessService, JwtTokenService jwtTokenService) {
-        this.accessService = accessService;
-        this.jwtTokenService = jwtTokenService;
-    }
+    private final JdbcTemplate jdbcTemplate;
 
     @GetMapping("/{userId}/roles")
-    @Operation(summary = "Get user's roles")
-    @PreAuthorize("hasAuthority('user:role:view')")
-    public Result<List<RoleResponse>> getUserRoles(@PathVariable Long userId) {
-        List<Role> roles = accessService.getUserRoles(userId);
-        List<RoleResponse> responses = roles.stream()
-            .map(this::toRoleResponse)
+    @Operation(summary = "Get user's role assignments with scope info")
+    @CasbinAccess(resource = "system:role", action = "view")
+    public Result<List<UserRoleResponse>> getUserRoles(@PathVariable Long userId) {
+        List<UserRole> assignments = accessService.getUserRoleAssignments(userId);
+
+        // Batch load role info
+        Set<Long> roleIds = assignments.stream().map(UserRole::getRoleId).collect(Collectors.toSet());
+        Map<Long, Role> roleMap = new HashMap<>();
+        if (!roleIds.isEmpty()) {
+            List<Role> roles = accessService.getUserRoles(userId);
+            for (Role r : roles) {
+                roleMap.put(r.getId(), r);
+            }
+        }
+
+        List<UserRoleResponse> responses = assignments.stream()
+            .map(ur -> toUserRoleResponse(ur, roleMap))
             .collect(Collectors.toList());
         return Result.success(responses);
     }
 
     @GetMapping("/{userId}/permissions")
     @Operation(summary = "Get user's permissions")
-    @PreAuthorize("hasAuthority('user:permission:view')")
+    @CasbinAccess(resource = "system:permission", action = "view")
     public Result<Set<String>> getUserPermissions(@PathVariable Long userId) {
         Set<String> permissions = accessService.getUserPermissions(userId);
         return Result.success(permissions);
     }
 
     @PostMapping("/{userId}/roles/{roleId}")
-    @Operation(summary = "Assign role to user")
-    @PreAuthorize("hasAuthority('user:role:assign')")
+    @Operation(summary = "Assign role to user (global scope)")
+    @CasbinAccess(resource = "system:role", action = "edit")
     public Result<UserRoleResponse> assignRole(
             @PathVariable Long userId,
             @PathVariable Long roleId) {
 
-        UserRole userRole = accessService.assignRoleToUser(userId, roleId, getCurrentUserId());
-        return Result.success(toUserRoleResponse(userRole));
+        UserRole userRole = accessService.assignRoleToUser(userId, roleId, SecurityUtils.requireCurrentUserId());
+        return Result.success(toUserRoleResponse(userRole, Collections.emptyMap()));
     }
 
     @PostMapping("/{userId}/roles/{roleId}/scoped")
-    @Operation(summary = "Assign role to user with organization scope")
-    @PreAuthorize("hasAuthority('user:role:assign')")
+    @Operation(summary = "Assign role to user with scope")
+    @CasbinAccess(resource = "system:role", action = "edit")
     public Result<UserRoleResponse> assignRoleWithScope(
             @PathVariable Long userId,
             @PathVariable Long roleId,
             @RequestBody AssignRoleWithScopeRequest request) {
 
+        String scopeType = request.getScopeType() != null ? request.getScopeType() : ScopeType.ALL;
+        Long scopeId = request.getScopeId() != null ? request.getScopeId() : 0L;
+
         UserRole userRole = accessService.assignRoleToUserWithScope(
-            userId, roleId, request.getOrgUnitId(), getCurrentUserId());
-        return Result.success(toUserRoleResponse(userRole));
+            userId, roleId, scopeType, scopeId, SecurityUtils.requireCurrentUserId());
+        return Result.success(toUserRoleResponse(userRole, Collections.emptyMap()));
     }
 
     @DeleteMapping("/{userId}/roles/{roleId}")
-    @Operation(summary = "Remove role from user")
-    @PreAuthorize("hasAuthority('user:role:remove')")
+    @Operation(summary = "Remove role from user (all scopes or specific scope)")
+    @CasbinAccess(resource = "system:role", action = "edit")
     public Result<Void> removeRole(
             @PathVariable Long userId,
-            @PathVariable Long roleId) {
+            @PathVariable Long roleId,
+            @RequestParam(required = false) String scopeType,
+            @RequestParam(required = false) Long scopeId) {
 
-        accessService.removeRoleFromUser(userId, roleId);
+        if (scopeType != null && scopeId != null) {
+            accessService.removeRoleFromUserWithScope(userId, roleId, scopeType, scopeId);
+        } else {
+            accessService.removeRoleFromUser(userId, roleId);
+        }
         return Result.success(null);
     }
 
     @PutMapping("/{userId}/roles")
-    @Operation(summary = "Set user's roles")
-    @PreAuthorize("hasAuthority('user:role:assign')")
+    @Operation(summary = "Set user's roles with scope")
+    @CasbinAccess(resource = "system:role", action = "edit")
     public Result<Void> setUserRoles(
             @PathVariable Long userId,
             @Valid @RequestBody SetUserRolesRequest request) {
 
-        accessService.setUserRoles(userId, request.getRoleIds(), getCurrentUserId());
+        List<AccessApplicationService.RoleAssignment> assignments = request.getAssignments().stream()
+            .map(item -> {
+                AccessApplicationService.RoleAssignment ra = new AccessApplicationService.RoleAssignment();
+                ra.setRoleId(item.getRoleId());
+                ra.setScopeType(item.getScopeType());
+                ra.setScopeId(item.getScopeId());
+                return ra;
+            })
+            .collect(Collectors.toList());
+
+        accessService.setUserRoles(userId, assignments, SecurityUtils.requireCurrentUserId());
         return Result.success(null);
     }
 
     @GetMapping("/me/permissions")
     @Operation(summary = "Get current user's permissions")
     public Result<Set<String>> getMyPermissions() {
-        Long userId = getCurrentUserId();
+        Long userId = SecurityUtils.requireCurrentUserId();
         Set<String> permissions = accessService.getUserPermissions(userId);
         return Result.success(permissions);
     }
@@ -107,16 +135,12 @@ public class UserRoleController {
     @GetMapping("/me/roles")
     @Operation(summary = "Get current user's roles")
     public Result<List<RoleResponse>> getMyRoles() {
-        Long userId = getCurrentUserId();
+        Long userId = SecurityUtils.requireCurrentUserId();
         List<Role> roles = accessService.getUserRoles(userId);
         List<RoleResponse> responses = roles.stream()
             .map(this::toRoleResponse)
             .collect(Collectors.toList());
         return Result.success(responses);
-    }
-
-    private Long getCurrentUserId() {
-        return jwtTokenService.getCurrentUserId();
     }
 
     private RoleResponse toRoleResponse(Role role) {
@@ -135,15 +159,38 @@ public class UserRoleController {
         return response;
     }
 
-    private UserRoleResponse toUserRoleResponse(UserRole userRole) {
+    private UserRoleResponse toUserRoleResponse(UserRole userRole, Map<Long, Role> roleMap) {
         UserRoleResponse response = new UserRoleResponse();
         response.setId(userRole.getId());
         response.setUserId(userRole.getUserId());
         response.setRoleId(userRole.getRoleId());
-        response.setOrgUnitId(userRole.getOrgUnitId());
+        response.setScopeType(userRole.getScopeType());
+        response.setScopeId(userRole.getScopeId());
         response.setAssignedAt(userRole.getAssignedAt());
         response.setExpiresAt(userRole.getExpiresAt());
         response.setIsActive(userRole.getIsActive());
+
+        // Enrich with role info
+        Role role = roleMap.get(userRole.getRoleId());
+        if (role != null) {
+            response.setRoleName(role.getRoleName());
+            response.setRoleCode(role.getRoleCode());
+        }
+
+        // Enrich scope name for ORG_UNIT scope
+        if (ScopeType.ORG_UNIT.equals(userRole.getScopeType())
+                && userRole.getScopeId() != null && userRole.getScopeId() > 0) {
+            try {
+                String scopeName = jdbcTemplate.queryForObject(
+                        "SELECT unit_name FROM org_units WHERE id = ? AND deleted = 0",
+                        String.class, userRole.getScopeId());
+                response.setScopeName(scopeName);
+            } catch (Exception ignored) {
+            }
+        } else if (ScopeType.ALL.equals(userRole.getScopeType())) {
+            response.setScopeName("全局");
+        }
+
         return response;
     }
 }

@@ -1,0 +1,435 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>方案C：网格编辑器 - 排座与平面图</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: -apple-system, 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif; background: #f5f7fa; color: #1f2937; }
+  .app { display: flex; height: 100vh; }
+
+  /* Top toolbar */
+  .top-toolbar {
+    height: 48px; background: #fff; border-bottom: 1px solid #e5e7eb;
+    display: flex; align-items: center; padding: 0 16px; gap: 8px;
+    position: fixed; top: 0; left: 0; right: 0; z-index: 10;
+  }
+  .top-toolbar .room-name { font-size: 14px; font-weight: 600; margin-right: 16px; }
+  .separator { width: 1px; height: 24px; background: #e5e7eb; margin: 0 4px; }
+  .cell-type-btn {
+    display: flex; align-items: center; gap: 5px; padding: 6px 12px; border: 1.5px solid #e5e7eb;
+    border-radius: 8px; background: #fff; cursor: pointer; font-size: 12px; color: #374151;
+    transition: all .15s; white-space: nowrap;
+  }
+  .cell-type-btn:hover { border-color: #93c5fd; background: #f0f7ff; }
+  .cell-type-btn.active { border-color: #3b82f6; background: #eff6ff; color: #2563eb; font-weight: 500; }
+  .cell-type-btn .swatch {
+    width: 14px; height: 14px; border-radius: 3px; flex-shrink: 0;
+  }
+  .swatch-seat { background: #dbeafe; border: 1px solid #93c5fd; }
+  .swatch-desk { background: #fef3c7; border: 1px solid #fbbf24; }
+  .swatch-wall { background: #6b7280; }
+  .swatch-door { background: #34d399; border: 1px solid #10b981; }
+  .swatch-aisle { background: #f3f4f6; border: 1px solid #e5e7eb; }
+  .swatch-eraser { background: #fff; border: 1px dashed #d1d5db; }
+
+  .spacer { flex: 1; }
+
+  .grid-size-control {
+    display: flex; align-items: center; gap: 4px; font-size: 12px; color: #6b7280;
+  }
+  .grid-size-input {
+    width: 40px; height: 28px; border: 1px solid #e5e7eb; border-radius: 6px;
+    text-align: center; font-size: 12px; outline: none;
+  }
+  .grid-size-input:focus { border-color: #3b82f6; }
+
+  .toolbar-btn {
+    padding: 6px 12px; border: 1px solid #e5e7eb; border-radius: 8px;
+    background: #fff; cursor: pointer; font-size: 12px; color: #374151; transition: all .15s;
+  }
+  .toolbar-btn:hover { background: #f3f4f6; }
+  .toolbar-btn.primary { background: #3b82f6; color: #fff; border-color: #3b82f6; }
+  .toolbar-btn.primary:hover { background: #2563eb; }
+
+  /* Main content */
+  .main-content {
+    display: flex; margin-top: 48px; height: calc(100vh - 48px);
+  }
+
+  /* Grid Editor */
+  .grid-editor {
+    flex: 1; display: flex; flex-direction: column; overflow: hidden;
+  }
+  .grid-canvas {
+    flex: 1; overflow: auto; display: flex; align-items: flex-start; justify-content: center;
+    padding: 24px; background: #f0f2f5;
+  }
+  .grid-table {
+    border-collapse: collapse; user-select: none;
+    box-shadow: 0 2px 12px rgba(0,0,0,.06);
+  }
+  .grid-table td {
+    width: 52px; height: 52px; border: 1px solid #e5e7eb;
+    text-align: center; vertical-align: middle; cursor: crosshair;
+    transition: all .1s; position: relative; font-size: 10px;
+  }
+  .grid-table td:hover { outline: 2px solid #3b82f6; outline-offset: -2px; z-index: 1; }
+
+  /* Cell types */
+  .cell-empty { background: #fff; }
+  .cell-seat { background: #eff6ff; border-color: #bfdbfe !important; }
+  .cell-seat .cell-pos { font-size: 9px; color: #93c5fd; font-weight: 600; }
+  .cell-seat .cell-name { font-size: 10px; color: #1e40af; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 48px; display: block; }
+  .cell-seat .cell-empty-marker { color: #bfdbfe; font-size: 11px; }
+  .cell-seat-occupied { background: #dbeafe; border-color: #93c5fd !important; }
+  .cell-desk { background: #fef3c7; border-color: #fde68a !important; }
+  .cell-desk .cell-label { font-size: 9px; color: #b45309; }
+  .cell-wall { background: #6b7280; border-color: #4b5563 !important; }
+  .cell-door { background: #d1fae5; border-color: #6ee7b7 !important; }
+  .cell-door .cell-label { font-size: 9px; color: #059669; }
+  .cell-aisle { background: #f9fafb; border-color: #f3f4f6 !important; }
+
+  /* Row/Col headers */
+  .grid-table .header-cell {
+    width: 28px; height: 28px; background: #f9fafb; color: #9ca3af;
+    font-size: 10px; font-weight: 500; cursor: default;
+  }
+  .grid-table .header-cell:hover { outline: none; }
+  .col-header { width: 52px !important; }
+
+  /* Bottom status */
+  .grid-status {
+    height: 36px; background: #fff; border-top: 1px solid #e5e7eb;
+    display: flex; align-items: center; padding: 0 16px; gap: 16px;
+    font-size: 11px; color: #6b7280;
+  }
+  .grid-status .stat-dot { width: 8px; height: 8px; border-radius: 2px; display: inline-block; margin-right: 4px; }
+
+  /* Right Panel */
+  .right-panel {
+    width: 260px; background: #fff; border-left: 1px solid #e5e7eb;
+    display: flex; flex-direction: column; flex-shrink: 0;
+  }
+  .rp-tabs {
+    display: flex; border-bottom: 1px solid #e5e7eb;
+  }
+  .rp-tab {
+    flex: 1; padding: 10px 0; text-align: center; font-size: 12px; font-weight: 500;
+    color: #6b7280; cursor: pointer; border-bottom: 2px solid transparent;
+  }
+  .rp-tab.active { color: #2563eb; border-bottom-color: #2563eb; }
+  .rp-section { padding: 12px 14px; border-bottom: 1px solid #f3f4f6; }
+  .rp-section .title {
+    font-size: 11px; font-weight: 600; color: #9ca3af; text-transform: uppercase;
+    letter-spacing: 0.5px; margin-bottom: 8px;
+  }
+  .rp-row { display: flex; align-items: center; margin-bottom: 6px; }
+  .rp-row .label { width: 56px; font-size: 11px; color: #6b7280; }
+  .rp-row .value { font-size: 12px; color: #1f2937; font-weight: 500; }
+
+  /* Occupant in cell detail */
+  .cell-detail-card {
+    background: #f9fafb; border-radius: 8px; padding: 12px;
+  }
+  .cell-detail-card .avatar-line {
+    display: flex; align-items: center; gap: 8px; margin-bottom: 8px;
+  }
+  .cell-detail-card .avatar {
+    width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center;
+    justify-content: center; color: #fff; font-weight: 600; font-size: 13px;
+  }
+  .cell-detail-card .avatar.m { background: #60a5fa; }
+  .cell-detail-card .person-name { font-size: 13px; font-weight: 600; }
+  .cell-detail-card .person-meta { font-size: 11px; color: #6b7280; }
+  .cell-detail-card .detail-rows { font-size: 11px; }
+  .cell-detail-card .detail-rows .dr { display: flex; margin-bottom: 4px; }
+  .cell-detail-card .detail-rows .dr .dl { color: #9ca3af; width: 48px; }
+  .cell-detail-card .detail-rows .dr .dv { color: #374151; }
+
+  .mini-actions {
+    display: flex; gap: 6px; margin-top: 10px;
+  }
+  .mini-btn {
+    flex: 1; height: 28px; border-radius: 6px; font-size: 11px; cursor: pointer;
+    border: 1px solid #e5e7eb; background: #fff; color: #374151; transition: all .1s;
+  }
+  .mini-btn:hover { background: #f3f4f6; }
+  .mini-btn.danger { color: #ef4444; border-color: #fca5a5; }
+  .mini-btn.danger:hover { background: #fef2f2; }
+
+  /* Quick fill panel */
+  .quick-fill {
+    padding: 12px 14px;
+  }
+  .qf-title { font-size: 12px; font-weight: 600; margin-bottom: 8px; color: #374151; }
+  .qf-options { display: flex; flex-direction: column; gap: 6px; }
+  .qf-option {
+    display: flex; align-items: center; gap: 8px; padding: 8px 10px; border: 1px solid #e5e7eb;
+    border-radius: 8px; cursor: pointer; transition: all .15s;
+  }
+  .qf-option:hover { border-color: #93c5fd; background: #f0f7ff; }
+  .qf-option .qf-icon { font-size: 16px; }
+  .qf-option .qf-label { font-size: 12px; font-weight: 500; }
+  .qf-option .qf-desc { font-size: 10px; color: #9ca3af; }
+
+  /* Legend */
+  .legend {
+    padding: 10px 14px; display: flex; flex-wrap: wrap; gap: 8px; border-top: 1px solid #f3f4f6;
+  }
+  .legend-item { display: flex; align-items: center; gap: 4px; font-size: 10px; color: #6b7280; }
+  .legend-swatch { width: 12px; height: 12px; border-radius: 2px; border: 1px solid #d1d5db; }
+</style>
+</head>
+<body>
+<!-- Top Toolbar -->
+<div class="top-toolbar">
+  <span class="room-name">高一(3)班教室</span>
+  <span class="separator"></span>
+  <button class="cell-type-btn active"><span class="swatch swatch-seat"></span> 座位</button>
+  <button class="cell-type-btn"><span class="swatch swatch-desk"></span> 课桌</button>
+  <button class="cell-type-btn"><span class="swatch swatch-wall"></span> 墙体</button>
+  <button class="cell-type-btn"><span class="swatch swatch-door"></span> 门</button>
+  <button class="cell-type-btn"><span class="swatch swatch-aisle"></span> 过道</button>
+  <button class="cell-type-btn"><span class="swatch swatch-eraser"></span> 擦除</button>
+  <span class="separator"></span>
+  <div class="grid-size-control">
+    <span>网格</span>
+    <input class="grid-size-input" value="10"/> × <input class="grid-size-input" value="8"/>
+  </div>
+  <span class="spacer"></span>
+  <button class="toolbar-btn">↩ 撤销</button>
+  <button class="toolbar-btn">↪ 重做</button>
+  <span class="separator"></span>
+  <button class="toolbar-btn">导出图片</button>
+  <button class="toolbar-btn primary">保存布局</button>
+</div>
+
+<div class="main-content">
+  <!-- Grid Editor -->
+  <div class="grid-editor">
+    <div class="grid-canvas">
+      <table class="grid-table">
+        <!-- Column headers -->
+        <tr>
+          <td class="header-cell"></td>
+          <td class="header-cell col-header">1</td>
+          <td class="header-cell col-header">2</td>
+          <td class="header-cell col-header">3</td>
+          <td class="header-cell col-header">4</td>
+          <td class="header-cell col-header">5</td>
+          <td class="header-cell col-header">6</td>
+          <td class="header-cell col-header">7</td>
+          <td class="header-cell col-header">8</td>
+          <td class="header-cell col-header">9</td>
+          <td class="header-cell col-header">10</td>
+        </tr>
+        <!-- Row 1: wall top -->
+        <tr>
+          <td class="header-cell">1</td>
+          <td class="cell-wall"></td>
+          <td class="cell-wall"></td>
+          <td class="cell-wall"></td>
+          <td class="cell-wall"></td>
+          <td class="cell-wall"></td>
+          <td class="cell-wall"></td>
+          <td class="cell-wall"></td>
+          <td class="cell-wall"></td>
+          <td class="cell-wall"></td>
+          <td class="cell-wall"></td>
+        </tr>
+        <!-- Row 2: wall + podium + wall -->
+        <tr>
+          <td class="header-cell">2</td>
+          <td class="cell-wall"></td>
+          <td class="cell-empty"></td>
+          <td class="cell-empty"></td>
+          <td class="cell-desk"><span class="cell-label">讲台</span></td>
+          <td class="cell-desk"><span class="cell-label">讲台</span></td>
+          <td class="cell-desk"><span class="cell-label">讲台</span></td>
+          <td class="cell-desk"><span class="cell-label">讲台</span></td>
+          <td class="cell-empty"></td>
+          <td class="cell-empty"></td>
+          <td class="cell-wall"></td>
+        </tr>
+        <!-- Row 3: seats row 1 -->
+        <tr>
+          <td class="header-cell">3</td>
+          <td class="cell-wall"></td>
+          <td class="cell-seat-occupied"><span class="cell-pos">01</span><span class="cell-name">张三</span></td>
+          <td class="cell-seat-occupied"><span class="cell-pos">02</span><span class="cell-name">李四</span></td>
+          <td class="cell-seat-occupied"><span class="cell-pos">03</span><span class="cell-name">王五</span></td>
+          <td class="cell-aisle"></td>
+          <td class="cell-seat-occupied"><span class="cell-pos">04</span><span class="cell-name">赵六</span></td>
+          <td class="cell-seat-occupied"><span class="cell-pos">05</span><span class="cell-name">孙七</span></td>
+          <td class="cell-seat"><span class="cell-pos">06</span><span class="cell-empty-marker">·</span></td>
+          <td class="cell-empty"></td>
+          <td class="cell-wall"></td>
+        </tr>
+        <!-- Row 4: seats row 2 -->
+        <tr>
+          <td class="header-cell">4</td>
+          <td class="cell-wall"></td>
+          <td class="cell-seat-occupied"><span class="cell-pos">07</span><span class="cell-name">周八</span></td>
+          <td class="cell-seat-occupied"><span class="cell-pos">08</span><span class="cell-name">吴九</span></td>
+          <td class="cell-seat"><span class="cell-pos">09</span><span class="cell-empty-marker">·</span></td>
+          <td class="cell-aisle"></td>
+          <td class="cell-seat-occupied"><span class="cell-pos">10</span><span class="cell-name">郑十</span></td>
+          <td class="cell-seat-occupied" style="outline:2px solid #f59e0b; outline-offset:-2px;"><span class="cell-pos">11</span><span class="cell-name">陈一</span></td>
+          <td class="cell-seat-occupied"><span class="cell-pos">12</span><span class="cell-name">林二</span></td>
+          <td class="cell-empty"></td>
+          <td class="cell-wall"></td>
+        </tr>
+        <!-- Row 5: seats row 3 -->
+        <tr>
+          <td class="header-cell">5</td>
+          <td class="cell-wall"></td>
+          <td class="cell-seat-occupied"><span class="cell-pos">13</span><span class="cell-name">黄三</span></td>
+          <td class="cell-seat"><span class="cell-pos">14</span><span class="cell-empty-marker">·</span></td>
+          <td class="cell-seat-occupied"><span class="cell-pos">15</span><span class="cell-name">何四</span></td>
+          <td class="cell-aisle"></td>
+          <td class="cell-seat-occupied"><span class="cell-pos">16</span><span class="cell-name">刘五</span></td>
+          <td class="cell-seat-occupied"><span class="cell-pos">17</span><span class="cell-name">杨六</span></td>
+          <td class="cell-seat-occupied"><span class="cell-pos">18</span><span class="cell-name">马七</span></td>
+          <td class="cell-empty"></td>
+          <td class="cell-wall"></td>
+        </tr>
+        <!-- Row 6: seats row 4 -->
+        <tr>
+          <td class="header-cell">6</td>
+          <td class="cell-wall"></td>
+          <td class="cell-seat-occupied"><span class="cell-pos">19</span><span class="cell-name">朱八</span></td>
+          <td class="cell-seat-occupied"><span class="cell-pos">20</span><span class="cell-name">秦九</span></td>
+          <td class="cell-seat-occupied"><span class="cell-pos">21</span><span class="cell-name">许十</span></td>
+          <td class="cell-aisle"></td>
+          <td class="cell-seat-occupied"><span class="cell-pos">22</span><span class="cell-name">韩一</span></td>
+          <td class="cell-seat"><span class="cell-pos">23</span><span class="cell-empty-marker">·</span></td>
+          <td class="cell-seat-occupied"><span class="cell-pos">24</span><span class="cell-name">冯二</span></td>
+          <td class="cell-empty"></td>
+          <td class="cell-wall"></td>
+        </tr>
+        <!-- Row 7: wall + door -->
+        <tr>
+          <td class="header-cell">7</td>
+          <td class="cell-wall"></td>
+          <td class="cell-empty"></td>
+          <td class="cell-empty"></td>
+          <td class="cell-empty"></td>
+          <td class="cell-empty"></td>
+          <td class="cell-empty"></td>
+          <td class="cell-empty"></td>
+          <td class="cell-empty"></td>
+          <td class="cell-empty"></td>
+          <td class="cell-wall"></td>
+        </tr>
+        <!-- Row 8: wall bottom -->
+        <tr>
+          <td class="header-cell">8</td>
+          <td class="cell-wall"></td>
+          <td class="cell-wall"></td>
+          <td class="cell-wall"></td>
+          <td class="cell-wall"></td>
+          <td class="cell-door"><span class="cell-label">门</span></td>
+          <td class="cell-door"><span class="cell-label">门</span></td>
+          <td class="cell-wall"></td>
+          <td class="cell-wall"></td>
+          <td class="cell-wall"></td>
+          <td class="cell-wall"></td>
+        </tr>
+      </table>
+    </div>
+    <div class="grid-status">
+      <span><span class="stat-dot" style="background:#dbeafe;"></span> 座位 24</span>
+      <span><span class="stat-dot" style="background:#fff; border:1px solid #93c5fd;"></span> 空位 4</span>
+      <span><span class="stat-dot" style="background:#fef3c7;"></span> 课桌 4</span>
+      <span><span class="stat-dot" style="background:#6b7280;"></span> 墙体 24</span>
+      <span><span class="stat-dot" style="background:#d1fae5;"></span> 门 2</span>
+      <span>|</span>
+      <span>网格 10×8 · 点击绘制 · Shift拖拽批量</span>
+    </div>
+  </div>
+
+  <!-- Right Panel -->
+  <div class="right-panel">
+    <div class="rp-tabs">
+      <div class="rp-tab active">单元格</div>
+      <div class="rp-tab">快速填充</div>
+      <div class="rp-tab">图例</div>
+    </div>
+
+    <!-- Cell Detail (when a seat with occupant is selected) -->
+    <div class="rp-section">
+      <div class="title">选中单元格 (4, 7)</div>
+      <div class="rp-row">
+        <span class="label">类型</span>
+        <span class="value">座位（已入座）</span>
+      </div>
+      <div class="rp-row">
+        <span class="label">位置号</span>
+        <span class="value">11</span>
+      </div>
+    </div>
+
+    <div class="rp-section">
+      <div class="title">入住人员</div>
+      <div class="cell-detail-card">
+        <div class="avatar-line">
+          <span class="avatar m">陈</span>
+          <div>
+            <div class="person-name">陈一</div>
+            <div class="person-meta">2024011 · 计算机系</div>
+          </div>
+        </div>
+        <div class="detail-rows">
+          <div class="dr"><span class="dl">性别</span><span class="dv">男</span></div>
+          <div class="dr"><span class="dl">部门</span><span class="dv">计算机系</span></div>
+          <div class="dr"><span class="dl">入住</span><span class="dv">2026-02-15 14:30</span></div>
+        </div>
+        <div class="mini-actions">
+          <button class="mini-btn">换座</button>
+          <button class="mini-btn danger">退出</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Quick Fill (shown on "快速填充" tab) -->
+    <div class="quick-fill">
+      <div class="qf-title">快速操作</div>
+      <div class="qf-options">
+        <div class="qf-option">
+          <span class="qf-icon">🏗️</span>
+          <div><div class="qf-label">围墙</div><div class="qf-desc">自动沿网格边缘画墙</div></div>
+        </div>
+        <div class="qf-option">
+          <span class="qf-icon">📐</span>
+          <div><div class="qf-label">填充座位行</div><div class="qf-desc">选区域后批量填入座位</div></div>
+        </div>
+        <div class="qf-option">
+          <span class="qf-icon">🔄</span>
+          <div><div class="qf-label">自动编号</div><div class="qf-desc">按S形/Z形重新编号</div></div>
+        </div>
+        <div class="qf-option">
+          <span class="qf-icon">🎲</span>
+          <div><div class="qf-label">随机排座</div><div class="qf-desc">打乱现有人员位置</div></div>
+        </div>
+        <div class="qf-option">
+          <span class="qf-icon">🧹</span>
+          <div><div class="qf-label">清空布局</div><div class="qf-desc">保留墙体，清除座位</div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Legend -->
+    <div class="legend">
+      <div class="legend-item"><span class="legend-swatch" style="background:#dbeafe;"></span> 已入座</div>
+      <div class="legend-item"><span class="legend-swatch" style="background:#eff6ff;"></span> 空座</div>
+      <div class="legend-item"><span class="legend-swatch" style="background:#fef3c7;"></span> 课桌</div>
+      <div class="legend-item"><span class="legend-swatch" style="background:#6b7280;"></span> 墙体</div>
+      <div class="legend-item"><span class="legend-swatch" style="background:#d1fae5;"></span> 门</div>
+      <div class="legend-item"><span class="legend-swatch" style="background:#f9fafb;"></span> 过道</div>
+    </div>
+  </div>
+</div>
+</body>
+</html>

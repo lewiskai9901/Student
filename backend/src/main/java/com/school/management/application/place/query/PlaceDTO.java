@@ -1,4 +1,4 @@
-package com.school.management.application.space.query;
+package com.school.management.application.place.query;
 
 import lombok.Data;
 
@@ -10,12 +10,12 @@ import java.util.Map;
  * 场所DTO
  */
 @Data
-public class SpaceDTO {
+public class PlaceDTO {
 
     private Long id;
-    private String spaceCode;
-    private String spaceName;
-    private String spaceType;
+    private String placeCode;
+    private String placeName;
+    private String placeType;
     private String roomType;
     private String buildingType;
 
@@ -69,7 +69,7 @@ public class SpaceDTO {
     private String description;
 
     // 子节点（树形结构用）
-    private List<SpaceDTO> children;
+    private List<PlaceDTO> children;
 
     // 扩展属性
     private DormitoryExtDTO dormitoryExt;

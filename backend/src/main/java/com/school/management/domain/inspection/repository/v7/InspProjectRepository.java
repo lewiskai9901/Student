@@ -16,9 +16,7 @@ public interface InspProjectRepository {
 
     List<InspProject> findByStatus(ProjectStatus status);
 
-    List<InspProject> findByTemplateId(Long templateId);
-
-    List<InspProject> findByParentProjectId(Long parentProjectId);
+    List<InspProject> findByRootSectionId(Long rootSectionId);
 
     List<InspProject> findAll();
 

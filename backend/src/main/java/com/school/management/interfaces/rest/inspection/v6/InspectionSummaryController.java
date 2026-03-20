@@ -5,7 +5,8 @@ import com.school.management.common.result.Result;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.format.annotation.DateTimeFormat;
-import org.springframework.security.access.prepost.PreAuthorize;
+import com.school.management.infrastructure.casbin.CasbinAccess;
+import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDate;
@@ -15,6 +16,7 @@ import java.util.Map;
 /**
  * V6检查汇总统计控制器
  */
+@RequiredArgsConstructor
 @Tag(name = "V6检查汇总", description = "V6检查汇总统计接口")
 @RestController
 @RequestMapping("/v6/inspection-summaries")
@@ -22,15 +24,11 @@ public class InspectionSummaryController {
 
     private final InspectionSummaryService summaryService;
 
-    public InspectionSummaryController(InspectionSummaryService summaryService) {
-        this.summaryService = summaryService;
-    }
-
     // ========== 汇总生成 ==========
 
     @Operation(summary = "手动生成日汇总")
     @PostMapping("/projects/{projectId}/daily")
-    @PreAuthorize("hasAuthority('inspection:summary:generate')")
+    @CasbinAccess(resource = "inspection:summary", action = "generate")
     public Result<Void> generateDailySummary(
             @PathVariable Long projectId,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date) {
@@ -41,7 +39,7 @@ public class InspectionSummaryController {
 
     @Operation(summary = "手动生成周汇总")
     @PostMapping("/projects/{projectId}/weekly")
-    @PreAuthorize("hasAuthority('inspection:summary:generate')")
+    @CasbinAccess(resource = "inspection:summary", action = "generate")
     public Result<Void> generateWeeklySummary(
             @PathVariable Long projectId,
             @RequestParam int year,
@@ -53,7 +51,7 @@ public class InspectionSummaryController {
 
     @Operation(summary = "手动生成月汇总")
     @PostMapping("/projects/{projectId}/monthly")
-    @PreAuthorize("hasAuthority('inspection:summary:generate')")
+    @CasbinAccess(resource = "inspection:summary", action = "generate")
     public Result<Void> generateMonthlySummary(
             @PathVariable Long projectId,
             @RequestParam int year,
@@ -67,7 +65,7 @@ public class InspectionSummaryController {
 
     @Operation(summary = "获取日排名")
     @GetMapping("/projects/{projectId}/daily-ranking")
-    @PreAuthorize("hasAuthority('inspection:summary:view')")
+    @CasbinAccess(resource = "inspection:summary", action = "view")
     public Result<List<Map<String, Object>>> getDailyRanking(
             @PathVariable Long projectId,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date,
@@ -79,7 +77,7 @@ public class InspectionSummaryController {
 
     @Operation(summary = "获取组织汇总")
     @GetMapping("/projects/{projectId}/org-summary")
-    @PreAuthorize("hasAuthority('inspection:summary:view')")
+    @CasbinAccess(resource = "inspection:summary", action = "view")
     public Result<List<Map<String, Object>>> getOrgSummary(
             @PathVariable Long projectId,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
@@ -91,7 +89,7 @@ public class InspectionSummaryController {
 
     @Operation(summary = "获取班级汇总")
     @GetMapping("/projects/{projectId}/class-summary")
-    @PreAuthorize("hasAuthority('inspection:summary:view')")
+    @CasbinAccess(resource = "inspection:summary", action = "view")
     public Result<List<Map<String, Object>>> getClassSummary(
             @PathVariable Long projectId,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
@@ -103,7 +101,7 @@ public class InspectionSummaryController {
 
     @Operation(summary = "获取趋势数据")
     @GetMapping("/projects/{projectId}/trend")
-    @PreAuthorize("hasAuthority('inspection:summary:view')")
+    @CasbinAccess(resource = "inspection:summary", action = "view")
     public Result<List<Map<String, Object>>> getTrend(
             @PathVariable Long projectId,
             @RequestParam Long targetId,

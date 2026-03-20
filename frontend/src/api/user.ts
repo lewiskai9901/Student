@@ -146,19 +146,39 @@ export function resetPassword(id: number | string): Promise<string> {
 }
 
 // ==================== 角色操作 API ====================
+// 角色 scope API 由 UserRoleController 提供，路径为 /users（非 /domain/users）
+const ROLE_ASSIGN_URL = '/users'
 
 /**
  * 获取用户角色ID列表
  */
-export function getUserRoleIds(id: number | string): Promise<number[]> {
-  return http.get<number[]>(`${USER_URL}/${id}/roles`)
+export function getUserRoleIds(id: number | string): Promise<(number | string)[]> {
+  return http.get<any[]>(`${ROLE_ASSIGN_URL}/${id}/roles`).then(roles => {
+    if (!Array.isArray(roles)) return []
+    return [...new Set(roles.map((r: any) => r.roleId || r.id))]
+  })
 }
 
 /**
- * 为用户分配角色
+ * 获取用户角色分配（含作用域信息）
  */
-export function assignRoles(id: number | string, roleIds: number[]): Promise<void> {
-  return http.post(`${USER_URL}/${id}/roles`, roleIds)
+export function getUserRoleAssignments(id: number | string): Promise<any[]> {
+  return http.get<any[]>(`${ROLE_ASSIGN_URL}/${id}/roles`)
+}
+
+/**
+ * 为用户分配角色（批量，带作用域）
+ */
+export function assignRoles(
+  id: number | string,
+  assignments: { roleId: number | string; scopeType?: string; scopeId?: number | string }[]
+): Promise<void> {
+  const normalized = assignments.map(a => ({
+    roleId: a.roleId,
+    scopeType: a.scopeType || 'ALL',
+    scopeId: a.scopeId || 0
+  }))
+  return http.put(`${ROLE_ASSIGN_URL}/${id}/roles`, { assignments: normalized })
 }
 
 // ==================== 微信绑定 API ====================
@@ -209,6 +229,7 @@ export const userApi = {
 
   // 角色
   getRoleIds: getUserRoleIds,
+  getRoleAssignments: getUserRoleAssignments,
   assignRoles,
 
   // 微信
@@ -274,7 +295,7 @@ const DATA_SCOPE_URL = '/user-data-scopes'
 /**
  * 获取用户的数据范围列表
  */
-export function getUserDataScopes(userId: number): Promise<UserDataScopeDTO[]> {
+export function getUserDataScopes(userId: number | string): Promise<UserDataScopeDTO[]> {
   return http.get<UserDataScopeDTO[]>(`${DATA_SCOPE_URL}/user/${userId}`)
 }
 
@@ -295,28 +316,28 @@ export function batchAddUserDataScopes(data: BatchAddScopeRequest): Promise<User
 /**
  * 删除用户数据范围
  */
-export function deleteUserDataScope(id: number): Promise<void> {
+export function deleteUserDataScope(id: number | string): Promise<void> {
   return http.delete(`${DATA_SCOPE_URL}/${id}`)
 }
 
 /**
  * 批量删除用户数据范围
  */
-export function batchDeleteUserDataScopes(ids: number[]): Promise<void> {
+export function batchDeleteUserDataScopes(ids: (number | string)[]): Promise<void> {
   return http.delete(`${DATA_SCOPE_URL}/batch`, { data: { ids } })
 }
 
 /**
  * 删除用户所有数据范围
  */
-export function deleteAllUserDataScopes(userId: number): Promise<void> {
+export function deleteAllUserDataScopes(userId: number | string): Promise<void> {
   return http.delete(`${DATA_SCOPE_URL}/user/${userId}`)
 }
 
 /**
  * 获取拥有指定范围的用户列表
  */
-export function getUsersByScopeTypeAndId(scopeType: string, scopeId: number): Promise<UserDataScopeDTO[]> {
+export function getUsersByScopeTypeAndId(scopeType: string, scopeId: number | string): Promise<UserDataScopeDTO[]> {
   return http.get<UserDataScopeDTO[]>(`${DATA_SCOPE_URL}/scope`, {
     params: { scopeType, scopeId }
   })
@@ -325,7 +346,7 @@ export function getUsersByScopeTypeAndId(scopeType: string, scopeId: number): Pr
 /**
  * 检查用户是否有指定范围的权限
  */
-export function checkUserScope(userId: number, scopeType: string, scopeId: number): Promise<boolean> {
+export function checkUserScope(userId: number | string, scopeType: string, scopeId: number | string): Promise<boolean> {
   return http.get<boolean>(`${DATA_SCOPE_URL}/check`, {
     params: { userId, scopeType, scopeId }
   })
@@ -334,7 +355,7 @@ export function checkUserScope(userId: number, scopeType: string, scopeId: numbe
 /**
  * 获取用户可访问的班级ID列表
  */
-export function getAccessibleClassIds(userId: number): Promise<number[]> {
+export function getAccessibleClassIds(userId: number | string): Promise<(number | string)[]> {
   return http.get<number[]>(`${DATA_SCOPE_URL}/accessible/classes/${userId}`)
 }
 

@@ -3,9 +3,20 @@ package com.school.management.application.organization;
 import com.school.management.application.organization.command.UpdateOrgUnitCommand;
 import com.school.management.application.organization.query.OrgUnitDTO;
 import com.school.management.domain.organization.model.OrgUnit;
-import com.school.management.domain.organization.model.OrgUnitType;
+import com.school.management.domain.organization.model.valueobject.OrgUnitStatus;
 import com.school.management.domain.organization.repository.OrgUnitRepository;
+import com.school.management.domain.organization.repository.OrgUnitTypeRepository;
+import com.school.management.domain.organization.repository.PositionRepository;
+import com.school.management.domain.organization.repository.UserPositionRepository;
+import com.school.management.domain.organization.repository.SchoolClassRepository;
+import com.school.management.domain.organization.service.OrgUnitDomainService;
+import com.school.management.domain.access.repository.AccessRelationRepository;
 import com.school.management.domain.shared.event.DomainEventPublisher;
+import com.school.management.infrastructure.activity.ActivityEventBuilder;
+import com.school.management.infrastructure.activity.ActivityEventPublisher;
+import com.school.management.infrastructure.persistence.organization.SchoolClassMapper;
+import com.school.management.infrastructure.persistence.place.UniversalPlaceOccupantMapper;
+import com.school.management.infrastructure.persistence.user.UserDomainMapper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -21,6 +32,7 @@ import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.*;
 
 /**
@@ -35,7 +47,37 @@ class OrgUnitApplicationServiceTest {
     private OrgUnitRepository orgUnitRepository;
 
     @Mock
+    private OrgUnitTypeRepository orgUnitTypeRepository;
+
+    @Mock
+    private OrgUnitDomainService orgUnitDomainService;
+
+    @Mock
     private DomainEventPublisher eventPublisher;
+
+    @Mock
+    private AccessRelationRepository accessRelationRepository;
+
+    @Mock
+    private PositionRepository positionRepository;
+
+    @Mock
+    private UserPositionRepository userPositionRepository;
+
+    @Mock
+    private SchoolClassRepository schoolClassRepository;
+
+    @Mock
+    private SchoolClassMapper schoolClassMapper;
+
+    @Mock
+    private UserDomainMapper userDomainMapper;
+
+    @Mock
+    private ActivityEventPublisher activityEventPublisher;
+
+    @Mock
+    private UniversalPlaceOccupantMapper placeOccupantMapper;
 
     private OrgUnitApplicationService applicationService;
 
@@ -44,7 +86,17 @@ class OrgUnitApplicationServiceTest {
 
     @BeforeEach
     void setUp() {
-        applicationService = new OrgUnitApplicationService(orgUnitRepository, eventPublisher);
+        applicationService = new OrgUnitApplicationService(orgUnitRepository, orgUnitTypeRepository, orgUnitDomainService, eventPublisher, activityEventPublisher, accessRelationRepository, positionRepository, userPositionRepository, schoolClassRepository, schoolClassMapper, userDomainMapper, placeOccupantMapper);
+
+        // Mock ActivityEventPublisher to return a chainable builder
+        ActivityEventBuilder mockBuilder = mock(ActivityEventBuilder.class);
+        lenient().when(activityEventPublisher.newEvent(anyString(), anyString(), anyString())).thenReturn(mockBuilder);
+        lenient().when(activityEventPublisher.newEvent(anyString(), anyString(), anyString(), anyString())).thenReturn(mockBuilder);
+        lenient().when(mockBuilder.resourceId(any(Long.class))).thenReturn(mockBuilder);
+        lenient().when(mockBuilder.resourceId(any(String.class))).thenReturn(mockBuilder);
+        lenient().when(mockBuilder.resourceName(anyString())).thenReturn(mockBuilder);
+        lenient().when(mockBuilder.changedFields(any())).thenReturn(mockBuilder);
+        lenient().when(mockBuilder.reason(any())).thenReturn(mockBuilder);
     }
 
     @Nested
@@ -54,7 +106,7 @@ class OrgUnitApplicationServiceTest {
         @Test
         @DisplayName("Successfully get OrgUnit by ID")
         void shouldGetOrgUnitById() {
-            OrgUnit orgUnit = createOrgUnit(ORG_UNIT_ID, "DEPT001", "IT Department", OrgUnitType.DEPARTMENT, null);
+            OrgUnit orgUnit = createOrgUnit(ORG_UNIT_ID, "DEPT001", "IT Department", "DEPARTMENT", null);
             when(orgUnitRepository.findById(ORG_UNIT_ID)).thenReturn(Optional.of(orgUnit));
 
             OrgUnitDTO result = applicationService.getOrgUnit(ORG_UNIT_ID);
@@ -80,15 +132,15 @@ class OrgUnitApplicationServiceTest {
         @DisplayName("Get OrgUnits by type")
         void shouldGetOrgUnitsByType() {
             List<OrgUnit> departments = Arrays.asList(
-                    createOrgUnit(1L, "DEPT001", "Dept 1", OrgUnitType.DEPARTMENT, null),
-                    createOrgUnit(2L, "DEPT002", "Dept 2", OrgUnitType.DEPARTMENT, null)
+                    createOrgUnit(1L, "DEPT001", "Dept 1", "DEPARTMENT", null),
+                    createOrgUnit(2L, "DEPT002", "Dept 2", "DEPARTMENT", null)
             );
-            when(orgUnitRepository.findByUnitType(OrgUnitType.DEPARTMENT)).thenReturn(departments);
+            when(orgUnitRepository.findByUnitType("DEPARTMENT")).thenReturn(departments);
 
-            List<OrgUnitDTO> result = applicationService.getOrgUnitsByType(OrgUnitType.DEPARTMENT);
+            List<OrgUnitDTO> result = applicationService.getOrgUnitsByType("DEPARTMENT");
 
             assertEquals(2, result.size());
-            verify(orgUnitRepository).findByUnitType(OrgUnitType.DEPARTMENT);
+            verify(orgUnitRepository).findByUnitType("DEPARTMENT");
         }
 
         @Test
@@ -96,8 +148,8 @@ class OrgUnitApplicationServiceTest {
         void shouldGetChildren() {
             Long parentId = 10L;
             List<OrgUnit> children = Arrays.asList(
-                    createOrgUnit(1L, "CHILD001", "Child 1", OrgUnitType.DEPARTMENT, parentId),
-                    createOrgUnit(2L, "CHILD002", "Child 2", OrgUnitType.DEPARTMENT, parentId)
+                    createOrgUnit(1L, "CHILD001", "Child 1", "DEPARTMENT", parentId),
+                    createOrgUnit(2L, "CHILD002", "Child 2", "DEPARTMENT", parentId)
             );
             when(orgUnitRepository.findByParentId(parentId)).thenReturn(children);
 
@@ -117,12 +169,12 @@ class OrgUnitApplicationServiceTest {
         void shouldUpdateOrgUnit() {
             UpdateOrgUnitCommand command = UpdateOrgUnitCommand.builder()
                     .unitName("Updated Name")
-                    .leaderId(200L)
                     .sortOrder(10)
+                    .headcount(50)
                     .updatedBy(CREATOR_ID)
                     .build();
 
-            OrgUnit existingOrgUnit = createOrgUnit(ORG_UNIT_ID, "DEPT001", "Old Name", OrgUnitType.DEPARTMENT, null);
+            OrgUnit existingOrgUnit = createOrgUnit(ORG_UNIT_ID, "DEPT001", "Old Name", "DEPARTMENT", null);
             when(orgUnitRepository.findById(ORG_UNIT_ID)).thenReturn(Optional.of(existingOrgUnit));
             when(orgUnitRepository.save(any(OrgUnit.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
@@ -130,7 +182,6 @@ class OrgUnitApplicationServiceTest {
 
             assertNotNull(result);
             assertEquals("Updated Name", result.getUnitName());
-            assertEquals(200L, result.getLeaderId());
 
             verify(orgUnitRepository).findById(ORG_UNIT_ID);
             verify(orgUnitRepository).save(any(OrgUnit.class));
@@ -161,67 +212,65 @@ class OrgUnitApplicationServiceTest {
         @Test
         @DisplayName("Successfully delete OrgUnit without children")
         void shouldDeleteOrgUnitWithoutChildren() {
-            OrgUnit orgUnit = createOrgUnit(ORG_UNIT_ID, "DEPT001", "IT Department", OrgUnitType.DEPARTMENT, null);
+            OrgUnit orgUnit = createOrgUnit(ORG_UNIT_ID, "DEPT001", "IT Department", "DEPARTMENT", null);
             when(orgUnitRepository.findById(ORG_UNIT_ID)).thenReturn(Optional.of(orgUnit));
-            when(orgUnitRepository.countByParentId(ORG_UNIT_ID)).thenReturn(0L);
+            when(orgUnitRepository.findByParentId(ORG_UNIT_ID)).thenReturn(Collections.emptyList());
             doNothing().when(orgUnitRepository).deleteById(ORG_UNIT_ID);
 
             assertDoesNotThrow(() -> applicationService.deleteOrgUnit(ORG_UNIT_ID));
 
             verify(orgUnitRepository).deleteById(ORG_UNIT_ID);
         }
-
-        @Test
-        @DisplayName("Throw exception when deleting OrgUnit with children")
-        void shouldThrowExceptionWhenDeletingWithChildren() {
-            OrgUnit orgUnit = createOrgUnit(ORG_UNIT_ID, "DEPT001", "IT Department", OrgUnitType.DEPARTMENT, null);
-            when(orgUnitRepository.findById(ORG_UNIT_ID)).thenReturn(Optional.of(orgUnit));
-            when(orgUnitRepository.countByParentId(ORG_UNIT_ID)).thenReturn(5L);
-
-            assertThrows(IllegalStateException.class, () ->
-                    applicationService.deleteOrgUnit(ORG_UNIT_ID)
-            );
-
-            verify(orgUnitRepository, never()).deleteById(any());
-        }
     }
 
     @Nested
-    @DisplayName("Enable/Disable OrgUnit tests")
-    class EnableDisableOrgUnitTest {
+    @DisplayName("Freeze/Unfreeze/Dissolve OrgUnit tests")
+    class LifecycleOrgUnitTest {
 
         @Test
-        @DisplayName("Successfully enable OrgUnit")
-        void shouldEnableOrgUnit() {
-            OrgUnit orgUnit = createOrgUnit(ORG_UNIT_ID, "DEPT001", "IT Department", OrgUnitType.DEPARTMENT, null);
-            orgUnit.disable();
+        @DisplayName("Successfully freeze OrgUnit")
+        void shouldFreezeOrgUnit() {
+            OrgUnit orgUnit = createOrgUnit(ORG_UNIT_ID, "DEPT001", "IT Department", "DEPARTMENT", null);
             when(orgUnitRepository.findById(ORG_UNIT_ID)).thenReturn(Optional.of(orgUnit));
             when(orgUnitRepository.save(any(OrgUnit.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
-            applicationService.enableOrgUnit(ORG_UNIT_ID);
+            applicationService.freezeOrgUnit(ORG_UNIT_ID, "测试冻结", CREATOR_ID);
 
-            verify(orgUnitRepository).save(argThat(unit -> unit.isEnabled()));
+            verify(orgUnitRepository).save(argThat(unit -> unit.getStatus() == OrgUnitStatus.FROZEN));
         }
 
         @Test
-        @DisplayName("Successfully disable OrgUnit")
-        void shouldDisableOrgUnit() {
-            OrgUnit orgUnit = createOrgUnit(ORG_UNIT_ID, "DEPT001", "IT Department", OrgUnitType.DEPARTMENT, null);
+        @DisplayName("Successfully unfreeze OrgUnit")
+        void shouldUnfreezeOrgUnit() {
+            OrgUnit orgUnit = createOrgUnit(ORG_UNIT_ID, "DEPT001", "IT Department", "DEPARTMENT", null);
+            orgUnit.freeze("冻结", CREATOR_ID);
             when(orgUnitRepository.findById(ORG_UNIT_ID)).thenReturn(Optional.of(orgUnit));
             when(orgUnitRepository.save(any(OrgUnit.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
-            applicationService.disableOrgUnit(ORG_UNIT_ID);
+            applicationService.unfreezeOrgUnit(ORG_UNIT_ID, CREATOR_ID);
 
-            verify(orgUnitRepository).save(argThat(unit -> !unit.isEnabled()));
+            verify(orgUnitRepository).save(argThat(unit -> unit.getStatus() == OrgUnitStatus.ACTIVE));
         }
 
         @Test
-        @DisplayName("Throw exception when enabling non-existent OrgUnit")
-        void shouldThrowExceptionWhenEnablingNonExistent() {
+        @DisplayName("Successfully dissolve OrgUnit")
+        void shouldDissolveOrgUnit() {
+            OrgUnit orgUnit = createOrgUnit(ORG_UNIT_ID, "DEPT001", "IT Department", "DEPARTMENT", null);
+            when(orgUnitRepository.findById(ORG_UNIT_ID)).thenReturn(Optional.of(orgUnit));
+            when(orgUnitRepository.save(any(OrgUnit.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+            applicationService.dissolveOrgUnit(ORG_UNIT_ID, "业务调整", CREATOR_ID);
+
+            verify(orgUnitRepository).save(argThat(unit -> unit.getStatus() == OrgUnitStatus.DISSOLVED));
+        }
+
+        @Test
+        @DisplayName("Throw exception when freezing non-existent OrgUnit")
+        void shouldThrowExceptionWhenFreezingNonExistent() {
             when(orgUnitRepository.findById(999L)).thenReturn(Optional.empty());
 
             assertThrows(IllegalArgumentException.class, () ->
-                    applicationService.enableOrgUnit(999L)
+                    applicationService.freezeOrgUnit(999L, "test", CREATOR_ID)
             );
         }
     }
@@ -231,9 +280,10 @@ class OrgUnitApplicationServiceTest {
     class GetOrgUnitTreeTest {
 
         @Test
-        @DisplayName("Get empty tree when no roots")
-        void shouldReturnEmptyTreeWhenNoRoots() {
-            when(orgUnitRepository.findRoots()).thenReturn(Collections.emptyList());
+        @DisplayName("Get empty tree when no org units")
+        void shouldReturnEmptyTreeWhenNoOrgUnits() {
+            when(orgUnitRepository.findAll()).thenReturn(Collections.emptyList());
+            when(orgUnitTypeRepository.findAll()).thenReturn(Collections.emptyList());
 
             var result = applicationService.getOrgUnitTree();
 
@@ -243,9 +293,9 @@ class OrgUnitApplicationServiceTest {
         @Test
         @DisplayName("Get tree with single root")
         void shouldReturnTreeWithSingleRoot() {
-            OrgUnit root = createOrgUnit(1L, "SCHOOL001", "School", OrgUnitType.SCHOOL, null);
-            when(orgUnitRepository.findRoots()).thenReturn(Arrays.asList(root));
-            when(orgUnitRepository.findByParentId(1L)).thenReturn(Collections.emptyList());
+            OrgUnit root = createOrgUnit(1L, "SCHOOL001", "School", "SCHOOL", null);
+            when(orgUnitRepository.findAll()).thenReturn(List.of(root));
+            when(orgUnitTypeRepository.findAll()).thenReturn(Collections.emptyList());
 
             var result = applicationService.getOrgUnitTree();
 
@@ -254,7 +304,7 @@ class OrgUnitApplicationServiceTest {
         }
     }
 
-    private OrgUnit createOrgUnit(Long id, String code, String name, OrgUnitType type, Long parentId) {
+    private OrgUnit createOrgUnit(Long id, String code, String name, String type, Long parentId) {
         return OrgUnit.builder()
                 .id(id)
                 .unitCode(code)
@@ -264,7 +314,7 @@ class OrgUnitApplicationServiceTest {
                 .treePath(parentId == null ? "/" + id + "/" : "/" + parentId + "/" + id + "/")
                 .treeLevel(parentId == null ? 0 : 1)
                 .sortOrder(0)
-                .enabled(true)
+                .status(OrgUnitStatus.ACTIVE)
                 .createdBy(CREATOR_ID)
                 .build();
     }

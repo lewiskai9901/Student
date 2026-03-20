@@ -1,10 +1,10 @@
-package com.school.management.infrastructure.persistence.space;
+package com.school.management.infrastructure.persistence.place;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
-import com.school.management.domain.space.model.aggregate.UniversalSpace;
-import com.school.management.domain.space.model.valueobject.SpaceStatus;
-import com.school.management.domain.space.repository.UniversalSpaceRepository;
+import com.school.management.domain.place.model.aggregate.UniversalPlace;
+import com.school.management.domain.place.model.valueobject.PlaceStatus;
+import com.school.management.domain.place.repository.UniversalPlaceRepository;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -20,71 +20,76 @@ import java.util.stream.Collectors;
  * 通用空间仓储实现
  */
 @Repository
-public class UniversalSpaceRepositoryImpl implements UniversalSpaceRepository {
+public class UniversalPlaceRepositoryImpl implements UniversalPlaceRepository {
 
-    private final UniversalSpaceMapper mapper;
+    private final UniversalPlaceMapper mapper;
     private final ObjectMapper objectMapper;
 
-    public UniversalSpaceRepositoryImpl(UniversalSpaceMapper mapper, ObjectMapper objectMapper) {
+    public UniversalPlaceRepositoryImpl(UniversalPlaceMapper mapper, ObjectMapper objectMapper) {
         this.mapper = mapper;
         this.objectMapper = objectMapper;
     }
 
     @Override
-    public UniversalSpace save(UniversalSpace space) {
-        UniversalSpacePO po = toPO(space);
+    public UniversalPlace save(UniversalPlace place) {
+        UniversalPlacePO po = toPO(place);
         if (po.getId() == null) {
             mapper.insert(po);
-            space.setId(po.getId());
+            place.setId(po.getId());
             // 更新路径
-            if (space.getParentId() == null) {
-                space.setPath("/" + po.getId() + "/");
-                space.setLevel(0);
+            if (place.getParentId() == null) {
+                place.setPath("/" + po.getId() + "/");
+                place.setLevel(0);
             }
-            po = toPO(space);
+            po = toPO(place);
             mapper.updateById(po);
         } else {
-            mapper.updateById(po);
+            int rows = mapper.updateById(po);
+            if (rows == 0) {
+                throw new IllegalStateException("更新场所失败：未找到 ID=" + po.getId() + " 的记录");
+            }
         }
-        return toDomain(po);
+        // 重新查询以获取最新数据（含关联字段）
+        UniversalPlacePO saved = mapper.selectById(po.getId());
+        return saved != null ? toDomain(saved) : toDomain(po);
     }
 
     @Override
-    public Optional<UniversalSpace> findById(Long id) {
-        UniversalSpacePO po = mapper.selectById(id);
+    public Optional<UniversalPlace> findById(Long id) {
+        UniversalPlacePO po = mapper.selectById(id);
         return Optional.ofNullable(po).map(this::toDomain);
     }
 
     @Override
-    public Optional<UniversalSpace> findBySpaceCode(String spaceCode) {
-        UniversalSpacePO po = mapper.findBySpaceCode(spaceCode);
+    public Optional<UniversalPlace> findByPlaceCode(String placeCode) {
+        UniversalPlacePO po = mapper.findByPlaceCode(placeCode);
         return Optional.ofNullable(po).map(this::toDomain);
     }
 
     @Override
-    public List<UniversalSpace> findAll() {
+    public List<UniversalPlace> findAll() {
         return mapper.selectList(null).stream()
                 .map(this::toDomain)
                 .collect(Collectors.toList());
     }
 
     @Override
-    public List<UniversalSpace> findAllRoots() {
+    public List<UniversalPlace> findAllRoots() {
         return mapper.findAllRoots().stream()
                 .map(this::toDomain)
                 .collect(Collectors.toList());
     }
 
     @Override
-    public List<UniversalSpace> findChildren(Long parentId) {
+    public List<UniversalPlace> findChildren(Long parentId) {
         return mapper.findChildren(parentId).stream()
                 .map(this::toDomain)
                 .collect(Collectors.toList());
     }
 
     @Override
-    public List<UniversalSpace> findDescendants(Long ancestorId) {
-        Optional<UniversalSpace> ancestor = findById(ancestorId);
+    public List<UniversalPlace> findDescendants(Long ancestorId) {
+        Optional<UniversalPlace> ancestor = findById(ancestorId);
         if (ancestor.isEmpty()) {
             return List.of();
         }
@@ -92,36 +97,36 @@ public class UniversalSpaceRepositoryImpl implements UniversalSpaceRepository {
     }
 
     @Override
-    public List<UniversalSpace> findByPathPrefix(String pathPrefix) {
+    public List<UniversalPlace> findByPathPrefix(String pathPrefix) {
         return mapper.findByPathPrefix(pathPrefix).stream()
                 .map(this::toDomain)
                 .collect(Collectors.toList());
     }
 
     @Override
-    public List<UniversalSpace> findByTypeCode(String typeCode) {
+    public List<UniversalPlace> findByTypeCode(String typeCode) {
         return mapper.findByTypeCode(typeCode).stream()
                 .map(this::toDomain)
                 .collect(Collectors.toList());
     }
 
     @Override
-    public List<UniversalSpace> findByOrgUnitId(Long orgUnitId) {
+    public List<UniversalPlace> findByOrgUnitId(Long orgUnitId) {
         return mapper.findByOrgUnitId(orgUnitId).stream()
                 .map(this::toDomain)
                 .collect(Collectors.toList());
     }
 
     @Override
-    public List<UniversalSpace> findByResponsibleUserId(Long userId) {
+    public List<UniversalPlace> findByResponsibleUserId(Long userId) {
         return mapper.findByResponsibleUserId(userId).stream()
                 .map(this::toDomain)
                 .collect(Collectors.toList());
     }
 
     @Override
-    public boolean existsBySpaceCode(String spaceCode) {
-        return mapper.existsBySpaceCode(spaceCode);
+    public boolean existsByPlaceCode(String placeCode) {
+        return mapper.existsByPlaceCode(placeCode);
     }
 
     @Override
@@ -137,13 +142,23 @@ public class UniversalSpaceRepositoryImpl implements UniversalSpaceRepository {
     }
 
     @Override
+    public int countByParentIdAndPlaceCode(Long parentId, String placeCode) {
+        return mapper.countByParentIdAndPlaceCode(parentId, placeCode);
+    }
+
+    @Override
+    public int countRootByPlaceCode(String placeCode) {
+        return mapper.countRootByPlaceCode(placeCode);
+    }
+
+    @Override
     public int countChildren(Long parentId) {
         return mapper.countChildren(parentId);
     }
 
     @Override
     public int countDescendants(Long ancestorId) {
-        Optional<UniversalSpace> ancestor = findById(ancestorId);
+        Optional<UniversalPlace> ancestor = findById(ancestorId);
         if (ancestor.isEmpty()) {
             return 0;
         }
@@ -151,52 +166,52 @@ public class UniversalSpaceRepositoryImpl implements UniversalSpaceRepository {
     }
 
     @Override
-    public List<UniversalSpace> findPage(SpaceQueryCriteria criteria, int page, int size) {
-        Page<UniversalSpacePO> pageParam = new Page<>(page, size);
-        LambdaQueryWrapper<UniversalSpacePO> wrapper = buildQueryWrapper(criteria);
-        Page<UniversalSpacePO> result = mapper.selectPage(pageParam, wrapper);
+    public List<UniversalPlace> findPage(PlaceQueryCriteria criteria, int page, int size) {
+        Page<UniversalPlacePO> pageParam = new Page<>(page, size);
+        LambdaQueryWrapper<UniversalPlacePO> wrapper = buildQueryWrapper(criteria);
+        Page<UniversalPlacePO> result = mapper.selectPage(pageParam, wrapper);
         return result.getRecords().stream()
                 .map(this::toDomain)
                 .collect(Collectors.toList());
     }
 
     @Override
-    public long count(SpaceQueryCriteria criteria) {
-        LambdaQueryWrapper<UniversalSpacePO> wrapper = buildQueryWrapper(criteria);
+    public long count(PlaceQueryCriteria criteria) {
+        LambdaQueryWrapper<UniversalPlacePO> wrapper = buildQueryWrapper(criteria);
         return mapper.selectCount(wrapper);
     }
 
-    private LambdaQueryWrapper<UniversalSpacePO> buildQueryWrapper(SpaceQueryCriteria criteria) {
-        LambdaQueryWrapper<UniversalSpacePO> wrapper = new LambdaQueryWrapper<>();
+    private LambdaQueryWrapper<UniversalPlacePO> buildQueryWrapper(PlaceQueryCriteria criteria) {
+        LambdaQueryWrapper<UniversalPlacePO> wrapper = new LambdaQueryWrapper<>();
         if (criteria != null) {
             if (criteria.getTypeCode() != null) {
-                wrapper.eq(UniversalSpacePO::getTypeCode, criteria.getTypeCode());
+                wrapper.eq(UniversalPlacePO::getTypeCode, criteria.getTypeCode());
             }
             if (criteria.getParentId() != null) {
-                wrapper.eq(UniversalSpacePO::getParentId, criteria.getParentId());
+                wrapper.eq(UniversalPlacePO::getParentId, criteria.getParentId());
             }
             if (criteria.getOrgUnitId() != null) {
-                wrapper.eq(UniversalSpacePO::getOrgUnitId, criteria.getOrgUnitId());
+                wrapper.eq(UniversalPlacePO::getOrgUnitId, criteria.getOrgUnitId());
             }
             if (criteria.getStatus() != null) {
-                wrapper.eq(UniversalSpacePO::getStatus, criteria.getStatus());
+                wrapper.eq(UniversalPlacePO::getStatus, criteria.getStatus());
             }
             if (criteria.getKeyword() != null && !criteria.getKeyword().isBlank()) {
-                wrapper.and(w -> w.like(UniversalSpacePO::getSpaceName, criteria.getKeyword())
-                        .or().like(UniversalSpacePO::getSpaceCode, criteria.getKeyword()));
+                wrapper.and(w -> w.like(UniversalPlacePO::getPlaceName, criteria.getKeyword())
+                        .or().like(UniversalPlacePO::getPlaceCode, criteria.getKeyword()));
             }
         }
-        wrapper.orderByAsc(UniversalSpacePO::getLevel, UniversalSpacePO::getSpaceName);
+        wrapper.orderByAsc(UniversalPlacePO::getLevel, UniversalPlacePO::getPlaceName);
         return wrapper;
     }
 
     // ==================== 转换方法 ====================
 
-    private UniversalSpacePO toPO(UniversalSpace entity) {
-        UniversalSpacePO po = new UniversalSpacePO();
+    private UniversalPlacePO toPO(UniversalPlace entity) {
+        UniversalPlacePO po = new UniversalPlacePO();
         po.setId(entity.getId());
-        po.setSpaceCode(entity.getSpaceCode());
-        po.setSpaceName(entity.getSpaceName());
+        po.setPlaceCode(entity.getPlaceCode());
+        po.setPlaceName(entity.getPlaceName());
         po.setTypeCode(entity.getTypeCode());
         po.setDescription(entity.getDescription());
         po.setParentId(entity.getParentId());
@@ -206,7 +221,8 @@ public class UniversalSpaceRepositoryImpl implements UniversalSpaceRepository {
         po.setCurrentOccupancy(entity.getCurrentOccupancy());
         po.setOrgUnitId(entity.getOrgUnitId());
         po.setResponsibleUserId(entity.getResponsibleUserId());
-        po.setStatus(entity.getStatus() != null ? entity.getStatus().getCode() : SpaceStatus.NORMAL.getCode());
+        po.setGender(entity.getGender());
+        po.setStatus(entity.getStatus() != null ? entity.getStatus().getCode() : PlaceStatus.NORMAL.getCode());
 
         // 转换 attributes 为 JSON
         if (entity.getAttributes() != null && !entity.getAttributes().isEmpty()) {
@@ -222,7 +238,7 @@ public class UniversalSpaceRepositoryImpl implements UniversalSpaceRepository {
         return po;
     }
 
-    private UniversalSpace toDomain(UniversalSpacePO po) {
+    private UniversalPlace toDomain(UniversalPlacePO po) {
         Map<String, Object> attributes = new HashMap<>();
         if (po.getAttributes() != null && !po.getAttributes().isBlank()) {
             try {
@@ -232,10 +248,10 @@ public class UniversalSpaceRepositoryImpl implements UniversalSpaceRepository {
             }
         }
 
-        return UniversalSpace.builder()
+        return UniversalPlace.builder()
                 .id(po.getId())
-                .spaceCode(po.getSpaceCode())
-                .spaceName(po.getSpaceName())
+                .placeCode(po.getPlaceCode())
+                .placeName(po.getPlaceName())
                 .typeCode(po.getTypeCode())
                 .description(po.getDescription())
                 .parentId(po.getParentId())
@@ -245,7 +261,8 @@ public class UniversalSpaceRepositoryImpl implements UniversalSpaceRepository {
                 .currentOccupancy(po.getCurrentOccupancy() != null ? po.getCurrentOccupancy() : 0)
                 .orgUnitId(po.getOrgUnitId())
                 .responsibleUserId(po.getResponsibleUserId())
-                .status(SpaceStatus.fromCode(po.getStatus()))
+                .gender(po.getGender())
+                .status(PlaceStatus.fromCode(po.getStatus()))
                 .attributes(attributes)
                 .build();
     }

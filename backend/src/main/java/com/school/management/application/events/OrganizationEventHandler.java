@@ -3,7 +3,7 @@ package com.school.management.application.events;
 import com.school.management.domain.organization.event.*;
 import com.school.management.infrastructure.event.DomainEventStore;
 import com.school.management.infrastructure.external.NotificationService;
-import com.school.management.infrastructure.audit.AuditLogService;
+import com.school.management.infrastructure.activity.ActivityEventPublisher;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.event.EventListener;
@@ -25,7 +25,7 @@ public class OrganizationEventHandler {
 
     private final DomainEventStore eventStore;
     private final NotificationService notificationService;
-    private final AuditLogService auditLogService;
+    private final ActivityEventPublisher activityEventPublisher;
 
     /**
      * 处理组织单元创建事件
@@ -203,9 +203,11 @@ public class OrganizationEventHandler {
     /**
      * 保存操作日志
      */
-    private void saveOperationLog(String operationType, String targetType, Long targetId, String description) {
+    private void saveOperationLog(String action, String resourceType, Long resourceId, String description) {
         try {
-            auditLogService.logCreate(targetType, targetId != null ? String.valueOf(targetId) : "", description, null, description);
+            activityEventPublisher.newEvent("organization", resourceType, action, description)
+                .resourceId(resourceId != null ? resourceId.toString() : "")
+                .publish();
         } catch (Exception e) {
             log.warn("保存操作日志失败: {}", e.getMessage());
         }

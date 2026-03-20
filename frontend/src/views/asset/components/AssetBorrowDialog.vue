@@ -139,7 +139,7 @@ interface SelectedUser {
 function handleUserSelect(users: SelectedUser[]) {
   if (users.length > 0) {
     const user = users[0]
-    formData.value.borrowerId = Number(user.id)
+    formData.value.borrowerId = user.id
     formData.value.borrowerName = user.realName
     formData.value.borrowerDept = user.orgUnitName || ''
   }

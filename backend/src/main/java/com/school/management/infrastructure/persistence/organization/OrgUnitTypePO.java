@@ -15,91 +15,66 @@ public class OrgUnitTypePO {
     @TableId(type = IdType.AUTO)
     private Long id;
 
-    /**
-     * 类型编码
-     */
+    @TableField("type_code")
     private String typeCode;
 
-    /**
-     * 类型名称
-     */
+    @TableField(value = "type_name", updateStrategy = FieldStrategy.ALWAYS)
     private String typeName;
 
-    /**
-     * 父类型编码
-     */
+    @TableField(value = "category", updateStrategy = FieldStrategy.ALWAYS)
+    private String category;
+
+    @TableField(value = "parent_type_code", updateStrategy = FieldStrategy.ALWAYS)
     private String parentTypeCode;
 
-    /**
-     * 层级顺序
-     */
-    private Integer levelOrder;
-
-    /**
-     * 图标
-     */
+    @TableField(value = "icon", updateStrategy = FieldStrategy.ALWAYS)
     private String icon;
 
-    /**
-     * 颜色
-     */
-    private String color;
-
-    /**
-     * 描述
-     */
+    @TableField(value = "description", updateStrategy = FieldStrategy.ALWAYS)
     private String description;
 
-    /**
-     * 是否教学单位
-     */
-    private Boolean isAcademic;
+    /** 行为特征 JSON: {"inspectionTarget": true, "memberManagement": true, ...} */
+    @TableField(value = "features", updateStrategy = FieldStrategy.ALWAYS)
+    private String features;
 
-    /**
-     * 是否可被检查
-     */
-    private Boolean canBeInspected;
+    /** 动态扩展属性定义 JSON (AttributeSchema) */
+    @TableField(value = "metadata_schema", updateStrategy = FieldStrategy.ALWAYS)
+    private String metadataSchema;
 
-    /**
-     * 是否可有子级
-     */
-    private Boolean canHaveChildren;
+    /** 允许的子类型编码列表 JSON: ["DEPARTMENT", "SECTION"] */
+    @TableField(value = "allowed_child_type_codes", updateStrategy = FieldStrategy.ALWAYS)
+    private String allowedChildTypeCodes;
 
-    /**
-     * 最大子级深度
-     */
+    @TableField(value = "max_depth", updateStrategy = FieldStrategy.ALWAYS)
     private Integer maxDepth;
 
-    /**
-     * 是否系统预置
-     */
+    /** 关联的默认用户类型编码 JSON: ["TEACHER", "STUDENT"] */
+    @TableField(value = "default_user_type_codes", updateStrategy = FieldStrategy.ALWAYS)
+    private String defaultUserTypeCodes;
+
+    /** 关联的默认场所类型编码 JSON: ["CLASSROOM", "OFFICE"] */
+    @TableField(value = "default_place_type_codes", updateStrategy = FieldStrategy.ALWAYS)
+    private String defaultPlaceTypeCodes;
+
+    /** 默认岗位模板 JSON数组 */
+    @TableField(value = "default_positions", updateStrategy = FieldStrategy.ALWAYS)
+    private String defaultPositions;
+
+    @TableField("is_system")
     private Boolean isSystem;
 
-    /**
-     * 是否启用
-     */
+    @TableField("is_enabled")
     private Boolean isEnabled;
 
-    /**
-     * 排序号
-     */
+    @TableField("sort_order")
     private Integer sortOrder;
 
-    /**
-     * 创建时间
-     */
     @TableField(fill = FieldFill.INSERT)
     private LocalDateTime createdAt;
 
-    /**
-     * 更新时间
-     */
     @TableField(fill = FieldFill.INSERT_UPDATE)
     private LocalDateTime updatedAt;
 
-    /**
-     * 逻辑删除
-     */
     @TableLogic
-    private Integer deleted;
+    private Long deleted;
 }

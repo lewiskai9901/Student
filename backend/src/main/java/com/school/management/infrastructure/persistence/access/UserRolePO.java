@@ -6,7 +6,7 @@ import lombok.Data;
 import java.time.LocalDateTime;
 
 /**
- * Persistence object for user-role mappings.
+ * Persistence object for user-role mappings with scope support.
  */
 @Data
 @TableName("user_roles")
@@ -19,7 +19,11 @@ public class UserRolePO {
 
     private Long roleId;
 
-    private Long orgUnitId;
+    private Long tenantId;
+
+    private String scopeType;
+
+    private Long scopeId;
 
     private LocalDateTime assignedAt;
 

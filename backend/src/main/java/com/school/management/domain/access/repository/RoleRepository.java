@@ -1,7 +1,6 @@
 package com.school.management.domain.access.repository;
 
 import com.school.management.domain.access.model.Role;
-import com.school.management.domain.access.model.RoleType;
 import com.school.management.domain.shared.Repository;
 
 import java.util.List;
@@ -20,7 +19,7 @@ public interface RoleRepository extends Repository<Role, Long> {
     /**
      * Finds all roles by type.
      */
-    List<Role> findByRoleType(RoleType roleType);
+    List<Role> findByRoleType(String roleType);
 
     /**
      * Finds all enabled roles.

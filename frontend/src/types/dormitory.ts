@@ -56,7 +56,7 @@ export const BuildingTypeMap: Record<BuildingType, string> = {
  * 学生简单信息
  */
 export interface StudentSimpleInfo {
-  id: number
+  id: number | string
   studentNo: string
   realName: string
   bedNumber?: string
@@ -107,7 +107,7 @@ export interface Dormitory {
  * 楼宇实体
  */
 export interface Building {
-  id: number
+  id: number | string
   buildingNo: string
   buildingName: string
   buildingType: BuildingType
@@ -127,7 +127,7 @@ export interface Building {
  */
 export interface BedAllocation {
   bedNumber: string
-  studentId?: number
+  studentId?: number | string
   studentNo?: string
   studentName?: string
   className?: string
@@ -157,7 +157,7 @@ export interface CreateDormitoryRequest {
  * 更新宿舍请求
  */
 export interface UpdateDormitoryRequest extends Partial<CreateDormitoryRequest> {
-  id?: number
+  id?: number | string
 }
 
 /**
@@ -165,15 +165,15 @@ export interface UpdateDormitoryRequest extends Partial<CreateDormitoryRequest> 
  */
 export interface DormitoryQueryParams {
   dormitoryNo?: string
-  buildingId?: number
+  buildingId?: number | string
   buildingName?: string
   floorNumber?: number
   roomType?: number
   genderType?: GenderType
-  supervisorId?: number
+  supervisorId?: number | string
   status?: DormitoryStatus
-  buildingIds?: number[]
-  classIds?: number[]
+  buildingIds?: (number | string)[]
+  classIds?: (number | string)[]
   sortBy?: string
   sortOrder?: 'asc' | 'desc'
   pageNum?: number
@@ -184,7 +184,7 @@ export interface DormitoryQueryParams {
  * 批量创建宿舍请求
  */
 export interface BatchCreateDormitoryRequest {
-  buildingId: number
+  buildingId: number | string
   startFloor: number
   endFloor: number
   roomsPerFloor: number
@@ -199,8 +199,8 @@ export interface BatchCreateDormitoryRequest {
  * 分配学生到宿舍请求
  */
 export interface AssignStudentRequest {
-  studentId: number
-  dormitoryId: number
+  studentId: number | string
+  dormitoryId: number | string
   bedNumber?: string
 }
 
@@ -208,8 +208,8 @@ export interface AssignStudentRequest {
  * 交换学生宿舍请求
  */
 export interface SwapStudentsRequest {
-  studentAId: number
-  studentBId: number
+  studentAId: number | string
+  studentBId: number | string
 }
 
 /**
@@ -218,16 +218,16 @@ export interface SwapStudentsRequest {
  */
 export interface BatchUpdateOrgUnitRequest {
   dormitoryIds: (number | string)[]
-  orgUnitId?: number | null
+  orgUnitId?: number | string | null
 }
 
 /**
  * 按楼层批量更新组织单元请求
  */
 export interface BatchUpdateOrgUnitByFloorRequest {
-  buildingId: number
+  buildingId: number | string
   floor: number
-  orgUnitId?: number | null
+  orgUnitId?: number | string | null
 }
 
 // 别名（兼容API命名）
@@ -251,7 +251,7 @@ export interface CreateBuildingRequest {
  * 更新楼宇请求
  */
 export interface UpdateBuildingRequest extends Partial<CreateBuildingRequest> {
-  id?: number
+  id?: number | string
 }
 
 /**

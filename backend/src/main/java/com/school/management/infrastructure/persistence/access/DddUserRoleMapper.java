@@ -9,7 +9,7 @@ import org.apache.ibatis.annotations.Select;
 import java.util.List;
 
 /**
- * MyBatis mapper for user-role mappings (DDD infrastructure).
+ * MyBatis mapper for user-role mappings with scope support.
  */
 @Mapper
 public interface DddUserRoleMapper extends BaseMapper<UserRolePO> {
@@ -24,15 +24,28 @@ public interface DddUserRoleMapper extends BaseMapper<UserRolePO> {
     @Select("SELECT * FROM user_roles WHERE role_id = #{roleId}")
     List<UserRolePO> findByRoleId(@Param("roleId") Long roleId);
 
-    @Select("SELECT * FROM user_roles WHERE user_id = #{userId} AND org_unit_id = #{orgUnitId}")
-    List<UserRolePO> findByUserIdAndOrgUnitId(@Param("userId") Long userId, @Param("orgUnitId") Long orgUnitId);
+    @Select("SELECT * FROM user_roles WHERE user_id = #{userId} " +
+            "AND scope_type = #{scopeType} AND scope_id = #{scopeId}")
+    List<UserRolePO> findByUserIdAndScope(@Param("userId") Long userId,
+                                          @Param("scopeType") String scopeType,
+                                          @Param("scopeId") Long scopeId);
 
     @Select("SELECT COUNT(*) > 0 FROM user_roles WHERE user_id = #{userId} AND role_id = #{roleId}")
     boolean existsByUserIdAndRoleId(@Param("userId") Long userId, @Param("roleId") Long roleId);
+
+    @Select("SELECT COUNT(*) > 0 FROM user_roles WHERE user_id = #{userId} AND role_id = #{roleId} " +
+            "AND scope_type = #{scopeType} AND scope_id = #{scopeId}")
+    boolean existsByUserIdAndRoleIdAndScope(@Param("userId") Long userId, @Param("roleId") Long roleId,
+                                            @Param("scopeType") String scopeType, @Param("scopeId") Long scopeId);
 
     @Delete("DELETE FROM user_roles WHERE user_id = #{userId}")
     void deleteByUserId(@Param("userId") Long userId);
 
     @Delete("DELETE FROM user_roles WHERE user_id = #{userId} AND role_id = #{roleId}")
     void deleteByUserIdAndRoleId(@Param("userId") Long userId, @Param("roleId") Long roleId);
+
+    @Delete("DELETE FROM user_roles WHERE user_id = #{userId} AND role_id = #{roleId} " +
+            "AND scope_type = #{scopeType} AND scope_id = #{scopeId}")
+    void deleteByUserIdAndRoleIdAndScope(@Param("userId") Long userId, @Param("roleId") Long roleId,
+                                          @Param("scopeType") String scopeType, @Param("scopeId") Long scopeId);
 }

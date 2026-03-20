@@ -1,4 +1,4 @@
-package com.school.management.infrastructure.persistence.space;
+package com.school.management.infrastructure.persistence.place;
 
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import org.apache.ibatis.annotations.Mapper;
@@ -11,50 +11,50 @@ import java.util.Map;
  * 场所 Mapper
  */
 @Mapper
-public interface SpaceMapper extends BaseMapper<SpacePO> {
+public interface PlaceMapper extends BaseMapper<PlacePO> {
 
     /**
      * 根据ID查询（带关联信息）
      */
-    SpacePO selectByIdWithRelations(@Param("id") Long id);
+    PlacePO selectByIdWithRelations(@Param("id") Long id);
 
     /**
      * 根据编码查询
      */
-    SpacePO selectByCode(@Param("spaceCode") String spaceCode);
+    PlacePO selectByCode(@Param("placeCode") String placeCode);
 
     /**
      * 查询子节点
      */
-    List<SpacePO> selectChildren(@Param("parentId") Long parentId);
+    List<PlacePO> selectChildren(@Param("parentId") Long parentId);
 
     /**
      * 查询所有校区
      */
-    List<SpacePO> selectAllCampuses();
+    List<PlacePO> selectAllCampuses();
 
     /**
      * 查询所有楼宇
      */
-    List<SpacePO> selectAllBuildings(@Param("buildingType") String buildingType,
+    List<PlacePO> selectAllBuildings(@Param("buildingType") String buildingType,
                                       @Param("status") Integer status);
 
     /**
      * 查询楼宇的楼层
      */
-    List<SpacePO> selectFloorsByBuildingId(@Param("buildingId") Long buildingId);
+    List<PlacePO> selectFloorsByBuildingId(@Param("buildingId") Long buildingId);
 
     /**
      * 查询楼宇的房间
      */
-    List<SpacePO> selectRoomsByBuildingId(@Param("buildingId") Long buildingId,
+    List<PlacePO> selectRoomsByBuildingId(@Param("buildingId") Long buildingId,
                                            @Param("roomType") String roomType,
                                            @Param("floorNumber") Integer floorNumber);
 
     /**
      * 按条件查询
      */
-    List<SpacePO> selectByConditions(@Param("spaceType") String spaceType,
+    List<PlacePO> selectByConditions(@Param("placeType") String placeType,
                                       @Param("roomType") String roomType,
                                       @Param("buildingType") String buildingType,
                                       @Param("buildingId") Long buildingId,
@@ -68,7 +68,7 @@ public interface SpaceMapper extends BaseMapper<SpacePO> {
     /**
      * 统计数量
      */
-    long countByConditions(@Param("spaceType") String spaceType,
+    long countByConditions(@Param("placeType") String placeType,
                            @Param("roomType") String roomType,
                            @Param("buildingType") String buildingType,
                            @Param("buildingId") Long buildingId,
@@ -80,12 +80,12 @@ public interface SpaceMapper extends BaseMapper<SpacePO> {
     /**
      * 按路径前缀查询
      */
-    List<SpacePO> selectByPathPrefix(@Param("pathPrefix") String pathPrefix);
+    List<PlacePO> selectByPathPrefix(@Param("pathPrefix") String pathPrefix);
 
     /**
      * 按组织单元查询
      */
-    List<SpacePO> selectByOrgUnitId(@Param("orgUnitId") Long orgUnitId);
+    List<PlacePO> selectByOrgUnitId(@Param("orgUnitId") Long orgUnitId);
 
     /**
      * 更新占用数
@@ -105,7 +105,7 @@ public interface SpaceMapper extends BaseMapper<SpacePO> {
     /**
      * 获取祖先链
      */
-    List<SpacePO> selectAncestors(@Param("path") String path);
+    List<PlacePO> selectAncestors(@Param("path") String path);
 
     /**
      * 获取楼宇统计
@@ -125,4 +125,26 @@ public interface SpaceMapper extends BaseMapper<SpacePO> {
     int countByRoomNoInBuilding(@Param("roomNo") Integer roomNo,
                                  @Param("buildingId") Long buildingId,
                                  @Param("excludeId") Long excludeId);
+
+    /**
+     * 原子增加占用数（如果有空位）
+     * 使用CAS操作,防止超卖
+     *
+     * @param placeId 场所ID
+     * @param increment 增加数量
+     * @return 受影响行数（1=成功,0=容量不足）
+     */
+    int incrementOccupancyIfAvailable(@Param("placeId") Long placeId,
+                                       @Param("increment") int increment);
+
+    /**
+     * 原子减少占用数
+     * 防止负数
+     *
+     * @param placeId 场所ID
+     * @param decrement 减少数量
+     * @return 受影响行数（1=成功,0=无法减少）
+     */
+    int decrementOccupancy(@Param("placeId") Long placeId,
+                           @Param("decrement") int decrement);
 }

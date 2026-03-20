@@ -4,13 +4,13 @@
  * 学生住宿记录
  */
 export interface StudentDormitory {
-  id: number
-  studentId: number
+  id: number | string
+  studentId: number | string
   studentNo: string
   studentName: string
   className?: string
-  dormitoryId: number
-  buildingId?: number
+  dormitoryId: number | string
+  buildingId?: number | string
   buildingNo?: string
   buildingName?: string
   dormitoryNo?: string
@@ -30,11 +30,11 @@ export interface StudentDormitory {
  * 住宿记录查询请求
  */
 export interface StudentDormitoryQueryRequest {
-  studentId?: number
+  studentId?: number | string
   studentNo?: string
   studentName?: string
-  dormitoryId?: number
-  buildingId?: number
+  dormitoryId?: number | string
+  buildingId?: number | string
   floorNumber?: number
   status?: number
   checkInDateStart?: string
@@ -47,8 +47,8 @@ export interface StudentDormitoryQueryRequest {
  * 学生入住请求
  */
 export interface StudentCheckInRequest {
-  studentId: number
-  dormitoryId: number
+  studentId: number | string
+  dormitoryId: number | string
   bedNumber?: string
   checkInDate?: string
   remark?: string
@@ -58,7 +58,7 @@ export interface StudentCheckInRequest {
  * 学生退宿请求
  */
 export interface StudentCheckOutRequest {
-  studentId: number
+  studentId: number | string
   checkOutDate?: string
   reason?: string
 }
@@ -67,8 +67,8 @@ export interface StudentCheckOutRequest {
  * 学生调换宿舍请求
  */
 export interface StudentChangeDormitoryRequest {
-  studentId: number
-  newDormitoryId: number
+  studentId: number | string
+  newDormitoryId: number | string
   newBedNumber?: string
   changeDate?: string
   reason?: string

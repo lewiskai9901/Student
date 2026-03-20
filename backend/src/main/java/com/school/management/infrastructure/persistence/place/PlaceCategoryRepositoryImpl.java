@@ -1,9 +1,9 @@
-package com.school.management.infrastructure.persistence.space;
+package com.school.management.infrastructure.persistence.place;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
-import com.school.management.domain.space.model.entity.SpaceCategory;
-import com.school.management.domain.space.model.valueobject.SpaceLevel;
-import com.school.management.domain.space.repository.SpaceCategoryRepository;
+import com.school.management.domain.place.model.entity.PlaceCategory;
+import com.school.management.domain.place.model.valueobject.PlaceLevel;
+import com.school.management.domain.place.repository.PlaceCategoryRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Repository;
 
@@ -16,14 +16,14 @@ import java.util.stream.Collectors;
  */
 @Repository
 @RequiredArgsConstructor
-public class SpaceCategoryRepositoryImpl implements SpaceCategoryRepository {
+public class PlaceCategoryRepositoryImpl implements PlaceCategoryRepository {
 
-    private final SpaceCategoryMapper mapper;
-    private final SpaceCategoryDomainMapper domainMapper;
+    private final PlaceCategoryMapper mapper;
+    private final PlaceCategoryDomainMapper domainMapper;
 
     @Override
-    public SpaceCategory save(SpaceCategory category) {
-        SpaceCategoryPO po = domainMapper.toPO(category);
+    public PlaceCategory save(PlaceCategory category) {
+        PlaceCategoryPO po = domainMapper.toPO(category);
         if (po.getId() == null) {
             mapper.insert(po);
         } else {
@@ -34,58 +34,58 @@ public class SpaceCategoryRepositoryImpl implements SpaceCategoryRepository {
     }
 
     @Override
-    public Optional<SpaceCategory> findById(Long id) {
-        SpaceCategoryPO po = mapper.selectById(id);
+    public Optional<PlaceCategory> findById(Long id) {
+        PlaceCategoryPO po = mapper.selectById(id);
         return Optional.ofNullable(domainMapper.toDomain(po));
     }
 
     @Override
-    public Optional<SpaceCategory> findByCode(String categoryCode) {
-        LambdaQueryWrapper<SpaceCategoryPO> wrapper = new LambdaQueryWrapper<>();
-        wrapper.eq(SpaceCategoryPO::getCategoryCode, categoryCode);
-        SpaceCategoryPO po = mapper.selectOne(wrapper);
+    public Optional<PlaceCategory> findByCode(String categoryCode) {
+        LambdaQueryWrapper<PlaceCategoryPO> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(PlaceCategoryPO::getCategoryCode, categoryCode);
+        PlaceCategoryPO po = mapper.selectOne(wrapper);
         return Optional.ofNullable(domainMapper.toDomain(po));
     }
 
     @Override
-    public List<SpaceCategory> findAll() {
-        LambdaQueryWrapper<SpaceCategoryPO> wrapper = new LambdaQueryWrapper<>();
-        wrapper.orderByAsc(SpaceCategoryPO::getSortOrder)
-               .orderByAsc(SpaceCategoryPO::getId);
+    public List<PlaceCategory> findAll() {
+        LambdaQueryWrapper<PlaceCategoryPO> wrapper = new LambdaQueryWrapper<>();
+        wrapper.orderByAsc(PlaceCategoryPO::getSortOrder)
+               .orderByAsc(PlaceCategoryPO::getId);
         return mapper.selectList(wrapper).stream()
             .map(domainMapper::toDomain)
             .collect(Collectors.toList());
     }
 
     @Override
-    public List<SpaceCategory> findByLevel(SpaceLevel level) {
-        LambdaQueryWrapper<SpaceCategoryPO> wrapper = new LambdaQueryWrapper<>();
-        wrapper.eq(SpaceCategoryPO::getApplyToLevel, level.name())
-               .orderByAsc(SpaceCategoryPO::getSortOrder)
-               .orderByAsc(SpaceCategoryPO::getId);
+    public List<PlaceCategory> findByLevel(PlaceLevel level) {
+        LambdaQueryWrapper<PlaceCategoryPO> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(PlaceCategoryPO::getApplyToLevel, level.name())
+               .orderByAsc(PlaceCategoryPO::getSortOrder)
+               .orderByAsc(PlaceCategoryPO::getId);
         return mapper.selectList(wrapper).stream()
             .map(domainMapper::toDomain)
             .collect(Collectors.toList());
     }
 
     @Override
-    public List<SpaceCategory> findAllEnabled() {
-        LambdaQueryWrapper<SpaceCategoryPO> wrapper = new LambdaQueryWrapper<>();
-        wrapper.eq(SpaceCategoryPO::getIsEnabled, true)
-               .orderByAsc(SpaceCategoryPO::getSortOrder)
-               .orderByAsc(SpaceCategoryPO::getId);
+    public List<PlaceCategory> findAllEnabled() {
+        LambdaQueryWrapper<PlaceCategoryPO> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(PlaceCategoryPO::getIsEnabled, true)
+               .orderByAsc(PlaceCategoryPO::getSortOrder)
+               .orderByAsc(PlaceCategoryPO::getId);
         return mapper.selectList(wrapper).stream()
             .map(domainMapper::toDomain)
             .collect(Collectors.toList());
     }
 
     @Override
-    public List<SpaceCategory> findEnabledByLevel(SpaceLevel level) {
-        LambdaQueryWrapper<SpaceCategoryPO> wrapper = new LambdaQueryWrapper<>();
-        wrapper.eq(SpaceCategoryPO::getApplyToLevel, level.name())
-               .eq(SpaceCategoryPO::getIsEnabled, true)
-               .orderByAsc(SpaceCategoryPO::getSortOrder)
-               .orderByAsc(SpaceCategoryPO::getId);
+    public List<PlaceCategory> findEnabledByLevel(PlaceLevel level) {
+        LambdaQueryWrapper<PlaceCategoryPO> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(PlaceCategoryPO::getApplyToLevel, level.name())
+               .eq(PlaceCategoryPO::getIsEnabled, true)
+               .orderByAsc(PlaceCategoryPO::getSortOrder)
+               .orderByAsc(PlaceCategoryPO::getId);
         return mapper.selectList(wrapper).stream()
             .map(domainMapper::toDomain)
             .collect(Collectors.toList());
@@ -98,16 +98,16 @@ public class SpaceCategoryRepositoryImpl implements SpaceCategoryRepository {
 
     @Override
     public boolean existsByCode(String categoryCode) {
-        LambdaQueryWrapper<SpaceCategoryPO> wrapper = new LambdaQueryWrapper<>();
-        wrapper.eq(SpaceCategoryPO::getCategoryCode, categoryCode);
+        LambdaQueryWrapper<PlaceCategoryPO> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(PlaceCategoryPO::getCategoryCode, categoryCode);
         return mapper.selectCount(wrapper) > 0;
     }
 
     @Override
     public boolean existsByCodeExcludeId(String categoryCode, Long excludeId) {
-        LambdaQueryWrapper<SpaceCategoryPO> wrapper = new LambdaQueryWrapper<>();
-        wrapper.eq(SpaceCategoryPO::getCategoryCode, categoryCode)
-               .ne(SpaceCategoryPO::getId, excludeId);
+        LambdaQueryWrapper<PlaceCategoryPO> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(PlaceCategoryPO::getCategoryCode, categoryCode)
+               .ne(PlaceCategoryPO::getId, excludeId);
         return mapper.selectCount(wrapper) > 0;
     }
 }

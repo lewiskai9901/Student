@@ -6,7 +6,8 @@ import com.school.management.domain.inspection.model.v6.*;
 import com.school.management.security.CustomUserDetails;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import org.springframework.security.access.prepost.PreAuthorize;
+import com.school.management.infrastructure.casbin.CasbinAccess;
+import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
@@ -19,6 +20,7 @@ import java.util.stream.Collectors;
 /**
  * V6检查项目控制器
  */
+@RequiredArgsConstructor
 @Tag(name = "V6检查项目", description = "V6检查项目管理接口")
 @RestController
 @RequestMapping("/v6/inspection-projects")
@@ -26,13 +28,9 @@ public class InspectionProjectController {
 
     private final InspectionProjectApplicationService projectService;
 
-    public InspectionProjectController(InspectionProjectApplicationService projectService) {
-        this.projectService = projectService;
-    }
-
     @Operation(summary = "创建项目")
     @PostMapping
-    @PreAuthorize("hasAuthority('inspection:project:create')")
+    @CasbinAccess(resource = "inspection:project", action = "create")
     public Result<ProjectResponse> createProject(
             @RequestBody CreateProjectRequest request,
             @AuthenticationPrincipal CustomUserDetails userDetails) {
@@ -49,7 +47,7 @@ public class InspectionProjectController {
 
     @Operation(summary = "更新项目配置")
     @PutMapping("/{id}/config")
-    @PreAuthorize("hasAuthority('inspection:project:update')")
+    @CasbinAccess(resource = "inspection:project", action = "update")
     public Result<ProjectResponse> updateProjectConfig(
             @PathVariable Long id,
             @RequestBody UpdateProjectConfigRequest request) {
@@ -63,8 +61,8 @@ public class InspectionProjectController {
         command.setCycleConfig(request.getCycleConfig());
         command.setTimeSlots(request.getTimeSlots());
         command.setSkipHolidays(request.isSkipHolidays());
-        command.setSharedSpaceStrategy(request.getSharedSpaceStrategy() != null ?
-                SharedSpaceStrategy.fromCode(request.getSharedSpaceStrategy()) : null);
+        command.setSharedPlaceStrategy(request.getSharedPlaceStrategy() != null ?
+                SharedPlaceStrategy.fromCode(request.getSharedPlaceStrategy()) : null);
         command.setInspectorAssignmentMode(request.getInspectorAssignmentMode() != null ?
                 InspectorAssignmentMode.fromCode(request.getInspectorAssignmentMode()) : null);
 
@@ -74,7 +72,7 @@ public class InspectionProjectController {
 
     @Operation(summary = "发布项目")
     @PostMapping("/{id}/publish")
-    @PreAuthorize("hasAuthority('inspection:project:publish')")
+    @CasbinAccess(resource = "inspection:project", action = "publish")
     public Result<ProjectResponse> publishProject(
             @PathVariable Long id,
             @RequestBody(required = false) PublishProjectRequest request) {
@@ -86,7 +84,7 @@ public class InspectionProjectController {
 
     @Operation(summary = "暂停项目")
     @PostMapping("/{id}/pause")
-    @PreAuthorize("hasAuthority('inspection:project:update')")
+    @CasbinAccess(resource = "inspection:project", action = "update")
     public Result<ProjectResponse> pauseProject(@PathVariable Long id) {
         InspectionProject project = projectService.pauseProject(id);
         return Result.success(toResponse(project));
@@ -94,7 +92,7 @@ public class InspectionProjectController {
 
     @Operation(summary = "恢复项目")
     @PostMapping("/{id}/resume")
-    @PreAuthorize("hasAuthority('inspection:project:update')")
+    @CasbinAccess(resource = "inspection:project", action = "update")
     public Result<ProjectResponse> resumeProject(@PathVariable Long id) {
         InspectionProject project = projectService.resumeProject(id);
         return Result.success(toResponse(project));
@@ -102,7 +100,7 @@ public class InspectionProjectController {
 
     @Operation(summary = "完成项目")
     @PostMapping("/{id}/complete")
-    @PreAuthorize("hasAuthority('inspection:project:update')")
+    @CasbinAccess(resource = "inspection:project", action = "update")
     public Result<ProjectResponse> completeProject(@PathVariable Long id) {
         InspectionProject project = projectService.completeProject(id);
         return Result.success(toResponse(project));
@@ -110,7 +108,7 @@ public class InspectionProjectController {
 
     @Operation(summary = "归档项目")
     @PostMapping("/{id}/archive")
-    @PreAuthorize("hasAuthority('inspection:project:update')")
+    @CasbinAccess(resource = "inspection:project", action = "update")
     public Result<ProjectResponse> archiveProject(@PathVariable Long id) {
         InspectionProject project = projectService.archiveProject(id);
         return Result.success(toResponse(project));
@@ -118,7 +116,7 @@ public class InspectionProjectController {
 
     @Operation(summary = "获取项目详情")
     @GetMapping("/{id}")
-    @PreAuthorize("hasAuthority('inspection:project:view')")
+    @CasbinAccess(resource = "inspection:project", action = "view")
     public Result<ProjectResponse> getProject(@PathVariable Long id) {
         return projectService.getProject(id)
                 .map(p -> Result.success(toResponse(p)))
@@ -127,7 +125,7 @@ public class InspectionProjectController {
 
     @Operation(summary = "分页查询项目")
     @GetMapping
-    @PreAuthorize("hasAuthority('inspection:project:view')")
+    @CasbinAccess(resource = "inspection:project", action = "view")
     public Result<Map<String, Object>> listProjects(
             @RequestParam(defaultValue = "1") int page,
             @RequestParam(defaultValue = "10") int size,
@@ -149,7 +147,7 @@ public class InspectionProjectController {
 
     @Operation(summary = "删除项目")
     @DeleteMapping("/{id}")
-    @PreAuthorize("hasAuthority('inspection:project:delete')")
+    @CasbinAccess(resource = "inspection:project", action = "delete")
     public Result<Void> deleteProject(@PathVariable Long id) {
         projectService.deleteProject(id);
         return Result.success();
@@ -168,7 +166,7 @@ public class InspectionProjectController {
                 .map(e -> Map.of("code", e.getCode(), "label", e.getLabel(), "description", e.getDescription()))
                 .collect(Collectors.toList()));
 
-        options.put("sharedSpaceStrategies", java.util.Arrays.stream(SharedSpaceStrategy.values())
+        options.put("sharedPlaceStrategies", java.util.Arrays.stream(SharedPlaceStrategy.values())
                 .map(e -> Map.of("code", e.getCode(), "label", e.getLabel(), "description", e.getDescription()))
                 .collect(Collectors.toList()));
 
@@ -198,7 +196,7 @@ public class InspectionProjectController {
         response.setCycleConfig(project.getCycleConfig());
         response.setTimeSlots(project.getTimeSlots());
         response.setSkipHolidays(project.isSkipHolidays());
-        response.setSharedSpaceStrategy(project.getSharedSpaceStrategy() != null ? project.getSharedSpaceStrategy().getCode() : null);
+        response.setSharedPlaceStrategy(project.getSharedPlaceStrategy() != null ? project.getSharedPlaceStrategy().getCode() : null);
         response.setInspectorAssignmentMode(project.getInspectorAssignmentMode() != null ? project.getInspectorAssignmentMode().getCode() : null);
         response.setStatus(project.getStatus() != null ? project.getStatus().getCode() : null);
         response.setStatusLabel(project.getStatus() != null ? project.getStatus().getLabel() : null);
@@ -232,7 +230,7 @@ public class InspectionProjectController {
         private String cycleConfig;
         private String timeSlots;
         private boolean skipHolidays;
-        private String sharedSpaceStrategy;
+        private String sharedPlaceStrategy;
         private String inspectorAssignmentMode;
 
         public String getScopeType() { return scopeType; }
@@ -251,8 +249,8 @@ public class InspectionProjectController {
         public void setTimeSlots(String timeSlots) { this.timeSlots = timeSlots; }
         public boolean isSkipHolidays() { return skipHolidays; }
         public void setSkipHolidays(boolean skipHolidays) { this.skipHolidays = skipHolidays; }
-        public String getSharedSpaceStrategy() { return sharedSpaceStrategy; }
-        public void setSharedSpaceStrategy(String sharedSpaceStrategy) { this.sharedSpaceStrategy = sharedSpaceStrategy; }
+        public String getSharedPlaceStrategy() { return sharedPlaceStrategy; }
+        public void setSharedPlaceStrategy(String sharedPlaceStrategy) { this.sharedPlaceStrategy = sharedPlaceStrategy; }
         public String getInspectorAssignmentMode() { return inspectorAssignmentMode; }
         public void setInspectorAssignmentMode(String inspectorAssignmentMode) { this.inspectorAssignmentMode = inspectorAssignmentMode; }
     }
@@ -278,7 +276,7 @@ public class InspectionProjectController {
         private String cycleConfig;
         private String timeSlots;
         private boolean skipHolidays;
-        private String sharedSpaceStrategy;
+        private String sharedPlaceStrategy;
         private String inspectorAssignmentMode;
         private String status;
         private String statusLabel;
@@ -314,8 +312,8 @@ public class InspectionProjectController {
         public void setTimeSlots(String timeSlots) { this.timeSlots = timeSlots; }
         public boolean isSkipHolidays() { return skipHolidays; }
         public void setSkipHolidays(boolean skipHolidays) { this.skipHolidays = skipHolidays; }
-        public String getSharedSpaceStrategy() { return sharedSpaceStrategy; }
-        public void setSharedSpaceStrategy(String sharedSpaceStrategy) { this.sharedSpaceStrategy = sharedSpaceStrategy; }
+        public String getSharedPlaceStrategy() { return sharedPlaceStrategy; }
+        public void setSharedPlaceStrategy(String sharedPlaceStrategy) { this.sharedPlaceStrategy = sharedPlaceStrategy; }
         public String getInspectorAssignmentMode() { return inspectorAssignmentMode; }
         public void setInspectorAssignmentMode(String inspectorAssignmentMode) { this.inspectorAssignmentMode = inspectorAssignmentMode; }
         public String getStatus() { return status; }

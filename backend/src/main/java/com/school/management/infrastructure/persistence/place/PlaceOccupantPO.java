@@ -1,4 +1,4 @@
-package com.school.management.infrastructure.persistence.space;
+package com.school.management.infrastructure.persistence.place;
 
 import com.baomidou.mybatisplus.annotation.*;
 import lombok.Data;
@@ -10,13 +10,13 @@ import java.time.LocalDateTime;
  * 场所占用持久化对象
  */
 @Data
-@TableName("space_occupant")
-public class SpaceOccupantPO {
+@TableName("place_occupant")
+public class PlaceOccupantPO {
 
     @TableId(type = IdType.AUTO)
     private Long id;
 
-    private Long spaceId;
+    private Long placeId;
     private String occupantType;
     private Long occupantId;
     private Integer positionNo;
@@ -33,5 +33,5 @@ public class SpaceOccupantPO {
     @TableField(exist = false)
     private String occupantNo;
     @TableField(exist = false)
-    private String spaceName;
+    private String placeName;
 }

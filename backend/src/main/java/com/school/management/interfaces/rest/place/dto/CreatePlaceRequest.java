@@ -1,8 +1,8 @@
-package com.school.management.interfaces.rest.space.dto;
+package com.school.management.interfaces.rest.place.dto;
 
-import com.school.management.domain.space.model.valueobject.BuildingType;
-import com.school.management.domain.space.model.valueobject.RoomType;
-import com.school.management.domain.space.model.valueobject.SpaceType;
+import com.school.management.domain.place.model.valueobject.BuildingType;
+import com.school.management.domain.place.model.valueobject.RoomType;
+import com.school.management.domain.place.model.valueobject.PlaceType;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import lombok.Data;
@@ -13,15 +13,15 @@ import java.util.Map;
  * 创建场所请求
  */
 @Data
-public class CreateSpaceRequest {
+public class CreatePlaceRequest {
 
     @NotNull(message = "场所类型不能为空")
-    private SpaceType spaceType;
+    private PlaceType placeType;
 
-    private String spaceCode;
+    private String placeCode;
 
     @NotBlank(message = "场所名称不能为空")
-    private String spaceName;
+    private String placeName;
 
     /**
      * 房间类型（仅ROOM类型需要）

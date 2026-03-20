@@ -1,7 +1,7 @@
-package com.school.management.domain.space.model.entity;
+package com.school.management.domain.place.model.entity;
 
 import com.school.management.domain.shared.Entity;
-import com.school.management.domain.space.model.valueobject.SpaceLevel;
+import com.school.management.domain.place.model.valueobject.PlaceLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
@@ -14,12 +14,12 @@ import java.time.LocalDateTime;
  */
 @Getter
 @NoArgsConstructor
-public class SpaceCategory implements Entity<Long> {
+public class PlaceCategory implements Entity<Long> {
 
     private Long id;
     private String categoryCode;
     private String categoryName;
-    private SpaceLevel applyToLevel;  // 适用层级：BUILDING 或 ROOM
+    private PlaceLevel applyToLevel;  // 适用层级：BUILDING 或 ROOM
     private String icon;
     private String color;
     private String description;
@@ -52,11 +52,11 @@ public class SpaceCategory implements Entity<Long> {
     /**
      * 创建楼栋分类
      */
-    public static SpaceCategory createBuildingCategory(String code, String name, String description) {
-        SpaceCategory category = new SpaceCategory();
+    public static PlaceCategory createBuildingCategory(String code, String name, String description) {
+        PlaceCategory category = new PlaceCategory();
         category.categoryCode = code;
         category.categoryName = name;
-        category.applyToLevel = SpaceLevel.BUILDING;
+        category.applyToLevel = PlaceLevel.BUILDING;
         category.description = description;
         category.hasCapacity = false;
         category.bookable = false;
@@ -73,15 +73,15 @@ public class SpaceCategory implements Entity<Long> {
     /**
      * 创建房间分类
      */
-    public static SpaceCategory createRoomCategory(String code, String name, String description,
+    public static PlaceCategory createRoomCategory(String code, String name, String description,
                                                    boolean hasCapacity, String capacityUnit,
                                                    Integer defaultCapacity,
                                                    boolean bookable, boolean assignable,
                                                    boolean occupiable, boolean hasGender) {
-        SpaceCategory category = new SpaceCategory();
+        PlaceCategory category = new PlaceCategory();
         category.categoryCode = code;
         category.categoryName = name;
-        category.applyToLevel = SpaceLevel.ROOM;
+        category.applyToLevel = PlaceLevel.ROOM;
         category.description = description;
         category.hasCapacity = hasCapacity;
         category.capacityUnit = capacityUnit;
@@ -100,15 +100,15 @@ public class SpaceCategory implements Entity<Long> {
     /**
      * 从持久化数据重建
      */
-    public static SpaceCategory reconstitute(Long id, String categoryCode, String categoryName,
-                                             SpaceLevel applyToLevel, String icon, String color,
+    public static PlaceCategory reconstitute(Long id, String categoryCode, String categoryName,
+                                             PlaceLevel applyToLevel, String icon, String color,
                                              String description,
                                              boolean hasCapacity, String capacityUnit, Integer defaultCapacity,
                                              boolean bookable, boolean assignable, boolean occupiable, boolean hasGender,
                                              boolean isSystem, boolean isEnabled, Integer sortOrder,
                                              Long createdBy, LocalDateTime createdAt,
                                              Long updatedBy, LocalDateTime updatedAt) {
-        SpaceCategory category = new SpaceCategory();
+        PlaceCategory category = new PlaceCategory();
         category.id = id;
         category.categoryCode = categoryCode;
         category.categoryName = categoryName;
@@ -180,11 +180,11 @@ public class SpaceCategory implements Entity<Long> {
     // ========== 查询方法 ==========
 
     public boolean isBuildingCategory() {
-        return this.applyToLevel == SpaceLevel.BUILDING;
+        return this.applyToLevel == PlaceLevel.BUILDING;
     }
 
     public boolean isRoomCategory() {
-        return this.applyToLevel == SpaceLevel.ROOM;
+        return this.applyToLevel == PlaceLevel.ROOM;
     }
 
     public boolean isDormitoryCategory() {

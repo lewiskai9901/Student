@@ -13,7 +13,7 @@ import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-import org.springframework.security.access.prepost.PreAuthorize;
+import com.school.management.infrastructure.casbin.CasbinAccess;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -33,7 +33,7 @@ public class StudentController {
 
     @Operation(summary = "分页查询学生")
     @GetMapping
-    @PreAuthorize("hasAuthority('student:info:view')")
+    @CasbinAccess(resource = "student:info", action = "view")
     public Result<PageResult<StudentDTO>> getStudents(
             @Parameter(description = "关键字") @RequestParam(required = false) String keyword,
             @Parameter(description = "班级ID") @RequestParam(required = false) Long classId,
@@ -60,7 +60,7 @@ public class StudentController {
 
     @Operation(summary = "获取学生详情")
     @GetMapping("/{id}")
-    @PreAuthorize("hasAuthority('student:info:view')")
+    @CasbinAccess(resource = "student:info", action = "view")
     public Result<StudentDTO> getStudent(
             @Parameter(description = "学生ID") @PathVariable Long id) {
         StudentDTO result = studentService.getById(id);
@@ -69,7 +69,7 @@ public class StudentController {
 
     @Operation(summary = "根据学号获取学生")
     @GetMapping("/by-no/{studentNo}")
-    @PreAuthorize("hasAuthority('student:info:view')")
+    @CasbinAccess(resource = "student:info", action = "view")
     public Result<StudentDTO> getStudentByNo(
             @Parameter(description = "学号") @PathVariable String studentNo) {
         StudentDTO result = studentService.getByStudentNo(studentNo);
@@ -78,7 +78,7 @@ public class StudentController {
 
     @Operation(summary = "创建学生(入学)")
     @PostMapping
-    @PreAuthorize("hasAuthority('student:create')")
+    @CasbinAccess(resource = "student:info", action = "add")
     public Result<Long> createStudent(@Valid @RequestBody EnrollStudentRequest request) {
         EnrollStudentCommand command = EnrollStudentCommand.builder()
                 .studentNo(request.getStudentNo())
@@ -104,7 +104,7 @@ public class StudentController {
 
     @Operation(summary = "更新学生信息")
     @PutMapping("/{id}")
-    @PreAuthorize("hasAuthority('student:update')")
+    @CasbinAccess(resource = "student:info", action = "edit")
     public Result<Void> updateStudent(
             @Parameter(description = "学生ID") @PathVariable Long id,
             @Valid @RequestBody UpdateStudentRequest request) {
@@ -128,7 +128,7 @@ public class StudentController {
 
     @Operation(summary = "删除学生")
     @DeleteMapping("/{id}")
-    @PreAuthorize("hasAuthority('student:delete')")
+    @CasbinAccess(resource = "student:info", action = "delete")
     public Result<Void> deleteStudent(
             @Parameter(description = "学生ID") @PathVariable Long id) {
         studentService.deleteStudent(id);
@@ -137,7 +137,7 @@ public class StudentController {
 
     @Operation(summary = "批量删除学生")
     @DeleteMapping("/batch")
-    @PreAuthorize("hasAuthority('student:delete')")
+    @CasbinAccess(resource = "student:info", action = "delete")
     public Result<Void> deleteStudents(@RequestBody List<Long> ids) {
         studentService.deleteStudents(ids);
         return Result.success();
@@ -147,7 +147,7 @@ public class StudentController {
 
     @Operation(summary = "更新学生状态")
     @PatchMapping("/{id}/status")
-    @PreAuthorize("hasAuthority('student:update')")
+    @CasbinAccess(resource = "student:info", action = "edit")
     public Result<Void> updateStatus(
             @Parameter(description = "学生ID") @PathVariable Long id,
             @Parameter(description = "状态") @RequestParam Integer status,
@@ -163,7 +163,7 @@ public class StudentController {
 
     @Operation(summary = "学生休学")
     @PostMapping("/{id}/suspend")
-    @PreAuthorize("hasAuthority('student:update')")
+    @CasbinAccess(resource = "student:info", action = "edit")
     public Result<Void> suspendStudent(
             @Parameter(description = "学生ID") @PathVariable Long id,
             @Parameter(description = "原因") @RequestParam(required = false) String reason) {
@@ -173,7 +173,7 @@ public class StudentController {
 
     @Operation(summary = "学生复学")
     @PostMapping("/{id}/resume")
-    @PreAuthorize("hasAuthority('student:update')")
+    @CasbinAccess(resource = "student:info", action = "edit")
     public Result<Void> resumeStudent(
             @Parameter(description = "学生ID") @PathVariable Long id,
             @Parameter(description = "原因") @RequestParam(required = false) String reason) {
@@ -183,7 +183,7 @@ public class StudentController {
 
     @Operation(summary = "学生毕业")
     @PostMapping("/{id}/graduate")
-    @PreAuthorize("hasAuthority('student:update')")
+    @CasbinAccess(resource = "student:info", action = "edit")
     public Result<Void> graduateStudent(
             @Parameter(description = "学生ID") @PathVariable Long id) {
         studentService.graduate(id);
@@ -192,7 +192,7 @@ public class StudentController {
 
     @Operation(summary = "学生退学")
     @PostMapping("/{id}/withdraw")
-    @PreAuthorize("hasAuthority('student:update')")
+    @CasbinAccess(resource = "student:info", action = "edit")
     public Result<Void> withdrawStudent(
             @Parameter(description = "学生ID") @PathVariable Long id,
             @Parameter(description = "原因") @RequestParam(required = false) String reason) {
@@ -204,7 +204,7 @@ public class StudentController {
 
     @Operation(summary = "学生转班")
     @PatchMapping("/{id}/transfer")
-    @PreAuthorize("hasAuthority('student:update')")
+    @CasbinAccess(resource = "student:info", action = "edit")
     public Result<Void> transferClass(
             @Parameter(description = "学生ID") @PathVariable Long id,
             @Parameter(description = "新班级ID") @RequestParam Long newClassId) {
@@ -218,7 +218,7 @@ public class StudentController {
 
     @Operation(summary = "分配宿舍")
     @PatchMapping("/{id}/dormitory")
-    @PreAuthorize("hasAuthority('student:update')")
+    @CasbinAccess(resource = "student:info", action = "edit")
     public Result<Void> assignDormitory(
             @Parameter(description = "学生ID") @PathVariable Long id,
             @Parameter(description = "宿舍ID") @RequestParam Long dormitoryId,
@@ -234,7 +234,7 @@ public class StudentController {
 
     @Operation(summary = "移除宿舍")
     @DeleteMapping("/{id}/dormitory")
-    @PreAuthorize("hasAuthority('student:update')")
+    @CasbinAccess(resource = "student:info", action = "edit")
     public Result<Void> removeDormitory(
             @Parameter(description = "学生ID") @PathVariable Long id) {
         studentService.removeDormitory(id);
@@ -245,7 +245,7 @@ public class StudentController {
 
     @Operation(summary = "根据班级获取学生列表")
     @GetMapping("/by-class/{classId}")
-    @PreAuthorize("hasAuthority('student:info:view')")
+    @CasbinAccess(resource = "student:info", action = "view")
     public Result<List<StudentDTO>> getStudentsByClass(
             @Parameter(description = "班级ID") @PathVariable Long classId) {
         List<StudentDTO> result = studentService.findByClassId(classId);
@@ -254,7 +254,7 @@ public class StudentController {
 
     @Operation(summary = "根据宿舍获取学生列表")
     @GetMapping("/by-dormitory/{dormitoryId}")
-    @PreAuthorize("hasAuthority('student:info:view')")
+    @CasbinAccess(resource = "student:info", action = "view")
     public Result<List<StudentDTO>> getStudentsByDormitory(
             @Parameter(description = "宿舍ID") @PathVariable Long dormitoryId) {
         List<StudentDTO> result = studentService.findByDormitoryId(dormitoryId);
@@ -263,7 +263,7 @@ public class StudentController {
 
     @Operation(summary = "检查学号是否存在")
     @GetMapping("/exists")
-    @PreAuthorize("hasAuthority('student:info:view')")
+    @CasbinAccess(resource = "student:info", action = "view")
     public Result<Boolean> existsStudentNo(
             @Parameter(description = "学号") @RequestParam String studentNo,
             @Parameter(description = "排除ID") @RequestParam(required = false) Long excludeId) {
@@ -273,7 +273,7 @@ public class StudentController {
 
     @Operation(summary = "统计班级学生数量")
     @GetMapping("/count/by-class")
-    @PreAuthorize("hasAuthority('student:info:view')")
+    @CasbinAccess(resource = "student:info", action = "view")
     public Result<Long> countByClass(
             @Parameter(description = "班级ID") @RequestParam Long classId) {
         long count = studentService.countByClassId(classId);
@@ -282,7 +282,7 @@ public class StudentController {
 
     @Operation(summary = "统计班级在读学生数量")
     @GetMapping("/count/active-by-class")
-    @PreAuthorize("hasAuthority('student:info:view')")
+    @CasbinAccess(resource = "student:info", action = "view")
     public Result<Long> countActiveByClass(
             @Parameter(description = "班级ID") @RequestParam Long classId) {
         long count = studentService.countActiveByClassId(classId);

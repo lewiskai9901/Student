@@ -100,7 +100,7 @@ export function getBindings(): Promise<ClassDormitoryBinding[]> {
 /**
  * 按班级获取绑定关系
  */
-export function getBindingsByClass(classId: number): Promise<ClassDormitoryBinding[]> {
+export function getBindingsByClass(classId: number | string): Promise<ClassDormitoryBinding[]> {
   return http.get<ClassDormitoryBinding[]>(`${BASE_URL}/bindings/by-class/${classId}`)
 }
 
@@ -121,7 +121,7 @@ export function batchAssignDormitoriesToClass(data: BatchAssignRequest): Promise
 /**
  * 取消宿舍-班级绑定
  */
-export function unassignDormitoryFromClass(dormitoryId: number, classId: number): Promise<void> {
+export function unassignDormitoryFromClass(dormitoryId: number | string, classId: number | string): Promise<void> {
   return http.delete(`${BASE_URL}/unassign`, { params: { dormitoryId, classId } })
 }
 

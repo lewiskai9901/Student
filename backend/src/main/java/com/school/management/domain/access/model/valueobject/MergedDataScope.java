@@ -1,6 +1,5 @@
 package com.school.management.domain.access.model.valueobject;
 
-import com.school.management.domain.access.model.DataModule;
 import com.school.management.domain.access.model.DataScope;
 import com.school.management.domain.access.model.entity.DataScopeItem;
 import com.school.management.domain.access.model.entity.RoleDataPermission;
@@ -134,13 +133,6 @@ public class MergedDataScope {
                 .sourceRoleIds(roleIds)
                 .hasSelfScope(hasSelf)
                 .build();
-    }
-
-    /**
-     * 获取模块枚举
-     */
-    public DataModule getModule() {
-        return DataModule.fromCode(moduleCode);
     }
 
     /**

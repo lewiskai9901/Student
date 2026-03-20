@@ -1,4 +1,4 @@
-package com.school.management.application.space.query;
+package com.school.management.application.place.query;
 
 import lombok.Data;
 
@@ -8,7 +8,7 @@ import java.util.List;
  * 场所统计DTO
  */
 @Data
-public class SpaceStatisticsDTO {
+public class PlaceStatisticsDTO {
 
     private int totalBuildings;
     private int totalRooms;

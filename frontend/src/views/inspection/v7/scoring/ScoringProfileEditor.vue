@@ -6,8 +6,8 @@
         <button class="sp-ic" @click="goBack">
           <ArrowLeft class="w-4 h-4" />
         </button>
-        <h1 class="text-base font-semibold" style="color:#1e2a3a;">评分配置</h1>
-        <span v-if="profile" style="font-size:12px; color:#8c95a3;">模板 #{{ profile.templateId }}</span>
+        <h1 class="text-base font-semibold" style="color:#1e2a3a;">汇总规则</h1>
+        <span v-if="profile" style="font-size:12px; color:#8c95a3;">分区 #{{ profile.sectionId }}</span>
       </div>
       <div class="flex items-center gap-2">
         <button
@@ -25,11 +25,11 @@
       <div style="color:#8c95a3; font-size:13px;">加载中...</div>
     </div>
 
-    <!-- No profile yet -->
+    <!-- No profile yet (fallback, normally auto-created) -->
     <div v-else-if="!profile" class="flex-1 flex items-center justify-center">
       <div class="text-center">
-        <div style="color:#8c95a3; font-size:13px; margin-bottom:12px;">该模板尚未配置评分引擎</div>
-        <button class="sp-btn-primary" @click="initProfile">创建评分配置</button>
+        <div style="color:#8c95a3; font-size:13px; margin-bottom:12px;">初始化配置失败</div>
+        <button class="sp-btn-primary" @click="initProfile">重试</button>
       </div>
     </div>
 
@@ -63,9 +63,6 @@
           <DimensionTable
             :dimensions="store.dimensions"
             :template-id="templateId"
-            @create="handleCreateDimension"
-            @update="handleUpdateDimension"
-            @delete="handleDeleteDimension"
           />
         </div>
 
@@ -137,7 +134,7 @@
           :dimensions="store.dimensions"
           :grade-bands="store.gradeBands"
           :rules="store.rules"
-          :template-id="profile.templateId"
+          :template-id="profile.sectionId"
         />
       </div>
     </div>
@@ -151,8 +148,6 @@ import { ArrowLeft, ShieldCheck, CheckCircle2, AlertTriangle, XCircle } from 'lu
 import { useInspScoringStore } from '@/stores/insp/inspScoringStore'
 import type {
   ScoringProfile,
-  CreateDimensionRequest,
-  UpdateDimensionRequest,
   CreateGradeBandRequest,
   UpdateGradeBandRequest,
   CreateRuleRequest,
@@ -197,7 +192,7 @@ const healthChecks = computed<HealthCheck[]>(() => {
   const dimCount = store.dimensions.length
   checks.push({
     key: 'dims',
-    label: dimCount > 0 ? `${dimCount} 个分区` : '未配置分区权重',
+    label: dimCount > 0 ? `${dimCount} 个子项` : '未配置子项权重',
     status: dimCount > 0 ? 'ok' : 'error',
   })
 
@@ -206,7 +201,7 @@ const healthChecks = computed<HealthCheck[]>(() => {
     const totalWeight = store.dimensions.reduce((s, d) => s + d.weight, 0)
     checks.push({
       key: 'weight',
-      label: totalWeight === 100 ? '分区权重合计 100%' : `分区权重合计 ${totalWeight}%`,
+      label: totalWeight === 100 ? '子项权重合计 100%' : `子项权重合计 ${totalWeight}%`,
       status: totalWeight === 100 ? 'ok' : 'error',
     })
   }
@@ -264,11 +259,15 @@ onMounted(async () => {
       profile.value = store.currentProfile
     } else if (tid) {
       templateId.value = tid
-      const p = await store.loadProfileByTemplate(tid)
+      let p = await store.loadProfileBySection(tid)
+      if (!p) {
+        // 自动创建默认配置，无需手动点击
+        p = await store.createProfile(tid)
+      }
       if (p) {
         profile.value = p
         await Promise.all([
-          store.loadDimensions(p.id),
+          store.syncDimensions(p.id),
           store.loadGradeBands(p.id),
           store.loadRules(p.id),
         ])
@@ -313,20 +312,6 @@ async function saveProfile() {
     precisionDigits: profileForm.precisionDigits,
   })
   dirty.value = false
-}
-
-// Dimension handlers
-async function handleCreateDimension(data: CreateDimensionRequest) {
-  if (!profile.value) return
-  await store.createDimension(profile.value.id, data)
-}
-async function handleUpdateDimension(id: number, data: UpdateDimensionRequest) {
-  if (!profile.value) return
-  await store.updateDimension(profile.value.id, id, data)
-}
-async function handleDeleteDimension(id: number) {
-  if (!profile.value) return
-  await store.deleteDimension(profile.value.id, id)
 }
 
 // GradeBand handlers

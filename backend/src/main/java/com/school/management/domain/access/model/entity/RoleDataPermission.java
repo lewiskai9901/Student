@@ -1,6 +1,5 @@
 package com.school.management.domain.access.model.entity;
 
-import com.school.management.domain.access.model.DataModule;
 import com.school.management.domain.access.model.DataScope;
 import com.school.management.domain.shared.Entity;
 import lombok.AllArgsConstructor;
@@ -52,13 +51,6 @@ public class RoleDataPermission implements Entity<Long> {
 
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
-
-    /**
-     * 获取数据模块枚举
-     */
-    public DataModule getModule() {
-        return DataModule.fromCode(moduleCode);
-    }
 
     /**
      * 获取数据范围枚举

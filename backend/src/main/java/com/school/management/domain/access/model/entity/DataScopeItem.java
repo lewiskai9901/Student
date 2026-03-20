@@ -1,6 +1,5 @@
 package com.school.management.domain.access.model.entity;
 
-import com.school.management.domain.access.model.ScopeItemType;
 import com.school.management.domain.shared.Entity;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -50,31 +49,24 @@ public class DataScopeItem implements Entity<Long> {
     private LocalDateTime createdAt;
 
     /**
-     * 获取范围项类型枚举
-     */
-    public ScopeItemType getItemType() {
-        return ScopeItemType.fromCode(itemTypeCode);
-    }
-
-    /**
      * 判断是否为部门类型
      */
     public boolean isOrgUnitType() {
-        return ScopeItemType.ORG_UNIT.getCode().equals(itemTypeCode);
+        return "ORG_UNIT".equals(itemTypeCode);
     }
 
     /**
      * 判断是否为班级类型
      */
     public boolean isClassType() {
-        return ScopeItemType.CLASS.getCode().equals(itemTypeCode);
+        return "CLASS".equals(itemTypeCode);
     }
 
     /**
      * 判断是否为年级类型
      */
     public boolean isGradeType() {
-        return ScopeItemType.GRADE.getCode().equals(itemTypeCode);
+        return "GRADE".equals(itemTypeCode);
     }
 
     /**
@@ -82,7 +74,7 @@ public class DataScopeItem implements Entity<Long> {
      */
     public static DataScopeItem createOrgUnit(Long orgUnitId, String orgUnitName, boolean includeChildren) {
         return DataScopeItem.builder()
-                .itemTypeCode(ScopeItemType.ORG_UNIT.getCode())
+                .itemTypeCode("ORG_UNIT")
                 .scopeId(orgUnitId)
                 .scopeName(orgUnitName)
                 .includeChildren(includeChildren)
@@ -94,7 +86,7 @@ public class DataScopeItem implements Entity<Long> {
      */
     public static DataScopeItem createClass(Long classId, String className) {
         return DataScopeItem.builder()
-                .itemTypeCode(ScopeItemType.CLASS.getCode())
+                .itemTypeCode("CLASS")
                 .scopeId(classId)
                 .scopeName(className)
                 .includeChildren(false)
@@ -106,7 +98,7 @@ public class DataScopeItem implements Entity<Long> {
      */
     public static DataScopeItem createGrade(Long gradeId, String gradeName) {
         return DataScopeItem.builder()
-                .itemTypeCode(ScopeItemType.GRADE.getCode())
+                .itemTypeCode("GRADE")
                 .scopeId(gradeId)
                 .scopeName(gradeName)
                 .includeChildren(false)
@@ -118,7 +110,7 @@ public class DataScopeItem implements Entity<Long> {
      */
     public static DataScopeItem createBuilding(Long buildingId, String buildingName) {
         return DataScopeItem.builder()
-                .itemTypeCode(ScopeItemType.BUILDING.getCode())
+                .itemTypeCode("BUILDING")
                 .scopeId(buildingId)
                 .scopeName(buildingName)
                 .includeChildren(false)

@@ -1,4 +1,4 @@
-package com.school.management.application.space.query;
+package com.school.management.application.place.query;
 
 import lombok.Data;
 
@@ -9,11 +9,11 @@ import java.time.LocalDateTime;
  * 场所占用者DTO
  */
 @Data
-public class SpaceOccupantDTO {
+public class PlaceOccupantDTO {
 
     private Long id;
-    private Long spaceId;
-    private String spaceName;
+    private Long placeId;
+    private String placeName;
     private String occupantType;
     private Long occupantId;
     private String occupantName;

@@ -36,6 +36,9 @@ public class InspTaskPO {
     private String collaborationMode;
     private LocalDateTime executionStartedAt;
     private LocalDateTime executionEndedAt;
+    private String assignedSectionIds;    // JSON: assigned section IDs
+    private String assignedTargetIds;     // JSON: assigned target IDs
+    private Long inspectionPlanId;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 

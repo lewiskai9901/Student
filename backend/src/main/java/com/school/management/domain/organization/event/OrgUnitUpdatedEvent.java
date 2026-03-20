@@ -10,14 +10,12 @@ public class OrgUnitUpdatedEvent extends BaseDomainEvent {
 
     private final Long orgUnitId;
     private final String unitName;
-    private final Long leaderId;
     private final Long updatedBy;
 
     public OrgUnitUpdatedEvent(OrgUnit orgUnit) {
         super("OrgUnit", String.valueOf(orgUnit.getId()));
         this.orgUnitId = orgUnit.getId();
         this.unitName = orgUnit.getUnitName();
-        this.leaderId = orgUnit.getLeaderId();
         this.updatedBy = orgUnit.getUpdatedBy();
     }
 
@@ -27,10 +25,6 @@ public class OrgUnitUpdatedEvent extends BaseDomainEvent {
 
     public String getUnitName() {
         return unitName;
-    }
-
-    public Long getLeaderId() {
-        return leaderId;
     }
 
     public Long getUpdatedBy() {

@@ -1,14 +1,16 @@
 package com.school.management.interfaces.rest.access;
 
-import jakarta.validation.constraints.NotNull;
 import lombok.Data;
 
 /**
- * Request DTO for assigning a role to a user with organization scope.
+ * Request DTO for assigning a role to a user with scope.
  */
 @Data
 public class AssignRoleWithScopeRequest {
 
-    @NotNull(message = "Organization unit ID is required")
-    private Long orgUnitId;
+    /** Scope type: ALL or ORG_UNIT. Defaults to ALL if not provided. */
+    private String scopeType;
+
+    /** Scope ID: 0 for ALL, orgUnitId for ORG_UNIT. */
+    private Long scopeId;
 }

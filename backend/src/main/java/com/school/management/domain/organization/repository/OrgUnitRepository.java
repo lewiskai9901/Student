@@ -1,8 +1,6 @@
 package com.school.management.domain.organization.repository;
 
 import com.school.management.domain.organization.model.OrgUnit;
-import com.school.management.domain.organization.model.OrgUnitType;
-import com.school.management.domain.organization.model.UnitCategory;
 import com.school.management.domain.shared.Repository;
 
 import java.util.List;
@@ -28,15 +26,7 @@ public interface OrgUnitRepository extends Repository<OrgUnit, Long> {
      * @param unitType the type to filter by
      * @return list of matching org units
      */
-    List<OrgUnit> findByUnitType(OrgUnitType unitType);
-
-    /**
-     * Finds all organization units by category.
-     *
-     * @param unitCategory the category to filter by (ACADEMIC, FUNCTIONAL, ADMINISTRATIVE)
-     * @return list of matching org units
-     */
-    List<OrgUnit> findByUnitCategory(UnitCategory unitCategory);
+    List<OrgUnit> findByUnitType(String unitType);
 
     /**
      * Finds all children of a parent organization unit.
@@ -76,14 +66,6 @@ public interface OrgUnitRepository extends Repository<OrgUnit, Long> {
      * @return true if exists, false otherwise
      */
     boolean existsByUnitCode(String unitCode);
-
-    /**
-     * Finds organization units led by a specific user.
-     *
-     * @param leaderId the leader ID
-     * @return list of org units led by this user
-     */
-    List<OrgUnit> findByLeaderId(Long leaderId);
 
     /**
      * Counts children of a parent organization unit.

@@ -33,7 +33,7 @@ export const v6InspectionApi = {
   /**
    * 获取模板详情
    */
-  getTemplate(id: number): Promise<any> {
+  getTemplate(id: number | string): Promise<any> {
     return request.get(`${TEMPLATE_URL}/${id}`)
   },
 
@@ -47,21 +47,28 @@ export const v6InspectionApi = {
   /**
    * 更新模板
    */
-  updateTemplate(id: number, data: any): Promise<any> {
+  updateTemplate(id: number | string, data: any): Promise<any> {
     return request.put(`${TEMPLATE_URL}/${id}`, data)
+  },
+
+  /**
+   * 删除模板
+   */
+  deleteTemplate(id: number | string): Promise<any> {
+    return request.delete(`${TEMPLATE_URL}/${id}`)
   },
 
   /**
    * 发布模板
    */
-  publishTemplate(id: number): Promise<any> {
+  publishTemplate(id: number | string): Promise<any> {
     return request.put(`${TEMPLATE_URL}/${id}/publish`)
   },
 
   /**
    * 获取模板的所有类别
    */
-  getCategories(templateId: number): Promise<any> {
+  getCategories(templateId: number | string): Promise<any> {
     return request.get(`${TEMPLATE_ITEM_URL}/templates/${templateId}/categories`)
   },
 
@@ -75,21 +82,21 @@ export const v6InspectionApi = {
   /**
    * 更新类别
    */
-  updateCategory(categoryId: number, data: any): Promise<any> {
+  updateCategory(categoryId: number | string, data: any): Promise<any> {
     return request.put(`${TEMPLATE_ITEM_URL}/categories/${categoryId}`, data)
   },
 
   /**
    * 删除类别
    */
-  deleteCategory(categoryId: number): Promise<any> {
+  deleteCategory(categoryId: number | string): Promise<any> {
     return request.delete(`${TEMPLATE_ITEM_URL}/categories/${categoryId}`)
   },
 
   /**
    * 获取类别下的检查项
    */
-  getItems(categoryId: number): Promise<any> {
+  getItems(categoryId: number | string): Promise<any> {
     return request.get(`${TEMPLATE_ITEM_URL}/categories/${categoryId}/items`)
   },
 
@@ -103,14 +110,14 @@ export const v6InspectionApi = {
   /**
    * 更新检查项
    */
-  updateItem(itemId: number, data: any): Promise<any> {
+  updateItem(itemId: number | string, data: any): Promise<any> {
     return request.put(`${TEMPLATE_ITEM_URL}/items/${itemId}`, data)
   },
 
   /**
    * 删除检查项
    */
-  deleteItem(itemId: number): Promise<any> {
+  deleteItem(itemId: number | string): Promise<any> {
     return request.delete(`${TEMPLATE_ITEM_URL}/items/${itemId}`)
   }
 }
@@ -128,49 +135,49 @@ export const v6ProjectApi = {
   /**
    * 更新项目配置
    */
-  updateConfig(id: number, data: UpdateProjectConfigRequest): Promise<InspectionProject> {
+  updateConfig(id: number | string, data: UpdateProjectConfigRequest): Promise<InspectionProject> {
     return request.put(`${BASE_URL}/${id}/config`, data)
   },
 
   /**
    * 发布项目
    */
-  publish(id: number, data?: PublishProjectRequest): Promise<InspectionProject> {
+  publish(id: number | string, data?: PublishProjectRequest): Promise<InspectionProject> {
     return request.post(`${BASE_URL}/${id}/publish`, data || {})
   },
 
   /**
    * 暂停项目
    */
-  pause(id: number): Promise<InspectionProject> {
+  pause(id: number | string): Promise<InspectionProject> {
     return request.post(`${BASE_URL}/${id}/pause`)
   },
 
   /**
    * 恢复项目
    */
-  resume(id: number): Promise<InspectionProject> {
+  resume(id: number | string): Promise<InspectionProject> {
     return request.post(`${BASE_URL}/${id}/resume`)
   },
 
   /**
    * 完成项目
    */
-  complete(id: number): Promise<InspectionProject> {
+  complete(id: number | string): Promise<InspectionProject> {
     return request.post(`${BASE_URL}/${id}/complete`)
   },
 
   /**
    * 归档项目
    */
-  archive(id: number): Promise<InspectionProject> {
+  archive(id: number | string): Promise<InspectionProject> {
     return request.post(`${BASE_URL}/${id}/archive`)
   },
 
   /**
    * 获取项目详情
    */
-  getById(id: number): Promise<InspectionProject> {
+  getById(id: number | string): Promise<InspectionProject> {
     return request.get(`${BASE_URL}/${id}`)
   },
 
@@ -184,7 +191,7 @@ export const v6ProjectApi = {
   /**
    * 删除项目
    */
-  delete(id: number): Promise<void> {
+  delete(id: number | string): Promise<void> {
     return request.delete(`${BASE_URL}/${id}`)
   },
 
@@ -202,7 +209,7 @@ export const v6TaskApi = {
   /**
    * 手动生成任务
    */
-  generate(projectId: number, date: string): Promise<InspectionTask[]> {
+  generate(projectId: number | string, date: string): Promise<InspectionTask[]> {
     return request.post(`${TASK_URL}/generate`, null, {
       params: { projectId, date }
     })
@@ -211,7 +218,7 @@ export const v6TaskApi = {
   /**
    * 批量生成任务
    */
-  generateBatch(projectId: number, startDate: string, endDate: string): Promise<InspectionTask[]> {
+  generateBatch(projectId: number | string, startDate: string, endDate: string): Promise<InspectionTask[]> {
     return request.post(`${TASK_URL}/generate-batch`, null, {
       params: { projectId, startDate, endDate }
     })
@@ -220,7 +227,7 @@ export const v6TaskApi = {
   /**
    * 获取任务详情
    */
-  getById(id: number): Promise<InspectionTask> {
+  getById(id: number | string): Promise<InspectionTask> {
     return request.get(`${TASK_URL}/${id}`)
   },
 
@@ -248,91 +255,91 @@ export const v6TaskApi = {
   /**
    * 领取任务
    */
-  claim(id: number): Promise<InspectionTask> {
+  claim(id: number | string): Promise<InspectionTask> {
     return request.post(`${TASK_URL}/${id}/claim`)
   },
 
   /**
    * 开始任务
    */
-  start(id: number): Promise<InspectionTask> {
+  start(id: number | string): Promise<InspectionTask> {
     return request.post(`${TASK_URL}/${id}/start`)
   },
 
   /**
    * 提交任务
    */
-  submit(id: number): Promise<InspectionTask> {
+  submit(id: number | string): Promise<InspectionTask> {
     return request.post(`${TASK_URL}/${id}/submit`)
   },
 
   /**
    * 审核任务
    */
-  review(id: number): Promise<InspectionTask> {
+  review(id: number | string): Promise<InspectionTask> {
     return request.post(`${TASK_URL}/${id}/review`)
   },
 
   /**
    * 发布任务
    */
-  publish(id: number): Promise<InspectionTask> {
+  publish(id: number | string): Promise<InspectionTask> {
     return request.post(`${TASK_URL}/${id}/publish`)
   },
 
   /**
    * 取消任务
    */
-  cancel(id: number): Promise<InspectionTask> {
+  cancel(id: number | string): Promise<InspectionTask> {
     return request.post(`${TASK_URL}/${id}/cancel`)
   },
 
   /**
    * 获取任务的检查目标
    */
-  getTargets(taskId: number): Promise<InspectionTarget[]> {
+  getTargets(taskId: number | string): Promise<InspectionTarget[]> {
     return request.get(`${TASK_URL}/${taskId}/targets`)
   },
 
   /**
    * 锁定目标
    */
-  lockTarget(targetId: number): Promise<InspectionTarget> {
+  lockTarget(targetId: number | string): Promise<InspectionTarget> {
     return request.post(`${TASK_URL}/targets/${targetId}/lock`)
   },
 
   /**
    * 解锁目标
    */
-  unlockTarget(targetId: number): Promise<InspectionTarget> {
+  unlockTarget(targetId: number | string): Promise<InspectionTarget> {
     return request.post(`${TASK_URL}/targets/${targetId}/unlock`)
   },
 
   /**
    * 完成目标检查
    */
-  completeTarget(targetId: number): Promise<InspectionTarget> {
+  completeTarget(targetId: number | string): Promise<InspectionTarget> {
     return request.post(`${TASK_URL}/targets/${targetId}/complete`)
   },
 
   /**
    * 跳过目标
    */
-  skipTarget(targetId: number, reason: string): Promise<InspectionTarget> {
+  skipTarget(targetId: number | string, reason: string): Promise<InspectionTarget> {
     return request.post(`${TASK_URL}/targets/${targetId}/skip`, { reason })
   },
 
   /**
    * 添加扣分
    */
-  addDeduction(targetId: number, deduction: number): Promise<void> {
+  addDeduction(targetId: number | string, deduction: number): Promise<void> {
     return request.post(`${TASK_URL}/targets/${targetId}/deductions`, { deduction })
   },
 
   /**
    * 添加加分
    */
-  addBonus(targetId: number, bonus: number): Promise<void> {
+  addBonus(targetId: number | string, bonus: number): Promise<void> {
     return request.post(`${TASK_URL}/targets/${targetId}/bonuses`, { bonus })
   }
 }
@@ -345,70 +352,70 @@ export const v6AssignmentApi = {
   /**
    * 获取项目检查员配置
    */
-  getProjectInspectors(projectId: number): Promise<any[]> {
+  getProjectInspectors(projectId: number | string): Promise<any[]> {
     return request.get(`${ASSIGNMENT_URL}/projects/${projectId}/inspectors`)
   },
 
   /**
    * 添加项目检查员
    */
-  addProjectInspector(projectId: number, data: any): Promise<any> {
+  addProjectInspector(projectId: number | string, data: any): Promise<any> {
     return request.post(`${ASSIGNMENT_URL}/projects/${projectId}/inspectors`, data)
   },
 
   /**
    * 批量添加项目检查员
    */
-  addProjectInspectors(projectId: number, inspectors: any[]): Promise<void> {
+  addProjectInspectors(projectId: number | string, inspectors: any[]): Promise<void> {
     return request.post(`${ASSIGNMENT_URL}/projects/${projectId}/inspectors/batch`, inspectors)
   },
 
   /**
    * 移除项目检查员
    */
-  removeProjectInspector(projectId: number, inspectorId: number): Promise<void> {
+  removeProjectInspector(projectId: number | string, inspectorId: number | string): Promise<void> {
     return request.delete(`${ASSIGNMENT_URL}/projects/${projectId}/inspectors/${inspectorId}`)
   },
 
   /**
    * 获取任务检查员分配
    */
-  getTaskAssignments(taskId: number): Promise<any[]> {
+  getTaskAssignments(taskId: number | string): Promise<any[]> {
     return request.get(`${ASSIGNMENT_URL}/tasks/${taskId}/inspectors`)
   },
 
   /**
    * 分配检查员到任务
    */
-  assignInspector(taskId: number, data: any): Promise<any> {
+  assignInspector(taskId: number | string, data: any): Promise<any> {
     return request.post(`${ASSIGNMENT_URL}/tasks/${taskId}/inspectors`, data)
   },
 
   /**
    * 批量分配检查员
    */
-  assignInspectors(taskId: number, assignments: any[]): Promise<void> {
+  assignInspectors(taskId: number | string, assignments: any[]): Promise<void> {
     return request.post(`${ASSIGNMENT_URL}/tasks/${taskId}/inspectors/batch`, assignments)
   },
 
   /**
    * 接受任务分配
    */
-  acceptAssignment(assignmentId: number): Promise<void> {
+  acceptAssignment(assignmentId: number | string): Promise<void> {
     return request.post(`${ASSIGNMENT_URL}/assignments/${assignmentId}/accept`)
   },
 
   /**
    * 拒绝任务分配
    */
-  declineAssignment(assignmentId: number): Promise<void> {
+  declineAssignment(assignmentId: number | string): Promise<void> {
     return request.post(`${ASSIGNMENT_URL}/assignments/${assignmentId}/decline`)
   },
 
   /**
    * 自动分配检查员
    */
-  autoAssign(taskId: number, projectId: number): Promise<void> {
+  autoAssign(taskId: number | string, projectId: number | string): Promise<void> {
     return request.post(`${ASSIGNMENT_URL}/tasks/${taskId}/auto-assign`, null, {
       params: { projectId }
     })
@@ -420,13 +427,13 @@ export const v6AssignmentApi = {
 const SUMMARY_URL = '/v6/inspection-summaries'
 
 export interface SummaryQueryParams {
-  projectId: number
+  projectId: number | string
   startDate: string
   endDate: string
 }
 
 export interface TrendQueryParams extends SummaryQueryParams {
-  targetId: number
+  targetId: number | string
   targetType: string
 }
 
@@ -434,7 +441,7 @@ export const v6SummaryApi = {
   /**
    * 手动生成日汇总
    */
-  generateDaily(projectId: number, date: string): Promise<void> {
+  generateDaily(projectId: number | string, date: string): Promise<void> {
     return request.post(`${SUMMARY_URL}/projects/${projectId}/daily`, null, {
       params: { date }
     })
@@ -443,7 +450,7 @@ export const v6SummaryApi = {
   /**
    * 手动生成周汇总
    */
-  generateWeekly(projectId: number, year: number, weekNumber: number): Promise<void> {
+  generateWeekly(projectId: number | string, year: number, weekNumber: number): Promise<void> {
     return request.post(`${SUMMARY_URL}/projects/${projectId}/weekly`, null, {
       params: { year, weekNumber }
     })
@@ -452,7 +459,7 @@ export const v6SummaryApi = {
   /**
    * 手动生成月汇总
    */
-  generateMonthly(projectId: number, year: number, month: number): Promise<void> {
+  generateMonthly(projectId: number | string, year: number, month: number): Promise<void> {
     return request.post(`${SUMMARY_URL}/projects/${projectId}/monthly`, null, {
       params: { year, month }
     })
@@ -461,7 +468,7 @@ export const v6SummaryApi = {
   /**
    * 获取日排名
    */
-  getDailyRanking(projectId: number, date: string, targetType?: string): Promise<any[]> {
+  getDailyRanking(projectId: number | string, date: string, targetType?: string): Promise<any[]> {
     return request.get(`${SUMMARY_URL}/projects/${projectId}/daily-ranking`, {
       params: { date, targetType }
     })
@@ -511,11 +518,11 @@ export const v6SummaryApi = {
 const EXECUTION_URL = '/v6/inspection-execution'
 
 export interface AddDeductionRequest {
-  targetId: number
-  categoryId?: number
+  targetId: number | string
+  categoryId?: number | string
   categoryCode?: string
   categoryName?: string
-  itemId?: number
+  itemId?: number | string
   itemCode?: string
   itemName: string
   score: number
@@ -524,8 +531,8 @@ export interface AddDeductionRequest {
 }
 
 export interface AddDeductionWithIndividualRequest extends AddDeductionRequest {
-  individualType: string  // 'USER' | 'SPACE'
-  individualId: number
+  individualType: string  // 'USER' | 'PLACE'
+  individualId: number | string
   individualName: string
 }
 
@@ -607,77 +614,77 @@ export const v6ExecutionApi = {
   /**
    * 更新明细
    */
-  updateDetail(detailId: number, data: { score: number; quantity?: number; remark?: string }): Promise<InspectionDetail> {
+  updateDetail(detailId: number | string, data: { score: number; quantity?: number; remark?: string }): Promise<InspectionDetail> {
     return request.put(`${EXECUTION_URL}/details/${detailId}`, data)
   },
 
   /**
    * 删除明细
    */
-  deleteDetail(detailId: number): Promise<void> {
+  deleteDetail(detailId: number | string): Promise<void> {
     return request.delete(`${EXECUTION_URL}/details/${detailId}`)
   },
 
   /**
    * 获取目标的明细列表
    */
-  getDetailsByTarget(targetId: number): Promise<InspectionDetail[]> {
+  getDetailsByTarget(targetId: number | string): Promise<InspectionDetail[]> {
     return request.get(`${EXECUTION_URL}/targets/${targetId}/details`)
   },
 
   /**
    * 获取目标某类别的明细
    */
-  getDetailsByTargetAndCategory(targetId: number, categoryId: number): Promise<InspectionDetail[]> {
+  getDetailsByTargetAndCategory(targetId: number | string, categoryId: number | string): Promise<InspectionDetail[]> {
     return request.get(`${EXECUTION_URL}/targets/${targetId}/categories/${categoryId}/details`)
   },
 
   /**
    * 获取个体的明细列表
    */
-  getDetailsByIndividual(individualType: string, individualId: number): Promise<InspectionDetail[]> {
+  getDetailsByIndividual(individualType: string, individualId: number | string): Promise<InspectionDetail[]> {
     return request.get(`${EXECUTION_URL}/individuals/${individualType}/${individualId}/details`)
   },
 
   /**
    * 获取明细详情
    */
-  getDetail(detailId: number): Promise<InspectionDetail> {
+  getDetail(detailId: number | string): Promise<InspectionDetail> {
     return request.get(`${EXECUTION_URL}/details/${detailId}`)
   },
 
   /**
    * 添加明细证据
    */
-  addEvidenceForDetail(detailId: number, data: AddEvidenceRequest): Promise<InspectionEvidence> {
+  addEvidenceForDetail(detailId: number | string, data: AddEvidenceRequest): Promise<InspectionEvidence> {
     return request.post(`${EXECUTION_URL}/details/${detailId}/evidences`, data)
   },
 
   /**
    * 添加目标整体证据
    */
-  addEvidenceForTarget(targetId: number, data: AddEvidenceRequest): Promise<InspectionEvidence> {
+  addEvidenceForTarget(targetId: number | string, data: AddEvidenceRequest): Promise<InspectionEvidence> {
     return request.post(`${EXECUTION_URL}/targets/${targetId}/evidences`, data)
   },
 
   /**
    * 删除证据
    */
-  deleteEvidence(evidenceId: number): Promise<void> {
+  deleteEvidence(evidenceId: number | string): Promise<void> {
     return request.delete(`${EXECUTION_URL}/evidences/${evidenceId}`)
   },
 
   /**
    * 获取明细的证据列表
    */
-  getEvidencesByDetail(detailId: number): Promise<InspectionEvidence[]> {
+  getEvidencesByDetail(detailId: number | string): Promise<InspectionEvidence[]> {
     return request.get(`${EXECUTION_URL}/details/${detailId}/evidences`)
   },
 
   /**
    * 获取目标的整体证据列表
    */
-  getEvidencesByTarget(targetId: number): Promise<InspectionEvidence[]> {
+  getEvidencesByTarget(targetId: number | string): Promise<InspectionEvidence[]> {
     return request.get(`${EXECUTION_URL}/targets/${targetId}/evidences`)
   }
 }

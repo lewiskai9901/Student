@@ -1,11 +1,11 @@
-package com.school.management.application.space;
+package com.school.management.application.place;
 
-import com.school.management.application.space.command.CreateSpaceCategoryCommand;
-import com.school.management.application.space.command.UpdateSpaceCategoryCommand;
-import com.school.management.application.space.query.SpaceCategoryDTO;
-import com.school.management.domain.space.model.entity.SpaceCategory;
-import com.school.management.domain.space.model.valueobject.SpaceLevel;
-import com.school.management.domain.space.repository.SpaceCategoryRepository;
+import com.school.management.application.place.command.CreatePlaceCategoryCommand;
+import com.school.management.application.place.command.UpdatePlaceCategoryCommand;
+import com.school.management.application.place.query.PlaceCategoryDTO;
+import com.school.management.domain.place.model.entity.PlaceCategory;
+import com.school.management.domain.place.model.valueobject.PlaceLevel;
+import com.school.management.domain.place.repository.PlaceCategoryRepository;
 import com.school.management.exception.BusinessException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -21,31 +21,31 @@ import java.util.stream.Collectors;
 @Slf4j
 @Service
 @RequiredArgsConstructor
-public class SpaceCategoryApplicationService {
+public class PlaceCategoryApplicationService {
 
-    private final SpaceCategoryRepository categoryRepository;
+    private final PlaceCategoryRepository categoryRepository;
 
     /**
      * 创建空间分类
      */
     @Transactional
-    public SpaceCategoryDTO createCategory(CreateSpaceCategoryCommand command, Long operatorId) {
+    public PlaceCategoryDTO createCategory(CreatePlaceCategoryCommand command, Long operatorId) {
         // 验证编码唯一性
         if (categoryRepository.existsByCode(command.getCategoryCode())) {
             throw new BusinessException("分类编码已存在: " + command.getCategoryCode());
         }
 
-        SpaceLevel level = SpaceLevel.valueOf(command.getApplyToLevel());
-        SpaceCategory category;
+        PlaceLevel level = PlaceLevel.valueOf(command.getApplyToLevel());
+        PlaceCategory category;
 
-        if (level == SpaceLevel.BUILDING) {
-            category = SpaceCategory.createBuildingCategory(
+        if (level == PlaceLevel.BUILDING) {
+            category = PlaceCategory.createBuildingCategory(
                 command.getCategoryCode(),
                 command.getCategoryName(),
                 command.getDescription()
             );
         } else {
-            category = SpaceCategory.createRoomCategory(
+            category = PlaceCategory.createRoomCategory(
                 command.getCategoryCode(),
                 command.getCategoryName(),
                 command.getDescription(),
@@ -62,16 +62,16 @@ public class SpaceCategoryApplicationService {
         category.setCreatedBy(operatorId);
         category = categoryRepository.save(category);
 
-        log.info("Created space category: {} by user {}", category.getCategoryCode(), operatorId);
-        return SpaceCategoryDTO.fromDomain(category);
+        log.info("Created place category: {} by user {}", category.getCategoryCode(), operatorId);
+        return PlaceCategoryDTO.fromDomain(category);
     }
 
     /**
      * 更新空间分类
      */
     @Transactional
-    public SpaceCategoryDTO updateCategory(UpdateSpaceCategoryCommand command, Long operatorId) {
-        SpaceCategory category = categoryRepository.findById(command.getId())
+    public PlaceCategoryDTO updateCategory(UpdatePlaceCategoryCommand command, Long operatorId) {
+        PlaceCategory category = categoryRepository.findById(command.getId())
             .orElseThrow(() -> new BusinessException("分类不存在"));
 
         if (category.isSystem()) {
@@ -96,8 +96,8 @@ public class SpaceCategoryApplicationService {
 
         category = categoryRepository.save(category);
 
-        log.info("Updated space category: {} by user {}", category.getId(), operatorId);
-        return SpaceCategoryDTO.fromDomain(category);
+        log.info("Updated place category: {} by user {}", category.getId(), operatorId);
+        return PlaceCategoryDTO.fromDomain(category);
     }
 
     /**
@@ -105,14 +105,14 @@ public class SpaceCategoryApplicationService {
      */
     @Transactional
     public void enableCategory(Long id, Long operatorId) {
-        SpaceCategory category = categoryRepository.findById(id)
+        PlaceCategory category = categoryRepository.findById(id)
             .orElseThrow(() -> new BusinessException("分类不存在"));
 
         category.enable();
         category.setUpdatedBy(operatorId);
         categoryRepository.save(category);
 
-        log.info("Enabled space category: {} by user {}", id, operatorId);
+        log.info("Enabled place category: {} by user {}", id, operatorId);
     }
 
     /**
@@ -120,7 +120,7 @@ public class SpaceCategoryApplicationService {
      */
     @Transactional
     public void disableCategory(Long id, Long operatorId) {
-        SpaceCategory category = categoryRepository.findById(id)
+        PlaceCategory category = categoryRepository.findById(id)
             .orElseThrow(() -> new BusinessException("分类不存在"));
 
         if (category.isSystem()) {
@@ -131,7 +131,7 @@ public class SpaceCategoryApplicationService {
         category.setUpdatedBy(operatorId);
         categoryRepository.save(category);
 
-        log.info("Disabled space category: {} by user {}", id, operatorId);
+        log.info("Disabled place category: {} by user {}", id, operatorId);
     }
 
     /**
@@ -139,7 +139,7 @@ public class SpaceCategoryApplicationService {
      */
     @Transactional
     public void deleteCategory(Long id, Long operatorId) {
-        SpaceCategory category = categoryRepository.findById(id)
+        PlaceCategory category = categoryRepository.findById(id)
             .orElseThrow(() -> new BusinessException("分类不存在"));
 
         if (category.isSystem()) {
@@ -149,67 +149,67 @@ public class SpaceCategoryApplicationService {
         // TODO: 检查是否有空间使用此分类
 
         categoryRepository.deleteById(id);
-        log.info("Deleted space category: {} by user {}", id, operatorId);
+        log.info("Deleted place category: {} by user {}", id, operatorId);
     }
 
     /**
      * 获取单个分类
      */
-    public SpaceCategoryDTO getCategory(Long id) {
+    public PlaceCategoryDTO getCategory(Long id) {
         return categoryRepository.findById(id)
-            .map(SpaceCategoryDTO::fromDomain)
+            .map(PlaceCategoryDTO::fromDomain)
             .orElseThrow(() -> new BusinessException("分类不存在"));
     }
 
     /**
      * 获取所有分类
      */
-    public List<SpaceCategoryDTO> getAllCategories() {
+    public List<PlaceCategoryDTO> getAllCategories() {
         return categoryRepository.findAll().stream()
-            .map(SpaceCategoryDTO::fromDomain)
+            .map(PlaceCategoryDTO::fromDomain)
             .collect(Collectors.toList());
     }
 
     /**
      * 获取所有启用的分类
      */
-    public List<SpaceCategoryDTO> getEnabledCategories() {
+    public List<PlaceCategoryDTO> getEnabledCategories() {
         return categoryRepository.findAllEnabled().stream()
-            .map(SpaceCategoryDTO::fromDomain)
+            .map(PlaceCategoryDTO::fromDomain)
             .collect(Collectors.toList());
     }
 
     /**
      * 按层级获取分类
      */
-    public List<SpaceCategoryDTO> getCategoriesByLevel(String level) {
-        SpaceLevel spaceLevel = SpaceLevel.valueOf(level);
-        return categoryRepository.findByLevel(spaceLevel).stream()
-            .map(SpaceCategoryDTO::fromDomain)
+    public List<PlaceCategoryDTO> getCategoriesByLevel(String level) {
+        PlaceLevel placeLevel = PlaceLevel.valueOf(level);
+        return categoryRepository.findByLevel(placeLevel).stream()
+            .map(PlaceCategoryDTO::fromDomain)
             .collect(Collectors.toList());
     }
 
     /**
      * 按层级获取启用的分类
      */
-    public List<SpaceCategoryDTO> getEnabledCategoriesByLevel(String level) {
-        SpaceLevel spaceLevel = SpaceLevel.valueOf(level);
-        return categoryRepository.findEnabledByLevel(spaceLevel).stream()
-            .map(SpaceCategoryDTO::fromDomain)
+    public List<PlaceCategoryDTO> getEnabledCategoriesByLevel(String level) {
+        PlaceLevel placeLevel = PlaceLevel.valueOf(level);
+        return categoryRepository.findEnabledByLevel(placeLevel).stream()
+            .map(PlaceCategoryDTO::fromDomain)
             .collect(Collectors.toList());
     }
 
     /**
      * 获取楼栋分类
      */
-    public List<SpaceCategoryDTO> getBuildingCategories() {
+    public List<PlaceCategoryDTO> getBuildingCategories() {
         return getCategoriesByLevel("BUILDING");
     }
 
     /**
      * 获取房间分类
      */
-    public List<SpaceCategoryDTO> getRoomCategories() {
+    public List<PlaceCategoryDTO> getRoomCategories() {
         return getCategoriesByLevel("ROOM");
     }
 }

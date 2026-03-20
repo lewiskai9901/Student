@@ -1,0 +1,72 @@
+-- V34: V7 Analytics read model tables (InspectorSummary, ItemFrequencySummary, CorrectiveSummary)
+
+CREATE TABLE IF NOT EXISTS insp_inspector_summaries (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    tenant_id BIGINT,
+    project_id BIGINT NOT NULL,
+    inspector_id BIGINT NOT NULL,
+    inspector_name VARCHAR(100),
+    period_type VARCHAR(20) NOT NULL COMMENT 'WEEKLY/MONTHLY/QUARTERLY/YEARLY',
+    period_start DATE NOT NULL,
+    period_end DATE,
+    total_tasks INT DEFAULT 0,
+    completed_tasks INT DEFAULT 0,
+    cancelled_tasks INT DEFAULT 0,
+    expired_tasks INT DEFAULT 0,
+    avg_completion_time_minutes DECIMAL(10,2),
+    avg_score DECIMAL(10,4),
+    total_submissions INT DEFAULT 0,
+    flagged_submissions INT DEFAULT 0,
+    compliance_rate DECIMAL(5,4),
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    deleted INT DEFAULT 0,
+    INDEX idx_insp_summary_project_period (project_id, period_type, period_start),
+    INDEX idx_insp_summary_inspector (inspector_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='检查员绩效汇总';
+
+CREATE TABLE IF NOT EXISTS insp_item_frequency_summaries (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    tenant_id BIGINT,
+    project_id BIGINT NOT NULL,
+    period_type VARCHAR(20) NOT NULL,
+    period_start DATE NOT NULL,
+    period_end DATE,
+    item_code VARCHAR(50),
+    item_name VARCHAR(200),
+    section_id BIGINT,
+    section_name VARCHAR(200),
+    occurrence_count INT DEFAULT 0,
+    flagged_count INT DEFAULT 0,
+    total_deduction DECIMAL(10,4) DEFAULT 0,
+    avg_deduction DECIMAL(10,4) DEFAULT 0,
+    cumulative_percentage DECIMAL(5,2) COMMENT 'Pareto cumulative %',
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    deleted INT DEFAULT 0,
+    INDEX idx_item_freq_project_period (project_id, period_type, period_start),
+    INDEX idx_item_freq_deduction (project_id, period_type, period_start, total_deduction DESC)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='检查项频次汇总(Pareto分析)';
+
+CREATE TABLE IF NOT EXISTS insp_corrective_summaries (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    tenant_id BIGINT,
+    project_id BIGINT NOT NULL,
+    period_type VARCHAR(20) NOT NULL,
+    period_start DATE NOT NULL,
+    period_end DATE,
+    total_cases INT DEFAULT 0,
+    open_cases INT DEFAULT 0,
+    in_progress_cases INT DEFAULT 0,
+    closed_cases INT DEFAULT 0,
+    overdue_cases INT DEFAULT 0,
+    escalated_cases INT DEFAULT 0,
+    avg_resolution_days DECIMAL(10,2),
+    on_time_rate DECIMAL(5,4),
+    effectiveness_confirmed INT DEFAULT 0,
+    effectiveness_failed INT DEFAULT 0,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    deleted INT DEFAULT 0,
+    INDEX idx_corr_summary_project_period (project_id, period_type, period_start)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='整改汇总';

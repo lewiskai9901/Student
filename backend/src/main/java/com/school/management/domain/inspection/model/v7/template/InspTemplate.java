@@ -179,6 +179,11 @@ public class InspTemplate extends AggregateRoot<Long> {
         return targetType;
     }
 
+    public void setTargetType(TargetType targetType) {
+        this.targetType = targetType;
+        this.updatedAt = LocalDateTime.now();
+    }
+
     public Integer getLatestVersion() {
         return latestVersion;
     }

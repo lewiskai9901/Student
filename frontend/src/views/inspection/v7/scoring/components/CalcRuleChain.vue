@@ -263,71 +263,59 @@ function handleSubmit() {
 </script>
 
 <style scoped>
-/* ========== Modal ========== */
-.sp-mask { position:fixed; inset:0; z-index:1000; display:flex; align-items:center; justify-content:center; background:rgba(15,23,42,0.4); backdrop-filter:blur(2px); }
-.sp-modal { width:600px; background:#fff; border-radius:14px; box-shadow:0 24px 64px rgba(0,0,0,0.18); overflow:hidden; display:flex; flex-direction:column; max-height:80vh; }
-.sp-modal-head { display:flex; align-items:center; justify-content:space-between; padding:20px 24px 0; }
-.sp-modal-head h3 { font-size:16px; font-weight:600; color:#1e2a3a; margin:0; }
-.sp-modal-close { background:none; border:none; font-size:22px; color:#b8c0cc; cursor:pointer; padding:0 4px; line-height:1; }
-.sp-modal-close:hover { color:#5a6474; }
-.sp-modal-body { display:flex; flex-direction:column; gap:16px; padding:20px 24px; }
+/* Modal */
+.sp-mask { position:fixed; inset:0; z-index:1000; display:flex; align-items:center; justify-content:center; background:rgba(15,23,42,0.35); backdrop-filter:blur(1px); }
+.sp-modal { width:480px; background:#fff; border-radius:10px; box-shadow:0 16px 48px rgba(0,0,0,0.15); overflow:hidden; display:flex; flex-direction:column; max-height:80vh; }
+.sp-modal-head { display:flex; align-items:center; justify-content:space-between; padding:10px 14px; border-bottom:1px solid #f0f1f3; }
+.sp-modal-head h3 { font-size:13px; font-weight:600; color:#1e2a3a; margin:0; }
+.sp-modal-close { background:none; border:none; font-size:18px; color:#9ca3af; cursor:pointer; line-height:1; }
+.sp-modal-body { display:flex; flex-direction:column; gap:8px; padding:10px 14px; }
 .sp-modal-scroll { flex:1; overflow-y:auto; }
-.sp-modal-foot { display:flex; justify-content:flex-end; gap:10px; padding:0 24px 20px; }
+.sp-modal-foot { display:flex; justify-content:flex-end; gap:6px; padding:6px 14px 10px; }
 
-/* ========== Animation ========== */
-.sp-modal-enter-active { transition:all 0.2s ease-out; }
-.sp-modal-leave-active { transition:all 0.15s ease-in; }
-.sp-modal-enter-from { opacity:0; }
-.sp-modal-enter-from .sp-modal { transform:translateY(12px) scale(0.97); }
-.sp-modal-leave-to { opacity:0; }
-.sp-modal-leave-to .sp-modal { transform:translateY(-8px) scale(0.98); }
+/* Animation */
+.sp-modal-enter-active { transition:all 0.15s ease-out; }
+.sp-modal-leave-active { transition:all 0.1s ease-in; }
+.sp-modal-enter-from, .sp-modal-leave-to { opacity:0; }
 
-/* ========== Buttons ========== */
-.sp-btn-primary { display:inline-flex; align-items:center; gap:5px; padding:8px 16px; background:#1a6dff; color:#fff; border:none; border-radius:8px; font-size:13px; font-weight:500; cursor:pointer; transition:background 0.15s; white-space:nowrap; }
+/* Buttons */
+.sp-btn-primary { padding:4px 10px; background:#1a6dff; color:#fff; border:none; border-radius:5px; font-size:11px; font-weight:500; cursor:pointer; }
 .sp-btn-primary:hover { background:#1558d6; }
-.sp-btn-primary.sm { padding:6px 12px; font-size:12px; border-radius:6px; }
-.sp-btn-ghost { padding:8px 16px; background:none; border:1px solid #dce1e8; border-radius:8px; font-size:13px; color:#5a6474; cursor:pointer; transition:background 0.15s; }
+.sp-btn-primary.sm { padding:3px 8px; font-size:10px; }
+.sp-btn-ghost { padding:4px 10px; background:none; border:1px solid #e5e7eb; border-radius:5px; font-size:11px; color:#6b7280; cursor:pointer; }
 .sp-btn-ghost:hover { background:#f4f6f9; }
-.sp-ic-s { background:none; border:none; padding:3px; color:#b8c0cc; cursor:pointer; border-radius:4px; display:flex; align-items:center; transition:all 0.12s; }
+.sp-ic-s { background:none; border:none; padding:1px 3px; color:#b8c0cc; cursor:pointer; font-size:12px; border-radius:3px; }
 .sp-ic-s:hover { color:#1a6dff; }
 .sp-ic-s.danger:hover { color:#d93025; }
 
-/* ========== Form fields ========== */
-.sp-fld label { display:block; font-size:12px; font-weight:500; color:#5a6474; margin-bottom:5px; }
-.sp-fld input, .sp-fld select, .sp-fld textarea { width:100%; border:1px solid #dce1e8; border-radius:8px; padding:8px 12px; font-size:13px; outline:none; transition:border-color 0.2s, box-shadow 0.2s; color:#1e2a3a; background:#fff; }
-.sp-fld input::placeholder, .sp-fld textarea::placeholder { color:#b8c0cc; }
-.sp-fld input:focus, .sp-fld select:focus, .sp-fld textarea:focus { border-color:#7aadff; box-shadow:0 0 0 3px rgba(26,109,255,0.08); }
-.sp-fld .help { font-size:11px; color:#8c95a3; margin-top:4px; }
+/* Form fields */
+.sp-fld { display:flex; flex-direction:column; }
+.sp-fld label { font-size:11px; font-weight:500; color:#6b7280; margin-bottom:2px; }
+.sp-fld input, .sp-fld select, .sp-fld textarea { width:100%; border:1px solid #e5e7eb; border-radius:6px; padding:4px 8px; font-size:12px; outline:none; color:#111827; background:#fff; }
+.sp-fld input:focus, .sp-fld select:focus, .sp-fld textarea:focus { border-color:#93c5fd; box-shadow:0 0 0 2px rgba(37,99,235,0.06); }
+.sp-fld .help { font-size:10px; color:#8c95a3; margin-top:2px; }
 
-/* ========== Section title / desc ========== */
-.sp-section-title { font-size:14px; font-weight:600; color:#1e2a3a; margin:0; }
-.sp-section-desc { font-size:12px; color:#8c95a3; }
+/* Section */
+.sp-section-title { font-size:11px; font-weight:600; color:#374151; margin:0; }
+.sp-section-desc { font-size:10px; color:#9ca3af; }
+.sp-empty { text-align:center; padding:8px 0; color:#b8c0cc; font-size:11px; }
 
-/* ========== Empty state ========== */
-.sp-empty { text-align:center; padding:32px 0; color:#b8c0cc; font-size:13px; }
-
-/* ========== Rule card ========== */
-.sp-rule-card { border:1px solid #e8ecf0; border-radius:10px; padding:12px; transition:all 0.15s; border-left:3px solid transparent; }
+/* Rule card */
+.sp-rule-card { border:1px solid #f0f1f3; border-radius:5px; padding:6px 8px; transition:all 0.1s; }
 .sp-rule-card.is-enabled { background:#fff; }
-.sp-rule-card.is-disabled { border-style:dashed; border-color:#dce1e8; background:#f8f9fb; opacity:0.6; }
-.sp-rule-card:hover { border-left:3px solid #1a6dff; }
+.sp-rule-card.is-disabled { border-style:dashed; opacity:0.5; }
+.sp-rule-card:hover { border-color:#dbeafe; }
 
-.sp-priority-badge { width:28px; height:28px; border-radius:50%; background:#f4f6f9; display:flex; align-items:center; justify-content:center; font-size:12px; font-family:monospace; color:#5a6474; flex-shrink:0; }
-.sp-type-badge { font-size:11px; padding:2px 8px; border-radius:99px; color:#fff; flex-shrink:0; }
-.sp-rule-name { font-size:13px; font-weight:500; color:#1e2a3a; }
-.sp-rule-code { font-size:11px; color:#8c95a3; font-family:monospace; }
-.sp-priority-label { font-size:11px; color:#8c95a3; }
-.sp-priority-value { font-size:13px; font-family:monospace; color:#5a6474; }
-.sp-rule-actions { display:flex; align-items:center; gap:2px; opacity:0; transition:opacity 0.15s; flex-shrink:0; }
+.sp-priority-badge { width:20px; height:20px; border-radius:50%; background:#f4f6f9; display:flex; align-items:center; justify-content:center; font-size:10px; font-family:monospace; color:#5a6474; flex-shrink:0; }
+.sp-type-badge { font-size:9px; padding:1px 6px; border-radius:99px; color:#fff; flex-shrink:0; }
+.sp-rule-name { font-size:12px; font-weight:500; color:#1e2a3a; }
+.sp-rule-code { font-size:10px; color:#8c95a3; font-family:monospace; }
+.sp-priority-label { font-size:10px; color:#8c95a3; }
+.sp-priority-value { font-size:11px; font-family:monospace; color:#5a6474; }
+.sp-rule-actions { display:flex; align-items:center; gap:2px; opacity:0; transition:opacity 0.1s; flex-shrink:0; }
 .group:hover .sp-rule-actions { opacity:1; }
 
-/* ========== Config summary ========== */
-.sp-config-summary { margin-top:8px; font-size:12px; background:#f4f6f9; border-radius:8px; padding:8px 10px; color:#5a6474; font-family:monospace; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-
-/* ========== Config section divider ========== */
-.sp-config-section { border-top:1px solid #e8ecf0; padding-top:12px; }
-
-/* ========== Checkbox label ========== */
-.sp-checkbox-label { font-size:13px; color:#5a6474; }
-
+.sp-config-summary { margin-top:4px; font-size:10px; background:#f8f9fb; border-radius:4px; padding:4px 6px; color:#5a6474; font-family:monospace; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.sp-config-section { border-top:1px solid #e8ecf0; padding-top:8px; }
+.sp-checkbox-label { font-size:11px; color:#5a6474; }
 </style>

@@ -1,6 +1,6 @@
-package com.school.management.domain.space.repository;
+package com.school.management.domain.place.repository;
 
-import com.school.management.domain.space.model.entity.SpaceClassAssignment;
+import com.school.management.domain.place.model.entity.PlaceClassAssignment;
 
 import java.util.List;
 import java.util.Optional;
@@ -8,37 +8,37 @@ import java.util.Optional;
 /**
  * 场所-班级分配仓储接口
  */
-public interface SpaceClassAssignmentRepository {
+public interface PlaceClassAssignmentRepository {
 
     /**
      * 保存分配记录
      */
-    SpaceClassAssignment save(SpaceClassAssignment assignment);
+    PlaceClassAssignment save(PlaceClassAssignment assignment);
 
     /**
      * 根据ID查询
      */
-    Optional<SpaceClassAssignment> findById(Long id);
+    Optional<PlaceClassAssignment> findById(Long id);
 
     /**
      * 根据场所ID查询所有分配
      */
-    List<SpaceClassAssignment> findBySpaceId(Long spaceId);
+    List<PlaceClassAssignment> findByPlaceId(Long placeId);
 
     /**
      * 根据班级ID查询所有分配
      */
-    List<SpaceClassAssignment> findByClassId(Long classId);
+    List<PlaceClassAssignment> findByClassId(Long classId);
 
     /**
      * 根据组织单元ID查询所有分配
      */
-    List<SpaceClassAssignment> findByOrgUnitId(Long orgUnitId);
+    List<PlaceClassAssignment> findByOrgUnitId(Long orgUnitId);
 
     /**
      * 根据场所ID和班级ID查询
      */
-    Optional<SpaceClassAssignment> findBySpaceIdAndClassId(Long spaceId, Long classId);
+    Optional<PlaceClassAssignment> findByPlaceIdAndClassId(Long placeId, Long classId);
 
     /**
      * 删除分配记录
@@ -48,7 +48,7 @@ public interface SpaceClassAssignmentRepository {
     /**
      * 删除场所的所有分配
      */
-    void deleteBySpaceId(Long spaceId);
+    void deleteByPlaceId(Long placeId);
 
     /**
      * 删除班级的所有分配
@@ -58,12 +58,12 @@ public interface SpaceClassAssignmentRepository {
     /**
      * 检查场所是否已分配给班级
      */
-    boolean existsBySpaceIdAndClassId(Long spaceId, Long classId);
+    boolean existsByPlaceIdAndClassId(Long placeId, Long classId);
 
     /**
      * 统计场所的分配数量
      */
-    int countBySpaceId(Long spaceId);
+    int countByPlaceId(Long placeId);
 
     /**
      * 统计班级的分配数量
@@ -73,5 +73,5 @@ public interface SpaceClassAssignmentRepository {
     /**
      * 批量保存
      */
-    void batchSave(List<SpaceClassAssignment> assignments);
+    void batchSave(List<PlaceClassAssignment> assignments);
 }

@@ -4,8 +4,8 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.school.management.domain.inspection.model.v6.*;
 import com.school.management.domain.inspection.repository.v6.InspectionProjectRepository;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -19,19 +19,13 @@ import java.util.concurrent.ThreadLocalRandom;
 /**
  * V6检查项目应用服务
  */
+@Slf4j
+@RequiredArgsConstructor
 @Service
 public class InspectionProjectApplicationService {
 
-    private static final Logger log = LoggerFactory.getLogger(InspectionProjectApplicationService.class);
-
     private final InspectionProjectRepository projectRepository;
     private final ObjectMapper objectMapper;
-
-    public InspectionProjectApplicationService(InspectionProjectRepository projectRepository,
-                                                ObjectMapper objectMapper) {
-        this.projectRepository = projectRepository;
-        this.objectMapper = objectMapper;
-    }
 
     /**
      * 创建项目（草稿）
@@ -70,7 +64,7 @@ public class InspectionProjectApplicationService {
                 command.getCycleConfig(),
                 command.getTimeSlots(),
                 command.isSkipHolidays(),
-                command.getSharedSpaceStrategy(),
+                command.getSharedPlaceStrategy(),
                 command.getInspectorAssignmentMode()
         );
 
@@ -225,7 +219,7 @@ public class InspectionProjectApplicationService {
         private String cycleConfig;
         private String timeSlots;
         private boolean skipHolidays;
-        private SharedSpaceStrategy sharedSpaceStrategy;
+        private SharedPlaceStrategy sharedPlaceStrategy;
         private InspectorAssignmentMode inspectorAssignmentMode;
 
         public ScopeType getScopeType() { return scopeType; }
@@ -244,8 +238,8 @@ public class InspectionProjectApplicationService {
         public void setTimeSlots(String timeSlots) { this.timeSlots = timeSlots; }
         public boolean isSkipHolidays() { return skipHolidays; }
         public void setSkipHolidays(boolean skipHolidays) { this.skipHolidays = skipHolidays; }
-        public SharedSpaceStrategy getSharedSpaceStrategy() { return sharedSpaceStrategy; }
-        public void setSharedSpaceStrategy(SharedSpaceStrategy sharedSpaceStrategy) { this.sharedSpaceStrategy = sharedSpaceStrategy; }
+        public SharedPlaceStrategy getSharedPlaceStrategy() { return sharedPlaceStrategy; }
+        public void setSharedPlaceStrategy(SharedPlaceStrategy sharedPlaceStrategy) { this.sharedPlaceStrategy = sharedPlaceStrategy; }
         public InspectorAssignmentMode getInspectorAssignmentMode() { return inspectorAssignmentMode; }
         public void setInspectorAssignmentMode(InspectorAssignmentMode inspectorAssignmentMode) { this.inspectorAssignmentMode = inspectorAssignmentMode; }
     }

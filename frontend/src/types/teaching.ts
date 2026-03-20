@@ -3,7 +3,7 @@
 // ==================== 校历管理 ====================
 
 export interface AcademicYear {
-  id: number
+  id: number | string
   name: string
   startDate: string
   endDate: string
@@ -15,8 +15,8 @@ export interface AcademicYear {
 }
 
 export interface Semester {
-  id: number
-  yearId: number
+  id: number | string
+  yearId: number | string
   yearName?: string
   name: string
   termType: number // 1-第一学期, 2-第二学期, 3-短学期
@@ -31,8 +31,8 @@ export interface Semester {
 }
 
 export interface TeachingWeek {
-  id: number
-  semesterId: number
+  id: number | string
+  semesterId: number | string
   weekNumber: number
   startDate: string
   endDate: string
@@ -41,9 +41,9 @@ export interface TeachingWeek {
 }
 
 export interface AcademicEvent {
-  id: number
-  yearId?: number
-  semesterId?: number
+  id: number | string
+  yearId?: number | string
+  semesterId?: number | string
   title: string
   eventType: number // 1-开学, 2-放假, 3-考试, 4-活动, 5-其他
   startDate: string
@@ -55,7 +55,7 @@ export interface AcademicEvent {
 // ==================== 课程管理 ====================
 
 export interface Course {
-  id: number
+  id: number | string
   code: string
   name: string
   englishName?: string
@@ -64,7 +64,7 @@ export interface Course {
   theoryHours: number
   practiceHours: number
   courseType: number // 1-必修, 2-选修, 3-通识
-  departmentId?: number
+  departmentId?: number | string
   departmentName?: string
   description?: string
   status: number
@@ -75,7 +75,7 @@ export interface Course {
 export interface CourseQueryParams {
   keyword?: string
   courseType?: number
-  departmentId?: number
+  departmentId?: number | string
   status?: number
   page?: number
   size?: number
@@ -84,9 +84,9 @@ export interface CourseQueryParams {
 // ==================== 培养方案 ====================
 
 export interface CurriculumPlan {
-  id: number
+  id: number | string
   name: string
-  majorId: number
+  majorId: number | string
   majorName?: string
   gradeYear: number
   version: string
@@ -99,9 +99,9 @@ export interface CurriculumPlan {
 }
 
 export interface PlanCourse {
-  id: number
-  planId: number
-  courseId: number
+  id: number | string
+  planId: number | string
+  courseId: number | string
   courseName?: string
   courseCode?: string
   credits?: number
@@ -112,7 +112,7 @@ export interface PlanCourse {
 }
 
 export interface CurriculumPlanQueryParams {
-  majorId?: number
+  majorId?: number | string
   gradeYear?: number
   status?: number
   page?: number
@@ -122,13 +122,13 @@ export interface CurriculumPlanQueryParams {
 // ==================== 教学任务 ====================
 
 export interface TeachingTask {
-  id: number
-  semesterId: number
+  id: number | string
+  semesterId: number | string
   semesterName?: string
-  courseId: number
+  courseId: number | string
   courseName?: string
   courseCode?: string
-  classId: number
+  classId: number | string
   className?: string
   studentCount: number
   weeklyHours: number
@@ -142,18 +142,18 @@ export interface TeachingTask {
 }
 
 export interface TaskTeacher {
-  id: number
-  taskId: number
-  teacherId: number
+  id: number | string
+  taskId: number | string
+  teacherId: number | string
   teacherName?: string
   isMain: boolean // 是否主讲教师
 }
 
 export interface TeachingTaskQueryParams {
-  semesterId?: number
-  courseId?: number
-  classId?: number
-  teacherId?: number
+  semesterId?: number | string
+  courseId?: number | string
+  classId?: number | string
+  teacherId?: number | string
   status?: number
   page?: number
   size?: number
@@ -162,8 +162,8 @@ export interface TeachingTaskQueryParams {
 // ==================== 排课管理 ====================
 
 export interface CourseSchedule {
-  id: number
-  semesterId: number
+  id: number | string
+  semesterId: number | string
   semesterName?: string
   name: string
   status: number // 0-草稿, 1-已发布, 2-已归档
@@ -176,13 +176,13 @@ export interface CourseSchedule {
 }
 
 export interface ScheduleEntry {
-  id: number
-  scheduleId: number
-  taskId: number
+  id: number | string
+  scheduleId: number | string
+  taskId: number | string
   courseName?: string
   className?: string
   teacherName?: string
-  classroomId: number
+  classroomId: number | string
   classroomName?: string
   dayOfWeek: number // 1-7
   periodStart: number // 开始节次
@@ -199,7 +199,7 @@ export interface ScheduleConflict {
 }
 
 export interface AutoScheduleParams {
-  scheduleId: number
+  scheduleId: number | string
   maxIterations?: number
   populationSize?: number
   mutationRate?: number
@@ -215,11 +215,11 @@ export interface AutoScheduleResult {
 // ==================== 调课管理 ====================
 
 export interface ScheduleAdjustment {
-  id: number
-  entryId: number
+  id: number | string
+  entryId: number | string
   originalEntry?: ScheduleEntry
   adjustmentType: number // 1-调课, 2-停课, 3-补课
-  newClassroomId?: number
+  newClassroomId?: number | string
   newClassroomName?: string
   newDayOfWeek?: number
   newPeriodStart?: number
@@ -227,9 +227,9 @@ export interface ScheduleAdjustment {
   newWeek?: number
   reason: string
   status: number // 0-待审批, 1-已批准, 2-已驳回, 3-已执行, 4-已取消
-  applicantId: number
+  applicantId: number | string
   applicantName?: string
-  approverId?: number
+  approverId?: number | string
   approverName?: string
   approvalRemark?: string
   appliedAt: string
@@ -238,10 +238,10 @@ export interface ScheduleAdjustment {
 }
 
 export interface AdjustmentQueryParams {
-  entryId?: number
+  entryId?: number | string
   adjustmentType?: number
   status?: number
-  applicantId?: number
+  applicantId?: number | string
   startDate?: string
   endDate?: string
   page?: number
@@ -251,8 +251,8 @@ export interface AdjustmentQueryParams {
 // ==================== 考试管理 ====================
 
 export interface ExamBatch {
-  id: number
-  semesterId: number
+  id: number | string
+  semesterId: number | string
   semesterName?: string
   name: string
   examType: number // 1-期中考试, 2-期末考试, 3-补考, 4-重修考试
@@ -266,12 +266,12 @@ export interface ExamBatch {
 }
 
 export interface ExamArrangement {
-  id: number
-  batchId: number
-  courseId: number
+  id: number | string
+  batchId: number | string
+  courseId: number | string
   courseName?: string
   courseCode?: string
-  classIds: number[]
+  classIds: (number | string)[]
   classNames?: string[]
   examDate: string
   startTime: string
@@ -282,9 +282,9 @@ export interface ExamArrangement {
 }
 
 export interface ExamRoom {
-  id: number
-  arrangementId: number
-  classroomId: number
+  id: number | string
+  arrangementId: number | string
+  classroomId: number | string
   classroomName?: string
   capacity: number
   actualCount: number
@@ -292,15 +292,15 @@ export interface ExamRoom {
 }
 
 export interface ExamInvigilator {
-  id: number
-  roomId: number
-  teacherId: number
+  id: number | string
+  roomId: number | string
+  teacherId: number | string
   teacherName?: string
   isMain: boolean // 是否主监考
 }
 
 export interface ExamBatchQueryParams {
-  semesterId?: number
+  semesterId?: number | string
   examType?: number
   status?: number
   page?: number
@@ -310,34 +310,34 @@ export interface ExamBatchQueryParams {
 // ==================== 成绩管理 ====================
 
 export interface GradeBatch {
-  id: number
-  semesterId: number
+  id: number | string
+  semesterId: number | string
   semesterName?: string
-  courseId: number
+  courseId: number | string
   courseName?: string
   courseCode?: string
-  classId: number
+  classId: number | string
   className?: string
   batchName: string
   gradeType: number // 1-平时成绩, 2-期中成绩, 3-期末成绩, 4-总评成绩
   status: number // 0-草稿, 1-已提交, 2-已审核, 3-已发布
   inputDeadline?: string
   grades?: StudentGrade[]
-  createdBy?: number
+  createdBy?: number | string
   createdByName?: string
   createdAt?: string
   updatedAt?: string
 }
 
 export interface StudentGrade {
-  id: number
-  batchId: number
-  studentId: number
+  id: number | string
+  batchId: number | string
+  studentId: number | string
   studentName?: string
   studentNo?: string
-  semesterId: number
-  courseId: number
-  classId: number
+  semesterId: number | string
+  courseId: number | string
+  classId: number | string
   batchName?: string
   gradeType: number
   totalScore?: number
@@ -351,18 +351,18 @@ export interface StudentGrade {
 }
 
 export interface GradeItem {
-  id: number
-  gradeId: number
+  id: number | string
+  gradeId: number | string
   itemName: string // 如：作业1, 实验2, 考勤
   score: number
   weight: number // 权重百分比
 }
 
 export interface GradeQueryParams {
-  semesterId?: number
-  courseId?: number
-  classId?: number
-  studentId?: number
+  semesterId?: number | string
+  courseId?: number | string
+  classId?: number | string
+  studentId?: number | string
   gradeType?: number
   status?: number
   page?: number

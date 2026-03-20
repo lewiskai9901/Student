@@ -16,77 +16,50 @@ public class OrgUnitPO {
     @TableId(type = IdType.ASSIGN_ID)
     private Long id;
 
-    /**
-     * 组织编码
-     */
     @TableField("unit_code")
     private String unitCode;
 
-    /**
-     * 组织名称
-     */
     @TableField("unit_name")
     private String unitName;
 
-    /**
-     * 组织类型: SCHOOL, COLLEGE, DEPARTMENT, TEACHING_GROUP（旧字段）
-     */
     @TableField("unit_type")
     private String unitType;
 
-    /**
-     * 组织类型编码（新，引用 org_types 表）
-     */
-    @TableField("type_code")
-    private String typeCode;
-
-    /**
-     * 组织类别: academic, functional, administrative
-     */
-    @TableField("unit_category")
-    private String unitCategory;
-
-    /**
-     * 父组织ID
-     */
     @TableField("parent_id")
     private Long parentId;
 
-    /**
-     * 树路径 (如: /1/5/12/)
-     */
     @TableField("tree_path")
     private String treePath;
 
-    /**
-     * 层级深度
-     */
     @TableField("tree_level")
     private Integer treeLevel;
 
-    /**
-     * 负责人ID
-     */
-    @TableField("leader_id")
-    private Long leaderId;
-
-    /**
-     * 副职ID列表 (JSON)
-     */
-    @TableField("deputy_leader_ids")
-    private String deputyLeaderIds;
-
-    /**
-     * 排序
-     */
     @TableField("sort_order")
     private Integer sortOrder;
 
-    /**
-     * 状态: 1启用 0禁用
-     */
     @TableField("status")
-    private Integer status;
+    private String status;  // DRAFT/ACTIVE/FROZEN/MERGING/DISSOLVED
+
+    @TableField("headcount")
+    private Integer headcount;
+
+    @TableField("attributes")
+    private String attributes;  // JSON string
+
+    @TableField("merged_into_id")
+    private Long mergedIntoId;
+
+    @TableField("split_from_id")
+    private Long splitFromId;
+
+    @TableField("dissolved_at")
+    private LocalDateTime dissolvedAt;
+
+    @TableField("dissolved_reason")
+    private String dissolvedReason;
+
+    @TableField("tenant_id")
+    private Long tenantId;
 
     @TableField("created_at")
     private LocalDateTime createdAt;
@@ -103,4 +76,8 @@ public class OrgUnitPO {
     @TableLogic
     @TableField("deleted")
     private Integer deleted;
+
+    @Version
+    @TableField("version")
+    private Integer version;
 }

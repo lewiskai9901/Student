@@ -78,17 +78,25 @@ public class InspSubmissionController {
     @PostMapping("/{id}/complete")
     @CasbinAccess(resource = "insp:submission", action = "execute")
     public Result<InspSubmission> completeSubmission(@PathVariable Long id,
-                                                      @RequestBody CompleteSubmissionRequest request) {
-        return Result.success(submissionService.completeSubmission(id,
-                request.getBaseScore(), request.getFinalScore(),
-                request.getDeductionTotal(), request.getBonusTotal(),
-                request.getScoreBreakdown(), request.getGrade(), request.getPassed()));
+                                                      @RequestBody(required = false) CompleteSubmissionRequest request) {
+        // 后端计算分数，忽略前端传入的分数
+        return Result.success(submissionService.completeSubmission(id));
     }
 
     @PostMapping("/{id}/skip")
     @CasbinAccess(resource = "insp:submission", action = "execute")
     public Result<InspSubmission> skipSubmission(@PathVariable Long id) {
         return Result.success(submissionService.skipSubmission(id));
+    }
+
+    /**
+     * 手动触发分数级联重算（管理员用）
+     * 重算链：SubmissionDetail → Submission总分 → Task汇总 → ProjectScore
+     */
+    @PostMapping("/{id}/recalculate")
+    @CasbinAccess(resource = "insp:submission", action = "admin")
+    public Result<InspSubmission> recalculateScore(@PathVariable Long id) {
+        return Result.success(submissionService.recalculateFromSubmission(id));
     }
 
     // ========== Submission Details ==========

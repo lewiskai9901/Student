@@ -32,8 +32,9 @@ import org.springframework.context.annotation.Configuration;
     "com.school.management.infrastructure.persistence.semester",
     "com.school.management.infrastructure.persistence.user",
     "com.school.management.infrastructure.persistence.query",
-    "com.school.management.infrastructure.persistence.space",
-    "com.school.management.infrastructure.audit"
+    "com.school.management.infrastructure.persistence.place",
+    "com.school.management.infrastructure.persistence.inspection.v7",
+    "com.school.management.infrastructure.activity.impl"
 })
 public class DddArchitectureConfig {
     // Configuration is handled through annotations

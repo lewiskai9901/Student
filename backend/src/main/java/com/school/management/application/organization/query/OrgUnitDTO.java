@@ -2,11 +2,10 @@ package com.school.management.application.organization.query;
 
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import com.fasterxml.jackson.databind.ser.std.ToStringSerializer;
-import com.school.management.domain.organization.model.OrgUnitType;
-import com.school.management.domain.organization.model.UnitCategory;
 import lombok.Data;
 
-import java.util.List;
+import java.time.LocalDateTime;
+import java.util.Map;
 
 /**
  * DTO for organization unit query results.
@@ -18,17 +17,21 @@ public class OrgUnitDTO {
     private Long id;
     private String unitCode;
     private String unitName;
-    private OrgUnitType unitType;
-    private UnitCategory unitCategory;  // 组织类别
+    private String unitType;           // typeCode
+    private String typeName;           // display name from org_unit_types
+    private String typeIcon;           // icon from org_unit_types
+    private String typeColor;          // color from org_unit_types
     @JsonSerialize(using = ToStringSerializer.class)
     private Long parentId;
     private String treePath;
     private Integer treeLevel;
-    @JsonSerialize(using = ToStringSerializer.class)
-    private Long leaderId;
-    private String leaderName;
-    @JsonSerialize(contentUsing = ToStringSerializer.class)
-    private List<Long> deputyLeaderIds;
     private Integer sortOrder;
-    private Boolean enabled;
+    private String status;             // DRAFT/ACTIVE/FROZEN/MERGING/DISSOLVED
+    private String statusLabel;        // human-readable status label
+    private Integer headcount;
+    private Map<String, Object> attributes;
+    @JsonSerialize(using = ToStringSerializer.class)
+    private Long mergedIntoId;
+    private LocalDateTime dissolvedAt;
+    private String dissolvedReason;
 }

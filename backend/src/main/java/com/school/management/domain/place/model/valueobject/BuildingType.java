@@ -1,4 +1,4 @@
-package com.school.management.domain.space.model.valueobject;
+package com.school.management.domain.place.model.valueobject;
 
 import lombok.Getter;
 

@@ -1,0 +1,14 @@
+{
+  "name": "sms-code-tool",
+  "version": "2.0.0",
+  "description": "短信验证码获取工具 + 小红书粉丝查询",
+  "main": "sms-tool-server.js",
+  "scripts": {
+    "start": "node sms-tool-server.js",
+    "xhs": "node xhs-fans-server.js",
+    "start-all": "node sms-tool-server.js & node xhs-fans-server.js"
+  },
+  "dependencies": {
+    "puppeteer": "^22.0.0"
+  }
+}

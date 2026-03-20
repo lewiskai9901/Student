@@ -30,10 +30,30 @@
       <!-- 菜单区域 -->
       <nav class="flex-1 overflow-y-auto py-3 px-3">
         <div class="space-y-0.5">
-          <template v-for="item in menuList" :key="item.path">
-            <!-- 有子菜单的项 -->
+          <template v-for="(item, index) in menuList" :key="item.path">
+            <!-- 分组分隔线 -->
+            <div v-if="showSeparator(index)" class="my-2 mx-1 border-t border-gray-200/60"></div>
+            <!-- 有子菜单的项（单个子项时直接导航） -->
             <div v-if="item.children && item.children.length > 0">
+              <!-- 单个子项：直接导航 -->
+              <router-link
+                v-if="item.children.length === 1"
+                :to="item.children[0].path"
+                :class="[
+                  'group relative flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-200',
+                  isCollapse ? 'justify-center' : '',
+                  currentRoute === item.children[0].path
+                    ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-semibold shadow-lg shadow-blue-500/30'
+                    : 'text-gray-600 hover:bg-gradient-to-r hover:from-gray-50 hover:to-gray-100/50 hover:text-gray-900'
+                ]"
+              >
+                <div v-if="currentRoute === item.children[0].path && !isCollapse" class="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-8 bg-white rounded-r-full"></div>
+                <component :is="getIcon(item.icon)" class="w-5 h-5 flex-shrink-0 transition-transform group-hover:scale-110" />
+                <span v-if="!isCollapse" class="text-sm font-medium">{{ item.title }}</span>
+              </router-link>
+              <!-- 多个子项：展开子菜单 -->
               <button
+                v-else
                 @click="toggleSubmenu(item.path)"
                 :class="[
                   'group relative w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-gray-600 hover:bg-gradient-to-r hover:from-gray-50 hover:to-gray-100/50 hover:text-gray-900 transition-all duration-200',
@@ -53,9 +73,9 @@
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
                 </svg>
               </button>
-              <!-- 子菜单 - 支持三级菜单 -->
+              <!-- 子菜单 - 支持三级菜单（仅多子项时显示） -->
               <div
-                v-if="!isCollapse"
+                v-if="!isCollapse && item.children.length > 1"
                 v-show="openSubmenus.includes(item.path)"
                 class="mt-1 ml-2 space-y-0.5 border-l-2 border-gray-100 pl-2"
               >
@@ -323,6 +343,14 @@ const isSubmenuActive = (item: MenuItem): boolean => {
   })
 }
 
+// 判断是否显示分组分隔线
+const showSeparator = (index: number): boolean => {
+  if (index === 0) return false
+  const prev = menuList.value[index - 1]
+  const curr = menuList.value[index]
+  return !!(prev.group && curr.group && prev.group !== curr.group)
+}
+
 // 从路由自动生成菜单
 const menuList = computed<MenuItem[]>(() => {
   const mainRoute = router.getRoutes().find(r => r.path === '/')
@@ -398,6 +426,34 @@ const iconComponents: Record<string, any> = {
   // 笔记本图标
   Notebook: () => h('svg', { class: 'w-5 h-5', fill: 'none', stroke: 'currentColor', viewBox: '0 0 24 24' }, [
     h('path', { 'stroke-linecap': 'round', 'stroke-linejoin': 'round', 'stroke-width': '2', d: 'M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01' })
+  ]),
+  // 组织架构图标（树形层级）
+  Hierarchy: () => h('svg', { class: 'w-5 h-5', fill: 'none', stroke: 'currentColor', viewBox: '0 0 24 24' }, [
+    h('rect', { x: '9', y: '2', width: '6', height: '4', rx: '1', 'stroke-width': '2' }),
+    h('rect', { x: '2', y: '18', width: '6', height: '4', rx: '1', 'stroke-width': '2' }),
+    h('rect', { x: '16', y: '18', width: '6', height: '4', rx: '1', 'stroke-width': '2' }),
+    h('path', { 'stroke-width': '2', d: 'M12 6v4m0 0H5m7 0h7m-14 0v8m14-8v8' })
+  ]),
+  // 地图标记图标
+  MapPin: () => h('svg', { class: 'w-5 h-5', fill: 'none', stroke: 'currentColor', viewBox: '0 0 24 24' }, [
+    h('path', { 'stroke-linecap': 'round', 'stroke-linejoin': 'round', 'stroke-width': '2', d: 'M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z' }),
+    h('path', { 'stroke-linecap': 'round', 'stroke-linejoin': 'round', 'stroke-width': '2', d: 'M15 11a3 3 0 11-6 0 3 3 0 016 0z' })
+  ]),
+  // 带勾清单图标
+  ClipboardCheck: () => h('svg', { class: 'w-5 h-5', fill: 'none', stroke: 'currentColor', viewBox: '0 0 24 24' }, [
+    h('path', { 'stroke-linecap': 'round', 'stroke-linejoin': 'round', 'stroke-width': '2', d: 'M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4' })
+  ]),
+  // 毕业帽图标
+  GraduationCap: () => h('svg', { class: 'w-5 h-5', fill: 'none', stroke: 'currentColor', viewBox: '0 0 24 24' }, [
+    h('path', { 'stroke-linecap': 'round', 'stroke-linejoin': 'round', 'stroke-width': '2', d: 'M12 3L1 9l11 6 9-4.91V17M5 13.18v4L12 21l7-3.82v-4' })
+  ]),
+  // 包裹图标
+  Package: () => h('svg', { class: 'w-5 h-5', fill: 'none', stroke: 'currentColor', viewBox: '0 0 24 24' }, [
+    h('path', { 'stroke-linecap': 'round', 'stroke-linejoin': 'round', 'stroke-width': '2', d: 'M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4' })
+  ]),
+  // 盾牌图标
+  Shield: () => h('svg', { class: 'w-5 h-5', fill: 'none', stroke: 'currentColor', viewBox: '0 0 24 24' }, [
+    h('path', { 'stroke-linecap': 'round', 'stroke-linejoin': 'round', 'stroke-width': '2', d: 'M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z' })
   ]),
 }
 

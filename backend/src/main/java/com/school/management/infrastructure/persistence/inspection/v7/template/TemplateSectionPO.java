@@ -14,12 +14,31 @@ public class TemplateSectionPO {
 
     private Long tenantId;
     private Long templateId;
+    @TableField(updateStrategy = FieldStrategy.ALWAYS)
+    private Long parentSectionId;
+    @TableField(updateStrategy = FieldStrategy.ALWAYS)
+    private Long refTemplateId;
+    @TableField(updateStrategy = FieldStrategy.ALWAYS)
+    private String scoringConfig;
     private String sectionCode;
     private String sectionName;
+    private String targetType;
+    private String targetSourceMode;
+    private String targetTypeFilter;
+    private String description;
+    private String tags;
+    private Long catalogId;
+    private String status;
+    private Integer latestVersion;
+    @TableField(updateStrategy = FieldStrategy.ALWAYS)
+    private Long refSectionId;
     private Integer sortOrder;
     private Integer weight;
     private Boolean isRepeatable;
     private String conditionLogic;
+    private String inspectionMode;
+    private String continuousStart;
+    private String continuousEnd;
     private Long createdBy;
     private LocalDateTime createdAt;
     private Long updatedBy;

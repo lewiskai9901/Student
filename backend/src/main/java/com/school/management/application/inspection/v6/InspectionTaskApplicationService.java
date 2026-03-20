@@ -4,8 +4,8 @@ import com.school.management.domain.inspection.model.v6.*;
 import com.school.management.domain.inspection.repository.v6.InspectionProjectRepository;
 import com.school.management.domain.inspection.repository.v6.InspectionTaskRepository;
 import com.school.management.domain.inspection.repository.v6.InspectionTargetRepository;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -17,22 +17,14 @@ import java.util.Optional;
 /**
  * V6检查任务应用服务
  */
+@Slf4j
+@RequiredArgsConstructor
 @Service
 public class InspectionTaskApplicationService {
-
-    private static final Logger log = LoggerFactory.getLogger(InspectionTaskApplicationService.class);
 
     private final InspectionTaskRepository taskRepository;
     private final InspectionTargetRepository targetRepository;
     private final InspectionProjectRepository projectRepository;
-
-    public InspectionTaskApplicationService(InspectionTaskRepository taskRepository,
-                                             InspectionTargetRepository targetRepository,
-                                             InspectionProjectRepository projectRepository) {
-        this.taskRepository = taskRepository;
-        this.targetRepository = targetRepository;
-        this.projectRepository = projectRepository;
-    }
 
     /**
      * 获取任务详情

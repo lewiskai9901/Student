@@ -39,14 +39,14 @@ export function getAssetList(params: AssetQueryCriteria) {
 /**
  * 获取资产详情
  */
-export function getAsset(id: number) {
+export function getAsset(id: number | string) {
   return request.get<Asset>(`${BASE_URL}/${id}`)
 }
 
 /**
  * 根据位置查询资产
  */
-export function getAssetsByLocation(locationType: string, locationId: number) {
+export function getAssetsByLocation(locationType: string, locationId: number | string) {
   return request.get<Asset[]>(`${BASE_URL}/by-location`, {
     params: { locationType, locationId }
   })
@@ -69,21 +69,21 @@ export function batchCreateAssets(data: BatchCreateAssetRequest) {
 /**
  * 更新资产
  */
-export function updateAsset(id: number, data: UpdateAssetRequest) {
+export function updateAsset(id: number | string, data: UpdateAssetRequest) {
   return request.put(`${BASE_URL}/${id}`, data)
 }
 
 /**
  * 删除资产
  */
-export function deleteAsset(id: number) {
+export function deleteAsset(id: number | string) {
   return request.delete(`${BASE_URL}/${id}`)
 }
 
 /**
  * 调拨资产
  */
-export function transferAsset(id: number, data: TransferAssetRequest) {
+export function transferAsset(id: number | string, data: TransferAssetRequest) {
   return request.post(`${BASE_URL}/${id}/transfer`, data)
 }
 
@@ -97,14 +97,14 @@ export function batchTransferAssets(data: BatchTransferAssetRequest) {
 /**
  * 报废资产
  */
-export function scrapAsset(id: number, data?: ScrapAssetRequest) {
+export function scrapAsset(id: number | string, data?: ScrapAssetRequest) {
   return request.post(`${BASE_URL}/${id}/scrap`, data || {})
 }
 
 /**
  * 获取资产变更历史
  */
-export function getAssetHistory(id: number) {
+export function getAssetHistory(id: number | string) {
   return request.get<AssetHistory[]>(`${BASE_URL}/${id}/history`)
 }
 
@@ -120,21 +120,21 @@ export function getAssetStatistics() {
 /**
  * 获取资产维修记录
  */
-export function getAssetMaintenanceRecords(id: number) {
+export function getAssetMaintenanceRecords(id: number | string) {
   return request.get<AssetMaintenance[]>(`${BASE_URL}/${id}/maintenance`)
 }
 
 /**
  * 创建维修记录
  */
-export function createMaintenance(assetId: number, data: CreateMaintenanceRequest) {
+export function createMaintenance(assetId: number | string, data: CreateMaintenanceRequest) {
   return request.post<number>(`${BASE_URL}/${assetId}/maintenance`, data)
 }
 
 /**
  * 完成维修
  */
-export function completeMaintenance(maintenanceId: number, data: CompleteMaintenanceRequest) {
+export function completeMaintenance(maintenanceId: number | string, data: CompleteMaintenanceRequest) {
   return request.post(`${BASE_URL}/maintenance/${maintenanceId}/complete`, data)
 }
 
@@ -193,7 +193,7 @@ export function getAllCategories() {
 /**
  * 获取分类详情
  */
-export function getCategory(id: number) {
+export function getCategory(id: number | string) {
   return request.get<AssetCategory>(`${CATEGORY_URL}/${id}`)
 }
 
@@ -207,14 +207,14 @@ export function createCategory(data: CreateCategoryRequest) {
 /**
  * 更新分类
  */
-export function updateCategory(id: number, data: CreateCategoryRequest) {
+export function updateCategory(id: number | string, data: CreateCategoryRequest) {
   return request.put(`${CATEGORY_URL}/${id}`, data)
 }
 
 /**
  * 删除分类
  */
-export function deleteCategory(id: number) {
+export function deleteCategory(id: number | string) {
   return request.delete(`${CATEGORY_URL}/${id}`)
 }
 

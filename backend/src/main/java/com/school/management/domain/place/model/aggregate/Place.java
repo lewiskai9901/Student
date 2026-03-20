@@ -1,7 +1,7 @@
-package com.school.management.domain.space.model.aggregate;
+package com.school.management.domain.place.model.aggregate;
 
 import com.school.management.domain.shared.AggregateRoot;
-import com.school.management.domain.space.model.valueobject.*;
+import com.school.management.domain.place.model.valueobject.*;
 import com.school.management.exception.BusinessException;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -16,12 +16,12 @@ import java.util.Map;
  */
 @Getter
 @NoArgsConstructor
-public class Space extends AggregateRoot<Long> {
+public class Place extends AggregateRoot<Long> {
 
     private Long id;
-    private String spaceCode;
-    private String spaceName;
-    private SpaceType spaceType;
+    private String placeCode;
+    private String placeName;
+    private PlaceType placeType;
     private Long categoryId;              // V10: 分类ID（楼栋分类/房间分类）
     private RoomType roomType;            // 保留兼容旧代码
     private BuildingType buildingType;    // 保留兼容旧代码
@@ -33,7 +33,7 @@ public class Space extends AggregateRoot<Long> {
 
     // 层级关系
     private Long parentId;
-    private SpacePath path;
+    private PlacePath path;
     private Integer level;
 
     // 位置信息（冗余字段）
@@ -53,7 +53,7 @@ public class Space extends AggregateRoot<Long> {
     private GenderType genderType;
 
     // 状态
-    private SpaceStatus status;
+    private PlaceStatus status;
 
     // 扩展属性
     private Map<String, Object> attributes;
@@ -71,40 +71,40 @@ public class Space extends AggregateRoot<Long> {
     /**
      * 创建校区
      */
-    public static Space createCampus(String code, String name) {
-        Space space = new Space();
-        space.spaceCode = code;
-        space.spaceName = name;
-        space.spaceType = SpaceType.CAMPUS;
-        space.level = 0;
-        space.path = SpacePath.root();
-        space.status = SpaceStatus.NORMAL;
-        space.attributes = new HashMap<>();
-        space.createdAt = LocalDateTime.now();
-        return space;
+    public static Place createCampus(String code, String name) {
+        Place place = new Place();
+        place.placeCode = code;
+        place.placeName = name;
+        place.placeType = PlaceType.CAMPUS;
+        place.level = 0;
+        place.path = PlacePath.root();
+        place.status = PlaceStatus.NORMAL;
+        place.attributes = new HashMap<>();
+        place.createdAt = LocalDateTime.now();
+        return place;
     }
 
     /**
      * 创建楼宇（V10版本）
      */
-    public static Space createBuilding(String code, String name, Long categoryId,
-                                       Integer buildingNo, Integer floorCount, Space campus) {
-        validateParent(campus, SpaceType.CAMPUS);
+    public static Place createBuilding(String code, String name, Long categoryId,
+                                       Integer buildingNo, Integer floorCount, Place campus) {
+        validateParent(campus, PlaceType.CAMPUS);
 
-        Space space = new Space();
-        space.spaceCode = code;
-        space.spaceName = name;
-        space.spaceType = SpaceType.BUILDING;
-        space.categoryId = categoryId;
-        space.buildingNo = buildingNo;
-        space.floorCount = floorCount;
-        space.parentId = campus.getId();
-        space.campusId = campus.getId();
-        space.level = campus.getLevel() + 1;
-        space.status = SpaceStatus.NORMAL;
-        space.attributes = new HashMap<>();
-        space.createdAt = LocalDateTime.now();
-        return space;
+        Place place = new Place();
+        place.placeCode = code;
+        place.placeName = name;
+        place.placeType = PlaceType.BUILDING;
+        place.categoryId = categoryId;
+        place.buildingNo = buildingNo;
+        place.floorCount = floorCount;
+        place.parentId = campus.getId();
+        place.campusId = campus.getId();
+        place.level = campus.getLevel() + 1;
+        place.status = PlaceStatus.NORMAL;
+        place.attributes = new HashMap<>();
+        place.createdAt = LocalDateTime.now();
+        return place;
     }
 
     /**
@@ -112,75 +112,75 @@ public class Space extends AggregateRoot<Long> {
      * @deprecated 请使用新版本的 createBuilding(code, name, categoryId, buildingNo, floorCount, campus)
      */
     @Deprecated
-    public static Space createBuilding(String code, String name, BuildingType buildingType,
-                                       String buildingNo, Space campus) {
-        validateParent(campus, SpaceType.CAMPUS);
+    public static Place createBuilding(String code, String name, BuildingType buildingType,
+                                       String buildingNo, Place campus) {
+        validateParent(campus, PlaceType.CAMPUS);
 
-        Space space = new Space();
-        space.spaceCode = code;
-        space.spaceName = name;
-        space.spaceType = SpaceType.BUILDING;
-        space.buildingType = buildingType;
+        Place place = new Place();
+        place.placeCode = code;
+        place.placeName = name;
+        place.placeType = PlaceType.BUILDING;
+        place.buildingType = buildingType;
         try {
-            space.buildingNo = Integer.parseInt(buildingNo);
+            place.buildingNo = Integer.parseInt(buildingNo);
         } catch (NumberFormatException e) {
-            space.buildingNo = null;
+            place.buildingNo = null;
         }
-        space.parentId = campus.getId();
-        space.campusId = campus.getId();
-        space.level = campus.getLevel() + 1;
-        space.status = SpaceStatus.NORMAL;
-        space.attributes = new HashMap<>();
-        space.createdAt = LocalDateTime.now();
-        return space;
+        place.parentId = campus.getId();
+        place.campusId = campus.getId();
+        place.level = campus.getLevel() + 1;
+        place.status = PlaceStatus.NORMAL;
+        place.attributes = new HashMap<>();
+        place.createdAt = LocalDateTime.now();
+        return place;
     }
 
     /**
      * 创建楼层
      */
-    public static Space createFloor(Integer floorNumber, Space building) {
-        validateParent(building, SpaceType.BUILDING);
+    public static Place createFloor(Integer floorNumber, Place building) {
+        validateParent(building, PlaceType.BUILDING);
 
-        Space space = new Space();
-        space.spaceCode = building.getSpaceCode() + "-F" + floorNumber;
-        space.spaceName = floorNumber + "层";
-        space.spaceType = SpaceType.FLOOR;
-        space.floorNumber = floorNumber;
-        space.parentId = building.getId();
-        space.campusId = building.getCampusId();
-        space.buildingId = building.getId();
-        space.level = building.getLevel() + 1;
-        space.status = SpaceStatus.NORMAL;
-        space.attributes = new HashMap<>();
-        space.createdAt = LocalDateTime.now();
-        return space;
+        Place place = new Place();
+        place.placeCode = building.getPlaceCode() + "-F" + floorNumber;
+        place.placeName = floorNumber + "层";
+        place.placeType = PlaceType.FLOOR;
+        place.floorNumber = floorNumber;
+        place.parentId = building.getId();
+        place.campusId = building.getCampusId();
+        place.buildingId = building.getId();
+        place.level = building.getLevel() + 1;
+        place.status = PlaceStatus.NORMAL;
+        place.attributes = new HashMap<>();
+        place.createdAt = LocalDateTime.now();
+        return place;
     }
 
     /**
      * 创建房间（V10版本）
      */
-    public static Space createRoom(String code, String name, Long categoryId,
+    public static Place createRoom(String code, String name, Long categoryId,
                                    Integer roomNo, Integer capacity, GenderType genderType,
-                                   Space floor) {
-        validateParent(floor, SpaceType.FLOOR);
+                                   Place floor) {
+        validateParent(floor, PlaceType.FLOOR);
 
-        Space space = new Space();
-        space.spaceCode = code;
-        space.spaceName = name;
-        space.spaceType = SpaceType.ROOM;
-        space.categoryId = categoryId;
-        space.roomNo = roomNo;
-        space.floorNumber = floor.getFloorNumber();
-        space.parentId = floor.getId();
-        space.campusId = floor.getCampusId();
-        space.buildingId = floor.getBuildingId();
-        space.level = floor.getLevel() + 1;
-        space.capacity = capacity != null ? Capacity.of(capacity) : Capacity.empty();
-        space.genderType = genderType != null ? genderType : GenderType.MIXED;
-        space.status = SpaceStatus.NORMAL;
-        space.attributes = new HashMap<>();
-        space.createdAt = LocalDateTime.now();
-        return space;
+        Place place = new Place();
+        place.placeCode = code;
+        place.placeName = name;
+        place.placeType = PlaceType.ROOM;
+        place.categoryId = categoryId;
+        place.roomNo = roomNo;
+        place.floorNumber = floor.getFloorNumber();
+        place.parentId = floor.getId();
+        place.campusId = floor.getCampusId();
+        place.buildingId = floor.getBuildingId();
+        place.level = floor.getLevel() + 1;
+        place.capacity = capacity != null ? Capacity.of(capacity) : Capacity.empty();
+        place.genderType = genderType != null ? genderType : GenderType.MIXED;
+        place.status = PlaceStatus.NORMAL;
+        place.attributes = new HashMap<>();
+        place.createdAt = LocalDateTime.now();
+        return place;
     }
 
     /**
@@ -188,37 +188,37 @@ public class Space extends AggregateRoot<Long> {
      * @deprecated 请使用新版本的 createRoom(code, name, categoryId, roomNo, capacity, genderType, floor)
      */
     @Deprecated
-    public static Space createRoom(String code, String name, RoomType roomType,
-                                   Integer capacity, String roomNo, Space floor) {
-        validateParent(floor, SpaceType.FLOOR);
+    public static Place createRoom(String code, String name, RoomType roomType,
+                                   Integer capacity, String roomNo, Place floor) {
+        validateParent(floor, PlaceType.FLOOR);
 
-        Space space = new Space();
-        space.spaceCode = code;
-        space.spaceName = name;
-        space.spaceType = SpaceType.ROOM;
-        space.roomType = roomType;
+        Place place = new Place();
+        place.placeCode = code;
+        place.placeName = name;
+        place.placeType = PlaceType.ROOM;
+        place.roomType = roomType;
         try {
-            space.roomNo = Integer.parseInt(roomNo);
+            place.roomNo = Integer.parseInt(roomNo);
         } catch (NumberFormatException e) {
-            space.roomNo = null;
+            place.roomNo = null;
         }
-        space.floorNumber = floor.getFloorNumber();
-        space.parentId = floor.getId();
-        space.campusId = floor.getCampusId();
-        space.buildingId = floor.getBuildingId();
-        space.level = floor.getLevel() + 1;
-        space.capacity = capacity != null ? Capacity.of(capacity) : Capacity.empty();
-        space.status = SpaceStatus.NORMAL;
-        space.attributes = new HashMap<>();
-        space.createdAt = LocalDateTime.now();
-        return space;
+        place.floorNumber = floor.getFloorNumber();
+        place.parentId = floor.getId();
+        place.campusId = floor.getCampusId();
+        place.buildingId = floor.getBuildingId();
+        place.level = floor.getLevel() + 1;
+        place.capacity = capacity != null ? Capacity.of(capacity) : Capacity.empty();
+        place.status = PlaceStatus.NORMAL;
+        place.attributes = new HashMap<>();
+        place.createdAt = LocalDateTime.now();
+        return place;
     }
 
     /**
      * 从持久化数据重建（V10版本）
      */
-    public static Space reconstitute(Long id, String spaceCode, String spaceName,
-                                     SpaceType spaceType, Long categoryId,
+    public static Place reconstitute(Long id, String placeCode, String placeName,
+                                     PlaceType placeType, Long categoryId,
                                      RoomType roomType, BuildingType buildingType,
                                      Integer buildingNo, Integer roomNo, Integer floorCount,
                                      Long parentId, String path, Integer level,
@@ -226,39 +226,39 @@ public class Space extends AggregateRoot<Long> {
                                      Integer maxCapacity, Integer currentOccupancy,
                                      Long orgUnitId, Long classId, Long responsibleUserId,
                                      GenderType genderType,
-                                     SpaceStatus status, Map<String, Object> attributes, String description,
+                                     PlaceStatus status, Map<String, Object> attributes, String description,
                                      Long createdBy, LocalDateTime createdAt,
                                      Long updatedBy, LocalDateTime updatedAt) {
-        Space space = new Space();
-        space.id = id;
-        space.spaceCode = spaceCode;
-        space.spaceName = spaceName;
-        space.spaceType = spaceType;
-        space.categoryId = categoryId;
-        space.roomType = roomType;
-        space.buildingType = buildingType;
-        space.buildingNo = buildingNo;
-        space.roomNo = roomNo;
-        space.floorCount = floorCount;
-        space.parentId = parentId;
-        space.path = SpacePath.of(path);
-        space.level = level;
-        space.campusId = campusId;
-        space.buildingId = buildingId;
-        space.floorNumber = floorNumber;
-        space.capacity = Capacity.of(maxCapacity, currentOccupancy);
-        space.orgUnitId = orgUnitId;
-        space.classId = classId;
-        space.responsibleUserId = responsibleUserId;
-        space.genderType = genderType != null ? genderType : GenderType.MIXED;
-        space.status = status;
-        space.attributes = attributes != null ? attributes : new HashMap<>();
-        space.description = description;
-        space.createdBy = createdBy;
-        space.createdAt = createdAt;
-        space.updatedBy = updatedBy;
-        space.updatedAt = updatedAt;
-        return space;
+        Place place = new Place();
+        place.id = id;
+        place.placeCode = placeCode;
+        place.placeName = placeName;
+        place.placeType = placeType;
+        place.categoryId = categoryId;
+        place.roomType = roomType;
+        place.buildingType = buildingType;
+        place.buildingNo = buildingNo;
+        place.roomNo = roomNo;
+        place.floorCount = floorCount;
+        place.parentId = parentId;
+        place.path = PlacePath.of(path);
+        place.level = level;
+        place.campusId = campusId;
+        place.buildingId = buildingId;
+        place.floorNumber = floorNumber;
+        place.capacity = Capacity.of(maxCapacity, currentOccupancy);
+        place.orgUnitId = orgUnitId;
+        place.classId = classId;
+        place.responsibleUserId = responsibleUserId;
+        place.genderType = genderType != null ? genderType : GenderType.MIXED;
+        place.status = status;
+        place.attributes = attributes != null ? attributes : new HashMap<>();
+        place.description = description;
+        place.createdBy = createdBy;
+        place.createdAt = createdAt;
+        place.updatedBy = updatedBy;
+        place.updatedAt = updatedAt;
+        return place;
     }
 
     /**
@@ -266,53 +266,53 @@ public class Space extends AggregateRoot<Long> {
      * @deprecated 请使用新版本的 reconstitute
      */
     @Deprecated
-    public static Space reconstitute(Long id, String spaceCode, String spaceName,
-                                     SpaceType spaceType, RoomType roomType, BuildingType buildingType,
+    public static Place reconstitute(Long id, String placeCode, String placeName,
+                                     PlaceType placeType, RoomType roomType, BuildingType buildingType,
                                      String buildingNo, String roomNo,
                                      Long parentId, String path, Integer level,
                                      Long campusId, Long buildingId, Integer floorNumber,
                                      Integer maxCapacity, Integer currentOccupancy,
                                      Long orgUnitId, Long classId, Long responsibleUserId,
                                      GenderType genderType,
-                                     SpaceStatus status, Map<String, Object> attributes, String description,
+                                     PlaceStatus status, Map<String, Object> attributes, String description,
                                      Long createdBy, LocalDateTime createdAt,
                                      Long updatedBy, LocalDateTime updatedAt) {
-        Space space = new Space();
-        space.id = id;
-        space.spaceCode = spaceCode;
-        space.spaceName = spaceName;
-        space.spaceType = spaceType;
-        space.roomType = roomType;
-        space.buildingType = buildingType;
+        Place place = new Place();
+        place.id = id;
+        place.placeCode = placeCode;
+        place.placeName = placeName;
+        place.placeType = placeType;
+        place.roomType = roomType;
+        place.buildingType = buildingType;
         try {
-            space.buildingNo = buildingNo != null ? Integer.parseInt(buildingNo) : null;
+            place.buildingNo = buildingNo != null ? Integer.parseInt(buildingNo) : null;
         } catch (NumberFormatException e) {
-            space.buildingNo = null;
+            place.buildingNo = null;
         }
         try {
-            space.roomNo = roomNo != null ? Integer.parseInt(roomNo) : null;
+            place.roomNo = roomNo != null ? Integer.parseInt(roomNo) : null;
         } catch (NumberFormatException e) {
-            space.roomNo = null;
+            place.roomNo = null;
         }
-        space.parentId = parentId;
-        space.path = SpacePath.of(path);
-        space.level = level;
-        space.campusId = campusId;
-        space.buildingId = buildingId;
-        space.floorNumber = floorNumber;
-        space.capacity = Capacity.of(maxCapacity, currentOccupancy);
-        space.orgUnitId = orgUnitId;
-        space.classId = classId;
-        space.responsibleUserId = responsibleUserId;
-        space.genderType = genderType != null ? genderType : GenderType.MIXED;
-        space.status = status;
-        space.attributes = attributes != null ? attributes : new HashMap<>();
-        space.description = description;
-        space.createdBy = createdBy;
-        space.createdAt = createdAt;
-        space.updatedBy = updatedBy;
-        space.updatedAt = updatedAt;
-        return space;
+        place.parentId = parentId;
+        place.path = PlacePath.of(path);
+        place.level = level;
+        place.campusId = campusId;
+        place.buildingId = buildingId;
+        place.floorNumber = floorNumber;
+        place.capacity = Capacity.of(maxCapacity, currentOccupancy);
+        place.orgUnitId = orgUnitId;
+        place.classId = classId;
+        place.responsibleUserId = responsibleUserId;
+        place.genderType = genderType != null ? genderType : GenderType.MIXED;
+        place.status = status;
+        place.attributes = attributes != null ? attributes : new HashMap<>();
+        place.description = description;
+        place.createdBy = createdBy;
+        place.createdAt = createdAt;
+        place.updatedBy = updatedBy;
+        place.updatedAt = updatedAt;
+        return place;
     }
 
     // ========== 业务方法 ==========
@@ -327,7 +327,7 @@ public class Space extends AggregateRoot<Long> {
     /**
      * 更新路径
      */
-    public void updatePath(SpacePath newPath) {
+    public void updatePath(PlacePath newPath) {
         this.path = newPath;
         this.updatedAt = LocalDateTime.now();
     }
@@ -336,7 +336,7 @@ public class Space extends AggregateRoot<Long> {
      * 更新基本信息
      */
     public void updateInfo(String name, String description) {
-        this.spaceName = name;
+        this.placeName = name;
         this.description = description;
         this.updatedAt = LocalDateTime.now();
     }
@@ -345,7 +345,7 @@ public class Space extends AggregateRoot<Long> {
      * 更新楼号（仅BUILDING类型）
      */
     public void updateBuildingNo(Integer buildingNo) {
-        if (this.spaceType == SpaceType.BUILDING) {
+        if (this.placeType == PlaceType.BUILDING) {
             this.buildingNo = buildingNo;
             this.updatedAt = LocalDateTime.now();
         }
@@ -355,7 +355,7 @@ public class Space extends AggregateRoot<Long> {
      * 更新楼层数（仅BUILDING类型）
      */
     public void updateFloorCount(Integer floorCount) {
-        if (this.spaceType == SpaceType.BUILDING) {
+        if (this.placeType == PlaceType.BUILDING) {
             this.floorCount = floorCount;
             this.updatedAt = LocalDateTime.now();
         }
@@ -365,7 +365,7 @@ public class Space extends AggregateRoot<Long> {
      * 更新房间号（仅ROOM类型）
      */
     public void updateRoomNo(Integer roomNo) {
-        if (this.spaceType == SpaceType.ROOM) {
+        if (this.placeType == PlaceType.ROOM) {
             this.roomNo = roomNo;
             this.updatedAt = LocalDateTime.now();
         }
@@ -375,7 +375,7 @@ public class Space extends AggregateRoot<Long> {
      * 更新分类（楼栋或房间）
      */
     public void updateCategory(Long categoryId) {
-        if (this.spaceType == SpaceType.BUILDING || this.spaceType == SpaceType.ROOM) {
+        if (this.placeType == PlaceType.BUILDING || this.placeType == PlaceType.ROOM) {
             this.categoryId = categoryId;
             this.updatedAt = LocalDateTime.now();
         }
@@ -447,8 +447,8 @@ public class Space extends AggregateRoot<Long> {
      * 启用
      */
     public void enable() {
-        if (this.status == SpaceStatus.DISABLED) {
-            this.status = SpaceStatus.NORMAL;
+        if (this.status == PlaceStatus.DISABLED) {
+            this.status = PlaceStatus.NORMAL;
             this.updatedAt = LocalDateTime.now();
         }
     }
@@ -460,7 +460,7 @@ public class Space extends AggregateRoot<Long> {
         if (this.capacity != null && !this.capacity.isEmpty()) {
             throw new BusinessException("场所有占用者，无法停用");
         }
-        this.status = SpaceStatus.DISABLED;
+        this.status = PlaceStatus.DISABLED;
         this.updatedAt = LocalDateTime.now();
     }
 
@@ -468,7 +468,7 @@ public class Space extends AggregateRoot<Long> {
      * 开始维修
      */
     public void startMaintenance() {
-        this.status = SpaceStatus.MAINTENANCE;
+        this.status = PlaceStatus.MAINTENANCE;
         this.updatedAt = LocalDateTime.now();
     }
 
@@ -476,8 +476,8 @@ public class Space extends AggregateRoot<Long> {
      * 完成维修
      */
     public void completeMaintenance() {
-        if (this.status == SpaceStatus.MAINTENANCE) {
-            this.status = SpaceStatus.NORMAL;
+        if (this.status == PlaceStatus.MAINTENANCE) {
+            this.status = PlaceStatus.NORMAL;
             this.updatedAt = LocalDateTime.now();
         }
     }
@@ -523,8 +523,8 @@ public class Space extends AggregateRoot<Long> {
      * 是否可入住
      */
     public boolean canCheckIn() {
-        return this.status == SpaceStatus.NORMAL
-            && this.spaceType == SpaceType.ROOM
+        return this.status == PlaceStatus.NORMAL
+            && this.placeType == PlaceType.ROOM
             && this.capacity != null
             && !this.capacity.isFull();
     }
@@ -533,7 +533,7 @@ public class Space extends AggregateRoot<Long> {
      * 是否是房间
      */
     public boolean isRoom() {
-        return this.spaceType == SpaceType.ROOM;
+        return this.placeType == PlaceType.ROOM;
     }
 
     /**
@@ -621,23 +621,23 @@ public class Space extends AggregateRoot<Long> {
 
     // ========== 私有方法 ==========
 
-    private static void validateParent(Space parent, SpaceType expectedType) {
+    private static void validateParent(Place parent, PlaceType expectedType) {
         if (parent == null) {
             throw new BusinessException("父级场所不能为空");
         }
         if (parent.getId() == null) {
             throw new BusinessException("父级场所必须先保存");
         }
-        if (parent.getSpaceType() != expectedType) {
+        if (parent.getPlaceType() != expectedType) {
             throw new BusinessException("父级场所类型不正确，期望: " + expectedType.getDescription());
         }
     }
 
     private void validateCheckIn() {
-        if (this.spaceType != SpaceType.ROOM) {
+        if (this.placeType != PlaceType.ROOM) {
             throw new BusinessException("只有房间类型场所才能入住");
         }
-        if (this.status != SpaceStatus.NORMAL) {
+        if (this.status != PlaceStatus.NORMAL) {
             throw new BusinessException("场所状态不可用");
         }
         if (this.capacity == null) {

@@ -5,218 +5,392 @@ import com.school.management.domain.inspection.model.v7.execution.TargetType;
 import com.school.management.domain.inspection.model.v7.template.*;
 import com.school.management.domain.inspection.repository.v7.*;
 import com.school.management.infrastructure.event.SpringDomainEventPublisher;
+import com.school.management.common.PageResult;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import com.school.management.common.PageResult;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.stream.Collectors;
 
+/**
+ * V62 统一分区模型 — 根分区应用服务
+ *
+ * 根分区（parentSectionId=null, templateId=null）替代原来的 InspTemplate。
+ * 所有"模板级"操作（创建、发布、版本管理、导出等）都通过根分区进行。
+ */
 @Slf4j
 @RequiredArgsConstructor
 @Service
 public class InspTemplateApplicationService {
 
-    private final InspTemplateRepository templateRepository;
-    private final TemplateVersionRepository versionRepository;
     private final TemplateSectionRepository sectionRepository;
+    private final TemplateVersionRepository versionRepository;
     private final TemplateItemRepository itemRepository;
-    private final TemplateModuleRefRepository moduleRefRepository;
     private final SpringDomainEventPublisher eventPublisher;
     private final ObjectMapper objectMapper;
 
-    @Transactional
-    public InspTemplate createTemplate(String templateName, String description,
-                                        Long catalogId, String tags,
-                                        TargetType targetType, Long createdBy) {
-        String templateCode = generateTemplateCode();
-        InspTemplate template = InspTemplate.create(templateCode, templateName, createdBy);
+    // ========== 根分区 CRUD ==========
 
-        // Set optional fields via update
-        if (description != null || catalogId != null || tags != null || targetType != null) {
-            InspTemplate saved = templateRepository.save(template);
-            saved.updateInfo(templateName, description, catalogId, tags, targetType, createdBy);
-            return templateRepository.save(saved);
+    /**
+     * 创建根分区（即创建新模板）
+     */
+    @Transactional
+    public TemplateSection createRootSection(String name, String description,
+                                              Long catalogId, String tags,
+                                              Long createdBy) {
+        String code = generateSectionCode();
+        TemplateSection root = TemplateSection.createRoot(code, name, createdBy);
+
+        // 保存先拿到ID，再设置可选字段
+        root = sectionRepository.save(root);
+
+        if (description != null || catalogId != null || tags != null) {
+            root.updateInfo(name, description, tags, catalogId, createdBy);
+            root = sectionRepository.save(root);
         }
 
-        return templateRepository.save(template);
+        log.info("创建根分区: id={}, code={}, name={}", root.getId(), code, name);
+        return root;
     }
 
+    /**
+     * 获取根分区详情
+     */
     @Transactional(readOnly = true)
-    public Optional<InspTemplate> getTemplate(Long id) {
-        return templateRepository.findById(id);
+    public Optional<TemplateSection> getRootSection(Long id) {
+        return sectionRepository.findById(id)
+                .filter(TemplateSection::isRoot);
     }
 
+    /**
+     * 分页查询根分区列表
+     */
     @Transactional(readOnly = true)
-    public PageResult<InspTemplate> listTemplates(int page, int size, TemplateStatus status,
-                                                   Long catalogId, String keyword) {
+    public PageResult<TemplateSection> listRootSections(int page, int size,
+                                                         TemplateStatus status,
+                                                         Long catalogId,
+                                                         String keyword) {
         int offset = (page - 1) * size;
-        List<InspTemplate> templates = templateRepository.findPagedWithConditions(offset, size, status, catalogId, keyword);
-        long total = templateRepository.countWithConditions(status, catalogId, keyword);
-        return PageResult.of(templates, total, page, size);
+        String statusStr = status != null ? status.name() : null;
+        List<TemplateSection> records = sectionRepository.findRootSectionsPaged(
+                offset, size, statusStr, catalogId, keyword);
+        int total = sectionRepository.countRootSections(statusStr, catalogId, keyword);
+        return PageResult.of(records, total, page, size);
     }
 
+    /**
+     * 更新根分区基本信息
+     */
     @Transactional
-    public InspTemplate updateTemplate(Long id, String templateName, String description,
-                                        Long catalogId, String tags,
-                                        TargetType targetType, Long updatedBy) {
-        InspTemplate template = templateRepository.findById(id)
-                .orElseThrow(() -> new IllegalArgumentException("模板不存在: " + id));
-        template.updateInfo(templateName, description, catalogId, tags, targetType, updatedBy);
-        return templateRepository.save(template);
+    public TemplateSection updateRootSection(Long id, String name, String description,
+                                              Long catalogId, String tags, Long updatedBy) {
+        TemplateSection root = findRootOrThrow(id);
+        root.updateInfo(name, description, tags, catalogId, updatedBy);
+        return sectionRepository.save(root);
     }
 
+    /**
+     * 删除根分区 — 级联删除所有子孙分区及其检查项
+     * 已发布的根分区不能直接删除，需先弃用/归档。
+     */
     @Transactional
-    public void deleteTemplate(Long id) {
-        InspTemplate template = templateRepository.findById(id)
-                .orElseThrow(() -> new IllegalArgumentException("模板不存在: " + id));
-        if (template.getStatus() != TemplateStatus.DRAFT) {
-            throw new IllegalStateException("只有草稿状态的模板才能删除");
+    public void deleteRootSection(Long id) {
+        TemplateSection root = findRootOrThrow(id);
+
+        if (root.getStatus() == TemplateStatus.PUBLISHED) {
+            throw new IllegalStateException("已发布的模板需先弃用才能删除");
         }
-        // Cascade delete sections and items
-        List<TemplateSection> sections = sectionRepository.findByTemplateId(id);
-        for (TemplateSection section : sections) {
+
+        // 获取所有子孙，逆序删除（叶子节点优先）
+        List<TemplateSection> descendants = sectionRepository.findDescendants(id);
+        // 从叶子到根删除
+        List<TemplateSection> reversed = new ArrayList<>(descendants);
+        Collections.reverse(reversed);
+
+        for (TemplateSection section : reversed) {
             itemRepository.deleteBySectionId(section.getId());
+            sectionRepository.deleteById(section.getId());
         }
-        sectionRepository.deleteByTemplateId(id);
-        templateRepository.deleteById(id);
+
+        // 最后删除根分区本身的 items 和根分区
+        itemRepository.deleteBySectionId(id);
+        sectionRepository.deleteById(id);
+
+        log.info("删除根分区及所有子孙: rootId={}, descendantCount={}", id, descendants.size());
     }
 
+    // ========== 生命周期管理 ==========
+
+    /**
+     * 发布根分区 — 创建不可变版本快照
+     */
     @Transactional
-    public TemplateVersion publishTemplate(Long id, Long operatorId) {
-        InspTemplate template = templateRepository.findById(id)
-                .orElseThrow(() -> new IllegalArgumentException("模板不存在: " + id));
+    public TemplateVersion publishRootSection(Long id, Long operatorId) {
+        TemplateSection root = findRootOrThrow(id);
 
-        List<TemplateSection> sections = sectionRepository.findByTemplateId(id);
-        List<TemplateItem> items = itemRepository.findByTemplateId(id);
-        List<TemplateModuleRef> moduleRefs = moduleRefRepository.findByCompositeTemplateId(id);
-
-        if (sections.isEmpty() && moduleRefs.isEmpty()) {
-            throw new IllegalArgumentException("模板至少需要一个分区或子模板引用才能发布");
+        // 收集所有子孙分区
+        List<TemplateSection> descendants = sectionRepository.findDescendants(id);
+        if (descendants.isEmpty()) {
+            throw new IllegalArgumentException("模板至少需要一个子分区才能发布");
         }
 
-        // Build structure snapshot
+        // 收集所有检查项（根分区 + 所有子孙）
+        List<TemplateItem> allItems = new ArrayList<>();
+        allItems.addAll(itemRepository.findBySectionId(id));
+        for (TemplateSection desc : descendants) {
+            allItems.addAll(itemRepository.findBySectionId(desc.getId()));
+        }
+
+        // 构建结构快照 JSON
         String structureSnapshot;
         try {
-            Map<String, Object> structure = new HashMap<>();
-            structure.put("sections", sections);
-            structure.put("items", items);
-            structure.put("moduleRefs", moduleRefs);
+            Map<String, Object> structure = new LinkedHashMap<>();
+            structure.put("rootSection", root);
+            structure.put("sections", descendants);
+            structure.put("items", allItems);
             structureSnapshot = objectMapper.writeValueAsString(structure);
         } catch (Exception e) {
             throw new RuntimeException("序列化模板结构失败", e);
         }
 
-        TemplateVersion version = template.publish(sections, items, structureSnapshot, null);
-        templateRepository.save(template);
+        // 调用领域模型的 publish 方法（更新状态、版本号）
+        TemplateVersion version = root.publish(descendants, allItems, structureSnapshot, null);
+        sectionRepository.save(root);
         versionRepository.save(version);
 
-        // Publish domain events
-        template.getDomainEvents().forEach(eventPublisher::publish);
-        template.clearDomainEvents();
+        // 发布领域事件
+        root.getDomainEvents().forEach(eventPublisher::publish);
+        root.clearDomainEvents();
 
+        log.info("发布根分区: id={}, version={}", id, version.getVersion());
         return version;
     }
 
+    /**
+     * 弃用根分区
+     */
     @Transactional
-    public void deprecateTemplate(Long id) {
-        InspTemplate template = templateRepository.findById(id)
-                .orElseThrow(() -> new IllegalArgumentException("模板不存在: " + id));
-        template.deprecate();
-        templateRepository.save(template);
+    public void deprecateRootSection(Long id) {
+        TemplateSection root = findRootOrThrow(id);
+        root.deprecate();
+        sectionRepository.save(root);
+        log.info("弃用根分区: id={}", id);
     }
 
+    /**
+     * 归档根分区
+     */
     @Transactional
-    public void archiveTemplate(Long id) {
-        InspTemplate template = templateRepository.findById(id)
-                .orElseThrow(() -> new IllegalArgumentException("模板不存在: " + id));
-        template.archive();
-        templateRepository.save(template);
+    public void archiveRootSection(Long id) {
+        TemplateSection root = findRootOrThrow(id);
+        root.archive();
+        sectionRepository.save(root);
+        log.info("归档根分区: id={}", id);
     }
 
+    // ========== 复制 ==========
+
+    /**
+     * 深度复制根分区（含完整分区树 + 检查项）
+     */
     @Transactional
-    public InspTemplate duplicateTemplate(Long id, Long operatorId) {
-        InspTemplate source = templateRepository.findById(id)
-                .orElseThrow(() -> new IllegalArgumentException("模板不存在: " + id));
+    public TemplateSection duplicateRootSection(Long id, Long operatorId) {
+        TemplateSection source = findRootOrThrow(id);
 
-        String newCode = generateTemplateCode();
-        InspTemplate copy = InspTemplate.create(newCode, source.getTemplateName() + " (副本)", operatorId);
-        copy = templateRepository.save(copy);
-        copy.updateInfo(copy.getTemplateName(), source.getDescription(), source.getCatalogId(),
-                source.getTags(), source.getTargetType(), operatorId);
-        copy = templateRepository.save(copy);
+        // 1. 创建新根分区
+        String newCode = generateSectionCode();
+        TemplateSection newRoot = TemplateSection.createRoot(newCode, source.getSectionName() + "(副本)", operatorId);
+        newRoot = sectionRepository.save(newRoot);
 
-        // Copy sections
-        List<TemplateSection> sourceSections = sectionRepository.findByTemplateId(id);
-        Map<Long, Long> sectionIdMap = new HashMap<>(); // old -> new
+        // 设置可选字段
+        newRoot.updateInfo(
+                newRoot.getSectionName(),
+                source.getDescription(),
+                source.getTags(),
+                source.getCatalogId(),
+                operatorId
+        );
+        if (source.getScoringConfig() != null) {
+            newRoot.updateScoringConfig(source.getScoringConfig(), operatorId);
+        }
+        newRoot = sectionRepository.save(newRoot);
 
-        for (TemplateSection srcSection : sourceSections) {
-            TemplateSection newSection = TemplateSection.create(
-                    copy.getId(), srcSection.getSectionCode(), srcSection.getSectionName(), operatorId);
-            newSection.update(srcSection.getSectionName(), srcSection.getWeight(),
-                    srcSection.getIsRepeatable(), srcSection.getConditionLogic(), operatorId);
-            newSection.reorder(srcSection.getSortOrder());
-            newSection = sectionRepository.save(newSection);
-            sectionIdMap.put(srcSection.getId(), newSection.getId());
+        // 2. 获取所有子孙分区，按拓扑排序（父节点在前）
+        List<TemplateSection> descendants = sectionRepository.findDescendants(id);
+        List<TemplateSection> sorted = topologicalSort(descendants);
+
+        // 3. 逐个复制子孙分区，维护 oldId → newId 映射
+        Map<Long, Long> idMap = new HashMap<>();
+        idMap.put(id, newRoot.getId()); // 根分区映射
+
+        for (TemplateSection src : sorted) {
+            Long newParentId = idMap.get(src.getParentSectionId());
+            if (newParentId == null) {
+                log.warn("复制分区时找不到父节点映射: srcId={}, parentId={}", src.getId(), src.getParentSectionId());
+                continue;
+            }
+
+            TemplateSection copy = TemplateSection.reconstruct(
+                    TemplateSection.builder()
+                            .parentSectionId(newParentId)
+                            .refSectionId(src.getRefSectionId())
+                            .sectionCode(src.getSectionCode() + "-COPY")
+                            .sectionName(src.getSectionName())
+                            .targetType(src.getTargetType())
+                            .sortOrder(src.getSortOrder())
+                            .weight(src.getWeight())
+                            .isRepeatable(src.getIsRepeatable())
+                            .conditionLogic(src.getConditionLogic())
+                            .scoringConfig(src.getScoringConfig())
+                            .createdBy(operatorId)
+            );
+            copy = sectionRepository.save(copy);
+            idMap.put(src.getId(), copy.getId());
         }
 
-        // Copy items
-        for (TemplateSection srcSection : sourceSections) {
-            Long newSectionId = sectionIdMap.get(srcSection.getId());
-            List<TemplateItem> srcItems = itemRepository.findBySectionId(srcSection.getId());
-            for (TemplateItem srcItem : srcItems) {
-                TemplateItem newItem = TemplateItem.create(
-                        newSectionId, srcItem.getItemCode(), srcItem.getItemName(),
-                        srcItem.getItemType(), operatorId);
-                newItem.update(srcItem.getItemName(), srcItem.getDescription(), srcItem.getItemType(),
-                        srcItem.getConfig(), srcItem.getValidationRules(), srcItem.getResponseSetId(),
-                        srcItem.getScoringConfig(), srcItem.getDimensionId(), srcItem.getHelpContent(),
-                        srcItem.getIsRequired(), srcItem.getIsScored(), srcItem.getRequireEvidence(),
-                        srcItem.getItemWeight(), srcItem.getConditionLogic(), operatorId);
-                newItem.reorder(srcItem.getSortOrder());
-                itemRepository.save(newItem);
+        // 4. 复制所有检查项
+        // 根分区自身的 items
+        copyItemsForSection(id, newRoot.getId(), operatorId);
+        // 子孙分区的 items
+        for (TemplateSection src : sorted) {
+            Long newSectionId = idMap.get(src.getId());
+            if (newSectionId != null) {
+                copyItemsForSection(src.getId(), newSectionId, operatorId);
             }
         }
 
-        return copy;
+        log.info("复制根分区完成: sourceId={}, newId={}, sectionCount={}",
+                id, newRoot.getId(), idMap.size());
+        return newRoot;
     }
 
+    // ========== 版本管理 ==========
+
+    /**
+     * 查询根分区的所有版本
+     */
     @Transactional(readOnly = true)
-    public List<TemplateVersion> listVersions(Long templateId) {
-        return versionRepository.findByTemplateId(templateId);
+    public List<TemplateVersion> listVersions(Long rootSectionId) {
+        // 确认是根分区
+        findRootOrThrow(rootSectionId);
+        return versionRepository.findByTemplateId(rootSectionId);
     }
 
+    /**
+     * 获取特定版本
+     */
     @Transactional(readOnly = true)
-    public Optional<TemplateVersion> getVersion(Long templateId, Integer version) {
-        return versionRepository.findByTemplateIdAndVersion(templateId, version);
+    public Optional<TemplateVersion> getVersion(Long rootSectionId, Integer version) {
+        findRootOrThrow(rootSectionId);
+        return versionRepository.findByTemplateIdAndVersion(rootSectionId, version);
     }
 
+    // ========== 导出 ==========
+
+    /**
+     * 导出根分区为 JSON（含完整分区树 + 检查项）
+     */
     @Transactional(readOnly = true)
-    public String exportTemplate(Long id) {
-        InspTemplate template = templateRepository.findById(id)
-                .orElseThrow(() -> new IllegalArgumentException("模板不存在: " + id));
-        List<TemplateSection> sections = sectionRepository.findByTemplateId(id);
-        List<TemplateItem> items = itemRepository.findByTemplateId(id);
+    public String exportRootSection(Long id) {
+        TemplateSection root = findRootOrThrow(id);
+        List<TemplateSection> descendants = sectionRepository.findDescendants(id);
+
+        // 收集所有检查项
+        List<TemplateItem> allItems = new ArrayList<>();
+        allItems.addAll(itemRepository.findBySectionId(id));
+        for (TemplateSection desc : descendants) {
+            allItems.addAll(itemRepository.findBySectionId(desc.getId()));
+        }
 
         try {
             Map<String, Object> export = new LinkedHashMap<>();
-            export.put("template", template);
-            export.put("sections", sections);
-            export.put("items", items);
+            export.put("rootSection", root);
+            export.put("sections", descendants);
+            export.put("items", allItems);
+            export.put("exportedAt", LocalDateTime.now().toString());
             return objectMapper.writeValueAsString(export);
         } catch (Exception e) {
             throw new RuntimeException("导出模板失败", e);
         }
     }
 
-    private String generateTemplateCode() {
+    // ========== 私有方法 ==========
+
+    private TemplateSection findRootOrThrow(Long id) {
+        TemplateSection section = sectionRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("根分区不存在: " + id));
+        if (!section.isRoot()) {
+            throw new IllegalArgumentException("ID " + id + " 不是根分区");
+        }
+        return section;
+    }
+
+    /**
+     * 拓扑排序：保证父节点排在子节点之前
+     */
+    private List<TemplateSection> topologicalSort(List<TemplateSection> sections) {
+        Map<Long, TemplateSection> byId = sections.stream()
+                .collect(Collectors.toMap(TemplateSection::getId, s -> s));
+        Map<Long, List<TemplateSection>> byParent = sections.stream()
+                .collect(Collectors.groupingBy(
+                        s -> s.getParentSectionId() != null ? s.getParentSectionId() : -1L));
+
+        List<TemplateSection> result = new ArrayList<>();
+        Set<Long> visited = new HashSet<>();
+
+        // BFS from roots of this sub-tree (sections whose parent is not in the set)
+        Set<Long> idSet = byId.keySet();
+        Queue<Long> queue = new LinkedList<>();
+        for (TemplateSection s : sections) {
+            if (s.getParentSectionId() == null || !idSet.contains(s.getParentSectionId())) {
+                queue.add(s.getId());
+            }
+        }
+
+        while (!queue.isEmpty()) {
+            Long currentId = queue.poll();
+            if (!visited.add(currentId)) continue;
+            TemplateSection current = byId.get(currentId);
+            if (current != null) {
+                result.add(current);
+            }
+            List<TemplateSection> children = byParent.getOrDefault(currentId, Collections.emptyList());
+            for (TemplateSection child : children) {
+                queue.add(child.getId());
+            }
+        }
+
+        return result;
+    }
+
+    /**
+     * 复制某个分区下的所有检查项到新分区
+     */
+    private void copyItemsForSection(Long sourceSectionId, Long targetSectionId, Long operatorId) {
+        List<TemplateItem> srcItems = itemRepository.findBySectionId(sourceSectionId);
+        for (TemplateItem srcItem : srcItems) {
+            TemplateItem newItem = TemplateItem.create(
+                    targetSectionId, srcItem.getItemCode() + "-COPY",
+                    srcItem.getItemName(), srcItem.getItemType(), operatorId);
+            newItem.update(
+                    srcItem.getItemName(), srcItem.getDescription(), srcItem.getItemType(),
+                    srcItem.getConfig(), srcItem.getValidationRules(), srcItem.getResponseSetId(),
+                    srcItem.getScoringConfig(), srcItem.getDimensionId(), srcItem.getHelpContent(),
+                    srcItem.getIsRequired(), srcItem.getIsScored(), srcItem.getRequireEvidence(),
+                    srcItem.getItemWeight(), srcItem.getConditionLogic(), operatorId);
+            newItem.reorder(srcItem.getSortOrder());
+            itemRepository.save(newItem);
+        }
+    }
+
+    private String generateSectionCode() {
         String datePart = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMdd"));
         int randomPart = ThreadLocalRandom.current().nextInt(1000, 9999);
-        return "TPL-" + datePart + "-" + randomPart;
+        return "SEC-" + datePart + "-" + randomPart;
     }
 }

@@ -13,7 +13,7 @@ public class TemplateScoreItem {
     private String itemCode;
     private String itemName;
     private String description;
-    private ScoringMode scoringMode;
+    private ItemScoringMethod scoringMode;
     private BigDecimal score;
     private BigDecimal minScore;
     private BigDecimal maxScore;
@@ -27,7 +27,10 @@ public class TemplateScoreItem {
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 
-    public enum ScoringMode {
+    /**
+     * 检查项评分方式（区别于全局 ScoringMode 枚举，后者用于 InspectionDetail）
+     */
+    public enum ItemScoringMethod {
         DEDUCTION,  // 扣分
         ADDITION,   // 加分
         FIXED,      // 固定分值
@@ -43,7 +46,7 @@ public class TemplateScoreItem {
         item.itemCode = itemCode;
         item.itemName = itemName;
         item.score = score;
-        item.scoringMode = ScoringMode.DEDUCTION;
+        item.scoringMode = ItemScoringMethod.DEDUCTION;
         item.minScore = BigDecimal.ZERO;
         item.canLinkIndividual = false;
         item.requiresPhoto = false;
@@ -71,8 +74,8 @@ public class TemplateScoreItem {
     public String getDescription() { return description; }
     public void setDescription(String description) { this.description = description; }
 
-    public ScoringMode getScoringMode() { return scoringMode; }
-    public void setScoringMode(ScoringMode scoringMode) { this.scoringMode = scoringMode; }
+    public ItemScoringMethod getScoringMode() { return scoringMode; }
+    public void setScoringMode(ItemScoringMethod scoringMode) { this.scoringMode = scoringMode; }
 
     public BigDecimal getScore() { return score; }
     public void setScore(BigDecimal score) { this.score = score; }

@@ -111,7 +111,7 @@
                   :class="config.formStyle === 'minimal' ? 'text-white/70' : 'text-gray-400'"
                   :style="config.formStyle === 'minimal' ? formInputStyle : { backgroundColor: 'rgba(255,255,255,0.8)' }"
                 >
-                  用户名
+                  账号
                 </div>
                 <div
                   class="h-4 rounded text-[7px] flex items-center px-2"
@@ -242,7 +242,7 @@
                 :class="config.formStyle === 'minimal' ? 'text-white/70' : 'text-gray-400'"
                 :style="config.formStyle === 'minimal' ? formInputStyle : { backgroundColor: '#f3f4f6' }"
               >
-                用户名
+                账号
               </div>
               <div
                 class="h-5 rounded text-[8px] flex items-center px-2"

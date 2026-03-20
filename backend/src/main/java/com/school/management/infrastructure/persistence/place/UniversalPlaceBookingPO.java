@@ -1,4 +1,4 @@
-package com.school.management.infrastructure.persistence.space;
+package com.school.management.infrastructure.persistence.place;
 
 import com.baomidou.mybatisplus.annotation.*;
 import lombok.Data;
@@ -9,8 +9,8 @@ import java.time.LocalDateTime;
  * 空间预订记录持久化对象
  */
 @Data
-@TableName("space_bookings")
-public class UniversalSpaceBookingPO {
+@TableName("place_bookings")
+public class UniversalPlaceBookingPO {
 
     @TableId(type = IdType.AUTO)
     private Long id;
@@ -18,7 +18,7 @@ public class UniversalSpaceBookingPO {
     /**
      * 空间ID
      */
-    private Long spaceId;
+    private Long placeId;
 
     /**
      * 预订人ID
@@ -94,11 +94,11 @@ public class UniversalSpaceBookingPO {
      * 空间名称
      */
     @TableField(exist = false)
-    private String spaceName;
+    private String placeName;
 
     /**
      * 空间类型
      */
     @TableField(exist = false)
-    private String spaceTypeCode;
+    private String placeTypeCode;
 }

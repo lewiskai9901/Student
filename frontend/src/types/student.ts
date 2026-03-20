@@ -33,9 +33,9 @@ export const GenderMap: Record<Gender, string> = {
  * 学生实体 - V2 DDD架构字段名
  */
 export interface Student {
-  id: number
+  id: number | string
   studentNo: string
-  userId?: number
+  userId?: number | string
   username?: string
 
   // V2 使用 name 代替 realName
@@ -54,14 +54,14 @@ export interface Student {
   avatarUrl?: string
 
   // 班级信息
-  classId?: number
+  classId?: number | string
   className?: string
-  gradeId?: number
+  gradeId?: number | string
   gradeName?: string
   gradeLevel?: number
-  majorId?: number
+  majorId?: number | string
   majorName?: string
-  majorDirectionId?: number
+  majorDirectionId?: number | string
 
   // 学籍信息
   educationLevel?: string
@@ -76,7 +76,7 @@ export interface Student {
   statusText?: string
 
   // 宿舍信息
-  dormitoryId?: number
+  dormitoryId?: number | string
   dormitoryName?: string
   buildingNo?: string
   buildingName?: string
@@ -143,10 +143,10 @@ export interface CreateStudentRequest {
   nativePlace?: string
 
   // 班级信息
-  classId?: number
-  gradeId?: number
-  majorId?: number
-  majorDirectionId?: number
+  classId?: number | string
+  gradeId?: number | string
+  majorId?: number | string
+  majorDirectionId?: number | string
 
   // 学籍信息
   educationLevel?: string
@@ -162,7 +162,7 @@ export interface CreateStudentRequest {
   graduatedSchool?: string
 
   // 宿舍信息
-  dormitoryId?: number
+  dormitoryId?: number | string
   bedNumber?: number | string
 
   // 家庭信息
@@ -203,7 +203,7 @@ export interface CreateStudentRequest {
  * 更新学生请求
  */
 export interface UpdateStudentRequest extends Partial<CreateStudentRequest> {
-  id?: number
+  id?: number | string
 }
 
 /**
@@ -214,20 +214,20 @@ export interface StudentQueryParams {
   // V2 使用 name 代替 realName (keyword 用于综合搜索)
   name?: string
   keyword?: string
-  classId?: number
-  gradeId?: number
+  classId?: number | string
+  gradeId?: number | string
   gradeLevel?: number
   // V2 使用 status 代替 studentStatus
   status?: StudentStatus
   gender?: Gender
-  dormitoryId?: number
+  dormitoryId?: number | string
   enrollmentDateStart?: string
   enrollmentDateEnd?: string
   pageNum?: number
   pageSize?: number
-  classIds?: number[]
-  orgUnitIds?: number[]
-  selfUserId?: number
+  classIds?: (number | string)[]
+  orgUnitIds?: (number | string)[]
+  selfUserId?: number | string
 }
 
 /**
@@ -235,7 +235,7 @@ export interface StudentQueryParams {
  */
 export interface StudentSearchParams {
   keyword: string
-  classId?: number
+  classId?: number | string
   limit?: number
 }
 
@@ -243,7 +243,7 @@ export interface StudentSearchParams {
  * 分配宿舍请求
  */
 export interface AssignDormitoryRequest {
-  dormitoryId: number
+  dormitoryId: number | string
   bedNumber?: string
 }
 

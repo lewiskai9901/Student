@@ -1,4 +1,4 @@
-package com.school.management.domain.space.model.entity;
+package com.school.management.domain.place.model.entity;
 
 import com.school.management.domain.shared.Entity;
 
@@ -8,10 +8,10 @@ import java.time.LocalDateTime;
  * 场所-班级分配实体
  * 支持一个场所分配给多个班级的场景（如部门分配宿舍给多个班级）
  */
-public class SpaceClassAssignment implements Entity<Long> {
+public class PlaceClassAssignment implements Entity<Long> {
 
     private Long id;
-    private Long spaceId;
+    private Long placeId;
     private Long classId;
     private Long orgUnitId;         // 所属部门ID（冗余，便于权限控制）
     private Integer assignedBeds;    // 分配床位数（NULL表示不限）
@@ -23,12 +23,12 @@ public class SpaceClassAssignment implements Entity<Long> {
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 
-    public SpaceClassAssignment() {}
+    public PlaceClassAssignment() {}
 
     // Getters
     @Override
     public Long getId() { return id; }
-    public Long getSpaceId() { return spaceId; }
+    public Long getPlaceId() { return placeId; }
     public Long getClassId() { return classId; }
     public Long getOrgUnitId() { return orgUnitId; }
     public Integer getAssignedBeds() { return assignedBeds; }
@@ -43,10 +43,10 @@ public class SpaceClassAssignment implements Entity<Long> {
     /**
      * 创建新的场所-班级分配
      */
-    public static SpaceClassAssignment create(Long spaceId, Long classId, Long orgUnitId,
+    public static PlaceClassAssignment create(Long placeId, Long classId, Long orgUnitId,
                                                Integer assignedBeds, Long assignedBy) {
-        SpaceClassAssignment assignment = new SpaceClassAssignment();
-        assignment.spaceId = spaceId;
+        PlaceClassAssignment assignment = new PlaceClassAssignment();
+        assignment.placeId = placeId;
         assignment.classId = classId;
         assignment.orgUnitId = orgUnitId;
         assignment.assignedBeds = assignedBeds;
@@ -61,13 +61,13 @@ public class SpaceClassAssignment implements Entity<Long> {
     /**
      * 从持久化数据重建
      */
-    public static SpaceClassAssignment reconstitute(Long id, Long spaceId, Long classId, Long orgUnitId,
+    public static PlaceClassAssignment reconstitute(Long id, Long placeId, Long classId, Long orgUnitId,
                                                      Integer assignedBeds, Integer priority, Integer status,
                                                      String remark, Long assignedBy, LocalDateTime assignedAt,
                                                      LocalDateTime createdAt, LocalDateTime updatedAt) {
-        SpaceClassAssignment assignment = new SpaceClassAssignment();
+        PlaceClassAssignment assignment = new PlaceClassAssignment();
         assignment.id = id;
-        assignment.spaceId = spaceId;
+        assignment.placeId = placeId;
         assignment.classId = classId;
         assignment.orgUnitId = orgUnitId;
         assignment.assignedBeds = assignedBeds;

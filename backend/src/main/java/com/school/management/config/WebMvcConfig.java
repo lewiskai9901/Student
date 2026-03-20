@@ -1,8 +1,11 @@
 package com.school.management.config;
 
+import com.school.management.infrastructure.context.AuditContextInterceptor;
+import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.core.io.Resource;
+import org.springframework.web.servlet.config.annotation.InterceptorRegistry;
 import org.springframework.web.servlet.config.annotation.ResourceHandlerRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 import org.springframework.web.servlet.resource.PathResourceResolver;
@@ -17,7 +20,21 @@ import java.io.IOException;
  * @since 1.0.0
  */
 @Configuration
+@RequiredArgsConstructor
 public class WebMvcConfig implements WebMvcConfigurer {
+
+    private final AuditContextInterceptor auditContextInterceptor;
+
+    /**
+     * 注册拦截器
+     * 添加审计上下文拦截器，自动填充请求上下文信息
+     */
+    @Override
+    public void addInterceptors(InterceptorRegistry registry) {
+        registry.addInterceptor(auditContextInterceptor)
+                .addPathPatterns("/api/**", "/v2/**", "/v6/**", "/v9/**")  // 拦截所有API请求
+                .excludePathPatterns("/api/auth/login", "/api/auth/refresh");  // 排除登录和刷新token接口
+    }
 
     /**
      * 配置静态资源处理
@@ -44,25 +61,13 @@ public class WebMvcConfig implements WebMvcConfigurer {
                             return requestedResource;
                         }
 
-                        // 如果是API请求,不处理,返回null让Spring Security和Controller处理
-                        // 注意: resourcePath可能是api/xxx或v2/xxx(取决于请求路径)
-                        // 也可能是scoring/xxx等API路径(当context-path为/api时)
-                        if (resourcePath.startsWith("api/") || resourcePath.startsWith("v2/")
-                            || resourcePath.startsWith("scoring/")
-                            || resourcePath.startsWith("auth/")
-                            || resourcePath.startsWith("users/")
-                            || resourcePath.startsWith("roles/")
-                            || resourcePath.startsWith("permissions/")
-                            || resourcePath.startsWith("org")
-                            || resourcePath.startsWith("inspection")
-                            || resourcePath.startsWith("space")
-                            || resourcePath.startsWith("system")
-                            || resourcePath.startsWith("export")) {
-                            return null;
-                        }
-
-                        // 如果是uploads请求,不处理,返回null让Controller处理
-                        if (resourcePath.startsWith("uploads/")) {
+                        // 如果不是静态文件请求（没有文件扩展名），视为 API 或前端路由
+                        // 静态文件都有扩展名（.js, .css, .html, .png 等），API 路径没有
+                        String lastSegment = resourcePath.contains("/")
+                            ? resourcePath.substring(resourcePath.lastIndexOf('/') + 1)
+                            : resourcePath;
+                        if (!lastSegment.contains(".")) {
+                            // 无扩展名 → 可能是 API 端点，返回 null 让 Controller 处理
                             return null;
                         }
 

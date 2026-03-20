@@ -86,8 +86,8 @@ export const MaintenanceStatusMap: Record<MaintenanceStatus, string> = {
 
 /** 资产分类 */
 export interface AssetCategory {
-  id: number
-  parentId: number | null
+  id: number | string
+  parentId: number | string | null
   categoryCode: string
   categoryName: string
   categoryType: CategoryType | null
@@ -107,10 +107,10 @@ export interface AssetCategory {
 
 /** 资产 */
 export interface Asset {
-  id: number
+  id: number | string
   assetCode: string
   assetName: string
-  categoryId: number
+  categoryId: number | string
   categoryName: string | null
   categoryCode: string | null
   brand: string | null
@@ -130,12 +130,12 @@ export interface Asset {
   availableQuantity: number | null
   locationType: string | null
   locationTypeDesc: string | null
-  locationId: number | null
+  locationId: number | string | null
   locationName: string | null
-  responsibleUserId: number | null
+  responsibleUserId: number | string | null
   responsibleUserName: string | null
   remark: string | null
-  createdBy: number | null
+  createdBy: number | string | null
   createdAt: string
   updatedAt: string
   underWarranty: boolean | null
@@ -150,18 +150,18 @@ export interface Asset {
 
 /** 资产变更历史 */
 export interface AssetHistory {
-  id: number
-  assetId: number
+  id: number | string
+  assetId: number | string
   changeType: string
   changeTypeDesc: string | null
   changeContent: string | null
   oldLocationType: string | null
-  oldLocationId: number | null
+  oldLocationId: number | string | null
   oldLocationName: string | null
   newLocationType: string | null
-  newLocationId: number | null
+  newLocationId: number | string | null
   newLocationName: string | null
-  operatorId: number
+  operatorId: number | string
   operatorName: string | null
   operateTime: string
   remark: string | null
@@ -169,8 +169,8 @@ export interface AssetHistory {
 
 /** 资产维修记录 */
 export interface AssetMaintenance {
-  id: number
-  assetId: number
+  id: number | string
+  assetId: number | string
   assetCode: string | null
   assetName: string | null
   maintenanceType: MaintenanceType
@@ -183,7 +183,7 @@ export interface AssetMaintenance {
   result: string | null
   status: MaintenanceStatus
   statusDesc: string | null
-  createdBy: number | null
+  createdBy: number | string | null
   createdAt: string
 }
 
@@ -201,7 +201,7 @@ export interface AssetStatistics {
 }
 
 export interface CategoryStatistics {
-  categoryId: number
+  categoryId: number | string
   categoryName: string
   count: number
   totalValue: number | null
@@ -217,10 +217,10 @@ export interface LocationStatistics {
 
 /** 资产查询条件 */
 export interface AssetQueryCriteria {
-  categoryId?: number
+  categoryId?: number | string
   status?: AssetStatus
   locationType?: string
-  locationId?: number
+  locationId?: number | string
   keyword?: string
   pageNum?: number
   pageSize?: number
@@ -229,7 +229,7 @@ export interface AssetQueryCriteria {
 /** 创建资产请求 */
 export interface CreateAssetRequest {
   assetName: string
-  categoryId: number
+  categoryId: number | string
   brand?: string
   model?: string
   unit: string
@@ -242,9 +242,9 @@ export interface CreateAssetRequest {
   warrantyDate?: string
   supplier?: string
   locationType?: string
-  locationId?: number
+  locationId?: number | string
   locationName?: string
-  responsibleUserId?: number
+  responsibleUserId?: number | string
   responsibleUserName?: string
   remark?: string
 }
@@ -252,7 +252,7 @@ export interface CreateAssetRequest {
 /** 更新资产请求 */
 export interface UpdateAssetRequest {
   assetName?: string
-  categoryId?: number
+  categoryId?: number | string
   brand?: string
   model?: string
   unit?: string
@@ -262,7 +262,7 @@ export interface UpdateAssetRequest {
   purchaseDate?: string
   warrantyDate?: string
   supplier?: string
-  responsibleUserId?: number
+  responsibleUserId?: number | string
   responsibleUserName?: string
   remark?: string
 }
@@ -270,9 +270,9 @@ export interface UpdateAssetRequest {
 /** 调拨资产请求 */
 export interface TransferAssetRequest {
   locationType: string
-  locationId: number
+  locationId: number | string
   locationName: string
-  responsibleUserId?: number
+  responsibleUserId?: number | string
   responsibleUserName?: string
   remark?: string
 }
@@ -284,7 +284,7 @@ export interface ScrapAssetRequest {
 
 /** 创建分类请求 */
 export interface CreateCategoryRequest {
-  parentId?: number
+  parentId?: number | string
   categoryCode: string
   categoryName: string
   categoryType?: CategoryType
@@ -313,7 +313,7 @@ export interface CompleteMaintenanceRequest {
 /** 批量入库请求 */
 export interface BatchCreateAssetRequest {
   assetName: string
-  categoryId: number
+  categoryId: number | string
   brand?: string
   model?: string
   unit: string
@@ -325,9 +325,9 @@ export interface BatchCreateAssetRequest {
   warrantyDate?: string
   supplier?: string
   locationType?: string
-  locationId?: number
+  locationId?: number | string
   locationName?: string
-  responsibleUserId?: number
+  responsibleUserId?: number | string
   responsibleUserName?: string
   remark?: string
 }
@@ -343,7 +343,7 @@ export interface BatchCreateResult {
   /** 末个资产编号 */
   lastAssetCode: string
   /** 生成的资产ID列表 */
-  assetIds: number[]
+  assetIds: (number | string)[]
   /** 总价值 */
   totalValue: number | null
 }
@@ -351,15 +351,15 @@ export interface BatchCreateResult {
 /** 批量调拨请求 */
 export interface BatchTransferAssetRequest {
   /** 要调拨的资产ID列表 */
-  assetIds: number[]
+  assetIds: (number | string)[]
   /** 目标位置类型 */
   locationType: string
   /** 目标位置ID */
-  locationId: number
+  locationId: number | string
   /** 目标位置名称 */
   locationName: string
   /** 新责任人ID (可选) */
-  responsibleUserId?: number
+  responsibleUserId?: number | string
   /** 新责任人姓名 (可选) */
   responsibleUserName?: string
   /** 调拨原因/备注 */
@@ -375,7 +375,7 @@ export interface BatchTransferResult {
   /** 失败数量 */
   failedCount: number
   /** 成功调拨的资产ID列表 */
-  successAssetIds: number[]
+  successAssetIds: (number | string)[]
   /** 失败的资产信息 */
   failedAssets: FailedAsset[]
   /** 目标位置名称 */
@@ -383,7 +383,7 @@ export interface BatchTransferResult {
 }
 
 export interface FailedAsset {
-  assetId: number
+  assetId: number | string
   assetCode?: string
   assetName?: string
   reason: string
@@ -453,19 +453,19 @@ export const ReturnConditionMap: Record<ReturnCondition, string> = {
 
 /** 资产借用记录 */
 export interface AssetBorrow {
-  id: number
+  id: number | string
   borrowNo: string
   borrowType: number
   borrowTypeDesc: string | null
 
   // 资产信息
-  assetId: number
+  assetId: number | string
   assetCode: string
   assetName: string
   quantity: number
 
   // 借用人信息
-  borrowerId: number
+  borrowerId: number | string
   borrowerName: string
   borrowerDept: string | null
   borrowerPhone: string | null
@@ -479,7 +479,7 @@ export interface AssetBorrow {
   returnCondition: string | null
   returnConditionDesc: string | null
   returnRemark: string | null
-  returnerId: number | null
+  returnerId: number | string | null
   returnerName: string | null
 
   // 申请信息
@@ -488,7 +488,7 @@ export interface AssetBorrow {
   statusDesc: string | null
 
   // 操作信息
-  operatorId: number
+  operatorId: number | string
   operatorName: string
 
   // 计算字段
@@ -502,9 +502,9 @@ export interface AssetBorrow {
 /** 创建借用请求 */
 export interface CreateBorrowRequest {
   borrowType: BorrowType
-  assetId: number
+  assetId: number | string
   quantity?: number
-  borrowerId: number
+  borrowerId: number | string
   borrowerName: string
   borrowerDept?: string
   borrowerPhone?: string
@@ -568,7 +568,7 @@ export const InventoryScopeTypeMap: Record<InventoryScopeType, string> = {
 
 /** 资产盘点 */
 export interface AssetInventory {
-  id: number
+  id: number | string
   inventoryCode: string
   inventoryName: string
   scopeType: string | null
@@ -584,16 +584,16 @@ export interface AssetInventory {
   lossCount: number
   /** 进度百分比 (0-100) */
   progress: number
-  createdBy: number | null
+  createdBy: number | string | null
   createdAt: string
   details?: AssetInventoryDetail[]
 }
 
 /** 盘点明细 */
 export interface AssetInventoryDetail {
-  id: number
-  inventoryId: number
-  assetId: number
+  id: number | string
+  inventoryId: number | string
+  assetId: number | string
   assetCode: string | null
   assetName: string | null
   locationName: string | null
@@ -603,7 +603,7 @@ export interface AssetInventoryDetail {
   resultType: number | null
   resultTypeDesc: string | null
   checkTime: string | null
-  checkerId: number | null
+  checkerId: number | string | null
   checkerName: string | null
   remark: string | null
 }
@@ -663,17 +663,17 @@ export const ApprovalStatusMap: Record<ApprovalStatus, string> = {
 
 /** 资产审批 */
 export interface AssetApproval {
-  id: number
+  id: number | string
   approvalNo: string
   approvalType: ApprovalType
   approvalTypeDesc: string | null
-  businessId: number | null
-  assetId: number | null
+  businessId: number | string | null
+  assetId: number | string | null
   assetName: string | null
-  applicantId: number
+  applicantId: number | string
   applicantName: string | null
   applicantDept: string | null
-  approverId: number | null
+  approverId: number | string | null
   approverName: string | null
   status: ApprovalStatus
   statusDesc: string | null
@@ -690,8 +690,8 @@ export interface AssetApproval {
 /** 创建审批请求 */
 export interface CreateApprovalRequest {
   approvalType: ApprovalType
-  businessId?: number
-  assetId?: number
+  businessId?: number | string
+  assetId?: number | string
   assetName?: string
   applyReason?: string
   applyQuantity?: number
@@ -735,13 +735,13 @@ export const AlertLevelMap: Record<AlertLevel, string> = {
 
 /** 资产预警 */
 export interface AssetAlert {
-  id: number
+  id: number | string
   alertType: AlertType
   alertTypeDesc: string | null
-  assetId: number | null
+  assetId: number | string | null
   assetCode: string | null
   assetName: string | null
-  borrowId: number | null
+  borrowId: number | string | null
   alertContent: string
   alertLevel: AlertLevel
   alertLevelDesc: string | null
@@ -749,9 +749,9 @@ export interface AssetAlert {
   isHandled: boolean
   handleRemark: string | null
   handleTime: string | null
-  handlerId: number | null
+  handlerId: number | string | null
   handlerName: string | null
-  notifyUserId: number | null
+  notifyUserId: number | string | null
   notifyUserName: string | null
   alertTime: string
   expireTime: string | null
@@ -786,8 +786,8 @@ export const DepreciationMethodMap: Record<DepreciationMethod, string> = {
 
 /** 折旧记录 */
 export interface AssetDepreciation {
-  id: number
-  assetId: number
+  id: number | string
+  assetId: number | string
   assetCode: string | null
   assetName: string | null
   depreciationMethod: DepreciationMethod

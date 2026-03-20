@@ -5,7 +5,7 @@ package com.school.management.domain.inspection.model.v6;
  */
 public enum TargetType {
     ORG("组织"),
-    SPACE("场所"),
+    PLACE("场所"),
     USER("用户");
 
     private final String label;

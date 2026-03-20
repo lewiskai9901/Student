@@ -16,7 +16,15 @@ public class UserRoleResponse {
 
     private Long roleId;
 
-    private Long orgUnitId;
+    private String roleName;
+
+    private String roleCode;
+
+    private String scopeType;
+
+    private Long scopeId;
+
+    private String scopeName;
 
     private LocalDateTime assignedAt;
 

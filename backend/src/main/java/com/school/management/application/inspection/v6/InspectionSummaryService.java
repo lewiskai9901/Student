@@ -4,8 +4,8 @@ import com.school.management.domain.inspection.model.v6.*;
 import com.school.management.domain.inspection.repository.v6.InspectionProjectRepository;
 import com.school.management.domain.inspection.repository.v6.InspectionTargetRepository;
 import com.school.management.domain.inspection.repository.v6.InspectionTaskRepository;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
@@ -21,25 +21,15 @@ import java.util.stream.Collectors;
 /**
  * V6检查汇总服务
  */
+@Slf4j
+@RequiredArgsConstructor
 @Service
 public class InspectionSummaryService {
-
-    private static final Logger log = LoggerFactory.getLogger(InspectionSummaryService.class);
 
     private final InspectionProjectRepository projectRepository;
     private final InspectionTaskRepository taskRepository;
     private final InspectionTargetRepository targetRepository;
     private final JdbcTemplate jdbcTemplate;
-
-    public InspectionSummaryService(InspectionProjectRepository projectRepository,
-                                     InspectionTaskRepository taskRepository,
-                                     InspectionTargetRepository targetRepository,
-                                     JdbcTemplate jdbcTemplate) {
-        this.projectRepository = projectRepository;
-        this.taskRepository = taskRepository;
-        this.targetRepository = targetRepository;
-        this.jdbcTemplate = jdbcTemplate;
-    }
 
     /**
      * 定时任务：每天凌晨3点生成前一天的汇总

@@ -14,26 +14,29 @@ public class InspProjectPO {
     private Long id;
 
     private Long tenantId;
-    private Long parentProjectId;
     private String projectCode;
     private String projectName;
-    private Long templateId;
+    private Long templateId;          // maps to rootSectionId in domain
     private Long templateVersionId;
     private Long scoringProfileId;
     private String scopeType;
     private String scopeConfig;
-    private String targetType;
     private LocalDate startDate;
     private LocalDate endDate;
-    private String cycleType;
-    private String cycleConfig;
-    private String timeSlots;
-    private Boolean skipHolidays;
-    private Long holidayCalendarId;
-    private String excludedDates;
     private String assignmentMode;
     private Boolean reviewRequired;
     private Boolean autoPublish;
+    private String evaluationMode;
+    private String multiRaterMode;
+    private String raterWeightBy;
+    private java.math.BigDecimal consensusThreshold;
+    private Boolean trendEnabled;
+    private Integer trendLookbackDays;
+    private Boolean decayEnabled;
+    private String decayMode;
+    private Boolean calibrationEnabled;
+    private String calibrationMethod;
+    private String splitStrategy;
     private String status;
     private Long createdBy;
     private LocalDateTime createdAt;

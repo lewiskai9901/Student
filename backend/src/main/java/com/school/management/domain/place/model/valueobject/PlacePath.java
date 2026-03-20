@@ -1,4 +1,4 @@
-package com.school.management.domain.space.model.valueobject;
+package com.school.management.domain.place.model.valueobject;
 
 import lombok.Value;
 
@@ -12,41 +12,41 @@ import java.util.stream.Collectors;
  * 用于表示场所的层级路径，如 /1/2/3/
  */
 @Value
-public class SpacePath {
+public class PlacePath {
     String value;
 
-    private SpacePath(String value) {
+    private PlacePath(String value) {
         this.value = value != null ? value : "/";
     }
 
     /**
      * 创建根路径
      */
-    public static SpacePath root() {
-        return new SpacePath("/");
+    public static PlacePath root() {
+        return new PlacePath("/");
     }
 
     /**
      * 从字符串创建路径
      */
-    public static SpacePath of(String path) {
-        return new SpacePath(path);
+    public static PlacePath of(String path) {
+        return new PlacePath(path);
     }
 
     /**
      * 为新节点创建路径（在当前路径后追加ID）
      */
-    public SpacePath append(Long id) {
+    public PlacePath append(Long id) {
         if (id == null) {
             return this;
         }
-        return new SpacePath(this.value + id + "/");
+        return new PlacePath(this.value + id + "/");
     }
 
     /**
      * 检查当前路径是否是另一个路径的祖先
      */
-    public boolean isAncestorOf(SpacePath other) {
+    public boolean isAncestorOf(PlacePath other) {
         if (other == null) return false;
         return other.value.startsWith(this.value) && !this.value.equals(other.value);
     }
@@ -54,7 +54,7 @@ public class SpacePath {
     /**
      * 检查当前路径是否是另一个路径的后代
      */
-    public boolean isDescendantOf(SpacePath other) {
+    public boolean isDescendantOf(PlacePath other) {
         if (other == null) return false;
         return this.value.startsWith(other.value) && !this.value.equals(other.value);
     }
@@ -82,7 +82,7 @@ public class SpacePath {
     /**
      * 获取父路径
      */
-    public SpacePath getParentPath() {
+    public PlacePath getParentPath() {
         List<Long> ancestors = getAncestorIds();
         if (ancestors.isEmpty() || ancestors.size() == 1) {
             return root();
@@ -91,7 +91,7 @@ public class SpacePath {
         for (int i = 0; i < ancestors.size() - 1; i++) {
             sb.append(ancestors.get(i)).append("/");
         }
-        return new SpacePath(sb.toString());
+        return new PlacePath(sb.toString());
     }
 
     /**

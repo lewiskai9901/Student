@@ -22,7 +22,7 @@ export const RuleTypeConfig: Record<RuleType, { label: string; description: stri
 export interface ScoringProfile {
   id: number
   tenantId: number
-  templateId: number
+  sectionId: number
   maxScore: number
   minScore: number
   precisionDigits: number
@@ -55,7 +55,7 @@ export interface ScoringProfile {
 }
 
 export interface CreateProfileRequest {
-  templateId: number
+  sectionId: number
 }
 
 export interface UpdateProfileRequest {
@@ -94,7 +94,7 @@ export interface ScoreDimension {
   weight: number
   baseScore: number
   passThreshold: number | null
-  sourceType: 'SECTION' | 'MODULE'
+  sourceType: 'SECTION' | 'MODULE' | 'ITEM'
   moduleTemplateId: number | null
   sortOrder: number
   createdAt: string

@@ -354,7 +354,7 @@ const quickActions = [
   { name: '日常检查', path: '/quantification/daily-checks', icon: ClipboardCheck, bgColor: '#dcfce7', color: '#16a34a' },
   { name: '新增学生', path: '/student-affairs/students', icon: UserPlus, bgColor: '#fef3c7', color: '#d97706' },
   { name: '数据统计', path: '/quantification/statistics', icon: PieChart, bgColor: '#fce7f3', color: '#db2777' },
-  { name: '系统设置', path: '/system/users', icon: Settings, bgColor: '#e0e7ff', color: '#4f46e5' }
+  { name: '系统管理', path: '/system/users', icon: Settings, bgColor: '#e0e7ff', color: '#4f46e5' }
 ]
 
 const formatTimeAgo = (dateStr: string) => {

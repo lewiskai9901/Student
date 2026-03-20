@@ -6,7 +6,6 @@ import com.school.management.domain.user.event.UserStatusChangedEvent;
 import com.school.management.domain.user.event.UserUpdatedEvent;
 import com.school.management.domain.user.event.UserPasswordResetEvent;
 import com.school.management.domain.user.model.valueobject.UserStatus;
-import com.school.management.domain.user.model.valueobject.UserType;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -70,29 +69,14 @@ public class User extends AggregateRoot<Long> {
     private String idCard;
 
     /**
-     * 组织单元ID
-     */
-    private Long orgUnitId;
-
-    /**
-     * 班级ID
-     */
-    private Long classId;
-
-    /**
-     * 用户类型（旧）
-     */
-    private UserType userType;
-
-    /**
      * 用户类型编码（新，引用 user_types 表）
      */
     private String userTypeCode;
 
     /**
-     * 主组织关系ID
+     * 主归属组织ID（直接指向 org_units.id）
      */
-    private Long primaryOrgRelationId;
+    private Long primaryOrgUnitId;
 
     /**
      * 状态
@@ -130,6 +114,11 @@ public class User extends AggregateRoot<Long> {
     private List<Long> roleIds = new ArrayList<>();
 
     /**
+     * 所属组织单元ID（查询时填充，非持久化字段，来自 user_org_relations）
+     */
+    private Long orgUnitId;
+
+    /**
      * 组织单元名称（查询时填充，非持久化字段）
      */
     private String orgUnitName;
@@ -159,15 +148,13 @@ public class User extends AggregateRoot<Long> {
             String username,
             String encodedPassword,
             String realName,
-            UserType userType,
-            Long orgUnitId
+            String userTypeCode
     ) {
         User user = new User();
         user.username = username;
         user.password = encodedPassword;
         user.realName = realName;
-        user.userType = userType;
-        user.orgUnitId = orgUnitId;
+        user.userTypeCode = userTypeCode;
         user.status = UserStatus.ENABLED;
         user.allowMultipleDevices = false;
         user.createdAt = LocalDateTime.now();
@@ -178,7 +165,7 @@ public class User extends AggregateRoot<Long> {
                 "NEW",
                 username,
                 realName,
-                userType
+                userTypeCode
         ));
 
         return user;
@@ -199,10 +186,7 @@ public class User extends AggregateRoot<Long> {
             Integer gender,
             LocalDate birthDate,
             String idCard,
-            Long orgUnitId,
-            Long primaryOrgRelationId,
-            Long classId,
-            UserType userType,
+            Long primaryOrgUnitId,
             String userTypeCode,
             UserStatus status,
             LocalDateTime lastLoginTime,
@@ -226,10 +210,7 @@ public class User extends AggregateRoot<Long> {
         user.gender = gender;
         user.birthDate = birthDate;
         user.idCard = idCard;
-        user.orgUnitId = orgUnitId;
-        user.primaryOrgRelationId = primaryOrgRelationId;
-        user.classId = classId;
-        user.userType = userType;
+        user.primaryOrgUnitId = primaryOrgUnitId;
         user.userTypeCode = userTypeCode;
         user.status = status;
         user.lastLoginTime = lastLoginTime;
@@ -253,8 +234,7 @@ public class User extends AggregateRoot<Long> {
             String employeeNo,
             Integer gender,
             LocalDate birthDate,
-            String idCard,
-            Long orgUnitId
+            String idCard
     ) {
         this.realName = realName;
         this.phone = phone;
@@ -263,7 +243,6 @@ public class User extends AggregateRoot<Long> {
         this.gender = gender;
         this.birthDate = birthDate;
         this.idCard = idCard;
-        this.orgUnitId = orgUnitId;
         this.updatedAt = LocalDateTime.now();
 
         // 只有在已持久化（有ID）时才注册更新事件
@@ -401,11 +380,13 @@ public class User extends AggregateRoot<Long> {
     public Integer getGender() { return gender; }
     public LocalDate getBirthDate() { return birthDate; }
     public String getIdCard() { return idCard; }
-    public Long getOrgUnitId() { return orgUnitId; }
-    public Long getClassId() { return classId; }
-    public UserType getUserType() { return userType; }
     public String getUserTypeCode() { return userTypeCode; }
-    public Long getPrimaryOrgRelationId() { return primaryOrgRelationId; }
+    public void changeUserType(String userTypeCode) { this.userTypeCode = userTypeCode; }
+    public Long getPrimaryOrgUnitId() { return primaryOrgUnitId; }
+    public void setPrimaryOrgUnitId(Long primaryOrgUnitId) {
+        this.primaryOrgUnitId = primaryOrgUnitId;
+        this.updatedAt = java.time.LocalDateTime.now();
+    }
     public UserStatus getStatus() { return status; }
     public LocalDateTime getLastLoginTime() { return lastLoginTime; }
     public String getLastLoginIp() { return lastLoginIp; }
@@ -421,6 +402,8 @@ public class User extends AggregateRoot<Long> {
     }
 
     // 关联字段的 Getter 和 Setter
+    public Long getOrgUnitId() { return orgUnitId; }
+    public void setOrgUnitId(Long orgUnitId) { this.orgUnitId = orgUnitId; }
     public String getOrgUnitName() { return orgUnitName; }
     public void setOrgUnitName(String orgUnitName) { this.orgUnitName = orgUnitName; }
     public List<String> getRoleNames() { return roleNames; }

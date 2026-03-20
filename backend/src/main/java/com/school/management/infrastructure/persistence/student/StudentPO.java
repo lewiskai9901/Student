@@ -136,6 +136,8 @@ public class StudentPO {
      */
     private String remark;
 
+    private Long tenantId;
+
     /**
      * 逻辑删除
      */

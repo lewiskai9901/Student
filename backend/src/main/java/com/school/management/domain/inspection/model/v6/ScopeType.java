@@ -5,7 +5,7 @@ package com.school.management.domain.inspection.model.v6;
  */
 public enum ScopeType {
     ORG("组织", "按组织结构检查"),
-    SPACE("场所", "按场所检查"),
+    PLACE("场所", "按场所检查"),
     USER("用户", "按用户检查");
 
     private final String label;

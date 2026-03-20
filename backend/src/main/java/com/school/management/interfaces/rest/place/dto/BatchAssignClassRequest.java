@@ -1,4 +1,4 @@
-package com.school.management.interfaces.rest.space.dto;
+package com.school.management.interfaces.rest.place.dto;
 
 import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.NotNull;
@@ -13,7 +13,7 @@ import java.util.List;
 public class BatchAssignClassRequest {
 
     @NotEmpty(message = "场所ID列表不能为空")
-    private List<Long> spaceIds;
+    private List<Long> placeIds;
 
     @NotNull(message = "班级ID不能为空")
     private Long classId;

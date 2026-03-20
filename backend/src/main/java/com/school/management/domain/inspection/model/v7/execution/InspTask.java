@@ -37,6 +37,9 @@ public class InspTask extends AggregateRoot<Long> {
     private String collaborationMode;      // SINGLE / COLLABORATIVE
     private LocalDateTime executionStartedAt;
     private LocalDateTime executionEndedAt;
+    private String assignedSectionIds;     // JSON: 分配的分区ID（空=全部）
+    private String assignedTargetIds;      // JSON: 分配的目标ID（空=全部）
+    private Long inspectionPlanId;         // 关联的检查计划
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 
@@ -67,6 +70,9 @@ public class InspTask extends AggregateRoot<Long> {
         this.collaborationMode = builder.collaborationMode != null ? builder.collaborationMode : "SINGLE";
         this.executionStartedAt = builder.executionStartedAt;
         this.executionEndedAt = builder.executionEndedAt;
+        this.assignedSectionIds = builder.assignedSectionIds;
+        this.assignedTargetIds = builder.assignedTargetIds;
+        this.inspectionPlanId = builder.inspectionPlanId;
         this.createdAt = builder.createdAt != null ? builder.createdAt : LocalDateTime.now();
         this.updatedAt = builder.updatedAt;
     }
@@ -240,6 +246,9 @@ public class InspTask extends AggregateRoot<Long> {
     public String getCollaborationMode() { return collaborationMode; }
     public LocalDateTime getExecutionStartedAt() { return executionStartedAt; }
     public LocalDateTime getExecutionEndedAt() { return executionEndedAt; }
+    public String getAssignedSectionIds() { return assignedSectionIds; }
+    public String getAssignedTargetIds() { return assignedTargetIds; }
+    public Long getInspectionPlanId() { return inspectionPlanId; }
     public LocalDateTime getCreatedAt() { return createdAt; }
     public LocalDateTime getUpdatedAt() { return updatedAt; }
 
@@ -269,6 +278,9 @@ public class InspTask extends AggregateRoot<Long> {
         private String collaborationMode;
         private LocalDateTime executionStartedAt;
         private LocalDateTime executionEndedAt;
+        private String assignedSectionIds;
+        private String assignedTargetIds;
+        private Long inspectionPlanId;
         private LocalDateTime createdAt;
         private LocalDateTime updatedAt;
 
@@ -295,6 +307,9 @@ public class InspTask extends AggregateRoot<Long> {
         public Builder collaborationMode(String collaborationMode) { this.collaborationMode = collaborationMode; return this; }
         public Builder executionStartedAt(LocalDateTime executionStartedAt) { this.executionStartedAt = executionStartedAt; return this; }
         public Builder executionEndedAt(LocalDateTime executionEndedAt) { this.executionEndedAt = executionEndedAt; return this; }
+        public Builder assignedSectionIds(String assignedSectionIds) { this.assignedSectionIds = assignedSectionIds; return this; }
+        public Builder assignedTargetIds(String assignedTargetIds) { this.assignedTargetIds = assignedTargetIds; return this; }
+        public Builder inspectionPlanId(Long inspectionPlanId) { this.inspectionPlanId = inspectionPlanId; return this; }
         public Builder createdAt(LocalDateTime createdAt) { this.createdAt = createdAt; return this; }
         public Builder updatedAt(LocalDateTime updatedAt) { this.updatedAt = updatedAt; return this; }
 

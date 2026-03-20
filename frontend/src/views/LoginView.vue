@@ -132,13 +132,13 @@
 
             <!-- 登录表单 -->
             <form @submit.prevent="handleLogin" class="space-y-5">
-              <!-- 用户名 -->
+              <!-- 账号 -->
               <div class="space-y-1.5">
-                <label :class="['text-sm font-medium', isMinimalStyle ? 'text-white/90' : 'text-gray-700']">用户名</label>
+                <label :class="['text-sm font-medium', isMinimalStyle ? 'text-white/90' : 'text-gray-700']">账号</label>
                 <input
                   v-model="loginForm.username"
                   type="text"
-                  placeholder="请输入用户名"
+                  placeholder="请输入账号"
                   :class="[
                     'w-full h-11 px-4 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all',
                     isMinimalStyle
@@ -354,13 +354,13 @@
 
             <!-- 登录表单 -->
             <form @submit.prevent="handleLogin" class="space-y-5">
-              <!-- 用户名 -->
+              <!-- 账号 -->
               <div class="space-y-1.5">
-                <label :class="['text-sm font-medium', isMinimalStyle ? 'text-white/90' : 'text-gray-700']">用户名</label>
+                <label :class="['text-sm font-medium', isMinimalStyle ? 'text-white/90' : 'text-gray-700']">账号</label>
                 <input
                   v-model="loginForm.username"
                   type="text"
-                  placeholder="请输入用户名"
+                  placeholder="请输入账号"
                   :class="[
                     'w-full h-11 px-4 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all',
                     isMinimalStyle
@@ -692,10 +692,10 @@ const validateForm = (): boolean => {
   let isValid = true
 
   if (!loginForm.username) {
-    errors.username = '请输入用户名'
+    errors.username = '请输入账号'
     isValid = false
   } else if (loginForm.username.length < 2 || loginForm.username.length > 20) {
-    errors.username = '用户名长度在 2 到 20 个字符'
+    errors.username = '账号长度在 2 到 20 个字符'
     isValid = false
   }
 
@@ -720,7 +720,7 @@ const handleLogin = async () => {
     ElMessage.success('登录成功')
     router.push('/')
   } catch (error: any) {
-    ElMessage.error(error.message || '登录失败，请检查用户名和密码')
+    ElMessage.error(error.message || '登录失败，请检查账号和密码')
   } finally {
     loading.value = false
   }

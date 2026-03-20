@@ -1,4 +1,4 @@
-package com.school.management.domain.space.model.valueobject;
+package com.school.management.domain.place.model.valueobject;
 
 import lombok.Getter;
 
@@ -6,7 +6,7 @@ import lombok.Getter;
  * 场所类型枚举
  */
 @Getter
-public enum SpaceType {
+public enum PlaceType {
     CAMPUS("校区", 1),
     BUILDING("楼宇", 2),
     FLOOR("楼层", 3),
@@ -15,7 +15,7 @@ public enum SpaceType {
     private final String description;
     private final int level;
 
-    SpaceType(String description, int level) {
+    PlaceType(String description, int level) {
         this.description = description;
         this.level = level;
     }

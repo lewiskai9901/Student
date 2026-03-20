@@ -35,7 +35,7 @@ public class InspectionProject extends AggregateRoot<Long> {
     private String excludedDates; // JSON
 
     // 策略配置
-    private SharedSpaceStrategy sharedSpaceStrategy;
+    private SharedPlaceStrategy sharedPlaceStrategy;
     private String scoreDistributionMode;
     private InspectorAssignmentMode inspectorAssignmentMode;
     private String defaultInspectors; // JSON
@@ -75,7 +75,7 @@ public class InspectionProject extends AggregateRoot<Long> {
         this.timeSlots = builder.timeSlots;
         this.skipHolidays = builder.skipHolidays;
         this.excludedDates = builder.excludedDates;
-        this.sharedSpaceStrategy = builder.sharedSpaceStrategy != null ? builder.sharedSpaceStrategy : SharedSpaceStrategy.RATIO;
+        this.sharedPlaceStrategy = builder.sharedPlaceStrategy != null ? builder.sharedPlaceStrategy : SharedPlaceStrategy.RATIO;
         this.scoreDistributionMode = builder.scoreDistributionMode;
         this.inspectorAssignmentMode = builder.inspectorAssignmentMode != null ? builder.inspectorAssignmentMode : InspectorAssignmentMode.FREE;
         this.defaultInspectors = builder.defaultInspectors;
@@ -167,7 +167,7 @@ public class InspectionProject extends AggregateRoot<Long> {
                              LocalDate startDate, LocalDate endDate,
                              CycleType cycleType, String cycleConfig,
                              String timeSlots, boolean skipHolidays,
-                             SharedSpaceStrategy sharedSpaceStrategy,
+                             SharedPlaceStrategy sharedPlaceStrategy,
                              InspectorAssignmentMode inspectorAssignmentMode) {
         if (this.status != ProjectStatus.DRAFT) {
             throw new IllegalStateException("只有草稿状态的项目才能修改配置");
@@ -180,7 +180,7 @@ public class InspectionProject extends AggregateRoot<Long> {
         this.cycleConfig = cycleConfig;
         this.timeSlots = timeSlots;
         this.skipHolidays = skipHolidays;
-        this.sharedSpaceStrategy = sharedSpaceStrategy;
+        this.sharedPlaceStrategy = sharedPlaceStrategy;
         this.inspectorAssignmentMode = inspectorAssignmentMode;
         this.updatedAt = LocalDateTime.now();
     }
@@ -289,8 +289,8 @@ public class InspectionProject extends AggregateRoot<Long> {
         return excludedDates;
     }
 
-    public SharedSpaceStrategy getSharedSpaceStrategy() {
-        return sharedSpaceStrategy;
+    public SharedPlaceStrategy getSharedPlaceStrategy() {
+        return sharedPlaceStrategy;
     }
 
     public String getScoreDistributionMode() {
@@ -369,7 +369,7 @@ public class InspectionProject extends AggregateRoot<Long> {
         private String timeSlots;
         private boolean skipHolidays = true;
         private String excludedDates;
-        private SharedSpaceStrategy sharedSpaceStrategy;
+        private SharedPlaceStrategy sharedPlaceStrategy;
         private String scoreDistributionMode;
         private InspectorAssignmentMode inspectorAssignmentMode;
         private String defaultInspectors;
@@ -399,7 +399,7 @@ public class InspectionProject extends AggregateRoot<Long> {
         public Builder timeSlots(String timeSlots) { this.timeSlots = timeSlots; return this; }
         public Builder skipHolidays(boolean skipHolidays) { this.skipHolidays = skipHolidays; return this; }
         public Builder excludedDates(String excludedDates) { this.excludedDates = excludedDates; return this; }
-        public Builder sharedSpaceStrategy(SharedSpaceStrategy sharedSpaceStrategy) { this.sharedSpaceStrategy = sharedSpaceStrategy; return this; }
+        public Builder sharedPlaceStrategy(SharedPlaceStrategy sharedPlaceStrategy) { this.sharedPlaceStrategy = sharedPlaceStrategy; return this; }
         public Builder scoreDistributionMode(String scoreDistributionMode) { this.scoreDistributionMode = scoreDistributionMode; return this; }
         public Builder inspectorAssignmentMode(InspectorAssignmentMode inspectorAssignmentMode) { this.inspectorAssignmentMode = inspectorAssignmentMode; return this; }
         public Builder defaultInspectors(String defaultInspectors) { this.defaultInspectors = defaultInspectors; return this; }

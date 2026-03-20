@@ -1,13 +1,16 @@
 package com.school.management.infrastructure.persistence.organization;
 
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.school.management.domain.organization.model.OrgUnit;
-import com.school.management.domain.organization.model.OrgUnitType;
-import com.school.management.domain.organization.model.UnitCategory;
+import com.school.management.domain.organization.model.valueobject.OrgUnitStatus;
 import com.school.management.domain.organization.repository.OrgUnitRepository;
 import org.springframework.stereotype.Repository;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
@@ -19,9 +22,11 @@ import java.util.stream.Collectors;
 public class OrgUnitRepositoryImpl implements OrgUnitRepository {
 
     private final OrgUnitMapper orgUnitMapper;
+    private final ObjectMapper objectMapper;
 
-    public OrgUnitRepositoryImpl(OrgUnitMapper orgUnitMapper) {
+    public OrgUnitRepositoryImpl(OrgUnitMapper orgUnitMapper, ObjectMapper objectMapper) {
         this.orgUnitMapper = orgUnitMapper;
+        this.objectMapper = objectMapper;
     }
 
     @Override
@@ -66,8 +71,8 @@ public class OrgUnitRepositoryImpl implements OrgUnitRepository {
     }
 
     @Override
-    public List<OrgUnit> findByUnitType(OrgUnitType unitType) {
-        return orgUnitMapper.findByUnitType(unitType.name()).stream()
+    public List<OrgUnit> findByUnitType(String unitType) {
+        return orgUnitMapper.findByUnitType(unitType).stream()
             .map(this::toDomain)
             .collect(Collectors.toList());
     }
@@ -124,28 +129,13 @@ public class OrgUnitRepositoryImpl implements OrgUnitRepository {
     }
 
     @Override
-    public List<OrgUnit> findByLeaderId(Long leaderId) {
-        return orgUnitMapper.findAllEnabled().stream()
-            .filter(po -> leaderId.equals(po.getLeaderId()))
-            .map(this::toDomain)
-            .collect(Collectors.toList());
-    }
-
-    @Override
     public long countByParentId(Long parentId) {
         return orgUnitMapper.countByParentId(parentId);
     }
 
     @Override
     public List<OrgUnit> findAll() {
-        return orgUnitMapper.findAllEnabled().stream()
-            .map(this::toDomain)
-            .collect(Collectors.toList());
-    }
-
-    @Override
-    public List<OrgUnit> findByUnitCategory(UnitCategory unitCategory) {
-        return orgUnitMapper.findByUnitCategory(unitCategory.getCode()).stream()
+        return orgUnitMapper.findAllIncludeDisabled().stream()
             .map(this::toDomain)
             .collect(Collectors.toList());
     }
@@ -153,74 +143,69 @@ public class OrgUnitRepositoryImpl implements OrgUnitRepository {
     // ==================== 转换方法 ====================
 
     private OrgUnit toDomain(OrgUnitPO po) {
-        // 解析 unitCategory
-        UnitCategory category = UnitCategory.ACADEMIC; // 默认为教学单位
-        if (po.getUnitCategory() != null) {
-            category = UnitCategory.fromCode(po.getUnitCategory());
-        }
-
-        // 解析 unitType
-        OrgUnitType unitType = parseUnitType(po.getUnitType(), po.getTreeLevel());
+        String unitType = po.getUnitType() != null && !po.getUnitType().isEmpty()
+            ? po.getUnitType()
+            : inferTypeFromLevel(po.getTreeLevel());
 
         return OrgUnit.builder()
             .id(po.getId())
             .unitCode(po.getUnitCode())
             .unitName(po.getUnitName())
             .unitType(unitType)
-            .unitCategory(category)
             .parentId(po.getParentId())
             .treePath(po.getTreePath())
             .treeLevel(po.getTreeLevel() != null ? po.getTreeLevel() : 0)
-            .leaderId(po.getLeaderId())
-            .deputyLeaderIds(parseDeputyLeaderIds(po.getDeputyLeaderIds()))
             .sortOrder(po.getSortOrder() != null ? po.getSortOrder() : 0)
-            .enabled(po.getStatus() != null && po.getStatus() == 1)
+            .status(parseStatus(po.getStatus()))
+            .headcount(po.getHeadcount())
+            .attributes(parseAttributes(po.getAttributes()))
+            .mergedIntoId(po.getMergedIntoId())
+            .splitFromId(po.getSplitFromId())
+            .dissolvedAt(po.getDissolvedAt())
+            .dissolvedReason(po.getDissolvedReason())
+            .version(po.getVersion() != null ? po.getVersion().longValue() : 0L)
             .createdBy(po.getCreatedBy())
+            .updatedBy(po.getUpdatedBy())
+            .createdAt(po.getCreatedAt())
             .build();
     }
 
-    /**
-     * 解析 unitType 字符串为枚举值
-     */
-    private OrgUnitType parseUnitType(String unitTypeStr, Integer treeLevel) {
-        if (unitTypeStr != null && !unitTypeStr.isEmpty()) {
-            try {
-                return OrgUnitType.valueOf(unitTypeStr.toUpperCase());
-            } catch (IllegalArgumentException e) {
-                // 如果无法解析，根据层级推断
-            }
-        }
-        // 根据层级推断类型
-        if (treeLevel == null) return OrgUnitType.DEPARTMENT;
+    private String inferTypeFromLevel(Integer treeLevel) {
+        if (treeLevel == null) return "DEPARTMENT";
         return switch (treeLevel) {
-            case 1 -> OrgUnitType.SCHOOL;
-            case 2 -> OrgUnitType.COLLEGE;
-            case 3 -> OrgUnitType.DEPARTMENT;
-            case 4 -> OrgUnitType.TEACHING_GROUP;
-            default -> OrgUnitType.DEPARTMENT;
+            case 1 -> "ORGANIZATION";
+            case 2 -> "DIVISION";
+            case 3 -> "DEPARTMENT";
+            case 4 -> "SECTION";
+            case 5 -> "TEAM";
+            default -> "DEPARTMENT";
         };
     }
 
-    /**
-     * 解析副职ID列表JSON
-     */
-    private List<Long> parseDeputyLeaderIds(String json) {
-        if (json == null || json.isEmpty()) {
-            return new ArrayList<>();
-        }
-        // 简单JSON解析，假设格式为 [1,2,3]
+    private Map<String, Object> parseAttributes(String json) {
+        if (json == null || json.isEmpty()) return null;
         try {
-            json = json.replace("[", "").replace("]", "").trim();
-            if (json.isEmpty()) {
-                return new ArrayList<>();
-            }
-            List<Long> ids = new ArrayList<>();
-            for (String idStr : json.split(",")) {
-                ids.add(Long.parseLong(idStr.trim()));
-            }
-            return ids;
+            return objectMapper.readValue(json, new TypeReference<Map<String, Object>>() {});
         } catch (Exception e) {
-            return new ArrayList<>();
+            return null;
+        }
+    }
+
+    private String serializeAttributes(Map<String, Object> attributes) {
+        if (attributes == null || attributes.isEmpty()) return null;
+        try {
+            return objectMapper.writeValueAsString(attributes);
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
+    private OrgUnitStatus parseStatus(String statusStr) {
+        if (statusStr == null || statusStr.isEmpty()) return OrgUnitStatus.ACTIVE;
+        try {
+            return OrgUnitStatus.valueOf(statusStr);
+        } catch (IllegalArgumentException e) {
+            return OrgUnitStatus.ACTIVE;
         }
     }
 
@@ -232,23 +217,22 @@ public class OrgUnitRepositoryImpl implements OrgUnitRepository {
         po.setParentId(domain.getParentId());
         po.setTreeLevel(domain.getTreeLevel());
         po.setTreePath(domain.getTreePath());
-        po.setLeaderId(domain.getLeaderId());
         po.setSortOrder(domain.getSortOrder());
-        po.setStatus(domain.isEnabled() ? 1 : 0);
+        po.setStatus(domain.getStatus() != null ? domain.getStatus().name() : "ACTIVE");
+        po.setHeadcount(domain.getHeadcount());
+        po.setAttributes(serializeAttributes(domain.getAttributes()));
+        po.setMergedIntoId(domain.getMergedIntoId());
+        po.setSplitFromId(domain.getSplitFromId());
+        po.setDissolvedAt(domain.getDissolvedAt());
+        po.setDissolvedReason(domain.getDissolvedReason());
+        po.setVersion(domain.getVersion() != null ? domain.getVersion().intValue() : 0);
+        po.setCreatedBy(domain.getCreatedBy());
+        po.setUpdatedBy(domain.getUpdatedBy());
+        po.setCreatedAt(domain.getCreatedAt());
+        po.setUpdatedAt(domain.getUpdatedAt());
 
-        // 保存 unitType
         if (domain.getUnitType() != null) {
-            po.setUnitType(domain.getUnitType().name());
-        }
-
-        // 保存 unitCategory
-        if (domain.getUnitCategory() != null) {
-            po.setUnitCategory(domain.getUnitCategory().getCode());
-        }
-
-        // 保存副职ID列表
-        if (domain.getDeputyLeaderIds() != null && !domain.getDeputyLeaderIds().isEmpty()) {
-            po.setDeputyLeaderIds(domain.getDeputyLeaderIds().toString());
+            po.setUnitType(domain.getUnitType());
         }
 
         return po;

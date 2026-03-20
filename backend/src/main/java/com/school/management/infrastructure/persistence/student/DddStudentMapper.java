@@ -1,6 +1,7 @@
 package com.school.management.infrastructure.persistence.student;
 
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
+import com.school.management.infrastructure.access.DataPermission;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 import org.apache.ibatis.annotations.Select;
@@ -12,6 +13,13 @@ import java.util.List;
  * 通过JOIN users表获取学生基本信息
  */
 @Mapper
+@DataPermission(
+    module = "student",
+    resourceType = "student",
+    tableAlias = "s",
+    orgUnitField = "org_unit_id",
+    creatorField = "created_by"
+)
 public interface DddStudentMapper extends BaseMapper<StudentPO> {
 
     String BASE_JOIN_SELECT = """

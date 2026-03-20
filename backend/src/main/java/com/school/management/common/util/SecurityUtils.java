@@ -38,6 +38,17 @@ public class SecurityUtils {
         return null;
     }
 
+    /**
+     * 获取当前用户ID，未认证时抛出异常
+     */
+    public static Long requireCurrentUserId() {
+        Long userId = getCurrentUserId();
+        if (userId == null) {
+            throw new IllegalStateException("当前用户未认证");
+        }
+        return userId;
+    }
+
     public static String getCurrentUsername() {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         if (authentication != null && authentication.isAuthenticated()) {

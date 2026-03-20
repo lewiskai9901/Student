@@ -40,7 +40,7 @@ interface SelectedUser {
 function handleUserSelect(users: SelectedUser[]) {
   if (users.length > 0) {
     const user = users[0]
-    formData.value.responsibleUserId = Number(user.id)
+    formData.value.responsibleUserId = user.id
     formData.value.responsibleUserName = user.realName
   }
   userSelectorVisible.value = false

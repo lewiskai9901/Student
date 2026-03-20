@@ -1,8 +1,8 @@
-package com.school.management.application.space.command;
+package com.school.management.application.place.command;
 
-import com.school.management.domain.space.model.valueobject.BuildingType;
-import com.school.management.domain.space.model.valueobject.RoomType;
-import com.school.management.domain.space.model.valueobject.SpaceType;
+import com.school.management.domain.place.model.valueobject.BuildingType;
+import com.school.management.domain.place.model.valueobject.RoomType;
+import com.school.management.domain.place.model.valueobject.PlaceType;
 import lombok.Data;
 
 import java.util.Map;
@@ -11,11 +11,11 @@ import java.util.Map;
  * 创建场所命令
  */
 @Data
-public class CreateSpaceCommand {
+public class CreatePlaceCommand {
 
-    private String spaceCode;        // 可选，不填则自动生成
-    private String spaceName;
-    private SpaceType spaceType;
+    private String placeCode;        // 可选，不填则自动生成
+    private String placeName;
+    private PlaceType placeType;
     private RoomType roomType;       // 仅ROOM有效
     private BuildingType buildingType; // 仅BUILDING有效
 

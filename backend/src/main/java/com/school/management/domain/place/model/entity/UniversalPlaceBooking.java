@@ -1,4 +1,4 @@
-package com.school.management.domain.space.model.entity;
+package com.school.management.domain.place.model.entity;
 
 import com.school.management.domain.shared.Entity;
 import lombok.AllArgsConstructor;
@@ -17,14 +17,14 @@ import java.util.List;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class UniversalSpaceBooking implements Entity<Long> {
+public class UniversalPlaceBooking implements Entity<Long> {
 
     private Long id;
 
     /**
      * 空间ID
      */
-    private Long spaceId;
+    private Long placeId;
 
     /**
      * 预订人ID
@@ -159,7 +159,7 @@ public class UniversalSpaceBooking implements Entity<Long> {
     /**
      * 判断是否与另一个预订冲突
      */
-    public boolean conflictsWith(UniversalSpaceBooking other) {
+    public boolean conflictsWith(UniversalPlaceBooking other) {
         if (other == null || !other.isActive()) {
             return false;
         }
@@ -193,13 +193,13 @@ public class UniversalSpaceBooking implements Entity<Long> {
     /**
      * 创建预订
      */
-    public static UniversalSpaceBooking create(Long spaceId, Long bookerId, String bookerName,
+    public static UniversalPlaceBooking create(Long placeId, Long bookerId, String bookerName,
                                                 String title, LocalDateTime startTime, LocalDateTime endTime) {
         if (startTime.isAfter(endTime) || startTime.equals(endTime)) {
             throw new IllegalArgumentException("开始时间必须早于结束时间");
         }
-        return UniversalSpaceBooking.builder()
-                .spaceId(spaceId)
+        return UniversalPlaceBooking.builder()
+                .placeId(placeId)
                 .bookerId(bookerId)
                 .bookerName(bookerName)
                 .title(title)

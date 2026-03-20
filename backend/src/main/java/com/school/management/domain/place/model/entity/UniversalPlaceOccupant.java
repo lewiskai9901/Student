@@ -1,4 +1,4 @@
-package com.school.management.domain.space.model.entity;
+package com.school.management.domain.place.model.entity;
 
 import com.school.management.domain.shared.Entity;
 import lombok.AllArgsConstructor;
@@ -16,14 +16,14 @@ import java.time.LocalDateTime;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class UniversalSpaceOccupant implements Entity<Long> {
+public class UniversalPlaceOccupant implements Entity<Long> {
 
     private Long id;
 
     /**
      * 空间ID
      */
-    private Long spaceId;
+    private Long placeId;
 
     /**
      * 占用者类型（如：STUDENT, EMPLOYEE, VISITOR 等，可自定义）
@@ -39,6 +39,21 @@ public class UniversalSpaceOccupant implements Entity<Long> {
      * 占用者名称（冗余字段，方便显示）
      */
     private String occupantName;
+
+    /**
+     * 用户名
+     */
+    private String username;
+
+    /**
+     * 组织名称（冗余）
+     */
+    private String orgUnitName;
+
+    /**
+     * 性别: 0-未知 1-男 2-女
+     */
+    private Integer gender;
 
     /**
      * 位置号（床位号/工位号等）
@@ -112,13 +127,30 @@ public class UniversalSpaceOccupant implements Entity<Long> {
     /**
      * 创建占用记录
      */
-    public static UniversalSpaceOccupant create(Long spaceId, String occupantType, Long occupantId,
+    public static UniversalPlaceOccupant create(Long placeId, String occupantType, Long occupantId,
                                                  String occupantName, String positionNo) {
-        return UniversalSpaceOccupant.builder()
-                .spaceId(spaceId)
+        return UniversalPlaceOccupant.builder()
+                .placeId(placeId)
                 .occupantType(occupantType)
                 .occupantId(occupantId)
                 .occupantName(occupantName)
+                .positionNo(positionNo)
+                .checkInTime(LocalDateTime.now())
+                .status(1)
+                .build();
+    }
+
+    public static UniversalPlaceOccupant create(Long placeId, String occupantType, Long occupantId,
+                                                 String occupantName, String username,
+                                                 String orgUnitName, Integer gender, String positionNo) {
+        return UniversalPlaceOccupant.builder()
+                .placeId(placeId)
+                .occupantType(occupantType)
+                .occupantId(occupantId)
+                .occupantName(occupantName)
+                .username(username)
+                .orgUnitName(orgUnitName)
+                .gender(gender)
                 .positionNo(positionNo)
                 .checkInTime(LocalDateTime.now())
                 .status(1)

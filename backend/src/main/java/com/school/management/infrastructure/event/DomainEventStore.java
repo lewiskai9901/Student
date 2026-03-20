@@ -2,8 +2,7 @@ package com.school.management.infrastructure.event;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.school.management.domain.shared.event.DomainEvent;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.RowMapper;
 import org.springframework.stereotype.Component;
@@ -20,10 +19,9 @@ import java.util.Optional;
  * Stores and retrieves domain events for event sourcing.
  * Provides both write (store) and read (query) capabilities.
  */
+@Slf4j
 @Component
 public class DomainEventStore {
-
-    private static final Logger log = LoggerFactory.getLogger(DomainEventStore.class);
 
     private final JdbcTemplate jdbcTemplate;
     private final ObjectMapper objectMapper;
@@ -62,8 +60,7 @@ public class DomainEventStore {
             log.debug("Stored domain event: {}", event.getEventId());
         } catch (Exception e) {
             log.error("Failed to store domain event: {}", event.getEventId(), e);
-            // For now, we just log the error but don't fail the operation
-            // In production, you might want to use a transactional outbox pattern
+            throw new RuntimeException("Failed to store domain event: " + event.getEventId(), e);
         }
     }
 

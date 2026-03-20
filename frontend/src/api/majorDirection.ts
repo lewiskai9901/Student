@@ -46,12 +46,12 @@ export const getAllDirections = () => {
 }
 
 // 根据专业ID获取专业方向列表
-export const getDirectionsByMajor = (majorId: number) => {
+export const getDirectionsByMajor = (majorId: number | string) => {
   return http.get<MajorDirection[]>(`/major-directions/major/${majorId}`)
 }
 
 // 获取专业方向详情
-export const getMajorDirectionDetail = (id: number) => {
+export const getMajorDirectionDetail = (id: number | string) => {
   return http.get<MajorDirection>(`/major-directions/${id}`)
 }
 
@@ -61,16 +61,16 @@ export const addMajorDirection = (data: MajorDirection) => {
 }
 
 // 更新专业方向
-export const updateMajorDirection = (id: number, data: MajorDirection) => {
+export const updateMajorDirection = (id: number | string, data: MajorDirection) => {
   return http.put(`/major-directions/${id}`, data)
 }
 
 // 删除专业方向
-export const deleteMajorDirection = (id: number) => {
+export const deleteMajorDirection = (id: number | string) => {
   return http.delete(`/major-directions/${id}`)
 }
 
 // 批量删除专业方向
-export const batchDeleteDirections = (ids: number[]) => {
+export const batchDeleteDirections = (ids: (number | string)[]) => {
   return http.delete('/major-directions/batch', { data: ids })
 }

@@ -2,8 +2,8 @@ package com.school.management.application.inspection.v7;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.school.management.domain.inspection.model.v7.scoring.*;
-import com.school.management.domain.inspection.model.v7.template.InspTemplate;
-import com.school.management.domain.inspection.model.v7.template.TemplateModuleRef;
+import com.school.management.domain.inspection.model.v7.template.TemplateItem;
+import com.school.management.domain.inspection.model.v7.template.TemplateSection;
 import com.school.management.domain.inspection.repository.v7.*;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -26,18 +26,18 @@ public class ScoringProfileApplicationService {
     private final CalculationRuleV7Repository ruleRepository;
     private final EscalationPolicyRepository escalationPolicyRepository;
     private final ScoringProfileVersionRepository versionRepository;
-    private final TemplateModuleRefRepository moduleRefRepository;
-    private final InspTemplateRepository templateRepository;
+    private final TemplateSectionRepository sectionRepository;
+    private final TemplateItemRepository itemRepository;
     private final ObjectMapper objectMapper;
 
     // ===== ScoringProfile =====
 
     @Transactional
-    public ScoringProfile createProfile(Long templateId, Long createdBy) {
-        profileRepository.findByTemplateId(templateId).ifPresent(existing -> {
-            throw new IllegalArgumentException("模板已有评分配置: templateId=" + templateId);
+    public ScoringProfile createProfile(Long sectionId, Long createdBy) {
+        profileRepository.findBySectionId(sectionId).ifPresent(existing -> {
+            throw new IllegalArgumentException("分区已有评分配置: sectionId=" + sectionId);
         });
-        ScoringProfile profile = ScoringProfile.create(templateId, createdBy);
+        ScoringProfile profile = ScoringProfile.create(sectionId, createdBy);
         return profileRepository.save(profile);
     }
 
@@ -47,8 +47,8 @@ public class ScoringProfileApplicationService {
     }
 
     @Transactional(readOnly = true)
-    public Optional<ScoringProfile> getProfileByTemplateId(Long templateId) {
-        return profileRepository.findByTemplateId(templateId);
+    public Optional<ScoringProfile> getProfileBySectionId(Long sectionId) {
+        return profileRepository.findBySectionId(sectionId);
     }
 
     @Transactional(readOnly = true)
@@ -139,62 +139,87 @@ public class ScoringProfileApplicationService {
     }
 
     /**
-     * 从模板的子模板引用同步 MODULE 类型的评分维度
-     * 每个子模板引用生成一个 sourceType=MODULE 的维度，权重取引用的 weight
+     * 自动同步所有子项权重：从当前分区的直接子分区读取，自动创建/更新/删除维度。
+     * 维度完全由子分区列表驱动，不需要手动管理。
+     * 新增子项默认权重 = 100（扣多少就是多少）。
      */
     @Transactional
-    public List<ScoreDimension> syncDimensionsFromModuleRefs(Long scoringProfileId) {
+    public List<ScoreDimension> syncAllDimensions(Long scoringProfileId) {
         ScoringProfile profile = profileRepository.findById(scoringProfileId)
                 .orElseThrow(() -> new IllegalArgumentException("评分配置不存在: " + scoringProfileId));
 
-        List<TemplateModuleRef> moduleRefs = moduleRefRepository.findByCompositeTemplateId(profile.getTemplateId());
+        Long sectionId = profile.getSectionId();
         List<ScoreDimension> existing = dimensionRepository.findByScoringProfileId(scoringProfileId);
 
-        // Existing MODULE dimensions keyed by moduleTemplateId
-        java.util.Map<Long, ScoreDimension> existingModuleDims = new java.util.HashMap<>();
+        java.util.Map<String, ScoreDimension> existingByCode = new java.util.HashMap<>();
         for (ScoreDimension dim : existing) {
-            if ("MODULE".equals(dim.getSourceType()) && dim.getModuleTemplateId() != null) {
-                existingModuleDims.put(dim.getModuleTemplateId(), dim);
-            }
+            existingByCode.put(dim.getDimensionCode(), dim);
         }
+        java.util.Set<String> activeCodes = new java.util.HashSet<>();
+        int sortOrder = 0;
 
-        // Track which module template IDs are still referenced
-        java.util.Set<Long> activeModuleIds = new java.util.HashSet<>();
-
-        for (TemplateModuleRef ref : moduleRefs) {
-            activeModuleIds.add(ref.getModuleTemplateId());
-            ScoreDimension existingDim = existingModuleDims.get(ref.getModuleTemplateId());
-
-            if (existingDim != null) {
-                // Update weight if changed
-                existingDim.update(existingDim.getDimensionName(), ref.getWeight(),
-                        existingDim.getBaseScore(), existingDim.getPassThreshold());
-                dimensionRepository.save(existingDim);
-            } else {
-                // Create new MODULE dimension
-                String moduleName = templateRepository.findById(ref.getModuleTemplateId())
-                        .map(InspTemplate::getTemplateName)
-                        .orElse("子模板 #" + ref.getModuleTemplateId());
-                ScoreDimension newDim = ScoreDimension.reconstruct(ScoreDimension.builder()
+        // 同步子分区 → 维度
+        List<TemplateSection> childSections = sectionRepository.findByParentSectionId(sectionId);
+        for (TemplateSection sec : childSections) {
+            String code = "SEC_" + sec.getId();
+            activeCodes.add(code);
+            ScoreDimension dim = existingByCode.get(code);
+            if (dim == null) {
+                dim = ScoreDimension.reconstruct(ScoreDimension.builder()
                         .scoringProfileId(scoringProfileId)
-                        .dimensionCode("MOD_" + ref.getModuleTemplateId())
-                        .dimensionName(moduleName)
-                        .weight(ref.getWeight())
-                        .sourceType("MODULE")
-                        .moduleTemplateId(ref.getModuleTemplateId())
-                        .sortOrder(ref.getSortOrder()));
-                dimensionRepository.save(newDim);
+                        .dimensionCode(code)
+                        .dimensionName(sec.getSectionName())
+                        .weight(sec.getWeight() != null ? sec.getWeight() : 100)
+                        .baseScore(new BigDecimal("100"))
+                        .sourceType("SECTION")
+                        .sortOrder(sortOrder));
+                dimensionRepository.save(dim);
+            } else {
+                dim.update(sec.getSectionName(), sec.getWeight() != null ? sec.getWeight() : dim.getWeight(), dim.getBaseScore(), dim.getPassThreshold());
+                dimensionRepository.save(dim);
             }
+            sortOrder++;
         }
 
-        // Remove MODULE dimensions for removed refs
-        for (var entry : existingModuleDims.entrySet()) {
-            if (!activeModuleIds.contains(entry.getKey())) {
-                dimensionRepository.deleteById(entry.getValue().getId());
+        // 同步直接字段（isScored=true）→ 维度
+        List<TemplateItem> directItems = itemRepository.findBySectionId(sectionId);
+        for (TemplateItem item : directItems) {
+            if (item.getIsScored() == null || !item.getIsScored()) continue;
+            String code = "ITEM_" + item.getId();
+            activeCodes.add(code);
+            ScoreDimension dim = existingByCode.get(code);
+            if (dim == null) {
+                dim = ScoreDimension.reconstruct(ScoreDimension.builder()
+                        .scoringProfileId(scoringProfileId)
+                        .dimensionCode(code)
+                        .dimensionName(item.getItemName())
+                        .weight(item.getItemWeight() != null ? item.getItemWeight().intValue() : 100)
+                        .baseScore(new BigDecimal("100"))
+                        .sourceType("ITEM")
+                        .sortOrder(sortOrder));
+                dimensionRepository.save(dim);
+            } else {
+                dim.update(item.getItemName(), item.getItemWeight() != null ? item.getItemWeight().intValue() : dim.getWeight(), dim.getBaseScore(), dim.getPassThreshold());
+                dimensionRepository.save(dim);
+            }
+            sortOrder++;
+        }
+
+        // 删除已不存在的维度
+        for (ScoreDimension dim : existing) {
+            if (!activeCodes.contains(dim.getDimensionCode())) {
+                gradeBandRepository.deleteByDimensionId(dim.getId());
+                dimensionRepository.deleteById(dim.getId());
             }
         }
 
         return dimensionRepository.findByScoringProfileId(scoringProfileId);
+    }
+
+    /** @deprecated Use syncAllDimensions instead */
+    @Transactional
+    public List<ScoreDimension> syncDimensionsFromModuleRefs(Long scoringProfileId) {
+        return syncAllDimensions(scoringProfileId);
     }
 
     // ===== GradeBand =====

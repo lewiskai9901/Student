@@ -30,7 +30,7 @@ export function getStudents(params?: StudentQueryParams): Promise<PageResponse<S
 /**
  * 获取学生详情
  */
-export function getStudent(id: number): Promise<Student> {
+export function getStudent(id: number | string): Promise<Student> {
   return http.get<Student>(`${STUDENT_URL}/${id}`)
 }
 
@@ -44,28 +44,28 @@ export function getStudentByNo(studentNo: string): Promise<Student> {
 /**
  * 创建学生
  */
-export function createStudent(data: CreateStudentRequest): Promise<number> {
+export function createStudent(data: CreateStudentRequest): Promise<number | string> {
   return http.post<number>(STUDENT_URL, data)
 }
 
 /**
  * 更新学生
  */
-export function updateStudent(id: number, data: UpdateStudentRequest): Promise<void> {
+export function updateStudent(id: number | string, data: UpdateStudentRequest): Promise<void> {
   return http.put(`${STUDENT_URL}/${id}`, data)
 }
 
 /**
  * 删除学生
  */
-export function deleteStudent(id: number): Promise<void> {
+export function deleteStudent(id: number | string): Promise<void> {
   return http.delete(`${STUDENT_URL}/${id}`)
 }
 
 /**
  * 批量删除学生
  */
-export function deleteStudents(ids: number[]): Promise<void> {
+export function deleteStudents(ids: (number | string)[]): Promise<void> {
   return http.delete(`${STUDENT_URL}/batch`, { data: ids })
 }
 
@@ -81,28 +81,28 @@ export function searchStudents(params: StudentSearchParams): Promise<Student[]> 
 /**
  * 检查学号是否存在
  */
-export function existsStudentNo(studentNo: string, excludeId?: number): Promise<boolean> {
+export function existsStudentNo(studentNo: string, excludeId?: number | string): Promise<boolean> {
   return http.get<boolean>(`${STUDENT_URL}/exists`, { params: { studentNo, excludeId } })
 }
 
 /**
  * 统计班级学生数量
  */
-export function countStudentsByClass(classId: number): Promise<number> {
+export function countStudentsByClass(classId: number | string): Promise<number> {
   return http.get<number>(`${STUDENT_URL}/count/by-class`, { params: { classId } })
 }
 
 /**
  * 统计宿舍学生数量
  */
-export function countStudentsByDormitory(dormitoryId: number): Promise<number> {
+export function countStudentsByDormitory(dormitoryId: number | string): Promise<number> {
   return http.get<number>(`${STUDENT_URL}/count/by-dormitory`, { params: { dormitoryId } })
 }
 
 /**
  * 根据班级ID获取学生列表
  */
-export function getStudentsByClass(classId: number): Promise<Student[]> {
+export function getStudentsByClass(classId: number | string): Promise<Student[]> {
   return http.get<Student[]>(`${STUDENT_URL}/by-class/${classId}`)
 }
 
@@ -111,28 +111,28 @@ export function getStudentsByClass(classId: number): Promise<Student[]> {
 /**
  * 更新学生状态
  */
-export function updateStudentStatus(id: number, status: number): Promise<void> {
+export function updateStudentStatus(id: number | string, status: number): Promise<void> {
   return http.patch(`${STUDENT_URL}/${id}/status`, null, { params: { status } })
 }
 
 /**
  * 分配宿舍
  */
-export function assignDormitory(id: number, data: AssignDormitoryRequest): Promise<void> {
+export function assignDormitory(id: number | string, data: AssignDormitoryRequest): Promise<void> {
   return http.patch(`${STUDENT_URL}/${id}/dormitory`, null, { params: data })
 }
 
 /**
  * 学生转班
  */
-export function transferClass(id: number, newClassId: number): Promise<void> {
+export function transferClass(id: number | string, newClassId: number | string): Promise<void> {
   return http.patch(`${STUDENT_URL}/${id}/transfer`, null, { params: { newClassId } })
 }
 
 /**
  * 重置密码
  */
-export function resetPassword(id: number, data: ResetPasswordRequest): Promise<void> {
+export function resetPassword(id: number | string, data: ResetPasswordRequest): Promise<void> {
   return http.patch(`${STUDENT_URL}/${id}/reset-password`, data)
 }
 

@@ -165,7 +165,7 @@ INSERT INTO space_categories (category_code, category_name, apply_to_level, icon
 -- 分类管理权限
 INSERT INTO permission (code, name, type, parent_id, path, sort_order, enabled, created_at, updated_at)
 SELECT
-    'system:space-category',
+    'system:place-category',
     '空间分类管理',
     'menu',
     (SELECT id FROM permission p2 WHERE code = 'system' LIMIT 1),
@@ -176,64 +176,64 @@ SELECT
     NOW(),
     NOW()
 FROM dual
-WHERE NOT EXISTS (SELECT 1 FROM permission WHERE code = 'system:space-category');
+WHERE NOT EXISTS (SELECT 1 FROM permission WHERE code = 'system:place-category');
 
 INSERT INTO permission (code, name, type, parent_id, path, sort_order, enabled, created_at, updated_at)
 SELECT
-    'system:space-category:view',
+    'system:place-category:view',
     '查看空间分类',
     'button',
-    (SELECT id FROM permission p2 WHERE code = 'system:space-category' LIMIT 1),
-    CONCAT((SELECT path FROM permission p3 WHERE code = 'system:space-category' LIMIT 1),
+    (SELECT id FROM permission p2 WHERE code = 'system:place-category' LIMIT 1),
+    CONCAT((SELECT path FROM permission p3 WHERE code = 'system:place-category' LIMIT 1),
            (SELECT COALESCE(MAX(id), 0) + 1 FROM permission), '/'),
     1,
     1,
     NOW(),
     NOW()
 FROM dual
-WHERE NOT EXISTS (SELECT 1 FROM permission WHERE code = 'system:space-category:view');
+WHERE NOT EXISTS (SELECT 1 FROM permission WHERE code = 'system:place-category:view');
 
 INSERT INTO permission (code, name, type, parent_id, path, sort_order, enabled, created_at, updated_at)
 SELECT
-    'system:space-category:add',
+    'system:place-category:add',
     '新增空间分类',
     'button',
-    (SELECT id FROM permission p2 WHERE code = 'system:space-category' LIMIT 1),
-    CONCAT((SELECT path FROM permission p3 WHERE code = 'system:space-category' LIMIT 1),
+    (SELECT id FROM permission p2 WHERE code = 'system:place-category' LIMIT 1),
+    CONCAT((SELECT path FROM permission p3 WHERE code = 'system:place-category' LIMIT 1),
            (SELECT COALESCE(MAX(id), 0) + 1 FROM permission), '/'),
     2,
     1,
     NOW(),
     NOW()
 FROM dual
-WHERE NOT EXISTS (SELECT 1 FROM permission WHERE code = 'system:space-category:add');
+WHERE NOT EXISTS (SELECT 1 FROM permission WHERE code = 'system:place-category:add');
 
 INSERT INTO permission (code, name, type, parent_id, path, sort_order, enabled, created_at, updated_at)
 SELECT
-    'system:space-category:edit',
+    'system:place-category:edit',
     '编辑空间分类',
     'button',
-    (SELECT id FROM permission p2 WHERE code = 'system:space-category' LIMIT 1),
-    CONCAT((SELECT path FROM permission p3 WHERE code = 'system:space-category' LIMIT 1),
+    (SELECT id FROM permission p2 WHERE code = 'system:place-category' LIMIT 1),
+    CONCAT((SELECT path FROM permission p3 WHERE code = 'system:place-category' LIMIT 1),
            (SELECT COALESCE(MAX(id), 0) + 1 FROM permission), '/'),
     3,
     1,
     NOW(),
     NOW()
 FROM dual
-WHERE NOT EXISTS (SELECT 1 FROM permission WHERE code = 'system:space-category:edit');
+WHERE NOT EXISTS (SELECT 1 FROM permission WHERE code = 'system:place-category:edit');
 
 INSERT INTO permission (code, name, type, parent_id, path, sort_order, enabled, created_at, updated_at)
 SELECT
-    'system:space-category:delete',
+    'system:place-category:delete',
     '删除空间分类',
     'button',
-    (SELECT id FROM permission p2 WHERE code = 'system:space-category' LIMIT 1),
-    CONCAT((SELECT path FROM permission p3 WHERE code = 'system:space-category' LIMIT 1),
+    (SELECT id FROM permission p2 WHERE code = 'system:place-category' LIMIT 1),
+    CONCAT((SELECT path FROM permission p3 WHERE code = 'system:place-category' LIMIT 1),
            (SELECT COALESCE(MAX(id), 0) + 1 FROM permission), '/'),
     4,
     1,
     NOW(),
     NOW()
 FROM dual
-WHERE NOT EXISTS (SELECT 1 FROM permission WHERE code = 'system:space-category:delete');
+WHERE NOT EXISTS (SELECT 1 FROM permission WHERE code = 'system:place-category:delete');

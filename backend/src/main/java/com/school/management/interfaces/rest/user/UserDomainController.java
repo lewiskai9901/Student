@@ -1,19 +1,19 @@
 package com.school.management.interfaces.rest.user;
 
-import com.school.management.infrastructure.audit.annotation.OperationLog;
+import com.school.management.infrastructure.activity.annotation.AuditEvent;
 import com.school.management.application.user.UserApplicationService;
 import com.school.management.application.user.command.CreateUserCommand;
 import com.school.management.application.user.command.UpdateUserCommand;
 import com.school.management.common.result.Result;
 import com.school.management.domain.user.model.aggregate.User;
-import com.school.management.security.JwtTokenService;
+import com.school.management.common.util.SecurityUtils;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.security.access.prepost.PreAuthorize;
+import com.school.management.infrastructure.casbin.CasbinAccess;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -32,14 +32,13 @@ import java.util.stream.Collectors;
 public class UserDomainController {
 
     private final UserApplicationService userApplicationService;
-    private final JwtTokenService jwtTokenService;
 
     // ==================== 创建与更新 ====================
 
     @Operation(summary = "创建用户")
     @PostMapping
-    @PreAuthorize("hasAuthority('system:user:add')")
-    @OperationLog(module = "system", type = "create", name = "创建用户")
+    @CasbinAccess(resource = "system:user", action = "add")
+    @AuditEvent(module = "system", action = "CREATE", resourceType = "USER", label = "创建用户")
     public Result<UserDomainResponse> createUser(@Valid @RequestBody CreateUserRequest request) {
         log.info("DDD 创建用户: {}", request.getUsername());
 
@@ -54,9 +53,10 @@ public class UserDomainController {
                 .birthDate(request.getBirthDate())
                 .idCard(request.getIdCard())
                 .orgUnitId(request.getOrgUnitId())
-                .userType(request.getUserType())
+                .placeId(request.getPlaceId())
+                .userTypeCode(request.getUserTypeCode())
                 .roleIds(request.getRoleIds())
-                .createdBy(getCurrentUserId())
+                .createdBy(SecurityUtils.requireCurrentUserId())
                 .build();
 
         User user = userApplicationService.createUser(command);
@@ -65,8 +65,8 @@ public class UserDomainController {
 
     @Operation(summary = "更新用户")
     @PutMapping("/{id}")
-    @PreAuthorize("hasAuthority('system:user:edit')")
-    @OperationLog(module = "system", type = "update", name = "更新用户")
+    @CasbinAccess(resource = "system:user", action = "edit")
+    @AuditEvent(module = "system", action = "UPDATE", resourceType = "USER", resourceId = "#id", label = "更新用户")
     public Result<UserDomainResponse> updateUser(
             @Parameter(description = "用户ID") @PathVariable Long id,
             @Valid @RequestBody UpdateUserRequest request) {
@@ -81,8 +81,9 @@ public class UserDomainController {
                 .birthDate(request.getBirthDate())
                 .idCard(request.getIdCard())
                 .orgUnitId(request.getOrgUnitId())
+                .userTypeCode(request.getUserTypeCode())
                 .roleIds(request.getRoleIds())
-                .updatedBy(getCurrentUserId())
+                .updatedBy(SecurityUtils.requireCurrentUserId())
                 .build();
 
         User user = userApplicationService.updateUser(id, command);
@@ -93,8 +94,8 @@ public class UserDomainController {
 
     @Operation(summary = "删除用户")
     @DeleteMapping("/{id}")
-    @PreAuthorize("hasAuthority('system:user:delete')")
-    @OperationLog(module = "system", type = "delete", name = "删除用户")
+    @CasbinAccess(resource = "system:user", action = "delete")
+    @AuditEvent(module = "system", action = "DELETE", resourceType = "USER", resourceId = "#id", label = "删除用户")
     public Result<Void> deleteUser(@Parameter(description = "用户ID") @PathVariable Long id) {
         log.info("DDD 删除用户: {}", id);
         userApplicationService.deleteUser(id);
@@ -103,8 +104,8 @@ public class UserDomainController {
 
     @Operation(summary = "批量删除用户")
     @DeleteMapping("/batch")
-    @PreAuthorize("hasAuthority('system:user:delete')")
-    @OperationLog(module = "system", type = "delete", name = "批量删除用户")
+    @CasbinAccess(resource = "system:user", action = "delete")
+    @AuditEvent(module = "system", action = "DELETE", resourceType = "USER", label = "批量删除用户")
     public Result<Void> deleteUsers(@RequestBody List<Long> ids) {
         log.info("DDD 批量删除用户: {}", ids);
         userApplicationService.deleteUsers(ids);
@@ -115,7 +116,7 @@ public class UserDomainController {
 
     @Operation(summary = "分页查询用户")
     @GetMapping("/page")
-    @PreAuthorize("hasAuthority('system:user:view')")
+    @CasbinAccess(resource = "system:user", action = "view")
     public Result<PageResponse> getUsersPage(
             @Parameter(description = "页码") @RequestParam(defaultValue = "1") Integer pageNum,
             @Parameter(description = "每页数量") @RequestParam(defaultValue = "10") Integer pageSize,
@@ -138,7 +139,7 @@ public class UserDomainController {
 
     @Operation(summary = "获取所有用户")
     @GetMapping
-    @PreAuthorize("hasAuthority('system:user:view')")
+    @CasbinAccess(resource = "system:user", action = "view")
     public Result<List<UserDomainResponse>> getAllUsers() {
         List<UserDomainResponse> users = userApplicationService.getAllUsers()
                 .stream()
@@ -149,7 +150,7 @@ public class UserDomainController {
 
     @Operation(summary = "获取简单用户列表（用于选择器）")
     @GetMapping("/simple")
-    @PreAuthorize("hasAuthority('system:user:view')")
+    @CasbinAccess(resource = "system:user", action = "view")
     public Result<List<SimpleUserResponse>> getSimpleUserList(
             @Parameter(description = "关键词") @RequestParam(required = false) String keyword) {
         List<SimpleUserResponse> users = userApplicationService.getSimpleUserList(keyword)
@@ -161,7 +162,7 @@ public class UserDomainController {
 
     @Operation(summary = "获取用户详情")
     @GetMapping("/{id}")
-    @PreAuthorize("hasAuthority('system:user:view')")
+    @CasbinAccess(resource = "system:user", action = "view")
     public Result<UserDomainResponse> getUser(@Parameter(description = "用户ID") @PathVariable Long id) {
         return userApplicationService.getUser(id)
                 .map(user -> Result.success(UserDomainResponse.fromDomain(user)))
@@ -170,7 +171,7 @@ public class UserDomainController {
 
     @Operation(summary = "根据用户名获取用户")
     @GetMapping("/by-username/{username}")
-    @PreAuthorize("hasAuthority('system:user:view')")
+    @CasbinAccess(resource = "system:user", action = "view")
     public Result<UserDomainResponse> getUserByUsername(
             @Parameter(description = "用户名") @PathVariable String username) {
         return userApplicationService.getUserByUsername(username)
@@ -180,7 +181,7 @@ public class UserDomainController {
 
     @Operation(summary = "根据组织单元获取用户列表")
     @GetMapping("/by-org-unit/{orgUnitId}")
-    @PreAuthorize("hasAuthority('system:user:view')")
+    @CasbinAccess(resource = "system:user", action = "view")
     public Result<List<UserDomainResponse>> getUsersByOrgUnit(
             @Parameter(description = "组织单元ID") @PathVariable Long orgUnitId) {
         List<UserDomainResponse> users = userApplicationService.getUsersByOrgUnit(orgUnitId)
@@ -192,7 +193,7 @@ public class UserDomainController {
 
     @Operation(summary = "检查用户名是否存在")
     @GetMapping("/exists")
-    @PreAuthorize("hasAuthority('system:user:view')")
+    @CasbinAccess(resource = "system:user", action = "view")
     public Result<Boolean> existsUsername(
             @Parameter(description = "用户名") @RequestParam String username,
             @Parameter(description = "排除的用户ID") @RequestParam(required = false) Long excludeId) {
@@ -204,8 +205,8 @@ public class UserDomainController {
 
     @Operation(summary = "启用用户")
     @PostMapping("/{id}/enable")
-    @PreAuthorize("hasAuthority('system:user:edit')")
-    @OperationLog(module = "system", type = "update", name = "启用用户")
+    @CasbinAccess(resource = "system:user", action = "edit")
+    @AuditEvent(module = "system", action = "UPDATE", resourceType = "USER", resourceId = "#id", label = "启用用户")
     public Result<UserDomainResponse> enableUser(@Parameter(description = "用户ID") @PathVariable Long id) {
         log.info("DDD 启用用户: {}", id);
         User user = userApplicationService.enableUser(id);
@@ -214,8 +215,8 @@ public class UserDomainController {
 
     @Operation(summary = "禁用用户")
     @PostMapping("/{id}/disable")
-    @PreAuthorize("hasAuthority('system:user:edit')")
-    @OperationLog(module = "system", type = "update", name = "禁用用户")
+    @CasbinAccess(resource = "system:user", action = "edit")
+    @AuditEvent(module = "system", action = "UPDATE", resourceType = "USER", resourceId = "#id", label = "禁用用户")
     public Result<UserDomainResponse> disableUser(@Parameter(description = "用户ID") @PathVariable Long id) {
         log.info("DDD 禁用用户: {}", id);
         User user = userApplicationService.disableUser(id);
@@ -226,8 +227,8 @@ public class UserDomainController {
 
     @Operation(summary = "重置用户密码")
     @PostMapping("/{id}/reset-password")
-    @PreAuthorize("hasAuthority('system:user:edit')")
-    @OperationLog(module = "system", type = "update", name = "重置用户密码")
+    @CasbinAccess(resource = "system:user", action = "edit")
+    @AuditEvent(module = "system", action = "UPDATE", resourceType = "USER", resourceId = "#id", label = "重置用户密码")
     public Result<String> resetPassword(@Parameter(description = "用户ID") @PathVariable Long id) {
         log.info("DDD 重置用户密码: {}", id);
         userApplicationService.resetPassword(id);
@@ -238,7 +239,7 @@ public class UserDomainController {
 
     @Operation(summary = "获取用户角色ID列表")
     @GetMapping("/{id}/roles")
-    @PreAuthorize("hasAuthority('system:user:view')")
+    @CasbinAccess(resource = "system:user", action = "view")
     public Result<List<Long>> getUserRoleIds(@Parameter(description = "用户ID") @PathVariable Long id) {
         List<Long> roleIds = userApplicationService.getUserRoleIds(id);
         return Result.success(roleIds);
@@ -246,8 +247,8 @@ public class UserDomainController {
 
     @Operation(summary = "分配角色给用户")
     @PostMapping("/{id}/roles")
-    @PreAuthorize("hasAuthority('system:user:edit')")
-    @OperationLog(module = "system", type = "update", name = "分配用户角色")
+    @CasbinAccess(resource = "system:user", action = "edit")
+    @AuditEvent(module = "system", action = "UPDATE", resourceType = "USER", resourceId = "#id", label = "分配用户角色")
     public Result<Void> assignRoles(
             @Parameter(description = "用户ID") @PathVariable Long id,
             @RequestBody List<Long> roleIds) {
@@ -260,7 +261,7 @@ public class UserDomainController {
 
     @Operation(summary = "绑定微信")
     @PostMapping("/{id}/bind-wechat")
-    @PreAuthorize("hasAuthority('system:user:edit')")
+    @CasbinAccess(resource = "system:user", action = "edit")
     public Result<Void> bindWechat(
             @Parameter(description = "用户ID") @PathVariable Long id,
             @RequestParam String openid) {
@@ -271,16 +272,11 @@ public class UserDomainController {
 
     @Operation(summary = "解绑微信")
     @PostMapping("/{id}/unbind-wechat")
-    @PreAuthorize("hasAuthority('system:user:edit')")
+    @CasbinAccess(resource = "system:user", action = "edit")
     public Result<Void> unbindWechat(@Parameter(description = "用户ID") @PathVariable Long id) {
         log.info("DDD 解绑微信: {}", id);
         userApplicationService.unbindWechat(id);
         return Result.success();
     }
 
-    // ==================== Helper ====================
-
-    private Long getCurrentUserId() {
-        return jwtTokenService.getCurrentUserId();
-    }
 }

@@ -1,12 +1,11 @@
 package com.school.management.interfaces.rest.organization;
 
-import com.school.management.domain.organization.model.OrgUnitType;
-import com.school.management.domain.organization.model.UnitCategory;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 import lombok.Data;
+
+import java.util.List;
 
 /**
  * Request DTO for creating an organization unit.
@@ -25,12 +24,22 @@ public class CreateOrgUnitRequest {
     @Size(max = 100, message = "Unit name cannot exceed 100 characters")
     private String unitName;
 
-    @Schema(description = "Organization type (optional, defaults to COLLEGE)")
-    private OrgUnitType unitType = OrgUnitType.COLLEGE;
-
-    @Schema(description = "Organization category: ACADEMIC, FUNCTIONAL, ADMINISTRATIVE")
-    private UnitCategory unitCategory;
+    @Schema(description = "Organization type code from org_unit_types", example = "COLLEGE")
+    @NotBlank(message = "Unit type is required")
+    private String unitType;
 
     @Schema(description = "Parent organization ID", example = "1")
     private Long parentId;
+
+    @Schema(description = "User-selected positions to create from template")
+    private List<SelectedPositionRequest> selectedPositions;
+
+    @Data
+    public static class SelectedPositionRequest {
+        @Schema(description = "Position name", example = "主任")
+        private String positionName;
+
+        @Schema(description = "Headcount for this position", example = "1")
+        private int headcount;
+    }
 }

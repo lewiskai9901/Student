@@ -3,7 +3,6 @@ package com.school.management.domain.shared.event;
 import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
-import java.util.UUID;
 
 /**
  * Domain event interface.
@@ -51,10 +50,11 @@ public interface DomainEvent {
 
     /**
      * Returns the unique event ID.
+     * Implementations MUST override this to cache the ID in a field.
+     * The default generates a new UUID each call — only safe as a fallback.
+     * All events should extend BaseDomainEvent which caches the ID properly.
      */
-    default String getEventId() {
-        return UUID.randomUUID().toString();
-    }
+    String getEventId();
 
     /**
      * Returns when this event occurred as Instant.

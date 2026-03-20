@@ -1,0 +1,618 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SMS Tool - 后台管理</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #f0f2f5; color: #333; padding: 20px; }
+
+  .container { max-width: 1200px; margin: 0 auto; }
+  .hidden { display: none !important; }
+
+  .header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; }
+  .header h1 { font-size: 20px; font-weight: 600; }
+  .header-right { display: flex; align-items: center; gap: 10px; }
+
+  .link-btn { font-size: 13px; color: #1677ff; text-decoration: none; cursor: pointer; }
+  .link-btn:hover { text-decoration: underline; }
+
+  .stats-bar {
+    display: flex; gap: 16px; flex-wrap: wrap;
+    background: #fff; padding: 16px 20px; border-radius: 8px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.08); margin-bottom: 12px;
+  }
+  .stat-item { font-size: 13px; color: #666; }
+  .stat-item span { font-weight: 700; font-size: 18px; margin-left: 4px; }
+  .stat-sep { width: 1px; background: #e8e8e8; }
+
+  .toolbar {
+    display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+    background: #fff; padding: 12px 16px; border-radius: 8px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.08); margin-bottom: 12px;
+  }
+  .toolbar input[type="text"] {
+    width: 220px; padding: 5px 10px; border: 1px solid #d9d9d9; border-radius: 4px;
+    font-size: 13px; outline: none;
+  }
+  .toolbar input[type="text"]:focus { border-color: #1677ff; }
+
+  .btn {
+    padding: 6px 16px; border: none; border-radius: 4px; font-size: 13px;
+    cursor: pointer; font-weight: 500; transition: all .2s;
+  }
+  .btn:hover { opacity: 0.85; }
+  .btn-primary { background: #1677ff; color: #fff; }
+  .btn-success { background: #52c41a; color: #fff; }
+  .btn-danger { background: #ff4d4f; color: #fff; }
+  .btn-warning { background: #faad14; color: #fff; }
+  .btn-default { background: #fff; color: #333; border: 1px solid #d9d9d9; }
+  .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+  .toggle-btn { font-size: 12px; padding: 4px 10px; }
+  .toggle-btn.active { background: #1677ff; color: #fff; border-color: #1677ff; }
+
+  .separator { width: 1px; height: 24px; background: #e8e8e8; }
+
+  .table-wrapper {
+    background: #fff; border-radius: 8px; overflow: hidden;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+  }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  thead { background: #fafafa; }
+  th { padding: 10px 12px; text-align: left; font-weight: 600; border-bottom: 1px solid #f0f0f0; white-space: nowrap; }
+  td { padding: 8px 12px; border-bottom: 1px solid #f0f0f0; vertical-align: middle; }
+  tr:hover { background: #fafafa; }
+  tr.expanded { background: #e6f4ff; }
+  tr.expanded:hover { background: #d0e8ff; }
+
+  .device-id { font-weight: 600; color: #1677ff; cursor: pointer; }
+  .device-id:hover { text-decoration: underline; }
+
+  .badge {
+    display: inline-block; padding: 1px 8px; border-radius: 10px; font-size: 11px; font-weight: 600;
+  }
+  .badge-done { background: #f6ffed; color: #52c41a; border: 1px solid #b7eb8f; }
+  .badge-error { background: #fff2f0; color: #ff4d4f; border: 1px solid #ffccc7; }
+  .badge-pending { background: #e6f4ff; color: #1677ff; border: 1px solid #91caff; }
+
+  .memo-preview { font-size: 12px; color: #999; max-width: 160px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; display: inline-block; }
+
+  .time-text { font-size: 12px; color: #999; white-space: nowrap; }
+  .ip-text { font-size: 12px; color: #666; font-family: monospace; }
+  .ua-text { font-size: 11px; color: #999; max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; display: inline-block; }
+
+  .mini-btn {
+    padding: 2px 8px; font-size: 11px; border: 1px solid #d9d9d9; background: #fff;
+    border-radius: 3px; cursor: pointer; margin: 0 2px;
+  }
+  .mini-btn:hover { border-color: #1677ff; color: #1677ff; }
+  .mini-btn.danger:hover { border-color: #ff4d4f; color: #ff4d4f; }
+
+  .empty-state { text-align: center; padding: 60px 20px; color: #999; font-size: 14px; }
+
+  /* Detail panel */
+  .detail-row td { padding: 0; background: #fafafa; }
+  .detail-panel { padding: 16px 20px; }
+  .detail-panel .detail-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+  .detail-panel .detail-header h3 { font-size: 15px; font-weight: 600; }
+  .detail-panel .detail-stats { display: flex; gap: 16px; font-size: 12px; color: #666; margin-bottom: 12px; }
+  .detail-panel .detail-stats span { font-weight: 600; }
+
+  .detail-panel .device-info-bar {
+    display: flex; gap: 20px; flex-wrap: wrap; font-size: 12px; color: #666;
+    background: #fff; padding: 10px 14px; border-radius: 4px; border: 1px solid #f0f0f0; margin-bottom: 12px;
+  }
+  .detail-panel .device-info-bar .info-label { color: #999; margin-right: 4px; }
+
+  .detail-panel .memo-section { margin-bottom: 12px; }
+  .detail-panel .memo-section label { font-size: 13px; font-weight: 500; display: block; margin-bottom: 4px; }
+  .detail-panel .memo-textarea {
+    width: 100%; min-height: 50px; max-height: 150px; padding: 8px;
+    border: 1px solid #d9d9d9; border-radius: 4px; font-size: 13px;
+    resize: vertical; font-family: inherit; line-height: 1.5;
+  }
+  .detail-panel .memo-actions { margin-top: 4px; display: flex; gap: 8px; }
+
+  .detail-table-wrap { max-height: 400px; overflow-y: auto; border: 1px solid #f0f0f0; border-radius: 4px; }
+  .detail-table-wrap table { font-size: 12px; }
+  .detail-table-wrap th { position: sticky; top: 0; background: #fafafa; z-index: 1; }
+  .detail-table-wrap td { padding: 6px 10px; }
+  .detail-table-wrap tr.row-done { background: #f6ffed; }
+  .detail-table-wrap tr.row-error { background: #fff2f0; }
+  .detail-table-wrap tr.row-fetched { background: #e6f4ff; }
+
+  .code-cell { font-weight: 600; color: #1677ff; font-family: monospace; }
+  .url-text { word-break: break-all; font-size: 11px; color: #666; max-width: 250px; display: inline-block; }
+
+  /* Login overlay */
+  .login-overlay {
+    position: fixed; inset: 0; background: #f0f2f5;
+    z-index: 2000; display: flex; justify-content: center; align-items: center;
+  }
+  .login-box {
+    background: #fff; border-radius: 8px; padding: 32px; width: 360px; max-width: 90vw;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.1); text-align: center;
+  }
+  .login-box h2 { font-size: 18px; margin-bottom: 8px; }
+  .login-box p { font-size: 13px; color: #999; margin-bottom: 20px; }
+  .login-box input[type="password"] {
+    width: 100%; padding: 10px 14px; border: 1px solid #d9d9d9; border-radius: 4px;
+    font-size: 14px; outline: none; margin-bottom: 12px;
+  }
+  .login-box input[type="password"]:focus { border-color: #1677ff; }
+  .login-box .login-btn { width: 100%; padding: 10px; font-size: 14px; }
+  .login-box .login-error { font-size: 12px; color: #ff4d4f; margin-top: 8px; min-height: 18px; }
+
+  /* Modal */
+  .modal-overlay {
+    display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.4);
+    z-index: 1000; justify-content: center; align-items: center;
+  }
+  .modal-overlay.show { display: flex; }
+  .modal {
+    background: #fff; border-radius: 8px; padding: 20px; width: 420px; max-width: 90vw;
+  }
+  .modal h3 { margin-bottom: 12px; font-size: 16px; }
+  .modal p { font-size: 13px; color: #666; margin-bottom: 16px; }
+  .modal .modal-actions { display: flex; gap: 8px; justify-content: flex-end; }
+
+  .refresh-indicator { font-size: 12px; color: #999; }
+  .refresh-indicator.loading { color: #1677ff; }
+
+  @media (max-width: 768px) {
+    body { padding: 10px; }
+    .stats-bar { gap: 10px; padding: 12px; }
+    .stat-item span { font-size: 15px; }
+    .toolbar { gap: 8px; }
+    .toolbar input[type="text"] { width: 150px; }
+    .memo-preview { max-width: 100px; }
+    .ua-text { max-width: 100px; }
+  }
+</style>
+</head>
+<body>
+
+<!-- Login overlay -->
+<div class="login-overlay" id="loginOverlay">
+  <div class="login-box">
+    <h2>SMS Tool 后台管理</h2>
+    <p>请输入管理密码</p>
+    <input type="password" id="loginPassword" placeholder="密码" onkeydown="if(event.key==='Enter')doLogin()">
+    <button class="btn btn-primary login-btn" onclick="doLogin()">登录</button>
+    <div class="login-error" id="loginError"></div>
+  </div>
+</div>
+
+<!-- Main content (hidden until login) -->
+<div class="container hidden" id="mainContent">
+  <div class="header">
+    <h1>SMS Tool 后台管理</h1>
+    <div class="header-right">
+      <span class="refresh-indicator" id="refreshIndicator"></span>
+      <a class="link-btn" onclick="doLogout()" style="cursor:pointer">退出登录</a>
+      <a class="link-btn" href="/">返回前台</a>
+    </div>
+  </div>
+
+  <div class="stats-bar" id="statsBar">
+    <div class="stat-item">编号总数<span id="statDevices">0</span></div>
+    <div class="stat-sep"></div>
+    <div class="stat-item">总条目<span id="statTotal">0</span></div>
+    <div class="stat-sep"></div>
+    <div class="stat-item">已完成<span id="statDone" style="color:#52c41a">0</span></div>
+    <div class="stat-sep"></div>
+    <div class="stat-item">异常<span id="statError" style="color:#ff4d4f">0</span></div>
+    <div class="stat-sep"></div>
+    <div class="stat-item">待处理<span id="statPending" style="color:#1677ff">0</span></div>
+  </div>
+
+  <div class="toolbar">
+    <input type="text" id="searchInput" placeholder="搜索编号 / IP..." oninput="renderTable()">
+    <div class="separator"></div>
+    <button class="btn btn-default" onclick="loadDevices()">刷新</button>
+    <button class="btn btn-default toggle-btn" id="autoRefreshBtn" onclick="toggleAutoRefresh()">自动刷新</button>
+    <div style="flex:1"></div>
+    <span style="font-size:12px;color:#999" id="lastLoadTime"></span>
+  </div>
+
+  <div class="table-wrapper">
+    <table>
+      <thead>
+        <tr>
+          <th style="width:36px">#</th>
+          <th>编号</th>
+          <th style="width:60px">条目</th>
+          <th style="width:70px">待处理</th>
+          <th style="width:70px">已完成</th>
+          <th style="width:60px">异常</th>
+          <th>IP</th>
+          <th>设备</th>
+          <th>备忘录</th>
+          <th style="width:130px">最后活跃</th>
+          <th style="width:130px;text-align:center">操作</th>
+        </tr>
+      </thead>
+      <tbody id="deviceTableBody">
+        <tr><td colspan="11" class="empty-state">加载中...</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- Delete confirmation modal -->
+<div class="modal-overlay" id="deleteModal">
+  <div class="modal">
+    <h3>确认删除</h3>
+    <p>确定要删除编号 <strong id="deleteDeviceId"></strong> 的所有数据吗？此操作不可恢复。</p>
+    <div class="modal-actions">
+      <button class="btn btn-default" onclick="closeDeleteModal()">取消</button>
+      <button class="btn btn-danger" onclick="confirmDelete()">删除</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const API = location.origin;
+let devices = [];
+let expandedId = null;
+let autoRefreshTimer = null;
+let pendingDeleteId = null;
+let adminPassword = '';
+
+// ---- Auth ----
+function getStoredPassword() {
+  return sessionStorage.getItem('sms_admin_pwd') || '';
+}
+function storePassword(pwd) {
+  sessionStorage.setItem('sms_admin_pwd', pwd);
+}
+function clearPassword() {
+  sessionStorage.removeItem('sms_admin_pwd');
+}
+
+function adminHeaders() {
+  return { 'x-admin-password': adminPassword };
+}
+
+async function doLogin() {
+  const pwd = document.getElementById('loginPassword').value.trim();
+  const errEl = document.getElementById('loginError');
+  if (!pwd) { errEl.textContent = '请输入密码'; return; }
+  errEl.textContent = '';
+  try {
+    const resp = await fetch(API + '/api/admin/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ password: pwd }),
+    });
+    if (resp.ok) {
+      adminPassword = pwd;
+      storePassword(pwd);
+      document.getElementById('loginOverlay').classList.add('hidden');
+      document.getElementById('mainContent').classList.remove('hidden');
+      loadDevices();
+    } else {
+      errEl.textContent = '密码错误';
+    }
+  } catch(e) {
+    errEl.textContent = '连接失败: ' + e.message;
+  }
+}
+
+function doLogout() {
+  adminPassword = '';
+  clearPassword();
+  document.getElementById('loginOverlay').classList.remove('hidden');
+  document.getElementById('mainContent').classList.add('hidden');
+  document.getElementById('loginPassword').value = '';
+  document.getElementById('loginError').textContent = '';
+  if (autoRefreshTimer) { clearInterval(autoRefreshTimer); autoRefreshTimer = null; }
+}
+
+// Auto-login if password in sessionStorage
+(function tryAutoLogin() {
+  const stored = getStoredPassword();
+  if (stored) {
+    adminPassword = stored;
+    // Verify password is still valid
+    fetch(API + '/api/admin/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ password: stored }),
+    }).then(resp => {
+      if (resp.ok) {
+        document.getElementById('loginOverlay').classList.add('hidden');
+        document.getElementById('mainContent').classList.remove('hidden');
+        loadDevices();
+      } else {
+        clearPassword();
+        adminPassword = '';
+      }
+    }).catch(() => {
+      clearPassword();
+      adminPassword = '';
+    });
+  }
+})();
+
+// ---- Load devices ----
+async function loadDevices() {
+  const ind = document.getElementById('refreshIndicator');
+  ind.textContent = '加载中...';
+  ind.className = 'refresh-indicator loading';
+  try {
+    const resp = await fetch(API + '/api/admin/devices', { headers: adminHeaders() });
+    if (resp.status === 401) { doLogout(); return; }
+    devices = await resp.json();
+    updateStats();
+    renderTable();
+    document.getElementById('lastLoadTime').textContent = '更新于 ' + new Date().toLocaleTimeString();
+  } catch(e) {
+    console.error('加载失败:', e);
+  }
+  ind.textContent = '';
+  ind.className = 'refresh-indicator';
+}
+
+function updateStats() {
+  let totalCount = 0, totalDone = 0, totalError = 0, totalPending = 0;
+  for (const d of devices) {
+    totalCount += d.count;
+    totalDone += d.done;
+    totalError += d.error;
+    totalPending += d.pending;
+  }
+  document.getElementById('statDevices').textContent = devices.length;
+  document.getElementById('statTotal').textContent = totalCount;
+  document.getElementById('statDone').textContent = totalDone;
+  document.getElementById('statError').textContent = totalError;
+  document.getElementById('statPending').textContent = totalPending;
+}
+
+// ---- Parse UA to short device description ----
+function parseUA(ua) {
+  if (!ua) return '-';
+  // Try to extract OS + browser
+  let os = '';
+  if (/Windows/.test(ua)) os = 'Windows';
+  else if (/Mac OS X/.test(ua)) os = 'macOS';
+  else if (/Android/.test(ua)) {
+    const m = ua.match(/Android\s([\d.]+)/);
+    os = 'Android' + (m ? ' ' + m[1] : '');
+  }
+  else if (/iPhone|iPad/.test(ua)) os = /iPad/.test(ua) ? 'iPad' : 'iPhone';
+  else if (/Linux/.test(ua)) os = 'Linux';
+  else os = '未知';
+
+  let browser = '';
+  if (/MicroMessenger/.test(ua)) browser = '微信';
+  else if (/Edg\//.test(ua)) browser = 'Edge';
+  else if (/Chrome\//.test(ua)) browser = 'Chrome';
+  else if (/Safari\//.test(ua) && !/Chrome/.test(ua)) browser = 'Safari';
+  else if (/Firefox\//.test(ua)) browser = 'Firefox';
+
+  return os + (browser ? ' / ' + browser : '');
+}
+
+// ---- Render table ----
+function renderTable() {
+  const tbody = document.getElementById('deviceTableBody');
+  const search = document.getElementById('searchInput').value.trim().toLowerCase();
+  const filtered = search
+    ? devices.filter(d => d.id.toLowerCase().includes(search) || (d.ip || '').toLowerCase().includes(search))
+    : devices;
+
+  if (filtered.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="11" class="empty-state">' + (devices.length === 0 ? '暂无数据' : '没有匹配的编号') + '</td></tr>';
+    return;
+  }
+
+  let html = '';
+  filtered.forEach((d, i) => {
+    const isExpanded = expandedId === d.id;
+    html += '<tr class="' + (isExpanded ? 'expanded' : '') + '">';
+    html += '<td style="text-align:center;color:#999">' + (i + 1) + '</td>';
+    html += '<td><span class="device-id" onclick="toggleDetail(\'' + d.id + '\')">' + esc(d.id) + '</span></td>';
+    html += '<td>' + d.count + '</td>';
+    html += '<td>' + (d.pending > 0 ? '<span class="badge badge-pending">' + d.pending + '</span>' : '<span style="color:#ccc">0</span>') + '</td>';
+    html += '<td>' + (d.done > 0 ? '<span class="badge badge-done">' + d.done + '</span>' : '<span style="color:#ccc">0</span>') + '</td>';
+    html += '<td>' + (d.error > 0 ? '<span class="badge badge-error">' + d.error + '</span>' : '<span style="color:#ccc">0</span>') + '</td>';
+    html += '<td><span class="ip-text">' + esc(d.ip || '-') + '</span></td>';
+    html += '<td><span class="ua-text" title="' + esc(d.userAgent || '') + '">' + esc(parseUA(d.userAgent)) + '</span></td>';
+    html += '<td><span class="memo-preview" title="' + esc(d.memo) + '">' + (d.memo ? esc(d.memo) : '<i style="color:#d9d9d9">无</i>') + '</span></td>';
+    html += '<td><span class="time-text">' + formatTime(d.lastSeen || d.updatedAt) + '</span></td>';
+    html += '<td style="text-align:center">';
+    html += '<button class="mini-btn" onclick="toggleDetail(\'' + d.id + '\')">详情</button>';
+    html += '<button class="mini-btn" onclick="exportDevice(\'' + d.id + '\')">导出</button>';
+    html += '<button class="mini-btn danger" onclick="showDeleteModal(\'' + d.id + '\')">删除</button>';
+    html += '</td></tr>';
+
+    if (isExpanded) {
+      html += '<tr class="detail-row"><td colspan="11"><div class="detail-panel" id="detailPanel_' + d.id + '">加载中...</div></td></tr>';
+    }
+  });
+
+  tbody.innerHTML = html;
+  if (expandedId) loadDetail(expandedId);
+}
+
+// ---- Detail panel ----
+async function toggleDetail(id) {
+  expandedId = expandedId === id ? null : id;
+  renderTable();
+}
+
+async function loadDetail(id) {
+  const panel = document.getElementById('detailPanel_' + id);
+  if (!panel) return;
+  const dev = devices.find(d => d.id === id);
+
+  try {
+    const [dataResp, memoResp] = await Promise.all([
+      fetch(API + '/api/data?device=' + encodeURIComponent(id)),
+      fetch(API + '/api/memo?device=' + encodeURIComponent(id)),
+    ]);
+    const data = await dataResp.json();
+    const memo = await memoResp.text();
+
+    const done = data.filter(r => r.status === 'done').length;
+    const error = data.filter(r => r.status === 'error').length;
+    const pending = data.filter(r => !r.status || r.status === '' || r.status === 'fetched').length;
+
+    let html = '<div class="detail-header">';
+    html += '<h3>编号: ' + esc(id) + '</h3>';
+    html += '<button class="btn btn-default" style="font-size:12px;padding:4px 12px" onclick="exportDevice(\'' + id + '\')">导出数据</button>';
+    html += '</div>';
+
+    // Device info bar
+    if (dev) {
+      html += '<div class="device-info-bar">';
+      html += '<div><span class="info-label">IP:</span><span class="ip-text">' + esc(dev.ip || '-') + '</span></div>';
+      html += '<div><span class="info-label">设备:</span>' + esc(parseUA(dev.userAgent)) + '</div>';
+      html += '<div><span class="info-label">完整 UA:</span><span style="font-size:11px;color:#999;word-break:break-all">' + esc(dev.userAgent || '-') + '</span></div>';
+      html += '<div><span class="info-label">首次访问:</span>' + formatTime(dev.firstSeen) + '</div>';
+      html += '<div><span class="info-label">最后活跃:</span>' + formatTime(dev.lastSeen) + '</div>';
+      html += '</div>';
+    }
+
+    html += '<div class="detail-stats">';
+    html += '总条目 <span>' + data.length + '</span>';
+    html += '&nbsp;&nbsp;|&nbsp;&nbsp;待处理 <span style="color:#1677ff">' + pending + '</span>';
+    html += '&nbsp;&nbsp;|&nbsp;&nbsp;已完成 <span style="color:#52c41a">' + done + '</span>';
+    html += '&nbsp;&nbsp;|&nbsp;&nbsp;异常 <span style="color:#ff4d4f">' + error + '</span>';
+    html += '</div>';
+
+    // Memo
+    html += '<div class="memo-section">';
+    html += '<label>备忘录</label>';
+    html += '<textarea class="memo-textarea" id="memoText_' + id + '">' + esc(memo) + '</textarea>';
+    html += '<div class="memo-actions">';
+    html += '<button class="btn btn-primary" style="font-size:12px;padding:3px 12px" onclick="saveMemo(\'' + id + '\')">保存备忘录</button>';
+    html += '<span id="memoStatus_' + id + '" style="font-size:12px;color:#52c41a"></span>';
+    html += '</div></div>';
+
+    // Data table
+    if (data.length > 0) {
+      html += '<div class="detail-table-wrap"><table>';
+      html += '<thead><tr><th>#</th><th>账号</th><th>手机号</th><th>URL</th><th>验证码</th><th>状态</th><th>备注</th></tr></thead><tbody>';
+      data.forEach((r, i) => {
+        const rowClass = r.status === 'done' ? 'row-done' : r.status === 'error' ? 'row-error' : r.code ? 'row-fetched' : '';
+        html += '<tr class="' + rowClass + '">';
+        html += '<td style="color:#999">' + (i + 1) + '</td>';
+        html += '<td>' + esc(r.account || '') + '</td>';
+        html += '<td>' + esc(r.phone || '') + '</td>';
+        html += '<td><span class="url-text">' + esc(r.url || '') + '</span></td>';
+        html += '<td class="code-cell">' + esc(r.code || '') + '</td>';
+        html += '<td>' + statusLabel(r.status) + '</td>';
+        html += '<td style="font-size:11px;color:#999">' + esc(r.errorNote || '') + '</td>';
+        html += '</tr>';
+      });
+      html += '</tbody></table></div>';
+    } else {
+      html += '<div style="text-align:center;padding:20px;color:#999;font-size:13px">该编号暂无数据</div>';
+    }
+
+    panel.innerHTML = html;
+  } catch(e) {
+    panel.innerHTML = '<div style="color:#ff4d4f;padding:10px">加载详情失败: ' + e.message + '</div>';
+  }
+}
+
+function statusLabel(status) {
+  if (status === 'done') return '<span class="badge badge-done">已完成</span>';
+  if (status === 'error') return '<span class="badge badge-error">异常</span>';
+  if (status === 'fetched') return '<span class="badge badge-pending">已获取</span>';
+  return '<span style="color:#999">-</span>';
+}
+
+// ---- Save memo ----
+async function saveMemo(id) {
+  const textarea = document.getElementById('memoText_' + id);
+  const status = document.getElementById('memoStatus_' + id);
+  if (!textarea) return;
+  try {
+    await fetch(API + '/api/memo?device=' + encodeURIComponent(id), { method: 'POST', body: textarea.value });
+    status.textContent = '已保存';
+    status.style.color = '#52c41a';
+    setTimeout(() => { status.textContent = ''; }, 2000);
+    const dev = devices.find(d => d.id === id);
+    if (dev) {
+      const v = textarea.value;
+      dev.memo = v.length > 100 ? v.substring(0, 100) + '...' : v;
+    }
+  } catch(e) {
+    status.textContent = '保存失败';
+    status.style.color = '#ff4d4f';
+  }
+}
+
+// ---- Export ----
+async function exportDevice(id) {
+  try {
+    const resp = await fetch(API + '/api/data?device=' + encodeURIComponent(id));
+    const data = await resp.json();
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = id + '_data.json';
+    a.click();
+    URL.revokeObjectURL(a.href);
+  } catch(e) {
+    console.error('导出失败:', e);
+  }
+}
+
+// ---- Delete ----
+function showDeleteModal(id) {
+  pendingDeleteId = id;
+  document.getElementById('deleteDeviceId').textContent = id;
+  document.getElementById('deleteModal').classList.add('show');
+}
+function closeDeleteModal() {
+  pendingDeleteId = null;
+  document.getElementById('deleteModal').classList.remove('show');
+}
+async function confirmDelete() {
+  if (!pendingDeleteId) return;
+  try {
+    await fetch(API + '/api/admin/device?device=' + encodeURIComponent(pendingDeleteId), {
+      method: 'DELETE',
+      headers: adminHeaders(),
+    });
+    if (expandedId === pendingDeleteId) expandedId = null;
+    closeDeleteModal();
+    await loadDevices();
+  } catch(e) {
+    console.error('删除失败:', e);
+  }
+}
+
+// ---- Auto refresh ----
+function toggleAutoRefresh() {
+  const btn = document.getElementById('autoRefreshBtn');
+  if (autoRefreshTimer) {
+    clearInterval(autoRefreshTimer);
+    autoRefreshTimer = null;
+    btn.classList.remove('active');
+  } else {
+    autoRefreshTimer = setInterval(loadDevices, 10000);
+    btn.classList.add('active');
+  }
+}
+
+// ---- Utility ----
+function esc(s) {
+  if (!s) return '';
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function formatTime(ms) {
+  if (!ms) return '-';
+  const d = new Date(ms);
+  const pad = n => String(n).padStart(2, '0');
+  return d.getFullYear() + '-' + pad(d.getMonth()+1) + '-' + pad(d.getDate()) + ' ' + pad(d.getHours()) + ':' + pad(d.getMinutes());
+}
+</script>
+</body>
+</html>

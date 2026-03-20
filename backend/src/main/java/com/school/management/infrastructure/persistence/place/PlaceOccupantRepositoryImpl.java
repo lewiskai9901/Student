@@ -1,9 +1,9 @@
-package com.school.management.infrastructure.persistence.space;
+package com.school.management.infrastructure.persistence.place;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
-import com.school.management.domain.space.model.entity.SpaceOccupant;
-import com.school.management.domain.space.model.valueobject.OccupantType;
-import com.school.management.domain.space.repository.SpaceOccupantRepository;
+import com.school.management.domain.place.model.entity.PlaceOccupant;
+import com.school.management.domain.place.model.valueobject.OccupantType;
+import com.school.management.domain.place.repository.PlaceOccupantRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Repository;
 
@@ -16,13 +16,13 @@ import java.util.stream.Collectors;
  */
 @Repository
 @RequiredArgsConstructor
-public class SpaceOccupantRepositoryImpl implements SpaceOccupantRepository {
+public class PlaceOccupantRepositoryImpl implements PlaceOccupantRepository {
 
-    private final SpaceOccupantMapper occupantMapper;
+    private final PlaceOccupantMapper occupantMapper;
 
     @Override
-    public SpaceOccupant save(SpaceOccupant occupant) {
-        SpaceOccupantPO po = toPO(occupant);
+    public PlaceOccupant save(PlaceOccupant occupant) {
+        PlaceOccupantPO po = toPO(occupant);
         if (occupant.getId() == null) {
             occupantMapper.insert(po);
             occupant.setId(po.getId());
@@ -33,40 +33,40 @@ public class SpaceOccupantRepositoryImpl implements SpaceOccupantRepository {
     }
 
     @Override
-    public Optional<SpaceOccupant> findById(Long id) {
-        SpaceOccupantPO po = occupantMapper.selectById(id);
+    public Optional<PlaceOccupant> findById(Long id) {
+        PlaceOccupantPO po = occupantMapper.selectById(id);
         return Optional.ofNullable(po).map(this::toDomain);
     }
 
     @Override
-    public List<SpaceOccupant> findActiveBySpaceId(Long spaceId) {
-        return occupantMapper.selectActiveBySpaceId(spaceId).stream()
+    public List<PlaceOccupant> findActiveByPlaceId(Long placeId) {
+        return occupantMapper.selectActiveByPlaceId(placeId).stream()
             .map(this::toDomain)
             .collect(Collectors.toList());
     }
 
     @Override
-    public List<SpaceOccupant> findAllBySpaceId(Long spaceId) {
-        return occupantMapper.selectAllBySpaceId(spaceId).stream()
+    public List<PlaceOccupant> findAllByPlaceId(Long placeId) {
+        return occupantMapper.selectAllByPlaceId(placeId).stream()
             .map(this::toDomain)
             .collect(Collectors.toList());
     }
 
     @Override
-    public Optional<SpaceOccupant> findActiveByOccupant(OccupantType occupantType, Long occupantId) {
-        SpaceOccupantPO po = occupantMapper.selectActiveByOccupant(occupantType.name(), occupantId);
+    public Optional<PlaceOccupant> findActiveByOccupant(OccupantType occupantType, Long occupantId) {
+        PlaceOccupantPO po = occupantMapper.selectActiveByOccupant(occupantType.name(), occupantId);
         return Optional.ofNullable(po).map(this::toDomain);
     }
 
     @Override
-    public Optional<SpaceOccupant> findActiveByPosition(Long spaceId, Integer positionNo) {
-        SpaceOccupantPO po = occupantMapper.selectActiveByPosition(spaceId, positionNo);
+    public Optional<PlaceOccupant> findActiveByPosition(Long placeId, Integer positionNo) {
+        PlaceOccupantPO po = occupantMapper.selectActiveByPosition(placeId, positionNo);
         return Optional.ofNullable(po).map(this::toDomain);
     }
 
     @Override
-    public boolean isPositionOccupied(Long spaceId, Integer positionNo) {
-        return occupantMapper.selectActiveByPosition(spaceId, positionNo) != null;
+    public boolean isPositionOccupied(Long placeId, Integer positionNo) {
+        return occupantMapper.selectActiveByPosition(placeId, positionNo) != null;
     }
 
     @Override
@@ -75,18 +75,18 @@ public class SpaceOccupantRepositoryImpl implements SpaceOccupantRepository {
     }
 
     @Override
-    public int countActiveBySpaceId(Long spaceId) {
-        return occupantMapper.countActiveBySpaceId(spaceId);
+    public int countActiveByPlaceId(Long placeId) {
+        return occupantMapper.countActiveByPlaceId(placeId);
     }
 
     @Override
-    public List<Integer> findOccupiedPositions(Long spaceId) {
-        return occupantMapper.selectOccupiedPositions(spaceId);
+    public List<Integer> findOccupiedPositions(Long placeId) {
+        return occupantMapper.selectOccupiedPositions(placeId);
     }
 
     @Override
-    public void batchCheckOutBySpaceId(Long spaceId) {
-        occupantMapper.batchCheckOut(spaceId);
+    public void batchCheckOutByPlaceId(Long placeId) {
+        occupantMapper.batchCheckOut(placeId);
     }
 
     @Override
@@ -96,10 +96,10 @@ public class SpaceOccupantRepositoryImpl implements SpaceOccupantRepository {
 
     // ========== 转换方法 ==========
 
-    private SpaceOccupantPO toPO(SpaceOccupant occupant) {
-        SpaceOccupantPO po = new SpaceOccupantPO();
+    private PlaceOccupantPO toPO(PlaceOccupant occupant) {
+        PlaceOccupantPO po = new PlaceOccupantPO();
         po.setId(occupant.getId());
-        po.setSpaceId(occupant.getSpaceId());
+        po.setPlaceId(occupant.getPlaceId());
         po.setOccupantType(occupant.getOccupantType().name());
         po.setOccupantId(occupant.getOccupantId());
         po.setPositionNo(occupant.getPositionNo());
@@ -112,10 +112,10 @@ public class SpaceOccupantRepositoryImpl implements SpaceOccupantRepository {
         return po;
     }
 
-    private SpaceOccupant toDomain(SpaceOccupantPO po) {
-        SpaceOccupant occupant = SpaceOccupant.reconstitute(
+    private PlaceOccupant toDomain(PlaceOccupantPO po) {
+        PlaceOccupant occupant = PlaceOccupant.reconstitute(
             po.getId(),
-            po.getSpaceId(),
+            po.getPlaceId(),
             OccupantType.valueOf(po.getOccupantType()),
             po.getOccupantId(),
             po.getPositionNo(),

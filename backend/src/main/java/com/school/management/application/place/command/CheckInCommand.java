@@ -1,6 +1,6 @@
-package com.school.management.application.space.command;
+package com.school.management.application.place.command;
 
-import com.school.management.domain.space.model.valueobject.OccupantType;
+import com.school.management.domain.place.model.valueobject.OccupantType;
 import lombok.Data;
 
 import java.time.LocalDate;
@@ -11,7 +11,7 @@ import java.time.LocalDate;
 @Data
 public class CheckInCommand {
 
-    private Long spaceId;
+    private Long placeId;
     private OccupantType occupantType;
     private Long occupantId;
     private Integer positionNo;

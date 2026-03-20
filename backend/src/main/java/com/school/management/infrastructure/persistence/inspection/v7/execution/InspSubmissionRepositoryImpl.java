@@ -66,9 +66,12 @@ public class InspSubmissionRepositoryImpl implements InspSubmissionRepository {
         po.setId(d.getId());
         po.setTenantId(d.getTenantId() != null ? d.getTenantId() : 0L);
         po.setTaskId(d.getTaskId());
+        po.setSectionId(d.getSectionId());
         po.setTargetType(d.getTargetType() != null ? d.getTargetType().name() : null);
         po.setTargetId(d.getTargetId());
         po.setTargetName(d.getTargetName());
+        po.setRootTargetId(d.getRootTargetId());
+        po.setRootTargetName(d.getRootTargetName());
         po.setOrgUnitId(d.getOrgUnitId());
         po.setOrgUnitName(d.getOrgUnitName());
         po.setWeightRatio(d.getWeightRatio());
@@ -96,9 +99,12 @@ public class InspSubmissionRepositoryImpl implements InspSubmissionRepository {
                 .id(po.getId())
                 .tenantId(po.getTenantId())
                 .taskId(po.getTaskId())
+                .sectionId(po.getSectionId())
                 .targetType(po.getTargetType() != null ? TargetType.valueOf(po.getTargetType()) : null)
                 .targetId(po.getTargetId())
                 .targetName(po.getTargetName())
+                .rootTargetId(po.getRootTargetId())
+                .rootTargetName(po.getRootTargetName())
                 .orgUnitId(po.getOrgUnitId())
                 .orgUnitName(po.getOrgUnitName())
                 .weightRatio(po.getWeightRatio())

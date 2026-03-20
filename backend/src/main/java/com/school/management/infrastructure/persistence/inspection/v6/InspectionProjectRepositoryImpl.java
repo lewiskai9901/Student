@@ -120,7 +120,7 @@ public class InspectionProjectRepositoryImpl implements InspectionProjectReposit
         po.setTimeSlots(domain.getTimeSlots());
         po.setSkipHolidays(domain.isSkipHolidays());
         po.setExcludedDates(domain.getExcludedDates());
-        po.setSharedSpaceStrategy(domain.getSharedSpaceStrategy() != null ? domain.getSharedSpaceStrategy().name() : null);
+        po.setSharedPlaceStrategy(domain.getSharedPlaceStrategy() != null ? domain.getSharedPlaceStrategy().name() : null);
         po.setScoreDistributionMode(domain.getScoreDistributionMode());
         po.setInspectorAssignmentMode(domain.getInspectorAssignmentMode() != null ? domain.getInspectorAssignmentMode().name() : null);
         po.setDefaultInspectors(domain.getDefaultInspectors());
@@ -154,7 +154,7 @@ public class InspectionProjectRepositoryImpl implements InspectionProjectReposit
                 .timeSlots(po.getTimeSlots())
                 .skipHolidays(po.getSkipHolidays() != null && po.getSkipHolidays())
                 .excludedDates(po.getExcludedDates())
-                .sharedSpaceStrategy(SharedSpaceStrategy.fromCode(po.getSharedSpaceStrategy()))
+                .sharedPlaceStrategy(SharedPlaceStrategy.fromCode(po.getSharedPlaceStrategy()))
                 .scoreDistributionMode(po.getScoreDistributionMode())
                 .inspectorAssignmentMode(InspectorAssignmentMode.fromCode(po.getInspectorAssignmentMode()))
                 .defaultInspectors(po.getDefaultInspectors())

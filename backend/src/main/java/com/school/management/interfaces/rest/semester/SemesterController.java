@@ -6,15 +6,15 @@ import com.school.management.application.semester.command.UpdateSemesterCommand;
 import com.school.management.common.result.Result;
 import com.school.management.domain.semester.model.aggregate.Semester;
 import com.school.management.domain.semester.model.valueobject.SemesterStatus;
-import com.school.management.infrastructure.audit.annotation.OperationLog;
-import com.school.management.security.JwtTokenService;
+import com.school.management.infrastructure.activity.annotation.AuditEvent;
+import com.school.management.common.util.SecurityUtils;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.security.access.prepost.PreAuthorize;
+import com.school.management.infrastructure.casbin.CasbinAccess;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.HashMap;
@@ -36,13 +36,12 @@ import java.util.stream.Collectors;
 public class SemesterController {
 
     private final SemesterApplicationService semesterApplicationService;
-    private final JwtTokenService jwtTokenService;
 
     // ==================== 基础CRUD ====================
 
     @Operation(summary = "分页查询学期列表")
     @GetMapping
-    @PreAuthorize("hasAuthority('system:semester:list')")
+    @CasbinAccess(resource = "system:semester", action = "list")
     public Result<Map<String, Object>> list(
             @Parameter(description = "页码") @RequestParam(defaultValue = "1") Integer pageNum,
             @Parameter(description = "每页数量") @RequestParam(defaultValue = "10") Integer pageSize,
@@ -88,7 +87,7 @@ public class SemesterController {
 
     @Operation(summary = "获取学期详情")
     @GetMapping("/{id}")
-    @PreAuthorize("hasAuthority('system:semester:query')")
+    @CasbinAccess(resource = "system:semester", action = "query")
     public Result<SemesterDomainResponse> getById(
             @Parameter(description = "学期ID") @PathVariable Long id) {
         log.info("V2 获取学期详情: {}", id);
@@ -99,8 +98,8 @@ public class SemesterController {
 
     @Operation(summary = "创建学期")
     @PostMapping
-    @PreAuthorize("hasAuthority('system:semester:add')")
-    @OperationLog(module = "system", type = "create", name = "创建学期")
+    @CasbinAccess(resource = "system:semester", action = "add")
+    @AuditEvent(module = "system", action = "CREATE", resourceType = "SEMESTER", label = "创建学期")
     public Result<SemesterDomainResponse> create(@Valid @RequestBody CreateSemesterRequest request) {
         log.info("V2 创建学期: {}", request.getSemesterName());
 
@@ -110,7 +109,7 @@ public class SemesterController {
                 .endDate(request.getEndDate())
                 .startYear(request.getStartYear())
                 .semesterType(request.getSemesterType())
-                .createdBy(getCurrentUserId())
+                .createdBy(SecurityUtils.requireCurrentUserId())
                 .build();
 
         Semester semester = semesterApplicationService.createSemester(command);
@@ -119,8 +118,8 @@ public class SemesterController {
 
     @Operation(summary = "更新学期")
     @PutMapping("/{id}")
-    @PreAuthorize("hasAuthority('system:semester:edit')")
-    @OperationLog(module = "system", type = "update", name = "更新学期")
+    @CasbinAccess(resource = "system:semester", action = "edit")
+    @AuditEvent(module = "system", action = "UPDATE", resourceType = "SEMESTER", resourceId = "#id", label = "更新学期")
     public Result<SemesterDomainResponse> update(
             @Parameter(description = "学期ID") @PathVariable Long id,
             @Valid @RequestBody UpdateSemesterRequest request) {
@@ -130,7 +129,7 @@ public class SemesterController {
                 .semesterName(request.getSemesterName())
                 .startDate(request.getStartDate())
                 .endDate(request.getEndDate())
-                .updatedBy(getCurrentUserId())
+                .updatedBy(SecurityUtils.requireCurrentUserId())
                 .build();
 
         Semester semester = semesterApplicationService.updateSemester(id, command);
@@ -139,8 +138,8 @@ public class SemesterController {
 
     @Operation(summary = "删除学期")
     @DeleteMapping("/{id}")
-    @PreAuthorize("hasAuthority('system:semester:delete')")
-    @OperationLog(module = "system", type = "delete", name = "删除学期")
+    @CasbinAccess(resource = "system:semester", action = "delete")
+    @AuditEvent(module = "system", action = "DELETE", resourceType = "SEMESTER", resourceId = "#id", label = "删除学期")
     public Result<Void> delete(
             @Parameter(description = "学期ID") @PathVariable Long id) {
         log.info("V2 删除学期: {}", id);
@@ -161,8 +160,8 @@ public class SemesterController {
 
     @Operation(summary = "设置当前学期")
     @PutMapping("/{id}/set-current")
-    @PreAuthorize("hasAuthority('system:semester:edit')")
-    @OperationLog(module = "system", type = "update", name = "设置当前学期")
+    @CasbinAccess(resource = "system:semester", action = "edit")
+    @AuditEvent(module = "system", action = "UPDATE", resourceType = "SEMESTER", resourceId = "#id", label = "设置当前学期")
     public Result<SemesterDomainResponse> setCurrentSemester(
             @Parameter(description = "学期ID") @PathVariable Long id) {
         log.info("V2 设置当前学期: {}", id);
@@ -174,8 +173,8 @@ public class SemesterController {
 
     @Operation(summary = "结束学期")
     @PostMapping("/{id}/end")
-    @PreAuthorize("hasAuthority('system:semester:edit')")
-    @OperationLog(module = "system", type = "update", name = "结束学期")
+    @CasbinAccess(resource = "system:semester", action = "edit")
+    @AuditEvent(module = "system", action = "UPDATE", resourceType = "SEMESTER", resourceId = "#id", label = "结束学期")
     public Result<SemesterDomainResponse> endSemester(
             @Parameter(description = "学期ID") @PathVariable Long id) {
         log.info("V2 结束学期: {}", id);
@@ -185,8 +184,8 @@ public class SemesterController {
 
     @Operation(summary = "重新激活学期")
     @PostMapping("/{id}/reactivate")
-    @PreAuthorize("hasAuthority('system:semester:edit')")
-    @OperationLog(module = "system", type = "update", name = "重新激活学期")
+    @CasbinAccess(resource = "system:semester", action = "edit")
+    @AuditEvent(module = "system", action = "UPDATE", resourceType = "SEMESTER", resourceId = "#id", label = "重新激活学期")
     public Result<SemesterDomainResponse> reactivateSemester(
             @Parameter(description = "学期ID") @PathVariable Long id) {
         log.info("V2 重新激活学期: {}", id);
@@ -221,7 +220,7 @@ public class SemesterController {
 
     @Operation(summary = "检查学期编码是否存在")
     @GetMapping("/exists")
-    @PreAuthorize("hasAuthority('system:semester:query')")
+    @CasbinAccess(resource = "system:semester", action = "query")
     public Result<Boolean> existsSemesterCode(
             @Parameter(description = "学期编码") @RequestParam String semesterCode,
             @Parameter(description = "排除的学期ID") @RequestParam(required = false) Long excludeId) {
@@ -240,9 +239,4 @@ public class SemesterController {
         return Result.success(code);
     }
 
-    // ==================== Helper ====================
-
-    private Long getCurrentUserId() {
-        return jwtTokenService.getCurrentUserId();
-    }
 }

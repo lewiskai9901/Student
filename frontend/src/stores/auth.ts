@@ -11,6 +11,8 @@ export const useAuthStore = defineStore('auth', () => {
   const refreshTokenValue = ref<string>('')
   const user = ref<LoginResponse['userInfo'] | null>(null)
   const permissions = ref<string[]>([])
+  const tenantId = ref<number | string | undefined>(undefined)
+  const tenantName = ref<string | undefined>(undefined)
 
   // 计算属性
   const isAuthenticated = computed(() => !!token.value && !isTokenExpired(token.value))
@@ -28,6 +30,8 @@ export const useAuthStore = defineStore('auth', () => {
       refreshTokenValue.value = newRefreshToken
       user.value = userInfo
       permissions.value = userInfo.permissions
+      tenantId.value = userInfo.tenantId
+      tenantName.value = userInfo.tenantName
 
       // 保存到安全存储
       setToken(accessToken)
@@ -55,6 +59,8 @@ export const useAuthStore = defineStore('auth', () => {
       refreshTokenValue.value = ''
       user.value = null
       permissions.value = []
+      tenantId.value = undefined
+      tenantName.value = undefined
 
       // 清除安全存储
       tokenStorage.clearAll()
@@ -128,6 +134,8 @@ export const useAuthStore = defineStore('auth', () => {
     token,
     user,
     permissions,
+    tenantId,
+    tenantName,
 
     // 计算属性
     isAuthenticated,

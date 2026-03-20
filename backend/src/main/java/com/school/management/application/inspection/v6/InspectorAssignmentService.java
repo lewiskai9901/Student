@@ -1,8 +1,8 @@
 package com.school.management.application.inspection.v6;
 
 import com.school.management.infrastructure.persistence.inspection.v6.*;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -12,19 +12,13 @@ import java.util.List;
 /**
  * V6检查员分配服务
  */
+@Slf4j
+@RequiredArgsConstructor
 @Service
 public class InspectorAssignmentService {
 
-    private static final Logger log = LoggerFactory.getLogger(InspectorAssignmentService.class);
-
     private final InspectorAssignmentMapper assignmentMapper;
     private final ProjectInspectorConfigMapper configMapper;
-
-    public InspectorAssignmentService(InspectorAssignmentMapper assignmentMapper,
-                                       ProjectInspectorConfigMapper configMapper) {
-        this.assignmentMapper = assignmentMapper;
-        this.configMapper = configMapper;
-    }
 
     // ========== 项目检查员配置 ==========
 

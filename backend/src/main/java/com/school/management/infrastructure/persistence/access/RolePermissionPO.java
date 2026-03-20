@@ -19,5 +19,7 @@ public class RolePermissionPO {
 
     private Long permissionId;
 
+    private Long tenantId;
+
     private LocalDateTime createdAt;
 }

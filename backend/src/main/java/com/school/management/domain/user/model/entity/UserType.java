@@ -1,117 +1,62 @@
 package com.school.management.domain.user.model.entity;
 
-import com.school.management.domain.shared.Entity;
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import com.school.management.domain.shared.ConfigurableType;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
+import java.util.Collections;
+import java.util.List;
+import java.util.Map;
+
 /**
- * 用户类型领域实体
- * 定义用户的类型和权限特性配置
+ * 用户类型领域实体（统一类型系统 Phase 2）
+ * 与 OrgType 统一模式：category + features + cross-references
  */
 @Getter
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class UserType implements Entity<Long> {
+public class UserType implements ConfigurableType {
 
     private Long id;
-
-    /**
-     * 类型编码（唯一标识）
-     */
     private String typeCode;
-
-    /**
-     * 类型名称
-     */
     private String typeName;
-
-    /**
-     * 父类型编码
-     */
+    private String category;
     private String parentTypeCode;
-
-    /**
-     * 层级顺序
-     */
-    private Integer levelOrder;
-
-    /**
-     * 图标
-     */
     private String icon;
-
-    /**
-     * 颜色
-     */
-    private String color;
-
-    /**
-     * 描述
-     */
     private String description;
 
-    // ========== 用户特性 ==========
+    /** 行为特征 JSON: {requiresOrg: bool, requiresPlace: bool, ...} */
+    private Map<String, Boolean> features;
 
-    /**
-     * 是否可登录系统
-     */
-    private boolean canLogin;
+    /** 动态属性定义 JSON Schema */
+    private String metadataSchema;
 
-    /**
-     * 是否可作为检查员
-     */
-    private boolean canBeInspector;
+    /** 允许的子类型编码 */
+    private List<String> allowedChildTypeCodes;
 
-    /**
-     * 是否可被检查
-     */
-    private boolean canBeInspected;
+    /** 最大嵌套深度 */
+    private Integer maxDepth;
 
-    /**
-     * 是否可管理组织
-     */
-    private boolean canManageOrg;
+    /** 默认角色编码 */
+    private List<String> defaultRoleCodes;
 
-    /**
-     * 是否可查看报表
-     */
-    private boolean canViewReports;
+    /** 关联组织类型编码 */
+    private List<String> defaultOrgTypeCodes;
 
-    /**
-     * 是否需要班级归属
-     */
-    private boolean requiresClass;
+    /** 关联场所类型编码 */
+    private List<String> defaultPlaceTypeCodes;
 
-    /**
-     * 是否需要宿舍归属
-     */
-    private boolean requiresDormitory;
-
-    // ========== 默认权限配置 ==========
-
-    /**
-     * 默认角色编码（逗号分隔）
-     */
-    private String defaultRoleCodes;
-
-    // ========== 系统字段 ==========
-
-    /**
-     * 是否系统预置
-     */
+    @JsonProperty("system")
     private boolean isSystem;
 
-    /**
-     * 是否启用
-     */
+    @JsonProperty("enabled")
     private boolean isEnabled;
 
-    /**
-     * 排序号
-     */
     private Integer sortOrder;
 
     @Override
@@ -119,97 +64,51 @@ public class UserType implements Entity<Long> {
         return id;
     }
 
-    /**
-     * 更新基本信息
-     */
-    public void update(String typeName, String description, String icon, String color) {
+    // ========== 行为特征查询 ==========
+
+    @JsonIgnore
+    public boolean isRequiresOrg() {
+        return hasFeature("requiresOrg");
+    }
+
+    @JsonIgnore
+    public boolean isRequiresPlace() {
+        return hasFeature("requiresPlace");
+    }
+
+    public boolean allowsChildType(String childTypeCode) {
+        return allowedChildTypeCodes != null && allowedChildTypeCodes.contains(childTypeCode);
+    }
+
+    @JsonIgnore
+    public List<String> getDefaultRoleCodeList() {
+        return defaultRoleCodes != null ? defaultRoleCodes : Collections.emptyList();
+    }
+
+    // ========== 领域行为 ==========
+
+    public void update(String typeName, String description) {
         this.typeName = typeName;
         this.description = description;
-        this.icon = icon;
-        this.color = color;
     }
 
-    /**
-     * 更新用户特性
-     */
-    public void updateFeatures(boolean canLogin, boolean canBeInspector, boolean canBeInspected,
-                               boolean canManageOrg, boolean canViewReports,
-                               boolean requiresClass, boolean requiresDormitory) {
-        this.canLogin = canLogin;
-        this.canBeInspector = canBeInspector;
-        this.canBeInspected = canBeInspected;
-        this.canManageOrg = canManageOrg;
-        this.canViewReports = canViewReports;
-        this.requiresClass = requiresClass;
-        this.requiresDormitory = requiresDormitory;
+    public void updateFeatures(Map<String, Boolean> features) {
+        this.features = features;
     }
 
-    /**
-     * 更新默认角色
-     */
-    public void updateDefaultRoles(String defaultRoleCodes) {
+    public void updateDefaultRoles(List<String> defaultRoleCodes) {
         this.defaultRoleCodes = defaultRoleCodes;
     }
 
-    /**
-     * 更新排序号
-     */
     public void updateSortOrder(Integer sortOrder) {
         this.sortOrder = sortOrder;
     }
 
-    /**
-     * 启用
-     */
     public void enable() {
         this.isEnabled = true;
     }
 
-    /**
-     * 禁用
-     */
     public void disable() {
         this.isEnabled = false;
-    }
-
-    /**
-     * 是否顶级类型
-     */
-    public boolean isTopLevel() {
-        return parentTypeCode == null || parentTypeCode.isEmpty();
-    }
-
-    /**
-     * 是否管理员类型
-     */
-    public boolean isAdminType() {
-        return "ADMIN".equals(typeCode) ||
-               (parentTypeCode != null && parentTypeCode.equals("ADMIN"));
-    }
-
-    /**
-     * 是否教职工类型
-     */
-    public boolean isTeacherType() {
-        return "TEACHER".equals(typeCode) ||
-               (parentTypeCode != null && parentTypeCode.equals("TEACHER"));
-    }
-
-    /**
-     * 是否学生类型
-     */
-    public boolean isStudentType() {
-        return "STUDENT".equals(typeCode) ||
-               (parentTypeCode != null && parentTypeCode.equals("STUDENT"));
-    }
-
-    /**
-     * 获取默认角色列表
-     */
-    public String[] getDefaultRoleCodeArray() {
-        if (defaultRoleCodes == null || defaultRoleCodes.isEmpty()) {
-            return new String[0];
-        }
-        return defaultRoleCodes.split(",");
     }
 }

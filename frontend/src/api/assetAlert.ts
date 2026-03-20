@@ -7,7 +7,7 @@ export const assetAlertApi = {
   /**
    * 获取预警详情
    */
-  getAlert(id: number): Promise<AssetAlert> {
+  getAlert(id: number | string): Promise<AssetAlert> {
     return request.get(`${BASE_URL}/${id}`)
   },
 
@@ -28,7 +28,7 @@ export const assetAlertApi = {
   /**
    * 标记为已读
    */
-  markAsRead(id: number): Promise<void> {
+  markAsRead(id: number | string): Promise<void> {
     return request.post(`${BASE_URL}/${id}/read`)
   },
 
@@ -42,7 +42,7 @@ export const assetAlertApi = {
   /**
    * 处理预警
    */
-  handleAlert(id: number, remark?: string): Promise<void> {
+  handleAlert(id: number | string, remark?: string): Promise<void> {
     return request.post(`${BASE_URL}/${id}/handle`, { remark })
   },
 

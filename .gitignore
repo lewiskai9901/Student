@@ -82,3 +82,5 @@ application-local.yml
 # 禁用代码目录
 backend/_disabled_sources/
 backend/temp_disabled/
+.xhs-chrome-data/
+.github/

@@ -1,272 +1,223 @@
 package com.school.management.domain.organization.model.entity;
 
-import com.school.management.domain.shared.Entity;
+import com.school.management.domain.organization.model.valueobject.PositionTemplate;
+import com.school.management.domain.shared.ConfigurableType;
+
+import java.util.*;
 
 /**
- * 组织类型实体
- * 定义组织的层级类型（学校、院系、系部等）
+ * 组织类型领域实体
+ * 统一类型系统 Phase 1：支持 category + features + metadataSchema
  */
-public class OrgType implements Entity<Long> {
+public class OrgType implements ConfigurableType {
 
     private Long id;
     private String typeCode;
     private String typeName;
+    private String category;          // OrgCategory 枚举值
     private String parentTypeCode;
-    private Integer levelOrder;
     private String icon;
-    private String color;
     private String description;
 
-    // 特性配置
-    private boolean canHaveClasses;
-    private boolean canHaveStudents;
-    private boolean canBeInspected;
-    private boolean canHaveLeader;
+    // ========== 行为特征 (JSON) ==========
+    private Map<String, Boolean> features;
 
-    // 系统标识
+    // ========== 动态属性定义 (JSON) ==========
+    private String metadataSchema;
+
+    // ========== 层级约束 ==========
+    private List<String> allowedChildTypeCodes;
+    private Integer maxDepth;
+
+    // ========== 跨领域关联 ==========
+    private List<String> defaultUserTypeCodes;
+    private List<String> defaultPlaceTypeCodes;
+
+    // ========== 岗位模板 ==========
+    private List<PositionTemplate> defaultPositions;
+
+    // ========== 系统字段 ==========
     private boolean isSystem;
     private boolean isEnabled;
     private Integer sortOrder;
 
-    protected OrgType() {}
+    public OrgType() {}
 
-    private OrgType(Builder builder) {
-        this.id = builder.id;
-        this.typeCode = builder.typeCode;
-        this.typeName = builder.typeName;
-        this.parentTypeCode = builder.parentTypeCode;
-        this.levelOrder = builder.levelOrder;
-        this.icon = builder.icon;
-        this.color = builder.color;
-        this.description = builder.description;
-        this.canHaveClasses = builder.canHaveClasses;
-        this.canHaveStudents = builder.canHaveStudents;
-        this.canBeInspected = builder.canBeInspected;
-        this.canHaveLeader = builder.canHaveLeader;
-        this.isSystem = builder.isSystem;
-        this.isEnabled = builder.isEnabled;
-        this.sortOrder = builder.sortOrder;
-    }
-
+    // ========== Getters ==========
     @Override
-    public Long getId() {
-        return id;
-    }
+    public Long getId() { return id; }
+    public String getTypeCode() { return typeCode; }
+    public String getTypeName() { return typeName; }
+    public String getCategory() { return category; }
+    public String getParentTypeCode() { return parentTypeCode; }
+    public String getIcon() { return icon; }
+    public String getDescription() { return description; }
+    public Map<String, Boolean> getFeatures() { return features; }
+    public String getMetadataSchema() { return metadataSchema; }
+    public List<String> getAllowedChildTypeCodes() { return allowedChildTypeCodes; }
+    public Integer getMaxDepth() { return maxDepth; }
+    public List<String> getDefaultUserTypeCodes() { return defaultUserTypeCodes; }
+    public List<String> getDefaultPlaceTypeCodes() { return defaultPlaceTypeCodes; }
+    public List<PositionTemplate> getDefaultPositions() { return defaultPositions; }
+    public boolean isSystem() { return isSystem; }
+    public boolean isEnabled() { return isEnabled; }
+    public Integer getSortOrder() { return sortOrder; }
 
-    public String getTypeCode() {
-        return typeCode;
-    }
-
-    public String getTypeName() {
-        return typeName;
-    }
-
-    public String getParentTypeCode() {
-        return parentTypeCode;
-    }
-
-    public Integer getLevelOrder() {
-        return levelOrder;
-    }
-
-    public String getIcon() {
-        return icon;
-    }
-
-    public String getColor() {
-        return color;
-    }
-
-    public String getDescription() {
-        return description;
-    }
-
-    public boolean isCanHaveClasses() {
-        return canHaveClasses;
-    }
-
-    public boolean isCanHaveStudents() {
-        return canHaveStudents;
-    }
-
-    public boolean isCanBeInspected() {
-        return canBeInspected;
-    }
-
-    public boolean isCanHaveLeader() {
-        return canHaveLeader;
-    }
-
-    public boolean isSystem() {
-        return isSystem;
-    }
-
-    public boolean isEnabled() {
-        return isEnabled;
-    }
-
-    public Integer getSortOrder() {
-        return sortOrder;
-    }
+    // ========== 业务方法 ==========
 
     /**
-     * 判断是否为顶级类型
+     * 是否可被检查
      */
-    public boolean isTopLevel() {
-        return parentTypeCode == null || parentTypeCode.isEmpty();
+    public boolean isInspectionTarget() {
+        return hasFeature("inspectionTarget");
     }
 
     /**
-     * 更新类型信息
+     * 是否数据权限边界
      */
-    public void update(String typeName, String description, String icon, String color) {
-        if (this.isSystem) {
-            // 系统预置类型只允许修改部分属性
-            this.description = description;
-            this.icon = icon;
-            this.color = color;
-        } else {
-            this.typeName = typeName;
-            this.description = description;
-            this.icon = icon;
-            this.color = color;
-        }
+    public boolean isDataPermissionBoundary() {
+        return hasFeature("dataPermissionBoundary");
     }
 
     /**
-     * 更新特性配置
+     * 是否管理成员
      */
-    public void updateFeatures(boolean canHaveClasses, boolean canHaveStudents,
-                               boolean canBeInspected, boolean canHaveLeader) {
-        if (!this.isSystem) {
-            this.canHaveClasses = canHaveClasses;
-            this.canHaveStudents = canHaveStudents;
-            this.canBeInspected = canBeInspected;
-            this.canHaveLeader = canHaveLeader;
-        }
+    public boolean isMemberManagement() {
+        return hasFeature("memberManagement");
     }
 
     /**
-     * 启用类型
+     * 是否允许某 typeCode 作为子类型
      */
-    public void enable() {
-        this.isEnabled = true;
+    public boolean allowsChildType(String childTypeCode) {
+        return allowedChildTypeCodes != null && allowedChildTypeCodes.contains(childTypeCode);
     }
 
     /**
-     * 禁用类型
+     * 更新基本信息
      */
-    public void disable() {
-        if (!this.isSystem) {
-            this.isEnabled = false;
-        }
+    public void update(String typeName, String description, String icon) {
+        this.typeName = typeName;
+        this.description = description;
+        this.icon = icon;
     }
 
     /**
-     * 更新排序
+     * 更新 category 和 features
+     */
+    public void updateCategoryAndFeatures(String category, Map<String, Boolean> features) {
+        this.category = category;
+        this.features = features;
+    }
+
+    /**
+     * 更新 metadataSchema
+     */
+    public void updateMetadataSchema(String metadataSchema) {
+        this.metadataSchema = metadataSchema;
+    }
+
+    /**
+     * 更新层级约束
+     */
+    public void updateHierarchyConfig(List<String> allowedChildTypeCodes, Integer maxDepth) {
+        this.allowedChildTypeCodes = allowedChildTypeCodes;
+        this.maxDepth = maxDepth;
+    }
+
+    /**
+     * 更新跨领域关联
+     */
+    public void updateCrossReferences(List<String> defaultUserTypeCodes, List<String> defaultPlaceTypeCodes) {
+        this.defaultUserTypeCodes = defaultUserTypeCodes;
+        this.defaultPlaceTypeCodes = defaultPlaceTypeCodes;
+    }
+
+    /**
+     * 更新岗位模板
+     */
+    public void updateDefaultPositions(List<PositionTemplate> defaultPositions) {
+        this.defaultPositions = defaultPositions;
+    }
+
+    /**
+     * 更新排序号
      */
     public void updateSortOrder(Integer sortOrder) {
         this.sortOrder = sortOrder;
     }
 
-    public static Builder builder() {
-        return new Builder();
+    /**
+     * 设置父类型编码（由 allowedChildTypeCodes 同步自动调用）
+     */
+    public void setParentTypeCode(String parentTypeCode) {
+        this.parentTypeCode = parentTypeCode;
     }
 
-    public static class Builder {
+    public void enable() { this.isEnabled = true; }
+    public void disable() { this.isEnabled = false; }
+
+    // ========== Builder ==========
+
+    public static OrgTypeBuilder builder() { return new OrgTypeBuilder(); }
+
+    public static class OrgTypeBuilder {
         private Long id;
         private String typeCode;
         private String typeName;
+        private String category;
         private String parentTypeCode;
-        private Integer levelOrder = 0;
         private String icon;
-        private String color;
         private String description;
-        private boolean canHaveClasses = false;
-        private boolean canHaveStudents = false;
-        private boolean canBeInspected = true;
-        private boolean canHaveLeader = true;
-        private boolean isSystem = false;
-        private boolean isEnabled = true;
-        private Integer sortOrder = 0;
+        private Map<String, Boolean> features;
+        private String metadataSchema;
+        private List<String> allowedChildTypeCodes;
+        private Integer maxDepth;
+        private List<String> defaultUserTypeCodes;
+        private List<String> defaultPlaceTypeCodes;
+        private List<PositionTemplate> defaultPositions;
+        private boolean isSystem;
+        private boolean isEnabled;
+        private Integer sortOrder;
 
-        public Builder id(Long id) {
-            this.id = id;
-            return this;
-        }
-
-        public Builder typeCode(String typeCode) {
-            this.typeCode = typeCode;
-            return this;
-        }
-
-        public Builder typeName(String typeName) {
-            this.typeName = typeName;
-            return this;
-        }
-
-        public Builder parentTypeCode(String parentTypeCode) {
-            this.parentTypeCode = parentTypeCode;
-            return this;
-        }
-
-        public Builder levelOrder(Integer levelOrder) {
-            this.levelOrder = levelOrder;
-            return this;
-        }
-
-        public Builder icon(String icon) {
-            this.icon = icon;
-            return this;
-        }
-
-        public Builder color(String color) {
-            this.color = color;
-            return this;
-        }
-
-        public Builder description(String description) {
-            this.description = description;
-            return this;
-        }
-
-        public Builder canHaveClasses(boolean canHaveClasses) {
-            this.canHaveClasses = canHaveClasses;
-            return this;
-        }
-
-        public Builder canHaveStudents(boolean canHaveStudents) {
-            this.canHaveStudents = canHaveStudents;
-            return this;
-        }
-
-        public Builder canBeInspected(boolean canBeInspected) {
-            this.canBeInspected = canBeInspected;
-            return this;
-        }
-
-        public Builder canHaveLeader(boolean canHaveLeader) {
-            this.canHaveLeader = canHaveLeader;
-            return this;
-        }
-
-        public Builder isSystem(boolean isSystem) {
-            this.isSystem = isSystem;
-            return this;
-        }
-
-        public Builder isEnabled(boolean isEnabled) {
-            this.isEnabled = isEnabled;
-            return this;
-        }
-
-        public Builder sortOrder(Integer sortOrder) {
-            this.sortOrder = sortOrder;
-            return this;
-        }
+        public OrgTypeBuilder id(Long id) { this.id = id; return this; }
+        public OrgTypeBuilder typeCode(String typeCode) { this.typeCode = typeCode; return this; }
+        public OrgTypeBuilder typeName(String typeName) { this.typeName = typeName; return this; }
+        public OrgTypeBuilder category(String category) { this.category = category; return this; }
+        public OrgTypeBuilder parentTypeCode(String parentTypeCode) { this.parentTypeCode = parentTypeCode; return this; }
+        public OrgTypeBuilder icon(String icon) { this.icon = icon; return this; }
+        public OrgTypeBuilder description(String description) { this.description = description; return this; }
+        public OrgTypeBuilder features(Map<String, Boolean> features) { this.features = features; return this; }
+        public OrgTypeBuilder metadataSchema(String metadataSchema) { this.metadataSchema = metadataSchema; return this; }
+        public OrgTypeBuilder allowedChildTypeCodes(List<String> allowedChildTypeCodes) { this.allowedChildTypeCodes = allowedChildTypeCodes; return this; }
+        public OrgTypeBuilder maxDepth(Integer maxDepth) { this.maxDepth = maxDepth; return this; }
+        public OrgTypeBuilder defaultUserTypeCodes(List<String> defaultUserTypeCodes) { this.defaultUserTypeCodes = defaultUserTypeCodes; return this; }
+        public OrgTypeBuilder defaultPlaceTypeCodes(List<String> defaultPlaceTypeCodes) { this.defaultPlaceTypeCodes = defaultPlaceTypeCodes; return this; }
+        public OrgTypeBuilder defaultPositions(List<PositionTemplate> defaultPositions) { this.defaultPositions = defaultPositions; return this; }
+        public OrgTypeBuilder isSystem(boolean isSystem) { this.isSystem = isSystem; return this; }
+        public OrgTypeBuilder isEnabled(boolean isEnabled) { this.isEnabled = isEnabled; return this; }
+        public OrgTypeBuilder sortOrder(Integer sortOrder) { this.sortOrder = sortOrder; return this; }
 
         public OrgType build() {
-            return new OrgType(this);
+            OrgType type = new OrgType();
+            type.id = this.id;
+            type.typeCode = this.typeCode;
+            type.typeName = this.typeName;
+            type.category = this.category;
+            type.parentTypeCode = this.parentTypeCode;
+            type.icon = this.icon;
+            type.description = this.description;
+            type.features = this.features;
+            type.metadataSchema = this.metadataSchema;
+            type.allowedChildTypeCodes = this.allowedChildTypeCodes;
+            type.maxDepth = this.maxDepth;
+            type.defaultUserTypeCodes = this.defaultUserTypeCodes;
+            type.defaultPlaceTypeCodes = this.defaultPlaceTypeCodes;
+            type.defaultPositions = this.defaultPositions;
+            type.isSystem = this.isSystem;
+            type.isEnabled = this.isEnabled;
+            type.sortOrder = this.sortOrder;
+            return type;
         }
     }
 }

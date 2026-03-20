@@ -7,20 +7,20 @@
 export type ProjectStatus = 'DRAFT' | 'ACTIVE' | 'PAUSED' | 'COMPLETED' | 'ARCHIVED'
 export type TaskStatus = 'PENDING' | 'IN_PROGRESS' | 'SUBMITTED' | 'REVIEWED' | 'PUBLISHED' | 'CANCELLED'
 export type TargetStatus = 'PENDING' | 'LOCKED' | 'COMPLETED' | 'SKIPPED'
-export type ScopeType = 'ORG' | 'SPACE' | 'USER'
+export type ScopeType = 'ORG' | 'PLACE' | 'USER'
 export type CycleType = 'DAILY' | 'WEEKLY' | 'MONTHLY' | 'CUSTOM'
-export type SharedSpaceStrategy = 'RATIO' | 'AVERAGE' | 'FULL' | 'MAIN_ONLY'
+export type SharedPlaceStrategy = 'RATIO' | 'AVERAGE' | 'FULL' | 'MAIN_ONLY'
 export type InspectorAssignmentMode = 'FREE' | 'ASSIGNED' | 'HYBRID'
-export type TargetType = 'ORG' | 'SPACE' | 'USER'
+export type TargetType = 'ORG' | 'PLACE' | 'USER'
 
 // ========== 检查项目 ==========
 
 export interface InspectionProject {
-  id: number
+  id: number | string
   projectCode: string
   projectName: string
   description?: string
-  templateId: number
+  templateId: number | string
   templateSnapshot?: string
   scopeType: ScopeType
   scopeConfig?: string
@@ -30,7 +30,7 @@ export interface InspectionProject {
   cycleConfig?: string
   timeSlots?: string
   skipHolidays: boolean
-  sharedSpaceStrategy: SharedSpaceStrategy
+  sharedPlaceStrategy: SharedPlaceStrategy
   inspectorAssignmentMode: InspectorAssignmentMode
   status: ProjectStatus
   statusLabel: string
@@ -44,8 +44,8 @@ export interface CreateProjectRequest {
   projectCode: string
   projectName: string
   description?: string
-  templateId?: number
-  scopeType?: 'ORGANIZATION' | 'SPACE' | 'USER'
+  templateId?: number | string
+  scopeType?: 'ORGANIZATION' | 'PLACE' | 'USER'
   entityTypeCode?: string
   scopeIds?: string
   scoringMode?: string
@@ -70,7 +70,7 @@ export interface UpdateProjectConfigRequest {
   cycleConfig?: string
   timeSlots?: string
   skipHolidays: boolean
-  sharedSpaceStrategy: SharedSpaceStrategy
+  sharedPlaceStrategy: SharedPlaceStrategy
   inspectorAssignmentMode: InspectorAssignmentMode
 }
 
@@ -81,15 +81,15 @@ export interface PublishProjectRequest {
 // ========== 检查任务 ==========
 
 export interface InspectionTask {
-  id: number
+  id: number | string
   taskCode: string
-  projectId: number
+  projectId: number | string
   projectName?: string
   taskDate: string
   timeSlot?: string
   status: TaskStatus
   statusLabel: string
-  inspectorId?: number
+  inspectorId?: number | string
   inspectorName?: string
   claimedAt?: string
   startedAt?: string
@@ -104,15 +104,15 @@ export interface InspectionTask {
 // ========== 检查目标 ==========
 
 export interface InspectionTarget {
-  id: number
-  taskId: number
+  id: number | string
+  taskId: number | string
   targetType: TargetType
-  targetId: number
+  targetId: number | string
   targetName: string
   targetCode?: string
-  orgUnitId?: number
+  orgUnitId?: number | string
   orgUnitName?: string
-  classId?: number
+  classId?: number | string
   className?: string
   weightRatio: number
   status: TargetStatus
@@ -141,7 +141,7 @@ export interface EnumOption {
 export interface ProjectOptions {
   scopeTypes: EnumOption[]
   cycleTypes: EnumOption[]
-  sharedSpaceStrategies: EnumOption[]
+  sharedPlaceStrategies: EnumOption[]
   inspectorAssignmentModes: EnumOption[]
   projectStatuses: EnumOption[]
 }
@@ -158,9 +158,9 @@ export interface ProjectQueryParams {
 export interface TaskQueryParams {
   page?: number
   size?: number
-  projectId?: number
+  projectId?: number | string
   status?: TaskStatus
   startDate?: string
   endDate?: string
-  inspectorId?: number
+  inspectorId?: number | string
 }

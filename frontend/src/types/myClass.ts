@@ -35,7 +35,7 @@ export interface ScoreTrendItem {
  * 最近检查记录
  */
 export interface RecentCheckRecord {
-  id: number
+  id: number | string
   checkDate: string
   checkType: string
   score: number
@@ -46,7 +46,7 @@ export interface RecentCheckRecord {
  * 班级概览数据
  */
 export interface MyClassOverview {
-  classId: number
+  classId: number | string
   className: string
   studentCount: number
   maleCount: number
@@ -64,7 +64,7 @@ export interface MyClassOverview {
  * 班级学生列表项
  */
 export interface MyClassStudent {
-  id: number
+  id: number | string
   studentNo: string
   name: string
   gender: '男' | '女'
@@ -78,7 +78,7 @@ export interface MyClassStudent {
  * 宿舍分布信息
  */
 export interface DormitoryDistribution {
-  buildingId: number
+  buildingId: number | string
   buildingName: string
   buildingType: 'MALE' | 'FEMALE' | 'MIXED'
   rooms: DormitoryRoom[]
@@ -89,7 +89,7 @@ export interface DormitoryDistribution {
  * 宿舍房间信息
  */
 export interface DormitoryRoom {
-  dormitoryId: number
+  dormitoryId: number | string
   roomNo: string
   floor: number
   studentCount: number
@@ -100,7 +100,7 @@ export interface DormitoryRoom {
  * 宿舍学生信息
  */
 export interface DormitoryStudent {
-  id: number
+  id: number | string
   name: string
   bedNo: string
 }

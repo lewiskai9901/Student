@@ -27,6 +27,11 @@ public class RolePO {
     private String roleCode;
 
     /**
+     * 角色类型（自由字符串，如 SUPER_ADMIN, CUSTOM 等）
+     */
+    private String roleType;
+
+    /**
      * 角色描述
      */
     @TableField("role_desc")
@@ -41,6 +46,8 @@ public class RolePO {
      * 状态: 1启用 0禁用
      */
     private Integer status;
+
+    private Long tenantId;
 
     private LocalDateTime createdAt;
 

@@ -64,41 +64,18 @@
                 </div>
                 <div class="form-item">
                   <label class="form-label">适用范围</label>
-                  <el-select v-model="templateForm.targetType" placeholder="选择适用范围">
-                    <el-option label="班级检查" value="CLASS" />
-                    <el-option label="宿舍检查" value="DORMITORY" />
-                    <el-option label="个人检查" value="INDIVIDUAL" />
-                  </el-select>
-                </div>
-                <div class="form-item">
-                  <label class="form-label">检查周期</label>
-                  <el-select v-model="templateForm.checkCycle" placeholder="选择检查周期">
-                    <el-option label="每日" value="DAILY" />
-                    <el-option label="每周" value="WEEKLY" />
-                    <el-option label="每月" value="MONTHLY" />
-                    <el-option label="自定义" value="CUSTOM" />
-                  </el-select>
+                  <el-checkbox-group v-model="templateForm.applicableScopes">
+                    <el-checkbox label="ORG">组织</el-checkbox>
+                    <el-checkbox label="PLACE">场所</el-checkbox>
+                    <el-checkbox label="USER">用户</el-checkbox>
+                  </el-checkbox-group>
                 </div>
               </div>
             </div>
           </div>
 
-          <!-- 步骤2: 计分策略 -->
+          <!-- 步骤2: 检查类别 -->
           <div v-show="currentStep === 1" class="step-panel">
-            <div class="panel-header">
-              <span class="panel-title">选择计分策略</span>
-            </div>
-            <div class="panel-body">
-              <StrategySelector
-                v-model="templateForm.scoringStrategy"
-                v-model:parameters="templateForm.strategyParams"
-                @change="handleStrategyChange"
-              />
-            </div>
-          </div>
-
-          <!-- 步骤3: 检查类别 -->
-          <div v-show="currentStep === 2" class="step-panel">
             <div class="panel-header">
               <span class="panel-title">配置检查类别</span>
               <div class="header-extra">
@@ -128,8 +105,8 @@
             </div>
           </div>
 
-          <!-- 步骤4: 检查项目 -->
-          <div v-show="currentStep === 3" class="step-panel">
+          <!-- 步骤3: 检查项目 -->
+          <div v-show="currentStep === 2" class="step-panel">
             <div class="panel-header">
               <span class="panel-title">配置检查项目</span>
             </div>
@@ -193,19 +170,6 @@
             </div>
           </div>
 
-          <!-- 步骤5: 高级规则 -->
-          <div v-show="currentStep === 4" class="step-panel">
-            <div class="panel-header">
-              <span class="panel-title">高级计算规则</span>
-            </div>
-            <div class="panel-body">
-              <RuleChainEditor
-                v-model="templateForm.calculationRules"
-                v-model:formula="templateForm.customFormula"
-                @change="handleRulesChange"
-              />
-            </div>
-          </div>
         </div>
 
         <!-- 右侧摘要面板 -->
@@ -222,27 +186,7 @@
             </div>
             <div class="summary-item">
               <span class="summary-label">适用范围</span>
-              <span class="summary-value">{{ getTargetTypeLabel(templateForm.targetType) }}</span>
-            </div>
-            <div class="summary-item">
-              <span class="summary-label">检查周期</span>
-              <span class="summary-value">{{ getCycleLabel(templateForm.checkCycle) }}</span>
-            </div>
-          </div>
-
-          <div class="summary-section">
-            <div class="summary-title">计分配置</div>
-            <div class="summary-item">
-              <span class="summary-label">计分策略</span>
-              <span class="summary-value highlight">{{ getStrategyLabel(templateForm.scoringStrategy) }}</span>
-            </div>
-            <div class="summary-item">
-              <span class="summary-label">基准分</span>
-              <span class="summary-value">{{ templateForm.strategyParams?.baseScore || 100 }}</span>
-            </div>
-            <div class="summary-item">
-              <span class="summary-label">分数范围</span>
-              <span class="summary-value">{{ templateForm.strategyParams?.minScore || 0 }} ~ {{ templateForm.strategyParams?.maxScore || 100 }}</span>
+              <span class="summary-value">{{ getScopeLabel(templateForm.applicableScopes) }}</span>
             </div>
           </div>
 
@@ -259,17 +203,6 @@
             <div class="summary-item">
               <span class="summary-label">已启用</span>
               <span class="summary-value highlight">{{ enabledItemsCount }} 个</span>
-            </div>
-          </div>
-
-          <div class="summary-section">
-            <div class="summary-title">高级规则</div>
-            <div v-for="rule in enabledRules" :key="rule.code" class="summary-item">
-              <span class="summary-label">{{ rule.name }}</span>
-              <el-tag size="small" type="success">已启用</el-tag>
-            </div>
-            <div v-if="enabledRules.length === 0" class="summary-item">
-              <span class="summary-label">无启用规则</span>
             </div>
           </div>
 
@@ -321,7 +254,7 @@
             <div class="card-code">{{ t.templateCode }}</div>
             <div class="card-desc">{{ t.description || '暂无描述' }}</div>
             <div class="card-meta">
-              <span>{{ getStrategyLabel(t.scoringStrategy) }}</span>
+              <span>{{ getScopeLabel(parseScopeToArray(t.applicableScope)) }}</span>
               <span>{{ t.categoriesCount || 0 }}个类别</span>
               <span>{{ t.itemsCount || 0 }}个检查项</span>
             </div>
@@ -388,11 +321,9 @@
         </div>
         <div class="form-item">
           <label class="form-label required">打分方式</label>
-          <InputTypeSelector
-            v-model="itemForm.inputType"
-            v-model:config="itemForm.inputConfig"
-            @change="handleInputTypeChange"
-          />
+          <el-select v-model="itemForm.inputType" placeholder="选择打分方式" @change="onInputTypeSelect">
+            <el-option v-for="(label, key) in inputTypeLabels" :key="key" :label="label" :value="key" />
+          </el-select>
         </div>
         <div class="form-item">
           <label class="form-label">描述说明</label>
@@ -467,17 +398,12 @@ import { ref, computed, onMounted, nextTick } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Plus, Search } from '@element-plus/icons-vue'
 import { v6InspectionApi } from '@/api/v6Inspection'
-import StrategySelector from './components/scoring/StrategySelector.vue'
-import InputTypeSelector from './components/scoring/InputTypeSelector.vue'
-import RuleChainEditor from './components/scoring/RuleChainEditor.vue'
 
 // ============ 常量配置 ============
 const steps = [
   { key: 'basic', title: '基本信息', desc: '模板名称与描述' },
-  { key: 'strategy', title: '计分策略', desc: '选择计分方式' },
   { key: 'categories', title: '检查类别', desc: '配置分类与权重' },
-  { key: 'items', title: '检查项目', desc: '添加具体检查项' },
-  { key: 'rules', title: '高级规则', desc: '封顶保底等规则' }
+  { key: 'items', title: '检查项目', desc: '添加具体检查项' }
 ]
 
 const colorPresets = [
@@ -486,27 +412,10 @@ const colorPresets = [
 
 const defaultOptions = [{ label: '合格', score: 0 }, { label: '不合格', score: -2 }]
 
-const targetTypeLabels: Record<string, string> = {
-  CLASS: '班级检查',
-  DORMITORY: '宿舍检查',
-  INDIVIDUAL: '个人检查'
-}
-
-const cycleLabels: Record<string, string> = {
-  DAILY: '每日',
-  WEEKLY: '每周',
-  MONTHLY: '每月',
-  CUSTOM: '自定义'
-}
-
-const strategyLabels: Record<string, string> = {
-  DEDUCTION: '扣分制',
-  ADDITION: '加分制',
-  BASE_ADJUST: '基准调整制',
-  CHECKLIST: '清单制',
-  GRADE: '等级制',
-  STAR_RATING: '星级制',
-  PASS_FAIL: '合格制'
+const scopeNameMap: Record<string, string> = {
+  ORG: '组织',
+  PLACE: '场所',
+  USER: '用户'
 }
 
 const inputTypeLabels: Record<string, string> = {
@@ -535,16 +444,7 @@ const templateForm = ref({
   templateName: '',
   templateCode: '',
   description: '',
-  targetType: 'CLASS',
-  checkCycle: 'WEEKLY',
-  scoringStrategy: 'DEDUCTION',
-  strategyParams: {
-    baseScore: 100,
-    maxScore: 120,
-    minScore: 0
-  },
-  calculationRules: [] as any[],
-  customFormula: ''
+  applicableScopes: ['ORG', 'PLACE', 'USER'] as string[]
 })
 
 // 类别和检查项
@@ -610,14 +510,17 @@ const enabledItemsCount = computed(() => {
   }, 0)
 })
 
-const enabledRules = computed(() => {
-  return templateForm.value.calculationRules.filter(r => r.enabled)
-})
-
 // ============ 辅助方法 ============
-const getTargetTypeLabel = (type: string) => targetTypeLabels[type] || type || '-'
-const getCycleLabel = (cycle: string) => cycleLabels[cycle] || cycle || '-'
-const getStrategyLabel = (strategy: string) => strategyLabels[strategy] || strategy || '-'
+const parseScopeToArray = (scope?: string): string[] => {
+  if (!scope || scope === 'ALL') return ['ORG', 'PLACE', 'USER']
+  return scope.split(',').map(s => s.trim()).filter(Boolean)
+}
+
+const getScopeLabel = (scopes: string[]) => {
+  if (!scopes || scopes.length === 0) return '-'
+  if (scopes.length === 3) return '全部'
+  return scopes.map(s => scopeNameMap[s] || s).join('/')
+}
 const getInputTypeLabel = (type: string) => inputTypeLabels[type] || type || '-'
 
 const hasScoreConfig = (item: any) => {
@@ -673,12 +576,7 @@ const loadTemplateDetail = async (id: number) => {
       templateName: template.templateName,
       templateCode: template.templateCode,
       description: template.description,
-      targetType: template.targetType || 'CLASS',
-      checkCycle: template.checkCycle || 'WEEKLY',
-      scoringStrategy: template.scoringStrategy || 'DEDUCTION',
-      strategyParams: template.strategyParams || { baseScore: 100, maxScore: 120, minScore: 0 },
-      calculationRules: template.calculationRules || [],
-      customFormula: template.customFormula || ''
+      applicableScopes: parseScopeToArray(template.applicableScope)
     }
     currentTemplate.value = template
 
@@ -716,12 +614,7 @@ const createNewTemplate = () => {
     templateName: '',
     templateCode: '',
     description: '',
-    targetType: 'CLASS',
-    checkCycle: 'WEEKLY',
-    scoringStrategy: 'DEDUCTION',
-    strategyParams: { baseScore: 100, maxScore: 120, minScore: 0 },
-    calculationRules: [],
-    customFormula: ''
+    applicableScopes: ['ORG', 'PLACE', 'USER']
   }
   categories.value = []
   selectedCategoryId.value = null
@@ -751,7 +644,7 @@ const duplicateTemplate = async (t: any) => {
 const deleteTemplate = async (t: any) => {
   try {
     await ElMessageBox.confirm(`确定删除模板"${t.templateName}"？此操作不可恢复！`, '警告', { type: 'warning' })
-    // await v6InspectionApi.deleteTemplate(t.id)
+    await v6InspectionApi.deleteTemplate(t.id)
     ElMessage.success('删除成功')
     loadTemplates()
   } catch { }
@@ -766,9 +659,12 @@ const saveTemplate = async () => {
 
   saving.value = true
   try {
+    const scopes = templateForm.value.applicableScopes
+    const applicableScope = scopes.length === 3 ? 'ALL' : scopes.join(',')
+    const { applicableScopes: _unused, ...rest } = templateForm.value
     const data = {
-      ...templateForm.value,
-      baseScore: templateForm.value.strategyParams?.baseScore
+      ...rest,
+      applicableScope
     }
 
     if (templateForm.value.id) {
@@ -1007,22 +903,17 @@ const saveScoreConfig = () => {
 }
 
 // ============ 事件处理 ============
-const handleStrategyChange = (strategy: any) => {
-  // 根据策略类型设置默认参数
-  if (strategy.defaultParameters) {
-    templateForm.value.strategyParams = { ...strategy.defaultParameters }
+const onInputTypeSelect = (type: string) => {
+  // 根据打分方式初始化默认配置
+  const defaults: Record<string, Record<string, any>> = {
+    OPTIONS: { options: [{ label: '优', value: 100 }, { label: '良', value: 80 }, { label: '差', value: 0 }] },
+    COUNT: { unit: '次', perUnit: -1 },
+    CHECKBOX: { checkedScore: 100, uncheckedScore: 0 },
+    NUMERIC: { min: 0, max: 100 },
+    STAR: { maxStars: 5 },
+    GRADE: { grades: ['A', 'B', 'C', 'D'] }
   }
-}
-
-const handleInputTypeChange = (inputType: any) => {
-  // 根据打分方式初始化配置
-  if (inputType.componentConfig) {
-    itemForm.value.inputConfig = { ...inputType.componentConfig }
-  }
-}
-
-const handleRulesChange = () => {
-  // 规则变更处理
+  itemForm.value.inputConfig = defaults[type] || {}
 }
 
 // ============ 生命周期 ============

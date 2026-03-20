@@ -1,7 +1,10 @@
-package com.school.management.application.space;
+package com.school.management.application.place;
 
-import com.school.management.domain.space.model.entity.UniversalSpaceType;
-import com.school.management.domain.space.repository.UniversalSpaceTypeRepository;
+import com.school.management.application.shared.TypeTreeBuilder;
+import com.school.management.application.shared.TypeTreeBuilder.TypeTreeNode;
+import com.school.management.domain.place.model.entity.UniversalPlaceType;
+import com.school.management.domain.place.model.valueobject.BaseCategory;
+import com.school.management.domain.place.repository.UniversalPlaceTypeRepository;
 import lombok.Data;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -11,282 +14,268 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 /**
- * 通用空间类型应用服务
+ * 通用场所类型应用服务（统一类型系统 Phase 3）
  */
 @Service
 @RequiredArgsConstructor
-public class UniversalSpaceTypeApplicationService {
+public class UniversalPlaceTypeApplicationService {
 
-    private final UniversalSpaceTypeRepository spaceTypeRepository;
+    private final UniversalPlaceTypeRepository placeTypeRepository;
+
+    // ==================== Category 枚举查询 ====================
 
     /**
-     * 获取所有空间类型
+     * 获取所有内置分类（BaseCategory 枚举值 + defaultFeatures）
      */
-    public List<UniversalSpaceType> getAllSpaceTypes() {
-        return spaceTypeRepository.findAll();
+    public List<PlaceCategoryDTO> getCategories() {
+        List<PlaceCategoryDTO> list = new ArrayList<>();
+        for (BaseCategory cat : BaseCategory.values()) {
+            list.add(new PlaceCategoryDTO(
+                    cat.name(),
+                    cat.getLabel(),
+                    cat.getDefaultFeatures(),
+                    cat.getAllowedChildCategories(),
+                    cat.isLeaf(),
+                    cat.isRoot()
+            ));
+        }
+        return list;
+    }
+
+    // ==================== 查询 ====================
+
+    public List<UniversalPlaceType> getAllPlaceTypes() {
+        return placeTypeRepository.findAll();
+    }
+
+    public List<UniversalPlaceType> getEnabledPlaceTypes() {
+        return placeTypeRepository.findAllEnabled();
+    }
+
+    public List<UniversalPlaceType> getRootTypes() {
+        return placeTypeRepository.findConcreteRootTypes();
+    }
+
+    public UniversalPlaceType getPlaceTypeById(Long id) {
+        return placeTypeRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("场所类型不存在: " + id));
+    }
+
+    public UniversalPlaceType getPlaceTypeByCode(String typeCode) {
+        return placeTypeRepository.findByTypeCode(typeCode)
+                .orElseThrow(() -> new IllegalArgumentException("场所类型不存在: " + typeCode));
     }
 
     /**
-     * 获取所有启用的空间类型
+     * 获取类型树（基于 parentTypeCode 构建）
      */
-    public List<UniversalSpaceType> getEnabledSpaceTypes() {
-        return spaceTypeRepository.findAllEnabled();
+    public List<TypeTreeNode<UniversalPlaceType>> getPlaceTypeTree() {
+        return TypeTreeBuilder.buildTree(placeTypeRepository.findAll());
     }
 
-    /**
-     * 获取所有根类型
-     */
-    public List<UniversalSpaceType> getRootTypes() {
-        return spaceTypeRepository.findAllRootTypes();
-    }
+    // ==================== 写操作 ====================
 
-    /**
-     * 获取允许的子类型
-     */
-    public List<UniversalSpaceType> getAllowedChildTypes(String parentTypeCode) {
-        return spaceTypeRepository.findAllowedChildTypes(parentTypeCode);
-    }
-
-    /**
-     * 根据ID获取空间类型
-     */
-    public UniversalSpaceType getSpaceTypeById(Long id) {
-        return spaceTypeRepository.findById(id)
-                .orElseThrow(() -> new IllegalArgumentException("空间类型不存在: " + id));
-    }
-
-    /**
-     * 根据编码获取空间类型
-     */
-    public UniversalSpaceType getSpaceTypeByCode(String typeCode) {
-        return spaceTypeRepository.findByTypeCode(typeCode)
-                .orElseThrow(() -> new IllegalArgumentException("空间类型不存在: " + typeCode));
-    }
-
-    /**
-     * 创建空间类型
-     */
     @Transactional
-    public UniversalSpaceType createSpaceType(CreateSpaceTypeCommand command) {
-        // 生成类型编码
-        String typeCode = generateTypeCode(command.getTypeName());
-
-        // 检查编码是否已存在
-        if (spaceTypeRepository.existsByTypeCode(typeCode)) {
-            typeCode = typeCode + "_" + UUID.randomUUID().toString().substring(0, 4).toUpperCase();
+    public UniversalPlaceType createPlaceType(CreatePlaceTypeCommand command) {
+        if (command.getTypeCode() == null || command.getTypeCode().isBlank()) {
+            command.setTypeCode(generateTypeCode());
         }
 
-        UniversalSpaceType spaceType = UniversalSpaceType.builder()
-                .typeCode(typeCode)
+        if (placeTypeRepository.existsByTypeCode(command.getTypeCode())) {
+            throw new IllegalArgumentException("类型编码已存在: " + command.getTypeCode());
+        }
+
+        if (command.getParentTypeCode() != null && !command.getParentTypeCode().isEmpty()) {
+            placeTypeRepository.findByTypeCode(command.getParentTypeCode())
+                    .orElseThrow(() -> new IllegalArgumentException("父类型不存在: " + command.getParentTypeCode()));
+        }
+
+        // 如果未提供 features，使用 category 的默认值
+        Map<String, Boolean> features = command.getFeatures();
+        if (features == null && command.getCategory() != null) {
+            try {
+                BaseCategory cat = BaseCategory.valueOf(command.getCategory());
+                features = cat.getDefaultFeatures();
+            } catch (IllegalArgumentException ignored) {}
+        }
+
+        boolean isRootType = command.getParentTypeCode() == null || command.getParentTypeCode().isEmpty();
+
+        UniversalPlaceType placeType = UniversalPlaceType.builder()
+                .typeCode(command.getTypeCode())
                 .typeName(command.getTypeName())
-                .icon(command.getIcon())
                 .description(command.getDescription())
                 .sortOrder(command.getSortOrder() != null ? command.getSortOrder() : 0)
                 .isSystem(false)
                 .isEnabled(true)
-                .isRootType(command.isRootType())
-                .allowedChildTypes(command.getAllowedChildTypes() != null ? command.getAllowedChildTypes() : new ArrayList<>())
-                .hasCapacity(command.isHasCapacity())
-                .bookable(command.isBookable())
-                .assignable(command.isAssignable())
-                .occupiable(command.isOccupiable())
+                .isRootType(isRootType)
+                .category(command.getCategory())
+                .parentTypeCode(command.getParentTypeCode())
+                .features(features)
+                .metadataSchema(command.getMetadataSchema())
+                .allowedChildTypeCodes(command.getAllowedChildTypeCodes())
+                .maxDepth(command.getMaxDepth())
+                .defaultUserTypeCodes(command.getDefaultUserTypeCodes())
+                .defaultOrgTypeCodes(command.getDefaultOrgTypeCodes())
                 .capacityUnit(command.getCapacityUnit())
                 .defaultCapacity(command.getDefaultCapacity())
                 .build();
 
-        spaceType.validate();
-        return spaceTypeRepository.save(spaceType);
+        placeType.validate();
+        return placeTypeRepository.save(placeType);
     }
 
-    /**
-     * 更新空间类型
-     */
     @Transactional
-    public UniversalSpaceType updateSpaceType(Long id, UpdateSpaceTypeCommand command) {
-        UniversalSpaceType spaceType = getSpaceTypeById(id);
+    public UniversalPlaceType updatePlaceType(Long id, UpdatePlaceTypeCommand command) {
+        UniversalPlaceType placeType = getPlaceTypeById(id);
 
-        if (spaceType.isSystem()) {
+        if (placeType.isSystem()) {
             throw new IllegalStateException("系统预置类型不可修改");
         }
 
         if (command.getTypeName() != null) {
-            spaceType.setTypeName(command.getTypeName());
-        }
-        if (command.getIcon() != null) {
-            spaceType.setIcon(command.getIcon());
+            placeType.setTypeName(command.getTypeName());
         }
         if (command.getDescription() != null) {
-            spaceType.setDescription(command.getDescription());
+            placeType.setDescription(command.getDescription());
         }
         if (command.getSortOrder() != null) {
-            spaceType.setSortOrder(command.getSortOrder());
+            placeType.setSortOrder(command.getSortOrder());
         }
-        if (command.getAllowedChildTypes() != null) {
-            spaceType.setAllowedChildTypes(command.getAllowedChildTypes());
+        if (command.getCategory() != null) {
+            placeType.setCategory(command.getCategory());
         }
-        if (command.getHasCapacity() != null) {
-            spaceType.setHasCapacity(command.getHasCapacity());
+        if (command.getFeatures() != null) {
+            placeType.setFeatures(command.getFeatures());
         }
-        if (command.getBookable() != null) {
-            spaceType.setBookable(command.getBookable());
+        if (command.getMetadataSchema() != null) {
+            placeType.setMetadataSchema(command.getMetadataSchema());
         }
-        if (command.getAssignable() != null) {
-            spaceType.setAssignable(command.getAssignable());
+        if (command.getAllowedChildTypeCodes() != null) {
+            placeType.setAllowedChildTypeCodes(command.getAllowedChildTypeCodes());
         }
-        if (command.getOccupiable() != null) {
-            spaceType.setOccupiable(command.getOccupiable());
+        if (command.getMaxDepth() != null) {
+            placeType.setMaxDepth(command.getMaxDepth());
+        }
+        if (command.getDefaultUserTypeCodes() != null) {
+            placeType.setDefaultUserTypeCodes(command.getDefaultUserTypeCodes());
+        }
+        if (command.getDefaultOrgTypeCodes() != null) {
+            placeType.setDefaultOrgTypeCodes(command.getDefaultOrgTypeCodes());
         }
         if (command.getCapacityUnit() != null) {
-            spaceType.setCapacityUnit(command.getCapacityUnit());
+            placeType.setCapacityUnit(command.getCapacityUnit());
         }
         if (command.getDefaultCapacity() != null) {
-            spaceType.setDefaultCapacity(command.getDefaultCapacity());
+            placeType.setDefaultCapacity(command.getDefaultCapacity());
         }
 
-        spaceType.validate();
-        return spaceTypeRepository.save(spaceType);
+        placeType.validate();
+        return placeTypeRepository.save(placeType);
     }
 
-    /**
-     * 删除空间类型
-     */
     @Transactional
-    public void deleteSpaceType(Long id) {
-        UniversalSpaceType spaceType = getSpaceTypeById(id);
+    public void deletePlaceType(Long id) {
+        UniversalPlaceType placeType = getPlaceTypeById(id);
 
-        if (spaceType.isSystem()) {
+        if (placeType.isSystem()) {
             throw new IllegalStateException("系统预置类型不可删除");
         }
 
-        if (spaceTypeRepository.isTypeInUse(spaceType.getTypeCode())) {
+        if (placeTypeRepository.isTypeInUse(placeType.getTypeCode())) {
             throw new IllegalStateException("类型正在使用中，不可删除");
         }
 
-        spaceTypeRepository.deleteById(id);
+        List<UniversalPlaceType> children = placeTypeRepository.findByParentTypeCode(placeType.getTypeCode());
+        if (!children.isEmpty()) {
+            throw new IllegalStateException("类型有子类型，请先删除子类型");
+        }
+
+        placeTypeRepository.deleteById(id);
     }
 
-    /**
-     * 切换启用状态
-     */
     @Transactional
-    public UniversalSpaceType toggleStatus(Long id, boolean enabled) {
-        UniversalSpaceType spaceType = getSpaceTypeById(id);
+    public UniversalPlaceType toggleStatus(Long id, boolean enabled) {
+        UniversalPlaceType placeType = getPlaceTypeById(id);
 
-        if (!enabled && spaceTypeRepository.isTypeInUse(spaceType.getTypeCode())) {
+        if (!enabled && placeTypeRepository.isTypeInUse(placeType.getTypeCode())) {
             throw new IllegalStateException("类型正在使用中，不可禁用");
         }
 
         if (enabled) {
-            spaceType.enable();
+            placeType.enable();
         } else {
-            spaceType.disable();
+            placeType.disable();
         }
 
-        return spaceTypeRepository.save(spaceType);
+        return placeTypeRepository.save(placeType);
     }
 
-    /**
-     * 获取空间类型树
-     */
-    public List<SpaceTypeTreeNode> getSpaceTypeTree() {
-        List<UniversalSpaceType> allTypes = spaceTypeRepository.findAllEnabled();
-        Map<String, UniversalSpaceType> typeMap = allTypes.stream()
-                .collect(Collectors.toMap(UniversalSpaceType::getTypeCode, t -> t));
-
-        // 找出根类型
-        List<SpaceTypeTreeNode> roots = new ArrayList<>();
-        for (UniversalSpaceType type : allTypes) {
-            if (type.isRootType()) {
-                SpaceTypeTreeNode node = buildTreeNode(type, typeMap, new HashSet<>());
-                roots.add(node);
-            }
-        }
-
-        return roots;
-    }
-
-    private SpaceTypeTreeNode buildTreeNode(UniversalSpaceType type, Map<String, UniversalSpaceType> typeMap, Set<String> visited) {
-        if (visited.contains(type.getTypeCode())) {
-            // 防止循环引用
-            return null;
-        }
-        visited.add(type.getTypeCode());
-
-        SpaceTypeTreeNode node = new SpaceTypeTreeNode();
-        node.setTypeCode(type.getTypeCode());
-        node.setTypeName(type.getTypeName());
-        node.setIcon(type.getIcon());
-        node.setHasCapacity(type.isHasCapacity());
-        node.setBookable(type.isBookable());
-        node.setAssignable(type.isAssignable());
-        node.setOccupiable(type.isOccupiable());
-        node.setLeaf(type.isLeafType());
-
-        List<SpaceTypeTreeNode> children = new ArrayList<>();
-        if (type.getAllowedChildTypes() != null) {
-            for (String childCode : type.getAllowedChildTypes()) {
-                UniversalSpaceType childType = typeMap.get(childCode);
-                if (childType != null && childType.isEnabled()) {
-                    SpaceTypeTreeNode childNode = buildTreeNode(childType, typeMap, new HashSet<>(visited));
-                    if (childNode != null) {
-                        children.add(childNode);
-                    }
-                }
-            }
-        }
-        node.setChildren(children);
-
-        return node;
-    }
-
-    private String generateTypeCode(String typeName) {
-        // 简单的编码生成：取拼音首字母或使用UUID
-        return "TYPE_" + UUID.randomUUID().toString().substring(0, 8).toUpperCase();
+    private String generateTypeCode() {
+        return "PLACE_" + UUID.randomUUID().toString().substring(0, 8).toUpperCase();
     }
 
     // ==================== 命令对象 ====================
 
     @Data
-    public static class CreateSpaceTypeCommand {
-        private String typeName;
-        private String icon;
-        private String description;
-        private Integer sortOrder;
-        private boolean rootType;
-        private List<String> allowedChildTypes;
-        private boolean hasCapacity;
-        private boolean bookable;
-        private boolean assignable;
-        private boolean occupiable;
-        private String capacityUnit;
-        private Integer defaultCapacity;
-    }
-
-    @Data
-    public static class UpdateSpaceTypeCommand {
-        private String typeName;
-        private String icon;
-        private String description;
-        private Integer sortOrder;
-        private List<String> allowedChildTypes;
-        private Boolean hasCapacity;
-        private Boolean bookable;
-        private Boolean assignable;
-        private Boolean occupiable;
-        private String capacityUnit;
-        private Integer defaultCapacity;
-    }
-
-    @Data
-    public static class SpaceTypeTreeNode {
+    public static class CreatePlaceTypeCommand {
         private String typeCode;
         private String typeName;
-        private String icon;
-        private boolean hasCapacity;
-        private boolean bookable;
-        private boolean assignable;
-        private boolean occupiable;
+        private String category;
+        private String parentTypeCode;
+        private String description;
+        private Map<String, Boolean> features;
+        private String metadataSchema;
+        private List<String> allowedChildTypeCodes;
+        private Integer maxDepth;
+        private List<String> defaultUserTypeCodes;
+        private List<String> defaultOrgTypeCodes;
+        private String capacityUnit;
+        private Integer defaultCapacity;
+        private Integer sortOrder = 0;
+    }
+
+    @Data
+    public static class UpdatePlaceTypeCommand {
+        private String typeName;
+        private String category;
+        private String description;
+        private Map<String, Boolean> features;
+        private String metadataSchema;
+        private List<String> allowedChildTypeCodes;
+        private Integer maxDepth;
+        private List<String> defaultUserTypeCodes;
+        private List<String> defaultOrgTypeCodes;
+        private String capacityUnit;
+        private Integer defaultCapacity;
+        private Integer sortOrder;
+    }
+
+    // ==================== DTO ====================
+
+    public static class PlaceCategoryDTO {
+        private String code;
+        private String label;
+        private Map<String, Boolean> defaultFeatures;
+        private List<String> allowedChildCategories;
         private boolean leaf;
-        private List<SpaceTypeTreeNode> children;
+        private boolean root;
+
+        public PlaceCategoryDTO(String code, String label, Map<String, Boolean> defaultFeatures,
+                                List<String> allowedChildCategories, boolean leaf, boolean root) {
+            this.code = code;
+            this.label = label;
+            this.defaultFeatures = defaultFeatures;
+            this.allowedChildCategories = allowedChildCategories;
+            this.leaf = leaf;
+            this.root = root;
+        }
+
+        public String getCode() { return code; }
+        public String getLabel() { return label; }
+        public Map<String, Boolean> getDefaultFeatures() { return defaultFeatures; }
+        public List<String> getAllowedChildCategories() { return allowedChildCategories; }
+        public boolean isLeaf() { return leaf; }
+        public boolean isRoot() { return root; }
     }
 }

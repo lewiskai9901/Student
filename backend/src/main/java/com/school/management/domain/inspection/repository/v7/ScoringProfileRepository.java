@@ -11,7 +11,7 @@ public interface ScoringProfileRepository {
 
     Optional<ScoringProfile> findById(Long id);
 
-    Optional<ScoringProfile> findByTemplateId(Long templateId);
+    Optional<ScoringProfile> findBySectionId(Long sectionId);
 
     List<ScoringProfile> findAll();
 

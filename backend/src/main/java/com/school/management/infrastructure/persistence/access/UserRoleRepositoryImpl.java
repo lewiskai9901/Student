@@ -1,5 +1,6 @@
 package com.school.management.infrastructure.persistence.access;
 
+import com.school.management.domain.access.model.ScopeType;
 import com.school.management.domain.access.model.UserRole;
 import com.school.management.domain.access.repository.UserRoleRepository;
 import org.springframework.stereotype.Repository;
@@ -77,8 +78,8 @@ public class UserRoleRepositoryImpl implements UserRoleRepository {
     }
 
     @Override
-    public List<UserRole> findByUserIdAndOrgUnitId(Long userId, Long orgUnitId) {
-        return userRoleMapper.findByUserIdAndOrgUnitId(userId, orgUnitId).stream()
+    public List<UserRole> findByUserIdAndScope(Long userId, String scopeType, Long scopeId) {
+        return userRoleMapper.findByUserIdAndScope(userId, scopeType, scopeId).stream()
             .map(this::toDomain)
             .collect(Collectors.toList());
     }
@@ -86,6 +87,11 @@ public class UserRoleRepositoryImpl implements UserRoleRepository {
     @Override
     public boolean existsByUserIdAndRoleId(Long userId, Long roleId) {
         return userRoleMapper.existsByUserIdAndRoleId(userId, roleId);
+    }
+
+    @Override
+    public boolean existsByUserIdAndRoleIdAndScope(Long userId, Long roleId, String scopeType, Long scopeId) {
+        return userRoleMapper.existsByUserIdAndRoleIdAndScope(userId, roleId, scopeType, scopeId);
     }
 
     @Override
@@ -98,12 +104,18 @@ public class UserRoleRepositoryImpl implements UserRoleRepository {
         userRoleMapper.deleteByUserIdAndRoleId(userId, roleId);
     }
 
+    @Override
+    public void deleteByUserIdAndRoleIdAndScope(Long userId, Long roleId, String scopeType, Long scopeId) {
+        userRoleMapper.deleteByUserIdAndRoleIdAndScope(userId, roleId, scopeType, scopeId);
+    }
+
     private UserRolePO toPO(UserRole domain) {
         UserRolePO po = new UserRolePO();
         po.setId(domain.getId());
         po.setUserId(domain.getUserId());
         po.setRoleId(domain.getRoleId());
-        po.setOrgUnitId(domain.getOrgUnitId());
+        po.setScopeType(domain.getScopeType() != null ? domain.getScopeType() : ScopeType.ALL);
+        po.setScopeId(domain.getScopeId() != null ? domain.getScopeId() : 0L);
         po.setAssignedAt(domain.getAssignedAt());
         po.setAssignedBy(domain.getAssignedBy());
         po.setExpiresAt(domain.getExpiresAt());
@@ -116,7 +128,8 @@ public class UserRoleRepositoryImpl implements UserRoleRepository {
             .id(po.getId())
             .userId(po.getUserId())
             .roleId(po.getRoleId())
-            .orgUnitId(po.getOrgUnitId())
+            .scopeType(po.getScopeType())
+            .scopeId(po.getScopeId())
             .assignedAt(po.getAssignedAt())
             .assignedBy(po.getAssignedBy())
             .expiresAt(po.getExpiresAt())

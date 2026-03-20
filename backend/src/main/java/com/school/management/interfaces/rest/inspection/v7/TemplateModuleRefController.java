@@ -9,6 +9,11 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
+/**
+ * @deprecated V62: 模块引用功能已被统一分区模型的引用分区(refSectionId)替代。
+ * 使用 TemplateSectionController 的 createRefSection 代替。
+ */
+@Deprecated
 @RestController
 @RequestMapping("/v7/insp/templates/{templateId}/module-refs")
 @RequiredArgsConstructor

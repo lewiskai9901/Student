@@ -8,7 +8,8 @@ import com.school.management.security.CustomUserDetails;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.format.annotation.DateTimeFormat;
-import org.springframework.security.access.prepost.PreAuthorize;
+import com.school.management.infrastructure.casbin.CasbinAccess;
+import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
@@ -22,6 +23,7 @@ import java.util.stream.Collectors;
 /**
  * V6检查任务控制器
  */
+@RequiredArgsConstructor
 @Tag(name = "V6检查任务", description = "V6检查任务管理接口")
 @RestController
 @RequestMapping("/v6/inspection-tasks")
@@ -30,15 +32,9 @@ public class InspectionTaskController {
     private final InspectionTaskApplicationService taskService;
     private final TaskGenerationService taskGenerationService;
 
-    public InspectionTaskController(InspectionTaskApplicationService taskService,
-                                     TaskGenerationService taskGenerationService) {
-        this.taskService = taskService;
-        this.taskGenerationService = taskGenerationService;
-    }
-
     @Operation(summary = "手动生成任务")
     @PostMapping("/generate")
-    @PreAuthorize("hasAuthority('inspection:task:generate')")
+    @CasbinAccess(resource = "inspection:task", action = "generate")
     public Result<List<TaskResponse>> generateTasks(
             @RequestParam Long projectId,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date) {
@@ -49,7 +45,7 @@ public class InspectionTaskController {
 
     @Operation(summary = "批量生成任务")
     @PostMapping("/generate-batch")
-    @PreAuthorize("hasAuthority('inspection:task:generate')")
+    @CasbinAccess(resource = "inspection:task", action = "generate")
     public Result<List<TaskResponse>> generateTasksBatch(
             @RequestParam Long projectId,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
@@ -61,7 +57,7 @@ public class InspectionTaskController {
 
     @Operation(summary = "获取任务详情")
     @GetMapping("/{id}")
-    @PreAuthorize("hasAuthority('inspection:task:view')")
+    @CasbinAccess(resource = "inspection:task", action = "view")
     public Result<TaskResponse> getTask(@PathVariable Long id) {
         return taskService.getTask(id)
                 .map(t -> Result.success(toResponse(t)))
@@ -70,7 +66,7 @@ public class InspectionTaskController {
 
     @Operation(summary = "分页查询任务")
     @GetMapping
-    @PreAuthorize("hasAuthority('inspection:task:view')")
+    @CasbinAccess(resource = "inspection:task", action = "view")
     public Result<Map<String, Object>> listTasks(
             @RequestParam(defaultValue = "1") int page,
             @RequestParam(defaultValue = "10") int size,
@@ -95,7 +91,7 @@ public class InspectionTaskController {
 
     @Operation(summary = "获取可领取的任务")
     @GetMapping("/available")
-    @PreAuthorize("hasAuthority('inspection:task:view')")
+    @CasbinAccess(resource = "inspection:task", action = "view")
     public Result<List<TaskResponse>> getAvailableTasks(
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date) {
 
@@ -106,7 +102,7 @@ public class InspectionTaskController {
 
     @Operation(summary = "获取我的任务")
     @GetMapping("/my-tasks")
-    @PreAuthorize("hasAuthority('inspection:task:view')")
+    @CasbinAccess(resource = "inspection:task", action = "view")
     public Result<List<TaskResponse>> getMyTasks(
             @AuthenticationPrincipal CustomUserDetails userDetails) {
 
@@ -116,7 +112,7 @@ public class InspectionTaskController {
 
     @Operation(summary = "领取任务")
     @PostMapping("/{id}/claim")
-    @PreAuthorize("hasAuthority('inspection:task:execute')")
+    @CasbinAccess(resource = "inspection:task", action = "execute")
     public Result<TaskResponse> claimTask(
             @PathVariable Long id,
             @AuthenticationPrincipal CustomUserDetails userDetails) {
@@ -127,7 +123,7 @@ public class InspectionTaskController {
 
     @Operation(summary = "开始任务")
     @PostMapping("/{id}/start")
-    @PreAuthorize("hasAuthority('inspection:task:execute')")
+    @CasbinAccess(resource = "inspection:task", action = "execute")
     public Result<TaskResponse> startTask(@PathVariable Long id) {
         InspectionTask task = taskService.startTask(id);
         return Result.success(toResponse(task));
@@ -135,7 +131,7 @@ public class InspectionTaskController {
 
     @Operation(summary = "提交任务")
     @PostMapping("/{id}/submit")
-    @PreAuthorize("hasAuthority('inspection:task:execute')")
+    @CasbinAccess(resource = "inspection:task", action = "execute")
     public Result<TaskResponse> submitTask(@PathVariable Long id) {
         InspectionTask task = taskService.submitTask(id);
         return Result.success(toResponse(task));
@@ -143,7 +139,7 @@ public class InspectionTaskController {
 
     @Operation(summary = "审核任务")
     @PostMapping("/{id}/review")
-    @PreAuthorize("hasAuthority('inspection:task:review')")
+    @CasbinAccess(resource = "inspection:task", action = "review")
     public Result<TaskResponse> reviewTask(@PathVariable Long id) {
         InspectionTask task = taskService.reviewTask(id);
         return Result.success(toResponse(task));
@@ -151,7 +147,7 @@ public class InspectionTaskController {
 
     @Operation(summary = "发布任务")
     @PostMapping("/{id}/publish")
-    @PreAuthorize("hasAuthority('inspection:task:publish')")
+    @CasbinAccess(resource = "inspection:task", action = "publish")
     public Result<TaskResponse> publishTask(@PathVariable Long id) {
         InspectionTask task = taskService.publishTask(id);
         return Result.success(toResponse(task));
@@ -159,7 +155,7 @@ public class InspectionTaskController {
 
     @Operation(summary = "取消任务")
     @PostMapping("/{id}/cancel")
-    @PreAuthorize("hasAuthority('inspection:task:cancel')")
+    @CasbinAccess(resource = "inspection:task", action = "execute")
     public Result<TaskResponse> cancelTask(@PathVariable Long id) {
         InspectionTask task = taskService.cancelTask(id);
         return Result.success(toResponse(task));
@@ -169,7 +165,7 @@ public class InspectionTaskController {
 
     @Operation(summary = "获取任务的检查目标")
     @GetMapping("/{id}/targets")
-    @PreAuthorize("hasAuthority('inspection:task:view')")
+    @CasbinAccess(resource = "inspection:task", action = "view")
     public Result<List<TargetResponse>> getTargets(@PathVariable Long id) {
         List<InspectionTarget> targets = taskService.getTargetsByTask(id);
         return Result.success(targets.stream().map(this::toTargetResponse).collect(Collectors.toList()));
@@ -177,7 +173,7 @@ public class InspectionTaskController {
 
     @Operation(summary = "锁定目标")
     @PostMapping("/targets/{targetId}/lock")
-    @PreAuthorize("hasAuthority('inspection:task:execute')")
+    @CasbinAccess(resource = "inspection:task", action = "execute")
     public Result<TargetResponse> lockTarget(
             @PathVariable Long targetId,
             @AuthenticationPrincipal CustomUserDetails userDetails) {
@@ -188,7 +184,7 @@ public class InspectionTaskController {
 
     @Operation(summary = "解锁目标")
     @PostMapping("/targets/{targetId}/unlock")
-    @PreAuthorize("hasAuthority('inspection:task:execute')")
+    @CasbinAccess(resource = "inspection:task", action = "execute")
     public Result<TargetResponse> unlockTarget(@PathVariable Long targetId) {
         InspectionTarget target = taskService.unlockTarget(targetId);
         return Result.success(toTargetResponse(target));
@@ -196,7 +192,7 @@ public class InspectionTaskController {
 
     @Operation(summary = "完成目标检查")
     @PostMapping("/targets/{targetId}/complete")
-    @PreAuthorize("hasAuthority('inspection:task:execute')")
+    @CasbinAccess(resource = "inspection:task", action = "execute")
     public Result<TargetResponse> completeTarget(@PathVariable Long targetId) {
         InspectionTarget target = taskService.completeTarget(targetId);
         return Result.success(toTargetResponse(target));
@@ -204,7 +200,7 @@ public class InspectionTaskController {
 
     @Operation(summary = "跳过目标")
     @PostMapping("/targets/{targetId}/skip")
-    @PreAuthorize("hasAuthority('inspection:task:execute')")
+    @CasbinAccess(resource = "inspection:task", action = "execute")
     public Result<TargetResponse> skipTarget(
             @PathVariable Long targetId,
             @RequestBody SkipTargetRequest request) {
@@ -215,7 +211,7 @@ public class InspectionTaskController {
 
     @Operation(summary = "添加扣分")
     @PostMapping("/targets/{targetId}/deductions")
-    @PreAuthorize("hasAuthority('inspection:task:execute')")
+    @CasbinAccess(resource = "inspection:task", action = "execute")
     public Result<Void> addDeduction(
             @PathVariable Long targetId,
             @RequestBody AddDeductionRequest request) {
@@ -226,7 +222,7 @@ public class InspectionTaskController {
 
     @Operation(summary = "添加加分")
     @PostMapping("/targets/{targetId}/bonuses")
-    @PreAuthorize("hasAuthority('inspection:task:execute')")
+    @CasbinAccess(resource = "inspection:task", action = "execute")
     public Result<Void> addBonus(
             @PathVariable Long targetId,
             @RequestBody AddBonusRequest request) {

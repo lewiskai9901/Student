@@ -10,33 +10,40 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 /**
- * V7 检查项目聚合根
+ * V7 检查项目聚合根（V62 统一分区版）
+ * 不再有 parentProjectId/targetType/cycleType/cycleConfig（排期移到 InspectionPlan）
+ * templateId 改为 rootSectionId（关联根分区而非模板）
+ *
  * 状态机: DRAFT → PUBLISHED → PAUSED → COMPLETED → ARCHIVED
  */
 public class InspProject extends AggregateRoot<Long> {
 
     private Long id;
     private Long tenantId;
-    private Long parentProjectId;
     private String projectCode;
     private String projectName;
-    private Long templateId;
-    private Long templateVersionId;
+    private Long rootSectionId;          // 关联的根分区ID（替代 templateId）
+    private Long templateVersionId;      // 锁定的版本快照
     private Long scoringProfileId;
     private ScopeType scopeType;
-    private String scopeConfig;
-    private TargetType targetType;
+    private String scopeConfig;          // JSON: 范围配置
     private LocalDate startDate;
     private LocalDate endDate;
-    private CycleType cycleType;
-    private String cycleConfig;
-    private String timeSlots;
-    private Boolean skipHolidays;
-    private Long holidayCalendarId;
-    private String excludedDates;
     private AssignmentMode assignmentMode;
     private Boolean reviewRequired;
     private Boolean autoPublish;
+    // 评分策略（项目级）
+    private String evaluationMode;       // SINGLE, MULTI
+    private String multiRaterMode;       // AVERAGE, WEIGHTED_AVERAGE, MEDIAN, MAX, MIN, CONSENSUS
+    private String raterWeightBy;        // EQUAL, BY_ROLE, BY_EXPERIENCE
+    private java.math.BigDecimal consensusThreshold;
+    private Boolean trendEnabled;
+    private Integer trendLookbackDays;
+    private Boolean decayEnabled;
+    private String decayMode;            // LINEAR, EXPONENTIAL
+    private Boolean calibrationEnabled;
+    private String calibrationMethod;    // Z_SCORE, MIN_MAX, PERCENTILE_RANK
+    private String splitStrategy;        // NONE, BY_TARGET, BY_SECTION, MANUAL
     private ProjectStatus status;
     private Long createdBy;
     private LocalDateTime createdAt;
@@ -49,24 +56,27 @@ public class InspProject extends AggregateRoot<Long> {
     private InspProject(Builder builder) {
         this.id = builder.id;
         this.tenantId = builder.tenantId;
-        this.parentProjectId = builder.parentProjectId;
         this.projectCode = builder.projectCode;
         this.projectName = builder.projectName;
-        this.templateId = builder.templateId;
+        this.rootSectionId = builder.rootSectionId;
         this.templateVersionId = builder.templateVersionId;
         this.scoringProfileId = builder.scoringProfileId;
         this.scopeType = builder.scopeType != null ? builder.scopeType : ScopeType.ORG;
         this.scopeConfig = builder.scopeConfig;
-        this.targetType = builder.targetType != null ? builder.targetType : TargetType.ORG;
         this.startDate = builder.startDate;
         this.endDate = builder.endDate;
-        this.cycleType = builder.cycleType != null ? builder.cycleType : CycleType.DAILY;
-        this.cycleConfig = builder.cycleConfig;
-        this.timeSlots = builder.timeSlots;
-        this.skipHolidays = builder.skipHolidays != null ? builder.skipHolidays : false;
-        this.holidayCalendarId = builder.holidayCalendarId;
-        this.excludedDates = builder.excludedDates;
         this.assignmentMode = builder.assignmentMode != null ? builder.assignmentMode : AssignmentMode.ASSIGNED;
+        this.evaluationMode = builder.evaluationMode != null ? builder.evaluationMode : "SINGLE";
+        this.multiRaterMode = builder.multiRaterMode != null ? builder.multiRaterMode : "AVERAGE";
+        this.raterWeightBy = builder.raterWeightBy;
+        this.consensusThreshold = builder.consensusThreshold;
+        this.trendEnabled = builder.trendEnabled != null ? builder.trendEnabled : false;
+        this.trendLookbackDays = builder.trendLookbackDays;
+        this.decayEnabled = builder.decayEnabled != null ? builder.decayEnabled : false;
+        this.decayMode = builder.decayMode;
+        this.calibrationEnabled = builder.calibrationEnabled != null ? builder.calibrationEnabled : false;
+        this.calibrationMethod = builder.calibrationMethod;
+        this.splitStrategy = builder.splitStrategy != null ? builder.splitStrategy : "NONE";
         this.reviewRequired = builder.reviewRequired != null ? builder.reviewRequired : true;
         this.autoPublish = builder.autoPublish != null ? builder.autoPublish : false;
         this.status = builder.status != null ? builder.status : ProjectStatus.DRAFT;
@@ -77,11 +87,11 @@ public class InspProject extends AggregateRoot<Long> {
     }
 
     public static InspProject create(String projectCode, String projectName,
-                                     Long templateId, LocalDate startDate, Long createdBy) {
+                                     Long rootSectionId, LocalDate startDate, Long createdBy) {
         return builder()
                 .projectCode(projectCode)
                 .projectName(projectName)
-                .templateId(templateId)
+                .rootSectionId(rootSectionId)
                 .startDate(startDate)
                 .status(ProjectStatus.DRAFT)
                 .createdBy(createdBy)
@@ -92,9 +102,6 @@ public class InspProject extends AggregateRoot<Long> {
         return new InspProject(builder);
     }
 
-    /**
-     * 发布项目 — DRAFT → PUBLISHED
-     */
     public void publish(Long templateVersionId) {
         if (this.status != ProjectStatus.DRAFT) {
             throw new IllegalStateException("只有草稿项目才能发布");
@@ -102,12 +109,9 @@ public class InspProject extends AggregateRoot<Long> {
         this.templateVersionId = templateVersionId;
         this.status = ProjectStatus.PUBLISHED;
         this.updatedAt = LocalDateTime.now();
-        registerEvent(new ProjectPublishedEvent(this.id, this.projectCode, this.templateId));
+        registerEvent(new ProjectPublishedEvent(this.id, this.projectCode, this.rootSectionId));
     }
 
-    /**
-     * 暂停项目 — PUBLISHED → PAUSED
-     */
     public void pause() {
         if (this.status != ProjectStatus.PUBLISHED) {
             throw new IllegalStateException("只有已发布的项目才能暂停");
@@ -117,9 +121,6 @@ public class InspProject extends AggregateRoot<Long> {
         registerEvent(new ProjectPausedEvent(this.id, this.projectCode));
     }
 
-    /**
-     * 恢复项目 — PAUSED → PUBLISHED
-     */
     public void resume() {
         if (this.status != ProjectStatus.PAUSED) {
             throw new IllegalStateException("只有已暂停的项目才能恢复");
@@ -129,9 +130,6 @@ public class InspProject extends AggregateRoot<Long> {
         registerEvent(new ProjectResumedEvent(this.id, this.projectCode));
     }
 
-    /**
-     * 完成项目 — PUBLISHED/PAUSED → COMPLETED
-     */
     public void complete() {
         if (this.status != ProjectStatus.PUBLISHED && this.status != ProjectStatus.PAUSED) {
             throw new IllegalStateException("只有已发布或已暂停的项目才能完成");
@@ -141,9 +139,6 @@ public class InspProject extends AggregateRoot<Long> {
         registerEvent(new ProjectCompletedEvent(this.id, this.projectCode));
     }
 
-    /**
-     * 归档项目 — COMPLETED → ARCHIVED
-     */
     public void archive() {
         if (this.status != ProjectStatus.COMPLETED) {
             throw new IllegalStateException("只有已完成的项目才能归档");
@@ -152,36 +147,37 @@ public class InspProject extends AggregateRoot<Long> {
         this.updatedAt = LocalDateTime.now();
     }
 
-    /**
-     * 更新项目基本信息（仅草稿可编辑）
-     */
-    public void updateInfo(String projectName, Long templateId, Long scoringProfileId,
+    public void updateInfo(String projectName, Long rootSectionId, Long scoringProfileId,
                            ScopeType scopeType, String scopeConfig,
-                           TargetType targetType, LocalDate startDate, LocalDate endDate,
-                           CycleType cycleType, String cycleConfig, String timeSlots,
-                           Boolean skipHolidays, Long holidayCalendarId, String excludedDates,
+                           LocalDate startDate, LocalDate endDate,
                            AssignmentMode assignmentMode, Boolean reviewRequired,
                            Boolean autoPublish, Long updatedBy) {
         if (this.status != ProjectStatus.DRAFT) {
             throw new IllegalStateException("只有草稿状态的项目才能修改");
         }
         this.projectName = projectName;
-        this.templateId = templateId;
+        this.rootSectionId = rootSectionId;
         this.scoringProfileId = scoringProfileId;
         this.scopeType = scopeType;
         this.scopeConfig = scopeConfig;
-        this.targetType = targetType;
         this.startDate = startDate;
         this.endDate = endDate;
-        this.cycleType = cycleType;
-        this.cycleConfig = cycleConfig;
-        this.timeSlots = timeSlots;
-        this.skipHolidays = skipHolidays;
-        this.holidayCalendarId = holidayCalendarId;
-        this.excludedDates = excludedDates;
         this.assignmentMode = assignmentMode;
         this.reviewRequired = reviewRequired;
         this.autoPublish = autoPublish;
+        this.updatedBy = updatedBy;
+        this.updatedAt = LocalDateTime.now();
+    }
+
+    public void updateOperationalConfig(AssignmentMode assignmentMode, Boolean reviewRequired,
+                                         Boolean autoPublish, String projectName, Long updatedBy) {
+        if (this.status == ProjectStatus.ARCHIVED) {
+            throw new IllegalStateException("已归档的项目不能修改");
+        }
+        if (assignmentMode != null) this.assignmentMode = assignmentMode;
+        if (reviewRequired != null) this.reviewRequired = reviewRequired;
+        if (autoPublish != null) this.autoPublish = autoPublish;
+        if (projectName != null) this.projectName = projectName;
         this.updatedBy = updatedBy;
         this.updatedAt = LocalDateTime.now();
     }
@@ -194,57 +190,67 @@ public class InspProject extends AggregateRoot<Long> {
     public void setId(Long id) { this.id = id; }
 
     public Long getTenantId() { return tenantId; }
-    public Long getParentProjectId() { return parentProjectId; }
     public String getProjectCode() { return projectCode; }
     public String getProjectName() { return projectName; }
-    public Long getTemplateId() { return templateId; }
+    public Long getRootSectionId() { return rootSectionId; }
     public Long getTemplateVersionId() { return templateVersionId; }
     public Long getScoringProfileId() { return scoringProfileId; }
     public ScopeType getScopeType() { return scopeType; }
     public String getScopeConfig() { return scopeConfig; }
-    public TargetType getTargetType() { return targetType; }
     public LocalDate getStartDate() { return startDate; }
     public LocalDate getEndDate() { return endDate; }
-    public CycleType getCycleType() { return cycleType; }
-    public String getCycleConfig() { return cycleConfig; }
-    public String getTimeSlots() { return timeSlots; }
-    public Boolean getSkipHolidays() { return skipHolidays; }
-    public Long getHolidayCalendarId() { return holidayCalendarId; }
-    public String getExcludedDates() { return excludedDates; }
     public AssignmentMode getAssignmentMode() { return assignmentMode; }
     public Boolean getReviewRequired() { return reviewRequired; }
     public Boolean getAutoPublish() { return autoPublish; }
+    public String getEvaluationMode() { return evaluationMode; }
+    public String getMultiRaterMode() { return multiRaterMode; }
+    public String getRaterWeightBy() { return raterWeightBy; }
+    public java.math.BigDecimal getConsensusThreshold() { return consensusThreshold; }
+    public Boolean getTrendEnabled() { return trendEnabled; }
+    public Integer getTrendLookbackDays() { return trendLookbackDays; }
+    public Boolean getDecayEnabled() { return decayEnabled; }
+    public String getDecayMode() { return decayMode; }
+    public Boolean getCalibrationEnabled() { return calibrationEnabled; }
+    public String getCalibrationMethod() { return calibrationMethod; }
+    public String getSplitStrategy() { return splitStrategy; }
     public ProjectStatus getStatus() { return status; }
     public Long getCreatedBy() { return createdBy; }
     public LocalDateTime getCreatedAt() { return createdAt; }
     public Long getUpdatedBy() { return updatedBy; }
     public LocalDateTime getUpdatedAt() { return updatedAt; }
 
+    // Backward compatibility — InspProjectPO still has templateId column during migration
+    @Deprecated
+    public Long getTemplateId() { return rootSectionId; }
+
     public static Builder builder() { return new Builder(); }
 
     public static class Builder {
         private Long id;
         private Long tenantId;
-        private Long parentProjectId;
         private String projectCode;
         private String projectName;
-        private Long templateId;
+        private Long rootSectionId;
         private Long templateVersionId;
         private Long scoringProfileId;
         private ScopeType scopeType;
         private String scopeConfig;
-        private TargetType targetType;
         private LocalDate startDate;
         private LocalDate endDate;
-        private CycleType cycleType;
-        private String cycleConfig;
-        private String timeSlots;
-        private Boolean skipHolidays;
-        private Long holidayCalendarId;
-        private String excludedDates;
         private AssignmentMode assignmentMode;
         private Boolean reviewRequired;
         private Boolean autoPublish;
+        private String evaluationMode;
+        private String multiRaterMode;
+        private String raterWeightBy;
+        private java.math.BigDecimal consensusThreshold;
+        private Boolean trendEnabled;
+        private Integer trendLookbackDays;
+        private Boolean decayEnabled;
+        private String decayMode;
+        private Boolean calibrationEnabled;
+        private String calibrationMethod;
+        private String splitStrategy;
         private ProjectStatus status;
         private Long createdBy;
         private LocalDateTime createdAt;
@@ -253,26 +259,29 @@ public class InspProject extends AggregateRoot<Long> {
 
         public Builder id(Long id) { this.id = id; return this; }
         public Builder tenantId(Long tenantId) { this.tenantId = tenantId; return this; }
-        public Builder parentProjectId(Long parentProjectId) { this.parentProjectId = parentProjectId; return this; }
         public Builder projectCode(String projectCode) { this.projectCode = projectCode; return this; }
         public Builder projectName(String projectName) { this.projectName = projectName; return this; }
-        public Builder templateId(Long templateId) { this.templateId = templateId; return this; }
+        public Builder rootSectionId(Long rootSectionId) { this.rootSectionId = rootSectionId; return this; }
         public Builder templateVersionId(Long templateVersionId) { this.templateVersionId = templateVersionId; return this; }
         public Builder scoringProfileId(Long scoringProfileId) { this.scoringProfileId = scoringProfileId; return this; }
         public Builder scopeType(ScopeType scopeType) { this.scopeType = scopeType; return this; }
         public Builder scopeConfig(String scopeConfig) { this.scopeConfig = scopeConfig; return this; }
-        public Builder targetType(TargetType targetType) { this.targetType = targetType; return this; }
         public Builder startDate(LocalDate startDate) { this.startDate = startDate; return this; }
         public Builder endDate(LocalDate endDate) { this.endDate = endDate; return this; }
-        public Builder cycleType(CycleType cycleType) { this.cycleType = cycleType; return this; }
-        public Builder cycleConfig(String cycleConfig) { this.cycleConfig = cycleConfig; return this; }
-        public Builder timeSlots(String timeSlots) { this.timeSlots = timeSlots; return this; }
-        public Builder skipHolidays(Boolean skipHolidays) { this.skipHolidays = skipHolidays; return this; }
-        public Builder holidayCalendarId(Long holidayCalendarId) { this.holidayCalendarId = holidayCalendarId; return this; }
-        public Builder excludedDates(String excludedDates) { this.excludedDates = excludedDates; return this; }
         public Builder assignmentMode(AssignmentMode assignmentMode) { this.assignmentMode = assignmentMode; return this; }
         public Builder reviewRequired(Boolean reviewRequired) { this.reviewRequired = reviewRequired; return this; }
         public Builder autoPublish(Boolean autoPublish) { this.autoPublish = autoPublish; return this; }
+        public Builder evaluationMode(String evaluationMode) { this.evaluationMode = evaluationMode; return this; }
+        public Builder multiRaterMode(String multiRaterMode) { this.multiRaterMode = multiRaterMode; return this; }
+        public Builder raterWeightBy(String raterWeightBy) { this.raterWeightBy = raterWeightBy; return this; }
+        public Builder consensusThreshold(java.math.BigDecimal consensusThreshold) { this.consensusThreshold = consensusThreshold; return this; }
+        public Builder trendEnabled(Boolean trendEnabled) { this.trendEnabled = trendEnabled; return this; }
+        public Builder trendLookbackDays(Integer trendLookbackDays) { this.trendLookbackDays = trendLookbackDays; return this; }
+        public Builder decayEnabled(Boolean decayEnabled) { this.decayEnabled = decayEnabled; return this; }
+        public Builder decayMode(String decayMode) { this.decayMode = decayMode; return this; }
+        public Builder calibrationEnabled(Boolean calibrationEnabled) { this.calibrationEnabled = calibrationEnabled; return this; }
+        public Builder calibrationMethod(String calibrationMethod) { this.calibrationMethod = calibrationMethod; return this; }
+        public Builder splitStrategy(String splitStrategy) { this.splitStrategy = splitStrategy; return this; }
         public Builder status(ProjectStatus status) { this.status = status; return this; }
         public Builder createdBy(Long createdBy) { this.createdBy = createdBy; return this; }
         public Builder createdAt(LocalDateTime createdAt) { this.createdAt = createdAt; return this; }

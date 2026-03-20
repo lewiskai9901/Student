@@ -60,7 +60,8 @@ export function generateMenuFromRoutes(
       title: route.meta?.title as string || route.path,
       icon: route.meta?.icon as string,
       order: (route.meta as any)?.order,
-      permission: route.meta?.permission as string
+      permission: route.meta?.permission as string,
+      group: route.meta?.group as string
     }
 
     // 递归处理子路由

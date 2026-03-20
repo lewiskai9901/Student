@@ -3,9 +3,17 @@ package com.school.management.application.user;
 import com.school.management.application.user.command.CreateUserCommand;
 import com.school.management.application.user.command.UpdateUserCommand;
 import com.school.management.domain.shared.event.DomainEventPublisher;
+import com.school.management.domain.access.model.Role;
+import com.school.management.domain.access.repository.RoleRepository;
+import com.school.management.domain.access.model.entity.AccessRelation;
+import com.school.management.domain.access.repository.AccessRelationRepository;
+import com.school.management.domain.place.model.entity.UniversalPlaceOccupant;
+import com.school.management.domain.place.repository.UniversalPlaceOccupantRepository;
+import com.school.management.domain.place.repository.UniversalPlaceRepository;
 import com.school.management.domain.user.model.aggregate.User;
-import com.school.management.domain.user.model.valueobject.UserType;
+import com.school.management.domain.user.model.entity.UserType;
 import com.school.management.domain.user.repository.UserRepository;
+import com.school.management.domain.user.repository.UserTypeRepository;
 import com.school.management.exception.BusinessException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
@@ -14,6 +22,8 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
 
@@ -31,8 +41,13 @@ import java.util.Optional;
 public class UserApplicationService {
 
     private final UserRepository userRepository;
+    private final UserTypeRepository userTypeRepository;
+    private final RoleRepository roleRepository;
+    private final AccessRelationRepository accessRelationRepository;
     private final PasswordEncoder passwordEncoder;
     private final DomainEventPublisher eventPublisher;
+    private final UniversalPlaceOccupantRepository occupantRepository;
+    private final UniversalPlaceRepository placeRepository;
 
     @Value("${app.security.default-password:Pwd@123456}")
     private String defaultPassword;
@@ -61,8 +76,7 @@ public class UserApplicationService {
                 command.getUsername(),
                 encodedPassword,
                 command.getRealName(),
-                command.getUserType() != null ? UserType.fromCode(command.getUserType()) : UserType.TEACHER,
-                command.getOrgUnitId()
+                command.getUserTypeCode() != null ? command.getUserTypeCode() : "TEACHER"
         );
 
         // 设置可选信息
@@ -73,23 +87,78 @@ public class UserApplicationService {
                 command.getEmployeeNo(),
                 command.getGender(),
                 command.getBirthDate(),
-                command.getIdCard(),
-                command.getOrgUnitId()
+                command.getIdCard()
         );
 
-        // 分配角色
-        if (command.getRoleIds() != null && !command.getRoleIds().isEmpty()) {
-            user.assignRoles(command.getRoleIds());
+        // 设置主归属组织（持久化字段）
+        if (command.getOrgUnitId() != null) {
+            user.setPrimaryOrgUnitId(command.getOrgUnitId());
+        }
+
+        // 分配角色：优先使用命令中指定的角色，否则使用用户类型的默认角色
+        List<Long> roleIds = command.getRoleIds();
+        if ((roleIds == null || roleIds.isEmpty()) && command.getUserTypeCode() != null) {
+            roleIds = resolveDefaultRoleIds(command.getUserTypeCode());
+        }
+        if (roleIds != null && !roleIds.isEmpty()) {
+            user.assignRoles(roleIds);
         }
 
         // 保存用户
         user = userRepository.save(user);
+
+        // 关联组织（写入 access_relations）
+        if (command.getOrgUnitId() != null) {
+            accessRelationRepository.save(AccessRelation.builder()
+                    .resourceType("org_unit")
+                    .resourceId(command.getOrgUnitId())
+                    .relation("member")
+                    .subjectType("user")
+                    .subjectId(user.getId())
+                    .accessLevel(1)
+                    .metadata(java.util.Map.of("isPrimary", true, "relationType", "PRIMARY"))
+                    .createdBy(command.getCreatedBy())
+                    .build());
+        }
+
+        // 关联场所
+        if (command.getPlaceId() != null) {
+            accessRelationRepository.save(AccessRelation.builder()
+                    .resourceType("place")
+                    .resourceId(command.getPlaceId())
+                    .relation("occupant")
+                    .subjectType("user")
+                    .subjectId(user.getId())
+                    .accessLevel(1)
+                    .metadata(java.util.Map.of("isPrimary", true, "relationType", "ASSIGNED"))
+                    .createdBy(command.getCreatedBy())
+                    .build());
+        }
 
         // 发布领域事件
         publishEvents(user);
 
         log.info("用户创建成功: id={}, username={}", user.getId(), user.getUsername());
         return user;
+    }
+
+    /**
+     * 根据用户类型编码解析默认角色ID列表
+     */
+    private List<Long> resolveDefaultRoleIds(String userTypeCode) {
+        Optional<UserType> utOpt = userTypeRepository.findByTypeCode(userTypeCode);
+        if (utOpt.isEmpty()) return List.of();
+
+        List<String> codes = utOpt.get().getDefaultRoleCodes();
+        if (codes == null || codes.isEmpty()) return List.of();
+
+        List<Long> ids = new ArrayList<>();
+        for (String code : codes) {
+            if (code != null && !code.trim().isEmpty()) {
+                roleRepository.findByRoleCode(code.trim()).ifPresent(role -> ids.add(role.getId()));
+            }
+        }
+        return ids;
     }
 
     // ==================== 用户更新 ====================
@@ -111,9 +180,50 @@ public class UserApplicationService {
                 command.getEmployeeNo(),
                 command.getGender(),
                 command.getBirthDate(),
-                command.getIdCard(),
-                command.getOrgUnitId()
+                command.getIdCard()
         );
+
+        // 更新用户类型
+        if (command.getUserTypeCode() != null) {
+            user.changeUserType(command.getUserTypeCode());
+        }
+
+        // 更新主归属组织
+        if (command.getOrgUnitId() != null) {
+            // 查找现有主归属
+            List<AccessRelation> existingOrgRels = accessRelationRepository
+                    .findBySubjectAndResourceType("user", userId, "org_unit");
+            AccessRelation existingPrimary = existingOrgRels.stream()
+                    .filter(r -> r.getBooleanMeta("isPrimary"))
+                    .findFirst().orElse(null);
+
+            if (existingPrimary != null) {
+                if (!command.getOrgUnitId().equals(existingPrimary.getResourceId())) {
+                    accessRelationRepository.deleteById(existingPrimary.getId());
+                    accessRelationRepository.save(AccessRelation.builder()
+                            .resourceType("org_unit")
+                            .resourceId(command.getOrgUnitId())
+                            .relation("member")
+                            .subjectType("user")
+                            .subjectId(userId)
+                            .accessLevel(1)
+                            .metadata(java.util.Map.of("isPrimary", true, "relationType", "PRIMARY"))
+                            .createdBy(command.getUpdatedBy())
+                            .build());
+                }
+            } else {
+                accessRelationRepository.save(AccessRelation.builder()
+                        .resourceType("org_unit")
+                        .resourceId(command.getOrgUnitId())
+                        .relation("member")
+                        .subjectType("user")
+                        .subjectId(userId)
+                        .accessLevel(1)
+                        .metadata(java.util.Map.of("isPrimary", true, "relationType", "PRIMARY"))
+                        .createdBy(command.getUpdatedBy())
+                        .build());
+            }
+        }
 
         // 更新角色
         if (command.getRoleIds() != null) {
@@ -217,6 +327,9 @@ public class UserApplicationService {
             throw new BusinessException("用户不存在: " + userId);
         }
 
+        // 自动退房：清理该用户的所有在住记录
+        autoCheckOutByUser(userId);
+
         userRepository.deleteById(userId);
     }
 
@@ -226,7 +339,34 @@ public class UserApplicationService {
     @Transactional
     public void deleteUsers(List<Long> userIds) {
         log.info("批量删除用户: {}", userIds);
+        for (Long userId : userIds) {
+            autoCheckOutByUser(userId);
+        }
         userRepository.deleteByIds(userIds);
+    }
+
+    /**
+     * 自动退房：退出指定用户的所有在住记录，并更新场所占用数
+     */
+    private void autoCheckOutByUser(Long userId) {
+        List<UniversalPlaceOccupant> activeOccupancies = occupantRepository.findActiveByOccupantId(userId);
+        if (activeOccupancies.isEmpty()) return;
+
+        List<Long> ids = activeOccupancies.stream()
+                .map(UniversalPlaceOccupant::getId)
+                .collect(java.util.stream.Collectors.toList());
+        occupantRepository.batchCheckOut(ids);
+
+        // 更新每个场所的占用数
+        activeOccupancies.stream()
+                .map(UniversalPlaceOccupant::getPlaceId)
+                .distinct()
+                .forEach(placeId -> placeRepository.findById(placeId).ifPresent(place -> {
+                    place.checkOut();
+                    placeRepository.save(place);
+                }));
+
+        log.info("用户 {} 自动退房 {} 条记录", userId, ids.size());
     }
 
     // ==================== 查询操作 ====================

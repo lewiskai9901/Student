@@ -1,4 +1,4 @@
-package com.school.management.infrastructure.persistence.space;
+package com.school.management.infrastructure.persistence.place;
 
 import com.baomidou.mybatisplus.annotation.*;
 import lombok.Data;
@@ -9,8 +9,8 @@ import java.time.LocalDateTime;
  * 空间占用记录持久化对象
  */
 @Data
-@TableName("space_occupants")
-public class UniversalSpaceOccupantPO {
+@TableName("place_occupants")
+public class UniversalPlaceOccupantPO {
 
     @TableId(type = IdType.AUTO)
     private Long id;
@@ -18,7 +18,7 @@ public class UniversalSpaceOccupantPO {
     /**
      * 空间ID
      */
-    private Long spaceId;
+    private Long placeId;
 
     /**
      * 占用者类型
@@ -34,6 +34,21 @@ public class UniversalSpaceOccupantPO {
      * 占用者名称
      */
     private String occupantName;
+
+    /**
+     * 用户名
+     */
+    private String username;
+
+    /**
+     * 组织名称
+     */
+    private String orgUnitName;
+
+    /**
+     * 性别
+     */
+    private Integer gender;
 
     /**
      * 位置号
@@ -94,5 +109,5 @@ public class UniversalSpaceOccupantPO {
      * 空间名称
      */
     @TableField(exist = false)
-    private String spaceName;
+    private String placeName;
 }

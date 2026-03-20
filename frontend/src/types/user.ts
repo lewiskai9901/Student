@@ -3,11 +3,6 @@
  */
 
 /**
- * 用户类型枚举
- */
-export type UserType = '管理员' | '教师' | '学生'
-
-/**
  * 用户状态枚举
  * 支持字符串和数字格式以兼容 V1/V2 API
  */
@@ -26,17 +21,19 @@ export interface User {
   employeeNo?: string
   gender?: number
   birthDate?: string
-  orgUnitId?: number | string
-  classId?: number | string
+  idCard?: string
   managedClassId?: number | string
-  userType?: UserType
+  userTypeCode?: string
+  userType?: string
+  orgUnitId?: number | string
+  orgUnitName?: string
   status?: UserStatus
   lastLoginTime?: string
   lastLoginIp?: string
   passwordChangedAt?: string
   wechatBound?: boolean
   allowMultipleDevices?: boolean
-  roleIds?: number[]
+  roleIds?: (number | string)[]
   createdAt?: string
   updatedAt?: string
 }
@@ -54,9 +51,10 @@ export interface CreateUserRequest {
   gender?: number
   birthDate?: string
   idCard?: string
-  orgUnitId?: number
-  userType?: number
-  roleIds?: number[]
+  orgUnitId?: number | string
+  placeId?: number | string
+  userTypeCode?: string
+  roleIds?: (number | string)[]
 }
 
 /**
@@ -70,8 +68,9 @@ export interface UpdateUserRequest {
   gender?: number
   birthDate?: string
   idCard?: string
-  orgUnitId?: number
-  roleIds?: number[]
+  orgUnitId?: number | string
+  userTypeCode?: string
+  roleIds?: (number | string)[]
 }
 
 /**
@@ -83,7 +82,7 @@ export interface UserQueryParams {
   username?: string
   realName?: string
   phone?: string
-  orgUnitId?: number
+  orgUnitId?: number | string
   status?: number
 }
 
@@ -95,6 +94,10 @@ export interface SimpleUser {
   username: string
   realName: string
   orgUnitName?: string
+  userType?: string
+  gender?: number
+  primaryOrgUnitId?: number | string
+  primaryOrgUnitName?: string
 }
 
 /**
@@ -109,8 +112,9 @@ export interface UserFormData {
   employeeNo?: string
   gender?: number
   birthDate?: string
-  identityCard?: string
-  orgUnitId?: number
+  idCard?: string
+  orgUnitId?: number | string
+  userTypeCode?: string
   status?: number
   password?: string
 }

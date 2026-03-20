@@ -64,9 +64,14 @@ public class CreateUserCommand {
     private Long orgUnitId;
 
     /**
-     * 用户类型: 1管理员 2教师 3学生
+     * 用户类型编码（引用 user_types 表）
      */
-    private Integer userType;
+    private String userTypeCode;
+
+    /**
+     * 关联场所ID
+     */
+    private Long placeId;
 
     /**
      * 角色ID列表

@@ -24,11 +24,7 @@ public class UserPO {
     private LocalDate birthDate;
     @TableField("identity_card")
     private String idCard;
-    private Long orgUnitId;
-    private Long primaryOrgRelationId;
-    private Long classId;
-    private Long managedClassId;
-    private Integer userType;
+    private Long primaryOrgUnitId;
     private String userTypeCode;
     private Integer status;
     private LocalDateTime lastLoginTime;
@@ -40,12 +36,15 @@ public class UserPO {
     private LocalDateTime createdAt;
     @TableField(fill = FieldFill.INSERT_UPDATE)
     private LocalDateTime updatedAt;
+    private Long tenantId;
     private Long createdBy;
     private Long updatedBy;
     @TableLogic
-    private Integer deleted;
+    private Long deleted;
     @TableField(exist = false)
     private String orgUnitName;
+    @TableField(exist = false)
+    private Long orgUnitId;
 
     // Getters
     public Long getId() { return id; }
@@ -59,11 +58,7 @@ public class UserPO {
     public Integer getGender() { return gender; }
     public LocalDate getBirthDate() { return birthDate; }
     public String getIdCard() { return idCard; }
-    public Long getOrgUnitId() { return orgUnitId; }
-    public Long getPrimaryOrgRelationId() { return primaryOrgRelationId; }
-    public Long getClassId() { return classId; }
-    public Long getManagedClassId() { return managedClassId; }
-    public Integer getUserType() { return userType; }
+    public Long getPrimaryOrgUnitId() { return primaryOrgUnitId; }
     public String getUserTypeCode() { return userTypeCode; }
     public Integer getStatus() { return status; }
     public LocalDateTime getLastLoginTime() { return lastLoginTime; }
@@ -73,10 +68,12 @@ public class UserPO {
     public Integer getAllowMultipleDevices() { return allowMultipleDevices; }
     public LocalDateTime getCreatedAt() { return createdAt; }
     public LocalDateTime getUpdatedAt() { return updatedAt; }
+    public Long getTenantId() { return tenantId; }
     public Long getCreatedBy() { return createdBy; }
     public Long getUpdatedBy() { return updatedBy; }
-    public Integer getDeleted() { return deleted; }
+    public Long getDeleted() { return deleted; }
     public String getOrgUnitName() { return orgUnitName; }
+    public Long getOrgUnitId() { return orgUnitId; }
 
     // Setters
     public void setId(Long id) { this.id = id; }
@@ -90,11 +87,7 @@ public class UserPO {
     public void setGender(Integer gender) { this.gender = gender; }
     public void setBirthDate(LocalDate birthDate) { this.birthDate = birthDate; }
     public void setIdCard(String idCard) { this.idCard = idCard; }
-    public void setOrgUnitId(Long orgUnitId) { this.orgUnitId = orgUnitId; }
-    public void setPrimaryOrgRelationId(Long primaryOrgRelationId) { this.primaryOrgRelationId = primaryOrgRelationId; }
-    public void setClassId(Long classId) { this.classId = classId; }
-    public void setManagedClassId(Long managedClassId) { this.managedClassId = managedClassId; }
-    public void setUserType(Integer userType) { this.userType = userType; }
+    public void setPrimaryOrgUnitId(Long primaryOrgUnitId) { this.primaryOrgUnitId = primaryOrgUnitId; }
     public void setUserTypeCode(String userTypeCode) { this.userTypeCode = userTypeCode; }
     public void setStatus(Integer status) { this.status = status; }
     public void setLastLoginTime(LocalDateTime lastLoginTime) { this.lastLoginTime = lastLoginTime; }
@@ -104,8 +97,10 @@ public class UserPO {
     public void setAllowMultipleDevices(Integer allowMultipleDevices) { this.allowMultipleDevices = allowMultipleDevices; }
     public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
     public void setUpdatedAt(LocalDateTime updatedAt) { this.updatedAt = updatedAt; }
+    public void setTenantId(Long tenantId) { this.tenantId = tenantId; }
     public void setCreatedBy(Long createdBy) { this.createdBy = createdBy; }
     public void setUpdatedBy(Long updatedBy) { this.updatedBy = updatedBy; }
-    public void setDeleted(Integer deleted) { this.deleted = deleted; }
+    public void setDeleted(Long deleted) { this.deleted = deleted; }
     public void setOrgUnitName(String orgUnitName) { this.orgUnitName = orgUnitName; }
+    public void setOrgUnitId(Long orgUnitId) { this.orgUnitId = orgUnitId; }
 }

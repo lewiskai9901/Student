@@ -246,7 +246,7 @@ const queryParams = reactive({
 const typeTabs = [
   { value: '', label: '全部' },
   { value: 'ORG', label: '组织' },
-  { value: 'SPACE', label: '场所' },
+  { value: 'PLACE', label: '场所' },
   { value: 'USER', label: '用户' }
 ]
 
@@ -274,7 +274,7 @@ const getRankClass = (rank: number) => {
 }
 
 const getTargetTypeLabel = (type: string) => {
-  const labels: Record<string, string> = { ORG: '组织', SPACE: '场所', USER: '用户' }
+  const labels: Record<string, string> = { ORG: '组织', PLACE: '场所', USER: '用户' }
   return labels[type] || type
 }
 
@@ -824,7 +824,7 @@ onMounted(async () => {
     color: #667eea;
   }
 
-  &.space {
+  &.place {
     background: rgba(103, 194, 58, 0.1);
     color: #67c23a;
   }

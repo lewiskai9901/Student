@@ -1,30 +1,30 @@
-package com.school.management.interfaces.rest.space;
+package com.school.management.interfaces.rest.place;
 
-import com.school.management.application.space.SpaceApplicationService;
-import com.school.management.application.space.command.CheckInCommand;
-import com.school.management.application.space.command.CreateSpaceCommand;
-import com.school.management.application.space.command.UpdateSpaceCommand;
-import com.school.management.application.space.query.SpaceDTO;
-import com.school.management.application.space.query.SpaceOccupantDTO;
-import com.school.management.application.space.query.SpaceQueryCriteria;
+import com.school.management.application.place.PlaceApplicationService;
+import com.school.management.application.place.command.CheckInCommand;
+import com.school.management.application.place.command.CreatePlaceCommand;
+import com.school.management.application.place.command.UpdatePlaceCommand;
+import com.school.management.application.place.query.PlaceDTO;
+import com.school.management.application.place.query.PlaceOccupantDTO;
+import com.school.management.application.place.query.PlaceQueryCriteria;
 import com.school.management.common.result.Result;
-import com.school.management.domain.space.model.valueobject.BuildingType;
-import com.school.management.domain.space.model.valueobject.RoomType;
-import com.school.management.domain.space.model.valueobject.SpaceStatus;
-import com.school.management.domain.space.model.valueobject.SpaceType;
-import com.school.management.interfaces.rest.space.dto.BatchAssignClassRequest;
-import com.school.management.interfaces.rest.space.dto.BatchAssignOrgUnitRequest;
-import com.school.management.interfaces.rest.space.dto.CheckInRequest;
-import com.school.management.interfaces.rest.space.dto.CreateSpaceRequest;
-import com.school.management.interfaces.rest.space.dto.UpdateSpaceRequest;
-import com.school.management.domain.space.model.valueobject.GenderType;
+import com.school.management.domain.place.model.valueobject.BuildingType;
+import com.school.management.domain.place.model.valueobject.RoomType;
+import com.school.management.domain.place.model.valueobject.PlaceStatus;
+import com.school.management.domain.place.model.valueobject.PlaceType;
+import com.school.management.interfaces.rest.place.dto.BatchAssignClassRequest;
+import com.school.management.interfaces.rest.place.dto.BatchAssignOrgUnitRequest;
+import com.school.management.interfaces.rest.place.dto.CheckInRequest;
+import com.school.management.interfaces.rest.place.dto.CreatePlaceRequest;
+import com.school.management.interfaces.rest.place.dto.UpdatePlaceRequest;
+import com.school.management.domain.place.model.valueobject.GenderType;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.security.access.prepost.PreAuthorize;
+import com.school.management.infrastructure.casbin.CasbinAccess;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.HashMap;
@@ -36,23 +36,23 @@ import java.util.Map;
  */
 @Slf4j
 @RestController
-@RequestMapping("/spaces")
+@RequestMapping("/places")
 @RequiredArgsConstructor
 @Tag(name = "场所管理", description = "统一场所管理API，包括校区、楼宇、楼层、房间等")
-public class SpaceController {
+public class PlaceController {
 
-    private final SpaceApplicationService spaceService;
+    private final PlaceApplicationService placeService;
 
     // ========== 基础CRUD ==========
 
     @PostMapping
     @Operation(summary = "创建场所")
-    @PreAuthorize("hasAuthority('space:create')")
-    public Result<Long> createSpace(@Valid @RequestBody CreateSpaceRequest request) {
-        CreateSpaceCommand command = new CreateSpaceCommand();
-        command.setSpaceType(request.getSpaceType());
-        command.setSpaceCode(request.getSpaceCode());
-        command.setSpaceName(request.getSpaceName());
+    @CasbinAccess(resource = "place", action = "add")
+    public Result<Long> createPlace(@Valid @RequestBody CreatePlaceRequest request) {
+        CreatePlaceCommand command = new CreatePlaceCommand();
+        command.setPlaceType(request.getPlaceType());
+        command.setPlaceCode(request.getPlaceCode());
+        command.setPlaceName(request.getPlaceName());
         command.setRoomType(request.getRoomType());
         command.setBuildingType(request.getBuildingType());
         command.setBuildingNo(request.getBuildingNo());
@@ -67,19 +67,19 @@ public class SpaceController {
         command.setDescription(request.getDescription());
         command.setAttributes(request.getAttributes());
 
-        Long id = spaceService.createSpace(command);
+        Long id = placeService.createPlace(command);
         return Result.success(id);
     }
 
     @PutMapping("/{id}")
     @Operation(summary = "更新场所")
-    @PreAuthorize("hasAuthority('space:update')")
-    public Result<Void> updateSpace(
+    @CasbinAccess(resource = "place", action = "edit")
+    public Result<Void> updatePlace(
             @PathVariable Long id,
-            @Valid @RequestBody UpdateSpaceRequest request) {
-        UpdateSpaceCommand command = new UpdateSpaceCommand();
+            @Valid @RequestBody UpdatePlaceRequest request) {
+        UpdatePlaceCommand command = new UpdatePlaceCommand();
         command.setId(id);
-        command.setSpaceName(request.getSpaceName());
+        command.setPlaceName(request.getPlaceName());
         command.setDescription(request.getDescription());
         command.setBuildingNo(request.getBuildingNo());
         command.setRoomNo(request.getRoomNo());
@@ -90,60 +90,60 @@ public class SpaceController {
         command.setGenderType(request.getGenderType());
         command.setAttributes(request.getAttributes());
 
-        spaceService.updateSpace(command);
+        placeService.updatePlace(command);
         return Result.success();
     }
 
     @DeleteMapping("/{id}")
     @Operation(summary = "删除场所")
-    @PreAuthorize("hasAuthority('space:delete')")
-    public Result<Void> deleteSpace(
+    @CasbinAccess(resource = "place", action = "delete")
+    public Result<Void> deletePlace(
             @PathVariable Long id,
             @RequestParam(defaultValue = "false") boolean force) {
-        spaceService.deleteSpace(id, force);
+        placeService.deletePlace(id, force);
         return Result.success();
     }
 
     @GetMapping("/{id}")
     @Operation(summary = "获取场所详情")
-    @PreAuthorize("hasAuthority('space:view')")
-    public Result<SpaceDTO> getById(@PathVariable Long id) {
-        return Result.success(spaceService.getById(id));
+    @CasbinAccess(resource = "place", action = "view")
+    public Result<PlaceDTO> getById(@PathVariable Long id) {
+        return Result.success(placeService.getById(id));
     }
 
     // ========== 状态管理 ==========
 
     @PutMapping("/{id}/status")
     @Operation(summary = "变更场所状态")
-    @PreAuthorize("hasAuthority('space:update')")
+    @CasbinAccess(resource = "place", action = "edit")
     public Result<Void> changeStatus(
             @PathVariable Long id,
-            @RequestParam SpaceStatus status) {
-        spaceService.changeStatus(id, status);
+            @RequestParam PlaceStatus status) {
+        placeService.changeStatus(id, status);
         return Result.success();
     }
 
     @PutMapping("/{id}/enable")
     @Operation(summary = "启用场所")
-    @PreAuthorize("hasAuthority('space:update')")
+    @CasbinAccess(resource = "place", action = "edit")
     public Result<Void> enable(@PathVariable Long id) {
-        spaceService.changeStatus(id, SpaceStatus.NORMAL);
+        placeService.changeStatus(id, PlaceStatus.NORMAL);
         return Result.success();
     }
 
     @PutMapping("/{id}/disable")
     @Operation(summary = "禁用场所")
-    @PreAuthorize("hasAuthority('space:update')")
+    @CasbinAccess(resource = "place", action = "edit")
     public Result<Void> disable(@PathVariable Long id) {
-        spaceService.changeStatus(id, SpaceStatus.DISABLED);
+        placeService.changeStatus(id, PlaceStatus.DISABLED);
         return Result.success();
     }
 
     @PutMapping("/{id}/maintenance")
     @Operation(summary = "设置维护状态")
-    @PreAuthorize("hasAuthority('space:update')")
+    @CasbinAccess(resource = "place", action = "edit")
     public Result<Void> startMaintenance(@PathVariable Long id) {
-        spaceService.changeStatus(id, SpaceStatus.MAINTENANCE);
+        placeService.changeStatus(id, PlaceStatus.MAINTENANCE);
         return Result.success();
     }
 
@@ -151,60 +151,60 @@ public class SpaceController {
 
     @PostMapping("/{id}/check-in")
     @Operation(summary = "入住")
-    @PreAuthorize("hasAuthority('space:occupant:manage')")
+    @CasbinAccess(resource = "place", action = "occupancy")
     public Result<Long> checkIn(
             @PathVariable Long id,
             @Valid @RequestBody CheckInRequest request) {
         CheckInCommand command = new CheckInCommand();
-        command.setSpaceId(id);
+        command.setPlaceId(id);
         command.setOccupantType(request.getOccupantType());
         command.setOccupantId(request.getOccupantId());
         command.setPositionNo(request.getPositionNo());
         command.setRemark(request.getRemark());
 
-        Long occupantRecordId = spaceService.checkIn(command);
+        Long occupantRecordId = placeService.checkIn(command);
         return Result.success(occupantRecordId);
     }
 
-    @PostMapping("/{spaceId}/check-out/{occupantRecordId}")
+    @PostMapping("/{placeId}/check-out/{occupantRecordId}")
     @Operation(summary = "退出")
-    @PreAuthorize("hasAuthority('space:occupant:manage')")
+    @CasbinAccess(resource = "place", action = "occupancy")
     public Result<Void> checkOut(
-            @PathVariable Long spaceId,
+            @PathVariable Long placeId,
             @PathVariable Long occupantRecordId) {
-        spaceService.checkOut(spaceId, occupantRecordId);
+        placeService.checkOut(placeId, occupantRecordId);
         return Result.success();
     }
 
     @GetMapping("/{id}/occupants")
     @Operation(summary = "获取场所占用者列表")
-    @PreAuthorize("hasAuthority('space:view')")
-    public Result<List<SpaceOccupantDTO>> getOccupants(@PathVariable Long id) {
-        return Result.success(spaceService.getOccupants(id));
+    @CasbinAccess(resource = "place", action = "view")
+    public Result<List<PlaceOccupantDTO>> getOccupants(@PathVariable Long id) {
+        return Result.success(placeService.getOccupants(id));
     }
 
     @GetMapping("/{id}/occupant-history")
     @Operation(summary = "获取场所占用历史")
-    @PreAuthorize("hasAuthority('space:view')")
-    public Result<List<SpaceOccupantDTO>> getOccupantHistory(@PathVariable Long id) {
-        return Result.success(spaceService.getOccupantHistory(id));
+    @CasbinAccess(resource = "place", action = "view")
+    public Result<List<PlaceOccupantDTO>> getOccupantHistory(@PathVariable Long id) {
+        return Result.success(placeService.getOccupantHistory(id));
     }
 
     // ========== 批量操作 ==========
 
     @PostMapping("/batch/assign-org-unit")
     @Operation(summary = "批量分配组织单元")
-    @PreAuthorize("hasAuthority('space:update')")
+    @CasbinAccess(resource = "place", action = "edit")
     public Result<Void> batchAssignOrgUnit(@Valid @RequestBody BatchAssignOrgUnitRequest request) {
-        spaceService.batchAssignOrgUnit(request.getSpaceIds(), request.getOrgUnitId());
+        placeService.batchAssignOrgUnit(request.getPlaceIds(), request.getOrgUnitId());
         return Result.success();
     }
 
     @PostMapping("/batch/assign-class")
     @Operation(summary = "批量分配班级")
-    @PreAuthorize("hasAuthority('space:update')")
+    @CasbinAccess(resource = "place", action = "edit")
     public Result<Void> batchAssignClass(@Valid @RequestBody BatchAssignClassRequest request) {
-        spaceService.batchAssignClass(request.getSpaceIds(), request.getClassId());
+        placeService.batchAssignClass(request.getPlaceIds(), request.getClassId());
         return Result.success();
     }
 
@@ -212,29 +212,29 @@ public class SpaceController {
 
     @PutMapping("/{id}/class")
     @Operation(summary = "设置场所归属班级")
-    @PreAuthorize("hasAuthority('space:update')")
+    @CasbinAccess(resource = "place", action = "edit")
     public Result<Void> assignClass(
             @PathVariable Long id,
             @RequestParam Long classId) {
-        spaceService.batchAssignClass(List.of(id), classId);
+        placeService.batchAssignClass(List.of(id), classId);
         return Result.success();
     }
 
     @DeleteMapping("/{id}/class")
     @Operation(summary = "取消场所班级分配")
-    @PreAuthorize("hasAuthority('space:update')")
+    @CasbinAccess(resource = "place", action = "edit")
     public Result<Void> unassignClass(@PathVariable Long id) {
-        spaceService.unassignClass(id);
+        placeService.unassignClass(id);
         return Result.success();
     }
 
     @PutMapping("/{id}/gender-type")
     @Operation(summary = "设置性别限制")
-    @PreAuthorize("hasAuthority('space:update')")
+    @CasbinAccess(resource = "place", action = "edit")
     public Result<Void> setGenderType(
             @PathVariable Long id,
             @RequestParam Integer genderType) {
-        spaceService.setGenderRestriction(id, genderType);
+        placeService.setGenderRestriction(id, genderType);
         return Result.success();
     }
 
@@ -242,57 +242,57 @@ public class SpaceController {
 
     @GetMapping("/tree")
     @Operation(summary = "获取场所树", description = "获取完整的场所树结构，可按楼宇类型筛选")
-    @PreAuthorize("hasAuthority('space:view')")
-    public Result<List<SpaceDTO>> getTree(
+    @CasbinAccess(resource = "place", action = "view")
+    public Result<List<PlaceDTO>> getTree(
             @Parameter(description = "楼宇类型筛选")
             @RequestParam(required = false) BuildingType buildingType,
             @Parameter(description = "是否包含统计信息")
             @RequestParam(defaultValue = "false") boolean includeStatistics) {
-        return Result.success(spaceService.getTree(buildingType, includeStatistics));
+        return Result.success(placeService.getTree(buildingType, includeStatistics));
     }
 
     @GetMapping("/{id}/children")
     @Operation(summary = "获取子节点")
-    @PreAuthorize("hasAuthority('space:view')")
-    public Result<List<SpaceDTO>> getChildren(@PathVariable Long id) {
-        return Result.success(spaceService.getChildren(id));
+    @CasbinAccess(resource = "place", action = "view")
+    public Result<List<PlaceDTO>> getChildren(@PathVariable Long id) {
+        return Result.success(placeService.getChildren(id));
     }
 
     @GetMapping("/{id}/ancestors")
     @Operation(summary = "获取祖先链")
-    @PreAuthorize("hasAuthority('space:view')")
-    public Result<List<SpaceDTO>> getAncestors(@PathVariable Long id) {
-        return Result.success(spaceService.getAncestors(id));
+    @CasbinAccess(resource = "place", action = "view")
+    public Result<List<PlaceDTO>> getAncestors(@PathVariable Long id) {
+        return Result.success(placeService.getAncestors(id));
     }
 
     // ========== 列表查询 ==========
 
     @GetMapping("/buildings")
     @Operation(summary = "获取楼宇列表")
-    @PreAuthorize("hasAuthority('space:view')")
-    public Result<List<SpaceDTO>> getBuildings(
+    @CasbinAccess(resource = "place", action = "view")
+    public Result<List<PlaceDTO>> getBuildings(
             @RequestParam(required = false) BuildingType buildingType,
-            @RequestParam(required = false) SpaceStatus status) {
-        return Result.success(spaceService.getBuildings(buildingType, status));
+            @RequestParam(required = false) PlaceStatus status) {
+        return Result.success(placeService.getBuildings(buildingType, status));
     }
 
     @GetMapping
     @Operation(summary = "分页查询场所")
-    @PreAuthorize("hasAuthority('space:view')")
+    @CasbinAccess(resource = "place", action = "view")
     public Result<Map<String, Object>> query(
-            @RequestParam(required = false) SpaceType spaceType,
+            @RequestParam(required = false) PlaceType placeType,
             @RequestParam(required = false) RoomType roomType,
             @RequestParam(required = false) BuildingType buildingType,
             @RequestParam(required = false) Long buildingId,
             @RequestParam(required = false) Integer floorNumber,
             @RequestParam(required = false) Long orgUnitId,
-            @RequestParam(required = false) SpaceStatus status,
+            @RequestParam(required = false) PlaceStatus status,
             @RequestParam(required = false) String keyword,
             @RequestParam(defaultValue = "1") int page,
             @RequestParam(defaultValue = "20") int pageSize) {
 
-        SpaceQueryCriteria criteria = new SpaceQueryCriteria();
-        criteria.setSpaceType(spaceType);
+        PlaceQueryCriteria criteria = new PlaceQueryCriteria();
+        criteria.setPlaceType(placeType);
         criteria.setRoomType(roomType);
         criteria.setBuildingType(buildingType);
         criteria.setBuildingId(buildingId);
@@ -303,8 +303,8 @@ public class SpaceController {
         criteria.setPage(page);
         criteria.setPageSize(pageSize);
 
-        List<SpaceDTO> list = spaceService.query(criteria);
-        long total = spaceService.count(criteria);
+        List<PlaceDTO> list = placeService.query(criteria);
+        long total = placeService.count(criteria);
 
         Map<String, Object> result = new HashMap<>();
         result.put("list", list);
@@ -317,11 +317,11 @@ public class SpaceController {
 
     // ========== 枚举查询 ==========
 
-    @GetMapping("/enums/space-types")
+    @GetMapping("/enums/place-types")
     @Operation(summary = "获取场所类型枚举")
-    public Result<List<Map<String, Object>>> getSpaceTypes() {
+    public Result<List<Map<String, Object>>> getPlaceTypes() {
         List<Map<String, Object>> types = new java.util.ArrayList<>();
-        for (SpaceType type : SpaceType.values()) {
+        for (PlaceType type : PlaceType.values()) {
             Map<String, Object> item = new HashMap<>();
             item.put("code", type.name());
             item.put("name", type.getDescription());
@@ -363,7 +363,7 @@ public class SpaceController {
     @Operation(summary = "获取场所状态枚举")
     public Result<List<Map<String, Object>>> getStatuses() {
         List<Map<String, Object>> statuses = new java.util.ArrayList<>();
-        for (SpaceStatus status : SpaceStatus.values()) {
+        for (PlaceStatus status : PlaceStatus.values()) {
             Map<String, Object> item = new HashMap<>();
             item.put("code", status.getCode());
             item.put("name", status.getDescription());

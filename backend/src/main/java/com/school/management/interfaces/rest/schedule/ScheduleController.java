@@ -7,13 +7,13 @@ import com.school.management.application.schedule.command.UpdatePolicyCommand;
 import com.school.management.common.result.Result;
 import com.school.management.domain.schedule.model.ScheduleExecution;
 import com.school.management.domain.schedule.model.SchedulePolicy;
-import com.school.management.security.JwtTokenService;
+import com.school.management.common.util.SecurityUtils;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.format.annotation.DateTimeFormat;
-import org.springframework.security.access.prepost.PreAuthorize;
+import com.school.management.infrastructure.casbin.CasbinAccess;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDate;
@@ -28,11 +28,10 @@ public class ScheduleController {
 
     private final ScheduleApplicationService scheduleService;
     private final ScheduleExecutionEngine executionEngine;
-    private final JwtTokenService jwtTokenService;
 
     @PostMapping("/policies")
     @Operation(summary = "创建排班策略")
-    @PreAuthorize("hasAuthority('schedule:policy:manage')")
+    @CasbinAccess(resource = "schedule:policy", action = "manage")
     public Result<PolicyResponse> createPolicy(@Valid @RequestBody CreatePolicyRequest request) {
         CreatePolicyCommand command = CreatePolicyCommand.builder()
             .policyName(request.getPolicyName())
@@ -42,7 +41,7 @@ public class ScheduleController {
             .inspectorPool(request.getInspectorPool())
             .scheduleConfig(request.getScheduleConfig())
             .excludedDates(request.getExcludedDates())
-            .createdBy(getCurrentUserId())
+            .createdBy(SecurityUtils.requireCurrentUserId())
             .build();
         SchedulePolicy policy = scheduleService.createPolicy(command);
         return Result.success(PolicyResponse.fromDomain(policy));
@@ -50,7 +49,7 @@ public class ScheduleController {
 
     @PutMapping("/policies/{id}")
     @Operation(summary = "更新排班策略")
-    @PreAuthorize("hasAuthority('schedule:policy:manage')")
+    @CasbinAccess(resource = "schedule:policy", action = "manage")
     public Result<PolicyResponse> updatePolicy(@PathVariable Long id, @Valid @RequestBody CreatePolicyRequest request) {
         UpdatePolicyCommand command = UpdatePolicyCommand.builder()
             .policyId(id)
@@ -66,7 +65,7 @@ public class ScheduleController {
 
     @GetMapping("/policies")
     @Operation(summary = "获取排班策略列表")
-    @PreAuthorize("hasAuthority('schedule:policy:view')")
+    @CasbinAccess(resource = "schedule:policy", action = "view")
     public Result<List<PolicyResponse>> listPolicies() {
         List<SchedulePolicy> policies = scheduleService.listPolicies();
         return Result.success(policies.stream().map(PolicyResponse::fromDomain).collect(Collectors.toList()));
@@ -74,7 +73,7 @@ public class ScheduleController {
 
     @GetMapping("/policies/{id}")
     @Operation(summary = "获取排班策略详情")
-    @PreAuthorize("hasAuthority('schedule:policy:view')")
+    @CasbinAccess(resource = "schedule:policy", action = "view")
     public Result<PolicyResponse> getPolicy(@PathVariable Long id) {
         SchedulePolicy policy = scheduleService.getPolicy(id);
         return Result.success(PolicyResponse.fromDomain(policy));
@@ -82,7 +81,7 @@ public class ScheduleController {
 
     @PutMapping("/policies/{id}/enable")
     @Operation(summary = "启用排班策略")
-    @PreAuthorize("hasAuthority('schedule:policy:manage')")
+    @CasbinAccess(resource = "schedule:policy", action = "manage")
     public Result<Void> enablePolicy(@PathVariable Long id) {
         scheduleService.enablePolicy(id);
         return Result.success(null);
@@ -90,7 +89,7 @@ public class ScheduleController {
 
     @PutMapping("/policies/{id}/disable")
     @Operation(summary = "禁用排班策略")
-    @PreAuthorize("hasAuthority('schedule:policy:manage')")
+    @CasbinAccess(resource = "schedule:policy", action = "manage")
     public Result<Void> disablePolicy(@PathVariable Long id) {
         scheduleService.disablePolicy(id);
         return Result.success(null);
@@ -98,7 +97,7 @@ public class ScheduleController {
 
     @DeleteMapping("/policies/{id}")
     @Operation(summary = "删除排班策略")
-    @PreAuthorize("hasAuthority('schedule:policy:manage')")
+    @CasbinAccess(resource = "schedule:policy", action = "manage")
     public Result<Void> deletePolicy(@PathVariable Long id) {
         scheduleService.deletePolicy(id);
         return Result.success(null);
@@ -106,7 +105,7 @@ public class ScheduleController {
 
     @GetMapping("/executions")
     @Operation(summary = "获取排班执行记录")
-    @PreAuthorize("hasAuthority('schedule:policy:view')")
+    @CasbinAccess(resource = "schedule:policy", action = "view")
     public Result<List<ExecutionResponse>> listExecutions(
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate) {
@@ -116,7 +115,7 @@ public class ScheduleController {
 
     @PostMapping("/executions/trigger")
     @Operation(summary = "手动触发排班执行")
-    @PreAuthorize("hasAuthority('schedule:policy:manage')")
+    @CasbinAccess(resource = "schedule:policy", action = "manage")
     public Result<ExecutionResponse> triggerExecution(
             @RequestParam Long policyId,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date) {
@@ -124,7 +123,4 @@ public class ScheduleController {
         return Result.success(ExecutionResponse.fromDomain(execution));
     }
 
-    private Long getCurrentUserId() {
-        return jwtTokenService.getCurrentUserId();
-    }
 }

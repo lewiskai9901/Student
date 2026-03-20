@@ -19,9 +19,6 @@ public interface InspProjectMapper extends BaseMapper<InspProjectPO> {
     @Select("SELECT * FROM insp_projects WHERE template_id = #{templateId} AND deleted = 0")
     List<InspProjectPO> findByTemplateId(@Param("templateId") Long templateId);
 
-    @Select("SELECT * FROM insp_projects WHERE parent_project_id = #{parentProjectId} AND deleted = 0")
-    List<InspProjectPO> findByParentProjectId(@Param("parentProjectId") Long parentProjectId);
-
     @Select("SELECT * FROM insp_projects WHERE deleted = 0 ORDER BY created_at DESC")
     List<InspProjectPO> findAll();
 }

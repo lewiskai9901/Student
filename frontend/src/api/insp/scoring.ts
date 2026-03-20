@@ -32,8 +32,13 @@ export function getProfile(id: number): Promise<ScoringProfile> {
   return http.get<ScoringProfile>(`${BASE}/${id}`)
 }
 
+export function getProfileBySection(sectionId: number): Promise<ScoringProfile> {
+  return http.get<ScoringProfile>(`${BASE}/by-section/${sectionId}`)
+}
+
+/** @deprecated Use getProfileBySection instead */
 export function getProfileByTemplate(templateId: number): Promise<ScoringProfile> {
-  return http.get<ScoringProfile>(`${BASE}/by-template/${templateId}`)
+  return http.get<ScoringProfile>(`${BASE}/by-section/${templateId}`)
 }
 
 export function createProfile(data: CreateProfileRequest): Promise<ScoringProfile> {
@@ -129,7 +134,8 @@ export function getVersion(profileId: number, version: number): Promise<ScoringP
 export const scoringProfileApi = {
   getList: getProfiles,
   getById: getProfile,
-  getByTemplate: getProfileByTemplate,
+  getBySection: getProfileBySection,
+  getByTemplate: getProfileByTemplate, // @deprecated
   create: createProfile,
   update: updateProfile,
   updateAdvanced: updateAdvancedSettings,

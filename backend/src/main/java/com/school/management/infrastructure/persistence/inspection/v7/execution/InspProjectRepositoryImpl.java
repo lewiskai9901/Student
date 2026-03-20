@@ -45,13 +45,9 @@ public class InspProjectRepositoryImpl implements InspProjectRepository {
     }
 
     @Override
-    public List<InspProject> findByTemplateId(Long templateId) {
-        return mapper.findByTemplateId(templateId).stream().map(this::toDomain).collect(Collectors.toList());
-    }
-
-    @Override
-    public List<InspProject> findByParentProjectId(Long parentProjectId) {
-        return mapper.findByParentProjectId(parentProjectId).stream().map(this::toDomain).collect(Collectors.toList());
+    public List<InspProject> findByRootSectionId(Long rootSectionId) {
+        // DB column is still template_id
+        return mapper.findByTemplateId(rootSectionId).stream().map(this::toDomain).collect(Collectors.toList());
     }
 
     @Override
@@ -68,26 +64,29 @@ public class InspProjectRepositoryImpl implements InspProjectRepository {
         InspProjectPO po = new InspProjectPO();
         po.setId(d.getId());
         po.setTenantId(d.getTenantId() != null ? d.getTenantId() : 0L);
-        po.setParentProjectId(d.getParentProjectId());
         po.setProjectCode(d.getProjectCode());
         po.setProjectName(d.getProjectName());
-        po.setTemplateId(d.getTemplateId());
+        po.setTemplateId(d.getRootSectionId());    // domain rootSectionId → PO templateId
         po.setTemplateVersionId(d.getTemplateVersionId());
         po.setScoringProfileId(d.getScoringProfileId());
         po.setScopeType(d.getScopeType() != null ? d.getScopeType().name() : null);
         po.setScopeConfig(d.getScopeConfig());
-        po.setTargetType(d.getTargetType() != null ? d.getTargetType().name() : null);
         po.setStartDate(d.getStartDate());
         po.setEndDate(d.getEndDate());
-        po.setCycleType(d.getCycleType() != null ? d.getCycleType().name() : null);
-        po.setCycleConfig(d.getCycleConfig());
-        po.setTimeSlots(d.getTimeSlots());
-        po.setSkipHolidays(d.getSkipHolidays());
-        po.setHolidayCalendarId(d.getHolidayCalendarId());
-        po.setExcludedDates(d.getExcludedDates());
         po.setAssignmentMode(d.getAssignmentMode() != null ? d.getAssignmentMode().name() : null);
         po.setReviewRequired(d.getReviewRequired());
         po.setAutoPublish(d.getAutoPublish());
+        po.setEvaluationMode(d.getEvaluationMode());
+        po.setMultiRaterMode(d.getMultiRaterMode());
+        po.setRaterWeightBy(d.getRaterWeightBy());
+        po.setConsensusThreshold(d.getConsensusThreshold());
+        po.setTrendEnabled(d.getTrendEnabled());
+        po.setTrendLookbackDays(d.getTrendLookbackDays());
+        po.setDecayEnabled(d.getDecayEnabled());
+        po.setDecayMode(d.getDecayMode());
+        po.setCalibrationEnabled(d.getCalibrationEnabled());
+        po.setCalibrationMethod(d.getCalibrationMethod());
+        po.setSplitStrategy(d.getSplitStrategy());
         po.setStatus(d.getStatus() != null ? d.getStatus().name() : null);
         po.setCreatedBy(d.getCreatedBy());
         po.setCreatedAt(d.getCreatedAt());
@@ -100,26 +99,29 @@ public class InspProjectRepositoryImpl implements InspProjectRepository {
         return InspProject.reconstruct(InspProject.builder()
                 .id(po.getId())
                 .tenantId(po.getTenantId())
-                .parentProjectId(po.getParentProjectId())
                 .projectCode(po.getProjectCode())
                 .projectName(po.getProjectName())
-                .templateId(po.getTemplateId())
+                .rootSectionId(po.getTemplateId())    // PO templateId → domain rootSectionId
                 .templateVersionId(po.getTemplateVersionId())
                 .scoringProfileId(po.getScoringProfileId())
                 .scopeType(po.getScopeType() != null ? ScopeType.valueOf(po.getScopeType()) : null)
                 .scopeConfig(po.getScopeConfig())
-                .targetType(po.getTargetType() != null ? TargetType.valueOf(po.getTargetType()) : null)
                 .startDate(po.getStartDate())
                 .endDate(po.getEndDate())
-                .cycleType(po.getCycleType() != null ? CycleType.valueOf(po.getCycleType()) : null)
-                .cycleConfig(po.getCycleConfig())
-                .timeSlots(po.getTimeSlots())
-                .skipHolidays(po.getSkipHolidays())
-                .holidayCalendarId(po.getHolidayCalendarId())
-                .excludedDates(po.getExcludedDates())
                 .assignmentMode(po.getAssignmentMode() != null ? AssignmentMode.valueOf(po.getAssignmentMode()) : null)
                 .reviewRequired(po.getReviewRequired())
                 .autoPublish(po.getAutoPublish())
+                .evaluationMode(po.getEvaluationMode())
+                .multiRaterMode(po.getMultiRaterMode())
+                .raterWeightBy(po.getRaterWeightBy())
+                .consensusThreshold(po.getConsensusThreshold())
+                .trendEnabled(po.getTrendEnabled())
+                .trendLookbackDays(po.getTrendLookbackDays())
+                .decayEnabled(po.getDecayEnabled())
+                .decayMode(po.getDecayMode())
+                .calibrationEnabled(po.getCalibrationEnabled())
+                .calibrationMethod(po.getCalibrationMethod())
+                .splitStrategy(po.getSplitStrategy())
                 .status(po.getStatus() != null ? ProjectStatus.valueOf(po.getStatus()) : null)
                 .createdBy(po.getCreatedBy())
                 .createdAt(po.getCreatedAt())

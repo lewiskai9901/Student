@@ -1,4 +1,4 @@
-package com.school.management.application.space.command;
+package com.school.management.application.place.command;
 
 import lombok.Data;
 
@@ -6,7 +6,7 @@ import lombok.Data;
  * 更新空间分类命令
  */
 @Data
-public class UpdateSpaceCategoryCommand {
+public class UpdatePlaceCategoryCommand {
     private Long id;
     private String categoryName;
     private String icon;

@@ -1,52 +1,49 @@
 package com.school.management.application.inspection.v7;
 
 import com.school.management.domain.inspection.model.v7.execution.*;
-import com.school.management.domain.inspection.model.v7.template.InspTemplate;
-import com.school.management.domain.inspection.model.v7.template.TemplateModuleRef;
 import com.school.management.domain.inspection.repository.v7.InspProjectRepository;
-import com.school.management.domain.inspection.repository.v7.InspTemplateRepository;
 import com.school.management.domain.inspection.repository.v7.ProjectInspectorRepository;
 import com.school.management.domain.inspection.repository.v7.ProjectScoreRepository;
-import com.school.management.domain.inspection.repository.v7.TemplateModuleRefRepository;
 import com.school.management.infrastructure.event.SpringDomainEventPublisher;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.ThreadLocalRandom;
 
 @Slf4j
-@RequiredArgsConstructor
 @Service
 public class InspProjectApplicationService {
 
     private final InspProjectRepository projectRepository;
     private final ProjectInspectorRepository inspectorRepository;
-    private final InspTemplateRepository templateRepository;
-    private final TemplateModuleRefRepository moduleRefRepository;
     private final ProjectScoreRepository scoreRepository;
     private final SpringDomainEventPublisher eventPublisher;
+
+    public InspProjectApplicationService(InspProjectRepository projectRepository,
+                                          ProjectInspectorRepository inspectorRepository,
+                                          ProjectScoreRepository scoreRepository,
+                                          SpringDomainEventPublisher eventPublisher) {
+        this.projectRepository = projectRepository;
+        this.inspectorRepository = inspectorRepository;
+        this.scoreRepository = scoreRepository;
+        this.eventPublisher = eventPublisher;
+    }
 
     // ========== Project CRUD ==========
 
     @Transactional
-    public InspProject createProject(String projectName, Long templateId,
+    public InspProject createProject(String projectName, Long rootSectionId,
                                      LocalDate startDate, Long createdBy) {
         String projectCode = generateProjectCode();
-        InspProject project = InspProject.create(projectCode, projectName, templateId, startDate, createdBy);
-        InspProject saved = projectRepository.save(project);
-
-        // 展开模块引用为子项目
-        expandModuleRefsToChildProjects(saved, createdBy);
-
-        return saved;
+        InspProject project = InspProject.create(projectCode, projectName, rootSectionId, startDate, createdBy);
+        return projectRepository.save(project);
     }
 
     @Transactional(readOnly = true)
@@ -65,32 +62,32 @@ public class InspProjectApplicationService {
     }
 
     @Transactional
-    public InspProject updateProject(Long id, String projectName, Long templateId,
+    public InspProject updateProject(Long id, String projectName, Long rootSectionId,
                                      Long scoringProfileId, ScopeType scopeType,
-                                     String scopeConfig, TargetType targetType,
+                                     String scopeConfig,
                                      LocalDate startDate, LocalDate endDate,
-                                     CycleType cycleType, String cycleConfig,
-                                     String timeSlots, Boolean skipHolidays,
-                                     Long holidayCalendarId, String excludedDates,
                                      AssignmentMode assignmentMode, Boolean reviewRequired,
                                      Boolean autoPublish, Long updatedBy) {
         InspProject project = projectRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("项目不存在: " + id));
-        project.updateInfo(projectName, templateId, scoringProfileId,
-                scopeType, scopeConfig, targetType, startDate, endDate,
-                cycleType, cycleConfig, timeSlots, skipHolidays,
-                holidayCalendarId, excludedDates, assignmentMode,
-                reviewRequired, autoPublish, updatedBy);
+        project.updateInfo(projectName, rootSectionId, scoringProfileId,
+                scopeType, scopeConfig, startDate, endDate,
+                assignmentMode, reviewRequired, autoPublish, updatedBy);
+        return projectRepository.save(project);
+    }
+
+    @Transactional
+    public InspProject updateOperationalConfig(Long id, AssignmentMode assignmentMode,
+                                                Boolean reviewRequired, Boolean autoPublish,
+                                                String projectName, Long updatedBy) {
+        InspProject project = projectRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("项目不存在: " + id));
+        project.updateOperationalConfig(assignmentMode, reviewRequired, autoPublish, projectName, updatedBy);
         return projectRepository.save(project);
     }
 
     @Transactional
     public void deleteProject(Long id) {
-        // 递归删除子项目
-        List<InspProject> children = projectRepository.findByParentProjectId(id);
-        for (InspProject child : children) {
-            deleteProject(child.getId());
-        }
         scoreRepository.deleteByProjectId(id);
         inspectorRepository.deleteByProjectId(id);
         projectRepository.deleteById(id);
@@ -102,10 +99,22 @@ public class InspProjectApplicationService {
     public InspProject publishProject(Long id, Long templateVersionId) {
         InspProject project = projectRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("项目不存在: " + id));
+
+        // 发布前校验
+        if (project.getScopeConfig() == null || project.getScopeConfig().isBlank()
+                || "[]".equals(project.getScopeConfig().trim())) {
+            throw new IllegalStateException("请先配置检查范围，否则无法确定检查目标");
+        }
+        if (project.getStartDate() == null) {
+            throw new IllegalStateException("请先设置开始日期");
+        }
+
         project.publish(templateVersionId);
         InspProject saved = projectRepository.save(project);
         eventPublisher.publishAll(saved.getDomainEvents());
         saved.clearDomainEvents();
+
+        log.info("项目 {} 已发布", saved.getProjectCode());
         return saved;
     }
 
@@ -169,67 +178,11 @@ public class InspProjectApplicationService {
         inspectorRepository.deleteById(inspectorId);
     }
 
-    // ========== Child Projects ==========
-
-    @Transactional(readOnly = true)
-    public List<InspProject> listChildProjects(Long parentProjectId) {
-        return projectRepository.findByParentProjectId(parentProjectId);
-    }
+    // ========== Scores ==========
 
     @Transactional(readOnly = true)
     public List<ProjectScore> listProjectScores(Long projectId) {
         return scoreRepository.findByProjectId(projectId);
-    }
-
-    // ========== Internal ==========
-
-    /**
-     * 展开组合模板的模块引用为子项目（递归）
-     */
-    private void expandModuleRefsToChildProjects(InspProject parentProject, Long createdBy) {
-        List<TemplateModuleRef> moduleRefs = moduleRefRepository.findByCompositeTemplateId(parentProject.getTemplateId());
-        if (moduleRefs.isEmpty()) {
-            return;
-        }
-
-        for (TemplateModuleRef ref : moduleRefs) {
-            InspTemplate moduleTemplate = templateRepository.findById(ref.getModuleTemplateId())
-                    .orElse(null);
-            if (moduleTemplate == null) {
-                log.warn("模块模板不存在: {}, 跳过", ref.getModuleTemplateId());
-                continue;
-            }
-
-            String childCode = generateProjectCode();
-            String childName = parentProject.getProjectName() + " - " + moduleTemplate.getTemplateName();
-
-            InspProject childProject = InspProject.reconstruct(InspProject.builder()
-                    .projectCode(childCode)
-                    .projectName(childName)
-                    .parentProjectId(parentProject.getId())
-                    .templateId(ref.getModuleTemplateId())
-                    .startDate(parentProject.getStartDate())
-                    .endDate(parentProject.getEndDate())
-                    .scopeType(parentProject.getScopeType())
-                    .scopeConfig(parentProject.getScopeConfig())
-                    .targetType(moduleTemplate.getTargetType())
-                    .cycleType(parentProject.getCycleType())
-                    .cycleConfig(parentProject.getCycleConfig())
-                    .timeSlots(parentProject.getTimeSlots())
-                    .skipHolidays(parentProject.getSkipHolidays())
-                    .holidayCalendarId(parentProject.getHolidayCalendarId())
-                    .excludedDates(parentProject.getExcludedDates())
-                    .assignmentMode(parentProject.getAssignmentMode())
-                    .reviewRequired(parentProject.getReviewRequired())
-                    .autoPublish(parentProject.getAutoPublish())
-                    .status(ProjectStatus.DRAFT)
-                    .createdBy(createdBy));
-
-            InspProject savedChild = projectRepository.save(childProject);
-
-            // 递归展开子模板的模块引用
-            expandModuleRefsToChildProjects(savedChild, createdBy);
-        }
     }
 
     private String generateProjectCode() {

@@ -1,4 +1,4 @@
-package com.school.management.infrastructure.persistence.space;
+package com.school.management.infrastructure.persistence.place;
 
 import com.baomidou.mybatisplus.annotation.*;
 import lombok.Data;
@@ -9,13 +9,13 @@ import java.time.LocalDateTime;
  * 场所-班级分配持久化对象
  */
 @Data
-@TableName("space_class_assignment")
-public class SpaceClassAssignmentPO {
+@TableName("place_class_assignment")
+public class PlaceClassAssignmentPO {
 
     @TableId(type = IdType.AUTO)
     private Long id;
 
-    private Long spaceId;
+    private Long placeId;
     private Long classId;
     private Long orgUnitId;
     private Integer assignedBeds;
@@ -29,13 +29,13 @@ public class SpaceClassAssignmentPO {
 
     // 关联查询字段（非数据库字段）
     @TableField(exist = false)
-    private String spaceName;
+    private String placeName;
     @TableField(exist = false)
-    private String spaceCode;
+    private String placeCode;
     @TableField(exist = false)
-    private String spaceType;
+    private String placeType;
     @TableField(exist = false)
-    private Integer spaceCapacity;
+    private Integer placeCapacity;
     @TableField(exist = false)
     private String className;
     @TableField(exist = false)

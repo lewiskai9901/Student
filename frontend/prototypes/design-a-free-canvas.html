@@ -1,0 +1,517 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>方案A：自由画布 - 排座与平面图</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: -apple-system, 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif; background: #f5f7fa; color: #1f2937; }
+
+  .app { display: flex; height: 100vh; }
+
+  /* Left Toolbar */
+  .toolbar {
+    width: 52px; background: #1e293b; display: flex; flex-direction: column; align-items: center;
+    padding: 12px 0; gap: 4px; flex-shrink: 0;
+  }
+  .toolbar .brand { color: #94a3b8; font-size: 10px; margin-bottom: 8px; letter-spacing: 1px; }
+  .tool-btn {
+    width: 40px; height: 40px; border: none; background: transparent; color: #94a3b8;
+    border-radius: 8px; cursor: pointer; display: flex; align-items: center; justify-content: center;
+    font-size: 18px; transition: all .15s; position: relative;
+  }
+  .tool-btn:hover { background: #334155; color: #e2e8f0; }
+  .tool-btn.active { background: #3b82f6; color: #fff; }
+  .tool-btn .tooltip {
+    display: none; position: absolute; left: 52px; top: 50%; transform: translateY(-50%);
+    background: #1e293b; color: #e2e8f0; padding: 4px 10px; border-radius: 6px;
+    font-size: 12px; white-space: nowrap; z-index: 100; pointer-events: none;
+  }
+  .tool-btn:hover .tooltip { display: block; }
+  .tool-divider { width: 28px; height: 1px; background: #334155; margin: 4px 0; }
+
+  /* Left Panel */
+  .left-panel {
+    width: 220px; background: #fff; border-right: 1px solid #e5e7eb;
+    display: flex; flex-direction: column; flex-shrink: 0;
+  }
+  .panel-header {
+    padding: 14px 16px 10px; border-bottom: 1px solid #f3f4f6;
+    font-size: 13px; font-weight: 600; color: #374151;
+  }
+  .element-list { flex: 1; overflow-y: auto; padding: 8px; }
+  .element-item {
+    display: flex; align-items: center; gap: 8px; padding: 8px 10px;
+    border-radius: 6px; cursor: pointer; font-size: 12px; transition: background .1s;
+  }
+  .element-item:hover { background: #f3f4f6; }
+  .element-item.selected { background: #eff6ff; color: #1d4ed8; }
+  .element-item .icon { width: 24px; height: 24px; border-radius: 4px; display: flex; align-items: center; justify-content: center; font-size: 13px; flex-shrink: 0; }
+  .element-item .icon.seat { background: #dbeafe; color: #2563eb; }
+  .element-item .icon.desk { background: #fef3c7; color: #d97706; }
+  .element-item .icon.wall { background: #e5e7eb; color: #6b7280; }
+  .element-item .icon.door { background: #d1fae5; color: #059669; }
+  .element-item .label { flex: 1; }
+  .element-item .sublabel { color: #9ca3af; font-size: 11px; }
+
+  /* Canvas Area */
+  .canvas-area {
+    flex: 1; display: flex; flex-direction: column; min-width: 0;
+  }
+  .canvas-topbar {
+    height: 44px; background: #fff; border-bottom: 1px solid #e5e7eb;
+    display: flex; align-items: center; padding: 0 16px; gap: 12px; flex-shrink: 0;
+  }
+  .canvas-topbar .room-name { font-size: 14px; font-weight: 600; }
+  .canvas-topbar .room-info { font-size: 12px; color: #6b7280; }
+  .canvas-topbar .spacer { flex: 1; }
+  .zoom-controls { display: flex; align-items: center; gap: 4px; }
+  .zoom-btn {
+    width: 28px; height: 28px; border: 1px solid #d1d5db; background: #fff; border-radius: 6px;
+    cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 14px;
+    color: #374151;
+  }
+  .zoom-btn:hover { background: #f9fafb; }
+  .zoom-label { font-size: 12px; color: #6b7280; min-width: 40px; text-align: center; }
+
+  .canvas-wrapper {
+    flex: 1; overflow: hidden; background: #f0f2f5; position: relative;
+    background-image: radial-gradient(circle, #d1d5db 1px, transparent 1px);
+    background-size: 20px 20px;
+  }
+  .canvas-svg {
+    width: 100%; height: 100%;
+  }
+
+  /* Elements on canvas */
+  .cv-seat {
+    cursor: pointer; transition: filter .1s;
+  }
+  .cv-seat:hover { filter: brightness(0.95); }
+  .cv-seat.occupied .seat-body { fill: #dbeafe; stroke: #93c5fd; }
+  .cv-seat.empty .seat-body { fill: #fff; stroke: #d1d5db; stroke-dasharray: 4 2; }
+  .cv-seat .seat-label { font-size: 10px; fill: #6b7280; font-weight: 500; text-anchor: middle; }
+  .cv-seat.occupied .seat-name { font-size: 9px; fill: #1d4ed8; font-weight: 600; text-anchor: middle; }
+  .cv-desk { fill: #fef3c7; stroke: #f59e0b; stroke-width: 1.5; rx: 3; }
+  .cv-wall { fill: #9ca3af; stroke: #6b7280; stroke-width: 1; }
+  .cv-door { fill: #d1fae5; stroke: #10b981; stroke-width: 1.5; rx: 2; }
+  .cv-room-outline { fill: none; stroke: #374151; stroke-width: 2; }
+
+  /* Right Panel - Properties */
+  .right-panel {
+    width: 240px; background: #fff; border-left: 1px solid #e5e7eb;
+    display: flex; flex-direction: column; flex-shrink: 0;
+  }
+  .prop-section { padding: 12px 16px; border-bottom: 1px solid #f3f4f6; }
+  .prop-section .title { font-size: 11px; font-weight: 600; color: #9ca3af; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 10px; }
+  .prop-row { display: flex; align-items: center; margin-bottom: 8px; }
+  .prop-row .prop-label { width: 60px; font-size: 12px; color: #6b7280; flex-shrink: 0; }
+  .prop-row .prop-input {
+    flex: 1; height: 28px; border: 1px solid #e5e7eb; border-radius: 6px;
+    padding: 0 8px; font-size: 12px; outline: none;
+  }
+  .prop-row .prop-input:focus { border-color: #3b82f6; }
+  .prop-row .prop-value { font-size: 12px; color: #1f2937; }
+  .prop-xy { display: flex; gap: 8px; }
+  .prop-xy .xy-group { display: flex; align-items: center; gap: 4px; flex: 1; }
+  .prop-xy .xy-label { font-size: 11px; color: #9ca3af; font-weight: 500; }
+  .prop-xy .xy-input {
+    width: 100%; height: 28px; border: 1px solid #e5e7eb; border-radius: 6px;
+    padding: 0 6px; font-size: 12px; outline: none; text-align: center;
+  }
+
+  /* Occupant Section */
+  .occupant-card {
+    display: flex; align-items: center; gap: 8px; padding: 8px 10px;
+    border-radius: 6px; font-size: 12px; cursor: grab; transition: background .1s;
+  }
+  .occupant-card:hover { background: #f3f4f6; }
+  .occupant-card .avatar {
+    width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center;
+    justify-content: center; font-size: 11px; font-weight: 600; color: #fff; flex-shrink: 0;
+  }
+  .occupant-card .avatar.male { background: #60a5fa; }
+  .occupant-card .avatar.female { background: #f472b6; }
+  .occupant-card .name { font-weight: 500; }
+  .occupant-card .dept { color: #9ca3af; font-size: 11px; }
+  .occupant-card .pos { margin-left: auto; color: #6b7280; font-size: 11px; background: #f3f4f6; padding: 2px 6px; border-radius: 4px; }
+
+  /* Status bar */
+  .status-bar {
+    height: 32px; background: #fff; border-top: 1px solid #e5e7eb;
+    display: flex; align-items: center; padding: 0 16px; gap: 16px;
+    font-size: 11px; color: #6b7280;
+  }
+  .status-bar .stat { display: flex; align-items: center; gap: 4px; }
+  .status-bar .dot { width: 6px; height: 6px; border-radius: 50%; }
+  .status-bar .dot.blue { background: #3b82f6; }
+  .status-bar .dot.gray { background: #d1d5db; }
+  .status-bar .dot.yellow { background: #f59e0b; }
+
+  .action-bar {
+    padding: 12px 16px; border-top: 1px solid #f3f4f6;
+    display: flex; gap: 8px;
+  }
+  .btn {
+    flex: 1; height: 32px; border: none; border-radius: 6px; font-size: 12px;
+    cursor: pointer; font-weight: 500; transition: all .15s;
+  }
+  .btn-primary { background: #3b82f6; color: #fff; }
+  .btn-primary:hover { background: #2563eb; }
+  .btn-outline { background: #fff; color: #374151; border: 1px solid #d1d5db; }
+  .btn-outline:hover { background: #f9fafb; }
+</style>
+</head>
+<body>
+<div class="app">
+  <!-- Toolbar -->
+  <div class="toolbar">
+    <div class="brand">A</div>
+    <button class="tool-btn active" title="选择"><span>↖</span><span class="tooltip">选择 (V)</span></button>
+    <button class="tool-btn" title="座位"><span>◻</span><span class="tooltip">添加座位 (S)</span></button>
+    <button class="tool-btn" title="课桌"><span>▬</span><span class="tooltip">添加课桌 (D)</span></button>
+    <div class="tool-divider"></div>
+    <button class="tool-btn" title="墙体"><span>▮</span><span class="tooltip">画墙体 (W)</span></button>
+    <button class="tool-btn" title="门"><span>⊡</span><span class="tooltip">添加门 (G)</span></button>
+    <button class="tool-btn" title="文字"><span>T</span><span class="tooltip">文字标注 (T)</span></button>
+    <div class="tool-divider"></div>
+    <button class="tool-btn" title="背景"><span>🖼</span><span class="tooltip">上传底图</span></button>
+    <div style="flex:1"></div>
+    <button class="tool-btn" title="撤销"><span>↩</span><span class="tooltip">撤销 Ctrl+Z</span></button>
+    <button class="tool-btn" title="重做"><span>↪</span><span class="tooltip">重做 Ctrl+Y</span></button>
+  </div>
+
+  <!-- Left Panel - Elements -->
+  <div class="left-panel">
+    <div class="panel-header">图层元素</div>
+    <div class="element-list">
+      <div class="element-item">
+        <span class="icon wall">▮</span>
+        <span class="label">房间轮廓</span>
+        <span class="sublabel">矩形</span>
+      </div>
+      <div class="element-item">
+        <span class="icon door">⊡</span>
+        <span class="label">门</span>
+        <span class="sublabel">南侧</span>
+      </div>
+      <div class="element-item">
+        <span class="icon desk">▬</span>
+        <span class="label">讲台</span>
+        <span class="sublabel">120×60</span>
+      </div>
+      <div class="element-item selected">
+        <span class="icon seat">◻</span>
+        <span class="label">座位组 A</span>
+        <span class="sublabel">3×5 = 15</span>
+      </div>
+      <div class="element-item">
+        <span class="icon seat">◻</span>
+        <span class="label">座位组 B</span>
+        <span class="sublabel">3×5 = 15</span>
+      </div>
+      <div class="element-item">
+        <span class="icon desk">▬</span>
+        <span class="label">课桌组 A</span>
+        <span class="sublabel">3×5</span>
+      </div>
+      <div class="element-item">
+        <span class="icon desk">▬</span>
+        <span class="label">课桌组 B</span>
+        <span class="sublabel">3×5</span>
+      </div>
+    </div>
+    <div class="action-bar">
+      <button class="btn btn-primary">保存布局</button>
+      <button class="btn btn-outline">导出</button>
+    </div>
+  </div>
+
+  <!-- Canvas -->
+  <div class="canvas-area">
+    <div class="canvas-topbar">
+      <span class="room-name">高一(3)班教室</span>
+      <span class="room-info">教学楼 A · 3F · A-301</span>
+      <span class="spacer"></span>
+      <div class="zoom-controls">
+        <button class="zoom-btn">−</button>
+        <span class="zoom-label">100%</span>
+        <button class="zoom-btn">+</button>
+        <button class="zoom-btn">⊡</button>
+      </div>
+    </div>
+    <div class="canvas-wrapper">
+      <svg class="canvas-svg" viewBox="0 0 800 560">
+        <!-- Room outline -->
+        <rect class="cv-room-outline" x="60" y="40" width="680" height="480" rx="2"/>
+
+        <!-- Door -->
+        <rect class="cv-door" x="60" y="460" width="50" height="12"/>
+        <text x="85" y="455" font-size="9" fill="#059669" text-anchor="middle">门</text>
+
+        <!-- 讲台 -->
+        <rect class="cv-desk" x="300" y="60" width="200" height="40" rx="4"/>
+        <text x="400" y="84" font-size="11" fill="#92400e" text-anchor="middle" font-weight="500">讲台</text>
+
+        <!-- Seat Group A (left 3×5) -->
+        <g transform="translate(100, 130)">
+          <!-- Row 1 -->
+          <g class="cv-seat occupied" transform="translate(0, 0)">
+            <rect class="seat-body" x="0" y="0" width="50" height="40" rx="4" stroke-width="1.5"/>
+            <text class="seat-label" x="25" y="14">01</text>
+            <text class="cv-seat occupied seat-name" x="25" y="30">张三</text>
+          </g>
+          <g class="cv-seat occupied" transform="translate(60, 0)">
+            <rect class="seat-body" x="0" y="0" width="50" height="40" rx="4" stroke-width="1.5"/>
+            <text class="seat-label" x="25" y="14">02</text>
+            <text class="cv-seat occupied seat-name" x="25" y="30">李四</text>
+          </g>
+          <g class="cv-seat occupied" transform="translate(120, 0)">
+            <rect class="seat-body" x="0" y="0" width="50" height="40" rx="4" stroke-width="1.5"/>
+            <text class="seat-label" x="25" y="14">03</text>
+            <text class="cv-seat occupied seat-name" x="25" y="30">王五</text>
+          </g>
+          <!-- Row 2 -->
+          <g class="cv-seat occupied" transform="translate(0, 55)">
+            <rect class="seat-body" x="0" y="0" width="50" height="40" rx="4" stroke-width="1.5"/>
+            <text class="seat-label" x="25" y="14">04</text>
+            <text class="cv-seat occupied seat-name" x="25" y="30">赵六</text>
+          </g>
+          <g class="cv-seat empty" transform="translate(60, 55)">
+            <rect class="seat-body" x="0" y="0" width="50" height="40" rx="4" stroke-width="1.5"/>
+            <text class="seat-label" x="25" y="14">05</text>
+            <text x="25" y="30" font-size="9" fill="#d1d5db" text-anchor="middle">空</text>
+          </g>
+          <g class="cv-seat occupied" transform="translate(120, 55)">
+            <rect class="seat-body" x="0" y="0" width="50" height="40" rx="4" stroke-width="1.5"/>
+            <text class="seat-label" x="25" y="14">06</text>
+            <text class="cv-seat occupied seat-name" x="25" y="30">孙七</text>
+          </g>
+          <!-- Row 3 -->
+          <g class="cv-seat occupied" transform="translate(0, 110)">
+            <rect class="seat-body" x="0" y="0" width="50" height="40" rx="4" stroke-width="1.5"/>
+            <text class="seat-label" x="25" y="14">07</text>
+            <text class="cv-seat occupied seat-name" x="25" y="30">周八</text>
+          </g>
+          <g class="cv-seat occupied" transform="translate(60, 110)">
+            <rect class="seat-body" x="0" y="0" width="50" height="40" rx="4" stroke-width="1.5"/>
+            <text class="seat-label" x="25" y="14">08</text>
+            <text class="cv-seat occupied seat-name" x="25" y="30">吴九</text>
+          </g>
+          <g class="cv-seat empty" transform="translate(120, 110)">
+            <rect class="seat-body" x="0" y="0" width="50" height="40" rx="4" stroke-width="1.5"/>
+            <text class="seat-label" x="25" y="14">09</text>
+            <text x="25" y="30" font-size="9" fill="#d1d5db" text-anchor="middle">空</text>
+          </g>
+          <!-- Row 4 -->
+          <g class="cv-seat occupied" transform="translate(0, 165)">
+            <rect class="seat-body" x="0" y="0" width="50" height="40" rx="4" stroke-width="1.5"/>
+            <text class="seat-label" x="25" y="14">10</text>
+            <text class="cv-seat occupied seat-name" x="25" y="30">郑十</text>
+          </g>
+          <g class="cv-seat occupied" transform="translate(60, 165)">
+            <rect class="seat-body" x="0" y="0" width="50" height="40" rx="4" stroke-width="1.5"/>
+            <text class="seat-label" x="25" y="14">11</text>
+            <text class="cv-seat occupied seat-name" x="25" y="30">陈一</text>
+          </g>
+          <g class="cv-seat occupied" transform="translate(120, 165)">
+            <rect class="seat-body" x="0" y="0" width="50" height="40" rx="4" stroke-width="1.5"/>
+            <text class="seat-label" x="25" y="14">12</text>
+            <text class="cv-seat occupied seat-name" x="25" y="30">林二</text>
+          </g>
+          <!-- Row 5 -->
+          <g class="cv-seat occupied" transform="translate(0, 220)">
+            <rect class="seat-body" x="0" y="0" width="50" height="40" rx="4" stroke-width="1.5"/>
+            <text class="seat-label" x="25" y="14">13</text>
+            <text class="cv-seat occupied seat-name" x="25" y="30">黄三</text>
+          </g>
+          <g class="cv-seat empty" transform="translate(60, 220)">
+            <rect class="seat-body" x="0" y="0" width="50" height="40" rx="4" stroke-width="1.5"/>
+            <text class="seat-label" x="25" y="14">14</text>
+            <text x="25" y="30" font-size="9" fill="#d1d5db" text-anchor="middle">空</text>
+          </g>
+          <g class="cv-seat occupied" transform="translate(120, 220)">
+            <rect class="seat-body" x="0" y="0" width="50" height="40" rx="4" stroke-width="1.5"/>
+            <text class="seat-label" x="25" y="14">15</text>
+            <text class="cv-seat occupied seat-name" x="25" y="30">何四</text>
+          </g>
+        </g>
+
+        <!-- Aisle gap -->
+
+        <!-- Seat Group B (right 3×5) -->
+        <g transform="translate(440, 130)">
+          <g class="cv-seat occupied" transform="translate(0, 0)">
+            <rect class="seat-body" x="0" y="0" width="50" height="40" rx="4" stroke-width="1.5"/>
+            <text class="seat-label" x="25" y="14">16</text>
+            <text class="cv-seat occupied seat-name" x="25" y="30">刘五</text>
+          </g>
+          <g class="cv-seat occupied" transform="translate(60, 0)">
+            <rect class="seat-body" x="0" y="0" width="50" height="40" rx="4" stroke-width="1.5"/>
+            <text class="seat-label" x="25" y="14">17</text>
+            <text class="cv-seat occupied seat-name" x="25" y="30">杨六</text>
+          </g>
+          <g class="cv-seat occupied" transform="translate(120, 0)">
+            <rect class="seat-body" x="0" y="0" width="50" height="40" rx="4" stroke-width="1.5"/>
+            <text class="seat-label" x="25" y="14">18</text>
+            <text class="cv-seat occupied seat-name" x="25" y="30">马七</text>
+          </g>
+          <g class="cv-seat empty" transform="translate(0, 55)">
+            <rect class="seat-body" x="0" y="0" width="50" height="40" rx="4" stroke-width="1.5"/>
+            <text class="seat-label" x="25" y="14">19</text>
+            <text x="25" y="30" font-size="9" fill="#d1d5db" text-anchor="middle">空</text>
+          </g>
+          <g class="cv-seat occupied" transform="translate(60, 55)">
+            <rect class="seat-body" x="0" y="0" width="50" height="40" rx="4" stroke-width="1.5"/>
+            <text class="seat-label" x="25" y="14">20</text>
+            <text class="cv-seat occupied seat-name" x="25" y="30">朱八</text>
+          </g>
+          <g class="cv-seat occupied" transform="translate(120, 55)">
+            <rect class="seat-body" x="0" y="0" width="50" height="40" rx="4" stroke-width="1.5"/>
+            <text class="seat-label" x="25" y="14">21</text>
+            <text class="cv-seat occupied seat-name" x="25" y="30">秦九</text>
+          </g>
+          <g class="cv-seat occupied" transform="translate(0, 110)">
+            <rect class="seat-body" x="0" y="0" width="50" height="40" rx="4" stroke-width="1.5"/>
+            <text class="seat-label" x="25" y="14">22</text>
+            <text class="cv-seat occupied seat-name" x="25" y="30">许十</text>
+          </g>
+          <g class="cv-seat occupied" transform="translate(60, 110)">
+            <rect class="seat-body" x="0" y="0" width="50" height="40" rx="4" stroke-width="1.5"/>
+            <text class="seat-label" x="25" y="14">23</text>
+            <text class="cv-seat occupied seat-name" x="25" y="30">韩一</text>
+          </g>
+          <g class="cv-seat occupied" transform="translate(120, 110)">
+            <rect class="seat-body" x="0" y="0" width="50" height="40" rx="4" stroke-width="1.5"/>
+            <text class="seat-label" x="25" y="14">24</text>
+            <text class="cv-seat occupied seat-name" x="25" y="30">冯二</text>
+          </g>
+          <g class="cv-seat occupied" transform="translate(0, 165)">
+            <rect class="seat-body" x="0" y="0" width="50" height="40" rx="4" stroke-width="1.5"/>
+            <text class="seat-label" x="25" y="14">25</text>
+            <text class="cv-seat occupied seat-name" x="25" y="30">董三</text>
+          </g>
+          <g class="cv-seat empty" transform="translate(60, 165)">
+            <rect class="seat-body" x="0" y="0" width="50" height="40" rx="4" stroke-width="1.5"/>
+            <text class="seat-label" x="25" y="14">26</text>
+            <text x="25" y="30" font-size="9" fill="#d1d5db" text-anchor="middle">空</text>
+          </g>
+          <g class="cv-seat occupied" transform="translate(120, 165)">
+            <rect class="seat-body" x="0" y="0" width="50" height="40" rx="4" stroke-width="1.5"/>
+            <text class="seat-label" x="25" y="14">27</text>
+            <text class="cv-seat occupied seat-name" x="25" y="30">萧四</text>
+          </g>
+          <g class="cv-seat occupied" transform="translate(0, 220)">
+            <rect class="seat-body" x="0" y="0" width="50" height="40" rx="4" stroke-width="1.5"/>
+            <text class="seat-label" x="25" y="14">28</text>
+            <text class="cv-seat occupied seat-name" x="25" y="30">程五</text>
+          </g>
+          <g class="cv-seat occupied" transform="translate(60, 220)">
+            <rect class="seat-body" x="0" y="0" width="50" height="40" rx="4" stroke-width="1.5"/>
+            <text class="seat-label" x="25" y="14">29</text>
+            <text class="cv-seat occupied seat-name" x="25" y="30">曹六</text>
+          </g>
+          <g class="cv-seat occupied" transform="translate(120, 220)">
+            <rect class="seat-body" x="0" y="0" width="50" height="40" rx="4" stroke-width="1.5"/>
+            <text class="seat-label" x="25" y="14">30</text>
+            <text class="cv-seat occupied seat-name" x="25" y="30">袁七</text>
+          </g>
+        </g>
+
+        <!-- Selection indicator on seat group A -->
+        <rect x="95" y="125" width="185" height="280" rx="4" fill="none" stroke="#3b82f6" stroke-width="2" stroke-dasharray="6 3"/>
+        <!-- Resize handles -->
+        <circle cx="95" cy="125" r="4" fill="#fff" stroke="#3b82f6" stroke-width="1.5"/>
+        <circle cx="280" cy="125" r="4" fill="#fff" stroke="#3b82f6" stroke-width="1.5"/>
+        <circle cx="95" cy="405" r="4" fill="#fff" stroke="#3b82f6" stroke-width="1.5"/>
+        <circle cx="280" cy="405" r="4" fill="#fff" stroke="#3b82f6" stroke-width="1.5"/>
+
+        <!-- Dimension labels -->
+        <text x="400" y="525" font-size="10" fill="#9ca3af" text-anchor="middle">8.5m × 6.0m</text>
+
+        <!-- Compass -->
+        <g transform="translate(720, 70)">
+          <circle cx="0" cy="0" r="14" fill="#fff" stroke="#d1d5db" stroke-width="1"/>
+          <text x="0" y="-3" font-size="8" fill="#ef4444" text-anchor="middle" font-weight="700">N</text>
+          <text x="0" y="8" font-size="7" fill="#9ca3af" text-anchor="middle">S</text>
+        </g>
+      </svg>
+    </div>
+    <div class="status-bar">
+      <span class="stat"><span class="dot blue"></span> 已入座 24</span>
+      <span class="stat"><span class="dot gray"></span> 空位 6</span>
+      <span class="stat"><span class="dot yellow"></span> 课桌 1</span>
+      <span>|</span>
+      <span>容量 30 · 入座率 80%</span>
+      <span style="flex:1"></span>
+      <span>鼠标: 拖拽移动 · 滚轮: 缩放 · Del: 删除</span>
+    </div>
+  </div>
+
+  <!-- Right Panel -->
+  <div class="right-panel">
+    <div class="prop-section">
+      <div class="title">选中：座位组 A</div>
+      <div class="prop-row">
+        <span class="prop-label">名称</span>
+        <input class="prop-input" value="座位组 A"/>
+      </div>
+      <div class="prop-xy">
+        <div class="xy-group">
+          <span class="xy-label">X</span>
+          <input class="xy-input" value="100"/>
+        </div>
+        <div class="xy-group">
+          <span class="xy-label">Y</span>
+          <input class="xy-input" value="130"/>
+        </div>
+      </div>
+      <div style="height:8px"></div>
+      <div class="prop-row">
+        <span class="prop-label">行数</span>
+        <input class="prop-input" value="5" type="number" style="width:60px"/>
+      </div>
+      <div class="prop-row">
+        <span class="prop-label">列数</span>
+        <input class="prop-input" value="3" type="number" style="width:60px"/>
+      </div>
+      <div class="prop-row">
+        <span class="prop-label">间距</span>
+        <input class="prop-input" value="10" type="number" style="width:60px"/>
+      </div>
+    </div>
+    <div class="prop-section">
+      <div class="title">入住人员 (24/30)</div>
+      <div style="max-height: 300px; overflow-y: auto;">
+        <div class="occupant-card">
+          <span class="avatar male">张</span>
+          <span><span class="name">张三</span><br><span class="dept">计算机系</span></span>
+          <span class="pos">01</span>
+        </div>
+        <div class="occupant-card">
+          <span class="avatar male">李</span>
+          <span><span class="name">李四</span><br><span class="dept">计算机系</span></span>
+          <span class="pos">02</span>
+        </div>
+        <div class="occupant-card">
+          <span class="avatar female">王</span>
+          <span><span class="name">王五</span><br><span class="dept">电子系</span></span>
+          <span class="pos">03</span>
+        </div>
+        <div class="occupant-card">
+          <span class="avatar male">赵</span>
+          <span><span class="name">赵六</span><br><span class="dept">电子系</span></span>
+          <span class="pos">04</span>
+        </div>
+        <div class="occupant-card">
+          <span class="avatar male">孙</span>
+          <span><span class="name">孙七</span><br><span class="dept">计算机系</span></span>
+          <span class="pos">06</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+</body>
+</html>

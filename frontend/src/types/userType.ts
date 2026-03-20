@@ -1,146 +1,82 @@
 /**
- * V6 用户类型 类型定义
+ * 用户类型 类型定义 (统一类型系统 Phase 2)
+ * API: /user-types
  */
 
-export interface UserType {
-  id: number
-  typeCode: string
-  typeName: string
-  parentTypeCode: string | null
-  levelOrder: number
-  icon: string | null
-  color: string | null
-  description: string | null
-  canLogin: boolean
-  canBeInspector: boolean
-  canBeInspected: boolean
-  canManageOrg: boolean
-  canViewReports: boolean
-  requiresClass: boolean
-  requiresDormitory: boolean
-  defaultRoleCodes: string | null
-  isSystem: boolean
-  isEnabled: boolean
-  sortOrder: number
+import type { ConfigurableType, TypeTreeNode, CategoryInfo } from './configurableType'
+
+// ==================== Category ====================
+
+export type UserCategoryInfo = CategoryInfo
+
+// ==================== 核心类型 ====================
+
+export interface UserType extends ConfigurableType {
+  // 跨领域关联（UserType 特有）
+  defaultRoleCodes: string[] | null
+  defaultOrgTypeCodes: string[] | null
+  defaultPlaceTypeCodes: string[] | null
 }
 
-export interface UserTypeTreeNode extends UserType {
-  children: UserTypeTreeNode[]
-}
+export type UserTypeTreeNode = TypeTreeNode<UserType>
+
+// ==================== Request ====================
 
 export interface CreateUserTypeRequest {
-  typeCode: string
   typeName: string
+  category?: string
   parentTypeCode?: string
-  levelOrder?: number
   icon?: string
-  color?: string
   description?: string
-  canLogin?: boolean
-  canBeInspector?: boolean
-  canBeInspected?: boolean
-  canManageOrg?: boolean
-  canViewReports?: boolean
-  requiresClass?: boolean
-  requiresDormitory?: boolean
-  defaultRoleCodes?: string
+  features?: Record<string, boolean>
+  metadataSchema?: string
+  allowedChildTypeCodes?: string[]
+  maxDepth?: number
+  defaultRoleCodes?: string[]
+  defaultOrgTypeCodes?: string[]
+  defaultPlaceTypeCodes?: string[]
   sortOrder?: number
 }
 
 export interface UpdateUserTypeRequest {
   typeName?: string
+  category?: string
   icon?: string
-  color?: string
   description?: string
-  canLogin?: boolean
-  canBeInspector?: boolean
-  canBeInspected?: boolean
-  canManageOrg?: boolean
-  canViewReports?: boolean
-  requiresClass?: boolean
-  requiresDormitory?: boolean
-  defaultRoleCodes?: string
+  features?: Record<string, boolean>
+  metadataSchema?: string
+  allowedChildTypeCodes?: string[]
+  maxDepth?: number
+  defaultRoleCodes?: string[]
+  defaultOrgTypeCodes?: string[]
+  defaultPlaceTypeCodes?: string[]
   sortOrder?: number
 }
 
-// 用户类型特性配置
-export interface UserTypeFeatures {
-  canLogin: boolean
-  canBeInspector: boolean
-  canBeInspected: boolean
-  canManageOrg: boolean
-  canViewReports: boolean
-  requiresClass: boolean
-  requiresDormitory: boolean
-}
+// ==================== Feature Keys ====================
 
-// 预置类型编码
-export const PRESET_USER_TYPES = {
-  // 顶级类型
-  ADMIN: 'ADMIN',
-  TEACHER: 'TEACHER',
-  STUDENT: 'STUDENT',
-  EXTERNAL: 'EXTERNAL',
-  // 管理员子类型
-  SUPER_ADMIN: 'SUPER_ADMIN',
-  SYSTEM_ADMIN: 'SYSTEM_ADMIN',
-  ORG_ADMIN: 'ORG_ADMIN',
-  // 教职工子类型
-  TEACHING_STAFF: 'TEACHING_STAFF',
-  CLASS_TEACHER: 'CLASS_TEACHER',
-  COUNSELOR: 'COUNSELOR',
-  INSPECTOR: 'INSPECTOR',
-  DORM_MANAGER: 'DORM_MANAGER',
-  ADMIN_STAFF: 'ADMIN_STAFF',
-  // 学生子类型
-  UNDERGRADUATE: 'UNDERGRADUATE',
-  GRADUATE: 'GRADUATE',
-  EXCHANGE: 'EXCHANGE',
-  // 外部人员子类型
-  VISITOR: 'VISITOR',
-  CONTRACTOR: 'CONTRACTOR'
+export const USER_FEATURE_KEYS = {
+  REQUIRES_ORG: 'requiresOrg',
+  REQUIRES_PLACE: 'requiresPlace'
 } as const
 
-// 类型图标映射
-export const USER_TYPE_ICONS: Record<string, string> = {
-  ADMIN: 'Setting',
-  TEACHER: 'User',
-  STUDENT: 'UserFilled',
-  EXTERNAL: 'Avatar',
-  SUPER_ADMIN: 'Setting',
-  SYSTEM_ADMIN: 'Tools',
-  ORG_ADMIN: 'OfficeBuilding',
-  TEACHING_STAFF: 'Reading',
-  CLASS_TEACHER: 'Stamp',
-  COUNSELOR: 'Service',
-  INSPECTOR: 'View',
-  DORM_MANAGER: 'House',
-  ADMIN_STAFF: 'Folder',
-  UNDERGRADUATE: 'Notebook',
-  GRADUATE: 'Document',
-  EXCHANGE: 'Promotion',
-  VISITOR: 'Visitor',
-  CONTRACTOR: 'Suitcase'
+export const USER_FEATURE_LABELS: Record<string, string> = {
+  requiresOrg: '需要归属组织',
+  requiresPlace: '需要关联场所'
 }
 
-// 类型颜色映射
-export const USER_TYPE_COLORS: Record<string, string> = {
-  ADMIN: '#f5222d',
-  TEACHER: '#1890ff',
-  STUDENT: '#52c41a',
-  EXTERNAL: '#8c8c8c',
-  SUPER_ADMIN: '#f5222d',
-  SYSTEM_ADMIN: '#fa541c',
-  ORG_ADMIN: '#fa8c16',
-  TEACHING_STAFF: '#1890ff',
-  CLASS_TEACHER: '#13c2c2',
-  COUNSELOR: '#722ed1',
-  INSPECTOR: '#eb2f96',
-  DORM_MANAGER: '#faad14',
-  ADMIN_STAFF: '#2f54eb',
-  UNDERGRADUATE: '#52c41a',
-  GRADUATE: '#52c41a',
-  EXCHANGE: '#52c41a',
-  VISITOR: '#8c8c8c',
-  CONTRACTOR: '#8c8c8c'
+// ==================== Category 常量 ====================
+
+export const USER_CATEGORIES = {
+  ADMIN: 'ADMIN',
+  STAFF: 'STAFF',
+  MEMBER: 'MEMBER',
+  EXTERNAL: 'EXTERNAL'
+} as const
+
+export const USER_CATEGORY_LABELS: Record<string, string> = {
+  ADMIN: '管理员',
+  STAFF: '职工',
+  MEMBER: '成员',
+  EXTERNAL: '外部人员'
 }

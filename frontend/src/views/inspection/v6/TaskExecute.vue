@@ -383,7 +383,7 @@
         <el-form-item label="类型">
           <el-radio-group v-model="individualForm.type">
             <el-radio label="USER">学生</el-radio>
-            <el-radio label="SPACE">场所</el-radio>
+            <el-radio label="PLACE">场所</el-radio>
           </el-radio-group>
         </el-form-item>
         <el-form-item label="选择">
@@ -428,7 +428,7 @@ import type { InspectionDetail, InspectionEvidence } from '@/api/v6Inspection'
 
 const router = useRouter()
 const route = useRoute()
-const taskId = Number(route.params.id)
+const taskId = route.params.id as string
 
 // 状态
 const loading = ref(false)

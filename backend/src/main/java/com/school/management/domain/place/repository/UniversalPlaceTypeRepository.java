@@ -1,67 +1,42 @@
-package com.school.management.domain.space.repository;
+package com.school.management.domain.place.repository;
 
-import com.school.management.domain.space.model.entity.UniversalSpaceType;
+import com.school.management.domain.place.model.entity.UniversalPlaceType;
 
 import java.util.List;
 import java.util.Optional;
 
 /**
- * 通用空间类型仓储接口
+ * 通用场所类型仓储接口（统一类型系统 Phase 3）
  */
-public interface UniversalSpaceTypeRepository {
+public interface UniversalPlaceTypeRepository {
 
-    /**
-     * 保存空间类型
-     */
-    UniversalSpaceType save(UniversalSpaceType spaceType);
+    UniversalPlaceType save(UniversalPlaceType placeType);
 
-    /**
-     * 根据ID查询
-     */
-    Optional<UniversalSpaceType> findById(Long id);
+    Optional<UniversalPlaceType> findById(Long id);
 
-    /**
-     * 根据类型编码查询
-     */
-    Optional<UniversalSpaceType> findByTypeCode(String typeCode);
+    Optional<UniversalPlaceType> findByTypeCode(String typeCode);
 
-    /**
-     * 查询所有空间类型
-     */
-    List<UniversalSpaceType> findAll();
+    List<UniversalPlaceType> findAll();
 
-    /**
-     * 查询所有启用的空间类型
-     */
-    List<UniversalSpaceType> findAllEnabled();
+    List<UniversalPlaceType> findAllEnabled();
 
-    /**
-     * 查询所有根类型
-     */
-    List<UniversalSpaceType> findAllRootTypes();
+    List<UniversalPlaceType> findAllRootTypes();
 
-    /**
-     * 查询允许的子类型
-     */
-    List<UniversalSpaceType> findAllowedChildTypes(String parentTypeCode);
+    List<UniversalPlaceType> findByParentTypeCode(String parentTypeCode);
 
-    /**
-     * 检查类型编码是否存在
-     */
+    List<UniversalPlaceType> findByCategory(String category);
+
     boolean existsByTypeCode(String typeCode);
 
-    /**
-     * 检查类型是否被使用（有空间实例使用该类型）
-     */
     boolean isTypeInUse(String typeCode);
 
-    /**
-     * 根据ID删除
-     */
     void deleteById(Long id);
 
-    /**
-     * 批量查询
-     */
-    List<UniversalSpaceType> findByTypeCodes(List<String> typeCodes);
+    List<UniversalPlaceType> findByTypeCodes(List<String> typeCodes);
+
+    List<UniversalPlaceType> findAllBaseCategories();
+
+    List<UniversalPlaceType> findConcreteRootTypes();
+
+    List<UniversalPlaceType> findAllConcreteTypes();
 }

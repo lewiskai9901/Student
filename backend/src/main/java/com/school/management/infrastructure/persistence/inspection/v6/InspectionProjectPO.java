@@ -38,7 +38,7 @@ public class InspectionProjectPO {
     private String excludedDates;
 
     // 策略配置
-    private String sharedSpaceStrategy;
+    private String sharedPlaceStrategy;
     private String scoreDistributionMode;
     private String inspectorAssignmentMode;
     private String defaultInspectors;

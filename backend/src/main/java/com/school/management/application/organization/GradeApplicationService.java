@@ -9,6 +9,7 @@ import com.school.management.domain.organization.model.GradeStatus;
 import com.school.management.domain.organization.repository.GradeRepository;
 import com.school.management.domain.organization.repository.SchoolClassRepository;
 import com.school.management.domain.shared.event.DomainEventPublisher;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -19,20 +20,13 @@ import java.util.stream.Collectors;
  * Application service for grade operations.
  * Orchestrates domain services, repositories, and event publishing.
  */
+@RequiredArgsConstructor
 @Service
 public class GradeApplicationService {
 
     private final GradeRepository gradeRepository;
     private final SchoolClassRepository schoolClassRepository;
     private final DomainEventPublisher eventPublisher;
-
-    public GradeApplicationService(GradeRepository gradeRepository,
-                                   SchoolClassRepository schoolClassRepository,
-                                   DomainEventPublisher eventPublisher) {
-        this.gradeRepository = gradeRepository;
-        this.schoolClassRepository = schoolClassRepository;
-        this.eventPublisher = eventPublisher;
-    }
 
     /**
      * Creates a new grade.

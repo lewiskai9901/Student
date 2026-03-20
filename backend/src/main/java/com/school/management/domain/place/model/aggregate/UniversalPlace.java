@@ -1,7 +1,7 @@
-package com.school.management.domain.space.model.aggregate;
+package com.school.management.domain.place.model.aggregate;
 
 import com.school.management.domain.shared.AggregateRoot;
-import com.school.management.domain.space.model.valueobject.SpaceStatus;
+import com.school.management.domain.place.model.valueobject.PlaceStatus;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -10,18 +10,17 @@ import lombok.EqualsAndHashCode;
 
 import java.util.HashMap;
 import java.util.Map;
-import java.util.UUID;
 
 /**
  * 通用空间聚合根
- * 支持任意类型的空间实例，类型由SpaceType配置决定
+ * 支持任意类型的空间实例，类型由PlaceType配置决定
  */
 @Data
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
 @EqualsAndHashCode(callSuper = true)
-public class UniversalSpace extends AggregateRoot<Long> {
+public class UniversalPlace extends AggregateRoot<Long> {
 
     private Long id;
 
@@ -30,15 +29,15 @@ public class UniversalSpace extends AggregateRoot<Long> {
     /**
      * 空间编码（唯一）
      */
-    private String spaceCode;
+    private String placeCode;
 
     /**
      * 空间名称
      */
-    private String spaceName;
+    private String placeName;
 
     /**
-     * 空间类型编码（关联SpaceType）
+     * 空间类型编码（关联PlaceType）
      */
     private String typeCode;
 
@@ -90,13 +89,20 @@ public class UniversalSpace extends AggregateRoot<Long> {
      */
     private Long responsibleUserId;
 
+    // ==================== 性别限制 ====================
+
+    /**
+     * 性别限制: MALE / FEMALE / MIXED / null（null表示继承父节点）
+     */
+    private String gender;
+
     // ==================== 状态 ====================
 
     /**
      * 状态
      */
     @Builder.Default
-    private SpaceStatus status = SpaceStatus.NORMAL;
+    private PlaceStatus status = PlaceStatus.NORMAL;
 
     // ==================== 扩展属性 ====================
 
@@ -139,88 +145,186 @@ public class UniversalSpace extends AggregateRoot<Long> {
     }
 
     /**
-     * 增加占用数
+     * 更新占用人数（领域方法，发布事件）
+     *
+     * @param newOccupancy 新占用人数
+     * @param operationType 操作类型（CHECK_IN/CHECK_OUT/MANUAL）
      */
-    public void incrementOccupancy() {
-        if (currentOccupancy == null) {
-            currentOccupancy = 0;
+    public void updateOccupancy(int newOccupancy, String operationType) {
+        Integer oldOccupancy = this.currentOccupancy != null ? this.currentOccupancy : 0;
+
+        // 值未变化，无需操作
+        if (oldOccupancy.equals(newOccupancy)) {
+            return;
         }
-        currentOccupancy++;
-    }
 
-    /**
-     * 减少占用数
-     */
-    public void decrementOccupancy() {
-        if (currentOccupancy != null && currentOccupancy > 0) {
-            currentOccupancy--;
+        // 业务规则校验：不能为负数
+        if (newOccupancy < 0) {
+            throw new IllegalArgumentException("占用人数不能为负数");
         }
+
+        // 业务规则校验：不能超过容量（除非无容量限制）
+        if (capacity != null && newOccupancy > capacity) {
+            throw new IllegalStateException(
+                    String.format("占用人数(%d)不能超过容量(%d)", newOccupancy, capacity)
+            );
+        }
+
+        // 更新值
+        this.currentOccupancy = newOccupancy;
+
+        // 发布领域事件
+        registerEvent(new com.school.management.domain.place.event.PlaceCapacityUpdatedEvent(
+                this.id, this.placeName, this.typeCode,
+                oldOccupancy, newOccupancy, this.capacity,
+                operationType
+        ));
     }
 
     /**
-     * 设置占用数
+     * 入住（占用数+1）
      */
-    public void setOccupancyCount(int count) {
-        this.currentOccupancy = Math.max(0, count);
+    public void checkIn() {
+        int currentCount = (currentOccupancy != null) ? currentOccupancy : 0;
+        updateOccupancy(currentCount + 1, "CHECK_IN");
     }
 
     /**
-     * 分配给组织单元
+     * 退住（占用数-1）
      */
-    public void assignToOrgUnit(Long orgUnitId) {
+    public void checkOut() {
+        int currentCount = (currentOccupancy != null) ? currentOccupancy : 0;
+        if (currentCount <= 0) {
+            throw new IllegalStateException("当前无占用者，无法退住");
+        }
+        updateOccupancy(currentCount - 1, "CHECK_OUT");
+    }
+
+    /**
+     * 手动调整占用数
+     */
+    public void adjustOccupancy(int newCount) {
+        updateOccupancy(newCount, "MANUAL");
+    }
+
+    /**
+     * 分配给组织单元（领域方法，发布事件）
+     *
+     * @param orgUnitId 组织单元ID（传入null表示恢复继承父级）
+     * @param reason 变更原因
+     */
+    public void assignOrganization(Long orgUnitId, String reason) {
+        Long oldOrgUnitId = this.orgUnitId;
+
+        // 值未变化，无需操作
+        if (java.util.Objects.equals(oldOrgUnitId, orgUnitId)) {
+            return;
+        }
+
+        // 更新值
         this.orgUnitId = orgUnitId;
+
+        // 发布领域事件
+        registerEvent(new com.school.management.domain.place.event.PlaceOrgAssignedEvent(
+                this.id, this.placeName, oldOrgUnitId, orgUnitId, reason
+        ));
     }
 
     /**
-     * 取消组织单元分配
+     * 取消组织单元分配（恢复继承）
+     *
+     * @param reason 变更原因
      */
-    public void unassignFromOrgUnit() {
-        this.orgUnitId = null;
+    public void clearOrganizationOverride(String reason) {
+        assignOrganization(null, reason);
     }
 
     /**
-     * 设置负责人
+     * 分配负责人（领域方法，发布事件）
+     *
+     * @param userId 负责人用户ID
+     * @param reason 变更原因
      */
-    public void setResponsible(Long userId) {
-        this.responsibleUserId = userId;
-    }
+    public void assignResponsible(Long userId, String reason) {
+        Long oldResponsibleUserId = this.responsibleUserId;
 
-    /**
-     * 启用
-     */
-    public void enable() {
-        this.status = SpaceStatus.NORMAL;
-    }
-
-    /**
-     * 禁用
-     */
-    public void disable() {
-        if (currentOccupancy != null && currentOccupancy > 0) {
-            throw new IllegalStateException("空间有占用者，不能禁用");
+        // 值未变化，无需操作
+        if (java.util.Objects.equals(oldResponsibleUserId, userId)) {
+            return;
         }
-        this.status = SpaceStatus.DISABLED;
+
+        // 更新值
+        this.responsibleUserId = userId;
+
+        // 发布领域事件
+        registerEvent(new com.school.management.domain.place.event.PlaceResponsibleAssignedEvent(
+                this.id, this.placeName, oldResponsibleUserId, userId, reason
+        ));
     }
 
     /**
-     * 开始维护
+     * 变更状态（领域方法，发布事件）
+     *
+     * @param newStatus 新状态
+     * @param reason 变更原因
      */
-    public void startMaintenance() {
-        this.status = SpaceStatus.MAINTENANCE;
+    public void changeStatus(PlaceStatus newStatus, String reason) {
+        PlaceStatus oldStatus = this.status;
+
+        // 状态未变化，无需操作
+        if (oldStatus == newStatus) {
+            return;
+        }
+
+        // 业务规则校验
+        if (newStatus == PlaceStatus.DISABLED) {
+            if (currentOccupancy != null && currentOccupancy > 0) {
+                throw new IllegalStateException("场所有占用者，不能禁用");
+            }
+        }
+
+        // 更新状态
+        this.status = newStatus;
+
+        // 发布领域事件
+        registerEvent(new com.school.management.domain.place.event.PlaceStatusChangedEvent(
+                this.id, this.placeName, oldStatus, newStatus, reason
+        ));
     }
 
     /**
-     * 完成维护
+     * 启用（领域方法）
      */
-    public void completeMaintenance() {
-        this.status = SpaceStatus.NORMAL;
+    public void enable(String reason) {
+        changeStatus(PlaceStatus.NORMAL, reason);
+    }
+
+    /**
+     * 禁用（领域方法）
+     */
+    public void disable(String reason) {
+        changeStatus(PlaceStatus.DISABLED, reason);
+    }
+
+    /**
+     * 开始维护（领域方法）
+     */
+    public void startMaintenance(String reason) {
+        changeStatus(PlaceStatus.MAINTENANCE, reason);
+    }
+
+    /**
+     * 完成维护（领域方法）
+     */
+    public void completeMaintenance(String reason) {
+        changeStatus(PlaceStatus.NORMAL, reason);
     }
 
     /**
      * 是否可以入住/占用
      */
     public boolean canCheckIn() {
-        return status == SpaceStatus.NORMAL && hasAvailableCapacity();
+        return status == PlaceStatus.NORMAL && hasAvailableCapacity();
     }
 
     /**
@@ -254,6 +358,17 @@ public class UniversalSpace extends AggregateRoot<Long> {
     }
 
     /**
+     * 验证性别限制与父节点有效性别的兼容性
+     */
+    public void validateGender(String parentEffectiveGender) {
+        if (gender == null) return;
+        if (parentEffectiveGender == null || "MIXED".equals(parentEffectiveGender)) return;
+        if (!parentEffectiveGender.equals(gender)) {
+            throw new IllegalArgumentException("性别限制与父节点冲突：父节点为" + parentEffectiveGender + "，不允许设置为" + gender);
+        }
+    }
+
+    /**
      * 更新层级信息
      */
     public void updateHierarchy(Long parentId, String parentPath, int parentLevel) {
@@ -270,7 +385,7 @@ public class UniversalSpace extends AggregateRoot<Long> {
     /**
      * 判断是否为指定空间的祖先
      */
-    public boolean isAncestorOf(UniversalSpace other) {
+    public boolean isAncestorOf(UniversalPlace other) {
         if (other == null || other.getPath() == null || this.path == null) {
             return false;
         }
@@ -280,7 +395,7 @@ public class UniversalSpace extends AggregateRoot<Long> {
     /**
      * 判断是否为指定空间的后代
      */
-    public boolean isDescendantOf(UniversalSpace other) {
+    public boolean isDescendantOf(UniversalPlace other) {
         if (other == null) {
             return false;
         }
@@ -290,16 +405,18 @@ public class UniversalSpace extends AggregateRoot<Long> {
     // ==================== 工厂方法 ====================
 
     /**
-     * 创建空间
+     * 创建空间（placeCode 由用户输入）
      */
-    public static UniversalSpace create(String spaceName, String typeCode, Long parentId) {
-        String spaceCode = generateSpaceCode();
-        return UniversalSpace.builder()
-                .spaceCode(spaceCode)
-                .spaceName(spaceName)
+    public static UniversalPlace create(String placeCode, String placeName, String typeCode, Long parentId) {
+        if (placeCode == null || placeCode.isBlank()) {
+            throw new IllegalArgumentException("场所编号不能为空");
+        }
+        return UniversalPlace.builder()
+                .placeCode(placeCode.trim())
+                .placeName(placeName)
                 .typeCode(typeCode)
                 .parentId(parentId)
-                .status(SpaceStatus.NORMAL)
+                .status(PlaceStatus.NORMAL)
                 .currentOccupancy(0)
                 .attributes(new HashMap<>())
                 .build();
@@ -308,14 +425,7 @@ public class UniversalSpace extends AggregateRoot<Long> {
     /**
      * 创建根空间
      */
-    public static UniversalSpace createRoot(String spaceName, String typeCode) {
-        return create(spaceName, typeCode, null);
-    }
-
-    /**
-     * 生成空间编码
-     */
-    private static String generateSpaceCode() {
-        return "SP_" + UUID.randomUUID().toString().substring(0, 8).toUpperCase();
+    public static UniversalPlace createRoot(String placeCode, String placeName, String typeCode) {
+        return create(placeCode, placeName, typeCode, null);
     }
 }

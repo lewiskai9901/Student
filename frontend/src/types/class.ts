@@ -14,24 +14,24 @@
 // 班级相关类型定义
 
 export interface Class {
-  id: number
+  id: number | string
   className: string
   classCode: string
   gradeLevel: number
-  gradeId?: number
-  orgUnitId: number
+  gradeId?: number | string
+  orgUnitId: number | string
   orgUnitName: string
-  majorId?: number
+  majorId?: number | string
   majorName?: string
-  majorDirectionId?: number
+  majorDirectionId?: number | string
   classSequence?: number
   educationSystem?: string
   skillLevel?: string
   duration?: number
   grade: string
-  teacherId?: number
+  teacherId?: number | string
   teacherName?: string
-  assistantTeacherId?: number
+  assistantTeacherId?: number | string
   assistantTeacherName?: string
   studentCount: number
   maxStudents?: number
@@ -48,8 +48,8 @@ export interface Class {
 
 export interface ClassQueryParams {
   className?: string
-  orgUnitId?: number | null
-  majorId?: number | null
+  orgUnitId?: number | string | null
+  majorId?: number | string | null
   teacherName?: string
   status?: number | null
   pageNum?: number
@@ -60,10 +60,10 @@ export interface ClassFormData {
   className: string
   classCode: string
   gradeLevel: number | null
-  orgUnitId: number | null
-  majorId?: number | null
-  teacherId?: number | null
-  assistantTeacherId?: number | null
+  orgUnitId: number | string | null
+  majorId?: number | string | null
+  teacherId?: number | string | null
+  assistantTeacherId?: number | string | null
   classroomLocation?: string
   enrollmentYear: number | null
   graduationYear: number | null
@@ -75,8 +75,8 @@ export interface ClassFormData {
  * 班级宿舍关联信息
  */
 export interface ClassDormitoryInfo {
-  id: number
-  dormitoryId: number
+  id: number | string
+  dormitoryId: number | string
   dormitoryNo: string  // 房间号
   buildingNo?: string  // 楼号
   buildingName?: string  // 楼宇名称

@@ -24,19 +24,30 @@ CREATE TABLE `users` (
     `phone` VARCHAR(20) COMMENT '手机号',
     `email` VARCHAR(100) COMMENT '邮箱',
     `avatar` VARCHAR(255) COMMENT '头像URL',
+    `employee_no` VARCHAR(50) COMMENT '工号',
     `gender` TINYINT DEFAULT 0 COMMENT '性别:0未知,1男,2女',
+    `birth_date` DATE COMMENT '出生日期',
+    `identity_card` VARCHAR(20) COMMENT '身份证号',
+    `primary_org_unit_id` BIGINT COMMENT '主归属组织ID',
+    `user_type_code` VARCHAR(50) COMMENT '用户类型编码',
     `status` TINYINT DEFAULT 1 COMMENT '状态:0禁用,1启用',
-    `last_login_at` DATETIME COMMENT '最后登录时间',
+    `last_login_time` DATETIME COMMENT '最后登录时间',
     `last_login_ip` VARCHAR(50) COMMENT '最后登录IP',
+    `password_changed_at` DATETIME COMMENT '密码修改时间',
+    `wechat_openid` VARCHAR(100) COMMENT '微信OpenID',
+    `allow_multiple_devices` TINYINT DEFAULT 0 COMMENT '是否允许多设备登录:0否,1是',
+    `tenant_id` BIGINT COMMENT '租户ID',
     `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
     `created_by` BIGINT COMMENT '创建人',
     `updated_at` DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
     `updated_by` BIGINT COMMENT '更新人',
-    `deleted` TINYINT DEFAULT 0 COMMENT '逻辑删除:0未删除,1已删除',
+    `deleted` BIGINT DEFAULT 0 COMMENT '逻辑删除:0未删除,删除时存id',
     PRIMARY KEY (`id`),
-    UNIQUE KEY `uk_username` (`username`),
+    UNIQUE KEY `uk_username_deleted` (`username`, `deleted`),
     INDEX `idx_phone` (`phone`),
     INDEX `idx_status` (`status`),
+    INDEX `idx_user_type_code` (`user_type_code`),
+    INDEX `idx_tenant_id` (`tenant_id`),
     INDEX `idx_deleted` (`deleted`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='用户表';
 
@@ -96,12 +107,21 @@ CREATE TABLE `user_roles` (
     `id` BIGINT NOT NULL COMMENT '主键ID',
     `user_id` BIGINT NOT NULL COMMENT '用户ID',
     `role_id` BIGINT NOT NULL COMMENT '角色ID',
+    `tenant_id` BIGINT DEFAULT 1 COMMENT '租户ID',
+    `scope_type` VARCHAR(20) NOT NULL DEFAULT 'ALL' COMMENT '作用域类型: ALL=全局, ORG_UNIT=组织节点',
+    `scope_id` BIGINT NOT NULL DEFAULT 0 COMMENT '作用域ID: ALL时=0, ORG_UNIT时=orgUnitId',
+    `assigned_at` DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '分配时间',
+    `assigned_by` BIGINT DEFAULT NULL COMMENT '分配人ID',
+    `expires_at` DATETIME DEFAULT NULL COMMENT '过期时间',
+    `is_active` TINYINT(1) NOT NULL DEFAULT 1 COMMENT '是否激活',
     `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
     PRIMARY KEY (`id`),
-    UNIQUE KEY `uk_user_role` (`user_id`, `role_id`),
+    UNIQUE KEY `uk_user_role_scope` (`user_id`, `role_id`, `scope_type`, `scope_id`),
     INDEX `idx_user_id` (`user_id`),
-    INDEX `idx_role_id` (`role_id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='用户角色关联表';
+    INDEX `idx_role_id` (`role_id`),
+    INDEX `idx_user_roles_scope` (`scope_type`, `scope_id`),
+    INDEX `idx_user_roles_active` (`is_active`, `expires_at`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='用户角色关联表(支持作用域)';
 
 -- ---------------------------------------------------
 -- 1.5 角色权限关联表
@@ -146,7 +166,7 @@ CREATE TABLE `org_units` (
     `id` BIGINT NOT NULL COMMENT '主键ID',
     `unit_code` VARCHAR(50) NOT NULL COMMENT '单元编码',
     `unit_name` VARCHAR(100) NOT NULL COMMENT '单元名称',
-    `unit_type` VARCHAR(30) NOT NULL COMMENT '类型:SCHOOL,COLLEGE,DEPARTMENT,TEACHING_GROUP',
+    `unit_type` VARCHAR(30) NOT NULL COMMENT '类型编码(来自org_unit_types表)',
     `parent_id` BIGINT COMMENT '父单元ID',
     `tree_path` VARCHAR(500) COMMENT '树形路径',
     `tree_level` INT DEFAULT 1 COMMENT '层级',
@@ -2101,9 +2121,9 @@ CREATE TABLE `inspection_deductions` (
     `deduction_item_id` BIGINT NOT NULL COMMENT '扣分项ID',
     `item_name` VARCHAR(100) COMMENT '扣分项名称',
     `category_name` VARCHAR(100) COMMENT '分类名称',
-    `space_type` VARCHAR(20) COMMENT '空间类型',
-    `space_id` BIGINT COMMENT '空间ID',
-    `space_name` VARCHAR(100) COMMENT '空间名称',
+    `place_type` VARCHAR(20) COMMENT '场所类型',
+    `place_id` BIGINT COMMENT '场所ID',
+    `place_name` VARCHAR(100) COMMENT '场所名称',
     `student_ids` JSON COMMENT '学生ID列表',
     `student_names` JSON COMMENT '学生姓名列表',
     `person_count` INT DEFAULT 0 COMMENT '涉及人数',
@@ -2557,23 +2577,23 @@ CREATE TABLE `rating_results` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='评级结果表';
 
 -- =====================================================
--- V4-8: 空间管理 (Space Domain)
+-- V4-8: 场所管理 (Place Domain)
 -- =====================================================
 
 -- ---------------------------------------------------
--- 空间表
+-- 场所表
 -- ---------------------------------------------------
-DROP TABLE IF EXISTS `space`;
-CREATE TABLE `space` (
+DROP TABLE IF EXISTS `place`;
+CREATE TABLE `place` (
     `id` BIGINT NOT NULL AUTO_INCREMENT COMMENT '主键ID',
-    `space_code` VARCHAR(50) COMMENT '空间编码',
-    `space_name` VARCHAR(100) NOT NULL COMMENT '空间名称',
-    `space_type` VARCHAR(20) COMMENT '空间类型',
+    `place_code` VARCHAR(50) COMMENT '场所编码',
+    `place_name` VARCHAR(100) NOT NULL COMMENT '场所名称',
+    `place_type` VARCHAR(20) COMMENT '场所类型',
     `room_type` VARCHAR(20) COMMENT '房间类型',
     `building_type` VARCHAR(20) COMMENT '建筑类型',
     `building_no` VARCHAR(20) COMMENT '建筑编号',
     `room_no` VARCHAR(20) COMMENT '房间号',
-    `parent_id` BIGINT COMMENT '父空间ID',
+    `parent_id` BIGINT COMMENT '父场所ID',
     `path` VARCHAR(500) COMMENT '树路径',
     `level` INT DEFAULT 0 COMMENT '层级',
     `campus_id` BIGINT COMMENT '校区ID',
@@ -2594,22 +2614,22 @@ CREATE TABLE `space` (
     `updated_at` DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
     `deleted` TINYINT DEFAULT 0 COMMENT '逻辑删除',
     PRIMARY KEY (`id`),
-    INDEX `idx_space_code` (`space_code`),
-    INDEX `idx_space_type` (`space_type`),
+    INDEX `idx_place_code` (`place_code`),
+    INDEX `idx_place_type` (`place_type`),
     INDEX `idx_parent_id` (`parent_id`),
     INDEX `idx_building_id` (`building_id`),
     INDEX `idx_org_unit_id` (`org_unit_id`),
     INDEX `idx_class_id` (`class_id`),
     INDEX `idx_deleted` (`deleted`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='空间表';
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='场所表';
 
 -- ---------------------------------------------------
--- 空间入住者表
+-- 场所入住者表
 -- ---------------------------------------------------
-DROP TABLE IF EXISTS `space_occupant`;
-CREATE TABLE `space_occupant` (
+DROP TABLE IF EXISTS `place_occupant`;
+CREATE TABLE `place_occupant` (
     `id` BIGINT NOT NULL AUTO_INCREMENT COMMENT '主键ID',
-    `space_id` BIGINT NOT NULL COMMENT '空间ID',
+    `place_id` BIGINT NOT NULL COMMENT '场所ID',
     `occupant_type` VARCHAR(20) COMMENT '入住者类型',
     `occupant_id` BIGINT NOT NULL COMMENT '入住者ID',
     `position_no` INT COMMENT '位置编号(床号)',
@@ -2620,18 +2640,18 @@ CREATE TABLE `space_occupant` (
     `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
     `updated_at` DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
     PRIMARY KEY (`id`),
-    INDEX `idx_space_id` (`space_id`),
+    INDEX `idx_place_id` (`place_id`),
     INDEX `idx_occupant` (`occupant_type`, `occupant_id`),
     INDEX `idx_status` (`status`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='空间入住者表';
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='场所入住者表';
 
 -- ---------------------------------------------------
--- 空间班级分配表
+-- 场所班级分配表
 -- ---------------------------------------------------
-DROP TABLE IF EXISTS `space_class_assignment`;
-CREATE TABLE `space_class_assignment` (
+DROP TABLE IF EXISTS `place_class_assignment`;
+CREATE TABLE `place_class_assignment` (
     `id` BIGINT NOT NULL AUTO_INCREMENT COMMENT '主键ID',
-    `space_id` BIGINT NOT NULL COMMENT '空间ID',
+    `place_id` BIGINT NOT NULL COMMENT '场所ID',
     `class_id` BIGINT NOT NULL COMMENT '班级ID',
     `org_unit_id` BIGINT COMMENT '组织单元ID',
     `assigned_beds` INT DEFAULT 0 COMMENT '分配床位数',
@@ -2643,10 +2663,10 @@ CREATE TABLE `space_class_assignment` (
     `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
     `updated_at` DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
     PRIMARY KEY (`id`),
-    UNIQUE KEY `uk_space_class` (`space_id`, `class_id`),
+    UNIQUE KEY `uk_place_class` (`place_id`, `class_id`),
     INDEX `idx_class_id` (`class_id`),
     INDEX `idx_org_unit_id` (`org_unit_id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='空间班级分配表';
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='场所班级分配表';
 
 -- ---------------------------------------------------
 -- 班级宿舍绑定表

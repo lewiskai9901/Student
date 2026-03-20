@@ -1,7 +1,6 @@
 package com.school.management.infrastructure.event.outbox;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.RowMapper;
 import org.springframework.stereotype.Repository;
@@ -16,10 +15,9 @@ import java.util.List;
  * Repository for managing outbox entries.
  * Provides CRUD operations for the event_publications table.
  */
+@Slf4j
 @Repository
 public class OutboxRepository {
-
-    private static final Logger log = LoggerFactory.getLogger(OutboxRepository.class);
 
     private final JdbcTemplate jdbcTemplate;
 

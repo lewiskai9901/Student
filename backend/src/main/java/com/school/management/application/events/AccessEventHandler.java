@@ -3,7 +3,7 @@ package com.school.management.application.events;
 import com.school.management.domain.access.event.*;
 import com.school.management.infrastructure.event.DomainEventStore;
 import com.school.management.infrastructure.external.NotificationService;
-import com.school.management.infrastructure.audit.AuditLogService;
+import com.school.management.infrastructure.activity.ActivityEventPublisher;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.event.EventListener;
@@ -25,7 +25,7 @@ public class AccessEventHandler {
 
     private final DomainEventStore eventStore;
     private final NotificationService notificationService;
-    private final AuditLogService auditLogService;
+    private final ActivityEventPublisher activityEventPublisher;
 
     /**
      * 处理角色创建事件
@@ -68,8 +68,8 @@ public class AccessEventHandler {
     @Async
     @EventListener
     public void handle(UserRoleAssignedEvent event) {
-        log.info("Handling UserRoleAssignedEvent: userId={}, roleId={}, orgUnitId={}",
-                 event.getUserId(), event.getRoleId(), event.getOrgUnitId());
+        log.info("Handling UserRoleAssignedEvent: userId={}, roleId={}, scopeType={}, scopeId={}",
+                 event.getUserId(), event.getRoleId(), event.getScopeType(), event.getScopeId());
 
         eventStore.store(event);
 
@@ -101,8 +101,8 @@ public class AccessEventHandler {
      * - 记录审计日志
      */
     private void handleUserRoleAssigned(UserRoleAssignedEvent event) {
-        log.info("User {} assigned role {} in org {}",
-                 event.getUserId(), event.getRoleId(), event.getOrgUnitId());
+        log.info("User {} assigned role {} with scope {}:{}",
+                 event.getUserId(), event.getRoleId(), event.getScopeType(), event.getScopeId());
 
         // 发送通知给用户
         notificationService.sendInAppMessage(
@@ -114,8 +114,8 @@ public class AccessEventHandler {
 
         // 记录审计日志
         saveOperationLog("ASSIGN", "USER_ROLE", event.getUserId(),
-                String.format("分配角色: userId=%d, roleId=%d, orgUnitId=%d",
-                        event.getUserId(), event.getRoleId(), event.getOrgUnitId()));
+                String.format("分配角色: userId=%d, roleId=%d, scope=%s:%d",
+                        event.getUserId(), event.getRoleId(), event.getScopeType(), event.getScopeId()));
 
         log.info("用户角色分配处理完成: userId={}, roleId={}", event.getUserId(), event.getRoleId());
     }
@@ -123,9 +123,11 @@ public class AccessEventHandler {
     /**
      * 保存操作日志
      */
-    private void saveOperationLog(String operationType, String targetType, Long targetId, String description) {
+    private void saveOperationLog(String action, String resourceType, Long resourceId, String description) {
         try {
-            auditLogService.logCreate(targetType, targetId != null ? String.valueOf(targetId) : "", description, null, description);
+            activityEventPublisher.newEvent("access", resourceType, action, description)
+                .resourceId(resourceId != null ? resourceId.toString() : "")
+                .publish();
         } catch (Exception e) {
             log.warn("保存操作日志失败: {}", e.getMessage());
         }

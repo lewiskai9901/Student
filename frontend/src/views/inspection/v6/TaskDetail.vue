@@ -61,7 +61,7 @@ import type { InspectionTask, InspectionTarget } from '@/types/v6Inspection'
 
 const router = useRouter()
 const route = useRoute()
-const taskId = Number(route.params.id)
+const taskId = route.params.id as string
 
 const loading = ref(false)
 const task = ref<InspectionTask | null>(null)

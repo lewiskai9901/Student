@@ -6,13 +6,13 @@
 import { ref, computed, watch, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
 import { Location, OfficeBuilding } from '@element-plus/icons-vue'
-import { universalSpaceApi } from '@/api/universalSpace'
-import type { SpaceTreeNode } from '@/types/universalSpace'
-import type { RoomType } from '@/types/space'
-import { getRoomTypeName } from '@/types/space'
+import { universalPlaceApi } from '@/api/universalPlace'
+import type { PlaceTreeNode } from '@/types/universalPlace'
+import type { RoomType } from '@/types/place'
+import { getRoomTypeName } from '@/types/place'
 
 // 使用新的空间树节点类型
-type SpaceDTO = SpaceTreeNode
+type PlaceDTO = PlaceTreeNode
 
 const props = defineProps<{
   locationType: string
@@ -28,7 +28,7 @@ const emit = defineEmits<{
 
 // 加载状态
 const loading = ref(false)
-const spaceTree = ref<SpaceDTO[]>([])
+const placeTree = ref<PlaceDTO[]>([])
 
 // 房间类型选项
 const roomTypeOptions: { value: RoomType; label: string }[] = [
@@ -47,18 +47,18 @@ const cascaderValue = ref<number[]>([])
 // 级联选择器配置
 const cascaderProps = {
   value: 'id',
-  label: 'spaceName',
+  label: 'placeName',
   children: 'children',
   emitPath: true,
   checkStrictly: false // 只能选择叶子节点（房间）
 }
 
 // 加载场所树
-async function loadSpaceTree() {
+async function loadPlaceTree() {
   loading.value = true
   try {
-    const data = await universalSpaceApi.getTree()
-    spaceTree.value = data || []
+    const data = await universalPlaceApi.getTree()
+    placeTree.value = data || []
   } catch (error) {
     console.error('加载场所树失败:', error)
     ElMessage.error('加载位置数据失败')
@@ -68,7 +68,7 @@ async function loadSpaceTree() {
 }
 
 // 根据ID查找完整路径
-function findPathById(tree: SpaceDTO[], targetId: number, path: number[] = []): number[] | null {
+function findPathById(tree: PlaceDTO[], targetId: number, path: number[] = []): number[] | null {
   for (const node of tree) {
     const currentPath = [...path, node.id]
     if (node.id === targetId) {
@@ -83,7 +83,7 @@ function findPathById(tree: SpaceDTO[], targetId: number, path: number[] = []): 
 }
 
 // 根据ID查找节点
-function findNodeById(tree: SpaceDTO[], targetId: number): SpaceDTO | null {
+function findNodeById(tree: PlaceDTO[], targetId: number): PlaceDTO | null {
   for (const node of tree) {
     if (node.id === targetId) return node
     if (node.children?.length) {
@@ -97,14 +97,14 @@ function findNodeById(tree: SpaceDTO[], targetId: number): SpaceDTO | null {
 // 构建位置名称
 function buildLocationName(path: number[]): string {
   const names: string[] = []
-  let currentNodes = spaceTree.value
+  let currentNodes = placeTree.value
 
   for (const id of path) {
     const node = currentNodes.find(n => n.id === id)
     if (node) {
       // 只取楼栋和房间名称
-      if (node.spaceType === 'BUILDING' || node.spaceType === 'ROOM') {
-        names.push(node.spaceName)
+      if (node.placeType === 'BUILDING' || node.placeType === 'ROOM') {
+        names.push(node.placeName)
       }
       currentNodes = node.children || []
     }
@@ -124,11 +124,11 @@ function handleTypeChange(value: string) {
 // 根据楼栋类型推断房间类型
 function inferRoomTypeFromBuilding(path: number[]): RoomType | null {
   // 查找路径中的楼栋节点
-  let currentNodes = spaceTree.value
+  let currentNodes = placeTree.value
   for (const id of path) {
     const node = currentNodes.find(n => n.id === id)
     if (node) {
-      if (node.spaceType === 'BUILDING' && node.buildingType) {
+      if (node.placeType === 'BUILDING' && node.buildingType) {
         // 根据楼栋类型推断房间类型
         const buildingToRoomType: Record<string, RoomType> = {
           'DORMITORY': 'DORMITORY',
@@ -147,7 +147,7 @@ function inferRoomTypeFromBuilding(path: number[]): RoomType | null {
 function handleCascaderChange(value: number[]) {
   if (value && value.length > 0) {
     const selectedId = value[value.length - 1]
-    const selectedNode = findNodeById(spaceTree.value, selectedId)
+    const selectedNode = findNodeById(placeTree.value, selectedId)
 
     if (selectedNode) {
       emit('update:locationId', selectedId)
@@ -178,16 +178,16 @@ function handleManualInput(value: string) {
 
 // 初始化时如果有值，恢复选中状态
 watch(() => props.locationId, (newId) => {
-  if (newId && spaceTree.value.length > 0) {
-    const path = findPathById(spaceTree.value, newId)
+  if (newId && placeTree.value.length > 0) {
+    const path = findPathById(placeTree.value, newId)
     if (path) {
       cascaderValue.value = path
     }
   }
 }, { immediate: true })
 
-// 监听spaceTree加载完成后恢复选中状态
-watch(() => spaceTree.value, (newTree) => {
+// 监听placeTree加载完成后恢复选中状态
+watch(() => placeTree.value, (newTree) => {
   if (props.locationId && newTree.length > 0) {
     const path = findPathById(newTree, props.locationId)
     if (path) {
@@ -197,7 +197,7 @@ watch(() => spaceTree.value, (newTree) => {
 })
 
 onMounted(() => {
-  loadSpaceTree()
+  loadPlaceTree()
 })
 </script>
 
@@ -225,7 +225,7 @@ onMounted(() => {
         <!-- 级联选择器 -->
         <el-cascader
           v-model="cascaderValue"
-          :options="spaceTree"
+          :options="placeTree"
           :props="cascaderProps"
           :show-all-levels="false"
           placeholder="选择具体位置（校区/楼栋/楼层/房间）"
@@ -238,12 +238,12 @@ onMounted(() => {
           <template #default="{ node, data }">
             <div class="flex items-center gap-1.5">
               <span class="text-xs text-gray-400 w-8">
-                {{ data.spaceType === 'CAMPUS' ? '校区' :
-                   data.spaceType === 'BUILDING' ? '楼栋' :
-                   data.spaceType === 'FLOOR' ? (data.floorNumber || '') + 'F' :
+                {{ data.placeType === 'CAMPUS' ? '校区' :
+                   data.placeType === 'BUILDING' ? '楼栋' :
+                   data.placeType === 'FLOOR' ? (data.floorNumber || '') + 'F' :
                    data.roomType ? getRoomTypeName(data.roomType) : '房间' }}
               </span>
-              <span>{{ data.spaceName }}</span>
+              <span>{{ data.placeName }}</span>
               <span v-if="data.roomNo" class="text-gray-400">({{ data.roomNo }})</span>
             </div>
           </template>

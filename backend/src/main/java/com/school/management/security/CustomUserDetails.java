@@ -4,7 +4,10 @@ import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 
+import com.school.management.infrastructure.access.UserContext;
+
 import java.util.Collection;
+import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -23,15 +26,16 @@ public class CustomUserDetails implements UserDetails {
 
     // 数据权限相关字段
     private Long orgUnitId;
-    private Long classId;
-    private Integer userType;
-    private String gradeLevel;
+    private String orgUnitPath;
+    private List<Long> roleIds;
+    private Long tenantId;
+    private List<UserContext.ScopedRoleInfo> scopedRoles;
 
     public CustomUserDetails() {
     }
 
     public CustomUserDetails(Long userId, String username, String password, String realName,
-                             Integer status, Long orgUnitId, Long classId, Integer userType,
+                             Integer status, Long orgUnitId, Long tenantId,
                              List<String> roles, List<String> permissions) {
         this.userId = userId;
         this.username = username;
@@ -39,8 +43,7 @@ public class CustomUserDetails implements UserDetails {
         this.realName = realName;
         this.status = status;
         this.orgUnitId = orgUnitId;
-        this.classId = classId;
-        this.userType = userType;
+        this.tenantId = tenantId;
         this.roles = roles;
         this.permissions = permissions;
     }
@@ -113,28 +116,36 @@ public class CustomUserDetails implements UserDetails {
         this.orgUnitId = orgUnitId;
     }
 
-    public Long getClassId() {
-        return classId;
+    public String getOrgUnitPath() {
+        return orgUnitPath;
     }
 
-    public void setClassId(Long classId) {
-        this.classId = classId;
+    public void setOrgUnitPath(String orgUnitPath) {
+        this.orgUnitPath = orgUnitPath;
     }
 
-    public Integer getUserType() {
-        return userType;
+    public List<Long> getRoleIds() {
+        return roleIds;
     }
 
-    public void setUserType(Integer userType) {
-        this.userType = userType;
+    public void setRoleIds(List<Long> roleIds) {
+        this.roleIds = roleIds;
     }
 
-    public String getGradeLevel() {
-        return gradeLevel;
+    public Long getTenantId() {
+        return tenantId;
     }
 
-    public void setGradeLevel(String gradeLevel) {
-        this.gradeLevel = gradeLevel;
+    public void setTenantId(Long tenantId) {
+        this.tenantId = tenantId;
+    }
+
+    public List<UserContext.ScopedRoleInfo> getScopedRoles() {
+        return scopedRoles != null ? scopedRoles : Collections.emptyList();
+    }
+
+    public void setScopedRoles(List<UserContext.ScopedRoleInfo> scopedRoles) {
+        this.scopedRoles = scopedRoles;
     }
 
     // UserDetails interface implementations
@@ -214,9 +225,7 @@ public class CustomUserDetails implements UserDetails {
                 ", realName='" + realName + '\'' +
                 ", status=" + status +
                 ", orgUnitId=" + orgUnitId +
-                ", classId=" + classId +
-                ", userType=" + userType +
-                ", gradeLevel='" + gradeLevel + '\'' +
+                ", tenantId=" + tenantId +
                 ", roles=" + roles +
                 ", permissions=" + permissions +
                 '}';

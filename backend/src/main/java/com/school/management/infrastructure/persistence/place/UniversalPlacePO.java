@@ -1,4 +1,4 @@
-package com.school.management.infrastructure.persistence.space;
+package com.school.management.infrastructure.persistence.place;
 
 import com.baomidou.mybatisplus.annotation.*;
 import lombok.Data;
@@ -9,8 +9,8 @@ import java.time.LocalDateTime;
  * 通用空间持久化对象
  */
 @Data
-@TableName("spaces")
-public class UniversalSpacePO {
+@TableName("places")
+public class UniversalPlacePO {
 
     @TableId(type = IdType.AUTO)
     private Long id;
@@ -18,12 +18,12 @@ public class UniversalSpacePO {
     /**
      * 空间编码
      */
-    private String spaceCode;
+    private String placeCode;
 
     /**
      * 空间名称
      */
-    private String spaceName;
+    private String placeName;
 
     /**
      * 空间类型编码
@@ -74,6 +74,11 @@ public class UniversalSpacePO {
      * 状态
      */
     private Integer status;
+
+    /**
+     * 性别限制
+     */
+    private String gender;
 
     /**
      * 扩展属性（JSON）

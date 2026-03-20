@@ -2,11 +2,15 @@ package com.school.management.application.user;
 
 import com.school.management.application.user.command.CreateUserCommand;
 import com.school.management.application.user.command.UpdateUserCommand;
+import com.school.management.domain.access.repository.AccessRelationRepository;
+import com.school.management.domain.access.repository.RoleRepository;
+import com.school.management.domain.place.repository.UniversalPlaceOccupantRepository;
+import com.school.management.domain.place.repository.UniversalPlaceRepository;
 import com.school.management.domain.shared.event.DomainEventPublisher;
 import com.school.management.domain.user.model.aggregate.User;
 import com.school.management.domain.user.model.valueobject.UserStatus;
-import com.school.management.domain.user.model.valueobject.UserType;
 import com.school.management.domain.user.repository.UserRepository;
+import com.school.management.domain.user.repository.UserTypeRepository;
 import com.school.management.exception.BusinessException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -42,10 +46,25 @@ class UserApplicationServiceTest {
     private UserRepository userRepository;
 
     @Mock
+    private UserTypeRepository userTypeRepository;
+
+    @Mock
+    private RoleRepository roleRepository;
+
+    @Mock
+    private AccessRelationRepository accessRelationRepository;
+
+    @Mock
     private PasswordEncoder passwordEncoder;
 
     @Mock
     private DomainEventPublisher eventPublisher;
+
+    @Mock
+    private UniversalPlaceOccupantRepository occupantRepository;
+
+    @Mock
+    private UniversalPlaceRepository placeRepository;
 
     @InjectMocks
     private UserApplicationService service;
@@ -71,11 +90,8 @@ class UserApplicationServiceTest {
                 1, // male
                 LocalDate.of(1990, 1, 1),
                 "110101199001011234",
-                1L, // orgUnitId
-                null, // primaryOrgRelationId
-                null, // classId
-                UserType.TEACHER,
-                null, // userTypeCode
+                null, // primaryOrgUnitId
+                "TEACHER", // userTypeCode
                 UserStatus.ENABLED,
                 null, // lastLoginTime
                 null, // lastLoginIp
@@ -95,9 +111,8 @@ class UserApplicationServiceTest {
                 "encodedPassword",
                 "禁用用户",
                 null, null, null, null, null, null, null,
-                1L, null, null,
-                UserType.TEACHER,
-                null, // userTypeCode
+                null, // primaryOrgUnitId
+                "TEACHER", // userTypeCode
                 UserStatus.DISABLED,
                 null, null, null, null, false,
                 Collections.emptyList(),
@@ -123,7 +138,7 @@ class UserApplicationServiceTest {
                     .phone("13800138001")
                     .email("testuser@example.com")
                     .orgUnitId(1L)
-                    .userType(2) // TEACHER
+                    .userTypeCode("TEACHER")
                     .build();
 
             when(userRepository.existsByUsername("testuser")).thenReturn(false);
@@ -684,8 +699,8 @@ class UserApplicationServiceTest {
             User user = User.reconstruct(
                     1L, "testuser", "password", "测试用户",
                     null, null, null, null, null, null, null,
-                    1L, null, null,
-                    UserType.TEACHER, null,
+                    null, // primaryOrgUnitId
+                    "TEACHER", // userTypeCode
                     UserStatus.ENABLED,
                     null, null, null,
                     "wechat_openid_123", // 已绑定微信

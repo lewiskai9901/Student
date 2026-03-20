@@ -19,6 +19,7 @@ import java.util.List;
 
 import static org.assertj.core.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
@@ -97,35 +98,21 @@ class AccessApplicationServiceTest {
         @DisplayName("应成功创建角色")
         void shouldCreateRoleSuccessfully() {
             CreateRoleCommand command = CreateRoleCommand.builder()
-                    .roleCode("ADMIN")
                     .roleName("管理员")
                     .description("系统管理员角色")
                     .build();
 
-            when(roleRepository.existsByRoleCode("ADMIN")).thenReturn(false);
+            // createRole now auto-generates roleCode, so existsByRoleCode is called with a generated code
+            when(roleRepository.existsByRoleCode(anyString())).thenReturn(false);
             when(roleRepository.save(any(Role.class)))
                     .thenAnswer(invocation -> invocation.getArgument(0));
 
             Role result = service.createRole(command);
 
             assertThat(result).isNotNull();
-            assertThat(result.getRoleCode()).isEqualTo("ADMIN");
+            assertThat(result.getRoleCode()).startsWith("ROLE_");
+            assertThat(result.getRoleName()).isEqualTo("管理员");
             verify(roleRepository).save(any(Role.class));
-        }
-
-        @Test
-        @DisplayName("角色编码重复时应抛出异常")
-        void shouldThrowExceptionWhenRoleCodeExists() {
-            CreateRoleCommand command = CreateRoleCommand.builder()
-                    .roleCode("ADMIN")
-                    .roleName("管理员")
-                    .build();
-
-            when(roleRepository.existsByRoleCode("ADMIN")).thenReturn(true);
-
-            assertThatThrownBy(() -> service.createRole(command))
-                    .isInstanceOf(IllegalArgumentException.class)
-                    .hasMessageContaining("Role code already exists");
         }
     }
 

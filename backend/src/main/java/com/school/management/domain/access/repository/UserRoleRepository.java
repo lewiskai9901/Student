@@ -26,14 +26,19 @@ public interface UserRoleRepository extends Repository<UserRole, Long> {
     List<UserRole> findByRoleId(Long roleId);
 
     /**
-     * Finds role assignments for a user within an organization unit.
+     * Finds role assignments for a user with a specific scope.
      */
-    List<UserRole> findByUserIdAndOrgUnitId(Long userId, Long orgUnitId);
+    List<UserRole> findByUserIdAndScope(Long userId, String scopeType, Long scopeId);
 
     /**
-     * Checks if a user has a specific role.
+     * Checks if a user has a specific role (any scope).
      */
     boolean existsByUserIdAndRoleId(Long userId, Long roleId);
+
+    /**
+     * Checks if a user has a specific role with exact scope.
+     */
+    boolean existsByUserIdAndRoleIdAndScope(Long userId, Long roleId, String scopeType, Long scopeId);
 
     /**
      * Removes all role assignments for a user.
@@ -41,7 +46,12 @@ public interface UserRoleRepository extends Repository<UserRole, Long> {
     void deleteByUserId(Long userId);
 
     /**
-     * Removes a specific role assignment.
+     * Removes all assignments of a specific role from a user (all scopes).
      */
     void deleteByUserIdAndRoleId(Long userId, Long roleId);
+
+    /**
+     * Removes a specific role assignment with exact scope.
+     */
+    void deleteByUserIdAndRoleIdAndScope(Long userId, Long roleId, String scopeType, Long scopeId);
 }

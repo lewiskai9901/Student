@@ -56,4 +56,14 @@ public interface MajorRepository extends Repository<Major, Long> {
      * 查找专业的所有专业方向
      */
     List<MajorDirection> findDirectionsByMajorId(Long majorId);
+
+    /**
+     * 批量根据ID查找专业
+     */
+    List<Major> findByIds(java.util.Collection<Long> ids);
+
+    /**
+     * 批量根据ID查找专业方向
+     */
+    List<MajorDirection> findDirectionsByIds(java.util.Collection<Long> ids);
 }

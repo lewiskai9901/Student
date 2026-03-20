@@ -63,7 +63,7 @@ const loading = ref(false)
 const project = ref<InspectionProject | null>(null)
 const tasks = ref<InspectionTask[]>([])
 
-const projectId = Number(route.params.id)
+const projectId = route.params.id as string
 
 const getStatusType = (status?: string) => {
   const types: Record<string, string> = { DRAFT: 'info', ACTIVE: 'success', PAUSED: 'warning', COMPLETED: 'primary', ARCHIVED: 'info' }

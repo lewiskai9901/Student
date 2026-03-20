@@ -6,6 +6,7 @@ import org.apache.ibatis.annotations.Insert;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 import org.apache.ibatis.annotations.Select;
+import org.apache.ibatis.annotations.Update;
 
 import java.util.List;
 
@@ -58,16 +59,16 @@ public interface UserDomainMapper extends BaseMapper<UserPO> {
     boolean existsByUsernameAndIdNot(@Param("username") String username, @Param("excludeId") Long excludeId);
 
     /**
-     * 根据组织单元ID查找用户
+     * 根据组织单元ID查找用户（通过 primary_org_unit_id）
      */
-    @Select("SELECT * FROM users WHERE org_unit_id = #{orgUnitId} AND deleted = 0")
+    @Select("SELECT * FROM users WHERE primary_org_unit_id = #{orgUnitId} AND deleted = 0")
     List<UserPO> findByOrgUnitId(@Param("orgUnitId") Long orgUnitId);
 
     /**
-     * 根据组织单元ID列表查找用户
+     * 根据组织单元ID列表查找用户（通过 primary_org_unit_id）
      */
     @Select("<script>" +
-            "SELECT * FROM users WHERE org_unit_id IN " +
+            "SELECT * FROM users WHERE primary_org_unit_id IN " +
             "<foreach collection='orgUnitIds' item='id' open='(' separator=',' close=')'>" +
             "#{id}" +
             "</foreach>" +
@@ -88,23 +89,44 @@ public interface UserDomainMapper extends BaseMapper<UserPO> {
     long countAll();
 
     /**
+     * 统计某组织的归属成员数（primary_org_unit_id）
+     */
+    @Select("SELECT COUNT(1) FROM users WHERE primary_org_unit_id = #{orgUnitId} AND deleted = 0")
+    long countByPrimaryOrgUnitId(@Param("orgUnitId") Long orgUnitId);
+
+    /**
+     * 按用户类型统计某组织的归属成员数
+     */
+    @Select("SELECT user_type_code, COUNT(1) AS cnt FROM users " +
+            "WHERE primary_org_unit_id = #{orgUnitId} AND deleted = 0 " +
+            "GROUP BY user_type_code")
+    List<java.util.Map<String, Object>> countByPrimaryOrgUnitIdGroupByType(@Param("orgUnitId") Long orgUnitId);
+
+    /**
+     * 单个逻辑删除用户（deleted 存 id，避免唯一键冲突）
+     */
+    @Update("UPDATE users SET deleted = id, updated_at = NOW() WHERE id = #{id} AND deleted = 0")
+    int softDeleteById(@Param("id") Long id);
+
+    /**
      * 批量删除用户（逻辑删除）
      */
-    @Select("<script>" +
-            "UPDATE users SET deleted = 1, updated_at = NOW() WHERE id IN " +
+    @Update("<script>" +
+            "UPDATE users SET deleted = id, updated_at = NOW() WHERE id IN " +
             "<foreach collection='ids' item='id' open='(' separator=',' close=')'>" +
             "#{id}" +
             "</foreach>" +
+            " AND deleted = 0" +
             "</script>")
     void deleteByIds(@Param("ids") List<Long> ids);
 
     /**
-     * 条件分页查询用户
+     * 条件分页查询用户（通过 primary_org_unit_id 关联组织）
      */
     @Select("<script>" +
-            "SELECT u.*, d.dept_name AS org_unit_name " +
+            "SELECT u.*, u.primary_org_unit_id AS org_unit_id, ou.unit_name AS org_unit_name " +
             "FROM users u " +
-            "LEFT JOIN departments d ON u.org_unit_id = d.id " +
+            "LEFT JOIN org_units ou ON u.primary_org_unit_id = ou.id AND ou.deleted = 0 " +
             "WHERE u.deleted = 0 " +
             "<if test='username != null and username != \"\"'>" +
             "AND u.username LIKE CONCAT('%', #{username}, '%') " +
@@ -116,7 +138,7 @@ public interface UserDomainMapper extends BaseMapper<UserPO> {
             "AND u.phone LIKE CONCAT('%', #{phone}, '%') " +
             "</if>" +
             "<if test='orgUnitId != null'>" +
-            "AND u.org_unit_id = #{orgUnitId} " +
+            "AND u.primary_org_unit_id = #{orgUnitId} " +
             "</if>" +
             "<if test='status != null'>" +
             "AND u.status = #{status} " +
@@ -134,10 +156,11 @@ public interface UserDomainMapper extends BaseMapper<UserPO> {
             @Param("status") Integer status);
 
     /**
-     * 条件统计用户总数
+     * 条件统计用户总数（通过 primary_org_unit_id 关联组织）
      */
     @Select("<script>" +
-            "SELECT COUNT(1) FROM users u WHERE u.deleted = 0 " +
+            "SELECT COUNT(1) FROM users u " +
+            "WHERE u.deleted = 0 " +
             "<if test='username != null and username != \"\"'>" +
             "AND u.username LIKE CONCAT('%', #{username}, '%') " +
             "</if>" +
@@ -148,7 +171,7 @@ public interface UserDomainMapper extends BaseMapper<UserPO> {
             "AND u.phone LIKE CONCAT('%', #{phone}, '%') " +
             "</if>" +
             "<if test='orgUnitId != null'>" +
-            "AND u.org_unit_id = #{orgUnitId} " +
+            "AND u.primary_org_unit_id = #{orgUnitId} " +
             "</if>" +
             "<if test='status != null'>" +
             "AND u.status = #{status} " +
@@ -165,11 +188,15 @@ public interface UserDomainMapper extends BaseMapper<UserPO> {
      * 获取简单用户列表（用于选择器）
      */
     @Select("<script>" +
-            "SELECT id, username, real_name, org_unit_id FROM users WHERE deleted = 0 AND status = 1 " +
+            "SELECT u.id, u.username, u.real_name, u.gender, u.user_type_code, " +
+            "u.primary_org_unit_id, o.unit_name AS org_unit_name " +
+            "FROM users u " +
+            "LEFT JOIN org_units o ON u.primary_org_unit_id = o.id AND o.deleted = 0 " +
+            "WHERE u.deleted = 0 AND u.status = 1 " +
             "<if test='keyword != null and keyword != \"\"'>" +
-            "AND (username LIKE CONCAT('%', #{keyword}, '%') OR real_name LIKE CONCAT('%', #{keyword}, '%')) " +
+            "AND (u.username LIKE CONCAT('%', #{keyword}, '%') OR u.real_name LIKE CONCAT('%', #{keyword}, '%')) " +
             "</if>" +
-            "ORDER BY created_at DESC LIMIT 100" +
+            "ORDER BY u.created_at DESC LIMIT 100" +
             "</script>")
     List<UserPO> findSimpleList(@Param("keyword") String keyword);
 
@@ -221,4 +248,11 @@ public interface UserDomainMapper extends BaseMapper<UserPO> {
      */
     @Insert("INSERT INTO user_roles (user_id, role_id, created_at) VALUES (#{userId}, #{roleId}, NOW())")
     void insertUserRole(@Param("userId") Long userId, @Param("roleId") Long roleId);
+
+    /**
+     * 清除某组织下所有用户的归属关系（primary_org_unit_id 设为 NULL）
+     */
+    @Update("UPDATE users SET primary_org_unit_id = NULL, updated_at = NOW() " +
+            "WHERE primary_org_unit_id = #{orgUnitId} AND deleted = 0")
+    int clearPrimaryOrgUnitId(@Param("orgUnitId") Long orgUnitId);
 }

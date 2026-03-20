@@ -91,6 +91,8 @@ public class SchoolClassPO {
      */
     private Integer status;
 
+    private Long tenantId;
+
     private LocalDateTime createdAt;
 
     private LocalDateTime updatedAt;

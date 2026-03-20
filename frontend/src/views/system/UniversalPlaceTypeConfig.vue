@@ -1,627 +1,733 @@
 <template>
-  <div class="space-type-config">
-    <div class="config-layout">
-      <!-- 左侧：类型树 -->
-      <div class="type-tree-panel">
-        <div class="panel-header">
-          <span class="panel-title">类型层级</span>
-          <el-button type="primary" size="small" @click="handleAddRoot">
-            <el-icon><Plus /></el-icon> 新增根类型
-          </el-button>
+  <div class="flex h-full flex-col bg-gray-50">
+    <!-- Header -->
+    <div class="flex items-center justify-between border-b border-gray-200 bg-white px-6 py-4">
+      <div>
+        <h1 class="text-lg font-semibold text-gray-900">场所类型配置</h1>
+        <p class="mt-0.5 text-sm text-gray-500">配置场所类型的分类、行为特征和层级关系</p>
+      </div>
+      <button
+        @click="loadData"
+        class="inline-flex items-center gap-1.5 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+      >
+        <RefreshCw class="h-4 w-4" :class="{ 'animate-spin': loading }" />
+        刷新
+      </button>
+    </div>
+
+    <!-- Main Content: Left Tree + Right Detail -->
+    <div class="flex flex-1 overflow-hidden">
+      <!-- Left: Type Tree -->
+      <div class="w-80 flex-shrink-0 overflow-y-auto border-r border-gray-200 bg-white">
+        <div v-if="loading" class="flex items-center justify-center py-20">
+          <div class="h-6 w-6 animate-spin rounded-full border-2 border-blue-600 border-t-transparent"></div>
         </div>
-        <div class="tree-container">
-          <el-tree
-            ref="treeRef"
-            :data="typeTree"
-            :props="{ label: 'typeName', children: 'children' }"
-            node-key="id"
-            default-expand-all
-            highlight-current
-            :expand-on-click-node="false"
-            @node-click="handleNodeClick"
-          >
-            <template #default="{ node, data }">
-              <div class="tree-node">
-                <span class="node-name">{{ data.typeName }}</span>
-                <span class="node-code">{{ data.typeCode }}</span>
-                <div class="node-actions">
-                  <el-button
-                    v-if="data.allowedChildTypes?.length !== 0"
-                    link
-                    size="small"
-                    type="primary"
-                    @click.stop="handleAddChild(data)"
-                  >
-                    <el-icon><Plus /></el-icon>
-                  </el-button>
-                </div>
-              </div>
-            </template>
-          </el-tree>
-          <div v-if="typeTree.length === 0 && !loading" class="empty-state">
-            <p>暂无类型数据</p>
-            <el-button type="primary" size="small" @click="handleAddRoot">创建第一个类型</el-button>
+
+        <div v-else class="p-3">
+          <!-- Search -->
+          <el-input
+            v-model="searchText"
+            placeholder="搜索类型..."
+            size="small"
+            clearable
+            class="mb-3"
+          />
+
+          <!-- Tree nodes -->
+          <template v-if="filteredTree.length > 0">
+            <TypeTreeNode
+              v-for="node in filteredTree"
+              :key="node.id"
+              :node="node"
+              :selected-id="selectedTypeId"
+              :depth="0"
+              @select="handleSelectType"
+              @add-child="handleAddChild"
+              @delete="handleDeleteType"
+            />
+          </template>
+          <div v-else class="py-10 text-center text-sm text-gray-400">
+            <MapPin class="mx-auto mb-2 h-8 w-8 text-gray-300" />
+            暂无类型
           </div>
+
+          <!-- Add root type button -->
+          <button
+            @click="handleAddRoot"
+            class="mt-3 flex w-full items-center gap-1.5 rounded-lg border border-dashed border-gray-300 px-3 py-2 text-sm text-gray-500 hover:border-blue-400 hover:text-blue-600"
+          >
+            <Plus class="h-3.5 w-3.5" />
+            新增根类型
+          </button>
         </div>
       </div>
 
-      <!-- 右侧：类型详情/编辑 -->
-      <div class="type-detail-panel">
-        <template v-if="selectedType">
-          <div class="panel-header">
-            <span class="panel-title">{{ selectedType.typeName }}</span>
-            <div class="header-actions">
-              <el-button size="small" @click="handleEdit">编辑</el-button>
-              <el-button
-                size="small"
-                type="danger"
-                :disabled="selectedType.system"
-                @click="handleDelete"
+      <!-- Right: Detail / Edit -->
+      <div class="flex-1 overflow-y-auto">
+        <!-- No selection -->
+        <div v-if="!selectedType && !isCreating" class="flex h-full items-center justify-center text-gray-400">
+          <div class="text-center">
+            <Settings class="mx-auto mb-3 h-10 w-10 text-gray-300" />
+            <p class="text-sm">选择左侧类型进行编辑，或新增类型</p>
+          </div>
+        </div>
+
+        <!-- Edit/Create form -->
+        <div v-else class="p-6 space-y-5">
+          <!-- Header -->
+          <div class="flex items-center justify-between">
+            <div class="flex items-center gap-2">
+              <h2 class="text-base font-semibold text-gray-900">
+                {{ isCreating ? (addParentType ? '新增子类型' : '新增根类型') : '编辑类型' }}
+              </h2>
+              <span v-if="formData.category" class="rounded bg-blue-50 px-2 py-0.5 text-xs font-medium text-blue-600">
+                {{ categoryLabel(formData.category) }}
+              </span>
+            </div>
+            <div class="flex items-center gap-2">
+              <button
+                v-if="!isCreating && selectedType && !selectedType.system"
+                @click="handleDeleteType(selectedType!)"
+                class="rounded-lg border border-red-200 px-3 py-1.5 text-sm text-red-600 hover:bg-red-50"
               >
                 删除
-              </el-button>
+              </button>
+              <button
+                v-if="isCreating"
+                @click="cancelCreate"
+                class="rounded-lg border border-gray-300 px-3 py-1.5 text-sm text-gray-600 hover:bg-gray-50"
+              >
+                取消
+              </button>
+              <button
+                @click="handleSave"
+                :disabled="saveLoading || (selectedType?.system && !isCreating)"
+                class="rounded-lg bg-blue-600 px-4 py-1.5 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
+              >
+                {{ saveLoading ? '保存中...' : (isCreating ? '创建' : '保存') }}
+              </button>
             </div>
           </div>
-          <div class="detail-content">
-            <div class="detail-row">
-              <span class="label">类型编码</span>
-              <span class="value">{{ selectedType.typeCode }}</span>
+
+          <!-- Category selector (only when creating) -->
+          <div v-if="isCreating && !formData.category">
+            <h4 class="mb-3 text-xs font-semibold uppercase tracking-wider text-gray-400">选择基础分类</h4>
+            <div class="grid grid-cols-3 gap-3">
+              <button
+                v-for="bc in availableCategories"
+                :key="bc.code"
+                @click="selectCategory(bc.code)"
+                class="rounded-xl border-2 border-gray-200 p-4 text-center transition-all hover:border-blue-300 hover:bg-blue-50/50"
+              >
+                <div class="text-2xl mb-1">{{ categoryIcon(bc.code) }}</div>
+                <div class="text-sm font-medium text-gray-900">{{ bc.label }}</div>
+                <div class="mt-0.5 text-xs text-gray-400">{{ bc.code }}</div>
+              </button>
             </div>
-            <div class="detail-row">
-              <span class="label">描述</span>
-              <span class="value">{{ selectedType.description || '-' }}</span>
-            </div>
-            <div class="detail-section">
-              <div class="section-title">层级配置</div>
-              <div class="detail-row">
-                <span class="label">是否根类型</span>
-                <el-tag :type="selectedType.rootType ? 'success' : 'info'" size="small">
-                  {{ selectedType.rootType ? '是' : '否' }}
-                </el-tag>
+          </div>
+
+          <!-- Form fields (show after category is selected) -->
+          <template v-if="formData.category">
+            <!-- Basic info -->
+            <div>
+              <h4 class="mb-3 text-xs font-semibold uppercase tracking-wider text-gray-400">基本信息</h4>
+              <div class="grid grid-cols-2 gap-4">
+                <div>
+                  <label class="mb-1 block text-sm font-medium text-gray-700">
+                    类型编码
+                  </label>
+                  <el-input
+                    v-model="formData.typeCode"
+                    placeholder="自动生成"
+                    :disabled="!isCreating"
+                    maxlength="50"
+                  />
+                </div>
+                <div>
+                  <label class="mb-1 block text-sm font-medium text-gray-700">
+                    类型名称 <span class="text-red-500">*</span>
+                  </label>
+                  <el-input v-model="formData.typeName" placeholder="如：教学楼、宿舍" maxlength="30" />
+                </div>
               </div>
-              <div class="detail-row">
-                <span class="label">允许子类型</span>
-                <span class="value" v-if="selectedType.allowedChildTypes?.length">
-                  <el-tag
-                    v-for="code in selectedType.allowedChildTypes"
-                    :key="code"
-                    size="small"
-                    class="mr-1"
+              <div class="mt-3 grid grid-cols-2 gap-4">
+                <div>
+                  <label class="mb-1 block text-sm font-medium text-gray-700">排序号</label>
+                  <el-input-number v-model="formData.sortOrder" :min="0" :max="999" style="width: 100%" />
+                </div>
+              </div>
+              <div class="mt-3">
+                <label class="mb-1 block text-sm font-medium text-gray-700">描述</label>
+                <el-input v-model="formData.description" type="textarea" :rows="2" placeholder="选填" />
+              </div>
+            </div>
+
+            <!-- Features -->
+            <div>
+              <h4 class="mb-3 text-xs font-semibold uppercase tracking-wider text-gray-400">行为特征</h4>
+              <div class="rounded-lg border border-gray-200 divide-y divide-gray-100">
+                <div class="flex items-center gap-3 px-3 py-2.5">
+                  <el-switch v-model="formFeatures.hasCapacity" />
+                  <span class="text-sm text-gray-700">有容量</span>
+                  <template v-if="formFeatures.hasCapacity">
+                    <el-select v-model="formData.capacityUnit" placeholder="单位" style="width: 90px" size="small">
+                      <el-option label="人" value="人" />
+                      <el-option label="床位" value="床位" />
+                      <el-option label="工位" value="工位" />
+                      <el-option label="平方米" value="平方米" />
+                    </el-select>
+                    <el-input-number
+                      v-model="formData.defaultCapacity"
+                      :min="0"
+                      placeholder="默认容量"
+                      size="small"
+                      style="width: 120px"
+                    />
+                  </template>
+                </div>
+                <div class="flex items-center gap-6 px-3 py-2.5">
+                  <label class="inline-flex cursor-pointer items-center gap-1.5 text-sm text-gray-700">
+                    <input type="checkbox" v-model="formFeatures.bookable" class="rounded border-gray-300 text-blue-600" />
+                    可预订
+                  </label>
+                  <label class="inline-flex cursor-pointer items-center gap-1.5 text-sm text-gray-700">
+                    <input type="checkbox" v-model="formFeatures.assignable" class="rounded border-gray-300 text-blue-600" />
+                    可分配
+                  </label>
+                  <label class="inline-flex cursor-pointer items-center gap-1.5 text-sm text-gray-700">
+                    <input type="checkbox" v-model="formFeatures.occupiable" class="rounded border-gray-300 text-blue-600" />
+                    可入住
+                  </label>
+                </div>
+              </div>
+            </div>
+
+            <!-- Hierarchy config -->
+            <div>
+              <h4 class="mb-3 text-xs font-semibold uppercase tracking-wider text-gray-400">层级配置</h4>
+              <div class="grid grid-cols-2 gap-4">
+                <div>
+                  <label class="mb-1 block text-sm font-medium text-gray-700">允许的子类型</label>
+                  <el-select
+                    v-model="formData.allowedChildTypeCodes"
+                    multiple
+                    placeholder="选择允许的子类型编码"
+                    style="width: 100%"
+                    filterable
                   >
-                    {{ getTypeName(code) }}
-                  </el-tag>
-                </span>
-                <span class="value text-gray-400" v-else>无（叶子类型）</span>
-              </div>
-            </div>
-            <div class="detail-section">
-              <div class="section-title">行为特性</div>
-              <div class="features-grid">
-                <div class="feature-item" :class="{ active: selectedType.hasCapacity }">
-                  <span class="feature-label">容量</span>
-                  <span class="feature-value">{{ selectedType.hasCapacity ? selectedType.capacityUnit || '人' : '无' }}</span>
+                    <el-option
+                      v-for="t in allFlatTypes.filter(t => t.typeCode !== formData.typeCode)"
+                      :key="t.typeCode"
+                      :label="t.typeName"
+                      :value="t.typeCode"
+                    />
+                  </el-select>
                 </div>
-                <div class="feature-item" :class="{ active: selectedType.bookable }">
-                  <span class="feature-label">可预订</span>
-                  <span class="feature-value">{{ selectedType.bookable ? '是' : '否' }}</span>
-                </div>
-                <div class="feature-item" :class="{ active: selectedType.assignable }">
-                  <span class="feature-label">可分配</span>
-                  <span class="feature-value">{{ selectedType.assignable ? '是' : '否' }}</span>
-                </div>
-                <div class="feature-item" :class="{ active: selectedType.occupiable }">
-                  <span class="feature-label">可入住</span>
-                  <span class="feature-value">{{ selectedType.occupiable ? '是' : '否' }}</span>
+                <div v-if="!formData.parentTypeCode">
+                  <label class="mb-1 block text-sm font-medium text-gray-700">最大层级深度</label>
+                  <el-input-number v-model="formData.maxDepth" :min="1" :max="10" style="width: 100%" />
                 </div>
               </div>
             </div>
-            <div class="detail-row">
-              <span class="label">状态</span>
-              <el-switch
-                v-model="selectedType.enabled"
-                :disabled="selectedType.system"
-                @change="handleToggleStatus"
-              />
+
+            <!-- Cross-domain references -->
+            <div>
+              <h4 class="mb-3 text-xs font-semibold uppercase tracking-wider text-gray-400">跨域关联</h4>
+              <div class="grid grid-cols-2 gap-4">
+                <div>
+                  <label class="mb-1 block text-sm font-medium text-gray-700">关联用户类型</label>
+                  <el-select
+                    v-model="formData.defaultUserTypeCodes"
+                    multiple
+                    placeholder="选填"
+                    style="width: 100%"
+                    filterable
+                    allow-create
+                  >
+                    <el-option
+                      v-for="ut in userTypes"
+                      :key="ut.typeCode"
+                      :label="ut.typeName"
+                      :value="ut.typeCode"
+                    />
+                  </el-select>
+                </div>
+                <div>
+                  <label class="mb-1 block text-sm font-medium text-gray-700">关联组织类型</label>
+                  <el-select
+                    v-model="formData.defaultOrgTypeCodes"
+                    multiple
+                    placeholder="选填"
+                    style="width: 100%"
+                    filterable
+                    allow-create
+                  >
+                    <el-option
+                      v-for="ot in orgTypes"
+                      :key="ot.typeCode"
+                      :label="ot.typeName"
+                      :value="ot.typeCode"
+                    />
+                  </el-select>
+                </div>
+              </div>
             </div>
-          </div>
-        </template>
-        <div v-else class="empty-detail">
-          <p>请从左侧选择一个类型查看详情</p>
+
+            <!-- System type info -->
+            <div v-if="selectedType?.system" class="rounded-lg bg-amber-50 border border-amber-200 px-4 py-3">
+              <div class="flex items-center gap-1.5 text-sm text-amber-700">
+                <Lock class="h-4 w-4" />
+                系统预置类型，不可修改
+              </div>
+            </div>
+          </template>
         </div>
       </div>
     </div>
-
-    <!-- V10: 改为 Dialog（弹窗）样式 -->
-    <el-dialog
-      v-model="drawerVisible"
-      :title="isEdit ? '编辑类型' : (parentType ? `新增子类型 - ${parentType.typeName}` : '新增根类型')"
-      width="480px"
-      destroy-on-close
-      align-center
-    >
-      <el-form
-        ref="formRef"
-        :model="formData"
-        :rules="formRules"
-        label-position="top"
-      >
-        <el-form-item label="类型名称" prop="typeName">
-          <el-input v-model="formData.typeName" placeholder="如: 楼栋、教室" />
-        </el-form-item>
-
-        <el-form-item label="描述">
-          <el-input v-model="formData.description" type="textarea" :rows="2" placeholder="选填" />
-        </el-form-item>
-
-        <el-divider />
-
-        <el-form-item label="是否根类型" v-if="!parentType">
-          <el-switch v-model="formData.rootType" />
-          <div class="form-tip">开启后可作为顶级空间</div>
-        </el-form-item>
-
-        <el-form-item label="允许的子类型">
-          <el-select
-            v-model="formData.allowedChildTypes"
-            multiple
-            placeholder="选择允许创建的子类型"
-            style="width: 100%"
-          >
-            <el-option
-              v-for="type in availableChildTypes"
-              :key="type.typeCode"
-              :label="type.typeName"
-              :value="type.typeCode"
-            />
-          </el-select>
-          <div class="form-tip">不选则为叶子类型（不能创建子空间）</div>
-        </el-form-item>
-
-        <el-divider />
-
-        <el-form-item label="容量">
-          <div class="inline-form">
-            <el-switch v-model="formData.hasCapacity" />
-            <el-select
-              v-if="formData.hasCapacity"
-              v-model="formData.capacityUnit"
-              placeholder="单位"
-              style="width: 100px; margin-left: 12px"
-            >
-              <el-option label="人" value="人" />
-              <el-option label="床位" value="床位" />
-              <el-option label="工位" value="工位" />
-            </el-select>
-          </div>
-        </el-form-item>
-
-        <el-form-item>
-          <el-checkbox v-model="formData.bookable">可预订</el-checkbox>
-          <el-checkbox v-model="formData.assignable">可分配</el-checkbox>
-          <el-checkbox v-model="formData.occupiable">可入住</el-checkbox>
-        </el-form-item>
-
-        <el-form-item label="排序">
-          <el-input-number v-model="formData.sortOrder" :min="0" />
-        </el-form-item>
-      </el-form>
-
-      <template #footer>
-        <el-button @click="drawerVisible = false">取消</el-button>
-        <el-button type="primary" :loading="submitting" @click="handleSubmit">
-          {{ isEdit ? '保存' : '创建' }}
-        </el-button>
-      </template>
-    </el-dialog>
   </div>
 </template>
 
-<script setup lang="ts">
-import { ref, reactive, computed, onMounted } from 'vue'
-import { ElMessage, ElMessageBox, type FormInstance, type FormRules } from 'element-plus'
-import { Plus } from '@element-plus/icons-vue'
-import { universalSpaceTypeApi } from '@/api/universalSpaceType'
-import type { UniversalSpaceType, CreateSpaceTypeRequest } from '@/types/universalSpace'
+<script lang="ts">
+import { defineComponent, h, ref, type PropType } from 'vue'
+import { ChevronRight, ChevronDown, Plus, Trash2 } from 'lucide-vue-next'
+import type { PlaceTypeTreeNode } from '@/types/universalPlace'
 
-// 数据
-const loading = ref(false)
-const submitting = ref(false)
-const spaceTypes = ref<UniversalSpaceType[]>([])
-const selectedType = ref<UniversalSpaceType | null>(null)
-const drawerVisible = ref(false)
-const isEdit = ref(false)
-const editingId = ref<number | null>(null)
-const parentType = ref<UniversalSpaceType | null>(null)
-const formRef = ref<FormInstance>()
-const treeRef = ref()
+// Recursive tree node component
+const TypeTreeNode = defineComponent({
+  name: 'TypeTreeNode',
+  props: {
+    node: { type: Object as PropType<PlaceTypeTreeNode>, required: true },
+    selectedId: { type: Number, default: null },
+    depth: { type: Number, default: 0 }
+  },
+  emits: ['select', 'add-child', 'delete'],
+  setup(props, { emit }) {
+    const expanded = ref(true)
 
-// 构建类型树
-const typeTree = computed(() => {
-  const types = spaceTypes.value
-  const typeMap = new Map(types.map(t => [t.typeCode, t]))
+    const categoryIcons: Record<string, string> = {
+      SITE: '🏫', BUILDING: '🏢', FLOOR: '📋', ROOM: '🚪', AREA: '📐', POINT: '📍'
+    }
 
-  // 找出所有根类型
-  const rootTypes = types.filter(t => t.rootType)
+    return () => {
+      const node = props.node
+      const isSelected = props.selectedId === node.id
+      const hasChildren = node.children && node.children.length > 0
+      const icon = categoryIcons[node.category || ''] || '📦'
+      const paddingLeft = `${props.depth * 16 + 8}px`
+      const isLeaf = !node.allowedChildTypeCodes || node.allowedChildTypeCodes.length === 0
 
-  // 递归构建子树
-  function buildChildren(parentCodes: string[] | undefined): any[] {
-    if (!parentCodes?.length) return []
-    return parentCodes
-      .map(code => typeMap.get(code))
-      .filter(Boolean)
-      .map(type => ({
-        ...type,
-        children: buildChildren(type!.allowedChildTypes)
-      }))
+      const children: any[] = []
+
+      // Main row
+      children.push(
+        h('div', {
+          class: [
+            'flex items-center gap-1.5 rounded-lg px-2 py-1.5 cursor-pointer text-sm transition-colors group',
+            isSelected ? 'bg-blue-50 text-blue-700' : 'text-gray-700 hover:bg-gray-50'
+          ],
+          style: { paddingLeft },
+          onClick: () => emit('select', node)
+        }, [
+          // Expand toggle
+          hasChildren
+            ? h('button', {
+                class: 'flex-shrink-0 w-4 h-4 flex items-center justify-center',
+                onClick: (e: Event) => { e.stopPropagation(); expanded.value = !expanded.value }
+              }, [
+                h(expanded.value ? ChevronDown : ChevronRight, { class: 'h-3 w-3 text-gray-400' })
+              ])
+            : h('span', { class: 'w-4' }),
+          // Icon
+          h('span', { class: 'text-sm flex-shrink-0' }, icon),
+          // Name
+          h('span', { class: 'flex-1 truncate text-sm font-medium' }, node.typeName),
+          // Category badge
+          h('span', {
+            class: 'rounded px-1 py-0.5 text-[10px] bg-gray-100 text-gray-400 flex-shrink-0'
+          }, node.category || ''),
+          // Actions (shown on hover)
+          h('div', { class: 'hidden group-hover:flex items-center gap-0.5 flex-shrink-0' }, [
+            // Add child button (if not leaf)
+            !isLeaf && h('button', {
+              class: 'rounded p-0.5 text-gray-400 hover:text-green-600',
+              title: '添加子类型',
+              onClick: (e: Event) => { e.stopPropagation(); emit('add-child', node) }
+            }, [h(Plus, { class: 'h-3 w-3' })]),
+            // Delete button
+            !node.system && h('button', {
+              class: 'rounded p-0.5 text-gray-400 hover:text-red-500',
+              title: '删除',
+              onClick: (e: Event) => { e.stopPropagation(); emit('delete', node) }
+            }, [h(Trash2, { class: 'h-3 w-3' })])
+          ])
+        ])
+      )
+
+      // Children
+      if (hasChildren && expanded.value) {
+        for (const child of node.children!) {
+          children.push(
+            h(TypeTreeNode, {
+              node: child,
+              selectedId: props.selectedId,
+              depth: props.depth + 1,
+              onSelect: (n: any) => emit('select', n),
+              onAddChild: (n: any) => emit('add-child', n),
+              onDelete: (n: any) => emit('delete', n)
+            })
+          )
+        }
+      }
+
+      return h('div', children)
+    }
   }
-
-  return rootTypes.map(root => ({
-    ...root,
-    children: buildChildren(root.allowedChildTypes)
-  }))
 })
 
-// 表单数据
-const formData = reactive<CreateSpaceTypeRequest & { rootType: boolean }>({
+export default { components: { TypeTreeNode } }
+</script>
+
+<script setup lang="ts">
+import { ref, reactive, computed, onMounted } from 'vue'
+import { ElMessage, ElMessageBox } from 'element-plus'
+import {
+  Plus, RefreshCw, Trash2, Lock, MapPin, Settings,
+  ChevronRight, ChevronDown
+} from 'lucide-vue-next'
+import { universalPlaceTypeApi } from '@/api/universalPlaceType'
+import { userTypeApi } from '@/api/userType'
+import { orgTypeApi } from '@/api/orgType'
+import type {
+  PlaceTypeTreeNode, CreatePlaceTypeRequest, UpdatePlaceTypeRequest, PlaceCategory
+} from '@/types/universalPlace'
+
+// --- State ---
+const loading = ref(false)
+const saveLoading = ref(false)
+const typeTree = ref<PlaceTypeTreeNode[]>([])
+const categories = ref<PlaceCategory[]>([])
+const allFlatTypes = ref<PlaceTypeTreeNode[]>([])
+const selectedTypeId = ref<number | null>(null)
+const selectedType = ref<PlaceTypeTreeNode | null>(null)
+const isCreating = ref(false)
+const addParentType = ref<PlaceTypeTreeNode | null>(null)
+const searchText = ref('')
+
+// Cross-domain refs
+const userTypes = ref<{ typeCode: string; typeName: string }[]>([])
+const orgTypes = ref<{ typeCode: string; typeName: string }[]>([])
+
+const formData = reactive({
+  typeCode: '',
   typeName: '',
-  icon: '',
+  category: '',
+  parentTypeCode: '',
   description: '',
   sortOrder: 0,
-  rootType: false,
-  allowedChildTypes: [],
+  capacityUnit: '人',
+  defaultCapacity: undefined as number | undefined,
+  allowedChildTypeCodes: [] as string[],
+  maxDepth: undefined as number | undefined,
+  defaultUserTypeCodes: [] as string[],
+  defaultOrgTypeCodes: [] as string[],
+  metadataSchema: '',
+})
+
+const formFeatures = reactive({
   hasCapacity: false,
   bookable: false,
   assignable: false,
   occupiable: false,
-  capacityUnit: '人',
-  defaultCapacity: undefined
 })
 
-const formRules: FormRules = {
-  typeName: [{ required: true, message: '请输入类型名称', trigger: 'blur' }]
-}
-
-// 可选的子类型
-const availableChildTypes = computed(() => {
-  if (!isEdit.value) return spaceTypes.value
-  return spaceTypes.value.filter(t => t.id !== editingId.value)
+// --- Computed ---
+const filteredTree = computed(() => {
+  if (!searchText.value) return typeTree.value
+  const q = searchText.value.toLowerCase()
+  function filterNodes(nodes: PlaceTypeTreeNode[]): PlaceTypeTreeNode[] {
+    return nodes
+      .map(node => {
+        const childMatches = node.children ? filterNodes(node.children) : []
+        const selfMatch = node.typeName.toLowerCase().includes(q) || node.typeCode.toLowerCase().includes(q)
+        if (selfMatch || childMatches.length > 0) {
+          return { ...node, children: childMatches.length > 0 ? childMatches : node.children }
+        }
+        return null
+      })
+      .filter(Boolean) as PlaceTypeTreeNode[]
+  }
+  return filterNodes(typeTree.value)
 })
 
-// 获取类型名称
-function getTypeName(code: string): string {
-  return spaceTypes.value.find(t => t.typeCode === code)?.typeName || code
-}
-
-// 加载数据
-async function loadData() {
-  loading.value = true
-  try {
-    spaceTypes.value = await universalSpaceTypeApi.getAll()
-  } catch (error) {
-    console.error('加载空间类型失败:', error)
-    ElMessage.error('加载空间类型失败')
-  } finally {
-    loading.value = false
+const availableCategories = computed(() => {
+  if (!addParentType.value) {
+    // Root type → only SITE
+    return categories.value.filter(bc => bc.root)
   }
+  const parentCat = addParentType.value.category
+  if (!parentCat) return []
+  const parentCategory = categories.value.find(bc => bc.code === parentCat)
+  if (!parentCategory) return []
+  return categories.value.filter(bc => parentCategory.allowedChildCategories.includes(bc.code))
+})
+
+// --- Helpers ---
+const categoryIcons: Record<string, string> = {
+  SITE: '🏫', BUILDING: '🏢', FLOOR: '📋', ROOM: '🚪', AREA: '📐', POINT: '📍'
 }
 
-// 点击节点
-function handleNodeClick(data: UniversalSpaceType) {
-  selectedType.value = data
+function categoryIcon(code: string): string {
+  return categoryIcons[code] || '📦'
 }
 
-// 新增根类型
-function handleAddRoot() {
-  isEdit.value = false
-  editingId.value = null
-  parentType.value = null
-  resetForm()
-  formData.rootType = true
-  drawerVisible.value = true
+function categoryLabel(code: string): string {
+  return categories.value.find(bc => bc.code === code)?.label || code
 }
 
-// 新增子类型
-function handleAddChild(parent: UniversalSpaceType) {
-  isEdit.value = false
-  editingId.value = null
-  parentType.value = parent
-  resetForm()
-  formData.rootType = false
-  drawerVisible.value = true
-}
-
-// 编辑
-function handleEdit() {
-  if (!selectedType.value) return
-  const row = selectedType.value
-  isEdit.value = true
-  editingId.value = row.id
-  parentType.value = null
-  Object.assign(formData, {
-    typeName: row.typeName,
-    icon: row.icon || '',
-    description: row.description || '',
-    sortOrder: row.sortOrder,
-    rootType: row.rootType,
-    allowedChildTypes: row.allowedChildTypes || [],
-    hasCapacity: row.hasCapacity,
-    bookable: row.bookable,
-    assignable: row.assignable,
-    occupiable: row.occupiable,
-    capacityUnit: row.capacityUnit || '人',
-    defaultCapacity: row.defaultCapacity
-  })
-  drawerVisible.value = true
-}
-
-// 删除
-async function handleDelete() {
-  if (!selectedType.value) return
-  try {
-    await ElMessageBox.confirm(`确定要删除类型"${selectedType.value.typeName}"吗？`, '提示', { type: 'warning' })
-    await universalSpaceTypeApi.delete(selectedType.value.id)
-    ElMessage.success('删除成功')
-    selectedType.value = null
-    loadData()
-  } catch (error: any) {
-    if (error !== 'cancel') {
-      ElMessage.error(error.message || '删除失败')
-    }
+function flattenTree(nodes: PlaceTypeTreeNode[]): PlaceTypeTreeNode[] {
+  const result: PlaceTypeTreeNode[] = []
+  for (const node of nodes) {
+    result.push(node)
+    if (node.children) result.push(...flattenTree(node.children))
   }
+  return result
 }
 
-// 切换状态
-async function handleToggleStatus() {
-  if (!selectedType.value) return
-  try {
-    if (selectedType.value.enabled) {
-      await universalSpaceTypeApi.enable(selectedType.value.id)
-    } else {
-      await universalSpaceTypeApi.disable(selectedType.value.id)
-    }
-    ElMessage.success('操作成功')
-  } catch (error: any) {
-    selectedType.value.enabled = !selectedType.value.enabled
-    ElMessage.error(error.message || '操作失败')
-  }
-}
-
-// 提交表单
-async function handleSubmit() {
-  try {
-    await formRef.value?.validate()
-    submitting.value = true
-
-    // 如果有父类型，需要更新父类型的allowedChildTypes
-    if (parentType.value && !isEdit.value) {
-      // 创建新类型后需要更新父类型
-    }
-
-    if (isEdit.value && editingId.value) {
-      await universalSpaceTypeApi.update(editingId.value, formData)
-      ElMessage.success('更新成功')
-    } else {
-      await universalSpaceTypeApi.create(formData)
-      ElMessage.success('创建成功')
-    }
-
-    drawerVisible.value = false
-    loadData()
-  } catch (error: any) {
-    if (error !== false) {
-      ElMessage.error(error.message || '操作失败')
-    }
-  } finally {
-    submitting.value = false
-  }
-}
-
-// 重置表单
 function resetForm() {
   Object.assign(formData, {
+    typeCode: '',
     typeName: '',
-    icon: '',
+    category: '',
+    parentTypeCode: '',
     description: '',
     sortOrder: 0,
-    rootType: false,
-    allowedChildTypes: [],
+    capacityUnit: '人',
+    defaultCapacity: undefined,
+    allowedChildTypeCodes: [],
+    maxDepth: undefined,
+    defaultUserTypeCodes: [],
+    defaultOrgTypeCodes: [],
+    metadataSchema: '',
+  })
+  Object.assign(formFeatures, {
     hasCapacity: false,
     bookable: false,
     assignable: false,
     occupiable: false,
-    capacityUnit: '人',
-    defaultCapacity: undefined
   })
 }
 
-onMounted(() => {
-  loadData()
-})
+// --- Actions ---
+async function loadData() {
+  loading.value = true
+  try {
+    const [tree, cats] = await Promise.all([
+      universalPlaceTypeApi.getTree(),
+      universalPlaceTypeApi.getCategories()
+    ])
+    typeTree.value = tree
+    categories.value = cats
+    allFlatTypes.value = flattenTree(tree)
+
+    // Re-select if previously selected
+    if (selectedTypeId.value) {
+      const found = allFlatTypes.value.find(t => t.id === selectedTypeId.value)
+      if (!found) {
+        selectedTypeId.value = null
+        selectedType.value = null
+      }
+    }
+  } catch {
+    ElMessage.error('加载场所类型失败')
+  } finally {
+    loading.value = false
+  }
+
+  // Load cross-domain types silently
+  loadCrossTypes()
+}
+
+async function loadCrossTypes() {
+  try {
+    const [ut, ot] = await Promise.all([
+      userTypeApi.getEnabled().catch(() => []),
+      orgTypeApi.getEnabled().catch(() => [])
+    ])
+    userTypes.value = (ut || []).map((t: any) => ({ typeCode: t.typeCode, typeName: t.typeName }))
+    orgTypes.value = (ot || []).map((t: any) => ({ typeCode: t.typeCode, typeName: t.typeName }))
+  } catch { /* silent */ }
+}
+
+function handleSelectType(node: PlaceTypeTreeNode) {
+  selectedTypeId.value = node.id
+  selectedType.value = node
+  isCreating.value = false
+  addParentType.value = null
+
+  // Load into form
+  resetForm()
+  formData.typeCode = node.typeCode
+  formData.typeName = node.typeName
+  formData.category = node.category || ''
+  formData.parentTypeCode = node.parentTypeCode || ''
+  formData.sortOrder = node.sortOrder || 0
+  formData.capacityUnit = node.capacityUnit || '人'
+  formData.defaultCapacity = node.defaultCapacity
+  formData.allowedChildTypeCodes = node.allowedChildTypeCodes || []
+  formData.maxDepth = node.maxDepth
+  formData.defaultUserTypeCodes = node.defaultUserTypeCodes || []
+  formData.defaultOrgTypeCodes = node.defaultOrgTypeCodes || []
+  formData.metadataSchema = node.metadataSchema || ''
+
+  // Load features
+  const f = node.features || {}
+  formFeatures.hasCapacity = !!f.hasCapacity
+  formFeatures.bookable = !!f.bookable
+  formFeatures.assignable = !!f.assignable
+  formFeatures.occupiable = !!f.occupiable
+
+  // Load full type from API for description
+  universalPlaceTypeApi.getById(node.id).then(fullType => {
+    formData.description = fullType.description || ''
+  }).catch(() => {})
+}
+
+function handleAddRoot() {
+  selectedTypeId.value = null
+  selectedType.value = null
+  isCreating.value = true
+  addParentType.value = null
+  resetForm()
+}
+
+function handleAddChild(parentNode: PlaceTypeTreeNode) {
+  selectedTypeId.value = null
+  selectedType.value = null
+  isCreating.value = true
+  addParentType.value = parentNode
+  resetForm()
+  formData.parentTypeCode = parentNode.typeCode
+}
+
+function selectCategory(code: string) {
+  formData.category = code
+
+  // Apply default features from category
+  const cat = categories.value.find(b => b.code === code)
+  if (cat?.defaultFeatures) {
+    formFeatures.hasCapacity = !!cat.defaultFeatures.hasCapacity
+    formFeatures.bookable = !!cat.defaultFeatures.bookable
+    formFeatures.assignable = !!cat.defaultFeatures.assignable
+    formFeatures.occupiable = !!cat.defaultFeatures.occupiable
+  }
+
+  // Auto-recommend allowed child type codes based on category's allowedChildCategories
+  if (cat?.allowedChildCategories && cat.allowedChildCategories.length > 0) {
+    const childCodes = allFlatTypes.value
+      .filter(t => t.category && cat.allowedChildCategories.includes(t.category) && t.typeCode !== formData.typeCode)
+      .map(t => t.typeCode)
+    if (childCodes.length > 0) {
+      formData.allowedChildTypeCodes = childCodes
+    }
+  }
+}
+
+function cancelCreate() {
+  isCreating.value = false
+  addParentType.value = null
+  resetForm()
+}
+
+async function handleDeleteType(node: PlaceTypeTreeNode) {
+  try {
+    await ElMessageBox.confirm(
+      `确定删除类型"${node.typeName}"吗？`,
+      '删除确认',
+      { type: 'warning', confirmButtonText: '删除', cancelButtonText: '取消' }
+    )
+    await universalPlaceTypeApi.delete(node.id)
+    ElMessage.success('删除成功')
+    if (selectedTypeId.value === node.id) {
+      selectedTypeId.value = null
+      selectedType.value = null
+    }
+    loadData()
+  } catch (error: any) {
+    if (error !== 'cancel') ElMessage.error(error.message || '删除失败')
+  }
+}
+
+function buildFeaturesMap(): Record<string, boolean> {
+  return {
+    hasCapacity: formFeatures.hasCapacity,
+    bookable: formFeatures.bookable,
+    assignable: formFeatures.assignable,
+    occupiable: formFeatures.occupiable,
+  }
+}
+
+async function handleSave() {
+  if (!formData.typeName.trim()) {
+    ElMessage.error('请填写类型名称')
+    return
+  }
+  if (!formData.category) {
+    ElMessage.error('请选择基础分类')
+    return
+  }
+
+  saveLoading.value = true
+  try {
+    if (isCreating.value) {
+      const createData: CreatePlaceTypeRequest = {
+        typeCode: formData.typeCode || undefined,
+        typeName: formData.typeName,
+        category: formData.category,
+        parentTypeCode: formData.parentTypeCode || undefined,
+        description: formData.description || undefined,
+        features: buildFeaturesMap(),
+        metadataSchema: formData.metadataSchema || undefined,
+        allowedChildTypeCodes: formData.allowedChildTypeCodes.length > 0 ? formData.allowedChildTypeCodes : undefined,
+        maxDepth: formData.maxDepth,
+        defaultUserTypeCodes: formData.defaultUserTypeCodes.length > 0 ? formData.defaultUserTypeCodes : undefined,
+        defaultOrgTypeCodes: formData.defaultOrgTypeCodes.length > 0 ? formData.defaultOrgTypeCodes : undefined,
+        capacityUnit: formFeatures.hasCapacity ? formData.capacityUnit : undefined,
+        defaultCapacity: formFeatures.hasCapacity ? formData.defaultCapacity : undefined,
+        sortOrder: formData.sortOrder,
+      }
+      const created = await universalPlaceTypeApi.create(createData)
+      ElMessage.success('创建成功')
+      isCreating.value = false
+      addParentType.value = null
+      await loadData()
+      selectedTypeId.value = created.id
+      const found = allFlatTypes.value.find(t => t.id === created.id)
+      if (found) selectedType.value = found
+    } else if (selectedType.value) {
+      const updateData: UpdatePlaceTypeRequest = {
+        typeName: formData.typeName,
+        category: formData.category,
+        description: formData.description || undefined,
+        features: buildFeaturesMap(),
+        metadataSchema: formData.metadataSchema || undefined,
+        allowedChildTypeCodes: formData.allowedChildTypeCodes,
+        maxDepth: formData.maxDepth,
+        defaultUserTypeCodes: formData.defaultUserTypeCodes,
+        defaultOrgTypeCodes: formData.defaultOrgTypeCodes,
+        capacityUnit: formFeatures.hasCapacity ? formData.capacityUnit : undefined,
+        defaultCapacity: formFeatures.hasCapacity ? formData.defaultCapacity : undefined,
+        sortOrder: formData.sortOrder,
+      }
+      await universalPlaceTypeApi.update(selectedType.value.id, updateData)
+      ElMessage.success('更新成功')
+      loadData()
+    }
+  } catch (error: any) {
+    ElMessage.error(error.message || '操作失败')
+  } finally {
+    saveLoading.value = false
+  }
+}
+
+onMounted(loadData)
 </script>
-
-<style scoped>
-.space-type-config {
-  height: 100%;
-  padding: 16px;
-}
-
-.config-layout {
-  display: flex;
-  gap: 16px;
-  height: 100%;
-}
-
-.type-tree-panel {
-  width: 320px;
-  flex-shrink: 0;
-  background: white;
-  border-radius: 8px;
-  border: 1px solid #e5e7eb;
-  display: flex;
-  flex-direction: column;
-}
-
-.type-detail-panel {
-  flex: 1;
-  background: white;
-  border-radius: 8px;
-  border: 1px solid #e5e7eb;
-  display: flex;
-  flex-direction: column;
-}
-
-.panel-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 12px 16px;
-  border-bottom: 1px solid #f0f0f0;
-}
-
-.panel-title {
-  font-weight: 600;
-  color: #374151;
-}
-
-.header-actions {
-  display: flex;
-  gap: 8px;
-}
-
-.tree-container {
-  flex: 1;
-  overflow: auto;
-  padding: 12px;
-}
-
-.tree-node {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  width: 100%;
-  padding: 4px 0;
-}
-
-.node-name {
-  font-weight: 500;
-  color: #374151;
-}
-
-.node-code {
-  color: #9ca3af;
-  font-size: 11px;
-}
-
-.node-actions {
-  margin-left: auto;
-  opacity: 0;
-  transition: opacity 0.15s;
-}
-
-.tree-node:hover .node-actions {
-  opacity: 1;
-}
-
-.empty-state,
-.empty-detail {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  padding: 40px;
-  color: #9ca3af;
-}
-
-.detail-content {
-  padding: 16px;
-  overflow: auto;
-}
-
-.detail-row {
-  display: flex;
-  align-items: center;
-  padding: 8px 0;
-  border-bottom: 1px solid #f5f5f5;
-}
-
-.detail-row .label {
-  width: 100px;
-  color: #6b7280;
-  font-size: 13px;
-  flex-shrink: 0;
-}
-
-.detail-row .value {
-  flex: 1;
-  color: #374151;
-  font-size: 13px;
-}
-
-.detail-section {
-  margin: 16px 0;
-}
-
-.section-title {
-  font-weight: 500;
-  color: #374151;
-  margin-bottom: 12px;
-  font-size: 13px;
-}
-
-.features-grid {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 8px;
-}
-
-.feature-item {
-  padding: 8px 12px;
-  background: #f9fafb;
-  border-radius: 6px;
-  display: flex;
-  justify-content: space-between;
-}
-
-.feature-item.active {
-  background: #ecfdf5;
-}
-
-.feature-label {
-  color: #6b7280;
-  font-size: 12px;
-}
-
-.feature-value {
-  color: #374151;
-  font-size: 12px;
-  font-weight: 500;
-}
-
-.feature-item.active .feature-value {
-  color: #059669;
-}
-
-.form-tip {
-  font-size: 12px;
-  color: #9ca3af;
-  margin-top: 4px;
-}
-
-.inline-form {
-  display: flex;
-  align-items: center;
-}
-
-.mr-1 {
-  margin-right: 4px;
-}
-
-:deep(.el-tree-node__content) {
-  height: auto;
-  padding: 4px 8px;
-}
-
-:deep(.el-tree-node.is-current > .el-tree-node__content) {
-  background-color: #eff6ff;
-}
-</style>

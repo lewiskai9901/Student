@@ -2,29 +2,8 @@
  * 组织管理模块类型定义 - DDD架构适配
  */
 
-// 组织类别
-export type UnitCategory = 'ACADEMIC' | 'FUNCTIONAL' | 'ADMINISTRATIVE'
-
-// 组织单元类型
-export type OrgUnitType =
-  // 教学单位
-  | 'SCHOOL'
-  | 'DEPARTMENT'
-  | 'MAJOR'
-  | 'GRADE'
-  | 'CLASS'
-  // 职能部门
-  | 'STUDENT_AFFAIRS'
-  | 'ACADEMIC_AFFAIRS'
-  | 'LOGISTICS'
-  | 'FINANCE'
-  | 'GENERAL_OFFICE'
-  | 'HR'
-  // 行政单位
-  | 'ADMIN_DEPT'
-  // 兼容旧类型
-  | 'COLLEGE'
-  | 'TEACHING_GROUP'
+// 组织单元类型 (now a string typeCode from org_unit_types table)
+export type OrgUnitType = string
 
 // 范围类型
 export type ScopeType = 'all' | 'custom'
@@ -42,34 +21,67 @@ export interface SystemModule {
   children?: SystemModule[]
 }
 
-// 组织类别配置
-export const UnitCategoryConfig: Record<UnitCategory, { label: string; color: string }> = {
-  ACADEMIC: { label: '教学单位', color: '#409EFF' },
-  FUNCTIONAL: { label: '职能部门', color: '#67C23A' },
-  ADMINISTRATIVE: { label: '行政单位', color: '#E6A23C' }
-}
-
 // 范围类型配置
 export const ScopeTypeConfig: Record<ScopeType, { label: string }> = {
   all: { label: '全校范围' },
   custom: { label: '自定义范围' }
 }
 
+// 组织类型配置 (from org_unit_types table)
+// NOTE: 推荐使用 @/types/orgType.ts 中的 OrgType，此接口保留兼容
+export interface OrgUnitTypeConfig {
+  id: number | string
+  typeCode: string
+  typeName: string
+  category?: string | null
+  parentTypeCode?: string | null
+  icon?: string | null
+  description?: string | null
+  features?: Record<string, boolean> | null
+  metadataSchema?: string | null
+  allowedChildTypeCodes?: string[] | null
+  maxDepth?: number | null
+  defaultUserTypeCodes?: string[] | null
+  defaultPlaceTypeCodes?: string[] | null
+  defaultPositions?: Array<{ positionName: string; sortOrder: number }> | null
+  system: boolean
+  enabled: boolean
+  sortOrder: number
+  children?: OrgUnitTypeConfig[]
+}
+
+// 组织单元状态
+export type OrgUnitStatusType = 'DRAFT' | 'ACTIVE' | 'FROZEN' | 'MERGING' | 'DISSOLVED'
+
+// 组织单元状态显示配置
+export const OrgUnitStatusConfig: Record<OrgUnitStatusType, { label: string; type: string; color: string }> = {
+  DRAFT: { label: '草稿', type: 'info', color: '#909399' },
+  ACTIVE: { label: '正常', type: 'success', color: '#67C23A' },
+  FROZEN: { label: '冻结', type: 'warning', color: '#E6A23C' },
+  MERGING: { label: '合并中', type: 'warning', color: '#F0A020' },
+  DISSOLVED: { label: '已撤销', type: 'danger', color: '#F56C6C' }
+}
+
 // 组织单元
 export interface OrgUnit {
-  id: number
+  id: number | string
   unitCode: string
   unitName: string
-  unitType: OrgUnitType
-  unitCategory?: UnitCategory
-  parentId: number | null
+  unitType: OrgUnitType        // typeCode string
+  typeName?: string            // display name from org_unit_types
+  typeIcon?: string            // icon from org_unit_types
+  typeColor?: string           // color from org_unit_types
+  parentId: number | string | null
   treePath: string
   treeLevel: number
-  leaderId: number | null
-  leaderName?: string
-  deputyLeaderIds: number[]
   sortOrder: number
-  enabled: boolean
+  status: OrgUnitStatusType
+  statusLabel?: string
+  headcount?: number
+  attributes?: Record<string, unknown>
+  mergedIntoId?: number | string
+  dissolvedAt?: string
+  dissolvedReason?: string
   createdAt: string
   updatedAt: string
 }
@@ -78,28 +90,32 @@ export interface OrgUnit {
 export interface OrgUnitTreeNode extends OrgUnit {
   children?: OrgUnitTreeNode[]
   label?: string // 用于树形选择器
-  value?: number // 用于树形选择器
+  value?: number | string // 用于树形选择器
+  // Class extension fields (only for CLASS type nodes)
+  studentCount?: number
+  standardSize?: number
+  headTeacherName?: string
+  enrollmentYear?: number
+  classStatus?: ClassStatus
 }
 
 // 创建组织单元请求
 export interface CreateOrgUnitRequest {
   unitCode: string
   unitName: string
-  unitType: OrgUnitType
-  unitCategory?: UnitCategory
-  parentId?: number
-  leaderId?: number
-  deputyLeaderIds?: number[]
+  unitType: string             // typeCode from org_unit_types
+  parentId?: number | string
   sortOrder?: number
+  selectedPositions?: Array<{ positionName: string; headcount: number }>
 }
 
 // 更新组织单元请求
 export interface UpdateOrgUnitRequest {
   unitName?: string
-  unitCategory?: string  // ACADEMIC | FUNCTIONAL | ADMINISTRATIVE
-  leaderId?: number
-  deputyLeaderIds?: number[]
   sortOrder?: number
+  headcount?: number
+  attributes?: Record<string, unknown>
+  reason?: string
 }
 
 // 班级状态
@@ -110,7 +126,7 @@ export type TeacherRole = 'HEAD_TEACHER' | 'DEPUTY_HEAD_TEACHER' | 'SUBJECT_TEAC
 
 // 教师任职记录
 export interface TeacherAssignment {
-  teacherId: number
+  teacherId: number | string
   teacherName: string
   role: TeacherRole
   startDate: string
@@ -120,16 +136,16 @@ export interface TeacherAssignment {
 
 // 班级
 export interface SchoolClass {
-  id: number
+  id: number | string
   classCode: string
   className: string
   shortName?: string
-  orgUnitId: number
+  orgUnitId: number | string
   orgUnitName?: string
   enrollmentYear: number
   gradeLevel: number
-  gradeId?: number  // 年级ID，用于关联年级表
-  majorDirectionId?: number
+  gradeId?: number | string  // 年级ID，用于关联年级表
+  majorDirectionId?: number | string
   majorName?: string  // 专业名称
   majorDirectionName?: string  // 专业方向名称（学制类型）
   schoolingYears: number
@@ -152,10 +168,10 @@ export interface CreateClassRequest {
   classCode: string
   className: string
   shortName?: string
-  orgUnitId: number
+  orgUnitId: number | string
   enrollmentYear: number
   gradeLevel?: number
-  majorDirectionId?: number
+  majorDirectionId?: number | string
   schoolingYears?: number
   standardSize?: number
 }
@@ -170,16 +186,16 @@ export interface UpdateClassRequest {
 
 // 分配班主任请求
 export interface AssignHeadTeacherRequest {
-  teacherId: number
+  teacherId: number | string
   teacherName: string
 }
 
 // 班级查询参数
 export interface ClassQueryParams {
-  orgUnitId?: number
+  orgUnitId?: number | string
   enrollmentYear?: number
   status?: ClassStatus
-  majorDirectionId?: number
+  majorDirectionId?: number | string
   keyword?: string
   pageNum?: number
   pageSize?: number

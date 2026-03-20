@@ -5,6 +5,7 @@ import com.school.management.domain.inspection.model.v6.TemplateScoreItem;
 import com.school.management.domain.inspection.repository.v6.TemplateCategoryRepository;
 import com.school.management.infrastructure.persistence.inspection.v6.TemplateScoreItemMapper;
 import com.school.management.infrastructure.persistence.inspection.v6.TemplateScoreItemPO;
+import lombok.RequiredArgsConstructor;
 import org.springframework.beans.BeanUtils;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -17,17 +18,12 @@ import java.util.stream.Collectors;
 /**
  * 模板扣分项应用服务
  */
+@RequiredArgsConstructor
 @Service
 public class TemplateItemApplicationService {
 
     private final TemplateCategoryRepository categoryRepository;
     private final TemplateScoreItemMapper itemMapper;
-
-    public TemplateItemApplicationService(TemplateCategoryRepository categoryRepository,
-                                          TemplateScoreItemMapper itemMapper) {
-        this.categoryRepository = categoryRepository;
-        this.itemMapper = itemMapper;
-    }
 
     /**
      * 获取模板的完整扣分项结构（类别+项目）
@@ -165,7 +161,7 @@ public class TemplateItemApplicationService {
         TemplateScoreItem item = new TemplateScoreItem();
         BeanUtils.copyProperties(po, item);
         if (po.getScoringMode() != null) {
-            item.setScoringMode(TemplateScoreItem.ScoringMode.valueOf(po.getScoringMode()));
+            item.setScoringMode(TemplateScoreItem.ItemScoringMethod.valueOf(po.getScoringMode()));
         }
         return item;
     }

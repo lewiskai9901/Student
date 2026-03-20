@@ -1,6 +1,6 @@
-package com.school.management.interfaces.rest.space.dto;
+package com.school.management.interfaces.rest.place.dto;
 
-import com.school.management.domain.space.model.valueobject.OccupantType;
+import com.school.management.domain.place.model.valueobject.OccupantType;
 import jakarta.validation.constraints.NotNull;
 import lombok.Data;
 

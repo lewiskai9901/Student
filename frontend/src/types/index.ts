@@ -1,9 +1,9 @@
 /**
- * V2 类型定义索引 - DDD架构适配
+ * 类型定义索引
  */
 
 export * from './organization'
-// export * from './inspection' // TODO: type definitions not yet implemented
+export * from './position'
 export * from './access'
 export * from './student'
 export * from './dormitory'
@@ -11,11 +11,7 @@ export * from './task'
 export * from './user'
 export * from './semester'
 export * from './myClass'
-// export * from './inspectionSession' // TODO: type definitions not yet implemented
-// export * from './corrective' // TODO: type definitions not yet implemented
-// export * from './behavior' // TODO: type definitions not yet implemented
 export * from './schedule'
-export * from './analytics'
 
 // 通用响应类型
 export interface ApiResponse<T> {
@@ -41,13 +37,13 @@ export interface PageParams {
 
 // 通用ID响应
 export interface IdResponse {
-  id: number
+  id: number | string
 }
 
 // 批量操作响应
 export interface BatchResponse {
   successCount: number
   failedCount: number
-  failedIds?: number[]
+  failedIds?: (number | string)[]
   message?: string
 }

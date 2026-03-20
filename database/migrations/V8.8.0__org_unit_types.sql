@@ -31,20 +31,14 @@ CREATE TABLE IF NOT EXISTS org_unit_types (
     INDEX idx_is_enabled (is_enabled)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='组织类型表';
 
--- 预置系统类型（与原枚举保持一致）
+-- 预置通用组织类型（不绑定特定行业）
 INSERT INTO org_unit_types (type_code, type_name, parent_type_code, level_order, is_academic, can_have_children, is_system, sort_order) VALUES
--- 教学单位层级
-('SCHOOL', '学校', NULL, 1, TRUE, TRUE, TRUE, 1),
-('COLLEGE', '系部', 'SCHOOL', 2, TRUE, TRUE, TRUE, 2),
-('DEPARTMENT', '专业', 'COLLEGE', 3, TRUE, TRUE, TRUE, 3),
-('TEACHING_GROUP', '班级', 'DEPARTMENT', 4, TRUE, FALSE, TRUE, 4),
--- 职能部门
-('STUDENT_AFFAIRS', '学工处', 'SCHOOL', 2, FALSE, FALSE, TRUE, 10),
-('ACADEMIC_AFFAIRS', '教务处', 'SCHOOL', 2, FALSE, FALSE, TRUE, 11),
-('LOGISTICS', '后勤处', 'SCHOOL', 2, FALSE, FALSE, TRUE, 12),
-('FINANCE', '财务处', 'SCHOOL', 2, FALSE, FALSE, TRUE, 13),
-('GENERAL_OFFICE', '校办', 'SCHOOL', 2, FALSE, FALSE, TRUE, 14),
-('HR', '人事处', 'SCHOOL', 2, FALSE, FALSE, TRUE, 15)
+-- 通用层级
+('ORGANIZATION', '组织', NULL, 1, FALSE, TRUE, TRUE, 1),
+('DIVISION', '事业部', 'ORGANIZATION', 2, FALSE, TRUE, TRUE, 2),
+('DEPARTMENT', '部门', 'ORGANIZATION', 2, FALSE, TRUE, TRUE, 3),
+('SECTION', '科室', 'DEPARTMENT', 3, FALSE, TRUE, TRUE, 4),
+('TEAM', '小组', 'SECTION', 4, FALSE, FALSE, TRUE, 5)
 ON DUPLICATE KEY UPDATE type_name = VALUES(type_name);
 
 -- 删除V6实体类型相关表（如果存在）

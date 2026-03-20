@@ -32,7 +32,7 @@
           <el-form-item label="检查模板" prop="templateId">
             <el-select v-model="formData.templateId" placeholder="请选择检查模板" style="width: 100%"
                        @change="onTemplateChange" filterable>
-              <el-option v-for="t in templates" :key="t.id" :label="t.name" :value="t.id">
+              <el-option v-for="t in availableTemplates" :key="t.id" :label="t.name" :value="t.id">
                 <span>{{ t.name }}</span>
                 <span class="template-desc" v-if="t.description">{{ t.description }}</span>
               </el-option>
@@ -242,15 +242,15 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, computed, onMounted } from 'vue'
+import { ref, reactive, computed, watch, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { ArrowLeft, QuestionFilled } from '@element-plus/icons-vue'
-import { v6ProjectApi } from '@/api/v6Inspection'
+import { v6ProjectApi, v6InspectionApi } from '@/api/v6Inspection'
 import { orgUnitApi } from '@/api/organization'
 
 // 简化的类型定义（V6 EntityType已移除，使用简化版本）
-type EntityCategory = 'ORGANIZATION' | 'SPACE' | 'USER'
+type EntityCategory = 'ORGANIZATION' | 'PLACE' | 'USER'
 interface EntityType {
   typeCode: string
   typeName: string
@@ -281,7 +281,7 @@ const entityTypes = ref<EntityType[]>([])
 const entityGroups = ref<EntityGroup[]>([])
 const entityCategories = ref<{code: EntityCategory, name: string}[]>([
   { code: 'ORGANIZATION', name: '组织' },
-  { code: 'SPACE', name: '场所' },
+  { code: 'PLACE', name: '场所' },
   { code: 'USER', name: '用户' }
 ])
 
@@ -339,6 +339,16 @@ const selectedTemplateName = computed(() => {
   return t ? t.name : ''
 })
 
+const availableTemplates = computed(() => {
+  const scope = formData.scopeType
+  if (!scope) return templates.value
+  // Map EntityCategory to ScopeType key
+  const scopeKey = scope === 'ORGANIZATION' ? 'ORG' : scope
+  return templates.value.filter((t: any) =>
+    !t.applicableScope || t.applicableScope === 'ALL' || t.applicableScope.includes(scopeKey)
+  )
+})
+
 // 表单验证规则
 const step1Rules = {
   projectCode: [{ required: true, message: '请输入项目编号', trigger: 'blur' }],
@@ -365,7 +375,7 @@ const goBack = () => {
 
 const generateCode = () => {
   const prefix = formData.scopeType === 'ORGANIZATION' ? 'ORG' :
-                 formData.scopeType === 'SPACE' ? 'SPACE' : 'USER'
+                 formData.scopeType === 'PLACE' ? 'PLACE' : 'USER'
   const date = new Date().toISOString().slice(0, 10).replace(/-/g, '')
   const random = Math.random().toString(36).substring(2, 6).toUpperCase()
   formData.projectCode = `${prefix}_${date}_${random}`
@@ -460,6 +470,13 @@ const onTemplateChange = (templateId: number) => {
 const onScopeTypeChange = () => {
   formData.entityTypeCode = ''
   selectedScopeIds.value = []
+  // Clear template if it's no longer in the filtered list
+  if (formData.templateId) {
+    const stillAvailable = availableTemplates.value.some((t: any) => t.id === formData.templateId)
+    if (!stillAvailable) {
+      formData.templateId = undefined
+    }
+  }
   loadScopeTreeData()
 }
 
@@ -513,7 +530,7 @@ const loadScopeTreeData = async () => {
 const getScopeTypeName = (type: string) => {
   const names: Record<string, string> = {
     'ORGANIZATION': '组织',
-    'SPACE': '场所',
+    'PLACE': '场所',
     'USER': '用户'
   }
   return names[type] || type
@@ -547,18 +564,26 @@ const getAssignmentModeName = (mode: string) => {
 // 加载数据
 const loadData = async () => {
   try {
-    // 模板数据暂时使用默认值（V6模板API待实现）
-    templates.value = [
-      { id: 1, name: '日常卫生检查模板', description: '用于日常卫生检查' },
-      { id: 2, name: '宿舍安全检查模板', description: '用于宿舍安全检查' },
-      { id: 3, name: '教室纪律检查模板', description: '用于教室纪律检查' }
-    ]
+    // 从API加载模板
+    try {
+      const res = await v6InspectionApi.getTemplates()
+      const allTemplates = res?.data?.data || res?.data || res || []
+      templates.value = allTemplates.map((t: any) => ({
+        id: t.id,
+        name: t.templateName,
+        description: t.description,
+        applicableScope: t.applicableScope || 'ALL'
+      }))
+    } catch (e) {
+      console.error('加载模板失败:', e)
+      templates.value = []
+    }
 
     // 简化的实体类型（V6 EntityType系统已移除）
     entityTypes.value = [
       { typeCode: 'CLASS', typeName: '班级', category: 'ORGANIZATION', isLeaf: true },
-      { typeCode: 'DORMITORY', typeName: '宿舍', category: 'SPACE', isLeaf: true },
-      { typeCode: 'CLASSROOM', typeName: '教室', category: 'SPACE', isLeaf: true },
+      { typeCode: 'DORMITORY', typeName: '宿舍', category: 'PLACE', isLeaf: true },
+      { typeCode: 'CLASSROOM', typeName: '教室', category: 'PLACE', isLeaf: true },
       { typeCode: 'STUDENT', typeName: '学生', category: 'USER', isLeaf: true }
     ]
 

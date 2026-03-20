@@ -1,10 +1,11 @@
 package com.school.management.infrastructure.event.outbox;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.school.management.domain.inspection.event.v7.*;
 import com.school.management.domain.shared.event.DomainEvent;
 import com.school.management.infrastructure.event.DomainEventStore;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import jakarta.annotation.PostConstruct;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -28,10 +29,9 @@ import java.util.concurrent.ConcurrentHashMap;
  *   <li>Dead letter handling for permanently failed events</li>
  * </ul>
  */
+@Slf4j
 @Component
 public class OutboxProcessor {
-
-    private static final Logger log = LoggerFactory.getLogger(OutboxProcessor.class);
 
     private final OutboxRepository outboxRepository;
     private final DomainEventStore eventStore;
@@ -58,6 +58,44 @@ public class OutboxProcessor {
         this.eventStore = eventStore;
         this.applicationEventPublisher = applicationEventPublisher;
         this.objectMapper = objectMapper;
+    }
+
+    @PostConstruct
+    public void registerV7EventTypes() {
+        // Template events
+        registerEventType("TemplatePublishedEvent", TemplatePublishedEvent.class);
+        // Project events
+        registerEventType("ProjectPublishedEvent", ProjectPublishedEvent.class);
+        registerEventType("ProjectPausedEvent", ProjectPausedEvent.class);
+        registerEventType("ProjectResumedEvent", ProjectResumedEvent.class);
+        registerEventType("ProjectCompletedEvent", ProjectCompletedEvent.class);
+        // Task events
+        registerEventType("TaskCreatedEvent", TaskCreatedEvent.class);
+        registerEventType("TaskClaimedEvent", TaskClaimedEvent.class);
+        registerEventType("TaskStartedEvent", TaskStartedEvent.class);
+        registerEventType("TaskSubmittedEvent", TaskSubmittedEvent.class);
+        registerEventType("TaskReviewedEvent", TaskReviewedEvent.class);
+        registerEventType("TaskPublishedEvent", TaskPublishedEvent.class);
+        registerEventType("TaskCancelledEvent", TaskCancelledEvent.class);
+        registerEventType("TaskExpiredEvent", TaskExpiredEvent.class);
+        // Submission events
+        registerEventType("SubmissionCompletedEvent", SubmissionCompletedEvent.class);
+        // Corrective events
+        registerEventType("CorrectiveCaseCreatedEvent", CorrectiveCaseCreatedEvent.class);
+        registerEventType("CaseAssignedEvent", CaseAssignedEvent.class);
+        registerEventType("CorrectionSubmittedEvent", CorrectionSubmittedEvent.class);
+        registerEventType("CaseVerifiedEvent", CaseVerifiedEvent.class);
+        registerEventType("CaseRejectedEvent", CaseRejectedEvent.class);
+        registerEventType("CaseEscalatedEvent", CaseEscalatedEvent.class);
+        registerEventType("CaseClosedEvent", CaseClosedEvent.class);
+        registerEventType("EffectivenessConfirmedEvent", EffectivenessConfirmedEvent.class);
+        registerEventType("EffectivenessFailedEvent", EffectivenessFailedEvent.class);
+        registerEventType("SlaBreachedEvent", SlaBreachedEvent.class);
+        // Analytics events
+        registerEventType("DailySummaryUpdatedEvent", DailySummaryUpdatedEvent.class);
+        registerEventType("PeriodSummaryCalculatedEvent", PeriodSummaryCalculatedEvent.class);
+
+        log.info("Registered {} V7 event types in OutboxProcessor", eventTypeRegistry.size());
     }
 
     /**

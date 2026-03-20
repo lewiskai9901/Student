@@ -29,8 +29,14 @@ public interface OrgUnitMapper extends BaseMapper<OrgUnitPO> {
     /**
      * 查询所有启用的组织
      */
-    @Select("SELECT * FROM org_units WHERE status = 1 AND deleted = 0 ORDER BY sort_order")
+    @Select("SELECT * FROM org_units WHERE status = 'ACTIVE' AND deleted = 0 ORDER BY sort_order")
     List<OrgUnitPO> findAllEnabled();
+
+    /**
+     * 查询所有组织（包含禁用的）
+     */
+    @Select("SELECT * FROM org_units WHERE deleted = 0 ORDER BY sort_order")
+    List<OrgUnitPO> findAllIncludeDisabled();
 
     /**
      * 根据组织编码查询
@@ -51,14 +57,8 @@ public interface OrgUnitMapper extends BaseMapper<OrgUnitPO> {
     List<OrgUnitPO> findByParentId(@Param("parentId") Long parentId);
 
     /**
-     * 根据组织类别查询
-     */
-    @Select("SELECT * FROM org_units WHERE unit_category = #{unitCategory} AND status = 1 AND deleted = 0 ORDER BY sort_order")
-    List<OrgUnitPO> findByUnitCategory(@Param("unitCategory") String unitCategory);
-
-    /**
      * 根据组织类型查询
      */
-    @Select("SELECT * FROM org_units WHERE unit_type = #{unitType} AND status = 1 AND deleted = 0 ORDER BY tree_level, sort_order")
+    @Select("SELECT * FROM org_units WHERE unit_type = #{unitType} AND status = 'ACTIVE' AND deleted = 0 ORDER BY tree_level, sort_order")
     List<OrgUnitPO> findByUnitType(@Param("unitType") String unitType);
 }

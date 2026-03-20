@@ -1,7 +1,12 @@
 package com.school.management.application.organization;
 
-import com.school.management.domain.organization.model.entity.OrgUnitTypeEntity;
+import com.school.management.application.shared.TypeTreeBuilder;
+import com.school.management.application.shared.TypeTreeBuilder.TypeTreeNode;
+import com.school.management.domain.organization.model.entity.OrgCategory;
+import com.school.management.domain.organization.model.entity.OrgType;
+import com.school.management.domain.organization.model.valueobject.PositionTemplate;
 import com.school.management.domain.organization.repository.OrgUnitTypeRepository;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -13,100 +18,133 @@ import java.util.stream.Collectors;
 /**
  * 组织类型应用服务
  */
+@RequiredArgsConstructor
 @Service
 public class OrgUnitTypeApplicationService {
 
     private final OrgUnitTypeRepository orgUnitTypeRepository;
 
-    public OrgUnitTypeApplicationService(OrgUnitTypeRepository orgUnitTypeRepository) {
-        this.orgUnitTypeRepository = orgUnitTypeRepository;
-    }
-
-    /**
-     * 创建组织类型
-     */
     @Transactional
-    public OrgUnitTypeEntity createOrgUnitType(CreateOrgUnitTypeCommand command) {
-        // 检查编码唯一性
+    public OrgType createOrgUnitType(CreateOrgUnitTypeCommand command) {
         if (orgUnitTypeRepository.existsByTypeCode(command.getTypeCode())) {
             throw new IllegalArgumentException("类型编码已存在: " + command.getTypeCode());
         }
 
-        // 验证父类型存在
         if (command.getParentTypeCode() != null && !command.getParentTypeCode().isEmpty()) {
             orgUnitTypeRepository.findByTypeCode(command.getParentTypeCode())
                     .orElseThrow(() -> new IllegalArgumentException("父类型不存在: " + command.getParentTypeCode()));
         }
 
-        OrgUnitTypeEntity orgUnitType = OrgUnitTypeEntity.builder()
+        // 如果未提供 features，使用 category 的默认值
+        Map<String, Boolean> features = command.getFeatures();
+        if (features == null && command.getCategory() != null) {
+            try {
+                OrgCategory cat = OrgCategory.valueOf(command.getCategory());
+                features = cat.getDefaultFeatures();
+            } catch (IllegalArgumentException ignored) {}
+        }
+
+        OrgType orgType = OrgType.builder()
                 .typeCode(command.getTypeCode())
                 .typeName(command.getTypeName())
+                .category(command.getCategory())
                 .parentTypeCode(command.getParentTypeCode())
-                .levelOrder(command.getLevelOrder())
                 .icon(command.getIcon())
-                .color(command.getColor())
                 .description(command.getDescription())
-                .isAcademic(command.isAcademic())
-                .canBeInspected(command.isCanBeInspected())
-                .canHaveChildren(command.isCanHaveChildren())
+                .features(features)
+                .metadataSchema(command.getMetadataSchema())
+                .allowedChildTypeCodes(command.getAllowedChildTypeCodes())
                 .maxDepth(command.getMaxDepth())
+                .defaultUserTypeCodes(command.getDefaultUserTypeCodes())
+                .defaultPlaceTypeCodes(command.getDefaultPlaceTypeCodes())
+                .defaultPositions(command.getDefaultPositions())
                 .isSystem(false)
                 .isEnabled(true)
                 .sortOrder(command.getSortOrder())
                 .build();
 
-        return orgUnitTypeRepository.save(orgUnitType);
+        OrgType saved = orgUnitTypeRepository.save(orgType);
+        syncChildParentTypeCodes(saved.getTypeCode(), saved.getAllowedChildTypeCodes());
+        return saved;
     }
 
-    /**
-     * 更新组织类型
-     */
     @Transactional
-    public OrgUnitTypeEntity updateOrgUnitType(Long id, UpdateOrgUnitTypeCommand command) {
-        OrgUnitTypeEntity orgUnitType = orgUnitTypeRepository.findById(id)
+    public OrgType updateOrgUnitType(Long id, UpdateOrgUnitTypeCommand command) {
+        OrgType orgType = orgUnitTypeRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("组织类型不存在: " + id));
 
-        orgUnitType.update(
-                command.getTypeName(),
-                command.getDescription(),
-                command.getIcon(),
-                command.getColor()
+        orgType.update(
+                command.getTypeName() != null ? command.getTypeName() : orgType.getTypeName(),
+                command.getDescription() != null ? command.getDescription() : orgType.getDescription(),
+                command.getIcon() != null ? command.getIcon() : orgType.getIcon()
         );
 
-        orgUnitType.updateFeatures(
-                command.isAcademic(),
-                command.isCanBeInspected(),
-                command.isCanHaveChildren(),
-                command.getMaxDepth()
+        if (command.getCategory() != null || command.getFeatures() != null) {
+            orgType.updateCategoryAndFeatures(
+                    command.getCategory() != null ? command.getCategory() : orgType.getCategory(),
+                    command.getFeatures() != null ? command.getFeatures() : orgType.getFeatures()
+            );
+        }
+
+        if (command.getMetadataSchema() != null) {
+            orgType.updateMetadataSchema(command.getMetadataSchema());
+        }
+
+        orgType.updateHierarchyConfig(
+                command.getAllowedChildTypeCodes() != null ? command.getAllowedChildTypeCodes() : orgType.getAllowedChildTypeCodes(),
+                command.getMaxDepth() != null ? command.getMaxDepth() : orgType.getMaxDepth()
         );
+
+        orgType.updateCrossReferences(
+                command.getDefaultUserTypeCodes() != null ? command.getDefaultUserTypeCodes() : orgType.getDefaultUserTypeCodes(),
+                command.getDefaultPlaceTypeCodes() != null ? command.getDefaultPlaceTypeCodes() : orgType.getDefaultPlaceTypeCodes()
+        );
+
+        if (command.getDefaultPositions() != null) {
+            orgType.updateDefaultPositions(command.getDefaultPositions());
+        }
 
         if (command.getSortOrder() != null) {
-            orgUnitType.updateSortOrder(command.getSortOrder());
+            orgType.updateSortOrder(command.getSortOrder());
         }
 
-        return orgUnitTypeRepository.save(orgUnitType);
+        OrgType saved = orgUnitTypeRepository.save(orgType);
+
+        // Sync parentTypeCode on children when allowedChildTypeCodes changes
+        if (command.getAllowedChildTypeCodes() != null) {
+            syncChildParentTypeCodes(saved.getTypeCode(), saved.getAllowedChildTypeCodes());
+        }
+
+        return saved;
     }
 
     /**
-     * 删除组织类型
+     * Sync parentTypeCode on child types based on allowedChildTypeCodes.
+     * When a type declares allowedChildTypeCodes, those child types get their parentTypeCode set.
      */
+    private void syncChildParentTypeCodes(String parentCode, List<String> childCodes) {
+        if (childCodes == null || childCodes.isEmpty()) return;
+        for (String childCode : childCodes) {
+            orgUnitTypeRepository.findByTypeCode(childCode).ifPresent(child -> {
+                String currentParent = child.getParentTypeCode();
+                if (currentParent == null || currentParent.isEmpty() || !currentParent.equals(parentCode)) {
+                    child.setParentTypeCode(parentCode);
+                    orgUnitTypeRepository.save(child);
+                }
+            });
+        }
+    }
+
     @Transactional
     public void deleteOrgUnitType(Long id) {
-        OrgUnitTypeEntity orgUnitType = orgUnitTypeRepository.findById(id)
+        OrgType orgType = orgUnitTypeRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("组织类型不存在: " + id));
 
-        // 系统预置类型不能删除
-        if (orgUnitType.isSystem()) {
-            throw new IllegalArgumentException("系统预置类型不能删除");
-        }
-
-        // 检查是否被使用
-        if (orgUnitTypeRepository.isTypeInUse(orgUnitType.getTypeCode())) {
+        if (orgUnitTypeRepository.isTypeInUse(orgType.getTypeCode())) {
             throw new IllegalArgumentException("该类型已被组织单元使用，无法删除");
         }
 
-        // 检查是否有子类型
-        List<OrgUnitTypeEntity> children = orgUnitTypeRepository.findByParentTypeCode(orgUnitType.getTypeCode());
+        List<OrgType> children = orgUnitTypeRepository.findByParentTypeCode(orgType.getTypeCode());
         if (!children.isEmpty()) {
             throw new IllegalArgumentException("该类型下存在子类型，无法删除");
         }
@@ -114,97 +152,56 @@ public class OrgUnitTypeApplicationService {
         orgUnitTypeRepository.deleteById(id);
     }
 
-    /**
-     * 启用/禁用组织类型
-     */
     @Transactional
-    public OrgUnitTypeEntity toggleStatus(Long id, boolean enabled) {
-        OrgUnitTypeEntity orgUnitType = orgUnitTypeRepository.findById(id)
+    public OrgType toggleStatus(Long id, boolean enabled) {
+        OrgType orgType = orgUnitTypeRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("组织类型不存在: " + id));
 
         if (enabled) {
-            orgUnitType.enable();
+            orgType.enable();
         } else {
-            orgUnitType.disable();
+            orgType.disable();
         }
 
-        return orgUnitTypeRepository.save(orgUnitType);
+        return orgUnitTypeRepository.save(orgType);
     }
 
-    /**
-     * 获取所有组织类型
-     */
-    public List<OrgUnitTypeEntity> getAllOrgUnitTypes() {
+    public List<OrgType> getAllOrgUnitTypes() {
         return orgUnitTypeRepository.findAll();
     }
 
-    /**
-     * 获取所有启用的组织类型
-     */
-    public List<OrgUnitTypeEntity> getEnabledOrgUnitTypes() {
+    public List<OrgType> getEnabledOrgUnitTypes() {
         return orgUnitTypeRepository.findAllEnabled();
     }
 
-    /**
-     * 获取组织类型树
-     */
-    public List<OrgUnitTypeTreeNode> getOrgUnitTypeTree() {
-        List<OrgUnitTypeEntity> allTypes = orgUnitTypeRepository.findAll();
-
-        // 按父类型分组
-        Map<String, List<OrgUnitTypeEntity>> groupedByParent = allTypes.stream()
-                .collect(Collectors.groupingBy(
-                        t -> t.getParentTypeCode() == null ? "" : t.getParentTypeCode()
-                ));
-
-        // 构建树
-        return buildTree(groupedByParent, "");
-    }
-
-    private List<OrgUnitTypeTreeNode> buildTree(Map<String, List<OrgUnitTypeEntity>> groupedByParent, String parentCode) {
-        List<OrgUnitTypeEntity> children = groupedByParent.getOrDefault(parentCode, new ArrayList<>());
-        return children.stream()
-                .map(type -> {
-                    OrgUnitTypeTreeNode node = new OrgUnitTypeTreeNode(type);
-                    node.setChildren(buildTree(groupedByParent, type.getTypeCode()));
-                    return node;
-                })
-                .collect(Collectors.toList());
+    public List<TypeTreeNode<OrgType>> getOrgUnitTypeTree() {
+        return TypeTreeBuilder.buildTree(orgUnitTypeRepository.findAll());
     }
 
     /**
-     * 获取教学单位类型
+     * 获取可检查的组织类型（通过 features.inspectionTarget 查询）
      */
-    public List<OrgUnitTypeEntity> getAcademicTypes() {
-        return orgUnitTypeRepository.findAcademicTypes();
+    public List<OrgType> getInspectableTypes() {
+        return orgUnitTypeRepository.findByFeature("inspectionTarget");
     }
 
     /**
-     * 获取职能部门类型
+     * 获取所有 category 枚举值
      */
-    public List<OrgUnitTypeEntity> getFunctionalTypes() {
-        return orgUnitTypeRepository.findFunctionalTypes();
+    public List<OrgCategoryDTO> getCategories() {
+        List<OrgCategoryDTO> list = new ArrayList<>();
+        for (OrgCategory cat : OrgCategory.values()) {
+            list.add(new OrgCategoryDTO(cat.name(), cat.getLabel(), cat.getDefaultFeatures()));
+        }
+        return list;
     }
 
-    /**
-     * 获取可检查的类型
-     */
-    public List<OrgUnitTypeEntity> getInspectableTypes() {
-        return orgUnitTypeRepository.findInspectableTypes();
-    }
-
-    /**
-     * 根据ID获取组织类型
-     */
-    public OrgUnitTypeEntity getOrgUnitTypeById(Long id) {
+    public OrgType getOrgUnitTypeById(Long id) {
         return orgUnitTypeRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("组织类型不存在: " + id));
     }
 
-    /**
-     * 根据编码获取组织类型
-     */
-    public OrgUnitTypeEntity getOrgUnitTypeByCode(String typeCode) {
+    public OrgType getOrgUnitTypeByCode(String typeCode) {
         return orgUnitTypeRepository.findByTypeCode(typeCode)
                 .orElseThrow(() -> new IllegalArgumentException("组织类型不存在: " + typeCode));
     }
@@ -214,129 +211,104 @@ public class OrgUnitTypeApplicationService {
     public static class CreateOrgUnitTypeCommand {
         private String typeCode;
         private String typeName;
+        private String category;
         private String parentTypeCode;
-        private Integer levelOrder = 0;
         private String icon;
-        private String color;
         private String description;
-        private boolean isAcademic = true;
-        private boolean canBeInspected = true;
-        private boolean canHaveChildren = true;
+        private Map<String, Boolean> features;
+        private String metadataSchema;
+        private List<String> allowedChildTypeCodes;
         private Integer maxDepth;
+        private List<String> defaultUserTypeCodes;
+        private List<String> defaultPlaceTypeCodes;
+        private List<PositionTemplate> defaultPositions;
         private Integer sortOrder = 0;
 
-        // Getters and Setters
         public String getTypeCode() { return typeCode; }
         public void setTypeCode(String typeCode) { this.typeCode = typeCode; }
         public String getTypeName() { return typeName; }
         public void setTypeName(String typeName) { this.typeName = typeName; }
+        public String getCategory() { return category; }
+        public void setCategory(String category) { this.category = category; }
         public String getParentTypeCode() { return parentTypeCode; }
         public void setParentTypeCode(String parentTypeCode) { this.parentTypeCode = parentTypeCode; }
-        public Integer getLevelOrder() { return levelOrder; }
-        public void setLevelOrder(Integer levelOrder) { this.levelOrder = levelOrder; }
         public String getIcon() { return icon; }
         public void setIcon(String icon) { this.icon = icon; }
-        public String getColor() { return color; }
-        public void setColor(String color) { this.color = color; }
         public String getDescription() { return description; }
         public void setDescription(String description) { this.description = description; }
-        public boolean isAcademic() { return isAcademic; }
-        public void setAcademic(boolean academic) { isAcademic = academic; }
-        public boolean isCanBeInspected() { return canBeInspected; }
-        public void setCanBeInspected(boolean canBeInspected) { this.canBeInspected = canBeInspected; }
-        public boolean isCanHaveChildren() { return canHaveChildren; }
-        public void setCanHaveChildren(boolean canHaveChildren) { this.canHaveChildren = canHaveChildren; }
+        public Map<String, Boolean> getFeatures() { return features; }
+        public void setFeatures(Map<String, Boolean> features) { this.features = features; }
+        public String getMetadataSchema() { return metadataSchema; }
+        public void setMetadataSchema(String metadataSchema) { this.metadataSchema = metadataSchema; }
+        public List<String> getAllowedChildTypeCodes() { return allowedChildTypeCodes; }
+        public void setAllowedChildTypeCodes(List<String> allowedChildTypeCodes) { this.allowedChildTypeCodes = allowedChildTypeCodes; }
         public Integer getMaxDepth() { return maxDepth; }
         public void setMaxDepth(Integer maxDepth) { this.maxDepth = maxDepth; }
+        public List<String> getDefaultUserTypeCodes() { return defaultUserTypeCodes; }
+        public void setDefaultUserTypeCodes(List<String> defaultUserTypeCodes) { this.defaultUserTypeCodes = defaultUserTypeCodes; }
+        public List<String> getDefaultPlaceTypeCodes() { return defaultPlaceTypeCodes; }
+        public void setDefaultPlaceTypeCodes(List<String> defaultPlaceTypeCodes) { this.defaultPlaceTypeCodes = defaultPlaceTypeCodes; }
+        public List<PositionTemplate> getDefaultPositions() { return defaultPositions; }
+        public void setDefaultPositions(List<PositionTemplate> defaultPositions) { this.defaultPositions = defaultPositions; }
         public Integer getSortOrder() { return sortOrder; }
         public void setSortOrder(Integer sortOrder) { this.sortOrder = sortOrder; }
     }
 
     public static class UpdateOrgUnitTypeCommand {
         private String typeName;
+        private String category;
         private String icon;
-        private String color;
         private String description;
-        private boolean isAcademic;
-        private boolean canBeInspected;
-        private boolean canHaveChildren;
+        private Map<String, Boolean> features;
+        private String metadataSchema;
+        private List<String> allowedChildTypeCodes;
         private Integer maxDepth;
+        private List<String> defaultUserTypeCodes;
+        private List<String> defaultPlaceTypeCodes;
+        private List<PositionTemplate> defaultPositions;
         private Integer sortOrder;
 
-        // Getters and Setters
         public String getTypeName() { return typeName; }
         public void setTypeName(String typeName) { this.typeName = typeName; }
+        public String getCategory() { return category; }
+        public void setCategory(String category) { this.category = category; }
         public String getIcon() { return icon; }
         public void setIcon(String icon) { this.icon = icon; }
-        public String getColor() { return color; }
-        public void setColor(String color) { this.color = color; }
         public String getDescription() { return description; }
         public void setDescription(String description) { this.description = description; }
-        public boolean isAcademic() { return isAcademic; }
-        public void setAcademic(boolean academic) { isAcademic = academic; }
-        public boolean isCanBeInspected() { return canBeInspected; }
-        public void setCanBeInspected(boolean canBeInspected) { this.canBeInspected = canBeInspected; }
-        public boolean isCanHaveChildren() { return canHaveChildren; }
-        public void setCanHaveChildren(boolean canHaveChildren) { this.canHaveChildren = canHaveChildren; }
+        public Map<String, Boolean> getFeatures() { return features; }
+        public void setFeatures(Map<String, Boolean> features) { this.features = features; }
+        public String getMetadataSchema() { return metadataSchema; }
+        public void setMetadataSchema(String metadataSchema) { this.metadataSchema = metadataSchema; }
+        public List<String> getAllowedChildTypeCodes() { return allowedChildTypeCodes; }
+        public void setAllowedChildTypeCodes(List<String> allowedChildTypeCodes) { this.allowedChildTypeCodes = allowedChildTypeCodes; }
         public Integer getMaxDepth() { return maxDepth; }
         public void setMaxDepth(Integer maxDepth) { this.maxDepth = maxDepth; }
+        public List<String> getDefaultUserTypeCodes() { return defaultUserTypeCodes; }
+        public void setDefaultUserTypeCodes(List<String> defaultUserTypeCodes) { this.defaultUserTypeCodes = defaultUserTypeCodes; }
+        public List<String> getDefaultPlaceTypeCodes() { return defaultPlaceTypeCodes; }
+        public void setDefaultPlaceTypeCodes(List<String> defaultPlaceTypeCodes) { this.defaultPlaceTypeCodes = defaultPlaceTypeCodes; }
+        public List<PositionTemplate> getDefaultPositions() { return defaultPositions; }
+        public void setDefaultPositions(List<PositionTemplate> defaultPositions) { this.defaultPositions = defaultPositions; }
         public Integer getSortOrder() { return sortOrder; }
         public void setSortOrder(Integer sortOrder) { this.sortOrder = sortOrder; }
     }
 
-    public static class OrgUnitTypeTreeNode {
-        private Long id;
-        private String typeCode;
-        private String typeName;
-        private String parentTypeCode;
-        private Integer levelOrder;
-        private String icon;
-        private String color;
-        private String description;
-        private boolean isAcademic;
-        private boolean canBeInspected;
-        private boolean canHaveChildren;
-        private Integer maxDepth;
-        private boolean isSystem;
-        private boolean isEnabled;
-        private Integer sortOrder;
-        private List<OrgUnitTypeTreeNode> children;
+    // ==================== DTO ====================
 
-        public OrgUnitTypeTreeNode(OrgUnitTypeEntity entity) {
-            this.id = entity.getId();
-            this.typeCode = entity.getTypeCode();
-            this.typeName = entity.getTypeName();
-            this.parentTypeCode = entity.getParentTypeCode();
-            this.levelOrder = entity.getLevelOrder();
-            this.icon = entity.getIcon();
-            this.color = entity.getColor();
-            this.description = entity.getDescription();
-            this.isAcademic = entity.isAcademic();
-            this.canBeInspected = entity.isCanBeInspected();
-            this.canHaveChildren = entity.isCanHaveChildren();
-            this.maxDepth = entity.getMaxDepth();
-            this.isSystem = entity.isSystem();
-            this.isEnabled = entity.isEnabled();
-            this.sortOrder = entity.getSortOrder();
+    public static class OrgCategoryDTO {
+        private String code;
+        private String label;
+        private Map<String, Boolean> defaultFeatures;
+
+        public OrgCategoryDTO(String code, String label, Map<String, Boolean> defaultFeatures) {
+            this.code = code;
+            this.label = label;
+            this.defaultFeatures = defaultFeatures;
         }
 
-        // Getters and Setters
-        public Long getId() { return id; }
-        public String getTypeCode() { return typeCode; }
-        public String getTypeName() { return typeName; }
-        public String getParentTypeCode() { return parentTypeCode; }
-        public Integer getLevelOrder() { return levelOrder; }
-        public String getIcon() { return icon; }
-        public String getColor() { return color; }
-        public String getDescription() { return description; }
-        public boolean isAcademic() { return isAcademic; }
-        public boolean isCanBeInspected() { return canBeInspected; }
-        public boolean isCanHaveChildren() { return canHaveChildren; }
-        public Integer getMaxDepth() { return maxDepth; }
-        public boolean isSystem() { return isSystem; }
-        public boolean isEnabled() { return isEnabled; }
-        public Integer getSortOrder() { return sortOrder; }
-        public List<OrgUnitTypeTreeNode> getChildren() { return children; }
-        public void setChildren(List<OrgUnitTypeTreeNode> children) { this.children = children; }
+        public String getCode() { return code; }
+        public String getLabel() { return label; }
+        public Map<String, Boolean> getDefaultFeatures() { return defaultFeatures; }
     }
 }

@@ -5,21 +5,20 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.school.management.common.result.Result;
 import com.school.management.common.util.SecurityUtils;
 import com.school.management.domain.organization.model.ClassStatus;
+import com.school.management.domain.organization.model.Major;
+import com.school.management.domain.organization.model.MajorDirection;
 import com.school.management.domain.organization.model.OrgUnit;
 import com.school.management.domain.organization.model.SchoolClass;
 import com.school.management.domain.organization.model.TeacherAssignment;
+import com.school.management.domain.organization.repository.MajorRepository;
 import com.school.management.domain.organization.repository.OrgUnitRepository;
 import com.school.management.domain.organization.repository.SchoolClassRepository;
-import com.school.management.infrastructure.persistence.organization.MajorDirectionPersistenceMapper;
-import com.school.management.infrastructure.persistence.organization.MajorDirectionPO;
-import com.school.management.infrastructure.persistence.organization.MajorPersistenceMapper;
-import com.school.management.infrastructure.persistence.organization.MajorPO;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.springframework.security.access.prepost.PreAuthorize;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import com.school.management.infrastructure.casbin.CasbinAccess;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -31,31 +30,20 @@ import java.util.stream.Collectors;
 /**
  * 班级管理 REST API (V2 - DDD架构)
  */
+@Slf4j
+@RequiredArgsConstructor
 @RestController("schoolClassController")
 @RequestMapping("/organization/classes")
 @Tag(name = "班级管理V2", description = "DDD架构的班级管理接口")
 public class SchoolClassController {
 
-    private static final Logger log = LoggerFactory.getLogger(SchoolClassController.class);
-
     private final SchoolClassRepository schoolClassRepository;
     private final OrgUnitRepository orgUnitRepository;
-    private final MajorDirectionPersistenceMapper majorDirectionMapper;
-    private final MajorPersistenceMapper majorMapper;
-
-    public SchoolClassController(SchoolClassRepository schoolClassRepository,
-                                 OrgUnitRepository orgUnitRepository,
-                                 MajorDirectionPersistenceMapper majorDirectionMapper,
-                                 MajorPersistenceMapper majorMapper) {
-        this.schoolClassRepository = schoolClassRepository;
-        this.orgUnitRepository = orgUnitRepository;
-        this.majorDirectionMapper = majorDirectionMapper;
-        this.majorMapper = majorMapper;
-    }
+    private final MajorRepository majorRepository;
 
     @GetMapping
     @Operation(summary = "获取班级列表")
-    @PreAuthorize("hasAuthority('class:view')")
+    @CasbinAccess(resource = "student:class", action = "view")
     public Result<IPage<SchoolClassResponse>> getClasses(
             @Parameter(description = "组织单元ID") @RequestParam(required = false) Long orgUnitId,
             @Parameter(description = "入学年份") @RequestParam(required = false) Integer enrollmentYear,
@@ -113,7 +101,7 @@ public class SchoolClassController {
 
     @GetMapping("/{id}")
     @Operation(summary = "获取班级详情")
-    @PreAuthorize("hasAuthority('class:view')")
+    @CasbinAccess(resource = "student:class", action = "view")
     public Result<SchoolClassResponse> getClass(@PathVariable Long id) {
         return schoolClassRepository.findById(id)
                 .map(c -> toResponse(c, getOrgUnitName(c.getOrgUnitId()), getMajorInfo(c.getMajorDirectionId())))
@@ -123,7 +111,7 @@ public class SchoolClassController {
 
     @GetMapping("/code/{classCode}")
     @Operation(summary = "根据编码获取班级")
-    @PreAuthorize("hasAuthority('class:view')")
+    @CasbinAccess(resource = "student:class", action = "view")
     public Result<SchoolClassResponse> getClassByCode(@PathVariable String classCode) {
         return schoolClassRepository.findByClassCode(classCode)
                 .map(c -> toResponse(c, getOrgUnitName(c.getOrgUnitId()), getMajorInfo(c.getMajorDirectionId())))
@@ -133,14 +121,14 @@ public class SchoolClassController {
 
     @PostMapping
     @Operation(summary = "创建班级")
-    @PreAuthorize("hasAuthority('class:create')")
+    @CasbinAccess(resource = "student:class", action = "add")
     public Result<SchoolClassResponse> createClass(@RequestBody CreateClassRequest request) {
         // 检查编码是否存在
         if (schoolClassRepository.existsByClassCode(request.getClassCode())) {
             return Result.error("班级编码已存在");
         }
 
-        Long currentUserId = getCurrentUserId();
+        Long currentUserId = SecurityUtils.requireCurrentUserId();
 
         SchoolClass schoolClass = SchoolClass.create(
                 request.getClassCode(),
@@ -167,11 +155,11 @@ public class SchoolClassController {
 
     @PutMapping("/{id}")
     @Operation(summary = "更新班级")
-    @PreAuthorize("hasAuthority('class:update')")
+    @CasbinAccess(resource = "student:class", action = "edit")
     public Result<SchoolClassResponse> updateClass(@PathVariable Long id, @RequestBody UpdateClassRequest request) {
         return schoolClassRepository.findById(id)
                 .map(schoolClass -> {
-                    Long currentUserId = getCurrentUserId();
+                    Long currentUserId = SecurityUtils.requireCurrentUserId();
                     // 更新基本信息
                     schoolClass.updateInfo(
                             request.getClassName(),
@@ -202,7 +190,7 @@ public class SchoolClassController {
 
     @DeleteMapping("/{id}")
     @Operation(summary = "删除班级")
-    @PreAuthorize("hasAuthority('class:delete')")
+    @CasbinAccess(resource = "student:class", action = "delete")
     public Result<Void> deleteClass(@PathVariable Long id) {
         return schoolClassRepository.findById(id)
                 .map(schoolClass -> {
@@ -214,11 +202,11 @@ public class SchoolClassController {
 
     @PostMapping("/{id}/activate")
     @Operation(summary = "激活班级")
-    @PreAuthorize("hasAuthority('class:update')")
+    @CasbinAccess(resource = "student:class", action = "edit")
     public Result<Void> activateClass(@PathVariable Long id) {
         return schoolClassRepository.findById(id)
                 .map(schoolClass -> {
-                    schoolClass.activate(getCurrentUserId());
+                    schoolClass.activate(SecurityUtils.requireCurrentUserId());
                     schoolClassRepository.save(schoolClass);
                     return Result.<Void>success(null);
                 })
@@ -227,11 +215,11 @@ public class SchoolClassController {
 
     @PostMapping("/{id}/graduate")
     @Operation(summary = "班级毕业")
-    @PreAuthorize("hasAuthority('class:update')")
+    @CasbinAccess(resource = "student:class", action = "edit")
     public Result<Void> graduateClass(@PathVariable Long id) {
         return schoolClassRepository.findById(id)
                 .map(schoolClass -> {
-                    schoolClass.graduate(getCurrentUserId());
+                    schoolClass.graduate(SecurityUtils.requireCurrentUserId());
                     schoolClassRepository.save(schoolClass);
                     return Result.<Void>success(null);
                 })
@@ -240,11 +228,11 @@ public class SchoolClassController {
 
     @PostMapping("/{id}/dissolve")
     @Operation(summary = "撤销班级")
-    @PreAuthorize("hasAuthority('class:update')")
+    @CasbinAccess(resource = "student:class", action = "edit")
     public Result<Void> dissolveClass(@PathVariable Long id) {
         return schoolClassRepository.findById(id)
                 .map(schoolClass -> {
-                    schoolClass.dissolve(getCurrentUserId());
+                    schoolClass.dissolve(SecurityUtils.requireCurrentUserId());
                     schoolClassRepository.save(schoolClass);
                     return Result.<Void>success(null);
                 })
@@ -253,11 +241,11 @@ public class SchoolClassController {
 
     @PostMapping("/{id}/head-teacher")
     @Operation(summary = "分配班主任")
-    @PreAuthorize("hasAuthority('class:update')")
+    @CasbinAccess(resource = "student:class", action = "edit")
     public Result<Void> assignHeadTeacher(@PathVariable Long id, @RequestBody AssignTeacherRequest request) {
         return schoolClassRepository.findById(id)
                 .map(schoolClass -> {
-                    schoolClass.assignHeadTeacher(request.getTeacherId(), request.getTeacherName(), getCurrentUserId());
+                    schoolClass.assignHeadTeacher(request.getTeacherId(), request.getTeacherName(), SecurityUtils.requireCurrentUserId());
                     schoolClassRepository.save(schoolClass);
                     return Result.<Void>success(null);
                 })
@@ -266,11 +254,11 @@ public class SchoolClassController {
 
     @PostMapping("/{id}/deputy-head-teacher")
     @Operation(summary = "分配副班主任")
-    @PreAuthorize("hasAuthority('class:update')")
+    @CasbinAccess(resource = "student:class", action = "edit")
     public Result<Void> assignDeputyHeadTeacher(@PathVariable Long id, @RequestBody AssignTeacherRequest request) {
         return schoolClassRepository.findById(id)
                 .map(schoolClass -> {
-                    schoolClass.assignDeputyHeadTeacher(request.getTeacherId(), request.getTeacherName(), getCurrentUserId());
+                    schoolClass.assignDeputyHeadTeacher(request.getTeacherId(), request.getTeacherName(), SecurityUtils.requireCurrentUserId());
                     schoolClassRepository.save(schoolClass);
                     return Result.<Void>success(null);
                 })
@@ -279,7 +267,7 @@ public class SchoolClassController {
 
     @GetMapping("/head-teacher/{teacherId}")
     @Operation(summary = "获取班主任管理的班级")
-    @PreAuthorize("hasAuthority('class:view')")
+    @CasbinAccess(resource = "student:class", action = "view")
     public Result<List<SchoolClassResponse>> getClassesByHeadTeacher(@PathVariable Long teacherId) {
         List<SchoolClass> classList = schoolClassRepository.findByHeadTeacherId(teacherId);
         Map<Long, String> orgUnitNameMap = getOrgUnitNameMap(classList);
@@ -292,7 +280,7 @@ public class SchoolClassController {
 
     @GetMapping("/graduating")
     @Operation(summary = "获取即将毕业的班级")
-    @PreAuthorize("hasAuthority('class:view')")
+    @CasbinAccess(resource = "student:class", action = "view")
     public Result<List<SchoolClassResponse>> getGraduatingClasses(@RequestParam Integer year) {
         List<SchoolClass> classList = schoolClassRepository.findGraduatingClasses(year);
         Map<Long, String> orgUnitNameMap = getOrgUnitNameMap(classList);
@@ -305,14 +293,14 @@ public class SchoolClassController {
 
     @GetMapping("/check-code")
     @Operation(summary = "检查班级编码是否存在")
-    @PreAuthorize("hasAuthority('class:view')")
+    @CasbinAccess(resource = "student:class", action = "view")
     public Result<Boolean> checkClassCodeExists(@RequestParam String classCode) {
         return Result.success(schoolClassRepository.existsByClassCode(classCode));
     }
 
     @DeleteMapping("/batch")
     @Operation(summary = "批量删除班级")
-    @PreAuthorize("hasAuthority('class:delete')")
+    @CasbinAccess(resource = "student:class", action = "delete")
     public Result<Integer> batchDeleteClasses(@RequestBody List<Long> ids) {
         if (ids == null || ids.isEmpty()) {
             return Result.error("请选择要删除的班级");
@@ -331,7 +319,7 @@ public class SchoolClassController {
 
     @PostMapping("/{id}/teachers/{teacherId}/end")
     @Operation(summary = "结束教师任职")
-    @PreAuthorize("hasAuthority('class:update')")
+    @CasbinAccess(resource = "student:class", action = "edit")
     public Result<Void> endTeacherAssignment(
             @PathVariable Long id,
             @PathVariable Long teacherId,
@@ -347,19 +335,6 @@ public class SchoolClassController {
     }
 
     // ==================== 辅助方法 ====================
-
-    private Long getCurrentUserId() {
-        try {
-            Long userId = SecurityUtils.getCurrentUserId();
-            if (userId != null) {
-                return userId;
-            }
-        } catch (Exception e) {
-            log.warn("Cannot get current user id", e);
-        }
-        // TODO: 应该抛出异常而不是返回默认值，待前端完善认证后修复
-        return 1L;
-    }
 
     private Map<Long, String> getOrgUnitNameMap(List<SchoolClass> classes) {
         Set<Long> orgUnitIds = classes.stream()
@@ -391,15 +366,12 @@ public class SchoolClassController {
 
     /**
      * 计算正确的学制
-     * 如果是分段注册，学制 = 第一阶段年数 + 第二阶段年数
-     * 否则使用 years 字段
      */
-    private Integer calculateSchoolingYears(MajorDirectionPO direction) {
+    private Integer calculateSchoolingYears(MajorDirection direction) {
         if (direction == null) {
             return null;
         }
-        // 如果是分段注册，计算总学制
-        if (direction.getIsSegmented() != null && direction.getIsSegmented() == 1) {
+        if (direction.isSegmented() != null && direction.isSegmented()) {
             int phase1 = direction.getPhase1Years() != null ? direction.getPhase1Years() : 0;
             int phase2 = direction.getPhase2Years() != null ? direction.getPhase2Years() : 0;
             return phase1 + phase2;
@@ -410,32 +382,27 @@ public class SchoolClassController {
     private Map<Long, MajorInfo> getMajorInfoMap(List<SchoolClass> classes) {
         Set<Long> directionIds = classes.stream()
                 .map(SchoolClass::getMajorDirectionId)
-                .filter(id -> id != null)
+                .filter(Objects::nonNull)
                 .collect(Collectors.toSet());
         if (directionIds.isEmpty()) {
             return Map.of();
         }
 
-        // 获取专业方向信息
-        List<MajorDirectionPO> directions = majorDirectionMapper.selectBatchIds(directionIds);
+        // 通过 domain repository 获取专业方向
+        List<MajorDirection> directions = majorRepository.findDirectionsByIds(directionIds);
 
-        // 获取关联的专业ID
-        Set<Long> majorIds = directions.stream()
-                .map(MajorDirectionPO::getMajorId)
-                .filter(id -> id != null)
-                .collect(Collectors.toSet());
+        // 获取关联专业名称
+        Map<Long, String> majorNameMap = new java.util.HashMap<>();
+        for (MajorDirection d : directions) {
+            majorRepository.findByDirectionId(d.getId())
+                    .ifPresent(major -> majorNameMap.put(d.getId(), major.getMajorName()));
+        }
 
-        // 获取专业名称映射
-        Map<Long, String> majorNameMap = majorIds.isEmpty() ? Map.of() :
-                majorMapper.selectBatchIds(majorIds).stream()
-                        .collect(Collectors.toMap(MajorPO::getId, MajorPO::getMajorName, (a, b) -> a));
-
-        // 构建专业方向ID -> MajorInfo 映射
         return directions.stream()
                 .collect(Collectors.toMap(
-                        MajorDirectionPO::getId,
+                        MajorDirection::getId,
                         d -> new MajorInfo(
-                                majorNameMap.get(d.getMajorId()),
+                                majorNameMap.get(d.getId()),
                                 d.getDirectionName(),
                                 calculateSchoolingYears(d)
                         ),
@@ -447,16 +414,14 @@ public class SchoolClassController {
         if (majorDirectionId == null) {
             return new MajorInfo(null, null, null);
         }
-        MajorDirectionPO direction = majorDirectionMapper.selectById(majorDirectionId);
-        if (direction == null) {
-            return new MajorInfo(null, null, null);
-        }
-        String majorName = null;
-        if (direction.getMajorId() != null) {
-            MajorPO major = majorMapper.selectById(direction.getMajorId());
-            majorName = major != null ? major.getMajorName() : null;
-        }
-        return new MajorInfo(majorName, direction.getDirectionName(), calculateSchoolingYears(direction));
+        return majorRepository.findDirectionById(majorDirectionId)
+                .map(direction -> {
+                    String majorName = majorRepository.findByDirectionId(direction.getId())
+                            .map(Major::getMajorName)
+                            .orElse(null);
+                    return new MajorInfo(majorName, direction.getDirectionName(), calculateSchoolingYears(direction));
+                })
+                .orElse(new MajorInfo(null, null, null));
     }
 
     private SchoolClassResponse toResponse(SchoolClass schoolClass, String orgUnitName, MajorInfo majorInfo) {

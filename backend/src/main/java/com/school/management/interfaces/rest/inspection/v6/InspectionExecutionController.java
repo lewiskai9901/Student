@@ -8,7 +8,8 @@ import com.school.management.domain.inspection.model.v6.InspectionEvidence;
 import com.school.management.security.CustomUserDetails;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import org.springframework.security.access.prepost.PreAuthorize;
+import com.school.management.infrastructure.casbin.CasbinAccess;
+import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
@@ -21,6 +22,7 @@ import java.util.stream.Collectors;
  * V6检查执行控制器
  * 管理检查明细和证据的CRUD操作
  */
+@RequiredArgsConstructor
 @Tag(name = "V6检查执行", description = "V6检查执行接口 - 管理检查明细和证据")
 @RestController
 @RequestMapping("/v6/inspection-execution")
@@ -28,15 +30,11 @@ public class InspectionExecutionController {
 
     private final InspectionExecutionApplicationService executionService;
 
-    public InspectionExecutionController(InspectionExecutionApplicationService executionService) {
-        this.executionService = executionService;
-    }
-
     // ========== 检查明细相关 ==========
 
     @Operation(summary = "添加扣分明细")
     @PostMapping("/details/deduction")
-    @PreAuthorize("hasAuthority('inspection:task:execute')")
+    @CasbinAccess(resource = "inspection:task", action = "execute")
     public Result<DetailResponse> addDeduction(
             @RequestBody AddDeductionRequest request,
             @AuthenticationPrincipal CustomUserDetails userDetails) {
@@ -60,7 +58,7 @@ public class InspectionExecutionController {
 
     @Operation(summary = "添加带个体关联的扣分明细")
     @PostMapping("/details/deduction-individual")
-    @PreAuthorize("hasAuthority('inspection:task:execute')")
+    @CasbinAccess(resource = "inspection:task", action = "execute")
     public Result<DetailResponse> addDeductionWithIndividual(
             @RequestBody AddDeductionWithIndividualRequest request,
             @AuthenticationPrincipal CustomUserDetails userDetails) {
@@ -87,7 +85,7 @@ public class InspectionExecutionController {
 
     @Operation(summary = "添加加分明细")
     @PostMapping("/details/bonus")
-    @PreAuthorize("hasAuthority('inspection:task:execute')")
+    @CasbinAccess(resource = "inspection:task", action = "execute")
     public Result<DetailResponse> addBonus(
             @RequestBody AddBonusRequest request,
             @AuthenticationPrincipal CustomUserDetails userDetails) {
@@ -111,7 +109,7 @@ public class InspectionExecutionController {
 
     @Operation(summary = "更新明细")
     @PutMapping("/details/{detailId}")
-    @PreAuthorize("hasAuthority('inspection:task:execute')")
+    @CasbinAccess(resource = "inspection:task", action = "execute")
     public Result<DetailResponse> updateDetail(
             @PathVariable Long detailId,
             @RequestBody UpdateDetailRequest request) {
@@ -123,7 +121,7 @@ public class InspectionExecutionController {
 
     @Operation(summary = "删除明细")
     @DeleteMapping("/details/{detailId}")
-    @PreAuthorize("hasAuthority('inspection:task:execute')")
+    @CasbinAccess(resource = "inspection:task", action = "execute")
     public Result<Void> deleteDetail(@PathVariable Long detailId) {
         executionService.deleteDetail(detailId);
         return Result.success();
@@ -131,7 +129,7 @@ public class InspectionExecutionController {
 
     @Operation(summary = "获取目标的明细列表")
     @GetMapping("/targets/{targetId}/details")
-    @PreAuthorize("hasAuthority('inspection:task:view')")
+    @CasbinAccess(resource = "inspection:task", action = "view")
     public Result<List<DetailResponse>> getDetailsByTarget(@PathVariable Long targetId) {
         List<InspectionDetail> details = executionService.getDetailsByTarget(targetId);
         return Result.success(details.stream().map(this::toDetailResponse).collect(Collectors.toList()));
@@ -139,7 +137,7 @@ public class InspectionExecutionController {
 
     @Operation(summary = "获取目标某类别的明细")
     @GetMapping("/targets/{targetId}/categories/{categoryId}/details")
-    @PreAuthorize("hasAuthority('inspection:task:view')")
+    @CasbinAccess(resource = "inspection:task", action = "view")
     public Result<List<DetailResponse>> getDetailsByTargetAndCategory(
             @PathVariable Long targetId,
             @PathVariable Long categoryId) {
@@ -149,7 +147,7 @@ public class InspectionExecutionController {
 
     @Operation(summary = "获取个体的明细列表")
     @GetMapping("/individuals/{individualType}/{individualId}/details")
-    @PreAuthorize("hasAuthority('inspection:task:view')")
+    @CasbinAccess(resource = "inspection:task", action = "view")
     public Result<List<DetailResponse>> getDetailsByIndividual(
             @PathVariable String individualType,
             @PathVariable Long individualId) {
@@ -159,7 +157,7 @@ public class InspectionExecutionController {
 
     @Operation(summary = "获取明细详情")
     @GetMapping("/details/{detailId}")
-    @PreAuthorize("hasAuthority('inspection:task:view')")
+    @CasbinAccess(resource = "inspection:task", action = "view")
     public Result<DetailResponse> getDetail(@PathVariable Long detailId) {
         return executionService.getDetail(detailId)
                 .map(d -> Result.success(toDetailResponse(d)))
@@ -170,7 +168,7 @@ public class InspectionExecutionController {
 
     @Operation(summary = "添加明细证据")
     @PostMapping("/details/{detailId}/evidences")
-    @PreAuthorize("hasAuthority('inspection:task:execute')")
+    @CasbinAccess(resource = "inspection:task", action = "execute")
     public Result<EvidenceResponse> addEvidenceForDetail(
             @PathVariable Long detailId,
             @RequestBody AddEvidenceRequest request,
@@ -191,7 +189,7 @@ public class InspectionExecutionController {
 
     @Operation(summary = "添加目标整体证据")
     @PostMapping("/targets/{targetId}/evidences")
-    @PreAuthorize("hasAuthority('inspection:task:execute')")
+    @CasbinAccess(resource = "inspection:task", action = "execute")
     public Result<EvidenceResponse> addEvidenceForTarget(
             @PathVariable Long targetId,
             @RequestBody AddEvidenceRequest request,
@@ -212,7 +210,7 @@ public class InspectionExecutionController {
 
     @Operation(summary = "添加带GPS的证据")
     @PostMapping("/evidences/with-location")
-    @PreAuthorize("hasAuthority('inspection:task:execute')")
+    @CasbinAccess(resource = "inspection:task", action = "execute")
     public Result<EvidenceResponse> addEvidenceWithLocation(
             @RequestBody AddEvidenceWithLocationRequest request,
             @AuthenticationPrincipal CustomUserDetails userDetails) {
@@ -235,7 +233,7 @@ public class InspectionExecutionController {
 
     @Operation(summary = "删除证据")
     @DeleteMapping("/evidences/{evidenceId}")
-    @PreAuthorize("hasAuthority('inspection:task:execute')")
+    @CasbinAccess(resource = "inspection:task", action = "execute")
     public Result<Void> deleteEvidence(@PathVariable Long evidenceId) {
         executionService.deleteEvidence(evidenceId);
         return Result.success();
@@ -243,7 +241,7 @@ public class InspectionExecutionController {
 
     @Operation(summary = "获取明细的证据列表")
     @GetMapping("/details/{detailId}/evidences")
-    @PreAuthorize("hasAuthority('inspection:task:view')")
+    @CasbinAccess(resource = "inspection:task", action = "view")
     public Result<List<EvidenceResponse>> getEvidencesByDetail(@PathVariable Long detailId) {
         List<InspectionEvidence> evidences = executionService.getEvidencesByDetail(detailId);
         return Result.success(evidences.stream().map(this::toEvidenceResponse).collect(Collectors.toList()));
@@ -251,7 +249,7 @@ public class InspectionExecutionController {
 
     @Operation(summary = "获取目标的整体证据列表")
     @GetMapping("/targets/{targetId}/evidences")
-    @PreAuthorize("hasAuthority('inspection:task:view')")
+    @CasbinAccess(resource = "inspection:task", action = "view")
     public Result<List<EvidenceResponse>> getEvidencesByTarget(@PathVariable Long targetId) {
         List<InspectionEvidence> evidences = executionService.getEvidencesByTarget(targetId);
         return Result.success(evidences.stream().map(this::toEvidenceResponse).collect(Collectors.toList()));

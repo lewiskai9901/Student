@@ -64,7 +64,7 @@
               </el-radio-group>
             </el-form-item>
             <el-form-item label="共享场所策略">
-              <el-radio-group v-model="formData.sharedSpaceStrategy">
+              <el-radio-group v-model="formData.sharedPlaceStrategy">
                 <el-radio value="RATIO">按比例</el-radio>
                 <el-radio value="AVERAGE">平均</el-radio>
                 <el-radio value="FULL">全部</el-radio>
@@ -96,7 +96,7 @@ import { v6ProjectApi, v6AssignmentApi } from '@/api/v6Inspection'
 
 const router = useRouter()
 const route = useRoute()
-const projectId = Number(route.params.id)
+const projectId = route.params.id as string
 
 const activeTab = ref('basic')
 const saving = ref(false)
@@ -109,7 +109,7 @@ const formData = reactive({
   startDate: '',
   endDate: '',
   inspectorAssignmentMode: 'FREE',
-  sharedSpaceStrategy: 'RATIO',
+  sharedPlaceStrategy: 'RATIO',
   enableItemWeight: false,
   enableDualCycle: false
 })

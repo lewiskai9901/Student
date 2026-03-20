@@ -22,9 +22,9 @@ public class UserDomainResponse {
     private String employeeNo;
     private Integer gender;
     private LocalDate birthDate;
-    private Long orgUnitId;
-    private Long classId;
+    private String idCard;
     private String userType;
+    private Long orgUnitId;
     private String status;
     private LocalDateTime lastLoginTime;
     private String lastLoginIp;
@@ -55,9 +55,9 @@ public class UserDomainResponse {
         response.setEmployeeNo(user.getEmployeeNo());
         response.setGender(user.getGender());
         response.setBirthDate(user.getBirthDate());
+        response.setIdCard(user.getIdCard());
+        response.setUserType(user.getUserTypeCode());
         response.setOrgUnitId(user.getOrgUnitId());
-        response.setClassId(user.getClassId());
-        response.setUserType(user.getUserType() != null ? user.getUserType().getDescription() : null);
         response.setStatus(user.getStatus() != null ? user.getStatus().getDescription() : null);
         response.setLastLoginTime(user.getLastLoginTime());
         response.setLastLoginIp(user.getLastLoginIp());

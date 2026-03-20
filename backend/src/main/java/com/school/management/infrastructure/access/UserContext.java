@@ -7,7 +7,7 @@ import java.util.List;
 import java.util.Set;
 
 /**
- * 用户上下文 (V5)
+ * 用户上下文 (V6 - Scoped Roles)
  * 存储当前请求用户的权限相关信息
  */
 @Data
@@ -25,7 +25,7 @@ public class UserContext {
     private String username;
 
     /**
-     * 用户所属组织单元ID
+     * 用户所属组织单元ID（主归属，来自 access_relations）
      */
     private Long orgUnitId;
 
@@ -43,6 +43,17 @@ public class UserContext {
      * 用户拥有的角色代码列表
      */
     private Set<String> roleCodes;
+
+    /**
+     * 带作用域的角色分配列表
+     */
+    private List<ScopedRoleInfo> scopedRoles;
+
+    /**
+     * 租户ID
+     */
+    @Builder.Default
+    private Long tenantId = 1L;
 
     /**
      * 是否为超级管理员
@@ -70,5 +81,17 @@ public class UserContext {
             }
         }
         return false;
+    }
+
+    /**
+     * 带作用域的角色信息
+     */
+    @Data
+    @Builder
+    public static class ScopedRoleInfo {
+        private Long roleId;
+        private String scopeType;   // ALL | ORG_UNIT
+        private Long scopeId;       // 0 for ALL, orgUnitId for ORG_UNIT
+        private String scopeOrgPath; // ORG_UNIT scope 对应的 org path（预查询，避免运行时查询）
     }
 }

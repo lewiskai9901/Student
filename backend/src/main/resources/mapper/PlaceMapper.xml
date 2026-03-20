@@ -1,13 +1,13 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
-<mapper namespace="com.school.management.infrastructure.persistence.space.SpaceMapper">
+<mapper namespace="com.school.management.infrastructure.persistence.place.PlaceMapper">
 
     <!-- 通用结果映射 -->
-    <resultMap id="BaseResultMap" type="com.school.management.infrastructure.persistence.space.SpacePO">
+    <resultMap id="BaseResultMap" type="com.school.management.infrastructure.persistence.place.PlacePO">
         <id column="id" property="id"/>
-        <result column="space_code" property="spaceCode"/>
-        <result column="space_name" property="spaceName"/>
-        <result column="space_type" property="spaceType"/>
+        <result column="place_code" property="placeCode"/>
+        <result column="place_name" property="placeName"/>
+        <result column="place_type" property="placeType"/>
         <result column="room_type" property="roomType"/>
         <result column="building_type" property="buildingType"/>
         <result column="building_no" property="buildingNo"/>
@@ -37,36 +37,36 @@
     <!-- 根据ID查询（带关联信息） -->
     <select id="selectByIdWithRelations" resultMap="BaseResultMap">
         SELECT s.*,
-               p.space_name as parent_name,
-               c.space_name as campus_name,
-               b.space_name as building_name,
+               p.place_name as parent_name,
+               c.place_name as campus_name,
+               b.place_name as building_name,
                b.building_no as parent_building_no
-        FROM space s
-        LEFT JOIN space p ON s.parent_id = p.id AND p.deleted = 0
-        LEFT JOIN space c ON s.campus_id = c.id AND c.deleted = 0
-        LEFT JOIN space b ON s.building_id = b.id AND b.deleted = 0
+        FROM place s
+        LEFT JOIN place p ON s.parent_id = p.id AND p.deleted = 0
+        LEFT JOIN place c ON s.campus_id = c.id AND c.deleted = 0
+        LEFT JOIN place b ON s.building_id = b.id AND b.deleted = 0
         WHERE s.id = #{id} AND s.deleted = 0
     </select>
 
     <!-- 根据编码查询 -->
     <select id="selectByCode" resultMap="BaseResultMap">
-        SELECT * FROM space WHERE space_code = #{spaceCode} AND deleted = 0
+        SELECT * FROM place WHERE place_code = #{placeCode} AND deleted = 0
     </select>
 
     <!-- 查询子节点 -->
     <select id="selectChildren" resultMap="BaseResultMap">
-        SELECT * FROM space WHERE parent_id = #{parentId} AND deleted = 0 ORDER BY space_code
+        SELECT * FROM place WHERE parent_id = #{parentId} AND deleted = 0 ORDER BY place_code
     </select>
 
     <!-- 查询所有校区 -->
     <select id="selectAllCampuses" resultMap="BaseResultMap">
-        SELECT * FROM space WHERE space_type = 'CAMPUS' AND deleted = 0 ORDER BY space_code
+        SELECT * FROM place WHERE place_type = 'CAMPUS' AND deleted = 0 ORDER BY place_code
     </select>
 
     <!-- 查询所有楼宇 -->
     <select id="selectAllBuildings" resultMap="BaseResultMap">
-        SELECT * FROM space
-        WHERE space_type = 'BUILDING' AND deleted = 0
+        SELECT * FROM place
+        WHERE place_type = 'BUILDING' AND deleted = 0
         <if test="buildingType != null">
             AND building_type = #{buildingType}
         </if>
@@ -78,15 +78,15 @@
 
     <!-- 查询楼宇的楼层 -->
     <select id="selectFloorsByBuildingId" resultMap="BaseResultMap">
-        SELECT * FROM space
-        WHERE building_id = #{buildingId} AND space_type = 'FLOOR' AND deleted = 0
+        SELECT * FROM place
+        WHERE building_id = #{buildingId} AND place_type = 'FLOOR' AND deleted = 0
         ORDER BY floor_number
     </select>
 
     <!-- 查询楼宇的房间 -->
     <select id="selectRoomsByBuildingId" resultMap="BaseResultMap">
-        SELECT * FROM space
-        WHERE building_id = #{buildingId} AND space_type = 'ROOM' AND deleted = 0
+        SELECT * FROM place
+        WHERE building_id = #{buildingId} AND place_type = 'ROOM' AND deleted = 0
         <if test="roomType != null">
             AND room_type = #{roomType}
         </if>
@@ -98,10 +98,10 @@
 
     <!-- 按条件查询 -->
     <select id="selectByConditions" resultMap="BaseResultMap">
-        SELECT * FROM space
+        SELECT * FROM place
         WHERE deleted = 0
-        <if test="spaceType != null">
-            AND space_type = #{spaceType}
+        <if test="placeType != null">
+            AND place_type = #{placeType}
         </if>
         <if test="roomType != null">
             AND room_type = #{roomType}
@@ -122,18 +122,18 @@
             AND status = #{status}
         </if>
         <if test="keyword != null and keyword != ''">
-            AND (space_name LIKE CONCAT('%', #{keyword}, '%') OR space_code LIKE CONCAT('%', #{keyword}, '%'))
+            AND (place_name LIKE CONCAT('%', #{keyword}, '%') OR place_code LIKE CONCAT('%', #{keyword}, '%'))
         </if>
-        ORDER BY path, space_code
+        ORDER BY path, place_code
         LIMIT #{offset}, #{limit}
     </select>
 
     <!-- 统计数量 -->
     <select id="countByConditions" resultType="long">
-        SELECT COUNT(*) FROM space
+        SELECT COUNT(*) FROM place
         WHERE deleted = 0
-        <if test="spaceType != null">
-            AND space_type = #{spaceType}
+        <if test="placeType != null">
+            AND place_type = #{placeType}
         </if>
         <if test="roomType != null">
             AND room_type = #{roomType}
@@ -154,30 +154,30 @@
             AND status = #{status}
         </if>
         <if test="keyword != null and keyword != ''">
-            AND (space_name LIKE CONCAT('%', #{keyword}, '%') OR space_code LIKE CONCAT('%', #{keyword}, '%'))
+            AND (place_name LIKE CONCAT('%', #{keyword}, '%') OR place_code LIKE CONCAT('%', #{keyword}, '%'))
         </if>
     </select>
 
     <!-- 按路径前缀查询 -->
     <select id="selectByPathPrefix" resultMap="BaseResultMap">
-        SELECT * FROM space
+        SELECT * FROM place
         WHERE path LIKE CONCAT(#{pathPrefix}, '%') AND deleted = 0
         ORDER BY path
     </select>
 
     <!-- 按组织单元查询 -->
     <select id="selectByOrgUnitId" resultMap="BaseResultMap">
-        SELECT * FROM space WHERE org_unit_id = #{orgUnitId} AND deleted = 0 ORDER BY path
+        SELECT * FROM place WHERE org_unit_id = #{orgUnitId} AND deleted = 0 ORDER BY path
     </select>
 
     <!-- 更新占用数 -->
     <update id="updateOccupancy">
-        UPDATE space SET current_occupancy = #{occupancy}, updated_at = NOW() WHERE id = #{id}
+        UPDATE place SET current_occupancy = #{occupancy}, updated_at = NOW() WHERE id = #{id}
     </update>
 
     <!-- 批量更新组织单元 -->
     <update id="batchUpdateOrgUnit">
-        UPDATE space SET org_unit_id = #{orgUnitId}, updated_at = NOW()
+        UPDATE place SET org_unit_id = #{orgUnitId}, updated_at = NOW()
         WHERE id IN
         <foreach collection="ids" item="id" open="(" separator="," close=")">
             #{id}
@@ -186,12 +186,12 @@
 
     <!-- 检查是否有子节点 -->
     <select id="countChildren" resultType="int">
-        SELECT COUNT(*) FROM space WHERE parent_id = #{parentId} AND deleted = 0
+        SELECT COUNT(*) FROM place WHERE parent_id = #{parentId} AND deleted = 0
     </select>
 
     <!-- 获取祖先链 -->
     <select id="selectAncestors" resultMap="BaseResultMap">
-        SELECT * FROM space
+        SELECT * FROM place
         WHERE id IN (
             SELECT CAST(SUBSTRING_INDEX(SUBSTRING_INDEX(#{path}, '/', numbers.n), '/', -1) AS UNSIGNED) as ancestor_id
             FROM (
@@ -207,20 +207,20 @@
     <!-- 获取楼宇统计 -->
     <select id="selectBuildingStats" resultType="java.util.Map">
         SELECT
-            COUNT(CASE WHEN space_type = 'FLOOR' THEN 1 END) as floor_count,
-            COUNT(CASE WHEN space_type = 'ROOM' THEN 1 END) as room_count,
-            COALESCE(SUM(CASE WHEN space_type = 'ROOM' THEN capacity ELSE 0 END), 0) as total_capacity,
-            COALESCE(SUM(CASE WHEN space_type = 'ROOM' THEN current_occupancy ELSE 0 END), 0) as total_occupancy
-        FROM space
+            COUNT(CASE WHEN place_type = 'FLOOR' THEN 1 END) as floor_count,
+            COUNT(CASE WHEN place_type = 'ROOM' THEN 1 END) as room_count,
+            COALESCE(SUM(CASE WHEN place_type = 'ROOM' THEN capacity ELSE 0 END), 0) as total_capacity,
+            COALESCE(SUM(CASE WHEN place_type = 'ROOM' THEN current_occupancy ELSE 0 END), 0) as total_occupancy
+        FROM place
         WHERE building_id = #{buildingId} AND deleted = 0
     </select>
 
     <!-- 统计校区内的楼号数量 -->
     <select id="countByBuildingNoInCampus" resultType="int">
-        SELECT COUNT(*) FROM space
+        SELECT COUNT(*) FROM place
         WHERE building_no = #{buildingNo}
           AND campus_id = #{campusId}
-          AND space_type = 'BUILDING'
+          AND place_type = 'BUILDING'
           AND deleted = 0
         <if test="excludeId != null">
             AND id != #{excludeId}
@@ -229,14 +229,35 @@
 
     <!-- 统计楼栋内的房间号数量 -->
     <select id="countByRoomNoInBuilding" resultType="int">
-        SELECT COUNT(*) FROM space
+        SELECT COUNT(*) FROM place
         WHERE room_no = #{roomNo}
           AND building_id = #{buildingId}
-          AND space_type = 'ROOM'
+          AND place_type = 'ROOM'
           AND deleted = 0
         <if test="excludeId != null">
             AND id != #{excludeId}
         </if>
     </select>
+
+    <!-- 原子增加占用数（如果有空位）- CAS操作 -->
+    <update id="incrementOccupancyIfAvailable">
+        UPDATE place
+        SET current_occupancy = current_occupancy + #{increment},
+            updated_at = NOW()
+        WHERE id = #{placeId}
+          AND deleted = 0
+          AND capacity IS NOT NULL
+          AND (current_occupancy + #{increment}) &lt;= capacity
+    </update>
+
+    <!-- 原子减少占用数 - CAS操作 -->
+    <update id="decrementOccupancy">
+        UPDATE place
+        SET current_occupancy = current_occupancy - #{decrement},
+            updated_at = NOW()
+        WHERE id = #{placeId}
+          AND deleted = 0
+          AND current_occupancy >= #{decrement}
+    </update>
 
 </mapper>

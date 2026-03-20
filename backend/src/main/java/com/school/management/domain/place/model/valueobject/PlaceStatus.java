@@ -1,4 +1,4 @@
-package com.school.management.domain.space.model.valueobject;
+package com.school.management.domain.place.model.valueobject;
 
 import lombok.Getter;
 
@@ -6,7 +6,7 @@ import lombok.Getter;
  * 场所状态枚举
  */
 @Getter
-public enum SpaceStatus {
+public enum PlaceStatus {
     DISABLED(0, "停用"),
     NORMAL(1, "正常"),
     MAINTENANCE(2, "维修中");
@@ -14,21 +14,21 @@ public enum SpaceStatus {
     private final int code;
     private final String description;
 
-    SpaceStatus(int code, String description) {
+    PlaceStatus(int code, String description) {
         this.code = code;
         this.description = description;
     }
 
-    public static SpaceStatus fromCode(int code) {
-        for (SpaceStatus status : values()) {
+    public static PlaceStatus fromCode(int code) {
+        for (PlaceStatus status : values()) {
             if (status.code == code) {
                 return status;
             }
         }
-        throw new IllegalArgumentException("Invalid space status code: " + code);
+        throw new IllegalArgumentException("Invalid place status code: " + code);
     }
 
-    public static SpaceStatus fromValue(int value) {
+    public static PlaceStatus fromValue(int value) {
         return fromCode(value);
     }
 

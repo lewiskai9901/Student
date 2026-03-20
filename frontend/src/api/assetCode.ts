@@ -3,7 +3,7 @@ import request from '@/utils/request'
 const BASE_URL = '/asset-codes'
 
 export interface LabelRequest {
-  assetId: number
+  assetId: number | string
   assetCode: string
   assetName: string
   location?: string
@@ -39,7 +39,7 @@ export const assetCodeApi = {
   /**
    * 生成资产二维码
    */
-  generateQRCode(assetCode: string, assetId: number, size = 200): Promise<{
+  generateQRCode(assetCode: string, assetId: number | string, size = 200): Promise<{
     qrcode: string
     assetCode: string
   }> {
@@ -78,7 +78,7 @@ export const assetCodeApi = {
    */
   generateLabel(
     assetCode: string,
-    assetId: number,
+    assetId: number | string,
     assetName: string,
     location?: string
   ): Promise<LabelData> {

@@ -19,14 +19,14 @@ export type ClassRole = 'HEAD_TEACHER' | 'DEPUTY_HEAD_TEACHER' | 'SUBJECT_TEACHE
 
 // 分配的班级信息
 export interface AssignedClass {
-  id: number
+  id: number | string
   className: string
   role: ClassRole
 }
 
 export interface UserInfo {
   userId: string
-  id?: number
+  id?: number | string
   username: string
   realName: string
   phone?: string
@@ -38,6 +38,8 @@ export interface UserInfo {
   roles: string[]
   permissions: string[]
   lastLoginTime?: string
+  tenantId?: number | string
+  tenantName?: string
   orgUnit?: {
     orgUnitId: string
     orgUnitName: string

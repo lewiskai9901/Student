@@ -187,7 +187,7 @@ const multipleAssignees = ref<string[]>([])
 // 处理单人选择变化
 const handleSingleAssigneeChange = (users: { id: string | number; realName: string }[]) => {
   if (users.length > 0) {
-    form.assigneeId = Number(users[0].id)
+    form.assigneeId = users[0].id
   } else {
     form.assigneeId = undefined
   }
@@ -195,7 +195,7 @@ const handleSingleAssigneeChange = (users: { id: string | number; realName: stri
 
 // 处理多人选择变化
 const handleMultipleAssigneesChange = (users: { id: string | number; realName: string }[]) => {
-  form.targetIds = users.map(u => Number(u.id))
+  form.targetIds = users.map(u => u.id)
 }
 
 // 加载流程模板

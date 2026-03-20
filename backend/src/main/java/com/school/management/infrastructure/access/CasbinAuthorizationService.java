@@ -1,14 +1,15 @@
 package com.school.management.infrastructure.access;
 
 import com.school.management.domain.access.model.DataScope;
-import com.school.management.domain.access.model.*;
+import com.school.management.domain.access.model.Permission;
+import com.school.management.domain.access.model.Role;
+import com.school.management.domain.access.model.UserRole;
 import com.school.management.domain.access.repository.PermissionRepository;
 import com.school.management.domain.access.repository.RoleRepository;
 import com.school.management.domain.access.repository.UserRoleRepository;
 import com.school.management.domain.access.service.AuthorizationService;
 import com.school.management.domain.organization.repository.OrgUnitRepository;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
@@ -20,10 +21,9 @@ import java.util.stream.Collectors;
  * Casbin-based implementation of AuthorizationService.
  * Uses Spring @Cacheable for performance with cache invalidation on changes.
  */
+@Slf4j
 @Service
 public class CasbinAuthorizationService implements AuthorizationService {
-
-    private static final Logger log = LoggerFactory.getLogger(CasbinAuthorizationService.class);
 
     private final UserRoleRepository userRoleRepository;
     private final RoleRepository roleRepository;
@@ -130,9 +130,9 @@ public class CasbinAuthorizationService implements AuthorizationService {
             }
         }
 
-        // Check for super admin role
+        // Check for super admin role (string comparison since roleType is now free-form)
         boolean isSuperAdmin = roles.stream()
-            .anyMatch(r -> r.getRoleType() == RoleType.SUPER_ADMIN);
+            .anyMatch(r -> "SUPER_ADMIN".equals(r.getRoleType()));
         if (isSuperAdmin) {
             permissions.add("*");
         }

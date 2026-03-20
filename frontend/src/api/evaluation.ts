@@ -221,7 +221,7 @@ export function getCurrentPeriod() {
 }
 
 /** 获取周期详情 */
-export function getPeriodDetail(id: number) {
+export function getPeriodDetail(id: number | string) {
   return http.get<EvaluationPeriod>(`/evaluation/periods/${id}`)
 }
 
@@ -231,47 +231,47 @@ export function createPeriod(data: EvaluationPeriod) {
 }
 
 /** 更新综测周期 */
-export function updatePeriod(id: number, data: EvaluationPeriod) {
+export function updatePeriod(id: number | string, data: EvaluationPeriod) {
   return http.put<void>(`/evaluation/periods/${id}`, data)
 }
 
 /** 删除综测周期 */
-export function deletePeriod(id: number) {
+export function deletePeriod(id: number | string) {
   return http.delete<void>(`/evaluation/periods/${id}`)
 }
 
 /** 开始数据采集 */
-export function startDataCollection(id: number) {
+export function startDataCollection(id: number | string) {
   return http.post<void>(`/evaluation/periods/${id}/start-data-collection`)
 }
 
 /** 开始荣誉申报 */
-export function startApplication(id: number) {
+export function startApplication(id: number | string) {
   return http.post<void>(`/evaluation/periods/${id}/start-application`)
 }
 
 /** 开始审核 */
-export function startReview(id: number) {
+export function startReview(id: number | string) {
   return http.post<void>(`/evaluation/periods/${id}/start-review`)
 }
 
 /** 开始公示 */
-export function startPublicity(id: number) {
+export function startPublicity(id: number | string) {
   return http.post<void>(`/evaluation/periods/${id}/start-publicity`)
 }
 
 /** 结束周期 */
-export function finishPeriod(id: number) {
+export function finishPeriod(id: number | string) {
   return http.post<void>(`/evaluation/periods/${id}/finish`)
 }
 
 /** 锁定周期 */
-export function lockPeriod(id: number) {
+export function lockPeriod(id: number | string) {
   return http.post<void>(`/evaluation/periods/${id}/lock`)
 }
 
 /** 解锁周期 */
-export function unlockPeriod(id: number) {
+export function unlockPeriod(id: number | string) {
   return http.post<void>(`/evaluation/periods/${id}/unlock`)
 }
 
@@ -286,19 +286,19 @@ export function getPeriodsByAcademicYear(academicYear: string) {
 export function pageHonorApplications(params: {
   pageNum?: number
   pageSize?: number
-  periodId?: number
+  periodId?: number | string
   studentName?: string
   studentNo?: string
-  honorTypeId?: number
+  honorTypeId?: number | string
   status?: number
-  classId?: number
-  orgUnitId?: number
+  classId?: number | string
+  orgUnitId?: number | string
 }) {
   return http.get<PageResult<HonorApplication>>('/evaluation/honor-applications', { params })
 }
 
 /** 获取申报详情 */
-export function getHonorApplicationDetail(id: number) {
+export function getHonorApplicationDetail(id: number | string) {
   return http.get<HonorApplication>(`/evaluation/honor-applications/${id}`)
 }
 
@@ -308,17 +308,17 @@ export function submitHonorApplication(data: HonorApplication) {
 }
 
 /** 更新荣誉申报 */
-export function updateHonorApplication(id: number, data: HonorApplication) {
+export function updateHonorApplication(id: number | string, data: HonorApplication) {
   return http.put<void>(`/evaluation/honor-applications/${id}`, data)
 }
 
 /** 撤回申报 */
-export function withdrawHonorApplication(id: number) {
+export function withdrawHonorApplication(id: number | string) {
   return http.post<void>(`/evaluation/honor-applications/${id}/withdraw`)
 }
 
 /** 班级审核 */
-export function classReviewHonorApplication(id: number, approved: boolean, comment?: string) {
+export function classReviewHonorApplication(id: number | string, approved: boolean, comment?: string) {
   return http.post<void>(`/evaluation/honor-applications/${id}/class-review`, {
     approved,
     comment
@@ -326,7 +326,7 @@ export function classReviewHonorApplication(id: number, approved: boolean, comme
 }
 
 /** 院系审核 */
-export function departmentReviewHonorApplication(id: number, approved: boolean, comment?: string) {
+export function departmentReviewHonorApplication(id: number | string, approved: boolean, comment?: string) {
   return http.post<void>(`/evaluation/honor-applications/${id}/department-review`, {
     approved,
     comment
@@ -334,7 +334,7 @@ export function departmentReviewHonorApplication(id: number, approved: boolean, 
 }
 
 /** 学校审核 */
-export function schoolReviewHonorApplication(id: number, approved: boolean, comment?: string) {
+export function schoolReviewHonorApplication(id: number | string, approved: boolean, comment?: string) {
   return http.post<void>(`/evaluation/honor-applications/${id}/school-review`, {
     approved,
     comment
@@ -343,7 +343,7 @@ export function schoolReviewHonorApplication(id: number, approved: boolean, comm
 
 /** 批量审核 */
 export function batchReviewHonorApplications(
-  ids: number[],
+  ids: (number | string)[],
   level: 'class' | 'department' | 'school',
   approved: boolean,
   comment?: string
@@ -357,14 +357,14 @@ export function batchReviewHonorApplications(
 }
 
 /** 获取学生申报列表 */
-export function getStudentHonorApplications(studentId: number, periodId?: number) {
+export function getStudentHonorApplications(studentId: number | string, periodId?: number | string) {
   return http.get<HonorApplication[]>(`/evaluation/honor-applications/student/${studentId}`, {
     params: { periodId }
   })
 }
 
 /** 获取我的申报列表 */
-export function getMyHonorApplications(periodId?: number) {
+export function getMyHonorApplications(periodId?: number | string) {
   return http.get<HonorApplication[]>('/evaluation/honor-applications/my', {
     params: { periodId }
   })
@@ -378,7 +378,7 @@ export function getPendingReviewList(level: 'class' | 'department' | 'school') {
 }
 
 /** 检查是否可申报 */
-export function checkCanApplyHonor(studentId: number, honorTypeId: number, periodId: number) {
+export function checkCanApplyHonor(studentId: number | string, honorTypeId: number | string, periodId: number | string) {
   return http.get<{ canApply: boolean; reason: string }>(
     '/evaluation/honor-applications/check-can-apply',
     {
@@ -388,14 +388,14 @@ export function checkCanApplyHonor(studentId: number, honorTypeId: number, perio
 }
 
 /** 获取可申报的荣誉类型 */
-export function getAvailableHonorTypes(studentId: number, periodId: number) {
+export function getAvailableHonorTypes(studentId: number | string, periodId: number | string) {
   return http.get<HonorType[]>('/evaluation/honor-applications/available-honor-types', {
     params: { studentId, periodId }
   })
 }
 
 /** 获取审核统计 */
-export function getHonorReviewStatistics(periodId: number) {
+export function getHonorReviewStatistics(periodId: number | string) {
   return http.get<Record<string, number>>(`/evaluation/honor-applications/statistics/${periodId}`)
 }
 
@@ -408,15 +408,15 @@ export function pageCourses(params: {
   courseCode?: string
   courseName?: string
   courseType?: string
-  semesterId?: number
-  orgUnitId?: number
+  semesterId?: number | string
+  orgUnitId?: number | string
   status?: number
 }) {
   return http.get<PageResult<Course>>('/evaluation/courses', { params })
 }
 
 /** 获取课程详情 */
-export function getCourseDetail(id: number) {
+export function getCourseDetail(id: number | string) {
   return http.get<Course>(`/evaluation/courses/${id}`)
 }
 
@@ -426,22 +426,22 @@ export function createCourse(data: Course) {
 }
 
 /** 更新课程 */
-export function updateCourse(id: number, data: Course) {
+export function updateCourse(id: number | string, data: Course) {
   return http.put<void>(`/evaluation/courses/${id}`, data)
 }
 
 /** 删除课程 */
-export function deleteCourse(id: number) {
+export function deleteCourse(id: number | string) {
   return http.delete<void>(`/evaluation/courses/${id}`)
 }
 
 /** 根据学期获取课程列表 */
-export function getCoursesBySemester(semesterId: number) {
+export function getCoursesBySemester(semesterId: number | string) {
   return http.get<Course[]>(`/evaluation/courses/semester/${semesterId}`)
 }
 
 /** 根据班级获取课程列表 */
-export function getCoursesByClass(classId: number, semesterId?: number) {
+export function getCoursesByClass(classId: number | string, semesterId?: number | string) {
   return http.get<Course[]>(`/evaluation/courses/class/${classId}`, {
     params: { semesterId }
   })
@@ -460,16 +460,16 @@ export function pageScores(params: {
   pageSize?: number
   studentName?: string
   studentNo?: string
-  courseId?: number
-  semesterId?: number
-  classId?: number
+  courseId?: number | string
+  semesterId?: number | string
+  classId?: number | string
   status?: number
 }) {
   return http.get<PageResult<StudentScore>>('/evaluation/scores', { params })
 }
 
 /** 获取成绩详情 */
-export function getScoreDetail(id: number) {
+export function getScoreDetail(id: number | string) {
   return http.get<StudentScore>(`/evaluation/scores/${id}`)
 }
 
@@ -484,31 +484,31 @@ export function batchInputScores(scores: StudentScore[]) {
 }
 
 /** 更新成绩 */
-export function updateScore(id: number, data: StudentScore) {
+export function updateScore(id: number | string, data: StudentScore) {
   return http.put<void>(`/evaluation/scores/${id}`, data)
 }
 
 /** 删除成绩 */
-export function deleteScore(id: number) {
+export function deleteScore(id: number | string) {
   return http.delete<void>(`/evaluation/scores/${id}`)
 }
 
 /** 获取学生学期成绩 */
-export function getStudentScores(studentId: number, semesterId: number) {
+export function getStudentScores(studentId: number | string, semesterId: number | string) {
   return http.get<StudentScore[]>(`/evaluation/scores/student/${studentId}`, {
     params: { semesterId }
   })
 }
 
 /** 获取我的成绩 */
-export function getMyScores(semesterId?: number) {
+export function getMyScores(semesterId?: number | string) {
   return http.get<StudentScore[]>('/evaluation/scores/my', {
     params: { semesterId }
   })
 }
 
 /** 计算学生GPA */
-export function calculateStudentGPA(studentId: number, semesterId: number) {
+export function calculateStudentGPA(studentId: number | string, semesterId: number | string) {
   return http.get<{ gpa: number; average: number; weightedAverage: number }>(
     `/evaluation/scores/student/${studentId}/gpa`,
     { params: { semesterId } }
@@ -516,28 +516,28 @@ export function calculateStudentGPA(studentId: number, semesterId: number) {
 }
 
 /** 获取班级成绩统计 */
-export function getClassScoreStatistics(classId: number, semesterId: number, courseId?: number) {
+export function getClassScoreStatistics(classId: number | string, semesterId: number | string, courseId?: number | string) {
   return http.get<Record<string, number>>(`/evaluation/scores/statistics/class/${classId}`, {
     params: { semesterId, courseId }
   })
 }
 
 /** 获取课程成绩排名 */
-export function getCourseScoreRanking(courseId: number, semesterId: number, limit?: number) {
+export function getCourseScoreRanking(courseId: number | string, semesterId: number | string, limit?: number) {
   return http.get<StudentScore[]>(`/evaluation/scores/ranking/course/${courseId}`, {
     params: { semesterId, limit }
   })
 }
 
 /** 锁定成绩 */
-export function lockScores(semesterId: number, courseId?: number) {
+export function lockScores(semesterId: number | string, courseId?: number | string) {
   return http.post<void>('/evaluation/scores/lock', null, {
     params: { semesterId, courseId }
   })
 }
 
 /** 解锁成绩 */
-export function unlockScores(semesterId: number, courseId?: number) {
+export function unlockScores(semesterId: number | string, courseId?: number | string) {
   return http.post<void>('/evaluation/scores/unlock', null, {
     params: { semesterId, courseId }
   })
@@ -549,76 +549,76 @@ export function unlockScores(semesterId: number, courseId?: number) {
 export function pageEvaluationResults(params: {
   pageNum?: number
   pageSize?: number
-  periodId?: number
+  periodId?: number | string
   studentName?: string
   studentNo?: string
-  classId?: number
-  orgUnitId?: number
+  classId?: number | string
+  orgUnitId?: number | string
 }) {
   return http.get<PageResult<EvaluationResult>>('/evaluation/results', { params })
 }
 
 /** 获取综测结果详情 */
-export function getEvaluationResultDetail(id: number) {
+export function getEvaluationResultDetail(id: number | string) {
   return http.get<EvaluationResult>(`/evaluation/results/${id}`)
 }
 
 /** 获取学生综测结果 */
-export function getStudentEvaluationResult(studentId: number, periodId: number) {
+export function getStudentEvaluationResult(studentId: number | string, periodId: number | string) {
   return http.get<EvaluationResult>('/evaluation/results/student', {
     params: { studentId, periodId }
   })
 }
 
 /** 获取我的综测结果 */
-export function getMyEvaluationResult(periodId: number) {
+export function getMyEvaluationResult(periodId: number | string) {
   return http.get<EvaluationResult>('/evaluation/results/my', {
     params: { periodId }
   })
 }
 
 /** 计算学生综测 */
-export function calculateStudentEvaluation(periodId: number, studentId: number) {
+export function calculateStudentEvaluation(periodId: number | string, studentId: number | string) {
   return http.post<EvaluationResult>('/evaluation/results/calculate/student', null, {
     params: { periodId, studentId }
   })
 }
 
 /** 计算班级综测 */
-export function calculateClassEvaluation(periodId: number, classId: number) {
+export function calculateClassEvaluation(periodId: number | string, classId: number | string) {
   return http.post<EvaluationResult[]>('/evaluation/results/calculate/class', null, {
     params: { periodId, classId }
   })
 }
 
 /** 计算年级综测 */
-export function calculateGradeEvaluation(periodId: number, gradeId: number) {
+export function calculateGradeEvaluation(periodId: number | string, gradeId: number | string) {
   return http.post<number>('/evaluation/results/calculate/grade', null, {
     params: { periodId, gradeId }
   })
 }
 
 /** 重新计算 */
-export function recalculateEvaluation(resultId: number) {
+export function recalculateEvaluation(resultId: number | string) {
   return http.post<EvaluationResult>(`/evaluation/results/${resultId}/recalculate`)
 }
 
 /** 计算排名 */
-export function calculateRankings(periodId: number) {
+export function calculateRankings(periodId: number | string) {
   return http.post<void>('/evaluation/results/calculate-rankings', null, {
     params: { periodId }
   })
 }
 
 /** 获取班级综测排名 */
-export function getClassEvaluationRanking(periodId: number, classId: number) {
+export function getClassEvaluationRanking(periodId: number | string, classId: number | string) {
   return http.get<EvaluationResult[]>('/evaluation/results/ranking/class', {
     params: { periodId, classId }
   })
 }
 
 /** 获取年级综测排名 */
-export function getGradeEvaluationRanking(periodId: number, gradeId: number, limit?: number) {
+export function getGradeEvaluationRanking(periodId: number | string, gradeId: number | string, limit?: number) {
   return http.get<EvaluationResult[]>('/evaluation/results/ranking/grade', {
     params: { periodId, gradeId, limit }
   })
@@ -640,7 +640,7 @@ export function pageBehaviorTypes(params: {
 }
 
 /** 获取行为类型详情 */
-export function getBehaviorTypeDetail(id: number) {
+export function getBehaviorTypeDetail(id: number | string) {
   return http.get<BehaviorType>(`/evaluation/behavior-types/${id}`)
 }
 
@@ -650,12 +650,12 @@ export function createBehaviorType(data: BehaviorType) {
 }
 
 /** 更新行为类型 */
-export function updateBehaviorType(id: number, data: BehaviorType) {
+export function updateBehaviorType(id: number | string, data: BehaviorType) {
   return http.put<void>(`/evaluation/behavior-types/${id}`, data)
 }
 
 /** 删除行为类型 */
-export function deleteBehaviorType(id: number) {
+export function deleteBehaviorType(id: number | string) {
   return http.delete<void>(`/evaluation/behavior-types/${id}`)
 }
 
@@ -695,7 +695,7 @@ export function getCurrentSemester() {
 }
 
 /** 获取学期详情 */
-export function getSemesterDetail(id: number) {
+export function getSemesterDetail(id: number | string) {
   return http.get<Semester>(`/evaluation/semesters/${id}`)
 }
 
@@ -705,12 +705,12 @@ export function createSemester(data: Semester) {
 }
 
 /** 更新学期 */
-export function updateSemester(id: number, data: Semester) {
+export function updateSemester(id: number | string, data: Semester) {
   return http.put<void>(`/evaluation/semesters/${id}`, data)
 }
 
 /** 删除学期 */
-export function deleteSemester(id: number) {
+export function deleteSemester(id: number | string) {
   return http.delete<void>(`/evaluation/semesters/${id}`)
 }
 
@@ -725,7 +725,7 @@ export function getAllAcademicYears() {
 }
 
 /** 设置为当前学期 */
-export function setCurrentSemester(id: number) {
+export function setCurrentSemester(id: number | string) {
   return http.post<void>(`/evaluation/semesters/${id}/set-current`)
 }
 
@@ -749,7 +749,7 @@ export function pageHonorTypes(params: {
 }
 
 /** 获取荣誉类型详情 */
-export function getHonorTypeDetail(id: number) {
+export function getHonorTypeDetail(id: number | string) {
   return http.get<HonorType>(`/evaluation/honor-types/${id}`)
 }
 
@@ -759,12 +759,12 @@ export function createHonorType(data: HonorType) {
 }
 
 /** 更新荣誉类型 */
-export function updateHonorType(id: number, data: HonorType) {
+export function updateHonorType(id: number | string, data: HonorType) {
   return http.put<void>(`/evaluation/honor-types/${id}`, data)
 }
 
 /** 删除荣誉类型 */
-export function deleteHonorType(id: number) {
+export function deleteHonorType(id: number | string) {
   return http.delete<void>(`/evaluation/honor-types/${id}`)
 }
 
@@ -808,6 +808,6 @@ export function getDimensionByCode(code: string) {
 }
 
 /** 更新维度配置 */
-export function updateDimension(id: number, data: EvaluationDimension) {
+export function updateDimension(id: number | string, data: EvaluationDimension) {
   return http.put<void>(`/evaluation/dimensions/${id}`, data)
 }

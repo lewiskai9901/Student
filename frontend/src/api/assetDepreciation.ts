@@ -31,7 +31,7 @@ export const assetDepreciationApi = {
   /**
    * 计算单个资产的折旧
    */
-  calculateDepreciation(assetId: number, period?: string): Promise<AssetDepreciationDTO> {
+  calculateDepreciation(assetId: number | string, period?: string): Promise<AssetDepreciationDTO> {
     return request.post(`${BASE_URL}/${assetId}/calculate`, null, {
       params: { period }
     })
@@ -61,7 +61,7 @@ export const assetDepreciationApi = {
   /**
    * 预览折旧计算结果
    */
-  previewDepreciation(assetId: number, period?: string): Promise<AssetDepreciationDTO> {
+  previewDepreciation(assetId: number | string, period?: string): Promise<AssetDepreciationDTO> {
     return request.get(`${BASE_URL}/${assetId}/preview`, {
       params: { period }
     })
@@ -70,7 +70,7 @@ export const assetDepreciationApi = {
   /**
    * 获取资产折旧历史
    */
-  getDepreciationHistory(assetId: number): Promise<AssetDepreciationDTO[]> {
+  getDepreciationHistory(assetId: number | string): Promise<AssetDepreciationDTO[]> {
     return request.get(`${BASE_URL}/${assetId}/history`)
   },
 
@@ -78,7 +78,7 @@ export const assetDepreciationApi = {
    * 获取资产折旧历史（分页）
    */
   getDepreciationHistoryPage(
-    assetId: number,
+    assetId: number | string,
     pageNum = 1,
     pageSize = 10
   ): Promise<{

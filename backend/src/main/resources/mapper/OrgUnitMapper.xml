@@ -7,19 +7,24 @@
         <result column="unit_code" property="unitCode"/>
         <result column="unit_name" property="unitName"/>
         <result column="unit_type" property="unitType"/>
-        <result column="unit_category" property="unitCategory"/>
         <result column="parent_id" property="parentId"/>
         <result column="tree_path" property="treePath"/>
         <result column="tree_level" property="treeLevel"/>
-        <result column="leader_id" property="leaderId"/>
-        <result column="deputy_leader_ids" property="deputyLeaderIds"/>
+        <result column="headcount" property="headcount"/>
         <result column="sort_order" property="sortOrder"/>
         <result column="status" property="status"/>
+        <result column="attributes" property="attributes"/>
+        <result column="merged_into_id" property="mergedIntoId"/>
+        <result column="split_from_id" property="splitFromId"/>
+        <result column="dissolved_at" property="dissolvedAt"/>
+        <result column="dissolved_reason" property="dissolvedReason"/>
+        <result column="tenant_id" property="tenantId"/>
         <result column="created_at" property="createdAt"/>
         <result column="updated_at" property="updatedAt"/>
         <result column="created_by" property="createdBy"/>
         <result column="updated_by" property="updatedBy"/>
         <result column="deleted" property="deleted"/>
+        <result column="version" property="version"/>
     </resultMap>
 
     <!-- 查询所有根节点 -->
@@ -67,7 +72,7 @@
     <select id="selectByCategory" resultMap="OrgUnitResultMap">
         SELECT * FROM org_units
         WHERE unit_category = #{unitCategory}
-        AND status = 1
+        AND status = 'ACTIVE'
         AND deleted = 0
         ORDER BY sort_order
     </select>

@@ -7,6 +7,7 @@ import { http } from '@/utils/request'
 import type {
   OrgUnit,
   OrgUnitTreeNode,
+  OrgUnitTypeConfig,
   CreateOrgUnitRequest,
   UpdateOrgUnitRequest,
   SchoolClass,
@@ -21,6 +22,7 @@ import type {
 
 // 后端API路径
 const ORG_UNIT_URL = '/org-units'
+const ORG_UNIT_TYPE_URL = '/org-types'
 const CLASS_URL = '/organization/classes'
 
 // ==================== 组织单元 API ====================
@@ -42,7 +44,7 @@ export function getOrgUnitTree(): Promise<OrgUnitTreeNode[]> {
 /**
  * 获取组织单元详情
  */
-export function getOrgUnit(id: number): Promise<OrgUnit> {
+export function getOrgUnit(id: number | string): Promise<OrgUnit> {
   return http.get<OrgUnit>(`${ORG_UNIT_URL}/${id}`)
 }
 
@@ -56,36 +58,50 @@ export function createOrgUnit(data: CreateOrgUnitRequest): Promise<OrgUnit> {
 /**
  * 更新组织单元
  */
-export function updateOrgUnit(id: number, data: UpdateOrgUnitRequest): Promise<OrgUnit> {
+export function updateOrgUnit(id: number | string, data: UpdateOrgUnitRequest): Promise<OrgUnit> {
   return http.put<OrgUnit>(`${ORG_UNIT_URL}/${id}`, data)
 }
 
 /**
  * 删除组织单元
  */
-export function deleteOrgUnit(id: number): Promise<void> {
+export function deleteOrgUnit(id: number | string): Promise<void> {
   return http.delete(`${ORG_UNIT_URL}/${id}`)
 }
 
 /**
- * 启用组织单元
+ * 冻结组织单元
  */
-export function enableOrgUnit(id: number): Promise<void> {
-  return http.put(`${ORG_UNIT_URL}/${id}/enable`)
+export function freezeOrgUnit(id: number | string, reason?: string): Promise<OrgUnit> {
+  return http.put<OrgUnit>(`${ORG_UNIT_URL}/${id}/freeze`, reason ? { reason } : {})
 }
 
 /**
- * 禁用组织单元
+ * 解冻组织单元
  */
-export function disableOrgUnit(id: number): Promise<void> {
-  return http.put(`${ORG_UNIT_URL}/${id}/disable`)
+export function unfreezeOrgUnit(id: number | string): Promise<OrgUnit> {
+  return http.put<OrgUnit>(`${ORG_UNIT_URL}/${id}/unfreeze`)
 }
 
 /**
- * 分配负责人
+ * 解散组织单元
  */
-export function assignLeader(id: number, leaderId: number): Promise<void> {
-  return http.put(`${ORG_UNIT_URL}/${id}/leader`, { leaderId })
+export function dissolveOrgUnit(id: number | string, reason: string): Promise<OrgUnit> {
+  return http.put<OrgUnit>(`${ORG_UNIT_URL}/${id}/dissolve`, { reason })
+}
+
+/**
+ * 合并组织单元（将 source 合并到 target）
+ */
+export function mergeOrgUnit(sourceId: number | string, targetId: number | string, reason?: string): Promise<OrgUnit> {
+  return http.post<OrgUnit>(`${ORG_UNIT_URL}/${sourceId}/merge-into/${targetId}`, reason ? { reason } : {})
+}
+
+/**
+ * 拆分组织单元
+ */
+export function splitOrgUnit(id: number | string, data: { reason: string; splits: Array<{ unitCode: string; unitName: string; childIds?: (number | string)[] }> }): Promise<OrgUnit[]> {
+  return http.post<OrgUnit[]>(`${ORG_UNIT_URL}/${id}/split`, data)
 }
 
 /**
@@ -98,8 +114,48 @@ export function getOrgUnitsByType(type: string): Promise<OrgUnit[]> {
 /**
  * 获取子组织单元
  */
-export function getOrgUnitChildren(id: number): Promise<OrgUnit[]> {
+export function getOrgUnitChildren(id: number | string): Promise<OrgUnit[]> {
   return http.get<OrgUnit[]>(`${ORG_UNIT_URL}/${id}/children`)
+}
+
+// ==================== 组织类型配置 API ====================
+
+/**
+ * 获取所有启用的组织类型
+ */
+export function getEnabledOrgUnitTypes(): Promise<OrgUnitTypeConfig[]> {
+  return http.get<OrgUnitTypeConfig[]>(`${ORG_UNIT_TYPE_URL}/enabled`)
+}
+
+/**
+ * 获取所有组织类型
+ */
+export function getAllOrgUnitTypes(): Promise<OrgUnitTypeConfig[]> {
+  return http.get<OrgUnitTypeConfig[]>(ORG_UNIT_TYPE_URL)
+}
+
+/**
+ * 获取组织类型树
+ */
+export function getOrgUnitTypeTree(): Promise<OrgUnitTypeConfig[]> {
+  return http.get<OrgUnitTypeConfig[]>(`${ORG_UNIT_TYPE_URL}/tree`)
+}
+
+/**
+ * 获取允许的子类型
+ */
+export function getAllowedChildTypes(parentTypeCode: string): Promise<OrgUnitTypeConfig[]> {
+  return http.get<OrgUnitTypeConfig[]>(`${ORG_UNIT_URL}/allowed-child-types/${parentTypeCode}`)
+}
+
+/**
+ * 组织类型 API 对象
+ */
+export const orgTypeApi = {
+  getAll: getAllOrgUnitTypes,
+  getEnabled: getEnabledOrgUnitTypes,
+  getTree: getOrgUnitTypeTree,
+  getAllowedChildren: getAllowedChildTypes,
 }
 
 // ==================== 班级 API ====================
@@ -114,7 +170,7 @@ export function getClasses(params: ClassQueryParams): Promise<PageResponse<Schoo
 /**
  * 获取班级详情
  */
-export function getClass(id: number): Promise<SchoolClass> {
+export function getClass(id: number | string): Promise<SchoolClass> {
   return http.get<SchoolClass>(`${CLASS_URL}/${id}`)
 }
 
@@ -135,56 +191,56 @@ export function createClass(data: CreateClassRequest): Promise<SchoolClass> {
 /**
  * 更新班级
  */
-export function updateClass(id: number, data: UpdateClassRequest): Promise<SchoolClass> {
+export function updateClass(id: number | string, data: UpdateClassRequest): Promise<SchoolClass> {
   return http.put<SchoolClass>(`${CLASS_URL}/${id}`, data)
 }
 
 /**
  * 删除班级
  */
-export function deleteClass(id: number): Promise<void> {
+export function deleteClass(id: number | string): Promise<void> {
   return http.delete(`${CLASS_URL}/${id}`)
 }
 
 /**
  * 激活班级
  */
-export function activateClass(id: number): Promise<void> {
+export function activateClass(id: number | string): Promise<void> {
   return http.post(`${CLASS_URL}/${id}/activate`)
 }
 
 /**
  * 班级毕业
  */
-export function graduateClass(id: number): Promise<void> {
+export function graduateClass(id: number | string): Promise<void> {
   return http.post(`${CLASS_URL}/${id}/graduate`)
 }
 
 /**
  * 撤销班级
  */
-export function dissolveClass(id: number): Promise<void> {
+export function dissolveClass(id: number | string): Promise<void> {
   return http.post(`${CLASS_URL}/${id}/dissolve`)
 }
 
 /**
  * 分配班主任
  */
-export function assignHeadTeacher(id: number, data: AssignHeadTeacherRequest): Promise<void> {
+export function assignHeadTeacher(id: number | string, data: AssignHeadTeacherRequest): Promise<void> {
   return http.post(`${CLASS_URL}/${id}/head-teacher`, data)
 }
 
 /**
  * 分配副班主任
  */
-export function assignDeputyHeadTeacher(id: number, data: AssignHeadTeacherRequest): Promise<void> {
+export function assignDeputyHeadTeacher(id: number | string, data: AssignHeadTeacherRequest): Promise<void> {
   return http.post(`${CLASS_URL}/${id}/deputy-head-teacher`, data)
 }
 
 /**
  * 结束教师任职
  */
-export function endTeacherAssignment(classId: number, teacherId: number, role: string): Promise<void> {
+export function endTeacherAssignment(classId: number | string, teacherId: number | string, role: string): Promise<void> {
   return http.post(`${CLASS_URL}/${classId}/teachers/${teacherId}/end`, null, { params: { role } })
 }
 
@@ -201,7 +257,7 @@ export function getClassesByOrgUnit(orgUnitId: number | string): Promise<SchoolC
 /**
  * 获取班主任管理的班级
  */
-export function getClassesByHeadTeacher(teacherId: number): Promise<SchoolClass[]> {
+export function getClassesByHeadTeacher(teacherId: number | string): Promise<SchoolClass[]> {
   return http.get<SchoolClass[]>(`${CLASS_URL}/head-teacher/${teacherId}`)
 }
 
@@ -222,7 +278,7 @@ export function checkClassCodeExists(classCode: string): Promise<boolean> {
 /**
  * 批量删除班级
  */
-export function batchDeleteClasses(ids: number[]): Promise<number> {
+export function batchDeleteClasses(ids: (number | string)[]): Promise<number> {
   return http.delete<number>(`${CLASS_URL}/batch`, { data: ids })
 }
 
@@ -236,7 +292,7 @@ export function getAllClasses(): Promise<SchoolClass[]> {
 /**
  * 获取班级列表（兼容V1接口名）
  */
-export function getClassList(params?: { gradeId?: number; status?: ClassStatus }): Promise<SchoolClass[]> {
+export function getClassList(params?: { gradeId?: number | string; status?: ClassStatus }): Promise<SchoolClass[]> {
   return getClasses({ ...params, pageNum: 1, pageSize: 10000 }).then(res => res.records)
 }
 
@@ -267,14 +323,14 @@ export interface ClassDormitoryInfo {
 /**
  * 获取班级详情
  */
-export function getClassDetail(id: number): Promise<SchoolClass> {
+export function getClassDetail(id: number | string): Promise<SchoolClass> {
   return http.get<SchoolClass>(`${CLASS_URL}/${id}`)
 }
 
 /**
  * 为班级分配教室
  */
-export function assignClassroom(classId: number, classroomId: number): Promise<void> {
+export function assignClassroom(classId: number | string, classroomId: number | string): Promise<void> {
   return http.post(`/classes/${classId}/assign-classroom`, null, {
     params: { classroomId }
   })
@@ -283,14 +339,14 @@ export function assignClassroom(classId: number, classroomId: number): Promise<v
 /**
  * 取消班级教室分配
  */
-export function removeClassroom(classId: number): Promise<void> {
+export function removeClassroom(classId: number | string): Promise<void> {
   return http.delete(`/classes/${classId}/classroom`)
 }
 
 /**
  * 获取班级的教室信息
  */
-export function getClassClassroom(classId: number): Promise<any> {
+export function getClassClassroom(classId: number | string): Promise<any> {
   return http.get(`/classes/${classId}/classroom`)
 }
 
@@ -350,7 +406,7 @@ export function getDormitoryList(): Promise<any[]> {
 /**
  * 获取班级学生列表
  */
-export function getClassStudents(classId: number): Promise<any[]> {
+export function getClassStudents(classId: number | string): Promise<any[]> {
   return http.get(`/students/by-class/${classId}`)
 }
 
@@ -366,7 +422,7 @@ export function getTeacherList(): Promise<any[]> {
 /**
  * 获取专业列表
  */
-export function getMajorList(orgUnitId?: number): Promise<any[]> {
+export function getMajorList(orgUnitId?: number | string): Promise<any[]> {
   return http.get('/majors', {
     params: orgUnitId ? { orgUnitId } : undefined
   })
@@ -375,7 +431,7 @@ export function getMajorList(orgUnitId?: number): Promise<any[]> {
 /**
  * 设置班主任 (兼容V1)
  */
-export function assignTeacher(classId: number, teacherId: number | null): Promise<void> {
+export function assignTeacher(classId: number | string, teacherId: number | string | null): Promise<void> {
   return http.post(`${CLASS_URL}/${classId}/head-teacher`, {
     teacherId
   })
@@ -395,9 +451,11 @@ export const orgUnitApi = {
   create: createOrgUnit,
   update: updateOrgUnit,
   delete: deleteOrgUnit,
-  enable: enableOrgUnit,
-  disable: disableOrgUnit,
-  assignLeader
+  freeze: freezeOrgUnit,
+  unfreeze: unfreezeOrgUnit,
+  dissolve: dissolveOrgUnit,
+  merge: mergeOrgUnit,
+  split: splitOrgUnit,
 }
 
 /**
@@ -441,30 +499,35 @@ export interface DepartmentResponse {
   id: number
   unitCode: string
   unitName: string
-  deptName?: string  // 别名，兼容旧代码
+  deptName?: string
   unitType: string
-  unitCategory?: string  // ACADEMIC | FUNCTIONAL | ADMINISTRATIVE
+  category?: string
+  typeName?: string
+  typeIcon?: string
+  typeColor?: string
   parentId: number | null
-  leaderId?: number
-  leaderName?: string
-  deputyLeaderIds?: number[]
-  phone?: string
-  email?: string
+  headcount?: number
   sortOrder: number
-  isEnabled: boolean
+  status: string
+  statusLabel?: string
+  mergedIntoId?: number
+  dissolvedAt?: string
+  dissolvedReason?: string
   createdAt: string
   updatedAt: string
   children?: DepartmentResponse[]
+  studentCount?: number
+  standardSize?: number
+  headTeacherName?: string
+  enrollmentYear?: number
+  classStatus?: string
 }
 
 export interface DepartmentCreateRequest {
   unitCode: string
   unitName: string
   unitType?: string
-  unitCategory?: string  // ACADEMIC | FUNCTIONAL | ADMINISTRATIVE
   parentId?: number
-  leaderId?: number
-  deputyLeaderIds?: number[]
   sortOrder?: number
 }
 
@@ -484,26 +547,24 @@ export function createDepartment(data: DepartmentCreateRequest): Promise<OrgUnit
 /**
  * 更新部门
  */
-export function updateDepartment(id: number, data: DepartmentCreateRequest): Promise<OrgUnit> {
+export function updateDepartment(id: number | string, data: DepartmentCreateRequest): Promise<OrgUnit> {
   return http.put(`${ORG_UNIT_URL}/${id}`, {
     unitName: data.unitName,
-    leaderId: data.leaderId,
-    deputyLeaderIds: data.deputyLeaderIds,
-    sortOrder: data.sortOrder
+    sortOrder: data.sortOrder,
   })
 }
 
 /**
  * 删除部门
  */
-export function deleteDepartment(id: number): Promise<void> {
+export function deleteDepartment(id: number | string): Promise<void> {
   return http.delete(`${ORG_UNIT_URL}/${id}`)
 }
 
 /**
  * 获取部门详情
  */
-export function getDepartmentById(id: number): Promise<DepartmentResponse> {
+export function getDepartmentById(id: number | string): Promise<DepartmentResponse> {
   return http.get<DepartmentResponse>(`${ORG_UNIT_URL}/${id}`)
 }
 
@@ -524,29 +585,29 @@ export function getAllEnabledDepartments(): Promise<DepartmentResponse[]> {
 /**
  * 根据父部门ID获取子部门
  */
-export function getDepartmentsByParentId(parentId: number): Promise<DepartmentResponse[]> {
+export function getDepartmentsByParentId(parentId: number | string): Promise<DepartmentResponse[]> {
   return http.get<DepartmentResponse[]>(`${ORG_UNIT_URL}/${parentId}/children`)
 }
 
 /**
- * 启用部门
+ * 冻结部门
  */
-export function enableDepartment(id: number): Promise<void> {
-  return http.put(`${ORG_UNIT_URL}/${id}/enable`)
+export function freezeDepartment(id: number | string, reason?: string): Promise<OrgUnit> {
+  return freezeOrgUnit(id, reason)
 }
 
 /**
- * 禁用部门
+ * 解冻部门
  */
-export function disableDepartment(id: number): Promise<void> {
-  return http.put(`${ORG_UNIT_URL}/${id}/disable`)
+export function unfreezeDepartment(id: number | string): Promise<OrgUnit> {
+  return unfreezeOrgUnit(id)
 }
 
 /**
- * 更新部门状态 (兼容V1)
+ * 解散部门
  */
-export function updateDepartmentStatus(id: number, status: number): Promise<void> {
-  return status === 1 ? enableDepartment(id) : disableDepartment(id)
+export function dissolveDepartment(id: number | string, reason: string): Promise<OrgUnit> {
+  return dissolveOrgUnit(id, reason)
 }
 
 // ==================== 年级管理 (兼容V1 grade.ts) ====================
@@ -599,19 +660,19 @@ export const getGradePage = (params: GradeQuery & { pageNum: number; pageSize: n
   })
 }
 
-export const getGrade = (id: number): Promise<Grade> => http.get<Grade>(`${GRADE_URL}/${id}`)
+export const getGrade = (id: number | string): Promise<Grade> => http.get<Grade>(`${GRADE_URL}/${id}`)
 export const getActiveGrades = (): Promise<Grade[]> => http.get<Grade[]>(`${GRADE_URL}/active`)
 export const getGradeByYear = (enrollmentYear: number): Promise<Grade> => http.get<Grade>(`${GRADE_URL}/by-year/${enrollmentYear}`)
 export const getGradesByStatus = (status: string): Promise<Grade[]> => http.get<Grade[]>(`${GRADE_URL}/by-status/${status}`)
 export const createGrade = (data: GradeCreateRequest): Promise<Grade> => http.post<Grade>(GRADE_URL, data)
-export const updateGrade = (data: { id: number; gradeName?: string; standardClassSize?: number; sortOrder?: number; remarks?: string }): Promise<Grade> =>
+export const updateGrade = (data: { id: number | string; gradeName?: string; standardClassSize?: number; sortOrder?: number; remarks?: string }): Promise<Grade> =>
   http.put<Grade>(`${GRADE_URL}/${data.id}`, data)
-export const activateGrade = (id: number): Promise<Grade> => http.put<Grade>(`${GRADE_URL}/${id}/activate`)
-export const graduateGrade = (id: number): Promise<Grade> => http.put<Grade>(`${GRADE_URL}/${id}/graduate`)
-export const stopEnrollment = (id: number): Promise<Grade> => http.put<Grade>(`${GRADE_URL}/${id}/stop-enrollment`)
-export const deleteGrade = (id: number): Promise<void> => http.delete(`${GRADE_URL}/${id}`)
+export const activateGrade = (id: number | string): Promise<Grade> => http.put<Grade>(`${GRADE_URL}/${id}/activate`)
+export const graduateGrade = (id: number | string): Promise<Grade> => http.put<Grade>(`${GRADE_URL}/${id}/graduate`)
+export const stopEnrollment = (id: number | string): Promise<Grade> => http.put<Grade>(`${GRADE_URL}/${id}/stop-enrollment`)
+export const deleteGrade = (id: number | string): Promise<void> => http.delete(`${GRADE_URL}/${id}`)
 export const getAllGrades = (): Promise<Grade[]> => http.get<Grade[]>(GRADE_URL)
-export const assignGradeLeaders = (id: number, data: { directorId?: number; counselorId?: number }): Promise<Grade> =>
+export const assignGradeLeaders = (id: number | string, data: { directorId?: number | string; counselorId?: number | string }): Promise<Grade> =>
   http.put<Grade>(`${GRADE_URL}/${id}/leaders`, data)
 
 // ==================== 系统模块 API ====================
@@ -663,12 +724,13 @@ export const addDormitory = addClassDormitory
 export const removeDormitory = removeClassDormitory
 export const getDepartmentList = getOrgUnitTree
 export const listDepartments = getDepartmentTree
-export const existsDeptCode = (_code: string, _excludeId?: number) => Promise.resolve(false)
+export const existsDeptCode = (_code: string, _excludeId?: number | string) => Promise.resolve(false)
 
 // ==================== 类型重导出 ====================
 export type {
   OrgUnit,
   OrgUnitTreeNode,
+  OrgUnitTypeConfig,
   CreateOrgUnitRequest,
   UpdateOrgUnitRequest,
   SchoolClass,

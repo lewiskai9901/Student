@@ -25,7 +25,7 @@ public class ScoringProfileController {
     @CasbinAccess(resource = "insp:scoring-profile", action = "create")
     public Result<ScoringProfile> createProfile(@RequestBody CreateProfileRequest request) {
         Long userId = SecurityUtils.getCurrentUserId();
-        return Result.success(scoringService.createProfile(request.getTemplateId(), userId));
+        return Result.success(scoringService.createProfile(request.getSectionId(), userId));
     }
 
     @GetMapping
@@ -41,10 +41,17 @@ public class ScoringProfileController {
                 .orElseThrow(() -> new IllegalArgumentException("评分配置不存在: " + id)));
     }
 
+    @GetMapping("/by-section/{sectionId}")
+    @CasbinAccess(resource = "insp:scoring-profile", action = "view")
+    public Result<ScoringProfile> getProfileBySection(@PathVariable Long sectionId) {
+        return Result.success(scoringService.getProfileBySectionId(sectionId).orElse(null));
+    }
+
+    /** @deprecated Use /by-section/{sectionId} instead */
     @GetMapping("/by-template/{templateId}")
     @CasbinAccess(resource = "insp:scoring-profile", action = "view")
-    public Result<ScoringProfile> getProfileByTemplate(@PathVariable Long templateId) {
-        return Result.success(scoringService.getProfileByTemplateId(templateId).orElse(null));
+    public Result<ScoringProfile> getProfileByTemplateLegacy(@PathVariable Long templateId) {
+        return Result.success(scoringService.getProfileBySectionId(templateId).orElse(null));
     }
 
     @PutMapping("/{id}")
@@ -265,7 +272,7 @@ public class ScoringProfileController {
 
     @lombok.Data
     public static class CreateProfileRequest {
-        private Long templateId;
+        private Long sectionId;
     }
 
     @lombok.Data

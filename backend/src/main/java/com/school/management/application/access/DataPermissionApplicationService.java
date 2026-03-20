@@ -1,13 +1,12 @@
 package com.school.management.application.access;
 
-import com.school.management.domain.access.model.DataModule;
 import com.school.management.domain.access.model.DataScope;
-import com.school.management.domain.access.model.ScopeItemType;
 import com.school.management.domain.access.model.entity.DataScopeItem;
 import com.school.management.domain.access.model.entity.RoleDataPermission;
-import com.school.management.domain.access.repository.RoleRepository;
-import com.school.management.infrastructure.access.DataModuleRegistry;
-import com.school.management.infrastructure.access.DataPermissionService;
+import com.school.management.infrastructure.access.DataPermissionPolicyService;
+import com.school.management.infrastructure.persistence.access.DataModulePO;
+import com.school.management.infrastructure.persistence.access.ScopeItemTypePO;
+import com.school.management.infrastructure.tenant.TenantContextHolder;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -18,35 +17,36 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 /**
- * 数据权限应用服务 (V5)
- * 处理角色数据权限配置的业务逻辑
+ * 数据权限应用服务（动态化重构）
+ * 使用 DynamicModuleService + DataPermissionPolicyService 替代旧的硬编码服务
  */
 @Slf4j
 @Service
 @RequiredArgsConstructor
 public class DataPermissionApplicationService {
 
-    private final RoleRepository roleRepository;
-    private final DataPermissionService dataPermissionService;
-    private final DataModuleRegistry moduleRegistry;
+    private final DynamicModuleService dynamicModuleService;
+    private final DataPermissionPolicyService dataPermissionPolicyService;
     private final JdbcTemplate jdbcTemplate;
-
-    // ==================== V5 API Methods ====================
 
     /**
      * 获取所有数据模块（按领域分组）
      */
     public List<DomainModulesDTO> getAllModulesGroupedByDomain() {
-        Map<String, List<DataModule>> grouped = DataModule.groupByDomain();
+        Long tenantId = TenantContextHolder.getTenantId();
+        Map<String, List<DataModulePO>> grouped = dynamicModuleService.listByDomain(tenantId);
 
         return grouped.entrySet().stream()
                 .map(entry -> {
-                    String domain = entry.getKey();
+                    String domainCode = entry.getKey();
+                    String domainName = entry.getValue().stream()
+                            .findFirst()
+                            .map(DataModulePO::getDomainName)
+                            .orElse(domainCode);
                     List<ModuleDTO> modules = entry.getValue().stream()
-                            .sorted(Comparator.comparingInt(DataModule::getSortOrder))
-                            .map(m -> new ModuleDTO(m.getCode(), m.getName()))
+                            .map(m -> new ModuleDTO(m.getModuleCode(), m.getModuleName()))
                             .collect(Collectors.toList());
-                    return new DomainModulesDTO(domain, DataModule.getDomainDisplayName(domain), modules);
+                    return new DomainModulesDTO(domainCode, domainName, modules);
                 })
                 .sorted(Comparator.comparing(DomainModulesDTO::getDomainCode))
                 .collect(Collectors.toList());
@@ -66,8 +66,9 @@ public class DataPermissionApplicationService {
      * 获取所有范围项类型
      */
     public List<ScopeItemTypeDTO> getAllScopeItemTypes() {
-        return ScopeItemType.getAllEnabled().stream()
-                .map(t -> new ScopeItemTypeDTO(t.getCode(), t.getName(), t.isSupportChildren()))
+        Long tenantId = TenantContextHolder.getTenantId();
+        return dynamicModuleService.listAllScopeItemTypes(tenantId).stream()
+                .map(t -> new ScopeItemTypeDTO(t.getItemTypeCode(), t.getItemTypeName(), t.getSupportChildren()))
                 .collect(Collectors.toList());
     }
 
@@ -75,22 +76,25 @@ public class DataPermissionApplicationService {
      * 搜索自定义范围可选项
      */
     public List<ScopeItemDTO> searchScopeItems(String itemTypeCode, String keyword, int limit) {
-        ScopeItemType itemType = ScopeItemType.fromCode(itemTypeCode);
-        if (itemType == null) {
-            return Collections.emptyList();
-        }
+        Long tenantId = TenantContextHolder.getTenantId();
+        List<ScopeItemTypePO> types = dynamicModuleService.listAllScopeItemTypes(tenantId);
+        ScopeItemTypePO config = types.stream()
+                .filter(t -> t.getItemTypeCode().equals(itemTypeCode))
+                .findFirst()
+                .orElse(null);
 
-        DataModuleRegistry.ScopeItemTypeConfig config = moduleRegistry.getScopeItemTypeConfig(itemTypeCode);
         if (config == null) {
             return Collections.emptyList();
         }
 
+        // Use parameterized query with sanitized identifiers
+        String refTable = sanitizeIdentifier(config.getRefTable());
+        String refIdField = sanitizeIdentifier(config.getRefIdField());
+        String refNameField = sanitizeIdentifier(config.getRefNameField());
+
         String sql = String.format(
                 "SELECT %s as id, %s as name FROM %s WHERE %s LIKE ? LIMIT ?",
-                config.getRefIdField(),
-                config.getRefNameField(),
-                config.getRefTable(),
-                config.getRefNameField()
+                refIdField, refNameField, refTable, refNameField
         );
 
         List<Map<String, Object>> rows = jdbcTemplate.queryForList(sql, "%" + keyword + "%", limit);
@@ -105,20 +109,19 @@ public class DataPermissionApplicationService {
     }
 
     /**
-     * 获取角色的数据权限配置 (V5)
+     * 获取角色的数据权限配置
      */
-    public List<RoleModulePermissionDTO> getRoleDataPermissionsV5(Long roleId) {
-        List<RoleDataPermission> permissions = dataPermissionService.getRolePermissions(roleId);
+    public List<RoleModulePermissionDTO> getRoleDataPermissions(Long roleId) {
+        Long tenantId = TenantContextHolder.getTenantId();
+        List<RoleDataPermission> permissions = dataPermissionPolicyService.getRolePermissions(tenantId, roleId);
 
-        // 构建moduleCode -> permission映射
         Map<String, RoleDataPermission> permissionMap = permissions.stream()
                 .collect(Collectors.toMap(RoleDataPermission::getModuleCode, p -> p, (a, b) -> a));
 
-        // 为所有模块构建配置（没有配置的默认SELF）
-        return Arrays.stream(DataModule.values())
-                .sorted(Comparator.comparingInt(DataModule::getSortOrder))
+        List<DataModulePO> allModules = dynamicModuleService.listModules(tenantId);
+        return allModules.stream()
                 .map(module -> {
-                    RoleDataPermission permission = permissionMap.get(module.getCode());
+                    RoleDataPermission permission = permissionMap.get(module.getModuleCode());
                     if (permission != null) {
                         List<ScopeItemDTO> scopeItems = permission.getScopeItems() != null ?
                                 permission.getScopeItems().stream()
@@ -131,17 +134,17 @@ public class DataPermissionApplicationService {
                                         .collect(Collectors.toList()) :
                                 Collections.emptyList();
                         return new RoleModulePermissionDTO(
-                                module.getCode(),
-                                module.getName(),
-                                module.getDomain(),
+                                module.getModuleCode(),
+                                module.getModuleName(),
+                                module.getDomainCode(),
                                 permission.getScopeCode(),
                                 scopeItems
                         );
                     } else {
                         return new RoleModulePermissionDTO(
-                                module.getCode(),
-                                module.getName(),
-                                module.getDomain(),
+                                module.getModuleCode(),
+                                module.getModuleName(),
+                                module.getDomainCode(),
                                 DataScope.SELF.getCode(),
                                 Collections.emptyList()
                         );
@@ -151,10 +154,12 @@ public class DataPermissionApplicationService {
     }
 
     /**
-     * 保存角色的数据权限配置 (V5)
+     * 保存角色的数据权限配置
      */
     @Transactional
-    public void saveRoleDataPermissionsV5(Long roleId, List<SavePermissionCommand> commands) {
+    public void saveRoleDataPermissions(Long roleId, List<SavePermissionCommand> commands) {
+        Long tenantId = TenantContextHolder.getTenantId();
+
         List<RoleDataPermission> permissions = commands.stream()
                 .map(cmd -> {
                     RoleDataPermission permission = RoleDataPermission.builder()
@@ -179,47 +184,36 @@ public class DataPermissionApplicationService {
                 })
                 .collect(Collectors.toList());
 
-        dataPermissionService.saveRolePermissions(roleId, permissions);
-        log.info("Saved {} V5 data permissions for role {}", permissions.size(), roleId);
+        dataPermissionPolicyService.saveRolePermissions(tenantId, roleId, permissions);
+        log.info("Saved {} data permissions for role {}", permissions.size(), roleId);
     }
 
-    // ==================== Legacy API Methods (for backward compatibility) ====================
-
     /**
-     * Get all data modules grouped by domain (legacy format).
+     * Get all data modules (flat list format for API)
      */
     public Map<String, List<Map<String, String>>> getAllModules() {
+        Long tenantId = TenantContextHolder.getTenantId();
+        Map<String, List<DataModulePO>> grouped = dynamicModuleService.listByDomain(tenantId);
         Map<String, List<Map<String, String>>> result = new LinkedHashMap<>();
 
-        Map<String, String> domainLabels = new LinkedHashMap<>();
-        domainLabels.put("organization", "组织管理");
-        domainLabels.put("space", "场所管理");
-        domainLabels.put("inspection", "量化检查");
-        domainLabels.put("access", "权限管理");
-
-        for (String domain : domainLabels.keySet()) {
-            List<Map<String, String>> modules = Arrays.stream(DataModule.values())
-                    .filter(m -> m.getDomain().equals(domain))
-                    .sorted(Comparator.comparingInt(DataModule::getSortOrder))
+        grouped.forEach((domain, modules) -> {
+            List<Map<String, String>> moduleList = modules.stream()
                     .map(m -> {
                         Map<String, String> map = new LinkedHashMap<>();
-                        map.put("code", m.getCode());
-                        map.put("name", m.getName());
-                        map.put("domain", m.getDomain());
+                        map.put("code", m.getModuleCode());
+                        map.put("name", m.getModuleName());
+                        map.put("domain", m.getDomainCode());
                         return map;
                     })
                     .collect(Collectors.toList());
-
-            if (!modules.isEmpty()) {
-                result.put(domain, modules);
-            }
-        }
+            result.put(domain, moduleList);
+        });
 
         return result;
     }
 
     /**
-     * Get all data scope options (legacy format).
+     * Get all data scope options
      */
     public List<Map<String, String>> getAllScopes() {
         return Arrays.stream(DataScope.values())
@@ -234,6 +228,11 @@ public class DataPermissionApplicationService {
                 .collect(Collectors.toList());
     }
 
+    private String sanitizeIdentifier(String identifier) {
+        if (identifier == null) return "id";
+        return identifier.replaceAll("[^a-zA-Z0-9_]", "");
+    }
+
     private Long getLongValue(Map<String, Object> row, String key) {
         Object value = row.get(key);
         if (value == null) return null;
@@ -241,7 +240,7 @@ public class DataPermissionApplicationService {
         return Long.parseLong(value.toString());
     }
 
-    // ==================== V5 DTO 类 ====================
+    // ==================== DTO 类 ====================
 
     @lombok.Data
     @lombok.AllArgsConstructor

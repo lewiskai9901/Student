@@ -46,59 +46,15 @@
     </div>
 
     <template v-else>
-      <!-- Stacked color band visualization -->
-      <div class="sp-viz-bar">
-        <div
-          v-for="band in sortedBands"
-          :key="'viz-' + band.id"
-          class="sp-viz-segment"
-          :style="{
-            backgroundColor: band.color || '#909399',
-            width: ((band.maxScore - band.minScore) / maxRange * 100) + '%',
-          }"
-          :title="`${band.gradeCode} ${band.gradeName}: ${band.minScore}~${band.maxScore}`"
-        >
-          <span v-if="(band.maxScore - band.minScore) / maxRange > 0.08">{{ band.gradeCode }}</span>
-        </div>
-      </div>
-
       <!-- Band list -->
       <div class="sp-band-list">
-        <div
-          v-for="band in filteredBands"
-          :key="band.id"
-          class="sp-band-card group"
-        >
-          <div class="sp-band-badge" :style="{ backgroundColor: band.color || '#909399' }">
-            {{ band.gradeCode }}
-          </div>
-          <div class="sp-band-info">
-            <div class="sp-band-name">{{ band.gradeName }}</div>
-            <div class="sp-band-range">
-              {{ band.minScore }} ~ {{ band.maxScore }} 分
-              <span v-if="band.dimensionId && getDimensionName(band.dimensionId)" class="sp-band-dim">
-                ({{ getDimensionName(band.dimensionId) }})
-              </span>
-            </div>
-          </div>
-          <!-- Score range bar -->
-          <div class="sp-range-bar-bg">
-            <div
-              class="sp-range-bar-fill"
-              :style="{
-                backgroundColor: band.color || '#909399',
-                width: ((band.maxScore - band.minScore) / maxRange * 100) + '%',
-                marginLeft: (band.minScore / maxRange * 100) + '%',
-              }"
-            />
-          </div>
+        <div v-for="band in filteredBands" :key="band.id" class="sp-band-card group">
+          <span class="sp-band-code">{{ band.gradeCode }}</span>
+          <span class="sp-band-name">{{ band.gradeName }}</span>
+          <span class="sp-band-range">{{ band.minScore }}~{{ band.maxScore }}</span>
           <div class="sp-band-actions">
-            <button class="sp-ic-s" @click="startEdit(band)">
-              <component :is="iconMap.Pencil" class="w-3.5 h-3.5" />
-            </button>
-            <button class="sp-ic-s danger" @click="$emit('delete', band.id)">
-              <component :is="iconMap.Trash2" class="w-3.5 h-3.5" />
-            </button>
+            <button class="sp-ic-s" @click="startEdit(band)">✎</button>
+            <button class="sp-ic-s danger" @click="$emit('delete', band.id)">×</button>
           </div>
         </div>
       </div>
@@ -155,19 +111,6 @@
                     {{ dim.dimensionName }}
                   </option>
                 </select>
-              </div>
-              <div class="sp-form-row">
-                <div class="sp-fld" style="flex:1;">
-                  <label>颜色</label>
-                  <div class="sp-color-row">
-                    <input v-model="form.color" type="color" class="sp-color-input" />
-                    <input v-model="form.color" style="flex:1; font-family:monospace;" placeholder="#67C23A" />
-                  </div>
-                </div>
-                <div class="sp-fld" style="width:128px; flex-shrink:0;">
-                  <label>图标</label>
-                  <input v-model="form.icon" placeholder="可选" />
-                </div>
               </div>
             </div>
             <div class="sp-modal-foot">
@@ -234,8 +177,6 @@ const form = ref({
   gradeName: '',
   minScore: 0,
   maxScore: 100,
-  color: '#67C23A',
-  icon: '',
   dimensionId: null as number | null,
 })
 
@@ -373,8 +314,6 @@ function startEdit(band: GradeBand) {
     gradeName: band.gradeName,
     minScore: band.minScore,
     maxScore: band.maxScore,
-    color: band.color || '#909399',
-    icon: band.icon || '',
     dimensionId: band.dimensionId,
   }
 }
@@ -382,7 +321,7 @@ function startEdit(band: GradeBand) {
 function closeDialog() {
   showAdd.value = false
   editingBand.value = null
-  form.value = { gradeCode: '', gradeName: '', minScore: 0, maxScore: 100, color: '#67C23A', icon: '', dimensionId: null }
+  form.value = { gradeCode: '', gradeName: '', minScore: 0, maxScore: 100, dimensionId: null }
 }
 
 function handleSubmit() {
@@ -391,8 +330,6 @@ function handleSubmit() {
       gradeName: form.value.gradeName,
       minScore: form.value.minScore,
       maxScore: form.value.maxScore,
-      color: form.value.color || undefined,
-      icon: form.value.icon || undefined,
     })
   } else {
     emit('create', {
@@ -400,8 +337,6 @@ function handleSubmit() {
       gradeName: form.value.gradeName,
       minScore: form.value.minScore,
       maxScore: form.value.maxScore,
-      color: form.value.color || undefined,
-      icon: form.value.icon || undefined,
       dimensionId: form.value.dimensionId,
     })
   }
@@ -410,93 +345,65 @@ function handleSubmit() {
 </script>
 
 <style scoped>
-/* ========== Section layout ========== */
-.sp-section { display:flex; flex-direction:column; gap:12px; }
+.sp-section { display:flex; flex-direction:column; gap:6px; }
 .sp-section-header { display:flex; align-items:center; justify-content:space-between; }
-.sp-section-title { font-size:14px; font-weight:600; color:#1e2a3a; margin:0; }
-.sp-header-actions { display:flex; align-items:center; gap:8px; }
+.sp-section-title { font-size:11px; font-weight:600; color:#374151; margin:0; }
+.sp-header-actions { display:flex; align-items:center; gap:6px; }
+.sp-filter-row { display:flex; align-items:center; gap:6px; }
 
-/* ========== Filter row ========== */
-.sp-filter-row { display:flex; align-items:center; gap:8px; }
+/* Preset pills */
+.sp-preset-group { display:flex; align-items:center; gap:3px; border-right:1px solid #e8ecf0; padding-right:6px; margin-right:2px; }
+.sp-pill { font-size:10px; padding:2px 8px; border-radius:10px; border:1px solid #dce1e8; color:#5a6474; background:none; cursor:pointer; transition:all 0.15s; }
+.sp-pill:hover { border-color:#7aadff; color:#1a6dff; background:#f0f4ff; }
 
-/* ========== Modal ========== */
-.sp-mask { position:fixed; inset:0; z-index:1000; display:flex; align-items:center; justify-content:center; background:rgba(15,23,42,0.4); backdrop-filter:blur(2px); }
-.sp-modal { background:#fff; border-radius:14px; box-shadow:0 24px 64px rgba(0,0,0,0.18); overflow:hidden; }
-.sp-modal-head { display:flex; align-items:center; justify-content:space-between; padding:20px 24px 0; }
-.sp-modal-head h3 { font-size:16px; font-weight:600; color:#1e2a3a; margin:0; }
-.sp-modal-close { background:none; border:none; font-size:22px; color:#b8c0cc; cursor:pointer; padding:0 4px; line-height:1; }
-.sp-modal-close:hover { color:#5a6474; }
-.sp-modal-body { display:flex; flex-direction:column; gap:16px; padding:20px 24px; }
-.sp-modal-foot { display:flex; justify-content:flex-end; gap:10px; padding:0 24px 20px; }
-
-/* ========== Animation ========== */
-.sp-modal-enter-active { transition:all 0.2s ease-out; }
-.sp-modal-leave-active { transition:all 0.15s ease-in; }
-.sp-modal-enter-from { opacity:0; }
-.sp-modal-enter-from .sp-modal { transform:translateY(12px) scale(0.97); }
-.sp-modal-leave-to { opacity:0; }
-.sp-modal-leave-to .sp-modal { transform:translateY(-8px) scale(0.98); }
-
-/* ========== Buttons ========== */
-.sp-btn-primary { display:inline-flex; align-items:center; gap:5px; padding:8px 16px; background:#1a6dff; color:#fff; border:none; border-radius:8px; font-size:13px; font-weight:500; cursor:pointer; transition:background 0.15s; white-space:nowrap; }
+/* Buttons */
+.sp-btn-primary { padding:4px 10px; background:#1a6dff; color:#fff; border:none; border-radius:5px; font-size:11px; font-weight:500; cursor:pointer; }
 .sp-btn-primary:hover { background:#1558d6; }
-.sp-btn-primary.sm { padding:6px 12px; font-size:12px; border-radius:6px; }
-.sp-btn-ghost { padding:8px 16px; background:none; border:1px solid #dce1e8; border-radius:8px; font-size:13px; color:#5a6474; cursor:pointer; transition:background 0.15s; }
+.sp-btn-primary.sm { padding:3px 8px; font-size:10px; }
+.sp-btn-ghost { padding:4px 10px; background:none; border:1px solid #e5e7eb; border-radius:5px; font-size:11px; color:#6b7280; cursor:pointer; }
 .sp-btn-ghost:hover { background:#f4f6f9; }
-.sp-ic-s { background:none; border:none; padding:3px; color:#b8c0cc; cursor:pointer; border-radius:4px; display:flex; align-items:center; transition:all 0.12s; }
+.sp-ic-s { background:none; border:none; padding:1px 3px; color:#b8c0cc; cursor:pointer; font-size:12px; border-radius:3px; }
 .sp-ic-s:hover { color:#1a6dff; }
 .sp-ic-s.danger:hover { color:#d93025; }
 
-/* ========== Form fields ========== */
-.sp-fld label { display:block; font-size:12px; font-weight:500; color:#5a6474; margin-bottom:5px; }
-.sp-fld input, .sp-fld select, .sp-fld textarea { width:100%; border:1px solid #dce1e8; border-radius:8px; padding:8px 12px; font-size:13px; outline:none; transition:border-color 0.2s, box-shadow 0.2s; color:#1e2a3a; background:#fff; }
-.sp-fld input::placeholder, .sp-fld textarea::placeholder { color:#b8c0cc; }
-.sp-fld input:focus, .sp-fld select:focus, .sp-fld textarea:focus { border-color:#7aadff; box-shadow:0 0 0 3px rgba(26,109,255,0.08); }
-.sp-fld .help { font-size:11px; color:#8c95a3; margin-top:4px; }
+/* Empty */
+.sp-empty { text-align:center; padding:8px 0; color:#b8c0cc; font-size:11px; }
 
-/* ========== Form layout helpers ========== */
-.sp-form-row { display:flex; gap:12px; }
-.sp-color-row { display:flex; align-items:center; gap:8px; }
+/* Band list */
+.sp-band-list { display:flex; flex-direction:column; gap:2px; }
+.sp-band-card { display:flex; align-items:center; gap:6px; padding:4px 6px; border-radius:5px; border:1px solid #f0f1f3; }
+.sp-band-card:hover { border-color:#dbeafe; background:#f8faff; }
+.sp-band-code { font-size:11px; font-weight:600; color:#1a6dff; min-width:20px; }
+.sp-band-name { font-size:12px; color:#1e2a3a; flex:1; }
+.sp-band-range { font-size:11px; color:#8c95a3; white-space:nowrap; }
+.sp-band-actions { display:flex; gap:2px; opacity:0; transition:opacity 0.1s; }
+.sp-band-card:hover .sp-band-actions { opacity:1; }
 
-/* ========== Preset pills ========== */
-.sp-preset-group { display:flex; align-items:center; gap:4px; border-right:1px solid #e8ecf0; padding-right:8px; margin-right:4px; }
-.sp-pill { font-size:11px; padding:4px 10px; border-radius:12px; border:1px solid #dce1e8; color:#5a6474; background:none; cursor:pointer; transition:all 0.15s; }
-.sp-pill:hover { border-color:#7aadff; color:#1a6dff; background:#f0f4ff; }
-
-/* ========== Empty state ========== */
-.sp-empty { text-align:center; padding:32px 0; color:#b8c0cc; font-size:13px; }
-
-/* ========== Color visualization bar ========== */
-.sp-viz-bar { height:24px; border-radius:99px; overflow:hidden; display:flex; background:#f0f2f5; }
-.sp-viz-segment { height:100%; position:relative; display:flex; align-items:center; justify-content:center; font-size:9px; font-weight:700; color:#fff; overflow:hidden; transition:all 0.15s; }
-
-/* ========== Band list & cards ========== */
-.sp-band-list { display:flex; flex-direction:column; gap:6px; }
-.sp-band-card { display:flex; align-items:center; gap:12px; padding:8px 12px; border-radius:10px; border:1px solid #e8ecf0; border-left:3px solid transparent; transition:border-color 0.15s; }
-.sp-band-card:hover { border-left-color:#1a6dff; }
-
-.sp-band-badge { width:32px; height:32px; border-radius:8px; display:flex; align-items:center; justify-content:center; font-size:12px; font-weight:700; color:#fff; flex-shrink:0; }
-
-.sp-band-info { flex:1; min-width:0; }
-.sp-band-name { font-size:13px; font-weight:500; color:#1e2a3a; }
-.sp-band-range { font-size:12px; color:#8c95a3; }
-.sp-band-dim { margin-left:4px; color:#1a6dff; }
-
-.sp-range-bar-bg { width:128px; height:8px; background:#f0f2f5; border-radius:99px; overflow:hidden; flex-shrink:0; }
-.sp-range-bar-fill { height:100%; border-radius:99px; }
-
-.sp-band-actions { display:flex; align-items:center; gap:4px; opacity:0; transition:opacity 0.15s; flex-shrink:0; }
-.group:hover .sp-band-actions { opacity:1; }
-
-/* ========== Validation warnings ========== */
-.sp-warnings { display:flex; flex-direction:column; gap:4px; }
-.sp-warning { font-size:12px; padding:6px 12px; border-radius:8px; border-left:3px solid transparent; }
+/* Warnings */
+.sp-warnings { display:flex; flex-direction:column; gap:2px; }
+.sp-warning { font-size:10px; padding:3px 8px; border-radius:4px; border-left:2px solid transparent; }
 .sp-warning-overlap { border-left-color:#d93025; background:#fef2f2; color:#b91c1c; }
 .sp-warning-gap { border-left-color:#d97706; background:#fffbeb; color:#92400e; }
 
-/* ========== Confirm dialog text ========== */
-.sp-confirm-text { font-size:13px; color:#5a6474; margin:0; }
+/* Modal */
+.sp-mask { position:fixed; inset:0; z-index:1000; display:flex; align-items:center; justify-content:center; background:rgba(15,23,42,0.35); backdrop-filter:blur(1px); }
+.sp-modal { background:#fff; border-radius:10px; box-shadow:0 16px 48px rgba(0,0,0,0.15); width:380px; overflow:hidden; }
+.sp-modal-head { display:flex; align-items:center; justify-content:space-between; padding:10px 14px; border-bottom:1px solid #f0f1f3; }
+.sp-modal-head h3 { font-size:13px; font-weight:600; color:#1e2a3a; margin:0; }
+.sp-modal-close { background:none; border:none; font-size:18px; color:#9ca3af; cursor:pointer; line-height:1; }
+.sp-modal-body { display:flex; flex-direction:column; gap:8px; padding:10px 14px; }
+.sp-modal-foot { display:flex; justify-content:flex-end; gap:6px; padding:6px 14px 10px; }
+.sp-confirm-text { font-size:12px; color:#5a6474; margin:0; }
 
-/* ========== Color input override ========== */
-.sp-color-input { width:32px !important; height:32px !important; padding:2px !important; border-radius:8px; border:1px solid #dce1e8; cursor:pointer; }
+/* Form fields (modal) */
+.sp-fld { display:flex; flex-direction:column; }
+.sp-fld label { font-size:11px; font-weight:500; color:#6b7280; margin-bottom:2px; }
+.sp-fld input, .sp-fld select { width:100%; border:1px solid #e5e7eb; border-radius:6px; padding:4px 8px; font-size:12px; outline:none; color:#111827; background:#fff; }
+.sp-fld input:focus, .sp-fld select:focus { border-color:#93c5fd; box-shadow:0 0 0 2px rgba(37,99,235,0.06); }
+.sp-form-row { display:flex; gap:8px; }
+
+/* Animation */
+.sp-modal-enter-active { transition:all 0.15s ease-out; }
+.sp-modal-leave-active { transition:all 0.1s ease-in; }
+.sp-modal-enter-from, .sp-modal-leave-to { opacity:0; }
 </style>

@@ -1,0 +1,2221 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>王鹏nb短信验证码获取工具</title>
+<script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box;
+    user-select: none !important; -webkit-user-select: none !important; -webkit-touch-callout: none !important;
+    -webkit-tap-highlight-color: transparent !important; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #f0f2f5; color: #333; padding: 20px; }
+  input, textarea, [contenteditable] { user-select: text !important; -webkit-user-select: text !important; }
+
+  .container { max-width: 1400px; margin: 0 auto; }
+
+  h1 { font-size: 20px; font-weight: 600; margin-bottom: 16px; cursor: pointer; }
+  h1 .rainbow {
+    font-weight: 900;
+    background: linear-gradient(90deg, #ff0000, #ff8800, #ffdd00, #00cc00, #0088ff, #8800ff, #ff0088, #ff0000);
+    background-size: 200% auto;
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    animation: rainbow-move 1.5s linear infinite, blink-glow 0.8s ease-in-out infinite alternate;
+  }
+  @keyframes rainbow-move {
+    0% { background-position: 0% center; }
+    100% { background-position: 200% center; }
+  }
+  @keyframes blink-glow {
+    0% { filter: brightness(1); opacity: 1; }
+    100% { filter: brightness(1.5); opacity: 0.7; }
+  }
+
+  .toolbar {
+    display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+    background: #fff; padding: 12px 16px; border-radius: 8px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.08); margin-bottom: 12px;
+  }
+
+  .toolbar label { font-size: 13px; color: #666; white-space: nowrap; }
+
+  .toolbar input[type="number"] {
+    width: 70px; padding: 4px 8px; border: 1px solid #d9d9d9; border-radius: 4px;
+    font-size: 13px; text-align: center;
+  }
+
+  .btn {
+    padding: 6px 16px; border: none; border-radius: 4px; font-size: 13px;
+    cursor: pointer; font-weight: 500; transition: all .2s;
+  }
+  .btn:hover { opacity: 0.85; }
+  .btn-primary { background: #1677ff; color: #fff; }
+  .btn-success { background: #52c41a; color: #fff; }
+  .btn-danger { background: #ff4d4f; color: #fff; }
+  .btn-warning { background: #faad14; color: #fff; }
+  .btn-default { background: #fff; color: #333; border: 1px solid #d9d9d9; }
+  .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+  .toggle-btn { font-size: 12px; padding: 4px 10px; }
+  .toggle-btn.off { background: #d9d9d9; color: #666; }
+
+  .separator { width: 1px; height: 24px; background: #e8e8e8; }
+
+  .file-input-wrapper { position: relative; }
+  .file-input-wrapper input[type="file"] { display: none; }
+
+  /* ---- Floating Memo Ball ---- */
+  .memo-ball {
+    position: fixed; width: 48px; height: 48px; border-radius: 50%;
+    background: linear-gradient(135deg, #1677ff, #4096ff); color: #fff;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 18px; cursor: grab; z-index: 9998;
+    box-shadow: 0 2px 12px rgba(22,119,255,0.4);
+    user-select: none; -webkit-user-select: none;
+    touch-action: none; -webkit-touch-callout: none;
+    transition: box-shadow 0.2s;
+  }
+  .memo-ball:active { cursor: grabbing; box-shadow: 0 4px 20px rgba(22,119,255,0.6); }
+  .memo-ball-copy-btn {
+    position: absolute; bottom: -3px; right: -3px;
+    width: 20px; height: 20px; border-radius: 50%;
+    background: #52c41a; color: #fff; border: 2px solid #fff;
+    font-size: 10px; cursor: pointer; line-height: 1;
+    display: flex; align-items: center; justify-content: center;
+    z-index: 9999; -webkit-tap-highlight-color: transparent;
+  }
+  .memo-ball .memo-dot {
+    position: absolute; top: 6px; right: 6px; width: 8px; height: 8px;
+    border-radius: 50%; background: #ff4d4f; display: none;
+  }
+  .memo-ball .memo-dot.has-content { display: block; }
+
+  .memo-panel {
+    position: fixed; width: 320px; background: #fff; border-radius: 12px;
+    box-shadow: 0 4px 24px rgba(0,0,0,0.15); z-index: 9997;
+    display: none; flex-direction: column; overflow: hidden;
+  }
+  .memo-panel.show { display: flex; }
+  .memo-panel-header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 10px 14px; background: #fafafa; border-bottom: 1px solid #f0f0f0;
+    font-size: 14px; font-weight: 500;
+  }
+  .memo-panel-close {
+    width: 24px; height: 24px; border: none; background: none;
+    cursor: pointer; font-size: 16px; color: #999; border-radius: 4px;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .memo-panel-close:hover { background: #f0f0f0; color: #333; }
+  .memo-textarea {
+    width: 100%; min-height: 120px; max-height: 300px;
+    padding: 10px 14px; border: none; outline: none;
+    font-size: 13px; resize: vertical; font-family: inherit; line-height: 1.6;
+  }
+  .memo-panel-footer {
+    padding: 6px 14px; font-size: 11px; color: #999;
+    border-top: 1px solid #f0f0f0; text-align: right;
+  }
+
+  /* ---- Delete Confirm Modal ---- */
+  .confirm-overlay {
+    display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.45);
+    z-index: 1100; justify-content: center; align-items: center;
+  }
+  .confirm-overlay.show { display: flex; }
+  .confirm-box {
+    background: #fff; border-radius: 10px; padding: 24px; width: 340px; max-width: 90vw;
+    text-align: center;
+  }
+  .confirm-box .confirm-icon { font-size: 40px; margin-bottom: 12px; }
+  .confirm-box .confirm-title { font-size: 16px; font-weight: 600; margin-bottom: 8px; }
+  .confirm-box .confirm-desc { font-size: 13px; color: #666; margin-bottom: 16px; }
+  .confirm-box .confirm-input {
+    width: 100%; padding: 8px 12px; border: 1px solid #d9d9d9; border-radius: 6px;
+    font-size: 14px; text-align: center; margin-bottom: 16px; outline: none;
+  }
+  .confirm-box .confirm-input:focus { border-color: #ff4d4f; }
+  .confirm-box .confirm-btns { display: flex; gap: 10px; justify-content: center; }
+  .confirm-box .confirm-btns button {
+    flex: 1; padding: 8px 16px; border-radius: 6px; font-size: 14px; cursor: pointer; border: none;
+  }
+  .confirm-box .btn-cancel { background: #f5f5f5; color: #666; }
+  .confirm-box .btn-cancel:hover { background: #e8e8e8; }
+  .confirm-box .btn-confirm-del {
+    background: #ff4d4f; color: #fff; opacity: 0.4; pointer-events: none;
+  }
+  .confirm-box .btn-confirm-del.enabled { opacity: 1; pointer-events: auto; }
+  .confirm-box .btn-confirm-del.enabled:hover { background: #ff1f1f; }
+
+  /* ---- XHS Login Modal ---- */
+  .xhs-login-overlay {
+    display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5);
+    z-index: 1200; justify-content: center; align-items: center;
+  }
+  .xhs-login-overlay.show { display: flex; }
+  .xhs-login-box {
+    background: #fff; border-radius: 12px; padding: 28px; width: 340px; max-width: 90vw;
+    text-align: center;
+  }
+  .xhs-login-box .xhs-title { font-size: 16px; font-weight: 600; margin-bottom: 4px; color: #ff2442; }
+  .xhs-login-box .xhs-desc { font-size: 13px; color: #666; margin-bottom: 16px; }
+  .xhs-login-box .xhs-qr {
+    width: 200px; height: 200px; margin: 0 auto 16px;
+    border: 1px solid #f0f0f0; border-radius: 8px; overflow: hidden;
+    display: flex; align-items: center; justify-content: center;
+    background: #fafafa;
+  }
+  .xhs-login-box .xhs-qr img { width: 100%; height: 100%; object-fit: contain; }
+  .xhs-login-box .xhs-status { font-size: 13px; color: #999; margin-bottom: 16px; min-height: 20px; }
+  .xhs-login-box .xhs-status.success { color: #52c41a; }
+  .xhs-login-box .xhs-status.error { color: #ff4d4f; }
+  .xhs-login-box .xhs-close { padding: 8px 24px; }
+
+  /* ---- XHS Status Bar ---- */
+  .xhs-bar {
+    display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+    background: #fff; padding: 8px 16px; border-radius: 8px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.08); margin-bottom: 12px;
+    font-size: 13px;
+  }
+  .xhs-bar-label { color: #666; white-space: nowrap; font-weight: 500; }
+  .xhs-bar-dot {
+    width: 8px; height: 8px; border-radius: 50%; display: inline-block;
+    margin-right: 4px; vertical-align: middle;
+  }
+  .xhs-bar-dot.off { background: #d9d9d9; }
+  .xhs-bar-dot.ok { background: #52c41a; }
+  .xhs-bar-dot.expired { background: #ff4d4f; }
+  .xhs-bar-status { font-size: 13px; }
+  .xhs-bar-status.off { color: #999; }
+  .xhs-bar-status.ok { color: #52c41a; }
+  .xhs-bar-status.expired { color: #ff4d4f; }
+  .xhs-bar .btn-xhs-login {
+    padding: 4px 12px; font-size: 12px; border: 1px solid #ff2442; color: #ff2442;
+    background: #fff; border-radius: 4px; cursor: pointer;
+  }
+  .xhs-bar .btn-xhs-login:hover { background: #fff1f0; }
+
+  .mini-btn.disabled-fans {
+    opacity: 0.35; pointer-events: none; color: #999 !important; border-color: #d9d9d9 !important;
+  }
+
+  .table-wrapper {
+    background: #fff; border-radius: 8px; overflow: hidden;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+    -webkit-user-select: none; user-select: none; -webkit-touch-callout: none;
+  }
+  /* Globally block ALL text selection in table rows */
+  .table-wrapper td, .table-wrapper td *,
+  .table-wrapper tr, .table-wrapper tr * {
+    -webkit-user-select: none !important;
+    user-select: none !important;
+    -webkit-touch-callout: none !important;
+  }
+  /* Re-allow text input inside table */
+  .table-wrapper input, .table-wrapper textarea {
+    -webkit-user-select: text !important;
+    user-select: text !important;
+  }
+
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  thead { background: #fafafa; }
+  th { padding: 10px 12px; text-align: left; font-weight: 600; border-bottom: 1px solid #f0f0f0; white-space: nowrap; }
+  td { padding: 8px 12px; border-bottom: 1px solid #f0f0f0; vertical-align: middle; }
+  tr:hover { background: #fafafa; }
+  tr.row-fetched { background: #e6f4ff; }
+  tr.row-fetched:hover { background: #d0e8ff; }
+  tr.row-done { background: #f6ffed; }
+  tr.row-done:hover { background: #e8fad6; }
+  tr.row-error { background: #fff2f0; }
+  tr.row-error:hover { background: #ffe6e3; }
+
+  .col-index { width: 50px; text-align: center; color: #999; }
+  .col-account { width: 140px; }
+  .col-phone { width: 200px; text-align: left; }
+  .col-url { max-width: 300px; }
+  .col-code { width: 160px; }
+  .col-followers { width: 100px; text-align: center; }
+  .col-actions { width: 180px; text-align: center; }
+  .followers-cell { font-weight: 600; font-size: 14px; color: #ff2442; font-family: monospace; }
+  .followers-cell.loading { color: #999; font-size: 12px; font-weight: 400; }
+  .followers-cell.error { color: #ff4d4f; font-size: 12px; font-weight: 400; cursor: pointer; }
+
+  .url-text { word-break: break-all; font-size: 12px; color: #666; max-height: 40px; overflow: hidden; }
+
+  .code-cell { font-weight: 600; font-size: 15px; color: #1677ff; font-family: monospace; -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; touch-action: manipulation; }
+  .code-copyable { cursor: pointer; -webkit-touch-callout: none !important; -webkit-user-select: none !important; user-select: none !important; }
+  .code-copyable:active { opacity: 0.6; }
+  .code-cell.loading { color: #999; font-size: 12px; font-weight: 400; }
+  .code-cell.error { color: #ff4d4f; font-size: 12px; font-weight: 400; }
+
+  .error-input {
+    width: 100%; padding: 2px 6px; border: 1px solid #ffccc7; border-radius: 3px;
+    font-size: 12px; margin-top: 4px; color: #ff4d4f;
+    -webkit-user-select: text; user-select: text;
+  }
+
+  .mini-btn {
+    padding: 2px 8px; font-size: 11px; border: 1px solid #d9d9d9; background: #fff;
+    border-radius: 3px; cursor: pointer; margin: 0 2px;
+  }
+  .mini-btn:hover { border-color: #1677ff; color: #1677ff; }
+  .mini-btn.active-done { border-color: #52c41a; color: #52c41a; background: #f6ffed; }
+  .mini-btn.active-error { border-color: #ff4d4f; color: #ff4d4f; background: #fff2f0; }
+
+  .stats {
+    display: flex; gap: 16px; font-size: 13px; color: #666;
+  }
+  .stats span { font-weight: 600; }
+
+  .empty-state { text-align: center; padding: 60px 20px; color: #999; font-size: 14px; }
+  tr.row-locked { opacity: 0.4; }
+  tr.row-locked .phone-cell { color: #999; cursor: default; }
+  tr.row-locked .mini-btn { opacity: 0.5; pointer-events: none; }
+
+  .progress-bar {
+    height: 3px; background: #f0f0f0; border-radius: 2px; overflow: hidden; margin-bottom: 12px;
+  }
+  .progress-bar-inner { height: 100%; background: #1677ff; transition: width 0.3s; }
+
+  /* Modal */
+  .modal-overlay {
+    display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.4);
+    z-index: 1000; justify-content: center; align-items: center;
+  }
+  .modal-overlay.show { display: flex; }
+  .modal {
+    background: #fff; border-radius: 8px; padding: 20px; width: 600px; max-width: 90vw;
+    max-height: 80vh; overflow: auto;
+  }
+  .modal h3 { margin-bottom: 12px; font-size: 16px; }
+  .modal pre {
+    background: #f5f5f5; padding: 12px; border-radius: 4px;
+    font-size: 12px; white-space: pre-wrap; word-break: break-all;
+    max-height: 400px; overflow: auto;
+  }
+  .modal .btn { margin-top: 12px; }
+
+  .phone-cell { cursor: pointer; color: #1677ff; -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
+  .phone-cell:active { opacity: 0.6; }
+  .follower-status { font-size: 11px; color: #999; font-weight: 400; }
+  .follower-status.error { color: #ff4d4f; }
+  .follower-status.ok { color: #52c41a; }
+  .phone-acct-label { display: none; }
+
+  .toast {
+    position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
+    background: rgba(0,0,0,0.75); color: #fff; padding: 10px 24px;
+    border-radius: 8px; font-size: 14px; z-index: 9999;
+    pointer-events: none; opacity: 0; transition: opacity 0.3s;
+  }
+  .toast.show { opacity: 1; }
+
+  .id-bar {
+    display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+    background: #fff; padding: 10px 16px; border-radius: 8px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.08); margin-bottom: 12px;
+    font-size: 13px;
+  }
+  .id-bar label { color: #666; white-space: nowrap; }
+  .id-current {
+    font-family: monospace; font-size: 16px; font-weight: 700; color: #1677ff;
+    letter-spacing: 2px; user-select: all; cursor: pointer;
+  }
+  .id-current:hover { text-decoration: underline; }
+  .id-bar input[type="text"] {
+    width: 110px; padding: 4px 8px; border: 1px solid #d9d9d9; border-radius: 4px;
+    font-size: 14px; font-family: monospace; text-align: center; letter-spacing: 1px;
+    text-transform: uppercase;
+  }
+  .id-bar .separator { width: 1px; height: 20px; background: #e8e8e8; }
+  .id-row { display: flex; align-items: center; gap: 8px; }
+
+  /* ---- Responsive ---- */
+  @media (max-width: 1024px) {
+    body { padding: 10px; }
+    .col-url { display: none; }
+    th.col-url { display: none; }
+    .toolbar { gap: 8px; padding: 10px 12px; }
+    .stats { font-size: 12px; gap: 8px; }
+  }
+
+  @media (max-width: 768px) {
+    body { padding: 8px; }
+    h1 { font-size: 16px; margin-bottom: 8px; }
+
+    /* ---- XHS bar ---- */
+    .xhs-bar { padding: 6px 12px; font-size: 12px; gap: 8px; }
+
+    /* ---- ID bar ---- */
+    .id-bar {
+      flex-direction: column; align-items: stretch; gap: 8px;
+      padding: 10px 12px; font-size: 12px;
+    }
+    .id-bar .separator { display: none; }
+    .id-row {
+      display: flex; align-items: center; gap: 8px;
+    }
+    .id-current { font-size: 14px; }
+    .id-bar input[type="text"] { width: 80px; font-size: 12px; padding: 4px 6px; }
+
+    /* ---- Toolbar ---- */
+    .toolbar {
+      flex-direction: column; align-items: stretch; gap: 8px;
+      padding: 10px 12px;
+    }
+    .toolbar .separator { display: none; }
+    .toolbar-row {
+      display: flex; align-items: center; gap: 6px; flex-wrap: wrap;
+    }
+    .toolbar input[type="number"] { width: 50px; font-size: 12px; padding: 4px; }
+    .toolbar label { font-size: 12px; }
+    .btn { padding: 7px 12px; font-size: 12px; }
+    .toggle-btn { font-size: 11px; padding: 5px 8px; white-space: nowrap; }
+    .stats { font-size: 11px; gap: 4px; flex-wrap: wrap; }
+
+    /* ---- Memo ---- */
+    .memo-ball { width: 42px; height: 42px; font-size: 16px; }
+    .memo-panel { width: 280px; }
+    .memo-textarea { font-size: 12px; min-height: 80px; }
+
+    /* ---- CRITICAL: no text selection in list area ---- */
+    .table-wrapper, .table-wrapper * {
+      -webkit-user-select: none !important;
+      user-select: none !important;
+      -webkit-touch-callout: none !important;
+    }
+    .table-wrapper .error-input {
+      -webkit-user-select: text !important;
+      user-select: text !important;
+    }
+
+    /* ---- Table → card layout ---- */
+    .table-wrapper {
+      background: transparent; box-shadow: none;
+      overflow: visible; border-radius: 0;
+    }
+    table { display: block; width: 100%; }
+    thead { display: none; }
+    tbody { display: flex; flex-direction: column; gap: 6px; }
+
+    tr {
+      display: flex; flex-wrap: wrap; align-items: center;
+      background: #fff;
+      border-radius: 8px;
+      padding: 0;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+      border-bottom: none;
+      overflow: hidden;
+    }
+    tr:hover { background: #fff; }
+    tr.row-fetched, tr.row-fetched:hover { background: #e6f4ff; }
+    tr.row-done, tr.row-done:hover { background: #f6ffed; }
+    tr.row-error, tr.row-error:hover { background: #fff2f0; }
+
+    td { border: none; padding: 0; font-size: 13px; }
+
+    td.col-index {
+      width: 32px; min-height: 40px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 12px; font-weight: 600; color: #999;
+      background: rgba(0,0,0,0.03);
+      border-right: 1px solid rgba(0,0,0,0.05);
+    }
+    td.col-account { display: none; }
+    td.col-index { order: 0; }
+    td.col-phone {
+      order: 1;
+      flex: 1; min-width: 0;
+      padding: 0;
+      text-align: left !important;
+      touch-action: manipulation;
+    }
+    td.col-phone * { touch-action: manipulation; }
+    td.col-phone .phone-acct-label { padding: 8px 12px 2px; }
+    td.col-phone .phone-cell { padding: 10px 12px; }
+    td.col-phone, td.col-phone * { text-align: left !important; }
+    td.col-followers {
+      order: 2;
+      padding: 10px 8px 10px 0;
+      text-align: right; white-space: nowrap;
+    }
+    td.col-code {
+      order: 3;
+      padding: 10px 12px 10px 0;
+      text-align: right; white-space: nowrap;
+      touch-action: manipulation;
+    }
+    td.col-code * { touch-action: manipulation; }
+    td.col-url { display: none; }
+    td.col-actions { order: 4; }
+    td.col-actions {
+      width: 100%;
+      display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px;
+      padding: 8px 12px;
+      border-top: 1px solid rgba(0,0,0,0.05);
+    }
+
+    .mini-btn {
+      padding: 7px 0; font-size: 12px; border-radius: 4px;
+      text-align: center; margin: 0;
+    }
+    .error-input {
+      grid-column: 1 / -1;
+      margin-top: 2px;
+    }
+
+    .code-cell { font-size: 15px; }
+    .code-cell.loading, .code-cell.error { font-size: 11px; }
+    .phone-cell { font-size: 14px; font-weight: 500; }
+    .phone-acct-label {
+      display: block; font-size: 11px; color: #999; font-weight: 400;
+      margin-bottom: 2px; white-space: nowrap;
+    }
+    .follower-status { display: block; margin: 0; }
+
+    .empty-state {
+      width: 100%; text-align: center;
+      padding: 40px 20px; font-size: 13px;
+    }
+
+    .modal { width: 95vw; padding: 14px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="container">
+  <h1 onclick="showToast('你点我干什么？！！')"><span class="rainbow">王鹏nb</span>短信验证码获取工具</h1>
+
+  <!-- ID Bar -->
+  <div class="id-bar">
+    <div class="id-row">
+      <label>我的编号:</label>
+      <span class="id-current" id="currentId" onclick="copyCurrentId()" title="点击复制编号">------</span>
+      <button class="btn btn-default" onclick="copyCurrentId()" style="padding:4px 10px;font-size:12px">复制</button>
+      <button class="btn btn-default" onclick="generateNewId()" style="padding:4px 10px;font-size:12px">新建编号</button>
+    </div>
+    <div class="separator"></div>
+    <div class="id-row">
+      <label>查询编号:</label>
+      <input type="text" id="queryIdInput" placeholder="输入编号" maxlength="6" onkeydown="if(event.key==='Enter')queryById()">
+      <button class="btn btn-primary" onclick="queryById()" style="padding:4px 12px;font-size:12px">加载</button>
+    </div>
+  </div>
+
+  <!-- XHS Status Bar -->
+  <div class="xhs-bar" id="xhsBar">
+    <span class="xhs-bar-label">小红书:</span>
+    <span class="xhs-bar-dot off" id="xhsDot"></span>
+    <span class="xhs-bar-status off" id="xhsStatus">未登录</span>
+    <button class="btn-xhs-login" id="xhsLoginBtn" onclick="xhsLoginClick()">扫码登录</button>
+    <button class="btn-xhs-login" id="xhsLogoutBtn" onclick="logoutXhs()" style="display:none;color:#ff4d4f;border-color:#ff4d4f">退出</button>
+  </div>
+
+  <!-- Delete Confirm Modal -->
+  <div class="confirm-overlay" id="deleteConfirm">
+    <div class="confirm-box">
+      <div class="confirm-icon">&#9888;&#65039;</div>
+      <div class="confirm-title">确认删除</div>
+      <div class="confirm-desc">请输入 <b style="color:#ff4d4f">删除</b> 以确认操作</div>
+      <input class="confirm-input" id="deleteConfirmInput" type="text" placeholder="请输入"删除"" autocomplete="off">
+      <div class="confirm-btns">
+        <button class="btn-cancel" onclick="closeDeleteConfirm()">取消</button>
+        <button class="btn-confirm-del" id="deleteConfirmBtn" onclick="confirmDelete()">确认删除</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- XHS Login Modal -->
+  <div class="xhs-login-overlay" id="xhsLoginOverlay">
+    <div class="xhs-login-box">
+      <div class="xhs-title">小红书扫码登录</div>
+      <div class="xhs-desc" id="xhsDesc">请用小红书App扫描下方二维码</div>
+      <div class="xhs-qr" id="xhsQrBox"><span style="color:#999">加载中...</span></div>
+      <div class="xhs-sms-box" id="xhsSmsBox" style="display:none">
+        <div style="font-size:13px;color:#666;margin-bottom:8px">请输入短信验证码 <span id="xhsPhoneHint" style="color:#333;font-weight:500"></span></div>
+        <div style="display:flex;gap:8px;justify-content:center">
+          <input type="tel" id="xhsSmsInput" maxlength="6" placeholder="输入验证码"
+            style="width:140px;height:38px;border:1px solid #ddd;border-radius:6px;text-align:center;font-size:18px;letter-spacing:4px;outline:none"
+            onkeydown="if(event.key==='Enter')submitXhsSmsCode()">
+          <button onclick="submitXhsSmsCode()"
+            style="height:38px;padding:0 16px;background:#ff2442;color:#fff;border:none;border-radius:6px;font-size:14px;cursor:pointer">确认</button>
+        </div>
+      </div>
+      <div class="xhs-status" id="xhsLoginStatus"></div>
+      <button class="btn btn-default xhs-close" onclick="closeXhsLogin()">取消</button>
+    </div>
+  </div>
+
+  <!-- Toolbar -->
+  <div class="toolbar">
+    <div class="toolbar-row">
+      <div class="file-input-wrapper">
+        <button class="btn btn-primary" onclick="document.getElementById('fileInput').click()">上传文件</button>
+        <input type="file" id="fileInput" accept=".csv,.txt,.tsv,.xlsx,.xls,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel,text/csv,text/plain" onchange="importFromFile(event)">
+      </div>
+      <span style="font-size:12px;color:#999">Excel / CSV / TXT</span>
+      <div class="separator"></div>
+      <label>间隔:</label>
+      <input type="number" id="intervalInput" value="3" min="0.1" max="60" step="0.1">
+      <label>秒</label>
+      <div class="separator"></div>
+      <label>批次:</label>
+      <input type="number" id="batchInput" value="5" min="1" max="100" step="1">
+      <label>条</label>
+    </div>
+    <div class="toolbar-row">
+      <button class="btn btn-success" id="startBtn" onclick="startFetching()">开始获取</button>
+      <button class="btn btn-danger" id="stopBtn" onclick="stopFetching()" disabled>停止</button>
+      <button class="btn btn-warning" onclick="retryEmpty()">重试未获取</button>
+      <button class="btn btn-default" onclick="exportData()">导出结果</button>
+      <button class="btn btn-danger" onclick="clearAll()">清空全部</button>
+      <div class="separator"></div>
+      <button class="btn btn-primary" id="fetchFollowersBtn" onclick="startFetchFollowers()" style="background:#ff2442" disabled>查询粉丝</button>
+      <button class="btn btn-danger" id="stopFollowersBtn" onclick="stopFetchFollowers()" disabled>停止查询</button>
+      <div class="separator"></div>
+      <button class="btn btn-success toggle-btn" id="autoRefreshBtn" onclick="toggleAutoRefresh()">复制自动刷新: 开</button>
+      <button class="btn btn-success toggle-btn" id="sequentialBtn" onclick="toggleSequential()">逐条模式: 开</button>
+    </div>
+    <div class="toolbar-row">
+      <div class="stats">
+        总计: <span id="statTotal">0</span> &nbsp;|&nbsp;
+        已获取: <span id="statFetched">0</span> &nbsp;|&nbsp;
+        已完成: <span id="statDone">0</span> &nbsp;|&nbsp;
+        异常: <span id="statError">0</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Progress -->
+  <div class="progress-bar" id="progressBar" style="display:none">
+    <div class="progress-bar-inner" id="progressInner" style="width:0%"></div>
+  </div>
+
+  <!-- Table -->
+  <div class="table-wrapper">
+    <table>
+      <thead>
+        <tr>
+          <th class="col-index">#</th>
+          <th class="col-account">账号</th>
+          <th class="col-followers">粉丝数</th>
+          <th class="col-phone">手机号</th>
+          <th class="col-url">URL</th>
+          <th class="col-code">验证码</th>
+          <th class="col-actions">操作</th>
+        </tr>
+      </thead>
+      <tbody id="dataBody">
+        <tr><td colspan="7" class="empty-state">暂无数据，请导入数据</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- Floating Memo Ball (outside container for proper fixed positioning) -->
+<div class="memo-ball" id="memoBall" title="单击打开 / 长按复制">
+  <span>&#128221;</span>
+  <div class="memo-dot" id="memoDot"></div>
+  <button class="memo-ball-copy-btn" id="memoCopyBtn" title="复制备忘录" onclick="copyMemoContent(event)">&#x2398;</button>
+</div>
+<div class="memo-panel" id="memoPanel">
+  <div class="memo-panel-header">
+    <span>备忘录</span>
+    <button onclick="copyMemoContent()" style="padding:2px 8px;font-size:12px;border:1px solid #ddd;border-radius:4px;background:#fff;cursor:pointer;margin-right:6px">复制</button>
+    <button class="memo-panel-close" onclick="toggleMemoPanel()">&#10005;</button>
+  </div>
+  <textarea class="memo-textarea" id="memoInput" placeholder="记录备注信息..." oninput="saveMemoDebounced()"></textarea>
+  <div class="memo-panel-footer">自动保存到云端</div>
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
+<!-- Response Modal -->
+<div class="modal-overlay" id="responseModal">
+  <div class="modal">
+    <h3>响应详情 - <span id="modalTitle"></span></h3>
+    <pre id="modalContent"></pre>
+    <button class="btn btn-default" onclick="closeModal()">关闭</button>
+  </div>
+</div>
+
+<script>
+let rows = [];       // { account, phone, url, code, rawResponse, status, errorNote, fetchUrl, urlType }
+let fetching = false;
+let fetchAbort = null;
+let fetchTimer = null;
+let singleTimers = {};
+let xhsReady = false;  // true when XHS cookie is valid
+
+// ---- User ID (6-char uppercase alphanumeric) ----
+function generateId() {
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // no 0/O/1/I to avoid confusion
+  let id = '';
+  for (let i = 0; i < 6; i++) id += chars[Math.floor(Math.random() * chars.length)];
+  return id;
+}
+
+function getUserId() {
+  return localStorage.getItem('sms_tool_user_id') || '';
+}
+
+async function ensureUserId() {
+  if (currentUserId) return;
+  let id = await generateUniqueId();
+  localStorage.setItem('sms_tool_user_id', id);
+  currentUserId = id;
+  displayCurrentId();
+}
+
+async function generateUniqueId() {
+  for (let attempt = 0; attempt < 10; attempt++) {
+    const id = generateId();
+    try {
+      const res = await fetch('/api/check-id?device=' + id);
+      const data = await res.json();
+      if (!data.exists) return id;
+    } catch(e) {
+      return id; // 网络错误时直接用，概率极低
+    }
+  }
+  return generateId(); // 兜底
+}
+
+let autoRefreshOnCopy = true;
+
+function toggleAutoRefresh() {
+  autoRefreshOnCopy = !autoRefreshOnCopy;
+  const btn = document.getElementById('autoRefreshBtn');
+  if (autoRefreshOnCopy) {
+    btn.textContent = '复制自动刷新: 开';
+    btn.classList.remove('off');
+    btn.classList.add('btn-success');
+  } else {
+    btn.textContent = '复制自动刷新: 关';
+    btn.classList.add('off');
+    btn.classList.remove('btn-success');
+  }
+}
+
+let sequentialMode = true;
+
+function toggleSequential() {
+  sequentialMode = !sequentialMode;
+  const btn = document.getElementById('sequentialBtn');
+  if (sequentialMode) {
+    btn.textContent = '逐条模式: 开';
+    btn.classList.remove('off');
+    btn.classList.add('btn-success');
+  } else {
+    btn.textContent = '逐条模式: 关';
+    btn.classList.add('off');
+    btn.classList.remove('btn-success');
+  }
+  render();
+}
+
+function isRowLocked(idx) {
+  if (!sequentialMode) return false;
+  // Done/error rows are never locked
+  if (rows[idx].status === 'done' || rows[idx].status === 'error') return false;
+  // The first pending row is active (not locked)
+  for (let i = 0; i < idx; i++) {
+    if (rows[i].status !== 'done' && rows[i].status !== 'error') return true;
+  }
+  return false;
+}
+
+let currentUserId = getUserId();
+ensureUserId();
+
+function displayCurrentId() {
+  document.getElementById('currentId').textContent = currentUserId;
+}
+
+function copyCurrentId() {
+  navigator.clipboard.writeText(currentUserId).then(() => {
+    showToast('编号已复制: ' + currentUserId);
+  }).catch(() => {
+    showToast('复制失败');
+  });
+}
+
+async function generateNewId() {
+  const input = prompt('请输入自定义编号（1~6位字母数字），留空则随机生成:');
+  if (input === null) return; // cancelled
+
+  let newId;
+  if (input.trim() === '') {
+    newId = await generateUniqueId();
+  } else {
+    newId = input.trim().toUpperCase().replace(/[^A-Z0-9]/g, '');
+    if (newId.length === 0 || newId.length > 6) {
+      showToast('编号只能是1~6位字母或数字');
+      return;
+    }
+    // Check duplicate via server
+    try {
+      const res = await fetch('/api/check-id?device=' + newId);
+      const data = await res.json();
+      if (data.exists) {
+        showToast('编号 ' + newId + ' 已存在，请换一个');
+        return;
+      }
+    } catch(e) {
+      showToast('检查编号失败，请重试');
+      return;
+    }
+  }
+
+  if (rows.length > 0 && !confirm(`切换到新编号 ${newId}？\n当前数据已保存，可随时通过旧编号找回。`)) return;
+  stopFetching();
+  saveToLocal(); // 确保当前数据已保存
+  rows = [];
+  currentUserId = newId;
+  localStorage.setItem('sms_tool_user_id', newId);
+  displayCurrentId();
+  document.getElementById('memoInput').value = '';
+  render();
+  loadFromServer();
+  loadMemo();
+  checkXhsStatus();
+  showToast('已切换到编号: ' + newId);
+}
+
+function queryById() {
+  let id = document.getElementById('queryIdInput').value.trim().toUpperCase().replace(/[^A-Z0-9]/g, '');
+  if (!id) { showToast('请输入编号'); return; }
+  if (id.length > 6) { showToast('编号最多6位字符'); return; }
+
+  if (rows.length > 0 && !confirm(`将切换到编号 ${id} 的数据，当前数据已自动保存。\n确定切换？`)) return;
+
+  stopFetching();
+  currentUserId = id;
+  localStorage.setItem('sms_tool_user_id', id);
+  displayCurrentId();
+  document.getElementById('queryIdInput').value = '';
+  rows = [];
+  render();
+  loadFromServer();
+  loadMemo();
+  checkXhsStatus();
+}
+
+// ---- Server Save / Load ----
+let saving = false;
+
+function serializeRows() {
+  return rows.map(r => ({
+    account: r.account, phone: r.phone, url: r.url,
+    code: r.code, rawResponse: r.rawResponse,
+    status: r.status, errorNote: r.errorNote,
+    fetchUrl: r.fetchUrl, urlType: r.urlType,
+    followers: r.followers || '',
+  }));
+}
+
+function saveToLocal(showFeedback) {
+  if (saving) return Promise.resolve(false);
+  saving = true;
+  return fetch('/api/data?device=' + currentUserId, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(serializeRows()),
+  }).then(() => {
+    if (showFeedback) showToast('数据已保存 (' + rows.length + '条)');
+    return true;
+  }).catch(() => {
+    if (showFeedback) showToast('保存失败，请检查网络');
+    return false;
+  }).finally(() => { saving = false; });
+}
+
+async function loadFromServer() {
+  try {
+    const res = await fetch('/api/data?device=' + currentUserId);
+    const data = await res.json();
+    if (Array.isArray(data) && data.length > 0) {
+      rows = data;
+      render();
+      showToast('已加载编号 ' + currentUserId + ' 的数据 (' + rows.length + '条)');
+    } else {
+      showToast('编号 ' + currentUserId + ' 暂无数据');
+    }
+  } catch(e) {
+    showToast('加载失败，请检查网络');
+  }
+}
+
+// ---- Memo Save / Load ----
+let memoSaveTimer = null;
+
+function saveMemoDebounced() {
+  clearTimeout(memoSaveTimer);
+  memoSaveTimer = setTimeout(saveMemo, 800);
+  // Update dot indicator
+  updateMemoDot();
+}
+
+function saveMemo() {
+  const text = document.getElementById('memoInput').value;
+  fetch('/api/memo?device=' + currentUserId, {
+    method: 'POST',
+    headers: { 'Content-Type': 'text/plain' },
+    body: text,
+  }).catch(() => {});
+}
+
+async function loadMemo() {
+  try {
+    const res = await fetch('/api/memo?device=' + currentUserId);
+    const text = await res.text();
+    document.getElementById('memoInput').value = text;
+    updateMemoDot();
+  } catch(e) {}
+}
+
+function updateMemoDot() {
+  const dot = document.getElementById('memoDot');
+  const text = document.getElementById('memoInput').value.trim();
+  dot.classList.toggle('has-content', text.length > 0);
+}
+
+// ---- Floating Memo Ball ----
+function toggleMemoPanel() {
+  const panel = document.getElementById('memoPanel');
+  panel.classList.toggle('show');
+  if (panel.classList.contains('show')) {
+    document.getElementById('memoInput').focus();
+  }
+}
+
+function copyMemoContent(e) {
+  if (e) { e.preventDefault(); e.stopPropagation(); }
+  const text = document.getElementById('memoInput').value.trim();
+  if (!text) { showToast('备忘录为空'); return; }
+  doCopyText(text);
+}
+
+(function initMemoBall() {
+  const ball = document.getElementById('memoBall');
+  const panel = document.getElementById('memoPanel');
+  let isDragging = false, wasDragged = false;
+  let startX, startY, ballX, ballY;
+  let lpTimer = null;
+
+  // Load saved position or default to bottom-right
+  function setDefaultPos() {
+    const bw = ball.offsetWidth || 48;
+    ball.style.left = (window.innerWidth - bw - 16) + 'px';
+    ball.style.top = (window.innerHeight - bw - 80) + 'px';
+  }
+  const saved = localStorage.getItem('memo_ball_pos');
+  if (saved) {
+    try {
+      const pos = JSON.parse(saved);
+      const bw = ball.offsetWidth || 48;
+      ball.style.left = Math.min(pos.x, window.innerWidth - bw) + 'px';
+      ball.style.top = Math.min(pos.y, window.innerHeight - bw) + 'px';
+    } catch(e) { setDefaultPos(); }
+  } else {
+    setDefaultPos();
+  }
+
+  function onStart(e) {
+    // Ignore clicks on the copy button
+    if (e.target.classList.contains('memo-ball-copy-btn')) return;
+    isDragging = true; wasDragged = false;
+    const touch = e.touches ? e.touches[0] : e;
+    const rect = ball.getBoundingClientRect();
+    startX = touch.clientX; startY = touch.clientY;
+    ballX = rect.left; ballY = rect.top;
+    ball.style.right = 'auto'; ball.style.bottom = 'auto';
+    ball.style.left = ballX + 'px'; ball.style.top = ballY + 'px';
+    e.preventDefault();
+    e.stopPropagation();
+
+    // Long press: copy memo content
+    lpTimer = setTimeout(() => {
+      if (!wasDragged) {
+        lpTimer = null;
+        isDragging = false;
+        copyMemoContent();
+        // Vibrate feedback if supported
+        if (navigator.vibrate) navigator.vibrate(40);
+      }
+    }, 600);
+  }
+
+  function onMove(e) {
+    if (!isDragging) return;
+    const touch = e.touches ? e.touches[0] : e;
+    const dx = touch.clientX - startX, dy = touch.clientY - startY;
+    if (Math.abs(dx) > 5 || Math.abs(dy) > 5) {
+      wasDragged = true;
+      if (lpTimer) { clearTimeout(lpTimer); lpTimer = null; }
+    }
+    let nx = ballX + dx, ny = ballY + dy;
+    const bw = ball.offsetWidth, bh = ball.offsetHeight;
+    nx = Math.max(0, Math.min(window.innerWidth - bw, nx));
+    ny = Math.max(0, Math.min(window.innerHeight - bh, ny));
+    ball.style.left = nx + 'px'; ball.style.top = ny + 'px';
+    e.preventDefault();
+    e.stopPropagation();
+  }
+
+  function onEnd(e) {
+    if (!isDragging) return;
+    if (lpTimer) { clearTimeout(lpTimer); lpTimer = null; }
+    isDragging = false;
+    const rect = ball.getBoundingClientRect();
+    localStorage.setItem('memo_ball_pos', JSON.stringify({ x: rect.left, y: rect.top }));
+    positionPanel();
+    if (!wasDragged) toggleMemoPanel();
+  }
+
+  function positionPanel() {
+    const rect = ball.getBoundingClientRect();
+    const pw = 320, ph = 220;
+    let px = rect.left - pw - 10;
+    let py = rect.top;
+    if (px < 10) px = rect.right + 10;
+    if (px + pw > window.innerWidth - 10) px = window.innerWidth - pw - 10;
+    if (py + ph > window.innerHeight - 10) py = window.innerHeight - ph - 10;
+    if (py < 10) py = 10;
+    panel.style.left = px + 'px'; panel.style.top = py + 'px';
+  }
+
+  ball.addEventListener('mousedown', onStart);
+  document.addEventListener('mousemove', onMove);
+  document.addEventListener('mouseup', onEnd);
+  ball.addEventListener('touchstart', onStart, { passive: false });
+  document.addEventListener('touchmove', onMove, { passive: false });
+  document.addEventListener('touchend', onEnd, { passive: false });
+
+  // Prevent page scroll/zoom when interacting with ball
+  ball.addEventListener('touchmove', e => e.preventDefault(), { passive: false });
+
+  requestAnimationFrame(positionPanel);
+})();
+
+// Init
+displayCurrentId();
+loadFromServer();
+loadMemo();
+
+// ---- Parse URL ----
+function parseUrl(url) {
+  url = url.trim();
+  // Type 1: xhscode.com/send-sms-code?key=xxx
+  if (url.includes('xhscode.com/send-sms-code')) {
+    try {
+      const u = new URL(url);
+      const key = u.searchParams.get('key');
+      if (key) {
+        return { type: 1, fetchUrl: `https://xhscode.com/smsCode?key=${key}&code=`, original: url };
+      }
+    } catch(e) {}
+  }
+  // Type 1 variant: xhscode.com/smsCode?key=xxx (already the fetch URL)
+  if (url.includes('xhscode.com/smsCode')) {
+    return { type: 1, fetchUrl: url.includes('&code=') ? url : url + '&code=', original: url };
+  }
+  // Type 2: api.sms8.net or any other direct URL
+  return { type: 2, fetchUrl: url, original: url };
+}
+
+// ---- Extract code from response ----
+function extractCode(text, urlType) {
+  try {
+    const json = JSON.parse(text);
+
+    // Format 1: { "code": "144952", "status": 1 } — code field IS the verification code
+    // Format 2: { "code": 0, "data": { "code": "123456" } } — code field is status, data.code is verification code
+
+    // Check data.code first (Format 2: sms8.net style)
+    // Success: { "code":1, "data": { "code": "Your verification code is: 114519." } }
+    // Fail:    { "code":0, "data": { "code": "" } }
+    if (json.data && typeof json.data === 'object' && json.data.code !== undefined) {
+      const dc = String(json.data.code);
+      if (/^\d{4,8}$/.test(dc)) return dc;
+      // data.code is a text containing digits, extract them
+      const m = dc.match(/(\d{4,8})/);
+      if (m) return m[1];
+      // data.code exists but empty/no digits → no code yet
+      return null;
+    }
+
+    // Format 1 fail: { "error": "未找到验证码", "status": 0 } → no code
+    if (json.error || json.status === 0) return null;
+
+    // Check top-level code (Format 1: xhscode style)
+    if (json.code !== undefined && /^\d{4,8}$/.test(String(json.code))) return String(json.code);
+
+    // Other common fields
+    if (json.smsCode !== undefined && /^\d{4,8}$/.test(String(json.smsCode))) return String(json.smsCode);
+    if (json.msg && /^\d{4,8}$/.test(json.msg)) return json.msg;
+    if (json.data && typeof json.data === 'string' && /^\d{4,8}$/.test(json.data)) return json.data;
+
+    return null;
+  } catch(e) {}
+
+  // Non-JSON fallback: find 4-8 digit code in plain text
+  const match = text.match(/\b(\d{4,8})\b/);
+  if (match) return match[1];
+
+  return null;
+}
+
+// ---- Import ----
+function parseLine(line) {
+  line = line.trim();
+  if (!line) return null;
+
+  // Try tab, comma, pipe
+  let parts;
+  if (line.includes('\t')) {
+    parts = line.split('\t');
+  } else if (line.includes('|')) {
+    parts = line.split('|');
+  } else {
+    // Smart comma split: don't split commas inside URLs
+    parts = smartSplit(line);
+  }
+
+  parts = parts.map(p => p.trim()).filter(Boolean);
+  if (parts.length < 3) return null;
+
+  // Skip header row
+  const headerKeywords = ['账号', '手机', 'url', 'URL', 'account', 'phone', '链接', '地址'];
+  if (headerKeywords.some(k => parts[0].includes(k) || parts[1].includes(k))) return null;
+
+  const urlInfo = parseUrl(parts[2]);
+  return {
+    account: parts[0],
+    phone: parts[1],
+    url: parts[2],
+    code: '',
+    rawResponse: '',
+    status: 'pending',   // pending | done | error
+    errorNote: '',
+    fetchUrl: urlInfo.fetchUrl,
+    urlType: urlInfo.type,
+    followers: '',
+  };
+}
+
+function smartSplit(line) {
+  // Split by comma but not if inside a URL (after ://)
+  const results = [];
+  let current = '';
+  let inUrl = false;
+
+  for (let i = 0; i < line.length; i++) {
+    if (line.substring(i, i+3) === '://' || line.substring(i, i+4) === 'http') {
+      inUrl = true;
+    }
+    if (line[i] === ',' && !inUrl) {
+      results.push(current);
+      current = '';
+      inUrl = false;
+      continue;
+    }
+    if (line[i] === ' ' && inUrl && current.includes('://') && !line.substring(i).match(/^[\S]/)) {
+      inUrl = false;
+    }
+    current += line[i];
+  }
+  if (current) results.push(current);
+
+  // If we only got 1-2 parts, the URL might have commas in it. Try simpler approach:
+  if (results.length < 3) {
+    // Find first two commas only
+    const first = line.indexOf(',');
+    if (first === -1) return [line];
+    const second = line.indexOf(',', first + 1);
+    if (second === -1) return [line.substring(0, first), line.substring(first + 1)];
+    return [
+      line.substring(0, first),
+      line.substring(first + 1, second),
+      line.substring(second + 1)
+    ];
+  }
+  return results;
+}
+
+function importFromFile(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+
+  const ext = file.name.split('.').pop().toLowerCase();
+
+  if (ext === 'xlsx' || ext === 'xls') {
+    // Excel file - use SheetJS
+    const reader = new FileReader();
+    reader.onload = function(e) {
+      try {
+        const wb = XLSX.read(e.target.result, { type: 'array' });
+        const ws = wb.Sheets[wb.SheetNames[0]];
+        const data = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' });
+
+        const newRows = [];
+        for (let i = 0; i < data.length; i++) {
+          const r = data[i];
+          if (!r || r.length < 3) continue;
+
+          const vals = r.map(v => String(v).trim());
+
+          const headerKeywords = ['账号', '手机', 'url', 'URL', 'account', 'phone', '链接', '地址'];
+          if (headerKeywords.some(k => vals[0].includes(k) || vals[1].includes(k))) continue;
+
+          if (!vals[0] || !vals[1] || !vals[2]) continue;
+
+          const urlInfo = parseUrl(vals[2]);
+          newRows.push({
+            account: vals[0],
+            phone: vals[1],
+            url: vals[2],
+            code: '',
+            rawResponse: '',
+            status: 'pending',
+            errorNote: '',
+            fetchUrl: urlInfo.fetchUrl,
+            urlType: urlInfo.type,
+            followers: '',
+          });
+        }
+
+        if (newRows.length === 0) {
+          alert('未识别到有效数据，请确认 Excel 前三列为: 账号、手机号、URL');
+        } else {
+          if (rows.length > 0) {
+            const choice = confirm(`当前已有 ${rows.length} 条数据，新导入 ${newRows.length} 条。\n\n确定 → 覆盖旧数据\n取消 → 追加到末尾`);
+            if (choice) rows = newRows;
+            else rows = rows.concat(newRows);
+          } else {
+            rows = newRows;
+          }
+          render();
+          saveToLocal(true);
+        }
+      } catch(err) {
+        alert('Excel 解析失败: ' + err.message);
+      }
+    };
+    reader.readAsArrayBuffer(file);
+  } else {
+    // CSV / TXT / TSV - read as text
+    const reader = new FileReader();
+    reader.onload = function(e) {
+      const text = (e.target.result || '').trim();
+      if (!text) return;
+      const lines = text.split('\n');
+      const newRows = [];
+      for (const line of lines) {
+        const row = parseLine(line);
+        if (row) newRows.push(row);
+      }
+      if (newRows.length === 0) { alert('未识别到有效数据，请检查格式'); return; }
+      if (rows.length > 0) {
+        const choice = confirm(`当前已有 ${rows.length} 条数据，新导入 ${newRows.length} 条。\n\n确定 → 覆盖旧数据\n取消 → 追加到末尾`);
+        if (choice) rows = newRows;
+        else rows = rows.concat(newRows);
+      } else {
+        rows = newRows;
+      }
+      render();
+      saveToLocal(true);
+    };
+    reader.readAsText(file, 'UTF-8');
+  }
+
+  event.target.value = '';
+}
+
+function clearAll() {
+  if (rows.length === 0) return;
+  if (!confirm('确定清空所有数据？')) return;
+  stopFetching();
+  rows = [];
+  render();
+}
+
+// ---- Fetch Logic ----
+
+function getPendingRows() {
+  return rows.filter(r => !r.code && r.status !== 'done');
+}
+
+async function startFetching() {
+  if (fetching) return;
+  if (getPendingRows().length === 0) { alert('没有需要获取的数据'); return; }
+
+  fetching = true;
+  document.getElementById('startBtn').disabled = true;
+  document.getElementById('stopBtn').disabled = false;
+  document.getElementById('progressBar').style.display = '';
+
+  const interval = parseFloat(document.getElementById('intervalInput').value) || 1;
+  const batchSize = parseInt(document.getElementById('batchInput').value) || 5;
+
+  while (fetching) {
+    const pending = getPendingRows();
+    if (pending.length === 0) break;
+
+    // Take one batch
+    const batch = pending.slice(0, batchSize);
+
+    // Mark batch as loading
+    batch.forEach(row => {
+      row.rawResponse = '获取中...';
+      renderRow(rows.indexOf(row));
+    });
+
+    // Fetch batch in parallel, wait for all to complete
+    await Promise.allSettled(batch.map(row => fetchOneRow(row)));
+
+    // Update progress
+    const total = rows.length;
+    const done = rows.filter(r => r.code || r.status === 'done').length;
+    document.getElementById('progressInner').style.width = (done / total * 100) + '%';
+    updateStats();
+
+    // Wait interval before next batch
+    if (fetching && getPendingRows().length > 0) {
+      await sleep(interval * 1000);
+    }
+  }
+
+  stopFetching();
+}
+
+async function fetchOneRow(row) {
+  const idx = rows.indexOf(row);
+  try {
+    const response = await fetchWithTimeout(row.fetchUrl, 10000);
+    const text = await response.text();
+    row.rawResponse = text;
+    const code = extractCode(text, row.urlType);
+    if (code) row.code = code;
+  } catch(err) {
+    row.rawResponse = '请求失败: ' + err.message;
+  }
+  renderRow(idx);
+}
+
+function stopFetching() {
+  fetching = false;
+  if (fetchTimer) { clearInterval(fetchTimer); fetchTimer = null; }
+  stopAllSingleFetches();
+  document.getElementById('startBtn').disabled = false;
+  document.getElementById('stopBtn').disabled = true;
+  document.getElementById('progressBar').style.display = 'none';
+  updateStats();
+  render();
+}
+
+function retryEmpty() {
+  rows.forEach(r => {
+    if (!r.code && r.status !== 'done') {
+      r.rawResponse = '';
+    }
+  });
+  render();
+  startFetching();
+}
+
+// ---- Single Row Refresh (30 times max) ----
+const SINGLE_MAX = 30;
+
+function fetchSingle(idx) {
+  // If already refreshing this row, stop it
+  if (singleTimers[idx]) {
+    stopSingleFetch(idx);
+    return;
+  }
+
+  const row = rows[idx];
+  row.code = '';
+  row.rawResponse = '';
+  row.singleRetry = 0;
+
+  doSingleFetch(idx);
+
+  const interval = parseFloat(document.getElementById('intervalInput').value) || 1;
+  singleTimers[idx] = setInterval(() => {
+    if (!singleTimers[idx]) return;
+    if (row.code || row.singleRetry >= SINGLE_MAX) {
+      stopSingleFetch(idx);
+      return;
+    }
+    doSingleFetch(idx);
+  }, interval * 1000);
+
+  renderRow(idx);
+}
+
+async function doSingleFetch(idx) {
+  const row = rows[idx];
+  row.singleRetry = (row.singleRetry || 0) + 1;
+  row.rawResponse = `获取中... (${row.singleRetry}/${SINGLE_MAX})`;
+  renderRow(idx);
+
+  try {
+    const response = await fetchWithTimeout(row.fetchUrl, 10000);
+    const text = await response.text();
+    row.rawResponse = text;
+    const code = extractCode(text, row.urlType);
+    if (code) {
+      row.code = code;
+      stopSingleFetch(idx);
+    }
+  } catch(err) {
+    row.rawResponse = `请求失败 (${row.singleRetry}/${SINGLE_MAX}): ` + err.message;
+  }
+
+  if (row.singleRetry >= SINGLE_MAX && !row.code) {
+    stopSingleFetch(idx);
+  }
+
+  renderRow(idx);
+  updateStats();
+}
+
+// ---- Mobile tap detection for copy ----
+// 行级别监听：根据 col-code 列的实际像素位置决定复制手机号还是验证码
+// 双触发：短按走 touchend，长按走 500ms 定时器（绕过鸿蒙 touchcancel 问题）
+let _tapCtx = null;   // { x, y, moved, idx, rowEl }
+let _tapTimer = null;
+let _lastCopyTs = 0;
+
+function _fireCopy() {
+  if (!_tapCtx || _tapCtx.moved) return;
+  const idx = _tapCtx.idx;
+  // 根据 col-code 列的实际位置决定复制什么
+  const codeTd = _tapCtx.rowEl.querySelector('.col-code');
+  const codeRect = codeTd ? codeTd.getBoundingClientRect() : null;
+  _lastCopyTs = Date.now();
+  if (codeRect && _tapCtx.x >= codeRect.left) {
+    // 点击在验证码列 → 复制验证码
+    if (rows[idx] && rows[idx].code) doCopyCode(idx);
+  } else {
+    // 点击在手机号区域 → 复制手机号
+    if (!isRowLocked(idx)) doCopyPhone(idx);
+  }
+}
+
+function rowTap(idx, e) {
+  // 点在按钮/输入框上直接跳过，不干扰按钮点击
+  if (e.target.closest('.col-actions, button, input, select')) {
+    clearTimeout(_tapTimer); _tapTimer = null; _tapCtx = null;
+    return;
+  }
+  if (e.touches.length !== 1) return;
+  clearTimeout(_tapTimer);
+  const t = e.touches[0];
+  _tapCtx = { x: t.clientX, y: t.clientY, moved: false, idx, rowEl: e.currentTarget };
+  // 长按 500ms 触发（手指还在屏幕上时复制，绕过鸿蒙 touchcancel）
+  _tapTimer = setTimeout(() => { _tapTimer = null; _fireCopy(); }, 500);
+}
+
+function moveTap(e) {
+  if (!_tapCtx || !e.touches.length) return;
+  // 15px 阈值，容忍长按时的手指抖动
+  if (Math.abs(e.touches[0].clientX - _tapCtx.x) > 15 ||
+      Math.abs(e.touches[0].clientY - _tapCtx.y) > 15) {
+    _tapCtx.moved = true;
+    clearTimeout(_tapTimer);
+    _tapTimer = null;
+  }
+}
+
+function endTap(e) {
+  // 短按（定时器未到 500ms）：立即复制
+  if (_tapTimer !== null) {
+    clearTimeout(_tapTimer);
+    _tapTimer = null;
+    _fireCopy();
+  }
+  // 长按（定时器已触发）：复制已完成，什么都不做
+  _tapCtx = null;
+}
+
+function cancelTap() {
+  // touchcancel（鸿蒙长按后系统接管）：定时器已触发则复制已完成，否则放弃
+  clearTimeout(_tapTimer);
+  _tapTimer = null;
+  _tapCtx = null;
+}
+
+// ---- Long press copy (unified for phone & code) ----
+let lpTimer = null;
+let lpStartX = 0;
+let lpStartY = 0;
+const LP_DELAY = 500;
+const LP_MOVE_THRESHOLD = 10; // px moved = cancel
+
+function lpTouchStart(e, callback) {
+  e.preventDefault(); // 阻止浏览器原生长按选中
+  const touch = e.touches[0];
+  lpStartX = touch.clientX;
+  lpStartY = touch.clientY;
+  clearTimeout(lpTimer);
+  lpTimer = setTimeout(() => {
+    lpTimer = null;
+    callback();
+  }, LP_DELAY);
+}
+
+function lpTouchMove(e) {
+  if (!lpTimer) return;
+  const touch = e.touches[0];
+  const dx = Math.abs(touch.clientX - lpStartX);
+  const dy = Math.abs(touch.clientY - lpStartY);
+  if (dx > LP_MOVE_THRESHOLD || dy > LP_MOVE_THRESHOLD) {
+    clearTimeout(lpTimer);
+    lpTimer = null;
+  }
+}
+
+function lpTouchEnd(e) {
+  if (e) e.preventDefault();
+  clearTimeout(lpTimer);
+  lpTimer = null;
+}
+
+// Phone: long press copy + auto refresh
+function phoneTouchStart(idx, e) { lpTouchStart(e, () => doCopyPhone(idx)); }
+function phoneTouchEnd(idx, e) { lpTouchEnd(e); }
+function phoneTouchMove(e) { lpTouchMove(e); }
+function phoneClick(idx, e) {
+  if (e) e.preventDefault();
+  if (isRowLocked(idx)) return;
+  if (Date.now() - _lastCopyTs < 200) return; // already handled by touchend
+  doCopyPhone(idx);
+}
+
+function doCopyPhone(idx) {
+  const row = rows[idx];
+  doCopyText(row.phone);
+  if (autoRefreshOnCopy && !row.code && !singleTimers[idx]) fetchSingle(idx);
+}
+
+// Code: long press copy
+function codeTouchStart(idx, e) { lpTouchStart(e, () => doCopyCode(idx)); }
+function codeTouchEnd(idx, e) { lpTouchEnd(e); }
+function codeTouchMove(e) { lpTouchMove(e); }
+function codeClick(idx, e) {
+  if (e) e.preventDefault();
+  if (Date.now() - _lastCopyTs < 200) return; // already handled by touchend
+  doCopyCode(idx);
+}
+
+function doCopyCode(idx) {
+  const code = rows[idx].code;
+  if (!code) return;
+  doCopyText(code);
+}
+
+function doCopyText(text) {
+  // Always try synchronous execCommand first (must be in user gesture, works on mobile)
+  const ta = document.createElement('textarea');
+  ta.value = text;
+  ta.style.cssText = 'position:fixed;left:-9999px;top:-9999px;opacity:0;pointer-events:none';
+  ta.setAttribute('readonly', '');
+  document.body.appendChild(ta);
+  ta.focus();
+  ta.select();
+  // iOS needs setSelectionRange
+  ta.setSelectionRange(0, text.length);
+  let ok = false;
+  try { ok = document.execCommand('copy'); } catch(e) {}
+  document.body.removeChild(ta);
+
+  if (ok) {
+    showToast('已复制: ' + text);
+    // Also try modern API in background for extra reliability
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(text).catch(() => {});
+    }
+    return;
+  }
+
+  // Fallback: modern clipboard API
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(text).then(() => {
+      showToast('已复制: ' + text);
+    }).catch(() => {
+      showToast('复制失败，请手动复制: ' + text);
+    });
+  } else {
+    showToast('复制失败，请手动复制: ' + text);
+  }
+}
+
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(t._timer);
+  t._timer = setTimeout(() => { t.classList.remove('show'); }, 1500);
+}
+
+function stopSingleFetch(idx) {
+  if (singleTimers[idx]) {
+    clearInterval(singleTimers[idx]);
+    delete singleTimers[idx];
+  }
+  renderRow(idx);
+}
+
+function stopAllSingleFetches() {
+  Object.keys(singleTimers).forEach(idx => {
+    clearInterval(singleTimers[idx]);
+  });
+  singleTimers = {};
+}
+
+function fetchWithTimeout(targetUrl, timeout) {
+  // Use local proxy to bypass CORS
+  const proxyUrl = '/proxy?url=' + encodeURIComponent(targetUrl);
+  return Promise.race([
+    fetch(proxyUrl),
+    new Promise((_, reject) => setTimeout(() => reject(new Error('超时')), timeout))
+  ]);
+}
+
+function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+// ---- Status ----
+function setStatus(idx, status) {
+  // Toggle off: clicking same status removes it
+  if (rows[idx].status === status) {
+    // Sequential mode: only allow unmarking if no later row is still pending
+    if (sequentialMode) {
+      for (let i = idx + 1; i < rows.length; i++) {
+        if (rows[i].status === 'done' || rows[i].status === 'error') {
+          showToast('逐条模式下请先取消后面的标记');
+          return;
+        }
+      }
+    }
+    rows[idx].status = 'pending';
+    rows[idx].errorNote = '';
+  } else {
+    rows[idx].status = status;
+    if (status !== 'error') rows[idx].errorNote = '';
+  }
+  if (sequentialMode) {
+    render();
+  } else {
+    renderRow(idx);
+    updateStats();
+  }
+}
+
+function setErrorNote(idx, note) {
+  rows[idx].errorNote = note;
+  saveToLocal();
+}
+
+// ---- Delete with Confirmation ----
+let pendingDeleteIdx = -1;
+
+function askDeleteRow(idx) {
+  pendingDeleteIdx = idx;
+  const input = document.getElementById('deleteConfirmInput');
+  const btn = document.getElementById('deleteConfirmBtn');
+  input.value = '';
+  btn.classList.remove('enabled');
+  document.getElementById('deleteConfirm').classList.add('show');
+  setTimeout(() => input.focus(), 100);
+}
+
+function closeDeleteConfirm() {
+  document.getElementById('deleteConfirm').classList.remove('show');
+  pendingDeleteIdx = -1;
+}
+
+document.getElementById('deleteConfirmInput').addEventListener('input', function() {
+  const btn = document.getElementById('deleteConfirmBtn');
+  if (this.value.trim() === '删除') {
+    btn.classList.add('enabled');
+  } else {
+    btn.classList.remove('enabled');
+  }
+});
+
+document.getElementById('deleteConfirmInput').addEventListener('keydown', function(e) {
+  if (e.key === 'Enter' && this.value.trim() === '删除') confirmDelete();
+  if (e.key === 'Escape') closeDeleteConfirm();
+});
+
+document.getElementById('deleteConfirm').addEventListener('click', function(e) {
+  if (e.target === this) closeDeleteConfirm();
+});
+
+function confirmDelete() {
+  if (pendingDeleteIdx < 0 || pendingDeleteIdx >= rows.length) { closeDeleteConfirm(); return; }
+  stopSingleFetch(pendingDeleteIdx);
+  rows.splice(pendingDeleteIdx, 1);
+  const newTimers = {};
+  Object.keys(singleTimers).forEach(k => {
+    const ki = parseInt(k);
+    if (ki > pendingDeleteIdx) newTimers[ki - 1] = singleTimers[k];
+    else if (ki < pendingDeleteIdx) newTimers[ki] = singleTimers[k];
+  });
+  singleTimers = newTimers;
+  closeDeleteConfirm();
+  render();
+}
+
+// ---- Render ----
+function render() {
+  const tbody = document.getElementById('dataBody');
+
+  if (rows.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="7" class="empty-state">暂无数据，请导入数据</td></tr>';
+    updateStats();
+    return;
+  }
+
+  tbody.innerHTML = rows.map((row, i) => buildRowHtml(row, i)).join('');
+  updateStats();
+  saveToLocal();
+}
+
+function renderRow(idx) {
+  const tbody = document.getElementById('dataBody');
+  const tr = tbody.children[idx];
+  if (!tr) { render(); return; }
+  tr.outerHTML = buildRowHtml(rows[idx], idx);
+}
+
+function buildRowHtml(row, i) {
+  const urlShort = row.url.length > 50 ? row.url.substring(0, 50) + '...' : row.url;
+  const typeLabel = row.urlType === 1 ? '<span style="color:#1677ff;font-size:11px">[xhs]</span>' : '<span style="color:#52c41a;font-size:11px">[sms8]</span>';
+
+  const locked = isRowLocked(i);
+
+  let codeHtml = '';
+  if (row.code) {
+    codeHtml = locked
+      ? `<span class="code-cell">${esc(row.code)}</span>`
+      : `<span class="code-cell code-copyable" data-idx="${i}" onclick="codeClick(${i},event)" title="点击复制验证码">${esc(row.code)}</span>`;
+  } else if (row.rawResponse && row.rawResponse.startsWith('获取中')) {
+    codeHtml = `<span class="code-cell loading">${esc(row.rawResponse)}</span>`;
+  } else if (row.rawResponse && row.rawResponse.startsWith('请求失败')) {
+    codeHtml = `<span class="code-cell error" style="cursor:pointer" onclick="showResponse(${i})" title="点击查看详情">请求失败</span>`;
+  } else if (row.rawResponse) {
+    codeHtml = `<span class="code-cell error" style="cursor:pointer" onclick="showResponse(${i})" title="点击查看响应">未获取到</span>`;
+  } else {
+    codeHtml = '<span style="color:#ccc">-</span>';
+  }
+
+  const doneCls = row.status === 'done' ? ' active-done' : '';
+  const errCls = row.status === 'error' ? ' active-error' : '';
+
+  // Row background: error > done > fetched > default
+  let rowCls = '';
+  if (row.status === 'error') rowCls = 'row-error';
+  else if (row.status === 'done') rowCls = 'row-done';
+  else if (row.code) rowCls = 'row-fetched';
+  if (locked) rowCls += ' row-locked';
+
+  // Show account (小红书号) as small label on mobile (col-account hidden on mobile)
+  const acctLabel = row.account ? `<div class="phone-acct-label">${esc(row.account)}</div>` : '';
+
+  const phoneHtml = `${acctLabel}<div class="phone-cell">${esc(row.phone)}</div>`;
+
+  // Follower status shown in followers cell
+  let followersHtml = '';
+  if (row._followersLoading) {
+    const loadMsg = typeof row._followersLoading === 'string' ? row._followersLoading : '查询中...';
+    followersHtml = `<span class="follower-status">${esc(loadMsg)}</span>`;
+  } else if (row._followersError) {
+    followersHtml = `<span class="follower-status error" title="${esc(row._followersError)}">${esc(row._followersError)}</span>`;
+  } else if (row.followers) {
+    followersHtml = `<span class="followers-cell">${esc(row.followers)}</span>`;
+  } else {
+    followersHtml = '<span style="color:#ccc">-</span>';
+  }
+
+  return `<tr class="${rowCls}" ontouchstart="rowTap(${i},event)" ontouchmove="moveTap(event)" ontouchend="endTap(event)" ontouchcancel="cancelTap()">
+    <td class="col-index">${i + 1}</td>
+    <td class="col-account">${esc(row.account)}</td>
+    <td class="col-followers">${followersHtml}</td>
+    <td class="col-phone"${locked ? '' : ` onclick="phoneClick(${i},event)" style="cursor:pointer"`}>${phoneHtml}</td>
+    <td class="col-url">${typeLabel} <span class="url-text" title="${esc(row.url)}">${esc(urlShort)}</span></td>
+    <td class="col-code">${codeHtml}</td>
+    <td class="col-actions">
+      ${singleTimers[i]
+        ? `<button class="mini-btn active-error" onclick="fetchSingle(${i})">停止</button>`
+        : `<button class="mini-btn" onclick="fetchSingle(${i})">刷新</button>`}
+      ${row._followersLoading
+        ? `<button class="mini-btn active-error" onclick="toggleFollowerQuery(${i})" title="停止查询" style="color:#ff4d4f;border-color:#ff4d4f">停止</button>`
+        : `<button class="mini-btn${xhsReady ? '' : ' disabled-fans'}" onclick="toggleFollowerQuery(${i})" title="查询粉丝数" style="color:#722ed1;border-color:#722ed1">粉丝</button>`}
+      <button class="mini-btn${doneCls}" onclick="setStatus(${i},'done')">完成</button>
+      <button class="mini-btn${errCls}" onclick="setStatus(${i},'error')">异常</button>
+      <button class="mini-btn" onclick="askDeleteRow(${i})">删除</button>
+      ${row.status === 'error' ? `<input class="error-input" type="text" placeholder="备注..." value="${esc(row.errorNote)}" onchange="setErrorNote(${i}, this.value)">` : ''}
+    </td>
+  </tr>`;
+}
+
+function updateStats() {
+  document.getElementById('statTotal').textContent = rows.length;
+  document.getElementById('statFetched').textContent = rows.filter(r => r.code).length;
+  document.getElementById('statDone').textContent = rows.filter(r => r.status === 'done').length;
+  document.getElementById('statError').textContent = rows.filter(r => r.status === 'error').length;
+  saveToLocal();
+}
+
+function esc(str) {
+  if (!str) return '';
+  return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+
+// ---- Modal ----
+function showResponse(idx) {
+  document.getElementById('modalTitle').textContent = rows[idx].account + ' - ' + rows[idx].phone;
+  let content = rows[idx].rawResponse;
+  try { content = JSON.stringify(JSON.parse(content), null, 2); } catch(e) {}
+  document.getElementById('modalContent').textContent = content;
+  document.getElementById('responseModal').classList.add('show');
+}
+
+function closeModal() {
+  document.getElementById('responseModal').classList.remove('show');
+}
+
+document.getElementById('responseModal').addEventListener('click', function(e) {
+  if (e.target === this) closeModal();
+});
+
+// ---- Export ----
+function exportData() {
+  if (rows.length === 0) { alert('没有数据可导出'); return; }
+
+  let csv = '账号,粉丝数,手机号,URL,验证码,状态,异常原因\n';
+  rows.forEach(r => {
+    const status = r.status === 'done' ? '已完成' : r.status === 'error' ? '异常' : '待处理';
+    csv += `"${r.account}","${r.followers || ''}","${r.phone}","${r.url}","${r.code}","${status}","${r.errorNote}"\n`;
+  });
+
+  const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `验证码结果_${new Date().toISOString().slice(0,10)}.csv`;
+  a.click();
+  URL.revokeObjectURL(a.href);
+}
+
+// ---- XHS Follower Query (via xhs-fans-server API) ----
+let fetchingFollowers = false;
+const followerAbortMap = new Map(); // rowIndex -> AbortController
+let xhsLoginPollTimer = null;
+const XHS_API_BASE = location.port === '3457' ? '' : location.protocol + '//' + location.hostname + ':3457';
+
+function getXhsCode() { return currentUserId || ''; }
+
+// ---- XHS Status Management ----
+function setXhsState(state, nickname) {
+  const wasReady = xhsReady;
+  xhsReady = (state === 'ok');
+  const dot = document.getElementById('xhsDot');
+  const statusEl = document.getElementById('xhsStatus');
+  const loginBtn = document.getElementById('xhsLoginBtn');
+  const logoutBtn = document.getElementById('xhsLogoutBtn');
+  const batchBtn = document.getElementById('fetchFollowersBtn');
+
+  dot.className = 'xhs-bar-dot ' + (state === 'ok' ? 'ok' : state === 'expired' ? 'expired' : 'off');
+  statusEl.className = 'xhs-bar-status ' + (state === 'ok' ? 'ok' : state === 'expired' ? 'expired' : 'off');
+
+  if (state === 'ok') {
+    statusEl.textContent = '已登录' + (nickname ? '(' + nickname + ')' : '');
+    loginBtn.textContent = '重新登录';
+    logoutBtn.style.display = '';
+    batchBtn.disabled = false;
+  } else if (state === 'expired') {
+    statusEl.textContent = '已过期';
+    loginBtn.textContent = '重新登录';
+    logoutBtn.style.display = '';
+    batchBtn.disabled = true;
+  } else if (state === 'offline') {
+    statusEl.textContent = '服务未连接';
+    loginBtn.textContent = '扫码登录';
+    logoutBtn.style.display = 'none';
+    batchBtn.disabled = true;
+  } else {
+    statusEl.textContent = '未登录';
+    loginBtn.textContent = '扫码登录';
+    logoutBtn.style.display = 'none';
+    batchBtn.disabled = true;
+  }
+  // Only re-render rows if state changed (avoid disrupting user input)
+  if (wasReady !== xhsReady) render();
+}
+
+async function checkXhsStatus() {
+  const code = getXhsCode();
+  if (!code) { setXhsState('off'); return; }
+  try {
+    const res = await fetch(XHS_API_BASE + '/api/auth/check?code=' + code);
+    const data = await res.json();
+    if (data.exists && !data.loginExpired) {
+      setXhsState('ok', data.nickname);
+    } else if (data.loginExpired) {
+      setXhsState('expired');
+    } else {
+      setXhsState('off');
+    }
+  } catch(e) {
+    setXhsState('offline');
+  }
+}
+
+function xhsLoginClick() {
+  const code = getXhsCode();
+  if (!code) { showToast('请先创建编号'); return; }
+  showXhsLogin(code);
+}
+
+let currentLoginToken = null;
+
+async function showXhsLogin(code) {
+  const overlay = document.getElementById('xhsLoginOverlay');
+  const qrBox = document.getElementById('xhsQrBox');
+  const smsBox = document.getElementById('xhsSmsBox');
+  const statusEl = document.getElementById('xhsLoginStatus');
+  const descEl = document.getElementById('xhsDesc');
+
+  // Clear any existing poll timer from previous open
+  if (xhsLoginPollTimer) { clearInterval(xhsLoginPollTimer); xhsLoginPollTimer = null; }
+  currentLoginToken = null;
+
+  overlay.classList.add('show');
+  qrBox.style.display = '';
+  qrBox.innerHTML = '<span style="color:#999">加载二维码...</span>';
+  smsBox.style.display = 'none';
+  descEl.textContent = '请用小红书App扫描下方二维码';
+  statusEl.textContent = '';
+  statusEl.className = 'xhs-status';
+
+  try {
+    const res = await fetch(XHS_API_BASE + '/api/login/start?code=' + code);
+    const data = await res.json();
+    if (data.error) { statusEl.textContent = data.error; statusEl.className = 'xhs-status error'; return; }
+    if (data.qrImage) {
+      qrBox.innerHTML = `<img src="${data.qrImage}" alt="扫码登录">`;
+    } else {
+      qrBox.innerHTML = '<span style="color:#ff4d4f">二维码获取失败</span>';
+      return;
+    }
+    statusEl.textContent = '等待扫码...';
+    currentLoginToken = data.loginToken;
+    xhsLoginPollTimer = setInterval(async () => {
+      try {
+        const r = await fetch(XHS_API_BASE + '/api/login/check?token=' + currentLoginToken);
+        const d = await r.json();
+        if (d.status === 'success') {
+          clearInterval(xhsLoginPollTimer); xhsLoginPollTimer = null;
+          statusEl.textContent = '登录成功！';
+          statusEl.className = 'xhs-status success';
+          setTimeout(() => { closeXhsLogin(); checkXhsStatus(); }, 800);
+        } else if (d.status === 'need_sms_code') {
+          // Show SMS verification UI
+          clearInterval(xhsLoginPollTimer); xhsLoginPollTimer = null;
+          descEl.textContent = '扫码成功，请输入短信验证码';
+          qrBox.style.display = 'none';
+          if (d.screenshot) {
+            qrBox.style.display = '';
+            qrBox.innerHTML = `<img src="${d.screenshot}" alt="验证页面" style="max-height:200px;opacity:0.6">`;
+          }
+          smsBox.style.display = '';
+          document.getElementById('xhsSmsInput').value = '';
+          document.getElementById('xhsSmsInput').focus();
+          if (d.phoneHint) {
+            document.getElementById('xhsPhoneHint').textContent = '(' + d.phoneHint + ')';
+          }
+          statusEl.textContent = '已发送短信验证码，请查收';
+          statusEl.className = 'xhs-status';
+        } else if (d.status === 'expired') {
+          clearInterval(xhsLoginPollTimer); xhsLoginPollTimer = null;
+          statusEl.textContent = '已过期，请关闭后重试';
+          statusEl.className = 'xhs-status error';
+        } else if (d.qrImage) {
+          qrBox.innerHTML = `<img src="${d.qrImage}" alt="扫码登录">`;
+        }
+      } catch(e) {}
+    }, 3000);
+  } catch(e) {
+    statusEl.textContent = '连接失败: ' + e.message;
+    statusEl.className = 'xhs-status error';
+  }
+}
+
+async function submitXhsSmsCode() {
+  const smsCode = document.getElementById('xhsSmsInput').value.trim();
+  if (!smsCode) { showToast('请输入验证码'); return; }
+  if (!currentLoginToken) { showToast('登录会话已失效'); return; }
+
+  const statusEl = document.getElementById('xhsLoginStatus');
+  statusEl.textContent = '提交验证码...';
+  statusEl.className = 'xhs-status';
+
+  try {
+    const r = await fetch(XHS_API_BASE + '/api/login/submit-code?token=' + currentLoginToken + '&code=' + encodeURIComponent(smsCode));
+    const d = await r.json();
+
+    if (d.status === 'success') {
+      statusEl.textContent = '登录成功！';
+      statusEl.className = 'xhs-status success';
+      setTimeout(() => { closeXhsLogin(); checkXhsStatus(); }, 800);
+    } else if (d.status === 'sms_error') {
+      statusEl.textContent = d.error || '验证码错误，请重试';
+      statusEl.className = 'xhs-status error';
+      document.getElementById('xhsSmsInput').value = '';
+      document.getElementById('xhsSmsInput').focus();
+    } else if (d.status === 'sms_submitted') {
+      statusEl.textContent = '验证中...';
+      // Start polling again to check if login succeeds
+      xhsLoginPollTimer = setInterval(async () => {
+        try {
+          const r2 = await fetch(XHS_API_BASE + '/api/login/check?token=' + currentLoginToken);
+          const d2 = await r2.json();
+          if (d2.status === 'success') {
+            clearInterval(xhsLoginPollTimer); xhsLoginPollTimer = null;
+            statusEl.textContent = '登录成功！';
+            statusEl.className = 'xhs-status success';
+            setTimeout(() => { closeXhsLogin(); checkXhsStatus(); }, 800);
+          } else if (d2.status === 'need_sms_code') {
+            clearInterval(xhsLoginPollTimer); xhsLoginPollTimer = null;
+            statusEl.textContent = '验证码错误，请重新输入';
+            statusEl.className = 'xhs-status error';
+            document.getElementById('xhsSmsInput').value = '';
+            document.getElementById('xhsSmsInput').focus();
+          }
+        } catch(e) {}
+      }, 2000);
+    } else if (d.error) {
+      statusEl.textContent = d.error;
+      statusEl.className = 'xhs-status error';
+    }
+  } catch(e) {
+    statusEl.textContent = '提交失败: ' + e.message;
+    statusEl.className = 'xhs-status error';
+  }
+}
+
+async function logoutXhs() {
+  const code = getXhsCode();
+  if (!code) return;
+  try {
+    await fetch(XHS_API_BASE + '/api/auth/logout?code=' + code, { method: 'POST' });
+  } catch(e) {}
+  setXhsState('off');
+  showToast('已退出小红书登录');
+}
+
+function closeXhsLogin() {
+  if (xhsLoginPollTimer) { clearInterval(xhsLoginPollTimer); xhsLoginPollTimer = null; }
+  document.getElementById('xhsLoginOverlay').classList.remove('show');
+}
+
+document.getElementById('xhsLoginOverlay').addEventListener('click', function(e) {
+  if (e.target === this) closeXhsLogin();
+});
+
+// ---- Follower Query ----
+function toggleFollowerQuery(rowOrIdx) {
+  const idx = typeof rowOrIdx === 'number' ? rowOrIdx : rows.indexOf(rowOrIdx);
+  if (idx < 0) return;
+  const row = rows[idx];
+
+  // If already loading, abort it
+  if (row._followersLoading && followerAbortMap.has(idx)) {
+    followerAbortMap.get(idx).abort();
+    followerAbortMap.delete(idx);
+    row._followersLoading = false;
+    row._followersError = '已停止';
+    renderRow(idx);
+    return;
+  }
+
+  if (!xhsReady) { showToast('请先登录小红书'); return; }
+  fetchOneFollower(row);
+}
+
+async function fetchOneFollower(row, _retry) {
+  if (!xhsReady) { showToast('请先登录小红书'); return; }
+  const idx = rows.indexOf(row);
+  if (idx < 0) return;
+  const code = getXhsCode();
+
+  const ac = new AbortController();
+  followerAbortMap.set(idx, ac);
+
+  row._followersLoading = _retry ? '重试中...' : '查询中...';
+  row._followersError = '';
+  renderRow(idx);
+
+  try {
+    const account = row.account.trim();
+    if (!account) { row._followersError = '账号为空'; row._followersLoading = false; followerAbortMap.delete(idx); renderRow(idx); return; }
+
+    const res = await fetch(XHS_API_BASE + '/api/query?id=' + encodeURIComponent(account) + '&code=' + encodeURIComponent(code), { signal: ac.signal });
+    const data = await res.json();
+
+    if (res.status === 401 && data.needLogin) {
+      row._followersError = '登录过期';
+      setXhsState('expired');
+      showToast('小红书登录已过期，请重新扫码');
+      return;
+    } else if (res.status === 429) {
+      row._followersError = '请稍后重试';
+    } else if (data.success) {
+      row.followers = data.fans || '0';
+    } else {
+      // 查询失败，自动重试一次
+      if (!_retry) {
+        followerAbortMap.delete(idx);
+        await sleep(1500);
+        return fetchOneFollower(row, true);
+      }
+      row._followersError = data.error || '未找到';
+    }
+  } catch(err) {
+    if (err.name === 'AbortError') {
+      return; // already handled in toggleFollowerQuery
+    } else if (err.message === 'Failed to fetch' || err.message.includes('NetworkError')) {
+      row._followersError = '服务未连接';
+      setXhsState('offline');
+    } else {
+      // 网络错误，自动重试一次
+      if (!_retry) {
+        followerAbortMap.delete(idx);
+        await sleep(1500);
+        return fetchOneFollower(row, true);
+      }
+      row._followersError = err.message || '请求失败';
+    }
+  }
+
+  followerAbortMap.delete(idx);
+  row._followersLoading = false;
+  renderRow(idx);
+}
+
+async function startFetchFollowers() {
+  if (fetchingFollowers) return;
+  if (!xhsReady) { showToast('请先登录小红书'); return; }
+
+  const pending = rows.filter(r => !r.followers && r.account);
+  if (pending.length === 0) { showToast('没有需要查询的账号'); return; }
+
+  fetchingFollowers = true;
+  document.getElementById('fetchFollowersBtn').disabled = true;
+  document.getElementById('stopFollowersBtn').disabled = false;
+  showToast(`开始查询 ${pending.length} 个账号的粉丝数`);
+
+  const queue = [...pending];
+  while (fetchingFollowers && queue.length > 0) {
+    if (!xhsReady) {
+      showToast('小红书登录已过期，批量查询已停止');
+      break;
+    }
+    const row = queue.shift();
+    await fetchOneFollower(row);
+    updateStats();
+    if (fetchingFollowers && queue.length > 0) await sleep(2000);
+  }
+
+  stopFetchFollowers();
+}
+
+function stopFetchFollowers() {
+  fetchingFollowers = false;
+  // Abort any in-flight single query
+  for (const [idx, ac] of followerAbortMap) {
+    ac.abort();
+    if (rows[idx]) { rows[idx]._followersLoading = false; rows[idx]._followersError = '已停止'; }
+  }
+  followerAbortMap.clear();
+  document.getElementById('fetchFollowersBtn').disabled = !xhsReady;
+  document.getElementById('stopFollowersBtn').disabled = true;
+  updateStats();
+  render();
+}
+
+// Check XHS status on load and periodically
+setTimeout(checkXhsStatus, 1000);
+setInterval(checkXhsStatus, 60000);
+
+// ---- Keyboard ----
+document.addEventListener('keydown', function(e) {
+  if (e.key === 'Escape') { closeModal(); closeDeleteConfirm(); closeXhsLogin(); }
+});
+
+// ---- Prevent text selection everywhere (except inputs) ----
+document.addEventListener('selectstart', function(e) {
+  if (!e.target.matches('input, textarea, [contenteditable], [contenteditable] *')) e.preventDefault();
+});
+document.addEventListener('contextmenu', function(e) {
+  if (!e.target.matches('input, textarea, [contenteditable], [contenteditable] *')) e.preventDefault();
+});
+// Nuclear option: immediately clear any selection that forms outside inputs
+document.addEventListener('selectionchange', function() {
+  const sel = window.getSelection();
+  if (!sel || sel.rangeCount === 0 || sel.toString().length === 0) return;
+  const node = sel.anchorNode;
+  const el = node ? (node.nodeType === 3 ? node.parentElement : node) : null;
+  if (!el || !el.closest('input, textarea, [contenteditable]')) {
+    sel.removeAllRanges();
+  }
+});
+
+// ---- Save & restore scroll position ----
+(function() {
+  const SCROLL_KEY = 'sms_tool_scroll_y';
+  // Restore on load
+  const savedY = parseInt(localStorage.getItem(SCROLL_KEY) || '0', 10);
+  if (savedY > 0) {
+    // Wait for render to complete before restoring
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => { window.scrollTo(0, savedY); });
+    });
+  }
+  // Save on scroll (throttled)
+  let scrollTimer = null;
+  window.addEventListener('scroll', function() {
+    if (scrollTimer) return;
+    scrollTimer = setTimeout(() => {
+      localStorage.setItem(SCROLL_KEY, Math.round(window.scrollY));
+      scrollTimer = null;
+    }, 200);
+  }, { passive: true });
+  // Save immediately when switching away
+  document.addEventListener('visibilitychange', function() {
+    if (document.hidden) {
+      localStorage.setItem(SCROLL_KEY, Math.round(window.scrollY));
+    } else {
+      // Restore when coming back (in case browser reset it)
+      const y = parseInt(localStorage.getItem(SCROLL_KEY) || '0', 10);
+      if (y > 0 && Math.abs(window.scrollY - y) > 50) {
+        requestAnimationFrame(() => { window.scrollTo(0, y); });
+      }
+    }
+  });
+  // Also save on page hide (before browser may unload)
+  window.addEventListener('pagehide', function() {
+    localStorage.setItem(SCROLL_KEY, Math.round(window.scrollY));
+  });
+})();
+</script>
+
+</body>
+</html>

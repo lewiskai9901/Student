@@ -54,6 +54,11 @@ public class UpdateUserCommand {
     private Long orgUnitId;
 
     /**
+     * 用户类型编码
+     */
+    private String userTypeCode;
+
+    /**
      * 角色ID列表
      */
     private List<Long> roleIds;

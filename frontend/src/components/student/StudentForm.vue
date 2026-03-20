@@ -500,13 +500,10 @@ const classList = ref<any[]>([])
 const gradeDirections = ref<any[]>([])
 const departmentList = ref<any[]>([])
 
-// 扁平化部门树为列表（只保留教学单位）
+// 扁平化部门树为列表
 const flattenDepartments = (nodes: any[], result: any[] = []): any[] => {
   for (const node of nodes) {
-    // 只添加教学单位（ACADEMIC）或 DEPARTMENT 类型
-    if (node.unitCategory === 'ACADEMIC' || node.unitType === 'DEPARTMENT') {
-      result.push(node)
-    }
+    result.push(node)
     if (node.children && node.children.length > 0) {
       flattenDepartments(node.children, result)
     }
@@ -521,7 +518,7 @@ const filteredClassList = computed(() => {
 
   // 根据部门（orgUnitId）过滤班级
   return classList.value.filter(c => {
-    return Number(c.orgUnitId) === Number(formData.orgUnitId)
+    return String(c.orgUnitId) === String(formData.orgUnitId)
   })
 })
 
@@ -612,7 +609,7 @@ const loadGradeDirections = async (academicYear: number) => {
 // 专业方向变更处理
 const handleMajorDirectionChange = () => {
   if (formData.majorDirectionId) {
-    const selected = gradeDirections.value.find(d => Number(d.majorDirectionId) === Number(formData.majorDirectionId))
+    const selected = gradeDirections.value.find(d => String(d.majorDirectionId) === String(formData.majorDirectionId))
     if (selected) {
       // 处理分段培养情况
       if (selected.isSegmented === 1) {

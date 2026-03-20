@@ -1,34 +1,33 @@
-package com.school.management.infrastructure.persistence.space;
+package com.school.management.infrastructure.persistence.place;
 
-import com.school.management.domain.space.model.entity.UniversalSpaceType;
-import com.school.management.domain.space.repository.UniversalSpaceTypeRepository;
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.school.management.domain.place.model.entity.UniversalPlaceType;
+import com.school.management.domain.place.repository.UniversalPlaceTypeRepository;
+import com.school.management.infrastructure.shared.TypeJsonUtils;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Repository;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Optional;
+import java.util.*;
 import java.util.stream.Collectors;
 
 /**
- * 通用空间类型仓储实现
+ * 通用场所类型仓储实现（统一类型系统 Phase 3）
  */
+@Slf4j
 @Repository
-public class UniversalSpaceTypeRepositoryImpl implements UniversalSpaceTypeRepository {
+public class UniversalPlaceTypeRepositoryImpl implements UniversalPlaceTypeRepository {
 
-    private final UniversalSpaceTypeMapper mapper;
+    private final UniversalPlaceTypeMapper mapper;
     private final ObjectMapper objectMapper;
 
-    public UniversalSpaceTypeRepositoryImpl(UniversalSpaceTypeMapper mapper, ObjectMapper objectMapper) {
+    public UniversalPlaceTypeRepositoryImpl(UniversalPlaceTypeMapper mapper, ObjectMapper objectMapper) {
         this.mapper = mapper;
         this.objectMapper = objectMapper;
     }
 
     @Override
-    public UniversalSpaceType save(UniversalSpaceType spaceType) {
-        UniversalSpaceTypePO po = toPO(spaceType);
+    public UniversalPlaceType save(UniversalPlaceType placeType) {
+        UniversalPlaceTypePO po = toPO(placeType);
         if (po.getId() == null) {
             mapper.insert(po);
         } else {
@@ -38,49 +37,38 @@ public class UniversalSpaceTypeRepositoryImpl implements UniversalSpaceTypeRepos
     }
 
     @Override
-    public Optional<UniversalSpaceType> findById(Long id) {
-        UniversalSpaceTypePO po = mapper.selectById(id);
-        return Optional.ofNullable(po).map(this::toDomain);
+    public Optional<UniversalPlaceType> findById(Long id) {
+        return Optional.ofNullable(mapper.selectById(id)).map(this::toDomain);
     }
 
     @Override
-    public Optional<UniversalSpaceType> findByTypeCode(String typeCode) {
-        UniversalSpaceTypePO po = mapper.findByTypeCode(typeCode);
-        return Optional.ofNullable(po).map(this::toDomain);
+    public Optional<UniversalPlaceType> findByTypeCode(String typeCode) {
+        return Optional.ofNullable(mapper.findByTypeCode(typeCode)).map(this::toDomain);
     }
 
     @Override
-    public List<UniversalSpaceType> findAll() {
-        return mapper.selectList(null).stream()
-                .map(this::toDomain)
-                .collect(Collectors.toList());
+    public List<UniversalPlaceType> findAll() {
+        return mapper.selectList(null).stream().map(this::toDomain).collect(Collectors.toList());
     }
 
     @Override
-    public List<UniversalSpaceType> findAllEnabled() {
-        return mapper.findAllEnabled().stream()
-                .map(this::toDomain)
-                .collect(Collectors.toList());
+    public List<UniversalPlaceType> findAllEnabled() {
+        return mapper.findAllEnabled().stream().map(this::toDomain).collect(Collectors.toList());
     }
 
     @Override
-    public List<UniversalSpaceType> findAllRootTypes() {
-        return mapper.findAllRootTypes().stream()
-                .map(this::toDomain)
-                .collect(Collectors.toList());
+    public List<UniversalPlaceType> findAllRootTypes() {
+        return mapper.findAllRootTypes().stream().map(this::toDomain).collect(Collectors.toList());
     }
 
     @Override
-    public List<UniversalSpaceType> findAllowedChildTypes(String parentTypeCode) {
-        Optional<UniversalSpaceType> parentOpt = findByTypeCode(parentTypeCode);
-        if (parentOpt.isEmpty()) {
-            return new ArrayList<>();
-        }
-        List<String> allowedCodes = parentOpt.get().getAllowedChildTypes();
-        if (allowedCodes == null || allowedCodes.isEmpty()) {
-            return new ArrayList<>();
-        }
-        return findByTypeCodes(allowedCodes);
+    public List<UniversalPlaceType> findByParentTypeCode(String parentTypeCode) {
+        return mapper.findByParentTypeCode(parentTypeCode).stream().map(this::toDomain).collect(Collectors.toList());
+    }
+
+    @Override
+    public List<UniversalPlaceType> findByCategory(String category) {
+        return mapper.findByCategory(category).stream().map(this::toDomain).collect(Collectors.toList());
     }
 
     @Override
@@ -99,78 +87,71 @@ public class UniversalSpaceTypeRepositoryImpl implements UniversalSpaceTypeRepos
     }
 
     @Override
-    public List<UniversalSpaceType> findByTypeCodes(List<String> typeCodes) {
-        if (typeCodes == null || typeCodes.isEmpty()) {
-            return new ArrayList<>();
-        }
-        return mapper.findByTypeCodes(typeCodes).stream()
-                .map(this::toDomain)
-                .collect(Collectors.toList());
+    public List<UniversalPlaceType> findByTypeCodes(List<String> typeCodes) {
+        if (typeCodes == null || typeCodes.isEmpty()) return new ArrayList<>();
+        return mapper.findByTypeCodes(typeCodes).stream().map(this::toDomain).collect(Collectors.toList());
     }
 
-    // ==================== 转换方法 ====================
+    @Override
+    public List<UniversalPlaceType> findAllBaseCategories() {
+        return mapper.findAllBaseCategories().stream().map(this::toDomain).collect(Collectors.toList());
+    }
 
-    private UniversalSpaceTypePO toPO(UniversalSpaceType entity) {
-        UniversalSpaceTypePO po = new UniversalSpaceTypePO();
+    @Override
+    public List<UniversalPlaceType> findConcreteRootTypes() {
+        return mapper.findConcreteRootTypes().stream().map(this::toDomain).collect(Collectors.toList());
+    }
+
+    @Override
+    public List<UniversalPlaceType> findAllConcreteTypes() {
+        return mapper.findAllConcreteTypes().stream().map(this::toDomain).collect(Collectors.toList());
+    }
+
+    // ==================== PO ↔ Domain ====================
+
+    private UniversalPlaceTypePO toPO(UniversalPlaceType entity) {
+        UniversalPlaceTypePO po = new UniversalPlaceTypePO();
         po.setId(entity.getId());
         po.setTypeCode(entity.getTypeCode());
         po.setTypeName(entity.getTypeName());
-        po.setIcon(entity.getIcon());
         po.setDescription(entity.getDescription());
         po.setSortOrder(entity.getSortOrder());
         po.setIsSystem(entity.isSystem());
         po.setIsEnabled(entity.isEnabled());
+        po.setCategory(entity.getCategory());
+        po.setParentTypeCode(entity.getParentTypeCode());
+        po.setFeatures(TypeJsonUtils.toJson(objectMapper, entity.getFeatures()));
+        po.setMetadataSchema(entity.getMetadataSchema());
+        po.setAllowedChildTypeCodes(TypeJsonUtils.toJson(objectMapper, entity.getAllowedChildTypeCodes()));
+        po.setMaxDepth(entity.getMaxDepth());
+        po.setDefaultUserTypeCodes(TypeJsonUtils.toJson(objectMapper, entity.getDefaultUserTypeCodes()));
+        po.setDefaultOrgTypeCodes(TypeJsonUtils.toJson(objectMapper, entity.getDefaultOrgTypeCodes()));
         po.setIsRootType(entity.isRootType());
-        po.setHasCapacity(entity.isHasCapacity());
-        po.setBookable(entity.isBookable());
-        po.setAssignable(entity.isAssignable());
-        po.setOccupiable(entity.isOccupiable());
         po.setCapacityUnit(entity.getCapacityUnit());
         po.setDefaultCapacity(entity.getDefaultCapacity());
-        po.setAttributeSchema(entity.getAttributeSchema());
-
-        // 转换 allowedChildTypes 为 JSON
-        if (entity.getAllowedChildTypes() != null && !entity.getAllowedChildTypes().isEmpty()) {
-            try {
-                po.setAllowedChildTypes(objectMapper.writeValueAsString(entity.getAllowedChildTypes()));
-            } catch (JsonProcessingException e) {
-                po.setAllowedChildTypes("[]");
-            }
-        } else {
-            po.setAllowedChildTypes("[]");
-        }
-
         return po;
     }
 
-    private UniversalSpaceType toDomain(UniversalSpaceTypePO po) {
-        List<String> allowedChildTypes = new ArrayList<>();
-        if (po.getAllowedChildTypes() != null && !po.getAllowedChildTypes().isBlank()) {
-            try {
-                allowedChildTypes = objectMapper.readValue(po.getAllowedChildTypes(), new TypeReference<List<String>>() {});
-            } catch (JsonProcessingException e) {
-                // 忽略解析错误
-            }
-        }
-
-        return UniversalSpaceType.builder()
+    private UniversalPlaceType toDomain(UniversalPlaceTypePO po) {
+        return UniversalPlaceType.builder()
                 .id(po.getId())
                 .typeCode(po.getTypeCode())
                 .typeName(po.getTypeName())
-                .icon(po.getIcon())
                 .description(po.getDescription())
                 .sortOrder(po.getSortOrder() != null ? po.getSortOrder() : 0)
                 .isSystem(Boolean.TRUE.equals(po.getIsSystem()))
                 .isEnabled(Boolean.TRUE.equals(po.getIsEnabled()))
+                .category(po.getCategory())
+                .parentTypeCode(po.getParentTypeCode())
+                .features(TypeJsonUtils.fromJsonMap(objectMapper, po.getFeatures()))
+                .metadataSchema(po.getMetadataSchema())
+                .allowedChildTypeCodes(TypeJsonUtils.fromJsonList(objectMapper, po.getAllowedChildTypeCodes()))
+                .maxDepth(po.getMaxDepth())
+                .defaultUserTypeCodes(TypeJsonUtils.fromJsonList(objectMapper, po.getDefaultUserTypeCodes()))
+                .defaultOrgTypeCodes(TypeJsonUtils.fromJsonList(objectMapper, po.getDefaultOrgTypeCodes()))
                 .isRootType(Boolean.TRUE.equals(po.getIsRootType()))
-                .allowedChildTypes(allowedChildTypes)
-                .hasCapacity(Boolean.TRUE.equals(po.getHasCapacity()))
-                .bookable(Boolean.TRUE.equals(po.getBookable()))
-                .assignable(Boolean.TRUE.equals(po.getAssignable()))
-                .occupiable(Boolean.TRUE.equals(po.getOccupiable()))
                 .capacityUnit(po.getCapacityUnit())
                 .defaultCapacity(po.getDefaultCapacity())
-                .attributeSchema(po.getAttributeSchema())
                 .build();
     }
 }

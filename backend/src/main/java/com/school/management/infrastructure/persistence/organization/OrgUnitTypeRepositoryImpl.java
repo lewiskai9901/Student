@@ -1,11 +1,14 @@
 package com.school.management.infrastructure.persistence.organization;
 
-import com.school.management.domain.organization.model.entity.OrgUnitTypeEntity;
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.school.management.domain.organization.model.entity.OrgType;
+import com.school.management.domain.organization.model.valueobject.PositionTemplate;
 import com.school.management.domain.organization.repository.OrgUnitTypeRepository;
+import com.school.management.infrastructure.shared.TypeJsonUtils;
 import org.springframework.stereotype.Repository;
 
-import java.util.List;
-import java.util.Optional;
+import java.util.*;
 import java.util.stream.Collectors;
 
 /**
@@ -15,14 +18,16 @@ import java.util.stream.Collectors;
 public class OrgUnitTypeRepositoryImpl implements OrgUnitTypeRepository {
 
     private final OrgUnitTypeMapper orgUnitTypeMapper;
+    private final ObjectMapper objectMapper;
 
-    public OrgUnitTypeRepositoryImpl(OrgUnitTypeMapper orgUnitTypeMapper) {
+    public OrgUnitTypeRepositoryImpl(OrgUnitTypeMapper orgUnitTypeMapper, ObjectMapper objectMapper) {
         this.orgUnitTypeMapper = orgUnitTypeMapper;
+        this.objectMapper = objectMapper;
     }
 
     @Override
-    public OrgUnitTypeEntity save(OrgUnitTypeEntity orgUnitType) {
-        OrgUnitTypePO po = toPO(orgUnitType);
+    public OrgType save(OrgType orgType) {
+        OrgUnitTypePO po = toPO(orgType);
         if (po.getId() == null) {
             orgUnitTypeMapper.insert(po);
         } else {
@@ -32,62 +37,55 @@ public class OrgUnitTypeRepositoryImpl implements OrgUnitTypeRepository {
     }
 
     @Override
-    public Optional<OrgUnitTypeEntity> findById(Long id) {
+    public Optional<OrgType> findById(Long id) {
         OrgUnitTypePO po = orgUnitTypeMapper.selectById(id);
         return Optional.ofNullable(po).map(this::toDomain);
     }
 
     @Override
-    public Optional<OrgUnitTypeEntity> findByTypeCode(String typeCode) {
+    public Optional<OrgType> findByTypeCode(String typeCode) {
         OrgUnitTypePO po = orgUnitTypeMapper.findByTypeCode(typeCode);
         return Optional.ofNullable(po).map(this::toDomain);
     }
 
     @Override
-    public List<OrgUnitTypeEntity> findAll() {
+    public List<OrgType> findAll() {
         return orgUnitTypeMapper.selectList(null).stream()
                 .map(this::toDomain)
                 .collect(Collectors.toList());
     }
 
     @Override
-    public List<OrgUnitTypeEntity> findAllEnabled() {
+    public List<OrgType> findAllEnabled() {
         return orgUnitTypeMapper.findAllEnabled().stream()
                 .map(this::toDomain)
                 .collect(Collectors.toList());
     }
 
     @Override
-    public List<OrgUnitTypeEntity> findByParentTypeCode(String parentTypeCode) {
+    public List<OrgType> findByParentTypeCode(String parentTypeCode) {
         return orgUnitTypeMapper.findByParentTypeCode(parentTypeCode).stream()
                 .map(this::toDomain)
                 .collect(Collectors.toList());
     }
 
     @Override
-    public List<OrgUnitTypeEntity> findTopLevelTypes() {
+    public List<OrgType> findTopLevelTypes() {
         return orgUnitTypeMapper.findTopLevelTypes().stream()
                 .map(this::toDomain)
                 .collect(Collectors.toList());
     }
 
     @Override
-    public List<OrgUnitTypeEntity> findAcademicTypes() {
-        return orgUnitTypeMapper.findAcademicTypes().stream()
+    public List<OrgType> findByCategory(String category) {
+        return orgUnitTypeMapper.findByCategory(category).stream()
                 .map(this::toDomain)
                 .collect(Collectors.toList());
     }
 
     @Override
-    public List<OrgUnitTypeEntity> findFunctionalTypes() {
-        return orgUnitTypeMapper.findFunctionalTypes().stream()
-                .map(this::toDomain)
-                .collect(Collectors.toList());
-    }
-
-    @Override
-    public List<OrgUnitTypeEntity> findInspectableTypes() {
-        return orgUnitTypeMapper.findInspectableTypes().stream()
+    public List<OrgType> findByFeature(String featureKey) {
+        return orgUnitTypeMapper.findByFeature(featureKey).stream()
                 .map(this::toDomain)
                 .collect(Collectors.toList());
     }
@@ -102,52 +100,55 @@ public class OrgUnitTypeRepositoryImpl implements OrgUnitTypeRepository {
         try {
             return orgUnitTypeMapper.countOrgUnitsByTypeCode(typeCode) > 0;
         } catch (Exception e) {
-            // 表可能不存在，返回false
             return false;
         }
     }
 
     @Override
     public void deleteById(Long id) {
-        orgUnitTypeMapper.deleteById(id);
+        orgUnitTypeMapper.softDeleteById(id);
     }
 
     // ==================== 转换方法 ====================
 
-    private OrgUnitTypePO toPO(OrgUnitTypeEntity entity) {
+    private OrgUnitTypePO toPO(OrgType entity) {
         OrgUnitTypePO po = new OrgUnitTypePO();
         po.setId(entity.getId());
         po.setTypeCode(entity.getTypeCode());
         po.setTypeName(entity.getTypeName());
+        po.setCategory(entity.getCategory());
         po.setParentTypeCode(entity.getParentTypeCode());
-        po.setLevelOrder(entity.getLevelOrder());
         po.setIcon(entity.getIcon());
-        po.setColor(entity.getColor());
         po.setDescription(entity.getDescription());
-        po.setIsAcademic(entity.isAcademic());
-        po.setCanBeInspected(entity.isCanBeInspected());
-        po.setCanHaveChildren(entity.isCanHaveChildren());
+        po.setFeatures(TypeJsonUtils.toJson(objectMapper, entity.getFeatures()));
+        po.setMetadataSchema(entity.getMetadataSchema());
+        po.setAllowedChildTypeCodes(TypeJsonUtils.toJson(objectMapper, entity.getAllowedChildTypeCodes()));
         po.setMaxDepth(entity.getMaxDepth());
+        po.setDefaultUserTypeCodes(TypeJsonUtils.toJson(objectMapper, entity.getDefaultUserTypeCodes()));
+        po.setDefaultPlaceTypeCodes(TypeJsonUtils.toJson(objectMapper, entity.getDefaultPlaceTypeCodes()));
+        po.setDefaultPositions(TypeJsonUtils.toJson(objectMapper, entity.getDefaultPositions()));
         po.setIsSystem(entity.isSystem());
         po.setIsEnabled(entity.isEnabled());
         po.setSortOrder(entity.getSortOrder());
         return po;
     }
 
-    private OrgUnitTypeEntity toDomain(OrgUnitTypePO po) {
-        return OrgUnitTypeEntity.builder()
+    private OrgType toDomain(OrgUnitTypePO po) {
+        return OrgType.builder()
                 .id(po.getId())
                 .typeCode(po.getTypeCode())
                 .typeName(po.getTypeName())
+                .category(po.getCategory())
                 .parentTypeCode(po.getParentTypeCode())
-                .levelOrder(po.getLevelOrder())
                 .icon(po.getIcon())
-                .color(po.getColor())
                 .description(po.getDescription())
-                .isAcademic(Boolean.TRUE.equals(po.getIsAcademic()))
-                .canBeInspected(Boolean.TRUE.equals(po.getCanBeInspected()))
-                .canHaveChildren(Boolean.TRUE.equals(po.getCanHaveChildren()))
+                .features(TypeJsonUtils.fromJsonMap(objectMapper, po.getFeatures()))
+                .metadataSchema(po.getMetadataSchema())
+                .allowedChildTypeCodes(TypeJsonUtils.fromJsonList(objectMapper, po.getAllowedChildTypeCodes()))
                 .maxDepth(po.getMaxDepth())
+                .defaultUserTypeCodes(TypeJsonUtils.fromJsonList(objectMapper, po.getDefaultUserTypeCodes()))
+                .defaultPlaceTypeCodes(TypeJsonUtils.fromJsonList(objectMapper, po.getDefaultPlaceTypeCodes()))
+                .defaultPositions(TypeJsonUtils.fromJson(objectMapper, po.getDefaultPositions(), new TypeReference<List<PositionTemplate>>(){}))
                 .isSystem(Boolean.TRUE.equals(po.getIsSystem()))
                 .isEnabled(Boolean.TRUE.equals(po.getIsEnabled()))
                 .sortOrder(po.getSortOrder())

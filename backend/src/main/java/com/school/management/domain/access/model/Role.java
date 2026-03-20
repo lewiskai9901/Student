@@ -17,13 +17,14 @@ public class Role extends AggregateRoot<Long> {
     private String roleCode;
     private String roleName;
     private String description;
-    private RoleType roleType;
+    private String roleType;
     private Integer level;
     private Boolean isSystem;
     private Boolean isEnabled;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
     private Long createdBy;
+    private Long tenantId;
 
     private Set<Long> permissionIds;
     private DataScope dataScope;
@@ -33,13 +34,13 @@ public class Role extends AggregateRoot<Long> {
     }
 
     public Role(Long id, String roleCode, String roleName, String description,
-                RoleType roleType, Integer level, Boolean isSystem, Boolean isEnabled,
+                String roleType, Integer level, Boolean isSystem, Boolean isEnabled,
                 Long createdBy, Set<Long> permissionIds, DataScope dataScope) {
         this.id = id;
         this.roleCode = Objects.requireNonNull(roleCode, "Role code is required");
         this.roleName = Objects.requireNonNull(roleName, "Role name is required");
         this.description = description;
-        this.roleType = roleType != null ? roleType : RoleType.CUSTOM;
+        this.roleType = roleType != null ? roleType : "CUSTOM";
         this.level = level != null ? level : 100;
         this.isSystem = isSystem != null ? isSystem : false;
         this.isEnabled = isEnabled != null ? isEnabled : true;
@@ -56,7 +57,7 @@ public class Role extends AggregateRoot<Long> {
      * Factory method to create a new role.
      */
     public static Role create(String roleCode, String roleName, String description,
-                              RoleType roleType, Long createdBy) {
+                              String roleType, Long createdBy) {
         Role role = Role.builder()
             .roleCode(roleCode)
             .roleName(roleName)
@@ -192,7 +193,7 @@ public class Role extends AggregateRoot<Long> {
     public String getRoleCode() { return roleCode; }
     public String getRoleName() { return roleName; }
     public String getDescription() { return description; }
-    public RoleType getRoleType() { return roleType; }
+    public String getRoleType() { return roleType; }
     public Integer getLevel() { return level; }
     public Boolean getIsSystem() { return isSystem; }
     public Boolean getIsEnabled() { return isEnabled; }
@@ -200,6 +201,8 @@ public class Role extends AggregateRoot<Long> {
     public LocalDateTime getUpdatedAt() { return updatedAt; }
     public Long getCreatedBy() { return createdBy; }
     public DataScope getDataScope() { return dataScope; }
+    public Long getTenantId() { return tenantId; }
+    public void setTenantId(Long tenantId) { this.tenantId = tenantId; }
 
     // Builder pattern
     public static RoleBuilder builder() {
@@ -211,28 +214,32 @@ public class Role extends AggregateRoot<Long> {
         private String roleCode;
         private String roleName;
         private String description;
-        private RoleType roleType;
+        private String roleType;
         private Integer level;
         private Boolean isSystem;
         private Boolean isEnabled;
         private Long createdBy;
         private Set<Long> permissionIds;
         private DataScope dataScope;
+        private Long tenantId;
 
         public RoleBuilder id(Long id) { this.id = id; return this; }
         public RoleBuilder roleCode(String roleCode) { this.roleCode = roleCode; return this; }
         public RoleBuilder roleName(String roleName) { this.roleName = roleName; return this; }
         public RoleBuilder description(String description) { this.description = description; return this; }
-        public RoleBuilder roleType(RoleType roleType) { this.roleType = roleType; return this; }
+        public RoleBuilder roleType(String roleType) { this.roleType = roleType; return this; }
         public RoleBuilder level(Integer level) { this.level = level; return this; }
         public RoleBuilder isSystem(Boolean isSystem) { this.isSystem = isSystem; return this; }
         public RoleBuilder isEnabled(Boolean isEnabled) { this.isEnabled = isEnabled; return this; }
         public RoleBuilder createdBy(Long createdBy) { this.createdBy = createdBy; return this; }
         public RoleBuilder permissionIds(Set<Long> permissionIds) { this.permissionIds = permissionIds; return this; }
         public RoleBuilder dataScope(DataScope dataScope) { this.dataScope = dataScope; return this; }
+        public RoleBuilder tenantId(Long tenantId) { this.tenantId = tenantId; return this; }
 
         public Role build() {
-            return new Role(id, roleCode, roleName, description, roleType, level, isSystem, isEnabled, createdBy, permissionIds, dataScope);
+            Role role = new Role(id, roleCode, roleName, description, roleType, level, isSystem, isEnabled, createdBy, permissionIds, dataScope);
+            role.tenantId = this.tenantId;
+            return role;
         }
     }
 }

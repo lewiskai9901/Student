@@ -16,8 +16,7 @@ import type {
   AssignRoleWithScopeRequest,
   SetUserRolesRequest,
   RoleQueryParams,
-  PermissionQueryParams,
-  RoleType
+  PermissionQueryParams
 } from '@/types'
 import type { PageResponse, PageParams } from '@/types'
 
@@ -45,7 +44,7 @@ export function getPermissionTree(): Promise<Permission[]> {
 /**
  * 获取权限详情
  */
-export function getPermission(id: number): Promise<Permission> {
+export function getPermission(id: number | string): Promise<Permission> {
   return http.get<Permission>(`${PERMISSION_URL}/${id}`)
 }
 
@@ -59,28 +58,28 @@ export function createPermission(data: CreatePermissionRequest): Promise<Permiss
 /**
  * 更新权限
  */
-export function updatePermission(id: number, data: UpdatePermissionRequest): Promise<Permission> {
+export function updatePermission(id: number | string, data: UpdatePermissionRequest): Promise<Permission> {
   return http.put<Permission>(`${PERMISSION_URL}/${id}`, data)
 }
 
 /**
  * 删除权限
  */
-export function deletePermission(id: number): Promise<void> {
+export function deletePermission(id: number | string): Promise<void> {
   return http.delete(`${PERMISSION_URL}/${id}`)
 }
 
 /**
  * 启用权限
  */
-export function enablePermission(id: number): Promise<void> {
+export function enablePermission(id: number | string): Promise<void> {
   return http.post(`${PERMISSION_URL}/${id}/enable`)
 }
 
 /**
  * 禁用权限
  */
-export function disablePermission(id: number): Promise<void> {
+export function disablePermission(id: number | string): Promise<void> {
   return http.post(`${PERMISSION_URL}/${id}/disable`)
 }
 
@@ -217,29 +216,43 @@ export function getRoleUsers(id: string | number, params?: PageParams): Promise<
 /**
  * 获取用户的角色
  */
-export function getUserRoles(userId: number): Promise<UserRole[]> {
+export function getUserRoles(userId: number | string): Promise<UserRole[]> {
   return http.get<UserRole[]>(`${USER_URL}/${userId}/roles`)
 }
 
 /**
- * 分配角色给用户（带范围）
+ * 分配角色给用户（全局作用域）
  */
-export function assignRoleToUser(userId: number, data: AssignRoleWithScopeRequest): Promise<void> {
-  return http.post(`${USER_URL}/${userId}/roles`, data)
+export function assignRoleToUser(userId: number | string, roleId: number | string): Promise<void> {
+  return http.post(`${USER_URL}/${userId}/roles/${roleId}`)
 }
 
 /**
- * 设置用户角色
+ * 分配角色给用户（带作用域）
  */
-export function setUserRoles(userId: number, data: SetUserRolesRequest): Promise<void> {
+export function assignRoleToUserWithScope(userId: number | string, roleId: number | string, data: AssignRoleWithScopeRequest): Promise<void> {
+  return http.post(`${USER_URL}/${userId}/roles/${roleId}/scoped`, data)
+}
+
+/**
+ * 设置用户角色（批量，带作用域）
+ */
+export function setUserRoles(userId: number | string, data: SetUserRolesRequest): Promise<void> {
   return http.put(`${USER_URL}/${userId}/roles`, data)
 }
 
 /**
- * 移除用户角色
+ * 移除用户角色（所有作用域）
  */
-export function removeUserRole(userId: number, roleId: number): Promise<void> {
+export function removeUserRole(userId: number | string, roleId: number | string): Promise<void> {
   return http.delete(`${USER_URL}/${userId}/roles/${roleId}`)
+}
+
+/**
+ * 移除用户角色（指定作用域）
+ */
+export function removeUserRoleWithScope(userId: number | string, roleId: number | string, scopeType: string, scopeId: number | string): Promise<void> {
+  return http.delete(`${USER_URL}/${userId}/roles/${roleId}`, { params: { scopeType, scopeId } })
 }
 
 /**
@@ -312,183 +325,92 @@ export const roleApi = {
 export const userRoleApi = {
   getUserRoles,
   assignRole: assignRoleToUser,
+  assignRoleWithScope: assignRoleToUserWithScope,
   setRoles: setUserRoles,
   removeRole: removeUserRole,
+  removeRoleWithScope: removeUserRoleWithScope,
   getCurrentPermissions: getCurrentUserPermissions,
   getCurrentRoles: getCurrentUserRoles,
   checkPermission,
   checkPermissions
 }
 
-// 数据权限选项
-export const DATA_SCOPE_OPTIONS = [
-  { value: 1, label: '全部数据' },
-  { value: 2, label: '本组织' },
-  { value: 3, label: '本年级' },
-  { value: 4, label: '本班级' },
-  { value: 5, label: '仅本人' }
-]
-
-// ==================== 数据权限 API (V1兼容) ====================
-
-/**
- * 角色数据权限配置
- */
-export interface RoleDataPermission {
-  moduleCode: string
-  moduleName: string
-  dataScope: number
-  dataScopeName?: string
-  customDeptIds?: string
-  customClassIds?: string
-}
-
-/**
- * 获取角色的数据权限配置
- * @deprecated 使用V1接口，待迁移到V2
- */
-export function getRoleDataPermissions(id: number): Promise<RoleDataPermission[]> {
-  return http.get<RoleDataPermission[]>(`/roles/${id}/data-permissions`)
-}
-
-/**
- * 保存角色的数据权限配置
- * @deprecated 使用V1接口，待迁移到V2
- */
-export function saveRoleDataPermissions(id: number, permissions: RoleDataPermission[]): Promise<void> {
-  return http.post(`/roles/${id}/data-permissions`, permissions)
-}
-
-// ==================== V2 数据权限 API ====================
+// ==================== 数据权限 API（动态化） ====================
 
 import type {
   DataScopeOption,
   RolePermissionConfig,
-  GroupedModules,
-  DomainWithModules,
-  // V5 types
-  DomainModulesV5,
-  ScopeTypeV5,
-  ScopeItemTypeV5,
-  ScopeItemV5,
-  RoleModulePermissionV5,
-  SavePermissionCommandV5
+  DataModuleDTO,
+  ScopeItemTypeDTO,
+  ModulePermission
 } from '@/types/access'
 
-// Re-export V5 types for consumers
-export type {
-  DomainModulesV5,
-  ScopeTypeV5,
-  ScopeItemTypeV5,
-  ScopeItemV5,
-  RoleModulePermissionV5,
-  SavePermissionCommandV5
-}
+const DATA_MODULE_URL = '/data-modules'
 
 /**
- * V2: 获取角色数据权限配置
+ * 获取角色数据权限配置
  */
-export function getRoleDataPermissionsV2(roleId: string | number): Promise<RolePermissionConfig> {
+export function getRoleDataPermissions(roleId: string | number): Promise<RolePermissionConfig> {
   return http.get<RolePermissionConfig>(`${ROLE_URL}/${roleId}/data-permissions`)
 }
 
 /**
- * V2: 保存角色数据权限配置
+ * 保存角色数据权限配置
  */
-export function saveRoleDataPermissionsV2(roleId: string | number, config: RolePermissionConfig): Promise<void> {
+export function saveRoleDataPermissions(roleId: string | number, config: RolePermissionConfig): Promise<void> {
   return http.put(`${ROLE_URL}/${roleId}/data-permissions`, config)
 }
 
 /**
- * V2: 获取所有数据模块（按领域分组）
+ * 获取所有数据模块（动态，按领域分组）
  */
-export function getDataModulesV2(): Promise<GroupedModules> {
-  return http.get<GroupedModules>(`${ROLE_URL}/data-permissions/modules`)
+export function getDataModules(): Promise<DataModuleDTO[]> {
+  return http.get<DataModuleDTO[]>(DATA_MODULE_URL)
 }
 
 /**
- * V2: 获取所有数据范围选项
+ * 获取所有数据范围选项
  */
-export function getDataScopesV2(): Promise<DataScopeOption[]> {
+export function getDataScopes(): Promise<DataScopeOption[]> {
   return http.get<DataScopeOption[]>(`${ROLE_URL}/data-permissions/scopes`)
 }
 
 /**
- * V2 数据权限 API 对象
+ * 获取所有范围项类型
  */
-export const roleDataPermissionApiV2 = {
-  getConfig: getRoleDataPermissionsV2,
-  saveConfig: saveRoleDataPermissionsV2,
-  getModules: getDataModulesV2,
-  getScopes: getDataScopesV2
-}
-
-// ==================== V5 数据权限 API ====================
-
-/**
- * V5: 获取所有数据模块（按领域分组）
- */
-export function getDataModulesV5(): Promise<DomainModulesV5[]> {
-  return http.get<DomainModulesV5[]>(`${ROLE_URL}/data-permissions/v5/modules`)
+export function getScopeItemTypes(): Promise<ScopeItemTypeDTO[]> {
+  return http.get<ScopeItemTypeDTO[]>(`${DATA_MODULE_URL}/scope-item-types`)
 }
 
 /**
- * V5: 获取所有数据范围类型
+ * 获取某模块可用的范围项类型
  */
-export function getDataScopesV5(): Promise<ScopeTypeV5[]> {
-  return http.get<ScopeTypeV5[]>(`${ROLE_URL}/data-permissions/v5/scopes`)
+export function getModuleScopeItemTypes(moduleCode: string): Promise<ScopeItemTypeDTO[]> {
+  return http.get<ScopeItemTypeDTO[]>(`${DATA_MODULE_URL}/${moduleCode}/scope-item-types`)
 }
 
 /**
- * V5: 获取所有范围项类型
+ * 搜索自定义范围可选项
  */
-export function getScopeItemTypesV5(): Promise<ScopeItemTypeV5[]> {
-  return http.get<ScopeItemTypeV5[]>(`${ROLE_URL}/data-permissions/v5/scope-item-types`)
-}
-
-/**
- * V5: 搜索自定义范围可选项
- */
-export function searchScopeItemsV5(
+export function searchScopeItems(
   itemTypeCode: string,
   keyword: string = '',
   limit: number = 20
-): Promise<ScopeItemV5[]> {
-  return http.get<ScopeItemV5[]>(`${ROLE_URL}/data-permissions/v5/scope-items`, {
+): Promise<{ id: number | string; name: string; parentId?: number | string }[]> {
+  return http.get(`${DATA_MODULE_URL}/scope-items`, {
     params: { itemTypeCode, keyword, limit }
   })
 }
 
 /**
- * V5: 获取角色数据权限配置
+ * 数据权限 API 对象
  */
-export function getRoleDataPermissionsV5(roleId: string | number): Promise<RoleModulePermissionV5[]> {
-  return http.get<RoleModulePermissionV5[]>(`${ROLE_URL}/${roleId}/data-permissions/v5`)
+export const dataPermissionApi = {
+  getConfig: getRoleDataPermissions,
+  saveConfig: saveRoleDataPermissions,
+  getModules: getDataModules,
+  getScopes: getDataScopes,
+  getScopeItemTypes,
+  getModuleScopeItemTypes,
+  searchScopeItems
 }
-
-/**
- * V5: 保存角色数据权限配置
- */
-export function saveRoleDataPermissionsV5(
-  roleId: string | number,
-  commands: SavePermissionCommandV5[]
-): Promise<void> {
-  return http.put(`${ROLE_URL}/${roleId}/data-permissions/v5`, commands)
-}
-
-/**
- * V5 数据权限 API 对象
- */
-export const roleDataPermissionApiV5 = {
-  getModules: getDataModulesV5,
-  getScopes: getDataScopesV5,
-  getScopeItemTypes: getScopeItemTypesV5,
-  searchScopeItems: searchScopeItemsV5,
-  getConfig: getRoleDataPermissionsV5,
-  saveConfig: saveRoleDataPermissionsV5
-}
-
-// ==================== 系统模块 API ====================
-// NOTE: SystemModule interface, getSystemModuleTree, getAllSystemModules, and systemModuleApi
-// are defined in api/organization.ts (the canonical location for organization-related APIs).
-// Import them from there instead of duplicating here.

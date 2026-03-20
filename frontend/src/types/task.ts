@@ -56,11 +56,11 @@ export const ApprovalActionMap: Record<ApprovalAction, string> = {
  * 任务提交记录
  */
 export interface TaskSubmission {
-  id: number
-  taskId: number
-  assigneeId: number
+  id: number | string
+  taskId: number | string
+  assigneeId: number | string
   content: string
-  attachmentIds?: number[]
+  attachmentIds?: (number | string)[]
   submittedAt: string
   createdAt?: string
 }
@@ -69,10 +69,10 @@ export interface TaskSubmission {
  * 任务审批记录
  */
 export interface TaskApprovalRecord {
-  id: number
-  taskId: number
-  submissionId: number
-  approverId: number
+  id: number | string
+  taskId: number | string
+  submissionId: number | string
+  approverId: number | string
   approverName: string
   approvalLevel: number
   action: ApprovalAction
@@ -85,11 +85,11 @@ export interface TaskApprovalRecord {
  * 任务执行人
  */
 export interface TaskAssignee {
-  id: number
-  taskId: number
-  assigneeId: number
+  id: number | string
+  taskId: number | string
+  assigneeId: number | string
   assigneeName: string
-  orgUnitId?: number
+  orgUnitId?: number | string
   orgUnitName?: string
   status: TaskStatus
   statusText?: string
@@ -110,7 +110,7 @@ export interface TaskProgressNode {
   nodeName: string
   nodeType: string
   status: 'pending' | 'active' | 'completed' | 'rejected'
-  operatorId?: number
+  operatorId?: number | string
   operatorName?: string
   operatedAt?: string
   comment?: string
@@ -120,7 +120,7 @@ export interface TaskProgressNode {
  * 任务实体
  */
 export interface Task {
-  id: number
+  id: number | string
   taskCode: string
   title: string
   description?: string
@@ -128,18 +128,18 @@ export interface Task {
   priorityText?: string
   status: TaskStatus
   statusText?: string
-  assignerId: number
+  assignerId: number | string
   assignerName: string
   assignType: AssignType
-  assigneeId?: number
+  assigneeId?: number | string
   assigneeName?: string
-  orgUnitId?: number
+  orgUnitId?: number | string
   orgUnitName?: string
   assignees?: TaskAssignee[]
   totalAssignees?: number
   submittedAssignees?: number
   completedAssignees?: number
-  myAssigneeId?: number
+  myAssigneeId?: number | string
   myStatus?: TaskStatus
   myAcceptedAt?: string
   mySubmittedAt?: string
@@ -148,12 +148,12 @@ export interface Task {
   acceptedAt?: string
   submittedAt?: string
   completedAt?: string
-  workflowTemplateId?: number
+  workflowTemplateId?: number | string
   workflowTemplateName?: string
   processInstanceId?: string
   currentNode?: string
-  currentApprovers?: number[]
-  attachmentIds?: number[]
+  currentApprovers?: (number | string)[]
+  attachmentIds?: (number | string)[]
   submission?: TaskSubmission
   approvalRecords?: TaskApprovalRecord[]
   createdAt: string
@@ -198,7 +198,7 @@ export interface TaskStatistics {
  * 工作流模板
  */
 export interface WorkflowTemplate {
-  id: number
+  id: number | string
   name: string
   description?: string
   approvalLevels: number
@@ -215,14 +215,14 @@ export interface ApprovalLevelConfig {
   level: number
   name: string
   approverType: 'role' | 'user' | 'orgUnit'
-  approverIds?: number[]
+  approverIds?: (number | string)[]
 }
 
 /**
  * 组织单元审批配置
  */
 export interface OrgUnitApprovalConfig {
-  orgUnitId: number
+  orgUnitId: number | string
   orgUnitName?: string
   approverConfigs: ApproverConfig[]
 }
@@ -232,7 +232,7 @@ export interface OrgUnitApprovalConfig {
  */
 export interface ApproverConfig {
   level: number
-  approverId: number
+  approverId: number | string
   approverName?: string
 }
 
@@ -246,13 +246,13 @@ export interface CreateTaskRequest {
   description?: string
   priority?: TaskPriority
   assignType: AssignType
-  assigneeId?: number
-  targetIds?: number[]
-  orgUnitId?: number
+  assigneeId?: number | string
+  targetIds?: (number | string)[]
+  orgUnitId?: number | string
   dueDate?: string
-  workflowTemplateId: number
+  workflowTemplateId: number | string
   approvalConfigs: OrgUnitApprovalConfig[]
-  attachmentIds?: number[]
+  attachmentIds?: (number | string)[]
 }
 
 /**
@@ -262,9 +262,9 @@ export interface TaskQueryParams {
   keyword?: string
   status?: TaskStatus
   priority?: TaskPriority
-  assignerId?: number
-  assigneeId?: number
-  orgUnitId?: number
+  assignerId?: number | string
+  assigneeId?: number | string
+  orgUnitId?: number | string
   startTime?: string
   endTime?: string
   dueStartTime?: string
@@ -279,17 +279,17 @@ export interface TaskQueryParams {
  * 任务提交请求
  */
 export interface TaskSubmitRequest {
-  taskId: number
+  taskId: number | string
   content: string
-  attachmentIds?: number[]
+  attachmentIds?: (number | string)[]
 }
 
 /**
  * 任务审批请求
  */
 export interface TaskApproveRequest {
-  taskId: number
-  submissionId: number
+  taskId: number | string
+  submissionId: number | string
   action: ApprovalAction
   comment?: string
   rejectToNode?: string
@@ -310,7 +310,7 @@ export interface CreateWorkflowTemplateRequest {
  * 更新工作流模板请求
  */
 export interface UpdateWorkflowTemplateRequest extends Partial<CreateWorkflowTemplateRequest> {
-  id?: number
+  id?: number | string
 }
 
 // ==================== 系统消息 ====================
@@ -319,12 +319,12 @@ export interface UpdateWorkflowTemplateRequest extends Partial<CreateWorkflowTem
  * 系统消息
  */
 export interface SystemMessage {
-  id: number
-  userId: number
+  id: number | string
+  userId: number | string
   type: string
   title: string
   content: string
-  relatedId?: number
+  relatedId?: number | string
   relatedType?: string
   isRead: boolean
   createdAt: string

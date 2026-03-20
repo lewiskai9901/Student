@@ -88,7 +88,7 @@ public class TemplateCategoryRepositoryImpl implements TemplateCategoryRepositor
         TemplateScoreItem item = new TemplateScoreItem();
         BeanUtils.copyProperties(po, item);
         if (po.getScoringMode() != null) {
-            item.setScoringMode(TemplateScoreItem.ScoringMode.valueOf(po.getScoringMode()));
+            item.setScoringMode(TemplateScoreItem.ItemScoringMethod.valueOf(po.getScoringMode()));
         }
         return item;
     }

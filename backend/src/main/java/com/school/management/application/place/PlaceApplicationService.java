@@ -1,22 +1,23 @@
-package com.school.management.application.space;
+package com.school.management.application.place;
 
-import com.school.management.application.space.command.CheckInCommand;
-import com.school.management.application.space.command.CreateSpaceCommand;
-import com.school.management.application.space.command.UpdateSpaceCommand;
-import com.school.management.application.space.query.SpaceDTO;
-import com.school.management.application.space.query.SpaceOccupantDTO;
-import com.school.management.application.space.query.SpaceQueryCriteria;
-import com.school.management.application.space.query.SpaceStatisticsDTO;
-import com.school.management.domain.space.model.aggregate.Space;
-import com.school.management.domain.space.model.entity.SpaceClassAssignment;
-import com.school.management.domain.space.model.entity.SpaceOccupant;
-import com.school.management.domain.space.model.valueobject.*;
-import com.school.management.domain.space.repository.SpaceClassAssignmentRepository;
-import com.school.management.domain.space.repository.SpaceOccupantRepository;
-import com.school.management.domain.space.repository.SpaceRepository;
+import com.school.management.application.place.command.CheckInCommand;
+import com.school.management.application.place.command.CreatePlaceCommand;
+import com.school.management.application.place.command.UpdatePlaceCommand;
+import com.school.management.application.place.query.PlaceDTO;
+import com.school.management.application.place.query.PlaceOccupantDTO;
+import com.school.management.application.place.query.PlaceQueryCriteria;
+import com.school.management.application.place.query.PlaceStatisticsDTO;
+import com.school.management.domain.place.model.aggregate.Place;
+import com.school.management.domain.place.model.entity.PlaceClassAssignment;
+import com.school.management.domain.place.model.entity.PlaceOccupant;
+import com.school.management.domain.place.model.valueobject.*;
+import com.school.management.domain.place.repository.PlaceClassAssignmentRepository;
+import com.school.management.domain.place.repository.PlaceOccupantRepository;
+import com.school.management.domain.place.repository.PlaceRepository;
+import com.school.management.domain.access.repository.AccessRelationRepository;
 import com.school.management.exception.BusinessException;
-import com.school.management.infrastructure.persistence.space.SpacePO;
-import com.school.management.infrastructure.persistence.space.SpaceMapper;
+import com.school.management.infrastructure.persistence.place.PlacePO;
+import com.school.management.infrastructure.persistence.place.PlaceMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -36,66 +37,67 @@ import java.util.stream.Collectors;
 @Slf4j
 @Service
 @RequiredArgsConstructor
-public class SpaceApplicationService {
+public class PlaceApplicationService {
 
     private static final AtomicLong CODE_SEQUENCE = new AtomicLong(System.currentTimeMillis());
 
-    private final SpaceRepository spaceRepository;
-    private final SpaceOccupantRepository occupantRepository;
-    private final SpaceClassAssignmentRepository classAssignmentRepository;
-    private final SpaceMapper spaceMapper;
+    private final PlaceRepository placeRepository;
+    private final PlaceOccupantRepository occupantRepository;
+    private final PlaceClassAssignmentRepository classAssignmentRepository;
+    private final AccessRelationRepository accessRelationRepository;
+    private final PlaceMapper placeMapper;
 
     /**
      * 创建场所
      */
     @Transactional
-    public Long createSpace(CreateSpaceCommand command) {
+    public Long createPlace(CreatePlaceCommand command) {
         // 验证编码唯一性
-        if (command.getSpaceCode() != null && spaceRepository.existsByCode(command.getSpaceCode())) {
-            throw new BusinessException("场所编码已存在: " + command.getSpaceCode());
+        if (command.getPlaceCode() != null && placeRepository.existsByCode(command.getPlaceCode())) {
+            throw new BusinessException("场所编码已存在: " + command.getPlaceCode());
         }
 
-        Space space;
-        switch (command.getSpaceType()) {
+        Place place;
+        switch (command.getPlaceType()) {
             case CAMPUS:
-                String campusCode = command.getSpaceCode() != null ? command.getSpaceCode()
+                String campusCode = command.getPlaceCode() != null ? command.getPlaceCode()
                     : generateCode("CAMPUS");
-                space = Space.createCampus(campusCode, command.getSpaceName());
+                place = Place.createCampus(campusCode, command.getPlaceName());
                 break;
 
             case BUILDING:
-                Space campus = getParentSpace(command.getParentId(), SpaceType.CAMPUS);
+                Place campus = getParentPlace(command.getParentId(), PlaceType.CAMPUS);
                 // 校验楼号唯一性
                 Integer buildingNoInt = parseInteger(command.getBuildingNo());
                 if (buildingNoInt != null &&
-                    spaceRepository.existsByBuildingNoInCampus(buildingNoInt, campus.getId(), null)) {
+                    placeRepository.existsByBuildingNoInCampus(buildingNoInt, campus.getId(), null)) {
                     throw new BusinessException("该校区内楼号\"" + command.getBuildingNo() + "\"已存在");
                 }
-                String buildingCode = command.getSpaceCode() != null ? command.getSpaceCode()
+                String buildingCode = command.getPlaceCode() != null ? command.getPlaceCode()
                     : generateCode("BLDG");
-                space = Space.createBuilding(buildingCode, command.getSpaceName(),
+                place = Place.createBuilding(buildingCode, command.getPlaceName(),
                     command.getBuildingType(), command.getBuildingNo(), campus);
                 break;
 
             case FLOOR:
-                Space building = getParentSpace(command.getParentId(), SpaceType.BUILDING);
+                Place building = getParentPlace(command.getParentId(), PlaceType.BUILDING);
                 if (command.getFloorNumber() == null) {
                     throw new BusinessException("楼层号不能为空");
                 }
-                space = Space.createFloor(command.getFloorNumber(), building);
+                place = Place.createFloor(command.getFloorNumber(), building);
                 break;
 
             case ROOM:
-                Space floor = getParentSpace(command.getParentId(), SpaceType.FLOOR);
+                Place floor = getParentPlace(command.getParentId(), PlaceType.FLOOR);
                 // 校验房间号唯一性（同一楼栋内）
                 Integer roomNoInt = parseInteger(command.getRoomNo());
                 if (roomNoInt != null && floor.getBuildingId() != null &&
-                    spaceRepository.existsByRoomNoInBuilding(roomNoInt, floor.getBuildingId(), null)) {
+                    placeRepository.existsByRoomNoInBuilding(roomNoInt, floor.getBuildingId(), null)) {
                     throw new BusinessException("该楼栋内房间号\"" + command.getRoomNo() + "\"已存在");
                 }
-                String roomCode = command.getSpaceCode() != null ? command.getSpaceCode()
+                String roomCode = command.getPlaceCode() != null ? command.getPlaceCode()
                     : generateRoomCode(floor);
-                space = Space.createRoom(roomCode, command.getSpaceName(),
+                place = Place.createRoom(roomCode, command.getPlaceName(),
                     command.getRoomType(), command.getCapacity(), command.getRoomNo(), floor);
                 break;
 
@@ -105,86 +107,86 @@ public class SpaceApplicationService {
 
         // 设置其他属性
         if (command.getOrgUnitId() != null) {
-            space.assignToOrgUnit(command.getOrgUnitId());
+            place.assignToOrgUnit(command.getOrgUnitId());
         }
         if (command.getClassId() != null) {
-            space.assignToClass(command.getClassId());
+            place.assignToClass(command.getClassId());
         }
         if (command.getResponsibleUserId() != null) {
-            space.assignResponsible(command.getResponsibleUserId());
+            place.assignResponsible(command.getResponsibleUserId());
         }
         if (command.getDescription() != null) {
-            space.updateInfo(space.getSpaceName(), command.getDescription());
+            place.updateInfo(place.getPlaceName(), command.getDescription());
         }
         if (command.getAttributes() != null) {
-            space.updateAttributes(command.getAttributes());
+            place.updateAttributes(command.getAttributes());
         }
         // 设置性别限制
         if (command.getGenderType() != null) {
-            space.setGenderRestriction(GenderType.fromCode(command.getGenderType()));
+            place.setGenderRestriction(GenderType.fromCode(command.getGenderType()));
         }
 
         // 保存
-        spaceRepository.save(space);
+        placeRepository.save(place);
 
         // TODO: 保存扩展属性（宿舍、教室等）
 
-        return space.getId();
+        return place.getId();
     }
 
     /**
      * 更新场所
      */
     @Transactional
-    public void updateSpace(UpdateSpaceCommand command) {
-        Space space = spaceRepository.findById(command.getId())
+    public void updatePlace(UpdatePlaceCommand command) {
+        Place place = placeRepository.findById(command.getId())
             .orElseThrow(() -> new BusinessException("场所不存在"));
 
-        if (command.getSpaceName() != null) {
-            space.updateInfo(command.getSpaceName(), command.getDescription());
+        if (command.getPlaceName() != null) {
+            place.updateInfo(command.getPlaceName(), command.getDescription());
         }
         // 更新楼号（仅BUILDING类型）
         Integer updateBuildingNo = parseInteger(command.getBuildingNo());
-        if (updateBuildingNo != null && !updateBuildingNo.equals(space.getBuildingNo())) {
+        if (updateBuildingNo != null && !updateBuildingNo.equals(place.getBuildingNo())) {
             // 校验楼号唯一性
-            if (space.getCampusId() != null &&
-                spaceRepository.existsByBuildingNoInCampus(updateBuildingNo, space.getCampusId(), space.getId())) {
+            if (place.getCampusId() != null &&
+                placeRepository.existsByBuildingNoInCampus(updateBuildingNo, place.getCampusId(), place.getId())) {
                 throw new BusinessException("该校区内楼号\"" + command.getBuildingNo() + "\"已存在");
             }
-            space.updateBuildingNo(updateBuildingNo);
+            place.updateBuildingNo(updateBuildingNo);
         }
         // 更新房间号（仅ROOM类型）
         Integer updateRoomNo = parseInteger(command.getRoomNo());
-        if (updateRoomNo != null && !updateRoomNo.equals(space.getRoomNo())) {
+        if (updateRoomNo != null && !updateRoomNo.equals(place.getRoomNo())) {
             // 校验房间号唯一性
-            if (space.getBuildingId() != null &&
-                spaceRepository.existsByRoomNoInBuilding(updateRoomNo, space.getBuildingId(), space.getId())) {
+            if (place.getBuildingId() != null &&
+                placeRepository.existsByRoomNoInBuilding(updateRoomNo, place.getBuildingId(), place.getId())) {
                 throw new BusinessException("该楼栋内房间号\"" + command.getRoomNo() + "\"已存在");
             }
-            space.updateRoomNo(updateRoomNo);
+            place.updateRoomNo(updateRoomNo);
         }
         if (command.getCapacity() != null) {
-            space.updateCapacity(command.getCapacity());
+            place.updateCapacity(command.getCapacity());
         }
         if (command.getOrgUnitId() != null) {
-            space.assignToOrgUnit(command.getOrgUnitId());
+            place.assignToOrgUnit(command.getOrgUnitId());
         }
         // 班级分配（允许设置为null来取消分配）
         if (command.getClassId() != null) {
-            space.assignToClass(command.getClassId());
+            place.assignToClass(command.getClassId());
         }
         if (command.getResponsibleUserId() != null) {
-            space.assignResponsible(command.getResponsibleUserId());
+            place.assignResponsible(command.getResponsibleUserId());
         }
         if (command.getAttributes() != null) {
-            space.updateAttributes(command.getAttributes());
+            place.updateAttributes(command.getAttributes());
         }
         // 性别限制
         if (command.getGenderType() != null) {
-            space.setGenderRestriction(GenderType.fromCode(command.getGenderType()));
+            place.setGenderRestriction(GenderType.fromCode(command.getGenderType()));
         }
 
-        spaceRepository.save(space);
+        placeRepository.save(place);
 
         // TODO: 更新扩展属性
     }
@@ -193,52 +195,51 @@ public class SpaceApplicationService {
      * 删除场所
      */
     @Transactional
-    public void deleteSpace(Long id, boolean force) {
-        Space space = spaceRepository.findById(id)
+    public void deletePlace(Long id, boolean force) {
+        Place place = placeRepository.findById(id)
             .orElseThrow(() -> new BusinessException("场所不存在"));
 
         // 检查是否有子节点
-        if (spaceRepository.hasChildren(id)) {
+        if (placeRepository.hasChildren(id)) {
             if (force) {
-                // 递归删除子节点
-                List<Space> descendants = spaceRepository.findByPathPrefix(space.getPath().getValue());
-                for (Space descendant : descendants) {
-                    spaceRepository.delete(descendant.getId());
+                // 递归删除子节点及其关系
+                List<Place> descendants = placeRepository.findByPathPrefix(place.getPath().getValue());
+                for (Place descendant : descendants) {
+                    accessRelationRepository.deleteByResource("place", descendant.getId());
+                    placeRepository.delete(descendant.getId());
                 }
             } else {
                 throw new BusinessException("该场所有子节点，无法删除");
             }
         }
 
-        // 检查是否有占用者
-        if (space.getCurrentOccupancy() > 0) {
-            throw new BusinessException("该场所有占用者，无法删除");
-        }
+        // Clean up relations for the target place
+        accessRelationRepository.deleteByResource("place", id);
 
-        spaceRepository.delete(id);
+        placeRepository.delete(id);
     }
 
     /**
      * 变更状态
      */
     @Transactional
-    public void changeStatus(Long id, SpaceStatus status) {
-        Space space = spaceRepository.findById(id)
+    public void changeStatus(Long id, PlaceStatus status) {
+        Place place = placeRepository.findById(id)
             .orElseThrow(() -> new BusinessException("场所不存在"));
 
         switch (status) {
             case NORMAL:
-                space.enable();
+                place.enable();
                 break;
             case DISABLED:
-                space.disable();
+                place.disable();
                 break;
             case MAINTENANCE:
-                space.startMaintenance();
+                place.startMaintenance();
                 break;
         }
 
-        spaceRepository.save(space);
+        placeRepository.save(place);
     }
 
     /**
@@ -246,17 +247,17 @@ public class SpaceApplicationService {
      */
     @Transactional
     public Long checkIn(CheckInCommand command) {
-        Space space = spaceRepository.findById(command.getSpaceId())
+        Place place = placeRepository.findById(command.getPlaceId())
             .orElseThrow(() -> new BusinessException("场所不存在"));
 
         // 验证是否可入住
-        if (!space.canCheckIn()) {
+        if (!place.canCheckIn()) {
             throw new BusinessException("该场所无法入住");
         }
 
         // 验证位置是否已被占用
         if (command.getPositionNo() != null &&
-            occupantRepository.isPositionOccupied(command.getSpaceId(), command.getPositionNo())) {
+            occupantRepository.isPositionOccupied(command.getPlaceId(), command.getPositionNo())) {
             throw new BusinessException("该位置已被占用");
         }
 
@@ -266,8 +267,8 @@ public class SpaceApplicationService {
         }
 
         // 创建占用记录
-        SpaceOccupant occupant = SpaceOccupant.create(
-            command.getSpaceId(),
+        PlaceOccupant occupant = PlaceOccupant.create(
+            command.getPlaceId(),
             command.getOccupantType(),
             command.getOccupantId(),
             command.getPositionNo()
@@ -279,8 +280,8 @@ public class SpaceApplicationService {
         occupantRepository.save(occupant);
 
         // 更新场所占用数
-        space.checkIn();
-        spaceRepository.save(space);
+        place.checkIn();
+        placeRepository.save(place);
 
         return occupant.getId();
     }
@@ -289,16 +290,16 @@ public class SpaceApplicationService {
      * 退出
      */
     @Transactional
-    public void checkOut(Long spaceId, Long occupantId) {
-        Space space = spaceRepository.findById(spaceId)
+    public void checkOut(Long placeId, Long occupantId) {
+        Place place = placeRepository.findById(placeId)
             .orElseThrow(() -> new BusinessException("场所不存在"));
 
         // 查找在住记录
         // 这里的 occupantId 是占用记录的ID，不是占用者ID
-        SpaceOccupant occupant = occupantRepository.findById(occupantId)
+        PlaceOccupant occupant = occupantRepository.findById(occupantId)
             .orElseThrow(() -> new BusinessException("占用记录不存在"));
 
-        if (!occupant.getSpaceId().equals(spaceId)) {
+        if (!occupant.getPlaceId().equals(placeId)) {
             throw new BusinessException("占用记录不属于该场所");
         }
 
@@ -311,28 +312,28 @@ public class SpaceApplicationService {
         occupantRepository.save(occupant);
 
         // 更新场所占用数
-        space.checkOut();
-        spaceRepository.save(space);
+        place.checkOut();
+        placeRepository.save(place);
     }
 
     /**
      * 批量分配组织单元
      */
     @Transactional
-    public void batchAssignOrgUnit(List<Long> spaceIds, Long orgUnitId) {
-        spaceRepository.batchUpdateOrgUnit(spaceIds, orgUnitId);
+    public void batchAssignOrgUnit(List<Long> placeIds, Long orgUnitId) {
+        placeRepository.batchUpdateOrgUnit(placeIds, orgUnitId);
     }
 
     /**
-     * 批量分配班级（直接分配到space表）
+     * 批量分配班级（直接分配到place表）
      */
     @Transactional
-    public void batchAssignClass(List<Long> spaceIds, Long classId) {
-        for (Long spaceId : spaceIds) {
-            Space space = spaceRepository.findById(spaceId)
-                .orElseThrow(() -> new BusinessException("场所不存在: " + spaceId));
-            space.assignToClass(classId);
-            spaceRepository.save(space);
+    public void batchAssignClass(List<Long> placeIds, Long classId) {
+        for (Long placeId : placeIds) {
+            Place place = placeRepository.findById(placeId)
+                .orElseThrow(() -> new BusinessException("场所不存在: " + placeId));
+            place.assignToClass(classId);
+            placeRepository.save(place);
         }
     }
 
@@ -340,15 +341,15 @@ public class SpaceApplicationService {
      * 添加场所-班级分配（多对多关系）
      */
     @Transactional
-    public Long addClassAssignment(Long spaceId, Long classId, Long orgUnitId,
+    public Long addClassAssignment(Long placeId, Long classId, Long orgUnitId,
                                     Integer assignedBeds, Long assignedBy) {
         // 检查是否已存在
-        if (classAssignmentRepository.existsBySpaceIdAndClassId(spaceId, classId)) {
+        if (classAssignmentRepository.existsByPlaceIdAndClassId(placeId, classId)) {
             throw new BusinessException("该场所已分配给此班级");
         }
 
-        SpaceClassAssignment assignment = SpaceClassAssignment.create(
-            spaceId, classId, orgUnitId, assignedBeds, assignedBy);
+        PlaceClassAssignment assignment = PlaceClassAssignment.create(
+            placeId, classId, orgUnitId, assignedBeds, assignedBy);
         classAssignmentRepository.save(assignment);
         return assignment.getId();
     }
@@ -357,22 +358,22 @@ public class SpaceApplicationService {
      * 移除场所-班级分配
      */
     @Transactional
-    public void removeClassAssignment(Long spaceId, Long classId) {
-        classAssignmentRepository.findBySpaceIdAndClassId(spaceId, classId)
+    public void removeClassAssignment(Long placeId, Long classId) {
+        classAssignmentRepository.findByPlaceIdAndClassId(placeId, classId)
             .ifPresent(a -> classAssignmentRepository.delete(a.getId()));
     }
 
     /**
      * 获取场所的班级分配列表
      */
-    public List<SpaceClassAssignment> getClassAssignmentsBySpace(Long spaceId) {
-        return classAssignmentRepository.findBySpaceId(spaceId);
+    public List<PlaceClassAssignment> getClassAssignmentsByPlace(Long placeId) {
+        return classAssignmentRepository.findByPlaceId(placeId);
     }
 
     /**
      * 获取班级的场所分配列表
      */
-    public List<SpaceClassAssignment> getClassAssignmentsByClass(Long classId) {
+    public List<PlaceClassAssignment> getClassAssignmentsByClass(Long classId) {
         return classAssignmentRepository.findByClassId(classId);
     }
 
@@ -380,22 +381,22 @@ public class SpaceApplicationService {
      * 取消班级分配
      */
     @Transactional
-    public void unassignClass(Long spaceId) {
-        Space space = spaceRepository.findById(spaceId)
+    public void unassignClass(Long placeId) {
+        Place place = placeRepository.findById(placeId)
             .orElseThrow(() -> new BusinessException("场所不存在"));
-        space.unassignFromClass();
-        spaceRepository.save(space);
+        place.unassignFromClass();
+        placeRepository.save(place);
     }
 
     /**
      * 设置性别限制
      */
     @Transactional
-    public void setGenderRestriction(Long spaceId, Integer genderType) {
-        Space space = spaceRepository.findById(spaceId)
+    public void setGenderRestriction(Long placeId, Integer genderType) {
+        Place place = placeRepository.findById(placeId)
             .orElseThrow(() -> new BusinessException("场所不存在"));
-        space.setGenderRestriction(GenderType.fromCode(genderType));
-        spaceRepository.save(space);
+        place.setGenderRestriction(GenderType.fromCode(genderType));
+        placeRepository.save(place);
     }
 
     // ========== 查询方法 ==========
@@ -403,9 +404,9 @@ public class SpaceApplicationService {
     /**
      * 获取场所详情（带关联信息）
      */
-    public SpaceDTO getById(Long id) {
+    public PlaceDTO getById(Long id) {
         // 使用带关联信息的查询
-        SpacePO po = spaceMapper.selectByIdWithRelations(id);
+        PlacePO po = placeMapper.selectByIdWithRelations(id);
         if (po == null) {
             throw new BusinessException("场所不存在");
         }
@@ -415,25 +416,25 @@ public class SpaceApplicationService {
     /**
      * 获取场所树
      */
-    public List<SpaceDTO> getTree(BuildingType buildingType, boolean includeStatistics) {
-        List<Space> campuses = spaceRepository.findAllCampuses();
-        List<SpaceDTO> result = new ArrayList<>();
+    public List<PlaceDTO> getTree(BuildingType buildingType, boolean includeStatistics) {
+        List<Place> campuses = placeRepository.findAllCampuses();
+        List<PlaceDTO> result = new ArrayList<>();
 
-        for (Space campus : campuses) {
-            SpaceDTO campusDTO = toDTO(campus);
+        for (Place campus : campuses) {
+            PlaceDTO campusDTO = toDTO(campus);
             campusDTO.setChildren(new ArrayList<>());
 
-            List<Space> buildings = spaceRepository.findChildren(campus.getId());
-            for (Space building : buildings) {
+            List<Place> buildings = placeRepository.findChildren(campus.getId());
+            for (Place building : buildings) {
                 if (buildingType != null && building.getBuildingType() != buildingType) {
                     continue;
                 }
 
-                SpaceDTO buildingDTO = toDTO(building);
+                PlaceDTO buildingDTO = toDTO(building);
                 buildingDTO.setChildren(new ArrayList<>());
 
                 if (includeStatistics) {
-                    SpaceRepository.SpaceBuildingStats stats = spaceRepository.getBuildingStats(building.getId());
+                    PlaceRepository.PlaceBuildingStats stats = placeRepository.getBuildingStats(building.getId());
                     buildingDTO.setCapacity(stats.getTotalCapacity());
                     buildingDTO.setCurrentOccupancy(stats.getTotalOccupancy());
                     if (stats.getTotalCapacity() > 0) {
@@ -441,13 +442,13 @@ public class SpaceApplicationService {
                     }
                 }
 
-                List<Space> floors = spaceRepository.findFloorsByBuildingId(building.getId());
-                for (Space floor : floors) {
-                    SpaceDTO floorDTO = toDTO(floor);
+                List<Place> floors = placeRepository.findFloorsByBuildingId(building.getId());
+                for (Place floor : floors) {
+                    PlaceDTO floorDTO = toDTO(floor);
                     floorDTO.setChildren(new ArrayList<>());
 
-                    List<Space> rooms = spaceRepository.findRoomsByFloorId(floor.getId());
-                    for (Space room : rooms) {
+                    List<Place> rooms = placeRepository.findRoomsByFloorId(floor.getId());
+                    for (Place room : rooms) {
                         floorDTO.getChildren().add(toDTO(room));
                     }
 
@@ -466,8 +467,8 @@ public class SpaceApplicationService {
     /**
      * 获取楼宇列表
      */
-    public List<SpaceDTO> getBuildings(BuildingType buildingType, SpaceStatus status) {
-        return spaceRepository.findAllBuildings(buildingType, status).stream()
+    public List<PlaceDTO> getBuildings(BuildingType buildingType, PlaceStatus status) {
+        return placeRepository.findAllBuildings(buildingType, status).stream()
             .map(this::toDTO)
             .collect(Collectors.toList());
     }
@@ -475,9 +476,9 @@ public class SpaceApplicationService {
     /**
      * 分页查询
      */
-    public List<SpaceDTO> query(SpaceQueryCriteria criteria) {
-        return spaceRepository.findByConditions(
-            criteria.getSpaceType(),
+    public List<PlaceDTO> query(PlaceQueryCriteria criteria) {
+        return placeRepository.findByConditions(
+            criteria.getPlaceType(),
             criteria.getRoomType(),
             criteria.getBuildingType(),
             criteria.getBuildingId(),
@@ -493,9 +494,9 @@ public class SpaceApplicationService {
     /**
      * 统计数量
      */
-    public long count(SpaceQueryCriteria criteria) {
-        return spaceRepository.countByConditions(
-            criteria.getSpaceType(),
+    public long count(PlaceQueryCriteria criteria) {
+        return placeRepository.countByConditions(
+            criteria.getPlaceType(),
             criteria.getRoomType(),
             criteria.getBuildingType(),
             criteria.getBuildingId(),
@@ -509,8 +510,8 @@ public class SpaceApplicationService {
     /**
      * 获取子节点
      */
-    public List<SpaceDTO> getChildren(Long parentId) {
-        return spaceRepository.findChildren(parentId).stream()
+    public List<PlaceDTO> getChildren(Long parentId) {
+        return placeRepository.findChildren(parentId).stream()
             .map(this::toDTO)
             .collect(Collectors.toList());
     }
@@ -518,8 +519,8 @@ public class SpaceApplicationService {
     /**
      * 获取祖先链
      */
-    public List<SpaceDTO> getAncestors(Long id) {
-        return spaceRepository.findAncestors(id).stream()
+    public List<PlaceDTO> getAncestors(Long id) {
+        return placeRepository.findAncestors(id).stream()
             .map(this::toDTO)
             .collect(Collectors.toList());
     }
@@ -527,8 +528,8 @@ public class SpaceApplicationService {
     /**
      * 获取场所占用者列表
      */
-    public List<SpaceOccupantDTO> getOccupants(Long spaceId) {
-        return occupantRepository.findActiveBySpaceId(spaceId).stream()
+    public List<PlaceOccupantDTO> getOccupants(Long placeId) {
+        return occupantRepository.findActiveByPlaceId(placeId).stream()
             .map(this::toOccupantDTO)
             .collect(Collectors.toList());
     }
@@ -536,21 +537,21 @@ public class SpaceApplicationService {
     /**
      * 获取场所占用历史
      */
-    public List<SpaceOccupantDTO> getOccupantHistory(Long spaceId) {
-        return occupantRepository.findAllBySpaceId(spaceId).stream()
+    public List<PlaceOccupantDTO> getOccupantHistory(Long placeId) {
+        return occupantRepository.findAllByPlaceId(placeId).stream()
             .map(this::toOccupantDTO)
             .collect(Collectors.toList());
     }
 
     // ========== 私有方法 ==========
 
-    private Space getParentSpace(Long parentId, SpaceType expectedType) {
+    private Place getParentPlace(Long parentId, PlaceType expectedType) {
         if (parentId == null) {
             throw new BusinessException("父级ID不能为空");
         }
-        Space parent = spaceRepository.findById(parentId)
+        Place parent = placeRepository.findById(parentId)
             .orElseThrow(() -> new BusinessException("父级场所不存在"));
-        if (parent.getSpaceType() != expectedType) {
+        if (parent.getPlaceType() != expectedType) {
             throw new BusinessException("父级场所类型不正确，期望: " + expectedType.getDescription());
         }
         return parent;
@@ -574,7 +575,7 @@ public class SpaceApplicationService {
         return prefix + "-" + UUID.randomUUID().toString().substring(0, 8);
     }
 
-    private String generateRoomCode(Space floor) {
+    private String generateRoomCode(Place floor) {
         // 基于楼层生成房间编码，使用AtomicLong保证唯一性
         List<Long> ancestorIds = floor.getPath() != null ? floor.getPath().getAncestorIds() : List.of();
         String buildingCode = ancestorIds.size() > 1
@@ -584,52 +585,52 @@ public class SpaceApplicationService {
         return buildingCode + "-" + floor.getFloorNumber() + String.format("%04d", seq);
     }
 
-    private SpaceDTO toDTO(Space space) {
-        SpaceDTO dto = new SpaceDTO();
-        dto.setId(space.getId());
-        dto.setSpaceCode(space.getSpaceCode());
-        dto.setSpaceName(space.getSpaceName());
-        dto.setSpaceType(space.getSpaceType().name());
-        dto.setRoomType(space.getRoomType() != null ? space.getRoomType().name() : null);
-        dto.setBuildingType(space.getBuildingType() != null ? space.getBuildingType().name() : null);
+    private PlaceDTO toDTO(Place place) {
+        PlaceDTO dto = new PlaceDTO();
+        dto.setId(place.getId());
+        dto.setPlaceCode(place.getPlaceCode());
+        dto.setPlaceName(place.getPlaceName());
+        dto.setPlaceType(place.getPlaceType().name());
+        dto.setRoomType(place.getRoomType() != null ? place.getRoomType().name() : null);
+        dto.setBuildingType(place.getBuildingType() != null ? place.getBuildingType().name() : null);
         // 楼号和房间号
-        dto.setBuildingNo(space.getBuildingNo() != null ? String.valueOf(space.getBuildingNo()) : null);
-        dto.setRoomNo(space.getRoomNo() != null ? String.valueOf(space.getRoomNo()) : null);
-        dto.setParentId(space.getParentId());
-        dto.setPath(space.getPath() != null ? space.getPath().getValue() : null);
-        dto.setLevel(space.getLevel());
-        dto.setCampusId(space.getCampusId());
-        dto.setBuildingId(space.getBuildingId());
-        dto.setFloorNumber(space.getFloorNumber());
-        dto.setCapacity(space.getMaxCapacity());
-        dto.setCurrentOccupancy(space.getCurrentOccupancy());
-        dto.setAvailableCapacity(space.getAvailableCapacity());
-        dto.setOccupancyRate(space.getOccupancyRate());
-        dto.setOrgUnitId(space.getOrgUnitId());
-        dto.setClassId(space.getClassId());
-        dto.setResponsibleUserId(space.getResponsibleUserId());
+        dto.setBuildingNo(place.getBuildingNo() != null ? String.valueOf(place.getBuildingNo()) : null);
+        dto.setRoomNo(place.getRoomNo() != null ? String.valueOf(place.getRoomNo()) : null);
+        dto.setParentId(place.getParentId());
+        dto.setPath(place.getPath() != null ? place.getPath().getValue() : null);
+        dto.setLevel(place.getLevel());
+        dto.setCampusId(place.getCampusId());
+        dto.setBuildingId(place.getBuildingId());
+        dto.setFloorNumber(place.getFloorNumber());
+        dto.setCapacity(place.getMaxCapacity());
+        dto.setCurrentOccupancy(place.getCurrentOccupancy());
+        dto.setAvailableCapacity(place.getAvailableCapacity());
+        dto.setOccupancyRate(place.getOccupancyRate());
+        dto.setOrgUnitId(place.getOrgUnitId());
+        dto.setClassId(place.getClassId());
+        dto.setResponsibleUserId(place.getResponsibleUserId());
         // 性别类型
-        if (space.getGenderType() != null) {
-            dto.setGenderType(space.getGenderType().getCode());
-            dto.setGenderTypeText(space.getGenderType().getDescription());
+        if (place.getGenderType() != null) {
+            dto.setGenderType(place.getGenderType().getCode());
+            dto.setGenderTypeText(place.getGenderType().getDescription());
         }
-        dto.setStatus(space.getStatus().getCode());
-        dto.setStatusText(space.getStatus().getDescription());
-        dto.setAttributes(space.getAttributes());
-        dto.setDescription(space.getDescription());
-        dto.setCreatedAt(space.getCreatedAt());
-        dto.setUpdatedAt(space.getUpdatedAt());
+        dto.setStatus(place.getStatus().getCode());
+        dto.setStatusText(place.getStatus().getDescription());
+        dto.setAttributes(place.getAttributes());
+        dto.setDescription(place.getDescription());
+        dto.setCreatedAt(place.getCreatedAt());
+        dto.setUpdatedAt(place.getUpdatedAt());
 
         // 如果是房间，查询关联信息（楼栋号、楼层、班级、班主任等）
-        if (space.getSpaceType() == SpaceType.ROOM) {
-            SpacePO poWithRelations = spaceMapper.selectByIdWithRelations(space.getId());
+        if (place.getPlaceType() == PlaceType.ROOM) {
+            PlacePO poWithRelations = placeMapper.selectByIdWithRelations(place.getId());
             if (poWithRelations != null) {
                 dto.setParentBuildingNo(poWithRelations.getParentBuildingNo());
                 dto.setBuildingName(poWithRelations.getBuildingName());
                 dto.setFloorId(poWithRelations.getFloorId());
                 dto.setFloorName(poWithRelations.getFloorName());
                 dto.setOrgUnitName(poWithRelations.getOrgUnitName());
-                if (space.getClassId() != null) {
+                if (place.getClassId() != null) {
                     dto.setClassName(poWithRelations.getClassName());
                     dto.setClassTeacherId(poWithRelations.getClassTeacherId());
                     dto.setClassTeacherName(poWithRelations.getClassTeacherName());
@@ -641,14 +642,14 @@ public class SpaceApplicationService {
     }
 
     /**
-     * 从SpacePO转换为DTO（带关联信息）
+     * 从PlacePO转换为DTO（带关联信息）
      */
-    private SpaceDTO toDTO(SpacePO po) {
-        SpaceDTO dto = new SpaceDTO();
+    private PlaceDTO toDTO(PlacePO po) {
+        PlaceDTO dto = new PlaceDTO();
         dto.setId(po.getId());
-        dto.setSpaceCode(po.getSpaceCode());
-        dto.setSpaceName(po.getSpaceName());
-        dto.setSpaceType(po.getSpaceType());
+        dto.setPlaceCode(po.getPlaceCode());
+        dto.setPlaceName(po.getPlaceName());
+        dto.setPlaceType(po.getPlaceType());
         dto.setRoomType(po.getRoomType());
         dto.setBuildingType(po.getBuildingType());
         // 楼号和房间号
@@ -689,7 +690,7 @@ public class SpaceApplicationService {
         dto.setGenderType(genderType.getCode());
         dto.setGenderTypeText(genderType.getDescription());
         // 状态
-        SpaceStatus status = SpaceStatus.fromCode(po.getStatus() != null ? po.getStatus() : 1);
+        PlaceStatus status = PlaceStatus.fromCode(po.getStatus() != null ? po.getStatus() : 1);
         dto.setStatus(status.getCode());
         dto.setStatusText(status.getDescription());
         dto.setDescription(po.getDescription());
@@ -698,10 +699,10 @@ public class SpaceApplicationService {
         return dto;
     }
 
-    private SpaceOccupantDTO toOccupantDTO(SpaceOccupant occupant) {
-        SpaceOccupantDTO dto = new SpaceOccupantDTO();
+    private PlaceOccupantDTO toOccupantDTO(PlaceOccupant occupant) {
+        PlaceOccupantDTO dto = new PlaceOccupantDTO();
         dto.setId(occupant.getId());
-        dto.setSpaceId(occupant.getSpaceId());
+        dto.setPlaceId(occupant.getPlaceId());
         dto.setOccupantType(occupant.getOccupantType().name());
         dto.setOccupantId(occupant.getOccupantId());
         dto.setOccupantName(occupant.getOccupantName());

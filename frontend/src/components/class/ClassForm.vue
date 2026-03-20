@@ -372,18 +372,12 @@ const loadGradeList = async () => {
   }
 }
 
-// 加载部门列表（扁平化树形结构，只显示教学单位）
+// 加载部门列表（扁平化树形结构）
 const loadDepartmentList = async () => {
   try {
     const treeData = await getDepartmentList()
     // 扁平化树形结构
-    const flatList = flattenTree(treeData || [])
-    // 只保留教学单位（academic/ACADEMIC），职能部门（functional）和行政单位（administrative）不能管理班级
-    departmentList.value = flatList.filter(item => {
-      const category = (item.unitCategory || '').toLowerCase()
-      // 只允许教学单位或未设置类别的（默认当作教学单位）
-      return category === 'academic' || category === '' || !item.unitCategory
-    })
+    departmentList.value = flattenTree(treeData || [])
   } catch (error) {
     console.error('加载部门列表失败:', error)
   }

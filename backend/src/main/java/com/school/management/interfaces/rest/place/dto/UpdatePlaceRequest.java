@@ -1,4 +1,4 @@
-package com.school.management.interfaces.rest.space.dto;
+package com.school.management.interfaces.rest.place.dto;
 
 import lombok.Data;
 
@@ -8,9 +8,9 @@ import java.util.Map;
  * 更新场所请求
  */
 @Data
-public class UpdateSpaceRequest {
+public class UpdatePlaceRequest {
 
-    private String spaceName;
+    private String placeName;
 
     private String description;
 

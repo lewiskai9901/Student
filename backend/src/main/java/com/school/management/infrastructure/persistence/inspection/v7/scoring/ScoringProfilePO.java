@@ -14,7 +14,7 @@ public class ScoringProfilePO {
     private Long id;
 
     private Long tenantId;
-    private Long templateId;
+    private Long sectionId;
     private BigDecimal maxScore;
     private BigDecimal minScore;
     private Integer precisionDigits;

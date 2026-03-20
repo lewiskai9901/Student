@@ -116,7 +116,7 @@ CREATE TABLE IF NOT EXISTS space_occupants (
     INDEX idx_deleted (deleted)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='空间占用记录表';
 
--- 4. 空间预订记录表
+-- 4. 场所预订记录表
 CREATE TABLE IF NOT EXISTS space_bookings (
     id BIGINT PRIMARY KEY AUTO_INCREMENT,
 
@@ -143,7 +143,7 @@ CREATE TABLE IF NOT EXISTS space_bookings (
     INDEX idx_time_range (start_time, end_time),
     INDEX idx_status (status),
     INDEX idx_deleted (deleted)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='空间预订记录表';
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='场所预订记录表';
 
 -- 5. 空间分配记录表（空间与组织的多对多关系）
 CREATE TABLE IF NOT EXISTS space_assignments (
@@ -209,7 +209,7 @@ INSERT INTO space_types (type_code, type_name, icon, description, is_root_type, 
 INSERT INTO permission (id, code, name, type, parent_id, path, sort_order, enabled, created_at, updated_at)
 SELECT
     (SELECT COALESCE(MAX(id), 0) + 1 FROM permission p2),
-    'system:space-type',
+    'system:place-type',
     '空间类型管理',
     'menu',
     (SELECT id FROM permission p3 WHERE code = 'system' LIMIT 1),
@@ -219,73 +219,73 @@ SELECT
     NOW(),
     NOW()
 FROM dual
-WHERE NOT EXISTS (SELECT 1 FROM permission WHERE code = 'system:space-type');
+WHERE NOT EXISTS (SELECT 1 FROM permission WHERE code = 'system:place-type');
 
 INSERT INTO permission (id, code, name, type, parent_id, path, sort_order, enabled, created_at, updated_at)
 SELECT
     (SELECT COALESCE(MAX(id), 0) + 1 FROM permission p2),
-    'system:space-type:view',
-    '查看空间类型',
+    'system:place-type:view',
+    '查看场所类型',
     'button',
-    (SELECT id FROM permission p3 WHERE code = 'system:space-type' LIMIT 1),
-    CONCAT((SELECT path FROM permission p4 WHERE code = 'system:space-type' LIMIT 1), (SELECT COALESCE(MAX(id), 0) + 1 FROM permission p5), '/'),
+    (SELECT id FROM permission p3 WHERE code = 'system:place-type' LIMIT 1),
+    CONCAT((SELECT path FROM permission p4 WHERE code = 'system:place-type' LIMIT 1), (SELECT COALESCE(MAX(id), 0) + 1 FROM permission p5), '/'),
     1,
     1,
     NOW(),
     NOW()
 FROM dual
-WHERE NOT EXISTS (SELECT 1 FROM permission WHERE code = 'system:space-type:view');
+WHERE NOT EXISTS (SELECT 1 FROM permission WHERE code = 'system:place-type:view');
 
 INSERT INTO permission (id, code, name, type, parent_id, path, sort_order, enabled, created_at, updated_at)
 SELECT
     (SELECT COALESCE(MAX(id), 0) + 1 FROM permission p2),
-    'system:space-type:add',
-    '新增空间类型',
+    'system:place-type:add',
+    '新增场所类型',
     'button',
-    (SELECT id FROM permission p3 WHERE code = 'system:space-type' LIMIT 1),
-    CONCAT((SELECT path FROM permission p4 WHERE code = 'system:space-type' LIMIT 1), (SELECT COALESCE(MAX(id), 0) + 1 FROM permission p5), '/'),
+    (SELECT id FROM permission p3 WHERE code = 'system:place-type' LIMIT 1),
+    CONCAT((SELECT path FROM permission p4 WHERE code = 'system:place-type' LIMIT 1), (SELECT COALESCE(MAX(id), 0) + 1 FROM permission p5), '/'),
     2,
     1,
     NOW(),
     NOW()
 FROM dual
-WHERE NOT EXISTS (SELECT 1 FROM permission WHERE code = 'system:space-type:add');
+WHERE NOT EXISTS (SELECT 1 FROM permission WHERE code = 'system:place-type:add');
 
 INSERT INTO permission (id, code, name, type, parent_id, path, sort_order, enabled, created_at, updated_at)
 SELECT
     (SELECT COALESCE(MAX(id), 0) + 1 FROM permission p2),
-    'system:space-type:edit',
-    '编辑空间类型',
+    'system:place-type:edit',
+    '编辑场所类型',
     'button',
-    (SELECT id FROM permission p3 WHERE code = 'system:space-type' LIMIT 1),
-    CONCAT((SELECT path FROM permission p4 WHERE code = 'system:space-type' LIMIT 1), (SELECT COALESCE(MAX(id), 0) + 1 FROM permission p5), '/'),
+    (SELECT id FROM permission p3 WHERE code = 'system:place-type' LIMIT 1),
+    CONCAT((SELECT path FROM permission p4 WHERE code = 'system:place-type' LIMIT 1), (SELECT COALESCE(MAX(id), 0) + 1 FROM permission p5), '/'),
     3,
     1,
     NOW(),
     NOW()
 FROM dual
-WHERE NOT EXISTS (SELECT 1 FROM permission WHERE code = 'system:space-type:edit');
+WHERE NOT EXISTS (SELECT 1 FROM permission WHERE code = 'system:place-type:edit');
 
 INSERT INTO permission (id, code, name, type, parent_id, path, sort_order, enabled, created_at, updated_at)
 SELECT
     (SELECT COALESCE(MAX(id), 0) + 1 FROM permission p2),
-    'system:space-type:delete',
-    '删除空间类型',
+    'system:place-type:delete',
+    '删除场所类型',
     'button',
-    (SELECT id FROM permission p3 WHERE code = 'system:space-type' LIMIT 1),
-    CONCAT((SELECT path FROM permission p4 WHERE code = 'system:space-type' LIMIT 1), (SELECT COALESCE(MAX(id), 0) + 1 FROM permission p5), '/'),
+    (SELECT id FROM permission p3 WHERE code = 'system:place-type' LIMIT 1),
+    CONCAT((SELECT path FROM permission p4 WHERE code = 'system:place-type' LIMIT 1), (SELECT COALESCE(MAX(id), 0) + 1 FROM permission p5), '/'),
     4,
     1,
     NOW(),
     NOW()
 FROM dual
-WHERE NOT EXISTS (SELECT 1 FROM permission WHERE code = 'system:space-type:delete');
+WHERE NOT EXISTS (SELECT 1 FROM permission WHERE code = 'system:place-type:delete');
 
 -- 空间管理权限
 INSERT INTO permission (id, code, name, type, parent_id, path, sort_order, enabled, created_at, updated_at)
 SELECT
     (SELECT COALESCE(MAX(id), 0) + 1 FROM permission p2),
-    'space',
+    'place',
     '空间管理',
     'menu',
     NULL,
@@ -295,109 +295,109 @@ SELECT
     NOW(),
     NOW()
 FROM dual
-WHERE NOT EXISTS (SELECT 1 FROM permission WHERE code = 'space');
+WHERE NOT EXISTS (SELECT 1 FROM permission WHERE code = 'place');
 
 INSERT INTO permission (id, code, name, type, parent_id, path, sort_order, enabled, created_at, updated_at)
 SELECT
     (SELECT COALESCE(MAX(id), 0) + 1 FROM permission p2),
-    'space:view',
-    '查看空间',
+    'place:view',
+    '查看场所',
     'button',
-    (SELECT id FROM permission p3 WHERE code = 'space' LIMIT 1),
-    CONCAT((SELECT path FROM permission p4 WHERE code = 'space' LIMIT 1), (SELECT COALESCE(MAX(id), 0) + 1 FROM permission p5), '/'),
+    (SELECT id FROM permission p3 WHERE code = 'place' LIMIT 1),
+    CONCAT((SELECT path FROM permission p4 WHERE code = 'place' LIMIT 1), (SELECT COALESCE(MAX(id), 0) + 1 FROM permission p5), '/'),
     1,
     1,
     NOW(),
     NOW()
 FROM dual
-WHERE NOT EXISTS (SELECT 1 FROM permission WHERE code = 'space:view');
+WHERE NOT EXISTS (SELECT 1 FROM permission WHERE code = 'place:view');
 
 INSERT INTO permission (id, code, name, type, parent_id, path, sort_order, enabled, created_at, updated_at)
 SELECT
     (SELECT COALESCE(MAX(id), 0) + 1 FROM permission p2),
-    'space:add',
-    '新增空间',
+    'place:add',
+    '新增场所',
     'button',
-    (SELECT id FROM permission p3 WHERE code = 'space' LIMIT 1),
-    CONCAT((SELECT path FROM permission p4 WHERE code = 'space' LIMIT 1), (SELECT COALESCE(MAX(id), 0) + 1 FROM permission p5), '/'),
+    (SELECT id FROM permission p3 WHERE code = 'place' LIMIT 1),
+    CONCAT((SELECT path FROM permission p4 WHERE code = 'place' LIMIT 1), (SELECT COALESCE(MAX(id), 0) + 1 FROM permission p5), '/'),
     2,
     1,
     NOW(),
     NOW()
 FROM dual
-WHERE NOT EXISTS (SELECT 1 FROM permission WHERE code = 'space:add');
+WHERE NOT EXISTS (SELECT 1 FROM permission WHERE code = 'place:add');
 
 INSERT INTO permission (id, code, name, type, parent_id, path, sort_order, enabled, created_at, updated_at)
 SELECT
     (SELECT COALESCE(MAX(id), 0) + 1 FROM permission p2),
-    'space:edit',
-    '编辑空间',
+    'place:edit',
+    '编辑场所',
     'button',
-    (SELECT id FROM permission p3 WHERE code = 'space' LIMIT 1),
-    CONCAT((SELECT path FROM permission p4 WHERE code = 'space' LIMIT 1), (SELECT COALESCE(MAX(id), 0) + 1 FROM permission p5), '/'),
+    (SELECT id FROM permission p3 WHERE code = 'place' LIMIT 1),
+    CONCAT((SELECT path FROM permission p4 WHERE code = 'place' LIMIT 1), (SELECT COALESCE(MAX(id), 0) + 1 FROM permission p5), '/'),
     3,
     1,
     NOW(),
     NOW()
 FROM dual
-WHERE NOT EXISTS (SELECT 1 FROM permission WHERE code = 'space:edit');
+WHERE NOT EXISTS (SELECT 1 FROM permission WHERE code = 'place:edit');
 
 INSERT INTO permission (id, code, name, type, parent_id, path, sort_order, enabled, created_at, updated_at)
 SELECT
     (SELECT COALESCE(MAX(id), 0) + 1 FROM permission p2),
-    'space:delete',
-    '删除空间',
+    'place:delete',
+    '删除场所',
     'button',
-    (SELECT id FROM permission p3 WHERE code = 'space' LIMIT 1),
-    CONCAT((SELECT path FROM permission p4 WHERE code = 'space' LIMIT 1), (SELECT COALESCE(MAX(id), 0) + 1 FROM permission p5), '/'),
+    (SELECT id FROM permission p3 WHERE code = 'place' LIMIT 1),
+    CONCAT((SELECT path FROM permission p4 WHERE code = 'place' LIMIT 1), (SELECT COALESCE(MAX(id), 0) + 1 FROM permission p5), '/'),
     4,
     1,
     NOW(),
     NOW()
 FROM dual
-WHERE NOT EXISTS (SELECT 1 FROM permission WHERE code = 'space:delete');
+WHERE NOT EXISTS (SELECT 1 FROM permission WHERE code = 'place:delete');
 
 INSERT INTO permission (id, code, name, type, parent_id, path, sort_order, enabled, created_at, updated_at)
 SELECT
     (SELECT COALESCE(MAX(id), 0) + 1 FROM permission p2),
-    'space:assign',
-    '分配空间',
+    'place:assign',
+    '分配场所',
     'button',
-    (SELECT id FROM permission p3 WHERE code = 'space' LIMIT 1),
-    CONCAT((SELECT path FROM permission p4 WHERE code = 'space' LIMIT 1), (SELECT COALESCE(MAX(id), 0) + 1 FROM permission p5), '/'),
+    (SELECT id FROM permission p3 WHERE code = 'place' LIMIT 1),
+    CONCAT((SELECT path FROM permission p4 WHERE code = 'place' LIMIT 1), (SELECT COALESCE(MAX(id), 0) + 1 FROM permission p5), '/'),
     5,
     1,
     NOW(),
     NOW()
 FROM dual
-WHERE NOT EXISTS (SELECT 1 FROM permission WHERE code = 'space:assign');
+WHERE NOT EXISTS (SELECT 1 FROM permission WHERE code = 'place:assign');
 
 INSERT INTO permission (id, code, name, type, parent_id, path, sort_order, enabled, created_at, updated_at)
 SELECT
     (SELECT COALESCE(MAX(id), 0) + 1 FROM permission p2),
-    'space:booking',
-    '空间预订',
+    'place:booking',
+    '场所预订',
     'button',
-    (SELECT id FROM permission p3 WHERE code = 'space' LIMIT 1),
-    CONCAT((SELECT path FROM permission p4 WHERE code = 'space' LIMIT 1), (SELECT COALESCE(MAX(id), 0) + 1 FROM permission p5), '/'),
+    (SELECT id FROM permission p3 WHERE code = 'place' LIMIT 1),
+    CONCAT((SELECT path FROM permission p4 WHERE code = 'place' LIMIT 1), (SELECT COALESCE(MAX(id), 0) + 1 FROM permission p5), '/'),
     6,
     1,
     NOW(),
     NOW()
 FROM dual
-WHERE NOT EXISTS (SELECT 1 FROM permission WHERE code = 'space:booking');
+WHERE NOT EXISTS (SELECT 1 FROM permission WHERE code = 'place:booking');
 
 INSERT INTO permission (id, code, name, type, parent_id, path, sort_order, enabled, created_at, updated_at)
 SELECT
     (SELECT COALESCE(MAX(id), 0) + 1 FROM permission p2),
-    'space:occupancy',
+    'place:occupancy',
     '入住管理',
     'button',
-    (SELECT id FROM permission p3 WHERE code = 'space' LIMIT 1),
-    CONCAT((SELECT path FROM permission p4 WHERE code = 'space' LIMIT 1), (SELECT COALESCE(MAX(id), 0) + 1 FROM permission p5), '/'),
+    (SELECT id FROM permission p3 WHERE code = 'place' LIMIT 1),
+    CONCAT((SELECT path FROM permission p4 WHERE code = 'place' LIMIT 1), (SELECT COALESCE(MAX(id), 0) + 1 FROM permission p5), '/'),
     7,
     1,
     NOW(),
     NOW()
 FROM dual
-WHERE NOT EXISTS (SELECT 1 FROM permission WHERE code = 'space:occupancy');
+WHERE NOT EXISTS (SELECT 1 FROM permission WHERE code = 'place:occupancy');

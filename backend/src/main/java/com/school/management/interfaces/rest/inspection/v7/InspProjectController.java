@@ -2,6 +2,7 @@ package com.school.management.interfaces.rest.inspection.v7;
 
 import com.school.management.application.inspection.v7.InspProjectApplicationService;
 import com.school.management.application.inspection.v7.ScoreAggregationService;
+import com.school.management.application.inspection.v7.ScoringProfileApplicationService;
 import com.school.management.application.inspection.v7.TargetPopulationService;
 import com.school.management.common.result.Result;
 import com.school.management.common.util.SecurityUtils;
@@ -10,11 +11,9 @@ import com.school.management.infrastructure.casbin.CasbinAccess;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
-import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Map;
-import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/v7/insp/projects")
@@ -22,6 +21,7 @@ import java.util.stream.Collectors;
 public class InspProjectController {
 
     private final InspProjectApplicationService projectService;
+    private final ScoringProfileApplicationService scoringService;
     private final TargetPopulationService targetPopulationService;
     private final ScoreAggregationService scoreAggregationService;
 
@@ -32,7 +32,7 @@ public class InspProjectController {
     public Result<InspProject> createProject(@RequestBody CreateProjectRequest request) {
         Long userId = SecurityUtils.getCurrentUserId();
         InspProject project = projectService.createProject(
-                request.getProjectName(), request.getTemplateId(),
+                request.getProjectName(), request.getRootSectionId(),
                 request.getStartDate(), userId);
         return Result.success(project);
     }
@@ -61,16 +61,23 @@ public class InspProjectController {
                                               @RequestBody UpdateProjectRequest request) {
         Long userId = SecurityUtils.getCurrentUserId();
         InspProject project = projectService.updateProject(id,
-                request.getProjectName(), request.getTemplateId(),
+                request.getProjectName(), request.getRootSectionId(),
                 request.getScoringProfileId(), request.getScopeType(),
-                request.getScopeConfig(), request.getTargetType(),
+                request.getScopeConfig(),
                 request.getStartDate(), request.getEndDate(),
-                request.getCycleType(), request.getCycleConfig(),
-                request.getTimeSlots(), request.getSkipHolidays(),
-                request.getHolidayCalendarId(), request.getExcludedDates(),
                 request.getAssignmentMode(), request.getReviewRequired(),
                 request.getAutoPublish(), userId);
         return Result.success(project);
+    }
+
+    @PatchMapping("/{id}/config")
+    @CasbinAccess(resource = "insp:project", action = "edit")
+    public Result<InspProject> updateOperationalConfig(@PathVariable Long id,
+                                                        @RequestBody OperationalConfigRequest request) {
+        Long userId = SecurityUtils.getCurrentUserId();
+        return Result.success(projectService.updateOperationalConfig(id,
+                request.getAssignmentMode(), request.getReviewRequired(),
+                request.getAutoPublish(), request.getProjectName(), userId));
     }
 
     @DeleteMapping("/{id}")
@@ -113,18 +120,54 @@ public class InspProjectController {
         return Result.success(projectService.archiveProject(id));
     }
 
-    // ========== Child Projects ==========
-
-    @GetMapping("/{id}/children")
-    @CasbinAccess(resource = "insp:project", action = "view")
-    public Result<List<InspProject>> listChildProjects(@PathVariable Long id) {
-        return Result.success(projectService.listChildProjects(id));
-    }
+    // ========== Scores ==========
 
     @GetMapping("/{id}/scores")
     @CasbinAccess(resource = "insp:project", action = "view")
     public Result<List<ProjectScore>> listProjectScores(@PathVariable Long id) {
         return Result.success(projectService.listProjectScores(id));
+    }
+
+    @PostMapping("/{id}/grade-score")
+    @CasbinAccess(resource = "insp:project", action = "edit")
+    public Result<ProjectScore> gradeScore(@PathVariable Long id,
+                                            @RequestParam String cycleDate) {
+        return Result.success(scoreAggregationService.gradeProjectScore(id, LocalDate.parse(cycleDate)));
+    }
+
+    // ========== Advanced Scoring Settings (project-level) ==========
+
+    @GetMapping("/{id}/advanced-scoring")
+    @CasbinAccess(resource = "insp:project", action = "view")
+    public Result<?> getAdvancedScoring(@PathVariable Long id) {
+        InspProject project = projectService.getProject(id)
+                .orElseThrow(() -> new IllegalArgumentException("项目不存在: " + id));
+        if (project.getScoringProfileId() == null) return Result.success(null);
+        return Result.success(scoringService.getProfile(project.getScoringProfileId()).orElse(null));
+    }
+
+    @PatchMapping("/{id}/advanced-scoring")
+    @CasbinAccess(resource = "insp:project", action = "edit")
+    public Result<?> updateAdvancedScoring(@PathVariable Long id,
+                                            @RequestBody AdvancedScoringRequest request) {
+        Long userId = SecurityUtils.getCurrentUserId();
+        InspProject project = projectService.getProject(id)
+                .orElseThrow(() -> new IllegalArgumentException("项目不存在: " + id));
+        if (project.getScoringProfileId() == null) {
+            throw new IllegalArgumentException("项目未关联评分配置");
+        }
+        return Result.success(scoringService.updateAdvancedSettings(
+                project.getScoringProfileId(),
+                request.getTrendFactorEnabled(), request.getTrendLookbackDays(),
+                request.getTrendBonusPerPercent(), request.getTrendPenaltyPerPercent(),
+                request.getTrendMaxAdjustment(),
+                request.getDecayEnabled(), request.getDecayMode(),
+                request.getDecayRatePerDay(), request.getDecayFloor(),
+                request.getMultiRaterMode(), request.getRaterWeightBy(),
+                request.getConsensusThreshold(),
+                request.getCalibrationEnabled(), request.getCalibrationMethod(),
+                request.getCalibrationPeriodDays(), request.getCalibrationMinSamples(),
+                userId));
     }
 
     // ========== Inspector Pool ==========
@@ -151,21 +194,6 @@ public class InspProjectController {
         return Result.success();
     }
 
-    // ========== Score Tree ==========
-
-    @GetMapping("/{id}/score-tree")
-    @CasbinAccess(resource = "insp:project", action = "view")
-    public Result<Map<String, Object>> getScoreTree(@PathVariable Long id) {
-        return Result.success(buildScoreTreeNode(id));
-    }
-
-    @PostMapping("/{id}/aggregate-score")
-    @CasbinAccess(resource = "insp:project", action = "edit")
-    public Result<ProjectScore> aggregateScore(@PathVariable Long id,
-                                                @RequestParam String cycleDate) {
-        return Result.success(scoreAggregationService.aggregateParentScore(id, LocalDate.parse(cycleDate)));
-    }
-
     // ========== Target Preview ==========
 
     @PostMapping("/target-preview")
@@ -176,19 +204,14 @@ public class InspProjectController {
         return Result.success(targets.size());
     }
 
-    private Map<String, Object> buildScoreTreeNode(Long projectId) {
-        InspProject project = projectService.getProject(projectId)
-                .orElseThrow(() -> new IllegalArgumentException("项目不存在: " + projectId));
-        List<ProjectScore> scores = projectService.listProjectScores(projectId);
-        List<InspProject> children = projectService.listChildProjects(projectId);
+    // ========== Target Persons (for PERSON_SCORE field type) ==========
 
-        Map<String, Object> node = new LinkedHashMap<>();
-        node.put("project", project);
-        node.put("scores", scores);
-        node.put("children", children.stream()
-                .map(child -> buildScoreTreeNode(child.getId()))
-                .collect(Collectors.toList()));
-        return node;
+    @GetMapping("/targets/persons")
+    @CasbinAccess(resource = "insp:project", action = "view")
+    public Result<List<TargetPopulationService.PersonInfo>> getTargetPersons(
+            @RequestParam String targetType,
+            @RequestParam Long targetId) {
+        return Result.success(targetPopulationService.resolvePersonsForTarget(targetType, targetId));
     }
 
     // --- Request DTOs ---
@@ -196,26 +219,19 @@ public class InspProjectController {
     @lombok.Data
     public static class CreateProjectRequest {
         private String projectName;
-        private Long templateId;
+        private Long rootSectionId;
         private LocalDate startDate;
     }
 
     @lombok.Data
     public static class UpdateProjectRequest {
         private String projectName;
-        private Long templateId;
+        private Long rootSectionId;
         private Long scoringProfileId;
         private ScopeType scopeType;
         private String scopeConfig;
-        private TargetType targetType;
         private LocalDate startDate;
         private LocalDate endDate;
-        private CycleType cycleType;
-        private String cycleConfig;
-        private String timeSlots;
-        private Boolean skipHolidays;
-        private Long holidayCalendarId;
-        private String excludedDates;
         private AssignmentMode assignmentMode;
         private Boolean reviewRequired;
         private Boolean autoPublish;
@@ -238,5 +254,33 @@ public class InspProjectController {
         private ScopeType scopeType;
         private String scopeConfig;
         private TargetType targetType;
+    }
+
+    @lombok.Data
+    public static class OperationalConfigRequest {
+        private String projectName;
+        private AssignmentMode assignmentMode;
+        private Boolean reviewRequired;
+        private Boolean autoPublish;
+    }
+
+    @lombok.Data
+    public static class AdvancedScoringRequest {
+        private Boolean trendFactorEnabled;
+        private Integer trendLookbackDays;
+        private BigDecimal trendBonusPerPercent;
+        private BigDecimal trendPenaltyPerPercent;
+        private BigDecimal trendMaxAdjustment;
+        private Boolean decayEnabled;
+        private String decayMode;
+        private BigDecimal decayRatePerDay;
+        private BigDecimal decayFloor;
+        private String multiRaterMode;
+        private String raterWeightBy;
+        private BigDecimal consensusThreshold;
+        private Boolean calibrationEnabled;
+        private String calibrationMethod;
+        private Integer calibrationPeriodDays;
+        private Integer calibrationMinSamples;
     }
 }

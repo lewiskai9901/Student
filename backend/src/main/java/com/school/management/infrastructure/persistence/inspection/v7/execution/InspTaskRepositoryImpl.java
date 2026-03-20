@@ -106,6 +106,9 @@ public class InspTaskRepositoryImpl implements InspTaskRepository {
         po.setCollaborationMode(d.getCollaborationMode());
         po.setExecutionStartedAt(d.getExecutionStartedAt());
         po.setExecutionEndedAt(d.getExecutionEndedAt());
+        po.setAssignedSectionIds(d.getAssignedSectionIds());
+        po.setAssignedTargetIds(d.getAssignedTargetIds());
+        po.setInspectionPlanId(d.getInspectionPlanId());
         po.setCreatedAt(d.getCreatedAt());
         po.setUpdatedAt(d.getUpdatedAt());
         return po;
@@ -136,6 +139,9 @@ public class InspTaskRepositoryImpl implements InspTaskRepository {
                 .collaborationMode(po.getCollaborationMode())
                 .executionStartedAt(po.getExecutionStartedAt())
                 .executionEndedAt(po.getExecutionEndedAt())
+                .assignedSectionIds(po.getAssignedSectionIds())
+                .assignedTargetIds(po.getAssignedTargetIds())
+                .inspectionPlanId(po.getInspectionPlanId())
                 .createdAt(po.getCreatedAt())
                 .updatedAt(po.getUpdatedAt()));
     }

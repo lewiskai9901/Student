@@ -88,28 +88,28 @@ export function getStudentDormitoryPage(params?: StudentDormitoryQueryRequest) {
 /**
  * 查询学生当前住宿信息
  */
-export function getCurrentByStudentId(studentId: number): Promise<StudentDormitoryResponse | null> {
+export function getCurrentByStudentId(studentId: number | string): Promise<StudentDormitoryResponse | null> {
   return http.get<StudentDormitoryResponse | null>(`${BASE_URL}/student/${studentId}/current`)
 }
 
 /**
  * 查询宿舍当前入住学生列表
  */
-export function getStudentsByDormitoryId(dormitoryId: number): Promise<StudentDormitoryResponse[]> {
+export function getStudentsByDormitoryId(dormitoryId: number | string): Promise<StudentDormitoryResponse[]> {
   return http.get<StudentDormitoryResponse[]>(`${BASE_URL}/dormitory/${dormitoryId}/students`)
 }
 
 /**
  * 查询学生住宿历史
  */
-export function getHistoryByStudentId(studentId: number): Promise<StudentDormitoryResponse[]> {
+export function getHistoryByStudentId(studentId: number | string): Promise<StudentDormitoryResponse[]> {
   return http.get<StudentDormitoryResponse[]>(`${BASE_URL}/student/${studentId}/history`)
 }
 
 /**
  * 学生入住
  */
-export function checkIn(data: StudentCheckInRequest): Promise<number> {
+export function checkIn(data: StudentCheckInRequest): Promise<number | string> {
   return http.post<number>(`${BASE_URL}/check-in`, data)
 }
 
@@ -130,14 +130,14 @@ export function changeDormitory(data: StudentChangeDormitoryRequest): Promise<vo
 /**
  * 批量入住
  */
-export function batchCheckIn(requests: StudentCheckInRequest[]): Promise<number> {
+export function batchCheckIn(requests: StudentCheckInRequest[]): Promise<number | string> {
   return http.post<number>(`${BASE_URL}/batch-check-in`, requests)
 }
 
 /**
  * 批量退宿
  */
-export function batchCheckOut(studentIds: number[], reason?: string): Promise<number> {
+export function batchCheckOut(studentIds: (number | string)[], reason?: string): Promise<number> {
   return http.post<number>(`${BASE_URL}/batch-check-out`, studentIds, { params: { reason } })
 }
 

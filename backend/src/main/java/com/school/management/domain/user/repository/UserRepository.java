@@ -107,4 +107,9 @@ public interface UserRepository extends Repository<User, Long> {
      * 获取所有用户
      */
     List<User> findAllUsers();
+
+    /**
+     * 根据ID列表批量查找用户
+     */
+    List<User> findByIds(List<Long> ids);
 }

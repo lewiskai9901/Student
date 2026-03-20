@@ -1,101 +1,98 @@
 /**
- * 组织类型 类型定义 (重构后匹配 org-unit-types API)
+ * 组织类型 类型定义 (统一类型系统 Phase 1)
+ * API: /org-types
  */
 
-export interface OrgType {
-  id: number
-  typeCode: string
-  typeName: string
-  parentTypeCode: string | null
-  levelOrder: number
-  icon: string | null
-  color: string | null
-  description: string | null
-  isAcademic: boolean         // 是否教学单位 (vs 职能部门)
-  canBeInspected: boolean     // 是否可被检查
-  canHaveChildren: boolean    // 是否可有子级
-  maxDepth: number | null     // 最大子级深度
-  isSystem: boolean
-  isEnabled: boolean
+import type { ConfigurableType, TypeTreeNode, CategoryInfo } from './configurableType'
+
+// ==================== Category ====================
+
+export type OrgCategoryInfo = CategoryInfo
+
+// ==================== 岗位模板 ====================
+
+export interface PositionTemplate {
+  positionName: string
   sortOrder: number
 }
 
-export interface OrgTypeTreeNode extends OrgType {
-  children: OrgTypeTreeNode[]
+// ==================== 核心类型 ====================
+
+export interface OrgType extends ConfigurableType {
+  // 跨领域关联（OrgType 特有）
+  defaultUserTypeCodes: string[] | null
+  defaultPlaceTypeCodes: string[] | null
+  defaultPositions: PositionTemplate[] | null
 }
+
+export type OrgTypeTreeNode = TypeTreeNode<OrgType>
+
+// ==================== Request ====================
 
 export interface CreateOrgTypeRequest {
   typeCode: string
   typeName: string
+  category?: string
   parentTypeCode?: string
-  levelOrder?: number
   icon?: string
-  color?: string
   description?: string
-  isAcademic?: boolean
-  canBeInspected?: boolean
-  canHaveChildren?: boolean
+  features?: Record<string, boolean>
+  metadataSchema?: string
+  allowedChildTypeCodes?: string[]
   maxDepth?: number
+  defaultUserTypeCodes?: string[]
+  defaultPlaceTypeCodes?: string[]
+  defaultPositions?: PositionTemplate[]
   sortOrder?: number
 }
 
 export interface UpdateOrgTypeRequest {
   typeName?: string
+  category?: string
   icon?: string
-  color?: string
   description?: string
-  isAcademic?: boolean
-  canBeInspected?: boolean
-  canHaveChildren?: boolean
+  features?: Record<string, boolean>
+  metadataSchema?: string
+  allowedChildTypeCodes?: string[]
   maxDepth?: number
+  defaultUserTypeCodes?: string[]
+  defaultPlaceTypeCodes?: string[]
+  defaultPositions?: PositionTemplate[]
   sortOrder?: number
 }
 
-// 组织类型特性配置
-export interface OrgTypeFeatures {
-  isAcademic: boolean
-  canBeInspected: boolean
-  canHaveChildren: boolean
-}
+// ==================== Feature Keys ====================
 
-// 预置类型编码
-export const PRESET_ORG_TYPES = {
-  SCHOOL: 'SCHOOL',
-  COLLEGE: 'COLLEGE',
-  DEPARTMENT: 'DEPARTMENT',
-  TEACHING_GROUP: 'TEACHING_GROUP',
-  STUDENT_AFFAIRS: 'STUDENT_AFFAIRS',
-  ACADEMIC_AFFAIRS: 'ACADEMIC_AFFAIRS',
-  LOGISTICS: 'LOGISTICS',
-  FINANCE: 'FINANCE',
-  GENERAL_OFFICE: 'GENERAL_OFFICE',
-  HR: 'HR'
+export const ORG_FEATURE_KEYS = {
+  DATA_PERMISSION_BOUNDARY: 'dataPermissionBoundary',
+  INSPECTION_TARGET: 'inspectionTarget',
+  MEMBER_MANAGEMENT: 'memberManagement',
+  ATTENDANCE: 'attendance',
+  SCHEDULING: 'scheduling'
 } as const
 
-// 类型图标映射
-export const ORG_TYPE_ICONS: Record<string, string> = {
-  SCHOOL: 'School',
-  COLLEGE: 'Building',
-  DEPARTMENT: 'Briefcase',
-  TEACHING_GROUP: 'Users',
-  STUDENT_AFFAIRS: 'UserCheck',
-  ACADEMIC_AFFAIRS: 'BookOpen',
-  LOGISTICS: 'Truck',
-  FINANCE: 'DollarSign',
-  GENERAL_OFFICE: 'FileText',
-  HR: 'Users'
+export const ORG_FEATURE_LABELS: Record<string, string> = {
+  dataPermissionBoundary: '数据权限边界',
+  inspectionTarget: '可被检查',
+  memberManagement: '成员管理',
+  attendance: '考勤',
+  scheduling: '排程管理'
 }
 
-// 类型颜色映射
-export const ORG_TYPE_COLORS: Record<string, string> = {
-  SCHOOL: '#1890ff',
-  COLLEGE: '#52c41a',
-  DEPARTMENT: '#722ed1',
-  TEACHING_GROUP: '#13c2c2',
-  STUDENT_AFFAIRS: '#fa8c16',
-  ACADEMIC_AFFAIRS: '#eb2f96',
-  LOGISTICS: '#8c8c8c',
-  FINANCE: '#faad14',
-  GENERAL_OFFICE: '#595959',
-  HR: '#2f54eb'
+// ==================== Category 常量 ====================
+
+export const ORG_CATEGORIES = {
+  ROOT: 'ROOT',
+  BRANCH: 'BRANCH',
+  FUNCTIONAL: 'FUNCTIONAL',
+  GROUP: 'GROUP',
+  CONTAINER: 'CONTAINER'
+} as const
+
+export const ORG_CATEGORY_LABELS: Record<string, string> = {
+  ROOT: '根组织',
+  BRANCH: '分支机构',
+  FUNCTIONAL: '职能部门',
+  GROUP: '成员组',
+  CONTAINER: '容器'
 }

@@ -36,11 +36,11 @@
     <div class="mb-6 rounded-lg border border-gray-200 bg-white p-4">
       <div class="flex flex-wrap items-end gap-4">
         <div class="w-44">
-          <label class="mb-1 block text-sm text-gray-600">用户名</label>
+          <label class="mb-1 block text-sm text-gray-600">账号</label>
           <input
             v-model="queryParams.username"
             type="text"
-            placeholder="请输入用户名"
+            placeholder="请输入账号"
             class="h-9 w-full rounded-lg border border-gray-300 px-3 text-sm focus:border-blue-500 focus:outline-none"
             @keyup.enter="handleQuery"
           />
@@ -135,9 +135,10 @@
                 class="h-4 w-4 rounded border-gray-300"
               />
             </th>
-            <th class="px-4 py-3 text-left text-sm font-medium text-gray-900">用户名</th>
+            <th class="px-4 py-3 text-left text-sm font-medium text-gray-900">账号</th>
             <th class="px-4 py-3 text-left text-sm font-medium text-gray-900">姓名</th>
             <th class="px-4 py-3 text-left text-sm font-medium text-gray-900">手机号</th>
+            <th class="px-4 py-3 text-left text-sm font-medium text-gray-900">用户类型</th>
             <th class="px-4 py-3 text-left text-sm font-medium text-gray-900">角色</th>
             <th class="px-4 py-3 text-left text-sm font-medium text-gray-900">组织</th>
             <th class="px-4 py-3 text-center text-sm font-medium text-gray-900">状态</th>
@@ -147,7 +148,7 @@
         </thead>
         <tbody v-if="loading">
           <tr>
-            <td colspan="9" class="py-16 text-center">
+            <td colspan="10" class="py-16 text-center">
               <Loader2 class="mx-auto h-8 w-8 animate-spin text-blue-600" />
               <div class="mt-2 text-sm text-gray-500">加载中...</div>
             </td>
@@ -155,7 +156,7 @@
         </tbody>
         <tbody v-else-if="userList.length === 0">
           <tr>
-            <td colspan="9" class="py-16 text-center">
+            <td colspan="10" class="py-16 text-center">
               <Users class="mx-auto h-12 w-12 text-gray-300" />
               <div class="mt-2 text-sm text-gray-500">暂无数据</div>
             </td>
@@ -178,6 +179,10 @@
             <td class="px-4 py-3 font-medium text-gray-900">{{ row.username }}</td>
             <td class="px-4 py-3 text-gray-700">{{ row.realName || '-' }}</td>
             <td class="px-4 py-3 text-gray-600">{{ row.phone || '-' }}</td>
+            <td class="px-4 py-3">
+              <span v-if="getUserTypeName(row.userType)" class="rounded bg-purple-50 px-1.5 py-0.5 text-xs text-purple-600">{{ getUserTypeName(row.userType) }}</span>
+              <span v-else class="text-gray-400">-</span>
+            </td>
             <td class="px-4 py-3">
               <template v-if="row.roleNames && row.roleNames.length">
                 <span
@@ -295,7 +300,7 @@
       <Transition name="modal">
         <div v-if="dialogVisible" class="fixed inset-0 z-50 flex items-center justify-center">
           <div class="fixed inset-0 bg-black/50" @click="dialogVisible = false"></div>
-          <div class="relative w-full max-w-xl rounded-lg bg-white shadow-xl">
+          <div class="relative w-full max-w-2xl rounded-lg bg-white shadow-xl">
             <div class="flex items-center justify-between border-b border-gray-200 px-6 py-4">
               <h3 class="text-lg font-medium text-gray-900">{{ dialogTitle }}</h3>
               <button @click="dialogVisible = false" class="rounded p-1 hover:bg-gray-100">
@@ -304,20 +309,23 @@
             </div>
             <div class="max-h-[60vh] overflow-y-auto p-6">
               <div class="grid grid-cols-2 gap-4">
+                <!-- 账号信息 -->
                 <div class="col-span-2">
                   <label class="mb-1 block text-sm text-gray-700">
-                    用户名 <span class="text-red-500">*</span>
+                    账号 <span class="text-red-500">*</span>
                   </label>
                   <input
                     v-model="formData.username"
                     type="text"
-                    placeholder="请输入用户名"
+                    placeholder="字母开头，仅限英文、数字、下划线（3-30位）"
                     :disabled="isEdit"
                     :class="[
                       'h-9 w-full rounded-lg border px-3 text-sm focus:outline-none',
-                      isEdit ? 'border-gray-200 bg-gray-100 text-gray-500' : 'border-gray-300 focus:border-blue-500'
+                      isEdit ? 'border-gray-200 bg-gray-100 text-gray-500' : usernameError ? 'border-red-400 focus:border-red-500' : 'border-gray-300 focus:border-blue-500'
                     ]"
+                    @input="validateUsername"
                   />
+                  <p v-if="usernameError" class="mt-0.5 text-xs text-red-500">{{ usernameError }}</p>
                 </div>
                 <div v-if="!isEdit" class="col-span-2">
                   <label class="mb-1 block text-sm text-gray-700">
@@ -330,6 +338,8 @@
                     class="h-9 w-full rounded-lg border border-gray-300 px-3 text-sm focus:border-blue-500 focus:outline-none"
                   />
                 </div>
+
+                <!-- 基本信息 -->
                 <div>
                   <label class="mb-1 block text-sm text-gray-700">
                     姓名 <span class="text-red-500">*</span>
@@ -351,13 +361,25 @@
                   />
                 </div>
                 <div>
-                  <label class="mb-1 block text-sm text-gray-700">
-                    手机号 <span class="text-red-500">*</span>
-                  </label>
+                  <label class="mb-1 block text-sm text-gray-700">手机号</label>
                   <input
                     v-model="formData.phone"
                     type="text"
-                    placeholder="请输入手机号"
+                    placeholder="请输入11位手机号"
+                    :class="[
+                      'h-9 w-full rounded-lg border px-3 text-sm focus:outline-none',
+                      phoneError ? 'border-red-400 focus:border-red-500' : 'border-gray-300 focus:border-blue-500'
+                    ]"
+                    @input="validatePhone"
+                  />
+                  <p v-if="phoneError" class="mt-0.5 text-xs text-red-500">{{ phoneError }}</p>
+                </div>
+                <div>
+                  <label class="mb-1 block text-sm text-gray-700">邮箱</label>
+                  <input
+                    v-model="formData.email"
+                    type="email"
+                    placeholder="请输入邮箱"
                     class="h-9 w-full rounded-lg border border-gray-300 px-3 text-sm focus:border-blue-500 focus:outline-none"
                   />
                 </div>
@@ -375,6 +397,75 @@
                   </div>
                 </div>
                 <div>
+                  <label class="mb-1 block text-sm text-gray-700">出生日期</label>
+                  <input
+                    v-model="formData.birthDate"
+                    type="date"
+                    class="h-9 w-full rounded-lg border border-gray-300 px-3 text-sm focus:border-blue-500 focus:outline-none"
+                  />
+                </div>
+                <div class="col-span-2">
+                  <label class="mb-1 block text-sm text-gray-700">身份证号</label>
+                  <input
+                    v-model="formData.idCard"
+                    type="text"
+                    placeholder="请输入身份证号"
+                    class="h-9 w-full rounded-lg border border-gray-300 px-3 text-sm focus:border-blue-500 focus:outline-none"
+                  />
+                </div>
+
+                <!-- 组织信息 -->
+                <div class="col-span-2">
+                  <label class="mb-1 block text-sm text-gray-700">
+                    用户类型 <span class="text-red-500">*</span>
+                  </label>
+                  <select
+                    v-model="formData.userTypeCode"
+                    class="h-9 w-full rounded-lg border border-gray-300 px-3 text-sm focus:border-blue-500 focus:outline-none"
+                  >
+                    <option value="">请选择用户类型</option>
+                    <option v-for="ut in userTypes" :key="ut.typeCode" :value="ut.typeCode">
+                      {{ ut.typeName }}
+                    </option>
+                  </select>
+                  <div v-if="selectedUserType" class="mt-1 flex gap-2">
+                    <span v-if="selectedUserType.features?.requiresOrg" class="text-xs text-orange-500">需关联组织</span>
+                    <span v-if="selectedUserType.features?.requiresPlace" class="text-xs text-orange-500">需关联场所</span>
+                    <span v-if="selectedUserType.defaultRoleCodes?.length" class="text-xs text-gray-400">默认角色: {{ selectedUserType.defaultRoleCodes.join(', ') }}</span>
+                  </div>
+                </div>
+                <div>
+                  <label class="mb-1 block text-sm text-gray-700">
+                    所属组织
+                    <span v-if="selectedUserType?.features?.requiresOrg" class="text-red-500">*</span>
+                  </label>
+                  <select
+                    v-model="formData.orgUnitId"
+                    class="h-9 w-full rounded-lg border border-gray-300 px-3 text-sm focus:border-blue-500 focus:outline-none"
+                  >
+                    <option :value="undefined">请选择</option>
+                    <option v-for="org in flatOrgUnits" :key="org.id" :value="org.id">
+                      {{ org.label }}
+                    </option>
+                  </select>
+                </div>
+                <div>
+                  <label class="mb-1 block text-sm text-gray-700">
+                    关联场所
+                    <span v-if="selectedUserType?.features?.requiresPlace" class="text-red-500">*</span>
+                  </label>
+                  <select
+                    v-model="formData.placeId"
+                    :disabled="!formData.orgUnitId"
+                    class="h-9 w-full rounded-lg border border-gray-300 px-3 text-sm focus:border-blue-500 focus:outline-none disabled:bg-gray-100 disabled:text-gray-400"
+                  >
+                    <option :value="undefined">{{ formData.orgUnitId ? (orgPlaces.length ? '请选择场所' : '该组织暂无关联场所') : '请先选择组织' }}</option>
+                    <option v-for="place in orgPlaces" :key="place.placeId" :value="place.placeId">
+                      {{ place.placeName }}
+                    </option>
+                  </select>
+                </div>
+                <div class="col-span-2">
                   <label class="mb-1 block text-sm text-gray-700">状态</label>
                   <div class="flex h-9 items-center gap-4">
                     <label class="flex items-center gap-1.5">
@@ -415,7 +506,7 @@
       <Transition name="modal">
         <div v-if="roleDialogVisible" class="fixed inset-0 z-50 flex items-center justify-center">
           <div class="fixed inset-0 bg-black/50" @click="roleDialogVisible = false"></div>
-          <div class="relative w-full max-w-md rounded-lg bg-white shadow-xl">
+          <div class="relative w-full max-w-2xl rounded-lg bg-white shadow-xl">
             <div class="flex items-center justify-between border-b border-gray-200 px-6 py-4">
               <h3 class="text-lg font-medium text-gray-900">分配角色</h3>
               <button @click="roleDialogVisible = false" class="rounded p-1 hover:bg-gray-100">
@@ -424,26 +515,50 @@
             </div>
             <div class="p-6">
               <div class="mb-4 rounded-lg bg-blue-50 p-3 text-sm text-blue-700">
-                请勾选需要分配给该用户的角色
+                勾选角色并选择作用域：「全局」不限范围，「指定组织」限定到某个组织节点及其子节点
               </div>
-              <div class="max-h-80 space-y-2 overflow-y-auto">
-                <label
+              <div class="max-h-96 space-y-2 overflow-y-auto">
+                <div
                   v-for="role in allRoles"
                   :key="role.id"
-                  class="flex cursor-pointer items-center justify-between rounded-lg border p-3 hover:bg-gray-50"
-                  :class="selectedRoleIds.includes(role.id) ? 'border-blue-500 bg-blue-50' : 'border-gray-200'"
+                  class="rounded-lg border p-3"
+                  :class="isRoleSelected(role.id) ? 'border-blue-500 bg-blue-50/50' : 'border-gray-200'"
                 >
                   <div class="flex items-center gap-3">
                     <input
                       type="checkbox"
-                      :value="role.id"
-                      v-model="selectedRoleIds"
-                      class="h-4 w-4 rounded border-gray-300"
+                      :checked="isRoleSelected(role.id)"
+                      @change="toggleRole(role.id)"
+                      class="h-4 w-4 shrink-0 rounded border-gray-300"
                     />
-                    <span class="font-medium text-gray-900">{{ role.roleName }}</span>
+                    <span class="shrink-0 font-medium text-gray-900">{{ role.roleName }}</span>
+                    <span v-if="role.roleCode" class="shrink-0 text-xs text-gray-500">{{ role.roleCode }}</span>
+                    <!-- 作用域选择器 -->
+                    <template v-if="isRoleSelected(role.id)">
+                      <div class="ml-auto flex items-center gap-2">
+                        <select
+                          :value="getRoleScope(role.id).scopeType"
+                          @change="updateRoleScopeType(role.id, ($event.target as HTMLSelectElement).value)"
+                          class="h-7 rounded border border-gray-300 px-2 text-xs"
+                        >
+                          <option value="ALL">全局</option>
+                          <option value="ORG_UNIT">指定组织</option>
+                        </select>
+                        <select
+                          v-if="getRoleScope(role.id).scopeType === 'ORG_UNIT'"
+                          :value="getRoleScope(role.id).scopeId"
+                          @change="updateRoleScopeId(role.id, Number(($event.target as HTMLSelectElement).value))"
+                          class="h-7 max-w-52 rounded border border-gray-300 px-2 text-xs"
+                        >
+                          <option :value="0">请选择组织</option>
+                          <option v-for="org in flatOrgUnits" :key="org.id" :value="org.id">
+                            {{ org.label }}
+                          </option>
+                        </select>
+                      </div>
+                    </template>
                   </div>
-                  <span v-if="role.roleCode" class="text-xs text-gray-500">{{ role.roleCode }}</span>
-                </label>
+                </div>
               </div>
             </div>
             <div class="flex justify-end gap-3 border-t border-gray-200 px-6 py-4">
@@ -472,7 +587,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, onMounted, computed } from 'vue'
+import { ref, reactive, onMounted, computed, watch } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import {
   Users,
@@ -486,7 +601,6 @@ import {
   Trash2,
   Shield,
   KeyRound,
-  Database,
   X,
   Loader2,
   ChevronLeft,
@@ -494,8 +608,13 @@ import {
   ChevronsLeft,
   ChevronsRight
 } from 'lucide-vue-next'
-// UserDataScopeManager 已移除 - 数据权限现在在角色级别配置
 import StatCard from '@/components/design-system/cards/StatCard.vue'
+import { getEnabledUserTypes } from '@/api/userType'
+import { getOrgUnitTree } from '@/api/organization'
+import { accessRelationApi } from '@/api/accessRelation'
+import { universalPlaceApi } from '@/api/universalPlace'
+import type { UserType as UserTypeItem } from '@/types/userType'
+import type { OrgUnitTreeNode } from '@/types'
 // V2 DDD API
 import {
   getUserPage,
@@ -505,7 +624,7 @@ import {
   batchDeleteUsers,
   resetPassword,
   updateUserStatus,
-  getUserRoleIds,
+  getUserRoleAssignments,
   assignRoles
 } from '@/api/user'
 import type {
@@ -526,8 +645,10 @@ const dialogVisible = ref(false)
 const roleDialogVisible = ref(false)
 // dataScopeDialogVisible 已移除 - 数据权限现在在角色级别配置
 const isEdit = ref(false)
-const selectedIds = ref<number[]>([])
-const currentUserId = ref<number>()
+const selectedIds = ref<(number | string)[]>([])
+const currentUserId = ref<number | string>()
+const usernameError = ref('')
+const phoneError = ref('')
 
 const queryParams = reactive<UserQueryParams>({
   pageNum: 1,
@@ -537,24 +658,130 @@ const queryParams = reactive<UserQueryParams>({
 const userList = ref<UserListItem[]>([])
 const total = ref(0)
 const allRoles = ref<Role[]>([])
-const selectedRoleIds = ref<(string | number)[]>([])
+// 角色分配（含作用域）
+interface RoleAssignmentLocal {
+  roleId: string | number
+  scopeType: string
+  scopeId: number | string
+}
+const roleAssignments = ref<RoleAssignmentLocal[]>([])
+const userTypes = ref<UserTypeItem[]>([])
+const orgTree = ref<OrgUnitTreeNode[]>([])
+// 组织关联的场所列表
+interface OrgPlaceItem { placeId: number; placeName: string }
+const orgPlaces = ref<OrgPlaceItem[]>([])
+
+// 当前选中的用户类型
+const selectedUserType = computed<UserTypeItem | null>(() => {
+  if (!formData.userTypeCode) return null
+  return userTypes.value.find(ut => ut.typeCode === formData.userTypeCode) || null
+})
+
+// 根据 typeCode 获取用户类型名称
+const getUserTypeName = (typeCode?: string): string => {
+  if (!typeCode) return ''
+  const ut = userTypes.value.find(t => t.typeCode === typeCode)
+  return ut?.typeName || typeCode
+}
+
+// 将组织树扁平化为列表（带缩进标记）
+interface FlatOrgItem { id: number; label: string }
+const flatOrgUnits = computed<FlatOrgItem[]>(() => {
+  const result: FlatOrgItem[] = []
+  const flatten = (nodes: OrgUnitTreeNode[], depth: number) => {
+    for (const node of nodes) {
+      const prefix = '\u00A0\u00A0'.repeat(depth)
+      result.push({ id: node.id, label: prefix + (node.unitName || node.label || '') })
+      if (node.children?.length) flatten(node.children, depth + 1)
+    }
+  }
+  flatten(orgTree.value, 0)
+  return result
+})
 
 // 统计数据 - 支持 V2 字符串状态和 V1 数字状态
 const enabledCount = computed(() => userList.value.filter(u => u.status === '启用' || u.status === 1).length)
 const disabledCount = computed(() => userList.value.filter(u => u.status === '禁用' || u.status === 2).length)
 const todayLoginCount = ref(0)
 
-const formData = reactive<UserFormData>({
+const formData = reactive<UserFormData & { placeId?: number }>({
   username: '',
   realName: '',
   password: '',
   phone: '',
+  email: '',
   employeeNo: '',
   gender: 1,
+  birthDate: '',
+  idCard: '',
+  userTypeCode: '',
+  orgUnitId: undefined,
+  placeId: undefined,
   status: 1
 })
 
+const validateUsername = () => {
+  const val = formData.username
+  if (!val) {
+    usernameError.value = ''
+    return
+  }
+  if (!/^[a-zA-Z]/.test(val)) {
+    usernameError.value = '必须以英文字母开头'
+  } else if (!/^[a-zA-Z][a-zA-Z0-9_]*$/.test(val)) {
+    usernameError.value = '只能包含英文字母、数字和下划线'
+  } else if (val.length < 3) {
+    usernameError.value = '至少3个字符'
+  } else if (val.length > 30) {
+    usernameError.value = '最多30个字符'
+  } else {
+    usernameError.value = ''
+  }
+}
+
+const validatePhone = () => {
+  const val = formData.phone
+  if (!val) {
+    phoneError.value = ''
+    return
+  }
+  if (!/^1[3-9]\d{9}$/.test(val)) {
+    phoneError.value = '请输入正确的11位手机号'
+  } else {
+    phoneError.value = ''
+  }
+}
+
 const dialogTitle = computed(() => (isEdit.value ? '编辑用户' : '新增用户'))
+
+// 监听组织变化，加载该组织关联的场所
+watch(() => formData.orgUnitId, async (orgId) => {
+  orgPlaces.value = []
+  formData.placeId = undefined
+  if (!orgId) return
+  try {
+    const relations = await accessRelationApi.getBySubject('org_unit', orgId as number, 'place')
+    // 需要根据 placeId 获取场所名称
+    const placeIds = relations.map(r => r.resourceId)
+    if (placeIds.length === 0) return
+    // 从全量场所树中查找名称
+    const tree = await universalPlaceApi.getTree()
+    const nameMap = new Map<number, string>()
+    const walk = (nodes: any[]) => {
+      for (const n of nodes) {
+        nameMap.set(n.id, n.placeName || n.name || '')
+        if (n.children?.length) walk(n.children)
+      }
+    }
+    walk(tree)
+    orgPlaces.value = placeIds.map(id => ({
+      placeId: id,
+      placeName: nameMap.get(id) || `场所#${id}`
+    }))
+  } catch (error) {
+    console.error('加载组织场所失败:', error)
+  }
+})
 
 const isAllSelected = computed(() => {
   return userList.value.length > 0 && selectedIds.value.length === userList.value.length
@@ -586,6 +813,22 @@ const loadAllRoles = async () => {
   }
 }
 
+const loadUserTypes = async () => {
+  try {
+    userTypes.value = await getEnabledUserTypes()
+  } catch (error) {
+    console.error('加载用户类型失败:', error)
+  }
+}
+
+const loadOrgTree = async () => {
+  try {
+    orgTree.value = await getOrgUnitTree()
+  } catch (error) {
+    console.error('加载组织树失败:', error)
+  }
+}
+
 const handleQuery = () => {
   queryParams.pageNum = 1
   loadUserList()
@@ -606,14 +849,14 @@ const resetQuery = () => {
 const handleSelectAll = (event: Event) => {
   const checked = (event.target as HTMLInputElement).checked
   if (checked) {
-    selectedIds.value = userList.value.map(item => typeof item.id === 'string' ? parseInt(item.id) : item.id)
+    selectedIds.value = userList.value.map(item => item.id)
   } else {
     selectedIds.value = []
   }
 }
 
 const handleSelectRow = (row: UserListItem) => {
-  const id = typeof row.id === 'string' ? parseInt(row.id) : row.id
+  const id = row.id
   const index = selectedIds.value.indexOf(id)
   if (index > -1) {
     selectedIds.value.splice(index, 1)
@@ -624,13 +867,21 @@ const handleSelectRow = (row: UserListItem) => {
 
 const handleAdd = () => {
   isEdit.value = false
+  usernameError.value = ''
+  phoneError.value = ''
   Object.assign(formData, {
     username: '',
     realName: '',
     password: '',
     phone: '',
+    email: '',
     employeeNo: '',
     gender: 1,
+    birthDate: '',
+    idCard: '',
+    userTypeCode: '',
+    orgUnitId: undefined,
+    placeId: undefined,
     status: 1
   })
   dialogVisible.value = true
@@ -642,21 +893,36 @@ const handleEdit = async (row: UserListItem) => {
     return
   }
   isEdit.value = true
+  usernameError.value = ''
+  phoneError.value = ''
   Object.assign(formData, {
     username: row.username,
     realName: row.realName,
-    phone: row.phone,
-    employeeNo: row.employeeNo,
+    phone: row.phone || '',
+    email: row.email || '',
+    employeeNo: row.employeeNo || '',
     gender: row.gender,
+    birthDate: row.birthDate ? String(row.birthDate).substring(0, 10) : '',
+    idCard: row.idCard || '',
+    userTypeCode: row.userType || '',
+    orgUnitId: row.orgUnitId || undefined,
     status: row.status === '启用' ? 1 : row.status === '禁用' ? 2 : row.status
   })
-  currentUserId.value = typeof row.id === 'string' ? parseInt(row.id) : row.id
+  currentUserId.value = row.id
   dialogVisible.value = true
 }
 
 const handleSubmit = async () => {
   if (!formData.username) {
-    ElMessage.error('请输入用户名')
+    ElMessage.error('请输入账号')
+    return
+  }
+  if (!isEdit.value && !/^[a-zA-Z][a-zA-Z0-9_]*$/.test(formData.username)) {
+    ElMessage.error('账号只能包含英文字母、数字和下划线，且必须以字母开头')
+    return
+  }
+  if (!isEdit.value && (formData.username.length < 3 || formData.username.length > 30)) {
+    ElMessage.error('账号长度须为3-30位')
     return
   }
   if (!isEdit.value && !formData.password) {
@@ -667,21 +933,44 @@ const handleSubmit = async () => {
     ElMessage.error('请输入姓名')
     return
   }
-  if (!formData.phone) {
-    ElMessage.error('请输入手机号')
+  if (formData.phone && !/^1[3-9]\d{9}$/.test(formData.phone)) {
+    ElMessage.error('手机号格式不正确')
     return
   }
-
+  if (usernameError.value || phoneError.value) {
+    ElMessage.error(usernameError.value || phoneError.value)
+    return
+  }
+  if (!formData.userTypeCode) {
+    ElMessage.error('请选择用户类型')
+    return
+  }
+  if (selectedUserType.value?.features?.requiresOrg && !formData.orgUnitId) {
+    ElMessage.error('该用户类型需要关联组织')
+    return
+  }
+  if (selectedUserType.value?.features?.requiresPlace && !formData.placeId) {
+    ElMessage.error('该用户类型需要关联场所')
+    return
+  }
   try {
     submitLoading.value = true
+    // 清理空字符串为 undefined，避免后端 @Pattern 对空串校验失败
+    const payload = { ...formData } as any
+    if (!payload.phone) payload.phone = undefined
+    if (!payload.email) payload.email = undefined
+    if (!payload.employeeNo) payload.employeeNo = undefined
+    if (!payload.idCard) payload.idCard = undefined
+    if (!payload.birthDate) payload.birthDate = undefined
     if (isEdit.value && currentUserId.value) {
-      await updateUser(currentUserId.value, formData)
+      await updateUser(currentUserId.value, payload)
       ElMessage.success('更新成功')
     } else {
-      await createUser(formData)
+      await createUser(payload)
       ElMessage.success('创建成功')
     }
     dialogVisible.value = false
+    queryParams.pageNum = 1
     loadUserList()
   } catch (error: any) {
     ElMessage.error(error.message || '操作失败')
@@ -692,10 +981,9 @@ const handleSubmit = async () => {
 
 const handleDelete = async (row: UserListItem) => {
   if (!row.id) return
-  const userId = typeof row.id === 'string' ? parseInt(row.id) : row.id
   try {
     await ElMessageBox.confirm(`确定要删除用户"${row.realName}"吗?`, '删除确认', { type: 'warning' })
-    await deleteUser(userId)
+    await deleteUser(row.id)
     ElMessage.success('删除成功')
     loadUserList()
   } catch (error: any) {
@@ -717,12 +1005,11 @@ const handleBatchDelete = async () => {
 
 const handleStatusChange = async (row: UserListItem) => {
   if (!row.id) return
-  const userId = typeof row.id === 'string' ? parseInt(row.id) : row.id
   // V2 API 使用字符串状态: '启用', '禁用'
   const isEnabled = row.status === '启用' || row.status === 1
   const newStatus = isEnabled ? 2 : 1
   try {
-    await updateUserStatus(userId, newStatus)
+    await updateUserStatus(row.id, newStatus)
     row.status = newStatus === 1 ? '启用' : '禁用'
     ElMessage.success('状态已更新')
   } catch (error: any) {
@@ -733,23 +1020,59 @@ const handleStatusChange = async (row: UserListItem) => {
 
 const handleResetPassword = async (row: UserListItem) => {
   if (!row.id) return
-  const userId = typeof row.id === 'string' ? parseInt(row.id) : row.id
   try {
     await ElMessageBox.confirm(`确定要重置用户"${row.realName}"的密码吗?`, '重置密码', { type: 'warning' })
-    await resetPassword(userId)
+    await resetPassword(row.id)
     ElMessage.success('密码重置成功')
   } catch (error: any) {
     if (error !== 'cancel') ElMessage.error(error.message || '重置失败')
   }
 }
 
+// ==================== 角色 scope 辅助方法 ====================
+
+const isRoleSelected = (roleId: string | number) => {
+  return roleAssignments.value.some(a => String(a.roleId) === String(roleId))
+}
+
+const getRoleScope = (roleId: string | number) => {
+  return roleAssignments.value.find(a => String(a.roleId) === String(roleId)) || { scopeType: 'ALL', scopeId: 0 }
+}
+
+const toggleRole = (roleId: string | number) => {
+  const idx = roleAssignments.value.findIndex(a => String(a.roleId) === String(roleId))
+  if (idx > -1) {
+    roleAssignments.value.splice(idx, 1)
+  } else {
+    roleAssignments.value.push({ roleId: String(roleId), scopeType: 'ALL', scopeId: 0 })
+  }
+}
+
+const updateRoleScopeType = (roleId: string | number, scopeType: string) => {
+  const a = roleAssignments.value.find(a => String(a.roleId) === String(roleId))
+  if (a) {
+    a.scopeType = scopeType
+    if (scopeType === 'ALL') a.scopeId = 0
+  }
+}
+
+const updateRoleScopeId = (roleId: string | number, scopeId: number) => {
+  const a = roleAssignments.value.find(a => String(a.roleId) === String(roleId))
+  if (a) a.scopeId = scopeId
+}
+
+// ==================== 角色分配操作 ====================
+
 const handleAssignRoles = async (row: UserListItem) => {
   if (!row.id) return
-  const userId = typeof row.id === 'string' ? parseInt(row.id) : row.id
   try {
-    currentUserId.value = userId
-    const roleIds = await getUserRoleIds(userId)
-    selectedRoleIds.value = roleIds.map(id => String(id))
+    currentUserId.value = row.id
+    const existing = await getUserRoleAssignments(row.id)
+    roleAssignments.value = (Array.isArray(existing) ? existing : []).map((a: any) => ({
+      roleId: String(a.roleId || a.id),
+      scopeType: a.scopeType || 'ALL',
+      scopeId: a.scopeId || 0
+    }))
     roleDialogVisible.value = true
   } catch (error) {
     ElMessage.error('加载角色失败')
@@ -758,9 +1081,16 @@ const handleAssignRoles = async (row: UserListItem) => {
 
 const handleRoleSubmit = async () => {
   if (!currentUserId.value) return
+  // 校验：ORG_UNIT scope 必须选了具体组织
+  const invalid = roleAssignments.value.find(a => a.scopeType === 'ORG_UNIT' && (!a.scopeId || a.scopeId === 0))
+  if (invalid) {
+    const role = allRoles.value.find(r => String(r.id) === String(invalid.roleId))
+    ElMessage.error(`角色"${role?.roleName || invalid.roleId}"选择了指定组织但未选择具体组织`)
+    return
+  }
   try {
     roleSubmitLoading.value = true
-    await assignRoles(currentUserId.value, selectedRoleIds.value.map(id => typeof id === 'string' ? parseInt(id) : id))
+    await assignRoles(currentUserId.value, roleAssignments.value)
     ElMessage.success('角色分配成功')
     roleDialogVisible.value = false
     loadUserList()
@@ -776,6 +1106,8 @@ const handleRoleSubmit = async () => {
 onMounted(() => {
   loadUserList()
   loadAllRoles()
+  loadUserTypes()
+  loadOrgTree()
 })
 </script>
 

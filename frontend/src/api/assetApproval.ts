@@ -18,28 +18,28 @@ export const assetApprovalApi = {
   /**
    * 审批通过
    */
-  approve(id: number, data?: ApprovalActionRequest): Promise<void> {
+  approve(id: number | string, data?: ApprovalActionRequest): Promise<void> {
     return request.post(`${BASE_URL}/${id}/approve`, data || {})
   },
 
   /**
    * 审批拒绝
    */
-  reject(id: number, data?: ApprovalActionRequest): Promise<void> {
+  reject(id: number | string, data?: ApprovalActionRequest): Promise<void> {
     return request.post(`${BASE_URL}/${id}/reject`, data || {})
   },
 
   /**
    * 取消申请
    */
-  cancel(id: number): Promise<void> {
+  cancel(id: number | string): Promise<void> {
     return request.post(`${BASE_URL}/${id}/cancel`)
   },
 
   /**
    * 获取审批详情
    */
-  getApproval(id: number): Promise<AssetApproval> {
+  getApproval(id: number | string): Promise<AssetApproval> {
     return request.get(`${BASE_URL}/${id}`)
   },
 
@@ -63,7 +63,7 @@ export const assetApprovalApi = {
   queryApprovals(params: {
     approvalType?: number
     status?: number
-    applicantId?: number
+    applicantId?: number | string
     pageNum?: number
     pageSize?: number
   }): Promise<{

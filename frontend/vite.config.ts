@@ -114,6 +114,10 @@ export default defineConfig({
             if (id.includes('vuedraggable') || id.includes('sortablejs')) {
               return 'draggable'
             }
+            // Konva 画布引擎
+            if (id.includes('konva')) {
+              return 'konva'
+            }
 
             // ===== 核心框架拆分 =====
             // Element Plus UI库

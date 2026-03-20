@@ -25,7 +25,7 @@ public class InspectionDetail implements Entity<Long> {
 
     // 作用范围
     private DetailScope scope;
-    private String individualType;  // USER or SPACE
+    private String individualType;  // USER or PLACE
     private Long individualId;
     private String individualName;
 

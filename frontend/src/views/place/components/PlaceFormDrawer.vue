@@ -1,193 +1,149 @@
 <template>
-  <!-- V10: 改为 Dialog（弹窗）样式 -->
   <el-dialog
     :model-value="visible"
     @update:model-value="handleClose"
     :title="dialogTitle"
-    width="560px"
+    :width="dialogWidth"
     :close-on-click-modal="false"
-    class="space-form-dialog"
+    class="pf-dlg"
     destroy-on-close
     align-center
   >
-    <div class="drawer-content">
-      <!-- 创建模式：类型选择 -->
-      <div v-if="mode === 'create' && !selectedTypeCode" class="type-selector">
-        <div class="text-sm text-gray-500 mb-3">
-          {{ parentSpace ? `在"${parentSpace.spaceName}"下创建` : '创建根级空间' }}
-        </div>
-        <div class="type-list">
-          <div
-            v-for="type in allowedTypes"
-            :key="type.typeCode"
-            class="type-item"
-            @click="selectType(type)"
-          >
-            <div
-              class="type-icon"
-              :class="getTypeColorClass(type.typeCode)"
-            >
-              <el-icon class="text-white">
-                <component :is="getTypeIcon(type.icon)" />
-              </el-icon>
-            </div>
-            <div class="type-info">
-              <div class="type-name">{{ type.typeName }}</div>
-              <div class="type-tags">
-                <span v-if="type.hasCapacity" class="mini-tag green">容量</span>
-                <span v-if="type.bookable" class="mini-tag blue">预订</span>
-                <span v-if="type.assignable" class="mini-tag amber">分配</span>
-                <span v-if="type.occupiable" class="mini-tag purple">入住</span>
-              </div>
-            </div>
-            <el-icon class="text-gray-300"><ArrowRight /></el-icon>
-          </div>
-        </div>
-      </div>
-
-      <!-- 表单区域 -->
-      <div v-else class="form-area">
-        <!-- 已选类型卡片 -->
-        <div v-if="mode === 'create' && selectedType" class="selected-type">
-          <div
-            class="type-icon-sm"
-            :class="getTypeColorClass(selectedType.typeCode)"
-          >
-            <el-icon class="text-white text-sm">
-              <component :is="getTypeIcon(selectedType.icon)" />
-            </el-icon>
-          </div>
-          <div class="flex-1">
-            <span class="font-medium text-gray-700">{{ selectedType.typeName }}</span>
-            <span class="text-gray-400 text-xs ml-2" v-if="parentSpace">
-              父级: {{ parentSpace.spaceName }}
-            </span>
-          </div>
-          <el-button
-            v-if="allowedTypes && allowedTypes.length > 1"
-            size="small"
-            text
-            @click="selectedTypeCode = ''"
-          >
-            更换
-          </el-button>
-        </div>
-
-        <!-- 紧凑表单 -->
-        <el-form
-          ref="formRef"
-          :model="formData"
-          :rules="formRules"
-          label-position="top"
-          size="default"
-          class="compact-form"
-        >
-          <!-- 名称 -->
-          <el-form-item label="空间名称" prop="spaceName">
-            <el-input
-              v-model="formData.spaceName"
-              placeholder="请输入空间名称"
-              maxlength="50"
-            />
-          </el-form-item>
-
-          <!-- 容量（如果支持） -->
-          <el-form-item v-if="showCapacitySection" label="容量" prop="capacity">
-            <el-input-number
-              v-model="formData.capacity"
-              :min="0"
-              :max="99999"
-              placeholder="最大容量"
-              controls-position="right"
-              class="w-full"
-            />
-            <template #label>
-              容量
-              <span v-if="capacityUnit" class="text-gray-400 font-normal">（{{ capacityUnit }}）</span>
-            </template>
-          </el-form-item>
-
-          <!-- 描述（折叠） -->
-          <el-collapse-transition>
-            <el-form-item v-if="showDescription" label="描述" prop="description">
-              <el-input
-                v-model="formData.description"
-                type="textarea"
-                :rows="2"
-                placeholder="选填"
-                maxlength="500"
-              />
-            </el-form-item>
-          </el-collapse-transition>
-
-          <div v-if="!showDescription" class="mb-3">
-            <el-button text type="primary" size="small" @click="showDescription = true">
-              + 添加描述
-            </el-button>
-          </div>
-
-          <!-- 关联信息（折叠） -->
-          <el-collapse-transition>
-            <div v-if="showRelation" class="relation-section">
-              <div class="grid grid-cols-2 gap-3">
-                <el-form-item label="所属组织" prop="orgUnitId">
-                  <el-tree-select
-                    v-model="formData.orgUnitId"
-                    :data="orgOptions"
-                    placeholder="选择"
-                    clearable
-                    check-strictly
-                    :render-after-expand="false"
-                    class="w-full"
-                  />
-                </el-form-item>
-
-                <el-form-item label="负责人" prop="responsibleUserId">
-                  <el-select
-                    v-model="formData.responsibleUserId"
-                    placeholder="选择"
-                    clearable
-                    filterable
-                    class="w-full"
-                  >
-                    <el-option
-                      v-for="user in userOptions"
-                      :key="user.id"
-                      :label="user.realName"
-                      :value="user.id"
-                    />
-                  </el-select>
-                </el-form-item>
-              </div>
-            </div>
-          </el-collapse-transition>
-
-          <div v-if="!showRelation" class="mb-3">
-            <el-button text type="primary" size="small" @click="showRelation = true">
-              + 设置关联
-            </el-button>
-          </div>
-
-          <!-- 特性提示 -->
-          <div v-if="showFeaturesSection" class="features-hint">
-            <span v-if="selectedType?.bookable" class="feature-badge blue">可预订</span>
-            <span v-if="selectedType?.assignable" class="feature-badge amber">可分配</span>
-            <span v-if="selectedType?.occupiable" class="feature-badge purple">可入住</span>
-          </div>
-        </el-form>
+    <!-- Type Selection Stage -->
+    <div v-if="mode === 'create' && !selectedTypeCode" class="px-5 py-4">
+      <div class="grid gap-2" :class="allowedTypes && allowedTypes.length > 3 ? 'grid-cols-3' : 'grid-cols-' + (allowedTypes?.length || 1)">
+        <button v-for="type in allowedTypes" :key="type.typeCode" class="pf-type-card" @click="selectType(type)">
+          <span class="font-medium text-gray-800 text-[13px]">{{ type.typeName }}</span>
+          <span class="text-[10px] text-gray-400">
+            <template v-if="type.features?.hasCapacity">容量</template>
+            <template v-if="type.features?.bookable"> 预订</template>
+            <template v-if="type.features?.occupiable"> 入住</template>
+          </span>
+        </button>
       </div>
     </div>
 
-    <!-- 底部按钮 -->
+    <!-- Form -->
+    <div v-else class="px-5 py-3">
+      <!-- Context bar -->
+      <div class="mb-3 flex items-center gap-2 text-xs text-gray-400">
+        <span class="rounded bg-gray-100 px-1.5 py-0.5 text-[11px] font-medium text-gray-600">{{ selectedType?.typeName }}</span>
+        <template v-if="mode === 'create' && parentPlace">
+          <span>上级: {{ parentPlace.placeName }}</span>
+        </template>
+        <template v-if="mode === 'edit' && editData">
+          <span>{{ getStatusLabel(editData.status) }}</span>
+          <span v-if="editData.parentName">上级: {{ editData.parentName }}</span>
+        </template>
+        <button v-if="mode === 'create' && allowedTypes && allowedTypes.length > 1" class="ml-auto text-blue-500 hover:text-blue-600" @click="selectedTypeCode = ''">换类型</button>
+      </div>
+
+      <el-form ref="formRef" :model="formData" :rules="formRules" label-position="left" label-width="72px" class="pf-form">
+        <!-- Row 1: Code + Name -->
+        <div class="pf-row">
+          <el-form-item label="编号" prop="placeCode" class="pf-col">
+            <el-input v-model="formData.placeCode" placeholder="如 A栋" maxlength="50" />
+          </el-form-item>
+          <el-form-item label="名称" prop="placeName" class="pf-col">
+            <el-input v-model="formData.placeName" placeholder="请输入名称" maxlength="50" />
+          </el-form-item>
+        </div>
+        <!-- Row 2: Status + Gender -->
+        <div class="pf-row">
+          <el-form-item label="状态" prop="status" class="pf-col">
+            <el-select v-model="formData.status" style="width: 100%">
+              <el-option label="正常" :value="1" />
+              <el-option label="维护中" :value="2" />
+              <el-option label="停用" :value="0" />
+            </el-select>
+          </el-form-item>
+          <el-form-item v-if="showGenderSection" label="性别限制" class="pf-col">
+            <el-select v-model="formData.gender" placeholder="不设置" clearable style="width: 100%">
+              <el-option v-for="opt in genderOptions" :key="opt.value" :label="opt.label" :value="opt.value" />
+            </el-select>
+          </el-form-item>
+        </div>
+        <!-- Row 3: Capacity (conditional) -->
+        <div v-if="showCapacitySection" class="pf-row">
+          <el-form-item class="pf-col">
+            <template #label>容量<span v-if="capacityUnit" class="text-[11px] text-gray-400 font-normal ml-0.5">({{ capacityUnit }})</span></template>
+            <el-input-number v-model="formData.capacity" :min="0" :max="99999" controls-position="right" style="width: 100%" />
+          </el-form-item>
+        </div>
+        <!-- Row 4: Description -->
+        <el-form-item label="描述">
+          <el-input v-model="formData.description" type="textarea" :rows="1" placeholder="选填" maxlength="500" />
+        </el-form-item>
+
+        <!-- Extended Attributes -->
+        <template v-if="sortedAttributeFields.length > 0">
+          <div class="pf-sep" />
+          <div class="pf-section">{{ selectedType?.typeName }}属性</div>
+          <div class="pf-row">
+            <template v-for="field in sortedAttributeFields" :key="field.key">
+              <div v-if="field.type === 'textarea'" class="pf-full">
+                <label class="pf-attr-lbl">{{ field.label }}<span v-if="field.required" class="text-red-500 ml-0.5">*</span></label>
+                <el-input v-model="attributeValues[field.key]" type="textarea" :rows="1" :placeholder="field.placeholder || ''" :maxlength="field.maxLength" />
+              </div>
+              <div v-else class="pf-col pf-attr-row">
+                <label class="pf-attr-lbl">{{ field.label }}<span v-if="field.required" class="text-red-500 ml-0.5">*</span></label>
+                <div class="flex-1 min-w-0">
+                  <el-input v-if="field.type === 'string'" v-model="attributeValues[field.key]" :placeholder="field.placeholder || ''" :maxlength="field.maxLength" />
+                  <el-input-number v-else-if="field.type === 'number'" v-model="attributeValues[field.key]" :min="field.min" :max="field.max" :step="field.step || 1" :precision="field.precision" controls-position="right" style="width: 100%" />
+                  <el-select v-else-if="field.type === 'select'" v-model="attributeValues[field.key]" :placeholder="field.placeholder || '请选择'" :multiple="field.multiple" clearable style="width: 100%">
+                    <el-option v-for="opt in field.options" :key="opt.value" :label="opt.label" :value="opt.value" />
+                  </el-select>
+                  <el-switch v-else-if="field.type === 'boolean'" v-model="attributeValues[field.key]" />
+                  <el-date-picker v-else-if="field.type === 'date'" v-model="attributeValues[field.key]" type="date" :placeholder="field.placeholder || '选择日期'" :format="field.format || 'YYYY-MM-DD'" :value-format="field.format || 'YYYY-MM-DD'" style="width: 100%" />
+                </div>
+              </div>
+            </template>
+          </div>
+        </template>
+
+        <!-- Relations -->
+        <div class="pf-sep" />
+        <div class="pf-section text-gray-400">关联（选填）</div>
+        <div class="pf-row">
+          <el-form-item label="所属组织" class="pf-col">
+            <el-tree-select
+              v-model="formData.orgUnitId"
+              :data="orgOptions"
+              placeholder="选择组织"
+              clearable
+              check-strictly
+              :render-after-expand="false"
+              :disabled="formData.clearOrgOverride"
+              style="width: 100%"
+            />
+          </el-form-item>
+          <el-form-item label="负责人" class="pf-col">
+            <el-select v-model="formData.responsibleUserId" placeholder="选择负责人" clearable filterable style="width: 100%">
+              <el-option v-for="user in userOptions" :key="user.id" :label="user.realName" :value="user.id" />
+            </el-select>
+          </el-form-item>
+        </div>
+        <!-- Org inheritance hint -->
+        <div v-if="mode === 'edit' && editData?.isOrgInherited" class="mb-2 text-[11px] text-gray-400 pl-[72px]">
+          ↑ 当前从父级继承: {{ editData.parentOrgUnitName || '未设置' }}
+        </div>
+        <!-- Clear override -->
+        <div v-if="mode === 'edit' && editData?.orgUnitId" class="mb-2 pl-[72px]">
+          <el-checkbox v-model="formData.clearOrgOverride" size="small">
+            <span class="text-xs text-gray-500">清除组织覆盖，从父级继承</span>
+          </el-checkbox>
+        </div>
+        <!-- Audit reason (edit only) -->
+        <el-form-item v-if="mode === 'edit'" label="变更原因">
+          <el-input v-model="formData.reason" placeholder="选填，用于审计" maxlength="200" />
+        </el-form-item>
+      </el-form>
+    </div>
+
     <template #footer>
-      <div class="dialog-footer">
+      <div class="flex justify-end gap-2">
         <el-button @click="handleClose">取消</el-button>
-        <el-button
-          type="primary"
-          :loading="submitting"
-          :disabled="mode === 'create' && !selectedTypeCode"
-          @click="handleSubmit"
-        >
+        <el-button type="primary" :loading="submitting" :disabled="mode === 'create' && !selectedTypeCode" @click="handleSubmit">
           {{ mode === 'create' ? '创建' : '保存' }}
         </el-button>
       </div>
@@ -196,385 +152,228 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch, markRaw } from 'vue'
+import { ref, computed, watch, markRaw, nextTick } from 'vue'
 import { ElMessage } from 'element-plus'
 import type { FormInstance, FormRules } from 'element-plus'
 import {
   ArrowRight, School, OfficeBuilding, House, Menu, Location, Grid, Box
 } from '@element-plus/icons-vue'
-import { universalSpaceApi } from '@/api/universalSpace'
-import type { SpaceTreeNode, UniversalSpaceType, CreateSpaceRequest, UpdateSpaceRequest } from '@/types/universalSpace'
+import { universalPlaceApi } from '@/api/universalPlace'
+import type { PlaceTreeNode, UniversalPlaceType, CreatePlaceRequest, UpdatePlaceRequest, AttributeFieldDefinition } from '@/types/universalPlace'
 import { orgUnitApi } from '@/api/organization'
 import { userApi } from '@/api/user'
 
-// Props
 const props = defineProps<{
   visible: boolean
   mode: 'create' | 'edit'
-  parentSpace?: SpaceTreeNode | null
-  editData?: SpaceTreeNode | null
-  allowedTypes?: UniversalSpaceType[]
+  parentPlace?: PlaceTreeNode | null
+  editData?: PlaceTreeNode | null
+  allowedTypes?: UniversalPlaceType[]
 }>()
 
-// Emits
 const emit = defineEmits<{
   'update:visible': [value: boolean]
   'success': []
 }>()
 
-// ========== 表单数据 ==========
 const formRef = ref<FormInstance>()
 const selectedTypeCode = ref('')
 const submitting = ref(false)
-const showDescription = ref(false)
-const showRelation = ref(false)
-
 const formData = ref({
-  spaceName: '',
-  description: '',
+  placeCode: '', placeName: '', description: '',
+  status: 1 as number,
   capacity: undefined as number | undefined,
+  gender: undefined as string | undefined,
   orgUnitId: undefined as number | undefined,
-  responsibleUserId: undefined as number | undefined
+  responsibleUserId: undefined as number | undefined,
+  clearOrgOverride: false as boolean,
+  reason: '' as string
 })
+const attributeFields = ref<AttributeFieldDefinition[]>([])
+const attributeValues = ref<Record<string, any>>({})
 
 const formRules: FormRules = {
-  spaceName: [
-    { required: true, message: '请输入空间名称', trigger: 'blur' },
-    { min: 2, max: 50, message: '长度在 2 到 50 个字符', trigger: 'blur' }
-  ]
+  placeCode: [{ required: true, message: '请输入编号', trigger: 'blur' }, { max: 50, message: '不超过50字', trigger: 'blur' }],
+  placeName: [{ required: true, message: '请输入名称', trigger: 'blur' }, { min: 2, max: 50, message: '2-50字', trigger: 'blur' }]
 }
 
-// 选项数据
+const genderOptions = computed(() => {
+  const pg = props.parentPlace?.effectiveGender
+  const all = [{ value: '', label: '不设置(继承)' }, { value: 'MALE', label: '男' }, { value: 'FEMALE', label: '女' }, { value: 'MIXED', label: '混合' }]
+  if (!pg || pg === 'MIXED') return all
+  return all.filter(o => o.value === '' || o.value === pg)
+})
+
 const orgOptions = ref<any[]>([])
 const userOptions = ref<any[]>([])
 
-// ========== 计算属性 ==========
-const dialogTitle = computed(() => {
-  if (props.mode === 'edit') {
-    return `编辑 - ${props.editData?.spaceName || ''}`
-  }
-  if (selectedTypeCode.value && selectedType.value) {
-    return `新增${selectedType.value.typeName}`
-  }
-  return '新增空间'
-})
+const mode = computed(() => props.mode)
+const dialogTitle = computed(() => props.mode === 'create' && !selectedTypeCode.value ? '选择场所类型' : props.mode === 'create' ? '新建场所' : '编辑场所')
+const dialogWidth = computed(() => props.mode === 'create' && !selectedTypeCode.value ? '420px' : '640px')
 
 const selectedType = computed(() => {
   if (props.mode === 'edit' && props.editData) {
-    return {
-      typeCode: props.editData.typeCode,
-      typeName: props.editData.typeName || '',
-      icon: props.editData.typeIcon,
-      hasCapacity: props.editData.hasCapacity,
-      bookable: props.editData.bookable,
-      assignable: props.editData.assignable,
-      occupiable: props.editData.occupiable,
-      capacityUnit: props.editData.capacityUnit
-    } as UniversalSpaceType
+    return { typeCode: props.editData.typeCode, typeName: props.editData.typeName || '', icon: props.editData.typeIcon, features: { hasCapacity: !!props.editData.hasCapacity, bookable: !!props.editData.bookable, assignable: !!props.editData.assignable, occupiable: !!props.editData.occupiable }, capacityUnit: props.editData.capacityUnit } as unknown as UniversalPlaceType
   }
   return props.allowedTypes?.find(t => t.typeCode === selectedTypeCode.value)
 })
 
-const showCapacitySection = computed(() => selectedType.value?.hasCapacity ?? false)
-
-const showFeaturesSection = computed(() => {
-  const type = selectedType.value
-  return type && (type.bookable || type.assignable || type.occupiable)
-})
-
+const showCapacitySection = computed(() => selectedType.value?.features?.hasCapacity ?? false)
+const showGenderSection = computed(() => !!selectedType.value)
 const capacityUnit = computed(() => selectedType.value?.capacityUnit || '')
+const sortedAttributeFields = computed(() => [...attributeFields.value].sort((a, b) => (a.sortOrder || 0) - (b.sortOrder || 0)))
 
-// ========== 方法 ==========
-function selectType(type: UniversalSpaceType) {
-  selectedTypeCode.value = type.typeCode
+function getStatusLabel(s?: number) { return s === 0 ? '停用' : s === 2 ? '维护中' : '正常' }
+
+function selectType(type: UniversalPlaceType) { selectedTypeCode.value = type.typeCode; loadAttributeFields(type) }
+
+function parseMetadataSchema(schemaStr?: string): AttributeFieldDefinition[] {
+  if (!schemaStr) return []
+  try {
+    const parsed = JSON.parse(schemaStr)
+    return parsed?.fields || []
+  } catch { return [] }
+}
+
+function loadAttributeFields(type: UniversalPlaceType | undefined) {
+  if (!type) { attributeFields.value = []; attributeValues.value = {}; return }
+  const full = props.allowedTypes?.find(t => t.typeCode === type.typeCode) || type
+  const fields = parseMetadataSchema(full.metadataSchema)
+  if (fields.length > 0) {
+    attributeFields.value = fields
+    const v: Record<string, any> = {}
+    for (const f of fields) { if (f.defaultValue != null) v[f.key] = f.defaultValue; else if (f.type === 'boolean') v[f.key] = false }
+    attributeValues.value = v
+  } else { attributeFields.value = []; attributeValues.value = {} }
+}
+
+function loadAttributeFieldsForEdit() {
+  if (!props.editData) return
+  const full = props.allowedTypes?.find(t => t.typeCode === props.editData!.typeCode)
+  attributeFields.value = parseMetadataSchema(full?.metadataSchema)
+  if (props.editData.attributes) attributeValues.value = { ...props.editData.attributes }
 }
 
 async function handleSubmit() {
   if (!formRef.value) return
-
-  try {
-    await formRef.value.validate()
-  } catch {
-    return
-  }
-
+  try { await formRef.value.validate() } catch { return }
   submitting.value = true
   try {
+    const attrs: Record<string, any> = {}
+    for (const [k, v] of Object.entries(attributeValues.value)) { if (v !== undefined && v !== null && v !== '') attrs[k] = v }
+    const hasAttrs = Object.keys(attrs).length > 0
     if (props.mode === 'create') {
-      const request: CreateSpaceRequest = {
-        spaceName: formData.value.spaceName,
-        typeCode: selectedTypeCode.value,
-        description: formData.value.description || undefined,
-        parentId: props.parentSpace?.id,
-        capacity: formData.value.capacity,
-        orgUnitId: formData.value.orgUnitId,
-        responsibleUserId: formData.value.responsibleUserId
-      }
-      await universalSpaceApi.create(request)
-      ElMessage.success('空间创建成功')
+      await universalPlaceApi.create({ placeCode: formData.value.placeCode, placeName: formData.value.placeName, typeCode: selectedTypeCode.value, description: formData.value.description || undefined, parentId: props.parentPlace?.id, status: formData.value.status, capacity: formData.value.capacity, gender: formData.value.gender || undefined, orgUnitId: formData.value.orgUnitId, responsibleUserId: formData.value.responsibleUserId, attributes: hasAttrs ? attrs : undefined })
+      ElMessage.success('创建成功')
     } else {
-      const request: UpdateSpaceRequest = {
-        spaceName: formData.value.spaceName,
+      await universalPlaceApi.update(props.editData!.id, {
+        placeCode: formData.value.placeCode,
+        placeName: formData.value.placeName,
         description: formData.value.description || undefined,
+        status: formData.value.status,
         capacity: formData.value.capacity,
+        gender: formData.value.gender || undefined,
         orgUnitId: formData.value.orgUnitId,
-        responsibleUserId: formData.value.responsibleUserId
-      }
-      await universalSpaceApi.update(props.editData!.id, request)
-      ElMessage.success('空间更新成功')
+        responsibleUserId: formData.value.responsibleUserId,
+        clearOrgOverride: formData.value.clearOrgOverride,
+        reason: formData.value.reason || undefined,
+        attributes: hasAttrs ? attrs : undefined
+      })
+      ElMessage.success('更新成功')
     }
-    emit('success')
-    handleClose()
-  } catch (error: any) {
-    ElMessage.error(error.message || '操作失败')
-  } finally {
-    submitting.value = false
-  }
+    emit('success'); handleClose()
+  } catch { /* 错误已由 axios 拦截器统一处理 */ }
+  finally { submitting.value = false }
 }
 
-function handleClose() {
-  emit('update:visible', false)
-}
-
+function handleClose() { emit('update:visible', false) }
 function resetForm() {
   selectedTypeCode.value = ''
-  showDescription.value = false
-  showRelation.value = false
   formData.value = {
-    spaceName: '',
-    description: '',
+    placeCode: '', placeName: '', description: '',
+    status: 1,
     capacity: undefined,
+    gender: undefined,
     orgUnitId: undefined,
-    responsibleUserId: undefined
+    responsibleUserId: undefined,
+    clearOrgOverride: false,
+    reason: ''
   }
+  attributeFields.value = []; attributeValues.value = {}
   formRef.value?.resetFields()
 }
 
 async function loadOptions() {
-  try {
-    const orgData = await orgUnitApi.getTree()
-    orgOptions.value = transformOrgTree(orgData)
-  } catch (error) {
-    console.error('加载组织数据失败:', error)
-  }
-
-  try {
-    const userData = await userApi.list({ pageNum: 1, pageSize: 500, status: 1 })
-    userOptions.value = userData.records || []
-  } catch (error) {
-    console.error('加载用户数据失败:', error)
-  }
+  try { const d = await orgUnitApi.getTree(); orgOptions.value = transformOrgTree(d) } catch {}
+  try { userOptions.value = (await userApi.getSimpleList()) || [] } catch {}
 }
-
 function transformOrgTree(nodes: any[]): any[] {
-  return nodes.map(node => ({
-    value: node.id,
-    label: node.unitName || node.name,
-    children: node.children ? transformOrgTree(node.children) : undefined
-  }))
+  return nodes.map(n => ({ value: n.id, label: n.unitName || n.name, children: n.children ? transformOrgTree(n.children) : undefined }))
 }
 
-// ========== 工具函数 ==========
-function getTypeIcon(iconName?: string) {
-  const iconMap: Record<string, any> = {
-    'School': markRaw(School),
-    'OfficeBuilding': markRaw(OfficeBuilding),
-    'House': markRaw(House),
-    'Menu': markRaw(Menu),
-    'Location': markRaw(Location),
-    'Grid': markRaw(Grid),
-    'Box': markRaw(Box)
-  }
-  return iconMap[iconName || ''] || OfficeBuilding
-}
-
-function getTypeColorClass(typeCode: string) {
-  const colorMap: Record<string, string> = {
-    'SITE': 'bg-blue-500',
-    'BUILDING': 'bg-purple-500',
-    'FLOOR': 'bg-cyan-500',
-    'ROOM': 'bg-green-500',
-    'AREA': 'bg-amber-500',
-    'STATION': 'bg-rose-500'
-  }
-  return colorMap[typeCode] || 'bg-gray-500'
-}
-
-// ========== 监听 ==========
 watch(() => props.visible, (val) => {
   if (val) {
-    resetForm()
-    loadOptions()
-
+    resetForm(); loadOptions()
     if (props.mode === 'edit' && props.editData) {
-      formData.value = {
-        spaceName: props.editData.spaceName,
-        description: props.editData.description || '',
-        capacity: props.editData.capacity,
-        orgUnitId: props.editData.orgUnitId,
-        responsibleUserId: props.editData.responsibleUserId
-      }
-      // 编辑模式下，如果有描述或关联则展开
-      showDescription.value = !!props.editData.description
-      showRelation.value = !!props.editData.orgUnitId || !!props.editData.responsibleUserId
+      nextTick(() => {
+        formData.value = {
+          placeCode: props.editData!.placeCode || '',
+          placeName: props.editData!.placeName,
+          description: props.editData!.description || '',
+          status: props.editData!.status ?? 1,
+          capacity: props.editData!.capacity,
+          gender: props.editData!.gender || undefined,
+          orgUnitId: props.editData!.orgUnitId,
+          responsibleUserId: props.editData!.responsibleUserId,
+          clearOrgOverride: false,
+          reason: ''
+        }
+        loadAttributeFieldsForEdit()
+      })
     } else if (props.mode === 'create' && props.allowedTypes?.length === 1) {
-      selectedTypeCode.value = props.allowedTypes[0].typeCode
+      selectedTypeCode.value = props.allowedTypes[0].typeCode; loadAttributeFields(props.allowedTypes[0])
     }
   }
 })
+watch(() => props.allowedTypes, (t) => {
+  if (t && t.length > 0 && props.visible && props.mode === 'edit' && props.editData) loadAttributeFieldsForEdit()
+}, { deep: true })
 </script>
 
 <style scoped>
-/* V10: Dialog 样式 */
-.space-form-dialog :deep(.el-dialog__header) {
-  margin-bottom: 0;
-  padding: 16px 20px;
-  border-bottom: 1px solid #f0f0f0;
+/* Dialog */
+.pf-dlg :deep(.el-dialog) { border-radius: 10px; }
+.pf-dlg :deep(.el-dialog__header) { padding: 12px 20px 0; }
+.pf-dlg :deep(.el-dialog__title) { font-size: 14px; font-weight: 600; color: #1f2937; }
+.pf-dlg :deep(.el-dialog__body) { padding: 0; }
+.pf-dlg :deep(.el-dialog__footer) { padding: 10px 20px; border-top: 1px solid #f3f4f6; }
+
+/* Type card */
+.pf-type-card {
+  display: flex; flex-direction: column; align-items: center; gap: 2px;
+  padding: 12px 8px; border: 1.5px solid #e5e7eb; border-radius: 8px;
+  cursor: pointer; background: #fff; transition: all 0.15s;
 }
+.pf-type-card:hover { border-color: #3b82f6; background: #eff6ff; }
 
-.space-form-dialog :deep(.el-dialog__body) {
-  padding: 0;
-}
+/* Form layout */
+.pf-form :deep(.el-form-item) { margin-bottom: 10px; }
+.pf-form :deep(.el-form-item__label) { font-size: 12px; color: #6b7280; font-weight: 500; line-height: 30px; }
+.pf-form :deep(.el-input__wrapper),
+.pf-form :deep(.el-textarea__inner),
+.pf-form :deep(.el-select__wrapper) { border-radius: 6px; }
+.pf-form :deep(.el-input),
+.pf-form :deep(.el-select),
+.pf-form :deep(.el-input-number) { --el-component-size: 30px; }
+.pf-form :deep(.el-textarea__inner) { min-height: 30px !important; }
 
-.space-form-dialog :deep(.el-dialog__footer) {
-  padding: 12px 20px;
-  border-top: 1px solid #f0f0f0;
-}
+.pf-row { display: grid; grid-template-columns: 1fr 1fr; gap: 0 12px; }
+.pf-col { min-width: 0; }
+.pf-full { grid-column: 1 / -1; margin-bottom: 10px; }
+.pf-sep { height: 1px; background: #f3f4f6; margin: 4px 0 8px; }
+.pf-section { font-size: 11px; font-weight: 600; color: #6b7280; margin-bottom: 8px; }
 
-.drawer-content {
-  padding: 16px 20px;
-  max-height: 60vh;
-  overflow-y: auto;
-}
-
-/* 类型选择列表 */
-.type-list {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.type-item {
-  display: flex;
-  align-items: center;
-  padding: 12px;
-  border: 1px solid #e5e7eb;
-  border-radius: 10px;
-  cursor: pointer;
-  transition: all 0.2s;
-}
-
-.type-item:hover {
-  border-color: #93c5fd;
-  background-color: #f8fafc;
-}
-
-.type-icon {
-  width: 40px;
-  height: 40px;
-  border-radius: 10px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-}
-
-.type-info {
-  flex: 1;
-  margin-left: 12px;
-  min-width: 0;
-}
-
-.type-name {
-  font-weight: 500;
-  color: #374151;
-}
-
-.type-tags {
-  display: flex;
-  gap: 4px;
-  margin-top: 4px;
-}
-
-.mini-tag {
-  font-size: 10px;
-  padding: 1px 5px;
-  border-radius: 3px;
-}
-
-.mini-tag.green { background: #dcfce7; color: #166534; }
-.mini-tag.blue { background: #dbeafe; color: #1e40af; }
-.mini-tag.amber { background: #fef3c7; color: #92400e; }
-.mini-tag.purple { background: #f3e8ff; color: #7c3aed; }
-
-/* 已选类型 */
-.selected-type {
-  display: flex;
-  align-items: center;
-  padding: 10px 12px;
-  background: #f8fafc;
-  border-radius: 8px;
-  margin-bottom: 16px;
-}
-
-.type-icon-sm {
-  width: 28px;
-  height: 28px;
-  border-radius: 6px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  margin-right: 10px;
-}
-
-/* 紧凑表单 */
-.compact-form :deep(.el-form-item) {
-  margin-bottom: 16px;
-}
-
-.compact-form :deep(.el-form-item__label) {
-  font-size: 13px;
-  color: #4b5563;
-  padding-bottom: 4px;
-}
-
-.compact-form :deep(.el-input__inner),
-.compact-form :deep(.el-textarea__inner) {
-  border-radius: 6px;
-}
-
-.relation-section {
-  padding: 12px;
-  background: #fafafa;
-  border-radius: 8px;
-  margin-bottom: 16px;
-}
-
-/* 特性提示 */
-.features-hint {
-  display: flex;
-  gap: 6px;
-  padding: 10px 0;
-  border-top: 1px dashed #e5e7eb;
-}
-
-.feature-badge {
-  font-size: 11px;
-  padding: 3px 8px;
-  border-radius: 4px;
-}
-
-.feature-badge.blue { background: #dbeafe; color: #1e40af; }
-.feature-badge.amber { background: #fef3c7; color: #92400e; }
-.feature-badge.purple { background: #f3e8ff; color: #7c3aed; }
-
-.dialog-footer {
-  display: flex;
-  justify-content: flex-end;
-  gap: 8px;
-}
-
-.w-full {
-  width: 100%;
-}
+/* Attribute inline */
+.pf-attr-row { display: flex; align-items: center; gap: 0; margin-bottom: 10px; }
+.pf-attr-lbl { font-size: 12px; font-weight: 500; color: #6b7280; white-space: nowrap; width: 72px; flex-shrink: 0; padding-right: 8px; }
 </style>

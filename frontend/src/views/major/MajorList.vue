@@ -974,14 +974,12 @@ const loadDepartmentList = async () => {
     const flattenTree = (nodes: any[]): any[] => {
       const result: any[] = []
       for (const node of nodes) {
-        if (node.unitType === 'COLLEGE') {
-          result.push({
-            // 强制转换为字符串避免JavaScript Long精度丢失
-            id: String(node.id),
-            deptName: node.unitName,
-            deptCode: node.unitCode
-          })
-        }
+        result.push({
+          // 强制转换为字符串避免JavaScript Long精度丢失
+          id: String(node.id),
+          deptName: node.unitName,
+          deptCode: node.unitCode
+        })
         if (node.children && node.children.length > 0) {
           result.push(...flattenTree(node.children))
         }

@@ -139,26 +139,24 @@ public class GlobalExceptionHandler {
 
     /**
      * 非法状态异常处理 (业务逻辑错误)
-     * 注意：不直接暴露异常消息，避免泄露内部实现细节
      */
     @ExceptionHandler(IllegalStateException.class)
     @ResponseStatus(HttpStatus.BAD_REQUEST)
     public Result<Void> handleIllegalStateException(IllegalStateException e, HttpServletRequest request) {
         log.warn("非法状态异常: {}", e.getMessage());
-        // 返回通用错误消息，不暴露内部实现细节
-        return Result.error(ResultCode.VALIDATION_ERROR.getCode(), "操作状态不正确，请刷新后重试");
+        String message = e.getMessage() != null ? e.getMessage() : "操作状态不正确，请刷新后重试";
+        return Result.error(ResultCode.VALIDATION_ERROR.getCode(), message);
     }
 
     /**
      * 非法参数异常处理
-     * 注意：不直接暴露异常消息，避免泄露内部实现细节
      */
     @ExceptionHandler(IllegalArgumentException.class)
     @ResponseStatus(HttpStatus.BAD_REQUEST)
     public Result<Void> handleIllegalArgumentException(IllegalArgumentException e, HttpServletRequest request) {
         log.warn("非法参数异常: {}", e.getMessage());
-        // 返回通用错误消息，不暴露内部实现细节
-        return Result.error(ResultCode.VALIDATION_ERROR.getCode(), "参数不正确，请检查后重试");
+        String message = e.getMessage() != null ? e.getMessage() : "参数不正确，请检查后重试";
+        return Result.error(ResultCode.VALIDATION_ERROR.getCode(), message);
     }
 
     /**

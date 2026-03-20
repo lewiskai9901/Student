@@ -1,5 +1,9 @@
 /**
- * V7 检查平台 - 模板引擎类型定义
+ * V62 检查平台 - 统一分区模型类型定义
+ *
+ * 核心变更：InspTemplate 被根 TemplateSection 替代。
+ * TemplateModuleRef 被 refSectionId 替代。
+ * targetType 下沉到一级分区。
  */
 import type { ItemType, TargetType, TemplateStatus } from './enums'
 
@@ -40,43 +44,36 @@ export interface UpdateCatalogRequest {
   isEnabled?: boolean
 }
 
-// ==================== 检查模板 ====================
+// ==================== 模板分区（统一模型） ====================
+//
+// 根分区 (parentSectionId=null, templateId=null) 即为"模板"。
+// 一级分区携带 targetType。
+// refSectionId 替代旧的 refTemplateId / TemplateModuleRef。
 
-export interface InspTemplate {
+export interface TemplateSection {
   id: number
-  tenantId: number
-  templateCode: string
-  templateName: string
+  templateId: number | null
+  parentSectionId: number | null
+  refSectionId: number | null
+  sectionCode: string
+  sectionName: string
+  targetType: TargetType | null
+  targetSourceMode: 'INDEPENDENT' | 'PARENT_ASSOCIATED' | null
+  targetTypeFilter: string | null
   description: string | null
-  catalogId: number | null
-  catalogName?: string
   tags: string | null
-  targetType: TargetType
-  latestVersion: number
+  catalogId: number | null
   status: TemplateStatus
-  isDefault: boolean
-  useCount: number
-  lastUsedAt: string | null
-  createdBy: number | null
-  updatedBy: number | null
+  latestVersion: number
+  sortOrder: number
+  weight: number
+  isRepeatable: boolean
+  scoringConfig: string | null
+  inspectionMode: 'SNAPSHOT' | 'CONTINUOUS'
+  continuousStart: string | null
+  continuousEnd: string | null
   createdAt: string
   updatedAt: string
-}
-
-export interface CreateTemplateRequest {
-  templateName: string
-  description?: string
-  catalogId?: number | null
-  tags?: string
-  targetType?: TargetType
-}
-
-export interface UpdateTemplateRequest {
-  templateName?: string
-  description?: string
-  catalogId?: number | null
-  tags?: string
-  targetType?: TargetType
 }
 
 export interface TemplateQueryParams {
@@ -85,6 +82,67 @@ export interface TemplateQueryParams {
   status?: TemplateStatus
   catalogId?: number
   keyword?: string
+}
+
+// ==================== 根分区（模板）请求 ====================
+
+export interface CreateRootSectionRequest {
+  name: string
+  description?: string
+  catalogId?: number | null
+  tags?: string
+}
+
+export interface UpdateRootSectionRequest {
+  name?: string
+  description?: string
+  catalogId?: number | null
+  tags?: string
+}
+
+// ==================== 子分区请求 ====================
+
+export interface CreateSectionRequest {
+  sectionCode: string
+  sectionName: string
+  parentSectionId?: number | null
+  targetType?: string
+  weight?: number
+  isRepeatable?: boolean
+  sortOrder?: number
+}
+
+export interface UpdateSectionRequest {
+  sectionName?: string
+  targetType?: string
+  targetSourceMode?: string
+  targetTypeFilter?: string
+  weight?: number
+  isRepeatable?: boolean
+}
+
+export interface CreateRefSectionRequest {
+  parentSectionId?: number | null
+  refSectionId: number
+  weight?: number
+  sortOrder?: number
+}
+
+// ==================== 评分配置 ====================
+
+export interface ScoringConfig {
+  aggregation: 'WEIGHTED_AVERAGE' | 'SUM' | 'AVERAGE' | 'MAX' | 'MIN'
+  maxScore: number
+  minScore: number
+  gradeBands: GradeBand[]
+}
+
+export interface GradeBand {
+  grade: string
+  label: string
+  minScore: number
+  maxScore: number
+  color: string
 }
 
 // ==================== 模板版本 ====================
@@ -97,34 +155,6 @@ export interface TemplateVersion {
   scoringProfileSnapshot: string | null
   publishedBy: number | null
   createdAt: string
-}
-
-// ==================== 模板分区 ====================
-
-export interface TemplateSection {
-  id: number
-  templateId: number
-  sectionCode: string
-  sectionName: string
-  sortOrder: number
-  weight: number
-  isRepeatable: boolean
-  createdAt: string
-  updatedAt: string
-}
-
-export interface CreateSectionRequest {
-  sectionCode: string
-  sectionName: string
-  weight?: number
-  isRepeatable?: boolean
-  sortOrder?: number
-}
-
-export interface UpdateSectionRequest {
-  sectionName?: string
-  weight?: number
-  isRepeatable?: boolean
 }
 
 // ==================== 模板字段 ====================
@@ -246,29 +276,6 @@ export interface UpdateOptionRequest {
   sortOrder?: number
 }
 
-// ==================== 模板模块引用 ====================
-
-export interface TemplateModuleRef {
-  id: number
-  compositeTemplateId: number
-  moduleTemplateId: number
-  sortOrder: number
-  weight: number
-  overrideConfig: string | null
-  createdAt: string
-}
-
-export interface AddModuleRefRequest {
-  moduleTemplateId: number
-  sortOrder?: number
-  weight?: number
-}
-
-export interface UpdateModuleRefRequest {
-  weight?: number
-  overrideConfig?: string
-}
-
 // ==================== 检查项库 ====================
 
 export interface LibraryItem {
@@ -315,6 +322,97 @@ export interface UpdateLibraryItemRequest {
   defaultScoringConfig?: string
   defaultHelpContent?: string
   isStandard?: boolean
+}
+
+// ==================== 检查计划 ====================
+
+export interface InspectionPlan {
+  id: number
+  projectId: number
+  planName: string
+  sectionIds: string  // JSON
+  scheduleMode: 'REGULAR' | 'ON_DEMAND'
+  cycleType: string
+  frequency: number
+  scheduleDays: string | null
+  timeSlots: string | null
+  skipHolidays: boolean
+  isEnabled: boolean
+  sortOrder: number
+  createdAt: string
+  updatedAt: string
+}
+
+export interface CreatePlanRequest {
+  projectId: number
+  planName: string
+  sectionIds: string
+  scheduleMode?: string
+  cycleType?: string
+  frequency?: number
+  scheduleDays?: string
+  timeSlots?: string
+  skipHolidays?: boolean
+}
+
+export interface UpdatePlanRequest {
+  planName?: string
+  sectionIds?: string
+  scheduleMode?: string
+  cycleType?: string
+  frequency?: number
+  scheduleDays?: string
+  timeSlots?: string
+  skipHolidays?: boolean
+}
+
+// ==================== 评级维度 ====================
+
+export interface RatingDimension {
+  id: number
+  projectId: number
+  dimensionName: string
+  sectionIds: string
+  aggregation: string
+  gradeBands: string | null
+  awardName: string | null
+  rankingEnabled: boolean
+  sortOrder: number
+  createdAt: string
+  updatedAt: string
+}
+
+export interface RatingResult {
+  id: number
+  dimensionId: number
+  targetId: number
+  targetName: string
+  targetType: string
+  cycleDate: string
+  score: number
+  grade: string | null
+  rankNo: number
+  createdAt: string
+}
+
+// ==================== 违纪记录 ====================
+
+export interface ViolationRecord {
+  id: number
+  submissionId: number
+  submissionDetailId: number
+  sectionId: number | null
+  itemId: number | null
+  userId: number
+  userName: string
+  classInfo: string | null
+  occurredAt: string
+  severity: 'MINOR' | 'MODERATE' | 'SEVERE'
+  description: string | null
+  evidenceUrls: string | null
+  score: number | null
+  createdBy: number | null
+  createdAt: string
 }
 
 // ==================== 分页结果 ====================

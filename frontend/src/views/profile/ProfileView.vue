@@ -20,9 +20,9 @@
           label-width="100px"
           class="max-w-lg"
         >
-          <el-form-item label="用户名">
+          <el-form-item label="账号">
             <el-input v-model="userInfo.username" disabled />
-            <div class="text-xs text-gray-400 mt-1">用户名不可修改</div>
+            <div class="text-xs text-gray-400 mt-1">账号不可修改</div>
           </el-form-item>
 
           <el-form-item label="真实姓名" prop="realName">

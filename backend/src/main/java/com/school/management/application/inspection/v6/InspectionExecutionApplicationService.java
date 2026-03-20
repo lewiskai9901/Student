@@ -4,8 +4,8 @@ import com.school.management.domain.inspection.model.v6.*;
 import com.school.management.domain.inspection.repository.v6.InspectionDetailRepository;
 import com.school.management.domain.inspection.repository.v6.InspectionEvidenceRepository;
 import com.school.management.domain.inspection.repository.v6.InspectionTargetRepository;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -17,22 +17,14 @@ import java.util.Optional;
  * V6检查执行应用服务
  * 管理检查明细和证据
  */
+@Slf4j
+@RequiredArgsConstructor
 @Service
 public class InspectionExecutionApplicationService {
-
-    private static final Logger log = LoggerFactory.getLogger(InspectionExecutionApplicationService.class);
 
     private final InspectionDetailRepository detailRepository;
     private final InspectionEvidenceRepository evidenceRepository;
     private final InspectionTargetRepository targetRepository;
-
-    public InspectionExecutionApplicationService(InspectionDetailRepository detailRepository,
-                                                   InspectionEvidenceRepository evidenceRepository,
-                                                   InspectionTargetRepository targetRepository) {
-        this.detailRepository = detailRepository;
-        this.evidenceRepository = evidenceRepository;
-        this.targetRepository = targetRepository;
-    }
 
     // ========== 检查明细操作 ==========
 

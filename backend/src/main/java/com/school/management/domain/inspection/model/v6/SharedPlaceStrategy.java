@@ -3,7 +3,7 @@ package com.school.management.domain.inspection.model.v6;
 /**
  * V6共享场所分数策略
  */
-public enum SharedSpaceStrategy {
+public enum SharedPlaceStrategy {
     RATIO("按比例", "根据组织归属比例分配分数"),
     AVERAGE("平均", "平均分配给所有相关组织"),
     FULL("全额", "每个相关组织都获得全部分数"),
@@ -12,7 +12,7 @@ public enum SharedSpaceStrategy {
     private final String label;
     private final String description;
 
-    SharedSpaceStrategy(String label, String description) {
+    SharedPlaceStrategy(String label, String description) {
         this.label = label;
         this.description = description;
     }
@@ -29,9 +29,9 @@ public enum SharedSpaceStrategy {
         return name();
     }
 
-    public static SharedSpaceStrategy fromCode(String code) {
+    public static SharedPlaceStrategy fromCode(String code) {
         if (code == null) return RATIO;
-        for (SharedSpaceStrategy strategy : values()) {
+        for (SharedPlaceStrategy strategy : values()) {
             if (strategy.name().equalsIgnoreCase(code)) {
                 return strategy;
             }

@@ -11,14 +11,16 @@ public class UserRoleAssignedEvent extends BaseDomainEvent {
 
     private final Long userId;
     private final Long roleId;
-    private final Long orgUnitId;
+    private final String scopeType;
+    private final Long scopeId;
     private final Long assignedBy;
 
-    public UserRoleAssignedEvent(Long userId, Long roleId, Long orgUnitId, Long assignedBy) {
+    public UserRoleAssignedEvent(Long userId, Long roleId, String scopeType, Long scopeId, Long assignedBy) {
         super("UserRole", userId + "-" + roleId);
         this.userId = userId;
         this.roleId = roleId;
-        this.orgUnitId = orgUnitId;
+        this.scopeType = scopeType;
+        this.scopeId = scopeId;
         this.assignedBy = assignedBy;
     }
 

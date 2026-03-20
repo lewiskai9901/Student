@@ -1,7 +1,7 @@
-package com.school.management.domain.space.repository;
+package com.school.management.domain.place.repository;
 
-import com.school.management.domain.space.model.entity.SpaceCategory;
-import com.school.management.domain.space.model.valueobject.SpaceLevel;
+import com.school.management.domain.place.model.entity.PlaceCategory;
+import com.school.management.domain.place.model.valueobject.PlaceLevel;
 
 import java.util.List;
 import java.util.Optional;
@@ -9,42 +9,42 @@ import java.util.Optional;
 /**
  * 空间分类仓储接口
  */
-public interface SpaceCategoryRepository {
+public interface PlaceCategoryRepository {
 
     /**
      * 保存分类
      */
-    SpaceCategory save(SpaceCategory category);
+    PlaceCategory save(PlaceCategory category);
 
     /**
      * 根据ID查询
      */
-    Optional<SpaceCategory> findById(Long id);
+    Optional<PlaceCategory> findById(Long id);
 
     /**
      * 根据编码查询
      */
-    Optional<SpaceCategory> findByCode(String categoryCode);
+    Optional<PlaceCategory> findByCode(String categoryCode);
 
     /**
      * 查询所有分类
      */
-    List<SpaceCategory> findAll();
+    List<PlaceCategory> findAll();
 
     /**
      * 根据适用层级查询
      */
-    List<SpaceCategory> findByLevel(SpaceLevel level);
+    List<PlaceCategory> findByLevel(PlaceLevel level);
 
     /**
      * 查询所有启用的分类
      */
-    List<SpaceCategory> findAllEnabled();
+    List<PlaceCategory> findAllEnabled();
 
     /**
      * 根据层级查询启用的分类
      */
-    List<SpaceCategory> findEnabledByLevel(SpaceLevel level);
+    List<PlaceCategory> findEnabledByLevel(PlaceLevel level);
 
     /**
      * 删除分类（逻辑删除）

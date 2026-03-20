@@ -13,28 +13,28 @@ export type ExecutionStatus = 'PLANNED' | 'EXECUTED' | 'SKIPPED' | 'FAILED'
 
 // 排班策略
 export interface SchedulePolicy {
-  id: number
+  id: number | string
   policyCode: string
   policyName: string
   policyType: PolicyType
   rotationAlgorithm: RotationAlgorithm
-  templateId?: number
-  inspectorPool: number[]
+  templateId?: number | string
+  inspectorPool: (number | string)[]
   scheduleConfig?: string
   excludedDates?: string[]
   enabled: boolean
-  createdBy?: number
+  createdBy?: number | string
   createdAt: string
   updatedAt?: string
 }
 
 // 排班执行记录
 export interface ScheduleExecution {
-  id: number
-  policyId: number
+  id: number | string
+  policyId: number | string
   executionDate: string
-  assignedInspectors: number[]
-  sessionId?: number
+  assignedInspectors: (number | string)[]
+  sessionId?: number | string
   status: ExecutionStatus
   failureReason?: string
   createdAt: string
@@ -45,8 +45,8 @@ export interface CreatePolicyRequest {
   policyName: string
   policyType: PolicyType
   rotationAlgorithm: RotationAlgorithm
-  templateId?: number
-  inspectorPool: number[]
+  templateId?: number | string
+  inspectorPool: (number | string)[]
   scheduleConfig?: string
   excludedDates?: string[]
 }

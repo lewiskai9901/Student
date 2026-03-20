@@ -7,10 +7,14 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.redis.core.Cursor;
 import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.data.redis.core.ScanOptions;
 import org.springframework.data.redis.core.ValueOperations;
 
 import java.time.Duration;
+import java.util.Iterator;
+import java.util.List;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
@@ -155,23 +159,36 @@ class CacheServiceTest {
     @DisplayName("evictByPattern测试")
     class EvictByPatternTest {
 
+        @SuppressWarnings("unchecked")
+        private Cursor<String> mockCursor(List<String> keys) {
+            Iterator<String> iterator = keys.iterator();
+            Cursor<String> cursor = mock(Cursor.class);
+            when(cursor.hasNext()).thenAnswer(inv -> iterator.hasNext());
+            lenient().when(cursor.next()).thenAnswer(inv -> iterator.next());
+            return cursor;
+        }
+
         @Test
         @DisplayName("按模式删除缓存")
+        @SuppressWarnings("unchecked")
         void shouldEvictByPattern() {
             String pattern = "user:*";
-            Set<String> keys = Set.of(KEY_PREFIX + "user:1", KEY_PREFIX + "user:2");
-            when(redisTemplate.keys(KEY_PREFIX + pattern)).thenReturn(keys);
+            List<String> keyList = List.of(KEY_PREFIX + "user:1", KEY_PREFIX + "user:2");
+            Cursor<String> cursor = mockCursor(keyList);
+            when(redisTemplate.scan(any(ScanOptions.class))).thenReturn(cursor);
 
             cacheService.evictByPattern(pattern);
 
-            verify(redisTemplate).delete(keys);
+            verify(redisTemplate).delete(Set.of(KEY_PREFIX + "user:1", KEY_PREFIX + "user:2"));
         }
 
         @Test
         @DisplayName("模式无匹配时不删除")
+        @SuppressWarnings("unchecked")
         void shouldNotDeleteWhenNoMatch() {
             String pattern = "nonexistent:*";
-            when(redisTemplate.keys(KEY_PREFIX + pattern)).thenReturn(Set.of());
+            Cursor<String> cursor = mockCursor(List.of());
+            when(redisTemplate.scan(any(ScanOptions.class))).thenReturn(cursor);
 
             cacheService.evictByPattern(pattern);
 

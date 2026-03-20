@@ -1,7 +1,6 @@
 package com.school.management.domain.organization.event;
 
 import com.school.management.domain.organization.model.OrgUnit;
-import com.school.management.domain.organization.model.OrgUnitType;
 import com.school.management.domain.shared.event.BaseDomainEvent;
 
 /**
@@ -12,7 +11,7 @@ public class OrgUnitCreatedEvent extends BaseDomainEvent {
     private final Long orgUnitId;
     private final String unitCode;
     private final String unitName;
-    private final OrgUnitType unitType;
+    private final String unitType;
     private final Long parentId;
     private final Long createdBy;
 
@@ -38,7 +37,7 @@ public class OrgUnitCreatedEvent extends BaseDomainEvent {
         return unitName;
     }
 
-    public OrgUnitType getUnitType() {
+    public String getUnitType() {
         return unitType;
     }
 

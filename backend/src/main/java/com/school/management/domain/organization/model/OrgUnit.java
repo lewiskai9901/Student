@@ -2,34 +2,39 @@ package com.school.management.domain.organization.model;
 
 import com.school.management.domain.organization.event.OrgUnitCreatedEvent;
 import com.school.management.domain.organization.event.OrgUnitUpdatedEvent;
+import com.school.management.domain.shared.model.valueobject.FieldChange;
+import com.school.management.domain.organization.model.valueobject.OrgUnitStatus;
 import com.school.management.domain.shared.AggregateRoot;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
-import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 
 /**
  * OrgUnit Aggregate Root.
  * Represents an organizational unit in the tree structure.
- * Supports both academic units (school -> department -> major -> class)
- * and functional departments (student_affairs, academic_affairs, etc.)
+ * unitType is a String (typeCode) driven by org_unit_types database configuration.
  */
 public class OrgUnit extends AggregateRoot<Long> {
 
     private Long id;
     private String unitCode;
     private String unitName;
-    private OrgUnitType unitType;
-    private UnitCategory unitCategory;  // 组织类别: ACADEMIC, FUNCTIONAL, ADMINISTRATIVE
+    private String unitType;           // typeCode from org_unit_types table
     private Long parentId;
     private String treePath;
     private Integer treeLevel;
-    private Long leaderId;
-    private List<Long> deputyLeaderIds;
     private Integer sortOrder;
-    private Boolean enabled;
+    private OrgUnitStatus status;
+    private Integer headcount;
+    private Map<String, Object> attributes;
+    private Long mergedIntoId;
+    private Long splitFromId;
+    private LocalDateTime dissolvedAt;
+    private String dissolvedReason;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
     private Long createdBy;
@@ -44,19 +49,25 @@ public class OrgUnit extends AggregateRoot<Long> {
         this.unitCode = Objects.requireNonNull(builder.unitCode, "unitCode cannot be null");
         this.unitName = Objects.requireNonNull(builder.unitName, "unitName cannot be null");
         this.unitType = Objects.requireNonNull(builder.unitType, "unitType cannot be null");
-        this.unitCategory = builder.unitCategory != null ? builder.unitCategory : UnitCategory.ACADEMIC;
+        if (this.unitType.isBlank()) {
+            throw new IllegalArgumentException("unitType cannot be blank");
+        }
         this.parentId = builder.parentId;
         this.treePath = builder.treePath;
         this.treeLevel = builder.treeLevel != null ? builder.treeLevel : 1;
-        this.leaderId = builder.leaderId;
-        this.deputyLeaderIds = builder.deputyLeaderIds != null
-            ? new ArrayList<>(builder.deputyLeaderIds)
-            : new ArrayList<>();
         this.sortOrder = builder.sortOrder != null ? builder.sortOrder : 0;
-        this.enabled = builder.enabled != null ? builder.enabled : true;
-        this.createdAt = LocalDateTime.now();
+        this.status = builder.status != null ? builder.status : OrgUnitStatus.ACTIVE;
+        this.headcount = builder.headcount;
+        this.attributes = builder.attributes != null ? new HashMap<>(builder.attributes) : null;
+        this.mergedIntoId = builder.mergedIntoId;
+        this.splitFromId = builder.splitFromId;
+        this.dissolvedAt = builder.dissolvedAt;
+        this.dissolvedReason = builder.dissolvedReason;
+        setVersion(builder.version);
+        this.createdAt = builder.createdAt != null ? builder.createdAt : LocalDateTime.now();
         this.updatedAt = this.createdAt;
         this.createdBy = builder.createdBy;
+        this.updatedBy = builder.updatedBy;
 
         validate();
     }
@@ -64,7 +75,7 @@ public class OrgUnit extends AggregateRoot<Long> {
     /**
      * Factory method to create a new OrgUnit.
      */
-    public static OrgUnit create(String unitCode, String unitName, OrgUnitType unitType,
+    public static OrgUnit create(String unitCode, String unitName, String unitType,
                                   Long parentId, Long createdBy) {
         OrgUnit orgUnit = builder()
             .unitCode(unitCode)
@@ -80,27 +91,138 @@ public class OrgUnit extends AggregateRoot<Long> {
 
     /**
      * Updates the organization unit information.
+     * Returns list of FieldChange for change logging.
      */
-    public void update(String unitName, UnitCategory unitCategory, Long leaderId, List<Long> deputyLeaderIds,
-                       Integer sortOrder, Long updatedBy) {
-        if (unitName != null && !unitName.isBlank()) {
+    public List<FieldChange> update(String unitName, Integer sortOrder, Integer headcount,
+                                     Map<String, Object> attributes, Long updatedBy) {
+        List<FieldChange> changes = new ArrayList<>();
+
+        if (unitName != null && !unitName.isBlank() && !unitName.equals(this.unitName)) {
+            changes.add(new FieldChange("unitName", this.unitName, unitName));
             this.unitName = unitName;
         }
-        if (unitCategory != null) {
-            this.unitCategory = unitCategory;
-        }
-        this.leaderId = leaderId;
-        this.deputyLeaderIds = deputyLeaderIds != null
-            ? new ArrayList<>(deputyLeaderIds)
-            : new ArrayList<>();
-        if (sortOrder != null) {
+        if (sortOrder != null && !sortOrder.equals(this.sortOrder)) {
+            changes.add(new FieldChange("sortOrder",
+                this.sortOrder != null ? this.sortOrder.toString() : null,
+                sortOrder.toString()));
             this.sortOrder = sortOrder;
         }
+        if (!Objects.equals(headcount, this.headcount)) {
+            changes.add(new FieldChange("headcount",
+                this.headcount != null ? this.headcount.toString() : null,
+                headcount != null ? headcount.toString() : null));
+            this.headcount = headcount;
+        }
+        if (attributes != null && !attributes.equals(this.attributes)) {
+            changes.add(new FieldChange("attributes",
+                this.attributes != null ? this.attributes.toString() : null,
+                attributes.toString()));
+            this.attributes = new HashMap<>(attributes);
+        }
+
         this.updatedBy = updatedBy;
         this.updatedAt = LocalDateTime.now();
 
         registerEvent(new OrgUnitUpdatedEvent(this));
+        return changes;
     }
+
+    // ==================== Lifecycle Operations ====================
+
+    /**
+     * Freeze the org unit — no new positions/members can be added.
+     */
+    public List<FieldChange> freeze(String reason, Long updatedBy) {
+        if (this.status == OrgUnitStatus.DISSOLVED) {
+            throw new IllegalStateException("Cannot freeze a dissolved org unit");
+        }
+        List<FieldChange> changes = new ArrayList<>();
+        changes.add(new FieldChange("status", this.status.name(), OrgUnitStatus.FROZEN.name()));
+        this.status = OrgUnitStatus.FROZEN;
+        this.updatedBy = updatedBy;
+        this.updatedAt = LocalDateTime.now();
+        return changes;
+    }
+
+    /**
+     * Unfreeze the org unit — restore to ACTIVE.
+     */
+    public List<FieldChange> unfreeze(Long updatedBy) {
+        if (this.status != OrgUnitStatus.FROZEN) {
+            throw new IllegalStateException("Can only unfreeze a frozen org unit");
+        }
+        List<FieldChange> changes = new ArrayList<>();
+        changes.add(new FieldChange("status", OrgUnitStatus.FROZEN.name(), OrgUnitStatus.ACTIVE.name()));
+        this.status = OrgUnitStatus.ACTIVE;
+        this.updatedBy = updatedBy;
+        this.updatedAt = LocalDateTime.now();
+        return changes;
+    }
+
+    /**
+     * Dissolve the org unit.
+     */
+    public List<FieldChange> dissolve(String reason, Long updatedBy) {
+        if (this.status == OrgUnitStatus.DISSOLVED) {
+            throw new IllegalStateException("Already dissolved");
+        }
+        List<FieldChange> changes = new ArrayList<>();
+        changes.add(new FieldChange("status", this.status.name(), OrgUnitStatus.DISSOLVED.name()));
+        this.status = OrgUnitStatus.DISSOLVED;
+        this.dissolvedAt = LocalDateTime.now();
+        this.dissolvedReason = reason;
+        this.updatedBy = updatedBy;
+        this.updatedAt = LocalDateTime.now();
+        return changes;
+    }
+
+    /**
+     * Mark as merging into target org unit.
+     */
+    public void markMergedInto(Long targetId, String reason, Long updatedBy) {
+        this.status = OrgUnitStatus.DISSOLVED;
+        this.mergedIntoId = targetId;
+        this.dissolvedAt = LocalDateTime.now();
+        this.dissolvedReason = reason;
+        this.updatedBy = updatedBy;
+        this.updatedAt = LocalDateTime.now();
+    }
+
+    /**
+     * Mark as split from source org unit.
+     */
+    public void markSplitFrom(Long sourceId) {
+        this.splitFromId = sourceId;
+    }
+
+    /**
+     * Move to new parent.
+     */
+    public void moveToParent(Long newParentId, Long updatedBy) {
+        this.parentId = newParentId;
+        this.updatedBy = updatedBy;
+        this.updatedAt = LocalDateTime.now();
+    }
+
+    // ==================== Status Queries ====================
+
+    public boolean canAddPositions() {
+        return status == OrgUnitStatus.ACTIVE;
+    }
+
+    public boolean canAddChildren() {
+        return status == OrgUnitStatus.ACTIVE || status == OrgUnitStatus.DRAFT;
+    }
+
+    public boolean isActive() {
+        return status == OrgUnitStatus.ACTIVE;
+    }
+
+    public boolean isDissolved() {
+        return status == OrgUnitStatus.DISSOLVED;
+    }
+
+    // ==================== Tree Operations ====================
 
     /**
      * Sets the tree path and level based on parent.
@@ -115,34 +237,6 @@ public class OrgUnit extends AggregateRoot<Long> {
         }
     }
 
-    /**
-     * Enables the organization unit.
-     */
-    public void enable() {
-        this.enabled = true;
-        this.updatedAt = LocalDateTime.now();
-    }
-
-    /**
-     * Disables the organization unit.
-     */
-    public void disable() {
-        this.enabled = false;
-        this.updatedAt = LocalDateTime.now();
-    }
-
-    /**
-     * Assigns a leader to this organization unit.
-     */
-    public void assignLeader(Long leaderId, Long updatedBy) {
-        this.leaderId = leaderId;
-        this.updatedBy = updatedBy;
-        this.updatedAt = LocalDateTime.now();
-    }
-
-    /**
-     * Checks if this unit is an ancestor of another unit.
-     */
     public boolean isAncestorOf(OrgUnit other) {
         if (other == null || other.getTreePath() == null || this.treePath == null) {
             return false;
@@ -151,9 +245,6 @@ public class OrgUnit extends AggregateRoot<Long> {
             && !other.getId().equals(this.id);
     }
 
-    /**
-     * Checks if this unit is a descendant of another unit.
-     */
     public boolean isDescendantOf(OrgUnit other) {
         if (other == null || this.treePath == null) {
             return false;
@@ -187,85 +278,28 @@ public class OrgUnit extends AggregateRoot<Long> {
         this.id = id;
     }
 
-    public String getUnitCode() {
-        return unitCode;
-    }
+    public String getUnitCode() { return unitCode; }
+    public String getUnitName() { return unitName; }
+    public String getUnitType() { return unitType; }
+    public Long getParentId() { return parentId; }
+    public String getTreePath() { return treePath; }
+    public Integer getTreeLevel() { return treeLevel; }
+    public Integer getSortOrder() { return sortOrder; }
+    public OrgUnitStatus getStatus() { return status; }
+    public Integer getHeadcount() { return headcount; }
+    public Map<String, Object> getAttributes() { return attributes; }
+    public Long getMergedIntoId() { return mergedIntoId; }
+    public Long getSplitFromId() { return splitFromId; }
+    public LocalDateTime getDissolvedAt() { return dissolvedAt; }
+    public String getDissolvedReason() { return dissolvedReason; }
+    public LocalDateTime getCreatedAt() { return createdAt; }
+    public LocalDateTime getUpdatedAt() { return updatedAt; }
+    public Long getCreatedBy() { return createdBy; }
+    public Long getUpdatedBy() { return updatedBy; }
 
-    public String getUnitName() {
-        return unitName;
-    }
-
-    public OrgUnitType getUnitType() {
-        return unitType;
-    }
-
-    public UnitCategory getUnitCategory() {
-        return unitCategory;
-    }
-
-    /**
-     * Checks if this is an academic unit (school, department, major, class, etc.)
-     */
-    public boolean isAcademic() {
-        return unitCategory == UnitCategory.ACADEMIC;
-    }
-
-    /**
-     * Checks if this is a functional department (student_affairs, academic_affairs, etc.)
-     */
-    public boolean isFunctional() {
-        return unitCategory == UnitCategory.FUNCTIONAL;
-    }
-
-    /**
-     * Checks if this is an administrative unit
-     */
-    public boolean isAdministrative() {
-        return unitCategory == UnitCategory.ADMINISTRATIVE;
-    }
-
-    public Long getParentId() {
-        return parentId;
-    }
-
-    public String getTreePath() {
-        return treePath;
-    }
-
-    public Integer getTreeLevel() {
-        return treeLevel;
-    }
-
-    public Long getLeaderId() {
-        return leaderId;
-    }
-
-    public List<Long> getDeputyLeaderIds() {
-        return deputyLeaderIds != null ? Collections.unmodifiableList(deputyLeaderIds) : Collections.emptyList();
-    }
-
-    public Integer getSortOrder() {
-        return sortOrder;
-    }
-
-    public Boolean isEnabled() {
-        return enabled;
-    }
-
-    public LocalDateTime getCreatedAt() {
-        return createdAt;
-    }
-
-    public LocalDateTime getUpdatedAt() {
-        return updatedAt;
-    }
-
-    public Long getCreatedBy() {
-        return createdBy;
-    }
-
-    public Long getUpdatedBy() {
-        return updatedBy;
+    /** @deprecated Use getStatus() == OrgUnitStatus.ACTIVE instead */
+    public boolean isEnabled() {
+        return status == OrgUnitStatus.ACTIVE || status == OrgUnitStatus.DRAFT;
     }
 
     // Builder
@@ -277,79 +311,48 @@ public class OrgUnit extends AggregateRoot<Long> {
         private Long id;
         private String unitCode;
         private String unitName;
-        private OrgUnitType unitType;
-        private UnitCategory unitCategory;
+        private String unitType;
         private Long parentId;
         private String treePath;
         private Integer treeLevel;
-        private Long leaderId;
-        private List<Long> deputyLeaderIds;
         private Integer sortOrder;
-        private Boolean enabled;
+        private OrgUnitStatus status;
+        private Integer headcount;
+        private Map<String, Object> attributes;
+        private Long mergedIntoId;
+        private Long splitFromId;
+        private LocalDateTime dissolvedAt;
+        private String dissolvedReason;
+        private Long version;
         private Long createdBy;
+        private Long updatedBy;
+        private LocalDateTime createdAt;
 
-        public Builder id(Long id) {
-            this.id = id;
-            return this;
-        }
+        public Builder id(Long id) { this.id = id; return this; }
+        public Builder unitCode(String unitCode) { this.unitCode = unitCode; return this; }
+        public Builder unitName(String unitName) { this.unitName = unitName; return this; }
+        public Builder unitType(String unitType) { this.unitType = unitType; return this; }
+        public Builder parentId(Long parentId) { this.parentId = parentId; return this; }
+        public Builder treePath(String treePath) { this.treePath = treePath; return this; }
+        public Builder treeLevel(Integer treeLevel) { this.treeLevel = treeLevel; return this; }
+        public Builder sortOrder(Integer sortOrder) { this.sortOrder = sortOrder; return this; }
+        public Builder status(OrgUnitStatus status) { this.status = status; return this; }
+        public Builder headcount(Integer headcount) { this.headcount = headcount; return this; }
+        public Builder attributes(Map<String, Object> attributes) { this.attributes = attributes; return this; }
+        public Builder mergedIntoId(Long mergedIntoId) { this.mergedIntoId = mergedIntoId; return this; }
+        public Builder splitFromId(Long splitFromId) { this.splitFromId = splitFromId; return this; }
+        public Builder dissolvedAt(LocalDateTime dissolvedAt) { this.dissolvedAt = dissolvedAt; return this; }
+        public Builder dissolvedReason(String dissolvedReason) { this.dissolvedReason = dissolvedReason; return this; }
+        public Builder version(Long version) { this.version = version; return this; }
+        public Builder createdBy(Long createdBy) { this.createdBy = createdBy; return this; }
+        public Builder updatedBy(Long updatedBy) { this.updatedBy = updatedBy; return this; }
+        public Builder createdAt(LocalDateTime createdAt) { this.createdAt = createdAt; return this; }
 
-        public Builder unitCode(String unitCode) {
-            this.unitCode = unitCode;
-            return this;
-        }
-
-        public Builder unitName(String unitName) {
-            this.unitName = unitName;
-            return this;
-        }
-
-        public Builder unitType(OrgUnitType unitType) {
-            this.unitType = unitType;
-            return this;
-        }
-
-        public Builder unitCategory(UnitCategory unitCategory) {
-            this.unitCategory = unitCategory;
-            return this;
-        }
-
-        public Builder parentId(Long parentId) {
-            this.parentId = parentId;
-            return this;
-        }
-
-        public Builder treePath(String treePath) {
-            this.treePath = treePath;
-            return this;
-        }
-
-        public Builder treeLevel(Integer treeLevel) {
-            this.treeLevel = treeLevel;
-            return this;
-        }
-
-        public Builder leaderId(Long leaderId) {
-            this.leaderId = leaderId;
-            return this;
-        }
-
-        public Builder deputyLeaderIds(List<Long> deputyLeaderIds) {
-            this.deputyLeaderIds = deputyLeaderIds;
-            return this;
-        }
-
-        public Builder sortOrder(Integer sortOrder) {
-            this.sortOrder = sortOrder;
-            return this;
-        }
-
+        /** @deprecated Use status(OrgUnitStatus) instead */
         public Builder enabled(Boolean enabled) {
-            this.enabled = enabled;
-            return this;
-        }
-
-        public Builder createdBy(Long createdBy) {
-            this.createdBy = createdBy;
+            if (enabled != null) {
+                this.status = enabled ? OrgUnitStatus.ACTIVE : OrgUnitStatus.FROZEN;
+            }
             return this;
         }
 

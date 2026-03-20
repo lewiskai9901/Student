@@ -10,23 +10,6 @@
           </h1>
           <p class="mt-1 text-slate-300">查看系统操作记录与审计信息</p>
         </div>
-        <div class="flex gap-3">
-          <button
-            :disabled="selectedIds.length === 0"
-            @click="handleBatchDelete"
-            class="flex items-center gap-2 rounded-lg bg-red-500 px-4 py-2 font-medium text-white shadow-md transition-all hover:bg-red-600 disabled:opacity-50"
-          >
-            <Trash2 class="h-5 w-5" />
-            批量删除 ({{ selectedIds.length }})
-          </button>
-          <button
-            @click="handleClearLogs"
-            class="flex items-center gap-2 rounded-lg bg-amber-500 px-4 py-2 font-medium text-white shadow-md transition-all hover:bg-amber-600"
-          >
-            <Eraser class="h-5 w-5" />
-            清空日志
-          </button>
-        </div>
       </div>
     </div>
 
@@ -36,7 +19,7 @@
         <div class="flex items-center justify-between">
           <div>
             <p class="text-sm font-medium text-gray-500">日志总数</p>
-            <p class="mt-1 text-2xl font-bold text-gray-900">{{ total }}</p>
+            <p class="mt-1 text-2xl font-bold text-gray-900">{{ statsData.total }}</p>
           </div>
           <div class="flex h-12 w-12 items-center justify-center rounded-xl bg-slate-100 text-slate-600">
             <ScrollText class="h-6 w-6" />
@@ -48,7 +31,7 @@
         <div class="flex items-center justify-between">
           <div>
             <p class="text-sm font-medium text-gray-500">成功操作</p>
-            <p class="mt-1 text-2xl font-bold text-green-600">{{ stats.success }}</p>
+            <p class="mt-1 text-2xl font-bold text-green-600">{{ statsData.success }}</p>
           </div>
           <div class="flex h-12 w-12 items-center justify-center rounded-xl bg-green-100 text-green-600">
             <CheckCircle class="h-6 w-6" />
@@ -60,7 +43,7 @@
         <div class="flex items-center justify-between">
           <div>
             <p class="text-sm font-medium text-gray-500">失败操作</p>
-            <p class="mt-1 text-2xl font-bold text-red-600">{{ stats.failed }}</p>
+            <p class="mt-1 text-2xl font-bold text-red-600">{{ statsData.failed }}</p>
           </div>
           <div class="flex h-12 w-12 items-center justify-center rounded-xl bg-red-100 text-red-600">
             <XCircle class="h-6 w-6" />
@@ -72,7 +55,7 @@
         <div class="flex items-center justify-between">
           <div>
             <p class="text-sm font-medium text-gray-500">今日操作</p>
-            <p class="mt-1 text-2xl font-bold text-blue-600">{{ stats.today }}</p>
+            <p class="mt-1 text-2xl font-bold text-blue-600">{{ statsData.today }}</p>
           </div>
           <div class="flex h-12 w-12 items-center justify-center rounded-xl bg-blue-100 text-blue-600">
             <Activity class="h-6 w-6" />
@@ -86,53 +69,57 @@
     <div class="mb-6 rounded-xl bg-white p-5 shadow-sm">
       <div class="flex flex-wrap items-end gap-4">
         <div class="min-w-[140px]">
-          <label class="mb-1.5 block text-sm font-medium text-gray-700">用户名</label>
+          <label class="mb-1.5 block text-sm font-medium text-gray-700">关键字</label>
           <input
-            v-model="queryParams.username"
+            v-model="queryParams.keyword"
             type="text"
-            placeholder="请输入用户名"
+            placeholder="用户/资源名/描述"
             class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm transition-colors focus:border-slate-500 focus:outline-none focus:ring-2 focus:ring-slate-500/20"
             @keyup.enter="handleQuery"
           />
         </div>
         <div class="min-w-[120px]">
-          <label class="mb-1.5 block text-sm font-medium text-gray-700">操作模块</label>
+          <label class="mb-1.5 block text-sm font-medium text-gray-700">模块</label>
           <select
-            v-model="queryParams.operationModule"
+            v-model="queryParams.module"
             class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm transition-colors focus:border-slate-500 focus:outline-none focus:ring-2 focus:ring-slate-500/20"
           >
             <option value="">全部模块</option>
-            <option value="student">学生管理</option>
-            <option value="class">班级管理</option>
-            <option value="dormitory">宿舍管理</option>
-            <option value="quantification">量化管理</option>
-            <option value="system">系统管理</option>
+            <option value="organization">组织管理</option>
+            <option value="place">场所管理</option>
+            <option value="user">用户管理</option>
+            <option value="access">权限管理</option>
+            <option value="inspection">检查管理</option>
           </select>
         </div>
         <div class="min-w-[120px]">
           <label class="mb-1.5 block text-sm font-medium text-gray-700">操作类型</label>
           <select
-            v-model="queryParams.operationType"
+            v-model="queryParams.action"
             class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm transition-colors focus:border-slate-500 focus:outline-none focus:ring-2 focus:ring-slate-500/20"
           >
             <option value="">全部类型</option>
-            <option value="create">创建</option>
-            <option value="update">更新</option>
-            <option value="delete">删除</option>
-            <option value="query">查询</option>
-            <option value="login">登录</option>
+            <option value="CREATE">创建</option>
+            <option value="UPDATE">更新</option>
+            <option value="DELETE">删除</option>
+            <option value="FREEZE">冻结</option>
+            <option value="DISSOLVE">解散</option>
+            <option value="ASSIGN">分配</option>
+            <option value="CHECK_IN">入住</option>
+            <option value="CHECK_OUT">退出</option>
+            <option value="LOGIN">登录</option>
+            <option value="LOGOUT">登出</option>
           </select>
         </div>
         <div class="min-w-[120px]">
-          <label class="mb-1.5 block text-sm font-medium text-gray-700">响应状态</label>
+          <label class="mb-1.5 block text-sm font-medium text-gray-700">结果</label>
           <select
-            v-model="queryParams.responseStatus"
+            v-model="queryParams.result"
             class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm transition-colors focus:border-slate-500 focus:outline-none focus:ring-2 focus:ring-slate-500/20"
           >
-            <option :value="null">全部状态</option>
-            <option :value="200">成功(200)</option>
-            <option :value="500">错误(500)</option>
-            <option :value="401">未授权(401)</option>
+            <option value="">全部</option>
+            <option value="SUCCESS">成功</option>
+            <option value="FAILURE">失败</option>
           </select>
         </div>
         <div class="flex gap-2">
@@ -169,29 +156,21 @@
         <table class="w-full">
           <thead>
             <tr class="border-b border-gray-100 bg-gray-50/50">
-              <th class="whitespace-nowrap px-4 py-3 text-left">
-                <input
-                  type="checkbox"
-                  :checked="selectedIds.length === logList.length && logList.length > 0"
-                  @change="handleSelectAll"
-                  class="h-4 w-4 rounded border-gray-300 text-slate-600 focus:ring-slate-500"
-                />
-              </th>
               <th class="whitespace-nowrap px-4 py-3 text-left text-sm font-semibold text-gray-900">用户</th>
               <th class="whitespace-nowrap px-4 py-3 text-center text-sm font-semibold text-gray-900">模块</th>
-              <th class="whitespace-nowrap px-4 py-3 text-center text-sm font-semibold text-gray-900">类型</th>
-              <th class="whitespace-nowrap px-4 py-3 text-left text-sm font-semibold text-gray-900">操作名称</th>
-              <th class="whitespace-nowrap px-4 py-3 text-center text-sm font-semibold text-gray-900">方法</th>
-              <th class="whitespace-nowrap px-4 py-3 text-center text-sm font-semibold text-gray-900">状态</th>
-              <th class="whitespace-nowrap px-4 py-3 text-center text-sm font-semibold text-gray-900">耗时</th>
-              <th class="whitespace-nowrap px-4 py-3 text-left text-sm font-semibold text-gray-900">IP地址</th>
-              <th class="whitespace-nowrap px-4 py-3 text-left text-sm font-semibold text-gray-900">操作时间</th>
               <th class="whitespace-nowrap px-4 py-3 text-center text-sm font-semibold text-gray-900">操作</th>
+              <th class="whitespace-nowrap px-4 py-3 text-left text-sm font-semibold text-gray-900">资源</th>
+              <th class="whitespace-nowrap px-4 py-3 text-left text-sm font-semibold text-gray-900">描述</th>
+              <th class="whitespace-nowrap px-4 py-3 text-center text-sm font-semibold text-gray-900">方法</th>
+              <th class="whitespace-nowrap px-4 py-3 text-center text-sm font-semibold text-gray-900">结果</th>
+              <th class="whitespace-nowrap px-4 py-3 text-left text-sm font-semibold text-gray-900">IP</th>
+              <th class="whitespace-nowrap px-4 py-3 text-left text-sm font-semibold text-gray-900">时间</th>
+              <th class="whitespace-nowrap px-4 py-3 text-center text-sm font-semibold text-gray-900">详情</th>
             </tr>
           </thead>
           <tbody v-if="loading">
             <tr>
-              <td colspan="11" class="py-20 text-center">
+              <td colspan="10" class="py-20 text-center">
                 <div class="flex flex-col items-center gap-3">
                   <Loader2 class="h-8 w-8 animate-spin text-slate-600" />
                   <span class="text-sm text-gray-500">加载中...</span>
@@ -201,7 +180,7 @@
           </tbody>
           <tbody v-else-if="logList.length === 0">
             <tr>
-              <td colspan="11" class="py-20 text-center">
+              <td colspan="10" class="py-20 text-center">
                 <div class="flex flex-col items-center gap-3">
                   <ScrollText class="h-12 w-12 text-gray-300" />
                   <span class="text-sm text-gray-500">暂无日志数据</span>
@@ -217,71 +196,51 @@
               :style="{ animationDelay: `${index * 30}ms` }"
             >
               <td class="whitespace-nowrap px-4 py-3">
-                <input
-                  type="checkbox"
-                  :checked="selectedIds.includes(row.id)"
-                  @change="handleSelectRow(row)"
-                  class="h-4 w-4 rounded border-gray-300 text-slate-600 focus:ring-slate-500"
-                />
-              </td>
-              <td class="whitespace-nowrap px-4 py-3">
                 <div class="flex items-center gap-2">
                   <div class="flex h-8 w-8 items-center justify-center rounded-full bg-slate-100 text-xs font-medium text-slate-600">
-                    {{ (row.realName || row.username || '?').charAt(0) }}
+                    {{ (row.userName || '?').charAt(0) }}
                   </div>
-                  <div>
-                    <div class="font-medium text-gray-900">{{ row.realName || row.username }}</div>
-                    <div class="text-xs text-gray-500">{{ row.username }}</div>
-                  </div>
+                  <div class="font-medium text-gray-900">{{ row.userName || '-' }}</div>
                 </div>
               </td>
               <td class="whitespace-nowrap px-4 py-3 text-center">
-                <span :class="getModuleClass(row.operationModule)">
-                  {{ getModuleName(row.operationModule) }}
+                <span :class="getModuleClass(row.module)">
+                  {{ getModuleName(row.module) }}
                 </span>
               </td>
               <td class="whitespace-nowrap px-4 py-3 text-center">
-                <span :class="getTypeClass(row.operationType)">
-                  {{ getTypeName(row.operationType) }}
+                <span :class="getActionClass(row.action)">
+                  {{ getActionName(row.action) }}
                 </span>
               </td>
-              <td class="max-w-xs truncate px-4 py-3 text-gray-600" :title="row.operationName">
-                {{ row.operationName }}
-              </td>
-              <td class="whitespace-nowrap px-4 py-3 text-center">
-                <span :class="getMethodClass(row.requestMethod)">
-                  {{ row.requestMethod }}
-                </span>
-              </td>
-              <td class="whitespace-nowrap px-4 py-3 text-center">
-                <span :class="getStatusClass(row.responseStatus)">
-                  {{ row.responseStatus }}
-                </span>
-              </td>
-              <td class="whitespace-nowrap px-4 py-3 text-center">
-                <span :class="['text-sm', row.responseTime > 1000 ? 'text-red-600 font-medium' : 'text-gray-600']">
-                  {{ row.responseTime }}ms
-                </span>
-              </td>
-              <td class="whitespace-nowrap px-4 py-3 text-sm text-gray-600">{{ row.ipAddress }}</td>
-              <td class="whitespace-nowrap px-4 py-3 text-sm text-gray-500">{{ row.createdAt }}</td>
               <td class="whitespace-nowrap px-4 py-3">
-                <div class="flex items-center justify-center gap-1">
-                  <button
-                    @click="handleView(row)"
-                    class="rounded-lg p-1.5 text-gray-500 transition-colors hover:bg-blue-100 hover:text-blue-600"
-                    title="详情"
-                  >
-                    <Eye class="h-4 w-4" />
-                  </button>
-                  <button
-                    @click="handleDelete(row)"
-                    class="rounded-lg p-1.5 text-gray-500 transition-colors hover:bg-red-100 hover:text-red-600"
-                    title="删除"
-                  >
-                    <Trash2 class="h-4 w-4" />
-                  </button>
-                </div>
+                <div class="text-sm text-gray-600">{{ row.resourceName || getResourceTypeName(row.resourceType) }}</div>
+                <div v-if="row.resourceId" class="text-xs text-gray-400">{{ getResourceTypeName(row.resourceType) }} #{{ row.resourceId }}</div>
+                <div v-else class="text-xs text-gray-400">{{ getResourceTypeName(row.resourceType) }}</div>
+              </td>
+              <td class="max-w-xs truncate px-4 py-3 text-gray-600" :title="row.actionLabel">
+                {{ row.actionLabel || row.action }}
+              </td>
+              <td class="whitespace-nowrap px-4 py-3 text-center">
+                <span :class="getMethodClass(row.httpMethod)">
+                  {{ row.httpMethod || '-' }}
+                </span>
+              </td>
+              <td class="whitespace-nowrap px-4 py-3 text-center">
+                <span :class="getResultClass(row.result)">
+                  {{ row.result === 'SUCCESS' ? '成功' : row.result === 'FAILURE' ? '失败' : row.result }}
+                </span>
+              </td>
+              <td class="whitespace-nowrap px-4 py-3 text-sm text-gray-600">{{ row.sourceIp || '-' }}</td>
+              <td class="whitespace-nowrap px-4 py-3 text-sm text-gray-500">{{ formatTime(row.occurredAt) }}</td>
+              <td class="whitespace-nowrap px-4 py-3">
+                <button
+                  @click="handleView(row)"
+                  class="rounded-lg p-1.5 text-gray-500 transition-colors hover:bg-blue-100 hover:text-blue-600"
+                  title="详情"
+                >
+                  <Eye class="h-4 w-4" />
+                </button>
               </td>
             </tr>
           </tbody>
@@ -325,7 +284,7 @@
           <select
             v-model="queryParams.pageSize"
             @change="queryParams.pageNum = 1; getLogList()"
-            class="pagination-select"
+            class="rounded-lg border border-gray-300 px-2 py-1.5 text-sm"
           >
             <option :value="10">10条/页</option>
             <option :value="20">20条/页</option>
@@ -342,7 +301,7 @@
         <div class="fixed inset-0 bg-black/50 backdrop-blur-sm" @click="detailVisible = false"></div>
         <div class="relative z-10 w-full max-w-3xl rounded-xl bg-white shadow-2xl">
           <div class="flex items-center justify-between border-b border-gray-100 px-6 py-4">
-            <h3 class="text-lg font-semibold text-gray-900">操作日志详情</h3>
+            <h3 class="text-lg font-semibold text-gray-900">事件详情</h3>
             <button @click="detailVisible = false" class="rounded-lg p-1 hover:bg-gray-100">
               <X class="h-5 w-5 text-gray-500" />
             </button>
@@ -350,68 +309,77 @@
           <div class="max-h-[70vh] overflow-y-auto p-6">
             <div class="grid grid-cols-2 gap-4">
               <div class="rounded-lg bg-gray-50 p-4">
-                <div class="text-sm text-gray-500 mb-1">日志ID</div>
+                <div class="text-sm text-gray-500 mb-1">事件ID</div>
                 <div class="font-mono text-sm text-gray-900">{{ currentLog.id }}</div>
               </div>
               <div class="rounded-lg bg-gray-50 p-4">
-                <div class="text-sm text-gray-500 mb-1">用户</div>
-                <div class="text-gray-900">{{ currentLog.realName }} ({{ currentLog.username }})</div>
+                <div class="text-sm text-gray-500 mb-1">操作人</div>
+                <div class="text-gray-900">{{ currentLog.userName || '-' }}</div>
               </div>
               <div class="rounded-lg bg-gray-50 p-4">
-                <div class="text-sm text-gray-500 mb-1">操作模块</div>
-                <span :class="getModuleClass(currentLog.operationModule)">
-                  {{ getModuleName(currentLog.operationModule) }}
+                <div class="text-sm text-gray-500 mb-1">模块</div>
+                <span :class="getModuleClass(currentLog.module)">
+                  {{ getModuleName(currentLog.module) }}
                 </span>
               </div>
               <div class="rounded-lg bg-gray-50 p-4">
-                <div class="text-sm text-gray-500 mb-1">操作类型</div>
-                <span :class="getTypeClass(currentLog.operationType)">
-                  {{ getTypeName(currentLog.operationType) }}
+                <div class="text-sm text-gray-500 mb-1">操作</div>
+                <span :class="getActionClass(currentLog.action)">
+                  {{ getActionName(currentLog.action) }}
                 </span>
               </div>
-              <div class="col-span-2 rounded-lg bg-gray-50 p-4">
-                <div class="text-sm text-gray-500 mb-1">操作名称</div>
-                <div class="text-gray-900">{{ currentLog.operationName }}</div>
+              <div class="rounded-lg bg-gray-50 p-4">
+                <div class="text-sm text-gray-500 mb-1">资源类型</div>
+                <div class="text-gray-900">{{ getResourceTypeName(currentLog.resourceType) }}</div>
+              </div>
+              <div class="rounded-lg bg-gray-50 p-4">
+                <div class="text-sm text-gray-500 mb-1">资源ID</div>
+                <div class="font-mono text-sm text-gray-900">{{ currentLog.resourceId || '-' }}</div>
+              </div>
+              <div v-if="currentLog.actionLabel" class="col-span-2 rounded-lg bg-gray-50 p-4">
+                <div class="text-sm text-gray-500 mb-1">操作描述</div>
+                <div class="text-gray-900">{{ currentLog.actionLabel }}</div>
               </div>
               <div class="rounded-lg bg-gray-50 p-4">
                 <div class="text-sm text-gray-500 mb-1">请求方法</div>
-                <span :class="getMethodClass(currentLog.requestMethod)">{{ currentLog.requestMethod }}</span>
+                <span :class="getMethodClass(currentLog.httpMethod)">{{ currentLog.httpMethod || '-' }}</span>
               </div>
               <div class="rounded-lg bg-gray-50 p-4">
-                <div class="text-sm text-gray-500 mb-1">响应状态</div>
-                <span :class="getStatusClass(currentLog.responseStatus)">{{ currentLog.responseStatus }}</span>
+                <div class="text-sm text-gray-500 mb-1">结果</div>
+                <span :class="getResultClass(currentLog.result)">
+                  {{ currentLog.result === 'SUCCESS' ? '成功' : currentLog.result === 'FAILURE' ? '失败' : currentLog.result }}
+                </span>
               </div>
-              <div class="col-span-2 rounded-lg bg-gray-50 p-4">
-                <div class="text-sm text-gray-500 mb-1">请求URL</div>
-                <div class="font-mono text-sm text-gray-900 break-all">{{ currentLog.requestUrl }}</div>
+              <div v-if="currentLog.apiEndpoint" class="col-span-2 rounded-lg bg-gray-50 p-4">
+                <div class="text-sm text-gray-500 mb-1">API端点</div>
+                <div class="font-mono text-sm text-gray-900 break-all">{{ currentLog.apiEndpoint }}</div>
               </div>
-              <div class="col-span-2 rounded-lg bg-gray-50 p-4">
-                <div class="text-sm text-gray-500 mb-1">请求参数</div>
-                <pre class="mt-2 max-h-40 overflow-auto rounded bg-gray-100 p-3 text-xs text-gray-800">{{ formatJson(currentLog.requestParams) }}</pre>
+              <div v-if="currentLog.changedFields?.length" class="col-span-2 rounded-lg bg-gray-50 p-4">
+                <div class="text-sm text-gray-500 mb-2">变更字段</div>
+                <div class="space-y-1">
+                  <div v-for="(fc, i) in currentLog.changedFields" :key="i" class="text-xs text-gray-600">
+                    <span class="font-medium text-gray-700">{{ getFieldLabel(fc.fieldName) }}</span>:
+                    <span v-if="fc.oldValue" class="text-red-500 line-through">{{ fc.oldValue }}</span>
+                    <span v-if="fc.oldValue && fc.newValue"> → </span>
+                    <span v-if="fc.newValue" class="text-green-600">{{ fc.newValue }}</span>
+                  </div>
+                </div>
               </div>
-              <div class="rounded-lg bg-gray-50 p-4">
-                <div class="text-sm text-gray-500 mb-1">响应时间</div>
-                <div class="text-gray-900">{{ currentLog.responseTime }}ms</div>
+              <div v-if="currentLog.reason" class="col-span-2 rounded-lg bg-gray-50 p-4">
+                <div class="text-sm text-gray-500 mb-1">原因</div>
+                <div class="text-gray-900">{{ currentLog.reason }}</div>
               </div>
               <div class="rounded-lg bg-gray-50 p-4">
                 <div class="text-sm text-gray-500 mb-1">IP地址</div>
-                <div class="text-gray-900">{{ currentLog.ipAddress }}</div>
+                <div class="text-gray-900">{{ currentLog.sourceIp || '-' }}</div>
               </div>
               <div class="rounded-lg bg-gray-50 p-4">
-                <div class="text-sm text-gray-500 mb-1">浏览器</div>
-                <div class="text-gray-900">{{ currentLog.browser }}</div>
-              </div>
-              <div class="rounded-lg bg-gray-50 p-4">
-                <div class="text-sm text-gray-500 mb-1">操作系统</div>
-                <div class="text-gray-900">{{ currentLog.os }}</div>
+                <div class="text-sm text-gray-500 mb-1">时间</div>
+                <div class="text-gray-900">{{ formatTime(currentLog.occurredAt) }}</div>
               </div>
               <div v-if="currentLog.errorMessage" class="col-span-2 rounded-lg bg-red-50 p-4">
                 <div class="text-sm text-red-500 mb-1">错误信息</div>
                 <div class="text-red-700">{{ currentLog.errorMessage }}</div>
-              </div>
-              <div class="col-span-2 rounded-lg bg-gray-50 p-4">
-                <div class="text-sm text-gray-500 mb-1">操作时间</div>
-                <div class="text-gray-900">{{ currentLog.createdAt }}</div>
               </div>
             </div>
           </div>
@@ -430,95 +398,90 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, computed, onMounted } from 'vue'
-import { ElMessage, ElMessageBox } from 'element-plus'
+import { ref, reactive, onMounted } from 'vue'
+import { ElMessage } from 'element-plus'
 import {
   ScrollText,
   Search,
   RotateCcw,
   Eye,
-  Trash2,
   X,
   Loader2,
   ChevronLeft,
   ChevronRight,
   CheckCircle,
   XCircle,
-  Activity,
-  Eraser
+  Activity
 } from 'lucide-vue-next'
-import { http } from '@/utils/request'
+import { listActivityEvents, getActivityStats } from '@/api/activityEvent'
+import type { ActivityEvent, ActivityEventStats } from '@/types/activityEvent'
 
 const queryParams = reactive({
-  username: '',
-  realName: '',
-  operationModule: '',
-  operationType: '',
-  ipAddress: '',
-  responseStatus: null as number | null,
-  createdAtStart: '',
-  createdAtEnd: '',
+  keyword: '',
+  module: '',
+  action: '',
+  result: '',
   pageNum: 1,
-  pageSize: 10
+  pageSize: 20
 })
 
 const loading = ref(false)
-const logList = ref<any[]>([])
+const logList = ref<ActivityEvent[]>([])
 const total = ref(0)
-const selectedIds = ref<number[]>([])
+const statsData = ref<ActivityEventStats>({ total: 0, success: 0, failed: 0, today: 0 })
 
 const detailVisible = ref(false)
-const currentLog = ref<any>({})
+const currentLog = ref<ActivityEvent>({} as ActivityEvent)
 
-// 统计数据
-const stats = computed(() => {
-  return {
-    success: logList.value.filter(l => l.responseStatus >= 200 && l.responseStatus < 300).length,
-    failed: logList.value.filter(l => l.responseStatus >= 400).length,
-    today: logList.value.length // 简化处理
-  }
-})
-
-// 获取模块样式
+// Module styles
 const getModuleClass = (module: string) => {
   const classes: Record<string, string> = {
-    student: 'rounded-full bg-blue-100 px-2 py-0.5 text-xs font-medium text-blue-700',
-    class: 'rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-700',
-    dormitory: 'rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-700',
-    quantification: 'rounded-full bg-purple-100 px-2 py-0.5 text-xs font-medium text-purple-700',
-    system: 'rounded-full bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-700'
+    organization: 'rounded-full bg-blue-100 px-2 py-0.5 text-xs font-medium text-blue-700',
+    place: 'rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-700',
+    user: 'rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-700',
+    access: 'rounded-full bg-purple-100 px-2 py-0.5 text-xs font-medium text-purple-700',
+    inspection: 'rounded-full bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-700'
   }
   return classes[module] || 'rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-600'
 }
 
 const getModuleName = (module: string) => {
   const map: Record<string, string> = {
-    student: '学生', class: '班级', dormitory: '宿舍',
-    quantification: '量化', system: '系统', user: '用户', role: '角色'
+    organization: '组织', place: '场所', user: '用户',
+    access: '权限', inspection: '检查', student: '学生'
   }
-  return map[module] || module
+  return map[module] || module || '-'
 }
 
-// 获取类型样式
-const getTypeClass = (type: string) => {
+// Action styles
+const getActionClass = (action: string) => {
   const classes: Record<string, string> = {
-    create: 'rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-700',
-    update: 'rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-700',
-    delete: 'rounded-full bg-red-100 px-2 py-0.5 text-xs font-medium text-red-700',
-    query: 'rounded-full bg-blue-100 px-2 py-0.5 text-xs font-medium text-blue-700',
-    login: 'rounded-full bg-indigo-100 px-2 py-0.5 text-xs font-medium text-indigo-700'
+    CREATE: 'rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-700',
+    UPDATE: 'rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-700',
+    DELETE: 'rounded-full bg-red-100 px-2 py-0.5 text-xs font-medium text-red-700',
+    LOGIN: 'rounded-full bg-indigo-100 px-2 py-0.5 text-xs font-medium text-indigo-700',
+    LOGOUT: 'rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-600',
+    FREEZE: 'rounded-full bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-700',
+    ASSIGN: 'rounded-full bg-blue-100 px-2 py-0.5 text-xs font-medium text-blue-700',
+    CHECK_IN: 'rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-700',
+    CHECK_OUT: 'rounded-full bg-red-100 px-2 py-0.5 text-xs font-medium text-red-700',
+    TRANSFER: 'rounded-full bg-blue-100 px-2 py-0.5 text-xs font-medium text-blue-700',
+    APPOINT: 'rounded-full bg-blue-100 px-2 py-0.5 text-xs font-medium text-blue-700'
   }
-  return classes[type] || 'rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-600'
+  return classes[action] || 'rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-600'
 }
 
-const getTypeName = (type: string) => {
+const getActionName = (action: string) => {
   const map: Record<string, string> = {
-    create: '创建', update: '更新', delete: '删除', query: '查询', login: '登录', logout: '登出'
+    CREATE: '创建', UPDATE: '更新', DELETE: '删除', LOGIN: '登录',
+    LOGOUT: '登出', FREEZE: '冻结', UNFREEZE: '解冻', DISSOLVE: '解散',
+    MERGE: '合并', SPLIT: '拆分', ASSIGN: '分配', TRANSFER: '调岗',
+    CHECK_IN: '入住', CHECK_OUT: '退出', APPOINT: '任命',
+    IMPORT: '导入', EXPORT: '导出'
   }
-  return map[type] || type
+  return map[action] || action || '-'
 }
 
-// 获取方法样式
 const getMethodClass = (method: string) => {
   const classes: Record<string, string> = {
     GET: 'rounded bg-blue-100 px-1.5 py-0.5 text-xs font-medium text-blue-700',
@@ -529,33 +492,60 @@ const getMethodClass = (method: string) => {
   return classes[method] || 'rounded bg-gray-100 px-1.5 py-0.5 text-xs font-medium text-gray-600'
 }
 
-// 获取状态样式
-const getStatusClass = (status: number) => {
-  if (status >= 200 && status < 300) return 'rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-700'
-  if (status >= 400 && status < 500) return 'rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-700'
-  if (status >= 500) return 'rounded-full bg-red-100 px-2 py-0.5 text-xs font-medium text-red-700'
-  return 'rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-600'
+const getResultClass = (result: string) => {
+  if (result === 'SUCCESS') return 'rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-700'
+  if (result === 'FAILURE') return 'rounded-full bg-red-100 px-2 py-0.5 text-xs font-medium text-red-700'
+  return 'rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-700'
 }
 
-const formatJson = (jsonStr: string) => {
-  if (!jsonStr) return '-'
-  try {
-    return JSON.stringify(JSON.parse(jsonStr), null, 2)
-  } catch {
-    return jsonStr
+const getResourceTypeName = (type: string) => {
+  const map: Record<string, string> = {
+    ORG_UNIT: '组织单元', PLACE: '场所', USER: '用户', ROLE: '角色',
+    STUDENT: '学生', USER_POSITION: '人员岗位', POSITION: '岗位',
+    SEMESTER: '学期', AUTH: '认证', INSPECTION: '检查',
+    SCHEDULE: '日程', CLASS: '班级'
   }
+  return map[type] || type || '-'
+}
+
+const getFieldLabel = (field: string) => {
+  const map: Record<string, string> = {
+    unitName: '名称', sortOrder: '排序', headcount: '编制人数',
+    attributes: '属性', status: '状态', addMember: '添加成员',
+    removeMember: '移除成员', mergedIntoId: '合并至', splitInto: '拆分为',
+    positionName: '岗位名称', positionId: '岗位', jobLevel: '职级',
+    reportsToId: '汇报对象', responsibilities: '职责', requirements: '任职要求',
+    keyPosition: '关键岗位', userId: '用户', endDate: '结束日期',
+    occupant: '入住人', username: '账号', positionNo: '位置号', orgUnitName: '所属组织',
+    name: '名称', description: '描述', type: '类型', category: '分类',
+    code: '编码', parentId: '上级', remark: '备注'
+  }
+  return map[field] || field
+}
+
+const formatTime = (time: string) => {
+  if (!time) return '-'
+  return time.replace('T', ' ').substring(0, 19)
 }
 
 const getLogList = async () => {
   loading.value = true
   try {
-    const response = await http.get<{ records: any[]; total: number }>('/system/operation-logs', { params: queryParams })
+    const response = await listActivityEvents(queryParams)
     logList.value = response.records || []
     total.value = response.total || 0
   } catch (error) {
     ElMessage.error('获取日志列表失败')
   } finally {
     loading.value = false
+  }
+}
+
+const loadStats = async () => {
+  try {
+    statsData.value = await getActivityStats()
+  } catch (e) {
+    console.error('获取统计数据失败', e)
   }
 }
 
@@ -566,74 +556,19 @@ const handleQuery = () => {
 
 const resetQuery = () => {
   Object.assign(queryParams, {
-    username: '', realName: '', operationModule: '', operationType: '',
-    ipAddress: '', responseStatus: null, pageNum: 1, pageSize: 10
+    keyword: '', module: '', action: '', result: '', pageNum: 1, pageSize: 20
   })
   getLogList()
 }
 
-const handleSelectAll = (e: Event) => {
-  const target = e.target as HTMLInputElement
-  selectedIds.value = target.checked ? logList.value.map(l => l.id) : []
-}
-
-const handleSelectRow = (row: any) => {
-  const idx = selectedIds.value.indexOf(row.id)
-  if (idx > -1) {
-    selectedIds.value.splice(idx, 1)
-  } else {
-    selectedIds.value.push(row.id)
-  }
-}
-
-const handleView = (row: any) => {
+const handleView = (row: ActivityEvent) => {
   currentLog.value = row
   detailVisible.value = true
 }
 
-const handleDelete = async (row: any) => {
-  try {
-    await ElMessageBox.confirm('确定删除该操作日志吗？', '提示', { type: 'warning' })
-    await http.delete(`/system/operation-logs/${row.id}`)
-    ElMessage.success('删除成功')
-    getLogList()
-  } catch (error: any) {
-    if (error !== 'cancel') ElMessage.error('删除失败')
-  }
-}
-
-const handleBatchDelete = async () => {
-  try {
-    await ElMessageBox.confirm(`确定删除选中的 ${selectedIds.value.length} 条日志吗？`, '提示', { type: 'warning' })
-    await http.delete('/system/operation-logs/batch', { data: selectedIds.value })
-    ElMessage.success('批量删除成功')
-    selectedIds.value = []
-    getLogList()
-  } catch (error: any) {
-    if (error !== 'cancel') ElMessage.error('批量删除失败')
-  }
-}
-
-const handleClearLogs = async () => {
-  try {
-    const { value } = await ElMessageBox.prompt('请输入要清空多少天前的日志', '清空日志', {
-      inputPattern: /^\d+$/,
-      inputErrorMessage: '请输入有效的天数',
-      inputPlaceholder: '例如: 30'
-    })
-    const days = parseInt(value)
-    const beforeDate = new Date()
-    beforeDate.setDate(beforeDate.getDate() - days)
-    await http.delete('/system/operation-logs/clear', { params: { beforeDate: beforeDate.toISOString() } })
-    ElMessage.success(`成功清空 ${days} 天前的日志`)
-    getLogList()
-  } catch (error: any) {
-    if (error !== 'cancel') ElMessage.error('清空日志失败')
-  }
-}
-
 onMounted(() => {
   getLogList()
+  loadStats()
 })
 </script>
 

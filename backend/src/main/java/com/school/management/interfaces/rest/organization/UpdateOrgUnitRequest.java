@@ -1,11 +1,10 @@
 package com.school.management.interfaces.rest.organization;
 
-import com.school.management.domain.organization.model.UnitCategory;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.Size;
 import lombok.Data;
 
-import java.util.List;
+import java.util.Map;
 
 /**
  * Request DTO for updating an organization unit.
@@ -18,15 +17,15 @@ public class UpdateOrgUnitRequest {
     @Size(max = 100, message = "Unit name cannot exceed 100 characters")
     private String unitName;
 
-    @Schema(description = "Organization category: ACADEMIC, FUNCTIONAL, ADMINISTRATIVE")
-    private UnitCategory unitCategory;
-
-    @Schema(description = "Leader user ID", example = "100")
-    private Long leaderId;
-
-    @Schema(description = "Deputy leader user IDs")
-    private List<Long> deputyLeaderIds;
-
     @Schema(description = "Sort order", example = "1")
     private Integer sortOrder;
+
+    @Schema(description = "Headcount limit")
+    private Integer headcount;
+
+    @Schema(description = "Custom attributes (JSON)")
+    private Map<String, Object> attributes;
+
+    @Schema(description = "Reason for change")
+    private String reason;
 }

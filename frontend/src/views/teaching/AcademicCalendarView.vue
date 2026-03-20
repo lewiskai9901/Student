@@ -1562,9 +1562,9 @@ const loadEvents = async () => {
 
     // 后端返回 eventName，前端使用 title，做字段映射
     events.value = data.map((e: any) => ({
-      id: Number(e.id) || 0,
-      yearId: Number(e.yearId),
-      semesterId: Number(e.semesterId),
+      id: e.id || 0,
+      yearId: e.yearId,
+      semesterId: e.semesterId,
       title: String(e.eventName || e.title || '未命名事件'),
       eventType: Number(e.eventType) || 5,
       startDate: String(e.startDate || ''),

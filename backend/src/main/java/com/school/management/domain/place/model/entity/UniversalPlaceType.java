@@ -1,6 +1,8 @@
-package com.school.management.domain.space.model.entity;
+package com.school.management.domain.place.model.entity;
 
-import com.school.management.domain.shared.Entity;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import com.school.management.domain.place.model.valueobject.BaseCategory;
+import com.school.management.domain.shared.ConfigurableType;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -8,100 +10,86 @@ import lombok.NoArgsConstructor;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 /**
- * 通用空间类型实体
- * 支持完全配置化的空间类型定义，适用于学校、医院、公司等各类场景
+ * 通用场所类型实体（统一类型系统 Phase 3）
+ * 支持完全配置化的场所类型定义
  */
 @Data
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class UniversalSpaceType implements Entity<Long> {
+public class UniversalPlaceType implements ConfigurableType {
 
     private Long id;
 
     // ==================== 基础信息 ====================
 
-    /**
-     * 类型编码（唯一标识）
-     */
     private String typeCode;
-
-    /**
-     * 类型名称
-     */
     private String typeName;
-
-    /**
-     * 图标
-     */
-    private String icon;
-
-    /**
-     * 描述
-     */
     private String description;
 
-    /**
-     * 排序号
-     */
     @Builder.Default
     private Integer sortOrder = 0;
 
-    /**
-     * 是否系统预置（系统预置的不可删除）
-     */
     @Builder.Default
     private boolean isSystem = false;
 
-    /**
-     * 是否启用
-     */
     @Builder.Default
     private boolean isEnabled = true;
 
-    // ==================== 层级关系 ====================
+    // ==================== 统一类型字段 ====================
+
+    /**
+     * 分类编码 (SITE/BUILDING/FLOOR/ROOM/AREA/POINT)
+     * 基础分类自身此字段为null，具体类型引用基础分类
+     */
+    private String category;
+
+    /**
+     * 父类型编码 (string-based hierarchy, consistent with OrgType/UserType)
+     */
+    private String parentTypeCode;
+
+    /**
+     * 行为特征 JSON {hasCapacity, bookable, assignable, occupiable, ...}
+     */
+    private Map<String, Boolean> features;
+
+    /**
+     * 扩展属性 JSON Schema (动态字段定义)
+     */
+    private String metadataSchema;
 
     /**
      * 允许的子类型编码列表
      */
     @Builder.Default
-    private List<String> allowedChildTypes = new ArrayList<>();
+    private List<String> allowedChildTypeCodes = new ArrayList<>();
+
+    /**
+     * 最大层级深度限制
+     */
+    private Integer maxDepth;
+
+    /**
+     * 关联用户类型编码列表
+     */
+    private List<String> defaultUserTypeCodes;
+
+    /**
+     * 关联组织类型编码列表
+     */
+    private List<String> defaultOrgTypeCodes;
+
+    // ==================== 场所特有字段 ====================
 
     /**
      * 是否可作为根节点
      */
     @Builder.Default
     private boolean isRootType = false;
-
-    // ==================== 行为特性 ====================
-
-    /**
-     * 是否有容量概念
-     */
-    @Builder.Default
-    private boolean hasCapacity = false;
-
-    /**
-     * 是否可预订
-     */
-    @Builder.Default
-    private boolean bookable = false;
-
-    /**
-     * 是否可分配给组织
-     */
-    @Builder.Default
-    private boolean assignable = false;
-
-    /**
-     * 是否可入住/占用
-     */
-    @Builder.Default
-    private boolean occupiable = false;
-
-    // ==================== 容量配置 ====================
 
     /**
      * 容量单位（人/床位/工位/平方米）
@@ -113,67 +101,52 @@ public class UniversalSpaceType implements Entity<Long> {
      */
     private Integer defaultCapacity;
 
-    // ==================== 扩展属性 ====================
-
-    /**
-     * 扩展属性JSON Schema
-     */
-    private String attributeSchema;
-
     // ==================== 业务方法 ====================
 
-    /**
-     * 判断是否允许某类型作为子类型
-     */
-    public boolean canHaveChild(String childTypeCode) {
-        return allowedChildTypes != null && allowedChildTypes.contains(childTypeCode);
+    public boolean isBaseCategory() {
+        return category == null && isSystem;
     }
 
-    /**
-     * 判断是否为叶子类型（不能有子节点）
-     */
+    public boolean isConcreteType() {
+        return category != null;
+    }
+
     public boolean isLeafType() {
-        return allowedChildTypes == null || allowedChildTypes.isEmpty();
+        if (category != null) {
+            try {
+                BaseCategory bc = BaseCategory.valueOf(category);
+                return bc.isLeaf();
+            } catch (IllegalArgumentException e) {
+                return true;
+            }
+        }
+        return allowedChildTypeCodes == null || allowedChildTypeCodes.isEmpty();
     }
 
-    /**
-     * 添加允许的子类型
-     */
-    public void addAllowedChildType(String childTypeCode) {
-        if (allowedChildTypes == null) {
-            allowedChildTypes = new ArrayList<>();
-        }
-        if (!allowedChildTypes.contains(childTypeCode)) {
-            allowedChildTypes.add(childTypeCode);
-        }
+    public boolean isHasCapacity() {
+        return hasFeature("hasCapacity");
     }
 
-    /**
-     * 移除允许的子类型
-     */
-    public void removeAllowedChildType(String childTypeCode) {
-        if (allowedChildTypes != null) {
-            allowedChildTypes.remove(childTypeCode);
-        }
+    public boolean isBookable() {
+        return hasFeature("bookable");
     }
 
-    /**
-     * 启用
-     */
+    public boolean isAssignable() {
+        return hasFeature("assignable");
+    }
+
+    public boolean isOccupiable() {
+        return hasFeature("occupiable");
+    }
+
     public void enable() {
         this.isEnabled = true;
     }
 
-    /**
-     * 禁用
-     */
     public void disable() {
         this.isEnabled = false;
     }
 
-    /**
-     * 验证配置的一致性
-     */
     public void validate() {
         if (typeCode == null || typeCode.isBlank()) {
             throw new IllegalArgumentException("类型编码不能为空");
@@ -181,58 +154,28 @@ public class UniversalSpaceType implements Entity<Long> {
         if (typeName == null || typeName.isBlank()) {
             throw new IllegalArgumentException("类型名称不能为空");
         }
-        // 如果有容量，则必须有容量单位
-        if (hasCapacity && (capacityUnit == null || capacityUnit.isBlank())) {
+        if (isHasCapacity() && (capacityUnit == null || capacityUnit.isBlank())) {
             throw new IllegalArgumentException("有容量的类型必须指定容量单位");
         }
-        // 可占用的类型必须有容量
-        if (occupiable && !hasCapacity) {
+        if (isOccupiable() && !isHasCapacity()) {
             throw new IllegalArgumentException("可占用的类型必须有容量概念");
         }
     }
 
-    // ==================== 工厂方法 ====================
+    // ==================== JSON property aliases ====================
 
-    /**
-     * 创建根类型
-     */
-    public static UniversalSpaceType createRootType(String typeCode, String typeName, List<String> allowedChildTypes) {
-        return UniversalSpaceType.builder()
-                .typeCode(typeCode)
-                .typeName(typeName)
-                .isRootType(true)
-                .allowedChildTypes(allowedChildTypes != null ? allowedChildTypes : new ArrayList<>())
-                .build();
+    @JsonProperty("system")
+    public boolean isSystem() {
+        return isSystem;
     }
 
-    /**
-     * 创建中间层类型（可有子节点）
-     */
-    public static UniversalSpaceType createIntermediateType(String typeCode, String typeName, List<String> allowedChildTypes) {
-        return UniversalSpaceType.builder()
-                .typeCode(typeCode)
-                .typeName(typeName)
-                .isRootType(false)
-                .allowedChildTypes(allowedChildTypes != null ? allowedChildTypes : new ArrayList<>())
-                .build();
+    @JsonProperty("enabled")
+    public boolean isEnabled() {
+        return isEnabled;
     }
 
-    /**
-     * 创建叶子类型（不能有子节点）
-     */
-    public static UniversalSpaceType createLeafType(String typeCode, String typeName,
-                                                     boolean hasCapacity, String capacityUnit,
-                                                     boolean bookable, boolean assignable, boolean occupiable) {
-        return UniversalSpaceType.builder()
-                .typeCode(typeCode)
-                .typeName(typeName)
-                .isRootType(false)
-                .allowedChildTypes(new ArrayList<>())
-                .hasCapacity(hasCapacity)
-                .capacityUnit(capacityUnit)
-                .bookable(bookable)
-                .assignable(assignable)
-                .occupiable(occupiable)
-                .build();
+    @JsonProperty("rootType")
+    public boolean isRootType() {
+        return isRootType;
     }
 }

@@ -5,8 +5,7 @@ import com.school.management.domain.shared.event.DomainEvent;
 import com.school.management.domain.shared.event.DomainEventPublisher;
 import com.school.management.infrastructure.event.outbox.OutboxEntry;
 import com.school.management.infrastructure.event.outbox.OutboxRepository;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Component;
@@ -28,10 +27,9 @@ import org.springframework.transaction.annotation.Transactional;
  *   <li>Published asynchronously by OutboxProcessor (for external systems)</li>
  * </ol>
  */
+@Slf4j
 @Component
 public class SpringDomainEventPublisher implements DomainEventPublisher {
-
-    private static final Logger log = LoggerFactory.getLogger(SpringDomainEventPublisher.class);
 
     private final ApplicationEventPublisher applicationEventPublisher;
     private final ObjectMapper objectMapper;
@@ -105,8 +103,7 @@ public class SpringDomainEventPublisher implements DomainEventPublisher {
             outboxRepository.save(entry);
         } catch (Exception e) {
             log.error("Failed to record event in outbox: {}", event.getEventId(), e);
-            // Don't rethrow - the event is still stored in event store
-            // The outbox is for async delivery; sync publish will still work
+            throw new RuntimeException("Failed to record event in outbox: " + event.getEventId(), e);
         }
     }
 

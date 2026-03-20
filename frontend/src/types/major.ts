@@ -1,10 +1,10 @@
 // 专业相关类型定义
 
 export interface Major {
-  id: number
+  id: number | string
   majorName: string
   majorCode: string
-  orgUnitId: number
+  orgUnitId: number | string
   orgUnitName?: string
   description?: string
   status: number
@@ -16,7 +16,7 @@ export interface Major {
 export interface MajorQueryParams {
   majorName?: string
   majorCode?: string
-  orgUnitId?: number | null
+  orgUnitId?: number | string | null
   status?: number | null
   pageNum?: number
   pageSize?: number
@@ -25,7 +25,7 @@ export interface MajorQueryParams {
 export interface MajorFormData {
   majorName: string
   majorCode: string
-  orgUnitId: number | null
+  orgUnitId: number | string | null
   description?: string
   status: number
 }

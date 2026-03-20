@@ -1,19 +1,19 @@
-package com.school.management.domain.space.model.valueobject;
+package com.school.management.domain.place.model.valueobject;
 
 import lombok.Getter;
 
 /**
  * 空间层级枚举
- * 用于SpaceCategory定义适用层级
+ * 用于PlaceCategory定义适用层级
  */
 @Getter
-public enum SpaceLevel {
+public enum PlaceLevel {
     BUILDING("楼栋"),
     ROOM("房间");
 
     private final String description;
 
-    SpaceLevel(String description) {
+    PlaceLevel(String description) {
         this.description = description;
     }
 }

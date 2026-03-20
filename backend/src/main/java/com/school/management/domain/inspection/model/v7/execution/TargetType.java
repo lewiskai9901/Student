@@ -7,5 +7,6 @@ public enum TargetType {
     ORG,
     PLACE,
     USER,
-    ASSET;
+    ASSET,
+    COMPOSITE;
 }

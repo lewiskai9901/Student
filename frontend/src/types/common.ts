@@ -47,6 +47,7 @@ export interface MenuItem {
   children?: MenuItem[]
   order?: number
   permission?: string
+  group?: string
 }
 
 /**

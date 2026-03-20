@@ -5,8 +5,5 @@ package com.school.management.domain.inspection.model.v7.execution;
  */
 public enum AssignmentMode {
     FREE,
-    ASSIGNED,
-    HYBRID,
-    ROUND_ROBIN,
-    LOAD_BALANCED;
+    ASSIGNED;
 }

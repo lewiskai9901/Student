@@ -8,10 +8,12 @@ import com.school.management.domain.access.repository.UserRoleRepository;
 import com.school.management.domain.access.service.AuthorizationService;
 import com.school.management.domain.shared.event.DomainEvent;
 import com.school.management.domain.shared.event.DomainEventPublisher;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.UUID;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -24,6 +26,7 @@ import java.util.stream.Collectors;
  * Application service for access control operations.
  */
 @Slf4j
+@RequiredArgsConstructor
 @Service
 @Transactional
 public class AccessApplicationService {
@@ -33,19 +36,6 @@ public class AccessApplicationService {
     private final UserRoleRepository userRoleRepository;
     private final AuthorizationService authorizationService;
     private final DomainEventPublisher eventPublisher;
-
-    public AccessApplicationService(
-            PermissionRepository permissionRepository,
-            RoleRepository roleRepository,
-            UserRoleRepository userRoleRepository,
-            AuthorizationService authorizationService,
-            DomainEventPublisher eventPublisher) {
-        this.permissionRepository = permissionRepository;
-        this.roleRepository = roleRepository;
-        this.userRoleRepository = userRoleRepository;
-        this.authorizationService = authorizationService;
-        this.eventPublisher = eventPublisher;
-    }
 
     // ==================== Permission Operations ====================
 
@@ -176,12 +166,11 @@ public class AccessApplicationService {
      * Creates a new role.
      */
     public Role createRole(CreateRoleCommand command) {
-        if (roleRepository.existsByRoleCode(command.getRoleCode())) {
-            throw new IllegalArgumentException("Role code already exists: " + command.getRoleCode());
-        }
+        // 自动生成角色编码
+        String roleCode = generateRoleCode();
 
         Role role = Role.create(
-            command.getRoleCode(),
+            roleCode,
             command.getRoleName(),
             command.getDescription(),
             command.getRoleType(),
@@ -195,6 +184,14 @@ public class AccessApplicationService {
         role = roleRepository.save(role);
         publishEvents(role);
         return role;
+    }
+
+    private String generateRoleCode() {
+        String code;
+        do {
+            code = "ROLE_" + UUID.randomUUID().toString().substring(0, 8).toUpperCase();
+        } while (roleRepository.existsByRoleCode(code));
+        return code;
     }
 
     /**
@@ -234,7 +231,7 @@ public class AccessApplicationService {
      * Lists roles by type.
      */
     @Transactional(readOnly = true)
-    public List<Role> listRolesByType(RoleType roleType) {
+    public List<Role> listRolesByType(String roleType) {
         return roleRepository.findByRoleType(roleType);
     }
 
@@ -311,40 +308,42 @@ public class AccessApplicationService {
     // ==================== User Role Operations ====================
 
     /**
-     * Assigns a role to a user.
+     * Assigns a role to a user with global scope (ALL).
      */
     public UserRole assignRoleToUser(Long userId, Long roleId, Long assignedBy) {
-        if (userRoleRepository.existsByUserIdAndRoleId(userId, roleId)) {
-            throw new IllegalArgumentException("User already has this role");
+        if (userRoleRepository.existsByUserIdAndRoleIdAndScope(userId, roleId, "ALL", 0L)) {
+            throw new IllegalArgumentException("User already has this role with global scope");
         }
 
         UserRole userRole = UserRole.assign(userId, roleId, assignedBy);
         userRole = userRoleRepository.save(userRole);
 
-        // Publish event
-        eventPublisher.publish(new UserRoleAssignedEvent(userId, roleId, null, assignedBy));
-
-        // Refresh user's permission cache
+        eventPublisher.publish(new UserRoleAssignedEvent(userId, roleId, "ALL", 0L, assignedBy));
         authorizationService.refreshCache(userId);
 
         return userRole;
     }
 
     /**
-     * Assigns a role to a user with organization scope.
+     * Assigns a role to a user with a specific scope.
      */
-    public UserRole assignRoleToUserWithScope(Long userId, Long roleId, Long orgUnitId, Long assignedBy) {
-        UserRole userRole = UserRole.assignWithScope(userId, roleId, orgUnitId, assignedBy);
+    public UserRole assignRoleToUserWithScope(Long userId, Long roleId,
+                                               String scopeType, Long scopeId, Long assignedBy) {
+        if (userRoleRepository.existsByUserIdAndRoleIdAndScope(userId, roleId, scopeType, scopeId)) {
+            throw new IllegalArgumentException("User already has this role with the same scope");
+        }
+
+        UserRole userRole = UserRole.assignWithScope(userId, roleId, scopeType, scopeId, assignedBy);
         userRole = userRoleRepository.save(userRole);
 
-        eventPublisher.publish(new UserRoleAssignedEvent(userId, roleId, orgUnitId, assignedBy));
+        eventPublisher.publish(new UserRoleAssignedEvent(userId, roleId, scopeType, scopeId, assignedBy));
         authorizationService.refreshCache(userId);
 
         return userRole;
     }
 
     /**
-     * Removes a role from a user.
+     * Removes a role from a user (all scopes).
      */
     public void removeRoleFromUser(Long userId, Long roleId) {
         userRoleRepository.deleteByUserIdAndRoleId(userId, roleId);
@@ -352,13 +351,30 @@ public class AccessApplicationService {
     }
 
     /**
-     * Gets all roles for a user.
+     * Removes a specific scoped role assignment from a user.
+     */
+    public void removeRoleFromUserWithScope(Long userId, Long roleId, String scopeType, Long scopeId) {
+        userRoleRepository.deleteByUserIdAndRoleIdAndScope(userId, roleId, scopeType, scopeId);
+        authorizationService.refreshCache(userId);
+    }
+
+    /**
+     * Gets all active user role assignments (with scope info).
+     */
+    @Transactional(readOnly = true)
+    public List<UserRole> getUserRoleAssignments(Long userId) {
+        return userRoleRepository.findActiveByUserId(userId);
+    }
+
+    /**
+     * Gets all roles for a user (deduplicated role objects).
      */
     @Transactional(readOnly = true)
     public List<Role> getUserRoles(Long userId) {
         List<UserRole> userRoles = userRoleRepository.findActiveByUserId(userId);
         List<Long> roleIds = userRoles.stream()
             .map(UserRole::getRoleId)
+            .distinct()
             .collect(Collectors.toList());
         return roleRepository.findByIds(roleIds);
     }
@@ -372,19 +388,33 @@ public class AccessApplicationService {
     }
 
     /**
-     * Sets all roles for a user.
+     * Sets all roles for a user (replaces existing assignments).
+     * Accepts a list of role assignments with scope info.
      */
-    public void setUserRoles(Long userId, Set<Long> roleIds, Long assignedBy) {
+    public void setUserRoles(Long userId, List<RoleAssignment> assignments, Long assignedBy) {
         // Remove all existing roles
         userRoleRepository.deleteByUserId(userId);
 
-        // Assign new roles
-        for (Long roleId : roleIds) {
-            UserRole userRole = UserRole.assign(userId, roleId, assignedBy);
+        // Assign new roles with scope
+        for (RoleAssignment assignment : assignments) {
+            String scopeType = assignment.getScopeType() != null ? assignment.getScopeType() : "ALL";
+            Long scopeId = assignment.getScopeId() != null ? assignment.getScopeId() : 0L;
+            UserRole userRole = UserRole.assignWithScope(userId, assignment.getRoleId(),
+                    scopeType, scopeId, assignedBy);
             userRoleRepository.save(userRole);
         }
 
         authorizationService.refreshCache(userId);
+    }
+
+    /**
+     * DTO for role assignment with scope.
+     */
+    @lombok.Data
+    public static class RoleAssignment {
+        private Long roleId;
+        private String scopeType;
+        private Long scopeId;
     }
 
     // ==================== Helper Methods ====================

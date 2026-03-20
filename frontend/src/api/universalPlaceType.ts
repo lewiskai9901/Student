@@ -1,100 +1,29 @@
-import request from '@/utils/request'
-import type {
-  UniversalSpaceType,
-  SpaceTypeTreeNode,
-  CreateSpaceTypeRequest,
-  UpdateSpaceTypeRequest
-} from '@/types/universalSpace'
-
-const BASE_URL = '/v9/space-types'
-
 /**
- * 通用空间类型 API
+ * 通用场所类型 API（统一类型系统 Phase 3）
+ * 端点: /place-types
  */
-export const universalSpaceTypeApi = {
-  /**
-   * 获取所有空间类型
-   */
-  getAll(): Promise<UniversalSpaceType[]> {
-    return request.get(BASE_URL)
-  },
+import { http } from '@/utils/request'
+import { createTypeApi } from './typeApiFactory'
+import type {
+  UniversalPlaceType,
+  PlaceTypeTreeNode,
+  CreatePlaceTypeRequest,
+  UpdatePlaceTypeRequest,
+  PlaceCategory
+} from '@/types/universalPlace'
 
-  /**
-   * 获取所有启用的空间类型
-   */
-  getEnabled(): Promise<UniversalSpaceType[]> {
-    return request.get(`${BASE_URL}/enabled`)
-  },
+const base = createTypeApi<UniversalPlaceType, CreatePlaceTypeRequest, UpdatePlaceTypeRequest>('/place-types')
 
-  /**
-   * 获取所有根类型
-   */
-  getRootTypes(): Promise<UniversalSpaceType[]> {
-    return request.get(`${BASE_URL}/root`)
+export const universalPlaceTypeApi = {
+  ...base,
+  // Override categories to use PlaceCategory (has extra fields: allowedChildCategories, leaf, root)
+  getCategories(): Promise<PlaceCategory[]> {
+    return http.get(`/place-types/categories`)
   },
-
-  /**
-   * 获取空间类型树
-   */
-  getTree(): Promise<SpaceTypeTreeNode[]> {
-    return request.get(`${BASE_URL}/tree`)
+  // Extra PlaceType-specific endpoint
+  getRootTypes(): Promise<UniversalPlaceType[]> {
+    return http.get(`/place-types/root`)
   },
-
-  /**
-   * 获取允许的子类型
-   */
-  getAllowedChildTypes(parentTypeCode: string): Promise<UniversalSpaceType[]> {
-    return request.get(`${BASE_URL}/${parentTypeCode}/children`)
-  },
-
-  /**
-   * 根据ID获取空间类型
-   */
-  getById(id: number): Promise<UniversalSpaceType> {
-    return request.get(`${BASE_URL}/id/${id}`)
-  },
-
-  /**
-   * 根据编码获取空间类型
-   */
-  getByCode(typeCode: string): Promise<UniversalSpaceType> {
-    return request.get(`${BASE_URL}/code/${typeCode}`)
-  },
-
-  /**
-   * 创建空间类型
-   */
-  create(data: CreateSpaceTypeRequest): Promise<UniversalSpaceType> {
-    return request.post(BASE_URL, data)
-  },
-
-  /**
-   * 更新空间类型
-   */
-  update(id: number, data: UpdateSpaceTypeRequest): Promise<UniversalSpaceType> {
-    return request.put(`${BASE_URL}/${id}`, data)
-  },
-
-  /**
-   * 删除空间类型
-   */
-  delete(id: number): Promise<void> {
-    return request.delete(`${BASE_URL}/${id}`)
-  },
-
-  /**
-   * 启用空间类型
-   */
-  enable(id: number): Promise<UniversalSpaceType> {
-    return request.put(`${BASE_URL}/${id}/enable`)
-  },
-
-  /**
-   * 禁用空间类型
-   */
-  disable(id: number): Promise<UniversalSpaceType> {
-    return request.put(`${BASE_URL}/${id}/disable`)
-  }
 }
 
-export default universalSpaceTypeApi
+export default universalPlaceTypeApi

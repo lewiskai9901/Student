@@ -5,7 +5,7 @@
 // ========== 枚举类型 ==========
 
 /** 场所类型 */
-export type SpaceType = 'CAMPUS' | 'BUILDING' | 'FLOOR' | 'ROOM'
+export type PlaceType = 'CAMPUS' | 'BUILDING' | 'FLOOR' | 'ROOM'
 
 /** 房间类型 */
 export type RoomType =
@@ -23,7 +23,7 @@ export type RoomType =
 export type BuildingType = 'TEACHING' | 'DORMITORY' | 'OFFICE' | 'MIXED'
 
 /** 场所状态 */
-export type SpaceStatus = 0 | 1 | 2  // 0-禁用 1-正常 2-维护中
+export type PlaceStatus = 0 | 1 | 2  // 0-禁用 1-正常 2-维护中
 
 /** 性别类型 */
 export type GenderType = 0 | 1 | 2  // 0-不限 1-男 2-女
@@ -46,7 +46,7 @@ export interface EnumOption {
   [key: string]: any
 }
 
-export interface SpaceTypeOption extends EnumOption {
+export interface PlaceTypeOption extends EnumOption {
   level: number
 }
 
@@ -58,12 +58,12 @@ export interface RoomTypeOption extends EnumOption {
 // ========== DTO类型 ==========
 
 /** 场所DTO */
-export interface SpaceDTO {
-  id: number
-  spaceCode: string
-  spaceName: string
-  spaceType: SpaceType
-  categoryId?: number           // V10: 分类ID
+export interface PlaceDTO {
+  id: number | string
+  placeCode: string
+  placeName: string
+  placeType: PlaceType
+  categoryId?: number | string  // V10: 分类ID
   categoryName?: string         // V10: 分类名称
   roomType?: RoomType           // 兼容旧字段
   buildingType?: BuildingType   // 兼容旧字段
@@ -75,17 +75,17 @@ export interface SpaceDTO {
   parentBuildingNo?: number     // 所属楼栋的楼号（房间查询时用）
 
   // 层级
-  parentId?: number
+  parentId?: number | string
   parentName?: string
   path?: string
   level: number
 
   // 位置
-  campusId?: number
+  campusId?: number | string
   campusName?: string
-  buildingId?: number
+  buildingId?: number | string
   buildingName?: string
-  floorId?: number
+  floorId?: number | string
   floorName?: string
   floorNumber?: number
 
@@ -96,15 +96,15 @@ export interface SpaceDTO {
   occupancyRate?: number
 
   // 归属
-  orgUnitId?: number
+  orgUnitId?: number | string
   orgUnitName?: string
-  responsibleUserId?: number
+  responsibleUserId?: number | string
   responsibleUserName?: string
 
   // 班级归属
-  classId?: number
+  classId?: number | string
   className?: string
-  classTeacherId?: number
+  classTeacherId?: number | string
   classTeacherName?: string
   classTeacherPhone?: string
 
@@ -113,7 +113,7 @@ export interface SpaceDTO {
   genderTypeText?: string
 
   // 状态
-  status: SpaceStatus
+  status: PlaceStatus
   statusText: string
 
   // 扩展
@@ -121,7 +121,7 @@ export interface SpaceDTO {
   description?: string
 
   // 子节点（树形结构用）
-  children?: SpaceDTO[]
+  children?: PlaceDTO[]
 
   // 扩展属性
   dormitoryExt?: DormitoryExtDTO
@@ -142,14 +142,14 @@ export interface DormitoryExtDTO {
   facilities?: string
   assignedClassIds?: string
   assignedClassNames?: string
-  supervisorId?: number
+  supervisorId?: number | string
   supervisorName?: string
 }
 
 /** 教室扩展DTO */
 export interface ClassroomExtDTO {
   classroomCategory?: string
-  assignedClassId?: number
+  assignedClassId?: number | string
   assignedClassName?: string
   hasProjector?: boolean
   hasAirConditioner?: boolean
@@ -161,7 +161,7 @@ export interface ClassroomExtDTO {
 export interface LabExtDTO {
   labCategory?: string
   safetyLevel?: number
-  majorId?: number
+  majorId?: number | string
   majorName?: string
   equipmentList?: string
   safetyNotice?: string
@@ -170,19 +170,19 @@ export interface LabExtDTO {
 /** 办公室扩展DTO */
 export interface OfficeExtDTO {
   officeType?: string
-  departmentId?: number
+  departmentId?: number | string
   departmentName?: string
   workstationCount?: number
   phoneNumber?: string
 }
 
 /** 场所占用者DTO */
-export interface SpaceOccupantDTO {
-  id: number
-  spaceId: number
-  spaceName?: string
+export interface PlaceOccupantDTO {
+  id: number | string
+  placeId: number | string
+  placeName?: string
   occupantType: OccupantType
-  occupantId: number
+  occupantId: number | string
   occupantName?: string
   occupantNo?: string
   positionNo?: number
@@ -201,7 +201,7 @@ export interface SpaceOccupantDTO {
 }
 
 /** 场所统计DTO */
-export interface SpaceStatisticsDTO {
+export interface PlaceStatisticsDTO {
   totalBuildings: number
   totalRooms: number
   totalCapacity: number
@@ -231,39 +231,39 @@ export interface BuildingTypeStats {
 // ========== 请求类型 ==========
 
 /** 创建场所请求 */
-export interface CreateSpaceRequest {
-  spaceType: SpaceType
-  spaceCode?: string
-  spaceName: string
-  categoryId?: number         // V10: 分类ID
+export interface CreatePlaceRequest {
+  placeType: PlaceType
+  placeCode?: string
+  placeName: string
+  categoryId?: number | string  // V10: 分类ID
   roomType?: RoomType         // 兼容旧字段
   buildingType?: BuildingType // 兼容旧字段
   buildingNo?: number         // V10: 楼号（数字，仅BUILDING类型）
   roomNo?: number             // V10: 房间号（数字，仅ROOM类型）
   floorCount?: number         // V10: 楼层数（仅BUILDING类型）
-  parentId?: number
+  parentId?: number | string
   floorNumber?: number
   capacity?: number
-  orgUnitId?: number
-  classId?: number
-  responsibleUserId?: number
+  orgUnitId?: number | string
+  classId?: number | string
+  responsibleUserId?: number | string
   genderType?: GenderType
   description?: string
   attributes?: Record<string, any>
 }
 
 /** 更新场所请求 */
-export interface UpdateSpaceRequest {
-  spaceName?: string
+export interface UpdatePlaceRequest {
+  placeName?: string
   description?: string
-  categoryId?: number         // V10: 分类ID
+  categoryId?: number | string  // V10: 分类ID
   buildingNo?: number         // V10: 楼号（数字，仅BUILDING类型）
   roomNo?: number             // V10: 房间号（数字，仅ROOM类型）
   floorCount?: number         // V10: 楼层数（仅BUILDING类型）
   capacity?: number
-  orgUnitId?: number
-  classId?: number
-  responsibleUserId?: number
+  orgUnitId?: number | string
+  classId?: number | string
+  responsibleUserId?: number | string
   genderType?: GenderType
   attributes?: Record<string, any>
 }
@@ -271,26 +271,26 @@ export interface UpdateSpaceRequest {
 /** 入住请求 */
 export interface CheckInRequest {
   occupantType: OccupantType
-  occupantId: number
+  occupantId: number | string
   positionNo?: number
   remark?: string
 }
 
 /** 批量分配组织单元请求 */
 export interface BatchAssignOrgUnitRequest {
-  spaceIds: number[]
-  orgUnitId: number  // 0 表示取消分配
+  placeIds: (number | string)[]
+  orgUnitId: number | string  // 0 表示取消分配
 }
 
 /** 场所查询条件 */
-export interface SpaceQueryParams {
-  spaceType?: SpaceType
+export interface PlaceQueryParams {
+  placeType?: PlaceType
   roomType?: RoomType
   buildingType?: BuildingType
-  buildingId?: number
+  buildingId?: number | string
   floorNumber?: number
-  orgUnitId?: number
-  status?: SpaceStatus
+  orgUnitId?: number | string
+  status?: PlaceStatus
   keyword?: string
   page?: number
   pageSize?: number
@@ -298,8 +298,8 @@ export interface SpaceQueryParams {
 
 // ========== 分页响应 ==========
 
-export interface SpacePageResult {
-  list: SpaceDTO[]
+export interface PlacePageResult {
+  list: PlaceDTO[]
   total: number
   page: number
   pageSize: number
@@ -307,8 +307,8 @@ export interface SpacePageResult {
 
 // ========== 类型配置 ==========
 
-export interface SpaceTypeConfig {
-  id: number
+export interface PlaceTypeConfig {
+  id: number | string
   typeCode: string
   typeName: string
   parentType: string
@@ -325,8 +325,8 @@ export interface SpaceTypeConfig {
 // ========== 辅助函数 ==========
 
 /** 获取场所类型显示名称 */
-export function getSpaceTypeName(type: SpaceType): string {
-  const names: Record<SpaceType, string> = {
+export function getPlaceTypeName(type: PlaceType): string {
+  const names: Record<PlaceType, string> = {
     CAMPUS: '校区',
     BUILDING: '楼栋',
     FLOOR: '楼层',
@@ -363,8 +363,8 @@ export function getBuildingTypeName(type: BuildingType): string {
 }
 
 /** 获取状态显示名称 */
-export function getStatusName(status: SpaceStatus): string {
-  const names: Record<SpaceStatus, string> = {
+export function getStatusName(status: PlaceStatus): string {
+  const names: Record<PlaceStatus, string> = {
     0: '已禁用',
     1: '正常',
     2: '维护中'
@@ -373,8 +373,8 @@ export function getStatusName(status: SpaceStatus): string {
 }
 
 /** 获取状态样式类 */
-export function getStatusClass(status: SpaceStatus): string {
-  const classes: Record<SpaceStatus, string> = {
+export function getStatusClass(status: PlaceStatus): string {
+  const classes: Record<PlaceStatus, string> = {
     0: 'bg-gray-100 text-gray-600',
     1: 'bg-green-100 text-green-700',
     2: 'bg-amber-100 text-amber-700'

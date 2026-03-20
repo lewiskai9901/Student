@@ -1,4 +1,4 @@
-package com.school.management.infrastructure.persistence.space;
+package com.school.management.infrastructure.persistence.place;
 
 import com.baomidou.mybatisplus.annotation.*;
 import lombok.Data;
@@ -9,17 +9,17 @@ import java.time.LocalDateTime;
  * 场所持久化对象
  */
 @Data
-@TableName("space")
-public class SpacePO {
+@TableName("place")
+public class PlacePO {
 
     @TableId(type = IdType.AUTO)
     private Long id;
 
-    private String spaceCode;
-    private String spaceName;
-    private String spaceType;
+    private String placeCode;
+    private String placeName;
+    private String placeType;
     private Long categoryId;              // V10: 分类ID
-    private String spaceTypeCode;         // 兼容旧字段
+    private String placeTypeCode;         // 兼容旧字段
     private String roomType;              // 兼容旧字段
     private String buildingType;          // 兼容旧字段
 

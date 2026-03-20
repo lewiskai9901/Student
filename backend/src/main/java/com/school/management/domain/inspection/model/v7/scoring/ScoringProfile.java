@@ -12,7 +12,7 @@ public class ScoringProfile extends AggregateRoot<Long> {
 
     private Long id;
     private Long tenantId;
-    private Long templateId;
+    private Long sectionId;
     private BigDecimal maxScore;
     private BigDecimal minScore;
     private Integer precisionDigits;
@@ -53,7 +53,7 @@ public class ScoringProfile extends AggregateRoot<Long> {
     private ScoringProfile(Builder builder) {
         this.id = builder.id;
         this.tenantId = builder.tenantId != null ? builder.tenantId : 0L;
-        this.templateId = builder.templateId;
+        this.sectionId = builder.sectionId;
         this.maxScore = builder.maxScore != null ? builder.maxScore : new BigDecimal("100");
         this.minScore = builder.minScore != null ? builder.minScore : BigDecimal.ZERO;
         this.precisionDigits = builder.precisionDigits != null ? builder.precisionDigits : 2;
@@ -85,9 +85,9 @@ public class ScoringProfile extends AggregateRoot<Long> {
         this.updatedAt = builder.updatedAt;
     }
 
-    public static ScoringProfile create(Long templateId, Long createdBy) {
+    public static ScoringProfile create(Long sectionId, Long createdBy) {
         return builder()
-                .templateId(templateId)
+                .sectionId(sectionId)
                 .createdBy(createdBy)
                 .build();
     }
@@ -152,7 +152,7 @@ public class ScoringProfile extends AggregateRoot<Long> {
     @Override
     public void setId(Long id) { this.id = id; }
     public Long getTenantId() { return tenantId; }
-    public Long getTemplateId() { return templateId; }
+    public Long getSectionId() { return sectionId; }
     public BigDecimal getMaxScore() { return maxScore; }
     public BigDecimal getMinScore() { return minScore; }
     public Integer getPrecisionDigits() { return precisionDigits; }
@@ -190,7 +190,7 @@ public class ScoringProfile extends AggregateRoot<Long> {
     public static class Builder {
         private Long id;
         private Long tenantId;
-        private Long templateId;
+        private Long sectionId;
         private BigDecimal maxScore;
         private BigDecimal minScore;
         private Integer precisionDigits;
@@ -218,7 +218,7 @@ public class ScoringProfile extends AggregateRoot<Long> {
 
         public Builder id(Long id) { this.id = id; return this; }
         public Builder tenantId(Long tenantId) { this.tenantId = tenantId; return this; }
-        public Builder templateId(Long templateId) { this.templateId = templateId; return this; }
+        public Builder sectionId(Long sectionId) { this.sectionId = sectionId; return this; }
         public Builder maxScore(BigDecimal maxScore) { this.maxScore = maxScore; return this; }
         public Builder minScore(BigDecimal minScore) { this.minScore = minScore; return this; }
         public Builder precisionDigits(Integer precisionDigits) { this.precisionDigits = precisionDigits; return this; }

@@ -34,7 +34,7 @@ class RoleTest {
             "ROLE_MANAGER",
             "部门经理",
             "负责部门日常管理",
-            RoleType.CUSTOM,
+            "CUSTOM",
             CREATOR_ID
         );
     }
@@ -50,7 +50,7 @@ class RoleTest {
             assertEquals("ROLE_MANAGER", role.getRoleCode());
             assertEquals("部门经理", role.getRoleName());
             assertEquals("负责部门日常管理", role.getDescription());
-            assertEquals(RoleType.CUSTOM, role.getRoleType());
+            assertEquals("CUSTOM", role.getRoleType());
             assertTrue(role.getIsEnabled());
             assertFalse(role.getIsSystem());
             assertEquals(100, role.getLevel());
@@ -67,14 +67,14 @@ class RoleTest {
             Role systemRole = Role.builder()
                 .roleCode("ROLE_ADMIN")
                 .roleName("系统管理员")
-                .roleType(RoleType.SYSTEM_ADMIN)
+                .roleType("SYSTEM_ADMIN")
                 .isSystem(true)
                 .level(1)
                 .createdBy(CREATOR_ID)
                 .build();
 
             assertTrue(systemRole.getIsSystem());
-            assertEquals(RoleType.SYSTEM_ADMIN, systemRole.getRoleType());
+            assertEquals("SYSTEM_ADMIN", systemRole.getRoleType());
             assertEquals(1, systemRole.getLevel());
         }
 
@@ -82,7 +82,7 @@ class RoleTest {
         @DisplayName("创建角色时缺少编码应抛出异常")
         void shouldFailWhenRoleCodeIsNull() {
             assertThrows(NullPointerException.class, () ->
-                Role.create(null, "部门经理", "描述", RoleType.CUSTOM, CREATOR_ID)
+                Role.create(null, "部门经理", "描述", "CUSTOM", CREATOR_ID)
             );
         }
 
@@ -90,7 +90,7 @@ class RoleTest {
         @DisplayName("创建角色时缺少名称应抛出异常")
         void shouldFailWhenRoleNameIsNull() {
             assertThrows(NullPointerException.class, () ->
-                Role.create("ROLE_MANAGER", null, "描述", RoleType.CUSTOM, CREATOR_ID)
+                Role.create("ROLE_MANAGER", null, "描述", "CUSTOM", CREATOR_ID)
             );
         }
 
@@ -381,7 +381,7 @@ class RoleTest {
                 .roleCode("ROLE_CUSTOM")
                 .roleName("自定义角色")
                 .description("测试角色")
-                .roleType(RoleType.CUSTOM)
+                .roleType("CUSTOM")
                 .level(50)
                 .isSystem(false)
                 .isEnabled(true)
@@ -405,7 +405,7 @@ class RoleTest {
                 .roleName("最小角色")
                 .build();
 
-            assertEquals(RoleType.CUSTOM, minimal.getRoleType());
+            assertEquals("CUSTOM", minimal.getRoleType());
             assertEquals(100, minimal.getLevel());
             assertFalse(minimal.getIsSystem());
             assertTrue(minimal.getIsEnabled());

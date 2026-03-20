@@ -5,6 +5,7 @@ import 'element-plus/dist/index.css'
 import 'element-plus/theme-chalk/dark/css-vars.css'
 import zhCn from 'element-plus/es/locale/lang/zh-cn'
 
+import VueKonva from 'vue-konva'
 import App from './App.vue'
 import router from './router'
 import { useAuthStore } from './stores/auth'
@@ -25,6 +26,7 @@ const authStore = useAuthStore()
 authStore.initAuth()
 
 app.use(router)
+app.use(VueKonva)
 app.use(ElementPlus, {
   locale: zhCn
 })

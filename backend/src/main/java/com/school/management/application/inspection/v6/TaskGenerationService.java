@@ -6,8 +6,14 @@ import com.school.management.domain.inspection.model.v6.*;
 import com.school.management.domain.inspection.repository.v6.InspectionProjectRepository;
 import com.school.management.domain.inspection.repository.v6.InspectionTaskRepository;
 import com.school.management.domain.inspection.repository.v6.InspectionTargetRepository;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import com.school.management.domain.organization.model.OrgUnit;
+import com.school.management.domain.organization.repository.OrgUnitRepository;
+import com.school.management.domain.place.model.aggregate.UniversalPlace;
+import com.school.management.domain.place.repository.UniversalPlaceRepository;
+import com.school.management.domain.user.model.aggregate.User;
+import com.school.management.domain.user.repository.UserRepository;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -23,25 +29,18 @@ import java.util.stream.Collectors;
  * V6任务生成引擎
  * 负责根据项目配置自动生成检查任务和目标
  */
+@Slf4j
+@RequiredArgsConstructor
 @Service
 public class TaskGenerationService {
-
-    private static final Logger log = LoggerFactory.getLogger(TaskGenerationService.class);
 
     private final InspectionProjectRepository projectRepository;
     private final InspectionTaskRepository taskRepository;
     private final InspectionTargetRepository targetRepository;
+    private final OrgUnitRepository orgUnitRepository;
+    private final UniversalPlaceRepository placeRepository;
+    private final UserRepository userRepository;
     private final ObjectMapper objectMapper;
-
-    public TaskGenerationService(InspectionProjectRepository projectRepository,
-                                  InspectionTaskRepository taskRepository,
-                                  InspectionTargetRepository targetRepository,
-                                  ObjectMapper objectMapper) {
-        this.projectRepository = projectRepository;
-        this.taskRepository = taskRepository;
-        this.targetRepository = targetRepository;
-        this.objectMapper = objectMapper;
-    }
 
     /**
      * 定时任务：每天凌晨2点生成当天的任务
@@ -225,19 +224,29 @@ public class TaskGenerationService {
             return Collections.emptyList();
         }
 
+        TargetType targetType = scopeType == ScopeType.ORG ? TargetType.ORG :
+                (scopeType == ScopeType.PLACE ? TargetType.PLACE : TargetType.USER);
+
         List<InspectionTarget> targets = new ArrayList<>();
 
-        // 根据范围类型生成目标
-        // 这里简化实现，实际需要查询组织/场所/用户表
         for (Long scopeId : scopeIds) {
+            String targetName = resolveTargetName(scopeType, scopeId);
+            String targetCode = null;
+            Long orgUnitId = null;
+            String orgUnitName = null;
+
+            if (scopeType == ScopeType.ORG) {
+                orgUnitId = scopeId;
+                orgUnitName = targetName;
+            }
+
             InspectionTarget target = InspectionTarget.create(
                     task.getId(),
-                    scopeType == ScopeType.ORG ? TargetType.ORG :
-                            (scopeType == ScopeType.SPACE ? TargetType.SPACE : TargetType.USER),
+                    targetType,
                     scopeId,
-                    "目标-" + scopeId, // 实际应从数据库查询
-                    null,
-                    null, null, // orgUnitId, orgUnitName
+                    targetName,
+                    targetCode,
+                    orgUnitId, orgUnitName,
                     null, null, // classId, className
                     new BigDecimal("100.00"),
                     new BigDecimal("100.00")
@@ -246,6 +255,33 @@ public class TaskGenerationService {
         }
 
         return targets;
+    }
+
+    /**
+     * 根据范围类型查询目标真实名称
+     */
+    private String resolveTargetName(ScopeType scopeType, Long scopeId) {
+        try {
+            switch (scopeType) {
+                case ORG:
+                    return orgUnitRepository.findById(scopeId)
+                            .map(OrgUnit::getUnitName)
+                            .orElse("组织-" + scopeId);
+                case PLACE:
+                    return placeRepository.findById(scopeId)
+                            .map(UniversalPlace::getPlaceName)
+                            .orElse("场所-" + scopeId);
+                case USER:
+                    return userRepository.findById(scopeId)
+                            .map(User::getRealName)
+                            .orElse("用户-" + scopeId);
+                default:
+                    return "目标-" + scopeId;
+            }
+        } catch (Exception e) {
+            log.warn("查询目标名称失败: scopeType={}, scopeId={}", scopeType, scopeId, e);
+            return "目标-" + scopeId;
+        }
     }
 
     // ========== 辅助解析方法 ==========

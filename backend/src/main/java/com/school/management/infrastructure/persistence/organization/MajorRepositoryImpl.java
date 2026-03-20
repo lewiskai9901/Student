@@ -5,7 +5,10 @@ import com.school.management.domain.organization.model.MajorDirection;
 import com.school.management.domain.organization.repository.MajorRepository;
 import org.springframework.stereotype.Repository;
 
+import lombok.RequiredArgsConstructor;
+
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
@@ -14,15 +17,11 @@ import java.util.stream.Collectors;
  * 专业仓储实现
  */
 @Repository
+@RequiredArgsConstructor
 public class MajorRepositoryImpl implements MajorRepository {
 
     private final MajorPersistenceMapper majorMapper;
     private final MajorDirectionPersistenceMapper directionMapper;
-
-    public MajorRepositoryImpl(MajorPersistenceMapper majorMapper, MajorDirectionPersistenceMapper directionMapper) {
-        this.majorMapper = majorMapper;
-        this.directionMapper = directionMapper;
-    }
 
     @Override
     public Optional<Major> findById(Long id) {
@@ -126,6 +125,26 @@ public class MajorRepositoryImpl implements MajorRepository {
     @Override
     public List<MajorDirection> findDirectionsByMajorId(Long majorId) {
         return directionMapper.findByMajorId(majorId).stream()
+            .map(this::toDirectionDomain)
+            .collect(Collectors.toList());
+    }
+
+    @Override
+    public List<Major> findByIds(Collection<Long> ids) {
+        if (ids == null || ids.isEmpty()) {
+            return List.of();
+        }
+        return majorMapper.selectBatchIds(ids).stream()
+            .map(this::toDomain)
+            .collect(Collectors.toList());
+    }
+
+    @Override
+    public List<MajorDirection> findDirectionsByIds(Collection<Long> ids) {
+        if (ids == null || ids.isEmpty()) {
+            return List.of();
+        }
+        return directionMapper.selectBatchIds(ids).stream()
             .map(this::toDirectionDomain)
             .collect(Collectors.toList());
     }

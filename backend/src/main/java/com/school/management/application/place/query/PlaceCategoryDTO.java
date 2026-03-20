@@ -1,6 +1,6 @@
-package com.school.management.application.space.query;
+package com.school.management.application.place.query;
 
-import com.school.management.domain.space.model.entity.SpaceCategory;
+import com.school.management.domain.place.model.entity.PlaceCategory;
 import lombok.Data;
 
 import java.time.LocalDateTime;
@@ -9,7 +9,7 @@ import java.time.LocalDateTime;
  * 空间分类DTO
  */
 @Data
-public class SpaceCategoryDTO {
+public class PlaceCategoryDTO {
     private Long id;
     private String categoryCode;
     private String categoryName;
@@ -42,12 +42,12 @@ public class SpaceCategoryDTO {
     /**
      * 从领域对象构建DTO
      */
-    public static SpaceCategoryDTO fromDomain(SpaceCategory category) {
+    public static PlaceCategoryDTO fromDomain(PlaceCategory category) {
         if (category == null) {
             return null;
         }
 
-        SpaceCategoryDTO dto = new SpaceCategoryDTO();
+        PlaceCategoryDTO dto = new PlaceCategoryDTO();
         dto.setId(category.getId());
         dto.setCategoryCode(category.getCategoryCode());
         dto.setCategoryName(category.getCategoryName());

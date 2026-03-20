@@ -35,6 +35,6 @@ public class LoginResponse {
         private List<String> roles;
         private List<String> permissions;
         private Long orgUnitId;
-        private Long classId;
+        private Long tenantId;
     }
 }

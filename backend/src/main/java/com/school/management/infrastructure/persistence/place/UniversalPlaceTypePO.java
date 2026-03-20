@@ -1,4 +1,4 @@
-package com.school.management.infrastructure.persistence.space;
+package com.school.management.infrastructure.persistence.place;
 
 import com.baomidou.mybatisplus.annotation.*;
 import lombok.Data;
@@ -6,110 +6,67 @@ import lombok.Data;
 import java.time.LocalDateTime;
 
 /**
- * 通用空间类型持久化对象
+ * 通用场所类型持久化对象（统一类型系统 Phase 3）
  */
 @Data
-@TableName("space_types")
-public class UniversalSpaceTypePO {
+@TableName("place_types")
+public class UniversalPlaceTypePO {
 
     @TableId(type = IdType.AUTO)
     private Long id;
 
-    /**
-     * 类型编码
-     */
     private String typeCode;
-
-    /**
-     * 类型名称
-     */
     private String typeName;
-
-    /**
-     * 图标
-     */
-    private String icon;
-
-    /**
-     * 描述
-     */
     private String description;
-
-    /**
-     * 排序号
-     */
     private Integer sortOrder;
-
-    /**
-     * 是否系统预置
-     */
     private Boolean isSystem;
-
-    /**
-     * 是否启用
-     */
     private Boolean isEnabled;
 
-    /**
-     * 允许的子类型（JSON数组）
-     */
-    private String allowedChildTypes;
+    // ==================== 统一类型字段 ====================
 
-    /**
-     * 是否可作为根节点
-     */
+    /** 分类编码 (was base_category) */
+    private String category;
+
+    /** 父类型编码 (was parent_type_id Long) */
+    private String parentTypeCode;
+
+    /** 行为特征 JSON */
+    @TableField(updateStrategy = FieldStrategy.ALWAYS)
+    private String features;
+
+    /** 扩展属性 JSON Schema (was attribute_schema) */
+    @TableField(updateStrategy = FieldStrategy.ALWAYS)
+    private String metadataSchema;
+
+    /** 允许的子类型编码 JSON (was allowed_child_types) */
+    @TableField(updateStrategy = FieldStrategy.ALWAYS)
+    private String allowedChildTypeCodes;
+
+    /** 最大层级深度 */
+    private Integer maxDepth;
+
+    /** 关联用户类型编码 JSON */
+    @TableField(updateStrategy = FieldStrategy.ALWAYS)
+    private String defaultUserTypeCodes;
+
+    /** 关联组织类型编码 JSON */
+    @TableField(updateStrategy = FieldStrategy.ALWAYS)
+    private String defaultOrgTypeCodes;
+
+    // ==================== 场所特有字段 ====================
+
     private Boolean isRootType;
-
-    /**
-     * 是否有容量
-     */
-    private Boolean hasCapacity;
-
-    /**
-     * 是否可预订
-     */
-    private Boolean bookable;
-
-    /**
-     * 是否可分配给组织
-     */
-    private Boolean assignable;
-
-    /**
-     * 是否可入住/占用
-     */
-    private Boolean occupiable;
-
-    /**
-     * 容量单位
-     */
     private String capacityUnit;
-
-    /**
-     * 默认容量
-     */
     private Integer defaultCapacity;
 
-    /**
-     * 扩展属性Schema
-     */
-    private String attributeSchema;
+    // ==================== 审计 ====================
 
-    /**
-     * 创建时间
-     */
     @TableField(fill = FieldFill.INSERT)
     private LocalDateTime createdAt;
 
-    /**
-     * 更新时间
-     */
     @TableField(fill = FieldFill.INSERT_UPDATE)
     private LocalDateTime updatedAt;
 
-    /**
-     * 逻辑删除
-     */
     @TableLogic
-    private Integer deleted;
+    private Long deleted;
 }

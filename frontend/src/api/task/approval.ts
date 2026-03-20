@@ -84,7 +84,7 @@ export function getMyPendingApprovals() {
  * @param recordId 审批记录ID
  * @param data 审批请求
  */
-export function approveTaskByRecord(recordId: number, data: ApproveRequest) {
+export function approveTaskByRecord(recordId: number | string, data: ApproveRequest) {
   return http.post<void>(`/tasks/approvals/${recordId}/approve`, data)
 }
 
@@ -93,6 +93,6 @@ export function approveTaskByRecord(recordId: number, data: ApproveRequest) {
  * @param taskId 任务ID
  * @param data 提交请求
  */
-export function submitTaskCompletion(taskId: number, data: SubmitTaskRequest) {
+export function submitTaskCompletion(taskId: number | string, data: SubmitTaskRequest) {
   return http.post<void>(`/tasks/approvals/${taskId}/submit`, data)
 }

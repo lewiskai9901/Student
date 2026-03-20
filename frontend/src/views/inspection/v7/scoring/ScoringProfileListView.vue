@@ -59,7 +59,7 @@ onMounted(() => {
     <!-- Table -->
     <el-table :data="profiles" v-loading="loading" stripe>
       <el-table-column prop="id" label="ID" width="80" />
-      <el-table-column prop="templateId" label="关联模板" width="120" />
+      <el-table-column prop="sectionId" label="关联分区" width="120" />
       <el-table-column prop="maxScore" label="最高分" width="100" align="center" />
       <el-table-column prop="minScore" label="最低分" width="100" align="center" />
       <el-table-column prop="precisionDigits" label="精度" width="70" align="center" />

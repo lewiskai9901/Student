@@ -1,24 +1,24 @@
 package com.school.management.domain.organization.model;
 
+import com.school.management.domain.shared.model.valueobject.FieldChange;
+import com.school.management.domain.organization.model.valueobject.OrgUnitStatus;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
-import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.*;
 
 /**
- * 组织单元聚合根单元测试
- * 测试组织单元的创建、更新、启用/禁用、层级关系等功能
+ * OrgUnit aggregate root unit tests.
  */
 @DisplayName("组织单元聚合根测试")
 class OrgUnitTest {
 
     private static final Long CREATOR_ID = 1L;
-    private static final Long LEADER_ID = 100L;
 
     @Nested
     @DisplayName("创建组织单元测试")
@@ -30,7 +30,7 @@ class OrgUnitTest {
             OrgUnit orgUnit = OrgUnit.create(
                 "DEPT001",
                 "信息技术系",
-                OrgUnitType.DEPARTMENT,
+                "DEPARTMENT",
                 null,
                 CREATOR_ID
             );
@@ -38,7 +38,7 @@ class OrgUnitTest {
             assertNotNull(orgUnit);
             assertEquals("DEPT001", orgUnit.getUnitCode());
             assertEquals("信息技术系", orgUnit.getUnitName());
-            assertEquals(OrgUnitType.DEPARTMENT, orgUnit.getUnitType());
+            assertEquals("DEPARTMENT", orgUnit.getUnitType());
             assertNull(orgUnit.getParentId());
             assertTrue(orgUnit.isEnabled());
             assertEquals(CREATOR_ID, orgUnit.getCreatedBy());
@@ -52,7 +52,7 @@ class OrgUnitTest {
             OrgUnit orgUnit = OrgUnit.create(
                 "GROUP001",
                 "软件教研组",
-                OrgUnitType.TEACHING_GROUP,
+                "TEACHING_GROUP",
                 1L,
                 CREATOR_ID
             );
@@ -64,7 +64,7 @@ class OrgUnitTest {
         @DisplayName("创建组织单元时缺少编码应抛出异常")
         void shouldFailWhenUnitCodeIsNull() {
             assertThrows(NullPointerException.class, () ->
-                OrgUnit.create(null, "信息技术系", OrgUnitType.DEPARTMENT, null, CREATOR_ID)
+                OrgUnit.create(null, "信息技术系", "DEPARTMENT", null, CREATOR_ID)
             );
         }
 
@@ -72,7 +72,7 @@ class OrgUnitTest {
         @DisplayName("创建组织单元时缺少名称应抛出异常")
         void shouldFailWhenUnitNameIsNull() {
             assertThrows(NullPointerException.class, () ->
-                OrgUnit.create("DEPT001", null, OrgUnitType.DEPARTMENT, null, CREATOR_ID)
+                OrgUnit.create("DEPT001", null, "DEPARTMENT", null, CREATOR_ID)
             );
         }
 
@@ -88,7 +88,7 @@ class OrgUnitTest {
         @DisplayName("创建组织单元时编码为空字符串应抛出异常")
         void shouldFailWhenUnitCodeIsBlank() {
             assertThrows(IllegalArgumentException.class, () ->
-                OrgUnit.create("  ", "信息技术系", OrgUnitType.DEPARTMENT, null, CREATOR_ID)
+                OrgUnit.create("  ", "信息技术系", "DEPARTMENT", null, CREATOR_ID)
             );
         }
 
@@ -97,7 +97,7 @@ class OrgUnitTest {
         void shouldFailWhenUnitCodeTooLong() {
             String longCode = "A".repeat(51);
             assertThrows(IllegalArgumentException.class, () ->
-                OrgUnit.create(longCode, "信息技术系", OrgUnitType.DEPARTMENT, null, CREATOR_ID)
+                OrgUnit.create(longCode, "信息技术系", "DEPARTMENT", null, CREATOR_ID)
             );
         }
     }
@@ -113,7 +113,7 @@ class OrgUnitTest {
             orgUnit = OrgUnit.create(
                 "DEPT001",
                 "信息技术系",
-                OrgUnitType.DEPARTMENT,
+                "DEPARTMENT",
                 null,
                 CREATOR_ID
             );
@@ -123,22 +123,20 @@ class OrgUnitTest {
         @Test
         @DisplayName("成功更新组织单元信息")
         void shouldUpdateOrgUnitSuccessfully() {
-            List<Long> deputyLeaderIds = Arrays.asList(200L, 300L);
-
-            orgUnit.update("信息工程系", null, LEADER_ID, deputyLeaderIds, 10, 2L);
+            List<FieldChange> changes = orgUnit.update("信息工程系", 10, 50, null, 2L);
 
             assertEquals("信息工程系", orgUnit.getUnitName());
-            assertEquals(LEADER_ID, orgUnit.getLeaderId());
-            assertEquals(2, orgUnit.getDeputyLeaderIds().size());
             assertEquals(10, orgUnit.getSortOrder());
+            assertEquals(50, orgUnit.getHeadcount());
             assertEquals(2L, orgUnit.getUpdatedBy());
             assertFalse(orgUnit.getDomainEvents().isEmpty());
+            assertFalse(changes.isEmpty());
         }
 
         @Test
         @DisplayName("更新时空名称保持原值")
         void shouldKeepOriginalNameWhenUpdateWithBlank() {
-            orgUnit.update("", null, LEADER_ID, null, null, 2L);
+            orgUnit.update("", null, null, null, 2L);
 
             assertEquals("信息技术系", orgUnit.getUnitName());
         }
@@ -146,15 +144,25 @@ class OrgUnitTest {
         @Test
         @DisplayName("更新时null名称保持原值")
         void shouldKeepOriginalNameWhenUpdateWithNull() {
-            orgUnit.update(null, null, LEADER_ID, null, null, 2L);
+            orgUnit.update(null, null, null, null, 2L);
 
             assertEquals("信息技术系", orgUnit.getUnitName());
         }
+
+        @Test
+        @DisplayName("更新属性")
+        void shouldUpdateAttributes() {
+            Map<String, Object> attrs = Map.of("custom", "value");
+            List<FieldChange> changes = orgUnit.update(null, null, null, attrs, 2L);
+
+            assertEquals(attrs, orgUnit.getAttributes());
+            assertFalse(changes.isEmpty());
+        }
     }
 
     @Nested
-    @DisplayName("启用/禁用测试")
-    class EnableDisableTest {
+    @DisplayName("生命周期状态测试")
+    class LifecycleTest {
 
         private OrgUnit orgUnit;
 
@@ -163,54 +171,63 @@ class OrgUnitTest {
             orgUnit = OrgUnit.create(
                 "DEPT001",
                 "信息技术系",
-                OrgUnitType.DEPARTMENT,
+                "DEPARTMENT",
                 null,
                 CREATOR_ID
             );
         }
 
         @Test
-        @DisplayName("禁用组织单元")
-        void shouldDisableOrgUnit() {
-            orgUnit.disable();
-
-            assertFalse(orgUnit.isEnabled());
+        @DisplayName("新建组织单元默认为ACTIVE状态")
+        void shouldBeActiveByDefault() {
+            assertEquals(OrgUnitStatus.ACTIVE, orgUnit.getStatus());
+            assertTrue(orgUnit.isActive());
         }
 
         @Test
-        @DisplayName("启用组织单元")
-        void shouldEnableOrgUnit() {
-            orgUnit.disable();
-            orgUnit.enable();
+        @DisplayName("冻结组织单元")
+        void shouldFreezeOrgUnit() {
+            List<FieldChange> changes = orgUnit.freeze("测试冻结", 2L);
 
-            assertTrue(orgUnit.isEnabled());
-        }
-    }
-
-    @Nested
-    @DisplayName("领导分配测试")
-    class AssignLeaderTest {
-
-        private OrgUnit orgUnit;
-
-        @BeforeEach
-        void setUp() {
-            orgUnit = OrgUnit.create(
-                "DEPT001",
-                "信息技术系",
-                OrgUnitType.DEPARTMENT,
-                null,
-                CREATOR_ID
-            );
+            assertEquals(OrgUnitStatus.FROZEN, orgUnit.getStatus());
+            assertFalse(orgUnit.isActive());
+            assertFalse(changes.isEmpty());
         }
 
         @Test
-        @DisplayName("分配领导")
-        void shouldAssignLeader() {
-            orgUnit.assignLeader(LEADER_ID, 2L);
+        @DisplayName("解冻组织单元")
+        void shouldUnfreezeOrgUnit() {
+            orgUnit.freeze("测试冻结", 2L);
+            List<FieldChange> changes = orgUnit.unfreeze(2L);
 
-            assertEquals(LEADER_ID, orgUnit.getLeaderId());
-            assertEquals(2L, orgUnit.getUpdatedBy());
+            assertEquals(OrgUnitStatus.ACTIVE, orgUnit.getStatus());
+            assertTrue(orgUnit.isActive());
+            assertFalse(changes.isEmpty());
+        }
+
+        @Test
+        @DisplayName("撤销组织单元")
+        void shouldDissolveOrgUnit() {
+            List<FieldChange> changes = orgUnit.dissolve("业务调整", 2L);
+
+            assertEquals(OrgUnitStatus.DISSOLVED, orgUnit.getStatus());
+            assertTrue(orgUnit.isDissolved());
+            assertNotNull(orgUnit.getDissolvedAt());
+            assertEquals("业务调整", orgUnit.getDissolvedReason());
+            assertFalse(changes.isEmpty());
+        }
+
+        @Test
+        @DisplayName("已撤销组织单元不能冻结")
+        void shouldNotFreezeDissolved() {
+            orgUnit.dissolve("测试", 2L);
+            assertThrows(IllegalStateException.class, () -> orgUnit.freeze("测试", 2L));
+        }
+
+        @Test
+        @DisplayName("只能解冻已冻结的组织单元")
+        void shouldOnlyUnfreezeFrozen() {
+            assertThrows(IllegalStateException.class, () -> orgUnit.unfreeze(2L));
         }
     }
 
@@ -225,7 +242,7 @@ class OrgUnitTest {
             orgUnit = OrgUnit.create(
                 "DEPT001",
                 "信息技术系",
-                OrgUnitType.DEPARTMENT,
+                "DEPARTMENT",
                 null,
                 CREATOR_ID
             );
@@ -271,7 +288,7 @@ class OrgUnitTest {
                 .id(1L)
                 .unitCode("DEPT001")
                 .unitName("信息技术系")
-                .unitType(OrgUnitType.DEPARTMENT)
+                .unitType("DEPARTMENT")
                 .treePath("/1/")
                 .treeLevel(1)
                 .build();
@@ -280,7 +297,7 @@ class OrgUnitTest {
                 .id(2L)
                 .unitCode("GROUP001")
                 .unitName("软件教研组")
-                .unitType(OrgUnitType.TEACHING_GROUP)
+                .unitType("TEACHING_GROUP")
                 .parentId(1L)
                 .treePath("/1/2/")
                 .treeLevel(2)
@@ -297,7 +314,7 @@ class OrgUnitTest {
                 .id(1L)
                 .unitCode("DEPT001")
                 .unitName("信息技术系")
-                .unitType(OrgUnitType.DEPARTMENT)
+                .unitType("DEPARTMENT")
                 .treePath("/1/")
                 .treeLevel(1)
                 .build();
@@ -306,7 +323,7 @@ class OrgUnitTest {
                 .id(2L)
                 .unitCode("GROUP001")
                 .unitName("软件教研组")
-                .unitType(OrgUnitType.TEACHING_GROUP)
+                .unitType("TEACHING_GROUP")
                 .parentId(1L)
                 .treePath("/1/2/")
                 .treeLevel(2)
@@ -323,7 +340,7 @@ class OrgUnitTest {
                 .id(1L)
                 .unitCode("DEPT001")
                 .unitName("信息技术系")
-                .unitType(OrgUnitType.DEPARTMENT)
+                .unitType("DEPARTMENT")
                 .treePath("/1/")
                 .treeLevel(1)
                 .build();
@@ -338,7 +355,7 @@ class OrgUnitTest {
                 .id(1L)
                 .unitCode("DEPT001")
                 .unitName("信息技术系")
-                .unitType(OrgUnitType.DEPARTMENT)
+                .unitType("DEPARTMENT")
                 .treePath("/1/")
                 .treeLevel(1)
                 .build();
@@ -353,7 +370,7 @@ class OrgUnitTest {
                 .id(1L)
                 .unitCode("DEPT001")
                 .unitName("信息技术系")
-                .unitType(OrgUnitType.DEPARTMENT)
+                .unitType("DEPARTMENT")
                 .treePath("/1/")
                 .treeLevel(1)
                 .build();
@@ -369,27 +386,23 @@ class OrgUnitTest {
         @Test
         @DisplayName("使用Builder构建完整对象")
         void shouldBuildOrgUnitWithAllFields() {
-            List<Long> deputyLeaderIds = Arrays.asList(200L, 300L);
-
             OrgUnit orgUnit = OrgUnit.builder()
                 .id(1L)
                 .unitCode("DEPT001")
                 .unitName("信息技术系")
-                .unitType(OrgUnitType.DEPARTMENT)
+                .unitType("DEPARTMENT")
                 .parentId(null)
                 .treePath("/1/")
                 .treeLevel(1)
-                .leaderId(100L)
-                .deputyLeaderIds(deputyLeaderIds)
                 .sortOrder(1)
-                .enabled(true)
+                .headcount(50)
+                .status(OrgUnitStatus.ACTIVE)
                 .createdBy(1L)
                 .build();
 
             assertEquals(1L, orgUnit.getId());
             assertEquals("DEPT001", orgUnit.getUnitCode());
-            assertEquals(100L, orgUnit.getLeaderId());
-            assertEquals(2, orgUnit.getDeputyLeaderIds().size());
+            assertEquals(50, orgUnit.getHeadcount());
         }
     }
 }

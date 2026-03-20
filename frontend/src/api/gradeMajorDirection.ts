@@ -47,22 +47,22 @@ export const getGradeMajorDirectionList = (params: GradeMajorDirectionQueryParam
 }
 
 // 根据学年获取专业方向列表
-export const getDirectionsByYear = (academicYear: number) => {
+export const getDirectionsByYear = (academicYear: number | string) => {
   return http.get<GradeMajorDirection[]>(`/grade-major-directions/year/${academicYear}`)
 }
 
 // 根据专业方向ID获取关联的学年列表
-export const getYearsByDirection = (directionId: number) => {
+export const getYearsByDirection = (directionId: number | string) => {
   return http.get<GradeMajorDirection[]>(`/grade-major-directions/direction/${directionId}`)
 }
 
 // 获取详情
-export const getGradeMajorDirectionDetail = (id: number) => {
+export const getGradeMajorDirectionDetail = (id: number | string) => {
   return http.get<GradeMajorDirection>(`/grade-major-directions/${id}`)
 }
 
 // 根据学年和专业方向ID查询
-export const getByYearAndDirection = (academicYear: number, directionId: number) => {
+export const getByYearAndDirection = (academicYear: number, directionId: number | string) => {
   return http.get<GradeMajorDirection>(`/grade-major-directions/year/${academicYear}/direction/${directionId}`)
 }
 
@@ -72,35 +72,35 @@ export const addDirectionToYear = (data: GradeMajorDirection) => {
 }
 
 // 批量为学年添加专业方向
-export const batchAddDirectionsToYear = (academicYear: number, directionIds: number[]) => {
+export const batchAddDirectionsToYear = (academicYear: number, directionIds: (number | string)[]) => {
   return http.post(`/grade-major-directions/year/${academicYear}/batch`, directionIds)
 }
 
 // 更新学年专业方向配置
-export const updateGradeMajorDirection = (id: number, data: GradeMajorDirection) => {
+export const updateGradeMajorDirection = (id: number | string, data: GradeMajorDirection) => {
   return http.put(`/grade-major-directions/${id}`, data)
 }
 
 // 删除学年专业方向关联
-export const deleteGradeMajorDirection = (id: number) => {
+export const deleteGradeMajorDirection = (id: number | string) => {
   return http.delete(`/grade-major-directions/${id}`)
 }
 
 // 批量删除学年专业方向关联
-export const batchDeleteGradeMajorDirections = (ids: number[]) => {
+export const batchDeleteGradeMajorDirections = (ids: (number | string)[]) => {
   return http.delete('/grade-major-directions/batch', { data: ids })
 }
 
 // 兼容旧API - 根据年级ID获取（重定向到使用学年）
-export const getDirectionsByGrade = (gradeId: number) => {
+export const getDirectionsByGrade = (gradeId: number | string) => {
   // 保持兼容性，继续使用原有API直到前端全部迁移
   return http.get<GradeMajorDirection[]>(`/grade-major-directions/year/${gradeId}`)
 }
 
 // 兼容旧API - 为年级添加专业方向
 export const addDirectionToGrade = (data: {
-  gradeId: number
-  majorDirectionId: number
+  gradeId: number | string
+  majorDirectionId: number | string
   plannedClassCount?: number
   isEnabled?: number
 }) => {

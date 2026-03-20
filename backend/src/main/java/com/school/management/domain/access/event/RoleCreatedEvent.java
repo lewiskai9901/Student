@@ -18,7 +18,7 @@ public class RoleCreatedEvent extends BaseDomainEvent {
         super("Role", role.getId() != null ? role.getId().toString() : "new");
         this.roleCode = role.getRoleCode();
         this.roleName = role.getRoleName();
-        this.roleType = role.getRoleType().name();
+        this.roleType = role.getRoleType();
     }
 
     /**
