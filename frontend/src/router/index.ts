@@ -740,6 +740,19 @@ const routes: RouteRecordRaw[] = [
               permission: 'insp:platform:view',
               order: 20
             }
+          },
+          // Phase 3.5: Rating Leaderboard
+          {
+            path: '/inspection/v7/ratings',
+            name: 'V7RatingLeaderboard',
+            component: () => import('@/views/inspection/v7/ratings/RatingLeaderboardView.vue'),
+            meta: {
+              title: '评级排名榜',
+              icon: 'Trophy',
+              requiresAuth: true,
+              permission: 'insp:analytics:view',
+              order: 8.5
+            }
           }
         ]
       },
@@ -1346,6 +1359,18 @@ const routes: RouteRecordRaw[] = [
             }
           }
         ]
+      },
+
+      // ==================== Phase 3.4: 实体事件时间线 ====================
+      {
+        path: '/entity-events/:subjectType/:subjectId',
+        name: 'EntityEventTimeline',
+        component: () => import('@/views/event/EntityEventTimelineView.vue'),
+        meta: {
+          title: '事件时间线',
+          requiresAuth: true,
+          hidden: true
+        }
       },
 
       // ==================== 测试页面 - 仅在开发环境可用 ====================

@@ -57,6 +57,12 @@ public class InspTaskRepositoryImpl implements InspTaskRepository {
     }
 
     @Override
+    public List<InspTask> findByProjectIdAndTaskDateBetween(Long projectId, LocalDate startDate, LocalDate endDate) {
+        return mapper.findByProjectIdAndTaskDateBetween(projectId, startDate, endDate).stream()
+                .map(this::toDomain).collect(Collectors.toList());
+    }
+
+    @Override
     public List<InspTask> findByStatus(TaskStatus status) {
         return mapper.findByStatus(status.name()).stream().map(this::toDomain).collect(Collectors.toList());
     }

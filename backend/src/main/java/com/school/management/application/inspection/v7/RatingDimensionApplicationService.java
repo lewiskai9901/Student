@@ -226,6 +226,125 @@ public class RatingDimensionApplicationService {
     }
 
     /**
+     * 跨周期评级计算 — 从 InspSubmission 表按时间范围聚合分数
+     *
+     * 流程:
+     * 1. 获取维度关联的 sectionIds
+     * 2. 查询指定项目在 [cycleStartDate, cycleEndDate] 内的所有任务
+     * 3. 遍历任务的已完成提交（按 sectionId 过滤）
+     * 4. 按 targetId 聚合分数（使用维度配置的聚合方式）
+     * 5. 根据 gradeBands 评定等级
+     * 6. 按分数降序排名
+     * 7. 以 cycleStartDate 为周期标识，保存/更新 RatingResult
+     *
+     * @param dimensionId    维度ID
+     * @param cycleStartDate 周期开始日期（同时作为 cycleDate 标识）
+     * @param cycleEndDate   周期结束日期
+     * @return 评级结果列表（按排名升序）
+     */
+    @Transactional
+    public List<RatingResult> calculateRatingFromSubmissions(Long dimensionId,
+                                                              LocalDate cycleStartDate,
+                                                              LocalDate cycleEndDate) {
+        RatingDimension dimension = dimensionRepository.findById(dimensionId)
+                .orElseThrow(() -> new IllegalArgumentException("评级维度不存在: " + dimensionId));
+
+        if (cycleStartDate == null || cycleEndDate == null) {
+            throw new IllegalArgumentException("周期开始和结束日期不能为空");
+        }
+        if (cycleStartDate.isAfter(cycleEndDate)) {
+            throw new IllegalArgumentException("周期开始日期不能晚于结束日期");
+        }
+
+        // 解析维度关联的 sectionIds（null 表示全部分区）
+        Set<Long> dimensionSectionIds = parseSectionIds(dimension.getSectionIds());
+
+        // 查询时间范围内的任务
+        List<InspTask> tasks = taskRepository.findByProjectIdAndTaskDateBetween(
+                dimension.getProjectId(), cycleStartDate, cycleEndDate);
+
+        if (tasks.isEmpty()) {
+            log.info("项目 {} 在 {} ~ {} 无任务，无评级数据",
+                    dimension.getProjectId(), cycleStartDate, cycleEndDate);
+            return Collections.emptyList();
+        }
+
+        // 按 targetId 收集已完成提交
+        Map<Long, List<InspSubmission>> targetSubmissions = new HashMap<>();
+        Map<Long, String> targetNames = new HashMap<>();
+        Map<Long, String> targetTypes = new HashMap<>();
+
+        for (InspTask task : tasks) {
+            List<InspSubmission> submissions = submissionRepository.findByTaskId(task.getId());
+            for (InspSubmission sub : submissions) {
+                if (sub.getStatus() != SubmissionStatus.COMPLETED) {
+                    continue;
+                }
+                if (sub.getFinalScore() == null) {
+                    continue;
+                }
+                // 若维度配置了 sectionIds，则只取匹配的提交
+                if (!dimensionSectionIds.isEmpty()
+                        && sub.getSectionId() != null
+                        && !dimensionSectionIds.contains(sub.getSectionId())) {
+                    continue;
+                }
+                targetSubmissions.computeIfAbsent(sub.getTargetId(), k -> new ArrayList<>()).add(sub);
+                targetNames.putIfAbsent(sub.getTargetId(), sub.getTargetName());
+                if (sub.getTargetType() != null) {
+                    targetTypes.putIfAbsent(sub.getTargetId(), sub.getTargetType().name());
+                }
+            }
+        }
+
+        if (targetSubmissions.isEmpty()) {
+            log.info("维度 {} 在 {} ~ {} 无匹配的已完成提交", dimensionId, cycleStartDate, cycleEndDate);
+            return Collections.emptyList();
+        }
+
+        // 聚合分数
+        String aggregation = dimension.getAggregation() != null ? dimension.getAggregation() : "AVG";
+        Map<Long, BigDecimal> targetScores = new HashMap<>();
+        for (Map.Entry<Long, List<InspSubmission>> entry : targetSubmissions.entrySet()) {
+            targetScores.put(entry.getKey(), aggregateScores(entry.getValue(), aggregation));
+        }
+
+        // 解析 gradeBands
+        List<GradeBandConfig> gradeBands = parseGradeBands(dimension.getGradeBands());
+
+        // 按分数降序排序
+        List<Map.Entry<Long, BigDecimal>> sortedEntries = targetScores.entrySet().stream()
+                .sorted(Map.Entry.<Long, BigDecimal>comparingByValue().reversed())
+                .collect(Collectors.toList());
+
+        // 清除旧结果（以 cycleStartDate 为周期标识）
+        resultRepository.deleteByDimensionIdAndCycleDate(dimensionId, cycleStartDate);
+
+        // 构建并保存评级结果
+        List<RatingResult> results = new ArrayList<>();
+        int rank = 0;
+        for (Map.Entry<Long, BigDecimal> entry : sortedEntries) {
+            rank++;
+            Long targetId = entry.getKey();
+            BigDecimal score = entry.getValue();
+            String grade = determineGrade(score, gradeBands);
+            String targetType = targetTypes.getOrDefault(targetId, "ORG");
+
+            RatingResult result = RatingResult.create(
+                    dimensionId, targetId,
+                    targetNames.getOrDefault(targetId, ""),
+                    targetType, cycleStartDate, score, grade,
+                    Boolean.TRUE.equals(dimension.getRankingEnabled()) ? rank : null);
+
+            results.add(resultRepository.save(result));
+        }
+
+        log.info("维度 {} 在 {} ~ {} 跨周期计算了 {} 个目标的评级结果",
+                dimensionId, cycleStartDate, cycleEndDate, results.size());
+        return results;
+    }
+
+    /**
      * 获取评级排名结果
      */
     @Transactional(readOnly = true)

@@ -21,6 +21,8 @@ public interface InspTaskRepository {
 
     List<InspTask> findByProjectIdAndTaskDate(Long projectId, LocalDate taskDate);
 
+    List<InspTask> findByProjectIdAndTaskDateBetween(Long projectId, LocalDate startDate, LocalDate endDate);
+
     List<InspTask> findByStatus(TaskStatus status);
 
     List<InspTask> findAll();

@@ -23,6 +23,11 @@ public interface InspTaskMapper extends BaseMapper<InspTaskPO> {
     @Select("SELECT * FROM insp_tasks WHERE project_id = #{projectId} AND task_date = #{taskDate} AND deleted = 0")
     List<InspTaskPO> findByProjectIdAndTaskDate(@Param("projectId") Long projectId, @Param("taskDate") LocalDate taskDate);
 
+    @Select("SELECT * FROM insp_tasks WHERE project_id = #{projectId} AND task_date >= #{startDate} AND task_date <= #{endDate} AND deleted = 0 ORDER BY task_date, time_slot_start")
+    List<InspTaskPO> findByProjectIdAndTaskDateBetween(@Param("projectId") Long projectId,
+                                                        @Param("startDate") LocalDate startDate,
+                                                        @Param("endDate") LocalDate endDate);
+
     @Select("SELECT * FROM insp_tasks WHERE status = #{status} AND deleted = 0")
     List<InspTaskPO> findByStatus(@Param("status") String status);
 
