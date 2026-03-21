@@ -293,41 +293,9 @@ onMounted(() => {
           />
         </div>
 
-        <!-- 范围类型 + 日期 并排 -->
-        <div class="wz-row2">
-          <div class="wz-field">
-            <label class="wz-label">范围类型</label>
-            <select v-model="form.scopeType" class="wz-select">
-              <option v-for="(cfg, key) in ScopeTypeConfig" :key="key" :value="key">
-                {{ cfg.label }}
-              </option>
-            </select>
-          </div>
-          <div class="wz-field">
-            <label class="wz-label">开始日期 <span class="wz-req">*</span></label>
-            <input
-              v-model="form.startDate"
-              type="date"
-              class="wz-input"
-            />
-          </div>
-        </div>
-
-        <div class="wz-row2">
-          <div class="wz-field">
-            <label class="wz-label">结束日期</label>
-            <input
-              v-model="form.endDate"
-              type="date"
-              class="wz-input"
-            />
-          </div>
-          <div class="wz-field" />
-        </div>
-
-        <!-- 范围配置：组织单元多选 -->
+        <!-- 检查范围 -->
         <div class="wz-field">
-          <label class="wz-label">范围配置 <span class="wz-opt">可选</span></label>
+          <label class="wz-label">检查范围</label>
           <div v-if="loadingOrg" class="wz-chip-area">加载中...</div>
           <div v-else-if="orgUnits.length === 0" class="wz-chip-area wz-chip-area--empty">暂无组织单元</div>
           <div v-else class="wz-chip-area">
@@ -341,6 +309,18 @@ onMounted(() => {
             >
               {{ unit.unitName }}
             </button>
+          </div>
+        </div>
+
+        <!-- 起止日期 -->
+        <div class="wz-row2">
+          <div class="wz-field">
+            <label class="wz-label">开始日期 <span class="wz-req">*</span></label>
+            <input v-model="form.startDate" type="date" class="wz-input" />
+          </div>
+          <div class="wz-field">
+            <label class="wz-label">结束日期</label>
+            <input v-model="form.endDate" type="date" class="wz-input" />
           </div>
         </div>
       </div>
@@ -363,7 +343,7 @@ onMounted(() => {
           </tr>
           <tr>
             <td class="wz-sk">检查范围</td>
-            <td class="wz-sv">{{ selectedScopeLabel }} / {{ selectedOrgNames }}</td>
+            <td class="wz-sv">{{ selectedOrgNames }}</td>
           </tr>
           <tr>
             <td class="wz-sk">日期</td>
