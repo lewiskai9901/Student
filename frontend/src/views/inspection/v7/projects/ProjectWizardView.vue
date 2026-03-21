@@ -4,7 +4,8 @@ import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { inspProjectApi, updateProject, createPlan } from '@/api/insp/project'
 import { inspTemplateApi } from '@/api/insp/template'
-import { getOrgUnits } from '@/api/organization'
+import { getOrgUnitTree } from '@/api/organization'
+import type { OrgUnitTreeNode } from '@/types'
 import type { OrgUnit } from '@/types'
 import type { TemplateSection } from '@/types/insp/template'
 import { ScopeTypeConfig, type ScopeType } from '@/types/insp/enums'
@@ -165,10 +166,22 @@ async function loadTemplates() {
   }
 }
 
+function flattenTree(nodes: OrgUnitTreeNode[], depth = 0): Array<OrgUnit & { depth: number }> {
+  const result: Array<OrgUnit & { depth: number }> = []
+  for (const node of nodes) {
+    result.push({ ...node, depth } as any)
+    if (node.children && node.children.length > 0) {
+      result.push(...flattenTree(node.children, depth + 1))
+    }
+  }
+  return result
+}
+
 async function loadOrgUnits() {
   loadingOrg.value = true
   try {
-    orgUnits.value = await getOrgUnits()
+    const tree = await getOrgUnitTree()
+    orgUnits.value = flattenTree(tree) as any[]
   } catch {
     // ignore
   } finally {
@@ -296,19 +309,21 @@ onMounted(() => {
         <!-- 检查范围 -->
         <div class="wz-field">
           <label class="wz-label">检查范围</label>
-          <div v-if="loadingOrg" class="wz-chip-area">加载中...</div>
-          <div v-else-if="orgUnits.length === 0" class="wz-chip-area wz-chip-area--empty">暂无组织单元</div>
-          <div v-else class="wz-chip-area">
-            <button
+          <div v-if="loadingOrg" class="wz-org-list">加载中...</div>
+          <div v-else-if="orgUnits.length === 0" class="wz-org-list">暂无组织单元</div>
+          <div v-else class="wz-org-list">
+            <div
               v-for="unit in orgUnits"
               :key="unit.id"
-              class="wz-chip"
-              :class="{ 'wz-chip--on': form.scopeIds.includes(Number(unit.id)) }"
+              class="wz-org-row"
+              :class="{ 'wz-org-row--on': form.scopeIds.includes(Number(unit.id)) }"
+              :style="{ paddingLeft: `${8 + (unit as any).depth * 16}px` }"
               @click="toggleOrgUnit(Number(unit.id))"
-              type="button"
             >
-              {{ unit.unitName }}
-            </button>
+              <span v-if="(unit as any).depth > 0" class="wz-org-indent" />
+              <span class="wz-org-name">{{ unit.unitName }}</span>
+              <span v-if="form.scopeIds.includes(Number(unit.id))" class="wz-org-check">✓</span>
+            </div>
           </div>
         </div>
 
@@ -776,51 +791,33 @@ onMounted(() => {
 }
 
 /* ===== Chip area (org unit selector) ===== */
-.wz-chip-area {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  padding: 10px;
+/* Org tree list */
+.wz-org-list {
   border: 1px solid #e5e7eb;
   border-radius: 6px;
   background: #fafbfc;
-  min-height: 42px;
-  align-items: center;
+  max-height: 240px;
+  overflow-y: auto;
   font-size: 12px;
   color: #9ca3af;
 }
-
-.wz-chip-area--empty {
-  justify-content: center;
-}
-
-.wz-chip {
-  padding: 4px 12px;
-  border-radius: 14px;
-  border: 1px solid #e5e7eb;
-  background: #fff;
-  font-size: 12px;
-  color: #4b5563;
+.wz-org-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
   cursor: pointer;
-  transition: all 0.15s;
-  outline: none;
+  transition: background 0.1s;
+  border-bottom: 1px solid #f0f1f3;
 }
-
-.wz-chip:hover {
-  border-color: #93b8ff;
-  color: #1a6dff;
-}
-
-.wz-chip--on {
-  background: #1a6dff;
-  border-color: #1a6dff;
-  color: #fff;
-}
-
-.wz-chip--on:hover {
-  background: #1558d8;
-  border-color: #1558d8;
-  color: #fff;
+.wz-org-row:last-child { border-bottom: none; }
+.wz-org-row:hover { background: #f0f4ff; }
+.wz-org-row--on { background: #eff6ff; }
+.wz-org-row--on:hover { background: #e0edff; }
+.wz-org-indent { width: 6px; height: 6px; border-left: 1px solid #d1d5db; border-bottom: 1px solid #d1d5db; flex-shrink: 0; }
+.wz-org-name { font-size: 12px; color: #1e2a3a; flex: 1; }
+.wz-org-row--on .wz-org-name { color: #1a6dff; font-weight: 500; }
+.wz-org-check { color: #1a6dff; font-size: 12px; font-weight: 600; flex-shrink: 0;
 }
 
 /* ===== Summary (Step 2) ===== */
