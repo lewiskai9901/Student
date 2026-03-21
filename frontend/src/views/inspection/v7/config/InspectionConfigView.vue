@@ -58,20 +58,17 @@ const openDropdownId = ref<number | null>(null)
 const dropdownStyle = ref<Record<string, string>>({})
 
 function toggleDropdown(id: number, event?: MouseEvent) {
+  event?.stopPropagation()
   if (openDropdownId.value === id) { openDropdownId.value = null; return }
   openDropdownId.value = id
-  if (event) {
-    const btn = event.currentTarget as HTMLElement
-    const rect = btn.getBoundingClientRect()
-    dropdownStyle.value = {
-      position: 'fixed',
-      top: `${rect.bottom + 4}px`,
-      right: `${window.innerWidth - rect.right}px`,
-      left: 'auto',
-    }
-  }
 }
 function closeDropdowns() { openDropdownId.value = null }
+
+// 点击外部关闭
+import { onUnmounted } from 'vue'
+function onDocClick() { openDropdownId.value = null }
+onMounted(() => document.addEventListener('click', onDocClick))
+onUnmounted(() => document.removeEventListener('click', onDocClick))
 
 // ==================== Load ====================
 async function loadTemplates() {
@@ -371,7 +368,7 @@ onMounted(() => { loadTemplates() })
                   <MoreHorizontal :size="14" />
                 </button>
                 <Transition name="dropdown">
-                  <div v-if="openDropdownId === sec.id" class="dropdown-menu" :style="dropdownStyle">
+                  <div v-if="openDropdownId === sec.id" class="dropdown-menu" @click.stop>
                     <button v-if="sec.status === 'DRAFT'" @click.stop="handlePublish(sec)">
                       <Upload :size="13" /> 发布
                     </button>
@@ -760,14 +757,25 @@ onMounted(() => { loadTemplates() })
 /* Dropdown */
 .dropdown-wrap { position: relative; }
 .dropdown-menu {
-  position: fixed;
+  position: absolute;
+  top: calc(100% + 4px);
+  right: 0;
   min-width: 130px;
   background: #fff;
   border: 1px solid #e8ecf0;
   border-radius: 10px;
   padding: 4px;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
   z-index: 200;
+}
+/* 防止按钮与菜单间的间隙导致闪烁 */
+.dropdown-menu::before {
+  content: '';
+  position: absolute;
+  top: -8px;
+  right: 0;
+  width: 40px;
+  height: 8px;
 }
 .dropdown-menu button {
   display: flex;
