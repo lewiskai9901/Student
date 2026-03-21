@@ -491,7 +491,8 @@ function getItemTypeLabel(item: TemplateItem) {
             <span class="te-header-code">{{ rootSection.sectionCode }} · v{{ rootSection.latestVersion }}</span>
           </div>
         </div>
-        <div class="flex items-center gap-2">
+        <div class="te-header-actions">
+          <span v-if="isReadonly" class="te-readonly-hint">已发布，不可编辑</span>
           <button class="te-btn te-btn-ghost" @click="showPreview = !showPreview"><Eye :size="13" />{{ showPreview ? '编辑' : '预览' }}</button>
           <button v-if="rootSection.status === 'DRAFT'" class="te-btn te-btn-green" @click="handlePublish"><Upload :size="13" />发布</button>
         </div>
@@ -596,10 +597,20 @@ function getItemTypeLabel(item: TemplateItem) {
                           loadTypeFilterOptions(val)
                         }"
                         :disabled="isReadonly">
-                        <option :value="null">{{ isRootSelected ? '不设置' : '不设置（对父目标直接打分）' }}</option>
-                        <option value="ORG">{{ isRootSelected ? '组织' : '组织（从父目标查找关联的组织）' }}</option>
-                        <option value="PLACE">{{ isRootSelected ? '场所' : '场所（从父目标查找关联的场所）' }}</option>
-                        <option value="USER">{{ isRootSelected ? '人员' : '人员（从父目标查找关联的人员）' }}</option>
+                        <!-- 根分区：必选，无"不设置" -->
+                        <template v-if="isRootSelected">
+                          <option :value="null" disabled>请选择检查对象</option>
+                          <option value="ORG">组织</option>
+                          <option value="PLACE">场所</option>
+                          <option value="USER">人员</option>
+                        </template>
+                        <!-- 子分区：可不选 -->
+                        <template v-else>
+                          <option :value="null">对父目标直接打分</option>
+                          <option value="ORG">查找关联组织</option>
+                          <option value="PLACE">查找关联场所</option>
+                          <option value="USER">查找关联人员</option>
+                        </template>
                       </select>
                     </div>
                     <div v-if="(isRootSelected ? rootForm.targetType : sf.targetType) && typeFilterOptions.length > 0" class="te-prop-field te-target-filter">
@@ -621,9 +632,8 @@ function getItemTypeLabel(item: TemplateItem) {
                       </div>
                     </div>
                   </div>
-                  <!-- 根分区未设置 targetType 时显示橙色提示 -->
-                  <div v-if="isRootSelected && !rootForm.targetType" class="te-target-hint">
-                    建议设置检查对象，项目需要知道检查什么目标
+                  <div v-if="isRootSelected && !rootForm.targetType" class="te-target-error">
+                    必须设置检查对象类型
                   </div>
                 </div>
 
@@ -857,12 +867,15 @@ function getItemTypeLabel(item: TemplateItem) {
 .te-target-select { flex: 0 0 auto; min-width: 140px; }
 .te-target-filter { flex: 1; min-width: 120px; }
 
-/* Orange hint for unset root targetType */
-.te-target-hint {
-  font-size: 11px; color: #d97706;
-  display: flex; align-items: center; gap: 4px;
+/* Error for unset root targetType */
+.te-target-error {
+  font-size: 10px; color: #ef4444; padding: 3px 8px;
+  background: #fef2f2; border-radius: 4px; border-left: 2px solid #ef4444;
 }
-.te-target-hint::before { content: '⚠'; font-size: 11px; }
+
+/* Readonly hint */
+.te-readonly-hint { font-size: 11px; color: #9ca3af; padding: 2px 8px; background: #f4f6f9; border-radius: 4px; }
+.te-header-actions { display: flex; align-items: center; gap: 8px; }
 
 /* Divider with title */
 .te-divider-title {
