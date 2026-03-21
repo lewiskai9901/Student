@@ -308,10 +308,56 @@ async function handleDeleteRule(id: number) {
   await scoringStore.deleteRule(scoringProfile.value.id, id)
 }
 async function handleApplyGradePreset(presetKey: string) {
-  // Simple preset application - will be handled by GradeBandEditor internally
+  // handled by GradeBandEditor internally
 }
 
-// ===== Scoring Policy selector =====
+// ===== Inline grade band editing =====
+async function addGradeBand() {
+  if (!scoringProfile.value) return
+  await scoringStore.createGradeBand(scoringProfile.value.id, {
+    gradeCode: '', gradeName: '', minScore: 0, maxScore: 100,
+  })
+}
+async function updateGradeBand(band: any) {
+  if (!scoringProfile.value) return
+  await scoringStore.updateGradeBand(scoringProfile.value.id, band.id, {
+    gradeName: band.gradeName, minScore: band.minScore, maxScore: band.maxScore,
+  })
+}
+async function deleteGradeBand(bandId: number) {
+  if (!scoringProfile.value) return
+  await scoringStore.deleteGradeBand(scoringProfile.value.id, bandId)
+}
+async function addCalcRule() {
+  if (!scoringProfile.value) return
+  await scoringStore.createRule(scoringProfile.value.id, {
+    ruleCode: 'R' + Date.now().toString(36), ruleName: '', ruleType: 'VETO',
+    config: '{}', isEnabled: true, priority: scoringStore.rules.length + 1,
+  })
+}
+
+// ===== Load from scoring policy =====
+import { getGradeBands as getPolicyGradeBands } from '@/api/insp/scoringPolicy'
+
+async function loadFromPolicy(policyId: number) {
+  if (!scoringProfile.value) return
+  try {
+    const bands = await getPolicyGradeBands(policyId)
+    // 清除现有等级，导入方案的等级
+    for (const existing of [...scoringStore.gradeBands]) {
+      await scoringStore.deleteGradeBand(scoringProfile.value!.id, existing.id)
+    }
+    for (const band of bands) {
+      await scoringStore.createGradeBand(scoringProfile.value!.id, {
+        gradeCode: band.gradeCode, gradeName: band.gradeName,
+        minScore: band.minPercent, maxScore: band.maxPercent,
+      })
+    }
+    ElMessage.success('已从方案导入等级映射')
+  } catch { ElMessage.error('导入失败') }
+}
+
+// ===== Scoring Policy list (for presets) =====
 const allScoringPolicies = ref<ScoringPolicy[]>([])
 const selectedPolicyId = ref<number | null>(null)
 
@@ -539,47 +585,64 @@ function getItemTypeLabel(item: TemplateItem) {
                     <!-- 基础设置 -->
                     <div class="te-row-3">
                       <div class="te-prop-field" style="flex:1">
-                        <label>最高分</label>
-                        <input v-model.number="scoringProfile.maxScore" type="number" @change="saveScoringBasic" />
+                        <label>满分</label>
+                        <input v-model.number="scoringProfile.maxScore" type="number" @change="saveScoringBasic" :disabled="isReadonly" />
                       </div>
                       <div class="te-prop-field" style="flex:1">
                         <label>最低分</label>
-                        <input v-model.number="scoringProfile.minScore" type="number" @change="saveScoringBasic" />
+                        <input v-model.number="scoringProfile.minScore" type="number" @change="saveScoringBasic" :disabled="isReadonly" />
                       </div>
                       <div class="te-prop-field" style="flex:1">
                         <label>精度</label>
-                        <input v-model.number="scoringProfile.precisionDigits" type="number" min="0" max="4" @change="saveScoringBasic" />
+                        <input v-model.number="scoringProfile.precisionDigits" type="number" min="0" max="4" @change="saveScoringBasic" :disabled="isReadonly" />
                       </div>
                     </div>
-                    <DimensionTable
-                      :dimensions="scoringStore.dimensions"
-                    />
-                    <!-- 评分方案选择器（替代内联 GradeBandEditor + CalcRuleChain） -->
-                    <div class="te-policy-selector">
-                      <label class="te-policy-label">评分方案</label>
-                      <div class="te-policy-row">
-                        <select
-                          class="te-policy-select"
-                          :value="selectedPolicyId ?? ''"
-                          :disabled="isReadonly"
-                          @change="(e) => handlePolicySelect(Number((e.target as HTMLSelectElement).value) || null)"
-                        >
-                          <option value="">不绑定方案（使用默认设置）</option>
-                          <option
-                            v-for="p in allScoringPolicies"
-                            :key="p.id"
-                            :value="p.id"
-                          >{{ p.policyName }}{{ p.isSystem ? ' [系统]' : '' }}</option>
-                        </select>
-                        <button
-                          v-if="selectedPolicyId"
-                          class="te-policy-link"
-                          @click="goToPolicyDetail(selectedPolicyId!)"
-                          type="button"
-                          title="在新标签页查看方案详情"
-                        >查看方案 →</button>
+
+                    <!-- 子项权重 -->
+                    <DimensionTable :dimensions="scoringStore.dimensions" />
+
+                    <!-- 等级映射（内联编辑 + 方案加载） -->
+                    <div class="te-scoring-block">
+                      <div class="te-scoring-block-head">
+                        <span class="te-scoring-block-title">等级映射</span>
+                        <div class="te-scoring-block-actions">
+                          <div class="te-preset-group">
+                            <button v-for="p in allScoringPolicies" :key="p.id"
+                              class="te-preset-pill" @click="loadFromPolicy(p.id)"
+                              :title="p.description || p.policyName">{{ p.policyName }}</button>
+                          </div>
+                          <button v-if="!isReadonly" class="te-add-btn" @click="addGradeBand">+</button>
+                        </div>
                       </div>
-                      <p class="te-policy-hint">评分方案定义等级区间（A/B/C…）和即时计算规则。在系统管理→评分方案中统一配置。</p>
+                      <div v-if="scoringStore.gradeBands.length === 0" class="te-scoring-empty">暂无等级</div>
+                      <div v-else class="te-grade-list">
+                        <div v-for="band in scoringStore.gradeBands" :key="band.id" class="te-grade-row">
+                          <input v-model="band.gradeCode" class="te-grade-code" :disabled="isReadonly" placeholder="A"
+                            @change="updateGradeBand(band)" />
+                          <input v-model="band.gradeName" class="te-grade-name" :disabled="isReadonly" placeholder="优秀"
+                            @change="updateGradeBand(band)" />
+                          <span class="te-grade-sep">≥</span>
+                          <input v-model.number="band.minScore" class="te-grade-pct" type="number" :disabled="isReadonly"
+                            @change="updateGradeBand(band)" />
+                          <span class="te-grade-unit">%</span>
+                          <button v-if="!isReadonly" class="te-grade-del" @click="deleteGradeBand(band.id)">×</button>
+                        </div>
+                      </div>
+                    </div>
+
+                    <!-- 即时规则（内联编辑） -->
+                    <div class="te-scoring-block">
+                      <div class="te-scoring-block-head">
+                        <span class="te-scoring-block-title">即时规则</span>
+                        <button v-if="!isReadonly" class="te-add-btn" @click="addCalcRule">+</button>
+                      </div>
+                      <div v-if="scoringStore.rules.length === 0" class="te-scoring-empty">暂无规则</div>
+                      <CalcRuleChain v-else
+                        :rules="scoringStore.rules"
+                        @create="handleCreateRule"
+                        @update="handleUpdateRule"
+                        @delete="handleDeleteRule"
+                      />
                     </div>
                   </template>
                 </div>
@@ -705,37 +768,33 @@ function getItemTypeLabel(item: TemplateItem) {
 .te-modal-mask { position: fixed; inset: 0; z-index: 50; display: flex; align-items: center; justify-content: center; background: rgba(0,0,0,0.35); }
 .te-modal { background: #fff; border-radius: 12px; padding: 20px; box-shadow: 0 20px 60px rgba(0,0,0,0.15); overflow-y: auto; }
 
-/* Scoring policy selector */
-.te-policy-selector { display: flex; flex-direction: column; gap: 4px; }
-.te-policy-label { font-size: 11px; font-weight: 500; color: #6b7280; }
-.te-policy-row { display: flex; align-items: center; gap: 6px; }
-.te-policy-select {
-  flex: 1;
-  min-width: 0;
-  height: 28px;
-  border: 1px solid #e5e7eb;
-  border-radius: 6px;
-  padding: 0 8px;
-  font-size: 12px;
-  outline: none;
-  color: #111827;
-  background: #fff;
-  transition: border-color 0.15s;
-  cursor: pointer;
-}
-.te-policy-select:focus { border-color: #93c5fd; box-shadow: 0 0 0 2px rgba(37,99,235,0.06); }
-.te-policy-select:disabled { background: #f9fafb; color: #9ca3af; cursor: default; }
-.te-policy-link {
-  font-size: 11px;
-  color: #2563eb;
-  background: none;
-  border: none;
-  cursor: pointer;
-  white-space: nowrap;
-  padding: 0 4px;
-  transition: opacity 0.12s;
-  flex-shrink: 0;
-}
-.te-policy-link:hover { opacity: 0.7; text-decoration: underline; }
-.te-policy-hint { font-size: 10px; color: #9ca3af; margin: 0; line-height: 1.5; }
+/* Inline scoring blocks */
+.te-scoring-block { display: flex; flex-direction: column; gap: 4px; }
+.te-scoring-block-head { display: flex; align-items: center; justify-content: space-between; }
+.te-scoring-block-title { font-size: 11px; font-weight: 600; color: #374151; }
+.te-scoring-block-actions { display: flex; align-items: center; gap: 4px; }
+.te-scoring-empty { font-size: 11px; color: #b8c0cc; padding: 4px 0; }
+
+/* Preset pills (load from policy) */
+.te-preset-group { display: flex; gap: 3px; }
+.te-preset-pill { font-size: 9px; padding: 1px 6px; border-radius: 8px; border: 1px solid #dce1e8; color: #5a6474; background: none; cursor: pointer; transition: all 0.12s; white-space: nowrap; }
+.te-preset-pill:hover { border-color: #93c5fd; color: #1a6dff; background: #f0f4ff; }
+
+.te-add-btn { width: 20px; height: 20px; border-radius: 4px; border: 1px dashed #d1d5db; background: none; color: #9ca3af; font-size: 14px; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.12s; }
+.te-add-btn:hover { border-color: #1a6dff; color: #1a6dff; background: #f0f4ff; }
+
+/* Grade band inline list */
+.te-grade-list { display: flex; flex-direction: column; gap: 2px; }
+.te-grade-row { display: flex; align-items: center; gap: 4px; padding: 3px 0; }
+.te-grade-code { width: 32px; border: 1px solid #e5e7eb; border-radius: 4px; padding: 2px 4px; font-size: 11px; font-weight: 600; text-align: center; color: #1a6dff; outline: none; }
+.te-grade-code:focus { border-color: #93c5fd; }
+.te-grade-name { flex: 1; border: 1px solid #e5e7eb; border-radius: 4px; padding: 2px 6px; font-size: 11px; color: #111827; outline: none; min-width: 0; }
+.te-grade-name:focus { border-color: #93c5fd; }
+.te-grade-sep { font-size: 10px; color: #9ca3af; flex-shrink: 0; }
+.te-grade-pct { width: 44px; border: 1px solid #e5e7eb; border-radius: 4px; padding: 2px 4px; font-size: 11px; text-align: center; color: #111827; outline: none; }
+.te-grade-pct:focus { border-color: #93c5fd; }
+.te-grade-unit { font-size: 10px; color: #9ca3af; }
+.te-grade-del { background: none; border: none; color: #d1d5db; font-size: 12px; cursor: pointer; padding: 0 2px; opacity: 0; transition: all 0.1s; }
+.te-grade-row:hover .te-grade-del { opacity: 1; }
+.te-grade-del:hover { color: #ef4444; }
 </style>
