@@ -612,7 +612,6 @@ onMounted(() => { loadTemplates() })
   transition: transform 0.18s, box-shadow 0.18s, border-color 0.18s;
   display: flex;
   flex-direction: column;
-  overflow: hidden;
 }
 .tpl-card:hover {
   transform: translateY(-1px);
