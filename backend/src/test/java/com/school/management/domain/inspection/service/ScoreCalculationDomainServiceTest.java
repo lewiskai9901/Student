@@ -34,7 +34,7 @@ class ScoreCalculationDomainServiceTest {
     private ScoringProfile buildProfile(BigDecimal maxScore, BigDecimal minScore) {
         return ScoringProfile.builder()
                 .id(1L)
-                .templateId(100L)
+                .sectionId(100L)
                 .maxScore(maxScore)
                 .minScore(minScore)
                 .precisionDigits(2)
