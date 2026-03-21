@@ -29,7 +29,7 @@ import java.util.stream.Collectors;
  *   5. 保存批次 + 结果
  */
 @Slf4j
-@Component
+@Component("evalCenterEngine")
 @RequiredArgsConstructor
 public class EvaluationEngine {
 
