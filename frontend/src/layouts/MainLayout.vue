@@ -151,7 +151,8 @@
               <!-- 激活指示器 -->
               <div v-if="currentRoute === item.path && !isCollapse" class="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-8 bg-white rounded-r-full"></div>
               <component :is="getIcon(item.icon)" class="w-5 h-5 flex-shrink-0 transition-transform group-hover:scale-110" />
-              <span v-if="!isCollapse" class="text-sm font-medium">{{ item.title }}</span>
+              <span v-if="!isCollapse" class="flex-1 text-sm font-medium">{{ item.title }}</span>
+              <UnreadBadge v-if="!isCollapse && item.path === '/messages'" />
             </router-link>
           </template>
         </div>
@@ -313,6 +314,7 @@ import { useAuthStore } from '@/stores/auth'
 import { useConfigStore } from '@/stores/config'
 import { generateMenuFromRoutes, sortMenuItems } from '@/utils/menu-generator'
 import Breadcrumb from '@/components/common/Breadcrumb.vue'
+import UnreadBadge from '@/components/message/UnreadBadge.vue'
 import type { MenuItem } from '@/types/common'
 
 const router = useRouter()
@@ -391,6 +393,9 @@ const iconComponents: Record<string, any> = {
   ]),
   Reading: () => h('svg', { class: 'w-5 h-5', fill: 'none', stroke: 'currentColor', viewBox: '0 0 24 24' }, [
     h('path', { 'stroke-linecap': 'round', 'stroke-linejoin': 'round', 'stroke-width': '2', d: 'M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253' })
+  ]),
+  Bell: () => h('svg', { class: 'w-5 h-5', fill: 'none', stroke: 'currentColor', viewBox: '0 0 24 24' }, [
+    h('path', { 'stroke-linecap': 'round', 'stroke-linejoin': 'round', 'stroke-width': '2', d: 'M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9' })
   ]),
   Management: () => h('svg', { class: 'w-5 h-5', fill: 'none', stroke: 'currentColor', viewBox: '0 0 24 24' }, [
     h('path', { 'stroke-linecap': 'round', 'stroke-linejoin': 'round', 'stroke-width': '2', d: 'M4 5a1 1 0 011-1h14a1 1 0 011 1v2a1 1 0 01-1 1H5a1 1 0 01-1-1V5zM4 13a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H5a1 1 0 01-1-1v-6zM16 13a1 1 0 011-1h2a1 1 0 011 1v6a1 1 0 01-1 1h-2a1 1 0 01-1-1v-6z' })

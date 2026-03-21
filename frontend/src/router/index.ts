@@ -72,6 +72,30 @@ const routes: RouteRecordRaw[] = [
         }
       },
 
+      // ==================== 消息中心 /messages (order: 1.5) ====================
+      {
+        path: '/messages',
+        name: 'Messages',
+        component: () => import('@/views/message/MessageListView.vue'),
+        meta: {
+          title: '消息中心',
+          icon: 'Bell',
+          requiresAuth: true,
+          order: 1.5,
+          group: 'daily'
+        }
+      },
+      {
+        path: '/messages/config',
+        name: 'MessagesConfig',
+        component: () => import('@/views/message/MessageConfigView.vue'),
+        meta: {
+          title: '消息配置',
+          requiresAuth: true,
+          hidden: true
+        }
+      },
+
       // ==================== 我的班级 /my-class (order: 2) ====================
       {
         path: '/my-class',

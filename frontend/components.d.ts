@@ -38,7 +38,6 @@ declare module 'vue' {
     ElCol: typeof import('element-plus/es')['ElCol']
     ElCollapse: typeof import('element-plus/es')['ElCollapse']
     ElCollapseItem: typeof import('element-plus/es')['ElCollapseItem']
-    ElColorPicker: typeof import('element-plus/es')['ElColorPicker']
     ElContainer: typeof import('element-plus/es')['ElContainer']
     ElDatePicker: typeof import('element-plus/es')['ElDatePicker']
     ElDescriptions: typeof import('element-plus/es')['ElDescriptions']
@@ -107,6 +106,7 @@ declare module 'vue' {
     StudentExport: typeof import('./src/components/student/StudentExport.vue')['default']
     StudentForm: typeof import('./src/components/student/StudentForm.vue')['default']
     StudentImport: typeof import('./src/components/student/StudentImport.vue')['default']
+    UnreadBadge: typeof import('./src/components/message/UnreadBadge.vue')['default']
     UserSelector: typeof import('./src/components/common/UserSelector.vue')['default']
     UserSelectorDialog: typeof import('./src/components/common/UserSelectorDialog.vue')['default']
   }
