@@ -312,38 +312,28 @@ async function handleApplyGradePreset(presetKey: string) {
 
 // ===== Grade mapping mode + validation =====
 const gradeEnabled = ref(false)
-const gradingMode = ref<'SCORE' | 'RANK_TOP' | 'RANK_BOTTOM' | 'PCT_TOP' | 'PCT_BOTTOM'>('SCORE')
-const gradeModes = [
-  { value: 'SCORE' as const, label: '分数区间' },
-  { value: 'RANK_TOP' as const, label: '前N名' },
-  { value: 'RANK_BOTTOM' as const, label: '后N名' },
-  { value: 'PCT_TOP' as const, label: '前N%' },
-  { value: 'PCT_BOTTOM' as const, label: '后N%' },
-]
+const gradingMode = ref<'SCORE' | 'RANK' | 'PERCENT'>('SCORE')
 
-const gradeValueLabel = computed(() => {
-  switch (gradingMode.value) {
-    case 'SCORE': return '≥ 百分比'
-    case 'RANK_TOP': return '前N名'
-    case 'RANK_BOTTOM': return '后N名'
-    case 'PCT_TOP': return '前N%'
-    case 'PCT_BOTTOM': return '后N%'
-  }
-})
-const gradeUnitLabel = computed(() => {
-  switch (gradingMode.value) {
-    case 'SCORE': return '%'
-    case 'RANK_TOP': case 'RANK_BOTTOM': return '名'
-    case 'PCT_TOP': case 'PCT_BOTTOM': return '%'
-  }
-})
+function switchGradeMode(mode: 'SCORE' | 'RANK' | 'PERCENT') {
+  if (scoringStore.gradeBands.length > 0) return
+  gradingMode.value = mode
+}
+
+// Direction helpers: maxScore encodes direction (100=SCORE, 1=TOP, -1=BOTTOM)
+function getBandDirection(band: any): 'TOP' | 'BOTTOM' {
+  return Number(band.maxScore) === -1 ? 'BOTTOM' : 'TOP'
+}
+function setBandDirection(band: any, dir: string) {
+  band.maxScore = dir === 'BOTTOM' ? -1 : 1
+  updateGradeBand(band)
+}
 
 const sortedGradeBands = computed(() => {
   const bands = [...scoringStore.gradeBands]
   if (gradingMode.value === 'SCORE') {
     bands.sort((a, b) => b.minScore - a.minScore) // 高分在前
   } else {
-    bands.sort((a, b) => a.minScore - b.minScore) // 小数在前（前3名 < 前10名）
+    bands.sort((a, b) => a.minScore - b.minScore) // 小数在前
   }
   return bands
 })
@@ -353,23 +343,45 @@ const gradeConflict = computed(() => {
   const bands = scoringStore.gradeBands
   if (bands.length < 2) return null
 
-  const values = bands.map(b => b.minScore).sort((a, b) => a - b)
-  // 检查重复值
-  for (let i = 0; i < values.length - 1; i++) {
-    if (values[i] === values[i + 1]) return `存在重复的阈值: ${values[i]}`
-  }
-
   if (gradingMode.value === 'SCORE') {
-    // 分数模式：检查区间是否覆盖完整
+    // 分数模式：检查区间重叠和间隙
+    const values = bands.map(b => b.minScore).sort((a, b) => a - b)
+    for (let i = 0; i < values.length - 1; i++) {
+      if (values[i] === values[i + 1]) return `存在重复的阈值: ${values[i]}`
+    }
     const sorted = bands.map(b => b.minScore).sort((a, b) => b - a)
     if (sorted[sorted.length - 1] > 0) return `最低等级的阈值应为 0（当前为 ${sorted[sorted.length - 1]}%）`
   }
 
-  if (gradingMode.value === 'RANK_TOP' || gradingMode.value === 'PCT_TOP') {
-    // 前N：后面的数必须大于前面的（前3名 < 前10名）
-    for (let i = 0; i < values.length - 1; i++) {
-      if (values[i] >= values[i + 1]) return `前${values[i]} 与 前${values[i + 1]} 范围重叠`
+  if (gradingMode.value === 'RANK') {
+    // 排名模式：同方向检查重复值
+    const topBands = bands.filter(b => Number(b.maxScore) !== -1)
+    const bottomBands = bands.filter(b => Number(b.maxScore) === -1)
+    const topVals = topBands.map(b => b.minScore).sort((a, b) => a - b)
+    for (let i = 0; i < topVals.length - 1; i++) {
+      if (topVals[i] === topVals[i + 1]) return `前${topVals[i]}名 存在重复`
     }
+    const bottomVals = bottomBands.map(b => b.minScore).sort((a, b) => a - b)
+    for (let i = 0; i < bottomVals.length - 1; i++) {
+      if (bottomVals[i] === bottomVals[i + 1]) return `后${bottomVals[i]}名 存在重复`
+    }
+  }
+
+  if (gradingMode.value === 'PERCENT') {
+    // 百分比模式：同方向检查重复，前+后>100则冲突
+    const topBands = bands.filter(b => Number(b.maxScore) !== -1)
+    const bottomBands = bands.filter(b => Number(b.maxScore) === -1)
+    const topVals = topBands.map(b => b.minScore).sort((a, b) => a - b)
+    for (let i = 0; i < topVals.length - 1; i++) {
+      if (topVals[i] === topVals[i + 1]) return `前${topVals[i]}% 存在重复`
+    }
+    const bottomVals = bottomBands.map(b => b.minScore).sort((a, b) => a - b)
+    for (let i = 0; i < bottomVals.length - 1; i++) {
+      if (bottomVals[i] === bottomVals[i + 1]) return `后${bottomVals[i]}% 存在重复`
+    }
+    const maxTop = topVals.length > 0 ? topVals[topVals.length - 1] : 0
+    const maxBottom = bottomVals.length > 0 ? bottomVals[bottomVals.length - 1] : 0
+    if (maxTop + maxBottom > 100) return `前${maxTop}% + 后${maxBottom}% 超过100%，存在重叠`
   }
 
   return null
@@ -394,8 +406,9 @@ watch(() => scoringStore.gradeBands.length, (len) => {
 // ===== Inline grade band editing =====
 async function addGradeBand() {
   if (!scoringProfile.value) return
+  const maxScore = gradingMode.value === 'SCORE' ? 100 : 1 // 1=TOP direction by default
   await scoringStore.createGradeBand(scoringProfile.value.id, {
-    gradeCode: '', gradeName: '', minScore: 0, maxScore: 100,
+    gradeCode: '', gradeName: '', minScore: 0, maxScore,
   })
 }
 async function updateGradeBand(band: any) {
@@ -446,7 +459,7 @@ async function applyGradePreset(preset: string) {
       gradeCode: b.code, gradeName: b.name, minScore: b.min, maxScore: b.max,
     })
   }
-  gradingMode.value = 'SCORE_RANGE'
+  gradingMode.value = 'SCORE'
 }
 
 
@@ -537,16 +550,17 @@ function getItemTypeLabel(item: TemplateItem) {
 
             <!-- ======= Section properties (root + child unified) ======= -->
             <template v-else-if="(isRootSelected && rootSection) || (selectedSection && !selectedSection.refSectionId)">
-              <div class="te-props-head">
-                <span>{{ isRootSelected ? '根分区' : '分区' }}</span>
+              <div class="te-sec-head">
+                <span class="te-sec-head-title">{{ isRootSelected ? '根分区属性' : '分区属性' }}</span>
                 <button v-if="isRootSelected ? rootInfoDirty : sfDirty"
-                  class="te-btn te-btn-primary te-btn-sm"
+                  class="te-sec-save-btn"
                   @click="isRootSelected ? saveRootProps() : saveSection()">保存</button>
               </div>
-              <div class="te-props-scroll">
-                <!-- 基本信息 -->
-                <div class="te-section-card">
-                  <div class="te-row-2" v-if="isRootSelected">
+              <div class="te-sec-scroll">
+
+                <!-- ── 基本信息（平铺，无卡片） ── -->
+                <div class="te-flat-group" v-if="isRootSelected">
+                  <div class="te-row-2">
                     <div class="te-prop-field" style="flex:2">
                       <label>名称</label>
                       <input v-model="rootForm.name" @input="rootInfoDirty = true" :disabled="isReadonly" />
@@ -556,31 +570,32 @@ function getItemTypeLabel(item: TemplateItem) {
                       <input v-model="rootForm.tags" placeholder="逗号分隔" @input="rootInfoDirty = true" :disabled="isReadonly" />
                     </div>
                   </div>
-                  <div class="te-prop-field" v-if="isRootSelected">
+                  <div class="te-prop-field">
                     <label>描述</label>
                     <input v-model="rootForm.description" @input="rootInfoDirty = true" :disabled="isReadonly" placeholder="可选" />
                   </div>
-                  <div class="te-row-3" v-if="!isRootSelected">
+                </div>
+                <div class="te-flat-group" v-if="!isRootSelected">
+                  <div class="te-inline-row">
                     <div class="te-prop-field" style="flex:2">
                       <label>名称</label>
                       <input v-model="sf.sectionName" @input="markDirty" :disabled="isReadonly" />
                     </div>
-                    <div class="te-prop-field" style="flex:1">
+                    <div class="te-prop-field" style="width:64px;flex:none">
                       <label>权重</label>
                       <input v-model.number="sf.weight" type="number" min="0" max="100" @input="markDirty" :disabled="isReadonly" />
                     </div>
-                    <label class="te-prop-check-inline">
+                    <label class="te-check-compact">
                       <input type="checkbox" v-model="sf.isRepeatable" @change="markDirty" :disabled="isReadonly" />
                       <span>可重复</span>
                     </label>
                   </div>
                 </div>
 
-                <!-- 检查目标 -->
-                <div class="te-section-card">
-                  <h4 class="te-card-title">检查目标</h4>
-                  <div class="te-row-2">
-                    <div class="te-prop-field">
+                <!-- ── 检查目标（蓝色左边线） ── -->
+                <div class="te-target-strip">
+                  <div class="te-inline-row">
+                    <div class="te-prop-field" style="flex:1">
                       <label>对象类型</label>
                       <select
                         :value="isRootSelected ? rootForm.targetType : sf.targetType"
@@ -606,8 +621,8 @@ function getItemTypeLabel(item: TemplateItem) {
                         <option value="USER">人员</option>
                       </select>
                     </div>
-                    <div v-if="(isRootSelected ? rootForm.targetType : sf.targetType)" class="te-prop-field">
-                      <label>目标来源</label>
+                    <div v-if="(isRootSelected ? rootForm.targetType : sf.targetType)" class="te-prop-field" style="flex:1">
+                      <label>来源</label>
                       <select
                         :value="isRootSelected ? rootForm.targetSourceMode : sf.targetSourceMode"
                         @change="(e: Event) => {
@@ -641,13 +656,14 @@ function getItemTypeLabel(item: TemplateItem) {
                   </div>
                 </div>
 
-                <!-- 汇总规则 -->
-                <div class="te-section-card">
-                  <h4 class="te-card-title">汇总规则</h4>
-                  <div v-if="scoringLoading" class="te-scoring-loading">加载中...</div>
-                  <template v-else-if="scoringProfile">
-                    <!-- 基础设置 -->
-                    <div class="te-row-3">
+                <!-- ── 汇总规则（带标题分割线） ── -->
+                <div class="te-divider-title"><span>汇总规则</span></div>
+
+                <div v-if="scoringLoading" class="te-scoring-loading">加载中...</div>
+                <template v-else-if="scoringProfile">
+                  <!-- 基础数值 -->
+                  <div class="te-flat-group">
+                    <div class="te-inline-row">
                       <div class="te-prop-field" style="flex:1">
                         <label>满分</label>
                         <input v-model.number="scoringProfile.maxScore" type="number" @change="saveScoringBasic" :disabled="isReadonly" />
@@ -661,100 +677,123 @@ function getItemTypeLabel(item: TemplateItem) {
                         <input v-model.number="scoringProfile.precisionDigits" type="number" min="0" max="4" @change="saveScoringBasic" :disabled="isReadonly" />
                       </div>
                     </div>
+                  </div>
 
-                    <!-- 子项权重 -->
-                    <DimensionTable :dimensions="scoringStore.dimensions" />
+                  <!-- 子项权重 -->
+                  <DimensionTable :dimensions="scoringStore.dimensions" />
 
-                    <!-- 等级映射 -->
-                    <div class="te-scoring-block">
-                      <div class="te-scoring-block-head">
-                        <span class="te-scoring-block-title">等级映射</span>
-                        <label class="te-toggle">
-                          <input type="checkbox" v-model="gradeEnabled" :disabled="isReadonly"
-                            @change="handleGradeToggle" />
-                          <span class="te-toggle-slider"></span>
-                        </label>
-                      </div>
-
-                      <template v-if="gradeEnabled">
-                        <!-- 模式选择（全局统一，不允许混搭） -->
-                        <div class="te-grade-mode-row">
-                          <label class="te-grade-mode-label">模式</label>
-                          <div class="te-grade-mode-pills">
-                            <button v-for="m in gradeModes" :key="m.value"
-                              class="te-mode-pill" :class="{ active: gradingMode === m.value }"
-                              :disabled="isReadonly || scoringStore.gradeBands.length > 0"
-                              @click="gradingMode = m.value">{{ m.label }}</button>
-                          </div>
-                          <span v-if="scoringStore.gradeBands.length > 0" class="te-grade-mode-hint">清空等级后可切换模式</span>
-                        </div>
-
-                        <!-- 预设（只在空时显示） -->
-                        <div v-if="scoringStore.gradeBands.length === 0 && gradingMode === 'SCORE'" class="te-grade-presets">
-                          <button class="te-preset-pill" @click="applyGradePreset('five')">五级制</button>
-                          <button class="te-preset-pill" @click="applyGradePreset('pass')">通过/不通过</button>
-                          <button class="te-preset-pill" @click="applyGradePreset('three')">三级制</button>
-                        </div>
-
-                        <!-- 等级列表 -->
-                        <div v-if="scoringStore.gradeBands.length > 0" class="te-grade-list">
-                          <!-- 表头 -->
-                          <div class="te-grade-header">
-                            <span class="te-grade-h-code">代码</span>
-                            <span class="te-grade-h-name">名称</span>
-                            <span class="te-grade-h-val">{{ gradeValueLabel }}</span>
-                            <span class="te-grade-h-del"></span>
-                          </div>
-                          <div v-for="band in sortedGradeBands" :key="band.id" class="te-grade-row">
-                            <input v-model="band.gradeCode" class="te-grade-code" :disabled="isReadonly" placeholder="A"
-                              @blur="updateGradeBand(band)" />
-                            <input v-model="band.gradeName" class="te-grade-name" :disabled="isReadonly" placeholder="优秀"
-                              @blur="updateGradeBand(band)" />
-                            <div class="te-grade-val-wrap">
-                              <span v-if="gradingMode === 'SCORE'" class="te-grade-prefix">≥</span>
-                              <span v-else-if="gradingMode === 'RANK_TOP' || gradingMode === 'PCT_TOP'" class="te-grade-prefix">前</span>
-                              <span v-else class="te-grade-prefix">后</span>
-                              <input v-model.number="band.minScore" class="te-grade-val" type="number" :disabled="isReadonly"
-                                @blur="updateGradeBand(band)" />
-                              <span class="te-grade-suffix">{{ gradeUnitLabel }}</span>
-                            </div>
-                            <button v-if="!isReadonly" class="te-grade-del" @click="deleteGradeBand(band.id)">×</button>
-                          </div>
-                        </div>
-
-                        <!-- 冲突检测 -->
-                        <div v-if="gradeConflict" class="te-grade-conflict">⚠ {{ gradeConflict }}</div>
-
-                        <!-- 添加 -->
-                        <button v-if="!isReadonly" class="te-grade-add-btn" @click="addGradeBand">+ 添加等级</button>
-                      </template>
+                  <!-- 等级映射 -->
+                  <div class="te-scoring-block">
+                    <div class="te-scoring-block-head">
+                      <span class="te-scoring-block-title">等级映射</span>
+                      <label class="te-toggle">
+                        <input type="checkbox" v-model="gradeEnabled" :disabled="isReadonly"
+                          @change="handleGradeToggle" />
+                        <span class="te-toggle-slider"></span>
+                      </label>
                     </div>
 
-                    <!-- 即时规则（内联编辑） -->
-                    <div class="te-scoring-block">
-                      <div class="te-scoring-block-head">
-                        <span class="te-scoring-block-title">即时规则</span>
-                        <button v-if="!isReadonly" class="te-add-btn" @click="addCalcRule">+</button>
+                    <template v-if="gradeEnabled">
+                      <!-- 模式选择（3按钮组） -->
+                      <div class="te-grade-mode-bar">
+                        <button :class="['te-mode-btn', gradingMode === 'SCORE' && 'active']"
+                          @click="switchGradeMode('SCORE')"
+                          :disabled="isReadonly || scoringStore.gradeBands.length > 0">分数区间</button>
+                        <button :class="['te-mode-btn', gradingMode === 'RANK' && 'active']"
+                          @click="switchGradeMode('RANK')"
+                          :disabled="isReadonly || scoringStore.gradeBands.length > 0">排名制</button>
+                        <button :class="['te-mode-btn', gradingMode === 'PERCENT' && 'active']"
+                          @click="switchGradeMode('PERCENT')"
+                          :disabled="isReadonly || scoringStore.gradeBands.length > 0">百分比制</button>
                       </div>
-                      <div v-if="scoringStore.rules.length === 0" class="te-scoring-empty">暂无规则</div>
-                      <CalcRuleChain v-else
-                        :rules="scoringStore.rules"
-                        @create="handleCreateRule"
-                        @update="handleUpdateRule"
-                        @delete="handleDeleteRule"
-                      />
+                      <span v-if="scoringStore.gradeBands.length > 0" class="te-mode-lock-hint">清空等级后可切换</span>
+
+                      <!-- 预设（空+分数模式） -->
+                      <div v-if="scoringStore.gradeBands.length === 0 && gradingMode === 'SCORE'" class="te-grade-presets">
+                        <button class="te-preset-chip" @click="applyGradePreset('five')">五级制</button>
+                        <button class="te-preset-chip" @click="applyGradePreset('pass')">通过/不通过</button>
+                        <button class="te-preset-chip" @click="applyGradePreset('three')">三级制</button>
+                      </div>
+
+                      <!-- 等级列表 -->
+                      <div v-if="scoringStore.gradeBands.length > 0" class="te-grade-table">
+                        <div v-for="band in sortedGradeBands" :key="band.id" class="te-grade-row">
+                          <input v-model="band.gradeCode" class="te-gr-code" :disabled="isReadonly" placeholder="A"
+                            @blur="updateGradeBand(band)" />
+                          <input v-model="band.gradeName" class="te-gr-name" :disabled="isReadonly" placeholder="优秀"
+                            @blur="updateGradeBand(band)" />
+
+                          <!-- 分数模式 -->
+                          <template v-if="gradingMode === 'SCORE'">
+                            <span class="te-gr-sym">&ge;</span>
+                            <input v-model.number="band.minScore" class="te-gr-val" type="number" :disabled="isReadonly"
+                              @blur="updateGradeBand(band)" />
+                            <span class="te-gr-unit">%</span>
+                          </template>
+
+                          <!-- 排名模式：每行可选前/后 -->
+                          <template v-if="gradingMode === 'RANK'">
+                            <select class="te-gr-dir" :value="getBandDirection(band)"
+                              @change="(e: Event) => setBandDirection(band, (e.target as HTMLSelectElement).value)"
+                              :disabled="isReadonly">
+                              <option value="TOP">前</option>
+                              <option value="BOTTOM">后</option>
+                            </select>
+                            <input v-model.number="band.minScore" class="te-gr-val" type="number" :disabled="isReadonly"
+                              @blur="updateGradeBand(band)" />
+                            <span class="te-gr-unit">名</span>
+                          </template>
+
+                          <!-- 百分比模式：每行可选前/后 -->
+                          <template v-if="gradingMode === 'PERCENT'">
+                            <select class="te-gr-dir" :value="getBandDirection(band)"
+                              @change="(e: Event) => setBandDirection(band, (e.target as HTMLSelectElement).value)"
+                              :disabled="isReadonly">
+                              <option value="TOP">前</option>
+                              <option value="BOTTOM">后</option>
+                            </select>
+                            <input v-model.number="band.minScore" class="te-gr-val" type="number" :disabled="isReadonly"
+                              @blur="updateGradeBand(band)" />
+                            <span class="te-gr-unit">%</span>
+                          </template>
+
+                          <button v-if="!isReadonly" class="te-gr-del" @click="deleteGradeBand(band.id)">&times;</button>
+                        </div>
+                      </div>
+
+                      <!-- 冲突检测 -->
+                      <div v-if="gradeConflict" class="te-grade-warn">{{ gradeConflict }}</div>
+
+                      <!-- 添加 -->
+                      <button v-if="!isReadonly" class="te-grade-add-btn" @click="addGradeBand">+ 添加等级</button>
+                    </template>
+                  </div>
+
+                  <!-- 即时规则 -->
+                  <div class="te-divider-title te-divider-title--sub"><span>即时规则</span></div>
+                  <div class="te-scoring-block">
+                    <div class="te-scoring-block-head">
+                      <span class="te-scoring-block-title"></span>
+                      <button v-if="!isReadonly" class="te-add-btn" @click="addCalcRule">+</button>
                     </div>
-                  </template>
-                </div>
+                    <div v-if="scoringStore.rules.length === 0" class="te-scoring-empty">暂无规则</div>
+                    <CalcRuleChain v-else
+                      :rules="scoringStore.rules"
+                      @create="handleCreateRule"
+                      @update="handleUpdateRule"
+                      @delete="handleDeleteRule"
+                    />
+                  </div>
+                </template>
               </div>
             </template>
 
             <!-- Ref section -->
             <template v-else-if="selectedSection?.refSectionId">
-              <div class="te-props-head"><span>引用分区</span></div>
-              <div class="te-props-scroll">
-                <div class="te-section-card">
-                  <p class="text-xs text-gray-500 mb-2">此分区引用自其他根分区，内容只读。</p>
+              <div class="te-sec-head"><span class="te-sec-head-title">引用分区</span></div>
+              <div class="te-sec-scroll">
+                <div class="te-ref-info">
+                  <p>此分区引用自其他根分区，内容只读。</p>
                   <div class="te-prop-field"><label>名称</label><input :value="selectedSection.sectionName" disabled /></div>
                 </div>
               </div>
@@ -822,115 +861,242 @@ function getItemTypeLabel(item: TemplateItem) {
 /* 2-Column body */
 .te-body { display: flex; flex: 1; overflow: hidden; }
 .te-col-tree { width: 260px; flex-shrink: 0; border-right: 1px solid #e5e7eb; background: #fff; overflow-y: auto; }
-.te-col-main { flex: 1; overflow: hidden; display: flex; flex-direction: column; background: #f5f6f8; }
+.te-col-main { flex: 1; overflow: hidden; display: flex; flex-direction: column; background: #fff; }
 
-/* Props header */
+/* Props header (field properties) */
 .te-props-head { display: flex; align-items: center; justify-content: space-between; padding: 7px 14px; background: #fff; border-bottom: 1px solid #e8ecf0; flex-shrink: 0; }
 .te-props-head span:first-child { font-size: 12px; font-weight: 600; color: #111827; }
 .te-props-path { font-size: 11px; color: #9ca3af; font-weight: 400; margin-left: 8px; }
 .te-props-scroll { flex: 1; overflow-y: auto; padding: 10px 14px; display: flex; flex-direction: column; gap: 8px; align-content: flex-start; }
 .te-props-empty { display: flex; align-items: center; justify-content: center; flex: 1; font-size: 12px; color: #9ca3af; }
 
-/* Section cards inside props */
-.te-section-card { display: flex; flex-direction: column; gap: 8px; padding: 10px; border: 1px solid #e8ecf0; border-radius: 8px; background: #fff; }
-.te-card-title { font-size: 11px; font-weight: 600; color: #374151; margin: 0; }
-.te-card-title-row { display: flex; align-items: center; justify-content: space-between; }
-.te-chevron { font-size: 11px; color: #9ca3af; transition: transform 0.15s; display: inline-block; }
-.te-chevron.open { transform: rotate(90deg); }
-.te-scoring-loading { font-size: 11px; color: #9ca3af; padding: 6px 0; text-align: center; }
+/* ======= Section properties panel (redesigned) ======= */
+
+/* Section head bar */
+.te-sec-head {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 10px 16px 8px;
+  flex-shrink: 0;
+  border-bottom: 1px solid #e8ecf0;
+}
+.te-sec-head-title { font-size: 12px; font-weight: 600; color: #111827; letter-spacing: 0.01em; }
+.te-sec-save-btn {
+  padding: 4px 14px; border-radius: 5px; border: none;
+  background: #1a6dff; color: #fff; font-size: 11px; font-weight: 500;
+  cursor: pointer; transition: background 0.15s;
+}
+.te-sec-save-btn:hover { background: #1559d6; }
+
+/* Scroll area */
+.te-sec-scroll {
+  flex: 1; overflow-y: auto; padding: 14px 16px 20px;
+  display: flex; flex-direction: column; gap: 14px;
+}
+
+/* Flat group (no card border, just vertical gap) */
+.te-flat-group { display: flex; flex-direction: column; gap: 8px; }
+
+/* Inline row (horizontal fields + checkbox) */
+.te-inline-row { display: flex; gap: 8px; align-items: flex-end; }
+
+/* Compact checkbox */
+.te-check-compact {
+  display: flex; align-items: center; gap: 5px;
+  font-size: 11px; color: #374151; cursor: pointer;
+  white-space: nowrap; padding-bottom: 5px;
+}
+.te-check-compact input { accent-color: #1a6dff; }
+
+/* Target strip (blue left border) */
+.te-target-strip {
+  display: flex; flex-direction: column; gap: 8px;
+  padding: 10px 12px;
+  border-left: 3px solid #1a6dff;
+  background: #f8f9fb;
+  border-radius: 0 6px 6px 0;
+}
+
+/* Divider with title */
+.te-divider-title {
+  display: flex; align-items: center; gap: 10px;
+  font-size: 11px; font-weight: 600; color: #6b7280;
+  letter-spacing: 0.02em;
+}
+.te-divider-title::after {
+  content: ''; flex: 1; height: 1px; background: #e8ecf0;
+}
+.te-divider-title--sub { font-size: 10px; font-weight: 500; color: #9ca3af; }
+
+/* Ref section info */
+.te-ref-info {
+  padding: 12px;
+  background: #f8f9fb;
+  border-radius: 8px;
+  display: flex; flex-direction: column; gap: 8px;
+}
+.te-ref-info p { font-size: 11px; color: #9ca3af; margin: 0; }
+
+/* Scoring loading */
+.te-scoring-loading { font-size: 11px; color: #9ca3af; padding: 8px 0; text-align: center; }
 
 /* Form fields */
 .te-prop-field { display: flex; flex-direction: column; }
 .te-prop-field label { font-size: 11px; font-weight: 500; color: #6b7280; margin-bottom: 2px; }
-.te-prop-field input, .te-prop-field select, .te-prop-field textarea { width: 100%; border: 1px solid #e5e7eb; border-radius: 6px; padding: 4px 8px; font-size: 12px; outline: none; color: #111827; background: #fff; transition: border-color 0.15s; }
-.te-prop-field input:focus, .te-prop-field select:focus, .te-prop-field textarea:focus { border-color: #93c5fd; box-shadow: 0 0 0 2px rgba(37,99,235,0.06); }
-.te-prop-field input:disabled, .te-prop-field select:disabled, .te-prop-field textarea:disabled { background: #f9fafb; color: #9ca3af; }
+.te-prop-field input, .te-prop-field select, .te-prop-field textarea {
+  width: 100%; border: 1px solid #e8ecf0; border-radius: 6px;
+  padding: 5px 8px; font-size: 12px; outline: none;
+  color: #111827; background: #fff; transition: border-color 0.15s;
+}
+.te-prop-field input:focus, .te-prop-field select:focus, .te-prop-field textarea:focus {
+  border-color: #93c5fd; box-shadow: 0 0 0 2px rgba(26,109,255,0.06);
+}
+.te-prop-field input:disabled, .te-prop-field select:disabled, .te-prop-field textarea:disabled {
+  background: #f9fafb; color: #9ca3af;
+}
 .te-prop-field textarea { resize: vertical; font-family: inherit; }
 .te-prop-hint { font-size: 10px; color: #9ca3af; margin-top: 2px; }
 .te-row-2 { display: flex; gap: 8px; }
 .te-row-2 > * { flex: 1; }
-.te-row-3 { display: flex; gap: 8px; align-items: flex-end; }
-.te-prop-row { display: flex; align-items: flex-end; gap: 8px; }
-.te-prop-check { display: flex; align-items: center; gap: 5px; font-size: 11px; color: #374151; cursor: pointer; padding-bottom: 4px; white-space: nowrap; }
-.te-prop-check input { accent-color: #2563eb; }
-.te-prop-check-inline { display: flex; align-items: center; gap: 5px; font-size: 11px; color: #374151; cursor: pointer; white-space: nowrap; padding-bottom: 2px; }
-.te-prop-check-inline input { accent-color: #2563eb; }
-.te-prop-hint-inline { font-size: 11px; color: #9ca3af; font-weight: 400; }
 
 /* Filter tags */
 .te-filter-tags { display: flex; flex-wrap: wrap; gap: 6px; }
-.te-filter-tag { display: flex; align-items: center; gap: 4px; padding: 4px 10px; border: 1px solid #e5e7eb; border-radius: 6px; font-size: 12px; color: #6b7280; cursor: pointer; transition: all 0.15s; user-select: none; }
+.te-filter-tag {
+  display: flex; align-items: center; gap: 4px;
+  padding: 3px 10px; border: 1px solid #e8ecf0; border-radius: 4px;
+  font-size: 11px; color: #6b7280; cursor: pointer;
+  transition: all 0.15s; user-select: none;
+}
 .te-filter-tag:hover { border-color: #93c5fd; }
-.te-filter-tag.active { border-color: #2563eb; background: #eff6ff; color: #2563eb; }
+.te-filter-tag.active { border-color: #1a6dff; background: #eef4ff; color: #1a6dff; }
 .te-filter-tag input[type="checkbox"] { display: none; }
 
 /* Modal */
 .te-modal-mask { position: fixed; inset: 0; z-index: 50; display: flex; align-items: center; justify-content: center; background: rgba(0,0,0,0.35); }
 .te-modal { background: #fff; border-radius: 12px; padding: 20px; box-shadow: 0 20px 60px rgba(0,0,0,0.15); overflow-y: auto; }
 
-/* Inline scoring blocks */
-.te-scoring-block { display: flex; flex-direction: column; gap: 4px; }
+/* ======= Scoring blocks ======= */
+.te-scoring-block { display: flex; flex-direction: column; gap: 6px; }
 .te-scoring-block-head { display: flex; align-items: center; justify-content: space-between; }
 .te-scoring-block-title { font-size: 11px; font-weight: 600; color: #374151; }
-.te-scoring-block-actions { display: flex; align-items: center; gap: 4px; }
 .te-scoring-empty { font-size: 11px; color: #b8c0cc; padding: 4px 0; }
 
 /* Toggle switch */
 .te-toggle { position: relative; display: inline-block; width: 28px; height: 16px; flex-shrink: 0; }
 .te-toggle input { opacity: 0; width: 0; height: 0; }
-.te-toggle-slider { position: absolute; cursor: pointer; inset: 0; background: #d1d5db; border-radius: 16px; transition: 0.2s; }
-.te-toggle-slider::before { content: ''; position: absolute; height: 12px; width: 12px; left: 2px; bottom: 2px; background: #fff; border-radius: 50%; transition: 0.2s; }
+.te-toggle-slider {
+  position: absolute; cursor: pointer; inset: 0;
+  background: #d1d5db; border-radius: 16px; transition: 0.2s;
+}
+.te-toggle-slider::before {
+  content: ''; position: absolute; height: 12px; width: 12px;
+  left: 2px; bottom: 2px; background: #fff; border-radius: 50%; transition: 0.2s;
+}
 .te-toggle input:checked + .te-toggle-slider { background: #1a6dff; }
 .te-toggle input:checked + .te-toggle-slider::before { transform: translateX(12px); }
 
-/* Grade mode */
-.te-grade-mode-row { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
-.te-grade-mode-label { font-size: 10px; color: #6b7280; font-weight: 500; flex-shrink: 0; }
-.te-grade-mode-pills { display: flex; gap: 2px; }
-.te-mode-pill { font-size: 9px; padding: 2px 8px; border-radius: 8px; border: 1px solid #e5e7eb; color: #6b7280; background: #fff; cursor: pointer; transition: all 0.12s; white-space: nowrap; }
-.te-mode-pill:hover { border-color: #93c5fd; color: #1a6dff; }
-.te-mode-pill.active { background: #1a6dff; color: #fff; border-color: #1a6dff; }
-.te-mode-pill:disabled { opacity: 0.4; cursor: not-allowed; }
-.te-grade-mode-hint { font-size: 9px; color: #f59e0b; }
+/* Grade mode bar (square button group) */
+.te-grade-mode-bar { display: flex; gap: 0; }
+.te-mode-btn {
+  font-size: 10px; padding: 4px 12px;
+  border: 1px solid #e8ecf0; color: #6b7280;
+  background: #fff; cursor: pointer;
+  transition: all 0.12s; white-space: nowrap;
+  margin-left: -1px;
+}
+.te-mode-btn:first-child { border-radius: 5px 0 0 5px; margin-left: 0; }
+.te-mode-btn:last-child { border-radius: 0 5px 5px 0; }
+.te-mode-btn:hover:not(:disabled) { color: #1a6dff; border-color: #93c5fd; z-index: 1; }
+.te-mode-btn.active {
+  background: #1a6dff; color: #fff; border-color: #1a6dff;
+  z-index: 2; font-weight: 500;
+}
+.te-mode-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+.te-mode-lock-hint { font-size: 9px; color: #f59e0b; }
 
 /* Grade presets */
 .te-grade-presets { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.te-preset-chip {
+  font-size: 10px; padding: 3px 10px; border-radius: 4px;
+  border: 1px solid #e8ecf0; color: #5a6474;
+  background: #f8f9fb; cursor: pointer;
+  transition: all 0.12s; white-space: nowrap;
+}
+.te-preset-chip:hover { border-color: #93c5fd; color: #1a6dff; background: #eef4ff; }
 
-/* Preset pills */
-.te-preset-pill { font-size: 9px; padding: 2px 8px; border-radius: 8px; border: 1px solid #dce1e8; color: #5a6474; background: none; cursor: pointer; transition: all 0.12s; white-space: nowrap; }
-.te-preset-pill:hover { border-color: #93c5fd; color: #1a6dff; background: #f0f4ff; }
+/* Add inline button */
+.te-add-btn {
+  width: 20px; height: 20px; border-radius: 4px;
+  border: 1px dashed #d1d5db; background: none; color: #9ca3af;
+  font-size: 14px; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  transition: all 0.12s;
+}
+.te-add-btn:hover { border-color: #1a6dff; color: #1a6dff; background: #eef4ff; }
 
-.te-add-btn { width: 20px; height: 20px; border-radius: 4px; border: 1px dashed #d1d5db; background: none; color: #9ca3af; font-size: 14px; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.12s; }
-.te-add-btn:hover { border-color: #1a6dff; color: #1a6dff; background: #f0f4ff; }
+/* ======= Grade band table (compact rows) ======= */
+.te-grade-table { display: flex; flex-direction: column; gap: 1px; }
+.te-grade-row {
+  display: flex; align-items: center; gap: 4px;
+  padding: 3px 0;
+  border-bottom: 1px solid #f2f3f5;
+}
+.te-grade-row:last-child { border-bottom: none; }
 
-/* Grade band inline list */
-.te-grade-list { display: flex; flex-direction: column; gap: 2px; }
-.te-grade-row { display: flex; align-items: center; gap: 4px; padding: 3px 0; }
-.te-grade-code { width: 32px; border: 1px solid #e5e7eb; border-radius: 4px; padding: 2px 4px; font-size: 11px; font-weight: 600; text-align: center; color: #1a6dff; outline: none; }
-.te-grade-code:focus { border-color: #93c5fd; }
-.te-grade-name { flex: 1; border: 1px solid #e5e7eb; border-radius: 4px; padding: 2px 6px; font-size: 11px; color: #111827; outline: none; min-width: 0; }
-.te-grade-name:focus { border-color: #93c5fd; }
-/* Grade header */
-.te-grade-header { display: flex; align-items: center; gap: 4px; padding: 0 0 2px; border-bottom: 1px solid #f0f1f3; margin-bottom: 2px; }
-.te-grade-h-code { width: 32px; font-size: 9px; color: #9ca3af; text-align: center; }
-.te-grade-h-name { flex: 1; font-size: 9px; color: #9ca3af; }
-.te-grade-h-val { width: 100px; font-size: 9px; color: #9ca3af; text-align: center; }
-.te-grade-h-del { width: 16px; }
+/* Grade inputs */
+.te-gr-code {
+  width: 34px; border: 1px solid #e8ecf0; border-radius: 4px;
+  padding: 3px 4px; font-size: 11px; font-weight: 600;
+  text-align: center; color: #1a6dff; outline: none;
+  background: #f8f9fb;
+}
+.te-gr-code:focus { border-color: #93c5fd; background: #fff; }
+.te-gr-name {
+  flex: 1; border: 1px solid #e8ecf0; border-radius: 4px;
+  padding: 3px 6px; font-size: 11px; color: #111827;
+  outline: none; min-width: 0;
+}
+.te-gr-name:focus { border-color: #93c5fd; }
+.te-gr-sym { font-size: 10px; color: #9ca3af; flex-shrink: 0; padding: 0 1px; }
+.te-gr-val {
+  width: 48px; border: 1px solid #e8ecf0; border-radius: 4px;
+  padding: 3px 4px; font-size: 11px; text-align: center;
+  color: #111827; outline: none;
+}
+.te-gr-val:focus { border-color: #93c5fd; }
+.te-gr-unit { font-size: 10px; color: #9ca3af; flex-shrink: 0; }
 
-/* Grade value */
-.te-grade-val-wrap { display: flex; align-items: center; gap: 2px; width: 100px; justify-content: center; }
-.te-grade-prefix { font-size: 10px; color: #9ca3af; flex-shrink: 0; }
-.te-grade-suffix { font-size: 10px; color: #9ca3af; flex-shrink: 0; }
-.te-grade-val { width: 44px; border: 1px solid #e5e7eb; border-radius: 4px; padding: 2px 4px; font-size: 11px; text-align: center; color: #111827; outline: none; }
-.te-grade-val:focus { border-color: #93c5fd; }
+/* Direction select (RANK/PERCENT mode per-row) */
+.te-gr-dir {
+  width: 44px; border: 1px solid #e8ecf0; border-radius: 4px;
+  padding: 2px 2px; font-size: 10px; color: #374151;
+  outline: none; background: #f8f9fb; cursor: pointer;
+  -webkit-appearance: none; appearance: none;
+  text-align: center;
+}
+.te-gr-dir:focus { border-color: #93c5fd; }
 
-/* Conflict warning */
-.te-grade-conflict { font-size: 10px; color: #ef4444; padding: 3px 6px; background: #fef2f2; border-radius: 4px; border-left: 2px solid #ef4444; }
+/* Delete */
+.te-gr-del {
+  background: none; border: none; color: #d1d5db;
+  font-size: 13px; cursor: pointer; padding: 0 2px;
+  opacity: 0; transition: all 0.1s; line-height: 1;
+}
+.te-grade-row:hover .te-gr-del { opacity: 1; }
+.te-gr-del:hover { color: #ef4444; }
 
-/* Add button */
-.te-grade-add-btn { font-size: 10px; color: #1a6dff; background: none; border: 1px dashed #dce1e8; border-radius: 4px; padding: 3px 8px; cursor: pointer; transition: all 0.12s; }
-.te-grade-add-btn:hover { border-color: #1a6dff; background: #f0f4ff; }
-.te-grade-del { background: none; border: none; color: #d1d5db; font-size: 12px; cursor: pointer; padding: 0 2px; opacity: 0; transition: all 0.1s; }
-.te-grade-row:hover .te-grade-del { opacity: 1; }
-.te-grade-del:hover { color: #ef4444; }
+/* Grade conflict warning */
+.te-grade-warn {
+  font-size: 10px; color: #ef4444;
+  padding: 4px 8px; background: #fef2f2;
+  border-radius: 4px; border-left: 2px solid #ef4444;
+}
+
+/* Grade add button */
+.te-grade-add-btn {
+  font-size: 10px; color: #1a6dff; background: none;
+  border: 1px dashed #dce1e8; border-radius: 4px;
+  padding: 4px 10px; cursor: pointer; transition: all 0.12s;
+  align-self: flex-start;
+}
+.te-grade-add-btn:hover { border-color: #1a6dff; background: #eef4ff; }
 </style>
