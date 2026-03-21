@@ -712,20 +712,17 @@ function getItemTypeLabel(item: TemplateItem) {
                       <!-- 等级列表 -->
                       <div v-if="scoringStore.gradeBands.length > 0" class="te-grade-table">
                         <div v-for="band in sortedGradeBands" :key="band.id" class="te-grade-row">
-                          <input v-model="band.gradeCode" class="te-gr-code" :disabled="isReadonly" placeholder="A"
-                            @blur="updateGradeBand(band)" />
-                          <input v-model="band.gradeName" class="te-gr-name" :disabled="isReadonly" placeholder="优秀"
+                          <input v-model="band.gradeName" class="te-gr-name" :disabled="isReadonly" placeholder="等级名称"
                             @blur="updateGradeBand(band)" />
 
                           <!-- 分数模式 -->
                           <template v-if="gradingMode === 'SCORE'">
-                            <span class="te-gr-sym">&ge;</span>
+                            <span class="te-gr-sym">≥</span>
                             <input v-model.number="band.minScore" class="te-gr-val" type="number" :disabled="isReadonly"
                               @blur="updateGradeBand(band)" />
-                            <span class="te-gr-unit">%</span>
                           </template>
 
-                          <!-- 排名模式：每行可选前/后 -->
+                          <!-- 排名模式 -->
                           <template v-if="gradingMode === 'RANK'">
                             <select class="te-gr-dir" :value="getBandDirection(band)"
                               @change="(e: Event) => setBandDirection(band, (e.target as HTMLSelectElement).value)"
