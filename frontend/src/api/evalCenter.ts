@@ -109,8 +109,8 @@ export function getOptionProjects(): Promise<InspProject[]> {
 
 /** 获取项目下的分区列表 */
 export function getOptionSections(projectId?: number | string): Promise<InspSection[]> {
-  const params = projectId ? { projectId } : undefined
-  return http.get<InspSection[]>(`${BASE}/options/sections`, { params })
+  if (!projectId) return Promise.resolve([])
+  return http.get<InspSection[]>(`${BASE}/options/sections/${projectId}`)
 }
 
 /** 获取分区的等级映射（grade bands） */
