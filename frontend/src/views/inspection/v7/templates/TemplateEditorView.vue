@@ -708,12 +708,6 @@ function getItemTypeLabel(item: TemplateItem) {
                       </div>
                       <span v-if="scoringStore.gradeBands.length > 0" class="te-mode-lock-hint">清空等级后可切换</span>
 
-                      <!-- 预设（空+分数模式） -->
-                      <div v-if="scoringStore.gradeBands.length === 0 && gradingMode === 'SCORE'" class="te-grade-presets">
-                        <button class="te-preset-chip" @click="applyGradePreset('five')">五级制</button>
-                        <button class="te-preset-chip" @click="applyGradePreset('pass')">通过/不通过</button>
-                        <button class="te-preset-chip" @click="applyGradePreset('three')">三级制</button>
-                      </div>
 
                       <!-- 等级列表 -->
                       <div v-if="scoringStore.gradeBands.length > 0" class="te-grade-table">
