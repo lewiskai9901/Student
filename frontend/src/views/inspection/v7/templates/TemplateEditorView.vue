@@ -450,6 +450,17 @@ async function applyGradePreset(preset: string) {
 
 
 
+// ===== Duplicate (create new version) =====
+async function handleDuplicate() {
+  if (!rootSection.value) return
+  try {
+    await ElMessageBox.confirm('将复制当前模板为新的草稿版本，确认？', '创建新版本', { type: 'info' })
+    const newSection = await tplStore.duplicate(Number(rootSection.value.id))
+    ElMessage.success('已创建新版本')
+    router.push(`/inspection/v7/templates/${newSection.id}/edit`)
+  } catch (e: any) { if (e !== 'cancel') ElMessage.error(e.message || '创建失败') }
+}
+
 // ===== Publish =====
 async function handlePublish() {
   if (!rootSection.value || rootSection.value.status !== 'DRAFT') return
@@ -492,7 +503,10 @@ function getItemTypeLabel(item: TemplateItem) {
           </div>
         </div>
         <div class="te-header-actions">
-          <span v-if="isReadonly" class="te-readonly-hint">已发布，不可编辑</span>
+          <template v-if="isReadonly">
+            <span class="te-readonly-hint">已发布，不可编辑</span>
+            <button class="te-btn te-btn-primary" @click="handleDuplicate">创建新版本</button>
+          </template>
           <button class="te-btn te-btn-ghost" @click="showPreview = !showPreview"><Eye :size="13" />{{ showPreview ? '编辑' : '预览' }}</button>
           <button v-if="rootSection.status === 'DRAFT'" class="te-btn te-btn-green" @click="handlePublish"><Upload :size="13" />发布</button>
         </div>
