@@ -464,7 +464,13 @@ async function handleDuplicate() {
 // ===== Publish =====
 async function handlePublish() {
   if (!rootSection.value || rootSection.value.status !== 'DRAFT') return
-  try { await ElMessageBox.confirm('确认发布？', '发布', { type: 'warning' }); await tplStore.publish(rootSection.value.id); await tplStore.loadRootSection(rootSection.value.id); ElMessage.success('已发布') }
+  // 校验根分区必须设置检查对象
+  if (!rootSection.value.targetType) {
+    ElMessage.error('请先设置根分区的检查对象类型')
+    selectedSectionId.value = rootSectionId.value
+    return
+  }
+  try { await ElMessageBox.confirm('确认发布？发布后不可直接编辑，需创建新版本。', '发布', { type: 'warning' }); await tplStore.publish(rootSection.value.id); await tplStore.loadRootSection(rootSection.value.id); ElMessage.success('已发布') }
   catch (e: any) { if (e !== 'cancel') ElMessage.error(e.message || '发布失败') }
 }
 
@@ -612,20 +618,15 @@ function getItemTypeLabel(item: TemplateItem) {
                           loadTypeFilterOptions(val)
                         }"
                         :disabled="isReadonly">
-                        <!-- 根分区：必选，无"不设置" -->
                         <template v-if="isRootSelected">
                           <option :value="null" disabled>请选择检查对象</option>
-                          <option value="ORG">组织</option>
-                          <option value="PLACE">场所</option>
-                          <option value="USER">人员</option>
                         </template>
-                        <!-- 子分区：默认对父目标直接打分 -->
                         <template v-else>
                           <option value="INHERIT">对父目标直接打分</option>
-                          <option value="ORG">查找关联组织</option>
-                          <option value="PLACE">查找关联场所</option>
-                          <option value="USER">查找关联人员</option>
                         </template>
+                        <option value="ORG">组织</option>
+                        <option value="PLACE">场所</option>
+                        <option value="USER">人员</option>
                       </select>
                     </div>
                     <div v-if="(isRootSelected ? rootForm.targetType : sf.targetType) && typeFilterOptions.length > 0" class="te-prop-field te-target-filter">
