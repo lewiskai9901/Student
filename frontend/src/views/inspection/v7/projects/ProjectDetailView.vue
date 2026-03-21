@@ -318,6 +318,16 @@ onMounted(async () => {
         </div>
       </div>
       <div class="pdv-header-actions" v-if="project">
+        <el-button
+          v-if="configDirty && !isArchived && activeTab === 'settings'"
+          type="primary"
+          :loading="saving"
+          @click="saveConfig"
+          size="small"
+          round
+        >
+          <Save class="w-3.5 h-3.5 mr-1" />保存配置
+        </el-button>
         <el-button v-if="isDraft" type="primary" :disabled="!canPublish" @click="handlePublish" size="small" round>
           <Send class="w-3.5 h-3.5 mr-1" />发布项目
         </el-button>
@@ -725,14 +735,6 @@ onMounted(async () => {
               <span class="cfg-hint">校正不同检查员的评分尺度差异</span>
             </label>
           </div>
-        </div>
-
-        <!-- 保存按钮 -->
-        <div v-if="configDirty && !isArchived" class="cfg-save-bar">
-          <el-button type="primary" :loading="saving" @click="saveConfig" round size="small">
-            <Save class="w-3.5 h-3.5 mr-1" />保存配置
-          </el-button>
-          <span class="cfg-hint">有未保存的修改</span>
         </div>
 
         <!-- 检查员管理 -->

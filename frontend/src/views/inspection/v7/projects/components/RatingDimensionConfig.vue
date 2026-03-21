@@ -1,345 +1,1058 @@
 <script setup lang="ts">
-import { ref, onMounted, computed } from 'vue'
-import { useRouter } from 'vue-router'
-import { ElMessage, ElMessageBox } from 'element-plus'
-import { Plus, Trash2, Star, BarChart3, Calculator } from 'lucide-vue-next'
-import { inspRatingDimensionApi } from '@/api/insp/project'
-import { inspTemplateApi } from '@/api/insp/template'
-import type { RatingDimension, TemplateSection, GradeBand } from '@/types/insp/template'
+import { ref, reactive, onMounted, computed } from 'vue'
+import type { EvaluationRule, EvaluationLevel, EvaluationCondition, ConditionType } from '@/types/insp/evaluation'
+import { ConditionTypeConfig } from '@/types/insp/evaluation'
+import {
+  listRules, createRule, updateRule, deleteRule,
+  getLevels, saveLevels, evaluate,
+} from '@/api/insp/evaluationRule'
 
-const props = defineProps<{
-  projectId: number
-}>()
+const props = defineProps<{ projectId: number }>()
 
-const router = useRouter()
-
-// ========== State ==========
+// ─── State ───────────────────────────────────────────────────
 const loading = ref(false)
-const dimensions = ref<RatingDimension[]>([])
-const sections = ref<TemplateSection[]>([])
-const dialogVisible = ref(false)
-const editingDimension = ref<RatingDimension | null>(null)
+const rules = ref<EvaluationRule[]>([])
+const dialogOpen = ref(false)
+const editingId = ref<number | null>(null)
 const saving = ref(false)
-const calculating = ref<number | null>(null)
+const evaluating = ref<number | null>(null)
 
-const aggregationOptions = [
-  { value: 'WEIGHTED_AVERAGE', label: '加权平均' },
-  { value: 'SUM', label: '求和' },
-  { value: 'AVERAGE', label: '平均值' },
-  { value: 'MAX', label: '最大值' },
-  { value: 'MIN', label: '最小值' },
-]
+// ─── Form ─────────────────────────────────────────────────────
+interface LevelForm {
+  levelNum: number
+  levelName: string
+  conditionLogic: 'AND' | 'OR'
+  conditions: EvaluationCondition[]
+}
 
-const form = ref({
-  dimensionName: '',
-  sectionIds: [] as number[],
-  aggregation: 'WEIGHTED_AVERAGE',
-  gradeBands: [] as GradeBand[],
+const form = reactive<{
+  ruleName: string
+  targetType: string
+  evaluationPeriod: string
+  awardName: string
+  rankingEnabled: boolean
+  levels: LevelForm[]
+}>({
+  ruleName: '',
+  targetType: 'PLACE',
+  evaluationPeriod: 'MONTHLY',
   awardName: '',
-  rankingEnabled: true,
+  rankingEnabled: false,
+  levels: [],
 })
 
-// ========== Computed ==========
-const sectionOptions = computed(() =>
-  sections.value.map(s => ({
-    value: s.id,
-    label: s.sectionName,
-    targetType: s.targetType,
-  }))
-)
+// ─── Options ──────────────────────────────────────────────────
+const targetTypeOptions = [
+  { value: 'PLACE', label: '场所' },
+  { value: 'ORG', label: '组织' },
+  { value: 'STUDENT', label: '学生' },
+  { value: 'CLASS', label: '班级' },
+]
 
-function getSectionNames(sectionIdsJson: string): string {
-  try {
-    const ids: number[] = JSON.parse(sectionIdsJson)
-    return ids.map(id => {
-      const s = sections.value.find(sec => sec.id === id)
-      return s ? s.sectionName : `#${id}`
-    }).join('、')
-  } catch {
-    return sectionIdsJson
+const periodOptions = [
+  { value: 'WEEKLY', label: '每周' },
+  { value: 'MONTHLY', label: '每月' },
+  { value: 'QUARTERLY', label: '每季度' },
+  { value: 'SEMESTER', label: '每学期' },
+  { value: 'YEARLY', label: '每年' },
+]
+
+const operatorOptions = [
+  { value: '>=', label: '≥' },
+  { value: '<=', label: '≤' },
+  { value: '=', label: '=' },
+  { value: '>', label: '>' },
+  { value: '<', label: '<' },
+  { value: '!=', label: '≠' },
+]
+
+// group condition types for dropdown
+const conditionGroups = computed(() => {
+  const groups: Record<string, { key: ConditionType; label: string }[]> = {}
+  for (const [key, cfg] of Object.entries(ConditionTypeConfig) as [ConditionType, { label: string; group: string }][]) {
+    if (!groups[cfg.group]) groups[cfg.group] = []
+    groups[cfg.group].push({ key, label: cfg.label })
   }
-}
+  return groups
+})
 
-function getGradeBandsPreview(bandsJson: string | null): string {
-  if (!bandsJson) return '-'
-  try {
-    const bands: GradeBand[] = JSON.parse(bandsJson)
-    return bands.map(b => `${b.grade}(${b.minScore}-${b.maxScore})`).join(' ')
-  } catch {
-    return '-'
-  }
-}
-
-function getAggregationLabel(val: string): string {
-  return aggregationOptions.find(o => o.value === val)?.label || val
-}
-
-// ========== Load ==========
-async function loadDimensions() {
+// ─── Load ─────────────────────────────────────────────────────
+async function loadRules() {
   loading.value = true
   try {
-    dimensions.value = await inspRatingDimensionApi.list(props.projectId)
-  } catch (e: any) {
-    ElMessage.error(e.message || '加载评级维度失败')
+    const data = await listRules(props.projectId)
+    // also load levels for each rule
+    const withLevels = await Promise.all(
+      data.map(async r => {
+        try {
+          r.levels = await getLevels(r.id)
+        } catch {
+          r.levels = []
+        }
+        return r
+      })
+    )
+    rules.value = withLevels
+  } catch {
+    // ignore
   } finally {
     loading.value = false
   }
 }
 
-async function loadSections() {
+onMounted(loadRules)
+
+// ─── Helpers ──────────────────────────────────────────────────
+function getTargetLabel(t: string) {
+  return targetTypeOptions.find(o => o.value === t)?.label ?? t
+}
+
+function getPeriodLabel(p: string) {
+  return periodOptions.find(o => o.value === p)?.label ?? p
+}
+
+function getConditionLabel(type: ConditionType) {
+  return ConditionTypeConfig[type]?.label ?? type
+}
+
+function starString(total: number, filled: number) {
+  return '★'.repeat(filled) + '☆'.repeat(total - filled)
+}
+
+function levelStars(rule: EvaluationRule, level: EvaluationLevel) {
+  const total = rule.levels?.length ?? 0
+  const filled = total - level.levelNum + 1
+  return starString(total, Math.max(0, filled))
+}
+
+// ─── Dialog ───────────────────────────────────────────────────
+function resetForm() {
+  form.ruleName = ''
+  form.targetType = 'PLACE'
+  form.evaluationPeriod = 'MONTHLY'
+  form.awardName = ''
+  form.rankingEnabled = false
+  form.levels = []
+}
+
+function openCreate() {
+  resetForm()
+  editingId.value = null
+  dialogOpen.value = true
+}
+
+async function openEdit(rule: EvaluationRule) {
+  resetForm()
+  editingId.value = rule.id
+  form.ruleName = rule.ruleName
+  form.targetType = rule.targetType
+  form.evaluationPeriod = rule.evaluationPeriod
+  form.awardName = rule.awardName ?? ''
+  form.rankingEnabled = rule.rankingEnabled
+  // load full levels with conditions
   try {
-    const { getProject } = await import('@/api/insp/project')
-    const project = await getProject(props.projectId)
-    if (project.rootSectionId) {
-      const all = await inspTemplateApi.getSections(project.rootSectionId)
-      sections.value = all.filter(s => s.parentSectionId === project.rootSectionId)
-    }
-  } catch { /* ignore */ }
-}
-
-// ========== CRUD ==========
-function openAddDialog() {
-  editingDimension.value = null
-  form.value = {
-    dimensionName: '',
-    sectionIds: [],
-    aggregation: 'WEIGHTED_AVERAGE',
-    gradeBands: [
-      { grade: 'A', label: '优秀', minScore: 90, maxScore: 100, color: '#10b981' },
-      { grade: 'B', label: '良好', minScore: 80, maxScore: 89, color: '#3b82f6' },
-      { grade: 'C', label: '合格', minScore: 60, maxScore: 79, color: '#f59e0b' },
-      { grade: 'D', label: '不合格', minScore: 0, maxScore: 59, color: '#ef4444' },
-    ],
-    awardName: '',
-    rankingEnabled: true,
+    const levels = rule.levels && rule.levels.length > 0
+      ? rule.levels
+      : await getLevels(rule.id)
+    form.levels = levels.map(l => ({
+      levelNum: l.levelNum,
+      levelName: l.levelName,
+      conditionLogic: l.conditionLogic,
+      conditions: l.conditions.map(c => ({ ...c })),
+    }))
+  } catch {
+    form.levels = []
   }
-  dialogVisible.value = true
+  dialogOpen.value = true
 }
 
-function openEditDialog(dim: RatingDimension) {
-  editingDimension.value = dim
-  let sectionIds: number[] = []
-  try { sectionIds = JSON.parse(dim.sectionIds) } catch {}
-  let gradeBands: GradeBand[] = []
-  try { if (dim.gradeBands) gradeBands = JSON.parse(dim.gradeBands) } catch {}
-  form.value = {
-    dimensionName: dim.dimensionName,
-    sectionIds,
-    aggregation: dim.aggregation,
-    gradeBands,
-    awardName: dim.awardName || '',
-    rankingEnabled: dim.rankingEnabled,
-  }
-  dialogVisible.value = true
+// ─── Level editing ────────────────────────────────────────────
+function addLevel() {
+  form.levels.push({
+    levelNum: form.levels.length + 1,
+    levelName: '',
+    conditionLogic: 'AND',
+    conditions: [],
+  })
 }
 
-function addGradeBand() {
-  form.value.gradeBands.push({ grade: '', label: '', minScore: 0, maxScore: 100, color: '#909399' })
+function removeLevel(idx: number) {
+  form.levels.splice(idx, 1)
+  // renumber
+  form.levels.forEach((l, i) => { l.levelNum = i + 1 })
 }
 
-function removeGradeBand(idx: number) {
-  form.value.gradeBands.splice(idx, 1)
+function addCondition(level: LevelForm) {
+  level.conditions.push({
+    conditionType: 'SCORE_AVG',
+    operator: '>=',
+    threshold: 0,
+    parameters: {},
+    description: '',
+  })
 }
 
+function removeCondition(level: LevelForm, idx: number) {
+  level.conditions.splice(idx, 1)
+}
+
+// ─── Save ─────────────────────────────────────────────────────
 async function handleSave() {
-  if (!form.value.dimensionName.trim()) {
-    ElMessage.warning('请输入维度名称')
-    return
-  }
+  if (!form.ruleName.trim()) return
   saving.value = true
   try {
-    const data: Partial<RatingDimension> = {
+    const payload: Partial<EvaluationRule> = {
       projectId: props.projectId,
-      dimensionName: form.value.dimensionName,
-      sectionIds: JSON.stringify(form.value.sectionIds),
-      aggregation: form.value.aggregation,
-      gradeBands: form.value.gradeBands.length > 0 ? JSON.stringify(form.value.gradeBands) : null,
-      awardName: form.value.awardName || null,
-      rankingEnabled: form.value.rankingEnabled,
+      ruleName: form.ruleName,
+      targetType: form.targetType,
+      evaluationPeriod: form.evaluationPeriod,
+      awardName: form.awardName || null,
+      rankingEnabled: form.rankingEnabled,
     }
-    if (editingDimension.value) {
-      await inspRatingDimensionApi.update(editingDimension.value.id, data)
-      ElMessage.success('已更新')
+    let ruleId: number
+    if (editingId.value) {
+      await updateRule(editingId.value, payload)
+      ruleId = editingId.value
     } else {
-      await inspRatingDimensionApi.create(data)
-      ElMessage.success('已创建')
+      const created = await createRule(payload)
+      ruleId = created.id
     }
-    dialogVisible.value = false
-    loadDimensions()
-  } catch (e: any) {
-    ElMessage.error(e.message || '保存失败')
+    // save levels
+    const levelsPayload: EvaluationLevel[] = form.levels.map(l => ({
+      levelNum: l.levelNum,
+      levelName: l.levelName,
+      levelIcon: null,
+      levelColor: null,
+      conditionLogic: l.conditionLogic,
+      conditions: l.conditions,
+    }))
+    await saveLevels(ruleId, levelsPayload)
+    dialogOpen.value = false
+    loadRules()
+  } catch {
+    // ignore
   } finally {
     saving.value = false
   }
 }
 
-async function handleDelete(dim: RatingDimension) {
-  try {
-    await ElMessageBox.confirm(`删除维度「${dim.dimensionName}」？`, '确认', { type: 'warning' })
-    await inspRatingDimensionApi.delete(dim.id)
-    ElMessage.success('已删除')
-    loadDimensions()
-  } catch {}
+// ─── Delete ───────────────────────────────────────────────────
+const confirmDeleteId = ref<number | null>(null)
+
+function askDelete(rule: EvaluationRule) {
+  confirmDeleteId.value = rule.id
 }
 
-async function handleCalculate(dim: RatingDimension) {
-  calculating.value = dim.id
+async function confirmDelete() {
+  if (!confirmDeleteId.value) return
   try {
-    const results = await inspRatingDimensionApi.calculate(dim.id)
-    ElMessage.success(`计算完成，共 ${results.length} 条结果`)
-  } catch (e: any) {
-    ElMessage.error(e.message || '计算失败')
-  } finally {
-    calculating.value = null
+    await deleteRule(confirmDeleteId.value)
+    confirmDeleteId.value = null
+    loadRules()
+  } catch {
+    // ignore
   }
 }
 
-function goRankings(dim: RatingDimension) {
-  router.push(`/inspection/v7/rating-dimensions/${dim.id}/rankings`)
+// ─── Evaluate ────────────────────────────────────────────────
+const evalDialogOpen = ref(false)
+const evalRuleId = ref<number | null>(null)
+const evalStart = ref('')
+const evalEnd = ref('')
+const evalResults = ref<any[]>([])
+const evalLoading = ref(false)
+
+function openEval(rule: EvaluationRule) {
+  evalRuleId.value = rule.id
+  // default to current month
+  const now = new Date()
+  const y = now.getFullYear()
+  const m = String(now.getMonth() + 1).padStart(2, '0')
+  evalStart.value = `${y}-${m}-01`
+  const lastDay = new Date(y, now.getMonth() + 1, 0).getDate()
+  evalEnd.value = `${y}-${m}-${lastDay}`
+  evalResults.value = []
+  evalDialogOpen.value = true
 }
 
-onMounted(() => {
-  loadDimensions()
-  loadSections()
-})
+async function runEval() {
+  if (!evalRuleId.value || !evalStart.value || !evalEnd.value) return
+  evalLoading.value = true
+  try {
+    evalResults.value = await evaluate(evalRuleId.value, evalStart.value, evalEnd.value)
+  } catch {
+    // ignore
+  } finally {
+    evalLoading.value = false
+  }
+}
 </script>
 
 <template>
-  <div v-loading="loading">
-    <!-- Header -->
-    <div class="flex items-center justify-between mb-4">
-      <div class="text-sm text-gray-500">配置评级维度，定义分数聚合和等级划分规则</div>
-      <el-button type="primary" size="small" @click="openAddDialog">
-        <Plus class="w-3.5 h-3.5 mr-1" />添加维度
-      </el-button>
+  <div class="erc">
+    <!-- ── Header ── -->
+    <div class="erc-header">
+      <span class="erc-header-title">评选规则</span>
+      <button class="erc-btn-primary" @click="openCreate">+ 新建规则</button>
     </div>
 
-    <!-- Dimension list -->
-    <div v-if="dimensions.length === 0" class="py-16 text-center text-gray-400">
-      <Star class="w-12 h-12 mx-auto mb-3 text-gray-300" />
-      <div class="text-sm">暂无评级维度</div>
-      <div class="text-xs text-gray-300 mt-1">添加维度来定义评级规则</div>
+    <!-- ── Loading ── -->
+    <div v-if="loading" class="erc-empty">加载中...</div>
+
+    <!-- ── Empty ── -->
+    <div v-else-if="rules.length === 0" class="erc-empty">
+      <div class="erc-empty-icon">⭐</div>
+      <div class="erc-empty-text">暂无评选规则</div>
+      <div class="erc-empty-sub">点击「新建规则」开始配置评选标准</div>
     </div>
 
-    <div v-else class="space-y-3">
-      <div
-        v-for="dim in dimensions"
-        :key="dim.id"
-        class="bg-white border border-gray-200 rounded-xl p-4 shadow-sm hover:border-gray-300 transition-colors"
-      >
-        <div class="flex items-start justify-between">
-          <div class="flex-1 min-w-0">
-            <div class="flex items-center gap-2">
-              <span class="font-medium text-gray-800">{{ dim.dimensionName }}</span>
-              <el-tag size="small" type="primary" round effect="plain">{{ getAggregationLabel(dim.aggregation) }}</el-tag>
-              <el-tag v-if="dim.awardName" size="small" type="warning" round effect="plain">{{ dim.awardName }}</el-tag>
-              <el-tag v-if="dim.rankingEnabled" size="small" type="success" round effect="plain">排名</el-tag>
-            </div>
-            <div class="text-xs text-gray-400 mt-1.5 space-y-0.5">
-              <div>关联分区: {{ getSectionNames(dim.sectionIds) || '全部' }}</div>
-              <div>等级划分: {{ getGradeBandsPreview(dim.gradeBands) }}</div>
-            </div>
-          </div>
-          <div class="flex items-center gap-1.5 shrink-0 ml-3">
-            <el-button
-              size="small"
-              type="primary"
-              plain
-              :loading="calculating === dim.id"
-              @click="handleCalculate(dim)"
-            >
-              <Calculator class="w-3.5 h-3.5 mr-0.5" />计算
-            </el-button>
-            <el-button
-              v-if="dim.rankingEnabled"
-              size="small"
-              plain
-              @click="goRankings(dim)"
-            >
-              <BarChart3 class="w-3.5 h-3.5 mr-0.5" />排名
-            </el-button>
-            <el-button size="small" plain @click="openEditDialog(dim)">编辑</el-button>
-            <el-button size="small" type="danger" plain @click="handleDelete(dim)">
-              <Trash2 class="w-3.5 h-3.5" />
-            </el-button>
+    <!-- ── Rule cards ── -->
+    <div v-else class="erc-list">
+      <div v-for="rule in rules" :key="rule.id" class="erc-card">
+        <!-- card header -->
+        <div class="erc-card-head">
+          <span class="erc-card-icon">⭐</span>
+          <span class="erc-card-name">{{ rule.ruleName }}</span>
+          <div class="erc-card-meta">
+            <span class="erc-meta-item">目标: {{ getTargetLabel(rule.targetType) }}</span>
+            <span class="erc-meta-sep">·</span>
+            <span class="erc-meta-item">周期: {{ getPeriodLabel(rule.evaluationPeriod) }}</span>
+            <template v-if="rule.rankingEnabled">
+              <span class="erc-meta-sep">·</span>
+              <span class="erc-meta-item erc-meta-badge">排名: 开启</span>
+            </template>
+            <template v-if="rule.awardName">
+              <span class="erc-meta-sep">·</span>
+              <span class="erc-meta-item">奖项: {{ rule.awardName }}</span>
+            </template>
           </div>
         </div>
-      </div>
-    </div>
 
-    <!-- Add/Edit Dialog -->
-    <el-dialog
-      v-model="dialogVisible"
-      :title="editingDimension ? '编辑评级维度' : '添加评级维度'"
-      width="640px"
-      destroy-on-close
-    >
-      <div class="space-y-4">
-        <div>
-          <label class="block text-sm font-medium text-gray-700 mb-1">维度名称 <span class="text-red-500">*</span></label>
-          <el-input v-model="form.dimensionName" placeholder="例如：综合评级" maxlength="100" />
-        </div>
-
-        <div>
-          <label class="block text-sm font-medium text-gray-700 mb-1">关联分区</label>
-          <el-select v-model="form.sectionIds" multiple class="w-full" placeholder="选择分区（不选则覆盖全部）" collapse-tags collapse-tags-tooltip>
-            <el-option v-for="opt in sectionOptions" :key="opt.value" :label="opt.label" :value="opt.value">
-              <div class="flex items-center justify-between">
-                <span>{{ opt.label }}</span>
-                <el-tag v-if="opt.targetType" size="small" type="info" class="ml-2">{{ opt.targetType }}</el-tag>
+        <!-- levels -->
+        <div v-if="rule.levels && rule.levels.length > 0" class="erc-levels">
+          <div v-for="level in rule.levels" :key="level.levelNum" class="erc-level">
+            <div class="erc-level-head">
+              <span class="erc-level-stars">{{ levelStars(rule, level) }}</span>
+              <span class="erc-level-name">{{ level.levelName }}</span>
+            </div>
+            <div v-if="level.conditions.length > 0" class="erc-conditions">
+              <div v-for="(cond, ci) in level.conditions" :key="ci" class="erc-cond">
+                · {{ getConditionLabel(cond.conditionType) }} {{ cond.operator }} {{ cond.threshold }}
+                <span v-if="cond.description" class="erc-cond-desc">{{ cond.description }}</span>
               </div>
-            </el-option>
-          </el-select>
-        </div>
-
-        <div class="grid grid-cols-2 gap-4">
-          <div>
-            <label class="block text-sm font-medium text-gray-700 mb-1">聚合方式</label>
-            <el-select v-model="form.aggregation" class="w-full">
-              <el-option v-for="opt in aggregationOptions" :key="opt.value" :label="opt.label" :value="opt.value" />
-            </el-select>
-          </div>
-          <div>
-            <label class="block text-sm font-medium text-gray-700 mb-1">奖项名称</label>
-            <el-input v-model="form.awardName" placeholder="例如：流动红旗" />
-          </div>
-        </div>
-
-        <div>
-          <el-checkbox v-model="form.rankingEnabled">启用排名</el-checkbox>
-        </div>
-
-        <!-- Grade Bands Editor -->
-        <div>
-          <div class="flex items-center justify-between mb-2">
-            <label class="text-sm font-medium text-gray-700">等级划分</label>
-            <el-button size="small" text type="primary" @click="addGradeBand"><Plus class="w-3.5 h-3.5 mr-0.5" />添加</el-button>
-          </div>
-          <div v-if="form.gradeBands.length === 0" class="text-xs text-gray-400 py-2">暂无等级划分</div>
-          <div v-else class="space-y-2">
-            <div
-              v-for="(band, idx) in form.gradeBands"
-              :key="idx"
-              class="flex items-center gap-2 bg-gray-50 rounded-lg px-3 py-2"
-            >
-              <el-color-picker v-model="band.color" size="small" />
-              <el-input v-model="band.grade" placeholder="等级" class="!w-16" size="small" />
-              <el-input v-model="band.label" placeholder="标签" class="!w-20" size="small" />
-              <el-input-number v-model="band.minScore" :min="0" :max="200" size="small" class="!w-24" placeholder="最低分" />
-              <span class="text-gray-400 text-xs">~</span>
-              <el-input-number v-model="band.maxScore" :min="0" :max="200" size="small" class="!w-24" placeholder="最高分" />
-              <el-button size="small" link type="danger" @click="removeGradeBand(idx)"><Trash2 class="w-3.5 h-3.5" /></el-button>
+              <div class="erc-cond-logic">逻辑: {{ level.conditionLogic === 'AND' ? '全部满足(AND)' : '任一满足(OR)' }}</div>
             </div>
+            <div v-else class="erc-cond erc-cond--empty">无条件</div>
+          </div>
+        </div>
+        <div v-else class="erc-levels-empty">尚未配置等级</div>
+
+        <!-- card footer -->
+        <div class="erc-card-foot">
+          <span class="erc-last-eval">上次评定: --</span>
+          <div class="erc-card-actions">
+            <button class="erc-btn-ghost" @click="openEdit(rule)">编辑</button>
+            <button class="erc-btn-ghost erc-btn-ghost--blue" @click="openEval(rule)">触发评选</button>
+            <button class="erc-btn-ghost erc-btn-ghost--red" @click="askDelete(rule)">删除</button>
           </div>
         </div>
       </div>
+    </div>
 
-      <template #footer>
-        <el-button @click="dialogVisible = false">取消</el-button>
-        <el-button type="primary" :loading="saving" @click="handleSave">
-          {{ editingDimension ? '更新' : '创建' }}
-        </el-button>
-      </template>
-    </el-dialog>
+    <!-- ════════════════════════════════════════════════════════
+         Edit / Create Dialog
+    ════════════════════════════════════════════════════════════ -->
+    <Teleport to="body">
+      <div v-if="dialogOpen" class="erc-overlay" @click.self="dialogOpen = false">
+        <div class="erc-dialog">
+          <!-- dialog header -->
+          <div class="erc-dialog-head">
+            <span class="erc-dialog-title">{{ editingId ? '编辑评选规则' : '新建评选规则' }}</span>
+            <button class="erc-dialog-close" @click="dialogOpen = false">×</button>
+          </div>
+
+          <!-- dialog body -->
+          <div class="erc-dialog-body">
+            <!-- 规则名称 -->
+            <div class="erc-field">
+              <label class="erc-label">规则名称</label>
+              <input
+                v-model="form.ruleName"
+                class="erc-input"
+                placeholder="例如：星级宿舍"
+                maxlength="50"
+              />
+            </div>
+
+            <!-- 目标类型 / 周期 / 排名 -->
+            <div class="erc-row3">
+              <div class="erc-field">
+                <label class="erc-label">目标类型</label>
+                <select v-model="form.targetType" class="erc-select">
+                  <option v-for="opt in targetTypeOptions" :key="opt.value" :value="opt.value">{{ opt.label }}</option>
+                </select>
+              </div>
+              <div class="erc-field">
+                <label class="erc-label">评选周期</label>
+                <select v-model="form.evaluationPeriod" class="erc-select">
+                  <option v-for="opt in periodOptions" :key="opt.value" :value="opt.value">{{ opt.label }}</option>
+                </select>
+              </div>
+              <div class="erc-field erc-field--check">
+                <label class="erc-label">排名</label>
+                <label class="erc-checkbox-label">
+                  <input type="checkbox" v-model="form.rankingEnabled" class="erc-checkbox" />
+                  <span>启用排名</span>
+                </label>
+              </div>
+            </div>
+
+            <!-- 奖项名称 -->
+            <div class="erc-field">
+              <label class="erc-label">奖项名称<span class="erc-label-hint">（选填）</span></label>
+              <input
+                v-model="form.awardName"
+                class="erc-input"
+                placeholder="例如：流动红旗"
+                maxlength="50"
+              />
+            </div>
+
+            <!-- 评选等级 -->
+            <div class="erc-section-title">评选等级</div>
+
+            <div v-if="form.levels.length === 0" class="erc-levels-hint">
+              尚无等级，点击「添加等级」开始配置
+            </div>
+
+            <div v-for="(level, li) in form.levels" :key="li" class="erc-level-editor">
+              <div class="erc-level-editor-head">
+                <div class="erc-level-editor-left">
+                  <span class="erc-level-num">等级{{ li + 1 }}</span>
+                  <input
+                    v-model="level.levelName"
+                    class="erc-input erc-input--sm erc-input--inline"
+                    placeholder="等级名称，如五星"
+                    maxlength="20"
+                  />
+                </div>
+                <button class="erc-btn-icon-del" @click="removeLevel(li)" title="删除等级">×</button>
+              </div>
+
+              <!-- conditions header -->
+              <div class="erc-cond-header">
+                <span class="erc-cond-label">条件</span>
+                <select v-model="level.conditionLogic" class="erc-select erc-select--xs">
+                  <option value="AND">全部满足(AND)</option>
+                  <option value="OR">任一满足(OR)</option>
+                </select>
+              </div>
+
+              <!-- condition rows -->
+              <div v-for="(cond, ci) in level.conditions" :key="ci" class="erc-cond-row">
+                <!-- type -->
+                <select v-model="cond.conditionType" class="erc-select erc-select--cond">
+                  <optgroup v-for="(items, group) in conditionGroups" :key="group" :label="group">
+                    <option v-for="item in items" :key="item.key" :value="item.key">{{ item.label }}</option>
+                  </optgroup>
+                </select>
+                <!-- operator -->
+                <select v-model="cond.operator" class="erc-select erc-select--op">
+                  <option v-for="op in operatorOptions" :key="op.value" :value="op.value">{{ op.label }}</option>
+                </select>
+                <!-- threshold -->
+                <input
+                  v-model.number="cond.threshold"
+                  type="number"
+                  class="erc-input erc-input--threshold"
+                  placeholder="值"
+                />
+                <!-- description -->
+                <input
+                  v-model="cond.description"
+                  class="erc-input erc-input--desc"
+                  placeholder="备注（选填）"
+                  maxlength="30"
+                />
+                <button class="erc-btn-icon-del" @click="removeCondition(level, ci)" title="删除条件">×</button>
+              </div>
+
+              <button class="erc-btn-text" @click="addCondition(level)">+ 添加条件</button>
+            </div>
+
+            <button class="erc-btn-dashed" @click="addLevel">+ 添加等级</button>
+          </div>
+
+          <!-- dialog footer -->
+          <div class="erc-dialog-foot">
+            <button class="erc-btn-cancel" @click="dialogOpen = false">取消</button>
+            <button
+              class="erc-btn-primary"
+              :disabled="saving || !form.ruleName.trim()"
+              @click="handleSave"
+            >{{ saving ? '保存中...' : '保存' }}</button>
+          </div>
+        </div>
+      </div>
+    </Teleport>
+
+    <!-- ════════════════════════════════════════════════════════
+         Delete Confirm Dialog
+    ════════════════════════════════════════════════════════════ -->
+    <Teleport to="body">
+      <div v-if="confirmDeleteId !== null" class="erc-overlay" @click.self="confirmDeleteId = null">
+        <div class="erc-dialog erc-dialog--sm">
+          <div class="erc-dialog-head">
+            <span class="erc-dialog-title">确认删除</span>
+            <button class="erc-dialog-close" @click="confirmDeleteId = null">×</button>
+          </div>
+          <div class="erc-dialog-body">
+            <p class="erc-confirm-text">删除后不可恢复，确定要删除这条评选规则吗？</p>
+          </div>
+          <div class="erc-dialog-foot">
+            <button class="erc-btn-cancel" @click="confirmDeleteId = null">取消</button>
+            <button class="erc-btn-danger" @click="confirmDelete">确认删除</button>
+          </div>
+        </div>
+      </div>
+    </Teleport>
+
+    <!-- ════════════════════════════════════════════════════════
+         Evaluate Dialog
+    ════════════════════════════════════════════════════════════ -->
+    <Teleport to="body">
+      <div v-if="evalDialogOpen" class="erc-overlay" @click.self="evalDialogOpen = false">
+        <div class="erc-dialog erc-dialog--sm">
+          <div class="erc-dialog-head">
+            <span class="erc-dialog-title">触发评选</span>
+            <button class="erc-dialog-close" @click="evalDialogOpen = false">×</button>
+          </div>
+          <div class="erc-dialog-body">
+            <div class="erc-row2">
+              <div class="erc-field">
+                <label class="erc-label">周期开始</label>
+                <input v-model="evalStart" type="date" class="erc-input" />
+              </div>
+              <div class="erc-field">
+                <label class="erc-label">周期结束</label>
+                <input v-model="evalEnd" type="date" class="erc-input" />
+              </div>
+            </div>
+            <!-- results -->
+            <div v-if="evalResults.length > 0" class="erc-eval-results">
+              <div class="erc-section-title">评选结果 ({{ evalResults.length }} 条)</div>
+              <div v-for="r in evalResults" :key="r.id" class="erc-eval-row">
+                <span class="erc-eval-name">{{ r.targetName || r.targetId }}</span>
+                <span class="erc-eval-level">{{ r.levelName || '未达标' }}</span>
+                <span v-if="r.rankNo" class="erc-eval-rank">第{{ r.rankNo }}名</span>
+              </div>
+            </div>
+          </div>
+          <div class="erc-dialog-foot">
+            <button class="erc-btn-cancel" @click="evalDialogOpen = false">关闭</button>
+            <button
+              class="erc-btn-primary"
+              :disabled="evalLoading || !evalStart || !evalEnd"
+              @click="runEval"
+            >{{ evalLoading ? '评选中...' : '执行评选' }}</button>
+          </div>
+        </div>
+      </div>
+    </Teleport>
   </div>
 </template>
+
+<style scoped>
+/* ── Root ── */
+.erc {
+  font-size: 12px;
+  color: #374151;
+}
+
+/* ── Header ── */
+.erc-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px;
+}
+.erc-header-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: #111827;
+}
+
+/* ── Buttons ── */
+.erc-btn-primary {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 5px 12px;
+  background: #1a6dff;
+  color: #fff;
+  border: none;
+  border-radius: 5px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.erc-btn-primary:hover:not(:disabled) { background: #1558d6; }
+.erc-btn-primary:disabled { opacity: 0.55; cursor: not-allowed; }
+
+.erc-btn-cancel {
+  display: inline-flex;
+  align-items: center;
+  padding: 5px 12px;
+  background: #f3f4f6;
+  color: #374151;
+  border: none;
+  border-radius: 5px;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.erc-btn-cancel:hover { background: #e5e7eb; }
+
+.erc-btn-danger {
+  display: inline-flex;
+  align-items: center;
+  padding: 5px 12px;
+  background: #ef4444;
+  color: #fff;
+  border: none;
+  border-radius: 5px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.erc-btn-danger:hover { background: #dc2626; }
+
+.erc-btn-ghost {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 9px;
+  background: transparent;
+  color: #6b7280;
+  border: 1px solid #e5e7eb;
+  border-radius: 5px;
+  font-size: 11px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.erc-btn-ghost:hover { background: #f9fafb; color: #374151; }
+.erc-btn-ghost--blue { color: #1a6dff; border-color: #bfdbfe; }
+.erc-btn-ghost--blue:hover { background: #eff6ff; }
+.erc-btn-ghost--red { color: #ef4444; border-color: #fecaca; }
+.erc-btn-ghost--red:hover { background: #fef2f2; }
+
+.erc-btn-text {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 6px;
+  background: transparent;
+  color: #1a6dff;
+  border: none;
+  font-size: 11px;
+  cursor: pointer;
+  margin-top: 4px;
+}
+.erc-btn-text:hover { text-decoration: underline; }
+
+.erc-btn-dashed {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  padding: 8px;
+  background: transparent;
+  color: #6b7280;
+  border: 1px dashed #d1d5db;
+  border-radius: 6px;
+  font-size: 12px;
+  cursor: pointer;
+  margin-top: 8px;
+  transition: all 0.15s;
+}
+.erc-btn-dashed:hover { border-color: #1a6dff; color: #1a6dff; background: #eff6ff; }
+
+.erc-btn-icon-del {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  padding: 0;
+  background: transparent;
+  color: #9ca3af;
+  border: none;
+  font-size: 14px;
+  line-height: 1;
+  cursor: pointer;
+  border-radius: 3px;
+  flex-shrink: 0;
+}
+.erc-btn-icon-del:hover { color: #ef4444; background: #fef2f2; }
+
+/* ── Empty ── */
+.erc-empty {
+  text-align: center;
+  padding: 48px 0;
+  color: #9ca3af;
+}
+.erc-empty-icon { font-size: 32px; margin-bottom: 10px; }
+.erc-empty-text { font-size: 13px; font-weight: 500; color: #6b7280; margin-bottom: 4px; }
+.erc-empty-sub { font-size: 11px; }
+
+/* ── Rule Cards ── */
+.erc-list { display: flex; flex-direction: column; gap: 10px; }
+
+.erc-card {
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  overflow: hidden;
+  transition: border-color 0.15s;
+}
+.erc-card:hover { border-color: #d1d5db; }
+
+.erc-card-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px 8px;
+  border-bottom: 1px solid #f3f4f6;
+  flex-wrap: wrap;
+}
+.erc-card-icon { font-size: 14px; }
+.erc-card-name {
+  font-size: 13px;
+  font-weight: 600;
+  color: #111827;
+}
+.erc-card-meta {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-left: auto;
+  flex-wrap: wrap;
+}
+.erc-meta-item { font-size: 11px; color: #6b7280; }
+.erc-meta-sep { font-size: 11px; color: #d1d5db; }
+.erc-meta-badge {
+  background: #dcfce7;
+  color: #16a34a;
+  padding: 1px 6px;
+  border-radius: 10px;
+  font-size: 10px;
+  font-weight: 600;
+}
+
+/* ── Levels ── */
+.erc-levels {
+  padding: 8px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.erc-levels-empty {
+  padding: 8px 14px;
+  font-size: 11px;
+  color: #9ca3af;
+  font-style: italic;
+}
+
+.erc-level {}
+.erc-level-head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 2px;
+}
+.erc-level-stars {
+  font-size: 12px;
+  color: #f59e0b;
+  letter-spacing: 1px;
+}
+.erc-level-name {
+  font-size: 12px;
+  font-weight: 600;
+  color: #374151;
+}
+
+.erc-conditions {
+  padding-left: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+.erc-cond {
+  font-size: 11px;
+  color: #6b7280;
+  line-height: 1.7;
+}
+.erc-cond--empty { font-style: italic; }
+.erc-cond-desc {
+  margin-left: 4px;
+  color: #9ca3af;
+}
+.erc-cond-logic {
+  font-size: 10px;
+  color: #9ca3af;
+  margin-top: 2px;
+}
+
+/* ── Card footer ── */
+.erc-card-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 7px 14px;
+  background: #fafafa;
+  border-top: 1px solid #f3f4f6;
+}
+.erc-last-eval { font-size: 11px; color: #9ca3af; }
+.erc-card-actions { display: flex; gap: 6px; }
+
+/* ── Dialog Overlay ── */
+.erc-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.35);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+  padding: 20px;
+}
+
+.erc-dialog {
+  background: #fff;
+  border-radius: 8px;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.18);
+  width: 100%;
+  max-width: 600px;
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+}
+.erc-dialog--sm { max-width: 420px; }
+
+.erc-dialog-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 18px 12px;
+  border-bottom: 1px solid #f3f4f6;
+  flex-shrink: 0;
+}
+.erc-dialog-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: #111827;
+}
+.erc-dialog-close {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  background: transparent;
+  border: none;
+  font-size: 18px;
+  color: #9ca3af;
+  cursor: pointer;
+  border-radius: 4px;
+  line-height: 1;
+}
+.erc-dialog-close:hover { background: #f3f4f6; color: #374151; }
+
+.erc-dialog-body {
+  padding: 16px 18px;
+  overflow-y: auto;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.erc-dialog-foot {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  padding: 12px 18px;
+  border-top: 1px solid #f3f4f6;
+  flex-shrink: 0;
+}
+
+/* ── Form Fields ── */
+.erc-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.erc-field--check {
+  justify-content: flex-start;
+}
+
+.erc-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: #374151;
+}
+.erc-label-hint {
+  font-weight: 400;
+  color: #9ca3af;
+  margin-left: 3px;
+}
+
+.erc-input {
+  height: 30px;
+  padding: 0 8px;
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+  font-size: 12px;
+  color: #374151;
+  outline: none;
+  transition: border-color 0.15s;
+  background: #fff;
+}
+.erc-input:focus { border-color: #1a6dff; }
+.erc-input--sm { height: 26px; font-size: 12px; }
+.erc-input--inline { flex: 1; min-width: 0; }
+.erc-input--threshold { width: 70px; flex-shrink: 0; }
+.erc-input--desc { flex: 1; min-width: 0; }
+
+.erc-select {
+  height: 30px;
+  padding: 0 6px;
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+  font-size: 12px;
+  color: #374151;
+  outline: none;
+  background: #fff;
+  cursor: pointer;
+  transition: border-color 0.15s;
+}
+.erc-select:focus { border-color: #1a6dff; }
+.erc-select--xs { height: 24px; font-size: 11px; padding: 0 4px; }
+.erc-select--cond { flex: 1.4; min-width: 0; }
+.erc-select--op { width: 54px; flex-shrink: 0; }
+
+.erc-checkbox-label {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 12px;
+  color: #374151;
+  cursor: pointer;
+  height: 30px;
+}
+.erc-checkbox { width: 14px; height: 14px; cursor: pointer; accent-color: #1a6dff; }
+
+.erc-row2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+.erc-row3 {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 10px;
+}
+
+/* ── Level editor ── */
+.erc-section-title {
+  font-size: 12px;
+  font-weight: 600;
+  color: #374151;
+  padding-bottom: 6px;
+  border-bottom: 1px solid #f3f4f6;
+}
+
+.erc-levels-hint {
+  font-size: 11px;
+  color: #9ca3af;
+  font-style: italic;
+  padding: 4px 0;
+}
+
+.erc-level-editor {
+  background: #f9fafb;
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.erc-level-editor-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.erc-level-editor-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1;
+  min-width: 0;
+}
+.erc-level-num {
+  font-size: 11px;
+  font-weight: 600;
+  color: #6b7280;
+  white-space: nowrap;
+}
+
+.erc-cond-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.erc-cond-label {
+  font-size: 11px;
+  color: #6b7280;
+}
+
+.erc-cond-row {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+/* ── Confirm dialog ── */
+.erc-confirm-text {
+  font-size: 13px;
+  color: #374151;
+  line-height: 1.6;
+  margin: 0;
+}
+
+/* ── Eval results ── */
+.erc-eval-results { margin-top: 8px; }
+.erc-eval-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 0;
+  border-bottom: 1px solid #f3f4f6;
+  font-size: 12px;
+}
+.erc-eval-name { flex: 1; color: #374151; }
+.erc-eval-level {
+  background: #fef9c3;
+  color: #ca8a04;
+  padding: 1px 7px;
+  border-radius: 10px;
+  font-size: 11px;
+  font-weight: 600;
+}
+.erc-eval-rank { font-size: 11px; color: #9ca3af; }
+</style>
