@@ -42,7 +42,7 @@ const filteredSections = computed(() => {
 })
 
 const selectedSection = computed(() =>
-  rootSections.value.find(s => s.id === form.rootSectionId)
+  rootSections.value.find(s => Number(s.id) === Number(form.rootSectionId))
 )
 
 const selectedScopeLabel = computed(() => {
@@ -53,10 +53,10 @@ const selectedScopeLabel = computed(() => {
 const selectedOrgNames = computed(() => {
   if (form.scopeIds.length === 0) return '未指定'
   const names = form.scopeIds
-    .map(id => orgUnits.value.find(u => u.id === id)?.unitName)
+    .map(id => orgUnits.value.find(u => Number(u.id) === Number(id))?.unitName)
     .filter(Boolean)
-  if (names.length <= 2) return names.join('、')
-  return names.slice(0, 2).join('、') + ` 等${names.length}个`
+  if (names.length <= 2) return names.join(', ')
+  return names.slice(0, 2).join(', ') + ` 等${names.length}个`
 })
 
 const dateRange = computed(() => {
@@ -69,10 +69,15 @@ const dateRange = computed(() => {
 const canProceedStep0 = computed(() => !!form.rootSectionId)
 const canProceedStep1 = computed(() => !!form.projectName.trim() && !!form.startDate)
 
+// 是否已发布
+function isPublished(section: TemplateSection): boolean {
+  return section.status === 'PUBLISHED'
+}
+
 // ========== Navigation ==========
 function nextStep() {
   if (currentStep.value === 0 && !canProceedStep0.value) {
-    ElMessage.warning('请先选择一个模板')
+    ElMessage.warning('请先选择一个已发布的模板')
     return
   }
   if (currentStep.value === 1 && !canProceedStep1.value) {
@@ -88,9 +93,20 @@ function prevStep() {
 
 // ========== Step 0: 选择模板 ==========
 function selectSection(section: TemplateSection) {
+  if (!isPublished(section)) return
   form.rootSectionId = section.id as number
   if (!form.projectName) {
     form.projectName = section.sectionName + ' 检查'
+  }
+}
+
+// ========== Step 1: 多选 orgUnit toggle ==========
+function toggleOrgUnit(id: number) {
+  const idx = form.scopeIds.indexOf(id)
+  if (idx >= 0) {
+    form.scopeIds.splice(idx, 1)
+  } else {
+    form.scopeIds.push(id)
   }
 }
 
@@ -129,7 +145,7 @@ async function handleCreate() {
 async function loadTemplates() {
   loadingTemplates.value = true
   try {
-    const result = await inspTemplateApi.getList({ page: 1, size: 100, status: 'PUBLISHED' })
+    const result = await inspTemplateApi.getList({ page: 1, size: 200 })
     rootSections.value = result.records
   } catch {
     // ignore
@@ -156,288 +172,260 @@ onMounted(() => {
 </script>
 
 <template>
-  <div class="wizard-page">
+  <div class="wz-page">
     <!-- Header -->
-    <div class="wizard-header">
-      <button class="back-btn" @click="router.back()">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <polyline points="15 18 9 12 15 6" />
-        </svg>
+    <div class="wz-header">
+      <button class="wz-back" @click="router.back()" title="返回">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
       </button>
-      <span class="wizard-title">创建检查项目</span>
+      <h1 class="wz-title">创建检查项目</h1>
     </div>
 
-    <!-- Step indicator -->
-    <div class="step-bar">
-      <template v-for="(label, idx) in ['选择模板', '配置范围', '确认创建']" :key="idx">
-        <!-- Step node -->
+    <!-- Step indicator: minimal dots + lines -->
+    <div class="wz-steps">
+      <template v-for="idx in [0, 1, 2]" :key="idx">
         <div
-          class="step-node"
+          class="wz-step"
           :class="{
-            'step-done': idx < currentStep,
-            'step-active': idx === currentStep,
-            'step-pending': idx > currentStep,
+            'is-done': idx < currentStep,
+            'is-active': idx === currentStep,
+            'is-pending': idx > currentStep,
           }"
           @click="idx < currentStep ? (currentStep = idx) : undefined"
-          :style="idx < currentStep ? 'cursor:pointer' : ''"
         >
-          <div class="step-dot">
-            <svg v-if="idx < currentStep" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
-              <polyline points="20 6 9 17 4 12" />
-            </svg>
+          <div class="wz-dot">
+            <svg v-if="idx < currentStep" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
             <span v-else>{{ idx + 1 }}</span>
           </div>
-          <span class="step-label">{{ label }}</span>
         </div>
-        <!-- Connector line -->
-        <div v-if="idx < 2" class="step-line" :class="idx < currentStep ? 'step-line-done' : 'step-line-pending'" />
+        <div v-if="idx < 2" class="wz-line" :class="idx < currentStep ? 'wz-line--done' : 'wz-line--pending'" />
       </template>
     </div>
 
     <!-- ==================== Step 0: 选择模板 ==================== -->
-    <div v-show="currentStep === 0" class="step-content">
-      <div class="section-title">第一步：选择模板</div>
-
+    <div v-show="currentStep === 0" class="wz-body">
       <!-- 搜索框 -->
-      <div class="search-row">
-        <el-input
+      <div class="wz-search">
+        <svg class="wz-search-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        <input
           v-model="searchKeyword"
-          placeholder="搜索模板名称或编码..."
-          clearable
-          class="search-input"
-        >
-          <template #prefix>
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" />
-            </svg>
-          </template>
-        </el-input>
+          type="text"
+          class="wz-search-input"
+          placeholder="搜索模板..."
+        />
+        <button v-if="searchKeyword" class="wz-search-clear" @click="searchKeyword = ''">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
       </div>
 
       <!-- 加载中 -->
-      <div v-if="loadingTemplates" class="loading-hint">加载模板中...</div>
+      <div v-if="loadingTemplates" class="wz-empty">加载模板中...</div>
 
       <!-- 空状态 -->
-      <div v-else-if="rootSections.length === 0" class="empty-hint">
-        暂无已发布的模板，请先在「模板管理」中创建并发布模板
+      <div v-else-if="rootSections.length === 0" class="wz-empty">
+        暂无模板，请先在模板管理中创建模板
       </div>
 
-      <!-- 模板卡片网格 -->
-      <div v-else-if="filteredSections.length === 0" class="empty-hint">
+      <div v-else-if="filteredSections.length === 0" class="wz-empty">
         未找到匹配的模板
       </div>
 
-      <div v-else class="template-grid">
+      <!-- 模板列表 -->
+      <div v-else class="tpl-list">
         <div
           v-for="section in filteredSections"
           :key="section.id"
-          class="template-card"
-          :class="{ 'template-card-selected': form.rootSectionId === section.id }"
+          class="tpl-row"
+          :class="{
+            'tpl-row--selected': Number(form.rootSectionId) === Number(section.id),
+            'tpl-row--disabled': !isPublished(section),
+          }"
           @click="selectSection(section)"
         >
-          <!-- 选中角标 -->
-          <div v-if="form.rootSectionId === section.id" class="selected-badge">
-            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
-              <polyline points="20 6 9 17 4 12" />
-            </svg>
+          <div class="tpl-main">
+            <div class="tpl-name-line">
+              <span class="tpl-name">{{ section.sectionName }}</span>
+              <span class="tpl-version">v{{ section.latestVersion }}</span>
+              <span
+                v-if="isPublished(section)"
+                class="tpl-status tpl-status--published"
+              >已发布</span>
+              <span v-else class="tpl-status tpl-status--draft">未发布</span>
+            </div>
+            <div v-if="section.description" class="tpl-desc">{{ section.description }}</div>
+            <div v-if="!isPublished(section)" class="tpl-hint">需要先发布才能选择</div>
           </div>
-
-          <!-- 模板图标 -->
-          <div class="card-icon">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
-              <polyline points="14 2 14 8 20 8"/>
-              <line x1="16" y1="13" x2="8" y2="13"/>
-              <line x1="16" y1="17" x2="8" y2="17"/>
-              <polyline points="10 9 9 9 8 9"/>
-            </svg>
-          </div>
-
-          <div class="card-name">{{ section.sectionName }}</div>
-          <div class="card-code">{{ section.sectionCode }}</div>
-
-          <div v-if="section.description" class="card-desc">{{ section.description }}</div>
-
-          <div class="card-meta">
-            <span class="meta-version">v{{ section.latestVersion }}</span>
-            <span class="meta-status">已发布</span>
-          </div>
-
-          <div class="card-select-btn" :class="{ 'card-select-btn-active': form.rootSectionId === section.id }">
-            {{ form.rootSectionId === section.id ? '已选择 ✓' : '选择' }}
+          <div class="tpl-radio">
+            <div
+              v-if="isPublished(section)"
+              class="tpl-radio-dot"
+              :class="{ 'tpl-radio-dot--on': Number(form.rootSectionId) === Number(section.id) }"
+            />
+            <span v-else class="tpl-radio-disabled">--</span>
           </div>
         </div>
       </div>
     </div>
 
     <!-- ==================== Step 1: 配置范围 ==================== -->
-    <div v-show="currentStep === 1" class="step-content">
-      <div class="section-title">第二步：配置范围</div>
-
-      <!-- 项目名称 -->
-      <div class="field-group">
-        <label class="field-label">项目名称 <span class="required">*</span></label>
-        <el-input
-          v-model="form.projectName"
-          placeholder="输入项目名称"
-          maxlength="100"
-          show-word-limit
-        />
-      </div>
-
-      <!-- 检查范围 -->
-      <div class="card-block">
-        <div class="block-title">检查范围</div>
-        <div class="two-col">
-          <div class="field-group">
-            <label class="field-label">范围类型</label>
-            <el-select v-model="form.scopeType" class="full-width">
-              <el-option
-                v-for="(cfg, key) in ScopeTypeConfig"
-                :key="key"
-                :label="cfg.label"
-                :value="key"
-              />
-            </el-select>
-          </div>
-          <div class="field-group">
-            <label class="field-label">范围配置</label>
-            <el-select
-              v-model="form.scopeIds"
-              multiple
-              collapse-tags
-              collapse-tags-tooltip
-              filterable
-              clearable
-              placeholder="选择组织单元（可选）"
-              class="full-width"
-              :loading="loadingOrg"
-            >
-              <el-option
-                v-for="unit in orgUnits"
-                :key="unit.id"
-                :label="unit.unitName"
-                :value="unit.id"
-              />
-            </el-select>
-          </div>
+    <div v-show="currentStep === 1" class="wz-body">
+      <div class="wz-form">
+        <!-- 项目名称 -->
+        <div class="wz-field">
+          <label class="wz-label">项目名称 <span class="wz-req">*</span></label>
+          <input
+            v-model="form.projectName"
+            type="text"
+            class="wz-input"
+            placeholder="输入项目名称"
+            maxlength="100"
+          />
         </div>
-      </div>
 
-      <!-- 起止日期 -->
-      <div class="card-block">
-        <div class="block-title">起止日期</div>
-        <div class="two-col">
-          <div class="field-group">
-            <label class="field-label">开始日期 <span class="required">*</span></label>
-            <el-date-picker
+        <!-- 范围类型 + 日期 并排 -->
+        <div class="wz-row2">
+          <div class="wz-field">
+            <label class="wz-label">范围类型</label>
+            <select v-model="form.scopeType" class="wz-select">
+              <option v-for="(cfg, key) in ScopeTypeConfig" :key="key" :value="key">
+                {{ cfg.label }}
+              </option>
+            </select>
+          </div>
+          <div class="wz-field">
+            <label class="wz-label">开始日期 <span class="wz-req">*</span></label>
+            <input
               v-model="form.startDate"
               type="date"
-              value-format="YYYY-MM-DD"
-              placeholder="选择开始日期"
-              class="full-width"
+              class="wz-input"
             />
           </div>
-          <div class="field-group">
-            <label class="field-label">结束日期</label>
-            <el-date-picker
+        </div>
+
+        <div class="wz-row2">
+          <div class="wz-field">
+            <label class="wz-label">结束日期</label>
+            <input
               v-model="form.endDate"
               type="date"
-              value-format="YYYY-MM-DD"
-              placeholder="选择结束日期（可选）"
-              class="full-width"
+              class="wz-input"
             />
+          </div>
+          <div class="wz-field" />
+        </div>
+
+        <!-- 范围配置：组织单元多选 -->
+        <div class="wz-field">
+          <label class="wz-label">范围配置 <span class="wz-opt">可选</span></label>
+          <div v-if="loadingOrg" class="wz-chip-area">加载中...</div>
+          <div v-else-if="orgUnits.length === 0" class="wz-chip-area wz-chip-area--empty">暂无组织单元</div>
+          <div v-else class="wz-chip-area">
+            <button
+              v-for="unit in orgUnits"
+              :key="unit.id"
+              class="wz-chip"
+              :class="{ 'wz-chip--on': form.scopeIds.includes(Number(unit.id)) }"
+              @click="toggleOrgUnit(Number(unit.id))"
+              type="button"
+            >
+              {{ unit.unitName }}
+            </button>
           </div>
         </div>
       </div>
     </div>
 
     <!-- ==================== Step 2: 确认创建 ==================== -->
-    <div v-show="currentStep === 2" class="step-content">
-      <div class="section-title">第三步：确认创建</div>
+    <div v-show="currentStep === 2" class="wz-body">
+      <table class="wz-summary">
+        <tbody>
+          <tr>
+            <td class="wz-sk">项目名称</td>
+            <td class="wz-sv">{{ form.projectName || '--' }}</td>
+          </tr>
+          <tr>
+            <td class="wz-sk">模板</td>
+            <td class="wz-sv">
+              {{ selectedSection?.sectionName || '--' }}
+              <span v-if="selectedSection" class="wz-sv-tag">v{{ selectedSection.latestVersion }}</span>
+            </td>
+          </tr>
+          <tr>
+            <td class="wz-sk">检查范围</td>
+            <td class="wz-sv">{{ selectedScopeLabel }} / {{ selectedOrgNames }}</td>
+          </tr>
+          <tr>
+            <td class="wz-sk">日期</td>
+            <td class="wz-sv">{{ dateRange }}</td>
+          </tr>
+        </tbody>
+      </table>
 
-      <div class="summary-card">
-        <div class="summary-header">项目摘要</div>
-        <div class="summary-body">
-          <div class="summary-row">
-            <span class="summary-key">项目名称</span>
-            <span class="summary-val">{{ form.projectName || '—' }}</span>
-          </div>
-          <div class="summary-row">
-            <span class="summary-key">模板</span>
-            <span class="summary-val">
-              {{ selectedSection?.sectionName || '—' }}
-              <span v-if="selectedSection" class="summary-tag">v{{ selectedSection.latestVersion }}</span>
-            </span>
-          </div>
-          <div class="summary-row">
-            <span class="summary-key">检查范围</span>
-            <span class="summary-val">
-              {{ selectedScopeLabel }}
-              <span class="summary-dot">·</span>
-              {{ selectedOrgNames }}
-            </span>
-          </div>
-          <div class="summary-row">
-            <span class="summary-key">日期</span>
-            <span class="summary-val">{{ dateRange }}</span>
-          </div>
-        </div>
-      </div>
-
-      <div class="tip-block">
+      <div class="wz-tip">
         创建后可在详情页继续配置检查计划、评级维度和检查员，发布后将自动生成检查任务。
       </div>
     </div>
 
     <!-- ==================== 底部操作栏 ==================== -->
-    <div class="bottom-bar">
-      <button v-if="currentStep > 0" class="btn-secondary" @click="prevStep">
-        ← 上一步
+    <div class="wz-footer">
+      <button v-if="currentStep > 0" class="wz-btn wz-btn--outline" @click="prevStep">
+        上一步
       </button>
       <span v-else />
 
-      <div class="btn-group-right">
-        <button
-          v-if="currentStep < 2"
-          class="btn-primary"
-          :disabled="currentStep === 0 ? !canProceedStep0 : !canProceedStep1"
-          @click="nextStep"
-        >
-          下一步 →
-        </button>
-        <button
-          v-if="currentStep === 2"
-          class="btn-primary btn-create"
-          :disabled="submitting"
-          @click="handleCreate"
-        >
-          <span v-if="submitting">创建中...</span>
-          <span v-else>创建项目</span>
-        </button>
-      </div>
+      <button
+        v-if="currentStep < 2"
+        class="wz-btn wz-btn--primary"
+        :disabled="currentStep === 0 ? !canProceedStep0 : !canProceedStep1"
+        @click="nextStep"
+      >
+        下一步
+      </button>
+      <button
+        v-if="currentStep === 2"
+        class="wz-btn wz-btn--create"
+        :disabled="submitting"
+        @click="handleCreate"
+      >
+        {{ submitting ? '创建中...' : '创建项目' }}
+      </button>
     </div>
   </div>
 </template>
 
 <style scoped>
-/* ===== 页面容器 ===== */
-.wizard-page {
-  max-width: 860px;
-  margin: 0 auto;
-  padding: 20px;
-  font-family: inherit;
+/* ===== Variables ===== */
+:root {
+  --wz-primary: #1a6dff;
+  --wz-primary-light: #e8f0ff;
+  --wz-success: #10b981;
+  --wz-success-light: #ecfdf5;
+  --wz-bg: #f7f8fa;
+  --wz-card: #fff;
+  --wz-border: #e5e7eb;
+  --wz-text: #1d2129;
+  --wz-text2: #4b5563;
+  --wz-text3: #9ca3af;
 }
 
-/* ===== 顶部标题 ===== */
-.wizard-header {
+/* ===== Page ===== */
+.wz-page {
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 24px 20px 32px;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  color: #1d2129;
+}
+
+/* ===== Header ===== */
+.wz-header {
   display: flex;
   align-items: center;
   gap: 10px;
-  margin-bottom: 24px;
+  margin-bottom: 28px;
 }
 
-.back-btn {
+.wz-back {
   display: flex;
   align-items: center;
   justify-content: center;
@@ -445,38 +433,42 @@ onMounted(() => {
   height: 32px;
   border: none;
   background: none;
-  color: #606266;
+  color: #6b7280;
   cursor: pointer;
   border-radius: 6px;
-  transition: background 0.15s;
+  transition: all 0.15s;
 }
 
-.back-btn:hover {
-  background: #f5f7fa;
+.wz-back:hover {
+  background: #f0f2f5;
   color: #1a6dff;
 }
 
-.wizard-title {
-  font-size: 16px;
-  font-weight: 600;
+.wz-title {
+  font-size: 18px;
+  font-weight: 700;
   color: #1d2129;
+  margin: 0;
 }
 
-/* ===== 步骤条 ===== */
-.step-bar {
+/* ===== Step Indicator ===== */
+.wz-steps {
   display: flex;
   align-items: center;
-  margin-bottom: 28px;
+  justify-content: center;
+  margin-bottom: 32px;
+  padding: 0 60px;
 }
 
-.step-node {
-  display: flex;
-  align-items: center;
-  gap: 8px;
+.wz-step {
   flex-shrink: 0;
 }
 
-.step-dot {
+.wz-step.is-done {
+  cursor: pointer;
+}
+
+.wz-dot {
   width: 28px;
   height: 28px;
   border-radius: 50%;
@@ -488,358 +480,428 @@ onMounted(() => {
   transition: all 0.2s;
 }
 
-.step-done .step-dot {
+.is-done .wz-dot {
   background: #1a6dff;
   color: #fff;
 }
 
-.step-active .step-dot {
+.is-active .wz-dot {
   background: #1a6dff;
   color: #fff;
-  width: 32px;
-  height: 32px;
-  box-shadow: 0 0 0 4px rgba(26, 109, 255, 0.15);
+  box-shadow: 0 0 0 4px rgba(26, 109, 255, 0.12);
 }
 
-.step-pending .step-dot {
-  background: #f0f2f5;
+.is-pending .wz-dot {
+  background: #e5e7eb;
   color: #9ca3af;
 }
 
-.step-label {
-  font-size: 12px;
-  font-weight: 600;
-  white-space: nowrap;
-}
-
-.step-done .step-label,
-.step-active .step-label {
-  color: #1a6dff;
-}
-
-.step-pending .step-label {
-  color: #9ca3af;
-}
-
-.step-line {
-  flex: 1;
+.wz-line {
+  width: 80px;
   height: 2px;
-  margin: 0 8px;
+  margin: 0 6px;
   border-radius: 1px;
-  transition: background 0.2s;
 }
 
-.step-line-done {
+.wz-line--done {
   background: #1a6dff;
 }
 
-.step-line-pending {
+.wz-line--pending {
   background: #e5e7eb;
 }
 
-/* ===== 步骤内容区 ===== */
-.step-content {
-  min-height: 320px;
+/* ===== Body (each step) ===== */
+.wz-body {
+  min-height: 300px;
   margin-bottom: 16px;
 }
 
-.section-title {
-  font-size: 13px;
-  font-weight: 600;
-  color: #374151;
-  padding-bottom: 12px;
-  border-bottom: 2px solid #1a6dff;
-  margin-bottom: 20px;
-  display: inline-block;
-}
-
-/* ===== 搜索行 ===== */
-.search-row {
-  margin-bottom: 16px;
-}
-
-.search-input {
-  width: 280px;
-}
-
-/* ===== 加载/空状态 ===== */
-.loading-hint,
-.empty-hint {
-  text-align: center;
-  color: #9ca3af;
-  font-size: 12px;
-  padding: 48px 0;
-  border: 1px dashed #e5e7eb;
-  border-radius: 10px;
-}
-
-/* ===== 模板网格 ===== */
-.template-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-  gap: 12px;
-}
-
-.template-card {
+/* ===== Search ===== */
+.wz-search {
   position: relative;
-  border: 1.5px solid #e5e7eb;
-  border-radius: 10px;
-  padding: 14px 14px 12px;
-  cursor: pointer;
-  transition: all 0.18s;
-  background: #fff;
-  overflow: hidden;
+  margin-bottom: 16px;
 }
 
-.template-card:hover {
-  border-color: #93b8ff;
-  box-shadow: 0 2px 8px rgba(26, 109, 255, 0.08);
-}
-
-.template-card-selected {
-  border-color: #1a6dff;
-  background: #f0f5ff;
-  box-shadow: 0 2px 10px rgba(26, 109, 255, 0.12);
-}
-
-/* 选中角标 */
-.selected-badge {
+.wz-search-icon {
   position: absolute;
-  top: 0;
-  right: 0;
-  width: 24px;
-  height: 24px;
-  background: #1a6dff;
-  border-radius: 0 10px 0 10px;
+  left: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #9ca3af;
+  pointer-events: none;
+}
+
+.wz-search-input {
+  width: 100%;
+  height: 38px;
+  padding: 0 36px 0 38px;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  font-size: 13px;
+  color: #1d2129;
+  background: #fff;
+  outline: none;
+  transition: border-color 0.15s;
+  box-sizing: border-box;
+}
+
+.wz-search-input::placeholder {
+  color: #b0b8c4;
+}
+
+.wz-search-input:focus {
+  border-color: #1a6dff;
+}
+
+.wz-search-clear {
+  position: absolute;
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
   display: flex;
   align-items: center;
   justify-content: center;
-  color: #fff;
+  width: 22px;
+  height: 22px;
+  border: none;
+  background: none;
+  color: #9ca3af;
+  cursor: pointer;
+  border-radius: 4px;
 }
 
-/* 卡片图标 */
-.card-icon {
-  color: #1a6dff;
-  margin-bottom: 8px;
-  opacity: 0.8;
+.wz-search-clear:hover {
+  color: #4b5563;
 }
 
-.template-card-selected .card-icon {
-  opacity: 1;
+/* ===== Empty / Loading ===== */
+.wz-empty {
+  text-align: center;
+  color: #9ca3af;
+  font-size: 13px;
+  padding: 56px 0;
+  border: 1px dashed #e5e7eb;
+  border-radius: 8px;
+  background: #fafbfc;
 }
 
-.card-name {
+/* ===== Template List ===== */
+.tpl-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  overflow: hidden;
+  background: #e5e7eb;
+}
+
+.tpl-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  background: #fff;
+  cursor: pointer;
+  transition: background 0.12s;
+  gap: 16px;
+}
+
+.tpl-row:hover:not(.tpl-row--disabled) {
+  background: #f7f9fc;
+}
+
+.tpl-row--selected {
+  background: #eff5ff !important;
+}
+
+.tpl-row--disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.tpl-main {
+  flex: 1;
+  min-width: 0;
+}
+
+.tpl-name-line {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.tpl-name {
   font-size: 13px;
   font-weight: 600;
   color: #1d2129;
-  margin-bottom: 2px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.card-code {
-  font-size: 11px;
-  color: #9ca3af;
-  margin-bottom: 6px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.card-desc {
-  font-size: 11px;
-  color: #6b7280;
-  line-height: 1.5;
-  margin-bottom: 8px;
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
-}
-
-.card-meta {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  margin-bottom: 10px;
-}
-
-.meta-version {
+.tpl-version {
   font-size: 11px;
   color: #6b7280;
   background: #f3f4f6;
   padding: 1px 6px;
   border-radius: 4px;
+  flex-shrink: 0;
 }
 
-.meta-status {
+.tpl-status {
   font-size: 11px;
-  color: #10b981;
-  background: #ecfdf5;
   padding: 1px 6px;
   border-radius: 4px;
+  flex-shrink: 0;
 }
 
-.card-select-btn {
+.tpl-status--published {
+  color: #10b981;
+  background: #ecfdf5;
+}
+
+.tpl-status--draft {
+  color: #9ca3af;
+  background: #f3f4f6;
+}
+
+.tpl-desc {
   font-size: 12px;
-  text-align: center;
-  padding: 5px 0;
-  border-radius: 6px;
-  border: 1px solid #e5e7eb;
   color: #6b7280;
-  background: #f9fafb;
+  margin-top: 4px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tpl-hint {
+  font-size: 11px;
+  color: #b0b8c4;
+  margin-top: 3px;
+}
+
+.tpl-radio {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+}
+
+.tpl-radio-dot {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  border: 2px solid #d1d5db;
   transition: all 0.15s;
+  position: relative;
 }
 
-.template-card:hover .card-select-btn {
+.tpl-radio-dot--on {
   border-color: #1a6dff;
-  color: #1a6dff;
-  background: #f0f5ff;
 }
 
-.card-select-btn-active {
-  border-color: #1a6dff !important;
-  color: #1a6dff !important;
-  background: #e8f0ff !important;
-  font-weight: 600;
+.tpl-radio-dot--on::after {
+  content: '';
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #1a6dff;
 }
 
-/* ===== 表单字段 ===== */
-.field-group {
+.tpl-radio-disabled {
+  font-size: 11px;
+  color: #d1d5db;
+}
+
+/* ===== Form (Step 1) ===== */
+.wz-form {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 20px;
 }
 
-.field-label {
-  font-size: 12px;
-  font-weight: 600;
-  color: #4b5563;
-}
-
-.required {
-  color: #ef4444;
-}
-
-.full-width {
-  width: 100%;
-}
-
-/* ===== 卡片块 ===== */
-.card-block {
-  border: 1px solid #e5e7eb;
-  border-radius: 10px;
-  padding: 16px;
-  margin-bottom: 16px;
-  background: #fff;
-}
-
-.block-title {
-  font-size: 13px;
-  font-weight: 600;
-  color: #374151;
-  margin-bottom: 14px;
-}
-
-.two-col {
+.wz-row2 {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 16px;
 }
 
-/* ===== 摘要卡片 ===== */
-.summary-card {
+.wz-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.wz-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: #4b5563;
+}
+
+.wz-req {
+  color: #ef4444;
+}
+
+.wz-opt {
+  font-weight: 400;
+  color: #9ca3af;
+  font-size: 11px;
+  margin-left: 4px;
+}
+
+.wz-input,
+.wz-select {
+  height: 36px;
+  padding: 0 10px;
   border: 1px solid #e5e7eb;
-  border-radius: 10px;
+  border-radius: 6px;
+  font-size: 13px;
+  color: #1d2129;
+  background: #fff;
+  outline: none;
+  transition: border-color 0.15s;
+  box-sizing: border-box;
+}
+
+.wz-input:focus,
+.wz-select:focus {
+  border-color: #1a6dff;
+}
+
+.wz-input::placeholder {
+  color: #b0b8c4;
+}
+
+.wz-select {
+  appearance: auto;
+  cursor: pointer;
+}
+
+/* ===== Chip area (org unit selector) ===== */
+.wz-chip-area {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 10px;
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+  background: #fafbfc;
+  min-height: 42px;
+  align-items: center;
+  font-size: 12px;
+  color: #9ca3af;
+}
+
+.wz-chip-area--empty {
+  justify-content: center;
+}
+
+.wz-chip {
+  padding: 4px 12px;
+  border-radius: 14px;
+  border: 1px solid #e5e7eb;
+  background: #fff;
+  font-size: 12px;
+  color: #4b5563;
+  cursor: pointer;
+  transition: all 0.15s;
+  outline: none;
+}
+
+.wz-chip:hover {
+  border-color: #93b8ff;
+  color: #1a6dff;
+}
+
+.wz-chip--on {
+  background: #1a6dff;
+  border-color: #1a6dff;
+  color: #fff;
+}
+
+.wz-chip--on:hover {
+  background: #1558d8;
+  border-color: #1558d8;
+  color: #fff;
+}
+
+/* ===== Summary (Step 2) ===== */
+.wz-summary {
+  width: 100%;
+  border-collapse: collapse;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
   overflow: hidden;
   margin-bottom: 16px;
 }
 
-.summary-header {
-  background: #f9fafb;
-  padding: 10px 16px;
-  font-size: 13px;
-  font-weight: 600;
-  color: #4b5563;
-  border-bottom: 1px solid #e5e7eb;
-}
-
-.summary-body {
-  background: #fff;
-}
-
-.summary-row {
-  display: flex;
-  align-items: baseline;
-  padding: 10px 16px;
+.wz-summary tr {
   border-bottom: 1px solid #f3f4f6;
-  gap: 12px;
 }
 
-.summary-row:last-child {
+.wz-summary tr:last-child {
   border-bottom: none;
 }
 
-.summary-key {
+.wz-sk {
+  width: 90px;
+  padding: 11px 16px;
   font-size: 12px;
   color: #6b7280;
-  width: 72px;
-  flex-shrink: 0;
+  background: #f9fafb;
+  text-align: left;
+  vertical-align: top;
+  font-weight: 500;
 }
 
-.summary-val {
-  font-size: 12px;
+.wz-sv {
+  padding: 11px 16px;
+  font-size: 13px;
   color: #1d2129;
   font-weight: 500;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  flex-wrap: wrap;
 }
 
-.summary-tag {
+.wz-sv-tag {
+  display: inline-block;
   font-size: 11px;
   color: #1a6dff;
   background: #eff6ff;
   padding: 1px 6px;
   border-radius: 4px;
+  margin-left: 6px;
+  font-weight: 500;
 }
 
-.summary-dot {
-  color: #9ca3af;
-}
-
-/* ===== 提示块 ===== */
-.tip-block {
+.wz-tip {
   font-size: 12px;
   color: #4b5563;
   background: #eff6ff;
   border: 1px solid #bfdbfe;
-  border-radius: 8px;
+  border-radius: 6px;
   padding: 10px 14px;
   line-height: 1.6;
 }
 
-/* ===== 底部操作栏 ===== */
-.bottom-bar {
+/* ===== Footer ===== */
+.wz-footer {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding-top: 16px;
+  padding-top: 20px;
   border-top: 1px solid #e5e7eb;
-  margin-top: 4px;
+  margin-top: 8px;
 }
 
-.btn-group-right {
-  display: flex;
-  gap: 8px;
-}
-
-.btn-secondary,
-.btn-primary {
-  height: 34px;
-  padding: 0 18px;
+.wz-btn {
+  height: 36px;
+  padding: 0 20px;
   border-radius: 6px;
   font-size: 13px;
   font-weight: 500;
@@ -847,63 +909,60 @@ onMounted(() => {
   border: none;
   outline: none;
   transition: all 0.15s;
-  display: flex;
-  align-items: center;
-  gap: 4px;
 }
 
-.btn-secondary {
+.wz-btn--outline {
+  background: #fff;
+  color: #4b5563;
+  border: 1px solid #d1d5db;
+}
+
+.wz-btn--outline:hover {
   background: #f5f7fa;
-  color: #374151;
-  border: 1px solid #e5e7eb;
+  border-color: #b0b8c4;
 }
 
-.btn-secondary:hover {
-  background: #e9ecf2;
-}
-
-.btn-primary {
+.wz-btn--primary {
   background: #1a6dff;
   color: #fff;
-  border: 1px solid #1a6dff;
 }
 
-.btn-primary:hover:not(:disabled) {
+.wz-btn--primary:hover:not(:disabled) {
   background: #1558d8;
 }
 
-.btn-primary:disabled {
-  opacity: 0.45;
+.wz-btn--primary:disabled {
+  opacity: 0.4;
   cursor: not-allowed;
 }
 
-.btn-create {
+.wz-btn--create {
   background: #10b981;
-  border-color: #10b981;
-  padding: 0 22px;
+  color: #fff;
+  padding: 0 24px;
 }
 
-.btn-create:hover:not(:disabled) {
+.wz-btn--create:hover:not(:disabled) {
   background: #059669;
-  border-color: #059669;
 }
 
-/* ===== 响应式 ===== */
-@media (max-width: 600px) {
-  .template-grid {
-    grid-template-columns: 1fr 1fr;
-  }
+.wz-btn--create:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
 
-  .two-col {
+/* ===== Responsive ===== */
+@media (max-width: 600px) {
+  .wz-row2 {
     grid-template-columns: 1fr;
   }
 
-  .step-label {
-    display: none;
+  .wz-steps {
+    padding: 0 20px;
   }
 
-  .search-input {
-    width: 100%;
+  .wz-line {
+    width: 48px;
   }
 }
 </style>
