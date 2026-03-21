@@ -254,7 +254,7 @@ async function saveConfig() {
   if (!project.value) return; saving.value = true
   try {
     if (isDraft.value) {
-      await inspProjectApi.update(projectId, { projectName: cf.value.projectName, rootSectionId: project.value.rootSectionId, scopeType: cf.value.scopeType as ScopeType, scopeConfig: cf.value.scopeIds.length > 0 ? JSON.stringify(cf.value.scopeIds.map(Number)) : undefined, startDate: cf.value.startDate || undefined, endDate: cf.value.endDate || undefined, assignmentMode: cf.value.assignmentMode as AssignmentMode, reviewRequired: cf.value.reviewRequired, autoPublish: cf.value.autoPublish })
+      await inspProjectApi.update(projectId, { projectName: cf.value.projectName, rootSectionId: project.value.rootSectionId, scopeType: cf.value.scopeType as ScopeType, scopeConfig: cf.value.scopeIds.length > 0 ? JSON.stringify(cf.value.scopeIds) : undefined, startDate: cf.value.startDate || undefined, endDate: cf.value.endDate || undefined, assignmentMode: cf.value.assignmentMode as AssignmentMode, reviewRequired: cf.value.reviewRequired, autoPublish: cf.value.autoPublish })
     } else {
       await updateOperationalConfig(projectId, { projectName: cf.value.projectName, assignmentMode: cf.value.assignmentMode, reviewRequired: cf.value.reviewRequired, autoPublish: cf.value.autoPublish })
     }
@@ -582,9 +582,9 @@ onMounted(async () => {
               placeholder="输入项目名称"
             />
           </div>
-          <div class="cfg-field cfg-field--mt">
-            <label class="cfg-label">根分区</label>
-            <div class="cfg-readonly-text">{{ rootSectionName || '-' }}</div>
+          <div v-if="rootSectionName" class="cfg-field cfg-field--mt">
+            <label class="cfg-label">检查模板</label>
+            <div class="cfg-readonly-text">{{ rootSectionName }}</div>
           </div>
         </div>
 

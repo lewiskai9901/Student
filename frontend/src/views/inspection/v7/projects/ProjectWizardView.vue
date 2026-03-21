@@ -26,7 +26,7 @@ const form = reactive({
   projectName: '',
   rootSectionId: undefined as number | undefined,
   scopeType: 'ORG' as ScopeType,
-  scopeIds: [] as number[],
+  scopeIds: [] as string[],
   startDate: '',
   endDate: '',
 })
@@ -54,7 +54,7 @@ const selectedScopeLabel = computed(() => {
 const selectedOrgNames = computed(() => {
   if (form.scopeIds.length === 0) return '未指定'
   const names = form.scopeIds
-    .map(id => orgUnits.value.find(u => Number(u.id) === Number(id))?.unitName)
+    .map(id => orgUnits.value.find(u => String(u.id) === String(id))?.unitName)
     .filter(Boolean)
   if (names.length <= 2) return names.join(', ')
   return names.slice(0, 2).join(', ') + ` 等${names.length}个`
@@ -102,7 +102,7 @@ function selectSection(section: TemplateSection) {
 }
 
 // ========== Step 1: 多选 orgUnit toggle ==========
-function toggleOrgUnit(id: number) {
+function toggleOrgUnit(id: string) {
   const idx = form.scopeIds.indexOf(id)
   if (idx >= 0) {
     form.scopeIds.splice(idx, 1)
@@ -140,7 +140,7 @@ async function handleCreate() {
         scopeType: form.scopeType,
       }
       if (form.endDate) updateData.endDate = form.endDate
-      if (form.scopeIds.length > 0) updateData.scopeConfig = JSON.stringify(form.scopeIds)
+      if (form.scopeIds.length > 0) updateData.scopeConfig = JSON.stringify(form.scopeIds.map(String))
       await updateProject(project.id, updateData)
     }
 
@@ -316,13 +316,13 @@ onMounted(() => {
               v-for="unit in orgUnits"
               :key="unit.id"
               class="wz-org-row"
-              :class="{ 'wz-org-row--on': form.scopeIds.includes(Number(unit.id)) }"
+              :class="{ 'wz-org-row--on': form.scopeIds.includes(String(unit.id)) }"
               :style="{ paddingLeft: `${8 + (unit as any).depth * 16}px` }"
-              @click="toggleOrgUnit(Number(unit.id))"
+              @click="toggleOrgUnit(String(unit.id))"
             >
               <span v-if="(unit as any).depth > 0" class="wz-org-indent" />
               <span class="wz-org-name">{{ unit.unitName }}</span>
-              <span v-if="form.scopeIds.includes(Number(unit.id))" class="wz-org-check">✓</span>
+              <span v-if="form.scopeIds.includes(String(unit.id))" class="wz-org-check">✓</span>
             </div>
           </div>
         </div>
