@@ -19,6 +19,8 @@ import GradeBandEditor from '../scoring/components/GradeBandEditor.vue'
 import CalcRuleChain from '../scoring/components/CalcRuleChain.vue'
 import { useInspScoringStore } from '@/stores/insp/inspScoringStore'
 import type { ScoringProfile, CreateGradeBandRequest, UpdateGradeBandRequest, CreateRuleRequest, UpdateRuleRequest } from '@/types/insp/scoring'
+import { listPolicies } from '@/api/insp/scoringPolicy'
+import type { ScoringPolicy } from '@/types/insp/evaluation'
 
 const route = useRoute()
 const router = useRouter()
@@ -309,6 +311,35 @@ async function handleApplyGradePreset(presetKey: string) {
   // Simple preset application - will be handled by GradeBandEditor internally
 }
 
+// ===== Scoring Policy selector =====
+const allScoringPolicies = ref<ScoringPolicy[]>([])
+const selectedPolicyId = ref<number | null>(null)
+
+async function loadScoringPolicies() {
+  try {
+    allScoringPolicies.value = await listPolicies()
+  } catch { /* ignore */ }
+}
+
+async function handlePolicySelect(policyId: number | null) {
+  selectedPolicyId.value = policyId
+  if (scoringProfile.value && policyId !== null) {
+    try {
+      await scoringStore.updateProfile(scoringProfile.value.id, {
+        maxScore: scoringProfile.value.maxScore,
+        minScore: scoringProfile.value.minScore,
+        precisionDigits: scoringProfile.value.precisionDigits,
+        ...(policyId ? { scoringPolicyId: policyId } : {}),
+      } as any)
+    } catch { /* best-effort */ }
+  }
+}
+
+function goToPolicyDetail(policyId: number) {
+  window.open(`/system/scoring-policies/${policyId}`, '_blank')
+}
+
+
 // ===== Publish =====
 async function handlePublish() {
   if (!rootSection.value || rootSection.value.status !== 'DRAFT') return
@@ -324,7 +355,10 @@ async function loadData() {
   selectedSectionId.value = rootSectionId.value
   loadScoringForSection(rootSectionId.value)
 }
-onMounted(() => { if (!rootSectionId.value) router.replace('/inspection/v7/config'); else loadData() })
+onMounted(() => {
+  loadScoringPolicies()
+  if (!rootSectionId.value) router.replace('/inspection/v7/config'); else loadData()
+})
 
 function getItemTypeLabel(item: TemplateItem) {
   if (item.isScored && item.scoringConfig) { try { const c = JSON.parse(item.scoringConfig); return ScoringModeConfig[c.mode as ScoringMode]?.label || ItemTypeConfig[item.itemType]?.label } catch {} }
@@ -442,10 +476,18 @@ function getItemTypeLabel(item: TemplateItem) {
                         :value="isRootSelected ? rootForm.targetType : sf.targetType"
                         @change="(e: Event) => {
                           const val = (e.target as HTMLSelectElement).value || null;
-                          if (isRootSelected) { rootForm.targetType = val as any; rootInfoDirty = true }
-                          else { sf.targetType = val as any; markDirty() }
-                          loadTypeFilterOptions(val);
-                          if (isRootSelected) rootForm.targetTypeFilter = []; else sf.targetTypeFilter = []
+                          if (isRootSelected) {
+                            rootForm.targetType = val as any; rootInfoDirty = true
+                            if (val && !rootForm.targetSourceMode) rootForm.targetSourceMode = 'INDEPENDENT'
+                            if (!val) rootForm.targetSourceMode = null
+                            rootForm.targetTypeFilter = []
+                          } else {
+                            sf.targetType = val as any; markDirty()
+                            if (val && !sf.targetSourceMode) sf.targetSourceMode = 'INDEPENDENT'
+                            if (!val) sf.targetSourceMode = null
+                            sf.targetTypeFilter = []
+                          }
+                          loadTypeFilterOptions(val)
                         }"
                         :disabled="isReadonly">
                         <option :value="null">不设置</option>
@@ -512,19 +554,33 @@ function getItemTypeLabel(item: TemplateItem) {
                     <DimensionTable
                       :dimensions="scoringStore.dimensions"
                     />
-                    <GradeBandEditor
-                      :grade-bands="scoringStore.gradeBands"
-                      @create="handleCreateGradeBand"
-                      @update="handleUpdateGradeBand"
-                      @delete="handleDeleteGradeBand"
-                      @apply-preset="handleApplyGradePreset"
-                    />
-                    <CalcRuleChain
-                      :rules="scoringStore.rules"
-                      @create="handleCreateRule"
-                      @update="handleUpdateRule"
-                      @delete="handleDeleteRule"
-                    />
+                    <!-- 评分方案选择器（替代内联 GradeBandEditor + CalcRuleChain） -->
+                    <div class="te-policy-selector">
+                      <label class="te-policy-label">评分方案</label>
+                      <div class="te-policy-row">
+                        <select
+                          class="te-policy-select"
+                          :value="selectedPolicyId ?? ''"
+                          :disabled="isReadonly"
+                          @change="(e) => handlePolicySelect(Number((e.target as HTMLSelectElement).value) || null)"
+                        >
+                          <option value="">不绑定方案（使用默认设置）</option>
+                          <option
+                            v-for="p in allScoringPolicies"
+                            :key="p.id"
+                            :value="p.id"
+                          >{{ p.policyName }}{{ p.isSystem ? ' [系统]' : '' }}</option>
+                        </select>
+                        <button
+                          v-if="selectedPolicyId"
+                          class="te-policy-link"
+                          @click="goToPolicyDetail(selectedPolicyId!)"
+                          type="button"
+                          title="在新标签页查看方案详情"
+                        >查看方案 →</button>
+                      </div>
+                      <p class="te-policy-hint">评分方案定义等级区间（A/B/C…）和即时计算规则。在系统管理→评分方案中统一配置。</p>
+                    </div>
                   </template>
                 </div>
               </div>
@@ -648,4 +704,38 @@ function getItemTypeLabel(item: TemplateItem) {
 /* Modal */
 .te-modal-mask { position: fixed; inset: 0; z-index: 50; display: flex; align-items: center; justify-content: center; background: rgba(0,0,0,0.35); }
 .te-modal { background: #fff; border-radius: 12px; padding: 20px; box-shadow: 0 20px 60px rgba(0,0,0,0.15); overflow-y: auto; }
+
+/* Scoring policy selector */
+.te-policy-selector { display: flex; flex-direction: column; gap: 4px; }
+.te-policy-label { font-size: 11px; font-weight: 500; color: #6b7280; }
+.te-policy-row { display: flex; align-items: center; gap: 6px; }
+.te-policy-select {
+  flex: 1;
+  min-width: 0;
+  height: 28px;
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+  padding: 0 8px;
+  font-size: 12px;
+  outline: none;
+  color: #111827;
+  background: #fff;
+  transition: border-color 0.15s;
+  cursor: pointer;
+}
+.te-policy-select:focus { border-color: #93c5fd; box-shadow: 0 0 0 2px rgba(37,99,235,0.06); }
+.te-policy-select:disabled { background: #f9fafb; color: #9ca3af; cursor: default; }
+.te-policy-link {
+  font-size: 11px;
+  color: #2563eb;
+  background: none;
+  border: none;
+  cursor: pointer;
+  white-space: nowrap;
+  padding: 0 4px;
+  transition: opacity 0.12s;
+  flex-shrink: 0;
+}
+.te-policy-link:hover { opacity: 0.7; text-decoration: underline; }
+.te-policy-hint { font-size: 10px; color: #9ca3af; margin: 0; line-height: 1.5; }
 </style>
