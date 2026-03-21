@@ -330,6 +330,7 @@ export interface InspectionPlan {
   id: number
   projectId: number
   planName: string
+  rootSectionId: number | null  // V66: 该计划绑定的模板根分区ID
   sectionIds: string  // JSON
   scheduleMode: 'REGULAR' | 'ON_DEMAND'
   cycleType: string
@@ -346,6 +347,7 @@ export interface InspectionPlan {
 export interface CreatePlanRequest {
   projectId: number
   planName: string
+  rootSectionId?: number | null  // V66: 计划绑定的模板（可选，null 则从项目继承）
   sectionIds: string
   scheduleMode?: string
   cycleType?: string
@@ -357,6 +359,7 @@ export interface CreatePlanRequest {
 
 export interface UpdatePlanRequest {
   planName?: string
+  rootSectionId?: number | null  // V66: 可选，变更计划绑定的模板
   sectionIds?: string
   scheduleMode?: string
   cycleType?: string

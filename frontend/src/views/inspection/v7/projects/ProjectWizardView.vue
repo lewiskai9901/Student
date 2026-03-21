@@ -2,7 +2,7 @@
 import { ref, reactive, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
-import { inspProjectApi, updateProject } from '@/api/insp/project'
+import { inspProjectApi, updateProject, createPlan } from '@/api/insp/project'
 import { inspTemplateApi } from '@/api/insp/template'
 import { getOrgUnits } from '@/api/organization'
 import type { OrgUnit } from '@/types'
@@ -114,14 +114,25 @@ function toggleOrgUnit(id: number) {
 async function handleCreate() {
   submitting.value = true
   try {
-    // 1. 创建项目（只传 projectName, rootSectionId, startDate）
+    // 1. 创建项目（不传 rootSectionId，让模板通过计划关联）
     const project = await inspProjectApi.create({
       projectName: form.projectName,
-      rootSectionId: form.rootSectionId!,
       startDate: form.startDate,
+      // rootSectionId 不传，改为通过第一个计划绑定
     })
 
-    // 2. 如果有额外配置（scopeType/scopeIds/endDate），更新项目
+    // 2. 创建第一个检查计划（绑定选中的模板）
+    if (form.rootSectionId) {
+      await createPlan({
+        projectId: project.id,
+        planName: form.projectName + ' 默认计划',
+        rootSectionId: form.rootSectionId,
+        sectionIds: '[]',
+        scheduleMode: 'ON_DEMAND',
+      })
+    }
+
+    // 3. 如果有额外配置（scopeType/scopeIds/endDate），更新项目
     const hasExtra = form.scopeIds.length > 0 || form.endDate || form.scopeType !== 'ORG'
     if (hasExtra) {
       const updateData: Record<string, any> = {

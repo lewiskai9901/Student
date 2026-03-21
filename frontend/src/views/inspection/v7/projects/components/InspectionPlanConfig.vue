@@ -14,6 +14,9 @@ const props = defineProps<{
 // ========== State ==========
 const loading = ref(false)
 const plans = ref<InspectionPlan[]>([])
+// allTemplates: 所有根分区（模板），用于计划模板选择器
+const allTemplates = ref<TemplateSection[]>([])
+// sections: 当前表单选中的模板下的一级分区
 const sections = ref<TemplateSection[]>([])
 const dialogVisible = ref(false)
 const editingPlan = ref<InspectionPlan | null>(null)
@@ -21,6 +24,7 @@ const saving = ref(false)
 
 const form = ref({
   planName: '',
+  rootSectionId: null as number | null,
   sectionIds: [] as number[],
   scheduleMode: 'REGULAR' as 'REGULAR' | 'ON_DEMAND',
   cycleType: 'DAILY' as string,
@@ -36,6 +40,10 @@ const scheduleModeOptions = [
 ]
 
 // ========== Computed ==========
+const templateOptions = computed(() =>
+  allTemplates.value.map(t => ({ value: t.id, label: t.sectionName }))
+)
+
 const sectionOptions = computed(() =>
   sections.value.map(s => ({
     value: s.id,
@@ -44,15 +52,30 @@ const sectionOptions = computed(() =>
   }))
 )
 
+// 根据 planId 找对应模板名
+function getTemplateName(plan: InspectionPlan): string {
+  if (!plan.rootSectionId) return '（继承项目模板）'
+  const t = allTemplates.value.find(t => t.id === plan.rootSectionId)
+  return t ? t.sectionName : `#${plan.rootSectionId}`
+}
+
+// 所有计划用到的分区（用于 sectionIds 展示）
+const allSectionsMap = computed(() => {
+  const m = new Map<number, string>()
+  for (const s of sections.value) m.set(s.id, s.sectionName)
+  return m
+})
+
 function getSectionNames(sectionIdsJson: string): string {
   try {
     const ids: number[] = JSON.parse(sectionIdsJson)
+    if (ids.length === 0) return '全部分区'
     return ids.map(id => {
-      const s = sections.value.find(sec => sec.id === id)
-      return s ? s.sectionName : `#${id}`
+      const s = allSectionsMap.value.get(id)
+      return s || `#${id}`
     }).join('、')
   } catch {
-    return sectionIdsJson
+    return sectionIdsJson || '全部分区'
   }
 }
 
@@ -90,17 +113,37 @@ async function loadPlans() {
   }
 }
 
+async function loadAllTemplates() {
+  try {
+    const result = await inspTemplateApi.getList({ page: 1, size: 200 })
+    allTemplates.value = result.records
+  } catch { /* ignore */ }
+}
+
+async function loadSectionsForTemplate(rootSectionId: number | null) {
+  sections.value = []
+  if (!rootSectionId) return
+  try {
+    const all = await inspTemplateApi.getSections(rootSectionId)
+    sections.value = all.filter(s => s.parentSectionId === rootSectionId)
+  } catch { /* ignore */ }
+}
+
 async function loadSections() {
   try {
     // Load from project's root section - we need the project first
     const { getProject } = await import('@/api/insp/project')
     const project = await getProject(props.projectId)
     if (project.rootSectionId) {
-      const all = await inspTemplateApi.getSections(project.rootSectionId)
-      // Only first-level children
-      sections.value = all.filter(s => s.parentSectionId === project.rootSectionId)
+      await loadSectionsForTemplate(project.rootSectionId)
     }
   } catch { /* ignore */ }
+}
+
+// 当模板选择变更时，重新加载一级分区
+async function onTemplateChange(val: number | null) {
+  form.value.sectionIds = []
+  await loadSectionsForTemplate(val)
 }
 
 // ========== CRUD ==========
@@ -108,6 +151,7 @@ function openAddDialog() {
   editingPlan.value = null
   form.value = {
     planName: '',
+    rootSectionId: null,
     sectionIds: [],
     scheduleMode: 'REGULAR',
     cycleType: 'DAILY',
@@ -116,6 +160,7 @@ function openAddDialog() {
     timeSlots: '',
     skipHolidays: false,
   }
+  sections.value = []
   dialogVisible.value = true
 }
 
@@ -125,6 +170,7 @@ function openEditDialog(plan: InspectionPlan) {
   try { sectionIds = JSON.parse(plan.sectionIds) } catch {}
   form.value = {
     planName: plan.planName,
+    rootSectionId: plan.rootSectionId ?? null,
     sectionIds,
     scheduleMode: plan.scheduleMode,
     cycleType: plan.cycleType,
@@ -133,6 +179,8 @@ function openEditDialog(plan: InspectionPlan) {
     timeSlots: plan.timeSlots || '',
     skipHolidays: plan.skipHolidays,
   }
+  // 加载该计划对应模板的分区
+  loadSectionsForTemplate(plan.rootSectionId)
   dialogVisible.value = true
 }
 
@@ -145,6 +193,7 @@ async function handleSave() {
   try {
     const data = {
       planName: form.value.planName,
+      rootSectionId: form.value.rootSectionId ?? undefined,
       sectionIds: JSON.stringify(form.value.sectionIds),
       scheduleMode: form.value.scheduleMode,
       cycleType: form.value.cycleType,
@@ -204,6 +253,7 @@ async function handleTrigger(plan: InspectionPlan) {
 
 onMounted(() => {
   loadPlans()
+  loadAllTemplates()
   loadSections()
 })
 </script>
@@ -250,7 +300,9 @@ onMounted(() => {
               </div>
               <div class="flex items-center gap-1">
                 <Clock class="w-3 h-3" />
-                <span>关联分区: {{ getSectionNames(plan.sectionIds) || '全部' }}</span>
+                <span>模板: {{ getTemplateName(plan) }}</span>
+                <span class="mx-1 text-gray-300">·</span>
+                <span>分区: {{ getSectionNames(plan.sectionIds) }}</span>
               </div>
             </div>
           </div>
@@ -289,6 +341,27 @@ onMounted(() => {
         <div>
           <label class="block text-sm font-medium text-gray-700 mb-1">计划名称 <span class="text-red-500">*</span></label>
           <el-input v-model="form.planName" placeholder="例如：每日卫生检查" maxlength="100" />
+        </div>
+
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">
+            使用模板
+            <span class="text-gray-400 font-normal text-xs ml-1">（不选则继承项目默认模板）</span>
+          </label>
+          <el-select
+            v-model="form.rootSectionId"
+            class="w-full"
+            placeholder="不选则继承项目模板"
+            clearable
+            @change="onTemplateChange"
+          >
+            <el-option
+              v-for="opt in templateOptions"
+              :key="opt.value"
+              :label="opt.label"
+              :value="opt.value"
+            />
+          </el-select>
         </div>
 
         <div>

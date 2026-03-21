@@ -14,6 +14,9 @@ import java.time.LocalDateTime;
  * 不再有 parentProjectId/targetType/cycleType/cycleConfig（排期移到 InspectionPlan）
  * templateId 改为 rootSectionId（关联根分区而非模板）
  *
+ * V66 多模板支持：rootSectionId 改为可空，保留作向后兼容。
+ * 新项目通过 InspectionPlan.rootSectionId 关联模板（每个计划绑定一个模板）。
+ *
  * 状态机: DRAFT → PUBLISHED → PAUSED → COMPLETED → ARCHIVED
  */
 public class InspProject extends AggregateRoot<Long> {
@@ -22,7 +25,11 @@ public class InspProject extends AggregateRoot<Long> {
     private Long tenantId;
     private String projectCode;
     private String projectName;
-    private Long rootSectionId;          // 关联的根分区ID（替代 templateId）
+    /**
+     * 向后兼容保留。V66 起新项目可为 null，模板通过 InspectionPlan.rootSectionId 关联。
+     * 旧项目此字段仍有值，可作为"主模板"快速访问。
+     */
+    private Long rootSectionId;          // 关联的根分区ID（替代 templateId），可空
     private Long templateVersionId;      // 锁定的版本快照
     private Long scoringProfileId;
     private ScopeType scopeType;
@@ -88,12 +95,15 @@ public class InspProject extends AggregateRoot<Long> {
         this.updatedAt = builder.updatedAt;
     }
 
+    /**
+     * 创建新项目。rootSectionId 可为 null（多模板项目通过 InspectionPlan 关联模板）。
+     */
     public static InspProject create(String projectCode, String projectName,
                                      Long rootSectionId, LocalDate startDate, Long createdBy) {
         return builder()
                 .projectCode(projectCode)
                 .projectName(projectName)
-                .rootSectionId(rootSectionId)
+                .rootSectionId(rootSectionId)   // nullable: null 表示通过计划关联模板
                 .startDate(startDate)
                 .status(ProjectStatus.DRAFT)
                 .createdBy(createdBy)

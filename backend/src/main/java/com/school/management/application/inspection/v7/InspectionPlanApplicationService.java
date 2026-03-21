@@ -32,20 +32,22 @@ public class InspectionPlanApplicationService {
     /**
      * 创建检查计划
      *
-     * @param projectId    关联项目ID
-     * @param planName     计划名称
-     * @param sectionIds   关联的一级分区ID列表（JSON）
-     * @param scheduleMode 调度模式: REGULAR / ON_DEMAND
-     * @param cycleType    周期类型: DAILY / WEEKLY / MONTHLY
-     * @param frequency    每周期执行次数
-     * @param scheduleDays 调度日（JSON: [1,3,5] 表示周几）
-     * @param timeSlots    时间段（JSON: ["07:00-08:00"]）
-     * @param skipHolidays 是否跳过节假日
-     * @param createdBy    创建人ID
+     * @param projectId     关联项目ID
+     * @param planName      计划名称
+     * @param rootSectionId 该计划使用的模板根分区ID（可选；若传 null 则从项目继承）
+     * @param sectionIds    关联的一级分区ID列表（JSON，空则覆盖全部）
+     * @param scheduleMode  调度模式: REGULAR / ON_DEMAND
+     * @param cycleType     周期类型: DAILY / WEEKLY / MONTHLY
+     * @param frequency     每周期执行次数
+     * @param scheduleDays  调度日（JSON: [1,3,5] 表示周几）
+     * @param timeSlots     时间段（JSON: ["07:00-08:00"]）
+     * @param skipHolidays  是否跳过节假日
+     * @param createdBy     创建人ID
      * @return 创建的检查计划
      */
     @Transactional
-    public InspectionPlan createPlan(Long projectId, String planName, String sectionIds,
+    public InspectionPlan createPlan(Long projectId, String planName, Long rootSectionId,
+                                     String sectionIds,
                                      String scheduleMode, String cycleType, Integer frequency,
                                      String scheduleDays, String timeSlots, Boolean skipHolidays,
                                      Long createdBy) {
@@ -54,9 +56,13 @@ public class InspectionPlanApplicationService {
                 .orElseThrow(() -> new IllegalArgumentException("项目不存在: " + projectId));
         validateProjectForPlanModification(project);
 
+        // 若未指定模板，从项目的 rootSectionId 继承
+        Long resolvedRootSectionId = rootSectionId != null ? rootSectionId : project.getRootSectionId();
+
         InspectionPlan plan = InspectionPlan.builder()
                 .projectId(projectId)
                 .planName(planName)
+                .rootSectionId(resolvedRootSectionId)
                 .sectionIds(sectionIds)
                 .scheduleMode(scheduleMode)
                 .cycleType(cycleType)
@@ -68,8 +74,8 @@ public class InspectionPlanApplicationService {
                 .build();
 
         InspectionPlan saved = planRepository.save(plan);
-        log.info("创建检查计划: projectId={}, planName={}, scheduleMode={}",
-                projectId, planName, scheduleMode);
+        log.info("创建检查计划: projectId={}, planName={}, rootSectionId={}, scheduleMode={}",
+                projectId, planName, resolvedRootSectionId, scheduleMode);
         return saved;
     }
 
@@ -77,7 +83,8 @@ public class InspectionPlanApplicationService {
      * 更新检查计划
      */
     @Transactional
-    public InspectionPlan updatePlan(Long planId, String planName, String sectionIds,
+    public InspectionPlan updatePlan(Long planId, String planName, Long rootSectionId,
+                                     String sectionIds,
                                      String scheduleMode, String cycleType, Integer frequency,
                                      String scheduleDays, String timeSlots, Boolean skipHolidays) {
         InspectionPlan plan = planRepository.findById(planId)
@@ -88,7 +95,7 @@ public class InspectionPlanApplicationService {
                 .orElseThrow(() -> new IllegalStateException("检查计划关联的项目不存在: " + plan.getProjectId()));
         validateProjectForPlanModification(project);
 
-        plan.update(planName, sectionIds, scheduleMode, cycleType, frequency,
+        plan.update(planName, rootSectionId, sectionIds, scheduleMode, cycleType, frequency,
                 scheduleDays, timeSlots, skipHolidays, null, null);
 
         InspectionPlan saved = planRepository.save(plan);

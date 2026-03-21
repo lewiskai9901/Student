@@ -49,10 +49,14 @@ public class InspProjectApplicationService {
 
     // ========== Project CRUD ==========
 
+    /**
+     * 创建检查项目。rootSectionId 可为 null（多模板项目通过 InspectionPlan.rootSectionId 关联模板）。
+     */
     @Transactional
     public InspProject createProject(String projectName, Long rootSectionId,
                                      LocalDate startDate, Long createdBy) {
         String projectCode = generateProjectCode();
+        // rootSectionId 可空：null 表示项目使用多模板，模板通过计划关联
         InspProject project = InspProject.create(projectCode, projectName, rootSectionId, startDate, createdBy);
         return projectRepository.save(project);
     }

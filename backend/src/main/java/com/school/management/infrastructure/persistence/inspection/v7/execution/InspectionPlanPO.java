@@ -15,6 +15,7 @@ public class InspectionPlanPO {
     private Long tenantId;
     private Long projectId;
     private String planName;
+    private Long rootSectionId;    // V66: 该计划使用的模板（根分区ID）
     private String sectionIds;
     private String scheduleMode;
     private String cycleType;

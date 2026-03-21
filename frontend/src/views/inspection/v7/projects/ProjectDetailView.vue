@@ -192,6 +192,9 @@ async function loadProject() {
     if (project.value.createdBy) { try { const u = await getUser(project.value.createdBy); creatorName.value = u.realName || u.username } catch {} }
     if (project.value.rootSectionId) {
       try { const section = await getRootSection(project.value.rootSectionId); rootSectionName.value = section.sectionName } catch {}
+    } else {
+      // 多模板项目：模板通过计划关联，header 不显示具体模板名
+      rootSectionName.value = ''
     }
     await loadScopeNames()
     allTasks.value = []; allSubmissions.value = []

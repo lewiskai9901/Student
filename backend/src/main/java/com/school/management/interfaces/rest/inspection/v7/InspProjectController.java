@@ -219,7 +219,7 @@ public class InspProjectController {
     @lombok.Data
     public static class CreateProjectRequest {
         private String projectName;
-        private Long rootSectionId;
+        private Long rootSectionId;   // 可选：null 表示通过计划关联模板（多模板项目）
         private LocalDate startDate;
     }
 

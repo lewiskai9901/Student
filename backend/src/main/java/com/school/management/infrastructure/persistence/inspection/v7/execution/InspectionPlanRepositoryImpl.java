@@ -60,6 +60,7 @@ public class InspectionPlanRepositoryImpl implements InspectionPlanRepository {
         po.setTenantId(d.getTenantId() != null ? d.getTenantId() : 0L);
         po.setProjectId(d.getProjectId());
         po.setPlanName(d.getPlanName());
+        po.setRootSectionId(d.getRootSectionId());
         po.setSectionIds(d.getSectionIds());
         po.setScheduleMode(d.getScheduleMode());
         po.setCycleType(d.getCycleType());
@@ -81,6 +82,7 @@ public class InspectionPlanRepositoryImpl implements InspectionPlanRepository {
                 .tenantId(po.getTenantId())
                 .projectId(po.getProjectId())
                 .planName(po.getPlanName())
+                .rootSectionId(po.getRootSectionId())
                 .sectionIds(po.getSectionIds())
                 .scheduleMode(po.getScheduleMode())
                 .cycleType(po.getCycleType())
