@@ -584,9 +584,10 @@ function getItemTypeLabel(item: TemplateItem) {
                     <div class="te-prop-field te-target-select">
                       <label>检查对象</label>
                       <select
-                        :value="isRootSelected ? rootForm.targetType : sf.targetType"
+                        :value="isRootSelected ? rootForm.targetType : (sf.targetType || 'INHERIT')"
                         @change="(e: Event) => {
-                          const val = (e.target as HTMLSelectElement).value || null;
+                          const raw = (e.target as HTMLSelectElement).value;
+                          const val = raw === 'INHERIT' ? null : (raw || null);
                           if (isRootSelected) {
                             rootForm.targetType = val as any; rootInfoDirty = true
                             rootForm.targetTypeFilter = []
@@ -604,9 +605,9 @@ function getItemTypeLabel(item: TemplateItem) {
                           <option value="PLACE">场所</option>
                           <option value="USER">人员</option>
                         </template>
-                        <!-- 子分区：可不选 -->
+                        <!-- 子分区：默认对父目标直接打分 -->
                         <template v-else>
-                          <option :value="null">对父目标直接打分</option>
+                          <option value="INHERIT">对父目标直接打分</option>
                           <option value="ORG">查找关联组织</option>
                           <option value="PLACE">查找关联场所</option>
                           <option value="USER">查找关联人员</option>
