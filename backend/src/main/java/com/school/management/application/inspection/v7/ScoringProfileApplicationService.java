@@ -216,11 +216,6 @@ public class ScoringProfileApplicationService {
         return dimensionRepository.findByScoringProfileId(scoringProfileId);
     }
 
-    /** @deprecated Use syncAllDimensions instead */
-    @Transactional
-    public List<ScoreDimension> syncDimensionsFromModuleRefs(Long scoringProfileId) {
-        return syncAllDimensions(scoringProfileId);
-    }
 
     // ===== GradeBand =====
 

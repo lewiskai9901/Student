@@ -38,22 +38,6 @@ public class TemplateSectionController {
                 request.conditionLogic(), request.sortOrder(), userId));
     }
 
-    @PostMapping("/ref")
-    @CasbinAccess(resource = "insp:template", action = "edit")
-    public Result<TemplateSection> createRefSection(@RequestBody CreateRefSectionRequest request) {
-        Long userId = SecurityUtils.getCurrentUserId();
-        return Result.success(sectionService.createRefSection(
-                request.parentSectionId(), request.refSectionId(),
-                request.weight(), request.sortOrder(), userId));
-    }
-
-    @PostMapping("/{id}/clone-ref")
-    @CasbinAccess(resource = "insp:template", action = "edit")
-    public Result<TemplateSection> cloneRefSection(@PathVariable Long id) {
-        Long userId = SecurityUtils.getCurrentUserId();
-        return Result.success(sectionService.cloneRefSection(id, userId));
-    }
-
     @GetMapping("/children/{parentId}")
     @CasbinAccess(resource = "insp:template", action = "view")
     public Result<List<TemplateSection>> listChildren(@PathVariable Long parentId) {
@@ -111,13 +95,6 @@ public class TemplateSectionController {
             Integer weight,
             Boolean isRepeatable,
             String conditionLogic,
-            Integer sortOrder
-    ) {}
-
-    public record CreateRefSectionRequest(
-            Long parentSectionId,
-            Long refSectionId,
-            Integer weight,
             Integer sortOrder
     ) {}
 

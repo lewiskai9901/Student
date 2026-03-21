@@ -10,8 +10,6 @@ import type { ItemType, ScoringMode } from '@/types/insp/enums'
 import {
   getSections,
   createSection,
-  createRefSection,
-  cloneRefSection,
   updateSection,
   deleteSection,
   reorderSections,
@@ -102,25 +100,6 @@ export function useTemplateEditor(rootSectionId: Ref<number>) {
     itemsBySection.value.set(section.id, [])
     isDirty.value = true
     return section
-  }
-
-  async function addRefSection(refSectionId: number, parentSectionId?: number | null): Promise<TemplateSection> {
-    const section = await createRefSection({
-      rootSectionId: rootSectionId.value,
-      refSectionId,
-      parentSectionId: parentSectionId ?? null,
-      sortOrder: sections.value.filter(s =>
-        parentSectionId ? s.parentSectionId === parentSectionId : !s.parentSectionId
-      ).length,
-    })
-    sections.value.push(section)
-    return section
-  }
-
-  async function cloneSection(sectionId: number): Promise<TemplateSection> {
-    const cloned = await cloneRefSection(sectionId)
-    await loadSections()
-    return cloned
   }
 
   async function updateScoringConfigFn(sectionId: number, config: string): Promise<void> {
@@ -281,8 +260,6 @@ export function useTemplateEditor(rootSectionId: Ref<number>) {
     // Section CRUD
     loadSections,
     addSection,
-    addRefSection,
-    cloneSection,
     editSection,
     removeSection,
     sortSections,

@@ -109,8 +109,8 @@ public class ScoringProfileController {
 
     @PostMapping("/{id}/dimensions/sync-modules")
     @CasbinAccess(resource = "insp:scoring-profile", action = "edit")
-    public Result<List<ScoreDimension>> syncDimensionsFromModules(@PathVariable Long id) {
-        return Result.success(scoringService.syncDimensionsFromModuleRefs(id));
+    public Result<List<ScoreDimension>> syncDimensions(@PathVariable Long id) {
+        return Result.success(scoringService.syncAllDimensions(id));
     }
 
     @PutMapping("/{id}/dimensions/{dimensionId}")

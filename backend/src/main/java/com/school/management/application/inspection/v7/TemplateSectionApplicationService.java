@@ -10,10 +10,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.LocalDateTime;
-import java.util.*;
-import java.util.concurrent.ThreadLocalRandom;
-import java.util.stream.Collectors;
+import java.util.List;
+import java.util.Objects;
 
 /**
  * V62 统一分区模型 — 子分区应用服务
@@ -72,164 +70,6 @@ public class TemplateSectionApplicationService {
         TemplateSection saved = sectionRepository.save(child);
         log.info("创建子分区: id={}, parentId={}, name={}", saved.getId(), parentSectionId, sectionName);
         return saved;
-    }
-
-    /**
-     * 创建引用分区 — 引用另一个分区（只读快捷方式）
-     *
-     * @param parentSectionId 父分区ID
-     * @param refSectionId    被引用的分区ID
-     * @param weight          权重
-     * @param sortOrder       排序
-     * @param createdBy       创建人
-     */
-    @Transactional
-    public TemplateSection createRefSection(Long parentSectionId, Long refSectionId,
-                                             Integer weight, Integer sortOrder,
-                                             Long createdBy) {
-        TemplateSection parent = sectionRepository.findById(parentSectionId)
-                .orElseThrow(() -> new IllegalArgumentException("父分区不存在: " + parentSectionId));
-
-        TemplateSection refTarget = sectionRepository.findById(refSectionId)
-                .orElseThrow(() -> new IllegalArgumentException("引用目标分区不存在: " + refSectionId));
-
-        // 循环引用检测：从 refSectionId 出发 BFS，如果能回到 parentSectionId 的根，说明循环
-        if (hasCircularReference(parentSectionId, refSectionId)) {
-            throw new IllegalArgumentException("检测到循环引用");
-        }
-
-        String sectionCode = "REF-" + System.currentTimeMillis() + "-"
-                + ThreadLocalRandom.current().nextInt(1000, 9999);
-
-        TemplateSection refSection = TemplateSection.createRef(
-                parentSectionId, sectionCode, refTarget.getSectionName(), refSectionId, createdBy);
-
-        if (weight != null) {
-            refSection.update(refSection.getSectionName(), weight, false, null, createdBy);
-        }
-        if (sortOrder != null) {
-            refSection.reorder(sortOrder);
-        }
-
-        TemplateSection saved = sectionRepository.save(refSection);
-        log.info("创建引用分区: id={}, parentId={}, refSectionId={}", saved.getId(), parentSectionId, refSectionId);
-        return saved;
-    }
-
-    /**
-     * 循环引用检测：BFS 从 refSectionId 往上走（通过子孙的 refSectionId），
-     * 检查是否能到达 parentSectionId 所在根分区。
-     */
-    private boolean hasCircularReference(Long parentSectionId, Long refSectionId) {
-        // 找到 parentSectionId 所在的根分区
-        Long rootId = findRootId(parentSectionId);
-        if (rootId == null) return false;
-
-        // BFS: 从 refSectionId 出发，检查它的子孙中是否有引用指向 rootId 或其子孙
-        Set<Long> visited = new HashSet<>();
-        Queue<Long> queue = new LinkedList<>();
-        queue.add(refSectionId);
-
-        while (!queue.isEmpty()) {
-            Long currentId = queue.poll();
-            if (currentId.equals(rootId)) return true;
-            if (!visited.add(currentId)) continue;
-
-            // 检查 currentId 的子分区中是否有引用
-            List<TemplateSection> children = sectionRepository.findByParentSectionId(currentId);
-            for (TemplateSection child : children) {
-                queue.add(child.getId());
-                if (child.getRefSectionId() != null) {
-                    queue.add(child.getRefSectionId());
-                }
-            }
-
-            // 如果 currentId 本身也是根分区，检查它的后代
-            TemplateSection current = sectionRepository.findById(currentId).orElse(null);
-            if (current != null && current.getRefSectionId() != null) {
-                queue.add(current.getRefSectionId());
-            }
-        }
-
-        return false;
-    }
-
-    /**
-     * 向上追溯找到根分区ID
-     */
-    private Long findRootId(Long sectionId) {
-        Set<Long> visited = new HashSet<>();
-        Long currentId = sectionId;
-        while (currentId != null) {
-            if (!visited.add(currentId)) return null; // 防止无限循环
-            TemplateSection section = sectionRepository.findById(currentId).orElse(null);
-            if (section == null) return null;
-            if (section.isRoot()) return section.getId();
-            currentId = section.getParentSectionId();
-        }
-        return null;
-    }
-
-    /**
-     * 将引用分区转为本地副本（深度复制被引用的分区树）
-     */
-    @Transactional
-    public TemplateSection cloneRefSection(Long sectionId, Long operatorId) {
-        TemplateSection refSection = sectionRepository.findById(sectionId)
-                .orElseThrow(() -> new IllegalArgumentException("分区不存在: " + sectionId));
-        if (refSection.getRefSectionId() == null) {
-            throw new IllegalArgumentException("非引用分区不需要克隆");
-        }
-
-        Long refTargetId = refSection.getRefSectionId();
-        TemplateSection refTarget = sectionRepository.findById(refTargetId)
-                .orElseThrow(() -> new IllegalArgumentException("引用目标分区不存在: " + refTargetId));
-
-        // 将当前引用分区转为本地分区（清除 refSectionId）
-        TemplateSection cloned = TemplateSection.reconstruct(
-                TemplateSection.builder()
-                        .id(refSection.getId())
-                        .parentSectionId(refSection.getParentSectionId())
-                        .refSectionId(null) // 清除引用
-                        .sectionCode(refSection.getSectionCode())
-                        .sectionName(refSection.getSectionName())
-                        .sortOrder(refSection.getSortOrder())
-                        .weight(refSection.getWeight())
-                        .isRepeatable(refSection.getIsRepeatable())
-                        .conditionLogic(refSection.getConditionLogic())
-                        .scoringConfig(refTarget.getScoringConfig())
-                        .createdBy(refSection.getCreatedBy())
-                        .createdAt(refSection.getCreatedAt())
-                        .updatedBy(operatorId)
-                        .updatedAt(LocalDateTime.now())
-        );
-        sectionRepository.save(cloned);
-
-        // 深度复制被引用分区的子树
-        List<TemplateSection> refDescendants = sectionRepository.findDescendants(refTargetId);
-        List<TemplateSection> refDirectChildren = refDescendants.stream()
-                .filter(s -> refTargetId.equals(s.getParentSectionId()))
-                .sorted(Comparator.comparingInt(TemplateSection::getSortOrder))
-                .collect(Collectors.toList());
-
-        Map<Long, Long> idMap = new HashMap<>();
-        idMap.put(refTargetId, refSection.getId());
-        copySubTree(refDirectChildren, refDescendants, refSection.getId(), idMap, operatorId);
-
-        // 复制被引用分区自身的 items 到当前分区
-        copyItemsForSection(refTargetId, refSection.getId(), operatorId);
-
-        // 复制子孙分区的 items
-        for (TemplateSection desc : refDescendants) {
-            Long newSectionId = idMap.get(desc.getId());
-            if (newSectionId != null) {
-                copyItemsForSection(desc.getId(), newSectionId, operatorId);
-            }
-        }
-
-        log.info("克隆引用分区: sectionId={}, refTargetId={}, copiedSections={}",
-                sectionId, refTargetId, idMap.size());
-        return cloned;
     }
 
     /**
@@ -310,9 +150,6 @@ public class TemplateSectionApplicationService {
     public TemplateSection updateScoringConfig(Long sectionId, String scoringConfig, Long updatedBy) {
         TemplateSection section = sectionRepository.findById(sectionId)
                 .orElseThrow(() -> new IllegalArgumentException("分区不存在: " + sectionId));
-        if (section.isRef()) {
-            throw new IllegalArgumentException("引用分区不可修改评分配置");
-        }
         section.updateScoringConfig(scoringConfig, updatedBy);
         return sectionRepository.save(section);
     }
@@ -341,65 +178,4 @@ public class TemplateSectionApplicationService {
         return sectionRepository.findDescendants(rootSectionId);
     }
 
-    // ========== 私有方法 ==========
-
-    /**
-     * 递归复制子树
-     */
-    private void copySubTree(List<TemplateSection> currentLevel,
-                              List<TemplateSection> allSections,
-                              Long targetParentId,
-                              Map<Long, Long> idMap,
-                              Long operatorId) {
-        for (TemplateSection src : currentLevel) {
-            String code = "S-" + System.currentTimeMillis() + "-"
-                    + ThreadLocalRandom.current().nextInt(1000, 9999);
-            TemplateSection copy = TemplateSection.reconstruct(
-                    TemplateSection.builder()
-                            .parentSectionId(targetParentId)
-                            .sectionCode(code)
-                            .sectionName(src.getSectionName())
-                            .targetType(src.getTargetType())
-                            .sortOrder(src.getSortOrder())
-                            .weight(src.getWeight())
-                            .isRepeatable(src.getIsRepeatable())
-                            .conditionLogic(src.getConditionLogic())
-                            .scoringConfig(src.getScoringConfig())
-                            .createdBy(operatorId)
-            );
-            copy = sectionRepository.save(copy);
-            idMap.put(src.getId(), copy.getId());
-
-            // 递归处理子分区
-            List<TemplateSection> children = allSections.stream()
-                    .filter(s -> src.getId().equals(s.getParentSectionId()))
-                    .sorted(Comparator.comparingInt(TemplateSection::getSortOrder))
-                    .collect(Collectors.toList());
-            if (!children.isEmpty()) {
-                copySubTree(children, allSections, copy.getId(), idMap, operatorId);
-            }
-        }
-    }
-
-    /**
-     * 复制某分区下的所有检查项到新分区
-     */
-    private void copyItemsForSection(Long sourceSectionId, Long targetSectionId, Long operatorId) {
-        List<TemplateItem> srcItems = itemRepository.findBySectionId(sourceSectionId);
-        for (TemplateItem srcItem : srcItems) {
-            String itemCode = "I-" + System.currentTimeMillis() + "-"
-                    + ThreadLocalRandom.current().nextInt(1000, 9999);
-            TemplateItem newItem = TemplateItem.create(
-                    targetSectionId, itemCode, srcItem.getItemName(),
-                    srcItem.getItemType(), operatorId);
-            newItem.update(
-                    srcItem.getItemName(), srcItem.getDescription(), srcItem.getItemType(),
-                    srcItem.getConfig(), srcItem.getValidationRules(), srcItem.getResponseSetId(),
-                    srcItem.getScoringConfig(), srcItem.getDimensionId(), srcItem.getHelpContent(),
-                    srcItem.getIsRequired(), srcItem.getIsScored(), srcItem.getRequireEvidence(),
-                    srcItem.getItemWeight(), srcItem.getConditionLogic(), operatorId);
-            newItem.reorder(srcItem.getSortOrder());
-            itemRepository.save(newItem);
-        }
-    }
 }

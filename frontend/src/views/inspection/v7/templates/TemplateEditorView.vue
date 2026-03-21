@@ -179,18 +179,6 @@ async function handleRemoveSection(id: number) {
   catch (e: any) { if (e !== 'cancel') ElMessage.error(e.message || '删除失败') }
 }
 
-// ===== Ref sections =====
-const showRefPicker = ref(false)
-const refPickerSections = ref<TemplateSection[]>([])
-async function handleAddRef() {
-  if (isReadonly.value) return
-  try { const r = await inspTemplateApi.getList({ page: 1, size: 100, status: 'PUBLISHED' }); refPickerSections.value = r.records.filter((t: TemplateSection) => t.id !== rootSectionId.value); showRefPicker.value = true } catch {}
-}
-async function handlePickRef(sec: TemplateSection) {
-  try { await editor.addRefSection(sec.id, selectedSectionId.value); showRefPicker.value = false; ElMessage.success(`已引用「${sec.sectionName}」`) }
-  catch (e: any) { ElMessage.error(e.message || '添加失败') }
-}
-
 // ===== Item CRUD =====
 function selectSection(id: number) {
   selectedSectionId.value = Number(id); selectedItem.value = null
@@ -526,7 +514,6 @@ function getItemTypeLabel(item: TemplateItem) {
               @select-section="selectSection"
               @select-item="selectItem"
               @add-child="handleAddSection"
-              @add-ref="handleAddRef"
               @add-item="openAddItem"
               @delete-section="handleRemoveSection"
               @delete-item="handleDeleteItem"
@@ -547,7 +534,7 @@ function getItemTypeLabel(item: TemplateItem) {
             </template>
 
             <!-- ======= Section properties (root + child unified) ======= -->
-            <template v-else-if="(isRootSelected && rootSection) || (selectedSection && !selectedSection.refSectionId)">
+            <template v-else-if="(isRootSelected && rootSection) || selectedSection">
               <div class="te-sec-head">
                 <span class="te-sec-head-title">{{ isRootSelected ? '根分区属性' : '分区属性' }}</span>
                 <button v-if="isRootSelected ? rootInfoDirty : sfDirty"
@@ -763,17 +750,6 @@ function getItemTypeLabel(item: TemplateItem) {
               </div>
             </template>
 
-            <!-- Ref section -->
-            <template v-else-if="selectedSection?.refSectionId">
-              <div class="te-sec-head"><span class="te-sec-head-title">引用分区</span></div>
-              <div class="te-sec-scroll">
-                <div class="te-ref-info">
-                  <p>此分区引用自其他根分区，内容只读。</p>
-                  <div class="te-prop-field"><label>名称</label><input :value="selectedSection.sectionName" disabled /></div>
-                </div>
-              </div>
-            </template>
-
             <div v-else class="te-props-empty">选择左侧分区或字段</div>
           </main>
         </template>
@@ -791,21 +767,6 @@ function getItemTypeLabel(item: TemplateItem) {
       </div>
     </Teleport>
 
-    <!-- Ref picker modal -->
-    <Teleport to="body">
-      <div v-if="showRefPicker" class="te-modal-mask" @click.self="showRefPicker = false">
-        <div class="te-modal w-[440px] max-h-[60vh] flex flex-col">
-          <div class="flex items-center justify-between px-4 py-3 border-b"><h3 class="text-sm font-semibold">选择引用</h3><button class="text-gray-400 text-lg" @click="showRefPicker = false">&times;</button></div>
-          <div v-if="!refPickerSections.length" class="py-10 text-center text-sm text-gray-400">无可用分区</div>
-          <div v-else class="overflow-y-auto p-2">
-            <div v-for="s in refPickerSections" :key="s.id" class="px-3 py-2 rounded-lg cursor-pointer hover:bg-blue-50" @click="handlePickRef(s)">
-              <div class="text-sm font-medium">{{ s.sectionName }}</div>
-              <div class="text-xs text-gray-400">{{ s.sectionCode }}</div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </Teleport>
   </div>
 </template>
 
@@ -913,15 +874,6 @@ function getItemTypeLabel(item: TemplateItem) {
   content: ''; flex: 1; height: 1px; background: #e8ecf0;
 }
 .te-divider-title--sub { font-size: 10px; font-weight: 500; color: #9ca3af; }
-
-/* Ref section info */
-.te-ref-info {
-  padding: 12px;
-  background: #f8f9fb;
-  border-radius: 8px;
-  display: flex; flex-direction: column; gap: 8px;
-}
-.te-ref-info p { font-size: 11px; color: #9ca3af; margin: 0; }
 
 /* Scoring loading */
 .te-scoring-loading { font-size: 11px; color: #9ca3af; padding: 8px 0; text-align: center; }

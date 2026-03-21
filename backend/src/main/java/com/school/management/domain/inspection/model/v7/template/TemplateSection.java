@@ -103,20 +103,6 @@ public class TemplateSection extends AggregateRoot<Long> {
                 .build();
     }
 
-    /**
-     * 创建引用分区（只读快捷方式）
-     */
-    public static TemplateSection createRef(Long parentSectionId, String sectionCode,
-                                             String sectionName, Long refSectionId, Long createdBy) {
-        return builder()
-                .parentSectionId(parentSectionId)
-                .sectionCode(sectionCode)
-                .sectionName(sectionName)
-                .refSectionId(refSectionId)
-                .createdBy(createdBy)
-                .build();
-    }
-
     public static TemplateSection reconstruct(Builder builder) {
         return new TemplateSection(builder);
     }
@@ -213,10 +199,6 @@ public class TemplateSection extends AggregateRoot<Long> {
 
     public boolean isRoot() {
         return templateId == null && parentSectionId == null;
-    }
-
-    public boolean isRef() {
-        return refSectionId != null;
     }
 
     public boolean isFirstLevel() {

@@ -16,7 +16,6 @@ const emit = defineEmits<{
   selectSection: [sectionId: number]
   selectItem: [item: TemplateItem]
   addChild: [parentSectionId: number]
-  addRef: [parentSectionId: number]
   addItem: [sectionId: number]
   deleteSection: [sectionId: number]
   deleteItem: [item: TemplateItem]
@@ -136,7 +135,6 @@ function getItemLabel(item: TemplateItem): string {
           class="st-node"
           :class="{
             selected: selectedId === node.key,
-            ref: !!node.section.refSectionId,
           }"
           :style="{ paddingLeft: `${4 + node.depth * 14}px` }"
           @click="emit('selectSection', Number(node.section!.id))"
@@ -148,13 +146,12 @@ function getItemLabel(item: TemplateItem): string {
             <span v-if="isFirstLevel(node.section) && node.section.targetType" class="st-tag st-tag-target">
               {{ TargetTypeConfig[node.section.targetType as TargetType]?.label }}
             </span>
-            <span v-if="node.section.refSectionId" class="st-tag st-tag-ref">引用</span>
           </div>
           <div v-if="!readonly" class="st-node-actions">
-            <button v-if="!node.section.refSectionId && !hasChildren(Number(node.section.id))"
+            <button v-if="!hasChildren(Number(node.section.id))"
               title="添加字段" class="item-btn"
               @click.stop="emit('addItem', Number(node.section!.id))">⊕</button>
-            <button v-if="!node.section.refSectionId"
+            <button
               title="添加子分区"
               @click.stop="emit('addChild', Number(node.section!.id))">+</button>
             <button title="删除" class="danger"
@@ -200,7 +197,6 @@ function getItemLabel(item: TemplateItem): string {
 }
 .st-node:hover { background: #f0f4ff; border-color: #dbeafe; }
 .st-node.selected { background: #eff6ff; border-color: #93c5fd; }
-.st-node.ref { border-left: 2px solid #7c3aed; }
 
 /* Root */
 .st-root-node { padding: 7px 8px; border-bottom: 1px solid #e8ecf0; border-radius: 6px 6px 0 0; margin-bottom: 2px; }
@@ -224,7 +220,6 @@ function getItemLabel(item: TemplateItem): string {
 .st-tag { font-size: 9px; padding: 0px 4px; border-radius: 3px; font-weight: 500; flex-shrink: 0; line-height: 16px; }
 .st-tag-weight { background: #f0f2f5; color: #5a6474; }
 .st-tag-target { background: #e8f0ff; color: #1a6dff; }
-.st-tag-ref { background: #f3e8ff; color: #7c3aed; }
 .st-tag-type { background: #f8f9fb; color: #8c95a3; font-size: 9px; }
 .st-tag-scored { background: #eff6ff; color: #2563eb; font-size: 9px; }
 

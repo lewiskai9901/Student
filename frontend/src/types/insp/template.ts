@@ -121,13 +121,6 @@ export interface UpdateSectionRequest {
   isRepeatable?: boolean
 }
 
-export interface CreateRefSectionRequest {
-  parentSectionId?: number | null
-  refSectionId: number
-  weight?: number
-  sortOrder?: number
-}
-
 // ==================== 评分配置 ====================
 
 export interface ScoringConfig {

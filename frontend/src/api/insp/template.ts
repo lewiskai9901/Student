@@ -17,7 +17,6 @@ import type {
   UpdateSectionRequest,
   CreateItemRequest,
   UpdateItemRequest,
-  CreateRefSectionRequest,
   InspPageResult,
 } from '@/types/insp/template'
 import type { TemplateStatus } from '@/types/insp/enums'
@@ -115,16 +114,6 @@ export function reorderSections(sectionIds: number[]): Promise<void> {
   return http.put(`${SECTION_BASE}/reorder`, sectionIds)
 }
 
-// ==================== 引用分区 ====================
-
-export function createRefSection(data: CreateRefSectionRequest & { rootSectionId: number }): Promise<TemplateSection> {
-  return http.post<TemplateSection>(`${SECTION_BASE}/ref`, data)
-}
-
-export function cloneRefSection(sectionId: number): Promise<TemplateSection> {
-  return http.post<TemplateSection>(`${SECTION_BASE}/${sectionId}/clone`)
-}
-
 export function updateSectionScoringConfig(sectionId: number, scoringConfig: string): Promise<TemplateSection> {
   return http.put<TemplateSection>(`${SECTION_BASE}/${sectionId}/scoring-config`, { scoringConfig })
 }
@@ -175,8 +164,6 @@ export const inspTemplateApi = {
   updateSection,
   deleteSection,
   reorderSections,
-  createRefSection,
-  cloneRefSection,
   updateSectionScoringConfig,
   // 字段
   getItems,
