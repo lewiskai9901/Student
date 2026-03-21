@@ -1215,6 +1215,7 @@ const routes: RouteRecordRaw[] = [
               title: '评分方案',
               icon: 'Award',
               requiresAuth: true,
+              hidden: true,
               order: 13
             }
           },

@@ -19,8 +19,7 @@ import GradeBandEditor from '../scoring/components/GradeBandEditor.vue'
 import CalcRuleChain from '../scoring/components/CalcRuleChain.vue'
 import { useInspScoringStore } from '@/stores/insp/inspScoringStore'
 import type { ScoringProfile, CreateGradeBandRequest, UpdateGradeBandRequest, CreateRuleRequest, UpdateRuleRequest } from '@/types/insp/scoring'
-import { listPolicies } from '@/api/insp/scoringPolicy'
-import type { ScoringPolicy } from '@/types/insp/evaluation'
+// ScoringPolicy type kept for potential future use
 
 const route = useRoute()
 const router = useRouter()
@@ -311,6 +310,9 @@ async function handleApplyGradePreset(presetKey: string) {
   // handled by GradeBandEditor internally
 }
 
+// ===== Grading mode =====
+const gradingMode = ref<'SCORE_RANGE' | 'RANK_TOP' | 'PERCENTILE'>('SCORE_RANGE')
+
 // ===== Inline grade band editing =====
 async function addGradeBand() {
   if (!scoringProfile.value) return
@@ -336,54 +338,39 @@ async function addCalcRule() {
   })
 }
 
-// ===== Load from scoring policy =====
-import { getGradeBands as getPolicyGradeBands } from '@/api/insp/scoringPolicy'
-
-async function loadFromPolicy(policyId: number) {
+// ===== Grade presets =====
+async function applyGradePreset(preset: string) {
   if (!scoringProfile.value) return
-  try {
-    const bands = await getPolicyGradeBands(policyId)
-    // 清除现有等级，导入方案的等级
-    for (const existing of [...scoringStore.gradeBands]) {
-      await scoringStore.deleteGradeBand(scoringProfile.value!.id, existing.id)
-    }
-    for (const band of bands) {
-      await scoringStore.createGradeBand(scoringProfile.value!.id, {
-        gradeCode: band.gradeCode, gradeName: band.gradeName,
-        minScore: band.minPercent, maxScore: band.maxPercent,
-      })
-    }
-    ElMessage.success('已从方案导入等级映射')
-  } catch { ElMessage.error('导入失败') }
-}
-
-// ===== Scoring Policy list (for presets) =====
-const allScoringPolicies = ref<ScoringPolicy[]>([])
-const selectedPolicyId = ref<number | null>(null)
-
-async function loadScoringPolicies() {
-  try {
-    allScoringPolicies.value = await listPolicies()
-  } catch { /* ignore */ }
-}
-
-async function handlePolicySelect(policyId: number | null) {
-  selectedPolicyId.value = policyId
-  if (scoringProfile.value && policyId !== null) {
-    try {
-      await scoringStore.updateProfile(scoringProfile.value.id, {
-        maxScore: scoringProfile.value.maxScore,
-        minScore: scoringProfile.value.minScore,
-        precisionDigits: scoringProfile.value.precisionDigits,
-        ...(policyId ? { scoringPolicyId: policyId } : {}),
-      } as any)
-    } catch { /* best-effort */ }
+  // 清除现有
+  for (const b of [...scoringStore.gradeBands]) {
+    await scoringStore.deleteGradeBand(scoringProfile.value!.id, b.id)
   }
+  const presets: Record<string, Array<{ code: string; name: string; min: number; max: number }>> = {
+    five: [
+      { code: 'A', name: '优秀', min: 90, max: 100 },
+      { code: 'B', name: '良好', min: 80, max: 89.99 },
+      { code: 'C', name: '中等', min: 70, max: 79.99 },
+      { code: 'D', name: '及格', min: 60, max: 69.99 },
+      { code: 'F', name: '不及格', min: 0, max: 59.99 },
+    ],
+    pass: [
+      { code: 'P', name: '通过', min: 60, max: 100 },
+      { code: 'F', name: '不通过', min: 0, max: 59.99 },
+    ],
+    three: [
+      { code: 'A', name: '优秀', min: 85, max: 100 },
+      { code: 'B', name: '合格', min: 60, max: 84.99 },
+      { code: 'C', name: '不合格', min: 0, max: 59.99 },
+    ],
+  }
+  for (const b of (presets[preset] || [])) {
+    await scoringStore.createGradeBand(scoringProfile.value!.id, {
+      gradeCode: b.code, gradeName: b.name, minScore: b.min, maxScore: b.max,
+    })
+  }
+  gradingMode.value = 'SCORE_RANGE'
 }
 
-function goToPolicyDetail(policyId: number) {
-  window.open(`/system/scoring-policies/${policyId}`, '_blank')
-}
 
 
 // ===== Publish =====
@@ -601,30 +588,63 @@ function getItemTypeLabel(item: TemplateItem) {
                     <!-- 子项权重 -->
                     <DimensionTable :dimensions="scoringStore.dimensions" />
 
-                    <!-- 等级映射（内联编辑 + 方案加载） -->
+                    <!-- 等级映射 -->
                     <div class="te-scoring-block">
                       <div class="te-scoring-block-head">
                         <span class="te-scoring-block-title">等级映射</span>
                         <div class="te-scoring-block-actions">
-                          <div class="te-preset-group">
-                            <button v-for="p in allScoringPolicies" :key="p.id"
-                              class="te-preset-pill" @click="loadFromPolicy(p.id)"
-                              :title="p.description || p.policyName">{{ p.policyName }}</button>
-                          </div>
+                          <select v-model="gradingMode" class="te-grading-mode" :disabled="isReadonly">
+                            <option value="SCORE_RANGE">分数区间</option>
+                            <option value="RANK_TOP">排名制</option>
+                            <option value="PERCENTILE">百分比排名</option>
+                          </select>
                           <button v-if="!isReadonly" class="te-add-btn" @click="addGradeBand">+</button>
                         </div>
                       </div>
-                      <div v-if="scoringStore.gradeBands.length === 0" class="te-scoring-empty">暂无等级</div>
+
+                      <!-- 预设快捷 -->
+                      <div v-if="scoringStore.gradeBands.length === 0" class="te-grade-presets">
+                        <span class="te-scoring-empty">暂无等级，快速添加：</span>
+                        <button class="te-preset-pill" @click="applyGradePreset('five')">五级制</button>
+                        <button class="te-preset-pill" @click="applyGradePreset('pass')">通过/不通过</button>
+                        <button class="te-preset-pill" @click="applyGradePreset('three')">三级制</button>
+                      </div>
+
                       <div v-else class="te-grade-list">
                         <div v-for="band in scoringStore.gradeBands" :key="band.id" class="te-grade-row">
                           <input v-model="band.gradeCode" class="te-grade-code" :disabled="isReadonly" placeholder="A"
                             @change="updateGradeBand(band)" />
                           <input v-model="band.gradeName" class="te-grade-name" :disabled="isReadonly" placeholder="优秀"
                             @change="updateGradeBand(band)" />
-                          <span class="te-grade-sep">≥</span>
-                          <input v-model.number="band.minScore" class="te-grade-pct" type="number" :disabled="isReadonly"
-                            @change="updateGradeBand(band)" />
-                          <span class="te-grade-unit">%</span>
+
+                          <!-- 分数区间模式 -->
+                          <template v-if="gradingMode === 'SCORE_RANGE'">
+                            <span class="te-grade-sep">≥</span>
+                            <input v-model.number="band.minScore" class="te-grade-pct" type="number" :disabled="isReadonly"
+                              @change="updateGradeBand(band)" />
+                            <span class="te-grade-unit">%</span>
+                          </template>
+
+                          <!-- 排名制模式 -->
+                          <template v-else-if="gradingMode === 'RANK_TOP'">
+                            <select v-model="band.gradeCode" class="te-grade-rank-type" :disabled="isReadonly"
+                              @change="updateGradeBand(band)" style="display:none">
+                              <!-- gradeCode doubled as rank type identifier -->
+                            </select>
+                            <span class="te-grade-sep">前</span>
+                            <input v-model.number="band.minScore" class="te-grade-pct" type="number" :disabled="isReadonly"
+                              @change="updateGradeBand(band)" />
+                            <span class="te-grade-unit">名</span>
+                          </template>
+
+                          <!-- 百分比排名模式 -->
+                          <template v-else-if="gradingMode === 'PERCENTILE'">
+                            <span class="te-grade-sep">前</span>
+                            <input v-model.number="band.minScore" class="te-grade-pct" type="number" :disabled="isReadonly"
+                              @change="updateGradeBand(band)" />
+                            <span class="te-grade-unit">%</span>
+                          </template>
+
                           <button v-if="!isReadonly" class="te-grade-del" @click="deleteGradeBand(band.id)">×</button>
                         </div>
                       </div>
@@ -775,9 +795,13 @@ function getItemTypeLabel(item: TemplateItem) {
 .te-scoring-block-actions { display: flex; align-items: center; gap: 4px; }
 .te-scoring-empty { font-size: 11px; color: #b8c0cc; padding: 4px 0; }
 
-/* Preset pills (load from policy) */
-.te-preset-group { display: flex; gap: 3px; }
-.te-preset-pill { font-size: 9px; padding: 1px 6px; border-radius: 8px; border: 1px solid #dce1e8; color: #5a6474; background: none; cursor: pointer; transition: all 0.12s; white-space: nowrap; }
+/* Grading mode selector */
+.te-grading-mode { border: 1px solid #e5e7eb; border-radius: 4px; padding: 1px 4px; font-size: 10px; color: #374151; outline: none; background: #fff; cursor: pointer; }
+.te-grading-mode:focus { border-color: #93c5fd; }
+.te-grade-presets { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+
+/* Preset pills */
+.te-preset-pill { font-size: 9px; padding: 2px 8px; border-radius: 8px; border: 1px solid #dce1e8; color: #5a6474; background: none; cursor: pointer; transition: all 0.12s; white-space: nowrap; }
 .te-preset-pill:hover { border-color: #93c5fd; color: #1a6dff; background: #f0f4ff; }
 
 .te-add-btn { width: 20px; height: 20px; border-radius: 4px; border: 1px dashed #d1d5db; background: none; color: #9ca3af; font-size: 14px; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.12s; }
