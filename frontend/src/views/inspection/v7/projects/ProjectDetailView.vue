@@ -48,7 +48,28 @@ const configDirty = ref(false)
 const saving = ref(false)
 
 // 配置表单
-const cf = ref({ scopeType: 'ORG', scopeIds: [] as number[], startDate: '', endDate: '', assignmentMode: 'FREE', reviewRequired: true, autoPublish: false, projectName: '', evaluationMode: 'SINGLE', multiRaterMode: 'AVERAGE', trendEnabled: false, decayEnabled: false, calibrationEnabled: false })
+const cf = ref({ scopeType: 'ORG', scopeIds: [] as string[], startDate: '', endDate: '', assignmentMode: 'FREE', reviewRequired: true, autoPublish: false, projectName: '', evaluationMode: 'SINGLE', multiRaterMode: 'AVERAGE', trendEnabled: false, decayEnabled: false, calibrationEnabled: false })
+
+// 扁平化组织树（带 depth）
+interface FlatOrgUnit { id: string; unitName: string; depth: number }
+const flatOrgUnits = ref<FlatOrgUnit[]>([])
+
+function flattenOrgTree(nodes: OrgUnitTreeNode[], depth = 0): FlatOrgUnit[] {
+  const result: FlatOrgUnit[] = []
+  for (const node of nodes) {
+    result.push({ id: String(node.id), unitName: node.unitName, depth })
+    if (node.children && node.children.length > 0) {
+      result.push(...flattenOrgTree(node.children, depth + 1))
+    }
+  }
+  return result
+}
+
+function toggleScopeId(id: string) {
+  const idx = cf.value.scopeIds.indexOf(id)
+  if (idx >= 0) cf.value.scopeIds.splice(idx, 1)
+  else cf.value.scopeIds.push(id)
+}
 
 // 检查员添加
 const addQuery = ref('')
@@ -209,7 +230,8 @@ async function loadProject() {
 }
 function syncForm() {
   if (!project.value) return; const p = project.value
-  let ids: number[] = []; try { ids = p.scopeConfig ? JSON.parse(p.scopeConfig) : [] } catch {}
+  let rawIds: (number | string)[] = []; try { rawIds = p.scopeConfig ? JSON.parse(p.scopeConfig) : [] } catch {}
+  const ids: string[] = rawIds.map(String)
   cf.value = { scopeType: p.scopeType || 'ORG', scopeIds: ids, startDate: p.startDate || '', endDate: p.endDate || '', assignmentMode: p.assignmentMode || 'FREE', reviewRequired: p.reviewRequired ?? true, autoPublish: p.autoPublish ?? false, projectName: p.projectName, evaluationMode: (p as any).evaluationMode || 'SINGLE', multiRaterMode: (p as any).multiRaterMode || 'AVERAGE', trendEnabled: (p as any).trendEnabled ?? false, decayEnabled: (p as any).decayEnabled ?? false, calibrationEnabled: (p as any).calibrationEnabled ?? false }
 }
 
@@ -222,17 +244,17 @@ watch(cf, () => { if (watchEnabled) configDirty.value = true }, { deep: true })
 async function loadScopeNames() {
   scopeOrgNames.value = []
   if (!project.value?.scopeConfig) return
-  try { const ids: number[] = JSON.parse(project.value.scopeConfig); if (orgTree.value.length === 0) await loadOrgTree(); const m = buildMap(orgTree.value); scopeOrgNames.value = ids.map(id => m.get(id) || `#${id}`) } catch {}
+  try { const rawIds: (number | string)[] = JSON.parse(project.value.scopeConfig); const ids = rawIds.map(String); if (orgTree.value.length === 0) await loadOrgTree(); const m = buildMap(orgTree.value); scopeOrgNames.value = ids.map(id => m.get(id) || `#${id}`) } catch {}
 }
-function buildMap(nodes: OrgUnitTreeNode[]): Map<number, string> { const m = new Map<number, string>(); function w(l: OrgUnitTreeNode[]) { for (const n of l) { m.set(n.id as number, n.unitName); if (n.children) w(n.children) } }; w(nodes); return m }
-async function loadOrgTree() { if (orgTree.value.length > 0) return; loadingOrgTree.value = true; try { orgTree.value = await getOrgUnitTree() } catch {}; loadingOrgTree.value = false }
+function buildMap(nodes: OrgUnitTreeNode[]): Map<string, string> { const m = new Map<string, string>(); function w(l: OrgUnitTreeNode[]) { for (const n of l) { m.set(String(n.id), n.unitName); if (n.children) w(n.children) } }; w(nodes); return m }
+async function loadOrgTree() { if (orgTree.value.length > 0) return; loadingOrgTree.value = true; try { orgTree.value = await getOrgUnitTree(); flatOrgUnits.value = flattenOrgTree(orgTree.value) } catch {}; loadingOrgTree.value = false }
 
 // ========== Save ==========
 async function saveConfig() {
   if (!project.value) return; saving.value = true
   try {
     if (isDraft.value) {
-      await inspProjectApi.update(projectId, { projectName: cf.value.projectName, rootSectionId: project.value.rootSectionId, scopeType: cf.value.scopeType as ScopeType, scopeConfig: cf.value.scopeIds.length > 0 ? JSON.stringify(cf.value.scopeIds) : undefined, startDate: cf.value.startDate || undefined, endDate: cf.value.endDate || undefined, assignmentMode: cf.value.assignmentMode as AssignmentMode, reviewRequired: cf.value.reviewRequired, autoPublish: cf.value.autoPublish })
+      await inspProjectApi.update(projectId, { projectName: cf.value.projectName, rootSectionId: project.value.rootSectionId, scopeType: cf.value.scopeType as ScopeType, scopeConfig: cf.value.scopeIds.length > 0 ? JSON.stringify(cf.value.scopeIds.map(Number)) : undefined, startDate: cf.value.startDate || undefined, endDate: cf.value.endDate || undefined, assignmentMode: cf.value.assignmentMode as AssignmentMode, reviewRequired: cf.value.reviewRequired, autoPublish: cf.value.autoPublish })
     } else {
       await updateOperationalConfig(projectId, { projectName: cf.value.projectName, assignmentMode: cf.value.assignmentMode, reviewRequired: cf.value.reviewRequired, autoPublish: cf.value.autoPublish })
     }
@@ -536,14 +558,14 @@ onMounted(async () => {
       </div>
 
       <!-- ===== 设置 Tab ===== -->
-      <div v-if="activeTab === 'settings'" class="space-y-5">
+      <div v-if="activeTab === 'settings'" class="cfg-section">
 
         <!-- 锁定提示 -->
         <div v-if="!isDraft" class="pdv-lock-notice">
           <Lock class="w-4 h-4 text-amber-500 mt-0.5 flex-shrink-0" />
           <div>
-            <div class="font-medium text-amber-800 text-sm">部分配置已锁定</div>
-            <div class="text-amber-600 text-xs mt-0.5">发布后，检查范围和根分区不可更改。项目名称和运营配置可随时调整。</div>
+            <div class="cfg-lock-title">部分配置已锁定</div>
+            <div class="cfg-lock-desc">发布后，检查范围和根分区不可更改。项目名称和运营配置可随时调整。</div>
           </div>
         </div>
 
@@ -552,11 +574,17 @@ onMounted(async () => {
           <div class="cfg-card-title">基本信息</div>
           <div class="cfg-field">
             <label class="cfg-label">项目名称</label>
-            <el-input v-model="cf.projectName" :disabled="isArchived" placeholder="输入项目名称" />
+            <input
+              v-model="cf.projectName"
+              type="text"
+              class="cfg-input"
+              :disabled="isArchived"
+              placeholder="输入项目名称"
+            />
           </div>
-          <div class="cfg-field mt-3">
+          <div class="cfg-field cfg-field--mt">
             <label class="cfg-label">根分区</label>
-            <div class="text-sm text-gray-700">{{ rootSectionName || '-' }} <span class="text-xs text-gray-400">(ID: {{ project?.rootSectionId }})</span></div>
+            <div class="cfg-readonly-text">{{ rootSectionName || '-' }}</div>
           </div>
         </div>
 
@@ -564,22 +592,36 @@ onMounted(async () => {
         <div class="cfg-card" :class="{ 'cfg-locked': !isDraft }">
           <div class="cfg-card-header">
             <div class="cfg-card-title">检查范围</div>
-            <Lock v-if="!isDraft" class="w-3.5 h-3.5 text-gray-300" />
+            <Lock v-if="!isDraft" class="w-3.5 h-3.5 cfg-lock-icon" />
           </div>
           <div class="cfg-desc">选择哪些组织单元参与本次检查，系统将根据分区的目标类型自动派生具体检查对象。</div>
-          <div class="grid grid-cols-2 gap-4 mt-3">
-            <div class="cfg-field">
-              <label class="cfg-label">范围类型</label>
-              <el-select v-model="cf.scopeType" class="w-full" :disabled="!isDraft">
-                <el-option v-for="(c,k) in ScopeTypeConfig" :key="k" :label="c.label" :value="k" />
-              </el-select>
+          <div class="cfg-field cfg-field--mt">
+            <label class="cfg-label">检查对象 <span v-if="isDraft" class="cfg-req">*</span></label>
+            <div v-if="loadingOrgTree" class="cfg-org-list cfg-org-loading">加载中...</div>
+            <div v-else-if="flatOrgUnits.length === 0" class="cfg-org-list cfg-org-loading">暂无组织单元</div>
+            <div v-else-if="!isDraft" class="cfg-org-readonly">
+              <span v-if="cf.scopeIds.length === 0" class="cfg-readonly-text">未选择</span>
+              <template v-else>
+                <span v-for="id in cf.scopeIds" :key="id" class="cfg-scope-tag">
+                  {{ flatOrgUnits.find(u => u.id === id)?.unitName || id }}
+                </span>
+              </template>
             </div>
-            <div class="cfg-field">
-              <label class="cfg-label">检查对象 <span v-if="isDraft" class="text-red-400">*</span></label>
-              <el-tree-select v-model="cf.scopeIds" :data="orgTree" multiple show-checkbox check-strictly node-key="id" :props="{label:'unitName',children:'children'}" :placeholder="isDraft ? '选择组织单元' : ''" class="w-full" :loading="loadingOrgTree" collapse-tags collapse-tags-tooltip filterable :render-after-expand="false" :disabled="!isDraft" />
+            <div v-else class="cfg-org-list">
+              <div
+                v-for="unit in flatOrgUnits"
+                :key="unit.id"
+                class="cfg-org-row"
+                :class="{ 'cfg-org-row--on': cf.scopeIds.includes(unit.id) }"
+                :style="{ paddingLeft: `${8 + unit.depth * 16}px` }"
+                @click="toggleScopeId(unit.id)"
+              >
+                <span class="cfg-org-name">{{ unit.unitName }}</span>
+                <span v-if="cf.scopeIds.includes(unit.id)" class="cfg-org-check">✓</span>
+              </div>
             </div>
           </div>
-          <div v-if="cf.scopeIds.length > 0 && isDraft" class="text-xs text-gray-400 mt-2">
+          <div v-if="cf.scopeIds.length > 0 && isDraft" class="cfg-hint">
             已选 {{ cf.scopeIds.length }} 个组织单元，发布后将自动匹配下属场所、部门等目标
           </div>
         </div>
@@ -588,17 +630,27 @@ onMounted(async () => {
         <div class="cfg-card" :class="{ 'cfg-locked': !isDraft }">
           <div class="cfg-card-header">
             <div class="cfg-card-title">时间范围</div>
-            <Lock v-if="!isDraft" class="w-3.5 h-3.5 text-gray-300" />
+            <Lock v-if="!isDraft" class="w-3.5 h-3.5 cfg-lock-icon" />
           </div>
           <div class="cfg-desc">设置检查的起止时间。具体调度频率在「检查计划」标签页中配置。</div>
-          <div class="grid grid-cols-2 gap-4 mt-3">
+          <div class="cfg-row2">
             <div class="cfg-field">
-              <label class="cfg-label">开始日期 <span v-if="isDraft" class="text-red-400">*</span></label>
-              <el-date-picker v-model="cf.startDate" type="date" value-format="YYYY-MM-DD" class="!w-full" :disabled="!isDraft" placeholder="选择日期" />
+              <label class="cfg-label">开始日期 <span v-if="isDraft" class="cfg-req">*</span></label>
+              <input
+                v-model="cf.startDate"
+                type="date"
+                class="cfg-input"
+                :disabled="!isDraft"
+              />
             </div>
             <div class="cfg-field">
               <label class="cfg-label">结束日期</label>
-              <el-date-picker v-model="cf.endDate" type="date" value-format="YYYY-MM-DD" class="!w-full" :disabled="!isDraft" placeholder="选择日期" />
+              <input
+                v-model="cf.endDate"
+                type="date"
+                class="cfg-input"
+                :disabled="!isDraft"
+              />
             </div>
           </div>
         </div>
@@ -607,23 +659,27 @@ onMounted(async () => {
         <div class="cfg-card">
           <div class="cfg-card-title">运营配置</div>
           <div class="cfg-desc">以下配置可随时调整，不影响已生成的任务结构。</div>
-          <div class="grid grid-cols-3 gap-5 mt-3">
+          <div class="cfg-row3">
             <div class="cfg-field">
               <label class="cfg-label">任务分配方式</label>
-              <el-select v-model="cf.assignmentMode" class="w-full" :disabled="isArchived">
-                <el-option v-for="(c,k) in AssignmentModeConfig" :key="k" :label="c.label" :value="k" />
-              </el-select>
-              <div class="text-xs text-gray-400 mt-1">{{ { FREE:'任何检查员可自由领取任务', ASSIGNED:'管理员手动指派给特定检查员' }[cf.assignmentMode] || '' }}</div>
+              <select v-model="cf.assignmentMode" class="cfg-select" :disabled="isArchived">
+                <option v-for="(c,k) in AssignmentModeConfig" :key="k" :value="k">{{ c.label }}</option>
+              </select>
+              <div class="cfg-hint">{{ { FREE:'任何检查员可自由领取任务', ASSIGNED:'管理员手动指派给特定检查员' }[cf.assignmentMode] || '' }}</div>
             </div>
             <div class="cfg-field">
               <label class="cfg-label">提交后审核</label>
-              <div class="mt-1"><el-switch v-model="cf.reviewRequired" :disabled="isArchived" /></div>
-              <div class="text-xs text-gray-400 mt-1">{{ cf.reviewRequired ? '检查员提交后需审核员审批' : '提交后直接生效，无需审核' }}</div>
+              <div class="cfg-toggle-row">
+                <el-switch v-model="cf.reviewRequired" :disabled="isArchived" />
+              </div>
+              <div class="cfg-hint">{{ cf.reviewRequired ? '检查员提交后需审核员审批' : '提交后直接生效，无需审核' }}</div>
             </div>
             <div class="cfg-field">
               <label class="cfg-label">自动发布结果</label>
-              <div class="mt-1"><el-switch v-model="cf.autoPublish" :disabled="isArchived" /></div>
-              <div class="text-xs text-gray-400 mt-1">{{ cf.autoPublish ? '审核通过后自动发布分数' : '需手动发布检查结果' }}</div>
+              <div class="cfg-toggle-row">
+                <el-switch v-model="cf.autoPublish" :disabled="isArchived" />
+              </div>
+              <div class="cfg-hint">{{ cf.autoPublish ? '审核通过后自动发布分数' : '需手动发布检查结果' }}</div>
             </div>
           </div>
         </div>
@@ -632,74 +688,74 @@ onMounted(async () => {
         <div class="cfg-card">
           <div class="cfg-card-title">高级评分设置</div>
           <div class="cfg-desc">配置本次检查的评分方式。</div>
-          <div class="grid grid-cols-2 gap-5 mt-3">
+          <div class="cfg-row2">
             <div class="cfg-field">
               <label class="cfg-label">评分模式</label>
-              <el-select v-model="cf.evaluationMode" class="w-full" :disabled="isArchived">
-                <el-option value="SINGLE" label="单人评分" />
-                <el-option value="MULTI" label="多人评分" />
-              </el-select>
-              <div class="text-xs text-gray-400 mt-1">{{ cf.evaluationMode === 'SINGLE' ? '每个目标由一名检查员独立检查' : '每个目标由多名检查员分别检查，结果合并' }}</div>
+              <select v-model="cf.evaluationMode" class="cfg-select" :disabled="isArchived">
+                <option value="SINGLE">单人评分</option>
+                <option value="MULTI">多人评分</option>
+              </select>
+              <div class="cfg-hint">{{ cf.evaluationMode === 'SINGLE' ? '每个目标由一名检查员独立检查' : '每个目标由多名检查员分别检查，结果合并' }}</div>
             </div>
-            <div class="cfg-field" v-if="cf.evaluationMode === 'MULTI'">
+            <div v-if="cf.evaluationMode === 'MULTI'" class="cfg-field">
               <label class="cfg-label">多人合并方式</label>
-              <el-select v-model="cf.multiRaterMode" class="w-full" :disabled="isArchived">
-                <el-option value="AVERAGE" label="取平均" />
-                <el-option value="MEDIAN" label="取中位数" />
-                <el-option value="MAX" label="取最高" />
-                <el-option value="MIN" label="取最低" />
-                <el-option value="CONSENSUS" label="共识模式" />
-              </el-select>
+              <select v-model="cf.multiRaterMode" class="cfg-select" :disabled="isArchived">
+                <option value="AVERAGE">取平均</option>
+                <option value="MEDIAN">取中位数</option>
+                <option value="MAX">取最高</option>
+                <option value="MIN">取最低</option>
+                <option value="CONSENSUS">共识模式</option>
+              </select>
             </div>
           </div>
-          <div class="flex items-center gap-6 mt-4 pt-3 border-t border-gray-100">
-            <label class="flex items-center gap-2 text-sm text-gray-600 cursor-pointer">
+          <div class="cfg-toggle-group">
+            <label class="cfg-toggle-item">
               <el-switch v-model="cf.trendEnabled" :disabled="isArchived" size="small" />
-              <span>趋势因子</span>
-              <span class="text-xs text-gray-400">根据历史趋势自动加减分</span>
+              <span class="cfg-toggle-name">趋势因子</span>
+              <span class="cfg-hint">根据历史趋势自动加减分</span>
             </label>
-            <label class="flex items-center gap-2 text-sm text-gray-600 cursor-pointer">
+            <label class="cfg-toggle-item">
               <el-switch v-model="cf.decayEnabled" :disabled="isArchived" size="small" />
-              <span>分数衰减</span>
-              <span class="text-xs text-gray-400">分数随时间递减</span>
+              <span class="cfg-toggle-name">分数衰减</span>
+              <span class="cfg-hint">分数随时间递减</span>
             </label>
-            <label class="flex items-center gap-2 text-sm text-gray-600 cursor-pointer">
+            <label class="cfg-toggle-item">
               <el-switch v-model="cf.calibrationEnabled" :disabled="isArchived" size="small" />
-              <span>尺度校准</span>
-              <span class="text-xs text-gray-400">校正不同检查员的评分尺度差异</span>
+              <span class="cfg-toggle-name">尺度校准</span>
+              <span class="cfg-hint">校正不同检查员的评分尺度差异</span>
             </label>
           </div>
         </div>
 
         <!-- 保存按钮 -->
-        <div v-if="configDirty && !isArchived" class="flex items-center gap-3 pb-2">
+        <div v-if="configDirty && !isArchived" class="cfg-save-bar">
           <el-button type="primary" :loading="saving" @click="saveConfig" round size="small">
             <Save class="w-3.5 h-3.5 mr-1" />保存配置
           </el-button>
-          <span class="text-xs text-gray-400">有未保存的修改</span>
+          <span class="cfg-hint">有未保存的修改</span>
         </div>
 
         <!-- 检查员管理 -->
         <div class="cfg-card">
-          <div class="cfg-card-header mb-3">
-            <div class="cfg-card-title flex items-center gap-1.5">
-              <Users class="w-4 h-4 text-[#1a6dff]" />检查员管理
-              <span v-if="inspectors.length" class="text-xs font-normal text-gray-400">({{ inspectors.length }} 人)</span>
+          <div class="cfg-card-header cfg-card-header--mb">
+            <div class="cfg-card-title cfg-card-title--with-icon">
+              <Users class="w-4 h-4" style="color:#1a6dff" />检查员管理
+              <span v-if="inspectors.length" class="cfg-count">({{ inspectors.length }} 人)</span>
             </div>
           </div>
 
           <!-- 添加 -->
-          <div class="mb-4 p-3 bg-blue-50/50 border border-blue-100 rounded-xl">
-            <div class="text-xs font-medium text-gray-600 mb-2">添加检查员</div>
-            <div class="flex items-center gap-2">
-              <div class="flex-1">
+          <div class="cfg-add-insp">
+            <div class="cfg-hint cfg-hint--mb">添加检查员</div>
+            <div class="cfg-add-insp-row">
+              <div class="cfg-add-insp-search">
                 <el-select v-model="addQuery" filterable remote reserve-keyword :remote-method="searchUsers" :loading="addLoading" placeholder="输入姓名搜索..." class="w-full" size="default" @change="handleAddInspector" clearable>
                   <el-option v-for="u in addResults" :key="Number(u.id)" :label="(u.realName||u.username) + (u.orgUnitName ? ` (${u.orgUnitName})` : '')" :value="Number(u.id)">
-                    <div class="flex items-center justify-between"><span class="font-medium">{{ u.realName || u.username }}</span><span class="text-xs text-gray-400">{{ u.orgUnitName || u.username }}</span></div>
+                    <div class="cfg-user-option"><span class="cfg-user-name">{{ u.realName || u.username }}</span><span class="cfg-hint">{{ u.orgUnitName || u.username }}</span></div>
                   </el-option>
                 </el-select>
               </div>
-              <div class="w-28">
+              <div class="cfg-add-insp-role">
                 <el-select v-model="addRole">
                   <el-option v-for="(v,k) in InspectorRoleConfig" :key="k" :label="v.label" :value="k" />
                 </el-select>
@@ -708,24 +764,24 @@ onMounted(async () => {
           </div>
 
           <!-- 工作量 -->
-          <div v-if="inspectorStats.length > 0 && !isDraft" class="grid grid-cols-4 gap-2 mb-4">
-            <div v-for="stat in inspectorStats" :key="stat.name" class="bg-gray-50 border border-gray-200 rounded-xl px-3 py-2">
-              <div class="font-medium text-gray-800 text-sm truncate">{{ stat.name }}</div>
-              <div class="flex gap-3 mt-1.5 text-xs">
-                <div><span class="text-gray-400">分配 </span><span class="font-bold text-gray-700">{{ stat.assigned }}</span></div>
-                <div><span class="text-gray-400">完成 </span><span class="font-bold text-green-600">{{ stat.completed }}</span></div>
+          <div v-if="inspectorStats.length > 0 && !isDraft" class="cfg-workload-grid">
+            <div v-for="stat in inspectorStats" :key="stat.name" class="cfg-workload-item">
+              <div class="cfg-workload-name">{{ stat.name }}</div>
+              <div class="cfg-workload-stats">
+                <span class="cfg-hint">分配 </span><span class="cfg-workload-val">{{ stat.assigned }}</span>
+                <span class="cfg-hint">完成 </span><span class="cfg-workload-val cfg-workload-val--done">{{ stat.completed }}</span>
               </div>
             </div>
           </div>
 
           <!-- 列表 -->
-          <div v-if="inspectors.length === 0" class="py-6 text-center text-gray-400 text-sm">暂无检查员</div>
-          <div v-else class="grid grid-cols-2 gap-2">
-            <div v-for="insp in inspectors" :key="insp.id" class="flex items-center gap-2.5 p-2.5 bg-white border border-gray-200 rounded-xl">
-              <div class="w-8 h-8 rounded-full bg-gradient-to-br from-blue-400 to-blue-600 text-white flex items-center justify-center text-xs font-bold">{{ (insp.userName || '?')[0] }}</div>
-              <div class="flex-1 min-w-0">
-                <div class="font-medium text-gray-800 text-sm">{{ insp.userName }}</div>
-                <div class="text-xs text-gray-400">{{ InspectorRoleConfig[insp.role as InspectorRole]?.label }}</div>
+          <div v-if="inspectors.length === 0" class="cfg-empty">暂无检查员</div>
+          <div v-else class="cfg-insp-grid">
+            <div v-for="insp in inspectors" :key="insp.id" class="cfg-insp-item">
+              <div class="cfg-insp-avatar">{{ (insp.userName || '?')[0] }}</div>
+              <div class="cfg-insp-info">
+                <div class="cfg-insp-name">{{ insp.userName }}</div>
+                <div class="cfg-hint">{{ InspectorRoleConfig[insp.role as InspectorRole]?.label }}</div>
               </div>
               <el-tag :type="insp.isActive ? 'success' : 'info'" size="small" round effect="plain">{{ insp.isActive ? '启用' : '禁用' }}</el-tag>
               <el-button link type="danger" size="small" @click="handleRemoveInspector(insp)"><Trash2 class="w-3.5 h-3.5" /></el-button>
@@ -735,18 +791,17 @@ onMounted(async () => {
 
         <!-- 审核待办 -->
         <div v-if="pendingReviewCount > 0" class="cfg-card">
-          <div class="cfg-card-title flex items-center gap-1.5 mb-3">
-            <ClipboardCheck class="w-4 h-4 text-[#1a6dff]" />待审核任务
+          <div class="cfg-card-title cfg-card-title--with-icon cfg-card-title--mb">
+            <ClipboardCheck class="w-4 h-4" style="color:#1a6dff" />待审核任务
             <span class="pdv-badge-red">{{ pendingReviewCount }}</span>
           </div>
-          <div class="space-y-2">
-            <div v-for="task in pendingReviewTasks" :key="task.id"
-                 class="flex items-center justify-between p-3 bg-orange-50 border border-orange-100 rounded-xl">
-              <div class="flex-1 min-w-0">
-                <div class="font-medium text-gray-800 text-sm">{{ task.taskCode }}</div>
-                <div class="text-xs text-gray-400 mt-0.5">检查员: {{ task.inspectorName || '-' }} · {{ task.updatedAt?.substring(0, 16) || '-' }}</div>
+          <div class="cfg-review-list">
+            <div v-for="task in pendingReviewTasks" :key="task.id" class="cfg-review-item">
+              <div class="cfg-review-info">
+                <div class="cfg-insp-name">{{ task.taskCode }}</div>
+                <div class="cfg-hint">检查员: {{ task.inspectorName || '-' }} · {{ task.updatedAt?.substring(0, 16) || '-' }}</div>
               </div>
-              <div class="flex items-center gap-1.5">
+              <div class="cfg-review-actions">
                 <el-tag type="warning" size="small" round>待审核</el-tag>
                 <el-button type="success" size="small" @click="handleApproveTask(task)"><Check class="w-3.5 h-3.5 mr-0.5" />通过</el-button>
                 <el-button type="danger" size="small" plain @click="handleRejectTask(task)"><X class="w-3.5 h-3.5 mr-0.5" />驳回</el-button>
@@ -757,8 +812,8 @@ onMounted(async () => {
 
         <!-- 操作区 -->
         <div class="cfg-card">
-          <div class="cfg-card-title mb-3">项目操作</div>
-          <div class="flex flex-wrap gap-2">
+          <div class="cfg-card-title cfg-card-title--mb">项目操作</div>
+          <div class="cfg-ops-row">
             <el-button v-if="project?.status === 'PUBLISHED'" type="warning" size="small" plain @click="handlePause" round>
               <Pause class="w-3.5 h-3.5 mr-1" />暂停项目
             </el-button>
@@ -1064,12 +1119,19 @@ onMounted(async () => {
   border-radius: 9px;
 }
 
+/* ========== Settings tab layout ========== */
+.cfg-section {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
 /* ========== Config card styles (settings tab) ========== */
 .cfg-card {
   background: #fff;
-  border: 1px solid #e5e7eb;
-  border-radius: 12px;
-  padding: 20px;
+  border: 1px solid #e8ecf0;
+  border-radius: 10px;
+  padding: 18px 20px;
   transition: border-color 0.2s;
 }
 .cfg-card:hover { border-color: #d1d5db; }
@@ -1082,10 +1144,23 @@ onMounted(async () => {
   align-items: center;
   justify-content: space-between;
 }
+.cfg-card-header--mb { margin-bottom: 12px; }
 .cfg-card-title {
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 600;
   color: #1f2937;
+}
+.cfg-card-title--with-icon {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.cfg-card-title--mb { margin-bottom: 12px; }
+.cfg-lock-icon { color: #d1d5db; }
+.cfg-count {
+  font-size: 11px;
+  font-weight: 400;
+  color: #9ca3af;
 }
 .cfg-desc {
   font-size: 12px;
@@ -1094,12 +1169,254 @@ onMounted(async () => {
   line-height: 1.5;
 }
 .cfg-field { display: flex; flex-direction: column; }
+.cfg-field--mt { margin-top: 12px; }
 .cfg-label {
   font-size: 12px;
   font-weight: 500;
   color: #6b7280;
   margin-bottom: 4px;
 }
+.cfg-req { color: #f87171; }
+
+/* ========== Native inputs ========== */
+.cfg-input {
+  height: 32px;
+  padding: 0 10px;
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+  font-size: 12px;
+  color: #1f2937;
+  background: #fff;
+  outline: none;
+  transition: border-color 0.15s;
+  box-sizing: border-box;
+  width: 100%;
+}
+.cfg-input:focus { border-color: #1a6dff; }
+.cfg-input:disabled { background: #f9fafb; color: #9ca3af; cursor: not-allowed; }
+
+.cfg-select {
+  height: 32px;
+  padding: 0 28px 0 10px;
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+  font-size: 12px;
+  color: #1f2937;
+  background: #fff url("data:image/svg+xml,%3Csvg width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%239ca3af' stroke-width='2' stroke-linecap='round' stroke-linejoin='round' xmlns='http://www.w3.org/2000/svg'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E") no-repeat right 8px center;
+  -webkit-appearance: none;
+  appearance: none;
+  outline: none;
+  cursor: pointer;
+  transition: border-color 0.15s;
+  box-sizing: border-box;
+  width: 100%;
+}
+.cfg-select:focus { border-color: #1a6dff; }
+.cfg-select:disabled { background-color: #f9fafb; color: #9ca3af; cursor: not-allowed; }
+
+/* ========== Grid layouts ========== */
+.cfg-row2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  margin-top: 12px;
+}
+.cfg-row3 {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+  margin-top: 12px;
+}
+
+/* ========== Readonly display ========== */
+.cfg-readonly-text {
+  font-size: 13px;
+  color: #374151;
+  padding: 4px 0;
+}
+.cfg-org-readonly {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 6px 0;
+}
+.cfg-scope-tag {
+  display: inline-block;
+  padding: 2px 8px;
+  background: #eff5ff;
+  color: #1a6dff;
+  border-radius: 4px;
+  font-size: 12px;
+}
+
+/* ========== Org unit flat list ========== */
+.cfg-org-list {
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+  overflow: hidden;
+  max-height: 220px;
+  overflow-y: auto;
+}
+.cfg-org-loading {
+  padding: 16px;
+  text-align: center;
+  font-size: 12px;
+  color: #9ca3af;
+}
+.cfg-org-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 7px 10px;
+  font-size: 12px;
+  color: #374151;
+  cursor: pointer;
+  background: #fff;
+  border-bottom: 1px solid #f3f4f6;
+  transition: background 0.1s;
+}
+.cfg-org-row:last-child { border-bottom: none; }
+.cfg-org-row:hover { background: #f7f9fc; }
+.cfg-org-row--on { background: #eff5ff !important; color: #1a6dff; }
+.cfg-org-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cfg-org-check { font-size: 11px; font-weight: 700; color: #1a6dff; flex-shrink: 0; margin-left: 8px; }
+
+/* ========== Toggle ========== */
+.cfg-toggle-row {
+  padding: 4px 0;
+}
+.cfg-toggle-group {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px solid #f0f0f0;
+}
+.cfg-toggle-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+}
+.cfg-toggle-name {
+  font-size: 13px;
+  color: #374151;
+}
+
+/* ========== Hint text ========== */
+.cfg-hint {
+  font-size: 11px;
+  color: #9ca3af;
+  margin-top: 4px;
+  line-height: 1.4;
+}
+.cfg-hint--mb { margin-top: 0; margin-bottom: 6px; font-weight: 500; color: #6b7280; }
+
+/* ========== Save bar ========== */
+.cfg-save-bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding-bottom: 4px;
+}
+
+/* ========== Inspector management ========== */
+.cfg-add-insp {
+  margin-bottom: 14px;
+  padding: 10px 12px;
+  background: rgba(239, 245, 255, 0.5);
+  border: 1px solid #dbeafe;
+  border-radius: 8px;
+}
+.cfg-add-insp-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.cfg-add-insp-search { flex: 1; }
+.cfg-add-insp-role { width: 110px; }
+.cfg-user-option { display: flex; align-items: center; justify-content: space-between; }
+.cfg-user-name { font-size: 13px; font-weight: 500; color: #1f2937; }
+
+.cfg-workload-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+  margin-bottom: 14px;
+}
+.cfg-workload-item {
+  background: #f9fafb;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  padding: 8px 10px;
+}
+.cfg-workload-name {
+  font-size: 12px;
+  font-weight: 500;
+  color: #374151;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  margin-bottom: 4px;
+}
+.cfg-workload-stats { display: flex; gap: 10px; font-size: 11px; }
+.cfg-workload-val { font-weight: 700; color: #1f2937; }
+.cfg-workload-val--done { color: #16a34a; }
+
+.cfg-empty {
+  padding: 20px 0;
+  text-align: center;
+  font-size: 12px;
+  color: #9ca3af;
+}
+
+.cfg-insp-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+.cfg-insp-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px;
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+}
+.cfg-insp-avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #60a5fa, #2563eb);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+.cfg-insp-info { flex: 1; min-width: 0; }
+.cfg-insp-name { font-size: 13px; font-weight: 500; color: #1f2937; }
+
+/* ========== Review list ========== */
+.cfg-review-list { display: flex; flex-direction: column; gap: 8px; }
+.cfg-review-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 12px;
+  background: #fff7ed;
+  border: 1px solid #fed7aa;
+  border-radius: 10px;
+}
+.cfg-review-info { flex: 1; min-width: 0; }
+.cfg-review-actions { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
+
+/* ========== Ops row ========== */
+.cfg-ops-row { display: flex; flex-wrap: wrap; gap: 8px; }
 
 /* ========== Lock notice ========== */
 .pdv-lock-notice {
@@ -1110,5 +1427,15 @@ onMounted(async () => {
   background: #fffbeb;
   border: 1px solid #fde68a;
   border-radius: 10px;
+}
+.cfg-lock-title {
+  font-size: 13px;
+  font-weight: 500;
+  color: #92400e;
+}
+.cfg-lock-desc {
+  font-size: 11px;
+  color: #b45309;
+  margin-top: 2px;
 }
 </style>
