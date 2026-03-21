@@ -310,8 +310,32 @@ async function handleApplyGradePreset(presetKey: string) {
   // handled by GradeBandEditor internally
 }
 
-// ===== Grading mode =====
-const gradingMode = ref<'SCORE_RANGE' | 'RANK_TOP' | 'PERCENTILE'>('SCORE_RANGE')
+// ===== Grade rule type helpers =====
+// 规则类型存在 band.maxScore 字段中（编码约定）：
+// maxScore = 100 → SCORE_GTE (默认，≥分数%)
+// maxScore = -1 → SCORE_LTE (≤分数%)
+// maxScore = -10 → RANK_TOP (前N名)
+// maxScore = -11 → RANK_BOTTOM (后N名)
+// maxScore = -20 → PCT_TOP (前N%)
+// maxScore = -21 → PCT_BOTTOM (后N%)
+function getGradeRuleType(band: any): string {
+  const v = Number(band.maxScore)
+  if (v === -1) return 'SCORE_LTE'
+  if (v === -10) return 'RANK_TOP'
+  if (v === -11) return 'RANK_BOTTOM'
+  if (v === -20) return 'PCT_TOP'
+  if (v === -21) return 'PCT_BOTTOM'
+  return 'SCORE_GTE'
+}
+function setGradeRuleType(band: any, type: string) {
+  const typeMap: Record<string, number> = {
+    'SCORE_GTE': 100, 'SCORE_LTE': -1,
+    'RANK_TOP': -10, 'RANK_BOTTOM': -11,
+    'PCT_TOP': -20, 'PCT_BOTTOM': -21,
+  }
+  band.maxScore = typeMap[type] ?? 100
+  updateGradeBand(band)
+}
 
 // ===== Inline grade band editing =====
 async function addGradeBand() {
@@ -591,19 +615,12 @@ function getItemTypeLabel(item: TemplateItem) {
                     <div class="te-scoring-block">
                       <div class="te-scoring-block-head">
                         <span class="te-scoring-block-title">等级映射</span>
-                        <div class="te-scoring-block-actions">
-                          <select v-model="gradingMode" class="te-grading-mode" :disabled="isReadonly">
-                            <option value="SCORE_RANGE">分数区间</option>
-                            <option value="RANK_TOP">排名制</option>
-                            <option value="PERCENTILE">百分比排名</option>
-                          </select>
-                          <button v-if="!isReadonly" class="te-add-btn" @click="addGradeBand">+</button>
-                        </div>
+                        <button v-if="!isReadonly" class="te-add-btn" @click="addGradeBand">+</button>
                       </div>
 
                       <!-- 预设快捷 -->
                       <div v-if="scoringStore.gradeBands.length === 0" class="te-grade-presets">
-                        <span class="te-scoring-empty">暂无等级，快速添加：</span>
+                        <span class="te-scoring-empty">暂无等级</span>
                         <button class="te-preset-pill" @click="applyGradePreset('five')">五级制</button>
                         <button class="te-preset-pill" @click="applyGradePreset('pass')">通过/不通过</button>
                         <button class="te-preset-pill" @click="applyGradePreset('three')">三级制</button>
@@ -612,38 +629,21 @@ function getItemTypeLabel(item: TemplateItem) {
                       <div v-else class="te-grade-list">
                         <div v-for="band in scoringStore.gradeBands" :key="band.id" class="te-grade-row">
                           <input v-model="band.gradeCode" class="te-grade-code" :disabled="isReadonly" placeholder="A"
-                            @change="updateGradeBand(band)" />
+                            @blur="updateGradeBand(band)" />
                           <input v-model="band.gradeName" class="te-grade-name" :disabled="isReadonly" placeholder="优秀"
-                            @change="updateGradeBand(band)" />
-
-                          <!-- 分数区间模式 -->
-                          <template v-if="gradingMode === 'SCORE_RANGE'">
-                            <span class="te-grade-sep">≥</span>
-                            <input v-model.number="band.minScore" class="te-grade-pct" type="number" :disabled="isReadonly"
-                              @change="updateGradeBand(band)" />
-                            <span class="te-grade-unit">%</span>
-                          </template>
-
-                          <!-- 排名制模式 -->
-                          <template v-else-if="gradingMode === 'RANK_TOP'">
-                            <select v-model="band.gradeCode" class="te-grade-rank-type" :disabled="isReadonly"
-                              @change="updateGradeBand(band)" style="display:none">
-                              <!-- gradeCode doubled as rank type identifier -->
-                            </select>
-                            <span class="te-grade-sep">前</span>
-                            <input v-model.number="band.minScore" class="te-grade-pct" type="number" :disabled="isReadonly"
-                              @change="updateGradeBand(band)" />
-                            <span class="te-grade-unit">名</span>
-                          </template>
-
-                          <!-- 百分比排名模式 -->
-                          <template v-else-if="gradingMode === 'PERCENTILE'">
-                            <span class="te-grade-sep">前</span>
-                            <input v-model.number="band.minScore" class="te-grade-pct" type="number" :disabled="isReadonly"
-                              @change="updateGradeBand(band)" />
-                            <span class="te-grade-unit">%</span>
-                          </template>
-
+                            @blur="updateGradeBand(band)" />
+                          <select :value="getGradeRuleType(band)" class="te-grade-rule"
+                            :disabled="isReadonly"
+                            @change="(e: Event) => setGradeRuleType(band, (e.target as HTMLSelectElement).value)">
+                            <option value="SCORE_GTE">≥ 分数%</option>
+                            <option value="SCORE_LTE">≤ 分数%</option>
+                            <option value="RANK_TOP">前N名</option>
+                            <option value="RANK_BOTTOM">后N名</option>
+                            <option value="PCT_TOP">前N%</option>
+                            <option value="PCT_BOTTOM">后N%</option>
+                          </select>
+                          <input v-model.number="band.minScore" class="te-grade-val" type="number" :disabled="isReadonly"
+                            @blur="updateGradeBand(band)" />
                           <button v-if="!isReadonly" class="te-grade-del" @click="deleteGradeBand(band.id)">×</button>
                         </div>
                       </div>
@@ -794,9 +794,7 @@ function getItemTypeLabel(item: TemplateItem) {
 .te-scoring-block-actions { display: flex; align-items: center; gap: 4px; }
 .te-scoring-empty { font-size: 11px; color: #b8c0cc; padding: 4px 0; }
 
-/* Grading mode selector */
-.te-grading-mode { border: 1px solid #e5e7eb; border-radius: 4px; padding: 1px 4px; font-size: 10px; color: #374151; outline: none; background: #fff; cursor: pointer; }
-.te-grading-mode:focus { border-color: #93c5fd; }
+/* Grade presets */
 .te-grade-presets { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
 
 /* Preset pills */
@@ -813,10 +811,10 @@ function getItemTypeLabel(item: TemplateItem) {
 .te-grade-code:focus { border-color: #93c5fd; }
 .te-grade-name { flex: 1; border: 1px solid #e5e7eb; border-radius: 4px; padding: 2px 6px; font-size: 11px; color: #111827; outline: none; min-width: 0; }
 .te-grade-name:focus { border-color: #93c5fd; }
-.te-grade-sep { font-size: 10px; color: #9ca3af; flex-shrink: 0; }
-.te-grade-pct { width: 44px; border: 1px solid #e5e7eb; border-radius: 4px; padding: 2px 4px; font-size: 11px; text-align: center; color: #111827; outline: none; }
-.te-grade-pct:focus { border-color: #93c5fd; }
-.te-grade-unit { font-size: 10px; color: #9ca3af; }
+.te-grade-rule { border: 1px solid #e5e7eb; border-radius: 4px; padding: 1px 2px; font-size: 10px; color: #5a6474; outline: none; background: #f8f9fb; cursor: pointer; flex-shrink: 0; width: 72px; }
+.te-grade-rule:focus { border-color: #93c5fd; }
+.te-grade-val { width: 40px; border: 1px solid #e5e7eb; border-radius: 4px; padding: 2px 4px; font-size: 11px; text-align: center; color: #111827; outline: none; }
+.te-grade-val:focus { border-color: #93c5fd; }
 .te-grade-del { background: none; border: none; color: #d1d5db; font-size: 12px; cursor: pointer; padding: 0 2px; opacity: 0; transition: all 0.1s; }
 .te-grade-row:hover .te-grade-del { opacity: 1; }
 .te-grade-del:hover { color: #ef4444; }
