@@ -1207,29 +1207,6 @@ const routes: RouteRecordRaw[] = [
               order: 12
             }
           },
-          {
-            path: '/system/scoring-policies',
-            name: 'SystemScoringPolicies',
-            component: () => import('@/views/system/ScoringPolicyView.vue'),
-            meta: {
-              title: '评分方案',
-              icon: 'Award',
-              requiresAuth: true,
-              hidden: true,
-              order: 13
-            }
-          },
-          {
-            path: '/system/scoring-policies/:id',
-            name: 'SystemScoringPolicyDetail',
-            component: () => import('@/views/system/ScoringPolicyDetailView.vue'),
-            meta: {
-              title: '评分方案详情',
-              requiresAuth: true,
-              permission: 'system:config:view',
-              hidden: true
-            }
-          }
         ]
       },
 
