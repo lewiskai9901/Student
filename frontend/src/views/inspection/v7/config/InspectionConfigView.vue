@@ -57,10 +57,20 @@ const filteredSections = computed(() => {
 const openDropdownId = ref<number | null>(null)
 const dropdownStyle = ref<Record<string, string>>({})
 
+const dropdownPos = ref({ top: '0px', right: '0px' })
+
 function toggleDropdown(id: number, event?: MouseEvent) {
   event?.stopPropagation()
   if (openDropdownId.value === id) { openDropdownId.value = null; return }
   openDropdownId.value = id
+  if (event) {
+    const btn = event.currentTarget as HTMLElement
+    const rect = btn.getBoundingClientRect()
+    dropdownPos.value = {
+      top: `${rect.bottom + 4}px`,
+      right: `${window.innerWidth - rect.right}px`,
+    }
+  }
 }
 function closeDropdowns() { openDropdownId.value = null }
 
@@ -360,36 +370,42 @@ onMounted(() => { loadTemplates() })
                 <Copy :size="13" />
                 复制
               </button>
-              <div class="dropdown-wrap">
-                <button
-                  class="act-btn act-btn-icon"
-                  @click.stop="toggleDropdown(sec.id, $event)"
-                >
-                  <MoreHorizontal :size="14" />
-                </button>
-                <Transition name="dropdown">
-                  <div v-if="openDropdownId === sec.id" class="dropdown-menu" @click.stop>
-                    <button v-if="sec.status === 'DRAFT'" @click.stop="handlePublish(sec)">
-                      <Upload :size="13" /> 发布
-                    </button>
-                    <button v-if="sec.status === 'PUBLISHED'" class="warn" @click.stop="handleDeprecate(sec)">
-                      <Ban :size="13" /> 废弃
-                    </button>
-                    <button v-if="sec.status !== 'ARCHIVED'" @click.stop="handleArchive(sec)">
-                      <Archive :size="13" /> 归档
-                    </button>
-                    <div v-if="sec.status !== 'PUBLISHED'" class="dropdown-divider" />
-                    <button v-if="sec.status !== 'PUBLISHED'" class="danger" @click.stop="handleDelete(sec)">
-                      <Trash2 :size="13" /> 删除
-                    </button>
-                  </div>
-                </Transition>
-              </div>
+              <button
+                class="act-btn act-btn-icon"
+                @click.stop="toggleDropdown(Number(sec.id), $event)"
+              >
+                <MoreHorizontal :size="14" />
+              </button>
             </div>
           </div>
         </div>
       </div>
     </div>
+
+    <!-- Dropdown Menu (Teleported to body) -->
+    <Teleport to="body">
+      <Transition name="dropdown">
+        <div v-if="openDropdownId !== null" class="dropdown-menu" :style="{ top: dropdownPos.top, right: dropdownPos.right }" @click.stop>
+          <template v-for="sec in filteredSections" :key="sec.id">
+            <template v-if="Number(sec.id) === openDropdownId">
+              <button v-if="sec.status === 'DRAFT'" @click.stop="handlePublish(sec)">
+                <Upload :size="13" /> 发布
+              </button>
+              <button v-if="sec.status === 'PUBLISHED'" class="warn" @click.stop="handleDeprecate(sec)">
+                <Ban :size="13" /> 废弃
+              </button>
+              <button v-if="sec.status !== 'ARCHIVED'" @click.stop="handleArchive(sec)">
+                <Archive :size="13" /> 归档
+              </button>
+              <div v-if="sec.status !== 'PUBLISHED'" class="dropdown-divider" />
+              <button v-if="sec.status !== 'PUBLISHED'" class="danger" @click.stop="handleDelete(sec)">
+                <Trash2 :size="13" /> 删除
+              </button>
+            </template>
+          </template>
+        </div>
+      </Transition>
+    </Teleport>
 
     <!-- Create Dialog -->
     <Teleport to="body">
@@ -753,28 +769,16 @@ onMounted(() => { loadTemplates() })
   padding: 4px 6px;
 }
 
-/* Dropdown */
-.dropdown-wrap { position: relative; }
+/* Dropdown (Teleported to body) */
 .dropdown-menu {
-  position: absolute;
-  top: calc(100% + 4px);
-  right: 0;
+  position: fixed;
   min-width: 130px;
   background: #fff;
   border: 1px solid #e8ecf0;
   border-radius: 10px;
   padding: 4px;
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
-  z-index: 200;
-}
-/* 防止按钮与菜单间的间隙导致闪烁 */
-.dropdown-menu::before {
-  content: '';
-  position: absolute;
-  top: -8px;
-  right: 0;
-  width: 40px;
-  height: 8px;
+  z-index: 9999;
 }
 .dropdown-menu button {
   display: flex;
