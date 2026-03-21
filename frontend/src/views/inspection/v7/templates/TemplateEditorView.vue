@@ -310,32 +310,86 @@ async function handleApplyGradePreset(presetKey: string) {
   // handled by GradeBandEditor internally
 }
 
-// ===== Grade rule type helpers =====
-// 规则类型存在 band.maxScore 字段中（编码约定）：
-// maxScore = 100 → SCORE_GTE (默认，≥分数%)
-// maxScore = -1 → SCORE_LTE (≤分数%)
-// maxScore = -10 → RANK_TOP (前N名)
-// maxScore = -11 → RANK_BOTTOM (后N名)
-// maxScore = -20 → PCT_TOP (前N%)
-// maxScore = -21 → PCT_BOTTOM (后N%)
-function getGradeRuleType(band: any): string {
-  const v = Number(band.maxScore)
-  if (v === -1) return 'SCORE_LTE'
-  if (v === -10) return 'RANK_TOP'
-  if (v === -11) return 'RANK_BOTTOM'
-  if (v === -20) return 'PCT_TOP'
-  if (v === -21) return 'PCT_BOTTOM'
-  return 'SCORE_GTE'
-}
-function setGradeRuleType(band: any, type: string) {
-  const typeMap: Record<string, number> = {
-    'SCORE_GTE': 100, 'SCORE_LTE': -1,
-    'RANK_TOP': -10, 'RANK_BOTTOM': -11,
-    'PCT_TOP': -20, 'PCT_BOTTOM': -21,
+// ===== Grade mapping mode + validation =====
+const gradeEnabled = ref(false)
+const gradingMode = ref<'SCORE' | 'RANK_TOP' | 'RANK_BOTTOM' | 'PCT_TOP' | 'PCT_BOTTOM'>('SCORE')
+const gradeModes = [
+  { value: 'SCORE' as const, label: '分数区间' },
+  { value: 'RANK_TOP' as const, label: '前N名' },
+  { value: 'RANK_BOTTOM' as const, label: '后N名' },
+  { value: 'PCT_TOP' as const, label: '前N%' },
+  { value: 'PCT_BOTTOM' as const, label: '后N%' },
+]
+
+const gradeValueLabel = computed(() => {
+  switch (gradingMode.value) {
+    case 'SCORE': return '≥ 百分比'
+    case 'RANK_TOP': return '前N名'
+    case 'RANK_BOTTOM': return '后N名'
+    case 'PCT_TOP': return '前N%'
+    case 'PCT_BOTTOM': return '后N%'
   }
-  band.maxScore = typeMap[type] ?? 100
-  updateGradeBand(band)
+})
+const gradeUnitLabel = computed(() => {
+  switch (gradingMode.value) {
+    case 'SCORE': return '%'
+    case 'RANK_TOP': case 'RANK_BOTTOM': return '名'
+    case 'PCT_TOP': case 'PCT_BOTTOM': return '%'
+  }
+})
+
+const sortedGradeBands = computed(() => {
+  const bands = [...scoringStore.gradeBands]
+  if (gradingMode.value === 'SCORE') {
+    bands.sort((a, b) => b.minScore - a.minScore) // 高分在前
+  } else {
+    bands.sort((a, b) => a.minScore - b.minScore) // 小数在前（前3名 < 前10名）
+  }
+  return bands
+})
+
+// 冲突检测
+const gradeConflict = computed(() => {
+  const bands = scoringStore.gradeBands
+  if (bands.length < 2) return null
+
+  const values = bands.map(b => b.minScore).sort((a, b) => a - b)
+  // 检查重复值
+  for (let i = 0; i < values.length - 1; i++) {
+    if (values[i] === values[i + 1]) return `存在重复的阈值: ${values[i]}`
+  }
+
+  if (gradingMode.value === 'SCORE') {
+    // 分数模式：检查区间是否覆盖完整
+    const sorted = bands.map(b => b.minScore).sort((a, b) => b - a)
+    if (sorted[sorted.length - 1] > 0) return `最低等级的阈值应为 0（当前为 ${sorted[sorted.length - 1]}%）`
+  }
+
+  if (gradingMode.value === 'RANK_TOP' || gradingMode.value === 'PCT_TOP') {
+    // 前N：后面的数必须大于前面的（前3名 < 前10名）
+    for (let i = 0; i < values.length - 1; i++) {
+      if (values[i] >= values[i + 1]) return `前${values[i]} 与 前${values[i + 1]} 范围重叠`
+    }
+  }
+
+  return null
+})
+
+// 开关切换
+async function handleGradeToggle() {
+  if (!gradeEnabled.value && scoringStore.gradeBands.length > 0) {
+    // 关闭时清空
+    if (!scoringProfile.value) return
+    for (const b of [...scoringStore.gradeBands]) {
+      await scoringStore.deleteGradeBand(scoringProfile.value.id, b.id)
+    }
+  }
 }
+
+// 加载时检测是否已有等级
+watch(() => scoringStore.gradeBands.length, (len) => {
+  if (len > 0) gradeEnabled.value = true
+}, { immediate: true })
 
 // ===== Inline grade band editing =====
 async function addGradeBand() {
@@ -615,38 +669,65 @@ function getItemTypeLabel(item: TemplateItem) {
                     <div class="te-scoring-block">
                       <div class="te-scoring-block-head">
                         <span class="te-scoring-block-title">等级映射</span>
-                        <button v-if="!isReadonly" class="te-add-btn" @click="addGradeBand">+</button>
+                        <label class="te-toggle">
+                          <input type="checkbox" v-model="gradeEnabled" :disabled="isReadonly"
+                            @change="handleGradeToggle" />
+                          <span class="te-toggle-slider"></span>
+                        </label>
                       </div>
 
-                      <!-- 预设快捷 -->
-                      <div v-if="scoringStore.gradeBands.length === 0" class="te-grade-presets">
-                        <span class="te-scoring-empty">暂无等级</span>
-                        <button class="te-preset-pill" @click="applyGradePreset('five')">五级制</button>
-                        <button class="te-preset-pill" @click="applyGradePreset('pass')">通过/不通过</button>
-                        <button class="te-preset-pill" @click="applyGradePreset('three')">三级制</button>
-                      </div>
-
-                      <div v-else class="te-grade-list">
-                        <div v-for="band in scoringStore.gradeBands" :key="band.id" class="te-grade-row">
-                          <input v-model="band.gradeCode" class="te-grade-code" :disabled="isReadonly" placeholder="A"
-                            @blur="updateGradeBand(band)" />
-                          <input v-model="band.gradeName" class="te-grade-name" :disabled="isReadonly" placeholder="优秀"
-                            @blur="updateGradeBand(band)" />
-                          <select :value="getGradeRuleType(band)" class="te-grade-rule"
-                            :disabled="isReadonly"
-                            @change="(e: Event) => setGradeRuleType(band, (e.target as HTMLSelectElement).value)">
-                            <option value="SCORE_GTE">≥ 分数%</option>
-                            <option value="SCORE_LTE">≤ 分数%</option>
-                            <option value="RANK_TOP">前N名</option>
-                            <option value="RANK_BOTTOM">后N名</option>
-                            <option value="PCT_TOP">前N%</option>
-                            <option value="PCT_BOTTOM">后N%</option>
-                          </select>
-                          <input v-model.number="band.minScore" class="te-grade-val" type="number" :disabled="isReadonly"
-                            @blur="updateGradeBand(band)" />
-                          <button v-if="!isReadonly" class="te-grade-del" @click="deleteGradeBand(band.id)">×</button>
+                      <template v-if="gradeEnabled">
+                        <!-- 模式选择（全局统一，不允许混搭） -->
+                        <div class="te-grade-mode-row">
+                          <label class="te-grade-mode-label">模式</label>
+                          <div class="te-grade-mode-pills">
+                            <button v-for="m in gradeModes" :key="m.value"
+                              class="te-mode-pill" :class="{ active: gradingMode === m.value }"
+                              :disabled="isReadonly || scoringStore.gradeBands.length > 0"
+                              @click="gradingMode = m.value">{{ m.label }}</button>
+                          </div>
+                          <span v-if="scoringStore.gradeBands.length > 0" class="te-grade-mode-hint">清空等级后可切换模式</span>
                         </div>
-                      </div>
+
+                        <!-- 预设（只在空时显示） -->
+                        <div v-if="scoringStore.gradeBands.length === 0 && gradingMode === 'SCORE'" class="te-grade-presets">
+                          <button class="te-preset-pill" @click="applyGradePreset('five')">五级制</button>
+                          <button class="te-preset-pill" @click="applyGradePreset('pass')">通过/不通过</button>
+                          <button class="te-preset-pill" @click="applyGradePreset('three')">三级制</button>
+                        </div>
+
+                        <!-- 等级列表 -->
+                        <div v-if="scoringStore.gradeBands.length > 0" class="te-grade-list">
+                          <!-- 表头 -->
+                          <div class="te-grade-header">
+                            <span class="te-grade-h-code">代码</span>
+                            <span class="te-grade-h-name">名称</span>
+                            <span class="te-grade-h-val">{{ gradeValueLabel }}</span>
+                            <span class="te-grade-h-del"></span>
+                          </div>
+                          <div v-for="band in sortedGradeBands" :key="band.id" class="te-grade-row">
+                            <input v-model="band.gradeCode" class="te-grade-code" :disabled="isReadonly" placeholder="A"
+                              @blur="updateGradeBand(band)" />
+                            <input v-model="band.gradeName" class="te-grade-name" :disabled="isReadonly" placeholder="优秀"
+                              @blur="updateGradeBand(band)" />
+                            <div class="te-grade-val-wrap">
+                              <span v-if="gradingMode === 'SCORE'" class="te-grade-prefix">≥</span>
+                              <span v-else-if="gradingMode === 'RANK_TOP' || gradingMode === 'PCT_TOP'" class="te-grade-prefix">前</span>
+                              <span v-else class="te-grade-prefix">后</span>
+                              <input v-model.number="band.minScore" class="te-grade-val" type="number" :disabled="isReadonly"
+                                @blur="updateGradeBand(band)" />
+                              <span class="te-grade-suffix">{{ gradeUnitLabel }}</span>
+                            </div>
+                            <button v-if="!isReadonly" class="te-grade-del" @click="deleteGradeBand(band.id)">×</button>
+                          </div>
+                        </div>
+
+                        <!-- 冲突检测 -->
+                        <div v-if="gradeConflict" class="te-grade-conflict">⚠ {{ gradeConflict }}</div>
+
+                        <!-- 添加 -->
+                        <button v-if="!isReadonly" class="te-grade-add-btn" @click="addGradeBand">+ 添加等级</button>
+                      </template>
                     </div>
 
                     <!-- 即时规则（内联编辑） -->
@@ -794,6 +875,24 @@ function getItemTypeLabel(item: TemplateItem) {
 .te-scoring-block-actions { display: flex; align-items: center; gap: 4px; }
 .te-scoring-empty { font-size: 11px; color: #b8c0cc; padding: 4px 0; }
 
+/* Toggle switch */
+.te-toggle { position: relative; display: inline-block; width: 28px; height: 16px; flex-shrink: 0; }
+.te-toggle input { opacity: 0; width: 0; height: 0; }
+.te-toggle-slider { position: absolute; cursor: pointer; inset: 0; background: #d1d5db; border-radius: 16px; transition: 0.2s; }
+.te-toggle-slider::before { content: ''; position: absolute; height: 12px; width: 12px; left: 2px; bottom: 2px; background: #fff; border-radius: 50%; transition: 0.2s; }
+.te-toggle input:checked + .te-toggle-slider { background: #1a6dff; }
+.te-toggle input:checked + .te-toggle-slider::before { transform: translateX(12px); }
+
+/* Grade mode */
+.te-grade-mode-row { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.te-grade-mode-label { font-size: 10px; color: #6b7280; font-weight: 500; flex-shrink: 0; }
+.te-grade-mode-pills { display: flex; gap: 2px; }
+.te-mode-pill { font-size: 9px; padding: 2px 8px; border-radius: 8px; border: 1px solid #e5e7eb; color: #6b7280; background: #fff; cursor: pointer; transition: all 0.12s; white-space: nowrap; }
+.te-mode-pill:hover { border-color: #93c5fd; color: #1a6dff; }
+.te-mode-pill.active { background: #1a6dff; color: #fff; border-color: #1a6dff; }
+.te-mode-pill:disabled { opacity: 0.4; cursor: not-allowed; }
+.te-grade-mode-hint { font-size: 9px; color: #f59e0b; }
+
 /* Grade presets */
 .te-grade-presets { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
 
@@ -811,10 +910,26 @@ function getItemTypeLabel(item: TemplateItem) {
 .te-grade-code:focus { border-color: #93c5fd; }
 .te-grade-name { flex: 1; border: 1px solid #e5e7eb; border-radius: 4px; padding: 2px 6px; font-size: 11px; color: #111827; outline: none; min-width: 0; }
 .te-grade-name:focus { border-color: #93c5fd; }
-.te-grade-rule { border: 1px solid #e5e7eb; border-radius: 4px; padding: 1px 2px; font-size: 10px; color: #5a6474; outline: none; background: #f8f9fb; cursor: pointer; flex-shrink: 0; width: 72px; }
-.te-grade-rule:focus { border-color: #93c5fd; }
-.te-grade-val { width: 40px; border: 1px solid #e5e7eb; border-radius: 4px; padding: 2px 4px; font-size: 11px; text-align: center; color: #111827; outline: none; }
+/* Grade header */
+.te-grade-header { display: flex; align-items: center; gap: 4px; padding: 0 0 2px; border-bottom: 1px solid #f0f1f3; margin-bottom: 2px; }
+.te-grade-h-code { width: 32px; font-size: 9px; color: #9ca3af; text-align: center; }
+.te-grade-h-name { flex: 1; font-size: 9px; color: #9ca3af; }
+.te-grade-h-val { width: 100px; font-size: 9px; color: #9ca3af; text-align: center; }
+.te-grade-h-del { width: 16px; }
+
+/* Grade value */
+.te-grade-val-wrap { display: flex; align-items: center; gap: 2px; width: 100px; justify-content: center; }
+.te-grade-prefix { font-size: 10px; color: #9ca3af; flex-shrink: 0; }
+.te-grade-suffix { font-size: 10px; color: #9ca3af; flex-shrink: 0; }
+.te-grade-val { width: 44px; border: 1px solid #e5e7eb; border-radius: 4px; padding: 2px 4px; font-size: 11px; text-align: center; color: #111827; outline: none; }
 .te-grade-val:focus { border-color: #93c5fd; }
+
+/* Conflict warning */
+.te-grade-conflict { font-size: 10px; color: #ef4444; padding: 3px 6px; background: #fef2f2; border-radius: 4px; border-left: 2px solid #ef4444; }
+
+/* Add button */
+.te-grade-add-btn { font-size: 10px; color: #1a6dff; background: none; border: 1px dashed #dce1e8; border-radius: 4px; padding: 3px 8px; cursor: pointer; transition: all 0.12s; }
+.te-grade-add-btn:hover { border-color: #1a6dff; background: #f0f4ff; }
 .te-grade-del { background: none; border: none; color: #d1d5db; font-size: 12px; cursor: pointer; padding: 0 2px; opacity: 0; transition: all 0.1s; }
 .te-grade-row:hover .te-grade-del { opacity: 1; }
 .te-grade-del:hover { color: #ef4444; }
