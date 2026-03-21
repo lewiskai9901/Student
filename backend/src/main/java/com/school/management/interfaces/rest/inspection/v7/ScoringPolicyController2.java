@@ -54,7 +54,6 @@ public class ScoringPolicyController2 {
     public Result<ScoringPolicy> createPolicy(@RequestBody CreatePolicyRequest request) {
         ScoringPolicy policy = policyService.createPolicy(
                 request.getPolicyCode(), request.getPolicyName(), request.getDescription(),
-                request.getMaxScore(), request.getMinScore(),
                 request.getPrecisionDigits(), request.getSortOrder());
         return Result.success(policy);
     }
@@ -72,7 +71,6 @@ public class ScoringPolicyController2 {
                                                @RequestBody UpdatePolicyRequest request) {
         ScoringPolicy policy = policyService.updatePolicy(id,
                 request.getPolicyName(), request.getDescription(),
-                request.getMaxScore(), request.getMinScore(),
                 request.getPrecisionDigits(), request.getSortOrder());
         return Result.success(policy);
     }
@@ -98,7 +96,7 @@ public class ScoringPolicyController2 {
                                                     @RequestBody GradeBandRequest request) {
         PolicyGradeBand band = policyService.createGradeBand(id,
                 request.getGradeCode(), request.getGradeName(),
-                request.getMinScore(), request.getMaxScore(), request.getSortOrder());
+                request.getMinPercent(), request.getMaxPercent(), request.getSortOrder());
         return Result.success(band);
     }
 
@@ -109,7 +107,7 @@ public class ScoringPolicyController2 {
                                                     @RequestBody GradeBandRequest request) {
         PolicyGradeBand band = policyService.updateGradeBand(id, bandId,
                 request.getGradeCode(), request.getGradeName(),
-                request.getMinScore(), request.getMaxScore(), request.getSortOrder());
+                request.getMinPercent(), request.getMaxPercent(), request.getSortOrder());
         return Result.success(band);
     }
 
@@ -164,8 +162,6 @@ public class ScoringPolicyController2 {
         private String policyCode;
         private String policyName;
         private String description;
-        private BigDecimal maxScore;
-        private BigDecimal minScore;
         private Integer precisionDigits;
         private Integer sortOrder;
     }
@@ -174,8 +170,6 @@ public class ScoringPolicyController2 {
     public static class UpdatePolicyRequest {
         private String policyName;
         private String description;
-        private BigDecimal maxScore;
-        private BigDecimal minScore;
         private Integer precisionDigits;
         private Integer sortOrder;
     }
@@ -184,8 +178,8 @@ public class ScoringPolicyController2 {
     public static class GradeBandRequest {
         private String gradeCode;
         private String gradeName;
-        private BigDecimal minScore;
-        private BigDecimal maxScore;
+        private BigDecimal minPercent;
+        private BigDecimal maxPercent;
         private Integer sortOrder;
     }
 

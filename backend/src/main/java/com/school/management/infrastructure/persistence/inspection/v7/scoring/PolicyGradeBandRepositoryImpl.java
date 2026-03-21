@@ -46,8 +46,8 @@ public class PolicyGradeBandRepositoryImpl implements PolicyGradeBandRepository 
         po.setPolicyId(d.getPolicyId());
         po.setGradeCode(d.getGradeCode());
         po.setGradeName(d.getGradeName());
-        po.setMinScore(d.getMinScore());
-        po.setMaxScore(d.getMaxScore());
+        po.setMinPercent(d.getMinPercent());
+        po.setMaxPercent(d.getMaxPercent());
         po.setSortOrder(d.getSortOrder());
         po.setCreatedAt(d.getCreatedAt());
         return po;
@@ -59,8 +59,8 @@ public class PolicyGradeBandRepositoryImpl implements PolicyGradeBandRepository 
                 .policyId(po.getPolicyId())
                 .gradeCode(po.getGradeCode())
                 .gradeName(po.getGradeName())
-                .minScore(po.getMinScore())
-                .maxScore(po.getMaxScore())
+                .minPercent(po.getMinPercent())
+                .maxPercent(po.getMaxPercent())
                 .sortOrder(po.getSortOrder())
                 .createdAt(po.getCreatedAt()));
     }

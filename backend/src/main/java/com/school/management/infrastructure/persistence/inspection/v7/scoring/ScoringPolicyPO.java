@@ -3,7 +3,6 @@ package com.school.management.infrastructure.persistence.inspection.v7.scoring;
 import com.baomidou.mybatisplus.annotation.*;
 import lombok.Data;
 
-import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 @Data
@@ -17,8 +16,6 @@ public class ScoringPolicyPO {
     private String policyCode;
     private String policyName;
     private String description;
-    private BigDecimal maxScore;
-    private BigDecimal minScore;
     private Integer precisionDigits;
     private Boolean isSystem;
     private Boolean isEnabled;

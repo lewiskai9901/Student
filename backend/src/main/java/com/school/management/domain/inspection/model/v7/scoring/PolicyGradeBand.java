@@ -6,7 +6,7 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 /**
- * 评分方案等级映射实体
+ * 评分方案等级映射实体 — minPercent/maxPercent 表示百分比（0-100）
  */
 public class PolicyGradeBand implements Entity<Long> {
 
@@ -14,8 +14,8 @@ public class PolicyGradeBand implements Entity<Long> {
     private Long policyId;
     private String gradeCode;
     private String gradeName;
-    private BigDecimal minScore;
-    private BigDecimal maxScore;
+    private BigDecimal minPercent;
+    private BigDecimal maxPercent;
     private Integer sortOrder;
     private LocalDateTime createdAt;
 
@@ -27,8 +27,8 @@ public class PolicyGradeBand implements Entity<Long> {
         this.policyId = builder.policyId;
         this.gradeCode = builder.gradeCode;
         this.gradeName = builder.gradeName;
-        this.minScore = builder.minScore;
-        this.maxScore = builder.maxScore;
+        this.minPercent = builder.minPercent;
+        this.maxPercent = builder.maxPercent;
         this.sortOrder = builder.sortOrder != null ? builder.sortOrder : 0;
         this.createdAt = builder.createdAt != null ? builder.createdAt : LocalDateTime.now();
     }
@@ -45,8 +45,8 @@ public class PolicyGradeBand implements Entity<Long> {
     public Long getPolicyId() { return policyId; }
     public String getGradeCode() { return gradeCode; }
     public String getGradeName() { return gradeName; }
-    public BigDecimal getMinScore() { return minScore; }
-    public BigDecimal getMaxScore() { return maxScore; }
+    public BigDecimal getMinPercent() { return minPercent; }
+    public BigDecimal getMaxPercent() { return maxPercent; }
     public Integer getSortOrder() { return sortOrder; }
     public LocalDateTime getCreatedAt() { return createdAt; }
 
@@ -57,8 +57,8 @@ public class PolicyGradeBand implements Entity<Long> {
         private Long policyId;
         private String gradeCode;
         private String gradeName;
-        private BigDecimal minScore;
-        private BigDecimal maxScore;
+        private BigDecimal minPercent;
+        private BigDecimal maxPercent;
         private Integer sortOrder;
         private LocalDateTime createdAt;
 
@@ -66,8 +66,8 @@ public class PolicyGradeBand implements Entity<Long> {
         public Builder policyId(Long policyId) { this.policyId = policyId; return this; }
         public Builder gradeCode(String gradeCode) { this.gradeCode = gradeCode; return this; }
         public Builder gradeName(String gradeName) { this.gradeName = gradeName; return this; }
-        public Builder minScore(BigDecimal minScore) { this.minScore = minScore; return this; }
-        public Builder maxScore(BigDecimal maxScore) { this.maxScore = maxScore; return this; }
+        public Builder minPercent(BigDecimal minPercent) { this.minPercent = minPercent; return this; }
+        public Builder maxPercent(BigDecimal maxPercent) { this.maxPercent = maxPercent; return this; }
         public Builder sortOrder(Integer sortOrder) { this.sortOrder = sortOrder; return this; }
         public Builder createdAt(LocalDateTime createdAt) { this.createdAt = createdAt; return this; }
 

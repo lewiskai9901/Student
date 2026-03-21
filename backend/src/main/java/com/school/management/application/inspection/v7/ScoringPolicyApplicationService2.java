@@ -42,15 +42,12 @@ public class ScoringPolicyApplicationService2 {
 
     @Transactional
     public ScoringPolicy createPolicy(String policyCode, String policyName, String description,
-                                      BigDecimal maxScore, BigDecimal minScore,
                                       Integer precisionDigits, Integer sortOrder) {
         Long userId = SecurityUtils.getCurrentUserId();
         ScoringPolicy policy = ScoringPolicy.builder()
                 .policyCode(policyCode)
                 .policyName(policyName)
                 .description(description)
-                .maxScore(maxScore)
-                .minScore(minScore)
                 .precisionDigits(precisionDigits)
                 .sortOrder(sortOrder)
                 .createdBy(userId)
@@ -62,12 +59,11 @@ public class ScoringPolicyApplicationService2 {
 
     @Transactional
     public ScoringPolicy updatePolicy(Long id, String policyName, String description,
-                                      BigDecimal maxScore, BigDecimal minScore,
                                       Integer precisionDigits, Integer sortOrder) {
         Long userId = SecurityUtils.getCurrentUserId();
         ScoringPolicy policy = policyRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("评分方案不存在: " + id));
-        policy.update(policyName, description, maxScore, minScore, precisionDigits, sortOrder, userId);
+        policy.update(policyName, description, precisionDigits, sortOrder, userId);
         ScoringPolicy saved = policyRepository.save(policy);
         log.info("更新评分方案: id={}", id);
         return saved;
@@ -95,7 +91,7 @@ public class ScoringPolicyApplicationService2 {
 
     @Transactional
     public PolicyGradeBand createGradeBand(Long policyId, String gradeCode, String gradeName,
-                                           BigDecimal minScore, BigDecimal maxScore,
+                                           BigDecimal minPercent, BigDecimal maxPercent,
                                            Integer sortOrder) {
         // 验证策略存在
         policyRepository.findById(policyId)
@@ -104,8 +100,8 @@ public class ScoringPolicyApplicationService2 {
                 .policyId(policyId)
                 .gradeCode(gradeCode)
                 .gradeName(gradeName)
-                .minScore(minScore)
-                .maxScore(maxScore)
+                .minPercent(minPercent)
+                .maxPercent(maxPercent)
                 .sortOrder(sortOrder)
                 .build();
         return gradeBandRepository.save(band);
@@ -122,8 +118,8 @@ public class ScoringPolicyApplicationService2 {
                             .policyId(policyId)
                             .gradeCode(b.getGradeCode())
                             .gradeName(b.getGradeName())
-                            .minScore(b.getMinScore())
-                            .maxScore(b.getMaxScore())
+                            .minPercent(b.getMinPercent())
+                            .maxPercent(b.getMaxPercent())
                             .sortOrder(b.getSortOrder())
                             .build();
                     return gradeBandRepository.save(newBand);
@@ -134,7 +130,7 @@ public class ScoringPolicyApplicationService2 {
     @Transactional
     public PolicyGradeBand updateGradeBand(Long policyId, Long bandId,
                                            String gradeCode, String gradeName,
-                                           BigDecimal minScore, BigDecimal maxScore,
+                                           BigDecimal minPercent, BigDecimal maxPercent,
                                            Integer sortOrder) {
         // 获取当前所有 bands，找到对应的 band 重建（因为 PolicyGradeBand 没有 update 方法）
         List<PolicyGradeBand> bands = gradeBandRepository.findByPolicyId(policyId);
@@ -149,8 +145,8 @@ public class ScoringPolicyApplicationService2 {
                         .policyId(policyId)
                         .gradeCode(gradeCode)
                         .gradeName(gradeName)
-                        .minScore(minScore)
-                        .maxScore(maxScore)
+                        .minPercent(minPercent)
+                        .maxPercent(maxPercent)
                         .sortOrder(sortOrder)
                         .createdAt(existing.getCreatedAt())
         );

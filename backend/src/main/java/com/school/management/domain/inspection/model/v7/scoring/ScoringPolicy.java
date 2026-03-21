@@ -2,7 +2,6 @@ package com.school.management.domain.inspection.model.v7.scoring;
 
 import com.school.management.domain.shared.AggregateRoot;
 
-import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 /**
@@ -15,8 +14,6 @@ public class ScoringPolicy extends AggregateRoot<Long> {
     private String policyCode;
     private String policyName;
     private String description;
-    private BigDecimal maxScore;
-    private BigDecimal minScore;
     private Integer precisionDigits;
     private Boolean isSystem;
     private Boolean isEnabled;
@@ -35,8 +32,6 @@ public class ScoringPolicy extends AggregateRoot<Long> {
         this.policyCode = builder.policyCode;
         this.policyName = builder.policyName;
         this.description = builder.description;
-        this.maxScore = builder.maxScore != null ? builder.maxScore : new BigDecimal("100");
-        this.minScore = builder.minScore != null ? builder.minScore : BigDecimal.ZERO;
         this.precisionDigits = builder.precisionDigits != null ? builder.precisionDigits : 2;
         this.isSystem = builder.isSystem != null ? builder.isSystem : false;
         this.isEnabled = builder.isEnabled != null ? builder.isEnabled : true;
@@ -60,18 +55,12 @@ public class ScoringPolicy extends AggregateRoot<Long> {
     }
 
     public void update(String policyName, String description,
-                       BigDecimal maxScore, BigDecimal minScore,
                        Integer precisionDigits, Integer sortOrder, Long updatedBy) {
         if (Boolean.TRUE.equals(this.isSystem)) {
             throw new IllegalStateException("系统预置评分方案不允许修改");
         }
-        if (minScore != null && maxScore != null && minScore.compareTo(maxScore) > 0) {
-            throw new IllegalArgumentException("minScore 不能大于 maxScore");
-        }
         this.policyName = policyName;
         this.description = description;
-        this.maxScore = maxScore;
-        this.minScore = minScore;
         this.precisionDigits = precisionDigits;
         this.sortOrder = sortOrder;
         this.updatedBy = updatedBy;
@@ -101,8 +90,6 @@ public class ScoringPolicy extends AggregateRoot<Long> {
     public String getPolicyCode() { return policyCode; }
     public String getPolicyName() { return policyName; }
     public String getDescription() { return description; }
-    public BigDecimal getMaxScore() { return maxScore; }
-    public BigDecimal getMinScore() { return minScore; }
     public Integer getPrecisionDigits() { return precisionDigits; }
     public Boolean getIsSystem() { return isSystem; }
     public Boolean getIsEnabled() { return isEnabled; }
@@ -120,8 +107,6 @@ public class ScoringPolicy extends AggregateRoot<Long> {
         private String policyCode;
         private String policyName;
         private String description;
-        private BigDecimal maxScore;
-        private BigDecimal minScore;
         private Integer precisionDigits;
         private Boolean isSystem;
         private Boolean isEnabled;
@@ -136,8 +121,6 @@ public class ScoringPolicy extends AggregateRoot<Long> {
         public Builder policyCode(String policyCode) { this.policyCode = policyCode; return this; }
         public Builder policyName(String policyName) { this.policyName = policyName; return this; }
         public Builder description(String description) { this.description = description; return this; }
-        public Builder maxScore(BigDecimal maxScore) { this.maxScore = maxScore; return this; }
-        public Builder minScore(BigDecimal minScore) { this.minScore = minScore; return this; }
         public Builder precisionDigits(Integer precisionDigits) { this.precisionDigits = precisionDigits; return this; }
         public Builder isSystem(Boolean isSystem) { this.isSystem = isSystem; return this; }
         public Builder isEnabled(Boolean isEnabled) { this.isEnabled = isEnabled; return this; }

@@ -5,8 +5,6 @@ export interface ScoringPolicy {
   policyCode: string
   policyName: string
   description: string | null
-  maxScore: number
-  minScore: number
   precisionDigits: number
   isSystem: boolean
   isEnabled: boolean
@@ -20,8 +18,8 @@ export interface PolicyGradeBand {
   policyId: number
   gradeCode: string
   gradeName: string
-  minScore: number
-  maxScore: number
+  minPercent: number
+  maxPercent: number
   sortOrder: number
 }
 

@@ -1213,8 +1213,8 @@ const routes: RouteRecordRaw[] = [
             component: () => import('@/views/system/ScoringPolicyView.vue'),
             meta: {
               title: '评分方案',
+              icon: 'Award',
               requiresAuth: true,
-              permission: 'system:config:view',
               order: 13
             }
           },

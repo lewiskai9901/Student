@@ -1,0 +1,484 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>V7 检查平台 - 完整架构图</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { font-family: -apple-system, 'Segoe UI', sans-serif; background: #0f172a; color: #e2e8f0; min-height: 100vh; padding: 40px 20px; }
+h1 { text-align: center; font-size: 28px; font-weight: 700; margin-bottom: 8px; background: linear-gradient(135deg, #60a5fa, #a78bfa); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+.subtitle { text-align: center; font-size: 13px; color: #64748b; margin-bottom: 40px; }
+
+.container { max-width: 1200px; margin: 0 auto; display: flex; flex-direction: column; gap: 32px; }
+
+/* ===== Layer ===== */
+.layer { border: 1px solid #1e293b; border-radius: 16px; padding: 24px; position: relative; background: rgba(15,23,42,0.6); backdrop-filter: blur(8px); }
+.layer-title { position: absolute; top: -12px; left: 24px; background: #0f172a; padding: 0 12px; font-size: 13px; font-weight: 600; letter-spacing: 1px; }
+.layer-title.config { color: #a78bfa; }
+.layer-title.template { color: #60a5fa; }
+.layer-title.project { color: #34d399; }
+.layer-title.execution { color: #fbbf24; }
+.layer-title.infra { color: #f87171; }
+
+.layer-content { display: flex; gap: 16px; flex-wrap: wrap; }
+
+/* ===== Entity Card ===== */
+.entity { background: #1e293b; border: 1px solid #334155; border-radius: 12px; padding: 16px; min-width: 200px; flex: 1; position: relative; transition: all 0.2s; }
+.entity:hover { border-color: #475569; transform: translateY(-2px); box-shadow: 0 8px 24px rgba(0,0,0,0.3); }
+.entity-name { font-size: 14px; font-weight: 600; margin-bottom: 8px; display: flex; align-items: center; gap: 8px; }
+.entity-name .icon { font-size: 16px; }
+.entity-fields { display: flex; flex-direction: column; gap: 3px; }
+.field { font-size: 11px; color: #94a3b8; display: flex; align-items: center; gap: 6px; }
+.field .dot { width: 4px; height: 4px; border-radius: 50%; flex-shrink: 0; }
+.field .dot.pk { background: #fbbf24; }
+.field .dot.fk { background: #60a5fa; }
+.field .dot.normal { background: #475569; }
+.field .type { color: #64748b; font-size: 10px; }
+.entity-tag { position: absolute; top: 8px; right: 8px; font-size: 9px; padding: 2px 6px; border-radius: 4px; font-weight: 500; }
+.tag-new { background: rgba(52,211,153,0.15); color: #34d399; }
+.tag-core { background: rgba(96,165,250,0.15); color: #60a5fa; }
+.tag-reuse { background: rgba(167,139,250,0.15); color: #a78bfa; }
+
+/* ===== Relation Arrows ===== */
+.relations { display: flex; flex-direction: column; gap: 12px; padding: 0 20px; }
+.relation { display: flex; align-items: center; gap: 12px; font-size: 11px; color: #64748b; }
+.relation .arrow { font-size: 14px; color: #475569; }
+.relation .from, .relation .to { font-size: 11px; font-weight: 500; padding: 2px 8px; border-radius: 4px; }
+.relation .from { background: rgba(96,165,250,0.1); color: #60a5fa; }
+.relation .to { background: rgba(52,211,153,0.1); color: #34d399; }
+.relation .label { color: #94a3b8; font-style: italic; }
+
+/* ===== Flow Section ===== */
+.flow-section { margin-top: 32px; }
+.flow-title { font-size: 16px; font-weight: 600; margin-bottom: 16px; color: #e2e8f0; display: flex; align-items: center; gap: 8px; }
+.flow-title .icon { font-size: 20px; }
+
+.flow { display: flex; align-items: stretch; gap: 0; overflow-x: auto; padding: 8px 0; }
+.flow-step { display: flex; flex-direction: column; align-items: center; min-width: 140px; position: relative; }
+.flow-box { background: #1e293b; border: 1px solid #334155; border-radius: 10px; padding: 12px 16px; text-align: center; width: 100%; }
+.flow-box .name { font-size: 12px; font-weight: 600; margin-bottom: 4px; }
+.flow-box .desc { font-size: 10px; color: #64748b; }
+.flow-box.active { border-color: #60a5fa; box-shadow: 0 0 12px rgba(96,165,250,0.2); }
+.flow-box.highlight { border-color: #34d399; box-shadow: 0 0 12px rgba(52,211,153,0.2); }
+.flow-box.warn { border-color: #fbbf24; box-shadow: 0 0 12px rgba(251,191,36,0.2); }
+.flow-arrow { display: flex; align-items: center; justify-content: center; min-width: 40px; color: #475569; font-size: 18px; }
+
+/* ===== Condition Types ===== */
+.condition-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.condition-item { background: #1e293b; border: 1px solid #334155; border-radius: 8px; padding: 8px 12px; }
+.condition-item .name { font-size: 11px; font-weight: 600; color: #e2e8f0; }
+.condition-item .desc { font-size: 10px; color: #64748b; margin-top: 2px; }
+.condition-group-title { font-size: 11px; font-weight: 600; color: #94a3b8; margin-bottom: 6px; letter-spacing: 1px; }
+
+/* ===== Summary Stats ===== */
+.stats { display: flex; gap: 16px; flex-wrap: wrap; margin-top: 24px; }
+.stat { background: #1e293b; border: 1px solid #334155; border-radius: 10px; padding: 16px 20px; flex: 1; min-width: 150px; text-align: center; }
+.stat .num { font-size: 24px; font-weight: 700; background: linear-gradient(135deg, #60a5fa, #a78bfa); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+.stat .label { font-size: 11px; color: #64748b; margin-top: 4px; }
+
+/* ===== Data Flow Diagram ===== */
+.dataflow { margin-top: 32px; }
+.df-row { display: flex; align-items: center; gap: 0; margin-bottom: 8px; }
+.df-node { background: #1e293b; border: 1px solid #334155; border-radius: 8px; padding: 8px 14px; font-size: 11px; font-weight: 500; white-space: nowrap; }
+.df-node.blue { border-color: #3b82f6; color: #93c5fd; }
+.df-node.green { border-color: #10b981; color: #6ee7b7; }
+.df-node.yellow { border-color: #f59e0b; color: #fcd34d; }
+.df-node.red { border-color: #ef4444; color: #fca5a5; }
+.df-node.purple { border-color: #8b5cf6; color: #c4b5fd; }
+.df-arrow { color: #475569; padding: 0 8px; font-size: 14px; }
+.df-label { font-size: 10px; color: #64748b; padding: 0 4px; }
+</style>
+</head>
+<body>
+
+<h1>V7 检查平台 · 完整架构图</h1>
+<p class="subtitle">通用检查评分评选系统 · 支持多租户多行业场景</p>
+
+<div class="container">
+
+<!-- ==================== 系统设置层 ==================== -->
+<div class="layer">
+  <div class="layer-title config">⚙ 系统设置层（全局可复用配置）</div>
+  <div class="layer-content">
+    <div class="entity">
+      <span class="entity-tag tag-new">新增</span>
+      <div class="entity-name"><span class="icon">📋</span> ScoringPolicy 评分方案</div>
+      <div class="entity-fields">
+        <div class="field"><span class="dot pk"></span> policyCode / policyName</div>
+        <div class="field"><span class="dot normal"></span> maxScore / minScore / precision</div>
+        <div class="field"><span class="dot normal"></span> isSystem / isEnabled</div>
+        <div class="field" style="margin-top:6px; color:#a78bfa; font-weight:500">↳ PolicyGradeBand 等级映射</div>
+        <div class="field"><span class="dot normal"></span> gradeCode(A/B/C) + 分数区间</div>
+        <div class="field" style="margin-top:4px; color:#a78bfa; font-weight:500">↳ PolicyCalcRule 即时规则</div>
+        <div class="field"><span class="dot normal"></span> VETO / PENALTY / BONUS</div>
+      </div>
+    </div>
+
+    <div class="entity">
+      <span class="entity-tag tag-new">新增</span>
+      <div class="entity-name"><span class="icon">🔔</span> EntityEventType 事件类型</div>
+      <div class="entity-fields">
+        <div class="field"><span class="dot pk"></span> categoryCode / typeCode</div>
+        <div class="field"><span class="dot normal"></span> typeName / hasScore / hasSeverity</div>
+        <div class="field"><span class="dot normal"></span> applicableSubjects (JSON)</div>
+        <div class="field"><span class="dot normal"></span> isSystem / 租户可扩展</div>
+        <div class="field" style="margin-top:6px; color:#64748b">预置: INSP_GRADE / INSP_VIOLATION</div>
+        <div class="field"><span class="dot normal"></span> ORG_TRANSFER / PLACE_ASSIGN...</div>
+      </div>
+    </div>
+
+    <div class="entity">
+      <span class="entity-tag tag-reuse">复用</span>
+      <div class="entity-name"><span class="icon">🏷</span> ConfigurableType 类型体系</div>
+      <div class="entity-fields">
+        <div class="field"><span class="dot normal"></span> OrgType 组织类型</div>
+        <div class="field"><span class="dot normal"></span> UserType 用户类型</div>
+        <div class="field"><span class="dot normal"></span> PlaceType 场所类型</div>
+        <div class="field" style="margin-top:4px; color:#64748b">统一接口: typeCode/typeName/</div>
+        <div class="field"><span class="dot normal"></span> features/hierarchy/crossRef</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ==================== 模板层 ==================== -->
+<div class="layer">
+  <div class="layer-title template">📐 模板层（静态定义 · 发布后不可变）</div>
+  <div class="layer-content">
+    <div class="entity" style="flex:2">
+      <span class="entity-tag tag-core">核心</span>
+      <div class="entity-name"><span class="icon">🌳</span> TemplateSection 递归分区树</div>
+      <div class="entity-fields">
+        <div class="field"><span class="dot pk"></span> 根分区 = 模板（parentSectionId=null）</div>
+        <div class="field"><span class="dot fk"></span> parentSectionId → 父分区</div>
+        <div class="field"><span class="dot fk"></span> refSectionId → 引用分区（只读快捷方式）</div>
+        <div class="field"><span class="dot fk"></span> scoringPolicyId → 评分方案</div>
+        <div class="field"><span class="dot normal"></span> targetType: ORG / PLACE / USER</div>
+        <div class="field"><span class="dot normal"></span> targetSourceMode / targetTypeFilter</div>
+        <div class="field"><span class="dot normal"></span> weight / isRepeatable / sortOrder</div>
+        <div class="field"><span class="dot normal"></span> inspectionMode: SNAPSHOT / CONTINUOUS</div>
+        <div class="field"><span class="dot normal"></span> status: DRAFT → PUBLISHED → ARCHIVED</div>
+        <div class="field" style="margin-top:6px; color:#60a5fa; font-weight:500">↳ ScoreDimension 子项权重（自动同步）</div>
+        <div class="field"><span class="dot normal"></span> weight 从分区 weight 读取（只读）</div>
+      </div>
+    </div>
+
+    <div class="entity">
+      <div class="entity-name"><span class="icon">📝</span> TemplateItem 检查字段</div>
+      <div class="entity-fields">
+        <div class="field"><span class="dot fk"></span> sectionId → 所属分区</div>
+        <div class="field"><span class="dot normal"></span> itemType: TEXT / NUMBER / PHOTO...</div>
+        <div class="field"><span class="dot normal"></span> + VIOLATION_RECORD (违纪记录)</div>
+        <div class="field"><span class="dot normal"></span> + PERSON_SCORE (逐人评分)</div>
+        <div class="field"><span class="dot normal"></span> isScored / scoringConfig (JSON)</div>
+        <div class="field"><span class="dot normal"></span> scoringMode: DEDUCTION / PASS_FAIL</div>
+        <div class="field"><span class="dot normal"></span> / GRADE / DIRECT / RATING_SCALE...</div>
+        <div class="field"><span class="dot normal"></span> itemWeight / conditionLogic</div>
+      </div>
+    </div>
+
+    <div class="entity">
+      <div class="entity-name"><span class="icon">📦</span> TemplateVersion 版本快照</div>
+      <div class="entity-fields">
+        <div class="field"><span class="dot fk"></span> templateId → 根分区</div>
+        <div class="field"><span class="dot normal"></span> version: 1, 2, 3...</div>
+        <div class="field"><span class="dot normal"></span> structureSnapshot (JSON)</div>
+        <div class="field"><span class="dot normal"></span> 发布时冻结分区树+字段</div>
+        <div class="field" style="margin-top:8px; color:#64748b">每次发布创建不可变快照</div>
+        <div class="field"><span class="dot normal"></span> 项目运行时引用快照版本</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ==================== 项目层 ==================== -->
+<div class="layer">
+  <div class="layer-title project">🚀 项目层（动态运行 · 管理检查生命周期）</div>
+  <div class="layer-content">
+    <div class="entity">
+      <span class="entity-tag tag-core">核心</span>
+      <div class="entity-name"><span class="icon">📊</span> InspProject 检查项目</div>
+      <div class="entity-fields">
+        <div class="field"><span class="dot fk"></span> rootSectionId → 根分区</div>
+        <div class="field"><span class="dot normal"></span> projectName / status</div>
+        <div class="field"><span class="dot normal"></span> scopeType / scopeConfig (检查范围)</div>
+        <div class="field"><span class="dot normal"></span> startDate / endDate</div>
+        <div class="field"><span class="dot normal"></span> assignmentMode / reviewRequired</div>
+        <div class="field"><span class="dot normal"></span> scoringConfigSnapshot (发布锁定)</div>
+        <div class="field" style="margin-top:4px; color:#64748b">生命周期: DRAFT → ACTIVE → PAUSED</div>
+        <div class="field"><span class="dot normal"></span>   → COMPLETED → ARCHIVED</div>
+      </div>
+    </div>
+
+    <div class="entity">
+      <div class="entity-name"><span class="icon">📅</span> InspectionPlan 检查计划</div>
+      <div class="entity-fields">
+        <div class="field"><span class="dot fk"></span> projectId → 项目</div>
+        <div class="field"><span class="dot normal"></span> planName / sectionIds</div>
+        <div class="field"><span class="dot normal"></span> scheduleMode: REGULAR / ON_DEMAND</div>
+        <div class="field"><span class="dot normal"></span> cycleType: DAILY / WEEKLY / MONTHLY</div>
+        <div class="field"><span class="dot normal"></span> frequency / scheduleDays / timeSlots</div>
+        <div class="field"><span class="dot normal"></span> isEnabled</div>
+        <div class="field" style="margin-top:4px; color:#64748b">REGULAR = 自动生成任务</div>
+        <div class="field"><span class="dot normal"></span> ON_DEMAND = 手动触发</div>
+      </div>
+    </div>
+
+    <div class="entity">
+      <span class="entity-tag tag-new">新增</span>
+      <div class="entity-name"><span class="icon">⭐</span> EvaluationRule 评选规则</div>
+      <div class="entity-fields">
+        <div class="field"><span class="dot fk"></span> projectId → 项目</div>
+        <div class="field"><span class="dot normal"></span> ruleName / targetType / awardName</div>
+        <div class="field"><span class="dot normal"></span> evaluationPeriod: MONTHLY / WEEKLY</div>
+        <div class="field" style="margin-top:4px; color:#34d399; font-weight:500">↳ EvaluationLevel 评选等级</div>
+        <div class="field"><span class="dot normal"></span> levelNum(1=最高) / levelName</div>
+        <div class="field"><span class="dot normal"></span> conditions (JSON条件列表)</div>
+        <div class="field"><span class="dot normal"></span> conditionLogic: AND / OR</div>
+        <div class="field" style="margin-top:4px; color:#34d399; font-weight:500">↳ EvaluationResult 评选结果</div>
+        <div class="field"><span class="dot normal"></span> targetId / levelName / rank / score</div>
+      </div>
+    </div>
+
+    <div class="entity">
+      <div class="entity-name"><span class="icon">⚡</span> 高级运行时设置</div>
+      <div class="entity-fields">
+        <div class="field" style="color:#fbbf24; font-weight:500">趋势因子</div>
+        <div class="field"><span class="dot normal"></span> 比较历史分数趋势加减分</div>
+        <div class="field" style="color:#fbbf24; font-weight:500; margin-top:4px">分数衰减</div>
+        <div class="field"><span class="dot normal"></span> 检查后分数随时间衰减</div>
+        <div class="field" style="color:#fbbf24; font-weight:500; margin-top:4px">多评审聚合</div>
+        <div class="field"><span class="dot normal"></span> 多检查员取平均/最新</div>
+        <div class="field" style="color:#fbbf24; font-weight:500; margin-top:4px">分布校准</div>
+        <div class="field"><span class="dot normal"></span> 统计校准消除评审偏差</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ==================== 执行层 ==================== -->
+<div class="layer">
+  <div class="layer-title execution">⚡ 执行层（检查任务的创建 · 打分 · 计分）</div>
+  <div class="layer-content">
+    <div class="entity">
+      <div class="entity-name"><span class="icon">📋</span> InspTask 检查任务</div>
+      <div class="entity-fields">
+        <div class="field"><span class="dot fk"></span> projectId → 项目</div>
+        <div class="field"><span class="dot normal"></span> taskCode / taskDate</div>
+        <div class="field"><span class="dot normal"></span> inspectorId / inspectorName</div>
+        <div class="field"><span class="dot normal"></span> assignedSectionIds (JSON)</div>
+        <div class="field"><span class="dot normal"></span> status: PENDING → CLAIMED</div>
+        <div class="field"><span class="dot normal"></span>   → IN_PROGRESS → SUBMITTED</div>
+        <div class="field"><span class="dot normal"></span>   → UNDER_REVIEW → PUBLISHED</div>
+      </div>
+    </div>
+
+    <div class="entity">
+      <div class="entity-name"><span class="icon">📄</span> InspSubmission 打分提交</div>
+      <div class="entity-fields">
+        <div class="field"><span class="dot fk"></span> taskId → 任务</div>
+        <div class="field"><span class="dot fk"></span> sectionId → 分区</div>
+        <div class="field"><span class="dot normal"></span> targetType / targetId / targetName</div>
+        <div class="field"><span class="dot normal"></span> rootTargetId / rootTargetName</div>
+        <div class="field"><span class="dot normal"></span> finalScore / grade / passed</div>
+        <div class="field"><span class="dot normal"></span> status: PENDING → IN_PROGRESS</div>
+        <div class="field"><span class="dot normal"></span>   → COMPLETED / SKIPPED</div>
+        <div class="field"><span class="dot normal"></span> closedAt / closedReason (CONTINUOUS)</div>
+      </div>
+    </div>
+
+    <div class="entity">
+      <div class="entity-name"><span class="icon">🔢</span> SubmissionDetail 字段填写</div>
+      <div class="entity-fields">
+        <div class="field"><span class="dot fk"></span> submissionId → 提交</div>
+        <div class="field"><span class="dot fk"></span> itemId → 字段模板</div>
+        <div class="field"><span class="dot normal"></span> responseValue (填写值)</div>
+        <div class="field"><span class="dot normal"></span> score / maxScore / scoringMode</div>
+        <div class="field"><span class="dot normal"></span> sectionId / sectionName</div>
+      </div>
+    </div>
+
+    <div class="entity">
+      <div class="entity-name"><span class="icon">🧮</span> 计分引擎</div>
+      <div class="entity-fields">
+        <div class="field" style="color:#fbbf24; font-weight:500">ScoreAggregation</div>
+        <div class="field"><span class="dot normal"></span> 级联重算: Detail→Submission</div>
+        <div class="field"><span class="dot normal"></span>   →Task→ProjectScore</div>
+        <div class="field" style="color:#fbbf24; font-weight:500; margin-top:4px">EvaluationEngine</div>
+        <div class="field"><span class="dot normal"></span> 条件评估器（12种类型）</div>
+        <div class="field"><span class="dot normal"></span> 从高到低逐级判定</div>
+        <div class="field"><span class="dot normal"></span> AND/OR 组合</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ==================== 基础设施层 ==================== -->
+<div class="layer">
+  <div class="layer-title infra">🔧 基础设施层（通用能力 · 跨业务域）</div>
+  <div class="layer-content">
+    <div class="entity">
+      <span class="entity-tag tag-new">新增</span>
+      <div class="entity-name"><span class="icon">📡</span> EntityEvent 实体事件流</div>
+      <div class="entity-fields">
+        <div class="field"><span class="dot normal"></span> subjectType / subjectId (主体)</div>
+        <div class="field"><span class="dot normal"></span> eventCategory / eventType</div>
+        <div class="field"><span class="dot normal"></span> payload (JSON 业务数据)</div>
+        <div class="field"><span class="dot normal"></span> sourceModule / sourceRefId</div>
+        <div class="field" style="margin-top:4px; color:#f87171; font-weight:500">↳ EntityEventRelation</div>
+        <div class="field"><span class="dot normal"></span> 关联主体（成员→组织→场所）</div>
+      </div>
+    </div>
+
+    <div class="entity">
+      <div class="entity-name"><span class="icon">📝</span> ActivityEvent 操作审计</div>
+      <div class="entity-fields">
+        <div class="field"><span class="dot normal"></span> resourceType / action</div>
+        <div class="field"><span class="dot normal"></span> userId / changedFields</div>
+        <div class="field"><span class="dot normal"></span> @AuditEvent 注解自动采集</div>
+        <div class="field" style="margin-top:4px; color:#64748b">已有系统，不动</div>
+      </div>
+    </div>
+
+    <div class="entity">
+      <div class="entity-name"><span class="icon">🔔</span> 通知监听</div>
+      <div class="entity-fields">
+        <div class="field"><span class="dot normal"></span> InspectionEventListener</div>
+        <div class="field"><span class="dot normal"></span> 监听 EntityEvent 创建</div>
+        <div class="field"><span class="dot normal"></span> VIOLATION → 通知管理者</div>
+        <div class="field"><span class="dot normal"></span> RATING → 通知相关组织</div>
+        <div class="field" style="margin-top:4px; color:#64748b">TODO: WebSocket / 微信推送</div>
+      </div>
+    </div>
+
+    <div class="entity">
+      <div class="entity-name"><span class="icon">⏰</span> 定时任务</div>
+      <div class="entity-fields">
+        <div class="field"><span class="dot normal"></span> TaskGenerationJob 按计划生成任务</div>
+        <div class="field"><span class="dot normal"></span> ContinuousClosureJob 自动关闭</div>
+        <div class="field"><span class="dot normal"></span> OutboxProcessor 事件发件箱</div>
+        <div class="field"><span class="dot normal"></span> CorrectiveSlaJob 整改超期</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ==================== 数据流 ==================== -->
+<div class="flow-section">
+  <div class="flow-title"><span class="icon">🔄</span> 核心数据流</div>
+
+  <div style="margin-bottom: 20px;">
+    <div style="font-size:12px; font-weight:600; color:#60a5fa; margin-bottom:8px;">检查执行流程</div>
+    <div class="df-row">
+      <div class="df-node blue">检查计划</div>
+      <div class="df-arrow">→</div>
+      <div class="df-node blue">生成任务</div>
+      <div class="df-arrow">→</div>
+      <div class="df-node yellow">认领/分配</div>
+      <div class="df-arrow">→</div>
+      <div class="df-node yellow">打分填写</div>
+      <div class="df-arrow">→</div>
+      <div class="df-node green">计分评级</div>
+      <div class="df-arrow">→</div>
+      <div class="df-node green">发布 EntityEvent</div>
+      <div class="df-arrow">→</div>
+      <div class="df-node purple">通知相关人</div>
+    </div>
+  </div>
+
+  <div style="margin-bottom: 20px;">
+    <div style="font-size:12px; font-weight:600; color:#34d399; margin-bottom:8px;">评选计算流程</div>
+    <div class="df-row">
+      <div class="df-node green">触发评选</div>
+      <div class="df-arrow">→</div>
+      <div class="df-node blue">收集目标</div>
+      <div class="df-arrow">→</div>
+      <div class="df-node yellow">逐级判定条件</div>
+      <div class="df-arrow">→</div>
+      <div class="df-node yellow">查分数+事件</div>
+      <div class="df-arrow">→</div>
+      <div class="df-node green">确定等级</div>
+      <div class="df-arrow">→</div>
+      <div class="df-node green">排名</div>
+      <div class="df-arrow">→</div>
+      <div class="df-node purple">发布荣誉事件</div>
+    </div>
+  </div>
+
+  <div style="margin-bottom: 20px;">
+    <div style="font-size:12px; font-weight:600; color:#fbbf24; margin-bottom:8px;">分数级联重算</div>
+    <div class="df-row">
+      <div class="df-node yellow">修改 Detail</div>
+      <div class="df-arrow">→</div>
+      <div class="df-node yellow">重算 Submission</div>
+      <div class="df-arrow">→</div>
+      <div class="df-node yellow">重算 Task 汇总</div>
+      <div class="df-arrow">→</div>
+      <div class="df-node yellow">重算 ProjectScore</div>
+      <div class="df-arrow">→</div>
+      <div class="df-node red">更新 EntityEvent</div>
+    </div>
+  </div>
+
+  <div>
+    <div style="font-size:12px; font-weight:600; color:#a78bfa; margin-bottom:8px;">实体事件查询</div>
+    <div class="df-row">
+      <div class="df-node purple">查看 201宿舍</div>
+      <div class="df-arrow">→</div>
+      <div class="df-node purple">EntityEvent 时间线</div>
+      <div class="df-arrow">→</div>
+      <div class="df-node blue">检查评级 92分A</div>
+      <div class="df-label">+</div>
+      <div class="df-node red">违规 李华迟到 -2</div>
+      <div class="df-label">+</div>
+      <div class="df-node green">荣誉 五星宿舍</div>
+    </div>
+  </div>
+</div>
+
+<!-- ==================== 条件类型库 ==================== -->
+<div class="flow-section">
+  <div class="flow-title"><span class="icon">🔍</span> 评选条件类型库（12种）</div>
+
+  <div style="display:flex; gap:16px; flex-wrap:wrap;">
+    <div style="flex:1; min-width:250px;">
+      <div class="condition-group-title">📊 检查分数类</div>
+      <div style="display:flex; flex-direction:column; gap:6px;">
+        <div class="condition-item"><div class="name">SCORE_AVG 平均分</div><div class="desc">检查分数的平均值 ≥ 阈值</div></div>
+        <div class="condition-item"><div class="name">SCORE_MIN 最低分</div><div class="desc">每次检查最低分 ≥ 阈值</div></div>
+        <div class="condition-item"><div class="name">SCORE_EVERY 每次达标</div><div class="desc">N次检查每次都 ≥ 阈值</div></div>
+        <div class="condition-item"><div class="name">SCORE_COUNT 达标次数</div><div class="desc">达标的检查次数 ≥ N</div></div>
+        <div class="condition-item"><div class="name">SCORE_SECTION_ZERO 零扣分</div><div class="desc">指定分区零扣分</div></div>
+      </div>
+    </div>
+    <div style="flex:1; min-width:250px;">
+      <div class="condition-group-title">📡 事件记录类</div>
+      <div style="display:flex; flex-direction:column; gap:6px;">
+        <div class="condition-item"><div class="name">EVENT_COUNT 事件计数</div><div class="desc">某类事件发生次数 ≤ N</div></div>
+        <div class="condition-item"><div class="name">EVENT_ROLE 角色事件</div><div class="desc">特定角色（宿舍长）的事件</div></div>
+        <div class="condition-item"><div class="name">EVENT_SCORE_SUM 事件扣分</div><div class="desc">事件的扣分总和 ≤ N</div></div>
+      </div>
+      <div class="condition-group-title" style="margin-top:12px;">📈 历史评选类</div>
+      <div style="display:flex; flex-direction:column; gap:6px;">
+        <div class="condition-item"><div class="name">PREV_EVAL 历史评选</div><div class="desc">连续N周评选 ≥ 某等级</div></div>
+        <div class="condition-item"><div class="name">RANK_PERCENTILE 排名百分比</div><div class="desc">排名在前 N%</div></div>
+        <div class="condition-item"><div class="name">TREND_IMPROVE 趋势改善</div><div class="desc">比上期提升 ≥ N分</div></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ==================== 统计 ==================== -->
+<div class="stats">
+  <div class="stat"><div class="num">6</div><div class="label">新建数据库表</div></div>
+  <div class="stat"><div class="num">12</div><div class="label">评选条件类型</div></div>
+  <div class="stat"><div class="num">13</div><div class="label">评分模式</div></div>
+  <div class="stat"><div class="num">22</div><div class="label">字段类型</div></div>
+  <div class="stat"><div class="num">10</div><div class="label">预置事件类型</div></div>
+  <div class="stat"><div class="num">3</div><div class="label">系统评分方案</div></div>
+</div>
+
+</div>
+</body>
+</html>

@@ -114,8 +114,6 @@ const form = ref({
   policyCode: '',
   policyName: '',
   description: '',
-  maxScore: 100,
-  minScore: 0,
   precisionDigits: 2,
   sortOrder: 0,
 })
@@ -127,8 +125,6 @@ function openCreate() {
     policyCode: '',
     policyName: '',
     description: '',
-    maxScore: 100,
-    minScore: 0,
     precisionDigits: 2,
     sortOrder: 0,
   })
@@ -143,8 +139,6 @@ function openEdit(policy: ScoringPolicy) {
     policyCode: policy.policyCode,
     policyName: policy.policyName,
     description: policy.description || '',
-    maxScore: policy.maxScore,
-    minScore: policy.minScore,
     precisionDigits: policy.precisionDigits,
     sortOrder: policy.sortOrder,
   })
@@ -156,8 +150,6 @@ async function openCopy(policy: ScoringPolicy) {
     policyCode: policy.policyCode + '_COPY',
     policyName: policy.policyName + '（副本）',
     description: policy.description || '',
-    maxScore: policy.maxScore,
-    minScore: policy.minScore,
     precisionDigits: policy.precisionDigits,
     sortOrder: 0,
   })
@@ -181,8 +173,6 @@ async function handleSave() {
       policyCode: form.value.policyCode.trim().toUpperCase(),
       policyName: form.value.policyName.trim(),
       description: form.value.description.trim() || null,
-      maxScore: form.value.maxScore,
-      minScore: form.value.minScore,
       precisionDigits: form.value.precisionDigits,
       sortOrder: form.value.sortOrder,
     }
@@ -322,8 +312,6 @@ onMounted(() => { loadPolicies() })
               <div class="card-meta">
                 <span class="card-code">{{ policy.policyCode }}</span>
                 <span class="meta-sep">·</span>
-                <span class="card-range">满分 {{ policy.maxScore }} / 最低 {{ policy.minScore }}</span>
-                <span class="meta-sep">·</span>
                 <span class="card-precision">精度 {{ policy.precisionDigits }} 位</span>
               </div>
               <p v-if="policy.description" class="card-desc">{{ policy.description }}</p>
@@ -364,10 +352,10 @@ onMounted(() => { loadPolicies() })
                 :key="band.id"
                 class="band-pill"
                 :style="getBandStyle(band.gradeCode)"
-                :title="`${band.gradeName}: ${band.minScore} ~ ${band.maxScore}`"
+                :title="`${band.gradeName}: ${band.minPercent}% ~ ${band.maxPercent}%`"
               >
                 <span class="band-code">{{ band.gradeCode }}</span>
-                <span class="band-score">≥{{ band.minScore }}</span>
+                <span class="band-score">≥{{ band.minPercent }}%</span>
               </div>
             </div>
             <div v-else-if="detailLoading.has(policy.id)" class="bands-loading">
@@ -394,7 +382,7 @@ onMounted(() => { loadPolicies() })
                     <div class="bands-table-head">
                       <span>等级</span>
                       <span>名称</span>
-                      <span>分数区间</span>
+                      <span>百分比区间</span>
                     </div>
                     <div
                       v-for="band in detailCache.get(policy.id)!.bands"
@@ -405,7 +393,7 @@ onMounted(() => { loadPolicies() })
                         <span class="band-tag" :style="getBandStyle(band.gradeCode)">{{ band.gradeCode }}</span>
                       </span>
                       <span class="band-name-text">{{ band.gradeName }}</span>
-                      <span class="band-range-text">{{ band.minScore }} ~ {{ band.maxScore }}</span>
+                      <span class="band-range-text">{{ band.minPercent }}% ~ {{ band.maxPercent }}%</span>
                     </div>
                   </div>
                   <p v-else class="detail-empty">暂无等级定义</p>
@@ -488,14 +476,6 @@ onMounted(() => { loadPolicies() })
               </div>
 
               <div class="fld-row">
-                <div class="fld fld-narrow">
-                  <label>满分</label>
-                  <input v-model.number="form.maxScore" type="number" class="fld-input" />
-                </div>
-                <div class="fld fld-narrow">
-                  <label>最低分</label>
-                  <input v-model.number="form.minScore" type="number" class="fld-input" />
-                </div>
                 <div class="fld fld-narrow">
                   <label>精度（小数位）</label>
                   <input v-model.number="form.precisionDigits" type="number" min="0" max="4" class="fld-input" />

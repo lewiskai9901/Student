@@ -52,23 +52,23 @@ function getBandTextColor(gradeCode: string): string {
 }
 
 // ==================== Grade presets ====================
-const PRESETS: Record<string, Array<{ gradeCode: string; gradeName: string; minScore: number; maxScore: number }>> = {
+const PRESETS: Record<string, Array<{ gradeCode: string; gradeName: string; minPercent: number; maxPercent: number }>> = {
   FIVE: [
-    { gradeCode: 'A', gradeName: '优秀', minScore: 90, maxScore: 100 },
-    { gradeCode: 'B', gradeName: '良好', minScore: 80, maxScore: 89.99 },
-    { gradeCode: 'C', gradeName: '中等', minScore: 70, maxScore: 79.99 },
-    { gradeCode: 'D', gradeName: '及格', minScore: 60, maxScore: 69.99 },
-    { gradeCode: 'F', gradeName: '不及格', minScore: 0, maxScore: 59.99 },
+    { gradeCode: 'A', gradeName: '优秀', minPercent: 90, maxPercent: 100 },
+    { gradeCode: 'B', gradeName: '良好', minPercent: 80, maxPercent: 89.99 },
+    { gradeCode: 'C', gradeName: '中等', minPercent: 70, maxPercent: 79.99 },
+    { gradeCode: 'D', gradeName: '及格', minPercent: 60, maxPercent: 69.99 },
+    { gradeCode: 'F', gradeName: '不及格', minPercent: 0, maxPercent: 59.99 },
   ],
   FOUR: [
-    { gradeCode: 'A', gradeName: '优秀', minScore: 90, maxScore: 100 },
-    { gradeCode: 'B', gradeName: '良好', minScore: 75, maxScore: 89.99 },
-    { gradeCode: 'C', gradeName: '及格', minScore: 60, maxScore: 74.99 },
-    { gradeCode: 'D', gradeName: '不及格', minScore: 0, maxScore: 59.99 },
+    { gradeCode: 'A', gradeName: '优秀', minPercent: 90, maxPercent: 100 },
+    { gradeCode: 'B', gradeName: '良好', minPercent: 75, maxPercent: 89.99 },
+    { gradeCode: 'C', gradeName: '及格', minPercent: 60, maxPercent: 74.99 },
+    { gradeCode: 'D', gradeName: '不及格', minPercent: 0, maxPercent: 59.99 },
   ],
   PASS: [
-    { gradeCode: 'P', gradeName: '通过', minScore: 60, maxScore: 100 },
-    { gradeCode: 'F', gradeName: '不通过', minScore: 0, maxScore: 59.99 },
+    { gradeCode: 'P', gradeName: '通过', minPercent: 60, maxPercent: 100 },
+    { gradeCode: 'F', gradeName: '不通过', minPercent: 0, maxPercent: 59.99 },
   ],
 }
 
@@ -115,8 +115,6 @@ async function saveBasic() {
     const updated = await updatePolicy(policyId.value, {
       policyName: policy.value.policyName,
       description: policy.value.description,
-      maxScore: policy.value.maxScore,
-      minScore: policy.value.minScore,
       precisionDigits: policy.value.precisionDigits,
     })
     policy.value = updated
@@ -131,7 +129,7 @@ async function saveBasic() {
 
 // ==================== Band CRUD ====================
 const addingBand = ref(false)
-const newBand = ref({ gradeCode: '', gradeName: '', minScore: 0, maxScore: 100 })
+const newBand = ref({ gradeCode: '', gradeName: '', minPercent: 0, maxPercent: 100 })
 
 async function applyPreset(key: string) {
   if (!PRESETS[key]) return
@@ -164,7 +162,7 @@ async function handleAddBand() {
       sortOrder: bands.value.length,
     })
     bands.value.push(created)
-    newBand.value = { gradeCode: '', gradeName: '', minScore: 0, maxScore: 100 }
+    newBand.value = { gradeCode: '', gradeName: '', minPercent: 0, maxPercent: 100 }
     addingBand.value = false
     ElMessage.success('等级已添加')
   } catch (e: any) {
@@ -301,26 +299,6 @@ onMounted(() => { loadData() })
             </div>
             <div class="form-row">
               <div class="form-field form-field-narrow">
-                <label>满分</label>
-                <input
-                  v-model.number="policy.maxScore"
-                  type="number"
-                  class="form-input"
-                  :disabled="policy.isSystem"
-                  @input="basicDirty = true"
-                />
-              </div>
-              <div class="form-field form-field-narrow">
-                <label>最低分</label>
-                <input
-                  v-model.number="policy.minScore"
-                  type="number"
-                  class="form-input"
-                  :disabled="policy.isSystem"
-                  @input="basicDirty = true"
-                />
-              </div>
-              <div class="form-field form-field-narrow">
                 <label>精度（小数位）</label>
                 <input
                   v-model.number="policy.precisionDigits"
@@ -371,8 +349,8 @@ onMounted(() => { loadData() })
                 <span></span>
                 <span>等级编码</span>
                 <span>等级名称</span>
-                <span>最低分</span>
-                <span>最高分</span>
+                <span>最低百分比</span>
+                <span>最高百分比</span>
                 <span></span>
               </div>
               <div
@@ -398,20 +376,20 @@ onMounted(() => { loadData() })
                 </div>
                 <div>
                   <input
-                    :value="band.minScore"
+                    :value="band.minPercent"
                     type="number"
                     class="bt-input bt-input-num"
                     :disabled="policy.isSystem"
-                    @blur="(e) => handleUpdateBandField(band, 'minScore', Number((e.target as HTMLInputElement).value))"
+                    @blur="(e) => handleUpdateBandField(band, 'minPercent', Number((e.target as HTMLInputElement).value))"
                   />
                 </div>
                 <div>
                   <input
-                    :value="band.maxScore"
+                    :value="band.maxPercent"
                     type="number"
                     class="bt-input bt-input-num"
                     :disabled="policy.isSystem"
-                    @blur="(e) => handleUpdateBandField(band, 'maxScore', Number((e.target as HTMLInputElement).value))"
+                    @blur="(e) => handleUpdateBandField(band, 'maxPercent', Number((e.target as HTMLInputElement).value))"
                   />
                 </div>
                 <div class="bt-actions">
@@ -444,17 +422,17 @@ onMounted(() => { loadData() })
                   style="flex: 1"
                 />
                 <input
-                  v-model.number="newBand.minScore"
+                  v-model.number="newBand.minPercent"
                   type="number"
                   class="bt-input bt-input-num"
-                  placeholder="最低"
+                  placeholder="最低%"
                   style="width: 80px"
                 />
                 <input
-                  v-model.number="newBand.maxScore"
+                  v-model.number="newBand.maxPercent"
                   type="number"
                   class="bt-input bt-input-num"
-                  placeholder="最高"
+                  placeholder="最高%"
                   style="width: 80px"
                 />
                 <button class="btn-primary btn-sm" @click="handleAddBand">确认</button>

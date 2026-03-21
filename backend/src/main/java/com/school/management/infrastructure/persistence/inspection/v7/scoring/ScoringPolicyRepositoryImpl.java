@@ -65,8 +65,6 @@ public class ScoringPolicyRepositoryImpl implements ScoringPolicyRepository {
         po.setPolicyCode(d.getPolicyCode());
         po.setPolicyName(d.getPolicyName());
         po.setDescription(d.getDescription());
-        po.setMaxScore(d.getMaxScore());
-        po.setMinScore(d.getMinScore());
         po.setPrecisionDigits(d.getPrecisionDigits());
         po.setIsSystem(d.getIsSystem());
         po.setIsEnabled(d.getIsEnabled());
@@ -85,8 +83,6 @@ public class ScoringPolicyRepositoryImpl implements ScoringPolicyRepository {
                 .policyCode(po.getPolicyCode())
                 .policyName(po.getPolicyName())
                 .description(po.getDescription())
-                .maxScore(po.getMaxScore())
-                .minScore(po.getMinScore())
                 .precisionDigits(po.getPrecisionDigits())
                 .isSystem(po.getIsSystem())
                 .isEnabled(po.getIsEnabled())

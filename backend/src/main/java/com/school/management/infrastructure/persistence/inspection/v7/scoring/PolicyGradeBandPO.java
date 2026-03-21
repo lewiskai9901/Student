@@ -16,8 +16,8 @@ public class PolicyGradeBandPO {
     private Long policyId;
     private String gradeCode;
     private String gradeName;
-    private BigDecimal minScore;
-    private BigDecimal maxScore;
+    private BigDecimal minPercent;
+    private BigDecimal maxPercent;
     private Integer sortOrder;
     private LocalDateTime createdAt;
 
