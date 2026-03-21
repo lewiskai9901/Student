@@ -389,7 +389,6 @@ async function loadData() {
   loadScoringForSection(rootSectionId.value)
 }
 onMounted(() => {
-  loadScoringPolicies()
   if (!rootSectionId.value) router.replace('/inspection/v7/config'); else loadData()
 })
 
