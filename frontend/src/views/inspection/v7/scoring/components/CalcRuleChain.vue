@@ -1,6 +1,6 @@
 <template>
-  <div class="space-y-3">
-    <div class="flex items-center justify-between">
+  <div class="crc-root">
+    <div class="crc-header">
       <h3 class="sp-section-title">计算规则链</h3>
       <button class="sp-btn-primary sm" @click="showAdd = true">
         添加规则
@@ -13,14 +13,14 @@
       暂无规则
     </div>
 
-    <div v-else class="space-y-2">
+    <div v-else class="crc-rule-list">
       <div
         v-for="(rule, idx) in rules"
         :key="rule.id"
         class="sp-rule-card group"
         :class="rule.isEnabled ? 'is-enabled' : 'is-disabled'"
       >
-        <div class="flex items-center gap-3">
+        <div class="crc-rule-row">
           <!-- Priority badge -->
           <div class="sp-priority-badge">
             {{ idx + 1 }}
@@ -33,12 +33,12 @@
             {{ RuleTypeConfig[rule.ruleType]?.label || rule.ruleType }}
           </span>
           <!-- Name -->
-          <div class="flex-1 min-w-0">
-            <div class="sp-rule-name truncate">{{ rule.ruleName }}</div>
-            <div class="sp-rule-code truncate">{{ rule.ruleCode }}</div>
+          <div class="crc-rule-name-block">
+            <div class="sp-rule-name crc-truncate">{{ rule.ruleName }}</div>
+            <div class="sp-rule-code crc-truncate">{{ rule.ruleCode }}</div>
           </div>
           <!-- Priority -->
-          <div class="text-right shrink-0">
+          <div class="crc-priority-col">
             <div class="sp-priority-label">优先级</div>
             <div class="sp-priority-value">{{ rule.priority }}</div>
           </div>
@@ -51,15 +51,15 @@
             >
               <component
                 :is="rule.isEnabled ? iconMap.ToggleRight : iconMap.ToggleLeft"
-                class="w-4 h-4"
-                :class="rule.isEnabled ? 'text-green-500' : 'text-gray-400'"
+                class="crc-icon-md"
+                :class="rule.isEnabled ? 'crc-green' : 'crc-gray'"
               />
             </button>
             <button class="sp-ic-s" @click="startEdit(rule)">
-              <component :is="iconMap.Pencil" class="w-3.5 h-3.5" />
+              <component :is="iconMap.Pencil" class="crc-icon-sm" />
             </button>
             <button class="sp-ic-s danger" @click="$emit('delete', rule.id)">
-              <component :is="iconMap.Trash2" class="w-3.5 h-3.5" />
+              <component :is="iconMap.Trash2" class="crc-icon-sm" />
             </button>
           </div>
         </div>
@@ -80,18 +80,18 @@
               <button class="sp-modal-close" @click="closeDialog">&times;</button>
             </div>
             <div class="sp-modal-body sp-modal-scroll">
-              <div class="flex gap-3">
-                <div class="sp-fld w-40" v-if="!editingRule">
+              <div class="crc-form-row">
+                <div class="sp-fld crc-w40" v-if="!editingRule">
                   <label>规则编码</label>
                   <input v-model="form.ruleCode" placeholder="ceiling_100" />
                 </div>
-                <div class="sp-fld flex-1">
+                <div class="sp-fld crc-flex1">
                   <label>规则名称</label>
                   <input v-model="form.ruleName" placeholder="满分封顶" />
                 </div>
               </div>
-              <div class="flex gap-3">
-                <div class="sp-fld flex-1">
+              <div class="crc-form-row">
+                <div class="sp-fld crc-flex1">
                   <label>规则类型</label>
                   <select v-model="form.ruleType">
                     <option v-for="(cfg, key) in RuleTypeConfig" :key="key" :value="key">
@@ -102,7 +102,7 @@
                     {{ RuleTypeConfig[form.ruleType]?.description }}
                   </p>
                 </div>
-                <div class="sp-fld w-24">
+                <div class="sp-fld crc-w24">
                   <label>优先级</label>
                   <input v-model.number="form.priority" type="number" min="0" />
                 </div>
@@ -114,7 +114,7 @@
                 </div>
                 <RuleConfigForm v-model="form.config" :rule-type="form.ruleType" :template-id="props.templateId" />
               </div>
-              <div class="flex items-center gap-2">
+              <div class="crc-checkbox-row">
                 <input v-model="form.isEnabled" type="checkbox" id="rule-enabled" class="rounded" />
                 <label for="rule-enabled" class="sp-checkbox-label">启用</label>
               </div>
@@ -133,7 +133,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref } from 'vue'
 import { Pencil, Trash2, ToggleLeft, ToggleRight } from 'lucide-vue-next'
 import type { CalculationRule, CreateRuleRequest, UpdateRuleRequest, RuleType } from '@/types/insp/scoring'
 import { RuleTypeConfig } from '@/types/insp/scoring'
@@ -256,6 +256,7 @@ function handleSubmit() {
       ruleType: form.value.ruleType,
       config: form.value.config,
       isEnabled: form.value.isEnabled,
+      scopeType: 'GLOBAL',
     })
   }
   closeDialog()
@@ -263,6 +264,30 @@ function handleSubmit() {
 </script>
 
 <style scoped>
+/* Root layout */
+.crc-root { display: flex; flex-direction: column; gap: 12px; }
+.crc-header { display: flex; align-items: center; justify-content: space-between; }
+.crc-rule-list { display: flex; flex-direction: column; gap: 8px; }
+
+/* Rule row layout */
+.crc-rule-row { display: flex; align-items: center; gap: 12px; }
+.crc-rule-name-block { flex: 1; min-width: 0; }
+.crc-truncate { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.crc-priority-col { text-align: right; flex-shrink: 0; }
+
+/* Icon sizes */
+.crc-icon-md { width: 16px; height: 16px; }
+.crc-icon-sm { width: 14px; height: 14px; }
+.crc-green { color: #22c55e; }
+.crc-gray { color: #9ca3af; }
+
+/* Form layout helpers */
+.crc-form-row { display: flex; gap: 12px; }
+.crc-flex1 { flex: 1; }
+.crc-w40 { width: 160px; }
+.crc-w24 { width: 96px; }
+.crc-checkbox-row { display: flex; align-items: center; gap: 8px; }
+
 /* Modal */
 .sp-mask { position:fixed; inset:0; z-index:1000; display:flex; align-items:center; justify-content:center; background:rgba(15,23,42,0.35); backdrop-filter:blur(1px); }
 .sp-modal { width:480px; background:#fff; border-radius:10px; box-shadow:0 16px 48px rgba(0,0,0,0.15); overflow:hidden; display:flex; flex-direction:column; max-height:80vh; }
@@ -284,7 +309,7 @@ function handleSubmit() {
 .sp-btn-primary.sm { padding:3px 8px; font-size:10px; }
 .sp-btn-ghost { padding:4px 10px; background:none; border:1px solid #e5e7eb; border-radius:5px; font-size:11px; color:#6b7280; cursor:pointer; }
 .sp-btn-ghost:hover { background:#f4f6f9; }
-.sp-ic-s { background:none; border:none; padding:1px 3px; color:#b8c0cc; cursor:pointer; font-size:12px; border-radius:3px; }
+.sp-ic-s { background:none; border:none; padding:1px 3px; color:#b8c0cc; cursor:pointer; font-size:12px; border-radius:3px; display:inline-flex; align-items:center; }
 .sp-ic-s:hover { color:#1a6dff; }
 .sp-ic-s.danger:hover { color:#d93025; }
 
@@ -297,7 +322,7 @@ function handleSubmit() {
 
 /* Section */
 .sp-section-title { font-size:11px; font-weight:600; color:#374151; margin:0; }
-.sp-section-desc { font-size:10px; color:#9ca3af; }
+.sp-section-desc { font-size:10px; color:#9ca3af; margin:0; }
 .sp-empty { text-align:center; padding:8px 0; color:#b8c0cc; font-size:11px; }
 
 /* Rule card */

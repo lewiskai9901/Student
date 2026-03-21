@@ -62,7 +62,6 @@
         <div class="sp-card">
           <DimensionTable
             :dimensions="store.dimensions"
-            :template-id="templateId"
           />
         </div>
 
@@ -70,7 +69,6 @@
         <div class="sp-card">
           <GradeBandEditor
             :grade-bands="store.gradeBands"
-            :dimensions="store.dimensions"
             @create="handleCreateGradeBand"
             @update="handleUpdateGradeBand"
             @delete="handleDeleteGradeBand"

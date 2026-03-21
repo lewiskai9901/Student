@@ -511,11 +511,9 @@ function getItemTypeLabel(item: TemplateItem) {
                     </div>
                     <DimensionTable
                       :dimensions="scoringStore.dimensions"
-                      :template-id="Number(selectedSectionId)"
                     />
                     <GradeBandEditor
                       :grade-bands="scoringStore.gradeBands"
-                      :dimensions="scoringStore.dimensions"
                       @create="handleCreateGradeBand"
                       @update="handleUpdateGradeBand"
                       @delete="handleDeleteGradeBand"

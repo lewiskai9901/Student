@@ -33,7 +33,6 @@ import type { ScoreDimension } from '@/types/insp/scoring'
 
 const props = defineProps<{
   dimensions: ScoreDimension[]
-  templateId: number
 }>()
 
 const totalWeight = computed(() => props.dimensions.reduce((s, d) => s + d.weight, 0))

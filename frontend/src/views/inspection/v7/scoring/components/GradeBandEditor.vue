@@ -23,32 +23,14 @@
       </div>
     </div>
 
-    <!-- Dimension filter -->
-    <div v-if="dimensions.length > 0" class="sp-filter-row">
-      <div class="sp-fld">
-        <label style="margin-bottom:0">筛选:</label>
-      </div>
-      <div class="sp-fld" style="flex:0 0 auto;">
-        <select
-          v-model="filterDimensionId"
-          style="width:auto"
-        >
-          <option :value="null">全局 (所有分区)</option>
-          <option v-for="dim in dimensions" :key="dim.id" :value="dim.id">
-            {{ dim.dimensionName }}
-          </option>
-        </select>
-      </div>
-    </div>
-
-    <div v-if="filteredBands.length === 0" class="sp-empty">
+    <div v-if="sortedBands.length === 0" class="sp-empty">
       暂无等级映射
     </div>
 
     <template v-else>
       <!-- Band list -->
       <div class="sp-band-list">
-        <div v-for="band in filteredBands" :key="band.id" class="sp-band-card group">
+        <div v-for="band in sortedBands" :key="band.id" class="sp-band-card group">
           <span class="sp-band-code">{{ band.gradeCode }}</span>
           <span class="sp-band-name">{{ band.gradeName }}</span>
           <span class="sp-band-range">{{ band.minScore }}~{{ band.maxScore }}</span>
@@ -102,16 +84,6 @@
                   <input v-model.number="form.maxScore" type="number" />
                 </div>
               </div>
-              <!-- Dimension selector -->
-              <div v-if="dimensions.length > 0" class="sp-fld">
-                <label>所属分区</label>
-                <select v-model="form.dimensionId">
-                  <option :value="null">全局 (不绑定分区)</option>
-                  <option v-for="dim in dimensions" :key="dim.id" :value="dim.id">
-                    {{ dim.dimensionName }}
-                  </option>
-                </select>
-              </div>
             </div>
             <div class="sp-modal-foot">
               <button class="sp-btn-ghost" @click="closeDialog">取消</button>
@@ -149,17 +121,11 @@
 
 <script setup lang="ts">
 import { ref, computed } from 'vue'
-import { Pencil, Trash2, AlertTriangle } from 'lucide-vue-next'
-import type { GradeBand, CreateGradeBandRequest, UpdateGradeBandRequest, ScoreDimension } from '@/types/insp/scoring'
+import type { GradeBand, CreateGradeBandRequest, UpdateGradeBandRequest } from '@/types/insp/scoring'
 
-const iconMap = { Pencil, Trash2, AlertTriangle }
-
-const props = withDefaults(defineProps<{
+const props = defineProps<{
   gradeBands: GradeBand[]
-  dimensions?: ScoreDimension[]
-}>(), {
-  dimensions: () => [],
-})
+}>()
 
 const emit = defineEmits<{
   create: [data: CreateGradeBandRequest]
@@ -170,33 +136,19 @@ const emit = defineEmits<{
 
 const showAdd = ref(false)
 const editingBand = ref<GradeBand | null>(null)
-const filterDimensionId = ref<number | null>(null)
 
 const form = ref({
   gradeCode: '',
   gradeName: '',
   minScore: 0,
   maxScore: 100,
-  dimensionId: null as number | null,
 })
 
 // ==================== Computed ====================
 
-const maxRange = computed(() => {
-  if (props.gradeBands.length === 0) return 100
-  return Math.max(100, ...props.gradeBands.map(b => b.maxScore))
-})
-
 const sortedBands = computed(() =>
   [...props.gradeBands].sort((a, b) => b.minScore - a.minScore)
 )
-
-const filteredBands = computed(() => {
-  if (filterDimensionId.value === null) return sortedBands.value
-  return sortedBands.value.filter(b =>
-    b.dimensionId === filterDimensionId.value || b.dimensionId === null
-  )
-})
 
 // ==================== Validation ====================
 
@@ -213,9 +165,6 @@ const validationWarnings = computed<ValidationWarning[]>(() => {
     for (let j = i + 1; j < bands.length; j++) {
       const a = bands[i]
       const b = bands[j]
-      // Only compare bands in the same dimension scope
-      if (a.dimensionId !== b.dimensionId) continue
-
       if (a.minScore < b.maxScore && b.minScore < a.maxScore) {
         warnings.push({
           type: 'overlap',
@@ -225,24 +174,15 @@ const validationWarnings = computed<ValidationWarning[]>(() => {
     }
   }
 
-  // Check for gaps between adjacent bands (same dimension)
-  const dimensionGroups = new Map<number | null, GradeBand[]>()
-  for (const band of bands) {
-    const key = band.dimensionId
-    if (!dimensionGroups.has(key)) dimensionGroups.set(key, [])
-    dimensionGroups.get(key)!.push(band)
-  }
-
-  for (const [, group] of dimensionGroups) {
-    const sorted = [...group].sort((a, b) => a.minScore - b.minScore)
-    for (let i = 0; i < sorted.length - 1; i++) {
-      const gap = sorted[i + 1].minScore - sorted[i].maxScore
-      if (gap > 0.01) {
-        warnings.push({
-          type: 'gap',
-          message: `${sorted[i].gradeCode}(${sorted[i].maxScore}) 与 ${sorted[i + 1].gradeCode}(${sorted[i + 1].minScore}) 之间存在 ${gap.toFixed(2)} 分间隙`,
-        })
-      }
+  // Check for gaps between adjacent bands
+  const sorted = [...bands].sort((a, b) => a.minScore - b.minScore)
+  for (let i = 0; i < sorted.length - 1; i++) {
+    const gap = sorted[i + 1].minScore - sorted[i].maxScore
+    if (gap > 0.01) {
+      warnings.push({
+        type: 'gap',
+        message: `${sorted[i].gradeCode}(${sorted[i].maxScore}) 与 ${sorted[i + 1].gradeCode}(${sorted[i + 1].minScore}) 之间存在 ${gap.toFixed(2)} 分间隙`,
+      })
     }
   }
 
@@ -303,10 +243,6 @@ function confirmPreset() {
 
 // ==================== Helpers ====================
 
-function getDimensionName(dimId: number): string {
-  return props.dimensions.find(d => String(d.id) === String(dimId))?.dimensionName || ''
-}
-
 function startEdit(band: GradeBand) {
   editingBand.value = band
   form.value = {
@@ -314,14 +250,13 @@ function startEdit(band: GradeBand) {
     gradeName: band.gradeName,
     minScore: band.minScore,
     maxScore: band.maxScore,
-    dimensionId: band.dimensionId,
   }
 }
 
 function closeDialog() {
   showAdd.value = false
   editingBand.value = null
-  form.value = { gradeCode: '', gradeName: '', minScore: 0, maxScore: 100, dimensionId: null }
+  form.value = { gradeCode: '', gradeName: '', minScore: 0, maxScore: 100 }
 }
 
 function handleSubmit() {
@@ -337,7 +272,6 @@ function handleSubmit() {
       gradeName: form.value.gradeName,
       minScore: form.value.minScore,
       maxScore: form.value.maxScore,
-      dimensionId: form.value.dimensionId,
     })
   }
   closeDialog()
@@ -349,7 +283,6 @@ function handleSubmit() {
 .sp-section-header { display:flex; align-items:center; justify-content:space-between; }
 .sp-section-title { font-size:11px; font-weight:600; color:#374151; margin:0; }
 .sp-header-actions { display:flex; align-items:center; gap:6px; }
-.sp-filter-row { display:flex; align-items:center; gap:6px; }
 
 /* Preset pills */
 .sp-preset-group { display:flex; align-items:center; gap:3px; border-right:1px solid #e8ecf0; padding-right:6px; margin-right:2px; }
