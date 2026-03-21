@@ -75,7 +75,7 @@ async function saveInfo() {
 }
 
 // ===== Root props panel (when root is selected in tree) =====
-const rootForm = ref({ name: '', description: '', tags: '', targetType: null as TargetType | null, targetSourceMode: null as string | null, targetTypeFilter: [] as string[] })
+const rootForm = ref({ name: '', description: '', tags: '', targetType: null as TargetType | null, targetTypeFilter: [] as string[] })
 const rootInfoDirty = ref(false)
 
 watch([isRootSelected, rootSection], ([sel, root]) => {
@@ -83,7 +83,6 @@ watch([isRootSelected, rootSection], ([sel, root]) => {
     rootForm.value = {
       name: root.sectionName, description: root.description || '', tags: root.tags || '',
       targetType: (root.targetType as TargetType | null) || null,
-      targetSourceMode: root.targetSourceMode || null,
       targetTypeFilter: parseFilterToArray(root.targetTypeFilter),
     }
     rootInfoDirty.value = false
@@ -100,7 +99,6 @@ async function saveRootProps() {
     await editor.editSection(Number(rootSection.value.id), {
       sectionName: rootForm.value.name,
       targetType: rootForm.value.targetType,
-      targetSourceMode: rootForm.value.targetSourceMode,
       targetTypeFilter: arrayToFilter(rootForm.value.targetTypeFilter),
     } as any)
     await tplStore.loadRootSection(Number(rootSection.value.id))
@@ -109,7 +107,7 @@ async function saveRootProps() {
 }
 
 // ===== Section form (right panel when no item selected) =====
-const sf = ref({ sectionName: '', targetType: null as TargetType | null, targetSourceMode: null as string | null, targetTypeFilter: [] as string[], weight: 100, isRepeatable: false })
+const sf = ref({ sectionName: '', targetType: null as TargetType | null, targetTypeFilter: [] as string[], weight: 100, isRepeatable: false })
 const sfDirty = ref(false)
 
 // 类型选项列表（根据 targetType 动态加载）
@@ -145,7 +143,7 @@ function arrayToFilter(arr: string[]): string | null {
 watch(selectedSection, (s) => {
   if (s) {
     const filterArr = parseFilterToArray(s.targetTypeFilter)
-    sf.value = { sectionName: s.sectionName, targetType: s.targetType as TargetType | null, targetSourceMode: s.targetSourceMode || null, targetTypeFilter: filterArr, weight: s.weight, isRepeatable: s.isRepeatable }
+    sf.value = { sectionName: s.sectionName, targetType: s.targetType as TargetType | null, targetTypeFilter: filterArr, weight: s.weight, isRepeatable: s.isRepeatable }
     sfDirty.value = false
     loadTypeFilterOptions(s.targetType as string | null)
   }
@@ -156,7 +154,7 @@ function markDirty() { sfDirty.value = true }
 async function saveSection() {
   if (!selectedSection.value) return
   try {
-    await editor.editSection(selectedSection.value.id, { sectionName: sf.value.sectionName, targetType: sf.value.targetType, targetSourceMode: sf.value.targetSourceMode, targetTypeFilter: arrayToFilter(sf.value.targetTypeFilter), weight: sf.value.weight, isRepeatable: sf.value.isRepeatable } as any)
+    await editor.editSection(selectedSection.value.id, { sectionName: sf.value.sectionName, targetType: sf.value.targetType, targetTypeFilter: arrayToFilter(sf.value.targetTypeFilter), weight: sf.value.weight, isRepeatable: sf.value.isRepeatable } as any)
     sfDirty.value = false; ElMessage.success('已保存')
   } catch (e: any) { ElMessage.error(e.message || '保存失败') }
 }
@@ -594,65 +592,51 @@ function getItemTypeLabel(item: TemplateItem) {
 
                 <!-- ── 检查目标（蓝色左边线） ── -->
                 <div class="te-target-strip">
-                  <div class="te-inline-row">
-                    <div class="te-prop-field" style="flex:1">
-                      <label>对象类型</label>
+                  <div class="te-target-row">
+                    <div class="te-prop-field te-target-select">
+                      <label>检查对象</label>
                       <select
                         :value="isRootSelected ? rootForm.targetType : sf.targetType"
                         @change="(e: Event) => {
                           const val = (e.target as HTMLSelectElement).value || null;
                           if (isRootSelected) {
                             rootForm.targetType = val as any; rootInfoDirty = true
-                            if (val && !rootForm.targetSourceMode) rootForm.targetSourceMode = 'INDEPENDENT'
-                            if (!val) rootForm.targetSourceMode = null
                             rootForm.targetTypeFilter = []
                           } else {
                             sf.targetType = val as any; markDirty()
-                            if (val && !sf.targetSourceMode) sf.targetSourceMode = 'INDEPENDENT'
-                            if (!val) sf.targetSourceMode = null
                             sf.targetTypeFilter = []
                           }
                           loadTypeFilterOptions(val)
                         }"
                         :disabled="isReadonly">
-                        <option :value="null">不设置</option>
-                        <option value="ORG">组织</option>
-                        <option value="PLACE">场所</option>
-                        <option value="USER">人员</option>
+                        <option :value="null">{{ isRootSelected ? '不设置' : '不设置（对父目标直接打分）' }}</option>
+                        <option value="ORG">{{ isRootSelected ? '组织' : '组织（从父目标查找关联的组织）' }}</option>
+                        <option value="PLACE">{{ isRootSelected ? '场所' : '场所（从父目标查找关联的场所）' }}</option>
+                        <option value="USER">{{ isRootSelected ? '人员' : '人员（从父目标查找关联的人员）' }}</option>
                       </select>
                     </div>
-                    <div v-if="(isRootSelected ? rootForm.targetType : sf.targetType)" class="te-prop-field" style="flex:1">
-                      <label>来源</label>
-                      <select
-                        :value="isRootSelected ? rootForm.targetSourceMode : sf.targetSourceMode"
-                        @change="(e: Event) => {
-                          const val = (e.target as HTMLSelectElement).value;
-                          if (isRootSelected) { rootForm.targetSourceMode = val; rootInfoDirty = true }
-                          else { sf.targetSourceMode = val; markDirty() }
-                        }"
-                        :disabled="isReadonly">
-                        <option value="INDEPENDENT">独立选择</option>
-                        <option value="PARENT_ASSOCIATED">父目标关联</option>
-                      </select>
+                    <div v-if="(isRootSelected ? rootForm.targetType : sf.targetType) && typeFilterOptions.length > 0" class="te-prop-field te-target-filter">
+                      <label>类型过滤</label>
+                      <div class="te-filter-tags">
+                        <label v-for="opt in typeFilterOptions" :key="opt.code"
+                          class="te-filter-tag" :class="{ active: (isRootSelected ? rootForm.targetTypeFilter : sf.targetTypeFilter).includes(opt.code) }">
+                          <input type="checkbox" :value="opt.code"
+                            :checked="(isRootSelected ? rootForm.targetTypeFilter : sf.targetTypeFilter).includes(opt.code)"
+                            @change="(e: Event) => {
+                              const arr = isRootSelected ? rootForm.targetTypeFilter : sf.targetTypeFilter
+                              const checked = (e.target as HTMLInputElement).checked
+                              if (checked) arr.push(opt.code); else arr.splice(arr.indexOf(opt.code), 1)
+                              if (isRootSelected) rootInfoDirty = true; else markDirty()
+                            }"
+                            :disabled="isReadonly" />
+                          <span>{{ opt.name }}</span>
+                        </label>
+                      </div>
                     </div>
                   </div>
-                  <div v-if="(isRootSelected ? rootForm.targetType : sf.targetType) && typeFilterOptions.length > 0" class="te-prop-field">
-                    <label>类型过滤</label>
-                    <div class="te-filter-tags">
-                      <label v-for="opt in typeFilterOptions" :key="opt.code"
-                        class="te-filter-tag" :class="{ active: (isRootSelected ? rootForm.targetTypeFilter : sf.targetTypeFilter).includes(opt.code) }">
-                        <input type="checkbox" :value="opt.code"
-                          :checked="(isRootSelected ? rootForm.targetTypeFilter : sf.targetTypeFilter).includes(opt.code)"
-                          @change="(e: Event) => {
-                            const arr = isRootSelected ? rootForm.targetTypeFilter : sf.targetTypeFilter
-                            const checked = (e.target as HTMLInputElement).checked
-                            if (checked) arr.push(opt.code); else arr.splice(arr.indexOf(opt.code), 1)
-                            if (isRootSelected) rootInfoDirty = true; else markDirty()
-                          }"
-                          :disabled="isReadonly" />
-                        <span>{{ opt.name }}</span>
-                      </label>
-                    </div>
+                  <!-- 根分区未设置 targetType 时显示橙色提示 -->
+                  <div v-if="isRootSelected && !rootForm.targetType" class="te-target-hint">
+                    建议设置检查对象，项目需要知道检查什么目标
                   </div>
                 </div>
 
@@ -906,6 +890,18 @@ function getItemTypeLabel(item: TemplateItem) {
   background: #f8f9fb;
   border-radius: 0 6px 6px 0;
 }
+
+/* Target row: select + filter tags on one line */
+.te-target-row { display: flex; gap: 12px; align-items: flex-start; flex-wrap: wrap; }
+.te-target-select { flex: 0 0 auto; min-width: 140px; }
+.te-target-filter { flex: 1; min-width: 120px; }
+
+/* Orange hint for unset root targetType */
+.te-target-hint {
+  font-size: 11px; color: #d97706;
+  display: flex; align-items: center; gap: 4px;
+}
+.te-target-hint::before { content: '⚠'; font-size: 11px; }
 
 /* Divider with title */
 .te-divider-title {
