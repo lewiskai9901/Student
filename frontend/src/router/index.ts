@@ -883,6 +883,50 @@ const routes: RouteRecordRaw[] = [
         ]
       },
 
+      // ==================== 评级中心 /eval-center (order: 14) ====================
+      {
+        path: '/eval-center',
+        name: 'EvalCenter',
+        component: () => import('@/views/evaluation/evalCenter/EvalCampaignListView.vue'),
+        meta: {
+          title: '评级中心',
+          icon: 'Award',
+          requiresAuth: true,
+          order: 14,
+          group: 'business'
+        }
+      },
+      {
+        path: '/eval-center/campaigns/create',
+        name: 'EvalCampaignCreate',
+        component: () => import('@/views/evaluation/evalCenter/EvalCampaignEditView.vue'),
+        meta: {
+          title: '新建评选活动',
+          hidden: true,
+          requiresAuth: true
+        }
+      },
+      {
+        path: '/eval-center/campaigns/:id',
+        name: 'EvalCampaignEdit',
+        component: () => import('@/views/evaluation/evalCenter/EvalCampaignEditView.vue'),
+        meta: {
+          title: '编辑评选活动',
+          hidden: true,
+          requiresAuth: true
+        }
+      },
+      {
+        path: '/eval-center/batches/:batchId',
+        name: 'EvalResultDetail',
+        component: () => import('@/views/evaluation/evalCenter/EvalResultDetailView.vue'),
+        meta: {
+          title: '评选结果详情',
+          hidden: true,
+          requiresAuth: true
+        }
+      },
+
       // ==================== 教务管理 /teaching (order: 20) - Teaching领域 ====================
       {
         path: '/teaching',
