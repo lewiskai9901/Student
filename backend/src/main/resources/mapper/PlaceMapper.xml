@@ -41,26 +41,26 @@
                c.place_name as campus_name,
                b.place_name as building_name,
                b.building_no as parent_building_no
-        FROM place s
-        LEFT JOIN place p ON s.parent_id = p.id AND p.deleted = 0
-        LEFT JOIN place c ON s.campus_id = c.id AND c.deleted = 0
-        LEFT JOIN place b ON s.building_id = b.id AND b.deleted = 0
+        FROM places s
+        LEFT JOIN places p ON s.parent_id = p.id AND p.deleted = 0
+        LEFT JOIN places c ON s.campus_id = c.id AND c.deleted = 0
+        LEFT JOIN places b ON s.building_id = b.id AND b.deleted = 0
         WHERE s.id = #{id} AND s.deleted = 0
     </select>
 
     <!-- 根据编码查询 -->
     <select id="selectByCode" resultMap="BaseResultMap">
-        SELECT * FROM place WHERE place_code = #{placeCode} AND deleted = 0
+        SELECT * FROM places WHERE place_code = #{placeCode} AND deleted = 0
     </select>
 
     <!-- 查询子节点 -->
     <select id="selectChildren" resultMap="BaseResultMap">
-        SELECT * FROM place WHERE parent_id = #{parentId} AND deleted = 0 ORDER BY place_code
+        SELECT * FROM places WHERE parent_id = #{parentId} AND deleted = 0 ORDER BY place_code
     </select>
 
     <!-- 查询所有校区 -->
     <select id="selectAllCampuses" resultMap="BaseResultMap">
-        SELECT * FROM place WHERE place_type = 'CAMPUS' AND deleted = 0 ORDER BY place_code
+        SELECT * FROM places WHERE place_type = 'CAMPUS' AND deleted = 0 ORDER BY place_code
     </select>
 
     <!-- 查询所有楼宇 -->
@@ -167,7 +167,7 @@
 
     <!-- 按组织单元查询 -->
     <select id="selectByOrgUnitId" resultMap="BaseResultMap">
-        SELECT * FROM place WHERE org_unit_id = #{orgUnitId} AND deleted = 0 ORDER BY path
+        SELECT * FROM places WHERE org_unit_id = #{orgUnitId} AND deleted = 0 ORDER BY path
     </select>
 
     <!-- 更新占用数 -->
@@ -186,7 +186,7 @@
 
     <!-- 检查是否有子节点 -->
     <select id="countChildren" resultType="int">
-        SELECT COUNT(*) FROM place WHERE parent_id = #{parentId} AND deleted = 0
+        SELECT COUNT(*) FROM places WHERE parent_id = #{parentId} AND deleted = 0
     </select>
 
     <!-- 获取祖先链 -->

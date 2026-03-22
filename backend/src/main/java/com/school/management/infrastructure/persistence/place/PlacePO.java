@@ -9,7 +9,7 @@ import java.time.LocalDateTime;
  * 场所持久化对象
  */
 @Data
-@TableName("place")
+@TableName("places")
 public class PlacePO {
 
     @TableId(type = IdType.AUTO)

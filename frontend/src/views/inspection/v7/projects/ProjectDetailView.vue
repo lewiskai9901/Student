@@ -5,7 +5,7 @@ import { ElMessage, ElMessageBox } from 'element-plus'
 import {
   ArrowLeft, Play, Pause, CheckCircle, Send, Plus, Trash2, Save,
   Calendar, Users, Building2, UserCircle, Settings, BarChart3, ClipboardList, Lock,
-  ClipboardCheck, Check, X, ListTree, Star, LayoutDashboard,
+  ClipboardCheck, Check, X, ListTree, LayoutDashboard,
 } from 'lucide-vue-next'
 import { useInspExecutionStore } from '@/stores/insp/inspExecutionStore'
 import {
@@ -24,7 +24,7 @@ import type { OrgUnitTreeNode } from '@/api/organization'
 import type { SimpleUser } from '@/types/user'
 import { getRootSection } from '@/api/insp/template'
 import InspectionPlanConfig from './components/InspectionPlanConfig.vue'
-import RatingDimensionConfig from './components/RatingDimensionConfig.vue'
+// RatingDimensionConfig 已移至评级中心模块
 
 const route = useRoute()
 const router = useRouter()
@@ -352,9 +352,7 @@ onMounted(async () => {
       <button :class="['pdv-tab', activeTab === 'plans' && 'active']" @click="activeTab = 'plans'">
         <Calendar class="w-3.5 h-3.5" />检查计划
       </button>
-      <button :class="['pdv-tab', activeTab === 'dimensions' && 'active']" @click="activeTab = 'dimensions'">
-        <Star class="w-3.5 h-3.5" />评级规则
-      </button>
+      <!-- 评级规则已移至评级中心 -->
       <button :class="['pdv-tab', activeTab === 'settings' && 'active']" @click="activeTab = 'settings'">
         <Settings class="w-3.5 h-3.5" />设置
         <span v-if="configDirty" class="pdv-tab-dot" />
@@ -562,10 +560,7 @@ onMounted(async () => {
         <InspectionPlanConfig :project-id="projectId" />
       </div>
 
-      <!-- ===== 评级规则 Tab ===== -->
-      <div v-if="activeTab === 'dimensions'">
-        <RatingDimensionConfig :project-id="projectId" />
-      </div>
+      <!-- 评级规则已移至评级中心模块 -->
 
       <!-- ===== 设置 Tab ===== -->
       <div v-if="activeTab === 'settings'" class="cfg-section">

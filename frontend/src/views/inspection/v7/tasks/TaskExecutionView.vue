@@ -125,56 +125,62 @@ function isNonScoring(detail: SubmissionDetail): boolean {
 /** Real-time score summary for selected submission */
 const scoreSummary = computed(() => {
   const scoreable = details.value.filter(d => d.scoringMode && d.itemType !== 'PERSON_SCORE' && d.itemType !== 'VIOLATION_RECORD')
-  let scored = 0
-  let totalMax = 0
-  let earned = 0
   let deductions = 0
   let bonuses = 0
+  let directTotal = 0
   let passCount = 0
   let failCount = 0
 
   for (const d of scoreable) {
     const cfg = parseScoringConfig(d)
     const mode = d.scoringMode!
-    const maxPts: number = cfg.maxScore ?? cfg.baseScore ?? cfg.maxDeduction ?? 10
 
-    totalMax += maxPts
-    const inputVal = numberInputs.value[d.id]
-
-    if (inputVal !== undefined) {
-      scored++
-      if (mode === 'DEDUCTION') {
-        const deduct = Math.abs(inputVal)
-        deductions += deduct
-        earned += Math.max(0, maxPts - deduct)
-      } else if (mode === 'PASS_FAIL') {
-        const sel = selectInputs.value[d.id]
-        if (sel === 'PASS') { passCount++; earned += maxPts }
-        else if (sel === 'FAIL') { failCount++ }
-        else { scored-- }
-      } else if (mode === 'ADDITION') {
+    if (mode === 'DEDUCTION') {
+      const inputVal = numberInputs.value[d.id]
+      if (inputVal !== undefined) {
+        deductions += Math.abs(inputVal) // inputVal 是负数如 -3，取绝对值
+      }
+    } else if (mode === 'PASS_FAIL') {
+      const sel = selectInputs.value[d.id]
+      if (sel === 'PASS') {
+        passCount++
+        // passScore 通常是 0（不加分不扣分）
+      } else if (sel === 'FAIL') {
+        failCount++
+        deductions += Math.abs(cfg.failScore ?? 5) // failScore 是负数如 -5
+      }
+    } else if (mode === 'ADDITION') {
+      const inputVal = numberInputs.value[d.id]
+      if (inputVal !== undefined && inputVal > 0) {
         bonuses += inputVal
-        earned += inputVal
-      } else {
-        earned += inputVal
+      }
+    } else if (mode === 'DIRECT') {
+      const inputVal = numberInputs.value[d.id]
+      if (inputVal !== undefined) {
+        directTotal += inputVal
+      }
+    } else {
+      const inputVal = numberInputs.value[d.id]
+      if (inputVal !== undefined) {
+        directTotal += inputVal
       }
     }
   }
 
-  // PASS_FAIL counted via selectInputs - fixup scored count
+  // 已评分数：PASS_FAIL 通过 selectInputs 计数，其他通过 numberInputs
   const passFailItems = scoreable.filter(d => d.scoringMode === 'PASS_FAIL')
   const passFailScored = passFailItems.filter(d => selectInputs.value[d.id] !== undefined).length
   const otherItems = scoreable.filter(d => d.scoringMode !== 'PASS_FAIL')
   const otherScored = otherItems.filter(d => numberInputs.value[d.id] !== undefined).length
   const realScored = passFailScored + otherScored
 
-  const finalScore = Math.min(100, Math.max(0, earned))
+  // 总分 = 直接打分 + 加分 - 扣分
+  const finalScore = directTotal + bonuses - deductions
 
   return {
     total: scoreable.length,
     scored: realScored,
     finalScore,
-    maxScore: totalMax,
     deductions,
     bonuses,
     passCount,
@@ -213,7 +219,7 @@ function getDeductionSteps(detail: SubmissionDetail): number[] {
 /** Generate addition buttons */
 function getAdditionSteps(detail: SubmissionDetail): number[] {
   const cfg = parseScoringConfig(detail)
-  const max = cfg.maxBonus ?? cfg.maxScore ?? 5
+  const max = cfg.maxAddition ?? cfg.maxBonus ?? cfg.maxScore ?? 5
   const step = cfg.step ?? 1
   const steps: number[] = []
   for (let i = 0; i <= max; i += step) steps.push(i)
@@ -265,7 +271,8 @@ async function handleDeductionSelect(detail: SubmissionDetail, val: number) {
 
 async function handlePassFail(detail: SubmissionDetail, val: 'PASS' | 'FAIL') {
   selectInputs.value[detail.id] = val
-  const score = val === 'PASS' ? (parseScoringConfig(detail).maxScore ?? 10) : 0
+  const cfg = parseScoringConfig(detail)
+  const score = val === 'PASS' ? (cfg.passScore ?? 0) : (cfg.failScore ?? -5)
   try {
     await store.updateDetailResponse(detail.id, {
       responseValue: val,
@@ -283,6 +290,17 @@ async function handleGradeSelect(detail: SubmissionDetail, label: string, score:
       responseValue: label,
       scoringMode: detail.scoringMode!,
       score,
+    })
+  } catch { /* silent */ }
+}
+
+async function handleAdditionSelect(detail: SubmissionDetail, val: number) {
+  numberInputs.value[detail.id] = val
+  try {
+    await store.updateDetailResponse(detail.id, {
+      responseValue: String(val),
+      scoringMode: 'ADDITION',
+      score: val,
     })
   } catch { /* silent */ }
 }
@@ -513,7 +531,7 @@ async function handleComplete() {
   const grade = getGrade(s.finalScore)
   try {
     await store.completeSubmission(selectedSubmission.value.id, {
-      baseScore: s.maxScore,
+      baseScore: s.finalScore,
       finalScore: s.finalScore,
       deductionTotal: s.deductions,
       bonusTotal: s.bonuses,
@@ -680,7 +698,7 @@ onMounted(() => loadData())
               @click="selectSubmission(sub)"
             >
               <Check v-if="sub.status === 'COMPLETED'" :size="11" class="pill-check" />
-              {{ sub.targetName }}
+              {{ sub.targetName || sub.rootTargetName || activeSectionInfo?.sectionName || '检查对象' }}
             </button>
             <span v-if="sectionSubmissions.length === 0" class="target-empty-hint">
               本分区暂无检查对象
@@ -784,7 +802,7 @@ onMounted(() => loadData())
                   class="score-btn score-btn--pos"
                   :class="{ 'score-btn--active': numberInputs[detail.id] === step }"
                   :disabled="!isEditable"
-                  @click="handleDeductionSelect(detail, step)"
+                  @click="handleAdditionSelect(detail, step)"
                 >
                   {{ step === 0 ? '0' : `+${step}` }}
                 </button>
@@ -956,8 +974,12 @@ onMounted(() => loadData())
             >
               {{ scoreSummary.finalScore }}
             </span>
-            <span class="score-sep">/</span>
-            <span class="score-max">{{ scoreSummary.maxScore }}</span>
+            <span v-if="scoreSummary.deductions > 0" class="score-sep stat-deduct">
+              -{{ scoreSummary.deductions }}
+            </span>
+            <span v-if="scoreSummary.bonuses > 0" class="score-sep stat-bonus">
+              +{{ scoreSummary.bonuses }}
+            </span>
             <span
               class="score-grade"
               :style="{ color: getGradeColor(getGrade(scoreSummary.finalScore)) }"

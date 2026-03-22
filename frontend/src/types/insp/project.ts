@@ -105,7 +105,9 @@ export interface InspTask {
   totalTargets: number
   completedTargets: number
   skippedTargets: number
+  collaborationMode: string | null  // SINGLE / COLLABORATIVE
   reviewComment: string | null
+  submittedAt: string | null
   createdAt: string
   updatedAt: string
 }

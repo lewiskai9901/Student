@@ -95,6 +95,7 @@ public class TargetPopulationService {
 
     /**
      * 目标类型=ORG：范围内的组织单元及其后代即为目标
+     * 目标名称包含父组织上下文（"父名-子名"格式），便于区分同名组织
      */
     private List<TargetInfo> resolveOrgTargets(ScopeType scopeType, List<Long> scopeIds) {
         Set<Long> visited = new LinkedHashSet<>();
@@ -111,13 +112,39 @@ public class TargetPopulationService {
         visited.add(orgId);
 
         orgUnitRepository.findById(orgId).ifPresent(org -> {
-            result.add(new TargetInfo(org.getId(), org.getUnitName(), org.getParentId()));
+            String displayName = buildOrgDisplayName(org);
+            result.add(new TargetInfo(org.getId(), displayName, org.getParentId()));
             // 递归查找子节点
             List<OrgUnit> children = orgUnitRepository.findByParentId(orgId);
             for (OrgUnit child : children) {
                 collectOrgAndDescendants(child.getId(), visited, result);
             }
         });
+    }
+
+    /**
+     * 构建带父组织上下文的显示名称（"父名-子名"格式）
+     * 便于区分不同年级下的同名班级
+     */
+    private String buildOrgDisplayName(OrgUnit org) {
+        if (org.getParentId() == null) {
+            return org.getUnitName();
+        }
+        return orgUnitRepository.findById(org.getParentId())
+                .map(parent -> parent.getUnitName() + "-" + org.getUnitName())
+                .orElse(org.getUnitName());
+    }
+
+    /**
+     * 过滤目标列表，仅保留叶子组织（没有子节点的组织）
+     */
+    public List<TargetInfo> filterLeafOrgs(List<TargetInfo> targets) {
+        if (targets == null || targets.isEmpty()) {
+            return targets;
+        }
+        return targets.stream()
+                .filter(t -> orgUnitRepository.countByParentId(t.getId()) == 0)
+                .collect(Collectors.toList());
     }
 
     /**
@@ -140,12 +167,17 @@ public class TargetPopulationService {
         }
 
         List<TargetInfo> targets = new ArrayList<>();
+        log.info("resolvePlaceTargets: {} org IDs expanded from scope", allOrgIds.size());
         for (Long orgId : allOrgIds) {
             List<Place> places = placeRepository.findByOrgUnitId(orgId);
+            if (!places.isEmpty()) {
+                log.info("  orgId={} → {} places", orgId, places.size());
+            }
             for (Place p : places) {
                 targets.add(new TargetInfo(p.getId(), p.getPlaceName(), p.getOrgUnitId()));
             }
         }
+        log.info("resolvePlaceTargets: total {} place targets", targets.size());
         return targets;
     }
 
@@ -267,7 +299,7 @@ public class TargetPopulationService {
             return placeRepository.findById(parentId)
                     .filter(p -> p.getOrgUnitId() != null)
                     .flatMap(p -> orgUnitRepository.findById(p.getOrgUnitId()))
-                    .map(o -> List.of(new TargetInfo(o.getId(), o.getUnitName(), o.getParentId())))
+                    .map(o -> List.of(new TargetInfo(o.getId(), buildOrgDisplayName(o), o.getParentId())))
                     .orElse(Collections.emptyList());
         }
         log.warn("deriveOrgTargets: 不支持从 {} 派生 ORG", parentType);
@@ -341,7 +373,7 @@ public class TargetPopulationService {
                     .collect(Collectors.toList());
         }
         return orgs.stream()
-                .map(o -> new TargetInfo(o.getId(), o.getUnitName(), o.getParentId()))
+                .map(o -> new TargetInfo(o.getId(), buildOrgDisplayName(o), o.getParentId()))
                 .collect(Collectors.toList());
     }
 

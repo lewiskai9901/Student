@@ -29,6 +29,12 @@ public class TemplateSectionApplicationService {
 
     // ========== 子分区 CRUD ==========
 
+    @Transactional(readOnly = true)
+    public TemplateSection getSection(Long id) {
+        return sectionRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("分区不存在: " + id));
+    }
+
     /**
      * 创建子分区
      *

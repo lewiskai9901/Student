@@ -97,34 +97,45 @@ public class InspSubmissionApplicationService {
      */
     @Transactional
     public InspSubmission completeSubmission(Long id) {
+        log.info("completeSubmission start: id={}", id);
         InspSubmission submission = submissionRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("提交不存在: " + id));
+        log.info("submission found: taskId={}, sectionId={}", submission.getTaskId(), submission.getSectionId());
 
         // 获取关联的 task → project
         InspTask task = taskRepository.findById(submission.getTaskId())
                 .orElseThrow(() -> new IllegalStateException("任务不存在: " + submission.getTaskId()));
         InspProject project = projectRepository.findById(task.getProjectId())
                 .orElseThrow(() -> new IllegalStateException("项目不存在: " + task.getProjectId()));
+        log.info("project found: id={}, name={}", project.getId(), project.getProjectName());
 
         // 读取所有明细，委托给 ScoreAggregationService 计算分数
         List<SubmissionDetail> details = detailRepository.findBySubmissionId(id);
-        ScoreAggregationService.ScoreFields fields =
-                scoreAggregationService.computeScoreFields(project, details);
+        log.info("details count: {}", details.size());
+        try {
+            ScoreAggregationService.ScoreFields fields =
+                    scoreAggregationService.computeScoreFields(project, details);
+            log.info("score computed: base={}, final={}", fields.baseScore, fields.finalScore);
 
-        submission.complete(fields.baseScore, fields.finalScore,
-                fields.deductionTotal, fields.bonusTotal,
-                fields.scoreBreakdown, fields.grade, fields.passed);
-        InspSubmission saved = submissionRepository.save(submission);
-        eventPublisher.publishAll(saved.getDomainEvents());
-        saved.clearDomainEvents();
+            submission.complete(fields.baseScore, fields.finalScore,
+                    fields.deductionTotal, fields.bonusTotal,
+                    fields.scoreBreakdown, fields.grade, fields.passed);
+            InspSubmission saved = submissionRepository.save(submission);
+            log.info("submission saved with status: {}", saved.getStatus());
+            eventPublisher.publishAll(saved.getDomainEvents());
+            saved.clearDomainEvents();
 
-        // 发布 EntityEvent 数据流：INSP_VIOLATION 和 INSP_GRADE
-        publishInspectionEvents(saved, details, project);
+            // 发布 EntityEvent 数据流：INSP_VIOLATION 和 INSP_GRADE
+            publishInspectionEvents(saved, details, project);
 
-        // 更新 task 的 completedTargets
-        updateTaskCompletedCount(task);
+            // 更新 task 的 completedTargets
+            updateTaskCompletedCount(task);
 
-        return saved;
+            return saved;
+        } catch (Exception e) {
+            log.error("completeSubmission failed: id={}, error={}", id, e.getMessage(), e);
+            throw e;
+        }
     }
 
     /**
@@ -181,6 +192,10 @@ public class InspSubmissionApplicationService {
         }
 
         // 2. 发布 INSP_GRADE 事件（主体=检查目标）
+        if (submission.getTargetId() == null) {
+            log.debug("Submission {} 无检查目标，跳过 INSP_GRADE 事件发布", submission.getId());
+            return;
+        }
         try {
             String targetType = submission.getTargetType() != null
                     ? submission.getTargetType().name().toLowerCase() : "unknown";

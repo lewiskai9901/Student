@@ -277,7 +277,7 @@ public class PlaceRepositoryImpl implements PlaceRepository {
             po.getId(),
             po.getPlaceCode(),
             po.getPlaceName(),
-            PlaceType.valueOf(po.getPlaceType()),
+            po.getPlaceType() != null ? PlaceType.valueOf(po.getPlaceType()) : null,
             po.getCategoryId(),  // V10: 分类ID
             po.getRoomType() != null ? RoomType.valueOf(po.getRoomType()) : null,
             po.getBuildingType() != null ? BuildingType.valueOf(po.getBuildingType()) : null,

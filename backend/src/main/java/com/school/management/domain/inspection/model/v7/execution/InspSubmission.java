@@ -160,7 +160,7 @@ public class InspSubmission extends AggregateRoot<Long> {
         this.completedAt = LocalDateTime.now();
         this.updatedAt = LocalDateTime.now();
         registerEvent(new SubmissionCompletedEvent(this.id, this.taskId,
-                this.targetType.name(), this.targetId, this.finalScore));
+                this.targetType != null ? this.targetType.name() : null, this.targetId, this.finalScore));
     }
 
     /**

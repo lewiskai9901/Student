@@ -38,6 +38,12 @@ public class TemplateSectionController {
                 request.conditionLogic(), request.sortOrder(), userId));
     }
 
+    @GetMapping("/{id}")
+    @CasbinAccess(resource = "insp:template", action = "view")
+    public Result<TemplateSection> getSection(@PathVariable Long id) {
+        return Result.success(sectionService.getSection(id));
+    }
+
     @GetMapping("/children/{parentId}")
     @CasbinAccess(resource = "insp:template", action = "view")
     public Result<List<TemplateSection>> listChildren(@PathVariable Long parentId) {

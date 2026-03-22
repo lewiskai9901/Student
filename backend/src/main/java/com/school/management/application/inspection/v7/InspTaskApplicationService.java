@@ -34,6 +34,7 @@ public class InspTaskApplicationService {
     private final TemplateSectionRepository sectionRepository;
     private final TemplateItemRepository itemRepository;
     private final ProjectScoreRepository scoreRepository;
+    private final InspectionPlanRepository planRepository;
     private final TargetPopulationService targetPopulationService;
     private final SpringDomainEventPublisher eventPublisher;
     private final ObjectMapper objectMapper;
@@ -184,7 +185,20 @@ public class InspTaskApplicationService {
             return;
         }
 
+        // V66: rootSectionId 优先从项目取，为空则从检查计划取
         Long rootSectionId = project.getRootSectionId();
+        if (rootSectionId == null) {
+            List<InspectionPlan> plans = planRepository.findByProjectId(project.getId());
+            if (!plans.isEmpty()) {
+                rootSectionId = plans.get(0).getRootSectionId();
+                log.info("项目 {} 通过检查计划获取 rootSectionId: {}", project.getProjectCode(), rootSectionId);
+            }
+        }
+        if (rootSectionId == null) {
+            log.warn("项目 {} 无 rootSectionId 且无检查计划", project.getProjectCode());
+            return;
+        }
+
         List<TemplateSection> firstLevelSections = sectionRepository.findByParentSectionId(rootSectionId);
 
         if (firstLevelSections.isEmpty()) {
@@ -221,8 +235,20 @@ public class InspTaskApplicationService {
         TargetType sectionTargetType = section.getTargetType();
         String sourceMode = section.getTargetSourceMode();
 
-        // 无目标配置的分区（如"检查概况"）：创建一条无目标的 submission
+        // 无目标配置的分区（"对父目标直接打分"）：
+        // 如果有父目标列表，为每个父目标创建 submission；否则创建一条无目标的
         if (sectionTargetType == null) {
+            if (parentTargets != null && !parentTargets.isEmpty()) {
+                int count = 0;
+                for (TargetPopulationService.TargetInfo parent : parentTargets) {
+                    Long effRoot = rootTargetId != null ? rootTargetId : parent.getId();
+                    String effRootName = rootTargetName != null ? rootTargetName : parent.getName();
+                    createSubmissionWithDetails(task, section, null,
+                            parent.getId(), parent.getName(), effRoot, effRootName);
+                    count++;
+                }
+                return count;
+            }
             createSubmissionWithDetails(task, section, null, null, null, rootTargetId, rootTargetName);
             return 1;
         }
@@ -240,8 +266,9 @@ public class InspTaskApplicationService {
                     project.getScopeType(), project.getScopeConfig(), sectionTargetType);
         }
 
+        log.info("分区 {} targetType={} sourceMode={} → {} 个目标",
+                section.getSectionName(), sectionTargetType, sourceMode, targets.size());
         if (targets.isEmpty()) {
-            log.debug("分区 {} 无目标", section.getSectionName());
             return 0;
         }
 
@@ -326,17 +353,21 @@ public class InspTaskApplicationService {
     }
 
     /**
-     * 从项目范围解析根目标
+     * 从项目范围解析根目标（仅叶子节点）
+     * 检查场景只关心叶子组织（如班级），过滤掉非叶子节点（如年级、系部）
      */
     private List<TargetPopulationService.TargetInfo> resolveRootTargets(InspProject project) {
         // 根目标默认为 ORG 类型（项目范围选择的组织）
-        return targetPopulationService.resolveTargets(
+        List<TargetPopulationService.TargetInfo> allTargets = targetPopulationService.resolveTargets(
                 project.getScopeType(), project.getScopeConfig(),
                 TargetType.ORG);
+        // 过滤：仅保留叶子组织（无子节点的组织）
+        return targetPopulationService.filterLeafOrgs(allTargets);
     }
 
     /**
      * 从 scoringConfig JSON 解析评分模式
+     * 处理可能的双重编码JSON（API创建时可能产生）
      */
     private ScoringMode parseScoringMode(String scoringConfig) {
         if (scoringConfig == null || scoringConfig.isBlank()) {
@@ -344,16 +375,33 @@ public class InspTaskApplicationService {
         }
         try {
             JsonNode node = objectMapper.readTree(scoringConfig);
+            // 处理双重编码：如果解析结果是字符串节点，尝试再解析一次
+            if (node.isTextual()) {
+                node = objectMapper.readTree(node.asText());
+            }
             if (node.has("mode")) {
                 return ScoringMode.valueOf(node.get("mode").asText());
             }
             if (node.has("scoringMode")) {
-                return ScoringMode.valueOf(node.get("scoringMode").asText());
+                String raw = node.get("scoringMode").asText();
+                return parseScoringModeValue(raw);
             }
         } catch (Exception e) {
             log.debug("解析 scoringConfig 的 mode 失败, 使用默认值 DEDUCTION: {}", e.getMessage());
         }
         return ScoringMode.DEDUCTION;
+    }
+
+    /** 映射前端评分模式名称到枚举（处理别名） */
+    private ScoringMode parseScoringModeValue(String raw) {
+        // 处理前端使用的别名
+        switch (raw) {
+            case "DIRECT_SCORE": return ScoringMode.DIRECT;
+            case "GRADE_EVAL": return ScoringMode.LEVEL;
+            default:
+                try { return ScoringMode.valueOf(raw); }
+                catch (Exception e) { return ScoringMode.DEDUCTION; }
+        }
     }
 
     // ========== Internal: Score Computation ==========
