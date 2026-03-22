@@ -24,6 +24,7 @@ import {
 import type { InspTask, InspSubmission, SubmissionDetail } from '@/types/insp/project'
 import type { TemplateSection } from '@/types/insp/template'
 import { getProject } from '@/api/insp/project'
+import { http } from '@/utils/request'
 import { inspTemplateApi } from '@/api/insp/template'
 import ViolationRecordInput from './components/ViolationRecordInput.vue'
 import PersonScoreGrid from './components/PersonScoreGrid.vue'
@@ -58,12 +59,12 @@ const isEditable = computed(() => selectedSubmission.value?.status === 'IN_PROGR
 
 /** First-level sections = direct children of root */
 const firstLevelSections = computed(() =>
-  allSections.value.filter(s => s.parentSectionId === rootSectionId.value),
+  allSections.value.filter(s => Number(s.parentSectionId) === Number(rootSectionId.value)),
 )
 
 /** For each first-level section: how many submissions belong to it? */
 function getSectionSubmissions(sectionId: number): InspSubmission[] {
-  return submissions.value.filter(s => s.sectionId === sectionId)
+  return submissions.value.filter(s => Number(s.sectionId) === Number(sectionId))
 }
 
 function getSectionProgress(sectionId: number): { done: number; total: number } {
@@ -377,9 +378,33 @@ async function loadData() {
     if (task.value) {
       try {
         const project = await getProject(task.value.projectId)
-        if (project.rootSectionId) {
-          rootSectionId.value = project.rootSectionId
-          allSections.value = await inspTemplateApi.getSections(project.rootSectionId)
+        // 多模板项目：从计划获取 rootSectionId，回退到项目的
+        let rsi = project.rootSectionId
+        if (!rsi && task.value.planId) {
+          try {
+            const plans = await http.get<any[]>(`/v7/insp/projects/${task.value.projectId}/plans`)
+            const plan = plans?.find((p: any) => Number(p.id) === Number(task.value!.planId)) || plans?.[0]
+            if (plan?.rootSectionId) rsi = plan.rootSectionId
+          } catch {}
+        }
+        // 再回退：从 submissions 的 sectionId 找根分区
+        if (!rsi && submissions.value.length > 0) {
+          const secId = submissions.value[0].sectionId
+          try {
+            const sec = await inspTemplateApi.getSection(secId)
+            rsi = sec.parentSectionId || secId
+          } catch {}
+        }
+        if (rsi) {
+          rootSectionId.value = Number(rsi)
+          try {
+            allSections.value = await inspTemplateApi.getSections(Number(rsi))
+          } catch {
+            // 如果 getSections(tree) 失败，用 getChildSections
+            try {
+              allSections.value = await inspTemplateApi.getChildSections(Number(rsi))
+            } catch {}
+          }
         }
       } catch { /* ignore */ }
     }
