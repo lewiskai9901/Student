@@ -429,3 +429,162 @@ export const WEEKDAYS = [
   { value: 6, label: '周六' },
   { value: 7, label: '周日' },
 ]
+
+// =====================================================
+// 开课管理 (Offering Management)
+// =====================================================
+
+export interface SemesterOffering {
+  id: number
+  semesterId: number
+  courseId: number
+  courseName?: string
+  courseCode?: string
+  applicableGrade: string
+  weeklyHours: number
+  totalWeeks?: number
+  startWeek: number
+  endWeek?: number
+  courseCategory?: number
+  courseType?: number
+  allowCombined: boolean
+  maxCombinedClasses: number
+  allowWalking: boolean
+  status: number
+  remark?: string
+}
+
+export interface ClassCourseAssignment {
+  id: number
+  semesterId: number
+  classId: number
+  className?: string
+  offeringId: number
+  courseId: number
+  courseName?: string
+  weeklyHours: number
+  studentCount?: number
+  status: number
+}
+
+// =====================================================
+// 教学班 (Teaching Class)
+// =====================================================
+
+export interface TeachingClass {
+  id: number
+  semesterId: number
+  className: string
+  classCode?: string
+  courseId: number
+  courseName?: string
+  classType: 1 | 2 | 3
+  weeklyHours: number
+  studentCount: number
+  requiredRoomType?: string
+  requiredCapacity?: number
+  startWeek: number
+  endWeek?: number
+  status: number
+  remark?: string
+  members?: TeachingClassMember[]
+}
+
+export interface TeachingClassMember {
+  id: number
+  teachingClassId: number
+  memberType: 1 | 2
+  adminClassId?: number
+  adminClassName?: string
+  studentId?: number
+  studentName?: string
+}
+
+export const TEACHING_CLASS_TYPES = [
+  { value: 1, label: '普通' },
+  { value: 2, label: '合堂' },
+  { value: 3, label: '走班' },
+] as const
+
+// =====================================================
+// 排课约束 (Scheduling Constraints)
+// =====================================================
+
+export interface SchedulingConstraint {
+  id: number
+  semesterId: number
+  constraintName: string
+  constraintLevel: 1 | 2 | 3 | 4
+  targetId?: number
+  targetName?: string
+  constraintType: string
+  isHard: boolean
+  priority: number
+  params: Record<string, any>
+  effectiveWeeks?: string
+  enabled: boolean
+}
+
+export const CONSTRAINT_LEVELS = [
+  { value: 1, label: '全局' },
+  { value: 2, label: '教师' },
+  { value: 3, label: '班级' },
+  { value: 4, label: '课程' },
+] as const
+
+export const CONSTRAINT_TYPES = [
+  { value: 'TIME_FORBIDDEN', label: '时间禁排', isHardDefault: true },
+  { value: 'TIME_FIXED', label: '时间固定', isHardDefault: true },
+  { value: 'MAX_DAILY', label: '每日上限', isHardDefault: true },
+  { value: 'MAX_CONSECUTIVE', label: '最大连排', isHardDefault: true },
+  { value: 'ROOM_REQUIRED', label: '教室要求', isHardDefault: true },
+  { value: 'TIME_PREFERRED', label: '时间偏好', isHardDefault: false },
+  { value: 'TIME_AVOIDED', label: '时间回避', isHardDefault: false },
+  { value: 'SPREAD_EVEN', label: '均匀分布', isHardDefault: false },
+  { value: 'MORNING_PRIORITY', label: '上午优先', isHardDefault: false },
+  { value: 'COMPACT_SCHEDULE', label: '紧凑排课', isHardDefault: false },
+  { value: 'MIN_GAP', label: '最小间隔', isHardDefault: false },
+  { value: 'ROOM_PREFERRED', label: '教室偏好', isHardDefault: false },
+] as const
+
+// =====================================================
+// 时间矩阵 & 冲突检测
+// =====================================================
+
+export interface TimeSlotStatus {
+  day: number
+  period: number
+  status: 'available' | 'forbidden' | 'preferred' | 'avoided'
+  reasons: string[]
+}
+
+export type TimeMatrix = TimeSlotStatus[][]
+
+export interface DetectedConflict {
+  id: number
+  semesterId: number
+  detectionBatch?: string
+  conflictCategory: 1 | 2 | 3
+  conflictType: string
+  severity: 1 | 2 | 3
+  description: string
+  detail?: Record<string, any>
+  entryId1?: number
+  entryId2?: number
+  constraintId?: number
+  resolutionStatus: 0 | 1 | 2
+  resolutionNote?: string
+}
+
+export interface FeasibilityReport {
+  blockingIssues: FeasibilityIssue[]
+  warnings: FeasibilityIssue[]
+  passedChecks: number
+}
+
+export interface FeasibilityIssue {
+  type: string
+  target: string
+  description: string
+  suggestion: string
+}

@@ -25,6 +25,14 @@ import type {
   GradeQueryParams,
   GradeStatistics,
   PageResult,
+  SemesterOffering,
+  ClassCourseAssignment,
+  TeachingClass,
+  TeachingClassMember,
+  SchedulingConstraint,
+  TimeMatrix,
+  DetectedConflict,
+  FeasibilityReport,
 } from '@/types/teaching'
 import type { Classroom, TeachingBuilding, ClassroomQueryParams } from '@/types/teaching'
 
@@ -478,4 +486,99 @@ export const gradeApi = {
       headers: { 'Content-Type': 'multipart/form-data' },
     })
   },
+}
+
+// =====================================================
+// 开课管理 API
+// =====================================================
+
+export const offeringApi = {
+  list: (semesterId: number | string) =>
+    request.get<SemesterOffering[]>(`${BASE_URL}/offerings`, { params: { semesterId } }),
+  create: (data: Partial<SemesterOffering>) =>
+    request.post<SemesterOffering>(`${BASE_URL}/offerings`, data),
+  update: (id: number | string, data: Partial<SemesterOffering>) =>
+    request.put<SemesterOffering>(`${BASE_URL}/offerings/${id}`, data),
+  delete: (id: number | string) =>
+    request.delete(`${BASE_URL}/offerings/${id}`),
+  confirm: (id: number | string) =>
+    request.post(`${BASE_URL}/offerings/${id}/confirm`),
+  importFromPlan: (data: { semesterId: number; planId: number; classIds?: number[] }) =>
+    request.post(`${BASE_URL}/offerings/import-from-plan`, data),
+}
+
+export const classAssignmentApi = {
+  list: (semesterId: number | string, classId?: number | string) =>
+    request.get<ClassCourseAssignment[]>(`${BASE_URL}/class-assignments`, { params: { semesterId, classId } }),
+  create: (data: Partial<ClassCourseAssignment>) =>
+    request.post<ClassCourseAssignment>(`${BASE_URL}/class-assignments`, data),
+  delete: (id: number | string) =>
+    request.delete(`${BASE_URL}/class-assignments/${id}`),
+  batchConfirm: (semesterId: number | string, classId: number | string) =>
+    request.post(`${BASE_URL}/class-assignments/batch-confirm`, { semesterId, classId }),
+}
+
+// =====================================================
+// 教学班 API
+// =====================================================
+
+export const teachingClassApi = {
+  list: (semesterId: number | string) =>
+    request.get<TeachingClass[]>(`${BASE_URL}/teaching-classes`, { params: { semesterId } }),
+  getById: (id: number | string) =>
+    request.get<TeachingClass>(`${BASE_URL}/teaching-classes/${id}`),
+  create: (data: Partial<TeachingClass>) =>
+    request.post<TeachingClass>(`${BASE_URL}/teaching-classes`, data),
+  update: (id: number | string, data: Partial<TeachingClass>) =>
+    request.put<TeachingClass>(`${BASE_URL}/teaching-classes/${id}`, data),
+  delete: (id: number | string) =>
+    request.delete(`${BASE_URL}/teaching-classes/${id}`),
+  autoGenerate: (semesterId: number | string) =>
+    request.post(`${BASE_URL}/teaching-classes/auto-generate`, { semesterId }),
+  getMembers: (id: number | string) =>
+    request.get<TeachingClassMember[]>(`${BASE_URL}/teaching-classes/${id}/members`),
+  addMembers: (id: number | string, members: Partial<TeachingClassMember>[]) =>
+    request.post(`${BASE_URL}/teaching-classes/${id}/members`, members),
+  removeMembers: (id: number | string, memberIds: number[]) =>
+    request.delete(`${BASE_URL}/teaching-classes/${id}/members`, { data: memberIds }),
+}
+
+// =====================================================
+// 约束管理 API
+// =====================================================
+
+export const constraintApi = {
+  list: (params: { semesterId: number | string; level?: number; targetId?: number | string }) =>
+    request.get<SchedulingConstraint[]>(`${BASE_URL}/constraints`, { params }),
+  create: (data: Partial<SchedulingConstraint>) =>
+    request.post<SchedulingConstraint>(`${BASE_URL}/constraints`, data),
+  update: (id: number | string, data: Partial<SchedulingConstraint>) =>
+    request.put<SchedulingConstraint>(`${BASE_URL}/constraints/${id}`, data),
+  delete: (id: number | string) =>
+    request.delete(`${BASE_URL}/constraints/${id}`),
+  enable: (id: number | string) =>
+    request.post(`${BASE_URL}/constraints/${id}/enable`),
+  disable: (id: number | string) =>
+    request.post(`${BASE_URL}/constraints/${id}/disable`),
+  getTimeMatrix: (params: { semesterId: number | string; level: number; targetId?: number | string }) =>
+    request.get<TimeMatrix>(`${BASE_URL}/constraints/time-matrix`, { params }),
+  batchImport: (semesterId: number | string, constraints: Partial<SchedulingConstraint>[]) =>
+    request.post(`${BASE_URL}/constraints/batch-import`, { semesterId, constraints }),
+}
+
+// =====================================================
+// 冲突检测 API
+// =====================================================
+
+export const conflictApi = {
+  feasibilityCheck: (semesterId: number | string) =>
+    request.post<FeasibilityReport>(`${BASE_URL}/conflicts/feasibility-check`, null, { params: { semesterId } }),
+  detect: (semesterId: number | string) =>
+    request.post<DetectedConflict[]>(`${BASE_URL}/conflicts/detect`, null, { params: { semesterId } }),
+  list: (params: { semesterId: number | string; status?: number }) =>
+    request.get<DetectedConflict[]>(`${BASE_URL}/conflicts`, { params }),
+  resolve: (id: number | string, note: string) =>
+    request.post(`${BASE_URL}/conflicts/${id}/resolve`, { note }),
+  ignore: (id: number | string, note: string) =>
+    request.post(`${BASE_URL}/conflicts/${id}/ignore`, { note }),
 }
