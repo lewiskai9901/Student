@@ -231,173 +231,16 @@ const routes: RouteRecordRaw[] = [
         ]
       },
 
-      // ==================== 量化检查 /inspection (order: 12) - Inspection领域 ====================
-      // V6重构：只保留V6路由，V4旧版路由全部隐藏
-      {
-        path: '/inspection',
-        name: 'Inspection',
-        redirect: '/inspection/v6/projects',  // 默认跳转到V6检查项目
-        meta: {
-          title: '量化检查',
-          icon: 'ClipboardCheck',
-          requiresAuth: true,
-          order: 12,
-          group: 'business'
-        },
-        children: [
-          // ==================== V6检查系统（当前主版本） ====================
-          {
-            path: '/inspection/v6/projects',
-            name: 'V6InspectionProjects',
-            component: () => import('@/views/inspection/v6/ProjectList.vue'),
-            meta: {
-              title: '检查项目',
-              icon: 'Folder',
-              requiresAuth: true,
-              permission: 'inspection:project:view',
-              order: 1
-            }
-          },
-          {
-            path: '/inspection/v6/projects/create',
-            name: 'V6InspectionProjectCreate',
-            component: () => import('@/views/inspection/v6/ProjectCreate.vue'),
-            meta: {
-              title: '创建检查项目',
-              hidden: true,
-              requiresAuth: true,
-              permission: 'inspection:project:create'
-            }
-          },
-          {
-            path: '/inspection/v6/projects/:id',
-            name: 'V6InspectionProjectDetail',
-            component: () => import('@/views/inspection/v6/ProjectDetail.vue'),
-            meta: {
-              title: '项目详情',
-              hidden: true,
-              requiresAuth: true,
-              permission: 'inspection:project:view'
-            }
-          },
-          {
-            path: '/inspection/v6/projects/:id/config',
-            name: 'V6InspectionProjectConfig',
-            component: () => import('@/views/inspection/v6/ProjectConfig.vue'),
-            meta: {
-              title: '项目配置',
-              hidden: true,
-              requiresAuth: true,
-              permission: 'inspection:project:update'
-            }
-          },
-          {
-            path: '/inspection/v6/tasks',
-            name: 'V6InspectionTasks',
-            component: () => import('@/views/inspection/v6/TaskList.vue'),
-            meta: {
-              title: '检查任务',
-              icon: 'List',
-              requiresAuth: true,
-              permission: 'inspection:task:view',
-              order: 2
-            }
-          },
-          {
-            path: '/inspection/v6/tasks/:id',
-            name: 'V6InspectionTaskDetail',
-            component: () => import('@/views/inspection/v6/TaskDetail.vue'),
-            meta: {
-              title: '任务详情',
-              hidden: true,
-              requiresAuth: true,
-              permission: 'inspection:task:view'
-            }
-          },
-          {
-            path: '/inspection/v6/tasks/:id/execute',
-            name: 'V6InspectionTaskExecute',
-            component: () => import('@/views/inspection/v6/TaskExecute.vue'),
-            meta: {
-              title: '执行检查',
-              hidden: true,
-              requiresAuth: true,
-              permission: 'inspection:task:execute'
-            }
-          },
-          {
-            path: '/inspection/v6/my-tasks',
-            name: 'V6InspectionMyTasks',
-            component: () => import('@/views/inspection/v6/MyTasks.vue'),
-            meta: {
-              title: '我的任务',
-              icon: 'User',
-              requiresAuth: true,
-              permission: 'inspection:task:execute',
-              order: 3
-            }
-          },
-          {
-            path: '/inspection/v6/summary',
-            name: 'V6InspectionSummary',
-            component: () => import('@/views/inspection/v6/SummaryDashboard.vue'),
-            meta: {
-              title: '汇总统计',
-              icon: 'DataLine',
-              requiresAuth: true,
-              permission: 'inspection:summary:view',
-              order: 4
-            }
-          },
-          {
-            path: '/inspection/v6/ranking',
-            name: 'V6InspectionRanking',
-            component: () => import('@/views/inspection/v6/RankingView.vue'),
-            meta: {
-              title: '排名榜',
-              icon: 'Trophy',
-              requiresAuth: true,
-              permission: 'inspection:summary:view',
-              order: 5
-            }
-          },
-          {
-            path: '/inspection/v6/templates',
-            name: 'V6TemplateManagement',
-            component: () => import('@/views/inspection/v6/TemplateManagement.vue'),
-            meta: {
-              title: '模板配置',
-              icon: 'Document',
-              requiresAuth: true,
-              permission: 'inspection:template:view',
-              order: 7
-            }
-          },
-          {
-            path: '/inspection/v6/corrective-actions',
-            name: 'V6CorrectiveActionManagement',
-            component: () => import('@/views/inspection/v6/CorrectiveActionManagement.vue'),
-            meta: {
-              title: '整改管理',
-              icon: 'Edit',
-              requiresAuth: true,
-              permission: 'inspection:corrective:view',
-              order: 8
-            }
-          },
-        ]
-      },
-
-      // ==================== V7 检查平台 (order: 12.5) ====================
+      // ==================== V7 检查平台 (order: 12) ====================
       {
         path: '/inspection/v7',
         name: 'InspectionV7',
         redirect: '/inspection/v7/config',
         meta: {
-          title: 'V7检查平台',
+          title: '检查平台',
           icon: 'ClipboardCheck',
           requiresAuth: true,
-          order: 12.5,
+          order: 12,
           group: 'business'
         },
         children: [
@@ -470,6 +313,25 @@ const routes: RouteRecordRaw[] = [
               permission: 'insp:template:view'
             }
           },
+          // 等级方案管理
+          {
+            path: '/inspection/v7/grade-schemes',
+            name: 'V7GradeSchemes',
+            component: () => import('@/views/inspection/v7/scoring/GradeSchemeListView.vue'),
+            meta: {
+              title: '等级方案',
+              icon: 'Award',
+              requiresAuth: true,
+              permission: 'insp:template:view',
+              order: 2.5
+            }
+          },
+          // ---------- My Inspection (hidden, redirect to /tasks) ----------
+          {
+            path: '/inspection/v7/my',
+            redirect: '/inspection/v7/tasks',
+            meta: { hidden: true }
+          },
           // ---------- Execution BC ----------
           {
             path: '/inspection/v7/projects',
@@ -508,13 +370,13 @@ const routes: RouteRecordRaw[] = [
           {
             path: '/inspection/v7/tasks',
             name: 'V7TaskList',
-            component: () => import('@/views/inspection/v7/tasks/TaskListView.vue'),
+            component: () => import('@/views/inspection/v7/MyInspectionView.vue'),
             meta: {
               title: '我的任务',
               icon: 'ClipboardList',
               requiresAuth: true,
               permission: 'insp:task:view',
-              order: 5
+              order: 3
             }
           },
           {
@@ -549,6 +411,19 @@ const routes: RouteRecordRaw[] = [
               hidden: true,
               requiresAuth: true,
               permission: 'insp:task:execute'
+            }
+          },
+          // 成绩公示
+          {
+            path: '/inspection/v7/results',
+            name: 'V7InspectionResults',
+            component: () => import('@/views/inspection/v7/projects/InspectionResultsView.vue'),
+            meta: {
+              title: '检查结果',
+              icon: 'BarChart3',
+              requiresAuth: true,
+              permission: 'insp:project:view',
+              order: 7
             }
           },
           // V7 单维度排名详情
@@ -986,12 +861,42 @@ const routes: RouteRecordRaw[] = [
           },
           {
             path: '/teaching/curriculum-plans',
-            name: 'TeachingCurriculumPlans',
+            name: 'TeachingCurriculum',
             component: () => import('@/views/teaching/CurriculumPlanView.vue'),
             meta: {
               title: '培养方案',
               requiresAuth: true,
               order: 3
+            }
+          },
+          {
+            path: '/teaching/offerings',
+            name: 'TeachingOfferings',
+            component: () => import('@/views/teaching/OfferingManagementView.vue'),
+            meta: {
+              title: '开课管理',
+              requiresAuth: true,
+              order: 4
+            }
+          },
+          {
+            path: '/teaching/scheduling',
+            name: 'TeachingScheduling',
+            component: () => import('@/views/teaching/ScheduleView.vue'),
+            meta: {
+              title: '排课中心',
+              requiresAuth: true,
+              order: 5
+            }
+          },
+          {
+            path: '/teaching/constraints',
+            name: 'TeachingConstraints',
+            component: () => import('@/views/teaching/scheduling/ConstraintConfigView.vue'),
+            meta: {
+              title: '约束配置',
+              requiresAuth: true,
+              order: 6
             }
           },
           {
@@ -1001,37 +906,17 @@ const routes: RouteRecordRaw[] = [
             meta: {
               title: '教学任务',
               requiresAuth: true,
-              order: 4
-            }
-          },
-          {
-            path: '/teaching/schedules',
-            name: 'TeachingSchedules',
-            component: () => import('@/views/teaching/ScheduleView.vue'),
-            meta: {
-              title: '排课管理',
-              requiresAuth: true,
-              order: 5
-            }
-          },
-          {
-            path: '/teaching/adjustments',
-            name: 'TeachingAdjustments',
-            component: () => import('@/views/teaching/ScheduleAdjustmentView.vue'),
-            meta: {
-              title: '调课管理',
-              requiresAuth: true,
-              order: 6
+              order: 7
             }
           },
           {
             path: '/teaching/examinations',
-            name: 'TeachingExaminations',
+            name: 'TeachingExams',
             component: () => import('@/views/teaching/ExaminationView.vue'),
             meta: {
               title: '考试管理',
               requiresAuth: true,
-              order: 7
+              order: 8
             }
           },
           {
@@ -1041,7 +926,7 @@ const routes: RouteRecordRaw[] = [
             meta: {
               title: '成绩管理',
               requiresAuth: true,
-              order: 8
+              order: 9
             }
           }
         ]
