@@ -7,6 +7,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 @Repository
@@ -23,6 +24,12 @@ public class ScheduleConflictRecordRepositoryImpl implements ScheduleConflictRec
             mapper.updateById(po);
         }
         return toDomain(po);
+    }
+
+    @Override
+    public Optional<ScheduleConflictRecord> findById(Long id) {
+        ScheduleConflictRecordPO po = mapper.selectById(id);
+        return Optional.ofNullable(po).map(this::toDomain);
     }
 
     @Override
