@@ -211,7 +211,9 @@
             <TimetableGrid
               :entries="filteredTimetableEntries"
               :periods="periods"
+              :editable="true"
               @entry-click="showEntryDetail"
+              @entry-drop="onEntryDrop"
             />
           </div>
 
@@ -424,24 +426,31 @@
 
         <!-- ==================== Tab 6: Export ==================== -->
         <div v-if="activeTab === 'export'">
-          <div class="rounded-xl border border-gray-200 bg-white p-8 text-center">
-            <Printer class="mx-auto mb-3 h-10 w-10 text-gray-300" />
-            <p class="mb-1 text-sm font-medium text-gray-600">导出与打印</p>
-            <p class="mb-4 text-xs text-gray-400">选择课表维度后可导出 Excel 或生成打印版课表。</p>
-            <div class="mx-auto flex max-w-md items-center gap-3">
-              <el-select v-model="exportType" placeholder="导出维度" class="flex-1" size="default">
-                <el-option value="class" label="按班级导出" />
-                <el-option value="teacher" label="按教师导出" />
-                <el-option value="classroom" label="按教室导出" />
-                <el-option value="all" label="全校总课表" />
-              </el-select>
-              <el-button type="primary" @click="handleExport">
-                <Download class="mr-1 h-4 w-4" /> 导出
-              </el-button>
-              <el-button @click="handlePrint">
-                <Printer class="mr-1 h-4 w-4" /> 打印预览
-              </el-button>
-            </div>
+          <div class="rounded-xl border border-gray-200 bg-white p-5">
+            <h3 class="mb-4 text-sm font-semibold text-gray-900">导出课表</h3>
+            <el-form label-width="100px">
+              <el-form-item label="导出维度">
+                <el-radio-group v-model="exportDimension" @change="exportTargetId = ''">
+                  <el-radio value="class">班级课表</el-radio>
+                  <el-radio value="teacher">教师课表</el-radio>
+                </el-radio-group>
+              </el-form-item>
+              <el-form-item label="选择对象">
+                <el-select v-model="exportTargetId" placeholder="请选择" class="w-64" filterable clearable>
+                  <el-option
+                    v-for="item in exportTargetList"
+                    :key="item.id"
+                    :value="item.id"
+                    :label="item.name"
+                  />
+                </el-select>
+              </el-form-item>
+              <el-form-item>
+                <el-button type="primary" :loading="exporting" @click="doExport" :disabled="!exportTargetId">
+                  <Download class="mr-1 h-4 w-4" /> 下载 Excel 课表
+                </el-button>
+              </el-form-item>
+            </el-form>
           </div>
         </div>
       </template>
@@ -450,10 +459,10 @@
     <!-- ==================== Dialogs ==================== -->
 
     <!-- Auto Schedule Dialog -->
-    <el-dialog v-model="autoScheduleDialogVisible" title="智能排课" width="500px">
-      <div class="mb-4 rounded-lg bg-blue-50 p-3 text-xs text-blue-700">
-        智能排课将根据教学任务和约束条件自动生成最优课表，过程可能需要几分钟。
-      </div>
+    <el-dialog v-model="autoScheduleDialogVisible" title="智能排课" width="520px">
+      <el-alert type="info" :closable="false" class="mb-4">
+        系统将基于约束规则自动排课。已手动排定的课程不会被调整。
+      </el-alert>
       <el-form :model="autoScheduleParams" label-width="120px">
         <el-form-item label="排课方案">
           <el-select v-model="autoScheduleParams.scheduleId" style="width: 100%">
@@ -464,15 +473,27 @@
           <el-input-number v-model="autoScheduleParams.maxIterations" :min="100" :max="5000" :step="100" />
         </el-form-item>
         <el-form-item label="种群大小">
-          <el-input-number v-model="autoScheduleParams.populationSize" :min="20" :max="500" :step="10" />
+          <el-input-number v-model="autoScheduleParams.populationSize" :min="10" :max="100" :step="10" />
         </el-form-item>
         <el-form-item label="变异率">
           <el-slider v-model="autoScheduleParams.mutationRate" :min="0.01" :max="0.5" :step="0.01" show-input />
         </el-form-item>
       </el-form>
+      <div v-if="scheduling" class="my-4 rounded-lg bg-gray-50 p-4">
+        <div class="mb-2 flex justify-between text-sm"><span>正在排课...</span></div>
+        <el-progress :percentage="autoProgress" />
+      </div>
+      <div v-if="autoResult" class="my-4 rounded-lg border p-4" :class="autoResult.success ? 'border-green-200 bg-green-50' : 'border-red-200 bg-red-50'">
+        <p class="font-medium" :class="autoResult.success ? 'text-green-600' : 'text-red-600'">
+          {{ autoResult.success ? '排课完成' : '排课失败' }}
+        </p>
+        <p class="mt-1 text-sm text-gray-600">生成: {{ autoResult.entriesGenerated || 0 }} 条 | 耗时: {{ ((autoResult.executionTime || 0) / 1000).toFixed(1) }}s</p>
+      </div>
       <template #footer>
-        <el-button @click="autoScheduleDialogVisible = false">取消</el-button>
-        <el-button type="primary" :loading="scheduling" @click="runAutoSchedule">开始排课</el-button>
+        <el-button @click="autoScheduleDialogVisible = false" :disabled="scheduling">取消</el-button>
+        <el-button type="primary" :loading="scheduling" @click="runAutoSchedule">
+          {{ scheduling ? '排课中...' : '开始排课' }}
+        </el-button>
       </template>
     </el-dialog>
 
@@ -613,7 +634,7 @@
           </el-row>
         </template>
         <el-form-item label="原因" prop="reason">
-          <el-input v-model="adjForm.reason" type="textarea" rows="2" placeholder="请填写调课原因" />
+          <el-input v-model="adjForm.reason" type="textarea" :rows="2" placeholder="请填写调课原因" />
         </el-form-item>
       </el-form>
       <template #footer>
@@ -636,7 +657,7 @@
 
     <!-- Resolve conflict dialog -->
     <el-dialog v-model="resolveDialogVisible" title="处理冲突" width="400px">
-      <el-input v-model="resolveNote" type="textarea" rows="3" :placeholder="resolveAction === 'resolve' ? '请描述解决方案' : '请说明忽略原因'" />
+      <el-input v-model="resolveNote" type="textarea" :rows="3" :placeholder="resolveAction === 'resolve' ? '请描述解决方案' : '请说明忽略原因'" />
       <template #footer>
         <el-button @click="resolveDialogVisible = false">取消</el-button>
         <el-button type="primary" :loading="resolveSaving" @click="confirmResolve">确认</el-button>
@@ -654,7 +675,7 @@ import {
   ShieldCheck, SearchCheck, CheckCircle2, XCircle, AlertTriangle,
   Plus, Download, Printer,
 } from 'lucide-vue-next'
-import request from '@/utils/request'
+import { http as request } from '@/utils/request'
 import {
   scheduleApi, semesterApi, teachingTaskApi, conflictApi, adjustmentApi,
 } from '@/api/teaching'
@@ -806,11 +827,21 @@ const adjRules: FormRules = {
 // ==================== Tab 6: Export ====================
 
 const exportType = ref<string>('class')
+const exportDimension = ref<'class' | 'teacher'>('class')
+const exportTargetId = ref<number | string>('')
+const exporting = ref(false)
+
+const exportTargetList = computed(() => {
+  if (exportDimension.value === 'class') return classList.value
+  return teacherList.value
+})
 
 // ==================== Dialogs State ====================
 
 const autoScheduleDialogVisible = ref(false)
 const scheduling = ref(false)
+const autoProgress = ref(0)
+const autoResult = ref<any>(null)
 const autoScheduleParams = ref({
   scheduleId: undefined as number | string | undefined,
   maxIterations: 1000,
@@ -1016,41 +1047,51 @@ function handleAutoSchedule() {
   }
   autoScheduleParams.value = {
     scheduleId: scheduleList.value[0].id,
-    maxIterations: 1000,
-    populationSize: 100,
+    maxIterations: 500,
+    populationSize: 30,
     mutationRate: 0.1,
   }
+  autoProgress.value = 0
+  autoResult.value = null
   autoScheduleDialogVisible.value = true
 }
 
 async function runAutoSchedule() {
-  if (!autoScheduleParams.value.scheduleId) {
-    ElMessage.warning('请选择排课方案')
+  if (!semesterId.value) {
+    ElMessage.warning('请先选择学期')
     return
   }
   scheduling.value = true
+  autoProgress.value = 0
+  autoResult.value = null
+  const timer = setInterval(() => {
+    if (autoProgress.value < 90) autoProgress.value += Math.random() * 15
+  }, 500)
   try {
     const result = await scheduleApi.autoSchedule({
+      semesterId: semesterId.value,
       scheduleId: autoScheduleParams.value.scheduleId,
       maxIterations: autoScheduleParams.value.maxIterations,
       populationSize: autoScheduleParams.value.populationSize,
       mutationRate: autoScheduleParams.value.mutationRate,
     })
+    autoProgress.value = 100
     const data = (result as any).data || result
+    autoResult.value = data
     if (data.success) {
-      ElMessage.success(`排课完成，生成 ${data.entriesGenerated} 条排课记录`)
+      ElMessage.success(`排课完成！共生成 ${data.entriesGenerated} 条记录`)
       if (data.conflicts?.length > 0) {
         ElMessage.warning(`存在 ${data.conflicts.length} 个冲突，请检查`)
       }
+      loadTasks()
+      loadScheduleList()
     } else {
       ElMessage.error('排课失败')
     }
-    autoScheduleDialogVisible.value = false
-    loadTasks()
-    loadScheduleList()
-  } catch (e) {
-    ElMessage.error('排课失败，请检查约束配置')
+  } catch (e: any) {
+    ElMessage.error('排课失败: ' + (e.message || '请检查约束配置'))
   } finally {
+    clearInterval(timer)
     scheduling.value = false
   }
 }
@@ -1164,6 +1205,32 @@ function onTimetableTypeChange() {
 function showEntryDetail(entry: ScheduleEntry) {
   selectedEntry.value = entry
   entryDetailVisible.value = true
+}
+
+async function onEntryDrop(entryId: number, newDay: number, newPeriod: number) {
+  if (!semesterId.value) return
+  try {
+    const check = await scheduleApi.checkMoveConflict({
+      entryId,
+      semesterId: Number(semesterId.value),
+      dayOfWeek: newDay,
+      periodStart: newPeriod,
+    })
+    const checkData = (check as any).data || check
+    if (checkData.hasConflict) {
+      ElMessage.warning('无法移动: 存在时间冲突')
+      return
+    }
+    await scheduleApi.moveEntry(entryId, {
+      semesterId: Number(semesterId.value),
+      dayOfWeek: newDay,
+      periodStart: newPeriod,
+    })
+    ElMessage.success('课程已移动')
+    loadTimetable()
+  } catch (e: any) {
+    ElMessage.error('移动失败')
+  }
 }
 
 // ==================== Tab 4 Actions ====================
@@ -1318,11 +1385,37 @@ async function cancelAdjustment(adj: ScheduleAdjustment) {
 // ==================== Tab 6 Actions ====================
 
 function handleExport() {
-  ElMessage.info('导出功能开发中...')
+  doExport()
 }
 
 function handlePrint() {
   ElMessage.info('打印功能开发中...')
+}
+
+async function doExport() {
+  if (!exportTargetId.value || !semesterId.value) {
+    ElMessage.warning('请先选择学期和导出对象')
+    return
+  }
+  exporting.value = true
+  try {
+    const blob = exportDimension.value === 'class'
+      ? await scheduleApi.exportClassSchedule(semesterId.value, exportTargetId.value)
+      : await scheduleApi.exportTeacherSchedule(semesterId.value, exportTargetId.value)
+    const url = window.URL.createObjectURL(new Blob([blob as any]))
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `${exportDimension.value}_schedule.xlsx`
+    document.body.appendChild(a)
+    a.click()
+    document.body.removeChild(a)
+    window.URL.revokeObjectURL(url)
+    ElMessage.success('导出成功')
+  } catch (e: any) {
+    ElMessage.error('导出失败: ' + (e.message || ''))
+  } finally {
+    exporting.value = false
+  }
 }
 
 // ==================== Helpers ====================

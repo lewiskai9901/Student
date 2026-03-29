@@ -1,4 +1,4 @@
-import request from '@/utils/request'
+import { http } from '@/utils/request'
 import type {
   AcademicYear,
   Semester,
@@ -33,8 +33,10 @@ import type {
   TimeMatrix,
   DetectedConflict,
   FeasibilityReport,
+  Classroom,
+  TeachingBuilding,
+  ClassroomQueryParams,
 } from '@/types/teaching'
-import type { Classroom, TeachingBuilding, ClassroomQueryParams } from '@/types/teaching'
 
 const BASE_URL = '/teaching'
 
@@ -48,13 +50,13 @@ export interface TeachingBuildingWithStats extends TeachingBuilding {
 
 export const getTeachingBuildings = async (): Promise<TeachingBuildingWithStats[]> => {
   // 使用 /teaching/buildings/enabled 获取所有启用的教学楼
-  return request.get<TeachingBuildingWithStats[]>('/teaching/buildings/enabled', {
+  return http.get<TeachingBuildingWithStats[]>('/teaching/buildings/enabled', {
     params: { buildingType: 1 } // buildingType=1 for teaching buildings
   })
 }
 
 export const getTeachingBuildingById = (id: number | string): Promise<TeachingBuildingWithStats> => {
-  return request.get(`/teaching/buildings/${id}`)
+  return http.get(`/teaching/buildings/${id}`)
 }
 
 // ==================== 教室管理 ====================
@@ -65,40 +67,40 @@ export interface ClassroomWithDetails extends Classroom {
 }
 
 export const getClassrooms = async (params?: ClassroomQueryParams): Promise<{ records: ClassroomWithDetails[]; total: number }> => {
-  return request.get('/teaching/classrooms', { params })
+  return http.get('/teaching/classrooms', { params })
 }
 
 export const getClassroomsByBuilding = async (buildingId: number | string): Promise<ClassroomWithDetails[]> => {
-  const res = await request.get<{ records: ClassroomWithDetails[]; total: number }>('/teaching/classrooms', {
+  const res = await http.get<{ records: ClassroomWithDetails[]; total: number }>('/teaching/classrooms', {
     params: { buildingId, pageNum: 1, pageSize: 500 }
   })
   return res.records || []
 }
 
 export const getClassroomById = (id: number | string): Promise<ClassroomWithDetails> => {
-  return request.get(`/teaching/classrooms/${id}`)
+  return http.get(`/teaching/classrooms/${id}`)
 }
 
 export const createClassroom = (data: Partial<Classroom>): Promise<Classroom> => {
-  return request.post('/teaching/classrooms', data)
+  return http.post('/teaching/classrooms', data)
 }
 
 export const updateClassroom = (id: number | string, data: Partial<Classroom>): Promise<Classroom> => {
-  return request.put(`/teaching/classrooms/${id}`, data)
+  return http.put(`/teaching/classrooms/${id}`, data)
 }
 
 export const deleteClassroom = (id: number | string): Promise<void> => {
-  return request.delete(`/teaching/classrooms/${id}`)
+  return http.delete(`/teaching/classrooms/${id}`)
 }
 
 export const assignClassToClassroom = (classroomId: number | string, classId: number | string): Promise<Classroom> => {
-  return request.post(`/teaching/classrooms/${classroomId}/assign-class`, null, {
+  return http.post(`/teaching/classrooms/${classroomId}/assign-class`, null, {
     params: { classId }
   })
 }
 
 export const unassignClassFromClassroom = (classroomId: number | string): Promise<Classroom> => {
-  return request.post(`/teaching/classrooms/${classroomId}/assign-class`, null, {
+  return http.post(`/teaching/classrooms/${classroomId}/assign-class`, null, {
     params: { classId: null }
   })
 }
@@ -106,22 +108,22 @@ export const unassignClassFromClassroom = (classroomId: number | string): Promis
 // ==================== 学年管理 ====================
 
 export const academicYearApi = {
-  list: () => request.get<AcademicYear[]>(`${BASE_URL}/academic-years`),
+  list: () => http.get<AcademicYear[]>(`${BASE_URL}/academic-years`),
 
-  getById: (id: number | string) => request.get<AcademicYear>(`${BASE_URL}/academic-years/${id}`),
+  getById: (id: number | string) => http.get<AcademicYear>(`${BASE_URL}/academic-years/${id}`),
 
-  getCurrent: () => request.get<AcademicYear>(`${BASE_URL}/academic-years/current`),
+  getCurrent: () => http.get<AcademicYear>(`${BASE_URL}/academic-years/current`),
 
   create: (data: Partial<AcademicYear>) =>
-    request.post<AcademicYear>(`${BASE_URL}/academic-years`, data),
+    http.post<AcademicYear>(`${BASE_URL}/academic-years`, data),
 
   update: (id: number | string, data: Partial<AcademicYear>) =>
-    request.put<AcademicYear>(`${BASE_URL}/academic-years/${id}`, data),
+    http.put<AcademicYear>(`${BASE_URL}/academic-years/${id}`, data),
 
-  delete: (id: number | string) => request.delete(`${BASE_URL}/academic-years/${id}`),
+  delete: (id: number | string) => http.delete(`${BASE_URL}/academic-years/${id}`),
 
   setCurrent: (id: number | string) =>
-    request.post(`${BASE_URL}/academic-years/${id}/set-current`),
+    http.post(`${BASE_URL}/academic-years/${id}/set-current`),
 }
 
 // ==================== 学期管理 ====================
@@ -129,200 +131,215 @@ export const academicYearApi = {
 export const semesterApi = {
   list: (yearId?: number | string) => {
     const params = yearId ? { yearId } : {}
-    return request.get<Semester[]>(`${BASE_URL}/semesters`, { params })
+    return http.get<Semester[]>(`${BASE_URL}/semesters`, { params })
   },
 
-  getById: (id: number | string) => request.get<Semester>(`${BASE_URL}/semesters/${id}`),
+  getById: (id: number | string) => http.get<Semester>(`${BASE_URL}/semesters/${id}`),
 
-  getCurrent: () => request.get<Semester>(`${BASE_URL}/semesters/current`),
+  getCurrent: () => http.get<Semester>(`${BASE_URL}/semesters/current`),
 
   create: (data: Partial<Semester>) =>
-    request.post<Semester>(`${BASE_URL}/semesters`, data),
+    http.post<Semester>(`${BASE_URL}/semesters`, data),
 
   update: (id: number | string, data: Partial<Semester>) =>
-    request.put<Semester>(`${BASE_URL}/semesters/${id}`, data),
+    http.put<Semester>(`${BASE_URL}/semesters/${id}`, data),
 
-  delete: (id: number | string) => request.delete(`${BASE_URL}/semesters/${id}`),
+  delete: (id: number | string) => http.delete(`${BASE_URL}/semesters/${id}`),
 
   setCurrent: (id: number | string) =>
-    request.post(`${BASE_URL}/semesters/${id}/set-current`),
+    http.post(`${BASE_URL}/semesters/${id}/set-current`),
 
   getWeeks: (semesterId: number | string) =>
-    request.get<TeachingWeek[]>(`${BASE_URL}/semesters/${semesterId}/weeks`),
+    http.get<TeachingWeek[]>(`${BASE_URL}/semesters/${semesterId}/weeks`),
 
   generateWeeks: (semesterId: number | string) =>
-    request.post<TeachingWeek[]>(`${BASE_URL}/semesters/${semesterId}/generate-weeks`),
+    http.post<TeachingWeek[]>(`${BASE_URL}/semesters/${semesterId}/generate-weeks`),
 }
 
 // ==================== 校历事件 ====================
 
 export const academicEventApi = {
   list: (params: { yearId?: number | string; semesterId?: number | string; eventType?: number }) =>
-    request.get<AcademicEvent[]>(`${BASE_URL}/events`, { params }),
+    http.get<AcademicEvent[]>(`${BASE_URL}/events`, { params }),
 
-  getById: (id: number | string) => request.get<AcademicEvent>(`${BASE_URL}/events/${id}`),
+  getById: (id: number | string) => http.get<AcademicEvent>(`${BASE_URL}/events/${id}`),
 
   create: (data: Partial<AcademicEvent>) =>
-    request.post<AcademicEvent>(`${BASE_URL}/events`, data),
+    http.post<AcademicEvent>(`${BASE_URL}/events`, data),
 
   update: (id: number | string, data: Partial<AcademicEvent>) =>
-    request.put<AcademicEvent>(`${BASE_URL}/events/${id}`, data),
+    http.put<AcademicEvent>(`${BASE_URL}/events/${id}`, data),
 
-  delete: (id: number | string) => request.delete(`${BASE_URL}/events/${id}`),
+  delete: (id: number | string) => http.delete(`${BASE_URL}/events/${id}`),
 }
 
 // ==================== 课程管理 ====================
 
 export const courseApi = {
   list: (params?: CourseQueryParams) =>
-    request.get<PageResult<Course>>(`${BASE_URL}/courses`, { params }),
+    http.get<PageResult<Course>>(`${BASE_URL}/courses`, { params }),
 
-  listAll: () => request.get<Course[]>(`${BASE_URL}/courses/all`),
+  listAll: () => http.get<Course[]>(`${BASE_URL}/courses/all`),
 
-  getById: (id: number | string) => request.get<Course>(`${BASE_URL}/courses/${id}`),
+  getById: (id: number | string) => http.get<Course>(`${BASE_URL}/courses/${id}`),
 
-  getByCode: (code: string) => request.get<Course>(`${BASE_URL}/courses/code/${code}`),
+  getByCode: (code: string) => http.get<Course>(`${BASE_URL}/courses/code/${code}`),
 
   create: (data: Partial<Course>) =>
-    request.post<Course>(`${BASE_URL}/courses`, data),
+    http.post<Course>(`${BASE_URL}/courses`, data),
 
   update: (id: number | string, data: Partial<Course>) =>
-    request.put<Course>(`${BASE_URL}/courses/${id}`, data),
+    http.put<Course>(`${BASE_URL}/courses/${id}`, data),
 
-  delete: (id: number | string) => request.delete(`${BASE_URL}/courses/${id}`),
+  delete: (id: number | string) => http.delete(`${BASE_URL}/courses/${id}`),
 
   updateStatus: (id: number | string, status: number) =>
-    request.patch(`${BASE_URL}/courses/${id}/status`, { status }),
+    http.patch(`${BASE_URL}/courses/${id}/status`, { status }),
 }
 
 // ==================== 培养方案 ====================
 
 export const curriculumPlanApi = {
   list: (params?: CurriculumPlanQueryParams) =>
-    request.get<PageResult<CurriculumPlan>>(`${BASE_URL}/curriculum-plans`, { params }),
+    http.get<PageResult<CurriculumPlan>>(`${BASE_URL}/curriculum-plans`, { params }),
 
-  getById: (id: number | string) => request.get<CurriculumPlan>(`${BASE_URL}/curriculum-plans/${id}`),
+  getById: (id: number | string) => http.get<CurriculumPlan>(`${BASE_URL}/curriculum-plans/${id}`),
 
   create: (data: Partial<CurriculumPlan>) =>
-    request.post<CurriculumPlan>(`${BASE_URL}/curriculum-plans`, data),
+    http.post<CurriculumPlan>(`${BASE_URL}/curriculum-plans`, data),
 
   update: (id: number | string, data: Partial<CurriculumPlan>) =>
-    request.put<CurriculumPlan>(`${BASE_URL}/curriculum-plans/${id}`, data),
+    http.put<CurriculumPlan>(`${BASE_URL}/curriculum-plans/${id}`, data),
 
-  delete: (id: number | string) => request.delete(`${BASE_URL}/curriculum-plans/${id}`),
+  delete: (id: number | string) => http.delete(`${BASE_URL}/curriculum-plans/${id}`),
 
   publish: (id: number | string) =>
-    request.post(`${BASE_URL}/curriculum-plans/${id}/publish`),
+    http.post(`${BASE_URL}/curriculum-plans/${id}/publish`),
 
   deprecate: (id: number | string) =>
-    request.post(`${BASE_URL}/curriculum-plans/${id}/deprecate`),
+    http.post(`${BASE_URL}/curriculum-plans/${id}/deprecate`),
 
   getCourses: (planId: number | string) =>
-    request.get<PlanCourse[]>(`${BASE_URL}/curriculum-plans/${planId}/courses`),
+    http.get<PlanCourse[]>(`${BASE_URL}/curriculum-plans/${planId}/courses`),
 
   addCourse: (planId: number | string, data: Partial<PlanCourse>) =>
-    request.post<PlanCourse>(`${BASE_URL}/curriculum-plans/${planId}/courses`, data),
+    http.post<PlanCourse>(`${BASE_URL}/curriculum-plans/${planId}/courses`, data),
 
   updateCourse: (planId: number | string, courseId: number | string, data: Partial<PlanCourse>) =>
-    request.put<PlanCourse>(`${BASE_URL}/curriculum-plans/${planId}/courses/${courseId}`, data),
+    http.put<PlanCourse>(`${BASE_URL}/curriculum-plans/${planId}/courses/${courseId}`, data),
 
   removeCourse: (planId: number | string, courseId: number | string) =>
-    request.delete(`${BASE_URL}/curriculum-plans/${planId}/courses/${courseId}`),
+    http.delete(`${BASE_URL}/curriculum-plans/${planId}/courses/${courseId}`),
 
   copyPlan: (id: number | string, newVersion: string) =>
-    request.post<CurriculumPlan>(`${BASE_URL}/curriculum-plans/${id}/copy`, { newVersion }),
+    http.post<CurriculumPlan>(`${BASE_URL}/curriculum-plans/${id}/copy`, { newVersion }),
 }
 
 // ==================== 教学任务 ====================
 
 export const teachingTaskApi = {
   list: (params?: TeachingTaskQueryParams) =>
-    request.get<PageResult<TeachingTask>>(`${BASE_URL}/tasks`, { params }),
+    http.get<PageResult<TeachingTask>>(`${BASE_URL}/tasks`, { params }),
 
-  getById: (id: number | string) => request.get<TeachingTask>(`${BASE_URL}/tasks/${id}`),
+  getById: (id: number | string) => http.get<TeachingTask>(`${BASE_URL}/tasks/${id}`),
 
   create: (data: Partial<TeachingTask>) =>
-    request.post<TeachingTask>(`${BASE_URL}/tasks`, data),
+    http.post<TeachingTask>(`${BASE_URL}/tasks`, data),
 
   update: (id: number | string, data: Partial<TeachingTask>) =>
-    request.put<TeachingTask>(`${BASE_URL}/tasks/${id}`, data),
+    http.put<TeachingTask>(`${BASE_URL}/tasks/${id}`, data),
 
-  delete: (id: number | string) => request.delete(`${BASE_URL}/tasks/${id}`),
+  delete: (id: number | string) => http.delete(`${BASE_URL}/tasks/${id}`),
 
   assignTeachers: (taskId: number | string, teacherIds: (number | string)[], mainTeacherId: number | string) =>
-    request.post(`${BASE_URL}/tasks/${taskId}/assign-teachers`, { teacherIds, mainTeacherId }),
+    http.post(`${BASE_URL}/tasks/${taskId}/assign-teachers`, { teacherIds, mainTeacherId }),
 
   removeTeacher: (taskId: number | string, teacherId: number | string) =>
-    request.delete(`${BASE_URL}/tasks/${taskId}/teachers/${teacherId}`),
+    http.delete(`${BASE_URL}/tasks/${taskId}/teachers/${teacherId}`),
 
   batchCreate: (semesterId: number | string, planId: number | string, classIds: (number | string)[]) =>
-    request.post<TeachingTask[]>(`${BASE_URL}/tasks/batch-create`, { semesterId, planId, classIds }),
+    http.post<TeachingTask[]>(`${BASE_URL}/tasks/batch-create`, { semesterId, planId, classIds }),
 
   updateStatus: (id: number | string, status: number) =>
-    request.patch(`${BASE_URL}/tasks/${id}/status`, { status }),
+    http.patch(`${BASE_URL}/tasks/${id}/status`, { status }),
 }
 
 // ==================== 排课管理 ====================
 
 export const scheduleApi = {
   list: (params?: { semesterId?: number | string; status?: number }) =>
-    request.get<CourseSchedule[]>(`${BASE_URL}/schedules`, { params }),
+    http.get<CourseSchedule[]>(`${BASE_URL}/schedules`, { params }),
 
-  getById: (id: number | string) => request.get<CourseSchedule>(`${BASE_URL}/schedules/${id}`),
+  getById: (id: number | string) => http.get<CourseSchedule>(`${BASE_URL}/schedules/${id}`),
 
   create: (data: Partial<CourseSchedule>) =>
-    request.post<CourseSchedule>(`${BASE_URL}/schedules`, data),
+    http.post<CourseSchedule>(`${BASE_URL}/schedules`, data),
 
   update: (id: number | string, data: Partial<CourseSchedule>) =>
-    request.put<CourseSchedule>(`${BASE_URL}/schedules/${id}`, data),
+    http.put<CourseSchedule>(`${BASE_URL}/schedules/${id}`, data),
 
-  delete: (id: number | string) => request.delete(`${BASE_URL}/schedules/${id}`),
+  delete: (id: number | string) => http.delete(`${BASE_URL}/schedules/${id}`),
 
   publish: (id: number | string) =>
-    request.post(`${BASE_URL}/schedules/${id}/publish`),
+    http.post(`${BASE_URL}/schedules/${id}/publish`),
 
   archive: (id: number | string) =>
-    request.post(`${BASE_URL}/schedules/${id}/archive`),
+    http.post(`${BASE_URL}/schedules/${id}/archive`),
 
   // 课表条目
   getEntries: (scheduleId: number | string) =>
-    request.get<ScheduleEntry[]>(`${BASE_URL}/schedules/${scheduleId}/entries`),
+    http.get<ScheduleEntry[]>(`${BASE_URL}/schedules/${scheduleId}/entries`),
 
   addEntry: (scheduleId: number | string, data: Partial<ScheduleEntry>) =>
-    request.post<ScheduleEntry>(`${BASE_URL}/schedules/${scheduleId}/entries`, data),
+    http.post<ScheduleEntry>(`${BASE_URL}/schedules/${scheduleId}/entries`, data),
 
   updateEntry: (scheduleId: number | string, entryId: number | string, data: Partial<ScheduleEntry>) =>
-    request.put<ScheduleEntry>(`${BASE_URL}/schedules/${scheduleId}/entries/${entryId}`, data),
+    http.put<ScheduleEntry>(`${BASE_URL}/schedules/${scheduleId}/entries/${entryId}`, data),
 
   deleteEntry: (scheduleId: number | string, entryId: number | string) =>
-    request.delete(`${BASE_URL}/schedules/${scheduleId}/entries/${entryId}`),
+    http.delete(`${BASE_URL}/schedules/${scheduleId}/entries/${entryId}`),
 
   // 智能排课
-  autoSchedule: (params: AutoScheduleParams) =>
-    request.post<AutoScheduleResult>(`${BASE_URL}/schedules/${params.scheduleId}/auto-schedule`, params),
+  autoSchedule: (params: { semesterId: number | string; maxIterations?: number; populationSize?: number; scheduleId?: number | string; mutationRate?: number }) =>
+    http.post<any>(`${BASE_URL}/schedules/auto-schedule`, params),
 
   // 冲突检测
   checkConflicts: (scheduleId: number | string) =>
-    request.get<{ conflicts: any[] }>(`${BASE_URL}/schedules/${scheduleId}/conflicts`),
+    http.get<{ conflicts: any[] }>(`${BASE_URL}/schedules/${scheduleId}/conflicts`),
+
+  // 拖拽移动课表条目
+  moveEntry: (id: number | string, data: { semesterId: number | string; dayOfWeek: number; periodStart: number; classroomId?: number }) =>
+    http.post(`${BASE_URL}/schedules/${id}/move`, data),
+
+  // 检查移动冲突
+  checkMoveConflict: (data: { entryId: number; semesterId: number | string; dayOfWeek: number; periodStart: number }) =>
+    http.post(`${BASE_URL}/schedules/check-move-conflict`, data),
 
   // 按班级/教师/教室查询
   getByClass: (classId: number | string, semesterId: number | string) =>
-    request.get<ScheduleEntry[]>(`${BASE_URL}/schedules/by-class/${classId}`, { params: { semesterId } }),
+    http.get<ScheduleEntry[]>(`${BASE_URL}/schedules/by-class/${classId}`, { params: { semesterId } }),
 
   getByTeacher: (teacherId: number | string, semesterId: number | string) =>
-    request.get<ScheduleEntry[]>(`${BASE_URL}/schedules/by-teacher/${teacherId}`, { params: { semesterId } }),
+    http.get<ScheduleEntry[]>(`${BASE_URL}/schedules/by-teacher/${teacherId}`, { params: { semesterId } }),
 
   getByClassroom: (classroomId: number | string, semesterId: number | string) =>
-    request.get<ScheduleEntry[]>(`${BASE_URL}/schedules/by-classroom/${classroomId}`, { params: { semesterId } }),
+    http.get<ScheduleEntry[]>(`${BASE_URL}/schedules/by-classroom/${classroomId}`, { params: { semesterId } }),
+
+  // 导出课表
+  exportClassSchedule: (semesterId: number | string, classId: number | string) =>
+    http.get(`${BASE_URL}/schedules/export/class/${classId}`, { params: { semesterId }, responseType: 'blob' }),
+
+  exportTeacherSchedule: (semesterId: number | string, teacherId: number | string) =>
+    http.get(`${BASE_URL}/schedules/export/teacher/${teacherId}`, { params: { semesterId }, responseType: 'blob' }),
 }
 
 // ==================== 调课管理 ====================
 
 export const adjustmentApi = {
   list: (params?: AdjustmentQueryParams) =>
-    request.get<PageResult<ScheduleAdjustment>>(`${BASE_URL}/adjustments`, { params }),
+    http.get<PageResult<ScheduleAdjustment>>(`${BASE_URL}/adjustments`, { params }),
 
-  getById: (id: number | string) => request.get<ScheduleAdjustment>(`${BASE_URL}/adjustments/${id}`),
+  getById: (id: number | string) => http.get<ScheduleAdjustment>(`${BASE_URL}/adjustments/${id}`),
 
   apply: (data: {
     entryId: number | string
@@ -333,25 +350,25 @@ export const adjustmentApi = {
     newPeriodEnd?: number
     newWeek?: number
     reason: string
-  }) => request.post<ScheduleAdjustment>(`${BASE_URL}/adjustments`, data),
+  }) => http.post<ScheduleAdjustment>(`${BASE_URL}/adjustments`, data),
 
   approve: (id: number | string, remark?: string) =>
-    request.post(`${BASE_URL}/adjustments/${id}/approve`, { remark }),
+    http.post(`${BASE_URL}/adjustments/${id}/approve`, { remark }),
 
   reject: (id: number | string, remark: string) =>
-    request.post(`${BASE_URL}/adjustments/${id}/reject`, { remark }),
+    http.post(`${BASE_URL}/adjustments/${id}/reject`, { remark }),
 
   execute: (id: number | string) =>
-    request.post(`${BASE_URL}/adjustments/${id}/execute`),
+    http.post(`${BASE_URL}/adjustments/${id}/execute`),
 
   cancel: (id: number | string) =>
-    request.post(`${BASE_URL}/adjustments/${id}/cancel`),
+    http.post(`${BASE_URL}/adjustments/${id}/cancel`),
 
   getMyApplications: (params?: { status?: number; page?: number; size?: number }) =>
-    request.get<PageResult<ScheduleAdjustment>>(`${BASE_URL}/adjustments/my-applications`, { params }),
+    http.get<PageResult<ScheduleAdjustment>>(`${BASE_URL}/adjustments/my-applications`, { params }),
 
   getPendingApprovals: (params?: { page?: number; size?: number }) =>
-    request.get<PageResult<ScheduleAdjustment>>(`${BASE_URL}/adjustments/pending-approvals`, { params }),
+    http.get<PageResult<ScheduleAdjustment>>(`${BASE_URL}/adjustments/pending-approvals`, { params }),
 }
 
 // ==================== 考试管理 ====================
@@ -359,49 +376,49 @@ export const adjustmentApi = {
 export const examApi = {
   // 考试批次
   listBatches: (params?: ExamBatchQueryParams) =>
-    request.get<PageResult<ExamBatch>>(`${BASE_URL}/examinations/batches`, { params }),
+    http.get<PageResult<ExamBatch>>(`${BASE_URL}/examinations/batches`, { params }),
 
-  getBatch: (id: number | string) => request.get<ExamBatch>(`${BASE_URL}/examinations/batches/${id}`),
+  getBatch: (id: number | string) => http.get<ExamBatch>(`${BASE_URL}/examinations/batches/${id}`),
 
   createBatch: (data: Partial<ExamBatch>) =>
-    request.post<ExamBatch>(`${BASE_URL}/examinations/batches`, data),
+    http.post<ExamBatch>(`${BASE_URL}/examinations/batches`, data),
 
   updateBatch: (id: number | string, data: Partial<ExamBatch>) =>
-    request.put<ExamBatch>(`${BASE_URL}/examinations/batches/${id}`, data),
+    http.put<ExamBatch>(`${BASE_URL}/examinations/batches/${id}`, data),
 
-  deleteBatch: (id: number | string) => request.delete(`${BASE_URL}/examinations/batches/${id}`),
+  deleteBatch: (id: number | string) => http.delete(`${BASE_URL}/examinations/batches/${id}`),
 
   publishBatch: (id: number | string) =>
-    request.post(`${BASE_URL}/examinations/batches/${id}/publish`),
+    http.post(`${BASE_URL}/examinations/batches/${id}/publish`),
 
   // 考试安排
   getArrangements: (batchId: number | string) =>
-    request.get<ExamArrangement[]>(`${BASE_URL}/examinations/batches/${batchId}/arrangements`),
+    http.get<ExamArrangement[]>(`${BASE_URL}/examinations/batches/${batchId}/arrangements`),
 
   createArrangement: (batchId: number | string, data: Partial<ExamArrangement>) =>
-    request.post<ExamArrangement>(`${BASE_URL}/examinations/batches/${batchId}/arrangements`, data),
+    http.post<ExamArrangement>(`${BASE_URL}/examinations/batches/${batchId}/arrangements`, data),
 
   updateArrangement: (batchId: number | string, arrangementId: number | string, data: Partial<ExamArrangement>) =>
-    request.put<ExamArrangement>(`${BASE_URL}/examinations/batches/${batchId}/arrangements/${arrangementId}`, data),
+    http.put<ExamArrangement>(`${BASE_URL}/examinations/batches/${batchId}/arrangements/${arrangementId}`, data),
 
   deleteArrangement: (batchId: number | string, arrangementId: number | string) =>
-    request.delete(`${BASE_URL}/examinations/batches/${batchId}/arrangements/${arrangementId}`),
+    http.delete(`${BASE_URL}/examinations/batches/${batchId}/arrangements/${arrangementId}`),
 
   // 考场分配
   assignRooms: (arrangementId: number | string, rooms: { classroomId: number | string; capacity: number }[]) =>
-    request.post(`${BASE_URL}/examinations/arrangements/${arrangementId}/rooms`, { rooms }),
+    http.post(`${BASE_URL}/examinations/arrangements/${arrangementId}/rooms`, { rooms }),
 
   // 监考教师
   assignInvigilators: (roomId: number | string, teacherIds: (number | string)[], mainTeacherId: number | string) =>
-    request.post(`${BASE_URL}/examinations/rooms/${roomId}/invigilators`, { teacherIds, mainTeacherId }),
+    http.post(`${BASE_URL}/examinations/rooms/${roomId}/invigilators`, { teacherIds, mainTeacherId }),
 
   // 查询教师监考安排
   getTeacherExams: (teacherId: number | string, semesterId: number | string) =>
-    request.get<ExamArrangement[]>(`${BASE_URL}/examinations/by-teacher/${teacherId}`, { params: { semesterId } }),
+    http.get<ExamArrangement[]>(`${BASE_URL}/examinations/by-teacher/${teacherId}`, { params: { semesterId } }),
 
   // 查询学生考试安排
   getStudentExams: (studentId: number | string, semesterId: number | string) =>
-    request.get<ExamArrangement[]>(`${BASE_URL}/examinations/by-student/${studentId}`, { params: { semesterId } }),
+    http.get<ExamArrangement[]>(`${BASE_URL}/examinations/by-student/${studentId}`, { params: { semesterId } }),
 }
 
 // ==================== 成绩管理 ====================
@@ -409,80 +426,80 @@ export const examApi = {
 export const gradeApi = {
   // 成绩批次
   listBatches: (params?: GradeQueryParams) =>
-    request.get<PageResult<GradeBatch>>(`${BASE_URL}/grades/batches`, { params }),
+    http.get<PageResult<GradeBatch>>(`${BASE_URL}/grades/batches`, { params }),
 
-  getBatch: (id: number | string) => request.get<GradeBatch>(`${BASE_URL}/grades/batches/${id}`),
+  getBatch: (id: number | string) => http.get<GradeBatch>(`${BASE_URL}/grades/batches/${id}`),
 
   createBatch: (data: Partial<GradeBatch>) =>
-    request.post<GradeBatch>(`${BASE_URL}/grades/batches`, data),
+    http.post<GradeBatch>(`${BASE_URL}/grades/batches`, data),
 
   updateBatch: (id: number | string, data: Partial<GradeBatch>) =>
-    request.put<GradeBatch>(`${BASE_URL}/grades/batches/${id}`, data),
+    http.put<GradeBatch>(`${BASE_URL}/grades/batches/${id}`, data),
 
-  deleteBatch: (id: number | string) => request.delete(`${BASE_URL}/grades/batches/${id}`),
+  deleteBatch: (id: number | string) => http.delete(`${BASE_URL}/grades/batches/${id}`),
 
   submitBatch: (id: number | string) =>
-    request.post(`${BASE_URL}/grades/batches/${id}/submit`),
+    http.post(`${BASE_URL}/grades/batches/${id}/submit`),
 
   approveBatch: (id: number | string) =>
-    request.post(`${BASE_URL}/grades/batches/${id}/approve`),
+    http.post(`${BASE_URL}/grades/batches/${id}/approve`),
 
   publishBatch: (id: number | string) =>
-    request.post(`${BASE_URL}/grades/batches/${id}/publish`),
+    http.post(`${BASE_URL}/grades/batches/${id}/publish`),
 
   // 成绩录入
   getGrades: (batchId: number | string) =>
-    request.get<StudentGrade[]>(`${BASE_URL}/grades/batches/${batchId}/grades`),
+    http.get<StudentGrade[]>(`${BASE_URL}/grades/batches/${batchId}/grades`),
 
   recordGrade: (batchId: number | string, data: {
     studentId: number | string
     totalScore?: number
     items?: { itemName: string; score: number; weight: number }[]
     remark?: string
-  }) => request.post<StudentGrade>(`${BASE_URL}/grades/batches/${batchId}/grades`, data),
+  }) => http.post<StudentGrade>(`${BASE_URL}/grades/batches/${batchId}/grades`, data),
 
   updateGrade: (gradeId: number | string, data: {
     totalScore?: number
     items?: { itemName: string; score: number; weight: number }[]
     remark?: string
-  }) => request.put<StudentGrade>(`${BASE_URL}/grades/${gradeId}`, data),
+  }) => http.put<StudentGrade>(`${BASE_URL}/grades/${gradeId}`, data),
 
   batchRecordGrades: (batchId: number | string, grades: {
     studentId: number | string
     totalScore: number
     remark?: string
-  }[]) => request.post(`${BASE_URL}/grades/batches/${batchId}/batch-record`, { grades }),
+  }[]) => http.post(`${BASE_URL}/grades/batches/${batchId}/batch-record`, { grades }),
 
   // 成绩查询
   getStudentGrades: (studentId: number | string, params?: { semesterId?: number | string; courseId?: number | string }) =>
-    request.get<StudentGrade[]>(`${BASE_URL}/grades/by-student/${studentId}`, { params }),
+    http.get<StudentGrade[]>(`${BASE_URL}/grades/by-student/${studentId}`, { params }),
 
   getClassGrades: (classId: number | string, params?: { semesterId?: number | string; courseId?: number | string }) =>
-    request.get<StudentGrade[]>(`${BASE_URL}/grades/by-class/${classId}`, { params }),
+    http.get<StudentGrade[]>(`${BASE_URL}/grades/by-class/${classId}`, { params }),
 
   // 成绩统计
   getStatistics: (params: { batchId?: number | string; classId?: number | string; courseId?: number | string; semesterId?: number | string }) =>
-    request.get<GradeStatistics>(`${BASE_URL}/grades/statistics`, { params }),
+    http.get<GradeStatistics>(`${BASE_URL}/grades/statistics`, { params }),
 
   // 成绩排名
   getRanking: (params: { classId: number | string; semesterId: number | string; courseId?: number | string }) =>
-    request.get<{ studentId: number | string; studentName: string; totalScore: number; rank: number }[]>(
+    http.get<{ studentId: number | string; studentName: string; totalScore: number; rank: number }[]>(
       `${BASE_URL}/grades/ranking`, { params }
     ),
 
   // 导出成绩
   exportGrades: (batchId: number | string) =>
-    request.get(`${BASE_URL}/grades/batches/${batchId}/export`, { responseType: 'blob' }),
+    http.get(`${BASE_URL}/grades/batches/${batchId}/export`, { responseType: 'blob' }),
 
   // 导入成绩模板
   getImportTemplate: (batchId: number | string) =>
-    request.get(`${BASE_URL}/grades/batches/${batchId}/import-template`, { responseType: 'blob' }),
+    http.get(`${BASE_URL}/grades/batches/${batchId}/import-template`, { responseType: 'blob' }),
 
   // 导入成绩
   importGrades: (batchId: number | string, file: File) => {
     const formData = new FormData()
     formData.append('file', file)
-    return request.post(`${BASE_URL}/grades/batches/${batchId}/import`, formData, {
+    return http.post(`${BASE_URL}/grades/batches/${batchId}/import`, formData, {
       headers: { 'Content-Type': 'multipart/form-data' },
     })
   },
@@ -494,28 +511,28 @@ export const gradeApi = {
 
 export const offeringApi = {
   list: (semesterId: number | string) =>
-    request.get<SemesterOffering[]>(`${BASE_URL}/offerings`, { params: { semesterId } }),
+    http.get<SemesterOffering[]>(`${BASE_URL}/offerings`, { params: { semesterId } }),
   create: (data: Partial<SemesterOffering>) =>
-    request.post<SemesterOffering>(`${BASE_URL}/offerings`, data),
+    http.post<SemesterOffering>(`${BASE_URL}/offerings`, data),
   update: (id: number | string, data: Partial<SemesterOffering>) =>
-    request.put<SemesterOffering>(`${BASE_URL}/offerings/${id}`, data),
+    http.put<SemesterOffering>(`${BASE_URL}/offerings/${id}`, data),
   delete: (id: number | string) =>
-    request.delete(`${BASE_URL}/offerings/${id}`),
+    http.delete(`${BASE_URL}/offerings/${id}`),
   confirm: (id: number | string) =>
-    request.post(`${BASE_URL}/offerings/${id}/confirm`),
+    http.post(`${BASE_URL}/offerings/${id}/confirm`),
   importFromPlan: (data: { semesterId: number; planId: number; classIds?: number[] }) =>
-    request.post(`${BASE_URL}/offerings/import-from-plan`, data),
+    http.post(`${BASE_URL}/offerings/import-from-plan`, data),
 }
 
 export const classAssignmentApi = {
   list: (semesterId: number | string, classId?: number | string) =>
-    request.get<ClassCourseAssignment[]>(`${BASE_URL}/class-assignments`, { params: { semesterId, classId } }),
+    http.get<ClassCourseAssignment[]>(`${BASE_URL}/class-assignments`, { params: { semesterId, classId } }),
   create: (data: Partial<ClassCourseAssignment>) =>
-    request.post<ClassCourseAssignment>(`${BASE_URL}/class-assignments`, data),
+    http.post<ClassCourseAssignment>(`${BASE_URL}/class-assignments`, data),
   delete: (id: number | string) =>
-    request.delete(`${BASE_URL}/class-assignments/${id}`),
+    http.delete(`${BASE_URL}/class-assignments/${id}`),
   batchConfirm: (semesterId: number | string, classId: number | string) =>
-    request.post(`${BASE_URL}/class-assignments/batch-confirm`, { semesterId, classId }),
+    http.post(`${BASE_URL}/class-assignments/batch-confirm`, { semesterId, classId }),
 }
 
 // =====================================================
@@ -524,23 +541,23 @@ export const classAssignmentApi = {
 
 export const teachingClassApi = {
   list: (semesterId: number | string) =>
-    request.get<TeachingClass[]>(`${BASE_URL}/teaching-classes`, { params: { semesterId } }),
+    http.get<TeachingClass[]>(`${BASE_URL}/teaching-classes`, { params: { semesterId } }),
   getById: (id: number | string) =>
-    request.get<TeachingClass>(`${BASE_URL}/teaching-classes/${id}`),
+    http.get<TeachingClass>(`${BASE_URL}/teaching-classes/${id}`),
   create: (data: Partial<TeachingClass>) =>
-    request.post<TeachingClass>(`${BASE_URL}/teaching-classes`, data),
+    http.post<TeachingClass>(`${BASE_URL}/teaching-classes`, data),
   update: (id: number | string, data: Partial<TeachingClass>) =>
-    request.put<TeachingClass>(`${BASE_URL}/teaching-classes/${id}`, data),
+    http.put<TeachingClass>(`${BASE_URL}/teaching-classes/${id}`, data),
   delete: (id: number | string) =>
-    request.delete(`${BASE_URL}/teaching-classes/${id}`),
+    http.delete(`${BASE_URL}/teaching-classes/${id}`),
   autoGenerate: (semesterId: number | string) =>
-    request.post(`${BASE_URL}/teaching-classes/auto-generate`, { semesterId }),
+    http.post(`${BASE_URL}/teaching-classes/auto-generate`, { semesterId }),
   getMembers: (id: number | string) =>
-    request.get<TeachingClassMember[]>(`${BASE_URL}/teaching-classes/${id}/members`),
+    http.get<TeachingClassMember[]>(`${BASE_URL}/teaching-classes/${id}/members`),
   addMembers: (id: number | string, members: Partial<TeachingClassMember>[]) =>
-    request.post(`${BASE_URL}/teaching-classes/${id}/members`, members),
+    http.post(`${BASE_URL}/teaching-classes/${id}/members`, members),
   removeMembers: (id: number | string, memberIds: number[]) =>
-    request.delete(`${BASE_URL}/teaching-classes/${id}/members`, { data: memberIds }),
+    http.delete(`${BASE_URL}/teaching-classes/${id}/members`, { data: memberIds }),
 }
 
 // =====================================================
@@ -549,21 +566,21 @@ export const teachingClassApi = {
 
 export const constraintApi = {
   list: (params: { semesterId: number | string; level?: number; targetId?: number | string }) =>
-    request.get<SchedulingConstraint[]>(`${BASE_URL}/constraints`, { params }),
+    http.get<SchedulingConstraint[]>(`${BASE_URL}/constraints`, { params }),
   create: (data: Partial<SchedulingConstraint>) =>
-    request.post<SchedulingConstraint>(`${BASE_URL}/constraints`, data),
+    http.post<SchedulingConstraint>(`${BASE_URL}/constraints`, data),
   update: (id: number | string, data: Partial<SchedulingConstraint>) =>
-    request.put<SchedulingConstraint>(`${BASE_URL}/constraints/${id}`, data),
+    http.put<SchedulingConstraint>(`${BASE_URL}/constraints/${id}`, data),
   delete: (id: number | string) =>
-    request.delete(`${BASE_URL}/constraints/${id}`),
+    http.delete(`${BASE_URL}/constraints/${id}`),
   enable: (id: number | string) =>
-    request.post(`${BASE_URL}/constraints/${id}/enable`),
+    http.post(`${BASE_URL}/constraints/${id}/enable`),
   disable: (id: number | string) =>
-    request.post(`${BASE_URL}/constraints/${id}/disable`),
+    http.post(`${BASE_URL}/constraints/${id}/disable`),
   getTimeMatrix: (params: { semesterId: number | string; level: number; targetId?: number | string }) =>
-    request.get<TimeMatrix>(`${BASE_URL}/constraints/time-matrix`, { params }),
+    http.get<TimeMatrix>(`${BASE_URL}/constraints/time-matrix`, { params }),
   batchImport: (semesterId: number | string, constraints: Partial<SchedulingConstraint>[]) =>
-    request.post(`${BASE_URL}/constraints/batch-import`, { semesterId, constraints }),
+    http.post(`${BASE_URL}/constraints/batch-import`, { semesterId, constraints }),
 }
 
 // =====================================================
@@ -572,13 +589,13 @@ export const constraintApi = {
 
 export const conflictApi = {
   feasibilityCheck: (semesterId: number | string) =>
-    request.post<FeasibilityReport>(`${BASE_URL}/conflicts/feasibility-check`, null, { params: { semesterId } }),
+    http.post<FeasibilityReport>(`${BASE_URL}/conflicts/feasibility-check`, null, { params: { semesterId } }),
   detect: (semesterId: number | string) =>
-    request.post<DetectedConflict[]>(`${BASE_URL}/conflicts/detect`, null, { params: { semesterId } }),
+    http.post<DetectedConflict[]>(`${BASE_URL}/conflicts/detect`, null, { params: { semesterId } }),
   list: (params: { semesterId: number | string; status?: number }) =>
-    request.get<DetectedConflict[]>(`${BASE_URL}/conflicts`, { params }),
+    http.get<DetectedConflict[]>(`${BASE_URL}/conflicts`, { params }),
   resolve: (id: number | string, note: string) =>
-    request.post(`${BASE_URL}/conflicts/${id}/resolve`, { note }),
+    http.post(`${BASE_URL}/conflicts/${id}/resolve`, { note }),
   ignore: (id: number | string, note: string) =>
-    request.post(`${BASE_URL}/conflicts/${id}/ignore`, { note }),
+    http.post(`${BASE_URL}/conflicts/${id}/ignore`, { note }),
 }
