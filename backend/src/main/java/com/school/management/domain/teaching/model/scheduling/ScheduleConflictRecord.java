@@ -43,6 +43,29 @@ public class ScheduleConflictRecord implements Entity<Long> {
         return r;
     }
 
+    public static ScheduleConflictRecord reconstruct(Long id, Long semesterId, String detectionBatch,
+            Integer conflictCategory, String conflictType, Integer severity,
+            String description, String detail, Long entryId1, Long entryId2,
+            Long constraintId, Integer resolutionStatus, String resolutionNote,
+            Long resolvedBy) {
+        ScheduleConflictRecord r = new ScheduleConflictRecord();
+        r.id = id;
+        r.semesterId = semesterId;
+        r.detectionBatch = detectionBatch;
+        r.conflictCategory = conflictCategory;
+        r.conflictType = conflictType;
+        r.severity = severity;
+        r.description = description;
+        r.detail = detail;
+        r.entryId1 = entryId1;
+        r.entryId2 = entryId2;
+        r.constraintId = constraintId;
+        r.resolutionStatus = resolutionStatus;
+        r.resolutionNote = resolutionNote;
+        r.resolvedBy = resolvedBy;
+        return r;
+    }
+
     public void resolve(String note, Long resolvedBy) {
         this.resolutionStatus = 1;
         this.resolutionNote = note;
