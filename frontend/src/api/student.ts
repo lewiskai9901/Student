@@ -11,7 +11,8 @@ import type {
   StudentQueryParams,
   StudentSearchParams,
   AssignDormitoryRequest,
-  ResetPasswordRequest
+  ResetPasswordRequest,
+  StudentStatusChange
 } from '@/types/student'
 import type { PageResponse } from '@/types'
 
@@ -136,6 +137,26 @@ export function resetPassword(id: number | string, data: ResetPasswordRequest): 
   return http.patch(`${STUDENT_URL}/${id}/reset-password`, data)
 }
 
+// ==================== 学籍异动记录 ====================
+
+/**
+ * 获取某学生的异动记录
+ */
+export function getStudentStatusChanges(studentId: number | string): Promise<StudentStatusChange[]> {
+  return http.get<StudentStatusChange[]>(`${STUDENT_URL}/${studentId}/status-changes`)
+}
+
+/**
+ * 管理员查看所有异动记录（分页）
+ */
+export function listStatusChanges(params?: {
+  page?: number
+  size?: number
+  changeType?: string
+}): Promise<PageResponse<StudentStatusChange>> {
+  return http.get<PageResponse<StudentStatusChange>>(`${STUDENT_URL}/status-changes`, { params })
+}
+
 // ==================== 导入导出 ====================
 
 /**
@@ -187,5 +208,7 @@ export const studentApi = {
   resetPassword,
   export: exportStudents,
   import: importStudents,
-  downloadTemplate: downloadImportTemplate
+  downloadTemplate: downloadImportTemplate,
+  getStatusChanges: getStudentStatusChanges,
+  listStatusChanges
 }

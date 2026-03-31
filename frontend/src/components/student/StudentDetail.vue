@@ -238,6 +238,56 @@
               <InfoItem label="更新时间" :value="formatDateTime(studentInfo.updatedAt)" />
             </div>
           </div>
+
+          <!-- 异动记录 -->
+          <div v-if="activeTab === 'changes'" class="space-y-4">
+            <div v-if="statusChangesLoading" class="flex items-center justify-center py-8">
+              <div class="h-6 w-6 animate-spin rounded-full border-2 border-blue-600 border-t-transparent"></div>
+            </div>
+            <div v-else-if="statusChanges.length === 0" class="py-8 text-center text-sm text-gray-500">
+              暂无异动记录
+            </div>
+            <div v-else class="overflow-hidden rounded-lg border border-gray-200">
+              <table class="min-w-full divide-y divide-gray-200">
+                <thead class="bg-gray-50">
+                  <tr>
+                    <th class="px-3 py-2 text-left text-xs font-medium text-gray-500">异动类型</th>
+                    <th class="px-3 py-2 text-left text-xs font-medium text-gray-500">原状态</th>
+                    <th class="px-3 py-2 text-left text-xs font-medium text-gray-500">新状态</th>
+                    <th class="px-3 py-2 text-left text-xs font-medium text-gray-500">班级变动</th>
+                    <th class="px-3 py-2 text-left text-xs font-medium text-gray-500">原因</th>
+                    <th class="px-3 py-2 text-left text-xs font-medium text-gray-500">操作人</th>
+                    <th class="px-3 py-2 text-left text-xs font-medium text-gray-500">生效日期</th>
+                    <th class="px-3 py-2 text-left text-xs font-medium text-gray-500">记录时间</th>
+                  </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-200 bg-white">
+                  <tr v-for="record in statusChanges" :key="record.id">
+                    <td class="whitespace-nowrap px-3 py-2 text-xs">
+                      <span
+                        :class="getChangeTypeClass(record.changeType)"
+                        class="inline-flex rounded px-1.5 py-0.5 text-xs font-medium"
+                      >
+                        {{ getChangeTypeText(record.changeType) }}
+                      </span>
+                    </td>
+                    <td class="whitespace-nowrap px-3 py-2 text-xs text-gray-600">{{ record.fromStatus || '-' }}</td>
+                    <td class="whitespace-nowrap px-3 py-2 text-xs text-gray-600">{{ record.toStatus || '-' }}</td>
+                    <td class="whitespace-nowrap px-3 py-2 text-xs text-gray-600">
+                      <template v-if="record.fromClassName || record.toClassName">
+                        {{ record.fromClassName || '-' }} -> {{ record.toClassName || '-' }}
+                      </template>
+                      <template v-else>-</template>
+                    </td>
+                    <td class="px-3 py-2 text-xs text-gray-600 max-w-40 truncate" :title="record.reason">{{ record.reason || '-' }}</td>
+                    <td class="whitespace-nowrap px-3 py-2 text-xs text-gray-600">{{ record.operatorName || '-' }}</td>
+                    <td class="whitespace-nowrap px-3 py-2 text-xs text-gray-600">{{ record.effectiveDate || '-' }}</td>
+                    <td class="whitespace-nowrap px-3 py-2 text-xs text-gray-600">{{ formatDateTime(record.createdAt) }}</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
         </div>
       </div>
     </div>
@@ -265,10 +315,10 @@ import { ElMessage } from 'element-plus'
 import { useAuthStore } from '@/stores/auth'
 import { formatDate, formatDateTime } from '@/utils/date'
 // V2 DDD API
-import { getStudent } from '@/api/student'
+import { getStudent, getStudentStatusChanges } from '@/api/student'
 import { getStudentDormitoryHistory } from '@/api/dormitory'
-import type { Student } from '@/types/student'
-import { StudentStatusMap } from '@/types/student'
+import type { Student, StudentStatusChange } from '@/types/student'
+import { StudentStatusMap, ChangeTypeMap } from '@/types/student'
 import type { StudentDormitory } from '@/types/studentDormitory'
 
 // 信息项组件
@@ -301,7 +351,8 @@ const tabs = [
   { key: 'academic', label: '学籍信息' },
   { key: 'hukou', label: '户籍与资助' },
   { key: 'family', label: '家庭信息' },
-  { key: 'other', label: '住宿与其他' }
+  { key: 'other', label: '住宿与其他' },
+  { key: 'changes', label: '异动记录' }
 ]
 
 const activeTab = ref('basic')
@@ -311,6 +362,8 @@ const loading = ref(false)
 const studentInfo = ref<Student | null>(null)
 const dormitoryHistory = ref<StudentDormitory[]>([])
 const showHistory = ref(false)
+const statusChanges = ref<StudentStatusChange[]>([])
+const statusChangesLoading = ref(false)
 
 // 获取状态样式类 - V2: 0=在读, 1=休学, 2=退学, 3=毕业, 4=转学
 const getStatusClass = (status: number) => {
@@ -358,6 +411,40 @@ const getDormitoryStatusText = (status: number) => {
   return statusMap[status] || '未知'
 }
 
+// 加载学籍异动记录
+const loadStatusChanges = async () => {
+  if (!props.studentId) return
+  statusChangesLoading.value = true
+  try {
+    const response = await getStudentStatusChanges(props.studentId)
+    statusChanges.value = response || []
+  } catch (error) {
+    console.error('加载异动记录失败:', error)
+  } finally {
+    statusChangesLoading.value = false
+  }
+}
+
+// 获取异动类型文本
+const getChangeTypeText = (type: string) => {
+  return ChangeTypeMap[type] || type
+}
+
+// 获取异动类型样式
+const getChangeTypeClass = (type: string) => {
+  const classMap: Record<string, string> = {
+    ENROLL: 'bg-green-50 text-green-700',
+    SUSPEND: 'bg-amber-50 text-amber-700',
+    RESUME: 'bg-blue-50 text-blue-700',
+    GRADUATE: 'bg-purple-50 text-purple-700',
+    WITHDRAW: 'bg-gray-100 text-gray-700',
+    EXPEL: 'bg-red-50 text-red-700',
+    TRANSFER_CLASS: 'bg-indigo-50 text-indigo-700',
+    TRANSFER_MAJOR: 'bg-cyan-50 text-cyan-700'
+  }
+  return classMap[type] || 'bg-gray-100 text-gray-700'
+}
+
 // 加载住宿历史
 const loadDormitoryHistory = async () => {
   if (!props.studentId) return
@@ -396,5 +483,6 @@ const handleEdit = () => {
 onMounted(() => {
   loadStudentDetail()
   loadDormitoryHistory()
+  loadStatusChanges()
 })
 </script>

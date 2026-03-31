@@ -29,6 +29,7 @@ public class StudentApplicationService {
 
     private final StudentRepository studentRepository;
     private final DomainEventPublisher eventPublisher;
+    private final StatusChangeRecordService statusChangeRecordService;
 
     /**
      * 学生入学
@@ -79,6 +80,9 @@ public class StudentApplicationService {
         // 发布领域事件
         eventPublisher.publishAll(student.getDomainEvents());
         student.clearDomainEvents();
+
+        // 记录入学异动
+        statusChangeRecordService.recordEnrollment(saved.getId(), saved.getStudentNo(), saved.getName());
 
         log.info("学生入学成功: {}", saved.getId());
         return saved.getId();
@@ -156,11 +160,16 @@ public class StudentApplicationService {
         Student student = studentRepository.findById(command.getStudentId())
                 .orElseThrow(() -> new BusinessException("学生不存在: " + command.getStudentId()));
 
+        Long oldClassId = student.getClassId();
         student.transferClass(command.getNewClassId());
         studentRepository.save(student);
 
         eventPublisher.publishAll(student.getDomainEvents());
         student.clearDomainEvents();
+
+        // 记录转班异动
+        statusChangeRecordService.recordTransfer(
+                command.getStudentId(), oldClassId, command.getNewClassId(), command.getReason());
 
         log.info("学生转班成功: {} -> {}", command.getStudentId(), command.getNewClassId());
     }
@@ -202,11 +211,20 @@ public class StudentApplicationService {
         Student student = studentRepository.findById(command.getStudentId())
                 .orElseThrow(() -> new BusinessException("学生不存在: " + command.getStudentId()));
 
+        StudentStatus oldStatus = student.getStatus();
         student.changeStatus(command.getNewStatus(), command.getReason());
         studentRepository.save(student);
 
         eventPublisher.publishAll(student.getDomainEvents());
         student.clearDomainEvents();
+
+        // 记录状态异动
+        statusChangeRecordService.recordStatusChange(
+                command.getStudentId(),
+                command.getNewStatus().name(),
+                oldStatus != null ? oldStatus.name() : null,
+                command.getNewStatus().name(),
+                command.getReason());
 
         log.info("学生状态变更成功: {} -> {}", command.getStudentId(), command.getNewStatus());
     }
@@ -219,11 +237,18 @@ public class StudentApplicationService {
         Student student = studentRepository.findById(studentId)
                 .orElseThrow(() -> new BusinessException("学生不存在: " + studentId));
 
+        StudentStatus oldStatus = student.getStatus();
         student.suspend(reason);
         studentRepository.save(student);
 
         eventPublisher.publishAll(student.getDomainEvents());
         student.clearDomainEvents();
+
+        // 记录休学异动
+        statusChangeRecordService.recordStatusChange(
+                studentId, "SUSPEND",
+                oldStatus != null ? oldStatus.name() : null,
+                "SUSPENDED", reason);
 
         log.info("学生休学成功: {}", studentId);
     }
@@ -236,11 +261,18 @@ public class StudentApplicationService {
         Student student = studentRepository.findById(studentId)
                 .orElseThrow(() -> new BusinessException("学生不存在: " + studentId));
 
+        StudentStatus oldStatus = student.getStatus();
         student.resume(reason);
         studentRepository.save(student);
 
         eventPublisher.publishAll(student.getDomainEvents());
         student.clearDomainEvents();
+
+        // 记录复学异动
+        statusChangeRecordService.recordStatusChange(
+                studentId, "RESUME",
+                oldStatus != null ? oldStatus.name() : null,
+                "STUDYING", reason);
 
         log.info("学生复学成功: {}", studentId);
     }
@@ -253,11 +285,18 @@ public class StudentApplicationService {
         Student student = studentRepository.findById(studentId)
                 .orElseThrow(() -> new BusinessException("学生不存在: " + studentId));
 
+        StudentStatus oldStatus = student.getStatus();
         student.graduate();
         studentRepository.save(student);
 
         eventPublisher.publishAll(student.getDomainEvents());
         student.clearDomainEvents();
+
+        // 记录毕业异动
+        statusChangeRecordService.recordStatusChange(
+                studentId, "GRADUATE",
+                oldStatus != null ? oldStatus.name() : null,
+                "GRADUATED", "正常毕业");
 
         log.info("学生毕业成功: {}", studentId);
     }
@@ -270,11 +309,18 @@ public class StudentApplicationService {
         Student student = studentRepository.findById(studentId)
                 .orElseThrow(() -> new BusinessException("学生不存在: " + studentId));
 
+        StudentStatus oldStatus = student.getStatus();
         student.withdraw(reason);
         studentRepository.save(student);
 
         eventPublisher.publishAll(student.getDomainEvents());
         student.clearDomainEvents();
+
+        // 记录退学异动
+        statusChangeRecordService.recordStatusChange(
+                studentId, "WITHDRAW",
+                oldStatus != null ? oldStatus.name() : null,
+                "WITHDRAWN", reason);
 
         log.info("学生退学成功: {}", studentId);
     }

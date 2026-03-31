@@ -254,6 +254,45 @@ export interface ResetPasswordRequest {
   newPassword: string
 }
 
+// ==================== 学籍异动记录 ====================
+
+/**
+ * 学籍异动记录
+ */
+export interface StudentStatusChange {
+  id: number
+  studentId: number
+  studentNo?: string
+  studentName?: string
+  changeType: string
+  fromStatus?: string
+  toStatus?: string
+  fromClassId?: number
+  fromClassName?: string
+  toClassId?: number
+  toClassName?: string
+  reason?: string
+  effectiveDate?: string
+  operatorId?: number
+  operatorName?: string
+  remark?: string
+  createdAt: string
+}
+
+/**
+ * 异动类型映射
+ */
+export const ChangeTypeMap: Record<string, string> = {
+  ENROLL: '入学',
+  SUSPEND: '休学',
+  RESUME: '复学',
+  GRADUATE: '毕业',
+  WITHDRAW: '退学',
+  EXPEL: '开除',
+  TRANSFER_CLASS: '转班',
+  TRANSFER_MAJOR: '转专业'
+}
+
 // ==================== 统计类型 ====================
 
 /**

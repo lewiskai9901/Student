@@ -7,7 +7,10 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 
+import org.springframework.data.redis.core.ScanOptions;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
@@ -83,8 +86,16 @@ public class PlaceCapacityCacheService {
     public void clearCache(String typeCode) {
         if (typeCode == null) {
             // 清除所有类型的缓存
-            redisTemplate.keys(CACHE_KEY_PREFIX + "*")
-                    .forEach(redisTemplate::delete);
+            Set<String> keysToDelete = new HashSet<>();
+            ScanOptions options = ScanOptions.scanOptions().match(CACHE_KEY_PREFIX + "*").count(100).build();
+            try (var cursor = redisTemplate.getConnectionFactory().getConnection().scan(options)) {
+                while (cursor.hasNext()) {
+                    keysToDelete.add(new String(cursor.next()));
+                }
+            }
+            if (!keysToDelete.isEmpty()) {
+                redisTemplate.delete(keysToDelete);
+            }
             log.info("已清除所有容量预警缓存");
         } else {
             // 清除指定类型的缓存

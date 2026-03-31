@@ -1,5 +1,6 @@
 package com.school.management.interfaces.rest.student;
 
+import com.school.management.application.student.StatusChangeRecordService;
 import com.school.management.application.student.StudentApplicationService;
 import com.school.management.application.student.command.*;
 import com.school.management.application.student.query.StudentDTO;
@@ -17,6 +18,7 @@ import com.school.management.infrastructure.casbin.CasbinAccess;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Map;
 
 /**
  * 学生管理 REST API控制器 (DDD架构)
@@ -28,6 +30,7 @@ import java.util.List;
 public class StudentController {
 
     private final StudentApplicationService studentService;
+    private final StatusChangeRecordService statusChangeRecordService;
 
     // ==================== 基础CRUD ====================
 
@@ -287,6 +290,28 @@ public class StudentController {
             @Parameter(description = "班级ID") @RequestParam Long classId) {
         long count = studentService.countActiveByClassId(classId);
         return Result.success(count);
+    }
+
+    // ==================== 学籍异动记录 ====================
+
+    @Operation(summary = "查看学生异动记录")
+    @GetMapping("/{id}/status-changes")
+    @CasbinAccess(resource = "student:info", action = "view")
+    public Result<List<Map<String, Object>>> getStudentStatusChanges(
+            @Parameter(description = "学生ID") @PathVariable Long id) {
+        List<Map<String, Object>> changes = statusChangeRecordService.getStudentChanges(id);
+        return Result.success(changes);
+    }
+
+    @Operation(summary = "查看所有异动记录（分页）")
+    @GetMapping("/status-changes")
+    @CasbinAccess(resource = "student:info", action = "view")
+    public Result<PageResult<Map<String, Object>>> listStatusChanges(
+            @Parameter(description = "页码") @RequestParam(defaultValue = "1") Integer page,
+            @Parameter(description = "每页数量") @RequestParam(defaultValue = "20") Integer size,
+            @Parameter(description = "异动类型") @RequestParam(required = false) String changeType) {
+        PageResult<Map<String, Object>> result = statusChangeRecordService.listRecentChanges(page, size, changeType);
+        return Result.success(result);
     }
 
     // NOTE: Import/export and search functionality will be re-added via DDD application services.
