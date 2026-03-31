@@ -1,5 +1,6 @@
 package com.school.management.interfaces.rest.teaching;
 
+import com.baomidou.mybatisplus.core.toolkit.IdWorker;
 import com.school.management.application.teaching.ScheduleExportService;
 import com.school.management.common.result.Result;
 import jakarta.servlet.http.HttpServletResponse;
@@ -85,7 +86,7 @@ public class TeachingScheduleController {
 
     @PostMapping("/schedules")
     public Result<Map<String, Object>> createSchedule(@RequestBody Map<String, Object> data) {
-        long id = System.currentTimeMillis();
+        long id = IdWorker.getId();
         Long semesterId = data.get("semesterId") != null ? ((Number) data.get("semesterId")).longValue() : null;
         Long taskId = data.get("taskId") != null ? ((Number) data.get("taskId")).longValue() : null;
         Long courseId = data.get("courseId") != null ? ((Number) data.get("courseId")).longValue() : null;
@@ -400,7 +401,7 @@ public class TeachingScheduleController {
 
     @PostMapping("/adjustments")
     public Result<Map<String, Object>> createAdjustment(@RequestBody Map<String, Object> data) {
-        long id = System.currentTimeMillis();
+        long id = IdWorker.getId();
         String adjustmentCode = "ADJ" + id;
         Long semesterId = data.get("semesterId") != null ? ((Number) data.get("semesterId")).longValue() : null;
         Long originalEntryId = data.get("originalEntryId") != null ? ((Number) data.get("originalEntryId")).longValue() : null;

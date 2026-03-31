@@ -1,9 +1,11 @@
 package com.school.management.interfaces.rest.teaching;
 
+import com.baomidou.mybatisplus.core.toolkit.IdWorker;
 import com.school.management.common.result.Result;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDate;
@@ -79,7 +81,7 @@ public class TeachingController {
         jdbc.update(
             "INSERT INTO academic_years (id, year_code, year_name, start_date, end_date, is_current, status, deleted) " +
             "VALUES (?, ?, ?, ?, ?, 0, 1, 0)",
-            System.currentTimeMillis(), yearCode, yearName, startDate, endDate
+            IdWorker.getId(), yearCode, yearName, startDate, endDate
         );
         return Result.success(data);
     }
@@ -104,6 +106,7 @@ public class TeachingController {
     }
 
     @PostMapping("/academic-years/{id}/set-current")
+    @Transactional
     public Result<Void> setCurrentAcademicYear(@PathVariable Long id) {
         jdbc.update("UPDATE academic_years SET is_current = 0 WHERE deleted = 0");
         jdbc.update("UPDATE academic_years SET is_current = 1 WHERE id = ? AND deleted = 0", id);
@@ -222,6 +225,7 @@ public class TeachingController {
     }
 
     @PostMapping("/semesters/{id}/set-current")
+    @Transactional
     public Result<Void> setCurrentSemester(@PathVariable Long id) {
         jdbc.update("UPDATE semesters SET is_current = 0 WHERE deleted = 0");
         jdbc.update("UPDATE semesters SET is_current = 1 WHERE id = ? AND deleted = 0", id);
@@ -243,6 +247,7 @@ public class TeachingController {
     }
 
     @PostMapping("/semesters/{semesterId}/generate-weeks")
+    @Transactional
     public Result<List<Map<String, Object>>> generateWeeks(@PathVariable Long semesterId) {
         // Get semester dates
         Map<String, Object> sem = jdbc.queryForMap(

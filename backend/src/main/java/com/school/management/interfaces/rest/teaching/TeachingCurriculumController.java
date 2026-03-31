@@ -1,9 +1,11 @@
 package com.school.management.interfaces.rest.teaching;
 
+import com.baomidou.mybatisplus.core.toolkit.IdWorker;
 import com.school.management.common.result.Result;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 
 import java.math.BigDecimal;
@@ -116,7 +118,7 @@ public class TeachingCurriculumController {
         Integer status = data.get("status") != null ? ((Number) data.get("status")).intValue() : 0;
         Long createdBy = data.get("createdBy") != null ? ((Number) data.get("createdBy")).longValue() : null;
 
-        long id = System.currentTimeMillis();
+        long id = IdWorker.getId();
         jdbc.update(
             "INSERT INTO curriculum_plans (id, plan_code, plan_name, major_id, major_direction_id, grade_year, " +
             "total_credits, required_credits, elective_credits, practice_credits, " +
@@ -242,7 +244,7 @@ public class TeachingCurriculumController {
         Integer sortOrder = data.get("sortOrder") != null ? ((Number) data.get("sortOrder")).intValue() : 0;
         String remark = (String) data.get("remark");
 
-        long id = System.currentTimeMillis();
+        long id = IdWorker.getId();
         jdbc.update(
             "INSERT INTO curriculum_plan_courses (id, plan_id, course_id, semester_number, " +
             "course_category, course_type, credits, total_hours, weekly_hours, " +
@@ -319,6 +321,7 @@ public class TeachingCurriculumController {
     // ==================== 复制培养方案 ====================
 
     @PostMapping("/curriculum-plans/{id}/copy")
+    @Transactional
     public Result<Map<String, Object>> copyPlan(@PathVariable Long id) {
         // Get original plan
         Map<String, Object> original = jdbc.queryForMap(
@@ -339,7 +342,7 @@ public class TeachingCurriculumController {
         int newVersion = (maxVersion != null ? maxVersion : 1) + 1;
 
         // Create new plan
-        long newId = System.currentTimeMillis();
+        long newId = IdWorker.getId();
         jdbc.update(
             "INSERT INTO curriculum_plans (id, plan_code, plan_name, major_id, major_direction_id, grade_year, " +
             "total_credits, required_credits, elective_credits, practice_credits, " +
@@ -358,7 +361,7 @@ public class TeachingCurriculumController {
             "SELECT * FROM curriculum_plan_courses WHERE plan_id = ?", id
         );
         for (Map<String, Object> course : courses) {
-            long courseRecordId = System.currentTimeMillis() + new Random().nextInt(10000);
+            long courseRecordId = IdWorker.getId();
             jdbc.update(
                 "INSERT INTO curriculum_plan_courses (id, plan_id, course_id, semester_number, " +
                 "course_category, course_type, credits, total_hours, weekly_hours, " +
