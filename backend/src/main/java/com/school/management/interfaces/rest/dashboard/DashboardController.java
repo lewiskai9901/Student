@@ -11,68 +11,138 @@ import org.springframework.web.bind.annotation.*;
 import java.util.*;
 
 /**
- * Dashboard controller providing statistics for the home page.
+ * Dashboard controller providing overview statistics for the home page.
+ * Uses countSafe() to handle missing tables gracefully.
  */
 @Slf4j
 @RestController
 @RequestMapping("/dashboard")
 @RequiredArgsConstructor
-@Tag(name = "Dashboard", description = "Dashboard statistics API")
+@Tag(name = "Dashboard", description = "Dashboard overview statistics API")
 public class DashboardController {
 
     private final JdbcTemplate jdbcTemplate;
 
+    @GetMapping("/overview")
+    @Operation(summary = "Get dashboard overview with organization, teaching, inspection and system stats")
+    public Result<Map<String, Object>> getOverview() {
+        Map<String, Object> result = new LinkedHashMap<>();
+        result.put("organization", getOrgStats());
+        result.put("teaching", getTeachingStats());
+        result.put("inspection", getInspectionStats());
+        result.put("system", getSystemStats());
+        return Result.success(result);
+    }
+
+    private Map<String, Object> getOrgStats() {
+        Map<String, Object> stats = new LinkedHashMap<>();
+        stats.put("orgUnitCount", countSafe(
+            "SELECT COUNT(*) FROM org_units WHERE deleted = 0 AND status = 1"));
+        stats.put("majorCount", countSafe(
+            "SELECT COUNT(*) FROM majors WHERE deleted = 0 AND status = 1"));
+        stats.put("classCount", countSafe(
+            "SELECT COUNT(*) FROM classes WHERE deleted = 0 AND status = 'ACTIVE'"));
+        stats.put("studentCount", countSafe(
+            "SELECT COUNT(*) FROM students WHERE deleted = 0 AND status = 1"));
+        stats.put("teacherCount", countSafe(
+            "SELECT COUNT(*) FROM users WHERE deleted = 0 AND user_type_code = 'TEACHER' AND status = 1"));
+        return stats;
+    }
+
+    private Map<String, Object> getTeachingStats() {
+        Map<String, Object> stats = new LinkedHashMap<>();
+
+        // Current semester name
+        stats.put("currentSemester", stringSafe(
+            "SELECT semester_code FROM semesters WHERE is_current = 1 LIMIT 1",
+            "--"));
+
+        // Get current semester id for task queries
+        long semesterId = longSafe(
+            "SELECT id FROM semesters WHERE is_current = 1 LIMIT 1");
+
+        stats.put("courseCount", countSafe(
+            "SELECT COUNT(*) FROM courses WHERE deleted = 0 AND status = 1"));
+
+        if (semesterId > 0) {
+            stats.put("taskCount", countSafe(
+                "SELECT COUNT(*) FROM teaching_tasks WHERE deleted = 0 AND semester_id = " + semesterId));
+
+            int totalTasks = countSafe(
+                "SELECT COUNT(*) FROM teaching_tasks WHERE deleted = 0 AND task_status = 1 AND semester_id = " + semesterId);
+            int scheduledTasks = countSafe(
+                "SELECT COUNT(*) FROM teaching_tasks WHERE deleted = 0 AND task_status = 1 AND scheduling_status = 2 AND semester_id = " + semesterId);
+            int rate = totalTasks > 0 ? (int) Math.round(scheduledTasks * 100.0 / totalTasks) : 0;
+            stats.put("scheduledRate", rate);
+            stats.put("unscheduledCount", totalTasks - scheduledTasks);
+        } else {
+            stats.put("taskCount", 0);
+            stats.put("scheduledRate", 0);
+            stats.put("unscheduledCount", 0);
+        }
+
+        return stats;
+    }
+
+    private Map<String, Object> getInspectionStats() {
+        Map<String, Object> stats = new LinkedHashMap<>();
+        stats.put("activeProjectCount", countSafe(
+            "SELECT COUNT(*) FROM insp_projects WHERE deleted = 0 AND status = 'PUBLISHED'"));
+        stats.put("pendingTaskCount", countSafe(
+            "SELECT COUNT(*) FROM insp_tasks WHERE deleted = 0 AND status IN ('PENDING','CLAIMED','IN_PROGRESS')"));
+        stats.put("correctiveOpenCount", countSafe(
+            "SELECT COUNT(*) FROM insp_corrective_cases WHERE deleted = 0 AND status IN ('OPEN','ASSIGNED','IN_PROGRESS','SUBMITTED')"));
+        return stats;
+    }
+
+    private Map<String, Object> getSystemStats() {
+        Map<String, Object> stats = new LinkedHashMap<>();
+        stats.put("totalUsers", countSafe(
+            "SELECT COUNT(*) FROM users WHERE deleted = 0 AND status = 1"));
+        stats.put("todayLoginCount", countSafe(
+            "SELECT COUNT(*) FROM users WHERE deleted = 0 AND DATE(last_login_time) = CURDATE()"));
+        return stats;
+    }
+
+    // ========== Safe query helpers ==========
+
+    private int countSafe(String sql) {
+        try {
+            Integer count = jdbcTemplate.queryForObject(sql, Integer.class);
+            return count != null ? count : 0;
+        } catch (Exception e) {
+            log.debug("Dashboard count query failed (table may not exist): {}", e.getMessage());
+            return 0;
+        }
+    }
+
+    private long longSafe(String sql) {
+        try {
+            Long val = jdbcTemplate.queryForObject(sql, Long.class);
+            return val != null ? val : 0L;
+        } catch (Exception e) {
+            log.debug("Dashboard long query failed: {}", e.getMessage());
+            return 0L;
+        }
+    }
+
+    private String stringSafe(String sql, String defaultValue) {
+        try {
+            String val = jdbcTemplate.queryForObject(sql, String.class);
+            return val != null ? val : defaultValue;
+        } catch (Exception e) {
+            log.debug("Dashboard string query failed: {}", e.getMessage());
+            return defaultValue;
+        }
+    }
+
+    // ========== Legacy endpoint (kept for backward compatibility) ==========
+
     @GetMapping("/statistics")
-    @Operation(summary = "Get dashboard statistics")
+    @Operation(summary = "Get dashboard statistics (legacy)")
     public Result<Map<String, Object>> getStatistics(
             @RequestParam(defaultValue = "7") int days) {
-        Map<String, Object> stats = new HashMap<>();
-
-        try {
-            Long studentCount = jdbcTemplate.queryForObject(
-                "SELECT COUNT(*) FROM students WHERE deleted = 0", Long.class);
-            stats.put("studentCount", studentCount != null ? studentCount : 0);
-        } catch (Exception e) {
-            log.warn("Failed to query student count: {}", e.getMessage());
-            stats.put("studentCount", 0);
-        }
-
-        try {
-            Long classCount = jdbcTemplate.queryForObject(
-                "SELECT COUNT(*) FROM classes WHERE deleted = 0", Long.class);
-            stats.put("classCount", classCount != null ? classCount : 0);
-        } catch (Exception e) {
-            log.warn("Failed to query class count: {}", e.getMessage());
-            stats.put("classCount", 0);
-        }
-
-        try {
-            Long dormitoryCount = jdbcTemplate.queryForObject(
-                "SELECT COUNT(*) FROM places WHERE deleted = 0 AND place_type = 'ROOM'", Long.class);
-            stats.put("dormitoryCount", dormitoryCount != null ? dormitoryCount : 0);
-        } catch (Exception e) {
-            log.warn("Failed to query dormitory count: {}", e.getMessage());
-            stats.put("dormitoryCount", 0);
-        }
-
-        try {
-            Long todayCheckCount = jdbcTemplate.queryForObject(
-                "SELECT COUNT(*) FROM daily_check WHERE DATE(check_date) = CURDATE() AND deleted = 0",
-                Long.class);
-            stats.put("todayCheckCount", todayCheckCount != null ? todayCheckCount : 0);
-        } catch (Exception e) {
-            log.warn("Failed to query today check count: {}", e.getMessage());
-            stats.put("todayCheckCount", 0);
-        }
-
-        stats.put("occupancyRate", 0);
-        stats.put("completedChecks", 0);
-        stats.put("pendingChecks", 0);
-        stats.put("completionRate", 0);
-        stats.put("chartData", Collections.emptyList());
-        stats.put("checkCategories", Collections.emptyList());
-        stats.put("recentRecords", Collections.emptyList());
-
-        return Result.success(stats);
+        // Delegate to the new overview endpoint for backward compatibility
+        return getOverview();
     }
 }

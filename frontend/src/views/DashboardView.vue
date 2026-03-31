@@ -1,293 +1,163 @@
 <template>
-  <div class="space-y-6">
-    <!-- 顶部欢迎区域 -->
+  <div class="space-y-5">
+    <!-- Header -->
     <div class="flex items-center justify-between">
       <div>
-        <h1 class="text-2xl font-semibold text-gray-900">{{ getGreeting() }}，{{ authStore.userName || '用户' }}</h1>
-        <p class="mt-1 text-sm text-gray-500">{{ currentDate }} {{ currentTime }}</p>
+        <h1 class="text-xl font-semibold text-gray-900">{{ getGreeting() }}，{{ authStore.userName || '用户' }}</h1>
+        <p class="mt-0.5 text-sm text-gray-500">{{ currentDate }} {{ currentTime }}</p>
       </div>
-      <div class="flex items-center gap-2">
-        <span class="inline-flex items-center gap-1.5 rounded-full bg-green-50 px-3 py-1 text-xs font-medium text-green-700">
-          <span class="h-1.5 w-1.5 rounded-full bg-green-500"></span>
-          系统运行正常
-        </span>
+      <span class="inline-flex items-center gap-1.5 rounded-full bg-green-50 px-3 py-1 text-xs font-medium text-green-700">
+        <span class="h-1.5 w-1.5 rounded-full bg-green-500"></span>
+        系统运行正常
+      </span>
+    </div>
+
+    <!-- Organization stats bar -->
+    <div class="rounded-lg border border-gray-200 bg-white px-5 py-4">
+      <div class="mb-2 text-sm font-medium text-gray-500">组织概览</div>
+      <div class="flex items-center gap-0 divide-x divide-gray-200 text-center">
+        <div class="flex-1 cursor-pointer px-3 transition-colors hover:bg-gray-50" @click="goTo('/organization/units')">
+          <div class="text-2xl font-semibold text-gray-900">{{ org.orgUnitCount }}</div>
+          <div class="mt-0.5 text-xs text-gray-500">组织单元</div>
+        </div>
+        <div class="flex-1 cursor-pointer px-3 transition-colors hover:bg-gray-50" @click="goTo('/organization/academic/majors')">
+          <div class="text-2xl font-semibold text-gray-900">{{ org.majorCount }}</div>
+          <div class="mt-0.5 text-xs text-gray-500">专业</div>
+        </div>
+        <div class="flex-1 cursor-pointer px-3 transition-colors hover:bg-gray-50" @click="goTo('/organization/classes')">
+          <div class="text-2xl font-semibold text-gray-900">{{ org.classCount }}</div>
+          <div class="mt-0.5 text-xs text-gray-500">班级</div>
+        </div>
+        <div class="flex-1 cursor-pointer px-3 transition-colors hover:bg-gray-50" @click="goTo('/organization/students')">
+          <div class="text-2xl font-semibold text-gray-900">{{ org.studentCount }}</div>
+          <div class="mt-0.5 text-xs text-gray-500">学生</div>
+        </div>
+        <div class="flex-1 cursor-pointer px-3 transition-colors hover:bg-gray-50" @click="goTo('/access/users')">
+          <div class="text-2xl font-semibold text-gray-900">{{ org.teacherCount }}</div>
+          <div class="mt-0.5 text-xs text-gray-500">教师</div>
+        </div>
       </div>
     </div>
 
-    <!-- 统计卡片 - 使用设计系统组件 -->
-    <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
-      <!-- 学生总数 -->
-      <StatCard
-        title="学生总数"
-        :value="animatedStats.studentCount"
-        :icon="Users"
-        subtitle="在校学生"
-        :trend="12.5"
-        color="blue"
-        clickable
-        @click="goToPage('/student-affairs/students')"
-      />
-
-      <!-- 班级总数 -->
-      <StatCard
-        title="班级总数"
-        :value="animatedStats.classCount"
-        :icon="GraduationCap"
-        subtitle="教学班级"
-        :trend="5.2"
-        color="purple"
-        clickable
-        @click="goToPage('/student-affairs/classes')"
-      />
-
-      <!-- 宿舍信息 -->
-      <StatCard
-        title="宿舍总数"
-        :value="animatedStats.dormitoryCount"
-        :icon="Building2"
-        :subtitle="`入住率 ${statistics.occupancyRate}%`"
-        :progress="statistics.occupancyRate"
-        :trend="2.8"
-        color="emerald"
-        clickable
-        @click="goToPage('/dormitory/rooms')"
-      />
-
-      <!-- 今日检查 -->
-      <StatCard
-        title="今日检查"
-        :value="animatedStats.todayCheckCount"
-        :icon="ClipboardCheck"
-        :subtitle="`完成 ${statistics.completedChecks} · 待处理 ${statistics.pendingChecks}`"
-        :progress="statistics.completionRate"
-        :trend="-1.5"
-        color="orange"
-        clickable
-        @click="goToPage('/quantification/daily-checks')"
-      />
-    </div>
-
-    <!-- 主内容区域 -->
-    <div class="grid gap-6 xl:grid-cols-3">
-      <!-- 检查得分趋势 -->
-      <div class="xl:col-span-2 rounded-xl bg-white border border-gray-200">
-        <div class="flex items-center justify-between border-b border-gray-100 px-5 py-4">
+    <!-- Middle row: Teaching + Inspection -->
+    <div class="grid grid-cols-1 gap-4 xl:grid-cols-2">
+      <!-- Teaching card -->
+      <div class="rounded-lg border border-gray-200 bg-white px-5 py-4">
+        <div class="mb-3 flex items-center justify-between">
+          <span class="text-sm font-medium text-gray-500">本学期教学</span>
+          <span class="rounded bg-blue-50 px-2 py-0.5 text-xs font-medium text-blue-600">{{ teaching.currentSemester }}</span>
+        </div>
+        <div class="flex items-baseline gap-6 text-sm">
           <div>
-            <h3 class="font-medium text-gray-900">检查得分趋势</h3>
-            <p class="text-xs text-gray-500 mt-0.5">各班级量化考核平均分走势</p>
+            <span class="text-gray-500">开设课程</span>
+            <span class="ml-1.5 text-lg font-semibold text-gray-900">{{ teaching.courseCount }}</span>
           </div>
-          <div class="flex items-center rounded-lg bg-gray-100 p-0.5">
-            <button
-              v-for="period in chartPeriods"
-              :key="period.value"
-              @click="changeChartPeriod(period.value)"
-              :class="[
-                'rounded-md px-3 py-1 text-xs font-medium transition-all',
-                chartPeriod === period.value
-                  ? 'bg-white text-gray-900 shadow-sm'
-                  : 'text-gray-500 hover:text-gray-700'
-              ]"
-            >
-              {{ period.label }}
-            </button>
+          <span class="text-gray-300">|</span>
+          <div>
+            <span class="text-gray-500">教学任务</span>
+            <span class="ml-1.5 text-lg font-semibold text-gray-900">{{ teaching.taskCount }}</span>
+          </div>
+          <span class="text-gray-300">|</span>
+          <div>
+            <span class="text-gray-500">未排课</span>
+            <span class="ml-1.5 text-lg font-semibold" :class="teaching.unscheduledCount > 0 ? 'text-amber-600' : 'text-gray-900'">{{ teaching.unscheduledCount }}</span>
           </div>
         </div>
-        <div class="p-5">
-          <div v-if="chartData.length > 0" class="relative">
-            <!-- Y轴标签 -->
-            <div class="absolute left-0 top-0 flex h-40 w-8 flex-col justify-between text-xs text-gray-400">
-              <span>100</span>
-              <span>75</span>
-              <span>50</span>
-              <span>25</span>
-              <span>0</span>
-            </div>
-            <!-- 图表区域 -->
-            <div class="ml-10">
-              <div class="absolute left-10 right-0 top-0 flex h-40 flex-col justify-between pointer-events-none">
-                <div v-for="i in 5" :key="i" class="h-px bg-gray-100"></div>
-              </div>
-              <div class="relative flex h-40 items-end justify-around gap-2">
-                <div
-                  v-for="(item, index) in chartData"
-                  :key="index"
-                  class="group relative flex-1 max-w-10"
-                >
-                  <div
-                    class="relative mx-auto w-full rounded-t bg-blue-500 transition-all hover:bg-blue-600"
-                    :style="{ height: `${(item.score / 100) * 160}px` }"
-                  >
-                  </div>
-                  <div class="pointer-events-none absolute -top-7 left-1/2 -translate-x-1/2 rounded bg-gray-800 px-2 py-0.5 text-xs text-white opacity-0 transition-opacity group-hover:opacity-100 whitespace-nowrap z-10">
-                    {{ item.score }}分
-                  </div>
-                </div>
-              </div>
-              <div class="mt-2 flex justify-around">
-                <span v-for="(item, index) in chartData" :key="index" class="flex-1 max-w-10 text-center text-xs text-gray-400">
-                  {{ item.date }}
-                </span>
-              </div>
-            </div>
+        <!-- Schedule rate progress bar -->
+        <div class="mt-3">
+          <div class="mb-1 flex items-center justify-between text-xs">
+            <span class="text-gray-500">排课进度</span>
+            <span class="font-medium text-gray-700">{{ teaching.scheduledRate }}%</span>
           </div>
-          <div v-else class="flex h-40 flex-col items-center justify-center text-gray-400">
-            <BarChart3 class="mb-2 h-8 w-8 opacity-50" />
-            <p class="text-sm">暂无数据</p>
+          <div class="h-2 w-full overflow-hidden rounded-full bg-gray-100">
+            <div
+              class="h-full rounded-full transition-all duration-700"
+              :class="teaching.scheduledRate >= 90 ? 'bg-green-500' : teaching.scheduledRate >= 60 ? 'bg-blue-500' : 'bg-amber-500'"
+              :style="{ width: teaching.scheduledRate + '%' }"
+            ></div>
           </div>
         </div>
       </div>
 
-      <!-- 检查完成率 -->
-      <div class="rounded-xl bg-white border border-gray-200">
-        <div class="border-b border-gray-100 px-5 py-4">
-          <h3 class="font-medium text-gray-900">检查完成率</h3>
-          <p class="text-xs text-gray-500 mt-0.5">本周各类检查完成情况</p>
-        </div>
-        <div class="p-5">
-          <div class="flex flex-col items-center">
-            <!-- 环形进度图 -->
-            <div class="relative h-28 w-28">
-              <svg class="h-full w-full -rotate-90 transform" viewBox="0 0 112 112">
-                <circle cx="56" cy="56" r="48" class="fill-none stroke-gray-100" stroke-width="8" />
-                <circle
-                  cx="56"
-                  cy="56"
-                  r="48"
-                  class="fill-none stroke-blue-500"
-                  stroke-width="8"
-                  stroke-linecap="round"
-                  :stroke-dasharray="`${statistics.completionRate * 3.015} 301.5`"
-                  style="transition: stroke-dasharray 1s ease-out"
-                />
-              </svg>
-              <div class="absolute inset-0 flex flex-col items-center justify-center">
-                <span class="text-xl font-semibold text-gray-900">{{ statistics.completionRate }}%</span>
-              </div>
-            </div>
-            <!-- 分类统计 -->
-            <div class="mt-5 w-full space-y-2">
-              <div v-for="item in checkCategories" :key="item.name" class="flex items-center gap-2">
-                <span class="h-2 w-2 rounded-full flex-shrink-0" :style="{ backgroundColor: item.color }"></span>
-                <span class="flex-1 text-xs text-gray-600">{{ item.name }}</span>
-                <span class="text-xs font-medium text-gray-900">{{ item.value }}%</span>
-              </div>
-            </div>
+      <!-- Inspection card -->
+      <div class="rounded-lg border border-gray-200 bg-white px-5 py-4">
+        <div class="mb-3 text-sm font-medium text-gray-500">检查平台</div>
+        <div class="flex items-baseline gap-6 text-sm">
+          <div>
+            <span class="text-gray-500">进行中项目</span>
+            <span class="ml-1.5 text-lg font-semibold text-gray-900">{{ inspection.activeProjectCount }}</span>
           </div>
+          <span class="text-gray-300">|</span>
+          <div>
+            <span class="text-gray-500">待处理任务</span>
+            <span class="ml-1.5 text-lg font-semibold" :class="inspection.pendingTaskCount > 0 ? 'text-blue-600' : 'text-gray-900'">{{ inspection.pendingTaskCount }}</span>
+          </div>
+          <span class="text-gray-300">|</span>
+          <div>
+            <span class="text-gray-500">待整改</span>
+            <span class="ml-1.5 text-lg font-semibold" :class="inspection.correctiveOpenCount > 0 ? 'text-red-600' : 'text-gray-900'">{{ inspection.correctiveOpenCount }}</span>
+          </div>
+        </div>
+        <!-- Quick links -->
+        <div class="mt-4 flex gap-2">
+          <button
+            @click="goTo('/inspection/v7/projects')"
+            class="rounded-md bg-gray-50 px-3 py-1.5 text-xs font-medium text-gray-600 transition-colors hover:bg-gray-100"
+          >检查项目</button>
+          <button
+            @click="goTo('/inspection/v7/tasks')"
+            class="rounded-md bg-gray-50 px-3 py-1.5 text-xs font-medium text-gray-600 transition-colors hover:bg-gray-100"
+          >检查任务</button>
+          <button
+            @click="goTo('/inspection/v7/templates')"
+            class="rounded-md bg-gray-50 px-3 py-1.5 text-xs font-medium text-gray-600 transition-colors hover:bg-gray-100"
+          >模板管理</button>
         </div>
       </div>
     </div>
 
-    <!-- 底部区域 -->
-    <div class="grid gap-6 xl:grid-cols-3">
-      <!-- 最近检查记录 -->
-      <div class="xl:col-span-2 rounded-xl bg-white border border-gray-200">
-        <div class="flex items-center justify-between border-b border-gray-100 px-5 py-4">
-          <h3 class="font-medium text-gray-900">最近检查记录</h3>
-          <button
-            @click="viewAllRecords"
-            class="flex items-center gap-1 text-xs font-medium text-blue-600 hover:text-blue-700"
-          >
-            查看全部
-            <ChevronRight class="h-4 w-4" />
-          </button>
+    <!-- System stats bar -->
+    <div class="rounded-lg border border-gray-200 bg-white px-5 py-4">
+      <div class="mb-2 text-sm font-medium text-gray-500">系统状态</div>
+      <div class="flex items-baseline gap-6 text-sm">
+        <div>
+          <span class="text-gray-500">用户总数</span>
+          <span class="ml-1.5 text-lg font-semibold text-gray-900">{{ system.totalUsers }}</span>
         </div>
-        <div class="divide-y divide-gray-100">
-          <div
-            v-for="record in recentRecords"
-            :key="record.id"
-            class="flex items-center justify-between px-5 py-3 hover:bg-gray-50 transition-colors"
-          >
-            <div class="flex items-center gap-3 min-w-0">
-              <div
-                :class="[
-                  'flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-lg',
-                  record.scoreRate >= 90 ? 'bg-green-50 text-green-600' :
-                  record.scoreRate >= 80 ? 'bg-amber-50 text-amber-600' :
-                  'bg-red-50 text-red-600'
-                ]"
-              >
-                <ClipboardCheck class="h-4 w-4" />
-              </div>
-              <div class="min-w-0">
-                <p class="truncate text-sm font-medium text-gray-900">{{ record.typeName }}</p>
-                <p class="text-xs text-gray-500">
-                  {{ record.targetName }} · {{ formatTimeAgo(record.createdAt) }}
-                </p>
-              </div>
-            </div>
-            <span
-              :class="[
-                'rounded-full px-2.5 py-0.5 text-xs font-medium',
-                record.scoreRate >= 90 ? 'bg-green-50 text-green-700' :
-                record.scoreRate >= 80 ? 'bg-amber-50 text-amber-700' :
-                'bg-red-50 text-red-700'
-              ]"
-            >
-              {{ record.totalScore }}分
-            </span>
-          </div>
-        </div>
-        <div v-if="recentRecords.length === 0" class="flex flex-col items-center justify-center py-10 text-gray-400">
-          <FileText class="mb-2 h-8 w-8 opacity-50" />
-          <p class="text-sm">暂无检查记录</p>
+        <span class="text-gray-300">|</span>
+        <div>
+          <span class="text-gray-500">今日登录</span>
+          <span class="ml-1.5 text-lg font-semibold text-gray-900">{{ system.todayLoginCount }}</span>
         </div>
       </div>
+    </div>
 
-      <!-- 快捷操作 -->
-      <div class="rounded-xl bg-white border border-gray-200">
-        <div class="border-b border-gray-100 px-5 py-4">
-          <h3 class="font-medium text-gray-900">快捷操作</h3>
-        </div>
-        <div class="p-4">
-          <div class="grid grid-cols-3 gap-2">
-            <button
-              v-for="action in quickActions"
-              :key="action.name"
-              @click="goToPage(action.path)"
-              class="flex flex-col items-center gap-2 rounded-lg p-3 transition-colors hover:bg-gray-50"
-            >
-              <div
-                class="flex h-10 w-10 items-center justify-center rounded-lg"
-                :style="{ backgroundColor: action.bgColor }"
-              >
-                <component :is="action.icon" class="h-5 w-5" :style="{ color: action.color }" />
-              </div>
-              <span class="text-xs text-gray-600">{{ action.name }}</span>
-            </button>
-          </div>
-        </div>
+    <!-- Quick actions -->
+    <div class="rounded-lg border border-gray-200 bg-white px-5 py-4">
+      <div class="mb-3 text-sm font-medium text-gray-500">快捷入口</div>
+      <div class="flex flex-wrap gap-2">
+        <button
+          v-for="action in quickActions"
+          :key="action.path"
+          @click="goTo(action.path)"
+          class="rounded-md border border-gray-200 bg-white px-4 py-2 text-sm text-gray-700 transition-colors hover:border-blue-300 hover:bg-blue-50 hover:text-blue-600"
+        >{{ action.label }}</button>
       </div>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, computed, onMounted, onUnmounted, watch } from 'vue'
+import { ref, reactive, computed, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
-import {
-  Users,
-  GraduationCap,
-  Building2,
-  ClipboardCheck,
-  ChevronRight,
-  BarChart3,
-  FileText,
-  UserPlus,
-  Settings,
-  PieChart
-} from 'lucide-vue-next'
 import { useAuthStore } from '@/stores/auth'
-import { getDashboardStatistics, type DashboardStatistics, type ChartDataItem, type CategoryItem, type RecentCheckRecord } from '@/api/dashboard'
-import StatCard from '@/components/design-system/cards/StatCard.vue'
+import { getDashboardOverview, type DashboardOverview } from '@/api/dashboard'
 
 const router = useRouter()
 const authStore = useAuthStore()
 
 const currentTime = ref('')
 let timeInterval: number
-
-// 加载状态
-const loading = ref(false)
 
 const getGreeting = () => {
   const hour = new Date().getHours()
@@ -311,131 +181,67 @@ const updateTime = () => {
   currentTime.value = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`
 }
 
-// 统计数据
-const statistics = reactive({
-  studentCount: 0,
+// Reactive stats - initialize all to 0
+const org = reactive({
+  orgUnitCount: 0,
+  majorCount: 0,
   classCount: 0,
-  dormitoryCount: 0,
-  todayCheckCount: 0,
-  occupancyRate: 0,
-  completedChecks: 0,
-  pendingChecks: 0,
-  completionRate: 0
+  studentCount: 0,
+  teacherCount: 0
 })
 
-// 动画数字
-const animatedStats = reactive({
-  studentCount: 0,
-  classCount: 0,
-  dormitoryCount: 0,
-  todayCheckCount: 0
+const teaching = reactive({
+  currentSemester: '--',
+  courseCount: 0,
+  taskCount: 0,
+  scheduledRate: 0,
+  unscheduledCount: 0
 })
 
-// 图表周期选项
-const chartPeriods = [
-  { value: 7, label: '7天' },
-  { value: 30, label: '30天' },
-  { value: 90, label: '90天' }
-]
-const chartPeriod = ref(7)
+const inspection = reactive({
+  activeProjectCount: 0,
+  pendingTaskCount: 0,
+  correctiveOpenCount: 0
+})
 
-// 图表数据
-const chartData = ref<ChartDataItem[]>([])
-
-// 检查分类
-const checkCategories = ref<CategoryItem[]>([])
-
-// 最近检查记录
-const recentRecords = ref<RecentCheckRecord[]>([])
+const system = reactive({
+  totalUsers: 0,
+  todayLoginCount: 0
+})
 
 const quickActions = [
-  { name: '学生管理', path: '/student-affairs/students', icon: Users, bgColor: '#dbeafe', color: '#2563eb' },
-  { name: '班级管理', path: '/student-affairs/classes', icon: GraduationCap, bgColor: '#f3e8ff', color: '#9333ea' },
-  { name: '日常检查', path: '/quantification/daily-checks', icon: ClipboardCheck, bgColor: '#dcfce7', color: '#16a34a' },
-  { name: '新增学生', path: '/student-affairs/students', icon: UserPlus, bgColor: '#fef3c7', color: '#d97706' },
-  { name: '数据统计', path: '/quantification/statistics', icon: PieChart, bgColor: '#fce7f3', color: '#db2777' },
-  { name: '系统管理', path: '/system/users', icon: Settings, bgColor: '#e0e7ff', color: '#4f46e5' }
+  { label: '组织架构', path: '/organization/units' },
+  { label: '班级管理', path: '/organization/classes' },
+  { label: '学生管理', path: '/organization/students' },
+  { label: '用户管理', path: '/access/users' },
+  { label: '角色管理', path: '/access/roles' },
+  { label: '课程管理', path: '/teaching/courses' },
+  { label: '检查项目', path: '/inspection/v7/projects' },
+  { label: '模板管理', path: '/inspection/v7/templates' },
+  { label: '系统配置', path: '/settings/configs' },
 ]
 
-const formatTimeAgo = (dateStr: string) => {
-  const now = new Date()
-  const date = new Date(dateStr)
-  const diff = now.getTime() - date.getTime()
-  const minutes = Math.floor(diff / 60000)
-  const hours = Math.floor(diff / 3600000)
-
-  if (minutes < 1) return '刚刚'
-  if (minutes < 60) return `${minutes}分钟前`
-  if (hours < 24) return `${hours}小时前`
-  return `${Math.floor(hours / 24)}天前`
-}
-
-const animateNumber = (target: keyof typeof animatedStats, endValue: number, duration: number = 1000) => {
-  const startTime = Date.now()
-  const startValue = animatedStats[target]
-  const diff = endValue - startValue
-
-  const animate = () => {
-    const elapsed = Date.now() - startTime
-    const progress = Math.min(elapsed / duration, 1)
-    const easeOut = 1 - Math.pow(1 - progress, 3)
-    animatedStats[target] = Math.round(startValue + diff * easeOut)
-
-    if (progress < 1) {
-      requestAnimationFrame(animate)
-    }
-  }
-  animate()
-}
-
-const goToPage = (path: string) => {
+const goTo = (path: string) => {
   router.push(path)
 }
 
-const viewAllRecords = () => {
-  router.push('/quantification/records')
-}
-
-// 切换图表周期
-const changeChartPeriod = (days: number) => {
-  chartPeriod.value = days
-  loadData()
-}
-
-// 加载数据
 const loadData = async () => {
   try {
-    loading.value = true
-    const data = await getDashboardStatistics(chartPeriod.value)
+    const data: DashboardOverview = await getDashboardOverview()
 
-    // 更新统计数据
-    statistics.studentCount = data.studentCount
-    statistics.classCount = data.classCount
-    statistics.dormitoryCount = data.dormitoryCount
-    statistics.todayCheckCount = data.todayCheckCount
-    statistics.occupancyRate = data.occupancyRate
-    statistics.completedChecks = data.completedChecks
-    statistics.pendingChecks = data.pendingChecks
-    statistics.completionRate = data.completionRate
+    // Organization
+    Object.assign(org, data.organization)
 
-    // 动画数字
-    animateNumber('studentCount', data.studentCount)
-    animateNumber('classCount', data.classCount)
-    animateNumber('dormitoryCount', data.dormitoryCount)
-    animateNumber('todayCheckCount', data.todayCheckCount)
+    // Teaching
+    Object.assign(teaching, data.teaching)
 
-    // 更新图表数据
-    chartData.value = data.chartData || []
+    // Inspection
+    Object.assign(inspection, data.inspection)
 
-    // 更新检查分类
-    checkCategories.value = data.checkCategories || []
-
-    // 更新最近记录
-    recentRecords.value = data.recentRecords || []
+    // System
+    Object.assign(system, data.system)
   } catch (error) {
-    console.error('加载仪表盘数据失败:', error)
-  } finally {
-    loading.value = false
+    console.error('Failed to load dashboard data:', error)
   }
 }
 
