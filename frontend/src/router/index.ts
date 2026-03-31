@@ -179,6 +179,28 @@ const routes: RouteRecordRaw[] = [
               order: 3
             }
           },
+          // 考勤管理
+          {
+            path: '/organization/attendance',
+            name: 'OrgAttendance',
+            component: () => import('@/views/student/AttendanceView.vue'),
+            meta: {
+              title: '考勤管理',
+              requiresAuth: true,
+              order: 3.5
+            }
+          },
+          // 学业预警
+          {
+            path: '/organization/warnings',
+            name: 'AcademicWarnings',
+            component: () => import('@/views/student/AcademicWarningView.vue'),
+            meta: {
+              title: '学业预警',
+              requiresAuth: true,
+              order: 3.6
+            }
+          },
           // 年级管理 (V2 重设计版本)
           {
             path: '/organization/grades',
@@ -654,176 +676,6 @@ const routes: RouteRecordRaw[] = [
             }
           }
         ]
-      },
-
-      // ==================== 综合测评 /evaluation (order: 13) ====================
-      {
-        path: '/evaluation',
-        name: 'Evaluation',
-        redirect: '/evaluation/periods',
-        meta: {
-          title: '综合测评',
-          icon: 'DataAnalysis',
-          requiresAuth: true,
-          order: 13,
-          group: 'business'
-        },
-        children: [
-          {
-            path: '/evaluation/periods',
-            name: 'EvaluationPeriods',
-            component: () => import('@/views/evaluation/period/index.vue'),
-            meta: {
-              title: '综测周期',
-              requiresAuth: true,
-              permission: 'evaluation:period:list',
-              order: 1
-            }
-          },
-          {
-            path: '/evaluation/honors',
-            name: 'HonorApplications',
-            component: () => import('@/views/evaluation/honor/index.vue'),
-            meta: {
-              title: '荣誉申报',
-              requiresAuth: true,
-              permission: 'evaluation:honor:list',
-              order: 2
-            }
-          },
-          {
-            path: '/evaluation/results',
-            name: 'EvaluationResults',
-            component: () => import('@/views/evaluation/result/index.vue'),
-            meta: {
-              title: '综测结果',
-              requiresAuth: true,
-              permission: 'evaluation:result:list',
-              order: 3
-            }
-          },
-          {
-            path: '/evaluation/my-result',
-            name: 'MyEvaluationResult',
-            component: () => import('@/views/evaluation/result/my.vue'),
-            meta: {
-              title: '我的综测',
-              requiresAuth: true,
-              permission: 'evaluation:result:my',
-              order: 4
-            }
-          },
-          {
-            path: '/evaluation/courses',
-            name: 'EvaluationCourses',
-            component: () => import('@/views/evaluation/course/index.vue'),
-            meta: {
-              title: '课程管理',
-              requiresAuth: true,
-              permission: 'evaluation:course:list',
-              order: 5
-            }
-          },
-          {
-            path: '/evaluation/scores',
-            name: 'StudentScores',
-            component: () => import('@/views/evaluation/score/index.vue'),
-            meta: {
-              title: '成绩管理',
-              requiresAuth: true,
-              permission: 'evaluation:score:list',
-              order: 6
-            }
-          },
-          {
-            path: '/evaluation/semesters',
-            name: 'SemesterManagement',
-            component: () => import('@/views/evaluation/semester/index.vue'),
-            meta: {
-              title: '学期管理',
-              requiresAuth: true,
-              permission: 'evaluation:period:list',
-              order: 7
-            }
-          },
-          {
-            path: '/evaluation/honor-types',
-            name: 'HonorTypeManagement',
-            component: () => import('@/views/evaluation/honor-type/index.vue'),
-            meta: {
-              title: '荣誉类型管理',
-              requiresAuth: true,
-              permission: 'evaluation:honor:list',
-              order: 8
-            }
-          },
-          {
-            path: '/evaluation/behavior-types',
-            name: 'BehaviorTypeManagement',
-            component: () => import('@/views/evaluation/behavior-type/index.vue'),
-            meta: {
-              title: '行为类型管理',
-              requiresAuth: true,
-              permission: 'evaluation:behavior:list',
-              order: 9
-            }
-          },
-          {
-            path: '/evaluation/dimensions',
-            name: 'DimensionConfig',
-            component: () => import('@/views/evaluation/dimension/index.vue'),
-            meta: {
-              title: '维度配置',
-              requiresAuth: true,
-              permission: 'evaluation:config:list',
-              order: 10
-            }
-          }
-        ]
-      },
-
-      // ==================== 评级中心 /eval-center (order: 14) ====================
-      {
-        path: '/eval-center',
-        name: 'EvalCenter',
-        component: () => import('@/views/evaluation/evalCenter/EvalCampaignListView.vue'),
-        meta: {
-          title: '评级中心',
-          icon: 'Award',
-          requiresAuth: true,
-          order: 14,
-          group: 'business'
-        }
-      },
-      {
-        path: '/eval-center/campaigns/create',
-        name: 'EvalCampaignCreate',
-        component: () => import('@/views/evaluation/evalCenter/EvalCampaignEditView.vue'),
-        meta: {
-          title: '新建评选活动',
-          hidden: true,
-          requiresAuth: true
-        }
-      },
-      {
-        path: '/eval-center/campaigns/:id',
-        name: 'EvalCampaignEdit',
-        component: () => import('@/views/evaluation/evalCenter/EvalCampaignEditView.vue'),
-        meta: {
-          title: '编辑评选活动',
-          hidden: true,
-          requiresAuth: true
-        }
-      },
-      {
-        path: '/eval-center/batches/:batchId',
-        name: 'EvalResultDetail',
-        component: () => import('@/views/evaluation/evalCenter/EvalResultDetailView.vue'),
-        meta: {
-          title: '评选结果详情',
-          hidden: true,
-          requiresAuth: true
-        }
       },
 
       // ==================== 教务管理 /teaching (order: 20) - Teaching领域 ====================
