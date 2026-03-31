@@ -43,13 +43,8 @@ public class OrganizationEventHandler {
         saveOperationLog("CREATE", "ORG_UNIT", event.getOrgUnitId(),
                 "创建组织单元: " + event.getUnitName() + " (" + event.getUnitCode() + ")");
 
-        // 发送通知给管理员
-        notificationService.sendInAppMessage(
-                1L, // TODO: hardcoded userId=1, should resolve actual admin userId from context
-                "组织单元创建",
-                String.format("新组织单元 [%s] 已创建", event.getUnitName()),
-                NotificationService.MessageType.SYSTEM_NOTICE
-        );
+        // TODO: resolve actual admin userId(s) via role-based lookup and send notification
+        log.debug("Skipping admin notification for OrgUnitCreated (no target user resolution yet): unitName={}", event.getUnitName());
     }
 
     /**
@@ -78,14 +73,10 @@ public class OrganizationEventHandler {
         saveOperationLog("CREATE", "CLASS", event.getClassId(),
                 "创建班级: " + event.getClassName() + " (" + event.getClassCode() + ")");
 
-        // 发送通知给系部管理员
+        // TODO: resolve department admin userId(s) from org unit and send notification
         if (event.getOrgUnitId() != null) {
-            notificationService.sendInAppMessage(
-                    1L, // TODO: hardcoded userId=1, should resolve department admin userId from org unit
-                    "新班级创建",
-                    String.format("新班级 [%s] 已在您的部门下创建", event.getClassName()),
-                    NotificationService.MessageType.SYSTEM_NOTICE
-            );
+            log.debug("Skipping department admin notification for ClassCreated (no target user resolution yet): className={}, orgUnitId={}",
+                    event.getClassName(), event.getOrgUnitId());
         }
 
         log.info("班级创建事件处理完成: classId={}", event.getClassId());
@@ -143,13 +134,8 @@ public class OrganizationEventHandler {
         saveOperationLog("GRADUATE", "CLASS", event.getClassId(),
                 "班级毕业: " + event.getClassName());
 
-        // 发送毕业通知给班主任
-        notificationService.sendInAppMessage(
-                1L, // TODO: hardcoded userId=1, should resolve class teacher userId from class context
-                "班级毕业通知",
-                String.format("班级 [%s] 已完成毕业流程，学生状态已更新", event.getClassName()),
-                NotificationService.MessageType.SYSTEM_NOTICE
-        );
+        // TODO: resolve class teacher userId from class context and send graduation notification
+        log.debug("Skipping class teacher notification for graduation (no target user resolution yet): className={}", event.getClassName());
 
         log.info("班级毕业处理完成: classId={}, className={}", event.getClassId(), event.getClassName());
     }
@@ -166,13 +152,8 @@ public class OrganizationEventHandler {
         saveOperationLog("ACTIVATE", "CLASS", event.getClassId(),
                 "班级激活: " + event.getClassName());
 
-        // 发送开班通知给相关人员
-        notificationService.sendInAppMessage(
-                1L, // TODO: hardcoded userId=1, should resolve department admin userId from context
-                "班级激活通知",
-                String.format("班级 [%s] 已激活并可正常使用", event.getClassName()),
-                NotificationService.MessageType.SYSTEM_NOTICE
-        );
+        // TODO: resolve department admin userId(s) from context and send activation notification
+        log.debug("Skipping activation notification (no target user resolution yet): className={}", event.getClassName());
 
         log.info("班级激活处理完成: classId={}", event.getClassId());
     }

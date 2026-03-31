@@ -42,14 +42,10 @@ public class StudentEventHandler {
         saveOperationLog("CREATE", "STUDENT", parseStudentId(event.getAggregateId()),
                 "学生入学: " + event.getStudentName() + " (" + event.getStudentNo() + ")");
 
-        // 发送通知给班主任
+        // TODO: resolve class teacher userId from classId via access_relations and send enrollment notification
         if (event.getClassId() != null) {
-            notificationService.sendInAppMessage(
-                    1L, // TODO: hardcoded userId=1, should be resolved from class teacher context
-                    "新生入学通知",
-                    String.format("学生 [%s] 已加入您的班级", event.getStudentName()),
-                    NotificationService.MessageType.SYSTEM_NOTICE
-            );
+            log.debug("Skipping class teacher notification for enrollment (no target user resolution yet): studentName={}, classId={}",
+                    event.getStudentName(), event.getClassId());
         }
 
         log.info("学生入学事件处理完成: studentNo={}", event.getStudentNo());
@@ -104,46 +100,24 @@ public class StudentEventHandler {
                         statusDesc,
                         event.getReason() != null ? event.getReason() : "无"));
 
-        // 根据不同状态发送通知
+        // TODO: resolve target userId(s) from student/class context via access_relations for proper notification routing
+        // For GRADUATED: should notify the student's own user account
+        // For SUSPENDED/WITHDRAWN/EXPELLED: should notify the class teacher
         switch (newStatus) {
             case GRADUATED:
-                log.info("Student {} graduated", studentNo);
-                notificationService.sendInAppMessage(
-                        1L, // TODO: hardcoded userId=1, should resolve actual student userId from event
-                        "毕业通知",
-                        "恭喜您已完成学业，祝前程似锦！",
-                        NotificationService.MessageType.SYSTEM_NOTICE
-                );
+                log.info("Student {} graduated (notification pending user resolution)", studentNo);
                 break;
 
             case SUSPENDED:
-                log.info("Student {} suspended", studentNo);
-                notificationService.sendInAppMessage(
-                        1L, // TODO: hardcoded userId=1, should resolve class teacher userId from context
-                        "休学通知",
-                        String.format("学生 [%s] 已办理休学手续", studentNo),
-                        NotificationService.MessageType.SYSTEM_NOTICE
-                );
+                log.info("Student {} suspended (notification pending user resolution)", studentNo);
                 break;
 
             case WITHDRAWN:
-                log.info("Student {} withdrawn", studentNo);
-                notificationService.sendInAppMessage(
-                        1L, // TODO: hardcoded userId=1, should resolve class teacher userId from context
-                        "退学通知",
-                        String.format("学生 [%s] 已办理退学手续", studentNo),
-                        NotificationService.MessageType.SYSTEM_NOTICE
-                );
+                log.info("Student {} withdrawn (notification pending user resolution)", studentNo);
                 break;
 
             case EXPELLED:
-                log.info("Student {} expelled", studentNo);
-                notificationService.sendInAppMessage(
-                        1L, // TODO: hardcoded userId=1, should resolve class teacher userId from context
-                        "开除通知",
-                        String.format("学生 [%s] 已被开除学籍", studentNo),
-                        NotificationService.MessageType.SYSTEM_NOTICE
-                );
+                log.info("Student {} expelled (notification pending user resolution)", studentNo);
                 break;
 
             default:
