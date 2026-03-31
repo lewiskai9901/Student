@@ -88,6 +88,8 @@ export interface CurriculumPlan {
   name: string
   majorId: number | string
   majorName?: string
+  majorDirectionId?: number | string
+  majorDirectionName?: string
   gradeYear: number
   version: string
   totalCredits: number
@@ -113,6 +115,7 @@ export interface PlanCourse {
 
 export interface CurriculumPlanQueryParams {
   majorId?: number | string
+  majorDirectionId?: number | string
   gradeYear?: number
   status?: number
   page?: number
@@ -385,6 +388,47 @@ export interface GradeDistribution {
   range: string // 如：90-100, 80-89
   count: number
   percentage: number
+}
+
+// ==================== 教学楼/教室 ====================
+
+export interface TeachingBuilding {
+  id: number | string
+  buildingNo: string
+  buildingName: string
+  buildingType: number
+  floorCount: number
+  address?: string
+  status: number
+  remark?: string
+  createdAt?: string
+  updatedAt?: string
+}
+
+export interface Classroom {
+  id: number | string
+  buildingId: number | string
+  buildingName?: string
+  roomNo: string
+  roomName?: string
+  floorNumber: number
+  roomType: number
+  capacity: number
+  equipment?: string
+  status: number
+  remark?: string
+  createdAt?: string
+  updatedAt?: string
+}
+
+export interface ClassroomQueryParams {
+  buildingId?: number | string
+  floorNumber?: number
+  roomType?: number
+  status?: number
+  keyword?: string
+  pageNum?: number
+  pageSize?: number
 }
 
 // ==================== 通用类型 ====================
