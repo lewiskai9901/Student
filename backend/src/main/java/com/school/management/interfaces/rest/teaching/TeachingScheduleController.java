@@ -9,6 +9,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.web.bind.annotation.*;
 
+import com.school.management.common.util.SecurityUtils;
+
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.*;
@@ -52,11 +54,18 @@ public class TeachingScheduleController {
             "created_at AS createdAt " +
             "FROM schedule_entries WHERE deleted = 0"
         );
-        if (semesterId != null) sql.append(" AND semester_id = ").append(semesterId);
-        if (status != null) sql.append(" AND entry_status = ").append(status);
+        List<Object> params = new ArrayList<>();
+        if (semesterId != null) {
+            sql.append(" AND semester_id = ?");
+            params.add(semesterId);
+        }
+        if (status != null) {
+            sql.append(" AND entry_status = ?");
+            params.add(status);
+        }
         sql.append(" ORDER BY weekday, start_slot");
 
-        return Result.success(jdbc.queryForList(sql.toString()));
+        return Result.success(jdbc.queryForList(sql.toString(), params.toArray()));
     }
 
     @GetMapping("/schedules/{id}")
@@ -96,10 +105,11 @@ public class TeachingScheduleController {
             "teacher_id, classroom_id, weekday, start_slot, end_slot, " +
             "start_week, end_week, week_type, schedule_type, " +
             "entry_status, conflict_flag, created_by, created_at, updated_at, deleted) " +
-            "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, 0, 1, NOW(), NOW(), 0)",
+            "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, 0, ?, NOW(), NOW(), 0)",
             id, semesterId, taskId, courseId, classId,
             teacherId, classroomId, weekday, startSlot, endSlot,
-            startWeek, endWeek, weekType, scheduleType
+            startWeek, endWeek, weekType, scheduleType,
+            SecurityUtils.requireCurrentUserId()
         );
 
         data.put("id", id);
@@ -410,7 +420,9 @@ public class TeachingScheduleController {
         Long newClassroomId = data.get("newClassroomId") != null ? ((Number) data.get("newClassroomId")).longValue() : null;
         Long newTeacherId = data.get("newTeacherId") != null ? ((Number) data.get("newTeacherId")).longValue() : null;
 
-        Long applicantId = data.get("applicantId") != null ? ((Number) data.get("applicantId")).longValue() : 1L;
+        Long applicantId = data.get("applicantId") != null
+                ? ((Number) data.get("applicantId")).longValue()
+                : SecurityUtils.requireCurrentUserId();
         String applyReason = (String) data.get("applyReason");
 
         jdbc.update(
@@ -435,21 +447,24 @@ public class TeachingScheduleController {
 
     @PostMapping("/adjustments/{id}/approve")
     public Result<Void> approveAdjustment(@PathVariable Long id) {
+        Long approverId = SecurityUtils.requireCurrentUserId();
         jdbc.update(
-            "UPDATE schedule_adjustments SET approval_status = 1, approver_id = 1, " +
-            "approval_time = NOW(), updated_at = NOW() WHERE id = ? AND deleted = 0", id
+            "UPDATE schedule_adjustments SET approval_status = 1, approver_id = ?, " +
+            "approval_time = NOW(), updated_at = NOW() WHERE id = ? AND deleted = 0",
+            approverId, id
         );
         return Result.success();
     }
 
     @PostMapping("/adjustments/{id}/reject")
     public Result<Void> rejectAdjustment(@PathVariable Long id, @RequestBody Map<String, Object> data) {
+        Long approverId = SecurityUtils.requireCurrentUserId();
         String comment = (String) data.get("approvalComment");
         jdbc.update(
-            "UPDATE schedule_adjustments SET approval_status = 2, approver_id = 1, " +
+            "UPDATE schedule_adjustments SET approval_status = 2, approver_id = ?, " +
             "approval_time = NOW(), approval_comment = ?, updated_at = NOW() " +
             "WHERE id = ? AND deleted = 0",
-            comment, id
+            approverId, comment, id
         );
         return Result.success();
     }
@@ -478,7 +493,7 @@ public class TeachingScheduleController {
             @RequestParam(defaultValue = "1") int page,
             @RequestParam(defaultValue = "20") int size) {
 
-        Long applicantId = 1L; // placeholder
+        Long applicantId = SecurityUtils.requireCurrentUserId();
         StringBuilder where = new StringBuilder(" WHERE deleted = 0 AND applicant_id = ?");
         List<Object> params = new ArrayList<>();
         params.add(applicantId);
