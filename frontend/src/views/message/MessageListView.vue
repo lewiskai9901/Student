@@ -1,8 +1,9 @@
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { messageApi } from '@/api/message'
 import type { MsgNotification } from '@/types/message'
+import { MsgTypeConfig } from '@/types/message'
 
 const router = useRouter()
 
@@ -11,20 +12,26 @@ const loading = ref(false)
 const loadingMore = ref(false)
 const notifications = ref<MsgNotification[]>([])
 const total = ref(0)
+const unreadTotal = ref(0)
 const keyword = ref('')
-const activeTab = ref<'ALL' | 'UNREAD' | 'READ'>('ALL')
+const activeTab = ref<'ALL' | 'UNREAD'>('ALL')
+const activeMsgType = ref<string | null>(null)
 const page = ref(1)
 const PAGE_SIZE = 20
 
+// Detail drawer
+const detailVisible = ref(false)
+const detailMessage = ref<MsgNotification | null>(null)
+
+// Delete confirm
+const deleteConfirmVisible = ref(false)
+const deleteTargetId = ref<number | null>(null)
+
 // ==================== Computed ====================
-const unreadCount = computed(() => notifications.value.filter(n => !n.isRead).length)
-const readCount = computed(() => notifications.value.filter(n => n.isRead).length)
 const hasMore = computed(() => notifications.value.length < total.value)
 
-const filteredNotifications = computed(() => {
+const displayedNotifications = computed(() => {
   let list = notifications.value
-  if (activeTab.value === 'UNREAD') list = list.filter(n => !n.isRead)
-  else if (activeTab.value === 'READ') list = list.filter(n => n.isRead)
   if (keyword.value.trim()) {
     const kw = keyword.value.trim().toLowerCase()
     list = list.filter(n =>
@@ -35,7 +42,7 @@ const filteredNotifications = computed(() => {
   return list
 })
 
-// 按时间分组
+// Group by time
 interface Group {
   label: string
   items: MsgNotification[]
@@ -50,7 +57,7 @@ const groupedNotifications = computed((): Group[] => {
   const yesterday: MsgNotification[] = []
   const earlier: MsgNotification[] = []
 
-  for (const n of filteredNotifications.value) {
+  for (const n of displayedNotifications.value) {
     const d = new Date(n.createdAt)
     if (d >= todayStart) today.push(n)
     else if (d >= yesterdayStart) yesterday.push(n)
@@ -74,10 +81,17 @@ async function loadNotifications(reset = false) {
   else loadingMore.value = true
 
   try {
-    const res = await messageApi.getNotifications({
+    const params: Record<string, any> = {
       page: page.value,
       size: PAGE_SIZE,
-    })
+    }
+    if (activeTab.value === 'UNREAD') {
+      params.isRead = false
+    }
+    if (activeMsgType.value) {
+      params.msgType = activeMsgType.value
+    }
+    const res = await messageApi.getNotifications(params)
     if (reset) {
       notifications.value = res.records ?? []
     } else {
@@ -92,18 +106,39 @@ async function loadNotifications(reset = false) {
   }
 }
 
+async function fetchUnreadCount() {
+  try {
+    const res = await messageApi.getUnreadCount()
+    unreadTotal.value = res?.count ?? 0
+  } catch { /* silent */ }
+}
+
 async function loadMore() {
   page.value++
   await loadNotifications(false)
 }
 
+// Watch tab/type changes to reload
+watch([activeTab, activeMsgType], () => {
+  loadNotifications(true)
+})
+
 // ==================== Actions ====================
+function openDetail(n: MsgNotification) {
+  detailMessage.value = n
+  detailVisible.value = true
+  if (!n.isRead) {
+    handleMarkRead(n)
+  }
+}
+
 async function handleMarkRead(n: MsgNotification) {
   if (n.isRead) return
   try {
     await messageApi.markRead(n.id)
     n.isRead = true
     n.readAt = new Date().toISOString()
+    unreadTotal.value = Math.max(0, unreadTotal.value - 1)
   } catch { /* silent */ }
 }
 
@@ -111,15 +146,42 @@ async function handleMarkAllRead() {
   try {
     await messageApi.markAllRead()
     notifications.value.forEach(n => { n.isRead = true; n.readAt = new Date().toISOString() })
+    unreadTotal.value = 0
   } catch { /* silent */ }
 }
 
-function handleSearch() {
-  // filter is computed, no need to reload
+function confirmDelete(id: number) {
+  deleteTargetId.value = id
+  deleteConfirmVisible.value = true
+}
+
+async function executeDelete() {
+  if (!deleteTargetId.value) return
+  try {
+    const targetId = deleteTargetId.value
+    await messageApi.delete(targetId)
+    const removed = notifications.value.find(n => n.id === targetId)
+    notifications.value = notifications.value.filter(n => n.id !== targetId)
+    total.value = Math.max(0, total.value - 1)
+    if (removed && !removed.isRead) {
+      unreadTotal.value = Math.max(0, unreadTotal.value - 1)
+    }
+    if (detailMessage.value?.id === targetId) {
+      detailVisible.value = false
+      detailMessage.value = null
+    }
+  } catch { /* silent */ } finally {
+    deleteConfirmVisible.value = false
+    deleteTargetId.value = null
+  }
 }
 
 function goConfig() {
   router.push('/messages/config')
+}
+
+function getMsgTypeLabel(type: string): string {
+  return MsgTypeConfig[type as keyof typeof MsgTypeConfig]?.label ?? type
 }
 
 // ==================== Helpers ====================
@@ -137,13 +199,29 @@ function formatTime(t: string): string {
   return `${(d.getMonth() + 1).toString().padStart(2, '0')}/${d.getDate().toString().padStart(2, '0')}`
 }
 
+function formatFullTime(t: string): string {
+  const d = new Date(t)
+  const pad = (n: number) => n.toString().padStart(2, '0')
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`
+}
+
+// Mask helpers
+const maskMouseDownTarget = ref<EventTarget | null>(null)
+function onMaskMouseDown(e: MouseEvent) { maskMouseDownTarget.value = e.target }
+function onMaskClick(e: MouseEvent, closeFn: () => void) {
+  if (e.target === e.currentTarget && maskMouseDownTarget.value === e.currentTarget) closeFn()
+  maskMouseDownTarget.value = null
+}
+
 // ==================== Polling ====================
 let pollTimer: ReturnType<typeof setInterval> | null = null
 
 onMounted(() => {
   loadNotifications(true)
-  // 每30秒刷新未读角标（通过重新加载）
-  pollTimer = setInterval(() => loadNotifications(true), 30000)
+  fetchUnreadCount()
+  pollTimer = setInterval(() => {
+    fetchUnreadCount()
+  }, 30000)
 })
 
 onUnmounted(() => {
@@ -163,7 +241,7 @@ onUnmounted(() => {
         <h1 class="msg-title">消息中心</h1>
       </div>
       <div class="msg-header-right">
-        <button v-if="unreadCount > 0" class="btn-text" @click="handleMarkAllRead">全部已读</button>
+        <button v-if="unreadTotal > 0" class="btn-text" @click="handleMarkAllRead">全部已读</button>
         <button class="btn-icon-only" title="消息配置" @click="goConfig">
           <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" width="16" height="16">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -174,21 +252,35 @@ onUnmounted(() => {
       </div>
     </div>
 
-    <!-- Stats bar -->
+    <!-- Stats bar + filters -->
     <div class="msg-stats">
       <button class="stat-item" :class="{ active: activeTab === 'ALL' }" @click="activeTab = 'ALL'">
         <span class="stat-label">全部</span>
         <span class="stat-value">{{ total }}</span>
       </button>
-      <span class="stat-sep">│</span>
+      <span class="stat-sep">|</span>
       <button class="stat-item" :class="{ active: activeTab === 'UNREAD' }" @click="activeTab = 'UNREAD'">
         <span class="stat-label">未读</span>
-        <span class="stat-value unread">{{ unreadCount }}</span>
+        <span class="stat-value unread">{{ unreadTotal }}</span>
       </button>
-      <span class="stat-sep">│</span>
-      <button class="stat-item" :class="{ active: activeTab === 'READ' }" @click="activeTab = 'READ'">
-        <span class="stat-label">已读</span>
-        <span class="stat-value">{{ readCount }}</span>
+
+      <!-- msgType filters -->
+      <span class="stat-sep">|</span>
+      <button
+        class="stat-item"
+        :class="{ active: activeMsgType === null }"
+        @click="activeMsgType = null"
+      >
+        <span class="stat-label">全类型</span>
+      </button>
+      <button
+        v-for="(cfg, key) in MsgTypeConfig"
+        :key="key"
+        class="stat-item"
+        :class="{ active: activeMsgType === key }"
+        @click="activeMsgType = key"
+      >
+        <span class="stat-label">{{ cfg.label }}</span>
       </button>
 
       <!-- Search -->
@@ -202,7 +294,6 @@ onUnmounted(() => {
           type="text"
           placeholder="搜索消息..."
           class="search-input"
-          @input="handleSearch"
         />
       </div>
     </div>
@@ -234,16 +325,29 @@ onUnmounted(() => {
             :key="n.id"
             class="msg-item"
             :class="{ unread: !n.isRead }"
-            @click="handleMarkRead(n)"
+            @click="openDetail(n)"
           >
             <span class="read-dot" :class="{ unread: !n.isRead }" />
             <div class="msg-item-body">
               <div class="msg-item-head">
                 <span class="msg-item-title">{{ n.title }}</span>
-                <span class="msg-item-time">{{ formatTime(n.createdAt) }}</span>
+                <div class="msg-item-right">
+                  <span class="msg-type-tag">{{ getMsgTypeLabel(n.msgType) }}</span>
+                  <span class="msg-item-time">{{ formatTime(n.createdAt) }}</span>
+                </div>
               </div>
               <div v-if="n.content" class="msg-item-content">{{ n.content }}</div>
             </div>
+            <button
+              class="msg-item-delete"
+              title="删除"
+              @click.stop="confirmDelete(n.id)"
+            >
+              <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" width="14" height="14">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                  d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+              </svg>
+            </button>
           </div>
         </div>
 
@@ -259,6 +363,65 @@ onUnmounted(() => {
         <div v-else class="no-more">已显示全部消息</div>
       </template>
     </div>
+
+    <!-- ==================== Detail Drawer ==================== -->
+    <Teleport to="body">
+      <Transition name="drawer">
+        <div v-if="detailVisible" class="drawer-mask" @click="detailVisible = false">
+          <div class="drawer-panel" @click.stop>
+            <div class="drawer-head">
+              <h3>消息详情</h3>
+              <button class="drawer-close" @click="detailVisible = false">&times;</button>
+            </div>
+            <div v-if="detailMessage" class="drawer-body">
+              <div class="detail-title">{{ detailMessage.title }}</div>
+              <div class="detail-meta">
+                <span class="detail-type-tag">{{ getMsgTypeLabel(detailMessage.msgType) }}</span>
+                <span class="detail-time">{{ formatFullTime(detailMessage.createdAt) }}</span>
+                <span v-if="detailMessage.isRead && detailMessage.readAt" class="detail-read">
+                  已读于 {{ formatFullTime(detailMessage.readAt) }}
+                </span>
+              </div>
+              <div v-if="detailMessage.sourceEventType" class="detail-source">
+                来源: {{ detailMessage.sourceEventType }}
+              </div>
+              <div class="detail-content">
+                {{ detailMessage.content || '（无正文内容）' }}
+              </div>
+              <div class="detail-actions">
+                <button class="btn-danger-sm" @click="confirmDelete(detailMessage.id)">删除此消息</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </Transition>
+    </Teleport>
+
+    <!-- ==================== Delete Confirm ==================== -->
+    <Teleport to="body">
+      <Transition name="modal">
+        <div
+          v-if="deleteConfirmVisible"
+          class="modal-mask"
+          @mousedown="onMaskMouseDown"
+          @click="onMaskClick($event, () => deleteConfirmVisible = false)"
+        >
+          <div class="modal-box modal-box-sm">
+            <div class="modal-head">
+              <h3>确认删除</h3>
+              <button class="modal-close" @click="deleteConfirmVisible = false">&times;</button>
+            </div>
+            <div class="modal-body">
+              <p class="confirm-text">确认删除此消息？删除后不可恢复。</p>
+            </div>
+            <div class="modal-foot">
+              <button class="btn-ghost" @click="deleteConfirmVisible = false">取消</button>
+              <button class="btn-danger" @click="executeDelete">删除</button>
+            </div>
+          </div>
+        </div>
+      </Transition>
+    </Teleport>
   </div>
 </template>
 
@@ -312,18 +475,19 @@ onUnmounted(() => {
   background: #fff;
   border-bottom: 1px solid #e8ecf0;
   flex-shrink: 0;
+  flex-wrap: wrap;
 }
 .stat-sep {
   color: #dce1e8;
   font-size: 14px;
-  padding: 0 16px;
+  padding: 0 12px;
   user-select: none;
 }
 .stat-item {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  padding: 4px 10px;
+  gap: 4px;
+  padding: 4px 8px;
   background: none;
   border: none;
   border-radius: 6px;
@@ -333,13 +497,13 @@ onUnmounted(() => {
 .stat-item:hover { background: #f4f6f9; }
 .stat-item.active { background: #e8f0ff; }
 .stat-label {
-  font-size: 13px;
+  font-size: 12px;
   color: #5a6474;
   font-weight: 500;
 }
 .stat-item.active .stat-label { color: #1a6dff; }
 .stat-value {
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 700;
   color: #1e2a3a;
 }
@@ -459,10 +623,24 @@ onUnmounted(() => {
 .msg-item.unread .msg-item-title {
   color: #1a6dff;
 }
+.msg-item-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+.msg-type-tag {
+  font-size: 10px;
+  font-weight: 500;
+  padding: 1px 6px;
+  border-radius: 3px;
+  background: #f0f2f5;
+  color: #6b7685;
+  white-space: nowrap;
+}
 .msg-item-time {
   font-size: 11px;
   color: #b8c0cc;
-  flex-shrink: 0;
   white-space: nowrap;
 }
 .msg-item-content {
@@ -473,6 +651,30 @@ onUnmounted(() => {
   display: -webkit-box;
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
+}
+
+/* Delete button on item */
+.msg-item-delete {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  background: none;
+  border: none;
+  border-radius: 4px;
+  color: #b8c0cc;
+  cursor: pointer;
+  flex-shrink: 0;
+  opacity: 0;
+  transition: opacity 0.15s, color 0.15s, background 0.15s;
+}
+.msg-item:hover .msg-item-delete {
+  opacity: 1;
+}
+.msg-item-delete:hover {
+  color: #d93025;
+  background: #fef2f2;
 }
 
 /* Load more */
@@ -592,4 +794,212 @@ onUnmounted(() => {
   background: #f4f6f9;
   color: #1a6dff;
 }
+
+/* ==================== Drawer ==================== */
+.drawer-mask {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  background: rgba(15, 23, 42, 0.3);
+  display: flex;
+  justify-content: flex-end;
+}
+.drawer-panel {
+  width: 440px;
+  max-width: 90vw;
+  background: #fff;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  box-shadow: -4px 0 24px rgba(0, 0, 0, 0.12);
+}
+.drawer-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 20px 24px;
+  border-bottom: 1px solid #e8ecf0;
+  flex-shrink: 0;
+}
+.drawer-head h3 {
+  font-size: 15px;
+  font-weight: 600;
+  color: #1e2a3a;
+  margin: 0;
+}
+.drawer-close {
+  background: none;
+  border: none;
+  font-size: 22px;
+  color: #b8c0cc;
+  cursor: pointer;
+  padding: 0 4px;
+  line-height: 1;
+}
+.drawer-close:hover { color: #5a6474; }
+.drawer-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.detail-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: #1e2a3a;
+  line-height: 1.4;
+}
+.detail-meta {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.detail-type-tag {
+  font-size: 11px;
+  font-weight: 500;
+  padding: 2px 8px;
+  border-radius: 4px;
+  background: #e8f0ff;
+  color: #2563eb;
+}
+.detail-time {
+  font-size: 12px;
+  color: #6b7685;
+}
+.detail-read {
+  font-size: 11px;
+  color: #10b981;
+}
+.detail-source {
+  font-size: 12px;
+  color: #8c95a3;
+  padding: 8px 12px;
+  background: #f8f9fb;
+  border-radius: 6px;
+}
+.detail-content {
+  font-size: 13px;
+  color: #3d4757;
+  line-height: 1.7;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+.detail-actions {
+  padding-top: 16px;
+  border-top: 1px solid #e8ecf0;
+}
+.btn-danger-sm {
+  padding: 6px 16px;
+  background: none;
+  border: 1px solid #fecaca;
+  border-radius: 6px;
+  font-size: 12px;
+  color: #d93025;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+.btn-danger-sm:hover {
+  background: #fef2f2;
+  color: #b91c1c;
+}
+
+/* Drawer transitions */
+.drawer-enter-active { transition: all 0.25s ease-out; }
+.drawer-leave-active { transition: all 0.2s ease-in; }
+.drawer-enter-from { opacity: 0; }
+.drawer-enter-from .drawer-panel { transform: translateX(100%); }
+.drawer-leave-to { opacity: 0; }
+.drawer-leave-to .drawer-panel { transform: translateX(100%); }
+
+/* ==================== Modal (Delete confirm) ==================== */
+.modal-mask {
+  position: fixed;
+  inset: 0;
+  z-index: 1100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(15, 23, 42, 0.4);
+  backdrop-filter: blur(2px);
+}
+.modal-box {
+  width: 380px;
+  background: #fff;
+  border-radius: 14px;
+  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.18);
+  overflow: hidden;
+}
+.modal-box-sm { width: 360px; }
+.modal-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 20px 24px 0;
+}
+.modal-head h3 {
+  font-size: 15px;
+  font-weight: 600;
+  color: #1e2a3a;
+  margin: 0;
+}
+.modal-close {
+  background: none;
+  border: none;
+  font-size: 22px;
+  color: #b8c0cc;
+  cursor: pointer;
+  padding: 0 4px;
+  line-height: 1;
+}
+.modal-close:hover { color: #5a6474; }
+.modal-body {
+  padding: 18px 24px;
+}
+.modal-foot {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  padding: 0 24px 20px;
+}
+.confirm-text {
+  font-size: 13px;
+  color: #3d4757;
+  margin: 0;
+  line-height: 1.6;
+}
+.btn-ghost {
+  padding: 8px 20px;
+  background: none;
+  border: 1px solid #dce1e8;
+  border-radius: 8px;
+  font-size: 13px;
+  color: #5a6474;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.btn-ghost:hover { background: #f4f6f9; }
+.btn-danger {
+  padding: 8px 20px;
+  background: #ef4444;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.btn-danger:hover { background: #dc2626; }
+
+/* Modal transitions */
+.modal-enter-active { transition: all 0.2s ease-out; }
+.modal-leave-active { transition: all 0.15s ease-in; }
+.modal-enter-from { opacity: 0; }
+.modal-enter-from .modal-box { transform: translateY(12px) scale(0.97); }
+.modal-leave-to { opacity: 0; }
+.modal-leave-to .modal-box { transform: translateY(-8px) scale(0.98); }
 </style>

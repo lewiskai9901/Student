@@ -30,6 +30,15 @@ public class MsgNotificationService {
     }
 
     /**
+     * 分页查询当前用户的消息（带消息类型过滤）
+     */
+    public PageResult<MsgNotification> getMyNotifications(Long userId, Boolean isRead, String msgType, int page, int size) {
+        List<MsgNotification> records = notificationRepository.findByUserId(userId, isRead, msgType, page, size);
+        long total = notificationRepository.countTotal(userId, isRead, msgType);
+        return PageResult.of(records, total, page, size);
+    }
+
+    /**
      * 获取未读消息数
      */
     public long getUnreadCount(Long userId) {
@@ -55,5 +64,18 @@ public class MsgNotificationService {
     @Transactional
     public void markAllRead(Long userId) {
         notificationRepository.markAllRead(userId);
+    }
+
+    /**
+     * 软删除消息（校验归属）
+     */
+    @Transactional
+    public void deleteMessage(Long messageId, Long userId) {
+        notificationRepository.findById(messageId).ifPresent(n -> {
+            if (!n.getUserId().equals(userId)) {
+                throw new IllegalArgumentException("无权操作此消息");
+            }
+            notificationRepository.softDelete(messageId, userId);
+        });
     }
 }

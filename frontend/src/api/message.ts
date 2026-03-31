@@ -5,6 +5,7 @@ export interface NotificationListParams {
   page?: number
   size?: number
   isRead?: boolean
+  msgType?: string
   keyword?: string
 }
 
@@ -46,6 +47,11 @@ export const messageApi = {
   /** 标记全部已读 */
   markAllRead(): Promise<void> {
     return http.put('/msg/notifications/read-all')
+  },
+
+  /** 删除消息（软删除） */
+  delete(id: number): Promise<void> {
+    return http.delete(`/msg/notifications/${id}`)
   },
 }
 

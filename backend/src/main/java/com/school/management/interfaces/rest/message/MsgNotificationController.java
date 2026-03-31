@@ -29,10 +29,11 @@ public class MsgNotificationController {
     @CasbinAccess(resource = "msg-notification", action = "view")
     public Result<PageResult<MsgNotification>> getMyNotifications(
             @RequestParam(required = false) Boolean isRead,
+            @RequestParam(required = false) String msgType,
             @RequestParam(defaultValue = "1") int page,
             @RequestParam(defaultValue = "20") int size) {
         Long userId = SecurityUtils.requireCurrentUserId();
-        return Result.success(notificationService.getMyNotifications(userId, isRead, page, size));
+        return Result.success(notificationService.getMyNotifications(userId, isRead, msgType, page, size));
     }
 
     @GetMapping("/unread-count")
@@ -59,6 +60,15 @@ public class MsgNotificationController {
     public Result<Void> markAllRead() {
         Long userId = SecurityUtils.requireCurrentUserId();
         notificationService.markAllRead(userId);
+        return Result.success();
+    }
+
+    @DeleteMapping("/{id}")
+    @Operation(summary = "删除消息（软删除）")
+    @CasbinAccess(resource = "msg-notification", action = "delete")
+    public Result<Void> deleteMessage(@PathVariable Long id) {
+        Long userId = SecurityUtils.requireCurrentUserId();
+        notificationService.deleteMessage(id, userId);
         return Result.success();
     }
 }

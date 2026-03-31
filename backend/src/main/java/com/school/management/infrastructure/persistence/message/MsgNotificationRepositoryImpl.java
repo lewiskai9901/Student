@@ -66,6 +66,25 @@ public class MsgNotificationRepositoryImpl implements MsgNotificationRepository 
         notificationMapper.markAllRead(userId);
     }
 
+    @Override
+    public void softDelete(Long id, Long userId) {
+        notificationMapper.softDelete(id, userId);
+    }
+
+    @Override
+    public List<MsgNotification> findByUserId(Long userId, Boolean isRead, String msgType, int page, int size) {
+        Integer isReadInt = isRead != null ? (isRead ? 1 : 0) : null;
+        int offset = (page - 1) * size;
+        return notificationMapper.findByUserIdWithType(userId, isReadInt, msgType, offset, size)
+                .stream().map(this::toDomain).collect(Collectors.toList());
+    }
+
+    @Override
+    public long countTotal(Long userId, Boolean isRead, String msgType) {
+        Integer isReadInt = isRead != null ? (isRead ? 1 : 0) : null;
+        return notificationMapper.countByUserIdWithType(userId, isReadInt, msgType);
+    }
+
     private MsgNotification toDomain(MsgNotificationPO po) {
         return MsgNotification.builder()
                 .id(po.getId())

@@ -23,4 +23,10 @@ public interface MsgNotificationRepository {
     void markRead(Long id);
 
     void markAllRead(Long userId);
+
+    void softDelete(Long id, Long userId);
+
+    List<MsgNotification> findByUserId(Long userId, Boolean isRead, String msgType, int page, int size);
+
+    long countTotal(Long userId, Boolean isRead, String msgType);
 }
