@@ -17,117 +17,20 @@ public final class PermissionConstants {
     // ==================== 宿舍管理权限 ====================
     public static final String DORMITORY_STUDENT_ASSIGN = "dormitory:student:assign";
 
-    // ==================== 综合测评权限 ====================
-    public static final String EVALUATION_BEHAVIOR_CREATE = "evaluation:behavior:create";
-    public static final String EVALUATION_BEHAVIOR_DELETE = "evaluation:behavior:delete";
-    public static final String EVALUATION_BEHAVIOR_LIST = "evaluation:behavior:list";
-    public static final String EVALUATION_BEHAVIOR_UPDATE = "evaluation:behavior:update";
-    public static final String EVALUATION_CONFIG_LIST = "evaluation:config:list";
-    public static final String EVALUATION_CONFIG_UPDATE = "evaluation:config:update";
-    public static final String EVALUATION_COURSE_CREATE = "evaluation:course:create";
-    public static final String EVALUATION_COURSE_DELETE = "evaluation:course:delete";
-    public static final String EVALUATION_COURSE_IMPORT = "evaluation:course:import";
-    public static final String EVALUATION_COURSE_LIST = "evaluation:course:list";
-    public static final String EVALUATION_COURSE_UPDATE = "evaluation:course:update";
-    public static final String EVALUATION_HONOR_APPLY = "evaluation:honor:apply";
-    public static final String EVALUATION_HONOR_CLASS_REVIEW = "evaluation:honor:class-review";
-    public static final String EVALUATION_HONOR_CREATE = "evaluation:honor:create";
-    public static final String EVALUATION_HONOR_DELETE = "evaluation:honor:delete";
-    public static final String EVALUATION_HONOR_DEPT_REVIEW = "evaluation:honor:dept-review";
-    public static final String EVALUATION_HONOR_EXPORT = "evaluation:honor:export";
-    public static final String EVALUATION_HONOR_LIST = "evaluation:honor:list";
-    public static final String EVALUATION_HONOR_SCHOOL_REVIEW = "evaluation:honor:school-review";
-    public static final String EVALUATION_HONOR_UPDATE = "evaluation:honor:update";
-    public static final String EVALUATION_PERIOD_CREATE = "evaluation:period:create";
-    public static final String EVALUATION_PERIOD_DELETE = "evaluation:period:delete";
-    public static final String EVALUATION_PERIOD_LIST = "evaluation:period:list";
-    public static final String EVALUATION_PERIOD_LOCK = "evaluation:period:lock";
-    public static final String EVALUATION_PERIOD_MANAGE = "evaluation:period:manage";
-    public static final String EVALUATION_PERIOD_UPDATE = "evaluation:period:update";
-    public static final String EVALUATION_RESULT_CALCULATE = "evaluation:result:calculate";
-    public static final String EVALUATION_RESULT_EXPORT = "evaluation:result:export";
-    public static final String EVALUATION_RESULT_LIST = "evaluation:result:list";
-    public static final String EVALUATION_RESULT_MY = "evaluation:result:my";
-    public static final String EVALUATION_RESULT_SYNC = "evaluation:result:sync";
-    public static final String EVALUATION_SCORE_DELETE = "evaluation:score:delete";
-    public static final String EVALUATION_SCORE_EXPORT = "evaluation:score:export";
-    public static final String EVALUATION_SCORE_IMPORT = "evaluation:score:import";
-    public static final String EVALUATION_SCORE_INPUT = "evaluation:score:input";
-    public static final String EVALUATION_SCORE_LIST = "evaluation:score:list";
-    public static final String EVALUATION_SCORE_LOCK = "evaluation:score:lock";
-    public static final String EVALUATION_SCORE_MY = "evaluation:score:my";
-    public static final String EVALUATION_SCORE_UPDATE = "evaluation:score:update";
-
-    // ==================== 年级方向权限 ====================
-    public static final String GRADE_DIRECTION_ADD = "grade:direction:add";
-    public static final String GRADE_DIRECTION_DELETE = "grade:direction:delete";
-    public static final String GRADE_DIRECTION_EDIT = "grade:direction:edit";
-    public static final String GRADE_DIRECTION_INFO = "grade:direction:info";
-    public static final String GRADE_DIRECTION_LIST = "grade:direction:list";
-
-    // ==================== 专业权限 ====================
-    public static final String MAJOR_ADD = "major:add";
-    public static final String MAJOR_DELETE = "major:delete";
-    public static final String MAJOR_DIRECTION_ADD = "major:direction:add";
-    public static final String MAJOR_DIRECTION_DELETE = "major:direction:delete";
-    public static final String MAJOR_DIRECTION_EDIT = "major:direction:edit";
-    public static final String MAJOR_DIRECTION_INFO = "major:direction:info";
-    public static final String MAJOR_DIRECTION_LIST = "major:direction:list";
-    public static final String MAJOR_EDIT = "major:edit";
-    public static final String MAJOR_INFO = "major:info";
-    public static final String MAJOR_LIST = "major:list";
-
-    // ==================== 量化考核权限 ====================
-    public static final String QUANTIFICATION_APPEAL_CREATE = "quantification:appeal:create";
-    public static final String QUANTIFICATION_APPEAL_LIST = "quantification:appeal:list";
-    public static final String QUANTIFICATION_APPEAL_MANAGE = "quantification:appeal:manage";
-    public static final String QUANTIFICATION_APPEAL_REVIEW = "quantification:appeal:review";
-    public static final String QUANTIFICATION_APPEAL_STATISTICS = "quantification:appeal:statistics";
-    public static final String QUANTIFICATION_APPEAL_VIEW = "quantification:appeal:view";
-    public static final String QUANTIFICATION_APPEAL_WITHDRAW = "quantification:appeal:withdraw";
-    public static final String QUANTIFICATION_CHECK_ADD = "quantification:check:add";
-    public static final String QUANTIFICATION_CHECK_DELETE = "quantification:check:delete";
-    public static final String QUANTIFICATION_CHECK_DETAIL = "quantification:check:detail";
-    public static final String QUANTIFICATION_CHECK_EDIT = "quantification:check:edit";
-    public static final String QUANTIFICATION_CHECK_LIST = "quantification:check:list";
-    public static final String QUANTIFICATION_CHECK_PUBLISH = "quantification:check:publish";
-    public static final String QUANTIFICATION_CHECK_REVIEW = "quantification:check:review";
-    public static final String QUANTIFICATION_CHECK_SCORE = "quantification:check:score";
-    public static final String QUANTIFICATION_CHECK_SUBMIT = "quantification:check:submit";
-    public static final String QUANTIFICATION_CHECK_VIEW = "quantification:check:view";
-    public static final String QUANTIFICATION_CHECK_RECORD_PUBLISH = "quantification:check-record:publish";
-    public static final String QUANTIFICATION_CHECK_RECORD_REVIEW = "quantification:check-record:review";
-    public static final String QUANTIFICATION_CONFIG_ADD = "quantification:config:add";
-    public static final String QUANTIFICATION_CONFIG_DELETE = "quantification:config:delete";
-    public static final String QUANTIFICATION_CONFIG_EDIT = "quantification:config:edit";
-    public static final String QUANTIFICATION_CONFIG_VIEW = "quantification:config:view";
-    public static final String QUANTIFICATION_DICTIONARY_CATEGORY = "quantification:dictionary:category";
-    public static final String QUANTIFICATION_DICTIONARY_ITEM = "quantification:dictionary:item";
-    public static final String QUANTIFICATION_GRADE_ADD = "quantification:grade:add";
-    public static final String QUANTIFICATION_GRADE_DELETE = "quantification:grade:delete";
-    public static final String QUANTIFICATION_GRADE_EDIT = "quantification:grade:edit";
-    public static final String QUANTIFICATION_GRADE_VIEW = "quantification:grade:view";
-    public static final String QUANTIFICATION_PLAN_ADD = "quantification:plan:add";
-    public static final String QUANTIFICATION_PLAN_DELETE = "quantification:plan:delete";
-    public static final String QUANTIFICATION_PLAN_EDIT = "quantification:plan:edit";
-    public static final String QUANTIFICATION_PLAN_MANAGE = "quantification:plan:manage";
-    public static final String QUANTIFICATION_PLAN_VIEW = "quantification:plan:view";
-    public static final String QUANTIFICATION_RECORD_ARCHIVE = "quantification:record:archive";
-    public static final String QUANTIFICATION_RECORD_CREATE = "quantification:record:create";
-    public static final String QUANTIFICATION_RECORD_DELETE = "quantification:record:delete";
-    public static final String QUANTIFICATION_RECORD_EDIT = "quantification:record:edit";
-    public static final String QUANTIFICATION_RECORD_VIEW = "quantification:record:view";
-    public static final String QUANTIFICATION_STATISTICS_EDIT = "quantification:statistics:edit";
-    public static final String QUANTIFICATION_STATISTICS_VIEW = "quantification:statistics:view";
-    public static final String QUANTIFICATION_TEMPLATE_ADD = "quantification:template:add";
-    public static final String QUANTIFICATION_TEMPLATE_DELETE = "quantification:template:delete";
-    public static final String QUANTIFICATION_TEMPLATE_EDIT = "quantification:template:edit";
-    public static final String QUANTIFICATION_TEMPLATE_VIEW = "quantification:template:view";
-    public static final String QUANTIFICATION_WEIGHT_CONFIG = "quantification:weight:config";
-    public static final String QUANTIFICATION_WEIGHT_CONFIG_SET = "quantification:weight-config:set";
-    public static final String QUANTIFICATION_WEIGHT_CONFIG_VIEW = "quantification:weight-config:view";
+    // ==================== 学术管理权限 (academic domain) ====================
+    public static final String ACADEMIC_MAJOR_VIEW = "academic:major:view";
+    public static final String ACADEMIC_MAJOR_EDIT = "academic:major:edit";
+    public static final String ACADEMIC_COURSE_VIEW = "academic:course:view";
+    public static final String ACADEMIC_COURSE_EDIT = "academic:course:edit";
+    public static final String ACADEMIC_CURRICULUM_VIEW = "academic:curriculum:view";
+    public static final String ACADEMIC_CURRICULUM_EDIT = "academic:curriculum:edit";
+    public static final String ACADEMIC_GRADE_DIRECTION_VIEW = "academic:grade-direction:view";
+    public static final String ACADEMIC_GRADE_DIRECTION_EDIT = "academic:grade-direction:edit";
 
     // ==================== 学生管理权限 ====================
+    public static final String STUDENT_GRADE_VIEW = "student:grade:view";
+    public static final String STUDENT_GRADE_EDIT = "student:grade:edit";
+    public static final String STUDENT_GRADE_DELETE = "student:grade:delete";
     public static final String STUDENT_CLASS_ADD = "student:class:add";
     public static final String STUDENT_CLASS_DELETE = "student:class:delete";
     public static final String STUDENT_CLASS_EDIT = "student:class:edit";

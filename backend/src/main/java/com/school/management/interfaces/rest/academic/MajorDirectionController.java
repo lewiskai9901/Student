@@ -30,28 +30,28 @@ public class MajorDirectionController {
 
     @Operation(summary = "Get directions by major")
     @GetMapping("/major/{majorId}")
-    @CasbinAccess(resource = "major", action = "list")
+    @CasbinAccess(resource = "academic:major", action = "view")
     public Result<List<MajorDirectionDTO>> getDirectionsByMajor(@PathVariable Long majorId) {
         return Result.success(majorService.getDirectionsByMajor(majorId));
     }
 
     @Operation(summary = "Get all directions")
     @GetMapping("/all")
-    @CasbinAccess(resource = "major", action = "list")
+    @CasbinAccess(resource = "academic:major", action = "view")
     public Result<List<MajorDirectionDTO>> getAllDirections() {
         return Result.success(majorService.getAllDirections());
     }
 
     @Operation(summary = "Get direction detail")
     @GetMapping("/{id}")
-    @CasbinAccess(resource = "major", action = "list")
+    @CasbinAccess(resource = "academic:major", action = "view")
     public Result<MajorDirectionDTO> getDirection(@PathVariable Long id) {
         return Result.success(majorService.getDirection(id));
     }
 
     @Operation(summary = "Create direction")
     @PostMapping
-    @CasbinAccess(resource = "major", action = "add")
+    @CasbinAccess(resource = "academic:major", action = "edit")
     public Result<MajorDirectionDTO> createDirection(@Valid @RequestBody CreateMajorDirectionRequest request) {
         CreateMajorDirectionCommand command = new CreateMajorDirectionCommand();
         command.setMajorId(request.getMajorId());
@@ -72,7 +72,7 @@ public class MajorDirectionController {
 
     @Operation(summary = "Update direction")
     @PutMapping("/{id}")
-    @CasbinAccess(resource = "major", action = "edit")
+    @CasbinAccess(resource = "academic:major", action = "edit")
     public Result<MajorDirectionDTO> updateDirection(@PathVariable Long id,
                                                       @RequestBody UpdateMajorDirectionRequest request) {
         UpdateMajorDirectionCommand command = new UpdateMajorDirectionCommand();
@@ -92,7 +92,7 @@ public class MajorDirectionController {
 
     @Operation(summary = "Delete direction")
     @DeleteMapping("/{id}")
-    @CasbinAccess(resource = "major", action = "delete")
+    @CasbinAccess(resource = "academic:major", action = "edit")
     public Result<Void> deleteDirection(@PathVariable Long id) {
         majorService.deleteDirection(id);
         return Result.success();
@@ -100,7 +100,7 @@ public class MajorDirectionController {
 
     @Operation(summary = "Batch delete directions")
     @DeleteMapping("/batch")
-    @CasbinAccess(resource = "major", action = "delete")
+    @CasbinAccess(resource = "academic:major", action = "edit")
     public Result<Void> batchDeleteDirections(@RequestBody List<Long> ids) {
         ids.forEach(majorService::deleteDirection);
         return Result.success();

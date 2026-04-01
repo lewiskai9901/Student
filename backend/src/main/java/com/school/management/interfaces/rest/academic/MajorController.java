@@ -32,7 +32,7 @@ public class MajorController {
 
     @Operation(summary = "Get major list (paginated)")
     @GetMapping
-    @CasbinAccess(resource = "major", action = "list")
+    @CasbinAccess(resource = "academic:major", action = "view")
     public Result<Page<MajorDTO>> getMajorList(
             @RequestParam(required = false) String majorName,
             @RequestParam(required = false) String majorCode,
@@ -46,28 +46,28 @@ public class MajorController {
 
     @Operation(summary = "Get all enabled majors")
     @GetMapping("/enabled")
-    @CasbinAccess(resource = "major", action = "list")
+    @CasbinAccess(resource = "academic:major", action = "view")
     public Result<List<MajorDTO>> getAllEnabledMajors() {
         return Result.success(majorService.getAllEnabledMajors());
     }
 
     @Operation(summary = "Get majors by org unit")
     @GetMapping("/org-unit/{orgUnitId}")
-    @CasbinAccess(resource = "major", action = "list")
+    @CasbinAccess(resource = "academic:major", action = "view")
     public Result<List<MajorDTO>> getMajorsByOrgUnit(@PathVariable Long orgUnitId) {
         return Result.success(majorService.getMajorsByOrgUnit(orgUnitId));
     }
 
     @Operation(summary = "Get major detail")
     @GetMapping("/{id}")
-    @CasbinAccess(resource = "major", action = "list")
+    @CasbinAccess(resource = "academic:major", action = "view")
     public Result<MajorDTO> getMajor(@PathVariable Long id) {
         return Result.success(majorService.getMajor(id));
     }
 
     @Operation(summary = "Create major")
     @PostMapping
-    @CasbinAccess(resource = "major", action = "add")
+    @CasbinAccess(resource = "academic:major", action = "edit")
     public Result<MajorDTO> createMajor(@Valid @RequestBody CreateMajorRequest request) {
         CreateMajorCommand command = new CreateMajorCommand();
         command.setMajorCode(request.getMajorCode());
@@ -81,7 +81,7 @@ public class MajorController {
 
     @Operation(summary = "Update major")
     @PutMapping("/{id}")
-    @CasbinAccess(resource = "major", action = "edit")
+    @CasbinAccess(resource = "academic:major", action = "edit")
     public Result<MajorDTO> updateMajor(@PathVariable Long id,
                                          @RequestBody UpdateMajorRequest request) {
         UpdateMajorCommand command = new UpdateMajorCommand();
@@ -95,7 +95,7 @@ public class MajorController {
 
     @Operation(summary = "Delete major")
     @DeleteMapping("/{id}")
-    @CasbinAccess(resource = "major", action = "delete")
+    @CasbinAccess(resource = "academic:major", action = "edit")
     public Result<Void> deleteMajor(@PathVariable Long id) {
         majorService.deleteMajor(id);
         return Result.success();
@@ -103,7 +103,7 @@ public class MajorController {
 
     @Operation(summary = "Batch delete majors")
     @DeleteMapping("/batch")
-    @CasbinAccess(resource = "major", action = "delete")
+    @CasbinAccess(resource = "academic:major", action = "edit")
     public Result<Void> batchDeleteMajors(@RequestBody Map<String, List<Long>> body) {
         List<Long> ids = body.get("ids");
         if (ids != null) {

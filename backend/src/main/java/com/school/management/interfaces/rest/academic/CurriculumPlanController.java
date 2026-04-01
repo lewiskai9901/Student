@@ -36,7 +36,7 @@ public class CurriculumPlanController {
 
     @Operation(summary = "Get plan list (paginated)")
     @GetMapping
-    @CasbinAccess(resource = "teaching:curriculum", action = "view")
+    @CasbinAccess(resource = "academic:curriculum", action = "view")
     public Result<Page<CurriculumPlanDTO>> listPlans(
             @RequestParam(defaultValue = "1") int pageNum,
             @RequestParam(defaultValue = "20") int pageSize,
@@ -48,14 +48,14 @@ public class CurriculumPlanController {
 
     @Operation(summary = "Get plan by ID")
     @GetMapping("/{id}")
-    @CasbinAccess(resource = "teaching:curriculum", action = "view")
+    @CasbinAccess(resource = "academic:curriculum", action = "view")
     public Result<CurriculumPlanDTO> getPlan(@PathVariable Long id) {
         return Result.success(planService.getPlan(id));
     }
 
     @Operation(summary = "Create plan")
     @PostMapping
-    @CasbinAccess(resource = "teaching:curriculum", action = "edit")
+    @CasbinAccess(resource = "academic:curriculum", action = "edit")
     public Result<CurriculumPlanDTO> createPlan(@RequestBody CreateCurriculumPlanCommand command) {
         command.setCreatedBy(SecurityUtils.requireCurrentUserId());
         return Result.success(planService.createPlan(command));
@@ -63,7 +63,7 @@ public class CurriculumPlanController {
 
     @Operation(summary = "Update plan")
     @PutMapping("/{id}")
-    @CasbinAccess(resource = "teaching:curriculum", action = "edit")
+    @CasbinAccess(resource = "academic:curriculum", action = "edit")
     public Result<CurriculumPlanDTO> updatePlan(@PathVariable Long id,
                                                   @RequestBody UpdateCurriculumPlanCommand command) {
         command.setUpdatedBy(SecurityUtils.requireCurrentUserId());
@@ -72,7 +72,7 @@ public class CurriculumPlanController {
 
     @Operation(summary = "Delete plan")
     @DeleteMapping("/{id}")
-    @CasbinAccess(resource = "teaching:curriculum", action = "edit")
+    @CasbinAccess(resource = "academic:curriculum", action = "edit")
     public Result<Void> deletePlan(@PathVariable Long id) {
         planService.deletePlan(id);
         return Result.success();
@@ -80,7 +80,7 @@ public class CurriculumPlanController {
 
     @Operation(summary = "Publish plan")
     @PostMapping("/{id}/publish")
-    @CasbinAccess(resource = "teaching:curriculum", action = "edit")
+    @CasbinAccess(resource = "academic:curriculum", action = "edit")
     public Result<Void> publishPlan(@PathVariable Long id) {
         planService.publishPlan(id, SecurityUtils.requireCurrentUserId());
         return Result.success();
@@ -88,7 +88,7 @@ public class CurriculumPlanController {
 
     @Operation(summary = "Deprecate plan")
     @PostMapping("/{id}/deprecate")
-    @CasbinAccess(resource = "teaching:curriculum", action = "edit")
+    @CasbinAccess(resource = "academic:curriculum", action = "edit")
     public Result<Void> deprecatePlan(@PathVariable Long id) {
         planService.deprecatePlan(id);
         return Result.success();
@@ -96,7 +96,7 @@ public class CurriculumPlanController {
 
     @Operation(summary = "Copy plan")
     @PostMapping("/{id}/copy")
-    @CasbinAccess(resource = "teaching:curriculum", action = "edit")
+    @CasbinAccess(resource = "academic:curriculum", action = "edit")
     public Result<Map<String, Object>> copyPlan(@PathVariable Long id) {
         return Result.success(planService.copyPlan(id, SecurityUtils.requireCurrentUserId()));
     }
@@ -105,14 +105,14 @@ public class CurriculumPlanController {
 
     @Operation(summary = "Get plan courses")
     @GetMapping("/{planId}/courses")
-    @CasbinAccess(resource = "teaching:curriculum", action = "view")
+    @CasbinAccess(resource = "academic:curriculum", action = "view")
     public Result<List<PlanCourseDTO>> listPlanCourses(@PathVariable Long planId) {
         return Result.success(planService.getPlanCourses(planId));
     }
 
     @Operation(summary = "Add plan course")
     @PostMapping("/{planId}/courses")
-    @CasbinAccess(resource = "teaching:curriculum", action = "edit")
+    @CasbinAccess(resource = "academic:curriculum", action = "edit")
     public Result<PlanCourseDTO> addPlanCourse(@PathVariable Long planId,
                                                 @RequestBody CreatePlanCourseCommand command) {
         return Result.success(planService.addPlanCourse(planId, command));
@@ -120,7 +120,7 @@ public class CurriculumPlanController {
 
     @Operation(summary = "Update plan course")
     @PutMapping("/{planId}/courses/{courseRecordId}")
-    @CasbinAccess(resource = "teaching:curriculum", action = "edit")
+    @CasbinAccess(resource = "academic:curriculum", action = "edit")
     public Result<Void> updatePlanCourse(@PathVariable Long planId,
                                           @PathVariable Long courseRecordId,
                                           @RequestBody UpdatePlanCourseCommand command) {
@@ -130,7 +130,7 @@ public class CurriculumPlanController {
 
     @Operation(summary = "Remove plan course")
     @DeleteMapping("/{planId}/courses/{courseRecordId}")
-    @CasbinAccess(resource = "teaching:curriculum", action = "edit")
+    @CasbinAccess(resource = "academic:curriculum", action = "edit")
     public Result<Void> removePlanCourse(@PathVariable Long planId,
                                           @PathVariable Long courseRecordId) {
         planService.removePlanCourse(planId, courseRecordId);

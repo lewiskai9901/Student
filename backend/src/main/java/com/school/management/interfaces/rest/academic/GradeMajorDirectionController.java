@@ -28,21 +28,21 @@ public class GradeMajorDirectionController {
 
     @Operation(summary = "Get directions by enrollment year")
     @GetMapping("/year/{year}")
-    @CasbinAccess(resource = "quantification:grade", action = "view")
+    @CasbinAccess(resource = "academic:grade-direction", action = "view")
     public Result<List<GradeMajorDirectionDTO>> getDirectionsByYear(@PathVariable Integer year) {
         return Result.success(service.getDirectionsByYear(year));
     }
 
     @Operation(summary = "Get directions by major direction ID")
     @GetMapping("/direction/{directionId}")
-    @CasbinAccess(resource = "quantification:grade", action = "view")
+    @CasbinAccess(resource = "academic:grade-direction", action = "view")
     public Result<List<GradeMajorDirectionDTO>> getDirectionsByMajorDirection(@PathVariable Long directionId) {
         return Result.success(service.getDirectionsByMajorDirectionId(directionId));
     }
 
     @Operation(summary = "Get by year and direction")
     @GetMapping("/year/{year}/direction/{directionId}")
-    @CasbinAccess(resource = "quantification:grade", action = "view")
+    @CasbinAccess(resource = "academic:grade-direction", action = "view")
     public Result<GradeMajorDirectionDTO> getByYearAndDirection(@PathVariable Integer year,
                                                                   @PathVariable Long directionId) {
         return Result.success(service.getByYearAndDirection(year, directionId));
@@ -50,14 +50,14 @@ public class GradeMajorDirectionController {
 
     @Operation(summary = "Get by ID")
     @GetMapping("/{id}")
-    @CasbinAccess(resource = "quantification:grade", action = "view")
+    @CasbinAccess(resource = "academic:grade-direction", action = "view")
     public Result<GradeMajorDirectionDTO> getById(@PathVariable Long id) {
         return Result.success(service.getById(id));
     }
 
     @Operation(summary = "Add direction to year")
     @PostMapping
-    @CasbinAccess(resource = "quantification:grade", action = "edit")
+    @CasbinAccess(resource = "academic:grade-direction", action = "edit")
     public Result<GradeMajorDirectionDTO> addDirectionToYear(
             @Valid @RequestBody CreateGradeMajorDirectionRequest request) {
         return Result.success(service.addDirectionToYear(
@@ -70,7 +70,7 @@ public class GradeMajorDirectionController {
 
     @Operation(summary = "Batch add directions to year")
     @PostMapping("/year/{year}/batch")
-    @CasbinAccess(resource = "quantification:grade", action = "edit")
+    @CasbinAccess(resource = "academic:grade-direction", action = "edit")
     public Result<Void> batchAddDirectionsToYear(@PathVariable Integer year,
                                                   @RequestBody List<Long> directionIds) {
         service.batchAddDirectionsToYear(year, directionIds, SecurityUtils.requireCurrentUserId());
@@ -79,7 +79,7 @@ public class GradeMajorDirectionController {
 
     @Operation(summary = "Update grade-major-direction")
     @PutMapping("/{id}")
-    @CasbinAccess(resource = "quantification:grade", action = "edit")
+    @CasbinAccess(resource = "academic:grade-direction", action = "edit")
     public Result<GradeMajorDirectionDTO> updateGradeMajorDirection(
             @PathVariable Long id,
             @RequestBody UpdateGradeMajorDirectionRequest request) {
@@ -88,7 +88,7 @@ public class GradeMajorDirectionController {
 
     @Operation(summary = "Delete grade-major-direction")
     @DeleteMapping("/{id}")
-    @CasbinAccess(resource = "quantification:grade", action = "edit")
+    @CasbinAccess(resource = "academic:grade-direction", action = "edit")
     public Result<Void> deleteGradeMajorDirection(@PathVariable Long id) {
         service.deleteGradeMajorDirection(id);
         return Result.success();
@@ -96,7 +96,7 @@ public class GradeMajorDirectionController {
 
     @Operation(summary = "Batch delete grade-major-directions")
     @DeleteMapping("/batch")
-    @CasbinAccess(resource = "quantification:grade", action = "edit")
+    @CasbinAccess(resource = "academic:grade-direction", action = "edit")
     public Result<Void> batchDeleteGradeMajorDirections(@RequestBody List<Long> ids) {
         service.batchDeleteGradeMajorDirections(ids);
         return Result.success();

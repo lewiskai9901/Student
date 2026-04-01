@@ -37,7 +37,7 @@ public class GradeController {
 
     @Operation(summary = "Create grade", description = "Creates a new grade")
     @PostMapping
-    @CasbinAccess(resource = "system:grade", action = "create")
+    @CasbinAccess(resource = "student:grade", action = "edit")
     public Result<GradeDTO> createGrade(@Valid @RequestBody CreateGradeRequest request) {
         CreateGradeCommand command = new CreateGradeCommand();
         command.setGradeCode(request.getGradeCode());
@@ -53,7 +53,7 @@ public class GradeController {
 
     @Operation(summary = "Update grade", description = "Updates an existing grade")
     @PutMapping("/{id}")
-    @CasbinAccess(resource = "system:grade", action = "update")
+    @CasbinAccess(resource = "student:grade", action = "edit")
     public Result<GradeDTO> updateGrade(
             @Parameter(description = "Grade ID") @PathVariable Long id,
             @RequestBody UpdateGradeRequest request) {
@@ -70,7 +70,7 @@ public class GradeController {
 
     @Operation(summary = "Assign leaders", description = "Assigns director and counselor to a grade")
     @PutMapping("/{id}/leaders")
-    @CasbinAccess(resource = "system:grade", action = "update")
+    @CasbinAccess(resource = "student:grade", action = "edit")
     public Result<GradeDTO> assignLeaders(
             @Parameter(description = "Grade ID") @PathVariable Long id,
             @RequestBody AssignGradeLeaderRequest request) {
@@ -87,7 +87,7 @@ public class GradeController {
 
     @Operation(summary = "Get grade", description = "Gets a grade by ID")
     @GetMapping("/{id}")
-    @CasbinAccess(resource = "system:grade", action = "view")
+    @CasbinAccess(resource = "student:grade", action = "view")
     public Result<GradeDTO> getGrade(
             @Parameter(description = "Grade ID") @PathVariable Long id) {
         GradeDTO result = gradeService.getGrade(id);
@@ -96,7 +96,7 @@ public class GradeController {
 
     @Operation(summary = "Get all grades", description = "Gets all grades ordered by enrollment year")
     @GetMapping
-    @CasbinAccess(resource = "system:grade", action = "view")
+    @CasbinAccess(resource = "student:grade", action = "view")
     public Result<List<GradeDTO>> getAllGrades() {
         List<GradeDTO> result = gradeService.getAllGrades();
         return Result.success(result);
@@ -104,7 +104,7 @@ public class GradeController {
 
     @Operation(summary = "Get active grades", description = "Gets all active grades")
     @GetMapping("/active")
-    @CasbinAccess(resource = "system:grade", action = "view")
+    @CasbinAccess(resource = "student:grade", action = "view")
     public Result<List<GradeDTO>> getActiveGrades() {
         List<GradeDTO> result = gradeService.getActiveGrades();
         return Result.success(result);
@@ -112,7 +112,7 @@ public class GradeController {
 
     @Operation(summary = "Get by status", description = "Gets grades by status")
     @GetMapping("/by-status/{status}")
-    @CasbinAccess(resource = "system:grade", action = "view")
+    @CasbinAccess(resource = "student:grade", action = "view")
     public Result<List<GradeDTO>> getByStatus(
             @Parameter(description = "Grade status") @PathVariable GradeStatus status) {
         List<GradeDTO> result = gradeService.getGradesByStatus(status);
@@ -121,7 +121,7 @@ public class GradeController {
 
     @Operation(summary = "Get by enrollment year", description = "Gets a grade by enrollment year")
     @GetMapping("/by-year/{enrollmentYear}")
-    @CasbinAccess(resource = "system:grade", action = "view")
+    @CasbinAccess(resource = "student:grade", action = "view")
     public Result<GradeDTO> getByEnrollmentYear(
             @Parameter(description = "Enrollment year") @PathVariable Integer enrollmentYear) {
         GradeDTO result = gradeService.getGradeByEnrollmentYear(enrollmentYear);
@@ -130,7 +130,7 @@ public class GradeController {
 
     @Operation(summary = "Activate grade", description = "Activates a grade (starts normal teaching)")
     @PutMapping("/{id}/activate")
-    @CasbinAccess(resource = "system:grade", action = "update")
+    @CasbinAccess(resource = "student:grade", action = "edit")
     public Result<GradeDTO> activateGrade(
             @Parameter(description = "Grade ID") @PathVariable Long id) {
         GradeDTO result = gradeService.activateGrade(id, SecurityUtils.requireCurrentUserId());
@@ -139,7 +139,7 @@ public class GradeController {
 
     @Operation(summary = "Graduate grade", description = "Marks a grade as graduated")
     @PutMapping("/{id}/graduate")
-    @CasbinAccess(resource = "system:grade", action = "update")
+    @CasbinAccess(resource = "student:grade", action = "edit")
     public Result<GradeDTO> graduateGrade(
             @Parameter(description = "Grade ID") @PathVariable Long id) {
         GradeDTO result = gradeService.graduateGrade(id, SecurityUtils.requireCurrentUserId());
@@ -148,7 +148,7 @@ public class GradeController {
 
     @Operation(summary = "Stop enrollment", description = "Stops enrollment for a grade")
     @PutMapping("/{id}/stop-enrollment")
-    @CasbinAccess(resource = "system:grade", action = "update")
+    @CasbinAccess(resource = "student:grade", action = "edit")
     public Result<GradeDTO> stopEnrollment(
             @Parameter(description = "Grade ID") @PathVariable Long id) {
         GradeDTO result = gradeService.stopEnrollment(id, SecurityUtils.requireCurrentUserId());
@@ -157,7 +157,7 @@ public class GradeController {
 
     @Operation(summary = "Delete grade", description = "Deletes a grade")
     @DeleteMapping("/{id}")
-    @CasbinAccess(resource = "system:grade", action = "delete")
+    @CasbinAccess(resource = "student:grade", action = "edit")
     public Result<Void> deleteGrade(
             @Parameter(description = "Grade ID") @PathVariable Long id) {
         gradeService.deleteGrade(id);

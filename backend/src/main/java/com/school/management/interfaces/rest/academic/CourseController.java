@@ -31,7 +31,7 @@ public class CourseController {
 
     @Operation(summary = "Get course list (paginated)")
     @GetMapping
-    @CasbinAccess(resource = "teaching:course", action = "view")
+    @CasbinAccess(resource = "academic:course", action = "view")
     public Result<Page<CourseDTO>> listCourses(
             @RequestParam(defaultValue = "1") int pageNum,
             @RequestParam(defaultValue = "20") int pageSize,
@@ -44,28 +44,28 @@ public class CourseController {
 
     @Operation(summary = "Get all courses (for dropdowns)")
     @GetMapping("/all")
-    @CasbinAccess(resource = "teaching:course", action = "view")
+    @CasbinAccess(resource = "academic:course", action = "view")
     public Result<List<CourseDTO>> listAllCourses() {
         return Result.success(courseService.getAllCourses());
     }
 
     @Operation(summary = "Get course by ID")
     @GetMapping("/{id}")
-    @CasbinAccess(resource = "teaching:course", action = "view")
+    @CasbinAccess(resource = "academic:course", action = "view")
     public Result<CourseDTO> getCourse(@PathVariable Long id) {
         return Result.success(courseService.getCourse(id));
     }
 
     @Operation(summary = "Get course by code")
     @GetMapping("/code/{code}")
-    @CasbinAccess(resource = "teaching:course", action = "view")
+    @CasbinAccess(resource = "academic:course", action = "view")
     public Result<CourseDTO> getCourseByCode(@PathVariable String code) {
         return Result.success(courseService.getCourseByCode(code));
     }
 
     @Operation(summary = "Create course")
     @PostMapping
-    @CasbinAccess(resource = "teaching:course", action = "edit")
+    @CasbinAccess(resource = "academic:course", action = "edit")
     public Result<CourseDTO> createCourse(@RequestBody CreateCourseCommand command) {
         command.setCreatedBy(SecurityUtils.requireCurrentUserId());
         return Result.success(courseService.createCourse(command));
@@ -73,7 +73,7 @@ public class CourseController {
 
     @Operation(summary = "Update course")
     @PutMapping("/{id}")
-    @CasbinAccess(resource = "teaching:course", action = "edit")
+    @CasbinAccess(resource = "academic:course", action = "edit")
     public Result<CourseDTO> updateCourse(@PathVariable Long id,
                                            @RequestBody UpdateCourseCommand command) {
         command.setUpdatedBy(SecurityUtils.requireCurrentUserId());
@@ -82,7 +82,7 @@ public class CourseController {
 
     @Operation(summary = "Delete course")
     @DeleteMapping("/{id}")
-    @CasbinAccess(resource = "teaching:course", action = "edit")
+    @CasbinAccess(resource = "academic:course", action = "edit")
     public Result<Void> deleteCourse(@PathVariable Long id) {
         courseService.deleteCourse(id);
         return Result.success();
@@ -90,7 +90,7 @@ public class CourseController {
 
     @Operation(summary = "Update course status")
     @PatchMapping("/{id}/status")
-    @CasbinAccess(resource = "teaching:course", action = "edit")
+    @CasbinAccess(resource = "academic:course", action = "edit")
     public Result<Void> updateCourseStatus(@PathVariable Long id,
                                             @RequestBody Map<String, Object> data) {
         Integer status = ((Number) data.get("status")).intValue();
