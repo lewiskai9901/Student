@@ -66,16 +66,6 @@ public class Student extends AggregateRoot<Long> {
     private Long classId;
 
     /**
-     * 宿舍ID
-     */
-    private Long dormitoryId;
-
-    /**
-     * 床位号
-     */
-    private Integer bedNumber;
-
-    /**
      * 学籍状态
      */
     private StudentStatus status;
@@ -166,8 +156,6 @@ public class Student extends AggregateRoot<Long> {
             LocalDate enrollmentDate,
             LocalDate expectedGraduationDate,
             Long classId,
-            Long dormitoryId,
-            Integer bedNumber,
             StudentStatus status,
             String avatarUrl,
             String homeAddress,
@@ -189,8 +177,6 @@ public class Student extends AggregateRoot<Long> {
         student.enrollmentDate = enrollmentDate;
         student.expectedGraduationDate = expectedGraduationDate;
         student.classId = classId;
-        student.dormitoryId = dormitoryId;
-        student.bedNumber = bedNumber;
         student.status = status;
         student.avatarUrl = avatarUrl;
         student.homeAddress = homeAddress;
@@ -249,24 +235,6 @@ public class Student extends AggregateRoot<Long> {
         this.updatedAt = LocalDateTime.now();
 
         // 可以发布转班事件
-    }
-
-    /**
-     * 分配宿舍
-     */
-    public void assignDormitory(Long dormitoryId, Integer bedNumber) {
-        this.dormitoryId = dormitoryId;
-        this.bedNumber = bedNumber;
-        this.updatedAt = LocalDateTime.now();
-    }
-
-    /**
-     * 退出宿舍
-     */
-    public void leaveDormitory() {
-        this.dormitoryId = null;
-        this.bedNumber = null;
-        this.updatedAt = LocalDateTime.now();
     }
 
     /**
@@ -344,8 +312,6 @@ public class Student extends AggregateRoot<Long> {
     public LocalDate getEnrollmentDate() { return enrollmentDate; }
     public LocalDate getExpectedGraduationDate() { return expectedGraduationDate; }
     public Long getClassId() { return classId; }
-    public Long getDormitoryId() { return dormitoryId; }
-    public Integer getBedNumber() { return bedNumber; }
     public StudentStatus getStatus() { return status; }
     public String getAvatarUrl() { return avatarUrl; }
     public String getHomeAddress() { return homeAddress; }

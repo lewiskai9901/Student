@@ -10,7 +10,6 @@ import type {
   UpdateStudentRequest,
   StudentQueryParams,
   StudentSearchParams,
-  AssignDormitoryRequest,
   ResetPasswordRequest,
   StudentStatusChange
 } from '@/types/student'
@@ -94,13 +93,6 @@ export function countStudentsByClass(classId: number | string): Promise<number> 
 }
 
 /**
- * 统计宿舍学生数量
- */
-export function countStudentsByDormitory(dormitoryId: number | string): Promise<number> {
-  return http.get<number>(`${STUDENT_URL}/count/by-dormitory`, { params: { dormitoryId } })
-}
-
-/**
  * 根据班级ID获取学生列表
  */
 export function getStudentsByClass(classId: number | string): Promise<Student[]> {
@@ -114,13 +106,6 @@ export function getStudentsByClass(classId: number | string): Promise<Student[]>
  */
 export function updateStudentStatus(id: number | string, status: number): Promise<void> {
   return http.patch(`${STUDENT_URL}/${id}/status`, null, { params: { status } })
-}
-
-/**
- * 分配宿舍
- */
-export function assignDormitory(id: number | string, data: AssignDormitoryRequest): Promise<void> {
-  return http.patch(`${STUDENT_URL}/${id}/dormitory`, null, { params: data })
 }
 
 /**
@@ -201,9 +186,7 @@ export const studentApi = {
   deleteBatch: deleteStudents,
   exists: existsStudentNo,
   countByClass: countStudentsByClass,
-  countByDormitory: countStudentsByDormitory,
   updateStatus: updateStudentStatus,
-  assignDormitory,
   transferClass,
   resetPassword,
   export: exportStudents,

@@ -9,10 +9,10 @@ import com.school.management.application.place.query.PlaceQueryCriteria;
 import com.school.management.application.place.query.PlaceStatisticsDTO;
 import com.school.management.domain.place.model.aggregate.Place;
 import com.school.management.domain.place.model.entity.PlaceClassAssignment;
-import com.school.management.domain.place.model.entity.PlaceOccupant;
+import com.school.management.domain.place.model.entity.UniversalPlaceOccupant;
 import com.school.management.domain.place.model.valueobject.*;
 import com.school.management.domain.place.repository.PlaceClassAssignmentRepository;
-import com.school.management.domain.place.repository.PlaceOccupantRepository;
+import com.school.management.domain.place.repository.UniversalPlaceOccupantRepository;
 import com.school.management.domain.place.repository.PlaceRepository;
 import com.school.management.domain.access.repository.AccessRelationRepository;
 import com.school.management.exception.BusinessException;
@@ -42,7 +42,7 @@ public class PlaceApplicationService {
     private static final AtomicLong CODE_SEQUENCE = new AtomicLong(System.currentTimeMillis());
 
     private final PlaceRepository placeRepository;
-    private final PlaceOccupantRepository occupantRepository;
+    private final UniversalPlaceOccupantRepository occupantRepository;
     private final PlaceClassAssignmentRepository classAssignmentRepository;
     private final AccessRelationRepository accessRelationRepository;
     private final PlaceMapper placeMapper;
@@ -255,23 +255,27 @@ public class PlaceApplicationService {
             throw new BusinessException("该场所无法入住");
         }
 
+        String occupantTypeStr = command.getOccupantType().name();
+        String positionNoStr = command.getPositionNo() != null ? String.valueOf(command.getPositionNo()) : null;
+
         // 验证位置是否已被占用
-        if (command.getPositionNo() != null &&
-            occupantRepository.isPositionOccupied(command.getPlaceId(), command.getPositionNo())) {
+        if (positionNoStr != null &&
+            occupantRepository.isPositionOccupied(command.getPlaceId(), positionNoStr)) {
             throw new BusinessException("该位置已被占用");
         }
 
         // 验证占用者是否已有其他在住记录
-        if (occupantRepository.hasActiveOccupancy(command.getOccupantType(), command.getOccupantId())) {
+        if (occupantRepository.hasActiveOccupancy(occupantTypeStr, command.getOccupantId())) {
             throw new BusinessException("该" + command.getOccupantType().getDescription() + "已有在住记录");
         }
 
         // 创建占用记录
-        PlaceOccupant occupant = PlaceOccupant.create(
+        UniversalPlaceOccupant occupant = UniversalPlaceOccupant.create(
             command.getPlaceId(),
-            command.getOccupantType(),
+            occupantTypeStr,
             command.getOccupantId(),
-            command.getPositionNo()
+            null, // occupantName
+            positionNoStr
         );
         if (command.getRemark() != null) {
             occupant.setRemark(command.getRemark());
@@ -296,7 +300,7 @@ public class PlaceApplicationService {
 
         // 查找在住记录
         // 这里的 occupantId 是占用记录的ID，不是占用者ID
-        PlaceOccupant occupant = occupantRepository.findById(occupantId)
+        UniversalPlaceOccupant occupant = occupantRepository.findById(occupantId)
             .orElseThrow(() -> new BusinessException("占用记录不存在"));
 
         if (!occupant.getPlaceId().equals(placeId)) {
@@ -699,21 +703,21 @@ public class PlaceApplicationService {
         return dto;
     }
 
-    private PlaceOccupantDTO toOccupantDTO(PlaceOccupant occupant) {
+    private PlaceOccupantDTO toOccupantDTO(UniversalPlaceOccupant occupant) {
         PlaceOccupantDTO dto = new PlaceOccupantDTO();
         dto.setId(occupant.getId());
         dto.setPlaceId(occupant.getPlaceId());
-        dto.setOccupantType(occupant.getOccupantType().name());
+        dto.setOccupantType(occupant.getOccupantType());
         dto.setOccupantId(occupant.getOccupantId());
         dto.setOccupantName(occupant.getOccupantName());
-        dto.setOccupantNo(occupant.getOccupantNo());
-        dto.setPositionNo(occupant.getPositionNo());
-        dto.setCheckInDate(occupant.getCheckInDate());
-        dto.setCheckOutDate(occupant.getCheckOutDate());
+        dto.setOccupantNo(occupant.getUsername());
+        dto.setPositionNo(parseInteger(occupant.getPositionNo()));
+        dto.setCheckInDate(occupant.getCheckInTime() != null ? occupant.getCheckInTime().toLocalDate() : null);
+        dto.setCheckOutDate(occupant.getCheckOutTime() != null ? occupant.getCheckOutTime().toLocalDate() : null);
         dto.setStatus(occupant.getStatus());
         dto.setStatusText(occupant.isActive() ? "在住" : "已退出");
         dto.setRemark(occupant.getRemark());
-        dto.setCreatedAt(occupant.getCreatedAt());
+        dto.setCreatedAt(occupant.getCheckInTime());
         return dto;
     }
 }

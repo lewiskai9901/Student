@@ -19,7 +19,6 @@ public class StudentQueryCriteria {
     private Long orgUnitId;
     private Integer gradeLevel;
     private Integer status;
-    private Long dormitoryId;
     private Integer pageNum;
     private Integer pageSize;
 }

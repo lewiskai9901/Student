@@ -76,36 +76,6 @@ public class StudentPO {
     private Long classId;
 
     /**
-     * 宿舍ID
-     */
-    private Long dormitoryId;
-
-    /**
-     * 床位号 (数据库中为字符串类型，如"床位1")
-     */
-    @TableField("bed_number")
-    private String bedNumber;
-
-    /**
-     * 获取床位号数字
-     */
-    public Integer getBedNumberAsInt() {
-        if (bedNumber == null || bedNumber.isEmpty()) {
-            return null;
-        }
-        // 尝试提取数字，如 "床位2" -> 2
-        String numStr = bedNumber.replaceAll("[^0-9]", "");
-        if (numStr.isEmpty()) {
-            return null;
-        }
-        try {
-            return Integer.parseInt(numStr);
-        } catch (NumberFormatException e) {
-            return null;
-        }
-    }
-
-    /**
      * 学籍状态: 0-在读, 1-休学, 2-退学, 3-毕业, 4-转学, 5-开除
      */
     @TableField("student_status")

@@ -74,13 +74,6 @@ public class StudentRepositoryImpl implements StudentRepository {
     }
 
     @Override
-    public List<Student> findByDormitoryId(Long dormitoryId) {
-        return studentMapper.selectByDormitoryId(dormitoryId).stream()
-                .map(this::toDomain)
-                .collect(Collectors.toList());
-    }
-
-    @Override
     public boolean existsByStudentNo(String studentNo) {
         return studentMapper.countByStudentNo(studentNo) > 0;
     }
@@ -144,8 +137,6 @@ public class StudentRepositoryImpl implements StudentRepository {
         po.setEnrollmentDate(student.getEnrollmentDate());
         po.setExpectedGraduationDate(student.getExpectedGraduationDate());
         po.setClassId(student.getClassId());
-        po.setDormitoryId(student.getDormitoryId());
-        po.setBedNumber(student.getBedNumber() != null ? "床位" + student.getBedNumber() : null);
         po.setStatus(student.getStatus() != null ? student.getStatus().getCode() : null);
         po.setAvatarUrl(student.getAvatarUrl());
         po.setHomeAddress(student.getHomeAddress());
@@ -170,8 +161,6 @@ public class StudentRepositoryImpl implements StudentRepository {
                 po.getEnrollmentDate(),
                 po.getExpectedGraduationDate(),
                 po.getClassId(),
-                po.getDormitoryId(),
-                po.getBedNumberAsInt(),  // 使用转换方法
                 po.getStatus() != null ? StudentStatus.fromCode(po.getStatus()) : null,
                 po.getAvatarUrl(),
                 po.getHomeAddress(),

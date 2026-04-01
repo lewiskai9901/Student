@@ -59,12 +59,6 @@ public interface DddStudentMapper extends BaseMapper<StudentPO> {
     List<StudentPO> selectByClassIdAndStatus(@Param("classId") Long classId, @Param("status") Integer status);
 
     /**
-     * 根据宿舍ID查询
-     */
-    @Select(BASE_JOIN_SELECT + " WHERE s.dormitory_id = #{dormitoryId} AND s.deleted = 0")
-    List<StudentPO> selectByDormitoryId(@Param("dormitoryId") Long dormitoryId);
-
-    /**
      * 分页查询学生(带用户信息)
      */
     @Select(BASE_JOIN_SELECT + " WHERE s.deleted = 0 ORDER BY s.created_at DESC LIMIT #{offset}, #{limit}")

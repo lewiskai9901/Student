@@ -6,8 +6,8 @@ import com.school.management.domain.inspection.model.v7.execution.TargetType;
 import com.school.management.domain.organization.model.OrgUnit;
 import com.school.management.domain.organization.repository.OrgUnitRepository;
 import com.school.management.domain.place.model.aggregate.Place;
-import com.school.management.domain.place.model.entity.PlaceOccupant;
-import com.school.management.domain.place.repository.PlaceOccupantRepository;
+import com.school.management.domain.place.model.entity.UniversalPlaceOccupant;
+import com.school.management.domain.place.repository.UniversalPlaceOccupantRepository;
 import com.school.management.domain.place.repository.PlaceRepository;
 import com.school.management.domain.user.model.aggregate.User;
 import com.school.management.domain.user.repository.UserRepository;
@@ -27,9 +27,14 @@ import java.util.stream.Collectors;
 @Service
 public class TargetPopulationService {
 
+    /**
+     * Maximum traversal depth for org hierarchy to prevent stack overflow
+     */
+    private static final int MAX_DEPTH = 10;
+
     private final OrgUnitRepository orgUnitRepository;
     private final PlaceRepository placeRepository;
-    private final PlaceOccupantRepository placeOccupantRepository;
+    private final UniversalPlaceOccupantRepository placeOccupantRepository;
     private final UserRepository userRepository;
     private final ObjectMapper objectMapper;
 
@@ -96,35 +101,84 @@ public class TargetPopulationService {
     /**
      * 目标类型=ORG：范围内的组织单元及其后代即为目标
      * 目标名称包含父组织上下文（"父名-子名"格式），便于区分同名组织
+     *
+     * Uses BFS with batch fetching: ONE query per depth level instead of N+1.
      */
     private List<TargetInfo> resolveOrgTargets(ScopeType scopeType, List<Long> scopeIds) {
-        Set<Long> visited = new LinkedHashSet<>();
-        List<TargetInfo> result = new ArrayList<>();
+        if (scopeIds == null || scopeIds.isEmpty()) {
+            return Collections.emptyList();
+        }
 
+        // BFS: collect all org units level by level with batch queries
+        Set<Long> visited = new LinkedHashSet<>();
+        List<OrgUnit> allOrgs = new ArrayList<>();
+
+        // Seed: fetch all root scope orgs in one batch via findById each (they are the user-specified roots)
+        List<Long> currentLevelIds = new ArrayList<>();
         for (Long orgId : scopeIds) {
-            collectOrgAndDescendants(orgId, visited, result);
+            if (orgId != null && !visited.contains(orgId)) {
+                visited.add(orgId);
+                currentLevelIds.add(orgId);
+            }
+        }
+
+        // Fetch the root-level orgs individually (these are the user-specified scope IDs, typically small)
+        for (Long orgId : currentLevelIds) {
+            orgUnitRepository.findById(orgId).ifPresent(allOrgs::add);
+        }
+
+        // BFS downward: batch-fetch children at each level
+        int depth = 0;
+        while (!currentLevelIds.isEmpty() && depth < MAX_DEPTH) {
+            List<OrgUnit> children = orgUnitRepository.findByParentIds(currentLevelIds);
+            currentLevelIds = new ArrayList<>();
+            for (OrgUnit child : children) {
+                if (child.getId() != null && !visited.contains(child.getId())) {
+                    visited.add(child.getId());
+                    currentLevelIds.add(child.getId());
+                    allOrgs.add(child);
+                }
+            }
+            depth++;
+        }
+
+        if (!currentLevelIds.isEmpty()) {
+            log.warn("Org hierarchy traversal hit MAX_DEPTH={} starting from scopeIds={}. Some deeper descendants may be omitted.",
+                    MAX_DEPTH, scopeIds);
+        }
+
+        // Build parent name lookup for display names (batch: all parents are already in allOrgs or can be fetched)
+        Map<Long, String> parentNameMap = buildParentNameMap(allOrgs);
+
+        // Convert to TargetInfo with display names
+        List<TargetInfo> result = new ArrayList<>();
+        for (OrgUnit org : allOrgs) {
+            String displayName = buildOrgDisplayName(org, parentNameMap);
+            result.add(new TargetInfo(org.getId(), displayName, org.getParentId()));
         }
         return result;
-    }
-
-    private void collectOrgAndDescendants(Long orgId, Set<Long> visited, List<TargetInfo> result) {
-        if (orgId == null || visited.contains(orgId)) return;
-        visited.add(orgId);
-
-        orgUnitRepository.findById(orgId).ifPresent(org -> {
-            String displayName = buildOrgDisplayName(org);
-            result.add(new TargetInfo(org.getId(), displayName, org.getParentId()));
-            // 递归查找子节点
-            List<OrgUnit> children = orgUnitRepository.findByParentId(orgId);
-            for (OrgUnit child : children) {
-                collectOrgAndDescendants(child.getId(), visited, result);
-            }
-        });
     }
 
     /**
      * 构建带父组织上下文的显示名称（"父名-子名"格式）
      * 便于区分不同年级下的同名班级
+     *
+     * Batch-friendly version: uses pre-built parent name map to avoid N+1 queries.
+     */
+    private String buildOrgDisplayName(OrgUnit org, Map<Long, String> parentNameMap) {
+        if (org.getParentId() == null) {
+            return org.getUnitName();
+        }
+        String parentName = parentNameMap.get(org.getParentId());
+        if (parentName != null) {
+            return parentName + "-" + org.getUnitName();
+        }
+        return org.getUnitName();
+    }
+
+    /**
+     * 构建带父组织上下文的显示名称（"父名-子名"格式）
+     * Single-org version for use outside batch contexts. Fetches parent from repository.
      */
     private String buildOrgDisplayName(OrgUnit org) {
         if (org.getParentId() == null) {
@@ -136,14 +190,51 @@ public class TargetPopulationService {
     }
 
     /**
+     * Build a map of orgId -> unitName for parent name lookups.
+     * Fetches any missing parents that aren't already in the collection.
+     */
+    private Map<Long, String> buildParentNameMap(List<OrgUnit> orgs) {
+        Map<Long, String> nameMap = new HashMap<>();
+        Set<Long> missingParentIds = new LinkedHashSet<>();
+
+        for (OrgUnit org : orgs) {
+            nameMap.put(org.getId(), org.getUnitName());
+        }
+
+        // Find parents that aren't already in the map
+        for (OrgUnit org : orgs) {
+            if (org.getParentId() != null && !nameMap.containsKey(org.getParentId())) {
+                missingParentIds.add(org.getParentId());
+            }
+        }
+
+        // Fetch missing parents (typically only the parents of root scope orgs)
+        for (Long parentId : missingParentIds) {
+            orgUnitRepository.findById(parentId).ifPresent(p -> nameMap.put(p.getId(), p.getUnitName()));
+        }
+
+        return nameMap;
+    }
+
+    /**
      * 过滤目标列表，仅保留叶子组织（没有子节点的组织）
+     *
+     * Uses ONE batch query to find which orgs have children, instead of N individual queries.
      */
     public List<TargetInfo> filterLeafOrgs(List<TargetInfo> targets) {
         if (targets == null || targets.isEmpty()) {
             return targets;
         }
+        // Collect all target IDs, then batch-check which ones have children
+        List<Long> allIds = targets.stream()
+                .map(TargetInfo::getId)
+                .filter(Objects::nonNull)
+                .collect(Collectors.toList());
+
+        Set<Long> idsWithChildren = orgUnitRepository.findParentIdsWithChildren(allIds);
+
         return targets.stream()
-                .filter(t -> orgUnitRepository.countByParentId(t.getId()) == 0)
+                .filter(t -> !idsWithChildren.contains(t.getId()))
                 .collect(Collectors.toList());
     }
 
@@ -162,9 +253,7 @@ public class TargetPopulationService {
 
         // ORG 范围 → 先展开所有后代组织 → 再查每个组织的场所
         Set<Long> allOrgIds = new LinkedHashSet<>();
-        for (Long orgId : scopeIds) {
-            collectOrgIds(orgId, allOrgIds);
-        }
+        collectAllDescendantIds(scopeIds, allOrgIds);
 
         List<TargetInfo> targets = new ArrayList<>();
         log.info("resolvePlaceTargets: {} org IDs expanded from scope", allOrgIds.size());
@@ -181,12 +270,42 @@ public class TargetPopulationService {
         return targets;
     }
 
+    /**
+     * BFS traversal to collect org IDs including all descendants.
+     * Uses batch fetching (ONE query per depth level) with depth limit.
+     */
     private void collectOrgIds(Long orgId, Set<Long> collected) {
         if (orgId == null || collected.contains(orgId)) return;
-        collected.add(orgId);
-        List<OrgUnit> children = orgUnitRepository.findByParentId(orgId);
-        for (OrgUnit child : children) {
-            collectOrgIds(child.getId(), collected);
+        collectAllDescendantIds(List.of(orgId), collected);
+    }
+
+    /**
+     * Batch BFS to collect all descendant org IDs from multiple root IDs.
+     */
+    private void collectAllDescendantIds(List<Long> rootIds, Set<Long> collected) {
+        List<Long> currentLevel = new ArrayList<>();
+        for (Long id : rootIds) {
+            if (id != null && !collected.contains(id)) {
+                collected.add(id);
+                currentLevel.add(id);
+            }
+        }
+
+        int depth = 0;
+        while (!currentLevel.isEmpty() && depth < MAX_DEPTH) {
+            List<OrgUnit> children = orgUnitRepository.findByParentIds(currentLevel);
+            currentLevel = new ArrayList<>();
+            for (OrgUnit child : children) {
+                if (child.getId() != null && !collected.contains(child.getId())) {
+                    collected.add(child.getId());
+                    currentLevel.add(child.getId());
+                }
+            }
+            depth++;
+        }
+
+        if (!currentLevel.isEmpty()) {
+            log.warn("collectAllDescendantIds hit MAX_DEPTH={}, some deeper descendants may be omitted.", MAX_DEPTH);
         }
     }
 
@@ -294,7 +413,14 @@ public class TargetPopulationService {
     private List<TargetInfo> deriveOrgTargets(Long parentId, String parentType, String filter) {
         if ("ORG".equals(parentType)) {
             List<OrgUnit> children = orgUnitRepository.findByParentId(parentId);
-            return applyOrgFilter(children, filter);
+            List<TargetInfo> filtered = applyOrgFilter(children, filter);
+            // 如果没有子组织（叶子节点），返回父目标自身
+            if (filtered.isEmpty()) {
+                return orgUnitRepository.findById(parentId)
+                        .map(o -> List.of(new TargetInfo(o.getId(), buildOrgDisplayName(o), o.getParentId())))
+                        .orElse(Collections.emptyList());
+            }
+            return filtered;
         } else if ("PLACE".equals(parentType)) {
             return placeRepository.findById(parentId)
                     .filter(p -> p.getOrgUnitId() != null)
@@ -333,7 +459,7 @@ public class TargetPopulationService {
             List<User> users = userRepository.findByOrgUnitIdIn(List.of(parentId));
             return applyUserFilter(users, filter);
         } else if ("PLACE".equals(parentType)) {
-            List<PlaceOccupant> occupants = placeOccupantRepository.findActiveByPlaceId(parentId);
+            List<UniversalPlaceOccupant> occupants = placeOccupantRepository.findActiveByPlaceId(parentId);
             return applyOccupantFilter(occupants, filter);
         }
         log.warn("deriveUserTargets: 不支持从 {} 派生 USER", parentType);
@@ -385,9 +511,10 @@ public class TargetPopulationService {
         if (!codes.isEmpty()) {
             places = places.stream()
                     .filter(p -> {
-                        // 匹配 categoryId 或 placeType
+                        // 匹配 categoryId、placeType 或 roomType
                         if (p.getCategoryId() != null && codes.contains(String.valueOf(p.getCategoryId()))) return true;
                         if (p.getPlaceType() != null && codes.contains(p.getPlaceType().name())) return true;
+                        if (p.getRoomType() != null && codes.contains(p.getRoomType().name())) return true;
                         return false;
                     })
                     .collect(Collectors.toList());
@@ -416,7 +543,7 @@ public class TargetPopulationService {
      * 对占用者列表应用过滤条件（占用者本身就是用户/学生）
      * 目前不做额外过滤，直接映射为 TargetInfo
      */
-    private List<TargetInfo> applyOccupantFilter(List<PlaceOccupant> occupants, String filter) {
+    private List<TargetInfo> applyOccupantFilter(List<UniversalPlaceOccupant> occupants, String filter) {
         return occupants.stream()
                 .map(o -> new TargetInfo(o.getOccupantId(), o.getOccupantName(), null))
                 .collect(Collectors.toList());

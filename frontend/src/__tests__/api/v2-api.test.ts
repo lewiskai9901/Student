@@ -24,7 +24,6 @@ import {
   searchStudents,
   existsStudentNo,
   updateStudentStatus,
-  assignDormitory,
   transferClass,
   studentApi
 } from '@/api/student'
@@ -212,18 +211,6 @@ describe('V2 API', () => {
       })
     })
 
-    describe('assignDormitory', () => {
-      it('should call PATCH /students/:id/dormitory with data', async () => {
-        mockedHttp.patch.mockResolvedValue(undefined)
-
-        await assignDormitory(1, { dormitoryId: 101, bedNo: '1' })
-
-        expect(mockedHttp.patch).toHaveBeenCalledWith('/students/1/dormitory', null, {
-          params: { dormitoryId: 101, bedNo: '1' }
-        })
-      })
-    })
-
     describe('transferClass', () => {
       it('should call PATCH /students/:id/transfer with newClassId', async () => {
         mockedHttp.patch.mockResolvedValue(undefined)
@@ -248,7 +235,6 @@ describe('V2 API', () => {
         expect(studentApi.search).toBe(searchStudents)
         expect(studentApi.exists).toBe(existsStudentNo)
         expect(studentApi.updateStatus).toBe(updateStudentStatus)
-        expect(studentApi.assignDormitory).toBe(assignDormitory)
         expect(studentApi.transferClass).toBe(transferClass)
       })
     })

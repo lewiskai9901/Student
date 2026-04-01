@@ -42,7 +42,6 @@ public class StudentController {
             @Parameter(description = "班级ID") @RequestParam(required = false) Long classId,
             @Parameter(description = "组织单元ID") @RequestParam(required = false) Long orgUnitId,
             @Parameter(description = "年级") @RequestParam(required = false) Integer gradeLevel,
-            @Parameter(description = "宿舍ID") @RequestParam(required = false) Long dormitoryId,
             @Parameter(description = "状态") @RequestParam(required = false) Integer studentStatus,
             @Parameter(description = "页码") @RequestParam(defaultValue = "1") Integer pageNum,
             @Parameter(description = "每页数量") @RequestParam(defaultValue = "10") Integer pageSize) {
@@ -52,7 +51,6 @@ public class StudentController {
         criteria.setClassId(classId);
         criteria.setOrgUnitId(orgUnitId);
         criteria.setGradeLevel(gradeLevel);
-        criteria.setDormitoryId(dormitoryId);
         criteria.setStatus(studentStatus);
         criteria.setPageNum(pageNum);
         criteria.setPageSize(pageSize);
@@ -93,8 +91,6 @@ public class StudentController {
                 .birthDate(request.getBirthDate())
                 .enrollmentDate(request.getEnrollmentDate())
                 .classId(request.getClassId())
-                .dormitoryId(request.getDormitoryId())
-                .bedNumber(request.getBedNumber())
                 .homeAddress(request.getHomeAddress())
                 .emergencyContact(request.getEmergencyContact())
                 .emergencyPhone(request.getEmergencyPhone())
@@ -219,32 +215,8 @@ public class StudentController {
         return Result.success();
     }
 
-    @Operation(summary = "分配宿舍")
-    @PatchMapping("/{id}/dormitory")
-    @CasbinAccess(resource = "student:info", action = "edit")
-    public Result<Void> assignDormitory(
-            @Parameter(description = "学生ID") @PathVariable Long id,
-            @Parameter(description = "宿舍ID") @RequestParam Long dormitoryId,
-            @Parameter(description = "床位号") @RequestParam(required = false) Integer bedNumber) {
-        AssignDormitoryCommand command = AssignDormitoryCommand.builder()
-                .studentId(id)
-                .dormitoryId(dormitoryId)
-                .bedNumber(bedNumber)
-                .build();
-        studentService.assignDormitory(command);
-        return Result.success();
-    }
-
-    @Operation(summary = "移除宿舍")
-    @DeleteMapping("/{id}/dormitory")
-    @CasbinAccess(resource = "student:info", action = "edit")
-    public Result<Void> removeDormitory(
-            @Parameter(description = "学生ID") @PathVariable Long id) {
-        studentService.removeDormitory(id);
-        return Result.success();
-    }
-
     // ==================== 查询和统计 ====================
+    // 注意: 宿舍分配/退出已统一到 /v9/places/{id}/check-in 和 /v9/places/{id}/check-out
 
     @Operation(summary = "根据班级获取学生列表")
     @GetMapping("/by-class/{classId}")
@@ -252,15 +224,6 @@ public class StudentController {
     public Result<List<StudentDTO>> getStudentsByClass(
             @Parameter(description = "班级ID") @PathVariable Long classId) {
         List<StudentDTO> result = studentService.findByClassId(classId);
-        return Result.success(result);
-    }
-
-    @Operation(summary = "根据宿舍获取学生列表")
-    @GetMapping("/by-dormitory/{dormitoryId}")
-    @CasbinAccess(resource = "student:info", action = "view")
-    public Result<List<StudentDTO>> getStudentsByDormitory(
-            @Parameter(description = "宿舍ID") @PathVariable Long dormitoryId) {
-        List<StudentDTO> result = studentService.findByDormitoryId(dormitoryId);
         return Result.success(result);
     }
 

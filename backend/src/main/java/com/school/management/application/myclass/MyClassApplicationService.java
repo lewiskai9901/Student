@@ -8,10 +8,10 @@ import com.school.management.domain.organization.model.SchoolClass;
 import com.school.management.domain.organization.repository.SchoolClassRepository;
 import com.school.management.domain.place.model.aggregate.Place;
 import com.school.management.domain.place.model.entity.PlaceClassAssignment;
-import com.school.management.domain.place.model.entity.PlaceOccupant;
+import com.school.management.domain.place.model.entity.UniversalPlaceOccupant;
 import com.school.management.domain.place.model.valueobject.GenderType;
 import com.school.management.domain.place.repository.PlaceClassAssignmentRepository;
-import com.school.management.domain.place.repository.PlaceOccupantRepository;
+import com.school.management.domain.place.repository.UniversalPlaceOccupantRepository;
 import com.school.management.domain.place.repository.PlaceRepository;
 import com.school.management.domain.student.model.aggregate.Student;
 import com.school.management.domain.student.model.valueobject.Gender;
@@ -37,7 +37,7 @@ public class MyClassApplicationService {
     private final StudentRepository studentRepository;
     private final PlaceClassAssignmentRepository placeClassAssignmentRepository;
     private final PlaceRepository placeRepository;
-    private final PlaceOccupantRepository placeOccupantRepository;
+    private final UniversalPlaceOccupantRepository placeOccupantRepository;
 
     /**
      * 获取当前用户管理的班级列表
@@ -164,10 +164,10 @@ public class MyClassApplicationService {
         }
 
         // 4. 查询每个宿舍(place)的在住学生
-        Map<Long, List<PlaceOccupant>> occupantsByPlace = new HashMap<>();
+        Map<Long, List<UniversalPlaceOccupant>> occupantsByPlace = new HashMap<>();
         for (Long placeId : placeIds) {
             try {
-                List<PlaceOccupant> occupants = placeOccupantRepository.findActiveByPlaceId(placeId);
+                List<UniversalPlaceOccupant> occupants = placeOccupantRepository.findActiveByPlaceId(placeId);
                 occupantsByPlace.put(placeId, occupants);
             } catch (Exception e) {
                 log.warn("Failed to load occupants for place {}: {}", placeId, e.getMessage());
@@ -223,14 +223,14 @@ public class MyClassApplicationService {
             int totalStudents = 0;
 
             for (Place room : buildingRooms) {
-                List<PlaceOccupant> roomOccupants = occupantsByPlace.getOrDefault(room.getId(), new ArrayList<>());
+                List<UniversalPlaceOccupant> roomOccupants = occupantsByPlace.getOrDefault(room.getId(), new ArrayList<>());
                 totalStudents += roomOccupants.size();
 
                 List<DormitoryDistributionDTO.StudentBedDTO> studentBeds = roomOccupants.stream()
                     .map(o -> DormitoryDistributionDTO.StudentBedDTO.builder()
                         .id(o.getOccupantId())
                         .name(o.getOccupantName())
-                        .bedNo(o.getPositionNo() != null ? String.valueOf(o.getPositionNo()) : null)
+                        .bedNo(o.getPositionNo())
                         .build())
                     .collect(Collectors.toList());
 
@@ -287,13 +287,20 @@ public class MyClassApplicationService {
 
     /**
      * 从DDD Student domain对象转换为MyClassStudentDTO
+     * 宿舍信息通过 place_occupants 查询（统一场所管理体系）
      */
     private MyClassStudentDTO toStudentDTOFromDomain(Student s) {
-        // 构建宿舍显示名称 - 需要查询宿舍Place信息
+        // 通过 place_occupants 查询学生当前入住的宿舍
         String dormitoryName = null;
-        if (s.getDormitoryId() != null) {
-            try {
-                Optional<Place> dormPlace = placeRepository.findById(s.getDormitoryId());
+        String bedNo = null;
+        try {
+            Optional<UniversalPlaceOccupant> activeOccupancy =
+                placeOccupantRepository.findActiveByOccupant("STUDENT", s.getId());
+            if (activeOccupancy.isPresent()) {
+                UniversalPlaceOccupant occ = activeOccupancy.get();
+                bedNo = occ.getPositionNo();
+                // 查询场所名称
+                Optional<Place> dormPlace = placeRepository.findById(occ.getPlaceId());
                 if (dormPlace.isPresent()) {
                     Place place = dormPlace.get();
                     if (place.getBuildingId() != null) {
@@ -307,9 +314,9 @@ public class MyClassApplicationService {
                         dormitoryName = place.getRoomNo() != null ? String.valueOf(place.getRoomNo()) : place.getPlaceName();
                     }
                 }
-            } catch (Exception e) {
-                log.debug("查询宿舍信息失败: dormitoryId={}, error={}", s.getDormitoryId(), e.getMessage());
             }
+        } catch (Exception e) {
+            log.debug("查询学生宿舍信息失败: studentId={}, error={}", s.getId(), e.getMessage());
         }
 
         // 状态映射
@@ -338,7 +345,7 @@ public class MyClassApplicationService {
             .gender(gender)
             .phone(s.getPhone())
             .dormitoryName(dormitoryName)
-            .bedNo(s.getBedNumber() != null ? String.valueOf(s.getBedNumber()) : null)
+            .bedNo(bedNo)
             .status(status)
             .build();
     }

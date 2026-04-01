@@ -39,12 +39,6 @@ public class EnrollStudentRequest {
     @Schema(description = "班级ID", required = true)
     private Long classId;
 
-    @Schema(description = "宿舍ID")
-    private Long dormitoryId;
-
-    @Schema(description = "床位号")
-    private Integer bedNumber;
-
     @Schema(description = "家庭住址")
     private String homeAddress;
 

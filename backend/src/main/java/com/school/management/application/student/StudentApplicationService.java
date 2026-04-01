@@ -69,11 +69,6 @@ public class StudentApplicationService {
                 command.getRemark()
         );
 
-        // 分配宿舍
-        if (command.getDormitoryId() != null) {
-            student.assignDormitory(command.getDormitoryId(), command.getBedNumber());
-        }
-
         // 保存学生
         Student saved = studentRepository.save(student);
 
@@ -172,35 +167,6 @@ public class StudentApplicationService {
                 command.getStudentId(), oldClassId, command.getNewClassId(), command.getReason());
 
         log.info("学生转班成功: {} -> {}", command.getStudentId(), command.getNewClassId());
-    }
-
-    /**
-     * 分配宿舍
-     */
-    @Transactional
-    public void assignDormitory(AssignDormitoryCommand command) {
-        Student student = studentRepository.findById(command.getStudentId())
-                .orElseThrow(() -> new BusinessException("学生不存在: " + command.getStudentId()));
-
-        student.assignDormitory(command.getDormitoryId(), command.getBedNumber());
-        studentRepository.save(student);
-
-        log.info("学生宿舍分配成功: {} -> {} 床位{}",
-                command.getStudentId(), command.getDormitoryId(), command.getBedNumber());
-    }
-
-    /**
-     * 移除宿舍
-     */
-    @Transactional
-    public void removeDormitory(Long studentId) {
-        Student student = studentRepository.findById(studentId)
-                .orElseThrow(() -> new BusinessException("学生不存在: " + studentId));
-
-        student.assignDormitory(null, null);
-        studentRepository.save(student);
-
-        log.info("学生移除宿舍成功: {}", studentId);
     }
 
     /**
@@ -354,7 +320,6 @@ public class StudentApplicationService {
         repoCriteria.setClassId(criteria.getClassId());
         repoCriteria.setOrgUnitId(criteria.getOrgUnitId());
         repoCriteria.setGradeLevel(criteria.getGradeLevel());
-        repoCriteria.setDormitoryId(criteria.getDormitoryId());
         if (criteria.getStatus() != null) {
             repoCriteria.setStatus(StudentStatus.fromCode(criteria.getStatus()));
         }
@@ -377,15 +342,6 @@ public class StudentApplicationService {
      */
     public List<StudentDTO> findByClassId(Long classId) {
         return studentRepository.findByClassId(classId).stream()
-                .map(this::toDTO)
-                .collect(Collectors.toList());
-    }
-
-    /**
-     * 根据宿舍ID获取学生列表
-     */
-    public List<StudentDTO> findByDormitoryId(Long dormitoryId) {
-        return studentRepository.findByDormitoryId(dormitoryId).stream()
                 .map(this::toDTO)
                 .collect(Collectors.toList());
     }
@@ -433,8 +389,6 @@ public class StudentApplicationService {
                 .enrollmentDate(student.getEnrollmentDate())
                 .expectedGraduationDate(student.getExpectedGraduationDate())
                 .classId(student.getClassId())
-                .dormitoryId(student.getDormitoryId())
-                .bedNumber(student.getBedNumber())
                 .status(student.getStatus() != null ? student.getStatus().getCode() : null)
                 .statusText(student.getStatus() != null ? student.getStatus().getName() : null)
                 .avatarUrl(student.getAvatarUrl())

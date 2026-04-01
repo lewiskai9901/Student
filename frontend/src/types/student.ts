@@ -75,13 +75,8 @@ export interface Student {
   // V2 使用 statusText 代替 studentStatusName
   statusText?: string
 
-  // 宿舍信息
-  dormitoryId?: number | string
-  dormitoryName?: string
-  buildingNo?: string
-  buildingName?: string
-  roomNo?: string
-  bedNumber?: number | string
+  // 宿舍信息已统一到 place_occupants 管理体系
+  // 通过 /v9/places API 查询学生入住信息
 
   // 家庭信息
   homeAddress?: string
@@ -161,10 +156,6 @@ export interface CreateStudentRequest {
   educationSystem?: string
   graduatedSchool?: string
 
-  // 宿舍信息
-  dormitoryId?: number | string
-  bedNumber?: number | string
-
   // 家庭信息
   homeAddress?: string
   hukouProvince?: string
@@ -220,7 +211,6 @@ export interface StudentQueryParams {
   // V2 使用 status 代替 studentStatus
   status?: StudentStatus
   gender?: Gender
-  dormitoryId?: number | string
   enrollmentDateStart?: string
   enrollmentDateEnd?: string
   pageNum?: number
@@ -237,14 +227,6 @@ export interface StudentSearchParams {
   keyword: string
   classId?: number | string
   limit?: number
-}
-
-/**
- * 分配宿舍请求
- */
-export interface AssignDormitoryRequest {
-  dormitoryId: number | string
-  bedNumber?: string
 }
 
 /**

@@ -34,11 +34,6 @@ public interface StudentRepository extends Repository<Student, Long> {
     List<Student> findByClassIdAndStatus(Long classId, StudentStatus status);
 
     /**
-     * 根据宿舍ID查询所有学生
-     */
-    List<Student> findByDormitoryId(Long dormitoryId);
-
-    /**
      * 检查学号是否存在
      */
     boolean existsByStudentNo(String studentNo);
@@ -84,7 +79,6 @@ public interface StudentRepository extends Repository<Student, Long> {
         private Long orgUnitId;
         private Integer gradeLevel;
         private StudentStatus status;
-        private Long dormitoryId;
 
         public String getKeyword() { return keyword; }
         public void setKeyword(String keyword) { this.keyword = keyword; }
@@ -96,7 +90,5 @@ public interface StudentRepository extends Repository<Student, Long> {
         public void setGradeLevel(Integer gradeLevel) { this.gradeLevel = gradeLevel; }
         public StudentStatus getStatus() { return status; }
         public void setStatus(StudentStatus status) { this.status = status; }
-        public Long getDormitoryId() { return dormitoryId; }
-        public void setDormitoryId(Long dormitoryId) { this.dormitoryId = dormitoryId; }
     }
 }

@@ -23,8 +23,6 @@ public class UpdateStudentCommand {
     private LocalDate enrollmentDate;
     private LocalDate expectedGraduationDate;
     private Long classId;
-    private Long dormitoryId;
-    private Integer bedNumber;
     private String avatarUrl;
     private String homeAddress;
     private String emergencyContact;

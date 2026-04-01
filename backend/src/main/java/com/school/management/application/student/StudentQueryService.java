@@ -80,15 +80,6 @@ public class StudentQueryService {
     }
 
     /**
-     * 根据宿舍ID获取学生列表
-     */
-    public List<StudentDTO> findByDormitoryId(Long dormitoryId) {
-        return studentRepository.findByDormitoryId(dormitoryId).stream()
-                .map(this::toDTO)
-                .collect(Collectors.toList());
-    }
-
-    /**
      * 根据组织单元ID获取学生列表
      */
     public List<StudentDTO> findByOrgUnitId(Long orgUnitId) {
@@ -149,13 +140,6 @@ public class StudentQueryService {
     }
 
     /**
-     * 统计宿舍学生数量
-     */
-    public long countByDormitoryId(Long dormitoryId) {
-        return studentRepository.findByDormitoryId(dormitoryId).size();
-    }
-
-    /**
      * 按状态统计学生数量
      */
     public long countByStatus(StudentStatus status) {
@@ -173,7 +157,6 @@ public class StudentQueryService {
         repoCriteria.setClassId(criteria.getClassId());
         repoCriteria.setOrgUnitId(criteria.getOrgUnitId());
         repoCriteria.setGradeLevel(criteria.getGradeLevel());
-        repoCriteria.setDormitoryId(criteria.getDormitoryId());
         if (criteria.getStatus() != null) {
             repoCriteria.setStatus(StudentStatus.fromCode(criteria.getStatus()));
         }
@@ -197,8 +180,6 @@ public class StudentQueryService {
                 .enrollmentDate(student.getEnrollmentDate())
                 .expectedGraduationDate(student.getExpectedGraduationDate())
                 .classId(student.getClassId())
-                .dormitoryId(student.getDormitoryId())
-                .bedNumber(student.getBedNumber())
                 .status(student.getStatus() != null ? student.getStatus().getCode() : null)
                 .statusText(student.getStatus() != null ? student.getStatus().getName() : null)
                 .avatarUrl(student.getAvatarUrl())

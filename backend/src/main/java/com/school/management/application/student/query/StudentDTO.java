@@ -26,9 +26,6 @@ public class StudentDTO {
     private LocalDate expectedGraduationDate;
     private Long classId;
     private String className;
-    private Long dormitoryId;
-    private String dormitoryName;
-    private Integer bedNumber;
     private Integer status;
     private String statusText;
     private String avatarUrl;
