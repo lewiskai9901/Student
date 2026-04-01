@@ -13,13 +13,13 @@ import com.school.management.domain.organization.repository.OrgUnitRepository;
 import com.school.management.infrastructure.activity.ActivityEventPublisher;
 import com.school.management.domain.organization.repository.OrgUnitTypeRepository;
 import com.school.management.domain.organization.repository.PositionRepository;
-import com.school.management.domain.organization.repository.SchoolClassRepository;
+import com.school.management.domain.student.repository.SchoolClassRepository;
 import com.school.management.domain.organization.repository.UserPositionRepository;
 import com.school.management.domain.organization.service.OrgUnitDomainService;
 import com.school.management.domain.access.repository.AccessRelationRepository;
 import com.school.management.domain.shared.event.DomainEventPublisher;
-import com.school.management.infrastructure.persistence.organization.SchoolClassMapper;
-import com.school.management.infrastructure.persistence.organization.SchoolClassPO;
+import com.school.management.infrastructure.persistence.student.SchoolClassMapper;
+import com.school.management.infrastructure.persistence.student.SchoolClassPO;
 import com.school.management.infrastructure.persistence.place.UniversalPlaceOccupantMapper;
 import com.school.management.infrastructure.persistence.user.UserDomainMapper;
 import com.school.management.infrastructure.persistence.user.UserPO;
@@ -264,9 +264,11 @@ public class OrgUnitApplicationService {
         List<FieldChange> changes = orgUnit.dissolve(reason, updatedBy);
         orgUnit = orgUnitRepository.save(orgUnit);
 
-        // 解散时清除成员归属、岗位任命、场所入住快照
+        // 解散时清除成员归属、岗位任命、岗位定义、访问关系、场所入住快照
         userPositionRepository.endAllByOrgUnitId(id, "组织解散: " + (reason != null ? reason : ""));
         userDomainMapper.clearPrimaryOrgUnitId(id);
+        positionRepository.softDeleteByOrgUnitId(id);
+        accessRelationRepository.deleteByResource("org_unit", id);
         if (orgUnit.getUnitName() != null) {
             placeOccupantMapper.clearOrgUnitName(orgUnit.getUnitName());
         }
@@ -392,7 +394,7 @@ public class OrgUnitApplicationService {
                 SchoolClassPO classPO = classMap.get(node.getId());
                 if (classPO != null) {
                     node.setStudentCount(classPO.getStudentCount());
-                    node.setStandardSize(45);
+                    node.setStandardSize(classPO.getStandardSize() != null ? classPO.getStandardSize() : 50);
                     node.setEnrollmentYear(classPO.getEnrollmentYear());
                     node.setClassStatus(classPO.getStatus() != null && classPO.getStatus() == 1
                         ? "ACTIVE" : "PREPARING");

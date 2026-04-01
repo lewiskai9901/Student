@@ -1,9 +1,11 @@
-package com.school.management.infrastructure.persistence.organization;
+package com.school.management.infrastructure.persistence.student;
 
-import com.school.management.domain.organization.model.ClassStatus;
-import com.school.management.domain.organization.model.SchoolClass;
-import com.school.management.domain.organization.model.TeacherAssignment;
-import com.school.management.domain.organization.repository.SchoolClassRepository;
+import com.school.management.domain.student.model.ClassStatus;
+import com.school.management.domain.student.model.SchoolClass;
+import com.school.management.domain.student.model.TeacherAssignment;
+import com.school.management.domain.student.repository.SchoolClassRepository;
+import com.school.management.infrastructure.persistence.organization.OrgUnitMapper;
+import com.school.management.infrastructure.persistence.organization.OrgUnitPO;
 import com.school.management.infrastructure.persistence.user.UserDomainMapper;
 import com.school.management.infrastructure.persistence.user.UserPO;
 import lombok.extern.slf4j.Slf4j;
@@ -336,7 +338,7 @@ public class SchoolClassRepositoryImpl implements SchoolClassRepository {
             .gradeLevel(gradeLevel)
             .majorDirectionId(po.getMajorDirectionId())
             .schoolingYears(3)
-            .standardSize(45)
+            .standardSize(po.getStandardSize() != null ? po.getStandardSize() : 50)
             .currentSize(po.getStudentCount() != null ? po.getStudentCount() : 0)
             .status(fromDbStatus(po.getStatus()))
             .teacherAssignments(teacherAssignments)

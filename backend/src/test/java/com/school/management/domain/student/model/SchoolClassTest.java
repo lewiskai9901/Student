@@ -1,4 +1,4 @@
-package com.school.management.domain.organization.model;
+package com.school.management.domain.student.model;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;

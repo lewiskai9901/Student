@@ -1,4 +1,4 @@
-package com.school.management.infrastructure.persistence.organization;
+package com.school.management.infrastructure.persistence.student;
 
 import com.baomidou.mybatisplus.annotation.*;
 import lombok.Data;
@@ -60,6 +60,12 @@ public class SchoolClassPO {
      * 副班主任ID
      */
     private Long assistantTeacherId;
+
+    /**
+     * 标准人数（非数据库字段，来自组织类型配置）
+     */
+    @TableField(exist = false)
+    private Integer standardSize;
 
     /**
      * 学生数量

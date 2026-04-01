@@ -17,6 +17,8 @@ import org.springframework.stereotype.Component;
  * - 学生入学
  * - 学籍状态变更
  * - 学生信息更新
+ * - 班级创建/状态变更
+ * - 教师任职分配
  */
 @Slf4j
 @Component
@@ -26,6 +28,8 @@ public class StudentEventHandler {
     private final DomainEventStore eventStore;
     private final NotificationService notificationService;
     private final ActivityEventPublisher activityEventPublisher;
+
+    // ==================== 学生事件 ====================
 
     /**
      * 处理学生入学事件
@@ -84,6 +88,73 @@ public class StudentEventHandler {
         log.info("学生信息更新事件处理完成: studentNo={}", event.getStudentNo());
     }
 
+    // ==================== 班级事件 ====================
+
+    /**
+     * 处理班级创建事件
+     */
+    @Async
+    @EventListener
+    public void handle(ClassCreatedEvent event) {
+        log.info("Handling ClassCreatedEvent: classCode={}, className={}",
+                 event.getClassCode(), event.getClassName());
+
+        eventStore.store(event);
+
+        // 记录操作日志
+        saveOperationLog("CREATE", "CLASS", event.getClassId(),
+                "创建班级: " + event.getClassName() + " (" + event.getClassCode() + ")");
+
+        // TODO: resolve department admin userId(s) from org unit and send notification
+        if (event.getOrgUnitId() != null) {
+            log.debug("Skipping department admin notification for ClassCreated (no target user resolution yet): className={}, orgUnitId={}",
+                    event.getClassName(), event.getOrgUnitId());
+        }
+
+        log.info("班级创建事件处理完成: classId={}", event.getClassId());
+    }
+
+    /**
+     * 处理班级状态变更事件
+     */
+    @Async
+    @EventListener
+    public void handle(ClassStatusChangedEvent event) {
+        log.info("Handling ClassStatusChangedEvent: classId={}, {} -> {}",
+                 event.getClassId(), event.getOldStatus(), event.getNewStatus());
+
+        eventStore.store(event);
+
+        // 处理毕业事件
+        if (event.isGraduation()) {
+            handleClassGraduation(event);
+        }
+
+        // 处理激活事件
+        if (event.isActivation()) {
+            handleClassActivation(event);
+        }
+    }
+
+    /**
+     * 处理教师任职事件
+     */
+    @Async
+    @EventListener
+    public void handle(TeacherAssignedEvent event) {
+        log.info("Handling TeacherAssignedEvent: classId={}, teacherId={}, role={}",
+                 event.getClassId(), event.getTeacherId(), event.getRole());
+
+        eventStore.store(event);
+
+        // 班主任任命通知
+        if (event.isHeadTeacherAssignment()) {
+            handleHeadTeacherAssignment(event);
+        }
+    }
+
+    // ==================== 私有方法 ====================
+
     /**
      * 处理学籍状态变更
      */
@@ -101,8 +172,6 @@ public class StudentEventHandler {
                         event.getReason() != null ? event.getReason() : "无"));
 
         // TODO: resolve target userId(s) from student/class context via access_relations for proper notification routing
-        // For GRADUATED: should notify the student's own user account
-        // For SUSPENDED/WITHDRAWN/EXPELLED: should notify the class teacher
         switch (newStatus) {
             case GRADUATED:
                 log.info("Student {} graduated (notification pending user resolution)", studentNo);
@@ -123,6 +192,54 @@ public class StudentEventHandler {
             default:
                 log.debug("Student {} status changed to {}", studentNo, newStatus);
         }
+    }
+
+    /**
+     * 处理班级毕业
+     */
+    private void handleClassGraduation(ClassStatusChangedEvent event) {
+        log.info("Class {} graduated, processing graduation workflow", event.getClassName());
+
+        saveOperationLog("GRADUATE", "CLASS", event.getClassId(),
+                "班级毕业: " + event.getClassName());
+
+        log.debug("Skipping class teacher notification for graduation (no target user resolution yet): className={}", event.getClassName());
+
+        log.info("班级毕业处理完成: classId={}, className={}", event.getClassId(), event.getClassName());
+    }
+
+    /**
+     * 处理班级激活
+     */
+    private void handleClassActivation(ClassStatusChangedEvent event) {
+        log.info("Class {} activated, initializing class configuration", event.getClassName());
+
+        saveOperationLog("ACTIVATE", "CLASS", event.getClassId(),
+                "班级激活: " + event.getClassName());
+
+        log.debug("Skipping activation notification (no target user resolution yet): className={}", event.getClassName());
+
+        log.info("班级激活处理完成: classId={}", event.getClassId());
+    }
+
+    /**
+     * 处理班主任任命
+     */
+    private void handleHeadTeacherAssignment(TeacherAssignedEvent event) {
+        log.info("Head teacher {} assigned to class {}", event.getTeacherName(), event.getClassName());
+
+        saveOperationLog("ASSIGN", "TEACHER", event.getTeacherId(),
+                String.format("任命班主任: %s -> %s", event.getTeacherName(), event.getClassName()));
+
+        // 发送任命通知给班主任
+        notificationService.sendInAppMessage(
+                event.getTeacherId(),
+                "班主任任命通知",
+                String.format("您已被任命为班级 [%s] 的班主任，请及时处理班级相关事务", event.getClassName()),
+                NotificationService.MessageType.TASK_ASSIGNED
+        );
+
+        log.info("班主任任命处理完成: teacherId={}, classId={}", event.getTeacherId(), event.getClassId());
     }
 
     /**

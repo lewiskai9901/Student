@@ -1,14 +1,14 @@
 package com.school.management.application.academic;
 
 import com.school.management.application.academic.query.GradeMajorDirectionDTO;
-import com.school.management.domain.organization.model.GradeOpenedDirection;
-import com.school.management.domain.organization.repository.GradeOpenedDirectionRepository;
-import com.school.management.domain.organization.repository.GradeRepository;
+import com.school.management.domain.student.model.GradeOpenedDirection;
+import com.school.management.domain.student.repository.GradeOpenedDirectionRepository;
+import com.school.management.domain.student.repository.GradeRepository;
 import com.school.management.domain.academic.repository.MajorRepository;
 import com.school.management.infrastructure.persistence.academic.GradeMajorDirectionMapper;
 import com.school.management.infrastructure.persistence.academic.GradeMajorDirectionPO;
-import com.school.management.infrastructure.persistence.organization.GradePersistenceMapper;
-import com.school.management.infrastructure.persistence.organization.GradePO;
+import com.school.management.infrastructure.persistence.student.GradePersistenceMapper;
+import com.school.management.infrastructure.persistence.student.GradePO;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;

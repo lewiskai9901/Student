@@ -1,18 +1,23 @@
-package com.school.management.interfaces.rest.organization;
+package com.school.management.interfaces.rest.student;
 
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.school.management.common.result.Result;
 import com.school.management.common.util.SecurityUtils;
-import com.school.management.domain.organization.model.ClassStatus;
+import com.school.management.domain.student.model.ClassStatus;
 import com.school.management.domain.academic.model.Major;
 import com.school.management.domain.academic.model.MajorDirection;
 import com.school.management.domain.academic.repository.MajorRepository;
 import com.school.management.domain.organization.model.OrgUnit;
-import com.school.management.domain.organization.model.SchoolClass;
-import com.school.management.domain.organization.model.TeacherAssignment;
+import com.school.management.domain.student.model.SchoolClass;
+import com.school.management.domain.student.model.TeacherAssignment;
 import com.school.management.domain.organization.repository.OrgUnitRepository;
-import com.school.management.domain.organization.repository.SchoolClassRepository;
+import com.school.management.domain.student.repository.SchoolClassRepository;
+import com.school.management.interfaces.rest.student.dto.AssignTeacherRequest;
+import com.school.management.interfaces.rest.student.dto.CreateClassRequest;
+import com.school.management.interfaces.rest.student.dto.SchoolClassResponse;
+import com.school.management.interfaces.rest.student.dto.TeacherAssignmentResponse;
+import com.school.management.interfaces.rest.student.dto.UpdateClassRequest;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -33,7 +38,7 @@ import java.util.stream.Collectors;
 @Slf4j
 @RequiredArgsConstructor
 @RestController("schoolClassController")
-@RequestMapping("/organization/classes")
+@RequestMapping("/students/classes")
 @Tag(name = "班级管理V2", description = "DDD架构的班级管理接口")
 public class SchoolClassController {
 

@@ -1,7 +1,7 @@
-package com.school.management.infrastructure.persistence.organization;
+package com.school.management.infrastructure.persistence.student;
 
-import com.school.management.domain.organization.model.GradeOpenedDirection;
-import com.school.management.domain.organization.repository.GradeOpenedDirectionRepository;
+import com.school.management.domain.student.model.GradeOpenedDirection;
+import com.school.management.domain.student.repository.GradeOpenedDirectionRepository;
 import com.school.management.infrastructure.persistence.academic.GradeMajorDirectionMapper;
 import com.school.management.infrastructure.persistence.academic.GradeMajorDirectionPO;
 import org.springframework.stereotype.Repository;

@@ -1,4 +1,4 @@
-package com.school.management.interfaces.rest.organization;
+package com.school.management.interfaces.rest.student.dto;
 
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;

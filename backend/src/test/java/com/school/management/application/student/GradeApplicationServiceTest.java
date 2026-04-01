@@ -1,10 +1,10 @@
-package com.school.management.application.organization;
+package com.school.management.application.student;
 
-import com.school.management.application.organization.command.CreateGradeCommand;
-import com.school.management.application.organization.query.GradeDTO;
-import com.school.management.domain.organization.model.Grade;
-import com.school.management.domain.organization.repository.GradeRepository;
-import com.school.management.domain.organization.repository.SchoolClassRepository;
+import com.school.management.application.student.command.CreateGradeCommand;
+import com.school.management.application.student.query.GradeDTO;
+import com.school.management.domain.student.model.Grade;
+import com.school.management.domain.student.repository.GradeRepository;
+import com.school.management.domain.student.repository.SchoolClassRepository;
 import com.school.management.domain.shared.event.DomainEventPublisher;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;

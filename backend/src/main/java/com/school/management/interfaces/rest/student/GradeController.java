@@ -1,13 +1,16 @@
-package com.school.management.interfaces.rest.organization;
+package com.school.management.interfaces.rest.student;
 
-import com.school.management.application.organization.GradeApplicationService;
-import com.school.management.application.organization.command.AssignGradeLeaderCommand;
-import com.school.management.application.organization.command.CreateGradeCommand;
-import com.school.management.application.organization.command.UpdateGradeCommand;
-import com.school.management.application.organization.query.GradeDTO;
+import com.school.management.application.student.GradeApplicationService;
+import com.school.management.application.student.command.AssignGradeLeaderCommand;
+import com.school.management.application.student.command.CreateGradeCommand;
+import com.school.management.application.student.command.UpdateGradeCommand;
+import com.school.management.application.student.query.GradeDTO;
 import com.school.management.common.result.Result;
-import com.school.management.domain.organization.model.GradeStatus;
+import com.school.management.domain.student.model.GradeStatus;
 import com.school.management.common.util.SecurityUtils;
+import com.school.management.interfaces.rest.student.dto.AssignGradeLeaderRequest;
+import com.school.management.interfaces.rest.student.dto.CreateGradeRequest;
+import com.school.management.interfaces.rest.student.dto.UpdateGradeRequest;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -27,7 +30,7 @@ import java.util.List;
 @RequiredArgsConstructor
 @Tag(name = "Grades", description = "Grade management API")
 @RestController("gradeController")
-@RequestMapping("/grades")
+@RequestMapping("/students/grades")
 public class GradeController {
 
     private final GradeApplicationService gradeService;
