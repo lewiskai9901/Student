@@ -56,7 +56,7 @@
                   <div class="mt-0.5 text-xs text-gray-500">{{ building.placeCode }}</div>
                 </div>
                 <div class="text-right">
-                  <div class="text-xs text-gray-600">{{ building.currentOccupancy || 0 }}/{{ building.capacity || 0 }}</div>
+                  <div class="text-xs text-gray-600">{{ getBuildingOccupancy(building) }}/{{ getBuildingCapacity(building) }}</div>
                   <div
                     class="mt-0.5 h-1.5 w-14 overflow-hidden rounded-full bg-gray-200"
                   >
@@ -364,20 +364,42 @@ const personSearchResults = ref<any[]>([])
 // ==================== Stats ====================
 
 const stats = computed(() => {
-  let buildingCount = buildings.value.length
-  let roomCount = 0
+  const buildingCount = buildings.value.length
+  const roomCount = rooms.value.length
+  // Aggregate from room level for accurate capacity (building capacity may be wrong)
   let totalCapacity = 0
   let totalOccupancy = 0
 
-  for (const b of buildings.value) {
-    totalCapacity += b.capacity || 0
-    totalOccupancy += b.currentOccupancy || 0
-  }
-  roomCount = rooms.value.length
-
-  // If no building selected, estimate room count from all buildings
-  if (!selectedBuildingId.value) {
-    // Use building-level capacity data
+  if (rooms.value.length > 0) {
+    // When a building is selected, use loaded rooms
+    for (const r of rooms.value) {
+      totalCapacity += r.capacity || 0
+      totalOccupancy += r.currentOccupancy || 0
+    }
+  } else {
+    // Fallback: sum from all buildings' children recursively
+    for (const b of buildings.value) {
+      const sumFromChildren = (children: any[]): { cap: number; occ: number } => {
+        let cap = 0, occ = 0
+        for (const c of children) {
+          if (c.occupiable || c.hasCapacity) {
+            cap += c.capacity || 0
+            occ += c.currentOccupancy || 0
+          }
+          if (c.children?.length) {
+            const sub = sumFromChildren(c.children)
+            cap += sub.cap
+            occ += sub.occ
+          }
+        }
+        return { cap, occ }
+      }
+      if (b.children?.length) {
+        const { cap, occ } = sumFromChildren(b.children)
+        totalCapacity += cap
+        totalOccupancy += occ
+      }
+    }
   }
 
   const occupancyRate = totalCapacity > 0 ? (totalOccupancy / totalCapacity) * 100 : 0
@@ -431,22 +453,21 @@ const loadBuildings = async () => {
     // Find dormitory buildings from the tree
     // Dormitory buildings can be at various levels; we look for buildings with dormitory-related types
     const dormBuildings: PlaceTreeNode[] = []
+    const isDormBuilding = (node: PlaceTreeNode): boolean => {
+      const typeCode = (node.typeCode || '').toUpperCase()
+      const typeName = (node.typeName || '').toLowerCase()
+      const nameLower = (node.placeName || '').toLowerCase()
+      // Match by typeCode first (most reliable)
+      if (['DORM_BUILDING', 'DORMITORY', 'DORM'].includes(typeCode)) return true
+      // Fallback to name/type string matching
+      return typeName.includes('宿舍') || nameLower.includes('宿舍') || nameLower.includes('公寓')
+    }
     const extractDormBuildings = (nodes: PlaceTreeNode[]) => {
       for (const node of nodes) {
-        // Check if this is a building-level node that contains dormitory rooms
-        // or has dormitory-related type codes
-        const typeLower = (node.typeCode || node.typeName || '').toLowerCase()
-        const nameLower = (node.placeName || '').toLowerCase()
-        if (
-          typeLower.includes('dorm') ||
-          typeLower.includes('宿舍') ||
-          nameLower.includes('宿舍') ||
-          nameLower.includes('公寓') ||
-          (node.hasCapacity && node.occupiable && typeLower.includes('building'))
-        ) {
+        if (isDormBuilding(node)) {
           dormBuildings.push(node)
         }
-        // Also check children recursively for campus → building hierarchy
+        // Also check children recursively for campus -> building hierarchy
         if (node.children && node.children.length > 0) {
           extractDormBuildings(node.children)
         }
@@ -498,6 +519,37 @@ const loadRooms = async (buildingId: number | string) => {
   } finally {
     roomLoading.value = false
   }
+}
+
+// ==================== Building Capacity Helpers ====================
+
+function sumCapacity(children: any[]): number {
+  let total = 0
+  for (const c of children) {
+    if (c.occupiable || c.hasCapacity) total += c.capacity || 0
+    if (c.children?.length) total += sumCapacity(c.children)
+  }
+  return total
+}
+
+function sumOccupancy(children: any[]): number {
+  let total = 0
+  for (const c of children) {
+    if (c.occupiable || c.hasCapacity) total += c.currentOccupancy || 0
+    if (c.children?.length) total += sumOccupancy(c.children)
+  }
+  return total
+}
+
+function getBuildingCapacity(building: PlaceTreeNode): number {
+  // Prefer aggregating from children (rooms) for accuracy
+  if (building.children?.length) return sumCapacity(building.children)
+  return building.capacity || 0
+}
+
+function getBuildingOccupancy(building: PlaceTreeNode): number {
+  if (building.children?.length) return sumOccupancy(building.children)
+  return building.currentOccupancy || 0
 }
 
 // ==================== Selection ====================
@@ -640,8 +692,11 @@ const handleCheckIn = async () => {
 // ==================== Helpers ====================
 
 const getOccupancyPercent = (place: PlaceTreeNode) => {
-  if (!place.capacity || place.capacity === 0) return 0
-  return Math.min(100, Math.round(((place.currentOccupancy || 0) / place.capacity) * 100))
+  // For buildings, aggregate from children
+  const cap = place.children?.length ? getBuildingCapacity(place) : (place.capacity || 0)
+  const occ = place.children?.length ? getBuildingOccupancy(place) : (place.currentOccupancy || 0)
+  if (!cap || cap === 0) return 0
+  return Math.min(100, Math.round((occ / cap) * 100))
 }
 
 const getOccupancyBarClass = (place: PlaceTreeNode) => {
