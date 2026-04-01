@@ -17,7 +17,9 @@ public class ScheduleConflictRecordPO {
     private Integer severity;
     private String description;
     private String detail;
+    @TableField("entry_id_1")
     private Long entryId1;
+    @TableField("entry_id_2")
     private Long entryId2;
     private Long constraintId;
     private Integer resolutionStatus;
