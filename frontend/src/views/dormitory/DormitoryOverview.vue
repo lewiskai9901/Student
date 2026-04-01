@@ -99,12 +99,21 @@
                   共 {{ filteredRooms.length }} 间
                 </span>
               </div>
-              <!-- Occupancy filter buttons -->
-              <div v-if="selectedBuilding" class="flex overflow-hidden rounded-md border border-gray-200 text-[11px]">
-                <button class="px-2.5 py-1 transition-colors" :class="occupancyFilter === 'all' ? 'bg-blue-50 text-blue-600 font-medium' : 'text-gray-500 hover:bg-gray-50'" @click="occupancyFilter = 'all'">全部</button>
-                <button class="border-l border-gray-200 px-2.5 py-1 transition-colors" :class="occupancyFilter === 'available' ? 'bg-blue-50 text-blue-600 font-medium' : 'text-gray-500 hover:bg-gray-50'" @click="occupancyFilter = 'available'">有空位</button>
-                <button class="border-l border-gray-200 px-2.5 py-1 transition-colors" :class="occupancyFilter === 'full' ? 'bg-blue-50 text-blue-600 font-medium' : 'text-gray-500 hover:bg-gray-50'" @click="occupancyFilter = 'full'">已满</button>
-                <button class="border-l border-gray-200 px-2.5 py-1 transition-colors" :class="occupancyFilter === 'empty' ? 'bg-blue-50 text-blue-600 font-medium' : 'text-gray-500 hover:bg-gray-50'" @click="occupancyFilter = 'empty'">空房</button>
+              <div v-if="selectedBuilding" class="flex items-center gap-2">
+                <!-- View mode switcher -->
+                <div class="flex overflow-hidden rounded-md border border-gray-200 text-[11px]">
+                  <button class="px-2 py-1 transition-colors" :class="roomViewMode === 'card' ? 'bg-blue-50 text-blue-600 font-medium' : 'text-gray-500 hover:bg-gray-50'" @click="roomViewMode = 'card'" title="卡片视图">卡片</button>
+                  <button class="border-l border-gray-200 px-2 py-1 transition-colors" :class="roomViewMode === 'list' ? 'bg-blue-50 text-blue-600 font-medium' : 'text-gray-500 hover:bg-gray-50'" @click="roomViewMode = 'list'" title="列表视图">列表</button>
+                  <button class="border-l border-gray-200 px-2 py-1 transition-colors" :class="roomViewMode === 'bed' ? 'bg-blue-50 text-blue-600 font-medium' : 'text-gray-500 hover:bg-gray-50'" @click="roomViewMode = 'bed'" title="床位图">床位</button>
+                  <button class="border-l border-gray-200 px-2 py-1 transition-colors" :class="roomViewMode === 'stats' ? 'bg-blue-50 text-blue-600 font-medium' : 'text-gray-500 hover:bg-gray-50'" @click="roomViewMode = 'stats'" title="统计视图">统计</button>
+                </div>
+                <!-- Occupancy filter -->
+                <div class="flex overflow-hidden rounded-md border border-gray-200 text-[11px]">
+                  <button class="px-2 py-1 transition-colors" :class="occupancyFilter === 'all' ? 'bg-blue-50 text-blue-600 font-medium' : 'text-gray-500 hover:bg-gray-50'" @click="occupancyFilter = 'all'">全部</button>
+                  <button class="border-l border-gray-200 px-2 py-1 transition-colors" :class="occupancyFilter === 'available' ? 'bg-blue-50 text-blue-600 font-medium' : 'text-gray-500 hover:bg-gray-50'" @click="occupancyFilter = 'available'">有空位</button>
+                  <button class="border-l border-gray-200 px-2 py-1 transition-colors" :class="occupancyFilter === 'full' ? 'bg-blue-50 text-blue-600 font-medium' : 'text-gray-500 hover:bg-gray-50'" @click="occupancyFilter = 'full'">已满</button>
+                  <button class="border-l border-gray-200 px-2 py-1 transition-colors" :class="occupancyFilter === 'empty' ? 'bg-blue-50 text-blue-600 font-medium' : 'text-gray-500 hover:bg-gray-50'" @click="occupancyFilter = 'empty'">空房</button>
+                </div>
               </div>
             </div>
             <!-- Floor tabs -->
@@ -131,7 +140,7 @@
             </div>
           </div>
 
-          <!-- Room Grid -->
+          <!-- Room Content -->
           <div v-if="!selectedBuilding" class="flex items-center justify-center py-20 text-sm text-gray-400">
             请从左侧选择宿舍楼查看房间
           </div>
@@ -141,7 +150,9 @@
           <div v-else-if="filteredRooms.length === 0" class="flex items-center justify-center py-20 text-sm text-gray-400">
             暂无房间数据
           </div>
-          <div v-else class="grid grid-cols-2 gap-3 p-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
+
+          <!-- ========== View: 卡片 ========== -->
+          <div v-else-if="roomViewMode === 'card'" class="grid grid-cols-2 gap-3 p-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
             <div
               v-for="room in filteredRooms"
               :key="room.id"
@@ -157,21 +168,149 @@
               </div>
               <div class="mt-1.5 flex items-center justify-between">
                 <span class="text-xs text-gray-500">{{ room.currentOccupancy || 0 }}/{{ room.capacity || 0 }}</span>
-                <span class="text-[10px]" :class="getRoomOccupancyTextClass(room)">
-                  {{ getRoomOccupancyLabel(room) }}
-                </span>
+                <span class="text-[10px]" :class="getRoomOccupancyTextClass(room)">{{ getRoomOccupancyLabel(room) }}</span>
               </div>
-              <!-- Bed bar -->
               <div class="mt-1.5 h-1 w-full overflow-hidden rounded-full bg-gray-200">
-                <div
-                  class="h-full rounded-full transition-all"
-                  :class="getOccupancyBarClass(room)"
-                  :style="{ width: getOccupancyPercent(room) + '%' }"
-                ></div>
+                <div class="h-full rounded-full transition-all" :class="getOccupancyBarClass(room)" :style="{ width: getOccupancyPercent(room) + '%' }"></div>
               </div>
-              <!-- Org info -->
-              <div v-if="room.effectiveOrgUnitName" class="mt-1.5 truncate text-[10px] text-gray-400">
-                {{ room.effectiveOrgUnitName }}
+              <div v-if="room.effectiveOrgUnitName" class="mt-1.5 truncate text-[10px] text-gray-400">{{ room.effectiveOrgUnitName }}</div>
+            </div>
+          </div>
+
+          <!-- ========== View: 列表 ========== -->
+          <div v-else-if="roomViewMode === 'list'" class="overflow-x-auto">
+            <table class="w-full text-left text-xs">
+              <thead>
+                <tr class="border-b border-gray-200 bg-gray-50">
+                  <th class="px-4 py-2.5 font-semibold text-gray-600">房间号</th>
+                  <th class="px-4 py-2.5 font-semibold text-gray-600">楼层</th>
+                  <th class="px-4 py-2.5 font-semibold text-gray-600 text-center">入住/容量</th>
+                  <th class="px-4 py-2.5 font-semibold text-gray-600 text-center">入住率</th>
+                  <th class="px-4 py-2.5 font-semibold text-gray-600 text-center">状态</th>
+                  <th class="px-4 py-2.5 font-semibold text-gray-600">归属</th>
+                  <th class="px-4 py-2.5 font-semibold text-gray-600 text-center">操作</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr
+                  v-for="room in filteredRooms"
+                  :key="room.id"
+                  class="border-b border-gray-100 transition-colors hover:bg-gray-50"
+                >
+                  <td class="px-4 py-2.5 font-medium text-gray-900">{{ room.placeName }}</td>
+                  <td class="px-4 py-2.5 text-gray-500">{{ getFloorName(room) }}</td>
+                  <td class="px-4 py-2.5 text-center">
+                    <span class="font-medium" :class="(room.currentOccupancy || 0) >= (room.capacity || 0) ? 'text-red-600' : 'text-gray-700'">
+                      {{ room.currentOccupancy || 0 }}
+                    </span>
+                    <span class="text-gray-400">/{{ room.capacity || 0 }}</span>
+                  </td>
+                  <td class="px-4 py-2.5 text-center">
+                    <div class="mx-auto flex items-center gap-1.5">
+                      <div class="h-1.5 w-12 overflow-hidden rounded-full bg-gray-200">
+                        <div class="h-full rounded-full transition-all" :class="getOccupancyBarClass(room)" :style="{ width: getOccupancyPercent(room) + '%' }"></div>
+                      </div>
+                      <span class="text-[10px] text-gray-400">{{ getOccupancyPercent(room) }}%</span>
+                    </div>
+                  </td>
+                  <td class="px-4 py-2.5 text-center">
+                    <span class="rounded-full px-2 py-0.5 text-[10px] font-medium" :class="getRoomStatusBadge(room)">
+                      {{ getRoomOccupancyLabel(room) }}
+                    </span>
+                  </td>
+                  <td class="px-4 py-2.5 text-gray-400">{{ room.effectiveOrgUnitName || '-' }}</td>
+                  <td class="px-4 py-2.5 text-center">
+                    <button class="text-blue-600 hover:text-blue-800" @click="openRoomDetail(room)">查看</button>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <!-- ========== View: 床位图 ========== -->
+          <div v-else-if="roomViewMode === 'bed'" class="p-4">
+            <div v-for="room in filteredRooms" :key="room.id" class="mb-4 rounded-lg border border-gray-200 p-3">
+              <div class="mb-2 flex items-center justify-between">
+                <div class="flex items-center gap-2">
+                  <span class="text-sm font-semibold text-gray-900">{{ room.placeName }}</span>
+                  <span class="text-[10px] text-gray-400">{{ room.currentOccupancy || 0 }}/{{ room.capacity || 0 }}</span>
+                </div>
+                <button class="text-xs text-blue-600 hover:text-blue-800" @click="openRoomDetail(room)">管理</button>
+              </div>
+              <!-- Bed grid -->
+              <div class="flex flex-wrap gap-2">
+                <div
+                  v-for="bed in (room.capacity || 6)"
+                  :key="bed"
+                  class="flex h-14 w-20 flex-col items-center justify-center rounded-md border text-[10px] transition-colors"
+                  :class="bed <= (room.currentOccupancy || 0) ? 'border-blue-300 bg-blue-50 text-blue-700' : 'border-dashed border-gray-300 bg-white text-gray-400'"
+                >
+                  <svg class="mb-0.5 h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path v-if="bed <= (room.currentOccupancy || 0)" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                    <path v-else stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V7M3 7l9-4 9 4" />
+                  </svg>
+                  <span>{{ bed <= (room.currentOccupancy || 0) ? bed + '号床' : '空床' }}</span>
+                </div>
+              </div>
+            </div>
+            <div v-if="filteredRooms.length > 20" class="py-4 text-center text-xs text-gray-400">
+              显示前20间房间的床位图，如需查看更多请选择具体楼层
+            </div>
+          </div>
+
+          <!-- ========== View: 统计 ========== -->
+          <div v-else-if="roomViewMode === 'stats'" class="p-5 space-y-5">
+            <!-- Floor occupancy comparison -->
+            <div>
+              <h4 class="mb-3 text-sm font-semibold text-gray-700">各楼层入住统计</h4>
+              <div class="space-y-2">
+                <div v-for="floor in floors" :key="floor.id" class="flex items-center gap-3">
+                  <span class="w-16 text-right text-xs text-gray-500">{{ floorShortName(floor) }}</span>
+                  <div class="flex-1 h-5 overflow-hidden rounded-full bg-gray-100">
+                    <div
+                      class="h-full rounded-full bg-blue-500 transition-all flex items-center justify-end pr-2"
+                      :style="{ width: Math.max(getFloorOccupancyRate(floor), 2) + '%' }"
+                    >
+                      <span v-if="getFloorOccupancyRate(floor) > 15" class="text-[10px] text-white font-medium">{{ getFloorOccupancy(floor) }}/{{ getFloorCapacity(floor) }}</span>
+                    </div>
+                  </div>
+                  <span class="w-12 text-right text-xs font-medium" :class="getFloorOccupancyRate(floor) >= 90 ? 'text-red-600' : getFloorOccupancyRate(floor) >= 60 ? 'text-amber-600' : 'text-gray-500'">
+                    {{ getFloorOccupancyRate(floor).toFixed(0) }}%
+                  </span>
+                </div>
+              </div>
+            </div>
+            <!-- Summary cards -->
+            <div class="grid grid-cols-4 gap-3">
+              <div class="rounded-lg border border-gray-200 p-3 text-center">
+                <div class="text-2xl font-bold text-gray-900">{{ filteredRooms.length }}</div>
+                <div class="mt-0.5 text-[11px] text-gray-500">房间总数</div>
+              </div>
+              <div class="rounded-lg border border-emerald-200 bg-emerald-50/50 p-3 text-center">
+                <div class="text-2xl font-bold text-emerald-600">{{ filteredRooms.filter(r => (r.currentOccupancy || 0) > 0 && (r.currentOccupancy || 0) < (r.capacity || 0)).length }}</div>
+                <div class="mt-0.5 text-[11px] text-gray-500">有空位</div>
+              </div>
+              <div class="rounded-lg border border-blue-200 bg-blue-50/50 p-3 text-center">
+                <div class="text-2xl font-bold text-blue-600">{{ filteredRooms.filter(r => (r.currentOccupancy || 0) >= (r.capacity || 1)).length }}</div>
+                <div class="mt-0.5 text-[11px] text-gray-500">已满房间</div>
+              </div>
+              <div class="rounded-lg border border-gray-200 p-3 text-center">
+                <div class="text-2xl font-bold text-gray-400">{{ filteredRooms.filter(r => (r.currentOccupancy || 0) === 0).length }}</div>
+                <div class="mt-0.5 text-[11px] text-gray-500">空房间</div>
+              </div>
+            </div>
+            <!-- Room type distribution (by capacity) -->
+            <div>
+              <h4 class="mb-3 text-sm font-semibold text-gray-700">房间规格分布</h4>
+              <div class="flex flex-wrap gap-2">
+                <div
+                  v-for="[cap, count] in roomCapacityDistribution"
+                  :key="cap"
+                  class="rounded-lg border border-gray-200 px-4 py-2 text-center"
+                >
+                  <div class="text-lg font-bold text-gray-900">{{ count }}</div>
+                  <div class="text-[11px] text-gray-500">{{ cap }}人间</div>
+                </div>
               </div>
             </div>
           </div>
@@ -353,6 +492,7 @@ const floors = ref<PlaceTreeNode[]>([])
 const selectedFloor = ref<number | string | null>(null)
 const rooms = ref<PlaceTreeNode[]>([])
 const occupancyFilter = ref('all')
+const roomViewMode = ref<'card' | 'list' | 'bed' | 'stats'>('card')
 
 const roomDetailVisible = ref(false)
 const currentRoom = ref<PlaceTreeNode | null>(null)
@@ -599,9 +739,44 @@ function floorShortName(floor: PlaceTreeNode): string {
 }
 
 function countFloorRooms(floor: PlaceTreeNode): number {
-  // Count rooms under this floor from loaded rooms data
   return rooms.value.filter(r => r.parentId === floor.id).length
 }
+
+function getFloorName(room: PlaceTreeNode): string {
+  const floor = floors.value.find(f => f.id === room.parentId)
+  return floor ? floorShortName(floor) : '-'
+}
+
+function getRoomStatusBadge(room: PlaceTreeNode): string {
+  const occ = room.currentOccupancy || 0
+  const cap = room.capacity || 0
+  if (occ >= cap && cap > 0) return 'bg-red-100 text-red-700'
+  if (occ > 0) return 'bg-blue-100 text-blue-700'
+  return 'bg-gray-100 text-gray-500'
+}
+
+function getFloorCapacity(floor: PlaceTreeNode): number {
+  return rooms.value.filter(r => r.parentId === floor.id).reduce((sum, r) => sum + (r.capacity || 0), 0)
+}
+
+function getFloorOccupancy(floor: PlaceTreeNode): number {
+  return rooms.value.filter(r => r.parentId === floor.id).reduce((sum, r) => sum + (r.currentOccupancy || 0), 0)
+}
+
+function getFloorOccupancyRate(floor: PlaceTreeNode): number {
+  const cap = getFloorCapacity(floor)
+  if (cap === 0) return 0
+  return (getFloorOccupancy(floor) / cap) * 100
+}
+
+const roomCapacityDistribution = computed(() => {
+  const map = new Map<number, number>()
+  for (const r of filteredRooms.value) {
+    const cap = r.capacity || 0
+    if (cap > 0) map.set(cap, (map.get(cap) || 0) + 1)
+  }
+  return Array.from(map.entries()).sort((a, b) => a[0] - b[0])
+})
 
 // ==================== Selection ====================
 
