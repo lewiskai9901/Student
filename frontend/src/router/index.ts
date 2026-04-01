@@ -225,16 +225,15 @@ const routes: RouteRecordRaw[] = [
               order: 5
             }
           },
-          // 宿舍管理和教学设施已整合到场所管理中心 (/place/center)
-          // 保留组织宿舍管理（特定用途）
+          // 宿舍管理旧路由重定向
           {
             path: '/organization/dormitory',
             name: 'OrgDormitory',
-            redirect: '/place/management',  // 重定向到场所管理中心
+            redirect: '/dormitory',
             meta: {
               title: '宿舍管理',
               requiresAuth: true,
-              hidden: true  // 隐藏菜单，已整合到场所管理中心
+              hidden: true
             },
             children: [
               {
@@ -245,7 +244,7 @@ const routes: RouteRecordRaw[] = [
                   title: '组织宿舍管理',
                   requiresAuth: true,
                   permission: 'dormitory:org:view',
-                  hidden: true  // 暂时隐藏，后续可根据需求决定是否保留
+                  hidden: true
                 }
               }
             ]
@@ -1057,6 +1056,55 @@ const routes: RouteRecordRaw[] = [
             redirect: '/place/management',
             meta: {
               hidden: true
+            }
+          }
+        ]
+      },
+
+      // ==================== 宿舍管理 /dormitory (order: 11.5) ====================
+      {
+        path: '/dormitory',
+        name: 'Dormitory',
+        redirect: '/dormitory/overview',
+        meta: {
+          title: '宿舍管理',
+          icon: 'Bed',
+          requiresAuth: true,
+          order: 11.5,
+          group: 'business'
+        },
+        children: [
+          {
+            path: '/dormitory/overview',
+            name: 'DormitoryOverview',
+            component: () => import('@/views/dormitory/DormitoryOverview.vue'),
+            meta: {
+              title: '宿舍总览',
+              requiresAuth: true,
+              permission: 'place:view',
+              order: 1
+            }
+          },
+          {
+            path: '/dormitory/students',
+            name: 'StudentDormitory',
+            component: () => import('@/views/dormitory/StudentDormitoryView.vue'),
+            meta: {
+              title: '住宿管理',
+              requiresAuth: true,
+              permission: 'place:view',
+              order: 2
+            }
+          },
+          {
+            path: '/dormitory/department',
+            name: 'DormitoryDepartmentAssign',
+            component: () => import('@/views/dormitory/DepartmentDormitoryView.vue'),
+            meta: {
+              title: '组织分配',
+              requiresAuth: true,
+              permission: 'dormitory:org:view',
+              order: 3
             }
           }
         ]
