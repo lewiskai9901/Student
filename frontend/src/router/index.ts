@@ -153,7 +153,6 @@ const routes: RouteRecordRaw[] = [
             meta: {
               title: '专业管理',
               requiresAuth: true,
-              permission: 'major:list',
               order: 1
             }
           },
