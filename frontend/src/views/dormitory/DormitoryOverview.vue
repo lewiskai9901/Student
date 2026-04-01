@@ -26,15 +26,20 @@
         <div class="rounded-lg border border-gray-200 bg-white">
           <div class="flex items-center justify-between border-b border-gray-100 px-4 py-3">
             <span class="text-sm font-medium text-gray-700">宿舍楼</span>
-            <span class="text-xs text-gray-400">{{ buildings.length }}栋</span>
+            <span class="text-xs text-gray-400">{{ filteredBuildings.length }}栋</span>
           </div>
-          <!-- Search -->
-          <div class="border-b border-gray-100 px-3 py-2">
+          <!-- Gender filter + Search -->
+          <div class="flex items-center gap-2 border-b border-gray-100 px-3 py-2">
+            <div class="flex overflow-hidden rounded-md border border-gray-200 text-[11px]">
+              <button class="px-2 py-1 transition-colors" :class="genderFilter === 'all' ? 'bg-blue-50 text-blue-600 font-medium' : 'text-gray-500 hover:bg-gray-50'" @click="genderFilter = 'all'">全部</button>
+              <button class="border-l border-gray-200 px-2 py-1 transition-colors" :class="genderFilter === 'male' ? 'bg-blue-50 text-blue-600 font-medium' : 'text-gray-500 hover:bg-gray-50'" @click="genderFilter = 'male'">男</button>
+              <button class="border-l border-gray-200 px-2 py-1 transition-colors" :class="genderFilter === 'female' ? 'bg-blue-50 text-blue-600 font-medium' : 'text-gray-500 hover:bg-gray-50'" @click="genderFilter = 'female'">女</button>
+            </div>
             <input
               v-model="buildingSearch"
               type="text"
-              placeholder="搜索楼栋..."
-              class="h-8 w-full rounded-md border border-gray-200 px-3 text-xs focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+              placeholder="搜索..."
+              class="h-7 flex-1 rounded-md border border-gray-200 px-2 text-xs focus:border-blue-500 focus:outline-none"
             />
           </div>
           <!-- Loading -->
@@ -51,30 +56,25 @@
               @click="selectBuilding(building)"
             >
               <div class="flex items-center justify-between">
-                <div>
+                <div class="min-w-0 flex-1">
                   <div class="text-sm font-medium text-gray-900">{{ building.placeName }}</div>
-                  <div class="mt-0.5 text-xs text-gray-500">{{ building.placeCode }}</div>
+                  <div class="mt-0.5 flex items-center gap-2 text-[11px] text-gray-400">
+                    <span>{{ (building.children || []).length }}层</span>
+                    <span>{{ countBuildingRooms(building) }}间</span>
+                    <span>{{ getBuildingCapacity(building) }}床</span>
+                  </div>
                 </div>
-                <div class="text-right">
-                  <div class="text-xs text-gray-600">{{ getBuildingOccupancy(building) }}/{{ getBuildingCapacity(building) }}</div>
-                  <div
-                    class="mt-0.5 h-1.5 w-14 overflow-hidden rounded-full bg-gray-200"
-                  >
-                    <div
-                      class="h-full rounded-full transition-all"
-                      :class="getOccupancyBarClass(building)"
-                      :style="{ width: getOccupancyPercent(building) + '%' }"
-                    ></div>
+                <div class="ml-2 text-right">
+                  <div class="text-xs font-medium" :class="getBuildingOccupancy(building) > 0 ? 'text-blue-600' : 'text-gray-400'">{{ getBuildingOccupancy(building) }}/{{ getBuildingCapacity(building) }}</div>
+                  <div class="mt-0.5 h-1.5 w-14 overflow-hidden rounded-full bg-gray-200">
+                    <div class="h-full rounded-full transition-all" :class="getOccupancyBarClass(building)" :style="{ width: getOccupancyPercent(building) + '%' }"></div>
                   </div>
                 </div>
               </div>
-              <!-- Gender + Status badges -->
-              <div class="mt-1.5 flex items-center gap-1.5">
-                <span v-if="building.effectiveGender" class="rounded px-1.5 py-0.5 text-[10px] font-medium" :class="genderBadgeClass(building.effectiveGender)">
-                  {{ genderLabel(building.effectiveGender) }}
-                </span>
-                <span class="rounded px-1.5 py-0.5 text-[10px] font-medium" :class="statusBadgeClass(building.status)">
-                  {{ statusLabel(building.status) }}
+              <!-- Gender badge -->
+              <div class="mt-1 flex items-center gap-1.5">
+                <span v-if="building.effectiveGender || building.gender" class="rounded px-1.5 py-0.5 text-[10px] font-medium" :class="genderBadgeClass(building.effectiveGender || building.gender)">
+                  {{ genderLabel(building.effectiveGender || building.gender) }}
                 </span>
               </div>
             </div>
@@ -89,35 +89,45 @@
       <div class="flex-1">
         <div class="rounded-lg border border-gray-200 bg-white">
           <!-- Room Header -->
-          <div class="flex items-center justify-between border-b border-gray-100 px-5 py-3">
-            <div class="flex items-center gap-3">
-              <span class="text-sm font-medium text-gray-700">
-                {{ selectedBuilding ? selectedBuilding.placeName + ' - 房间列表' : '请选择宿舍楼' }}
-              </span>
-              <span v-if="selectedBuilding" class="text-xs text-gray-400">
-                共 {{ rooms.length }} 间
-              </span>
+          <div class="border-b border-gray-100 px-5 py-3">
+            <div class="flex items-center justify-between">
+              <div class="flex items-center gap-3">
+                <span class="text-sm font-medium text-gray-700">
+                  {{ selectedBuilding ? selectedBuilding.placeName : '请选择宿舍楼' }}
+                </span>
+                <span v-if="selectedBuilding" class="text-xs text-gray-400">
+                  共 {{ filteredRooms.length }} 间
+                </span>
+              </div>
+              <!-- Occupancy filter buttons -->
+              <div v-if="selectedBuilding" class="flex overflow-hidden rounded-md border border-gray-200 text-[11px]">
+                <button class="px-2.5 py-1 transition-colors" :class="occupancyFilter === 'all' ? 'bg-blue-50 text-blue-600 font-medium' : 'text-gray-500 hover:bg-gray-50'" @click="occupancyFilter = 'all'">全部</button>
+                <button class="border-l border-gray-200 px-2.5 py-1 transition-colors" :class="occupancyFilter === 'available' ? 'bg-blue-50 text-blue-600 font-medium' : 'text-gray-500 hover:bg-gray-50'" @click="occupancyFilter = 'available'">有空位</button>
+                <button class="border-l border-gray-200 px-2.5 py-1 transition-colors" :class="occupancyFilter === 'full' ? 'bg-blue-50 text-blue-600 font-medium' : 'text-gray-500 hover:bg-gray-50'" @click="occupancyFilter = 'full'">已满</button>
+                <button class="border-l border-gray-200 px-2.5 py-1 transition-colors" :class="occupancyFilter === 'empty' ? 'bg-blue-50 text-blue-600 font-medium' : 'text-gray-500 hover:bg-gray-50'" @click="occupancyFilter = 'empty'">空房</button>
+              </div>
             </div>
-            <div class="flex items-center gap-2">
-              <!-- Floor filter -->
-              <select
-                v-if="floors.length > 0"
-                v-model="selectedFloor"
-                class="h-8 rounded-md border border-gray-200 bg-white px-2 text-xs focus:border-blue-500 focus:outline-none"
+            <!-- Floor tabs -->
+            <div v-if="selectedBuilding && floors.length > 0" class="mt-2 flex items-center gap-0 overflow-x-auto">
+              <button
+                class="relative whitespace-nowrap px-3 py-1.5 text-xs font-medium transition-colors"
+                :class="selectedFloor === null ? 'text-blue-600' : 'text-gray-500 hover:text-gray-700'"
+                @click="selectedFloor = null"
               >
-                <option :value="null">全部楼层</option>
-                <option v-for="floor in floors" :key="floor.id" :value="floor.id">{{ floor.placeName }}</option>
-              </select>
-              <!-- Occupancy filter -->
-              <select
-                v-model="occupancyFilter"
-                class="h-8 rounded-md border border-gray-200 bg-white px-2 text-xs focus:border-blue-500 focus:outline-none"
+                全部
+                <div v-if="selectedFloor === null" class="absolute bottom-0 left-0 right-0 h-0.5 bg-blue-600 rounded-full"></div>
+              </button>
+              <button
+                v-for="floor in floors"
+                :key="floor.id"
+                class="relative whitespace-nowrap px-3 py-1.5 text-xs font-medium transition-colors"
+                :class="selectedFloor === floor.id ? 'text-blue-600' : 'text-gray-500 hover:text-gray-700'"
+                @click="selectedFloor = floor.id"
               >
-                <option value="all">全部状态</option>
-                <option value="available">有空位</option>
-                <option value="full">已满</option>
-                <option value="empty">空房</option>
-              </select>
+                {{ floorShortName(floor) }}
+                <span class="ml-1 text-[10px] text-gray-400">({{ countFloorRooms(floor) }})</span>
+                <div v-if="selectedFloor === floor.id" class="absolute bottom-0 left-0 right-0 h-0.5 bg-blue-600 rounded-full"></div>
+              </button>
             </div>
           </div>
 
@@ -335,6 +345,7 @@ const checkInLoading = ref(false)
 
 const buildings = ref<PlaceTreeNode[]>([])
 const buildingSearch = ref('')
+const genderFilter = ref<'all' | 'male' | 'female'>('all')
 const selectedBuildingId = ref<number | string | null>(null)
 const selectedBuilding = ref<PlaceTreeNode | null>(null)
 
@@ -417,11 +428,30 @@ const occupancyRateClass = computed(() => {
 // ==================== Computed ====================
 
 const filteredBuildings = computed(() => {
-  if (!buildingSearch.value) return buildings.value
-  const q = buildingSearch.value.toLowerCase()
-  return buildings.value.filter(b =>
-    b.placeName.toLowerCase().includes(q) || b.placeCode?.toLowerCase().includes(q)
-  )
+  let result = buildings.value
+
+  // Gender filter
+  if (genderFilter.value === 'male') {
+    result = result.filter(b => {
+      const g = b.effectiveGender || b.gender
+      return g === 1 || g === 'MALE'
+    })
+  } else if (genderFilter.value === 'female') {
+    result = result.filter(b => {
+      const g = b.effectiveGender || b.gender
+      return g === 2 || g === 'FEMALE'
+    })
+  }
+
+  // Search filter
+  if (buildingSearch.value) {
+    const q = buildingSearch.value.toLowerCase()
+    result = result.filter(b =>
+      b.placeName.toLowerCase().includes(q) || b.placeCode?.toLowerCase().includes(q)
+    )
+  }
+
+  return result
 })
 
 const filteredRooms = computed(() => {
@@ -550,6 +580,27 @@ function getBuildingCapacity(building: PlaceTreeNode): number {
 function getBuildingOccupancy(building: PlaceTreeNode): number {
   if (building.children?.length) return sumOccupancy(building.children)
   return building.currentOccupancy || 0
+}
+
+function countBuildingRooms(building: PlaceTreeNode): number {
+  let count = 0
+  for (const floor of (building.children || [])) {
+    count += (floor.children || []).length
+  }
+  return count
+}
+
+function floorShortName(floor: PlaceTreeNode): string {
+  // Extract short name like "1层" from "男1栋1层"
+  const name = floor.placeName || ''
+  const match = name.match(/(\d+)\s*[层楼F]/i)
+  if (match) return match[1] + '层'
+  return name
+}
+
+function countFloorRooms(floor: PlaceTreeNode): number {
+  // Count rooms under this floor from loaded rooms data
+  return rooms.value.filter(r => r.parentId === floor.id).length
 }
 
 // ==================== Selection ====================
