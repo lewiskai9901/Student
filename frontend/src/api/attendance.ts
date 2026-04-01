@@ -43,6 +43,17 @@ export function batchRecord(data: Record<string, any>): Promise<any> {
   return http.post(`${BASE}/batch`, data)
 }
 
+// ==================== 导出 ====================
+
+export function exportRecords(params: {
+  semesterId: number | string
+  classId?: number
+  startDate?: string
+  endDate?: string
+}): Promise<any> {
+  return http.get(`${BASE}/records/export`, { params, responseType: 'blob' })
+}
+
 // ==================== 考勤统计 ====================
 
 export function getStatistics(params: Record<string, any>): Promise<AttendanceStats> {

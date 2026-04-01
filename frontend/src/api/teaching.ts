@@ -487,9 +487,13 @@ export const gradeApi = {
       `${BASE_URL}/grades/ranking`, { params }
     ),
 
-  // 导出成绩
+  // 导出成绩（按批次）
   exportGrades: (batchId: number | string) =>
     http.get(`${BASE_URL}/grades/batches/${batchId}/export`, { responseType: 'blob' }),
+
+  // 导出成绩（按学期/班级/课程筛选）
+  exportGradesByFilter: (params: { semesterId: number | string; classId?: number; courseId?: number }) =>
+    http.get(`${BASE_URL}/grades/export`, { params, responseType: 'blob' }),
 
   // 导入成绩模板
   getImportTemplate: (batchId: number | string) =>

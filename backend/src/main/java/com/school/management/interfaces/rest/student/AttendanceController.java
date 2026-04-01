@@ -9,6 +9,11 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 
+import jakarta.servlet.http.HttpServletResponse;
+import org.apache.poi.ss.usermodel.*;
+import org.apache.poi.xssf.usermodel.XSSFWorkbook;
+
+import java.io.IOException;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.*;
@@ -494,6 +499,97 @@ public class AttendanceController {
             "ORDER BY lr.created_at ASC"
         );
         return Result.success(rows);
+    }
+
+    // ==================== 导出 ====================
+
+    @GetMapping("/records/export")
+    public void exportAttendance(
+            @RequestParam Long semesterId,
+            @RequestParam(required = false) Long classId,
+            @RequestParam(required = false) String startDate,
+            @RequestParam(required = false) String endDate,
+            HttpServletResponse response) throws IOException {
+
+        StringBuilder sql = new StringBuilder(
+            "SELECT ar.attendance_date, ar.period, ar.status, ar.remark, " +
+            "s.student_no, s.name AS student_name, " +
+            "c.name AS course_name, sc.name AS class_name " +
+            "FROM attendance_records ar " +
+            "LEFT JOIN students s ON s.id = ar.student_id " +
+            "LEFT JOIN courses c ON c.id = ar.course_id " +
+            "LEFT JOIN school_classes sc ON sc.id = ar.class_id " +
+            "WHERE ar.semester_id = ?");
+        List<Object> params = new ArrayList<>();
+        params.add(semesterId);
+        if (classId != null) { sql.append(" AND ar.class_id = ?"); params.add(classId); }
+        if (startDate != null) { sql.append(" AND ar.attendance_date >= ?"); params.add(startDate); }
+        if (endDate != null) { sql.append(" AND ar.attendance_date <= ?"); params.add(endDate); }
+        sql.append(" ORDER BY ar.attendance_date DESC, sc.name, s.student_no");
+
+        List<Map<String, Object>> records = jdbc.queryForList(sql.toString(), params.toArray());
+
+        String[] statusNames = {"", "出勤", "迟到", "早退", "请假", "旷课"};
+
+        try (Workbook wb = new XSSFWorkbook()) {
+            Sheet sheet = wb.createSheet("考勤记录");
+
+            // Header style
+            CellStyle headerStyle = wb.createCellStyle();
+            Font hf = wb.createFont();
+            hf.setBold(true);
+            headerStyle.setFont(hf);
+            headerStyle.setAlignment(HorizontalAlignment.CENTER);
+            headerStyle.setBorderBottom(BorderStyle.THIN);
+            headerStyle.setBorderTop(BorderStyle.THIN);
+            headerStyle.setBorderLeft(BorderStyle.THIN);
+            headerStyle.setBorderRight(BorderStyle.THIN);
+
+            CellStyle cellStyle = wb.createCellStyle();
+            cellStyle.setBorderBottom(BorderStyle.THIN);
+            cellStyle.setBorderTop(BorderStyle.THIN);
+            cellStyle.setBorderLeft(BorderStyle.THIN);
+            cellStyle.setBorderRight(BorderStyle.THIN);
+            cellStyle.setAlignment(HorizontalAlignment.CENTER);
+
+            String[] headers = {"日期", "学号", "姓名", "班级", "课程", "节次", "状态", "备注"};
+            Row headerRow = sheet.createRow(0);
+            for (int i = 0; i < headers.length; i++) {
+                Cell cell = headerRow.createCell(i);
+                cell.setCellValue(headers[i]);
+                cell.setCellStyle(headerStyle);
+            }
+
+            int rowIdx = 1;
+            for (Map<String, Object> r : records) {
+                Row row = sheet.createRow(rowIdx++);
+                int st = r.get("status") != null ? ((Number) r.get("status")).intValue() : 0;
+                String[] values = {
+                    str(r.get("attendance_date")), str(r.get("student_no")),
+                    str(r.get("student_name")), str(r.get("class_name")),
+                    str(r.get("course_name")),
+                    r.get("period") != null ? "第" + r.get("period") + "节" : "",
+                    st > 0 && st < statusNames.length ? statusNames[st] : "",
+                    str(r.get("remark"))
+                };
+                for (int i = 0; i < values.length; i++) {
+                    Cell cell = row.createCell(i);
+                    cell.setCellValue(values[i]);
+                    cell.setCellStyle(cellStyle);
+                }
+            }
+
+            for (int i = 0; i < headers.length; i++) sheet.autoSizeColumn(i);
+
+            response.setContentType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+            response.setHeader("Content-Disposition", "attachment; filename=attendance.xlsx");
+            wb.write(response.getOutputStream());
+            response.getOutputStream().flush();
+        }
+    }
+
+    private String str(Object val) {
+        return val != null ? val.toString() : "";
     }
 
     // ==================== Helper Methods ====================

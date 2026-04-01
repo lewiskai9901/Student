@@ -8,6 +8,11 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 
+import jakarta.servlet.http.HttpServletResponse;
+import org.apache.poi.ss.usermodel.*;
+import org.apache.poi.xssf.usermodel.XSSFWorkbook;
+
+import java.io.IOException;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
@@ -511,5 +516,92 @@ public class TeachingGradeController {
         }
 
         return Result.success(ranking);
+    }
+
+    // ==================== 导出 ====================
+
+    @GetMapping("/export")
+    public void exportGrades(
+            @RequestParam Long semesterId,
+            @RequestParam(required = false) Long classId,
+            @RequestParam(required = false) Long courseId,
+            HttpServletResponse response) throws IOException {
+
+        StringBuilder sql = new StringBuilder(
+            "SELECT sg.total_score, sg.grade_point, sg.passed, " +
+            "s.student_no, s.name AS student_name, " +
+            "c.course_name, sc.name AS class_name " +
+            "FROM student_grades sg " +
+            "LEFT JOIN students s ON s.id = sg.student_id " +
+            "LEFT JOIN courses c ON c.id = sg.course_id " +
+            "LEFT JOIN school_classes sc ON sc.id = sg.class_id " +
+            "WHERE sg.semester_id = ? AND sg.deleted = 0");
+        List<Object> params = new ArrayList<>();
+        params.add(semesterId);
+        if (classId != null) { sql.append(" AND sg.class_id = ?"); params.add(classId); }
+        if (courseId != null) { sql.append(" AND sg.course_id = ?"); params.add(courseId); }
+        sql.append(" ORDER BY sc.name, s.student_no");
+
+        List<Map<String, Object>> grades = jdbc.queryForList(sql.toString(), params.toArray());
+
+        try (Workbook wb = new XSSFWorkbook()) {
+            Sheet sheet = wb.createSheet("成绩表");
+
+            // Header style
+            CellStyle headerStyle = wb.createCellStyle();
+            Font headerFont = wb.createFont();
+            headerFont.setBold(true);
+            headerStyle.setFont(headerFont);
+            headerStyle.setAlignment(HorizontalAlignment.CENTER);
+            headerStyle.setBorderBottom(BorderStyle.THIN);
+            headerStyle.setBorderTop(BorderStyle.THIN);
+            headerStyle.setBorderLeft(BorderStyle.THIN);
+            headerStyle.setBorderRight(BorderStyle.THIN);
+
+            CellStyle cellStyle = wb.createCellStyle();
+            cellStyle.setBorderBottom(BorderStyle.THIN);
+            cellStyle.setBorderTop(BorderStyle.THIN);
+            cellStyle.setBorderLeft(BorderStyle.THIN);
+            cellStyle.setBorderRight(BorderStyle.THIN);
+            cellStyle.setAlignment(HorizontalAlignment.CENTER);
+
+            // Headers
+            String[] headers = {"学号", "姓名", "班级", "课程", "成绩", "绩点", "是否通过"};
+            Row headerRow = sheet.createRow(0);
+            for (int i = 0; i < headers.length; i++) {
+                Cell cell = headerRow.createCell(i);
+                cell.setCellValue(headers[i]);
+                cell.setCellStyle(headerStyle);
+            }
+
+            // Data rows
+            int rowIdx = 1;
+            for (Map<String, Object> g : grades) {
+                Row row = sheet.createRow(rowIdx++);
+                String[] values = {
+                    str(g.get("student_no")), str(g.get("student_name")),
+                    str(g.get("class_name")), str(g.get("course_name")),
+                    str(g.get("total_score")), str(g.get("grade_point")),
+                    g.get("passed") != null && ((Number) g.get("passed")).intValue() == 1 ? "是" : "否"
+                };
+                for (int i = 0; i < values.length; i++) {
+                    Cell cell = row.createCell(i);
+                    cell.setCellValue(values[i]);
+                    cell.setCellStyle(cellStyle);
+                }
+            }
+
+            // Auto-size columns
+            for (int i = 0; i < headers.length; i++) sheet.autoSizeColumn(i);
+
+            response.setContentType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+            response.setHeader("Content-Disposition", "attachment; filename=grades.xlsx");
+            wb.write(response.getOutputStream());
+            response.getOutputStream().flush();
+        }
+    }
+
+    private String str(Object val) {
+        return val != null ? val.toString() : "";
     }
 }

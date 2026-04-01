@@ -145,6 +145,13 @@
           >
             查询
           </button>
+          <button
+            class="inline-flex items-center gap-1.5 rounded-lg bg-gray-100 px-3.5 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-200 disabled:opacity-50"
+            :disabled="!recordFilter.semesterId || exportingRecords"
+            @click="doExportRecords"
+          >
+            {{ exportingRecords ? '导出中...' : '导出Excel' }}
+          </button>
         </div>
 
         <!-- Records Table -->
@@ -412,6 +419,7 @@ import {
   listLeaves,
   approveLeave,
   rejectLeave,
+  exportRecords,
 } from '@/api/attendance'
 import { semesterApi, courseApi } from '@/api/teaching'
 import { schoolClassApi } from '@/api/organization'
@@ -576,6 +584,39 @@ async function loadRecords() {
     ElMessage.error('查询失败: ' + (e.message || '未知错误'))
   } finally {
     recordsLoading.value = false
+  }
+}
+
+// Export records
+const exportingRecords = ref(false)
+
+async function doExportRecords() {
+  if (!recordFilter.semesterId) {
+    ElMessage.warning('请先选择学期')
+    return
+  }
+  exportingRecords.value = true
+  try {
+    const params: any = { semesterId: recordFilter.semesterId }
+    if (recordFilter.classId) params.classId = recordFilter.classId
+    if (recordFilter.dateRange?.[0]) params.startDate = recordFilter.dateRange[0]
+    if (recordFilter.dateRange?.[1]) params.endDate = recordFilter.dateRange[1]
+
+    const res = await exportRecords(params)
+    const blob = new Blob([res as any], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' })
+    const url = window.URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = '考勤记录.xlsx'
+    document.body.appendChild(a)
+    a.click()
+    document.body.removeChild(a)
+    window.URL.revokeObjectURL(url)
+    ElMessage.success('导出成功')
+  } catch {
+    ElMessage.error('导出失败')
+  } finally {
+    exportingRecords.value = false
   }
 }
 
