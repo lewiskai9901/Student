@@ -6,6 +6,7 @@ import type {
   UpdatePlaceRequest,
   UniversalPlaceType,
   PlaceOccupant,
+  PlaceOccupantWithPlace,
   CheckInRequest,
   PlaceBooking,
   CreateBookingRequest,
@@ -181,6 +182,20 @@ export const universalPlaceApi = {
    */
   swapPositions(placeId: number | string, recordId1: number | string, recordId2: number | string): Promise<void> {
     return request.post(`${BASE_URL}/${placeId}/swap-positions`, { recordId1, recordId2 })
+  },
+
+  /**
+   * 查询指定场所列表中的所有活跃占用记录（带场所信息）
+   */
+  getOccupantsForPlaces(placeIds?: (number | string)[], occupantType?: string): Promise<PlaceOccupantWithPlace[]> {
+    return request.get(`${BASE_URL}/batch-occupants`, { params: { placeIds, occupantType } })
+  },
+
+  /**
+   * 查询占用者的所有占用历史（带场所信息）
+   */
+  getOccupantHistoryByOccupant(occupantType: string, occupantId: number | string): Promise<PlaceOccupantWithPlace[]> {
+    return request.get(`${BASE_URL}/occupant-history`, { params: { occupantType, occupantId } })
   },
 
   // ==================== 预订管理 ====================

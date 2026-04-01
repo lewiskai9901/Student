@@ -231,6 +231,24 @@ public class UniversalPlaceController {
         return Result.success();
     }
 
+    @GetMapping("/batch-occupants")
+    @Operation(summary = "查询指定场所列表中的所有活跃占用记录")
+    @CasbinAccess(resource = "place", action = "view")
+    public Result<List<UniversalPlaceApplicationService.OccupantWithPlaceDTO>> getOccupantsForPlaces(
+            @RequestParam(required = false) List<Long> placeIds,
+            @RequestParam(required = false) String occupantType) {
+        return Result.success(placeService.getOccupantsForPlaces(placeIds, occupantType));
+    }
+
+    @GetMapping("/occupant-history")
+    @Operation(summary = "查询占用者的所有占用历史")
+    @CasbinAccess(resource = "place", action = "view")
+    public Result<List<UniversalPlaceApplicationService.OccupantWithPlaceDTO>> getOccupantHistoryByOccupant(
+            @RequestParam String occupantType,
+            @RequestParam Long occupantId) {
+        return Result.success(placeService.getOccupantHistoryByOccupant(occupantType, occupantId));
+    }
+
     // ==================== 请求对象 ====================
 
     @Data
