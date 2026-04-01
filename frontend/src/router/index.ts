@@ -133,6 +133,122 @@ const routes: RouteRecordRaw[] = [
         ]
       },
 
+      // ==================== 学术管理 /academic (order: 3) - Academic领域 ====================
+      {
+        path: '/academic',
+        name: 'Academic',
+        redirect: '/academic/majors',
+        meta: {
+          title: '学术管理',
+          icon: 'GraduationCap',
+          requiresAuth: true,
+          order: 3,
+          group: 'business'
+        },
+        children: [
+          {
+            path: '/academic/majors',
+            name: 'AcademicMajors',
+            component: () => import('@/views/academic/MajorListView.vue'),
+            meta: {
+              title: '专业管理',
+              requiresAuth: true,
+              permission: 'major:list',
+              order: 1
+            }
+          },
+          {
+            path: '/academic/courses',
+            name: 'AcademicCourses',
+            component: () => import('@/views/academic/CourseListView.vue'),
+            meta: {
+              title: '课程管理',
+              requiresAuth: true,
+              order: 2
+            }
+          },
+          {
+            path: '/academic/curriculum-plans',
+            name: 'AcademicCurriculum',
+            component: () => import('@/views/academic/CurriculumPlanView.vue'),
+            meta: {
+              title: '培养方案',
+              requiresAuth: true,
+              order: 3
+            }
+          }
+        ]
+      },
+
+      // ==================== 学生管理 /student (order: 4) - Student领域 ====================
+      {
+        path: '/student',
+        name: 'Student',
+        redirect: '/student/list',
+        meta: {
+          title: '学生管理',
+          icon: 'Users',
+          requiresAuth: true,
+          order: 4,
+          group: 'business'
+        },
+        children: [
+          {
+            path: '/student/list',
+            name: 'StudentList',
+            component: () => import('@/views/student/StudentList.vue'),
+            meta: {
+              title: '学生列表',
+              requiresAuth: true,
+              permission: 'student:info:view',
+              order: 1
+            }
+          },
+          {
+            path: '/student/grades',
+            name: 'StudentGrades',
+            component: () => import('@/views/organization/grades/GradeManagementV2.vue'),
+            meta: {
+              title: '年级管理',
+              requiresAuth: true,
+              permission: 'student:grade:view',
+              order: 2
+            }
+          },
+          {
+            path: '/student/classes',
+            name: 'StudentClasses',
+            component: () => import('@/views/class/ClassList.vue'),
+            meta: {
+              title: '班级管理',
+              requiresAuth: true,
+              permission: 'student:class:view',
+              order: 3
+            }
+          },
+          {
+            path: '/student/attendance',
+            name: 'StudentAttendance',
+            component: () => import('@/views/student/AttendanceView.vue'),
+            meta: {
+              title: '考勤管理',
+              requiresAuth: true,
+              order: 4
+            }
+          },
+          {
+            path: '/student/warnings',
+            name: 'StudentWarnings',
+            component: () => import('@/views/student/AcademicWarningView.vue'),
+            meta: {
+              title: '学业预警',
+              requiresAuth: true,
+              order: 5
+            }
+          }
+        ]
+      },
+
       // ==================== 组织管理 /organization (order: 10) - Organization领域 ====================
       {
         path: '/organization',
@@ -157,73 +273,36 @@ const routes: RouteRecordRaw[] = [
               order: 1
             }
           },
+          // Old route redirects for backward compatibility
           {
             path: '/organization/classes',
-            name: 'OrgClasses',
-            component: () => import('@/views/class/ClassList.vue'),
-            meta: {
-              title: '班级管理',
-              requiresAuth: true,
-              permission: 'student:class:view',
-              order: 2
-            }
+            redirect: '/student/classes',
+            meta: { hidden: true }
           },
           {
             path: '/organization/students',
-            name: 'OrgStudents',
-            component: () => import('@/views/student/StudentList.vue'),
-            meta: {
-              title: '学生管理',
-              requiresAuth: true,
-              permission: 'student:info:view',
-              order: 3
-            }
+            redirect: '/student/list',
+            meta: { hidden: true }
           },
-          // 考勤管理
-          {
-            path: '/organization/attendance',
-            name: 'OrgAttendance',
-            component: () => import('@/views/student/AttendanceView.vue'),
-            meta: {
-              title: '考勤管理',
-              requiresAuth: true,
-              order: 3.5
-            }
-          },
-          // 学业预警
-          {
-            path: '/organization/warnings',
-            name: 'AcademicWarnings',
-            component: () => import('@/views/student/AcademicWarningView.vue'),
-            meta: {
-              title: '学业预警',
-              requiresAuth: true,
-              order: 3.6
-            }
-          },
-          // 年级管理 (V2 重设计版本)
           {
             path: '/organization/grades',
-            name: 'OrgGrades',
-            component: () => import('@/views/organization/grades/GradeManagementV2.vue'),
-            meta: {
-              title: '年级管理',
-              requiresAuth: true,
-              permission: 'quantification:grade:view',
-              order: 4
-            }
+            redirect: '/student/grades',
+            meta: { hidden: true }
           },
-          // 专业管理
           {
             path: '/organization/majors',
-            name: 'OrgMajors',
-            component: () => import('@/views/major/MajorList.vue'),
-            meta: {
-              title: '专业管理',
-              requiresAuth: true,
-              permission: 'major:list',
-              order: 5
-            }
+            redirect: '/academic/majors',
+            meta: { hidden: true }
+          },
+          {
+            path: '/organization/attendance',
+            redirect: '/student/attendance',
+            meta: { hidden: true }
+          },
+          {
+            path: '/organization/warnings',
+            redirect: '/student/warnings',
+            meta: { hidden: true }
           },
           // 宿舍管理旧路由重定向
           {
@@ -684,7 +763,7 @@ const routes: RouteRecordRaw[] = [
         redirect: '/teaching/calendar',
         meta: {
           title: '教务管理',
-          icon: 'GraduationCap',
+          icon: 'BookOpen',
           requiresAuth: true,
           order: 20,
           group: 'operations'
@@ -700,25 +779,16 @@ const routes: RouteRecordRaw[] = [
               order: 1
             }
           },
+          // Redirects for moved routes
           {
             path: '/teaching/courses',
-            name: 'TeachingCourses',
-            component: () => import('@/views/teaching/CourseListView.vue'),
-            meta: {
-              title: '课程管理',
-              requiresAuth: true,
-              order: 2
-            }
+            redirect: '/academic/courses',
+            meta: { hidden: true }
           },
           {
             path: '/teaching/curriculum-plans',
-            name: 'TeachingCurriculum',
-            component: () => import('@/views/teaching/CurriculumPlanView.vue'),
-            meta: {
-              title: '培养方案',
-              requiresAuth: true,
-              order: 3
-            }
+            redirect: '/academic/curriculum-plans',
+            meta: { hidden: true }
           },
           {
             path: '/teaching/offerings',

@@ -4,11 +4,6 @@ import type {
   Semester,
   TeachingWeek,
   AcademicEvent,
-  Course,
-  CourseQueryParams,
-  CurriculumPlan,
-  PlanCourse,
-  CurriculumPlanQueryParams,
   TeachingTask,
   TeachingTaskQueryParams,
   CourseSchedule,
@@ -37,6 +32,9 @@ import type {
   TeachingBuilding,
   ClassroomQueryParams,
 } from '@/types/teaching'
+
+// Re-export courseApi and curriculumPlanApi from academic module for backward compatibility
+export { courseApi, curriculumPlanApi } from '@/api/academic'
 
 const BASE_URL = '/teaching'
 
@@ -171,68 +169,6 @@ export const academicEventApi = {
     http.put<AcademicEvent>(`${BASE_URL}/events/${id}`, data),
 
   delete: (id: number | string) => http.delete(`${BASE_URL}/events/${id}`),
-}
-
-// ==================== 课程管理 ====================
-
-export const courseApi = {
-  list: (params?: CourseQueryParams) =>
-    http.get<PageResult<Course>>(`${BASE_URL}/courses`, { params }),
-
-  listAll: () => http.get<Course[]>(`${BASE_URL}/courses/all`),
-
-  getById: (id: number | string) => http.get<Course>(`${BASE_URL}/courses/${id}`),
-
-  getByCode: (code: string) => http.get<Course>(`${BASE_URL}/courses/code/${code}`),
-
-  create: (data: Partial<Course>) =>
-    http.post<Course>(`${BASE_URL}/courses`, data),
-
-  update: (id: number | string, data: Partial<Course>) =>
-    http.put<Course>(`${BASE_URL}/courses/${id}`, data),
-
-  delete: (id: number | string) => http.delete(`${BASE_URL}/courses/${id}`),
-
-  updateStatus: (id: number | string, status: number) =>
-    http.patch(`${BASE_URL}/courses/${id}/status`, { status }),
-}
-
-// ==================== 培养方案 ====================
-
-export const curriculumPlanApi = {
-  list: (params?: CurriculumPlanQueryParams) =>
-    http.get<PageResult<CurriculumPlan>>(`${BASE_URL}/curriculum-plans`, { params }),
-
-  getById: (id: number | string) => http.get<CurriculumPlan>(`${BASE_URL}/curriculum-plans/${id}`),
-
-  create: (data: Partial<CurriculumPlan>) =>
-    http.post<CurriculumPlan>(`${BASE_URL}/curriculum-plans`, data),
-
-  update: (id: number | string, data: Partial<CurriculumPlan>) =>
-    http.put<CurriculumPlan>(`${BASE_URL}/curriculum-plans/${id}`, data),
-
-  delete: (id: number | string) => http.delete(`${BASE_URL}/curriculum-plans/${id}`),
-
-  publish: (id: number | string) =>
-    http.post(`${BASE_URL}/curriculum-plans/${id}/publish`),
-
-  deprecate: (id: number | string) =>
-    http.post(`${BASE_URL}/curriculum-plans/${id}/deprecate`),
-
-  getCourses: (planId: number | string) =>
-    http.get<PlanCourse[]>(`${BASE_URL}/curriculum-plans/${planId}/courses`),
-
-  addCourse: (planId: number | string, data: Partial<PlanCourse>) =>
-    http.post<PlanCourse>(`${BASE_URL}/curriculum-plans/${planId}/courses`, data),
-
-  updateCourse: (planId: number | string, courseId: number | string, data: Partial<PlanCourse>) =>
-    http.put<PlanCourse>(`${BASE_URL}/curriculum-plans/${planId}/courses/${courseId}`, data),
-
-  removeCourse: (planId: number | string, courseId: number | string) =>
-    http.delete(`${BASE_URL}/curriculum-plans/${planId}/courses/${courseId}`),
-
-  copyPlan: (id: number | string, newVersion: string) =>
-    http.post<CurriculumPlan>(`${BASE_URL}/curriculum-plans/${id}/copy`, { newVersion }),
 }
 
 // ==================== 教学任务 ====================

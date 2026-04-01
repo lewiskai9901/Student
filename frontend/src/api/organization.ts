@@ -23,7 +23,7 @@ import type {
 // 后端API路径
 const ORG_UNIT_URL = '/org-units'
 const ORG_UNIT_TYPE_URL = '/org-types'
-const CLASS_URL = '/organization/classes'
+const CLASS_URL = '/students/classes'
 
 // ==================== 组织单元 API ====================
 
@@ -612,7 +612,7 @@ export function dissolveDepartment(id: number | string, reason: string): Promise
 
 // ==================== 年级管理 (兼容V1 grade.ts) ====================
 
-const GRADE_URL = '/grades'
+const GRADE_URL = '/students/grades'
 
 export interface Grade {
   id?: number

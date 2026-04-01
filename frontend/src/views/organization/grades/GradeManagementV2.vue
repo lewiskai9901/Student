@@ -101,8 +101,7 @@ import MajorConfigPanel from './components/MajorConfigPanel.vue'
 import GradeForm from '@/components/grade/GradeForm.vue'
 import { getGradePage, deleteGrade } from '@/api/organization'
 import { getDirectionsByYear } from '@/api/gradeMajorDirection'
-import { getAllEnabledMajors } from '@/api/major'
-import { getDirectionsByMajor } from '@/api/majorDirection'
+import { getAllEnabledMajors, getDirectionsByMajor } from '@/api/academic'
 
 // 主题色配置
 const themeColors = {

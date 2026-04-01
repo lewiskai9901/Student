@@ -43,7 +43,7 @@ export const getGradeMajorDirectionList = (params: GradeMajorDirectionQueryParam
     records: GradeMajorDirection[]
     total: number
     pages: number
-  }>('/grade-major-directions', { params })
+  }>('/academic/grade-major-directions', { params })
 }
 
 // 根据学年获取专业方向列表
@@ -68,7 +68,7 @@ export const getByYearAndDirection = (academicYear: number, directionId: number 
 
 // 为学年添加专业方向
 export const addDirectionToYear = (data: GradeMajorDirection) => {
-  return http.post<GradeMajorDirection>('/grade-major-directions', data)
+  return http.post<GradeMajorDirection>('/academic/grade-major-directions', data)
 }
 
 // 批量为学年添加专业方向
@@ -104,7 +104,7 @@ export const addDirectionToGrade = (data: {
   plannedClassCount?: number
   isEnabled?: number
 }) => {
-  return http.post<GradeMajorDirection>('/grade-major-directions', {
+  return http.post<GradeMajorDirection>('/academic/grade-major-directions', {
     academicYear: data.gradeId, // 使用 gradeId 作为 academicYear
     majorDirectionId: data.majorDirectionId,
     remarks: ''
