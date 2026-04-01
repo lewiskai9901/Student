@@ -416,7 +416,8 @@
 import { ref, reactive, computed, onMounted } from 'vue'
 import { ElMessage, ElMessageBox, type FormInstance, type FormRules, type UploadInstance } from 'element-plus'
 import { Plus, FileText } from 'lucide-vue-next'
-import { gradeApi, semesterApi, courseApi } from '@/api/teaching'
+import { gradeApi, semesterApi } from '@/api/teaching'
+import { courseApi } from '@/api/academic'
 import { schoolClassApi } from '@/api/organization'
 import type { GradeBatch, StudentGrade, GradeStatistics, Semester, Course, GradeQueryParams } from '@/types/teaching'
 

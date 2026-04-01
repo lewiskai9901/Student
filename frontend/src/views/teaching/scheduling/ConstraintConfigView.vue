@@ -385,8 +385,9 @@
 import { ref, computed, onMounted } from 'vue'
 import { Plus, Settings, Edit3, Trash2 } from 'lucide-vue-next'
 import { ElMessage, ElMessageBox, type FormInstance, type FormRules } from 'element-plus'
-import { constraintApi, semesterApi, courseApi } from '@/api/teaching'
-import request from '@/utils/request'
+import { constraintApi, semesterApi } from '@/api/teaching'
+import { courseApi } from '@/api/academic'
+import { http } from '@/utils/request'
 import type { SchedulingConstraint, Semester, TimeSlotStatus, Course } from '@/types/teaching'
 import { CONSTRAINT_LEVELS, CONSTRAINT_TYPES, WEEKDAYS, DEFAULT_PERIODS } from '@/types/teaching'
 
@@ -497,8 +498,8 @@ async function loadSemesters() {
 async function loadTargetLists() {
   try {
     const [teacherRes, classRes, courseRes] = await Promise.allSettled([
-      request.get<any>('/users', { params: { role: 'TEACHER', pageSize: 500 } }),
-      request.get<any>('/organization/classes/list'),
+      http.get<any>('/users', { params: { role: 'TEACHER', pageSize: 500 } }),
+      http.get<any>('/organization/classes/list'),
       courseApi.listAll(),
     ])
 

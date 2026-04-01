@@ -64,7 +64,7 @@
             <el-table-column prop="weeklyHours" label="周课时" width="80" align="center" />
             <el-table-column label="课程类别" width="100" align="center">
               <template #default="{ row }">
-                <el-tag size="small" :type="row.courseType === 1 ? '' : row.courseType === 2 ? 'success' : 'info'">
+                <el-tag size="small" :type="(row.courseType === 1 ? '' : row.courseType === 2 ? 'success' : 'info') as any">
                   {{ getCourseTypeName(row.courseType) }}
                 </el-tag>
               </template>
@@ -406,7 +406,7 @@
       <el-table :data="currentMembers" v-loading="membersLoading" stripe max-height="360">
         <el-table-column label="类型" width="80" align="center">
           <template #default="{ row }">
-            <el-tag size="small" :type="row.memberType === 1 ? '' : 'success'">
+            <el-tag size="small" :type="(row.memberType === 1 ? '' : 'success') as any">
               {{ row.memberType === 1 ? '整班' : '个人' }}
             </el-tag>
           </template>
@@ -430,7 +430,8 @@
 import { ref, computed, onMounted, watch } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import type { FormInstance, FormRules } from 'element-plus'
-import { offeringApi, classAssignmentApi, teachingClassApi, semesterApi, courseApi, curriculumPlanApi } from '@/api/teaching'
+import { offeringApi, classAssignmentApi, teachingClassApi, semesterApi } from '@/api/teaching'
+import { courseApi, curriculumPlanApi } from '@/api/academic'
 import { schoolClassApi } from '@/api/organization'
 import type {
   SemesterOffering, ClassCourseAssignment, TeachingClass, TeachingClassMember,

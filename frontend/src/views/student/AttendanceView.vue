@@ -421,7 +421,8 @@ import {
   rejectLeave,
   exportRecords,
 } from '@/api/attendance'
-import { semesterApi, courseApi } from '@/api/teaching'
+import { semesterApi } from '@/api/teaching'
+import { courseApi } from '@/api/academic'
 import { schoolClassApi } from '@/api/organization'
 import { http } from '@/utils/request'
 import type { AttendanceStats } from '@/types/attendance'

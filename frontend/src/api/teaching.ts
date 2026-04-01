@@ -33,8 +33,6 @@ import type {
   ClassroomQueryParams,
 } from '@/types/teaching'
 
-// Re-export courseApi and curriculumPlanApi from academic module for backward compatibility
-export { courseApi, curriculumPlanApi } from '@/api/academic'
 
 const BASE_URL = '/teaching'
 
