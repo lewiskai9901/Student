@@ -11,6 +11,7 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.web.bind.annotation.*;
 
 import com.school.management.common.util.SecurityUtils;
+import com.school.management.infrastructure.casbin.CasbinAccess;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -41,6 +42,7 @@ public class TeachingScheduleController {
     // ==================== 课表条目 ====================
 
     @GetMapping("/schedules")
+    @CasbinAccess(resource = "teaching:schedule", action = "view")
     public Result<List<Map<String, Object>>> listSchedules(
             @RequestParam(required = false) Long semesterId,
             @RequestParam(required = false) Integer status) {
@@ -70,6 +72,7 @@ public class TeachingScheduleController {
     }
 
     @GetMapping("/schedules/{id}")
+    @CasbinAccess(resource = "teaching:schedule", action = "view")
     public Result<Map<String, Object>> getSchedule(@PathVariable Long id) {
         Map<String, Object> entry = jdbc.queryForMap(
             "SELECT id, semester_id AS semesterId, task_id AS taskId, " +
@@ -85,6 +88,7 @@ public class TeachingScheduleController {
     }
 
     @PostMapping("/schedules")
+    @CasbinAccess(resource = "teaching:schedule", action = "edit")
     public Result<Map<String, Object>> createSchedule(@RequestBody Map<String, Object> data) {
         long id = IdWorker.getId();
         Long semesterId = data.get("semesterId") != null ? ((Number) data.get("semesterId")).longValue() : null;
@@ -118,6 +122,7 @@ public class TeachingScheduleController {
     }
 
     @PutMapping("/schedules/{id}")
+    @CasbinAccess(resource = "teaching:schedule", action = "edit")
     public Result<Void> updateSchedule(@PathVariable Long id, @RequestBody Map<String, Object> data) {
         Long teacherId = data.get("teacherId") != null ? ((Number) data.get("teacherId")).longValue() : null;
         Long classroomId = data.get("classroomId") != null ? ((Number) data.get("classroomId")).longValue() : null;
@@ -140,12 +145,14 @@ public class TeachingScheduleController {
     }
 
     @DeleteMapping("/schedules/{id}")
+    @CasbinAccess(resource = "teaching:schedule", action = "edit")
     public Result<Void> deleteSchedule(@PathVariable Long id) {
         jdbc.update("UPDATE schedule_entries SET deleted = 1 WHERE id = ?", id);
         return Result.success();
     }
 
     @GetMapping("/schedules/by-class/{classId}")
+    @CasbinAccess(resource = "teaching:schedule", action = "view")
     public Result<List<Map<String, Object>>> getSchedulesByClass(
             @PathVariable Long classId,
             @RequestParam(required = false) Long semesterId) {
@@ -175,6 +182,7 @@ public class TeachingScheduleController {
     }
 
     @GetMapping("/schedules/by-teacher/{teacherId}")
+    @CasbinAccess(resource = "teaching:schedule", action = "view")
     public Result<List<Map<String, Object>>> getSchedulesByTeacher(
             @PathVariable Long teacherId,
             @RequestParam(required = false) Long semesterId) {
@@ -204,6 +212,7 @@ public class TeachingScheduleController {
     }
 
     @GetMapping("/schedules/by-classroom/{classroomId}")
+    @CasbinAccess(resource = "teaching:schedule", action = "view")
     public Result<List<Map<String, Object>>> getSchedulesByClassroom(
             @PathVariable Long classroomId,
             @RequestParam(required = false) Long semesterId) {
@@ -235,6 +244,7 @@ public class TeachingScheduleController {
     // ==================== 智能排课 / 拖拽移动 / 冲突检测 ====================
 
     @PostMapping("/schedules/auto-schedule")
+    @CasbinAccess(resource = "teaching:schedule", action = "edit")
     public Result<Map<String, Object>> autoSchedule(@RequestBody Map<String, Object> params) {
         if (autoSchedulingService == null) {
             return Result.error("排课服务未启用");
@@ -245,6 +255,7 @@ public class TeachingScheduleController {
     }
 
     @PostMapping("/schedules/{id}/move")
+    @CasbinAccess(resource = "teaching:schedule", action = "edit")
     public Result<Map<String, Object>> moveEntry(@PathVariable Long id, @RequestBody Map<String, Object> body) {
         int newDay = Integer.parseInt(body.get("dayOfWeek").toString());
         int newPeriod = Integer.parseInt(body.get("periodStart").toString());
@@ -270,6 +281,7 @@ public class TeachingScheduleController {
     }
 
     @PostMapping("/schedules/check-move-conflict")
+    @CasbinAccess(resource = "teaching:schedule", action = "view")
     public Result<Map<String, Object>> checkMoveConflict(@RequestBody Map<String, Object> body) {
         Long entryId = Long.parseLong(body.get("entryId").toString());
         Long semesterId = Long.parseLong(body.get("semesterId").toString());
@@ -313,6 +325,7 @@ public class TeachingScheduleController {
     // ==================== 课表导出 ====================
 
     @GetMapping("/schedules/export/class/{classId}")
+    @CasbinAccess(resource = "teaching:schedule", action = "view")
     public void exportClassSchedule(
             @PathVariable Long classId,
             @RequestParam Long semesterId,
@@ -325,6 +338,7 @@ public class TeachingScheduleController {
     }
 
     @GetMapping("/schedules/export/teacher/{teacherId}")
+    @CasbinAccess(resource = "teaching:schedule", action = "view")
     public void exportTeacherSchedule(
             @PathVariable Long teacherId,
             @RequestParam Long semesterId,
@@ -339,6 +353,7 @@ public class TeachingScheduleController {
     // ==================== 调课管理 ====================
 
     @GetMapping("/adjustments")
+    @CasbinAccess(resource = "teaching:schedule", action = "view")
     public Result<Map<String, Object>> listAdjustments(
             @RequestParam(required = false) Integer status,
             @RequestParam(defaultValue = "1") int page,
@@ -380,6 +395,7 @@ public class TeachingScheduleController {
     }
 
     @GetMapping("/adjustments/{id}")
+    @CasbinAccess(resource = "teaching:schedule", action = "view")
     public Result<Map<String, Object>> getAdjustment(@PathVariable Long id) {
         Map<String, Object> adj = jdbc.queryForMap(
             "SELECT id, adjustment_code AS adjustmentCode, semester_id AS semesterId, " +
@@ -400,6 +416,7 @@ public class TeachingScheduleController {
     }
 
     @PostMapping("/adjustments")
+    @CasbinAccess(resource = "teaching:schedule", action = "edit")
     public Result<Map<String, Object>> createAdjustment(@RequestBody Map<String, Object> data) {
         long id = IdWorker.getId();
         String adjustmentCode = "ADJ" + id;
@@ -447,6 +464,7 @@ public class TeachingScheduleController {
     }
 
     @PostMapping("/adjustments/{id}/approve")
+    @CasbinAccess(resource = "teaching:schedule", action = "edit")
     public Result<Void> approveAdjustment(@PathVariable Long id) {
         Long approverId = SecurityUtils.requireCurrentUserId();
         jdbc.update(
@@ -458,6 +476,7 @@ public class TeachingScheduleController {
     }
 
     @PostMapping("/adjustments/{id}/reject")
+    @CasbinAccess(resource = "teaching:schedule", action = "edit")
     public Result<Void> rejectAdjustment(@PathVariable Long id, @RequestBody Map<String, Object> data) {
         Long approverId = SecurityUtils.requireCurrentUserId();
         String comment = (String) data.get("approvalComment");
@@ -471,6 +490,7 @@ public class TeachingScheduleController {
     }
 
     @PostMapping("/adjustments/{id}/execute")
+    @CasbinAccess(resource = "teaching:schedule", action = "edit")
     public Result<Void> executeAdjustment(@PathVariable Long id) {
         jdbc.update(
             "UPDATE schedule_adjustments SET executed = 1, executed_at = NOW(), " +
@@ -480,6 +500,7 @@ public class TeachingScheduleController {
     }
 
     @PostMapping("/adjustments/{id}/cancel")
+    @CasbinAccess(resource = "teaching:schedule", action = "edit")
     public Result<Void> cancelAdjustment(@PathVariable Long id) {
         jdbc.update(
             "UPDATE schedule_adjustments SET approval_status = 3, " +
@@ -489,6 +510,7 @@ public class TeachingScheduleController {
     }
 
     @GetMapping("/adjustments/my-applications")
+    @CasbinAccess(resource = "teaching:schedule", action = "view")
     public Result<Map<String, Object>> myApplications(
             @RequestParam(required = false) Integer status,
             @RequestParam(defaultValue = "1") int page,
@@ -528,6 +550,7 @@ public class TeachingScheduleController {
     }
 
     @GetMapping("/adjustments/pending-approvals")
+    @CasbinAccess(resource = "teaching:schedule", action = "view")
     public Result<Map<String, Object>> pendingApprovals(
             @RequestParam(defaultValue = "1") int page,
             @RequestParam(defaultValue = "20") int size) {

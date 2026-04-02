@@ -7,6 +7,7 @@ import com.school.management.domain.access.model.Role;
 import com.school.management.domain.access.repository.RoleRepository;
 import com.school.management.domain.access.model.entity.AccessRelation;
 import com.school.management.domain.access.repository.AccessRelationRepository;
+import com.school.management.domain.access.repository.UserRoleRepository;
 import com.school.management.domain.place.model.entity.UniversalPlaceOccupant;
 import com.school.management.domain.place.repository.UniversalPlaceOccupantRepository;
 import com.school.management.domain.place.repository.UniversalPlaceRepository;
@@ -26,6 +27,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
 
 /**
  * 用户应用服务
@@ -44,12 +46,13 @@ public class UserApplicationService {
     private final UserTypeRepository userTypeRepository;
     private final RoleRepository roleRepository;
     private final AccessRelationRepository accessRelationRepository;
+    private final UserRoleRepository userRoleRepository;
     private final PasswordEncoder passwordEncoder;
     private final DomainEventPublisher eventPublisher;
     private final UniversalPlaceOccupantRepository occupantRepository;
     private final UniversalPlaceRepository placeRepository;
 
-    @Value("${app.security.default-password:Pwd@123456}")
+    @Value("${app.security.default-password:}")
     private String defaultPassword;
 
     // ==================== 用户创建 ====================
@@ -67,9 +70,13 @@ public class UserApplicationService {
         }
 
         // 加密密码
-        String encodedPassword = passwordEncoder.encode(
-                command.getPassword() != null ? command.getPassword() : defaultPassword
-        );
+        String rawPassword = command.getPassword();
+        if (rawPassword == null || rawPassword.isEmpty()) {
+            rawPassword = (defaultPassword != null && !defaultPassword.isEmpty())
+                    ? defaultPassword
+                    : UUID.randomUUID().toString().substring(0, 12);
+        }
+        String encodedPassword = passwordEncoder.encode(rawPassword);
 
         // 创建用户聚合
         User user = User.create(
@@ -283,7 +290,9 @@ public class UserApplicationService {
 
         User user = getUserOrThrow(userId);
 
-        String newPassword = defaultPassword;
+        String newPassword = (defaultPassword != null && !defaultPassword.isEmpty())
+                ? defaultPassword
+                : UUID.randomUUID().toString().substring(0, 12);
         String encodedPassword = passwordEncoder.encode(newPassword);
         user.resetPassword(encodedPassword);
 
@@ -327,6 +336,9 @@ public class UserApplicationService {
             throw new BusinessException("用户不存在: " + userId);
         }
 
+        // 清理关联数据
+        cleanupUserRelations(userId);
+
         // 自动退房：清理该用户的所有在住记录
         autoCheckOutByUser(userId);
 
@@ -340,9 +352,23 @@ public class UserApplicationService {
     public void deleteUsers(List<Long> userIds) {
         log.info("批量删除用户: {}", userIds);
         for (Long userId : userIds) {
+            cleanupUserRelations(userId);
             autoCheckOutByUser(userId);
         }
         userRepository.deleteByIds(userIds);
+    }
+
+    /**
+     * 清理用户关联数据：access_relations、user_roles
+     */
+    private void cleanupUserRelations(Long userId) {
+        // 清理 access_relations（组织关系、场所关系等）
+        accessRelationRepository.deleteBySubject("user", userId);
+        log.debug("已清理用户 {} 的 access_relations", userId);
+
+        // 清理 user_roles（角色分配）
+        userRoleRepository.deleteByUserId(userId);
+        log.debug("已清理用户 {} 的 user_roles", userId);
     }
 
     /**
@@ -449,6 +475,15 @@ public class UserApplicationService {
         log.info("分配用户角色: userId={}, roleIds={}", userId, roleIds);
 
         User user = getUserOrThrow(userId);
+
+        // 验证每个角色ID是否存在
+        if (roleIds != null) {
+            for (Long roleId : roleIds) {
+                roleRepository.findById(roleId)
+                        .orElseThrow(() -> new BusinessException("角色不存在: " + roleId));
+            }
+        }
+
         user.assignRoles(roleIds);
         userRepository.save(user);
     }

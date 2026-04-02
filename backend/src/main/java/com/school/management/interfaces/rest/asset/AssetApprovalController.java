@@ -10,6 +10,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.math.BigDecimal;
 import java.util.*;
+import com.school.management.infrastructure.casbin.CasbinAccess;
 
 /**
  * Asset Approval REST Controller
@@ -39,6 +40,7 @@ public class AssetApprovalController {
     // ==================== Create Approval ====================
 
     @PostMapping
+    @CasbinAccess(resource = "asset:approval", action = "edit")
     @Transactional
     public Result<Long> createApproval(@RequestBody Map<String, Object> data) {
         long id = IdWorker.getId();
@@ -67,6 +69,7 @@ public class AssetApprovalController {
     // ==================== Approve ====================
 
     @PostMapping("/{id}/approve")
+    @CasbinAccess(resource = "asset:approval", action = "edit")
     @Transactional
     public Result<Void> approve(@PathVariable Long id, @RequestBody(required = false) Map<String, Object> data) {
         String remark = data != null ? (String) data.get("remark") : null;
@@ -81,6 +84,7 @@ public class AssetApprovalController {
     // ==================== Reject ====================
 
     @PostMapping("/{id}/reject")
+    @CasbinAccess(resource = "asset:approval", action = "edit")
     @Transactional
     public Result<Void> reject(@PathVariable Long id, @RequestBody(required = false) Map<String, Object> data) {
         String remark = data != null ? (String) data.get("remark") : null;
@@ -95,6 +99,7 @@ public class AssetApprovalController {
     // ==================== Cancel ====================
 
     @PostMapping("/{id}/cancel")
+    @CasbinAccess(resource = "asset:approval", action = "edit")
     @Transactional
     public Result<Void> cancel(@PathVariable Long id) {
         jdbc.update(
@@ -105,6 +110,7 @@ public class AssetApprovalController {
     // ==================== Get Approval ====================
 
     @GetMapping("/{id}")
+    @CasbinAccess(resource = "asset:approval", action = "view")
     public Result<Map<String, Object>> getApproval(@PathVariable Long id) {
         Map<String, Object> approval = jdbc.queryForMap(
             "SELECT " + APPROVAL_COLUMNS + " FROM asset_approval WHERE id = ?", id);
@@ -115,6 +121,7 @@ public class AssetApprovalController {
     // ==================== My Approvals ====================
 
     @GetMapping("/my")
+    @CasbinAccess(resource = "asset:approval", action = "view")
     public Result<List<Map<String, Object>>> getMyApprovals() {
         List<Map<String, Object>> approvals = jdbc.queryForList(
             "SELECT " + APPROVAL_COLUMNS + " FROM asset_approval ORDER BY apply_time DESC"
@@ -126,6 +133,7 @@ public class AssetApprovalController {
     // ==================== Pending Approvals ====================
 
     @GetMapping("/pending")
+    @CasbinAccess(resource = "asset:approval", action = "view")
     public Result<List<Map<String, Object>>> getPendingApprovals() {
         List<Map<String, Object>> approvals = jdbc.queryForList(
             "SELECT " + APPROVAL_COLUMNS + " FROM asset_approval WHERE status = 0 ORDER BY apply_time DESC"
@@ -137,6 +145,7 @@ public class AssetApprovalController {
     // ==================== Query Approvals (paginated) ====================
 
     @GetMapping
+    @CasbinAccess(resource = "asset:approval", action = "view")
     public Result<Map<String, Object>> queryApprovals(
             @RequestParam(defaultValue = "1") int pageNum,
             @RequestParam(defaultValue = "20") int pageSize,
@@ -187,6 +196,7 @@ public class AssetApprovalController {
     // ==================== Pending Count ====================
 
     @GetMapping("/pending/count")
+    @CasbinAccess(resource = "asset:approval", action = "view")
     public Result<Long> countPending() {
         Long count = jdbc.queryForObject(
             "SELECT COUNT(*) FROM asset_approval WHERE status = 0", Long.class);

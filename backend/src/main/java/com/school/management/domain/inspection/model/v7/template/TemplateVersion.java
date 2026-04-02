@@ -11,6 +11,7 @@ import java.time.LocalDateTime;
 public class TemplateVersion implements Entity<Long> {
 
     private Long id;
+    private Long tenantId;
     private Long templateId;
     private Integer version;
     private String structureSnapshot;        // JSON: 完整 sections+items 树
@@ -87,5 +88,13 @@ public class TemplateVersion implements Entity<Long> {
 
     public LocalDateTime getCreatedAt() {
         return createdAt;
+    }
+
+    public Long getTenantId() {
+        return tenantId;
+    }
+
+    public void setTenantId(Long tenantId) {
+        this.tenantId = tenantId;
     }
 }

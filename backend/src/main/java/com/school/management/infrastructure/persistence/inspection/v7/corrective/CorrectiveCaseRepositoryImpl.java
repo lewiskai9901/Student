@@ -6,6 +6,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.school.management.domain.inspection.model.v7.corrective.*;
 import com.school.management.domain.inspection.repository.v7.CorrectiveCaseRepository;
 // RcaMethod, EffectivenessStatus used in toDomain
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Repository;
 
 import java.time.LocalDateTime;
@@ -14,6 +15,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
+@Slf4j
 @Repository
 public class CorrectiveCaseRepositoryImpl implements CorrectiveCaseRepository {
 
@@ -187,6 +189,7 @@ public class CorrectiveCaseRepositoryImpl implements CorrectiveCaseRepository {
         try {
             return objectMapper.readValue(json, new TypeReference<List<Long>>() {});
         } catch (JsonProcessingException e) {
+            log.error("Failed to deserialize correction evidence IDs: {}", json, e);
             return Collections.emptyList();
         }
     }

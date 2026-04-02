@@ -29,6 +29,9 @@ export interface PageResponse<T> {
   pages: number
 }
 
+// Alias for backward compatibility
+export type PageResult<T> = PageResponse<T>
+
 // 分页请求参数
 export interface PageParams {
   pageNum?: number

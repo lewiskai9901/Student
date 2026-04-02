@@ -1,9 +1,11 @@
 package com.school.management.infrastructure.persistence.inspection.v7.execution;
 
+import com.baomidou.mybatisplus.core.batch.MybatisBatch;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.school.management.domain.inspection.model.v7.execution.ScoringMode;
 import com.school.management.domain.inspection.model.v7.execution.SubmissionDetail;
 import com.school.management.domain.inspection.repository.v7.SubmissionDetailRepository;
+import org.apache.ibatis.session.SqlSessionFactory;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
@@ -14,9 +16,11 @@ import java.util.stream.Collectors;
 public class SubmissionDetailRepositoryImpl implements SubmissionDetailRepository {
 
     private final SubmissionDetailMapper mapper;
+    private final SqlSessionFactory sqlSessionFactory;
 
-    public SubmissionDetailRepositoryImpl(SubmissionDetailMapper mapper) {
+    public SubmissionDetailRepositoryImpl(SubmissionDetailMapper mapper, SqlSessionFactory sqlSessionFactory) {
         this.mapper = mapper;
+        this.sqlSessionFactory = sqlSessionFactory;
     }
 
     @Override
@@ -29,6 +33,19 @@ public class SubmissionDetailRepositoryImpl implements SubmissionDetailRepositor
             mapper.updateById(po);
         }
         return detail;
+    }
+
+    @Override
+    public List<SubmissionDetail> saveAll(List<SubmissionDetail> details) {
+        if (details == null || details.isEmpty()) {
+            return details;
+        }
+        List<SubmissionDetailPO> poList = details.stream().map(this::toPO).collect(Collectors.toList());
+        // Details don't need their generated IDs returned, so use MybatisBatch for true JDBC batching.
+        MybatisBatch<SubmissionDetailPO> mybatisBatch = new MybatisBatch<>(sqlSessionFactory, poList);
+        MybatisBatch.Method<SubmissionDetailPO> method = new MybatisBatch.Method<>(SubmissionDetailMapper.class);
+        mybatisBatch.execute(method.insert());
+        return details;
     }
 
     @Override

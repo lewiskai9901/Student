@@ -38,6 +38,16 @@ public class InspSubmissionApplicationService {
     public InspSubmission createSubmission(Long taskId, TargetType targetType,
                                            Long targetId, String targetName) {
         InspSubmission submission = InspSubmission.create(taskId, targetType, targetId, targetName);
+        // Auto-set sectionId from project's rootSectionId if not already set
+        if (submission.getSectionId() == null) {
+            taskRepository.findById(taskId).ifPresent(task ->
+                projectRepository.findById(task.getProjectId()).ifPresent(project -> {
+                    if (project.getRootSectionId() != null) {
+                        submission.setSectionId(project.getRootSectionId());
+                    }
+                })
+            );
+        }
         return submissionRepository.save(submission);
     }
 
@@ -109,12 +119,20 @@ public class InspSubmissionApplicationService {
                 .orElseThrow(() -> new IllegalStateException("项目不存在: " + task.getProjectId()));
         log.info("project found: id={}, name={}", project.getId(), project.getProjectName());
 
+        // Auto-start if still in PENDING or LOCKED status
+        if (submission.getStatus() == SubmissionStatus.PENDING
+                || submission.getStatus() == SubmissionStatus.LOCKED) {
+            log.info("Auto-transitioning submission {} from {} to IN_PROGRESS",
+                    id, submission.getStatus());
+            submission.startFilling();
+        }
+
         // 读取所有明细，委托给 ScoreAggregationService 计算分数
         List<SubmissionDetail> details = detailRepository.findBySubmissionId(id);
         log.info("details count: {}", details.size());
         try {
             ScoreAggregationService.ScoreFields fields =
-                    scoreAggregationService.computeScoreFields(project, details);
+                    scoreAggregationService.computeScoreFields(project, details, submission.getSectionId());
             log.info("score computed: base={}, final={}", fields.baseScore, fields.finalScore);
 
             submission.complete(fields.baseScore, fields.finalScore,
@@ -226,12 +244,12 @@ public class InspSubmissionApplicationService {
      */
     private void updateTaskCompletedCount(InspTask task) {
         List<InspSubmission> submissions = submissionRepository.findByTaskId(task.getId());
-        int completed = (int) submissions.stream()
-                .filter(s -> s.getStatus() == SubmissionStatus.COMPLETED)
-                .count();
-        int skipped = (int) submissions.stream()
-                .filter(s -> s.getStatus() == SubmissionStatus.SKIPPED)
-                .count();
+        int completed = 0;
+        int skipped = 0;
+        for (InspSubmission s : submissions) {
+            if (s.getStatus() == SubmissionStatus.COMPLETED) completed++;
+            else if (s.getStatus() == SubmissionStatus.SKIPPED) skipped++;
+        }
         task.updateTargetCounts(submissions.size(), completed, skipped);
         taskRepository.save(task);
     }

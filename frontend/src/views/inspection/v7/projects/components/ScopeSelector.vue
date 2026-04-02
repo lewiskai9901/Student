@@ -69,8 +69,9 @@ async function loadTreeData() {
       const res = await orgUnitApi.getTree()
       treeData.value = mapOrgTree(res.data ?? res)
     } else {
-      // Place tree loading
-      treeData.value = []
+      const { universalPlaceApi } = await import('@/api/universalPlace')
+      const res = await universalPlaceApi.getTree()
+      treeData.value = mapPlaceTree(res.data ?? res ?? [])
     }
   } catch {
     treeData.value = []
@@ -85,6 +86,15 @@ function mapOrgTree(nodes: any[]): TreeNode[] {
     id: n.id,
     label: n.name || n.unitName || n.label || `ID:${n.id}`,
     children: n.children ? mapOrgTree(n.children) : undefined,
+  }))
+}
+
+function mapPlaceTree(nodes: any[]): TreeNode[] {
+  if (!Array.isArray(nodes)) return []
+  return nodes.map(n => ({
+    id: n.id,
+    label: n.placeName || n.name || n.label || `ID:${n.id}`,
+    children: n.children?.length ? mapPlaceTree(n.children) : undefined,
   }))
 }
 

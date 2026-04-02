@@ -109,7 +109,12 @@ public class InspSubmissionController {
                 || request.getValidationRules() != null
                 || request.getConditionLogic() != null;
         if (request.getSectionName() != null || request.getScoringMode() != null) {
-            ScoringMode mode = request.getScoringMode() != null ? ScoringMode.valueOf(request.getScoringMode()) : null;
+            ScoringMode mode;
+            try {
+                mode = request.getScoringMode() != null ? ScoringMode.valueOf(request.getScoringMode()) : null;
+            } catch (IllegalArgumentException e) {
+                throw new IllegalArgumentException("无效的评分模式: " + request.getScoringMode());
+            }
             if (hasConfig) {
                 return Result.success(submissionService.createDetail(submissionId,
                         request.getTemplateItemId(), request.getItemCode(),

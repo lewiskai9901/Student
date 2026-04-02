@@ -1,11 +1,11 @@
 package com.school.management.infrastructure.schedule;
 
+import com.baomidou.mybatisplus.core.toolkit.IdWorker;
 import com.school.management.domain.schedule.ScheduleCodeGenerator;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
-import java.util.concurrent.ThreadLocalRandom;
 
 /**
  * Default implementation of ScheduleCodeGenerator.
@@ -19,7 +19,7 @@ public class DefaultScheduleCodeGenerator implements ScheduleCodeGenerator {
     @Override
     public String generatePolicyCode() {
         String datePart = LocalDate.now().format(DATE_FORMAT);
-        int randomPart = ThreadLocalRandom.current().nextInt(0, 1000);
+        int randomPart = Math.abs((int) (IdWorker.getId() % 1000));
         return String.format("SCH-%s-%03d", datePart, randomPart);
     }
 }

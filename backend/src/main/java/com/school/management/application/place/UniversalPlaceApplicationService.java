@@ -198,6 +198,17 @@ public class UniversalPlaceApplicationService {
             throw new IllegalArgumentException("空间类型已禁用");
         }
 
+        // 验证编码在同父节点下唯一
+        if (command.getParentId() != null) {
+            if (placeRepository.countByParentIdAndPlaceCode(command.getParentId(), command.getPlaceCode()) > 0) {
+                throw new IllegalArgumentException("同级场所下编码已存在: " + command.getPlaceCode());
+            }
+        } else {
+            if (placeRepository.countRootByPlaceCode(command.getPlaceCode()) > 0) {
+                throw new IllegalArgumentException("根场所下编码已存在: " + command.getPlaceCode());
+            }
+        }
+
         // 验证父空间
         UniversalPlace parent = null;
         if (command.getParentId() != null) {
@@ -268,6 +279,11 @@ public class UniversalPlaceApplicationService {
     public PlaceDTO updatePlace(Long id, UpdatePlaceCommand command) {
         UniversalPlace place = placeRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("空间不存在"));
+
+        // 场所类型创建后不可修改
+        if (command.getTypeCode() != null && !command.getTypeCode().equals(place.getTypeCode())) {
+            throw new IllegalArgumentException("场所类型创建后不可修改");
+        }
 
         String reason = command.getReason();
 
@@ -341,9 +357,15 @@ public class UniversalPlaceApplicationService {
             throw new IllegalArgumentException("空间有子空间，不能删除");
         }
 
-        // 检查是否有占用
+        // 检查是否有活跃占用记录（比 currentOccupancy 字段更可靠）
+        List<UniversalPlaceOccupant> activeOccupants = occupantRepository.findActiveByPlaceId(id);
+        if (!activeOccupants.isEmpty()) {
+            throw new IllegalArgumentException("场所有占用记录，请先清退后再删除");
+        }
+
+        // 检查 currentOccupancy 字段（双重保险）
         if (place.getCurrentOccupancy() != null && place.getCurrentOccupancy() > 0) {
-            throw new IllegalArgumentException("空间有占用者，不能删除");
+            throw new IllegalArgumentException("场所有占用记录，请先清退后再删除");
         }
 
         placeRepository.deleteById(id);
@@ -382,13 +404,18 @@ public class UniversalPlaceApplicationService {
         node.setStatus(place.getStatus().getValue());
         node.setAttributes(place.getAttributes());
 
-        // 组织继承计算
-        Long effectiveOrgId = inheritanceService.getEffectiveOrgUnitId(place);
-        node.setEffectiveOrgUnitId(effectiveOrgId);
-        node.setIsOrgInherited(inheritanceService.isOrgInherited(place));
-        if (effectiveOrgId != null && place.getOrgUnitId() == null) {
-            orgUnitRepository.findById(effectiveOrgId)
-                    .ifPresent(org -> node.setEffectiveOrgUnitName(org.getUnitName()));
+        // 组织继承计算（防御性null检查）
+        try {
+            Long effectiveOrgId = inheritanceService.getEffectiveOrgUnitId(place);
+            node.setEffectiveOrgUnitId(effectiveOrgId);
+            node.setIsOrgInherited(inheritanceService.isOrgInherited(place));
+            if (effectiveOrgId != null && place.getOrgUnitId() == null) {
+                orgUnitRepository.findById(effectiveOrgId)
+                        .ifPresent(org -> node.setEffectiveOrgUnitName(org.getUnitName()));
+            }
+        } catch (Exception e) {
+            log.warn("计算场所[{}]组织继承时出错: {}", place.getId(), e.getMessage());
+            node.setIsOrgInherited(false);
         }
         if (place.getParentId() != null) {
             placeRepository.findById(place.getParentId()).ifPresent(parent ->
@@ -396,13 +423,18 @@ public class UniversalPlaceApplicationService {
             );
         }
 
-        // 负责人继承计算
-        node.setIsResponsibleInherited(inheritanceService.isResponsibleInherited(place));
-        Long effectiveResponsibleId = inheritanceService.getEffectiveResponsibleUserId(place);
-        node.setEffectiveResponsibleUserId(effectiveResponsibleId);
-        if (effectiveResponsibleId != null) {
-            userRepository.findById(effectiveResponsibleId)
-                    .ifPresent(user -> node.setEffectiveResponsibleUserName(user.getRealName()));
+        // 负责人继承计算（防御性null检查）
+        try {
+            node.setIsResponsibleInherited(inheritanceService.isResponsibleInherited(place));
+            Long effectiveResponsibleId = inheritanceService.getEffectiveResponsibleUserId(place);
+            node.setEffectiveResponsibleUserId(effectiveResponsibleId);
+            if (effectiveResponsibleId != null) {
+                userRepository.findById(effectiveResponsibleId)
+                        .ifPresent(user -> node.setEffectiveResponsibleUserName(user.getRealName()));
+            }
+        } catch (Exception e) {
+            log.warn("计算场所[{}]负责人继承时出错: {}", place.getId(), e.getMessage());
+            node.setIsResponsibleInherited(false);
         }
 
         // 获取类型信息
@@ -469,6 +501,123 @@ public class UniversalPlaceApplicationService {
         return occupantRepository.findAllByPlaceId(placeId).stream()
                 .map(this::toOccupantDTO)
                 .collect(Collectors.toList());
+    }
+
+    /**
+     * 查询指定场所列表中的所有活跃占用记录（带场所信息），用于住宿管理列表视图
+     */
+    public List<OccupantWithPlaceDTO> getOccupantsForPlaces(List<Long> placeIds, String occupantType) {
+        List<UniversalPlaceOccupant> occupants = occupantRepository.findActiveByPlaceIds(placeIds, occupantType);
+        // 批量加载场所信息
+        Set<Long> uniquePlaceIds = occupants.stream()
+                .map(UniversalPlaceOccupant::getPlaceId)
+                .collect(Collectors.toSet());
+        Map<Long, UniversalPlace> placeMap = new HashMap<>();
+        // Also build parent-name map for building names
+        Map<Long, String> placeParentNameMap = new HashMap<>();
+        for (Long pid : uniquePlaceIds) {
+            placeRepository.findById(pid).ifPresent(p -> {
+                placeMap.put(pid, p);
+                // Get building name (parent or grandparent)
+                if (p.getParentId() != null) {
+                    placeRepository.findById(p.getParentId()).ifPresent(parent -> {
+                        String parentType = parent.getTypeCode() != null ? parent.getTypeCode().toLowerCase() : "";
+                        if (parentType.contains("floor") || parentType.contains("楼层")) {
+                            // Parent is a floor, grandparent is the building
+                            if (parent.getParentId() != null) {
+                                placeRepository.findById(parent.getParentId())
+                                        .ifPresent(gp -> placeParentNameMap.put(pid, gp.getPlaceName()));
+                            }
+                        } else {
+                            // Parent is the building
+                            placeParentNameMap.put(pid, parent.getPlaceName());
+                        }
+                    });
+                }
+            });
+        }
+
+        return occupants.stream().map(occ -> {
+            OccupantDTO base = toOccupantDTO(occ);
+            OccupantWithPlaceDTO dto = new OccupantWithPlaceDTO();
+            dto.setId(base.getId());
+            dto.setPlaceId(base.getPlaceId());
+            dto.setOccupantType(base.getOccupantType());
+            dto.setOccupantId(base.getOccupantId());
+            dto.setOccupantName(base.getOccupantName());
+            dto.setUsername(base.getUsername());
+            dto.setOrgUnitName(base.getOrgUnitName());
+            dto.setUserTypeName(base.getUserTypeName());
+            dto.setGender(base.getGender());
+            dto.setPositionNo(base.getPositionNo());
+            dto.setCheckInTime(base.getCheckInTime());
+            dto.setCheckOutTime(base.getCheckOutTime());
+            dto.setStatus(base.getStatus());
+            dto.setRemark(base.getRemark());
+            // Enrich with place info
+            UniversalPlace place = placeMap.get(occ.getPlaceId());
+            if (place != null) {
+                dto.setPlaceName(place.getPlaceName());
+                dto.setPlaceCode(place.getPlaceCode());
+            }
+            dto.setBuildingName(placeParentNameMap.get(occ.getPlaceId()));
+            return dto;
+        }).collect(Collectors.toList());
+    }
+
+    /**
+     * 查询某个占用者的所有占用历史（跨场所），带场所信息
+     */
+    public List<OccupantWithPlaceDTO> getOccupantHistoryByOccupant(String occupantType, Long occupantId) {
+        List<UniversalPlaceOccupant> records = occupantRepository.findAllByOccupant(occupantType, occupantId);
+        Set<Long> uniquePlaceIds = records.stream()
+                .map(UniversalPlaceOccupant::getPlaceId)
+                .collect(Collectors.toSet());
+        Map<Long, UniversalPlace> placeMap = new HashMap<>();
+        Map<Long, String> placeParentNameMap = new HashMap<>();
+        for (Long pid : uniquePlaceIds) {
+            placeRepository.findById(pid).ifPresent(p -> {
+                placeMap.put(pid, p);
+                if (p.getParentId() != null) {
+                    placeRepository.findById(p.getParentId()).ifPresent(parent -> {
+                        String parentType = parent.getTypeCode() != null ? parent.getTypeCode().toLowerCase() : "";
+                        if (parentType.contains("floor") || parentType.contains("楼层")) {
+                            if (parent.getParentId() != null) {
+                                placeRepository.findById(parent.getParentId())
+                                        .ifPresent(gp -> placeParentNameMap.put(pid, gp.getPlaceName()));
+                            }
+                        } else {
+                            placeParentNameMap.put(pid, parent.getPlaceName());
+                        }
+                    });
+                }
+            });
+        }
+        return records.stream().map(occ -> {
+            OccupantDTO base = toOccupantDTO(occ);
+            OccupantWithPlaceDTO dto = new OccupantWithPlaceDTO();
+            dto.setId(base.getId());
+            dto.setPlaceId(base.getPlaceId());
+            dto.setOccupantType(base.getOccupantType());
+            dto.setOccupantId(base.getOccupantId());
+            dto.setOccupantName(base.getOccupantName());
+            dto.setUsername(base.getUsername());
+            dto.setOrgUnitName(base.getOrgUnitName());
+            dto.setUserTypeName(base.getUserTypeName());
+            dto.setGender(base.getGender());
+            dto.setPositionNo(base.getPositionNo());
+            dto.setCheckInTime(base.getCheckInTime());
+            dto.setCheckOutTime(base.getCheckOutTime());
+            dto.setStatus(base.getStatus());
+            dto.setRemark(base.getRemark());
+            UniversalPlace place = placeMap.get(occ.getPlaceId());
+            if (place != null) {
+                dto.setPlaceName(place.getPlaceName());
+                dto.setPlaceCode(place.getPlaceCode());
+            }
+            dto.setBuildingName(placeParentNameMap.get(occ.getPlaceId()));
+            return dto;
+        }).collect(Collectors.toList());
     }
 
     @Transactional
@@ -780,6 +929,7 @@ public class UniversalPlaceApplicationService {
     public static class UpdatePlaceCommand {
         private String placeCode;
         private String placeName;
+        private String typeCode;
         private String description;
         private Integer status;
         private Integer capacity;
@@ -807,6 +957,27 @@ public class UniversalPlaceApplicationService {
     public static class OccupantDTO {
         private Long id;
         private Long placeId;
+        private String occupantType;
+        private Long occupantId;
+        private String occupantName;
+        private String username;
+        private String orgUnitName;
+        private String userTypeName;
+        private Integer gender;
+        private String positionNo;
+        private java.time.LocalDateTime checkInTime;
+        private java.time.LocalDateTime checkOutTime;
+        private Integer status;
+        private String remark;
+    }
+
+    @Data
+    public static class OccupantWithPlaceDTO {
+        private Long id;
+        private Long placeId;
+        private String placeName;
+        private String placeCode;
+        private String buildingName;
         private String occupantType;
         private Long occupantId;
         private String occupantName;

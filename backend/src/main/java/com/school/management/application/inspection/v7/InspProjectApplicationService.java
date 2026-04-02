@@ -31,6 +31,7 @@ public class InspProjectApplicationService {
     private final ProjectScoreRepository scoreRepository;
     private final SpringDomainEventPublisher eventPublisher;
     private final ScoringProfileRepository scoringProfileRepository;
+    private final TargetPopulationService targetPopulationService;
     private final ObjectMapper objectMapper;
 
     public InspProjectApplicationService(InspProjectRepository projectRepository,
@@ -38,12 +39,14 @@ public class InspProjectApplicationService {
                                           ProjectScoreRepository scoreRepository,
                                           SpringDomainEventPublisher eventPublisher,
                                           ScoringProfileRepository scoringProfileRepository,
+                                          TargetPopulationService targetPopulationService,
                                           ObjectMapper objectMapper) {
         this.projectRepository = projectRepository;
         this.inspectorRepository = inspectorRepository;
         this.scoreRepository = scoreRepository;
         this.eventPublisher = eventPublisher;
         this.scoringProfileRepository = scoringProfileRepository;
+        this.targetPopulationService = targetPopulationService;
         this.objectMapper = objectMapper;
     }
 
@@ -124,34 +127,40 @@ public class InspProjectApplicationService {
             throw new IllegalStateException("请先设置开始日期");
         }
 
+        // 校验检查范围内存在有效的检查对象
+        List<TargetPopulationService.TargetInfo> targets = targetPopulationService.resolveTargets(
+                project.getScopeType(), project.getScopeConfig(), TargetType.ORG);
+        if (targets.isEmpty()) {
+            throw new IllegalStateException("检查范围内未找到有效的检查对象，请检查范围配置");
+        }
+
         // 锁定评分配置快照
-        try {
-            Long rootSectionId = project.getRootSectionId();
-            if (rootSectionId != null) {
-                scoringProfileRepository.findBySectionId(rootSectionId).ifPresent(profile -> {
-                    try {
-                        Map<String, Object> snapshotMap = new HashMap<>();
-                        snapshotMap.put("profileId", profile.getId());
-                        snapshotMap.put("sectionId", profile.getSectionId());
-                        snapshotMap.put("maxScore", profile.getMaxScore());
-                        snapshotMap.put("minScore", profile.getMinScore());
-                        snapshotMap.put("precisionDigits", profile.getPrecisionDigits());
-                        snapshotMap.put("multiRaterMode", profile.getMultiRaterMode());
-                        snapshotMap.put("calibrationEnabled", profile.getCalibrationEnabled());
-                        snapshotMap.put("calibrationMethod", profile.getCalibrationMethod());
-                        snapshotMap.put("trendFactorEnabled", profile.getTrendFactorEnabled());
-                        snapshotMap.put("decayEnabled", profile.getDecayEnabled());
-                        snapshotMap.put("decayMode", profile.getDecayMode());
-                        snapshotMap.put("snapshotAt", LocalDateTime.now().toString());
-                        String snapshot = objectMapper.writeValueAsString(snapshotMap);
-                        project.lockScoringConfig(snapshot);
-                    } catch (Exception e) {
-                        log.warn("序列化评分配置快照失败，projectId={}: {}", project.getId(), e.getMessage());
-                    }
-                });
-            }
-        } catch (Exception e) {
-            log.warn("锁定评分配置快照过程中出错，projectId={}: {}", project.getId(), e.getMessage());
+        Long rootSectionId = project.getRootSectionId();
+        if (rootSectionId != null) {
+            scoringProfileRepository.findBySectionId(rootSectionId).ifPresentOrElse(profile -> {
+                try {
+                    Map<String, Object> snapshotMap = new HashMap<>();
+                    snapshotMap.put("profileId", profile.getId());
+                    snapshotMap.put("sectionId", profile.getSectionId());
+                    snapshotMap.put("maxScore", profile.getMaxScore());
+                    snapshotMap.put("minScore", profile.getMinScore());
+                    snapshotMap.put("precisionDigits", profile.getPrecisionDigits());
+                    snapshotMap.put("multiRaterMode", profile.getMultiRaterMode());
+                    snapshotMap.put("calibrationEnabled", profile.getCalibrationEnabled());
+                    snapshotMap.put("calibrationMethod", profile.getCalibrationMethod());
+                    snapshotMap.put("trendFactorEnabled", profile.getTrendFactorEnabled());
+                    snapshotMap.put("decayEnabled", profile.getDecayEnabled());
+                    snapshotMap.put("decayMode", profile.getDecayMode());
+                    snapshotMap.put("snapshotAt", LocalDateTime.now().toString());
+                    String snapshot = objectMapper.writeValueAsString(snapshotMap);
+                    project.lockScoringConfig(snapshot);
+                    log.info("评分配置快照已锁定，projectId={}", project.getId());
+                } catch (Exception e) {
+                    log.error("序列化评分配置快照失败，projectId={}，将使用默认评分配置: {}", project.getId(), e.getMessage());
+                }
+            }, () -> {
+                log.info("项目 {} 未配置评分方案，将使用默认评分逻辑", project.getId());
+            });
         }
 
         project.publish(templateVersionId);

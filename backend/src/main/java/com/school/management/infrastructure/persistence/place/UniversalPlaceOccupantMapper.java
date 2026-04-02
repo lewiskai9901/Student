@@ -80,4 +80,22 @@ public interface UniversalPlaceOccupantMapper extends BaseMapper<UniversalPlaceO
     @Update("UPDATE place_occupants SET org_unit_name = NULL, updated_at = NOW() " +
             "WHERE org_unit_name = #{orgUnitName} AND status = 1 AND deleted = 0")
     int clearOrgUnitName(@Param("orgUnitName") String orgUnitName);
+
+    /**
+     * 查询指定场所列表中的所有活跃占用记录
+     */
+    @Select("<script>" +
+            "SELECT * FROM place_occupants WHERE status = 1 AND deleted = 0 " +
+            "<if test='placeIds != null and placeIds.size() > 0'>" +
+            "AND place_id IN " +
+            "<foreach collection='placeIds' item='pid' open='(' separator=',' close=')'>" +
+            "#{pid}" +
+            "</foreach>" +
+            "</if>" +
+            "<if test='occupantType != null'> AND occupant_type = #{occupantType}</if>" +
+            " ORDER BY check_in_time DESC" +
+            "</script>")
+    List<UniversalPlaceOccupantPO> findActiveByPlaceIds(
+            @Param("placeIds") List<Long> placeIds,
+            @Param("occupantType") String occupantType);
 }

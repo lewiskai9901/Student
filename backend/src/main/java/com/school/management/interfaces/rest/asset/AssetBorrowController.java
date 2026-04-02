@@ -12,6 +12,7 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
 import java.util.*;
+import com.school.management.infrastructure.casbin.CasbinAccess;
 
 /**
  * Asset Borrow REST Controller
@@ -41,6 +42,7 @@ public class AssetBorrowController {
     // ==================== Create Borrow ====================
 
     @PostMapping
+    @CasbinAccess(resource = "asset:borrow", action = "edit")
     @Transactional
     public Result<Long> createBorrow(@RequestBody Map<String, Object> data) {
         long id = IdWorker.getId();
@@ -83,6 +85,7 @@ public class AssetBorrowController {
     // ==================== Return Borrow ====================
 
     @PostMapping("/{id}/return")
+    @CasbinAccess(resource = "asset:borrow", action = "edit")
     @Transactional
     public Result<Void> returnBorrow(@PathVariable Long id, @RequestBody Map<String, Object> data) {
         jdbc.update(
@@ -99,6 +102,7 @@ public class AssetBorrowController {
     // ==================== Cancel Borrow ====================
 
     @PostMapping("/{id}/cancel")
+    @CasbinAccess(resource = "asset:borrow", action = "edit")
     @Transactional
     public Result<Void> cancelBorrow(@PathVariable Long id) {
         jdbc.update(
@@ -109,6 +113,7 @@ public class AssetBorrowController {
     // ==================== Get Borrow Detail ====================
 
     @GetMapping("/{id}")
+    @CasbinAccess(resource = "asset:borrow", action = "view")
     public Result<Map<String, Object>> getBorrow(@PathVariable Long id) {
         Map<String, Object> borrow = jdbc.queryForMap(
             "SELECT " + BORROW_COLUMNS + " FROM asset_borrow WHERE id = ? AND deleted = 0", id);
@@ -119,6 +124,7 @@ public class AssetBorrowController {
     // ==================== List Borrows (paginated) ====================
 
     @GetMapping
+    @CasbinAccess(resource = "asset:borrow", action = "view")
     public Result<Map<String, Object>> listBorrows(
             @RequestParam(defaultValue = "1") int pageNum,
             @RequestParam(defaultValue = "20") int pageSize,
@@ -177,6 +183,7 @@ public class AssetBorrowController {
     // ==================== My Borrows ====================
 
     @GetMapping("/my")
+    @CasbinAccess(resource = "asset:borrow", action = "view")
     public Result<List<Map<String, Object>>> getMyBorrows() {
         // In a real system, get current user from SecurityContext.
         // For now, return all active borrows.
@@ -193,6 +200,7 @@ public class AssetBorrowController {
     // ==================== Asset Borrow History ====================
 
     @GetMapping("/asset/{assetId}")
+    @CasbinAccess(resource = "asset:borrow", action = "view")
     public Result<List<Map<String, Object>>> getAssetBorrowHistory(@PathVariable Long assetId) {
         List<Map<String, Object>> borrows = jdbc.queryForList(
             "SELECT " + BORROW_COLUMNS + " FROM asset_borrow WHERE asset_id = ? AND deleted = 0 " +
@@ -207,6 +215,7 @@ public class AssetBorrowController {
     // ==================== Overdue Borrows ====================
 
     @GetMapping("/overdue")
+    @CasbinAccess(resource = "asset:borrow", action = "view")
     public Result<List<Map<String, Object>>> getOverdueBorrows() {
         List<Map<String, Object>> borrows = jdbc.queryForList(
             "SELECT " + BORROW_COLUMNS + " FROM asset_borrow " +
@@ -222,6 +231,7 @@ public class AssetBorrowController {
     // ==================== Statistics ====================
 
     @GetMapping("/statistics")
+    @CasbinAccess(resource = "asset:borrow", action = "view")
     public Result<Map<String, Object>> getStatistics() {
         Map<String, Object> stats = jdbc.queryForMap(
             "SELECT " +

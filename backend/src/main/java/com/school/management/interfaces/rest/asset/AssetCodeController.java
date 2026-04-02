@@ -8,6 +8,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.nio.charset.StandardCharsets;
 import java.util.*;
+import com.school.management.infrastructure.casbin.CasbinAccess;
 
 /**
  * Asset Code / Label REST Controller
@@ -26,6 +27,7 @@ public class AssetCodeController {
     // ==================== Generate Asset Code ====================
 
     @PostMapping("/generate")
+    @CasbinAccess(resource = "asset:manage", action = "edit")
     public Result<String> generateAssetCode(
             @RequestParam String categoryCode,
             @RequestParam(defaultValue = "0") int currentMaxSeq) {
@@ -47,6 +49,7 @@ public class AssetCodeController {
     // ==================== Batch Generate Codes ====================
 
     @PostMapping("/generate-batch")
+    @CasbinAccess(resource = "asset:manage", action = "edit")
     public Result<List<String>> generateAssetCodes(
             @RequestParam String categoryCode,
             @RequestParam int count,
@@ -70,6 +73,7 @@ public class AssetCodeController {
     // ==================== Generate QR Code ====================
 
     @GetMapping("/qrcode")
+    @CasbinAccess(resource = "asset:manage", action = "view")
     public Result<Map<String, Object>> generateQRCode(
             @RequestParam String assetCode,
             @RequestParam Long assetId,
@@ -90,6 +94,7 @@ public class AssetCodeController {
     // ==================== Generate Barcode ====================
 
     @GetMapping("/barcode")
+    @CasbinAccess(resource = "asset:manage", action = "view")
     public Result<Map<String, Object>> generateBarcode(
             @RequestParam String assetCode,
             @RequestParam(defaultValue = "300") int width,
@@ -108,6 +113,7 @@ public class AssetCodeController {
     // ==================== Parse QR Code ====================
 
     @PostMapping("/parse-qrcode")
+    @CasbinAccess(resource = "asset:manage", action = "edit")
     public Result<Map<String, Object>> parseQRCode(@RequestParam String content) {
         Map<String, Object> result = new HashMap<>();
 
@@ -128,6 +134,7 @@ public class AssetCodeController {
     // ==================== Generate Label ====================
 
     @GetMapping("/label")
+    @CasbinAccess(resource = "asset:manage", action = "view")
     public Result<Map<String, Object>> generateLabel(
             @RequestParam String assetCode,
             @RequestParam Long assetId,
@@ -155,6 +162,7 @@ public class AssetCodeController {
     // ==================== Batch Generate Labels ====================
 
     @PostMapping("/labels")
+    @CasbinAccess(resource = "asset:manage", action = "edit")
     public Result<List<Map<String, Object>>> generateLabels(@RequestBody List<Map<String, Object>> requests) {
         List<Map<String, Object>> results = new ArrayList<>();
 

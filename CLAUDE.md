@@ -4,13 +4,14 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-This is a **Student Management System (学生管理系统)** built with Spring Boot 3.2 + Vue.js 3 + TypeScript. It's a modern education information platform featuring student information management, V4 inspection system with auto scheduling and analytics, dormitory management, and WeChat miniprogram support.
+This is a **通用组织管理平台** built with Spring Boot 3.2 + Vue.js 3 + TypeScript. It's a modern organization management platform featuring organization structure, place management, V7 inspection platform, teaching management, and more.
 
 **Key Features:**
 - RBAC-based user permission management with JWT authentication (access + refresh tokens)
-- Student information management with Excel import/export
-- V4 inspection system with session-based architecture, corrective actions, auto scheduling, analytics, and data export
-- Department/Class/Dormitory/Classroom organization management
+- Generic organization structure management (tree-based, configurable types)
+- Universal place management with occupancy, booking, and floor plan
+- V7 inspection platform with templates, tasks, scoring, analytics, and corrective actions
+- Teaching management (curriculum, schedule, examination)
 - WeChat miniprogram integration (in development)
 
 ## Build and Run Commands
@@ -109,7 +110,7 @@ com.school.management/
 │   │   ├── model/            # 聚合根、实体、值对象
 │   │   ├── repository/       # 仓储接口
 │   │   └── event/            # 领域事件
-│   ├── inspection/           # 量化检查领域
+│   ├── inspection/           # 检查平台领域
 │   │   ├── model/            # 检查领域模型
 │   │   ├── repository/       # 仓储接口
 │   │   ├── saga/             # Saga编排 (跨聚合工作流)
@@ -118,7 +119,7 @@ com.school.management/
 │   └── shared/               # 共享内核 (Entity, AggregateRoot, ValueObject)
 ├── application/              # 应用层 - 用例编排
 │   ├── organization/         # 组织管理应用服务
-│   ├── inspection/           # 量化检查应用服务
+│   ├── inspection/           # 检查平台应用服务
 │   └── access/               # 权限管理应用服务
 ├── infrastructure/           # 基础设施层 - 技术实现
 │   ├── persistence/          # 持久化实现 (Repository实现, Mapper, PO)
@@ -186,7 +187,7 @@ com.school.management/
 src/
 ├── api/                 # API模块
 │   ├── organization.ts  # 组织管理API (orgUnitApi, schoolClassApi)
-│   ├── inspection.ts    # 量化检查API (templateApi, recordApi, appealApi)
+│   ├── inspection.ts    # 检查平台API (templateApi, recordApi, appealApi)
 │   └── access.ts        # 权限管理API (permissionApi, roleApi)
 ├── types/               # TypeScript类型定义
 ├── stores/              # Pinia状态管理
@@ -211,13 +212,13 @@ src/
 │   ├── /organization/academic/* - 年级专业
 │   ├── /organization/dormitory/* - 宿舍管理
 │   └── /organization/teaching/* - 教学设施
-├── /inspection (量化检查, order: 3) ← Inspection领域
-│   ├── /inspection/config - 量化配置
-│   ├── /inspection/plans - 检查计划
-│   ├── /inspection/appeals - 申诉管理
-│   └── /inspection/* - 其他检查功能
-├── /evaluation (综合测评, order: 4)
-├── /task (任务管理, order: 5)
+├── /inspection/v7 (检查平台, order: 12) ← Inspection领域
+│   ├── /inspection/v7/config - 检查配置
+│   ├── /inspection/v7/templates/* - 模板管理
+│   ├── /inspection/v7/projects/* - 检查项目
+│   ├── /inspection/v7/tasks/* - 检查任务
+│   └── /inspection/v7/analytics/* - 数据分析
+├── /teaching (教务管理, order: 20)
 ├── /access (权限管理, order: 6) ← Access领域
 │   ├── /access/users - 用户管理
 │   ├── /access/roles - 角色管理
@@ -250,17 +251,15 @@ src/
 4. On token expiry, frontend auto-refreshes using `/api/auth/refresh`
 5. Logout calls `/api/auth/logout` → token added to Redis blacklist
 
-### V4 Inspection System
+### V7 Inspection Platform
 
-The inspection system uses a session-based architecture (V4) with the following capabilities:
-- **Inspection Sessions**: Session-based check management with configurable templates
-- **Corrective Actions**: Track and manage corrective actions linked to inspection findings
-- **Student Behavior**: Record and analyze student behavior patterns
-- **Auto Scheduling**: Automated scheduling of inspection sessions
-- **Analytics**: Inspection data analytics and department ranking
-- **Data Export**: Export inspection data for reporting
-
-Key domain packages: `domain/inspection/saga/` for cross-aggregate workflow orchestration, `domain/inspection/export/` for data export logic.
+The inspection platform (V7) features:
+- **Template System**: Modular templates with sections, items, library items, and response sets
+- **Inspection Projects**: Project-based inspection management with plans and tasks
+- **Scoring System**: Grade schemes, indicators, and scoring profiles
+- **Corrective Actions**: Root cause analysis and corrective case management
+- **Analytics**: Real-time dashboards, daily/period summaries, and ranking
+- **IoT Integration**: NFC tags and sensor binding for automated inspection
 
 ### MyBatis Plus Configuration
 

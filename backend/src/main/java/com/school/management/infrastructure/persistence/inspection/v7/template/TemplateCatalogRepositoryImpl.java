@@ -63,7 +63,7 @@ public class TemplateCatalogRepositoryImpl implements TemplateCatalogRepository 
     private TemplateCatalogPO toPO(TemplateCatalog domain) {
         TemplateCatalogPO po = new TemplateCatalogPO();
         po.setId(domain.getId());
-        po.setTenantId(0L);
+        po.setTenantId(domain.getTenantId() != null ? domain.getTenantId() : 0L);
         po.setParentId(domain.getParentId());
         po.setCatalogCode(domain.getCatalogCode());
         po.setCatalogName(domain.getCatalogName());

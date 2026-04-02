@@ -1,10 +1,10 @@
 package com.school.management.infrastructure.persistence.inspection.v7.analytics;
 
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
-import org.apache.ibatis.annotations.Delete;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 import org.apache.ibatis.annotations.Select;
+import org.apache.ibatis.annotations.Update;
 
 import java.time.LocalDate;
 import java.util.List;
@@ -37,6 +37,6 @@ public interface DailySummaryMapper extends BaseMapper<DailySummaryPO> {
                                        @Param("startDate") LocalDate startDate,
                                        @Param("endDate") LocalDate endDate);
 
-    @Delete("UPDATE insp_daily_summaries SET deleted = 1 WHERE project_id = #{projectId} AND summary_date = #{date}")
+    @Update("UPDATE insp_daily_summaries SET deleted = 1 WHERE project_id = #{projectId} AND summary_date = #{date}")
     void deleteByProjectAndDate(@Param("projectId") Long projectId, @Param("date") LocalDate date);
 }

@@ -53,8 +53,7 @@ const isFirstLevel = computed(() => Number(selectedSection.value?.parentSectionI
 const isLeaf = computed(() => selectedSection.value ? !editor.sections.value.some(s => Number(s.parentSectionId) === Number(selectedSection.value!.id)) : false)
 const currentItems = computed(() => {
   if (!selectedSectionId.value) return []
-  // Try both number and original key since itemsBySection keys may be string or number
-  return editor.itemsBySection.value.get(selectedSectionId.value) || editor.itemsBySection.value.get(Number(selectedSectionId.value)) || []
+  return editor.itemsBySection.value.get(String(selectedSectionId.value)) || []
 })
 const allItems = computed(() => { const r: TemplateItem[] = []; for (const l of editor.itemsBySection.value.values()) r.push(...l); return r })
 
@@ -63,7 +62,7 @@ const editingInfo = ref(false)
 const infoForm = ref({ name: '', description: '', tags: '' })
 function openEditInfo() {
   if (!rootSection.value || isReadonly.value) return
-  infoForm.value = { name: rootSection.value.sectionName, description: rootSection.value.description || '', tags: rootSection.value.tags || '' }
+  infoForm.value = { name: rootSection.value.sectionName, description: rootSection.value.description || '', tags: parseTags(rootSection.value.tags) }
   editingInfo.value = true
 }
 async function saveInfo() {
@@ -81,7 +80,7 @@ const rootInfoDirty = ref(false)
 watch([isRootSelected, rootSection], ([sel, root]) => {
   if (sel && root) {
     rootForm.value = {
-      name: root.sectionName, description: root.description || '', tags: root.tags || '',
+      name: root.sectionName, description: root.description || '', tags: parseTags(root.tags),
       targetType: (root.targetType as TargetType | null) || null,
       targetTypeFilter: parseFilterToArray(root.targetTypeFilter),
     }
@@ -107,7 +106,7 @@ async function saveRootProps() {
 }
 
 // ===== Section form (right panel when no item selected) =====
-const sf = ref({ sectionName: '', targetType: null as TargetType | null, targetTypeFilter: [] as string[], weight: 100, isRepeatable: false })
+const sf = ref({ sectionName: '', targetType: null as TargetType | null, targetTypeFilter: [] as string[], weight: 100, isRepeatable: false, inputMode: 'INLINE' as 'INLINE' | 'EVENT_STREAM' })
 const sfDirty = ref(false)
 
 // 类型选项列表（根据 targetType 动态加载）
@@ -132,6 +131,15 @@ async function loadTypeFilterOptions(targetType: string | null) {
 }
 
 // 解析 targetTypeFilter 字符串为数组
+/** Parse tags from JSON string or comma-separated string to display format */
+function parseTags(tags: string | null | undefined): string {
+  if (!tags) return ''
+  try {
+    const arr = JSON.parse(tags)
+    return Array.isArray(arr) ? arr.join(', ') : String(tags)
+  } catch { return String(tags) }
+}
+
 function parseFilterToArray(filter: string | null): string[] {
   if (!filter) return []
   return filter.split('&&').map(s => s.trim()).filter(Boolean)
@@ -143,7 +151,7 @@ function arrayToFilter(arr: string[]): string | null {
 watch(selectedSection, (s) => {
   if (s) {
     const filterArr = parseFilterToArray(s.targetTypeFilter)
-    sf.value = { sectionName: s.sectionName, targetType: s.targetType as TargetType | null, targetTypeFilter: filterArr, weight: s.weight, isRepeatable: s.isRepeatable }
+    sf.value = { sectionName: s.sectionName, targetType: s.targetType as TargetType | null, targetTypeFilter: filterArr, weight: s.weight, isRepeatable: s.isRepeatable, inputMode: s.inputMode || 'INLINE' }
     sfDirty.value = false
     loadTypeFilterOptions(s.targetType as string | null)
   }
@@ -154,7 +162,7 @@ function markDirty() { sfDirty.value = true }
 async function saveSection() {
   if (!selectedSection.value) return
   try {
-    await editor.editSection(selectedSection.value.id, { sectionName: sf.value.sectionName, targetType: sf.value.targetType, targetTypeFilter: arrayToFilter(sf.value.targetTypeFilter), weight: sf.value.weight, isRepeatable: sf.value.isRepeatable } as any)
+    await editor.editSection(selectedSection.value.id, { sectionName: sf.value.sectionName, targetType: sf.value.targetType, targetTypeFilter: arrayToFilter(sf.value.targetTypeFilter), weight: sf.value.weight, isRepeatable: sf.value.isRepeatable, inputMode: sf.value.inputMode } as any)
     sfDirty.value = false; ElMessage.success('已保存')
   } catch (e: any) { ElMessage.error(e.message || '保存失败') }
 }
@@ -245,7 +253,7 @@ async function loadScoringForSection(sectionId: number) {
         scoringStore.loadRules(p.id),
       ])
     }
-  } catch { scoringProfile.value = null }
+  } catch (e) { console.warn('Load scoring profile failed', e); scoringProfile.value = null }
   finally { scoringLoading.value = false }
 }
 
@@ -258,7 +266,7 @@ async function saveScoringBasic() {
       precisionDigits: scoringProfile.value.precisionDigits,
     })
     if (updated) scoringProfile.value = updated
-  } catch {}
+  } catch (e) { console.warn('Save scoring basic settings failed', e) }
 }
 
 function toggleScoring() {
@@ -450,15 +458,18 @@ async function applyGradePreset(preset: string) {
 
 
 
-// ===== Duplicate (create new version) =====
-async function handleDuplicate() {
+// ===== Unlock for editing (to create new version) =====
+async function handleUnlockForEdit() {
   if (!rootSection.value) return
   try {
-    await ElMessageBox.confirm('将复制当前模板为新的草稿版本，确认？', '创建新版本', { type: 'info' })
-    const newSection = await tplStore.duplicate(Number(rootSection.value.id))
-    ElMessage.success('已创建新版本')
-    router.push(`/inspection/v7/templates/${newSection.id}/edit`)
-  } catch (e: any) { if (e !== 'cancel') ElMessage.error(e.message || '创建失败') }
+    await ElMessageBox.confirm(
+      '解锁后可以编辑模板内容，编辑完成后重新发布即生成新版本。已使用当前版本的项目不受影响。',
+      '编辑模板', { type: 'info', confirmButtonText: '解锁编辑' }
+    )
+    await http.put(`/v7/insp/sections/${rootSection.value.id}/status`, { status: 'DRAFT' })
+    await tplStore.loadRootSection(rootSection.value.id)
+    ElMessage.success('已解锁，可以编辑')
+  } catch (e: any) { if (e !== 'cancel') ElMessage.error(e.message || '操作失败') }
 }
 
 // ===== Publish =====
@@ -477,7 +488,7 @@ async function handlePublish() {
 // ===== Init =====
 async function loadData() {
   try { await tplStore.loadRootSection(rootSectionId.value); rootSectionIdRef.value = rootSectionId.value; loadError.value = null } catch (e: any) { loadError.value = e.message || '加载失败' }
-  try { responseSets.value = await tplStore.loadResponseSets() } catch {}
+  try { responseSets.value = await tplStore.loadResponseSets() } catch (e) { console.warn('Load response sets failed', e) }
   // 默认选中根节点并加载汇总规则
   selectedSectionId.value = rootSectionId.value
   loadScoringForSection(rootSectionId.value)
@@ -487,7 +498,7 @@ onMounted(() => {
 })
 
 function getItemTypeLabel(item: TemplateItem) {
-  if (item.isScored && item.scoringConfig) { try { const c = JSON.parse(item.scoringConfig); return ScoringModeConfig[c.mode as ScoringMode]?.label || ItemTypeConfig[item.itemType]?.label } catch {} }
+  if (item.isScored && item.scoringConfig) { try { const c = JSON.parse(item.scoringConfig); return ScoringModeConfig[c.mode as ScoringMode]?.label || ItemTypeConfig[item.itemType]?.label } catch (e) { console.warn('JSON parse failed', e) } }
   return ItemTypeConfig[item.itemType]?.label || item.itemType
 }
 </script>
@@ -510,8 +521,8 @@ function getItemTypeLabel(item: TemplateItem) {
         </div>
         <div class="te-header-actions">
           <template v-if="isReadonly">
-            <span class="te-readonly-hint">已发布，不可编辑</span>
-            <button class="te-btn te-btn-primary" @click="handleDuplicate">创建新版本</button>
+            <span class="te-readonly-hint">已发布 v{{ rootSection.latestVersion }}</span>
+            <button class="te-btn te-btn-primary" @click="handleUnlockForEdit">解锁编辑</button>
           </template>
           <button class="te-btn te-btn-ghost" @click="showPreview = !showPreview"><Eye :size="13" />{{ showPreview ? '编辑' : '预览' }}</button>
           <button v-if="rootSection.status === 'DRAFT'" class="te-btn te-btn-green" @click="handlePublish"><Upload :size="13" />发布</button>
@@ -586,10 +597,6 @@ function getItemTypeLabel(item: TemplateItem) {
                     <div class="te-prop-field" style="flex:2">
                       <label>名称</label>
                       <input v-model="sf.sectionName" @input="markDirty" :disabled="isReadonly" />
-                    </div>
-                    <div class="te-prop-field" style="width:64px;flex:none">
-                      <label>权重</label>
-                      <input v-model.number="sf.weight" type="number" min="0" max="100" @input="markDirty" :disabled="isReadonly" />
                     </div>
                     <label class="te-check-compact">
                       <input type="checkbox" v-model="sf.isRepeatable" @change="markDirty" :disabled="isReadonly" />
@@ -676,86 +683,6 @@ function getItemTypeLabel(item: TemplateItem) {
                     </div>
                   </div>
 
-                  <!-- 子项权重 -->
-                  <DimensionTable :dimensions="scoringStore.dimensions" />
-
-                  <!-- 等级映射 -->
-                  <div class="te-scoring-block">
-                    <div class="te-scoring-block-head">
-                      <span class="te-scoring-block-title">等级映射</span>
-                      <label class="te-toggle">
-                        <input type="checkbox" v-model="gradeEnabled" :disabled="isReadonly"
-                          @change="handleGradeToggle" />
-                        <span class="te-toggle-slider"></span>
-                      </label>
-                    </div>
-
-                    <template v-if="gradeEnabled">
-                      <!-- 模式选择（3按钮组） -->
-                      <div class="te-grade-mode-bar">
-                        <button :class="['te-mode-btn', gradingMode === 'SCORE' && 'active']"
-                          @click="switchGradeMode('SCORE')"
-                          :disabled="isReadonly || scoringStore.gradeBands.length > 0">分数区间</button>
-                        <button :class="['te-mode-btn', gradingMode === 'RANK' && 'active']"
-                          @click="switchGradeMode('RANK')"
-                          :disabled="isReadonly || scoringStore.gradeBands.length > 0">排名制</button>
-                        <button :class="['te-mode-btn', gradingMode === 'PERCENT' && 'active']"
-                          @click="switchGradeMode('PERCENT')"
-                          :disabled="isReadonly || scoringStore.gradeBands.length > 0">百分比制</button>
-                      </div>
-                      <span v-if="scoringStore.gradeBands.length > 0" class="te-mode-lock-hint">清空等级后可切换</span>
-
-
-                      <!-- 等级列表 -->
-                      <div v-if="scoringStore.gradeBands.length > 0" class="te-grade-table">
-                        <div v-for="band in sortedGradeBands" :key="band.id" class="te-grade-row">
-                          <input v-model="band.gradeName" class="te-gr-name" :disabled="isReadonly" placeholder="等级名称"
-                            @blur="updateGradeBand(band)" />
-
-                          <!-- 分数模式 -->
-                          <template v-if="gradingMode === 'SCORE'">
-                            <span class="te-gr-sym">≥</span>
-                            <input v-model.number="band.minScore" class="te-gr-val" type="number" :disabled="isReadonly"
-                              @blur="updateGradeBand(band)" />
-                          </template>
-
-                          <!-- 排名模式 -->
-                          <template v-if="gradingMode === 'RANK'">
-                            <select class="te-gr-dir" :value="getBandDirection(band)"
-                              @change="(e: Event) => setBandDirection(band, (e.target as HTMLSelectElement).value)"
-                              :disabled="isReadonly">
-                              <option value="TOP">前</option>
-                              <option value="BOTTOM">后</option>
-                            </select>
-                            <input v-model.number="band.minScore" class="te-gr-val" type="number" :disabled="isReadonly"
-                              @blur="updateGradeBand(band)" />
-                            <span class="te-gr-unit">名</span>
-                          </template>
-
-                          <!-- 百分比模式：每行可选前/后 -->
-                          <template v-if="gradingMode === 'PERCENT'">
-                            <select class="te-gr-dir" :value="getBandDirection(band)"
-                              @change="(e: Event) => setBandDirection(band, (e.target as HTMLSelectElement).value)"
-                              :disabled="isReadonly">
-                              <option value="TOP">前</option>
-                              <option value="BOTTOM">后</option>
-                            </select>
-                            <input v-model.number="band.minScore" class="te-gr-val" type="number" :disabled="isReadonly"
-                              @blur="updateGradeBand(band)" />
-                            <span class="te-gr-unit">%</span>
-                          </template>
-
-                          <button v-if="!isReadonly" class="te-gr-del" @click="deleteGradeBand(band.id)">&times;</button>
-                        </div>
-                      </div>
-
-                      <!-- 冲突检测 -->
-                      <div v-if="gradeConflict" class="te-grade-warn">{{ gradeConflict }}</div>
-
-                      <!-- 添加 -->
-                      <button v-if="!isReadonly" class="te-grade-add-btn" @click="addGradeBand">+ 添加等级</button>
-                    </template>
-                  </div>
 
                   <!-- 即时规则 -->
                   <div class="te-divider-title te-divider-title--sub"><span>即时规则</span></div>

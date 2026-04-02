@@ -69,4 +69,9 @@ public interface UniversalPlaceOccupantRepository {
      * 查询某用户的所有在住记录（跨场所）
      */
     List<UniversalPlaceOccupant> findActiveByOccupantId(Long occupantId);
+
+    /**
+     * 查询指定场所列表中的所有活跃占用记录（可按 occupantType 过滤）
+     */
+    List<UniversalPlaceOccupant> findActiveByPlaceIds(List<Long> placeIds, String occupantType);
 }

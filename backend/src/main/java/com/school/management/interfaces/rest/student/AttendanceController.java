@@ -17,6 +17,7 @@ import java.io.IOException;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.*;
+import com.school.management.infrastructure.casbin.CasbinAccess;
 
 /**
  * 考勤管理 REST Controller
@@ -39,6 +40,7 @@ public class AttendanceController {
      * 创建考勤记录（单个或批量）
      */
     @PostMapping("/records")
+    @CasbinAccess(resource = "student:attendance", action = "edit")
     public Result<Map<String, Object>> createRecord(@RequestBody Map<String, Object> body) {
         Long recordedBy = SecurityUtils.getCurrentUserId();
         Long semesterId = toLong(body.get("semesterId"));
@@ -67,6 +69,7 @@ public class AttendanceController {
      * 查询考勤记录（支持筛选）
      */
     @GetMapping("/records")
+    @CasbinAccess(resource = "student:attendance", action = "view")
     public Result<List<Map<String, Object>>> listRecords(
             @RequestParam(required = false) Long semesterId,
             @RequestParam(required = false) Long classId,
@@ -121,6 +124,7 @@ public class AttendanceController {
      * 班级考勤视图：某天某班所有学生的考勤
      */
     @GetMapping("/records/by-class")
+    @CasbinAccess(resource = "student:attendance", action = "view")
     public Result<List<Map<String, Object>>> getByClass(
             @RequestParam Long classId,
             @RequestParam String date,
@@ -176,6 +180,7 @@ public class AttendanceController {
      * 修改考勤状态
      */
     @PutMapping("/records/{id}")
+    @CasbinAccess(resource = "student:attendance", action = "edit")
     public Result<Void> updateRecord(@PathVariable Long id, @RequestBody Map<String, Object> body) {
         Integer status = toInt(body.get("status"));
         String remark = (String) body.get("remark");
@@ -197,6 +202,7 @@ public class AttendanceController {
      * 删除考勤记录
      */
     @DeleteMapping("/records/{id}")
+    @CasbinAccess(resource = "student:attendance", action = "edit")
     public Result<Void> deleteRecord(@PathVariable Long id) {
         jdbc.update("DELETE FROM attendance_records WHERE id = ?", id);
         return Result.success();
@@ -208,6 +214,7 @@ public class AttendanceController {
      * 批量考勤（一个班级一次课的所有学生）
      */
     @PostMapping("/batch")
+    @CasbinAccess(resource = "student:attendance", action = "edit")
     @Transactional
     @SuppressWarnings("unchecked")
     public Result<Map<String, Object>> batchRecord(@RequestBody Map<String, Object> body) {
@@ -282,6 +289,7 @@ public class AttendanceController {
      * 考勤统计（出勤率、迟到率等）
      */
     @GetMapping("/statistics")
+    @CasbinAccess(resource = "student:attendance", action = "view")
     public Result<Map<String, Object>> getStatistics(
             @RequestParam Long semesterId,
             @RequestParam(required = false) Long classId,
@@ -329,6 +337,7 @@ public class AttendanceController {
      * 个人考勤统计
      */
     @GetMapping("/statistics/student/{studentId}")
+    @CasbinAccess(resource = "student:attendance", action = "view")
     public Result<Map<String, Object>> getStudentStatistics(
             @PathVariable Long studentId,
             @RequestParam(required = false) Long semesterId,
@@ -393,6 +402,7 @@ public class AttendanceController {
      * 提交请假申请
      */
     @PostMapping("/leave-requests")
+    @CasbinAccess(resource = "student:attendance", action = "edit")
     public Result<Map<String, Object>> createLeaveRequest(@RequestBody Map<String, Object> body) {
         Long studentId = toLong(body.get("studentId"));
         Integer leaveType = toInt(body.get("leaveType"));
@@ -416,6 +426,7 @@ public class AttendanceController {
      * 查询请假列表
      */
     @GetMapping("/leave-requests")
+    @CasbinAccess(resource = "student:attendance", action = "view")
     public Result<List<Map<String, Object>>> listLeaveRequests(
             @RequestParam(required = false) Long studentId,
             @RequestParam(required = false) Long classId,
@@ -454,6 +465,7 @@ public class AttendanceController {
      * 审批通过
      */
     @PostMapping("/leave-requests/{id}/approve")
+    @CasbinAccess(resource = "student:attendance", action = "edit")
     public Result<Void> approveLeave(@PathVariable Long id,
                                       @RequestBody(required = false) Map<String, Object> body) {
         Long approverId = SecurityUtils.getCurrentUserId();
@@ -470,6 +482,7 @@ public class AttendanceController {
      * 审批拒绝
      */
     @PostMapping("/leave-requests/{id}/reject")
+    @CasbinAccess(resource = "student:attendance", action = "edit")
     public Result<Void> rejectLeave(@PathVariable Long id,
                                      @RequestBody(required = false) Map<String, Object> body) {
         Long approverId = SecurityUtils.getCurrentUserId();
@@ -486,6 +499,7 @@ public class AttendanceController {
      * 待审批列表
      */
     @GetMapping("/leave-requests/pending")
+    @CasbinAccess(resource = "student:attendance", action = "view")
     public Result<List<Map<String, Object>>> pendingLeaves() {
         List<Map<String, Object>> rows = jdbc.queryForList(
             "SELECT lr.id, lr.student_id AS studentId, lr.leave_type AS leaveType, " +
@@ -504,6 +518,7 @@ public class AttendanceController {
     // ==================== 导出 ====================
 
     @GetMapping("/records/export")
+    @CasbinAccess(resource = "student:attendance", action = "view")
     public void exportAttendance(
             @RequestParam Long semesterId,
             @RequestParam(required = false) Long classId,

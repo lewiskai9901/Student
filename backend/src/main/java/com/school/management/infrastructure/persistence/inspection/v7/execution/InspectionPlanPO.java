@@ -23,6 +23,7 @@ public class InspectionPlanPO {
     private String scheduleDays;
     private String timeSlots;
     private Boolean skipHolidays;
+    private String inspectorIds;
     private Boolean isEnabled;
     private Integer sortOrder;
     private Long createdBy;

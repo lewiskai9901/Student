@@ -2,6 +2,9 @@ package com.school.management.application.access;
 
 import com.school.management.domain.access.model.entity.AccessRelation;
 import com.school.management.domain.access.repository.AccessRelationRepository;
+import com.school.management.domain.organization.repository.OrgUnitRepository;
+import com.school.management.domain.place.model.aggregate.UniversalPlace;
+import com.school.management.domain.place.repository.UniversalPlaceRepository;
 import com.school.management.infrastructure.access.UserContextHolder;
 import lombok.Data;
 import lombok.RequiredArgsConstructor;
@@ -19,17 +22,59 @@ import java.util.Map;
 public class AccessRelationApplicationService {
 
     private final AccessRelationRepository accessRelationRepository;
+    private final UniversalPlaceRepository placeRepository;
+    private final OrgUnitRepository orgUnitRepository;
 
     public List<AccessRelation> findByResource(String resourceType, Long resourceId) {
-        return accessRelationRepository.findByResource(resourceType, resourceId);
+        List<AccessRelation> relations = accessRelationRepository.findByResource(resourceType, resourceId);
+        enrichRelations(relations);
+        return relations;
     }
 
     public List<AccessRelation> findBySubject(String subjectType, Long subjectId) {
-        return accessRelationRepository.findBySubject(subjectType, subjectId);
+        List<AccessRelation> relations = accessRelationRepository.findBySubject(subjectType, subjectId);
+        enrichRelations(relations);
+        return relations;
     }
 
     public List<AccessRelation> findBySubjectAndResourceType(String subjectType, Long subjectId, String resourceType) {
-        return accessRelationRepository.findBySubjectAndResourceType(subjectType, subjectId, resourceType);
+        List<AccessRelation> relations = accessRelationRepository.findBySubjectAndResourceType(subjectType, subjectId, resourceType);
+        enrichRelations(relations);
+        return relations;
+    }
+
+    /**
+     * 填充关系的资源名称到 metadata（场所名称、组织名称等）
+     */
+    private void enrichRelations(List<AccessRelation> relations) {
+        if (relations == null || relations.isEmpty()) return;
+
+        for (AccessRelation rel : relations) {
+            Map<String, Object> meta = rel.getMetadata() != null ? new HashMap<>(rel.getMetadata()) : new HashMap<>();
+            try {
+                if ("place".equals(rel.getResourceType()) && rel.getResourceId() != null) {
+                    placeRepository.findById(rel.getResourceId()).ifPresent(place -> {
+                        meta.put("placeName", place.getPlaceName());
+                        meta.put("placeCode", place.getPlaceCode());
+                    });
+                } else if ("org_unit".equals(rel.getResourceType()) && rel.getResourceId() != null) {
+                    orgUnitRepository.findById(rel.getResourceId()).ifPresent(org -> {
+                        meta.put("orgUnitName", org.getUnitName());
+                    });
+                }
+                // 同样填充 subject 名称
+                if ("org_unit".equals(rel.getSubjectType()) && rel.getSubjectId() != null) {
+                    if (!meta.containsKey("subjectName")) {
+                        orgUnitRepository.findById(rel.getSubjectId()).ifPresent(org -> {
+                            meta.put("subjectName", org.getUnitName());
+                        });
+                    }
+                }
+            } catch (Exception e) {
+                log.warn("填充关系元数据失败: relationId={}, error={}", rel.getId(), e.getMessage());
+            }
+            rel.setMetadata(meta);
+        }
     }
 
     public boolean checkAccess(String resourceType, Long resourceId, String relation, String subjectType, Long subjectId) {

@@ -57,7 +57,7 @@ public class TemplateVersionRepositoryImpl implements TemplateVersionRepository 
     private TemplateVersionPO toPO(TemplateVersion domain) {
         TemplateVersionPO po = new TemplateVersionPO();
         po.setId(domain.getId());
-        po.setTenantId(0L);
+        po.setTenantId(domain.getTenantId() != null ? domain.getTenantId() : 0L);
         po.setTemplateId(domain.getTemplateId());
         po.setVersion(domain.getVersion());
         po.setStructureSnapshot(domain.getStructureSnapshot());

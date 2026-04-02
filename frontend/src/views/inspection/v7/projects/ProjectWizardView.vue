@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, reactive, computed, onMounted } from 'vue'
+import { ref, reactive, computed, onMounted, watch, nextTick } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { inspProjectApi, updateProject, createPlan } from '@/api/insp/project'
@@ -8,7 +8,7 @@ import { getOrgUnitTree } from '@/api/organization'
 import type { OrgUnitTreeNode } from '@/types'
 import type { OrgUnit } from '@/types'
 import type { TemplateSection } from '@/types/insp/template'
-import { ScopeTypeConfig, type ScopeType } from '@/types/insp/enums'
+import { ScopeTypeConfig, TargetTypeConfig, type ScopeType, type TargetType } from '@/types/insp/enums'
 
 const router = useRouter()
 
@@ -18,9 +18,11 @@ const submitting = ref(false)
 const loadingTemplates = ref(false)
 const loadingOrg = ref(false)
 const searchKeyword = ref('')
+const scopeSearchKeyword = ref('')
 
 const rootSections = ref<TemplateSection[]>([])
-const orgUnits = ref<OrgUnit[]>([])
+const orgTree = ref<OrgUnitTreeNode[]>([])
+const flatOrgUnits = ref<(OrgUnit & { depth: number })[]>([])
 
 const form = reactive({
   projectName: '',
@@ -29,6 +31,15 @@ const form = reactive({
   scopeIds: [] as string[],
   startDate: '',
   endDate: '',
+})
+
+// ========== Template Info ==========
+const selectedSection = computed(() =>
+  rootSections.value.find(s => Number(s.id) === Number(form.rootSectionId))
+)
+
+const templateTargetType = computed<TargetType | null>(() => {
+  return selectedSection.value?.targetType as TargetType | null
 })
 
 // ========== Computed ==========
@@ -42,10 +53,6 @@ const filteredSections = computed(() => {
   )
 })
 
-const selectedSection = computed(() =>
-  rootSections.value.find(s => Number(s.id) === Number(form.rootSectionId))
-)
-
 const selectedScopeLabel = computed(() => {
   const cfg = ScopeTypeConfig[form.scopeType]
   return cfg ? cfg.label : form.scopeType
@@ -54,9 +61,9 @@ const selectedScopeLabel = computed(() => {
 const selectedOrgNames = computed(() => {
   if (form.scopeIds.length === 0) return '未指定'
   const names = form.scopeIds
-    .map(id => orgUnits.value.find(u => String(u.id) === String(id))?.unitName)
+    .map(id => flatOrgUnits.value.find(u => String(u.id) === String(id))?.unitName)
     .filter(Boolean)
-  if (names.length <= 2) return names.join(', ')
+  if (names.length <= 3) return names.join(', ')
   return names.slice(0, 2).join(', ') + ` 等${names.length}个`
 })
 
@@ -66,14 +73,125 @@ const dateRange = computed(() => {
   return form.startDate + ' ~ ' + form.endDate
 })
 
-// 每步的校验
 const canProceedStep0 = computed(() => !!form.rootSectionId)
 const canProceedStep1 = computed(() => !!form.projectName.trim() && !!form.startDate)
 
-// 是否已发布
 function isPublished(section: TemplateSection): boolean {
   return section.status === 'PUBLISHED'
 }
+
+// ========== Scope Tree ==========
+
+// Collect unique unitType values for quick-filter buttons
+const availableUnitTypes = computed(() => {
+  const typeMap = new Map<string, { code: string; name: string; count: number }>()
+  for (const unit of flatOrgUnits.value) {
+    const code = unit.unitType || ''
+    if (!code) continue
+    if (typeMap.has(code)) {
+      typeMap.get(code)!.count++
+    } else {
+      typeMap.set(code, { code, name: unit.typeName || code, count: 1 })
+    }
+  }
+  return Array.from(typeMap.values())
+})
+
+// Active type filter for quick-filter buttons
+const activeTypeFilter = ref<string | null>(null)
+
+// Filter tree nodes based on search keyword and type filter
+function filterOrgNode(node: OrgUnitTreeNode): OrgUnitTreeNode | null {
+  const kw = scopeSearchKeyword.value.trim().toLowerCase()
+  const typeFilter = activeTypeFilter.value
+
+  const filteredChildren = (node.children || [])
+    .map(c => filterOrgNode(c))
+    .filter(Boolean) as OrgUnitTreeNode[]
+
+  const selfMatch =
+    (!kw || node.unitName.toLowerCase().includes(kw) || (node.typeName || '').toLowerCase().includes(kw)) &&
+    (!typeFilter || node.unitType === typeFilter)
+
+  if (selfMatch || filteredChildren.length > 0) {
+    return { ...node, children: filteredChildren.length > 0 ? filteredChildren : (selfMatch ? node.children : filteredChildren) }
+  }
+  return null
+}
+
+const filteredOrgTree = computed(() => {
+  if (!scopeSearchKeyword.value && !activeTypeFilter.value) return orgTree.value
+  return orgTree.value.map(n => filterOrgNode(n)).filter(Boolean) as OrgUnitTreeNode[]
+})
+
+// el-tree data format
+const treeData = computed(() => {
+  function mapNode(node: OrgUnitTreeNode): any {
+    return {
+      id: String(node.id),
+      label: node.unitName,
+      typeName: node.typeName || node.unitType || '',
+      unitType: node.unitType || '',
+      children: (node.children || []).map(mapNode),
+    }
+  }
+  return filteredOrgTree.value.map(mapNode)
+})
+
+const treeRef = ref<any>(null)
+
+// Handle check change from el-tree
+function handleTreeCheck() {
+  if (!treeRef.value) return
+  const checked = treeRef.value.getCheckedKeys(false) as string[]
+  form.scopeIds = checked
+}
+
+// Select all visible nodes
+function selectAll() {
+  if (!treeRef.value) return
+  // Get all leaf + branch node keys from current filtered tree
+  const allKeys = flatOrgUnits.value
+    .filter(u => !activeTypeFilter.value || u.unitType === activeTypeFilter.value)
+    .map(u => String(u.id))
+  for (const key of allKeys) {
+    treeRef.value.setChecked(key, true, false)
+  }
+  handleTreeCheck()
+}
+
+// Deselect all
+function deselectAll() {
+  if (!treeRef.value) return
+  treeRef.value.setCheckedKeys([])
+  form.scopeIds = []
+}
+
+// Select all nodes of a specific type
+function selectByType(typeCode: string) {
+  if (!treeRef.value) return
+  const keys = flatOrgUnits.value
+    .filter(u => u.unitType === typeCode)
+    .map(u => String(u.id))
+  for (const key of keys) {
+    treeRef.value.setChecked(key, true, false)
+  }
+  handleTreeCheck()
+}
+
+// Toggle type filter button
+function toggleTypeFilter(code: string) {
+  activeTypeFilter.value = activeTypeFilter.value === code ? null : code
+}
+
+// Sync checked keys when tree data changes
+watch(treeData, () => {
+  nextTick(() => {
+    if (treeRef.value && form.scopeIds.length > 0) {
+      treeRef.value.setCheckedKeys(form.scopeIds)
+    }
+  })
+})
 
 // ========== Navigation ==========
 function nextStep() {
@@ -99,30 +217,21 @@ function selectSection(section: TemplateSection) {
   if (!form.projectName) {
     form.projectName = section.sectionName + ' 检查'
   }
-}
-
-// ========== Step 1: 多选 orgUnit toggle ==========
-function toggleOrgUnit(id: string) {
-  const idx = form.scopeIds.indexOf(id)
-  if (idx >= 0) {
-    form.scopeIds.splice(idx, 1)
-  } else {
-    form.scopeIds.push(id)
-  }
+  // Auto-set scopeType based on template targetType
+  if (section.targetType === 'ORG') form.scopeType = 'ORG'
+  else if (section.targetType === 'PLACE') form.scopeType = 'PLACE'
+  else if (section.targetType === 'USER') form.scopeType = 'USER'
 }
 
 // ========== Step 2: 创建 ==========
 async function handleCreate() {
   submitting.value = true
   try {
-    // 1. 创建项目（不传 rootSectionId，让模板通过计划关联）
     const project = await inspProjectApi.create({
       projectName: form.projectName,
       startDate: form.startDate,
-      // rootSectionId 不传，改为通过第一个计划绑定
     })
 
-    // 2. 创建第一个检查计划（绑定选中的模板）
     if (form.rootSectionId) {
       await createPlan({
         projectId: project.id,
@@ -133,7 +242,6 @@ async function handleCreate() {
       })
     }
 
-    // 3. 如果有额外配置（scopeType/scopeIds/endDate），更新项目
     const hasExtra = form.scopeIds.length > 0 || form.endDate || form.scopeType !== 'ORG'
     if (hasExtra) {
       const updateData: Record<string, any> = {
@@ -159,8 +267,8 @@ async function loadTemplates() {
   try {
     const result = await inspTemplateApi.getList({ page: 1, size: 200 })
     rootSections.value = result.records
-  } catch {
-    // ignore
+  } catch (e) {
+    console.warn('Failed to load templates', e)
   } finally {
     loadingTemplates.value = false
   }
@@ -181,9 +289,10 @@ async function loadOrgUnits() {
   loadingOrg.value = true
   try {
     const tree = await getOrgUnitTree()
-    orgUnits.value = flattenTree(tree) as any[]
-  } catch {
-    // ignore
+    orgTree.value = tree
+    flatOrgUnits.value = flattenTree(tree) as any[]
+  } catch (e) {
+    console.warn('Failed to load org units', e)
   } finally {
     loadingOrg.value = false
   }
@@ -205,7 +314,7 @@ onMounted(() => {
       <h1 class="wz-title">创建检查项目</h1>
     </div>
 
-    <!-- Step indicator: minimal dots + lines -->
+    <!-- Step indicator -->
     <div class="wz-steps">
       <template v-for="idx in [0, 1, 2]" :key="idx">
         <div
@@ -221,6 +330,7 @@ onMounted(() => {
             <svg v-if="idx < currentStep" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
             <span v-else>{{ idx + 1 }}</span>
           </div>
+          <div class="wz-step-label">{{ ['选择模板', '配置范围', '确认创建'][idx] }}</div>
         </div>
         <div v-if="idx < 2" class="wz-line" :class="idx < currentStep ? 'wz-line--done' : 'wz-line--pending'" />
       </template>
@@ -228,33 +338,18 @@ onMounted(() => {
 
     <!-- ==================== Step 0: 选择模板 ==================== -->
     <div v-show="currentStep === 0" class="wz-body">
-      <!-- 搜索框 -->
       <div class="wz-search">
         <svg class="wz-search-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-        <input
-          v-model="searchKeyword"
-          type="text"
-          class="wz-search-input"
-          placeholder="搜索模板..."
-        />
+        <input v-model="searchKeyword" type="text" class="wz-search-input" placeholder="搜索模板..." />
         <button v-if="searchKeyword" class="wz-search-clear" @click="searchKeyword = ''">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
         </button>
       </div>
 
-      <!-- 加载中 -->
       <div v-if="loadingTemplates" class="wz-empty">加载模板中...</div>
+      <div v-else-if="rootSections.length === 0" class="wz-empty">暂无模板，请先在模板管理中创建模板</div>
+      <div v-else-if="filteredSections.length === 0" class="wz-empty">未找到匹配的模板</div>
 
-      <!-- 空状态 -->
-      <div v-else-if="rootSections.length === 0" class="wz-empty">
-        暂无模板，请先在模板管理中创建模板
-      </div>
-
-      <div v-else-if="filteredSections.length === 0" class="wz-empty">
-        未找到匹配的模板
-      </div>
-
-      <!-- 模板列表 -->
       <div v-else class="tpl-list">
         <div
           v-for="section in filteredSections"
@@ -270,11 +365,11 @@ onMounted(() => {
             <div class="tpl-name-line">
               <span class="tpl-name">{{ section.sectionName }}</span>
               <span class="tpl-version">v{{ section.latestVersion }}</span>
-              <span
-                v-if="isPublished(section)"
-                class="tpl-status tpl-status--published"
-              >已发布</span>
+              <span v-if="isPublished(section)" class="tpl-status tpl-status--published">已发布</span>
               <span v-else class="tpl-status tpl-status--draft">未发布</span>
+              <span v-if="section.targetType" class="tpl-target-badge">
+                {{ TargetTypeConfig[section.targetType as TargetType]?.label || section.targetType }}
+              </span>
             </div>
             <div v-if="section.description" class="tpl-desc">{{ section.description }}</div>
             <div v-if="!isPublished(section)" class="tpl-hint">需要先发布才能选择</div>
@@ -297,33 +392,93 @@ onMounted(() => {
         <!-- 项目名称 -->
         <div class="wz-field">
           <label class="wz-label">项目名称 <span class="wz-req">*</span></label>
-          <input
-            v-model="form.projectName"
-            type="text"
-            class="wz-input"
-            placeholder="输入项目名称"
-            maxlength="100"
-          />
+          <input v-model="form.projectName" type="text" class="wz-input" placeholder="输入项目名称" maxlength="100" />
         </div>
 
         <!-- 检查范围 -->
         <div class="wz-field">
-          <label class="wz-label">检查范围</label>
-          <div v-if="loadingOrg" class="wz-org-list">加载中...</div>
-          <div v-else-if="orgUnits.length === 0" class="wz-org-list">暂无组织单元</div>
-          <div v-else class="wz-org-list">
-            <div
-              v-for="unit in orgUnits"
-              :key="unit.id"
-              class="wz-org-row"
-              :class="{ 'wz-org-row--on': form.scopeIds.includes(String(unit.id)) }"
-              :style="{ paddingLeft: `${8 + (unit as any).depth * 16}px` }"
-              @click="toggleOrgUnit(String(unit.id))"
-            >
-              <span v-if="(unit as any).depth > 0" class="wz-org-indent" />
-              <span class="wz-org-name">{{ unit.unitName }}</span>
-              <span v-if="form.scopeIds.includes(String(unit.id))" class="wz-org-check">✓</span>
+          <label class="wz-label">
+            检查范围
+            <span v-if="templateTargetType" class="wz-label-hint">
+              模板目标: {{ TargetTypeConfig[templateTargetType]?.label || templateTargetType }}
+            </span>
+          </label>
+
+          <!-- Quick filter buttons -->
+          <div class="scope-toolbar">
+            <div class="scope-type-filters">
+              <button
+                v-for="ut in availableUnitTypes"
+                :key="ut.code"
+                class="scope-type-btn"
+                :class="{ 'scope-type-btn--active': activeTypeFilter === ut.code }"
+                @click="toggleTypeFilter(ut.code)"
+              >
+                {{ ut.name }}
+                <span class="scope-type-count">{{ ut.count }}</span>
+              </button>
             </div>
+            <div class="scope-actions">
+              <button class="scope-action-btn" @click="selectAll" title="全选">全选</button>
+              <button class="scope-action-btn" @click="deselectAll" title="取消全选">清空</button>
+              <template v-if="availableUnitTypes.length > 0">
+                <span class="scope-divider" />
+                <button
+                  v-for="ut in availableUnitTypes"
+                  :key="'sel-' + ut.code"
+                  class="scope-action-btn scope-action-btn--type"
+                  @click="selectByType(ut.code)"
+                  :title="`选中所有${ut.name}`"
+                >
+                  选全部{{ ut.name }}
+                </button>
+              </template>
+            </div>
+          </div>
+
+          <!-- Search -->
+          <div class="scope-search">
+            <svg class="scope-search-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+            <input
+              v-model="scopeSearchKeyword"
+              type="text"
+              class="scope-search-input"
+              placeholder="搜索组织..."
+            />
+          </div>
+
+          <!-- Tree -->
+          <div v-if="loadingOrg" class="wz-org-list">
+            <div class="wz-empty" style="border: none; padding: 24px 0;">加载中...</div>
+          </div>
+          <div v-else-if="treeData.length === 0" class="wz-org-list">
+            <div class="wz-empty" style="border: none; padding: 24px 0;">暂无组织单元</div>
+          </div>
+          <div v-else class="scope-tree-container">
+            <el-tree
+              ref="treeRef"
+              :data="treeData"
+              show-checkbox
+              node-key="id"
+              :default-expand-all="true"
+              :check-strictly="true"
+              :default-checked-keys="form.scopeIds"
+              :props="{ label: 'label', children: 'children' }"
+              @check="handleTreeCheck"
+              class="scope-tree"
+            >
+              <template #default="{ data }">
+                <span class="scope-tree-node">
+                  <span class="scope-tree-name">{{ data.label }}</span>
+                  <span v-if="data.typeName" class="scope-tree-type">{{ data.typeName }}</span>
+                </span>
+              </template>
+            </el-tree>
+          </div>
+
+          <!-- Selection summary -->
+          <div v-if="form.scopeIds.length > 0" class="scope-summary">
+            已选 <strong>{{ form.scopeIds.length }}</strong> 个目标
           </div>
         </div>
 
@@ -354,11 +509,17 @@ onMounted(() => {
             <td class="wz-sv">
               {{ selectedSection?.sectionName || '--' }}
               <span v-if="selectedSection" class="wz-sv-tag">v{{ selectedSection.latestVersion }}</span>
+              <span v-if="templateTargetType" class="wz-sv-tag wz-sv-tag--target">
+                {{ TargetTypeConfig[templateTargetType]?.label }}
+              </span>
             </td>
           </tr>
           <tr>
             <td class="wz-sk">检查范围</td>
-            <td class="wz-sv">{{ selectedOrgNames }}</td>
+            <td class="wz-sv">
+              {{ selectedOrgNames }}
+              <span v-if="form.scopeIds.length > 0" class="wz-sv-count">共{{ form.scopeIds.length }}个</span>
+            </td>
           </tr>
           <tr>
             <td class="wz-sk">日期</td>
@@ -468,10 +629,26 @@ onMounted(() => {
 
 .wz-step {
   flex-shrink: 0;
+  text-align: center;
 }
 
 .wz-step.is-done {
   cursor: pointer;
+}
+
+.wz-step-label {
+  font-size: 11px;
+  margin-top: 4px;
+  color: #9ca3af;
+}
+
+.is-active .wz-step-label {
+  color: #1a6dff;
+  font-weight: 500;
+}
+
+.is-done .wz-step-label {
+  color: #1a6dff;
 }
 
 .wz-dot {
@@ -484,6 +661,7 @@ onMounted(() => {
   font-size: 12px;
   font-weight: 600;
   transition: all 0.2s;
+  margin: 0 auto;
 }
 
 .is-done .wz-dot {
@@ -506,6 +684,7 @@ onMounted(() => {
   width: 80px;
   height: 2px;
   margin: 0 6px;
+  margin-bottom: 20px;
   border-radius: 1px;
 }
 
@@ -517,7 +696,7 @@ onMounted(() => {
   background: #e5e7eb;
 }
 
-/* ===== Body (each step) ===== */
+/* ===== Body ===== */
 .wz-body {
   min-height: 300px;
   margin-bottom: 16px;
@@ -581,7 +760,7 @@ onMounted(() => {
   color: #4b5563;
 }
 
-/* ===== Empty / Loading ===== */
+/* ===== Empty ===== */
 .wz-empty {
   text-align: center;
   color: #9ca3af;
@@ -643,9 +822,6 @@ onMounted(() => {
   font-size: 13px;
   font-weight: 600;
   color: #1d2129;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
 }
 
 .tpl-version {
@@ -674,13 +850,19 @@ onMounted(() => {
   background: #f3f4f6;
 }
 
+.tpl-target-badge {
+  font-size: 10px;
+  padding: 1px 5px;
+  border-radius: 3px;
+  color: #1a6dff;
+  background: #e8f0ff;
+  flex-shrink: 0;
+}
+
 .tpl-desc {
   font-size: 12px;
   color: #6b7280;
   margin-top: 4px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
 }
 
 .tpl-hint {
@@ -749,21 +931,25 @@ onMounted(() => {
   font-size: 12px;
   font-weight: 600;
   color: #4b5563;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.wz-label-hint {
+  font-weight: 400;
+  font-size: 11px;
+  color: #1a6dff;
+  background: #e8f0ff;
+  padding: 1px 6px;
+  border-radius: 3px;
 }
 
 .wz-req {
   color: #ef4444;
 }
 
-.wz-opt {
-  font-weight: 400;
-  color: #9ca3af;
-  font-size: 11px;
-  margin-left: 4px;
-}
-
-.wz-input,
-.wz-select {
+.wz-input {
   height: 36px;
   padding: 0 10px;
   border: 1px solid #e5e7eb;
@@ -776,8 +962,7 @@ onMounted(() => {
   box-sizing: border-box;
 }
 
-.wz-input:focus,
-.wz-select:focus {
+.wz-input:focus {
   border-color: #1a6dff;
 }
 
@@ -785,13 +970,185 @@ onMounted(() => {
   color: #b0b8c4;
 }
 
-.wz-select {
-  appearance: auto;
-  cursor: pointer;
+/* ===== Scope Selector ===== */
+.scope-toolbar {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
 }
 
-/* ===== Chip area (org unit selector) ===== */
-/* Org tree list */
+.scope-type-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.scope-type-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 8px;
+  border: 1px solid #e5e7eb;
+  border-radius: 4px;
+  background: #fff;
+  font-size: 11px;
+  color: #4b5563;
+  cursor: pointer;
+  transition: all 0.12s;
+}
+
+.scope-type-btn:hover {
+  border-color: #1a6dff;
+  color: #1a6dff;
+}
+
+.scope-type-btn--active {
+  border-color: #1a6dff;
+  background: #e8f0ff;
+  color: #1a6dff;
+}
+
+.scope-type-count {
+  font-size: 10px;
+  color: #9ca3af;
+  background: #f3f4f6;
+  padding: 0 4px;
+  border-radius: 3px;
+  line-height: 16px;
+}
+
+.scope-type-btn--active .scope-type-count {
+  background: #bfdbfe;
+  color: #1a6dff;
+}
+
+.scope-actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+
+.scope-action-btn {
+  padding: 2px 8px;
+  border: none;
+  border-radius: 3px;
+  background: none;
+  font-size: 11px;
+  color: #1a6dff;
+  cursor: pointer;
+  transition: background 0.12s;
+}
+
+.scope-action-btn:hover {
+  background: #e8f0ff;
+}
+
+.scope-action-btn--type {
+  color: #10b981;
+}
+
+.scope-action-btn--type:hover {
+  background: #ecfdf5;
+}
+
+.scope-divider {
+  width: 1px;
+  height: 14px;
+  background: #e5e7eb;
+  margin: 0 2px;
+}
+
+.scope-search {
+  position: relative;
+}
+
+.scope-search-icon {
+  position: absolute;
+  left: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #9ca3af;
+  pointer-events: none;
+}
+
+.scope-search-input {
+  width: 100%;
+  height: 32px;
+  padding: 0 10px 0 30px;
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+  font-size: 12px;
+  color: #1d2129;
+  background: #fafbfc;
+  outline: none;
+  transition: border-color 0.15s;
+  box-sizing: border-box;
+}
+
+.scope-search-input:focus {
+  border-color: #1a6dff;
+  background: #fff;
+}
+
+.scope-search-input::placeholder {
+  color: #b0b8c4;
+}
+
+.scope-tree-container {
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+  background: #fff;
+  max-height: 320px;
+  overflow-y: auto;
+}
+
+.scope-tree {
+  padding: 4px 0;
+}
+
+.scope-tree :deep(.el-tree-node__content) {
+  height: 32px;
+}
+
+.scope-tree-node {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex: 1;
+  min-width: 0;
+}
+
+.scope-tree-name {
+  font-size: 13px;
+  color: #1d2129;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.scope-tree-type {
+  font-size: 10px;
+  color: #9ca3af;
+  background: #f3f4f6;
+  padding: 1px 5px;
+  border-radius: 3px;
+  flex-shrink: 0;
+}
+
+.scope-summary {
+  font-size: 12px;
+  color: #1a6dff;
+  background: #e8f0ff;
+  padding: 6px 10px;
+  border-radius: 5px;
+}
+
+.scope-summary strong {
+  font-weight: 600;
+}
+
+/* ===== Org list fallback (compat) ===== */
 .wz-org-list {
   border: 1px solid #e5e7eb;
   border-radius: 6px;
@@ -800,24 +1157,6 @@ onMounted(() => {
   overflow-y: auto;
   font-size: 12px;
   color: #9ca3af;
-}
-.wz-org-row {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 6px 10px;
-  cursor: pointer;
-  transition: background 0.1s;
-  border-bottom: 1px solid #f0f1f3;
-}
-.wz-org-row:last-child { border-bottom: none; }
-.wz-org-row:hover { background: #f0f4ff; }
-.wz-org-row--on { background: #eff6ff; }
-.wz-org-row--on:hover { background: #e0edff; }
-.wz-org-indent { width: 6px; height: 6px; border-left: 1px solid #d1d5db; border-bottom: 1px solid #d1d5db; flex-shrink: 0; }
-.wz-org-name { font-size: 12px; color: #1e2a3a; flex: 1; }
-.wz-org-row--on .wz-org-name { color: #1a6dff; font-weight: 500; }
-.wz-org-check { color: #1a6dff; font-size: 12px; font-weight: 600; flex-shrink: 0;
 }
 
 /* ===== Summary (Step 2) ===== */
@@ -865,6 +1204,17 @@ onMounted(() => {
   border-radius: 4px;
   margin-left: 6px;
   font-weight: 500;
+}
+
+.wz-sv-tag--target {
+  color: #10b981;
+  background: #ecfdf5;
+}
+
+.wz-sv-count {
+  font-size: 11px;
+  color: #9ca3af;
+  margin-left: 6px;
 }
 
 .wz-tip {

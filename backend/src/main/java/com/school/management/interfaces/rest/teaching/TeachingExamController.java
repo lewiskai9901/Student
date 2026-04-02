@@ -11,6 +11,7 @@ import org.springframework.web.bind.annotation.*;
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.util.*;
+import com.school.management.infrastructure.casbin.CasbinAccess;
 
 /**
  * 考试管理 REST Controller
@@ -33,6 +34,7 @@ public class TeachingExamController {
     // ==================== 考试批次管理 ====================
 
     @GetMapping("/batches")
+    @CasbinAccess(resource = "teaching:exam", action = "view")
     public Result<Map<String, Object>> listBatches(
             @RequestParam(required = false) Long semesterId,
             @RequestParam(required = false) Integer examType,
@@ -79,6 +81,7 @@ public class TeachingExamController {
     }
 
     @GetMapping("/batches/{id}")
+    @CasbinAccess(resource = "teaching:exam", action = "view")
     public Result<Map<String, Object>> getBatch(@PathVariable Long id) {
         Map<String, Object> batch = jdbc.queryForMap(
             "SELECT id, batch_code AS batchCode, batch_name AS batchName, " +
@@ -92,6 +95,7 @@ public class TeachingExamController {
     }
 
     @PostMapping("/batches")
+    @CasbinAccess(resource = "teaching:exam", action = "edit")
     public Result<Map<String, Object>> createBatch(@RequestBody Map<String, Object> data) {
         String batchName = (String) data.get("batchName");
         Long semesterId = data.get("semesterId") != null ? ((Number) data.get("semesterId")).longValue() : null;
@@ -119,6 +123,7 @@ public class TeachingExamController {
     }
 
     @PutMapping("/batches/{id}")
+    @CasbinAccess(resource = "teaching:exam", action = "edit")
     public Result<Void> updateBatch(@PathVariable Long id, @RequestBody Map<String, Object> data) {
         String batchName = (String) data.get("batchName");
         Long semesterId = data.get("semesterId") != null ? ((Number) data.get("semesterId")).longValue() : null;
@@ -138,12 +143,14 @@ public class TeachingExamController {
     }
 
     @DeleteMapping("/batches/{id}")
+    @CasbinAccess(resource = "teaching:exam", action = "edit")
     public Result<Void> deleteBatch(@PathVariable Long id) {
         jdbc.update("UPDATE exam_batches SET deleted = 1 WHERE id = ?", id);
         return Result.success();
     }
 
     @PostMapping("/batches/{id}/publish")
+    @CasbinAccess(resource = "teaching:exam", action = "edit")
     public Result<Void> publishBatch(@PathVariable Long id) {
         jdbc.update("UPDATE exam_batches SET status = 2, updated_at = NOW() WHERE id = ? AND deleted = 0", id);
         return Result.success();
@@ -152,6 +159,7 @@ public class TeachingExamController {
     // ==================== 考试安排 ====================
 
     @GetMapping("/batches/{batchId}/arrangements")
+    @CasbinAccess(resource = "teaching:exam", action = "view")
     public Result<List<Map<String, Object>>> listArrangements(@PathVariable Long batchId) {
         List<Map<String, Object>> arrangements;
         try {
@@ -181,6 +189,7 @@ public class TeachingExamController {
     }
 
     @PostMapping("/batches/{batchId}/arrangements")
+    @CasbinAccess(resource = "teaching:exam", action = "edit")
     public Result<Map<String, Object>> createArrangement(
             @PathVariable Long batchId,
             @RequestBody Map<String, Object> data) {
@@ -209,6 +218,7 @@ public class TeachingExamController {
     }
 
     @PutMapping("/batches/{batchId}/arrangements/{arrangementId}")
+    @CasbinAccess(resource = "teaching:exam", action = "edit")
     public Result<Void> updateArrangement(
             @PathVariable Long batchId,
             @PathVariable Long arrangementId,
@@ -233,6 +243,7 @@ public class TeachingExamController {
     }
 
     @DeleteMapping("/batches/{batchId}/arrangements/{arrangementId}")
+    @CasbinAccess(resource = "teaching:exam", action = "edit")
     public Result<Void> deleteArrangement(
             @PathVariable Long batchId,
             @PathVariable Long arrangementId) {
@@ -244,6 +255,7 @@ public class TeachingExamController {
     // ==================== 考场分配 ====================
 
     @PostMapping("/arrangements/{arrangementId}/rooms")
+    @CasbinAccess(resource = "teaching:exam", action = "edit")
     @Transactional
     public Result<Void> assignRooms(
             @PathVariable Long arrangementId,
@@ -275,6 +287,7 @@ public class TeachingExamController {
     // ==================== 监考分配 ====================
 
     @PostMapping("/rooms/{roomId}/invigilators")
+    @CasbinAccess(resource = "teaching:exam", action = "edit")
     @Transactional
     public Result<Void> assignInvigilators(
             @PathVariable Long roomId,

@@ -84,158 +84,87 @@
               </div>
             </div>
 
-            <!-- Dense Info Grid (4 columns) -->
-            <div class="grid grid-cols-4 border-t border-gray-100 text-xs">
-              <!-- Row 1: 基本标识 -->
-              <div class="detail-cell border-r">
-                <span class="detail-label">编号</span>
-                <span class="detail-val">{{ selectedNode.placeCode }}</span>
-              </div>
-              <div class="detail-cell border-r">
-                <span class="detail-label">类型</span>
-                <span class="detail-val">{{ selectedNode.typeName }}</span>
-              </div>
-              <div class="detail-cell border-r">
-                <span class="detail-label">层级</span>
-                <span class="detail-val">第{{ selectedNode.level }}级</span>
-              </div>
-              <div class="detail-cell">
-                <span class="detail-label">状态</span>
-                <span class="detail-val">{{ getStatusLabel(selectedNode.status) }}</span>
-              </div>
-
-              <!-- Row 2: 组织关系 (可快捷设置, 支持继承显示) -->
-              <div class="detail-cell border-r col-span-2">
-                <span class="detail-label">所属部门</span>
-                <span v-if="selectedNode.orgUnitName" class="detail-val">{{ selectedNode.orgUnitName }}</span>
-                <span v-else-if="selectedNode.isOrgInherited && selectedNode.effectiveOrgUnitId" class="detail-val text-gray-400">{{ selectedNode.effectiveOrgUnitName }} <span class="text-[10px] text-gray-300">继承</span></span>
-                <button v-else class="detail-link" @click="handleEdit(selectedNode)">点击设置</button>
-              </div>
-              <div class="detail-cell border-r col-span-2">
-                <span class="detail-label">负责人</span>
-                <span v-if="selectedNode.responsibleUserName" class="detail-val">{{ selectedNode.responsibleUserName }}</span>
-                <span v-else-if="selectedNode.isResponsibleInherited && selectedNode.effectiveResponsibleUserId" class="detail-val text-gray-400">{{ selectedNode.effectiveResponsibleUserName }} <span class="text-[10px] text-gray-300">继承</span></span>
-                <button v-else class="detail-link" @click="handleEdit(selectedNode)">点击设置</button>
-              </div>
-
-              <!-- Row 3: 性别 & 容量 & 特性 -->
-              <div class="detail-cell border-r">
-                <span class="detail-label">性别限制</span>
-                <span class="detail-val">{{ genderDisplay(selectedNode) }}</span>
-              </div>
-              <div v-if="selectedNode.hasCapacity" class="detail-cell border-r">
-                <span class="detail-label">容量</span>
-                <span class="detail-val">
-                  <span class="font-medium">{{ selectedNode.currentOccupancy || 0 }}/{{ selectedNode.capacity || '-' }}</span>
-                  <span v-if="selectedNode.capacityUnit" class="text-gray-400 ml-0.5">{{ selectedNode.capacityUnit }}</span>
-                </span>
-              </div>
-              <div v-else class="detail-cell border-r">
-                <span class="detail-label">容量</span>
-                <span class="detail-val text-gray-300">不适用</span>
-              </div>
-              <div class="detail-cell border-r">
-                <span class="detail-label">特性</span>
-                <div class="flex flex-wrap gap-0.5">
-                  <span v-if="selectedNode.bookable" class="rounded bg-blue-50 px-1 py-px text-[10px] text-blue-600">预订</span>
-                  <span v-if="selectedNode.assignable" class="rounded bg-amber-50 px-1 py-px text-[10px] text-amber-600">分配</span>
-                  <span v-if="selectedNode.occupiable" class="rounded bg-purple-50 px-1 py-px text-[10px] text-purple-600">入住</span>
-                  <span v-if="!selectedNode.bookable && !selectedNode.assignable && !selectedNode.occupiable" class="text-gray-300">无</span>
-                </div>
-              </div>
-              <div class="detail-cell">
-                <span class="detail-label">上级</span>
-                <span :class="selectedNodeParentName ? 'detail-val' : 'detail-val text-gray-300'">{{ selectedNodeParentName || '(根节点)' }}</span>
-              </div>
-
-              <!-- Row 4: 路径 -->
-              <div class="detail-cell border-r col-span-4">
-                <span class="detail-label">路径</span>
-                <span class="detail-val">{{ selectedNodePath }}</span>
-              </div>
-
-              <!-- Row 5: 描述 -->
-              <div v-if="selectedNode.description" class="detail-cell border-r col-span-4">
-                <span class="detail-label">描述</span>
-                <span class="detail-val text-gray-600">{{ selectedNode.description }}</span>
-              </div>
-
-              <!-- Extended attributes (schema-resolved, 4-col dense) -->
-              <template v-if="resolvedAttributes.length > 0">
-                <div
-                  v-for="(attr, index) in resolvedAttributes"
-                  :key="attr.key"
-                  :class="['detail-cell', (index + 1) % 4 !== 0 ? 'border-r' : '']"
-                >
-                  <span class="detail-label">{{ attr.label }}</span>
-                  <span :class="attr.isEmpty ? 'detail-val text-gray-300 italic' : 'detail-val'">{{ attr.value }}</span>
-                </div>
-                <!-- Fill remaining cells in last row -->
-                <div v-for="n in (4 - (resolvedAttributes.length % 4)) % 4" :key="'fill-' + n" :class="['detail-cell', n < (4 - (resolvedAttributes.length % 4)) % 4 ? 'border-r' : '']"></div>
-              </template>
+            <!-- Compact stats -->
+            <div class="flex items-center gap-4 border-t border-gray-100 px-5 py-2 text-xs text-gray-600">
+              <span>编号 <strong class="text-gray-900">{{ selectedNode.placeCode }}</strong></span>
+              <div class="h-3 w-px bg-gray-200" />
+              <span>类型 <strong class="text-gray-900">{{ selectedNode.typeName }}</strong></span>
+              <div class="h-3 w-px bg-gray-200" />
+              <span v-if="selectedNode.hasCapacity">容量 <strong class="text-gray-900">{{ selectedNode.currentOccupancy || 0 }}/{{ selectedNode.capacity || '-' }}</strong></span>
+              <span v-else>容量 <strong class="text-gray-300">不适用</strong></span>
             </div>
           </div>
 
-          <!-- Child Places -->
-          <div v-if="childPlaces.length > 0" class="rounded-xl border border-gray-200 bg-white">
-            <div class="flex items-center justify-between px-5 py-2.5">
-              <h3 class="text-xs font-semibold text-gray-700">
-                子场所 <span class="text-gray-400">({{ childPlaces.length }})</span>
-              </h3>
-            </div>
-            <div class="flex flex-wrap gap-1.5 border-t border-gray-100 px-5 py-2.5">
-              <button
-                v-for="child in childPlaces"
-                :key="child.id"
-                class="inline-flex items-center gap-1 rounded border border-gray-200 bg-gray-50 px-2 py-1 text-[11px] transition-colors hover:border-blue-300 hover:bg-blue-50"
-                @click="selectPlace(child)"
-              >
-                <span class="font-medium text-gray-700">{{ child.placeName }}</span>
-                <span class="text-gray-400">{{ child.typeName }}</span>
-                <span v-if="child.capacity" class="rounded bg-gray-200 px-1 py-px text-[10px] text-gray-600">{{ child.currentOccupancy || 0 }}/{{ child.capacity }}</span>
-              </button>
-            </div>
-          </div>
-
-          <!-- 使用组织 Panel -->
+          <!-- Tabs -->
           <div class="rounded-xl border border-gray-200 bg-white">
-            <div class="flex items-center justify-between px-5 py-2.5">
-              <h3 class="text-xs font-semibold text-gray-700">
-                使用组织 <span class="text-gray-400">({{ placeOrgRelations.length }})</span>
-              </h3>
+            <div class="flex border-b border-gray-200">
               <button
-                class="inline-flex items-center gap-1 rounded-md bg-blue-600 px-2.5 py-1 text-[11px] font-medium text-white transition-colors hover:bg-blue-700"
-                @click="openAddOrgRelDialog"
+                v-for="tab in placeTabs"
+                :key="tab.key"
+                :class="[
+                  'relative px-4 py-2.5 text-xs font-medium transition-colors',
+                  activePlaceTab === tab.key
+                    ? 'text-blue-600'
+                    : 'text-gray-500 hover:text-gray-700'
+                ]"
+                @click="activePlaceTab = tab.key"
               >
-                <Plus class="h-3 w-3" /> 添加
+                {{ tab.label }}
+                <span
+                  v-if="tab.count !== undefined && tab.count > 0"
+                  class="ml-1 rounded-full bg-gray-100 px-1.5 py-0.5 text-[10px] font-medium text-gray-600"
+                >{{ tab.count }}</span>
+                <div
+                  v-if="activePlaceTab === tab.key"
+                  class="absolute bottom-0 left-0 right-0 h-0.5 bg-blue-600"
+                ></div>
               </button>
             </div>
-            <div class="border-t border-gray-100">
+
+            <!-- Tab: 子场所 -->
+            <div v-if="activePlaceTab === 'children'">
+              <div v-if="childPlaces.length > 0" class="flex flex-wrap gap-1.5 px-5 py-3">
+                <button
+                  v-for="child in childPlaces"
+                  :key="child.id"
+                  class="inline-flex items-center gap-1 rounded border border-gray-200 bg-gray-50 px-2 py-1 text-[11px] transition-colors hover:border-blue-300 hover:bg-blue-50"
+                  @click="selectPlace(child)"
+                >
+                  <span class="font-medium text-gray-700">{{ child.placeName }}</span>
+                  <span class="text-gray-400">{{ child.typeName }}</span>
+                  <span v-if="child.capacity" class="rounded bg-gray-200 px-1 py-px text-[10px] text-gray-600">{{ child.currentOccupancy || 0 }}/{{ child.capacity }}</span>
+                </button>
+              </div>
+              <div v-else class="px-5 py-4 text-center text-xs text-gray-400">暂无子场所</div>
+            </div>
+
+            <!-- Tab: 关联组织 -->
+            <div v-if="activePlaceTab === 'orgs'">
+              <div class="flex items-center justify-end border-b border-gray-50 px-5 py-2.5">
+                <button
+                  class="inline-flex items-center gap-1 rounded-md bg-blue-600 px-2.5 py-1 text-[11px] font-medium text-white transition-colors hover:bg-blue-700"
+                  @click="openAddOrgRelDialog"
+                >
+                  <Plus class="h-3 w-3" /> 添加
+                </button>
+              </div>
               <table v-if="placeOrgRelations.length > 0" class="w-full text-xs">
                 <thead>
                   <tr class="border-b border-gray-100 bg-gray-50/50">
                     <th class="px-4 py-2 text-left font-medium text-gray-500">组织名称</th>
                     <th class="px-4 py-2 text-left font-medium text-gray-500">关系类型</th>
-                    <th class="px-4 py-2 text-left font-medium text-gray-500">权限</th>
-                    <th class="w-16 px-4 py-2 text-right font-medium text-gray-400"></th>
+                    <th class="w-12 px-2 py-2 text-right font-medium text-gray-400"></th>
                   </tr>
                 </thead>
                 <tbody>
                   <tr v-for="rel in placeOrgRelations" :key="rel.id" class="border-b border-gray-50 hover:bg-gray-50/50">
-                    <td class="px-4 py-2 font-medium text-gray-800">{{ rel.subjectId }}</td>
+                    <td class="px-4 py-2 font-medium text-gray-800">{{ rel.metadata?.subjectName || `组织#${rel.subjectId}` }}</td>
                     <td class="px-4 py-2">
                       <span class="rounded px-1.5 py-0.5 text-[10px] font-medium" :class="relTypeBadge(rel.metadata?.relationType)">
                         {{ RelationLabels[rel.relation] || rel.relation }}
                       </span>
                     </td>
-                    <td class="px-4 py-2">
-                      <div class="flex flex-wrap gap-0.5">
-                        <span v-if="rel.metadata?.canUse" class="rounded bg-blue-50 px-1 py-px text-[10px] text-blue-600">使用</span>
-                        <span v-if="rel.metadata?.canManage" class="rounded bg-amber-50 px-1 py-px text-[10px] text-amber-600">管理</span>
-                        <span v-if="rel.metadata?.canInspect" class="rounded bg-purple-50 px-1 py-px text-[10px] text-purple-600">检查</span>
-                      </div>
-                    </td>
-                    <td class="px-4 py-2 text-right">
+                    <td class="whitespace-nowrap px-2 py-2 text-right">
                       <button
                         class="rounded px-1.5 py-0.5 text-[10px] font-medium text-red-400 transition-colors hover:bg-red-50 hover:text-red-500"
                         @click="handleDeleteOrgRelation(rel)"
@@ -244,18 +173,13 @@
                   </tr>
                 </tbody>
               </table>
-              <div v-else class="px-5 py-4 text-center text-xs text-gray-400">
-                暂无关联组织
-              </div>
+              <div v-else class="px-5 py-4 text-center text-xs text-gray-400">暂无关联组织</div>
             </div>
-          </div>
 
-          <!-- Occupant Management Panel -->
-          <div v-if="showOccupantPanel" class="rounded-xl border border-gray-200 bg-white">
-            <!-- Header -->
-            <div class="flex items-center justify-between px-5 py-2.5">
+            <!-- Tab: 入住管理 -->
+            <div v-if="activePlaceTab === 'occupants' && showOccupantPanel">
+            <div class="flex items-center justify-between border-b border-gray-50 px-5 py-2.5">
               <div class="flex items-center gap-2">
-                <h3 class="text-xs font-semibold text-gray-700">入住管理</h3>
                 <span v-if="selectedNode?.capacity" class="text-[11px] text-gray-400">
                   容量 <span class="font-medium text-gray-600">{{ occupants.length }}/{{ selectedNode.capacity }}</span>{{ selectedNode.capacityUnit ? selectedNode.capacityUnit : '人' }}
                 </span>
@@ -416,16 +340,9 @@
             </div>
           </div>
 
-          <!-- Booking Management Panel -->
-          <div v-if="showBookingPanel" class="rounded-xl border border-gray-200 bg-white">
-            <div class="flex items-center justify-between px-5 py-2.5">
-              <div class="flex items-center gap-2">
-                <h3 class="text-xs font-semibold text-gray-700">预订管理</h3>
-                <span class="text-[11px] text-gray-400">
-                  活跃预订 <span class="font-medium text-gray-600">{{ bookings.filter(b => b.status === 1 || b.status === 2).length }}</span>
-                </span>
-              </div>
-              <div class="flex items-center gap-2">
+            <!-- Tab: 预订管理 -->
+            <div v-if="activePlaceTab === 'bookings' && showBookingPanel">
+            <div class="flex items-center justify-end gap-2 border-b border-gray-50 px-5 py-2.5">
                 <button
                   class="text-[11px] font-medium"
                   :class="bookingShowAll ? 'text-blue-500' : 'text-gray-400'"
@@ -437,7 +354,6 @@
                 >
                   <Plus class="h-3 w-3" /> 新建预订
                 </button>
-              </div>
             </div>
             <div class="border-t border-gray-100">
               <table v-if="bookings.length > 0" class="w-full text-xs">
@@ -481,16 +397,63 @@
                 暂无预订记录
               </div>
             </div>
-          </div>
+            </div>
 
-          <!-- Audit Log Panel -->
-          <ActivityTimeline
-            v-if="selectedNode"
-            resourceType="PLACE"
-            :resourceId="selectedNode.id"
-            :limit="30"
-            title="操作记录"
-          />
+            <!-- Tab: 基本信息 -->
+            <div v-if="activePlaceTab === 'info'" class="grid grid-cols-2 gap-x-6 gap-y-3 px-5 py-4 text-xs lg:grid-cols-4">
+              <div>
+                <dt class="font-medium text-gray-500">编号</dt>
+                <dd class="mt-0.5 text-gray-900">{{ selectedNode.placeCode }}</dd>
+              </div>
+              <div>
+                <dt class="font-medium text-gray-500">类型</dt>
+                <dd class="mt-0.5 text-gray-900">{{ selectedNode.typeName }}</dd>
+              </div>
+              <div>
+                <dt class="font-medium text-gray-500">层级</dt>
+                <dd class="mt-0.5 text-gray-900">第{{ selectedNode.level }}级</dd>
+              </div>
+              <div>
+                <dt class="font-medium text-gray-500">上级</dt>
+                <dd class="mt-0.5 text-gray-900">{{ selectedNodeParentName || '(根节点)' }}</dd>
+              </div>
+              <div class="col-span-2">
+                <dt class="font-medium text-gray-500">所属部门</dt>
+                <dd class="mt-0.5 text-gray-900">{{ selectedNode.orgUnitName || selectedNode.effectiveOrgUnitName || '-' }}</dd>
+              </div>
+              <div class="col-span-2">
+                <dt class="font-medium text-gray-500">负责人</dt>
+                <dd class="mt-0.5 text-gray-900">{{ selectedNode.responsibleUserName || selectedNode.effectiveResponsibleUserName || '-' }}</dd>
+              </div>
+              <div>
+                <dt class="font-medium text-gray-500">性别限制</dt>
+                <dd class="mt-0.5 text-gray-900">{{ genderDisplay(selectedNode) }}</dd>
+              </div>
+              <div>
+                <dt class="font-medium text-gray-500">容量</dt>
+                <dd class="mt-0.5 text-gray-900">{{ selectedNode.hasCapacity ? `${selectedNode.currentOccupancy || 0}/${selectedNode.capacity || '-'}` : '不适用' }}</dd>
+              </div>
+              <div class="col-span-2">
+                <dt class="font-medium text-gray-500">路径</dt>
+                <dd class="mt-0.5 text-gray-900">{{ selectedNodePath }}</dd>
+              </div>
+              <div v-if="selectedNode.description" class="col-span-4">
+                <dt class="font-medium text-gray-500">描述</dt>
+                <dd class="mt-0.5 text-gray-600">{{ selectedNode.description }}</dd>
+              </div>
+            </div>
+
+            <!-- Tab: 操作记录 -->
+            <div v-if="activePlaceTab === 'logs'">
+              <ActivityTimeline
+                resourceType="PLACE"
+                :resourceId="selectedNode.id"
+                :limit="30"
+                title="操作记录"
+              />
+            </div>
+
+          </div><!-- end tabs card -->
         </div>
 
         <!-- Overview (when no node selected) -->
@@ -731,7 +694,7 @@
     </el-dialog>
 
     <!-- Add Org Relation Dialog -->
-    <el-dialog v-model="showAddOrgRelDialog" title="添加使用组织" width="440px" :close-on-click-modal="false" destroy-on-close align-center>
+    <el-dialog v-model="showAddOrgRelDialog" title="添加关联组织" width="440px" :close-on-click-modal="false" destroy-on-close align-center>
       <el-form label-position="top" class="space-y-3">
         <el-form-item label="选择组织" required>
           <el-tree-select
@@ -751,11 +714,6 @@
             <el-radio value="MANAGED">托管</el-radio>
           </el-radio-group>
         </el-form-item>
-        <div class="flex flex-wrap gap-4">
-          <el-checkbox v-model="addOrgRelForm.canUse">可使用</el-checkbox>
-          <el-checkbox v-model="addOrgRelForm.canManage">可管理</el-checkbox>
-          <el-checkbox v-model="addOrgRelForm.canInspect">可检查</el-checkbox>
-        </div>
       </el-form>
       <template #footer>
         <div class="flex justify-end gap-2">
@@ -849,6 +807,7 @@ const childPlaces = ref<UniversalPlace[]>([])
 const statistics = ref<PlaceStatistics | null>(null)
 const showDropdown = ref(false)
 const dropdownRef = ref<HTMLElement | null>(null)
+const activePlaceTab = ref<string>('children')
 
 // ========== Place Types (for schema lookups) ==========
 const allPlaceTypes = ref<UniversalPlaceType[]>([])
@@ -1406,6 +1365,22 @@ const showOccupantPanel = computed(() => {
   const node = selectedNode.value
   if (!node) return false
   return node.occupiable || node.hasCapacity
+})
+
+const placeTabs = computed(() => {
+  const tabs: { key: string; label: string; count?: number }[] = [
+    { key: 'children', label: '子场所', count: childPlaces.value.length },
+    { key: 'orgs', label: '关联组织', count: placeOrgRelations.value.length },
+  ]
+  if (showOccupantPanel.value) {
+    tabs.push({ key: 'occupants', label: '入住管理', count: occupants.value.length })
+  }
+  if (showBookingPanel.value) {
+    tabs.push({ key: 'bookings', label: '预订管理', count: bookings.value.filter((b: any) => b.status === 1 || b.status === 2).length })
+  }
+  tabs.push({ key: 'info', label: '基本信息' })
+  tabs.push({ key: 'logs', label: '操作记录' })
+  return tabs
 })
 
 const swapTargets = computed(() => {

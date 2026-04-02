@@ -10,6 +10,8 @@ public interface InspSubmissionRepository {
 
     InspSubmission save(InspSubmission submission);
 
+    List<InspSubmission> saveAll(List<InspSubmission> submissions);
+
     Optional<InspSubmission> findById(Long id);
 
     List<InspSubmission> findByTaskId(Long taskId);

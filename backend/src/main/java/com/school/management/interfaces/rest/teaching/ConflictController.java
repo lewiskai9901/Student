@@ -4,6 +4,7 @@ import com.school.management.application.teaching.ConflictDetectionService;
 import com.school.management.common.result.Result;
 import com.school.management.common.util.SecurityUtils;
 import com.school.management.domain.teaching.model.scheduling.ScheduleConflictRecord;
+import com.school.management.infrastructure.casbin.CasbinAccess;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
@@ -17,16 +18,19 @@ public class ConflictController {
     private final ConflictDetectionService service;
 
     @PostMapping("/feasibility-check")
+    @CasbinAccess(resource = "teaching:schedule", action = "view")
     public Result<Map<String, Object>> feasibilityCheck(@RequestParam Long semesterId) {
         return Result.success(service.feasibilityCheck(semesterId));
     }
 
     @PostMapping("/detect")
+    @CasbinAccess(resource = "teaching:schedule", action = "view")
     public Result<List<ScheduleConflictRecord>> detect(@RequestParam Long semesterId) {
         return Result.success(service.detectConflicts(semesterId));
     }
 
     @GetMapping
+    @CasbinAccess(resource = "teaching:schedule", action = "view")
     public Result<List<ScheduleConflictRecord>> list(
             @RequestParam Long semesterId,
             @RequestParam(required = false) Integer status) {
@@ -34,12 +38,14 @@ public class ConflictController {
     }
 
     @PostMapping("/{id}/resolve")
+    @CasbinAccess(resource = "teaching:schedule", action = "edit")
     public Result<Void> resolve(@PathVariable Long id, @RequestBody Map<String, String> body) {
         service.resolveConflict(id, body.get("note"), SecurityUtils.getCurrentUserId());
         return Result.success(null);
     }
 
     @PostMapping("/{id}/ignore")
+    @CasbinAccess(resource = "teaching:schedule", action = "edit")
     public Result<Void> ignore(@PathVariable Long id, @RequestBody Map<String, String> body) {
         service.ignoreConflict(id, body.get("note"), SecurityUtils.getCurrentUserId());
         return Result.success(null);

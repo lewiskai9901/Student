@@ -28,16 +28,24 @@
             :class="[
               editable ? 'cursor-pointer hover:bg-blue-50/50' : '',
               getEntriesForCell(day.value, period.period).length === 0 ? 'min-h-[56px]' : '',
+              isDragOver(day.value, period.period) ? 'bg-blue-100 ring-2 ring-inset ring-blue-400' : '',
+              isForbiddenSlot(day.value, period.period) ? 'bg-gray-100 opacity-50' : '',
             ]"
             style="min-height: 56px"
             @click="handleCellClick(day.value, period.period)"
+            @dragover="onDragOver($event, day.value, period.period)"
+            @dragleave="onDragLeave"
+            @drop="onDrop($event, day.value, period.period)"
           >
             <div
               v-for="entry in getEntriesForCell(day.value, period.period)"
               :key="entry.id"
               class="mb-1 cursor-pointer rounded-md p-1.5 text-white last:mb-0"
               :class="getEntryColor(entry)"
+              :draggable="editable"
               @click.stop="emit('entry-click', entry)"
+              @dragstart="onDragStart($event, entry)"
+              @dragend="onDragEnd"
             >
               <div class="text-[11px] font-semibold leading-tight">{{ entry.courseName }}</div>
               <div class="text-[10px] leading-tight opacity-90">{{ entry.classroomName }}</div>
@@ -59,7 +67,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
+import { ref, computed } from 'vue'
 import type { ScheduleEntry, PeriodConfig } from '@/types/teaching'
 import { WEEKDAYS, DEFAULT_PERIODS } from '@/types/teaching'
 
@@ -68,17 +76,20 @@ interface Props {
   periods?: PeriodConfig[]
   weekdays?: { value: number; label: string }[]
   editable?: boolean
+  constraintMatrix?: any[][]
 }
 
 const props = withDefaults(defineProps<Props>(), {
   periods: () => DEFAULT_PERIODS,
   weekdays: undefined,
   editable: false,
+  constraintMatrix: undefined,
 })
 
 const emit = defineEmits<{
   'entry-click': [entry: ScheduleEntry]
   'cell-click': [day: number, period: number]
+  'entry-drop': [entryId: number, newDay: number, newPeriod: number]
 }>()
 
 const displayWeekdays = computed(() => {
@@ -96,8 +107,56 @@ const colors = [
   'bg-teal-500',
 ]
 
+// ==================== Drag-and-Drop State ====================
+
+const draggedEntry = ref<any>(null)
+const dragOverCell = ref<{ day: number; period: number } | null>(null)
+
+function onDragStart(e: DragEvent, entry: any) {
+  if (!props.editable) return
+  draggedEntry.value = entry
+  e.dataTransfer!.effectAllowed = 'move'
+  e.dataTransfer!.setData('text/plain', String(entry.id))
+}
+
+function onDragOver(e: DragEvent, day: number, period: number) {
+  if (!props.editable || !draggedEntry.value) return
+  e.preventDefault()
+  dragOverCell.value = { day, period }
+}
+
+function onDragLeave() {
+  dragOverCell.value = null
+}
+
+function onDrop(e: DragEvent, day: number, period: number) {
+  e.preventDefault()
+  if (!draggedEntry.value) return
+  emit('entry-drop', draggedEntry.value.id, day, period)
+  draggedEntry.value = null
+  dragOverCell.value = null
+}
+
+function onDragEnd() {
+  draggedEntry.value = null
+  dragOverCell.value = null
+}
+
+function isDragOver(day: number, period: number): boolean {
+  return dragOverCell.value?.day === day && dragOverCell.value?.period === period
+}
+
+function isForbiddenSlot(day: number, period: number): boolean {
+  if (!props.constraintMatrix) return false
+  const dayRow = props.constraintMatrix[day - 1]
+  if (!dayRow) return false
+  return dayRow[period - 1]?.status === 'forbidden'
+}
+
+// ==================== Cell Logic ====================
+
 function getEntryColor(entry: ScheduleEntry) {
-  const idx = Number(entry.courseId ?? entry.taskId ?? 0) % colors.length
+  const idx = Number(entry.taskId ?? 0) % colors.length
   return colors[idx]
 }
 

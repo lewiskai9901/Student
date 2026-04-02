@@ -30,7 +30,7 @@ public class InspectionPlanController {
         Long userId = SecurityUtils.getCurrentUserId();
         return Result.success(planService.createPlan(
                 request.projectId(), request.planName(), request.rootSectionId(),
-                request.sectionIds(),
+                request.sectionIds(), request.inspectorIds(),
                 request.scheduleMode(), request.cycleType(), request.frequency(),
                 request.scheduleDays(), request.timeSlots(), request.skipHolidays(),
                 userId));
@@ -55,6 +55,7 @@ public class InspectionPlanController {
                                               @RequestBody UpdatePlanRequest request) {
         return Result.success(planService.updatePlan(id,
                 request.planName(), request.rootSectionId(), request.sectionIds(),
+                request.inspectorIds(),
                 request.scheduleMode(), request.cycleType(), request.frequency(),
                 request.scheduleDays(), request.timeSlots(), request.skipHolidays()));
     }
@@ -90,25 +91,27 @@ public class InspectionPlanController {
     public record CreatePlanRequest(
             Long projectId,
             String planName,
-            Long rootSectionId,    // V66: 该计划使用的模板（可选，null 则从项目继承）
+            Long rootSectionId,
             String sectionIds,
             String scheduleMode,
             String cycleType,
             Integer frequency,
             String scheduleDays,
             String timeSlots,
-            Boolean skipHolidays
+            Boolean skipHolidays,
+            String inspectorIds    // JSON: 指定检查员ID列表，空=项目全员
     ) {}
 
     public record UpdatePlanRequest(
             String planName,
-            Long rootSectionId,    // V66: 可选，变更该计划绑定的模板
+            Long rootSectionId,
             String sectionIds,
             String scheduleMode,
             String cycleType,
             Integer frequency,
             String scheduleDays,
             String timeSlots,
-            Boolean skipHolidays
+            Boolean skipHolidays,
+            String inspectorIds
     ) {}
 }

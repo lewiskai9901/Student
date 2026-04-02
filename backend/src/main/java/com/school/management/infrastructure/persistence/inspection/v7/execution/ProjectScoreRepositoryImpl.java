@@ -62,6 +62,8 @@ public class ProjectScoreRepositoryImpl implements ProjectScoreRepository {
         po.setGrade(d.getGrade());
         po.setTargetCount(d.getTargetCount());
         po.setDetail(d.getDetail());
+        po.setGradeSchemeDisplayName(d.getGradeSchemeDisplayName());
+        po.setGradeName(d.getGradeName());
         po.setCreatedAt(d.getCreatedAt());
         po.setUpdatedAt(d.getUpdatedAt());
         return po;
@@ -77,6 +79,8 @@ public class ProjectScoreRepositoryImpl implements ProjectScoreRepository {
                 .grade(po.getGrade())
                 .targetCount(po.getTargetCount())
                 .detail(po.getDetail())
+                .gradeSchemeDisplayName(po.getGradeSchemeDisplayName())
+                .gradeName(po.getGradeName())
                 .createdAt(po.getCreatedAt())
                 .updatedAt(po.getUpdatedAt()));
     }

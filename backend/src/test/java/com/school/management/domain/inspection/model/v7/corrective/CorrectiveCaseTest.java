@@ -298,18 +298,36 @@ class CorrectiveCaseTest {
     class EscalateTests {
 
         @Test
-        @DisplayName("升级 — 增加升级等级")
+        @DisplayName("升级 — 增加升级等级并重置为OPEN")
         void testEscalate() {
             // Given
-            CorrectiveCase c = createOpenCase();
+            CorrectiveCase c = createAssignedCase();
             int originalLevel = c.getEscalationLevel();
 
             // When
             c.escalate();
 
-            // Then
-            assertThat(c.getStatus()).isEqualTo(CaseStatus.ESCALATED);
+            // Then: 升级后回到 OPEN，等待重新分配给更高级别责任人
+            assertThat(c.getStatus()).isEqualTo(CaseStatus.OPEN);
             assertThat(c.getEscalationLevel()).isEqualTo(originalLevel + 1);
+            assertThat(c.getAssigneeId()).isNull();
+            assertThat(c.getAssigneeName()).isNull();
+        }
+
+        @Test
+        @DisplayName("升级可以多次执行（每次递增 escalationLevel）")
+        void testEscalate_MultipleTimes() {
+            // Given
+            CorrectiveCase c = createOpenCase();
+
+            // When: 连续升级
+            c.escalate();
+            assertThat(c.getEscalationLevel()).isEqualTo(1);
+            assertThat(c.getStatus()).isEqualTo(CaseStatus.OPEN);
+
+            c.escalate();
+            assertThat(c.getEscalationLevel()).isEqualTo(2);
+            assertThat(c.getStatus()).isEqualTo(CaseStatus.OPEN);
         }
 
         @Test
@@ -319,18 +337,24 @@ class CorrectiveCaseTest {
 
             assertThatThrownBy(() -> c.escalate())
                     .isInstanceOf(IllegalStateException.class)
-                    .hasMessageContaining("已关闭或已升级的案例不能再升级");
+                    .hasMessageContaining("已关闭的案例不能升级");
         }
 
         @Test
-        @DisplayName("已升级案例不能再次升级")
-        void testEscalate_AlreadyEscalatedThrows() {
-            CorrectiveCase c = createOpenCase();
-            c.escalate();
+        @DisplayName("升级后可以重新分配")
+        void testEscalate_ThenReassign() {
+            // Given: 已分配的案例
+            CorrectiveCase c = createAssignedCase();
 
-            assertThatThrownBy(() -> c.escalate())
-                    .isInstanceOf(IllegalStateException.class)
-                    .hasMessageContaining("已关闭或已升级的案例不能再升级");
+            // When: 升级
+            c.escalate();
+            assertThat(c.getStatus()).isEqualTo(CaseStatus.OPEN);
+
+            // Then: 可以重新分配给更高级别责任人
+            c.assign(30L, "主管");
+            assertThat(c.getStatus()).isEqualTo(CaseStatus.ASSIGNED);
+            assertThat(c.getAssigneeId()).isEqualTo(30L);
+            assertThat(c.getEscalationLevel()).isEqualTo(1);
         }
     }
 

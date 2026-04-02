@@ -89,7 +89,7 @@ export function useTimingTracker() {
 
   function getAllTimings(): Record<number, number> {
     const result: Record<number, number> = {}
-    for (const [itemId, timing] of itemTimings) {
+    for (const [itemId, _timing] of itemTimings) {
       result[itemId] = getItemTimeSeconds(itemId)
     }
     return result

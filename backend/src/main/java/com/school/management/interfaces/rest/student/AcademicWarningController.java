@@ -14,6 +14,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDateTime;
 import java.util.*;
+import com.school.management.infrastructure.casbin.CasbinAccess;
 
 /**
  * 学业预警 REST Controller
@@ -38,6 +39,7 @@ public class AcademicWarningController {
 
     @Operation(summary = "查询预警规则列表")
     @GetMapping("/rules")
+    @CasbinAccess(resource = "student:warning", action = "view")
     public Result<List<Map<String, Object>>> listRules() {
         List<Map<String, Object>> rules = jdbc.queryForList(
             "SELECT id, rule_name AS ruleName, rule_type AS ruleType, " +
@@ -55,6 +57,7 @@ public class AcademicWarningController {
 
     @Operation(summary = "创建预警规则")
     @PostMapping("/rules")
+    @CasbinAccess(resource = "student:warning", action = "edit")
     public Result<Long> createRule(@RequestBody Map<String, Object> data) {
         String ruleName = (String) data.get("ruleName");
         String ruleType = (String) data.get("ruleType");
@@ -84,6 +87,7 @@ public class AcademicWarningController {
 
     @Operation(summary = "更新预警规则")
     @PutMapping("/rules/{id}")
+    @CasbinAccess(resource = "student:warning", action = "edit")
     public Result<Void> updateRule(@PathVariable Long id, @RequestBody Map<String, Object> data) {
         String ruleName = (String) data.get("ruleName");
         String ruleType = (String) data.get("ruleType");
@@ -110,6 +114,7 @@ public class AcademicWarningController {
 
     @Operation(summary = "删除预警规则")
     @DeleteMapping("/rules/{id}")
+    @CasbinAccess(resource = "student:warning", action = "edit")
     public Result<Void> deleteRule(@PathVariable Long id) {
         jdbc.update("UPDATE academic_warning_rules SET deleted = 1 WHERE id = ?", id);
         return Result.success();
@@ -117,6 +122,7 @@ public class AcademicWarningController {
 
     @Operation(summary = "启用/禁用预警规则")
     @PostMapping("/rules/{id}/toggle")
+    @CasbinAccess(resource = "student:warning", action = "edit")
     public Result<Void> toggleRule(@PathVariable Long id) {
         jdbc.update("UPDATE academic_warning_rules SET enabled = 1 - enabled WHERE id = ? AND deleted = 0", id);
         return Result.success();
@@ -126,6 +132,7 @@ public class AcademicWarningController {
 
     @Operation(summary = "手动触发预警扫描")
     @PostMapping("/scan")
+    @CasbinAccess(resource = "student:warning", action = "edit")
     @Transactional
     public Result<Map<String, Object>> scanWarnings(@RequestParam Long semesterId) {
         List<Map<String, Object>> rules = jdbc.queryForList(
@@ -230,6 +237,7 @@ public class AcademicWarningController {
 
     @Operation(summary = "预览扫描结果（不写入DB）")
     @GetMapping("/scan/preview")
+    @CasbinAccess(resource = "student:warning", action = "view")
     public Result<List<Map<String, Object>>> previewScan(@RequestParam Long semesterId) {
         // Same logic as scan but collect results instead of inserting
         List<Map<String, Object>> rules = jdbc.queryForList(
@@ -329,6 +337,7 @@ public class AcademicWarningController {
 
     @Operation(summary = "查询预警记录列表")
     @GetMapping
+    @CasbinAccess(resource = "student:warning", action = "view")
     public Result<Map<String, Object>> listWarnings(
             @RequestParam(required = false) Integer warningLevel,
             @RequestParam(required = false) Integer status,
@@ -394,6 +403,7 @@ public class AcademicWarningController {
 
     @Operation(summary = "查询预警详情")
     @GetMapping("/{id}")
+    @CasbinAccess(resource = "student:warning", action = "view")
     public Result<Map<String, Object>> getWarningDetail(@PathVariable Long id) {
         Map<String, Object> warning = jdbc.queryForMap(
             "SELECT id, student_id AS studentId, student_no AS studentNo, student_name AS studentName, " +
@@ -409,6 +419,7 @@ public class AcademicWarningController {
 
     @Operation(summary = "确认预警")
     @PostMapping("/{id}/confirm")
+    @CasbinAccess(resource = "student:warning", action = "edit")
     public Result<Void> confirmWarning(@PathVariable Long id) {
         Long userId = SecurityUtils.getCurrentUserId();
         jdbc.update(
@@ -420,6 +431,7 @@ public class AcademicWarningController {
 
     @Operation(summary = "记录干预措施")
     @PostMapping("/{id}/intervene")
+    @CasbinAccess(resource = "student:warning", action = "edit")
     public Result<Void> interveneWarning(@PathVariable Long id, @RequestParam String note) {
         Long userId = SecurityUtils.getCurrentUserId();
         jdbc.update(
@@ -431,6 +443,7 @@ public class AcademicWarningController {
 
     @Operation(summary = "解除预警")
     @PostMapping("/{id}/dismiss")
+    @CasbinAccess(resource = "student:warning", action = "edit")
     public Result<Void> dismissWarning(@PathVariable Long id, @RequestParam(required = false) String note) {
         Long userId = SecurityUtils.getCurrentUserId();
         jdbc.update(
@@ -442,6 +455,7 @@ public class AcademicWarningController {
 
     @Operation(summary = "预警统计")
     @GetMapping("/statistics")
+    @CasbinAccess(resource = "student:warning", action = "view")
     public Result<Map<String, Object>> statistics(@RequestParam(required = false) Long semesterId) {
         String semesterWhere = semesterId != null ? " WHERE semester_id = " + semesterId : "";
 
@@ -478,6 +492,7 @@ public class AcademicWarningController {
 
     @Operation(summary = "学生个人预警历史")
     @GetMapping("/by-student/{studentId}")
+    @CasbinAccess(resource = "student:warning", action = "view")
     public Result<List<Map<String, Object>>> studentWarningHistory(@PathVariable Long studentId) {
         List<Map<String, Object>> warnings = jdbc.queryForList(
             "SELECT id, warning_type AS warningType, warning_level AS warningLevel, " +

@@ -110,7 +110,7 @@ public class TemplateSectionRepositoryImpl implements TemplateSectionRepository 
     private TemplateSectionPO toPO(TemplateSection domain) {
         TemplateSectionPO po = new TemplateSectionPO();
         po.setId(domain.getId());
-        po.setTenantId(0L);
+        po.setTenantId(domain.getTenantId() != null ? domain.getTenantId() : 0L);
         po.setTemplateId(domain.getTemplateId());
         po.setParentSectionId(domain.getParentSectionId());
         po.setRefTemplateId(null); // legacy field, no longer used; refSectionId replaces it
@@ -127,9 +127,9 @@ public class TemplateSectionRepositoryImpl implements TemplateSectionRepository 
         po.setStatus(domain.getStatus() != null ? domain.getStatus().name() : null);
         po.setLatestVersion(domain.getLatestVersion());
         po.setSortOrder(domain.getSortOrder());
-        po.setWeight(domain.getWeight());
         po.setIsRepeatable(domain.getIsRepeatable());
         po.setConditionLogic(domain.getConditionLogic());
+        po.setInputMode(domain.getInputMode());
         po.setInspectionMode(domain.getInspectionMode());
         po.setContinuousStart(domain.getContinuousStart());
         po.setContinuousEnd(domain.getContinuousEnd());
@@ -158,9 +158,9 @@ public class TemplateSectionRepositoryImpl implements TemplateSectionRepository 
                 .status(po.getStatus() != null ? TemplateStatus.valueOf(po.getStatus()) : null)
                 .latestVersion(po.getLatestVersion())
                 .sortOrder(po.getSortOrder())
-                .weight(po.getWeight())
                 .isRepeatable(po.getIsRepeatable())
                 .conditionLogic(po.getConditionLogic())
+                .inputMode(po.getInputMode())
                 .inspectionMode(po.getInspectionMode())
                 .continuousStart(po.getContinuousStart())
                 .continuousEnd(po.getContinuousEnd())

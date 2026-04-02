@@ -8,10 +8,15 @@ import com.school.management.domain.organization.repository.OrgUnitRepository;
 import org.springframework.stereotype.Repository;
 
 import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 /**
@@ -138,6 +143,24 @@ public class OrgUnitRepositoryImpl implements OrgUnitRepository {
         return orgUnitMapper.findAllIncludeDisabled().stream()
             .map(this::toDomain)
             .collect(Collectors.toList());
+    }
+
+    @Override
+    public List<OrgUnit> findByParentIds(Collection<Long> parentIds) {
+        if (parentIds == null || parentIds.isEmpty()) {
+            return Collections.emptyList();
+        }
+        return orgUnitMapper.findByParentIds(parentIds).stream()
+            .map(this::toDomain)
+            .collect(Collectors.toList());
+    }
+
+    @Override
+    public Set<Long> findParentIdsWithChildren(Collection<Long> parentIds) {
+        if (parentIds == null || parentIds.isEmpty()) {
+            return Collections.emptySet();
+        }
+        return new HashSet<>(orgUnitMapper.findParentIdsWithChildren(parentIds));
     }
 
     // ==================== 转换方法 ====================

@@ -13,12 +13,13 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
 @RestController
+@RequestMapping("/v7/insp/library-items")
 @RequiredArgsConstructor
 public class LibraryItemController {
 
     private final LibraryItemApplicationService libraryItemService;
 
-    @GetMapping("/v7/insp/library-items")
+    @GetMapping
     @CasbinAccess(resource = "insp:template", action = "view")
     public Result<List<LibraryItem>> listLibraryItems(
             @RequestParam(required = false) String keyword,
@@ -29,19 +30,19 @@ public class LibraryItemController {
         return Result.success(libraryItemService.listLibraryItems());
     }
 
-    @GetMapping("/v7/insp/library-items/categories")
+    @GetMapping("/categories")
     @CasbinAccess(resource = "insp:template", action = "view")
     public Result<List<String>> getCategories() {
         return Result.success(libraryItemService.getCategories());
     }
 
-    @GetMapping("/v7/insp/library-items/{id}")
+    @GetMapping("/{id}")
     @CasbinAccess(resource = "insp:template", action = "view")
     public Result<LibraryItem> getLibraryItem(@PathVariable Long id) {
         return Result.success(libraryItemService.getLibraryItem(id));
     }
 
-    @PostMapping("/v7/insp/library-items")
+    @PostMapping
     @CasbinAccess(resource = "insp:template", action = "edit")
     public Result<LibraryItem> createLibraryItem(@RequestBody CreateLibraryItemRequest request) {
         Long userId = SecurityUtils.getCurrentUserId();
@@ -53,7 +54,7 @@ public class LibraryItemController {
                 request.getIsStandard(), userId));
     }
 
-    @PutMapping("/v7/insp/library-items/{id}")
+    @PutMapping("/{id}")
     @CasbinAccess(resource = "insp:template", action = "edit")
     public Result<LibraryItem> updateLibraryItem(@PathVariable Long id,
                                                   @RequestBody UpdateLibraryItemRequest request) {
@@ -65,14 +66,14 @@ public class LibraryItemController {
                 request.getIsStandard()));
     }
 
-    @DeleteMapping("/v7/insp/library-items/{id}")
+    @DeleteMapping("/{id}")
     @CasbinAccess(resource = "insp:template", action = "edit")
     public Result<Void> deleteLibraryItem(@PathVariable Long id) {
         libraryItemService.deleteLibraryItem(id);
         return Result.success();
     }
 
-    @PostMapping("/v7/insp/library-items/{id}/sync")
+    @PostMapping("/{id}/sync")
     @CasbinAccess(resource = "insp:template", action = "edit")
     public Result<Integer> syncToTemplates(@PathVariable Long id) {
         int count = libraryItemService.syncLibraryItemToTemplates(id);

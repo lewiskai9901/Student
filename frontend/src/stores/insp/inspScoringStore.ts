@@ -200,13 +200,18 @@ export const useInspScoringStore = defineStore('inspScoring', () => {
   // ===== Load All Sub-resources =====
 
   async function loadProfileFull(profileId: number) {
-    await Promise.all([
-      loadProfile(profileId),
-      loadDimensions(profileId),
-      loadGradeBands(profileId),
-      loadRules(profileId),
-      loadVersions(profileId),
-    ])
+    try {
+      await Promise.all([
+        loadProfile(profileId),
+        loadDimensions(profileId),
+        loadGradeBands(profileId),
+        loadRules(profileId),
+        loadVersions(profileId),
+      ])
+    } catch (e) {
+      console.warn('Load full scoring profile failed', e)
+      throw e
+    }
   }
 
   return {

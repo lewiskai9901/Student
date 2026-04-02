@@ -69,6 +69,7 @@ export interface TemplateSection {
   weight: number
   isRepeatable: boolean
   scoringConfig: string | null
+  inputMode?: 'INLINE' | 'EVENT_STREAM'
   inspectionMode: 'SNAPSHOT' | 'CONTINUOUS'
   continuousStart: string | null
   continuousEnd: string | null
@@ -119,6 +120,7 @@ export interface UpdateSectionRequest {
   targetTypeFilter?: string
   weight?: number
   isRepeatable?: boolean
+  inputMode?: 'INLINE' | 'EVENT_STREAM'
 }
 
 // ==================== 评分配置 ====================
@@ -172,6 +174,7 @@ export interface TemplateItem {
   sortOrder: number
   conditionLogic: string | null
   libraryItemId: number | null
+  inputMode?: 'INLINE' | 'EVENT_STREAM'
   syncWithLibrary: boolean
   visibilityLogic: string | null
   scoringLogic: string | null
@@ -331,6 +334,7 @@ export interface InspectionPlan {
   scheduleDays: string | null
   timeSlots: string | null
   skipHolidays: boolean
+  inspectorIds: string | null  // JSON: 指定检查员ID列表，空=全员
   isEnabled: boolean
   sortOrder: number
   createdAt: string
@@ -340,8 +344,9 @@ export interface InspectionPlan {
 export interface CreatePlanRequest {
   projectId: number
   planName: string
-  rootSectionId?: number | null  // V66: 计划绑定的模板（可选，null 则从项目继承）
+  rootSectionId?: number | null
   sectionIds: string
+  inspectorIds?: string
   scheduleMode?: string
   cycleType?: string
   frequency?: number
@@ -352,8 +357,9 @@ export interface CreatePlanRequest {
 
 export interface UpdatePlanRequest {
   planName?: string
-  rootSectionId?: number | null  // V66: 可选，变更计划绑定的模板
+  rootSectionId?: number | null
   sectionIds?: string
+  inspectorIds?: string
   scheduleMode?: string
   cycleType?: string
   frequency?: number

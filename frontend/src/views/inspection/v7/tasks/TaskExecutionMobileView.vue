@@ -85,7 +85,7 @@ watch(currentIndex, async () => {
   if (currentSubmission.value) {
     try {
       details.value = await store.loadDetails(currentSubmission.value.id)
-    } catch { details.value = [] }
+    } catch (e) { console.warn('Load submission details failed', e); details.value = [] }
   }
 })
 
@@ -110,7 +110,7 @@ async function handleSubmitTask() {
     await store.submitTask(taskId)
     ElMessage.success('任务已提交')
     loadData()
-  } catch { /* cancelled */ }
+  } catch (e: any) { if (e !== 'cancel') console.warn('Operation failed', e) }
 }
 
 async function handleStartFilling() {
@@ -129,7 +129,7 @@ async function handleSkipSubmission() {
     await store.skipSubmission(currentSubmission.value.id)
     ElMessage.success('已跳过')
     loadData()
-  } catch { /* cancelled */ }
+  } catch (e: any) { if (e !== 'cancel') console.warn('Operation failed', e) }
 }
 
 async function handleSync() {

@@ -85,7 +85,7 @@ public class LibraryItemRepositoryImpl implements LibraryItemRepository {
     private LibraryItemPO toPO(LibraryItem domain) {
         LibraryItemPO po = new LibraryItemPO();
         po.setId(domain.getId());
-        po.setTenantId(0L);
+        po.setTenantId(domain.getTenantId() != null ? domain.getTenantId() : 0L);
         po.setItemCode(domain.getItemCode());
         po.setItemName(domain.getItemName());
         po.setDescription(domain.getDescription());

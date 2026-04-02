@@ -2,8 +2,7 @@
 import { ref, computed, onMounted, watch } from 'vue'
 import { ElMessage } from 'element-plus'
 import { Trophy, RefreshCw, Zap } from 'lucide-vue-next'
-import { getProjects } from '@/api/insp/project'
-import { getRatingDimensionsByProject, getRatingResults, computeRatings } from '@/api/insp/ratingDimension'
+import { getProjects, listDimensions, getRankings, calculateRatings } from '@/api/insp/project'
 import type { InspProject, RatingDimension, RatingResult } from '@/types/insp/project'
 
 // ========== State ==========
@@ -73,7 +72,7 @@ async function loadDimensions() {
   }
   loadingDimensions.value = true
   try {
-    dimensions.value = await getRatingDimensionsByProject(selectedProjectId.value)
+    dimensions.value = await listDimensions(selectedProjectId.value)
     if (dimensions.value.length > 0) {
       selectedDimensionId.value = dimensions.value[0].id
     } else {
@@ -95,7 +94,7 @@ async function loadResults() {
   }
   loadingResults.value = true
   try {
-    results.value = await getRatingResults(selectedDimensionId.value, cycleDate.value || undefined)
+    results.value = await getRankings(selectedDimensionId.value, { cycleDate: cycleDate.value || undefined })
   } catch (e: any) {
     ElMessage.error(e.message || '加载排名数据失败')
   } finally {
@@ -109,7 +108,7 @@ async function triggerCompute() {
   computing.value = true
   try {
     const today = new Date().toISOString().substring(0, 10)
-    await computeRatings(selectedDimensionId.value, cycleDate.value || today)
+    await calculateRatings(selectedDimensionId.value, { cycleDate: cycleDate.value || today })
     ElMessage.success('评级计算已触发，正在刷新...')
     await loadResults()
   } catch (e: any) {

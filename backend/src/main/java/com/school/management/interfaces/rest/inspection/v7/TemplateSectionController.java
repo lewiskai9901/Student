@@ -30,11 +30,16 @@ public class TemplateSectionController {
     @CasbinAccess(resource = "insp:template", action = "edit")
     public Result<TemplateSection> createChildSection(@RequestBody CreateChildSectionRequest request) {
         Long userId = SecurityUtils.getCurrentUserId();
-        TargetType targetType = request.targetType() != null
-                ? TargetType.valueOf(request.targetType()) : null;
+        TargetType targetType;
+        try {
+            targetType = request.targetType() != null
+                    ? TargetType.valueOf(request.targetType()) : null;
+        } catch (IllegalArgumentException e) {
+            throw new IllegalArgumentException("无效的目标类型: " + request.targetType());
+        }
         return Result.success(sectionService.createChildSection(
                 request.parentSectionId(), request.sectionCode(), request.sectionName(),
-                targetType, request.weight(), request.isRepeatable(),
+                targetType, request.isRepeatable(),
                 request.conditionLogic(), request.sortOrder(), userId));
     }
 
@@ -61,12 +66,18 @@ public class TemplateSectionController {
     public Result<TemplateSection> updateSection(@PathVariable Long id,
                                                   @RequestBody UpdateSectionRequest request) {
         Long userId = SecurityUtils.getCurrentUserId();
-        TargetType targetType = request.targetType() != null
-                ? TargetType.valueOf(request.targetType()) : null;
+        TargetType targetType;
+        try {
+            targetType = request.targetType() != null
+                    ? TargetType.valueOf(request.targetType()) : null;
+        } catch (IllegalArgumentException e) {
+            throw new IllegalArgumentException("无效的目标类型: " + request.targetType());
+        }
         return Result.success(sectionService.updateSection(id,
                 request.sectionName(), targetType,
                 request.targetSourceMode(), request.targetTypeFilter(),
-                request.weight(), request.isRepeatable(), request.conditionLogic(), userId));
+                request.isRepeatable(), request.conditionLogic(),
+                request.inputMode(), userId));
     }
 
     @DeleteMapping("/{id}")
@@ -91,6 +102,14 @@ public class TemplateSectionController {
         return Result.success(sectionService.updateScoringConfig(id, request.scoringConfig(), userId));
     }
 
+    @PutMapping("/{id}/status")
+    @CasbinAccess(resource = "insp:template", action = "edit")
+    public Result<Void> updateStatus(@PathVariable Long id,
+                                     @RequestBody UpdateStatusRequest request) {
+        sectionService.updateSectionStatus(id, request.status());
+        return Result.success();
+    }
+
     // --- Request DTOs ---
 
     public record CreateChildSectionRequest(
@@ -98,7 +117,6 @@ public class TemplateSectionController {
             String sectionCode,
             String sectionName,
             String targetType,
-            Integer weight,
             Boolean isRepeatable,
             String conditionLogic,
             Integer sortOrder
@@ -109,9 +127,9 @@ public class TemplateSectionController {
             String targetType,
             String targetSourceMode,
             String targetTypeFilter,
-            Integer weight,
             Boolean isRepeatable,
-            String conditionLogic
+            String conditionLogic,
+            String inputMode
     ) {}
 
     public record ReorderSectionsRequest(
@@ -121,5 +139,9 @@ public class TemplateSectionController {
 
     public record UpdateScoringConfigRequest(
             String scoringConfig
+    ) {}
+
+    public record UpdateStatusRequest(
+            String status
     ) {}
 }

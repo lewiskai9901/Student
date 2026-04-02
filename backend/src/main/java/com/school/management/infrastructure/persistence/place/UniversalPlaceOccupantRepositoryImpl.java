@@ -99,6 +99,13 @@ public class UniversalPlaceOccupantRepositoryImpl implements UniversalPlaceOccup
                 .collect(Collectors.toList());
     }
 
+    @Override
+    public List<UniversalPlaceOccupant> findActiveByPlaceIds(List<Long> placeIds, String occupantType) {
+        return mapper.findActiveByPlaceIds(placeIds, occupantType).stream()
+                .map(this::toDomain)
+                .collect(Collectors.toList());
+    }
+
     // ==================== 转换方法 ====================
 
     private UniversalPlaceOccupantPO toPO(UniversalPlaceOccupant entity) {

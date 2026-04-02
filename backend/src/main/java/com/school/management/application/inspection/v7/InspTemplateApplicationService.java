@@ -143,7 +143,16 @@ public class InspTemplateApplicationService {
         List<TemplateItem> allItems = new ArrayList<>();
         allItems.addAll(itemRepository.findBySectionId(id));
         for (TemplateSection desc : descendants) {
-            allItems.addAll(itemRepository.findBySectionId(desc.getId()));
+            List<TemplateItem> sectionItems = itemRepository.findBySectionId(desc.getId());
+            if (sectionItems.isEmpty()) {
+                log.warn("分区 [{}](id={}) 没有检查项", desc.getSectionName(), desc.getId());
+            }
+            allItems.addAll(sectionItems);
+        }
+
+        // 校验：模板至少需要一个检查项
+        if (allItems.isEmpty()) {
+            throw new IllegalStateException("模板至少需要一个检查项才能发布");
         }
 
         // 构建结构快照 JSON
@@ -243,7 +252,6 @@ public class InspTemplateApplicationService {
                             .sectionName(src.getSectionName())
                             .targetType(src.getTargetType())
                             .sortOrder(src.getSortOrder())
-                            .weight(src.getWeight())
                             .isRepeatable(src.getIsRepeatable())
                             .conditionLogic(src.getConditionLogic())
                             .scoringConfig(src.getScoringConfig())
@@ -382,7 +390,8 @@ public class InspTemplateApplicationService {
                     srcItem.getConfig(), srcItem.getValidationRules(), srcItem.getResponseSetId(),
                     srcItem.getScoringConfig(), srcItem.getDimensionId(), srcItem.getHelpContent(),
                     srcItem.getIsRequired(), srcItem.getIsScored(), srcItem.getRequireEvidence(),
-                    srcItem.getItemWeight(), srcItem.getConditionLogic(), operatorId);
+                    srcItem.getItemWeight(), srcItem.getConditionLogic(), srcItem.getInputMode(),
+                    operatorId);
             newItem.reorder(srcItem.getSortOrder());
             itemRepository.save(newItem);
         }

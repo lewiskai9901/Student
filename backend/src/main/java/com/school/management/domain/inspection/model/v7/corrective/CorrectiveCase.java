@@ -9,9 +9,17 @@ import java.util.List;
 
 /**
  * V7 整改案例聚合根（完整 CAPA）
- * 状态机: OPEN → ASSIGNED → IN_PROGRESS → SUBMITTED → VERIFIED|REJECTED → CLOSED
- *         CLOSED → (效果验证) EFFECTIVENESS_PENDING → EFFECTIVENESS_CONFIRMED|EFFECTIVENESS_FAILED
- *         ESCALATED (任何非终态可升级)
+ *
+ * 状态机:
+ *   主流程: OPEN → ASSIGNED → IN_PROGRESS → SUBMITTED → VERIFIED|REJECTED → CLOSED
+ *   效果验证: CLOSED(PENDING) → EFFECTIVENESS_CONFIRMED | EFFECTIVENESS_FAILED → OPEN(重新打开)
+ *   升级: 任何非终态 → OPEN(escalationLevel+1)，升级不改变状态，而是提升优先级并重新打开
+ *   驳回后重新分配: REJECTED → ASSIGNED
+ *
+ * 设计说明:
+ *   escalate() 将案例重置为 OPEN 并递增 escalationLevel，使其重新进入分配流程。
+ *   这避免了 ESCALATED 作为死胡同状态的问题（无法继续流转）。
+ *   ESCALATED 枚举值保留用于向后兼容，但不再作为活跃状态使用。
  */
 public class CorrectiveCase extends AggregateRoot<Long> {
 
@@ -272,13 +280,19 @@ public class CorrectiveCase extends AggregateRoot<Long> {
 
     /**
      * 升级 — 任何非终态都可升级
+     *
+     * 升级会递增 escalationLevel 并将案例重置为 OPEN 状态，使其重新进入
+     * 分配流程（OPEN → ASSIGNED → ...）。这样升级后的案例可以被重新分配
+     * 给更高级别的责任人处理，而不是停留在无法流转的死胡同状态。
      */
     public void escalate() {
-        if (this.status == CaseStatus.CLOSED || this.status == CaseStatus.ESCALATED) {
-            throw new IllegalStateException("已关闭或已升级的案例不能再升级");
+        if (this.status == CaseStatus.CLOSED) {
+            throw new IllegalStateException("已关闭的案例不能升级");
         }
         this.escalationLevel = this.escalationLevel + 1;
-        this.status = CaseStatus.ESCALATED;
+        this.status = CaseStatus.OPEN;
+        this.assigneeId = null;
+        this.assigneeName = null;
         this.updatedAt = LocalDateTime.now();
         registerEvent(new CaseEscalatedEvent(this.id, this.caseCode, this.escalationLevel));
     }

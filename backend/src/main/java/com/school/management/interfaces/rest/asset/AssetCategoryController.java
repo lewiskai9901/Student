@@ -10,6 +10,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.*;
 import java.util.stream.Collectors;
+import com.school.management.infrastructure.casbin.CasbinAccess;
 
 /**
  * Asset Category REST Controller
@@ -33,6 +34,7 @@ public class AssetCategoryController {
     // ==================== Category Tree ====================
 
     @GetMapping("/tree")
+    @CasbinAccess(resource = "asset:manage", action = "view")
     public Result<List<Map<String, Object>>> getCategoryTree() {
         List<Map<String, Object>> all = jdbc.queryForList(
             "SELECT " + CAT_COLUMNS + " FROM asset_category WHERE deleted = 0 ORDER BY sort_order, id"
@@ -58,6 +60,7 @@ public class AssetCategoryController {
     // ==================== All Categories (flat) ====================
 
     @GetMapping
+    @CasbinAccess(resource = "asset:manage", action = "view")
     public Result<List<Map<String, Object>>> getAllCategories() {
         List<Map<String, Object>> categories = jdbc.queryForList(
             "SELECT " + CAT_COLUMNS + " FROM asset_category WHERE deleted = 0 ORDER BY sort_order, id"
@@ -72,6 +75,7 @@ public class AssetCategoryController {
     // ==================== Get Category ====================
 
     @GetMapping("/{id}")
+    @CasbinAccess(resource = "asset:manage", action = "view")
     public Result<Map<String, Object>> getCategory(@PathVariable Long id) {
         Map<String, Object> cat = jdbc.queryForMap(
             "SELECT " + CAT_COLUMNS + " FROM asset_category WHERE id = ? AND deleted = 0", id
@@ -84,6 +88,7 @@ public class AssetCategoryController {
     // ==================== Create Category ====================
 
     @PostMapping
+    @CasbinAccess(resource = "asset:manage", action = "edit")
     @Transactional
     public Result<Long> createCategory(@RequestBody Map<String, Object> data) {
         long id = IdWorker.getId();
@@ -110,6 +115,7 @@ public class AssetCategoryController {
     // ==================== Update Category ====================
 
     @PutMapping("/{id}")
+    @CasbinAccess(resource = "asset:manage", action = "edit")
     @Transactional
     public Result<Void> updateCategory(@PathVariable Long id, @RequestBody Map<String, Object> data) {
         jdbc.update(
@@ -136,6 +142,7 @@ public class AssetCategoryController {
     // ==================== Delete Category ====================
 
     @DeleteMapping("/{id}")
+    @CasbinAccess(resource = "asset:manage", action = "edit")
     @Transactional
     public Result<Void> deleteCategory(@PathVariable Long id) {
         // Check for child categories

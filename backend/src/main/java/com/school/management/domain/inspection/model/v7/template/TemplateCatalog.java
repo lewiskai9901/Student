@@ -10,6 +10,7 @@ import java.time.LocalDateTime;
 public class TemplateCatalog extends AggregateRoot<Long> {
 
     private Long id;
+    private Long tenantId;
     private Long parentId;
     private String catalogCode;
     private String catalogName;
@@ -27,6 +28,7 @@ public class TemplateCatalog extends AggregateRoot<Long> {
 
     private TemplateCatalog(Builder builder) {
         this.id = builder.id;
+        this.tenantId = builder.tenantId;
         this.parentId = builder.parentId;
         this.catalogCode = builder.catalogCode;
         this.catalogName = builder.catalogName;
@@ -73,6 +75,10 @@ public class TemplateCatalog extends AggregateRoot<Long> {
     @Override
     public void setId(Long id) {
         this.id = id;
+    }
+
+    public Long getTenantId() {
+        return tenantId;
     }
 
     public Long getParentId() {
@@ -125,6 +131,7 @@ public class TemplateCatalog extends AggregateRoot<Long> {
 
     public static class Builder {
         private Long id;
+        private Long tenantId;
         private Long parentId;
         private String catalogCode;
         private String catalogName;
@@ -138,6 +145,7 @@ public class TemplateCatalog extends AggregateRoot<Long> {
         private LocalDateTime updatedAt;
 
         public Builder id(Long id) { this.id = id; return this; }
+        public Builder tenantId(Long tenantId) { this.tenantId = tenantId; return this; }
         public Builder parentId(Long parentId) { this.parentId = parentId; return this; }
         public Builder catalogCode(String catalogCode) { this.catalogCode = catalogCode; return this; }
         public Builder catalogName(String catalogName) { this.catalogName = catalogName; return this; }

@@ -25,6 +25,7 @@ public class InspectionPlan extends AggregateRoot<Long> {
     private String scheduleDays;       // JSON: [1,3,5] 周几
     private String timeSlots;          // JSON: ["07:00-08:00"]
     private Boolean skipHolidays;
+    private String inspectorIds;       // JSON: 指定检查员ID列表，空=项目全员可领取
     private Boolean isEnabled;
     private Integer sortOrder;
     private Long createdBy;
@@ -47,6 +48,7 @@ public class InspectionPlan extends AggregateRoot<Long> {
         this.scheduleDays = builder.scheduleDays;
         this.timeSlots = builder.timeSlots;
         this.skipHolidays = builder.skipHolidays != null ? builder.skipHolidays : false;
+        this.inspectorIds = builder.inspectorIds;
         this.isEnabled = builder.isEnabled != null ? builder.isEnabled : true;
         this.sortOrder = builder.sortOrder != null ? builder.sortOrder : 0;
         this.createdBy = builder.createdBy;
@@ -71,6 +73,11 @@ public class InspectionPlan extends AggregateRoot<Long> {
 
     public static InspectionPlan reconstruct(Builder builder) {
         return new InspectionPlan(builder);
+    }
+
+    public void updateInspectorIds(String inspectorIds) {
+        this.inspectorIds = inspectorIds;
+        this.updatedAt = LocalDateTime.now();
     }
 
     public void update(String planName, Long rootSectionId, String sectionIds, String scheduleMode,
@@ -122,6 +129,7 @@ public class InspectionPlan extends AggregateRoot<Long> {
     public String getScheduleDays() { return scheduleDays; }
     public String getTimeSlots() { return timeSlots; }
     public Boolean getSkipHolidays() { return skipHolidays; }
+    public String getInspectorIds() { return inspectorIds; }
     public Boolean getIsEnabled() { return isEnabled; }
     public Integer getSortOrder() { return sortOrder; }
     public Long getCreatedBy() { return createdBy; }
@@ -143,6 +151,7 @@ public class InspectionPlan extends AggregateRoot<Long> {
         private String scheduleDays;
         private String timeSlots;
         private Boolean skipHolidays;
+        private String inspectorIds;
         private Boolean isEnabled;
         private Integer sortOrder;
         private Long createdBy;
@@ -161,6 +170,7 @@ public class InspectionPlan extends AggregateRoot<Long> {
         public Builder scheduleDays(String scheduleDays) { this.scheduleDays = scheduleDays; return this; }
         public Builder timeSlots(String timeSlots) { this.timeSlots = timeSlots; return this; }
         public Builder skipHolidays(Boolean skipHolidays) { this.skipHolidays = skipHolidays; return this; }
+        public Builder inspectorIds(String inspectorIds) { this.inspectorIds = inspectorIds; return this; }
         public Builder isEnabled(Boolean isEnabled) { this.isEnabled = isEnabled; return this; }
         public Builder sortOrder(Integer sortOrder) { this.sortOrder = sortOrder; return this; }
         public Builder createdBy(Long createdBy) { this.createdBy = createdBy; return this; }

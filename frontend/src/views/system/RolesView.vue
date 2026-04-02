@@ -1282,7 +1282,6 @@ const getDomainIcon = (domain: string) => {
   const icons: Record<string, any> = {
     organization: Building2,
     inspection: CheckSquare,
-    evaluation: BarChart3,
     task: BookOpen
   }
   return icons[domain] || Folder

@@ -211,25 +211,46 @@ class InspTaskTest {
     class PublishTests {
 
         @Test
-        @DisplayName("REVIEWED → PUBLISHED 正常发布")
+        @DisplayName("REVIEWED → PUBLISHED 正常发布（autoPublish=false）")
         void testPublish_FromReviewed() {
             InspTask task = createReviewedTask();
 
-            task.publish();
+            task.publish(false);
 
             assertThat(task.getStatus()).isEqualTo(TaskStatus.PUBLISHED);
             assertThat(task.getPublishedAt()).isNotNull();
         }
 
         @Test
-        @DisplayName("SUBMITTED → PUBLISHED 无需审核直接发布")
-        void testPublish_FromSubmitted() {
-            InspTask task = createSubmittedTask();
+        @DisplayName("REVIEWED → PUBLISHED 正常发布（autoPublish=true 也允许）")
+        void testPublish_FromReviewed_AutoPublish() {
+            InspTask task = createReviewedTask();
 
-            task.publish();
+            task.publish(true);
 
             assertThat(task.getStatus()).isEqualTo(TaskStatus.PUBLISHED);
             assertThat(task.getPublishedAt()).isNotNull();
+        }
+
+        @Test
+        @DisplayName("SUBMITTED → PUBLISHED 自动发布（autoPublish=true）")
+        void testPublish_FromSubmitted_AutoPublish() {
+            InspTask task = createSubmittedTask();
+
+            task.publish(true);
+
+            assertThat(task.getStatus()).isEqualTo(TaskStatus.PUBLISHED);
+            assertThat(task.getPublishedAt()).isNotNull();
+        }
+
+        @Test
+        @DisplayName("SUBMITTED 状态非自动发布应抛异常（autoPublish=false）")
+        void testPublish_FromSubmitted_NoAutoPublish_Throws() {
+            InspTask task = createSubmittedTask();
+
+            assertThatThrownBy(() -> task.publish(false))
+                    .isInstanceOf(IllegalStateException.class)
+                    .hasMessageContaining("该项目未开启自动发布");
         }
 
         @Test
@@ -237,9 +258,9 @@ class InspTaskTest {
         void testPublish_InvalidState() {
             InspTask task = createInProgressTask();
 
-            assertThatThrownBy(() -> task.publish())
+            assertThatThrownBy(() -> task.publish(false))
                     .isInstanceOf(IllegalStateException.class)
-                    .hasMessageContaining("只有已审核或已提交的任务才能发布");
+                    .hasMessageContaining("只有已审核的任务才能发布");
         }
     }
 
@@ -283,7 +304,7 @@ class InspTaskTest {
         @DisplayName("已发布任务不能取消")
         void testCancel_PublishedThrows() {
             InspTask task = createReviewedTask();
-            task.publish();
+            task.publish(false);
 
             assertThatThrownBy(() -> task.cancel())
                     .isInstanceOf(IllegalStateException.class)
@@ -407,7 +428,7 @@ class InspTaskTest {
             task.review("一切正常");
             assertThat(task.getStatus()).isEqualTo(TaskStatus.REVIEWED);
 
-            task.publish();
+            task.publish(false);
             assertThat(task.getStatus()).isEqualTo(TaskStatus.PUBLISHED);
 
             assertThat(task.getSubmittedAt()).isNotNull();

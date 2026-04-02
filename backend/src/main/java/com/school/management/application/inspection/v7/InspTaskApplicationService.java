@@ -1,5 +1,6 @@
 package com.school.management.application.inspection.v7;
 
+import com.baomidou.mybatisplus.core.toolkit.IdWorker;
 import com.school.management.domain.inspection.model.v7.execution.*;
 import com.school.management.domain.inspection.model.v7.template.TemplateItem;
 import com.school.management.domain.inspection.model.v7.template.TemplateSection;
@@ -16,10 +17,10 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.concurrent.ThreadLocalRandom;
 import java.util.stream.Collectors;
 
 @Slf4j
@@ -36,6 +37,7 @@ public class InspTaskApplicationService {
     private final ProjectScoreRepository scoreRepository;
     private final InspectionPlanRepository planRepository;
     private final TargetPopulationService targetPopulationService;
+    private final ScoreAggregationService scoreAggregationService;
     private final SpringDomainEventPublisher eventPublisher;
     private final ObjectMapper objectMapper;
 
@@ -82,6 +84,35 @@ public class InspTaskApplicationService {
         return taskRepository.findAvailableTasks();
     }
 
+    /**
+     * 列出当前用户可领取的任务（过滤掉计划指定了其他人的任务）
+     */
+    @Transactional(readOnly = true)
+    public List<InspTask> listAvailableTasksForUser(Long userId) {
+        List<InspTask> all = taskRepository.findAvailableTasks();
+        return all.stream().filter(task -> {
+            if (task.getInspectionPlanId() == null) return true;
+            InspectionPlan plan = planRepository.findById(task.getInspectionPlanId()).orElse(null);
+            if (plan == null || plan.getInspectorIds() == null || plan.getInspectorIds().isBlank()) return true;
+            return plan.getInspectorIds().contains(String.valueOf(userId));
+        }).toList();
+    }
+
+    /**
+     * 重新填充 submissions（当任务创建时未成功填充时手动触发）
+     */
+    @Transactional
+    public InspTask repopulateSubmissions(Long id) {
+        InspTask task = taskRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("任务不存在: " + id));
+        if (task.getTotalTargets() > 0) {
+            log.info("任务 {} 已有 {} 个目标，跳过重新填充", task.getTaskCode(), task.getTotalTargets());
+            return task;
+        }
+        populateSubmissions(task);
+        return taskRepository.findById(id).orElse(task);
+    }
+
     // ========== Task Lifecycle ==========
 
     @Transactional
@@ -122,6 +153,38 @@ public class InspTaskApplicationService {
     }
 
     @Transactional
+    public InspTask withdrawTask(Long id) {
+        InspTask task = taskRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("任务不存在: " + id));
+        task.withdraw();
+        // 将关联的 COMPLETED submissions 重新打开
+        List<InspSubmission> submissions = submissionRepository.findByTaskId(id);
+        for (InspSubmission sub : submissions) {
+            if (sub.getStatus() == SubmissionStatus.COMPLETED) {
+                sub.reopen();
+                submissionRepository.save(sub);
+            }
+        }
+        return taskRepository.save(task);
+    }
+
+    @Transactional
+    public InspTask rejectTask(Long id, String comment) {
+        InspTask task = taskRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("任务不存在: " + id));
+        task.reject(comment);
+        // 将关联的 COMPLETED submissions 重新打开
+        List<InspSubmission> submissions = submissionRepository.findByTaskId(id);
+        for (InspSubmission sub : submissions) {
+            if (sub.getStatus() == SubmissionStatus.COMPLETED) {
+                sub.reopen();
+                submissionRepository.save(sub);
+            }
+        }
+        return taskRepository.save(task);
+    }
+
+    @Transactional
     public InspTask startReview(Long id, Long reviewerId, String reviewerName) {
         InspTask task = taskRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("任务不存在: " + id));
@@ -144,10 +207,24 @@ public class InspTaskApplicationService {
     public InspTask publishTask(Long id) {
         InspTask task = taskRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("任务不存在: " + id));
-        task.publish();
+        // 从关联项目获取 autoPublish 配置
+        boolean autoPublish = false;
+        InspProject project = projectRepository.findById(task.getProjectId()).orElse(null);
+        if (project != null && Boolean.TRUE.equals(project.getAutoPublish())) {
+            autoPublish = true;
+        }
+        task.publish(autoPublish);
         InspTask saved = taskRepository.save(task);
         eventPublisher.publishAll(saved.getDomainEvents());
         saved.clearDomainEvents();
+
+        // Auto-recompute project score after task publish
+        try {
+            scoreAggregationService.recomputeProjectScore(saved.getProjectId(), saved.getTaskDate());
+        } catch (Exception e) {
+            log.warn("Failed to recompute project score after task publish: {}", e.getMessage());
+        }
+
         return saved;
     }
 
@@ -209,29 +286,66 @@ public class InspTaskApplicationService {
         // 解析根目标（从项目范围获取）
         List<TargetPopulationService.TargetInfo> rootTargets = resolveRootTargets(project);
 
-        int totalTargets = 0;
+        // Collect all submissions and their details into lists for batch insertion.
+        List<InspSubmission> submissionBatch = new ArrayList<>();
+        // Each entry holds the items to create as details once the submission ID is assigned.
+        List<Map.Entry<InspSubmission, List<TemplateItem>>> pendingDetails = new ArrayList<>();
 
         for (TemplateSection section : firstLevelSections) {
-            totalTargets += populateSectionSubmissions(
-                    task, project, section, rootTargets, "ORG", null, null);
+            collectSectionSubmissions(
+                    task, project, section, rootTargets, "ORG", null, null,
+                    submissionBatch, pendingDetails);
         }
+
+        // totalTargets = distinct target count (not submission count)
+        int totalTargets = (int) submissionBatch.stream()
+                .map(InspSubmission::getTargetId)
+                .filter(id -> id != null)
+                .distinct().count();
+
+        // Batch-insert all submissions (IDs are assigned back by saveAll)
+        submissionRepository.saveAll(submissionBatch);
+
+        // Now build all details with the assigned submission IDs and batch-insert
+        List<SubmissionDetail> detailBatch = new ArrayList<>();
+        for (Map.Entry<InspSubmission, List<TemplateItem>> entry : pendingDetails) {
+            InspSubmission submission = entry.getKey();
+            for (TemplateItem item : entry.getValue()) {
+                ScoringMode scoringMode = parseScoringMode(item.getScoringConfig());
+                TemplateSection itemSection = sectionRepository.findById(item.getSectionId())
+                        .orElse(null);
+                String sectionName = itemSection != null ? itemSection.getSectionName() : null;
+                detailBatch.add(SubmissionDetail.create(
+                        submission.getId(), item.getId(),
+                        item.getItemCode(), item.getItemName(),
+                        item.getItemType() != null ? item.getItemType().name() : null,
+                        item.getSectionId(), sectionName, scoringMode,
+                        item.getScoringConfig(), item.getValidationRules(), item.getConditionLogic()));
+            }
+        }
+        detailRepository.saveAll(detailBatch);
 
         task.updateTargetCounts(totalTargets, 0, 0);
         taskRepository.save(task);
-        log.info("任务 {} 填充了 {} 个目标", task.getTaskCode(), totalTargets);
+        log.info("任务 {} 填充了 {} 个目标，{} 条 submissions，{} 条 details",
+                task.getTaskCode(), totalTargets, submissionBatch.size(), detailBatch.size());
     }
 
     /**
-     * 递归为分区生成 submissions
+     * 递归收集分区的 submissions（不立即持久化，累积到 submissionBatch / pendingDetails）
      * @param parentTargets 父分区的目标列表
      * @param parentTargetType 父目标的实体类型
-     * @param rootTarget 根目标（用于 rootTargetId 字段，按部门分组）
+     * @param rootTargetId 根目标（用于 rootTargetId 字段，按部门分组）
+     * @param submissionBatch 收集待批量插入的 submission 对象
+     * @param pendingDetails 收集 submission → items 的映射，待 ID 分配后创建 details
      */
-    private int populateSectionSubmissions(InspTask task, InspProject project,
-                                            TemplateSection section,
-                                            List<TargetPopulationService.TargetInfo> parentTargets,
-                                            String parentTargetType,
-                                            Long rootTargetId, String rootTargetName) {
+    private int collectSectionSubmissions(InspTask task, InspProject project,
+                                           TemplateSection section,
+                                           List<TargetPopulationService.TargetInfo> parentTargets,
+                                           String parentTargetType,
+                                           Long rootTargetId, String rootTargetName,
+                                           List<InspSubmission> submissionBatch,
+                                           List<Map.Entry<InspSubmission, List<TemplateItem>>> pendingDetails) {
         TargetType sectionTargetType = section.getTargetType();
         String sourceMode = section.getTargetSourceMode();
 
@@ -243,13 +357,15 @@ public class InspTaskApplicationService {
                 for (TargetPopulationService.TargetInfo parent : parentTargets) {
                     Long effRoot = rootTargetId != null ? rootTargetId : parent.getId();
                     String effRootName = rootTargetName != null ? rootTargetName : parent.getName();
-                    createSubmissionWithDetails(task, section, null,
-                            parent.getId(), parent.getName(), effRoot, effRootName);
+                    collectSubmissionWithDetails(task, section, null,
+                            parent.getId(), parent.getName(), effRoot, effRootName,
+                            submissionBatch, pendingDetails);
                     count++;
                 }
                 return count;
             }
-            createSubmissionWithDetails(task, section, null, null, null, rootTargetId, rootTargetName);
+            collectSubmissionWithDetails(task, section, null, null, null, rootTargetId, rootTargetName,
+                    submissionBatch, pendingDetails);
             return 1;
         }
 
@@ -284,18 +400,20 @@ public class InspTaskApplicationService {
             Long effectiveRootId = rootTargetId != null ? rootTargetId : target.getId();
             String effectiveRootName = rootTargetName != null ? rootTargetName : target.getName();
 
-            // 为当前分区创建 submission（含当前分区和无目标子分区的字段）
-            createSubmissionWithDetails(task, section, sectionTargetType,
-                    target.getId(), target.getName(), effectiveRootId, effectiveRootName);
+            // 为当前分区收集 submission（含当前分区和无目标子分区的字段）
+            collectSubmissionWithDetails(task, section, sectionTargetType,
+                    target.getId(), target.getName(), effectiveRootId, effectiveRootName,
+                    submissionBatch, pendingDetails);
             count++;
 
             // 递归处理有目标配置的子分区
             if (hasTargetChildren) {
                 for (TemplateSection child : childSections) {
                     if (child.getTargetType() != null) {
-                        count += populateSectionSubmissions(task, project, child,
+                        count += collectSectionSubmissions(task, project, child,
                                 List.of(target), sectionTargetType.name(),
-                                effectiveRootId, effectiveRootName);
+                                effectiveRootId, effectiveRootName,
+                                submissionBatch, pendingDetails);
                     }
                 }
             }
@@ -305,11 +423,14 @@ public class InspTaskApplicationService {
     }
 
     /**
-     * 创建 submission + details
+     * 构建一个 submission 对象并收集其 items，不立即持久化。
+     * submission 在 saveAll 后会被分配 ID，pendingDetails 在此之后统一创建。
      */
-    private void createSubmissionWithDetails(InspTask task, TemplateSection section,
-                                              TargetType targetType, Long targetId, String targetName,
-                                              Long rootTargetId, String rootTargetName) {
+    private void collectSubmissionWithDetails(InspTask task, TemplateSection section,
+                                               TargetType targetType, Long targetId, String targetName,
+                                               Long rootTargetId, String rootTargetName,
+                                               List<InspSubmission> submissionBatch,
+                                               List<Map.Entry<InspSubmission, List<TemplateItem>>> pendingDetails) {
         InspSubmission submission = InspSubmission.reconstruct(InspSubmission.builder()
                 .taskId(task.getId())
                 .sectionId(section.getId())
@@ -320,21 +441,11 @@ public class InspTaskApplicationService {
                 .rootTargetName(rootTargetName)
                 .status(SubmissionStatus.PENDING)
                 .createdAt(java.time.LocalDateTime.now()));
-        submission = submissionRepository.save(submission);
+        submissionBatch.add(submission);
 
-        // 收集当前分区及其无目标子分区的所有 items
+        // 收集当前分区及其无目标子分区的所有 items（延迟创建 details 直到 ID 分配后）
         List<TemplateItem> items = collectItemsForSubmission(section);
-        for (TemplateItem item : items) {
-            ScoringMode scoringMode = parseScoringMode(item.getScoringConfig());
-            TemplateSection itemSection = sectionRepository.findById(item.getSectionId()).orElse(section);
-            SubmissionDetail detail = SubmissionDetail.create(
-                    submission.getId(), item.getId(),
-                    item.getItemCode(), item.getItemName(),
-                    item.getItemType() != null ? item.getItemType().name() : null,
-                    item.getSectionId(), itemSection.getSectionName(), scoringMode,
-                    item.getScoringConfig(), item.getValidationRules(), item.getConditionLogic());
-            detailRepository.save(detail);
-        }
+        pendingDetails.add(Map.entry(submission, items));
     }
 
     /**
@@ -469,7 +580,7 @@ public class InspTaskApplicationService {
 
     private String generateTaskCode() {
         String dateStr = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMdd"));
-        int random = ThreadLocalRandom.current().nextInt(1000, 9999);
-        return "TSK-" + dateStr + "-" + random;
+        int suffix = Math.abs((int) (IdWorker.getId() % 9000)) + 1000;
+        return "TSK-" + dateStr + "-" + suffix;
     }
 }

@@ -29,7 +29,7 @@ interface EditAction {
 
 export function useTemplateEditor(rootSectionId: Ref<number>) {
   const sections = ref<TemplateSection[]>([])
-  const itemsBySection = ref<Map<number, TemplateItem[]>>(new Map())
+  const itemsBySection = ref<Map<string, TemplateItem[]>>(new Map())
   const isDirty = ref(false)
   const isSaving = ref(false)
   const isLoading = ref(false)
@@ -60,14 +60,21 @@ export function useTemplateEditor(rootSectionId: Ref<number>) {
     try {
       sections.value = await getSections(rootSectionId.value)
       // Load items for each section
-      const itemMap = new Map<number, TemplateItem[]>()
+      const itemMap = new Map<string, TemplateItem[]>()
       await Promise.all(
         sections.value.map(async (section) => {
-          const items = await getItems(section.id)
-          itemMap.set(section.id, items)
+          try {
+            const items = await getItems(section.id)
+            itemMap.set(String(section.id), items)
+          } catch (e) {
+            console.warn(`Failed to load items for section ${section.id}`, e)
+            itemMap.set(String(section.id), [])
+          }
         })
       )
       itemsBySection.value = itemMap
+    } catch (e) {
+      console.error('Failed to load sections', e)
     } finally {
       isLoading.value = false
     }
@@ -97,7 +104,7 @@ export function useTemplateEditor(rootSectionId: Ref<number>) {
       ).length,
     })
     sections.value.push(section)
-    itemsBySection.value.set(section.id, [])
+    itemsBySection.value.set(String(section.id), [])
     isDirty.value = true
     return section
   }
@@ -116,6 +123,7 @@ export function useTemplateEditor(rootSectionId: Ref<number>) {
       targetTypeFilter: data.targetTypeFilter ?? undefined,
       weight: data.weight,
       isRepeatable: data.isRepeatable,
+      inputMode: data.inputMode,
     })
     const idx = sections.value.findIndex(s => s.id === sectionId)
     if (idx >= 0) sections.value[idx] = section
@@ -125,7 +133,7 @@ export function useTemplateEditor(rootSectionId: Ref<number>) {
   async function removeSection(sectionId: number) {
     await deleteSection(sectionId)
     sections.value = sections.value.filter(s => s.id !== sectionId)
-    itemsBySection.value.delete(sectionId)
+    itemsBySection.value.delete(String(sectionId))
     isDirty.value = true
   }
 
@@ -145,7 +153,7 @@ export function useTemplateEditor(rootSectionId: Ref<number>) {
 
   async function addItem(sectionId: number, itemType: ItemType | null, isScored: boolean, scoringMode?: ScoringMode, itemName?: string) {
     const code = `I${Date.now().toString(36).toUpperCase()}`
-    const currentItems = itemsBySection.value.get(sectionId) || []
+    const currentItems = itemsBySection.value.get(String(sectionId)) || []
 
     // Build scoring config for scored items
     let scoringConfig: string | undefined
@@ -163,7 +171,7 @@ export function useTemplateEditor(rootSectionId: Ref<number>) {
       sortOrder: currentItems.length + 1,
     })
     currentItems.push(item)
-    itemsBySection.value.set(sectionId, [...currentItems])
+    itemsBySection.value.set(String(sectionId), [...currentItems])
     isDirty.value = true
     return item
   }
@@ -222,13 +230,13 @@ export function useTemplateEditor(rootSectionId: Ref<number>) {
 
   async function sortItems(sectionId: number, itemIds: number[]) {
     await reorderItems(sectionId, itemIds)
-    const items = itemsBySection.value.get(sectionId) || []
+    const items = itemsBySection.value.get(String(sectionId)) || []
     const ordered: TemplateItem[] = []
     for (const id of itemIds) {
       const it = items.find(i => i.id === id)
       if (it) ordered.push(it)
     }
-    itemsBySection.value.set(sectionId, ordered)
+    itemsBySection.value.set(String(sectionId), ordered)
     isDirty.value = true
   }
 

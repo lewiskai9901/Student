@@ -11,6 +11,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
 @RestController
+@RequestMapping("/v7/insp/scoring-presets")
 @RequiredArgsConstructor
 public class ScoringPresetController {
 
@@ -32,7 +33,7 @@ public class ScoringPresetController {
                 request.getItemValues(), userId));
     }
 
-    @PutMapping("/v7/insp/scoring-presets/{id}")
+    @PutMapping("/{id}")
     @CasbinAccess(resource = "insp:execution", action = "edit")
     public Result<ScoringPreset> updatePreset(@PathVariable Long id,
                                                @RequestBody UpdateScoringPresetRequest request) {
@@ -40,13 +41,13 @@ public class ScoringPresetController {
                 id, request.getPresetName(), request.getItemValues()));
     }
 
-    @PostMapping("/v7/insp/scoring-presets/{id}/apply")
+    @PostMapping("/{id}/apply")
     @CasbinAccess(resource = "insp:execution", action = "edit")
     public Result<ScoringPreset> applyPreset(@PathVariable Long id) {
         return Result.success(scoringPresetService.applyPreset(id));
     }
 
-    @DeleteMapping("/v7/insp/scoring-presets/{id}")
+    @DeleteMapping("/{id}")
     @CasbinAccess(resource = "insp:execution", action = "edit")
     public Result<Void> deletePreset(@PathVariable Long id) {
         scoringPresetService.deletePreset(id);

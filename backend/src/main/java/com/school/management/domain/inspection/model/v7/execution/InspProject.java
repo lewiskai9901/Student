@@ -118,6 +118,7 @@ public class InspProject extends AggregateRoot<Long> {
         if (this.status != ProjectStatus.DRAFT) {
             throw new IllegalStateException("只有草稿项目才能发布");
         }
+        validateAutoPublishReviewConflict(this.autoPublish, this.reviewRequired);
         this.templateVersionId = templateVersionId;
         this.status = ProjectStatus.PUBLISHED;
         this.updatedAt = LocalDateTime.now();
@@ -175,6 +176,7 @@ public class InspProject extends AggregateRoot<Long> {
         if (this.status != ProjectStatus.DRAFT) {
             throw new IllegalStateException("只有草稿状态的项目才能修改");
         }
+        validateAutoPublishReviewConflict(autoPublish, reviewRequired);
         this.projectName = projectName;
         this.rootSectionId = rootSectionId;
         this.scoringProfileId = scoringProfileId;
@@ -194,12 +196,25 @@ public class InspProject extends AggregateRoot<Long> {
         if (this.status == ProjectStatus.ARCHIVED) {
             throw new IllegalStateException("已归档的项目不能修改");
         }
+        // 合并现有值与传入值，再校验冲突
+        Boolean effectiveAutoPublish = autoPublish != null ? autoPublish : this.autoPublish;
+        Boolean effectiveReviewRequired = reviewRequired != null ? reviewRequired : this.reviewRequired;
+        validateAutoPublishReviewConflict(effectiveAutoPublish, effectiveReviewRequired);
         if (assignmentMode != null) this.assignmentMode = assignmentMode;
         if (reviewRequired != null) this.reviewRequired = reviewRequired;
         if (autoPublish != null) this.autoPublish = autoPublish;
         if (projectName != null) this.projectName = projectName;
         this.updatedBy = updatedBy;
         this.updatedAt = LocalDateTime.now();
+    }
+
+    /**
+     * 校验 autoPublish 和 reviewRequired 互斥
+     */
+    private static void validateAutoPublishReviewConflict(Boolean autoPublish, Boolean reviewRequired) {
+        if (Boolean.TRUE.equals(autoPublish) && Boolean.TRUE.equals(reviewRequired)) {
+            throw new IllegalStateException("自动发布和必须审核不能同时启用");
+        }
     }
 
     // Getters

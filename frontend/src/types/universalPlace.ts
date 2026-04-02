@@ -270,6 +270,15 @@ export interface PlaceOccupant {
 }
 
 /**
+ * 占用记录（带场所信息）
+ */
+export interface PlaceOccupantWithPlace extends PlaceOccupant {
+  placeName?: string
+  placeCode?: string
+  buildingName?: string
+}
+
+/**
  * 入住请求
  */
 export interface CheckInRequest {

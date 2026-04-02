@@ -70,7 +70,7 @@ public class TemplateItemRepositoryImpl implements TemplateItemRepository {
     private TemplateItemPO toPO(TemplateItem domain) {
         TemplateItemPO po = new TemplateItemPO();
         po.setId(domain.getId());
-        po.setTenantId(0L);
+        po.setTenantId(domain.getTenantId() != null ? domain.getTenantId() : 0L);
         po.setSectionId(domain.getSectionId());
         po.setItemCode(domain.getItemCode());
         po.setItemName(domain.getItemName());
@@ -92,6 +92,7 @@ public class TemplateItemRepositoryImpl implements TemplateItemRepository {
         po.setSyncWithLibrary(domain.getSyncWithLibrary());
         po.setVisibilityLogic(domain.getVisibilityLogic());
         po.setScoringLogic(domain.getScoringLogic());
+        po.setInputMode(domain.getInputMode());
         po.setCreatedBy(domain.getCreatedBy());
         po.setCreatedAt(domain.getCreatedAt());
         po.setUpdatedBy(domain.getUpdatedBy());
@@ -123,6 +124,7 @@ public class TemplateItemRepositoryImpl implements TemplateItemRepository {
                 .syncWithLibrary(po.getSyncWithLibrary())
                 .visibilityLogic(po.getVisibilityLogic())
                 .scoringLogic(po.getScoringLogic())
+                .inputMode(po.getInputMode())
                 .createdBy(po.getCreatedBy())
                 .createdAt(po.getCreatedAt())
                 .updatedBy(po.getUpdatedBy())

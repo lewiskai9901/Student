@@ -449,7 +449,6 @@
               v-model="formData.defaultOrgTypeCodes"
               multiple
               filterable
-              allow-create
               placeholder="选择关联组织类型"
               style="width: 100%"
             >
@@ -473,7 +472,6 @@
               v-model="formData.defaultPlaceTypeCodes"
               multiple
               filterable
-              allow-create
               placeholder="选择关联场所类型"
               style="width: 100%"
             >
@@ -525,9 +523,9 @@ import {
 import { userTypeApi } from '@/api/userType'
 import { orgTypeApi } from '@/api/orgType'
 import { universalPlaceTypeApi } from '@/api/universalPlaceType'
+import { roleApi } from '@/api/access'
 import type { UserType, UserTypeTreeNode, UserCategoryInfo, CreateUserTypeRequest, UpdateUserTypeRequest } from '@/types/userType'
 import { USER_CATEGORY_LABELS, USER_FEATURE_LABELS } from '@/types/userType'
-import { useAuthStore } from '@/stores/auth'
 
 // --- Feature descriptions ---
 const featureDescriptions: Record<string, string> = {
@@ -645,7 +643,9 @@ async function loadCrossTypes() {
     ])
     orgTypes.value = (ot || []).map((t: any) => ({ typeCode: t.typeCode, typeName: t.typeName }))
     placeTypes.value = (pt || []).map((t: any) => ({ typeCode: t.typeCode, typeName: t.typeName }))
-  } catch { /* silent */ }
+  } catch (e) {
+    console.warn('Failed to load cross-domain types', e)
+  }
 }
 
 // --- State ---
@@ -780,17 +780,8 @@ const loadData = async () => {
 
     // Load roles silently (403 → empty)
     try {
-      const authStore = useAuthStore()
-      const baseUrl = import.meta.env.VITE_API_BASE_URL || '/api'
-      const resp = await fetch(`${baseUrl}/roles`, {
-        headers: { 'Authorization': `Bearer ${authStore.token}` }
-      })
-      if (resp.ok) {
-        const json = await resp.json()
-        allRoles.value = (json.data || []).map((r: any) => ({ roleCode: r.roleCode, roleName: r.roleName }))
-      } else {
-        allRoles.value = []
-      }
+      const roles = await roleApi.getAll()
+      allRoles.value = (roles || []).map((r: any) => ({ roleCode: r.roleCode, roleName: r.roleName }))
     } catch {
       allRoles.value = []
     }

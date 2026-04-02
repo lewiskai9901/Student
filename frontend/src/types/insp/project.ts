@@ -204,6 +204,7 @@ export interface SubmissionDetail {
   scoringConfig: string | null
   validationRules: string | null
   conditionLogic: string | null
+  inputMode?: string
   isFlagged: boolean
   flagReason: string | null
   remark: string | null

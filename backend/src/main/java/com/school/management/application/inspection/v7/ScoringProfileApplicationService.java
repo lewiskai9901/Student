@@ -169,13 +169,13 @@ public class ScoringProfileApplicationService {
                         .scoringProfileId(scoringProfileId)
                         .dimensionCode(code)
                         .dimensionName(sec.getSectionName())
-                        .weight(sec.getWeight() != null ? sec.getWeight() : 100)
+                        .weight(100)
                         .baseScore(new BigDecimal("100"))
                         .sourceType("SECTION")
                         .sortOrder(sortOrder));
                 dimensionRepository.save(dim);
             } else {
-                dim.update(sec.getSectionName(), sec.getWeight() != null ? sec.getWeight() : dim.getWeight(), dim.getBaseScore(), dim.getPassThreshold());
+                dim.update(sec.getSectionName(), dim.getWeight(), dim.getBaseScore(), dim.getPassThreshold());
                 dimensionRepository.save(dim);
             }
             sortOrder++;

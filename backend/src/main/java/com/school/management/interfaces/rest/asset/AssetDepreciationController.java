@@ -13,6 +13,7 @@ import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
+import com.school.management.infrastructure.casbin.CasbinAccess;
 
 /**
  * Asset Depreciation REST Controller
@@ -46,6 +47,7 @@ public class AssetDepreciationController {
     // ==================== Calculate Depreciation ====================
 
     @PostMapping("/{assetId}/calculate")
+    @CasbinAccess(resource = "asset:manage", action = "edit")
     @Transactional
     public Result<Map<String, Object>> calculateDepreciation(
             @PathVariable Long assetId,
@@ -102,6 +104,7 @@ public class AssetDepreciationController {
     // ==================== Batch Calculate All ====================
 
     @PostMapping("/calculate-all")
+    @CasbinAccess(resource = "asset:manage", action = "edit")
     @Transactional
     public Result<Map<String, Object>> calculateAllDepreciation(
             @RequestParam(required = false) String period) {
@@ -163,6 +166,7 @@ public class AssetDepreciationController {
     // ==================== Trigger Depreciation ====================
 
     @PostMapping("/trigger")
+    @CasbinAccess(resource = "asset:manage", action = "edit")
     @Transactional
     public Result<Void> triggerDepreciation(@RequestParam String period) {
         // Delegate to calculate-all
@@ -173,6 +177,7 @@ public class AssetDepreciationController {
     // ==================== Preview Depreciation ====================
 
     @GetMapping("/{assetId}/preview")
+    @CasbinAccess(resource = "asset:manage", action = "view")
     public Result<Map<String, Object>> previewDepreciation(
             @PathVariable Long assetId,
             @RequestParam(required = false) String period) {
@@ -192,6 +197,7 @@ public class AssetDepreciationController {
     // ==================== Depreciation History ====================
 
     @GetMapping("/{assetId}/history")
+    @CasbinAccess(resource = "asset:manage", action = "view")
     public Result<List<Map<String, Object>>> getHistory(@PathVariable Long assetId) {
         List<Map<String, Object>> history = jdbc.queryForList(
             "SELECT " + DEP_COLUMNS + " FROM asset_depreciation " +
@@ -204,6 +210,7 @@ public class AssetDepreciationController {
     // ==================== Depreciation History (paginated) ====================
 
     @GetMapping("/{assetId}/history-page")
+    @CasbinAccess(resource = "asset:manage", action = "view")
     public Result<Map<String, Object>> getHistoryPage(
             @PathVariable Long assetId,
             @RequestParam(defaultValue = "1") int pageNum,
@@ -231,6 +238,7 @@ public class AssetDepreciationController {
     // ==================== Period Summary ====================
 
     @GetMapping("/period/{period}")
+    @CasbinAccess(resource = "asset:manage", action = "view")
     public Result<Map<String, Object>> getPeriodSummary(@PathVariable String period) {
         List<Map<String, Object>> records = jdbc.queryForList(
             "SELECT " + DEP_COLUMNS + " FROM asset_depreciation " +
@@ -255,6 +263,7 @@ public class AssetDepreciationController {
     // ==================== Depreciation Methods ====================
 
     @GetMapping("/methods")
+    @CasbinAccess(resource = "asset:manage", action = "view")
     public Result<List<Map<String, Object>>> getMethods() {
         List<Map<String, Object>> methods = new ArrayList<>();
         methods.add(Map.of("code", 0, "name", "不计提折旧"));

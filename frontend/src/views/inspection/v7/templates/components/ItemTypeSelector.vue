@@ -50,6 +50,16 @@ const scoringModeGroups = computed(() => [
   },
 ])
 
+// 特殊评分项类型（既有评分又有特殊采集方式）
+const specialScoredTypes = [
+  { type: 'VIOLATION_RECORD' as ItemType, label: '违纪记录', description: '逐条记录事件，按次数扣分', scoringMode: 'DEDUCTION' as ScoringMode },
+  { type: 'PERSON_SCORE' as ItemType, label: '逐人评分', description: '对目标中每个人逐一打分', scoringMode: 'DIRECT' as ScoringMode },
+]
+
+function selectSpecialType(item: typeof specialScoredTypes[0]) {
+  emit('select', item.type, true, item.scoringMode)
+}
+
 // 采集类型分组
 const captureGrouped = computed(() => {
   return ItemTypeGroups.map(group => ({
@@ -110,6 +120,19 @@ function selectCaptureType(type: ItemType) {
             <span class="text-[10px] leading-tight text-gray-400">{{ m.description }}</span>
           </button>
         </div>
+      </div>
+      <!-- Special scored types -->
+      <div class="mb-2 text-xs font-medium uppercase tracking-wider text-gray-400">特殊</div>
+      <div class="grid grid-cols-2 gap-1.5">
+        <button
+          v-for="st in specialScoredTypes"
+          :key="st.type"
+          class="flex flex-col gap-0.5 rounded-md border border-orange-200 px-3 py-2 text-left transition hover:border-orange-400 hover:bg-orange-50"
+          @click="selectSpecialType(st)"
+        >
+          <span class="text-sm text-gray-700">{{ st.label }}</span>
+          <span class="text-[10px] leading-tight text-gray-400">{{ st.description }}</span>
+        </button>
       </div>
     </template>
 

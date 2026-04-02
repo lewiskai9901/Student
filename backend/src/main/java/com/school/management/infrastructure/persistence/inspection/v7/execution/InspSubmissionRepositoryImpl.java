@@ -32,6 +32,21 @@ public class InspSubmissionRepositoryImpl implements InspSubmissionRepository {
     }
 
     @Override
+    public List<InspSubmission> saveAll(List<InspSubmission> submissions) {
+        if (submissions == null || submissions.isEmpty()) {
+            return submissions;
+        }
+        // Use individual inserts so that the DB-generated ID is populated back into each PO.
+        // All execute within the same transaction/connection (no N+1 connection overhead).
+        for (InspSubmission submission : submissions) {
+            InspSubmissionPO po = toPO(submission);
+            mapper.insert(po);
+            submission.setId(po.getId());
+        }
+        return submissions;
+    }
+
+    @Override
     public Optional<InspSubmission> findById(Long id) {
         return Optional.ofNullable(mapper.selectById(id)).map(this::toDomain);
     }

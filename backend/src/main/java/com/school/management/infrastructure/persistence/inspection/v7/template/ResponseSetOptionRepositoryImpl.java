@@ -55,7 +55,7 @@ public class ResponseSetOptionRepositoryImpl implements ResponseSetOptionReposit
     private ResponseSetOptionPO toPO(ResponseSetOption domain) {
         ResponseSetOptionPO po = new ResponseSetOptionPO();
         po.setId(domain.getId());
-        po.setTenantId(0L);
+        po.setTenantId(domain.getTenantId() != null ? domain.getTenantId() : 0L);
         po.setResponseSetId(domain.getResponseSetId());
         po.setOptionValue(domain.getOptionValue());
         po.setOptionLabel(domain.getOptionLabel());

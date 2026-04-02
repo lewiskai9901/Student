@@ -68,6 +68,7 @@ public class InspectionPlanRepositoryImpl implements InspectionPlanRepository {
         po.setScheduleDays(d.getScheduleDays());
         po.setTimeSlots(d.getTimeSlots());
         po.setSkipHolidays(d.getSkipHolidays());
+        po.setInspectorIds(d.getInspectorIds());
         po.setIsEnabled(d.getIsEnabled());
         po.setSortOrder(d.getSortOrder());
         po.setCreatedBy(d.getCreatedBy());
@@ -90,6 +91,7 @@ public class InspectionPlanRepositoryImpl implements InspectionPlanRepository {
                 .scheduleDays(po.getScheduleDays())
                 .timeSlots(po.getTimeSlots())
                 .skipHolidays(po.getSkipHolidays())
+                .inspectorIds(po.getInspectorIds())
                 .isEnabled(po.getIsEnabled())
                 .sortOrder(po.getSortOrder())
                 .createdBy(po.getCreatedBy())

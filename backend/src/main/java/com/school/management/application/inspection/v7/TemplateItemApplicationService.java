@@ -25,11 +25,12 @@ public class TemplateItemApplicationService {
                                     String scoringConfig, Long dimensionId, String helpContent,
                                     Boolean isRequired, Boolean isScored, Boolean requireEvidence,
                                     BigDecimal itemWeight, String conditionLogic,
+                                    String inputMode,
                                     Integer sortOrder, Long createdBy) {
         TemplateItem item = TemplateItem.create(sectionId, itemCode, itemName, itemType, createdBy);
         item.update(itemName, description, itemType, config, validationRules, responseSetId,
                 scoringConfig, dimensionId, helpContent, isRequired, isScored, requireEvidence,
-                itemWeight, conditionLogic, createdBy);
+                itemWeight, conditionLogic, inputMode, createdBy);
         if (sortOrder != null) {
             item.reorder(sortOrder);
         }
@@ -47,12 +48,13 @@ public class TemplateItemApplicationService {
                                     Long responseSetId, String scoringConfig, Long dimensionId,
                                     String helpContent,
                                     Boolean isRequired, Boolean isScored, Boolean requireEvidence,
-                                    BigDecimal itemWeight, String conditionLogic, Long updatedBy) {
+                                    BigDecimal itemWeight, String conditionLogic,
+                                    String inputMode, Long updatedBy) {
         TemplateItem item = itemRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("字段不存在: " + id));
         item.update(itemName, description, itemType, config, validationRules, responseSetId,
                 scoringConfig, dimensionId, helpContent, isRequired, isScored, requireEvidence,
-                itemWeight, conditionLogic, updatedBy);
+                itemWeight, conditionLogic, inputMode, updatedBy);
         return itemRepository.save(item);
     }
 

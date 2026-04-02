@@ -35,6 +35,7 @@ public class TemplateItemPO {
     private Boolean syncWithLibrary;
     private String visibilityLogic;
     private String scoringLogic;
+    private String inputMode;
     private Long createdBy;
     private LocalDateTime createdAt;
     private Long updatedBy;

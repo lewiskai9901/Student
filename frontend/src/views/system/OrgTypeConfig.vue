@@ -442,7 +442,6 @@
               v-model="formData.defaultUserTypeCodes"
               multiple
               filterable
-              allow-create
               placeholder="选择关联用户类型"
               style="width: 100%"
             >
@@ -466,7 +465,6 @@
               v-model="formData.defaultPlaceTypeCodes"
               multiple
               filterable
-              allow-create
               placeholder="选择关联场所类型"
               style="width: 100%"
             >
@@ -679,7 +677,9 @@ async function loadCrossTypes() {
     ])
     userTypes.value = (ut || []).map((t: any) => ({ typeCode: t.typeCode, typeName: t.typeName }))
     placeTypes.value = (pt || []).map((t: any) => ({ typeCode: t.typeCode, typeName: t.typeName }))
-  } catch { /* silent */ }
+  } catch (e) {
+    console.warn('Failed to load cross-domain types', e)
+  }
 }
 
 // --- State ---
@@ -987,8 +987,7 @@ const resetForm = () => {
 }
 
 const generateTypeCode = () => {
-  const ts = Date.now().toString(36).toUpperCase()
-  return `UT_${ts}`
+  return `OT_${crypto.randomUUID().slice(0, 8).toUpperCase()}`
 }
 
 // Auto-populate features from category defaults when category changes (new mode only)
@@ -1004,7 +1003,7 @@ watch(() => formData.category, (newCat) => {
 // Auto-generate code when name changes
 watch(() => formData.typeName, () => {
   if (!isEdit.value && !showCodeEdit.value && formData.typeName) {
-    if (!formData.typeCode || formData.typeCode.startsWith('UT_')) {
+    if (!formData.typeCode || formData.typeCode.startsWith('OT_')) {
       formData.typeCode = generateTypeCode()
     }
   }

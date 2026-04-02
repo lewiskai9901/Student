@@ -3,12 +3,14 @@ import { ref, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { useInspExecutionStore } from '@/stores/insp/inspExecutionStore'
+import { useAuthStore } from '@/stores/auth'
 import { TaskStatusConfig, type TaskStatus } from '@/types/insp/enums'
 import type { InspTask, InspProject } from '@/types/insp/project'
 
 const route = useRoute()
 const router = useRouter()
 const store = useInspExecutionStore()
+const authStore = useAuthStore()
 
 const loading = ref(false)
 const tasks = ref<InspTask[]>([])
@@ -74,7 +76,7 @@ async function loadData() {
         try {
           const p = await store.loadProject(pid)
           if (p) projects.value.set(pid, p)
-        } catch {}
+        } catch (e) { console.warn(`Load project ${pid} failed`, e) }
       }
     }
   } catch (e: any) {
@@ -136,7 +138,7 @@ function goProject(pid: number) { router.push(`/inspection/v7/projects/${pid}`) 
 
 async function handleClaim(t: InspTask) {
   try {
-    await store.claimTask(t.id, { inspectorName: '当前用户' })
+    await store.claimTask(t.id, { inspectorName: authStore.userName || '未知用户' })
     ElMessage.success('领取成功')
     loadData()
   } catch (e: any) { ElMessage.error(e.message || '领取失败') }
@@ -148,7 +150,7 @@ async function handleCancel(t: InspTask) {
     await store.cancelTask(t.id)
     ElMessage.success('已取消')
     loadData()
-  } catch {}
+  } catch (e: any) { if (e !== 'cancel') console.warn('Operation failed', e) }
 }
 
 async function handlePublish(t: InspTask) {

@@ -44,6 +44,7 @@ import {
   claimTask as claimTaskApi,
   startTask as startTaskApi,
   submitTask as submitTaskApi,
+  withdrawTask as withdrawTaskApi,
   reviewTask as reviewTaskApi,
   publishTask as publishTaskApi,
   cancelTask as cancelTaskApi,
@@ -70,6 +71,7 @@ import { getSections } from '@/api/insp/template'
 
 export interface SectionCondition {
   sectionId: number | string
+  conditionLogic: string | null
 }
 
 export const useInspExecutionStore = defineStore('inspExecution', () => {
@@ -188,6 +190,10 @@ export const useInspExecutionStore = defineStore('inspExecution', () => {
     return await submitTaskApi(id)
   }
 
+  async function withdrawTask(id: number): Promise<InspTask> {
+    return await withdrawTaskApi(id)
+  }
+
   async function reviewTask(id: number, data: ReviewTaskRequest): Promise<InspTask> {
     return await reviewTaskApi(id, data)
   }
@@ -300,7 +306,7 @@ export const useInspExecutionStore = defineStore('inspExecution', () => {
     loadInspectors, addInspector, removeInspector,
     // Task Actions
     loadTasks, loadTask, loadAvailableTasks, loadMyTasks,
-    claimTask, startTask, submitTask, reviewTask, publishTask, cancelTask, assignTask,
+    claimTask, startTask, submitTask, withdrawTask, reviewTask, publishTask, cancelTask, assignTask,
     // Submission Actions
     loadSubmissions, loadSubmission,
     lockSubmission, unlockSubmission, startFillingSubmission,

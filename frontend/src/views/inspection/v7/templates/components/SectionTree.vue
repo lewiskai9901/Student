@@ -5,7 +5,7 @@ import { TargetTypeConfig, ItemTypeConfig, ScoringModeConfig, type TargetType, t
 
 const props = defineProps<{
   sections: TemplateSection[]
-  itemsBySection: Map<number, TemplateItem[]>
+  itemsBySection: Map<string, TemplateItem[]>
   selectedId: string | null  // "section:123" or "item:456"
   readonly?: boolean
   rootSectionId?: number
@@ -101,7 +101,7 @@ function getItemLabel(item: TemplateItem): string {
     try {
       const mode = JSON.parse(item.scoringConfig).mode as ScoringMode
       return ScoringModeConfig[mode]?.label || ItemTypeConfig[item.itemType as ItemType]?.label || item.itemType
-    } catch {}
+    } catch (e) { console.warn('JSON parse failed', e) }
   }
   return ItemTypeConfig[item.itemType as ItemType]?.label || item.itemType
 }
@@ -139,7 +139,7 @@ function getItemLabel(item: TemplateItem): string {
           :style="{ paddingLeft: `${4 + node.depth * 14}px` }"
           @click="emit('selectSection', Number(node.section!.id))"
         >
-          <div class="st-node-content">
+          <div class="st-node-content" @click="emit('selectSection', Number(node.section!.id))">
             <span class="st-indent-marker" />
             <span class="st-node-name">{{ node.section.sectionName || '未命名' }}</span>
             <span v-if="node.section.weight && node.section.weight !== 100" class="st-tag st-tag-weight">{{ node.section.weight }}</span>

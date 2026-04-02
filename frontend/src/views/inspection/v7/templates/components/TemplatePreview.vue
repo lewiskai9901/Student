@@ -6,7 +6,7 @@ import type { TemplateSection, TemplateItem } from '@/types/insp/template'
 
 const props = defineProps<{
   sections: TemplateSection[]
-  itemsBySection: Map<number, TemplateItem[]>
+  itemsBySection: Map<string, TemplateItem[]>
 }>()
 
 const emit = defineEmits<{

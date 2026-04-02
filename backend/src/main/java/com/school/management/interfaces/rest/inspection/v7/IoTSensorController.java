@@ -5,6 +5,7 @@ import com.school.management.common.result.Result;
 import com.school.management.domain.inspection.model.v7.platform.IoTSensor;
 import com.school.management.domain.inspection.model.v7.platform.ItemSensorBinding;
 import com.school.management.domain.inspection.model.v7.platform.SensorReading;
+import com.school.management.infrastructure.casbin.CasbinAccess;
 import lombok.RequiredArgsConstructor;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.web.bind.annotation.*;
@@ -24,6 +25,7 @@ public class IoTSensorController {
     // ========== Sensor CRUD ==========
 
     @GetMapping
+    @CasbinAccess(resource = "insp:iot-sensor", action = "view")
     public Result<List<IoTSensor>> list(@RequestParam(required = false) Boolean activeOnly) {
         if (Boolean.TRUE.equals(activeOnly)) {
             return Result.success(service.getActiveSensors());
@@ -32,16 +34,19 @@ public class IoTSensorController {
     }
 
     @GetMapping("/{id}")
+    @CasbinAccess(resource = "insp:iot-sensor", action = "view")
     public Result<IoTSensor> get(@PathVariable Long id) {
         return Result.success(service.getSensor(id));
     }
 
     @GetMapping("/by-place/{placeId}")
+    @CasbinAccess(resource = "insp:iot-sensor", action = "view")
     public Result<List<IoTSensor>> getByPlace(@PathVariable Long placeId) {
         return Result.success(service.getSensorsByPlace(placeId));
     }
 
     @PostMapping
+    @CasbinAccess(resource = "insp:iot-sensor", action = "create")
     public Result<IoTSensor> create(@RequestBody Map<String, Object> body) {
         return Result.success(service.registerSensor(
                 (String) body.get("sensorCode"),
@@ -55,6 +60,7 @@ public class IoTSensorController {
     }
 
     @PutMapping("/{id}")
+    @CasbinAccess(resource = "insp:iot-sensor", action = "edit")
     public Result<IoTSensor> update(@PathVariable Long id, @RequestBody Map<String, Object> body) {
         return Result.success(service.updateSensor(
                 id,
@@ -68,18 +74,21 @@ public class IoTSensorController {
     }
 
     @PutMapping("/{id}/activate")
+    @CasbinAccess(resource = "insp:iot-sensor", action = "edit")
     public Result<Void> activate(@PathVariable Long id) {
         service.activateSensor(id);
         return Result.success(null);
     }
 
     @PutMapping("/{id}/deactivate")
+    @CasbinAccess(resource = "insp:iot-sensor", action = "edit")
     public Result<Void> deactivate(@PathVariable Long id) {
         service.deactivateSensor(id);
         return Result.success(null);
     }
 
     @DeleteMapping("/{id}")
+    @CasbinAccess(resource = "insp:iot-sensor", action = "delete")
     public Result<Void> delete(@PathVariable Long id) {
         service.deleteSensor(id);
         return Result.success(null);
@@ -88,6 +97,7 @@ public class IoTSensorController {
     // ========== Readings ==========
 
     @GetMapping("/{sensorId}/readings")
+    @CasbinAccess(resource = "insp:iot-sensor", action = "view")
     public Result<List<SensorReading>> getReadings(
             @PathVariable Long sensorId,
             @RequestParam(defaultValue = "100") int limit,
@@ -100,6 +110,7 @@ public class IoTSensorController {
     }
 
     @PostMapping("/{sensorId}/readings")
+    @CasbinAccess(resource = "insp:iot-sensor", action = "write-reading")
     public Result<SensorReading> recordReading(@PathVariable Long sensorId, @RequestBody Map<String, Object> body) {
         BigDecimal value = new BigDecimal(body.get("readingValue").toString());
         String unit = (String) body.get("readingUnit");
@@ -109,6 +120,7 @@ public class IoTSensorController {
     // ========== Bindings ==========
 
     @GetMapping("/bindings")
+    @CasbinAccess(resource = "insp:iot-sensor", action = "view")
     public Result<List<ItemSensorBinding>> getBindings(
             @RequestParam(required = false) Long templateItemId,
             @RequestParam(required = false) Long sensorId) {
@@ -121,6 +133,7 @@ public class IoTSensorController {
     }
 
     @PostMapping("/bindings")
+    @CasbinAccess(resource = "insp:iot-sensor", action = "edit")
     public Result<ItemSensorBinding> createBinding(@RequestBody Map<String, Object> body) {
         return Result.success(service.createBinding(
                 Long.valueOf(body.get("templateItemId").toString()),
@@ -132,6 +145,7 @@ public class IoTSensorController {
     }
 
     @DeleteMapping("/bindings/{id}")
+    @CasbinAccess(resource = "insp:iot-sensor", action = "delete")
     public Result<Void> deleteBinding(@PathVariable Long id) {
         service.deleteBinding(id);
         return Result.success(null);

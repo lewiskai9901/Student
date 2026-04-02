@@ -1,12 +1,15 @@
 package com.school.management.interfaces.rest.user;
 
 import com.school.management.infrastructure.activity.annotation.AuditEvent;
+import com.school.management.application.access.AccessApplicationService;
 import com.school.management.application.user.UserApplicationService;
 import com.school.management.application.user.command.CreateUserCommand;
 import com.school.management.application.user.command.UpdateUserCommand;
 import com.school.management.common.result.Result;
+import com.school.management.domain.access.model.Role;
 import com.school.management.domain.user.model.aggregate.User;
 import com.school.management.common.util.SecurityUtils;
+import com.school.management.exception.BusinessException;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -32,6 +35,7 @@ import java.util.stream.Collectors;
 public class UserDomainController {
 
     private final UserApplicationService userApplicationService;
+    private final AccessApplicationService accessApplicationService;
 
     // ==================== 创建与更新 ====================
 
@@ -231,6 +235,23 @@ public class UserDomainController {
     @AuditEvent(module = "system", action = "UPDATE", resourceType = "USER", resourceId = "#id", label = "重置用户密码")
     public Result<String> resetPassword(@Parameter(description = "用户ID") @PathVariable Long id) {
         log.info("DDD 重置用户密码: {}", id);
+
+        // 检查目标用户是否拥有管理员角色，若有则仅超级管理员可重置
+        List<Role> targetRoles = accessApplicationService.getUserRoles(id);
+        boolean targetIsAdmin = targetRoles.stream()
+                .anyMatch(r -> "ADMIN".equalsIgnoreCase(r.getRoleType())
+                        || (r.getRoleCode() != null && r.getRoleCode().toUpperCase().contains("ADMIN")));
+        if (targetIsAdmin) {
+            Long currentUserId = SecurityUtils.requireCurrentUserId();
+            List<Role> currentRoles = accessApplicationService.getUserRoles(currentUserId);
+            boolean isSuperAdmin = currentRoles.stream()
+                    .anyMatch(r -> "SUPER_ADMIN".equalsIgnoreCase(r.getRoleType())
+                            || (r.getRoleCode() != null && r.getRoleCode().toUpperCase().contains("SUPER_ADMIN")));
+            if (!isSuperAdmin) {
+                throw new BusinessException("仅超级管理员可重置管理员用户的密码");
+            }
+        }
+
         userApplicationService.resetPassword(id);
         return Result.success("密码已重置成功");
     }

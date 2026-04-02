@@ -9,6 +9,7 @@ import java.time.LocalDateTime;
  */
 public class LibraryItem extends AggregateRoot<Long> {
 
+    private Long tenantId;
     private String itemCode;
     private String itemName;
     private String description;
@@ -30,6 +31,7 @@ public class LibraryItem extends AggregateRoot<Long> {
 
     private LibraryItem(Builder builder) {
         this.id = builder.id;
+        this.tenantId = builder.tenantId;
         this.itemCode = builder.itemCode;
         this.itemName = builder.itemName;
         this.description = builder.description;
@@ -92,6 +94,7 @@ public class LibraryItem extends AggregateRoot<Long> {
     }
 
     // Getters
+    public Long getTenantId() { return tenantId; }
     public String getItemCode() { return itemCode; }
     public String getItemName() { return itemName; }
     public String getDescription() { return description; }
@@ -112,6 +115,7 @@ public class LibraryItem extends AggregateRoot<Long> {
 
     public static class Builder {
         private Long id;
+        private Long tenantId;
         private String itemCode;
         private String itemName;
         private String description;
@@ -129,6 +133,7 @@ public class LibraryItem extends AggregateRoot<Long> {
         private LocalDateTime updatedAt;
 
         public Builder id(Long id) { this.id = id; return this; }
+        public Builder tenantId(Long tenantId) { this.tenantId = tenantId; return this; }
         public Builder itemCode(String itemCode) { this.itemCode = itemCode; return this; }
         public Builder itemName(String itemName) { this.itemName = itemName; return this; }
         public Builder description(String description) { this.description = description; return this; }

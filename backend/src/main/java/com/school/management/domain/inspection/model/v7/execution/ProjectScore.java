@@ -20,6 +20,8 @@ public class ProjectScore implements Entity<Long> {
     private String grade;
     private Integer targetCount;
     private String detail; // JSON
+    private String gradeSchemeDisplayName;
+    private String gradeName;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 
@@ -35,6 +37,8 @@ public class ProjectScore implements Entity<Long> {
         this.grade = builder.grade;
         this.targetCount = builder.targetCount != null ? builder.targetCount : 0;
         this.detail = builder.detail;
+        this.gradeSchemeDisplayName = builder.gradeSchemeDisplayName;
+        this.gradeName = builder.gradeName;
         this.createdAt = builder.createdAt != null ? builder.createdAt : LocalDateTime.now();
         this.updatedAt = builder.updatedAt;
     }
@@ -58,6 +62,12 @@ public class ProjectScore implements Entity<Long> {
         this.updatedAt = LocalDateTime.now();
     }
 
+    public void updateGradeInfo(String gradeSchemeDisplayName, String gradeName) {
+        this.gradeSchemeDisplayName = gradeSchemeDisplayName;
+        this.gradeName = gradeName;
+        this.updatedAt = LocalDateTime.now();
+    }
+
     @Override
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
@@ -68,6 +78,8 @@ public class ProjectScore implements Entity<Long> {
     public String getGrade() { return grade; }
     public Integer getTargetCount() { return targetCount; }
     public String getDetail() { return detail; }
+    public String getGradeSchemeDisplayName() { return gradeSchemeDisplayName; }
+    public String getGradeName() { return gradeName; }
     public LocalDateTime getCreatedAt() { return createdAt; }
     public LocalDateTime getUpdatedAt() { return updatedAt; }
 
@@ -82,6 +94,8 @@ public class ProjectScore implements Entity<Long> {
         private String grade;
         private Integer targetCount;
         private String detail;
+        private String gradeSchemeDisplayName;
+        private String gradeName;
         private LocalDateTime createdAt;
         private LocalDateTime updatedAt;
 
@@ -93,6 +107,8 @@ public class ProjectScore implements Entity<Long> {
         public Builder grade(String grade) { this.grade = grade; return this; }
         public Builder targetCount(Integer targetCount) { this.targetCount = targetCount; return this; }
         public Builder detail(String detail) { this.detail = detail; return this; }
+        public Builder gradeSchemeDisplayName(String gradeSchemeDisplayName) { this.gradeSchemeDisplayName = gradeSchemeDisplayName; return this; }
+        public Builder gradeName(String gradeName) { this.gradeName = gradeName; return this; }
         public Builder createdAt(LocalDateTime createdAt) { this.createdAt = createdAt; return this; }
         public Builder updatedAt(LocalDateTime updatedAt) { this.updatedAt = updatedAt; return this; }
 

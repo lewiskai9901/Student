@@ -9,7 +9,9 @@ import java.time.LocalTime;
 
 /**
  * V7 检查任务聚合根
- * 状态机: PENDING → CLAIMED → IN_PROGRESS → SUBMITTED → UNDER_REVIEW → REVIEWED → PUBLISHED
+ * 状态机:
+ *   标准流程: PENDING → CLAIMED → IN_PROGRESS → SUBMITTED → UNDER_REVIEW → REVIEWED → PUBLISHED
+ *   自动发布: PENDING → CLAIMED → IN_PROGRESS → SUBMITTED → PUBLISHED (需项目 autoPublish=true)
  * 终态: CANCELLED, EXPIRED
  */
 public class InspTask extends AggregateRoot<Long> {
@@ -159,16 +161,54 @@ public class InspTask extends AggregateRoot<Long> {
     }
 
     /**
-     * 发布结果 — REVIEWED → PUBLISHED (或 SUBMITTED → PUBLISHED 当无需审核)
+     * 发布结果
+     * 状态转换:
+     *   - REVIEWED → PUBLISHED (标准流程: 经过审核后发布)
+     *   - SUBMITTED → PUBLISHED (仅当 autoPublish=true: 项目配置了自动发布，跳过审核)
+     *
+     * @param autoPublish 是否为自动发布模式（来自项目配置 InspProject.autoPublish）
      */
-    public void publish() {
-        if (this.status != TaskStatus.REVIEWED && this.status != TaskStatus.SUBMITTED) {
-            throw new IllegalStateException("只有已审核或已提交的任务才能发布");
+    public void publish(boolean autoPublish) {
+        if (this.status == TaskStatus.REVIEWED) {
+            // 标准流程: 审核通过后发布
+        } else if (this.status == TaskStatus.SUBMITTED && autoPublish) {
+            // 自动发布: 项目配置了无需审核，提交后直接发布
+        } else if (this.status == TaskStatus.SUBMITTED) {
+            throw new IllegalStateException("该项目未开启自动发布，已提交的任务需先审核再发布");
+        } else {
+            throw new IllegalStateException("只有已审核的任务才能发布");
         }
         this.status = TaskStatus.PUBLISHED;
         this.publishedAt = LocalDateTime.now();
         this.updatedAt = LocalDateTime.now();
         registerEvent(new TaskPublishedEvent(this.id, this.taskCode, this.projectId));
+    }
+
+    /**
+     * 驳回 — SUBMITTED/UNDER_REVIEW → IN_PROGRESS
+     * 审核不通过，退回给检查员修改
+     */
+    public void reject(String comment) {
+        if (this.status != TaskStatus.SUBMITTED && this.status != TaskStatus.UNDER_REVIEW) {
+            throw new IllegalStateException("只有已提交或审核中的任务才能驳回");
+        }
+        this.reviewComment = comment;
+        this.status = TaskStatus.IN_PROGRESS;
+        this.submittedAt = null;
+        this.updatedAt = LocalDateTime.now();
+    }
+
+    /**
+     * 撤回提交 — SUBMITTED → IN_PROGRESS
+     * 仅在已提交但未进入审核时允许撤回
+     */
+    public void withdraw() {
+        if (this.status != TaskStatus.SUBMITTED) {
+            throw new IllegalStateException("只有已提交且未审核的任务才能撤回");
+        }
+        this.status = TaskStatus.IN_PROGRESS;
+        this.submittedAt = null;
+        this.updatedAt = LocalDateTime.now();
     }
 
     /**

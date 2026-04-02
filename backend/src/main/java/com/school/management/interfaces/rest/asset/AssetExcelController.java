@@ -19,6 +19,7 @@ import java.nio.charset.StandardCharsets;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
+import com.school.management.infrastructure.casbin.CasbinAccess;
 
 /**
  * Asset Excel Import/Export REST Controller
@@ -40,6 +41,7 @@ public class AssetExcelController {
     // ==================== Download Template ====================
 
     @GetMapping("/template")
+    @CasbinAccess(resource = "asset:manage", action = "view")
     public void downloadTemplate(HttpServletResponse response) throws IOException {
         response.setContentType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
         String fileName = URLEncoder.encode("资产导入模板.xlsx", StandardCharsets.UTF_8);
@@ -89,6 +91,7 @@ public class AssetExcelController {
     // ==================== Import ====================
 
     @PostMapping("/import")
+    @CasbinAccess(resource = "asset:manage", action = "edit")
     @Transactional
     public Result<Map<String, Object>> importAssets(@RequestParam("file") MultipartFile file) {
         if (file.isEmpty()) {
@@ -185,6 +188,7 @@ public class AssetExcelController {
     // ==================== Export ====================
 
     @GetMapping("/export")
+    @CasbinAccess(resource = "asset:manage", action = "view")
     public void exportAssets(
             HttpServletResponse response,
             @RequestParam(required = false) Long categoryId,

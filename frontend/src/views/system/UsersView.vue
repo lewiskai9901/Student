@@ -199,13 +199,13 @@
                 @click="handleStatusChange(row)"
                 :class="[
                   'relative inline-flex h-5 w-9 items-center rounded-full transition-colors',
-                  (row.status === '启用' || row.status === 1) ? 'bg-blue-600' : 'bg-gray-300'
+                  normalizeStatus(row.status) === 1 ? 'bg-blue-600' : 'bg-gray-300'
                 ]"
               >
                 <span
                   :class="[
                     'inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform',
-                    (row.status === '启用' || row.status === 1) ? 'translate-x-4' : 'translate-x-0.5'
+                    normalizeStatus(row.status) === 1 ? 'translate-x-4' : 'translate-x-0.5'
                   ]"
                 />
               </button>
@@ -699,9 +699,16 @@ const flatOrgUnits = computed<FlatOrgItem[]>(() => {
   return result
 })
 
-// 统计数据 - 支持 V2 字符串状态和 V1 数字状态
-const enabledCount = computed(() => userList.value.filter(u => u.status === '启用' || u.status === 1).length)
-const disabledCount = computed(() => userList.value.filter(u => u.status === '禁用' || u.status === 2).length)
+// 将 status 统一为数字：1=启用, 2=禁用
+const normalizeStatus = (status: any): number => {
+  if (status === '启用' || status === 1) return 1
+  if (status === '禁用' || status === 2) return 2
+  return Number(status) || 1
+}
+
+// 统计数据
+const enabledCount = computed(() => userList.value.filter(u => normalizeStatus(u.status) === 1).length)
+const disabledCount = computed(() => userList.value.filter(u => normalizeStatus(u.status) === 2).length)
 const todayLoginCount = ref(0)
 
 const formData = reactive<UserFormData & { placeId?: number }>({
@@ -795,7 +802,8 @@ const loadUserList = async () => {
   loading.value = true
   try {
     const res = await getUserPage(queryParams)
-    userList.value = res.records || []
+    // 统一 status 为数字格式
+    userList.value = (res.records || []).map(u => ({ ...u, status: normalizeStatus(u.status) }))
     total.value = res.total || 0
   } catch (error) {
     console.error('加载用户列表失败:', error)
@@ -906,7 +914,7 @@ const handleEdit = async (row: UserListItem) => {
     idCard: row.idCard || '',
     userTypeCode: row.userType || '',
     orgUnitId: row.orgUnitId || undefined,
-    status: row.status === '启用' ? 1 : row.status === '禁用' ? 2 : row.status
+    status: normalizeStatus(row.status)
   })
   currentUserId.value = row.id
   dialogVisible.value = true
@@ -1005,12 +1013,11 @@ const handleBatchDelete = async () => {
 
 const handleStatusChange = async (row: UserListItem) => {
   if (!row.id) return
-  // V2 API 使用字符串状态: '启用', '禁用'
-  const isEnabled = row.status === '启用' || row.status === 1
-  const newStatus = isEnabled ? 2 : 1
+  const currentStatus = normalizeStatus(row.status)
+  const newStatus = currentStatus === 1 ? 2 : 1
   try {
     await updateUserStatus(row.id, newStatus)
-    row.status = newStatus === 1 ? '启用' : '禁用'
+    row.status = newStatus
     ElMessage.success('状态已更新')
   } catch (error: any) {
     ElMessage.error(error.message || '更新失败')

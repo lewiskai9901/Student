@@ -10,6 +10,7 @@ import java.time.LocalDateTime;
 public class ResponseSet extends AggregateRoot<Long> {
 
     private Long id;
+    private Long tenantId;
     private String setCode;
     private String setName;
     private Boolean isGlobal;
@@ -24,6 +25,7 @@ public class ResponseSet extends AggregateRoot<Long> {
 
     private ResponseSet(Builder builder) {
         this.id = builder.id;
+        this.tenantId = builder.tenantId;
         this.setCode = builder.setCode;
         this.setName = builder.setName;
         this.isGlobal = builder.isGlobal != null ? builder.isGlobal : false;
@@ -65,6 +67,10 @@ public class ResponseSet extends AggregateRoot<Long> {
         this.id = id;
     }
 
+    public Long getTenantId() {
+        return tenantId;
+    }
+
     public String getSetCode() {
         return setCode;
     }
@@ -103,6 +109,7 @@ public class ResponseSet extends AggregateRoot<Long> {
 
     public static class Builder {
         private Long id;
+        private Long tenantId;
         private String setCode;
         private String setName;
         private Boolean isGlobal;
@@ -113,6 +120,7 @@ public class ResponseSet extends AggregateRoot<Long> {
         private LocalDateTime updatedAt;
 
         public Builder id(Long id) { this.id = id; return this; }
+        public Builder tenantId(Long tenantId) { this.tenantId = tenantId; return this; }
         public Builder setCode(String setCode) { this.setCode = setCode; return this; }
         public Builder setName(String setName) { this.setName = setName; return this; }
         public Builder isGlobal(Boolean isGlobal) { this.isGlobal = isGlobal; return this; }

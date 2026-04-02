@@ -10,6 +10,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.*;
+import com.school.management.infrastructure.casbin.CasbinAccess;
 
 /**
  * 教学任务管理 REST Controller
@@ -30,6 +31,7 @@ public class TeachingTaskMgmtController {
     // ==================== 教学任务 ====================
 
     @GetMapping("/tasks")
+    @CasbinAccess(resource = "teaching:task", action = "view")
     public Result<Map<String, Object>> listTasks(
             @RequestParam(required = false) Long semesterId,
             @RequestParam(required = false) Integer status,
@@ -76,6 +78,7 @@ public class TeachingTaskMgmtController {
     }
 
     @GetMapping("/tasks/{id}")
+    @CasbinAccess(resource = "teaching:task", action = "view")
     public Result<Map<String, Object>> getTask(@PathVariable Long id) {
         Map<String, Object> task = jdbc.queryForMap(
             "SELECT t.id, t.task_code AS taskCode, t.semester_id AS semesterId, " +
@@ -94,6 +97,7 @@ public class TeachingTaskMgmtController {
     }
 
     @PostMapping("/tasks")
+    @CasbinAccess(resource = "teaching:task", action = "edit")
     public Result<Map<String, Object>> createTask(@RequestBody Map<String, Object> data) {
         long id = IdWorker.getId();
         String taskCode = "TT" + id;
@@ -125,6 +129,7 @@ public class TeachingTaskMgmtController {
     }
 
     @PutMapping("/tasks/{id}")
+    @CasbinAccess(resource = "teaching:task", action = "edit")
     public Result<Void> updateTask(@PathVariable Long id, @RequestBody Map<String, Object> data) {
         Long courseId = data.get("courseId") != null ? ((Number) data.get("courseId")).longValue() : null;
         Long classId = data.get("classId") != null ? ((Number) data.get("classId")).longValue() : null;
@@ -148,6 +153,7 @@ public class TeachingTaskMgmtController {
     }
 
     @DeleteMapping("/tasks/{id}")
+    @CasbinAccess(resource = "teaching:task", action = "edit")
     public Result<Void> deleteTask(@PathVariable Long id) {
         jdbc.update("UPDATE teaching_tasks SET deleted = 1 WHERE id = ?", id);
         return Result.success();
@@ -156,6 +162,7 @@ public class TeachingTaskMgmtController {
     // ==================== 教师分配 ====================
 
     @PostMapping("/tasks/{id}/assign-teachers")
+    @CasbinAccess(resource = "teaching:task", action = "edit")
     @Transactional
     public Result<Void> assignTeachers(@PathVariable Long id, @RequestBody Map<String, Object> data) {
         @SuppressWarnings("unchecked")
@@ -181,6 +188,7 @@ public class TeachingTaskMgmtController {
     }
 
     @DeleteMapping("/tasks/{id}/teachers/{teacherId}")
+    @CasbinAccess(resource = "teaching:task", action = "edit")
     public Result<Void> removeTeacher(@PathVariable Long id, @PathVariable Long teacherId) {
         jdbc.update("DELETE FROM teaching_task_teachers WHERE task_id = ? AND teacher_id = ?", id, teacherId);
         return Result.success();
@@ -189,6 +197,7 @@ public class TeachingTaskMgmtController {
     // ==================== 批量创建 ====================
 
     @PostMapping("/tasks/batch-create")
+    @CasbinAccess(resource = "teaching:task", action = "edit")
     @Transactional
     public Result<List<Map<String, Object>>> batchCreateTasks(@RequestBody Map<String, Object> data) {
         Long semesterId = data.get("semesterId") != null ? ((Number) data.get("semesterId")).longValue() : null;
@@ -245,6 +254,7 @@ public class TeachingTaskMgmtController {
     // ==================== 状态变更 ====================
 
     @PatchMapping("/tasks/{id}/status")
+    @CasbinAccess(resource = "teaching:task", action = "edit")
     public Result<Void> updateTaskStatus(@PathVariable Long id, @RequestBody Map<String, Object> data) {
         Integer taskStatus = data.get("taskStatus") != null ? ((Number) data.get("taskStatus")).intValue() : null;
         if (taskStatus == null) {

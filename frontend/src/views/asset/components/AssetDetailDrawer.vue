@@ -299,7 +299,7 @@ function handleTransfer() {
                 </div>
               </el-timeline-item>
             </el-timeline>
-            <el-empty v-else description="暂无变更记录" />
+            <el-empty v-else description="暂无操作记录" />
           </div>
         </el-tab-pane>
 

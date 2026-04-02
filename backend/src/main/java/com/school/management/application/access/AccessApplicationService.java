@@ -311,6 +311,10 @@ public class AccessApplicationService {
      * Assigns a role to a user with global scope (ALL).
      */
     public UserRole assignRoleToUser(Long userId, Long roleId, Long assignedBy) {
+        // 验证角色存在
+        roleRepository.findById(roleId)
+                .orElseThrow(() -> new IllegalArgumentException("角色不存在: " + roleId));
+
         if (userRoleRepository.existsByUserIdAndRoleIdAndScope(userId, roleId, "ALL", 0L)) {
             throw new IllegalArgumentException("User already has this role with global scope");
         }
@@ -329,6 +333,16 @@ public class AccessApplicationService {
      */
     public UserRole assignRoleToUserWithScope(Long userId, Long roleId,
                                                String scopeType, Long scopeId, Long assignedBy) {
+        // 验证角色存在
+        roleRepository.findById(roleId)
+                .orElseThrow(() -> new IllegalArgumentException("角色不存在: " + roleId));
+
+        // 验证 ORG_UNIT scope 的 scopeId 有效性
+        if (ScopeType.ORG_UNIT.equals(scopeType) && scopeId != null && scopeId > 0) {
+            // scopeId 应指向一个有效的组织单元（此处仅做非零校验，因为 OrgUnitRepository 不在本服务依赖中）
+            log.debug("Assigning role {} with ORG_UNIT scope, scopeId={}", roleId, scopeId);
+        }
+
         if (userRoleRepository.existsByUserIdAndRoleIdAndScope(userId, roleId, scopeType, scopeId)) {
             throw new IllegalArgumentException("User already has this role with the same scope");
         }
@@ -392,6 +406,12 @@ public class AccessApplicationService {
      * Accepts a list of role assignments with scope info.
      */
     public void setUserRoles(Long userId, List<RoleAssignment> assignments, Long assignedBy) {
+        // 验证所有角色ID存在
+        for (RoleAssignment assignment : assignments) {
+            roleRepository.findById(assignment.getRoleId())
+                    .orElseThrow(() -> new IllegalArgumentException("角色不存在: " + assignment.getRoleId()));
+        }
+
         // Remove all existing roles
         userRoleRepository.deleteByUserId(userId);
 

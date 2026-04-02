@@ -33,10 +33,10 @@ public class TemplateSection extends AggregateRoot<Long> {
     private TemplateStatus status;     // 仅根分区有效
     private Integer latestVersion;     // 仅根分区有效
     private Integer sortOrder;
-    private Integer weight;            // 0-100
     private Boolean isRepeatable;
     private String conditionLogic;     // JSON
     private String scoringConfig;      // JSON: {aggregation, maxScore, minScore, gradeBands[]}
+    private String inputMode;         // INLINE / EVENT_STREAM
     private String inspectionMode;    // SNAPSHOT / CONTINUOUS
     private String continuousStart;   // HH:mm
     private String continuousEnd;     // HH:mm
@@ -63,10 +63,10 @@ public class TemplateSection extends AggregateRoot<Long> {
         this.status = builder.status != null ? builder.status : TemplateStatus.DRAFT;
         this.latestVersion = builder.latestVersion != null ? builder.latestVersion : 0;
         this.sortOrder = builder.sortOrder != null ? builder.sortOrder : 0;
-        this.weight = builder.weight != null ? builder.weight : 100;
         this.isRepeatable = builder.isRepeatable != null ? builder.isRepeatable : false;
         this.conditionLogic = builder.conditionLogic;
         this.scoringConfig = builder.scoringConfig;
+        this.inputMode = builder.inputMode != null ? builder.inputMode : "INLINE";
         this.inspectionMode = builder.inspectionMode != null ? builder.inspectionMode : "SNAPSHOT";
         this.targetSourceMode = builder.targetSourceMode;
         this.targetTypeFilter = builder.targetTypeFilter;
@@ -159,18 +159,27 @@ public class TemplateSection extends AggregateRoot<Long> {
         this.updatedAt = LocalDateTime.now();
     }
 
-    public void update(String sectionName, Integer weight,
+    public void update(String sectionName,
                        Boolean isRepeatable, String conditionLogic, Long updatedBy) {
         this.sectionName = sectionName;
-        this.weight = weight;
         this.isRepeatable = isRepeatable;
         this.conditionLogic = conditionLogic;
         this.updatedBy = updatedBy;
         this.updatedAt = LocalDateTime.now();
     }
 
+    public void setStatus(TemplateStatus status) {
+        this.status = status;
+        this.updatedAt = LocalDateTime.now();
+    }
+
     public void setTargetType(TargetType targetType) {
         this.targetType = targetType;
+        this.updatedAt = LocalDateTime.now();
+    }
+
+    public void setInputMode(String inputMode) {
+        this.inputMode = inputMode;
         this.updatedAt = LocalDateTime.now();
     }
 
@@ -194,6 +203,7 @@ public class TemplateSection extends AggregateRoot<Long> {
         this.updatedBy = updatedBy;
         this.updatedAt = LocalDateTime.now();
     }
+
 
     // ========== 查询方法 ==========
 
@@ -229,10 +239,10 @@ public class TemplateSection extends AggregateRoot<Long> {
     public TemplateStatus getStatus() { return status; }
     public Integer getLatestVersion() { return latestVersion; }
     public Integer getSortOrder() { return sortOrder; }
-    public Integer getWeight() { return weight; }
     public Boolean getIsRepeatable() { return isRepeatable; }
     public String getConditionLogic() { return conditionLogic; }
     public String getScoringConfig() { return scoringConfig; }
+    public String getInputMode() { return inputMode; }
     public String getInspectionMode() { return inspectionMode; }
     public String getContinuousStart() { return continuousStart; }
     public String getContinuousEnd() { return continuousEnd; }
@@ -260,10 +270,10 @@ public class TemplateSection extends AggregateRoot<Long> {
         private TemplateStatus status;
         private Integer latestVersion;
         private Integer sortOrder;
-        private Integer weight;
         private Boolean isRepeatable;
         private String conditionLogic;
         private String scoringConfig;
+        private String inputMode;
         private String inspectionMode;
         private String continuousStart;
         private String continuousEnd;
@@ -288,10 +298,10 @@ public class TemplateSection extends AggregateRoot<Long> {
         public Builder status(TemplateStatus status) { this.status = status; return this; }
         public Builder latestVersion(Integer latestVersion) { this.latestVersion = latestVersion; return this; }
         public Builder sortOrder(Integer sortOrder) { this.sortOrder = sortOrder; return this; }
-        public Builder weight(Integer weight) { this.weight = weight; return this; }
         public Builder isRepeatable(Boolean isRepeatable) { this.isRepeatable = isRepeatable; return this; }
         public Builder conditionLogic(String conditionLogic) { this.conditionLogic = conditionLogic; return this; }
         public Builder scoringConfig(String scoringConfig) { this.scoringConfig = scoringConfig; return this; }
+        public Builder inputMode(String inputMode) { this.inputMode = inputMode; return this; }
         public Builder inspectionMode(String inspectionMode) { this.inspectionMode = inspectionMode; return this; }
         public Builder continuousStart(String continuousStart) { this.continuousStart = continuousStart; return this; }
         public Builder continuousEnd(String continuousEnd) { this.continuousEnd = continuousEnd; return this; }

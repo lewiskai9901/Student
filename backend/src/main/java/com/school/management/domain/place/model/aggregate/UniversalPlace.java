@@ -276,10 +276,11 @@ public class UniversalPlace extends AggregateRoot<Long> {
             return;
         }
 
-        // 业务规则校验
-        if (newStatus == PlaceStatus.DISABLED) {
+        // 业务规则校验：有占用者时不允许禁用或维护
+        if (newStatus == PlaceStatus.DISABLED || newStatus == PlaceStatus.MAINTENANCE) {
             if (currentOccupancy != null && currentOccupancy > 0) {
-                throw new IllegalStateException("场所有占用者，不能禁用");
+                String action = newStatus == PlaceStatus.DISABLED ? "禁用" : "设为维护中";
+                throw new IllegalStateException("场所有占用者，不能" + action);
             }
         }
 

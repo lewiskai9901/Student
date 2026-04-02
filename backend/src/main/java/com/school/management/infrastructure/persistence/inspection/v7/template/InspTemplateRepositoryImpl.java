@@ -80,7 +80,7 @@ public class InspTemplateRepositoryImpl implements InspTemplateRepository {
     private InspTemplatePO toPO(InspTemplate domain) {
         InspTemplatePO po = new InspTemplatePO();
         po.setId(domain.getId());
-        po.setTenantId(0L);
+        po.setTenantId(domain.getTenantId() != null ? domain.getTenantId() : 0L);
         po.setTemplateCode(domain.getTemplateCode());
         po.setTemplateName(domain.getTemplateName());
         po.setDescription(domain.getDescription());

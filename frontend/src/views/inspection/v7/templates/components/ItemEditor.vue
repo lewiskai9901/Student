@@ -41,6 +41,7 @@ const form = ref({
   validationRules: '',
   scoringConfig: '',
   conditionLogic: '',
+  inputMode: 'INLINE' as 'INLINE' | 'EVENT_STREAM',
 })
 
 // Category: 'scored' or 'capture'
@@ -513,6 +514,7 @@ watch(() => props.item, (item) => {
       validationRules: item.validationRules || '',
       scoringConfig: item.scoringConfig || '',
       conditionLogic: item.conditionLogic || '',
+      inputMode: item.inputMode || 'INLINE',
     }
     itemCategory.value = inferCategory(item)
     resetScoringDefaults()
@@ -635,6 +637,7 @@ function handleSave() {
       scoringConfig: scoringJson || undefined,
       conditionLogic: form.value.conditionLogic || undefined,
       isScored: true,
+      inputMode: form.value.inputMode || 'INLINE',
     } as Partial<TemplateItem>)
   } else {
     // === Capture item save ===
@@ -654,6 +657,7 @@ function handleSave() {
       scoringConfig: undefined,
       conditionLogic: form.value.conditionLogic || undefined,
       isScored: false,
+      inputMode: form.value.inputMode || 'INLINE',
     } as Partial<TemplateItem>)
   }
 }
@@ -730,6 +734,20 @@ const scoringFromResponseSet = computed(() =>
           <div class="ie-fld">
             <label>帮助提示</label>
             <input v-model="form.helpContent" placeholder="检查员看到的提示" />
+          </div>
+        </div>
+      </div>
+
+      <!-- ── 录入模式（所有评分项） ── -->
+      <div v-if="itemCategory === 'scored'" class="ie-section">
+        <div class="ie-fld">
+          <label>录入模式</label>
+          <el-radio-group v-model="form.inputMode" size="small">
+            <el-radio-button value="INLINE">结构化检查</el-radio-button>
+            <el-radio-button value="EVENT_STREAM">巡查快速记录</el-radio-button>
+          </el-radio-group>
+          <div v-if="form.inputMode === 'EVENT_STREAM'" style="font-size:11px;color:#9ca3af;margin-top:4px;">
+            检查员搜索目标后快速打分，适合随机抽查、巡查等场景
           </div>
         </div>
       </div>
@@ -1086,6 +1104,11 @@ const scoringFromResponseSet = computed(() =>
 .ie-fld input:focus, .ie-fld textarea:focus { border-color:#7aadff; box-shadow:0 0 0 2px rgba(26,109,255,0.06); }
 .ie-req { color:#ef4444; }
 .ie-muted { font-size:10px; color:#8c95a3; text-align:center; padding:4px 0; }
+
+.ie-radio-group { display:flex; flex-direction:column; gap:4px; }
+.ie-radio-label { display:flex; align-items:center; gap:5px; font-size:12px; color:#1e2a3a; cursor:pointer; }
+.ie-radio-label input[type="radio"] { margin:0; accent-color:#1a6dff; }
+.ie-hint { font-size:12px; color:#9ca3af; margin-top:4px; line-height:1.4; }
 
 .ie-select { width:100%; border:1px solid #dce1e8; border-radius:5px; padding:4px 8px; font-size:12px; outline:none; color:#1e2a3a; background:#fff; cursor:pointer; appearance:none;
   background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%239ca3af' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");

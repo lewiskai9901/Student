@@ -9,6 +9,8 @@ public interface SubmissionDetailRepository {
 
     SubmissionDetail save(SubmissionDetail detail);
 
+    List<SubmissionDetail> saveAll(List<SubmissionDetail> details);
+
     Optional<SubmissionDetail> findById(Long id);
 
     List<SubmissionDetail> findBySubmissionId(Long submissionId);

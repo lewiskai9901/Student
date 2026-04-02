@@ -13,10 +13,10 @@ import type { SubmissionDetail } from '@/types/insp/project'
 import type { TemplateSection } from '@/types/insp/template'
 import {
   getDetails,
-  updateDetailResponse,
+  updateDetailResponse as _updateDetailResponse,
   saveFormData,
 } from '@/api/insp/submission'
-import { getSections } from '@/api/insp/template'
+import { getSections as _getSections } from '@/api/insp/template'
 
 interface ConditionRule {
   field: string
@@ -85,16 +85,15 @@ export function useInspectionForm(submissionId: Ref<number | null>) {
               if (d.sectionId != null && !sectionMap.has(d.sectionId)) {
                 sectionMap.set(d.sectionId, {
                   id: d.sectionId,
-                  templateId: 0, // not available from detail
+                  templateId: 0,
                   sectionCode: '',
                   sectionName: d.sectionName || '',
                   sortOrder: sectionMap.size,
                   weight: 1,
                   isRepeatable: false,
-                  conditionLogic: null,
                   createdAt: '',
                   updatedAt: '',
-                })
+                } as TemplateSection)
               }
             }
             sections.value = Array.from(sectionMap.values())

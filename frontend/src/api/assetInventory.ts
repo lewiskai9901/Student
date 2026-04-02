@@ -5,7 +5,7 @@ import type {
   UpdateInventoryDetailRequest,
   InventoryStatistics
 } from '@/types/asset'
-import type { PageResult } from '@/types/api'
+import type { PageResult } from '@/types/common'
 
 const BASE_URL = '/asset-inventories'
 

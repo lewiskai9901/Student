@@ -50,12 +50,20 @@ export function submitTask(id: number): Promise<InspTask> {
   return http.post<InspTask>(`${BASE}/${id}/submit`)
 }
 
+export function withdrawTask(id: number): Promise<InspTask> {
+  return http.post<InspTask>(`${BASE}/${id}/withdraw`)
+}
+
 export function reviewTask(id: number, data: ReviewTaskRequest): Promise<InspTask> {
   return http.post<InspTask>(`${BASE}/${id}/review`, data)
 }
 
 export function publishTask(id: number): Promise<InspTask> {
   return http.post<InspTask>(`${BASE}/${id}/publish`)
+}
+
+export function rejectTask(id: number, comment?: string): Promise<InspTask> {
+  return http.post<InspTask>(`${BASE}/${id}/reject`, { comment: comment || '驳回' })
 }
 
 export function cancelTask(id: number): Promise<InspTask> {
@@ -77,7 +85,9 @@ export const inspTaskApi = {
   claim: claimTask,
   start: startTask,
   submit: submitTask,
+  withdraw: withdrawTask,
   review: reviewTask,
+  reject: rejectTask,
   publish: publishTask,
   cancel: cancelTask,
   assign: assignTask,

@@ -11,6 +11,7 @@ import java.time.LocalDateTime;
 public class ResponseSetOption implements Entity<Long> {
 
     private Long id;
+    private Long tenantId;
     private Long responseSetId;
     private String optionValue;
     private String optionLabel;
@@ -26,6 +27,7 @@ public class ResponseSetOption implements Entity<Long> {
 
     private ResponseSetOption(Builder builder) {
         this.id = builder.id;
+        this.tenantId = builder.tenantId;
         this.responseSetId = builder.responseSetId;
         this.optionValue = builder.optionValue;
         this.optionLabel = builder.optionLabel;
@@ -71,6 +73,10 @@ public class ResponseSetOption implements Entity<Long> {
         this.id = id;
     }
 
+    public Long getTenantId() {
+        return tenantId;
+    }
+
     public Long getResponseSetId() {
         return responseSetId;
     }
@@ -113,6 +119,7 @@ public class ResponseSetOption implements Entity<Long> {
 
     public static class Builder {
         private Long id;
+        private Long tenantId;
         private Long responseSetId;
         private String optionValue;
         private String optionLabel;
@@ -124,6 +131,7 @@ public class ResponseSetOption implements Entity<Long> {
         private LocalDateTime updatedAt;
 
         public Builder id(Long id) { this.id = id; return this; }
+        public Builder tenantId(Long tenantId) { this.tenantId = tenantId; return this; }
         public Builder responseSetId(Long responseSetId) { this.responseSetId = responseSetId; return this; }
         public Builder optionValue(String optionValue) { this.optionValue = optionValue; return this; }
         public Builder optionLabel(String optionLabel) { this.optionLabel = optionLabel; return this; }

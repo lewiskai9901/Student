@@ -75,7 +75,7 @@ public class ResponseSetRepositoryImpl implements ResponseSetRepository {
     private ResponseSetPO toPO(ResponseSet domain) {
         ResponseSetPO po = new ResponseSetPO();
         po.setId(domain.getId());
-        po.setTenantId(0L);
+        po.setTenantId(domain.getTenantId() != null ? domain.getTenantId() : 0L);
         po.setSetCode(domain.getSetCode());
         po.setSetName(domain.getSetName());
         po.setIsGlobal(domain.getIsGlobal());

@@ -8,6 +8,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.*;
+import com.school.management.infrastructure.casbin.CasbinAccess;
 
 /**
  * Asset Alert REST Controller
@@ -36,6 +37,7 @@ public class AssetAlertController {
     // ==================== Get Alert ====================
 
     @GetMapping("/{id}")
+    @CasbinAccess(resource = "asset:manage", action = "view")
     public Result<Map<String, Object>> getAlert(@PathVariable Long id) {
         Map<String, Object> alert = jdbc.queryForMap(
             "SELECT " + ALERT_COLUMNS + " FROM asset_alert WHERE id = ?", id);
@@ -46,6 +48,7 @@ public class AssetAlertController {
     // ==================== Unread Alerts ====================
 
     @GetMapping("/unread")
+    @CasbinAccess(resource = "asset:manage", action = "view")
     public Result<List<Map<String, Object>>> getUnreadAlerts() {
         List<Map<String, Object>> alerts = jdbc.queryForList(
             "SELECT " + ALERT_COLUMNS + " FROM asset_alert WHERE is_read = 0 ORDER BY alert_time DESC"
@@ -57,6 +60,7 @@ public class AssetAlertController {
     // ==================== Unhandled Alerts ====================
 
     @GetMapping("/unhandled")
+    @CasbinAccess(resource = "asset:manage", action = "view")
     public Result<List<Map<String, Object>>> getUnhandledAlerts() {
         List<Map<String, Object>> alerts = jdbc.queryForList(
             "SELECT " + ALERT_COLUMNS + " FROM asset_alert WHERE is_handled = 0 ORDER BY alert_time DESC"
@@ -68,6 +72,7 @@ public class AssetAlertController {
     // ==================== Mark as Read ====================
 
     @PostMapping("/{id}/read")
+    @CasbinAccess(resource = "asset:manage", action = "edit")
     @Transactional
     public Result<Void> markAsRead(@PathVariable Long id) {
         jdbc.update("UPDATE asset_alert SET is_read = 1, updated_at = NOW() WHERE id = ?", id);
@@ -77,6 +82,7 @@ public class AssetAlertController {
     // ==================== Mark All as Read ====================
 
     @PostMapping("/read-all")
+    @CasbinAccess(resource = "asset:manage", action = "edit")
     @Transactional
     public Result<Void> markAllAsRead() {
         jdbc.update("UPDATE asset_alert SET is_read = 1, updated_at = NOW() WHERE is_read = 0");
@@ -86,6 +92,7 @@ public class AssetAlertController {
     // ==================== Handle Alert ====================
 
     @PostMapping("/{id}/handle")
+    @CasbinAccess(resource = "asset:manage", action = "edit")
     @Transactional
     public Result<Void> handleAlert(@PathVariable Long id, @RequestBody(required = false) Map<String, Object> data) {
         String remark = data != null ? (String) data.get("remark") : null;
@@ -100,6 +107,7 @@ public class AssetAlertController {
     // ==================== Query Alerts (paginated) ====================
 
     @GetMapping
+    @CasbinAccess(resource = "asset:manage", action = "view")
     public Result<Map<String, Object>> queryAlerts(
             @RequestParam(defaultValue = "1") int pageNum,
             @RequestParam(defaultValue = "20") int pageSize,
@@ -150,6 +158,7 @@ public class AssetAlertController {
     // ==================== Statistics ====================
 
     @GetMapping("/statistics")
+    @CasbinAccess(resource = "asset:manage", action = "view")
     public Result<Map<String, Object>> getStatistics() {
         Map<String, Object> stats = jdbc.queryForMap(
             "SELECT " +
@@ -168,6 +177,7 @@ public class AssetAlertController {
     // ==================== Unread Count ====================
 
     @GetMapping("/unread/count")
+    @CasbinAccess(resource = "asset:manage", action = "view")
     public Result<Long> countUnread() {
         Long count = jdbc.queryForObject(
             "SELECT COUNT(*) FROM asset_alert WHERE is_read = 0", Long.class);

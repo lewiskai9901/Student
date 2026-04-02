@@ -3,8 +3,10 @@ package com.school.management.domain.organization.repository;
 import com.school.management.domain.organization.model.OrgUnit;
 import com.school.management.domain.shared.Repository;
 
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 
 /**
  * Repository interface for OrgUnit aggregate.
@@ -81,4 +83,21 @@ public interface OrgUnitRepository extends Repository<OrgUnit, Long> {
      * @return list of all org units
      */
     List<OrgUnit> findAll();
+
+    /**
+     * Batch finds all children of multiple parent organization units.
+     *
+     * @param parentIds the parent IDs
+     * @return list of child org units for all specified parents
+     */
+    List<OrgUnit> findByParentIds(Collection<Long> parentIds);
+
+    /**
+     * Batch checks which parent IDs actually have children.
+     * Returns the subset of parentIds that have at least one child.
+     *
+     * @param parentIds the parent IDs to check
+     * @return set of parent IDs that have children
+     */
+    Set<Long> findParentIdsWithChildren(Collection<Long> parentIds);
 }

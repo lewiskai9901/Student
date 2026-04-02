@@ -49,7 +49,8 @@ public class InspTaskController {
     @GetMapping("/available")
     @CasbinAccess(resource = "insp:task", action = "view")
     public Result<List<InspTask>> listAvailableTasks() {
-        return Result.success(taskService.listAvailableTasks());
+        Long userId = SecurityUtils.getCurrentUserId();
+        return Result.success(taskService.listAvailableTasksForUser(userId));
     }
 
     @GetMapping("/my-tasks")
@@ -81,6 +82,20 @@ public class InspTaskController {
         return Result.success(taskService.submitTask(id));
     }
 
+    @PostMapping("/{id}/withdraw")
+    @CasbinAccess(resource = "insp:task", action = "execute")
+    public Result<InspTask> withdrawTask(@PathVariable Long id) {
+        return Result.success(taskService.withdrawTask(id));
+    }
+
+    @PostMapping("/{id}/reject")
+    @CasbinAccess(resource = "insp:task", action = "review")
+    public Result<InspTask> rejectTask(@PathVariable Long id,
+                                        @RequestBody(required = false) RejectTaskRequest request) {
+        String comment = request != null ? request.getComment() : "驳回";
+        return Result.success(taskService.rejectTask(id, comment));
+    }
+
     @PostMapping("/{id}/review")
     @CasbinAccess(resource = "insp:task", action = "review")
     public Result<InspTask> reviewTask(@PathVariable Long id,
@@ -110,6 +125,12 @@ public class InspTaskController {
                 request.getInspectorId(), request.getInspectorName()));
     }
 
+    @PostMapping("/{id}/repopulate")
+    @CasbinAccess(resource = "insp:task", action = "edit")
+    public Result<InspTask> repopulateSubmissions(@PathVariable Long id) {
+        return Result.success(taskService.repopulateSubmissions(id));
+    }
+
     // --- Request DTOs ---
 
     @lombok.Data
@@ -136,5 +157,10 @@ public class InspTaskController {
     public static class AssignTaskRequest {
         private Long inspectorId;
         private String inspectorName;
+    }
+
+    @lombok.Data
+    public static class RejectTaskRequest {
+        private String comment;
     }
 }

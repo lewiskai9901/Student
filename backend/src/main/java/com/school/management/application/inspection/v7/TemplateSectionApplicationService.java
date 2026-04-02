@@ -42,7 +42,6 @@ public class TemplateSectionApplicationService {
      * @param sectionCode     分区编码
      * @param sectionName     分区名称
      * @param targetType      目标类型（仅根分区的一级子分区可设）
-     * @param weight          权重 0-100
      * @param isRepeatable    是否可重复
      * @param conditionLogic  条件逻辑 JSON
      * @param sortOrder       排序
@@ -51,19 +50,16 @@ public class TemplateSectionApplicationService {
     @Transactional
     public TemplateSection createChildSection(Long parentSectionId, String sectionCode,
                                                String sectionName, TargetType targetType,
-                                               Integer weight, Boolean isRepeatable,
+                                               Boolean isRepeatable,
                                                String conditionLogic, Integer sortOrder,
                                                Long createdBy) {
         TemplateSection parent = sectionRepository.findById(parentSectionId)
                 .orElseThrow(() -> new IllegalArgumentException("父分区不存在: " + parentSectionId));
 
-        // Design B: 任何非根分区都可以设置 targetType
-
         TemplateSection child = TemplateSection.createChild(parentSectionId, sectionCode, sectionName, createdBy);
 
         // 设置可选属性
         child.update(sectionName,
-                weight != null ? weight : 100,
                 isRepeatable != null ? isRepeatable : false,
                 conditionLogic, createdBy);
         if (sortOrder != null) {
@@ -86,12 +82,11 @@ public class TemplateSectionApplicationService {
     @Transactional
     public TemplateSection updateSection(Long id, String sectionName, TargetType targetType,
                                           String targetSourceMode, String targetTypeFilter,
-                                          Integer weight, Boolean isRepeatable,
-                                          String conditionLogic, Long updatedBy) {
+                                          Boolean isRepeatable,
+                                          String conditionLogic, String inputMode, Long updatedBy) {
         TemplateSection section = sectionRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("分区不存在: " + id));
 
-        // Design B: 任何非根分区都可以设置 targetType
         if (targetType != null) {
             section.setTargetType(targetType);
         } else {
@@ -100,7 +95,10 @@ public class TemplateSectionApplicationService {
 
         section.setTargetSourceMode(targetSourceMode);
         section.setTargetTypeFilter(targetTypeFilter);
-        section.update(sectionName, weight, isRepeatable, conditionLogic, updatedBy);
+        if (inputMode != null) {
+            section.setInputMode(inputMode);
+        }
+        section.update(sectionName, isRepeatable, conditionLogic, updatedBy);
         return sectionRepository.save(section);
     }
 
@@ -158,6 +156,14 @@ public class TemplateSectionApplicationService {
                 .orElseThrow(() -> new IllegalArgumentException("分区不存在: " + sectionId));
         section.updateScoringConfig(scoringConfig, updatedBy);
         return sectionRepository.save(section);
+    }
+
+    @Transactional
+    public void updateSectionStatus(Long sectionId, String status) {
+        TemplateSection section = sectionRepository.findById(sectionId)
+                .orElseThrow(() -> new IllegalArgumentException("分区不存在: " + sectionId));
+        section.setStatus(com.school.management.domain.inspection.model.v7.template.TemplateStatus.valueOf(status));
+        sectionRepository.save(section);
     }
 
     // ========== 查询 ==========

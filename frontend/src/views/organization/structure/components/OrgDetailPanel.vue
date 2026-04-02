@@ -13,51 +13,38 @@
   <div v-else class="space-y-4">
     <!-- Header Card -->
     <div class="rounded-xl border border-gray-200 bg-white">
-      <div class="flex items-center justify-between border-b border-gray-100 px-6 py-4">
-        <div class="flex items-center gap-3">
-          <div
-            class="flex h-10 w-10 items-center justify-center rounded-lg"
-            :style="typeIconStyle"
+      <div class="flex items-center justify-between px-5 py-3">
+        <div class="flex items-center gap-2 min-w-0">
+          <h2 class="truncate text-[15px] font-semibold text-gray-900">{{ node.unitName }}</h2>
+          <code class="rounded bg-gray-100 px-1.5 py-0.5 font-mono text-[10px] text-gray-500 flex-shrink-0">{{ node.unitCode }}</code>
+          <span
+            class="inline-flex items-center rounded px-1.5 py-0.5 text-[10px] font-medium flex-shrink-0"
+            :style="typeBadgeStyle"
           >
-            <Building2 class="h-5 w-5" />
-          </div>
-          <div>
-            <h2 class="text-lg font-semibold text-gray-900">{{ node.unitName }}</h2>
-            <div class="flex items-center gap-2 text-xs text-gray-500">
-              <code class="rounded bg-gray-100 px-1.5 py-0.5 font-mono">{{ node.unitCode }}</code>
-              <span class="text-gray-300">|</span>
-              <span
-                class="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium"
-                :style="typeBadgeStyle"
-              >
-                {{ node.typeName || node.unitType }}
-              </span>
-              <span class="text-gray-300">|</span>
-              <span :class="node.status === 'ACTIVE' ? 'text-green-600' : node.status === 'FROZEN' ? 'text-orange-500' : 'text-red-500'">
-                {{ node.statusLabel || node.status }}
-              </span>
-            </div>
-          </div>
+            {{ node.typeName || node.unitType }}
+          </span>
+          <span class="rounded px-1.5 py-0.5 text-[10px] font-medium flex-shrink-0" :class="node.status === 'ACTIVE' ? 'bg-green-50 text-green-600' : node.status === 'FROZEN' ? 'bg-orange-50 text-orange-500' : 'bg-red-50 text-red-500'">
+            {{ node.statusLabel || node.status }}
+          </span>
         </div>
-        <div class="flex items-center gap-2">
+        <div class="flex items-center gap-1.5 flex-shrink-0">
           <button
-            class="inline-flex items-center gap-1.5 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50"
+            class="inline-flex items-center gap-1 rounded-md border border-gray-200 px-2.5 py-1 text-xs font-medium text-gray-600 hover:bg-gray-50"
             @click="emit('addChild', node)"
           >
-            <Plus class="h-4 w-4" />
-            添加子组织
+            <Plus class="h-3 w-3" />
+            子组织
           </button>
           <button
-            class="inline-flex items-center gap-1.5 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50"
+            class="inline-flex items-center gap-1 rounded-md border border-gray-200 px-2.5 py-1 text-xs font-medium text-gray-600 hover:bg-gray-50"
             @click="emit('edit', node)"
           >
-            <Pencil class="h-4 w-4" />
+            <Pencil class="h-3 w-3" />
             编辑
           </button>
           <el-dropdown v-if="node.status === 'ACTIVE' || node.status === 'FROZEN'" trigger="click">
-            <button class="inline-flex items-center gap-1.5 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50">
-              <MoreHorizontal class="h-4 w-4" />
-              更多操作
+            <button class="inline-flex items-center justify-center h-6 w-6 rounded-md border border-gray-200 text-gray-400 hover:bg-gray-50">
+              <MoreHorizontal class="h-3.5 w-3.5" />
             </button>
             <template #dropdown>
               <el-dropdown-menu>
@@ -90,17 +77,17 @@
           </el-dropdown>
           <button
             v-else
-            class="inline-flex items-center gap-1.5 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm font-medium text-red-700 transition-colors hover:bg-red-100"
+            class="inline-flex items-center gap-1 rounded-md border border-red-200 bg-red-50 px-2.5 py-1 text-xs font-medium text-red-600 transition-colors hover:bg-red-100"
             @click="emit('delete', node)"
           >
-            <Trash2 class="h-4 w-4" />
+            <Trash2 class="h-3 w-3" />
             删除
           </button>
         </div>
       </div>
 
       <!-- Statistics Bar -->
-      <div v-if="stats" class="flex items-center gap-4 border-b border-gray-100 px-6 py-2.5 text-xs text-gray-600">
+      <div v-if="stats" class="flex items-center gap-4 border-t border-gray-100 px-5 py-2 text-xs text-gray-600">
         <span>成员 <strong class="text-gray-900">{{ stats.belongingCount }}</strong></span>
         <template v-if="Object.keys(stats.countByUserType).length > 0">
           <span class="text-gray-300">—</span>
@@ -119,7 +106,7 @@
           v-for="tab in tabs"
           :key="tab.key"
           :class="[
-            'relative px-5 py-3 text-sm font-medium transition-colors',
+            'relative px-4 py-2.5 text-xs font-medium transition-colors',
             activeTab === tab.key
               ? 'text-blue-600'
               : 'text-gray-500 hover:text-gray-700'
@@ -140,25 +127,25 @@
 
       <!-- Tab: 下级组织 -->
       <div v-if="activeTab === 'children'">
-        <div class="flex items-center justify-between border-b border-gray-50 px-6 py-3">
+        <div class="flex items-center justify-between border-b border-gray-50 px-5 py-2.5">
           <span class="text-xs text-gray-500">共 {{ children.length }} 个下级组织</span>
           <button
-            class="inline-flex items-center gap-1.5 rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-xs font-medium text-gray-700 transition-colors hover:bg-gray-50"
+            class="inline-flex items-center gap-1 rounded-md bg-blue-600 px-2.5 py-1 text-[11px] font-medium text-white transition-colors hover:bg-blue-700"
             @click="emit('addChild', node)"
           >
-            <Plus class="h-3.5 w-3.5" />
+            <Plus class="h-3 w-3" />
             添加
           </button>
         </div>
         <div v-if="children.length > 0" class="overflow-x-auto">
           <table class="w-full">
             <thead>
-              <tr class="border-b border-gray-100 bg-gray-50/60">
-                <th class="px-6 py-2.5 text-left text-xs font-medium text-gray-500">名称</th>
-                <th class="px-6 py-2.5 text-left text-xs font-medium text-gray-500">编码</th>
-                <th class="px-6 py-2.5 text-left text-xs font-medium text-gray-500">类型</th>
-                <th class="px-6 py-2.5 text-center text-xs font-medium text-gray-500">状态</th>
-                <th class="px-6 py-2.5 text-right text-xs font-medium text-gray-500">操作</th>
+              <tr class="border-b border-gray-100 bg-gray-50/50">
+                <th class="px-4 py-2 text-left text-xs font-medium text-gray-500">名称</th>
+                <th class="px-4 py-2 text-left text-xs font-medium text-gray-500">编码</th>
+                <th class="px-4 py-2 text-left text-xs font-medium text-gray-500">类型</th>
+                <th class="px-4 py-2 text-center text-xs font-medium text-gray-500">状态</th>
+                <th class="px-4 py-2 text-right text-xs font-medium text-gray-500">操作</th>
               </tr>
             </thead>
             <tbody class="divide-y divide-gray-50">
@@ -167,35 +154,29 @@
                 :key="child.id"
                 class="transition-colors hover:bg-gray-50"
               >
-                <td class="px-6 py-3">
+                <td class="px-4 py-2">
                   <div class="flex items-center gap-2">
-                    <div
-                      class="flex h-7 w-7 items-center justify-center rounded"
-                      :style="getChildIconStyle(child)"
-                    >
-                      <Building2 class="h-3.5 w-3.5" />
-                    </div>
-                    <span class="text-sm font-medium text-gray-900">{{ child.unitName }}</span>
+                    <span class="text-xs font-medium text-gray-900">{{ child.unitName }}</span>
                     <span
                       v-if="child.children?.length"
-                      class="rounded bg-gray-100 px-1.5 py-0.5 text-[10px] text-gray-500"
+                      class="rounded bg-gray-100 px-1 py-px text-[10px] text-gray-500"
                     >
                       {{ child.children.length }} 子级
                     </span>
                   </div>
                 </td>
-                <td class="px-6 py-3">
-                  <code class="rounded bg-gray-100 px-1.5 py-0.5 font-mono text-xs text-gray-600">
+                <td class="px-4 py-2">
+                  <code class="rounded bg-gray-100 px-1.5 py-0.5 font-mono text-[10px] text-gray-600">
                     {{ child.unitCode }}
                   </code>
                 </td>
-                <td class="px-6 py-3">
-                  <span class="text-sm text-gray-600">{{ child.typeName || child.unitType }}</span>
+                <td class="px-4 py-2">
+                  <span class="text-xs text-gray-600">{{ child.typeName || child.unitType }}</span>
                 </td>
-                <td class="px-6 py-3 text-center">
+                <td class="px-4 py-2 text-center">
                   <span
                     :class="[
-                      'inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium',
+                      'inline-flex items-center rounded px-1.5 py-0.5 text-[10px] font-medium',
                       child.status === 'ACTIVE' ? 'bg-green-50 text-green-700' :
                       child.status === 'FROZEN' ? 'bg-orange-50 text-orange-700' :
                       'bg-red-50 text-red-700'
@@ -204,7 +185,7 @@
                     {{ child.statusLabel || child.status }}
                   </span>
                 </td>
-                <td class="px-6 py-3 text-right">
+                <td class="px-4 py-2 text-right">
                   <div class="flex items-center justify-end gap-1">
                     <button
                       class="rounded p-1.5 text-gray-400 hover:bg-gray-100 hover:text-blue-600"
@@ -363,70 +344,44 @@
         <div v-else-if="places.length > 0" class="overflow-x-auto">
           <table class="w-full">
             <thead>
-              <tr class="border-b border-gray-100 bg-gray-50/60">
-                <th class="px-6 py-2.5 text-left text-xs font-medium text-gray-500">场所名称</th>
-                <th class="px-6 py-2.5 text-left text-xs font-medium text-gray-500">编码</th>
-                <th class="px-6 py-2.5 text-left text-xs font-medium text-gray-500">关系类型</th>
-                <th class="px-6 py-2.5 text-center text-xs font-medium text-gray-500">主归属</th>
-                <th class="px-6 py-2.5 text-center text-xs font-medium text-gray-500">可检查</th>
-                <th class="px-6 py-2.5 text-right text-xs font-medium text-gray-500">操作</th>
+              <tr class="border-b border-gray-100 bg-gray-50/50">
+                <th class="px-4 py-2 text-left text-xs font-medium text-gray-500">场所名称</th>
+                <th class="px-4 py-2 text-left text-xs font-medium text-gray-500">编码</th>
+                <th class="px-4 py-2 text-left text-xs font-medium text-gray-500">关系类型</th>
+                <th class="w-12 px-2 py-2 text-right font-medium text-gray-400"></th>
               </tr>
             </thead>
             <tbody class="divide-y divide-gray-50">
               <tr
                 v-for="s in places"
                 :key="s.id"
-                class="transition-colors hover:bg-gray-50"
+                class="transition-colors hover:bg-gray-50/50"
               >
-                <td class="px-6 py-3">
-                  <div class="flex items-center gap-2">
-                    <div class="flex h-7 w-7 items-center justify-center rounded bg-purple-50 text-purple-600">
-                      <MapPin class="h-3.5 w-3.5" />
-                    </div>
-                    <span class="text-sm font-medium text-gray-900">{{ s.metadata?.placeName || `场所#${s.resourceId}` }}</span>
-                  </div>
+                <td class="px-4 py-2">
+                  <span class="text-xs font-medium text-gray-900">{{ s.metadata?.placeName || `场所#${s.resourceId}` }}</span>
                 </td>
-                <td class="px-6 py-3">
-                  <code class="rounded bg-gray-100 px-1.5 py-0.5 font-mono text-xs text-gray-600">
+                <td class="px-4 py-2">
+                  <code class="rounded bg-gray-100 px-1.5 py-0.5 font-mono text-[10px] text-gray-600">
                     {{ s.metadata?.placeCode || '-' }}
                   </code>
                 </td>
-                <td class="px-6 py-3">
-                  <span class="inline-flex rounded-full bg-purple-50 px-2 py-0.5 text-xs font-medium text-purple-700">
+                <td class="px-4 py-2">
+                  <span class="rounded px-1.5 py-0.5 text-[10px] font-medium bg-purple-50 text-purple-700">
                     {{ RelationLabels[s.relation] || s.relation }}
                   </span>
                 </td>
-                <td class="px-6 py-3 text-center">
-                  <CheckCircle v-if="s.metadata?.isPrimary" class="mx-auto h-4 w-4 text-green-500" />
-                  <span v-else class="text-gray-300">-</span>
-                </td>
-                <td class="px-6 py-3 text-center">
-                  <CheckCircle v-if="s.metadata?.canInspect" class="mx-auto h-4 w-4 text-blue-500" />
-                  <span v-else class="text-gray-300">-</span>
-                </td>
-                <td class="px-6 py-3 text-right">
+                <td class="whitespace-nowrap px-2 py-2 text-right">
                   <button
-                    class="rounded p-1.5 text-gray-400 hover:bg-red-50 hover:text-red-600"
-                    title="移除关联"
+                    class="rounded px-1.5 py-0.5 text-[10px] font-medium text-red-400 transition-colors hover:bg-red-50 hover:text-red-500"
                     @click="handleRemovePlace(s)"
-                  >
-                    <Trash2 class="h-3.5 w-3.5" />
-                  </button>
+                  >移除</button>
                 </td>
               </tr>
             </tbody>
           </table>
         </div>
-        <div v-else class="flex flex-col items-center py-10">
-          <MapPin class="h-10 w-10 text-gray-300" />
-          <p class="mt-2 text-sm text-gray-500">暂无关联场所</p>
-          <button
-            class="mt-3 inline-flex items-center gap-1.5 rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-xs font-medium text-gray-700 transition-colors hover:bg-gray-50"
-            @click="showAddPlace = true"
-          >
-            <Plus class="h-3.5 w-3.5" />
-            关联场所
-          </button>
+        <div v-else class="px-5 py-4 text-center text-xs text-gray-400">
+          暂无关联场所
         </div>
       </div>
 
@@ -587,18 +542,18 @@
         </div>
       </div>
 
-      <!-- Tab: 变更记录 -->
+      <!-- Tab: 操作记录 -->
       <div v-if="activeTab === 'changelog'">
         <ActivityTimeline
           resourceType="ORG_UNIT"
           :resourceId="node.id"
           :limit="50"
-          title="变更记录"
+          title="操作记录"
         />
       </div>
 
       <!-- Tab: 基本信息 -->
-      <div v-if="activeTab === 'info'" class="grid grid-cols-2 gap-x-8 gap-y-4 px-6 py-5 lg:grid-cols-3">
+      <div v-if="activeTab === 'info'" class="grid grid-cols-2 gap-x-6 gap-y-3 px-5 py-4 lg:grid-cols-3">
         <div>
           <dt class="text-xs font-medium text-gray-500">组织编码</dt>
           <dd class="mt-1 text-sm font-medium text-gray-900">
@@ -1120,7 +1075,7 @@ const tabs = computed(() => [
   { key: 'members' as const, label: '成员', count: belongingMembers.value.length || undefined },
   { key: 'positions' as const, label: '岗位编制', count: positions.value.length },
   { key: 'places' as const, label: '关联场所', count: places.value.length },
-  { key: 'changelog' as const, label: '变更记录', count: undefined },
+  { key: 'changelog' as const, label: '操作记录', count: undefined },
   { key: 'info' as const, label: '基本信息', count: undefined }
 ])
 

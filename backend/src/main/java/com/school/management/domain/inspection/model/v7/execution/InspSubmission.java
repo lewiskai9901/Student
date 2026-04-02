@@ -118,11 +118,12 @@ public class InspSubmission extends AggregateRoot<Long> {
     }
 
     /**
-     * 开始填写 — LOCKED → IN_PROGRESS
+     * 开始填写 — PENDING/LOCKED → IN_PROGRESS
+     * 支持两种入口：直接从 PENDING 开始（跳过锁定），或从 LOCKED 开始
      */
     public void startFilling() {
         if (this.status != SubmissionStatus.LOCKED && this.status != SubmissionStatus.PENDING) {
-            throw new IllegalStateException("只有待检查或已锁定的提交才能开始填写");
+            throw new IllegalStateException("只有待检查或已锁定的提交才能开始填写，当前状态: " + this.status);
         }
         this.status = SubmissionStatus.IN_PROGRESS;
         this.updatedAt = LocalDateTime.now();
@@ -161,6 +162,19 @@ public class InspSubmission extends AggregateRoot<Long> {
         this.updatedAt = LocalDateTime.now();
         registerEvent(new SubmissionCompletedEvent(this.id, this.taskId,
                 this.targetType != null ? this.targetType.name() : null, this.targetId, this.finalScore));
+    }
+
+    /**
+     * 撤回提交 — COMPLETED → IN_PROGRESS
+     * 允许检查员修改已完成的打分
+     */
+    public void reopen() {
+        if (this.status != SubmissionStatus.COMPLETED) {
+            throw new IllegalStateException("只有已完成的提交才能撤回");
+        }
+        this.status = SubmissionStatus.IN_PROGRESS;
+        this.completedAt = null;
+        this.updatedAt = LocalDateTime.now();
     }
 
     /**
@@ -211,6 +225,7 @@ public class InspSubmission extends AggregateRoot<Long> {
     public Long getTenantId() { return tenantId; }
     public Long getTaskId() { return taskId; }
     public Long getSectionId() { return sectionId; }
+    public void setSectionId(Long sectionId) { this.sectionId = sectionId; }
     public TargetType getTargetType() { return targetType; }
     public Long getTargetId() { return targetId; }
     public String getTargetName() { return targetName; }

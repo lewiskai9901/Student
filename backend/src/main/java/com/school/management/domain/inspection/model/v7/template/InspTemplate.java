@@ -14,6 +14,7 @@ import java.util.List;
 public class InspTemplate extends AggregateRoot<Long> {
 
     private Long id;
+    private Long tenantId;
     private String templateCode;
     private String templateName;
     private String description;
@@ -35,6 +36,7 @@ public class InspTemplate extends AggregateRoot<Long> {
 
     private InspTemplate(Builder builder) {
         this.id = builder.id;
+        this.tenantId = builder.tenantId;
         this.templateCode = builder.templateCode;
         this.templateName = builder.templateName;
         this.description = builder.description;
@@ -155,6 +157,10 @@ public class InspTemplate extends AggregateRoot<Long> {
         this.id = id;
     }
 
+    public Long getTenantId() {
+        return tenantId;
+    }
+
     public String getTemplateCode() {
         return templateCode;
     }
@@ -226,6 +232,7 @@ public class InspTemplate extends AggregateRoot<Long> {
 
     public static class Builder {
         private Long id;
+        private Long tenantId;
         private String templateCode;
         private String templateName;
         private String description;
@@ -243,6 +250,7 @@ public class InspTemplate extends AggregateRoot<Long> {
         private LocalDateTime updatedAt;
 
         public Builder id(Long id) { this.id = id; return this; }
+        public Builder tenantId(Long tenantId) { this.tenantId = tenantId; return this; }
         public Builder templateCode(String templateCode) { this.templateCode = templateCode; return this; }
         public Builder templateName(String templateName) { this.templateName = templateName; return this; }
         public Builder description(String description) { this.description = description; return this; }

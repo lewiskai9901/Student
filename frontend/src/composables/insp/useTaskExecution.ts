@@ -19,7 +19,6 @@ import {
   getSubmissions,
   completeSubmission as apiCompleteSubmission,
   saveFormData,
-  startFilling,
 } from '@/api/insp/submission'
 
 export function useTaskExecution() {

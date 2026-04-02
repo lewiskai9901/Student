@@ -33,9 +33,9 @@ public class TemplateSectionPO {
     @TableField(updateStrategy = FieldStrategy.ALWAYS)
     private Long refSectionId;
     private Integer sortOrder;
-    private Integer weight;
     private Boolean isRepeatable;
     private String conditionLogic;
+    private String inputMode;
     private String inspectionMode;
     private String continuousStart;
     private String continuousEnd;

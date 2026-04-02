@@ -5,20 +5,20 @@
  * 布局：
  *   顶部导航栏：返回 + 任务信息 + 任务操作
  *   主体两栏：
- *     左：分区导航（section nav）+ 完成进度指示
+ *     左：目标导航（target nav）+ 完成进度指示
  *     右：顶部目标选择器 + 字段列表（按 scoringMode 渲染不同控件）+ 底部实时得分
  */
-import { ref, computed, onMounted, watch } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import {
-  ArrowLeft, Play, Send, Lock, SkipForward, Check, X,
-  AlertTriangle, ChevronLeft, ChevronRight, Plus, Minus,
-  Flag, Star,
+  ArrowLeft, Play, Send, RotateCcw,
+  ChevronLeft, ChevronRight,
+  Star, Search, Target,
 } from 'lucide-vue-next'
 import { useInspExecutionStore } from '@/stores/insp/inspExecutionStore'
 import {
-  TaskStatusConfig, SubmissionStatusConfig, ScoringModeConfig, TargetTypeConfig,
+  TaskStatusConfig, SubmissionStatusConfig, ScoringModeConfig,
   type TaskStatus, type SubmissionStatus, type ScoringMode,
 } from '@/types/insp/enums'
 import type { InspTask, InspSubmission, SubmissionDetail } from '@/types/insp/project'
@@ -26,8 +26,12 @@ import type { TemplateSection } from '@/types/insp/template'
 import { getProject } from '@/api/insp/project'
 import { http } from '@/utils/request'
 import { inspTemplateApi } from '@/api/insp/template'
+import { createDetail as createDetailApi } from '@/api/insp/submission'
+import { orgUnitApi } from '@/api/organization'
+import { buildSectionTree, flattenTree, type SectionTreeNode } from '@/utils/sectionTree'
 import ViolationRecordInput from './components/ViolationRecordInput.vue'
 import PersonScoreGrid from './components/PersonScoreGrid.vue'
+import EventStreamRecorder from './components/EventStreamRecorder.vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -40,71 +44,481 @@ const loading = ref(false)
 const detailLoading = ref(false)
 const task = ref<InspTask | null>(null)
 const submissions = ref<InspSubmission[]>([])
-const selectedSubmission = ref<InspSubmission | null>(null)
 const details = ref<SubmissionDetail[]>([])
 const allSections = ref<TemplateSection[]>([])
 const rootSectionId = ref<number | null>(null)
+const sectionTree = ref<SectionTreeNode[]>([])
 
-// Active first-level section
-const activeSectionId = ref<number | null>(null)
-
-// Per-detail input state
+// Per-detail input state (keyed by detail.id)
 const numberInputs = ref<Record<number, number>>({})
 const selectInputs = ref<Record<number, string>>({})
 const textInputs = ref<Record<number, string>>({})
 
-const isEditable = computed(() => selectedSubmission.value?.status === 'IN_PROGRESS')
+const isEditable = computed(() => {
+  // In target mode, editable if ANY non-intermediate submission for the target is IN_PROGRESS
+  return targetSectionGroups.value.some(g => !g.isIntermediate && g.submission.status === 'IN_PROGRESS')
+})
 
-// ==================== Section Nav (left panel) ====================
+// ==================== Target Mode ====================
 
-/** First-level sections = direct children of root */
-const firstLevelSections = computed(() =>
-  allSections.value.filter(s => Number(s.parentSectionId) === Number(rootSectionId.value)),
-)
+const selectedTargetId = ref<number | null>(null)
+const targetSearch = ref('')
+const targetFilter = ref<'all' | 'pending' | 'completed'>('all')
+const targetContextFilter = ref<string>('')
 
-/** For each first-level section: how many submissions belong to it? */
-function getSectionSubmissions(sectionId: number): InspSubmission[] {
-  return submissions.value.filter(s => Number(s.sectionId) === Number(sectionId))
+// ---- Target filter context (org tree / place types) ----
+interface TargetMeta { targetId: number; targetName: string; targetType: string; parentId?: number; parentName?: string }
+const targetMetaMap = ref<Map<number, TargetMeta>>(new Map())
+const filterDimensions = ref<{ label: string; key: string; options: { value: string; label: string }[] }[]>([])
+
+/** Load filter context based on target type */
+async function loadTargetFilterContext() {
+  const types = new Set(submissions.value.map(s => s.targetType))
+  const dominantType = types.has('ORG') ? 'ORG' : types.has('PLACE') ? 'PLACE' : types.has('USER') ? 'USER' : ''
+
+  if (dominantType === 'ORG') {
+    try {
+      const tree = await orgUnitApi.getTree()
+      const parentMap = new Map<number, { id: number; name: string; type: string }>()
+      const nameMap = new Map<number, string>()
+      function walk(nodes: any[], parent?: any) {
+        for (const n of nodes || []) {
+          nameMap.set(Number(n.id), n.unitName || n.name || '')
+          if (parent) parentMap.set(Number(n.id), { id: Number(parent.id), name: parent.unitName || parent.name, type: parent.unitType })
+          walk(n.children || [], n)
+        }
+      }
+      walk(Array.isArray(tree) ? tree : (tree as any)?.data || [])
+      // Build meta with parent info, resolve empty targetName from org tree
+      const newMap = new Map(targetMetaMap.value)
+      for (const s of submissions.value) {
+        const tid = Number(s.targetId)
+        const p = parentMap.get(tid)
+        const resolvedName = s.targetName || nameMap.get(tid) || `目标 #${s.targetId}`
+        newMap.set(s.targetId, {
+          targetId: s.targetId, targetName: resolvedName, targetType: s.targetType,
+          parentId: p?.id, parentName: p?.name,
+        })
+      }
+      targetMetaMap.value = newMap
+      // Build dimension: filter by parent org
+      const groups = new Map<string, string>()
+      for (const m of newMap.values()) {
+        if (m.parentName) groups.set(String(m.parentId), m.parentName)
+      }
+      if (groups.size > 1) {
+        filterDimensions.value = [{ label: '上级组织', key: 'parentId', options: Array.from(groups, ([v, l]) => ({ value: v, label: l })) }]
+      }
+    } catch { /* ignore */ }
+  } else if (dominantType === 'PLACE') {
+    const groups = new Set<string>()
+    const newMap = new Map(targetMetaMap.value)
+    for (const s of submissions.value) {
+      const m = s.targetName.match(/^(.+?)[第\d]/)
+      if (m) groups.add(m[1])
+      newMap.set(s.targetId, { targetId: s.targetId, targetName: s.targetName || `目标 #${s.targetId}`, targetType: s.targetType, parentName: m?.[1] })
+    }
+    targetMetaMap.value = newMap
+    if (groups.size > 1) {
+      filterDimensions.value = [{ label: '场所类型', key: 'parentName', options: Array.from(groups).sort().map(g => ({ value: g, label: g })) }]
+    }
+  } else if (dominantType === 'USER') {
+    const depts = new Set<string>()
+    const newMap = new Map(targetMetaMap.value)
+    for (const s of submissions.value) {
+      const dept = (s as any).targetOrgName || ''
+      if (dept) depts.add(dept)
+      newMap.set(s.targetId, { targetId: s.targetId, targetName: s.targetName || `目标 #${s.targetId}`, targetType: s.targetType, parentName: dept })
+    }
+    targetMetaMap.value = newMap
+    if (depts.size > 1) {
+      filterDimensions.value = [{ label: '所属部门', key: 'parentName', options: Array.from(depts).sort().map(d => ({ value: d, label: d })) }]
+    }
+  }
 }
 
-function getSectionProgress(sectionId: number): { done: number; total: number } {
-  const subs = getSectionSubmissions(sectionId)
+/** Unique targets deduped from submissions */
+const uniqueTargets = computed(() => {
+  const map = new Map<number, TargetMeta>()
+  for (const s of submissions.value) {
+    if (!map.has(s.targetId)) {
+      const meta = targetMetaMap.value.get(s.targetId)
+      // Use meta name (resolved from org tree) > submission name > fallback
+      const name = meta?.targetName || s.targetName || `目标 #${s.targetId}`
+      map.set(s.targetId, meta ? { ...meta, targetName: name } : { targetId: s.targetId, targetName: name, targetType: s.targetType })
+    }
+  }
+  return Array.from(map.values())
+})
+
+/** Context filter label */
+const contextFilterLabel = computed(() => filterDimensions.value[0]?.label ?? '分组')
+/** Context filter options */
+const contextFilterOptions = computed(() => filterDimensions.value[0]?.options ?? [])
+
+function getTargetStatus(targetId: number): string {
+  const subs = submissions.value.filter(s => s.targetId === targetId)
+  if (subs.length === 0) return 'PENDING'
+  if (subs.every(s => s.status === 'COMPLETED' || s.status === 'SKIPPED')) return 'COMPLETED'
+  if (subs.some(s => s.status === 'IN_PROGRESS')) return 'IN_PROGRESS'
+  return 'PENDING'
+}
+
+function getTargetProgress(targetId: number): { done: number; total: number } {
+  const subs = submissions.value.filter(s => s.targetId === targetId)
   const done = subs.filter(s => s.status === 'COMPLETED' || s.status === 'SKIPPED').length
   return { done, total: subs.length }
 }
 
-/** Status icon for section: ● done (green) ◐ in-progress (blue) ○ not started (gray) */
-function getSectionIcon(sectionId: number): 'done' | 'partial' | 'empty' {
-  const { done, total } = getSectionProgress(sectionId)
-  if (total === 0) return 'empty'
-  if (done === total) return 'done'
-  if (done > 0) return 'partial'
-  return 'empty'
-}
-
-// ==================== Targets in right panel ====================
-
-/** Submissions for the currently active section */
-const sectionSubmissions = computed(() => {
-  if (!activeSectionId.value) return submissions.value
-  return submissions.value.filter(s => s.sectionId === activeSectionId.value)
-})
-
-const currentTargetIndex = computed(() => {
-  if (!selectedSubmission.value) return -1
-  return sectionSubmissions.value.findIndex(s => s.id === selectedSubmission.value!.id)
-})
-
-const hasPrev = computed(() => currentTargetIndex.value > 0)
-const hasNext = computed(() =>
-  currentTargetIndex.value >= 0 && currentTargetIndex.value < sectionSubmissions.value.length - 1,
+const pendingCount = computed(() =>
+  uniqueTargets.value.filter(t => getTargetStatus(t.targetId) !== 'COMPLETED').length
+)
+const completedTargetCount = computed(() =>
+  uniqueTargets.value.filter(t => getTargetStatus(t.targetId) === 'COMPLETED').length
 )
 
-function goToPrev() {
-  if (hasPrev.value) selectSubmission(sectionSubmissions.value[currentTargetIndex.value - 1])
+function getTargetDotClass(targetId: number): string {
+  const s = getTargetStatus(targetId)
+  return s === 'COMPLETED' ? 'done' : s === 'IN_PROGRESS' ? 'progress' : 'pending'
 }
-function goToNext() {
-  if (hasNext.value) selectSubmission(sectionSubmissions.value[currentTargetIndex.value + 1])
+
+const filteredTargets = computed(() => {
+  let list = uniqueTargets.value
+  // Context filter (by parent id or parent name)
+  if (targetContextFilter.value) {
+    const dim = filterDimensions.value[0]
+    if (dim?.key === 'parentId') {
+      list = list.filter(t => String(t.parentId) === targetContextFilter.value)
+    } else {
+      list = list.filter(t => t.parentName === targetContextFilter.value)
+    }
+  }
+  if (targetSearch.value) {
+    const q = targetSearch.value.toLowerCase()
+    list = list.filter(t => t.targetName.toLowerCase().includes(q))
+  }
+  if (targetFilter.value === 'pending') {
+    list = list.filter(t => getTargetStatus(t.targetId) !== 'COMPLETED')
+  } else if (targetFilter.value === 'completed') {
+    list = list.filter(t => getTargetStatus(t.targetId) === 'COMPLETED')
+  }
+  return list
+})
+
+interface TargetSectionGroup {
+  section: TemplateSection | null
+  submission: InspSubmission
+  details: SubmissionDetail[]
+  collapsed: boolean
+  depth: number           // tree depth for indentation
+  isIntermediate: boolean // true = has child sections, renders as group header
+}
+const targetSectionGroups = ref<TargetSectionGroup[]>([])
+
+/** Current target index in filtered list */
+const currentTargetIdx = computed(() => {
+  if (!selectedTargetId.value) return -1
+  return filteredTargets.value.findIndex(t => t.targetId === selectedTargetId.value)
+})
+const hasNextTarget = computed(() => currentTargetIdx.value >= 0 && currentTargetIdx.value < filteredTargets.value.length - 1)
+const hasPrevTarget = computed(() => currentTargetIdx.value > 0)
+
+function goToNextTarget() {
+  if (hasNextTarget.value) selectTarget(filteredTargets.value[currentTargetIdx.value + 1].targetId)
+}
+function goToPrevTarget() {
+  if (hasPrevTarget.value) selectTarget(filteredTargets.value[currentTargetIdx.value - 1].targetId)
+}
+
+const currentTargetName = computed(() => {
+  const t = uniqueTargets.value.find(t => t.targetId === selectedTargetId.value)
+  return t?.targetName ?? ''
+})
+
+const targetItemProgress = computed(() => {
+  let total = 0, done = 0
+  for (const g of targetSectionGroups.value) {
+    if (g.isIntermediate) continue
+    total += g.details.length
+    done += g.details.filter(d =>
+      numberInputs.value[d.id] !== undefined ||
+      selectInputs.value[d.id] !== undefined ||
+      textInputs.value[d.id] !== undefined
+    ).length
+  }
+  return { done, total }
+})
+
+const targetProgressPercent = computed(() => {
+  const { done, total } = targetItemProgress.value
+  return total > 0 ? Math.round((done / total) * 100) : 0
+})
+
+const completedSectionCount = computed(() =>
+  targetSectionGroups.value.filter(g => !g.isIntermediate && g.submission.status === 'COMPLETED').length
+)
+
+const leafSectionCount = computed(() =>
+  targetSectionGroups.value.filter(g => !g.isIntermediate).length
+)
+
+const targetScore = computed(() => {
+  let total = 0
+  for (const g of targetSectionGroups.value) {
+    if (g.isIntermediate) continue
+    for (const d of g.details) {
+      const val = numberInputs.value[d.id]
+      if (val !== undefined) total += val
+    }
+  }
+  return total
+})
+
+function isDetailScored(detail: SubmissionDetail): boolean {
+  return numberInputs.value[detail.id] !== undefined ||
+    selectInputs.value[detail.id] !== undefined ||
+    textInputs.value[detail.id] !== undefined
+}
+
+function scoredCountInGroup(group: TargetSectionGroup): number {
+  return group.details.filter(d => isDetailScored(d)).length
+}
+
+function groupProgressPercent(group: TargetSectionGroup): number {
+  const total = group.details.length
+  return total > 0 ? Math.round((scoredCountInGroup(group) / total) * 100) : 0
+}
+
+/** Count child leaf sections under an intermediate group */
+function intermediateChildCount(group: TargetSectionGroup): number {
+  if (!group.section || !sectionTree.value.length) return 0
+  const node = flattenTree(sectionTree.value).find(n => n.id === Number(group.section!.id))
+  if (!node) return 0
+  return flattenTree(node.children).filter(c => c.isLeaf).length
+}
+
+/** Check if group is hidden because any ancestor intermediate section is collapsed */
+function isGroupHiddenByParent(gi: number): boolean {
+  const group = targetSectionGroups.value[gi]
+  if (!group || group.depth === 0) return false
+  // Walk backwards and check ALL ancestor intermediate sections
+  for (let i = gi - 1; i >= 0; i--) {
+    const prev = targetSectionGroups.value[i]
+    if (prev.isIntermediate && prev.depth < group.depth) {
+      if (prev.collapsed) return true
+    }
+    // Stop if we've gone past all possible parents
+    if (prev.depth === 0 && prev.isIntermediate) break
+  }
+  return false
+}
+
+async function selectTarget(targetId: number) {
+  selectedTargetId.value = targetId
+  details.value = []
+  numberInputs.value = {}
+  selectInputs.value = {}
+  textInputs.value = {}
+
+  detailLoading.value = true
+  try {
+    // Auto-transition PENDING submissions for this target
+    const subs = submissions.value.filter(s => s.targetId === targetId)
+    for (const sub of subs) {
+      if (sub.status === 'PENDING' || sub.status === 'LOCKED') {
+        try {
+          const updated = await store.startFillingSubmission(sub.id)
+          const idx = submissions.value.findIndex(s => s.id === sub.id)
+          if (idx >= 0) submissions.value[idx] = updated
+        } catch { /* non-fatal */ }
+      }
+    }
+    // Load details for all submissions of this target
+    const rawGroups: TargetSectionGroup[] = []
+    const updatedSubs = submissions.value.filter(s => s.targetId === targetId)
+    for (const sub of updatedSubs) {
+      let section = allSections.value.find(s => Number(s.id) === Number(sub.sectionId)) || null
+      // Fallback: if sectionId is null/missing, use root section
+      if (!section && !sub.sectionId && allSections.value.length > 0 && rootSectionId.value) {
+        section = allSections.value.find(s => Number(s.id) === rootSectionId.value) || allSections.value[0]
+      }
+      let dets: SubmissionDetail[] = []
+      try { dets = await store.loadDetails(sub.id) } catch { /* skip */ }
+
+      // Build groups per leaf section from template tree
+      if (sectionTree.value.length > 0) {
+        const leafNodes = flattenTree(sectionTree.value).filter(n => n.isLeaf)
+        // Index existing details by sectionId
+        const detsBySectionId = new Map<number, SubmissionDetail[]>()
+        for (const d of dets) {
+          const sid = Number(d.sectionId || 0)
+          if (!detsBySectionId.has(sid)) detsBySectionId.set(sid, [])
+          detsBySectionId.get(sid)!.push(d)
+        }
+        // For each leaf section, use saved details or load template items as placeholders
+        for (const leaf of leafNodes) {
+          const savedDets = detsBySectionId.get(leaf.id) || []
+          let leafDets: SubmissionDetail[] = savedDets
+          // If no saved details for this section, load from template
+          if (savedDets.length === 0) {
+            try {
+              const items = await inspTemplateApi.getItems(leaf.id)
+              leafDets = items.map(item => ({
+                id: -(leaf.id * 10000 + Number(item.id || 0)),
+                submissionId: sub.id,
+                templateItemId: Number(item.id),
+                itemCode: item.itemCode || '',
+                itemName: item.itemName || '',
+                itemType: item.itemType || 'NUMBER',
+                sectionId: leaf.id,
+                sectionName: leaf.sectionName || '',
+                scoringMode: 'DIRECT' as any,
+                scoringConfig: item.scoringConfig || '',
+                responseValue: '',
+                score: null as any,
+                maxScore: 100,
+              } as SubmissionDetail))
+            } catch { /* skip */ }
+          }
+          if (leafDets.length === 0) continue
+          const leafSection = allSections.value.find(s => Number(s.id) === leaf.id) || { id: leaf.id, sectionName: leaf.sectionName } as any
+          rawGroups.push({ section: leafSection, submission: sub, details: leafDets, collapsed: false, depth: 0, isIntermediate: false })
+        }
+        // Also include any details not matched to a leaf section (orphaned)
+        const leafIds = new Set(leafNodes.map(n => n.id))
+        const orphaned = dets.filter(d => !leafIds.has(Number(d.sectionId || 0)))
+        if (orphaned.length > 0) {
+          rawGroups.push({ section, submission: sub, details: orphaned, collapsed: false, depth: 0, isIntermediate: false })
+        }
+      } else {
+        rawGroups.push({ section, submission: sub, details: dets, collapsed: false, depth: 0, isIntermediate: false })
+      }
+    }
+
+    // If we have a section tree, annotate with depth and insert intermediate headers
+    if (sectionTree.value.length > 0) {
+      const allFlat = flattenTree(sectionTree.value)
+      const sectionIdToNode = new Map<number, SectionTreeNode>()
+      for (const n of allFlat) sectionIdToNode.set(n.id, n)
+
+      // Compute depth for each section from tree
+      const depthMap = new Map<number, number>()
+      const walkDepth = (nodes: SectionTreeNode[], d: number) => {
+        for (const n of nodes) { depthMap.set(n.id, d); walkDepth(n.children, d + 1) }
+      }
+      walkDepth(sectionTree.value, 0)
+
+      // Build ordered groups following tree order, inserting intermediate headers
+      const orderedGroups: TargetSectionGroup[] = []
+      const insertedIntermediates = new Set<number>()
+      const groupBySectionId = new Map<number, TargetSectionGroup>()
+      for (const g of rawGroups) {
+        if (g.section) groupBySectionId.set(Number(g.section.id), g)
+      }
+
+      const walkTree = (nodes: SectionTreeNode[]) => {
+        for (const node of nodes) {
+          const depth = depthMap.get(node.id) ?? 0
+          if (!node.isLeaf) {
+            // Insert intermediate group header (no submission/details)
+            if (!insertedIntermediates.has(node.id)) {
+              insertedIntermediates.add(node.id)
+              // Check if any child leaf has a submission for this target
+              const childLeafIds = flattenTree(node.children).filter(c => c.isLeaf).map(c => c.id)
+              const hasChildSubmissions = childLeafIds.some(id => groupBySectionId.has(id))
+              if (hasChildSubmissions) {
+                orderedGroups.push({
+                  section: allSections.value.find(s => Number(s.id) === node.id) || { id: node.id, sectionName: node.sectionName } as any,
+                  submission: {} as InspSubmission, // placeholder
+                  details: [],
+                  collapsed: false,
+                  depth,
+                  isIntermediate: true,
+                })
+              }
+            }
+            walkTree(node.children)
+          } else {
+            const existing = groupBySectionId.get(node.id)
+            if (existing) {
+              existing.depth = depth
+              existing.isIntermediate = false
+              orderedGroups.push(existing)
+            }
+          }
+        }
+      }
+      walkTree(sectionTree.value)
+
+      // Append any groups not in tree (safety fallback)
+      for (const g of rawGroups) {
+        if (!orderedGroups.includes(g)) {
+          orderedGroups.push(g)
+        }
+      }
+      targetSectionGroups.value = orderedGroups
+    } else {
+      targetSectionGroups.value = rawGroups
+    }
+    // Init inputs for all details across all groups
+    const allDets = targetSectionGroups.value.flatMap(g => g.details)
+    initInputs(allDets)
+  } finally {
+    detailLoading.value = false
+  }
+}
+
+/** Target-mode: check if a specific group's submission is editable */
+function isGroupEditable(group: TargetSectionGroup): boolean {
+  return group.submission.status === 'IN_PROGRESS'
+}
+
+/**
+ * Ensure a detail record is persisted (saved to backend).
+ * If detail.id < 0, it's a placeholder from template items - create it first.
+ * Returns the real (persisted) detail with a valid positive ID.
+ */
+async function ensureDetailPersisted(detail: SubmissionDetail): Promise<SubmissionDetail> {
+  if (detail.id > 0) return detail // Already persisted
+
+  // Create detail via API
+  const created = await createDetailApi(detail.submissionId, {
+    templateItemId: detail.templateItemId,
+    itemCode: detail.itemCode,
+    itemName: detail.itemName,
+    itemType: detail.itemType,
+    sectionId: detail.sectionId,
+    sectionName: detail.sectionName,
+    scoringMode: detail.scoringMode || 'DIRECT',
+  } as any)
+
+  // Replace placeholder in all groups
+  for (const g of targetSectionGroups.value) {
+    const idx = g.details.findIndex(d => d.id === detail.id)
+    if (idx >= 0) {
+      g.details[idx] = { ...g.details[idx], ...created, id: created.id }
+      // Update input maps with new ID
+      if (numberInputs.value[detail.id] !== undefined) {
+        numberInputs.value[created.id] = numberInputs.value[detail.id]
+        delete numberInputs.value[detail.id]
+      }
+      if (selectInputs.value[detail.id] !== undefined) {
+        selectInputs.value[created.id] = selectInputs.value[detail.id]
+        delete selectInputs.value[detail.id]
+      }
+      if (textInputs.value[detail.id] !== undefined) {
+        textInputs.value[created.id] = textInputs.value[detail.id]
+        delete textInputs.value[detail.id]
+      }
+      break
+    }
+  }
+  return created
+}
+
+/** Get all submissions for a given section */
+function getSubmissionsForSection(sectionId: number): InspSubmission[] {
+  return submissions.value.filter(s => String(s.sectionId) === String(sectionId))
 }
 
 // ==================== Scoring State & Helpers ====================
@@ -188,6 +602,12 @@ const scoreSummary = computed(() => {
   }
 })
 
+/**
+ * Estimate-only grade calculation with hardcoded thresholds.
+ * Used only for real-time preview during IN_PROGRESS status.
+ * The actual grade is calculated by the backend scoring engine
+ * (ScoringProfile + dimensions + grade bands) on submission complete.
+ */
 function getGrade(score: number): string {
   if (score >= 95) return 'A+'
   if (score >= 90) return 'A'
@@ -206,24 +626,18 @@ function getGradeColor(grade: string): string {
 
 // ==================== Deduction button groups ====================
 
-/** Generate deduction buttons based on scoringConfig.maxDeduction */
-function getDeductionSteps(detail: SubmissionDetail): number[] {
+/** Deduction range for el-input-number */
+function getDeductionRange(detail: SubmissionDetail): { min: number; step: number } {
   const cfg = parseScoringConfig(detail)
   const max = cfg.maxDeduction ?? cfg.maxScore ?? 5
-  const step = cfg.step ?? 1
-  const steps: number[] = [0]
-  for (let i = step; i <= max; i += step) steps.push(-i)
-  return steps
+  return { min: -max, step: cfg.step ?? cfg.deductPerViolation ?? 1 }
 }
 
-/** Generate addition buttons */
-function getAdditionSteps(detail: SubmissionDetail): number[] {
+/** Addition range for el-input-number */
+function getAdditionRange(detail: SubmissionDetail): { max: number; step: number } {
   const cfg = parseScoringConfig(detail)
   const max = cfg.maxAddition ?? cfg.maxBonus ?? cfg.maxScore ?? 5
-  const step = cfg.step ?? 1
-  const steps: number[] = []
-  for (let i = 0; i <= max; i += step) steps.push(i)
-  return steps
+  return { max, step: cfg.step ?? 1 }
 }
 
 /** Grade levels config */
@@ -261,74 +675,122 @@ function getCumulativeConfig(detail: SubmissionDetail): { countLabel: string; sc
 async function handleDeductionSelect(detail: SubmissionDetail, val: number) {
   numberInputs.value[detail.id] = val
   try {
-    await store.updateDetailResponse(detail.id, {
+    const real = await ensureDetailPersisted(detail)
+    await store.updateDetailResponse(real.id, {
       responseValue: String(val),
       scoringMode: 'DEDUCTION',
       score: val,
     })
-  } catch { /* silent */ }
+  } catch (e: any) { console.error('扣分保存失败', e); ElMessage.error('扣分保存失败，请重试') }
 }
 
 async function handlePassFail(detail: SubmissionDetail, val: 'PASS' | 'FAIL') {
+  const isDeselect = selectInputs.value[detail.id] === val
+  if (isDeselect) {
+    delete selectInputs.value[detail.id]
+    try {
+      const real = await ensureDetailPersisted(detail)
+      await store.updateDetailResponse(real.id, { responseValue: '', scoringMode: 'PASS_FAIL', score: 0 })
+    } catch (e: any) { console.error('取消评判失败', e); ElMessage.error('取消评判失败，请重试') }
+    return
+  }
   selectInputs.value[detail.id] = val
   const cfg = parseScoringConfig(detail)
   const score = val === 'PASS' ? (cfg.passScore ?? 0) : (cfg.failScore ?? -5)
   try {
-    await store.updateDetailResponse(detail.id, {
+    const real = await ensureDetailPersisted(detail)
+    await store.updateDetailResponse(real.id, {
       responseValue: val,
       scoringMode: 'PASS_FAIL',
       score,
     })
-  } catch { /* silent */ }
+  } catch (e: any) { console.error('评判保存失败', e); ElMessage.error('评判保存失败，请重试') }
 }
 
 async function handleGradeSelect(detail: SubmissionDetail, label: string, score: number) {
+  const isDeselect = selectInputs.value[detail.id] === label
+  if (isDeselect) {
+    delete selectInputs.value[detail.id]
+    delete numberInputs.value[detail.id]
+    try {
+      const real = await ensureDetailPersisted(detail)
+      await store.updateDetailResponse(real.id, { responseValue: '', scoringMode: detail.scoringMode!, score: 0 })
+    } catch (e: any) { console.error('取消等级失败', e); ElMessage.error('取消等级失败，请重试') }
+    return
+  }
   selectInputs.value[detail.id] = label
   numberInputs.value[detail.id] = score
   try {
-    await store.updateDetailResponse(detail.id, {
+    const real = await ensureDetailPersisted(detail)
+    await store.updateDetailResponse(real.id, {
       responseValue: label,
       scoringMode: detail.scoringMode!,
       score,
     })
-  } catch { /* silent */ }
+  } catch (e: any) { console.error('等级保存失败', e); ElMessage.error('等级保存失败，请重试') }
 }
 
 async function handleAdditionSelect(detail: SubmissionDetail, val: number) {
   numberInputs.value[detail.id] = val
   try {
-    await store.updateDetailResponse(detail.id, {
+    const real = await ensureDetailPersisted(detail)
+    await store.updateDetailResponse(real.id, {
       responseValue: String(val),
       scoringMode: 'ADDITION',
       score: val,
     })
-  } catch { /* silent */ }
+  } catch (e: any) { console.error('加分保存失败', e); ElMessage.error('加分保存失败，请重试') }
 }
 
 async function handleDirectInput(detail: SubmissionDetail, val: number) {
   numberInputs.value[detail.id] = val
   try {
-    await store.updateDetailResponse(detail.id, {
+    const real = await ensureDetailPersisted(detail)
+    await store.updateDetailResponse(real.id, {
       responseValue: String(val),
       scoringMode: 'DIRECT',
       score: val,
     })
-  } catch { /* silent */ }
+  } catch (e: any) { console.error('分数保存失败', e); ElMessage.error('分数保存失败，请重试') }
 }
 
 async function handleRatingScale(detail: SubmissionDetail, stars: number) {
+  const isDeselect = numberInputs.value[detail.id] === stars
+  if (isDeselect) {
+    delete numberInputs.value[detail.id]
+    try {
+      const real = await ensureDetailPersisted(detail)
+      await store.updateDetailResponse(real.id, { responseValue: '', scoringMode: 'RATING_SCALE', score: 0 })
+    } catch (e: any) { console.error('取消评分失败', e); ElMessage.error('取消评分失败，请重试') }
+    return
+  }
   numberInputs.value[detail.id] = stars
   const cfg = parseScoringConfig(detail)
   const maxScore = cfg.maxScore ?? 100
   const maxStars = getRatingMax(detail)
   const score = Math.round((stars / maxStars) * maxScore)
   try {
-    await store.updateDetailResponse(detail.id, {
+    const real = await ensureDetailPersisted(detail)
+    await store.updateDetailResponse(real.id, {
       responseValue: String(stars),
       scoringMode: 'RATING_SCALE',
       score,
     })
-  } catch { /* silent */ }
+  } catch (e: any) { console.error('评分保存失败', e); ElMessage.error('评分保存失败，请重试') }
+}
+
+function handleDeductionStep(detail: SubmissionDetail, direction: number) {
+  const range = getDeductionRange(detail)
+  const current = numberInputs.value[detail.id] ?? 0
+  const next = Math.max(range.min, Math.min(0, current + direction * range.step))
+  if (next !== current) handleDeductionSelect(detail, next)
+}
+
+function handleAdditionStep(detail: SubmissionDetail, direction: number) {
+  const range = getAdditionRange(detail)
+  const current = numberInputs.value[detail.id] ?? 0
+  const next = Math.max(0, Math.min(range.max, current + direction * range.step))
+  if (next !== current) handleAdditionSelect(detail, next)
 }
 
 function handleCumulativeChange(detail: SubmissionDetail, delta: number) {
@@ -337,11 +799,13 @@ function handleCumulativeChange(detail: SubmissionDetail, delta: number) {
   numberInputs.value[detail.id] = next
   const cfg = getCumulativeConfig(detail)
   const score = next * cfg.scorePerUnit
-  store.updateDetailResponse(detail.id, {
-    responseValue: String(next),
-    scoringMode: 'CUMULATIVE',
-    score,
-  }).catch(() => {})
+  ensureDetailPersisted(detail).then(real =>
+    store.updateDetailResponse(real.id, {
+      responseValue: String(next),
+      scoringMode: 'CUMULATIVE',
+      score,
+    })
+  ).catch((e: any) => { console.error('计数保存失败', e); ElMessage.error('计数保存失败，请重试') })
 }
 
 async function handleTextInput(detail: SubmissionDetail, val: string) {
@@ -351,11 +815,12 @@ async function handleTextInput(detail: SubmissionDetail, val: string) {
 async function saveTextInput(detail: SubmissionDetail) {
   const val = textInputs.value[detail.id] ?? ''
   try {
-    await store.updateDetailResponse(detail.id, {
+    const real = await ensureDetailPersisted(detail)
+    await store.updateDetailResponse(real.id, {
       responseValue: val,
       score: undefined,
     })
-  } catch { /* silent */ }
+  } catch (e: any) { console.error('文本保存失败', e); ElMessage.error('文本保存失败，请重试') }
 }
 
 // ==================== Init inputs from existing response ====================
@@ -379,12 +844,6 @@ function initInputs(list: SubmissionDetail[]) {
   }
 }
 
-// ==================== Section active section targetType ====================
-
-const activeSectionInfo = computed(() =>
-  allSections.value.find(s => s.id === activeSectionId.value) ?? null,
-)
-
 // ==================== Data Loading ====================
 
 async function loadData() {
@@ -393,17 +852,30 @@ async function loadData() {
     task.value = await store.loadTask(taskId)
     submissions.value = await store.loadSubmissions(taskId)
 
+    // 如果 submissions 为空，尝试重新填充
+    if (task.value && submissions.value.length === 0 && task.value.totalTargets === 0) {
+      try {
+        await http.post(`/v7/insp/tasks/${taskId}/repopulate`)
+        task.value = await store.loadTask(taskId)
+        submissions.value = await store.loadSubmissions(taskId)
+      } catch (e: any) {
+        console.warn('重新填充 submissions 失败', e)
+      }
+    }
+
     if (task.value) {
       try {
         const project = await getProject(task.value.projectId)
         // 多模板项目：从计划获取 rootSectionId，回退到项目的
         let rsi = project.rootSectionId
-        if (!rsi && task.value.planId) {
+        if (!rsi) {
           try {
-            const plans = await http.get<any[]>(`/v7/insp/projects/${task.value.projectId}/plans`)
-            const plan = plans?.find((p: any) => Number(p.id) === Number(task.value!.planId)) || plans?.[0]
+            const plans = await http.get<any[]>('/v7/insp/plans', { params: { projectId: task.value.projectId } })
+            const plan = task.value.inspectionPlanId
+              ? plans?.find((p: any) => Number(p.id) === Number(task.value!.inspectionPlanId)) || plans?.[0]
+              : plans?.[0]
             if (plan?.rootSectionId) rsi = plan.rootSectionId
-          } catch {}
+          } catch (e: any) { console.warn('加载检查计划失败，尝试其他方式', e) }
         }
         // 再回退：从 submissions 的 sectionId 找根分区
         if (!rsi && submissions.value.length > 0) {
@@ -411,25 +883,37 @@ async function loadData() {
           try {
             const sec = await inspTemplateApi.getSection(secId)
             rsi = sec.parentSectionId || secId
-          } catch {}
+          } catch (e: any) { console.warn('从提交记录推断分区失败', e) }
         }
         if (rsi) {
           rootSectionId.value = Number(rsi)
           try {
             allSections.value = await inspTemplateApi.getSections(Number(rsi))
-          } catch {
+          } catch (e: any) {
+            console.warn('getSections 失败，回退到 getChildSections', e)
             // 如果 getSections(tree) 失败，用 getChildSections
             try {
               allSections.value = await inspTemplateApi.getChildSections(Number(rsi))
-            } catch {}
+            } catch (e2: any) { console.error('加载分区失败', e2); ElMessage.error('加载检查分区失败') }
+          }
+          // Build section tree for multi-level rendering
+          if (allSections.value.length > 0) {
+            sectionTree.value = buildSectionTree(allSections.value, Number(rsi))
           }
         }
-      } catch { /* ignore */ }
+      } catch (e: any) { console.error('加载项目信息失败', e); ElMessage.error('加载项目信息失败') }
     }
 
-    // Auto-select first section
-    if (firstLevelSections.value.length > 0 && !activeSectionId.value) {
-      activeSectionId.value = firstLevelSections.value[0].id
+    // Load target filter context (org tree, etc.) - must await before rendering targets
+    if (submissions.value.length > 0) {
+      try { await loadTargetFilterContext() } catch { /* non-fatal */ }
+    }
+
+    // Auto-select first pending target
+    if (uniqueTargets.value.length > 0 && !selectedTargetId.value) {
+      // Select first pending target, or first target
+      const pending = uniqueTargets.value.find(t => getTargetStatus(t.targetId) !== 'COMPLETED')
+      await selectTarget((pending || uniqueTargets.value[0]).targetId)
     }
   } catch (e: any) {
     ElMessage.error(e.message || '加载失败')
@@ -438,30 +922,13 @@ async function loadData() {
   }
 }
 
-async function selectSubmission(sub: InspSubmission) {
-  selectedSubmission.value = sub
-  numberInputs.value = {}
-  selectInputs.value = {}
-  textInputs.value = {}
-  detailLoading.value = true
-  try {
-    const list = await store.loadDetails(sub.id)
-    details.value = list
-    initInputs(list)
-  } catch (e: any) {
-    ElMessage.error(e.message || '加载明细失败')
-  } finally {
-    detailLoading.value = false
-  }
-}
-
 async function reloadAll(keepSelected = true) {
-  const prevId = selectedSubmission.value?.id
+  const prevTargetId = selectedTargetId.value
   submissions.value = await store.loadSubmissions(taskId)
   task.value = await store.loadTask(taskId)
-  if (keepSelected && prevId) {
-    const updated = submissions.value.find(s => s.id === prevId)
-    if (updated) selectedSubmission.value = updated
+  if (keepSelected && prevTargetId) {
+    // Re-select the same target to refresh its groups
+    await selectTarget(prevTargetId)
   }
 }
 
@@ -479,73 +946,89 @@ async function handleStartTask() {
 
 async function handleSubmitTask() {
   try {
-    await ElMessageBox.confirm('确认提交此检查任务？提交后不可修改。', '提交确认', { type: 'warning' })
+    await ElMessageBox.confirm('确认提交此检查任务？提交后如需修改可撤回。', '提交确认', { type: 'warning' })
     await store.submitTask(taskId)
     ElMessage.success('任务已提交')
     await reloadAll(false)
-  } catch { /* cancelled */ }
-}
-
-// ==================== Submission Lifecycle ====================
-
-async function handleStartFilling(sub: InspSubmission) {
-  try {
-    await store.startFillingSubmission(sub.id)
-    ElMessage.success('开始打分')
-    await reloadAll()
-    const updated = submissions.value.find(s => s.id === sub.id)
-    if (updated) await selectSubmission(updated)
   } catch (e: any) {
-    ElMessage.error(e.message || '操作失败')
+    if (e !== 'cancel' && e?.toString?.() !== 'cancel') { console.error('提交任务失败', e); ElMessage.error('提交任务失败，请重试') }
   }
 }
 
-async function handleLock(sub: InspSubmission) {
+async function handleWithdrawTask() {
   try {
-    await store.lockSubmission(sub.id)
-    ElMessage.success('已锁定')
-    await reloadAll()
+    await ElMessageBox.confirm('撤回后任务将回到进行中状态，可重新修改打分。', '撤回确认', { type: 'info' })
+    await store.withdrawTask(taskId)
+    ElMessage.success('任务已撤回，可重新修改')
+    await reloadAll(false)
   } catch (e: any) {
-    ElMessage.error(e.message || '锁定失败')
+    if (e !== 'cancel' && e?.toString?.() !== 'cancel') { console.error('撤回失败', e); ElMessage.error('撤回失败，请重试') }
   }
 }
 
-async function handleSkip(sub: InspSubmission) {
-  try {
-    await ElMessageBox.confirm('确定跳过此检查对象？', '确认', { type: 'warning' })
-    await store.skipSubmission(sub.id)
-    ElMessage.success('已跳过')
-    await reloadAll()
-    selectedSubmission.value = null
-    details.value = []
-  } catch { /* cancelled */ }
-}
+// ==================== Target Completion ====================
 
-async function handleComplete() {
-  if (!selectedSubmission.value) return
-  const s = scoreSummary.value
-  if (s.scored < s.total) {
-    ElMessage.warning(`还有 ${s.total - s.scored} 项未评分`)
-    return
-  }
-  const grade = getGrade(s.finalScore)
-  try {
-    await store.completeSubmission(selectedSubmission.value.id, {
-      baseScore: s.finalScore,
-      finalScore: s.finalScore,
-      deductionTotal: s.deductions,
-      bonusTotal: s.bonuses,
-      scoreBreakdown: JSON.stringify({
-        passCount: s.passCount,
-        failCount: s.failCount,
-        deductions: s.deductions,
-        bonuses: s.bonuses,
-      }),
-      grade,
-      passed: s.finalScore >= 60,
+/** Target mode: complete all sections for the selected target */
+async function handleCompleteTarget() {
+  if (!selectedTargetId.value) return
+  const groups = targetSectionGroups.value
+  // Check all groups have all items scored
+  for (const group of groups) {
+    if (group.isIntermediate) continue
+    if (group.submission.status === 'COMPLETED' || group.submission.status === 'SKIPPED') continue
+    const scorable = group.details.filter(d => d.scoringMode)
+    const scored = scorable.filter(d => {
+      if (['DEDUCTION', 'ADDITION', 'DIRECT', 'CUMULATIVE', 'RATING_SCALE'].includes(d.scoringMode!)) {
+        return numberInputs.value[d.id] !== undefined
+      }
+      if (['PASS_FAIL', 'LEVEL', 'SCORE_TABLE', 'TIERED_DEDUCTION'].includes(d.scoringMode!)) {
+        return selectInputs.value[d.id] !== undefined
+      }
+      return d.responseValue != null && d.responseValue !== ''
     })
-    ElMessage.success(`完成！得分 ${s.finalScore}（${grade}）`)
+    if (scored.length < scorable.length) {
+      ElMessage.warning(`「${group.section?.sectionName || '分区'}」还有 ${scorable.length - scored.length} 项未评分`)
+      return
+    }
+  }
+  try {
+    for (const group of groups) {
+      if (group.isIntermediate) continue
+      if (group.submission.status !== 'IN_PROGRESS') continue
+      // Calculate score for this group
+      let deductions = 0, bonuses = 0, base = 100, passCount = 0, failCount = 0
+      for (const d of group.details) {
+        if (!d.scoringMode) continue
+        const num = numberInputs.value[d.id]
+        const sel = selectInputs.value[d.id]
+        if (d.scoringMode === 'DEDUCTION' && num != null) deductions += Math.abs(num)
+        else if (d.scoringMode === 'ADDITION' && num != null) bonuses += num
+        else if (d.scoringMode === 'PASS_FAIL') { if (sel === 'PASS') passCount++; else failCount++ }
+        else if (['LEVEL', 'SCORE_TABLE', 'TIERED_DEDUCTION'].includes(d.scoringMode) && num != null) {
+          // score is already set via handleGradeSelect
+        }
+        else if (d.scoringMode === 'DIRECT' && num != null) base = num
+      }
+      const finalScore = Math.max(0, base - deductions + bonuses)
+      const grade = getGrade(finalScore)
+      await store.completeSubmission(group.submission.id, {
+        baseScore: finalScore,
+        finalScore,
+        deductionTotal: deductions,
+        bonusTotal: bonuses,
+        scoreBreakdown: JSON.stringify({ passCount, failCount, deductions, bonuses }),
+        grade,
+        passed: finalScore >= 60,
+      })
+    }
+    ElMessage.success('所有分区评分已完成')
     await reloadAll()
+    // Auto-advance to next target
+    if (hasNextTarget.value) {
+      const next = filteredTargets.value.find(t => getTargetStatus(t.targetId) !== 'COMPLETED')
+      if (next) await selectTarget(next.targetId)
+      else goToNextTarget()
+    }
   } catch (e: any) {
     ElMessage.error(e.message || '完成失败')
   }
@@ -555,32 +1038,10 @@ function goBack() {
   router.push('/inspection/v7/tasks')
 }
 
-// ==================== Computed: items split by type ====================
-
-const regularItems = computed(() =>
-  details.value.filter(d => d.itemType !== 'PERSON_SCORE' && d.itemType !== 'VIOLATION_RECORD'),
-)
-const personScoreItems = computed(() =>
-  details.value.filter(d => d.itemType === 'PERSON_SCORE'),
-)
-const violationItems = computed(() =>
-  details.value.filter(d => d.itemType === 'VIOLATION_RECORD'),
-)
-
 const progressText = computed(() => {
   if (!task.value) return ''
   const done = task.value.completedTargets + task.value.skippedTargets
   return `${done}/${task.value.totalTargets}`
-})
-
-// ==================== Watchers ====================
-
-watch(activeSectionId, () => {
-  selectedSubmission.value = null
-  details.value = []
-  numberInputs.value = {}
-  selectInputs.value = {}
-  textInputs.value = {}
 })
 
 onMounted(() => loadData())
@@ -629,392 +1090,261 @@ onMounted(() => loadData())
         >
           <Send :size="13" class="btn-icon" />提交任务
         </el-button>
+        <el-button
+          v-if="task.status === 'SUBMITTED'"
+          type="info" size="small"
+          @click="handleWithdrawTask"
+        >
+          <RotateCcw :size="13" class="btn-icon" />撤回
+        </el-button>
       </div>
     </div>
 
     <!-- ===== MAIN BODY ===== -->
     <div class="main-body">
 
-      <!-- ===== LEFT: SECTION NAV ===== -->
-      <div class="section-nav">
-        <div class="section-nav-header">分区导航</div>
-        <div
-          v-for="sec in firstLevelSections"
-          :key="sec.id"
-          class="section-item"
-          :class="{ active: activeSectionId === sec.id }"
-          @click="activeSectionId = sec.id"
-        >
-          <!-- Status indicator -->
-          <span
-            class="sec-dot"
-            :class="{
-              'sec-dot--done':    getSectionIcon(sec.id) === 'done',
-              'sec-dot--partial': getSectionIcon(sec.id) === 'partial',
-              'sec-dot--empty':   getSectionIcon(sec.id) === 'empty',
-            }"
-          />
-          <div class="sec-label-wrap">
-            <span class="sec-name">{{ sec.sectionName }}</span>
-            <span class="sec-prog">
-              {{ getSectionProgress(sec.id).done }}/{{ getSectionProgress(sec.id).total }}
-            </span>
+      <!-- ===== LEFT SIDEBAR ===== -->
+      <div class="sidebar">
+        <div class="sidebar-header">
+          <div class="search-box">
+            <el-input v-model="targetSearch" placeholder="搜索目标..." size="small" clearable>
+              <template #prefix><Search :size="13" /></template>
+            </el-input>
+          </div>
+          <div v-if="contextFilterOptions.length > 1" class="filter-row">
+            <select v-model="targetContextFilter" class="filter-select">
+              <option value="">{{ contextFilterLabel }}: 全部</option>
+              <option v-for="opt in contextFilterOptions" :key="opt.value" :value="opt.value">{{ opt.label }}</option>
+            </select>
+          </div>
+          <div class="status-pills">
+            <button class="status-pill" :class="{ active: targetFilter === 'all' }" @click="targetFilter = 'all'">
+              全部 <span class="pill-count">{{ uniqueTargets.length }}</span>
+            </button>
+            <button class="status-pill" :class="{ active: targetFilter === 'pending' }" @click="targetFilter = 'pending'">
+              待检 <span class="pill-count">{{ pendingCount }}</span>
+            </button>
+            <button class="status-pill" :class="{ active: targetFilter === 'completed' }" @click="targetFilter = 'completed'">
+              已完成 <span class="pill-count">{{ completedTargetCount }}</span>
+            </button>
           </div>
         </div>
-        <div v-if="firstLevelSections.length === 0" class="section-empty">
-          暂无分区
+        <div class="target-list">
+          <div
+            v-for="t in filteredTargets" :key="t.targetId"
+            class="target-item" :class="{ active: selectedTargetId === t.targetId }"
+            @click="selectTarget(t.targetId)"
+          >
+            <span class="target-dot" :class="getTargetDotClass(t.targetId)" />
+            <span class="target-name">{{ t.targetName }}</span>
+            <span class="target-score">{{ getTargetProgress(t.targetId).done }}/{{ getTargetProgress(t.targetId).total }}</span>
+          </div>
+          <div v-if="filteredTargets.length === 0" class="target-empty">无匹配目标</div>
         </div>
       </div>
 
       <!-- ===== RIGHT: SCORING PANEL ===== -->
       <div class="scoring-panel">
 
-        <!-- === Section header row === -->
-        <div class="section-header-row" v-if="activeSectionInfo">
-          <span class="sec-header-name">{{ activeSectionInfo.sectionName }}</span>
-          <el-tag
-            v-if="activeSectionInfo.targetType"
-            size="small"
-            type="info"
-            effect="plain"
-          >
-            {{ TargetTypeConfig[activeSectionInfo.targetType]?.label ?? activeSectionInfo.targetType }}
-          </el-tag>
+        <!-- Panel Header -->
+        <div class="panel-header" v-if="selectedTargetId">
+          <div class="panel-header-info">
+            <div class="panel-target-name">{{ currentTargetName }}</div>
+            <div class="panel-progress">
+              <span>{{ targetItemProgress.done }}/{{ targetItemProgress.total }} 已评</span>
+              <div class="progress-bar-wrap">
+                <div class="progress-bar-fill" :style="{ width: targetProgressPercent + '%' }" />
+              </div>
+              <span class="progress-pct" :style="{ color: 'var(--blue)' }">{{ targetProgressPercent }}%</span>
+            </div>
+          </div>
+          <button class="nav-btn" :disabled="!hasPrevTarget" @click="goToPrevTarget">
+            <ChevronLeft :size="16" />
+          </button>
+          <button class="nav-btn" :disabled="!hasNextTarget" @click="goToNextTarget">
+            <ChevronRight :size="16" />
+          </button>
         </div>
 
-        <!-- === Target pill selector === -->
-        <div class="target-row">
-          <div class="target-pills">
-            <button
-              v-for="sub in sectionSubmissions"
-              :key="sub.id"
-              class="target-pill"
-              :class="{
-                'target-pill--active':     selectedSubmission?.id === sub.id,
-                'target-pill--completed':  sub.status === 'COMPLETED',
-                'target-pill--skipped':    sub.status === 'SKIPPED',
-                'target-pill--inprogress': sub.status === 'IN_PROGRESS',
-              }"
-              @click="selectSubmission(sub)"
-            >
-              <Check v-if="sub.status === 'COMPLETED'" :size="11" class="pill-check" />
-              {{ sub.targetName || sub.rootTargetName || activeSectionInfo?.sectionName || '检查对象' }}
-            </button>
-            <span v-if="sectionSubmissions.length === 0" class="target-empty-hint">
-              本分区暂无检查对象
-            </span>
+        <!-- Scrollable Body -->
+        <div class="panel-body" v-loading="detailLoading">
+          <div v-if="!selectedTargetId" class="panel-empty">
+            <Target :size="28" style="color: var(--gray-300)" />
+            <p>请在左侧选择检查目标</p>
           </div>
-          <div class="target-nav">
-            <button class="nav-btn" :disabled="!hasPrev" @click="goToPrev">
-              <ChevronLeft :size="14" />
-            </button>
-            <span class="nav-count">
-              {{ currentTargetIndex >= 0 ? currentTargetIndex + 1 : '-' }}
-              /
-              {{ sectionSubmissions.length }}
-            </span>
-            <button class="nav-btn" :disabled="!hasNext" @click="goToNext">
-              <ChevronRight :size="14" />
-            </button>
-          </div>
+          <template v-else>
+            <!-- Section cards -->
+            <div v-for="(group, gi) in targetSectionGroups" :key="gi"
+              v-show="!isGroupHiddenByParent(gi)"
+              class="section" :class="{ collapsed: group.collapsed, 'section--intermediate': group.isIntermediate, [`section--depth-${group.depth}`]: true }"
+              :style="{ paddingLeft: group.depth * 24 + 'px' }">
+              <!-- Depth connector line -->
+              <div v-if="group.depth > 0" class="section-depth-line" :style="{ left: (group.depth * 24 - 12) + 'px' }" />
+              <!-- Intermediate section: group header only -->
+              <div v-if="group.isIntermediate" class="section-header section-header--intermediate" @click="group.collapsed = !group.collapsed">
+                <svg class="section-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>
+                <span class="section-depth-badge" v-if="group.depth > 0">L{{ group.depth }}</span>
+                <span class="section-title section-title--intermediate">{{ group.section?.sectionName || '未知分组' }}</span>
+                <div class="section-meta">
+                  <span class="section-count">{{ intermediateChildCount(group) }} 子分区</span>
+                </div>
+              </div>
+              <!-- Leaf section: normal header with progress -->
+              <div v-else class="section-header" @click="group.collapsed = !group.collapsed">
+                <svg class="section-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>
+                <span class="section-depth-badge" v-if="group.depth > 0">L{{ group.depth }}</span>
+                <span class="section-title">{{ group.section?.sectionName || '未知分区' }}</span>
+                <div class="section-meta">
+                  <span class="section-count">{{ group.details.length }}项</span>
+                  <span>{{ scoredCountInGroup(group) }}/{{ group.details.length }} 已评</span>
+                  <div class="section-progress-mini">
+                    <div class="section-progress-fill" :style="{ width: groupProgressPercent(group) + '%' }" />
+                  </div>
+                </div>
+              </div>
+              <div v-if="!group.isIntermediate" class="section-body">
+                <!-- Field cards with scoring controls -->
+                <div v-for="detail in group.details" :key="detail.id"
+                  class="score-card" :class="{ scored: isDetailScored(detail), 'score-card--fullwidth': detail.inputMode === 'EVENT_STREAM' }">
+                  <div class="card-top">
+                    <span class="card-name">{{ detail.itemName }}</span>
+                    <el-tag v-if="detail.scoringMode" size="small" effect="plain"
+                      :type="detail.scoringMode === 'DEDUCTION' ? 'danger' : detail.scoringMode === 'ADDITION' ? 'success' : detail.scoringMode === 'PASS_FAIL' ? '' : 'warning'"
+                    >{{ ScoringModeConfig[detail.scoringMode]?.label ?? detail.scoringMode }}</el-tag>
+                    <el-tag v-else size="small" type="info" effect="plain">采集</el-tag>
+                  </div>
+                  <!-- EVENT_STREAM mode: show search+record interface -->
+                  <template v-if="detail.inputMode === 'EVENT_STREAM'">
+                    <EventStreamRecorder
+                      :section-id="Number(group.submission.sectionId || 0)"
+                      :target-type="group.submission.targetType"
+                      :items="[detail]"
+                      :submissions="getSubmissionsForSection(Number(group.submission.sectionId || 0))"
+                      :disabled="!isGroupEditable(group)"
+                    />
+                  </template>
+                  <!-- INLINE mode: standard scoring controls -->
+                  <div v-else-if="detail.scoringMode === 'DEDUCTION'" class="card-control">
+                    <div class="stepper">
+                      <button class="stepper-btn" :disabled="!isGroupEditable(group) || (numberInputs[detail.id] ?? 0) <= getDeductionRange(detail).min"
+                        @click="handleDeductionStep(detail, -1)">−</button>
+                      <span class="stepper-value" :class="{ negative: (numberInputs[detail.id] ?? 0) < 0 }">
+                        {{ numberInputs[detail.id] ?? 0 }}
+                      </span>
+                      <button class="stepper-btn" :disabled="!isGroupEditable(group) || (numberInputs[detail.id] ?? 0) >= 0"
+                        @click="handleDeductionStep(detail, 1)">+</button>
+                    </div>
+                    <span v-if="(numberInputs[detail.id] ?? 0) < 0" class="score-hint">{{ numberInputs[detail.id] }}分</span>
+                  </div>
+                  <div v-else-if="detail.scoringMode === 'ADDITION'" class="card-control">
+                    <div class="stepper">
+                      <button class="stepper-btn" :disabled="!isGroupEditable(group) || (numberInputs[detail.id] ?? 0) <= 0"
+                        @click="handleAdditionStep(detail, -1)">−</button>
+                      <span class="stepper-value" :class="{ positive: (numberInputs[detail.id] ?? 0) > 0 }">
+                        {{ numberInputs[detail.id] ?? 0 }}
+                      </span>
+                      <button class="stepper-btn" :disabled="!isGroupEditable(group) || (numberInputs[detail.id] ?? 0) >= getAdditionRange(detail).max"
+                        @click="handleAdditionStep(detail, 1)">+</button>
+                    </div>
+                    <span v-if="(numberInputs[detail.id] ?? 0) > 0" class="score-hint">+{{ numberInputs[detail.id] }}分</span>
+                  </div>
+                  <div v-else-if="detail.scoringMode === 'PASS_FAIL'" class="card-control">
+                    <div class="pill-group">
+                      <button class="pill-btn" :class="{ 'active-green': selectInputs[detail.id] === 'PASS' }"
+                        :disabled="!isGroupEditable(group)" @click="handlePassFail(detail, 'PASS')">&#10003; 通过 <span class="pill-score">{{ parseScoringConfig(detail).passScore ?? 0 }}分</span></button>
+                      <button class="pill-btn" :class="{ 'active-red': selectInputs[detail.id] === 'FAIL' }"
+                        :disabled="!isGroupEditable(group)" @click="handlePassFail(detail, 'FAIL')">&#10007; 不通过 <span class="pill-score">{{ parseScoringConfig(detail).failScore ?? -5 }}分</span></button>
+                    </div>
+                  </div>
+                  <div v-else-if="['LEVEL','SCORE_TABLE','TIERED_DEDUCTION'].includes(detail.scoringMode!)" class="card-control">
+                    <div class="pill-group">
+                      <button v-for="lv in getGradeLevels(detail)" :key="lv.label"
+                        class="pill-btn" :class="{ 'active-blue': selectInputs[detail.id] === lv.label }"
+                        :disabled="!isGroupEditable(group)" @click="handleGradeSelect(detail, lv.label, lv.score)">
+                        {{ lv.label }} <span class="pill-score">{{ lv.score }}分</span>
+                      </button>
+                    </div>
+                  </div>
+                  <div v-else-if="detail.scoringMode === 'DIRECT'" class="card-control card-control--direct">
+                    <el-input-number v-model="numberInputs[detail.id]" :min="getDirectRange(detail).min" :max="getDirectRange(detail).max"
+                      :disabled="!isGroupEditable(group)" size="small" style="width: 120px" @change="(val: number) => handleDirectInput(detail, val)" />
+                    <span class="range-hint">范围 {{ getDirectRange(detail).min }}–{{ getDirectRange(detail).max }}</span>
+                  </div>
+                  <div v-else-if="detail.scoringMode === 'RATING_SCALE'" class="card-control">
+                    <button v-for="n in getRatingMax(detail)" :key="n" class="star-btn"
+                      :class="{ 'star-btn--active': (numberInputs[detail.id] ?? 0) >= n }"
+                      :disabled="!isGroupEditable(group)" @click="handleRatingScale(detail, n)"><Star :size="18" /></button>
+                    <span class="star-val" v-if="numberInputs[detail.id] !== undefined">{{ numberInputs[detail.id] }}/{{ getRatingMax(detail) }} <span class="pill-score">{{ Math.round((numberInputs[detail.id] / getRatingMax(detail)) * (parseScoringConfig(detail).maxScore ?? 100)) }}分</span></span>
+                  </div>
+                  <div v-else-if="detail.scoringMode === 'CUMULATIVE'" class="card-control">
+                    <div class="stepper">
+                      <button class="stepper-btn" :disabled="!isGroupEditable(group) || (numberInputs[detail.id] ?? 0) <= 0"
+                        @click="handleCumulativeChange(detail, -1)">−</button>
+                      <span class="stepper-value">{{ numberInputs[detail.id] ?? 0 }}</span>
+                      <button class="stepper-btn" :disabled="!isGroupEditable(group)"
+                        @click="handleCumulativeChange(detail, 1)">+</button>
+                    </div>
+                    <span class="counter-unit">{{ getCumulativeConfig(detail).countLabel }}</span>
+                    <span class="score-hint">× {{ getCumulativeConfig(detail).scorePerUnit }}分 = {{ (numberInputs[detail.id] ?? 0) * getCumulativeConfig(detail).scorePerUnit }}分</span>
+                  </div>
+                  <div v-else-if="!detail.scoringMode && detail.itemType !== 'VIOLATION_RECORD' && detail.itemType !== 'PERSON_SCORE'" class="card-control card-control--capture">
+                    <el-input v-model="textInputs[detail.id]" :disabled="!isGroupEditable(group)" size="small" placeholder="请填写..." clearable @blur="saveTextInput(detail)" />
+                  </div>
+                  <!-- VIOLATION_RECORD: EVENT_STREAM or INLINE mode -->
+                  <template v-else-if="detail.itemType === 'VIOLATION_RECORD'">
+                    <EventStreamRecorder
+                      v-if="detail.inputMode === 'EVENT_STREAM'"
+                      :section-id="Number(group.submission.sectionId || 0)"
+                      :target-type="group.submission.targetType"
+                      :items="[detail]"
+                      :submissions="getSubmissionsForSection(Number(group.submission.sectionId || 0))"
+                      :disabled="!isGroupEditable(group)"
+                    />
+                    <ViolationRecordInput
+                      v-else
+                      :submission-id="group.submission.id"
+                      :detail-id="detail.id"
+                      :section-id="detail.sectionId"
+                      :item-id="detail.templateItemId"
+                      :disabled="!isGroupEditable(group)"
+                    />
+                  </template>
+                  <!-- PERSON_SCORE -->
+                  <template v-else-if="detail.itemType === 'PERSON_SCORE'">
+                    <PersonScoreGrid
+                      :target-type="group.submission.targetType"
+                      :target-id="group.submission.targetId"
+                      :detail-id="detail.id"
+                      :disabled="!isGroupEditable(group)"
+                    />
+                  </template>
+                </div>
+                <div v-if="group.details.length === 0" class="panel-empty" style="height:80px"><p>暂无检查项</p></div>
+              </div>
+            </div>
+
+            <div v-if="targetSectionGroups.length === 0 && !detailLoading" class="panel-empty">
+              <Target :size="28" style="color: var(--gray-300)" />
+              <p>暂无检查分区</p>
+              <p style="font-size:11px;color:var(--gray-400)">请检查模板是否已配置检查项，或联系管理员</p>
+            </div>
+          </template>
         </div>
 
-        <!-- === Scoring form area === -->
-        <div class="form-area" v-loading="detailLoading">
-
-          <!-- Empty / pre-start state -->
-          <div v-if="!selectedSubmission" class="form-placeholder">
-            <ChevronLeft :size="28" class="ph-icon" />
-            <p>请在上方选择检查对象开始打分</p>
+        <!-- Bottom Bar -->
+        <div class="bottom-bar" v-if="selectedTargetId">
+          <div class="bottom-info">
+            目标 <strong>{{ currentTargetIdx + 1 }}</strong> / {{ filteredTargets.length }}
+            &nbsp;&middot;&nbsp; 分区 <strong>{{ completedSectionCount }}</strong>/{{ leafSectionCount }} 已完成
           </div>
-
-          <!-- Pre-filling prompt -->
-          <div
-            v-else-if="selectedSubmission.status === 'PENDING' || selectedSubmission.status === 'LOCKED'"
-            class="form-prestart"
-          >
-            <div class="prestart-actions">
-              <el-button
-                v-if="selectedSubmission.status === 'PENDING'"
-                size="small"
-                @click="handleLock(selectedSubmission)"
-              >
-                <Lock :size="13" class="btn-icon" />锁定
-              </el-button>
-              <el-button type="primary" size="small" @click="handleStartFilling(selectedSubmission)">
-                <Play :size="13" class="btn-icon" />开始打分
-              </el-button>
-              <el-button size="small" @click="handleSkip(selectedSubmission)">
-                <SkipForward :size="13" class="btn-icon" />跳过
-              </el-button>
+          <div class="bottom-score">
+            <div class="score-display">
+              <div class="score-label">当前得分</div>
+              <div class="score-value">{{ targetScore }}</div>
             </div>
-            <p class="prestart-hint">点击「开始打分」加载检查项</p>
-          </div>
-
-          <!-- Actual scoring form -->
-          <div v-else class="field-list">
-
-            <!-- Regular scoring items -->
-            <div
-              v-for="detail in regularItems"
-              :key="detail.id"
-              class="field-card"
-            >
-              <div class="field-header">
-                <span class="field-name">{{ detail.itemName }}</span>
-                <el-tag
-                  v-if="detail.scoringMode"
-                  size="small"
-                  effect="plain"
-                  :type="detail.scoringMode === 'DEDUCTION' ? 'danger'
-                       : detail.scoringMode === 'ADDITION' ? 'success'
-                       : detail.scoringMode === 'PASS_FAIL' ? ''
-                       : 'warning'"
-                >
-                  {{ ScoringModeConfig[detail.scoringMode]?.label ?? detail.scoringMode }}
-                </el-tag>
-                <el-tag v-else size="small" type="info" effect="plain">采集</el-tag>
-              </div>
-
-              <!-- DEDUCTION: button group [0][-1][-2]... -->
-              <div v-if="detail.scoringMode === 'DEDUCTION'" class="ctrl-row">
-                <button
-                  v-for="step in getDeductionSteps(detail)"
-                  :key="step"
-                  class="score-btn"
-                  :class="{
-                    'score-btn--active': numberInputs[detail.id] === step,
-                    'score-btn--zero':   step === 0,
-                    'score-btn--neg':    step < 0,
-                  }"
-                  :disabled="!isEditable"
-                  @click="handleDeductionSelect(detail, step)"
-                >
-                  {{ step === 0 ? '0' : step }}
-                </button>
-              </div>
-
-              <!-- ADDITION: button group [0][+1][+2]... -->
-              <div v-else-if="detail.scoringMode === 'ADDITION'" class="ctrl-row">
-                <button
-                  v-for="step in getAdditionSteps(detail)"
-                  :key="step"
-                  class="score-btn score-btn--pos"
-                  :class="{ 'score-btn--active': numberInputs[detail.id] === step }"
-                  :disabled="!isEditable"
-                  @click="handleAdditionSelect(detail, step)"
-                >
-                  {{ step === 0 ? '0' : `+${step}` }}
-                </button>
-              </div>
-
-              <!-- PASS_FAIL: 通过 / 不通过 -->
-              <div v-else-if="detail.scoringMode === 'PASS_FAIL'" class="ctrl-row">
-                <button
-                  class="pf-btn pf-btn--pass"
-                  :class="{ 'pf-btn--active': selectInputs[detail.id] === 'PASS' }"
-                  :disabled="!isEditable"
-                  @click="handlePassFail(detail, 'PASS')"
-                >
-                  <Check :size="13" /> 通过
-                </button>
-                <button
-                  class="pf-btn pf-btn--fail"
-                  :class="{ 'pf-btn--active': selectInputs[detail.id] === 'FAIL' }"
-                  :disabled="!isEditable"
-                  @click="handlePassFail(detail, 'FAIL')"
-                >
-                  <X :size="13" /> 不通过
-                </button>
-              </div>
-
-              <!-- LEVEL / SCORE_TABLE / TIERED_DEDUCTION: pill grade selector -->
-              <div
-                v-else-if="detail.scoringMode === 'LEVEL' || detail.scoringMode === 'SCORE_TABLE' || detail.scoringMode === 'TIERED_DEDUCTION'"
-                class="ctrl-row"
-              >
-                <button
-                  v-for="lv in getGradeLevels(detail)"
-                  :key="lv.label"
-                  class="grade-btn"
-                  :class="{ 'grade-btn--active': selectInputs[detail.id] === lv.label }"
-                  :disabled="!isEditable"
-                  @click="handleGradeSelect(detail, lv.label, lv.score)"
-                >
-                  {{ lv.label }}
-                  <span class="grade-score">{{ lv.score }}</span>
-                </button>
-              </div>
-
-              <!-- DIRECT: number input + range hint -->
-              <div v-else-if="detail.scoringMode === 'DIRECT'" class="ctrl-row ctrl-row--direct">
-                <el-input-number
-                  v-model="numberInputs[detail.id]"
-                  :min="getDirectRange(detail).min"
-                  :max="getDirectRange(detail).max"
-                  :disabled="!isEditable"
-                  size="small"
-                  style="width: 120px"
-                  @change="(val: number) => handleDirectInput(detail, val)"
-                />
-                <span class="range-hint">范围 {{ getDirectRange(detail).min }}–{{ getDirectRange(detail).max }}</span>
-              </div>
-
-              <!-- RATING_SCALE: star buttons -->
-              <div v-else-if="detail.scoringMode === 'RATING_SCALE'" class="ctrl-row">
-                <button
-                  v-for="n in getRatingMax(detail)"
-                  :key="n"
-                  class="star-btn"
-                  :class="{ 'star-btn--active': (numberInputs[detail.id] ?? 0) >= n }"
-                  :disabled="!isEditable"
-                  @click="handleRatingScale(detail, n)"
-                >
-                  <Star :size="18" />
-                </button>
-                <span class="star-val" v-if="numberInputs[detail.id] !== undefined">
-                  {{ numberInputs[detail.id] }}/{{ getRatingMax(detail) }}
-                </span>
-              </div>
-
-              <!-- CUMULATIVE: +/- counter -->
-              <div v-else-if="detail.scoringMode === 'CUMULATIVE'" class="ctrl-row ctrl-row--cumulative">
-                <button class="counter-btn" :disabled="!isEditable" @click="handleCumulativeChange(detail, -1)">
-                  <Minus :size="14" />
-                </button>
-                <span class="counter-val">{{ numberInputs[detail.id] ?? 0 }}</span>
-                <button class="counter-btn" :disabled="!isEditable" @click="handleCumulativeChange(detail, 1)">
-                  <Plus :size="14" />
-                </button>
-                <span class="counter-unit">{{ getCumulativeConfig(detail).countLabel }}</span>
-              </div>
-
-              <!-- Other scoring modes: show numeric input -->
-              <div
-                v-else-if="detail.scoringMode && !['DEDUCTION','ADDITION','PASS_FAIL','LEVEL','SCORE_TABLE','TIERED_DEDUCTION','DIRECT','RATING_SCALE','CUMULATIVE'].includes(detail.scoringMode)"
-                class="ctrl-row ctrl-row--direct"
-              >
-                <el-input-number
-                  v-model="numberInputs[detail.id]"
-                  :min="0"
-                  :max="100"
-                  :disabled="!isEditable"
-                  size="small"
-                  style="width: 120px"
-                  @change="(val: number) => handleDirectInput(detail, val)"
-                />
-                <span class="range-hint">{{ ScoringModeConfig[detail.scoringMode!]?.label }}</span>
-              </div>
-
-              <!-- Non-scoring capture items -->
-              <div v-else-if="!detail.scoringMode" class="ctrl-row ctrl-row--capture">
-                <el-input
-                  v-model="textInputs[detail.id]"
-                  :disabled="!isEditable"
-                  size="small"
-                  placeholder="请填写..."
-                  clearable
-                  @blur="saveTextInput(detail)"
-                />
-              </div>
-
-            </div>
-            <!-- /regular items -->
-
-            <!-- PERSON_SCORE items -->
-            <div v-for="detail in personScoreItems" :key="'ps-' + detail.id" class="field-card">
-              <div class="field-header">
-                <span class="field-name">{{ detail.itemName }}</span>
-                <el-tag size="small" type="info" effect="plain">逐人评分</el-tag>
-              </div>
-              <PersonScoreGrid
-                v-if="selectedSubmission"
-                :target-type="selectedSubmission.targetType"
-                :target-id="selectedSubmission.targetId"
-                :detail-id="detail.id"
-                :disabled="!isEditable"
-              />
-            </div>
-
-            <!-- VIOLATION_RECORD items -->
-            <div v-for="detail in violationItems" :key="'vr-' + detail.id" class="field-card field-card--violation">
-              <div class="field-header">
-                <span class="field-name">{{ detail.itemName }}</span>
-                <el-tag size="small" type="warning" effect="plain">违纪记录</el-tag>
-              </div>
-              <ViolationRecordInput
-                v-if="selectedSubmission"
-                :submission-id="selectedSubmission.id"
-                :detail-id="detail.id"
-                :section-id="detail.sectionId ?? 0"
-                :item-id="detail.templateItemId"
-                :disabled="!isEditable"
-              />
-            </div>
-
-            <!-- Empty items state -->
-            <div v-if="details.length === 0" class="form-placeholder">
-              <p>暂无检查项</p>
-            </div>
-
-          </div>
-          <!-- /field-list -->
-        </div>
-        <!-- /form-area -->
-
-        <!-- === Bottom score bar === -->
-        <div
-          v-if="selectedSubmission && (isEditable || selectedSubmission.status === 'COMPLETED')"
-          class="score-bar"
-        >
-          <div class="score-bar-left">
-            <span
-              class="score-value"
-              :style="{ color: getGradeColor(getGrade(scoreSummary.finalScore)) }"
-            >
-              {{ scoreSummary.finalScore }}
-            </span>
-            <span v-if="scoreSummary.deductions > 0" class="score-sep stat-deduct">
-              -{{ scoreSummary.deductions }}
-            </span>
-            <span v-if="scoreSummary.bonuses > 0" class="score-sep stat-bonus">
-              +{{ scoreSummary.bonuses }}
-            </span>
-            <span
-              class="score-grade"
-              :style="{ color: getGradeColor(getGrade(scoreSummary.finalScore)) }"
-            >
-              {{ getGrade(scoreSummary.finalScore) }}
-            </span>
-          </div>
-          <div class="score-bar-stats">
-            <span v-if="scoreSummary.passCount > 0" class="stat-pass">
-              <Check :size="11" /> {{ scoreSummary.passCount }}
-            </span>
-            <span v-if="scoreSummary.failCount > 0" class="stat-fail">
-              <X :size="11" /> {{ scoreSummary.failCount }}
-            </span>
-            <span v-if="scoreSummary.deductions > 0" class="stat-deduct">
-              -{{ scoreSummary.deductions }}
-            </span>
-            <span v-if="scoreSummary.bonuses > 0" class="stat-bonus">
-              +{{ scoreSummary.bonuses }}
-            </span>
-          </div>
-          <div class="score-bar-progress">
-            {{ scoreSummary.scored }}/{{ scoreSummary.total }} 已评分
-          </div>
-          <div class="score-bar-actions" v-if="isEditable">
-            <el-button
-              type="primary" size="small"
-              :disabled="scoreSummary.scored < scoreSummary.total"
-              @click="handleComplete"
-            >
-              <Check :size="13" class="btn-icon" />
-              提交 ({{ scoreSummary.scored }}/{{ scoreSummary.total }})
-            </el-button>
-            <el-button size="small" @click="handleSkip(selectedSubmission!)">
-              <SkipForward :size="13" class="btn-icon" />跳过
+            <el-button type="primary" :disabled="getTargetStatus(selectedTargetId) === 'COMPLETED'"
+              @click="handleCompleteTarget">
+              完成并下一个 <ChevronRight :size="14" />
             </el-button>
           </div>
         </div>
@@ -1108,219 +1438,208 @@ onMounted(() => loadData())
   min-height: 0;
 }
 
-/* ===== Left Section Nav ===== */
-.section-nav {
-  width: 180px;
-  flex-shrink: 0;
+/* ===== Sidebar (iAuditor style) ===== */
+.sidebar {
+  width: 220px;
+  min-width: 220px;
   background: #fff;
   border-right: 1px solid #e5e7eb;
   display: flex;
   flex-direction: column;
-  overflow-y: auto;
+  overflow: hidden;
 }
 
-.section-nav-header {
-  padding: 10px 12px 8px;
-  font-size: 10px;
-  font-weight: 600;
-  color: #9ca3af;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  border-bottom: 1px solid #f3f4f6;
+.sidebar-header {
+  padding: 12px 12px 8px;
+  flex-shrink: 0;
 }
 
-.section-item {
+.search-box {
+  margin-bottom: 8px;
+}
+
+.filter-row {
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 9px 12px;
+  gap: 6px;
+  margin-bottom: 8px;
+}
+.filter-select {
+  flex: 1;
+  height: 26px;
+  border: 1px solid #e5e7eb;
+  border-radius: 5px;
+  padding: 0 6px;
+  font-size: 11px;
+  color: #4b5563;
+  background: #fff;
+  outline: none;
   cursor: pointer;
-  border-left: 2px solid transparent;
-  transition: all 0.15s;
 }
-.section-item:hover { background: #f9fafb; }
-.section-item.active {
-  border-left-color: #1a6dff;
-  background: #eff6ff;
-}
-.section-item.active .sec-name { color: #1a6dff; font-weight: 600; }
 
-.sec-dot {
-  width: 8px;
-  height: 8px;
+.status-pills {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 4px;
+}
+.status-pill {
+  flex: 1;
+  height: 26px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  border: 1px solid #e5e7eb;
+  border-radius: 5px;
+  font-size: 11px;
+  color: #6b7280;
+  cursor: pointer;
+  transition: all 0.15s;
+  background: #fff;
+}
+.status-pill:hover { border-color: #1a6dff; color: #1a6dff; }
+.status-pill.active {
+  background: #1a6dff;
+  color: #fff;
+  border-color: #1a6dff;
+}
+.pill-count { font-weight: 600; }
+
+.target-list {
+  flex: 1;
+  overflow-y: auto;
+  padding: 4px 6px;
+}
+.target-list::-webkit-scrollbar { width: 4px; }
+.target-list::-webkit-scrollbar-thumb { background: #d1d5db; border-radius: 2px; }
+
+.target-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 8px;
+  border-radius: 5px;
+  cursor: pointer;
+  transition: background 0.12s;
+  font-size: 11px;
+  line-height: 1.4;
+}
+.target-item:hover { background: #f9fafb; }
+.target-item.active { background: #e8f0ff; }
+
+.target-dot {
+  width: 7px;
+  height: 7px;
   border-radius: 50%;
   flex-shrink: 0;
 }
-.sec-dot--done    { background: #10b981; }
-.sec-dot--partial { background: #1a6dff; }
-.sec-dot--empty   { background: #d1d5db; }
+.target-dot.done { background: #10b981; }
+.target-dot.progress { background: #1a6dff; }
+.target-dot.pending { background: #d1d5db; }
 
-.sec-label-wrap {
-  display: flex;
-  flex-direction: column;
-  gap: 1px;
-  min-width: 0;
-}
-
-.sec-name {
-  font-size: 12px;
-  font-weight: 500;
-  color: #374151;
-  white-space: nowrap;
+.target-name {
+  flex: 1;
   overflow: hidden;
   text-overflow: ellipsis;
+  white-space: nowrap;
+  color: #374151;
 }
+.target-item.active .target-name { color: #1a6dff; font-weight: 500; }
 
-.sec-prog {
+.target-score {
+  flex-shrink: 0;
   font-size: 10px;
   color: #9ca3af;
+  font-variant-numeric: tabular-nums;
 }
+.target-item.active .target-score { color: #1a6dff; }
 
-.section-empty {
+.target-empty {
   padding: 16px 12px;
   font-size: 11px;
   color: #d1d5db;
   text-align: center;
 }
 
-/* ===== Right Scoring Panel ===== */
+/* ===== Right Scoring Panel (iAuditor style) ===== */
 .scoring-panel {
   flex: 1;
   display: flex;
   flex-direction: column;
   min-width: 0;
   overflow: hidden;
+  background: #f9fafb;
+  position: relative;
 }
 
-/* Section header row */
-.section-header-row {
+/* Panel header */
+.panel-header {
+  background: #fff;
+  border-bottom: 1px solid #e5e7eb;
+  padding: 12px 20px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-shrink: 0;
+}
+.panel-header-info { flex: 1; }
+.panel-target-name {
+  font-size: 15px;
+  font-weight: 600;
+  color: #111827;
+  margin-bottom: 2px;
+}
+.panel-progress {
+  font-size: 12px;
+  color: #6b7280;
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 10px 20px 8px;
-  background: #fff;
-  border-bottom: 1px solid #f3f4f6;
-  flex-shrink: 0;
 }
-
-.sec-header-name {
-  font-size: 13px;
-  font-weight: 600;
-  color: #111827;
+.progress-bar-wrap {
+  width: 120px;
+  height: 4px;
+  background: #e5e7eb;
+  border-radius: 2px;
+  overflow: hidden;
 }
-
-/* Target pill row */
-.target-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  padding: 8px 20px;
-  background: #fff;
-  border-bottom: 1px solid #e5e7eb;
-  flex-shrink: 0;
+.progress-bar-fill {
+  height: 100%;
+  background: #1a6dff;
+  border-radius: 2px;
+  transition: width 0.3s;
 }
-
-.target-pills {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  flex-wrap: wrap;
-  flex: 1;
-}
-
-.target-pill {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  padding: 4px 10px;
-  border-radius: 20px;
-  border: 1px solid #e5e7eb;
-  background: #f9fafb;
-  font-size: 12px;
-  color: #6b7280;
-  cursor: pointer;
-  transition: all 0.15s;
-  white-space: nowrap;
-}
-.target-pill:hover { border-color: #93c5fd; color: #1a6dff; }
-
-.target-pill--active {
-  border-color: #1a6dff;
-  background: #eff6ff;
-  color: #1a6dff;
-  font-weight: 600;
-}
-
-.target-pill--completed {
-  border-color: #6ee7b7;
-  background: #f0fdf4;
-  color: #059669;
-}
-.target-pill--completed.target-pill--active {
-  border-color: #10b981;
-  background: #d1fae5;
-}
-
-.target-pill--inprogress {
-  border-color: #93c5fd;
-  background: #eff6ff;
-  color: #1d4ed8;
-}
-
-.target-pill--skipped {
-  border-color: #fcd34d;
-  color: #b45309;
-  background: #fffbeb;
-}
-
-.pill-check { flex-shrink: 0; }
-
-.target-empty-hint {
-  font-size: 11px;
-  color: #d1d5db;
-  padding: 4px 0;
-}
-
-.target-nav {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  flex-shrink: 0;
+.progress-pct {
+  font-weight: 500;
 }
 
 .nav-btn {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 26px;
-  height: 26px;
+  width: 32px;
+  height: 32px;
   border: 1px solid #e5e7eb;
   border-radius: 6px;
   background: #fff;
-  color: #6b7280;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   cursor: pointer;
+  color: #6b7280;
   transition: all 0.15s;
 }
-.nav-btn:hover:not(:disabled) { border-color: #1a6dff; color: #1a6dff; }
+.nav-btn:hover:not(:disabled) { border-color: #1a6dff; color: #1a6dff; background: #e8f0ff; }
 .nav-btn:disabled { opacity: 0.4; cursor: not-allowed; }
 
-.nav-count {
-  font-size: 11px;
-  color: #9ca3af;
-  min-width: 36px;
-  text-align: center;
-  tabular-nums: true;
-}
-
-/* Form area */
-.form-area {
+/* Scrollable body */
+.panel-body {
   flex: 1;
   overflow-y: auto;
-  padding: 16px 20px;
+  padding: 16px 20px 80px;
 }
+.panel-body::-webkit-scrollbar { width: 6px; }
+.panel-body::-webkit-scrollbar-thumb { background: #d1d5db; border-radius: 3px; }
 
-.form-placeholder {
+/* Panel empty state */
+.panel-empty {
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -1329,166 +1648,221 @@ onMounted(() => loadData())
   color: #d1d5db;
   gap: 8px;
 }
-.ph-icon { color: #e5e7eb; }
-.form-placeholder p { font-size: 12px; }
+.panel-empty p { font-size: 12px; }
 
-.form-prestart {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 14px;
-  padding-top: 40px;
+/* Sections */
+.section {
+  margin-bottom: 16px;
 }
-.prestart-actions { display: flex; gap: 8px; }
-.prestart-hint { font-size: 11px; color: #9ca3af; }
-
-.field-list { display: flex; flex-direction: column; gap: 10px; }
-
-/* Field card */
-.field-card {
+.section-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
   background: #fff;
   border: 1px solid #e5e7eb;
   border-radius: 8px;
-  padding: 12px 14px;
-  transition: box-shadow 0.15s;
+  cursor: pointer;
+  user-select: none;
+  transition: background 0.12s;
 }
-.field-card:hover { box-shadow: 0 1px 6px rgba(0,0,0,0.06); }
+.section-header:hover { background: #f9fafb; }
 
-.field-card--violation {
-  background: #fffdf0;
-  border-color: #fde68a;
+.section-chevron {
+  width: 16px;
+  height: 16px;
+  color: #9ca3af;
+  transition: transform 0.2s;
+  flex-shrink: 0;
 }
+.section.collapsed .section-chevron { transform: rotate(-90deg); }
 
-.field-header {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-bottom: 10px;
-}
-
-.field-name {
+.section-title {
   font-size: 13px;
   font-weight: 600;
   color: #1f2937;
-  flex: 1;
 }
-
-/* Controls row */
-.ctrl-row {
+.section-meta {
+  margin-left: auto;
   display: flex;
   align-items: center;
-  gap: 6px;
-  flex-wrap: wrap;
+  gap: 8px;
+  font-size: 11px;
+  color: #9ca3af;
+}
+.section-count { font-weight: 500; }
+.section-progress-mini {
+  width: 40px;
+  height: 3px;
+  background: #e5e7eb;
+  border-radius: 2px;
+  overflow: hidden;
+}
+.section-progress-fill {
+  height: 100%;
+  border-radius: 2px;
+  background: #1a6dff;
 }
 
-.ctrl-row--direct {
-  align-items: center;
-  gap: 10px;
-}
-
-.ctrl-row--capture {
-  display: block;
-}
-
-.ctrl-row--cumulative {
+.section-body {
+  margin-top: 8px;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
   gap: 8px;
 }
+.section-body--stream {
+  margin-top: 8px;
+  display: block;
+}
+.section.collapsed .section-body { display: none; }
+
+/* Intermediate section (group header) */
+.section {
+  position: relative;
+}
+.section-depth-line {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 1px;
+  background: #e5e7eb;
+}
+.section-depth-badge {
+  font-size: 9px;
+  font-weight: 600;
+  padding: 1px 4px;
+  border-radius: 3px;
+  background: #f0f0f0;
+  color: #888;
+  flex-shrink: 0;
+  margin-right: 2px;
+}
+.section--intermediate {
+  margin-bottom: 8px;
+}
+.section-header--intermediate {
+  background: #fafbfc;
+  border-left: 3px solid #8b5cf6;
+}
+.section-header--intermediate:hover { background: #f5f3ff; }
+.section-title--intermediate {
+  font-size: 14px;
+  font-weight: 700;
+  color: #1e1b4b;
+}
+.section-type-tag {
+  font-size: 9px; font-weight: 700; padding: 1px 5px; border-radius: 3px;
+  background: #f3f0ff; color: #8b5cf6; text-transform: uppercase;
+  flex-shrink: 0;
+}
+
+/* Score Cards */
+.score-card {
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-left: 3px solid transparent;
+  border-radius: 8px;
+  padding: 10px 12px;
+  transition: box-shadow 0.15s, border-color 0.15s;
+}
+.score-card:hover { box-shadow: 0 1px 3px rgba(0,0,0,0.1), 0 1px 2px rgba(0,0,0,0.06); border-color: #d1d5db; border-left-color: transparent; }
+.score-card.scored { border-left-color: #1a6dff; }
+.score-card--fullwidth { grid-column: 1 / -1; }
+
+.card-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+.card-name {
+  font-size: 13px;
+  font-weight: 500;
+  color: #1f2937;
+}
+
+/* Card controls */
+.card-control { display: flex; align-items: center; gap: 6px; }
+.card-control--direct { gap: 10px; }
+.card-control--capture { display: block; }
 
 .range-hint {
   font-size: 11px;
   color: #9ca3af;
 }
 
-/* Score buttons (deduction/addition) */
-.score-btn {
-  min-width: 38px;
-  height: 32px;
-  padding: 0 8px;
+/* Stepper */
+.stepper {
+  display: inline-flex;
+  align-items: center;
+  border: 1px solid #e5e7eb;
   border-radius: 6px;
-  border: 1px solid #e5e7eb;
+  overflow: hidden;
+  height: 30px;
+}
+.stepper-btn {
+  width: 30px;
+  height: 30px;
+  border: none;
   background: #f9fafb;
-  font-size: 12px;
-  font-weight: 500;
-  color: #374151;
+  color: #4b5563;
+  font-size: 15px;
   cursor: pointer;
-  transition: all 0.15s;
-}
-.score-btn:hover:not(:disabled) { border-color: #1a6dff; color: #1a6dff; }
-.score-btn:disabled { opacity: 0.45; cursor: not-allowed; }
-
-.score-btn--active {
-  background: #1a6dff;
-  border-color: #1a6dff;
-  color: #fff !important;
-}
-
-.score-btn--zero { }
-
-.score-btn--neg { color: #ef4444; border-color: #fca5a5; background: #fff5f5; }
-.score-btn--neg:hover:not(:disabled) { background: #ef4444; border-color: #ef4444; color: #fff; }
-.score-btn--neg.score-btn--active { background: #ef4444; border-color: #ef4444; color: #fff; }
-
-.score-btn--pos { color: #10b981; border-color: #6ee7b7; background: #f0fdf4; }
-.score-btn--pos:hover:not(:disabled) { background: #10b981; border-color: #10b981; color: #fff; }
-.score-btn--pos.score-btn--active { background: #10b981; border-color: #10b981; color: #fff; }
-
-/* Pass/Fail buttons */
-.pf-btn {
-  display: inline-flex;
+  display: flex;
   align-items: center;
-  gap: 5px;
-  padding: 6px 18px;
-  border-radius: 20px;
-  border: 1.5px solid;
-  font-size: 12px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.15s;
+  justify-content: center;
+  transition: all 0.12s;
+  line-height: 1;
 }
-.pf-btn:disabled { opacity: 0.45; cursor: not-allowed; }
-
-.pf-btn--pass {
-  border-color: #6ee7b7;
-  color: #059669;
-  background: #f0fdf4;
+.stepper-btn:hover { background: #f3f4f6; color: #1a6dff; }
+.stepper-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+.stepper-value {
+  width: 40px;
+  text-align: center;
+  font-size: 13px;
+  font-weight: 600;
+  color: #1f2937;
+  background: #fff;
+  border-left: 1px solid #e5e7eb;
+  border-right: 1px solid #e5e7eb;
+  height: 30px;
+  line-height: 30px;
+  font-variant-numeric: tabular-nums;
 }
-.pf-btn--pass:hover:not(:disabled) { background: #10b981; color: #fff; border-color: #10b981; }
-.pf-btn--pass.pf-btn--active { background: #10b981; color: #fff; border-color: #10b981; }
+.stepper-value.negative { color: #ef4444; }
+.stepper-value.positive { color: #10b981; }
 
-.pf-btn--fail {
-  border-color: #fca5a5;
-  color: #dc2626;
-  background: #fff5f5;
-}
-.pf-btn--fail:hover:not(:disabled) { background: #ef4444; color: #fff; border-color: #ef4444; }
-.pf-btn--fail.pf-btn--active { background: #ef4444; color: #fff; border-color: #ef4444; }
-
-/* Grade buttons */
-.grade-btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  padding: 5px 14px;
-  border-radius: 20px;
+/* Pill Group */
+.pill-group {
+  display: flex;
+  gap: 0;
   border: 1px solid #e5e7eb;
-  background: #f9fafb;
+  border-radius: 6px;
+  overflow: hidden;
+}
+.pill-btn {
+  padding: 5px 12px;
   font-size: 12px;
-  font-weight: 500;
-  color: #374151;
+  border: none;
+  background: #fff;
+  color: #6b7280;
   cursor: pointer;
-  transition: all 0.15s;
+  transition: all 0.12s;
+  font-weight: 500;
+  white-space: nowrap;
+  border-right: 1px solid #e5e7eb;
 }
-.grade-btn:hover:not(:disabled) { border-color: #93c5fd; color: #1a6dff; }
-.grade-btn:disabled { opacity: 0.45; cursor: not-allowed; }
-.grade-btn--active { background: #1a6dff; border-color: #1a6dff; color: #fff; }
-.grade-btn--active .grade-score { color: rgba(255,255,255,0.75); }
+.pill-btn:last-child { border-right: none; }
+.pill-btn:hover { background: #f9fafb; color: #374151; }
+.pill-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+.pill-btn.active-green { background: #10b981; color: #fff; }
+.pill-btn.active-red { background: #ef4444; color: #fff; }
+.pill-btn.active-blue { background: #1a6dff; color: #fff; }
 
-.grade-score {
-  font-size: 10px;
-  color: #9ca3af;
-  font-weight: 400;
-}
+.counter-unit { font-size: 11px; color: #9ca3af; }
+.score-hint { font-size: 11px; color: #9ca3af; margin-left: 4px; }
+.pill-score { font-size: 11px; opacity: 0.75; margin-left: 2px; }
 
 /* Star buttons */
 .star-btn {
@@ -1509,92 +1883,44 @@ onMounted(() => loadData())
   margin-left: 4px;
 }
 
-/* Cumulative counter */
-.counter-btn {
+/* ===== Bottom Bar ===== */
+.bottom-bar {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 56px;
+  background: #fff;
+  border-top: 1px solid #e5e7eb;
   display: flex;
   align-items: center;
-  justify-content: center;
-  width: 28px;
-  height: 28px;
-  border-radius: 6px;
-  border: 1px solid #e5e7eb;
-  background: #f9fafb;
-  color: #374151;
-  cursor: pointer;
-  transition: all 0.15s;
+  justify-content: space-between;
+  padding: 0 20px;
+  z-index: 10;
 }
-.counter-btn:hover:not(:disabled) { border-color: #1a6dff; color: #1a6dff; }
-.counter-btn:disabled { opacity: 0.45; cursor: not-allowed; }
-
-.counter-val {
-  font-size: 16px;
-  font-weight: 600;
-  color: #111827;
-  min-width: 28px;
-  text-align: center;
+.bottom-info {
+  font-size: 13px;
+  color: #6b7280;
 }
+.bottom-info strong { color: #374151; }
 
-.counter-unit {
-  font-size: 11px;
-  color: #9ca3af;
-}
-
-/* ===== Score Bar ===== */
-.score-bar {
+.bottom-score {
   display: flex;
   align-items: center;
   gap: 16px;
-  padding: 10px 20px;
-  background: #fff;
-  border-top: 1px solid #e5e7eb;
-  flex-shrink: 0;
 }
-
-.score-bar-left {
-  display: flex;
-  align-items: baseline;
-  gap: 4px;
+.score-display {
+  text-align: right;
 }
-
+.score-label {
+  font-size: 11px;
+  color: #9ca3af;
+}
 .score-value {
-  font-size: 26px;
+  font-size: 20px;
   font-weight: 700;
-  line-height: 1;
-  tabular-nums: true;
-}
-
-.score-sep, .score-max {
-  font-size: 14px;
-  color: #9ca3af;
-}
-
-.score-grade {
-  font-size: 14px;
-  font-weight: 700;
-  margin-left: 4px;
-}
-
-.score-bar-stats {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  font-size: 11px;
-}
-
-.stat-pass  { color: #10b981; display: flex; align-items: center; gap: 3px; }
-.stat-fail  { color: #ef4444; display: flex; align-items: center; gap: 3px; }
-.stat-deduct { color: #ef4444; }
-.stat-bonus  { color: #10b981; }
-
-.score-bar-progress {
-  font-size: 11px;
-  color: #9ca3af;
-  margin-left: auto;
-}
-
-.score-bar-actions {
-  display: flex;
-  align-items: center;
-  gap: 8px;
+  color: #111827;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.2;
 }
 </style>

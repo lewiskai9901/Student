@@ -45,7 +45,12 @@ public class InspTemplateController {
             @RequestParam(required = false) String status,
             @RequestParam(required = false) Long catalogId,
             @RequestParam(required = false) String keyword) {
-        TemplateStatus ts = status != null ? TemplateStatus.valueOf(status) : null;
+        TemplateStatus ts;
+        try {
+            ts = status != null ? TemplateStatus.valueOf(status) : null;
+        } catch (IllegalArgumentException e) {
+            throw new IllegalArgumentException("无效的模板状态: " + status);
+        }
         return Result.success(templateService.listRootSections(page, size, ts, catalogId, keyword));
     }
 

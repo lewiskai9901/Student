@@ -173,6 +173,14 @@ public class OrgUnitDomainService {
             throw new IllegalStateException("Cannot merge into a dissolved org unit");
         }
 
+        // Validate no parent-child relationship (circular reference prevention)
+        if (source.isAncestorOf(target)) {
+            throw new IllegalArgumentException("Cannot merge: source is an ancestor of target");
+        }
+        if (source.isDescendantOf(target)) {
+            throw new IllegalArgumentException("Cannot merge: source is a descendant of target");
+        }
+
         // Move children from source to target
         List<OrgUnit> children = orgUnitRepository.findByParentId(sourceId);
         List<OrgUnit> movedChildren = new ArrayList<>();

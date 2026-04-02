@@ -21,6 +21,8 @@ public class ProjectScorePO {
     private String grade;
     private Integer targetCount;
     private String detail;
+    private String gradeSchemeDisplayName;
+    private String gradeName;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 

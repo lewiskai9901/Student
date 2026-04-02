@@ -5,6 +5,8 @@ import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 import org.apache.ibatis.annotations.Select;
 
+import java.util.Collection;
+
 import java.util.List;
 
 /**
@@ -61,4 +63,20 @@ public interface OrgUnitMapper extends BaseMapper<OrgUnitPO> {
      */
     @Select("SELECT * FROM org_units WHERE unit_type = #{unitType} AND status = 'ACTIVE' AND deleted = 0 ORDER BY tree_level, sort_order")
     List<OrgUnitPO> findByUnitType(@Param("unitType") String unitType);
+
+    /**
+     * 批量根据多个父节点ID查询所有子节点
+     */
+    @Select("<script>SELECT * FROM org_units WHERE parent_id IN "
+            + "<foreach collection='parentIds' item='id' open='(' separator=',' close=')'>#{id}</foreach>"
+            + " AND deleted = 0 ORDER BY sort_order</script>")
+    List<OrgUnitPO> findByParentIds(@Param("parentIds") Collection<Long> parentIds);
+
+    /**
+     * 批量查询哪些父节点ID拥有子节点（返回有子节点的parent_id集合）
+     */
+    @Select("<script>SELECT DISTINCT parent_id FROM org_units WHERE parent_id IN "
+            + "<foreach collection='parentIds' item='id' open='(' separator=',' close=')'>#{id}</foreach>"
+            + " AND deleted = 0</script>")
+    List<Long> findParentIdsWithChildren(@Param("parentIds") Collection<Long> parentIds);
 }

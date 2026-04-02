@@ -209,16 +209,16 @@
                   <tbody class="divide-y divide-gray-200 bg-white">
                     <tr v-for="record in dormitoryHistory" :key="record.id">
                       <td class="whitespace-nowrap px-3 py-2 text-xs text-gray-900">{{ record.buildingName || '-' }}</td>
-                      <td class="whitespace-nowrap px-3 py-2 text-xs text-gray-600">{{ record.dormitoryNo || '-' }}</td>
-                      <td class="whitespace-nowrap px-3 py-2 text-xs text-gray-600">{{ record.bedNumber || '-' }}</td>
-                      <td class="whitespace-nowrap px-3 py-2 text-xs text-gray-600">{{ record.checkInDate || '-' }}</td>
-                      <td class="whitespace-nowrap px-3 py-2 text-xs text-gray-600">{{ record.checkOutDate || '-' }}</td>
+                      <td class="whitespace-nowrap px-3 py-2 text-xs text-gray-600">{{ record.placeName || '-' }}</td>
+                      <td class="whitespace-nowrap px-3 py-2 text-xs text-gray-600">{{ record.positionNo || '-' }}</td>
+                      <td class="whitespace-nowrap px-3 py-2 text-xs text-gray-600">{{ record.checkInTime || '-' }}</td>
+                      <td class="whitespace-nowrap px-3 py-2 text-xs text-gray-600">{{ record.checkOutTime || '-' }}</td>
                       <td class="whitespace-nowrap px-3 py-2 text-xs">
                         <span :class="getDormitoryStatusClass(record.status)" class="inline-flex rounded px-1.5 py-0.5 text-xs font-medium">
                           {{ getDormitoryStatusText(record.status) }}
                         </span>
                       </td>
-                      <td class="px-3 py-2 text-xs text-gray-600 max-w-32 truncate" :title="record.changeReason">{{ record.changeReason || '-' }}</td>
+                      <td class="px-3 py-2 text-xs text-gray-600 max-w-32 truncate" :title="record.remark">{{ record.remark || '-' }}</td>
                     </tr>
                   </tbody>
                 </table>
@@ -316,10 +316,10 @@ import { useAuthStore } from '@/stores/auth'
 import { formatDate, formatDateTime } from '@/utils/date'
 // V2 DDD API
 import { getStudent, getStudentStatusChanges } from '@/api/student'
-import { getStudentDormitoryHistory } from '@/api/dormitory'
+import { universalPlaceApi } from '@/api/universalPlace'
+import type { PlaceOccupantWithPlace } from '@/types/universalPlace'
 import type { Student, StudentStatusChange } from '@/types/student'
 import { StudentStatusMap, ChangeTypeMap } from '@/types/student'
-import type { StudentDormitory } from '@/types/studentDormitory'
 
 // 信息项组件
 const InfoItem = (props: { label: string; value?: string | null; class?: string }) => {
@@ -360,7 +360,7 @@ const activeTab = ref('basic')
 // 数据
 const loading = ref(false)
 const studentInfo = ref<Student | null>(null)
-const dormitoryHistory = ref<StudentDormitory[]>([])
+const dormitoryHistory = ref<PlaceOccupantWithPlace[]>([])
 const showHistory = ref(false)
 const statusChanges = ref<StudentStatusChange[]>([])
 const statusChangesLoading = ref(false)
@@ -391,12 +391,11 @@ const maskIdCard = (idCard?: string) => {
   return idCard
 }
 
-// 住宿状态样式类
+// 住宿状态样式类 (UniversalPlace: 1=在住, 0=已退)
 const getDormitoryStatusClass = (status: number) => {
   const classMap: Record<number, string> = {
     1: 'bg-green-50 text-green-700',
-    2: 'bg-gray-100 text-gray-700',
-    3: 'bg-amber-50 text-amber-700'
+    0: 'bg-gray-100 text-gray-700'
   }
   return classMap[status] || 'bg-gray-100 text-gray-700'
 }
@@ -405,8 +404,7 @@ const getDormitoryStatusClass = (status: number) => {
 const getDormitoryStatusText = (status: number) => {
   const statusMap: Record<number, string> = {
     1: '在住',
-    2: '已退宿',
-    3: '调换中'
+    0: '已退宿'
   }
   return statusMap[status] || '未知'
 }
@@ -445,11 +443,12 @@ const getChangeTypeClass = (type: string) => {
   return classMap[type] || 'bg-gray-100 text-gray-700'
 }
 
-// 加载住宿历史
+// 加载住宿历史 (via UniversalPlace occupant history)
 const loadDormitoryHistory = async () => {
   if (!props.studentId) return
   try {
-    const response = await getStudentDormitoryHistory(props.studentId)
+    // studentId is the user ID in the UniversalPlace system
+    const response = await universalPlaceApi.getOccupantHistoryByOccupant('STUDENT', props.studentId)
     dormitoryHistory.value = response || []
   } catch (error) {
     console.error('加载住宿历史失败:', error)

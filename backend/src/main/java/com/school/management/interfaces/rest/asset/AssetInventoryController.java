@@ -11,6 +11,7 @@ import org.springframework.web.bind.annotation.*;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.*;
+import com.school.management.infrastructure.casbin.CasbinAccess;
 
 /**
  * Asset Inventory (stocktaking) REST Controller
@@ -30,6 +31,7 @@ public class AssetInventoryController {
     // ==================== Create Inventory ====================
 
     @PostMapping
+    @CasbinAccess(resource = "asset:inventory", action = "edit")
     @Transactional
     public Result<Long> createInventory(@RequestBody Map<String, Object> data) {
         long id = IdWorker.getId();
@@ -83,6 +85,7 @@ public class AssetInventoryController {
     // ==================== List Inventories (paginated) ====================
 
     @GetMapping
+    @CasbinAccess(resource = "asset:inventory", action = "view")
     public Result<Map<String, Object>> listInventories(
             @RequestParam(defaultValue = "1") int pageNum,
             @RequestParam(defaultValue = "20") int pageSize,
@@ -140,6 +143,7 @@ public class AssetInventoryController {
     // ==================== Get Inventory Detail ====================
 
     @GetMapping("/{id}")
+    @CasbinAccess(resource = "asset:inventory", action = "view")
     public Result<Map<String, Object>> getInventory(@PathVariable Long id) {
         Map<String, Object> inv = jdbc.queryForMap(
             "SELECT id, inventory_code AS inventoryCode, inventory_name AS inventoryName, " +
@@ -181,6 +185,7 @@ public class AssetInventoryController {
     // ==================== Update Inventory Detail ====================
 
     @PutMapping("/{inventoryId}/details/{detailId}")
+    @CasbinAccess(resource = "asset:inventory", action = "edit")
     @Transactional
     public Result<Void> updateInventoryDetail(
             @PathVariable Long inventoryId,
@@ -212,6 +217,7 @@ public class AssetInventoryController {
     // ==================== Complete Inventory ====================
 
     @PostMapping("/{id}/complete")
+    @CasbinAccess(resource = "asset:inventory", action = "edit")
     @Transactional
     public Result<Void> completeInventory(@PathVariable Long id) {
         jdbc.update("UPDATE asset_inventory SET status = 2, updated_at = NOW() WHERE id = ?", id);
@@ -221,6 +227,7 @@ public class AssetInventoryController {
     // ==================== Cancel Inventory ====================
 
     @PostMapping("/{id}/cancel")
+    @CasbinAccess(resource = "asset:inventory", action = "edit")
     @Transactional
     public Result<Void> cancelInventory(@PathVariable Long id) {
         jdbc.update("UPDATE asset_inventory SET status = 3, updated_at = NOW() WHERE id = ?", id);
@@ -230,6 +237,7 @@ public class AssetInventoryController {
     // ==================== Statistics ====================
 
     @GetMapping("/statistics")
+    @CasbinAccess(resource = "asset:inventory", action = "view")
     public Result<Map<String, Object>> getStatistics() {
         Map<String, Object> stats = jdbc.queryForMap(
             "SELECT " +

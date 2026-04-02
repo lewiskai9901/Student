@@ -2,10 +2,8 @@
 import { ref, onMounted, watch } from 'vue'
 import { ElMessage } from 'element-plus'
 import { Trophy, Medal, RefreshCw } from 'lucide-vue-next'
-import { getProjects } from '@/api/insp/project'
-import { getRatingDimensionsByProject, getRatingResults } from '@/api/insp/ratingDimension'
-import type { InspProject } from '@/types/insp/project'
-import type { RatingDimension, RatingResult } from '@/types/insp/project'
+import { getProjects, listDimensions, getRankings } from '@/api/insp/project'
+import type { InspProject, RatingDimension, RatingResult } from '@/types/insp/project'
 
 // ========== State ==========
 const projects = ref<InspProject[]>([])
@@ -41,7 +39,7 @@ async function loadDimensions() {
   }
   loadingDimensions.value = true
   try {
-    dimensions.value = await getRatingDimensionsByProject(selectedProjectId.value)
+    dimensions.value = await listDimensions(selectedProjectId.value)
     await loadAllResults()
   } catch (e: any) {
     ElMessage.error(e.message || '加载评级维度失败')
@@ -56,7 +54,7 @@ async function loadAllResults() {
   const promises = dimensions.value.map(async (dim) => {
     loadingResults.value.add(dim.id)
     try {
-      const results = await getRatingResults(dim.id, selectedDate.value || undefined)
+      const results = await getRankings(dim.id, { cycleDate: selectedDate.value || undefined })
       newMap.set(dim.id, results)
     } catch {
       newMap.set(dim.id, [])

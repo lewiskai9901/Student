@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted, computed } from 'vue'
+import { ref, onMounted, computed, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import {
@@ -16,15 +16,18 @@ import {
 } from '@/types/insp/enums'
 import type { InspProject, ProjectInspector, InspTask, InspSubmission } from '@/types/insp/project'
 import { inspProjectApi, updateOperationalConfig } from '@/api/insp/project'
-import { getTasks } from '@/api/insp/task'
+import { getTasks, assignTask } from '@/api/insp/task'
 import { getSubmissions } from '@/api/insp/submission'
+import { getSections } from '@/api/insp/template'
+import { getProfileBySection, getGradeBands } from '@/api/insp/scoring'
 import { getSimpleUserList, getUser } from '@/api/user'
 import { getOrgUnitTree } from '@/api/organization'
 import type { OrgUnitTreeNode } from '@/api/organization'
 import type { SimpleUser } from '@/types/user'
 import { getRootSection } from '@/api/insp/template'
-import InspectionPlanConfig from './components/InspectionPlanConfig.vue'
-// RatingDimensionConfig 已移至评级中心模块
+import SectionConfigView from './components/SectionConfigView.vue'
+import { buildSectionTree, type SectionTreeNode } from '@/utils/sectionTree'
+import IndicatorScoreView from './components/IndicatorScoreView.vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -37,38 +40,85 @@ const project = ref<InspProject | null>(null)
 const inspectors = ref<ProjectInspector[]>([])
 const allTasks = ref<InspTask[]>([])
 const allSubmissions = ref<InspSubmission[]>([])
+const sectionNameMap = ref<Map<number, { name: string; targetType?: string }>>(new Map())
+const sectionTree = ref<SectionTreeNode[]>([])
+const sectionList = computed(() => [...sectionNameMap.value.entries()].map(([id, info]) => ({ id, sectionName: info.name, targetType: info.targetType })))
+const rootGradeBands = ref<Array<{ name: string; min: number; max: number }>>([])
 const creatorName = ref('')
 const rootSectionName = ref('')
 const scopeOrgNames = ref<string[]>([])
 const orgTree = ref<OrgUnitTreeNode[]>([])
 const loadingOrgTree = ref(false)
-// Tabs: overview | plans | dimensions | settings
+// Tabs
 const activeTab = ref('overview')
+
+// ========== 日期范围筛选 ==========
+const dateRangeType = ref('all')
+const customDateRange = ref<[string, string] | null>(null)
+
+const activeDateRange = computed<{ start: string | null; end: string | null }>(() => {
+  const today = new Date()
+  const fmt = (d: Date) => d.toISOString().split('T')[0]
+
+  switch (dateRangeType.value) {
+    case 'today':
+      return { start: fmt(today), end: fmt(today) }
+    case 'week': {
+      const day = today.getDay() || 7
+      const mon = new Date(today)
+      mon.setDate(today.getDate() - day + 1)
+      const sun = new Date(mon)
+      sun.setDate(mon.getDate() + 6)
+      return { start: fmt(mon), end: fmt(sun) }
+    }
+    case 'month': {
+      const first = new Date(today.getFullYear(), today.getMonth(), 1)
+      const last = new Date(today.getFullYear(), today.getMonth() + 1, 0)
+      return { start: fmt(first), end: fmt(last) }
+    }
+    case 'custom':
+      if (customDateRange.value && customDateRange.value.length === 2) {
+        return { start: customDateRange.value[0], end: customDateRange.value[1] }
+      }
+      return { start: null, end: null }
+    default:
+      return { start: null, end: null }
+  }
+})
+
+const filteredTasks = computed(() => {
+  const range = activeDateRange.value
+  if (!range.start || !range.end) return allTasks.value
+  return allTasks.value.filter(t => {
+    const d = t.taskDate
+    return d && d >= range.start! && d <= range.end!
+  })
+})
+
+const filteredSubmissions = computed(() => {
+  const range = activeDateRange.value
+  if (!range.start || !range.end) return allSubmissions.value
+  const taskIds = new Set(filteredTasks.value.map(t => t.id))
+  return allSubmissions.value.filter(s => taskIds.has(s.taskId))
+})
 const configDirty = ref(false)
 const saving = ref(false)
 
 // 配置表单
 const cf = ref({ scopeType: 'ORG', scopeIds: [] as string[], startDate: '', endDate: '', assignmentMode: 'FREE', reviewRequired: true, autoPublish: false, projectName: '', evaluationMode: 'SINGLE', multiRaterMode: 'AVERAGE', trendEnabled: false, decayEnabled: false, calibrationEnabled: false })
 
-// 扁平化组织树（带 depth）
-interface FlatOrgUnit { id: string; unitName: string; depth: number }
-const flatOrgUnits = ref<FlatOrgUnit[]>([])
+// 范围树
+const scopeTreeRef = ref<any>(null)
+const scopeFilterText = ref('')
 
-function flattenOrgTree(nodes: OrgUnitTreeNode[], depth = 0): FlatOrgUnit[] {
-  const result: FlatOrgUnit[] = []
-  for (const node of nodes) {
-    result.push({ id: String(node.id), unitName: node.unitName, depth })
-    if (node.children && node.children.length > 0) {
-      result.push(...flattenOrgTree(node.children, depth + 1))
-    }
-  }
-  return result
+function handleScopeCheckChange() {
+  const checked = scopeTreeRef.value?.getCheckedKeys(false) ?? []
+  cf.value.scopeIds = checked.map(String)
 }
 
-function toggleScopeId(id: string) {
-  const idx = cf.value.scopeIds.indexOf(id)
-  if (idx >= 0) cf.value.scopeIds.splice(idx, 1)
-  else cf.value.scopeIds.push(id)
+function filterScopeNode(value: string, data: any): boolean {
+  if (!value) return true
+  return (data.unitName || data.label || '').includes(value)
 }
 
 // 检查员添加
@@ -83,7 +133,7 @@ const canPublish = computed(() => isDraft.value && cf.value.scopeIds.length > 0 
 
 // ========== 任务统计 ==========
 const taskStats = computed(() => {
-  const t = allTasks.value
+  const t = filteredTasks.value
   return {
     total: t.length,
     pending: t.filter(x => x.status === 'PENDING').length,
@@ -95,8 +145,25 @@ const taskStats = computed(() => {
 })
 const progressPct = computed(() => taskStats.value.total === 0 ? 0 : Math.round(taskStats.value.done / taskStats.value.total * 100))
 
+// ========== 待分配任务 ==========
+const pendingAssignTasks = computed(() => filteredTasks.value.filter(t => t.status === 'PENDING' && !t.inspectorId))
+const assigningTaskId = ref<number | null>(null)
+
+async function handleAssignTask(task: InspTask, inspector: ProjectInspector) {
+  try {
+    assigningTaskId.value = task.id
+    await assignTask(task.id, { inspectorId: Number(inspector.userId), inspectorName: inspector.userName })
+    ElMessage.success(`已分配给 ${inspector.userName}`)
+    await loadProject()
+  } catch (e: any) {
+    ElMessage.error(e.message || '分配失败')
+  } finally {
+    assigningTaskId.value = null
+  }
+}
+
 // ========== 审核 ==========
-const pendingReviewTasks = computed(() => allTasks.value.filter(t => t.status === 'SUBMITTED'))
+const pendingReviewTasks = computed(() => filteredTasks.value.filter(t => t.status === 'SUBMITTED'))
 const pendingReviewCount = computed(() => pendingReviewTasks.value.length)
 
 async function handleApproveTask(task: InspTask) {
@@ -105,7 +172,9 @@ async function handleApproveTask(task: InspTask) {
     await store.reviewTask(task.id, { reviewerName: 'admin', comment: '审核通过' })
     ElMessage.success('审核通过')
     loadProject()
-  } catch {}
+  } catch (e: any) {
+    if (e !== 'cancel' && e?.toString?.() !== 'cancel') { console.error('审核通过失败', e); ElMessage.error('审核操作失败，请重试') }
+  }
 }
 
 async function handleRejectTask(task: InspTask) {
@@ -114,28 +183,30 @@ async function handleRejectTask(task: InspTask) {
     await store.reviewTask(task.id, { reviewerName: 'admin', comment: comment || '审核驳回' })
     ElMessage.success('已驳回')
     loadProject()
-  } catch {}
+  } catch (e: any) {
+    if (e !== 'cancel' && e?.toString?.() !== 'cancel') { console.error('驳回失败', e); ElMessage.error('驳回操作失败，请重试') }
+  }
 }
 
 // ========== 检查结果统计 ==========
 const resultStats = computed(() => {
-  const subs = allSubmissions.value.filter(s => s.status === 'COMPLETED')
-  if (subs.length === 0) return null
-  const scores = subs.filter(s => s.finalScore != null).map(s => s.finalScore!)
-  const passed = subs.filter(s => s.passed === true).length
-  const failed = subs.filter(s => s.passed === false).length
+  const agg = aggregatedTargetScores.value
+  if (agg.length === 0) return null
+  const scores = agg.map(a => a.totalScore)
+  const passed = agg.filter(a => a.passed === true).length
+  const failed = agg.filter(a => a.passed === false).length
   const avg = scores.length > 0 ? scores.reduce((a, b) => a + b, 0) / scores.length : 0
   const max = scores.length > 0 ? Math.max(...scores) : 0
   const min = scores.length > 0 ? Math.min(...scores) : 0
   const gradeMap = new Map<string, number>()
-  for (const s of subs) { if (s.grade) gradeMap.set(s.grade, (gradeMap.get(s.grade) || 0) + 1) }
-  return { total: subs.length, avg: avg.toFixed(1), max, min, passed, failed, unrated: subs.filter(s => s.passed == null).length, grades: [...gradeMap.entries()].sort((a, b) => b[1] - a[1]) }
+  for (const a of agg) { if (a.grade) gradeMap.set(a.grade, (gradeMap.get(a.grade) || 0) + 1) }
+  return { total: agg.length, avg: avg.toFixed(1), max, min, passed, failed, unrated: agg.filter(a => a.passed == null).length, grades: [...gradeMap.entries()].sort((a, b) => b[1] - a[1]) }
 })
 
 // ========== 总览 Tab 数据 ==========
 // 分区得分 - 从分析维度/submissions派生
 const sectionScores = computed(() => {
-  const subs = allSubmissions.value.filter(s => s.status === 'COMPLETED' && s.finalScore != null)
+  const subs = filteredSubmissions.value.filter(s => s.status === 'COMPLETED' && s.finalScore != null)
   if (subs.length === 0) return []
   // Group by targetName as a proxy for section
   const map = new Map<string, { name: string; scores: number[] }>()
@@ -152,14 +223,14 @@ const sectionScores = computed(() => {
 
 // 最近5条任务
 const recentTasks = computed(() => {
-  return [...allTasks.value]
+  return [...filteredTasks.value]
     .filter(t => ['SUBMITTED', 'UNDER_REVIEW', 'REVIEWED', 'PUBLISHED'].includes(t.status))
     .sort((a, b) => (b.taskDate || '').localeCompare(a.taskDate || ''))
     .slice(0, 5)
 })
 
 // 待整改数 = 未通过的submissions
-const pendingCorrectiveCount = computed(() => allSubmissions.value.filter(s => s.passed === false).length)
+const pendingCorrectiveCount = computed(() => filteredSubmissions.value.filter(s => s.passed === false).length)
 
 function getSectionScoreColor(score: number): string {
   if (score >= 85) return '#10b981'
@@ -171,7 +242,7 @@ function getSectionScoreColor(score: number): string {
 interface DayTask { date: string; subTasks: { task: InspTask; projectName: string }[]; totalTargets: number; completedTargets: number; inspectorName: string; allDone: boolean }
 const dayTasks = computed<DayTask[]>(() => {
   const dateMap = new Map<string, { task: InspTask; projectName: string }[]>()
-  for (const task of allTasks.value) {
+  for (const task of filteredTasks.value) {
     if (!dateMap.has(task.taskDate)) dateMap.set(task.taskDate, [])
     dateMap.get(task.taskDate)!.push({ task, projectName: project.value?.projectName || '' })
   }
@@ -186,7 +257,7 @@ const dayTasks = computed<DayTask[]>(() => {
 
 const inspectorStats = computed(() => {
   const map = new Map<string, { name: string; assigned: number; completed: number; targets: number }>()
-  for (const task of allTasks.value) {
+  for (const task of filteredTasks.value) {
     const name = task.inspectorName || '未分配'
     if (!map.has(name)) map.set(name, { name, assigned: 0, completed: 0, targets: 0 })
     const s = map.get(name)!; s.assigned++
@@ -197,10 +268,136 @@ const inspectorStats = computed(() => {
 })
 
 const targetScores = computed(() => {
-  return allSubmissions.value
+  return filteredSubmissions.value
     .filter(s => s.status === 'COMPLETED' && s.finalScore != null)
     .sort((a, b) => (a.finalScore ?? 0) - (b.finalScore ?? 0))
 })
+
+// Aggregated target scores: group by rootTargetId, compute average, include section breakdown
+const aggregatedTargetScores = computed(() => {
+  const completed = filteredSubmissions.value.filter(s => s.status === 'COMPLETED' && s.finalScore != null)
+  // Group by rootTargetId (or targetId if rootTargetId is absent)
+  const groups = new Map<number, typeof completed>()
+  for (const s of completed) {
+    const key = s.rootTargetId ?? s.targetId
+    if (!key) continue
+    if (!groups.has(key)) groups.set(key, [])
+    groups.get(key)!.push(s)
+  }
+  // Build aggregated rows
+  const rows: Array<{
+    targetId: number
+    targetName: string
+    totalScore: number
+    grade: string | null
+    passed: boolean | null
+    sections: Array<{ sectionId: number; sectionName: string; score: number; grade: string | null }>
+  }> = []
+  for (const [targetId, subs] of groups) {
+    // Simple average of all section scores
+    let total = 0
+    const sections: typeof rows[0]['sections'] = []
+    for (const s of subs) {
+      const secInfo = sectionNameMap.value.get(s.sectionId!)
+      total += (s.finalScore ?? 0)
+      sections.push({
+        sectionId: s.sectionId!,
+        sectionName: secInfo?.name || s.sectionName || `分区${s.sectionId}`,
+        score: s.finalScore ?? 0,
+        grade: s.grade ?? null,
+      })
+    }
+    const roundedTotal = subs.length > 0 ? Math.round((total / subs.length) * 10) / 10 : 0
+    // Overall grade from root section's grade bands (absolute score matching)
+    let overallGrade: string | null = null
+    let overallPassed: boolean | null = null
+    for (const band of rootGradeBands.value) {
+      if (roundedTotal >= band.min && roundedTotal <= band.max) {
+        overallGrade = band.name
+        break
+      }
+    }
+    // If no root grade bands, check if any section has grades
+    const anySecGrade = sections.some(s => s.grade != null)
+    if (!overallGrade && !anySecGrade) {
+      overallPassed = null
+    } else {
+      overallPassed = overallGrade ? !overallGrade.includes('不') : null
+    }
+    rows.push({
+      targetId,
+      targetName: subs[0].rootTargetName || subs[0].targetName || `目标${targetId}`,
+      totalScore: roundedTotal,
+      grade: overallGrade,
+      passed: overallPassed,
+      sections
+    })
+  }
+  return rows.sort((a, b) => a.totalScore - b.totalScore)
+})
+
+const hasGradeConfig = computed(() => {
+  return aggregatedTargetScores.value.some(a => a.grade != null || a.sections.some(s => s.grade != null))
+})
+
+// ========== 维度选择 (Dimension tabs for scores) ==========
+const selectedDimension = ref<'overall' | number>('overall')
+
+const dimensionTabs = computed(() => {
+  const tabs: Array<{ key: 'overall' | number; label: string }> = [{ key: 'overall', label: '综合' }]
+  const entries = [...sectionNameMap.value.entries()]
+  for (const [id, info] of entries) {
+    tabs.push({ key: id, label: info.name })
+  }
+  return tabs
+})
+
+const dimensionScores = computed(() => {
+  if (selectedDimension.value === 'overall') {
+    return [...aggregatedTargetScores.value]
+      .sort((a, b) => b.totalScore - a.totalScore)
+      .map((a, i) => ({ ...a, rank: i + 1 }))
+  }
+  const sectionId = selectedDimension.value as number
+  const completed = filteredSubmissions.value
+    .filter(s => s.status === 'COMPLETED' && s.finalScore != null && s.sectionId === sectionId)
+    .sort((a, b) => (b.finalScore ?? 0) - (a.finalScore ?? 0))
+  return completed.map((s, i) => ({
+    targetId: s.rootTargetId ?? s.targetId,
+    targetName: s.rootTargetName || s.targetName || '?',
+    totalScore: s.finalScore ?? 0,
+    grade: s.grade ?? null,
+    passed: null as boolean | null,
+    rank: i + 1,
+    sections: [] as Array<{ sectionId: number; sectionName: string; score: number; grade: string | null; weight: number }>
+  }))
+})
+
+const dimensionStats = computed(() => {
+  const scores = dimensionScores.value
+  if (scores.length === 0) return null
+  const vals = scores.map(s => s.totalScore)
+  const avg = vals.reduce((a, b) => a + b, 0) / vals.length
+  return {
+    total: scores.length,
+    avg: avg.toFixed(1),
+    max: Math.max(...vals).toFixed(1),
+    min: Math.min(...vals).toFixed(1),
+    passed: scores.filter(s => s.grade && !s.grade.includes('不')).length,
+    failed: scores.filter(s => s.grade && s.grade.includes('不')).length,
+  }
+})
+
+const dimensionHasGrades = computed(() => {
+  return dimensionScores.value.some(s => s.grade != null)
+})
+
+// Grade color resolver (简单回退，详细等级颜色由 IndicatorScoreView 处理)
+function getGradeColor(grade: string | null, _sectionId?: number): string | null {
+  if (!grade) return null
+  if (grade.includes('不') || grade.includes('差')) return '#ef4444'
+  return '#10b981'
+}
 
 // ========== Load ==========
 async function loadProject() {
@@ -210,27 +407,47 @@ async function loadProject() {
     inspectors.value = await store.loadInspectors(projectId)
     if (isDraft.value) activeTab.value = 'settings'
     syncForm()
-    if (project.value.createdBy) { try { const u = await getUser(project.value.createdBy); creatorName.value = u.realName || u.username } catch {} }
+    if (project.value.createdBy) { try { const u = await getUser(project.value.createdBy); creatorName.value = u.realName || u.username } catch (e: any) { console.warn('加载创建者信息失败', e) } }
     if (project.value.rootSectionId) {
-      try { const section = await getRootSection(project.value.rootSectionId); rootSectionName.value = section.sectionName } catch {}
+      try { const section = await getRootSection(project.value.rootSectionId); rootSectionName.value = section.sectionName } catch (e: any) { console.warn('加载模板分区名称失败', e) }
     } else {
       // 多模板项目：模板通过计划关联，header 不显示具体模板名
       rootSectionName.value = ''
     }
     await loadScopeNames()
+    // Load section tree
+    if (project.value.rootSectionId) {
+      try {
+        const sections = await getSections(project.value.rootSectionId)
+        const map = new Map<number, { name: string; targetType?: string }>()
+        for (const sec of sections) {
+          map.set(Number(sec.id), { name: sec.sectionName, targetType: sec.targetType })
+        }
+        sectionNameMap.value = map
+        sectionTree.value = buildSectionTree(sections, project.value.rootSectionId)
+      } catch (e) { console.warn('加载分区树失败', e) }
+      // Load root section grade bands
+      try {
+        const rootProfile = await getProfileBySection(project.value.rootSectionId)
+        if (rootProfile?.id) {
+          const bands = await getGradeBands(rootProfile.id)
+          rootGradeBands.value = bands.map(b => ({ name: b.gradeName || b.gradeCode, min: b.minScore, max: b.maxScore }))
+        }
+      } catch (e) { /* no root grade mapping */ rootGradeBands.value = [] }
+    }
     allTasks.value = []; allSubmissions.value = []
     try {
       const tasks = await getTasks({ projectId })
       allTasks.value.push(...tasks)
-      for (const t of tasks) { try { allSubmissions.value.push(...await getSubmissions({ taskId: t.id })) } catch {} }
-    } catch {}
+      for (const t of tasks) { try { allSubmissions.value.push(...await getSubmissions({ taskId: t.id })) } catch (e: any) { console.warn(`加载任务 ${t.id} 的提交记录失败`, e) } }
+    } catch (e: any) { console.error('加载任务列表失败', e); ElMessage.error('加载任务列表失败') }
     configDirty.value = false
   } catch (e: any) { ElMessage.error(e.message || '加载失败') }
   finally { loading.value = false }
 }
 function syncForm() {
   if (!project.value) return; const p = project.value
-  let rawIds: (number | string)[] = []; try { rawIds = p.scopeConfig ? JSON.parse(p.scopeConfig) : [] } catch {}
+  let rawIds: (number | string)[] = []; try { rawIds = p.scopeConfig ? JSON.parse(p.scopeConfig) : [] } catch (e: any) { console.warn('解析 scopeConfig 失败', e) }
   const ids: string[] = rawIds.map(String)
   cf.value = { scopeType: p.scopeType || 'ORG', scopeIds: ids, startDate: p.startDate || '', endDate: p.endDate || '', assignmentMode: p.assignmentMode || 'FREE', reviewRequired: p.reviewRequired ?? true, autoPublish: p.autoPublish ?? false, projectName: p.projectName, evaluationMode: (p as any).evaluationMode || 'SINGLE', multiRaterMode: (p as any).multiRaterMode || 'AVERAGE', trendEnabled: (p as any).trendEnabled ?? false, decayEnabled: (p as any).decayEnabled ?? false, calibrationEnabled: (p as any).calibrationEnabled ?? false }
 }
@@ -238,16 +455,16 @@ function syncForm() {
 // Watch cf changes after initial sync
 let watchEnabled = false
 function startWatch() { watchEnabled = true }
-import { watch } from 'vue'
 watch(cf, () => { if (watchEnabled) configDirty.value = true }, { deep: true })
+watch(scopeFilterText, (val) => { scopeTreeRef.value?.filter(val) })
 
 async function loadScopeNames() {
   scopeOrgNames.value = []
   if (!project.value?.scopeConfig) return
-  try { const rawIds: (number | string)[] = JSON.parse(project.value.scopeConfig); const ids = rawIds.map(String); if (orgTree.value.length === 0) await loadOrgTree(); const m = buildMap(orgTree.value); scopeOrgNames.value = ids.map(id => m.get(id) || `#${id}`) } catch {}
+  try { const rawIds: (number | string)[] = JSON.parse(project.value.scopeConfig); const ids = rawIds.map(String); if (orgTree.value.length === 0) await loadOrgTree(); const m = buildMap(orgTree.value); scopeOrgNames.value = ids.map(id => m.get(id) || `#${id}`) } catch (e: any) { console.warn('加载检查范围名称失败', e) }
 }
 function buildMap(nodes: OrgUnitTreeNode[]): Map<string, string> { const m = new Map<string, string>(); function w(l: OrgUnitTreeNode[]) { for (const n of l) { m.set(String(n.id), n.unitName); if (n.children) w(n.children) } }; w(nodes); return m }
-async function loadOrgTree() { if (orgTree.value.length > 0) return; loadingOrgTree.value = true; try { orgTree.value = await getOrgUnitTree(); flatOrgUnits.value = flattenOrgTree(orgTree.value) } catch {}; loadingOrgTree.value = false }
+async function loadOrgTree() { if (orgTree.value.length > 0) return; loadingOrgTree.value = true; try { orgTree.value = await getOrgUnitTree() } catch (e: any) { console.error('加载组织树失败', e); ElMessage.error('加载组织结构失败') }; loadingOrgTree.value = false }
 
 // ========== Save ==========
 async function saveConfig() {
@@ -268,21 +485,29 @@ async function handlePublish() {
   if (cf.value.scopeIds.length === 0) { ElMessage.error('请先配置检查范围'); activeTab.value = 'settings'; return }
   if (!cf.value.startDate) { ElMessage.error('请先设置开始日期'); activeTab.value = 'settings'; return }
   if (configDirty.value) await saveConfig()
-  try { await ElMessageBox.confirm('确定发布？将自动生成检查任务。', '确认发布', { type: 'warning' }); await store.publishProject(projectId, { templateVersionId: project.value.templateVersionId || null as any }); ElMessage.success('已发布'); activeTab.value = 'overview'; loadProject() } catch {}
+  try { await ElMessageBox.confirm('确定发布？将自动生成检查任务。', '确认发布', { type: 'warning' }); await store.publishProject(projectId, { templateVersionId: project.value.templateVersionId || null as any }); ElMessage.success('已发布'); activeTab.value = 'overview'; loadProject() } catch (e: any) {
+    if (e !== 'cancel' && e?.toString?.() !== 'cancel') { console.error('发布项目失败', e); ElMessage.error('发布项目失败，请重试') }
+  }
 }
 async function handlePause() { try { await store.pauseProject(projectId); ElMessage.success('已暂停'); loadProject() } catch (e: any) { ElMessage.error(e.message || '失败') } }
 async function handleResume() { try { await store.resumeProject(projectId); ElMessage.success('已恢复'); loadProject() } catch (e: any) { ElMessage.error(e.message || '失败') } }
-async function handleComplete() { try { await ElMessageBox.confirm('确定完结？', '确认', { type: 'warning' }); await store.completeProject(projectId); ElMessage.success('已完结'); loadProject() } catch {} }
-async function handleArchive() { try { await ElMessageBox.confirm('确定归档？归档后不可恢复为活跃状态。', '确认归档', { type: 'warning' }); await inspProjectApi.archive(projectId); ElMessage.success('已归档'); loadProject() } catch {} }
+async function handleComplete() { try { await ElMessageBox.confirm('确定完结？', '确认', { type: 'warning' }); await store.completeProject(projectId); ElMessage.success('已完结'); loadProject() } catch (e: any) {
+    if (e !== 'cancel' && e?.toString?.() !== 'cancel') { console.error('完结项目失败', e); ElMessage.error('完结项目失败，请重试') }
+  } }
+async function handleArchive() { try { await ElMessageBox.confirm('确定归档？归档后不可恢复为活跃状态。', '确认归档', { type: 'warning' }); await inspProjectApi.archive(projectId); ElMessage.success('已归档'); loadProject() } catch (e: any) {
+    if (e !== 'cancel' && e?.toString?.() !== 'cancel') { console.error('归档项目失败', e); ElMessage.error('归档项目失败，请重试') }
+  } }
 async function handleClaim(task: InspTask) { try { await store.claimTask(task.id, { inspectorName: '当前用户' }); ElMessage.success('已领取'); loadProject() } catch (e: any) { ElMessage.error(e.message || '失败') } }
 
 // ========== Inspector ==========
-async function searchUsers(q: string) { if (!q.trim()) { addResults.value = []; return }; addLoading.value = true; try { addResults.value = await getSimpleUserList(q.trim()) } catch { addResults.value = [] }; addLoading.value = false }
+async function searchUsers(q: string) { if (!q.trim()) { addResults.value = []; return }; addLoading.value = true; try { addResults.value = await getSimpleUserList(q.trim()) } catch (e: any) { console.warn('搜索用户失败', e); addResults.value = [] }; addLoading.value = false }
 async function handleAddInspector(userId: number) {
   const u = addResults.value.find(x => Number(x.id) === userId); if (!u) return
   try { await store.addInspector(projectId, { userId: Number(u.id), userName: u.realName || u.username, role: addRole.value }); ElMessage.success(`已添加 ${u.realName || u.username}`); addQuery.value = ''; addResults.value = []; inspectors.value = await store.loadInspectors(projectId) } catch (e: any) { ElMessage.error(e.message || '失败') }
 }
-async function handleRemoveInspector(insp: ProjectInspector) { try { await ElMessageBox.confirm(`移除「${insp.userName}」？`, '确认', { type: 'warning' }); await store.removeInspector(projectId, insp.id); inspectors.value = await store.loadInspectors(projectId) } catch {} }
+async function handleRemoveInspector(insp: ProjectInspector) { try { await ElMessageBox.confirm(`移除「${insp.userName}」？`, '确认', { type: 'warning' }); await store.removeInspector(projectId, insp.id); inspectors.value = await store.loadInspectors(projectId) } catch (e: any) {
+    if (e !== 'cancel' && e?.toString?.() !== 'cancel') { console.error('移除检查员失败', e); ElMessage.error('移除检查员失败，请重试') }
+  } }
 
 function goBack() { router.push('/inspection/v7/projects') }
 function goExecuteTask(taskId: number) { router.push(`/inspection/v7/tasks/${taskId}/execute`) }
@@ -349,10 +574,16 @@ onMounted(async () => {
       <button :class="['pdv-tab', activeTab === 'overview' && 'active']" @click="activeTab = 'overview'">
         <LayoutDashboard class="w-3.5 h-3.5" />总览
       </button>
-      <button :class="['pdv-tab', activeTab === 'plans' && 'active']" @click="activeTab = 'plans'">
-        <Calendar class="w-3.5 h-3.5" />检查计划
+      <button :class="['pdv-tab', activeTab === 'scores' && 'active']" @click="activeTab = 'scores'">
+        <BarChart3 class="w-3.5 h-3.5" />成绩统计
       </button>
-      <!-- 评级规则已移至评级中心 -->
+      <button :class="['pdv-tab', activeTab === 'team' && 'active']" @click="activeTab = 'team'">
+        <Users class="w-3.5 h-3.5" />人员与任务
+        <span v-if="pendingReviewCount > 0 || pendingAssignTasks.length > 0" class="pdv-tab-badge">{{ pendingReviewCount + pendingAssignTasks.length }}</span>
+      </button>
+      <button :class="['pdv-tab', activeTab === 'config' && 'active']" @click="activeTab = 'config'">
+        <ListTree class="w-3.5 h-3.5" />检查配置
+      </button>
       <button :class="['pdv-tab', activeTab === 'settings' && 'active']" @click="activeTab = 'settings'">
         <Settings class="w-3.5 h-3.5" />设置
         <span v-if="configDirty" class="pdv-tab-dot" />
@@ -386,16 +617,6 @@ onMounted(async () => {
             <div class="pdv-stat-card">
               <div class="pdv-stat-value text-green-600">{{ taskStats.done }}</div>
               <div class="pdv-stat-label">已完成</div>
-            </div>
-            <div class="pdv-stat-divider" />
-            <div class="pdv-stat-card">
-              <div class="pdv-stat-value text-blue-600">{{ resultStats ? resultStats.avg : '-' }}</div>
-              <div class="pdv-stat-label">平均分</div>
-            </div>
-            <div class="pdv-stat-divider" />
-            <div class="pdv-stat-card">
-              <div class="pdv-stat-value text-orange-500">{{ pendingCorrectiveCount }}</div>
-              <div class="pdv-stat-label">待整改</div>
             </div>
           </div>
 
@@ -471,98 +692,346 @@ onMounted(async () => {
               <div v-if="pendingReviewCount > 0" class="pdv-review-alert">
                 <ClipboardCheck class="w-3.5 h-3.5 text-orange-500" />
                 <span>{{ pendingReviewCount }} 个任务待审核</span>
-                <button class="pdv-review-link" @click="activeTab = 'settings'">去处理</button>
+                <button class="pdv-review-link" @click="activeTab = 'team'">去处理</button>
               </div>
             </div>
 
-          </div>
-
-          <!-- 检查结果统计 (仅有数据时) -->
-          <div v-if="resultStats" class="pdv-card mt-4">
-            <div class="pdv-card-title">
-              <BarChart3 class="w-4 h-4 text-[#1a6dff]" />检查结果汇总
-            </div>
-            <div class="pdv-result-stats">
-              <div class="pdv-result-item">
-                <div class="pdv-result-val">{{ resultStats.total }}</div>
-                <div class="pdv-result-lbl">已完成</div>
+            <!-- 待分配任务 -->
+            <div v-if="pendingAssignTasks.length > 0" class="pdv-card">
+              <div class="pdv-card-title">
+                <Users class="w-4 h-4 text-orange-500" />待分配任务
+                <span class="pdv-badge-orange ml-1.5">{{ pendingAssignTasks.length }}</span>
               </div>
-              <div class="pdv-result-divider" />
-              <div class="pdv-result-item">
-                <div class="pdv-result-val text-green-600">{{ resultStats.passed }}</div>
-                <div class="pdv-result-lbl">通过</div>
-              </div>
-              <div class="pdv-result-divider" />
-              <div class="pdv-result-item">
-                <div class="pdv-result-val text-red-500">{{ resultStats.failed }}</div>
-                <div class="pdv-result-lbl">未通过</div>
-              </div>
-              <div class="pdv-result-divider" />
-              <div class="pdv-result-item">
-                <div class="pdv-result-val text-blue-600">{{ resultStats.avg }}</div>
-                <div class="pdv-result-lbl">平均分</div>
-              </div>
-              <div class="pdv-result-divider" />
-              <div class="pdv-result-item">
-                <div class="pdv-result-val text-gray-700">{{ resultStats.max }}<span class="text-xs font-normal text-gray-400">/{{ resultStats.min }}</span></div>
-                <div class="pdv-result-lbl">最高/最低</div>
-              </div>
-            </div>
-
-            <!-- 评级分布 -->
-            <div v-if="resultStats.grades.length > 0" class="mt-4 pt-3 border-t border-gray-100">
-              <div class="text-xs font-medium text-gray-500 mb-2">评级分布</div>
-              <div class="flex items-end gap-4">
-                <div v-for="[grade, count] in resultStats.grades" :key="grade" class="text-center">
-                  <div class="w-10 bg-blue-100 rounded-t mx-auto flex items-end justify-center"
-                       :style="{ height: Math.max(16, count / resultStats.total * 80) + 'px' }">
-                    <span class="text-[10px] font-bold text-blue-700 pb-0.5">{{ count }}</span>
-                  </div>
-                  <div class="text-xs text-gray-500 mt-0.5 font-medium">{{ grade }}</div>
+              <div class="pdv-assign-list">
+                <div v-for="task in pendingAssignTasks.slice(0, 8)" :key="task.id" class="pdv-assign-row">
+                  <span class="text-xs text-gray-500">{{ task.taskDate }}</span>
+                  <span class="text-xs text-gray-400">{{ task.totalTargets }}个目标</span>
+                  <el-select
+                    :model-value="null"
+                    placeholder="选择检查员"
+                    size="small"
+                    style="width: 140px"
+                    :loading="assigningTaskId === task.id"
+                    @change="(val: any) => {
+                      const insp = inspectors.find((i: ProjectInspector) => String(i.userId) === String(val))
+                      if (insp) handleAssignTask(task, insp)
+                    }"
+                  >
+                    <el-option
+                      v-for="insp in inspectors"
+                      :key="insp.userId"
+                      :label="insp.userName"
+                      :value="insp.userId"
+                    />
+                  </el-select>
                 </div>
               </div>
             </div>
 
-            <!-- 目标得分明细 -->
-            <div v-if="targetScores.length > 0" class="mt-4 pt-3 border-t border-gray-100">
-              <div class="text-xs font-medium text-gray-500 mb-2">目标得分明细 <span class="text-gray-300 font-normal">（低→高）</span></div>
-              <el-table :data="targetScores.slice(0, 20)" max-height="280" size="small">
-                <el-table-column prop="targetName" label="检查目标" min-width="160" />
-                <el-table-column label="分数" width="80" align="center">
-                  <template #default="{ row }">
-                    <span class="font-bold" :style="{ color: getSectionScoreColor(row.finalScore ?? 0) }">
-                      {{ row.finalScore?.toFixed(1) ?? '-' }}
-                    </span>
-                  </template>
-                </el-table-column>
-                <el-table-column label="评级" width="70" align="center">
-                  <template #default="{ row }">
-                    <el-tag v-if="row.grade" size="small" round effect="plain">{{ row.grade }}</el-tag>
-                    <span v-else class="text-gray-300">-</span>
-                  </template>
-                </el-table-column>
-                <el-table-column label="结果" width="70" align="center">
-                  <template #default="{ row }">
-                    <el-tag v-if="row.passed === true" type="success" size="small" round effect="dark">通过</el-tag>
-                    <el-tag v-else-if="row.passed === false" type="danger" size="small" round effect="dark">未通过</el-tag>
-                    <span v-else class="text-gray-300">-</span>
-                  </template>
-                </el-table-column>
-              </el-table>
-            </div>
           </div>
 
         </template>
       </div>
 
-      <!-- ===== 检查计划 Tab ===== -->
-      <div v-if="activeTab === 'plans'">
-        <InspectionPlanConfig :project-id="projectId" />
+      <!-- ===== 成绩统计 Tab ===== -->
+      <div v-if="activeTab === 'scores'">
+        <IndicatorScoreView v-if="!isDraft" :project-id="projectId" />
+
+        <!-- Legacy score aggregation removed — IndicatorScoreView handles everything -->
+        <template v-if="false">
+          <!-- Filter Bar -->
+          <div class="flex items-center gap-3 mb-5">
+            <el-radio-group v-model="dateRangeType" size="small">
+              <el-radio-button value="today">今日</el-radio-button>
+              <el-radio-button value="week">本周</el-radio-button>
+              <el-radio-button value="month">本月</el-radio-button>
+              <el-radio-button value="custom">自定义</el-radio-button>
+              <el-radio-button value="all">全部</el-radio-button>
+            </el-radio-group>
+            <el-date-picker v-if="dateRangeType === 'custom'" v-model="customDateRange"
+              type="daterange" range-separator="至" start-placeholder="开始" end-placeholder="结束"
+              size="small" value-format="YYYY-MM-DD" style="width: 220px" />
+          </div>
+
+          <!-- Dimension Tabs -->
+          <div class="flex gap-1 mb-5 border-b border-gray-100 pb-3">
+            <button v-for="tab in dimensionTabs" :key="tab.key"
+              :class="['px-3.5 py-1.5 rounded-full text-sm font-medium transition-all',
+                selectedDimension === tab.key
+                  ? 'bg-blue-600 text-white shadow-sm'
+                  : 'text-gray-500 hover:text-gray-700 hover:bg-gray-100']"
+              @click="selectedDimension = tab.key">
+              {{ tab.label }}
+            </button>
+          </div>
+
+          <!-- Stats Cards -->
+          <div v-if="dimensionStats" class="grid gap-4 mb-5"
+               :class="dimensionHasGrades ? 'grid-cols-5' : 'grid-cols-3'">
+            <div class="bg-white rounded-xl border border-gray-100 p-4 text-center">
+              <div class="text-2xl font-bold text-gray-800">{{ dimensionStats.total }}</div>
+              <div class="text-xs text-gray-400 mt-1">已评目标</div>
+            </div>
+            <div class="bg-white rounded-xl border border-gray-100 p-4 text-center">
+              <div class="text-2xl font-bold text-blue-600">{{ dimensionStats.avg }}</div>
+              <div class="text-xs text-gray-400 mt-1">平均分</div>
+            </div>
+            <div class="bg-white rounded-xl border border-gray-100 p-4 text-center">
+              <div class="text-2xl font-bold text-gray-600">
+                {{ dimensionStats.max }}<span class="text-sm font-normal text-gray-300"> / {{ dimensionStats.min }}</span>
+              </div>
+              <div class="text-xs text-gray-400 mt-1">最高 / 最低</div>
+            </div>
+            <div v-if="dimensionHasGrades" class="bg-white rounded-xl border border-gray-100 p-4 text-center">
+              <div class="text-2xl font-bold text-emerald-600">{{ dimensionStats.passed }}</div>
+              <div class="text-xs text-gray-400 mt-1">达标</div>
+            </div>
+            <div v-if="dimensionHasGrades" class="bg-white rounded-xl border border-gray-100 p-4 text-center">
+              <div class="text-2xl font-bold text-red-500">{{ dimensionStats.failed }}</div>
+              <div class="text-xs text-gray-400 mt-1">未达标</div>
+            </div>
+          </div>
+
+          <!-- Score Distribution (only for overall) -->
+          <div v-if="selectedDimension === 'overall' && sectionScores.length > 0" class="bg-white rounded-xl border border-gray-100 p-4 mb-5">
+            <div class="text-xs font-semibold text-gray-500 mb-3">各维度平均分</div>
+            <div class="flex flex-col gap-2">
+              <div v-for="item in sectionScores" :key="item.name" class="flex items-center gap-2">
+                <span class="text-xs text-gray-500 w-24 truncate flex-shrink-0" :title="item.name">{{ item.name }}</span>
+                <div class="flex-1 h-5 bg-gray-50 rounded overflow-hidden">
+                  <div class="h-full rounded transition-all duration-300"
+                    :style="{ width: item.avg + '%', backgroundColor: getSectionScoreColor(item.avg) }" />
+                </div>
+                <span class="text-xs font-semibold w-10 text-right" :style="{ color: getSectionScoreColor(item.avg) }">
+                  {{ item.avg.toFixed(1) }}
+                </span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Rankings Table -->
+          <div class="bg-white rounded-xl border border-gray-100 overflow-hidden">
+            <div class="px-5 py-3 border-b border-gray-50 flex items-center justify-between">
+              <span class="text-sm font-semibold text-gray-700">
+                {{ selectedDimension === 'overall' ? '综合排名' : dimensionTabs.find(t => t.key === selectedDimension)?.label + '排名' }}
+              </span>
+              <span class="text-xs text-gray-400">{{ dimensionScores.length }} 个目标</span>
+            </div>
+
+            <div v-if="dimensionScores.length === 0" class="py-16 text-center text-gray-400 text-sm">
+              暂无成绩数据
+            </div>
+
+            <el-table v-else :data="dimensionScores" size="small" row-key="targetId"
+              :row-class-name="({rowIndex}: any) => rowIndex < 3 ? 'top-rank-row' : ''">
+
+              <!-- Expand (only for overall) -->
+              <el-table-column v-if="selectedDimension === 'overall'" type="expand" width="32">
+                <template #default="{ row }">
+                  <div class="px-6 py-3 bg-gray-50/60">
+                    <div class="grid grid-cols-2 gap-x-8 gap-y-2">
+                      <div v-for="sec in row.sections" :key="sec.sectionName"
+                           class="flex items-center justify-between py-1">
+                        <div class="flex items-center gap-2">
+                          <span class="text-sm text-gray-600">{{ sec.sectionName }}</span>
+                        </div>
+                        <div class="flex items-center gap-2">
+                          <span class="text-sm font-semibold" :style="{ color: getSectionScoreColor(sec.score) }">
+                            {{ sec.score.toFixed(1) }}
+                          </span>
+                          <span v-if="sec.grade" class="text-[11px] px-1.5 py-0.5 rounded font-medium"
+                            :style="getGradeColor(sec.grade, sec.sectionId) ? {
+                              background: getGradeColor(sec.grade, sec.sectionId) + '18',
+                              color: getGradeColor(sec.grade, sec.sectionId),
+                            } : undefined"
+                            :class="!getGradeColor(sec.grade, sec.sectionId) ? 'bg-blue-50 text-blue-600' : ''">
+                            {{ sec.grade }}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </template>
+              </el-table-column>
+
+              <!-- Rank -->
+              <el-table-column label="#" width="50" align="center">
+                <template #default="{ row }">
+                  <span v-if="row.rank === 1" class="text-lg">&#x1F947;</span>
+                  <span v-else-if="row.rank === 2" class="text-lg">&#x1F948;</span>
+                  <span v-else-if="row.rank === 3" class="text-lg">&#x1F949;</span>
+                  <span v-else class="text-sm text-gray-400 font-medium">{{ row.rank }}</span>
+                </template>
+              </el-table-column>
+
+              <!-- Target Name -->
+              <el-table-column prop="targetName" label="检查目标" min-width="180">
+                <template #default="{ row }">
+                  <span class="text-sm font-medium text-gray-700">{{ row.targetName }}</span>
+                </template>
+              </el-table-column>
+
+              <!-- Score -->
+              <el-table-column label="得分" width="90" align="center">
+                <template #default="{ row }">
+                  <span class="text-sm font-bold" :style="{ color: getSectionScoreColor(row.totalScore) }">
+                    {{ row.totalScore.toFixed(1) }}
+                  </span>
+                </template>
+              </el-table-column>
+
+              <!-- Grade (conditional) -->
+              <el-table-column v-if="dimensionHasGrades" label="等级" width="100" align="center">
+                <template #default="{ row }">
+                  <span v-if="row.grade" class="pdv-grade-badge"
+                    :style="getGradeColor(row.grade) ? {
+                      background: getGradeColor(row.grade) + '18',
+                      color: getGradeColor(row.grade),
+                      borderColor: getGradeColor(row.grade) + '30',
+                    } : undefined"
+                    :class="!getGradeColor(row.grade) ? (
+                      row.grade.includes('不') ? 'bg-red-50 text-red-600' :
+                      row.grade === '优秀' ? 'bg-emerald-50 text-emerald-600' :
+                      row.grade === '合格' ? 'bg-amber-50 text-amber-600' :
+                      'bg-blue-50 text-blue-600'
+                    ) : ''">
+                    <span v-if="getGradeColor(row.grade)" class="pdv-grade-dot" :style="{ background: getGradeColor(row.grade) }" />
+                    {{ row.grade }}
+                  </span>
+                  <span v-else class="text-gray-300">-</span>
+                </template>
+              </el-table-column>
+            </el-table>
+          </div>
+        </template>
+
+        <div v-else class="py-20 text-center">
+          <BarChart3 class="w-10 h-10 text-gray-300 mx-auto mb-3" />
+          <div class="text-sm text-gray-400">项目发布后可查看成绩统计</div>
+        </div>
       </div>
 
-      <!-- 评级规则已移至评级中心模块 -->
+      <!-- ===== 检查配置 Tab ===== -->
+      <div v-if="activeTab === 'config'">
+        <SectionConfigView :project-id="projectId" :sections="sectionList" :section-tree="sectionTree" :root-section-id="project?.rootSectionId" :root-section-name="rootSectionName" :inspectors="inspectors" />
+      </div>
 
       <!-- ===== 设置 Tab ===== -->
+      <!-- ===== 人员与任务 Tab ===== -->
+      <div v-if="activeTab === 'team'" class="cfg-section">
+
+        <!-- 待分配任务 -->
+        <div v-if="pendingAssignTasks.length > 0" class="cfg-card">
+          <div class="cfg-card-title cfg-card-title--with-icon cfg-card-title--mb">
+            <ClipboardList class="w-4 h-4" style="color:#f59e0b" />待分配任务
+            <span class="pdv-badge-orange">{{ pendingAssignTasks.length }}</span>
+          </div>
+          <div class="pdv-assign-list">
+            <div v-for="task in pendingAssignTasks" :key="task.id" class="pdv-assign-row">
+              <span class="text-xs font-medium">{{ task.taskCode }}</span>
+              <span class="text-xs text-gray-500">{{ task.taskDate }}</span>
+              <span class="text-xs text-gray-400">{{ task.totalTargets }}个目标</span>
+              <el-select
+                :model-value="null"
+                placeholder="指派检查员"
+                size="small"
+                style="width: 160px"
+                :loading="assigningTaskId === task.id"
+                @change="(val: any) => {
+                  const insp = inspectors.find((i: ProjectInspector) => String(i.userId) === String(val))
+                  if (insp) handleAssignTask(task, insp)
+                }"
+              >
+                <el-option v-for="insp in inspectors" :key="insp.userId" :label="insp.userName" :value="insp.userId" />
+              </el-select>
+            </div>
+          </div>
+        </div>
+
+        <!-- 检查员管理 -->
+        <div class="cfg-card">
+          <div class="cfg-card-header cfg-card-header--mb">
+            <div class="cfg-card-title cfg-card-title--with-icon">
+              <Users class="w-4 h-4" style="color:#1a6dff" />检查员管理
+              <span v-if="inspectors.length" class="cfg-count">({{ inspectors.length }} 人)</span>
+            </div>
+          </div>
+
+          <!-- 添加 -->
+          <div class="cfg-add-insp">
+            <div class="cfg-hint cfg-hint--mb">添加检查员</div>
+            <div class="cfg-add-insp-row">
+              <div class="cfg-add-insp-search">
+                <el-select v-model="addQuery" filterable remote reserve-keyword :remote-method="searchUsers" :loading="addLoading" placeholder="输入姓名搜索..." class="w-full" size="default" @change="handleAddInspector" clearable>
+                  <el-option v-for="u in addResults" :key="Number(u.id)" :label="(u.realName||u.username) + (u.orgUnitName ? ` (${u.orgUnitName})` : '')" :value="Number(u.id)">
+                    <div class="cfg-user-option"><span class="cfg-user-name">{{ u.realName || u.username }}</span><span class="cfg-hint">{{ u.orgUnitName || u.username }}</span></div>
+                  </el-option>
+                </el-select>
+              </div>
+              <div class="cfg-add-insp-role">
+                <el-select v-model="addRole">
+                  <el-option v-for="(v,k) in InspectorRoleConfig" :key="k" :label="v.label" :value="k" />
+                </el-select>
+              </div>
+            </div>
+          </div>
+
+          <!-- 工作量 -->
+          <div v-if="inspectorStats.length > 0 && !isDraft" class="cfg-workload-grid">
+            <div v-for="stat in inspectorStats" :key="stat.name" class="cfg-workload-item">
+              <div class="cfg-workload-name">{{ stat.name }}</div>
+              <div class="cfg-workload-stats">
+                <span class="cfg-hint">分配 </span><span class="cfg-workload-val">{{ stat.assigned }}</span>
+                <span class="cfg-hint">完成 </span><span class="cfg-workload-val cfg-workload-val--done">{{ stat.completed }}</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- 列表 -->
+          <div v-if="inspectors.length === 0" class="cfg-empty">暂无检查员</div>
+          <div v-else class="cfg-insp-grid">
+            <div v-for="insp in inspectors" :key="insp.id" class="cfg-insp-item">
+              <div class="cfg-insp-avatar">{{ (insp.userName || '?')[0] }}</div>
+              <div class="cfg-insp-info">
+                <div class="cfg-insp-name">{{ insp.userName }}</div>
+                <div class="cfg-hint">{{ InspectorRoleConfig[insp.role as InspectorRole]?.label }}</div>
+              </div>
+              <el-tag :type="insp.isActive ? 'success' : 'info'" size="small" round effect="plain">{{ insp.isActive ? '启用' : '禁用' }}</el-tag>
+              <el-button link type="danger" size="small" @click="handleRemoveInspector(insp)"><Trash2 class="w-3.5 h-3.5" /></el-button>
+            </div>
+          </div>
+        </div>
+
+        <!-- 审核待办 -->
+        <div v-if="pendingReviewCount > 0" class="cfg-card">
+          <div class="cfg-card-title cfg-card-title--with-icon cfg-card-title--mb">
+            <ClipboardCheck class="w-4 h-4" style="color:#1a6dff" />待审核任务
+            <span class="pdv-badge-red">{{ pendingReviewCount }}</span>
+          </div>
+          <div class="cfg-review-list">
+            <div v-for="task in pendingReviewTasks" :key="task.id" class="cfg-review-item">
+              <div class="cfg-review-info">
+                <div class="cfg-insp-name">{{ task.taskCode }}</div>
+                <div class="cfg-hint">检查员: {{ task.inspectorName || '-' }} · {{ task.updatedAt?.substring(0, 16) || '-' }}</div>
+              </div>
+              <div class="cfg-review-actions">
+                <el-tag type="warning" size="small" round>待审核</el-tag>
+                <el-button type="success" size="small" @click="handleApproveTask(task)"><Check class="w-3.5 h-3.5 mr-0.5" />通过</el-button>
+                <el-button type="danger" size="small" plain @click="handleRejectTask(task)"><X class="w-3.5 h-3.5 mr-0.5" />驳回</el-button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 无待办时 -->
+        <div v-if="pendingAssignTasks.length === 0 && pendingReviewCount === 0 && inspectors.length > 0" class="cfg-card">
+          <div class="cfg-empty" style="padding: 16px">
+            <CheckCircle class="w-5 h-5 text-green-400" style="margin: 0 auto 6px" />
+            所有任务已分配，无待审核项目
+          </div>
+        </div>
+      </div>
+
       <div v-if="activeTab === 'settings'" class="cfg-section">
 
         <!-- 锁定提示 -->
@@ -603,28 +1072,41 @@ onMounted(async () => {
           <div class="cfg-field cfg-field--mt">
             <label class="cfg-label">检查对象 <span v-if="isDraft" class="cfg-req">*</span></label>
             <div v-if="loadingOrgTree" class="cfg-org-list cfg-org-loading">加载中...</div>
-            <div v-else-if="flatOrgUnits.length === 0" class="cfg-org-list cfg-org-loading">暂无组织单元</div>
+            <div v-else-if="orgTree.length === 0" class="cfg-org-list cfg-org-loading">暂无组织单元</div>
             <div v-else-if="!isDraft" class="cfg-org-readonly">
               <span v-if="cf.scopeIds.length === 0" class="cfg-readonly-text">未选择</span>
               <template v-else>
                 <span v-for="id in cf.scopeIds" :key="id" class="cfg-scope-tag">
-                  {{ flatOrgUnits.find(u => u.id === id)?.unitName || id }}
+                  {{ scopeOrgNames[cf.scopeIds.indexOf(id)] || id }}
                 </span>
               </template>
             </div>
-            <div v-else class="cfg-org-list">
-              <div
-                v-for="unit in flatOrgUnits"
-                :key="unit.id"
-                class="cfg-org-row"
-                :class="{ 'cfg-org-row--on': cf.scopeIds.includes(unit.id) }"
-                :style="{ paddingLeft: `${8 + unit.depth * 16}px` }"
-                @click="toggleScopeId(unit.id)"
-              >
-                <span class="cfg-org-name">{{ unit.unitName }}</span>
-                <span v-if="cf.scopeIds.includes(unit.id)" class="cfg-org-check">✓</span>
+            <template v-else>
+              <div class="flex items-center gap-2 mb-1.5">
+                <el-input
+                  v-model="scopeFilterText"
+                  placeholder="搜索组织..."
+                  size="small"
+                  clearable
+                  style="width: 200px"
+                />
+                <el-button size="small" link type="primary" @click="scopeTreeRef?.setCheckedKeys([]); cf.scopeIds = []">清空</el-button>
               </div>
-            </div>
+              <div class="cfg-org-list">
+                <el-tree
+                  ref="scopeTreeRef"
+                  :data="orgTree"
+                  :props="{ children: 'children', label: 'unitName' }"
+                  show-checkbox
+                  check-strictly
+                  node-key="id"
+                  :default-checked-keys="cf.scopeIds.map(Number)"
+                  :filter-node-method="filterScopeNode"
+                  default-expand-all
+                  @check="handleScopeCheckChange"
+                />
+              </div>
+            </template>
           </div>
           <div v-if="cf.scopeIds.length > 0 && isDraft" class="cfg-hint">
             已选 {{ cf.scopeIds.length }} 个组织单元，发布后将自动匹配下属场所、部门等目标
@@ -729,81 +1211,6 @@ onMounted(async () => {
               <span class="cfg-toggle-name">尺度校准</span>
               <span class="cfg-hint">校正不同检查员的评分尺度差异</span>
             </label>
-          </div>
-        </div>
-
-        <!-- 检查员管理 -->
-        <div class="cfg-card">
-          <div class="cfg-card-header cfg-card-header--mb">
-            <div class="cfg-card-title cfg-card-title--with-icon">
-              <Users class="w-4 h-4" style="color:#1a6dff" />检查员管理
-              <span v-if="inspectors.length" class="cfg-count">({{ inspectors.length }} 人)</span>
-            </div>
-          </div>
-
-          <!-- 添加 -->
-          <div class="cfg-add-insp">
-            <div class="cfg-hint cfg-hint--mb">添加检查员</div>
-            <div class="cfg-add-insp-row">
-              <div class="cfg-add-insp-search">
-                <el-select v-model="addQuery" filterable remote reserve-keyword :remote-method="searchUsers" :loading="addLoading" placeholder="输入姓名搜索..." class="w-full" size="default" @change="handleAddInspector" clearable>
-                  <el-option v-for="u in addResults" :key="Number(u.id)" :label="(u.realName||u.username) + (u.orgUnitName ? ` (${u.orgUnitName})` : '')" :value="Number(u.id)">
-                    <div class="cfg-user-option"><span class="cfg-user-name">{{ u.realName || u.username }}</span><span class="cfg-hint">{{ u.orgUnitName || u.username }}</span></div>
-                  </el-option>
-                </el-select>
-              </div>
-              <div class="cfg-add-insp-role">
-                <el-select v-model="addRole">
-                  <el-option v-for="(v,k) in InspectorRoleConfig" :key="k" :label="v.label" :value="k" />
-                </el-select>
-              </div>
-            </div>
-          </div>
-
-          <!-- 工作量 -->
-          <div v-if="inspectorStats.length > 0 && !isDraft" class="cfg-workload-grid">
-            <div v-for="stat in inspectorStats" :key="stat.name" class="cfg-workload-item">
-              <div class="cfg-workload-name">{{ stat.name }}</div>
-              <div class="cfg-workload-stats">
-                <span class="cfg-hint">分配 </span><span class="cfg-workload-val">{{ stat.assigned }}</span>
-                <span class="cfg-hint">完成 </span><span class="cfg-workload-val cfg-workload-val--done">{{ stat.completed }}</span>
-              </div>
-            </div>
-          </div>
-
-          <!-- 列表 -->
-          <div v-if="inspectors.length === 0" class="cfg-empty">暂无检查员</div>
-          <div v-else class="cfg-insp-grid">
-            <div v-for="insp in inspectors" :key="insp.id" class="cfg-insp-item">
-              <div class="cfg-insp-avatar">{{ (insp.userName || '?')[0] }}</div>
-              <div class="cfg-insp-info">
-                <div class="cfg-insp-name">{{ insp.userName }}</div>
-                <div class="cfg-hint">{{ InspectorRoleConfig[insp.role as InspectorRole]?.label }}</div>
-              </div>
-              <el-tag :type="insp.isActive ? 'success' : 'info'" size="small" round effect="plain">{{ insp.isActive ? '启用' : '禁用' }}</el-tag>
-              <el-button link type="danger" size="small" @click="handleRemoveInspector(insp)"><Trash2 class="w-3.5 h-3.5" /></el-button>
-            </div>
-          </div>
-        </div>
-
-        <!-- 审核待办 -->
-        <div v-if="pendingReviewCount > 0" class="cfg-card">
-          <div class="cfg-card-title cfg-card-title--with-icon cfg-card-title--mb">
-            <ClipboardCheck class="w-4 h-4" style="color:#1a6dff" />待审核任务
-            <span class="pdv-badge-red">{{ pendingReviewCount }}</span>
-          </div>
-          <div class="cfg-review-list">
-            <div v-for="task in pendingReviewTasks" :key="task.id" class="cfg-review-item">
-              <div class="cfg-review-info">
-                <div class="cfg-insp-name">{{ task.taskCode }}</div>
-                <div class="cfg-hint">检查员: {{ task.inspectorName || '-' }} · {{ task.updatedAt?.substring(0, 16) || '-' }}</div>
-              </div>
-              <div class="cfg-review-actions">
-                <el-tag type="warning" size="small" round>待审核</el-tag>
-                <el-button type="success" size="small" @click="handleApproveTask(task)"><Check class="w-3.5 h-3.5 mr-0.5" />通过</el-button>
-                <el-button type="danger" size="small" plain @click="handleRejectTask(task)"><X class="w-3.5 h-3.5 mr-0.5" />驳回</el-button>
-              </div>
-            </div>
           </div>
         </div>
 
@@ -924,6 +1331,12 @@ onMounted(async () => {
 .pdv-tab:hover { color: #374151; background: rgba(255,255,255,0.6); }
 .pdv-tab.active { color: #1a6dff; background: #fff; box-shadow: 0 1px 4px rgba(0,0,0,0.1); font-weight: 600; }
 .pdv-tab-dot { width: 6px; height: 6px; border-radius: 50%; background: #f59e0b; flex-shrink: 0; }
+.pdv-tab-badge {
+  font-size: 10px; min-width: 16px; height: 16px; line-height: 16px;
+  text-align: center; border-radius: 8px;
+  background: #ef4444; color: #fff; font-weight: 700;
+  padding: 0 4px; flex-shrink: 0;
+}
 
 /* ========== Body ========== */
 .pdv-body { min-height: 300px; }
@@ -1077,6 +1490,15 @@ onMounted(async () => {
   border-radius: 8px;
   font-size: 12px;
   color: #9a3412;
+}
+.pdv-badge-orange {
+  font-size: 11px; padding: 1px 7px; border-radius: 8px;
+  background: #fffbeb; color: #f59e0b; font-weight: 600;
+}
+.pdv-assign-list { display: flex; flex-direction: column; gap: 6px; }
+.pdv-assign-row {
+  display: flex; align-items: center; gap: 8px;
+  padding: 4px 0;
 }
 .pdv-review-link {
   margin-left: auto;
@@ -1246,13 +1668,14 @@ onMounted(async () => {
   font-size: 12px;
 }
 
-/* ========== Org unit flat list ========== */
+/* ========== Org unit tree ========== */
 .cfg-org-list {
   border: 1px solid #e5e7eb;
   border-radius: 6px;
   overflow: hidden;
-  max-height: 220px;
+  max-height: 320px;
   overflow-y: auto;
+  padding: 4px 0;
 }
 .cfg-org-loading {
   padding: 16px;
@@ -1260,23 +1683,6 @@ onMounted(async () => {
   font-size: 12px;
   color: #9ca3af;
 }
-.cfg-org-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 7px 10px;
-  font-size: 12px;
-  color: #374151;
-  cursor: pointer;
-  background: #fff;
-  border-bottom: 1px solid #f3f4f6;
-  transition: background 0.1s;
-}
-.cfg-org-row:last-child { border-bottom: none; }
-.cfg-org-row:hover { background: #f7f9fc; }
-.cfg-org-row--on { background: #eff5ff !important; color: #1a6dff; }
-.cfg-org-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.cfg-org-check { font-size: 11px; font-weight: 700; color: #1a6dff; flex-shrink: 0; margin-left: 8px; }
 
 /* ========== Toggle ========== */
 .cfg-toggle-row {
@@ -1434,5 +1840,28 @@ onMounted(async () => {
   font-size: 11px;
   color: #b45309;
   margin-top: 2px;
+}
+
+/* ========== Scores tab: top rank highlight ========== */
+:deep(.top-rank-row) {
+  background-color: #fafbff !important;
+}
+
+/* ========== Grade badge with scheme colors ========== */
+.pdv-grade-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  font-weight: 500;
+  padding: 2px 8px;
+  border-radius: 20px;
+  border: 1px solid transparent;
+}
+.pdv-grade-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  flex-shrink: 0;
 }
 </style>

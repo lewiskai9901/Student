@@ -12,6 +12,7 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.*;
+import com.school.management.infrastructure.casbin.CasbinAccess;
 
 /**
  * Asset Management REST Controller
@@ -47,6 +48,7 @@ public class AssetController {
     // ==================== Asset List (paginated) ====================
 
     @GetMapping
+    @CasbinAccess(resource = "asset:manage", action = "view")
     public Result<Map<String, Object>> listAssets(
             @RequestParam(defaultValue = "1") int pageNum,
             @RequestParam(defaultValue = "20") int pageSize,
@@ -112,6 +114,7 @@ public class AssetController {
     // ==================== Get Asset Detail ====================
 
     @GetMapping("/{id}")
+    @CasbinAccess(resource = "asset:manage", action = "view")
     public Result<Map<String, Object>> getAsset(@PathVariable Long id) {
         Map<String, Object> asset = jdbc.queryForMap(
             "SELECT " + ASSET_COLUMNS +
@@ -127,6 +130,7 @@ public class AssetController {
     // ==================== Query by Location ====================
 
     @GetMapping("/by-location")
+    @CasbinAccess(resource = "asset:manage", action = "view")
     public Result<List<Map<String, Object>>> getAssetsByLocation(
             @RequestParam String locationType,
             @RequestParam Long locationId) {
@@ -146,6 +150,7 @@ public class AssetController {
     // ==================== Create Asset ====================
 
     @PostMapping
+    @CasbinAccess(resource = "asset:manage", action = "edit")
     @Transactional
     public Result<Long> createAsset(@RequestBody Map<String, Object> data) {
         long id = IdWorker.getId();
@@ -190,6 +195,7 @@ public class AssetController {
     // ==================== Batch Create ====================
 
     @PostMapping("/batch")
+    @CasbinAccess(resource = "asset:manage", action = "edit")
     @Transactional
     public Result<Map<String, Object>> batchCreateAssets(@RequestBody Map<String, Object> data) {
         int quantity = ((Number) data.getOrDefault("quantity", 1)).intValue();
@@ -262,6 +268,7 @@ public class AssetController {
     // ==================== Update Asset ====================
 
     @PutMapping("/{id}")
+    @CasbinAccess(resource = "asset:manage", action = "edit")
     @Transactional
     public Result<Void> updateAsset(@PathVariable Long id, @RequestBody Map<String, Object> data) {
         StringBuilder sql = new StringBuilder("UPDATE asset SET updated_at = NOW()");
@@ -295,6 +302,7 @@ public class AssetController {
     // ==================== Delete Asset ====================
 
     @DeleteMapping("/{id}")
+    @CasbinAccess(resource = "asset:manage", action = "edit")
     @Transactional
     public Result<Void> deleteAsset(@PathVariable Long id) {
         jdbc.update("UPDATE asset SET deleted = 1, updated_at = NOW() WHERE id = ? AND deleted = 0", id);
@@ -304,6 +312,7 @@ public class AssetController {
     // ==================== Transfer Asset ====================
 
     @PostMapping("/{id}/transfer")
+    @CasbinAccess(resource = "asset:manage", action = "edit")
     @Transactional
     public Result<Void> transferAsset(@PathVariable Long id, @RequestBody Map<String, Object> data) {
         // Get current location
@@ -333,6 +342,7 @@ public class AssetController {
     // ==================== Batch Transfer ====================
 
     @PostMapping("/batch-transfer")
+    @CasbinAccess(resource = "asset:manage", action = "edit")
     @Transactional
     public Result<Map<String, Object>> batchTransferAssets(@RequestBody Map<String, Object> data) {
         @SuppressWarnings("unchecked")
@@ -396,6 +406,7 @@ public class AssetController {
     // ==================== Scrap Asset ====================
 
     @PostMapping("/{id}/scrap")
+    @CasbinAccess(resource = "asset:manage", action = "edit")
     @Transactional
     public Result<Void> scrapAsset(@PathVariable Long id, @RequestBody(required = false) Map<String, Object> data) {
         jdbc.update("UPDATE asset SET status = 4, updated_at = NOW() WHERE id = ? AND deleted = 0", id);
@@ -409,6 +420,7 @@ public class AssetController {
     // ==================== Asset History ====================
 
     @GetMapping("/{id}/history")
+    @CasbinAccess(resource = "asset:manage", action = "view")
     public Result<List<Map<String, Object>>> getAssetHistory(@PathVariable Long id) {
         List<Map<String, Object>> history = jdbc.queryForList(
             "SELECT id, asset_id AS assetId, change_type AS changeType, " +
@@ -430,6 +442,7 @@ public class AssetController {
     // ==================== Statistics ====================
 
     @GetMapping("/statistics")
+    @CasbinAccess(resource = "asset:manage", action = "view")
     public Result<Map<String, Object>> getAssetStatistics() {
         Map<String, Object> stats = new HashMap<>();
 
@@ -470,6 +483,7 @@ public class AssetController {
     // ==================== Maintenance ====================
 
     @GetMapping("/{id}/maintenance")
+    @CasbinAccess(resource = "asset:manage", action = "view")
     public Result<List<Map<String, Object>>> getMaintenanceRecords(@PathVariable Long id) {
         List<Map<String, Object>> records = jdbc.queryForList(
             "SELECT m.id, m.asset_id AS assetId, a.asset_code AS assetCode, a.asset_name AS assetName, " +
@@ -487,6 +501,7 @@ public class AssetController {
     }
 
     @PostMapping("/{assetId}/maintenance")
+    @CasbinAccess(resource = "asset:manage", action = "edit")
     @Transactional
     public Result<Long> createMaintenance(@PathVariable Long assetId, @RequestBody Map<String, Object> data) {
         long id = IdWorker.getId();
@@ -510,6 +525,7 @@ public class AssetController {
     }
 
     @PostMapping("/maintenance/{maintenanceId}/complete")
+    @CasbinAccess(resource = "asset:manage", action = "edit")
     @Transactional
     public Result<Void> completeMaintenance(@PathVariable Long maintenanceId, @RequestBody Map<String, Object> data) {
         // Get the asset ID

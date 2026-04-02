@@ -133,9 +133,7 @@ public class OrgUnit extends AggregateRoot<Long> {
      * Freeze the org unit — no new positions/members can be added.
      */
     public List<FieldChange> freeze(String reason, Long updatedBy) {
-        if (this.status == OrgUnitStatus.DISSOLVED) {
-            throw new IllegalStateException("Cannot freeze a dissolved org unit");
-        }
+        validateStatusTransition(OrgUnitStatus.FROZEN);
         List<FieldChange> changes = new ArrayList<>();
         changes.add(new FieldChange("status", this.status.name(), OrgUnitStatus.FROZEN.name()));
         this.status = OrgUnitStatus.FROZEN;
@@ -148,11 +146,9 @@ public class OrgUnit extends AggregateRoot<Long> {
      * Unfreeze the org unit — restore to ACTIVE.
      */
     public List<FieldChange> unfreeze(Long updatedBy) {
-        if (this.status != OrgUnitStatus.FROZEN) {
-            throw new IllegalStateException("Can only unfreeze a frozen org unit");
-        }
+        validateStatusTransition(OrgUnitStatus.ACTIVE);
         List<FieldChange> changes = new ArrayList<>();
-        changes.add(new FieldChange("status", OrgUnitStatus.FROZEN.name(), OrgUnitStatus.ACTIVE.name()));
+        changes.add(new FieldChange("status", this.status.name(), OrgUnitStatus.ACTIVE.name()));
         this.status = OrgUnitStatus.ACTIVE;
         this.updatedBy = updatedBy;
         this.updatedAt = LocalDateTime.now();
@@ -163,9 +159,7 @@ public class OrgUnit extends AggregateRoot<Long> {
      * Dissolve the org unit.
      */
     public List<FieldChange> dissolve(String reason, Long updatedBy) {
-        if (this.status == OrgUnitStatus.DISSOLVED) {
-            throw new IllegalStateException("Already dissolved");
-        }
+        validateStatusTransition(OrgUnitStatus.DISSOLVED);
         List<FieldChange> changes = new ArrayList<>();
         changes.add(new FieldChange("status", this.status.name(), OrgUnitStatus.DISSOLVED.name()));
         this.status = OrgUnitStatus.DISSOLVED;
@@ -180,6 +174,7 @@ public class OrgUnit extends AggregateRoot<Long> {
      * Mark as merging into target org unit.
      */
     public void markMergedInto(Long targetId, String reason, Long updatedBy) {
+        validateStatusTransition(OrgUnitStatus.DISSOLVED);
         this.status = OrgUnitStatus.DISSOLVED;
         this.mergedIntoId = targetId;
         this.dissolvedAt = LocalDateTime.now();
@@ -212,6 +207,34 @@ public class OrgUnit extends AggregateRoot<Long> {
 
     public boolean canAddChildren() {
         return status == OrgUnitStatus.ACTIVE || status == OrgUnitStatus.DRAFT;
+    }
+
+    // ==================== Status Transition Validation ====================
+
+    /**
+     * Validates that a status transition is allowed.
+     * Allowed transitions:
+     *   DRAFT    → ACTIVE, DISSOLVED
+     *   ACTIVE   → FROZEN, DISSOLVED
+     *   FROZEN   → ACTIVE, DISSOLVED
+     *   DISSOLVED → (terminal, no transitions)
+     *   MERGING  → DISSOLVED
+     */
+    public void validateStatusTransition(OrgUnitStatus newStatus) {
+        if (this.status == newStatus) {
+            return; // no-op
+        }
+        boolean allowed = switch (this.status) {
+            case DRAFT -> newStatus == OrgUnitStatus.ACTIVE || newStatus == OrgUnitStatus.DISSOLVED;
+            case ACTIVE -> newStatus == OrgUnitStatus.FROZEN || newStatus == OrgUnitStatus.DISSOLVED;
+            case FROZEN -> newStatus == OrgUnitStatus.ACTIVE || newStatus == OrgUnitStatus.DISSOLVED;
+            case MERGING -> newStatus == OrgUnitStatus.DISSOLVED;
+            case DISSOLVED -> false;
+        };
+        if (!allowed) {
+            throw new IllegalStateException(
+                String.format("Cannot transition from %s to %s", this.status, newStatus));
+        }
     }
 
     public boolean isActive() {

@@ -51,7 +51,7 @@
         >
           <div class="bed-number">{{ bed.number }}号床</div>
           <div v-if="bed.student" class="bed-student">
-            {{ bed.student.studentName }}
+            {{ bed.student.occupantName }}
           </div>
           <div v-else class="bed-empty">空闲</div>
         </div>
@@ -114,8 +114,8 @@
           {{ selectedBed.student.gender === 1 ? '男' : '女' }}
         </div>
         <div class="student-info">
-          <div class="student-name">{{ selectedBed.student.studentName }}</div>
-          <div class="student-no">{{ selectedBed.student.studentNo }}</div>
+          <div class="student-name">{{ selectedBed.student.occupantName }}</div>
+          <div class="student-no">{{ selectedBed.student.username }}</div>
         </div>
         <el-button type="danger" size="small" plain @click="handleCheckOut">
           办理退宿
@@ -144,12 +144,8 @@ import { ref, computed, watch } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { User, Search, Check, Loading } from '@element-plus/icons-vue'
 import { getClassStudents } from '@/api/myClass'
-import {
-  getStudentsByDormitoryId,
-  checkIn,
-  checkOut,
-  type StudentDormitoryResponse
-} from '@/api/studentDormitory'
+import { universalPlaceApi } from '@/api/universalPlace'
+import type { PlaceOccupant } from '@/types/universalPlace'
 import type { MyClassStudent } from '@/types/myClass'
 
 // Props & Emits
@@ -176,7 +172,7 @@ const emit = defineEmits<{
 // Types
 interface BedInfo {
   number: string
-  student: StudentDormitoryResponse | null
+  student: PlaceOccupant | null
 }
 
 // State
@@ -185,7 +181,7 @@ const dialogVisible = computed({
   set: (value) => emit('update:visible', value)
 })
 
-const currentOccupants = ref<StudentDormitoryResponse[]>([])
+const currentOccupants = ref<PlaceOccupant[]>([])
 const bedList = ref<BedInfo[]>([])
 const selectedBed = ref<BedInfo | null>(null)
 const selectedStudent = ref<MyClassStudent | null>(null)
@@ -225,13 +221,13 @@ const loadDormitoryData = async () => {
   if (!props.dormitory?.id) return
 
   try {
-    currentOccupants.value = await getStudentsByDormitoryId(props.dormitory.id)
+    currentOccupants.value = await universalPlaceApi.getOccupants(props.dormitory.id)
 
     const capacity = props.dormitory.bedCapacity || 6
     const beds: BedInfo[] = []
     for (let i = 1; i <= capacity; i++) {
       const bedNumber = String(i)
-      const occupant = currentOccupants.value.find(o => o.bedNumber === bedNumber)
+      const occupant = currentOccupants.value.find(o => o.positionNo === bedNumber)
       beds.push({
         number: bedNumber,
         student: occupant || null
@@ -275,10 +271,12 @@ const handleSubmit = async () => {
 
   submitting.value = true
   try {
-    await checkIn({
-      studentId: selectedStudent.value!.id,
-      dormitoryId: props.dormitory!.id,
-      bedNumber: selectedBed.value!.number
+    await universalPlaceApi.checkIn(props.dormitory!.id, {
+      occupantType: 'STUDENT',
+      occupantId: selectedStudent.value!.id,
+      occupantName: selectedStudent.value!.name,
+      username: selectedStudent.value!.studentNo,
+      positionNo: selectedBed.value!.number
     })
 
     ElMessage.success('学生入住成功')
@@ -292,11 +290,11 @@ const handleSubmit = async () => {
 }
 
 const handleCheckOut = async () => {
-  if (!selectedBed.value?.student) return
+  if (!selectedBed.value?.student || !props.dormitory) return
 
   try {
     await ElMessageBox.confirm(
-      `确定要为 ${selectedBed.value.student.studentName} 办理退宿吗？`,
+      `确定要为 ${selectedBed.value.student.occupantName} 办理退宿吗？`,
       '确认退宿',
       {
         confirmButtonText: '确定',
@@ -305,9 +303,7 @@ const handleCheckOut = async () => {
       }
     )
 
-    await checkOut({
-      studentId: selectedBed.value.student.studentId
-    })
+    await universalPlaceApi.checkOut(props.dormitory.id, selectedBed.value.student.id)
 
     ElMessage.success('退宿成功')
     loadDormitoryData()

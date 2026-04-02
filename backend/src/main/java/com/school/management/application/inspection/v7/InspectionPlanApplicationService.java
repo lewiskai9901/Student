@@ -47,7 +47,7 @@ public class InspectionPlanApplicationService {
      */
     @Transactional
     public InspectionPlan createPlan(Long projectId, String planName, Long rootSectionId,
-                                     String sectionIds,
+                                     String sectionIds, String inspectorIds,
                                      String scheduleMode, String cycleType, Integer frequency,
                                      String scheduleDays, String timeSlots, Boolean skipHolidays,
                                      Long createdBy) {
@@ -64,6 +64,7 @@ public class InspectionPlanApplicationService {
                 .planName(planName)
                 .rootSectionId(resolvedRootSectionId)
                 .sectionIds(sectionIds)
+                .inspectorIds(inspectorIds)
                 .scheduleMode(scheduleMode)
                 .cycleType(cycleType)
                 .frequency(frequency)
@@ -84,7 +85,7 @@ public class InspectionPlanApplicationService {
      */
     @Transactional
     public InspectionPlan updatePlan(Long planId, String planName, Long rootSectionId,
-                                     String sectionIds,
+                                     String sectionIds, String inspectorIds,
                                      String scheduleMode, String cycleType, Integer frequency,
                                      String scheduleDays, String timeSlots, Boolean skipHolidays) {
         InspectionPlan plan = planRepository.findById(planId)
@@ -97,6 +98,7 @@ public class InspectionPlanApplicationService {
 
         plan.update(planName, rootSectionId, sectionIds, scheduleMode, cycleType, frequency,
                 scheduleDays, timeSlots, skipHolidays, null, null);
+        if (inspectorIds != null) plan.updateInspectorIds(inspectorIds);
 
         InspectionPlan saved = planRepository.save(plan);
         log.info("更新检查计划: planId={}, planName={}", planId, planName);
@@ -193,15 +195,39 @@ public class InspectionPlanApplicationService {
         // 创建任务
         String taskCode = generateTaskCode();
         InspTask task = InspTask.create(taskCode, plan.getProjectId(), LocalDate.now());
+
+        // 如果计划指定了检查员，自动取第一个进行指派（轮转逻辑后续可扩展）
+        Long assignedInspectorId = null;
+        String assignedInspectorName = null;
+        if (plan.getInspectorIds() != null && !plan.getInspectorIds().isBlank()) {
+            try {
+                var ids = new com.fasterxml.jackson.databind.ObjectMapper()
+                        .readValue(plan.getInspectorIds(), Long[].class);
+                if (ids.length > 0) {
+                    assignedInspectorId = ids[0];
+                    // 简单使用 ID 作为名字占位，实际应查询用户表
+                    assignedInspectorName = String.valueOf(ids[0]);
+                }
+            } catch (Exception e) {
+                log.warn("解析计划检查员列表失败: {}", e.getMessage());
+            }
+        }
+
         // 通过 reconstruct 设置 inspectionPlanId 和 assignedSectionIds
-        task = InspTask.reconstruct(InspTask.builder()
+        var builder = InspTask.builder()
                 .taskCode(task.getTaskCode())
                 .projectId(task.getProjectId())
                 .taskDate(task.getTaskDate())
                 .status(task.getStatus())
                 .inspectionPlanId(planId)
                 .assignedSectionIds(plan.getSectionIds())
-                .createdAt(task.getCreatedAt()));
+                .createdAt(task.getCreatedAt());
+        if (assignedInspectorId != null) {
+            builder.inspectorId(assignedInspectorId)
+                   .inspectorName(assignedInspectorName)
+                   .status(TaskStatus.CLAIMED);
+        }
+        task = InspTask.reconstruct(builder);
         InspTask saved = taskRepository.save(task);
 
         log.info("手动触发 ON_DEMAND 计划: planId={}, taskCode={}, operatorId={}",

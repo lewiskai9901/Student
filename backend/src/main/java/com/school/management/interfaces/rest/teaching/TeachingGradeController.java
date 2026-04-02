@@ -17,6 +17,7 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
+import com.school.management.infrastructure.casbin.CasbinAccess;
 
 /**
  * 成绩管理 REST Controller
@@ -37,6 +38,7 @@ public class TeachingGradeController {
     // ==================== 成绩批次管理 ====================
 
     @GetMapping("/batches")
+    @CasbinAccess(resource = "teaching:grade", action = "view")
     public Result<Map<String, Object>> listBatches(
             @RequestParam(required = false) Long semesterId,
             @RequestParam(required = false) Integer gradeType,
@@ -83,6 +85,7 @@ public class TeachingGradeController {
     }
 
     @GetMapping("/batches/{id}")
+    @CasbinAccess(resource = "teaching:grade", action = "view")
     public Result<Map<String, Object>> getBatch(@PathVariable Long id) {
         Map<String, Object> batch = jdbc.queryForMap(
             "SELECT id, batch_code AS batchCode, batch_name AS batchName, " +
@@ -96,6 +99,7 @@ public class TeachingGradeController {
     }
 
     @PostMapping("/batches")
+    @CasbinAccess(resource = "teaching:grade", action = "edit")
     public Result<Map<String, Object>> createBatch(@RequestBody Map<String, Object> data) {
         String batchName = (String) data.get("batchName");
         Long semesterId = data.get("semesterId") != null ? ((Number) data.get("semesterId")).longValue() : null;
@@ -124,6 +128,7 @@ public class TeachingGradeController {
     }
 
     @PutMapping("/batches/{id}")
+    @CasbinAccess(resource = "teaching:grade", action = "edit")
     public Result<Void> updateBatch(@PathVariable Long id, @RequestBody Map<String, Object> data) {
         String batchName = (String) data.get("batchName");
         Long semesterId = data.get("semesterId") != null ? ((Number) data.get("semesterId")).longValue() : null;
@@ -144,6 +149,7 @@ public class TeachingGradeController {
     }
 
     @DeleteMapping("/batches/{id}")
+    @CasbinAccess(resource = "teaching:grade", action = "edit")
     public Result<Void> deleteBatch(@PathVariable Long id) {
         // Physical delete
         jdbc.update("DELETE FROM grade_batches WHERE id = ?", id);
@@ -151,18 +157,21 @@ public class TeachingGradeController {
     }
 
     @PostMapping("/batches/{id}/submit")
+    @CasbinAccess(resource = "teaching:grade", action = "edit")
     public Result<Void> submitBatch(@PathVariable Long id) {
         jdbc.update("UPDATE grade_batches SET status = 1, updated_at = NOW() WHERE id = ?", id);
         return Result.success();
     }
 
     @PostMapping("/batches/{id}/approve")
+    @CasbinAccess(resource = "teaching:grade", action = "edit")
     public Result<Void> approveBatch(@PathVariable Long id) {
         jdbc.update("UPDATE grade_batches SET status = 2, updated_at = NOW() WHERE id = ?", id);
         return Result.success();
     }
 
     @PostMapping("/batches/{id}/publish")
+    @CasbinAccess(resource = "teaching:grade", action = "edit")
     public Result<Void> publishBatch(@PathVariable Long id) {
         jdbc.update("UPDATE grade_batches SET status = 3, updated_at = NOW() WHERE id = ?", id);
         return Result.success();
@@ -171,6 +180,7 @@ public class TeachingGradeController {
     // ==================== 成绩录入与查询 ====================
 
     @GetMapping("/batches/{batchId}/grades")
+    @CasbinAccess(resource = "teaching:grade", action = "view")
     public Result<List<Map<String, Object>>> listGradesByBatch(@PathVariable Long batchId) {
         List<Map<String, Object>> grades;
         try {
@@ -204,6 +214,7 @@ public class TeachingGradeController {
     }
 
     @PostMapping("/batches/{batchId}/grades")
+    @CasbinAccess(resource = "teaching:grade", action = "edit")
     public Result<Map<String, Object>> recordGrade(
             @PathVariable Long batchId,
             @RequestBody Map<String, Object> data) {
@@ -234,6 +245,7 @@ public class TeachingGradeController {
     }
 
     @PutMapping("/{gradeId}")
+    @CasbinAccess(resource = "teaching:grade", action = "edit")
     public Result<Void> updateGrade(@PathVariable Long gradeId, @RequestBody Map<String, Object> data) {
         BigDecimal totalScore = data.get("totalScore") != null ? new BigDecimal(data.get("totalScore").toString()) : null;
         BigDecimal gradePoint = data.get("gradePoint") != null ? new BigDecimal(data.get("gradePoint").toString()) : null;
@@ -252,6 +264,7 @@ public class TeachingGradeController {
     }
 
     @PostMapping("/batches/{batchId}/batch-record")
+    @CasbinAccess(resource = "teaching:grade", action = "edit")
     @Transactional
     public Result<Void> batchRecordGrades(
             @PathVariable Long batchId,
@@ -297,6 +310,7 @@ public class TeachingGradeController {
     // ==================== 按学生/班级查询 ====================
 
     @GetMapping("/by-student/{studentId}")
+    @CasbinAccess(resource = "teaching:grade", action = "view")
     public Result<List<Map<String, Object>>> getGradesByStudent(
             @PathVariable Long studentId,
             @RequestParam(required = false) Long semesterId,
@@ -370,6 +384,7 @@ public class TeachingGradeController {
     }
 
     @GetMapping("/by-class/{classId}")
+    @CasbinAccess(resource = "teaching:grade", action = "view")
     public Result<List<Map<String, Object>>> getGradesByClass(@PathVariable Long classId) {
         List<Map<String, Object>> grades;
         try {
@@ -406,6 +421,7 @@ public class TeachingGradeController {
     // ==================== 统计与排名 ====================
 
     @GetMapping("/statistics")
+    @CasbinAccess(resource = "teaching:grade", action = "view")
     public Result<Map<String, Object>> getStatistics(
             @RequestParam(required = false) Long batchId,
             @RequestParam(required = false) Long classId,
@@ -457,6 +473,7 @@ public class TeachingGradeController {
     }
 
     @GetMapping("/ranking")
+    @CasbinAccess(resource = "teaching:grade", action = "view")
     public Result<List<Map<String, Object>>> getRanking(
             @RequestParam Long classId,
             @RequestParam(required = false) Long semesterId) {
@@ -521,6 +538,7 @@ public class TeachingGradeController {
     // ==================== 导出 ====================
 
     @GetMapping("/export")
+    @CasbinAccess(resource = "teaching:grade", action = "view")
     public void exportGrades(
             @RequestParam Long semesterId,
             @RequestParam(required = false) Long classId,

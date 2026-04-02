@@ -42,8 +42,12 @@ public class InspProjectController {
     public Result<List<InspProject>> listProjects(
             @RequestParam(required = false) String status) {
         if (status != null) {
-            return Result.success(projectService.listProjectsByStatus(
-                    ProjectStatus.valueOf(status)));
+            try {
+                return Result.success(projectService.listProjectsByStatus(
+                        ProjectStatus.valueOf(status)));
+            } catch (IllegalArgumentException e) {
+                throw new IllegalArgumentException("无效的项目状态: " + status);
+            }
         }
         return Result.success(projectService.listProjects());
     }

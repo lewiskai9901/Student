@@ -86,23 +86,41 @@ public class AnalyticsQueryService {
     @Transactional(readOnly = true)
     public Map<String, Object> getCorrectiveSummaryLive(Long projectId) {
         List<CorrectiveCase> cases = correctiveCaseRepository.findByProjectId(projectId);
+
+        // Single-pass: count statuses, priorities, escalated, and overdue
+        Map<String, Long> statusCounts = new HashMap<>();
+        Map<String, Long> priorityCounts = new HashMap<>();
+        long escalated = 0;
+        long overdue = 0;
+
+        for (CorrectiveCase c : cases) {
+            String statusName = c.getStatus() != null ? c.getStatus().name() : "UNKNOWN";
+            statusCounts.merge(statusName, 1L, Long::sum);
+
+            if (c.getPriority() != null) {
+                priorityCounts.merge(c.getPriority().name(), 1L, Long::sum);
+            }
+            if (c.getEscalationLevel() != null && c.getEscalationLevel() > 0) {
+                escalated++;
+            }
+            if (c.isOverdue()) {
+                overdue++;
+            }
+        }
+
         Map<String, Object> result = new HashMap<>();
         result.put("total", cases.size());
-        result.put("open", cases.stream().filter(c -> "OPEN".equals(c.getStatus().name())).count());
-        result.put("assigned", cases.stream().filter(c -> "ASSIGNED".equals(c.getStatus().name())).count());
-        result.put("inProgress", cases.stream().filter(c -> "IN_PROGRESS".equals(c.getStatus().name())).count());
-        result.put("submitted", cases.stream().filter(c -> "SUBMITTED".equals(c.getStatus().name())).count());
-        result.put("verified", cases.stream().filter(c -> "VERIFIED".equals(c.getStatus().name())).count());
-        result.put("rejected", cases.stream().filter(c -> "REJECTED".equals(c.getStatus().name())).count());
-        result.put("closed", cases.stream().filter(c -> "CLOSED".equals(c.getStatus().name())).count());
-        result.put("escalated", cases.stream().filter(c -> "ESCALATED".equals(c.getStatus().name())).count());
-
-        long overdue = cases.stream().filter(CorrectiveCase::isOverdue).count();
+        result.put("open", statusCounts.getOrDefault("OPEN", 0L));
+        result.put("assigned", statusCounts.getOrDefault("ASSIGNED", 0L));
+        result.put("inProgress", statusCounts.getOrDefault("IN_PROGRESS", 0L));
+        result.put("submitted", statusCounts.getOrDefault("SUBMITTED", 0L));
+        result.put("verified", statusCounts.getOrDefault("VERIFIED", 0L));
+        result.put("rejected", statusCounts.getOrDefault("REJECTED", 0L));
+        result.put("closed", statusCounts.getOrDefault("CLOSED", 0L));
+        result.put("escalated", escalated);
         result.put("overdue", overdue);
-
-        // Priority breakdown
-        result.put("critical", cases.stream().filter(c -> "CRITICAL".equals(c.getPriority().name())).count());
-        result.put("high", cases.stream().filter(c -> "HIGH".equals(c.getPriority().name())).count());
+        result.put("critical", priorityCounts.getOrDefault("CRITICAL", 0L));
+        result.put("high", priorityCounts.getOrDefault("HIGH", 0L));
 
         return result;
     }
@@ -195,7 +213,8 @@ public class AnalyticsQueryService {
         transitionCounts.put("SUBMITTED->VERIFIED", cases.stream().filter(c -> "VERIFIED".equals(c.getStatus().name()) || "CLOSED".equals(c.getStatus().name())).count());
         transitionCounts.put("SUBMITTED->REJECTED", cases.stream().filter(c -> "REJECTED".equals(c.getStatus().name())).count());
         transitionCounts.put("VERIFIED->CLOSED", cases.stream().filter(c -> "CLOSED".equals(c.getStatus().name())).count());
-        transitionCounts.put("OPEN->ESCALATED", cases.stream().filter(c -> "ESCALATED".equals(c.getStatus().name())).count());
+        // 升级后案例回到 OPEN 状态（escalationLevel > 0），通过 escalationLevel 统计升级数量
+        transitionCounts.put("OPEN->ESCALATED", cases.stream().filter(c -> c.getEscalationLevel() != null && c.getEscalationLevel() > 0).count());
 
         List<Map<String, Object>> links = new ArrayList<>();
         for (Map.Entry<String, Long> entry : transitionCounts.entrySet()) {

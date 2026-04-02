@@ -11,6 +11,7 @@ import java.time.LocalDateTime;
 public class TemplateItem implements Entity<Long> {
 
     private Long id;
+    private Long tenantId;
     private Long sectionId;
     private String itemCode;
     private String itemName;
@@ -32,6 +33,7 @@ public class TemplateItem implements Entity<Long> {
     private Boolean syncWithLibrary;  // 是否与库同步
     private String visibilityLogic;   // JSON: 显示条件(条件逻辑V2)
     private String scoringLogic;      // JSON: 计分条件(条件逻辑V2)
+    private String inputMode;         // INLINE | EVENT_STREAM
     private Long createdBy;
     private LocalDateTime createdAt;
     private Long updatedBy;
@@ -42,6 +44,7 @@ public class TemplateItem implements Entity<Long> {
 
     private TemplateItem(Builder builder) {
         this.id = builder.id;
+        this.tenantId = builder.tenantId;
         this.sectionId = builder.sectionId;
         this.itemCode = builder.itemCode;
         this.itemName = builder.itemName;
@@ -63,6 +66,7 @@ public class TemplateItem implements Entity<Long> {
         this.syncWithLibrary = builder.syncWithLibrary != null ? builder.syncWithLibrary : false;
         this.visibilityLogic = builder.visibilityLogic;
         this.scoringLogic = builder.scoringLogic;
+        this.inputMode = builder.inputMode;
         this.createdBy = builder.createdBy;
         this.createdAt = builder.createdAt != null ? builder.createdAt : LocalDateTime.now();
         this.updatedBy = builder.updatedBy;
@@ -88,7 +92,8 @@ public class TemplateItem implements Entity<Long> {
                        String config, String validationRules, Long responseSetId,
                        String scoringConfig, Long dimensionId, String helpContent,
                        Boolean isRequired, Boolean isScored, Boolean requireEvidence,
-                       BigDecimal itemWeight, String conditionLogic, Long updatedBy) {
+                       BigDecimal itemWeight, String conditionLogic, String inputMode,
+                       Long updatedBy) {
         if (itemName != null) this.itemName = itemName;
         if (description != null) this.description = description;
         if (itemType != null) this.itemType = itemType;
@@ -104,6 +109,7 @@ public class TemplateItem implements Entity<Long> {
         if (requireEvidence != null) this.requireEvidence = requireEvidence;
         if (itemWeight != null) this.itemWeight = itemWeight;
         if (conditionLogic != null) this.conditionLogic = conditionLogic;
+        if (inputMode != null) this.inputMode = inputMode;
         this.updatedBy = updatedBy;
         this.updatedAt = LocalDateTime.now();
     }
@@ -121,6 +127,10 @@ public class TemplateItem implements Entity<Long> {
 
     public void setId(Long id) {
         this.id = id;
+    }
+
+    public Long getTenantId() {
+        return tenantId;
     }
 
     public Long getSectionId() {
@@ -207,6 +217,10 @@ public class TemplateItem implements Entity<Long> {
         return scoringLogic;
     }
 
+    public String getInputMode() {
+        return inputMode;
+    }
+
     public void linkToLibrary(Long libraryItemId, boolean syncWithLibrary) {
         this.libraryItemId = libraryItemId;
         this.syncWithLibrary = syncWithLibrary;
@@ -241,6 +255,7 @@ public class TemplateItem implements Entity<Long> {
 
     public static class Builder {
         private Long id;
+        private Long tenantId;
         private Long sectionId;
         private String itemCode;
         private String itemName;
@@ -262,12 +277,14 @@ public class TemplateItem implements Entity<Long> {
         private Boolean syncWithLibrary;
         private String visibilityLogic;
         private String scoringLogic;
+        private String inputMode;
         private Long createdBy;
         private LocalDateTime createdAt;
         private Long updatedBy;
         private LocalDateTime updatedAt;
 
         public Builder id(Long id) { this.id = id; return this; }
+        public Builder tenantId(Long tenantId) { this.tenantId = tenantId; return this; }
         public Builder sectionId(Long sectionId) { this.sectionId = sectionId; return this; }
         public Builder itemCode(String itemCode) { this.itemCode = itemCode; return this; }
         public Builder itemName(String itemName) { this.itemName = itemName; return this; }
@@ -289,6 +306,7 @@ public class TemplateItem implements Entity<Long> {
         public Builder syncWithLibrary(Boolean syncWithLibrary) { this.syncWithLibrary = syncWithLibrary; return this; }
         public Builder visibilityLogic(String visibilityLogic) { this.visibilityLogic = visibilityLogic; return this; }
         public Builder scoringLogic(String scoringLogic) { this.scoringLogic = scoringLogic; return this; }
+        public Builder inputMode(String inputMode) { this.inputMode = inputMode; return this; }
         public Builder createdBy(Long createdBy) { this.createdBy = createdBy; return this; }
         public Builder createdAt(LocalDateTime createdAt) { this.createdAt = createdAt; return this; }
         public Builder updatedBy(Long updatedBy) { this.updatedBy = updatedBy; return this; }
