@@ -523,7 +523,7 @@ async function loadTargetLists() {
       const list = Array.isArray(courseRes.value) ? courseRes.value : []
       courses.value = list.map((c: Course) => ({
         value: c.id,
-        label: `${c.name} (${c.code})`,
+        label: `${c.courseName} (${c.courseCode})`,
       }))
     }
   } catch {

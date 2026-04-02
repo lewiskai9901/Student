@@ -85,20 +85,27 @@ export interface MajorDirectionQueryParams {
   level?: string
 }
 
-// ==================== Course (from types/teaching.ts) ====================
+// ==================== Course ====================
 
 export interface Course {
   id: number | string
-  code: string
-  name: string
-  englishName?: string
+  courseCode: string
+  courseName: string
+  courseNameEn?: string
+  /** 课程类别: 1-公共基础课 2-专业核心课 3-专业方向课 4-选修课 */
+  courseCategory: number
+  /** 课程类型: 1-理论 2-实践 3-理论+实践 */
+  courseType: number
+  /** 课程性质: 1-必修 2-限选 3-任选 */
+  courseNature: number
   credits: number
   totalHours: number
   theoryHours: number
   practiceHours: number
-  courseType: number // 1-required, 2-elective, 3-general
-  departmentId?: number | string
-  departmentName?: string
+  weeklyHours: number
+  /** 考核方式: 1-考试 2-考查 */
+  examType: number
+  orgUnitId?: number | string
   description?: string
   status: number
   createdAt?: string
@@ -107,27 +114,32 @@ export interface Course {
 
 export interface CourseQueryParams {
   keyword?: string
+  courseCategory?: number
   courseType?: number
-  departmentId?: number | string
   status?: number
-  page?: number
-  size?: number
+  pageNum?: number
+  pageSize?: number
 }
 
-// ==================== CurriculumPlan (from types/teaching.ts) ====================
+// ==================== CurriculumPlan ====================
 
 export interface CurriculumPlan {
   id: number | string
-  name: string
+  planCode: string
+  planName: string
   majorId: number | string
   majorName?: string
-  majorDirectionId?: number | string
-  majorDirectionName?: string
   gradeYear: number
-  version: string
   totalCredits: number
+  requiredCredits?: number
+  electiveCredits?: number
+  practiceCredits?: number
+  trainingObjective?: string
+  graduationRequirement?: string
+  version: number
   status: number // 0-draft, 1-published, 2-deprecated
-  description?: string
+  publishedAt?: string
+  publishedBy?: number | string
   courses?: PlanCourse[]
   createdAt?: string
   updatedAt?: string
@@ -139,18 +151,25 @@ export interface PlanCourse {
   courseId: number | string
   courseName?: string
   courseCode?: string
-  credits?: number
   semesterNumber: number
-  courseCategory: number // 1-public basic, 2-major basic, 3-major core, 4-major elective, 5-practicum
-  isRequired: boolean
+  /** 课程类别: 1-公共基础 2-专业基础 3-专业核心 4-专业选修 5-实践环节 */
+  courseCategory: number
+  /** 课程类型: 1-必修 2-限选 3-任选 */
+  courseType: number
+  credits?: number
+  totalHours?: number
   weeklyHours?: number
+  theoryHours?: number
+  practiceHours?: number
+  examType?: number
+  sortOrder?: number
+  remark?: string
 }
 
 export interface CurriculumPlanQueryParams {
   majorId?: number | string
-  majorDirectionId?: number | string
   gradeYear?: number
   status?: number
-  page?: number
-  size?: number
+  pageNum?: number
+  pageSize?: number
 }

@@ -269,7 +269,7 @@
       <el-form ref="offeringFormRef" :model="offeringForm" :rules="offeringRules" label-width="100px" class="pr-4">
         <el-form-item label="课程" prop="courseId">
           <el-select v-model="offeringForm.courseId" placeholder="选择课程" filterable class="w-full" @change="onOfferingCourseChange">
-            <el-option v-for="c in allCourses" :key="c.id" :value="c.id" :label="`${c.code} - ${c.name}`" />
+            <el-option v-for="c in allCourses" :key="c.id" :value="c.id" :label="`${c.courseCode} - ${c.courseName}`" />
           </el-select>
         </el-form-item>
         <el-form-item label="适用年级" prop="applicableGrade">
@@ -324,7 +324,7 @@
               v-for="p in curriculumPlans"
               :key="p.id"
               :value="p.id"
-              :label="`${p.name} (${p.version})`"
+              :label="`${p.planName} (v${p.version})`"
             />
           </el-select>
         </el-form-item>
@@ -353,7 +353,7 @@
         </el-form-item>
         <el-form-item label="课程" prop="courseId">
           <el-select v-model="tcForm.courseId" placeholder="选择课程" filterable class="w-full">
-            <el-option v-for="c in allCourses" :key="c.id" :value="c.id" :label="`${c.code} - ${c.name}`" />
+            <el-option v-for="c in allCourses" :key="c.id" :value="c.id" :label="`${c.courseCode} - ${c.courseName}`" />
           </el-select>
         </el-form-item>
         <el-form-item label="教学班类型" prop="classType">
@@ -605,7 +605,7 @@ async function loadClasses() {
 
 async function loadCurriculumPlans() {
   try {
-    const res = await curriculumPlanApi.list({ status: 1, page: 1, size: 200 })
+    const res = await curriculumPlanApi.list({ status: 1, pageNum: 1, pageSize: 200 })
     curriculumPlans.value = res.records || []
   } catch {
     // non-critical

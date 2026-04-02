@@ -4,7 +4,7 @@
     <div class="flex items-center justify-between border-b border-gray-200 bg-white px-6 py-4">
       <div>
         <h1 class="text-lg font-semibold text-gray-900">课程管理</h1>
-        <p class="mt-0.5 text-sm text-gray-500">管理全校课程信息</p>
+        <p class="mt-0.5 text-sm text-gray-500">管理课程信息</p>
       </div>
       <button
         class="inline-flex items-center gap-1.5 rounded-lg bg-blue-600 px-3 py-2 text-sm font-medium text-white hover:bg-blue-700"
@@ -37,9 +37,9 @@
         @keyup.enter="search"
       />
       <el-select v-model="queryParams.courseType" placeholder="课程类型" clearable class="!w-32">
-        <el-option :value="1" label="必修课" />
-        <el-option :value="2" label="选修课" />
-        <el-option :value="3" label="通识课" />
+        <el-option :value="1" label="理论" />
+        <el-option :value="2" label="实践" />
+        <el-option :value="3" label="理论+实践" />
       </el-select>
       <el-select v-model="queryParams.status" placeholder="状态" clearable class="!w-28">
         <el-option :value="1" label="启用" />
@@ -53,8 +53,8 @@
     <div class="flex-1 overflow-y-auto px-6 pt-5 pb-6">
       <div class="overflow-hidden rounded-xl border border-gray-200 bg-white">
         <el-table :data="courses" v-loading="loading" stripe>
-          <el-table-column prop="code" label="课程编码" width="120" />
-          <el-table-column prop="name" label="课程名称" min-width="150" />
+          <el-table-column prop="courseCode" label="课程编码" width="120" />
+          <el-table-column prop="courseName" label="课程名称" min-width="150" />
           <el-table-column prop="courseType" label="课程类型" width="100">
             <template #default="{ row }">
               <el-tag size="small" :type="getCourseTypeTag(row.courseType)">
@@ -66,10 +66,9 @@
           <el-table-column prop="totalHours" label="总学时" width="80" align="center" />
           <el-table-column label="理论/实践" width="100" align="center">
             <template #default="{ row }">
-              {{ row.theoryHours }} / {{ row.practiceHours }}
+              {{ row.theoryHours ?? 0 }} / {{ row.practiceHours ?? 0 }}
             </template>
           </el-table-column>
-          <el-table-column prop="departmentName" label="开课部门" width="120" />
           <el-table-column prop="status" label="状态" width="80" align="center">
             <template #default="{ row }">
               <span
@@ -99,8 +98,8 @@
 
       <div class="mt-4 flex justify-end">
         <el-pagination
-          v-model:current-page="queryParams.page"
-          v-model:page-size="queryParams.size"
+          v-model:current-page="queryParams.pageNum"
+          v-model:page-size="queryParams.pageSize"
           :total="total"
           :page-sizes="[10, 20, 50, 100]"
           layout="total, sizes, prev, pager, next, jumper"
@@ -119,28 +118,28 @@
       <el-form ref="formRef" :model="form" :rules="rules" label-width="100px">
         <el-row :gutter="20">
           <el-col :span="12">
-            <el-form-item label="课程编码" prop="code">
-              <el-input v-model="form.code" placeholder="如：CS101" />
+            <el-form-item label="课程编码" prop="courseCode">
+              <el-input v-model="form.courseCode" placeholder="如：CS101" />
             </el-form-item>
           </el-col>
           <el-col :span="12">
-            <el-form-item label="课程名称" prop="name">
-              <el-input v-model="form.name" placeholder="课程名称" />
+            <el-form-item label="课程名称" prop="courseName">
+              <el-input v-model="form.courseName" placeholder="课程名称" />
             </el-form-item>
           </el-col>
         </el-row>
         <el-row :gutter="20">
           <el-col :span="12">
             <el-form-item label="英文名称">
-              <el-input v-model="form.englishName" placeholder="English Name" />
+              <el-input v-model="form.courseNameEn" placeholder="English Name" />
             </el-form-item>
           </el-col>
           <el-col :span="12">
             <el-form-item label="课程类型" prop="courseType">
               <el-select v-model="form.courseType" style="width: 100%">
-                <el-option :value="1" label="必修课" />
-                <el-option :value="2" label="选修课" />
-                <el-option :value="3" label="通识课" />
+                <el-option :value="1" label="理论" />
+                <el-option :value="2" label="实践" />
+                <el-option :value="3" label="理论+实践" />
               </el-select>
             </el-form-item>
           </el-col>
@@ -160,12 +159,12 @@
         <el-row :gutter="20">
           <el-col :span="12">
             <el-form-item label="理论学时">
-              <el-input-number v-model="form.theoryHours" :min="0" :max="form.totalHours" style="width: 100%" />
+              <el-input-number v-model="form.theoryHours" :min="0" :max="form.totalHours || 500" style="width: 100%" />
             </el-form-item>
           </el-col>
           <el-col :span="12">
             <el-form-item label="实践学时">
-              <el-input-number v-model="form.practiceHours" :min="0" :max="form.totalHours" style="width: 100%" />
+              <el-input-number v-model="form.practiceHours" :min="0" :max="form.totalHours || 500" style="width: 100%" />
             </el-form-item>
           </el-col>
         </el-row>
@@ -187,7 +186,6 @@ import { ElMessage, ElMessageBox, type FormInstance, type FormRules } from 'elem
 import { courseApi } from '@/api/academic'
 import type { Course, CourseQueryParams } from '@/types/academic'
 
-// 状态
 const loading = ref(false)
 const saving = ref(false)
 const dialogVisible = ref(false)
@@ -198,28 +196,26 @@ const queryParams = reactive<CourseQueryParams>({
   keyword: '',
   courseType: undefined,
   status: undefined,
-  page: 1,
-  size: 10,
+  pageNum: 1,
+  pageSize: 10,
 })
 
 const formRef = ref<FormInstance>()
 const form = ref<Partial<Course>>({})
 
 const rules: FormRules = {
-  code: [{ required: true, message: '请输入课程编码', trigger: 'blur' }],
-  name: [{ required: true, message: '请输入课程名称', trigger: 'blur' }],
+  courseCode: [{ required: true, message: '请输入课程编码', trigger: 'blur' }],
+  courseName: [{ required: true, message: '请输入课程名称', trigger: 'blur' }],
   courseType: [{ required: true, message: '请选择课程类型', trigger: 'change' }],
   credits: [{ required: true, message: '请输入学分', trigger: 'blur' }],
   totalHours: [{ required: true, message: '请输入总学时', trigger: 'blur' }],
 }
 
-// 统计数据 (computed from current page data)
 const activeCount = computed(() => courses.value.filter(c => c.status === 1).length)
 const inactiveCount = computed(() => courses.value.filter(c => c.status === 0).length)
-const requiredCount = computed(() => courses.value.filter(c => c.courseType === 1).length)
-const electiveCount = computed(() => courses.value.filter(c => c.courseType === 2).length)
+const requiredCount = computed(() => courses.value.filter(c => c.courseNature === 1).length)
+const electiveCount = computed(() => courses.value.filter(c => c.courseNature === 2 || c.courseNature === 3).length)
 
-// 方法
 const loadCourses = async () => {
   loading.value = true
   try {
@@ -235,7 +231,7 @@ const loadCourses = async () => {
 }
 
 const search = () => {
-  queryParams.page = 1
+  queryParams.pageNum = 1
   loadCourses()
 }
 
@@ -243,14 +239,14 @@ const resetQuery = () => {
   queryParams.keyword = ''
   queryParams.courseType = undefined
   queryParams.status = undefined
-  queryParams.page = 1
+  queryParams.pageNum = 1
   loadCourses()
 }
 
 const showDialog = (course?: Course) => {
   form.value = course
     ? { ...course }
-    : { credits: 2, totalHours: 32, theoryHours: 24, practiceHours: 8, courseType: 1, status: 1 }
+    : { credits: 2, totalHours: 32, theoryHours: 24, practiceHours: 8, courseType: 1, courseNature: 1, courseCategory: 1, status: 1 }
   dialogVisible.value = true
 }
 
@@ -276,7 +272,7 @@ const saveCourse = async () => {
 const toggleStatus = async (course: Course) => {
   const newStatus = course.status === 1 ? 0 : 1
   const action = newStatus === 1 ? '启用' : '停用'
-  await ElMessageBox.confirm(`确定${action}课程"${course.name}"吗？`, '提示', { type: 'warning' })
+  await ElMessageBox.confirm(`确定${action}课程"${course.courseName}"吗？`, '提示', { type: 'warning' })
   try {
     await courseApi.updateStatus(course.id, newStatus)
     ElMessage.success(`${action}成功`)
@@ -287,7 +283,7 @@ const toggleStatus = async (course: Course) => {
 }
 
 const handleDelete = async (course: Course) => {
-  await ElMessageBox.confirm(`确定删除课程"${course.name}"吗？此操作不可恢复。`, '警告', {
+  await ElMessageBox.confirm(`确定删除课程"${course.courseName}"吗？此操作不可恢复。`, '警告', {
     type: 'warning',
     confirmButtonText: '确定删除',
     confirmButtonClass: 'el-button--danger',
@@ -302,13 +298,13 @@ const handleDelete = async (course: Course) => {
 }
 
 const getCourseTypeName = (type: number) => {
-  const names: Record<number, string> = { 1: '必修课', 2: '选修课', 3: '通识课' }
+  const names: Record<number, string> = { 1: '理论', 2: '实践', 3: '理论+实践' }
   return names[type] || '未知'
 }
 
 const getCourseTypeTag = (type: number) => {
-  const types: Record<number, '' | 'success' | 'warning' | 'danger' | 'info'> = {
-    1: 'danger',
+  const types: Record<number, 'primary' | 'success' | 'warning' | 'danger' | 'info'> = {
+    1: 'primary',
     2: 'success',
     3: 'info',
   }

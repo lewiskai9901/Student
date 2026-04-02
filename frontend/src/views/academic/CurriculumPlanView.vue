@@ -38,28 +38,12 @@
               clearable
               filterable
               class="!w-[180px]"
-              @change="onFilterMajorChange"
             >
               <el-option
                 v-for="m in majors"
                 :key="m.id"
                 :value="m.id"
                 :label="m.majorName"
-              />
-            </el-select>
-          </el-form-item>
-          <el-form-item v-if="directions.length > 0" label="方向" class="!mb-0">
-            <el-select
-              v-model="queryParams.majorDirectionId"
-              placeholder="全部"
-              clearable
-              class="!w-[180px]"
-            >
-              <el-option
-                v-for="d in directions"
-                :key="d.id"
-                :value="d.id"
-                :label="d.directionName"
               />
             </el-select>
           </el-form-item>
@@ -98,30 +82,38 @@
       <div class="rounded-xl border border-gray-200 bg-white">
         <div class="px-5 py-3">
           <el-table :data="plans" v-loading="loading" stripe class="w-full">
-            <el-table-column prop="name" label="方案名称" min-width="200">
+            <el-table-column prop="planName" label="方案名称" min-width="200">
               <template #default="{ row }">
                 <button
                   class="text-left font-medium text-blue-600 transition-colors hover:text-blue-700"
                   @click="viewPlan(row)"
                 >
-                  {{ row.name }}
+                  {{ row.planName }}
                 </button>
               </template>
             </el-table-column>
-            <el-table-column prop="majorName" label="专业" width="150" />
-            <el-table-column prop="majorDirectionName" label="专业方向" width="150">
+            <el-table-column prop="planCode" label="方案编码" width="130" />
+            <el-table-column prop="majorName" label="专业" width="150">
               <template #default="{ row }">
-                <span v-if="row.majorDirectionName">{{ row.majorDirectionName }}</span>
-                <span v-else class="text-gray-400">--</span>
+                {{ row.majorName || '--' }}
               </template>
             </el-table-column>
             <el-table-column prop="gradeYear" label="适用年级" width="100" align="center">
               <template #default="{ row }">{{ row.gradeYear }}级</template>
             </el-table-column>
-            <el-table-column prop="version" label="版本" width="100" align="center" />
-            <el-table-column prop="totalCredits" label="总学分" width="100" align="center">
+            <el-table-column prop="version" label="版本" width="80" align="center">
+              <template #default="{ row }">
+                v{{ row.version }}
+              </template>
+            </el-table-column>
+            <el-table-column prop="totalCredits" label="总学分" width="80" align="center">
               <template #default="{ row }">
                 <span class="font-medium">{{ row.totalCredits }}</span>
+              </template>
+            </el-table-column>
+            <el-table-column label="必修/选修/实践" width="130" align="center">
+              <template #default="{ row }">
+                {{ row.requiredCredits ?? '--' }} / {{ row.electiveCredits ?? '--' }} / {{ row.practiceCredits ?? '--' }}
               </template>
             </el-table-column>
             <el-table-column prop="status" label="状态" width="100" align="center">
@@ -163,8 +155,8 @@
         <!-- Pagination -->
         <div class="flex items-center justify-end border-t border-gray-100 px-5 py-3">
           <el-pagination
-            v-model:current-page="queryParams.page"
-            v-model:page-size="queryParams.size"
+            v-model:current-page="queryParams.pageNum"
+            v-model:page-size="queryParams.pageSize"
             :total="total"
             :page-sizes="[10, 20, 50]"
             layout="total, sizes, prev, pager, next"
@@ -183,7 +175,7 @@
         <div class="border-b border-gray-200 px-6 py-4">
           <div class="flex items-center justify-between">
             <div class="flex items-center gap-3">
-              <h2 class="text-lg font-semibold text-gray-900">{{ currentPlan.name }}</h2>
+              <h2 class="text-lg font-semibold text-gray-900">{{ currentPlan.planName }}</h2>
               <span
                 class="inline-flex rounded px-1.5 py-0.5 text-[11px] font-medium"
                 :class="statusBadgeClass(currentPlan.status)"
@@ -200,22 +192,32 @@
           </div>
           <!-- Meta info -->
           <div class="mt-2 flex flex-wrap items-center gap-4 text-sm text-gray-500">
-            <span>专业：{{ currentPlan.majorName }}</span>
-            <template v-if="currentPlan.majorDirectionName">
-              <div class="h-3 w-px bg-gray-200" />
-              <span>方向：{{ currentPlan.majorDirectionName }}</span>
-            </template>
+            <span>编码：{{ currentPlan.planCode }}</span>
+            <div class="h-3 w-px bg-gray-200" />
+            <span>专业：{{ currentPlan.majorName || '--' }}</span>
             <div class="h-3 w-px bg-gray-200" />
             <span>年级：{{ currentPlan.gradeYear }}级</span>
             <div class="h-3 w-px bg-gray-200" />
-            <span>版本：{{ currentPlan.version }}</span>
+            <span>版本：v{{ currentPlan.version }}</span>
             <div class="h-3 w-px bg-gray-200" />
             <span>总学分：<span class="font-semibold text-gray-900">{{ currentPlan.totalCredits }}</span></span>
+            <template v-if="currentPlan.requiredCredits != null">
+              <div class="h-3 w-px bg-gray-200" />
+              <span>必修 {{ currentPlan.requiredCredits }} / 选修 {{ currentPlan.electiveCredits ?? 0 }} / 实践 {{ currentPlan.practiceCredits ?? 0 }}</span>
+            </template>
           </div>
         </div>
 
         <!-- Drawer Content -->
         <div class="flex-1 overflow-y-auto px-6 pt-5 pb-6">
+          <!-- Training Objective -->
+          <template v-if="currentPlan.trainingObjective">
+            <div class="mb-4 rounded-lg border border-gray-200 bg-white p-4">
+              <h3 class="mb-2 text-sm font-semibold text-gray-900">培养目标</h3>
+              <p class="text-sm leading-relaxed text-gray-600">{{ currentPlan.trainingObjective }}</p>
+            </div>
+          </template>
+
           <!-- Section Header -->
           <div class="mb-4 flex items-center justify-between">
             <h3 class="text-sm font-semibold text-gray-900">课程设置</h3>
@@ -252,7 +254,7 @@
                         <span class="font-medium">{{ row.credits }}</span>
                       </template>
                     </el-table-column>
-                    <el-table-column prop="courseCategory" label="课程类别" width="120">
+                    <el-table-column prop="courseCategory" label="课程类别" width="110">
                       <template #default="{ row }">
                         <span
                           class="inline-flex rounded px-1.5 py-0.5 text-[11px] font-medium"
@@ -262,13 +264,13 @@
                         </span>
                       </template>
                     </el-table-column>
-                    <el-table-column prop="isRequired" label="性质" width="80" align="center">
+                    <el-table-column prop="courseType" label="性质" width="80" align="center">
                       <template #default="{ row }">
                         <span
                           class="inline-flex rounded px-1.5 py-0.5 text-[11px] font-medium"
-                          :class="row.isRequired ? 'bg-red-50 text-red-600' : 'bg-emerald-50 text-emerald-600'"
+                          :class="row.courseType === 1 ? 'bg-red-50 text-red-600' : 'bg-emerald-50 text-emerald-600'"
                         >
-                          {{ row.isRequired ? '必修' : '选修' }}
+                          {{ row.courseType === 1 ? '必修' : row.courseType === 2 ? '限选' : '任选' }}
                         </span>
                       </template>
                     </el-table-column>
@@ -299,13 +301,22 @@
     <el-dialog
       v-model="planDialogVisible"
       :title="planForm.id ? '编辑培养方案' : '新建培养方案'"
-      width="600px"
+      width="650px"
       :close-on-click-modal="false"
     >
       <el-form ref="planFormRef" :model="planForm" :rules="planRules" label-width="100px">
-        <el-form-item label="方案名称" prop="name">
-          <el-input v-model="planForm.name" placeholder="如：计算机科学与技术专业2025级培养方案" />
-        </el-form-item>
+        <el-row :gutter="20">
+          <el-col :span="12">
+            <el-form-item label="方案编码" prop="planCode">
+              <el-input v-model="planForm.planCode" placeholder="如：CS2025V1" />
+            </el-form-item>
+          </el-col>
+          <el-col :span="12">
+            <el-form-item label="方案名称" prop="planName">
+              <el-input v-model="planForm.planName" placeholder="如：计算机科学2025级培养方案" />
+            </el-form-item>
+          </el-col>
+        </el-row>
         <el-row :gutter="20">
           <el-col :span="12">
             <el-form-item label="专业" prop="majorId">
@@ -314,7 +325,6 @@
                 placeholder="选择专业"
                 filterable
                 style="width: 100%"
-                @change="onFormMajorChange"
               >
                 <el-option
                   v-for="m in majors"
@@ -326,48 +336,43 @@
             </el-form-item>
           </el-col>
           <el-col :span="12">
-            <el-form-item label="专业方向">
-              <el-select
-                v-model="planForm.majorDirectionId"
-                placeholder="可选，不选则适用全部方向"
-                clearable
-                style="width: 100%"
-                :disabled="!planForm.majorId || formDirections.length === 0"
-              >
-                <el-option
-                  v-for="d in formDirections"
-                  :key="d.id"
-                  :value="d.id"
-                  :label="d.directionName"
-                />
-              </el-select>
-            </el-form-item>
-          </el-col>
-        </el-row>
-        <el-row :gutter="20">
-          <el-col :span="12">
             <el-form-item label="适用年级" prop="gradeYear">
               <el-select v-model="planForm.gradeYear" placeholder="选择年级" style="width: 100%">
                 <el-option v-for="year in gradeYears" :key="year" :value="year" :label="`${year}级`" />
               </el-select>
             </el-form-item>
           </el-col>
-          <el-col :span="12">
-            <el-form-item label="版本号" prop="version">
-              <el-input v-model="planForm.version" placeholder="如：v1.0" />
-            </el-form-item>
-          </el-col>
         </el-row>
         <el-row :gutter="20">
-          <el-col :span="12">
+          <el-col :span="8">
             <el-form-item label="总学分" prop="totalCredits">
               <el-input-number v-model="planForm.totalCredits" :min="0" :max="300" style="width: 100%" />
             </el-form-item>
           </el-col>
-          <el-col :span="12" />
+          <el-col :span="8">
+            <el-form-item label="必修学分">
+              <el-input-number v-model="planForm.requiredCredits" :min="0" :max="300" style="width: 100%" />
+            </el-form-item>
+          </el-col>
+          <el-col :span="8">
+            <el-form-item label="选修学分">
+              <el-input-number v-model="planForm.electiveCredits" :min="0" :max="300" style="width: 100%" />
+            </el-form-item>
+          </el-col>
         </el-row>
-        <el-form-item label="方案描述">
-          <el-input v-model="planForm.description" type="textarea" :rows="3" />
+        <el-row :gutter="20">
+          <el-col :span="8">
+            <el-form-item label="实践学分">
+              <el-input-number v-model="planForm.practiceCredits" :min="0" :max="300" style="width: 100%" />
+            </el-form-item>
+          </el-col>
+          <el-col :span="16" />
+        </el-row>
+        <el-form-item label="培养目标">
+          <el-input v-model="planForm.trainingObjective" type="textarea" :rows="3" placeholder="培养目标描述..." />
+        </el-form-item>
+        <el-form-item label="毕业要求">
+          <el-input v-model="planForm.graduationRequirement" type="textarea" :rows="3" placeholder="毕业要求描述..." />
         </el-form-item>
       </el-form>
       <template #footer>
@@ -392,7 +397,7 @@
               v-for="c in availableCourses"
               :key="c.id"
               :value="c.id"
-              :label="`${c.code} - ${c.name}`"
+              :label="`${c.courseCode} - ${c.courseName}`"
             />
           </el-select>
         </el-form-item>
@@ -418,8 +423,12 @@
         </el-row>
         <el-row :gutter="20">
           <el-col :span="12">
-            <el-form-item label="是否必修">
-              <el-switch v-model="courseForm.isRequired" />
+            <el-form-item label="课程性质" prop="courseType">
+              <el-select v-model="courseForm.courseType" style="width: 100%">
+                <el-option :value="1" label="必修" />
+                <el-option :value="2" label="限选" />
+                <el-option :value="3" label="任选" />
+              </el-select>
             </el-form-item>
           </el-col>
           <el-col :span="12">
@@ -434,19 +443,6 @@
         <el-button type="primary" :loading="saving" @click="addCourse">添加</el-button>
       </template>
     </el-dialog>
-
-    <!-- Copy Plan Dialog -->
-    <el-dialog v-model="copyDialogVisible" title="复制培养方案" width="400px" :close-on-click-modal="false">
-      <el-form :model="copyForm" label-width="100px">
-        <el-form-item label="新版本号">
-          <el-input v-model="copyForm.newVersion" placeholder="如：v2.0" />
-        </el-form-item>
-      </el-form>
-      <template #footer>
-        <el-button @click="copyDialogVisible = false">取消</el-button>
-        <el-button type="primary" :loading="saving" @click="confirmCopy">确定复制</el-button>
-      </template>
-    </el-dialog>
   </div>
 </template>
 
@@ -455,9 +451,9 @@ import { ref, reactive, computed, onMounted } from 'vue'
 import { ElMessage, ElMessageBox, type FormInstance, type FormRules } from 'element-plus'
 import { Plus, Search, RotateCcw, X, BookOpen } from 'lucide-vue-next'
 import {
-  curriculumPlanApi, courseApi, getAllEnabledMajors, getDirectionsByMajor,
+  curriculumPlanApi, courseApi, getAllEnabledMajors,
 } from '@/api/academic'
-import type { CurriculumPlan, PlanCourse, Course, CurriculumPlanQueryParams, Major, MajorDirection } from '@/types/academic'
+import type { CurriculumPlan, PlanCourse, Course, CurriculumPlanQueryParams, Major } from '@/types/academic'
 
 // State
 const loading = ref(false)
@@ -465,8 +461,6 @@ const saving = ref(false)
 const plans = ref<CurriculumPlan[]>([])
 const total = ref(0)
 const majors = ref<Major[]>([])
-const directions = ref<MajorDirection[]>([])
-const formDirections = ref<MajorDirection[]>([])
 const availableCourses = ref<Course[]>([])
 const planCourses = ref<PlanCourse[]>([])
 const currentPlan = ref<CurriculumPlan>()
@@ -475,23 +469,20 @@ const currentPlan = ref<CurriculumPlan>()
 const planDialogVisible = ref(false)
 const detailDrawerVisible = ref(false)
 const courseDialogVisible = ref(false)
-const copyDialogVisible = ref(false)
 
 // Forms
 const planFormRef = ref<FormInstance>()
 const courseFormRef = ref<FormInstance>()
 const planForm = ref<Partial<CurriculumPlan>>({})
 const courseForm = ref<Partial<PlanCourse>>({})
-const copyForm = ref({ planId: 0 as number | string, newVersion: '' })
 const activeSemester = ref('1')
 
 const queryParams = reactive<CurriculumPlanQueryParams>({
   majorId: undefined,
-  majorDirectionId: undefined,
   gradeYear: undefined,
   status: undefined,
-  page: 1,
-  size: 10,
+  pageNum: 1,
+  pageSize: 10,
 })
 
 // Grade year options
@@ -514,10 +505,10 @@ const statusCounts = computed(() => {
 
 // Validation rules
 const planRules: FormRules = {
-  name: [{ required: true, message: '请输入方案名称', trigger: 'blur' }],
+  planCode: [{ required: true, message: '请输入方案编码', trigger: 'blur' }],
+  planName: [{ required: true, message: '请输入方案名称', trigger: 'blur' }],
   majorId: [{ required: true, message: '请选择专业', trigger: 'change' }],
   gradeYear: [{ required: true, message: '请选择年级', trigger: 'change' }],
-  version: [{ required: true, message: '请输入版本号', trigger: 'blur' }],
   totalCredits: [{ required: true, message: '请输入总学分', trigger: 'blur' }],
 }
 
@@ -525,6 +516,7 @@ const courseRules: FormRules = {
   courseId: [{ required: true, message: '请选择课程', trigger: 'change' }],
   semesterNumber: [{ required: true, message: '请选择学期', trigger: 'change' }],
   courseCategory: [{ required: true, message: '请选择课程类别', trigger: 'change' }],
+  courseType: [{ required: true, message: '请选择课程性质', trigger: 'change' }],
 }
 
 // Status helpers
@@ -589,58 +581,16 @@ const loadMajors = async () => {
   }
 }
 
-// Load directions for filter bar major selection
-const loadDirectionsForFilter = async (majorId: number | string) => {
-  try {
-    const res = await getDirectionsByMajor(majorId)
-    directions.value = (res as any)?.data || res || []
-  } catch (error) {
-    console.error('Failed to load directions:', error)
-    directions.value = []
-  }
-}
-
-// Load directions for form major selection
-const loadDirectionsForForm = async (majorId: number | string) => {
-  try {
-    const res = await getDirectionsByMajor(majorId)
-    formDirections.value = (res as any)?.data || res || []
-  } catch (error) {
-    console.error('Failed to load directions:', error)
-    formDirections.value = []
-  }
-}
-
-// When major changes in filter, reset direction filter and reload
-const onFilterMajorChange = (majorId: number | string | undefined) => {
-  queryParams.majorDirectionId = undefined
-  directions.value = []
-  if (majorId) {
-    loadDirectionsForFilter(majorId)
-  }
-}
-
-// When major changes in form, reset direction and reload
-const onFormMajorChange = (majorId: number | string | undefined) => {
-  planForm.value.majorDirectionId = undefined
-  formDirections.value = []
-  if (majorId) {
-    loadDirectionsForForm(majorId)
-  }
-}
-
 const search = () => {
-  queryParams.page = 1
+  queryParams.pageNum = 1
   loadPlans()
 }
 
 const resetQuery = () => {
   queryParams.majorId = undefined
-  queryParams.majorDirectionId = undefined
   queryParams.gradeYear = undefined
   queryParams.status = undefined
-  queryParams.page = 1
-  directions.value = []
+  queryParams.pageNum = 1
   loadPlans()
 }
 
@@ -648,11 +598,7 @@ const resetQuery = () => {
 const showPlanDialog = (plan?: CurriculumPlan) => {
   planForm.value = plan
     ? { ...plan }
-    : { gradeYear: currentYear, version: 'v1.0', totalCredits: 160, status: 0 }
-  formDirections.value = []
-  if (planForm.value.majorId) {
-    loadDirectionsForForm(planForm.value.majorId)
-  }
+    : { gradeYear: currentYear, totalCredits: 160, status: 0 }
   planDialogVisible.value = true
 }
 
@@ -698,35 +644,28 @@ const publishPlan = async (plan: CurriculumPlan) => {
   }
 }
 
-const copyPlan = (plan: CurriculumPlan) => {
-  copyForm.value = { planId: plan.id, newVersion: `${plan.version}-copy` }
-  copyDialogVisible.value = true
-}
-
-const confirmCopy = async () => {
-  saving.value = true
+const copyPlan = async (plan: CurriculumPlan) => {
+  await ElMessageBox.confirm(`确定复制方案"${plan.planName}"吗？将自动创建新版本。`, '复制确认', { type: 'info' })
   try {
-    await curriculumPlanApi.copyPlan(copyForm.value.planId, copyForm.value.newVersion)
-    ElMessage.success('复制成功')
-    copyDialogVisible.value = false
+    const res: any = await curriculumPlanApi.copyPlan(plan.id)
+    const data = res.data || res
+    ElMessage.success(`复制成功，新版本 v${data.version}，已复制 ${data.copiedCourses} 门课程`)
     loadPlans()
   } catch (error) {
     ElMessage.error('复制失败')
-  } finally {
-    saving.value = false
   }
 }
 
 // Course management
 const showCourseDialog = () => {
-  courseForm.value = { semesterNumber: parseInt(activeSemester.value), isRequired: true, weeklyHours: 2 }
+  courseForm.value = { semesterNumber: parseInt(activeSemester.value), courseType: 1, weeklyHours: 2 }
   courseDialogVisible.value = true
 }
 
 const searchCourses = async (query: string) => {
   if (query.length < 2) return
   try {
-    const res = await courseApi.list({ keyword: query, page: 1, size: 20 })
+    const res = await courseApi.list({ keyword: query, pageNum: 1, pageSize: 20 })
     const data = (res as any)?.data || res
     availableCourses.value = data.records || []
   } catch (error) {

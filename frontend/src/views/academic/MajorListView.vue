@@ -362,15 +362,13 @@
                 class="rounded-lg border border-gray-100 bg-gray-50/60 p-4"
               >
                 <div class="flex items-center justify-between mb-1">
-                  <span class="font-medium text-gray-800">{{ plan.name }}</span>
+                  <span class="font-medium text-gray-800">{{ plan.planName }}</span>
                   <el-tag v-if="plan.status === 1" size="small" type="success">已发布</el-tag>
                   <el-tag v-else-if="plan.status === 0" size="small" type="info">草稿</el-tag>
                   <el-tag v-else size="small" type="warning">已废弃</el-tag>
                 </div>
                 <div class="text-sm text-gray-500 space-y-0.5">
-                  <div>版本: {{ plan.version }} | 年级: {{ plan.gradeYear }} | 总学分: {{ plan.totalCredits }}</div>
-                  <div v-if="plan.majorDirectionName">方向: {{ plan.majorDirectionName }}</div>
-                  <div v-if="plan.description" class="text-xs text-gray-400">{{ plan.description }}</div>
+                  <div>版本: v{{ plan.version }} | 年级: {{ plan.gradeYear }} | 总学分: {{ plan.totalCredits }}</div>
                 </div>
               </div>
             </div>

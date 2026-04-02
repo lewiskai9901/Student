@@ -158,7 +158,7 @@
                   v-for="c in courseOptions"
                   :key="c.id"
                   :value="c.id"
-                  :label="`${c.code} - ${c.name}`"
+                  :label="`${c.courseCode} - ${c.courseName}`"
                 />
               </el-select>
             </el-form-item>
@@ -259,7 +259,7 @@
         </el-form-item>
         <el-form-item label="培养方案" prop="planId">
           <el-select v-model="batchForm.planId" filterable placeholder="选择培养方案" style="width: 100%">
-            <el-option v-for="p in planOptions" :key="p.id" :value="p.id" :label="p.name" />
+            <el-option v-for="p in planOptions" :key="p.id" :value="p.id" :label="p.planName" />
           </el-select>
         </el-form-item>
         <el-form-item label="班级" prop="classIds">
@@ -411,7 +411,7 @@ const loadTeachers = async () => {
 
 const loadPlans = async () => {
   try {
-    const res: any = await curriculumPlanApi.list({ page: 1, size: 500 })
+    const res: any = await curriculumPlanApi.list({ pageNum: 1, pageSize: 500 })
     const data = res.data || res
     planOptions.value = data.records || data || []
   } catch (error) {
@@ -436,7 +436,7 @@ const resetQuery = () => {
 const searchCourses = async (query: string) => {
   if (query.length < 2) return
   try {
-    const res: any = await courseApi.list({ keyword: query, page: 1, size: 20 })
+    const res: any = await courseApi.list({ keyword: query, pageNum: 1, pageSize: 20 })
     const data = res.data || res
     courseOptions.value = data.records || []
   } catch (error) {

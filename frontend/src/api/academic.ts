@@ -190,6 +190,6 @@ export const curriculumPlanApi = {
   removeCourse: (planId: number | string, courseId: number | string) =>
     http.delete(`${BASE}/curriculum-plans/${planId}/courses/${courseId}`),
 
-  copyPlan: (id: number | string, newVersion: string) =>
-    http.post<CurriculumPlan>(`${BASE}/curriculum-plans/${id}/copy`, { newVersion }),
+  copyPlan: (id: number | string) =>
+    http.post<{ id: number; version: number; copiedCourses: number }>(`${BASE}/curriculum-plans/${id}/copy`),
 }

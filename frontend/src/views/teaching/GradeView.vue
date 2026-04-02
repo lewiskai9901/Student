@@ -200,7 +200,7 @@
                   v-for="c in courseOptions"
                   :key="c.id"
                   :value="c.id"
-                  :label="`${c.code} - ${c.name}`"
+                  :label="`${c.courseCode} - ${c.courseName}`"
                 />
               </el-select>
             </el-form-item>
@@ -538,7 +538,7 @@ const handleFilterChange = () => {
 const searchCourses = async (query: string) => {
   if (query.length < 2) return
   try {
-    const res: any = await courseApi.list({ keyword: query, page: 1, size: 20 })
+    const res: any = await courseApi.list({ keyword: query, pageNum: 1, pageSize: 20 })
     const data = res.data || res
     courseOptions.value = data.records || []
   } catch (error) {

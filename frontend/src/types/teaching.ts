@@ -52,75 +52,15 @@ export interface AcademicEvent {
   description?: string
 }
 
-// ==================== 课程管理 ====================
+// ==================== 课程管理 (re-export from academic) ====================
 
-export interface Course {
-  id: number | string
-  code: string
-  name: string
-  englishName?: string
-  credits: number
-  totalHours: number
-  theoryHours: number
-  practiceHours: number
-  courseType: number // 1-必修, 2-选修, 3-通识
-  departmentId?: number | string
-  departmentName?: string
-  description?: string
-  status: number
-  createdAt?: string
-  updatedAt?: string
-}
-
-export interface CourseQueryParams {
-  keyword?: string
-  courseType?: number
-  departmentId?: number | string
-  status?: number
-  page?: number
-  size?: number
-}
-
-// ==================== 培养方案 ====================
-
-export interface CurriculumPlan {
-  id: number | string
-  name: string
-  majorId: number | string
-  majorName?: string
-  majorDirectionId?: number | string
-  majorDirectionName?: string
-  gradeYear: number
-  version: string
-  totalCredits: number
-  status: number // 0-草稿, 1-已发布, 2-已废弃
-  description?: string
-  courses?: PlanCourse[]
-  createdAt?: string
-  updatedAt?: string
-}
-
-export interface PlanCourse {
-  id: number | string
-  planId: number | string
-  courseId: number | string
-  courseName?: string
-  courseCode?: string
-  credits?: number
-  semesterNumber: number // 第几学期
-  courseCategory: number // 1-公共基础, 2-专业基础, 3-专业核心, 4-专业选修, 5-实践环节
-  isRequired: boolean
-  weeklyHours?: number
-}
-
-export interface CurriculumPlanQueryParams {
-  majorId?: number | string
-  majorDirectionId?: number | string
-  gradeYear?: number
-  status?: number
-  page?: number
-  size?: number
-}
+export type {
+  Course,
+  CourseQueryParams,
+  CurriculumPlan,
+  PlanCourse,
+  CurriculumPlanQueryParams,
+} from './academic'
 
 // ==================== 教学任务 ====================
 
