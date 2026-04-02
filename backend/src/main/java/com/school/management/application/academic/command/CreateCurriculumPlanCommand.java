@@ -12,6 +12,7 @@ public class CreateCurriculumPlanCommand {
     private String planCode;
     private String planName;
     private Long majorId;
+    private Long majorDirectionId;
     private Integer gradeYear;
     private BigDecimal totalCredits;
     private BigDecimal requiredCredits;

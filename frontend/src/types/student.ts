@@ -53,15 +53,12 @@ export interface Student {
   nativePlace?: string
   avatarUrl?: string
 
-  // 班级信息
+  // 班级信息 (gradeId/majorId/majorDirectionId are on class, not student)
   classId?: number | string
   className?: string
-  gradeId?: number | string
   gradeName?: string
   gradeLevel?: number
-  majorId?: number | string
   majorName?: string
-  majorDirectionId?: number | string
 
   // 学籍信息
   educationLevel?: string
@@ -137,11 +134,8 @@ export interface CreateStudentRequest {
   birthDate?: string
   nativePlace?: string
 
-  // 班级信息
+  // 班级信息 (gradeId/majorId/majorDirectionId are on class, not student)
   classId?: number | string
-  gradeId?: number | string
-  majorId?: number | string
-  majorDirectionId?: number | string
 
   // 学籍信息
   educationLevel?: string
@@ -206,7 +200,7 @@ export interface StudentQueryParams {
   name?: string
   keyword?: string
   classId?: number | string
-  gradeId?: number | string
+  gradeId?: number | string // UI-only: used to filter class dropdown, not a student field
   gradeLevel?: number
   // V2 使用 status 代替 studentStatus
   status?: StudentStatus

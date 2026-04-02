@@ -76,6 +76,7 @@ public class CurriculumPlanApplicationService {
             .planCode(command.getPlanCode())
             .planName(command.getPlanName())
             .majorId(command.getMajorId())
+            .majorDirectionId(command.getMajorDirectionId())
             .gradeYear(command.getGradeYear())
             .totalCredits(command.getTotalCredits())
             .requiredCredits(command.getRequiredCredits())
@@ -99,6 +100,7 @@ public class CurriculumPlanApplicationService {
         plan.update(
             command.getPlanName(),
             command.getMajorId(),
+            command.getMajorDirectionId(),
             command.getGradeYear(),
             command.getTotalCredits(),
             command.getRequiredCredits(),
@@ -229,6 +231,7 @@ public class CurriculumPlanApplicationService {
         dto.setPlanCode(plan.getPlanCode());
         dto.setPlanName(plan.getPlanName());
         dto.setMajorId(plan.getMajorId());
+        dto.setMajorDirectionId(plan.getMajorDirectionId());
         dto.setGradeYear(plan.getGradeYear());
         dto.setTotalCredits(plan.getTotalCredits());
         dto.setRequiredCredits(plan.getRequiredCredits());
@@ -252,6 +255,7 @@ public class CurriculumPlanApplicationService {
         dto.setPlanCode(po.getPlanCode());
         dto.setPlanName(po.getPlanName());
         dto.setMajorId(po.getMajorId());
+        dto.setMajorDirectionId(po.getMajorDirectionId());
         dto.setGradeYear(po.getGradeYear());
         dto.setTotalCredits(po.getTotalCredits());
         dto.setRequiredCredits(po.getRequiredCredits());

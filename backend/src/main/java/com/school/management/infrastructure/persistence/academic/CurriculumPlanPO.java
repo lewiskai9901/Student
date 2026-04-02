@@ -23,6 +23,8 @@ public class CurriculumPlanPO {
     @TableField("major_id")
     private Long majorId;
 
+    private Long majorDirectionId;
+
     private Integer gradeYear;
     private BigDecimal totalCredits;
     private BigDecimal requiredCredits;

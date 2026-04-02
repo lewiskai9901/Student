@@ -55,6 +55,8 @@ public class SemesterOfferingRepositoryImpl implements SemesterOfferingRepositor
         SemesterOfferingPO po = new SemesterOfferingPO();
         po.setId(o.getId());
         po.setSemesterId(o.getSemesterId());
+        po.setPlanId(o.getPlanId());
+        po.setPlanCourseId(o.getPlanCourseId());
         po.setCourseId(o.getCourseId());
         po.setApplicableGrade(o.getApplicableGrade());
         po.setWeeklyHours(o.getWeeklyHours());
@@ -74,7 +76,8 @@ public class SemesterOfferingRepositoryImpl implements SemesterOfferingRepositor
 
     private SemesterOffering toDomain(SemesterOfferingPO po) {
         return SemesterOffering.reconstruct(
-                po.getId(), po.getSemesterId(), po.getCourseId(),
+                po.getId(), po.getSemesterId(), po.getPlanId(),
+                po.getPlanCourseId(), po.getCourseId(),
                 po.getApplicableGrade(), po.getWeeklyHours(), po.getTotalWeeks(),
                 po.getStartWeek(), po.getEndWeek(), po.getCourseCategory(), po.getCourseType(),
                 po.getAllowCombined(), po.getMaxCombinedClasses(), po.getAllowWalking(),

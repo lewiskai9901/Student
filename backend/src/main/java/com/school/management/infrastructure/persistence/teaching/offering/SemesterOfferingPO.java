@@ -11,6 +11,8 @@ public class SemesterOfferingPO {
     @TableId(type = IdType.AUTO)
     private Long id;
     private Long semesterId;
+    private Long planId;
+    private Long planCourseId;
     private Long courseId;
     private String applicableGrade;
     private Integer weeklyHours;

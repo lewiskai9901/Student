@@ -22,6 +22,9 @@ public class CurriculumPlan extends AggregateRoot<Long> {
     /** 所属专业ID */
     private Long majorId;
 
+    /** 所属专业方向ID */
+    private Long majorDirectionId;
+
     /** 适用年级 */
     private Integer gradeYear;
 
@@ -68,6 +71,7 @@ public class CurriculumPlan extends AggregateRoot<Long> {
         this.planCode = Objects.requireNonNull(builder.planCode, "planCode cannot be null");
         this.planName = Objects.requireNonNull(builder.planName, "planName cannot be null");
         this.majorId = builder.majorId;
+        this.majorDirectionId = builder.majorDirectionId;
         this.gradeYear = builder.gradeYear;
         this.totalCredits = builder.totalCredits;
         this.requiredCredits = builder.requiredCredits;
@@ -101,13 +105,14 @@ public class CurriculumPlan extends AggregateRoot<Long> {
     /**
      * 更新方案信息
      */
-    public void update(String planName, Long majorId, Integer gradeYear,
+    public void update(String planName, Long majorId, Long majorDirectionId, Integer gradeYear,
                        BigDecimal totalCredits, BigDecimal requiredCredits,
                        BigDecimal electiveCredits, BigDecimal practiceCredits,
                        String trainingObjective, String graduationRequirement,
                        Long updatedBy) {
         if (planName != null) this.planName = planName;
         this.majorId = majorId;
+        this.majorDirectionId = majorDirectionId;
         if (gradeYear != null) this.gradeYear = gradeYear;
         this.totalCredits = totalCredits;
         this.requiredCredits = requiredCredits;
@@ -145,6 +150,7 @@ public class CurriculumPlan extends AggregateRoot<Long> {
             .planCode(this.planCode)
             .planName(this.planName)
             .majorId(this.majorId)
+            .majorDirectionId(this.majorDirectionId)
             .gradeYear(this.gradeYear)
             .totalCredits(this.totalCredits)
             .requiredCredits(this.requiredCredits)
@@ -180,6 +186,7 @@ public class CurriculumPlan extends AggregateRoot<Long> {
     public String getPlanCode() { return planCode; }
     public String getPlanName() { return planName; }
     public Long getMajorId() { return majorId; }
+    public Long getMajorDirectionId() { return majorDirectionId; }
     public Integer getGradeYear() { return gradeYear; }
     public BigDecimal getTotalCredits() { return totalCredits; }
     public BigDecimal getRequiredCredits() { return requiredCredits; }
@@ -204,6 +211,7 @@ public class CurriculumPlan extends AggregateRoot<Long> {
         private String planCode;
         private String planName;
         private Long majorId;
+        private Long majorDirectionId;
         private Integer gradeYear;
         private BigDecimal totalCredits;
         private BigDecimal requiredCredits;
@@ -224,6 +232,7 @@ public class CurriculumPlan extends AggregateRoot<Long> {
         public Builder planCode(String v) { this.planCode = v; return this; }
         public Builder planName(String v) { this.planName = v; return this; }
         public Builder majorId(Long v) { this.majorId = v; return this; }
+        public Builder majorDirectionId(Long v) { this.majorDirectionId = v; return this; }
         public Builder gradeYear(Integer v) { this.gradeYear = v; return this; }
         public Builder totalCredits(BigDecimal v) { this.totalCredits = v; return this; }
         public Builder requiredCredits(BigDecimal v) { this.requiredCredits = v; return this; }

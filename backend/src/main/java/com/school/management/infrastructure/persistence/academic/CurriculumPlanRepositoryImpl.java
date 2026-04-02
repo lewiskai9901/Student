@@ -64,6 +64,7 @@ public class CurriculumPlanRepositoryImpl implements CurriculumPlanRepository {
         po.setPlanCode(domain.getPlanCode());
         po.setPlanName(domain.getPlanName());
         po.setMajorId(domain.getMajorId());
+        po.setMajorDirectionId(domain.getMajorDirectionId());
         po.setGradeYear(domain.getGradeYear());
         po.setTotalCredits(domain.getTotalCredits());
         po.setRequiredCredits(domain.getRequiredCredits());
@@ -88,6 +89,7 @@ public class CurriculumPlanRepositoryImpl implements CurriculumPlanRepository {
             .planCode(po.getPlanCode())
             .planName(po.getPlanName())
             .majorId(po.getMajorId())
+            .majorDirectionId(po.getMajorDirectionId())
             .gradeYear(po.getGradeYear())
             .totalCredits(po.getTotalCredits())
             .requiredCredits(po.getRequiredCredits())

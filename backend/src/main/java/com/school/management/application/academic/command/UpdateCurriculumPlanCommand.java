@@ -11,6 +11,7 @@ import java.math.BigDecimal;
 public class UpdateCurriculumPlanCommand {
     private String planName;
     private Long majorId;
+    private Long majorDirectionId;
     private Integer gradeYear;
     private BigDecimal totalCredits;
     private BigDecimal requiredCredits;

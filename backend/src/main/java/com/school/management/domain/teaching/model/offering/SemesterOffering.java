@@ -6,6 +6,8 @@ import lombok.Getter;
 @Getter
 public class SemesterOffering extends AggregateRoot<Long> {
     private Long semesterId;
+    private Long planId;
+    private Long planCourseId;
     private Long courseId;
     private String applicableGrade;
     private Integer weeklyHours;
@@ -40,7 +42,8 @@ public class SemesterOffering extends AggregateRoot<Long> {
         return o;
     }
 
-    public static SemesterOffering reconstruct(Long id, Long semesterId, Long courseId,
+    public static SemesterOffering reconstruct(Long id, Long semesterId, Long planId,
+            Long planCourseId, Long courseId,
             String applicableGrade, Integer weeklyHours, Integer totalWeeks,
             Integer startWeek, Integer endWeek, Integer courseCategory, Integer courseType,
             Boolean allowCombined, Integer maxCombinedClasses, Boolean allowWalking,
@@ -48,6 +51,8 @@ public class SemesterOffering extends AggregateRoot<Long> {
         SemesterOffering o = new SemesterOffering();
         o.id = id;
         o.semesterId = semesterId;
+        o.planId = planId;
+        o.planCourseId = planCourseId;
         o.courseId = courseId;
         o.applicableGrade = applicableGrade;
         o.weeklyHours = weeklyHours;
