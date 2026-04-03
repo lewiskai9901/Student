@@ -325,46 +325,7 @@ class StudentApplicationServiceTest {
         }
     }
 
-    @Nested
-    @DisplayName("宿舍管理")
-    class DormitoryTests {
-
-        @Test
-        @DisplayName("应成功分配宿舍")
-        void shouldAssignDormitorySuccessfully() {
-            // Given
-            Student student = createTestStudent(1L, "2024001", "张三");
-            AssignDormitoryCommand command = AssignDormitoryCommand.builder()
-                    .studentId(1L)
-                    .dormitoryId(2L)
-                    .bedNumber(3)
-                    .build();
-
-            when(studentRepository.findById(1L)).thenReturn(Optional.of(student));
-            when(studentRepository.save(any(Student.class))).thenReturn(student);
-
-            // When
-            service.assignDormitory(command);
-
-            // Then
-            verify(studentRepository).save(any(Student.class));
-        }
-
-        @Test
-        @DisplayName("应成功移除宿舍")
-        void shouldRemoveDormitorySuccessfully() {
-            // Given
-            Student student = createTestStudent(1L, "2024001", "张三");
-            when(studentRepository.findById(1L)).thenReturn(Optional.of(student));
-            when(studentRepository.save(any(Student.class))).thenReturn(student);
-
-            // When
-            service.removeDormitory(1L);
-
-            // Then
-            verify(studentRepository).save(any(Student.class));
-        }
-    }
+    // DormitoryTests removed — dormitory management now uses UniversalPlace system
 
     @Nested
     @DisplayName("学籍状态变更")
@@ -500,20 +461,7 @@ class StudentApplicationServiceTest {
             assertThat(result.get(1).getName()).isEqualTo("李四");
         }
 
-        @Test
-        @DisplayName("应根据宿舍ID获取学生列表")
-        void shouldFindByDormitoryId() {
-            // Given
-            Student student = createTestStudent(1L, "2024001", "张三");
-            when(studentRepository.findByDormitoryId(1L)).thenReturn(Collections.singletonList(student));
-
-            // When
-            List<StudentDTO> result = service.findByDormitoryId(1L);
-
-            // Then
-            assertThat(result).hasSize(1);
-            assertThat(result.get(0).getName()).isEqualTo("张三");
-        }
+        // findByDormitoryId test removed — dormitory queries now through UniversalPlace
 
         @Test
         @DisplayName("应分页查询学生")
