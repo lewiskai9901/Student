@@ -677,8 +677,9 @@ import {
 } from 'lucide-vue-next'
 import { http as request } from '@/utils/request'
 import {
-  scheduleApi, semesterApi, teachingTaskApi, conflictApi, adjustmentApi,
+  scheduleApi, teachingTaskApi, conflictApi, adjustmentApi,
 } from '@/api/teaching'
+import { semesterApi } from '@/api/calendar'
 import type {
   CourseSchedule, ScheduleEntry, Semester, TeachingTask,
   DetectedConflict, FeasibilityReport, ScheduleAdjustment,

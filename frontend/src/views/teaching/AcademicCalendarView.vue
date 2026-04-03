@@ -362,7 +362,7 @@
 import { ref, computed, onMounted } from 'vue'
 import { ElMessage, ElMessageBox, type FormInstance, type FormRules } from 'element-plus'
 import { ArrowLeft, ArrowRight, InfoFilled, Clock } from '@element-plus/icons-vue'
-import { academicYearApi, semesterApi, academicEventApi } from '@/api/teaching'
+import { academicYearApi, semesterApi, academicEventApi } from '@/api/calendar'
 import type { AcademicYear, Semester, TeachingWeek, AcademicEvent } from '@/types/teaching'
 import CalendarSemesterTab from './calendar/CalendarSemesterTab.vue'
 import CalendarEventsTab from './calendar/CalendarEventsTab.vue'

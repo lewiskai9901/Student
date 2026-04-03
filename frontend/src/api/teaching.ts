@@ -1,9 +1,5 @@
 import { http } from '@/utils/request'
 import type {
-  AcademicYear,
-  Semester,
-  TeachingWeek,
-  AcademicEvent,
   TeachingTask,
   TeachingTaskQueryParams,
   CourseSchedule,
@@ -99,74 +95,6 @@ export const unassignClassFromClassroom = (classroomId: number | string): Promis
   return http.post(`/teaching/classrooms/${classroomId}/assign-class`, null, {
     params: { classId: null }
   })
-}
-
-// ==================== 学年管理 ====================
-
-export const academicYearApi = {
-  list: () => http.get<AcademicYear[]>(`${BASE_URL}/academic-years`),
-
-  getById: (id: number | string) => http.get<AcademicYear>(`${BASE_URL}/academic-years/${id}`),
-
-  getCurrent: () => http.get<AcademicYear>(`${BASE_URL}/academic-years/current`),
-
-  create: (data: Partial<AcademicYear>) =>
-    http.post<AcademicYear>(`${BASE_URL}/academic-years`, data),
-
-  update: (id: number | string, data: Partial<AcademicYear>) =>
-    http.put<AcademicYear>(`${BASE_URL}/academic-years/${id}`, data),
-
-  delete: (id: number | string) => http.delete(`${BASE_URL}/academic-years/${id}`),
-
-  setCurrent: (id: number | string) =>
-    http.post(`${BASE_URL}/academic-years/${id}/set-current`),
-}
-
-// ==================== 学期管理 ====================
-
-export const semesterApi = {
-  list: (yearId?: number | string) => {
-    const params = yearId ? { yearId } : {}
-    return http.get<Semester[]>(`${BASE_URL}/semesters`, { params })
-  },
-
-  getById: (id: number | string) => http.get<Semester>(`${BASE_URL}/semesters/${id}`),
-
-  getCurrent: () => http.get<Semester>(`${BASE_URL}/semesters/current`),
-
-  create: (data: Partial<Semester>) =>
-    http.post<Semester>(`${BASE_URL}/semesters`, data),
-
-  update: (id: number | string, data: Partial<Semester>) =>
-    http.put<Semester>(`${BASE_URL}/semesters/${id}`, data),
-
-  delete: (id: number | string) => http.delete(`${BASE_URL}/semesters/${id}`),
-
-  setCurrent: (id: number | string) =>
-    http.post(`${BASE_URL}/semesters/${id}/set-current`),
-
-  getWeeks: (semesterId: number | string) =>
-    http.get<TeachingWeek[]>(`${BASE_URL}/semesters/${semesterId}/weeks`),
-
-  generateWeeks: (semesterId: number | string) =>
-    http.post<TeachingWeek[]>(`${BASE_URL}/semesters/${semesterId}/generate-weeks`),
-}
-
-// ==================== 校历事件 ====================
-
-export const academicEventApi = {
-  list: (params: { yearId?: number | string; semesterId?: number | string; eventType?: number }) =>
-    http.get<AcademicEvent[]>(`${BASE_URL}/events`, { params }),
-
-  getById: (id: number | string) => http.get<AcademicEvent>(`${BASE_URL}/events/${id}`),
-
-  create: (data: Partial<AcademicEvent>) =>
-    http.post<AcademicEvent>(`${BASE_URL}/events`, data),
-
-  update: (id: number | string, data: Partial<AcademicEvent>) =>
-    http.put<AcademicEvent>(`${BASE_URL}/events/${id}`, data),
-
-  delete: (id: number | string) => http.delete(`${BASE_URL}/events/${id}`),
 }
 
 // ==================== 教学任务 ====================

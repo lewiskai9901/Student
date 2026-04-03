@@ -430,7 +430,8 @@
 import { ref, computed, onMounted, watch } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import type { FormInstance, FormRules } from 'element-plus'
-import { offeringApi, classAssignmentApi, teachingClassApi, semesterApi } from '@/api/teaching'
+import { offeringApi, classAssignmentApi, teachingClassApi } from '@/api/teaching'
+import { semesterApi } from '@/api/calendar'
 import { courseApi, curriculumPlanApi } from '@/api/academic'
 import { schoolClassApi } from '@/api/organization'
 import type {

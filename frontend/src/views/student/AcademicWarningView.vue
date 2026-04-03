@@ -307,7 +307,7 @@ import { ref, reactive, computed, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import type { FormInstance, FormRules } from 'element-plus'
 import { Plus, RefreshCw, Loader2 } from 'lucide-vue-next'
-import { semesterApi } from '@/api/teaching'
+import { semesterApi } from '@/api/calendar'
 import { schoolClassApi } from '@/api/organization'
 import {
   getRules, createRule, updateRule, deleteRule, toggleRule,

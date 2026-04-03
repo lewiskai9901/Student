@@ -285,7 +285,8 @@
 <script setup lang="ts">
 import { ref, reactive, computed, onMounted } from 'vue'
 import { ElMessage, ElMessageBox, type FormInstance, type FormRules } from 'element-plus'
-import { teachingTaskApi, semesterApi } from '@/api/teaching'
+import { teachingTaskApi } from '@/api/teaching'
+import { semesterApi } from '@/api/calendar'
 import { courseApi, curriculumPlanApi } from '@/api/academic'
 import { schoolClassApi } from '@/api/organization'
 import { getSimpleUserList } from '@/api/user'

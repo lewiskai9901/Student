@@ -1,4 +1,4 @@
-package com.school.management.interfaces.rest.teaching;
+package com.school.management.interfaces.rest.calendar;
 
 import com.baomidou.mybatisplus.core.toolkit.IdWorker;
 import com.school.management.common.result.Result;
@@ -14,27 +14,29 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * 教务管理 REST Controller
- * 处理学年、学期（别名路由）、校历事件、教学周的 CRUD
+ * 校历管理 REST Controller (共享资源)
+ *
+ * 从 TeachingController 提取，作为跨领域共享的日历服务。
+ * 处理学年、学期、教学周、校历事件的 CRUD。
  *
  * 使用 JdbcTemplate 直接操作已有的 DB 表:
  * - academic_years
- * - semesters (别名, 主路由在 SemesterController)
- * - academic_event
+ * - semesters
  * - academic_weeks
+ * - academic_event
  */
 @Slf4j
 @RestController
-@RequestMapping("/teaching")
+@RequestMapping("/calendar")
 @RequiredArgsConstructor
-public class TeachingController {
+public class AcademicCalendarController {
 
     private final JdbcTemplate jdbc;
 
     // ==================== 学年管理 ====================
 
     @GetMapping("/academic-years")
-    @CasbinAccess(resource = "teaching:calendar", action = "view")
+    @CasbinAccess(resource = "calendar", action = "view")
     public Result<List<Map<String, Object>>> listAcademicYears() {
         List<Map<String, Object>> years = jdbc.queryForList(
             "SELECT id, year_code AS yearCode, year_name AS yearName, " +
@@ -46,7 +48,7 @@ public class TeachingController {
     }
 
     @GetMapping("/academic-years/{id}")
-    @CasbinAccess(resource = "teaching:calendar", action = "view")
+    @CasbinAccess(resource = "calendar", action = "view")
     public Result<Map<String, Object>> getAcademicYear(@PathVariable Long id) {
         Map<String, Object> year = jdbc.queryForMap(
             "SELECT id, year_code AS yearCode, year_name AS yearName, " +
@@ -58,7 +60,7 @@ public class TeachingController {
     }
 
     @GetMapping("/academic-years/current")
-    @CasbinAccess(resource = "teaching:calendar", action = "view")
+    @CasbinAccess(resource = "calendar", action = "view")
     public Result<Map<String, Object>> getCurrentAcademicYear() {
         try {
             Map<String, Object> year = jdbc.queryForMap(
@@ -74,12 +76,11 @@ public class TeachingController {
     }
 
     @PostMapping("/academic-years")
-    @CasbinAccess(resource = "teaching:calendar", action = "edit")
+    @CasbinAccess(resource = "calendar", action = "edit")
     public Result<Map<String, Object>> createAcademicYear(@RequestBody Map<String, Object> data) {
         String yearName = (String) data.get("yearName");
         LocalDate startDate = LocalDate.parse((String) data.get("startDate"));
         LocalDate endDate = LocalDate.parse((String) data.get("endDate"));
-        // Auto-generate yearCode if not provided: e.g., "2025-2026"
         String yearCode = data.get("yearCode") != null ? (String) data.get("yearCode")
             : startDate.getYear() + "-" + endDate.getYear();
 
@@ -92,7 +93,7 @@ public class TeachingController {
     }
 
     @PutMapping("/academic-years/{id}")
-    @CasbinAccess(resource = "teaching:calendar", action = "edit")
+    @CasbinAccess(resource = "calendar", action = "edit")
     public Result<Void> updateAcademicYear(@PathVariable Long id, @RequestBody Map<String, Object> data) {
         String yearName = (String) data.get("yearName");
         String startDateStr = (String) data.get("startDate");
@@ -106,14 +107,14 @@ public class TeachingController {
     }
 
     @DeleteMapping("/academic-years/{id}")
-    @CasbinAccess(resource = "teaching:calendar", action = "edit")
+    @CasbinAccess(resource = "calendar", action = "edit")
     public Result<Void> deleteAcademicYear(@PathVariable Long id) {
         jdbc.update("UPDATE academic_years SET deleted = 1 WHERE id = ?", id);
         return Result.success();
     }
 
     @PostMapping("/academic-years/{id}/set-current")
-    @CasbinAccess(resource = "teaching:calendar", action = "edit")
+    @CasbinAccess(resource = "calendar", action = "edit")
     @Transactional
     public Result<Void> setCurrentAcademicYear(@PathVariable Long id) {
         jdbc.update("UPDATE academic_years SET is_current = 0 WHERE deleted = 0");
@@ -121,12 +122,10 @@ public class TeachingController {
         return Result.success();
     }
 
-    // ==================== 学期别名路由 ====================
-    // 主路由在 SemesterController(/semesters)
-    // 这里提供 /teaching/semesters 别名以匹配前端 API
+    // ==================== 学期管理 ====================
 
     @GetMapping("/semesters")
-    @CasbinAccess(resource = "teaching:calendar", action = "view")
+    @CasbinAccess(resource = "calendar", action = "view")
     public Result<List<Map<String, Object>>> listSemesters(
             @RequestParam(required = false) Long yearId) {
         if (yearId != null) {
@@ -155,7 +154,7 @@ public class TeachingController {
     }
 
     @GetMapping("/semesters/{id}")
-    @CasbinAccess(resource = "teaching:calendar", action = "view")
+    @CasbinAccess(resource = "calendar", action = "view")
     public Result<Map<String, Object>> getSemester(@PathVariable Long id) {
         Map<String, Object> sem = jdbc.queryForMap(
             "SELECT id, semester_name AS semesterName, semester_code AS semesterCode, " +
@@ -168,7 +167,7 @@ public class TeachingController {
     }
 
     @GetMapping("/semesters/current")
-    @CasbinAccess(resource = "teaching:calendar", action = "view")
+    @CasbinAccess(resource = "calendar", action = "view")
     public Result<Map<String, Object>> getCurrentSemester() {
         try {
             Map<String, Object> sem = jdbc.queryForMap(
@@ -185,14 +184,13 @@ public class TeachingController {
     }
 
     @PostMapping("/semesters")
-    @CasbinAccess(resource = "teaching:calendar", action = "edit")
+    @CasbinAccess(resource = "calendar", action = "edit")
     public Result<Map<String, Object>> createSemester(@RequestBody Map<String, Object> data) {
         String semesterName = (String) data.get("semesterName");
         Integer semesterType = data.get("semesterType") != null ? ((Number) data.get("semesterType")).intValue() : 1;
         LocalDate startDate = LocalDate.parse((String) data.get("startDate"));
         LocalDate endDate = LocalDate.parse((String) data.get("endDate"));
         Integer startYear = startDate.getYear();
-        // Auto-generate semester code: e.g., 2025-2026-1
         String semesterCode = data.get("semesterCode") != null ? (String) data.get("semesterCode")
             : startYear + "-" + (startYear + 1) + "-" + semesterType;
 
@@ -206,7 +204,7 @@ public class TeachingController {
     }
 
     @PutMapping("/semesters/{id}")
-    @CasbinAccess(resource = "teaching:calendar", action = "edit")
+    @CasbinAccess(resource = "calendar", action = "edit")
     public Result<Void> updateSemester(@PathVariable Long id, @RequestBody Map<String, Object> data) {
         String semesterName = (String) data.get("semesterName");
         String startDateStr = (String) data.get("startDate");
@@ -232,14 +230,14 @@ public class TeachingController {
     }
 
     @DeleteMapping("/semesters/{id}")
-    @CasbinAccess(resource = "teaching:calendar", action = "edit")
+    @CasbinAccess(resource = "calendar", action = "edit")
     public Result<Void> deleteSemester(@PathVariable Long id) {
         jdbc.update("UPDATE semesters SET deleted = 1 WHERE id = ?", id);
         return Result.success();
     }
 
     @PostMapping("/semesters/{id}/set-current")
-    @CasbinAccess(resource = "teaching:calendar", action = "edit")
+    @CasbinAccess(resource = "calendar", action = "edit")
     @Transactional
     public Result<Void> setCurrentSemester(@PathVariable Long id) {
         jdbc.update("UPDATE semesters SET is_current = 0 WHERE deleted = 0");
@@ -250,7 +248,7 @@ public class TeachingController {
     // ==================== 教学周 ====================
 
     @GetMapping("/semesters/{semesterId}/weeks")
-    @CasbinAccess(resource = "teaching:calendar", action = "view")
+    @CasbinAccess(resource = "calendar", action = "view")
     public Result<List<Map<String, Object>>> getWeeks(@PathVariable Long semesterId) {
         List<Map<String, Object>> weeks = jdbc.queryForList(
             "SELECT id, semester_id AS semesterId, week_number AS weekNumber, " +
@@ -263,10 +261,9 @@ public class TeachingController {
     }
 
     @PostMapping("/semesters/{semesterId}/generate-weeks")
-    @CasbinAccess(resource = "teaching:calendar", action = "edit")
+    @CasbinAccess(resource = "calendar", action = "edit")
     @Transactional
     public Result<List<Map<String, Object>>> generateWeeks(@PathVariable Long semesterId) {
-        // Get semester dates
         Map<String, Object> sem = jdbc.queryForMap(
             "SELECT start_date, end_date FROM semesters WHERE id = ? AND deleted = 0", semesterId);
         Object startObj = sem.get("start_date");
@@ -298,7 +295,7 @@ public class TeachingController {
     // ==================== 校历事件 ====================
 
     @GetMapping("/events")
-    @CasbinAccess(resource = "teaching:calendar", action = "view")
+    @CasbinAccess(resource = "calendar", action = "view")
     public Result<List<Map<String, Object>>> listEvents(
             @RequestParam(required = false) Long yearId,
             @RequestParam(required = false) Long semesterId,
@@ -329,7 +326,7 @@ public class TeachingController {
     }
 
     @GetMapping("/events/{id}")
-    @CasbinAccess(resource = "teaching:calendar", action = "view")
+    @CasbinAccess(resource = "calendar", action = "view")
     public Result<Map<String, Object>> getEvent(@PathVariable Long id) {
         Map<String, Object> event = jdbc.queryForMap(
             "SELECT id, year_id AS yearId, semester_id AS semesterId, " +
@@ -346,6 +343,7 @@ public class TeachingController {
         if (val instanceof Number) return ((Number) val).longValue();
         return Long.valueOf(val.toString());
     }
+
     private Integer toInt(Object val, int defaultVal) {
         if (val == null) return defaultVal;
         if (val instanceof Number) return ((Number) val).intValue();
@@ -353,7 +351,7 @@ public class TeachingController {
     }
 
     @PostMapping("/events")
-    @CasbinAccess(resource = "teaching:calendar", action = "edit")
+    @CasbinAccess(resource = "calendar", action = "edit")
     public Result<Map<String, Object>> createEvent(@RequestBody Map<String, Object> data) {
         Long yearId = toLong(data.get("yearId"));
         Long semesterId = toLong(data.get("semesterId"));
@@ -375,7 +373,7 @@ public class TeachingController {
     }
 
     @PutMapping("/events/{id}")
-    @CasbinAccess(resource = "teaching:calendar", action = "edit")
+    @CasbinAccess(resource = "calendar", action = "edit")
     public Result<Void> updateEvent(@PathVariable Long id, @RequestBody Map<String, Object> data) {
         String eventName = (String) data.get("eventName");
         Integer eventType = data.get("eventType") != null ? toInt(data.get("eventType"), 5) : null;
@@ -393,7 +391,7 @@ public class TeachingController {
     }
 
     @DeleteMapping("/events/{id}")
-    @CasbinAccess(resource = "teaching:calendar", action = "edit")
+    @CasbinAccess(resource = "calendar", action = "edit")
     public Result<Void> deleteEvent(@PathVariable Long id) {
         jdbc.update("UPDATE academic_event SET deleted = 1 WHERE id = ?", id);
         return Result.success();

@@ -421,7 +421,7 @@ import {
   rejectLeave,
   exportRecords,
 } from '@/api/attendance'
-import { semesterApi } from '@/api/teaching'
+import { semesterApi } from '@/api/calendar'
 import { courseApi } from '@/api/academic'
 import { schoolClassApi } from '@/api/organization'
 import { http } from '@/utils/request'
