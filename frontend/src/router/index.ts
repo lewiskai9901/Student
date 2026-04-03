@@ -193,6 +193,16 @@ const routes: RouteRecordRaw[] = [
         },
         children: [
           {
+            path: '/student/enrollment',
+            name: 'StudentEnrollment',
+            component: () => import('@/views/student/EnrollmentView.vue'),
+            meta: {
+              title: '招生管理',
+              requiresAuth: true,
+              order: 0
+            }
+          },
+          {
             path: '/student/list',
             name: 'StudentList',
             component: () => import('@/views/student/StudentList.vue'),
