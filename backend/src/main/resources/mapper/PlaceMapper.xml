@@ -65,7 +65,7 @@
 
     <!-- 查询所有楼宇 -->
     <select id="selectAllBuildings" resultMap="BaseResultMap">
-        SELECT * FROM place
+        SELECT * FROM places
         WHERE place_type = 'BUILDING' AND deleted = 0
         <if test="buildingType != null">
             AND building_type = #{buildingType}
@@ -78,14 +78,14 @@
 
     <!-- 查询楼宇的楼层 -->
     <select id="selectFloorsByBuildingId" resultMap="BaseResultMap">
-        SELECT * FROM place
+        SELECT * FROM places
         WHERE building_id = #{buildingId} AND place_type = 'FLOOR' AND deleted = 0
         ORDER BY floor_number
     </select>
 
     <!-- 查询楼宇的房间 -->
     <select id="selectRoomsByBuildingId" resultMap="BaseResultMap">
-        SELECT * FROM place
+        SELECT * FROM places
         WHERE building_id = #{buildingId} AND place_type = 'ROOM' AND deleted = 0
         <if test="roomType != null">
             AND room_type = #{roomType}
@@ -98,7 +98,7 @@
 
     <!-- 按条件查询 -->
     <select id="selectByConditions" resultMap="BaseResultMap">
-        SELECT * FROM place
+        SELECT * FROM places
         WHERE deleted = 0
         <if test="placeType != null">
             AND place_type = #{placeType}
@@ -130,7 +130,7 @@
 
     <!-- 统计数量 -->
     <select id="countByConditions" resultType="long">
-        SELECT COUNT(*) FROM place
+        SELECT COUNT(*) FROM places
         WHERE deleted = 0
         <if test="placeType != null">
             AND place_type = #{placeType}
@@ -160,7 +160,7 @@
 
     <!-- 按路径前缀查询 -->
     <select id="selectByPathPrefix" resultMap="BaseResultMap">
-        SELECT * FROM place
+        SELECT * FROM places
         WHERE path LIKE CONCAT(#{pathPrefix}, '%') AND deleted = 0
         ORDER BY path
     </select>
@@ -172,12 +172,12 @@
 
     <!-- 更新占用数 -->
     <update id="updateOccupancy">
-        UPDATE place SET current_occupancy = #{occupancy}, updated_at = NOW() WHERE id = #{id}
+        UPDATE places SET current_occupancy = #{occupancy}, updated_at = NOW() WHERE id = #{id}
     </update>
 
     <!-- 批量更新组织单元 -->
     <update id="batchUpdateOrgUnit">
-        UPDATE place SET org_unit_id = #{orgUnitId}, updated_at = NOW()
+        UPDATE places SET org_unit_id = #{orgUnitId}, updated_at = NOW()
         WHERE id IN
         <foreach collection="ids" item="id" open="(" separator="," close=")">
             #{id}
@@ -191,7 +191,7 @@
 
     <!-- 获取祖先链 -->
     <select id="selectAncestors" resultMap="BaseResultMap">
-        SELECT * FROM place
+        SELECT * FROM places
         WHERE id IN (
             SELECT CAST(SUBSTRING_INDEX(SUBSTRING_INDEX(#{path}, '/', numbers.n), '/', -1) AS UNSIGNED) as ancestor_id
             FROM (
@@ -211,13 +211,13 @@
             COUNT(CASE WHEN place_type = 'ROOM' THEN 1 END) as room_count,
             COALESCE(SUM(CASE WHEN place_type = 'ROOM' THEN capacity ELSE 0 END), 0) as total_capacity,
             COALESCE(SUM(CASE WHEN place_type = 'ROOM' THEN current_occupancy ELSE 0 END), 0) as total_occupancy
-        FROM place
+        FROM places
         WHERE building_id = #{buildingId} AND deleted = 0
     </select>
 
     <!-- 统计校区内的楼号数量 -->
     <select id="countByBuildingNoInCampus" resultType="int">
-        SELECT COUNT(*) FROM place
+        SELECT COUNT(*) FROM places
         WHERE building_no = #{buildingNo}
           AND campus_id = #{campusId}
           AND place_type = 'BUILDING'
@@ -229,7 +229,7 @@
 
     <!-- 统计楼栋内的房间号数量 -->
     <select id="countByRoomNoInBuilding" resultType="int">
-        SELECT COUNT(*) FROM place
+        SELECT COUNT(*) FROM places
         WHERE room_no = #{roomNo}
           AND building_id = #{buildingId}
           AND place_type = 'ROOM'
@@ -241,7 +241,7 @@
 
     <!-- 原子增加占用数（如果有空位）- CAS操作 -->
     <update id="incrementOccupancyIfAvailable">
-        UPDATE place
+        UPDATE places
         SET current_occupancy = current_occupancy + #{increment},
             updated_at = NOW()
         WHERE id = #{placeId}
@@ -252,7 +252,7 @@
 
     <!-- 原子减少占用数 - CAS操作 -->
     <update id="decrementOccupancy">
-        UPDATE place
+        UPDATE places
         SET current_occupancy = current_occupancy - #{decrement},
             updated_at = NOW()
         WHERE id = #{placeId}
