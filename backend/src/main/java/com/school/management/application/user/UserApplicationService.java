@@ -69,6 +69,13 @@ public class UserApplicationService {
             throw new BusinessException("用户名已存在: " + command.getUsername());
         }
 
+        // 验证用户类型编码
+        if (command.getUserTypeCode() != null && !command.getUserTypeCode().isEmpty()) {
+            if (!userTypeRepository.existsByTypeCode(command.getUserTypeCode())) {
+                throw new BusinessException("无效的用户类型: " + command.getUserTypeCode());
+            }
+        }
+
         // 加密密码
         String rawPassword = command.getPassword();
         if (rawPassword == null || rawPassword.isEmpty()) {
@@ -190,8 +197,11 @@ public class UserApplicationService {
                 command.getIdCard()
         );
 
-        // 更新用户类型
-        if (command.getUserTypeCode() != null) {
+        // 更新用户类型（先验证再更新）
+        if (command.getUserTypeCode() != null && !command.getUserTypeCode().isEmpty()) {
+            if (!userTypeRepository.existsByTypeCode(command.getUserTypeCode())) {
+                throw new BusinessException("无效的用户类型: " + command.getUserTypeCode());
+            }
             user.changeUserType(command.getUserTypeCode());
         }
 
