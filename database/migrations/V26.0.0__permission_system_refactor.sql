@@ -70,24 +70,23 @@ CREATE TABLE data_modules (
     UNIQUE KEY uk_tenant_code (tenant_id, module_code)
 ) COMMENT='动态数据模块配置';
 
--- 插入默认模块配置（从原 DataModule 枚举转化）
+-- 插入默认模块配置
 INSERT INTO data_modules (tenant_id, module_code, module_name, domain_code, domain_name, resource_type, org_unit_field, creator_field, sort_order) VALUES
-(1, 'student',              '学生信息',     'organization', '组织管理', 'student',   'org_unit_id', 'created_by', 101),
-(1, 'school_class',         '班级管理',     'organization', '组织管理', NULL,        'org_unit_id', 'created_by', 102),
-(1, 'org_unit',             '组织架构',     'organization', '组织管理', NULL,        'parent_id',   'created_by', 103),
-(1, 'dormitory_building',   '楼栋管理',     'place',        '场所管理', NULL,        'org_unit_id', 'created_by', 201),
-(1, 'dormitory_room',       '房间管理',     'place',        '场所管理', NULL,        'org_unit_id', 'created_by', 202),
-(1, 'dormitory_checkin',    '入住管理',     'place',        '场所管理', NULL,        'org_unit_id', 'created_by', 203),
-(1, 'inspection_template',  '检查模板',     'inspection',   '量化检查', NULL,        'org_unit_id', 'created_by', 301),
-(1, 'inspection_project',   '检查项目',     'inspection',   '量化检查', NULL,        'org_unit_id', 'created_by', 302),
-(1, 'inspection_task',      '检查任务',     'inspection',   '量化检查', NULL,        'org_unit_id', 'created_by', 303),
-(1, 'inspection_record',    '检查记录',     'inspection',   '量化检查', NULL,        'org_unit_id', 'created_by', 304),
-(1, 'inspection_personal',  '个人检查记录', 'inspection',   '量化检查', NULL,        'org_unit_id', 'created_by', 305),
-(1, 'inspection_appeal',    '申诉管理',     'inspection',   '量化检查', NULL,        'org_unit_id', 'created_by', 306),
-(1, 'inspection_summary',   '检查汇总',     'inspection',   '量化检查', NULL,        'org_unit_id', 'created_by', 307),
-(1, 'inspection_corrective','整改管理',     'inspection',   '量化检查', NULL,        'org_unit_id', 'created_by', 308),
-(1, 'system_user',          '用户管理',     'access',       '权限管理', NULL,        'org_unit_id', 'created_by', 401),
-(1, 'system_role',          '角色管理',     'access',       '权限管理', NULL,        NULL,          'created_by', 402);
+-- Organization domain
+(1, 'org_unit',             '组织单元',   'organization', '组织管理', 'org_unit',             'parent_id',   'created_by', 1),
+-- Student domain
+(1, 'student',              '学生信息',   'student',      '学生管理', 'student',              'org_unit_id', 'created_by', 10),
+(1, 'school_class',         '班级管理',   'student',      '学生管理', 'school_class',         'org_unit_id', 'created_by', 11),
+(1, 'attendance',           '考勤记录',   'student',      '学生管理', 'attendance',           'class_id',    'recorded_by', 12),
+-- Teaching domain
+(1, 'teaching_task',        '教学任务',   'teaching',     '教学管理', 'teaching_task',        'org_unit_id', 'created_by', 20),
+(1, 'exam_batch',           '考试管理',   'teaching',     '教学管理', 'exam_batch',           '',            'created_by', 21),
+(1, 'student_grade',        '学生成绩',   'teaching',     '教学管理', 'student_grade',        'class_id',    '',           22),
+-- Inspection domain
+(1, 'inspection_template',  '检查模板',   'inspection',   '检查平台', 'inspection_template',  'org_unit_id', 'created_by', 30),
+(1, 'inspection_record',    '检查记录',   'inspection',   '检查平台', 'inspection_record',    'org_unit_id', 'created_by', 31),
+-- Place domain
+(1, 'place',                '场所管理',   'place',        '场所管理', 'place',                'org_unit_id', 'created_by', 40);
 
 -- ============================================================
 -- 5. scope_item_types 表（动态范围项类型配置）
