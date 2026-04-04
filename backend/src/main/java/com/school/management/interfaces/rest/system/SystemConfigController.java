@@ -133,6 +133,43 @@ public class SystemConfigController {
     }
 
     /**
+     * 批量更新配置（按key更新value，不存在则创建）
+     * 登录自定义等功能使用此接口批量保存
+     */
+    @PutMapping("/batch")
+    @CasbinAccess(resource = "system:config", action = "edit")
+    @Audited(module = "system", action = "BATCH_UPDATE", resourceType = "SystemConfig", description = "批量更新配置")
+    @Operation(summary = "批量更新配置", description = "按配置键批量更新配置值，不存在的键自动创建")
+    public Result<Integer> batchUpdateConfigs(@RequestBody java.util.Map<String, String> configs) {
+        int count = 0;
+        for (java.util.Map.Entry<String, String> entry : configs.entrySet()) {
+            String key = entry.getKey();
+            String value = entry.getValue();
+            if (key == null || key.isEmpty()) continue;
+
+            SystemConfigPO existing = systemConfigMapper.findByKey(key);
+            if (existing != null) {
+                existing.setConfigValue(value);
+                systemConfigMapper.updateById(existing);
+            } else {
+                // Auto-create: derive group from key prefix
+                String group = key.contains(".") ? key.substring(0, key.indexOf('.')) : "system";
+                SystemConfigPO newConfig = new SystemConfigPO();
+                newConfig.setConfigKey(key);
+                newConfig.setConfigValue(value);
+                newConfig.setConfigGroup(group);
+                newConfig.setConfigLabel(key);
+                newConfig.setConfigType("string");
+                newConfig.setStatus(1);
+                newConfig.setDeleted(0);
+                systemConfigMapper.insert(newConfig);
+            }
+            count++;
+        }
+        return Result.success(count);
+    }
+
+    /**
      * 删除配置
      */
     @DeleteMapping("/{id}")
