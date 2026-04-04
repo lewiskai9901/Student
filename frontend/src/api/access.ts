@@ -335,6 +335,23 @@ export const userRoleApi = {
   checkPermissions
 }
 
+// ==================== 权限同步检查 API ====================
+
+/**
+ * 检查代码注解中的权限与数据库权限的同步状态
+ */
+export function checkPermissionSync(): Promise<{
+  codeAnnotationCount: number
+  dbPermissionCount: number
+  missingInDb: string[]
+  missingInDbCount: number
+  potentiallyObsoleteInDb: string[]
+  potentiallyObsoleteCount: number
+  codeResourceActions: Record<string, string[]>
+}> {
+  return http.get('/system/permission-sync/check')
+}
+
 // ==================== 数据权限 API（动态化） ====================
 
 import type {
