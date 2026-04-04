@@ -1,0 +1,1166 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>考试阅卷式评分界面 - Style 3</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  :root {
+    --indigo: #4f46e5;
+    --indigo-light: #6366f1;
+    --indigo-dark: #3730a3;
+    --green: #10b981;
+    --green-light: #d1fae5;
+    --green-dark: #059669;
+    --red: #dc2626;
+    --red-light: #fee2e2;
+    --red-dark: #b91c1c;
+    --sidebar-bg: #1e293b;
+    --sidebar-card: #273548;
+    --sidebar-text: #e2e8f0;
+    --sidebar-muted: #94a3b8;
+    --gray-50: #f8fafc;
+    --gray-100: #f1f5f9;
+    --gray-200: #e2e8f0;
+    --gray-300: #cbd5e1;
+    --gray-400: #94a3b8;
+    --gray-500: #64748b;
+    --gray-600: #475569;
+    --gray-700: #334155;
+    --gray-800: #1e293b;
+    --gray-900: #0f172a;
+    --white: #ffffff;
+    --shadow-sm: 0 1px 2px rgba(0,0,0,0.05);
+    --shadow: 0 1px 3px rgba(0,0,0,0.1), 0 1px 2px rgba(0,0,0,0.06);
+    --shadow-md: 0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -1px rgba(0,0,0,0.06);
+    --shadow-lg: 0 10px 15px -3px rgba(0,0,0,0.1), 0 4px 6px -2px rgba(0,0,0,0.05);
+  }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
+    background: var(--gray-100);
+    color: var(--gray-800);
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    font-size: 14px;
+    line-height: 1.5;
+  }
+
+  /* ===== TOP BAR ===== */
+  .top-bar {
+    height: 48px;
+    background: var(--white);
+    border-bottom: 1px solid var(--gray-200);
+    display: flex;
+    align-items: center;
+    padding: 0 16px;
+    flex-shrink: 0;
+    z-index: 100;
+    box-shadow: var(--shadow-sm);
+  }
+
+  .top-bar-back {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    color: var(--gray-500);
+    cursor: pointer;
+    padding: 6px 10px;
+    border-radius: 6px;
+    transition: all 0.15s;
+    font-size: 13px;
+    text-decoration: none;
+  }
+  .top-bar-back:hover {
+    background: var(--gray-100);
+    color: var(--gray-700);
+  }
+  .top-bar-back svg { width: 16px; height: 16px; }
+
+  .top-bar-divider {
+    width: 1px;
+    height: 20px;
+    background: var(--gray-200);
+    margin: 0 12px;
+  }
+
+  .top-bar-task-code {
+    font-size: 12px;
+    color: var(--gray-400);
+    font-family: 'SF Mono', 'Fira Code', monospace;
+    background: var(--gray-50);
+    padding: 2px 8px;
+    border-radius: 4px;
+    border: 1px solid var(--gray-200);
+  }
+
+  .top-bar-target {
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--gray-800);
+    margin-left: 12px;
+  }
+
+  .top-bar-right {
+    margin-left: auto;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+  }
+
+  .progress-ring-container {
+    position: relative;
+    width: 32px;
+    height: 32px;
+  }
+  .progress-ring-container svg {
+    transform: rotate(-90deg);
+    width: 32px;
+    height: 32px;
+  }
+  .progress-ring-bg {
+    fill: none;
+    stroke: var(--gray-200);
+    stroke-width: 3;
+  }
+  .progress-ring-fg {
+    fill: none;
+    stroke: var(--indigo);
+    stroke-width: 3;
+    stroke-linecap: round;
+    stroke-dasharray: 75.4;
+    stroke-dashoffset: 30.16;
+    transition: stroke-dashoffset 0.3s;
+  }
+  .progress-ring-label {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 9px;
+    font-weight: 700;
+    color: var(--indigo);
+  }
+
+  .top-bar-status {
+    font-size: 12px;
+    color: var(--gray-500);
+  }
+  .top-bar-status strong {
+    color: var(--indigo);
+    font-weight: 600;
+  }
+
+  /* ===== MAIN CONTENT ===== */
+  .main-content {
+    display: flex;
+    flex: 1;
+    overflow: hidden;
+  }
+
+  /* ===== LEFT PANEL (SIDEBAR) ===== */
+  .left-panel {
+    width: 260px;
+    background: var(--sidebar-bg);
+    display: flex;
+    flex-direction: column;
+    flex-shrink: 0;
+    overflow: hidden;
+  }
+
+  /* Target Info Card */
+  .target-info-card {
+    padding: 16px;
+    border-bottom: 1px solid rgba(255,255,255,0.06);
+  }
+
+  .target-info-title {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--sidebar-text);
+    margin-bottom: 12px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .target-info-title .icon {
+    width: 28px;
+    height: 28px;
+    background: rgba(79, 70, 229, 0.2);
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .target-info-title .icon svg { width: 14px; height: 14px; color: var(--indigo-light); }
+
+  .target-info-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+  }
+  .target-info-label {
+    font-size: 12px;
+    color: var(--sidebar-muted);
+  }
+  .target-info-value {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--sidebar-text);
+  }
+
+  .target-progress-bar {
+    height: 4px;
+    background: rgba(255,255,255,0.1);
+    border-radius: 2px;
+    overflow: hidden;
+    margin-top: 4px;
+  }
+  .target-progress-fill {
+    height: 100%;
+    background: var(--indigo-light);
+    border-radius: 2px;
+    width: 60%;
+    transition: width 0.3s;
+  }
+
+  .target-score {
+    display: flex;
+    align-items: baseline;
+    gap: 4px;
+    margin-top: 12px;
+    padding-top: 12px;
+    border-top: 1px solid rgba(255,255,255,0.06);
+  }
+  .target-score-number {
+    font-size: 28px;
+    font-weight: 700;
+    color: var(--white);
+    line-height: 1;
+  }
+  .target-score-unit {
+    font-size: 13px;
+    color: var(--sidebar-muted);
+  }
+  .target-score-grade {
+    margin-left: auto;
+    padding: 2px 10px;
+    background: rgba(16, 185, 129, 0.15);
+    color: var(--green);
+    font-size: 12px;
+    font-weight: 600;
+    border-radius: 10px;
+  }
+
+  /* Navigator Grid */
+  .navigator-grid {
+    flex: 1;
+    overflow-y: auto;
+    padding: 12px 16px;
+  }
+  .navigator-grid::-webkit-scrollbar { width: 4px; }
+  .navigator-grid::-webkit-scrollbar-track { background: transparent; }
+  .navigator-grid::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.15); border-radius: 2px; }
+
+  .nav-section {
+    margin-bottom: 16px;
+  }
+  .nav-section-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 8px;
+  }
+  .nav-section-title {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--sidebar-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+  .nav-section-badge {
+    font-size: 10px;
+    padding: 1px 6px;
+    background: rgba(255,255,255,0.08);
+    color: var(--sidebar-muted);
+    border-radius: 8px;
+  }
+
+  .nav-grid {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 6px;
+  }
+
+  .nav-square {
+    width: 36px;
+    height: 36px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.15s;
+    position: relative;
+  }
+
+  .nav-square.scored {
+    background: rgba(16, 185, 129, 0.2);
+    color: var(--green);
+    border: 1.5px solid rgba(16, 185, 129, 0.35);
+  }
+  .nav-square.scored:hover {
+    background: rgba(16, 185, 129, 0.3);
+    border-color: var(--green);
+  }
+  .nav-square.scored .check-icon {
+    position: absolute;
+    top: 2px;
+    right: 2px;
+    width: 10px;
+    height: 10px;
+    background: var(--green);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .nav-square.scored .check-icon svg {
+    width: 6px;
+    height: 6px;
+    color: white;
+  }
+
+  .nav-square.active {
+    background: var(--indigo);
+    color: var(--white);
+    border: 1.5px solid var(--indigo-light);
+    box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.3);
+  }
+
+  .nav-square.pending {
+    background: transparent;
+    color: var(--sidebar-muted);
+    border: 1.5px solid rgba(255,255,255,0.15);
+  }
+  .nav-square.pending:hover {
+    border-color: rgba(255,255,255,0.3);
+    color: var(--sidebar-text);
+  }
+
+  .nav-square.flagged {
+    background: rgba(220, 38, 38, 0.1);
+    color: var(--red);
+    border: 1.5px solid rgba(220, 38, 38, 0.4);
+  }
+  .nav-square.flagged:hover {
+    background: rgba(220, 38, 38, 0.2);
+    border-color: var(--red);
+  }
+
+  /* Target Switcher */
+  .target-switcher {
+    padding: 12px 16px;
+    border-top: 1px solid rgba(255,255,255,0.06);
+    flex-shrink: 0;
+  }
+
+  .target-switcher-nav {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .target-switcher-btn {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 12px;
+    color: var(--sidebar-muted);
+    cursor: pointer;
+    padding: 6px 10px;
+    border-radius: 6px;
+    transition: all 0.15s;
+    background: none;
+    border: none;
+    font-family: inherit;
+  }
+  .target-switcher-btn:hover {
+    background: rgba(255,255,255,0.06);
+    color: var(--sidebar-text);
+  }
+  .target-switcher-btn svg { width: 12px; height: 12px; }
+  .target-switcher-pos {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--sidebar-text);
+  }
+  .target-switcher-pos span {
+    color: var(--sidebar-muted);
+    font-weight: 400;
+  }
+
+  .target-mini-list {
+    margin-top: 8px;
+    display: flex;
+    gap: 4px;
+    justify-content: center;
+  }
+  .target-mini-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.15);
+    transition: all 0.15s;
+  }
+  .target-mini-dot.done { background: var(--green); }
+  .target-mini-dot.current { background: var(--indigo-light); width: 16px; border-radius: 3px; }
+
+  /* ===== RIGHT PANEL ===== */
+  .right-panel {
+    flex: 1;
+    overflow-y: auto;
+    padding: 24px 32px;
+    background: var(--gray-50);
+  }
+
+  .item-card {
+    max-width: 720px;
+    margin: 0 auto;
+    background: var(--white);
+    border-radius: 16px;
+    box-shadow: var(--shadow-lg);
+    border: 1px solid var(--gray-200);
+    overflow: hidden;
+  }
+
+  /* Item Header */
+  .item-header {
+    padding: 24px 28px 20px;
+    border-bottom: 1px solid var(--gray-100);
+  }
+
+  .item-header-top {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 12px;
+  }
+
+  .item-number {
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--indigo);
+    background: rgba(79, 70, 229, 0.08);
+    padding: 4px 10px;
+    border-radius: 6px;
+    font-family: 'SF Mono', 'Fira Code', monospace;
+  }
+
+  .item-type-badge {
+    font-size: 11px;
+    font-weight: 600;
+    padding: 3px 10px;
+    border-radius: 10px;
+  }
+  .item-type-badge.deduction {
+    background: var(--red-light);
+    color: var(--red);
+  }
+  .item-type-badge.addition {
+    background: var(--green-light);
+    color: var(--green-dark);
+  }
+
+  .item-breadcrumb {
+    font-size: 12px;
+    color: var(--gray-400);
+    margin-left: auto;
+  }
+  .item-breadcrumb span { color: var(--gray-500); }
+
+  .item-name {
+    font-size: 20px;
+    font-weight: 700;
+    color: var(--gray-900);
+    line-height: 1.3;
+  }
+
+  .item-description {
+    font-size: 13px;
+    color: var(--gray-500);
+    margin-top: 6px;
+    line-height: 1.5;
+  }
+
+  /* Scoring Area */
+  .scoring-area {
+    padding: 28px;
+    background: var(--gray-50);
+    border-bottom: 1px solid var(--gray-100);
+  }
+
+  .scoring-area-label {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--gray-500);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 16px;
+  }
+
+  .scoring-display {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 20px;
+    margin-bottom: 20px;
+  }
+
+  .scoring-adjust-btn {
+    width: 44px;
+    height: 44px;
+    border-radius: 12px;
+    border: 1.5px solid var(--gray-200);
+    background: var(--white);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.15s;
+    color: var(--gray-500);
+  }
+  .scoring-adjust-btn:hover {
+    border-color: var(--indigo);
+    color: var(--indigo);
+    background: rgba(79, 70, 229, 0.04);
+  }
+  .scoring-adjust-btn svg { width: 20px; height: 20px; }
+
+  .scoring-value {
+    min-width: 120px;
+    text-align: center;
+  }
+  .scoring-value-number {
+    font-size: 48px;
+    font-weight: 800;
+    line-height: 1;
+    font-variant-numeric: tabular-nums;
+  }
+  .scoring-value-number.negative { color: var(--red); }
+  .scoring-value-number.positive { color: var(--green-dark); }
+  .scoring-value-number.zero { color: var(--gray-400); }
+  .scoring-value-hint {
+    font-size: 11px;
+    color: var(--gray-400);
+    margin-top: 6px;
+  }
+
+  .scoring-presets {
+    display: flex;
+    gap: 8px;
+    justify-content: center;
+    flex-wrap: wrap;
+  }
+  .scoring-preset-btn {
+    min-width: 52px;
+    height: 40px;
+    padding: 0 14px;
+    border-radius: 10px;
+    border: 1.5px solid var(--gray-200);
+    background: var(--white);
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--gray-600);
+    cursor: pointer;
+    transition: all 0.15s;
+    font-family: inherit;
+  }
+  .scoring-preset-btn:hover {
+    border-color: var(--indigo);
+    color: var(--indigo);
+    background: rgba(79, 70, 229, 0.04);
+  }
+  .scoring-preset-btn.active {
+    background: var(--indigo);
+    color: var(--white);
+    border-color: var(--indigo);
+    box-shadow: 0 2px 8px rgba(79, 70, 229, 0.3);
+  }
+  .scoring-preset-btn.zero-btn {
+    border-color: var(--green);
+    color: var(--green-dark);
+    background: var(--green-light);
+  }
+
+  /* Additional Fields */
+  .item-fields {
+    padding: 24px 28px;
+  }
+
+  .field-group {
+    margin-bottom: 20px;
+  }
+  .field-group:last-child { margin-bottom: 0; }
+
+  .field-label {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--gray-500);
+    margin-bottom: 6px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .field-label svg { width: 13px; height: 13px; color: var(--gray-400); }
+
+  .field-input {
+    width: 100%;
+    padding: 10px 14px;
+    border: 1.5px solid var(--gray-200);
+    border-radius: 10px;
+    font-size: 13px;
+    color: var(--gray-700);
+    background: var(--white);
+    resize: none;
+    font-family: inherit;
+    transition: border-color 0.15s;
+    outline: none;
+  }
+  .field-input:focus {
+    border-color: var(--indigo);
+    box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.08);
+  }
+  .field-input::placeholder { color: var(--gray-300); }
+
+  .field-upload-area {
+    border: 1.5px dashed var(--gray-200);
+    border-radius: 10px;
+    padding: 16px;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.15s;
+    background: var(--white);
+  }
+  .field-upload-area:hover {
+    border-color: var(--indigo);
+    background: rgba(79, 70, 229, 0.02);
+  }
+  .field-upload-icon {
+    width: 36px;
+    height: 36px;
+    margin: 0 auto 8px;
+    background: var(--gray-100);
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--gray-400);
+  }
+  .field-upload-icon svg { width: 18px; height: 18px; }
+  .field-upload-text {
+    font-size: 12px;
+    color: var(--gray-500);
+  }
+  .field-upload-text strong {
+    color: var(--indigo);
+    font-weight: 600;
+  }
+
+  .field-timestamp {
+    font-size: 12px;
+    color: var(--gray-400);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .field-timestamp svg { width: 13px; height: 13px; }
+
+  /* Item Nav */
+  .item-nav {
+    padding: 16px 28px;
+    border-top: 1px solid var(--gray-100);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .item-nav-btn {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 13px;
+    color: var(--gray-500);
+    cursor: pointer;
+    padding: 8px 14px;
+    border-radius: 8px;
+    transition: all 0.15s;
+    background: none;
+    border: 1.5px solid var(--gray-200);
+    font-family: inherit;
+    font-weight: 500;
+  }
+  .item-nav-btn:hover {
+    border-color: var(--gray-300);
+    color: var(--gray-700);
+    background: var(--gray-50);
+  }
+  .item-nav-btn.primary {
+    background: var(--indigo);
+    color: var(--white);
+    border-color: var(--indigo);
+  }
+  .item-nav-btn.primary:hover {
+    background: var(--indigo-dark);
+    border-color: var(--indigo-dark);
+  }
+  .item-nav-btn svg { width: 14px; height: 14px; }
+
+  .item-nav-pos {
+    font-size: 13px;
+    color: var(--gray-400);
+  }
+  .item-nav-pos strong {
+    color: var(--gray-700);
+    font-weight: 600;
+  }
+
+  /* ===== BOTTOM BAR ===== */
+  .bottom-bar {
+    height: 56px;
+    background: var(--white);
+    border-top: 1px solid var(--gray-200);
+    display: flex;
+    align-items: center;
+    padding: 0 20px;
+    flex-shrink: 0;
+    box-shadow: 0 -1px 3px rgba(0,0,0,0.04);
+  }
+
+  .bottom-bar-left {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+  }
+
+  .bottom-score-item {
+    display: flex;
+    align-items: baseline;
+    gap: 4px;
+  }
+  .bottom-score-label {
+    font-size: 11px;
+    color: var(--gray-400);
+  }
+  .bottom-score-value {
+    font-size: 20px;
+    font-weight: 700;
+    color: var(--gray-800);
+    font-variant-numeric: tabular-nums;
+  }
+  .bottom-score-value.grade {
+    font-size: 14px;
+    padding: 2px 10px;
+    border-radius: 6px;
+    background: rgba(16, 185, 129, 0.1);
+    color: var(--green-dark);
+  }
+  .bottom-score-value.deduction {
+    color: var(--red);
+    font-size: 16px;
+  }
+
+  .bottom-bar-center {
+    flex: 1;
+    display: flex;
+    justify-content: center;
+    gap: 4px;
+    align-items: center;
+  }
+
+  .progress-pill {
+    width: 32px;
+    height: 6px;
+    border-radius: 3px;
+    transition: all 0.2s;
+  }
+  .progress-pill.scored { background: var(--green); }
+  .progress-pill.current { background: var(--indigo); box-shadow: 0 0 0 2px rgba(79, 70, 229, 0.2); }
+  .progress-pill.pending { background: var(--gray-200); }
+  .progress-pill.flagged { background: var(--red); }
+
+  .bottom-bar-right {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-left: auto;
+  }
+
+  .bottom-nav-btn {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 13px;
+    font-weight: 500;
+    padding: 8px 16px;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.15s;
+    border: 1.5px solid var(--gray-200);
+    background: var(--white);
+    color: var(--gray-600);
+    font-family: inherit;
+  }
+  .bottom-nav-btn:hover {
+    border-color: var(--gray-300);
+    background: var(--gray-50);
+  }
+  .bottom-nav-btn.primary {
+    background: var(--indigo);
+    color: var(--white);
+    border-color: var(--indigo);
+  }
+  .bottom-nav-btn.primary:hover {
+    background: var(--indigo-dark);
+  }
+  .bottom-nav-btn svg { width: 14px; height: 14px; }
+
+  /* ===== SCROLLBAR ===== */
+  .right-panel::-webkit-scrollbar { width: 6px; }
+  .right-panel::-webkit-scrollbar-track { background: transparent; }
+  .right-panel::-webkit-scrollbar-thumb { background: var(--gray-300); border-radius: 3px; }
+
+  /* ===== ANIMATIONS ===== */
+  .nav-square { transition: all 0.15s ease; }
+  .nav-square:active { transform: scale(0.92); }
+  .scoring-preset-btn:active { transform: scale(0.96); }
+  .scoring-adjust-btn:active { transform: scale(0.92); }
+
+  /* Subtle pulse on active nav square */
+  @keyframes activePulse {
+    0%, 100% { box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.3); }
+    50% { box-shadow: 0 0 0 5px rgba(79, 70, 229, 0.15); }
+  }
+  .nav-square.active { animation: activePulse 2s ease-in-out infinite; }
+</style>
+</head>
+<body>
+
+<!-- ===== TOP BAR ===== -->
+<div class="top-bar">
+  <a class="top-bar-back" href="#">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
+    返回
+  </a>
+  <div class="top-bar-divider"></div>
+  <span class="top-bar-task-code">TASK-20260324-007</span>
+  <span class="top-bar-target">计算机应用24-3班</span>
+
+  <div class="top-bar-right">
+    <span class="top-bar-status">已评 <strong>3</strong>/5 项</span>
+    <div class="progress-ring-container">
+      <svg viewBox="0 0 32 32">
+        <circle class="progress-ring-bg" cx="16" cy="16" r="12"/>
+        <circle class="progress-ring-fg" cx="16" cy="16" r="12"/>
+      </svg>
+      <span class="progress-ring-label">60%</span>
+    </div>
+  </div>
+</div>
+
+<!-- ===== MAIN CONTENT ===== -->
+<div class="main-content">
+
+  <!-- ===== LEFT PANEL ===== -->
+  <div class="left-panel">
+
+    <!-- Target Info Card -->
+    <div class="target-info-card">
+      <div class="target-info-title">
+        <div class="icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>
+        </div>
+        当前检查目标
+      </div>
+
+      <div class="target-info-row">
+        <span class="target-info-label">班级</span>
+        <span class="target-info-value">计算机应用24-3班</span>
+      </div>
+      <div class="target-info-row">
+        <span class="target-info-label">进度</span>
+        <span class="target-info-value">3/5 已评</span>
+      </div>
+      <div class="target-progress-bar">
+        <div class="target-progress-fill"></div>
+      </div>
+
+      <div class="target-score">
+        <span class="target-score-number">97</span>
+        <span class="target-score-unit">分</span>
+        <span class="target-score-grade">优</span>
+      </div>
+    </div>
+
+    <!-- Navigator Grid -->
+    <div class="navigator-grid">
+
+      <!-- Section: 教室卫生 -->
+      <div class="nav-section">
+        <div class="nav-section-header">
+          <span class="nav-section-title">教室卫生</span>
+          <span class="nav-section-badge">2/3</span>
+        </div>
+        <div class="nav-grid">
+          <div class="nav-square scored" title="地面清洁 — 已评: 0">
+            1
+            <div class="check-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+            </div>
+          </div>
+          <div class="nav-square scored" title="黑板清洁 — 已评: -2">
+            2
+            <div class="check-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+            </div>
+          </div>
+          <div class="nav-square active" title="窗台灰尘 — 当前">
+            3
+          </div>
+        </div>
+      </div>
+
+      <!-- Section: 课堂纪律 -->
+      <div class="nav-section">
+        <div class="nav-section-header">
+          <span class="nav-section-title">课堂纪律</span>
+          <span class="nav-section-badge">1/3</span>
+        </div>
+        <div class="nav-grid">
+          <div class="nav-square scored" title="课堂秩序 — 已评: -1">
+            4
+            <div class="check-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+            </div>
+          </div>
+          <div class="nav-square pending" title="出勤情况 — 未评">
+            5
+          </div>
+          <div class="nav-square pending" title="课堂参与 — 未评">
+            6
+          </div>
+        </div>
+      </div>
+
+      <!-- Section: 物品摆放 -->
+      <div class="nav-section">
+        <div class="nav-section-header">
+          <span class="nav-section-title">物品摆放</span>
+          <span class="nav-section-badge">0/4</span>
+        </div>
+        <div class="nav-grid">
+          <div class="nav-square pending" title="桌椅整齐 — 未评">
+            7
+          </div>
+          <div class="nav-square pending" title="书本摆放 — 未评">
+            8
+          </div>
+          <div class="nav-square flagged" title="垃圾分类 — 有问题">
+            9
+          </div>
+          <div class="nav-square pending" title="清洁工具 — 未评">
+            10
+          </div>
+        </div>
+      </div>
+
+      <!-- Section: 安全检查 -->
+      <div class="nav-section">
+        <div class="nav-section-header">
+          <span class="nav-section-title">安全检查</span>
+          <span class="nav-section-badge">0/2</span>
+        </div>
+        <div class="nav-grid">
+          <div class="nav-square pending" title="电器安全 — 未评">
+            11
+          </div>
+          <div class="nav-square pending" title="门窗状况 — 未评">
+            12
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Target Switcher -->
+    <div class="target-switcher">
+      <div class="target-switcher-nav">
+        <button class="target-switcher-btn">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
+          上一个
+        </button>
+        <span class="target-switcher-pos">3 <span>/ 15</span></span>
+        <button class="target-switcher-btn">
+          下一个
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg>
+        </button>
+      </div>
+      <div class="target-mini-list">
+        <div class="target-mini-dot done"></div>
+        <div class="target-mini-dot done"></div>
+        <div class="target-mini-dot current"></div>
+        <div class="target-mini-dot"></div>
+        <div class="target-mini-dot"></div>
+        <div class="target-mini-dot"></div>
+        <div class="target-mini-dot"></div>
+        <div class="target-mini-dot"></div>
+        <div class="target-mini-dot"></div>
+        <div class="target-mini-dot"></div>
+        <div class="target-mini-dot"></div>
+        <div class="target-mini-dot"></div>
+        <div class="target-mini-dot"></div>
+        <div class="target-mini-dot"></div>
+        <div class="target-mini-dot"></div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ===== RIGHT PANEL ===== -->
+  <div class="right-panel">
+
+    <div class="item-card">
+
+      <!-- Item Header -->
+      <div class="item-header">
+        <div class="item-header-top">
+          <span class="item-number">#3</span>
+          <span class="item-type-badge deduction">扣分项</span>
+          <span class="item-breadcrumb">教室卫生 <span>&rsaquo;</span> 窗台灰尘</span>
+        </div>
+        <div class="item-name">窗台灰尘</div>
+        <div class="item-description">检查窗台、窗框是否积灰，窗户玻璃是否清洁。轻微灰尘扣1分，明显积灰扣2-3分，严重污渍扣5分。</div>
+      </div>
+
+      <!-- Scoring Area -->
+      <div class="scoring-area">
+        <div class="scoring-area-label">评分操作</div>
+
+        <div class="scoring-display">
+          <button class="scoring-adjust-btn">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          </button>
+          <div class="scoring-value">
+            <div class="scoring-value-number negative">-1</div>
+            <div class="scoring-value-hint">扣分范围: 0 ~ -5</div>
+          </div>
+          <button class="scoring-adjust-btn">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          </button>
+        </div>
+
+        <div class="scoring-presets">
+          <button class="scoring-preset-btn zero-btn">0</button>
+          <button class="scoring-preset-btn active">-1</button>
+          <button class="scoring-preset-btn">-2</button>
+          <button class="scoring-preset-btn">-3</button>
+          <button class="scoring-preset-btn">-4</button>
+          <button class="scoring-preset-btn">-5</button>
+        </div>
+      </div>
+
+      <!-- Additional Fields -->
+      <div class="item-fields">
+        <div class="field-group">
+          <label class="field-label">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+            备注
+          </label>
+          <textarea class="field-input" rows="3" placeholder="输入备注说明（选填）...">窗台左侧有少量灰尘</textarea>
+        </div>
+
+        <div class="field-group">
+          <label class="field-label">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+            证据照片
+          </label>
+          <div class="field-upload-area">
+            <div class="field-upload-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+            </div>
+            <div class="field-upload-text"><strong>点击上传</strong> 或拖拽照片到此处</div>
+          </div>
+        </div>
+
+        <div class="field-group">
+          <div class="field-timestamp">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+            评分时间: 2026-03-24 14:23:17
+          </div>
+        </div>
+      </div>
+
+      <!-- Item Navigation -->
+      <div class="item-nav">
+        <button class="item-nav-btn">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
+          上一项
+        </button>
+        <span class="item-nav-pos"><strong>3</strong> / 5</span>
+        <button class="item-nav-btn primary">
+          下一项
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg>
+        </button>
+      </div>
+
+    </div>
+
+  </div>
+
+</div>
+
+<!-- ===== BOTTOM BAR ===== -->
+<div class="bottom-bar">
+  <div class="bottom-bar-left">
+    <div class="bottom-score-item">
+      <span class="bottom-score-label">当前得分</span>
+      <span class="bottom-score-value">97</span>
+    </div>
+    <div class="bottom-score-item">
+      <span class="bottom-score-label">等级</span>
+      <span class="bottom-score-value grade">优</span>
+    </div>
+    <div class="bottom-score-item">
+      <span class="bottom-score-label">扣分</span>
+      <span class="bottom-score-value deduction">-3</span>
+    </div>
+  </div>
+
+  <div class="bottom-bar-center">
+    <div class="progress-pill scored"></div>
+    <div class="progress-pill scored"></div>
+    <div class="progress-pill current"></div>
+    <div class="progress-pill pending"></div>
+    <div class="progress-pill pending"></div>
+  </div>
+
+  <div class="bottom-bar-right">
+    <button class="bottom-nav-btn">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
+      上一项
+    </button>
+    <button class="bottom-nav-btn primary">
+      下一项
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg>
+    </button>
+  </div>
+</div>
+
+</body>
+</html>

@@ -1,0 +1,1016 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Design B - 看板风格评分界面</title>
+<style>
+  /* ===== Reset & Base ===== */
+  *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+  html { font-size: 14px; -webkit-font-smoothing: antialiased; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+    background: #f7f8fa;
+    color: #1d2129;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* ===== Top Bar ===== */
+  .top-bar {
+    background: #fff;
+    border-bottom: 1px solid #e5e6eb;
+    padding: 0 24px;
+    height: 52px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    flex-shrink: 0;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.04);
+    position: relative;
+    z-index: 20;
+  }
+  .top-bar .back-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+    border: none;
+    background: #f2f3f5;
+    cursor: pointer;
+    color: #4e5969;
+    font-size: 16px;
+    transition: background 0.15s;
+    flex-shrink: 0;
+  }
+  .top-bar .back-btn:hover { background: #e5e6eb; }
+  .top-bar .task-code {
+    font-weight: 600;
+    font-size: 15px;
+    color: #1d2129;
+    letter-spacing: -0.01em;
+  }
+  .top-bar .badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 3px 10px;
+    border-radius: 10px;
+    font-size: 12px;
+    font-weight: 500;
+    flex-shrink: 0;
+  }
+  .top-bar .badge-running {
+    background: #e8f3ff;
+    color: #165dff;
+  }
+  .top-bar .badge-running::before {
+    content: "";
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: #165dff;
+    animation: pulse-dot 1.8s infinite;
+  }
+  @keyframes pulse-dot {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.4; }
+  }
+  .top-bar .meta {
+    color: #86909c;
+    font-size: 13px;
+    flex-shrink: 0;
+  }
+  .top-bar .spacer { flex: 1; }
+  .top-bar .progress-block {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-shrink: 0;
+  }
+  .progress-bar-wrapper {
+    width: 120px;
+    height: 6px;
+    background: #f2f3f5;
+    border-radius: 3px;
+    overflow: hidden;
+  }
+  .progress-bar-fill {
+    height: 100%;
+    width: 2.2%;
+    background: linear-gradient(90deg, #165dff, #4080ff);
+    border-radius: 3px;
+    transition: width 0.4s ease;
+  }
+  .progress-text {
+    font-size: 13px;
+    font-weight: 600;
+    color: #4e5969;
+    min-width: 44px;
+    text-align: right;
+  }
+
+  /* ===== Main Layout ===== */
+  .main-area {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  /* ===== Target Chips Zone ===== */
+  .chips-zone {
+    background: #fff;
+    border-bottom: 1px solid #e5e6eb;
+    padding: 10px 24px 0;
+    flex-shrink: 0;
+    position: relative;
+  }
+  .chips-row-wrapper {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .chips-search-btn {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    border: 1.5px solid #e5e6eb;
+    background: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    color: #86909c;
+    font-size: 13px;
+    flex-shrink: 0;
+    transition: all 0.15s;
+  }
+  .chips-search-btn:hover {
+    border-color: #165dff;
+    color: #165dff;
+  }
+  .chips-scroll {
+    flex: 1;
+    overflow-x: auto;
+    overflow-y: hidden;
+    display: flex;
+    gap: 5px;
+    padding-bottom: 2px;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+  .chips-scroll::-webkit-scrollbar { display: none; }
+  .chip {
+    flex-shrink: 0;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 3px 9px;
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+    white-space: nowrap;
+    user-select: none;
+    border: 1px solid transparent;
+    line-height: 1.4;
+  }
+  .chip-pending {
+    border-color: #e5e6eb;
+    color: #86909c;
+    background: #fff;
+  }
+  .chip-pending:hover {
+    border-color: #c9cdd4;
+    color: #4e5969;
+  }
+  .chip-active {
+    background: #165dff;
+    color: #fff;
+    border-color: #165dff;
+    box-shadow: 0 1px 6px rgba(22,93,255,0.25);
+  }
+  .chip-done {
+    border-color: #7be0a3;
+    color: #00b42a;
+    background: #e8ffea;
+  }
+  .chip-done .chip-dot {
+    width: 5px;
+    height: 5px;
+    border-radius: 50%;
+    background: #00b42a;
+  }
+
+  /* Filter Row: type dropdown + status tabs */
+  .filter-row {
+    display: flex;
+    align-items: center;
+    gap: 0;
+    padding: 8px 0 10px;
+  }
+  .type-filter {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px 10px;
+    border-radius: 6px;
+    font-size: 12px;
+    font-weight: 500;
+    color: #4e5969;
+    background: #f2f3f5;
+    border: none;
+    cursor: pointer;
+    white-space: nowrap;
+    user-select: none;
+    transition: all 0.15s;
+    flex-shrink: 0;
+  }
+  .type-filter:hover {
+    background: #e5e6eb;
+    color: #1d2129;
+  }
+  .type-filter .tf-label {
+    color: #86909c;
+  }
+  .type-filter .tf-arrow {
+    font-size: 10px;
+    color: #86909c;
+    margin-left: 1px;
+  }
+  .filter-divider {
+    width: 1px;
+    height: 16px;
+    background: #e5e6eb;
+    margin: 0 10px;
+    flex-shrink: 0;
+  }
+  .filter-tabs {
+    display: flex;
+    gap: 4px;
+  }
+  .filter-tab {
+    padding: 4px 12px;
+    border-radius: 6px;
+    font-size: 12px;
+    color: #86909c;
+    cursor: pointer;
+    transition: all 0.15s;
+    font-weight: 500;
+    background: transparent;
+    border: none;
+    user-select: none;
+  }
+  .filter-tab:hover { color: #4e5969; background: #f7f8fa; }
+  .filter-tab.active {
+    background: #f2f3f5;
+    color: #1d2129;
+    font-weight: 600;
+  }
+
+  /* ===== Content Zone ===== */
+  .content-zone {
+    flex: 1;
+    overflow-y: auto;
+    padding: 20px 24px;
+    padding-bottom: 88px;
+  }
+  .content-zone::-webkit-scrollbar { width: 6px; }
+  .content-zone::-webkit-scrollbar-thumb { background: #d9dce1; border-radius: 3px; }
+
+  /* Target Header */
+  .target-header {
+    margin-bottom: 16px;
+  }
+  .target-name {
+    font-size: 20px;
+    font-weight: 700;
+    color: #1d2129;
+    letter-spacing: -0.02em;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .target-name .type-label {
+    font-size: 11px;
+    font-weight: 500;
+    padding: 1px 7px;
+    border-radius: 4px;
+    background: #e8f3ff;
+    color: #165dff;
+  }
+  .target-subtitle {
+    font-size: 13px;
+    color: #86909c;
+    margin-top: 3px;
+  }
+
+  /* ===== Section Cards ===== */
+  .section-card {
+    background: #fff;
+    border-radius: 10px;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.05);
+    margin-bottom: 14px;
+    overflow: visible;
+    animation: fadeUp 0.3s ease both;
+  }
+  .section-card:nth-child(1) { animation-delay: 0s; }
+  .section-card:nth-child(2) { animation-delay: 0.08s; }
+  .section-card:nth-child(3) { animation-delay: 0.16s; }
+  .section-card-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 16px;
+    border-bottom: 1px solid #f2f3f5;
+    background: #fafbfc;
+    border-radius: 10px 10px 0 0;
+  }
+  .section-card-title {
+    font-size: 14px;
+    font-weight: 600;
+    color: #1d2129;
+  }
+  .section-card-meta {
+    font-size: 12px;
+    color: #86909c;
+    font-weight: 400;
+  }
+
+  /* Scoring Card Grid */
+  .scoring-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: 10px;
+    padding: 12px 14px;
+  }
+  .scoring-card {
+    border: 1px solid #e5e6eb;
+    border-radius: 8px;
+    padding: 10px 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    transition: border-color 0.15s, box-shadow 0.15s;
+    background: #fff;
+  }
+  .scoring-card:hover {
+    border-color: #c9cdd4;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+  }
+  .scoring-card-top {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .scoring-card-name {
+    font-size: 13px;
+    font-weight: 500;
+    color: #1d2129;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .scoring-card-tag {
+    display: inline-flex;
+    align-items: center;
+    padding: 1px 6px;
+    border-radius: 3px;
+    font-size: 11px;
+    font-weight: 500;
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+  .tag-deduct { background: #fff7e8; color: #ff7d00; }
+  .tag-passfail { background: #e8f3ff; color: #165dff; }
+  .tag-accum { background: #f2f3f5; color: #4e5969; }
+  .tag-level { background: #f0e8ff; color: #722ed1; }
+
+  .scoring-card-top .spacer { flex: 1; }
+  .scoring-card-bottom {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+
+  /* Compact deduction buttons (inline) */
+  .row-btns {
+    display: flex;
+    gap: 4px;
+    flex-shrink: 0;
+    align-items: center;
+  }
+  .row-btn {
+    min-width: 34px;
+    height: 28px;
+    border-radius: 6px;
+    border: 1px solid #e5e6eb;
+    background: #fff;
+    font-size: 12px;
+    font-weight: 600;
+    color: #4e5969;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.12s;
+    user-select: none;
+    padding: 0 5px;
+  }
+  .row-btn:hover {
+    border-color: #94bfff;
+    color: #165dff;
+    background: #f2f7ff;
+  }
+  .row-btn.selected {
+    background: #165dff;
+    color: #fff;
+    border-color: #165dff;
+    box-shadow: 0 1px 4px rgba(22,93,255,0.2);
+  }
+  .row-btn.selected.negative {
+    background: #f53f3f;
+    border-color: #f53f3f;
+    box-shadow: 0 1px 4px rgba(245,63,63,0.2);
+  }
+  .row-btn.selected.positive {
+    background: #00b42a;
+    border-color: #00b42a;
+    box-shadow: 0 1px 4px rgba(0,180,42,0.2);
+  }
+
+  /* Compact pass/fail buttons (inline) */
+  .row-pf-btn {
+    height: 28px;
+    padding: 0 10px;
+    border-radius: 6px;
+    border: 1px solid #e5e6eb;
+    background: #fff;
+    font-size: 12px;
+    font-weight: 600;
+    color: #4e5969;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    transition: all 0.12s;
+    user-select: none;
+  }
+  .row-pf-btn:hover { border-color: #c9cdd4; }
+  .row-pf-btn.pass-selected {
+    background: #e8ffea;
+    color: #00b42a;
+    border-color: #7be0a3;
+  }
+  .row-pf-btn.fail-selected {
+    background: #ffece8;
+    color: #f53f3f;
+    border-color: #fbb0a0;
+  }
+
+  /* Level buttons */
+  .row-level-btn {
+    min-width: 28px;
+    height: 28px;
+    border-radius: 6px;
+    border: 1px solid #e5e6eb;
+    background: #fff;
+    font-size: 12px;
+    font-weight: 600;
+    color: #4e5969;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.12s;
+    user-select: none;
+    padding: 0 7px;
+  }
+  .row-level-btn:hover {
+    border-color: #d3adf7;
+    color: #722ed1;
+    background: #f9f0ff;
+  }
+  .row-level-btn.selected {
+    background: #722ed1;
+    color: #fff;
+    border-color: #722ed1;
+  }
+
+  /* Accumulator +/- */
+  .row-accum {
+    display: inline-flex;
+    align-items: center;
+    gap: 0;
+    border: 1px solid #e5e6eb;
+    border-radius: 6px;
+    overflow: hidden;
+    height: 28px;
+  }
+  .row-accum-btn {
+    width: 28px;
+    height: 28px;
+    border: none;
+    background: #fff;
+    font-size: 14px;
+    font-weight: 600;
+    color: #4e5969;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.12s;
+  }
+  .row-accum-btn:hover { background: #f2f3f5; }
+  .row-accum-val {
+    width: 32px;
+    text-align: center;
+    font-size: 13px;
+    font-weight: 700;
+    color: #1d2129;
+    border-left: 1px solid #e5e6eb;
+    border-right: 1px solid #e5e6eb;
+    height: 28px;
+    line-height: 28px;
+    background: #fafbfc;
+  }
+  .row-accum-val.has-value { color: #f53f3f; }
+
+  /* Remark button (compact) */
+  .row-remark-btn {
+    width: 28px;
+    height: 28px;
+    border-radius: 6px;
+    border: 1px solid transparent;
+    background: none;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: #c9cdd4;
+    transition: all 0.12s;
+    flex-shrink: 0;
+  }
+  .row-remark-btn:hover {
+    color: #165dff;
+    background: #f2f7ff;
+    border-color: #e8f3ff;
+  }
+  .row-remark-btn.has-remark {
+    color: #165dff;
+  }
+
+  /* ===== Bottom Bar ===== */
+  .bottom-bar {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: #fff;
+    border-top: 1px solid #e5e6eb;
+    padding: 12px 24px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    z-index: 30;
+    box-shadow: 0 -2px 12px rgba(0,0,0,0.04);
+  }
+  .score-summary {
+    display: flex;
+    align-items: baseline;
+    gap: 16px;
+  }
+  .score-summary .label {
+    font-size: 13px;
+    color: #86909c;
+  }
+  .score-summary .total-score {
+    font-size: 28px;
+    font-weight: 700;
+    color: #1d2129;
+    letter-spacing: -0.03em;
+  }
+  .score-summary .total-score .unit {
+    font-size: 14px;
+    font-weight: 500;
+    color: #86909c;
+    margin-left: 2px;
+  }
+  .score-summary .deduct-info {
+    font-size: 13px;
+    color: #f53f3f;
+    font-weight: 500;
+  }
+  .bottom-actions {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .btn {
+    height: 40px;
+    padding: 0 24px;
+    border-radius: 10px;
+    border: none;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    transition: all 0.2s;
+  }
+  .btn-default {
+    background: #f2f3f5;
+    color: #4e5969;
+  }
+  .btn-default:hover { background: #e5e6eb; }
+  .btn-primary {
+    background: #165dff;
+    color: #fff;
+    box-shadow: 0 2px 8px rgba(22,93,255,0.3);
+  }
+  .btn-primary:hover {
+    background: #0e42d2;
+  }
+  .btn-success {
+    background: #00b42a;
+    color: #fff;
+    box-shadow: 0 2px 8px rgba(0,180,42,0.3);
+  }
+  .btn-success:hover { background: #009a29; }
+
+  /* ===== SVG Icons (inline) ===== */
+  .icon { display: inline-flex; align-items: center; }
+  .icon svg { width: 1em; height: 1em; fill: currentColor; }
+
+  /* ===== Animations ===== */
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(8px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  /* Nav indicator on chip scroll */
+  .chips-row-wrapper::after {
+    content: "";
+    position: absolute;
+    right: 24px;
+    top: 10px;
+    width: 40px;
+    height: 28px;
+    background: linear-gradient(to right, transparent, #fff);
+    pointer-events: none;
+    z-index: 2;
+  }
+</style>
+</head>
+<body>
+
+<!-- ===== Top Bar ===== -->
+<div class="top-bar">
+  <button class="back-btn" title="返回">
+    <span class="icon"><svg viewBox="0 0 24 24"><path d="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z"/></svg></span>
+  </button>
+  <span class="task-code">TSK-20260324-6045</span>
+  <span class="badge badge-running">进行中</span>
+  <span class="meta">2026-03-24 &middot; 王浩宇</span>
+  <span class="spacer"></span>
+  <div class="progress-block">
+    <div class="progress-bar-wrapper">
+      <div class="progress-bar-fill"></div>
+    </div>
+    <span class="progress-text">2/90</span>
+  </div>
+</div>
+
+<!-- ===== Main Area ===== -->
+<div class="main-area">
+
+  <!-- Target Chips Zone -->
+  <div class="chips-zone">
+    <div class="chips-row-wrapper">
+      <button class="chips-search-btn" title="搜索目标">
+        <span class="icon"><svg viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27A6.47 6.47 0 0016 9.5 6.5 6.5 0 109.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg></span>
+      </button>
+      <div class="chips-scroll">
+        <span class="chip chip-done"><span class="chip-dot"></span>计算24-1</span>
+        <span class="chip chip-done"><span class="chip-dot"></span>计算24-2</span>
+        <span class="chip chip-active">计算24-3</span>
+        <span class="chip chip-pending">计算24-4</span>
+        <span class="chip chip-pending">计算24-5</span>
+        <span class="chip chip-pending">电商24-1</span>
+        <span class="chip chip-pending">电商24-2</span>
+        <span class="chip chip-pending">电商24-3</span>
+        <span class="chip chip-pending">会计24-1</span>
+        <span class="chip chip-pending">会计24-2</span>
+        <span class="chip chip-pending">会计24-3</span>
+        <span class="chip chip-pending">护理24-1</span>
+        <span class="chip chip-pending">护理24-2</span>
+        <span class="chip chip-pending">护理24-3</span>
+        <span class="chip chip-pending">机电24-1</span>
+        <span class="chip chip-pending">机电24-2</span>
+        <span class="chip chip-pending">建筑24-1</span>
+        <span class="chip chip-pending">建筑24-2</span>
+        <span class="chip chip-pending">建筑24-3</span>
+        <span class="chip chip-pending">旅游24-1</span>
+        <span class="chip chip-pending">旅游24-2</span>
+        <span class="chip chip-pending">汽修24-1</span>
+        <span class="chip chip-pending">汽修24-2</span>
+        <span class="chip chip-pending">汽修24-3</span>
+        <span class="chip chip-pending">烹饪24-1</span>
+        <span class="chip chip-pending">烹饪24-2</span>
+        <span class="chip chip-pending">美术24-1</span>
+        <span class="chip chip-pending">美术24-2</span>
+        <span class="chip chip-pending">美术24-3</span>
+        <span class="chip chip-pending">音乐24-1</span>
+        <span class="chip chip-pending">学前24-1</span>
+        <span class="chip chip-pending">学前24-2</span>
+        <span class="chip chip-pending">学前24-3</span>
+        <span class="chip chip-pending">学前24-4</span>
+        <span class="chip chip-pending">数媒24-1</span>
+        <span class="chip chip-pending">数媒24-2</span>
+        <span class="chip chip-pending">网络24-1</span>
+        <span class="chip chip-pending">网络24-2</span>
+        <span class="chip chip-pending">物流24-1</span>
+        <span class="chip chip-pending">物流24-2</span>
+        <span class="chip chip-pending">药学24-1</span>
+        <span class="chip chip-pending">药学24-2</span>
+        <span class="chip chip-pending">药学24-3</span>
+        <span class="chip chip-pending">服装24-1</span>
+        <span class="chip chip-pending">服装24-2</span>
+      </div>
+    </div>
+    <div class="filter-row">
+      <button class="type-filter">
+        <span class="tf-label">年级:</span> 全部 <span class="tf-arrow">&#9662;</span>
+      </button>
+      <div class="filter-divider"></div>
+      <div class="filter-tabs">
+        <button class="filter-tab active">全部(45)</button>
+        <button class="filter-tab">待检(43)</button>
+        <button class="filter-tab">进行中(0)</button>
+        <button class="filter-tab">已完成(2)</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Content Zone -->
+  <div class="content-zone">
+    <!-- Target Header -->
+    <div class="target-header">
+      <div class="target-name">
+        2024级-计算机应用24-3班
+        <span class="type-label">班级</span>
+      </div>
+      <div class="target-subtitle">计算机系 &middot; 教室 3-407 &middot; 班主任: 李明</div>
+    </div>
+
+    <!-- Section Card 1: 教室卫生 -->
+    <div class="section-card">
+      <div class="section-card-header">
+        <span class="section-card-title">教室卫生</span>
+        <span class="section-card-meta">3项 &middot; 2/3已评</span>
+      </div>
+
+      <div class="scoring-grid">
+        <!-- Card 1: 地面清洁 - deduction, selected -1 -->
+        <div class="scoring-card">
+          <div class="scoring-card-top">
+            <span class="scoring-card-name">地面清洁</span>
+            <span class="scoring-card-tag tag-deduct">扣分</span>
+            <span class="spacer"></span>
+            <button class="row-remark-btn" title="添加备注">
+              <svg viewBox="0 0 24 24" width="15" height="15" fill="currentColor"><path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm0 14H5.17L4 17.17V4h16v12z"/></svg>
+            </button>
+          </div>
+          <div class="scoring-card-bottom">
+            <div class="row-btns">
+              <button class="row-btn">0</button>
+              <button class="row-btn selected negative">-1</button>
+              <button class="row-btn">-2</button>
+              <button class="row-btn">-3</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Card 2: 桌椅整齐 - pass/fail, selected pass -->
+        <div class="scoring-card">
+          <div class="scoring-card-top">
+            <span class="scoring-card-name">桌椅整齐</span>
+            <span class="scoring-card-tag tag-passfail">通过/不通过</span>
+            <span class="spacer"></span>
+            <button class="row-remark-btn" title="添加备注">
+              <svg viewBox="0 0 24 24" width="15" height="15" fill="currentColor"><path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm0 14H5.17L4 17.17V4h16v12z"/></svg>
+            </button>
+          </div>
+          <div class="scoring-card-bottom">
+            <div class="row-btns">
+              <button class="row-pf-btn pass-selected">
+                <svg viewBox="0 0 24 24" width="12" height="12" fill="currentColor"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>
+                通过
+              </button>
+              <button class="row-pf-btn">
+                <svg viewBox="0 0 24 24" width="12" height="12" fill="currentColor"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+                不通过
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Card 3: 窗台灰尘 - deduction, selected 0 -->
+        <div class="scoring-card">
+          <div class="scoring-card-top">
+            <span class="scoring-card-name">窗台灰尘</span>
+            <span class="scoring-card-tag tag-deduct">扣分</span>
+            <span class="spacer"></span>
+            <button class="row-remark-btn" title="添加备注">
+              <svg viewBox="0 0 24 24" width="15" height="15" fill="currentColor"><path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm0 14H5.17L4 17.17V4h16v12z"/></svg>
+            </button>
+          </div>
+          <div class="scoring-card-bottom">
+            <div class="row-btns">
+              <button class="row-btn selected positive">0</button>
+              <button class="row-btn">-1</button>
+              <button class="row-btn">-2</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Section Card 2: 课堂纪律 -->
+    <div class="section-card">
+      <div class="section-card-header">
+        <span class="section-card-title">课堂纪律</span>
+        <span class="section-card-meta">4项 &middot; 0/4已评</span>
+      </div>
+
+      <div class="scoring-grid">
+        <!-- Card 1: 迟到人数 - accumulator -->
+        <div class="scoring-card">
+          <div class="scoring-card-top">
+            <span class="scoring-card-name">迟到人数</span>
+            <span class="scoring-card-tag tag-accum">累计</span>
+            <span class="spacer"></span>
+            <button class="row-remark-btn" title="添加备注">
+              <svg viewBox="0 0 24 24" width="15" height="15" fill="currentColor"><path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm0 14H5.17L4 17.17V4h16v12z"/></svg>
+            </button>
+          </div>
+          <div class="scoring-card-bottom">
+            <div class="row-btns">
+              <div class="row-accum">
+                <button class="row-accum-btn">&minus;</button>
+                <span class="row-accum-val">0</span>
+                <button class="row-accum-btn">+</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Card 2: 课堂秩序 - level -->
+        <div class="scoring-card">
+          <div class="scoring-card-top">
+            <span class="scoring-card-name">课堂秩序</span>
+            <span class="scoring-card-tag tag-level">等级</span>
+            <span class="spacer"></span>
+            <button class="row-remark-btn" title="添加备注">
+              <svg viewBox="0 0 24 24" width="15" height="15" fill="currentColor"><path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm0 14H5.17L4 17.17V4h16v12z"/></svg>
+            </button>
+          </div>
+          <div class="scoring-card-bottom">
+            <div class="row-btns">
+              <button class="row-level-btn">优</button>
+              <button class="row-level-btn">良</button>
+              <button class="row-level-btn">中</button>
+              <button class="row-level-btn">差</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Card 3: 黑板清洁 - deduction, not scored -->
+        <div class="scoring-card">
+          <div class="scoring-card-top">
+            <span class="scoring-card-name">黑板清洁</span>
+            <span class="scoring-card-tag tag-deduct">扣分</span>
+            <span class="spacer"></span>
+            <button class="row-remark-btn" title="添加备注">
+              <svg viewBox="0 0 24 24" width="15" height="15" fill="currentColor"><path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm0 14H5.17L4 17.17V4h16v12z"/></svg>
+            </button>
+          </div>
+          <div class="scoring-card-bottom">
+            <div class="row-btns">
+              <button class="row-btn">0</button>
+              <button class="row-btn">-1</button>
+              <button class="row-btn">-2</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Card 4: 垃圾分类 - pass/fail, not scored -->
+        <div class="scoring-card">
+          <div class="scoring-card-top">
+            <span class="scoring-card-name">垃圾分类</span>
+            <span class="scoring-card-tag tag-passfail">通过/不通过</span>
+            <span class="spacer"></span>
+            <button class="row-remark-btn" title="添加备注">
+              <svg viewBox="0 0 24 24" width="15" height="15" fill="currentColor"><path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm0 14H5.17L4 17.17V4h16v12z"/></svg>
+            </button>
+          </div>
+          <div class="scoring-card-bottom">
+            <div class="row-btns">
+              <button class="row-pf-btn">
+                <svg viewBox="0 0 24 24" width="12" height="12" fill="currentColor"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>
+                通过
+              </button>
+              <button class="row-pf-btn">
+                <svg viewBox="0 0 24 24" width="12" height="12" fill="currentColor"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+                不通过
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Section Card 3: 物品摆放 (extra section to show density) -->
+    <div class="section-card">
+      <div class="section-card-header">
+        <span class="section-card-title">物品摆放</span>
+        <span class="section-card-meta">2项 &middot; 1/2已评</span>
+      </div>
+
+      <div class="scoring-grid">
+        <!-- Card 1: 讲台整洁 - deduction, not scored, has remark -->
+        <div class="scoring-card">
+          <div class="scoring-card-top">
+            <span class="scoring-card-name">讲台整洁</span>
+            <span class="scoring-card-tag tag-deduct">扣分</span>
+            <span class="spacer"></span>
+            <button class="row-remark-btn has-remark" title="讲台有水渍">
+              <svg viewBox="0 0 24 24" width="15" height="15" fill="currentColor"><path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm0 14H5.17L4 17.17V4h16v12z"/></svg>
+            </button>
+          </div>
+          <div class="scoring-card-bottom">
+            <div class="row-btns">
+              <button class="row-btn">0</button>
+              <button class="row-btn">-1</button>
+              <button class="row-btn">-2</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Card 2: 工具摆放 - deduction, selected -2 -->
+        <div class="scoring-card">
+          <div class="scoring-card-top">
+            <span class="scoring-card-name">工具摆放</span>
+            <span class="scoring-card-tag tag-deduct">扣分</span>
+            <span class="spacer"></span>
+            <button class="row-remark-btn" title="添加备注">
+              <svg viewBox="0 0 24 24" width="15" height="15" fill="currentColor"><path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm0 14H5.17L4 17.17V4h16v12z"/></svg>
+            </button>
+          </div>
+          <div class="scoring-card-bottom">
+            <div class="row-btns">
+              <button class="row-btn">0</button>
+              <button class="row-btn">-1</button>
+              <button class="row-btn selected negative">-2</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /content-zone -->
+
+</div><!-- /main-area -->
+
+<!-- ===== Bottom Bar ===== -->
+<div class="bottom-bar">
+  <div class="score-summary">
+    <span class="label">当前得分</span>
+    <span class="total-score">6<span class="unit">/ 12 分</span></span>
+    <span class="deduct-info">已扣 1 分</span>
+  </div>
+  <div class="bottom-actions">
+    <button class="btn btn-default">
+      <span class="icon"><svg viewBox="0 0 24 24" style="width:16px;height:16px;fill:currentColor"><path d="M15.41 16.59L10.83 12l4.58-4.59L14 6l-6 6 6 6z"/></svg></span>
+      上一个
+    </button>
+    <button class="btn btn-primary">
+      下一个
+      <span class="icon"><svg viewBox="0 0 24 24" style="width:16px;height:16px;fill:currentColor"><path d="M8.59 16.59L13.17 12 8.59 7.41 10 6l6 6-6 6z"/></svg></span>
+    </button>
+    <button class="btn btn-success">
+      <span class="icon"><svg viewBox="0 0 24 24" style="width:16px;height:16px;fill:currentColor"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg></span>
+      完成评分
+    </button>
+  </div>
+</div>
+
+</body>
+</html>

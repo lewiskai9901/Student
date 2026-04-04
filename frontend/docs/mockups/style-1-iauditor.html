@@ -1,0 +1,883 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>检查评分 - iAuditor 风格</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --blue: #1a6dff;
+    --blue-light: #e8f0ff;
+    --blue-hover: #1558cc;
+    --green: #10b981;
+    --green-light: #ecfdf5;
+    --green-bg: #d1fae5;
+    --red: #ef4444;
+    --red-light: #fef2f2;
+    --red-bg: #fee2e2;
+    --gray-50: #f9fafb;
+    --gray-100: #f3f4f6;
+    --gray-200: #e5e7eb;
+    --gray-300: #d1d5db;
+    --gray-400: #9ca3af;
+    --gray-500: #6b7280;
+    --gray-600: #4b5563;
+    --gray-700: #374151;
+    --gray-800: #1f2937;
+    --gray-900: #111827;
+    --orange: #f59e0b;
+    --orange-light: #fffbeb;
+    --radius: 8px;
+    --shadow-sm: 0 1px 2px rgba(0,0,0,0.05);
+    --shadow: 0 1px 3px rgba(0,0,0,0.1), 0 1px 2px rgba(0,0,0,0.06);
+    --shadow-md: 0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -1px rgba(0,0,0,0.06);
+  }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei", "Segoe UI", Roboto, sans-serif;
+    background: #f0f2f5;
+    color: var(--gray-800);
+    font-size: 13px;
+    line-height: 1.5;
+    height: 100vh;
+    overflow: hidden;
+  }
+
+  /* ── Top bar ── */
+  .topbar {
+    height: 48px;
+    background: #fff;
+    border-bottom: 1px solid var(--gray-200);
+    display: flex;
+    align-items: center;
+    padding: 0 20px;
+    gap: 16px;
+    flex-shrink: 0;
+  }
+  .topbar-back {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    color: var(--gray-500);
+    font-size: 13px;
+    cursor: pointer;
+    text-decoration: none;
+    transition: color .15s;
+  }
+  .topbar-back:hover { color: var(--blue); }
+  .topbar-back svg { width: 16px; height: 16px; }
+  .topbar-title {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--gray-900);
+  }
+  .topbar-meta {
+    margin-left: auto;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    font-size: 12px;
+    color: var(--gray-500);
+  }
+  .topbar-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    background: var(--blue-light);
+    color: var(--blue);
+    padding: 2px 8px;
+    border-radius: 10px;
+    font-size: 11px;
+    font-weight: 500;
+  }
+
+  /* ── Layout ── */
+  .layout {
+    display: flex;
+    height: calc(100vh - 48px);
+  }
+
+  /* ── Sidebar ── */
+  .sidebar {
+    width: 220px;
+    min-width: 220px;
+    background: #fff;
+    border-right: 1px solid var(--gray-200);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  .sidebar-header {
+    padding: 12px 12px 8px;
+    flex-shrink: 0;
+  }
+
+  .search-box {
+    position: relative;
+    margin-bottom: 8px;
+  }
+  .search-box input {
+    width: 100%;
+    height: 30px;
+    border: 1px solid var(--gray-200);
+    border-radius: 6px;
+    padding: 0 8px 0 28px;
+    font-size: 12px;
+    outline: none;
+    transition: border-color .15s;
+    background: var(--gray-50);
+    color: var(--gray-700);
+  }
+  .search-box input::placeholder { color: var(--gray-400); }
+  .search-box input:focus { border-color: var(--blue); background: #fff; }
+  .search-box .search-icon {
+    position: absolute;
+    left: 8px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 14px;
+    height: 14px;
+    color: var(--gray-400);
+  }
+
+  .filter-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-bottom: 8px;
+  }
+  .filter-select {
+    flex: 1;
+    height: 26px;
+    border: 1px solid var(--gray-200);
+    border-radius: 5px;
+    padding: 0 6px;
+    font-size: 11px;
+    color: var(--gray-600);
+    background: #fff;
+    outline: none;
+    cursor: pointer;
+  }
+
+  .status-pills {
+    display: flex;
+    gap: 4px;
+    margin-bottom: 4px;
+  }
+  .status-pill {
+    flex: 1;
+    height: 26px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 3px;
+    border: 1px solid var(--gray-200);
+    border-radius: 5px;
+    font-size: 11px;
+    color: var(--gray-500);
+    cursor: pointer;
+    transition: all .15s;
+    background: #fff;
+  }
+  .status-pill:hover { border-color: var(--blue); color: var(--blue); }
+  .status-pill.active {
+    background: var(--blue);
+    color: #fff;
+    border-color: var(--blue);
+  }
+  .status-pill .count { font-weight: 600; }
+
+  .target-list {
+    flex: 1;
+    overflow-y: auto;
+    padding: 4px 6px;
+  }
+  .target-list::-webkit-scrollbar { width: 4px; }
+  .target-list::-webkit-scrollbar-thumb { background: var(--gray-300); border-radius: 2px; }
+
+  .target-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 5px 8px;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: background .12s;
+    font-size: 11px;
+    line-height: 1.4;
+  }
+  .target-item:hover { background: var(--gray-50); }
+  .target-item.active { background: var(--blue-light); }
+
+  .target-dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+  .target-dot.done { background: var(--green); }
+  .target-dot.progress { background: var(--blue); }
+  .target-dot.pending { background: var(--gray-300); }
+
+  .target-name {
+    flex: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    color: var(--gray-700);
+  }
+  .target-item.active .target-name { color: var(--blue); font-weight: 500; }
+
+  .target-score {
+    flex-shrink: 0;
+    font-size: 10px;
+    color: var(--gray-400);
+    font-variant-numeric: tabular-nums;
+  }
+  .target-item.active .target-score { color: var(--blue); }
+
+  /* ── Main Panel ── */
+  .main-panel {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    background: var(--gray-50);
+  }
+
+  .panel-header {
+    background: #fff;
+    border-bottom: 1px solid var(--gray-200);
+    padding: 12px 20px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-shrink: 0;
+  }
+  .panel-header-info { flex: 1; }
+  .panel-target-name {
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--gray-900);
+    margin-bottom: 2px;
+  }
+  .panel-progress {
+    font-size: 12px;
+    color: var(--gray-500);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .progress-bar-wrap {
+    width: 120px;
+    height: 4px;
+    background: var(--gray-200);
+    border-radius: 2px;
+    overflow: hidden;
+  }
+  .progress-bar-fill {
+    height: 100%;
+    background: var(--blue);
+    border-radius: 2px;
+    transition: width .3s;
+  }
+
+  .nav-btn {
+    width: 32px;
+    height: 32px;
+    border: 1px solid var(--gray-200);
+    border-radius: 6px;
+    background: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    color: var(--gray-500);
+    transition: all .15s;
+  }
+  .nav-btn:hover { border-color: var(--blue); color: var(--blue); background: var(--blue-light); }
+  .nav-btn svg { width: 16px; height: 16px; }
+
+  /* ── Scrollable body ── */
+  .panel-body {
+    flex: 1;
+    overflow-y: auto;
+    padding: 16px 20px 80px;
+  }
+  .panel-body::-webkit-scrollbar { width: 6px; }
+  .panel-body::-webkit-scrollbar-thumb { background: var(--gray-300); border-radius: 3px; }
+
+  /* ── Sections ── */
+  .section {
+    margin-bottom: 16px;
+  }
+  .section-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 12px;
+    background: #fff;
+    border: 1px solid var(--gray-200);
+    border-radius: var(--radius);
+    cursor: pointer;
+    user-select: none;
+    transition: background .12s;
+  }
+  .section-header:hover { background: var(--gray-50); }
+
+  .section-chevron {
+    width: 16px;
+    height: 16px;
+    color: var(--gray-400);
+    transition: transform .2s;
+    flex-shrink: 0;
+  }
+  .section.collapsed .section-chevron { transform: rotate(-90deg); }
+
+  .section-title {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--gray-800);
+  }
+  .section-meta {
+    margin-left: auto;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 11px;
+    color: var(--gray-400);
+  }
+  .section-count { font-weight: 500; }
+  .section-progress-mini {
+    width: 40px;
+    height: 3px;
+    background: var(--gray-200);
+    border-radius: 2px;
+    overflow: hidden;
+  }
+  .section-progress-fill {
+    height: 100%;
+    border-radius: 2px;
+    background: var(--blue);
+  }
+
+  .section-body {
+    margin-top: 8px;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+    gap: 8px;
+  }
+  .section.collapsed .section-body { display: none; }
+
+  /* ── Score Cards ── */
+  .score-card {
+    background: #fff;
+    border: 1px solid var(--gray-200);
+    border-radius: var(--radius);
+    padding: 10px 12px;
+    transition: box-shadow .15s, border-color .15s;
+  }
+  .score-card:hover { box-shadow: var(--shadow); border-color: var(--gray-300); }
+  .score-card.scored { border-left: 3px solid var(--blue); }
+
+  .card-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 8px;
+  }
+  .card-name {
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--gray-800);
+  }
+  .card-tag {
+    font-size: 10px;
+    padding: 1px 6px;
+    border-radius: 3px;
+    font-weight: 500;
+  }
+  .card-tag.deduct { background: var(--orange-light); color: var(--orange); }
+  .card-tag.passfail { background: var(--green-light); color: var(--green); }
+  .card-tag.level { background: var(--blue-light); color: var(--blue); }
+  .card-tag.counter { background: #fdf4ff; color: #a855f7; }
+
+  .card-control {
+    display: flex;
+    align-items: center;
+    gap: 0;
+  }
+
+  /* ── Number Stepper ── */
+  .stepper {
+    display: inline-flex;
+    align-items: center;
+    border: 1px solid var(--gray-200);
+    border-radius: 6px;
+    overflow: hidden;
+    height: 30px;
+  }
+  .stepper-btn {
+    width: 30px;
+    height: 30px;
+    border: none;
+    background: var(--gray-50);
+    color: var(--gray-600);
+    font-size: 15px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all .12s;
+    line-height: 1;
+  }
+  .stepper-btn:hover { background: var(--gray-100); color: var(--blue); }
+  .stepper-btn:active { background: var(--gray-200); }
+  .stepper-value {
+    width: 40px;
+    height: 30px;
+    border: none;
+    border-left: 1px solid var(--gray-200);
+    border-right: 1px solid var(--gray-200);
+    text-align: center;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--gray-800);
+    background: #fff;
+    font-variant-numeric: tabular-nums;
+  }
+  .stepper-value.negative { color: var(--red); }
+  .stepper-value.positive { color: var(--green); }
+
+  /* ── Pill Buttons ── */
+  .pill-group {
+    display: flex;
+    gap: 0;
+    border: 1px solid var(--gray-200);
+    border-radius: 6px;
+    overflow: hidden;
+  }
+  .pill-btn {
+    padding: 5px 12px;
+    font-size: 12px;
+    border: none;
+    background: #fff;
+    color: var(--gray-500);
+    cursor: pointer;
+    transition: all .12s;
+    font-weight: 500;
+    white-space: nowrap;
+    border-right: 1px solid var(--gray-200);
+  }
+  .pill-btn:last-child { border-right: none; }
+  .pill-btn:hover { background: var(--gray-50); color: var(--gray-700); }
+
+  .pill-btn.active-green {
+    background: var(--green);
+    color: #fff;
+  }
+  .pill-btn.active-green:hover { background: #059669; }
+
+  .pill-btn.active-red {
+    background: var(--red);
+    color: #fff;
+  }
+
+  .pill-btn.active-blue {
+    background: var(--blue);
+    color: #fff;
+  }
+  .pill-btn.active-blue:hover { background: var(--blue-hover); }
+
+  /* ── Bottom Bar ── */
+  .bottom-bar {
+    position: absolute;
+    bottom: 0;
+    left: 220px;
+    right: 0;
+    height: 56px;
+    background: #fff;
+    border-top: 1px solid var(--gray-200);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 20px;
+    z-index: 10;
+  }
+  .bottom-info {
+    font-size: 13px;
+    color: var(--gray-500);
+  }
+  .bottom-info strong { color: var(--gray-700); }
+
+  .bottom-score {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+  }
+  .score-display {
+    text-align: right;
+  }
+  .score-label {
+    font-size: 11px;
+    color: var(--gray-400);
+  }
+  .score-value {
+    font-size: 20px;
+    font-weight: 700;
+    color: var(--gray-900);
+    font-variant-numeric: tabular-nums;
+    line-height: 1.2;
+  }
+
+  .btn-primary {
+    height: 36px;
+    padding: 0 20px;
+    background: var(--blue);
+    color: #fff;
+    border: none;
+    border-radius: 6px;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    transition: background .15s;
+    white-space: nowrap;
+  }
+  .btn-primary:hover { background: var(--blue-hover); }
+  .btn-primary svg { width: 14px; height: 14px; }
+
+  /* ── Misc ── */
+  .note-input {
+    width: 100%;
+    margin-top: 6px;
+    font-size: 11px;
+    color: var(--gray-400);
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    cursor: pointer;
+    transition: color .12s;
+  }
+  .note-input:hover { color: var(--gray-600); }
+  .note-input svg { width: 12px; height: 12px; flex-shrink: 0; }
+
+  .note-text {
+    width: 100%;
+    margin-top: 6px;
+    font-size: 11px;
+    color: var(--gray-500);
+    display: flex;
+    align-items: flex-start;
+    gap: 4px;
+  }
+  .note-text svg { width: 12px; height: 12px; flex-shrink: 0; margin-top: 1px; color: var(--gray-400); }
+</style>
+</head>
+<body>
+
+<!-- Top Bar -->
+<div class="topbar">
+  <a class="topbar-back" href="#">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
+    返回项目
+  </a>
+  <div class="topbar-title">每周教室卫生检查</div>
+  <div class="topbar-meta">
+    <span class="topbar-badge">
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
+      2026-03-24
+    </span>
+    <span style="color:var(--gray-400)">检查员: 张明</span>
+  </div>
+</div>
+
+<!-- Main Layout -->
+<div class="layout">
+
+  <!-- Left Sidebar -->
+  <div class="sidebar">
+    <div class="sidebar-header">
+      <div class="search-box">
+        <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+        <input type="text" placeholder="搜索目标...">
+      </div>
+      <div class="filter-row">
+        <select class="filter-select">
+          <option>年级: 全部</option>
+          <option>2024级</option>
+          <option>2023级</option>
+        </select>
+      </div>
+      <div class="status-pills">
+        <div class="status-pill active">全部 <span class="count">15</span></div>
+        <div class="status-pill">待检 <span class="count">12</span></div>
+        <div class="status-pill">已完成 <span class="count">3</span></div>
+      </div>
+    </div>
+
+    <div class="target-list">
+      <!-- Completed -->
+      <div class="target-item">
+        <span class="target-dot done"></span>
+        <span class="target-name">计算机24-1班</span>
+        <span class="target-score">5/5</span>
+      </div>
+      <div class="target-item">
+        <span class="target-dot done"></span>
+        <span class="target-name">计算机24-2班</span>
+        <span class="target-score">5/5</span>
+      </div>
+      <div class="target-item">
+        <span class="target-dot done"></span>
+        <span class="target-name">电子商务24-1班</span>
+        <span class="target-score">5/5</span>
+      </div>
+      <!-- Active / in progress -->
+      <div class="target-item active">
+        <span class="target-dot progress"></span>
+        <span class="target-name">计算机24-3班</span>
+        <span class="target-score">3/5</span>
+      </div>
+      <!-- Pending -->
+      <div class="target-item">
+        <span class="target-dot pending"></span>
+        <span class="target-name">会计24-1班</span>
+        <span class="target-score">0/5</span>
+      </div>
+      <div class="target-item">
+        <span class="target-dot pending"></span>
+        <span class="target-name">会计24-2班</span>
+        <span class="target-score">0/5</span>
+      </div>
+      <div class="target-item">
+        <span class="target-dot pending"></span>
+        <span class="target-name">电子商务24-2班</span>
+        <span class="target-score">0/5</span>
+      </div>
+      <div class="target-item">
+        <span class="target-dot pending"></span>
+        <span class="target-name">机电24-1班</span>
+        <span class="target-score">0/5</span>
+      </div>
+      <div class="target-item">
+        <span class="target-dot pending"></span>
+        <span class="target-name">机电24-2班</span>
+        <span class="target-score">0/5</span>
+      </div>
+      <div class="target-item">
+        <span class="target-dot pending"></span>
+        <span class="target-name">护理24-1班</span>
+        <span class="target-score">0/5</span>
+      </div>
+      <div class="target-item">
+        <span class="target-dot pending"></span>
+        <span class="target-name">护理24-2班</span>
+        <span class="target-score">0/5</span>
+      </div>
+      <div class="target-item">
+        <span class="target-dot pending"></span>
+        <span class="target-name">旅游23-1班</span>
+        <span class="target-score">0/5</span>
+      </div>
+      <div class="target-item">
+        <span class="target-dot pending"></span>
+        <span class="target-name">旅游23-2班</span>
+        <span class="target-score">0/5</span>
+      </div>
+      <div class="target-item">
+        <span class="target-dot pending"></span>
+        <span class="target-name">护理23-1班</span>
+        <span class="target-score">0/5</span>
+      </div>
+      <div class="target-item">
+        <span class="target-dot pending"></span>
+        <span class="target-name">护理23-2班</span>
+        <span class="target-score">0/5</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Right Main Panel -->
+  <div class="main-panel">
+
+    <!-- Panel Header -->
+    <div class="panel-header">
+      <div class="panel-header-info">
+        <div class="panel-target-name">2024级 - 计算机应用24-3班</div>
+        <div class="panel-progress">
+          <span>3/5 已评</span>
+          <div class="progress-bar-wrap">
+            <div class="progress-bar-fill" style="width:60%"></div>
+          </div>
+          <span style="color:var(--blue);font-weight:500;">60%</span>
+        </div>
+      </div>
+      <button class="nav-btn" title="上一个目标">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
+      </button>
+      <button class="nav-btn" title="下一个目标">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg>
+      </button>
+    </div>
+
+    <!-- Scrollable Body -->
+    <div class="panel-body">
+
+      <!-- Section 1: 教室卫生 -->
+      <div class="section">
+        <div class="section-header" onclick="this.parentElement.classList.toggle('collapsed')">
+          <svg class="section-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>
+          <span class="section-title">教室卫生</span>
+          <div class="section-meta">
+            <span class="section-count">3项</span>
+            <span>2/3 已评</span>
+            <div class="section-progress-mini"><div class="section-progress-fill" style="width:66%"></div></div>
+          </div>
+        </div>
+        <div class="section-body">
+
+          <!-- Card: 地面清洁 (deduction, scored) -->
+          <div class="score-card scored">
+            <div class="card-top">
+              <span class="card-name">地面清洁</span>
+              <span class="card-tag deduct">扣分</span>
+            </div>
+            <div class="card-control">
+              <div class="stepper">
+                <button class="stepper-btn">−</button>
+                <input class="stepper-value negative" type="text" value="-1" readonly>
+                <button class="stepper-btn">+</button>
+              </div>
+            </div>
+            <div class="note-text">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 013 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+              <span>教室后排有纸屑</span>
+            </div>
+          </div>
+
+          <!-- Card: 桌椅整齐 (pass/fail, scored) -->
+          <div class="score-card scored">
+            <div class="card-top">
+              <span class="card-name">桌椅整齐</span>
+              <span class="card-tag passfail">通过/不通过</span>
+            </div>
+            <div class="card-control">
+              <div class="pill-group">
+                <button class="pill-btn active-green">&#10003; 通过</button>
+                <button class="pill-btn">&#10007; 不通过</button>
+              </div>
+            </div>
+            <div class="note-input">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 013 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+              <span>添加备注...</span>
+            </div>
+          </div>
+
+          <!-- Card: 窗台灰尘 (deduction, not scored yet) -->
+          <div class="score-card">
+            <div class="card-top">
+              <span class="card-name">窗台灰尘</span>
+              <span class="card-tag deduct">扣分</span>
+            </div>
+            <div class="card-control">
+              <div class="stepper">
+                <button class="stepper-btn">−</button>
+                <input class="stepper-value" type="text" value="0" readonly>
+                <button class="stepper-btn">+</button>
+              </div>
+            </div>
+            <div class="note-input">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 013 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+              <span>添加备注...</span>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- Section 2: 课堂纪律 -->
+      <div class="section">
+        <div class="section-header" onclick="this.parentElement.classList.toggle('collapsed')">
+          <svg class="section-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>
+          <span class="section-title">课堂纪律</span>
+          <div class="section-meta">
+            <span class="section-count">2项</span>
+            <span>1/2 已评</span>
+            <div class="section-progress-mini"><div class="section-progress-fill" style="width:50%"></div></div>
+          </div>
+        </div>
+        <div class="section-body">
+
+          <!-- Card: 迟到人数 (counter, scored) -->
+          <div class="score-card scored">
+            <div class="card-top">
+              <span class="card-name">迟到人数</span>
+              <span class="card-tag counter">累计</span>
+            </div>
+            <div class="card-control">
+              <div class="stepper">
+                <button class="stepper-btn">−</button>
+                <input class="stepper-value" type="text" value="2" readonly>
+                <button class="stepper-btn">+</button>
+              </div>
+            </div>
+            <div class="note-text">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 013 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+              <span>第二节课2人迟到</span>
+            </div>
+          </div>
+
+          <!-- Card: 课堂秩序 (level, not scored) -->
+          <div class="score-card">
+            <div class="card-top">
+              <span class="card-name">课堂秩序</span>
+              <span class="card-tag level">等级</span>
+            </div>
+            <div class="card-control">
+              <div class="pill-group">
+                <button class="pill-btn">优</button>
+                <button class="pill-btn active-blue">良</button>
+                <button class="pill-btn">中</button>
+                <button class="pill-btn">差</button>
+              </div>
+            </div>
+            <div class="note-input">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 013 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+              <span>添加备注...</span>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+    </div><!-- /panel-body -->
+
+    <!-- Bottom Bar -->
+    <div class="bottom-bar">
+      <div class="bottom-info">
+        目标 <strong>4</strong> / 15 &nbsp;&middot;&nbsp; 分区 <strong>1/2</strong> 已完成
+      </div>
+      <div class="bottom-score">
+        <div class="score-display">
+          <div class="score-label">当前得分</div>
+          <div class="score-value">97</div>
+        </div>
+        <button class="btn-primary">
+          完成并下一个
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg>
+        </button>
+      </div>
+    </div>
+
+  </div><!-- /main-panel -->
+
+</div><!-- /layout -->
+
+</body>
+</html>

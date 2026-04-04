@@ -1,0 +1,1025 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>快速事件记录 - 每日考勤检查</title>
+<style>
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+:root {
+  --color-late: #f59e0b;
+  --color-late-bg: #fef3c7;
+  --color-late-border: #fde68a;
+  --color-early: #3b82f6;
+  --color-early-bg: #dbeafe;
+  --color-early-border: #bfdbfe;
+  --color-absent: #ef4444;
+  --color-absent-bg: #fee2e2;
+  --color-absent-border: #fecaca;
+  --color-violate: #8b5cf6;
+  --color-violate-bg: #ede9fe;
+  --color-violate-border: #ddd6fe;
+  --color-primary: #3b82f6;
+  --color-primary-hover: #2563eb;
+  --color-text: #1f2937;
+  --color-text-secondary: #6b7280;
+  --color-text-muted: #9ca3af;
+  --color-border: #e5e7eb;
+  --color-bg: #f3f4f6;
+  --color-white: #ffffff;
+  --color-success: #10b981;
+  --shadow-sm: 0 1px 2px rgba(0,0,0,0.05);
+  --shadow-md: 0 4px 6px -1px rgba(0,0,0,0.07), 0 2px 4px -2px rgba(0,0,0,0.05);
+  --shadow-lg: 0 10px 15px -3px rgba(0,0,0,0.08), 0 4px 6px -4px rgba(0,0,0,0.04);
+  --radius: 8px;
+  --radius-lg: 12px;
+  --max-width: 680px;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Helvetica Neue", "Microsoft YaHei", sans-serif;
+  background: var(--color-bg);
+  color: var(--color-text);
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+/* ========== Top Bar ========== */
+.top-bar {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  background: var(--color-white);
+  border-bottom: 1px solid var(--color-border);
+  height: 48px;
+  display: flex;
+  align-items: center;
+  padding: 0 16px;
+  box-shadow: var(--shadow-sm);
+}
+
+.top-bar-inner {
+  width: 100%;
+  max-width: var(--max-width);
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.back-btn {
+  font-size: 14px;
+  color: var(--color-primary);
+  cursor: pointer;
+  white-space: nowrap;
+  background: none;
+  border: none;
+  font-family: inherit;
+  padding: 4px 0;
+}
+.back-btn:hover {
+  color: var(--color-primary-hover);
+}
+
+.task-name {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--color-text);
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.status-badge {
+  font-size: 11px;
+  font-weight: 500;
+  padding: 2px 8px;
+  border-radius: 10px;
+  background: #dcfce7;
+  color: #16a34a;
+  white-space: nowrap;
+}
+
+.current-time {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--color-text);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  letter-spacing: 0.5px;
+}
+
+/* ========== Main Content ========== */
+.main-content {
+  flex: 1;
+  max-width: var(--max-width);
+  width: 100%;
+  margin: 0 auto;
+  padding-bottom: 60px; /* space for bottom bar */
+}
+
+/* ========== Input Area (Sticky) ========== */
+.input-area {
+  position: sticky;
+  top: 48px;
+  z-index: 90;
+  background: var(--color-bg);
+  padding: 12px 16px 0;
+}
+
+.input-card {
+  background: var(--color-white);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-md);
+  padding: 14px 16px 16px;
+}
+
+/* Event type pills */
+.event-pills {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  padding-bottom: 2px;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+}
+.event-pills::-webkit-scrollbar { display: none; }
+
+.event-pill {
+  font-size: 13px;
+  font-weight: 500;
+  padding: 5px 14px;
+  border-radius: 16px;
+  border: 1.5px solid var(--color-border);
+  background: var(--color-white);
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.15s ease;
+  font-family: inherit;
+  line-height: 1.4;
+}
+.event-pill:hover {
+  border-color: #d1d5db;
+  background: #f9fafb;
+}
+.event-pill.active-late {
+  background: var(--color-late-bg);
+  color: #b45309;
+  border-color: var(--color-late-border);
+}
+.event-pill.active-early {
+  background: var(--color-early-bg);
+  color: #1d4ed8;
+  border-color: var(--color-early-border);
+}
+.event-pill.active-absent {
+  background: var(--color-absent-bg);
+  color: #dc2626;
+  border-color: var(--color-absent-border);
+}
+.event-pill.active-violate {
+  background: var(--color-violate-bg);
+  color: #7c3aed;
+  border-color: var(--color-violate-border);
+}
+.event-pill-custom {
+  color: var(--color-text-muted);
+  border-style: dashed;
+}
+
+/* Search input */
+.search-wrapper {
+  position: relative;
+  margin-top: 12px;
+}
+
+.search-input {
+  width: 100%;
+  height: 44px;
+  padding: 0 40px 0 40px;
+  border: 1.5px solid var(--color-border);
+  border-radius: var(--radius);
+  font-size: 15px;
+  font-family: inherit;
+  color: var(--color-text);
+  background: var(--color-white);
+  outline: none;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+.search-input::placeholder {
+  color: var(--color-text-muted);
+}
+.search-input:focus {
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.search-icon {
+  position: absolute;
+  left: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--color-text-muted);
+  pointer-events: none;
+}
+
+.search-clear {
+  position: absolute;
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: none;
+  background: var(--color-bg);
+  color: var(--color-text-muted);
+  cursor: pointer;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  font-family: inherit;
+  transition: background 0.1s;
+}
+.search-clear:hover {
+  background: #e5e7eb;
+  color: var(--color-text-secondary);
+}
+.search-clear.visible {
+  display: flex;
+}
+
+/* Search results dropdown */
+.search-results {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  margin-top: 4px;
+  background: var(--color-white);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-lg);
+  overflow: hidden;
+  display: none;
+  z-index: 80;
+}
+.search-results.visible {
+  display: block;
+}
+
+.search-result-item {
+  display: flex;
+  align-items: center;
+  padding: 10px 14px;
+  cursor: pointer;
+  transition: background 0.1s;
+  border-bottom: 1px solid #f3f4f6;
+}
+.search-result-item:last-child {
+  border-bottom: none;
+}
+.search-result-item:hover {
+  background: #eff6ff;
+}
+.search-result-item.flash-green {
+  background: #dcfce7;
+  transition: background 0s;
+}
+
+.result-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.result-name {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--color-text);
+}
+
+.result-detail {
+  font-size: 12px;
+  color: var(--color-text-muted);
+  margin-top: 1px;
+}
+
+.result-action {
+  flex-shrink: 0;
+  font-size: 12px;
+  font-weight: 500;
+  padding: 5px 12px;
+  border-radius: 14px;
+  border: none;
+  background: var(--color-primary);
+  color: var(--color-white);
+  cursor: pointer;
+  white-space: nowrap;
+  font-family: inherit;
+  transition: background 0.15s;
+  margin-left: 10px;
+}
+.result-action:hover {
+  background: var(--color-primary-hover);
+}
+.result-action.action-late { background: var(--color-late); }
+.result-action.action-late:hover { background: #d97706; }
+.result-action.action-early { background: var(--color-early); }
+.result-action.action-early:hover { background: #2563eb; }
+.result-action.action-absent { background: var(--color-absent); }
+.result-action.action-absent:hover { background: #dc2626; }
+.result-action.action-violate { background: var(--color-violate); }
+.result-action.action-violate:hover { background: #7c3aed; }
+
+/* ========== Record Log ========== */
+.record-section {
+  padding: 16px 16px 0;
+}
+
+.record-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+
+.record-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--color-text);
+}
+
+.record-title-count {
+  color: var(--color-text-muted);
+  font-weight: 400;
+}
+
+.record-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.record-actions button {
+  font-size: 12px;
+  padding: 4px 10px;
+  border-radius: 6px;
+  border: 1px solid var(--color-border);
+  background: var(--color-white);
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  font-family: inherit;
+  transition: all 0.1s;
+}
+.record-actions button:hover {
+  background: var(--color-bg);
+  border-color: #d1d5db;
+}
+
+/* Filter tabs */
+.filter-tabs {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 10px;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+}
+.filter-tabs::-webkit-scrollbar { display: none; }
+
+.filter-tab {
+  font-size: 12px;
+  padding: 4px 10px;
+  border-radius: 12px;
+  border: none;
+  cursor: pointer;
+  white-space: nowrap;
+  font-family: inherit;
+  transition: all 0.15s;
+  background: var(--color-white);
+  color: var(--color-text-secondary);
+  border: 1px solid var(--color-border);
+}
+.filter-tab:hover {
+  background: #f9fafb;
+}
+.filter-tab.active {
+  background: var(--color-primary);
+  color: var(--color-white);
+  border-color: var(--color-primary);
+}
+
+/* Record list */
+.record-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.record-card {
+  background: var(--color-white);
+  border-radius: var(--radius);
+  padding: 10px 14px;
+  box-shadow: var(--shadow-sm);
+  border: 1px solid #f3f4f6;
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  transition: all 0.2s;
+  animation: slideIn 0.25s ease-out;
+}
+
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.record-card.revoked {
+  opacity: 0.45;
+}
+.record-card.revoked .record-student-name,
+.record-card.revoked .record-student-detail,
+.record-card.revoked .record-note {
+  text-decoration: line-through;
+}
+
+.record-time {
+  font-size: 13px;
+  font-family: "SF Mono", "Menlo", "Consolas", monospace;
+  color: var(--color-text-muted);
+  flex-shrink: 0;
+  padding-top: 1px;
+  min-width: 38px;
+}
+
+.record-body {
+  flex: 1;
+  min-width: 0;
+}
+
+.record-top-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.record-student-name {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--color-text);
+}
+
+.record-type-tag {
+  font-size: 11px;
+  font-weight: 500;
+  padding: 1px 7px;
+  border-radius: 4px;
+  white-space: nowrap;
+}
+.tag-late {
+  background: var(--color-late-bg);
+  color: #b45309;
+}
+.tag-early {
+  background: var(--color-early-bg);
+  color: #1d4ed8;
+}
+.tag-absent {
+  background: var(--color-absent-bg);
+  color: #dc2626;
+}
+.tag-violate {
+  background: var(--color-violate-bg);
+  color: #7c3aed;
+}
+
+.record-student-detail {
+  font-size: 12px;
+  color: var(--color-text-muted);
+  margin-top: 2px;
+}
+
+.record-note {
+  font-size: 12px;
+  color: var(--color-text-secondary);
+  margin-top: 3px;
+}
+.record-note span {
+  color: var(--color-text-muted);
+}
+
+.record-card-actions {
+  display: flex;
+  gap: 6px;
+  flex-shrink: 0;
+  align-self: center;
+}
+
+.btn-revoke, .btn-edit {
+  font-size: 11px;
+  padding: 3px 8px;
+  border-radius: 4px;
+  border: 1px solid var(--color-border);
+  background: var(--color-white);
+  color: var(--color-text-muted);
+  cursor: pointer;
+  font-family: inherit;
+  transition: all 0.1s;
+}
+.btn-revoke:hover {
+  border-color: #fca5a5;
+  color: #ef4444;
+  background: #fef2f2;
+}
+.btn-edit:hover {
+  border-color: #93c5fd;
+  color: #3b82f6;
+  background: #eff6ff;
+}
+
+.record-card.revoked .btn-revoke {
+  color: var(--color-text-muted);
+  border-color: var(--color-border);
+  background: var(--color-bg);
+  pointer-events: none;
+}
+
+/* Empty state */
+.empty-state {
+  text-align: center;
+  padding: 48px 20px;
+  color: var(--color-text-muted);
+  font-size: 14px;
+  display: none;
+}
+
+/* ========== Bottom Stats Bar ========== */
+.bottom-bar {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 100;
+  background: var(--color-white);
+  border-top: 1px solid var(--color-border);
+  box-shadow: 0 -2px 8px rgba(0,0,0,0.04);
+  height: auto;
+  min-height: 48px;
+  padding: 8px 16px;
+}
+
+.bottom-bar-inner {
+  max-width: var(--max-width);
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.bottom-stats {
+  font-size: 12px;
+  color: var(--color-text-secondary);
+  line-height: 1.6;
+  flex: 1;
+}
+
+.bottom-stats .stat-label {
+  color: var(--color-text-muted);
+}
+
+.stat-late { color: var(--color-late); font-weight: 600; }
+.stat-early { color: var(--color-early); font-weight: 600; }
+.stat-absent { color: var(--color-absent); font-weight: 600; }
+.stat-violate { color: var(--color-violate); font-weight: 600; }
+.stat-separator {
+  margin: 0 3px;
+  color: var(--color-border);
+}
+
+.btn-finish {
+  font-size: 13px;
+  font-weight: 500;
+  padding: 7px 18px;
+  border-radius: var(--radius);
+  border: none;
+  background: #ef4444;
+  color: var(--color-white);
+  cursor: pointer;
+  font-family: inherit;
+  white-space: nowrap;
+  transition: background 0.15s;
+  flex-shrink: 0;
+}
+.btn-finish:hover {
+  background: #dc2626;
+}
+
+/* ========== Responsive ========== */
+@media (max-width: 480px) {
+  .top-bar { padding: 0 12px; }
+  .task-name { font-size: 13px; }
+  .input-area { padding: 10px 12px 0; }
+  .input-card { padding: 12px 14px 14px; }
+  .record-section { padding: 12px 12px 0; }
+  .event-pill { font-size: 12px; padding: 4px 11px; }
+  .search-input { height: 42px; font-size: 14px; }
+  .record-card { padding: 9px 12px; }
+  .bottom-bar { padding: 6px 12px; }
+  .bottom-stats { font-size: 11px; }
+}
+</style>
+</head>
+<body>
+
+<!-- ===== Top Bar ===== -->
+<div class="top-bar">
+  <div class="top-bar-inner">
+    <button class="back-btn">&larr; 返回</button>
+    <div class="task-name">每日考勤检查 - 校门口</div>
+    <span class="status-badge">进行中</span>
+    <span class="current-time" id="currentTime">09:15</span>
+  </div>
+</div>
+
+<!-- ===== Main Content ===== -->
+<div class="main-content">
+
+  <!-- ===== Input Area (Sticky) ===== -->
+  <div class="input-area">
+    <div class="input-card">
+      <!-- Event type pills -->
+      <div class="event-pills">
+        <button class="event-pill active-late" data-type="late" onclick="selectEventType(this)">迟到</button>
+        <button class="event-pill" data-type="early" onclick="selectEventType(this)">早退</button>
+        <button class="event-pill" data-type="absent" onclick="selectEventType(this)">缺勤</button>
+        <button class="event-pill" data-type="violate" onclick="selectEventType(this)">违纪</button>
+        <button class="event-pill event-pill-custom">+ 自定义</button>
+      </div>
+
+      <!-- Search input -->
+      <div class="search-wrapper">
+        <svg class="search-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="11" cy="11" r="8"></circle>
+          <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+        </svg>
+        <input
+          type="text"
+          class="search-input"
+          id="searchInput"
+          placeholder="输入学生姓名或学号..."
+          autofocus
+          autocomplete="off"
+          oninput="onSearchInput(this.value)"
+        >
+        <button class="search-clear" id="searchClear" onclick="clearSearch()">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="18" y1="6" x2="6" y2="18"></line>
+            <line x1="6" y1="6" x2="18" y2="18"></line>
+          </svg>
+        </button>
+
+        <!-- Search results dropdown -->
+        <div class="search-results" id="searchResults"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== Record Log ===== -->
+  <div class="record-section">
+    <div class="record-header">
+      <div class="record-title" id="recordTitle">今日记录 <span class="record-title-count" id="recordCount">(12人)</span></div>
+      <div class="record-actions">
+        <button onclick="alert('导出功能演示')">导出Excel</button>
+        <button onclick="if(confirm('确定要清空所有记录吗？')) clearAllRecords()">清空</button>
+      </div>
+    </div>
+
+    <div class="filter-tabs" id="filterTabs">
+      <button class="filter-tab active" data-filter="all" onclick="filterRecords(this, 'all')">全部 <span id="countAll">12</span></button>
+      <button class="filter-tab" data-filter="late" onclick="filterRecords(this, 'late')">迟到 <span id="countLate">8</span></button>
+      <button class="filter-tab" data-filter="early" onclick="filterRecords(this, 'early')">早退 <span id="countEarly">2</span></button>
+      <button class="filter-tab" data-filter="absent" onclick="filterRecords(this, 'absent')">缺勤 <span id="countAbsent">1</span></button>
+      <button class="filter-tab" data-filter="violate" onclick="filterRecords(this, 'violate')">违纪 <span id="countViolate">1</span></button>
+    </div>
+
+    <div class="record-list" id="recordList"></div>
+
+    <div class="empty-state" id="emptyState">暂无记录，在上方搜索学生开始记录</div>
+  </div>
+</div>
+
+<!-- ===== Bottom Stats Bar ===== -->
+<div class="bottom-bar">
+  <div class="bottom-bar-inner">
+    <div class="bottom-stats" id="bottomStats">
+      <span class="stat-label">今日统计:</span>
+      迟到 <span class="stat-late" id="statLate">8</span>人<span class="stat-separator">&middot;</span>
+      早退 <span class="stat-early" id="statEarly">2</span>人<span class="stat-separator">&middot;</span>
+      缺勤 <span class="stat-absent" id="statAbsent">1</span>人<span class="stat-separator">&middot;</span>
+      违纪 <span class="stat-violate" id="statViolate">1</span>人<span class="stat-separator">&middot;</span>
+      涉及 <span style="font-weight:600" id="statClasses">7</span>个班级
+    </div>
+    <button class="btn-finish" onclick="if(confirm('确定要结束本次检查吗？')) alert('检查已结束')">结束检查</button>
+  </div>
+</div>
+
+<script>
+// ===== State =====
+let currentEventType = 'late';
+let currentFilter = 'all';
+
+const TYPE_CONFIG = {
+  late:    { label: '迟到', tagClass: 'tag-late',    actionClass: 'action-late',    activeClass: 'active-late' },
+  early:   { label: '早退', tagClass: 'tag-early',   actionClass: 'action-early',   activeClass: 'active-early' },
+  absent:  { label: '缺勤', tagClass: 'tag-absent',  actionClass: 'action-absent',  activeClass: 'active-absent' },
+  violate: { label: '违纪', tagClass: 'tag-violate', actionClass: 'action-violate', activeClass: 'active-violate' }
+};
+
+// Mock student database for search
+const STUDENTS = [
+  { name: '张三丰', cls: '计算机应用24-1班', id: '2024010103' },
+  { name: '张思远', cls: '护理24-2班', id: '2024030215' },
+  { name: '张明', cls: '电子商务24-1班', id: '2024010301' },
+  { name: '张伟', cls: '机电24-1班', id: '2024020108' },
+  { name: '李思琪', cls: '电子商务24-2班', id: '2024010412' },
+  { name: '李明辉', cls: '会计24-1班', id: '2024050106' },
+  { name: '王浩然', cls: '护理24-1班', id: '2024030107' },
+  { name: '王小红', cls: '计算机应用24-2班', id: '2024010220' },
+  { name: '赵云飞', cls: '机电24-1班', id: '2024020115' },
+  { name: '赵雅婷', cls: '会计24-1班', id: '2024050118' },
+  { name: '钱学森', cls: '计算机应用24-2班', id: '2024010205' },
+  { name: '孙悟空', cls: '电子商务24-1班', id: '2024010322' },
+  { name: '周星星', cls: '护理24-2班', id: '2024030211' },
+  { name: '吴用', cls: '机电24-2班', id: '2024020209' },
+  { name: '郑成功', cls: '计算机应用24-1班', id: '2024010118' },
+  { name: '冯梦龙', cls: '会计24-1班', id: '2024050102' },
+  { name: '陈小明', cls: '护理24-1班', id: '2024030125' },
+  { name: '黄大仙', cls: '电子商务24-2班', id: '2024010408' },
+  { name: '刘备', cls: '计算机应用24-1班', id: '2024010112' },
+  { name: '关羽', cls: '计算机应用24-1班', id: '2024010113' },
+  { name: '诸葛亮', cls: '机电24-2班', id: '2024020216' }
+];
+
+// Initial records
+let records = [
+  { time: '09:12', name: '张三丰', cls: '计算机应用24-1班', type: 'late', note: '', revoked: false },
+  { time: '09:10', name: '李思琪', cls: '电子商务24-2班', type: 'late', note: '', revoked: false },
+  { time: '09:08', name: '王浩然', cls: '护理24-1班', type: 'late', note: '第三次迟到', revoked: false },
+  { time: '09:05', name: '赵云飞', cls: '机电24-1班', type: 'late', note: '', revoked: false },
+  { time: '09:03', name: '钱学森', cls: '计算机应用24-2班', type: 'late', note: '', revoked: false },
+  { time: '09:01', name: '孙悟空', cls: '电子商务24-1班', type: 'early', note: '', revoked: false },
+  { time: '08:58', name: '周星星', cls: '护理24-2班', type: 'late', note: '', revoked: false },
+  { time: '08:55', name: '吴用', cls: '机电24-2班', type: 'absent', note: '', revoked: false },
+  { time: '08:52', name: '郑成功', cls: '计算机应用24-1班', type: 'late', note: '', revoked: false },
+  { time: '08:50', name: '冯梦龙', cls: '会计24-1班', type: 'late', note: '', revoked: false },
+  { time: '08:45', name: '陈小明', cls: '护理24-1班', type: 'violate', note: '携带手机进校', revoked: false },
+  { time: '08:40', name: '黄大仙', cls: '电子商务24-2班', type: 'early', note: '', revoked: false }
+];
+
+// ===== Clock =====
+function updateClock() {
+  const now = new Date();
+  const h = String(now.getHours()).padStart(2, '0');
+  const m = String(now.getMinutes()).padStart(2, '0');
+  document.getElementById('currentTime').textContent = h + ':' + m;
+}
+updateClock();
+setInterval(updateClock, 10000);
+
+// ===== Event Type Selection =====
+function selectEventType(el) {
+  if (el.classList.contains('event-pill-custom')) return;
+  const type = el.dataset.type;
+  if (!type) return;
+  currentEventType = type;
+
+  document.querySelectorAll('.event-pill').forEach(p => {
+    p.className = 'event-pill' + (p.classList.contains('event-pill-custom') ? ' event-pill-custom' : '');
+  });
+  el.classList.add(TYPE_CONFIG[type].activeClass);
+
+  // Update search results action buttons if visible
+  updateSearchResults(document.getElementById('searchInput').value);
+}
+
+// ===== Search =====
+function onSearchInput(value) {
+  const clearBtn = document.getElementById('searchClear');
+  clearBtn.classList.toggle('visible', value.length > 0);
+  updateSearchResults(value);
+}
+
+function updateSearchResults(query) {
+  const container = document.getElementById('searchResults');
+  if (!query || query.trim().length === 0) {
+    container.classList.remove('visible');
+    container.innerHTML = '';
+    return;
+  }
+
+  const q = query.trim().toLowerCase();
+  const matches = STUDENTS.filter(s =>
+    s.name.toLowerCase().includes(q) || s.id.includes(q)
+  ).slice(0, 5);
+
+  if (matches.length === 0) {
+    container.innerHTML = '<div style="padding:14px;text-align:center;color:#9ca3af;font-size:13px;">未找到匹配的学生</div>';
+    container.classList.add('visible');
+    return;
+  }
+
+  const cfg = TYPE_CONFIG[currentEventType];
+  container.innerHTML = matches.map((s, i) => `
+    <div class="search-result-item" id="result-${i}" onclick="recordFromSearch(${i}, '${s.name}', '${s.cls}')">
+      <div class="result-info">
+        <div class="result-name">${highlightMatch(s.name, q)}</div>
+        <div class="result-detail">${s.cls}&nbsp;&nbsp;学号: ${s.id}</div>
+      </div>
+      <button class="result-action ${cfg.actionClass}" onclick="event.stopPropagation(); recordFromSearch(${i}, '${s.name}', '${s.cls}')">
+        记录${cfg.label} &rarr;
+      </button>
+    </div>
+  `).join('');
+  container.classList.add('visible');
+}
+
+function highlightMatch(text, query) {
+  const idx = text.toLowerCase().indexOf(query);
+  if (idx === -1) return text;
+  return text.slice(0, idx) + '<b style="color:#2563eb">' + text.slice(idx, idx + query.length) + '</b>' + text.slice(idx + query.length);
+}
+
+function clearSearch() {
+  const input = document.getElementById('searchInput');
+  input.value = '';
+  document.getElementById('searchClear').classList.remove('visible');
+  document.getElementById('searchResults').classList.remove('visible');
+  document.getElementById('searchResults').innerHTML = '';
+  input.focus();
+}
+
+// ===== Record from search =====
+function recordFromSearch(resultIndex, name, cls) {
+  const resultEl = document.getElementById('result-' + resultIndex);
+  if (resultEl) {
+    resultEl.classList.add('flash-green');
+  }
+
+  const now = new Date();
+  const h = String(now.getHours()).padStart(2, '0');
+  const m = String(now.getMinutes()).padStart(2, '0');
+
+  const newRecord = {
+    time: h + ':' + m,
+    name: name,
+    cls: cls,
+    type: currentEventType,
+    note: '',
+    revoked: false
+  };
+
+  records.unshift(newRecord);
+
+  setTimeout(() => {
+    clearSearch();
+    renderRecords();
+    updateStats();
+  }, 250);
+}
+
+// ===== Render Records =====
+function renderRecords() {
+  const list = document.getElementById('recordList');
+  const emptyState = document.getElementById('emptyState');
+
+  const filtered = currentFilter === 'all'
+    ? records
+    : records.filter(r => r.type === currentFilter);
+
+  if (filtered.length === 0) {
+    list.innerHTML = '';
+    emptyState.style.display = 'block';
+    return;
+  }
+
+  emptyState.style.display = 'none';
+
+  list.innerHTML = filtered.map((r, i) => {
+    const actualIndex = records.indexOf(r);
+    const cfg = TYPE_CONFIG[r.type];
+    const noteHtml = r.note
+      ? `<div class="record-note">备注: ${r.note}</div>`
+      : `<div class="record-note"><span>备注: &mdash;</span></div>`;
+
+    return `
+      <div class="record-card${r.revoked ? ' revoked' : ''}" id="record-${actualIndex}">
+        <div class="record-time">${r.time}</div>
+        <div class="record-body">
+          <div class="record-top-row">
+            <span class="record-student-name">${r.name}</span>
+            <span class="record-type-tag ${cfg.tagClass}">${cfg.label}</span>
+          </div>
+          <div class="record-student-detail">${r.cls}</div>
+          ${noteHtml}
+        </div>
+        <div class="record-card-actions">
+          <button class="btn-revoke" onclick="toggleRevoke(${actualIndex})">${r.revoked ? '已撤销' : '撤销'}</button>
+          <button class="btn-edit" onclick="editRecord(${actualIndex})">编辑</button>
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+// ===== Toggle Revoke =====
+function toggleRevoke(index) {
+  records[index].revoked = !records[index].revoked;
+  renderRecords();
+  updateStats();
+}
+
+// ===== Edit Record =====
+function editRecord(index) {
+  const r = records[index];
+  const note = prompt('编辑备注:', r.note || '');
+  if (note !== null) {
+    records[index].note = note;
+    renderRecords();
+  }
+}
+
+// ===== Filter Records =====
+function filterRecords(el, type) {
+  currentFilter = type;
+  document.querySelectorAll('.filter-tab').forEach(t => t.classList.remove('active'));
+  el.classList.add('active');
+  renderRecords();
+}
+
+// ===== Update Stats =====
+function updateStats() {
+  const active = records.filter(r => !r.revoked);
+  const counts = { late: 0, early: 0, absent: 0, violate: 0 };
+  const classes = new Set();
+
+  active.forEach(r => {
+    counts[r.type]++;
+    classes.add(r.cls);
+  });
+
+  document.getElementById('statLate').textContent = counts.late;
+  document.getElementById('statEarly').textContent = counts.early;
+  document.getElementById('statAbsent').textContent = counts.absent;
+  document.getElementById('statViolate').textContent = counts.violate;
+  document.getElementById('statClasses').textContent = classes.size;
+
+  document.getElementById('recordCount').textContent = '(' + active.length + '人)';
+  document.getElementById('countAll').textContent = active.length;
+  document.getElementById('countLate').textContent = counts.late;
+  document.getElementById('countEarly').textContent = counts.early;
+  document.getElementById('countAbsent').textContent = counts.absent;
+  document.getElementById('countViolate').textContent = counts.violate;
+}
+
+// ===== Clear All Records =====
+function clearAllRecords() {
+  records = [];
+  currentFilter = 'all';
+  document.querySelectorAll('.filter-tab').forEach(t => t.classList.remove('active'));
+  document.querySelector('.filter-tab[data-filter="all"]').classList.add('active');
+  renderRecords();
+  updateStats();
+}
+
+// ===== Close search results when clicking outside =====
+document.addEventListener('click', function(e) {
+  const wrapper = document.querySelector('.search-wrapper');
+  if (!wrapper.contains(e.target)) {
+    document.getElementById('searchResults').classList.remove('visible');
+  }
+});
+
+// ===== Init =====
+renderRecords();
+updateStats();
+</script>
+</body>
+</html>

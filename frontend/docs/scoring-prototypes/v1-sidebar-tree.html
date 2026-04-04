@@ -1,0 +1,357 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>V1 - 树形导航 · 打分界面</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@300;400;500;700&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{
+  --bg:#f5f6f8;--surface:#fff;--border:#e8eaed;
+  --text:#1a1d21;--text2:#5f6368;--text3:#9aa0a6;
+  --blue:#1a73e8;--blue-bg:#e8f0fe;--blue-light:#d2e3fc;
+  --green:#34a853;--green-bg:#e6f4ea;
+  --orange:#ea8600;--orange-bg:#fef7e0;
+  --red:#d93025;--red-bg:#fce8e6;
+  --purple:#8430ce;--purple-bg:#f3e8fd;
+  --depth0:#1a73e8;--depth1:#8430ce;--depth2:#ea8600;--depth3:#34a853;
+  --radius:10px;--shadow:0 1px 3px rgba(0,0,0,.08),0 1px 2px rgba(0,0,0,.04);
+}
+body{font-family:'Noto Sans SC',sans-serif;background:var(--bg);color:var(--text);height:100vh;display:flex;flex-direction:column;overflow:hidden}
+
+/* ── Topbar ── */
+.topbar{height:52px;background:var(--surface);border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 20px;gap:16px;flex-shrink:0}
+.topbar-back{width:32px;height:32px;border-radius:50%;border:none;background:transparent;cursor:pointer;display:flex;align-items:center;justify-content:center;color:var(--text2);font-size:18px}
+.topbar-back:hover{background:var(--bg)}
+.topbar-info{flex:1}
+.topbar-title{font-size:14px;font-weight:500;display:flex;align-items:center;gap:8px}
+.topbar-sub{font-size:12px;color:var(--text2);margin-top:1px}
+.tag{font-size:10px;padding:2px 8px;border-radius:10px;font-weight:500}
+.tag-progress{background:var(--blue-bg);color:var(--blue)}
+.tag-submitted{background:var(--green-bg);color:var(--green)}
+.topbar-actions{display:flex;gap:8px}
+.btn{padding:6px 16px;border-radius:6px;border:none;font-size:13px;font-weight:500;cursor:pointer;display:flex;align-items:center;gap:5px;transition:all .15s}
+.btn-primary{background:var(--blue);color:#fff}.btn-primary:hover{background:#1557b0}
+.btn-outline{background:transparent;border:1px solid var(--border);color:var(--text2)}.btn-outline:hover{background:var(--bg)}
+
+/* ── Main ── */
+.main{flex:1;display:flex;overflow:hidden}
+
+/* ── Sidebar ── */
+.sidebar{width:280px;background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;flex-shrink:0}
+.sidebar-header{padding:12px 16px;border-bottom:1px solid var(--border)}
+.sidebar-search{width:100%;padding:7px 10px 7px 32px;border:1px solid var(--border);border-radius:6px;font-size:13px;background:var(--bg) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%239aa0a6' stroke-width='2'%3E%3Ccircle cx='11' cy='11' r='8'/%3E%3Cline x1='21' y1='21' x2='16.65' y2='16.65'/%3E%3C/svg%3E") 10px center no-repeat;outline:none}
+.sidebar-search:focus{border-color:var(--blue)}
+.sidebar-stats{display:flex;gap:4px;margin-top:8px}
+.stat-pill{font-size:11px;padding:3px 10px;border-radius:12px;cursor:pointer;border:none;background:var(--bg);color:var(--text2)}
+.stat-pill.active{background:var(--blue-bg);color:var(--blue);font-weight:500}
+.target-list{flex:1;overflow-y:auto;padding:6px 8px}
+.target-item{padding:8px 12px;border-radius:8px;cursor:pointer;display:flex;align-items:center;gap:10px;margin-bottom:2px;transition:background .1s}
+.target-item:hover{background:var(--bg)}
+.target-item.active{background:var(--blue-bg)}
+.target-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.target-dot.pending{background:var(--text3)}
+.target-dot.progress{background:var(--orange)}
+.target-dot.done{background:var(--green)}
+.target-name{flex:1;font-size:13px;font-weight:400;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.target-score{font-size:11px;color:var(--text3);white-space:nowrap}
+
+/* ── Scoring Panel ── */
+.panel{flex:1;display:flex;flex-direction:column;overflow:hidden}
+.panel-header{padding:12px 20px;border-bottom:1px solid var(--border);background:var(--surface);display:flex;align-items:center;gap:16px}
+.panel-target{font-size:15px;font-weight:500;flex:1}
+.panel-progress{font-size:12px;color:var(--text2);display:flex;align-items:center;gap:8px}
+.progress-bar{width:120px;height:4px;background:var(--border);border-radius:2px;overflow:hidden}
+.progress-fill{height:100%;background:var(--blue);border-radius:2px;transition:width .3s}
+.panel-nav{display:flex;gap:4px}
+.panel-nav button{width:28px;height:28px;border:1px solid var(--border);border-radius:6px;background:var(--surface);cursor:pointer;font-size:14px;color:var(--text2)}
+.panel-nav button:hover{background:var(--bg)}
+
+.panel-body{flex:1;overflow-y:auto;padding:16px 20px}
+
+/* ── Section Groups ── */
+.section-group{margin-bottom:12px;border-radius:var(--radius);border:1px solid var(--border);overflow:hidden}
+.section-group.depth-0{border-left:3px solid var(--depth0)}
+.section-group.depth-1{border-left:3px solid var(--depth1);margin-left:20px}
+.section-group.depth-2{border-left:3px solid var(--depth2);margin-left:40px}
+.section-group.depth-3{border-left:3px solid var(--depth3);margin-left:60px}
+
+.section-hdr{padding:10px 14px;background:var(--surface);display:flex;align-items:center;gap:8px;cursor:pointer;user-select:none}
+.section-hdr:hover{background:#fafbfc}
+.section-chevron{width:16px;height:16px;color:var(--text3);transition:transform .2s;flex-shrink:0}
+.section-group.collapsed .section-chevron{transform:rotate(-90deg)}
+.depth-badge{font-size:9px;font-weight:700;padding:2px 6px;border-radius:4px;flex-shrink:0}
+.depth-badge.d0{background:var(--blue-bg);color:var(--blue)}
+.depth-badge.d1{background:var(--purple-bg);color:var(--purple)}
+.depth-badge.d2{background:var(--orange-bg);color:var(--orange)}
+.depth-badge.d3{background:var(--green-bg);color:var(--green)}
+.section-name{font-size:13px;font-weight:500;flex:1}
+.section-meta{font-size:11px;color:var(--text3);display:flex;align-items:center;gap:8px}
+.section-progress{width:60px;height:3px;background:var(--border);border-radius:2px;overflow:hidden}
+.section-progress-fill{height:100%;border-radius:2px}
+
+.section-body{border-top:1px solid var(--border);background:#fafbfc}
+.section-group.collapsed .section-body{display:none}
+
+/* ── Score Cards ── */
+.score-card{padding:12px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:12px;transition:background .1s}
+.score-card:last-child{border-bottom:none}
+.score-card:hover{background:#f0f2f5}
+.score-card.scored{background:var(--green-bg)}
+.card-info{flex:1;min-width:0}
+.card-name{font-size:13px;font-weight:400}
+.card-type{font-size:11px;color:var(--text3);margin-top:2px}
+.card-controls{display:flex;align-items:center;gap:6px;flex-shrink:0}
+.score-input{width:72px;padding:5px 8px;border:1px solid var(--border);border-radius:6px;text-align:center;font-size:14px;font-weight:500;outline:none}
+.score-input:focus{border-color:var(--blue);box-shadow:0 0 0 2px var(--blue-light)}
+.score-max{font-size:11px;color:var(--text3)}
+.pf-btn{padding:4px 12px;border-radius:5px;border:1px solid var(--border);background:var(--surface);cursor:pointer;font-size:12px;font-weight:500;transition:all .15s}
+.pf-btn:hover{background:var(--bg)}
+.pf-btn.pass{border-color:var(--green);color:var(--green)}
+.pf-btn.pass.active{background:var(--green);color:#fff}
+.pf-btn.fail{border-color:var(--red);color:var(--red)}
+.pf-btn.fail.active{background:var(--red);color:#fff}
+.star-row{display:flex;gap:2px}
+.star{width:24px;height:24px;cursor:pointer;color:var(--border);transition:color .1s}
+.star.filled{color:#fbbc04}
+
+/* ── Bottom Bar ── */
+.bottom-bar{padding:10px 20px;border-top:1px solid var(--border);background:var(--surface);display:flex;align-items:center;justify-content:space-between}
+.bottom-score{font-size:22px;font-weight:700;color:var(--blue)}
+.bottom-label{font-size:11px;color:var(--text3)}
+</style>
+</head>
+<body>
+<!-- Topbar -->
+<div class="topbar">
+  <button class="topbar-back">←</button>
+  <div class="topbar-info">
+    <div class="topbar-title">TSK-20260329-4010 <span class="tag tag-progress">进行中</span></div>
+    <div class="topbar-sub">2026-03-29 · 王浩宇 · 进度 3/5</div>
+  </div>
+  <div class="topbar-actions">
+    <button class="btn btn-outline">保存草稿</button>
+    <button class="btn btn-primary">▶ 提交任务</button>
+  </div>
+</div>
+
+<div class="main">
+  <!-- Left Sidebar -->
+  <div class="sidebar">
+    <div class="sidebar-header">
+      <input class="sidebar-search" placeholder="搜索目标...">
+      <div class="sidebar-stats">
+        <button class="stat-pill active">全部 5</button>
+        <button class="stat-pill">待检 2</button>
+        <button class="stat-pill">已完成 3</button>
+      </div>
+    </div>
+    <div class="target-list">
+      <div class="target-item active"><span class="target-dot progress"></span><span class="target-name">经济与信息技术系</span><span class="target-score">18/24</span></div>
+      <div class="target-item"><span class="target-dot done"></span><span class="target-name">汽车工程系</span><span class="target-score">24/24</span></div>
+      <div class="target-item"><span class="target-dot done"></span><span class="target-name">康养系</span><span class="target-score">24/24</span></div>
+      <div class="target-item"><span class="target-dot done"></span><span class="target-name">学前教育系</span><span class="target-score">24/24</span></div>
+      <div class="target-item"><span class="target-dot pending"></span><span class="target-name">基础教育部</span><span class="target-score">0/24</span></div>
+    </div>
+  </div>
+
+  <!-- Right Panel -->
+  <div class="panel">
+    <div class="panel-header">
+      <div class="panel-target">经济与信息技术系</div>
+      <div class="panel-progress">
+        <span>18/24 已评</span>
+        <div class="progress-bar"><div class="progress-fill" style="width:75%"></div></div>
+      </div>
+      <div class="panel-nav">
+        <button>‹</button><button>›</button>
+      </div>
+    </div>
+    <div class="panel-body">
+      <!-- L1: 教学管理 -->
+      <div class="section-group depth-0">
+        <div class="section-hdr">
+          <svg class="section-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>
+          <span class="depth-badge d0">L1</span>
+          <span class="section-name">教学管理</span>
+          <div class="section-meta"><span>8/8 已评</span><div class="section-progress"><div class="section-progress-fill" style="width:100%;background:var(--green)"></div></div></div>
+        </div>
+        <div class="section-body">
+          <!-- L2: 课堂教学 -->
+          <div class="section-group depth-1" style="margin:8px">
+            <div class="section-hdr">
+              <svg class="section-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>
+              <span class="depth-badge d1">L2</span>
+              <span class="section-name">课堂教学</span>
+              <div class="section-meta"><span>4/4</span></div>
+            </div>
+            <div class="section-body">
+              <!-- L3: 教学内容 -->
+              <div class="section-group depth-2" style="margin:8px">
+                <div class="section-hdr">
+                  <svg class="section-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>
+                  <span class="depth-badge d2">L3</span>
+                  <span class="section-name">教学内容</span>
+                  <div class="section-meta"><span>2/2</span></div>
+                </div>
+                <div class="section-body">
+                  <div class="score-card scored">
+                    <div class="card-info"><div class="card-name">教案准备完整度</div><div class="card-type">直接打分 · 0-100</div></div>
+                    <div class="card-controls"><input class="score-input" value="92"><span class="score-max">/ 100</span></div>
+                  </div>
+                  <div class="score-card scored">
+                    <div class="card-info"><div class="card-name">教学目标明确性</div><div class="card-type">合格/不合格</div></div>
+                    <div class="card-controls"><button class="pf-btn pass active">合格</button><button class="pf-btn fail">不合格</button></div>
+                  </div>
+                </div>
+              </div>
+              <!-- L3: 教学方法 -->
+              <div class="section-group depth-2" style="margin:8px">
+                <div class="section-hdr">
+                  <svg class="section-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>
+                  <span class="depth-badge d2">L3</span>
+                  <span class="section-name">教学方法</span>
+                  <div class="section-meta"><span>2/2</span></div>
+                </div>
+                <div class="section-body">
+                  <div class="score-card scored">
+                    <div class="card-info"><div class="card-name">互动教学评分</div><div class="card-type">星级评分 · 5星</div></div>
+                    <div class="card-controls">
+                      <div class="star-row">
+                        <svg class="star filled" viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01z" fill="currentColor"/></svg>
+                        <svg class="star filled" viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01z" fill="currentColor"/></svg>
+                        <svg class="star filled" viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01z" fill="currentColor"/></svg>
+                        <svg class="star filled" viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01z" fill="currentColor"/></svg>
+                        <svg class="star" viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01z" fill="currentColor"/></svg>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="score-card scored">
+                    <div class="card-info"><div class="card-name">多媒体使用情况</div><div class="card-type">直接打分 · 0-100</div></div>
+                    <div class="card-controls"><input class="score-input" value="85"><span class="score-max">/ 100</span></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <!-- L2: 作业批改 (collapsed) -->
+          <div class="section-group depth-1 collapsed" style="margin:8px">
+            <div class="section-hdr" onclick="this.parentElement.classList.toggle('collapsed')">
+              <svg class="section-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>
+              <span class="depth-badge d1">L2</span>
+              <span class="section-name">作业批改</span>
+              <div class="section-meta"><span>4/4</span><div class="section-progress"><div class="section-progress-fill" style="width:100%;background:var(--green)"></div></div></div>
+            </div>
+            <div class="section-body">
+              <div class="score-card scored"><div class="card-info"><div class="card-name">批改及时性</div></div><div class="card-controls"><input class="score-input" value="88"><span class="score-max">/ 100</span></div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- L1: 卫生环境 -->
+      <div class="section-group depth-0">
+        <div class="section-hdr" onclick="this.parentElement.classList.toggle('collapsed')">
+          <svg class="section-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>
+          <span class="depth-badge d0">L1</span>
+          <span class="section-name">卫生环境</span>
+          <div class="section-meta"><span>6/8 已评</span><div class="section-progress"><div class="section-progress-fill" style="width:75%;background:var(--orange)"></div></div></div>
+        </div>
+        <div class="section-body">
+          <div class="section-group depth-1" style="margin:8px">
+            <div class="section-hdr">
+              <svg class="section-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>
+              <span class="depth-badge d1">L2</span><span class="section-name">教室卫生</span><div class="section-meta"><span>4/4</span></div>
+            </div>
+            <div class="section-body">
+              <div class="section-group depth-2" style="margin:8px">
+                <div class="section-hdr"><svg class="section-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg><span class="depth-badge d2">L3</span><span class="section-name">地面清洁</span><div class="section-meta"><span>2/2</span></div></div>
+                <div class="section-body">
+                  <div class="score-card scored"><div class="card-info"><div class="card-name">地面无纸屑垃圾</div><div class="card-type">合格/不合格</div></div><div class="card-controls"><button class="pf-btn pass active">合格</button><button class="pf-btn fail">不合格</button></div></div>
+                  <div class="score-card scored"><div class="card-info"><div class="card-name">地面拖扫整洁度</div><div class="card-type">直接打分 · 0-100</div></div><div class="card-controls"><input class="score-input" value="78"><span class="score-max">/ 100</span></div></div>
+                </div>
+              </div>
+              <div class="section-group depth-2" style="margin:8px">
+                <div class="section-hdr"><svg class="section-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg><span class="depth-badge d2">L3</span><span class="section-name">桌面整理</span><div class="section-meta"><span>2/2</span></div></div>
+                <div class="section-body">
+                  <div class="score-card scored"><div class="card-info"><div class="card-name">桌面物品摆放规范</div><div class="card-type">直接打分</div></div><div class="card-controls"><input class="score-input" value="90"><span class="score-max">/ 100</span></div></div>
+                  <div class="score-card scored"><div class="card-info"><div class="card-name">抽屉整理有序</div><div class="card-type">合格/不合格</div></div><div class="card-controls"><button class="pf-btn pass active">合格</button><button class="pf-btn fail">不合格</button></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="section-group depth-1" style="margin:8px">
+            <div class="section-hdr"><svg class="section-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg><span class="depth-badge d1">L2</span><span class="section-name">公共区域</span><div class="section-meta"><span style="color:var(--orange)">2/4 待评</span></div></div>
+            <div class="section-body">
+              <div class="section-group depth-2" style="margin:8px">
+                <div class="section-hdr"><svg class="section-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg><span class="depth-badge d2">L3</span><span class="section-name">走廊卫生</span><div class="section-meta"><span>1/2</span></div></div>
+                <div class="section-body">
+                  <div class="score-card scored"><div class="card-info"><div class="card-name">走廊地面清洁</div><div class="card-type">直接打分</div></div><div class="card-controls"><input class="score-input" value="72"><span class="score-max">/ 100</span></div></div>
+                  <div class="score-card"><div class="card-info"><div class="card-name">墙面无污渍涂鸦</div><div class="card-type">合格/不合格</div></div><div class="card-controls"><button class="pf-btn pass">合格</button><button class="pf-btn fail">不合格</button></div></div>
+                </div>
+              </div>
+              <div class="section-group depth-2" style="margin:8px">
+                <div class="section-hdr"><svg class="section-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg><span class="depth-badge d2">L3</span><span class="section-name">厕所卫生</span><div class="section-meta"><span style="color:var(--red)">0/2</span></div></div>
+                <div class="section-body">
+                  <div class="score-card"><div class="card-info"><div class="card-name">厕所清洁度</div><div class="card-type">直接打分 · 0-100</div></div><div class="card-controls"><input class="score-input" placeholder="—"><span class="score-max">/ 100</span></div></div>
+                  <div class="score-card"><div class="card-info"><div class="card-name">洗手台卫生</div><div class="card-type">星级评分 · 5星</div></div><div class="card-controls"><div class="star-row"><svg class="star" viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01z" fill="currentColor"/></svg><svg class="star" viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01z" fill="currentColor"/></svg><svg class="star" viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01z" fill="currentColor"/></svg><svg class="star" viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01z" fill="currentColor"/></svg><svg class="star" viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01z" fill="currentColor"/></svg></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- L1: 安全纪律 (collapsed) -->
+      <div class="section-group depth-0 collapsed">
+        <div class="section-hdr" onclick="this.parentElement.classList.toggle('collapsed')">
+          <svg class="section-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>
+          <span class="depth-badge d0">L1</span>
+          <span class="section-name">安全纪律</span>
+          <div class="section-meta"><span>4/8 已评</span><div class="section-progress"><div class="section-progress-fill" style="width:50%;background:var(--orange)"></div></div></div>
+        </div>
+        <div class="section-body"><div style="padding:20px;text-align:center;color:var(--text3);font-size:13px">展开查看 4 个子分区</div></div>
+      </div>
+    </div>
+
+    <!-- Bottom -->
+    <div class="bottom-bar">
+      <div><div class="bottom-label">当前目标得分</div><div class="bottom-score">82.5</div></div>
+      <div style="text-align:right"><div class="bottom-label">目标 1 / 5</div><div style="font-size:13px;color:var(--text2)">分区 10/12 已完成</div></div>
+    </div>
+  </div>
+</div>
+
+<script>
+document.querySelectorAll('.section-hdr').forEach(h=>{
+  h.addEventListener('click',()=>h.parentElement.classList.toggle('collapsed'))
+})
+document.querySelectorAll('.pf-btn').forEach(b=>{
+  b.addEventListener('click',e=>{
+    e.stopPropagation()
+    const row=b.parentElement
+    row.querySelectorAll('.pf-btn').forEach(x=>x.classList.remove('active'))
+    b.classList.add('active')
+    b.closest('.score-card').classList.add('scored')
+  })
+})
+document.querySelectorAll('.star').forEach(s=>{
+  s.addEventListener('click',e=>{
+    e.stopPropagation()
+    const row=s.parentElement
+    const stars=[...row.children]
+    const idx=stars.indexOf(s)
+    stars.forEach((st,i)=>st.classList.toggle('filled',i<=idx))
+    s.closest('.score-card').classList.add('scored')
+  })
+})
+document.querySelectorAll('.score-input').forEach(inp=>{
+  inp.addEventListener('input',()=>{
+    if(inp.value) inp.closest('.score-card').classList.add('scored')
+    else inp.closest('.score-card').classList.remove('scored')
+  })
+})
+</script>
+</body>
+</html>

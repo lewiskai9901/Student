@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>V5 - 移动端步进 · 打分界面</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+*{margin:0;padding:0;box-sizing:border-box}
+:root{
+  --bg:#f0f2f5;--surface:#fff;--border:#e4e7ec;
+  --text:#101828;--text2:#667085;--text3:#98a2b3;
+  --primary:#7f56d9;--primary-light:#f4f3ff;--primary-dark:#6941c6;
+  --green:#12b76a;--green-bg:#ecfdf3;
+  --red:#f04438;--red-bg:#fef3f2;
+  --amber:#f79009;
+  --radius:16px;
+}
+body{font-family:'Inter','Noto Sans SC',sans-serif;background:var(--bg);color:var(--text);max-width:420px;margin:0 auto;min-height:100vh;display:flex;flex-direction:column}
+
+/* ── Header ── */
+.header{background:var(--primary);color:#fff;padding:16px 20px 20px;border-radius:0 0 24px 24px;position:relative}
+.header::after{content:'';position:absolute;bottom:-12px;left:50%;transform:translateX(-50%);width:40px;height:4px;border-radius:2px;background:var(--primary-dark);opacity:.3}
+.h-top{display:flex;align-items:center;gap:12px;margin-bottom:12px}
+.h-back{width:32px;height:32px;border-radius:10px;border:none;background:rgba(255,255,255,.15);color:#fff;font-size:16px;cursor:pointer}
+.h-title{font-size:15px;font-weight:600;flex:1}
+.h-badge{font-size:10px;padding:3px 10px;border-radius:20px;background:rgba(255,255,255,.2);font-weight:500}
+.h-target{background:rgba(255,255,255,.1);border-radius:12px;padding:12px 14px;display:flex;align-items:center;gap:10px}
+.h-avatar{width:36px;height:36px;border-radius:10px;background:rgba(255,255,255,.2);display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700}
+.h-target-info{flex:1}
+.h-target-name{font-size:14px;font-weight:500}
+.h-target-sub{font-size:11px;opacity:.7}
+.h-target-nav{display:flex;gap:4px}
+.h-target-nav button{width:28px;height:28px;border-radius:8px;border:none;background:rgba(255,255,255,.15);color:#fff;cursor:pointer;font-size:13px}
+
+/* ── Progress Steps ── */
+.steps{display:flex;padding:20px 20px 8px;gap:4px}
+.step{flex:1;height:4px;border-radius:2px;background:var(--border);overflow:hidden;cursor:pointer}
+.step .fill{height:100%;border-radius:2px;background:var(--primary);transition:width .3s}
+.step-labels{display:flex;padding:0 20px 12px;justify-content:space-between}
+.step-label{font-size:10px;color:var(--text3);font-weight:500;cursor:pointer}
+.step-label.active{color:var(--primary);font-weight:600}
+
+/* ── Breadcrumb path ── */
+.path{padding:0 20px 12px;font-size:12px;color:var(--text2)}
+.path span{cursor:pointer}.path span:hover{color:var(--primary)}
+.path .sep{color:var(--text3);margin:0 4px}
+
+/* ── Section header ── */
+.sec-header{padding:8px 20px;display:flex;align-items:center;gap:8px}
+.sec-icon{width:32px;height:32px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:16px}
+.sec-icon.l1{background:var(--primary-light);color:var(--primary)}
+.sec-icon.l2{background:#fef0c7;color:var(--amber)}
+.sec-icon.l3{background:var(--green-bg);color:var(--green)}
+.sec-info{flex:1}
+.sec-name{font-size:14px;font-weight:600}
+.sec-count{font-size:11px;color:var(--text2)}
+
+/* ── Cards ── */
+.cards{flex:1;overflow-y:auto;padding:8px 16px 100px}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px;margin-bottom:10px;transition:all .2s}
+.card.scored{border-color:var(--green);background:var(--green-bg)}
+.card-top{display:flex;align-items:flex-start;gap:10px;margin-bottom:12px}
+.card-num{width:24px;height:24px;border-radius:8px;background:var(--bg);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:var(--text2);flex-shrink:0}
+.card.scored .card-num{background:var(--green);color:#fff}
+.card-name{font-size:14px;font-weight:500;flex:1;line-height:1.4}
+.card-type{font-size:11px;color:var(--text3);margin-top:2px}
+
+/* Score controls */
+.ctrl-score{display:flex;align-items:center;gap:8px;justify-content:center}
+.score-minus,.score-plus{width:40px;height:40px;border-radius:12px;border:1px solid var(--border);background:var(--surface);font-size:20px;cursor:pointer;display:flex;align-items:center;justify-content:center;color:var(--text2);transition:all .15s}
+.score-minus:hover,.score-plus:hover{background:var(--bg);border-color:var(--primary)}
+.score-minus:active,.score-plus:active{transform:scale(.95)}
+.score-display{width:80px;text-align:center}
+.score-val{font-size:28px;font-weight:700;color:var(--primary)}
+.score-max{font-size:11px;color:var(--text3)}
+
+.ctrl-pf{display:flex;gap:8px}
+.pf-card{flex:1;padding:14px;border-radius:12px;border:2px solid var(--border);background:var(--surface);cursor:pointer;text-align:center;transition:all .2s}
+.pf-card:hover{border-color:var(--text3)}
+.pf-card.pass-on{border-color:var(--green);background:var(--green-bg)}
+.pf-card.fail-on{border-color:var(--red);background:var(--red-bg)}
+.pf-card .pf-icon{font-size:24px;margin-bottom:4px}
+.pf-card .pf-text{font-size:13px;font-weight:500;color:var(--text2)}
+.pf-card.pass-on .pf-text{color:var(--green)}
+.pf-card.fail-on .pf-text{color:var(--red)}
+
+.ctrl-stars{display:flex;justify-content:center;gap:8px}
+.star-btn{width:44px;height:44px;border-radius:12px;border:1px solid var(--border);background:var(--surface);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:20px;transition:all .15s}
+.star-btn:hover{border-color:var(--amber)}
+.star-btn.on{background:#fef0c7;border-color:var(--amber);color:var(--amber)}
+
+/* ── Bottom action ── */
+.bottom-action{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:420px;padding:12px 16px;background:var(--surface);border-top:1px solid var(--border);display:flex;gap:8px}
+.ba-btn{flex:1;padding:14px;border-radius:12px;border:none;font-size:14px;font-weight:600;cursor:pointer;font-family:inherit}
+.ba-secondary{background:var(--bg);color:var(--text2)}.ba-secondary:hover{background:var(--border)}
+.ba-primary{background:var(--primary);color:#fff}.ba-primary:hover{background:var(--primary-dark)}
+</style>
+</head>
+<body>
+<div class="header">
+  <div class="h-top">
+    <button class="h-back">←</button>
+    <div class="h-title">TSK-20260329-4010</div>
+    <span class="h-badge">进行中</span>
+  </div>
+  <div class="h-target">
+    <div class="h-avatar">经</div>
+    <div class="h-target-info">
+      <div class="h-target-name">经济与信息技术系</div>
+      <div class="h-target-sub">目标 1/5 · 18/24 已评</div>
+    </div>
+    <div class="h-target-nav"><button>‹</button><button>›</button></div>
+  </div>
+</div>
+
+<div class="steps">
+  <div class="step"><div class="fill" style="width:100%"></div></div>
+  <div class="step"><div class="fill" style="width:75%"></div></div>
+  <div class="step"><div class="fill" style="width:50%"></div></div>
+</div>
+<div class="step-labels">
+  <span class="step-label">教学管理 ✓</span>
+  <span class="step-label active">卫生环境</span>
+  <span class="step-label">安全纪律</span>
+</div>
+
+<div class="path">
+  <span>卫生环境</span><span class="sep">›</span>
+  <span>公共区域</span><span class="sep">›</span>
+  <span style="color:var(--primary);font-weight:500">走廊卫生</span>
+</div>
+
+<div class="sec-header">
+  <div class="sec-icon l3">🧹</div>
+  <div class="sec-info">
+    <div class="sec-name">走廊卫生</div>
+    <div class="sec-count">2 个检查项 · 1/2 已评</div>
+  </div>
+</div>
+
+<div class="cards">
+  <div class="card scored">
+    <div class="card-top">
+      <div class="card-num">1</div>
+      <div><div class="card-name">走廊地面清洁</div><div class="card-type">直接打分 · 0~100</div></div>
+    </div>
+    <div class="ctrl-score">
+      <button class="score-minus">−</button>
+      <div class="score-display"><div class="score-val">72</div><div class="score-max">/ 100</div></div>
+      <button class="score-plus">+</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-top">
+      <div class="card-num">2</div>
+      <div><div class="card-name">墙面无污渍涂鸦</div><div class="card-type">合格 / 不合格</div></div>
+    </div>
+    <div class="ctrl-pf">
+      <div class="pf-card" onclick="this.parentElement.querySelectorAll('.pf-card').forEach(x=>{x.classList.remove('pass-on','fail-on')});this.classList.add('pass-on');this.closest('.card').classList.add('scored')">
+        <div class="pf-icon">✓</div><div class="pf-text">合格</div>
+      </div>
+      <div class="pf-card" onclick="this.parentElement.querySelectorAll('.pf-card').forEach(x=>{x.classList.remove('pass-on','fail-on')});this.classList.add('fail-on');this.closest('.card').classList.add('scored')">
+        <div class="pf-icon">✕</div><div class="pf-text">不合格</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-top">
+      <div class="card-num">3</div>
+      <div><div class="card-name">走廊照明设施完好</div><div class="card-type">星级评分 · 5星</div></div>
+    </div>
+    <div class="ctrl-stars">
+      <button class="star-btn" onclick="selectStar(this,1)">★</button>
+      <button class="star-btn" onclick="selectStar(this,2)">★</button>
+      <button class="star-btn" onclick="selectStar(this,3)">★</button>
+      <button class="star-btn" onclick="selectStar(this,4)">★</button>
+      <button class="star-btn" onclick="selectStar(this,5)">★</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-top">
+      <div class="card-num">4</div>
+      <div><div class="card-name">消防设施标识清晰</div><div class="card-type">直接打分 · 0~100</div></div>
+    </div>
+    <div class="ctrl-score">
+      <button class="score-minus" onclick="changeScore(this,-5)">−</button>
+      <div class="score-display"><div class="score-val">—</div><div class="score-max">/ 100</div></div>
+      <button class="score-plus" onclick="changeScore(this,5)">+</button>
+    </div>
+  </div>
+</div>
+
+<div class="bottom-action">
+  <button class="ba-btn ba-secondary">← 上一分区</button>
+  <button class="ba-btn ba-primary">下一分区 →</button>
+</div>
+
+<script>
+function selectStar(el,n){
+  const btns=[...el.parentElement.children]
+  btns.forEach((b,i)=>b.classList.toggle('on',i<n))
+  el.closest('.card').classList.add('scored')
+  el.closest('.card').querySelector('.card-num').style.cssText='background:var(--green);color:#fff'
+}
+function changeScore(btn,delta){
+  const display=btn.parentElement.querySelector('.score-val')
+  let val=parseInt(display.textContent)||0
+  val=Math.max(0,Math.min(100,val+delta))
+  display.textContent=val
+  const card=btn.closest('.card')
+  card.classList.add('scored')
+  card.querySelector('.card-num').style.cssText='background:var(--green);color:#fff'
+}
+document.querySelectorAll('.score-minus').forEach(b=>{b.addEventListener('click',()=>changeScore(b,-5))})
+document.querySelectorAll('.score-plus').forEach(b=>{b.addEventListener('click',()=>changeScore(b,5))})
+</script>
+</body>
+</html>

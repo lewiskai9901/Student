@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>V3 - Tab分层 · 打分界面</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap');
+*{margin:0;padding:0;box-sizing:border-box}
+:root{
+  --bg:#faf9f7;--surface:#fff;--border:#e5e2dc;
+  --text:#2c2825;--text2:#7a756e;--text3:#b5afa7;
+  --ink:#2c2825;--accent:#c45d35;--accent-light:#fef0eb;
+  --green:#3d8b5f;--green-bg:#ecf5f0;
+  --red:#c44236;--red-bg:#fcedeb;
+  --gold:#b8860b;
+  --radius:8px;
+}
+body{font-family:'Plus Jakarta Sans','Noto Sans SC',sans-serif;background:var(--bg);color:var(--text);min-height:100vh}
+
+/* ── Top ── */
+.top-strip{background:var(--ink);color:#fff;padding:14px 32px;display:flex;align-items:center;gap:16px}
+.top-back{color:#fff;opacity:.6;cursor:pointer;font-size:18px;border:none;background:none}.top-back:hover{opacity:1}
+.top-info{flex:1}
+.top-title{font-size:16px;font-weight:600;letter-spacing:-.3px}
+.top-sub{font-size:12px;opacity:.5;margin-top:2px}
+.top-badge{font-size:10px;padding:3px 10px;border-radius:4px;background:rgba(255,255,255,.15);font-weight:600}
+.top-btn{padding:8px 24px;border-radius:6px;border:none;font-size:13px;font-weight:600;cursor:pointer;background:var(--accent);color:#fff}
+
+/* ── Target Row ── */
+.target-row{background:var(--surface);border-bottom:1px solid var(--border);padding:10px 32px;display:flex;align-items:center;gap:16px}
+.target-select{padding:6px 12px;border:1px solid var(--border);border-radius:6px;font-size:13px;background:var(--surface);min-width:200px;font-family:inherit}
+.target-pills{display:flex;gap:4px;margin-left:auto}
+.pill{font-size:11px;padding:4px 12px;border-radius:20px;border:1px solid var(--border);background:var(--surface);cursor:pointer;font-family:inherit;color:var(--text2)}
+.pill.active{background:var(--ink);color:#fff;border-color:var(--ink)}
+.overall-score{margin-left:16px;font-size:24px;font-weight:700;color:var(--accent)}
+
+/* ── L1 Tabs ── */
+.l1-tabs{display:flex;border-bottom:2px solid var(--border);padding:0 32px;background:var(--surface)}
+.l1-tab{padding:12px 24px;font-size:14px;font-weight:500;color:var(--text2);cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-2px;transition:all .15s;position:relative}
+.l1-tab:hover{color:var(--text)}
+.l1-tab.active{color:var(--accent);border-bottom-color:var(--accent);font-weight:600}
+.l1-tab .tab-badge{font-size:10px;font-weight:700;margin-left:6px;padding:1px 6px;border-radius:8px;background:var(--border);color:var(--text2)}
+.l1-tab.active .tab-badge{background:var(--accent-light);color:var(--accent)}
+.l1-tab.done::after{content:'✓';position:absolute;top:8px;right:4px;font-size:10px;color:var(--green)}
+
+/* ── Content ── */
+.content{padding:24px 32px;max-width:1000px}
+
+/* ── L2 Accordion ── */
+.l2-section{margin-bottom:16px;border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;background:var(--surface)}
+.l2-header{padding:14px 18px;display:flex;align-items:center;gap:10px;cursor:pointer;user-select:none}
+.l2-header:hover{background:#fdfcfa}
+.l2-chevron{width:14px;height:14px;color:var(--text3);transition:transform .2s}
+.l2-section.closed .l2-chevron{transform:rotate(-90deg)}
+.l2-tag{font-size:9px;font-weight:700;padding:2px 6px;border-radius:3px;background:#f0ebe5;color:var(--text2);text-transform:uppercase;letter-spacing:.5px}
+.l2-name{font-size:14px;font-weight:600;flex:1}
+.l2-meta{font-size:12px;color:var(--text2)}
+.l2-bar{width:48px;height:4px;background:var(--border);border-radius:2px;overflow:hidden}
+.l2-bar-fill{height:100%;border-radius:2px}
+.l2-body{border-top:1px solid var(--border)}
+.l2-section.closed .l2-body{display:none}
+
+/* ── L3 Sub-section ── */
+.l3-group{padding:4px 0}
+.l3-label{padding:8px 18px;font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.8px;display:flex;align-items:center;gap:8px}
+.l3-label::after{content:'';flex:1;height:1px;background:var(--border)}
+
+/* ── Score Items ── */
+.item{padding:10px 18px;display:flex;align-items:center;gap:12px;border-bottom:1px solid #f0ede8}
+.item:last-child{border-bottom:none}
+.item:hover{background:#fdfcfa}
+.item.scored{background:var(--green-bg)}
+.item-bullet{width:6px;height:6px;border-radius:50%;background:var(--border);flex-shrink:0}
+.item.scored .item-bullet{background:var(--green)}
+.item-info{flex:1;min-width:0}
+.item-name{font-size:13px}
+.item-hint{font-size:11px;color:var(--text3);margin-top:1px}
+.item-input{display:flex;align-items:center;gap:6px;flex-shrink:0}
+.inp{width:72px;padding:6px 8px;border:1px solid var(--border);border-radius:6px;text-align:center;font-size:14px;font-weight:600;outline:none;font-family:inherit;background:var(--bg)}
+.inp:focus{border-color:var(--accent);background:var(--surface)}
+.inp-unit{font-size:11px;color:var(--text3)}
+.toggle-group{display:flex;border:1px solid var(--border);border-radius:6px;overflow:hidden}
+.toggle{padding:5px 14px;font-size:12px;font-weight:500;cursor:pointer;background:var(--surface);border:none;border-right:1px solid var(--border);font-family:inherit;color:var(--text2)}
+.toggle:last-child{border-right:none}
+.toggle:hover{background:var(--bg)}
+.toggle.pass-on{background:var(--green);color:#fff}
+.toggle.fail-on{background:var(--red);color:#fff}
+.rating-dots{display:flex;gap:4px}
+.dot{width:20px;height:20px;border-radius:50%;border:2px solid var(--border);cursor:pointer;transition:all .15s;position:relative}
+.dot:hover{border-color:var(--gold)}
+.dot.filled{border-color:var(--gold);background:var(--gold)}
+.dot.filled::after{content:'';position:absolute;inset:4px;border-radius:50%;background:#fff}
+</style>
+</head>
+<body>
+<div class="top-strip">
+  <button class="top-back">←</button>
+  <div class="top-info"><div class="top-title">TSK-20260329-4010</div><div class="top-sub">2026-03-29 · 王浩宇 · E2E四层综合检查模板</div></div>
+  <span class="top-badge">进行中</span>
+  <button class="top-btn">提交任务 →</button>
+</div>
+
+<div class="target-row">
+  <select class="target-select">
+    <option>经济与信息技术系</option><option>汽车工程系</option><option>康养系</option><option>学前教育系</option><option>基础教育部</option>
+  </select>
+  <div class="target-pills">
+    <button class="pill active">全部 5</button><button class="pill">待检 2</button><button class="pill">已完成 3</button>
+  </div>
+  <div class="overall-score">82.5</div>
+</div>
+
+<div class="l1-tabs">
+  <div class="l1-tab done" onclick="switchL1(0)">教学管理<span class="tab-badge">8/8</span></div>
+  <div class="l1-tab active" onclick="switchL1(1)">卫生环境<span class="tab-badge">6/8</span></div>
+  <div class="l1-tab" onclick="switchL1(2)">安全纪律<span class="tab-badge">4/8</span></div>
+</div>
+
+<div class="content">
+  <!-- L2: 教室卫生 -->
+  <div class="l2-section">
+    <div class="l2-header" onclick="this.parentElement.classList.toggle('closed')">
+      <svg class="l2-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M6 9l6 6 6-6"/></svg>
+      <span class="l2-tag">二级</span>
+      <span class="l2-name">教室卫生</span>
+      <span class="l2-meta">4/4 已评</span>
+      <div class="l2-bar"><div class="l2-bar-fill" style="width:100%;background:var(--green)"></div></div>
+    </div>
+    <div class="l2-body">
+      <div class="l3-group">
+        <div class="l3-label">地面清洁</div>
+        <div class="item scored"><div class="item-bullet"></div><div class="item-info"><div class="item-name">地面无纸屑垃圾</div><div class="item-hint">合格 / 不合格</div></div><div class="item-input"><div class="toggle-group"><button class="toggle pass-on">合格</button><button class="toggle">不合格</button></div></div></div>
+        <div class="item scored"><div class="item-bullet"></div><div class="item-info"><div class="item-name">地面拖扫整洁度</div><div class="item-hint">直接打分 · 0~100</div></div><div class="item-input"><input class="inp" value="78"><span class="inp-unit">/100</span></div></div>
+      </div>
+      <div class="l3-group">
+        <div class="l3-label">桌面整理</div>
+        <div class="item scored"><div class="item-bullet"></div><div class="item-info"><div class="item-name">桌面物品摆放规范</div><div class="item-hint">直接打分 · 0~100</div></div><div class="item-input"><input class="inp" value="90"><span class="inp-unit">/100</span></div></div>
+        <div class="item scored"><div class="item-bullet"></div><div class="item-info"><div class="item-name">抽屉整理有序</div><div class="item-hint">合格 / 不合格</div></div><div class="item-input"><div class="toggle-group"><button class="toggle pass-on">合格</button><button class="toggle">不合格</button></div></div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- L2: 公共区域 -->
+  <div class="l2-section">
+    <div class="l2-header" onclick="this.parentElement.classList.toggle('closed')">
+      <svg class="l2-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M6 9l6 6 6-6"/></svg>
+      <span class="l2-tag">二级</span>
+      <span class="l2-name">公共区域</span>
+      <span class="l2-meta" style="color:var(--accent)">2/4 待评</span>
+      <div class="l2-bar"><div class="l2-bar-fill" style="width:50%;background:var(--gold)"></div></div>
+    </div>
+    <div class="l2-body">
+      <div class="l3-group">
+        <div class="l3-label">走廊卫生</div>
+        <div class="item scored"><div class="item-bullet"></div><div class="item-info"><div class="item-name">走廊地面清洁</div><div class="item-hint">直接打分 · 0~100</div></div><div class="item-input"><input class="inp" value="72"><span class="inp-unit">/100</span></div></div>
+        <div class="item"><div class="item-bullet"></div><div class="item-info"><div class="item-name">墙面无污渍涂鸦</div><div class="item-hint">合格 / 不合格</div></div><div class="item-input"><div class="toggle-group"><button class="toggle">合格</button><button class="toggle">不合格</button></div></div></div>
+      </div>
+      <div class="l3-group">
+        <div class="l3-label">厕所卫生</div>
+        <div class="item"><div class="item-bullet"></div><div class="item-info"><div class="item-name">厕所清洁度</div><div class="item-hint">直接打分 · 0~100</div></div><div class="item-input"><input class="inp" placeholder="—"><span class="inp-unit">/100</span></div></div>
+        <div class="item"><div class="item-bullet"></div><div class="item-info"><div class="item-name">洗手台卫生</div><div class="item-hint">等级评分 · 5级</div></div><div class="item-input"><div class="rating-dots"><div class="dot"></div><div class="dot"></div><div class="dot"></div><div class="dot"></div><div class="dot"></div></div></div></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+function switchL1(i){document.querySelectorAll('.l1-tab').forEach((t,j)=>{t.classList.toggle('active',i===j)})}
+document.querySelectorAll('.toggle').forEach(b=>{b.addEventListener('click',()=>{const g=b.parentElement;g.querySelectorAll('.toggle').forEach(x=>{x.classList.remove('pass-on','fail-on')});b.classList.add(b.textContent.includes('合格')?'pass-on':'fail-on');b.closest('.item').classList.add('scored')})})
+document.querySelectorAll('.dot').forEach(d=>{d.addEventListener('click',()=>{const dots=[...d.parentElement.children];const idx=dots.indexOf(d);dots.forEach((dt,i)=>dt.classList.toggle('filled',i<=idx));d.closest('.item').classList.add('scored')})})
+</script>
+</body>
+</html>

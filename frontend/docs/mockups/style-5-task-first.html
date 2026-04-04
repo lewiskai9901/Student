@@ -1,0 +1,558 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>我的检查 — Inspector Workbench</title>
+<style>
+  *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+  :root{
+    --blue:#1a6dff;--blue-light:#e8f0fe;
+    --green:#10b981;--green-light:#ecfdf5;
+    --orange:#f59e0b;--orange-light:#fffbeb;
+    --gray:#9ca3af;--gray-light:#f3f4f6;
+    --bg:#f7f8fa;--card:#fff;
+    --text:#1a1a2e;--text-secondary:#6b7280;--text-tertiary:#9ca3af;
+    --border:#e5e7eb;
+    --radius:8px;--radius-sm:6px;
+    --shadow:0 1px 3px rgba(0,0,0,.06);
+    --shadow-hover:0 2px 8px rgba(0,0,0,.1);
+    --transition:all .2s ease;
+  }
+  html{font-size:13px}
+  body{
+    font-family:-apple-system,"PingFang SC","Helvetica Neue","Microsoft YaHei",sans-serif;
+    background:var(--bg);color:var(--text);line-height:1.6;
+    -webkit-font-smoothing:antialiased;
+  }
+
+  /* ── Top Bar ── */
+  .topbar{
+    position:sticky;top:0;z-index:100;
+    height:48px;background:#fff;border-bottom:1px solid var(--border);
+    display:flex;align-items:center;justify-content:space-between;
+    padding:0 24px;
+  }
+  .topbar-title{font-size:16px;font-weight:700;letter-spacing:-.3px;color:var(--text)}
+  .topbar-right{display:flex;align-items:center;gap:16px}
+  .week-nav{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--text-secondary)}
+  .week-nav button{
+    width:28px;height:28px;border:1px solid var(--border);border-radius:var(--radius-sm);
+    background:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center;
+    color:var(--text-secondary);font-size:14px;transition:var(--transition);
+  }
+  .week-nav button:hover{background:var(--gray-light);color:var(--text)}
+  .week-label{font-weight:500;color:var(--text);user-select:none}
+  .avatar{
+    width:30px;height:30px;border-radius:50%;background:var(--blue);
+    color:#fff;display:flex;align-items:center;justify-content:center;
+    font-size:12px;font-weight:600;cursor:pointer;
+  }
+
+  /* ── Page Container ── */
+  .page{max-width:800px;margin:0 auto;padding:16px 20px 60px}
+
+  /* ── Stats Bar ── */
+  .stats-bar{
+    display:flex;gap:8px;flex-wrap:wrap;margin-bottom:20px;
+  }
+  .stat-pill{
+    display:flex;align-items:center;gap:6px;
+    padding:6px 14px;border-radius:20px;
+    background:#fff;border:1px solid var(--border);
+    font-size:12.5px;color:var(--text-secondary);
+    cursor:pointer;transition:var(--transition);user-select:none;
+  }
+  .stat-pill:hover{border-color:var(--blue);color:var(--blue)}
+  .stat-pill.active{border-color:var(--blue);background:var(--blue-light);color:var(--blue)}
+  .stat-pill .num{font-weight:700;color:var(--text)}
+  .stat-pill.active .num{color:var(--blue)}
+  .stat-dot{width:6px;height:6px;border-radius:50%}
+  .stat-dot.blue{background:var(--blue)}
+  .stat-dot.green{background:var(--green)}
+  .stat-dot.orange{background:var(--orange)}
+  .stat-dot.gray{background:var(--gray)}
+
+  /* ── Section ── */
+  .section{margin-bottom:24px}
+  .section-header{
+    display:flex;align-items:center;gap:8px;
+    margin-bottom:12px;padding-left:12px;
+    border-left:3px solid var(--blue);
+  }
+  .section-header.orange{border-left-color:var(--orange)}
+  .section-title{font-size:14px;font-weight:700;color:var(--text)}
+  .section-sub{font-size:12px;color:var(--text-tertiary);font-weight:400}
+  .section-badge{
+    font-size:11px;padding:2px 8px;border-radius:10px;
+    background:var(--orange-light);color:var(--orange);font-weight:600;
+  }
+
+  /* ── Task Card ── */
+  .task-card{
+    background:var(--card);border:1px solid var(--border);border-radius:var(--radius);
+    padding:16px 18px;margin-bottom:10px;
+    border-left:4px solid var(--gray);
+    transition:var(--transition);position:relative;
+  }
+  .task-card:hover{box-shadow:var(--shadow-hover);border-color:var(--border)}
+  .task-card.status-active{border-left-color:var(--blue)}
+  .task-card.status-claim{border-left-color:var(--orange)}
+  .task-card.status-done{border-left-color:var(--green)}
+  .task-card.status-pending{border-left-color:var(--gray)}
+
+  .task-card.claimed{
+    border-left-color:var(--green);
+    animation:claimFlash .6s ease;
+  }
+  @keyframes claimFlash{
+    0%{background:#fff}
+    30%{background:var(--green-light)}
+    100%{background:#fff}
+  }
+
+  .card-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
+  .card-title{font-size:14px;font-weight:700;color:var(--text)}
+  .status-pill{
+    font-size:11px;padding:3px 10px;border-radius:12px;font-weight:600;
+    display:flex;align-items:center;gap:4px;white-space:nowrap;
+  }
+  .status-pill.active{background:var(--blue-light);color:var(--blue)}
+  .status-pill.claim{background:var(--orange-light);color:var(--orange)}
+  .status-pill.done{background:var(--green-light);color:var(--green)}
+  .status-pill.pending{background:var(--gray-light);color:var(--gray)}
+  .status-pill .dot{width:6px;height:6px;border-radius:50%;background:currentColor}
+
+  /* Progress */
+  .progress-row{display:flex;align-items:center;gap:10px;margin-bottom:8px}
+  .progress-track{
+    flex:1;height:4px;background:var(--gray-light);border-radius:2px;overflow:hidden;
+  }
+  .progress-fill{height:100%;border-radius:2px;transition:width .4s ease}
+  .progress-fill.blue{background:var(--blue)}
+  .progress-fill.green{background:var(--green)}
+  .progress-text{font-size:12px;color:var(--text-secondary);white-space:nowrap}
+
+  .card-current{
+    font-size:12.5px;color:var(--text-secondary);margin-bottom:8px;
+    display:flex;align-items:center;gap:6px;
+  }
+  .card-current .label{color:var(--blue);font-weight:600}
+  .card-scope{font-size:12.5px;color:var(--text-secondary);margin-bottom:8px}
+
+  .card-bottom{
+    display:flex;align-items:center;justify-content:space-between;
+  }
+  .card-meta{font-size:12px;color:var(--text-tertiary);display:flex;align-items:center;gap:4px}
+  .card-meta .sep{margin:0 2px;color:var(--border)}
+
+  .action-btn{
+    font-size:12.5px;font-weight:600;padding:6px 16px;border-radius:var(--radius-sm);
+    border:1px solid;cursor:pointer;transition:var(--transition);
+    display:flex;align-items:center;gap:4px;white-space:nowrap;
+  }
+  .action-btn.blue{
+    background:var(--blue);color:#fff;border-color:var(--blue);
+  }
+  .action-btn.blue:hover{background:#155cd4}
+  .action-btn.orange{
+    background:#fff;color:var(--orange);border-color:var(--orange);
+  }
+  .action-btn.orange:hover{background:var(--orange-light)}
+  .action-btn.outline{
+    background:#fff;color:var(--text-secondary);border-color:var(--border);
+  }
+  .action-btn.outline:hover{background:var(--gray-light)}
+  .action-btn.green{
+    background:var(--green-light);color:var(--green);border-color:var(--green);cursor:default;
+  }
+
+  .score-badge{
+    display:inline-flex;align-items:center;gap:3px;
+    font-size:12px;font-weight:700;color:var(--green);
+  }
+
+  /* ── Timeline Section ── */
+  .timeline{padding:0}
+  .timeline-day{margin-bottom:14px}
+  .day-header{
+    font-size:12.5px;font-weight:600;color:var(--text-secondary);
+    margin-bottom:6px;display:flex;align-items:center;gap:6px;
+  }
+  .day-header.past{color:var(--text-tertiary)}
+  .day-header.today{color:var(--blue)}
+  .day-header .today-tag{
+    font-size:10px;padding:1px 6px;border-radius:8px;
+    background:var(--blue);color:#fff;font-weight:600;
+  }
+  .day-header .no-plan{font-weight:400;font-size:12px;color:var(--text-tertiary)}
+
+  .timeline-item{
+    display:flex;align-items:center;gap:8px;
+    padding:5px 0 5px 20px;font-size:12.5px;
+  }
+  .timeline-item.past{color:var(--text-tertiary)}
+  .timeline-item .icon{width:16px;text-align:center;font-size:12px;flex-shrink:0}
+  .timeline-item .icon.done{color:var(--green)}
+  .timeline-item .icon.future{color:var(--text-tertiary)}
+  .timeline-item .name{font-weight:500}
+  .timeline-item .detail{color:var(--text-tertiary)}
+  .timeline-item .score-sm{font-weight:600;color:var(--green)}
+
+  /* ── Claim Table ── */
+  .claim-list{
+    background:var(--card);border:1px solid var(--border);border-radius:var(--radius);
+    overflow:hidden;
+  }
+  .claim-row{
+    display:flex;align-items:center;justify-content:space-between;
+    padding:10px 16px;border-bottom:1px solid var(--gray-light);
+    transition:var(--transition);
+  }
+  .claim-row:last-child{border-bottom:none}
+  .claim-row:hover{background:var(--gray-light)}
+  .claim-info{display:flex;align-items:center;gap:16px;font-size:12.5px}
+  .claim-name{font-weight:600;color:var(--text);min-width:120px}
+  .claim-date{color:var(--text-tertiary);min-width:50px}
+  .claim-targets{color:var(--text-secondary)}
+  .claim-btn{
+    font-size:12px;font-weight:600;padding:4px 14px;border-radius:var(--radius-sm);
+    border:1px solid var(--orange);background:#fff;color:var(--orange);
+    cursor:pointer;transition:var(--transition);
+  }
+  .claim-btn:hover{background:var(--orange-light)}
+  .claim-btn.claimed-btn{
+    border-color:var(--green);color:var(--green);background:var(--green-light);cursor:default;
+  }
+
+  /* ── Responsive ── */
+  @media(max-width:640px){
+    .topbar{padding:0 12px}
+    .page{padding:12px 12px 40px}
+    .stats-bar{gap:6px}
+    .stat-pill{padding:5px 10px;font-size:12px}
+    .task-card{padding:12px 14px}
+    .card-bottom{flex-direction:column;align-items:flex-start;gap:8px}
+    .action-btn{align-self:flex-end}
+    .claim-info{gap:8px;flex-wrap:wrap}
+  }
+</style>
+</head>
+<body>
+
+<!-- ═══════ Top Bar ═══════ -->
+<header class="topbar">
+  <div class="topbar-title">我的检查</div>
+  <div class="topbar-right">
+    <div class="week-nav">
+      <button id="weekPrev" title="上一周">&lsaquo;</button>
+      <span class="week-label" id="weekLabel">本周 3/24 – 3/30</span>
+      <button id="weekNext" title="下一周">&rsaquo;</button>
+    </div>
+    <div class="avatar" title="张明">张</div>
+  </div>
+</header>
+
+<div class="page">
+
+  <!-- ═══════ Stats Bar ═══════ -->
+  <div class="stats-bar" id="statsBar">
+    <div class="stat-pill active" data-filter="today" title="筛选今日任务">
+      <span class="stat-dot blue"></span>
+      今日 <span class="num">2</span>个任务
+    </div>
+    <div class="stat-pill" data-filter="week" title="筛选本周任务">
+      <span class="stat-dot gray"></span>
+      本周进度 <span class="num">12/20</span>
+    </div>
+    <div class="stat-pill" data-filter="claim" title="筛选待领取">
+      <span class="stat-dot orange"></span>
+      待领取 <span class="num" id="claimCount">3</span>
+    </div>
+    <div class="stat-pill" data-filter="done" title="筛选已完成">
+      <span class="stat-dot green"></span>
+      已完成 <span class="num">85%</span>
+    </div>
+  </div>
+
+  <!-- ═══════ Section 1: 今日待办 ═══════ -->
+  <div class="section" id="sectionToday">
+    <div class="section-header">
+      <span class="section-title">今日待办</span>
+      <span class="section-sub">· 3月25日 周二</span>
+    </div>
+
+    <!-- Card: 进行中 -->
+    <div class="task-card status-active">
+      <div class="card-top">
+        <span class="card-title">班级日常检查</span>
+        <span class="status-pill active"><span class="dot"></span>进行中</span>
+      </div>
+      <div class="progress-row">
+        <div class="progress-track">
+          <div class="progress-fill blue" style="width:62.5%"></div>
+        </div>
+        <span class="progress-text">5/8 目标已完成</span>
+      </div>
+      <div class="card-current">
+        <span class="label">当前:</span> 计算机应用24-3班 (教室卫生 3/5)
+      </div>
+      <div class="card-bottom">
+        <span class="card-meta">检查员: 张明 <span class="sep">·</span> 计划: 每日 08:00-12:00</span>
+        <button class="action-btn blue" onclick="doAction('score')">继续打分 &rarr;</button>
+      </div>
+    </div>
+
+    <!-- Card: 待领取 -->
+    <div class="task-card status-claim" id="taskClaim1">
+      <div class="card-top">
+        <span class="card-title">宿舍安全检查</span>
+        <span class="status-pill claim" id="taskClaim1Status"><span class="dot"></span>待领取</span>
+      </div>
+      <div class="card-scope">3栋宿舍楼 · 15个房间</div>
+      <div class="card-bottom">
+        <span class="card-meta">计划: 每周二 14:00-17:00</span>
+        <button class="action-btn orange" id="taskClaim1Btn" onclick="claimTask('taskClaim1')">领取任务 &rarr;</button>
+      </div>
+    </div>
+
+    <!-- Card: 已完成 -->
+    <div class="task-card status-done">
+      <div class="card-top">
+        <span class="card-title">食堂卫生检查</span>
+        <span class="status-pill done"><span class="dot"></span>已完成</span>
+      </div>
+      <div class="progress-row">
+        <div class="progress-track">
+          <div class="progress-fill green" style="width:100%"></div>
+        </div>
+        <span class="progress-text">2/2 目标已完成</span>
+        <span class="score-badge">得分 95</span>
+      </div>
+      <div class="card-bottom">
+        <span class="card-meta">完成时间: 09:45 <span class="sep">·</span> 检查员: 张明</span>
+        <button class="action-btn outline" onclick="doAction('detail')">查看详情 &rarr;</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════ Section 2: 近期计划 ═══════ -->
+  <div class="section" id="sectionWeek">
+    <div class="section-header">
+      <span class="section-title">近期计划</span>
+    </div>
+
+    <div class="timeline">
+      <!-- 昨天 -->
+      <div class="timeline-day">
+        <div class="day-header past">昨天 3/24 (周一)</div>
+        <div class="timeline-item past">
+          <span class="icon done">&#10003;</span>
+          <span class="name">班级日常检查</span>
+          <span class="detail">· 8/8 完成</span>
+          <span class="score-sm">得分 92</span>
+        </div>
+        <div class="timeline-item past">
+          <span class="icon done">&#10003;</span>
+          <span class="name">食堂卫生检查</span>
+          <span class="detail">· 2/2 完成</span>
+          <span class="score-sm">得分 88</span>
+        </div>
+      </div>
+
+      <!-- 今天 -->
+      <div class="timeline-day">
+        <div class="day-header today">今天 3/25 (周二) <span class="today-tag">今天</span></div>
+        <div class="timeline-item">
+          <span class="icon" style="color:var(--blue)">&#9679;</span>
+          <span class="name">班级日常检查</span>
+          <span class="detail">· 5/8 进行中</span>
+        </div>
+        <div class="timeline-item">
+          <span class="icon" style="color:var(--orange)">&#9675;</span>
+          <span class="name">宿舍安全检查</span>
+          <span class="detail">· 15个目标</span>
+        </div>
+        <div class="timeline-item">
+          <span class="icon done">&#10003;</span>
+          <span class="name">食堂卫生检查</span>
+          <span class="detail">· 2/2 完成</span>
+          <span class="score-sm">得分 95</span>
+        </div>
+      </div>
+
+      <!-- 明天 -->
+      <div class="timeline-day">
+        <div class="day-header">明天 3/26 (周三)</div>
+        <div class="timeline-item">
+          <span class="icon future">&#9675;</span>
+          <span class="name">班级日常检查</span>
+          <span class="detail">· 8个目标</span>
+        </div>
+      </div>
+
+      <!-- 周四 -->
+      <div class="timeline-day">
+        <div class="day-header">3/27 (周四)</div>
+        <div class="timeline-item">
+          <span class="icon future">&#9675;</span>
+          <span class="name">班级日常检查</span>
+          <span class="detail">· 8个目标</span>
+        </div>
+        <div class="timeline-item">
+          <span class="icon future">&#9675;</span>
+          <span class="name">宿舍安全检查</span>
+          <span class="detail">· 15个目标</span>
+        </div>
+      </div>
+
+      <!-- 周五 -->
+      <div class="timeline-day">
+        <div class="day-header">3/28 (周五) <span class="no-plan">无计划</span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════ Section 3: 待领取任务 ═══════ -->
+  <div class="section" id="sectionClaim">
+    <div class="section-header orange">
+      <span class="section-title">待领取任务</span>
+      <span class="section-badge" id="claimBadge">3个</span>
+    </div>
+
+    <div class="claim-list">
+      <div class="claim-row" id="claimRow1">
+        <div class="claim-info">
+          <span class="claim-name">实训室设备检查</span>
+          <span class="claim-date">3/26</span>
+          <span class="claim-targets">5个目标</span>
+        </div>
+        <button class="claim-btn" id="claimBtn1" onclick="claimRow('claimRow1','claimBtn1')">领取</button>
+      </div>
+      <div class="claim-row" id="claimRow2">
+        <div class="claim-info">
+          <span class="claim-name">图书馆环境检查</span>
+          <span class="claim-date">3/27</span>
+          <span class="claim-targets">3个目标</span>
+        </div>
+        <button class="claim-btn" id="claimBtn2" onclick="claimRow('claimRow2','claimBtn2')">领取</button>
+      </div>
+      <div class="claim-row" id="claimRow3">
+        <div class="claim-info">
+          <span class="claim-name">操场设施检查</span>
+          <span class="claim-date">3/28</span>
+          <span class="claim-targets">8个目标</span>
+        </div>
+        <button class="claim-btn" id="claimBtn3" onclick="claimRow('claimRow3','claimBtn3')">领取</button>
+      </div>
+    </div>
+  </div>
+
+</div><!-- .page -->
+
+<script>
+(function(){
+  // ── Week navigation ──
+  var weekOffset = 0;
+  var weekPrev = document.getElementById('weekPrev');
+  var weekNext = document.getElementById('weekNext');
+  var weekLabel = document.getElementById('weekLabel');
+
+  function fmtWeek(offset){
+    var base = new Date(2026, 2, 24); // 2026-03-24 Monday
+    base.setDate(base.getDate() + offset * 7);
+    var end = new Date(base);
+    end.setDate(end.getDate() + 6);
+    var prefix = offset === 0 ? '本周' : offset === -1 ? '上周' : offset === 1 ? '下周' : '';
+    if(!prefix) prefix = (base.getMonth()+1) + '月';
+    return prefix + ' ' + (base.getMonth()+1) + '/' + base.getDate() + ' \u2013 ' + (end.getMonth()+1) + '/' + end.getDate();
+  }
+
+  weekPrev.addEventListener('click', function(){
+    weekOffset--;
+    weekLabel.textContent = fmtWeek(weekOffset);
+  });
+  weekNext.addEventListener('click', function(){
+    weekOffset++;
+    weekLabel.textContent = fmtWeek(weekOffset);
+  });
+
+  // ── Stats pill filter ──
+  var pills = document.querySelectorAll('.stat-pill');
+  pills.forEach(function(pill){
+    pill.addEventListener('click', function(){
+      var wasActive = pill.classList.contains('active');
+      pills.forEach(function(p){ p.classList.remove('active') });
+      if(!wasActive) pill.classList.add('active');
+      // visual filter hint
+      var filter = pill.getAttribute('data-filter');
+      if(wasActive) filter = null; // show all
+      applyFilter(filter);
+    });
+  });
+
+  function applyFilter(filter){
+    var sToday = document.getElementById('sectionToday');
+    var sWeek = document.getElementById('sectionWeek');
+    var sClaim = document.getElementById('sectionClaim');
+    sToday.style.display = '';
+    sWeek.style.display = '';
+    sClaim.style.display = '';
+    if(filter === 'today'){
+      sWeek.style.display = 'none';
+      sClaim.style.display = 'none';
+    } else if(filter === 'week'){
+      sClaim.style.display = 'none';
+    } else if(filter === 'claim'){
+      sToday.style.display = 'none';
+      sWeek.style.display = 'none';
+    } else if(filter === 'done'){
+      sClaim.style.display = 'none';
+    }
+  }
+
+  // ── Claim task (today card) ──
+  window.claimTask = function(cardId){
+    var card = document.getElementById(cardId);
+    var btn = document.getElementById(cardId + 'Btn');
+    var status = document.getElementById(cardId + 'Status');
+    if(card.classList.contains('claimed')) return;
+    card.classList.remove('status-claim');
+    card.classList.add('claimed');
+    status.className = 'status-pill done';
+    status.innerHTML = '<span class="dot"></span>已领取';
+    btn.className = 'action-btn green';
+    btn.textContent = '已领取';
+    btn.onclick = null;
+    updateClaimCount(-1);
+  };
+
+  // ── Claim row (bottom section) ──
+  window.claimRow = function(rowId, btnId){
+    var btn = document.getElementById(btnId);
+    if(btn.classList.contains('claimed-btn')) return;
+    btn.classList.add('claimed-btn');
+    btn.textContent = '已领取';
+    btn.onclick = null;
+    var row = document.getElementById(rowId);
+    row.style.animation = 'claimFlash .6s ease';
+    updateClaimCount(-1);
+  };
+
+  var claimTotal = 3;
+  function updateClaimCount(delta){
+    claimTotal = Math.max(0, claimTotal + delta);
+    document.getElementById('claimCount').textContent = claimTotal;
+    document.getElementById('claimBadge').textContent = claimTotal + '个';
+  }
+
+  // ── Action buttons ──
+  window.doAction = function(type){
+    if(type === 'score') alert('跳转到打分界面');
+    else if(type === 'detail') alert('跳转到详情页面');
+  };
+})();
+</script>
+
+</body>
+</html>

@@ -1,0 +1,3 @@
+ALTER TABLE insp_indicators
+    ADD COLUMN normalization VARCHAR(20) DEFAULT 'NONE' COMMENT 'NONE|RELATION_COUNT|FIXED_VALUE|PERCENTAGE',
+    ADD COLUMN normalization_config TEXT DEFAULT NULL COMMENT 'JSON config for normalization';

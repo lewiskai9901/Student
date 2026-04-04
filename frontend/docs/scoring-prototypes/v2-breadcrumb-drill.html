@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>V2 - 面包屑钻取 · 打分界面</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,500;0,9..40,700&display=swap');
+*{margin:0;padding:0;box-sizing:border-box}
+:root{
+  --bg:#0f1117;--surface:#1a1d27;--surface2:#22252f;--border:#2d313d;
+  --text:#e8eaed;--text2:#9aa0a6;--text3:#5f6368;
+  --accent:#7c5cfc;--accent-glow:rgba(124,92,252,.15);
+  --green:#4ade80;--red:#f87171;--amber:#fbbf24;--cyan:#22d3ee;
+  --radius:12px;
+}
+body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min-height:100vh}
+.container{max-width:860px;margin:0 auto;padding:20px}
+
+/* ── Header ── */
+.header{display:flex;align-items:center;gap:12px;margin-bottom:24px}
+.back-btn{width:36px;height:36px;border-radius:10px;border:1px solid var(--border);background:var(--surface);color:var(--text2);cursor:pointer;font-size:16px;display:flex;align-items:center;justify-content:center}
+.back-btn:hover{border-color:var(--accent);color:var(--accent)}
+.header-info{flex:1}
+.header-title{font-size:18px;font-weight:700;letter-spacing:-.3px}
+.header-sub{font-size:13px;color:var(--text2);margin-top:2px}
+.header-actions{display:flex;gap:8px}
+.btn{padding:8px 20px;border-radius:8px;border:none;font-size:13px;font-weight:500;cursor:pointer}
+.btn-ghost{background:var(--surface);border:1px solid var(--border);color:var(--text2)}.btn-ghost:hover{border-color:var(--accent)}
+.btn-accent{background:var(--accent);color:#fff}.btn-accent:hover{background:#6a4ae0}
+
+/* ── Breadcrumb ── */
+.breadcrumb{display:flex;align-items:center;gap:6px;margin-bottom:20px;font-size:13px}
+.crumb{color:var(--text2);cursor:pointer;padding:4px 8px;border-radius:6px;transition:all .15s}
+.crumb:hover{background:var(--surface);color:var(--text)}
+.crumb.active{color:var(--accent);font-weight:500}
+.crumb-sep{color:var(--text3);font-size:10px}
+
+/* ── Target Switcher ── */
+.target-bar{display:flex;align-items:center;gap:12px;padding:14px 18px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);margin-bottom:20px}
+.target-indicator{width:10px;height:10px;border-radius:50%;background:var(--amber)}
+.target-name{flex:1;font-size:15px;font-weight:500}
+.target-progress{font-size:12px;color:var(--text2)}
+.target-nav{display:flex;gap:4px}
+.target-nav button{width:28px;height:28px;border:1px solid var(--border);border-radius:6px;background:var(--surface2);color:var(--text2);cursor:pointer;font-size:13px}
+.target-nav button:hover{border-color:var(--accent)}
+
+/* ── Section Grid ── */
+.section-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:12px;margin-bottom:24px}
+.section-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px;cursor:pointer;transition:all .2s;position:relative;overflow:hidden}
+.section-card::before{content:'';position:absolute;top:0;left:0;right:0;height:3px}
+.section-card.l1::before{background:var(--accent)}
+.section-card.l2::before{background:var(--cyan)}
+.section-card.l3::before{background:var(--amber)}
+.section-card:hover{border-color:var(--accent);transform:translateY(-2px);box-shadow:0 8px 24px rgba(0,0,0,.3)}
+.section-card.done{opacity:.7}.section-card.done:hover{opacity:1}
+.card-depth{font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px}
+.card-title{font-size:14px;font-weight:500;margin-bottom:8px}
+.card-stats{display:flex;justify-content:space-between;align-items:center}
+.card-count{font-size:12px;color:var(--text2)}
+.card-bar{width:60px;height:4px;background:var(--border);border-radius:2px;overflow:hidden}
+.card-bar-fill{height:100%;border-radius:2px;transition:width .3s}
+.card-check{position:absolute;top:12px;right:12px;width:20px;height:20px;border-radius:50%;background:var(--green);display:flex;align-items:center;justify-content:center;font-size:11px;color:var(--bg)}
+
+/* ── Score List (leaf level) ── */
+.score-list{display:flex;flex-direction:column;gap:8px}
+.score-row{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:14px 18px;display:flex;align-items:center;gap:14px;transition:all .2s}
+.score-row:hover{border-color:var(--accent);background:var(--surface2)}
+.score-row.scored{border-color:rgba(74,222,128,.3);background:rgba(74,222,128,.04)}
+.row-num{width:24px;height:24px;border-radius:6px;background:var(--surface2);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:var(--text3);flex-shrink:0}
+.score-row.scored .row-num{background:var(--green);color:var(--bg)}
+.row-info{flex:1}
+.row-name{font-size:14px;font-weight:400}
+.row-type{font-size:11px;color:var(--text3);margin-top:2px}
+.row-controls{display:flex;align-items:center;gap:8px;flex-shrink:0}
+.num-input{width:80px;padding:7px 10px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;color:var(--text);text-align:center;font-size:15px;font-weight:700;outline:none;font-family:inherit}
+.num-input:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-glow)}
+.num-input::placeholder{color:var(--text3);font-weight:400}
+.unit{font-size:12px;color:var(--text3)}
+.pf-group{display:flex;gap:4px}
+.pf{padding:6px 16px;border-radius:8px;border:1px solid var(--border);background:var(--surface2);color:var(--text2);cursor:pointer;font-size:12px;font-weight:500;transition:all .15s}
+.pf:hover{border-color:var(--text2)}
+.pf.pass.on{background:rgba(74,222,128,.15);border-color:var(--green);color:var(--green)}
+.pf.fail.on{background:rgba(248,113,113,.15);border-color:var(--red);color:var(--red)}
+.stars{display:flex;gap:3px}
+.stars svg{width:22px;height:22px;color:var(--border);cursor:pointer;transition:color .1s}
+.stars svg.on{color:var(--amber)}
+
+/* ── Score Summary ── */
+.summary{position:fixed;bottom:0;left:0;right:0;background:var(--surface);border-top:1px solid var(--border);padding:12px 0}
+.summary-inner{max-width:860px;margin:0 auto;display:flex;align-items:center;justify-content:space-between;padding:0 20px}
+.summary-score{font-size:28px;font-weight:700;background:linear-gradient(135deg,var(--accent),var(--cyan));-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.summary-label{font-size:11px;color:var(--text3);margin-bottom:2px}
+</style>
+</head>
+<body>
+<div class="container" style="padding-bottom:80px">
+  <div class="header">
+    <button class="back-btn">←</button>
+    <div class="header-info">
+      <div class="header-title">TSK-20260329-4010</div>
+      <div class="header-sub">2026-03-29 · 王浩宇</div>
+    </div>
+    <div class="header-actions">
+      <button class="btn btn-ghost">保存</button>
+      <button class="btn btn-accent">提交任务 →</button>
+    </div>
+  </div>
+
+  <!-- Breadcrumb -->
+  <div class="breadcrumb">
+    <span class="crumb" onclick="showLevel('target')">经济与信息技术系</span>
+    <span class="crumb-sep">›</span>
+    <span class="crumb" onclick="showLevel('l1')">卫生环境</span>
+    <span class="crumb-sep">›</span>
+    <span class="crumb" onclick="showLevel('l2')">教室卫生</span>
+    <span class="crumb-sep">›</span>
+    <span class="crumb active">地面清洁</span>
+  </div>
+
+  <!-- Target bar -->
+  <div class="target-bar">
+    <div class="target-indicator"></div>
+    <div class="target-name">经济与信息技术系</div>
+    <div class="target-progress">18/24 已评 · 75%</div>
+    <div class="target-nav"><button>‹</button><button>›</button></div>
+  </div>
+
+  <!-- Level views (toggle via JS) -->
+  <div id="view-target" style="display:none">
+    <div class="section-grid">
+      <div class="section-card l1 done" onclick="showLevel('l1')">
+        <div class="card-check">✓</div>
+        <div class="card-depth">一级分区</div>
+        <div class="card-title">教学管理</div>
+        <div class="card-stats"><span class="card-count">8/8 已评</span><div class="card-bar"><div class="card-bar-fill" style="width:100%;background:var(--green)"></div></div></div>
+      </div>
+      <div class="section-card l1" onclick="showLevel('l1')">
+        <div class="card-depth">一级分区</div>
+        <div class="card-title">卫生环境</div>
+        <div class="card-stats"><span class="card-count">6/8 已评</span><div class="card-bar"><div class="card-bar-fill" style="width:75%;background:var(--amber)"></div></div></div>
+      </div>
+      <div class="section-card l1" onclick="showLevel('l1')">
+        <div class="card-depth">一级分区</div>
+        <div class="card-title">安全纪律</div>
+        <div class="card-stats"><span class="card-count">4/8 已评</span><div class="card-bar"><div class="card-bar-fill" style="width:50%;background:var(--amber)"></div></div></div>
+      </div>
+    </div>
+  </div>
+
+  <div id="view-l1" style="display:none">
+    <div class="section-grid">
+      <div class="section-card l2 done"><div class="card-check">✓</div><div class="card-depth">二级分区</div><div class="card-title">教室卫生</div><div class="card-stats"><span class="card-count">4/4</span><div class="card-bar"><div class="card-bar-fill" style="width:100%;background:var(--green)"></div></div></div></div>
+      <div class="section-card l2"><div class="card-depth">二级分区</div><div class="card-title">公共区域</div><div class="card-stats"><span class="card-count">2/4</span><div class="card-bar"><div class="card-bar-fill" style="width:50%;background:var(--amber)"></div></div></div></div>
+    </div>
+  </div>
+
+  <div id="view-l2" style="display:none">
+    <div class="section-grid">
+      <div class="section-card l3 done"><div class="card-check">✓</div><div class="card-depth">三级分区</div><div class="card-title">地面清洁</div><div class="card-stats"><span class="card-count">2/2</span></div></div>
+      <div class="section-card l3"><div class="card-depth">三级分区</div><div class="card-title">桌面整理</div><div class="card-stats"><span class="card-count">1/2</span></div></div>
+    </div>
+  </div>
+
+  <div id="view-leaf">
+    <div class="score-list">
+      <div class="score-row scored">
+        <div class="row-num">1</div>
+        <div class="row-info"><div class="row-name">地面无纸屑垃圾</div><div class="row-type">合格 / 不合格</div></div>
+        <div class="row-controls"><div class="pf-group"><button class="pf pass on">合格</button><button class="pf fail">不合格</button></div></div>
+      </div>
+      <div class="score-row scored">
+        <div class="row-num">2</div>
+        <div class="row-info"><div class="row-name">地面拖扫整洁度</div><div class="row-type">直接打分 · 0~100</div></div>
+        <div class="row-controls"><input class="num-input" value="78"><span class="unit">/100</span></div>
+      </div>
+      <div class="score-row">
+        <div class="row-num">3</div>
+        <div class="row-info"><div class="row-name">角落死角清洁</div><div class="row-type">星级评分 · 5星</div></div>
+        <div class="row-controls">
+          <div class="stars">
+            <svg viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01z" fill="currentColor"/></svg>
+            <svg viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01z" fill="currentColor"/></svg>
+            <svg viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01z" fill="currentColor"/></svg>
+            <svg viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01z" fill="currentColor"/></svg>
+            <svg viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01z" fill="currentColor"/></svg>
+          </div>
+        </div>
+      </div>
+      <div class="score-row">
+        <div class="row-num">4</div>
+        <div class="row-info"><div class="row-name">地面无水渍油渍</div><div class="row-type">合格 / 不合格</div></div>
+        <div class="row-controls"><div class="pf-group"><button class="pf pass">合格</button><button class="pf fail">不合格</button></div></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="summary">
+  <div class="summary-inner">
+    <div><div class="summary-label">当前目标总分</div><div class="summary-score">82.5</div></div>
+    <div style="text-align:right"><div class="summary-label">完成进度</div><div style="font-size:14px;font-weight:500">18 / 24</div></div>
+  </div>
+</div>
+
+<script>
+function showLevel(level){
+  document.querySelectorAll('[id^=view-]').forEach(v=>v.style.display='none')
+  document.getElementById('view-'+level).style.display='block'
+  // Update breadcrumb active state
+  const crumbs=document.querySelectorAll('.crumb')
+  crumbs.forEach(c=>c.classList.remove('active'))
+  const map={target:0,l1:1,l2:2,leaf:3}
+  if(map[level]!==undefined) crumbs[map[level]].classList.add('active')
+}
+// PF buttons
+document.querySelectorAll('.pf').forEach(b=>{
+  b.addEventListener('click',()=>{
+    b.parentElement.querySelectorAll('.pf').forEach(x=>x.classList.remove('on'))
+    b.classList.add('on')
+    b.closest('.score-row').classList.add('scored')
+  })
+})
+// Stars
+document.querySelectorAll('.stars svg').forEach(s=>{
+  s.addEventListener('click',()=>{
+    const stars=[...s.parentElement.children]
+    const idx=stars.indexOf(s)
+    stars.forEach((st,i)=>st.classList.toggle('on',i<=idx))
+    s.closest('.score-row').classList.add('scored')
+  })
+})
+</script>
+</body>
+</html>

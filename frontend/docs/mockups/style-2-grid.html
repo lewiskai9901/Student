@@ -1,0 +1,964 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>检查评分 - 多维表格视图</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --blue: #1a6dff;
+    --blue-light: #eff6ff;
+    --blue-hover: #1458d6;
+    --green: #10b981;
+    --green-bg: #ecfdf5;
+    --red: #dc2626;
+    --red-bg: #fef2f2;
+    --gray-50: #f9fafb;
+    --gray-100: #f3f4f6;
+    --gray-200: #e5e7eb;
+    --gray-300: #d1d5db;
+    --gray-400: #9ca3af;
+    --gray-500: #6b7280;
+    --gray-600: #4b5563;
+    --gray-700: #374151;
+    --gray-800: #1f2937;
+    --gray-900: #111827;
+    --border: #e5e7eb;
+    --font: -apple-system, BlinkMacSystemFont, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Segoe UI", Roboto, sans-serif;
+  }
+
+  html, body {
+    height: 100%;
+    font-family: var(--font);
+    font-size: 13px;
+    color: var(--gray-800);
+    background: #fff;
+    overflow: hidden;
+  }
+
+  .app {
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+  }
+
+  /* ── Top Bar ── */
+  .top-bar {
+    height: 48px;
+    min-height: 48px;
+    display: flex;
+    align-items: center;
+    padding: 0 16px;
+    border-bottom: 1px solid var(--border);
+    background: #fff;
+    gap: 12px;
+  }
+
+  .back-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    border-radius: 6px;
+    border: none;
+    background: none;
+    cursor: pointer;
+    color: var(--gray-500);
+    transition: all .15s;
+  }
+  .back-btn:hover { background: var(--gray-100); color: var(--gray-700); }
+  .back-btn svg { width: 18px; height: 18px; }
+
+  .task-code {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--gray-900);
+    letter-spacing: -0.01em;
+  }
+
+  .status-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 2px 10px;
+    border-radius: 10px;
+    font-size: 12px;
+    font-weight: 500;
+  }
+  .status-badge.active {
+    background: #dbeafe;
+    color: #1d4ed8;
+  }
+  .status-badge .dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: currentColor;
+  }
+
+  .top-bar-sep {
+    width: 1px;
+    height: 20px;
+    background: var(--gray-200);
+  }
+
+  .progress-text {
+    font-size: 12px;
+    color: var(--gray-500);
+  }
+  .progress-text strong {
+    color: var(--gray-700);
+    font-weight: 600;
+  }
+
+  .top-bar-right {
+    margin-left: auto;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .icon-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    border-radius: 6px;
+    border: none;
+    background: none;
+    cursor: pointer;
+    color: var(--gray-400);
+    transition: all .15s;
+  }
+  .icon-btn:hover { background: var(--gray-100); color: var(--gray-600); }
+  .icon-btn svg { width: 18px; height: 18px; }
+
+  /* ── Sub-header / Section Tabs ── */
+  .sub-header {
+    display: flex;
+    align-items: center;
+    padding: 0 16px;
+    height: 40px;
+    min-height: 40px;
+    border-bottom: 1px solid var(--border);
+    background: #fff;
+    gap: 0;
+  }
+
+  .section-tab {
+    position: relative;
+    display: flex;
+    align-items: center;
+    height: 40px;
+    padding: 0 16px;
+    font-size: 13px;
+    color: var(--gray-500);
+    cursor: pointer;
+    border: none;
+    background: none;
+    font-family: var(--font);
+    transition: color .15s;
+    white-space: nowrap;
+  }
+  .section-tab:hover { color: var(--gray-700); }
+  .section-tab.active {
+    color: var(--blue);
+    font-weight: 600;
+  }
+  .section-tab.active::after {
+    content: '';
+    position: absolute;
+    left: 16px;
+    right: 16px;
+    bottom: 0;
+    height: 2px;
+    background: var(--blue);
+    border-radius: 1px 1px 0 0;
+  }
+
+  .section-count {
+    margin-left: 4px;
+    font-size: 11px;
+    font-weight: 400;
+    color: var(--gray-400);
+  }
+  .section-tab.active .section-count { color: var(--blue); opacity: .7; }
+
+  .sub-header-right {
+    margin-left: auto;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .filter-btn {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    height: 28px;
+    padding: 0 10px;
+    border-radius: 6px;
+    border: 1px solid var(--gray-200);
+    background: #fff;
+    font-size: 12px;
+    color: var(--gray-500);
+    cursor: pointer;
+    font-family: var(--font);
+    transition: all .15s;
+  }
+  .filter-btn:hover { border-color: var(--gray-300); color: var(--gray-700); }
+  .filter-btn svg { width: 14px; height: 14px; }
+
+  /* ── Grid / Table ── */
+  .grid-wrapper {
+    flex: 1;
+    overflow: auto;
+    position: relative;
+    background: #fff;
+  }
+
+  .grid-table {
+    border-collapse: collapse;
+    table-layout: fixed;
+    min-width: 100%;
+  }
+
+  /* Sticky header */
+  .grid-table thead th {
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    background: var(--gray-50);
+    border-bottom: 1px solid var(--border);
+    font-weight: 500;
+    font-size: 12px;
+    color: var(--gray-500);
+    text-align: left;
+    padding: 0 12px;
+    height: 36px;
+    white-space: nowrap;
+    user-select: none;
+  }
+
+  /* Sticky first column */
+  .grid-table thead th:first-child,
+  .grid-table tbody td:first-child {
+    position: sticky;
+    left: 0;
+    z-index: 5;
+  }
+  .grid-table thead th:first-child {
+    z-index: 15;
+    background: var(--gray-50);
+  }
+  .grid-table tbody td:first-child {
+    background: #fff;
+  }
+
+  .grid-table thead th:first-child {
+    width: 180px;
+    min-width: 180px;
+  }
+
+  .col-item { width: 148px; min-width: 148px; }
+  .col-action { width: 100px; min-width: 100px; }
+
+  .col-header-inner {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .col-header-inner .col-name {
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .col-type-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 1px 6px;
+    border-radius: 3px;
+    font-size: 10px;
+    font-weight: 500;
+    line-height: 16px;
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+  .col-type-badge.deduct { background: #fef2f2; color: #b91c1c; }
+  .col-type-badge.pass { background: #ecfdf5; color: #047857; }
+  .col-type-badge.grade { background: #eff6ff; color: #1d4ed8; }
+
+  /* Body rows */
+  .grid-table tbody td {
+    border-bottom: 1px solid var(--gray-100);
+    padding: 0 12px;
+    height: 42px;
+    vertical-align: middle;
+    font-size: 13px;
+    transition: background .1s;
+  }
+
+  .grid-table tbody tr:hover td { background: #fafbfd; }
+  .grid-table tbody tr:hover td:first-child { background: #fafbfd; }
+
+  .grid-table tbody tr.row-alt td { background: var(--gray-50); }
+  .grid-table tbody tr.row-alt td:first-child { background: var(--gray-50); }
+  .grid-table tbody tr.row-alt:hover td,
+  .grid-table tbody tr.row-alt:hover td:first-child { background: #f3f5f8; }
+
+  .grid-table tbody tr.row-active td { background: var(--blue-light) !important; }
+  .grid-table tbody tr.row-active td:first-child { background: var(--blue-light) !important; }
+
+  .grid-table tbody tr.row-completed td { opacity: .6; }
+  .grid-table tbody tr.row-completed:hover td { opacity: .8; }
+
+  /* ── First column: target name ── */
+  .target-cell {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-width: 0;
+  }
+  .target-dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+  .target-dot.done { background: var(--green); }
+  .target-dot.active { background: var(--blue); }
+  .target-dot.pending { background: var(--gray-300); }
+
+  .target-name {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: 13px;
+    color: var(--gray-800);
+  }
+
+  .target-index {
+    font-size: 11px;
+    color: var(--gray-400);
+    margin-right: 2px;
+    flex-shrink: 0;
+    width: 18px;
+    text-align: right;
+  }
+
+  /* ── Score cell ── */
+  .score-cell {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+  }
+
+  .score-value {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 36px;
+    height: 26px;
+    padding: 0 8px;
+    border-radius: 4px;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all .12s;
+    border: 1px solid transparent;
+  }
+  .score-value:hover { border-color: var(--gray-300); background: #fff; }
+
+  .score-value.zero { color: var(--green); }
+  .score-value.negative { color: var(--red); background: #fef2f2; }
+  .score-value.empty { color: var(--gray-300); }
+  .score-value.pass-yes { color: var(--green); background: var(--green-bg); }
+  .score-value.pass-no { color: var(--red); background: var(--red-bg); }
+
+  /* Active editing cell */
+  .score-edit {
+    display: inline-flex;
+    align-items: center;
+    gap: 0;
+    background: #fff;
+    border: 1.5px solid var(--blue);
+    border-radius: 6px;
+    box-shadow: 0 0 0 3px rgba(26,109,255,.1);
+    overflow: hidden;
+  }
+
+  .score-edit-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    border: none;
+    background: none;
+    cursor: pointer;
+    color: var(--gray-500);
+    font-size: 16px;
+    font-weight: 500;
+    transition: all .1s;
+    font-family: var(--font);
+  }
+  .score-edit-btn:hover { background: var(--gray-100); color: var(--gray-800); }
+  .score-edit-btn.minus:hover { background: #fef2f2; color: var(--red); }
+  .score-edit-btn.plus:hover { background: var(--green-bg); color: var(--green); }
+
+  .score-edit-val {
+    width: 36px;
+    text-align: center;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--gray-800);
+    border: none;
+    outline: none;
+    background: none;
+    font-family: var(--font);
+  }
+  .score-edit-val.is-neg { color: var(--red); }
+
+  /* Pass/fail inline buttons */
+  .pf-group {
+    display: inline-flex;
+    gap: 4px;
+  }
+  .pf-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    border-radius: 5px;
+    border: 1.5px solid var(--blue);
+    background: #fff;
+    cursor: pointer;
+    font-size: 14px;
+    transition: all .12s;
+  }
+  .pf-btn:first-child { color: var(--green); }
+  .pf-btn:last-child { color: var(--red); }
+  .pf-btn:first-child:hover { background: var(--green-bg); }
+  .pf-btn:last-child:hover { background: var(--red-bg); }
+
+  /* ── Row action column ── */
+  .row-action {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .action-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 3px 10px;
+    border-radius: 4px;
+    font-size: 12px;
+    font-weight: 500;
+    white-space: nowrap;
+  }
+  .action-badge.done { background: var(--green-bg); color: #047857; }
+  .action-badge.in-progress { background: var(--blue-light); color: var(--blue); }
+  .action-badge.waiting { color: var(--gray-400); }
+
+  /* ── Bottom Bar ── */
+  .bottom-bar {
+    height: 52px;
+    min-height: 52px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 16px;
+    border-top: 1px solid var(--border);
+    background: #fff;
+  }
+
+  .bottom-stats {
+    font-size: 13px;
+    color: var(--gray-500);
+  }
+  .bottom-stats strong {
+    font-weight: 600;
+    color: var(--gray-700);
+  }
+  .bottom-stats .sep {
+    display: inline-block;
+    width: 1px;
+    height: 12px;
+    background: var(--gray-200);
+    margin: 0 10px;
+    vertical-align: middle;
+  }
+
+  .bottom-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    height: 34px;
+    padding: 0 18px;
+    border-radius: 7px;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    border: none;
+    font-family: var(--font);
+    transition: all .15s;
+    white-space: nowrap;
+  }
+
+  .btn-default {
+    background: #fff;
+    border: 1px solid var(--gray-200);
+    color: var(--gray-600);
+  }
+  .btn-default:hover { border-color: var(--gray-300); color: var(--gray-800); background: var(--gray-50); }
+
+  .btn-primary {
+    background: var(--blue);
+    color: #fff;
+    box-shadow: 0 1px 2px rgba(26,109,255,.2);
+  }
+  .btn-primary:hover { background: var(--blue-hover); }
+
+  /* ── Scrollbar Styling ── */
+  .grid-wrapper::-webkit-scrollbar { width: 8px; height: 8px; }
+  .grid-wrapper::-webkit-scrollbar-track { background: transparent; }
+  .grid-wrapper::-webkit-scrollbar-thumb { background: var(--gray-300); border-radius: 4px; }
+  .grid-wrapper::-webkit-scrollbar-thumb:hover { background: var(--gray-400); }
+  .grid-wrapper::-webkit-scrollbar-corner { background: transparent; }
+
+  /* First column right shadow */
+  .grid-table tbody td:first-child::after,
+  .grid-table thead th:first-child::after {
+    content: '';
+    position: absolute;
+    right: -6px;
+    top: 0;
+    bottom: 0;
+    width: 6px;
+    pointer-events: none;
+    background: linear-gradient(to right, rgba(0,0,0,.04), transparent);
+  }
+  .grid-table tbody td:first-child,
+  .grid-table thead th:first-child {
+    position: sticky;
+    left: 0;
+    /* already set, ensure relative for pseudo-el */
+  }
+
+  /* Column resize handle placeholder */
+  .grid-table thead th {
+    position: sticky;
+    top: 0;
+  }
+  .grid-table thead th .resize-handle {
+    position: absolute;
+    right: 0;
+    top: 6px;
+    bottom: 6px;
+    width: 3px;
+    background: transparent;
+    cursor: col-resize;
+    border-radius: 1.5px;
+    transition: background .15s;
+  }
+  .grid-table thead th:hover .resize-handle { background: var(--gray-300); }
+
+  /* row number on hover */
+  .grid-table tbody tr:hover .target-index { color: var(--gray-600); }
+</style>
+</head>
+<body>
+<div class="app">
+  <!-- ── Top Bar ── -->
+  <header class="top-bar">
+    <button class="back-btn" title="返回">
+      <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/></svg>
+    </button>
+    <span class="task-code">TSK-20260324-6045</span>
+    <span class="status-badge active"><span class="dot"></span>进行中</span>
+    <span class="top-bar-sep"></span>
+    <span class="progress-text">已评分 <strong>5</strong> / 90 项</span>
+
+    <div class="top-bar-right">
+      <button class="icon-btn" title="搜索目标">
+        <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path stroke-linecap="round" d="M21 21l-4.35-4.35"/></svg>
+      </button>
+      <button class="icon-btn" title="快捷键">
+        <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 6.042A8.967 8.967 0 006 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 016 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 016-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0018 18a8.967 8.967 0 00-6 2.292m0-14.25v14.25"/></svg>
+      </button>
+      <button class="icon-btn" title="更多">
+        <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><circle cx="12" cy="5" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="12" cy="19" r="1"/></svg>
+      </button>
+    </div>
+  </header>
+
+  <!-- ── Sub-header: Section Tabs ── -->
+  <div class="sub-header">
+    <button class="section-tab active">教室卫生<span class="section-count">3</span></button>
+    <button class="section-tab">课堂纪律<span class="section-count">4</span></button>
+    <button class="section-tab">宿舍检查<span class="section-count">5</span></button>
+
+    <div class="sub-header-right">
+      <button class="filter-btn">
+        <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z"/></svg>
+        筛选
+      </button>
+      <button class="filter-btn">
+        <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M3 7h18M3 12h12M3 17h6"/></svg>
+        排序
+      </button>
+    </div>
+  </div>
+
+  <!-- ── Grid ── -->
+  <div class="grid-wrapper">
+    <table class="grid-table">
+      <thead>
+        <tr>
+          <th>
+            <div class="col-header-inner">
+              <span class="col-name">目标</span>
+            </div>
+            <span class="resize-handle"></span>
+          </th>
+          <th class="col-item">
+            <div class="col-header-inner">
+              <span class="col-name">地面清洁</span>
+              <span class="col-type-badge deduct">扣分</span>
+            </div>
+            <span class="resize-handle"></span>
+          </th>
+          <th class="col-item">
+            <div class="col-header-inner">
+              <span class="col-name">桌椅整齐</span>
+              <span class="col-type-badge pass">通过</span>
+            </div>
+            <span class="resize-handle"></span>
+          </th>
+          <th class="col-item">
+            <div class="col-header-inner">
+              <span class="col-name">窗台灰尘</span>
+              <span class="col-type-badge deduct">扣分</span>
+            </div>
+            <span class="resize-handle"></span>
+          </th>
+          <th class="col-action">
+            操作
+            <span class="resize-handle"></span>
+          </th>
+        </tr>
+      </thead>
+      <tbody>
+        <!-- Row 1 - completed -->
+        <tr class="row-completed">
+          <td>
+            <div class="target-cell">
+              <span class="target-index">1</span>
+              <span class="target-dot done"></span>
+              <span class="target-name">计算机24-1班</span>
+            </div>
+          </td>
+          <td>
+            <div class="score-cell">
+              <span class="score-value negative">-1</span>
+            </div>
+          </td>
+          <td>
+            <div class="score-cell">
+              <span class="score-value pass-yes">&#10003; 通过</span>
+            </div>
+          </td>
+          <td>
+            <div class="score-cell">
+              <span class="score-value zero">0</span>
+            </div>
+          </td>
+          <td>
+            <div class="row-action">
+              <span class="action-badge done">&#10003; 已完成</span>
+            </div>
+          </td>
+        </tr>
+
+        <!-- Row 2 - completed, alt -->
+        <tr class="row-completed row-alt">
+          <td>
+            <div class="target-cell">
+              <span class="target-index">2</span>
+              <span class="target-dot done"></span>
+              <span class="target-name">计算机24-2班</span>
+            </div>
+          </td>
+          <td>
+            <div class="score-cell">
+              <span class="score-value negative">-2</span>
+            </div>
+          </td>
+          <td>
+            <div class="score-cell">
+              <span class="score-value pass-no">&#10007; 不通过</span>
+            </div>
+          </td>
+          <td>
+            <div class="score-cell">
+              <span class="score-value negative">-1</span>
+            </div>
+          </td>
+          <td>
+            <div class="row-action">
+              <span class="action-badge done">&#10003; 已完成</span>
+            </div>
+          </td>
+        </tr>
+
+        <!-- Row 3 - active (being scored) -->
+        <tr class="row-active">
+          <td>
+            <div class="target-cell">
+              <span class="target-index">3</span>
+              <span class="target-dot active"></span>
+              <span class="target-name">计算机24-3班</span>
+            </div>
+          </td>
+          <td>
+            <!-- Active editing cell: deduction stepper -->
+            <div class="score-cell">
+              <div class="score-edit">
+                <button class="score-edit-btn minus">&minus;</button>
+                <input class="score-edit-val is-neg" value="-1" readonly />
+                <button class="score-edit-btn plus">+</button>
+              </div>
+            </div>
+          </td>
+          <td>
+            <div class="score-cell">
+              <span class="score-value pass-yes">&#10003; 通过</span>
+            </div>
+          </td>
+          <td>
+            <!-- Active editing cell: pass/fail buttons -->
+            <div class="score-cell">
+              <div class="pf-group">
+                <button class="pf-btn" title="合格">&#10003;</button>
+                <button class="pf-btn" title="不合格">&#10007;</button>
+              </div>
+            </div>
+          </td>
+          <td>
+            <div class="row-action">
+              <span class="action-badge in-progress">进行中</span>
+            </div>
+          </td>
+        </tr>
+
+        <!-- Row 4 - pending -->
+        <tr>
+          <td>
+            <div class="target-cell">
+              <span class="target-index">4</span>
+              <span class="target-dot pending"></span>
+              <span class="target-name">计算机24-4班</span>
+            </div>
+          </td>
+          <td><div class="score-cell"><span class="score-value empty">&mdash;</span></div></td>
+          <td><div class="score-cell"><span class="score-value empty">&mdash;</span></div></td>
+          <td><div class="score-cell"><span class="score-value empty">&mdash;</span></div></td>
+          <td><div class="row-action"><span class="action-badge waiting">待检</span></div></td>
+        </tr>
+
+        <!-- Row 5 - pending, alt -->
+        <tr class="row-alt">
+          <td>
+            <div class="target-cell">
+              <span class="target-index">5</span>
+              <span class="target-dot pending"></span>
+              <span class="target-name">机电24-1班</span>
+            </div>
+          </td>
+          <td><div class="score-cell"><span class="score-value empty">&mdash;</span></div></td>
+          <td><div class="score-cell"><span class="score-value empty">&mdash;</span></div></td>
+          <td><div class="score-cell"><span class="score-value empty">&mdash;</span></div></td>
+          <td><div class="row-action"><span class="action-badge waiting">待检</span></div></td>
+        </tr>
+
+        <!-- Row 6 -->
+        <tr>
+          <td>
+            <div class="target-cell">
+              <span class="target-index">6</span>
+              <span class="target-dot pending"></span>
+              <span class="target-name">机电24-2班</span>
+            </div>
+          </td>
+          <td><div class="score-cell"><span class="score-value empty">&mdash;</span></div></td>
+          <td><div class="score-cell"><span class="score-value empty">&mdash;</span></div></td>
+          <td><div class="score-cell"><span class="score-value empty">&mdash;</span></div></td>
+          <td><div class="row-action"><span class="action-badge waiting">待检</span></div></td>
+        </tr>
+
+        <!-- Row 7 -->
+        <tr class="row-alt">
+          <td>
+            <div class="target-cell">
+              <span class="target-index">7</span>
+              <span class="target-dot pending"></span>
+              <span class="target-name">商务英语24-1班</span>
+            </div>
+          </td>
+          <td><div class="score-cell"><span class="score-value empty">&mdash;</span></div></td>
+          <td><div class="score-cell"><span class="score-value empty">&mdash;</span></div></td>
+          <td><div class="score-cell"><span class="score-value empty">&mdash;</span></div></td>
+          <td><div class="row-action"><span class="action-badge waiting">待检</span></div></td>
+        </tr>
+
+        <!-- Row 8 -->
+        <tr>
+          <td>
+            <div class="target-cell">
+              <span class="target-index">8</span>
+              <span class="target-dot pending"></span>
+              <span class="target-name">商务英语24-2班</span>
+            </div>
+          </td>
+          <td><div class="score-cell"><span class="score-value empty">&mdash;</span></div></td>
+          <td><div class="score-cell"><span class="score-value empty">&mdash;</span></div></td>
+          <td><div class="score-cell"><span class="score-value empty">&mdash;</span></div></td>
+          <td><div class="row-action"><span class="action-badge waiting">待检</span></div></td>
+        </tr>
+
+        <!-- Row 9 -->
+        <tr class="row-alt">
+          <td>
+            <div class="target-cell">
+              <span class="target-index">9</span>
+              <span class="target-dot pending"></span>
+              <span class="target-name">会计24-1班</span>
+            </div>
+          </td>
+          <td><div class="score-cell"><span class="score-value empty">&mdash;</span></div></td>
+          <td><div class="score-cell"><span class="score-value empty">&mdash;</span></div></td>
+          <td><div class="score-cell"><span class="score-value empty">&mdash;</span></div></td>
+          <td><div class="row-action"><span class="action-badge waiting">待检</span></div></td>
+        </tr>
+
+        <!-- Row 10 -->
+        <tr>
+          <td>
+            <div class="target-cell">
+              <span class="target-index">10</span>
+              <span class="target-dot pending"></span>
+              <span class="target-name">会计24-2班</span>
+            </div>
+          </td>
+          <td><div class="score-cell"><span class="score-value empty">&mdash;</span></div></td>
+          <td><div class="score-cell"><span class="score-value empty">&mdash;</span></div></td>
+          <td><div class="score-cell"><span class="score-value empty">&mdash;</span></div></td>
+          <td><div class="row-action"><span class="action-badge waiting">待检</span></div></td>
+        </tr>
+
+        <!-- Row 11 -->
+        <tr class="row-alt">
+          <td>
+            <div class="target-cell">
+              <span class="target-index">11</span>
+              <span class="target-dot pending"></span>
+              <span class="target-name">护理24-1班</span>
+            </div>
+          </td>
+          <td><div class="score-cell"><span class="score-value empty">&mdash;</span></div></td>
+          <td><div class="score-cell"><span class="score-value empty">&mdash;</span></div></td>
+          <td><div class="score-cell"><span class="score-value empty">&mdash;</span></div></td>
+          <td><div class="row-action"><span class="action-badge waiting">待检</span></div></td>
+        </tr>
+
+        <!-- Row 12 -->
+        <tr>
+          <td>
+            <div class="target-cell">
+              <span class="target-index">12</span>
+              <span class="target-dot pending"></span>
+              <span class="target-name">护理24-2班</span>
+            </div>
+          </td>
+          <td><div class="score-cell"><span class="score-value empty">&mdash;</span></div></td>
+          <td><div class="score-cell"><span class="score-value empty">&mdash;</span></div></td>
+          <td><div class="score-cell"><span class="score-value empty">&mdash;</span></div></td>
+          <td><div class="row-action"><span class="action-badge waiting">待检</span></div></td>
+        </tr>
+
+        <!-- Row 13 -->
+        <tr class="row-alt">
+          <td>
+            <div class="target-cell">
+              <span class="target-index">13</span>
+              <span class="target-dot pending"></span>
+              <span class="target-name">电子商务24-1班</span>
+            </div>
+          </td>
+          <td><div class="score-cell"><span class="score-value empty">&mdash;</span></div></td>
+          <td><div class="score-cell"><span class="score-value empty">&mdash;</span></div></td>
+          <td><div class="score-cell"><span class="score-value empty">&mdash;</span></div></td>
+          <td><div class="row-action"><span class="action-badge waiting">待检</span></div></td>
+        </tr>
+
+        <!-- Row 14 -->
+        <tr>
+          <td>
+            <div class="target-cell">
+              <span class="target-index">14</span>
+              <span class="target-dot pending"></span>
+              <span class="target-name">电子商务24-2班</span>
+            </div>
+          </td>
+          <td><div class="score-cell"><span class="score-value empty">&mdash;</span></div></td>
+          <td><div class="score-cell"><span class="score-value empty">&mdash;</span></div></td>
+          <td><div class="score-cell"><span class="score-value empty">&mdash;</span></div></td>
+          <td><div class="row-action"><span class="action-badge waiting">待检</span></div></td>
+        </tr>
+
+        <!-- Row 15 -->
+        <tr class="row-alt">
+          <td>
+            <div class="target-cell">
+              <span class="target-index">15</span>
+              <span class="target-dot pending"></span>
+              <span class="target-name">学前教育24-1班</span>
+            </div>
+          </td>
+          <td><div class="score-cell"><span class="score-value empty">&mdash;</span></div></td>
+          <td><div class="score-cell"><span class="score-value empty">&mdash;</span></div></td>
+          <td><div class="score-cell"><span class="score-value empty">&mdash;</span></div></td>
+          <td><div class="row-action"><span class="action-badge waiting">待检</span></div></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- ── Bottom Bar ── -->
+  <footer class="bottom-bar">
+    <div class="bottom-stats">
+      已完成 <strong>2</strong> / 15 目标
+      <span class="sep"></span>
+      总分 <strong>97</strong>
+    </div>
+    <div class="bottom-actions">
+      <button class="btn btn-default">保存</button>
+      <button class="btn btn-primary">提交任务</button>
+    </div>
+  </footer>
+</div>
+</body>
+</html>

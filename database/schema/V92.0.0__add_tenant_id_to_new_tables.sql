@@ -1059,12 +1059,9 @@ SET @sql = (SELECT IF(
     'SELECT 1'));
 PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
 
--- place
-SET @sql = (SELECT IF(
-    (SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'place' AND COLUMN_NAME = 'tenant_id') = 0,
-    'ALTER TABLE `place` ADD COLUMN tenant_id BIGINT NOT NULL DEFAULT 1 COMMENT ''租户ID''',
-    'SELECT 1'));
-PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+-- place (skipped - table dropped in V88)
+-- SET @sql = 'SELECT 1';
+-- PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
 
 -- place_assignments
 SET @sql = (SELECT IF(
@@ -2663,11 +2660,9 @@ SET @sql = (SELECT IF(
     'SELECT 1'));
 PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
 
-SET @sql = (SELECT IF(
-    (SELECT COUNT(*) FROM INFORMATION_SCHEMA.STATISTICS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'place' AND INDEX_NAME = 'idx_tenant') = 0,
-    'ALTER TABLE `place` ADD INDEX idx_tenant (tenant_id)',
-    'SELECT 1'));
-PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+-- place index skipped - table dropped in V88
+-- SET @sql = 'SELECT 1';
+-- PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
 
 SET @sql = (SELECT IF(
     (SELECT COUNT(*) FROM INFORMATION_SCHEMA.STATISTICS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'place_assignments' AND INDEX_NAME = 'idx_tenant') = 0,

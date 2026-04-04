@@ -1,0 +1,628 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>检查评分 - TSK-20260324-6045</title>
+<style>
+  /* ===== Reset & Base ===== */
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Hiragino Sans GB",
+      "Microsoft YaHei", "Helvetica Neue", Arial, sans-serif;
+    font-size: 13px;
+    color: #1f2937;
+    background: #f3f4f6;
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+  }
+  button { cursor: pointer; font-family: inherit; border: none; background: none; }
+  input, select { font-family: inherit; }
+
+  /* ===== Layout Shell ===== */
+  .app { display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
+  .topbar {
+    flex-shrink: 0;
+    height: 48px;
+    background: #fff;
+    border-bottom: 1px solid #e5e7eb;
+    display: flex;
+    align-items: center;
+    padding: 0 16px;
+    gap: 12px;
+    z-index: 10;
+  }
+  .body { display: flex; flex: 1; min-height: 0; }
+
+  /* ===== Top Bar ===== */
+  .back-btn {
+    display: inline-flex; align-items: center; gap: 4px;
+    font-size: 13px; color: #6b7280; padding: 4px 8px; border-radius: 6px;
+    transition: background .15s;
+  }
+  .back-btn:hover { background: #f3f4f6; color: #374151; }
+  .back-btn svg { width: 16px; height: 16px; }
+
+  .task-code { font-size: 14px; font-weight: 600; color: #111827; letter-spacing: -.01em; }
+
+  .tag {
+    display: inline-flex; align-items: center; gap: 4px;
+    font-size: 11px; font-weight: 500; padding: 2px 8px; border-radius: 10px;
+  }
+  .tag--active { background: #dbeafe; color: #1d4ed8; }
+  .tag--active::before {
+    content: ""; width: 6px; height: 6px; border-radius: 50%; background: #3b82f6;
+  }
+
+  .topbar-meta { font-size: 12px; color: #9ca3af; display: flex; align-items: center; gap: 6px; }
+  .topbar-meta span { color: #6b7280; }
+  .topbar-sep { width: 1px; height: 14px; background: #e5e7eb; }
+
+  .topbar-right { margin-left: auto; display: flex; align-items: center; gap: 10px; }
+  .progress-badge {
+    font-size: 12px; font-weight: 500; color: #6b7280; background: #f3f4f6;
+    padding: 3px 10px; border-radius: 10px;
+  }
+  .progress-badge b { color: #1a6dff; }
+
+  /* ===== Sidebar ===== */
+  .sidebar {
+    width: 220px; flex-shrink: 0;
+    background: #fff;
+    border-right: 1px solid #e5e7eb;
+    display: flex; flex-direction: column;
+    overflow: hidden;
+  }
+  .sidebar-header { padding: 12px 12px 0; flex-shrink: 0; }
+
+  /* Segmented control */
+  .seg-ctrl {
+    display: flex; background: #f3f4f6; border-radius: 6px; padding: 2px; margin-bottom: 10px;
+  }
+  .seg-ctrl__btn {
+    flex: 1; text-align: center; font-size: 12px; font-weight: 500;
+    padding: 5px 0; border-radius: 5px; color: #6b7280;
+    transition: all .15s;
+  }
+  .seg-ctrl__btn--active {
+    background: #fff; color: #111827; box-shadow: 0 1px 3px rgba(0,0,0,.08);
+  }
+
+  /* Search */
+  .search-box {
+    position: relative; margin-bottom: 8px;
+  }
+  .search-box input {
+    width: 100%; height: 30px; padding: 0 8px 0 28px;
+    border: 1px solid #e5e7eb; border-radius: 6px;
+    font-size: 12px; color: #374151; background: #fff;
+    outline: none; transition: border-color .15s;
+  }
+  .search-box input::placeholder { color: #c0c4cc; }
+  .search-box input:focus { border-color: #93bbfd; }
+  .search-box svg {
+    position: absolute; left: 8px; top: 50%; transform: translateY(-50%);
+    width: 14px; height: 14px; color: #9ca3af;
+  }
+
+  /* Context filter (grade/department dropdown) */
+  .context-filter {
+    margin-bottom: 6px;
+  }
+  .context-filter select {
+    width: 100%; height: 26px; padding: 0 6px;
+    border: 1px solid #e5e7eb; border-radius: 5px;
+    font-size: 11px; color: #374151; background: #fff;
+    outline: none; cursor: pointer;
+    appearance: auto;
+    transition: border-color .15s;
+  }
+  .context-filter select:focus { border-color: #93bbfd; }
+
+  /* Filter tabs */
+  .filter-tabs { display: flex; gap: 2px; margin-bottom: 4px; }
+  .filter-tab {
+    font-size: 11px; padding: 3px 8px; border-radius: 4px;
+    color: #6b7280; font-weight: 500; transition: all .15s;
+  }
+  .filter-tab:hover { background: #f3f4f6; }
+  .filter-tab--active { color: #1a6dff; background: #eff6ff; }
+  .filter-tab .cnt { font-size: 10px; color: #9ca3af; margin-left: 2px; }
+  .filter-tab--active .cnt { color: #93bbfd; }
+
+  /* Target list */
+  .target-list {
+    flex: 1; overflow-y: auto; padding: 2px 0;
+  }
+  .target-list::-webkit-scrollbar { width: 4px; }
+  .target-list::-webkit-scrollbar-thumb { background: #d1d5db; border-radius: 4px; }
+
+  .target-item {
+    display: flex; align-items: center; gap: 6px;
+    padding: 4px 10px; margin: 0 4px; border-radius: 5px;
+    border-left: 3px solid transparent;
+    cursor: pointer; transition: all .12s;
+    font-size: 11px;
+  }
+  .target-item:hover { background: #f9fafb; }
+  .target-item--active {
+    background: #eff6ff; border-left-color: #1a6dff;
+  }
+
+  .status-dot {
+    width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0;
+  }
+  .status-dot--done { background: #10b981; }
+  .status-dot--active { background: #3b82f6; }
+  .status-dot--pending { background: #d1d5db; }
+
+  .target-item__name {
+    flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    color: #374151;
+  }
+  .target-item--active .target-item__name { color: #1a6dff; font-weight: 500; }
+
+  .target-item__progress {
+    font-size: 10px; color: #9ca3af; flex-shrink: 0;
+  }
+  .target-item--done .target-item__progress { color: #10b981; }
+
+  /* ===== Content Area ===== */
+  .content {
+    flex: 1; display: flex; flex-direction: column; min-width: 0; background: #f7f8fa;
+  }
+
+  /* Content header */
+  .content-header {
+    flex-shrink: 0;
+    background: #fff; border-bottom: 1px solid #e5e7eb;
+    padding: 12px 20px;
+    display: flex; align-items: center; gap: 10px;
+  }
+  .nav-btn {
+    width: 28px; height: 28px; display: inline-flex; align-items: center; justify-content: center;
+    border-radius: 6px; color: #9ca3af; transition: all .15s;
+  }
+  .nav-btn:hover { background: #f3f4f6; color: #374151; }
+  .nav-btn svg { width: 16px; height: 16px; }
+
+  .content-title { font-size: 15px; font-weight: 600; color: #111827; }
+  .content-counter {
+    font-size: 12px; color: #9ca3af; background: #f3f4f6;
+    padding: 2px 8px; border-radius: 10px;
+  }
+
+  /* Scrollable body */
+  .content-body {
+    flex: 1; overflow-y: auto; padding: 16px 20px;
+  }
+  .content-body::-webkit-scrollbar { width: 5px; }
+  .content-body::-webkit-scrollbar-thumb { background: #d1d5db; border-radius: 4px; }
+
+  /* Section cards */
+  .section-card {
+    background: #fff; border: 1px solid #e5e7eb; border-radius: 8px;
+    margin-bottom: 12px; overflow: hidden;
+  }
+  .section-card__header {
+    display: flex; align-items: center; gap: 8px;
+    padding: 10px 14px;
+    background: #f9fafb; border-bottom: 1px solid #e5e7eb;
+    cursor: pointer; user-select: none;
+  }
+  .section-card__chevron {
+    width: 16px; height: 16px; color: #9ca3af;
+    transition: transform .2s;
+  }
+  .section-card--collapsed .section-card__chevron { transform: rotate(-90deg); }
+  .section-card__title { font-size: 13px; font-weight: 600; color: #374151; }
+  .section-card__count {
+    font-size: 11px; color: #9ca3af; background: #f3f4f6;
+    padding: 1px 6px; border-radius: 8px; margin-left: 2px;
+  }
+  .section-card__body--old { padding: 0; }
+  .section-card--collapsed .section-card__body { display: none; }
+
+  /* Score items - card grid layout */
+  .section-card__body {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: 8px;
+    padding: 10px;
+  }
+
+  .score-item {
+    display: flex; flex-direction: column; gap: 8px;
+    padding: 10px 12px;
+    border: 1px solid #eef0f3;
+    border-radius: 8px;
+    background: #fff;
+    transition: border-color .15s, box-shadow .15s;
+  }
+  .score-item:hover { border-color: #d1d5db; box-shadow: 0 1px 4px rgba(0,0,0,.04); }
+
+  .score-item__header {
+    display: flex; align-items: center; justify-content: space-between; gap: 6px;
+  }
+  .score-item__label {
+    display: flex; align-items: center; gap: 6px;
+    min-width: 0;
+  }
+  .score-item__name {
+    font-size: 13px; font-weight: 500; color: #1f2937;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .score-item__tag {
+    display: inline-block; padding: 0 5px; border-radius: 3px;
+    background: #f3f4f6; color: #9ca3af; font-size: 10px;
+    white-space: nowrap; line-height: 16px;
+    flex-shrink: 0;
+  }
+
+  .score-item__controls { display: flex; align-items: center; gap: 4px; flex-wrap: wrap; }
+
+  /* Button styles for deduction scores */
+  .deduct-btns { display: flex; gap: 3px; }
+  .deduct-btn {
+    min-width: 32px; height: 26px; padding: 0 6px;
+    border-radius: 5px; font-size: 12px; font-weight: 500;
+    border: 1px solid #e5e7eb; background: #fff; color: #6b7280;
+    transition: all .12s;
+    display: inline-flex; align-items: center; justify-content: center;
+  }
+  .deduct-btn:hover { border-color: #d1d5db; background: #f9fafb; }
+  .deduct-btn--active-blue { background: #eff6ff; color: #1a6dff; border-color: #93bbfd; }
+  .deduct-btn--active-red { background: #fef2f2; color: #dc2626; border-color: #fca5a5; }
+
+  /* Pass / Fail pills */
+  .pill-group { display: flex; gap: 3px; }
+  .pill-btn {
+    height: 26px; padding: 0 10px; border-radius: 13px;
+    font-size: 12px; font-weight: 500;
+    border: 1px solid #e5e7eb; background: #fff; color: #6b7280;
+    transition: all .12s;
+  }
+  .pill-btn:hover { border-color: #d1d5db; }
+  .pill-btn--pass-active { background: #ecfdf5; color: #059669; border-color: #6ee7b7; }
+  .pill-btn--fail-active { background: #fef2f2; color: #dc2626; border-color: #fca5a5; }
+
+  /* Grade pills */
+  .grade-btn {
+    min-width: 48px; height: 26px; padding: 0 7px;
+    border-radius: 13px; font-size: 11px; font-weight: 500;
+    border: 1px solid #e5e7eb; background: #fff; color: #6b7280;
+    transition: all .12s;
+    display: inline-flex; align-items: center; justify-content: center;
+  }
+  .grade-btn:hover { border-color: #d1d5db; }
+  .grade-btn--active { background: #eff6ff; color: #1a6dff; border-color: #93bbfd; }
+
+  /* Counter control */
+  .counter-ctrl {
+    display: flex; align-items: center; gap: 0;
+    border: 1px solid #e5e7eb; border-radius: 6px; overflow: hidden;
+  }
+  .counter-ctrl__btn {
+    width: 28px; height: 26px;
+    display: inline-flex; align-items: center; justify-content: center;
+    color: #6b7280; font-size: 14px; font-weight: 500;
+    transition: background .12s;
+  }
+  .counter-ctrl__btn:hover { background: #f3f4f6; }
+  .counter-ctrl__val {
+    width: 32px; height: 26px; text-align: center; line-height: 26px;
+    font-size: 13px; font-weight: 600; color: #1f2937;
+    border-left: 1px solid #e5e7eb; border-right: 1px solid #e5e7eb;
+    background: #fafbfc;
+  }
+
+  /* ===== Bottom Bar ===== */
+  .bottom-bar {
+    flex-shrink: 0;
+    background: #fff; border-top: 1px solid #e5e7eb;
+    padding: 10px 20px;
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  .bottom-bar__hint {
+    font-size: 12px; color: #9ca3af;
+  }
+  .bottom-bar__hint b { color: #6b7280; font-weight: 600; }
+
+  .btn-primary {
+    height: 32px; padding: 0 20px; border-radius: 6px;
+    font-size: 13px; font-weight: 500;
+    background: #1a6dff; color: #fff;
+    transition: background .15s;
+  }
+  .btn-primary:hover { background: #155bd4; }
+
+  /* Section progress badge */
+  .section-card__progress {
+    margin-left: auto;
+    font-size: 11px; color: #9ca3af;
+  }
+  .section-card__progress b { font-weight: 600; color: #6b7280; }
+
+  /* Score remark icon */
+  .remark-btn {
+    width: 24px; height: 24px; display: inline-flex; align-items: center; justify-content: center;
+    border-radius: 5px; color: #d1d5db; transition: all .12s;
+  }
+  .remark-btn:hover { background: #f3f4f6; color: #9ca3af; }
+  .remark-btn svg { width: 13px; height: 13px; }
+</style>
+</head>
+<body>
+<div class="app">
+  <!-- ===== Top Bar ===== -->
+  <header class="topbar">
+    <button class="back-btn">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
+      返回
+    </button>
+    <span class="topbar-sep"></span>
+    <span class="task-code">TSK-20260324-6045</span>
+    <span class="tag tag--active">进行中</span>
+    <div class="topbar-meta">
+      <span>2026-03-24</span>
+      <span class="topbar-sep"></span>
+      <span>王浩宇</span>
+    </div>
+    <div class="topbar-right">
+      <span class="progress-badge"><b>2</b> / 90</span>
+    </div>
+  </header>
+
+  <div class="body">
+    <!-- ===== Sidebar ===== -->
+    <aside class="sidebar">
+      <div class="sidebar-header">
+        <!-- Mode toggle -->
+        <div class="seg-ctrl">
+          <button class="seg-ctrl__btn seg-ctrl__btn--active">按目标</button>
+          <button class="seg-ctrl__btn">按分区</button>
+        </div>
+        <!-- Search -->
+        <div class="search-box">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          <input type="text" placeholder="搜索目标...">
+        </div>
+        <!-- Context filter (by parent org / grade) -->
+        <div class="context-filter">
+          <select>
+            <option value="">年级: 全部</option>
+            <option value="2024" selected>年级: 2024级</option>
+            <option value="2025">年级: 2025级</option>
+            <option value="2023">年级: 2023级</option>
+          </select>
+        </div>
+        <!-- Status filter -->
+        <div class="filter-tabs">
+          <button class="filter-tab filter-tab--active">全部<span class="cnt">12</span></button>
+          <button class="filter-tab">待检<span class="cnt">10</span></button>
+          <button class="filter-tab">已完成<span class="cnt">2</span></button>
+        </div>
+      </div>
+
+      <!-- Target list -->
+      <div class="target-list">
+        <!-- 1 done -->
+        <div class="target-item target-item--done">
+          <span class="status-dot status-dot--done"></span>
+          <span class="target-item__name">计算机应用24-1班</span>
+          <span class="target-item__progress">2/2</span>
+        </div>
+        <!-- 2 done -->
+        <div class="target-item target-item--done">
+          <span class="status-dot status-dot--done"></span>
+          <span class="target-item__name">计算机应用24-2班</span>
+          <span class="target-item__progress">2/2</span>
+        </div>
+        <!-- 3 active / selected -->
+        <div class="target-item target-item--active">
+          <span class="status-dot status-dot--active"></span>
+          <span class="target-item__name">计算机应用24-3班</span>
+          <span class="target-item__progress">1/2</span>
+        </div>
+        <!-- 4-15 pending -->
+        <div class="target-item">
+          <span class="status-dot status-dot--pending"></span>
+          <span class="target-item__name">计算机应用24-4班</span>
+          <span class="target-item__progress">0/2</span>
+        </div>
+        <div class="target-item">
+          <span class="status-dot status-dot--pending"></span>
+          <span class="target-item__name">计算机应用24-5班</span>
+          <span class="target-item__progress">0/2</span>
+        </div>
+        <div class="target-item">
+          <span class="status-dot status-dot--pending"></span>
+          <span class="target-item__name">计算机应用24-6班</span>
+          <span class="target-item__progress">0/2</span>
+        </div>
+        <div class="target-item">
+          <span class="status-dot status-dot--pending"></span>
+          <span class="target-item__name">计算机应用24-7班</span>
+          <span class="target-item__progress">0/2</span>
+        </div>
+        <div class="target-item">
+          <span class="status-dot status-dot--pending"></span>
+          <span class="target-item__name">计算机应用24-8班</span>
+          <span class="target-item__progress">0/2</span>
+        </div>
+        <div class="target-item">
+          <span class="status-dot status-dot--pending"></span>
+          <span class="target-item__name">计算机应用24-9班</span>
+          <span class="target-item__progress">0/2</span>
+        </div>
+        <div class="target-item">
+          <span class="status-dot status-dot--pending"></span>
+          <span class="target-item__name">计算机应用24-10班</span>
+          <span class="target-item__progress">0/2</span>
+        </div>
+        <div class="target-item">
+          <span class="status-dot status-dot--pending"></span>
+          <span class="target-item__name">计算机应用24-11班</span>
+          <span class="target-item__progress">0/2</span>
+        </div>
+        <div class="target-item">
+          <span class="status-dot status-dot--pending"></span>
+          <span class="target-item__name">计算机应用24-12班</span>
+          <span class="target-item__progress">0/2</span>
+        </div>
+      </div>
+    </aside>
+
+    <!-- ===== Content ===== -->
+    <main class="content">
+      <!-- Content Header -->
+      <div class="content-header">
+        <button class="nav-btn">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
+        </button>
+        <span class="content-title">2024级-计算机应用24-3班</span>
+        <button class="nav-btn">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg>
+        </button>
+        <span class="content-counter">3 / 12</span>
+      </div>
+
+      <!-- Scrollable scoring body -->
+      <div class="content-body">
+
+        <!-- Section 1: 教室卫生 -->
+        <div class="section-card">
+          <div class="section-card__header">
+            <svg class="section-card__chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>
+            <span class="section-card__title">教室卫生</span>
+            <span class="section-card__count">3</span>
+            <span class="section-card__progress"><b>2</b> / 3 已评</span>
+          </div>
+          <div class="section-card__body">
+            <!-- Item 1: 地面清洁 (deduction, -1 selected) -->
+            <div class="score-item">
+              <div class="score-item__header">
+                <div class="score-item__label">
+                  <span class="score-item__name">地面清洁</span>
+                  <span class="score-item__tag">扣分</span>
+                </div>
+                <button class="remark-btn" title="备注">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
+                </button>
+              </div>
+              <div class="score-item__controls">
+                <div class="deduct-btns">
+                  <button class="deduct-btn">0</button>
+                  <button class="deduct-btn deduct-btn--active-red">-1</button>
+                  <button class="deduct-btn">-2</button>
+                  <button class="deduct-btn">-3</button>
+                </div>
+              </div>
+            </div>
+
+            <!-- Item 2: 桌椅整齐 (pass/fail, pass selected) -->
+            <div class="score-item">
+              <div class="score-item__header">
+                <div class="score-item__label">
+                  <span class="score-item__name">桌椅整齐</span>
+                  <span class="score-item__tag">通过/不通过</span>
+                </div>
+                <button class="remark-btn" title="备注">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
+                </button>
+              </div>
+              <div class="score-item__controls">
+                <div class="pill-group">
+                  <button class="pill-btn pill-btn--pass-active">通过</button>
+                  <button class="pill-btn">不通过</button>
+                </div>
+              </div>
+            </div>
+
+            <!-- Item 3: 窗台灰尘 (deduction, 0 selected) -->
+            <div class="score-item">
+              <div class="score-item__header">
+                <div class="score-item__label">
+                  <span class="score-item__name">窗台灰尘</span>
+                  <span class="score-item__tag">扣分</span>
+                </div>
+                <button class="remark-btn" title="备注">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
+                </button>
+              </div>
+              <div class="score-item__controls">
+                <div class="deduct-btns">
+                  <button class="deduct-btn deduct-btn--active-blue">0</button>
+                  <button class="deduct-btn">-1</button>
+                  <button class="deduct-btn">-2</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Section 2: 课堂纪律 -->
+        <div class="section-card">
+          <div class="section-card__header">
+            <svg class="section-card__chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>
+            <span class="section-card__title">课堂纪律</span>
+            <span class="section-card__count">2</span>
+            <span class="section-card__progress"><b>1</b> / 2 已评</span>
+          </div>
+          <div class="section-card__body">
+            <!-- Item 4: 迟到人数 (counter) -->
+            <div class="score-item">
+              <div class="score-item__header">
+                <div class="score-item__label">
+                  <span class="score-item__name">迟到人数</span>
+                  <span class="score-item__tag">累计</span>
+                </div>
+                <button class="remark-btn" title="备注">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
+                </button>
+              </div>
+              <div class="score-item__controls">
+                <div class="counter-ctrl">
+                  <button class="counter-ctrl__btn">&minus;</button>
+                  <span class="counter-ctrl__val">2</span>
+                  <button class="counter-ctrl__btn">+</button>
+                </div>
+              </div>
+            </div>
+
+            <!-- Item 5: 课堂秩序 (grade, 良 selected) -->
+            <div class="score-item">
+              <div class="score-item__header">
+                <div class="score-item__label">
+                  <span class="score-item__name">课堂秩序</span>
+                  <span class="score-item__tag">等级</span>
+                </div>
+                <button class="remark-btn" title="备注">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
+                </button>
+              </div>
+              <div class="score-item__controls">
+                <div class="pill-group">
+                  <button class="grade-btn">优(100)</button>
+                  <button class="grade-btn grade-btn--active">良(80)</button>
+                  <button class="grade-btn">中(60)</button>
+                  <button class="grade-btn">差(40)</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div><!-- /content-body -->
+
+      <!-- Bottom bar -->
+      <div class="bottom-bar">
+        <span class="bottom-bar__hint">目标 <b>1 / 2</b> 分区已完成</span>
+        <button class="btn-primary">全部完成</button>
+      </div>
+    </main>
+  </div>
+</div>
+</body>
+</html>
