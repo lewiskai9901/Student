@@ -604,7 +604,7 @@
                       <select
                         :value="getRoleScope(role.id).scopeId"
                         @change="updateRoleScopeId(role.id, Number(($event.target as HTMLSelectElement).value))"
-                        class="h-7 w-48 rounded border border-gray-300 px-2 text-xs"
+                        class="h-8 w-48 rounded border border-gray-300 px-2 py-1 text-xs leading-normal"
                         :disabled="getRoleScope(role.id).scopeType !== 'ORG_UNIT'"
                         :class="getRoleScope(role.id).scopeType !== 'ORG_UNIT' ? 'opacity-30' : ''"
                       >
