@@ -26,7 +26,6 @@ declare module 'vue' {
     DecorationImageManager: typeof import('./src/components/settings/DecorationImageManager.vue')['default']
     DepartmentTreeNode: typeof import('./src/components/common/DepartmentTreeNode.vue')['default']
     ElAlert: typeof import('element-plus/es')['ElAlert']
-    ElAvatar: typeof import('element-plus/es')['ElAvatar']
     ElButton: typeof import('element-plus/es')['ElButton']
     ElCard: typeof import('element-plus/es')['ElCard']
     ElCarousel: typeof import('element-plus/es')['ElCarousel']
