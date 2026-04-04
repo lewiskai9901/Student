@@ -24,7 +24,7 @@ const USER_URL = '/users'
  * 获取用户分页列表
  */
 export function getUserPage(params: UserQueryParams): Promise<PageResponse<UserListItem>> {
-  return http.get<PageResponse<UserListItem>>(`${USER_URL}/page`, { params })
+  return http.get<PageResponse<UserListItem>>(`/domain/users/page`, { params })
 }
 
 /**
