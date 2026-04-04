@@ -582,37 +582,40 @@
                     />
                     <span class="shrink-0 font-medium text-gray-900">{{ role.roleName }}</span>
                     <span v-if="role.roleCode" class="shrink-0 text-xs text-gray-500">{{ role.roleCode }}</span>
-                    <!-- 作用域选择器 -->
-                    <template v-if="isRoleSelected(role.id)">
-                      <div class="ml-auto flex items-center gap-2 text-xs">
-                        <label class="flex items-center gap-1 cursor-pointer">
-                          <input type="radio" :name="'scope-' + role.id" value="ALL"
-                            :checked="getRoleScope(role.id).scopeType === 'ALL'"
-                            @change="updateRoleScopeType(role.id, 'ALL')" class="accent-blue-600" />
-                          <span>全局</span>
-                        </label>
-                        <label class="flex items-center gap-1 cursor-pointer">
-                          <input type="radio" :name="'scope-' + role.id" value="ORG_UNIT"
-                            :checked="getRoleScope(role.id).scopeType === 'ORG_UNIT'"
-                            @change="updateRoleScopeType(role.id, 'ORG_UNIT')" class="accent-blue-600" />
-                          <span>指定组织</span>
-                        </label>
-                        <select
-                          v-if="getRoleScope(role.id).scopeType === 'ORG_UNIT'"
-                          :value="getRoleScope(role.id).scopeId"
-                          @change="updateRoleScopeId(role.id, Number(($event.target as HTMLSelectElement).value))"
-                          class="h-7 max-w-52 rounded border border-gray-300 px-2 text-xs"
-                        >
-                          <option :value="0">请选择组织</option>
-                          <option v-for="org in flatOrgUnits" :key="org.id" :value="org.id">
-                            {{ org.label }}
-                          </option>
-                        </select>
-                      </div>
-                    </template>
                   </div>
-                  <!-- 过期时间和原因（展开行） -->
-                  <div v-if="isRoleSelected(role.id)" class="mt-2 flex flex-wrap items-center gap-3 pl-7">
+                  <!-- 作用域 + 过期 + 原因（固定第二行，避免抖动） -->
+                  <div v-if="isRoleSelected(role.id)" class="mt-2 space-y-2 pl-7">
+                    <!-- 作用域选择 -->
+                    <div class="flex items-center gap-3 text-xs">
+                      <span class="text-gray-500 w-14 shrink-0">作用域</span>
+                      <label class="flex items-center gap-1 cursor-pointer">
+                        <input type="radio" :name="'scope-' + role.id" value="ALL"
+                          :checked="getRoleScope(role.id).scopeType === 'ALL'"
+                          @change="updateRoleScopeType(role.id, 'ALL')" class="accent-blue-600" />
+                        <span>全局</span>
+                      </label>
+                      <label class="flex items-center gap-1 cursor-pointer">
+                        <input type="radio" :name="'scope-' + role.id" value="ORG_UNIT"
+                          :checked="getRoleScope(role.id).scopeType === 'ORG_UNIT'"
+                          @change="updateRoleScopeType(role.id, 'ORG_UNIT')" class="accent-blue-600" />
+                        <span>指定组织</span>
+                      </label>
+                      <!-- 组织选择始终占位，禁用状态防抖动 -->
+                      <select
+                        :value="getRoleScope(role.id).scopeId"
+                        @change="updateRoleScopeId(role.id, Number(($event.target as HTMLSelectElement).value))"
+                        class="h-7 w-48 rounded border border-gray-300 px-2 text-xs"
+                        :disabled="getRoleScope(role.id).scopeType !== 'ORG_UNIT'"
+                        :class="getRoleScope(role.id).scopeType !== 'ORG_UNIT' ? 'opacity-30' : ''"
+                      >
+                        <option :value="0">请选择组织</option>
+                        <option v-for="org in flatOrgUnits" :key="org.id" :value="org.id">
+                          {{ org.label }}
+                        </option>
+                      </select>
+                    </div>
+                    <!-- 过期时间和原因 -->
+                    <div class="flex flex-wrap items-center gap-3 text-xs">
                     <div class="flex items-center gap-1.5">
                       <label class="text-xs text-gray-500">过期时间</label>
                       <input
