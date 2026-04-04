@@ -19,7 +19,7 @@ import java.util.Map;
  * 成绩管理 REST Controller (DDD-lite)
  * 处理成绩批次、成绩录入、成绩查询、统计与排名
  */
-@RestController
+@RestController("teachingGradeController")
 @RequestMapping("/teaching/grades")
 @RequiredArgsConstructor
 public class GradeController {

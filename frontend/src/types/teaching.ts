@@ -4,28 +4,28 @@
 
 export interface AcademicYear {
   id: number | string
-  name: string
+  yearCode?: string
+  yearName: string
   startDate: string
   endDate: string
-  isCurrent: boolean
-  status: number
-  remark?: string
+  isCurrent?: boolean
+  status?: number
   createdAt?: string
   updatedAt?: string
 }
 
 export interface Semester {
   id: number | string
-  yearId: number | string
-  yearName?: string
-  name: string
-  termType: number // 1-第一学期, 2-第二学期, 3-短学期
+  semesterName: string
+  semesterCode: string
   startDate: string
   endDate: string
-  teachingWeeks: number
-  isCurrent: boolean
-  status: number
-  remark?: string
+  startYear?: number
+  semesterType?: number // 1-第一学期, 2-第二学期
+  isCurrent?: boolean
+  status?: number // 1-正常, 0-已结束
+  durationDays?: number
+  ongoing?: boolean
   createdAt?: string
   updatedAt?: string
 }

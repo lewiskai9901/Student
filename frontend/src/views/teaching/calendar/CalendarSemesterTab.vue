@@ -28,19 +28,18 @@
             <span
               class="rounded px-1.5 py-0.5 text-xs font-medium"
               :class="{
-                'bg-amber-50 text-amber-700': sem.termType === 1,
-                'bg-emerald-50 text-emerald-700': sem.termType === 2,
-                'bg-sky-50 text-sky-700': sem.termType === 3,
+                'bg-amber-50 text-amber-700': sem.semesterType === 1,
+                'bg-emerald-50 text-emerald-700': sem.semesterType === 2,
+                'bg-sky-50 text-sky-700': sem.semesterType === 3,
               }"
             >
-              {{ sem.termType === 1 ? '秋季' : sem.termType === 2 ? '春季' : '夏季' }}
+              {{ sem.semesterType === 1 ? '秋季' : sem.semesterType === 2 ? '春季' : '夏季' }}
             </span>
-            <span class="text-sm font-medium text-gray-900">{{ sem.name }}</span>
+            <span class="text-sm font-medium text-gray-900">{{ sem.semesterName }}</span>
             <el-tag v-if="sem.isCurrent" size="small" type="success">当前</el-tag>
           </div>
-          <div class="mt-1 flex items-center justify-between text-xs text-gray-400">
+          <div class="mt-1 text-xs text-gray-400">
             <span>{{ sem.startDate }} ~ {{ sem.endDate }}</span>
-            <span>{{ sem.teachingWeeks }}教学周</span>
           </div>
         </div>
         <el-empty v-if="!semesters.length" description="暂无学期，请先创建" :image-size="60" />
@@ -52,7 +51,7 @@
       <template v-if="selectedSemester">
         <div class="rounded-xl border border-gray-200 bg-white">
           <div class="flex items-center justify-between border-b border-gray-200 px-5 py-3">
-            <span class="text-sm font-semibold text-gray-900">{{ selectedSemester.name }} - 教学周管理</span>
+            <span class="text-sm font-semibold text-gray-900">{{ selectedSemester.semesterName }} - 教学周管理</span>
             <div class="flex items-center gap-2">
               <el-button size="small" @click="$emit('show-dialog', selectedSemester)">编辑学期</el-button>
               <el-button type="primary" size="small" @click="$emit('generate-weeks')">自动生成周次</el-button>
@@ -72,7 +71,7 @@
               </div>
               <div class="text-sm">
                 <span class="text-gray-400">教学周数</span>
-                <span class="ml-2 font-medium text-gray-900">{{ selectedSemester.teachingWeeks }}周</span>
+                <span class="ml-2 font-medium text-gray-900">{{ teachingWeeks.length || '-' }}周</span>
               </div>
               <div class="text-sm">
                 <span class="text-gray-400">状态</span>

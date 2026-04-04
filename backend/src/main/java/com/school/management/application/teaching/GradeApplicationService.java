@@ -23,7 +23,7 @@ import java.time.format.DateTimeFormatter;
 import java.util.*;
 
 @Slf4j
-@Service
+@Service("teachingGradeApplicationService")
 @RequiredArgsConstructor
 public class GradeApplicationService {
 

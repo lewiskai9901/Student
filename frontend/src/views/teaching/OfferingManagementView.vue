@@ -7,7 +7,7 @@
         <p class="mt-0.5 text-sm text-gray-500">管理学期开课计划、班级课程确认与教学班组建</p>
       </div>
       <el-select v-model="semesterId" placeholder="选择学期" class="w-48" @change="onSemesterChange">
-        <el-option v-for="s in semesters" :key="s.id" :value="s.id" :label="s.name" />
+        <el-option v-for="s in semesters" :key="s.id" :value="s.id" :label="s.semesterName" />
       </el-select>
     </div>
 

@@ -31,7 +31,7 @@
     <!-- Filter Bar -->
     <div class="flex items-center gap-3 border-b border-gray-200 bg-white px-6 py-3">
       <el-select v-model="queryParams.semesterId" placeholder="选择学期" clearable style="width: 200px" @change="loadBatches">
-        <el-option v-for="sem in semesters" :key="sem.id" :value="sem.id" :label="sem.name" />
+        <el-option v-for="sem in semesters" :key="sem.id" :value="sem.id" :label="sem.semesterName" />
       </el-select>
       <el-select v-model="queryParams.examType" placeholder="考试类型" clearable style="width: 140px" @change="loadBatches">
         <el-option :value="1" label="期中考试" />
@@ -228,7 +228,7 @@
           <el-col :span="12">
             <el-form-item label="学期" prop="semesterId">
               <el-select v-model="batchForm.semesterId" style="width: 100%">
-                <el-option v-for="sem in semesters" :key="sem.id" :value="sem.id" :label="sem.name" />
+                <el-option v-for="sem in semesters" :key="sem.id" :value="sem.id" :label="sem.semesterName" />
               </el-select>
             </el-form-item>
           </el-col>

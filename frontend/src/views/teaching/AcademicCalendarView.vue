@@ -20,7 +20,7 @@
       <div class="flex items-center gap-4 border-b border-gray-200 bg-white px-6 py-2.5">
         <span class="text-sm text-gray-500">学年总数 <span class="font-semibold text-gray-900">{{ academicYears.length }}</span></span>
         <div class="h-3 w-px bg-gray-200" />
-        <span class="text-sm text-gray-500">当前学年 <span class="font-semibold text-gray-900">{{ academicYears.find(y => y.isCurrent)?.name || '未设置' }}</span></span>
+        <span class="text-sm text-gray-500">当前学年 <span class="font-semibold text-gray-900">{{ academicYears.find(y => y.isCurrent)?.yearName || '未设置' }}</span></span>
       </div>
 
       <!-- Year grid -->
@@ -38,7 +38,7 @@
               class="absolute right-3 top-3 rounded-full bg-blue-50 px-2 py-0.5 text-xs font-medium text-blue-600"
             >当前学年</span>
             <div class="mb-3 text-2xl">📅</div>
-            <div class="text-base font-semibold text-gray-900">{{ year.name }}</div>
+            <div class="text-base font-semibold text-gray-900">{{ year.yearName }}</div>
             <div class="mt-1 text-xs text-gray-400">{{ year.startDate }} ~ {{ year.endDate }}</div>
             <div class="mt-3 flex items-center gap-4 text-sm">
               <span class="text-gray-500"><span class="font-semibold text-gray-900">{{ getYearSemesterCount(year.id) }}</span> 学期</span>
@@ -73,7 +73,7 @@
             <span>返回</span>
           </button>
           <div class="h-4 w-px bg-gray-200" />
-          <h1 class="text-lg font-semibold text-gray-900">{{ selectedYear.name }}</h1>
+          <h1 class="text-lg font-semibold text-gray-900">{{ selectedYear.yearName }}</h1>
           <el-tag v-if="selectedYear.isCurrent" type="success" size="small">当前</el-tag>
         </div>
         <div class="flex items-center gap-2">
@@ -96,7 +96,7 @@
 
       <!-- Stats bar -->
       <div class="flex items-center gap-4 border-b border-gray-200 bg-white px-6 py-2.5">
-        <span class="text-sm text-gray-500">当前学期 <span class="font-semibold text-gray-900">{{ currentSemester?.name || '未设置' }}</span></span>
+        <span class="text-sm text-gray-500">当前学期 <span class="font-semibold text-gray-900">{{ currentSemester?.semesterName || '未设置' }}</span></span>
         <div class="h-3 w-px bg-gray-200" />
         <span class="text-sm text-gray-500">当前周次 <span class="font-semibold text-gray-900">{{ currentWeekNumber ? `第${currentWeekNumber}周` : '-' }}</span></span>
         <div class="h-3 w-px bg-gray-200" />
@@ -170,8 +170,8 @@
     <!-- Year dialog -->
     <el-dialog v-model="yearDialogVisible" :title="yearForm.id ? '编辑学年' : '新建学年'" width="500px" :close-on-click-modal="false">
       <el-form ref="yearFormRef" :model="yearForm" :rules="yearRules" label-position="top">
-        <el-form-item label="学年名称" prop="name">
-          <el-input v-model="yearForm.name" placeholder="请输入学年名称，如：2025-2026学年" />
+        <el-form-item label="学年名称" prop="yearName">
+          <el-input v-model="yearForm.yearName" placeholder="请输入学年名称，如：2025-2026学年" />
         </el-form-item>
         <div class="flex items-center gap-3">
           <el-form-item label="开始日期" prop="startDate" class="flex-1">
@@ -196,17 +196,17 @@
     <!-- Semester dialog -->
     <el-dialog v-model="semesterDialogVisible" :title="semesterForm.id ? '编辑学期' : '新建学期'" width="520px" :close-on-click-modal="false">
       <el-form ref="semesterFormRef" :model="semesterForm" :rules="semesterRules" label-position="top">
-        <el-form-item label="学期名称" prop="name">
-          <el-input v-model="semesterForm.name" placeholder="请输入学期名称" />
+        <el-form-item label="学期名称" prop="semesterName">
+          <el-input v-model="semesterForm.semesterName" placeholder="请输入学期名称" />
         </el-form-item>
-        <el-form-item label="学期类型" prop="termType">
+        <el-form-item label="学期类型" prop="semesterType">
           <div class="flex gap-3">
             <div
               v-for="term in [{value: 1, label: '第一学期', icon: '①'}, {value: 2, label: '第二学期', icon: '②'}, {value: 3, label: '短学期', icon: '☀'}]"
               :key="term.value"
               class="flex cursor-pointer items-center gap-2 rounded-lg border px-4 py-2.5 transition-all"
-              :class="semesterForm.termType === term.value ? 'border-blue-300 bg-blue-50 text-blue-700' : 'border-gray-200 text-gray-600 hover:border-gray-300'"
-              @click="semesterForm.termType = term.value"
+              :class="semesterForm.semesterType === term.value ? 'border-blue-300 bg-blue-50 text-blue-700' : 'border-gray-200 text-gray-600 hover:border-gray-300'"
+              @click="semesterForm.semesterType = term.value"
             >
               <span class="text-lg">{{ term.icon }}</span>
               <span class="text-sm font-medium">{{ term.label }}</span>
@@ -239,12 +239,6 @@
             />
           </el-form-item>
         </div>
-        <el-form-item label="教学周数" prop="teachingWeeks">
-          <div class="flex items-center gap-2">
-            <el-input-number v-model="semesterForm.teachingWeeks" :min="1" :max="30" controls-position="right" />
-            <span class="text-sm text-gray-400">周（一般为16-20周）</span>
-          </div>
-        </el-form-item>
       </el-form>
       <template #footer>
         <el-button @click="semesterDialogVisible = false">取消</el-button>
@@ -255,7 +249,7 @@
     <!-- Weeks dialog -->
     <el-dialog v-model="weeksDialogVisible" title="教学周历" width="650px">
       <div class="mb-3 flex items-center justify-between">
-        <span class="font-medium text-gray-900">{{ currentSemesterForWeeks?.name }}</span>
+        <span class="font-medium text-gray-900">{{ currentSemesterForWeeks?.semesterName }}</span>
         <el-button type="primary" size="small" @click="generateWeeks">自动生成</el-button>
       </div>
       <el-table :data="teachingWeeks" border size="small" max-height="400">
@@ -421,16 +415,15 @@ const periodConfigForm = ref({
 
 // Validation rules
 const yearRules: FormRules = {
-  name: [{ required: true, message: '请输入学年名称', trigger: 'blur' }],
+  yearName: [{ required: true, message: '请输入学年名称', trigger: 'blur' }],
   startDate: [{ required: true, message: '请选择开始日期', trigger: 'change' }],
   endDate: [{ required: true, message: '请选择结束日期', trigger: 'change' }],
 }
 const semesterRules: FormRules = {
-  name: [{ required: true, message: '请输入学期名称', trigger: 'blur' }],
-  termType: [{ required: true, message: '请选择学期类型', trigger: 'change' }],
+  semesterName: [{ required: true, message: '请输入学期名称', trigger: 'blur' }],
+  semesterType: [{ required: true, message: '请选择学期类型', trigger: 'change' }],
   startDate: [{ required: true, message: '请选择开始日期', trigger: 'change' }],
   endDate: [{ required: true, message: '请选择结束日期', trigger: 'change' }],
-  teachingWeeks: [{ required: true, message: '请输入教学周数', trigger: 'blur' }],
 }
 const eventRules: FormRules = {
   title: [{ required: true, message: '请输入事件标题', trigger: 'blur' }],
@@ -446,7 +439,8 @@ const currentWeekNumber = computed(() => {
   const start = new Date(currentSemester.value.startDate)
   const today = new Date()
   const diff = Math.floor((today.getTime() - start.getTime()) / (7 * 24 * 60 * 60 * 1000))
-  return diff >= 0 && diff < (currentSemester.value.teachingWeeks || 18) ? diff + 1 : null
+  const totalWeeks = Math.ceil((new Date(currentSemester.value.endDate).getTime() - start.getTime()) / (7 * 24 * 60 * 60 * 1000))
+  return diff >= 0 && diff < (totalWeeks || 18) ? diff + 1 : null
 })
 
 const daysRemaining = computed(() => {
@@ -469,7 +463,7 @@ const loadAcademicYears = async () => {
   try {
     const res: any = await academicYearApi.list()
     const data = Array.isArray(res) ? res : (res.data || [])
-    academicYears.value = data.map((y: any) => ({ ...y, name: y.yearName || y.name }))
+    academicYears.value = data.map((y: any) => ({ ...y, yearName: y.yearName || y.name }))
     loadYearStats()
   } catch (error) {
     console.error('Failed to load academic years:', error)
@@ -510,9 +504,8 @@ const loadSemesters = async () => {
     const data = res.data || res
     semesters.value = data.map((s: any) => ({
       ...s,
-      name: s.semesterName || s.name,
-      termType: s.semesterType || s.termType,
-      teachingWeeks: s.weekCount || s.teachingWeeks,
+      semesterName: s.semesterName || s.name,
+      semesterType: s.semesterType || s.termType,
     }))
   } catch (error) {
     console.error('Failed to load semesters:', error)
@@ -613,7 +606,6 @@ const saveYear = async () => {
   try {
     const payload = {
       ...yearForm.value,
-      yearName: yearForm.value.name,
       yearCode: yearForm.value.startDate && yearForm.value.endDate
         ? yearForm.value.startDate.substring(0, 4) + '-' + yearForm.value.endDate.substring(0, 4)
         : undefined,
@@ -628,7 +620,7 @@ const saveYear = async () => {
 }
 
 const showSemesterDialog = (semester?: Semester) => {
-  semesterForm.value = semester ? { ...semester } : { yearId: currentYearId.value, teachingWeeks: 18 }
+  semesterForm.value = semester ? { ...semester } : {}
   semesterDialogVisible.value = true
 }
 
@@ -636,7 +628,7 @@ const saveSemester = async () => {
   try { await semesterFormRef.value?.validate() } catch { ElMessage.warning('请填写完整的学期信息'); return }
   saving.value = true
   try {
-    const payload = { ...semesterForm.value, semesterName: semesterForm.value.name, semesterType: semesterForm.value.termType, weekCount: semesterForm.value.teachingWeeks }
+    const payload = { ...semesterForm.value }
     if (semesterForm.value.id) await semesterApi.update(semesterForm.value.id, payload)
     else await semesterApi.create(payload)
     ElMessage.success('保存成功')

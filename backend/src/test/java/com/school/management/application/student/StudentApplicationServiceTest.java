@@ -66,8 +66,6 @@ class StudentApplicationServiceTest {
                 LocalDate.of(2024, 9, 1),
                 LocalDate.of(2027, 6, 30),
                 1L,  // classId
-                1L,  // dormitoryId
-                1,   // bedNumber
                 status,
                 null,
                 "北京市海淀区",
@@ -105,7 +103,7 @@ class StudentApplicationServiceTest {
                         1L, s.getStudentNo(), s.getName(), s.getGender(),
                         s.getIdCard(), s.getPhone(), s.getEmail(), s.getBirthDate(),
                         s.getEnrollmentDate(), s.getExpectedGraduationDate(), s.getClassId(),
-                        s.getDormitoryId(), s.getBedNumber(), s.getStatus(), s.getAvatarUrl(),
+                        s.getStatus(), s.getAvatarUrl(),
                         s.getHomeAddress(), s.getEmergencyContact(), s.getEmergencyPhone(),
                         s.getRemark(), LocalDateTime.now(), LocalDateTime.now()
                 );

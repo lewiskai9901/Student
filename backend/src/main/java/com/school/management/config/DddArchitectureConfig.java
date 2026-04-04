@@ -29,7 +29,7 @@ import org.springframework.context.annotation.Configuration;
     "com.school.management.infrastructure.persistence.task",
     "com.school.management.infrastructure.persistence.student",
     "com.school.management.infrastructure.persistence.rating",
-    "com.school.management.infrastructure.persistence.semester",
+    "com.school.management.infrastructure.persistence.calendar",
     "com.school.management.infrastructure.persistence.user",
     "com.school.management.infrastructure.persistence.query",
     "com.school.management.infrastructure.persistence.place",

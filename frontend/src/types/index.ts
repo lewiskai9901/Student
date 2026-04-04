@@ -8,7 +8,7 @@ export * from './access'
 export * from './student'
 export * from './dormitory'
 export * from './user'
-export * from './semester'
+export * from './teaching'
 export * from './myClass'
 
 

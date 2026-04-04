@@ -12,7 +12,7 @@ import java.util.*;
  * Audit trail query API.
  * Read-only access to the audit_trail table.
  */
-@RestController
+@RestController("systemAuditTrailController")
 @RequestMapping("/audit-trail")
 @RequiredArgsConstructor
 public class AuditTrailController {

@@ -7,7 +7,7 @@
         <p class="mt-0.5 text-sm text-gray-500">配置全局、教师、班级、课程四级排课约束</p>
       </div>
       <el-select v-model="semesterId" placeholder="选择学期" class="w-48" @change="onSemesterChange">
-        <el-option v-for="s in semesters" :key="s.id" :value="s.id" :label="s.name" />
+        <el-option v-for="s in semesters" :key="s.id" :value="s.id" :label="s.semesterName" />
       </el-select>
     </div>
 

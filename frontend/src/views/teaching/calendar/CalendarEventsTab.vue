@@ -63,7 +63,7 @@
         @mouseup="handleDragEnd"
         @mouseleave="handleDragEnd"
       >
-        <div class="mb-2 text-sm font-medium text-gray-700">{{ currentSemester?.name || '本学期' }} 校历总览</div>
+        <div class="mb-2 text-sm font-medium text-gray-700">{{ currentSemester?.semesterName || '本学期' }} 校历总览</div>
         <div class="overflow-x-auto">
           <table class="w-full border-collapse text-xs">
             <thead>

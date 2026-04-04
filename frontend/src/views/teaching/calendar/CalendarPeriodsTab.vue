@@ -5,7 +5,7 @@
       <div class="flex items-center gap-2">
         <el-select v-model="localSemesterId" placeholder="选择学期" size="small" class="!w-44">
           <el-option label="全校默认" :value="0" />
-          <el-option v-for="sem in semesters" :key="sem.id" :label="sem.name" :value="sem.id" />
+          <el-option v-for="sem in semesters" :key="sem.id" :label="sem.semesterName" :value="sem.id" />
         </el-select>
         <button
           class="inline-flex items-center gap-1 rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-blue-700"

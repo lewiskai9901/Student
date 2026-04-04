@@ -73,8 +73,8 @@
             class="h-9 w-full rounded-lg border border-gray-300 px-3 text-sm focus:border-blue-500 focus:outline-none"
           >
             <option :value="undefined">全部</option>
-            <option value="正常">正常</option>
-            <option value="已结束">已结束</option>
+            <option :value="1">正常</option>
+            <option :value="0">已结束</option>
           </select>
         </div>
         <div class="flex gap-2">
@@ -156,10 +156,10 @@
               <span
                 :class="[
                   'inline-flex rounded-full px-2 py-0.5 text-xs',
-                  row.semesterType === '第一学期' ? 'bg-blue-100 text-blue-700' : 'bg-green-100 text-green-700'
+                  row.semesterType === 1 ? 'bg-blue-100 text-blue-700' : 'bg-green-100 text-green-700'
                 ]"
               >
-                {{ row.semesterType }}
+                {{ row.semesterType === 1 ? '第一学期' : '第二学期' }}
               </span>
             </td>
             <td class="px-4 py-3 text-sm text-gray-600">{{ row.startDate }}</td>
@@ -179,10 +179,10 @@
               <span
                 :class="[
                   'inline-flex rounded-full px-2 py-0.5 text-xs',
-                  row.status === '正常' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600'
+                  row.status === 1 ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600'
                 ]"
               >
-                {{ row.status }}
+                {{ row.status === 1 ? '正常' : '已结束' }}
               </span>
             </td>
             <td class="px-4 py-3">
@@ -195,7 +195,7 @@
                   <Pencil class="h-4 w-4" />
                 </button>
                 <button
-                  v-if="!row.isCurrent && row.status === '正常'"
+                  v-if="!row.isCurrent && row.status === 1"
                   @click="handleSetCurrent(row)"
                   class="rounded p-1.5 text-gray-500 hover:bg-amber-50 hover:text-amber-600"
                   title="设为当前学期"
@@ -203,7 +203,7 @@
                   <Star class="h-4 w-4" />
                 </button>
                 <button
-                  v-if="row.status === '正常'"
+                  v-if="row.status === 1"
                   @click="handleEndSemester(row)"
                   class="rounded p-1.5 text-gray-500 hover:bg-orange-50 hover:text-orange-600"
                   title="结束学期"
@@ -211,7 +211,7 @@
                   <CircleStop class="h-4 w-4" />
                 </button>
                 <button
-                  v-if="row.status === '已结束'"
+                  v-if="row.status === 0"
                   @click="handleReactivate(row)"
                   class="rounded p-1.5 text-gray-500 hover:bg-green-50 hover:text-green-600"
                   title="重新激活"
@@ -367,18 +367,19 @@ import {
   Loader2
 } from 'lucide-vue-next'
 import StatCard from '@/components/design-system/cards/StatCard.vue'
-import {
-  getAllSemesters,
-  getCurrentSemester,
-  createSemester,
-  updateSemester,
-  deleteSemester,
-  setCurrentSemester,
-  endSemester,
-  reactivateSemester,
-  generateSemesterCode
-} from '@/api/semester'
-import type { Semester, CreateSemesterRequest, UpdateSemesterRequest } from '@/types/semester'
+import { semesterApi } from '@/api/calendar'
+import type { Semester } from '@/types/teaching'
+
+// 包装函数 — 适配旧调用签名
+const getAllSemesters = () => semesterApi.list()
+const getCurrentSemester = () => semesterApi.getCurrent()
+const createSemester = (data: any) => semesterApi.create(data)
+const updateSemester = (id: number | string, data: any) => semesterApi.update(id, data)
+const deleteSemester = (id: number | string) => semesterApi.delete(id)
+const setCurrentSemester = (id: number | string) => semesterApi.setCurrent(id)
+const endSemester = (id: number | string) => semesterApi.end(id)
+const reactivateSemester = (id: number | string) => semesterApi.reactivate(id)
+const generateSemesterCode = (startYear: number, semesterType: number) => semesterApi.generateCode(startYear, semesterType)
 
 const loading = ref(false)
 const submitLoading = ref(false)
@@ -395,7 +396,7 @@ const queryParams = reactive({
   semesterName: '',
   startYear: undefined as number | undefined,
   semesterType: undefined as number | undefined,
-  status: undefined as string | undefined
+  status: undefined as number | undefined
 })
 
 // 表单数据
@@ -419,11 +420,11 @@ const currentSemesterName = computed(() => {
 })
 
 const activeSemesterCount = computed(() => {
-  return semesterList.value.filter(s => s.status === '正常').length
+  return semesterList.value.filter(s => s.status === 1).length
 })
 
 const endedSemesterCount = computed(() => {
-  return semesterList.value.filter(s => s.status === '已结束').length
+  return semesterList.value.filter(s => s.status === 0).length
 })
 
 const dialogTitle = computed(() => (isEdit.value ? '编辑学期' : '新增学期'))
@@ -439,8 +440,7 @@ const filteredSemesterList = computed(() => {
     list = list.filter(s => s.startYear === queryParams.startYear)
   }
   if (queryParams.semesterType) {
-    const typeMap: Record<number, string> = { 1: '第一学期', 2: '第二学期' }
-    list = list.filter(s => s.semesterType === typeMap[queryParams.semesterType!])
+    list = list.filter(s => s.semesterType === queryParams.semesterType)
   }
   if (queryParams.status) {
     list = list.filter(s => s.status === queryParams.status)
@@ -512,7 +512,7 @@ const handleEdit = (row: Semester) => {
   currentSemesterId.value = row.id
   formData.semesterName = row.semesterName
   formData.startYear = row.startYear || currentYear
-  formData.semesterType = row.semesterType === '第一学期' ? 1 : 2
+  formData.semesterType = (row.semesterType as number) || 1
   formData.startDate = row.startDate
   formData.endDate = row.endDate
   generatedCode.value = row.semesterCode
@@ -532,7 +532,7 @@ const handleSubmit = async () => {
   try {
     submitLoading.value = true
     if (isEdit.value && currentSemesterId.value) {
-      const updateData: UpdateSemesterRequest = {
+      const updateData: Partial<Semester> = {
         semesterName: formData.semesterName,
         startDate: formData.startDate,
         endDate: formData.endDate
@@ -540,7 +540,7 @@ const handleSubmit = async () => {
       await updateSemester(currentSemesterId.value, updateData)
       ElMessage.success('更新成功')
     } else {
-      const createData: CreateSemesterRequest = {
+      const createData: Partial<Semester> & { startYear: number; semesterType: number } = {
         semesterName: formData.semesterName,
         startYear: formData.startYear,
         semesterType: formData.semesterType,

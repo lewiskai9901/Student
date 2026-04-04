@@ -13,7 +13,7 @@
           class="w-48"
           @change="onSemesterChange"
         >
-          <el-option v-for="s in semesters" :key="s.id" :value="s.id" :label="s.name" />
+          <el-option v-for="s in semesters" :key="s.id" :value="s.id" :label="s.semesterName" />
         </el-select>
       </div>
     </div>

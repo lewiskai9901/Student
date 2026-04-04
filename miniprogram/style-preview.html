@@ -1,0 +1,815 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>小程序 UI 风格选择 v3</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@300;400;500;600;700;900&family=Inter:wght@300;400;500;600;700;800&family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,700;1,9..40,400&family=Playfair+Display:wght@400;600;700&family=JetBrains+Mono:wght@400;500;600&family=Outfit:wght@300;400;500;600;700&family=Sora:wght@300;400;500;600;700&family=Manrope:wght@300;400;500;600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Onest:wght@400;500;600;700;800&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Noto Sans SC',sans-serif;background:#e8eaed;color:#333;min-height:100vh}
+
+.page-header{text-align:center;padding:60px 20px 50px}
+.page-header h1{font-family:'Sora','Noto Sans SC',sans-serif;font-size:40px;font-weight:700;color:#1a1a1a;margin-bottom:8px;letter-spacing:-.5px}
+.page-header p{color:#888;font-size:15px}
+
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(400px,1fr));gap:60px;max-width:1700px;margin:0 auto;padding:0 48px 100px}
+.style-card{display:flex;flex-direction:column;align-items:center;gap:24px}
+.style-label{text-align:center}
+.style-number{display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;border-radius:8px;font-family:'Sora',sans-serif;font-weight:700;font-size:13px;color:#fff;margin-bottom:8px}
+.style-name{font-size:22px;font-weight:700;color:#1a1a1a;font-family:'Sora','Noto Sans SC',sans-serif}
+.style-desc{font-size:13px;color:#999;margin-top:4px}
+
+.phone{width:340px;height:700px;border-radius:40px;overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,.15),0 0 0 2px rgba(0,0,0,.08);position:relative}
+.phone::before{content:'';position:absolute;top:0;left:50%;transform:translateX(-50%);width:120px;height:28px;background:#111;border-radius:0 0 16px 16px;z-index:10}
+.phone-inner{width:100%;height:100%;overflow:hidden;display:flex;flex-direction:column;position:relative}
+
+.status-bar{height:50px;display:flex;align-items:flex-end;justify-content:space-between;padding:0 24px 6px;font-size:12px;font-weight:600;flex-shrink:0;position:relative;z-index:5}
+.tab-bar{height:60px;display:flex;align-items:center;justify-content:space-around;flex-shrink:0;padding:0 8px 8px}
+.tab-item{display:flex;flex-direction:column;align-items:center;gap:2px;font-size:10px;padding:4px 12px;border-radius:12px}
+.tab-item svg{width:22px;height:22px}
+.content{flex:1;overflow-y:auto;-ms-overflow-style:none;scrollbar-width:none}
+.content::-webkit-scrollbar{display:none}
+
+/* ================================================ */
+/* STYLE 1: 呼吸感白 — 大量留白，超大圆角，呼吸节奏  */
+/* ================================================ */
+.s1 .phone-inner{background:#fafafa;color:#1a1a1a}
+.s1 .status-bar{color:#999}
+.s1 .s1-header{padding:20px 24px 0}
+.s1 .s1-org{font-size:11px;color:#ccc;letter-spacing:2px;text-transform:uppercase;font-family:'DM Sans',sans-serif}
+.s1 .s1-name{font-size:26px;font-weight:700;color:#111;font-family:'DM Sans','Noto Sans SC',sans-serif;margin-top:4px;letter-spacing:-.5px}
+.s1 .s1-search{margin:20px 24px;height:44px;background:#f0f0f0;border-radius:22px;display:flex;align-items:center;padding:0 18px;gap:10px;color:#bbb;font-size:13px}
+.s1 .s1-search svg{width:18px;height:18px;stroke:#bbb;fill:none}
+.s1 .s1-section{padding:8px 24px;font-size:12px;color:#bbb;font-weight:500;margin-top:8px}
+.s1 .s1-modules{padding:8px 20px;display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.s1 .s1-mod{background:#fff;border-radius:20px;padding:20px;display:flex;align-items:center;gap:14px;box-shadow:0 1px 3px rgba(0,0,0,.04)}
+.s1 .s1-mod-icon{width:44px;height:44px;border-radius:14px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.s1 .s1-mod-icon svg{width:22px;height:22px;fill:none}
+.s1 .s1-mod-icon.a{background:#f0f7ff}
+.s1 .s1-mod-icon.a svg{stroke:#4a90d9}
+.s1 .s1-mod-icon.b{background:#fff5f0}
+.s1 .s1-mod-icon.b svg{stroke:#e07040}
+.s1 .s1-mod-icon.c{background:#f0faf4}
+.s1 .s1-mod-icon.c svg{stroke:#4a9e68}
+.s1 .s1-mod-icon.d{background:#faf0ff}
+.s1 .s1-mod-icon.d svg{stroke:#9a5cc6}
+.s1 .s1-mod-name{font-size:13px;font-weight:600;color:#222}
+.s1 .s1-mod-sub{font-size:10px;color:#bbb;margin-top:2px}
+.s1 .s1-notice{margin:16px 24px 8px;padding:16px 18px;background:#fff;border-radius:16px;box-shadow:0 1px 3px rgba(0,0,0,.04)}
+.s1 .s1-notice-title{font-size:11px;color:#bbb;margin-bottom:10px;font-weight:500}
+.s1 .s1-notice-item{display:flex;align-items:center;gap:10px;padding:6px 0;font-size:12px;color:#555}
+.s1 .s1-notice-item+.s1-notice-item{border-top:1px solid #f5f5f5}
+.s1 .s1-notice-dot{width:5px;height:5px;border-radius:50%;background:#ddd;flex-shrink:0}
+.s1 .s1-notice-dot.new{background:#111}
+.s1 .tab-bar{background:#fafafa}
+.s1 .tab-item{color:#ccc}
+.s1 .tab-item.active{color:#111;background:#f0f0f0}
+.s1-num{background:#222}
+
+/* ================================================ */
+/* STYLE 2: 暗金商务 — 暗底浮层卡片，金色线条装饰    */
+/* ================================================ */
+.s2 .phone-inner{background:#0c0c10;color:#ccc}
+.s2 .status-bar{color:#666}
+.s2 .s2-header{padding:16px 24px 0;display:flex;align-items:center;justify-content:space-between}
+.s2 .s2-left .org{font-size:10px;color:#444;letter-spacing:3px;text-transform:uppercase;font-family:'Outfit',sans-serif}
+.s2 .s2-left .name{font-size:20px;font-weight:600;color:#e8c865;font-family:'Outfit','Noto Sans SC',sans-serif;margin-top:4px}
+.s2 .s2-avatar{width:40px;height:40px;border-radius:12px;background:linear-gradient(135deg,#c9a44a,#e8c865);display:flex;align-items:center;justify-content:center;color:#0c0c10;font-weight:700;font-size:15px}
+.s2 .s2-search{margin:16px 24px;height:40px;background:#16161c;border:1px solid #222;border-radius:10px;display:flex;align-items:center;padding:0 14px;gap:8px;color:#444;font-size:12px}
+.s2 .s2-search svg{width:16px;height:16px;stroke:#444;fill:none}
+.s2 .s2-divider{height:1px;background:linear-gradient(90deg,transparent,#222,transparent);margin:12px 24px}
+.s2 .s2-section{padding:4px 24px 8px;font-size:10px;color:#444;letter-spacing:3px;text-transform:uppercase;font-family:'Outfit',sans-serif}
+.s2 .s2-modules{padding:0 20px;display:flex;flex-direction:column;gap:8px}
+.s2 .s2-mod{background:#13131a;border:1px solid #1e1e28;border-radius:14px;padding:16px 18px;display:flex;align-items:center;gap:14px;position:relative;overflow:hidden}
+.s2 .s2-mod::after{content:'';position:absolute;right:16px;top:50%;transform:translateY(-50%);width:6px;height:6px;border-right:1.5px solid #444;border-bottom:1.5px solid #444;transform:translateY(-50%) rotate(-45deg)}
+.s2 .s2-mod-icon{width:38px;height:38px;border-radius:10px;display:flex;align-items:center;justify-content:center;background:rgba(232,200,101,.08);border:1px solid rgba(232,200,101,.12);flex-shrink:0}
+.s2 .s2-mod-icon svg{width:18px;height:18px;stroke:#e8c865;fill:none}
+.s2 .s2-mod-name{font-size:13px;font-weight:500;color:#ddd}
+.s2 .s2-mod-sub{font-size:10px;color:#444;margin-top:2px}
+.s2 .s2-notice-area{margin:16px 24px 8px}
+.s2 .s2-notice-item{padding:10px 0;border-bottom:1px solid #16161c;display:flex;gap:10px;align-items:flex-start}
+.s2 .s2-notice-badge{width:4px;height:4px;border-radius:50%;background:#e8c865;margin-top:6px;flex-shrink:0}
+.s2 .s2-notice-title{font-size:12px;color:#888}
+.s2 .s2-notice-time{font-size:10px;color:#333;margin-top:2px}
+.s2 .tab-bar{background:#0c0c10;border-top:1px solid #16161c}
+.s2 .tab-item{color:#333}
+.s2 .tab-item.active{color:#e8c865}
+.s2-num{background:linear-gradient(135deg,#c9a44a,#e8c865);color:#111}
+
+/* ================================================ */
+/* STYLE 3: 梦幻紫 — 渐变背景融合，浮岛式卡片群     */
+/* ================================================ */
+.s3 .phone-inner{background:linear-gradient(180deg,#6b46c1 0%,#8b5cf6 30%,#ede9fe 50%,#f5f3ff 100%);color:#3b1f7a}
+.s3 .status-bar{color:rgba(255,255,255,.8)}
+.s3 .s3-header{padding:12px 24px 0;color:#fff}
+.s3 .s3-org{font-size:11px;opacity:.6;font-family:'Manrope',sans-serif}
+.s3 .s3-greeting{display:flex;align-items:center;justify-content:space-between;margin-top:4px}
+.s3 .s3-name{font-size:22px;font-weight:800;font-family:'Manrope','Noto Sans SC',sans-serif}
+.s3 .s3-avatar{width:38px;height:38px;border-radius:50%;background:rgba(255,255,255,.2);backdrop-filter:blur(8px);display:flex;align-items:center;justify-content:center;font-size:14px;border:1.5px solid rgba(255,255,255,.3)}
+.s3 .s3-search{margin:16px 24px;height:42px;background:rgba(255,255,255,.2);backdrop-filter:blur(12px);border-radius:21px;display:flex;align-items:center;padding:0 16px;gap:8px;color:rgba(255,255,255,.6);font-size:12px;border:1px solid rgba(255,255,255,.15)}
+.s3 .s3-search svg{width:16px;height:16px;stroke:rgba(255,255,255,.5);fill:none}
+.s3 .s3-float-area{padding:8px 20px;display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:10px}
+.s3 .s3-float{background:#fff;border-radius:20px;padding:16px 8px;display:flex;flex-direction:column;align-items:center;gap:8px;box-shadow:0 4px 20px rgba(107,70,193,.1)}
+.s3 .s3-float-icon{width:42px;height:42px;border-radius:50%;display:flex;align-items:center;justify-content:center}
+.s3 .s3-float-icon svg{width:20px;height:20px;fill:none}
+.s3 .s3-float-icon.a{background:linear-gradient(135deg,#e0e7ff,#c7d2fe)}
+.s3 .s3-float-icon.a svg{stroke:#6366f1}
+.s3 .s3-float-icon.b{background:linear-gradient(135deg,#fce7f3,#fbcfe8)}
+.s3 .s3-float-icon.b svg{stroke:#ec4899}
+.s3 .s3-float-icon.c{background:linear-gradient(135deg,#d1fae5,#a7f3d0)}
+.s3 .s3-float-icon.c svg{stroke:#10b981}
+.s3 .s3-float-icon.d{background:linear-gradient(135deg,#fef3c7,#fde68a)}
+.s3 .s3-float-icon.d svg{stroke:#f59e0b}
+.s3 .s3-float-name{font-size:10px;color:#5b4a8a;font-weight:500}
+.s3 .s3-more-row{padding:10px 20px;display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:10px}
+.s3 .s3-more{display:flex;flex-direction:column;align-items:center;gap:6px;padding:8px}
+.s3 .s3-more-icon{width:36px;height:36px;border-radius:10px;background:#f3f0ff;display:flex;align-items:center;justify-content:center}
+.s3 .s3-more-icon svg{width:18px;height:18px;stroke:#8b5cf6;fill:none}
+.s3 .s3-more-name{font-size:10px;color:#7c6aaa}
+.s3 .s3-section{padding:6px 24px;font-size:12px;color:#9a8ac0;font-weight:600}
+.s3 .s3-notice{margin:0 20px 8px;background:#fff;border-radius:16px;padding:14px 16px;box-shadow:0 2px 10px rgba(107,70,193,.06)}
+.s3 .s3-notice-row{display:flex;align-items:center;gap:8px}
+.s3 .s3-notice-row+.s3-notice-row{margin-top:10px;padding-top:10px;border-top:1px solid #f5f3ff}
+.s3 .s3-ndot{width:6px;height:6px;border-radius:50%;background:#8b5cf6;flex-shrink:0}
+.s3 .s3-ntxt{font-size:11px;color:#5b4a8a}
+.s3 .tab-bar{background:rgba(255,255,255,.9);backdrop-filter:blur(10px);border-top:1px solid #ede9fe}
+.s3 .tab-item{color:#c4b5e0}
+.s3 .tab-item.active{color:#7c3aed;font-weight:600}
+.s3-num{background:linear-gradient(135deg,#7c3aed,#a78bfa)}
+
+/* ================================================ */
+/* STYLE 4: 橙系活力 — 横滑卡片，大圆角气泡          */
+/* ================================================ */
+.s4 .phone-inner{background:#fff;color:#1a1a1a}
+.s4 .status-bar{color:#333}
+.s4 .s4-header{padding:14px 24px 0;display:flex;align-items:center;gap:14px}
+.s4 .s4-avatar{width:44px;height:44px;border-radius:16px;background:linear-gradient(135deg,#ff6b35,#ff9a5c);display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:18px;flex-shrink:0}
+.s4 .s4-org{font-size:11px;color:#bbb}
+.s4 .s4-name{font-size:18px;font-weight:700;font-family:'Sora','Noto Sans SC',sans-serif;margin-top:2px}
+.s4 .s4-banner{margin:16px 20px;background:linear-gradient(135deg,#ff6b35,#ff9a5c);border-radius:20px;padding:18px 20px;color:#fff;position:relative;overflow:hidden}
+.s4 .s4-banner::before{content:'';position:absolute;right:-20px;bottom:-20px;width:100px;height:100px;border-radius:50%;background:rgba(255,255,255,.12)}
+.s4 .s4-banner::after{content:'';position:absolute;right:30px;top:-10px;width:60px;height:60px;border-radius:50%;background:rgba(255,255,255,.08)}
+.s4 .s4-banner-title{font-size:14px;font-weight:600;position:relative}
+.s4 .s4-banner-sub{font-size:11px;opacity:.8;margin-top:4px;position:relative}
+.s4 .s4-section{padding:12px 24px 8px;font-size:13px;font-weight:700;color:#222}
+.s4 .s4-scroll{display:flex;gap:12px;padding:0 20px;overflow-x:auto;-ms-overflow-style:none;scrollbar-width:none}
+.s4 .s4-scroll::-webkit-scrollbar{display:none}
+.s4 .s4-chip{flex-shrink:0;width:100px;padding:16px 12px;border-radius:18px;display:flex;flex-direction:column;align-items:center;gap:10px;text-align:center}
+.s4 .s4-chip-icon{width:42px;height:42px;border-radius:14px;display:flex;align-items:center;justify-content:center}
+.s4 .s4-chip-icon svg{width:20px;height:20px;fill:none}
+.s4 .s4-chip.a{background:#fff5f0}
+.s4 .s4-chip.a .s4-chip-icon{background:#ffe0d0}
+.s4 .s4-chip.a .s4-chip-icon svg{stroke:#e05020}
+.s4 .s4-chip.b{background:#f0f7ff}
+.s4 .s4-chip.b .s4-chip-icon{background:#d0e4ff}
+.s4 .s4-chip.b .s4-chip-icon svg{stroke:#3070d0}
+.s4 .s4-chip.c{background:#f0faf4}
+.s4 .s4-chip.c .s4-chip-icon{background:#c0ecd0}
+.s4 .s4-chip.c .s4-chip-icon svg{stroke:#208050}
+.s4 .s4-chip.d{background:#fef9ee}
+.s4 .s4-chip.d .s4-chip-icon{background:#fce8bb}
+.s4 .s4-chip.d .s4-chip-icon svg{stroke:#b07818}
+.s4 .s4-chip.e{background:#faf0ff}
+.s4 .s4-chip.e .s4-chip-icon{background:#e8d0ff}
+.s4 .s4-chip.e .s4-chip-icon svg{stroke:#8040c0}
+.s4 .s4-chip-name{font-size:11px;font-weight:600;color:#444}
+.s4 .s4-notices{padding:0 20px}
+.s4 .s4-notice{padding:12px 0;border-bottom:1px solid #f5f5f5;display:flex;align-items:center;gap:10px}
+.s4 .s4-notice:last-child{border:0}
+.s4 .s4-ndot{width:8px;height:8px;border-radius:50%;background:#ffe0d0;flex-shrink:0}
+.s4 .s4-ndot.new{background:#ff6b35}
+.s4 .s4-ntxt{font-size:12px;color:#555;flex:1}
+.s4 .s4-ntime{font-size:10px;color:#ccc;flex-shrink:0}
+.s4 .tab-bar{background:#fff;box-shadow:0 -2px 10px rgba(0,0,0,.03)}
+.s4 .tab-item{color:#ccc}
+.s4 .tab-item.active{color:#ff6b35;font-weight:600}
+.s4-num{background:linear-gradient(135deg,#ff6b35,#ff9a5c)}
+
+/* ================================================ */
+/* STYLE 5: 玻璃深空 — 网格纹理背景，发光卡片        */
+/* ================================================ */
+.s5 .phone-inner{background:#08090f;color:#a0b0c0;position:relative}
+.s5 .phone-inner::before{content:'';position:absolute;inset:0;background:radial-gradient(ellipse at 30% 20%,rgba(56,100,220,.15),transparent 60%),radial-gradient(ellipse at 70% 70%,rgba(124,58,237,.1),transparent 50%);pointer-events:none}
+.s5 .status-bar{color:#556}
+.s5 .s5-header{padding:12px 24px 0;position:relative;z-index:1}
+.s5 .s5-row{display:flex;align-items:center;justify-content:space-between}
+.s5 .s5-org{font-size:10px;color:#334;letter-spacing:2px;text-transform:uppercase}
+.s5 .s5-name{font-size:20px;font-weight:600;color:#fff;margin-top:4px}
+.s5 .s5-avatar{width:36px;height:36px;border-radius:50%;background:rgba(125,211,252,.1);border:1px solid rgba(125,211,252,.2);display:flex;align-items:center;justify-content:center;color:#7dd3fc;font-size:13px}
+.s5 .s5-search{margin:14px 24px;height:40px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.06);border-radius:12px;display:flex;align-items:center;padding:0 14px;gap:8px;color:#334;font-size:12px;position:relative;z-index:1}
+.s5 .s5-search svg{width:16px;height:16px;stroke:#335;fill:none}
+.s5 .s5-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;padding:8px 20px;position:relative;z-index:1}
+.s5 .s5-card{background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.06);border-radius:16px;padding:18px 16px;position:relative;overflow:hidden;transition:.15s}
+.s5 .s5-card::before{content:'';position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,rgba(125,211,252,.2),transparent)}
+.s5 .s5-card-icon{width:36px;height:36px;border-radius:10px;display:flex;align-items:center;justify-content:center;margin-bottom:10px}
+.s5 .s5-card-icon svg{width:18px;height:18px;fill:none}
+.s5 .s5-card-icon.a{background:rgba(56,100,220,.12)}
+.s5 .s5-card-icon.a svg{stroke:#6090e0}
+.s5 .s5-card-icon.b{background:rgba(125,211,252,.1)}
+.s5 .s5-card-icon.b svg{stroke:#7dd3fc}
+.s5 .s5-card-icon.c{background:rgba(124,58,237,.1)}
+.s5 .s5-card-icon.c svg{stroke:#a78bfa}
+.s5 .s5-card-icon.d{background:rgba(52,211,153,.1)}
+.s5 .s5-card-icon.d svg{stroke:#34d399}
+.s5 .s5-card-name{font-size:13px;font-weight:500;color:#cdd}
+.s5 .s5-card-sub{font-size:10px;color:#445;margin-top:3px}
+.s5 .s5-section{padding:14px 24px 6px;font-size:10px;color:#335;letter-spacing:2px;text-transform:uppercase;position:relative;z-index:1}
+.s5 .s5-notice{margin:0 20px 6px;padding:12px 14px;background:rgba(255,255,255,.02);border:1px solid rgba(255,255,255,.04);border-radius:10px;display:flex;align-items:center;gap:10px;position:relative;z-index:1}
+.s5 .s5-ndot{width:4px;height:4px;border-radius:50%;background:#7dd3fc;box-shadow:0 0 6px rgba(125,211,252,.4);flex-shrink:0}
+.s5 .s5-ntxt{font-size:11px;color:#778}
+.s5 .tab-bar{background:rgba(8,9,15,.9);backdrop-filter:blur(16px);border-top:1px solid rgba(255,255,255,.04)}
+.s5 .tab-item{color:#223}
+.s5 .tab-item.active{color:#7dd3fc}
+.s5-num{background:linear-gradient(135deg,#1a2040,#2a1a40);border:1px solid rgba(125,211,252,.3)}
+
+/* ================================================ */
+/* STYLE 6: 克莱因蓝 — 分割构图，色块几何            */
+/* ================================================ */
+.s6 .phone-inner{background:#f4f5f8;color:#1a1a2e}
+.s6 .status-bar{color:#fff;position:relative;z-index:2}
+.s6 .s6-hero{background:#002fa7;margin-top:-50px;padding:58px 24px 24px;position:relative;overflow:hidden}
+.s6 .s6-hero::before{content:'';position:absolute;right:-40px;top:-40px;width:160px;height:160px;border-radius:50%;background:rgba(255,255,255,.04)}
+.s6 .s6-hero::after{content:'';position:absolute;left:-20px;bottom:-60px;width:200px;height:200px;border-radius:50%;background:rgba(255,255,255,.03)}
+.s6 .s6-org{font-size:11px;color:rgba(255,255,255,.4);font-family:'Manrope',sans-serif}
+.s6 .s6-name{font-size:24px;font-weight:800;color:#fff;font-family:'Manrope','Noto Sans SC',sans-serif;margin-top:4px;position:relative}
+.s6 .s6-search{margin:16px 0 0;height:42px;background:rgba(255,255,255,.12);border-radius:12px;display:flex;align-items:center;padding:0 14px;gap:8px;color:rgba(255,255,255,.4);font-size:12px;position:relative}
+.s6 .s6-search svg{width:16px;height:16px;stroke:rgba(255,255,255,.4);fill:none}
+.s6 .s6-section{padding:16px 24px 8px;font-size:13px;font-weight:700;color:#1a1a2e}
+.s6 .s6-modules{padding:0 20px;display:grid;grid-template-columns:repeat(4,1fr);gap:14px 10px}
+.s6 .s6-mod{display:flex;flex-direction:column;align-items:center;gap:8px}
+.s6 .s6-mod-icon{width:48px;height:48px;border-radius:16px;display:flex;align-items:center;justify-content:center;background:#fff;box-shadow:0 2px 8px rgba(0,47,167,.08)}
+.s6 .s6-mod-icon svg{width:22px;height:22px;stroke:#002fa7;fill:none}
+.s6 .s6-mod-name{font-size:11px;color:#555;font-weight:500}
+.s6 .s6-notice-area{margin:12px 20px;background:#fff;border-radius:16px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,.03)}
+.s6 .s6-ni{padding:12px 16px;display:flex;align-items:center;gap:10px}
+.s6 .s6-ni+.s6-ni{border-top:1px solid #f0f1f4}
+.s6 .s6-ni-dot{width:8px;height:8px;border-radius:3px;background:#002fa7;flex-shrink:0}
+.s6 .s6-ni-txt{font-size:11px;color:#555;flex:1}
+.s6 .tab-bar{background:#fff;border-top:1px solid #e8e9ee}
+.s6 .tab-item{color:#bbc}
+.s6 .tab-item.active{color:#002fa7;font-weight:600}
+.s6-num{background:#002fa7}
+
+/* ================================================ */
+/* STYLE 7: 田园绿 — 卡片内嵌插画区，衬线标题        */
+/* ================================================ */
+.s7 .phone-inner{background:#f2f5ee;color:#2d3a2d}
+.s7 .status-bar{color:#6a8a5a}
+.s7 .s7-header{padding:14px 24px 0;display:flex;align-items:center;gap:14px}
+.s7 .s7-avatar{width:42px;height:42px;border-radius:50%;background:linear-gradient(135deg,#8ab87a,#6a9a5a);display:flex;align-items:center;justify-content:center;color:#fff;font-size:16px;font-weight:600;flex-shrink:0}
+.s7 .s7-org{font-size:11px;color:#a0b890}
+.s7 .s7-name{font-family:'Playfair Display','Noto Sans SC',serif;font-size:22px;font-weight:700;color:#2a3a1a;margin-top:2px}
+.s7 .s7-banner{margin:16px 20px;background:linear-gradient(135deg,#5a8a48,#7aaa68);border-radius:20px;padding:20px;color:#fff;position:relative;overflow:hidden}
+.s7 .s7-banner::after{content:'';position:absolute;right:10px;bottom:10px;width:80px;height:80px;border-radius:50%;border:2px solid rgba(255,255,255,.1)}
+.s7 .s7-banner-title{font-family:'Playfair Display',serif;font-size:16px;font-weight:600;position:relative}
+.s7 .s7-banner-sub{font-size:11px;opacity:.7;margin-top:4px;position:relative}
+.s7 .s7-section{padding:12px 24px 8px;font-size:13px;font-weight:600;color:#4a6a3a;font-family:'Playfair Display','Noto Sans SC',serif}
+.s7 .s7-modules{padding:0 20px;display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.s7 .s7-mod{background:#fff;border-radius:16px;padding:16px;display:flex;align-items:center;gap:12px;border:1px solid #e0eadb}
+.s7 .s7-mod-icon{width:40px;height:40px;border-radius:12px;background:#eaf4e4;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.s7 .s7-mod-icon svg{width:20px;height:20px;stroke:#5a8a48;fill:none}
+.s7 .s7-mod-name{font-size:12px;font-weight:600;color:#2d3a2d}
+.s7 .s7-mod-sub{font-size:10px;color:#a0b890;margin-top:2px}
+.s7 .s7-notice{margin:12px 20px 8px;background:#fff;border-radius:14px;padding:14px 16px;border:1px solid #e0eadb}
+.s7 .s7-nr{display:flex;align-items:center;gap:8px;padding:6px 0;font-size:11px;color:#5a7a4a}
+.s7 .s7-nr+.s7-nr{border-top:1px solid #f0f5eb}
+.s7 .s7-nrdot{width:5px;height:5px;border-radius:50%;background:#7aaa68;flex-shrink:0}
+.s7 .tab-bar{background:#f2f5ee;border-top:1px solid #e0eadb}
+.s7 .tab-item{color:#c0d0b0}
+.s7 .tab-item.active{color:#5a8a48;font-weight:600}
+.s7-num{background:linear-gradient(135deg,#5a8a48,#7aaa68)}
+
+/* ================================================ */
+/* STYLE 8: 赛博朋克 — 扫描线效果，数据终端风         */
+/* ================================================ */
+.s8 .phone-inner{background:#05080d;color:#6a8090;position:relative;font-family:'JetBrains Mono','Noto Sans SC',monospace}
+.s8 .phone-inner::after{content:'';position:absolute;inset:0;background:repeating-linear-gradient(transparent,transparent 3px,rgba(0,255,255,.01) 3px,rgba(0,255,255,.01) 4px);pointer-events:none;z-index:1}
+.s8 .status-bar{color:#0ff;font-size:11px;position:relative;z-index:2}
+.s8 .s8-header{padding:10px 24px 0;position:relative;z-index:2}
+.s8 .s8-line{height:1px;background:linear-gradient(90deg,#0ff,transparent);margin-bottom:10px;opacity:.3}
+.s8 .s8-org{font-size:9px;color:#224;letter-spacing:4px;text-transform:uppercase}
+.s8 .s8-row{display:flex;align-items:baseline;justify-content:space-between;margin-top:6px}
+.s8 .s8-name{font-size:18px;font-weight:600;color:#0ff;text-shadow:0 0 20px rgba(0,255,255,.2)}
+.s8 .s8-time{font-size:10px;color:#224}
+.s8 .s8-search{margin:12px 24px;height:36px;background:rgba(0,255,255,.02);border:1px solid rgba(0,255,255,.08);border-radius:2px;display:flex;align-items:center;padding:0 12px;gap:8px;color:#224;font-size:11px;position:relative;z-index:2}
+.s8 .s8-search svg{width:14px;height:14px;stroke:rgba(0,255,255,.3);fill:none}
+.s8 .s8-section{padding:10px 24px 6px;font-size:9px;color:#335;letter-spacing:3px;text-transform:uppercase;position:relative;z-index:2}
+.s8 .s8-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px;padding:0 20px;position:relative;z-index:2}
+.s8 .s8-mod{background:rgba(0,255,255,.02);border:1px solid rgba(0,255,255,.06);padding:14px;display:flex;align-items:center;gap:10px;border-radius:2px;position:relative}
+.s8 .s8-mod::before{content:'';position:absolute;left:0;top:0;bottom:0;width:2px;background:#0ff;opacity:.4}
+.s8 .s8-mod-icon{width:28px;height:28px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.s8 .s8-mod-icon svg{width:18px;height:18px;stroke:#0ff;fill:none;filter:drop-shadow(0 0 4px rgba(0,255,255,.3))}
+.s8 .s8-mod-name{font-size:10px;color:#7aa}
+.s8 .s8-mod-id{font-size:8px;color:#224;margin-top:2px}
+.s8 .s8-notices{padding:0 20px;position:relative;z-index:2}
+.s8 .s8-ni{padding:8px 12px;border-bottom:1px solid rgba(0,255,255,.04);display:flex;align-items:center;gap:8px}
+.s8 .s8-ni-tag{font-size:8px;color:#0ff;background:rgba(0,255,255,.08);padding:1px 6px;border-radius:1px;flex-shrink:0}
+.s8 .s8-ni-txt{font-size:10px;color:#557;flex:1}
+.s8 .tab-bar{background:#05080d;border-top:1px solid rgba(0,255,255,.06);position:relative;z-index:2}
+.s8 .tab-item{color:#223;font-family:'JetBrains Mono',monospace;font-size:9px}
+.s8 .tab-item.active{color:#0ff}
+.s8-num{background:#05080d;border:1px solid #0ff;color:#0ff}
+
+/* ================================================ */
+/* STYLE 9: 奶油棕 — 圆润气泡设计，超柔和            */
+/* ================================================ */
+.s9 .phone-inner{background:#faf6f0;color:#5a4030}
+.s9 .status-bar{color:#b09878}
+.s9 .s9-header{padding:14px 24px 0;display:flex;align-items:center;gap:14px}
+.s9 .s9-avatar{width:44px;height:44px;border-radius:50%;background:linear-gradient(135deg,#e0b888,#c8a070);display:flex;align-items:center;justify-content:center;color:#fff;font-size:16px;font-weight:600;flex-shrink:0;box-shadow:0 4px 12px rgba(200,160,112,.2)}
+.s9 .s9-org{font-size:11px;color:#c0a888}
+.s9 .s9-name{font-family:'Playfair Display','Noto Sans SC',serif;font-size:21px;font-weight:700;color:#3a2818;margin-top:2px}
+.s9 .s9-search{margin:16px 24px;height:42px;background:#f0e8dc;border-radius:21px;display:flex;align-items:center;padding:0 16px;gap:8px;color:#c0a888;font-size:12px}
+.s9 .s9-search svg{width:16px;height:16px;stroke:#c0a888;fill:none}
+.s9 .s9-section{padding:12px 24px 8px;font-size:12px;color:#a08868;font-weight:600}
+.s9 .s9-bubble-row{display:flex;gap:12px;padding:0 20px;overflow-x:auto;-ms-overflow-style:none;scrollbar-width:none}
+.s9 .s9-bubble-row::-webkit-scrollbar{display:none}
+.s9 .s9-bubble{flex-shrink:0;width:90px;display:flex;flex-direction:column;align-items:center;gap:8px}
+.s9 .s9-bubble-icon{width:56px;height:56px;border-radius:50%;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 14px rgba(0,0,0,.05)}
+.s9 .s9-bubble-icon svg{width:24px;height:24px;fill:none}
+.s9 .s9-bubble-icon.a{background:linear-gradient(135deg,#fce4d0,#f8d4b8)}
+.s9 .s9-bubble-icon.a svg{stroke:#c07840}
+.s9 .s9-bubble-icon.b{background:linear-gradient(135deg,#e8daf0,#dcc8e8)}
+.s9 .s9-bubble-icon.b svg{stroke:#8858a8}
+.s9 .s9-bubble-icon.c{background:linear-gradient(135deg,#d4eae0,#c0dcd0)}
+.s9 .s9-bubble-icon.c svg{stroke:#508868}
+.s9 .s9-bubble-icon.d{background:linear-gradient(135deg,#faeaca,#f4deb0)}
+.s9 .s9-bubble-icon.d svg{stroke:#a88830}
+.s9 .s9-bubble-icon.e{background:linear-gradient(135deg,#dae4f4,#c8d8ee)}
+.s9 .s9-bubble-icon.e svg{stroke:#4868a8}
+.s9 .s9-bubble-name{font-size:11px;color:#7a5a3a;font-weight:500}
+.s9 .s9-notice-area{margin:12px 20px 8px}
+.s9 .s9-ni{background:#fff;border-radius:16px;padding:14px 16px;margin-bottom:8px;box-shadow:0 2px 8px rgba(180,140,100,.06);display:flex;align-items:center;gap:10px}
+.s9 .s9-ni-dot{width:6px;height:6px;border-radius:50%;background:#e0b888;flex-shrink:0}
+.s9 .s9-ni-txt{font-size:11px;color:#6a5040;flex:1}
+.s9 .s9-ni-time{font-size:9px;color:#c0a888;flex-shrink:0}
+.s9 .tab-bar{background:#faf6f0;border-top:1px solid #ece4d8}
+.s9 .tab-item{color:#d0c0a8}
+.s9 .tab-item.active{color:#a07848;font-weight:600}
+.s9-num{background:linear-gradient(135deg,#d4a574,#c4956a)}
+
+/* ================================================ */
+/* STYLE 10: 钢蓝专业 — 信息密度高，精确排版          */
+/* ================================================ */
+.s10 .phone-inner{background:#f3f5f8;color:#2c3e50}
+.s10 .status-bar{color:#8a95a5}
+.s10 .s10-header{padding:14px 24px 0;display:flex;align-items:center;justify-content:space-between}
+.s10 .s10-left .org{font-size:10px;color:#a0aab4;letter-spacing:1px;font-family:'Plus Jakarta Sans',sans-serif}
+.s10 .s10-left .name{font-size:19px;font-weight:800;color:#1a2840;font-family:'Plus Jakarta Sans','Noto Sans SC',sans-serif;margin-top:3px}
+.s10 .s10-right{display:flex;gap:10px;align-items:center}
+.s10 .s10-icon-btn{width:36px;height:36px;border-radius:10px;background:#fff;display:flex;align-items:center;justify-content:center;box-shadow:0 1px 3px rgba(0,0,0,.04)}
+.s10 .s10-icon-btn svg{width:18px;height:18px;stroke:#8a95a5;fill:none}
+.s10 .s10-search{margin:14px 24px;height:40px;background:#fff;border-radius:10px;display:flex;align-items:center;padding:0 14px;gap:8px;color:#b0bac4;font-size:12px;box-shadow:0 1px 2px rgba(0,0,0,.03)}
+.s10 .s10-search svg{width:16px;height:16px;stroke:#b0bac4;fill:none}
+.s10 .s10-section-row{padding:12px 24px 8px;display:flex;align-items:center;justify-content:space-between}
+.s10 .s10-section-title{font-size:14px;font-weight:700;color:#1a2840;font-family:'Plus Jakarta Sans','Noto Sans SC',sans-serif}
+.s10 .s10-section-more{font-size:11px;color:#3a7bd5}
+.s10 .s10-modules{padding:0 20px;display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+.s10 .s10-mod{display:flex;flex-direction:column;align-items:center;gap:8px;padding:10px 4px}
+.s10 .s10-mod-icon{width:46px;height:46px;border-radius:14px;display:flex;align-items:center;justify-content:center;background:#fff;box-shadow:0 2px 6px rgba(58,123,213,.06)}
+.s10 .s10-mod-icon svg{width:22px;height:22px;fill:none}
+.s10 .s10-mod-icon.a svg{stroke:#3a7bd5}
+.s10 .s10-mod-icon.b svg{stroke:#e0592a}
+.s10 .s10-mod-icon.c svg{stroke:#15a87e}
+.s10 .s10-mod-icon.d svg{stroke:#9a5cc6}
+.s10 .s10-mod-icon.e svg{stroke:#d4a030}
+.s10 .s10-mod-icon.f svg{stroke:#4a90d9}
+.s10 .s10-mod-icon.g svg{stroke:#e07070}
+.s10 .s10-mod-icon.h svg{stroke:#50a0a0}
+.s10 .s10-mod-name{font-size:11px;color:#5a6a7a;font-weight:500}
+.s10 .s10-notice-card{margin:8px 20px;background:#fff;border-radius:14px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,.03)}
+.s10 .s10-ni{padding:13px 16px;display:flex;align-items:center;gap:10px}
+.s10 .s10-ni+.s10-ni{border-top:1px solid #f3f5f8}
+.s10 .s10-ni-dot{width:6px;height:6px;border-radius:2px;background:#3a7bd5;flex-shrink:0}
+.s10 .s10-ni-dot.warn{background:#e0592a}
+.s10 .s10-ni-txt{font-size:12px;color:#4a5568;flex:1}
+.s10 .s10-ni-time{font-size:10px;color:#b0bac4;flex-shrink:0}
+.s10 .tab-bar{background:#fff;box-shadow:0 -1px 3px rgba(0,0,0,.03)}
+.s10 .tab-item{color:#c0c8d0}
+.s10 .tab-item.active{color:#3a7bd5;font-weight:600}
+.s10-num{background:linear-gradient(135deg,#3a7bd5,#5a9be5)}
+
+</style>
+</head>
+<body>
+
+<div class="page-header">
+  <h1>UI Style Preview</h1>
+  <p>10 种风格，每种布局结构各不相同</p>
+</div>
+
+<div class="grid">
+
+<!-- ====== 1. 呼吸感白 ====== -->
+<div class="style-card">
+  <div class="style-label">
+    <div class="style-number s1-num">1</div>
+    <div class="style-name">呼吸感白</div>
+    <div class="style-desc">大留白 + 双列圆角卡片 + 描述副文本</div>
+  </div>
+  <div class="phone">
+    <div class="phone-inner s1">
+      <div class="status-bar"><span>9:41</span><span>●●● ▂▅▇</span></div>
+      <div class="content">
+        <div class="s1-header">
+          <div class="s1-org">DEMO ORGANIZATION</div>
+          <div class="s1-name">Hi, 张明</div>
+        </div>
+        <div class="s1-search"><svg viewBox="0 0 24 24" stroke-width="1.5"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>搜索功能或人员</div>
+        <div class="s1-section">常用功能</div>
+        <div class="s1-modules">
+          <div class="s1-mod"><div class="s1-mod-icon a"><svg viewBox="0 0 24 24" stroke-width="1.5"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg></div><div><div class="s1-mod-name">检查任务</div><div class="s1-mod-sub">执行与记录</div></div></div>
+          <div class="s1-mod"><div class="s1-mod-icon b"><svg viewBox="0 0 24 24" stroke-width="1.5"><path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg></div><div><div class="s1-mod-name">审核管理</div><div class="s1-mod-sub">审批与确认</div></div></div>
+          <div class="s1-mod"><div class="s1-mod-icon c"><svg viewBox="0 0 24 24" stroke-width="1.5"><path d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/></svg></div><div><div class="s1-mod-name">人员管理</div><div class="s1-mod-sub">组织与人员</div></div></div>
+          <div class="s1-mod"><div class="s1-mod-icon d"><svg viewBox="0 0 24 24" stroke-width="1.5"><path d="M16 8v8m-4-5v5m-4-2v2m-2 4h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg></div><div><div class="s1-mod-name">数据统计</div><div class="s1-mod-sub">图表与分析</div></div></div>
+        </div>
+        <div class="s1-notice">
+          <div class="s1-notice-title">最新通知</div>
+          <div class="s1-notice-item"><div class="s1-notice-dot new"></div>系统升级通知：v2.1 版本已发布</div>
+          <div class="s1-notice-item"><div class="s1-notice-dot"></div>新功能上线：支持扫码操作</div>
+          <div class="s1-notice-item"><div class="s1-notice-dot"></div>4月份工作安排已发布</div>
+        </div>
+      </div>
+      <div class="tab-bar">
+        <div class="tab-item active"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-4 0a1 1 0 01-1-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 01-1 1h-2z"/></svg>首页</div>
+        <div class="tab-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 10h.01M12 10h.01M16 10h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/></svg>消息</div>
+        <div class="tab-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/></svg>我的</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ====== 2. 暗金商务 ====== -->
+<div class="style-card">
+  <div class="style-label">
+    <div class="style-number s2-num">2</div>
+    <div class="style-name">暗金商务</div>
+    <div class="style-desc">列表式模块 + 右箭头引导 + 金线分割</div>
+  </div>
+  <div class="phone">
+    <div class="phone-inner s2">
+      <div class="status-bar"><span>9:41</span><span>●●● ▂▅▇</span></div>
+      <div class="content">
+        <div class="s2-header">
+          <div class="s2-left"><div class="org">DEMO ORGANIZATION</div><div class="name">张明</div></div>
+          <div class="s2-avatar">张</div>
+        </div>
+        <div class="s2-search"><svg viewBox="0 0 24 24" stroke-width="1.5"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>搜索...</div>
+        <div class="s2-divider"></div>
+        <div class="s2-section">FUNCTIONS</div>
+        <div class="s2-modules">
+          <div class="s2-mod"><div class="s2-mod-icon"><svg viewBox="0 0 24 24" stroke-width="1.5"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg></div><div><div class="s2-mod-name">检查任务</div><div class="s2-mod-sub">执行检查与记录</div></div></div>
+          <div class="s2-mod"><div class="s2-mod-icon"><svg viewBox="0 0 24 24" stroke-width="1.5"><path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg></div><div><div class="s2-mod-name">审核管理</div><div class="s2-mod-sub">审批确认与驳回</div></div></div>
+          <div class="s2-mod"><div class="s2-mod-icon"><svg viewBox="0 0 24 24" stroke-width="1.5"><path d="M12 9v2m0 4h.01M5.07 19h13.86c1.54 0 2.5-1.67 1.73-3L13.73 4c-.77-1.33-2.69-1.33-3.46 0L3.34 16c-.77 1.33.19 3 1.73 3z"/></svg></div><div><div class="s2-mod-name">整改处理</div><div class="s2-mod-sub">整改跟踪与反馈</div></div></div>
+          <div class="s2-mod"><div class="s2-mod-icon"><svg viewBox="0 0 24 24" stroke-width="1.5"><path d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/></svg></div><div><div class="s2-mod-name">人员管理</div><div class="s2-mod-sub">组织架构与人员</div></div></div>
+        </div>
+        <div class="s2-divider"></div>
+        <div class="s2-section">NOTICES</div>
+        <div class="s2-notice-area">
+          <div class="s2-notice-item"><div class="s2-notice-badge"></div><div><div class="s2-notice-title">系统升级通知：v2.1 版本</div><div class="s2-notice-time">10 分钟前</div></div></div>
+          <div class="s2-notice-item"><div class="s2-notice-badge"></div><div><div class="s2-notice-title">新功能上线：扫码快捷操作</div><div class="s2-notice-time">1 小时前</div></div></div>
+        </div>
+      </div>
+      <div class="tab-bar">
+        <div class="tab-item active"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-4 0a1 1 0 01-1-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 01-1 1h-2z"/></svg>首页</div>
+        <div class="tab-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 10h.01M12 10h.01M16 10h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/></svg>消息</div>
+        <div class="tab-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/></svg>我的</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ====== 3. 梦幻紫 ====== -->
+<div class="style-card">
+  <div class="style-label">
+    <div class="style-number s3-num">3</div>
+    <div class="style-name">梦幻紫</div>
+    <div class="style-desc">渐变天际线 + 浮岛圆形图标 + 次排小图标</div>
+  </div>
+  <div class="phone">
+    <div class="phone-inner s3">
+      <div class="status-bar"><span>9:41</span><span>●●● ▂▅▇</span></div>
+      <div class="content">
+        <div class="s3-header">
+          <div class="s3-org">演示组织名称</div>
+          <div class="s3-greeting"><div class="s3-name">Hi, 张明</div><div class="s3-avatar">张</div></div>
+        </div>
+        <div class="s3-search"><svg viewBox="0 0 24 24" stroke-width="1.5"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>搜索功能或人员</div>
+        <div class="s3-float-area">
+          <div class="s3-float"><div class="s3-float-icon a"><svg viewBox="0 0 24 24" stroke-width="1.5"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg></div><div class="s3-float-name">检查</div></div>
+          <div class="s3-float"><div class="s3-float-icon b"><svg viewBox="0 0 24 24" stroke-width="1.5"><path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg></div><div class="s3-float-name">审核</div></div>
+          <div class="s3-float"><div class="s3-float-icon c"><svg viewBox="0 0 24 24" stroke-width="1.5"><path d="M12 9v2m0 4h.01M5.07 19h13.86c1.54 0 2.5-1.67 1.73-3L13.73 4c-.77-1.33-2.69-1.33-3.46 0L3.34 16c-.77 1.33.19 3 1.73 3z"/></svg></div><div class="s3-float-name">整改</div></div>
+          <div class="s3-float"><div class="s3-float-icon d"><svg viewBox="0 0 24 24" stroke-width="1.5"><path d="M16 8v8m-4-5v5m-4-2v2m-2 4h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg></div><div class="s3-float-name">统计</div></div>
+        </div>
+        <div class="s3-more-row">
+          <div class="s3-more"><div class="s3-more-icon"><svg viewBox="0 0 24 24" stroke-width="1.5"><path d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/></svg></div><div class="s3-more-name">人员</div></div>
+          <div class="s3-more"><div class="s3-more-icon"><svg viewBox="0 0 24 24" stroke-width="1.5"><path d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0H5m14 0h2m-16 0H3"/></svg></div><div class="s3-more-name">组织</div></div>
+          <div class="s3-more"><div class="s3-more-icon"><svg viewBox="0 0 24 24" stroke-width="1.5"><path d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg></div><div class="s3-more-name">日程</div></div>
+          <div class="s3-more"><div class="s3-more-icon"><svg viewBox="0 0 24 24" stroke-width="1.5"><path d="M3 7V5a2 2 0 012-2h2m0 16H5a2 2 0 01-2-2v-2m16-10V5a2 2 0 00-2-2h-2m0 16h2a2 2 0 002-2v-2M7 12h10"/></svg></div><div class="s3-more-name">扫码</div></div>
+        </div>
+        <div class="s3-section">通知</div>
+        <div class="s3-notice">
+          <div class="s3-notice-row"><div class="s3-ndot"></div><div class="s3-ntxt">系统升级通知：v2.1 版本已发布</div></div>
+          <div class="s3-notice-row"><div class="s3-ndot"></div><div class="s3-ntxt">新功能上线：支持扫码快捷操作</div></div>
+          <div class="s3-notice-row"><div class="s3-ndot"></div><div class="s3-ntxt">4月份工作安排已发布，请查阅</div></div>
+        </div>
+      </div>
+      <div class="tab-bar">
+        <div class="tab-item active"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-4 0a1 1 0 01-1-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 01-1 1h-2z"/></svg>首页</div>
+        <div class="tab-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 10h.01M12 10h.01M16 10h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/></svg>消息</div>
+        <div class="tab-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/></svg>我的</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ====== 4. 活力橙 ====== -->
+<div class="style-card">
+  <div class="style-label">
+    <div class="style-number s4-num">4</div>
+    <div class="style-name">活力橙</div>
+    <div class="style-desc">横滑彩色卡片 + 运营 Banner + 气泡装饰</div>
+  </div>
+  <div class="phone">
+    <div class="phone-inner s4">
+      <div class="status-bar"><span>9:41</span><span>●●● ▂▅▇</span></div>
+      <div class="content">
+        <div class="s4-header">
+          <div class="s4-avatar">张</div>
+          <div><div class="s4-org">演示组织名称</div><div class="s4-name">你好，张明</div></div>
+        </div>
+        <div class="s4-banner"><div class="s4-banner-title">欢迎回来</div><div class="s4-banner-sub">今天也是高效的一天</div></div>
+        <div class="s4-section">功能入口</div>
+        <div class="s4-scroll">
+          <div class="s4-chip a"><div class="s4-chip-icon"><svg viewBox="0 0 24 24" stroke-width="1.5"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg></div><div class="s4-chip-name">检查任务</div></div>
+          <div class="s4-chip b"><div class="s4-chip-icon"><svg viewBox="0 0 24 24" stroke-width="1.5"><path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg></div><div class="s4-chip-name">审核管理</div></div>
+          <div class="s4-chip c"><div class="s4-chip-icon"><svg viewBox="0 0 24 24" stroke-width="1.5"><path d="M12 9v2m0 4h.01M5.07 19h13.86c1.54 0 2.5-1.67 1.73-3L13.73 4c-.77-1.33-2.69-1.33-3.46 0L3.34 16c-.77 1.33.19 3 1.73 3z"/></svg></div><div class="s4-chip-name">整改处理</div></div>
+          <div class="s4-chip d"><div class="s4-chip-icon"><svg viewBox="0 0 24 24" stroke-width="1.5"><path d="M16 8v8m-4-5v5m-4-2v2m-2 4h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg></div><div class="s4-chip-name">数据统计</div></div>
+          <div class="s4-chip e"><div class="s4-chip-icon"><svg viewBox="0 0 24 24" stroke-width="1.5"><path d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/></svg></div><div class="s4-chip-name">人员管理</div></div>
+        </div>
+        <div class="s4-section">通知</div>
+        <div class="s4-notices">
+          <div class="s4-notice"><div class="s4-ndot new"></div><div class="s4-ntxt">系统升级通知：v2.1 版本已发布</div><div class="s4-ntime">10分钟前</div></div>
+          <div class="s4-notice"><div class="s4-ndot"></div><div class="s4-ntxt">新功能上线：支持扫码操作</div><div class="s4-ntime">1小时前</div></div>
+          <div class="s4-notice"><div class="s4-ndot"></div><div class="s4-ntxt">4月份工作安排已发布</div><div class="s4-ntime">3小时前</div></div>
+        </div>
+      </div>
+      <div class="tab-bar">
+        <div class="tab-item active"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-4 0a1 1 0 01-1-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 01-1 1h-2z"/></svg>首页</div>
+        <div class="tab-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 10h.01M12 10h.01M16 10h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/></svg>消息</div>
+        <div class="tab-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/></svg>我的</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ====== 5. 玻璃深空 ====== -->
+<div class="style-card">
+  <div class="style-label">
+    <div class="style-number s5-num">5</div>
+    <div class="style-name">玻璃深空</div>
+    <div class="style-desc">极光背景 + 双列发光卡片 + 顶线高光</div>
+  </div>
+  <div class="phone">
+    <div class="phone-inner s5">
+      <div class="status-bar"><span>9:41</span><span>●●● ▂▅▇</span></div>
+      <div class="content">
+        <div class="s5-header">
+          <div class="s5-org">DEMO ORGANIZATION</div>
+          <div class="s5-row"><div class="s5-name">Hi, 张明</div><div class="s5-avatar">张</div></div>
+        </div>
+        <div class="s5-search"><svg viewBox="0 0 24 24" stroke-width="1.5"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>搜索...</div>
+        <div class="s5-section">MODULES</div>
+        <div class="s5-grid">
+          <div class="s5-card"><div class="s5-card-icon a"><svg viewBox="0 0 24 24" stroke-width="1.5"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg></div><div class="s5-card-name">检查任务</div><div class="s5-card-sub">执行检查与记录</div></div>
+          <div class="s5-card"><div class="s5-card-icon b"><svg viewBox="0 0 24 24" stroke-width="1.5"><path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg></div><div class="s5-card-name">审核管理</div><div class="s5-card-sub">审批与确认</div></div>
+          <div class="s5-card"><div class="s5-card-icon c"><svg viewBox="0 0 24 24" stroke-width="1.5"><path d="M12 9v2m0 4h.01M5.07 19h13.86c1.54 0 2.5-1.67 1.73-3L13.73 4c-.77-1.33-2.69-1.33-3.46 0L3.34 16c-.77 1.33.19 3 1.73 3z"/></svg></div><div class="s5-card-name">整改处理</div><div class="s5-card-sub">跟踪与反馈</div></div>
+          <div class="s5-card"><div class="s5-card-icon d"><svg viewBox="0 0 24 24" stroke-width="1.5"><path d="M16 8v8m-4-5v5m-4-2v2m-2 4h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg></div><div class="s5-card-name">数据统计</div><div class="s5-card-sub">图表与分析</div></div>
+        </div>
+        <div class="s5-section">NOTICES</div>
+        <div class="s5-notice"><div class="s5-ndot"></div><div class="s5-ntxt">系统升级通知：v2.1 版本已发布</div></div>
+        <div class="s5-notice"><div class="s5-ndot"></div><div class="s5-ntxt">新功能上线：支持扫码操作</div></div>
+      </div>
+      <div class="tab-bar">
+        <div class="tab-item active"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-4 0a1 1 0 01-1-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 01-1 1h-2z"/></svg>首页</div>
+        <div class="tab-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 10h.01M12 10h.01M16 10h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/></svg>消息</div>
+        <div class="tab-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/></svg>我的</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ====== 6. 克莱因蓝 ====== -->
+<div class="style-card">
+  <div class="style-label">
+    <div class="style-number s6-num">6</div>
+    <div class="style-name">克莱因蓝</div>
+    <div class="style-desc">大色块分割构图 + 圆形气泡几何 + 白卡片阵列</div>
+  </div>
+  <div class="phone">
+    <div class="phone-inner s6">
+      <div class="status-bar"><span>9:41</span><span>●●● ▂▅▇</span></div>
+      <div class="content">
+        <div class="s6-hero">
+          <div class="s6-org">演示组织名称</div>
+          <div class="s6-name">你好，张明</div>
+          <div class="s6-search"><svg viewBox="0 0 24 24" stroke-width="1.5"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>搜索功能或人员</div>
+        </div>
+        <div class="s6-section">功能</div>
+        <div class="s6-modules">
+          <div class="s6-mod"><div class="s6-mod-icon"><svg viewBox="0 0 24 24" stroke-width="1.5"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg></div><div class="s6-mod-name">检查</div></div>
+          <div class="s6-mod"><div class="s6-mod-icon"><svg viewBox="0 0 24 24" stroke-width="1.5"><path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg></div><div class="s6-mod-name">审核</div></div>
+          <div class="s6-mod"><div class="s6-mod-icon"><svg viewBox="0 0 24 24" stroke-width="1.5"><path d="M12 9v2m0 4h.01M5.07 19h13.86c1.54 0 2.5-1.67 1.73-3L13.73 4c-.77-1.33-2.69-1.33-3.46 0L3.34 16c-.77 1.33.19 3 1.73 3z"/></svg></div><div class="s6-mod-name">整改</div></div>
+          <div class="s6-mod"><div class="s6-mod-icon"><svg viewBox="0 0 24 24" stroke-width="1.5"><path d="M16 8v8m-4-5v5m-4-2v2m-2 4h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg></div><div class="s6-mod-name">统计</div></div>
+          <div class="s6-mod"><div class="s6-mod-icon"><svg viewBox="0 0 24 24" stroke-width="1.5"><path d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/></svg></div><div class="s6-mod-name">人员</div></div>
+          <div class="s6-mod"><div class="s6-mod-icon"><svg viewBox="0 0 24 24" stroke-width="1.5"><path d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0H5m14 0h2m-16 0H3"/></svg></div><div class="s6-mod-name">组织</div></div>
+          <div class="s6-mod"><div class="s6-mod-icon"><svg viewBox="0 0 24 24" stroke-width="1.5"><path d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg></div><div class="s6-mod-name">日程</div></div>
+          <div class="s6-mod"><div class="s6-mod-icon"><svg viewBox="0 0 24 24" stroke-width="1.5"><path d="M3 7V5a2 2 0 012-2h2m0 16H5a2 2 0 01-2-2v-2m16-10V5a2 2 0 00-2-2h-2m0 16h2a2 2 0 002-2v-2M7 12h10"/></svg></div><div class="s6-mod-name">扫码</div></div>
+        </div>
+        <div class="s6-section">通知</div>
+        <div class="s6-notice-area">
+          <div class="s6-ni"><div class="s6-ni-dot"></div><div class="s6-ni-txt">系统升级通知：v2.1 版本已发布</div></div>
+          <div class="s6-ni"><div class="s6-ni-dot"></div><div class="s6-ni-txt">新功能上线：支持扫码快捷操作</div></div>
+          <div class="s6-ni"><div class="s6-ni-dot"></div><div class="s6-ni-txt">4月份工作安排已发布，请查阅</div></div>
+        </div>
+      </div>
+      <div class="tab-bar">
+        <div class="tab-item active"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-4 0a1 1 0 01-1-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 01-1 1h-2z"/></svg>首页</div>
+        <div class="tab-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 10h.01M12 10h.01M16 10h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/></svg>消息</div>
+        <div class="tab-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/></svg>我的</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ====== 7. 田园绿 ====== -->
+<div class="style-card">
+  <div class="style-label">
+    <div class="style-number s7-num">7</div>
+    <div class="style-name">田园绿</div>
+    <div class="style-desc">衬线大标题 + 绿色 Banner + 双列带边框卡片</div>
+  </div>
+  <div class="phone">
+    <div class="phone-inner s7">
+      <div class="status-bar"><span>9:41</span><span>●●● ▂▅▇</span></div>
+      <div class="content">
+        <div class="s7-header">
+          <div class="s7-avatar">张</div>
+          <div><div class="s7-org">演示组织名称</div><div class="s7-name">你好，张明</div></div>
+        </div>
+        <div class="s7-banner"><div class="s7-banner-title">Welcome Back</div><div class="s7-banner-sub">今天也是美好的一天</div></div>
+        <div class="s7-section">Features</div>
+        <div class="s7-modules">
+          <div class="s7-mod"><div class="s7-mod-icon"><svg viewBox="0 0 24 24" stroke-width="1.5"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg></div><div><div class="s7-mod-name">检查任务</div><div class="s7-mod-sub">执行与记录</div></div></div>
+          <div class="s7-mod"><div class="s7-mod-icon"><svg viewBox="0 0 24 24" stroke-width="1.5"><path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg></div><div><div class="s7-mod-name">审核管理</div><div class="s7-mod-sub">审批确认</div></div></div>
+          <div class="s7-mod"><div class="s7-mod-icon"><svg viewBox="0 0 24 24" stroke-width="1.5"><path d="M12 9v2m0 4h.01M5.07 19h13.86c1.54 0 2.5-1.67 1.73-3L13.73 4c-.77-1.33-2.69-1.33-3.46 0L3.34 16c-.77 1.33.19 3 1.73 3z"/></svg></div><div><div class="s7-mod-name">整改处理</div><div class="s7-mod-sub">跟踪反馈</div></div></div>
+          <div class="s7-mod"><div class="s7-mod-icon"><svg viewBox="0 0 24 24" stroke-width="1.5"><path d="M16 8v8m-4-5v5m-4-2v2m-2 4h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg></div><div><div class="s7-mod-name">数据统计</div><div class="s7-mod-sub">图表分析</div></div></div>
+        </div>
+        <div class="s7-notice">
+          <div class="s7-nr"><div class="s7-nrdot"></div>系统升级通知：v2.1 版本已发布</div>
+          <div class="s7-nr"><div class="s7-nrdot"></div>新功能上线：支持扫码快捷操作</div>
+          <div class="s7-nr"><div class="s7-nrdot"></div>4月份工作安排已发布</div>
+        </div>
+      </div>
+      <div class="tab-bar">
+        <div class="tab-item active"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-4 0a1 1 0 01-1-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 01-1 1h-2z"/></svg>首页</div>
+        <div class="tab-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 10h.01M12 10h.01M16 10h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/></svg>消息</div>
+        <div class="tab-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/></svg>我的</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ====== 8. 赛博朋克 ====== -->
+<div class="style-card">
+  <div class="style-label">
+    <div class="style-number s8-num">8</div>
+    <div class="style-name">赛博朋克</div>
+    <div class="style-desc">扫描线纹理 + 左侧高光边 + 终端标签</div>
+  </div>
+  <div class="phone">
+    <div class="phone-inner s8">
+      <div class="status-bar"><span>09:41:22</span><span>SYS OK</span></div>
+      <div class="content">
+        <div class="s8-header">
+          <div class="s8-line"></div>
+          <div class="s8-org">DEMO ORGANIZATION</div>
+          <div class="s8-row"><div class="s8-name">> 张明</div><div class="s8-time">2026.04.04</div></div>
+        </div>
+        <div class="s8-search"><svg viewBox="0 0 24 24" stroke-width="1.5"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>search_query...</div>
+        <div class="s8-section">// modules</div>
+        <div class="s8-grid">
+          <div class="s8-mod"><div class="s8-mod-icon"><svg viewBox="0 0 24 24" stroke-width="1.5"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg></div><div><div class="s8-mod-name">检查任务</div><div class="s8-mod-id">MOD_001</div></div></div>
+          <div class="s8-mod"><div class="s8-mod-icon"><svg viewBox="0 0 24 24" stroke-width="1.5"><path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg></div><div><div class="s8-mod-name">审核管理</div><div class="s8-mod-id">MOD_002</div></div></div>
+          <div class="s8-mod"><div class="s8-mod-icon"><svg viewBox="0 0 24 24" stroke-width="1.5"><path d="M12 9v2m0 4h.01M5.07 19h13.86c1.54 0 2.5-1.67 1.73-3L13.73 4c-.77-1.33-2.69-1.33-3.46 0L3.34 16c-.77 1.33.19 3 1.73 3z"/></svg></div><div><div class="s8-mod-name">整改处理</div><div class="s8-mod-id">MOD_003</div></div></div>
+          <div class="s8-mod"><div class="s8-mod-icon"><svg viewBox="0 0 24 24" stroke-width="1.5"><path d="M16 8v8m-4-5v5m-4-2v2m-2 4h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg></div><div><div class="s8-mod-name">数据统计</div><div class="s8-mod-id">MOD_004</div></div></div>
+          <div class="s8-mod"><div class="s8-mod-icon"><svg viewBox="0 0 24 24" stroke-width="1.5"><path d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7"/></svg></div><div><div class="s8-mod-name">人员管理</div><div class="s8-mod-id">MOD_005</div></div></div>
+          <div class="s8-mod"><div class="s8-mod-icon"><svg viewBox="0 0 24 24" stroke-width="1.5"><path d="M3 7V5a2 2 0 012-2h2m0 16H5a2 2 0 01-2-2v-2m16-10V5a2 2 0 00-2-2h-2m0 16h2a2 2 0 002-2v-2M7 12h10"/></svg></div><div><div class="s8-mod-name">扫码入口</div><div class="s8-mod-id">MOD_006</div></div></div>
+        </div>
+        <div class="s8-section">// log</div>
+        <div class="s8-notices">
+          <div class="s8-ni"><div class="s8-ni-tag">SYS</div><div class="s8-ni-txt">v2.1 版本已发布</div></div>
+          <div class="s8-ni"><div class="s8-ni-tag">NEW</div><div class="s8-ni-txt">扫码快捷操作上线</div></div>
+          <div class="s8-ni"><div class="s8-ni-tag">INF</div><div class="s8-ni-txt">4月份工作安排已发布</div></div>
+        </div>
+      </div>
+      <div class="tab-bar">
+        <div class="tab-item active"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-4 0a1 1 0 01-1-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 01-1 1h-2z"/></svg>HOME</div>
+        <div class="tab-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M8 10h.01M12 10h.01M16 10h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/></svg>MSG</div>
+        <div class="tab-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/></svg>SELF</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ====== 9. 奶油棕 ====== -->
+<div class="style-card">
+  <div class="style-label">
+    <div class="style-number s9-num">9</div>
+    <div class="style-name">奶油棕</div>
+    <div class="style-desc">大圆气泡图标横滑 + 衬线标题 + 柔光卡片</div>
+  </div>
+  <div class="phone">
+    <div class="phone-inner s9">
+      <div class="status-bar"><span>9:41</span><span>●●● ▂▅▇</span></div>
+      <div class="content">
+        <div class="s9-header">
+          <div class="s9-avatar">张</div>
+          <div><div class="s9-org">演示组织名称</div><div class="s9-name">你好，张明</div></div>
+        </div>
+        <div class="s9-search"><svg viewBox="0 0 24 24" stroke-width="1.5"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>搜索功能或人员</div>
+        <div class="s9-section">常用功能</div>
+        <div class="s9-bubble-row">
+          <div class="s9-bubble"><div class="s9-bubble-icon a"><svg viewBox="0 0 24 24" stroke-width="1.5"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg></div><div class="s9-bubble-name">检查任务</div></div>
+          <div class="s9-bubble"><div class="s9-bubble-icon b"><svg viewBox="0 0 24 24" stroke-width="1.5"><path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg></div><div class="s9-bubble-name">审核管理</div></div>
+          <div class="s9-bubble"><div class="s9-bubble-icon c"><svg viewBox="0 0 24 24" stroke-width="1.5"><path d="M12 9v2m0 4h.01M5.07 19h13.86c1.54 0 2.5-1.67 1.73-3L13.73 4c-.77-1.33-2.69-1.33-3.46 0L3.34 16c-.77 1.33.19 3 1.73 3z"/></svg></div><div class="s9-bubble-name">整改处理</div></div>
+          <div class="s9-bubble"><div class="s9-bubble-icon d"><svg viewBox="0 0 24 24" stroke-width="1.5"><path d="M16 8v8m-4-5v5m-4-2v2m-2 4h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg></div><div class="s9-bubble-name">数据统计</div></div>
+          <div class="s9-bubble"><div class="s9-bubble-icon e"><svg viewBox="0 0 24 24" stroke-width="1.5"><path d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7"/></svg></div><div class="s9-bubble-name">人员管理</div></div>
+        </div>
+        <div class="s9-section">通知</div>
+        <div class="s9-notice-area">
+          <div class="s9-ni"><div class="s9-ni-dot"></div><div class="s9-ni-txt">系统升级通知：v2.1 版本已发布</div><div class="s9-ni-time">10分钟前</div></div>
+          <div class="s9-ni"><div class="s9-ni-dot"></div><div class="s9-ni-txt">新功能上线：支持扫码操作</div><div class="s9-ni-time">1小时前</div></div>
+          <div class="s9-ni"><div class="s9-ni-dot"></div><div class="s9-ni-txt">4月份工作安排已发布</div><div class="s9-ni-time">3小时前</div></div>
+        </div>
+      </div>
+      <div class="tab-bar">
+        <div class="tab-item active"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-4 0a1 1 0 01-1-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 01-1 1h-2z"/></svg>首页</div>
+        <div class="tab-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 10h.01M12 10h.01M16 10h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/></svg>消息</div>
+        <div class="tab-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/></svg>我的</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ====== 10. 钢蓝专业 ====== -->
+<div class="style-card">
+  <div class="style-label">
+    <div class="style-number s10-num">10</div>
+    <div class="style-name">钢蓝专业</div>
+    <div class="style-desc">高信息密度 + 右侧工具栏 + 4x2 白卡宫格 + 卡片通知</div>
+  </div>
+  <div class="phone">
+    <div class="phone-inner s10">
+      <div class="status-bar"><span>9:41</span><span>●●● ▂▅▇</span></div>
+      <div class="content">
+        <div class="s10-header">
+          <div class="s10-left"><div class="org">DEMO ORGANIZATION</div><div class="name">Hi, 张明</div></div>
+          <div class="s10-right">
+            <div class="s10-icon-btn"><svg viewBox="0 0 24 24" stroke-width="1.5"><path d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/></svg></div>
+            <div class="s10-icon-btn"><svg viewBox="0 0 24 24" stroke-width="1.5"><path d="M3 7V5a2 2 0 012-2h2m0 16H5a2 2 0 01-2-2v-2m16-10V5a2 2 0 00-2-2h-2m0 16h2a2 2 0 002-2v-2M7 12h10"/></svg></div>
+          </div>
+        </div>
+        <div class="s10-search"><svg viewBox="0 0 24 24" stroke-width="1.5"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>搜索功能、人员、通知...</div>
+        <div class="s10-section-row"><div class="s10-section-title">功能</div><div class="s10-section-more">全部 ></div></div>
+        <div class="s10-modules">
+          <div class="s10-mod"><div class="s10-mod-icon a"><svg viewBox="0 0 24 24" stroke-width="1.5"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg></div><div class="s10-mod-name">检查</div></div>
+          <div class="s10-mod"><div class="s10-mod-icon b"><svg viewBox="0 0 24 24" stroke-width="1.5"><path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg></div><div class="s10-mod-name">审核</div></div>
+          <div class="s10-mod"><div class="s10-mod-icon c"><svg viewBox="0 0 24 24" stroke-width="1.5"><path d="M12 9v2m0 4h.01M5.07 19h13.86c1.54 0 2.5-1.67 1.73-3L13.73 4c-.77-1.33-2.69-1.33-3.46 0L3.34 16c-.77 1.33.19 3 1.73 3z"/></svg></div><div class="s10-mod-name">整改</div></div>
+          <div class="s10-mod"><div class="s10-mod-icon d"><svg viewBox="0 0 24 24" stroke-width="1.5"><path d="M16 8v8m-4-5v5m-4-2v2m-2 4h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg></div><div class="s10-mod-name">统计</div></div>
+          <div class="s10-mod"><div class="s10-mod-icon e"><svg viewBox="0 0 24 24" stroke-width="1.5"><path d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/></svg></div><div class="s10-mod-name">人员</div></div>
+          <div class="s10-mod"><div class="s10-mod-icon f"><svg viewBox="0 0 24 24" stroke-width="1.5"><path d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0H5m14 0h2m-16 0H3"/></svg></div><div class="s10-mod-name">组织</div></div>
+          <div class="s10-mod"><div class="s10-mod-icon g"><svg viewBox="0 0 24 24" stroke-width="1.5"><path d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg></div><div class="s10-mod-name">日程</div></div>
+          <div class="s10-mod"><div class="s10-mod-icon h"><svg viewBox="0 0 24 24" stroke-width="1.5"><path d="M3 7V5a2 2 0 012-2h2m0 16H5a2 2 0 01-2-2v-2m16-10V5a2 2 0 00-2-2h-2m0 16h2a2 2 0 002-2v-2M7 12h10"/></svg></div><div class="s10-mod-name">扫码</div></div>
+        </div>
+        <div class="s10-section-row"><div class="s10-section-title">通知</div><div class="s10-section-more">更多 ></div></div>
+        <div class="s10-notice-card">
+          <div class="s10-ni"><div class="s10-ni-dot"></div><div class="s10-ni-txt">系统升级通知：v2.1 版本已发布</div><div class="s10-ni-time">10分钟</div></div>
+          <div class="s10-ni"><div class="s10-ni-dot warn"></div><div class="s10-ni-txt">新功能上线：支持扫码操作</div><div class="s10-ni-time">1小时</div></div>
+          <div class="s10-ni"><div class="s10-ni-dot"></div><div class="s10-ni-txt">4月份工作安排已发布</div><div class="s10-ni-time">3小时</div></div>
+        </div>
+      </div>
+      <div class="tab-bar">
+        <div class="tab-item active"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-4 0a1 1 0 01-1-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 01-1 1h-2z"/></svg>首页</div>
+        <div class="tab-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 10h.01M12 10h.01M16 10h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/></svg>消息</div>
+        <div class="tab-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/></svg>我的</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+</div>
+</body>
+</html>

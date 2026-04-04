@@ -48,7 +48,7 @@
                 v-for="sem in semesters"
                 :key="sem.id"
                 :value="sem.id"
-                :label="sem.name"
+                :label="sem.semesterName"
               />
             </el-select>
           </el-form-item>
@@ -140,7 +140,7 @@
           <el-col :span="12">
             <el-form-item label="学期" prop="semesterId">
               <el-select v-model="taskForm.semesterId" placeholder="选择学期" style="width: 100%">
-                <el-option v-for="sem in semesters" :key="sem.id" :value="sem.id" :label="sem.name" />
+                <el-option v-for="sem in semesters" :key="sem.id" :value="sem.id" :label="sem.semesterName" />
               </el-select>
             </el-form-item>
           </el-col>
@@ -254,7 +254,7 @@
       <el-form ref="batchFormRef" :model="batchForm" :rules="batchRules" label-width="100px">
         <el-form-item label="学期" prop="semesterId">
           <el-select v-model="batchForm.semesterId" placeholder="选择学期" style="width: 100%">
-            <el-option v-for="sem in semesters" :key="sem.id" :value="sem.id" :label="sem.name" />
+            <el-option v-for="sem in semesters" :key="sem.id" :value="sem.id" :label="sem.semesterName" />
           </el-select>
         </el-form-item>
         <el-form-item label="培养方案" prop="planId">

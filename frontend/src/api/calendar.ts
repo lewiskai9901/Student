@@ -58,6 +58,15 @@ export const semesterApi = {
   setCurrent: (id: number | string) =>
     http.post(`${BASE}/semesters/${id}/set-current`),
 
+  end: (id: number | string) =>
+    http.post(`${BASE}/semesters/${id}/end`),
+
+  reactivate: (id: number | string) =>
+    http.post(`${BASE}/semesters/${id}/reactivate`),
+
+  generateCode: (startYear: number, semesterType: number) =>
+    http.get<string>(`${BASE}/semesters/generate-code`, { params: { startYear, semesterType } }),
+
   getWeeks: (semesterId: number | string) =>
     http.get<TeachingWeek[]>(`${BASE}/semesters/${semesterId}/weeks`),
 

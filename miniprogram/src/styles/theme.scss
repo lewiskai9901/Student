@@ -1,0 +1,54 @@
+// ===== 钢蓝专业 Design Tokens =====
+
+// Colors
+$color-primary: #3a7bd5;
+$color-primary-light: #e8edf4;
+$color-primary-dark: #2a5fa8;
+$color-danger: #e0592a;
+$color-warning: #d4a030;
+$color-success: #15a87e;
+$color-info: #9a5cc6;
+
+// Backgrounds
+$bg-page: #f3f5f8;
+$bg-card: #ffffff;
+$bg-input: #ffffff;
+
+// Text
+$text-primary: #1a2840;
+$text-secondary: #5a6a7a;
+$text-placeholder: #a0aab4;
+$text-disabled: #c0c8d0;
+
+// Border
+$border-color: #e8ecf0;
+$border-light: #f0f2f5;
+
+// Radius
+$radius-card: 28rpx;
+$radius-btn: 20rpx;
+$radius-icon: 28rpx;
+$radius-input: 20rpx;
+$radius-tag: 12rpx;
+
+// Shadows
+$shadow-card: 0 4rpx 12rpx rgba(58, 123, 213, 0.06);
+$shadow-search: 0 2rpx 4rpx rgba(0, 0, 0, 0.03);
+$shadow-tabbar: 0 -2rpx 6rpx rgba(0, 0, 0, 0.03);
+
+// Spacing
+$spacing-xs: 8rpx;
+$spacing-sm: 16rpx;
+$spacing-md: 24rpx;
+$spacing-lg: 32rpx;
+$spacing-xl: 40rpx;
+$spacing-page: 40rpx;
+
+// Font
+$font-xs: 20rpx;
+$font-sm: 22rpx;
+$font-base: 26rpx;
+$font-md: 28rpx;
+$font-lg: 34rpx;
+$font-xl: 38rpx;
+$font-xxl: 44rpx;

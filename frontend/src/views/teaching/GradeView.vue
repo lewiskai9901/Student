@@ -37,7 +37,7 @@
         class="w-44"
         @change="handleFilterChange"
       >
-        <el-option v-for="sem in semesters" :key="sem.id" :value="sem.id" :label="sem.name" />
+        <el-option v-for="sem in semesters" :key="sem.id" :value="sem.id" :label="sem.semesterName" />
       </el-select>
       <el-select
         v-model="queryParams.gradeType"
@@ -170,7 +170,7 @@
           <el-col :span="12">
             <el-form-item label="学期" prop="semesterId">
               <el-select v-model="batchForm.semesterId" style="width: 100%">
-                <el-option v-for="sem in semesters" :key="sem.id" :value="sem.id" :label="sem.name" />
+                <el-option v-for="sem in semesters" :key="sem.id" :value="sem.id" :label="sem.semesterName" />
               </el-select>
             </el-form-item>
           </el-col>
