@@ -111,6 +111,8 @@ export interface UserRole {
 export interface AssignRoleWithScopeRequest {
   scopeType?: ScopeTypeValue
   scopeId?: number | string
+  expiresAt?: string
+  reason?: string
 }
 
 // 角色分配项（用于批量设置）
@@ -118,6 +120,8 @@ export interface RoleAssignmentItem {
   roleId: number | string
   scopeType?: ScopeTypeValue
   scopeId?: number | string
+  expiresAt?: string
+  reason?: string
 }
 
 // 设置用户角色请求

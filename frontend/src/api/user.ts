@@ -167,16 +167,18 @@ export function getUserRoleAssignments(id: number | string): Promise<any[]> {
 }
 
 /**
- * 为用户分配角色（批量，带作用域）
+ * 为用户分配角色（批量，带作用域、过期时间、原因）
  */
 export function assignRoles(
   id: number | string,
-  assignments: { roleId: number | string; scopeType?: string; scopeId?: number | string }[]
+  assignments: { roleId: number | string; scopeType?: string; scopeId?: number | string; expiresAt?: string; reason?: string }[]
 ): Promise<void> {
   const normalized = assignments.map(a => ({
     roleId: a.roleId,
     scopeType: a.scopeType || 'ALL',
-    scopeId: a.scopeId || 0
+    scopeId: a.scopeId || 0,
+    expiresAt: a.expiresAt || undefined,
+    reason: a.reason || undefined
   }))
   return http.put(`${ROLE_ASSIGN_URL}/${id}/roles`, { assignments: normalized })
 }

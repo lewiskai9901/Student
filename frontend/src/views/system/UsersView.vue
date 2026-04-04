@@ -506,25 +506,69 @@
       <Transition name="modal">
         <div v-if="roleDialogVisible" class="fixed inset-0 z-50 flex items-center justify-center">
           <div class="fixed inset-0 bg-black/50" @click="roleDialogVisible = false"></div>
-          <div class="relative w-full max-w-2xl rounded-lg bg-white shadow-xl">
+          <div class="relative w-full max-w-3xl rounded-lg bg-white shadow-xl">
             <div class="flex items-center justify-between border-b border-gray-200 px-6 py-4">
-              <h3 class="text-lg font-medium text-gray-900">分配角色</h3>
+              <h3 class="text-lg font-medium text-gray-900">分配角色 - {{ currentUserName }}</h3>
               <button @click="roleDialogVisible = false" class="rounded p-1 hover:bg-gray-100">
                 <X class="h-5 w-5 text-gray-500" />
               </button>
             </div>
-            <div class="p-6">
-              <div class="mb-4 rounded-lg bg-blue-50 p-3 text-sm text-blue-700">
+            <div class="max-h-[70vh] overflow-y-auto p-6">
+              <!-- 当前角色列表 -->
+              <div v-if="currentUserRolesDetailed.length > 0" class="mb-5">
+                <h4 class="mb-2 text-sm font-medium text-gray-700">当前角色</h4>
+                <table class="w-full text-sm">
+                  <thead>
+                    <tr class="border-b border-gray-200 bg-gray-50">
+                      <th class="px-3 py-2 text-left font-medium text-gray-600">角色名</th>
+                      <th class="px-3 py-2 text-left font-medium text-gray-600">作用域类型</th>
+                      <th class="px-3 py-2 text-left font-medium text-gray-600">作用域名称</th>
+                      <th class="px-3 py-2 text-left font-medium text-gray-600">过期时间</th>
+                      <th class="px-3 py-2 text-center font-medium text-gray-600">状态</th>
+                      <th class="px-3 py-2 text-center font-medium text-gray-600">操作</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr
+                      v-for="(ur, idx) in currentUserRolesDetailed"
+                      :key="idx"
+                      class="border-b border-gray-100"
+                      :class="ur.isExpired ? 'opacity-50' : ''"
+                    >
+                      <td class="px-3 py-2 font-medium text-gray-900">{{ ur.roleName }}</td>
+                      <td class="px-3 py-2 text-gray-600">{{ ur.scopeType === 'ALL' ? '全局' : '指定组织' }}</td>
+                      <td class="px-3 py-2 text-gray-600">{{ ur.scopeName || (ur.scopeType === 'ALL' ? '-' : '未知') }}</td>
+                      <td class="px-3 py-2 text-gray-500">{{ ur.expiresAt ? ur.expiresAt.substring(0, 10) : '永久' }}</td>
+                      <td class="px-3 py-2 text-center">
+                        <span v-if="ur.isExpired" class="rounded bg-gray-100 px-1.5 py-0.5 text-xs text-gray-500">已过期</span>
+                        <span v-else class="rounded bg-green-100 px-1.5 py-0.5 text-xs text-green-600">有效</span>
+                      </td>
+                      <td class="px-3 py-2 text-center">
+                        <button
+                          @click="handleRemoveSingleRole(ur)"
+                          class="rounded p-1 text-gray-400 hover:bg-red-50 hover:text-red-500"
+                          title="移除"
+                        >
+                          <Trash2 class="h-3.5 w-3.5" />
+                        </button>
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+
+              <!-- 添加角色 -->
+              <div class="mb-3 rounded-lg bg-blue-50 p-3 text-sm text-blue-700">
                 勾选角色并选择作用域：「全局」不限范围，「指定组织」限定到某个组织节点及其子节点
               </div>
-              <div class="max-h-96 space-y-2 overflow-y-auto">
+              <div class="max-h-72 space-y-2 overflow-y-auto">
                 <div
                   v-for="role in allRoles"
                   :key="role.id"
                   class="rounded-lg border p-3"
                   :class="isRoleSelected(role.id) ? 'border-blue-500 bg-blue-50/50' : 'border-gray-200'"
                 >
-                  <div class="flex items-center gap-3">
+                  <div class="flex flex-wrap items-center gap-3">
                     <input
                       type="checkbox"
                       :checked="isRoleSelected(role.id)"
@@ -557,6 +601,29 @@
                         </select>
                       </div>
                     </template>
+                  </div>
+                  <!-- 过期时间和原因（展开行） -->
+                  <div v-if="isRoleSelected(role.id)" class="mt-2 flex flex-wrap items-center gap-3 pl-7">
+                    <div class="flex items-center gap-1.5">
+                      <label class="text-xs text-gray-500">过期时间</label>
+                      <input
+                        type="date"
+                        :value="getRoleScope(role.id).expiresAt || ''"
+                        @input="updateRoleExpiry(role.id, ($event.target as HTMLInputElement).value)"
+                        class="h-7 rounded border border-gray-300 px-2 text-xs"
+                        placeholder="空=永久"
+                      />
+                    </div>
+                    <div class="flex items-center gap-1.5">
+                      <label class="text-xs text-gray-500">授权原因</label>
+                      <input
+                        type="text"
+                        :value="getRoleScope(role.id).reason || ''"
+                        @input="updateRoleReason(role.id, ($event.target as HTMLInputElement).value)"
+                        class="h-7 w-40 rounded border border-gray-300 px-2 text-xs"
+                        placeholder="可选"
+                      />
+                    </div>
                   </div>
                 </div>
               </div>
@@ -606,7 +673,8 @@ import {
   ChevronLeft,
   ChevronRight,
   ChevronsLeft,
-  ChevronsRight
+  ChevronsRight,
+  Clock
 } from 'lucide-vue-next'
 import StatCard from '@/components/design-system/cards/StatCard.vue'
 import { getEnabledUserTypes } from '@/api/userType'
@@ -633,7 +701,7 @@ import type {
   UserFormData,
   UserListItem
 } from '@/types/user'
-import { getAllRoles } from '@/api/access'
+import { getAllRoles, removeUserRoleWithScope } from '@/api/access'
 import type { RoleResponse as Role } from '@/api/access'
 import { useConfigStore } from '@/stores/config'
 
@@ -658,13 +726,30 @@ const queryParams = reactive<UserQueryParams>({
 const userList = ref<UserListItem[]>([])
 const total = ref(0)
 const allRoles = ref<Role[]>([])
-// 角色分配（含作用域）
+// 角色分配（含作用域、过期时间、原因）
 interface RoleAssignmentLocal {
   roleId: string | number
   scopeType: string
   scopeId: number | string
+  expiresAt?: string
+  reason?: string
 }
 const roleAssignments = ref<RoleAssignmentLocal[]>([])
+const currentUserName = ref('')
+
+// 当前用户的角色详细信息（用于显示表格）
+interface UserRoleDetailed {
+  roleId: string | number
+  roleName: string
+  roleCode?: string
+  scopeType: string
+  scopeId: number | string
+  scopeName?: string
+  expiresAt?: string
+  isExpired: boolean
+  assignedAt?: string
+}
+const currentUserRolesDetailed = ref<UserRoleDetailed[]>([])
 const userTypes = ref<UserTypeItem[]>([])
 const orgTree = ref<OrgUnitTreeNode[]>([])
 // 组织关联的场所列表
@@ -1043,7 +1128,7 @@ const isRoleSelected = (roleId: string | number) => {
 }
 
 const getRoleScope = (roleId: string | number) => {
-  return roleAssignments.value.find(a => String(a.roleId) === String(roleId)) || { scopeType: 'ALL', scopeId: 0 }
+  return roleAssignments.value.find(a => String(a.roleId) === String(roleId)) || { scopeType: 'ALL', scopeId: 0, expiresAt: '', reason: '' }
 }
 
 const toggleRole = (roleId: string | number) => {
@@ -1051,7 +1136,7 @@ const toggleRole = (roleId: string | number) => {
   if (idx > -1) {
     roleAssignments.value.splice(idx, 1)
   } else {
-    roleAssignments.value.push({ roleId: String(roleId), scopeType: 'ALL', scopeId: 0 })
+    roleAssignments.value.push({ roleId: String(roleId), scopeType: 'ALL', scopeId: 0, expiresAt: '', reason: '' })
   }
 }
 
@@ -1068,21 +1153,78 @@ const updateRoleScopeId = (roleId: string | number, scopeId: number) => {
   if (a) a.scopeId = scopeId
 }
 
+const updateRoleExpiry = (roleId: string | number, expiresAt: string) => {
+  const a = roleAssignments.value.find(a => String(a.roleId) === String(roleId))
+  if (a) a.expiresAt = expiresAt || undefined
+}
+
+const updateRoleReason = (roleId: string | number, reason: string) => {
+  const a = roleAssignments.value.find(a => String(a.roleId) === String(roleId))
+  if (a) a.reason = reason || undefined
+}
+
 // ==================== 角色分配操作 ====================
 
 const handleAssignRoles = async (row: UserListItem) => {
   if (!row.id) return
   try {
     currentUserId.value = row.id
+    currentUserName.value = row.realName || row.username || ''
     const existing = await getUserRoleAssignments(row.id)
-    roleAssignments.value = (Array.isArray(existing) ? existing : []).map((a: any) => ({
+    const existingArr = Array.isArray(existing) ? existing : []
+
+    // Build detailed roles table
+    const now = new Date().toISOString()
+    currentUserRolesDetailed.value = existingArr.map((a: any) => {
+      const roleName = a.roleName || allRoles.value.find(r => String(r.id) === String(a.roleId || a.id))?.roleName || '未知角色'
+      const roleCode = a.roleCode || allRoles.value.find(r => String(r.id) === String(a.roleId || a.id))?.roleCode || ''
+      const scopeName = a.scopeName || (a.scopeType === 'ORG_UNIT' ? findOrgName(a.scopeId) : undefined)
+      return {
+        roleId: String(a.roleId || a.id),
+        roleName,
+        roleCode,
+        scopeType: a.scopeType || 'ALL',
+        scopeId: a.scopeId || 0,
+        scopeName,
+        expiresAt: a.expiresAt,
+        isExpired: a.expiresAt ? a.expiresAt < now : false,
+        assignedAt: a.assignedAt
+      }
+    })
+
+    roleAssignments.value = existingArr.map((a: any) => ({
       roleId: String(a.roleId || a.id),
       scopeType: a.scopeType || 'ALL',
-      scopeId: a.scopeId || 0
+      scopeId: a.scopeId || 0,
+      expiresAt: a.expiresAt ? String(a.expiresAt).substring(0, 10) : undefined,
+      reason: a.reason || undefined
     }))
     roleDialogVisible.value = true
   } catch (error) {
     ElMessage.error('加载角色失败')
+  }
+}
+
+// 根据 orgId 查找组织名称
+const findOrgName = (orgId: number | string): string => {
+  if (!orgId || orgId === 0) return ''
+  const org = flatOrgUnits.value.find(o => o.id === Number(orgId))
+  return org?.label?.trim() || ''
+}
+
+// 移除单个角色分配
+const handleRemoveSingleRole = async (ur: UserRoleDetailed) => {
+  if (!currentUserId.value) return
+  try {
+    await ElMessageBox.confirm(`确定移除角色"${ur.roleName}"吗？`, '移除确认', { type: 'warning' })
+    await removeUserRoleWithScope(currentUserId.value, ur.roleId, ur.scopeType, ur.scopeId)
+    ElMessage.success('角色已移除')
+    // Reload the role dialog
+    const row = userList.value.find(u => u.id === currentUserId.value)
+    if (row) await handleAssignRoles(row)
+    loadUserList()
+  } catch (error: any) {
+    if (error !== 'cancel') ElMessage.error(error.message || '移除失败')
   }
 }
 
@@ -1097,7 +1239,15 @@ const handleRoleSubmit = async () => {
   }
   try {
     roleSubmitLoading.value = true
-    await assignRoles(currentUserId.value, roleAssignments.value)
+    // Include expiresAt and reason in the assignment payload
+    const payload = roleAssignments.value.map(a => ({
+      roleId: a.roleId,
+      scopeType: a.scopeType || 'ALL',
+      scopeId: a.scopeId || 0,
+      expiresAt: a.expiresAt || undefined,
+      reason: a.reason || undefined
+    }))
+    await assignRoles(currentUserId.value, payload)
     ElMessage.success('角色分配成功')
     roleDialogVisible.value = false
     loadUserList()

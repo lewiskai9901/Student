@@ -137,6 +137,80 @@
         </div>
       </div>
     </div>
+
+    <!-- 我的角色与权限卡片 -->
+    <div class="bg-white rounded-xl shadow-sm border border-gray-200">
+      <div class="px-6 py-4 border-b border-gray-100">
+        <h2 class="text-lg font-medium text-gray-900">我的角色与权限</h2>
+        <p class="text-sm text-gray-500 mt-1">当前分配的角色及其作用域和权限详情</p>
+      </div>
+
+      <div class="p-6 space-y-6">
+        <!-- 角色列表 -->
+        <div>
+          <h3 class="text-sm font-medium text-gray-700 mb-3">角色分配</h3>
+          <div v-if="myRolesLoading" class="py-4 text-center text-sm text-gray-500">
+            加载中...
+          </div>
+          <div v-else-if="myRoles.length === 0" class="py-4 text-center text-sm text-gray-400">
+            暂无角色分配
+          </div>
+          <table v-else class="w-full text-sm">
+            <thead>
+              <tr class="border-b border-gray-200 bg-gray-50">
+                <th class="px-3 py-2 text-left font-medium text-gray-600">角色名称</th>
+                <th class="px-3 py-2 text-left font-medium text-gray-600">角色编码</th>
+                <th class="px-3 py-2 text-left font-medium text-gray-600">作用域</th>
+                <th class="px-3 py-2 text-left font-medium text-gray-600">作用域名称</th>
+                <th class="px-3 py-2 text-left font-medium text-gray-600">过期时间</th>
+                <th class="px-3 py-2 text-center font-medium text-gray-600">状态</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr
+                v-for="(role, idx) in myRoles"
+                :key="idx"
+                class="border-b border-gray-100"
+                :class="role.isExpired ? 'opacity-50' : ''"
+              >
+                <td class="px-3 py-2 font-medium text-gray-900">{{ role.roleName }}</td>
+                <td class="px-3 py-2">
+                  <span class="rounded bg-gray-100 px-1.5 py-0.5 font-mono text-xs text-gray-600">{{ role.roleCode }}</span>
+                </td>
+                <td class="px-3 py-2 text-gray-600">{{ role.scopeType === 'ALL' ? '全局' : '指定组织' }}</td>
+                <td class="px-3 py-2 text-gray-600">{{ role.scopeName || (role.scopeType === 'ALL' ? '-' : '-') }}</td>
+                <td class="px-3 py-2 text-gray-500">{{ role.expiresAt ? role.expiresAt.substring(0, 10) : '永久' }}</td>
+                <td class="px-3 py-2 text-center">
+                  <span v-if="role.isExpired" class="rounded bg-gray-100 px-1.5 py-0.5 text-xs text-gray-500">已过期</span>
+                  <span v-else class="rounded bg-green-100 px-1.5 py-0.5 text-xs text-green-600">有效</span>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- 功能权限列表 -->
+        <div>
+          <h3 class="text-sm font-medium text-gray-700 mb-3">功能权限</h3>
+          <div v-if="myPermissionsLoading" class="py-4 text-center text-sm text-gray-500">
+            加载中...
+          </div>
+          <div v-else-if="myPermissionCodes.length === 0" class="py-4 text-center text-sm text-gray-400">
+            暂无功能权限
+          </div>
+          <div v-else class="flex flex-wrap gap-2">
+            <span
+              v-for="code in myPermissionCodes"
+              :key="code"
+              class="rounded bg-blue-50 px-2 py-1 text-xs text-blue-700"
+            >{{ code }}</span>
+          </div>
+          <div v-if="myPermissionCodes.length > 0" class="mt-2 text-xs text-gray-400">
+            共 {{ myPermissionCodes.length }} 项权限
+          </div>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -146,6 +220,7 @@ import { ElMessage, type FormInstance, type FormRules } from 'element-plus'
 import { getCurrentUser, updateProfile, changePassword } from '@/api/auth'
 import type { UserInfo } from '@/types/auth'
 import { useAuthStore } from '@/stores/auth'
+import { getCurrentUserRoles, getCurrentUserPermissions } from '@/api/access'
 
 const authStore = useAuthStore()
 
@@ -294,7 +369,61 @@ const handleChangePassword = async () => {
   }
 }
 
+// ==================== 我的角色与权限 ====================
+
+interface MyRoleInfo {
+  roleName: string
+  roleCode: string
+  scopeType: string
+  scopeId: number | string
+  scopeName?: string
+  expiresAt?: string
+  isExpired: boolean
+}
+
+const myRoles = ref<MyRoleInfo[]>([])
+const myRolesLoading = ref(false)
+const myPermissionCodes = ref<string[]>([])
+const myPermissionsLoading = ref(false)
+
+const loadMyRoles = async () => {
+  myRolesLoading.value = true
+  try {
+    const roles = await getCurrentUserRoles()
+    const now = new Date().toISOString()
+    myRoles.value = (Array.isArray(roles) ? roles : []).map((r: any) => ({
+      roleName: r.roleName || '',
+      roleCode: r.roleCode || '',
+      scopeType: r.scopeType || 'ALL',
+      scopeId: r.scopeId || 0,
+      scopeName: r.scopeName || '',
+      expiresAt: r.expiresAt,
+      isExpired: r.expiresAt ? r.expiresAt < now : false
+    }))
+  } catch (error) {
+    console.error('加载角色失败:', error)
+  } finally {
+    myRolesLoading.value = false
+  }
+}
+
+const loadMyPermissions = async () => {
+  myPermissionsLoading.value = true
+  try {
+    const perms = await getCurrentUserPermissions()
+    myPermissionCodes.value = (Array.isArray(perms) ? perms : []).map((p: any) =>
+      typeof p === 'string' ? p : p.permissionCode || p.code || ''
+    ).filter(Boolean)
+  } catch (error) {
+    console.error('加载权限失败:', error)
+  } finally {
+    myPermissionsLoading.value = false
+  }
+}
+
 onMounted(() => {
   loadUserInfo()
+  loadMyRoles()
+  loadMyPermissions()
 })
 </script>
