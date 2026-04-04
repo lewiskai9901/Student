@@ -27,6 +27,14 @@ public class Role extends AggregateRoot<Long> {
     private Long tenantId;
 
     private Set<Long> permissionIds;
+
+    /**
+     * Legacy field: per-role data scope.
+     * The main data permission system now uses role_data_permissions_v5 table
+     * (via DataPermissionInterceptor + DataPermissionPolicyService) for fine-grained
+     * module-level scope control. This field is still read by CasbinAuthorizationService
+     * for backward compatibility but should not be relied upon for new features.
+     */
     private DataScope dataScope;
 
     protected Role() {

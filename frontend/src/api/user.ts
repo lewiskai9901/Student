@@ -1,7 +1,7 @@
 /**
- * 用户管理 API - DDD架构适配
+ * 用户管理 API
  *
- * 使用纯 DDD 端点: /domain/users
+ * 统一使用 /users 端点（UserController + UserRoleController）
  */
 import { http } from '@/utils/request'
 import type {
@@ -15,8 +15,8 @@ import type {
 } from '@/types/user'
 import type { PageResponse } from '@/types'
 
-// 后端API路径 - 纯DDD端点
-const USER_URL = '/domain/users'
+// 后端API路径 - 统一使用 /users
+const USER_URL = '/users'
 
 // ==================== 分页查询 API ====================
 
@@ -146,7 +146,7 @@ export function resetPassword(id: number | string): Promise<string> {
 }
 
 // ==================== 角色操作 API ====================
-// 角色 scope API 由 UserRoleController 提供，路径为 /users（非 /domain/users）
+// 角色 scope API 由 UserRoleController 提供，路径同为 /users
 const ROLE_ASSIGN_URL = '/users'
 
 /**

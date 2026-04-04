@@ -683,7 +683,7 @@ import { accessRelationApi } from '@/api/accessRelation'
 import { universalPlaceApi } from '@/api/universalPlace'
 import type { UserType as UserTypeItem } from '@/types/userType'
 import type { OrgUnitTreeNode } from '@/types'
-// V2 DDD API
+// User API
 import {
   getUserPage,
   createUser,

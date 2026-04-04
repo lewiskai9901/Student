@@ -316,26 +316,8 @@ const routes: RouteRecordRaw[] = [
           // 宿舍管理旧路由重定向
           {
             path: '/organization/dormitory',
-            name: 'OrgDormitory',
             redirect: '/dormitory',
-            meta: {
-              title: '宿舍管理',
-              requiresAuth: true,
-              hidden: true
-            },
-            children: [
-              {
-                path: '/organization/dormitory/department',
-                name: 'DepartmentDormitory',
-                component: () => import('@/views/dormitory/DepartmentDormitoryView.vue'),
-                meta: {
-                  title: '组织宿舍管理',
-                  requiresAuth: true,
-                  permission: 'dormitory:org:view',
-                  hidden: true
-                }
-              }
-            ]
+            meta: { hidden: true }
           }
         ]
       },

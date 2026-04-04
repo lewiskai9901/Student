@@ -1,10 +1,12 @@
 package com.school.management.interfaces.rest.user;
 
+import com.school.management.application.access.AccessApplicationService;
 import com.school.management.application.user.UserApplicationService;
 import com.school.management.application.user.command.CreateUserCommand;
 import com.school.management.application.user.command.UpdateUserCommand;
 import com.school.management.infrastructure.activity.annotation.AuditEvent;
 import com.school.management.common.result.Result;
+import com.school.management.domain.access.model.Role;
 import com.school.management.domain.user.model.aggregate.User;
 import com.school.management.exception.BusinessException;
 import com.school.management.common.util.SecurityUtils;
@@ -33,6 +35,7 @@ import java.util.stream.Collectors;
 public class UserController {
 
     private final UserApplicationService userApplicationService;
+    private final AccessApplicationService accessApplicationService;
 
     // ==================== 基础CRUD ====================
 
@@ -54,6 +57,7 @@ public class UserController {
                 .birthDate(request.getBirthDate())
                 .idCard(request.getIdCard())
                 .orgUnitId(request.getOrgUnitId())
+                .placeId(request.getPlaceId())
                 .userTypeCode(request.getUserTypeCode())
                 .roleIds(request.getRoleIds())
                 .createdBy(SecurityUtils.requireCurrentUserId())
@@ -121,8 +125,19 @@ public class UserController {
         return Result.success(UserDomainResponse.fromDomain(user));
     }
 
-    @Operation(summary = "分页查询用户")
+    @Operation(summary = "获取所有用户")
     @GetMapping
+    @CasbinAccess(resource = "system:user", action = "view")
+    public Result<List<UserDomainResponse>> getAllUsers() {
+        List<UserDomainResponse> users = userApplicationService.getAllUsers()
+                .stream()
+                .map(UserDomainResponse::fromDomain)
+                .collect(Collectors.toList());
+        return Result.success(users);
+    }
+
+    @Operation(summary = "分页查询用户")
+    @GetMapping("/page")
     @CasbinAccess(resource = "system:user", action = "view")
     public Result<PageResponse> getUserPage(
             @Parameter(description = "页码") @RequestParam(defaultValue = "1") Integer pageNum,
@@ -199,6 +214,36 @@ public class UserController {
 
     // 角色操作已迁移到 UserRoleController（支持 scope）
 
+    // ==================== 密码操作（增强版） ====================
+
+    @Operation(summary = "重置用户密码（含管理员保护）")
+    @PostMapping("/{id}/reset-password-safe")
+    @CasbinAccess(resource = "system:user", action = "edit")
+    @AuditEvent(module = "user", action = "UPDATE", resourceType = "USER", resourceId = "#id", label = "重置用户密码")
+    public Result<String> resetPasswordSafe(
+            @Parameter(description = "用户ID") @PathVariable Long id) {
+        log.info("重置用户密码(safe): {}", id);
+
+        // 检查目标用户是否拥有管理员角色，若有则仅超级管理员可重置
+        List<Role> targetRoles = accessApplicationService.getUserRoles(id);
+        boolean targetIsAdmin = targetRoles.stream()
+                .anyMatch(r -> "ADMIN".equalsIgnoreCase(r.getRoleType())
+                        || (r.getRoleCode() != null && r.getRoleCode().toUpperCase().contains("ADMIN")));
+        if (targetIsAdmin) {
+            Long currentUserId = SecurityUtils.requireCurrentUserId();
+            List<Role> currentRoles = accessApplicationService.getUserRoles(currentUserId);
+            boolean isSuperAdmin = currentRoles.stream()
+                    .anyMatch(r -> "SUPER_ADMIN".equalsIgnoreCase(r.getRoleType())
+                            || (r.getRoleCode() != null && r.getRoleCode().toUpperCase().contains("SUPER_ADMIN")));
+            if (!isSuperAdmin) {
+                throw new BusinessException("仅超级管理员可重置管理员用户的密码");
+            }
+        }
+
+        userApplicationService.resetPassword(id);
+        return Result.success("密码已重置成功");
+    }
+
     // ==================== 查询操作 ====================
 
     @Operation(summary = "检查用户名是否存在")
@@ -242,7 +287,6 @@ public class UserController {
     @GetMapping("/with-org-units")
     public Result<List<UserDomainResponse>> getUsersWithOrgUnits(
             @Parameter(description = "搜索关键词") @RequestParam(required = false) String keyword) {
-        // 使用简单列表查询，UserDomainResponse已包含orgUnitName
         List<User> users = (keyword != null && !keyword.isEmpty())
                 ? userApplicationService.getSimpleUserList(keyword)
                 : userApplicationService.getAllUsers();
@@ -250,5 +294,44 @@ public class UserController {
                 .map(UserDomainResponse::fromDomain)
                 .collect(Collectors.toList());
         return Result.success(responses);
+    }
+
+    @Operation(summary = "获取带部门信息的用户列表（with-org-units别名）")
+    @GetMapping("/with-departments")
+    public Result<List<UserDomainResponse>> getUsersWithDepartments(
+            @Parameter(description = "搜索关键词") @RequestParam(required = false) String keyword) {
+        return getUsersWithOrgUnits(keyword);
+    }
+
+    @Operation(summary = "根据用户名获取用户")
+    @GetMapping("/by-username/{username}")
+    @CasbinAccess(resource = "system:user", action = "view")
+    public Result<UserDomainResponse> getUserByUsername(
+            @Parameter(description = "用户名") @PathVariable String username) {
+        return userApplicationService.getUserByUsername(username)
+                .map(user -> Result.success(UserDomainResponse.fromDomain(user)))
+                .orElse(Result.error("用户不存在"));
+    }
+
+    // ==================== 微信绑定 ====================
+
+    @Operation(summary = "绑定微信")
+    @PostMapping("/{id}/bind-wechat")
+    @CasbinAccess(resource = "system:user", action = "edit")
+    public Result<Void> bindWechat(
+            @Parameter(description = "用户ID") @PathVariable Long id,
+            @RequestParam String openid) {
+        log.info("绑定微信: userId={}, openid={}", id, openid);
+        userApplicationService.bindWechat(id, openid);
+        return Result.success();
+    }
+
+    @Operation(summary = "解绑微信")
+    @PostMapping("/{id}/unbind-wechat")
+    @CasbinAccess(resource = "system:user", action = "edit")
+    public Result<Void> unbindWechat(@Parameter(description = "用户ID") @PathVariable Long id) {
+        log.info("解绑微信: {}", id);
+        userApplicationService.unbindWechat(id);
+        return Result.success();
     }
 }
