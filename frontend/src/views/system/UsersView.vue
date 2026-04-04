@@ -616,25 +616,26 @@
                     </div>
                     <!-- 过期时间和原因 -->
                     <div class="flex flex-wrap items-center gap-3 text-xs">
-                    <div class="flex items-center gap-1.5">
-                      <label class="text-xs text-gray-500">过期时间</label>
-                      <input
-                        type="date"
-                        :value="getRoleScope(role.id).expiresAt || ''"
-                        @input="updateRoleExpiry(role.id, ($event.target as HTMLInputElement).value)"
-                        class="h-7 rounded border border-gray-300 px-2 text-xs"
-                        placeholder="空=永久"
-                      />
-                    </div>
-                    <div class="flex items-center gap-1.5">
-                      <label class="text-xs text-gray-500">授权原因</label>
-                      <input
-                        type="text"
-                        :value="getRoleScope(role.id).reason || ''"
-                        @input="updateRoleReason(role.id, ($event.target as HTMLInputElement).value)"
-                        class="h-7 w-40 rounded border border-gray-300 px-2 text-xs"
-                        placeholder="可选"
-                      />
+                      <div class="flex items-center gap-1.5">
+                        <span class="text-gray-500 w-14 shrink-0">过期时间</span>
+                        <input
+                          type="date"
+                          :value="getRoleScope(role.id).expiresAt || ''"
+                          @input="updateRoleExpiry(role.id, ($event.target as HTMLInputElement).value)"
+                          class="h-7 rounded border border-gray-300 px-2 text-xs"
+                          placeholder="空=永久"
+                        />
+                      </div>
+                      <div class="flex items-center gap-1.5">
+                        <span class="text-gray-500 shrink-0">原因</span>
+                        <input
+                          type="text"
+                          :value="getRoleScope(role.id).reason || ''"
+                          @input="updateRoleReason(role.id, ($event.target as HTMLInputElement).value)"
+                          class="h-7 w-40 rounded border border-gray-300 px-2 text-xs"
+                          placeholder="可选"
+                        />
+                      </div>
                     </div>
                   </div>
                 </div>
