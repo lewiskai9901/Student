@@ -25,13 +25,16 @@ public class UserRole implements Entity<Long> {
     private Long assignedBy;
     private LocalDateTime expiresAt;
     private Boolean isActive;
+    private String reason;
+    private Long grantedBy;
+    private LocalDateTime grantedAt;
 
     protected UserRole() {}
 
     @Builder
     public UserRole(Long id, Long userId, Long roleId, String scopeType, Long scopeId,
                     LocalDateTime assignedAt, Long assignedBy, LocalDateTime expiresAt,
-                    Boolean isActive) {
+                    Boolean isActive, String reason, Long grantedBy, LocalDateTime grantedAt) {
         this.id = id;
         this.userId = userId;
         this.roleId = roleId;
@@ -41,6 +44,9 @@ public class UserRole implements Entity<Long> {
         this.assignedBy = assignedBy;
         this.expiresAt = expiresAt;
         this.isActive = isActive != null ? isActive : true;
+        this.reason = reason;
+        this.grantedBy = grantedBy;
+        this.grantedAt = grantedAt;
     }
 
     /**

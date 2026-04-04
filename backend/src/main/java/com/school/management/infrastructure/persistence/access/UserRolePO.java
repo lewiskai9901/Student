@@ -32,4 +32,10 @@ public class UserRolePO {
     private LocalDateTime expiresAt;
 
     private Boolean isActive;
+
+    private String reason;
+
+    private Long grantedBy;
+
+    private LocalDateTime grantedAt;
 }

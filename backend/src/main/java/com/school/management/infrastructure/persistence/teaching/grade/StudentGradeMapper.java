@@ -1,6 +1,7 @@
 package com.school.management.infrastructure.persistence.teaching.grade;
 
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
+import com.school.management.infrastructure.access.DataPermission;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 import org.apache.ibatis.annotations.Select;
@@ -9,6 +10,7 @@ import java.util.List;
 import java.util.Map;
 
 @Mapper
+@DataPermission(module = "student_grade", orgUnitField = "class_id")
 public interface StudentGradeMapper extends BaseMapper<StudentGradePO> {
 
     @Select("SELECT g.id, g.batch_id AS batchId, g.semester_id AS semesterId, " +

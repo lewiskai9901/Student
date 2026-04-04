@@ -1,6 +1,7 @@
 package com.school.management.infrastructure.persistence.student;
 
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
+import com.school.management.infrastructure.access.DataPermission;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 import org.apache.ibatis.annotations.Select;
@@ -12,6 +13,7 @@ import java.util.List;
  * Maps to the existing 'classes' table.
  */
 @Mapper
+@DataPermission(module = "school_class", orgUnitField = "org_unit_id")
 public interface SchoolClassMapper extends BaseMapper<SchoolClassPO> {
 
     /**

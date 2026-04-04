@@ -201,26 +201,29 @@ public interface UserDomainMapper extends BaseMapper<UserPO> {
     List<UserPO> findSimpleList(@Param("keyword") String keyword);
 
     /**
-     * 根据用户ID查询角色ID列表
+     * 根据用户ID查询角色ID列表（过滤已过期和已停用的角色分配）
      */
-    @Select("SELECT role_id FROM user_roles WHERE user_id = #{userId}")
+    @Select("SELECT role_id FROM user_roles WHERE user_id = #{userId} " +
+            "AND is_active = 1 AND (expires_at IS NULL OR expires_at > NOW())")
     List<Long> findRoleIdsByUserId(@Param("userId") Long userId);
 
     /**
-     * 根据用户ID查询角色代码列表
+     * 根据用户ID查询角色代码列表（过滤已过期和已停用的角色分配）
      */
     @Select("SELECT r.role_code FROM roles r " +
             "INNER JOIN user_roles ur ON r.id = ur.role_id " +
-            "WHERE ur.user_id = #{userId} AND r.deleted = 0")
+            "WHERE ur.user_id = #{userId} AND r.deleted = 0 " +
+            "AND ur.is_active = 1 AND (ur.expires_at IS NULL OR ur.expires_at > NOW())")
     List<String> findRoleCodesByUserId(@Param("userId") Long userId);
 
     /**
-     * 根据用户ID查询权限代码列表
+     * 根据用户ID查询权限代码列表（过滤已过期和已停用的角色分配）
      */
     @Select("SELECT DISTINCT p.permission_code FROM permissions p " +
             "INNER JOIN role_permissions rp ON p.id = rp.permission_id " +
             "INNER JOIN user_roles ur ON rp.role_id = ur.role_id " +
-            "WHERE ur.user_id = #{userId}")
+            "WHERE ur.user_id = #{userId} " +
+            "AND ur.is_active = 1 AND (ur.expires_at IS NULL OR ur.expires_at > NOW())")
     List<String> findPermissionCodesByUserId(@Param("userId") Long userId);
 
     /**
@@ -230,11 +233,12 @@ public interface UserDomainMapper extends BaseMapper<UserPO> {
     List<String> findAllPermissionCodes();
 
     /**
-     * 根据用户ID查询角色名称列表
+     * 根据用户ID查询角色名称列表（过滤已过期和已停用的角色分配）
      */
     @Select("SELECT r.role_name FROM user_roles ur " +
             "JOIN roles r ON ur.role_id = r.id " +
-            "WHERE ur.user_id = #{userId} AND r.deleted = 0")
+            "WHERE ur.user_id = #{userId} AND r.deleted = 0 " +
+            "AND ur.is_active = 1 AND (ur.expires_at IS NULL OR ur.expires_at > NOW())")
     List<String> findRoleNamesByUserId(@Param("userId") Long userId);
 
     /**

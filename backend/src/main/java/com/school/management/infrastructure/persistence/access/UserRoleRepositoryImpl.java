@@ -120,6 +120,9 @@ public class UserRoleRepositoryImpl implements UserRoleRepository {
         po.setAssignedBy(domain.getAssignedBy());
         po.setExpiresAt(domain.getExpiresAt());
         po.setIsActive(domain.getIsActive());
+        po.setReason(domain.getReason());
+        po.setGrantedBy(domain.getGrantedBy());
+        po.setGrantedAt(domain.getGrantedAt());
         return po;
     }
 
@@ -134,6 +137,9 @@ public class UserRoleRepositoryImpl implements UserRoleRepository {
             .assignedBy(po.getAssignedBy())
             .expiresAt(po.getExpiresAt())
             .isActive(po.getIsActive())
+            .reason(po.getReason())
+            .grantedBy(po.getGrantedBy())
+            .grantedAt(po.getGrantedAt())
             .build();
     }
 }
