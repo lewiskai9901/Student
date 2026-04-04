@@ -1,6 +1,7 @@
 package com.school.management.interfaces.rest.teaching;
 
 import com.school.management.application.teaching.GradeApplicationService;
+import com.school.management.common.audit.Audited;
 import com.school.management.common.result.Result;
 import com.school.management.common.util.SecurityUtils;
 import com.school.management.infrastructure.casbin.CasbinAccess;
@@ -81,6 +82,7 @@ public class GradeController {
 
     @PostMapping("/batches/{id}/publish")
     @CasbinAccess(resource = "teaching:grade", action = "edit")
+    @Audited(module = "teaching", action = "PUBLISH", resourceType = "GradeBatch", description = "发布成绩批次")
     public Result<Void> publishBatch(@PathVariable Long id) {
         gradeService.publishBatch(id);
         return Result.success();

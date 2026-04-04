@@ -8,6 +8,7 @@ import com.school.management.application.academic.command.UpdateCurriculumPlanCo
 import com.school.management.application.academic.command.UpdatePlanCourseCommand;
 import com.school.management.application.academic.query.CurriculumPlanDTO;
 import com.school.management.application.academic.query.PlanCourseDTO;
+import com.school.management.common.audit.Audited;
 import com.school.management.common.result.Result;
 import com.school.management.common.util.SecurityUtils;
 import com.school.management.infrastructure.casbin.CasbinAccess;
@@ -56,6 +57,7 @@ public class CurriculumPlanController {
     @Operation(summary = "Create plan")
     @PostMapping
     @CasbinAccess(resource = "academic:curriculum", action = "edit")
+    @Audited(module = "academic", action = "CREATE", resourceType = "CurriculumPlan", description = "创建培养方案")
     public Result<CurriculumPlanDTO> createPlan(@RequestBody CreateCurriculumPlanCommand command) {
         command.setCreatedBy(SecurityUtils.requireCurrentUserId());
         return Result.success(planService.createPlan(command));
@@ -64,6 +66,7 @@ public class CurriculumPlanController {
     @Operation(summary = "Update plan")
     @PutMapping("/{id}")
     @CasbinAccess(resource = "academic:curriculum", action = "edit")
+    @Audited(module = "academic", action = "UPDATE", resourceType = "CurriculumPlan", description = "更新培养方案")
     public Result<CurriculumPlanDTO> updatePlan(@PathVariable Long id,
                                                   @RequestBody UpdateCurriculumPlanCommand command) {
         command.setUpdatedBy(SecurityUtils.requireCurrentUserId());
@@ -73,6 +76,7 @@ public class CurriculumPlanController {
     @Operation(summary = "Delete plan")
     @DeleteMapping("/{id}")
     @CasbinAccess(resource = "academic:curriculum", action = "edit")
+    @Audited(module = "academic", action = "DELETE", resourceType = "CurriculumPlan", description = "删除培养方案")
     public Result<Void> deletePlan(@PathVariable Long id) {
         planService.deletePlan(id);
         return Result.success();
@@ -81,6 +85,7 @@ public class CurriculumPlanController {
     @Operation(summary = "Publish plan")
     @PostMapping("/{id}/publish")
     @CasbinAccess(resource = "academic:curriculum", action = "edit")
+    @Audited(module = "academic", action = "PUBLISH", resourceType = "CurriculumPlan", description = "发布培养方案")
     public Result<Void> publishPlan(@PathVariable Long id) {
         planService.publishPlan(id, SecurityUtils.requireCurrentUserId());
         return Result.success();

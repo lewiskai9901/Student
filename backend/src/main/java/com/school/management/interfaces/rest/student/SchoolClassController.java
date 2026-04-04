@@ -2,6 +2,7 @@ package com.school.management.interfaces.rest.student;
 
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.school.management.common.audit.Audited;
 import com.school.management.common.result.Result;
 import com.school.management.common.util.SecurityUtils;
 import com.school.management.domain.student.model.ClassStatus;
@@ -127,6 +128,7 @@ public class SchoolClassController {
     @PostMapping
     @Operation(summary = "创建班级")
     @CasbinAccess(resource = "student:class", action = "add")
+    @Audited(module = "student", action = "CREATE", resourceType = "SchoolClass", description = "创建班级")
     public Result<SchoolClassResponse> createClass(@RequestBody CreateClassRequest request) {
         // 检查编码是否存在
         if (schoolClassRepository.existsByClassCode(request.getClassCode())) {

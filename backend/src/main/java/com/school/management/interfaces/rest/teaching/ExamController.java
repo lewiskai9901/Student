@@ -1,6 +1,7 @@
 package com.school.management.interfaces.rest.teaching;
 
 import com.school.management.application.teaching.ExamApplicationService;
+import com.school.management.common.audit.Audited;
 import com.school.management.common.result.Result;
 import com.school.management.common.util.SecurityUtils;
 import com.school.management.infrastructure.casbin.CasbinAccess;
@@ -44,6 +45,7 @@ public class ExamController {
 
     @PostMapping("/batches")
     @CasbinAccess(resource = "teaching:exam", action = "edit")
+    @Audited(module = "teaching", action = "CREATE", resourceType = "ExamBatch", description = "创建考试批次")
     public Result<ExamBatchPO> createBatch(@RequestBody Map<String, Object> data) {
         Long userId = SecurityUtils.getCurrentUserId();
         return Result.success(examService.createBatch(data, userId));
@@ -65,6 +67,7 @@ public class ExamController {
 
     @PostMapping("/batches/{id}/publish")
     @CasbinAccess(resource = "teaching:exam", action = "edit")
+    @Audited(module = "teaching", action = "PUBLISH", resourceType = "ExamBatch", description = "发布考试批次")
     public Result<Void> publishBatch(@PathVariable Long id) {
         examService.publishBatch(id);
         return Result.success();

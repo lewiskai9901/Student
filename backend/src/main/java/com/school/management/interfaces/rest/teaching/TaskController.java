@@ -1,6 +1,7 @@
 package com.school.management.interfaces.rest.teaching;
 
 import com.school.management.application.teaching.TeachingTaskApplicationService;
+import com.school.management.common.audit.Audited;
 import com.school.management.common.result.Result;
 import com.school.management.common.util.SecurityUtils;
 import com.school.management.infrastructure.casbin.CasbinAccess;
@@ -41,6 +42,7 @@ public class TaskController {
 
     @PostMapping("/tasks")
     @CasbinAccess(resource = "teaching:task", action = "edit")
+    @Audited(module = "teaching", action = "CREATE", resourceType = "TeachingTask", description = "创建教学任务")
     public Result<Map<String, Object>> createTask(@RequestBody Map<String, Object> data) {
         return Result.success(taskService.create(data, SecurityUtils.requireCurrentUserId()));
     }
@@ -54,6 +56,7 @@ public class TaskController {
 
     @DeleteMapping("/tasks/{id}")
     @CasbinAccess(resource = "teaching:task", action = "edit")
+    @Audited(module = "teaching", action = "DELETE", resourceType = "TeachingTask", description = "删除教学任务")
     public Result<Void> deleteTask(@PathVariable Long id) {
         taskService.delete(id);
         return Result.success();

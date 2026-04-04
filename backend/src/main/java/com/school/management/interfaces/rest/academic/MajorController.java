@@ -5,6 +5,7 @@ import com.school.management.application.academic.MajorApplicationService;
 import com.school.management.application.academic.command.CreateMajorCommand;
 import com.school.management.application.academic.command.UpdateMajorCommand;
 import com.school.management.application.academic.query.MajorDTO;
+import com.school.management.common.audit.Audited;
 import com.school.management.common.result.Result;
 import com.school.management.common.util.SecurityUtils;
 import io.swagger.v3.oas.annotations.Operation;
@@ -68,6 +69,7 @@ public class MajorController {
     @Operation(summary = "Create major")
     @PostMapping
     @CasbinAccess(resource = "academic:major", action = "edit")
+    @Audited(module = "academic", action = "CREATE", resourceType = "Major", description = "创建专业")
     public Result<MajorDTO> createMajor(@Valid @RequestBody CreateMajorRequest request) {
         CreateMajorCommand command = new CreateMajorCommand();
         command.setMajorCode(request.getMajorCode());
@@ -82,6 +84,7 @@ public class MajorController {
     @Operation(summary = "Update major")
     @PutMapping("/{id}")
     @CasbinAccess(resource = "academic:major", action = "edit")
+    @Audited(module = "academic", action = "UPDATE", resourceType = "Major", description = "更新专业")
     public Result<MajorDTO> updateMajor(@PathVariable Long id,
                                          @RequestBody UpdateMajorRequest request) {
         UpdateMajorCommand command = new UpdateMajorCommand();
@@ -96,6 +99,7 @@ public class MajorController {
     @Operation(summary = "Delete major")
     @DeleteMapping("/{id}")
     @CasbinAccess(resource = "academic:major", action = "edit")
+    @Audited(module = "academic", action = "DELETE", resourceType = "Major", description = "删除专业")
     public Result<Void> deleteMajor(@PathVariable Long id) {
         majorService.deleteMajor(id);
         return Result.success();

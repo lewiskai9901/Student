@@ -5,6 +5,7 @@ import com.school.management.application.academic.CourseApplicationService;
 import com.school.management.application.academic.command.CreateCourseCommand;
 import com.school.management.application.academic.command.UpdateCourseCommand;
 import com.school.management.application.academic.query.CourseDTO;
+import com.school.management.common.audit.Audited;
 import com.school.management.common.result.Result;
 import com.school.management.common.util.SecurityUtils;
 import com.school.management.infrastructure.casbin.CasbinAccess;
@@ -66,6 +67,7 @@ public class CourseController {
     @Operation(summary = "Create course")
     @PostMapping
     @CasbinAccess(resource = "academic:course", action = "edit")
+    @Audited(module = "academic", action = "CREATE", resourceType = "Course", description = "创建课程")
     public Result<CourseDTO> createCourse(@RequestBody CreateCourseCommand command) {
         command.setCreatedBy(SecurityUtils.requireCurrentUserId());
         return Result.success(courseService.createCourse(command));
@@ -74,6 +76,7 @@ public class CourseController {
     @Operation(summary = "Update course")
     @PutMapping("/{id}")
     @CasbinAccess(resource = "academic:course", action = "edit")
+    @Audited(module = "academic", action = "UPDATE", resourceType = "Course", description = "更新课程")
     public Result<CourseDTO> updateCourse(@PathVariable Long id,
                                            @RequestBody UpdateCourseCommand command) {
         command.setUpdatedBy(SecurityUtils.requireCurrentUserId());
@@ -83,6 +86,7 @@ public class CourseController {
     @Operation(summary = "Delete course")
     @DeleteMapping("/{id}")
     @CasbinAccess(resource = "academic:course", action = "edit")
+    @Audited(module = "academic", action = "DELETE", resourceType = "Course", description = "删除课程")
     public Result<Void> deleteCourse(@PathVariable Long id) {
         courseService.deleteCourse(id);
         return Result.success();

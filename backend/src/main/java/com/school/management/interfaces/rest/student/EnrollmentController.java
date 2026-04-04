@@ -1,5 +1,6 @@
 package com.school.management.interfaces.rest.student;
 
+import com.school.management.common.audit.Audited;
 import com.school.management.common.result.Result;
 import com.school.management.common.util.SecurityUtils;
 import com.school.management.infrastructure.casbin.CasbinAccess;
@@ -349,6 +350,7 @@ public class EnrollmentController {
     @Operation(summary = "录取")
     @PostMapping("/applications/{id}/admit")
     @CasbinAccess(resource = "enrollment", action = "edit")
+    @Audited(module = "enrollment", action = "ADMIT", resourceType = "Application", description = "录取报名")
     @Transactional
     public Result<Void> admitApplication(@PathVariable Long id) {
         Long reviewerId = SecurityUtils.getCurrentUserId();
@@ -365,6 +367,7 @@ public class EnrollmentController {
     @Operation(summary = "不录取")
     @PostMapping("/applications/{id}/reject")
     @CasbinAccess(resource = "enrollment", action = "edit")
+    @Audited(module = "enrollment", action = "REJECT", resourceType = "Application", description = "拒绝报名")
     public Result<Void> rejectApplication(@PathVariable Long id,
                                            @RequestBody(required = false) Map<String, Object> body) {
         Long reviewerId = SecurityUtils.getCurrentUserId();
@@ -380,6 +383,7 @@ public class EnrollmentController {
     @Operation(summary = "报到注册（创建学生记录+分配班级）")
     @PostMapping("/applications/{id}/register")
     @CasbinAccess(resource = "enrollment", action = "edit")
+    @Audited(module = "enrollment", action = "REGISTER", resourceType = "Application", description = "报到注册")
     @Transactional
     public Result<Map<String, Object>> registerApplication(
             @PathVariable Long id, @RequestBody Map<String, Object> body) {

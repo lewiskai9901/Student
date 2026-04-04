@@ -1,0 +1,21 @@
+CREATE TABLE IF NOT EXISTS audit_trail (
+    id BIGINT PRIMARY KEY AUTO_INCREMENT,
+    module VARCHAR(50) NOT NULL COMMENT '模块',
+    action VARCHAR(30) NOT NULL COMMENT '操作',
+    resource_type VARCHAR(50) NOT NULL COMMENT '资源类型',
+    resource_id VARCHAR(50) COMMENT '资源ID',
+    resource_name VARCHAR(200) COMMENT '资源名称',
+    before_data JSON COMMENT '变更前',
+    after_data JSON COMMENT '变更后',
+    operator_id BIGINT COMMENT '操作人ID',
+    operator_name VARCHAR(50) COMMENT '操作人',
+    ip_address VARCHAR(50) COMMENT 'IP',
+    description VARCHAR(500) COMMENT '描述',
+    tenant_id BIGINT NOT NULL DEFAULT 1,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    INDEX idx_module (module),
+    INDEX idx_resource (resource_type, resource_id),
+    INDEX idx_operator (operator_id),
+    INDEX idx_time (created_at),
+    INDEX idx_tenant (tenant_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='操作审计日志表';
