@@ -257,7 +257,7 @@
           <select
             v-model="queryParams.pageSize"
             @change="loadUserList"
-            class="h-8 rounded border border-gray-300 px-2 py-1 text-xs leading-normal"
+            class="rounded border border-gray-300 pl-2 text-xs"
           >
             <option v-for="size in [10, 20, 50, 100]" :key="size" :value="size">{{ size }}条/页</option>
           </select>
@@ -604,7 +604,7 @@
                       <select
                         :value="getRoleScope(role.id).scopeId"
                         @change="updateRoleScopeId(role.id, Number(($event.target as HTMLSelectElement).value))"
-                        class="h-8 w-48 rounded border border-gray-300 px-2 py-1 text-xs leading-normal"
+                        class="w-48 rounded border border-gray-300 pl-2 text-xs"
                         :disabled="getRoleScope(role.id).scopeType !== 'ORG_UNIT'"
                         :class="getRoleScope(role.id).scopeType !== 'ORG_UNIT' ? 'opacity-30' : ''"
                       >
@@ -622,7 +622,7 @@
                           type="date"
                           :value="getRoleScope(role.id).expiresAt || ''"
                           @input="updateRoleExpiry(role.id, ($event.target as HTMLInputElement).value)"
-                          class="h-8 rounded border border-gray-300 px-2 py-1 text-xs leading-normal"
+                          class="rounded border border-gray-300 pl-2 text-xs"
                           placeholder="空=永久"
                         />
                       </div>
@@ -632,7 +632,7 @@
                           type="text"
                           :value="getRoleScope(role.id).reason || ''"
                           @input="updateRoleReason(role.id, ($event.target as HTMLInputElement).value)"
-                          class="h-8 w-40 rounded border border-gray-300 px-2 py-1 text-xs leading-normal"
+                          class="w-40 rounded border border-gray-300 pl-2 text-xs"
                           placeholder="可选"
                         />
                       </div>
