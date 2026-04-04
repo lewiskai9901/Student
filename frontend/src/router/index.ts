@@ -844,77 +844,6 @@ const routes: RouteRecordRaw[] = [
         ]
       },
 
-      // ==================== 任务管理 /task (order: 21) ====================
-      {
-        path: '/task',
-        name: 'TaskManagement',
-        redirect: '/task/list',
-        meta: {
-          title: '任务管理',
-          icon: 'Tickets',
-          requiresAuth: true,
-          order: 21,
-          group: 'operations'
-        },
-        children: [
-          {
-            path: '/task/list',
-            name: 'TaskList',
-            component: () => import('@/views/task/TaskList.vue'),
-            meta: {
-              title: '任务列表',
-              requiresAuth: true,
-              permission: 'task:list',
-              order: 1
-            }
-          },
-          {
-            path: '/task/my',
-            name: 'MyTask',
-            component: () => import('@/views/task/MyTask.vue'),
-            meta: {
-              title: '我的任务',
-              requiresAuth: true,
-              permission: 'task:my',
-              order: 2
-            }
-          },
-          {
-            path: '/task/approval',
-            name: 'TaskApproval',
-            component: () => import('@/views/task/TaskApproval.vue'),
-            meta: {
-              title: '任务审批',
-              requiresAuth: true,
-              permission: 'task:approve',
-              order: 3
-            }
-          },
-          {
-            path: '/task/workflow',
-            name: 'WorkflowTemplate',
-            component: () => import('@/views/task/WorkflowTemplate.vue'),
-            meta: {
-              title: '流程模板',
-              requiresAuth: true,
-              permission: 'task:workflow:manage',
-              order: 4
-            }
-          },
-          {
-            path: '/task/workflow/:id/design',
-            name: 'WorkflowDesigner',
-            component: () => import('@/views/task/WorkflowDesigner.vue'),
-            meta: {
-              title: '流程设计',
-              requiresAuth: true,
-              permission: 'task:workflow:manage',
-              hidden: true
-            }
-          }
-        ]
-      },
-
       // ==================== 系统管理 /system (order: 30) - 合并权限管理+系统设置 ====================
       {
         path: '/system',
@@ -1070,6 +999,28 @@ const routes: RouteRecordRaw[] = [
               requiresAuth: true,
               permission: 'system:tenant:view',
               order: 12
+            }
+          },
+          {
+            path: '/system/teachers',
+            name: 'TeacherProfiles',
+            component: () => import('@/views/system/TeacherProfileView.vue'),
+            meta: {
+              title: '教师档案',
+              requiresAuth: true,
+              permission: 'system:teacher:view',
+              order: 13
+            }
+          },
+          {
+            path: '/system/audit',
+            name: 'AuditTrail',
+            component: () => import('@/views/system/AuditTrailView.vue'),
+            meta: {
+              title: '审计日志',
+              requiresAuth: true,
+              permission: 'system:audit:view',
+              order: 14
             }
           },
         ]
