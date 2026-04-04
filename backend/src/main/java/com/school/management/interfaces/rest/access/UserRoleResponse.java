@@ -1,5 +1,6 @@
 package com.school.management.interfaces.rest.access;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
 import lombok.Data;
 
 import java.time.LocalDateTime;
@@ -8,6 +9,7 @@ import java.time.LocalDateTime;
  * Response DTO for user role assignment information.
  */
 @Data
+@JsonInclude(JsonInclude.Include.ALWAYS)
 public class UserRoleResponse {
 
     private Long id;
@@ -31,4 +33,10 @@ public class UserRoleResponse {
     private LocalDateTime expiresAt;
 
     private Boolean isActive;
+
+    private String reason;
+
+    private Long grantedBy;
+
+    private LocalDateTime grantedAt;
 }

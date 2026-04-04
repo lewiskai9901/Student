@@ -169,6 +169,9 @@ public class UserRoleController {
         response.setAssignedAt(userRole.getAssignedAt());
         response.setExpiresAt(userRole.getExpiresAt());
         response.setIsActive(userRole.getIsActive());
+        response.setReason(userRole.getReason());
+        response.setGrantedBy(userRole.getGrantedBy());
+        response.setGrantedAt(userRole.getGrantedAt());
 
         // Enrich with role info
         Role role = roleMap.get(userRole.getRoleId());
