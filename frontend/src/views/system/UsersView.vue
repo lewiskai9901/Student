@@ -257,7 +257,7 @@
           <select
             v-model="queryParams.pageSize"
             @change="loadUserList"
-            class="pagination-select"
+            class="h-8 rounded border border-gray-300 px-2 py-1 text-xs leading-normal"
           >
             <option v-for="size in [10, 20, 50, 100]" :key="size" :value="size">{{ size }}条/页</option>
           </select>
@@ -622,7 +622,7 @@
                           type="date"
                           :value="getRoleScope(role.id).expiresAt || ''"
                           @input="updateRoleExpiry(role.id, ($event.target as HTMLInputElement).value)"
-                          class="h-7 rounded border border-gray-300 px-2 text-xs"
+                          class="h-8 rounded border border-gray-300 px-2 py-1 text-xs leading-normal"
                           placeholder="空=永久"
                         />
                       </div>
@@ -632,7 +632,7 @@
                           type="text"
                           :value="getRoleScope(role.id).reason || ''"
                           @input="updateRoleReason(role.id, ($event.target as HTMLInputElement).value)"
-                          class="h-7 w-40 rounded border border-gray-300 px-2 text-xs"
+                          class="h-8 w-40 rounded border border-gray-300 px-2 py-1 text-xs leading-normal"
                           placeholder="可选"
                         />
                       </div>
