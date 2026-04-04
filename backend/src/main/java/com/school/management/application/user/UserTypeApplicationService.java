@@ -59,7 +59,13 @@ public class UserTypeApplicationService {
 
     @Transactional
     public UserType createUserType(CreateUserTypeCommand command) {
-        String typeCode = generateTypeCode();
+        // If typeCode is provided and non-blank, use it. Otherwise generate.
+        String typeCode = command.getTypeCode();
+        if (typeCode == null || typeCode.isBlank()) {
+            typeCode = generateTypeCode();
+        } else if (userTypeRepository.existsByTypeCode(typeCode)) {
+            throw new IllegalArgumentException("类型编码已存在: " + typeCode);
+        }
 
         if (command.getParentTypeCode() != null && !command.getParentTypeCode().isEmpty()) {
             userTypeRepository.findByTypeCode(command.getParentTypeCode())
@@ -179,6 +185,7 @@ public class UserTypeApplicationService {
     @NoArgsConstructor
     @AllArgsConstructor
     public static class CreateUserTypeCommand {
+        private String typeCode;
         private String typeName;
         private String category;
         private String parentTypeCode;

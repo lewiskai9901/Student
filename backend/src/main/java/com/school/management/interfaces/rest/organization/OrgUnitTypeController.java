@@ -85,7 +85,7 @@ public class OrgUnitTypeController {
 
     @PostMapping
     @Operation(summary = "创建组织类型")
-    @CasbinAccess(resource = "system:org", action = "create")
+    @CasbinAccess(resource = "system:org", action = "edit")
     public Result<OrgType> createOrgType(@RequestBody CreateOrgTypeRequest request) {
         CreateOrgUnitTypeCommand command = new CreateOrgUnitTypeCommand();
         command.setTypeCode(request.getTypeCode());
@@ -108,7 +108,7 @@ public class OrgUnitTypeController {
 
     @PutMapping("/{id}")
     @Operation(summary = "更新组织类型")
-    @CasbinAccess(resource = "system:org", action = "update")
+    @CasbinAccess(resource = "system:org", action = "edit")
     public Result<OrgType> updateOrgType(@PathVariable Long id, @RequestBody UpdateOrgTypeRequest request) {
         UpdateOrgUnitTypeCommand command = new UpdateOrgUnitTypeCommand();
         command.setTypeName(request.getTypeName());
@@ -129,7 +129,7 @@ public class OrgUnitTypeController {
 
     @DeleteMapping("/{id}")
     @Operation(summary = "删除组织类型")
-    @CasbinAccess(resource = "system:org", action = "delete")
+    @CasbinAccess(resource = "system:org", action = "edit")
     public Result<Void> deleteOrgType(@PathVariable Long id) {
         orgUnitTypeService.deleteOrgUnitType(id);
         return Result.success();
@@ -137,14 +137,14 @@ public class OrgUnitTypeController {
 
     @PutMapping("/{id}/enable")
     @Operation(summary = "启用组织类型")
-    @CasbinAccess(resource = "system:org", action = "update")
+    @CasbinAccess(resource = "system:org", action = "edit")
     public Result<OrgType> enableOrgType(@PathVariable Long id) {
         return Result.success(orgUnitTypeService.toggleStatus(id, true));
     }
 
     @PutMapping("/{id}/disable")
     @Operation(summary = "禁用组织类型")
-    @CasbinAccess(resource = "system:org", action = "update")
+    @CasbinAccess(resource = "system:org", action = "edit")
     public Result<OrgType> disableOrgType(@PathVariable Long id) {
         return Result.success(orgUnitTypeService.toggleStatus(id, false));
     }

@@ -84,7 +84,7 @@ public class UniversalPlaceTypeController {
 
     @PostMapping
     @Operation(summary = "创建场所类型")
-    @CasbinAccess(resource = "system:place-type", action = "add")
+    @CasbinAccess(resource = "system:place-type", action = "edit")
     public Result<UniversalPlaceType> createPlaceType(@RequestBody CreatePlaceTypeRequest request) {
         CreatePlaceTypeCommand command = new CreatePlaceTypeCommand();
         command.setTypeCode(request.getTypeCode());
@@ -128,7 +128,7 @@ public class UniversalPlaceTypeController {
 
     @DeleteMapping("/{id}")
     @Operation(summary = "删除场所类型")
-    @CasbinAccess(resource = "system:place-type", action = "delete")
+    @CasbinAccess(resource = "system:place-type", action = "edit")
     public Result<Void> deletePlaceType(@PathVariable Long id) {
         placeTypeService.deletePlaceType(id);
         return Result.success();

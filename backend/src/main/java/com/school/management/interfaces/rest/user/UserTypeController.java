@@ -71,9 +71,10 @@ public class UserTypeController {
 
     @PostMapping
     @Operation(summary = "创建用户类型")
-    @CasbinAccess(resource = "system:user", action = "add")
+    @CasbinAccess(resource = "system:user", action = "edit")
     public Result<UserType> createUserType(@RequestBody CreateUserTypeRequest request) {
         CreateUserTypeCommand command = CreateUserTypeCommand.builder()
+                .typeCode(request.getTypeCode())
                 .typeName(request.getTypeName())
                 .category(request.getCategory())
                 .parentTypeCode(request.getParentTypeCode())
@@ -114,7 +115,7 @@ public class UserTypeController {
 
     @DeleteMapping("/{id}")
     @Operation(summary = "删除用户类型")
-    @CasbinAccess(resource = "system:user", action = "delete")
+    @CasbinAccess(resource = "system:user", action = "edit")
     public Result<Void> deleteUserType(@PathVariable Long id) {
         userTypeService.deleteUserType(id);
         return Result.success();
@@ -138,6 +139,7 @@ public class UserTypeController {
 
     @Data
     public static class CreateUserTypeRequest {
+        private String typeCode;
         private String typeName;
         private String category;
         private String parentTypeCode;
