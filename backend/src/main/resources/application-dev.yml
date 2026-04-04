@@ -2,6 +2,10 @@
 # 注意: 所有敏感配置都应通过环境变量设置，不要硬编码密码
 # 首次使用请复制 .env.example 到 .env 并配置您的本地环境
 
+app:
+  security:
+    default-password: admin123
+
 spring:
   datasource:
     url: jdbc:mysql://${DB_HOST:localhost}:${DB_PORT:3306}/${DB_NAME:student_management}?useUnicode=true&characterEncoding=UTF-8&useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true
