@@ -504,6 +504,13 @@
               </button>
             </div>
 
+            <!-- 说明 -->
+            <div class="px-6 pt-4 pb-0">
+              <p class="text-xs text-gray-400 mb-0">
+                功能权限控制"能不能用某个功能"，数据权限控制"能看到哪些数据范围"
+              </p>
+            </div>
+
             <!-- 快捷操作 -->
             <div class="flex items-center gap-2 border-b border-gray-100 bg-gray-50/50 px-6 py-3">
               <span class="text-sm text-gray-500">快捷设置：</span>

@@ -421,7 +421,8 @@
                   </label>
                   <select
                     v-model="formData.userTypeCode"
-                    class="h-9 w-full rounded-lg border border-gray-300 px-3 text-sm focus:border-blue-500 focus:outline-none"
+                    class="h-9 w-full rounded-lg border px-3 text-sm focus:outline-none"
+                    :class="formData.userTypeCode ? 'border-gray-300 focus:border-blue-500' : 'border-red-300 focus:border-red-500'"
                   >
                     <option value="">请选择用户类型</option>
                     <option v-for="ut in userTypes" :key="ut.typeCode" :value="ut.typeCode">
@@ -456,11 +457,10 @@
                   </label>
                   <select
                     v-model="formData.placeId"
-                    :disabled="!formData.orgUnitId"
-                    class="h-9 w-full rounded-lg border border-gray-300 px-3 text-sm focus:border-blue-500 focus:outline-none disabled:bg-gray-100 disabled:text-gray-400"
+                    class="h-9 w-full rounded-lg border border-gray-300 px-3 text-sm focus:border-blue-500 focus:outline-none"
                   >
-                    <option :value="undefined">{{ formData.orgUnitId ? (orgPlaces.length ? '请选择场所' : '该组织暂无关联场所') : '请先选择组织' }}</option>
-                    <option v-for="place in orgPlaces" :key="place.placeId" :value="place.placeId">
+                    <option :value="undefined">请选择场所</option>
+                    <option v-for="place in allPlaces" :key="place.placeId" :value="place.placeId">
                       {{ place.placeName }}
                     </option>
                   </select>
@@ -521,9 +521,9 @@
                   <thead>
                     <tr class="border-b border-gray-200 bg-gray-50">
                       <th class="px-3 py-2 text-left font-medium text-gray-600">角色名</th>
-                      <th class="px-3 py-2 text-left font-medium text-gray-600">作用域类型</th>
-                      <th class="px-3 py-2 text-left font-medium text-gray-600">作用域名称</th>
+                      <th class="px-3 py-2 text-left font-medium text-gray-600">作用域</th>
                       <th class="px-3 py-2 text-left font-medium text-gray-600">过期时间</th>
+                      <th class="px-3 py-2 text-left font-medium text-gray-600">原因</th>
                       <th class="px-3 py-2 text-center font-medium text-gray-600">状态</th>
                       <th class="px-3 py-2 text-center font-medium text-gray-600">操作</th>
                     </tr>
@@ -536,9 +536,14 @@
                       :class="ur.isExpired ? 'opacity-50' : ''"
                     >
                       <td class="px-3 py-2 font-medium text-gray-900">{{ ur.roleName }}</td>
-                      <td class="px-3 py-2 text-gray-600">{{ ur.scopeType === 'ALL' ? '全局' : '指定组织' }}</td>
-                      <td class="px-3 py-2 text-gray-600">{{ ur.scopeName || (ur.scopeType === 'ALL' ? '-' : '未知') }}</td>
+                      <td class="px-3 py-2 text-gray-600">
+                        <span v-if="ur.scopeType === 'ALL'" class="rounded bg-blue-50 px-2 py-0.5 text-xs text-blue-600">全局</span>
+                        <span v-else class="text-sm">{{ ur.scopeName || '未指定' }}</span>
+                      </td>
                       <td class="px-3 py-2 text-gray-500">{{ ur.expiresAt ? ur.expiresAt.substring(0, 10) : '永久' }}</td>
+                      <td class="px-3 py-2 text-gray-400 text-xs truncate max-w-[150px]" :title="ur.reason">
+                        {{ ur.reason || '-' }}
+                      </td>
                       <td class="px-3 py-2 text-center">
                         <span v-if="ur.isExpired" class="rounded bg-gray-100 px-1.5 py-0.5 text-xs text-gray-500">已过期</span>
                         <span v-else class="rounded bg-green-100 px-1.5 py-0.5 text-xs text-green-600">有效</span>
@@ -579,15 +584,19 @@
                     <span v-if="role.roleCode" class="shrink-0 text-xs text-gray-500">{{ role.roleCode }}</span>
                     <!-- 作用域选择器 -->
                     <template v-if="isRoleSelected(role.id)">
-                      <div class="ml-auto flex items-center gap-2">
-                        <select
-                          :value="getRoleScope(role.id).scopeType"
-                          @change="updateRoleScopeType(role.id, ($event.target as HTMLSelectElement).value)"
-                          class="h-7 rounded border border-gray-300 px-2 text-xs"
-                        >
-                          <option value="ALL">全局</option>
-                          <option value="ORG_UNIT">指定组织</option>
-                        </select>
+                      <div class="ml-auto flex items-center gap-2 text-xs">
+                        <label class="flex items-center gap-1 cursor-pointer">
+                          <input type="radio" :name="'scope-' + role.id" value="ALL"
+                            :checked="getRoleScope(role.id).scopeType === 'ALL'"
+                            @change="updateRoleScopeType(role.id, 'ALL')" class="accent-blue-600" />
+                          <span>全局</span>
+                        </label>
+                        <label class="flex items-center gap-1 cursor-pointer">
+                          <input type="radio" :name="'scope-' + role.id" value="ORG_UNIT"
+                            :checked="getRoleScope(role.id).scopeType === 'ORG_UNIT'"
+                            @change="updateRoleScopeType(role.id, 'ORG_UNIT')" class="accent-blue-600" />
+                          <span>指定组织</span>
+                        </label>
                         <select
                           v-if="getRoleScope(role.id).scopeType === 'ORG_UNIT'"
                           :value="getRoleScope(role.id).scopeId"
@@ -654,7 +663,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, onMounted, computed, watch } from 'vue'
+import { ref, reactive, onMounted, computed } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import {
   Users,
@@ -679,7 +688,6 @@ import {
 import StatCard from '@/components/design-system/cards/StatCard.vue'
 import { getEnabledUserTypes } from '@/api/userType'
 import { getOrgUnitTree } from '@/api/organization'
-import { accessRelationApi } from '@/api/accessRelation'
 import { universalPlaceApi } from '@/api/universalPlace'
 import type { UserType as UserTypeItem } from '@/types/userType'
 import type { OrgUnitTreeNode } from '@/types'
@@ -748,13 +756,14 @@ interface UserRoleDetailed {
   expiresAt?: string
   isExpired: boolean
   assignedAt?: string
+  reason?: string
 }
 const currentUserRolesDetailed = ref<UserRoleDetailed[]>([])
 const userTypes = ref<UserTypeItem[]>([])
 const orgTree = ref<OrgUnitTreeNode[]>([])
-// 组织关联的场所列表
-interface OrgPlaceItem { placeId: number; placeName: string }
-const orgPlaces = ref<OrgPlaceItem[]>([])
+// 全量场所列表（独立于组织）
+interface PlaceItem { placeId: number; placeName: string }
+const allPlaces = ref<PlaceItem[]>([])
 
 // 当前选中的用户类型
 const selectedUserType = computed<UserTypeItem | null>(() => {
@@ -846,34 +855,24 @@ const validatePhone = () => {
 
 const dialogTitle = computed(() => (isEdit.value ? '编辑用户' : '新增用户'))
 
-// 监听组织变化，加载该组织关联的场所
-watch(() => formData.orgUnitId, async (orgId) => {
-  orgPlaces.value = []
-  formData.placeId = undefined
-  if (!orgId) return
+// 加载全量场所列表（独立于组织）
+const loadAllPlaces = async () => {
   try {
-    const relations = await accessRelationApi.getBySubject('org_unit', orgId as number, 'place')
-    // 需要根据 placeId 获取场所名称
-    const placeIds = relations.map(r => r.resourceId)
-    if (placeIds.length === 0) return
-    // 从全量场所树中查找名称
     const tree = await universalPlaceApi.getTree()
-    const nameMap = new Map<number, string>()
-    const walk = (nodes: any[]) => {
+    const result: PlaceItem[] = []
+    const flatten = (nodes: any[], depth: number) => {
       for (const n of nodes) {
-        nameMap.set(n.id, n.placeName || n.name || '')
-        if (n.children?.length) walk(n.children)
+        const prefix = '\u00A0\u00A0'.repeat(depth)
+        result.push({ placeId: n.id, placeName: prefix + (n.placeName || n.name || '') })
+        if (n.children?.length) flatten(n.children, depth + 1)
       }
     }
-    walk(tree)
-    orgPlaces.value = placeIds.map(id => ({
-      placeId: id,
-      placeName: nameMap.get(id) || `场所#${id}`
-    }))
+    flatten(tree, 0)
+    allPlaces.value = result
   } catch (error) {
-    console.error('加载组织场所失败:', error)
+    console.error('加载场所列表失败:', error)
   }
-})
+}
 
 const isAllSelected = computed(() => {
   return userList.value.length > 0 && selectedIds.value.length === userList.value.length
@@ -1188,7 +1187,8 @@ const handleAssignRoles = async (row: UserListItem) => {
         scopeName,
         expiresAt: a.expiresAt,
         isExpired: a.expiresAt ? a.expiresAt < now : false,
-        assignedAt: a.assignedAt
+        assignedAt: a.assignedAt,
+        reason: a.reason
       }
     })
 
@@ -1265,6 +1265,7 @@ onMounted(() => {
   loadAllRoles()
   loadUserTypes()
   loadOrgTree()
+  loadAllPlaces()
 })
 </script>
 
