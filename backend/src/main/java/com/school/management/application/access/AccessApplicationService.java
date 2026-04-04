@@ -415,12 +415,29 @@ public class AccessApplicationService {
         // Remove all existing roles
         userRoleRepository.deleteByUserId(userId);
 
-        // Assign new roles with scope
+        // Assign new roles with scope, expiry, and reason
         for (RoleAssignment assignment : assignments) {
             String scopeType = assignment.getScopeType() != null ? assignment.getScopeType() : "ALL";
             Long scopeId = assignment.getScopeId() != null ? assignment.getScopeId() : 0L;
-            UserRole userRole = UserRole.assignWithScope(userId, assignment.getRoleId(),
-                    scopeType, scopeId, assignedBy);
+
+            java.time.LocalDateTime expiresAt = null;
+            if (assignment.getExpiresAt() != null && !assignment.getExpiresAt().isEmpty()) {
+                String raw = assignment.getExpiresAt();
+                expiresAt = java.time.LocalDateTime.parse(raw.length() > 10 ? raw : raw + "T23:59:59");
+            }
+
+            UserRole userRole = UserRole.builder()
+                    .userId(userId)
+                    .roleId(assignment.getRoleId())
+                    .scopeType(scopeType)
+                    .scopeId("ALL".equals(scopeType) ? 0L : scopeId)
+                    .assignedBy(assignedBy)
+                    .expiresAt(expiresAt)
+                    .reason(assignment.getReason())
+                    .grantedBy(assignedBy)
+                    .grantedAt(java.time.LocalDateTime.now())
+                    .build();
+
             userRoleRepository.save(userRole);
         }
 
@@ -435,6 +452,8 @@ public class AccessApplicationService {
         private Long roleId;
         private String scopeType;
         private Long scopeId;
+        private String expiresAt;
+        private String reason;
     }
 
     // ==================== Helper Methods ====================

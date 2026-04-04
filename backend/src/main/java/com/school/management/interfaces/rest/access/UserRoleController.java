@@ -116,6 +116,8 @@ public class UserRoleController {
                 ra.setRoleId(item.getRoleId());
                 ra.setScopeType(item.getScopeType());
                 ra.setScopeId(item.getScopeId());
+                ra.setExpiresAt(item.getExpiresAt());
+                ra.setReason(item.getReason());
                 return ra;
             })
             .collect(Collectors.toList());

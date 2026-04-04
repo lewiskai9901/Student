@@ -24,5 +24,11 @@ public class SetUserRolesRequest {
 
         /** Scope ID: 0 for ALL, orgUnitId for ORG_UNIT. */
         private Long scopeId;
+
+        /** Expiry time (null = permanent). */
+        private String expiresAt;
+
+        /** Authorization reason. */
+        private String reason;
     }
 }
