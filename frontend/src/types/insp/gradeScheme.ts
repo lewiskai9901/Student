@@ -49,4 +49,5 @@ export interface GradeDefinitionInput {
   color?: string | null
   icon?: string | null
   sortOrder?: number
+  eventTypeCode?: string
 }

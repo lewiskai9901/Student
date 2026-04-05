@@ -11,6 +11,8 @@ import {
 } from '@/types/insp/enums'
 import type { TemplateItem, ResponseSet, ResponseSetOption } from '@/types/insp/template'
 import { responseSetApi } from '@/api/insp/responseSet'
+import { eventTypeApi } from '@/api/event'
+import type { EventType } from '@/types/event'
 import ConditionBuilder from '@/components/insp/ConditionBuilder.vue'
 
 const props = defineProps<{
@@ -26,6 +28,12 @@ const emit = defineEmits<{
 
 // ==================== Refs ====================
 const itemNameInput = ref<HTMLInputElement | null>(null)
+const availableEventTypes = ref<EventType[]>([])
+
+// Load event types for association dropdown
+;(async () => {
+  try { availableEventTypes.value = (await eventTypeApi.list()) as any || [] } catch { /* ignore */ }
+})()
 
 // ==================== Tab State ====================
 const activeTab = ref<'scoring' | 'validation' | 'condition'>('scoring')
@@ -42,6 +50,7 @@ const form = ref({
   scoringConfig: '',
   conditionLogic: '',
   inputMode: 'INLINE' as 'INLINE' | 'EVENT_STREAM',
+  eventTypeCode: undefined as string | undefined,
 })
 
 // Category: 'scored' or 'capture'
@@ -515,6 +524,7 @@ watch(() => props.item, (item) => {
       scoringConfig: item.scoringConfig || '',
       conditionLogic: item.conditionLogic || '',
       inputMode: item.inputMode || 'INLINE',
+      eventTypeCode: (item as any).eventTypeCode || undefined,
     }
     itemCategory.value = inferCategory(item)
     resetScoringDefaults()
@@ -638,6 +648,7 @@ function handleSave() {
       conditionLogic: form.value.conditionLogic || undefined,
       isScored: true,
       inputMode: form.value.inputMode || 'INLINE',
+      eventTypeCode: form.value.eventTypeCode || undefined,
     } as Partial<TemplateItem>)
   } else {
     // === Capture item save ===
@@ -658,6 +669,7 @@ function handleSave() {
       conditionLogic: form.value.conditionLogic || undefined,
       isScored: false,
       inputMode: form.value.inputMode || 'INLINE',
+      eventTypeCode: form.value.eventTypeCode || undefined,
     } as Partial<TemplateItem>)
   }
 }
@@ -749,6 +761,20 @@ const scoringFromResponseSet = computed(() =>
           <div v-if="form.inputMode === 'EVENT_STREAM'" style="font-size:11px;color:#9ca3af;margin-top:4px;">
             检查员搜索目标后快速打分，适合随机抽查、巡查等场景
           </div>
+        </div>
+      </div>
+
+      <!-- ── 事件关联 ── -->
+      <div class="ie-section">
+        <div class="ie-fld">
+          <label>事件关联</label>
+          <select v-model="form.eventTypeCode" class="ie-event-select">
+            <option :value="undefined">不关联事件</option>
+            <option v-for="et in availableEventTypes" :key="et.typeCode" :value="et.typeCode">
+              {{ et.categoryName }} / {{ et.typeName }}
+            </option>
+          </select>
+          <div style="font-size:10px;color:#9ca3af;margin-top:2px;">检查此项不合格时自动生成对应事件</div>
         </div>
       </div>
 
@@ -1198,4 +1224,11 @@ const scoringFromResponseSet = computed(() =>
 
 .ie-opt-card { padding:6px; border:1px solid #f0f2f5; border-radius:6px; background:#fafbfc; }
 .ie-opt-top { display:flex; align-items:center; gap:5px; }
+
+/* Event type association select */
+.ie-event-select {
+  width:100%; padding:5px 8px; border:1px solid #dce1e8; border-radius:5px;
+  font-size:11px; color:#1e2a3a; background:#fff; outline:none; appearance:auto; cursor:pointer;
+}
+.ie-event-select:focus { border-color:#7aadff; }
 </style>

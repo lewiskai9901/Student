@@ -899,14 +899,26 @@ const routes: RouteRecordRaw[] = [
           },
           {
             path: '/system/event-types',
-            name: 'EventTypeConfig',
-            component: () => import('@/views/system/EventTypeConfigView.vue'),
+            name: 'EventTypes',
+            component: () => import('@/views/system/EventTypeManagementView.vue'),
             meta: {
               title: '事件类型',
               icon: 'Bell',
               requiresAuth: true,
               permission: 'settings:event-types',
-              order: 6.5
+              order: 15
+            }
+          },
+          {
+            path: '/system/event-triggers',
+            name: 'EventTriggers',
+            component: () => import('@/views/system/EventTriggerView.vue'),
+            meta: {
+              title: '事件触发器',
+              icon: 'Zap',
+              requiresAuth: true,
+              permission: 'settings:event-types',
+              order: 16
             }
           },
           {

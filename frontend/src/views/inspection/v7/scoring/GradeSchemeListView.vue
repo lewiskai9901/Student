@@ -7,6 +7,8 @@ import {
   deleteGradeScheme, cloneGradeScheme,
 } from '@/api/insp/gradeScheme'
 import type { GradeScheme } from '@/types/insp/gradeScheme'
+import { eventTypeApi } from '@/api/event'
+import type { EventType } from '@/types/event'
 
 const loading = ref(false)
 const schemes = ref<GradeScheme[]>([])
@@ -14,11 +16,13 @@ const dialogVisible = ref(false)
 const editingScheme = ref<GradeScheme | null>(null)
 const saving = ref(false)
 
+const availableEventTypes = ref<EventType[]>([])
+
 const form = ref({
   displayName: '',
   description: '',
   schemeType: 'PERCENT_RANGE' as string,
-  grades: [] as Array<{ code: string; name: string; color: string; icon: string }>,
+  grades: [] as Array<{ code: string; name: string; color: string; icon: string; eventTypeCode?: string }>,
 })
 
 const systemSchemes = computed(() => schemes.value.filter(s => s.isSystem))
@@ -65,7 +69,14 @@ const PRESETS: Record<string, typeof form.value> = {
 
 async function loadSchemes() {
   loading.value = true
-  try { schemes.value = await getGradeSchemes() }
+  try {
+    const [s, et] = await Promise.all([
+      getGradeSchemes(),
+      eventTypeApi.list().catch(() => []),
+    ])
+    schemes.value = s
+    availableEventTypes.value = (et as any) || []
+  }
   catch (e: any) { ElMessage.error(e.message || '加载失败') }
   finally { loading.value = false }
 }
@@ -231,6 +242,10 @@ onMounted(() => loadSchemes())
             <input v-model="g.code" class="dlg-grade-input code" placeholder="编码" />
             <input v-model="g.name" class="dlg-grade-input name" placeholder="名称" />
             <input v-model="g.color" class="dlg-grade-color" type="color" />
+            <select v-model="g.eventTypeCode" class="dlg-grade-event" title="事件关联">
+              <option :value="undefined">无事件</option>
+              <option v-for="et in availableEventTypes" :key="et.typeCode" :value="et.typeCode">{{ et.typeName }}</option>
+            </select>
             <button class="dlg-grade-del" @click="removeGrade(i)">&times;</button>
           </div>
           <button class="dlg-grade-add" @click="addGrade">
@@ -344,6 +359,11 @@ onMounted(() => loadSchemes())
   display: flex; align-items: center; justify-content: center; transition: all 0.15s;
 }
 .dlg-grade-del:hover { background: #fef2f2; color: #ef4444; }
+.dlg-grade-event {
+  flex: 1; min-width: 0; padding: 6px 8px; border: 1px solid #e5e7eb; border-radius: 6px;
+  font-size: 11px; outline: none; color: #4b5563; appearance: auto; cursor: pointer;
+}
+.dlg-grade-event:focus { border-color: #d97706; }
 
 .dlg-grade-add {
   display: inline-flex; align-items: center; gap: 4px;

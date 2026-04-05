@@ -78,6 +78,7 @@ declare module 'vue' {
     ElTreeSelect: typeof import('element-plus/es')['ElTreeSelect']
     ElUpload: typeof import('element-plus/es')['ElUpload']
     EmptyState: typeof import('./src/components/design-system/feedback/EmptyState.vue')['default']
+    EntityEventTimeline: typeof import('./src/components/event/EntityEventTimeline.vue')['default']
     EvidenceLightbox: typeof import('./src/components/insp/EvidenceLightbox.vue')['default']
     FileUpload: typeof import('./src/components/common/FileUpload.vue')['default']
     FilterBar: typeof import('./src/components/design-system/tables/FilterBar.vue')['default']
