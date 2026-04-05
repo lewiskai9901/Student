@@ -7,10 +7,12 @@ import com.school.management.infrastructure.persistence.teaching.grade.GradeBatc
 import com.school.management.infrastructure.persistence.teaching.grade.GradeBatchPO;
 import com.school.management.infrastructure.persistence.teaching.grade.StudentGradeMapper;
 import com.school.management.infrastructure.persistence.teaching.grade.StudentGradePO;
+import com.school.management.application.event.TriggerService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.poi.ss.usermodel.*;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -30,6 +32,9 @@ public class GradeApplicationService {
     private final GradeBatchMapper batchMapper;
     private final StudentGradeMapper gradeMapper;
     private final JdbcTemplate jdbc; // for complex queries with dynamic filters
+
+    @Autowired(required = false)
+    private TriggerService triggerService;
 
     // ==================== Batch Methods ====================
 
@@ -113,6 +118,17 @@ public class GradeApplicationService {
         if (po == null) throw new RuntimeException("成绩批次不存在: " + id);
         po.setStatus(3);
         batchMapper.updateById(po);
+
+        // 触发事件: 成绩发布
+        if (triggerService != null) {
+            try {
+                triggerService.fire("GRADE_PUBLISHED", Map.of(
+                    "batchId", id,
+                    "batchName", po.getBatchName() != null ? po.getBatchName() : "",
+                    "semesterId", po.getSemesterId() != null ? po.getSemesterId() : 0L
+                ));
+            } catch (Exception ignored) {}
+        }
     }
 
     // ==================== Grade CRUD ====================

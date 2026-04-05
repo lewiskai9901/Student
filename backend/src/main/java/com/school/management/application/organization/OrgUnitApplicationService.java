@@ -23,7 +23,9 @@ import com.school.management.infrastructure.persistence.student.SchoolClassPO;
 import com.school.management.infrastructure.persistence.place.UniversalPlaceOccupantMapper;
 import com.school.management.infrastructure.persistence.user.UserDomainMapper;
 import com.school.management.infrastructure.persistence.user.UserPO;
+import com.school.management.application.event.TriggerService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -55,6 +57,9 @@ public class OrgUnitApplicationService {
     private final UserDomainMapper userDomainMapper;
     private final UniversalPlaceOccupantMapper placeOccupantMapper;
 
+    @Autowired(required = false)
+    private TriggerService triggerService;
+
     @Transactional
     public OrgUnitDTO createOrgUnit(CreateOrgUnitCommand command) {
         OrgUnit orgUnit = orgUnitDomainService.createOrgUnit(
@@ -72,6 +77,18 @@ public class OrgUnitApplicationService {
 
         // Create user-selected positions (or none if not provided)
         createSelectedPositions(orgUnit, command.getSelectedPositions());
+
+        // 触发事件: 组织单元创建
+        if (triggerService != null) {
+            try {
+                triggerService.fire("ORG_UNIT_CREATED", Map.of(
+                    "orgUnitId", orgUnit.getId(),
+                    "orgUnitName", orgUnit.getUnitName() != null ? orgUnit.getUnitName() : "",
+                    "orgUnitType", orgUnit.getUnitType() != null ? orgUnit.getUnitType() : "",
+                    "parentId", command.getParentId() != null ? command.getParentId() : 0L
+                ));
+            } catch (Exception ignored) {}
+        }
 
         return toDTO(orgUnit);
     }

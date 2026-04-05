@@ -10,12 +10,15 @@ import com.school.management.domain.student.model.valueobject.Gender;
 import com.school.management.domain.student.model.valueobject.StudentStatus;
 import com.school.management.domain.student.repository.StudentRepository;
 import com.school.management.exception.BusinessException;
+import com.school.management.application.event.TriggerService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 /**
@@ -30,6 +33,9 @@ public class StudentApplicationService {
     private final StudentRepository studentRepository;
     private final DomainEventPublisher eventPublisher;
     private final StatusChangeRecordService statusChangeRecordService;
+
+    @Autowired(required = false)
+    private TriggerService triggerService;
 
     /**
      * 学生入学
@@ -80,6 +86,19 @@ public class StudentApplicationService {
         statusChangeRecordService.recordEnrollment(saved.getId(), saved.getStudentNo(), saved.getName());
 
         log.info("学生入学成功: {}", saved.getId());
+
+        // 触发事件
+        if (triggerService != null) {
+            try {
+                triggerService.fire("STUDENT_ENROLLED", Map.of(
+                    "studentId", saved.getId(),
+                    "studentName", saved.getName() != null ? saved.getName() : "",
+                    "studentNo", saved.getStudentNo() != null ? saved.getStudentNo() : "",
+                    "classId", command.getClassId() != null ? command.getClassId() : 0L
+                ));
+            } catch (Exception ignored) {}
+        }
+
         return saved.getId();
     }
 
@@ -193,6 +212,19 @@ public class StudentApplicationService {
                 command.getReason());
 
         log.info("学生状态变更成功: {} -> {}", command.getStudentId(), command.getNewStatus());
+
+        // 触发事件
+        if (triggerService != null) {
+            try {
+                triggerService.fire("STUDENT_STATUS_CHANGED", Map.of(
+                    "studentId", command.getStudentId(),
+                    "studentName", student.getName() != null ? student.getName() : "",
+                    "oldStatus", oldStatus != null ? oldStatus.name() : "",
+                    "newStatus", command.getNewStatus().name(),
+                    "reason", command.getReason() != null ? command.getReason() : ""
+                ));
+            } catch (Exception ignored) {}
+        }
     }
 
     /**

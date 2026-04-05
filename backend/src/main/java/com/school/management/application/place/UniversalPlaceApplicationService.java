@@ -19,9 +19,11 @@ import com.school.management.domain.user.model.entity.UserType;
 import com.school.management.domain.user.repository.UserRepository;
 import com.school.management.domain.user.repository.UserTypeRepository;
 import com.school.management.infrastructure.activity.ActivityEventPublisher;
+import com.school.management.application.event.TriggerService;
 import lombok.Data;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -46,6 +48,9 @@ public class UniversalPlaceApplicationService {
     private final DomainEventPublisher eventPublisher;
     private final PlaceInheritanceService inheritanceService;
     private final ActivityEventPublisher activityEventPublisher;
+
+    @Autowired(required = false)
+    private TriggerService triggerService;
 
     // ==================== 查询 ====================
 
@@ -694,6 +699,18 @@ public class UniversalPlaceApplicationService {
                 ))
                 .publish();
 
+        // 触发事件
+        if (triggerService != null) {
+            try {
+                triggerService.fire("DORM_CHECKIN", Map.of(
+                    "occupantId", command.getOccupantId(),
+                    "occupantName", occupantName != null ? occupantName : "",
+                    "placeId", placeId,
+                    "placeName", place.getPlaceName() != null ? place.getPlaceName() : ""
+                ));
+            } catch (Exception ignored) {}
+        }
+
         return toOccupantDTO(occupant);
     }
 
@@ -739,6 +756,18 @@ public class UniversalPlaceApplicationService {
                         new FieldChange("positionNo", occupant.getPositionNo(), null)
                 ))
                 .publish();
+
+        // 触发事件
+        if (triggerService != null) {
+            try {
+                triggerService.fire("DORM_CHECKOUT", Map.of(
+                    "occupantId", occupant.getOccupantId(),
+                    "occupantName", occupantName != null ? occupantName : "",
+                    "placeId", placeId,
+                    "placeName", place.getPlaceName() != null ? place.getPlaceName() : ""
+                ));
+            } catch (Exception ignored) {}
+        }
     }
 
     @Transactional

@@ -14,6 +14,7 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 
+import com.school.management.application.event.TriggerService;
 import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.time.LocalDate;
@@ -35,6 +36,9 @@ import java.util.*;
 public class EnrollmentController {
 
     private final JdbcTemplate jdbc;
+
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    private TriggerService triggerService;
 
     // ==================== 招生计划 CRUD ====================
 
@@ -361,6 +365,22 @@ public class EnrollmentController {
         );
         // Update plan actual_count
         updatePlanCounts(id);
+
+        // 触发事件
+        if (triggerService != null) {
+            try {
+                String applicantName = "";
+                try {
+                    applicantName = jdbc.queryForObject(
+                        "SELECT applicant_name FROM enrollment_applications WHERE id=?", String.class, id);
+                } catch (Exception ignored) {}
+                triggerService.fire("ENROLLMENT_ADMITTED", Map.of(
+                    "applicationId", id,
+                    "applicantName", applicantName != null ? applicantName : ""
+                ));
+            } catch (Exception ignored) {}
+        }
+
         return Result.success();
     }
 
@@ -451,6 +471,23 @@ public class EnrollmentController {
 
         // 5. Update plan registered_count
         updatePlanCounts(id);
+
+        // 触发事件
+        if (triggerService != null) {
+            try {
+                String className = "";
+                try {
+                    className = jdbc.queryForObject(
+                        "SELECT name FROM school_classes WHERE id=?", String.class, classId);
+                } catch (Exception ignored) {}
+                triggerService.fire("ENROLLMENT_REGISTERED", Map.of(
+                    "studentId", studentId,
+                    "studentName", app.get("applicantName") != null ? app.get("applicantName") : "",
+                    "className", className != null ? className : "",
+                    "applicationId", id
+                ));
+            } catch (Exception ignored) {}
+        }
 
         Map<String, Object> result = new LinkedHashMap<>();
         result.put("studentId", studentId);

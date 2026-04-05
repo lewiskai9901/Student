@@ -12,6 +12,7 @@ import org.springframework.web.bind.annotation.*;
 
 import com.school.management.common.util.SecurityUtils;
 import com.school.management.infrastructure.casbin.CasbinAccess;
+import com.school.management.application.event.TriggerService;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -38,6 +39,9 @@ public class TeachingScheduleController {
 
     @Autowired
     private ScheduleExportService exportService;
+
+    @Autowired(required = false)
+    private TriggerService triggerService;
 
     // ==================== 课表条目 ====================
 
@@ -251,6 +255,18 @@ public class TeachingScheduleController {
         }
         Long semesterId = Long.parseLong(params.get("semesterId").toString());
         Map<String, Object> result = autoSchedulingService.autoSchedule(semesterId, params);
+
+        // 触发事件: 排课完成
+        if (triggerService != null) {
+            try {
+                triggerService.fire("SCHEDULE_PUBLISHED", Map.of(
+                    "semesterId", semesterId,
+                    "scheduledCount", result.getOrDefault("scheduledCount", 0),
+                    "action", "AUTO_SCHEDULE"
+                ));
+            } catch (Exception ignored) {}
+        }
+
         return Result.success(result);
     }
 

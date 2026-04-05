@@ -18,6 +18,7 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.*;
 import com.school.management.infrastructure.casbin.CasbinAccess;
+import com.school.management.application.event.TriggerService;
 
 /**
  * 考勤管理 REST Controller
@@ -33,6 +34,9 @@ import com.school.management.infrastructure.casbin.CasbinAccess;
 public class AttendanceController {
 
     private final JdbcTemplate jdbc;
+
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    private TriggerService triggerService;
 
     // ==================== 考勤记录 CRUD ====================
 
@@ -278,6 +282,28 @@ public class AttendanceController {
                     attendanceType, status, remark, recordedBy
                 );
             }
+            // Fire trigger for abnormal attendance (not normal=1)
+            if (triggerService != null && status != 1) {
+                try {
+                    String statusName = status == 2 ? "迟到" : status == 3 ? "早退" : status == 5 ? "旷课" : "异常";
+                    String eventHint = status == 2 ? "LATE" : status == 3 ? "EARLY_LEAVE" : status == 5 ? "ABSENCE" : null;
+                    if (eventHint != null) {
+                        // Lookup student name
+                        String studentName = "";
+                        try {
+                            studentName = jdbc.queryForObject(
+                                "SELECT name FROM students WHERE id = ?", String.class, studentId);
+                        } catch (Exception ignored) {}
+                        triggerService.fire("ATTENDANCE_RECORDED", Map.of(
+                            "studentId", studentId, "studentName", studentName != null ? studentName : "",
+                            "status", status, "statusName", statusName,
+                            "eventTypeHint", eventHint,
+                            "date", dateStr != null ? dateStr : ""
+                        ));
+                    }
+                } catch (Exception ignored) {}
+            }
+
             count++;
         }
         return Result.success(Map.of("recorded", count));
