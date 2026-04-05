@@ -891,9 +891,9 @@ const loadUserList = async () => {
   try {
     const res = await getUserPage(queryParams)
     // 统一 status 为数字格式，过滤掉学生类型用户（学生在学生管理中维护）
-    userList.value = (res.records || [])
-      .filter((u: any) => u.userType !== 'STUDENT' && u.userTypeCode !== 'STUDENT')
-      .map(u => ({ ...u, status: normalizeStatus(u.status) }))
+    const records = (res.records || []).filter((u: any) => u.userType !== 'STUDENT' && u.userTypeCode !== 'STUDENT')
+    records.forEach((u: any) => { u.status = normalizeStatus(u.status) })
+    userList.value = records as any
     total.value = res.total || 0
   } catch (error) {
     console.error('加载用户列表失败:', error)
