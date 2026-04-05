@@ -1,291 +1,357 @@
 <template>
-  <div class="flex h-full flex-col bg-gray-50">
+  <div class="tm-page">
     <!-- Header -->
-    <div class="flex items-center justify-between border-b border-gray-200 bg-white px-6 py-4">
+    <div class="tm-header">
       <div>
-        <h1 class="text-lg font-semibold text-gray-900">教学任务</h1>
-        <p class="mt-0.5 text-sm text-gray-500">管理课程教学任务分配与教师安排</p>
-      </div>
-      <div class="flex items-center gap-2">
-        <button
-          class="inline-flex items-center gap-1.5 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50"
-          @click="showBatchCreateDialog"
-        >
-          批量生成
-        </button>
-        <button
-          class="inline-flex items-center gap-1.5 rounded-lg bg-blue-600 px-3 py-2 text-sm font-medium text-white transition-colors hover:bg-blue-700"
-          @click="showTaskDialog()"
-        >
-          新建任务
-        </button>
-      </div>
-    </div>
-
-    <!-- Stats Bar -->
-    <div class="flex items-center gap-4 border-b border-gray-200 bg-white px-6 py-2.5">
-      <span class="text-sm text-gray-500">总数 <span class="font-semibold text-gray-900">{{ total }}</span></span>
-      <div class="h-3 w-px bg-gray-200" />
-      <span class="text-sm text-gray-500">待分配 <span class="font-semibold text-gray-900">{{ statusCounts[0] }}</span></span>
-      <div class="h-3 w-px bg-gray-200" />
-      <span class="text-sm text-gray-500">已分配 <span class="font-semibold text-gray-900">{{ statusCounts[1] }}</span></span>
-      <div class="h-3 w-px bg-gray-200" />
-      <span class="text-sm text-gray-500">已排课 <span class="font-semibold text-gray-900">{{ statusCounts[2] }}</span></span>
-      <div class="h-3 w-px bg-gray-200" />
-      <span class="text-sm text-gray-500">进行中 <span class="font-semibold text-gray-900">{{ statusCounts[3] }}</span></span>
-      <div class="h-3 w-px bg-gray-200" />
-      <span class="text-sm text-gray-500">已结束 <span class="font-semibold text-gray-900">{{ statusCounts[4] }}</span></span>
-    </div>
-
-    <!-- Content Area -->
-    <div class="flex-1 overflow-y-auto px-6 pt-5 pb-6">
-      <!-- Filter Bar -->
-      <div class="mb-4 rounded-xl border border-gray-200 bg-white px-5 py-3">
-        <el-form :inline="true" :model="queryParams" class="flex flex-wrap items-center gap-x-4 gap-y-2">
-          <el-form-item label="学期" class="!mb-0">
-            <el-select v-model="queryParams.semesterId" placeholder="选择学期" clearable style="width: 180px">
-              <el-option
-                v-for="sem in semesters"
-                :key="sem.id"
-                :value="sem.id"
-                :label="sem.semesterName"
-              />
-            </el-select>
-          </el-form-item>
-          <el-form-item label="状态" class="!mb-0">
-            <el-select v-model="queryParams.status" placeholder="全部" clearable style="width: 120px">
-              <el-option :value="0" label="待分配" />
-              <el-option :value="1" label="已分配" />
-              <el-option :value="2" label="已排课" />
-              <el-option :value="3" label="进行中" />
-              <el-option :value="4" label="已结束" />
-            </el-select>
-          </el-form-item>
-          <el-form-item class="!mb-0">
-            <el-button type="primary" @click="search">查询</el-button>
-            <el-button @click="resetQuery">重置</el-button>
-          </el-form-item>
-        </el-form>
-      </div>
-
-      <!-- Table -->
-      <div class="rounded-xl border border-gray-200 bg-white">
-        <el-table :data="tasks" v-loading="loading" class="w-full">
-          <el-table-column prop="courseName" label="课程名称" min-width="150" />
-          <el-table-column prop="courseCode" label="课程编码" width="100" />
-          <el-table-column prop="className" label="班级" width="120" />
-          <el-table-column prop="studentCount" label="学生数" width="80" align="center" />
-          <el-table-column label="教师" width="150">
-            <template #default="{ row }">
-              <div v-if="row.teachers?.length" class="flex flex-wrap gap-1">
-                <el-tag
-                  v-for="t in row.teachers"
-                  :key="t.teacherId"
-                  :type="(t.isMain ? '' : 'info') as any"
-                  size="small"
-                >
-                  {{ t.teacherName }}{{ t.isMain ? '(主)' : '' }}
-                </el-tag>
-              </div>
-              <span v-else class="text-xs text-gray-400">未分配</span>
-            </template>
-          </el-table-column>
-          <el-table-column prop="weeklyHours" label="周学时" width="80" align="center" />
-          <el-table-column label="教学周" width="100" align="center">
-            <template #default="{ row }">
-              {{ row.startWeek }}-{{ row.endWeek }}周
-            </template>
-          </el-table-column>
-          <el-table-column prop="status" label="状态" width="100" align="center">
-            <template #default="{ row }">
-              <el-tag :type="getStatusTag(row.status)" size="small">
-                {{ getStatusName(row.status) }}
-              </el-tag>
-            </template>
-          </el-table-column>
-          <el-table-column label="操作" width="180" fixed="right">
-            <template #default="{ row }">
-              <el-button size="small" text @click="showTaskDialog(row)">编辑</el-button>
-              <el-button size="small" text type="primary" @click="showAssignDialog(row)">分配教师</el-button>
-              <el-button size="small" text type="danger" @click="handleDelete(row)">删除</el-button>
-            </template>
-          </el-table-column>
-        </el-table>
-
-        <!-- Pagination -->
-        <div class="border-t border-gray-100 px-5 py-3">
-          <el-pagination
-            v-model:current-page="queryParams.page"
-            v-model:page-size="queryParams.size"
-            :total="total"
-            :page-sizes="[10, 20, 50, 100]"
-            layout="total, sizes, prev, pager, next, jumper"
-            class="justify-end"
-            @size-change="loadTasks"
-            @current-change="loadTasks"
-          />
+        <h1 class="tm-title">教学任务</h1>
+        <div class="tm-stats">
+          <span>总数 <b>{{ total }}</b></span>
+          <span class="sep" />
+          <span><span class="dot dot-gray" />待分配 <b>{{ statusCounts[0] }}</b></span>
+          <span class="sep" />
+          <span><span class="dot dot-green" />已分配 <b>{{ statusCounts[1] }}</b></span>
+          <span class="sep" />
+          <span>已排课 <b>{{ statusCounts[2] }}</b></span>
+          <span class="sep" />
+          <span><span class="dot dot-green" />进行中 <b>{{ statusCounts[3] }}</b></span>
+          <span class="sep" />
+          <span>已结束 <b>{{ statusCounts[4] }}</b></span>
         </div>
       </div>
+      <div style="display: flex; align-items: center; gap: 8px;">
+        <button class="tm-btn tm-btn-workflow" @click="handleGenerateFromOfferings">从开课计划生成</button>
+        <button class="tm-btn tm-btn-secondary" @click="showBatchCreateDialog">批量生成</button>
+        <button class="tm-btn tm-btn-primary" @click="showTaskDialog()">新建任务</button>
+      </div>
     </div>
 
-    <!-- Task Dialog -->
-    <el-dialog
-      v-model="taskDialogVisible"
-      :title="taskForm.id ? '编辑教学任务' : '新建教学任务'"
-      width="600px"
-      :close-on-click-modal="false"
-    >
-      <el-form ref="taskFormRef" :model="taskForm" :rules="taskRules" label-width="100px">
-        <el-row :gutter="20">
-          <el-col :span="12">
-            <el-form-item label="学期" prop="semesterId">
-              <el-select v-model="taskForm.semesterId" placeholder="选择学期" style="width: 100%">
-                <el-option v-for="sem in semesters" :key="sem.id" :value="sem.id" :label="sem.semesterName" />
-              </el-select>
-            </el-form-item>
-          </el-col>
-          <el-col :span="12">
-            <el-form-item label="课程" prop="courseId">
-              <el-select
-                v-model="taskForm.courseId"
-                filterable
-                remote
-                :remote-method="searchCourses"
-                placeholder="搜索课程"
-                style="width: 100%"
-              >
-                <el-option
-                  v-for="c in courseOptions"
-                  :key="c.id"
-                  :value="c.id"
-                  :label="`${c.courseCode} - ${c.courseName}`"
-                />
-              </el-select>
-            </el-form-item>
-          </el-col>
-        </el-row>
-        <el-row :gutter="20">
-          <el-col :span="12">
-            <el-form-item label="班级" prop="classId">
-              <el-select v-model="taskForm.classId" filterable placeholder="选择班级" style="width: 100%">
-                <el-option v-for="cls in classOptions" :key="cls.id" :value="cls.id" :label="cls.className" />
-              </el-select>
-            </el-form-item>
-          </el-col>
-          <el-col :span="12">
-            <el-form-item label="学生数" prop="studentCount">
-              <el-input-number v-model="taskForm.studentCount" :min="1" style="width: 100%" />
-            </el-form-item>
-          </el-col>
-        </el-row>
-        <el-row :gutter="20">
-          <el-col :span="8">
-            <el-form-item label="周学时" prop="weeklyHours">
-              <el-input-number v-model="taskForm.weeklyHours" :min="1" :max="20" style="width: 100%" />
-            </el-form-item>
-          </el-col>
-          <el-col :span="8">
-            <el-form-item label="开始周" prop="startWeek">
-              <el-input-number v-model="taskForm.startWeek" :min="1" :max="20" style="width: 100%" />
-            </el-form-item>
-          </el-col>
-          <el-col :span="8">
-            <el-form-item label="结束周" prop="endWeek">
-              <el-input-number v-model="taskForm.endWeek" :min="1" :max="20" style="width: 100%" />
-            </el-form-item>
-          </el-col>
-        </el-row>
-        <el-form-item label="备注">
-          <el-input v-model="taskForm.remark" type="textarea" :rows="2" />
-        </el-form-item>
-      </el-form>
-      <template #footer>
-        <el-button @click="taskDialogVisible = false">取消</el-button>
-        <el-button type="primary" :loading="saving" @click="saveTask">保存</el-button>
-      </template>
-    </el-dialog>
+    <!-- Filter Bar -->
+    <div class="tm-filters">
+      <select v-model="queryParams.semesterId" class="tm-select">
+        <option :value="undefined" disabled>选择学期</option>
+        <option v-for="sem in semesters" :key="sem.id" :value="sem.id">{{ sem.semesterName }}</option>
+      </select>
+      <select v-model="queryParams.status" class="tm-select">
+        <option :value="undefined">全部状态</option>
+        <option :value="0">待分配</option>
+        <option :value="1">已分配</option>
+        <option :value="2">已排课</option>
+        <option :value="3">进行中</option>
+        <option :value="4">已结束</option>
+      </select>
+      <button class="tm-btn tm-btn-primary" style="padding: 7px 16px;" @click="search">查询</button>
+      <button class="tm-btn-reset" @click="resetQuery">重置</button>
+    </div>
 
-    <!-- Assign Teacher Dialog -->
-    <el-dialog v-model="assignDialogVisible" title="分配教师" width="500px" :close-on-click-modal="false">
-      <div v-if="currentTask" class="mb-4 rounded-lg bg-gray-50 p-3 text-sm text-gray-700">
-        <p><span class="font-medium text-gray-900">课程：</span>{{ currentTask.courseName }}</p>
-        <p class="mt-1"><span class="font-medium text-gray-900">班级：</span>{{ currentTask.className }}</p>
+    <!-- Table -->
+    <div class="tm-table-wrap">
+      <table class="tm-table">
+        <colgroup>
+          <col style="width: 18%;" />
+          <col style="width: 10%;" />
+          <col style="width: 12%;" />
+          <col style="width: 7%;" />
+          <col style="width: 16%;" />
+          <col style="width: 7%;" />
+          <col style="width: 9%;" />
+          <col style="width: 8%;" />
+          <col style="width: 13%;" />
+        </colgroup>
+        <thead>
+          <tr>
+            <th class="text-left">课程名称</th>
+            <th>编码</th>
+            <th>班级</th>
+            <th>学生数</th>
+            <th>教师</th>
+            <th>周学时</th>
+            <th>教学周</th>
+            <th>状态</th>
+            <th>操作</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr v-if="loading">
+            <td colspan="9" class="tm-empty">
+              <span class="tm-spin" style="display: inline-block; width: 16px; height: 16px; border: 2px solid #e5e7eb; border-top-color: #2563eb; border-radius: 50;" />
+              加载中...
+            </td>
+          </tr>
+          <tr v-else-if="tasks.length === 0">
+            <td colspan="9" class="tm-empty">暂无教学任务数据</td>
+          </tr>
+          <tr v-for="row in tasks" :key="row.id">
+            <td class="text-left">{{ row.courseName }}</td>
+            <td><span class="tm-code">{{ row.courseCode }}</span></td>
+            <td>{{ row.className }}</td>
+            <td class="tm-mono">{{ row.studentCount }}</td>
+            <td>
+              <template v-if="row.teachers?.length">
+                <span
+                  v-for="t in row.teachers"
+                  :key="t.teacherId"
+                  :class="['tm-chip', t.isMain ? 'tm-chip-blue' : 'tm-chip-gray']"
+                  style="margin: 1px 2px;"
+                >
+                  {{ t.teacherName }}{{ t.isMain ? '(主)' : '' }}
+                </span>
+              </template>
+              <span v-else style="color: #9ca3af; font-size: 12px;">未分配</span>
+            </td>
+            <td class="tm-mono">{{ row.weeklyHours }}</td>
+            <td class="tm-mono">{{ row.startWeek }}-{{ row.endWeek }}周</td>
+            <td>
+              <span :class="['tm-chip', { 0: 'tm-chip-gray', 1: 'tm-chip-amber', 2: 'tm-chip-blue', 3: 'tm-chip-green', 4: 'tm-chip-red' }[row.status] || 'tm-chip-gray']">
+                {{ getStatusName(row.status) }}
+              </span>
+            </td>
+            <td>
+              <button class="tm-action" @click="showTaskDialog(row)">编辑</button>
+              <button class="tm-action" @click="showAssignDialog(row)">分配</button>
+              <button class="tm-action tm-action-danger" @click="handleDelete(row)">删除</button>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Pagination -->
+    <div class="tm-pagination">
+      <span class="tm-page-info">共 {{ total }} 条</span>
+      <div class="tm-page-controls">
+        <select
+          class="tm-page-select"
+          :value="queryParams.size ?? 10"
+          @change="queryParams.size = Number(($event.target as HTMLSelectElement).value); queryParams.page = 1; loadTasks()"
+        >
+          <option :value="10">10 条/页</option>
+          <option :value="20">20 条/页</option>
+          <option :value="50">50 条/页</option>
+          <option :value="100">100 条/页</option>
+        </select>
+        <button
+          class="tm-page-btn"
+          :disabled="(queryParams.page ?? 1) <= 1"
+          @click="queryParams.page = (queryParams.page ?? 1) - 1; loadTasks()"
+        >
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+        </button>
+        <span class="tm-page-current">{{ queryParams.page ?? 1 }}</span>
+        <button
+          class="tm-page-btn"
+          :disabled="(queryParams.page ?? 1) >= Math.ceil(total / (queryParams.size ?? 10))"
+          @click="queryParams.page = (queryParams.page ?? 1) + 1; loadTasks()"
+        >
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+        </button>
       </div>
-      <el-form ref="assignFormRef" :model="assignForm" :rules="assignRules" label-width="100px">
-        <el-form-item label="选择教师" prop="teacherIds">
-          <el-select
-            v-model="assignForm.teacherIds"
-            multiple
-            filterable
-            placeholder="可多选"
-            style="width: 100%"
-          >
-            <el-option
-              v-for="t in teacherOptions"
-              :key="t.id"
-              :value="t.id"
-              :label="t.realName"
-            />
-          </el-select>
-        </el-form-item>
-        <el-form-item label="主讲教师" prop="mainTeacherId">
-          <el-select
-            v-model="assignForm.mainTeacherId"
-            placeholder="选择主讲教师"
-            style="width: 100%"
-          >
-            <el-option
-              v-for="tid in assignForm.teacherIds"
-              :key="tid"
-              :value="tid"
-              :label="getTeacherName(tid)"
-            />
-          </el-select>
-        </el-form-item>
-      </el-form>
-      <template #footer>
-        <el-button @click="assignDialogVisible = false">取消</el-button>
-        <el-button type="primary" :loading="saving" @click="assignTeachers">确定分配</el-button>
-      </template>
-    </el-dialog>
+    </div>
 
-    <!-- Batch Create Dialog -->
-    <el-dialog v-model="batchDialogVisible" title="批量生成教学任务" width="500px" :close-on-click-modal="false">
-      <el-form ref="batchFormRef" :model="batchForm" :rules="batchRules" label-width="100px">
-        <el-form-item label="学期" prop="semesterId">
-          <el-select v-model="batchForm.semesterId" placeholder="选择学期" style="width: 100%">
-            <el-option v-for="sem in semesters" :key="sem.id" :value="sem.id" :label="sem.semesterName" />
-          </el-select>
-        </el-form-item>
-        <el-form-item label="培养方案" prop="planId">
-          <el-select v-model="batchForm.planId" filterable placeholder="选择培养方案" style="width: 100%">
-            <el-option v-for="p in planOptions" :key="p.id" :value="p.id" :label="p.planName" />
-          </el-select>
-        </el-form-item>
-        <el-form-item label="班级" prop="classIds">
-          <el-select
-            v-model="batchForm.classIds"
-            multiple
-            filterable
-            placeholder="选择班级(可多选)"
-            style="width: 100%"
-          >
-            <el-option v-for="cls in classOptions" :key="cls.id" :value="cls.id" :label="cls.className" />
-          </el-select>
-        </el-form-item>
-      </el-form>
-      <template #footer>
-        <el-button @click="batchDialogVisible = false">取消</el-button>
-        <el-button type="primary" :loading="saving" @click="batchCreate">生成</el-button>
-      </template>
-    </el-dialog>
+    <!-- Task Drawer -->
+    <Teleport to="body">
+      <Transition name="tm-drawer">
+        <div v-if="taskDialogVisible" class="tm-drawer-overlay" @click.self="taskDialogVisible = false">
+          <div class="tm-drawer">
+            <div class="tm-drawer-header">
+              <h2 class="tm-drawer-title">{{ taskForm.id ? '编辑教学任务' : '新建教学任务' }}</h2>
+              <button class="tm-drawer-close" @click="taskDialogVisible = false">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+              </button>
+            </div>
+            <div class="tm-drawer-body">
+              <div class="tm-section">
+                <h3 class="tm-section-title">基本信息</h3>
+                <div class="tm-fields tm-cols-2">
+                  <div class="tm-field">
+                    <label class="tm-label">学期 <span class="req">*</span></label>
+                    <select v-model="taskForm.semesterId" class="tm-field-select">
+                      <option :value="undefined" disabled>选择学期</option>
+                      <option v-for="sem in semesters" :key="sem.id" :value="sem.id">{{ sem.semesterName }}</option>
+                    </select>
+                  </div>
+                  <div class="tm-field">
+                    <label class="tm-label">课程 <span class="req">*</span></label>
+                    <el-select
+                      v-model="taskForm.courseId"
+                      filterable
+                      remote
+                      :remote-method="searchCourses"
+                      placeholder="搜索课程"
+                      style="width: 100%"
+                    >
+                      <el-option
+                        v-for="c in courseOptions"
+                        :key="c.id"
+                        :value="c.id"
+                        :label="`${c.courseCode} - ${c.courseName}`"
+                      />
+                    </el-select>
+                  </div>
+                </div>
+                <div class="tm-fields tm-cols-2">
+                  <div class="tm-field">
+                    <label class="tm-label">班级 <span class="req">*</span></label>
+                    <el-select v-model="taskForm.classId" filterable placeholder="选择班级" style="width: 100%">
+                      <el-option v-for="cls in classOptions" :key="cls.id" :value="cls.id" :label="cls.className" />
+                    </el-select>
+                  </div>
+                  <div class="tm-field">
+                    <label class="tm-label">学生数 <span class="req">*</span></label>
+                    <input v-model.number="taskForm.studentCount" type="number" min="1" class="tm-input" placeholder="输入学生数" />
+                  </div>
+                </div>
+              </div>
+              <div class="tm-section">
+                <h3 class="tm-section-title">教学安排</h3>
+                <div class="tm-fields tm-cols-3">
+                  <div class="tm-field">
+                    <label class="tm-label">周学时 <span class="req">*</span></label>
+                    <input v-model.number="taskForm.weeklyHours" type="number" min="1" max="20" class="tm-input" placeholder="周学时" />
+                  </div>
+                  <div class="tm-field">
+                    <label class="tm-label">开始周 <span class="req">*</span></label>
+                    <input v-model.number="taskForm.startWeek" type="number" min="1" max="20" class="tm-input" placeholder="开始周" />
+                  </div>
+                  <div class="tm-field">
+                    <label class="tm-label">结束周 <span class="req">*</span></label>
+                    <input v-model.number="taskForm.endWeek" type="number" min="1" max="20" class="tm-input" placeholder="结束周" />
+                  </div>
+                </div>
+              </div>
+              <div class="tm-section">
+                <h3 class="tm-section-title">备注</h3>
+                <textarea v-model="taskForm.remark" class="tm-textarea" rows="2" placeholder="选填备注信息"></textarea>
+              </div>
+            </div>
+            <div class="tm-drawer-footer">
+              <button class="tm-btn tm-btn-secondary" @click="taskDialogVisible = false">取消</button>
+              <button class="tm-btn tm-btn-primary" :disabled="saving" @click="saveTask">
+                <span v-if="saving" class="tm-spin" style="display: inline-block; width: 14px; height: 14px; border: 2px solid rgba(255,255,255,0.3); border-top-color: #fff; border-radius: 50%;" />
+                保存
+              </button>
+            </div>
+          </div>
+        </div>
+      </Transition>
+    </Teleport>
+
+    <!-- Assign Teacher Drawer -->
+    <Teleport to="body">
+      <Transition name="tm-drawer">
+        <div v-if="assignDialogVisible" class="tm-drawer-overlay" @click.self="assignDialogVisible = false">
+          <div class="tm-drawer" style="width: 480px;">
+            <div class="tm-drawer-header">
+              <h2 class="tm-drawer-title">分配教师</h2>
+              <button class="tm-drawer-close" @click="assignDialogVisible = false">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+              </button>
+            </div>
+            <div class="tm-drawer-body">
+              <div v-if="currentTask" class="tm-section" style="background: #f9fafb;">
+                <div style="font-size: 13px; color: #374151;">
+                  <p><span style="font-weight: 600; color: #111827;">课程：</span>{{ currentTask.courseName }}</p>
+                  <p style="margin-top: 4px;"><span style="font-weight: 600; color: #111827;">班级：</span>{{ currentTask.className }}</p>
+                </div>
+              </div>
+              <div class="tm-section">
+                <h3 class="tm-section-title">教师选择</h3>
+                <div class="tm-field">
+                  <label class="tm-label">选择教师 <span class="req">*</span></label>
+                  <el-select
+                    v-model="assignForm.teacherIds"
+                    multiple
+                    filterable
+                    placeholder="可多选"
+                    style="width: 100%"
+                  >
+                    <el-option
+                      v-for="t in teacherOptions"
+                      :key="t.id"
+                      :value="t.id"
+                      :label="t.realName"
+                    />
+                  </el-select>
+                </div>
+                <div class="tm-field" style="margin-top: 12px;">
+                  <label class="tm-label">主讲教师 <span class="req">*</span></label>
+                  <select v-model="assignForm.mainTeacherId" class="tm-field-select">
+                    <option :value="undefined" disabled>选择主讲教师</option>
+                    <option v-for="tid in assignForm.teacherIds" :key="tid" :value="tid">{{ getTeacherName(tid) }}</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+            <div class="tm-drawer-footer">
+              <button class="tm-btn tm-btn-secondary" @click="assignDialogVisible = false">取消</button>
+              <button class="tm-btn tm-btn-primary" :disabled="saving" @click="assignTeachers">
+                <span v-if="saving" class="tm-spin" style="display: inline-block; width: 14px; height: 14px; border: 2px solid rgba(255,255,255,0.3); border-top-color: #fff; border-radius: 50%;" />
+                确定分配
+              </button>
+            </div>
+          </div>
+        </div>
+      </Transition>
+    </Teleport>
+
+    <!-- Batch Create Drawer -->
+    <Teleport to="body">
+      <Transition name="tm-drawer">
+        <div v-if="batchDialogVisible" class="tm-drawer-overlay" @click.self="batchDialogVisible = false">
+          <div class="tm-drawer" style="width: 480px;">
+            <div class="tm-drawer-header">
+              <h2 class="tm-drawer-title">批量生成教学任务</h2>
+              <button class="tm-drawer-close" @click="batchDialogVisible = false">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+              </button>
+            </div>
+            <div class="tm-drawer-body">
+              <div class="tm-section">
+                <h3 class="tm-section-title">生成配置</h3>
+                <div class="tm-field">
+                  <label class="tm-label">学期 <span class="req">*</span></label>
+                  <select v-model="batchForm.semesterId" class="tm-field-select">
+                    <option :value="undefined" disabled>选择学期</option>
+                    <option v-for="sem in semesters" :key="sem.id" :value="sem.id">{{ sem.semesterName }}</option>
+                  </select>
+                </div>
+                <div class="tm-field" style="margin-top: 12px;">
+                  <label class="tm-label">培养方案 <span class="req">*</span></label>
+                  <el-select v-model="batchForm.planId" filterable placeholder="选择培养方案" style="width: 100%">
+                    <el-option v-for="p in planOptions" :key="p.id" :value="p.id" :label="p.planName" />
+                  </el-select>
+                </div>
+                <div class="tm-field" style="margin-top: 12px;">
+                  <label class="tm-label">班级 <span class="req">*</span></label>
+                  <el-select
+                    v-model="batchForm.classIds"
+                    multiple
+                    filterable
+                    placeholder="选择班级(可多选)"
+                    style="width: 100%"
+                  >
+                    <el-option v-for="cls in classOptions" :key="cls.id" :value="cls.id" :label="cls.className" />
+                  </el-select>
+                </div>
+              </div>
+            </div>
+            <div class="tm-drawer-footer">
+              <button class="tm-btn tm-btn-secondary" @click="batchDialogVisible = false">取消</button>
+              <button class="tm-btn tm-btn-primary" :disabled="saving" @click="batchCreate">
+                <span v-if="saving" class="tm-spin" style="display: inline-block; width: 14px; height: 14px; border: 2px solid rgba(255,255,255,0.3); border-top-color: #fff; border-radius: 50%;" />
+                生成
+              </button>
+            </div>
+          </div>
+        </div>
+      </Transition>
+    </Teleport>
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, reactive, computed, onMounted } from 'vue'
-import { ElMessage, ElMessageBox, type FormInstance, type FormRules } from 'element-plus'
-import { teachingTaskApi } from '@/api/teaching'
+import { ElMessage, ElMessageBox, type FormInstance } from 'element-plus'
+import { teachingTaskApi, workflowApi } from '@/api/teaching'
 import { semesterApi } from '@/api/calendar'
 import { courseApi, curriculumPlanApi } from '@/api/academic'
 import { schoolClassApi } from '@/api/organization'
@@ -337,8 +403,8 @@ const statusCounts = computed(() => {
   return counts
 })
 
-// Validation rules
-const taskRules: FormRules = {
+// Validation rules (bound to forms via :rules binding)
+const taskRules = {
   semesterId: [{ required: true, message: '请选择学期', trigger: 'change' }],
   courseId: [{ required: true, message: '请选择课程', trigger: 'change' }],
   classId: [{ required: true, message: '请选择班级', trigger: 'change' }],
@@ -348,12 +414,12 @@ const taskRules: FormRules = {
   endWeek: [{ required: true, message: '请输入结束周', trigger: 'blur' }],
 }
 
-const assignRules: FormRules = {
+const assignRules = {
   teacherIds: [{ required: true, type: 'array', min: 1, message: '请选择教师', trigger: 'change' }],
   mainTeacherId: [{ required: true, message: '请选择主讲教师', trigger: 'change' }],
 }
 
-const batchRules: FormRules = {
+const batchRules = {
   semesterId: [{ required: true, message: '请选择学期', trigger: 'change' }],
   planId: [{ required: true, message: '请选择培养方案', trigger: 'change' }],
   classIds: [{ required: true, type: 'array', min: 1, message: '请选择班级', trigger: 'change' }],
@@ -504,6 +570,25 @@ const getTeacherName = (id: number | string) => {
   return teacherOptions.value.find(t => t.id === id)?.realName || ''
 }
 
+const handleGenerateFromOfferings = async () => {
+  if (!queryParams.semesterId) {
+    ElMessage.warning('请先选择学期')
+    return
+  }
+  try {
+    await ElMessageBox.confirm(
+      '将根据已确认的班级分配(开课计划)批量生成教学任务。已存在的任务不会重复创建。',
+      '从开课计划生成',
+      { type: 'info' }
+    )
+    const res = await workflowApi.generateTasks(queryParams.semesterId)
+    ElMessage.success(`成功生成 ${res.generated} 条教学任务`)
+    loadTasks()
+  } catch (e: any) {
+    if (e !== 'cancel') ElMessage.error(e.message || '生成失败')
+  }
+}
+
 const showBatchCreateDialog = () => {
   batchForm.value = { semesterId: queryParams.semesterId, planId: undefined, classIds: [] }
   batchDialogVisible.value = true
@@ -551,16 +636,6 @@ const getStatusName = (status: number) => {
   return names[status] || '未知'
 }
 
-const getStatusTag = (status: number) => {
-  const types: Record<number, '' | 'success' | 'warning' | 'danger' | 'info'> = {
-    0: 'info',
-    1: 'warning',
-    2: '',
-    3: 'success',
-    4: 'danger',
-  }
-  return types[status] || 'info'
-}
 
 // Init
 onMounted(async () => {
@@ -571,3 +646,11 @@ onMounted(async () => {
   loadPlans()
 })
 </script>
+
+<style>
+@import '@/styles/teaching-ui.css';
+</style>
+
+<style scoped>
+/* Status chip helper used in template */
+</style>

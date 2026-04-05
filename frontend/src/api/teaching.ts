@@ -24,78 +24,10 @@ import type {
   TimeMatrix,
   DetectedConflict,
   FeasibilityReport,
-  Classroom,
-  TeachingBuilding,
-  ClassroomQueryParams,
 } from '@/types/teaching'
 
 
 const BASE_URL = '/teaching'
-
-// ==================== 教学楼管理 ====================
-
-export interface TeachingBuildingWithStats extends TeachingBuilding {
-  totalClassrooms?: number
-  usedClassrooms?: number
-  totalCapacity?: number
-}
-
-export const getTeachingBuildings = async (): Promise<TeachingBuildingWithStats[]> => {
-  // 使用 /teaching/buildings/enabled 获取所有启用的教学楼
-  return http.get<TeachingBuildingWithStats[]>('/teaching/buildings/enabled', {
-    params: { buildingType: 1 } // buildingType=1 for teaching buildings
-  })
-}
-
-export const getTeachingBuildingById = (id: number | string): Promise<TeachingBuildingWithStats> => {
-  return http.get(`/teaching/buildings/${id}`)
-}
-
-// ==================== 教室管理 ====================
-
-export interface ClassroomWithDetails extends Classroom {
-  buildingNo?: string
-  usageRate?: number
-}
-
-export const getClassrooms = async (params?: ClassroomQueryParams): Promise<{ records: ClassroomWithDetails[]; total: number }> => {
-  return http.get('/teaching/classrooms', { params })
-}
-
-export const getClassroomsByBuilding = async (buildingId: number | string): Promise<ClassroomWithDetails[]> => {
-  const res = await http.get<{ records: ClassroomWithDetails[]; total: number }>('/teaching/classrooms', {
-    params: { buildingId, pageNum: 1, pageSize: 500 }
-  })
-  return res.records || []
-}
-
-export const getClassroomById = (id: number | string): Promise<ClassroomWithDetails> => {
-  return http.get(`/teaching/classrooms/${id}`)
-}
-
-export const createClassroom = (data: Partial<Classroom>): Promise<Classroom> => {
-  return http.post('/teaching/classrooms', data)
-}
-
-export const updateClassroom = (id: number | string, data: Partial<Classroom>): Promise<Classroom> => {
-  return http.put(`/teaching/classrooms/${id}`, data)
-}
-
-export const deleteClassroom = (id: number | string): Promise<void> => {
-  return http.delete(`/teaching/classrooms/${id}`)
-}
-
-export const assignClassToClassroom = (classroomId: number | string, classId: number | string): Promise<Classroom> => {
-  return http.post(`/teaching/classrooms/${classroomId}/assign-class`, null, {
-    params: { classId }
-  })
-}
-
-export const unassignClassFromClassroom = (classroomId: number | string): Promise<Classroom> => {
-  return http.post(`/teaching/classrooms/${classroomId}/assign-class`, null, {
-    params: { classId: null }
-  })
-}
 
 // ==================== 教学任务 ====================
 
@@ -464,4 +396,36 @@ export const conflictApi = {
     http.post(`${BASE_URL}/conflicts/${id}/resolve`, { note }),
   ignore: (id: number | string, note: string) =>
     http.post(`${BASE_URL}/conflicts/${id}/ignore`, { note }),
+}
+
+// ==================== 教务工作流 ====================
+
+export const workflowApi = {
+  /** 自动生成年级-学期映射 */
+  generateMappings: (semesterId: number | string) =>
+    http.post<{ generated: number }>(`${BASE_URL}/workflow/cohort-mappings/generate`, { semesterId }),
+
+  /** 查看年级-学期映射 */
+  getMappings: (semesterId: number | string) =>
+    http.get<any[]>(`${BASE_URL}/workflow/cohort-mappings`, { params: { semesterId } }),
+
+  /** Step 1: 从培养方案导入开课计划 */
+  generateOfferings: (semesterId: number | string) =>
+    http.post<{ generated: number }>(`${BASE_URL}/workflow/generate-offerings`, { semesterId }),
+
+  /** Step 2: 从开课批量生成教学任务 */
+  generateTasks: (semesterId: number | string) =>
+    http.post<{ generated: number }>(`${BASE_URL}/workflow/generate-tasks`, { semesterId }),
+
+  /** Step 3: 从教学任务创建考试安排 */
+  generateExams: (batchId: number | string, taskIds: (number | string)[]) =>
+    http.post<{ generated: number }>(`${BASE_URL}/workflow/generate-exams`, { batchId, taskIds }),
+
+  /** Step 4: 从考试批次创建成绩批次 */
+  generateGradeBatch: (examBatchId: number | string) =>
+    http.post<{ gradeBatchId: number }>(`${BASE_URL}/workflow/generate-grade-batch`, { examBatchId }),
+
+  /** 一键学期初始化 (映射 + 开课 + 任务) */
+  initializeSemester: (semesterId: number | string) =>
+    http.post<{ mappings: number; offerings: number; tasks: number }>(`${BASE_URL}/workflow/initialize-semester`, { semesterId }),
 }

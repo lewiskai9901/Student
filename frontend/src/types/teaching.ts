@@ -109,6 +109,7 @@ export interface CourseSchedule {
   semesterId: number | string
   semesterName?: string
   name: string
+  description?: string
   status: number // 0-草稿, 1-已发布, 2-已归档
   generatedAt?: string
   publishedAt?: string

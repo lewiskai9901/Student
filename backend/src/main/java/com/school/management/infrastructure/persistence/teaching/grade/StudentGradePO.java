@@ -18,10 +18,13 @@ public class StudentGradePO {
     private Long studentId;
     private Long classId;
     private BigDecimal totalScore;
+    private String gradeLevel;
     private BigDecimal gradePoint;
     private Integer passed;
     private BigDecimal creditsEarned;
     private Integer gradeStatus;
+    private Integer isMakeup;
+    private Integer isRetake;
     private String remark;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;

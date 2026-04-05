@@ -452,7 +452,7 @@ import { ElMessage } from 'element-plus'
 import { getStudent, createStudent, updateStudent } from '@/api/student'
 import { getClassList, getOrgUnitTree } from '@/api/organization'
 // 年级和专业方向暂保留V1
-import { getAllGrades } from '@/api/organization'
+import { getAllCohorts } from '@/api/organization'
 import { getDirectionsByYear } from '@/api/gradeMajorDirection'
 
 interface Props {
@@ -660,7 +660,7 @@ const loadDepartmentListData = async () => {
 
 const loadGradeListData = async () => {
   try {
-    const response = await getAllGrades()
+    const response = await getAllCohorts()
     gradeList.value = response || []
   } catch (error) {
     console.error('加载年级列表失败:', error)

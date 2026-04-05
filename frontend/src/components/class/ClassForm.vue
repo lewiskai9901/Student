@@ -197,8 +197,8 @@ import {
   createClass,
   updateClass,
   getDepartmentList,
-  getAllGrades,
-  type Grade
+  getAllCohorts,
+  type Cohort
 } from '@/api/organization'
 import { getDirectionsByYear } from '@/api/gradeMajorDirection'
 import type { GradeMajorDirection } from '@/api/gradeMajorDirection'
@@ -219,7 +219,7 @@ const loading = ref(false)
 const submitting = ref(false)
 const directionLoading = ref(false)  // 专业方向加载状态（避免全表单刷新）
 const departmentList = ref<any[]>([])
-const gradeList = ref<Grade[]>([])
+const gradeList = ref<Cohort[]>([])
 const directionList = ref<GradeMajorDirection[]>([])
 const selectedDirection = ref<GradeMajorDirection | null>(null)
 
@@ -365,7 +365,7 @@ const validateForm = () => {
 // 加载年级列表
 const loadGradeList = async () => {
   try {
-    const data = await getAllGrades()
+    const data = await getAllCohorts()
     gradeList.value = data || []
   } catch (error) {
     console.error('加载年级列表失败:', error)

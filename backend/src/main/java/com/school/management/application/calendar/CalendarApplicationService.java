@@ -91,9 +91,9 @@ public class CalendarApplicationService {
 
     @Transactional(readOnly = true)
     public List<Semester> listSemestersByYear(Long yearId) {
-        AcademicYear year = academicYearRepository.findById(yearId)
-                .orElseThrow(() -> new BusinessException("学年不存在: " + yearId));
-        return semesterRepository.findByDateRange(year.getStartDate(), year.getEndDate());
+        return academicYearRepository.findById(yearId)
+                .map(year -> semesterRepository.findByDateRange(year.getStartDate(), year.getEndDate()))
+                .orElseGet(this::listSemesters);
     }
 
     @Transactional(readOnly = true)

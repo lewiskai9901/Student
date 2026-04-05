@@ -610,11 +610,11 @@ export function dissolveDepartment(id: number | string, reason: string): Promise
   return dissolveOrgUnit(id, reason)
 }
 
-// ==================== 年级管理 (兼容V1 grade.ts) ====================
+// ==================== 年级(Cohort)管理 (兼容V1 grade.ts) ====================
 
-const GRADE_URL = '/students/grades'
+const COHORT_URL = '/students/cohorts'
 
-export interface Grade {
+export interface Cohort {
   id?: number
   gradeName: string
   gradeCode: string
@@ -634,7 +634,7 @@ export interface Grade {
   updatedAt?: string
 }
 
-export interface GradeQuery {
+export interface CohortQuery {
   pageNum?: number
   pageSize?: number
   enrollmentYear?: number
@@ -642,7 +642,7 @@ export interface GradeQuery {
   keyword?: string
 }
 
-export interface GradeCreateRequest {
+export interface CohortCreateRequest {
   gradeName: string
   gradeCode: string
   enrollmentYear: number
@@ -650,30 +650,30 @@ export interface GradeCreateRequest {
   standardClassSize?: number
 }
 
-export const listGrades = (params?: GradeQuery): Promise<Grade[]> => http.get<Grade[]>(GRADE_URL, { params })
+export const listCohorts = (params?: CohortQuery): Promise<Cohort[]> => http.get<Cohort[]>(COHORT_URL, { params })
 
-export const getGradePage = (params: GradeQuery & { pageNum: number; pageSize: number }) => {
-  return http.get<Grade[]>(GRADE_URL, { params }).then(grades => {
+export const getCohortPage = (params: CohortQuery & { pageNum: number; pageSize: number }) => {
+  return http.get<Cohort[]>(COHORT_URL, { params }).then(cohorts => {
     const start = (params.pageNum - 1) * params.pageSize
     const end = start + params.pageSize
-    return { records: grades.slice(start, end), total: grades.length, current: params.pageNum, size: params.pageSize }
+    return { records: cohorts.slice(start, end), total: cohorts.length, current: params.pageNum, size: params.pageSize }
   })
 }
 
-export const getGrade = (id: number | string): Promise<Grade> => http.get<Grade>(`${GRADE_URL}/${id}`)
-export const getActiveGrades = (): Promise<Grade[]> => http.get<Grade[]>(`${GRADE_URL}/active`)
-export const getGradeByYear = (enrollmentYear: number): Promise<Grade> => http.get<Grade>(`${GRADE_URL}/by-year/${enrollmentYear}`)
-export const getGradesByStatus = (status: string): Promise<Grade[]> => http.get<Grade[]>(`${GRADE_URL}/by-status/${status}`)
-export const createGrade = (data: GradeCreateRequest): Promise<Grade> => http.post<Grade>(GRADE_URL, data)
-export const updateGrade = (data: { id: number | string; gradeName?: string; standardClassSize?: number; sortOrder?: number; remarks?: string }): Promise<Grade> =>
-  http.put<Grade>(`${GRADE_URL}/${data.id}`, data)
-export const activateGrade = (id: number | string): Promise<Grade> => http.put<Grade>(`${GRADE_URL}/${id}/activate`)
-export const graduateGrade = (id: number | string): Promise<Grade> => http.put<Grade>(`${GRADE_URL}/${id}/graduate`)
-export const stopEnrollment = (id: number | string): Promise<Grade> => http.put<Grade>(`${GRADE_URL}/${id}/stop-enrollment`)
-export const deleteGrade = (id: number | string): Promise<void> => http.delete(`${GRADE_URL}/${id}`)
-export const getAllGrades = (): Promise<Grade[]> => http.get<Grade[]>(GRADE_URL)
-export const assignGradeLeaders = (id: number | string, data: { directorId?: number | string; counselorId?: number | string }): Promise<Grade> =>
-  http.put<Grade>(`${GRADE_URL}/${id}/leaders`, data)
+export const getCohort = (id: number | string): Promise<Cohort> => http.get<Cohort>(`${COHORT_URL}/${id}`)
+export const getActiveCohorts = (): Promise<Cohort[]> => http.get<Cohort[]>(`${COHORT_URL}/active`)
+export const getCohortByYear = (enrollmentYear: number): Promise<Cohort> => http.get<Cohort>(`${COHORT_URL}/by-year/${enrollmentYear}`)
+export const getCohortsByStatus = (status: string): Promise<Cohort[]> => http.get<Cohort[]>(`${COHORT_URL}/by-status/${status}`)
+export const createCohort = (data: CohortCreateRequest): Promise<Cohort> => http.post<Cohort>(COHORT_URL, data)
+export const updateCohort = (data: { id: number | string; gradeName?: string; standardClassSize?: number; sortOrder?: number; remarks?: string }): Promise<Cohort> =>
+  http.put<Cohort>(`${COHORT_URL}/${data.id}`, data)
+export const activateCohort = (id: number | string): Promise<Cohort> => http.put<Cohort>(`${COHORT_URL}/${id}/activate`)
+export const graduateCohort = (id: number | string): Promise<Cohort> => http.put<Cohort>(`${COHORT_URL}/${id}/graduate`)
+export const stopEnrollment = (id: number | string): Promise<Cohort> => http.put<Cohort>(`${COHORT_URL}/${id}/stop-enrollment`)
+export const deleteCohort = (id: number | string): Promise<void> => http.delete(`${COHORT_URL}/${id}`)
+export const getAllCohorts = (): Promise<Cohort[]> => http.get<Cohort[]>(COHORT_URL)
+export const assignCohortLeaders = (id: number | string, data: { directorId?: number | string; counselorId?: number | string }): Promise<Cohort> =>
+  http.put<Cohort>(`${COHORT_URL}/${id}/leaders`, data)
 
 // ==================== 系统模块 API ====================
 

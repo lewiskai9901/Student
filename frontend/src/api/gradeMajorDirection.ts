@@ -92,20 +92,20 @@ export const batchDeleteGradeMajorDirections = (ids: (number | string)[]) => {
 }
 
 // 兼容旧API - 根据年级ID获取（重定向到使用学年）
-export const getDirectionsByGrade = (gradeId: number | string) => {
+export const getDirectionsByCohort = (cohortId: number | string) => {
   // 保持兼容性，继续使用原有API直到前端全部迁移
-  return http.get<GradeMajorDirection[]>(`/grade-major-directions/year/${gradeId}`)
+  return http.get<GradeMajorDirection[]>(`/grade-major-directions/year/${cohortId}`)
 }
 
 // 兼容旧API - 为年级添加专业方向
-export const addDirectionToGrade = (data: {
-  gradeId: number | string
+export const addDirectionToCohort = (data: {
+  cohortId: number | string
   majorDirectionId: number | string
   plannedClassCount?: number
   isEnabled?: number
 }) => {
   return http.post<GradeMajorDirection>('/academic/grade-major-directions', {
-    academicYear: data.gradeId, // 使用 gradeId 作为 academicYear
+    academicYear: data.cohortId, // 使用 cohortId 作为 academicYear
     majorDirectionId: data.majorDirectionId,
     remarks: ''
   })

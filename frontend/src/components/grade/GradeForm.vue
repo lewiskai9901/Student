@@ -60,10 +60,10 @@
 import { ref, reactive, watch } from 'vue'
 import { ElMessage, ElDatePicker } from 'element-plus'
 import { X } from 'lucide-vue-next'
-import { createGrade, updateGrade } from '@/api/organization'
-import type { Grade } from '@/api/organization'
+import { createCohort, updateCohort } from '@/api/organization'
+import type { Cohort } from '@/api/organization'
 
-interface Props { modelValue: boolean, formData: Partial<Grade>, isEdit: boolean }
+interface Props { modelValue: boolean, formData: Partial<Cohort>, isEdit: boolean }
 const props = defineProps<Props>()
 const emit = defineEmits<{ 'update:modelValue': [value: boolean], success: [] }>()
 
@@ -104,10 +104,10 @@ const handleSubmit = async () => {
     if (props.isEdit && props.formData.id) {
       data.id = props.formData.id
       data.status = form.status
-      await updateGrade(data)
+      await updateCohort(data)
       ElMessage.success('更新成功')
     } else {
-      await createGrade(data)
+      await createCohort(data)
       ElMessage.success('创建成功')
     }
     emit('success')

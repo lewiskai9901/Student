@@ -19,16 +19,6 @@ const routes: RouteRecordRaw[] = [
       requiresAuth: false
     }
   },
-  // 公开查看通报页面（无需登录）
-  {
-    path: '/notification/view/:id',
-    name: 'NotificationPublicView',
-    component: () => import('@/views/notification/NotificationPublicView.vue'),
-    meta: {
-      title: '查看通报',
-      requiresAuth: false
-    }
-  },
   // V7 大屏展示（独立全屏页面）
   {
     path: '/inspection/v7/big-screen',
@@ -225,17 +215,6 @@ const routes: RouteRecordRaw[] = [
             }
           },
           {
-            path: '/student/classes',
-            name: 'StudentClasses',
-            component: () => import('@/views/class/ClassList.vue'),
-            meta: {
-              title: '班级管理',
-              requiresAuth: true,
-              permission: 'student:class:view',
-              order: 3
-            }
-          },
-          {
             path: '/student/attendance',
             name: 'StudentAttendance',
             component: () => import('@/views/student/AttendanceView.vue'),
@@ -283,11 +262,6 @@ const routes: RouteRecordRaw[] = [
             }
           },
           // Old route redirects for backward compatibility
-          {
-            path: '/organization/classes',
-            redirect: '/student/classes',
-            meta: { hidden: true }
-          },
           {
             path: '/organization/students',
             redirect: '/student/list',

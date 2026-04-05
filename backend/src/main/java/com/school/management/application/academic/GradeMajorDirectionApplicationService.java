@@ -1,14 +1,14 @@
 package com.school.management.application.academic;
 
 import com.school.management.application.academic.query.GradeMajorDirectionDTO;
-import com.school.management.domain.student.model.GradeOpenedDirection;
-import com.school.management.domain.student.repository.GradeOpenedDirectionRepository;
-import com.school.management.domain.student.repository.GradeRepository;
+import com.school.management.domain.student.model.CohortOpenedDirection;
+import com.school.management.domain.student.repository.CohortOpenedDirectionRepository;
+import com.school.management.domain.student.repository.CohortRepository;
 import com.school.management.domain.academic.repository.MajorRepository;
 import com.school.management.infrastructure.persistence.academic.GradeMajorDirectionMapper;
 import com.school.management.infrastructure.persistence.academic.GradeMajorDirectionPO;
-import com.school.management.infrastructure.persistence.student.GradePersistenceMapper;
-import com.school.management.infrastructure.persistence.student.GradePO;
+import com.school.management.infrastructure.persistence.student.CohortPersistenceMapper;
+import com.school.management.infrastructure.persistence.student.CohortPO;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -24,18 +24,18 @@ import java.util.stream.Collectors;
 @Service
 public class GradeMajorDirectionApplicationService {
 
-    private final GradeOpenedDirectionRepository gradeOpenedDirectionRepository;
-    private final GradeRepository gradeRepository;
+    private final CohortOpenedDirectionRepository gradeOpenedDirectionRepository;
+    private final CohortRepository gradeRepository;
     private final MajorRepository majorRepository;
     private final GradeMajorDirectionMapper gradeMajorDirectionMapper;
-    private final GradePersistenceMapper gradePersistenceMapper;
+    private final CohortPersistenceMapper gradePersistenceMapper;
 
     /**
      * 根据学年（入学年份）获取年级-方向列表，含 JOIN 信息
      */
     @Transactional(readOnly = true)
     public List<GradeMajorDirectionDTO> getDirectionsByYear(Integer enrollmentYear) {
-        GradePO grade = gradePersistenceMapper.findByEnrollmentYear(enrollmentYear);
+        CohortPO grade = gradePersistenceMapper.findByEnrollmentYear(enrollmentYear);
         if (grade == null) {
             return new ArrayList<>();
         }
@@ -58,7 +58,7 @@ public class GradeMajorDirectionApplicationService {
      */
     @Transactional(readOnly = true)
     public GradeMajorDirectionDTO getByYearAndDirection(Integer enrollmentYear, Long directionId) {
-        GradePO grade = gradePersistenceMapper.findByEnrollmentYear(enrollmentYear);
+        CohortPO grade = gradePersistenceMapper.findByEnrollmentYear(enrollmentYear);
         if (grade == null) {
             throw new IllegalArgumentException("年级不存在: " + enrollmentYear + "级");
         }
@@ -88,7 +88,7 @@ public class GradeMajorDirectionApplicationService {
     @Transactional
     public GradeMajorDirectionDTO addDirectionToYear(Integer academicYear, Long majorDirectionId,
                                                       String remarks, Long createdBy) {
-        GradePO grade = gradePersistenceMapper.findByEnrollmentYear(academicYear);
+        CohortPO grade = gradePersistenceMapper.findByEnrollmentYear(academicYear);
         if (grade == null) {
             throw new IllegalArgumentException("年级不存在: " + academicYear + "级");
         }
@@ -102,7 +102,7 @@ public class GradeMajorDirectionApplicationService {
         var major = majorRepository.findByDirectionId(majorDirectionId)
                 .orElseThrow(() -> new IllegalArgumentException("专业方向不存在: " + majorDirectionId));
 
-        GradeOpenedDirection entity = GradeOpenedDirection.create(
+        CohortOpenedDirection entity = CohortOpenedDirection.create(
                 grade.getId(), majorDirectionId, null, null, remarks, createdBy);
 
         entity = gradeOpenedDirectionRepository.save(entity);
@@ -137,7 +137,7 @@ public class GradeMajorDirectionApplicationService {
      */
     @Transactional
     public GradeMajorDirectionDTO updateGradeMajorDirection(Long id, String remarks, Long updatedBy) {
-        GradeOpenedDirection entity = gradeOpenedDirectionRepository.findById(id)
+        CohortOpenedDirection entity = gradeOpenedDirectionRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("年级-方向关联不存在: " + id));
         entity.updatePlan(entity.getPlannedClasses(), entity.getPlannedStudents(), remarks, updatedBy);
         gradeOpenedDirectionRepository.save(entity);

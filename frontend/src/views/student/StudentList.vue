@@ -271,6 +271,14 @@
                     <Pencil class="h-4 w-4" />
                   </button>
                   <button
+                    v-if="row.userId"
+                    class="rounded p-1.5 text-gray-400 hover:bg-gray-100 hover:text-amber-600"
+                    title="重置密码"
+                    @click="handleResetStudentPassword(row)"
+                  >
+                    <KeyRound class="h-4 w-4" />
+                  </button>
+                  <button
                     v-if="hasPermission('student:info:delete')"
                     class="rounded p-1.5 text-gray-400 hover:bg-gray-100 hover:text-red-600"
                     title="删除"
@@ -494,7 +502,8 @@ import {
   ChevronsLeft,
   ChevronsRight,
   GraduationCap,
-  Clock
+  Clock,
+  KeyRound
 } from 'lucide-vue-next'
 import { useAuthStore } from '@/stores/auth'
 import { formatDate } from '@/utils/date'
@@ -504,12 +513,13 @@ import {
   deleteStudent,
   deleteStudents
 } from '@/api/student'
+import { resetPassword as resetUserPassword } from '@/api/user'
 import type { Student, StudentQueryParams, StudentStatus } from '@/types/student'
 import { StudentStatusMap } from '@/types/student'
 // V2 班级和年级 API
 import { getClasses } from '@/api/organization'
 import type { SchoolClass } from '@/types'
-import { getAllGrades, type Grade } from '@/api/organization'
+import { getAllCohorts, type Cohort } from '@/api/organization'
 import StudentDetail from '@/components/student/StudentDetail.vue'
 import StudentForm from '@/components/student/StudentForm.vue'
 import { StatCard } from '@/components/design-system'
@@ -553,7 +563,7 @@ const studentList = ref<Student[]>([])
 const total = ref(0)
 const selectedRows = ref<Student[]>([])
 const classList = ref<SchoolClass[]>([])
-const gradeList = ref<Grade[]>([])
+const gradeList = ref<Cohort[]>([])
 
 // 计算总页数
 const totalPages = computed(() => Math.ceil(total.value / pagination.pageSize) || 1)
@@ -676,7 +686,7 @@ const loadClassList = async () => {
 // 加载年级列表
 const loadGradeList = async () => {
   try {
-    const response = await getAllGrades()
+    const response = await getAllCohorts()
     gradeList.value = response || []
   } catch (error: any) {
     console.error('加载年级列表失败:', error)
@@ -747,6 +757,23 @@ const handleDelete = async (row: Student) => {
     if (error !== 'cancel') {
       const message = error.response?.data?.message || '删除失败'
       ElMessage.error(message)
+    }
+  }
+}
+
+// 重置学生密码
+const handleResetStudentPassword = async (student: any) => {
+  if (!student.userId) {
+    ElMessage.warning('该学生无系统账号')
+    return
+  }
+  try {
+    await ElMessageBox.confirm('确定重置该学生的密码?', '重置密码', { type: 'warning' })
+    const newPwd = await resetUserPassword(student.userId)
+    ElMessageBox.alert(`新密码: ${newPwd || 'admin123'}`, '密码已重置', { dangerouslyUseHTMLString: true })
+  } catch (error: any) {
+    if (error !== 'cancel') {
+      ElMessage.error('重置密码失败')
     }
   }
 }

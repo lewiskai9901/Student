@@ -99,7 +99,7 @@ import { GraduationCap } from 'lucide-vue-next'
 import GradeSelector from './components/GradeSelector.vue'
 import MajorConfigPanel from './components/MajorConfigPanel.vue'
 import GradeForm from '@/components/grade/GradeForm.vue'
-import { getGradePage, deleteGrade } from '@/api/organization'
+import { getCohortPage, deleteCohort } from '@/api/organization'
 import { getDirectionsByYear } from '@/api/gradeMajorDirection'
 import { getAllEnabledMajors, getDirectionsByMajor } from '@/api/academic'
 
@@ -183,7 +183,7 @@ const currentGradeStats = computed(() => {
 const loadGrades = async () => {
   loading.value = true
   try {
-    const { records } = await getGradePage({ pageNum: 1, pageSize: 100 })
+    const { records } = await getCohortPage({ pageNum: 1, pageSize: 100 })
     // 按入学年份降序排列
     gradeList.value = (records || []).sort((a: any, b: any) => b.enrollmentYear - a.enrollmentYear)
 
@@ -292,7 +292,7 @@ const handleDeleteGrade = async (grade: any) => {
       { confirmButtonText: '确定', cancelButtonText: '取消', type: 'warning' }
     )
 
-    await deleteGrade(grade.id)
+    await deleteCohort(grade.id)
     ElMessage.success('删除成功')
 
     // 如果删除的是当前选中的年级，清空选择

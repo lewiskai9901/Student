@@ -14,6 +14,7 @@ public class ExamArrangementPO {
     private Long id;
     private Long batchId;
     private Long courseId;
+    private Long taskId;
     private LocalDate examDate;
     private LocalTime startTime;
     private LocalTime endTime;
