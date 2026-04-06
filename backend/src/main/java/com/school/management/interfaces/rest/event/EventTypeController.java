@@ -11,6 +11,9 @@ import org.springframework.web.bind.annotation.*;
 import java.util.*;
 import java.util.stream.Collectors;
 
+import static com.school.management.common.util.SnakeToCamelUtil.toCamelCase;
+import static com.school.management.common.util.SnakeToCamelUtil.toCamelCaseList;
+
 /**
  * 事件类型管理 API (增强版，路径 /event/types)
  * 支持按分类分组、分类极性、分类CRUD
@@ -38,7 +41,7 @@ public class EventTypeController {
 
         List<Map<String, Object>> allTypes = jdbcTemplate.queryForList(sql, params.toArray());
 
-        // Group by category
+        // Group by category (use raw snake_case keys for grouping, then convert)
         Map<String, List<Map<String, Object>>> grouped = allTypes.stream()
             .collect(Collectors.groupingBy(
                 row -> String.valueOf(row.get("category_code")),
@@ -53,7 +56,7 @@ public class EventTypeController {
             group.put("categoryCode", entry.getKey());
             group.put("categoryName", first.get("category_name"));
             group.put("categoryPolarity", first.get("category_polarity"));
-            group.put("types", types);
+            group.put("types", toCamelCaseList(types));
             result.add(group);
         }
         return Result.success(result);
@@ -74,7 +77,7 @@ public class EventTypeController {
             "FROM entity_event_types WHERE deleted = 0 " +
             "GROUP BY category_code, category_name, category_polarity " +
             "ORDER BY min_sort");
-        return Result.success(result);
+        return Result.success(toCamelCaseList(result));
     }
 
     @PostMapping

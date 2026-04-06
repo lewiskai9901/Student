@@ -10,6 +10,9 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.*;
 
+import static com.school.management.common.util.SnakeToCamelUtil.toCamelCase;
+import static com.school.management.common.util.SnakeToCamelUtil.toCamelCaseList;
+
 /**
  * 实体事件查询 API (增强版，路径 /event/events)
  * 支持按主体+极性查询、统计聚合
@@ -67,7 +70,7 @@ public class EventController {
         params.add(size);
         params.add(offset);
 
-        List<Map<String, Object>> records = jdbcTemplate.queryForList(dataSql, params.toArray());
+        List<Map<String, Object>> records = toCamelCaseList(jdbcTemplate.queryForList(dataSql, params.toArray()));
 
         Map<String, Object> result = new LinkedHashMap<>();
         result.put("records", records);
@@ -111,22 +114,22 @@ public class EventController {
         }
 
         // By category
-        List<Map<String, Object>> byCategory = jdbcTemplate.queryForList(
+        List<Map<String, Object>> byCategory = toCamelCaseList(jdbcTemplate.queryForList(
             "SELECT e.event_category, t.category_name, t.category_polarity, COUNT(*) as count " +
             whereSql + " GROUP BY e.event_category, t.category_name, t.category_polarity " +
-            "ORDER BY count DESC", params.toArray());
+            "ORDER BY count DESC", params.toArray()));
 
         // By polarity
-        List<Map<String, Object>> byPolarity = jdbcTemplate.queryForList(
+        List<Map<String, Object>> byPolarity = toCamelCaseList(jdbcTemplate.queryForList(
             "SELECT COALESCE(t.category_polarity, 'NEUTRAL') as polarity, COUNT(*) as count " +
             whereSql + " GROUP BY t.category_polarity " +
-            "ORDER BY count DESC", params.toArray());
+            "ORDER BY count DESC", params.toArray()));
 
         // By event type (top 10)
-        List<Map<String, Object>> byType = jdbcTemplate.queryForList(
+        List<Map<String, Object>> byType = toCamelCaseList(jdbcTemplate.queryForList(
             "SELECT e.event_type, t.type_name, t.category_polarity, t.icon, t.color, COUNT(*) as count " +
             whereSql + " GROUP BY e.event_type, t.type_name, t.category_polarity, t.icon, t.color " +
-            "ORDER BY count DESC LIMIT 10", params.toArray());
+            "ORDER BY count DESC LIMIT 10", params.toArray()));
 
         // Total
         Integer total = jdbcTemplate.queryForObject(

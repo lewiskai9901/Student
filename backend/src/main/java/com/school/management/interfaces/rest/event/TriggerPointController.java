@@ -11,6 +11,9 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 import java.util.Map;
 
+import static com.school.management.common.util.SnakeToCamelUtil.toCamelCase;
+import static com.school.management.common.util.SnakeToCamelUtil.toCamelCaseList;
+
 /**
  * 触发点管理 API
  */
@@ -32,7 +35,7 @@ public class TriggerPointController {
             sql += " AND module_code = '" + module.replace("'", "") + "'";
         }
         sql += " ORDER BY module_code, sort_order";
-        return Result.success(jdbcTemplate.queryForList(sql));
+        return Result.success(toCamelCaseList(jdbcTemplate.queryForList(sql)));
     }
 
     @GetMapping("/{id}")
@@ -44,7 +47,7 @@ public class TriggerPointController {
         if (rows.isEmpty()) {
             return Result.error("触发点不存在");
         }
-        return Result.success(rows.get(0));
+        return Result.success(toCamelCase(rows.get(0)));
     }
 
     @PostMapping

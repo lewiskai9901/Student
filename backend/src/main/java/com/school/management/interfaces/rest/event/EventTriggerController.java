@@ -14,6 +14,9 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
+import static com.school.management.common.util.SnakeToCamelUtil.toCamelCase;
+import static com.school.management.common.util.SnakeToCamelUtil.toCamelCaseList;
+
 /**
  * 事件触发器管理 API
  */
@@ -50,7 +53,7 @@ public class EventTriggerController {
         }
         sql.append(" ORDER BY t.sort_order, t.id");
 
-        return Result.success(jdbcTemplate.queryForList(sql.toString(), params.toArray()));
+        return Result.success(toCamelCaseList(jdbcTemplate.queryForList(sql.toString(), params.toArray())));
     }
 
     @GetMapping("/{id}")
@@ -65,7 +68,7 @@ public class EventTriggerController {
         if (rows.isEmpty()) {
             return Result.error("触发器不存在");
         }
-        return Result.success(rows.get(0));
+        return Result.success(toCamelCase(rows.get(0)));
     }
 
     @PostMapping
@@ -196,6 +199,6 @@ public class EventTriggerController {
         if (pointCode == null || context == null) {
             return Result.error("pointCode和context不能为空");
         }
-        return Result.success(triggerService.testFire(pointCode, context));
+        return Result.success(toCamelCaseList(triggerService.testFire(pointCode, context)));
     }
 }
