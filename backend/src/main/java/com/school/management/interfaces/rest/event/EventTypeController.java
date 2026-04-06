@@ -166,10 +166,13 @@ public class EventTypeController {
         if (count != null && count > 0) {
             return Result.error("分类编码已存在: " + categoryCode);
         }
-        // Create a placeholder type for the category (users can add actual types later)
-        // We don't insert anything - categories are derived from types
-        // Instead, we return success as a signal that the category name/polarity is noted
-        // The frontend will use this when creating new types
-        return Result.success("分类已记录，请在该分类下创建事件类型", null);
+        // Insert a placeholder type so the category appears in queries
+        jdbcTemplate.update(
+            "INSERT INTO entity_event_types (tenant_id, category_code, category_name, category_polarity, " +
+            "type_code, type_name, is_system, is_enabled, sort_order, deleted) " +
+            "VALUES (1, ?, ?, ?, ?, ?, 0, 1, 0, 0)",
+            categoryCode, categoryName, polarity,
+            categoryCode + "_PLACEHOLDER", categoryName + "(默认)");
+        return Result.success(null);
     }
 }

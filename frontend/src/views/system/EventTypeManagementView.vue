@@ -306,9 +306,23 @@ async function handleSaveCategory() {
       ElMessage.error(e.message || '更新失败')
     }
   } else {
-    // For new category, just close — types will be added via "添加子类型"
-    ElMessage.success('分类已就绪，请添加子类型')
-    catDialogVisible.value = false
+    // Create new category via API
+    try {
+      await createEntityEventType({
+        categoryCode: catForm.categoryCode.trim(),
+        categoryName: catForm.categoryName.trim(),
+        categoryPolarity: catForm.polarity,
+        typeCode: catForm.categoryCode.trim() + '_DEFAULT',
+        typeName: catForm.categoryName.trim() + '(默认)',
+        isEnabled: 1,
+        sortOrder: 0,
+      })
+      ElMessage.success('分类创建成功，请添加子类型')
+      catDialogVisible.value = false
+      await loadTypes()
+    } catch (e: any) {
+      ElMessage.error(e.message || '创建失败')
+    }
   }
 }
 
