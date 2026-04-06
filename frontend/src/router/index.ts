@@ -76,13 +76,15 @@ const routes: RouteRecordRaw[] = [
         }
       },
       {
-        path: '/messages/config',
+        path: '/message-config',
         name: 'MessagesConfig',
         component: () => import('@/views/message/MessageConfigView.vue'),
         meta: {
           title: '消息配置',
+          icon: 'Settings',
           requiresAuth: true,
-          hidden: true
+          order: 1.6,
+          group: 'daily'
         }
       },
 
