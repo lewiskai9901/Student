@@ -7,8 +7,8 @@ import type {
   UpdateEntityEventTypeCommand,
 } from '@/types/entityEvent'
 
-const TYPE_BASE = '/entity-event-types'
-const EVENT_BASE = '/entity-events'
+const TYPE_BASE = '/event/types'
+const EVENT_BASE = '/event/events'
 
 // ==================== Event Types ====================
 

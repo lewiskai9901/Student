@@ -131,10 +131,8 @@ export const POLARITY_CONFIG: Record<Polarity, { label: string; color: string; t
 /** 主体类型 */
 export const SUBJECT_TYPES = [
   { value: 'USER', label: '用户' },
-  { value: 'STUDENT', label: '学生' },
   { value: 'ORG_UNIT', label: '组织' },
   { value: 'PLACE', label: '场所' },
-  { value: 'CLASS', label: '班级' },
 ] as const
 
 /** 条件运算符选项 */
