@@ -62,30 +62,44 @@ const routes: RouteRecordRaw[] = [
         }
       },
 
-      // ==================== 消息中心 /messages (order: 1.5) ====================
+      // ==================== 消息与事件 /message (order: 1.5) ====================
       {
-        path: '/messages',
-        name: 'Messages',
-        component: () => import('@/views/message/MessageListView.vue'),
+        path: '/message',
+        name: 'MessageCenter',
+        redirect: '/message/list',
         meta: {
-          title: '消息中心',
+          title: '消息与事件',
           icon: 'Bell',
           requiresAuth: true,
           order: 1.5,
           group: 'daily'
-        }
-      },
-      {
-        path: '/message-config',
-        name: 'MessagesConfig',
-        component: () => import('@/views/message/MessageConfigView.vue'),
-        meta: {
-          title: '消息配置',
-          icon: 'Settings',
-          requiresAuth: true,
-          order: 1.6,
-          group: 'daily'
-        }
+        },
+        children: [
+          {
+            path: '/message/list',
+            name: 'MessageList',
+            component: () => import('@/views/message/MessageListView.vue'),
+            meta: { title: '消息通知', requiresAuth: true, order: 1 }
+          },
+          {
+            path: '/message/event-types',
+            name: 'EventTypes',
+            component: () => import('@/views/system/EventTypeManagementView.vue'),
+            meta: { title: '事件类型', requiresAuth: true, order: 2 }
+          },
+          {
+            path: '/message/triggers',
+            name: 'EventTriggers',
+            component: () => import('@/views/system/EventTriggerView.vue'),
+            meta: { title: '事件触发器', requiresAuth: true, order: 3 }
+          },
+          {
+            path: '/message/subscriptions',
+            name: 'MessageSubscriptions',
+            component: () => import('@/views/message/MessageConfigView.vue'),
+            meta: { title: '订阅与模板', requiresAuth: true, order: 4 }
+          },
+        ]
       },
 
       // ==================== 我的班级 /my-class (order: 2) ====================
@@ -899,30 +913,7 @@ const routes: RouteRecordRaw[] = [
               order: 6
             }
           },
-          {
-            path: '/system/event-types',
-            name: 'EventTypes',
-            component: () => import('@/views/system/EventTypeManagementView.vue'),
-            meta: {
-              title: '事件类型',
-              icon: 'Bell',
-              requiresAuth: true,
-              permission: 'settings:event-types',
-              order: 15
-            }
-          },
-          {
-            path: '/system/event-triggers',
-            name: 'EventTriggers',
-            component: () => import('@/views/system/EventTriggerView.vue'),
-            meta: {
-              title: '事件触发器',
-              icon: 'Zap',
-              requiresAuth: true,
-              permission: 'settings:event-types',
-              order: 16
-            }
-          },
+          // 事件类型和触发器已移到"消息与事件"菜单下
           {
             path: '/system/configs',
             name: 'SystemConfigs',
