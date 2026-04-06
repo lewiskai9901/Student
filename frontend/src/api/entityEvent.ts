@@ -12,9 +12,32 @@ const EVENT_BASE = '/event/events'
 
 // ==================== Event Types ====================
 
-/** 获取所有事件类型 */
-export function listEntityEventTypes() {
-  return http.get<EntityEventType[]>(TYPE_BASE)
+/** 获取所有事件类型（后端返回按分类分组，这里展平为列表） */
+export async function listEntityEventTypes(): Promise<EntityEventType[]> {
+  const data = await http.get<any>(TYPE_BASE)
+  // 后端返回 [{categoryCode, categoryName, categoryPolarity, types: [...]}]
+  // 展平为 EntityEventType[]
+  if (Array.isArray(data)) {
+    const flat: EntityEventType[] = []
+    for (const group of data) {
+      if (group.types && Array.isArray(group.types)) {
+        for (const t of group.types) {
+          flat.push({
+            ...t,
+            id: Number(t.id),
+            categoryCode: t.categoryCode || group.categoryCode,
+            categoryName: t.categoryName || group.categoryName,
+            categoryPolarity: t.categoryPolarity || group.categoryPolarity,
+          })
+        }
+      } else if (group.typeCode) {
+        // 已经是扁平的
+        flat.push(group)
+      }
+    }
+    return flat
+  }
+  return data as EntityEventType[]
 }
 
 /** 创建事件类型 */

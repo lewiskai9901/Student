@@ -1,19 +1,20 @@
 export interface EntityEventType {
   id: number
-  tenantId: number
+  tenantId?: number
   categoryCode: string
   categoryName: string
+  categoryPolarity?: string // POSITIVE/NEGATIVE/NEUTRAL
   typeCode: string
   typeName: string
-  hasScore: boolean
-  hasSeverity: boolean
-  severityLevels: string | null  // JSON array
-  icon: string | null
-  color: string | null
-  applicableSubjects: string | null  // JSON array
-  isSystem: boolean
-  isEnabled: boolean
-  sortOrder: number
+  hasScore?: boolean
+  hasSeverity?: boolean
+  severityLevels?: string | null
+  icon?: string | null
+  color?: string | null
+  applicableSubjects?: string | null
+  isSystem?: boolean
+  isEnabled?: boolean | number
+  sortOrder?: number
 }
 
 export interface EntityEvent {

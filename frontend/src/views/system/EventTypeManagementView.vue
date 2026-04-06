@@ -206,7 +206,7 @@ const groupedTypes = computed<GroupedCategory[]>(() => {
       map.set(t.categoryCode, {
         categoryCode: t.categoryCode,
         categoryName: t.categoryName,
-        polarity: guessCategoryPolarity(t.categoryCode),
+        polarity: (t as any).categoryPolarity || guessCategoryPolarity(t.categoryCode),
         items: [],
       })
     }
