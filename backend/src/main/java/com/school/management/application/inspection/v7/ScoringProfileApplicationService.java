@@ -34,9 +34,11 @@ public class ScoringProfileApplicationService {
 
     @Transactional
     public ScoringProfile createProfile(Long sectionId, Long createdBy) {
-        profileRepository.findBySectionId(sectionId).ifPresent(existing -> {
-            throw new IllegalArgumentException("分区已有评分配置: sectionId=" + sectionId);
-        });
+        // 如果已存在则直接返回，不报错（支持幂等调用）
+        Optional<ScoringProfile> existing = profileRepository.findBySectionId(sectionId);
+        if (existing.isPresent()) {
+            return existing.get();
+        }
         ScoringProfile profile = ScoringProfile.create(sectionId, createdBy);
         return profileRepository.save(profile);
     }
