@@ -17,23 +17,33 @@ public class PlacePO {
 
     private String placeCode;
     private String placeName;
+    @TableField("type_code")
     private String placeType;
-    private Long categoryId;              // V10: 分类ID
-    private String placeTypeCode;         // 兼容旧字段
+    @TableField(exist = false)
+    private Long categoryId;              // V10: 分类ID (not in DB yet)
+    @TableField(exist = false)
+    private String placeTypeCode;         // 兼容旧字段 - derived from type_code
     private String roomType;              // 兼容旧字段
-    private String buildingType;          // 兼容旧字段
+    @TableField(exist = false)
+    private String buildingType;          // not in DB, stored in attributes
 
-    // 楼号和房间号（V10: 改为数字类型）
+    // 楼号和房间号（not in DB, stored in attributes）
+    @TableField(exist = false)
     private Integer buildingNo;           // 楼号（数字）- BUILDING类型
+    @TableField(exist = false)
     private Integer roomNo;               // 房间号（数字）- ROOM类型
+    @TableField(exist = false)
     private Integer floorCount;           // 楼层数 - BUILDING类型
 
     private Long parentId;
     private String path;
     private Integer level;
 
+    @TableField(exist = false)
     private Long campusId;
+    @TableField(exist = false)
     private Long buildingId;
+    @TableField(exist = false)
     private Integer floorNumber;
 
     private Integer capacity;
@@ -42,13 +52,14 @@ public class PlacePO {
     @TableField(updateStrategy = FieldStrategy.IGNORED)
     private Long orgUnitId;
 
+    @TableField(exist = false)
     private Long primaryOrgRelationId;
 
     @TableField(updateStrategy = FieldStrategy.IGNORED)
     private Long responsibleUserId;
 
-    @TableField(updateStrategy = FieldStrategy.IGNORED)
-    private Integer genderType;        // 性别类型：0-不限，1-男，2-女
+    @TableField(exist = false)
+    private Integer genderType;        // 性别类型：DB has 'gender' varchar, mapped via XML resultMap
 
     private Integer status;
 

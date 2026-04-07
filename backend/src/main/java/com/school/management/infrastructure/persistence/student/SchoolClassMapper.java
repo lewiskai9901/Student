@@ -42,8 +42,12 @@ public interface SchoolClassMapper extends BaseMapper<SchoolClassPO> {
 
     /**
      * Find by enrollment year.
+     * NOTE: enrollment_year is no longer in the classes VIEW; query via org_units.attributes instead.
      */
-    @Select("SELECT * FROM classes WHERE enrollment_year = #{year} AND deleted = 0 ORDER BY class_code")
+    @Select("SELECT c.* FROM classes c " +
+            "JOIN org_units o ON c.id = o.id AND o.deleted = 0 " +
+            "WHERE JSON_UNQUOTE(JSON_EXTRACT(o.attributes, '$.enrollmentYear')) = #{year} " +
+            "AND c.deleted = 0 ORDER BY c.class_code")
     List<SchoolClassPO> findByEnrollmentYear(@Param("year") Integer year);
 
     /**
@@ -78,13 +82,21 @@ public interface SchoolClassMapper extends BaseMapper<SchoolClassPO> {
 
     /**
      * Find by major direction ID.
+     * NOTE: major_direction_id is no longer in the classes VIEW; query via org_units.attributes instead.
      */
-    @Select("SELECT * FROM classes WHERE major_direction_id = #{majorDirectionId} AND deleted = 0 ORDER BY class_code")
+    @Select("SELECT c.* FROM classes c " +
+            "JOIN org_units o ON c.id = o.id AND o.deleted = 0 " +
+            "WHERE CAST(JSON_UNQUOTE(JSON_EXTRACT(o.attributes, '$.majorDirectionId')) AS UNSIGNED) = #{majorDirectionId} " +
+            "AND c.deleted = 0 ORDER BY c.class_code")
     List<SchoolClassPO> findByMajorDirectionId(@Param("majorDirectionId") Long majorDirectionId);
 
     /**
      * Find by graduation year.
+     * NOTE: graduation_year is no longer in the classes VIEW; query via org_units.attributes instead.
      */
-    @Select("SELECT * FROM classes WHERE graduation_year = #{graduationYear} AND deleted = 0 ORDER BY class_code")
+    @Select("SELECT c.* FROM classes c " +
+            "JOIN org_units o ON c.id = o.id AND o.deleted = 0 " +
+            "WHERE JSON_UNQUOTE(JSON_EXTRACT(o.attributes, '$.graduationYear')) = #{graduationYear} " +
+            "AND c.deleted = 0 ORDER BY c.class_code")
     List<SchoolClassPO> findByGraduationYear(@Param("graduationYear") Integer graduationYear);
 }

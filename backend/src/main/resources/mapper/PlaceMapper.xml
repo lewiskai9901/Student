@@ -7,7 +7,7 @@
         <id column="id" property="id"/>
         <result column="place_code" property="placeCode"/>
         <result column="place_name" property="placeName"/>
-        <result column="place_type" property="placeType"/>
+        <result column="type_code" property="placeType"/>
         <result column="room_type" property="roomType"/>
         <result column="building_type" property="buildingType"/>
         <result column="building_no" property="buildingNo"/>
@@ -21,9 +21,8 @@
         <result column="capacity" property="capacity"/>
         <result column="current_occupancy" property="currentOccupancy"/>
         <result column="org_unit_id" property="orgUnitId"/>
-        <result column="class_id" property="classId"/>
         <result column="responsible_user_id" property="responsibleUserId"/>
-        <result column="gender_type" property="genderType"/>
+        <!-- DB column is 'gender' varchar(10), PO is Integer genderType - leave unmapped for now -->
         <result column="status" property="status"/>
         <result column="attributes" property="attributes"/>
         <result column="description" property="description"/>
@@ -60,13 +59,13 @@
 
     <!-- 查询所有校区 -->
     <select id="selectAllCampuses" resultMap="BaseResultMap">
-        SELECT * FROM places WHERE place_type = 'CAMPUS' AND deleted = 0 ORDER BY place_code
+        SELECT * FROM places WHERE type_code = 'CAMPUS' AND deleted = 0 ORDER BY place_code
     </select>
 
     <!-- 查询所有楼宇 -->
     <select id="selectAllBuildings" resultMap="BaseResultMap">
         SELECT * FROM places
-        WHERE place_type = 'BUILDING' AND deleted = 0
+        WHERE type_code = 'BUILDING' AND deleted = 0
         <if test="buildingType != null">
             AND building_type = #{buildingType}
         </if>
@@ -79,14 +78,14 @@
     <!-- 查询楼宇的楼层 -->
     <select id="selectFloorsByBuildingId" resultMap="BaseResultMap">
         SELECT * FROM places
-        WHERE building_id = #{buildingId} AND place_type = 'FLOOR' AND deleted = 0
+        WHERE building_id = #{buildingId} AND type_code = 'FLOOR' AND deleted = 0
         ORDER BY floor_number
     </select>
 
     <!-- 查询楼宇的房间 -->
     <select id="selectRoomsByBuildingId" resultMap="BaseResultMap">
         SELECT * FROM places
-        WHERE building_id = #{buildingId} AND place_type = 'ROOM' AND deleted = 0
+        WHERE building_id = #{buildingId} AND type_code = 'ROOM' AND deleted = 0
         <if test="roomType != null">
             AND room_type = #{roomType}
         </if>
@@ -101,7 +100,7 @@
         SELECT * FROM places
         WHERE deleted = 0
         <if test="placeType != null">
-            AND place_type = #{placeType}
+            AND type_code = #{placeType}
         </if>
         <if test="roomType != null">
             AND room_type = #{roomType}
@@ -133,7 +132,7 @@
         SELECT COUNT(*) FROM places
         WHERE deleted = 0
         <if test="placeType != null">
-            AND place_type = #{placeType}
+            AND type_code = #{placeType}
         </if>
         <if test="roomType != null">
             AND room_type = #{roomType}
@@ -207,10 +206,10 @@
     <!-- 获取楼宇统计 -->
     <select id="selectBuildingStats" resultType="java.util.Map">
         SELECT
-            COUNT(CASE WHEN place_type = 'FLOOR' THEN 1 END) as floor_count,
-            COUNT(CASE WHEN place_type = 'ROOM' THEN 1 END) as room_count,
-            COALESCE(SUM(CASE WHEN place_type = 'ROOM' THEN capacity ELSE 0 END), 0) as total_capacity,
-            COALESCE(SUM(CASE WHEN place_type = 'ROOM' THEN current_occupancy ELSE 0 END), 0) as total_occupancy
+            COUNT(CASE WHEN type_code = 'FLOOR' THEN 1 END) as floor_count,
+            COUNT(CASE WHEN type_code = 'ROOM' THEN 1 END) as room_count,
+            COALESCE(SUM(CASE WHEN type_code = 'ROOM' THEN capacity ELSE 0 END), 0) as total_capacity,
+            COALESCE(SUM(CASE WHEN type_code = 'ROOM' THEN current_occupancy ELSE 0 END), 0) as total_occupancy
         FROM places
         WHERE building_id = #{buildingId} AND deleted = 0
     </select>
@@ -220,7 +219,7 @@
         SELECT COUNT(*) FROM places
         WHERE building_no = #{buildingNo}
           AND campus_id = #{campusId}
-          AND place_type = 'BUILDING'
+          AND type_code = 'BUILDING'
           AND deleted = 0
         <if test="excludeId != null">
             AND id != #{excludeId}
@@ -232,7 +231,7 @@
         SELECT COUNT(*) FROM places
         WHERE room_no = #{roomNo}
           AND building_id = #{buildingId}
-          AND place_type = 'ROOM'
+          AND type_code = 'ROOM'
           AND deleted = 0
         <if test="excludeId != null">
             AND id != #{excludeId}

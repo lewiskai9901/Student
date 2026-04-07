@@ -47,8 +47,9 @@ public class SchoolClassPO {
     private Long majorId;
 
     /**
-     * 专业方向ID
+     * 专业方向ID (not in classes VIEW, stored in org_units.attributes)
      */
+    @TableField(exist = false)
     private Long majorDirectionId;
 
     /**
@@ -57,8 +58,9 @@ public class SchoolClassPO {
     private Long teacherId;
 
     /**
-     * 副班主任ID
+     * 副班主任ID (not in classes VIEW, stored in org_units.attributes)
      */
+    @TableField(exist = false)
     private Long assistantTeacherId;
 
     /**
@@ -73,18 +75,21 @@ public class SchoolClassPO {
     private Integer studentCount;
 
     /**
-     * 教室位置
+     * 教室位置 (not in classes VIEW, stored in org_units.attributes)
      */
+    @TableField(exist = false)
     private String classroomLocation;
 
     /**
-     * 入学年份
+     * 入学年份 (not in classes VIEW, stored in org_units.attributes)
      */
+    @TableField(exist = false)
     private Integer enrollmentYear;
 
     /**
-     * 毕业年份
+     * 毕业年份 (not in classes VIEW, stored in org_units.attributes)
      */
+    @TableField(exist = false)
     private Integer graduationYear;
 
     /**

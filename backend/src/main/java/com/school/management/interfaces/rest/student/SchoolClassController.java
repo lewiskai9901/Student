@@ -96,7 +96,7 @@ public class SchoolClassController {
         Map<Long, MajorInfo> majorInfoMap = getMajorInfoMap(pageClasses);
 
         List<SchoolClassResponse> pageData = pageClasses.stream()
-                .map(c -> toResponse(c, orgUnitNameMap.get(c.getOrgUnitId()), majorInfoMap.get(c.getMajorDirectionId())))
+                .map(c -> toResponse(c, orgUnitNameMap.get(c.getOrgUnitId()), c.getMajorDirectionId() != null ? majorInfoMap.get(c.getMajorDirectionId()) : null))
                 .collect(Collectors.toList());
 
         Page<SchoolClassResponse> page = new Page<>(pageNum, pageSize, total);
@@ -280,7 +280,7 @@ public class SchoolClassController {
         Map<Long, String> orgUnitNameMap = getOrgUnitNameMap(classList);
         Map<Long, MajorInfo> majorInfoMap = getMajorInfoMap(classList);
         List<SchoolClassResponse> classes = classList.stream()
-                .map(c -> toResponse(c, orgUnitNameMap.get(c.getOrgUnitId()), majorInfoMap.get(c.getMajorDirectionId())))
+                .map(c -> toResponse(c, orgUnitNameMap.get(c.getOrgUnitId()), c.getMajorDirectionId() != null ? majorInfoMap.get(c.getMajorDirectionId()) : null))
                 .collect(Collectors.toList());
         return Result.success(classes);
     }
@@ -293,7 +293,7 @@ public class SchoolClassController {
         Map<Long, String> orgUnitNameMap = getOrgUnitNameMap(classList);
         Map<Long, MajorInfo> majorInfoMap = getMajorInfoMap(classList);
         List<SchoolClassResponse> classes = classList.stream()
-                .map(c -> toResponse(c, orgUnitNameMap.get(c.getOrgUnitId()), majorInfoMap.get(c.getMajorDirectionId())))
+                .map(c -> toResponse(c, orgUnitNameMap.get(c.getOrgUnitId()), c.getMajorDirectionId() != null ? majorInfoMap.get(c.getMajorDirectionId()) : null))
                 .collect(Collectors.toList());
         return Result.success(classes);
     }

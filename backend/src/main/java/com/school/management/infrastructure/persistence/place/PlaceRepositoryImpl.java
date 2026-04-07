@@ -276,7 +276,7 @@ public class PlaceRepositoryImpl implements PlaceRepository {
             po.getId(),
             po.getPlaceCode(),
             po.getPlaceName(),
-            po.getPlaceType() != null ? PlaceType.valueOf(po.getPlaceType()) : null,
+            parsePlaceType(po.getPlaceType()),
             po.getCategoryId(),  // V10: 分类ID
             po.getRoomType() != null ? RoomType.valueOf(po.getRoomType()) : null,
             po.getBuildingType() != null ? BuildingType.valueOf(po.getBuildingType()) : null,
@@ -302,6 +302,21 @@ public class PlaceRepositoryImpl implements PlaceRepository {
             po.getUpdatedBy(),
             po.getUpdatedAt()
         );
+    }
+
+    /**
+     * Parse type_code to PlaceType enum, returning null if not a standard structural type.
+     * type_code may contain configurable type codes (e.g. "CLASSROOM", "TYPE_xxx")
+     * that don't map to the structural PlaceType enum (CAMPUS/BUILDING/FLOOR/ROOM).
+     */
+    private PlaceType parsePlaceType(String typeCode) {
+        if (typeCode == null) return null;
+        try {
+            return PlaceType.valueOf(typeCode);
+        } catch (IllegalArgumentException e) {
+            // Not a standard structural type - return null
+            return null;
+        }
     }
 
     private String toJson(Map<String, Object> map) {

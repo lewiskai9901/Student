@@ -587,7 +587,7 @@ public class PlaceApplicationService {
         dto.setId(place.getId());
         dto.setPlaceCode(place.getPlaceCode());
         dto.setPlaceName(place.getPlaceName());
-        dto.setPlaceType(place.getPlaceType().name());
+        dto.setPlaceType(place.getPlaceType() != null ? place.getPlaceType().name() : null);
         dto.setRoomType(place.getRoomType() != null ? place.getRoomType().name() : null);
         dto.setBuildingType(place.getBuildingType() != null ? place.getBuildingType().name() : null);
         // 楼号和房间号

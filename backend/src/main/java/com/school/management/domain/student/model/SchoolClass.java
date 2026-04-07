@@ -122,7 +122,7 @@ public class SchoolClass extends AggregateRoot<Long> {
         this.shortName = builder.shortName;
         this.orgUnitId = Objects.requireNonNull(builder.orgUnitId, "orgUnitId cannot be null");
         this.gradeId = builder.gradeId;
-        this.enrollmentYear = Objects.requireNonNull(builder.enrollmentYear, "enrollmentYear cannot be null");
+        this.enrollmentYear = builder.enrollmentYear != null ? builder.enrollmentYear : java.time.LocalDate.now().getYear();
         this.gradeLevel = builder.gradeLevel != null ? builder.gradeLevel : 1;
         this.majorDirectionId = builder.majorDirectionId;
         this.schoolingYears = builder.schoolingYears != null ? builder.schoolingYears : 3;
