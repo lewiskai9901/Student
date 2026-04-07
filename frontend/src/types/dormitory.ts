@@ -173,7 +173,7 @@ export interface DormitoryQueryParams {
   supervisorId?: number | string
   status?: DormitoryStatus
   buildingIds?: (number | string)[]
-  classIds?: (number | string)[]
+  orgUnitIds?: (number | string)[]
   sortBy?: string
   sortOrder?: 'asc' | 'desc'
   pageNum?: number

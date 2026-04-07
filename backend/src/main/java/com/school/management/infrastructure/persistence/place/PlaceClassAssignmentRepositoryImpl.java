@@ -134,7 +134,6 @@ public class PlaceClassAssignmentRepositoryImpl implements PlaceClassAssignmentR
             po.getId(),
             po.getPlaceId(),
             po.getOrgUnitId(),
-            po.getOrgUnitId(),
             po.getAssignedBeds(),
             po.getPriority(),
             po.getStatus(),

@@ -162,7 +162,7 @@ async function loadRanking() {
   if (!props.semesterId) return
   rankingLoading.value = true; ranking.value = []
   try {
-    const res: any = await gradeApi.getRanking({ classId: 0, semesterId: props.semesterId })
+    const res: any = await gradeApi.getRanking({ orgUnitId: 0, semesterId: props.semesterId })
     ranking.value = res.data || res || []
   } catch { ranking.value = [] } finally { rankingLoading.value = false }
 }

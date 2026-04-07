@@ -66,7 +66,6 @@ public class CreatePlaceRequest {
     /**
      * 归属班级ID
      */
-    private Long classId;
 
     /**
      * 责任人用户ID

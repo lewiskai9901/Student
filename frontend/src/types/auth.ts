@@ -45,7 +45,7 @@ export interface UserInfo {
     orgUnitName: string
   }
   classInfo?: {
-    classId: string
+    orgUnitId: string
     className: string
   }
   // 用户分配的班级列表（用于"我的班级"等功能的菜单权限控制）

@@ -70,7 +70,6 @@ public class TeachingTaskRepositoryImpl implements TeachingTaskRepository {
         po.setTaskCode(t.getTaskCode());
         po.setSemesterId(t.getSemesterId());
         po.setCourseId(t.getCourseId());
-        po.setClassId(t.getClassId());
         po.setOrgUnitId(t.getOrgUnitId());
         po.setStudentCount(t.getStudentCount());
         po.setWeeklyHours(t.getWeeklyHours());
@@ -87,7 +86,7 @@ public class TeachingTaskRepositoryImpl implements TeachingTaskRepository {
     private TeachingTask toDomain(TeachingTaskPO po) {
         return TeachingTask.reconstruct(
                 po.getId(), po.getTaskCode(), po.getSemesterId(),
-                po.getCourseId(), po.getClassId(), po.getOrgUnitId(),
+                po.getCourseId(), po.getOrgUnitId(),
                 po.getStudentCount(), po.getWeeklyHours(), po.getTotalHours(),
                 po.getStartWeek(), po.getEndWeek(),
                 po.getSchedulingStatus() != null ? SchedulingStatus.fromCode(po.getSchedulingStatus()) : SchedulingStatus.UNSCHEDULED,

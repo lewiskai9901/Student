@@ -205,7 +205,7 @@ import type { GradeMajorDirection } from '@/api/gradeMajorDirection'
 
 interface Props {
   mode: 'add' | 'edit'
-  classId?: number | null
+  orgUnitId?: number | null
 }
 
 const props = defineProps<Props>()
@@ -546,11 +546,11 @@ watch(() => formData.classSequence, () => {
 
 // 加载班级详情
 const loadClassDetail = async () => {
-  if (props.mode !== 'edit' || !props.classId) return
+  if (props.mode !== 'edit' || !props.orgUnitId) return
 
   loading.value = true
   try {
-    const data = await getClassDetail(props.classId)
+    const data = await getClassDetail(props.orgUnitId)
     formData.gradeId = data.gradeId || null
     formData.gradeLevel = data.gradeLevel || null
     formData.majorId = data.majorId || null
@@ -649,8 +649,8 @@ const handleSubmit = async () => {
     if (props.mode === 'add') {
       await createClass(submitData)
       ElMessage.success('班级创建成功')
-    } else if (props.classId) {
-      await updateClass(props.classId, submitData)
+    } else if (props.orgUnitId) {
+      await updateClass(props.orgUnitId, submitData)
       ElMessage.success('班级更新成功')
     }
 
@@ -665,11 +665,11 @@ const handleSubmit = async () => {
   }
 }
 
-// 监听 classId 变化（不使用 immediate，由 onMounted 控制）
+// 监听 orgUnitId 变化（不使用 immediate，由 onMounted 控制）
 watch(
-  () => props.classId,
+  () => props.orgUnitId,
   (newId, oldId) => {
-    // 仅在 classId 实际变化时触发（排除初始化）
+    // 仅在 orgUnitId 实际变化时触发（排除初始化）
     if (newId !== oldId && props.mode === 'edit') {
       loadClassDetail()
     }
@@ -681,7 +681,7 @@ onMounted(async () => {
   await Promise.all([loadGradeList(), loadDepartmentList()])
 
   // 基础数据加载完成后，如果是编辑模式则加载班级详情
-  if (props.mode === 'edit' && props.classId) {
+  if (props.mode === 'edit' && props.orgUnitId) {
     await loadClassDetail()
   }
 })

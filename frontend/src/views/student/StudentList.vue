@@ -79,7 +79,7 @@
         <div class="w-40">
           <label class="mb-1 block text-xs font-medium text-gray-600">班级</label>
           <select
-            v-model="searchForm.classId"
+            v-model="searchForm.orgUnitId"
             class="h-9 w-full rounded-md border border-gray-300 bg-white px-3 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
           >
             <option :value="null">全部班级</option>
@@ -548,7 +548,7 @@ const searchForm = reactive<StudentQueryParams>({
   studentNo: '',
   name: '',  // V2: name 代替 realName
   gradeId: undefined,
-  classId: undefined,
+  orgUnitId: undefined,
   status: undefined  // V2: status 代替 studentStatus
 })
 
@@ -652,7 +652,7 @@ const loadStudentList = async () => {
     if (searchForm.studentNo) params.studentNo = searchForm.studentNo
     if (searchForm.name) params.name = searchForm.name
     if (searchForm.gradeId) params.gradeId = searchForm.gradeId
-    if (searchForm.classId) params.classId = searchForm.classId
+    if (searchForm.orgUnitId) params.orgUnitId = searchForm.orgUnitId
     if (searchForm.status !== undefined) params.status = searchForm.status
 
     const response = await getStudents(params)
@@ -701,7 +701,7 @@ const handleSearch = () => {
 
 // 年级改变时,清空班级选择
 const handleGradeChange = () => {
-  searchForm.classId = undefined
+  searchForm.orgUnitId = undefined
 }
 
 // 重置 - V2 字段名
@@ -710,7 +710,7 @@ const handleReset = () => {
     studentNo: '',
     name: '',           // V2: name 代替 realName
     gradeId: undefined,
-    classId: undefined,
+    orgUnitId: undefined,
     status: undefined   // V2: status 代替 studentStatus
   })
   pagination.pageNum = 1
@@ -874,12 +874,12 @@ const handleImportSuccess = () => {
 onMounted(async () => {
   await Promise.all([loadClassList(), loadGradeList()])
 
-  const classIdFromQuery = route.query.classId
+  const orgUnitIdFromQuery = route.query.orgUnitId
   const classNameFromQuery = route.query.className
 
-  if (classIdFromQuery) {
+  if (orgUnitIdFromQuery) {
     // 不使用 Number() 转换，避免雪花ID精度丢失
-    searchForm.classId = classIdFromQuery as any
+    searchForm.orgUnitId = orgUnitIdFromQuery as any
     if (classNameFromQuery) {
       ElMessage.info(`正在显示班级"${classNameFromQuery}"的学生`)
     }

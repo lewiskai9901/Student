@@ -17,7 +17,6 @@ public class PlaceClassAssignmentPO {
 
     private Long placeId;
     private Long orgUnitId;
-    private Long orgUnitId;
     private Integer assignedBeds;
     private Integer priority;
     private Integer status;      // 0-禁用，1-启用

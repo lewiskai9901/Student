@@ -105,14 +105,14 @@ public class DashboardReadModel {
 
             String sql = """
                 SELECT
-                    c.id as class_id,
+                    c.id as org_unit_id,
                     c.name as class_name,
                     d.name as department_name,
                     COALESCE(AVG(dc.final_score), 0) as avg_score,
                     COUNT(dc.id) as check_count
                 FROM classes c
                 LEFT JOIN org_units d ON c.org_unit_id = d.id
-                LEFT JOIN daily_check dc ON dc.class_id = c.id
+                LEFT JOIN daily_check dc ON dc.org_unit_id = c.id
                     AND dc.check_date BETWEEN ? AND ?
                     AND dc.deleted = 0
                 WHERE c.deleted = 0
@@ -123,7 +123,7 @@ public class DashboardReadModel {
 
             return jdbcTemplate.query(sql,
                 (rs, rowNum) -> ClassRanking.builder()
-                    .classId(rs.getLong("class_id"))
+                    .orgUnitId(rs.getLong("org_unit_id"))
                     .className(rs.getString("class_name"))
                     .orgUnitName(rs.getString("department_name"))
                     .averageScore(rs.getBigDecimal("avg_score"))
@@ -153,7 +153,7 @@ public class DashboardReadModel {
                 COUNT(DISTINCT u.id) as user_count
             FROM org_units d
             LEFT JOIN classes c ON c.org_unit_id = d.id AND c.deleted = 0
-            LEFT JOIN students s ON s.class_id = c.id AND s.deleted = 0
+            LEFT JOIN students s ON s.org_unit_id = c.id AND s.deleted = 0
             LEFT JOIN user_org_relations ud ON ud.org_unit_id = d.id
             LEFT JOIN users u ON u.id = ud.user_id AND u.deleted = 0 AND u.status = 1
             WHERE d.deleted = 0
@@ -191,7 +191,7 @@ public class DashboardReadModel {
                     u.real_name as actor_name,
                     dc.created_at as activity_time
                 FROM daily_check dc
-                JOIN classes c ON dc.class_id = c.id
+                JOIN classes c ON dc.org_unit_id = c.id
                 JOIN users u ON dc.inspector_id = u.id
                 WHERE dc.deleted = 0
                 ORDER BY dc.created_at DESC
@@ -204,7 +204,7 @@ public class DashboardReadModel {
                     a.created_at as activity_time
                 FROM check_item_appeal a
                 JOIN daily_check dc ON a.daily_check_id = dc.id
-                JOIN classes c ON dc.class_id = c.id
+                JOIN classes c ON dc.org_unit_id = c.id
                 JOIN users u ON a.created_by = u.id
                 WHERE a.deleted = 0
                 ORDER BY a.created_at DESC
@@ -261,7 +261,7 @@ public class DashboardReadModel {
     @Data
     @Builder
     public static class ClassRanking {
-        private Long classId;
+        private Long orgUnitId;
         private String className;
         private String orgUnitName;
         private BigDecimal averageScore;

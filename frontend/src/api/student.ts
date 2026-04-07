@@ -88,15 +88,15 @@ export function existsStudentNo(studentNo: string, excludeId?: number | string):
 /**
  * 统计班级学生数量
  */
-export function countStudentsByClass(classId: number | string): Promise<number> {
-  return http.get<number>(`${STUDENT_URL}/count/by-class`, { params: { classId } })
+export function countStudentsByClass(orgUnitId: number | string): Promise<number> {
+  return http.get<number>(`${STUDENT_URL}/count/by-class`, { params: { orgUnitId } })
 }
 
 /**
  * 根据班级ID获取学生列表
  */
-export function getStudentsByClass(classId: number | string): Promise<Student[]> {
-  return http.get<Student[]>(`${STUDENT_URL}/by-class/${classId}`)
+export function getStudentsByClass(orgUnitId: number | string): Promise<Student[]> {
+  return http.get<Student[]>(`${STUDENT_URL}/by-class/${orgUnitId}`)
 }
 
 // ==================== 学生状态操作 ====================

@@ -16,7 +16,7 @@ const BASE_URL = '/department-dormitory'
  */
 export interface ClassDormitoryBinding {
   id: number
-  classId: number
+  orgUnitId: number
   className: string
   classCode: string
   dormitoryId: number
@@ -51,7 +51,7 @@ export interface ClassInfo {
  */
 export interface AssignDormitoryRequest {
   dormitoryId: number
-  classId: number
+  orgUnitId: number
   allocatedBeds?: number
 }
 
@@ -59,7 +59,7 @@ export interface AssignDormitoryRequest {
  * 批量分配请求
  */
 export interface BatchAssignRequest {
-  classId: number
+  orgUnitId: number
   dormitoryIds: number[]
 }
 
@@ -100,8 +100,8 @@ export function getBindings(): Promise<ClassDormitoryBinding[]> {
 /**
  * 按班级获取绑定关系
  */
-export function getBindingsByClass(classId: number | string): Promise<ClassDormitoryBinding[]> {
-  return http.get<ClassDormitoryBinding[]>(`${BASE_URL}/bindings/by-class/${classId}`)
+export function getBindingsByClass(orgUnitId: number | string): Promise<ClassDormitoryBinding[]> {
+  return http.get<ClassDormitoryBinding[]>(`${BASE_URL}/bindings/by-class/${orgUnitId}`)
 }
 
 /**
@@ -121,8 +121,8 @@ export function batchAssignDormitoriesToClass(data: BatchAssignRequest): Promise
 /**
  * 取消宿舍-班级绑定
  */
-export function unassignDormitoryFromClass(dormitoryId: number | string, classId: number | string): Promise<void> {
-  return http.delete(`${BASE_URL}/unassign`, { params: { dormitoryId, classId } })
+export function unassignDormitoryFromClass(dormitoryId: number | string, orgUnitId: number | string): Promise<void> {
+  return http.delete(`${BASE_URL}/unassign`, { params: { dormitoryId, orgUnitId } })
 }
 
 /**

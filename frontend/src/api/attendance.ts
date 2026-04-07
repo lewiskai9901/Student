@@ -19,7 +19,7 @@ export function listRecords(params: Record<string, any>): Promise<AttendanceReco
 }
 
 export function getByClass(params: {
-  classId: number
+  orgUnitId: number
   date: string
   courseId?: number
   period?: number
@@ -47,7 +47,7 @@ export function batchRecord(data: Record<string, any>): Promise<any> {
 
 export function exportRecords(params: {
   semesterId: number | string
-  classId?: number
+  orgUnitId?: number
   startDate?: string
   endDate?: string
 }): Promise<any> {

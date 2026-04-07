@@ -13,10 +13,9 @@ public class TeachingTaskPO {
     private String taskCode;
     private Long semesterId;
     private Long courseId;
-    private Long classId;
+    private Long orgUnitId;
     private Long offeringId;
     private Long teachingClassId;
-    private Long orgUnitId;
     private Integer studentCount;
     private Integer weeklyHours;
     private Integer totalHours;

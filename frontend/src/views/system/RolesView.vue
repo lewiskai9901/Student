@@ -1434,13 +1434,13 @@ const handleGradeCheck = (gradeId: number, checked: boolean) => {
 }
 
 // 处理班级选中
-const handleClassCheck = (classId: number, checked: boolean) => {
+const handleClassCheck = (orgUnitId: number, checked: boolean) => {
   if (checked) {
-    if (!selectedClassIds.value.includes(classId)) {
-      selectedClassIds.value.push(classId)
+    if (!selectedClassIds.value.includes(orgUnitId)) {
+      selectedClassIds.value.push(orgUnitId)
     }
   } else {
-    const idx = selectedClassIds.value.indexOf(classId)
+    const idx = selectedClassIds.value.indexOf(orgUnitId)
     if (idx > -1) selectedClassIds.value.splice(idx, 1)
   }
 }

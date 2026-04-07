@@ -178,7 +178,7 @@
             </div>
             <div class="tm-field">
               <label class="tm-label">限定班级（可选）</label>
-              <select v-model="importForm.classIds" class="tm-field-select" multiple style="min-height: 100px;">
+              <select v-model="importForm.orgUnitIds" class="tm-field-select" multiple style="min-height: 100px;">
                 <option v-for="c in classes" :key="c.id" :value="c.id">{{ c.className }}</option>
               </select>
             </div>
@@ -240,7 +240,7 @@ const importDialogVisible = ref(false)
 const importLoading = ref(false)
 const importForm = ref({
   planId: undefined as number | undefined,
-  classIds: [] as number[],
+  orgUnitIds: [] as number[],
 })
 
 // ==================== Computed ====================
@@ -424,7 +424,7 @@ function showImportFromPlanDialog() {
     ElMessage.warning('请先选择学期')
     return
   }
-  importForm.value = { planId: undefined, classIds: [] }
+  importForm.value = { planId: undefined, orgUnitIds: [] }
   importDialogVisible.value = true
   loadCurriculumPlans()
 }
@@ -439,7 +439,7 @@ async function doImportFromPlan() {
     await offeringApi.importFromPlan({
       semesterId: Number(props.semesterId),
       planId: importForm.value.planId,
-      classIds: importForm.value.classIds.length > 0 ? importForm.value.classIds : undefined,
+      orgUnitIds: importForm.value.orgUnitIds.length > 0 ? importForm.value.orgUnitIds : undefined,
     })
     ElMessage.success('导入成功')
     importDialogVisible.value = false

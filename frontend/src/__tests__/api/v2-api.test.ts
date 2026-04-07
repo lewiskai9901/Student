@@ -123,7 +123,7 @@ describe('V2 API', () => {
           studentNo: '2024001',
           name: '张三',
           gender: 1,
-          classId: 1
+          orgUnitId: 1
         }
         const result = await createStudent(data)
 
@@ -504,7 +504,7 @@ describe('V2 API', () => {
       const mockError = new Error('Validation failed')
       mockedHttp.post.mockRejectedValue(mockError)
 
-      await expect(createStudent({ studentNo: '', name: '', gender: 1, classId: 1 })).rejects.toThrow('Validation failed')
+      await expect(createStudent({ studentNo: '', name: '', gender: 1, orgUnitId: 1 })).rejects.toThrow('Validation failed')
     })
   })
 })

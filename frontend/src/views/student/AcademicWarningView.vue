@@ -79,7 +79,7 @@
           <el-option value="CREDIT_SHORT" label="学分不足" />
         </el-select>
         <el-select
-          v-model="filters.classId"
+          v-model="filters.orgUnitId"
           placeholder="班级"
           clearable
           filterable
@@ -338,7 +338,7 @@ const filters = reactive({
   warningLevel: undefined as number | undefined,
   status: undefined as number | undefined,
   warningType: undefined as string | undefined,
-  classId: undefined as number | undefined,
+  orgUnitId: undefined as number | undefined,
   pageNum: 1,
   pageSize: 20,
 })

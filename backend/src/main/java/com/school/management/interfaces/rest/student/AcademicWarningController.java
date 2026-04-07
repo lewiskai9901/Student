@@ -160,15 +160,15 @@ public class AcademicWarningController {
                     int minFailCount = getIntParam(params, "minFailCount", 2);
                     flaggedStudents = jdbc.queryForList(
                         "SELECT s.id AS student_id, s.student_no, s.name AS student_name, " +
-                        "s.class_id, sc.name AS class_name, " +
+                        "s.org_unit_id, sc.name AS class_name, " +
                         "COUNT(*) AS fail_count, " +
                         "GROUP_CONCAT(c.course_name SEPARATOR '、') AS failed_courses " +
                         "FROM student_grades sg " +
                         "JOIN students s ON s.id = sg.student_id " +
-                        "LEFT JOIN school_classes sc ON sc.id = s.class_id " +
+                        "LEFT JOIN school_classes sc ON sc.id = s.org_unit_id " +
                         "LEFT JOIN courses c ON c.id = sg.course_id " +
                         "WHERE sg.semester_id = ? AND sg.passed = 0 AND s.status = 1 " +
-                        "GROUP BY s.id, s.student_no, s.name, s.class_id, sc.name " +
+                        "GROUP BY s.id, s.student_no, s.name, s.org_unit_id, sc.name " +
                         "HAVING fail_count >= ?",
                         semesterId, minFailCount);
 
@@ -184,15 +184,15 @@ public class AcademicWarningController {
                     int minRate = getIntParam(params, "minAttendanceRate", 80);
                     flaggedStudents = jdbc.queryForList(
                         "SELECT s.id AS student_id, s.student_no, s.name AS student_name, " +
-                        "s.class_id, sc.name AS class_name, " +
+                        "s.org_unit_id, sc.name AS class_name, " +
                         "COUNT(*) AS total, " +
                         "SUM(CASE WHEN ar.status IN (1,2) THEN 1 ELSE 0 END) AS attended, " +
                         "ROUND(SUM(CASE WHEN ar.status IN (1,2) THEN 1 ELSE 0 END) * 100.0 / COUNT(*), 1) AS rate " +
                         "FROM attendance_records ar " +
                         "JOIN students s ON s.id = ar.student_id " +
-                        "LEFT JOIN school_classes sc ON sc.id = s.class_id " +
+                        "LEFT JOIN school_classes sc ON sc.id = s.org_unit_id " +
                         "WHERE ar.semester_id = ? AND s.status = 1 " +
-                        "GROUP BY s.id, s.student_no, s.name, s.class_id, sc.name " +
+                        "GROUP BY s.id, s.student_no, s.name, s.org_unit_id, sc.name " +
                         "HAVING rate < ?",
                         semesterId, minRate);
 
@@ -209,13 +209,13 @@ public class AcademicWarningController {
                     int actualBelow = getIntParam(params, "actualCreditsBelow", 20);
                     flaggedStudents = jdbc.queryForList(
                         "SELECT s.id AS student_id, s.student_no, s.name AS student_name, " +
-                        "s.class_id, sc.name AS class_name, " +
+                        "s.org_unit_id, sc.name AS class_name, " +
                         "COALESCE(SUM(sg.credits_earned), 0) AS earned_credits " +
                         "FROM students s " +
-                        "LEFT JOIN school_classes sc ON sc.id = s.class_id " +
+                        "LEFT JOIN school_classes sc ON sc.id = s.org_unit_id " +
                         "LEFT JOIN student_grades sg ON sg.student_id = s.id AND sg.semester_id = ? AND sg.passed = 1 " +
                         "WHERE s.status = 1 " +
-                        "GROUP BY s.id, s.student_no, s.name, s.class_id, sc.name " +
+                        "GROUP BY s.id, s.student_no, s.name, s.org_unit_id, sc.name " +
                         "HAVING earned_credits < ?",
                         semesterId, actualBelow);
 
@@ -264,15 +264,15 @@ public class AcademicWarningController {
                     int minFailCount = getIntParam(params, "minFailCount", 2);
                     flaggedStudents = jdbc.queryForList(
                         "SELECT s.id AS studentId, s.student_no AS studentNo, s.name AS studentName, " +
-                        "s.class_id AS classId, sc.name AS className, " +
+                        "s.org_unit_id AS orgUnitId, sc.name AS className, " +
                         "COUNT(*) AS failCount, " +
                         "GROUP_CONCAT(c.course_name SEPARATOR '、') AS failedCourses " +
                         "FROM student_grades sg " +
                         "JOIN students s ON s.id = sg.student_id " +
-                        "LEFT JOIN school_classes sc ON sc.id = s.class_id " +
+                        "LEFT JOIN school_classes sc ON sc.id = s.org_unit_id " +
                         "LEFT JOIN courses c ON c.id = sg.course_id " +
                         "WHERE sg.semester_id = ? AND sg.passed = 0 AND s.status = 1 " +
-                        "GROUP BY s.id, s.student_no, s.name, s.class_id, sc.name " +
+                        "GROUP BY s.id, s.student_no, s.name, s.org_unit_id, sc.name " +
                         "HAVING failCount >= ?",
                         semesterId, minFailCount);
                     for (Map<String, Object> s : flaggedStudents) {
@@ -287,13 +287,13 @@ public class AcademicWarningController {
                     int minRate = getIntParam(params, "minAttendanceRate", 80);
                     flaggedStudents = jdbc.queryForList(
                         "SELECT s.id AS studentId, s.student_no AS studentNo, s.name AS studentName, " +
-                        "s.class_id AS classId, sc.name AS className, " +
+                        "s.org_unit_id AS orgUnitId, sc.name AS className, " +
                         "ROUND(SUM(CASE WHEN ar.status IN (1,2) THEN 1 ELSE 0 END) * 100.0 / COUNT(*), 1) AS rate " +
                         "FROM attendance_records ar " +
                         "JOIN students s ON s.id = ar.student_id " +
-                        "LEFT JOIN school_classes sc ON sc.id = s.class_id " +
+                        "LEFT JOIN school_classes sc ON sc.id = s.org_unit_id " +
                         "WHERE ar.semester_id = ? AND s.status = 1 " +
-                        "GROUP BY s.id, s.student_no, s.name, s.class_id, sc.name " +
+                        "GROUP BY s.id, s.student_no, s.name, s.org_unit_id, sc.name " +
                         "HAVING rate < ?",
                         semesterId, minRate);
                     for (Map<String, Object> s : flaggedStudents) {
@@ -309,13 +309,13 @@ public class AcademicWarningController {
                     int actualBelow = getIntParam(params, "actualCreditsBelow", 20);
                     flaggedStudents = jdbc.queryForList(
                         "SELECT s.id AS studentId, s.student_no AS studentNo, s.name AS studentName, " +
-                        "s.class_id AS classId, sc.name AS className, " +
+                        "s.org_unit_id AS orgUnitId, sc.name AS className, " +
                         "COALESCE(SUM(sg.credits_earned), 0) AS earnedCredits " +
                         "FROM students s " +
-                        "LEFT JOIN school_classes sc ON sc.id = s.class_id " +
+                        "LEFT JOIN school_classes sc ON sc.id = s.org_unit_id " +
                         "LEFT JOIN student_grades sg ON sg.student_id = s.id AND sg.semester_id = ? AND sg.passed = 1 " +
                         "WHERE s.status = 1 " +
-                        "GROUP BY s.id, s.student_no, s.name, s.class_id, sc.name " +
+                        "GROUP BY s.id, s.student_no, s.name, s.org_unit_id, sc.name " +
                         "HAVING earnedCredits < ?",
                         semesterId, actualBelow);
                     for (Map<String, Object> s : flaggedStudents) {
@@ -341,7 +341,7 @@ public class AcademicWarningController {
     public Result<Map<String, Object>> listWarnings(
             @RequestParam(required = false) Integer warningLevel,
             @RequestParam(required = false) Integer status,
-            @RequestParam(required = false) Long classId,
+            @RequestParam(required = false) Long orgUnitId,
             @RequestParam(required = false) Long studentId,
             @RequestParam(required = false) String warningType,
             @RequestParam(required = false) Long semesterId,
@@ -359,9 +359,9 @@ public class AcademicWarningController {
             where.append(" AND status = ?");
             params.add(status);
         }
-        if (classId != null) {
-            where.append(" AND class_id = ?");
-            params.add(classId);
+        if (orgUnitId != null) {
+            where.append(" AND org_unit_id = ?");
+            params.add(orgUnitId);
         }
         if (studentId != null) {
             where.append(" AND student_id = ?");
@@ -381,7 +381,7 @@ public class AcademicWarningController {
 
         int offset = (pageNum - 1) * pageSize;
         String sql = "SELECT id, student_id AS studentId, student_no AS studentNo, student_name AS studentName, " +
-            "class_id AS classId, class_name AS className, rule_id AS ruleId, rule_name AS ruleName, " +
+            "org_unit_id AS orgUnitId, class_name AS className, rule_id AS ruleId, rule_name AS ruleName, " +
             "warning_type AS warningType, warning_level AS warningLevel, description, detail, " +
             "status, handler_id AS handlerId, handle_note AS handleNote, handled_at AS handledAt, " +
             "semester_id AS semesterId, created_at AS createdAt " +
@@ -407,7 +407,7 @@ public class AcademicWarningController {
     public Result<Map<String, Object>> getWarningDetail(@PathVariable Long id) {
         Map<String, Object> warning = jdbc.queryForMap(
             "SELECT id, student_id AS studentId, student_no AS studentNo, student_name AS studentName, " +
-            "class_id AS classId, class_name AS className, rule_id AS ruleId, rule_name AS ruleName, " +
+            "org_unit_id AS orgUnitId, class_name AS className, rule_id AS ruleId, rule_name AS ruleName, " +
             "warning_type AS warningType, warning_level AS warningLevel, description, detail, " +
             "status, handler_id AS handlerId, handle_note AS handleNote, handled_at AS handledAt, " +
             "semester_id AS semesterId, created_at AS createdAt " +
@@ -523,11 +523,11 @@ public class AcademicWarningController {
             }
 
             jdbc.update(
-                "INSERT INTO academic_warnings (student_id, student_no, student_name, class_id, class_name, " +
+                "INSERT INTO academic_warnings (student_id, student_no, student_name, org_unit_id, class_name, " +
                 "rule_id, rule_name, warning_type, warning_level, description, detail, status, semester_id) " +
                 "VALUES (?,?,?,?,?,?,?,?,?,?,?,0,?)",
                 student.get("student_id"), student.get("student_no"), student.get("student_name"),
-                student.get("class_id"), student.get("class_name"),
+                student.get("org_unit_id"), student.get("class_name"),
                 rule.get("id"), rule.get("rule_name"),
                 warningType, warningLevel, description, detailJson, semesterId
             );

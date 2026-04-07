@@ -191,7 +191,7 @@
                 <div class="tm-fields tm-cols-2">
                   <div class="tm-field">
                     <label class="tm-label">班级 <span class="req">*</span></label>
-                    <el-select v-model="taskForm.classId" filterable placeholder="选择班级" style="width: 100%">
+                    <el-select v-model="taskForm.orgUnitId" filterable placeholder="选择班级" style="width: 100%">
                       <el-option v-for="cls in classOptions" :key="cls.id" :value="cls.id" :label="cls.className" />
                     </el-select>
                   </div>
@@ -323,7 +323,7 @@
                 <div class="tm-field" style="margin-top: 12px;">
                   <label class="tm-label">班级 <span class="req">*</span></label>
                   <el-select
-                    v-model="batchForm.classIds"
+                    v-model="batchForm.orgUnitIds"
                     multiple
                     filterable
                     placeholder="选择班级(可多选)"
@@ -384,7 +384,7 @@ const batchFormRef = ref<FormInstance>()
 const queryParams = reactive<TeachingTaskQueryParams>({
   semesterId: undefined,
   courseId: undefined,
-  classId: undefined,
+  orgUnitId: undefined,
   status: undefined,
   page: 1,
   size: 10,
@@ -392,7 +392,7 @@ const queryParams = reactive<TeachingTaskQueryParams>({
 
 const taskForm = ref<Partial<TeachingTask>>({})
 const assignForm = ref({ teacherIds: [] as (number | string)[], mainTeacherId: undefined as number | string | undefined })
-const batchForm = ref({ semesterId: undefined as number | string | undefined, planId: undefined as number | string | undefined, classIds: [] as (number | string)[] })
+const batchForm = ref({ semesterId: undefined as number | string | undefined, planId: undefined as number | string | undefined, orgUnitIds: [] as (number | string)[] })
 
 // Computed stats
 const statusCounts = computed(() => {
@@ -472,7 +472,7 @@ const search = () => {
 
 const resetQuery = () => {
   queryParams.courseId = undefined
-  queryParams.classId = undefined
+  queryParams.orgUnitId = undefined
   queryParams.status = undefined
   queryParams.page = 1
   loadTasks()
@@ -568,7 +568,7 @@ const handleGenerateFromOfferings = async () => {
 }
 
 const showBatchCreateDialog = () => {
-  batchForm.value = { semesterId: queryParams.semesterId, planId: undefined, classIds: [] }
+  batchForm.value = { semesterId: queryParams.semesterId, planId: undefined, orgUnitIds: [] }
   batchDialogVisible.value = true
 }
 
@@ -580,7 +580,7 @@ const batchCreate = async () => {
     await teachingTaskApi.batchCreate(
       batchForm.value.semesterId,
       batchForm.value.planId,
-      batchForm.value.classIds
+      batchForm.value.orgUnitIds
     )
     ElMessage.success('生成成功')
     batchDialogVisible.value = false

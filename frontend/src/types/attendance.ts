@@ -7,7 +7,7 @@ export interface AttendanceRecord {
   semesterId: number
   courseId?: number
   courseName?: string
-  classId: number
+  orgUnitId: number
   className?: string
   studentId: number
   studentName?: string
@@ -27,7 +27,7 @@ export interface LeaveRequest {
   studentId: number
   studentName?: string
   studentNo?: string
-  classId?: number
+  orgUnitId?: number
   leaveType: 1 | 2 | 3 // 1事假 2病假 3公假
   startDate: string
   endDate: string

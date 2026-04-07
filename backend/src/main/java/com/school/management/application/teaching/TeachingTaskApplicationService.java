@@ -68,7 +68,6 @@ public class TeachingTaskApplicationService {
                 toLong(data.get("semesterId")),
                 toLong(data.get("courseId")),
                 toLong(data.get("orgUnitId")),
-                toLong(data.get("orgUnitId")),
                 toInt(data.get("studentCount")),
                 toInt(data.get("weeklyHours")),
                 toInt(data.get("totalHours")),
@@ -95,7 +94,6 @@ public class TeachingTaskApplicationService {
                 .orElseThrow(() -> new IllegalArgumentException("教学任务不存在: " + id));
         task.update(
                 toLong(data.get("courseId")),
-                toLong(data.get("orgUnitId")),
                 toLong(data.get("orgUnitId")),
                 toInt(data.get("studentCount")),
                 toInt(data.get("weeklyHours")),
@@ -168,7 +166,7 @@ public class TeachingTaskApplicationService {
                 Integer totalHours = pc.get("total_hours") != null ? ((Number) pc.get("total_hours")).intValue() : null;
 
                 TeachingTask task = TeachingTask.create(
-                        taskCode, semesterId, courseId, orgUnitId, null,
+                        taskCode, semesterId, courseId, orgUnitId,
                         0, weeklyHours, totalHours, 1, 16,
                         TaskStatus.CONFIRMED, null, userId
                 );

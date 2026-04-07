@@ -49,7 +49,7 @@ public class AttendanceController {
         Long recordedBy = SecurityUtils.getCurrentUserId();
         Long semesterId = toLong(body.get("semesterId"));
         Long courseId = toLong(body.get("courseId"));
-        Long classId = toLong(body.get("classId"));
+        Long orgUnitId = toLong(body.get("orgUnitId"));
         Long studentId = toLong(body.get("studentId"));
         String dateStr = (String) body.get("attendanceDate");
         Integer period = toInt(body.get("period"));
@@ -60,10 +60,10 @@ public class AttendanceController {
         String remark = (String) body.get("remark");
 
         jdbc.update(
-            "INSERT INTO attendance_records (semester_id, course_id, class_id, student_id, attendance_date, " +
+            "INSERT INTO attendance_records (semester_id, course_id, org_unit_id, student_id, attendance_date, " +
             "period, attendance_type, status, check_in_time, check_method, remark, recorded_by) " +
             "VALUES (?,?,?,?,?,?,?,?,NOW(),?,?,?)",
-            semesterId, courseId, classId, studentId, dateStr,
+            semesterId, courseId, orgUnitId, studentId, dateStr,
             period, attendanceType, status, checkMethod, remark, recordedBy
         );
         return Result.success(Map.of("created", 1));
@@ -76,7 +76,7 @@ public class AttendanceController {
     @CasbinAccess(resource = "student:attendance", action = "view")
     public Result<List<Map<String, Object>>> listRecords(
             @RequestParam(required = false) Long semesterId,
-            @RequestParam(required = false) Long classId,
+            @RequestParam(required = false) Long orgUnitId,
             @RequestParam(required = false) Long studentId,
             @RequestParam(required = false) Long courseId,
             @RequestParam(required = false) String date,
@@ -89,7 +89,7 @@ public class AttendanceController {
 
         StringBuilder sql = new StringBuilder(
             "SELECT ar.id, ar.semester_id AS semesterId, ar.course_id AS courseId, " +
-            "ar.class_id AS classId, ar.student_id AS studentId, " +
+            "ar.org_unit_id AS orgUnitId, ar.student_id AS studentId, " +
             "ar.attendance_date AS attendanceDate, ar.period, " +
             "ar.attendance_type AS attendanceType, ar.status, " +
             "ar.check_in_time AS checkInTime, ar.check_method AS checkMethod, " +
@@ -104,7 +104,7 @@ public class AttendanceController {
         List<Object> params = new ArrayList<>();
 
         if (semesterId != null) { sql.append(" AND ar.semester_id = ?"); params.add(semesterId); }
-        if (classId != null) { sql.append(" AND ar.class_id = ?"); params.add(classId); }
+        if (orgUnitId != null) { sql.append(" AND ar.org_unit_id = ?"); params.add(orgUnitId); }
         if (studentId != null) { sql.append(" AND ar.student_id = ?"); params.add(studentId); }
         if (courseId != null) { sql.append(" AND ar.course_id = ?"); params.add(courseId); }
         if (date != null) { sql.append(" AND ar.attendance_date = ?"); params.add(date); }
@@ -130,7 +130,7 @@ public class AttendanceController {
     @GetMapping("/records/by-class")
     @CasbinAccess(resource = "student:attendance", action = "view")
     public Result<List<Map<String, Object>>> getByClass(
-            @RequestParam Long classId,
+            @RequestParam Long orgUnitId,
             @RequestParam String date,
             @RequestParam(required = false) Long courseId,
             @RequestParam(required = false) Integer period) {
@@ -138,17 +138,17 @@ public class AttendanceController {
         // 1. 获取班级所有学生
         List<Map<String, Object>> students = jdbc.queryForList(
             "SELECT id AS studentId, student_no AS studentNo, name AS studentName " +
-            "FROM students WHERE class_id = ? AND status = 0 ORDER BY student_no",
-            classId
+            "FROM students WHERE org_unit_id = ? AND status = 0 ORDER BY student_no",
+            orgUnitId
         );
 
         // 2. 获取已有考勤记录
         StringBuilder recordSql = new StringBuilder(
             "SELECT student_id AS studentId, status, remark, id AS recordId " +
-            "FROM attendance_records WHERE class_id = ? AND attendance_date = ?"
+            "FROM attendance_records WHERE org_unit_id = ? AND attendance_date = ?"
         );
         List<Object> params = new ArrayList<>();
-        params.add(classId);
+        params.add(orgUnitId);
         params.add(date);
         if (courseId != null) { recordSql.append(" AND course_id = ?"); params.add(courseId); }
         if (period != null) { recordSql.append(" AND period = ?"); params.add(period); }
@@ -223,7 +223,7 @@ public class AttendanceController {
     @SuppressWarnings("unchecked")
     public Result<Map<String, Object>> batchRecord(@RequestBody Map<String, Object> body) {
         Long semesterId = toLong(body.get("semesterId"));
-        Long classId = toLong(body.get("classId"));
+        Long orgUnitId = toLong(body.get("orgUnitId"));
         Long courseId = toLong(body.get("courseId"));
         String dateStr = (String) body.get("date");
         Integer period = toInt(body.get("period"));
@@ -275,10 +275,10 @@ public class AttendanceController {
             } else {
                 // Insert new
                 jdbc.update(
-                    "INSERT INTO attendance_records (semester_id, course_id, class_id, student_id, " +
+                    "INSERT INTO attendance_records (semester_id, course_id, org_unit_id, student_id, " +
                     "attendance_date, period, attendance_type, status, check_method, remark, recorded_by) " +
                     "VALUES (?,?,?,?,?,?,?,?,'MANUAL',?,?)",
-                    semesterId, courseId, classId, studentId, dateStr, period,
+                    semesterId, courseId, orgUnitId, studentId, dateStr, period,
                     attendanceType, status, remark, recordedBy
                 );
             }
@@ -294,14 +294,14 @@ public class AttendanceController {
                         try {
                             Map<String, Object> stuInfo = jdbc.queryForMap(
                                 "SELECT s.name, sc.name AS class_name FROM students s " +
-                                "LEFT JOIN school_classes sc ON s.class_id = sc.id WHERE s.id = ?", studentId);
+                                "LEFT JOIN school_classes sc ON s.org_unit_id = sc.id WHERE s.id = ?", studentId);
                             studentName = (String) stuInfo.getOrDefault("name", "");
                             className = (String) stuInfo.getOrDefault("class_name", "");
                         } catch (Exception ignored) {}
                         Map<String, Object> ctx = new HashMap<>();
                         ctx.put("studentId", studentId);
                         ctx.put("studentName", studentName != null ? studentName : "");
-                        ctx.put("classId", classId != null ? classId : 0);
+                        ctx.put("orgUnitId", orgUnitId != null ? orgUnitId : 0);
                         ctx.put("className", className != null ? className : "");
                         ctx.put("status", status);
                         ctx.put("statusName", statusName);
@@ -327,7 +327,7 @@ public class AttendanceController {
     @CasbinAccess(resource = "student:attendance", action = "view")
     public Result<Map<String, Object>> getStatistics(
             @RequestParam Long semesterId,
-            @RequestParam(required = false) Long classId,
+            @RequestParam(required = false) Long orgUnitId,
             @RequestParam(required = false) String startDate,
             @RequestParam(required = false) String endDate) {
 
@@ -335,7 +335,7 @@ public class AttendanceController {
             "SELECT status, COUNT(*) as cnt FROM attendance_records WHERE semester_id = ?");
         List<Object> params = new ArrayList<>();
         params.add(semesterId);
-        if (classId != null) { sql.append(" AND class_id = ?"); params.add(classId); }
+        if (orgUnitId != null) { sql.append(" AND org_unit_id = ?"); params.add(orgUnitId); }
         if (startDate != null) { sql.append(" AND attendance_date >= ?"); params.add(startDate); }
         if (endDate != null) { sql.append(" AND attendance_date <= ?"); params.add(endDate); }
         sql.append(" GROUP BY status");
@@ -464,7 +464,7 @@ public class AttendanceController {
     @CasbinAccess(resource = "student:attendance", action = "view")
     public Result<List<Map<String, Object>>> listLeaveRequests(
             @RequestParam(required = false) Long studentId,
-            @RequestParam(required = false) Long classId,
+            @RequestParam(required = false) Long orgUnitId,
             @RequestParam(required = false) Integer approvalStatus,
             @RequestParam(required = false) String startDate,
             @RequestParam(required = false) String endDate) {
@@ -485,7 +485,7 @@ public class AttendanceController {
         List<Object> params = new ArrayList<>();
 
         if (studentId != null) { sql.append(" AND lr.student_id = ?"); params.add(studentId); }
-        if (classId != null) { sql.append(" AND s.class_id = ?"); params.add(classId); }
+        if (orgUnitId != null) { sql.append(" AND s.org_unit_id = ?"); params.add(orgUnitId); }
         if (approvalStatus != null) { sql.append(" AND lr.approval_status = ?"); params.add(approvalStatus); }
         if (startDate != null) { sql.append(" AND lr.start_date >= ?"); params.add(startDate); }
         if (endDate != null) { sql.append(" AND lr.end_date <= ?"); params.add(endDate); }
@@ -541,7 +541,7 @@ public class AttendanceController {
             "lr.start_date AS startDate, lr.end_date AS endDate, " +
             "lr.start_period AS startPeriod, lr.end_period AS endPeriod, " +
             "lr.reason, lr.created_at AS createdAt, " +
-            "s.name AS studentName, s.student_no AS studentNo, s.class_id AS classId " +
+            "s.name AS studentName, s.student_no AS studentNo, s.org_unit_id AS classId " +
             "FROM leave_requests lr " +
             "LEFT JOIN students s ON lr.student_id = s.id " +
             "WHERE lr.approval_status = 0 " +
@@ -556,7 +556,7 @@ public class AttendanceController {
     @CasbinAccess(resource = "student:attendance", action = "view")
     public void exportAttendance(
             @RequestParam Long semesterId,
-            @RequestParam(required = false) Long classId,
+            @RequestParam(required = false) Long orgUnitId,
             @RequestParam(required = false) String startDate,
             @RequestParam(required = false) String endDate,
             HttpServletResponse response) throws IOException {
@@ -568,11 +568,11 @@ public class AttendanceController {
             "FROM attendance_records ar " +
             "LEFT JOIN students s ON s.id = ar.student_id " +
             "LEFT JOIN courses c ON c.id = ar.course_id " +
-            "LEFT JOIN school_classes sc ON sc.id = ar.class_id " +
+            "LEFT JOIN school_classes sc ON sc.id = ar.org_unit_id " +
             "WHERE ar.semester_id = ?");
         List<Object> params = new ArrayList<>();
         params.add(semesterId);
-        if (classId != null) { sql.append(" AND ar.class_id = ?"); params.add(classId); }
+        if (orgUnitId != null) { sql.append(" AND ar.org_unit_id = ?"); params.add(orgUnitId); }
         if (startDate != null) { sql.append(" AND ar.attendance_date >= ?"); params.add(startDate); }
         if (endDate != null) { sql.append(" AND ar.attendance_date <= ?"); params.add(endDate); }
         sql.append(" ORDER BY ar.attendance_date DESC, sc.name, s.student_no");

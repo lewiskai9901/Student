@@ -62,8 +62,8 @@ public class ScheduleEntryRepositoryImpl implements ScheduleEntryRepository {
     }
 
     @Override
-    public List<ScheduleEntry> findByClassAndWeekday(Long semesterId, Long classId, Integer weekday) {
-        return mapper.findByClassAndWeekday(semesterId, classId, weekday)
+    public List<ScheduleEntry> findByClassAndWeekday(Long semesterId, Long orgUnitId, Integer weekday) {
+        return mapper.findByClassAndWeekday(semesterId, orgUnitId, weekday)
                 .stream().map(this::toDomain).collect(Collectors.toList());
     }
 
@@ -77,7 +77,7 @@ public class ScheduleEntryRepositoryImpl implements ScheduleEntryRepository {
         ScheduleEntryPO po = new ScheduleEntryPO();
         po.setId(d.getId()); po.setSemesterId(d.getSemesterId()); po.setTaskId(d.getTaskId());
         po.setTeachingClassId(d.getTeachingClassId()); po.setCourseId(d.getCourseId());
-        po.setClassId(d.getClassId()); po.setTeacherId(d.getTeacherId());
+        po.setOrgUnitId(d.getOrgUnitId()); po.setTeacherId(d.getTeacherId());
         po.setClassroomId(d.getClassroomId()); po.setWeekday(d.getWeekday());
         po.setStartSlot(d.getStartSlot()); po.setEndSlot(d.getEndSlot());
         po.setStartWeek(d.getStartWeek()); po.setEndWeek(d.getEndWeek());
@@ -91,7 +91,7 @@ public class ScheduleEntryRepositoryImpl implements ScheduleEntryRepository {
 
     private ScheduleEntry toDomain(ScheduleEntryPO po) {
         return ScheduleEntry.reconstruct(po.getId(), po.getSemesterId(), po.getTaskId(),
-                po.getTeachingClassId(), po.getCourseId(), po.getClassId(),
+                po.getTeachingClassId(), po.getCourseId(), po.getOrgUnitId(),
                 po.getTeacherId(), po.getClassroomId(), po.getWeekday(),
                 po.getStartSlot(), po.getEndSlot(), po.getStartWeek(), po.getEndWeek(),
                 WeekType.fromCode(po.getWeekType()), po.getConsecutiveGroup(),

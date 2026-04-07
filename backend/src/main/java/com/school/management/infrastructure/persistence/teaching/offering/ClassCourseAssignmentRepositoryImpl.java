@@ -32,10 +32,10 @@ public class ClassCourseAssignmentRepositoryImpl implements ClassCourseAssignmen
     }
 
     @Override
-    public List<ClassCourseAssignment> findBySemesterIdAndClassId(Long semesterId, Long classId) {
+    public List<ClassCourseAssignment> findBySemesterIdAndClassId(Long semesterId, Long orgUnitId) {
         return mapper.selectList(new LambdaQueryWrapper<ClassCourseAssignmentPO>()
                 .eq(ClassCourseAssignmentPO::getSemesterId, semesterId)
-                .eq(ClassCourseAssignmentPO::getClassId, classId))
+                .eq(ClassCourseAssignmentPO::getOrgUnitId, orgUnitId))
                 .stream().map(this::toDomain).collect(Collectors.toList());
     }
 
@@ -62,7 +62,7 @@ public class ClassCourseAssignmentRepositoryImpl implements ClassCourseAssignmen
         ClassCourseAssignmentPO po = new ClassCourseAssignmentPO();
         po.setId(a.getId());
         po.setSemesterId(a.getSemesterId());
-        po.setClassId(a.getClassId());
+        po.setOrgUnitId(a.getOrgUnitId());
         po.setOfferingId(a.getOfferingId());
         po.setCourseId(a.getCourseId());
         po.setWeeklyHours(a.getWeeklyHours());
@@ -73,7 +73,7 @@ public class ClassCourseAssignmentRepositoryImpl implements ClassCourseAssignmen
 
     private ClassCourseAssignment toDomain(ClassCourseAssignmentPO po) {
         return ClassCourseAssignment.reconstruct(
-                po.getId(), po.getSemesterId(), po.getClassId(),
+                po.getId(), po.getSemesterId(), po.getOrgUnitId(),
                 po.getOfferingId(), po.getCourseId(), po.getWeeklyHours(),
                 po.getStudentCount(), po.getStatus()
         );

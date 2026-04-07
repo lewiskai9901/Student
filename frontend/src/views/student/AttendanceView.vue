@@ -41,7 +41,7 @@
           >
             <el-option v-for="s in semesters" :key="s.id" :value="s.id" :label="s.semesterName || s.name" />
           </el-select>
-          <el-select v-model="checkin.classId" placeholder="选择班级" class="w-40" filterable @change="loadClassStudents">
+          <el-select v-model="checkin.orgUnitId" placeholder="选择班级" class="w-40" filterable @change="loadClassStudents">
             <el-option v-for="c in classes" :key="c.id" :value="c.id" :label="c.name || c.className" />
           </el-select>
           <el-date-picker
@@ -124,7 +124,7 @@
           <el-select v-model="recordFilter.semesterId" placeholder="学期" clearable class="w-44" @change="loadRecords">
             <el-option v-for="s in semesters" :key="s.id" :value="s.id" :label="s.semesterName || s.name" />
           </el-select>
-          <el-select v-model="recordFilter.classId" placeholder="班级" clearable filterable class="w-40" @change="loadRecords">
+          <el-select v-model="recordFilter.orgUnitId" placeholder="班级" clearable filterable class="w-40" @change="loadRecords">
             <el-option v-for="c in classes" :key="c.id" :value="c.id" :label="c.name || c.className" />
           </el-select>
           <el-date-picker
@@ -191,7 +191,7 @@
           <el-select v-model="statsFilter.semesterId" placeholder="学期" class="w-44" @change="loadStats">
             <el-option v-for="s in semesters" :key="s.id" :value="s.id" :label="s.semesterName || s.name" />
           </el-select>
-          <el-select v-model="statsFilter.classId" placeholder="班级(可选)" clearable filterable class="w-40" @change="loadStats">
+          <el-select v-model="statsFilter.orgUnitId" placeholder="班级(可选)" clearable filterable class="w-40" @change="loadStats">
             <el-option v-for="c in classes" :key="c.id" :value="c.id" :label="c.name || c.className" />
           </el-select>
           <el-date-picker
@@ -277,7 +277,7 @@
             <el-option :value="1" label="已通过" />
             <el-option :value="2" label="已拒绝" />
           </el-select>
-          <el-select v-model="leaveFilter.classId" placeholder="班级" clearable filterable class="w-40" @change="loadLeaves">
+          <el-select v-model="leaveFilter.orgUnitId" placeholder="班级" clearable filterable class="w-40" @change="loadLeaves">
             <el-option v-for="c in classes" :key="c.id" :value="c.id" :label="c.name || c.className" />
           </el-select>
           <button
@@ -354,7 +354,7 @@
     <el-dialog v-model="showLeaveDialog" title="新建请假申请" width="480px">
       <el-form label-width="80px">
         <el-form-item label="班级">
-          <el-select v-model="leaveForm.classId" placeholder="选择班级" filterable class="w-full" @change="loadLeaveStudents">
+          <el-select v-model="leaveForm.orgUnitId" placeholder="选择班级" filterable class="w-full" @change="loadLeaveStudents">
             <el-option v-for="c in classes" :key="c.id" :value="c.id" :label="c.name || c.className" />
           </el-select>
         </el-form-item>
@@ -484,7 +484,7 @@ async function loadBaseData() {
 // ==================== Tab 1: Checkin ====================
 const checkin = reactive({
   semesterId: null as number | null,
-  classId: null as number | null,
+  orgUnitId: null as number | null,
   date: new Date().toISOString().split('T')[0],
   courseId: null as number | null,
   period: null as number | null,
@@ -497,12 +497,12 @@ function onSemesterChange() {
 }
 
 async function loadClassStudents() {
-  if (!checkin.classId || !checkin.date) {
+  if (!checkin.orgUnitId || !checkin.date) {
     ElMessage.warning('请选择班级和日期')
     return
   }
   try {
-    const params: any = { classId: checkin.classId, date: checkin.date }
+    const params: any = { orgUnitId: checkin.orgUnitId, date: checkin.date }
     if (checkin.courseId) params.courseId = checkin.courseId
     if (checkin.period) params.period = checkin.period
 
@@ -540,7 +540,7 @@ async function saveBatchAttendance() {
   try {
     const payload = {
       semesterId: checkin.semesterId,
-      classId: checkin.classId,
+      orgUnitId: checkin.orgUnitId,
       courseId: checkin.courseId,
       date: checkin.date,
       period: checkin.period,
@@ -563,7 +563,7 @@ async function saveBatchAttendance() {
 // ==================== Tab 2: Records ====================
 const recordFilter = reactive({
   semesterId: null as number | null,
-  classId: null as number | null,
+  orgUnitId: null as number | null,
   dateRange: null as [string, string] | null,
   status: null as number | null,
 })
@@ -575,7 +575,7 @@ async function loadRecords() {
   try {
     const params: any = {}
     if (recordFilter.semesterId) params.semesterId = recordFilter.semesterId
-    if (recordFilter.classId) params.classId = recordFilter.classId
+    if (recordFilter.orgUnitId) params.orgUnitId = recordFilter.orgUnitId
     if (recordFilter.status) params.status = recordFilter.status
     if (recordFilter.dateRange?.[0]) params.startDate = recordFilter.dateRange[0]
     if (recordFilter.dateRange?.[1]) params.endDate = recordFilter.dateRange[1]
@@ -599,7 +599,7 @@ async function doExportRecords() {
   exportingRecords.value = true
   try {
     const params: any = { semesterId: recordFilter.semesterId }
-    if (recordFilter.classId) params.classId = recordFilter.classId
+    if (recordFilter.orgUnitId) params.orgUnitId = recordFilter.orgUnitId
     if (recordFilter.dateRange?.[0]) params.startDate = recordFilter.dateRange[0]
     if (recordFilter.dateRange?.[1]) params.endDate = recordFilter.dateRange[1]
 
@@ -657,7 +657,7 @@ async function delRecord(id: number) {
 // ==================== Tab 3: Statistics ====================
 const statsFilter = reactive({
   semesterId: null as number | null,
-  classId: null as number | null,
+  orgUnitId: null as number | null,
   dateRange: null as [string, string] | null,
 })
 const stats = ref<AttendanceStats | null>(null)
@@ -669,7 +669,7 @@ async function loadStats() {
   }
   try {
     const params: any = { semesterId: statsFilter.semesterId }
-    if (statsFilter.classId) params.classId = statsFilter.classId
+    if (statsFilter.orgUnitId) params.orgUnitId = statsFilter.orgUnitId
     if (statsFilter.dateRange?.[0]) params.startDate = statsFilter.dateRange[0]
     if (statsFilter.dateRange?.[1]) params.endDate = statsFilter.dateRange[1]
 
@@ -687,14 +687,14 @@ function barWidth(count: number): string {
 // ==================== Tab 4: Leave Requests ====================
 const leaveFilter = reactive({
   approvalStatus: null as number | null,
-  classId: null as number | null,
+  orgUnitId: null as number | null,
 })
 const leaveList = ref<any[]>([])
 const leavesLoading = ref(false)
 const showLeaveDialog = ref(false)
 const leaveStudents = ref<any[]>([])
 const leaveForm = reactive({
-  classId: null as number | null,
+  orgUnitId: null as number | null,
   studentId: null as number | null,
   leaveType: 1,
   dateRange: null as [string, string] | null,
@@ -708,7 +708,7 @@ async function loadLeaves() {
     if (leaveFilter.approvalStatus !== null && leaveFilter.approvalStatus !== undefined) {
       params.approvalStatus = leaveFilter.approvalStatus
     }
-    if (leaveFilter.classId) params.classId = leaveFilter.classId
+    if (leaveFilter.orgUnitId) params.orgUnitId = leaveFilter.orgUnitId
     leaveList.value = (await listLeaves(params)) || []
   } catch (e: any) {
     ElMessage.error('加载请假列表失败')
@@ -718,9 +718,9 @@ async function loadLeaves() {
 }
 
 async function loadLeaveStudents() {
-  if (!leaveForm.classId) return
+  if (!leaveForm.orgUnitId) return
   try {
-    const students = await http.get<any[]>('/organization/classes/' + leaveForm.classId + '/students')
+    const students = await http.get<any[]>('/organization/classes/' + leaveForm.orgUnitId + '/students')
     leaveStudents.value = students || []
   } catch {
     leaveStudents.value = []

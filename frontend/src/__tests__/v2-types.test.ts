@@ -133,7 +133,7 @@ describe('V2 Types', () => {
         name: '张三',
         gender: 1,
         status: 0,
-        classId: 1
+        orgUnitId: 1
       }
       expect(student.id).toBe(1)
       expect(student.name).toBe('张三')

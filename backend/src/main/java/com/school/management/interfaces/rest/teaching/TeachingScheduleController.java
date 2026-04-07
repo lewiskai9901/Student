@@ -55,7 +55,7 @@ public class TeachingScheduleController {
             @RequestParam(required = false) String date,
             @RequestParam(required = false) Integer weekNumber,
             @RequestParam(required = false) Long teacherId,
-            @RequestParam(required = false) Long classId,
+            @RequestParam(required = false) Long orgUnitId,
             @RequestParam(required = false) Long classroomId) {
 
         StringBuilder sql = new StringBuilder(
@@ -69,7 +69,7 @@ public class TeachingScheduleController {
             "COALESCE(p.place_name, '') AS classroomName " +
             "FROM schedule_instances si " +
             "LEFT JOIN courses c ON c.id = si.course_id " +
-            "LEFT JOIN classes cl ON cl.id = si.class_id " +
+            "LEFT JOIN classes cl ON cl.id = si.org_unit_id " +
             "LEFT JOIN places p ON p.id = si.classroom_id " +
             "WHERE si.semester_id = ? AND si.deleted = 0"
         );
@@ -79,7 +79,7 @@ public class TeachingScheduleController {
         if (date != null) { sql.append(" AND si.actual_date = ?"); params.add(date); }
         if (weekNumber != null) { sql.append(" AND si.week_number = ?"); params.add(weekNumber); }
         if (teacherId != null) { sql.append(" AND si.teacher_id = ?"); params.add(teacherId); }
-        if (classId != null) { sql.append(" AND si.class_id = ?"); params.add(classId); }
+        if (orgUnitId != null) { sql.append(" AND si.org_unit_id = ?"); params.add(orgUnitId); }
         if (classroomId != null) { sql.append(" AND si.classroom_id = ?"); params.add(classroomId); }
         sql.append(" ORDER BY si.actual_date, si.start_slot");
 
@@ -121,8 +121,8 @@ public class TeachingScheduleController {
                 groupCol = "si.teacher_id"; nameCol = "COALESCE(u.real_name, u.username, CONCAT('教师',si.teacher_id))";
                 nameJoin = "LEFT JOIN users u ON u.id = si.teacher_id"; break;
             case "class":
-                groupCol = "si.class_id"; nameCol = "cl.class_name";
-                nameJoin = "LEFT JOIN classes cl ON cl.id = si.class_id"; break;
+                groupCol = "si.org_unit_id"; nameCol = "cl.class_name";
+                nameJoin = "LEFT JOIN classes cl ON cl.id = si.org_unit_id"; break;
             case "course":
                 groupCol = "si.course_id"; nameCol = "c.course_name";
                 nameJoin = "LEFT JOIN courses c ON c.id = si.course_id"; break;
@@ -382,7 +382,7 @@ public class TeachingScheduleController {
 
         StringBuilder sql = new StringBuilder(
             "SELECT id, semester_id AS semesterId, task_id AS taskId, " +
-            "course_id AS courseId, class_id AS classId, teacher_id AS teacherId, " +
+            "course_id AS courseId, org_unit_id AS orgUnitId, teacher_id AS teacherId, " +
             "classroom_id AS classroomId, weekday, start_slot AS startSlot, " +
             "end_slot AS endSlot, start_week AS startWeek, end_week AS endWeek, " +
             "week_type AS weekType, schedule_type AS scheduleType, " +
@@ -409,7 +409,7 @@ public class TeachingScheduleController {
     public Result<Map<String, Object>> getSchedule(@PathVariable Long id) {
         Map<String, Object> entry = jdbc.queryForMap(
             "SELECT id, semester_id AS semesterId, task_id AS taskId, " +
-            "course_id AS courseId, class_id AS classId, teacher_id AS teacherId, " +
+            "course_id AS courseId, org_unit_id AS orgUnitId, teacher_id AS teacherId, " +
             "classroom_id AS classroomId, weekday, start_slot AS startSlot, " +
             "end_slot AS endSlot, start_week AS startWeek, end_week AS endWeek, " +
             "week_type AS weekType, schedule_type AS scheduleType, " +
@@ -427,7 +427,7 @@ public class TeachingScheduleController {
         Long semesterId = data.get("semesterId") != null ? ((Number) data.get("semesterId")).longValue() : null;
         Long taskId = data.get("taskId") != null ? ((Number) data.get("taskId")).longValue() : null;
         Long courseId = data.get("courseId") != null ? ((Number) data.get("courseId")).longValue() : null;
-        Long classId = data.get("classId") != null ? ((Number) data.get("classId")).longValue() : null;
+        Long orgUnitId = data.get("orgUnitId") != null ? ((Number) data.get("orgUnitId")).longValue() : null;
         Long teacherId = data.get("teacherId") != null ? ((Number) data.get("teacherId")).longValue() : null;
         Long classroomId = data.get("classroomId") != null ? ((Number) data.get("classroomId")).longValue() : null;
         Integer weekday = data.get("weekday") != null ? ((Number) data.get("weekday")).intValue() : null;
@@ -439,12 +439,12 @@ public class TeachingScheduleController {
         Integer scheduleType = data.get("scheduleType") != null ? ((Number) data.get("scheduleType")).intValue() : 1;
 
         jdbc.update(
-            "INSERT INTO schedule_entries (id, semester_id, task_id, course_id, class_id, " +
+            "INSERT INTO schedule_entries (id, semester_id, task_id, course_id, org_unit_id, " +
             "teacher_id, classroom_id, weekday, start_slot, end_slot, " +
             "start_week, end_week, week_type, schedule_type, " +
             "entry_status, conflict_flag, created_by, created_at, updated_at, deleted) " +
             "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, 0, ?, NOW(), NOW(), 0)",
-            id, semesterId, taskId, courseId, classId,
+            id, semesterId, taskId, courseId, orgUnitId,
             teacherId, classroomId, weekday, startSlot, endSlot,
             startWeek, endWeek, weekType, scheduleType,
             SecurityUtils.requireCurrentUserId()
@@ -487,12 +487,12 @@ public class TeachingScheduleController {
     @GetMapping("/schedules/by-class/{classId}")
     @CasbinAccess(resource = "teaching:schedule", action = "view")
     public Result<List<Map<String, Object>>> getSchedulesByClass(
-            @PathVariable Long classId,
+            @PathVariable Long orgUnitId,
             @RequestParam(required = false) Long semesterId) {
 
         StringBuilder sql = new StringBuilder(
             "SELECT se.id, se.semester_id AS semesterId, se.task_id AS taskId, " +
-            "se.course_id AS courseId, se.class_id AS classId, se.teacher_id AS teacherId, " +
+            "se.course_id AS courseId, se.org_unit_id AS orgUnitId, se.teacher_id AS teacherId, " +
             "se.classroom_id AS classroomId, se.weekday, se.start_slot AS startSlot, " +
             "se.end_slot AS endSlot, se.start_week AS startWeek, se.end_week AS endWeek, " +
             "se.week_type AS weekType, se.schedule_type AS scheduleType, " +
@@ -501,10 +501,10 @@ public class TeachingScheduleController {
             "FROM schedule_entries se " +
             "LEFT JOIN courses c ON c.id = se.course_id " +
             "LEFT JOIN users u ON u.id = se.teacher_id " +
-            "WHERE se.class_id = ? AND se.deleted = 0"
+            "WHERE se.org_unit_id = ? AND se.deleted = 0"
         );
         List<Object> params = new ArrayList<>();
-        params.add(classId);
+        params.add(orgUnitId);
         if (semesterId != null) {
             sql.append(" AND se.semester_id = ?");
             params.add(semesterId);
@@ -522,7 +522,7 @@ public class TeachingScheduleController {
 
         StringBuilder sql = new StringBuilder(
             "SELECT se.id, se.semester_id AS semesterId, se.task_id AS taskId, " +
-            "se.course_id AS courseId, se.class_id AS classId, se.teacher_id AS teacherId, " +
+            "se.course_id AS courseId, se.org_unit_id AS orgUnitId, se.teacher_id AS teacherId, " +
             "se.classroom_id AS classroomId, se.weekday, se.start_slot AS startSlot, " +
             "se.end_slot AS endSlot, se.start_week AS startWeek, se.end_week AS endWeek, " +
             "se.week_type AS weekType, se.schedule_type AS scheduleType, " +
@@ -552,7 +552,7 @@ public class TeachingScheduleController {
 
         StringBuilder sql = new StringBuilder(
             "SELECT se.id, se.semester_id AS semesterId, se.task_id AS taskId, " +
-            "se.course_id AS courseId, se.class_id AS classId, se.teacher_id AS teacherId, " +
+            "se.course_id AS courseId, se.org_unit_id AS orgUnitId, se.teacher_id AS teacherId, " +
             "se.classroom_id AS classroomId, se.weekday, se.start_slot AS startSlot, " +
             "se.end_slot AS endSlot, se.start_week AS startWeek, se.end_week AS endWeek, " +
             "se.week_type AS weekType, se.schedule_type AS scheduleType, " +
@@ -634,7 +634,7 @@ public class TeachingScheduleController {
         int newPeriod = Integer.parseInt(body.get("periodStart").toString());
 
         Map<String, Object> entry = jdbc.queryForMap(
-            "SELECT teacher_id, class_id, end_slot - start_slot + 1 as span FROM schedule_entries WHERE id = ?", entryId);
+            "SELECT teacher_id, org_unit_id, end_slot - start_slot + 1 as span FROM schedule_entries WHERE id = ?", entryId);
         int span = ((Number) entry.get("span")).intValue();
         int newEndPeriod = newPeriod + span - 1;
 
@@ -653,12 +653,12 @@ public class TeachingScheduleController {
         }
 
         // Check class conflict
-        if (entry.get("class_id") != null) {
-            Long classId = ((Number) entry.get("class_id")).longValue();
+        if (entry.get("org_unit_id") != null) {
+            Long orgUnitId = ((Number) entry.get("org_unit_id")).longValue();
             List<Map<String, Object>> cc = jdbc.queryForList(
-                "SELECT id FROM schedule_entries WHERE semester_id=? AND class_id=? AND weekday=? " +
+                "SELECT id FROM schedule_entries WHERE semester_id=? AND org_unit_id=? AND weekday=? " +
                 "AND start_slot <= ? AND end_slot >= ? AND id != ? AND deleted=0",
-                semesterId, classId, newDay, newEndPeriod, newPeriod, entryId);
+                semesterId, orgUnitId, newDay, newEndPeriod, newPeriod, entryId);
             if (!cc.isEmpty()) hasConflict = true;
             result.put("classConflicts", cc);
         }
@@ -672,10 +672,10 @@ public class TeachingScheduleController {
     @GetMapping("/schedules/export/class/{classId}")
     @CasbinAccess(resource = "teaching:schedule", action = "view")
     public void exportClassSchedule(
-            @PathVariable Long classId,
+            @PathVariable Long orgUnitId,
             @RequestParam Long semesterId,
             HttpServletResponse response) throws java.io.IOException {
-        byte[] data = exportService.exportClassSchedule(semesterId, classId);
+        byte[] data = exportService.exportClassSchedule(semesterId, orgUnitId);
         response.setContentType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
         response.setHeader("Content-Disposition", "attachment; filename=class_schedule.xlsx");
         response.getOutputStream().write(data);

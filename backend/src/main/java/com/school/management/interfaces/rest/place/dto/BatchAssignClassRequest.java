@@ -16,5 +16,5 @@ public class BatchAssignClassRequest {
     private List<Long> placeIds;
 
     @NotNull(message = "班级ID不能为空")
-    private Long classId;
+    private Long orgUnitId;
 }

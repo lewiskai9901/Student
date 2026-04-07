@@ -101,8 +101,6 @@ export interface PlaceDTO {
   responsibleUserId?: number | string
   responsibleUserName?: string
 
-  // @deprecated 班级归属 — 过渡期保留，新代码应使用 attributes
-  classId?: number | string
   className?: string
   classTeacherId?: number | string
   classTeacherName?: string
@@ -245,7 +243,6 @@ export interface CreatePlaceRequest {
   floorNumber?: number
   capacity?: number
   orgUnitId?: number | string
-  classId?: number | string
   responsibleUserId?: number | string
   genderType?: GenderType
   description?: string
@@ -262,7 +259,6 @@ export interface UpdatePlaceRequest {
   floorCount?: number         // V10: 楼层数（仅BUILDING类型）
   capacity?: number
   orgUnitId?: number | string
-  classId?: number | string
   responsibleUserId?: number | string
   genderType?: GenderType
   attributes?: Record<string, any>

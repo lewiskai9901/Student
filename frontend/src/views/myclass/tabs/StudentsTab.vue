@@ -146,7 +146,7 @@ import type { MyClassStudent } from '@/types/myClass'
 import { StudentStatusConfig } from '@/types/myClass'
 
 const props = defineProps<{
-  classId: string | number
+  orgUnitId: string | number
 }>()
 
 // 状态
@@ -166,7 +166,7 @@ const loadStudents = async () => {
     if (statusFilter.value) {
       params.status = statusFilter.value
     }
-    const response = await getClassStudents(props.classId, params)
+    const response = await getClassStudents(props.orgUnitId, params)
     students.value = response || []
   } catch (error: any) {
     console.error('加载学生列表失败:', error)
@@ -249,8 +249,8 @@ watch(statusFilter, () => {
   loadStudents()
 })
 
-// 监听 classId 变化
-watch(() => props.classId, () => {
+// 监听 orgUnitId 变化
+watch(() => props.orgUnitId, () => {
   loadStudents()
 })
 

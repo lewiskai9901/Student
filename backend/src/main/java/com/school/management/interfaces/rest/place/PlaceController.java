@@ -61,7 +61,7 @@ public class PlaceController {
         command.setFloorNumber(request.getFloorNumber());
         command.setCapacity(request.getCapacity());
         command.setOrgUnitId(request.getOrgUnitId());
-        command.setClassId(request.getClassId());
+        command.setOrgUnitId(request.getOrgUnitId());
         command.setResponsibleUserId(request.getResponsibleUserId());
         command.setGenderType(request.getGenderType());
         command.setDescription(request.getDescription());
@@ -85,7 +85,7 @@ public class PlaceController {
         command.setRoomNo(request.getRoomNo());
         command.setCapacity(request.getCapacity());
         command.setOrgUnitId(request.getOrgUnitId());
-        command.setClassId(request.getClassId());
+        command.setOrgUnitId(request.getOrgUnitId());
         command.setResponsibleUserId(request.getResponsibleUserId());
         command.setGenderType(request.getGenderType());
         command.setAttributes(request.getAttributes());
@@ -204,7 +204,7 @@ public class PlaceController {
     @Operation(summary = "批量分配班级")
     @CasbinAccess(resource = "place", action = "edit")
     public Result<Void> batchAssignClass(@Valid @RequestBody BatchAssignClassRequest request) {
-        placeService.batchAssignClass(request.getPlaceIds(), request.getClassId());
+        placeService.batchAssignClass(request.getPlaceIds(), request.getOrgUnitId());
         return Result.success();
     }
 
@@ -215,8 +215,8 @@ public class PlaceController {
     @CasbinAccess(resource = "place", action = "edit")
     public Result<Void> assignClass(
             @PathVariable Long id,
-            @RequestParam Long classId) {
-        placeService.batchAssignClass(List.of(id), classId);
+            @RequestParam Long orgUnitId) {
+        placeService.batchAssignClass(List.of(id), orgUnitId);
         return Result.success();
     }
 

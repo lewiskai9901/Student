@@ -28,7 +28,6 @@ public class UpdatePlaceRequest {
 
     private Long orgUnitId;
 
-    private Long classId;
 
     private Long responsibleUserId;
 

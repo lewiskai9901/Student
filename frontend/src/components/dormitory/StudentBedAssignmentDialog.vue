@@ -161,7 +161,7 @@ const props = defineProps<{
     bedCapacity?: number
     occupiedBeds?: number
   } | null
-  classId?: string | number
+  orgUnitId?: string | number
 }>()
 
 const emit = defineEmits<{
@@ -241,14 +241,14 @@ const loadDormitoryData = async () => {
 }
 
 const loadClassStudents = async () => {
-  if (!props.classId) {
+  if (!props.orgUnitId) {
     classStudents.value = []
     return
   }
 
   studentsLoading.value = true
   try {
-    classStudents.value = await getClassStudents(props.classId)
+    classStudents.value = await getClassStudents(props.orgUnitId)
   } catch (error: any) {
     ElMessage.error(error.message || '加载学生列表失败')
     classStudents.value = []

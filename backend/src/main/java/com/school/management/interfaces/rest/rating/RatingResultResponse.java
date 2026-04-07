@@ -17,7 +17,7 @@ public class RatingResultResponse {
     private Long id;
     private Long ratingConfigId;
     private Long checkPlanId;
-    private Long classId;
+    private Long orgUnitId;
     private String className;
     private RatingPeriodType periodType;
     private LocalDate periodStart;

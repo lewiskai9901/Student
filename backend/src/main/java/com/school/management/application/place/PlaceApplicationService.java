@@ -109,9 +109,6 @@ public class PlaceApplicationService {
         if (command.getOrgUnitId() != null) {
             place.assignToOrgUnit(command.getOrgUnitId());
         }
-        if (command.getOrgUnitId() != null) {
-            place.assignToClass(command.getOrgUnitId());
-        }
         if (command.getResponsibleUserId() != null) {
             place.assignResponsible(command.getResponsibleUserId());
         }
@@ -170,10 +167,6 @@ public class PlaceApplicationService {
         }
         if (command.getOrgUnitId() != null) {
             place.assignToOrgUnit(command.getOrgUnitId());
-        }
-        // 班级分配（允许设置为null来取消分配）
-        if (command.getOrgUnitId() != null) {
-            place.assignToClass(command.getOrgUnitId());
         }
         if (command.getResponsibleUserId() != null) {
             place.assignResponsible(command.getResponsibleUserId());
@@ -336,7 +329,7 @@ public class PlaceApplicationService {
         for (Long placeId : placeIds) {
             Place place = placeRepository.findById(placeId)
                 .orElseThrow(() -> new BusinessException("场所不存在: " + placeId));
-            place.assignToClass(orgUnitId);
+            place.assignToOrgUnit(orgUnitId);
             placeRepository.save(place);
         }
     }
@@ -345,7 +338,7 @@ public class PlaceApplicationService {
      * 添加场所-班级分配（多对多关系）
      */
     @Transactional
-    public Long addClassAssignment(Long placeId, Long orgUnitId, Long orgUnitId,
+    public Long addClassAssignment(Long placeId, Long orgUnitId,
                                     Integer assignedBeds, Long assignedBy) {
         // 检查是否已存在
         if (classAssignmentRepository.existsByPlaceIdAndClassId(placeId, orgUnitId)) {
@@ -353,7 +346,7 @@ public class PlaceApplicationService {
         }
 
         PlaceClassAssignment assignment = PlaceClassAssignment.create(
-            placeId, orgUnitId, orgUnitId, assignedBeds, assignedBy);
+            placeId, orgUnitId, assignedBeds, assignedBy);
         classAssignmentRepository.save(assignment);
         return assignment.getId();
     }
@@ -388,7 +381,7 @@ public class PlaceApplicationService {
     public void unassignClass(Long placeId) {
         Place place = placeRepository.findById(placeId)
             .orElseThrow(() -> new BusinessException("场所不存在"));
-        place.unassignFromClass();
+        place.assignToOrgUnit(null);
         placeRepository.save(place);
     }
 

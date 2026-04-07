@@ -16,8 +16,8 @@ public interface ScheduleEntryPersistenceMapper extends BaseMapper<ScheduleEntry
     @Select("SELECT * FROM schedule_entries WHERE semester_id = #{sid} AND classroom_id = #{cid} AND weekday = #{day} AND deleted = 0 AND entry_status = 1")
     List<ScheduleEntryPO> findByClassroomAndWeekday(@Param("sid") Long semesterId, @Param("cid") Long classroomId, @Param("day") Integer weekday);
 
-    @Select("SELECT * FROM schedule_entries WHERE semester_id = #{sid} AND class_id = #{cid} AND weekday = #{day} AND deleted = 0 AND entry_status = 1")
-    List<ScheduleEntryPO> findByClassAndWeekday(@Param("sid") Long semesterId, @Param("cid") Long classId, @Param("day") Integer weekday);
+    @Select("SELECT * FROM schedule_entries WHERE semester_id = #{sid} AND org_unit_id = #{cid} AND weekday = #{day} AND deleted = 0 AND entry_status = 1")
+    List<ScheduleEntryPO> findByClassAndWeekday(@Param("sid") Long semesterId, @Param("cid") Long orgUnitId, @Param("day") Integer weekday);
 
     @Delete("DELETE FROM schedule_entries WHERE task_id = #{taskId}")
     void deleteByTaskId(@Param("taskId") Long taskId);

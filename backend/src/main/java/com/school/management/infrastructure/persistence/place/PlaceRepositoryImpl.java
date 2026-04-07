@@ -258,7 +258,6 @@ public class PlaceRepositoryImpl implements PlaceRepository {
         po.setCapacity(place.getMaxCapacity());
         po.setCurrentOccupancy(place.getCurrentOccupancy());
         po.setOrgUnitId(place.getOrgUnitId());
-        po.setClassId(place.getClassId());
         po.setResponsibleUserId(place.getResponsibleUserId());
         po.setGenderType(place.getGenderType() != null ? place.getGenderType().getCode() : 0);
         po.setStatus(place.getStatus().getCode());
@@ -293,7 +292,6 @@ public class PlaceRepositoryImpl implements PlaceRepository {
             po.getCapacity(),
             po.getCurrentOccupancy(),
             po.getOrgUnitId(),
-            po.getClassId(),
             po.getResponsibleUserId(),
             GenderType.fromCode(po.getGenderType()),
             PlaceStatus.fromCode(po.getStatus() != null ? po.getStatus() : 1),

@@ -135,8 +135,8 @@ public class GradeController {
 
     @GetMapping("/by-class/{classId}")
     @CasbinAccess(resource = "teaching:grade", action = "view")
-    public Result<List<Map<String, Object>>> getGradesByClass(@PathVariable Long classId) {
-        return Result.success(gradeService.getClassGrades(classId));
+    public Result<List<Map<String, Object>>> getGradesByClass(@PathVariable Long orgUnitId) {
+        return Result.success(gradeService.getClassGrades(orgUnitId));
     }
 
     // ==================== 统计与排名 ====================
@@ -145,17 +145,17 @@ public class GradeController {
     @CasbinAccess(resource = "teaching:grade", action = "view")
     public Result<Map<String, Object>> getStatistics(
             @RequestParam(required = false) Long batchId,
-            @RequestParam(required = false) Long classId,
+            @RequestParam(required = false) Long orgUnitId,
             @RequestParam(required = false) Long courseId) {
-        return Result.success(gradeService.getStatistics(batchId, classId, courseId));
+        return Result.success(gradeService.getStatistics(batchId, orgUnitId, courseId));
     }
 
     @GetMapping("/ranking")
     @CasbinAccess(resource = "teaching:grade", action = "view")
     public Result<List<Map<String, Object>>> getRanking(
-            @RequestParam Long classId,
+            @RequestParam Long orgUnitId,
             @RequestParam(required = false) Long semesterId) {
-        return Result.success(gradeService.getRanking(classId, semesterId));
+        return Result.success(gradeService.getRanking(orgUnitId, semesterId));
     }
 
     // ==================== 导出 ====================
@@ -164,9 +164,9 @@ public class GradeController {
     @CasbinAccess(resource = "teaching:grade", action = "view")
     public void exportGrades(
             @RequestParam Long semesterId,
-            @RequestParam(required = false) Long classId,
+            @RequestParam(required = false) Long orgUnitId,
             @RequestParam(required = false) Long courseId,
             HttpServletResponse response) throws IOException {
-        gradeService.exportGrades(semesterId, classId, courseId, response);
+        gradeService.exportGrades(semesterId, orgUnitId, courseId, response);
     }
 }

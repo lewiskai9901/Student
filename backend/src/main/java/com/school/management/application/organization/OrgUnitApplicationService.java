@@ -27,6 +27,7 @@ import com.school.management.infrastructure.persistence.user.UserDomainMapper;
 import com.school.management.infrastructure.persistence.user.UserPO;
 import com.school.management.application.event.TriggerService;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -42,6 +43,7 @@ import java.util.stream.Collectors;
  * Application service for organization unit operations.
  * Orchestrates domain services, repositories, and event publishing.
  */
+@Slf4j
 @RequiredArgsConstructor
 @Service
 public class OrgUnitApplicationService {
@@ -411,9 +413,9 @@ public class OrgUnitApplicationService {
             .map(OrgUnit::getId)
             .collect(Collectors.toList());
 
-        if (orgUnitIds.isEmpty()) return;
+        if (classIds.isEmpty()) return;
 
-        List<SchoolClassPO> classPOs = schoolClassMapper.selectBatchIds(orgUnitIds);
+        List<SchoolClassPO> classPOs = schoolClassMapper.selectBatchIds(classIds);
         Map<Long, SchoolClassPO> classMap = classPOs.stream()
             .collect(Collectors.toMap(SchoolClassPO::getId, Function.identity(), (a, b) -> a));
 

@@ -135,7 +135,7 @@ public class Student extends AggregateRoot<Long> {
                 student.getId() != null ? student.getId().toString() : "NEW",
                 studentNo,
                 name,
-                classId
+                orgUnitId
         ));
 
         return student;

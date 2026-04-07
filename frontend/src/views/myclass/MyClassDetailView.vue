@@ -93,18 +93,18 @@ const currentClass = computed(() =>
 const fetchClasses = async () => {
   allClasses.value = await getMyClasses()
 
-  // 从路由参数获取classId (保持字符串，避免大整数精度丢失)
-  const classId = route.params.classId as string
-  if (classId && allClasses.value.some(c => String(c.id) === classId)) {
-    currentClassId.value = classId
+  // 从路由参数获取orgUnitId (保持字符串，避免大整数精度丢失)
+  const orgUnitId = route.params.orgUnitId as string
+  if (orgUnitId && allClasses.value.some(c => String(c.id) === orgUnitId)) {
+    currentClassId.value = orgUnitId
   } else if (allClasses.value.length > 0) {
     currentClassId.value = allClasses.value[0].id
     router.replace(`/my-class/${currentClassId.value}`)
   }
 }
 
-const onClassChange = (classId: string | number) => {
-  router.push(`/my-class/${classId}`)
+const onClassChange = (orgUnitId: string | number) => {
+  router.push(`/my-class/${orgUnitId}`)
 }
 
 const goBack = () => {
@@ -119,7 +119,7 @@ const changeTab = (tab: string) => {
   activeTab.value = tab
 }
 
-watch(() => route.params.classId, (newId) => {
+watch(() => route.params.orgUnitId, (newId) => {
   if (newId) {
     currentClassId.value = newId as string
   }

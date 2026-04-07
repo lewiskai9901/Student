@@ -170,7 +170,7 @@ import { Plus, X, Building2, Home, AlertCircle } from 'lucide-vue-next'
 import { getClassDetail, getClassClassroom, getClassDormitories, assignClassroom, removeClassroom, removeDormitory, getClassroomList } from '@/api/organization'
 import ClassDormitoryAssignmentDialog from './ClassDormitoryAssignmentDialog.vue'
 
-interface Props { classId: number | null }
+interface Props { orgUnitId: number | null }
 const props = defineProps<Props>()
 const emit = defineEmits<{ close: [] }>()
 
@@ -187,10 +187,10 @@ const classroomForm = ref({ classroomId: null as number | null })
 const getStatusText = (status: number) => ({ 1: '正常', 2: '停招', 3: '毕业' }[status] || '未知')
 
 const loadClassDetail = async () => {
-  if (!props.classId) return
+  if (!props.orgUnitId) return
   loading.value = true
   try {
-    classInfo.value = await getClassDetail(props.classId)
+    classInfo.value = await getClassDetail(props.orgUnitId)
     await loadClassroom()
     await loadDormitories()
   } catch (error) {
@@ -202,13 +202,13 @@ const loadClassDetail = async () => {
 }
 
 const loadClassroom = async () => {
-  if (!props.classId) return
-  try { classroomInfo.value = await getClassClassroom(props.classId) } catch (error) { console.error('加载教室信息失败:', error) }
+  if (!props.orgUnitId) return
+  try { classroomInfo.value = await getClassClassroom(props.orgUnitId) } catch (error) { console.error('加载教室信息失败:', error) }
 }
 
 const loadDormitories = async () => {
-  if (!props.classId) return
-  try { dormitories.value = await getClassDormitories(props.classId) || [] } catch (error) { console.error('加载宿舍信息失败:', error) }
+  if (!props.orgUnitId) return
+  try { dormitories.value = await getClassDormitories(props.orgUnitId) || [] } catch (error) { console.error('加载宿舍信息失败:', error) }
 }
 
 const showAssignClassroomDialog = async () => {
@@ -223,7 +223,7 @@ const handleAssignClassroom = async () => {
   if (!classroomForm.value.classroomId) { ElMessage.warning('请选择教室'); return }
   submitting.value = true
   try {
-    await assignClassroom(props.classId!, classroomForm.value.classroomId)
+    await assignClassroom(props.orgUnitId!, classroomForm.value.classroomId)
     ElMessage.success('教室分配成功')
     classroomDialogVisible.value = false
     await loadClassroom()
@@ -233,7 +233,7 @@ const handleAssignClassroom = async () => {
 const handleRemoveClassroom = async () => {
   try {
     await ElMessageBox.confirm('确定要取消教室分配吗?', '提示', { confirmButtonText: '确定', cancelButtonText: '取消', type: 'warning' })
-    await removeClassroom(props.classId!)
+    await removeClassroom(props.orgUnitId!)
     ElMessage.success('已取消教室分配')
     await loadClassroom()
   } catch (error: any) { if (error !== 'cancel') ElMessage.error(error.message || '取消教室分配失败') }
@@ -250,7 +250,7 @@ const showAddDormitoryDialog = () => {
 const handleRemoveDormitory = async (row: any) => {
   try {
     await ElMessageBox.confirm(`确定要移除宿舍 ${row.dormitoryNo} 吗?`, '提示', { confirmButtonText: '确定', cancelButtonText: '取消', type: 'warning' })
-    await removeDormitory(props.classId!, row.dormitoryId)
+    await removeDormitory(props.orgUnitId!, row.dormitoryId)
     ElMessage.success('宿舍移除成功')
     await loadDormitories()
   } catch (error: any) { if (error !== 'cancel') ElMessage.error(error.message || '移除宿舍失败') }

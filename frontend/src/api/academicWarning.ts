@@ -40,7 +40,7 @@ export function previewScan(semesterId: number): Promise<AcademicWarning[]> {
 export function getWarnings(params: {
   warningLevel?: number
   status?: number
-  classId?: number
+  orgUnitId?: number
   studentId?: number
   warningType?: string
   semesterId?: number

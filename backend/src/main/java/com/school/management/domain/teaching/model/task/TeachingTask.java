@@ -14,7 +14,6 @@ public class TeachingTask extends AggregateRoot<Long> {
     private Long orgUnitId;
     private Long offeringId;
     private Long teachingClassId;
-    private Long orgUnitId;
     private Integer studentCount;
     private Integer weeklyHours;
     private Integer totalHours;
@@ -29,14 +28,13 @@ public class TeachingTask extends AggregateRoot<Long> {
     protected TeachingTask() {}
 
     public static TeachingTask create(String taskCode, Long semesterId, Long courseId,
-            Long orgUnitId, Long orgUnitId, Integer studentCount, Integer weeklyHours,
+            Long orgUnitId, Integer studentCount, Integer weeklyHours,
             Integer totalHours, Integer startWeek, Integer endWeek,
             TaskStatus taskStatus, String remark, Long createdBy) {
         TeachingTask t = new TeachingTask();
         t.taskCode = taskCode;
         t.semesterId = semesterId;
         t.courseId = courseId;
-        t.orgUnitId = orgUnitId;
         t.orgUnitId = orgUnitId;
         t.studentCount = studentCount != null ? studentCount : 0;
         t.weeklyHours = weeklyHours;
@@ -51,7 +49,7 @@ public class TeachingTask extends AggregateRoot<Long> {
     }
 
     public static TeachingTask reconstruct(Long id, String taskCode, Long semesterId,
-            Long courseId, Long orgUnitId, Long orgUnitId, Integer studentCount,
+            Long courseId, Long orgUnitId, Integer studentCount,
             Integer weeklyHours, Integer totalHours, Integer startWeek, Integer endWeek,
             SchedulingStatus schedulingStatus, TaskStatus taskStatus,
             String remark, Long createdBy) {
@@ -60,7 +58,6 @@ public class TeachingTask extends AggregateRoot<Long> {
         t.taskCode = taskCode;
         t.semesterId = semesterId;
         t.courseId = courseId;
-        t.orgUnitId = orgUnitId;
         t.orgUnitId = orgUnitId;
         t.studentCount = studentCount;
         t.weeklyHours = weeklyHours;
@@ -74,11 +71,10 @@ public class TeachingTask extends AggregateRoot<Long> {
         return t;
     }
 
-    public void update(Long courseId, Long orgUnitId, Long orgUnitId,
+    public void update(Long courseId, Long orgUnitId,
             Integer studentCount, Integer weeklyHours, Integer totalHours,
             Integer startWeek, Integer endWeek, String remark) {
         this.courseId = courseId;
-        this.orgUnitId = orgUnitId;
         this.orgUnitId = orgUnitId;
         this.studentCount = studentCount;
         this.weeklyHours = weeklyHours;

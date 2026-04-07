@@ -39,7 +39,6 @@ public class StudentController {
     @CasbinAccess(resource = "student:info", action = "view")
     public Result<PageResult<StudentDTO>> getStudents(
             @Parameter(description = "关键字") @RequestParam(required = false) String keyword,
-            @Parameter(description = "班级ID") @RequestParam(required = false) Long classId,
             @Parameter(description = "组织单元ID") @RequestParam(required = false) Long orgUnitId,
             @Parameter(description = "年级") @RequestParam(required = false) Integer gradeLevel,
             @Parameter(description = "状态") @RequestParam(required = false) Integer studentStatus,
@@ -48,7 +47,6 @@ public class StudentController {
 
         StudentQueryCriteria criteria = new StudentQueryCriteria();
         criteria.setKeyword(keyword);
-        criteria.setClassId(classId);
         criteria.setOrgUnitId(orgUnitId);
         criteria.setGradeLevel(gradeLevel);
         criteria.setStatus(studentStatus);
@@ -90,7 +88,7 @@ public class StudentController {
                 .email(request.getEmail())
                 .birthDate(request.getBirthDate())
                 .enrollmentDate(request.getEnrollmentDate())
-                .classId(request.getClassId())
+                .orgUnitId(request.getOrgUnitId())
                 .homeAddress(request.getHomeAddress())
                 .emergencyContact(request.getEmergencyContact())
                 .emergencyPhone(request.getEmergencyPhone())
@@ -222,8 +220,8 @@ public class StudentController {
     @GetMapping("/by-class/{classId}")
     @CasbinAccess(resource = "student:info", action = "view")
     public Result<List<StudentDTO>> getStudentsByClass(
-            @Parameter(description = "班级ID") @PathVariable Long classId) {
-        List<StudentDTO> result = studentService.findByClassId(classId);
+            @Parameter(description = "班级ID") @PathVariable Long orgUnitId) {
+        List<StudentDTO> result = studentService.findByClassId(orgUnitId);
         return Result.success(result);
     }
 
@@ -241,8 +239,8 @@ public class StudentController {
     @GetMapping("/count/by-class")
     @CasbinAccess(resource = "student:info", action = "view")
     public Result<Long> countByClass(
-            @Parameter(description = "班级ID") @RequestParam Long classId) {
-        long count = studentService.countByClassId(classId);
+            @Parameter(description = "班级ID") @RequestParam Long orgUnitId) {
+        long count = studentService.countByClassId(orgUnitId);
         return Result.success(count);
     }
 
@@ -250,8 +248,8 @@ public class StudentController {
     @GetMapping("/count/active-by-class")
     @CasbinAccess(resource = "student:info", action = "view")
     public Result<Long> countActiveByClass(
-            @Parameter(description = "班级ID") @RequestParam Long classId) {
-        long count = studentService.countActiveByClassId(classId);
+            @Parameter(description = "班级ID") @RequestParam Long orgUnitId) {
+        long count = studentService.countActiveByClassId(orgUnitId);
         return Result.success(count);
     }
 

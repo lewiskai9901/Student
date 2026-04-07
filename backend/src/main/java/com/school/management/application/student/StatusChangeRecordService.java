@@ -185,7 +185,7 @@ public class StatusChangeRecordService {
         try {
             return jdbc.queryForObject(
                 "SELECT class_name FROM classes WHERE id = ? AND deleted = 0",
-                String.class, classId
+                String.class, orgUnitId
             );
         } catch (Exception e) {
             log.warn("查询班级名称失败: classId={}", orgUnitId, e);

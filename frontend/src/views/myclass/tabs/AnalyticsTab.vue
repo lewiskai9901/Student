@@ -13,7 +13,7 @@
 import { BarChart3 } from 'lucide-vue-next'
 
 defineProps<{
-  classId: string | number
+  orgUnitId: string | number
 }>()
 </script>
 

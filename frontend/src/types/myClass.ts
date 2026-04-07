@@ -46,7 +46,7 @@ export interface RecentCheckRecord {
  * 班级概览数据
  */
 export interface MyClassOverview {
-  classId: number | string
+  orgUnitId: number | string
   className: string
   studentCount: number
   maleCount: number

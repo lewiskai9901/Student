@@ -20,8 +20,8 @@ public class ClassAssignmentController {
     @CasbinAccess(resource = "teaching:offering", action = "view")
     public Result<List<ClassCourseAssignment>> list(
             @RequestParam Long semesterId,
-            @RequestParam(required = false) Long classId) {
-        return Result.success(service.listAssignments(semesterId, classId));
+            @RequestParam(required = false) Long orgUnitId) {
+        return Result.success(service.listAssignments(semesterId, orgUnitId));
     }
 
     @PostMapping
@@ -42,7 +42,7 @@ public class ClassAssignmentController {
     public Result<Void> batchConfirm(@RequestBody Map<String, Object> body) {
         service.batchConfirmAssignments(
             Long.parseLong(body.get("semesterId").toString()),
-            Long.parseLong(body.get("classId").toString())
+            Long.parseLong(body.get("orgUnitId").toString())
         );
         return Result.success(null);
     }

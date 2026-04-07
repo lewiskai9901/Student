@@ -127,7 +127,7 @@ const routes: RouteRecordRaw[] = [
             }
           },
           {
-            path: '/my-class/:classId',
+            path: '/my-class/:orgUnitId',
             name: 'MyClassDetail',
             component: () => import('@/views/myclass/MyClassDetailView.vue'),
             meta: {

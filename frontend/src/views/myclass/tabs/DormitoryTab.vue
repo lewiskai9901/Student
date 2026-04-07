@@ -218,7 +218,7 @@
     <StudentBedAssignmentDialog
       v-model:visible="bedAssignmentVisible"
       :dormitory="selectedDormitoryForAssignment"
-      :class-id="props.classId"
+      :class-id="props.orgUnitId"
       @success="handleBedAssignmentSuccess"
     />
   </div>
@@ -235,7 +235,7 @@ import StudentBedAssignmentDialog from '@/components/dormitory/StudentBedAssignm
 import { useAuthStore } from '@/stores/auth'
 
 const props = defineProps<{
-  classId: string | number
+  orgUnitId: string | number
 }>()
 
 const authStore = useAuthStore()
@@ -389,16 +389,16 @@ const handleBedAssignmentSuccess = () => {
 
 // 加载数据
 const loadData = async () => {
-  console.log('[DormitoryTab] loadData called, classId:', props.classId, 'type:', typeof props.classId)
-  if (!props.classId) {
-    console.warn('[DormitoryTab] classId is empty, skipping load')
+  console.log('[DormitoryTab] loadData called, orgUnitId:', props.orgUnitId, 'type:', typeof props.orgUnitId)
+  if (!props.orgUnitId) {
+    console.warn('[DormitoryTab] orgUnitId is empty, skipping load')
     return
   }
 
   loading.value = true
   try {
-    console.log('[DormitoryTab] Calling getClassDormitoryDistribution with classId:', props.classId)
-    distribution.value = await getClassDormitoryDistribution(props.classId)
+    console.log('[DormitoryTab] Calling getClassDormitoryDistribution with orgUnitId:', props.orgUnitId)
+    distribution.value = await getClassDormitoryDistribution(props.orgUnitId)
     console.log('[DormitoryTab] Distribution data received:', distribution.value?.length, 'buildings')
     console.log('[DormitoryTab] Distribution data:', JSON.stringify(distribution.value, null, 2))
   } catch (error) {
@@ -410,8 +410,8 @@ const loadData = async () => {
   }
 }
 
-// 监听 classId 变化
-watch(() => props.classId, (newId) => {
+// 监听 orgUnitId 变化
+watch(() => props.orgUnitId, (newId) => {
   if (newId) {
     loadData()
   }

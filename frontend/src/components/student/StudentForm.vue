@@ -183,7 +183,7 @@
               <div>
                 <label class="mb-1.5 block text-sm font-medium text-gray-700">班级</label>
                 <select
-                  v-model="formData.classId"
+                  v-model="formData.orgUnitId"
                   class="h-9 w-full rounded-md border border-gray-300 bg-white px-3 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
                   :disabled="!formData.orgUnitId"
                 >
@@ -544,7 +544,7 @@ const formData = reactive<any>({
   financialAidType: '',
   orgUnitId: null,
   gradeId: null,
-  classId: null,
+  orgUnitId: null,
   majorId: null,
   majorDirectionId: null,
   educationLevel: '',
@@ -574,12 +574,12 @@ const errors = reactive<Record<string, string>>({})
 // 部门变更处理
 const handleDepartmentChange = () => {
   // 清空班级选择
-  formData.classId = null
+  formData.orgUnitId = null
 }
 
 // 年级变更处理
 const handleGradeChange = async () => {
-  formData.classId = null
+  formData.orgUnitId = null
   formData.majorDirectionId = null
   formData.educationLevel = ''
   formData.studyLength = ''

@@ -54,7 +54,7 @@ export interface Student {
   avatarUrl?: string
 
   // 班级信息 (gradeId/majorId/majorDirectionId are on class, not student)
-  classId?: number | string
+  orgUnitId?: number | string
   className?: string
   gradeName?: string
   gradeLevel?: number
@@ -135,7 +135,7 @@ export interface CreateStudentRequest {
   nativePlace?: string
 
   // 班级信息 (gradeId/majorId/majorDirectionId are on class, not student)
-  classId?: number | string
+  orgUnitId?: number | string
 
   // 学籍信息
   educationLevel?: string
@@ -199,7 +199,7 @@ export interface StudentQueryParams {
   // V2 使用 name 代替 realName (keyword 用于综合搜索)
   name?: string
   keyword?: string
-  classId?: number | string
+  orgUnitId?: number | string
   gradeId?: number | string // UI-only: used to filter class dropdown, not a student field
   gradeLevel?: number
   // V2 使用 status 代替 studentStatus
@@ -209,7 +209,7 @@ export interface StudentQueryParams {
   enrollmentDateEnd?: string
   pageNum?: number
   pageSize?: number
-  classIds?: (number | string)[]
+  orgUnitIds?: (number | string)[]
   orgUnitIds?: (number | string)[]
   selfUserId?: number | string
 }
@@ -219,7 +219,7 @@ export interface StudentQueryParams {
  */
 export interface StudentSearchParams {
   keyword: string
-  classId?: number | string
+  orgUnitId?: number | string
   limit?: number
 }
 

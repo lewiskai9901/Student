@@ -57,7 +57,7 @@ import { ref, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Plus } from 'lucide-vue-next'
 
-interface Props { classId: number | null }
+interface Props { orgUnitId: number | null }
 const props = defineProps<Props>()
 const emit = defineEmits<{ close: [] }>()
 
@@ -65,7 +65,7 @@ const loading = ref(false)
 const studentList = ref<any[]>([])
 
 const loadStudentList = async () => {
-  if (!props.classId) return
+  if (!props.orgUnitId) return
   loading.value = true
   try {
     // 模拟数据

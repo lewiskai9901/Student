@@ -71,7 +71,7 @@ export interface TeachingTask {
   courseId: number | string
   courseName?: string
   courseCode?: string
-  classId: number | string
+  orgUnitId: number | string
   className?: string
   studentCount: number
   weeklyHours: number
@@ -95,7 +95,7 @@ export interface TaskTeacher {
 export interface TeachingTaskQueryParams {
   semesterId?: number | string
   courseId?: number | string
-  classId?: number | string
+  orgUnitId?: number | string
   teacherId?: number | string
   status?: number
   page?: number
@@ -216,7 +216,7 @@ export interface ExamArrangement {
   courseId: number | string
   courseName?: string
   courseCode?: string
-  classIds: (number | string)[]
+  orgUnitIds: (number | string)[]
   classNames?: string[]
   examDate: string
   startTime: string
@@ -261,7 +261,7 @@ export interface GradeBatch {
   courseId: number | string
   courseName?: string
   courseCode?: string
-  classId: number | string
+  orgUnitId: number | string
   className?: string
   batchName: string
   gradeType: number // 1-平时成绩, 2-期中成绩, 3-期末成绩, 4-总评成绩
@@ -282,7 +282,7 @@ export interface StudentGrade {
   studentNo?: string
   semesterId: number | string
   courseId: number | string
-  classId: number | string
+  orgUnitId: number | string
   batchName?: string
   gradeType: number
   totalScore?: number
@@ -306,7 +306,7 @@ export interface GradeItem {
 export interface GradeQueryParams {
   semesterId?: number | string
   courseId?: number | string
-  classId?: number | string
+  orgUnitId?: number | string
   studentId?: number | string
   gradeType?: number
   status?: number
@@ -443,7 +443,7 @@ export interface SemesterOffering {
 export interface ClassCourseAssignment {
   id: number
   semesterId: number
-  classId: number
+  orgUnitId: number
   className?: string
   offeringId: number
   courseId: number

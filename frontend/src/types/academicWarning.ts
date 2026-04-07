@@ -14,7 +14,7 @@ export interface AcademicWarning {
   studentId: number
   studentNo?: string
   studentName?: string
-  classId?: number
+  orgUnitId?: number
   className?: string
   ruleId?: number
   ruleName?: string

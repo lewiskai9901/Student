@@ -37,7 +37,7 @@ public class EnrollStudentRequest {
     private LocalDate enrollmentDate;
 
     @Schema(description = "班级ID", required = true)
-    private Long classId;
+    private Long orgUnitId;
 
     @Schema(description = "家庭住址")
     private String homeAddress;

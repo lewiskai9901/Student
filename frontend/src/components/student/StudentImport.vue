@@ -606,7 +606,7 @@ const parseExcelFile = async (file: File) => {
         if (!classExists) {
           errors.push(`班级"${rowData.className}"不存在`)
         } else {
-          rowData.classId = classList.value.find(c => c.className === rowData.className)?.id
+          rowData.orgUnitId = classList.value.find(c => c.className === rowData.className)?.id
         }
       }
 

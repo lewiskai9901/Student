@@ -126,7 +126,7 @@ async function loadInstances() {
   try {
     const params: any = { semesterId: props.semesterId }
     if (weekNumber.value) params.weekNumber = weekNumber.value
-    if (viewType.value === 'class') params.classId = targetId.value
+    if (viewType.value === 'class') params.orgUnitId = targetId.value
     else if (viewType.value === 'teacher') params.teacherId = targetId.value
     else params.classroomId = targetId.value
     const res = await instanceApi.list(params)

@@ -76,14 +76,11 @@ public interface StudentRepository extends Repository<Student, Long> {
     class StudentQueryCriteria {
         private String keyword;
         private Long orgUnitId;
-        private Long orgUnitId;
         private Integer gradeLevel;
         private StudentStatus status;
 
         public String getKeyword() { return keyword; }
         public void setKeyword(String keyword) { this.keyword = keyword; }
-        public Long getOrgUnitId() { return orgUnitId; }
-        public void setOrgUnitId(Long orgUnitId) { this.orgUnitId = orgUnitId; }
         public Long getOrgUnitId() { return orgUnitId; }
         public void setOrgUnitId(Long orgUnitId) { this.orgUnitId = orgUnitId; }
         public Integer getGradeLevel() { return gradeLevel; }

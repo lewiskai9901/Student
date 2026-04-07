@@ -38,31 +38,31 @@ public class MyClassController {
     @GetMapping("/classes/{classId}/overview")
     @Operation(summary = "获取班级概览数据")
     public Result<MyClassOverviewDTO> getClassOverview(
-            @PathVariable Long classId,
+            @PathVariable Long orgUnitId,
             @AuthenticationPrincipal CustomUserDetails userDetails) {
-        MyClassOverviewDTO overview = myClassService.getClassOverview(classId, userDetails.getUserId());
+        MyClassOverviewDTO overview = myClassService.getClassOverview(orgUnitId, userDetails.getUserId());
         return Result.success(overview);
     }
 
     @GetMapping("/classes/{classId}/students")
     @Operation(summary = "获取班级学生列表")
     public Result<List<MyClassStudentDTO>> getClassStudents(
-            @PathVariable Long classId,
+            @PathVariable Long orgUnitId,
             @RequestParam(required = false) String keyword,
             @RequestParam(required = false) String status,
             @AuthenticationPrincipal CustomUserDetails userDetails) {
         List<MyClassStudentDTO> students = myClassService.getClassStudents(
-            classId, userDetails.getUserId(), keyword, status);
+            orgUnitId, userDetails.getUserId(), keyword, status);
         return Result.success(students);
     }
 
     @GetMapping("/classes/{classId}/dormitory-distribution")
     @Operation(summary = "获取班级宿舍分布")
     public Result<List<DormitoryDistributionDTO>> getDormitoryDistribution(
-            @PathVariable Long classId,
+            @PathVariable Long orgUnitId,
             @AuthenticationPrincipal CustomUserDetails userDetails) {
         List<DormitoryDistributionDTO> distribution = myClassService.getDormitoryDistribution(
-            classId, userDetails.getUserId());
+            orgUnitId, userDetails.getUserId());
         return Result.success(distribution);
     }
 }

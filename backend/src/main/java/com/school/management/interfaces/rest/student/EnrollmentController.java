@@ -224,14 +224,14 @@ public class EnrollmentController {
             "ea.graduate_from AS graduateFrom, ea.major_id AS majorId, " +
             "ea.major_direction_id AS majorDirectionId, ea.application_date AS applicationDate, " +
             "ea.exam_score AS examScore, ea.status, ea.review_comment AS reviewComment, " +
-            "ea.assigned_class_id AS assignedClassId, ea.assigned_student_id AS assignedStudentId, " +
+            "ea.assigned_org_unit_id AS assignedClassId, ea.assigned_student_id AS assignedStudentId, " +
             "ea.remark, ea.created_at AS createdAt, ea.registered_at AS registeredAt, " +
             "m.name AS majorName, md.name AS majorDirectionName, " +
             "sc.name AS assignedClassName " +
             "FROM enrollment_applications ea " +
             "LEFT JOIN majors m ON ea.major_id = m.id " +
             "LEFT JOIN major_directions md ON ea.major_direction_id = md.id " +
-            "LEFT JOIN school_classes sc ON ea.assigned_class_id = sc.id " +
+            "LEFT JOIN school_classes sc ON ea.assigned_org_unit_id = sc.id " +
             "WHERE ea.deleted = 0"
         );
         List<Object> params = new ArrayList<>();
@@ -407,8 +407,8 @@ public class EnrollmentController {
     @Transactional
     public Result<Map<String, Object>> registerApplication(
             @PathVariable Long id, @RequestBody Map<String, Object> body) {
-        Long classId = toLong(body.get("classId"));
-        if (classId == null) {
+        Long orgUnitId = toLong(body.get("orgUnitId"));
+        if (orgUnitId == null) {
             return Result.error("请选择分配班级");
         }
 
@@ -446,7 +446,7 @@ public class EnrollmentController {
         // 3. Insert student record
         Long createdBy = SecurityUtils.getCurrentUserId();
         jdbc.update(
-            "INSERT INTO students (student_no, name, gender, id_card, phone, class_id, " +
+            "INSERT INTO students (student_no, name, gender, id_card, phone, org_unit_id, " +
             "enrollment_date, status, created_by, created_at) " +
             "VALUES (?,?,?,?,?,?,?,1,?,NOW())",
             studentNo,
@@ -454,7 +454,7 @@ public class EnrollmentController {
             app.get("gender"),
             app.get("idCard"),
             app.get("phone"),
-            classId,
+            orgUnitId,
             LocalDate.now(),
             createdBy
         );
@@ -462,11 +462,11 @@ public class EnrollmentController {
         // Get the new student ID
         Long studentId = jdbc.queryForObject("SELECT LAST_INSERT_ID()", Long.class);
 
-        // 4. Update application: status=3(已报到), assigned_class_id, assigned_student_id
+        // 4. Update application: status=3(已报到), assigned_org_unit_id, assigned_student_id
         jdbc.update(
-            "UPDATE enrollment_applications SET status=3, assigned_class_id=?, " +
+            "UPDATE enrollment_applications SET status=3, assigned_org_unit_id=?, " +
             "assigned_student_id=?, registered_at=NOW(), updated_at=NOW() WHERE id=?",
-            classId, studentId, id
+            orgUnitId, studentId, id
         );
 
         // 5. Update plan registered_count
@@ -478,7 +478,7 @@ public class EnrollmentController {
                 String className = "";
                 try {
                     className = jdbc.queryForObject(
-                        "SELECT name FROM school_classes WHERE id=?", String.class, classId);
+                        "SELECT name FROM school_classes WHERE id=?", String.class, orgUnitId);
                 } catch (Exception ignored) {}
                 triggerService.fire("ENROLLMENT_REGISTERED", Map.of(
                     "studentId", studentId,
@@ -541,7 +541,7 @@ public class EnrollmentController {
             "FROM enrollment_applications ea " +
             "LEFT JOIN majors m ON ea.major_id = m.id " +
             "LEFT JOIN major_directions md ON ea.major_direction_id = md.id " +
-            "LEFT JOIN school_classes sc ON ea.assigned_class_id = sc.id " +
+            "LEFT JOIN school_classes sc ON ea.assigned_org_unit_id = sc.id " +
             "WHERE ea.deleted = 0"
         );
         List<Object> params = new ArrayList<>();

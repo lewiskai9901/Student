@@ -51,8 +51,8 @@ export const teachingTaskApi = {
   removeTeacher: (taskId: number | string, teacherId: number | string) =>
     http.delete(`${BASE_URL}/tasks/${taskId}/teachers/${teacherId}`),
 
-  batchCreate: (semesterId: number | string, planId: number | string, classIds: (number | string)[]) =>
-    http.post<TeachingTask[]>(`${BASE_URL}/tasks/batch-create`, { semesterId, planId, classIds }),
+  batchCreate: (semesterId: number | string, planId: number | string, orgUnitIds: (number | string)[]) =>
+    http.post<TeachingTask[]>(`${BASE_URL}/tasks/batch-create`, { semesterId, planId, orgUnitIds }),
 
   updateStatus: (id: number | string, status: number) =>
     http.patch(`${BASE_URL}/tasks/${id}/status`, { status }),
@@ -74,7 +74,7 @@ export const scheduleConfigApi = {
 // ==================== 实况课表 & 课时统计 ====================
 
 export const instanceApi = {
-  list: (params: { semesterId: number | string; date?: string; weekNumber?: number; teacherId?: number | string; classId?: number | string; classroomId?: number | string }) =>
+  list: (params: { semesterId: number | string; date?: string; weekNumber?: number; teacherId?: number | string; orgUnitId?: number | string; classroomId?: number | string }) =>
     http.get<any[]>(`${BASE_URL}/instances`, { params }),
 
   generate: (semesterId: number | string) =>
@@ -165,8 +165,8 @@ export const scheduleApi = {
     http.post(`${BASE_URL}/schedules/check-move-conflict`, data),
 
   // ---- 按维度查询课表 ----
-  getByClass: (classId: number | string, semesterId: number | string) =>
-    http.get<ScheduleEntry[]>(`${BASE_URL}/schedules/by-class/${classId}`, { params: { semesterId } }),
+  getByClass: (orgUnitId: number | string, semesterId: number | string) =>
+    http.get<ScheduleEntry[]>(`${BASE_URL}/schedules/by-class/${orgUnitId}`, { params: { semesterId } }),
 
   getByTeacher: (teacherId: number | string, semesterId: number | string) =>
     http.get<ScheduleEntry[]>(`${BASE_URL}/schedules/by-teacher/${teacherId}`, { params: { semesterId } }),
@@ -175,8 +175,8 @@ export const scheduleApi = {
     http.get<ScheduleEntry[]>(`${BASE_URL}/schedules/by-classroom/${classroomId}`, { params: { semesterId } }),
 
   // ---- 导出 ----
-  exportClassSchedule: (semesterId: number | string, classId: number | string) =>
-    http.get(`${BASE_URL}/schedules/export/class/${classId}`, { params: { semesterId }, responseType: 'blob' }),
+  exportClassSchedule: (semesterId: number | string, orgUnitId: number | string) =>
+    http.get(`${BASE_URL}/schedules/export/class/${orgUnitId}`, { params: { semesterId }, responseType: 'blob' }),
 
   exportTeacherSchedule: (semesterId: number | string, teacherId: number | string) =>
     http.get(`${BASE_URL}/schedules/export/teacher/${teacherId}`, { params: { semesterId }, responseType: 'blob' }),
@@ -323,15 +323,15 @@ export const gradeApi = {
   getStudentGrades: (studentId: number | string, params?: { semesterId?: number | string; courseId?: number | string }) =>
     http.get<StudentGrade[]>(`${BASE_URL}/grades/by-student/${studentId}`, { params }),
 
-  getClassGrades: (classId: number | string, params?: { semesterId?: number | string; courseId?: number | string }) =>
-    http.get<StudentGrade[]>(`${BASE_URL}/grades/by-class/${classId}`, { params }),
+  getClassGrades: (orgUnitId: number | string, params?: { semesterId?: number | string; courseId?: number | string }) =>
+    http.get<StudentGrade[]>(`${BASE_URL}/grades/by-class/${orgUnitId}`, { params }),
 
   // 成绩统计
-  getStatistics: (params: { batchId?: number | string; classId?: number | string; courseId?: number | string; semesterId?: number | string }) =>
+  getStatistics: (params: { batchId?: number | string; orgUnitId?: number | string; courseId?: number | string; semesterId?: number | string }) =>
     http.get<GradeStatistics>(`${BASE_URL}/grades/statistics`, { params }),
 
   // 成绩排名
-  getRanking: (params: { classId: number | string; semesterId: number | string; courseId?: number | string }) =>
+  getRanking: (params: { orgUnitId: number | string; semesterId: number | string; courseId?: number | string }) =>
     http.get<{ studentId: number | string; studentName: string; totalScore: number; rank: number }[]>(
       `${BASE_URL}/grades/ranking`, { params }
     ),
@@ -341,7 +341,7 @@ export const gradeApi = {
     http.get(`${BASE_URL}/grades/batches/${batchId}/export`, { responseType: 'blob' }),
 
   // 导出成绩（按学期/班级/课程筛选）
-  exportGradesByFilter: (params: { semesterId: number | string; classId?: number; courseId?: number }) =>
+  exportGradesByFilter: (params: { semesterId: number | string; orgUnitId?: number; courseId?: number }) =>
     http.get(`${BASE_URL}/grades/export`, { params, responseType: 'blob' }),
 
   // 导入成绩模板
@@ -373,19 +373,19 @@ export const offeringApi = {
     http.delete(`${BASE_URL}/offerings/${id}`),
   confirm: (id: number | string) =>
     http.post(`${BASE_URL}/offerings/${id}/confirm`),
-  importFromPlan: (data: { semesterId: number; planId: number; classIds?: number[] }) =>
+  importFromPlan: (data: { semesterId: number; planId: number; orgUnitIds?: number[] }) =>
     http.post(`${BASE_URL}/offerings/import-from-plan`, data),
 }
 
 export const classAssignmentApi = {
-  list: (semesterId: number | string, classId?: number | string) =>
-    http.get<ClassCourseAssignment[]>(`${BASE_URL}/class-assignments`, { params: { semesterId, classId } }),
+  list: (semesterId: number | string, orgUnitId?: number | string) =>
+    http.get<ClassCourseAssignment[]>(`${BASE_URL}/class-assignments`, { params: { semesterId, orgUnitId } }),
   create: (data: Partial<ClassCourseAssignment>) =>
     http.post<ClassCourseAssignment>(`${BASE_URL}/class-assignments`, data),
   delete: (id: number | string) =>
     http.delete(`${BASE_URL}/class-assignments/${id}`),
-  batchConfirm: (semesterId: number | string, classId: number | string) =>
-    http.post(`${BASE_URL}/class-assignments/batch-confirm`, { semesterId, classId }),
+  batchConfirm: (semesterId: number | string, orgUnitId: number | string) =>
+    http.post(`${BASE_URL}/class-assignments/batch-confirm`, { semesterId, orgUnitId }),
 }
 
 // =====================================================

@@ -248,14 +248,14 @@ public class SchoolClassRepositoryImpl implements SchoolClassRepository {
             OrgUnitPO parent = orgUnitMapper.selectById(parentOrgUnitId);
             if (parent != null) {
                 String parentPath = parent.getTreePath() != null ? parent.getTreePath() : "/" + parent.getId() + "/";
-                classPO.setTreePath(parentPath + classId + "/");
+                classPO.setTreePath(parentPath + orgUnitId + "/");
                 classPO.setTreeLevel((parent.getTreeLevel() != null ? parent.getTreeLevel() : 0) + 1);
             } else {
-                classPO.setTreePath("/" + classId + "/");
+                classPO.setTreePath("/" + orgUnitId + "/");
                 classPO.setTreeLevel(1);
             }
         } else {
-            classPO.setTreePath("/" + classId + "/");
+            classPO.setTreePath("/" + orgUnitId + "/");
             classPO.setTreeLevel(1);
         }
 

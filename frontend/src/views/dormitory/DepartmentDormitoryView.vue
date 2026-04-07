@@ -395,8 +395,8 @@ const getDormitoryBindings = (dormitoryId: number) => {
   return bindings.value.filter(b => b.dormitoryId === dormitoryId)
 }
 
-const getClassBindings = (classId: number) => {
-  return bindings.value.filter(b => b.classId === classId)
+const getClassBindings = (orgUnitId: number) => {
+  return bindings.value.filter(b => b.orgUnitId === orgUnitId)
 }
 
 const handleAssignToClass = (classItem: ClassInfo) => {
@@ -414,7 +414,7 @@ const confirmAssign = async () => {
   assigning.value = true
   try {
     const count = await batchAssignDormitoriesToClass({
-      classId: targetClass.value.id,
+      orgUnitId: targetClass.value.id,
       dormitoryIds: selectedDormitories.value.map(d => d.id)
     })
     ElMessage.success(`成功分配 ${count} 间宿舍`)
@@ -440,7 +440,7 @@ const handleUnassign = async (binding: ClassDormitoryBinding) => {
       }
     )
 
-    await unassignDormitoryFromClass(binding.dormitoryId, binding.classId)
+    await unassignDormitoryFromClass(binding.dormitoryId, binding.orgUnitId)
     ElMessage.success('已取消分配')
     loadData()
   } catch (error: any) {

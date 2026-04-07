@@ -187,7 +187,7 @@ import type { MyClassOverview, RecentCheckRecord } from '@/types/myClass'
 import TrendChart from '../components/TrendChart.vue'
 
 const props = defineProps<{
-  classId: string | number
+  orgUnitId: string | number
 }>()
 
 const emit = defineEmits<{
@@ -200,11 +200,11 @@ const overview = ref<MyClassOverview | null>(null)
 
 // 加载概览数据
 const loadOverview = async () => {
-  if (!props.classId) return
+  if (!props.orgUnitId) return
 
   loading.value = true
   try {
-    overview.value = await getClassOverview(props.classId)
+    overview.value = await getClassOverview(props.orgUnitId)
   } catch (error: any) {
     console.error('加载概览数据失败:', error)
     ElMessage.error(error.response?.data?.message || '加载概览数据失败')
@@ -269,8 +269,8 @@ const goToAppeals = () => {
   router.push('/inspection/appeals')
 }
 
-// 监听 classId 变化
-watch(() => props.classId, () => {
+// 监听 orgUnitId 变化
+watch(() => props.orgUnitId, () => {
   loadOverview()
 })
 

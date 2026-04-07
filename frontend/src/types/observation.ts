@@ -11,7 +11,7 @@ export interface SubmissionObservation {
   subjectType: string
   subjectId: number
   subjectName: string | null
-  classId: number | null
+  orgUnitId: number | null
   className: string | null
   score: number
   isNegative: boolean | number

@@ -133,7 +133,7 @@ async function importAssignmentsFromPlan() {
     for (const o of toImport) {
       await classAssignmentApi.create({
         semesterId: Number(props.semesterId),
-        classId: Number(assignClassId.value),
+        orgUnitId: Number(assignClassId.value),
         offeringId: o.id,
         courseId: o.courseId,
         weeklyHours: o.weeklyHours,

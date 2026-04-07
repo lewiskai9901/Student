@@ -222,7 +222,7 @@ public class RatingResult extends AggregateRoot<Long> {
         public Builder id(Long v) { r.setId(v); return this; }
         public Builder ratingConfigId(Long v) { r.ratingConfigId = v; return this; }
         public Builder checkPlanId(Long v) { r.checkPlanId = v; return this; }
-        public Builder classId(Long v) { r.orgUnitId = v; return this; }
+        public Builder orgUnitId(Long v) { r.orgUnitId = v; return this; }
         public Builder className(String v) { r.className = v; return this; }
         public Builder periodType(RatingPeriodType v) { r.periodType = v; return this; }
         public Builder periodStart(LocalDate v) { r.periodStart = v; return this; }

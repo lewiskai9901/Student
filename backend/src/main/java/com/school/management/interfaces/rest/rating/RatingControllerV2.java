@@ -130,8 +130,8 @@ public class RatingControllerV2 {
     @GetMapping("/results/class/{classId}")
     @Operation(summary = "Get results by class")
     @CasbinAccess(resource = "quantification:config", action = "view")
-    public Result<List<RatingResultResponse>> getResultsByClass(@PathVariable Long classId) {
-        List<RatingResultResponse> results = ratingService.getResultsByClass(classId)
+    public Result<List<RatingResultResponse>> getResultsByClass(@PathVariable Long orgUnitId) {
+        List<RatingResultResponse> results = ratingService.getResultsByClass(orgUnitId)
             .stream().map(this::toResultResponse).collect(Collectors.toList());
         return Result.success(results);
     }
@@ -216,7 +216,7 @@ public class RatingControllerV2 {
         resp.setId(r.getId());
         resp.setRatingConfigId(r.getRatingConfigId());
         resp.setCheckPlanId(r.getCheckPlanId());
-        resp.setClassId(r.getClassId());
+        resp.setOrgUnitId(r.getOrgUnitId());
         resp.setClassName(r.getClassName());
         resp.setPeriodType(r.getPeriodType());
         resp.setPeriodStart(r.getPeriodStart());

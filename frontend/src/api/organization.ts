@@ -240,8 +240,8 @@ export function assignDeputyHeadTeacher(id: number | string, data: AssignHeadTea
 /**
  * 结束教师任职
  */
-export function endTeacherAssignment(classId: number | string, teacherId: number | string, role: string): Promise<void> {
-  return http.post(`${CLASS_URL}/${classId}/teachers/${teacherId}/end`, null, { params: { role } })
+export function endTeacherAssignment(orgUnitId: number | string, teacherId: number | string, role: string): Promise<void> {
+  return http.post(`${CLASS_URL}/${orgUnitId}/teachers/${teacherId}/end`, null, { params: { role } })
 }
 
 /**
@@ -330,8 +330,8 @@ export function getClassDetail(id: number | string): Promise<SchoolClass> {
 /**
  * 为班级分配教室
  */
-export function assignClassroom(classId: number | string, classroomId: number | string): Promise<void> {
-  return http.post(`/classes/${classId}/assign-classroom`, null, {
+export function assignClassroom(orgUnitId: number | string, classroomId: number | string): Promise<void> {
+  return http.post(`/classes/${orgUnitId}/assign-classroom`, null, {
     params: { classroomId }
   })
 }
@@ -339,40 +339,40 @@ export function assignClassroom(classId: number | string, classroomId: number | 
 /**
  * 取消班级教室分配
  */
-export function removeClassroom(classId: number | string): Promise<void> {
-  return http.delete(`/classes/${classId}/classroom`)
+export function removeClassroom(orgUnitId: number | string): Promise<void> {
+  return http.delete(`/classes/${orgUnitId}/classroom`)
 }
 
 /**
  * 获取班级的教室信息
  */
-export function getClassClassroom(classId: number | string): Promise<any> {
-  return http.get(`/classes/${classId}/classroom`)
+export function getClassClassroom(orgUnitId: number | string): Promise<any> {
+  return http.get(`/classes/${orgUnitId}/classroom`)
 }
 
 /**
  * 为班级添加宿舍
- * @param classId 支持 number 或 string 类型（大数字ID需要使用 string 避免精度丢失）
+ * @param orgUnitId 支持 number 或 string 类型（大数字ID需要使用 string 避免精度丢失）
  */
-export function addClassDormitory(classId: number | string, dormitoryId: number | string, allocatedBeds: number): Promise<void> {
-  return http.post(`/classes/${classId}/dormitories`, null, {
+export function addClassDormitory(orgUnitId: number | string, dormitoryId: number | string, allocatedBeds: number): Promise<void> {
+  return http.post(`/classes/${orgUnitId}/dormitories`, null, {
     params: { dormitoryId, allocatedBeds }
   })
 }
 
 /**
  * 移除班级宿舍
- * @param classId 支持 number 或 string 类型（大数字ID需要使用 string 避免精度丢失）
+ * @param orgUnitId 支持 number 或 string 类型（大数字ID需要使用 string 避免精度丢失）
  */
-export function removeClassDormitory(classId: number | string, dormitoryId: number | string): Promise<void> {
-  return http.delete(`/classes/${classId}/dormitories/${dormitoryId}`)
+export function removeClassDormitory(orgUnitId: number | string, dormitoryId: number | string): Promise<void> {
+  return http.delete(`/classes/${orgUnitId}/dormitories/${dormitoryId}`)
 }
 
 /**
  * 获取班级的宿舍列表
  */
-export function getClassDormitories(classId: number | string): Promise<ClassDormitoryInfo[]> {
-  return http.get<ClassDormitoryInfo[]>(`/classes/${classId}/dormitories`)
+export function getClassDormitories(orgUnitId: number | string): Promise<ClassDormitoryInfo[]> {
+  return http.get<ClassDormitoryInfo[]>(`/classes/${orgUnitId}/dormitories`)
 }
 
 /**
@@ -406,8 +406,8 @@ export function getDormitoryList(): Promise<any[]> {
 /**
  * 获取班级学生列表
  */
-export function getClassStudents(classId: number | string): Promise<any[]> {
-  return http.get(`/students/by-class/${classId}`)
+export function getClassStudents(orgUnitId: number | string): Promise<any[]> {
+  return http.get(`/students/by-class/${orgUnitId}`)
 }
 
 /**
@@ -431,8 +431,8 @@ export function getMajorList(orgUnitId?: number | string): Promise<any[]> {
 /**
  * 设置班主任 (兼容V1)
  */
-export function assignTeacher(classId: number | string, teacherId: number | string | null): Promise<void> {
-  return http.post(`${CLASS_URL}/${classId}/head-teacher`, {
+export function assignTeacher(orgUnitId: number | string, teacherId: number | string | null): Promise<void> {
+  return http.post(`${CLASS_URL}/${orgUnitId}/head-teacher`, {
     teacherId
   })
 }

@@ -134,9 +134,9 @@
                   <option v-for="c in courseOptions" :key="c.id" :value="c.id">{{ c.courseCode }} - {{ c.courseName }}</option>
                 </select>
               </div>
-              <div class="tm-field" :class="{ 'tm-error': formErrors.classId }">
+              <div class="tm-field" :class="{ 'tm-error': formErrors.orgUnitId }">
                 <label class="tm-label">班级 <span class="req">*</span></label>
-                <select v-model="batchForm.classId" class="tm-field-select">
+                <select v-model="batchForm.orgUnitId" class="tm-field-select">
                   <option :value="undefined" disabled>选择班级</option>
                   <option v-for="cls in classOptions" :key="cls.id" :value="cls.id">{{ cls.name }}</option>
                 </select>
@@ -207,7 +207,7 @@ const statusCounts = computed(() => {
 
 const batchDialogVisible = ref(false)
 const batchForm = ref<Partial<GradeBatch>>({})
-const formErrors = reactive({ batchName: false, semesterId: false, gradeType: false, courseId: false, classId: false })
+const formErrors = reactive({ batchName: false, semesterId: false, gradeType: false, courseId: false, orgUnitId: false })
 
 const queryParams = reactive<GradeQueryParams>({
   semesterId: undefined,
@@ -258,7 +258,7 @@ function validate() {
   formErrors.semesterId = !f.semesterId
   formErrors.gradeType = !f.gradeType
   formErrors.courseId = !f.courseId
-  formErrors.classId = !f.classId
+  formErrors.orgUnitId = !f.orgUnitId
   return !Object.values(formErrors).some(Boolean)
 }
 

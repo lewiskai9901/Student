@@ -475,22 +475,22 @@ const getAssignedClassCount = (room: any) => {
 }
 
 // 获取班级下的宿舍数量
-const getClassRoomCount = (classId: string) => {
-  const count = rooms.value.filter(r => isRoomAssignedToClass(r, classId)).length
+const getClassRoomCount = (orgUnitId: string) => {
+  const count = rooms.value.filter(r => isRoomAssignedToClass(r, orgUnitId)).length
   return count
 }
 
 // 判断宿舍是否分配给某班级（使用字符串比较避免大数字精度问题）
-const isRoomAssignedToClass = (room: any, classId: string) => {
+const isRoomAssignedToClass = (room: any, orgUnitId: string) => {
   if (!room || !room.assignedClassIds) return false
-  const classIds = String(room.assignedClassIds).split(',').map(id => id.trim()).filter(id => id)
-  const result = classIds.includes(String(classId))
+  const orgUnitIds = String(room.assignedClassIds).split(',').map(id => id.trim()).filter(id => id)
+  const result = orgUnitIds.includes(String(orgUnitId))
   return result
 }
 
 // 获取班级下按楼层分组的宿舍
-const getClassRoomsByFloor = (classId: string) => {
-  const classRooms = rooms.value.filter(r => isRoomAssignedToClass(r, classId))
+const getClassRoomsByFloor = (orgUnitId: string) => {
+  const classRooms = rooms.value.filter(r => isRoomAssignedToClass(r, orgUnitId))
   if (classRooms.length === 0) return []
 
   const floorMap = new Map<number, { floor: number; rooms: any[] }>()
@@ -556,9 +556,9 @@ const loadData = async () => {
       const classMap = new Map<string, { id: string; className: string }>()
       dormitories.forEach((room: any) => {
         if (room.assignedClassIds && room.assignedClassNames) {
-          const classIds = String(room.assignedClassIds).split(',').map(id => id.trim()).filter(id => id)
+          const orgUnitIds = String(room.assignedClassIds).split(',').map(id => id.trim()).filter(id => id)
           const classNames = String(room.assignedClassNames).split(',').map(name => name.trim())
-          classIds.forEach((id, index) => {
+          orgUnitIds.forEach((id, index) => {
             if (!classMap.has(id)) {
               classMap.set(id, { id, className: classNames[index] || `班级${id}` })
             }
@@ -634,11 +634,11 @@ const isRoomSelected = (roomId: number | string) => {
   return selectedRoomIds.value.some(id => String(id) === String(roomId))
 }
 
-const toggleClassExpand = (classId: string) => {
-  const index = expandedClassIds.value.indexOf(classId)
+const toggleClassExpand = (orgUnitId: string) => {
+  const index = expandedClassIds.value.indexOf(orgUnitId)
   if (index === -1) {
-    expandedClassIds.value.push(classId)
-    targetClassId.value = classId
+    expandedClassIds.value.push(orgUnitId)
+    targetClassId.value = orgUnitId
   } else {
     expandedClassIds.value.splice(index, 1)
   }
@@ -664,9 +664,9 @@ const handleDragEnd = () => {
   draggedRoomIds.value = []
 }
 
-const handleDragOver = (event: DragEvent, classId: string) => {
+const handleDragOver = (event: DragEvent, orgUnitId: string) => {
   event.preventDefault()
-  dragOverClassId.value = classId
+  dragOverClassId.value = orgUnitId
   dragOverUnassigned.value = false
 }
 
@@ -679,14 +679,14 @@ const handleDragLeave = (event: DragEvent) => {
   dragOverClassId.value = null
 }
 
-const handleDrop = async (event: DragEvent, classId: string) => {
+const handleDrop = async (event: DragEvent, orgUnitId: string) => {
   event.preventDefault()
   dragOverClassId.value = null
   isDragging.value = false
 
   if (draggedRoomIds.value.length === 0) return
 
-  await assignRoomsToClass(draggedRoomIds.value, classId)
+  await assignRoomsToClass(draggedRoomIds.value, orgUnitId)
   draggedRoomIds.value = []
 }
 
@@ -729,19 +729,19 @@ const unassignFromSelectedClass = async () => {
   await unassignRoomsFromClass(selectedRoomIds.value, targetClassId.value)
 }
 
-const assignRoomsToClass = async (roomIds: string[], classId: string) => {
-  console.log('[assignRoomsToClass] Starting assignment:', { roomIds, classId })
+const assignRoomsToClass = async (roomIds: string[], orgUnitId: string) => {
+  console.log('[assignRoomsToClass] Starting assignment:', { roomIds, orgUnitId })
   try {
     for (const roomId of roomIds) {
       const room = rooms.value.find(r => String(r.id) === String(roomId))
-      console.log('[assignRoomsToClass] Processing room:', room?.id, 'already assigned:', isRoomAssignedToClass(room, classId))
-      if (room && !isRoomAssignedToClass(room, classId)) {
-        await addDormitory(classId, roomId, room?.bedCapacity || room?.bedCount || 6)
+      console.log('[assignRoomsToClass] Processing room:', room?.id, 'already assigned:', isRoomAssignedToClass(room, orgUnitId))
+      if (room && !isRoomAssignedToClass(room, orgUnitId)) {
+        await addDormitory(orgUnitId, roomId, room?.bedCapacity || room?.bedCount || 6)
       }
     }
 
     // 更新本地数据 - 使用字符串比较
-    const className = classOptions.value.find(c => String(c.id) === String(classId))?.className || ''
+    const className = classOptions.value.find(c => String(c.id) === String(orgUnitId))?.className || ''
     console.log('[assignRoomsToClass] Updating local data, className:', className)
 
     const newRooms = rooms.value.map(room => {
@@ -749,8 +749,8 @@ const assignRoomsToClass = async (roomIds: string[], classId: string) => {
         const existingIds = room.assignedClassIds ? String(room.assignedClassIds).split(',').map(id => id.trim()) : []
         const existingNames = room.assignedClassNames ? String(room.assignedClassNames).split(',').map(n => n.trim()) : []
 
-        if (!existingIds.includes(String(classId))) {
-          existingIds.push(String(classId))
+        if (!existingIds.includes(String(orgUnitId))) {
+          existingIds.push(String(orgUnitId))
           existingNames.push(className)
         }
 
@@ -772,8 +772,8 @@ const assignRoomsToClass = async (roomIds: string[], classId: string) => {
     hasChanges.value = true
 
     // 自动展开目标班级
-    if (!expandedClassIds.value.includes(classId)) {
-      expandedClassIds.value.push(classId)
+    if (!expandedClassIds.value.includes(orgUnitId)) {
+      expandedClassIds.value.push(orgUnitId)
     }
 
     ElMessage.success(`成功分配 ${roomIds.length} 间宿舍`)
@@ -782,12 +782,12 @@ const assignRoomsToClass = async (roomIds: string[], classId: string) => {
   }
 }
 
-const unassignRoomsFromClass = async (roomIds: string[], classId: string) => {
+const unassignRoomsFromClass = async (roomIds: string[], orgUnitId: string) => {
   try {
     for (const roomId of roomIds) {
       const room = rooms.value.find(r => String(r.id) === String(roomId))
-      if (room && isRoomAssignedToClass(room, classId)) {
-        await removeDormitory(classId, roomId)
+      if (room && isRoomAssignedToClass(room, orgUnitId)) {
+        await removeDormitory(orgUnitId, roomId)
       }
     }
 
@@ -797,7 +797,7 @@ const unassignRoomsFromClass = async (roomIds: string[], classId: string) => {
         const existingIds = room.assignedClassIds ? String(room.assignedClassIds).split(',').map(id => id.trim()) : []
         const existingNames = room.assignedClassNames ? String(room.assignedClassNames).split(',').map(n => n.trim()) : []
 
-        const classIndex = existingIds.indexOf(String(classId))
+        const classIndex = existingIds.indexOf(String(orgUnitId))
         if (classIndex !== -1) {
           existingIds.splice(classIndex, 1)
           existingNames.splice(classIndex, 1)
@@ -826,9 +826,9 @@ const unassignRoomsFromAllClasses = async (roomIds: string[]) => {
     for (const roomId of roomIds) {
       const room = rooms.value.find(r => String(r.id) === String(roomId))
       if (room && room.assignedClassIds) {
-        const classIds = String(room.assignedClassIds).split(',').map(id => id.trim()).filter(id => id)
-        for (const classId of classIds) {
-          await removeDormitory(classId, roomId)
+        const orgUnitIds = String(room.assignedClassIds).split(',').map(id => id.trim()).filter(id => id)
+        for (const orgUnitId of orgUnitIds) {
+          await removeDormitory(orgUnitId, roomId)
         }
       }
     }
@@ -872,8 +872,8 @@ const getRoomTooltip = (room: any) => {
   return `${roomNo} | ${beds}人间 | ${classes}`
 }
 
-const getClassCardClass = (classId: string) => {
-  if (String(targetClassId.value) === String(classId)) {
+const getClassCardClass = (orgUnitId: string) => {
+  if (String(targetClassId.value) === String(orgUnitId)) {
     return 'border-blue-500 bg-blue-50 cursor-pointer'
   }
   return 'border-gray-200 bg-white hover:border-blue-300 cursor-pointer'

@@ -26,27 +26,27 @@ export function getMyClasses(): Promise<MyClassItem[]> {
 /**
  * 获取班级概览数据
  */
-export function getClassOverview(classId: string | number): Promise<MyClassOverview> {
-  return http.get<MyClassOverview>(`${BASE_URL}/classes/${classId}/overview`)
+export function getClassOverview(orgUnitId: string | number): Promise<MyClassOverview> {
+  return http.get<MyClassOverview>(`${BASE_URL}/classes/${orgUnitId}/overview`)
 }
 
 /**
  * 获取班级学生列表
  */
-export function getClassStudents(classId: string | number, params?: {
+export function getClassStudents(orgUnitId: string | number, params?: {
   keyword?: string
   status?: string
 }): Promise<MyClassStudent[]> {
-  return http.get<MyClassStudent[]>(`${BASE_URL}/classes/${classId}/students`, { params })
+  return http.get<MyClassStudent[]>(`${BASE_URL}/classes/${orgUnitId}/students`, { params })
 }
 
 /**
  * 获取班级宿舍分布
  */
-export function getClassDormitoryDistribution(classId: string | number): Promise<DormitoryDistribution[]> {
-  console.log('[myClass API] getClassDormitoryDistribution called with classId:', classId, 'type:', typeof classId)
-  console.log('[myClass API] Request URL:', `${BASE_URL}/classes/${classId}/dormitory-distribution`)
-  return http.get<DormitoryDistribution[]>(`${BASE_URL}/classes/${classId}/dormitory-distribution`)
+export function getClassDormitoryDistribution(orgUnitId: string | number): Promise<DormitoryDistribution[]> {
+  console.log('[myClass API] getClassDormitoryDistribution called with orgUnitId:', orgUnitId, 'type:', typeof orgUnitId)
+  console.log('[myClass API] Request URL:', `${BASE_URL}/classes/${orgUnitId}/dormitory-distribution`)
+  return http.get<DormitoryDistribution[]>(`${BASE_URL}/classes/${orgUnitId}/dormitory-distribution`)
     .then((response: DormitoryDistribution[]) => {
       console.log('[myClass API] getClassDormitoryDistribution response:', response)
       return response

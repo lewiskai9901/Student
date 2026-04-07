@@ -825,7 +825,7 @@ async function doRegister() {
   }
   registerSaving.value = true
   try {
-    const res: any = await enrollmentApplicationApi.register(registerTarget.value.id, { classId: registerClassId.value })
+    const res: any = await enrollmentApplicationApi.register(registerTarget.value.id, { orgUnitId: registerClassId.value })
     ElMessage.success(`报到成功，学号: ${res.studentNo}`)
     registerDialogVisible.value = false
     loadApplications()

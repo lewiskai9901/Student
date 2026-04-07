@@ -98,9 +98,9 @@
                 <option v-for="c in courseOptions" :key="c.id" :value="c.id">{{ c.courseCode }} - {{ c.courseName }}</option>
               </select>
             </div>
-            <div class="tm-field" :class="{ 'tm-error': formErrors.classIds }">
+            <div class="tm-field" :class="{ 'tm-error': formErrors.orgUnitIds }">
               <label class="tm-label">班级 <span class="req">*</span>（按住Ctrl多选）</label>
-              <select v-model="arrangementForm.classIds" class="tm-field-select" multiple style="min-height: 80px;">
+              <select v-model="arrangementForm.orgUnitIds" class="tm-field-select" multiple style="min-height: 80px;">
                 <option v-for="cls in classOptions" :key="cls.id" :value="cls.id">{{ cls.name }}</option>
               </select>
             </div>
@@ -161,7 +161,7 @@ const classOptions = ref<{ id: number | string; name: string }[]>([])
 
 const arrangementDialogVisible = ref(false)
 const arrangementForm = ref<Partial<ExamArrangement>>({})
-const formErrors = reactive({ courseId: false, classIds: false, examDate: false, startTime: false, endTime: false, duration: false })
+const formErrors = reactive({ courseId: false, orgUnitIds: false, examDate: false, startTime: false, endTime: false, duration: false })
 
 const arrangementsWithRooms = computed(() => arrangements.value.filter(a => a.examRooms && a.examRooms.length > 0).length)
 
@@ -199,7 +199,7 @@ async function loadCourseOptions() {
 function validate() {
   const f = arrangementForm.value
   formErrors.courseId = !f.courseId
-  formErrors.classIds = !f.classIds?.length
+  formErrors.orgUnitIds = !f.orgUnitIds?.length
   formErrors.examDate = !f.examDate
   formErrors.startTime = !f.startTime
   formErrors.endTime = !f.endTime

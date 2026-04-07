@@ -13,7 +13,7 @@ public class ScheduleEntryPO {
     private Long taskId;
     private Long teachingClassId;
     private Long courseId;
-    private Long classId;
+    private Long orgUnitId;
     private Long teacherId;
     private Long classroomId;
     private Integer weekday;
