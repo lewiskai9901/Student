@@ -746,10 +746,11 @@ public class AutoSchedulingService {
         int count = 0;
         for (ScheduleSlot slot : solution) {
             jdbcTemplate.update(
-                "INSERT INTO schedule_entries (semester_id, task_id, course_id, class_id, teacher_id, " +
+                "INSERT INTO schedule_entries (id, semester_id, task_id, course_id, class_id, teacher_id, " +
                 "classroom_id, teaching_class_id, weekday, start_slot, end_slot, start_week, end_week, " +
                 "week_type, schedule_type, entry_status, conflict_flag, deleted) " +
-                "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, 1, 0, 0)",
+                "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, 1, 0, 0)",
+                com.baomidou.mybatisplus.core.toolkit.IdWorker.getId(),
                 semesterId, slot.taskId, slot.courseId, slot.classId, slot.teacherId,
                 slot.classroomId, slot.teachingClassId,
                 slot.dayOfWeek, slot.periodStart, slot.periodEnd,

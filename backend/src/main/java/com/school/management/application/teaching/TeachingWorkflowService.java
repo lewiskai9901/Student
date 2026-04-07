@@ -7,6 +7,7 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.baomidou.mybatisplus.core.toolkit.IdWorker;
 import java.util.List;
 import java.util.Map;
 
@@ -41,18 +42,20 @@ public class TeachingWorkflowService {
         log.info("自动生成年级-学期映射: semesterId={}", semesterId);
 
         Map<String, Object> sem = jdbc.queryForMap(
-            "SELECT start_year, semester_type FROM semesters WHERE id = ? AND deleted = 0", semesterId);
+            "SELECT CAST(start_year AS UNSIGNED) AS start_year, semester_type FROM semesters WHERE id = ? AND deleted = 0", semesterId);
         int semStartYear = ((Number) sem.get("start_year")).intValue();
         int semType = ((Number) sem.get("semester_type")).intValue();
 
         List<Map<String, Object>> cohorts = jdbc.queryForList(
-            "SELECT id, enrollment_year, schooling_years FROM grades WHERE status != 'GRADUATED' AND deleted = 0");
+            "SELECT id, CAST(enrollment_year AS UNSIGNED) AS enrollment_year, CAST(graduation_year AS UNSIGNED) AS graduation_year FROM grades WHERE status = 1 AND deleted = 0");
 
         int count = 0;
         for (Map<String, Object> c : cohorts) {
             Long cohortId = toLong(c.get("id"));
             int enrollYear = ((Number) c.get("enrollment_year")).intValue();
-            int schoolingYears = c.get("schooling_years") != null ? ((Number) c.get("schooling_years")).intValue() : 3;
+            int gradYear = c.get("graduation_year") != null ? ((Number) c.get("graduation_year")).intValue() : enrollYear + 3;
+            int schoolingYears = gradYear - enrollYear;
+            if (schoolingYears <= 0) schoolingYears = 3;
             int programSem = (semStartYear - enrollYear) * 2 + semType;
 
             if (programSem < 1 || programSem > schoolingYears * 2) continue;
@@ -149,8 +152,9 @@ public class TeachingWorkflowService {
         int endWeek = 16;
         try {
             Map<String, Object> semInfo = jdbc.queryForMap(
-                "SELECT total_weeks FROM semesters WHERE id = ? AND deleted = 0", semesterId);
+                "SELECT DATEDIFF(end_date, start_date) DIV 7 AS total_weeks FROM semesters WHERE id = ? AND deleted = 0", semesterId);
             endWeek = semInfo.get("total_weeks") != null ? ((Number) semInfo.get("total_weeks")).intValue() : 16;
+            if (endWeek <= 0) endWeek = 16;
         } catch (Exception ignored) {}
 
         List<Map<String, Object>> assignments = jdbc.queryForList(
@@ -181,11 +185,11 @@ public class TeachingWorkflowService {
             String taskCode = String.format("TK-%d-%d-%d", semesterId, courseId, classId);
 
             jdbc.update(
-                "INSERT INTO teaching_tasks (task_code, semester_id, course_id, class_id, offering_id, " +
+                "INSERT INTO teaching_tasks (id, task_code, semester_id, course_id, class_id, offering_id, " +
                 "student_count, weekly_hours, total_hours, start_week, end_week, " +
-                "scheduling_status, task_status, created_by, deleted) " +
-                "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, 1, ?, 0)",
-                taskCode, semesterId, courseId, classId, offeringId,
+                "scheduling_status, task_status, created_by, deleted, tenant_id) " +
+                "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, 1, ?, 0, 1)",
+                IdWorker.getId(), taskCode, semesterId, courseId, classId, offeringId,
                 studentCount, weeklyHours, totalHours, taskStartWeek, taskEndWeek, createdBy
             );
             count++;
