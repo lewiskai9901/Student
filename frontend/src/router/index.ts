@@ -763,7 +763,7 @@ const routes: RouteRecordRaw[] = [
           {
             path: '/teaching/calendar',
             name: 'TeachingCalendar',
-            component: () => import('@/views/teaching/AcademicCalendarView.vue'),
+            component: () => import('@/views/teaching/CalendarCenter.vue'),
             meta: {
               title: '校历管理',
               requiresAuth: true,
