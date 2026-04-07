@@ -794,7 +794,7 @@ const routes: RouteRecordRaw[] = [
           {
             path: '/teaching/scheduling',
             name: 'TeachingScheduling',
-            component: () => import('@/views/teaching/ScheduleView.vue'),
+            component: () => import('@/views/teaching/ScheduleCenter.vue'),
             meta: {
               title: '排课中心',
               requiresAuth: true,

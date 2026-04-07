@@ -43,6 +43,96 @@ public class TeachingScheduleController {
     @Autowired(required = false)
     private TriggerService triggerService;
 
+    // ==================== 节次配置 & 数据就绪 ====================
+
+    @GetMapping("/schedule-config")
+    @CasbinAccess(resource = "teaching:schedule", action = "view")
+    public Result<Map<String, Object>> getScheduleConfig(@RequestParam Long semesterId) {
+        try {
+            String json = jdbc.queryForObject(
+                "SELECT config_value FROM system_configs WHERE config_key = ? AND deleted = 0",
+                String.class, "schedule.periods." + semesterId);
+            // Parse JSON string to Map
+            com.fasterxml.jackson.databind.ObjectMapper om = new com.fasterxml.jackson.databind.ObjectMapper();
+            Map<String, Object> config = om.readValue(json, Map.class);
+            return Result.success(config);
+        } catch (org.springframework.dao.EmptyResultDataAccessException e) {
+            // No config for this semester, return default
+            Map<String, Object> def = new LinkedHashMap<>();
+            def.put("periodsPerDay", 8);
+            def.put("scheduleDays", List.of(1, 2, 3, 4, 5));
+            List<Map<String, Object>> periods = new ArrayList<>();
+            String[][] defaultPeriods = {
+                {"1", "第一节", "08:00", "08:45"}, {"2", "第二节", "08:55", "09:40"},
+                {"3", "第三节", "10:00", "10:45"}, {"4", "第四节", "10:55", "11:40"},
+                {"5", "第五节", "14:00", "14:45"}, {"6", "第六节", "14:55", "15:40"},
+                {"7", "第七节", "16:00", "16:45"}, {"8", "第八节", "16:55", "17:40"},
+            };
+            for (String[] p : defaultPeriods) {
+                Map<String, Object> m = new LinkedHashMap<>();
+                m.put("period", Integer.parseInt(p[0])); m.put("name", p[1]);
+                m.put("startTime", p[2]); m.put("endTime", p[3]);
+                periods.add(m);
+            }
+            def.put("periods", periods);
+            return Result.success(def);
+        } catch (Exception e) {
+            log.error("Failed to load schedule config", e);
+            return Result.success(Map.of("periodsPerDay", 8));
+        }
+    }
+
+    @PutMapping("/schedule-config")
+    @CasbinAccess(resource = "teaching:schedule", action = "edit")
+    public Result<Void> saveScheduleConfig(@RequestBody Map<String, Object> data) {
+        Long semesterId = ((Number) data.get("semesterId")).longValue();
+        String key = "schedule.periods." + semesterId;
+        try {
+            // Remove semesterId from saved value
+            Map<String, Object> config = new LinkedHashMap<>(data);
+            config.remove("semesterId");
+            com.fasterxml.jackson.databind.ObjectMapper om = new com.fasterxml.jackson.databind.ObjectMapper();
+            String json = om.writeValueAsString(config);
+            Long exists = jdbc.queryForObject("SELECT COUNT(1) FROM system_configs WHERE config_key = ?", Long.class, key);
+            if (exists != null && exists > 0) {
+                jdbc.update("UPDATE system_configs SET config_value = ?, updated_by = ? WHERE config_key = ?",
+                    json, SecurityUtils.requireCurrentUserId(), key);
+            } else {
+                jdbc.update("INSERT INTO system_configs (config_key, config_value, config_type, description, created_by, deleted) VALUES (?, ?, 'JSON', '排课节次配置', ?, 0)",
+                    key, json, SecurityUtils.requireCurrentUserId());
+            }
+            return Result.success();
+        } catch (Exception e) {
+            log.error("Failed to save schedule config", e);
+            return Result.error("保存失败");
+        }
+    }
+
+    @GetMapping("/schedule-readiness")
+    @CasbinAccess(resource = "teaching:schedule", action = "view")
+    public Result<Map<String, Object>> checkReadiness(@RequestParam Long semesterId) {
+        Map<String, Object> result = new LinkedHashMap<>();
+        // 开课计划
+        Long offeringCount = jdbc.queryForObject("SELECT COUNT(1) FROM semester_course_offerings WHERE semester_id=? AND deleted=0", Long.class, semesterId);
+        result.put("offerings", Map.of("count", offeringCount, "status", offeringCount > 0 ? "ready" : "empty"));
+        // 教学任务
+        Long taskCount = jdbc.queryForObject("SELECT COUNT(1) FROM teaching_tasks WHERE semester_id=? AND deleted=0", Long.class, semesterId);
+        Long noTeacher = jdbc.queryForObject("SELECT COUNT(1) FROM teaching_tasks t WHERE t.semester_id=? AND t.deleted=0 AND NOT EXISTS (SELECT 1 FROM teaching_task_teachers tt WHERE tt.task_id=t.id)", Long.class, semesterId);
+        String taskStatus = taskCount == 0 ? "empty" : (noTeacher > 0 ? "warning" : "ready");
+        result.put("tasks", Map.of("count", taskCount, "withoutTeacher", noTeacher, "status", taskStatus));
+        // 教室
+        Long classroomCount = jdbc.queryForObject("SELECT COUNT(1) FROM places WHERE deleted=0 AND room_type='CLASSROOM'", Long.class);
+        result.put("classrooms", Map.of("count", classroomCount, "status", classroomCount > 0 ? "ready" : "empty"));
+        // 约束
+        Long constraintCount = jdbc.queryForObject("SELECT COUNT(1) FROM scheduling_constraints WHERE semester_id=? AND deleted=0 AND enabled=1", Long.class, semesterId);
+        result.put("constraints", Map.of("count", constraintCount, "status", constraintCount > 0 ? "ready" : "empty"));
+        // 排课方案
+        Long planCount = jdbc.queryForObject("SELECT COUNT(1) FROM course_schedules WHERE semester_id=? AND deleted=0", Long.class, semesterId);
+        Long entryCount = jdbc.queryForObject("SELECT COUNT(1) FROM schedule_entries WHERE semester_id=? AND deleted=0", Long.class, semesterId);
+        result.put("plans", Map.of("count", planCount, "entryCount", entryCount, "status", entryCount > 0 ? "ready" : "empty"));
+        return Result.success(result);
+    }
+
     // ==================== 排课方案 (CourseSchedule) ====================
 
     @GetMapping("/schedule-plans")

@@ -58,6 +58,19 @@ export const teachingTaskApi = {
     http.patch(`${BASE_URL}/tasks/${id}/status`, { status }),
 }
 
+// ==================== 排课配置 & 就绪检查 ====================
+
+export const scheduleConfigApi = {
+  get: (semesterId: number | string) =>
+    http.get<any>(`${BASE_URL}/schedule-config`, { params: { semesterId } }),
+
+  save: (data: { semesterId: number | string; periodsPerDay: number; scheduleDays: number[]; periods: any[] }) =>
+    http.put(`${BASE_URL}/schedule-config`, data),
+
+  checkReadiness: (semesterId: number | string) =>
+    http.get<any>(`${BASE_URL}/schedule-readiness`, { params: { semesterId } }),
+}
+
 // ==================== 排课管理 ====================
 
 export const scheduleApi = {
