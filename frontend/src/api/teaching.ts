@@ -61,55 +61,51 @@ export const teachingTaskApi = {
 // ==================== 排课管理 ====================
 
 export const scheduleApi = {
+  // ---- 排课方案 (CourseSchedule / schedule-plans) ----
   list: (params?: { semesterId?: number | string; status?: number }) =>
-    http.get<CourseSchedule[]>(`${BASE_URL}/schedules`, { params }),
+    http.get<CourseSchedule[]>(`${BASE_URL}/schedule-plans`, { params }),
 
-  getById: (id: number | string) => http.get<CourseSchedule>(`${BASE_URL}/schedules/${id}`),
+  getById: (id: number | string) => http.get<CourseSchedule>(`${BASE_URL}/schedule-plans/${id}`),
 
   create: (data: Partial<CourseSchedule>) =>
-    http.post<CourseSchedule>(`${BASE_URL}/schedules`, data),
+    http.post<CourseSchedule>(`${BASE_URL}/schedule-plans`, data),
 
   update: (id: number | string, data: Partial<CourseSchedule>) =>
-    http.put<CourseSchedule>(`${BASE_URL}/schedules/${id}`, data),
+    http.put<CourseSchedule>(`${BASE_URL}/schedule-plans/${id}`, data),
 
-  delete: (id: number | string) => http.delete(`${BASE_URL}/schedules/${id}`),
+  delete: (id: number | string) => http.delete(`${BASE_URL}/schedule-plans/${id}`),
 
   publish: (id: number | string) =>
-    http.post(`${BASE_URL}/schedules/${id}/publish`),
+    http.post(`${BASE_URL}/schedule-plans/${id}/publish`),
 
   archive: (id: number | string) =>
-    http.post(`${BASE_URL}/schedules/${id}/archive`),
+    http.post(`${BASE_URL}/schedule-plans/${id}/archive`),
 
-  // 课表条目
+  // ---- 课表条目 (ScheduleEntry / schedules) ----
   getEntries: (scheduleId: number | string) =>
-    http.get<ScheduleEntry[]>(`${BASE_URL}/schedules/${scheduleId}/entries`),
+    http.get<ScheduleEntry[]>(`${BASE_URL}/schedules`, { params: { scheduleId } }),
 
-  addEntry: (scheduleId: number | string, data: Partial<ScheduleEntry>) =>
-    http.post<ScheduleEntry>(`${BASE_URL}/schedules/${scheduleId}/entries`, data),
+  addEntry: (_scheduleId: number | string, data: Partial<ScheduleEntry>) =>
+    http.post<ScheduleEntry>(`${BASE_URL}/schedules`, data),
 
-  updateEntry: (scheduleId: number | string, entryId: number | string, data: Partial<ScheduleEntry>) =>
-    http.put<ScheduleEntry>(`${BASE_URL}/schedules/${scheduleId}/entries/${entryId}`, data),
+  updateEntry: (_scheduleId: number | string, entryId: number | string, data: Partial<ScheduleEntry>) =>
+    http.put<ScheduleEntry>(`${BASE_URL}/schedules/${entryId}`, data),
 
-  deleteEntry: (scheduleId: number | string, entryId: number | string) =>
-    http.delete(`${BASE_URL}/schedules/${scheduleId}/entries/${entryId}`),
+  deleteEntry: (_scheduleId: number | string, entryId: number | string) =>
+    http.delete(`${BASE_URL}/schedules/${entryId}`),
 
-  // 智能排课
+  // ---- 智能排课 ----
   autoSchedule: (params: { semesterId: number | string; maxIterations?: number; populationSize?: number; scheduleId?: number | string; mutationRate?: number }) =>
     http.post<any>(`${BASE_URL}/schedules/auto-schedule`, params),
 
-  // 冲突检测
-  checkConflicts: (scheduleId: number | string) =>
-    http.get<{ conflicts: any[] }>(`${BASE_URL}/schedules/${scheduleId}/conflicts`),
-
-  // 拖拽移动课表条目
+  // ---- 拖拽移动 / 冲突检测 ----
   moveEntry: (id: number | string, data: { semesterId: number | string; dayOfWeek: number; periodStart: number; classroomId?: number }) =>
     http.post(`${BASE_URL}/schedules/${id}/move`, data),
 
-  // 检查移动冲突
   checkMoveConflict: (data: { entryId: number; semesterId: number | string; dayOfWeek: number; periodStart: number }) =>
     http.post(`${BASE_URL}/schedules/check-move-conflict`, data),
 
-  // 按班级/教师/教室查询
+  // ---- 按维度查询课表 ----
   getByClass: (classId: number | string, semesterId: number | string) =>
     http.get<ScheduleEntry[]>(`${BASE_URL}/schedules/by-class/${classId}`, { params: { semesterId } }),
 
@@ -119,7 +115,7 @@ export const scheduleApi = {
   getByClassroom: (classroomId: number | string, semesterId: number | string) =>
     http.get<ScheduleEntry[]>(`${BASE_URL}/schedules/by-classroom/${classroomId}`, { params: { semesterId } }),
 
-  // 导出课表
+  // ---- 导出 ----
   exportClassSchedule: (semesterId: number | string, classId: number | string) =>
     http.get(`${BASE_URL}/schedules/export/class/${classId}`, { params: { semesterId }, responseType: 'blob' }),
 

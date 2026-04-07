@@ -43,6 +43,86 @@ public class TeachingScheduleController {
     @Autowired(required = false)
     private TriggerService triggerService;
 
+    // ==================== 排课方案 (CourseSchedule) ====================
+
+    @GetMapping("/schedule-plans")
+    @CasbinAccess(resource = "teaching:schedule", action = "view")
+    public Result<List<Map<String, Object>>> listSchedulePlans(
+            @RequestParam(required = false) Long semesterId,
+            @RequestParam(required = false) Integer status) {
+        StringBuilder sql = new StringBuilder(
+            "SELECT id, semester_id AS semesterId, name, description, status, entry_count AS entryCount, " +
+            "generated_at AS generatedAt, published_at AS publishedAt, remark, " +
+            "created_at AS createdAt, updated_at AS updatedAt " +
+            "FROM course_schedules WHERE deleted = 0"
+        );
+        List<Object> params = new ArrayList<>();
+        if (semesterId != null) { sql.append(" AND semester_id = ?"); params.add(semesterId); }
+        if (status != null) { sql.append(" AND status = ?"); params.add(status); }
+        sql.append(" ORDER BY created_at DESC");
+        return Result.success(jdbc.queryForList(sql.toString(), params.toArray()));
+    }
+
+    @GetMapping("/schedule-plans/{id}")
+    @CasbinAccess(resource = "teaching:schedule", action = "view")
+    public Result<Map<String, Object>> getSchedulePlan(@PathVariable Long id) {
+        Map<String, Object> plan = jdbc.queryForMap(
+            "SELECT id, semester_id AS semesterId, name, description, status, entry_count AS entryCount, " +
+            "generated_at AS generatedAt, published_at AS publishedAt, remark, " +
+            "created_at AS createdAt, updated_at AS updatedAt " +
+            "FROM course_schedules WHERE id = ? AND deleted = 0", id);
+        return Result.success(plan);
+    }
+
+    @PostMapping("/schedule-plans")
+    @CasbinAccess(resource = "teaching:schedule", action = "edit")
+    public Result<Map<String, Object>> createSchedulePlan(@RequestBody Map<String, Object> data) {
+        Long semesterId = ((Number) data.get("semesterId")).longValue();
+        String name = (String) data.get("name");
+        String description = (String) data.getOrDefault("description", "");
+        jdbc.update(
+            "INSERT INTO course_schedules (semester_id, name, description, status, entry_count, created_by, deleted) " +
+            "VALUES (?, ?, ?, 0, 0, ?, 0)",
+            semesterId, name, description, SecurityUtils.requireCurrentUserId());
+        Long newId = jdbc.queryForObject("SELECT LAST_INSERT_ID()", Long.class);
+        return Result.success(Map.of("id", newId, "name", name, "status", 0));
+    }
+
+    @PutMapping("/schedule-plans/{id}")
+    @CasbinAccess(resource = "teaching:schedule", action = "edit")
+    public Result<Void> updateSchedulePlan(@PathVariable Long id, @RequestBody Map<String, Object> data) {
+        String name = (String) data.get("name");
+        String description = (String) data.getOrDefault("description", "");
+        jdbc.update("UPDATE course_schedules SET name = ?, description = ?, updated_by = ? WHERE id = ? AND deleted = 0",
+            name, description, SecurityUtils.requireCurrentUserId(), id);
+        return Result.success();
+    }
+
+    @DeleteMapping("/schedule-plans/{id}")
+    @CasbinAccess(resource = "teaching:schedule", action = "edit")
+    public Result<Void> deleteSchedulePlan(@PathVariable Long id) {
+        jdbc.update("UPDATE course_schedules SET deleted = 1 WHERE id = ?", id);
+        // 同时软删关联的条目
+        jdbc.update("UPDATE schedule_entries SET deleted = 1 WHERE schedule_id = ?", id);
+        return Result.success();
+    }
+
+    @PostMapping("/schedule-plans/{id}/publish")
+    @CasbinAccess(resource = "teaching:schedule", action = "edit")
+    public Result<Void> publishSchedulePlan(@PathVariable Long id) {
+        jdbc.update("UPDATE course_schedules SET status = 1, published_at = NOW(), updated_by = ? WHERE id = ? AND deleted = 0",
+            SecurityUtils.requireCurrentUserId(), id);
+        return Result.success();
+    }
+
+    @PostMapping("/schedule-plans/{id}/archive")
+    @CasbinAccess(resource = "teaching:schedule", action = "edit")
+    public Result<Void> archiveSchedulePlan(@PathVariable Long id) {
+        jdbc.update("UPDATE course_schedules SET status = 2, updated_by = ? WHERE id = ? AND deleted = 0",
+            SecurityUtils.requireCurrentUserId(), id);
+        return Result.success();
+    }
+
     // ==================== 课表条目 ====================
 
     @GetMapping("/schedules")
