@@ -44,13 +44,13 @@
       </div>
       <table class="tm-table" style="border-radius: 0; border-left: none; border-right: none; border-bottom: none;">
         <colgroup>
-          <col style="width: 14%" />
-          <col style="width: 18%" />
-          <col style="width: 12%" />
-          <col style="width: 8%" />
-          <col style="width: 10%" />
-          <col style="width: 8%" />
-          <col style="width: 8%" />
+          <col />
+          <col />
+          <col style="width: 100px" />
+          <col style="width: 70px" />
+          <col style="width: 90px" />
+          <col style="width: 80px" />
+          <col style="width: 80px" />
         </colgroup>
         <thead>
           <tr>

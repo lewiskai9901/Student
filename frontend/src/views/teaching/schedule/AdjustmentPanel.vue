@@ -14,22 +14,20 @@
     <div style="border: 1px solid #e5e7eb; border-radius: 10px; background: #fff; overflow: hidden;">
       <table class="tm-table" style="border-radius: 0; border: none;">
         <colgroup>
-          <col style="width: 70px" />
-          <col style="width: 85px" />
+          <col style="width: 65px" />
+          <col style="width: 75px" />
           <col />
-          <col style="width: 140px" />
-          <col style="width: 90px" />
-          <col style="width: 80px" />
-          <col style="width: 140px" />
-          <col style="width: 140px" />
+          <col style="width: 180px" />
+          <col style="width: 75px" />
+          <col style="width: 130px" />
+          <col style="width: 130px" />
         </colgroup>
         <thead>
           <tr>
             <th>类型</th>
             <th>申请人</th>
             <th class="text-left">原因</th>
-            <th>新时间</th>
-            <th>新教室</th>
+            <th class="text-left">调整至</th>
             <th>状态</th>
             <th>申请时间</th>
             <th>操作</th>
@@ -37,20 +35,20 @@
         </thead>
         <tbody>
           <tr v-if="adjustmentLoading">
-            <td colspan="8" class="tm-empty"><span class="tm-spin" style="display:inline-block;width:16px;height:16px;border:2px solid #e5e7eb;border-top-color:#2563eb;border-radius:50%;" /> 加载中...</td>
+            <td colspan="7" class="tm-empty"><span class="tm-spin" style="display:inline-block;width:16px;height:16px;border:2px solid #e5e7eb;border-top-color:#2563eb;border-radius:50%;" /> 加载中...</td>
           </tr>
           <tr v-else-if="adjustments.length === 0">
-            <td colspan="8" class="tm-empty">暂无调课记录</td>
+            <td colspan="7" class="tm-empty">暂无调课记录</td>
           </tr>
           <tr v-for="row in adjustments" :key="row.id">
             <td><span :class="['tm-chip', { 1:'tm-chip-blue', 2:'tm-chip-red', 3:'tm-chip-green' }[row.adjustmentType] || 'tm-chip-gray']">{{ getAdjTypeName(row.adjustmentType) }}</span></td>
             <td>{{ row.applicantName }}</td>
             <td class="text-left" style="white-space: normal !important; font-size: 12px;">{{ row.reason }}</td>
-            <td style="font-size: 12px;">
+            <td class="text-left" style="font-size: 12px; white-space: normal !important;">
               <template v-if="row.newDayOfWeek">{{ getWeekdayName(row.newDayOfWeek) }} 第{{ row.newPeriodStart }}-{{ row.newPeriodEnd }}节</template>
-              <span v-else style="color: #9ca3af;">-</span>
+              <span v-if="row.newClassroomName" style="margin-left: 4px; color: #6b7280;">{{ row.newClassroomName }}</span>
+              <span v-if="!row.newDayOfWeek && !row.newClassroomName" style="color: #9ca3af;">-</span>
             </td>
-            <td>{{ row.newClassroomName || '-' }}</td>
             <td><span :class="['tm-chip', { 0:'tm-chip-amber', 1:'tm-chip-green', 2:'tm-chip-red', 3:'tm-chip-blue', 4:'tm-chip-gray' }[row.status] || 'tm-chip-gray']">{{ getAdjStatusName(row.status) }}</span></td>
             <td style="font-size: 12px; color: #6b7280;">{{ row.appliedAt }}</td>
             <td>

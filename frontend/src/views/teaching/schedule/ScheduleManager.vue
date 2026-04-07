@@ -9,10 +9,10 @@
       <table class="tm-table" style="border-radius: 0; border-left: none; border-right: none; border-bottom: none;">
         <colgroup>
           <col />
-          <col style="width: 90px" />
-          <col style="width: 150px" />
           <col style="width: 80px" />
-          <col style="width: 200px" />
+          <col style="width: 140px" />
+          <col style="width: 70px" />
+          <col style="width: 240px" />
         </colgroup>
         <thead>
           <tr>

@@ -171,12 +171,17 @@
 }
 .tm-table th,
 .tm-table td {
-  padding: 10px 12px;
+  padding: 8px 10px;
   vertical-align: middle;
   text-align: center;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+/* 操作列允许按钮换行 */
+.tm-table td:last-child {
+  white-space: normal;
+  overflow: visible;
 }
 .tm-table th {
   font-size: 11px;
@@ -257,7 +262,7 @@
 
 /* Action buttons */
 .tm-action {
-  padding: 4px 8px;
+  padding: 3px 6px;
   font-size: 12px;
   color: #4b5563;
   background: none;
@@ -266,6 +271,7 @@
   cursor: pointer;
   font-family: inherit;
   transition: all 0.1s;
+  white-space: nowrap;
 }
 .tm-action:hover { background: #f3f4f6; color: #111827; }
 .tm-action-danger:hover { background: #fef2f2; color: #dc2626; }
@@ -474,14 +480,19 @@
 /* Tab navigation */
 .tm-tabs {
   display: flex;
-  gap: 24px;
+  gap: 16px;
   padding: 0 24px;
   background: #fff;
   border-bottom: 1px solid #e8eaed;
+  overflow-x: auto;
+  -ms-overflow-style: none;
+  scrollbar-width: none;
 }
+.tm-tabs::-webkit-scrollbar { display: none; }
 .tm-tab {
   padding: 12px 0;
   font-size: 13px;
+  white-space: nowrap;
   font-weight: 500;
   color: #6b7280;
   border-bottom: 2px solid transparent;
