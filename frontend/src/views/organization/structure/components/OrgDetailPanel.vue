@@ -1,16 +1,5 @@
 <template>
-  <!-- CLASS type: render ClassDetailPanel -->
-  <ClassDetailPanel
-    v-if="node.category === 'GROUP'"
-    :node="node"
-    :tree-data="treeData"
-    @refresh="emit('refresh')"
-    @edit="emit('edit', node)"
-    @delete="emit('delete', node)"
-    @toggle-status="emit('toggleStatus', node)"
-  />
-
-  <div v-else class="space-y-4">
+  <div class="space-y-4">
     <!-- Header Card -->
     <div class="rounded-xl border border-gray-200 bg-white">
       <div class="flex items-center justify-between px-5 py-3">
@@ -97,6 +86,12 @@
           </template>
         </template>
       </div>
+    </div>
+
+    <!-- Extension Attributes (from SPI plugin, if any) -->
+    <div v-if="extensionSchema && extensionSchema.fields?.length > 0" class="rounded-xl border border-gray-200 bg-white p-5">
+      <h3 class="mb-3 text-xs font-semibold uppercase tracking-wider text-gray-400">扩展属性</h3>
+      <DynamicForm :schema="extensionSchema" v-model="extensionAttrs" :disabled="true" />
     </div>
 
     <!-- Tabs -->
@@ -797,7 +792,8 @@ import {
 } from 'lucide-vue-next'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import type { DepartmentResponse } from '@/api/organization'
-import ClassDetailPanel from './ClassDetailPanel.vue'
+import DynamicForm from '@/components/extension/DynamicForm.vue'
+import { entityTypeApi } from '@/api/entityType'
 import UserRelationDrawer from './UserRelationDrawer.vue'
 import UserSelectorDialog from '@/components/common/UserSelectorDialog.vue'
 import OrgExportDialog from './OrgExportDialog.vue'
@@ -1107,6 +1103,28 @@ const staffingColor = (p: Position) => {
 }
 
 // ==================== Load data on node change ====================
+// Extension schema from entity_type_configs (SPI plugin)
+const extensionSchema = ref<{ fields: any[] } | null>(null)
+const extensionAttrs = ref<Record<string, any>>({})
+
+async function loadExtensionSchema() {
+  extensionSchema.value = null
+  extensionAttrs.value = {}
+  const typeCode = props.node.typeCode || props.node.unitType
+  if (!typeCode) return
+  try {
+    const res = await entityTypeApi.get('ORG_UNIT', typeCode)
+    const data = (res as any).data || res
+    if (data?.metadataSchema) {
+      const schema = typeof data.metadataSchema === 'string' ? JSON.parse(data.metadataSchema) : data.metadataSchema
+      if (schema?.fields?.length > 0) {
+        extensionSchema.value = schema
+        extensionAttrs.value = props.node.attributes || {}
+      }
+    }
+  } catch { /* no plugin */ }
+}
+
 watch(
   () => props.node.id,
   () => {
@@ -1122,6 +1140,7 @@ watch(
     loadPlaces()
     loadPositions()
     loadStats()
+    loadExtensionSchema()
   },
   { immediate: true }
 )
