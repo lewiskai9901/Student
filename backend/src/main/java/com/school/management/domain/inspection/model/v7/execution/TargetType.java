@@ -8,5 +8,6 @@ public enum TargetType {
     PLACE,
     USER,
     ASSET,
+    CLASS,
     COMPOSITE;
 }

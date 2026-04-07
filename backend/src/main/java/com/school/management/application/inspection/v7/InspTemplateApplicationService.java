@@ -391,7 +391,7 @@ public class InspTemplateApplicationService {
                     srcItem.getScoringConfig(), srcItem.getDimensionId(), srcItem.getHelpContent(),
                     srcItem.getIsRequired(), srcItem.getIsScored(), srcItem.getRequireEvidence(),
                     srcItem.getItemWeight(), srcItem.getConditionLogic(), srcItem.getInputMode(),
-                    operatorId);
+                    srcItem.getLinkedEventTypeCode(), operatorId);
             newItem.reorder(srcItem.getSortOrder());
             itemRepository.save(newItem);
         }
