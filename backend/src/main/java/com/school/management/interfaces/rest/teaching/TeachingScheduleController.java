@@ -43,6 +43,129 @@ public class TeachingScheduleController {
     @Autowired(required = false)
     private TriggerService triggerService;
 
+    @Autowired(required = false)
+    private com.school.management.application.teaching.InstanceGenerationService instanceService;
+
+    // ==================== 实况课表 ====================
+
+    @GetMapping("/instances")
+    @CasbinAccess(resource = "teaching:schedule", action = "view")
+    public Result<List<Map<String, Object>>> listInstances(
+            @RequestParam Long semesterId,
+            @RequestParam(required = false) String date,
+            @RequestParam(required = false) Integer weekNumber,
+            @RequestParam(required = false) Long teacherId,
+            @RequestParam(required = false) Long classId,
+            @RequestParam(required = false) Long classroomId) {
+
+        StringBuilder sql = new StringBuilder(
+            "SELECT si.id, si.entry_id AS entryId, si.actual_date AS actualDate, si.weekday, " +
+            "si.week_number AS weekNumber, si.start_slot AS startSlot, si.end_slot AS endSlot, " +
+            "si.status, si.cancel_reason AS cancelReason, si.source_type AS sourceType, " +
+            "si.actual_hours AS actualHours, si.teacher_id AS teacherId, " +
+            "si.original_teacher_id AS originalTeacherId, si.classroom_id AS classroomId, " +
+            "c.course_name AS courseName, c.course_code AS courseCode, " +
+            "cl.class_name AS className, " +
+            "COALESCE(p.place_name, '') AS classroomName " +
+            "FROM schedule_instances si " +
+            "LEFT JOIN courses c ON c.id = si.course_id " +
+            "LEFT JOIN classes cl ON cl.id = si.class_id " +
+            "LEFT JOIN places p ON p.id = si.classroom_id " +
+            "WHERE si.semester_id = ? AND si.deleted = 0"
+        );
+        List<Object> params = new ArrayList<>();
+        params.add(semesterId);
+
+        if (date != null) { sql.append(" AND si.actual_date = ?"); params.add(date); }
+        if (weekNumber != null) { sql.append(" AND si.week_number = ?"); params.add(weekNumber); }
+        if (teacherId != null) { sql.append(" AND si.teacher_id = ?"); params.add(teacherId); }
+        if (classId != null) { sql.append(" AND si.class_id = ?"); params.add(classId); }
+        if (classroomId != null) { sql.append(" AND si.classroom_id = ?"); params.add(classroomId); }
+        sql.append(" ORDER BY si.actual_date, si.start_slot");
+
+        return Result.success(jdbc.queryForList(sql.toString(), params.toArray()));
+    }
+
+    @PostMapping("/instances/generate")
+    @CasbinAccess(resource = "teaching:schedule", action = "edit")
+    public Result<Map<String, Object>> generateInstances(@RequestBody Map<String, Object> data) {
+        if (instanceService == null) return Result.error("服务未启用");
+        Long semesterId = ((Number) data.get("semesterId")).longValue();
+        Map<String, Object> result = instanceService.generateInstances(semesterId);
+        return Result.success(result);
+    }
+
+    @PostMapping("/instances/apply-event")
+    @CasbinAccess(resource = "teaching:schedule", action = "edit")
+    public Result<Map<String, Object>> applyEvent(@RequestBody Map<String, Object> data) {
+        if (instanceService == null) return Result.error("服务未启用");
+        Long eventId = ((Number) data.get("eventId")).longValue();
+        int affected = instanceService.applyCalendarEvent(eventId);
+        return Result.success(Map.of("affected", affected));
+    }
+
+    // ==================== 课时统计 ====================
+
+    @GetMapping("/statistics/hours")
+    @CasbinAccess(resource = "teaching:schedule", action = "view")
+    public Result<Map<String, Object>> hoursStatistics(
+            @RequestParam Long semesterId,
+            @RequestParam String groupBy,
+            @RequestParam(required = false) String period,
+            @RequestParam(required = false) Integer weekNumber,
+            @RequestParam(required = false) Integer month) {
+
+        String groupCol, nameJoin, nameCol;
+        switch (groupBy) {
+            case "teacher":
+                groupCol = "si.teacher_id"; nameCol = "COALESCE(u.real_name, u.username, CONCAT('教师',si.teacher_id))";
+                nameJoin = "LEFT JOIN users u ON u.id = si.teacher_id"; break;
+            case "class":
+                groupCol = "si.class_id"; nameCol = "cl.class_name";
+                nameJoin = "LEFT JOIN classes cl ON cl.id = si.class_id"; break;
+            case "course":
+                groupCol = "si.course_id"; nameCol = "c.course_name";
+                nameJoin = "LEFT JOIN courses c ON c.id = si.course_id"; break;
+            case "classroom":
+                groupCol = "si.classroom_id"; nameCol = "COALESCE(p.place_name, CONCAT('教室',si.classroom_id))";
+                nameJoin = "LEFT JOIN places p ON p.id = si.classroom_id"; break;
+            default:
+                return Result.error("无效的 groupBy 参数");
+        }
+
+        StringBuilder where = new StringBuilder("si.semester_id = ? AND si.deleted = 0");
+        List<Object> params = new ArrayList<>();
+        params.add(semesterId);
+
+        if ("week".equals(period) && weekNumber != null) {
+            where.append(" AND si.week_number = ?"); params.add(weekNumber);
+        }
+        if ("month".equals(period) && month != null) {
+            where.append(" AND MONTH(si.actual_date) = ?"); params.add(month);
+        }
+
+        String sql = String.format(
+            "SELECT %s AS groupId, %s AS name, " +
+            "COUNT(*) AS totalInstances, " +
+            "SUM(CASE WHEN si.status IN (0,3,4) THEN si.actual_hours ELSE 0 END) AS actualHours, " +
+            "SUM(CASE WHEN si.status = 0 THEN si.actual_hours ELSE 0 END) AS normalHours, " +
+            "SUM(CASE WHEN si.status = 1 THEN si.actual_hours ELSE 0 END) AS cancelledHours, " +
+            "SUM(CASE WHEN si.status = 3 THEN si.actual_hours ELSE 0 END) AS substituteHours, " +
+            "SUM(CASE WHEN si.status = 4 THEN si.actual_hours ELSE 0 END) AS proxyHours, " +
+            "SUM(si.actual_hours) AS totalHours " +
+            "FROM schedule_instances si %s WHERE %s AND %s IS NOT NULL GROUP BY %s ORDER BY actualHours DESC",
+            groupCol, nameCol, nameJoin, where, groupCol, groupCol);
+
+        List<Map<String, Object>> items = jdbc.queryForList(sql, params.toArray());
+
+        // Summary
+        double totalActual = items.stream().mapToDouble(i -> ((Number) i.getOrDefault("actualHours", 0)).doubleValue()).sum();
+        return Result.success(Map.of(
+            "items", items,
+            "summary", Map.of("count", items.size(), "totalActualHours", totalActual)
+        ));
+    }
+
     // ==================== 节次配置 & 数据就绪 ====================
 
     @GetMapping("/schedule-config")

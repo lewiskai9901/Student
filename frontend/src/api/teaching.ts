@@ -71,6 +71,43 @@ export const scheduleConfigApi = {
     http.get<any>(`${BASE_URL}/schedule-readiness`, { params: { semesterId } }),
 }
 
+// ==================== 实况课表 & 课时统计 ====================
+
+export const instanceApi = {
+  list: (params: { semesterId: number | string; date?: string; weekNumber?: number; teacherId?: number | string; classId?: number | string; classroomId?: number | string }) =>
+    http.get<any[]>(`${BASE_URL}/instances`, { params }),
+
+  generate: (semesterId: number | string) =>
+    http.post<any>(`${BASE_URL}/instances/generate`, { semesterId }),
+
+  applyEvent: (eventId: number | string) =>
+    http.post<any>(`${BASE_URL}/instances/apply-event`, { eventId }),
+}
+
+export const hoursApi = {
+  getStatistics: (params: { semesterId: number | string; groupBy: string; period?: string; weekNumber?: number; month?: number }) =>
+    http.get<any>(`${BASE_URL}/statistics/hours`, { params }),
+}
+
+// ==================== 作息表 ====================
+
+export const periodConfigApi = {
+  list: (semesterId: number | string) =>
+    http.get<any[]>('/calendar/period-configs', { params: { semesterId } }),
+
+  create: (data: any) =>
+    http.post<any>('/calendar/period-configs', data),
+
+  update: (id: number | string, data: any) =>
+    http.put('/calendar/period-configs/' + id, data),
+
+  delete: (id: number | string) =>
+    http.delete('/calendar/period-configs/' + id),
+
+  initFromPrevious: (semesterId: number | string) =>
+    http.post<any>('/calendar/period-configs/init-from-previous', { semesterId }),
+}
+
 // ==================== 排课管理 ====================
 
 export const scheduleApi = {
