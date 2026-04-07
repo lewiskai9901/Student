@@ -530,38 +530,5 @@ public class OrgUnitApplicationService {
         return dto;
     }
 
-    /**
-     * 当组织节点类型的 category = GROUP 时，自动在 classes 表创建扩展记录。
-     * 这样组织管理保持通用，行业扩展字段在 classes 表维护。
-     */
-    private void autoCreateClassBinding(OrgUnit orgUnit) {
-        if (orgUnit.getUnitType() == null) return;
-        try {
-            OrgType typeConfig = orgUnitTypeRepository.findByTypeCode(orgUnit.getUnitType()).orElse(null);
-            if (typeConfig == null) return;
-            // category = GROUP 表示该类型是"班级"类节点
-            if (!"GROUP".equals(typeConfig.getCategory())) return;
-
-            // 检查是否已绑定
-            Long existing = schoolClassMapper.selectCount(
-                new com.baomidou.mybatisplus.core.conditions.query.QueryWrapper<SchoolClassPO>()
-                    .eq("org_unit_id", orgUnit.getId()).eq("deleted", 0));
-            if (existing != null && existing > 0) return;
-
-            // 创建 classes 扩展记录
-            SchoolClassPO classPO = new SchoolClassPO();
-            classPO.setClassName(orgUnit.getUnitName());
-            classPO.setClassCode(orgUnit.getUnitCode());
-            classPO.setOrgUnitId(orgUnit.getId());
-            classPO.setGradeLevel(1); // 默认值，后续在班级管理中编辑
-            classPO.setEnrollmentYear(java.time.Year.now());
-            classPO.setStatus(1);
-            classPO.setDeleted(0);
-            schoolClassMapper.insert(classPO);
-
-            log.info("组织节点[{}]自动创建班级扩展记录: classId={}", orgUnit.getUnitName(), classPO.getId());
-        } catch (Exception e) {
-            log.warn("自动创建班级扩展记录失败(非致命): {}", e.getMessage());
-        }
-    }
+    // autoCreateClassBinding removed — replaced by SPI plugin (ClassPlugin.afterCreate)
 }

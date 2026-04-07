@@ -94,22 +94,6 @@
       @success="handleFormSuccess"
     />
 
-    <!-- Edit Class Dialog -->
-    <el-dialog
-      v-model="classFormVisible"
-      :title="editingClassId ? '编辑班级' : '新建班级'"
-      width="640px"
-      :close-on-click-modal="false"
-    >
-      <ClassForm
-        v-if="classFormVisible"
-        :mode="editingClassId ? 'edit' : 'add'"
-        :class-id="editingClassId"
-        @success="handleClassFormSuccess"
-        @close="classFormVisible = false"
-      />
-    </el-dialog>
-
     <!-- Merge Dialog -->
     <MergeOrgDialog
       v-model:visible="mergeVisible"
@@ -137,7 +121,7 @@ import OrgOverview from './components/OrgOverview.vue'
 import OrgUnitForm from './components/OrgUnitForm.vue'
 import MergeOrgDialog from './components/MergeOrgDialog.vue'
 import SplitOrgDialog from './components/SplitOrgDialog.vue'
-import ClassForm from '@/components/class/ClassForm.vue'
+// ClassForm removed - class management done via DynamicForm + SPI plugins
 import {
   getDepartmentTree,
   freezeOrgUnit,
@@ -153,8 +137,7 @@ const selectedNodeId = ref<number | null>(null)
 const formVisible = ref(false)
 const editingDept = ref<DepartmentResponse | null>(null)
 const parentDept = ref<DepartmentResponse | null>(null)
-const classFormVisible = ref(false)
-const editingClassId = ref<number | null>(null)
+// classFormVisible/editingClassId removed - class editing via DynamicForm
 const mergeVisible = ref(false)
 const mergingNode = ref<DepartmentResponse | null>(null)
 const splitVisible = ref(false)
@@ -234,19 +217,11 @@ const handleAddChild = (node: DepartmentResponse) => {
 
 const handleEdit = (node: DepartmentResponse) => {
   if (node.category === 'GROUP') {
-    editingClassId.value = node.id
-    classFormVisible.value = true
-  } else {
-    editingDept.value = node
-    parentDept.value = null
-    formVisible.value = true
+    // All types use same generic form now
   }
-}
-
-const handleClassFormSuccess = () => {
-  classFormVisible.value = false
-  editingClassId.value = null
-  loadData()
+  editingDept.value = node
+  parentDept.value = null
+  formVisible.value = true
 }
 
 const handleDelete = async (node: DepartmentResponse) => {

@@ -101,7 +101,7 @@ export interface PlaceDTO {
   responsibleUserId?: number | string
   responsibleUserName?: string
 
-  // 班级归属
+  // @deprecated 班级归属 — 过渡期保留，新代码应使用 attributes
   classId?: number | string
   className?: string
   classTeacherId?: number | string

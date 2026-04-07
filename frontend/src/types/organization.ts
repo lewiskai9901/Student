@@ -91,12 +91,7 @@ export interface OrgUnitTreeNode extends OrgUnit {
   children?: OrgUnitTreeNode[]
   label?: string // 用于树形选择器
   value?: number | string // 用于树形选择器
-  // Class extension fields (only for CLASS type nodes)
-  studentCount?: number
-  standardSize?: number
-  headTeacherName?: string
-  enrollmentYear?: number
-  classStatus?: ClassStatus
+  // Extension fields now stored in attributes JSON (via SPI plugins)
 }
 
 // 创建组织单元请求
