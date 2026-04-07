@@ -137,6 +137,7 @@
 import { ref, computed, onMounted, watch } from 'vue'
 import { useSharedDataStore } from '@/stores/sharedData'
 import { scheduleConfigApi } from '@/api/teaching'
+import { semesterApi } from '@/api/calendar'
 
 import TimetableViewer from './schedule/TimetableViewer.vue'
 import AdjustmentPanel from './schedule/AdjustmentPanel.vue'
@@ -173,9 +174,13 @@ const steps = computed(() => [
 
 // Data loading
 async function loadSemesters() {
-  semesters.value = await sharedData.getSemesters()
-  const current = await sharedData.getCurrentSemester()
-  if (current) semesterId.value = current.id
+  try {
+    const res = await semesterApi.list()
+    semesters.value = Array.isArray(res) ? res : (res as any).data || []
+    const current = semesters.value.find((s: any) => s.isCurrent)
+    if (current) semesterId.value = current.id
+    else if (semesters.value.length > 0) semesterId.value = semesters.value[0].id
+  } catch { semesters.value = [] }
 }
 
 async function loadPeriodConfig() {
