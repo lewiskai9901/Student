@@ -235,10 +235,27 @@ function parseMetadataSchema(schemaStr?: string): AttributeFieldDefinition[] {
   } catch { return [] }
 }
 
-function loadAttributeFields(type: UniversalPlaceType | undefined) {
+async function loadAttributeFields(type: UniversalPlaceType | undefined) {
   if (!type) { attributeFields.value = []; attributeValues.value = {}; return }
   const full = props.allowedTypes?.find(t => t.typeCode === type.typeCode) || type
-  const fields = parseMetadataSchema(full.metadataSchema)
+  let fields = parseMetadataSchema(full.metadataSchema)
+  // 合并 entity_type_configs 中插件注册的字段
+  try {
+    const { entityTypeApi } = await import('@/api/entityType')
+    const res = await entityTypeApi.get('PLACE', type.typeCode)
+    const data = (res as any).data || res
+    if (data?.metadataSchema) {
+      const pluginSchema = typeof data.metadataSchema === 'string' ? JSON.parse(data.metadataSchema) : data.metadataSchema
+      if (pluginSchema?.fields?.length > 0) {
+        const existingKeys = new Set(fields.map(f => f.key))
+        for (const pf of pluginSchema.fields) {
+          if (!existingKeys.has(pf.key)) {
+            fields.push({ key: pf.key, label: pf.label, type: pf.type, group: pf.group, required: pf.required, defaultValue: pf.defaultValue || pf.config?.default, sortOrder: 100, config: pf.config })
+          }
+        }
+      }
+    }
+  } catch { /* no plugin registered for this place type */ }
   if (fields.length > 0) {
     attributeFields.value = fields
     const v: Record<string, any> = {}

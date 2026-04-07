@@ -480,6 +480,11 @@
                 </div>
               </div>
             </div>
+            <!-- Dynamic Extension Fields (from SPI plugins) -->
+            <div v-if="userTypeSchema && userTypeSchema.fields?.length > 0" class="px-6 pb-4">
+              <h3 class="mb-3 text-xs font-semibold uppercase tracking-wider text-gray-400">扩展属性</h3>
+              <DynamicForm :schema="userTypeSchema" v-model="formData.attributes" />
+            </div>
             <div class="flex justify-end gap-3 border-t border-gray-200 px-6 py-4">
               <button
                 @click="dialogVisible = false"
@@ -667,7 +672,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, onMounted, computed } from 'vue'
+import { ref, reactive, onMounted, computed, watch } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import {
   Users,
@@ -716,6 +721,8 @@ import type {
 import { getAllRoles, removeUserRoleWithScope } from '@/api/access'
 import type { RoleResponse as Role } from '@/api/access'
 import { useConfigStore } from '@/stores/config'
+import DynamicForm from '@/components/extension/DynamicForm.vue'
+import { entityTypeApi } from '@/api/entityType'
 
 const configStore = useConfigStore()
 const loading = ref(false)
@@ -822,7 +829,26 @@ const formData = reactive<UserFormData & { placeId?: number }>({
   userTypeCode: '',
   orgUnitId: undefined,
   placeId: undefined,
-  status: 1
+  status: 1,
+  attributes: {} as Record<string, any>,
+})
+
+// Dynamic schema for user type (loaded from entity_type_configs)
+const userTypeSchema = ref<{ fields: any[] } | null>(null)
+
+// Watch userTypeCode changes to load schema
+watch(() => formData.userTypeCode, async (newCode) => {
+  userTypeSchema.value = null
+  formData.attributes = {}
+  if (!newCode) return
+  try {
+    const res = await entityTypeApi.get('USER', newCode)
+    const data = (res as any).data || res
+    if (data?.metadataSchema) {
+      const schema = typeof data.metadataSchema === 'string' ? JSON.parse(data.metadataSchema) : data.metadataSchema
+      if (schema?.fields?.length > 0) userTypeSchema.value = schema
+    }
+  } catch { /* no plugin for this user type */ }
 })
 
 const validateUsername = () => {
