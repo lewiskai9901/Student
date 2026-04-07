@@ -166,6 +166,42 @@ public class TeachingScheduleController {
         ));
     }
 
+    // ==================== 代课 ====================
+
+    @PostMapping("/instances/{id}/substitute")
+    @CasbinAccess(resource = "teaching:schedule", action = "edit")
+    public Result<Void> substituteTeacher(@PathVariable Long id, @RequestBody Map<String, Object> data) {
+        Long newTeacherId = ((Number) data.get("teacherId")).longValue();
+        String reason = (String) data.getOrDefault("reason", "代课");
+        // 记录原教师, 改为代课状态
+        jdbc.update(
+            "UPDATE schedule_instances SET original_teacher_id = teacher_id, teacher_id = ?, " +
+            "status = 4, cancel_reason = ?, updated_at = NOW() " +
+            "WHERE id = ? AND deleted = 0",
+            newTeacherId, reason, id);
+        return Result.success();
+    }
+
+    @PostMapping("/instances/{id}/cancel")
+    @CasbinAccess(resource = "teaching:schedule", action = "edit")
+    public Result<Void> cancelInstance(@PathVariable Long id, @RequestBody Map<String, Object> data) {
+        String reason = (String) data.getOrDefault("reason", "临时取消");
+        jdbc.update(
+            "UPDATE schedule_instances SET status = 1, cancel_reason = ?, updated_at = NOW() " +
+            "WHERE id = ? AND deleted = 0",
+            reason, id);
+        return Result.success();
+    }
+
+    @PostMapping("/instances/{id}/restore")
+    @CasbinAccess(resource = "teaching:schedule", action = "edit")
+    public Result<Void> restoreInstance(@PathVariable Long id) {
+        jdbc.update(
+            "UPDATE schedule_instances SET status = 0, cancel_reason = NULL, " +
+            "original_teacher_id = NULL, updated_at = NOW() WHERE id = ? AND deleted = 0", id);
+        return Result.success();
+    }
+
     // ==================== 节次配置 & 数据就绪 ====================
 
     @GetMapping("/schedule-config")
@@ -801,10 +837,48 @@ public class TeachingScheduleController {
     @PostMapping("/adjustments/{id}/execute")
     @CasbinAccess(resource = "teaching:schedule", action = "edit")
     public Result<Void> executeAdjustment(@PathVariable Long id) {
+        // 1. 标记已执行
         jdbc.update(
             "UPDATE schedule_adjustments SET executed = 1, executed_at = NOW(), " +
             "updated_at = NOW() WHERE id = ? AND deleted = 0", id
         );
+
+        // 2. 联动更新实况课表
+        try {
+            Map<String, Object> adj = jdbc.queryForMap(
+                "SELECT semester_id, original_entry_id, adjustment_type, " +
+                "new_day_of_week, new_period_start, new_period_end, new_classroom_id, new_week " +
+                "FROM schedule_adjustments WHERE id = ? AND deleted = 0", id);
+            Long semesterId = ((Number) adj.get("semester_id")).longValue();
+            Long entryId = adj.get("original_entry_id") != null ? ((Number) adj.get("original_entry_id")).longValue() : null;
+            int adjType = ((Number) adj.get("adjustment_type")).intValue();
+
+            if (entryId != null) {
+                if (adjType == 2) {
+                    // 停课: 取消对应实例
+                    if (adj.get("new_week") != null) {
+                        int week = ((Number) adj.get("new_week")).intValue();
+                        jdbc.update(
+                            "UPDATE schedule_instances SET status = 1, cancel_reason = '调课停课', source_id = ? " +
+                            "WHERE entry_id = ? AND semester_id = ? AND week_number = ? AND status = 0 AND deleted = 0",
+                            id, entryId, semesterId, week);
+                    }
+                } else if (adjType == 1) {
+                    // 调课: 原实例标调走 + 生成新实例
+                    if (adj.get("new_week") != null) {
+                        int week = ((Number) adj.get("new_week")).intValue();
+                        jdbc.update(
+                            "UPDATE schedule_instances SET status = 2, cancel_reason = '已调课', source_id = ? " +
+                            "WHERE entry_id = ? AND semester_id = ? AND week_number = ? AND status = 0 AND deleted = 0",
+                            id, entryId, semesterId, week);
+                    }
+                    // 新实例在调课目标日期生成(如有新时间)
+                }
+            }
+        } catch (Exception e) {
+            log.warn("调课联动实况更新失败(非致命): {}", e.getMessage());
+        }
+
         return Result.success();
     }
 

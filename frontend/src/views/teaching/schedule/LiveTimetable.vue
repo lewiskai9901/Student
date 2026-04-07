@@ -44,6 +44,7 @@
         <col style="width: 100px" />
         <col style="width: 80px" />
         <col />
+        <col style="width: 100px" />
       </colgroup>
       <thead>
         <tr>
@@ -55,6 +56,7 @@
           <th>教师</th>
           <th>状态</th>
           <th class="text-left">备注</th>
+          <th>操作</th>
         </tr>
       </thead>
       <tbody>
@@ -67,6 +69,15 @@
           <td>{{ inst.teacherName || '-' }}</td>
           <td><span :class="['tm-chip', statusChip(inst.status)]">{{ statusName(inst.status) }}</span></td>
           <td class="text-left" style="font-size: 12px; color: #6b7280;">{{ inst.cancelReason || '' }}</td>
+          <td>
+            <template v-if="inst.status === 0">
+              <button class="tm-action" style="color: #d97706;" @click="showSubstitute(inst)">代课</button>
+              <button class="tm-action tm-action-danger" @click="handleCancel(inst)">取消</button>
+            </template>
+            <template v-else-if="inst.status === 1 || inst.status === 4">
+              <button class="tm-action" style="color: #2563eb;" @click="handleRestore(inst)">恢复</button>
+            </template>
+          </td>
         </tr>
       </tbody>
     </table>
@@ -88,6 +99,7 @@
 
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
+import { ElMessage, ElMessageBox } from 'element-plus'
 import { http as request } from '@/utils/request'
 import { instanceApi } from '@/api/teaching'
 
@@ -122,6 +134,33 @@ async function loadInstances() {
 function statusName(s: number) { return ({ 0: '正常', 1: '取消', 2: '调走', 3: '补课', 4: '代课' } as any)[s] || '?' }
 function statusChip(s: number) { return ({ 0: 'tm-chip-green', 1: 'tm-chip-red', 2: 'tm-chip-gray', 3: 'tm-chip-blue', 4: 'tm-chip-amber' } as any)[s] || 'tm-chip-gray' }
 function statusBg(s: number) { return ({ 1: '#fef2f2', 2: '#f9fafb', 3: '#f0fdf4', 4: '#fffbeb' } as any)[s] || '' }
+
+async function showSubstitute(inst: any) {
+  // Simple prompt for substitute teacher selection
+  const teacherName = await ElMessageBox.prompt('请输入代课教师ID', '代课', { inputPlaceholder: '教师ID' }).catch(() => null)
+  if (!teacherName?.value) return
+  try {
+    await instanceApi.substitute(inst.id, Number(teacherName.value), '代课')
+    ElMessage.success('代课设置成功'); loadInstances()
+  } catch { ElMessage.error('设置失败') }
+}
+
+async function handleCancel(inst: any) {
+  const res = await ElMessageBox.prompt('请填写取消原因', '取消课程', { inputPlaceholder: '如: 教师请假' }).catch(() => null)
+  if (!res?.value) return
+  try {
+    await instanceApi.cancel(inst.id, res.value)
+    ElMessage.success('已取消'); loadInstances()
+  } catch { ElMessage.error('操作失败') }
+}
+
+async function handleRestore(inst: any) {
+  await ElMessageBox.confirm('确定恢复此课程为正常状态？', '确认')
+  try {
+    await instanceApi.restore(inst.id)
+    ElMessage.success('已恢复'); loadInstances()
+  } catch { ElMessage.error('操作失败') }
+}
 
 async function loadOptions() {
   try { const r = await request.get('/students/classes'); const d = (r as any).data || r; classList.value = (Array.isArray(d) ? d : d.records || []).map((c: any) => ({ id: c.id, name: c.className || c.name })) } catch { classList.value = [] }

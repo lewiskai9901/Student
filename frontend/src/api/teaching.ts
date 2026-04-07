@@ -82,6 +82,15 @@ export const instanceApi = {
 
   applyEvent: (eventId: number | string) =>
     http.post<any>(`${BASE_URL}/instances/apply-event`, { eventId }),
+
+  substitute: (id: number | string, teacherId: number | string, reason?: string) =>
+    http.post(`${BASE_URL}/instances/${id}/substitute`, { teacherId, reason }),
+
+  cancel: (id: number | string, reason?: string) =>
+    http.post(`${BASE_URL}/instances/${id}/cancel`, { reason }),
+
+  restore: (id: number | string) =>
+    http.post(`${BASE_URL}/instances/${id}/restore`),
 }
 
 export const hoursApi = {
