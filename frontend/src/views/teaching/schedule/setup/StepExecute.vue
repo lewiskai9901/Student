@@ -43,6 +43,14 @@
         <span v-if="result.conflicts?.length > 0" style="color: #d97706; margin-left: 8px;">（{{ result.conflicts.length }} 个冲突）</span>
       </p>
     </div>
+
+    <!-- 容量警告 -->
+    <div v-if="result?.capacityWarnings?.length > 0" style="border: 1px solid #fde68a; border-radius: 10px; background: #fffbeb; padding: 14px 16px; margin-bottom: 16px;">
+      <p style="font-size: 13px; font-weight: 600; color: #d97706; margin: 0 0 8px;">教室容量警告 ({{ result.capacityWarnings.length }})</p>
+      <div v-for="(w, i) in result.capacityWarnings" :key="i" style="font-size: 12px; color: #92400e; padding: 4px 0; border-bottom: 1px solid #fef3c7;">
+        {{ w.message }}
+      </div>
+    </div>
   </div>
 </template>
 

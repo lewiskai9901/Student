@@ -41,7 +41,8 @@
         <col />
         <col style="width: 100px" />
         <col style="width: 90px" />
-        <col style="width: 100px" />
+        <col style="width: 90px" />
+        <col style="width: 90px" />
         <col style="width: 80px" />
         <col />
         <col style="width: 100px" />
@@ -53,6 +54,7 @@
           <th class="text-left">课程</th>
           <th>班级</th>
           <th>节次</th>
+          <th>教室</th>
           <th>教师</th>
           <th>状态</th>
           <th class="text-left">备注</th>
@@ -66,6 +68,7 @@
           <td class="text-left" style="font-weight: 500;">{{ inst.courseName }}</td>
           <td>{{ inst.className }}</td>
           <td class="tm-mono">{{ inst.startSlot }}-{{ inst.endSlot }}节</td>
+          <td style="font-size: 12px;">{{ inst.classroomName || '-' }}</td>
           <td>{{ inst.teacherName || '-' }}</td>
           <td><span :class="['tm-chip', statusChip(inst.status)]">{{ statusName(inst.status) }}</span></td>
           <td class="text-left" style="font-size: 12px; color: #6b7280;">{{ inst.cancelReason || '' }}</td>
