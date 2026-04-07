@@ -154,6 +154,16 @@
       </div>
     </div>
 
+      <!-- Dynamic Extension Fields (from plugin metadata_schema) -->
+      <div v-if="typeSchema && typeSchema.fields?.length > 0">
+        <h4 class="mb-3 text-xs font-semibold uppercase tracking-wider text-gray-400">扩展属性</h4>
+        <DynamicForm
+          :schema="typeSchema"
+          v-model="formData.attributes"
+        />
+      </div>
+    </div>
+
     <template #footer>
       <div class="flex items-center justify-end gap-3">
         <el-button @click="$emit('update:visible', false)">取消</el-button>
@@ -169,6 +179,8 @@
 import { ref, reactive, computed, watch } from 'vue'
 import { ElMessage } from 'element-plus'
 import { Building2, RefreshCw } from 'lucide-vue-next'
+import DynamicForm from '@/components/extension/DynamicForm.vue'
+import { entityTypeApi } from '@/api/entityType'
 import {
   orgUnitApi,
   getEnabledOrgUnitTypes,
@@ -205,7 +217,11 @@ const formData = reactive({
   unitCode: '',
   unitType: '',
   parentId: null as number | null,
+  attributes: {} as Record<string, any>,
 })
+
+// Dynamic schema from entity_type_configs (loaded when type is selected)
+const typeSchema = ref<{ fields: any[] } | null>(null)
 
 // Position selection state
 interface PositionSelection {
@@ -260,10 +276,30 @@ function selectType(t: OrgUnitTypeConfig) {
   if (isEdit.value) return
   formData.unitType = t.typeCode
   typeError.value = ''
-  // Auto-generate code when type changes
   formData.unitCode = generateCode(t.typeCode)
-  // Build position selections from template
   buildPositionSelections(t)
+  // Load dynamic schema from entity_type_configs
+  loadTypeSchema(t.typeCode)
+}
+
+async function loadTypeSchema(typeCode: string) {
+  typeSchema.value = null
+  formData.attributes = {}
+  try {
+    const res = await entityTypeApi.get('ORG_UNIT', typeCode)
+    const data = (res as any).data || res
+    if (data?.metadataSchema) {
+      const schema = typeof data.metadataSchema === 'string' ? JSON.parse(data.metadataSchema) : data.metadataSchema
+      if (schema?.fields?.length > 0) {
+        typeSchema.value = schema
+        // Apply default values
+        for (const f of schema.fields) {
+          if (f.defaultValue !== undefined) formData.attributes[f.key] = f.defaultValue
+          if (f.config?.default !== undefined) formData.attributes[f.key] = f.config.default
+        }
+      }
+    }
+  } catch { /* Plugin not registered for this type, no dynamic fields */ }
 }
 
 function buildPositionSelections(typeConfig: OrgUnitTypeConfig) {
@@ -401,7 +437,8 @@ const handleSubmit = async () => {
         unitCode: formData.unitCode,
         unitType: formData.unitType,
         parentId: formData.parentId || undefined,
-        selectedPositions: selectedPositions.length > 0 ? selectedPositions : undefined
+        selectedPositions: selectedPositions.length > 0 ? selectedPositions : undefined,
+        attributes: Object.keys(formData.attributes).length > 0 ? formData.attributes : undefined,
       })
       ElMessage.success('组织创建成功')
       emit('update:visible', false)

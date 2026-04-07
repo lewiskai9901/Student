@@ -4,6 +4,7 @@ import lombok.Builder;
 import lombok.Data;
 
 import java.util.List;
+import java.util.Map;
 
 /**
  * Command to create a new organization unit.
@@ -24,6 +25,9 @@ public class CreateOrgUnitCommand {
      * If null, no positions are auto-created (template is just a menu).
      */
     private List<SelectedPosition> selectedPositions;
+
+    /** 扩展属性（来自 DynamicForm，存入 org_units.attributes） */
+    private Map<String, Object> attributes;
 
     @Data
     public static class SelectedPosition {

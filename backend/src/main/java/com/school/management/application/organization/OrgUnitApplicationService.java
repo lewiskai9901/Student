@@ -75,6 +75,11 @@ public class OrgUnitApplicationService {
             command.getCreatedBy()
         );
 
+        // 设置扩展属性（来自 DynamicForm）
+        if (command.getAttributes() != null && !command.getAttributes().isEmpty()) {
+            orgUnit.setAttributes(command.getAttributes());
+        }
+
         orgUnit = orgUnitRepository.save(orgUnit);
 
         orgUnit.getDomainEvents().forEach(eventPublisher::publish);

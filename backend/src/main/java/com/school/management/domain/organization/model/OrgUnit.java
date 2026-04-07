@@ -311,6 +311,7 @@ public class OrgUnit extends AggregateRoot<Long> {
     public OrgUnitStatus getStatus() { return status; }
     public Integer getHeadcount() { return headcount; }
     public Map<String, Object> getAttributes() { return attributes; }
+    public void setAttributes(Map<String, Object> attributes) { this.attributes = attributes != null ? new HashMap<>(attributes) : null; }
     public Long getMergedIntoId() { return mergedIntoId; }
     public Long getSplitFromId() { return splitFromId; }
     public LocalDateTime getDissolvedAt() { return dissolvedAt; }
