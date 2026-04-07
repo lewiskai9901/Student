@@ -7,6 +7,12 @@ export interface MsgNotification {
   sourceEventType: string | null
   sourceRefType: string | null
   sourceRefId: number | null
+  subjectType: string | null
+  subjectId: number | null
+  subjectName: string | null
+  eventCategory: string | null
+  sourceModule: string | null
+  eventId: number | null
   isRead: boolean
   readAt: string | null
   createdAt: string

@@ -553,6 +553,16 @@ const routes: RouteRecordRaw[] = [
             }
           },
           {
+            path: '/inspection/v7/observations',
+            name: 'V7Observations',
+            component: () => import('@/views/inspection/v7/analytics/ObservationListView.vue'),
+            meta: {
+              title: '评分观察',
+              requiresAuth: true,
+              permission: 'insp:analytics:view'
+            }
+          },
+          {
             path: '/inspection/v7/rankings',
             name: 'V7RatingRankings',
             component: () => import('@/views/inspection/v7/analytics/RatingRankingView.vue'),

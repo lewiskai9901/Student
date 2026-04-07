@@ -26,4 +26,9 @@ public interface EntityEventRepository {
      * 统计主体各类事件数量
      */
     List<Map<String, Object>> countBySubjectGroupByType(String subjectType, Long subjectId);
+
+    /**
+     * 根据事件类型编码查询分类编码
+     */
+    String findCategoryByTypeCode(String typeCode);
 }

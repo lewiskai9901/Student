@@ -18,6 +18,7 @@ public class GradeDefinition implements Entity<Long> {
     private String color;
     private String icon;
     private Integer sortOrder;
+    private String linkedEventTypeCode;
 
     protected GradeDefinition() {
     }
@@ -32,6 +33,7 @@ public class GradeDefinition implements Entity<Long> {
         this.color = builder.color;
         this.icon = builder.icon;
         this.sortOrder = builder.sortOrder != null ? builder.sortOrder : 0;
+        this.linkedEventTypeCode = builder.linkedEventTypeCode;
     }
 
     // ── Factory ──────────────────────────────────────────────
@@ -98,6 +100,10 @@ public class GradeDefinition implements Entity<Long> {
         return sortOrder;
     }
 
+    public String getLinkedEventTypeCode() {
+        return linkedEventTypeCode;
+    }
+
     // ── Builder ──────────────────────────────────────────────
 
     public static Builder builder() {
@@ -114,6 +120,7 @@ public class GradeDefinition implements Entity<Long> {
         private String color;
         private String icon;
         private Integer sortOrder;
+        private String linkedEventTypeCode;
 
         public Builder id(Long id) { this.id = id; return this; }
         public Builder gradeSchemeId(Long gradeSchemeId) { this.gradeSchemeId = gradeSchemeId; return this; }
@@ -124,6 +131,7 @@ public class GradeDefinition implements Entity<Long> {
         public Builder color(String color) { this.color = color; return this; }
         public Builder icon(String icon) { this.icon = icon; return this; }
         public Builder sortOrder(Integer sortOrder) { this.sortOrder = sortOrder; return this; }
+        public Builder linkedEventTypeCode(String linkedEventTypeCode) { this.linkedEventTypeCode = linkedEventTypeCode; return this; }
 
         public GradeDefinition build() {
             return new GradeDefinition(this);

@@ -96,6 +96,12 @@ public class MsgNotificationRepositoryImpl implements MsgNotificationRepository 
                 .sourceEventType(po.getSourceEventType())
                 .sourceRefType(po.getSourceRefType())
                 .sourceRefId(po.getSourceRefId())
+                .subjectType(po.getSubjectType())
+                .subjectId(po.getSubjectId())
+                .subjectName(po.getSubjectName())
+                .eventCategory(po.getEventCategory())
+                .sourceModule(po.getSourceModule())
+                .eventId(po.getEventId())
                 .isRead(po.getIsRead())
                 .readAt(po.getReadAt())
                 .createdAt(po.getCreatedAt())
@@ -113,6 +119,12 @@ public class MsgNotificationRepositoryImpl implements MsgNotificationRepository 
         po.setSourceEventType(notification.getSourceEventType());
         po.setSourceRefType(notification.getSourceRefType());
         po.setSourceRefId(notification.getSourceRefId());
+        po.setSubjectType(notification.getSubjectType());
+        po.setSubjectId(notification.getSubjectId());
+        po.setSubjectName(notification.getSubjectName());
+        po.setEventCategory(notification.getEventCategory());
+        po.setSourceModule(notification.getSourceModule());
+        po.setEventId(notification.getEventId());
         po.setIsRead(notification.getIsRead() != null ? notification.getIsRead() : 0);
         po.setReadAt(notification.getReadAt());
         po.setCreatedAt(notification.getCreatedAt());

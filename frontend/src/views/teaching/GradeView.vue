@@ -1,34 +1,39 @@
 <template>
-  <div class="flex h-full flex-col bg-gray-50">
+  <div class="tm-page">
     <!-- Header -->
-    <div class="flex items-center justify-between border-b border-gray-200 bg-white px-6 py-4">
+    <div class="tm-header">
       <div>
-        <h1 class="text-lg font-semibold text-gray-900">成绩管理</h1>
-        <p class="mt-0.5 text-sm text-gray-500">管理课程成绩批次、录入与统计</p>
+        <h1 class="tm-title">成绩管理</h1>
+        <div class="tm-stats">
+          <span>管理课程成绩批次、录入与统计</span>
+        </div>
       </div>
     </div>
 
     <!-- Filter Bar -->
-    <div class="flex items-center gap-3 border-b border-gray-200 bg-white px-6 py-3">
-      <el-select v-model="queryParams.semesterId" placeholder="选择学期" clearable class="w-44" @change="onFilterChange">
-        <el-option v-for="sem in semesters" :key="sem.id" :value="sem.id" :label="sem.semesterName" />
-      </el-select>
-      <el-select v-model="queryParams.gradeType" placeholder="成绩类型" clearable class="w-32" @change="onFilterChange">
-        <el-option :value="1" label="平时成绩" />
-        <el-option :value="2" label="期中成绩" />
-        <el-option :value="3" label="期末成绩" />
-        <el-option :value="4" label="总评成绩" />
-      </el-select>
-      <el-select v-model="queryParams.status" placeholder="状态" clearable class="w-28" @change="onFilterChange">
-        <el-option :value="0" label="草稿" />
-        <el-option :value="1" label="已提交" />
-        <el-option :value="2" label="已审核" />
-        <el-option :value="3" label="已发布" />
-      </el-select>
+    <div class="tm-filters">
+      <select v-model="queryParams.semesterId" class="tm-select" @change="onFilterChange">
+        <option :value="undefined">全部学期</option>
+        <option v-for="sem in semesters" :key="sem.id" :value="sem.id">{{ sem.semesterName }}</option>
+      </select>
+      <select v-model="queryParams.gradeType" class="tm-select" @change="onFilterChange">
+        <option :value="undefined">全部类型</option>
+        <option :value="1">平时成绩</option>
+        <option :value="2">期中成绩</option>
+        <option :value="3">期末成绩</option>
+        <option :value="4">总评成绩</option>
+      </select>
+      <select v-model="queryParams.status" class="tm-select" @change="onFilterChange">
+        <option :value="undefined">全部状态</option>
+        <option :value="0">草稿</option>
+        <option :value="1">已提交</option>
+        <option :value="2">已审核</option>
+        <option :value="3">已发布</option>
+      </select>
     </div>
 
     <!-- Content: master-detail -->
-    <div class="flex-1 overflow-y-auto px-6 pt-5 pb-6 space-y-4">
+    <div class="tm-table-wrap" style="display: flex; flex-direction: column; gap: 16px;">
       <GradeBatchList
         :semester-id="queryParams.semesterId"
         :grade-type="queryParams.gradeType"
@@ -69,7 +74,6 @@ const queryParams = reactive({
 
 const currentBatch = ref<GradeBatch>()
 const entryBatch = ref<GradeBatch>()
-const statsBatch = ref<GradeBatch>()
 
 function onFilterChange() {
   currentBatch.value = undefined
@@ -79,8 +83,8 @@ function onEnterGrades(batch: GradeBatch) {
   entryBatch.value = batch
 }
 
-function onViewStatistics(batch: GradeBatch) {
-  statsBatch.value = batch
+function onViewStatistics(_batch: GradeBatch) {
+  // statistics panel reacts via batch-id prop
 }
 
 onMounted(async () => {
@@ -89,3 +93,7 @@ onMounted(async () => {
   if (current) queryParams.semesterId = current.id
 })
 </script>
+
+<style>
+@import '@/styles/teaching-ui.css';
+</style>

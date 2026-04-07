@@ -111,6 +111,7 @@ export interface CourseSchedule {
   name: string
   description?: string
   status: number // 0-草稿, 1-已发布, 2-已归档
+  entryCount?: number
   generatedAt?: string
   publishedAt?: string
   remark?: string

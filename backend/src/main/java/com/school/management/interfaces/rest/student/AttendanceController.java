@@ -288,18 +288,27 @@ public class AttendanceController {
                     String statusName = status == 2 ? "迟到" : status == 3 ? "早退" : status == 5 ? "旷课" : "异常";
                     String eventHint = status == 2 ? "LATE" : status == 3 ? "EARLY_LEAVE" : status == 5 ? "ABSENCE" : null;
                     if (eventHint != null) {
-                        // Lookup student name
+                        // Lookup student name and class name
                         String studentName = "";
+                        String className = "";
                         try {
-                            studentName = jdbc.queryForObject(
-                                "SELECT name FROM students WHERE id = ?", String.class, studentId);
+                            Map<String, Object> stuInfo = jdbc.queryForMap(
+                                "SELECT s.name, sc.name AS class_name FROM students s " +
+                                "LEFT JOIN school_classes sc ON s.class_id = sc.id WHERE s.id = ?", studentId);
+                            studentName = (String) stuInfo.getOrDefault("name", "");
+                            className = (String) stuInfo.getOrDefault("class_name", "");
                         } catch (Exception ignored) {}
-                        triggerService.fire("ATTENDANCE_RECORDED", Map.of(
-                            "studentId", studentId, "studentName", studentName != null ? studentName : "",
-                            "status", status, "statusName", statusName,
-                            "eventTypeHint", eventHint,
-                            "date", dateStr != null ? dateStr : ""
-                        ));
+                        Map<String, Object> ctx = new HashMap<>();
+                        ctx.put("studentId", studentId);
+                        ctx.put("studentName", studentName != null ? studentName : "");
+                        ctx.put("classId", classId != null ? classId : 0);
+                        ctx.put("className", className != null ? className : "");
+                        ctx.put("status", status);
+                        ctx.put("statusName", statusName);
+                        ctx.put("eventTypeHint", eventHint);
+                        ctx.put("date", dateStr != null ? dateStr : "");
+                        ctx.put("_refType", "attendance_record");
+                        triggerService.fire("ATTENDANCE_RECORDED", ctx);
                     }
                 } catch (Exception ignored) {}
             }

@@ -48,4 +48,7 @@ public interface EntityEventMapper extends BaseMapper<EntityEventPO> {
             "AND deleted = 0 GROUP BY event_category, event_type")
     List<Map<String, Object>> countGroupByType(@Param("subjectType") String subjectType,
                                                 @Param("subjectId") Long subjectId);
+
+    @Select("SELECT category_code FROM entity_event_types WHERE type_code = #{typeCode} AND deleted = 0 LIMIT 1")
+    String selectCategoryByTypeCode(@Param("typeCode") String typeCode);
 }

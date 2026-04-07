@@ -75,43 +75,18 @@ public class EventTriggerController {
     @Operation(summary = "创建触发器")
     @CasbinAccess(resource = "event-trigger", action = "add")
     public Result<Void> create(@RequestBody Map<String, Object> body) {
-        String conditionJson = null;
-        if (body.get("conditionJson") != null) {
-            try {
-                conditionJson = objectMapper.writeValueAsString(body.get("conditionJson"));
-            } catch (Exception e) {
-                conditionJson = body.get("conditionJson").toString();
-            }
-        }
-        String relatedSources = null;
-        if (body.get("relatedSources") != null) {
-            try {
-                relatedSources = objectMapper.writeValueAsString(body.get("relatedSources"));
-            } catch (Exception e) {
-                relatedSources = body.get("relatedSources").toString();
-            }
-        }
-        String payloadFields = null;
-        if (body.get("payloadFields") != null) {
-            try {
-                payloadFields = objectMapper.writeValueAsString(body.get("payloadFields"));
-            } catch (Exception e) {
-                payloadFields = body.get("payloadFields").toString();
-            }
-        }
+        String conditionJson = toJsonString(body.get("conditionJson"));
+        String subjectsJson = toJsonString(body.get("subjectsJson"));
 
         jdbcTemplate.update(
             "INSERT INTO event_triggers (name, trigger_point_code, condition_json, " +
             "event_type_mode, event_type_code, event_type_source, " +
-            "subject_type, subject_source, subject_name_source, " +
-            "related_sources, payload_fields, description, is_enabled, sort_order, tenant_id) " +
-            "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1)",
+            "subjects_json, description, is_enabled, sort_order, tenant_id) " +
+            "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1)",
             body.get("name"), body.get("triggerPointCode"), conditionJson,
             body.getOrDefault("eventTypeMode", "FIXED"),
             body.get("eventTypeCode"), body.get("eventTypeSource"),
-            body.getOrDefault("subjectType", "USER"),
-            body.get("subjectSource"), body.get("subjectNameSource"),
-            relatedSources, payloadFields,
+            subjectsJson,
             body.get("description"),
             body.getOrDefault("isEnabled", 1),
             body.getOrDefault("sortOrder", 0));
@@ -122,43 +97,18 @@ public class EventTriggerController {
     @Operation(summary = "更新触发器")
     @CasbinAccess(resource = "event-trigger", action = "edit")
     public Result<Void> update(@PathVariable Long id, @RequestBody Map<String, Object> body) {
-        String conditionJson = null;
-        if (body.get("conditionJson") != null) {
-            try {
-                conditionJson = objectMapper.writeValueAsString(body.get("conditionJson"));
-            } catch (Exception e) {
-                conditionJson = body.get("conditionJson").toString();
-            }
-        }
-        String relatedSources = null;
-        if (body.get("relatedSources") != null) {
-            try {
-                relatedSources = objectMapper.writeValueAsString(body.get("relatedSources"));
-            } catch (Exception e) {
-                relatedSources = body.get("relatedSources").toString();
-            }
-        }
-        String payloadFields = null;
-        if (body.get("payloadFields") != null) {
-            try {
-                payloadFields = objectMapper.writeValueAsString(body.get("payloadFields"));
-            } catch (Exception e) {
-                payloadFields = body.get("payloadFields").toString();
-            }
-        }
+        String conditionJson = toJsonString(body.get("conditionJson"));
+        String subjectsJson = toJsonString(body.get("subjectsJson"));
 
         jdbcTemplate.update(
             "UPDATE event_triggers SET name = ?, trigger_point_code = ?, condition_json = ?, " +
             "event_type_mode = ?, event_type_code = ?, event_type_source = ?, " +
-            "subject_type = ?, subject_source = ?, subject_name_source = ?, " +
-            "related_sources = ?, payload_fields = ?, description = ?, sort_order = ? " +
+            "subjects_json = ?, description = ?, sort_order = ? " +
             "WHERE id = ? AND deleted = 0",
             body.get("name"), body.get("triggerPointCode"), conditionJson,
             body.getOrDefault("eventTypeMode", "FIXED"),
             body.get("eventTypeCode"), body.get("eventTypeSource"),
-            body.getOrDefault("subjectType", "USER"),
-            body.get("subjectSource"), body.get("subjectNameSource"),
-            relatedSources, payloadFields,
+            subjectsJson,
             body.get("description"),
             body.getOrDefault("sortOrder", 0),
             id);
@@ -200,5 +150,15 @@ public class EventTriggerController {
             return Result.error("pointCode和context不能为空");
         }
         return Result.success(toCamelCaseList(triggerService.testFire(pointCode, context)));
+    }
+
+    private String toJsonString(Object value) {
+        if (value == null) return null;
+        if (value instanceof String) return (String) value;
+        try {
+            return objectMapper.writeValueAsString(value);
+        } catch (Exception e) {
+            return value.toString();
+        }
     }
 }

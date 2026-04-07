@@ -16,8 +16,10 @@ public interface MsgSubscriptionRuleMapper extends BaseMapper<MsgSubscriptionRul
 
     @Select("<script>" +
             "SELECT * FROM msg_subscription_rules WHERE is_enabled = 1 AND deleted = 0" +
-            " AND (event_category IS NULL OR event_category = #{eventCategory})" +
-            " AND (event_type IS NULL OR event_type = #{eventType})" +
+            " AND (event_category IS NULL" +
+            "   <if test='eventCategory != null'> OR event_category = #{eventCategory}</if>)" +
+            " AND (event_type IS NULL" +
+            "   <if test='eventType != null'> OR event_type = #{eventType}</if>)" +
             " ORDER BY sort_order" +
             "</script>")
     List<MsgSubscriptionRulePO> findByEvent(@Param("eventCategory") String eventCategory,

@@ -93,6 +93,7 @@ public class TemplateItemRepositoryImpl implements TemplateItemRepository {
         po.setVisibilityLogic(domain.getVisibilityLogic());
         po.setScoringLogic(domain.getScoringLogic());
         po.setInputMode(domain.getInputMode());
+        po.setLinkedEventTypeCode(domain.getLinkedEventTypeCode());
         po.setCreatedBy(domain.getCreatedBy());
         po.setCreatedAt(domain.getCreatedAt());
         po.setUpdatedBy(domain.getUpdatedBy());
@@ -125,6 +126,7 @@ public class TemplateItemRepositoryImpl implements TemplateItemRepository {
                 .visibilityLogic(po.getVisibilityLogic())
                 .scoringLogic(po.getScoringLogic())
                 .inputMode(po.getInputMode())
+                .linkedEventTypeCode(po.getLinkedEventTypeCode())
                 .createdBy(po.getCreatedBy())
                 .createdAt(po.getCreatedAt())
                 .updatedBy(po.getUpdatedBy())

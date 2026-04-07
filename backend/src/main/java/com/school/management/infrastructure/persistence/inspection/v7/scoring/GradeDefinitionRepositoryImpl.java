@@ -49,6 +49,7 @@ public class GradeDefinitionRepositoryImpl implements GradeDefinitionRepository 
         po.setColor(domain.getColor());
         po.setIcon(domain.getIcon());
         po.setSortOrder(domain.getSortOrder());
+        po.setLinkedEventTypeCode(domain.getLinkedEventTypeCode());
         return po;
     }
 
@@ -62,6 +63,7 @@ public class GradeDefinitionRepositoryImpl implements GradeDefinitionRepository 
                 .maxValue(po.getMaxValue())
                 .color(po.getColor())
                 .icon(po.getIcon())
-                .sortOrder(po.getSortOrder()));
+                .sortOrder(po.getSortOrder())
+                .linkedEventTypeCode(po.getLinkedEventTypeCode()));
     }
 }

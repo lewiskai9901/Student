@@ -1,21 +1,27 @@
 package com.school.management.application.inspection.v7;
 
 import com.school.management.application.event.EntityEventApplicationService;
+import com.school.management.application.event.TriggerService;
+import com.school.management.common.util.SecurityUtils;
 import com.school.management.domain.inspection.model.v7.execution.*;
 import com.school.management.domain.inspection.model.v7.scoring.*;
+import com.school.management.domain.inspection.model.v7.template.TemplateItem;
 import com.school.management.domain.inspection.repository.v7.*;
+import com.school.management.domain.inspection.service.ObservationContext;
+import com.school.management.domain.inspection.service.ObservationExtractor;
 import com.school.management.infrastructure.event.SpringDomainEventPublisher;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
+import java.time.LocalDateTime;
+import java.util.*;
+import java.util.stream.Collectors;
 
 @Slf4j
 @RequiredArgsConstructor
@@ -31,6 +37,15 @@ public class InspSubmissionApplicationService {
     private final SpringDomainEventPublisher eventPublisher;
     private final ObjectMapper objectMapper;
     private final EntityEventApplicationService entityEventApplicationService;
+
+    @Autowired(required = false)
+    private TriggerService triggerService;
+    @Autowired(required = false)
+    private List<ObservationExtractor> observationExtractors;
+    @Autowired(required = false)
+    private SubmissionObservationRepository observationRepository;
+    @Autowired(required = false)
+    private TemplateItemRepository templateItemRepository;
 
     // ========== Submission CRUD ==========
 
@@ -175,68 +190,140 @@ public class InspSubmissionApplicationService {
     private void publishInspectionEvents(InspSubmission submission,
                                           List<SubmissionDetail> details,
                                           InspProject project) {
-        String sourceRefType = "INSP_SUBMISSION";
-        Long sourceRefId = submission.getId();
-        String sourceModule = "INSPECTION_V7";
-
-        // 1. 遍历 details，发布 INSP_VIOLATION 事件
-        for (SubmissionDetail detail : details) {
-            if (!"VIOLATION_RECORD".equals(detail.getItemType())) continue;
-            String responseValue = detail.getResponseValue();
-            if (responseValue == null || responseValue.isBlank()) continue;
-            try {
-                // responseValue 是 JSON 数组，每项包含违规学生信息
-                List<Map<String, Object>> records = objectMapper.readValue(
-                        responseValue, new TypeReference<List<Map<String, Object>>>() {});
-                for (Map<String, Object> record : records) {
-                    Object studentId = record.get("studentId");
-                    Object studentName = record.get("studentName");
-                    if (studentId == null) continue;
-                    Long sid = Long.valueOf(studentId.toString());
-                    String sname = studentName != null ? studentName.toString() : "未知";
-                    String payload = objectMapper.writeValueAsString(record);
-                    entityEventApplicationService.createEvent(
-                            "student", sid, sname,
-                            "INSP_VIOLATION", "违规记录",
-                            payload, sourceModule,
-                            sourceRefType, sourceRefId,
-                            "inspection,violation", null, null
-                    );
-                }
-            } catch (Exception e) {
-                log.warn("解析 VIOLATION_RECORD responseValue 失败，submissionId={}, detailId={}: {}",
-                        submission.getId(), detail.getId(), e.getMessage());
-            }
-        }
-
-        // 2. 发布 INSP_GRADE 事件（主体=检查目标）
-        if (submission.getTargetId() == null) {
-            log.debug("Submission {} 无检查目标，跳过 INSP_GRADE 事件发布", submission.getId());
+        if (triggerService == null || observationExtractors == null) {
+            log.debug("TriggerService 或 ObservationExtractors 未注入，跳过事件发布");
             return;
         }
+
         try {
-            String targetType = submission.getTargetType() != null
-                    ? submission.getTargetType().name().toLowerCase() : "unknown";
-            Long targetId = submission.getTargetId();
-            String targetName = submission.getTargetName() != null ? submission.getTargetName() : "";
-            Map<String, Object> gradePayload = Map.of(
-                    "projectId", project.getId() != null ? project.getId() : 0,
-                    "projectName", project.getProjectName() != null ? project.getProjectName() : "",
-                    "score", submission.getFinalScore() != null ? submission.getFinalScore() : BigDecimal.ZERO,
-                    "grade", submission.getGrade() != null ? submission.getGrade() : "",
-                    "passed", Boolean.TRUE.equals(submission.getPassed())
-            );
-            String gradePayloadJson = objectMapper.writeValueAsString(gradePayload);
-            entityEventApplicationService.createEvent(
-                    targetType, targetId, targetName,
-                    "INSP_GRADE", "检查评分",
-                    gradePayloadJson, sourceModule,
-                    sourceRefType, sourceRefId,
-                    "inspection,grade", null, null
-            );
+            InspTask task = taskRepository.findById(submission.getTaskId()).orElse(null);
+
+            // 构建 ObservationContext
+            Map<Long, String> itemEventTypeMap = buildItemEventTypeMap(details);
+            ObservationContext ctx = ObservationContext.builder()
+                    .submissionId(submission.getId())
+                    .projectId(project.getId())
+                    .taskId(submission.getTaskId())
+                    .projectName(project.getProjectName())
+                    .targetType(submission.getTargetType() != null ? submission.getTargetType().name() : null)
+                    .targetId(submission.getTargetId())
+                    .targetName(submission.getTargetName())
+                    .observedAt(LocalDateTime.now())
+                    .itemEventTypeMap(itemEventTypeMap)
+                    .build();
+
+            // 1. 提取所有观察（Strategy 模式，零 if/else）
+            List<ScoringObservation> allObservations = new ArrayList<>();
+            for (SubmissionDetail detail : details) {
+                ObservationExtractor extractor = findExtractor(detail.getItemType());
+                allObservations.addAll(extractor.extract(detail, ctx));
+            }
+
+            // 2. 批量写入 submission_observations 表
+            if (observationRepository != null && !allObservations.isEmpty()) {
+                observationRepository.batchInsert(allObservations);
+            }
+
+            // 3. 负面观察 → 触发 INSP_ITEM_RESULT 事件
+            for (ScoringObservation obs : allObservations) {
+                if (!obs.isNegative()) continue;
+                try {
+                    Map<String, Object> context = obs.toContextMap();
+                    context.put("_refType", "inspection_submission");
+                    context.put("_refId", submission.getId());
+                    context.put("projectName", project.getProjectName() != null ? project.getProjectName() : "");
+                    triggerService.fire("INSP_ITEM_RESULT", context);
+                } catch (Exception e) {
+                    log.warn("触发 INSP_ITEM_RESULT 失败, obs={}: {}", obs.getItemName(), e.getMessage());
+                }
+            }
+
+            // 4. 等级事件 → 触发 INSP_GRADE_RESULT
+            if (submission.getGrade() != null && submission.getTargetId() != null) {
+                try {
+                    boolean passed = Boolean.TRUE.equals(submission.getPassed());
+                    Map<String, Object> gradeCtx = new HashMap<>();
+                    gradeCtx.put("isNegative", !passed);
+                    gradeCtx.put("severity", passed ? "LOW" : "HIGH");
+                    gradeCtx.put("targetId", submission.getTargetId());
+                    gradeCtx.put("targetName", submission.getTargetName() != null ? submission.getTargetName() : "");
+                    gradeCtx.put("targetType", ctx.getTargetType());
+                    gradeCtx.put("score", submission.getFinalScore() != null ? submission.getFinalScore() : BigDecimal.ZERO);
+                    gradeCtx.put("grade", submission.getGrade());
+                    gradeCtx.put("passed", passed);
+                    gradeCtx.put("projectName", project.getProjectName() != null ? project.getProjectName() : "");
+                    gradeCtx.put("_refType", "inspection_submission");
+                    gradeCtx.put("_refId", submission.getId());
+                    triggerService.fire("INSP_GRADE_RESULT", gradeCtx);
+                } catch (Exception e) {
+                    log.warn("触发 INSP_GRADE_RESULT 失败: {}", e.getMessage());
+                }
+            }
+
+            // 5. 完成事件 → 触发 INSP_RECORD_COMPLETE
+            try {
+                String inspectorName = "";
+                try { inspectorName = SecurityUtils.getCurrentUsername(); } catch (Exception ignored) {}
+                Map<String, Object> completeCtx = new HashMap<>();
+                completeCtx.put("isNegative", false);
+                completeCtx.put("taskId", submission.getTaskId());
+                completeCtx.put("targetId", submission.getTargetId());
+                completeCtx.put("targetName", submission.getTargetName() != null ? submission.getTargetName() : "");
+                completeCtx.put("score", submission.getFinalScore() != null ? submission.getFinalScore() : BigDecimal.ZERO);
+                completeCtx.put("inspectorName", inspectorName);
+                completeCtx.put("_refType", "inspection_submission");
+                completeCtx.put("_refId", submission.getId());
+                triggerService.fire("INSP_RECORD_COMPLETE", completeCtx);
+            } catch (Exception e) {
+                log.warn("触发 INSP_RECORD_COMPLETE 失败: {}", e.getMessage());
+            }
+
+            log.info("检查事件发布完成: submissionId={}, 观察数={}, 负面={}",
+                    submission.getId(), allObservations.size(),
+                    allObservations.stream().filter(ScoringObservation::isNegative).count());
+
         } catch (Exception e) {
-            log.warn("发布 INSP_GRADE 事件失败，submissionId={}: {}", submission.getId(), e.getMessage());
+            log.error("发布检查事件异常, submissionId={}: {}", submission.getId(), e.getMessage());
         }
+    }
+
+    private ObservationExtractor findExtractor(String itemType) {
+        if (observationExtractors != null) {
+            for (ObservationExtractor ext : observationExtractors) {
+                if (ext.supports(itemType) && !(ext instanceof com.school.management.domain.inspection.service.DefaultObservationExtractor)) {
+                    return ext;
+                }
+            }
+        }
+        // 兜底用 default
+        return observationExtractors != null
+                ? observationExtractors.stream()
+                    .filter(e -> e instanceof com.school.management.domain.inspection.service.DefaultObservationExtractor)
+                    .findFirst().orElse(observationExtractors.get(0))
+                : null;
+    }
+
+    /**
+     * 构建 templateItemId → linkedEventTypeCode 映射
+     */
+    private Map<Long, String> buildItemEventTypeMap(List<SubmissionDetail> details) {
+        Map<Long, String> map = new HashMap<>();
+        if (templateItemRepository == null) return map;
+        Set<Long> itemIds = details.stream()
+                .map(SubmissionDetail::getTemplateItemId)
+                .filter(Objects::nonNull)
+                .collect(Collectors.toSet());
+        for (Long itemId : itemIds) {
+            try {
+                Optional<TemplateItem> item = templateItemRepository.findById(itemId);
+                item.ifPresent(ti -> {
+                    if (ti.getLinkedEventTypeCode() != null && !ti.getLinkedEventTypeCode().isBlank()) {
+                        map.put(itemId, ti.getLinkedEventTypeCode());
+                    }
+                });
+            } catch (Exception ignored) {}
+        }
+        return map;
     }
 
     /**

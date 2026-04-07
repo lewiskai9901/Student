@@ -23,6 +23,12 @@ public class MsgNotificationPO {
     private String sourceEventType;
     private String sourceRefType;
     private Long sourceRefId;
+    private String subjectType;
+    private Long subjectId;
+    private String subjectName;
+    private String eventCategory;
+    private String sourceModule;
+    private Long eventId;
     private Integer isRead;
     private LocalDateTime readAt;
     private LocalDateTime createdAt;

@@ -75,9 +75,8 @@ public class EntityEventApplicationService {
         EntityEvent saved = eventRepository.save(event);
         log.info("Created entity event: {} for {}/{}", eventType, subjectType, subjectId);
 
-        // 发布 Spring Application Event，触发异步通知处理
-        applicationEventPublisher.publishEvent(new EntityEventCreatedNotification(
-                saved.getId(), subjectType, subjectId, subjectName, eventType, eventLabel));
+        // 发布 Spring Application Event → EntityEventDispatchListener → MessageDispatcher
+        applicationEventPublisher.publishEvent(new EntityEventCreatedNotification(saved));
 
         return saved;
     }
@@ -106,13 +105,17 @@ public class EntityEventApplicationService {
     }
 
     /**
-     * 从 eventType 推导 category（取第一段，例如 INSP_GRADE → INSPECTION 需要映射，但简单做法取 _ 前部分）
-     * 预置类型格式：INSP_xxx → INSPECTION, ORG_xxx → ORG, PLACE_xxx → PLACE
+     * 从 entity_event_types 表查询 eventType 对应的 category_code
+     * 查不到时降级为取下划线前缀
      */
     private String deriveCategory(String eventType) {
         if (eventType == null) return "UNKNOWN";
-        if (eventType.startsWith("INSP_")) return "INSPECTION";
-        int idx = eventType.indexOf('_');
-        return idx > 0 ? eventType.substring(0, idx) : eventType;
+        try {
+            return eventRepository.findCategoryByTypeCode(eventType);
+        } catch (Exception e) {
+            // 降级：取第一个下划线前的部分
+            int idx = eventType.indexOf('_');
+            return idx > 0 ? eventType.substring(0, idx) : eventType;
+        }
     }
 }

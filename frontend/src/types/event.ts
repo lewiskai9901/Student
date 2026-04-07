@@ -34,6 +34,13 @@ export interface ConditionGroup {
   any?: ConditionItem[]
 }
 
+/** 主体配置项 */
+export interface SubjectConfig {
+  type: 'USER' | 'ORG_UNIT' | 'PLACE'
+  idSource: string
+  nameSource?: string
+}
+
 /** 事件触发器 */
 export interface EventTrigger {
   id: number
@@ -43,11 +50,7 @@ export interface EventTrigger {
   eventTypeMode: 'FIXED' | 'DYNAMIC'
   eventTypeCode?: string | null
   eventTypeSource?: string | null
-  subjectType: string
-  subjectSource: string
-  subjectNameSource?: string | null
-  relatedSources?: Record<string, string> | string | null
-  payloadFields?: string[] | string | null
+  subjectsJson?: SubjectConfig[] | string | null
   description?: string
   isEnabled: number
   sortOrder: number

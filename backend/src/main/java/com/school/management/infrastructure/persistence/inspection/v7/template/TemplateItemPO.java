@@ -36,6 +36,7 @@ public class TemplateItemPO {
     private String visibilityLogic;
     private String scoringLogic;
     private String inputMode;
+    private String linkedEventTypeCode;
     private Long createdBy;
     private LocalDateTime createdAt;
     private Long updatedBy;

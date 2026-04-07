@@ -2,7 +2,6 @@ package com.school.management.application.message;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.school.management.application.event.EntityEventCreatedNotification;
 import com.school.management.domain.event.model.EntityEvent;
 import com.school.management.domain.message.model.MsgNotification;
 import com.school.management.domain.message.model.MsgSubscriptionRule;
@@ -19,19 +18,19 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
-import java.util.Set;
+import java.util.*;
 import java.util.stream.Collectors;
 
 /**
  * 消息分发器
- * 核心职责：根据订阅规则将事件转化为站内消息，分发给目标用户
+ * 核心职责：根据订阅规则将实体事件转化为站内通知，分发给目标用户
+ *
+ * 链路: TriggerService → Spring Event → EntityEventDispatchListener → 此类
+ *
+ * 匹配逻辑:
+ *   msg_subscription_rules.event_category IS NULL → 匹配所有类别
+ *   msg_subscription_rules.event_type IS NULL     → 匹配类别下所有类型
+ *   两者都 NULL → 匹配所有事件（全局规则）
  */
 @Slf4j
 @Service
@@ -47,107 +46,56 @@ public class MessageDispatcher {
     private final ObjectMapper objectMapper;
 
     /**
-     * 根据 EntityEventCreatedNotification 分发消息
-     */
-    public void dispatch(EntityEventCreatedNotification notification) {
-        try {
-            String eventCategory = deriveCategory(notification.getEventType());
-            String eventType = notification.getEventType();
-
-            List<MsgSubscriptionRule> rules = subscriptionRuleRepository.findByEventType(eventCategory, eventType);
-            if (rules.isEmpty()) {
-                return;
-            }
-
-            // 构建事件变量用于模板渲染
-            Map<String, String> variables = buildVariables(notification);
-
-            for (MsgSubscriptionRule rule : rules) {
-                try {
-                    processRule(rule, notification, variables);
-                } catch (Exception e) {
-                    log.warn("[消息分发] 规则 {} 处理失败: {}", rule.getId(), e.getMessage());
-                }
-            }
-        } catch (Exception e) {
-            log.error("[消息分发] 事件 {} 处理异常", notification.getEventType(), e);
-        }
-    }
-
-    /**
-     * 根据 EntityEvent 分发消息（事件完整信息版本）
+     * 根据 EntityEvent 分发消息
+     * @param event 已持久化的实体事件
      */
     public void dispatch(EntityEvent event) {
         try {
+            // 1. 查询匹配的订阅规则
             List<MsgSubscriptionRule> rules = subscriptionRuleRepository.findByEventType(
                     event.getEventCategory(), event.getEventType());
             if (rules.isEmpty()) {
+                log.debug("[消息分发] 无匹配规则: category={}, type={}",
+                        event.getEventCategory(), event.getEventType());
                 return;
             }
 
-            Map<String, String> variables = buildVariablesFromEvent(event);
+            // 2. 构建模板变量 (基础字段 + payload 内所有字段)
+            Map<String, String> variables = buildVariables(event);
 
+            // 3. 逐条规则处理
             for (MsgSubscriptionRule rule : rules) {
                 try {
-                    processRuleForEvent(rule, event, variables);
+                    processRule(rule, event, variables);
                 } catch (Exception e) {
-                    log.warn("[消息分发] 规则 {} 处理失败: {}", rule.getId(), e.getMessage());
+                    log.warn("[消息分发] 规则 {}({}) 处理失败: {}",
+                            rule.getRuleName(), rule.getId(), e.getMessage());
                 }
             }
         } catch (Exception e) {
-            log.error("[消息分发] 事件 {} 处理异常", event.getEventType(), e);
+            log.error("[消息分发] 事件分发异常: type={}, error={}",
+                    event.getEventType(), e.getMessage());
         }
     }
 
-    // ── 私有方法 ──────────────────────────────────────────────────────────────
+    // ── 核心处理 ──────────────────────────────────────────────────
 
-    private void processRule(MsgSubscriptionRule rule,
-                              EntityEventCreatedNotification notification,
-                              Map<String, String> variables) {
-        // 解析目标用户
-        Set<Long> targetUserIds = resolveTargetUsers(rule,
-                notification.getSubjectId(), notification.getSubjectType());
-        if (targetUserIds.isEmpty()) {
-            return;
-        }
-
-        // 加载并渲染模板
-        String title;
-        String content;
-        if (rule.getTemplateId() != null) {
-            Optional<MsgTemplate> templateOpt = templateRepository.findById(rule.getTemplateId());
-            if (templateOpt.isPresent()) {
-                MsgTemplate.RenderedMessage rendered = templateOpt.get().render(variables);
-                title = rendered.getTitle();
-                content = rendered.getContent();
-            } else {
-                title = notification.getEventLabel();
-                content = notification.getSubjectName() + " - " + notification.getEventLabel();
-            }
-        } else {
-            title = notification.getEventLabel();
-            content = notification.getSubjectName() + " - " + notification.getEventLabel();
-        }
-
-        // 为每个目标用户创建通知
-        saveNotifications(targetUserIds, title, content, notification.getEventType(),
-                null, null, 0L);
-    }
-
-    private void processRuleForEvent(MsgSubscriptionRule rule,
-                                      EntityEvent event,
-                                      Map<String, String> variables) {
+    private void processRule(MsgSubscriptionRule rule, EntityEvent event,
+                             Map<String, String> variables) {
+        // 1. 解析目标用户
         Set<Long> targetUserIds = resolveTargetUsers(rule, event.getSubjectId(), event.getSubjectType());
         if (targetUserIds.isEmpty()) {
+            log.debug("[消息分发] 规则 {} 无目标用户", rule.getRuleName());
             return;
         }
 
+        // 2. 渲染消息内容
         String title;
         String content;
         if (rule.getTemplateId() != null) {
-            Optional<MsgTemplate> templateOpt = templateRepository.findById(rule.getTemplateId());
-            if (templateOpt.isPresent()) {
-                MsgTemplate.RenderedMessage rendered = templateOpt.get().render(variables);
+            Optional<MsgTemplate> tplOpt = templateRepository.findById(rule.getTemplateId());
+            if (tplOpt.isPresent()) {
+                MsgTemplate.RenderedMessage rendered = tplOpt.get().render(variables);
                 title = rendered.getTitle();
                 content = rendered.getContent();
             } else {
@@ -159,19 +107,28 @@ public class MessageDispatcher {
             content = event.getSubjectName() + " - " + event.getEventLabel();
         }
 
-        saveNotifications(targetUserIds, title, content, event.getEventType(),
-                event.getSourceRefType(), event.getSourceRefId(),
-                event.getTenantId() != null ? event.getTenantId() : 0L);
+        // 3. 为每个目标用户创建通知（携带完整主体/分类/模块信息）
+        for (Long userId : targetUserIds) {
+            MsgNotification notification = MsgNotification.createFromEvent(
+                    event.getTenantId(), userId, title, content,
+                    event.getEventType(),
+                    event.getSourceRefType(), event.getSourceRefId(),
+                    event.getSubjectType(), event.getSubjectId(), event.getSubjectName(),
+                    event.getEventCategory(), event.getSourceModule(), event.getId());
+            notificationRepository.save(notification);
+        }
+
+        log.info("[消息分发] 规则「{}」→ {} 个用户, 事件: {}/{}, 主体: {}/{}",
+                rule.getRuleName(), targetUserIds.size(),
+                event.getEventCategory(), event.getEventType(),
+                event.getSubjectType(), event.getSubjectName());
     }
 
-    /**
-     * 根据 targetMode 解析目标用户 ID 集合
-     */
+    // ── 目标用户解析 ─────────────────────────────────────────────
+
     private Set<Long> resolveTargetUsers(MsgSubscriptionRule rule, Long subjectId, String subjectType) {
         String mode = rule.getTargetMode();
-        if (mode == null) {
-            return Collections.emptySet();
-        }
+        if (mode == null) return Collections.emptySet();
 
         return switch (mode) {
             case "BY_ROLE" -> resolveByRole(rule.getTargetConfig());
@@ -185,14 +142,10 @@ public class MessageDispatcher {
         };
     }
 
-    /**
-     * BY_ROLE: 从 targetConfig 读角色编码列表，查所有拥有该角色的用户
-     */
+    /** BY_ROLE: targetConfig = ["admin","teacher"] → 查拥有这些角色的用户 */
     private Set<Long> resolveByRole(String targetConfig) {
         List<String> roleCodes = parseStringList(targetConfig);
-        if (roleCodes.isEmpty()) {
-            return Collections.emptySet();
-        }
+        if (roleCodes.isEmpty()) return Collections.emptySet();
         Set<Long> userIds = new HashSet<>();
         for (String roleCode : roleCodes) {
             RolePO role = roleMapper.findByRoleCode(roleCode);
@@ -204,118 +157,84 @@ public class MessageDispatcher {
         return userIds;
     }
 
-    /**
-     * BY_ORG_ADMIN: 找主体所属组织的管理员用户
-     */
+    /** BY_ORG_ADMIN: 找主体所属组织的管理员 */
     private Set<Long> resolveByOrgAdmin(Long subjectId, String subjectType) {
-        if (subjectId == null) {
-            return Collections.emptySet();
-        }
-        // 查找对该主体有 manager/admin 关系的用户
+        if (subjectId == null) return Collections.emptySet();
         try {
-            List<Long> managerUserIds = accessRelationMapper.findAccessibleResourceIds(
+            List<Long> ids = accessRelationMapper.findAccessibleResourceIds(
                     subjectType != null ? subjectType : "org_unit", "user", subjectId);
-            return new HashSet<>(managerUserIds);
+            return new HashSet<>(ids);
         } catch (Exception e) {
             log.warn("[消息分发] 查询 org admin 失败: {}", e.getMessage());
             return Collections.emptySet();
         }
     }
 
-    /**
-     * BY_USER: 直接从 targetConfig 读用户 ID 列表
-     */
+    /** BY_USER: targetConfig = [1, 2, 3] → 直接指定用户ID */
     private Set<Long> resolveByUser(String targetConfig) {
-        List<Long> ids = parseLongList(targetConfig);
-        return new HashSet<>(ids);
+        return new HashSet<>(parseLongList(targetConfig));
     }
 
-    /**
-     * BY_RELATED: 从事件关联主体中提取用户（这里简化为查询与主体有关联的用户）
-     */
+    /** BY_RELATED: 查询与主体有关联关系的用户 */
     private Set<Long> resolveByRelated(Long subjectId, String subjectType) {
-        if (subjectId == null) {
-            return Collections.emptySet();
-        }
+        if (subjectId == null) return Collections.emptySet();
         try {
-            // 查找与主体直接关联的用户
-            List<Long> relatedUsers = accessRelationMapper.findAccessibleResourceIds(
+            List<Long> ids = accessRelationMapper.findAccessibleResourceIds(
                     "user", subjectType != null ? subjectType : "student", subjectId);
-            return new HashSet<>(relatedUsers);
+            return new HashSet<>(ids);
         } catch (Exception e) {
             log.warn("[消息分发] 查询关联用户失败: {}", e.getMessage());
             return Collections.emptySet();
         }
     }
 
-    private void saveNotifications(Set<Long> userIds, String title, String content,
-                                    String sourceEventType, String sourceRefType,
-                                    Long sourceRefId, Long tenantId) {
-        for (Long userId : userIds) {
-            MsgNotification notification = MsgNotification.create(
-                    tenantId, userId, title, content,
-                    "EVENT", sourceEventType, sourceRefType, sourceRefId);
-            notificationRepository.save(notification);
-        }
-        log.info("[消息分发] 已发送通知给 {} 个用户，事件类型: {}", userIds.size(), sourceEventType);
-    }
+    // ── 模板变量构建 ─────────────────────────────────────────────
 
-    private Map<String, String> buildVariables(EntityEventCreatedNotification notification) {
+    private Map<String, String> buildVariables(EntityEvent event) {
         Map<String, String> vars = new HashMap<>();
-        vars.put("subjectName", notification.getSubjectName());
-        vars.put("eventLabel", notification.getEventLabel());
-        vars.put("eventType", notification.getEventType());
-        vars.put("time", java.time.LocalDateTime.now().toString());
-        return vars;
-    }
-
-    private Map<String, String> buildVariablesFromEvent(EntityEvent event) {
-        Map<String, String> vars = new HashMap<>();
-        vars.put("subjectName", event.getSubjectName());
-        vars.put("eventLabel", event.getEventLabel());
-        vars.put("eventType", event.getEventType());
+        vars.put("subjectName", safe(event.getSubjectName()));
+        vars.put("eventLabel", safe(event.getEventLabel()));
+        vars.put("eventType", safe(event.getEventType()));
+        vars.put("eventCategory", safe(event.getEventCategory()));
+        vars.put("sourceModule", safe(event.getSourceModule()));
         vars.put("time", event.getOccurredAt() != null ? event.getOccurredAt().toString() : "");
 
-        // 从 payload JSON 中提取变量
+        // 从 payload JSON 注入所有字段为模板变量
         if (event.getPayload() != null) {
             try {
                 Map<String, Object> payload = objectMapper.readValue(event.getPayload(),
-                        new TypeReference<Map<String, Object>>() {});
-                payload.forEach((k, v) -> vars.put(k, v != null ? v.toString() : ""));
+                        new TypeReference<>() {});
+                payload.forEach((k, v) -> {
+                    if (!k.startsWith("_")) { // 跳过 _refType, _refId 等内部字段
+                        vars.put(k, v != null ? v.toString() : "");
+                    }
+                });
             } catch (Exception e) {
-                log.debug("[消息分发] payload 解析失败，跳过变量注入: {}", e.getMessage());
+                log.debug("[消息分发] payload 解析跳过: {}", e.getMessage());
             }
         }
         return vars;
     }
 
-    /**
-     * 根据事件类型推断大类
-     */
-    private String deriveCategory(String eventType) {
-        if (eventType == null) return null;
-        if (eventType.startsWith("INSP_")) return "INSPECTION";
-        if (eventType.startsWith("EVAL_")) return "EVALUATION";
-        if (eventType.startsWith("SYS_")) return "SYSTEM";
-        return null;
-    }
+    private String safe(String s) { return s != null ? s : ""; }
+
+    // ── JSON 解析工具 ─────────────────────────────────────────────
 
     private List<String> parseStringList(String json) {
         if (json == null || json.isBlank()) return Collections.emptyList();
         try {
-            return objectMapper.readValue(json, new TypeReference<List<String>>() {});
+            return objectMapper.readValue(json, new TypeReference<>() {});
         } catch (Exception e) {
-            log.warn("[消息分发] 解析字符串列表失败: {}", json);
-            return Collections.emptyList();
+            // 可能是逗号分隔的字符串而非JSON数组
+            return Arrays.asList(json.split(","));
         }
     }
 
     private List<Long> parseLongList(String json) {
         if (json == null || json.isBlank()) return Collections.emptyList();
         try {
-            return objectMapper.readValue(json, new TypeReference<List<Long>>() {});
+            return objectMapper.readValue(json, new TypeReference<>() {});
         } catch (Exception e) {
-            log.warn("[消息分发] 解析 Long 列表失败: {}", json);
             return Collections.emptyList();
         }
     }

@@ -34,6 +34,7 @@ public class TemplateItem implements Entity<Long> {
     private String visibilityLogic;   // JSON: 显示条件(条件逻辑V2)
     private String scoringLogic;      // JSON: 计分条件(条件逻辑V2)
     private String inputMode;         // INLINE | EVENT_STREAM
+    private String linkedEventTypeCode; // 关联事件类型编码(扣分时触发)
     private Long createdBy;
     private LocalDateTime createdAt;
     private Long updatedBy;
@@ -67,6 +68,7 @@ public class TemplateItem implements Entity<Long> {
         this.visibilityLogic = builder.visibilityLogic;
         this.scoringLogic = builder.scoringLogic;
         this.inputMode = builder.inputMode;
+        this.linkedEventTypeCode = builder.linkedEventTypeCode;
         this.createdBy = builder.createdBy;
         this.createdAt = builder.createdAt != null ? builder.createdAt : LocalDateTime.now();
         this.updatedBy = builder.updatedBy;
@@ -221,6 +223,10 @@ public class TemplateItem implements Entity<Long> {
         return inputMode;
     }
 
+    public String getLinkedEventTypeCode() {
+        return linkedEventTypeCode;
+    }
+
     public void linkToLibrary(Long libraryItemId, boolean syncWithLibrary) {
         this.libraryItemId = libraryItemId;
         this.syncWithLibrary = syncWithLibrary;
@@ -278,6 +284,7 @@ public class TemplateItem implements Entity<Long> {
         private String visibilityLogic;
         private String scoringLogic;
         private String inputMode;
+        private String linkedEventTypeCode;
         private Long createdBy;
         private LocalDateTime createdAt;
         private Long updatedBy;
@@ -307,6 +314,7 @@ public class TemplateItem implements Entity<Long> {
         public Builder visibilityLogic(String visibilityLogic) { this.visibilityLogic = visibilityLogic; return this; }
         public Builder scoringLogic(String scoringLogic) { this.scoringLogic = scoringLogic; return this; }
         public Builder inputMode(String inputMode) { this.inputMode = inputMode; return this; }
+        public Builder linkedEventTypeCode(String linkedEventTypeCode) { this.linkedEventTypeCode = linkedEventTypeCode; return this; }
         public Builder createdBy(Long createdBy) { this.createdBy = createdBy; return this; }
         public Builder createdAt(LocalDateTime createdAt) { this.createdAt = createdAt; return this; }
         public Builder updatedBy(Long updatedBy) { this.updatedBy = updatedBy; return this; }

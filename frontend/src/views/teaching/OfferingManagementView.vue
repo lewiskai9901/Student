@@ -1,42 +1,36 @@
 <template>
-  <div class="flex h-full flex-col bg-gray-50">
+  <div class="tm-page">
     <!-- Header -->
-    <div class="flex items-center justify-between border-b border-gray-200 bg-white px-6 py-4">
+    <div class="tm-header">
       <div>
-        <h1 class="text-lg font-semibold text-gray-900">开课管理</h1>
-        <p class="mt-0.5 text-sm text-gray-500">学期开课、班级分配、教学班管理</p>
+        <h1 class="tm-title">开课管理</h1>
+        <div class="tm-stats">
+          <span>学期开课、班级分配、教学班管理</span>
+        </div>
       </div>
-      <div class="flex items-center gap-3">
-        <el-select v-model="semesterId" placeholder="选择学期" class="w-48" @change="onSemesterChange">
-          <el-option v-for="s in semesters" :key="s.id" :value="s.id" :label="s.semesterName" />
-        </el-select>
-        <button
-          v-if="semesterId"
-          class="inline-flex items-center gap-1.5 rounded-lg bg-green-600 px-3 py-2 text-sm font-medium text-white hover:bg-green-700"
-          @click="handleImportFromPlan"
-        >
-          从培养方案导入
-        </button>
+      <div style="display: flex; align-items: center; gap: 10px;">
+        <select v-model="semesterId" class="tm-select" @change="onSemesterChange">
+          <option :value="''" disabled>选择学期</option>
+          <option v-for="s in semesters" :key="s.id" :value="s.id">{{ s.semesterName }}</option>
+        </select>
+        <button v-if="semesterId" class="tm-btn tm-btn-workflow" @click="handleImportFromPlan">从培养方案导入</button>
       </div>
     </div>
 
     <!-- Tabs -->
-    <div class="border-b border-gray-200 bg-white px-6">
-      <nav class="-mb-px flex gap-6">
-        <button
-          v-for="tab in tabs"
-          :key="tab.key"
-          class="border-b-2 px-1 py-3 text-sm font-medium transition-colors"
-          :class="activeTab === tab.key ? 'border-blue-500 text-blue-600' : 'border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700'"
-          @click="activeTab = tab.key"
-        >
-          {{ tab.label }}
-        </button>
-      </nav>
+    <div class="tm-tabs">
+      <button
+        v-for="tab in tabs"
+        :key="tab.key"
+        :class="['tm-tab', { active: activeTab === tab.key }]"
+        @click="activeTab = tab.key"
+      >
+        {{ tab.label }}
+      </button>
     </div>
 
     <!-- Content -->
-    <div class="flex-1 overflow-y-auto">
+    <div style="flex: 1; overflow-y: auto;">
       <OfferingListTab v-if="activeTab === 'offerings'" :semester-id="semesterId" />
       <ClassAssignmentTab v-else-if="activeTab === 'assignments'" :semester-id="semesterId" />
       <TeachingClassTab v-else-if="activeTab === 'classes'" :semester-id="semesterId" />
@@ -89,3 +83,7 @@ onMounted(async () => {
   if (current) semesterId.value = current.id
 })
 </script>
+
+<style>
+@import '@/styles/teaching-ui.css';
+</style>

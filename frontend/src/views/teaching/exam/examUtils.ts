@@ -1,23 +1,23 @@
 /** Shared helper functions for the exam module */
 
-export const examTypeBadgeClass = (type: number) => {
+export const examTypeChipClass = (type: number) => {
   const map: Record<number, string> = {
-    1: 'bg-blue-50 text-blue-700',
-    2: 'bg-indigo-50 text-indigo-700',
-    3: 'bg-amber-50 text-amber-700',
-    4: 'bg-red-50 text-red-700',
+    1: 'tm-chip-blue',
+    2: 'tm-chip-purple',
+    3: 'tm-chip-amber',
+    4: 'tm-chip-red',
   }
-  return map[type] || 'bg-gray-100 text-gray-600'
+  return map[type] || 'tm-chip-gray'
 }
 
-export const statusBadgeClass = (status: number) => {
+export const statusChipClass = (status: number) => {
   const map: Record<number, string> = {
-    0: 'bg-gray-100 text-gray-600',
-    1: 'bg-emerald-50 text-emerald-700',
-    2: 'bg-amber-50 text-amber-700',
-    3: 'bg-red-50 text-red-600',
+    0: 'tm-chip-gray',
+    1: 'tm-chip-green',
+    2: 'tm-chip-amber',
+    3: 'tm-chip-red',
   }
-  return map[status] || 'bg-gray-100 text-gray-600'
+  return map[status] || 'tm-chip-gray'
 }
 
 export const getExamTypeName = (type: number) => {

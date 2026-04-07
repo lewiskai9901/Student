@@ -403,28 +403,6 @@ const statusCounts = computed(() => {
   return counts
 })
 
-// Validation rules (bound to forms via :rules binding)
-const taskRules = {
-  semesterId: [{ required: true, message: '请选择学期', trigger: 'change' }],
-  courseId: [{ required: true, message: '请选择课程', trigger: 'change' }],
-  classId: [{ required: true, message: '请选择班级', trigger: 'change' }],
-  studentCount: [{ required: true, message: '请输入学生数', trigger: 'blur' }],
-  weeklyHours: [{ required: true, message: '请输入周学时', trigger: 'blur' }],
-  startWeek: [{ required: true, message: '请输入开始周', trigger: 'blur' }],
-  endWeek: [{ required: true, message: '请输入结束周', trigger: 'blur' }],
-}
-
-const assignRules = {
-  teacherIds: [{ required: true, type: 'array', min: 1, message: '请选择教师', trigger: 'change' }],
-  mainTeacherId: [{ required: true, message: '请选择主讲教师', trigger: 'change' }],
-}
-
-const batchRules = {
-  semesterId: [{ required: true, message: '请选择学期', trigger: 'change' }],
-  planId: [{ required: true, message: '请选择培养方案', trigger: 'change' }],
-  classIds: [{ required: true, type: 'array', min: 1, message: '请选择班级', trigger: 'change' }],
-}
-
 // Data loading
 const loadTasks = async () => {
   loading.value = true

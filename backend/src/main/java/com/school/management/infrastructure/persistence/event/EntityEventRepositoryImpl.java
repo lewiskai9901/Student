@@ -78,6 +78,11 @@ public class EntityEventRepositoryImpl implements EntityEventRepository {
         return eventMapper.countGroupByType(subjectType, subjectId);
     }
 
+    @Override
+    public String findCategoryByTypeCode(String typeCode) {
+        return eventMapper.selectCategoryByTypeCode(typeCode);
+    }
+
     private EntityEvent toDomain(EntityEventPO po) {
         return EntityEvent.builder()
                 .id(po.getId())

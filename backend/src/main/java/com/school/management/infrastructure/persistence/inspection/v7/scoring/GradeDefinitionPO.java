@@ -20,4 +20,5 @@ public class GradeDefinitionPO {
     private String color;
     private String icon;
     private Integer sortOrder;
+    private String linkedEventTypeCode;
 }

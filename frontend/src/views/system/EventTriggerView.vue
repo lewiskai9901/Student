@@ -32,7 +32,7 @@
       <div class="filter-group">
         <select v-model="filterModule" class="filter-select" @change="filterTriggers">
           <option value="">全部模块</option>
-          <option v-for="m in moduleOptions" :key="m" :value="m">{{ m }}</option>
+          <option v-for="m in moduleOptions" :key="m.code" :value="m.code">{{ m.name }}</option>
         </select>
         <select v-model="filterEventType" class="filter-select" @change="filterTriggers">
           <option value="">全部事件类型</option>
@@ -46,17 +46,19 @@
     <div class="table-container" v-loading="loading">
       <table class="trg-table">
         <colgroup>
-          <col style="width: 180px" />
-          <col style="width: 140px" />
+          <col style="width: 160px" />
+          <col style="width: 90px" />
+          <col style="width: 120px" />
           <col />
           <col style="width: 120px" />
-          <col style="width: 90px" />
+          <col style="width: 80px" />
           <col style="width: 70px" />
           <col style="width: 100px" />
         </colgroup>
         <thead>
           <tr>
             <th>名称</th>
+            <th>模块</th>
             <th>触发点</th>
             <th>条件摘要</th>
             <th>事件类型</th>
@@ -68,17 +70,18 @@
         <tbody>
           <tr v-for="row in filteredTriggers" :key="row.id" class="trg-row">
             <td class="cell-name">{{ row.name }}</td>
+            <td class="cell-module">{{ getModuleNameByTrigger(row.triggerPointCode) }}</td>
             <td>
-              <code class="code-badge">{{ row.triggerPointCode }}</code>
+              <code class="code-badge" :title="row.triggerPointCode">{{ getTriggerPointName(row.triggerPointCode) }}</code>
             </td>
-            <td class="cell-condition">{{ formatCondition(row.conditionJson) }}</td>
+            <td class="cell-condition">{{ formatCondition(row.conditionJson, row.triggerPointCode) }}</td>
             <td>
               <span class="evt-type-chip" :class="getEventTypeClass(row)">
                 <em class="dot" :style="{ background: getEventTypeDotColor(row) }" />
-                {{ row.eventTypeMode === 'FIXED' ? (row.eventTypeCode || '--') : '(动态)' }}
+                {{ row.eventTypeMode === 'FIXED' ? getEventTypeName(row.eventTypeCode) : '(动态)' }}
               </span>
             </td>
-            <td>{{ row.subjectType }}</td>
+            <td>{{ formatSubjects(row.subjectsJson) }}</td>
             <td @click.stop>
               <button
                 class="status-toggle"
@@ -95,7 +98,7 @@
             </td>
           </tr>
           <tr v-if="!loading && filteredTriggers.length === 0">
-            <td colspan="7" class="empty-cell">暂无触发器数据</td>
+            <td colspan="8" class="empty-cell">暂无触发器数据</td>
           </tr>
         </tbody>
       </table>
@@ -134,8 +137,8 @@
                   <div class="field">
                     <label class="field-label">模块</label>
                     <select v-model="selectedModule" class="field-select" @change="onModuleChange">
-                      <option value="">选择模块</option>
-                      <option v-for="m in moduleOptions" :key="m" :value="m">{{ m }}</option>
+                      <option value="">请选择模块</option>
+                      <option v-for="m in moduleOptions" :key="m.code" :value="m.code">{{ m.name }}</option>
                     </select>
                   </div>
                   <div class="field">
@@ -150,7 +153,7 @@
                 </div>
                 <div v-if="currentContextSchema && Object.keys(currentContextSchema).length > 0" class="context-hint">
                   <span class="context-label">上下文字段:</span>
-                  <code v-for="(_desc, key) in currentContextSchema" :key="key" class="context-field">{{ key }}</code>
+                  <code v-for="(def, key) in currentContextSchema" :key="key" class="context-field" :title="String(key)">{{ getFieldLabel(def, String(key)) }}</code>
                 </div>
               </section>
 
@@ -161,7 +164,7 @@
                   <div v-for="(cond, idx) in conditions" :key="idx" class="cond-row">
                     <select v-model="cond.field" class="cond-select cond-field">
                       <option value="">字段</option>
-                      <option v-for="(_desc, key) in currentContextSchema" :key="key" :value="key">{{ key }}</option>
+                      <option v-for="(def, key) in currentContextSchema" :key="key" :value="key">{{ getFieldLabel(def, String(key)) }}</option>
                     </select>
                     <select v-model="cond.operator" class="cond-select cond-op">
                       <option v-for="op in OPERATORS" :key="op.value" :value="op.value">{{ op.label }}</option>
@@ -182,18 +185,19 @@
               <section class="form-section">
                 <h3 class="section-title">生成事件</h3>
                 <div class="field">
-                  <label class="field-label">模式</label>
+                  <label class="field-label">事件类型</label>
                   <div class="radio-group">
                     <label class="radio-item" :class="{ active: triggerForm.eventTypeMode === 'FIXED' }">
                       <input type="radio" value="FIXED" v-model="triggerForm.eventTypeMode" /> 固定类型
                     </label>
-                    <label class="radio-item" :class="{ active: triggerForm.eventTypeMode === 'DYNAMIC' }">
-                      <input type="radio" value="DYNAMIC" v-model="triggerForm.eventTypeMode" /> 动态(从context取)
+                    <label v-if="dynamicEventTypeField" class="radio-item" :class="{ active: triggerForm.eventTypeMode === 'DYNAMIC' }">
+                      <input type="radio" value="DYNAMIC" v-model="triggerForm.eventTypeMode" />
+                      动态 <span class="dynamic-hint">(来源: {{ dynamicEventTypeField.label }})</span>
                     </label>
                   </div>
                 </div>
                 <div v-if="triggerForm.eventTypeMode === 'FIXED'" class="field">
-                  <label class="field-label">事件类型</label>
+                  <label class="field-label">选择事件类型</label>
                   <select v-model="triggerForm.eventTypeCode" class="field-select">
                     <option value="">选择事件类型</option>
                     <option v-for="et in eventTypes" :key="et.typeCode" :value="et.typeCode">
@@ -201,60 +205,75 @@
                     </option>
                   </select>
                 </div>
-                <div v-else class="field">
-                  <label class="field-label">事件类型来源字段</label>
-                  <select v-model="triggerForm.eventTypeSource" class="field-select">
-                    <option value="">从context中选择字段</option>
-                    <option v-for="(_desc, key) in currentContextSchema" :key="key" :value="key">{{ key }}</option>
-                  </select>
-                </div>
-
-                <div class="field">
-                  <label class="field-label">主体类型</label>
-                  <div class="radio-group">
-                    <label v-for="st in SUBJECT_TYPES" :key="st.value" class="radio-item" :class="{ active: triggerForm.subjectType === st.value }">
-                      <input type="radio" :value="st.value" v-model="triggerForm.subjectType" /> {{ st.label }}
-                    </label>
-                  </div>
-                </div>
-                <div class="field-grid cols-2">
-                  <div class="field">
-                    <label class="field-label">主体ID来源</label>
-                    <select v-model="triggerForm.subjectSource" class="field-select">
-                      <option value="">从context选择</option>
-                      <option v-for="(_desc, key) in currentContextSchema" :key="key" :value="key">{{ key }}</option>
-                    </select>
-                  </div>
-                  <div class="field">
-                    <label class="field-label">主体名称来源</label>
-                    <select v-model="triggerForm.subjectNameSource" class="field-select">
-                      <option value="">从context选择</option>
-                      <option v-for="(_desc, key) in currentContextSchema" :key="key" :value="key">{{ key }}</option>
-                    </select>
-                  </div>
+                <div v-else-if="triggerForm.eventTypeMode === 'DYNAMIC'" class="dynamic-info">
+                  运行时将从上下文字段「{{ dynamicEventTypeField?.label }}」自动获取事件类型编码
                 </div>
               </section>
 
-              <!-- Section 5: 关联实体 -->
+              <!-- Section 5: 主体配置 -->
               <section class="form-section">
-                <h3 class="section-title">关联实体 <span class="section-optional">(可选)</span></h3>
-                <div v-for="(rel, idx) in relatedEntities" :key="idx" class="rel-row">
-                  <input v-model="rel.type" class="rel-input" placeholder="类型 如 CLASS" />
-                  <select v-model="rel.source" class="rel-select">
-                    <option value="">ID来源</option>
-                    <option v-for="(_desc, key) in currentContextSchema" :key="key" :value="key">{{ key }}</option>
-                  </select>
-                  <select v-model="rel.nameSource" class="rel-select">
-                    <option value="">名称来源</option>
-                    <option v-for="(_desc, key) in currentContextSchema" :key="key" :value="key">{{ key }}</option>
-                  </select>
-                  <button class="cond-del" @click="relatedEntities.splice(idx, 1)">
-                    <svg width="12" height="12" viewBox="0 0 12 12"><path d="M3 3l6 6M9 3l-6 6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
-                  </button>
+                <h3 class="section-title">主体配置 <span class="section-hint">勾选后，事件将同时记录到对应主体名下</span></h3>
+
+                <!-- 自动识别的主体 -->
+                <div v-if="detectedSubjects.length" class="subject-cards">
+                  <label v-for="ds in detectedSubjects" :key="ds.type"
+                         class="subject-card" :class="{ checked: isSubjectEnabled(ds.type) }">
+                    <input type="checkbox" :checked="isSubjectEnabled(ds.type)" @change="toggleSubject(ds)" />
+                    <span class="subject-card-body">
+                      <span class="subject-card-type">{{ getSubjectLabel(ds.type) }}</span>
+                      <span class="subject-card-fields">{{ ds.idLabel }} / {{ ds.nameLabel || '无名称字段' }}</span>
+                    </span>
+                    <svg v-if="isSubjectEnabled(ds.type)" class="subject-check" width="16" height="16" viewBox="0 0 16 16">
+                      <circle cx="8" cy="8" r="7" fill="#2563eb"/>
+                      <path d="M5 8l2 2 4-4" stroke="#fff" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                  </label>
                 </div>
-                <button class="cond-add" @click="relatedEntities.push({ type: '', source: '', nameSource: '' })">
+
+                <!-- 无可识别主体时的提示 -->
+                <div v-if="!detectedSubjects.length && triggerForm.triggerPointCode" class="subject-empty">
+                  当前触发点无可识别的主体字段，请手动添加
+                </div>
+
+                <!-- 已选主体预览（显示手动添加的非自动识别项） -->
+                <div v-for="(subj, idx) in manualSubjects" :key="'m'+idx" class="subject-row">
+                  <div class="subject-header">
+                    <span class="subject-index">自定义主体</span>
+                    <button class="cond-del" @click="removeManualSubject(idx)">
+                      <svg width="12" height="12" viewBox="0 0 12 12"><path d="M3 3l6 6M9 3l-6 6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+                    </button>
+                  </div>
+                  <div class="subject-fields">
+                    <div class="field">
+                      <label class="field-label-sm">类型</label>
+                      <div class="radio-group compact">
+                        <label v-for="st in SUBJECT_TYPES" :key="st.value" class="radio-item" :class="{ active: subj.type === st.value }">
+                          <input type="radio" :value="st.value" v-model="subj.type" /> {{ st.label }}
+                        </label>
+                      </div>
+                    </div>
+                    <div class="field-grid cols-2">
+                      <div class="field">
+                        <label class="field-label-sm">ID来源</label>
+                        <select v-model="subj.idSource" class="field-select">
+                          <option value="">从上下文选择</option>
+                          <option v-for="(def, key) in currentContextSchema" :key="key" :value="key">{{ getFieldLabel(def, String(key)) }}</option>
+                        </select>
+                      </div>
+                      <div class="field">
+                        <label class="field-label-sm">名称来源</label>
+                        <select v-model="subj.nameSource" class="field-select">
+                          <option value="">从上下文选择</option>
+                          <option v-for="(def, key) in currentContextSchema" :key="key" :value="key">{{ getFieldLabel(def, String(key)) }}</option>
+                        </select>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <button class="cond-add" @click="subjects.push({ type: 'USER', idSource: '', nameSource: '' })">
                   <svg width="12" height="12" viewBox="0 0 12 12"><path d="M6 2v8M2 6h8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
-                  添加关联
+                  手动添加主体
                 </button>
               </section>
             </div>
@@ -277,7 +296,7 @@
 import { ref, computed, reactive, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { eventTriggerApi, triggerPointApi, eventTypeApi } from '@/api/event'
-import type { EventTrigger, TriggerPoint, EventType, ConditionOperator } from '@/types/event'
+import type { EventTrigger, TriggerPoint, EventType, ConditionOperator, SubjectConfig } from '@/types/event'
 import { CONDITION_OPERATORS, SUBJECT_TYPES } from '@/types/event'
 
 // ==================== State ====================
@@ -301,12 +320,45 @@ const disabledCount = computed(() => totalCount.value - enabledCount.value)
 const hasFilters = computed(() => searchKeyword.value || filterModule.value || filterEventType.value)
 
 const moduleOptions = computed(() => {
-  const set = new Set<string>()
+  const map = new Map<string, string>()
   for (const tp of triggerPoints.value) {
-    if (tp.moduleCode) set.add(tp.moduleCode)
+    if (tp.moduleCode && !map.has(tp.moduleCode)) {
+      map.set(tp.moduleCode, tp.moduleName || tp.moduleCode)
+    }
   }
-  return Array.from(set).sort()
+  return Array.from(map.entries()).map(([code, name]) => ({ code, name })).sort((a, b) => a.name.localeCompare(b.name, 'zh-CN'))
 })
+
+function getTriggerPointName(code: string): string {
+  const tp = triggerPoints.value.find(t => t.pointCode === code)
+  return tp?.pointName || code
+}
+
+function getEventTypeName(code: string | null | undefined): string {
+  if (!code) return '--'
+  const et = eventTypes.value.find(e => e.typeCode === code)
+  return et ? et.typeName : code
+}
+
+function getSubjectLabel(type: string): string {
+  const st = SUBJECT_TYPES.find(s => s.value === type)
+  return st?.label || type
+}
+
+function formatSubjects(json: SubjectConfig[] | string | null | undefined): string {
+  if (!json) return '--'
+  let arr: SubjectConfig[] = json as any
+  if (typeof json === 'string') {
+    try { arr = JSON.parse(json) } catch { return '--' }
+  }
+  if (!Array.isArray(arr) || !arr.length) return '--'
+  return arr.map(s => getSubjectLabel(s.type)).join(' + ')
+}
+
+function getModuleNameByTrigger(triggerPointCode: string): string {
+  const tp = triggerPoints.value.find(t => t.pointCode === triggerPointCode)
+  return tp?.moduleName || tp?.moduleCode || '--'
+}
 
 const filteredTriggers = computed(() => {
   let list = triggers.value
@@ -334,15 +386,98 @@ const filteredTriggerPoints = computed(() => {
   return triggerPoints.value.filter(tp => tp.moduleCode === selectedModule.value)
 })
 
-const currentContextSchema = computed<Record<string, string>>(() => {
+interface ContextFieldDef {
+  type?: string
+  label?: string
+  subject?: string  // USER / ORG_UNIT / PLACE
+  role?: string     // id / name
+}
+
+const currentContextSchema = computed<Record<string, ContextFieldDef | string>>(() => {
   if (!triggerForm.triggerPointCode) return {}
   const tp = triggerPoints.value.find(p => p.pointCode === triggerForm.triggerPointCode)
   if (!tp || !tp.contextSchema) return {}
   if (typeof tp.contextSchema === 'string') {
     try { return JSON.parse(tp.contextSchema) } catch { return {} }
   }
-  return tp.contextSchema as Record<string, string>
+  return tp.contextSchema as Record<string, ContextFieldDef | string>
 })
+
+/** 从 contextSchema 自动识别动态事件类型字段 */
+const dynamicEventTypeField = computed<{ key: string; label: string } | null>(() => {
+  for (const [key, def] of Object.entries(currentContextSchema.value)) {
+    if (typeof def === 'object' && def.role === 'eventType') {
+      return { key, label: def.label || key }
+    }
+  }
+  return null
+})
+
+/** 从 contextSchema 自动识别可用主体 */
+interface DetectedSubject {
+  type: string      // USER / ORG_UNIT / PLACE
+  idField: string
+  idLabel: string
+  nameField: string
+  nameLabel: string
+}
+
+const detectedSubjects = computed<DetectedSubject[]>(() => {
+  const schema = currentContextSchema.value
+  const groups = new Map<string, DetectedSubject>()
+  for (const [key, def] of Object.entries(schema)) {
+    if (typeof def !== 'object' || !def.subject || !def.role) continue
+    let g = groups.get(def.subject)
+    if (!g) {
+      g = { type: def.subject, idField: '', idLabel: '', nameField: '', nameLabel: '' }
+      groups.set(def.subject, g)
+    }
+    if (def.role === 'id') { g.idField = key; g.idLabel = def.label || key }
+    if (def.role === 'name') { g.nameField = key; g.nameLabel = def.label || key }
+  }
+  return Array.from(groups.values()).filter(g => g.idField)
+})
+
+function isSubjectEnabled(type: string): boolean {
+  return subjects.value.some(s => s.type === type)
+}
+
+function toggleSubject(ds: DetectedSubject) {
+  const idx = subjects.value.findIndex(s => s.type === ds.type)
+  if (idx >= 0) {
+    subjects.value.splice(idx, 1)
+  } else {
+    subjects.value.push({ type: ds.type, idSource: ds.idField, nameSource: ds.nameField })
+  }
+}
+
+/** 手动添加的主体 = subjects 中不在自动识别列表里的项 */
+const manualSubjects = computed(() => {
+  const detectedTypes = new Set(detectedSubjects.value.map(d => d.type))
+  return subjects.value.filter(s => !detectedTypes.has(s.type))
+})
+
+function removeManualSubject(manualIdx: number) {
+  const detectedTypes = new Set(detectedSubjects.value.map(d => d.type))
+  let count = 0
+  for (let i = 0; i < subjects.value.length; i++) {
+    if (!detectedTypes.has(subjects.value[i].type)) {
+      if (count === manualIdx) {
+        subjects.value.splice(i, 1)
+        return
+      }
+      count++
+    }
+  }
+}
+
+/** 从 contextSchema 的值中提取中文 label */
+function getFieldLabel(def: ContextFieldDef | string | unknown, key: string): string {
+  if (!def) return key
+  if (typeof def === 'string') return def || key
+  if (typeof def === 'object' && def !== null && 'label' in (def as any)) return (def as any).label || key
+  return key
+}
 
 // ==================== Form ====================
 const triggerForm = reactive({
@@ -353,16 +488,15 @@ const triggerForm = reactive({
   eventTypeMode: 'FIXED' as 'FIXED' | 'DYNAMIC',
   eventTypeCode: '' as string | null,
   eventTypeSource: '' as string | null,
-  subjectType: 'USER',
-  subjectSource: '',
-  subjectNameSource: '' as string | null,
 })
 
 const conditions = ref<Array<{ field: string; operator: ConditionOperator; value: string }>>([])
-const relatedEntities = ref<Array<{ type: string; source: string; nameSource: string }>>([])
+const subjects = ref<Array<{ type: string; idSource: string; nameSource: string }>>([
+  { type: 'USER', idSource: '', nameSource: '' }
+])
 
 // ==================== Helpers ====================
-function formatCondition(json: any): string {
+function formatCondition(json: any, triggerPointCode?: string): string {
   if (!json) return '--'
   let obj = json
   if (typeof json === 'string') {
@@ -370,7 +504,21 @@ function formatCondition(json: any): string {
   }
   const items = obj.all || obj.any || []
   if (!items.length) return '--'
-  return items.map((c: any) => `${c.field} ${c.operator} ${c.value}`).join(' & ')
+  // Try to resolve field names to Chinese labels from contextSchema
+  let schema: Record<string, any> = {}
+  if (triggerPointCode) {
+    const tp = triggerPoints.value.find(p => p.pointCode === triggerPointCode)
+    if (tp?.contextSchema) {
+      try {
+        schema = typeof tp.contextSchema === 'string' ? JSON.parse(tp.contextSchema) : tp.contextSchema as Record<string, any>
+      } catch { /* ignore */ }
+    }
+  }
+  return items.map((c: any) => {
+    const def = schema[c.field]
+    const label = def ? (typeof def === 'object' ? def.label || c.field : def) : c.field
+    return `${label} ${c.operator} ${c.value}`
+  }).join(' & ')
 }
 
 function getEventTypeClass(row: EventTrigger): string {
@@ -391,8 +539,13 @@ function onModuleChange() {
 }
 
 function onTriggerPointChange() {
-  // Reset conditions when trigger point changes — fields may differ
+  // Reset conditions and subjects when trigger point changes — fields may differ
   conditions.value = []
+  subjects.value = []
+  // If current mode is DYNAMIC but new trigger point has no dynamic field, reset to FIXED
+  if (triggerForm.eventTypeMode === 'DYNAMIC' && !dynamicEventTypeField.value) {
+    triggerForm.eventTypeMode = 'FIXED'
+  }
 }
 
 // ==================== Load ====================
@@ -431,9 +584,6 @@ function openTriggerDialog(existing?: EventTrigger) {
     triggerForm.eventTypeMode = existing.eventTypeMode
     triggerForm.eventTypeCode = existing.eventTypeCode || ''
     triggerForm.eventTypeSource = existing.eventTypeSource || ''
-    triggerForm.subjectType = existing.subjectType
-    triggerForm.subjectSource = existing.subjectSource
-    triggerForm.subjectNameSource = existing.subjectNameSource || ''
 
     // Parse conditions
     let condObj = existing.conditionJson
@@ -451,19 +601,19 @@ function openTriggerDialog(existing?: EventTrigger) {
       conditions.value = []
     }
 
-    // Parse related sources
-    let relObj = existing.relatedSources
-    if (typeof relObj === 'string') {
-      try { relObj = JSON.parse(relObj) } catch { relObj = null }
+    // Parse subjects
+    let subjArr = existing.subjectsJson
+    if (typeof subjArr === 'string') {
+      try { subjArr = JSON.parse(subjArr) } catch { subjArr = null }
     }
-    if (relObj && typeof relObj === 'object') {
-      relatedEntities.value = Object.entries(relObj as Record<string, any>).map(([type, val]) => ({
-        type,
-        source: typeof val === 'string' ? val : (val as any).source || '',
-        nameSource: typeof val === 'object' ? (val as any).nameSource || '' : '',
+    if (Array.isArray(subjArr) && subjArr.length) {
+      subjects.value = subjArr.map((s: any) => ({
+        type: s.type || 'USER',
+        idSource: s.idSource || '',
+        nameSource: s.nameSource || '',
       }))
     } else {
-      relatedEntities.value = []
+      subjects.value = [{ type: 'USER', idSource: '', nameSource: '' }]
     }
 
     // Set module from trigger point
@@ -477,11 +627,8 @@ function openTriggerDialog(existing?: EventTrigger) {
     triggerForm.eventTypeMode = 'FIXED'
     triggerForm.eventTypeCode = ''
     triggerForm.eventTypeSource = ''
-    triggerForm.subjectType = 'USER'
-    triggerForm.subjectSource = ''
-    triggerForm.subjectNameSource = ''
     conditions.value = []
-    relatedEntities.value = []
+    subjects.value = [{ type: 'USER', idSource: '', nameSource: '' }]
     selectedModule.value = ''
   }
   dialogVisible.value = true
@@ -491,33 +638,24 @@ async function handleSave() {
   if (!triggerForm.name.trim()) { ElMessage.warning('请填写触发器名称'); return }
   if (!triggerForm.triggerPointCode) { ElMessage.warning('请选择触发点'); return }
 
+  const validSubjects = subjects.value.filter(s => s.idSource)
+  if (!validSubjects.length) { ElMessage.warning('请至少配置一个主体'); return }
+
   saving.value = true
   try {
     const conditionJson = conditions.value.length > 0
       ? JSON.stringify({ all: conditions.value.filter(c => c.field).map(c => ({ field: c.field, operator: c.operator, value: parseConditionValue(c.value) })) })
       : null
 
-    const relSourcesObj: Record<string, any> = {}
-    for (const rel of relatedEntities.value) {
-      if (rel.type && rel.source) {
-        relSourcesObj[rel.type] = rel.nameSource
-          ? { source: rel.source, nameSource: rel.nameSource }
-          : rel.source
-      }
-    }
-
-    const data: Partial<EventTrigger> = {
+    const data: Record<string, any> = {
       name: triggerForm.name.trim(),
       description: triggerForm.description || undefined,
       triggerPointCode: triggerForm.triggerPointCode,
       eventTypeMode: triggerForm.eventTypeMode,
       eventTypeCode: triggerForm.eventTypeMode === 'FIXED' ? (triggerForm.eventTypeCode || undefined) : undefined,
-      eventTypeSource: triggerForm.eventTypeMode === 'DYNAMIC' ? (triggerForm.eventTypeSource || undefined) : undefined,
-      subjectType: triggerForm.subjectType,
-      subjectSource: triggerForm.subjectSource,
-      subjectNameSource: triggerForm.subjectNameSource || undefined,
-      conditionJson: conditionJson as any,
-      relatedSources: Object.keys(relSourcesObj).length ? JSON.stringify(relSourcesObj) as any : undefined,
+      eventTypeSource: triggerForm.eventTypeMode === 'DYNAMIC' ? (dynamicEventTypeField.value?.key || triggerForm.eventTypeSource || undefined) : undefined,
+      subjectsJson: validSubjects,
+      conditionJson: conditionJson ? JSON.parse(conditionJson) : undefined,
     }
 
     if (triggerForm.id) {
@@ -744,6 +882,7 @@ onMounted(() => { loadAll() })
 .text-right { text-align: right !important; }
 
 .cell-name { font-weight: 500; color: #111827; }
+.cell-module { font-size: 12px; color: #6b7280; }
 .cell-condition { font-size: 12px; color: #6b7280; }
 
 .code-badge {
@@ -924,6 +1063,16 @@ onMounted(() => { loadAll() })
 }
 .radio-item input { display: none; }
 .radio-item.active { border-color: #2563eb; color: #2563eb; background: #eff6ff; }
+.dynamic-hint { font-size: 10px; color: #9ca3af; font-weight: 400; margin-left: 2px; }
+.radio-item.active .dynamic-hint { color: #60a5fa; }
+.dynamic-info {
+  padding: 8px 12px;
+  background: #f0f7ff;
+  border: 1px solid #bfdbfe;
+  border-radius: 6px;
+  font-size: 12px;
+  color: #1e40af;
+}
 
 /* Context hint */
 .context-hint {
@@ -1013,41 +1162,82 @@ onMounted(() => { loadAll() })
 }
 .cond-add:hover { color: #2563eb; border-color: #93c5fd; background: #eff6ff; }
 
-/* Related entity rows */
-.rel-row {
+/* Subject config */
+.section-hint {
+  font-weight: 400;
+  color: #9ca3af;
+  text-transform: none;
+  letter-spacing: 0;
+  font-size: 10px;
+  margin-left: 6px;
+}
+
+/* Auto-detected subject cards */
+.subject-cards {
   display: flex;
+  flex-direction: column;
   gap: 6px;
+  margin-bottom: 10px;
+}
+.subject-card {
+  display: flex;
   align-items: center;
-  margin-bottom: 6px;
-}
-.rel-input {
-  flex: 1;
-  min-width: 0;
-  padding: 6px 8px;
-  border: 1px solid #e5e7eb;
-  border-radius: 6px;
-  font-size: 12px;
-  font-family: inherit;
-  color: #374151;
+  gap: 10px;
+  padding: 10px 12px;
+  border: 1.5px solid #e5e7eb;
+  border-radius: 8px;
   background: #fafafa;
-  outline: none;
-}
-.rel-input:focus { border-color: #2563eb; }
-.rel-select {
-  flex: 1;
-  min-width: 0;
-  padding: 6px 8px;
-  border: 1px solid #e5e7eb;
-  border-radius: 6px;
-  font-size: 12px;
-  font-family: inherit;
-  color: #374151;
-  background: #fafafa;
-  appearance: none;
-  outline: none;
   cursor: pointer;
+  transition: all 0.15s;
+  user-select: none;
 }
-.rel-select:focus { border-color: #2563eb; }
+.subject-card input[type="checkbox"] { display: none; }
+.subject-card:hover { border-color: #93c5fd; background: #f0f7ff; }
+.subject-card.checked { border-color: #2563eb; background: #eff6ff; }
+.subject-card-body { flex: 1; display: flex; flex-direction: column; gap: 2px; }
+.subject-card-type { font-size: 13px; font-weight: 600; color: #111827; }
+.subject-card.checked .subject-card-type { color: #1d4ed8; }
+.subject-card-fields { font-size: 11px; color: #6b7280; }
+.subject-check { flex-shrink: 0; }
+.subject-empty {
+  padding: 12px;
+  text-align: center;
+  font-size: 12px;
+  color: #9ca3af;
+  border: 1px dashed #d1d5db;
+  border-radius: 8px;
+  margin-bottom: 10px;
+}
+
+/* Manual subject rows (fallback) */
+.subject-row {
+  padding: 10px 12px;
+  background: #f9fafb;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  margin-bottom: 8px;
+}
+.subject-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+.subject-index {
+  font-size: 11px;
+  font-weight: 600;
+  color: #6b7280;
+}
+.subject-fields { display: flex; flex-direction: column; gap: 8px; }
+.field-label-sm {
+  display: block;
+  font-size: 11px;
+  font-weight: 500;
+  color: #6b7280;
+  margin-bottom: 4px;
+}
+.radio-group.compact { gap: 6px; }
+.radio-group.compact .radio-item { padding: 3px 10px; font-size: 11px; }
 
 /* Drawer footer */
 .drawer-footer {

@@ -1,41 +1,42 @@
 <template>
-  <div class="flex h-full flex-col bg-gray-50">
+  <div class="tm-page">
     <!-- Header -->
-    <div class="flex items-center justify-between border-b border-gray-200 bg-white px-6 py-4">
+    <div class="tm-header">
       <div>
-        <h1 class="text-lg font-semibold text-gray-900">考试管理</h1>
-        <p class="mt-0.5 text-sm text-gray-500">管理考试批次、考场安排与监考分配</p>
+        <h1 class="tm-title">考试管理</h1>
+        <div class="tm-stats">
+          <span>管理考试批次、考场安排与监考分配</span>
+        </div>
       </div>
-      <button
-        v-if="currentBatch"
-        class="inline-flex items-center gap-1.5 rounded-lg bg-green-600 px-3 py-2 text-sm font-medium text-white hover:bg-green-700"
-        @click="handleGenerateGradeBatch"
-      >
-        生成成绩批次
-      </button>
+      <div style="display: flex; align-items: center; gap: 8px;">
+        <button v-if="currentBatch" class="tm-btn tm-btn-workflow" @click="handleGenerateGradeBatch">生成成绩批次</button>
+      </div>
     </div>
 
     <!-- Filter Bar -->
-    <div class="flex items-center gap-3 border-b border-gray-200 bg-white px-6 py-3">
-      <el-select v-model="queryParams.semesterId" placeholder="选择学期" clearable class="w-48" @change="onFilterChange">
-        <el-option v-for="sem in semesters" :key="sem.id" :value="sem.id" :label="sem.semesterName" />
-      </el-select>
-      <el-select v-model="queryParams.examType" placeholder="考试类型" clearable class="w-36" @change="onFilterChange">
-        <el-option :value="1" label="期中考试" />
-        <el-option :value="2" label="期末考试" />
-        <el-option :value="3" label="补考" />
-        <el-option :value="4" label="重修考试" />
-      </el-select>
-      <el-select v-model="queryParams.status" placeholder="状态" clearable class="w-28" @change="onFilterChange">
-        <el-option :value="0" label="草稿" />
-        <el-option :value="1" label="已发布" />
-        <el-option :value="2" label="进行中" />
-        <el-option :value="3" label="已结束" />
-      </el-select>
+    <div class="tm-filters">
+      <select v-model="queryParams.semesterId" class="tm-select" @change="onFilterChange">
+        <option :value="undefined">全部学期</option>
+        <option v-for="sem in semesters" :key="sem.id" :value="sem.id">{{ sem.semesterName }}</option>
+      </select>
+      <select v-model="queryParams.examType" class="tm-select" @change="onFilterChange">
+        <option :value="undefined">全部类型</option>
+        <option :value="1">期中考试</option>
+        <option :value="2">期末考试</option>
+        <option :value="3">补考</option>
+        <option :value="4">重修考试</option>
+      </select>
+      <select v-model="queryParams.status" class="tm-select" @change="onFilterChange">
+        <option :value="undefined">全部状态</option>
+        <option :value="0">草稿</option>
+        <option :value="1">已发布</option>
+        <option :value="2">进行中</option>
+        <option :value="3">已结束</option>
+      </select>
     </div>
 
     <!-- Content: master-detail -->
-    <div class="flex-1 overflow-y-auto px-6 pt-5 pb-6 space-y-4">
+    <div class="tm-table-wrap" style="display: flex; flex-direction: column; gap: 16px;">
       <ExamBatchList
         :semester-id="queryParams.semesterId"
         :exam-type="queryParams.examType"
@@ -123,3 +124,7 @@ onMounted(async () => {
   if (current) queryParams.semesterId = current.id
 })
 </script>
+
+<style>
+@import '@/styles/teaching-ui.css';
+</style>
