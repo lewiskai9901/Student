@@ -15,6 +15,7 @@ public class TeachingTaskPO {
     private Long courseId;
     private Long classId;
     private Long offeringId;
+    private Long teachingClassId;
     private Long orgUnitId;
     private Integer studentCount;
     private Integer weeklyHours;

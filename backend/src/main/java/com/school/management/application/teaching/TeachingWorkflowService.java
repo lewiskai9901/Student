@@ -14,6 +14,14 @@ import java.util.Map;
  * 教务工作流编排服务
  *
  * 串联: 培养方案 → 开课计划 → 教学任务 → 考试安排 → 成绩批次
+ *
+ * 数据链路:
+ * curriculum_plans → semester_course_offerings (plan_id, plan_course_id)
+ *   → class_course_assignments (offering_id)
+ *   → teaching_tasks (offering_id, 从 assignment 生成)
+ *   → schedule_entries (task_id)
+ *   → exam_arrangements (task_id, 从 task 生成)
+ *   → grade_batches + student_grades (task_id, 从 exam 生成)
  */
 @Slf4j
 @Service
@@ -47,16 +55,13 @@ public class TeachingWorkflowService {
             int schoolingYears = c.get("schooling_years") != null ? ((Number) c.get("schooling_years")).intValue() : 3;
             int programSem = (semStartYear - enrollYear) * 2 + semType;
 
-            // 跳过不合理的学期（还没入学或已超学制）
             if (programSem < 1 || programSem > schoolingYears * 2) continue;
 
-            // 检查是否已存在
             Long exists = jdbc.queryForObject(
                 "SELECT COUNT(1) FROM cohort_semester_mapping WHERE cohort_id = ? AND semester_id = ?",
                 Long.class, cohortId, semesterId);
             if (exists != null && exists > 0) continue;
 
-            // 查找匹配的培养方案
             Long planId = null;
             try {
                 planId = jdbc.queryForObject(
@@ -74,6 +79,8 @@ public class TeachingWorkflowService {
         log.info("生成年级-学期映射 {} 条", count);
         return count;
     }
+
+    // ==================== 开课计划生成 ====================
 
     /**
      * 从培养方案自动导入开课计划（基于年级-学期映射）
@@ -106,7 +113,6 @@ public class TeachingWorkflowService {
             for (Map<String, Object> c : courses) {
                 Long courseId = toLong(c.get("course_id"));
 
-                // 检查是否已存在
                 Long exists = jdbc.queryForObject(
                     "SELECT COUNT(1) FROM semester_course_offerings " +
                     "WHERE semester_id = ? AND course_id = ? AND applicable_grade = ? AND deleted = 0",
@@ -131,16 +137,28 @@ public class TeachingWorkflowService {
 
     /**
      * 从开课计划批量创建教学任务
-     * 为每个 class_course_assignment (已确认) 生成一个 teaching_task
+     * 为每个已确认的 class_course_assignment 生成一个 teaching_task
+     * 关键关联: teaching_tasks.offering_id → semester_course_offerings.id
      */
     @Transactional
     public int generateTasksFromOfferings(Long semesterId, Long createdBy) {
         log.info("从开课计划生成教学任务: semesterId={}", semesterId);
 
+        // 从学期获取教学周范围
+        int startWeek = 1;
+        int endWeek = 16;
+        try {
+            Map<String, Object> semInfo = jdbc.queryForMap(
+                "SELECT total_weeks FROM semesters WHERE id = ? AND deleted = 0", semesterId);
+            endWeek = semInfo.get("total_weeks") != null ? ((Number) semInfo.get("total_weeks")).intValue() : 16;
+        } catch (Exception ignored) {}
+
         List<Map<String, Object>> assignments = jdbc.queryForList(
             "SELECT a.id AS assignmentId, a.offering_id AS offeringId, a.course_id AS courseId, " +
-            "a.class_id AS classId, a.weekly_hours AS weeklyHours, a.student_count AS studentCount " +
+            "a.class_id AS classId, a.weekly_hours AS weeklyHours, a.student_count AS studentCount, " +
+            "o.start_week AS offeringStartWeek, o.end_week AS offeringEndWeek " +
             "FROM class_course_assignments a " +
+            "LEFT JOIN semester_course_offerings o ON o.id = a.offering_id " +
             "WHERE a.semester_id = ? AND a.status = 1 AND a.deleted = 0 " +
             "AND NOT EXISTS (SELECT 1 FROM teaching_tasks t WHERE t.semester_id = a.semester_id " +
             "AND t.course_id = a.course_id AND t.class_id = a.class_id AND t.deleted = 0)",
@@ -155,15 +173,20 @@ public class TeachingWorkflowService {
             int weeklyHours = ((Number) a.get("weeklyHours")).intValue();
             int studentCount = a.get("studentCount") != null ? ((Number) a.get("studentCount")).intValue() : 0;
 
+            // 从开课计划继承周次范围，否则用学期默认值
+            int taskStartWeek = a.get("offeringStartWeek") != null ? ((Number) a.get("offeringStartWeek")).intValue() : startWeek;
+            int taskEndWeek = a.get("offeringEndWeek") != null ? ((Number) a.get("offeringEndWeek")).intValue() : endWeek;
+            int totalHours = weeklyHours * (taskEndWeek - taskStartWeek + 1);
+
             String taskCode = String.format("TK-%d-%d-%d", semesterId, courseId, classId);
 
             jdbc.update(
                 "INSERT INTO teaching_tasks (task_code, semester_id, course_id, class_id, offering_id, " +
                 "student_count, weekly_hours, total_hours, start_week, end_week, " +
                 "scheduling_status, task_status, created_by, deleted) " +
-                "VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1, 16, 0, 1, ?, 0)",
+                "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, 1, ?, 0)",
                 taskCode, semesterId, courseId, classId, offeringId,
-                studentCount, weeklyHours, weeklyHours * 16, createdBy
+                studentCount, weeklyHours, totalHours, taskStartWeek, taskEndWeek, createdBy
             );
             count++;
         }
@@ -172,8 +195,12 @@ public class TeachingWorkflowService {
         return count;
     }
 
+    // ==================== 考试安排生成 ====================
+
     /**
      * 从教学任务批量创建考试安排
+     * 关键关联: exam_arrangements.task_id → teaching_tasks.id
+     * 考试时间从 exam_batch 的 start_date 推算，而非硬编码
      */
     @Transactional
     public int generateExamFromTasks(Long batchId, List<Long> taskIds, Long createdBy) {
@@ -183,19 +210,45 @@ public class TeachingWorkflowService {
 
         log.info("从教学任务创建考试安排: batchId={}, tasks={}", batchId, taskIds.size());
 
+        // 从考试批次获取默认考试日期和类型
+        Map<String, Object> batch = jdbc.queryForMap(
+            "SELECT batch_name, start_date, end_date, exam_type FROM exam_batches WHERE id = ? AND deleted = 0", batchId);
+        Object batchStartDate = batch.get("start_date");
+        int examType = batch.get("exam_type") != null ? ((Number) batch.get("exam_type")).intValue() : 1;
+
+        // 考试形式：从课程的 exam_type 字段读取，默认笔试
         int count = 0;
         for (Long taskId : taskIds) {
             Map<String, Object> task = jdbc.queryForMap(
-                "SELECT course_id, class_id FROM teaching_tasks WHERE id = ? AND deleted = 0", taskId
+                "SELECT t.course_id, t.class_id, t.student_count, " +
+                "COALESCE(c.exam_type, 1) AS course_exam_form, " +
+                "COALESCE(c.total_hours, 120) AS course_hours " +
+                "FROM teaching_tasks t " +
+                "LEFT JOIN courses c ON c.id = t.course_id " +
+                "WHERE t.id = ? AND t.deleted = 0", taskId
             );
 
+            Long courseId = toLong(task.get("course_id"));
+            Long classId = toLong(task.get("class_id"));
+            int studentCount = task.get("student_count") != null ? ((Number) task.get("student_count")).intValue() : 0;
+            int examForm = ((Number) task.get("course_exam_form")).intValue();
+            // 考试时长：根据课程总学时推算，最少60分钟，最多180分钟
+            int courseHours = ((Number) task.get("course_hours")).intValue();
+            int duration = Math.max(60, Math.min(180, courseHours >= 64 ? 120 : 90));
+
+            // 检查重复
+            Long exists = jdbc.queryForObject(
+                "SELECT COUNT(1) FROM exam_arrangements WHERE batch_id = ? AND task_id = ?",
+                Long.class, batchId, taskId);
+            if (exists != null && exists > 0) continue;
+
             jdbc.update(
-                "INSERT INTO exam_arrangements (batch_id, course_id, task_id, exam_date, " +
+                "INSERT INTO exam_arrangements (batch_id, course_id, task_id, class_id, exam_date, " +
                 "start_time, end_time, duration, exam_form, total_students, status, created_by) " +
-                "SELECT ?, ?, ?, CURDATE(), '08:00', '10:00', 120, 1, " +
-                "COALESCE((SELECT COUNT(*) FROM students s JOIN classes c ON s.class_id = c.id " +
-                "WHERE c.id = ? AND s.deleted = 0), 0), 1, ?",
-                batchId, task.get("course_id"), taskId, task.get("class_id"), createdBy
+                "VALUES (?, ?, ?, ?, ?, '08:00', ADDTIME('08:00', SEC_TO_TIME(? * 60)), ?, ?, ?, 0, ?)",
+                batchId, courseId, taskId, classId,
+                batchStartDate != null ? batchStartDate : "CURDATE()",
+                duration, duration, examForm, studentCount, createdBy
             );
             count++;
         }
@@ -204,29 +257,67 @@ public class TeachingWorkflowService {
         return count;
     }
 
+    // ==================== 成绩批次生成 ====================
+
     /**
      * 从考试批次创建成绩批次
+     * 同时为该批次涉及的每个学生生成 student_grades 待录入记录
      */
     @Transactional
     public Long generateGradeBatchFromExam(Long examBatchId, Long createdBy) {
         Map<String, Object> examBatch = jdbc.queryForMap(
             "SELECT batch_name, semester_id, exam_type FROM exam_batches WHERE id = ? AND deleted = 0",
-            examBatchId
-        );
+            examBatchId);
 
         String batchName = examBatch.get("batch_name") + " - 成绩录入";
         Long semesterId = toLong(examBatch.get("semester_id"));
         int examType = ((Number) examBatch.get("exam_type")).intValue();
-        int gradeType = examType <= 2 ? examType + 1 : 3; // midterm→2, final→3
+        // 考试类型→成绩类型映射: 1(期中)→2, 2(期末)→3, 3(补考)→3, 4(重修)→3
+        int gradeType = examType == 1 ? 2 : 3;
 
+        String batchCode = "GB-" + semesterId + "-" + System.currentTimeMillis();
         jdbc.update(
             "INSERT INTO grade_batches (batch_code, batch_name, semester_id, grade_type, status, created_by) " +
             "VALUES (?, ?, ?, ?, 0, ?)",
-            "GB-" + System.currentTimeMillis(), batchName, semesterId, gradeType, createdBy
+            batchCode, batchName, semesterId, gradeType, createdBy
         );
 
         Long gradeBatchId = jdbc.queryForObject("SELECT LAST_INSERT_ID()", Long.class);
-        log.info("从考试批次 {} 创建成绩批次 {}", examBatchId, gradeBatchId);
+
+        // 为考试批次中的每个安排，生成对应的学生成绩待录入记录
+        List<Map<String, Object>> arrangements = jdbc.queryForList(
+            "SELECT ea.task_id, ea.course_id, ea.class_id " +
+            "FROM exam_arrangements ea WHERE ea.batch_id = ?", examBatchId);
+
+        int gradeCount = 0;
+        for (Map<String, Object> arr : arrangements) {
+            Long taskId = toLong(arr.get("task_id"));
+            Long courseId = toLong(arr.get("course_id"));
+            Long classId = toLong(arr.get("class_id"));
+            if (taskId == null || courseId == null) continue;
+
+            // 查找班级学生，为每人生成一条待录入记录
+            List<Map<String, Object>> students = jdbc.queryForList(
+                "SELECT id FROM students WHERE class_id = ? AND status = 1 AND deleted = 0", classId);
+
+            for (Map<String, Object> s : students) {
+                Long studentId = toLong(s.get("id"));
+                // 避免重复
+                Long exists = jdbc.queryForObject(
+                    "SELECT COUNT(1) FROM student_grades " +
+                    "WHERE batch_id = ? AND student_id = ? AND course_id = ? AND semester_id = ?",
+                    Long.class, gradeBatchId, studentId, courseId, semesterId);
+                if (exists != null && exists > 0) continue;
+
+                jdbc.update(
+                    "INSERT INTO student_grades (batch_id, semester_id, task_id, course_id, student_id, class_id, " +
+                    "grade_status, deleted) VALUES (?, ?, ?, ?, ?, ?, 0, 0)",
+                    gradeBatchId, semesterId, taskId, courseId, studentId, classId);
+                gradeCount++;
+            }
+        }
+
+        log.info("从考试批次 {} 创建成绩批次 {}, 生成 {} 条待录入成绩", examBatchId, gradeBatchId, gradeCount);
         return gradeBatchId;
     }
 

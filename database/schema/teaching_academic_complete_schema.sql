@@ -294,6 +294,8 @@ CREATE TABLE IF NOT EXISTS `teaching_tasks` (
     `semester_id` BIGINT NOT NULL,
     `course_id` BIGINT NOT NULL,
     `class_id` BIGINT NOT NULL,
+    `offering_id` BIGINT COMMENT '关联开课计划',
+    `teaching_class_id` BIGINT COMMENT '关联教学班',
     `org_unit_id` BIGINT,
     `student_count` INT DEFAULT 0,
     `weekly_hours` INT NOT NULL,
@@ -311,7 +313,9 @@ CREATE TABLE IF NOT EXISTS `teaching_tasks` (
     UNIQUE KEY `uk_task_code` (`task_code`),
     INDEX `idx_semester` (`semester_id`),
     INDEX `idx_course` (`course_id`),
-    INDEX `idx_class` (`class_id`)
+    INDEX `idx_class` (`class_id`),
+    INDEX `idx_offering` (`offering_id`),
+    INDEX `idx_teaching_class` (`teaching_class_id`)
 ) COMMENT '教学任务表';
 
 CREATE TABLE IF NOT EXISTS `teaching_task_teachers` (
@@ -492,6 +496,8 @@ CREATE TABLE IF NOT EXISTS `exam_arrangements` (
     `id` BIGINT NOT NULL AUTO_INCREMENT PRIMARY KEY,
     `batch_id` BIGINT NOT NULL,
     `course_id` BIGINT NOT NULL,
+    `task_id` BIGINT COMMENT '关联教学任务',
+    `class_id` BIGINT COMMENT '关联班级',
     `exam_date` DATE NOT NULL,
     `start_time` TIME NOT NULL,
     `end_time` TIME NOT NULL,
@@ -505,7 +511,8 @@ CREATE TABLE IF NOT EXISTS `exam_arrangements` (
     `updated_by` BIGINT,
     `updated_at` DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     INDEX `idx_batch` (`batch_id`),
-    INDEX `idx_course` (`course_id`)
+    INDEX `idx_course` (`course_id`),
+    INDEX `idx_task` (`task_id`)
 ) COMMENT '考试安排表';
 
 CREATE TABLE IF NOT EXISTS `exam_rooms` (
