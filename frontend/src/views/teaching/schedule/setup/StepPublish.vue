@@ -30,16 +30,24 @@
       <p style="font-size: 13px; font-weight: 600; color: #16a34a; margin: 0;">无冲突，可以发布</p>
     </div>
 
-    <button class="tm-btn tm-btn-primary" :disabled="publishing || entryCount === 0" @click="publish" style="font-size: 14px; padding: 10px 24px;">
-      {{ publishing ? '发布中...' : '发布课表' }}
-    </button>
+    <div style="display: flex; gap: 12px;">
+      <button class="tm-btn tm-btn-secondary" :disabled="generating || entryCount === 0" @click="generateLive" style="font-size: 14px; padding: 10px 20px;">
+        {{ generating ? '生成中...' : '生成实况课表' }}
+      </button>
+      <button class="tm-btn tm-btn-primary" :disabled="publishing || entryCount === 0" @click="publish" style="font-size: 14px; padding: 10px 24px;">
+        {{ publishing ? '发布中...' : '发布课表' }}
+      </button>
+    </div>
+    <div v-if="liveResult" style="margin-top: 12px; padding: 10px 14px; background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px; font-size: 13px; color: #16a34a;">
+      实况课表已生成: {{ liveResult.generated }} 条实例, 校历影响 {{ liveResult.calendarAffected || 0 }} 条
+    </div>
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { scheduleApi } from '@/api/teaching'
+import { scheduleApi, instanceApi } from '@/api/teaching'
 import { scheduleConfigApi } from '@/api/teaching'
 
 const props = defineProps<{ semesterId: number | string | undefined }>()
@@ -49,6 +57,18 @@ const entryCount = ref(0)
 const conflictCount = ref(0)
 const planCount = ref(0)
 const publishing = ref(false)
+const generating = ref(false)
+const liveResult = ref<any>(null)
+
+async function generateLive() {
+  if (!props.semesterId) return
+  generating.value = true
+  try {
+    const res = await instanceApi.generate(props.semesterId)
+    liveResult.value = (res as any).data || res
+    ElMessage.success(`实况课表生成完成`)
+  } catch { ElMessage.error('生成失败') } finally { generating.value = false }
+}
 
 async function loadStats() {
   if (!props.semesterId) return

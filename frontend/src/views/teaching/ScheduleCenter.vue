@@ -27,8 +27,10 @@
 
     <!-- Daily Tabs -->
     <div class="tm-tabs">
-      <button :class="['tm-tab', { active: dailyTab === 'timetable' }]" @click="dailyTab = 'timetable'">课表视图</button>
+      <button :class="['tm-tab', { active: dailyTab === 'timetable' }]" @click="dailyTab = 'timetable'">基准课表</button>
+      <button :class="['tm-tab', { active: dailyTab === 'live' }]" @click="dailyTab = 'live'">实况课表</button>
       <button :class="['tm-tab', { active: dailyTab === 'adjustment' }]" @click="dailyTab = 'adjustment'">调课管理</button>
+      <button :class="['tm-tab', { active: dailyTab === 'hours' }]" @click="dailyTab = 'hours'">课时统计</button>
       <button :class="['tm-tab', { active: dailyTab === 'export' }]" @click="dailyTab = 'export'">导出打印</button>
     </div>
 
@@ -44,11 +46,17 @@
         <button class="tm-btn tm-btn-primary" @click="setupVisible = true">开始排课</button>
       </div>
 
-      <!-- Timetable -->
+      <!-- Master Timetable -->
       <TimetableViewer v-else-if="dailyTab === 'timetable'" :semester-id="semesterId" :period-config="periodConfig" />
+
+      <!-- Live Timetable -->
+      <LiveTimetable v-else-if="dailyTab === 'live'" :semester-id="semesterId" />
 
       <!-- Adjustment -->
       <AdjustmentPanel v-else-if="dailyTab === 'adjustment'" :semester-id="semesterId" />
+
+      <!-- Hours Statistics -->
+      <HoursStatistics v-else-if="dailyTab === 'hours'" :semester-id="semesterId" />
 
       <!-- Export -->
       <DailyExport v-else-if="dailyTab === 'export'" :semester-id="semesterId" />
@@ -140,7 +148,9 @@ import { scheduleConfigApi } from '@/api/teaching'
 import { semesterApi } from '@/api/calendar'
 
 import TimetableViewer from './schedule/TimetableViewer.vue'
+import LiveTimetable from './schedule/LiveTimetable.vue'
 import AdjustmentPanel from './schedule/AdjustmentPanel.vue'
+import HoursStatistics from './schedule/HoursStatistics.vue'
 import DailyExport from './schedule/DailyExport.vue'
 import StepPeriodConfig from './schedule/setup/StepPeriodConfig.vue'
 import StepDataReady from './schedule/setup/StepDataReady.vue'
@@ -153,7 +163,7 @@ const sharedData = useSharedDataStore()
 // State
 const semesters = ref<any[]>([])
 const semesterId = ref<number | string>()
-const dailyTab = ref<'timetable' | 'adjustment' | 'export'>('timetable')
+const dailyTab = ref<'timetable' | 'live' | 'adjustment' | 'hours' | 'export'>('timetable')
 const setupVisible = ref(false)
 const currentStep = ref(0)
 const periodConfig = ref<any>(null)

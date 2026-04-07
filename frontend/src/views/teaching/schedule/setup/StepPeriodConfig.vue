@@ -1,158 +1,98 @@
 <template>
   <div>
-    <h3 class="setup-step-title">节次时间配置</h3>
-    <p class="setup-step-desc">配置本学期每天上几节课、每节课的时间。不同学期可以有不同配置。</p>
+    <h3 class="setup-step-title">确认作息表</h3>
+    <p class="setup-step-desc">排课将使用校历中配置的作息表。如需修改，请前往校历管理 → 作息表。</p>
 
-    <!-- Presets -->
-    <div style="display: flex; gap: 8px; margin-bottom: 16px;">
-      <button class="tm-btn tm-btn-secondary" style="font-size: 12px; padding: 6px 12px;" @click="applyPreset(8)">标准8节制</button>
-      <button class="tm-btn tm-btn-secondary" style="font-size: 12px; padding: 6px 12px;" @click="applyPreset(10)">10节制(含晚自习)</button>
-      <button class="tm-btn tm-btn-secondary" style="font-size: 12px; padding: 6px 12px;" @click="applyPreset(6)">6节制</button>
-    </div>
+    <div v-if="loading" style="text-align: center; padding: 30px; color: #9ca3af;">加载中...</div>
 
-    <!-- Schedule Days -->
-    <div class="tm-field" style="margin-bottom: 16px;">
-      <label class="tm-label">排课日</label>
+    <div v-else-if="!hasConfig" style="border: 1px solid #fde68a; border-radius: 10px; background: #fffbeb; padding: 20px; margin-bottom: 16px;">
+      <p style="font-size: 14px; font-weight: 600; color: #d97706; margin: 0 0 8px;">本学期暂无作息表</p>
+      <p style="font-size: 13px; color: #92400e; margin: 0 0 12px;">请先在校历管理中配置作息表，或点击下方按钮快速创建。</p>
       <div style="display: flex; gap: 8px;">
-        <label v-for="d in allDays" :key="d.value" style="display: flex; align-items: center; gap: 4px; font-size: 13px; cursor: pointer;">
-          <input type="checkbox" :value="d.value" v-model="scheduleDays" /> {{ d.label }}
-        </label>
+        <button class="tm-btn tm-btn-secondary" @click="initFromPrevious">从上学期继承</button>
+        <button class="tm-btn tm-btn-primary" @click="createDefault">创建默认(8节制)</button>
       </div>
     </div>
 
-    <!-- Period Table -->
-    <table class="tm-table" style="margin-bottom: 16px;">
-      <colgroup>
-        <col style="width: 60px" />
-        <col />
-        <col style="width: 120px" />
-        <col style="width: 120px" />
-        <col style="width: 60px" />
-      </colgroup>
-      <thead>
-        <tr>
-          <th>序号</th>
-          <th class="text-left">名称</th>
-          <th>开始时间</th>
-          <th>结束时间</th>
-          <th>操作</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr v-for="(p, idx) in periods" :key="idx">
-          <td class="tm-mono">{{ p.period }}</td>
-          <td class="text-left">
-            <input v-model="p.name" class="tm-input" style="padding: 4px 8px;" />
-          </td>
-          <td><input v-model="p.startTime" type="time" class="tm-input" style="padding: 4px 8px; text-align: center;" /></td>
-          <td><input v-model="p.endTime" type="time" class="tm-input" style="padding: 4px 8px; text-align: center;" /></td>
-          <td><button class="tm-action tm-action-danger" @click="removePeriod(idx)">删</button></td>
-        </tr>
-        <tr v-if="periods.length === 0">
-          <td colspan="5" class="tm-empty">暂无节次，请选择预设或手动添加</td>
-        </tr>
-      </tbody>
-    </table>
-
-    <div style="display: flex; gap: 8px;">
-      <button class="tm-btn tm-btn-secondary" @click="addPeriod">添加一节</button>
-      <span style="flex: 1;" />
-      <button class="tm-btn tm-btn-primary" :disabled="saving" @click="save">{{ saving ? '保存中...' : '保存配置' }}</button>
+    <div v-else style="border: 1px solid #e5e7eb; border-radius: 10px; background: #fff; overflow: hidden;">
+      <div style="display: flex; align-items: center; justify-content: space-between; padding: 12px 16px; border-bottom: 1px solid #f3f4f6;">
+        <span style="font-size: 13px; font-weight: 600; color: #111827;">当前作息表 · {{ periods.length }}节制</span>
+        <span class="tm-chip tm-chip-green">已配置</span>
+      </div>
+      <table class="tm-table" style="border: none; border-radius: 0;">
+        <colgroup><col style="width: 60px" /><col /><col style="width: 100px" /><col style="width: 100px" /></colgroup>
+        <thead><tr><th>节次</th><th class="text-left">名称</th><th>开始</th><th>结束</th></tr></thead>
+        <tbody>
+          <tr v-for="p in periods" :key="p.period">
+            <td class="tm-mono">{{ p.period }}</td>
+            <td class="text-left">{{ p.name }}</td>
+            <td>{{ p.startTime }}</td>
+            <td>{{ p.endTime }}</td>
+          </tr>
+        </tbody>
+      </table>
+      <div style="padding: 10px 16px; font-size: 12px; color: #6b7280; border-top: 1px solid #f3f4f6;">
+        排课日: {{ scheduleDaysText }}
+      </div>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, watch } from 'vue'
+import { ref, computed, watch } from 'vue'
 import { ElMessage } from 'element-plus'
-import { scheduleConfigApi } from '@/api/teaching'
+import { periodConfigApi } from '@/api/teaching'
 
 const props = defineProps<{ semesterId: number | string | undefined; config: any }>()
 const emit = defineEmits<{ saved: [config: any] }>()
 
-const allDays = [
-  { value: 1, label: '周一' }, { value: 2, label: '周二' }, { value: 3, label: '周三' },
-  { value: 4, label: '周四' }, { value: 5, label: '周五' }, { value: 6, label: '周六' }, { value: 7, label: '周日' },
-]
+const loading = ref(false)
+const hasConfig = ref(false)
+const periods = ref<any[]>([])
+const scheduleDays = ref<number[]>([])
 
-const scheduleDays = ref<number[]>([1, 2, 3, 4, 5])
-const periods = ref<{ period: number; name: string; startTime: string; endTime: string }[]>([])
-const saving = ref(false)
+const dayNames: Record<number, string> = { 1: '周一', 2: '周二', 3: '周三', 4: '周四', 5: '周五', 6: '周六', 7: '周日' }
+const scheduleDaysText = computed(() => scheduleDays.value.map(d => dayNames[d]).join('、'))
 
-const PRESETS: Record<number, { period: number; name: string; startTime: string; endTime: string }[]> = {
-  6: [
-    { period: 1, name: '第一节', startTime: '08:00', endTime: '08:40' },
-    { period: 2, name: '第二节', startTime: '08:50', endTime: '09:30' },
-    { period: 3, name: '第三节', startTime: '09:50', endTime: '10:30' },
-    { period: 4, name: '第四节', startTime: '10:40', endTime: '11:20' },
-    { period: 5, name: '第五节', startTime: '14:00', endTime: '14:40' },
-    { period: 6, name: '第六节', startTime: '14:50', endTime: '15:30' },
-  ],
-  8: [
-    { period: 1, name: '第一节', startTime: '08:00', endTime: '08:45' },
-    { period: 2, name: '第二节', startTime: '08:55', endTime: '09:40' },
-    { period: 3, name: '第三节', startTime: '10:00', endTime: '10:45' },
-    { period: 4, name: '第四节', startTime: '10:55', endTime: '11:40' },
-    { period: 5, name: '第五节', startTime: '14:00', endTime: '14:45' },
-    { period: 6, name: '第六节', startTime: '14:55', endTime: '15:40' },
-    { period: 7, name: '第七节', startTime: '16:00', endTime: '16:45' },
-    { period: 8, name: '第八节', startTime: '16:55', endTime: '17:40' },
-  ],
-  10: [
-    { period: 1, name: '第一节', startTime: '08:00', endTime: '08:45' },
-    { period: 2, name: '第二节', startTime: '08:55', endTime: '09:40' },
-    { period: 3, name: '第三节', startTime: '10:00', endTime: '10:45' },
-    { period: 4, name: '第四节', startTime: '10:55', endTime: '11:40' },
-    { period: 5, name: '第五节', startTime: '14:00', endTime: '14:45' },
-    { period: 6, name: '第六节', startTime: '14:55', endTime: '15:40' },
-    { period: 7, name: '第七节', startTime: '16:00', endTime: '16:45' },
-    { period: 8, name: '第八节', startTime: '16:55', endTime: '17:40' },
-    { period: 9, name: '第九节', startTime: '19:00', endTime: '19:45' },
-    { period: 10, name: '第十节', startTime: '19:55', endTime: '20:40' },
-  ],
-}
-
-function applyPreset(n: number) {
-  periods.value = JSON.parse(JSON.stringify(PRESETS[n] || PRESETS[8]))
-}
-
-function addPeriod() {
-  const last = periods.value[periods.value.length - 1]
-  periods.value.push({
-    period: (last?.period || 0) + 1,
-    name: `第${(last?.period || 0) + 1}节`,
-    startTime: '',
-    endTime: '',
-  })
-}
-
-function removePeriod(idx: number) {
-  periods.value.splice(idx, 1)
-  periods.value.forEach((p, i) => { p.period = i + 1 })
-}
-
-async function save() {
+async function loadConfig() {
   if (!props.semesterId) return
-  saving.value = true
+  loading.value = true
   try {
-    const config = { semesterId: props.semesterId, periodsPerDay: periods.value.length, scheduleDays: scheduleDays.value, periods: periods.value }
-    await scheduleConfigApi.save(config)
-    ElMessage.success('节次配置已保存')
-    emit('saved', config)
-  } catch { ElMessage.error('保存失败') }
-  finally { saving.value = false }
+    const res = await periodConfigApi.list(props.semesterId)
+    const list = (res as any).data || res || []
+    if (list.length > 0) {
+      const c = list[0]
+      hasConfig.value = true
+      periods.value = typeof c.periods === 'string' ? JSON.parse(c.periods) : c.periods || []
+      scheduleDays.value = typeof c.scheduleDays === 'string' ? JSON.parse(c.scheduleDays) : c.scheduleDays || []
+      emit('saved', c)
+    } else { hasConfig.value = false }
+  } catch { hasConfig.value = false } finally { loading.value = false }
 }
 
-// Init from props
-watch(() => props.config, (cfg) => {
-  if (cfg) {
-    scheduleDays.value = cfg.scheduleDays || [1, 2, 3, 4, 5]
-    periods.value = JSON.parse(JSON.stringify(cfg.periods || PRESETS[8]))
-  } else {
-    scheduleDays.value = [1, 2, 3, 4, 5]
-    periods.value = JSON.parse(JSON.stringify(PRESETS[8]))
-  }
-}, { immediate: true })
+async function createDefault() {
+  if (!props.semesterId) return
+  const defaultPeriods = [
+    { period: 1, name: '第一节', startTime: '08:00', endTime: '08:45' },{ period: 2, name: '第二节', startTime: '08:55', endTime: '09:40' },
+    { period: 3, name: '第三节', startTime: '10:00', endTime: '10:45' },{ period: 4, name: '第四节', startTime: '10:55', endTime: '11:40' },
+    { period: 5, name: '第五节', startTime: '14:00', endTime: '14:45' },{ period: 6, name: '第六节', startTime: '14:55', endTime: '15:40' },
+    { period: 7, name: '第七节', startTime: '16:00', endTime: '16:45' },{ period: 8, name: '第八节', startTime: '16:55', endTime: '17:40' },
+  ]
+  try {
+    await periodConfigApi.create({ semesterId: props.semesterId, configName: '默认作息表', periodsPerDay: 8, scheduleDays: [1,2,3,4,5], periods: defaultPeriods })
+    ElMessage.success('已创建默认作息表'); loadConfig()
+  } catch { ElMessage.error('创建失败') }
+}
+
+async function initFromPrevious() {
+  if (!props.semesterId) return
+  try {
+    await periodConfigApi.initFromPrevious(props.semesterId)
+    ElMessage.success('已继承'); loadConfig()
+  } catch { ElMessage.error('继承失败') }
+}
+
+watch(() => props.semesterId, () => loadConfig(), { immediate: true })
 </script>
 
 <style scoped>
