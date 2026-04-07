@@ -162,7 +162,6 @@
           v-model="formData.attributes"
         />
       </div>
-    </div>
 
     <template #footer>
       <div class="flex items-center justify-end gap-3">
