@@ -220,6 +220,17 @@ const routes: RouteRecordRaw[] = [
             }
           },
           {
+            path: '/student/classes',
+            name: 'ClassManagement',
+            component: () => import('@/views/student/ClassManagement.vue'),
+            meta: {
+              title: '班级管理',
+              requiresAuth: true,
+              permission: 'student:class:view',
+              order: 2
+            }
+          },
+          {
             path: '/student/grades',
             name: 'StudentGrades',
             component: () => import('@/views/organization/grades/GradeManagementV2.vue'),
