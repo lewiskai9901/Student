@@ -1,13 +1,19 @@
 -- 补全教务工作流串联所需的字段
--- 确保 teaching_tasks → offering 和 exam_arrangements → task 的关联完整
 
--- teaching_tasks: 添加 offering_id (关联开课计划) 和 teaching_class_id (关联教学班)
-ALTER TABLE teaching_tasks ADD COLUMN IF NOT EXISTS offering_id BIGINT COMMENT '关联开课计划ID' AFTER class_id;
-ALTER TABLE teaching_tasks ADD COLUMN IF NOT EXISTS teaching_class_id BIGINT COMMENT '关联教学班ID' AFTER offering_id;
-ALTER TABLE teaching_tasks ADD INDEX IF NOT EXISTS idx_offering (offering_id);
-ALTER TABLE teaching_tasks ADD INDEX IF NOT EXISTS idx_teaching_class (teaching_class_id);
+-- teaching_tasks: 添加 offering_id 和 teaching_class_id
+SET @col_exists = (SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'teaching_tasks' AND COLUMN_NAME = 'offering_id');
+SET @sql = IF(@col_exists = 0, 'ALTER TABLE teaching_tasks ADD COLUMN offering_id BIGINT COMMENT ''关联开课计划ID'' AFTER class_id, ADD INDEX idx_offering (offering_id)', 'SELECT 1');
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
 
--- exam_arrangements: 添加 task_id (关联教学任务) 和 class_id (关联班级)
-ALTER TABLE exam_arrangements ADD COLUMN IF NOT EXISTS task_id BIGINT COMMENT '关联教学任务ID' AFTER course_id;
-ALTER TABLE exam_arrangements ADD COLUMN IF NOT EXISTS class_id BIGINT COMMENT '关联班级ID' AFTER task_id;
-ALTER TABLE exam_arrangements ADD INDEX IF NOT EXISTS idx_task (task_id);
+SET @col_exists = (SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'teaching_tasks' AND COLUMN_NAME = 'teaching_class_id');
+SET @sql = IF(@col_exists = 0, 'ALTER TABLE teaching_tasks ADD COLUMN teaching_class_id BIGINT COMMENT ''关联教学班ID'' AFTER offering_id, ADD INDEX idx_teaching_class (teaching_class_id)', 'SELECT 1');
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+
+-- exam_arrangements: 添加 task_id 和 class_id
+SET @col_exists = (SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'exam_arrangements' AND COLUMN_NAME = 'task_id');
+SET @sql = IF(@col_exists = 0, 'ALTER TABLE exam_arrangements ADD COLUMN task_id BIGINT COMMENT ''关联教学任务ID'' AFTER course_id, ADD INDEX idx_task (task_id)', 'SELECT 1');
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+
+SET @col_exists = (SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'exam_arrangements' AND COLUMN_NAME = 'class_id');
+SET @sql = IF(@col_exists = 0, 'ALTER TABLE exam_arrangements ADD COLUMN class_id BIGINT COMMENT ''关联班级ID'' AFTER task_id', 'SELECT 1');
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
