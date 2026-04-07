@@ -25,12 +25,12 @@ public class TemplateItemApplicationService {
                                     String scoringConfig, Long dimensionId, String helpContent,
                                     Boolean isRequired, Boolean isScored, Boolean requireEvidence,
                                     BigDecimal itemWeight, String conditionLogic,
-                                    String inputMode,
+                                    String inputMode, String linkedEventTypeCode,
                                     Integer sortOrder, Long createdBy) {
         TemplateItem item = TemplateItem.create(sectionId, itemCode, itemName, itemType, createdBy);
         item.update(itemName, description, itemType, config, validationRules, responseSetId,
                 scoringConfig, dimensionId, helpContent, isRequired, isScored, requireEvidence,
-                itemWeight, conditionLogic, inputMode, createdBy);
+                itemWeight, conditionLogic, inputMode, linkedEventTypeCode, createdBy);
         if (sortOrder != null) {
             item.reorder(sortOrder);
         }
@@ -49,12 +49,13 @@ public class TemplateItemApplicationService {
                                     String helpContent,
                                     Boolean isRequired, Boolean isScored, Boolean requireEvidence,
                                     BigDecimal itemWeight, String conditionLogic,
-                                    String inputMode, Long updatedBy) {
+                                    String inputMode, String linkedEventTypeCode,
+                                    Long updatedBy) {
         TemplateItem item = itemRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("字段不存在: " + id));
         item.update(itemName, description, itemType, config, validationRules, responseSetId,
                 scoringConfig, dimensionId, helpContent, isRequired, isScored, requireEvidence,
-                itemWeight, conditionLogic, inputMode, updatedBy);
+                itemWeight, conditionLogic, inputMode, linkedEventTypeCode, updatedBy);
         return itemRepository.save(item);
     }
 

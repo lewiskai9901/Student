@@ -122,10 +122,10 @@ const timetableWeeklyCount = computed(() => filteredTimetableEntries.value.lengt
 const timetableDayCount = computed(() => new Set(filteredTimetableEntries.value.map(e => e.dayOfWeek)).size)
 
 async function loadClassrooms() {
-  try { const res = await request.get('/v9/places', { params: { typeCode: 'CLASSROOM' } }); const data = (res as any).data || res; const items = Array.isArray(data) ? data : data.records || []; classrooms.value = items.map((p: any) => ({ id: p.id, name: p.placeName || p.name })) } catch { /* */ }
+  try { const res = await request.get('/places', { params: { roomType: 'CLASSROOM' } }); const data = (res as any).data || res; const items = Array.isArray(data) ? data : data.records || []; classrooms.value = items.map((p: any) => ({ id: p.id, name: p.placeName || p.name })) } catch { /* */ }
 }
 async function loadClassList() {
-  try { const res = await request.get('/organization/classes/list'); const data = (res as any).data || res; const items = Array.isArray(data) ? data : data.records || []; classList.value = items.map((c: any) => ({ id: c.id, name: c.className || c.name })) } catch { /* */ }
+  try { const res = await request.get('/students/classes'); const data = (res as any).data || res; const items = Array.isArray(data) ? data : data.records || []; classList.value = items.map((c: any) => ({ id: c.id, name: c.className || c.name })) } catch { /* */ }
 }
 async function loadTeacherList() {
   try { const res = await request.get('/users', { params: { role: 'TEACHER' } }); const data = (res as any).data || res; const items = Array.isArray(data) ? data : data.records || []; teacherList.value = items.map((t: any) => ({ id: t.id, name: t.realName || t.username || t.name })) } catch { /* */ }

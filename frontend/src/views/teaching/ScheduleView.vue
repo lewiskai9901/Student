@@ -122,7 +122,7 @@ const exportTargetList = computed(() => exportDimension.value === 'class' ? clas
 
 async function loadClassList() {
   try {
-    const res = await request.get('/organization/classes/list')
+    const res = await request.get('/students/classes')
     const data = (res as any).data || res
     const items = Array.isArray(data) ? data : data.records || []
     classList.value = items.map((c: any) => ({ id: c.id, name: c.className || c.name }))

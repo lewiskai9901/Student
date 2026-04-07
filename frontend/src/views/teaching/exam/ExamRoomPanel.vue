@@ -147,7 +147,7 @@ async function loadTeacherOptions() {
 
 async function loadClassroomOptions() {
   try {
-    const res = await request.get('/v9/places', { params: { typeCode: 'CLASSROOM', pageSize: 500 } })
+    const res = await request.get('/places', { params: { roomType: 'CLASSROOM', pageSize: 500 } })
     const data = res.data || res
     classroomOptions.value = Array.isArray(data) ? data : data.records || []
   } catch { /* */ }

@@ -198,8 +198,16 @@ public class InspSubmissionApplicationService {
         try {
             InspTask task = taskRepository.findById(submission.getTaskId()).orElse(null);
 
-            // 构建 ObservationContext
+            // 构建 ObservationContext（推断 classId）
             Map<Long, String> itemEventTypeMap = buildItemEventTypeMap(details);
+            Long classId = null;
+            String className = null;
+            if (submission.getTargetType() == TargetType.CLASS) {
+                classId = submission.getTargetId();
+                className = submission.getTargetName();
+            }
+            // TODO: 若 targetType 是 STUDENT，可通过 student.classId 查询班级
+
             ObservationContext ctx = ObservationContext.builder()
                     .submissionId(submission.getId())
                     .projectId(project.getId())
@@ -208,6 +216,8 @@ public class InspSubmissionApplicationService {
                     .targetType(submission.getTargetType() != null ? submission.getTargetType().name() : null)
                     .targetId(submission.getTargetId())
                     .targetName(submission.getTargetName())
+                    .classId(classId)
+                    .className(className)
                     .observedAt(LocalDateTime.now())
                     .itemEventTypeMap(itemEventTypeMap)
                     .build();
@@ -216,6 +226,7 @@ public class InspSubmissionApplicationService {
             List<ScoringObservation> allObservations = new ArrayList<>();
             for (SubmissionDetail detail : details) {
                 ObservationExtractor extractor = findExtractor(detail.getItemType());
+                if (extractor == null) continue;
                 allObservations.addAll(extractor.extract(detail, ctx));
             }
 

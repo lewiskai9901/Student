@@ -292,7 +292,7 @@ async function loadScheduleList() {
 
 async function loadClassrooms() {
   try {
-    const res = await request.get('/v9/places', { params: { typeCode: 'CLASSROOM' } })
+    const res = await request.get('/places', { params: { roomType: 'CLASSROOM' } })
     const data = (res as any).data || res; const items = Array.isArray(data) ? data : data.records || []
     classrooms.value = items.map((p: any) => ({ id: p.id, name: p.placeName || p.name }))
   } catch { /* */ }

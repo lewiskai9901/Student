@@ -99,7 +99,7 @@ public class LibraryItemApplicationService {
                 libraryItem.getDefaultValidationRules(), null,
                 libraryItem.getDefaultScoringConfig(), null,
                 libraryItem.getDefaultHelpContent(), false, false, false,
-                null, null, null, createdBy);
+                null, null, null, null, createdBy);
         item.linkToLibrary(libraryItemId, syncWithLibrary);
 
         TemplateItem saved = templateItemRepository.save(item);
@@ -128,7 +128,8 @@ public class LibraryItemApplicationService {
                     libraryItem.getDefaultScoringConfig(), item.getDimensionId(),
                     libraryItem.getDefaultHelpContent(), item.getIsRequired(),
                     item.getIsScored(), item.getRequireEvidence(),
-                    item.getItemWeight(), item.getConditionLogic(), null, null);
+                    item.getItemWeight(), item.getConditionLogic(), null,
+                    item.getLinkedEventTypeCode(), null);
             templateItemRepository.save(item);
             count++;
         }

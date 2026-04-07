@@ -95,7 +95,7 @@ public class TemplateItem implements Entity<Long> {
                        String scoringConfig, Long dimensionId, String helpContent,
                        Boolean isRequired, Boolean isScored, Boolean requireEvidence,
                        BigDecimal itemWeight, String conditionLogic, String inputMode,
-                       Long updatedBy) {
+                       String linkedEventTypeCode, Long updatedBy) {
         if (itemName != null) this.itemName = itemName;
         if (description != null) this.description = description;
         if (itemType != null) this.itemType = itemType;
@@ -112,6 +112,7 @@ public class TemplateItem implements Entity<Long> {
         if (itemWeight != null) this.itemWeight = itemWeight;
         if (conditionLogic != null) this.conditionLogic = conditionLogic;
         if (inputMode != null) this.inputMode = inputMode;
+        this.linkedEventTypeCode = linkedEventTypeCode; // 允许设为 null (解除绑定)
         this.updatedBy = updatedBy;
         this.updatedAt = LocalDateTime.now();
     }

@@ -30,7 +30,7 @@ public class TemplateItemController {
                 request.getScoringConfig(), request.getDimensionId(), request.getHelpContent(),
                 request.getIsRequired(), request.getIsScored(), request.getRequireEvidence(),
                 request.getItemWeight(), request.getConditionLogic(),
-                request.getInputMode(),
+                request.getInputMode(), request.getLinkedEventTypeCode(),
                 request.getSortOrder(), userId));
     }
 
@@ -52,7 +52,7 @@ public class TemplateItemController {
                 request.getHelpContent(),
                 request.getIsRequired(), request.getIsScored(), request.getRequireEvidence(),
                 request.getItemWeight(), request.getConditionLogic(),
-                request.getInputMode(), userId));
+                request.getInputMode(), request.getLinkedEventTypeCode(), userId));
     }
 
     @DeleteMapping("/v7/insp/items/{itemId}")
@@ -88,6 +88,7 @@ public class TemplateItemController {
         private BigDecimal itemWeight;
         private String conditionLogic;
         private String inputMode;
+        private String linkedEventTypeCode;
         private Integer sortOrder;
     }
 
@@ -108,5 +109,6 @@ public class TemplateItemController {
         private BigDecimal itemWeight;
         private String conditionLogic;
         private String inputMode;
+        private String linkedEventTypeCode;
     }
 }
