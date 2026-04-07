@@ -34,9 +34,11 @@ public class AutoSchedulingService {
         int endWeek;
         int consecutivePeriods; // default 2 for double-period classes
         int timesPerWeek;      // number of sessions per week
+        int weekType;          // 0=每周 1=单周 2=双周
+        int studentCount;      // 学生人数(合堂时为合计)
         String courseName;
-        List<Long> combinedClassIds;  // 合堂: 所有涉及的班级ID
-        List<Long> combinedTaskIds;   // 合堂: 所有涉及的任务ID
+        List<Long> combinedClassIds;
+        List<Long> combinedTaskIds;
     }
 
     static class ScheduleSlot {
@@ -138,11 +140,39 @@ public class AutoSchedulingService {
             updateTaskStatuses(semesterId);
         }
 
-        long elapsed = System.currentTimeMillis() - startTime;
-        log.info("排课完成: 生成 {} 条记录, 耗时 {}ms", entriesGenerated, elapsed);
+        // 11. 容量警告检测
+        List<Map<String, Object>> capacityWarnings = new ArrayList<>();
+        if (solution != null) {
+            Map<Long, Integer> roomCapMap = new HashMap<>();
+            for (Map<String, Object> r : classrooms) {
+                roomCapMap.put(toLong(r.get("id")), r.get("capacity") != null ? toInt(r.get("capacity")) : 0);
+            }
+            for (ScheduleSlot slot : solution) {
+                if (slot.classroomId != null) {
+                    int cap = roomCapMap.getOrDefault(slot.classroomId, 0);
+                    int students = slot.combinedClassIds != null ? sessions.stream()
+                        .filter(s -> s.taskId.equals(slot.taskId)).findFirst().map(s -> s.studentCount).orElse(0) : 0;
+                    if (students == 0) {
+                        students = requirements.stream().filter(r -> r.taskId.equals(slot.taskId))
+                            .findFirst().map(r -> r.studentCount).orElse(0);
+                    }
+                    if (cap > 0 && students > cap) {
+                        capacityWarnings.add(Map.of(
+                            "taskId", slot.taskId, "classroomId", slot.classroomId,
+                            "capacity", cap, "studentCount", students,
+                            "message", String.format("教室容量%d不足，学生%d人", cap, students)));
+                    }
+                }
+            }
+        }
 
-        return buildResult(solution != null && !solution.isEmpty(), entriesGenerated,
-            Collections.emptyList(), elapsed);
+        long elapsed = System.currentTimeMillis() - startTime;
+        log.info("排课完成: 生成 {} 条记录, 容量警告 {} 个, 耗时 {}ms", entriesGenerated, capacityWarnings.size(), elapsed);
+
+        Map<String, Object> result = new HashMap<>(buildResult(solution != null && !solution.isEmpty(), entriesGenerated,
+            Collections.emptyList(), elapsed));
+        result.put("capacityWarnings", capacityWarnings);
+        return result;
     }
 
     // ==================== Data Loading ====================
@@ -172,6 +202,8 @@ public class AutoSchedulingService {
             req.startWeek = row.get("start_week") != null ? toInt(row.get("start_week")) : 1;
             req.endWeek = row.get("end_week") != null ? toInt(row.get("end_week")) : 16;
             req.courseName = (String) row.get("course_name");
+            req.studentCount = row.get("student_count") != null ? toInt(row.get("student_count")) : 0;
+            req.weekType = 0; // 默认每周，可从 teaching_tasks 扩展
             // Default: 2-period consecutive sessions
             req.consecutivePeriods = Math.min(2, req.weeklyHours);
             req.timesPerWeek = (int) Math.ceil((double) req.weeklyHours / req.consecutivePeriods);
@@ -330,6 +362,8 @@ public class AutoSchedulingService {
                 session.consecutivePeriods = Math.min(req.consecutivePeriods, remainingHours);
                 session.weeklyHours = session.consecutivePeriods;
                 session.timesPerWeek = 1;
+                session.weekType = req.weekType;
+                session.studentCount = req.studentCount;
                 sessions.add(session);
             }
         }
@@ -337,12 +371,13 @@ public class AutoSchedulingService {
         // 展开合堂课程: 取组内第一个 task 的参数, 但记录所有 classId
         for (List<TaskRequirement> group : combinedGroups.values()) {
             TaskRequirement primary = group.get(0);
-            // 合堂课的 combinedClassIds 记录所有班级
             List<Long> allClassIds = new ArrayList<>();
             List<Long> allTaskIds = new ArrayList<>();
+            int totalStudents = 0;
             for (TaskRequirement t : group) {
                 allClassIds.add(t.classId);
                 allTaskIds.add(t.taskId);
+                totalStudents += t.studentCount;
             }
 
             for (int i = 0; i < primary.timesPerWeek; i++) {
@@ -357,6 +392,8 @@ public class AutoSchedulingService {
                 session.courseName = primary.courseName + "(合堂)";
                 session.combinedClassIds = allClassIds;
                 session.combinedTaskIds = allTaskIds;
+                session.studentCount = totalStudents;
+                session.weekType = primary.weekType;
                 int remainingHours = primary.weeklyHours - i * primary.consecutivePeriods;
                 session.consecutivePeriods = Math.min(primary.consecutivePeriods, remainingHours);
                 session.weeklyHours = session.consecutivePeriods;
@@ -411,8 +448,9 @@ public class AutoSchedulingService {
             int day = c[0], periodStart = c[1];
             int periodEnd = periodStart + session.consecutivePeriods - 1;
 
-            // Find a room
-            Long roomId = findRoom(day, periodStart, periodEnd, roomOcc, classrooms);
+            // Find a room (with capacity check)
+            Long roomId = findRoom(day, periodStart, periodEnd, roomOcc, classrooms,
+                session.studentCount, session.weekType);
 
             // Create slot
             ScheduleSlot slot = new ScheduleSlot();
@@ -426,7 +464,7 @@ public class AutoSchedulingService {
             slot.periodEnd = periodEnd;
             slot.weekStart = session.startWeek;
             slot.weekEnd = session.endWeek;
-            slot.weekType = 0;
+            slot.weekType = session.weekType;
             slot.classroomId = roomId;
             slot.combinedClassIds = session.combinedClassIds;
             slot.combinedTaskIds = session.combinedTaskIds;
@@ -471,12 +509,26 @@ public class AutoSchedulingService {
                 if (isForbidden(day, p, pEnd, session,
                     globalForbidden, teacherForbidden, classForbidden, courseForbidden)) continue;
 
-                // Check occupied
+                // Check occupied (with weekType awareness)
+                // weekType: 0=每周, 1=单周, 2=双周
+                // 冲突规则: 0与0/1/2都冲突; 1只与0和1冲突; 2只与0和2冲突
                 boolean occupied = false;
+                int wt = session.weekType;
                 for (int pp = p; pp <= pEnd; pp++) {
-                    String key = day + "_" + pp;
-                    if (session.teacherId != null && teacherOcc.contains(session.teacherId + "_" + key)) { occupied = true; break; }
-                    if (session.classId != null && classOcc.contains(session.classId + "_" + key)) { occupied = true; break; }
+                    String keyBase = day + "_" + pp;
+                    if (session.teacherId != null) {
+                        String tid = session.teacherId + "_" + keyBase;
+                        if (teacherOcc.contains(tid + "_0") || teacherOcc.contains(tid + "_" + wt)) { occupied = true; break; }
+                        if (wt == 0 && (teacherOcc.contains(tid + "_1") || teacherOcc.contains(tid + "_2"))) { occupied = true; break; }
+                    }
+                    // 检查所有涉及班级(合堂)
+                    List<Long> classIds = session.combinedClassIds != null ? session.combinedClassIds : (session.classId != null ? List.of(session.classId) : List.of());
+                    for (Long cid : classIds) {
+                        String cidKey = cid + "_" + keyBase;
+                        if (classOcc.contains(cidKey + "_0") || classOcc.contains(cidKey + "_" + wt)) { occupied = true; break; }
+                        if (wt == 0 && (classOcc.contains(cidKey + "_1") || classOcc.contains(cidKey + "_2"))) { occupied = true; break; }
+                    }
+                    if (occupied) break;
                 }
                 if (occupied) continue;
 
@@ -730,46 +782,78 @@ public class AutoSchedulingService {
 
     // ==================== Helper Methods ====================
 
+    /**
+     * 查找可用教室，优先匹配容量
+     * @param studentCount 需要容纳的学生数(0=不限)
+     * @param weekType 周类型(用于冲突检测: 单双周不冲突)
+     */
     private Long findRoom(int day, int periodStart, int periodEnd,
-            Set<String> roomOcc, List<Map<String, Object>> classrooms) {
+            Set<String> roomOcc, List<Map<String, Object>> classrooms,
+            int studentCount, int weekType) {
+        Long fallbackRoom = null; // 容量不足但时间可用的教室(作为兜底)
         for (Map<String, Object> room : classrooms) {
             Long roomId = toLong(room.get("id"));
+            int capacity = room.get("capacity") != null ? toInt(room.get("capacity")) : 0;
             boolean occupied = false;
             for (int p = periodStart; p <= periodEnd; p++) {
-                if (roomOcc.contains(roomId + "_" + day + "_" + p)) {
+                String keyEvery = roomId + "_" + day + "_" + p + "_0";
+                String keyThis = roomId + "_" + day + "_" + p + "_" + weekType;
+                // 检查冲突: 每周课(0)与任何课冲突; 单周(1)只与每周(0)和单周(1)冲突
+                if (roomOcc.contains(keyEvery) || roomOcc.contains(keyThis)) {
                     occupied = true;
                     break;
                 }
+                // 如果当前是每周课，还要检查单双周是否有占用
+                if (weekType == 0) {
+                    if (roomOcc.contains(roomId + "_" + day + "_" + p + "_1") ||
+                        roomOcc.contains(roomId + "_" + day + "_" + p + "_2")) {
+                        occupied = true;
+                        break;
+                    }
+                }
             }
-            if (!occupied) return roomId;
+            if (!occupied) {
+                if (studentCount <= 0 || capacity >= studentCount) {
+                    return roomId; // 容量匹配
+                }
+                if (fallbackRoom == null) fallbackRoom = roomId; // 容量不足但可用
+            }
         }
-        return null; // No available room
+        return fallbackRoom; // 返回兜底(可能容量不足，后续标警告)
+    }
+
+    // 兼容旧调用
+    private Long findRoom(int day, int periodStart, int periodEnd,
+            Set<String> roomOcc, List<Map<String, Object>> classrooms) {
+        return findRoom(day, periodStart, periodEnd, roomOcc, classrooms, 0, 0);
     }
 
     private void markOccupied(ScheduleSlot slot,
             Set<String> teacherOcc, Set<String> classOcc, Set<String> roomOcc,
             Set<String> addedTeacher, Set<String> addedClass, Set<String> addedRoom) {
+        int wt = slot.weekType;
         for (int p = slot.periodStart; p <= slot.periodEnd; p++) {
             String key = slot.dayOfWeek + "_" + p;
+            String keyWt = key + "_" + wt;
             if (slot.teacherId != null) {
-                String tk = slot.teacherId + "_" + key;
+                String tk = slot.teacherId + "_" + keyWt;
                 teacherOcc.add(tk);
                 addedTeacher.add(tk);
             }
             // 合堂: 占用所有涉及班级的时段
             if (slot.combinedClassIds != null && !slot.combinedClassIds.isEmpty()) {
                 for (Long cid : slot.combinedClassIds) {
-                    String ck = cid + "_" + key;
+                    String ck = cid + "_" + keyWt;
                     classOcc.add(ck);
                     addedClass.add(ck);
                 }
             } else if (slot.classId != null) {
-                String ck = slot.classId + "_" + key;
+                String ck = slot.classId + "_" + keyWt;
                 classOcc.add(ck);
                 addedClass.add(ck);
             }
             if (slot.classroomId != null) {
-                String rk = slot.classroomId + "_" + key;
+                String rk = slot.classroomId + "_" + keyWt;
                 roomOcc.add(rk);
                 addedRoom.add(rk);
             }
