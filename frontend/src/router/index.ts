@@ -802,16 +802,6 @@ const routes: RouteRecordRaw[] = [
             }
           },
           {
-            path: '/teaching/constraints',
-            name: 'TeachingConstraints',
-            component: () => import('@/views/teaching/scheduling/ConstraintConfigView.vue'),
-            meta: {
-              title: '约束配置',
-              requiresAuth: true,
-              order: 6
-            }
-          },
-          {
             path: '/teaching/tasks',
             name: 'TeachingTasks',
             component: () => import('@/views/teaching/TeachingTaskView.vue'),
