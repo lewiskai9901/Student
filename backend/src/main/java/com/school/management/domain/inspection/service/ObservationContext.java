@@ -23,7 +23,7 @@ public class ObservationContext {
     private final String targetName;
 
     // 目标所属班级（冗余）
-    private final Long classId;
+    private final Long orgUnitId;
     private final String className;
 
     private final LocalDateTime observedAt;

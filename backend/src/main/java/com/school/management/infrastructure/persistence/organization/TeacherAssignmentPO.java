@@ -19,7 +19,7 @@ public class TeacherAssignmentPO {
     /**
      * 班级ID
      */
-    private Long classId;
+    private Long orgUnitId;
 
     /**
      * 教师ID

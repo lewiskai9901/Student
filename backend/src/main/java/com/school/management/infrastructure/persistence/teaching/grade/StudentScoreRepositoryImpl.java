@@ -52,9 +52,9 @@ public class StudentScoreRepositoryImpl implements StudentScoreRepository {
     }
 
     @Override
-    public List<StudentScore> findByClassId(Long classId) {
+    public List<StudentScore> findByClassId(Long orgUnitId) {
         LambdaQueryWrapper<StudentGradePO> w = new LambdaQueryWrapper<>();
-        w.eq(StudentGradePO::getClassId, classId)
+        w.eq(StudentGradePO::getOrgUnitId, orgUnitId)
          .orderByAsc(StudentGradePO::getCourseId)
          .orderByDesc(StudentGradePO::getTotalScore);
         return mapper.selectList(w).stream().map(this::toDomain).collect(Collectors.toList());
@@ -67,7 +67,7 @@ public class StudentScoreRepositoryImpl implements StudentScoreRepository {
         StudentGradePO po = new StudentGradePO();
         po.setId(d.getId()); po.setBatchId(d.getBatchId()); po.setSemesterId(d.getSemesterId());
         po.setTaskId(d.getTaskId()); po.setCourseId(d.getCourseId());
-        po.setStudentId(d.getStudentId()); po.setClassId(d.getClassId());
+        po.setStudentId(d.getStudentId()); po.setOrgUnitId(d.getOrgUnitId());
         po.setTotalScore(d.getTotalScore()); po.setGradeLevel(d.getGradeLevel());
         po.setGradePoint(d.getGradePoint());
         po.setPassed(d.getPassed() != null && d.getPassed() ? 1 : 0);
@@ -82,7 +82,7 @@ public class StudentScoreRepositoryImpl implements StudentScoreRepository {
 
     private StudentScore toDomain(StudentGradePO po) {
         return StudentScore.reconstruct(po.getId(), po.getBatchId(), po.getSemesterId(),
-                po.getTaskId(), po.getCourseId(), po.getStudentId(), po.getClassId(),
+                po.getTaskId(), po.getCourseId(), po.getStudentId(), po.getOrgUnitId(),
                 po.getTotalScore(), po.getGradeLevel(), po.getGradePoint(),
                 po.getPassed() != null && po.getPassed() == 1,
                 po.getCreditsEarned(), po.getGradeStatus(),

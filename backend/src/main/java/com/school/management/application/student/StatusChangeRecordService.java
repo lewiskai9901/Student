@@ -73,7 +73,7 @@ public class StatusChangeRecordService {
         jdbc.update(
             "INSERT INTO student_status_changes " +
             "(student_id, student_no, student_name, change_type, from_status, to_status, " +
-            " from_class_id, from_class_name, to_class_id, to_class_name, " +
+            " from_org_unit_id, from_class_name, to_org_unit_id, to_class_name, " +
             " reason, effective_date, operator_id, operator_name, created_at) " +
             "VALUES (?, ?, ?, 'TRANSFER_CLASS', 'STUDYING', 'STUDYING', ?, ?, ?, ?, ?, ?, ?, ?, NOW())",
             studentId, studentNo, studentName,
@@ -112,8 +112,8 @@ public class StatusChangeRecordService {
             "SELECT id, student_id AS studentId, student_no AS studentNo, " +
             "student_name AS studentName, change_type AS changeType, " +
             "from_status AS fromStatus, to_status AS toStatus, " +
-            "from_class_id AS fromClassId, from_class_name AS fromClassName, " +
-            "to_class_id AS toClassId, to_class_name AS toClassName, " +
+            "from_org_unit_id AS fromClassId, from_class_name AS fromClassName, " +
+            "to_org_unit_id AS toClassId, to_class_name AS toClassName, " +
             "reason, effective_date AS effectiveDate, " +
             "operator_id AS operatorId, operator_name AS operatorName, " +
             "remark, created_at AS createdAt " +
@@ -134,8 +134,8 @@ public class StatusChangeRecordService {
             "SELECT id, student_id AS studentId, student_no AS studentNo, " +
             "student_name AS studentName, change_type AS changeType, " +
             "from_status AS fromStatus, to_status AS toStatus, " +
-            "from_class_id AS fromClassId, from_class_name AS fromClassName, " +
-            "to_class_id AS toClassId, to_class_name AS toClassName, " +
+            "from_org_unit_id AS fromClassId, from_class_name AS fromClassName, " +
+            "to_org_unit_id AS toClassId, to_class_name AS toClassName, " +
             "reason, effective_date AS effectiveDate, " +
             "operator_id AS operatorId, operator_name AS operatorName, " +
             "remark, created_at AS createdAt " +
@@ -180,15 +180,15 @@ public class StatusChangeRecordService {
         }
     }
 
-    private String resolveClassName(Long classId) {
-        if (classId == null) return null;
+    private String resolveClassName(Long orgUnitId) {
+        if (orgUnitId == null) return null;
         try {
             return jdbc.queryForObject(
                 "SELECT class_name FROM classes WHERE id = ? AND deleted = 0",
                 String.class, classId
             );
         } catch (Exception e) {
-            log.warn("查询班级名称失败: classId={}", classId, e);
+            log.warn("查询班级名称失败: classId={}", orgUnitId, e);
             return null;
         }
     }

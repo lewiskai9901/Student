@@ -17,19 +17,19 @@ public interface TeacherAssignmentMapper extends BaseMapper<TeacherAssignmentPO>
      * 根据班级ID查找所有任职记录
      */
     @Select("SELECT * FROM teacher_assignments " +
-            "WHERE class_id = #{classId} " +
+            "WHERE org_unit_id = #{classId} " +
             "AND deleted = 0 " +
             "ORDER BY start_date DESC")
-    List<TeacherAssignmentPO> findByClassId(@Param("classId") Long classId);
+    List<TeacherAssignmentPO> findByClassId(@Param("orgUnitId") Long orgUnitId);
 
     /**
      * 根据班级ID查找当前任职记录
      */
     @Select("SELECT * FROM teacher_assignments " +
-            "WHERE class_id = #{classId} " +
+            "WHERE org_unit_id = #{classId} " +
             "AND is_current = 1 " +
             "AND deleted = 0")
-    List<TeacherAssignmentPO> findCurrentByClassId(@Param("classId") Long classId);
+    List<TeacherAssignmentPO> findCurrentByClassId(@Param("orgUnitId") Long orgUnitId);
 
     /**
      * 根据教师ID查找所有任职记录

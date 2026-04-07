@@ -58,7 +58,7 @@ public class StudentApplicationService {
                 command.getName(),
                 command.getGender() != null ? Gender.fromCode(command.getGender()) : null,
                 command.getIdCard(),
-                command.getClassId(),
+                command.getOrgUnitId(),
                 command.getEnrollmentDate()
         );
 
@@ -94,7 +94,7 @@ public class StudentApplicationService {
                     "studentId", saved.getId(),
                     "studentName", saved.getName() != null ? saved.getName() : "",
                     "studentNo", saved.getStudentNo() != null ? saved.getStudentNo() : "",
-                    "classId", command.getClassId() != null ? command.getClassId() : 0L
+                    "orgUnitId", command.getOrgUnitId() != null ? command.getOrgUnitId() : 0L
                 ));
             } catch (Exception ignored) {}
         }
@@ -174,7 +174,7 @@ public class StudentApplicationService {
         Student student = studentRepository.findById(command.getStudentId())
                 .orElseThrow(() -> new BusinessException("学生不存在: " + command.getStudentId()));
 
-        Long oldClassId = student.getClassId();
+        Long oldClassId = student.getOrgUnitId();
         student.transferClass(command.getNewClassId());
         studentRepository.save(student);
 
@@ -349,7 +349,7 @@ public class StudentApplicationService {
     public PageResult<StudentDTO> findByPage(StudentQueryCriteria criteria) {
         StudentRepository.StudentQueryCriteria repoCriteria = new StudentRepository.StudentQueryCriteria();
         repoCriteria.setKeyword(criteria.getKeyword());
-        repoCriteria.setClassId(criteria.getClassId());
+        repoCriteria.setOrgUnitId(criteria.getOrgUnitId());
         repoCriteria.setOrgUnitId(criteria.getOrgUnitId());
         repoCriteria.setGradeLevel(criteria.getGradeLevel());
         if (criteria.getStatus() != null) {
@@ -372,8 +372,8 @@ public class StudentApplicationService {
     /**
      * 根据班级ID获取学生列表
      */
-    public List<StudentDTO> findByClassId(Long classId) {
-        return studentRepository.findByClassId(classId).stream()
+    public List<StudentDTO> findByClassId(Long orgUnitId) {
+        return studentRepository.findByClassId(orgUnitId).stream()
                 .map(this::toDTO)
                 .collect(Collectors.toList());
     }
@@ -393,15 +393,15 @@ public class StudentApplicationService {
     /**
      * 统计班级学生数量
      */
-    public long countByClassId(Long classId) {
-        return studentRepository.countByClassId(classId);
+    public long countByClassId(Long orgUnitId) {
+        return studentRepository.countByClassId(orgUnitId);
     }
 
     /**
      * 统计班级在读学生数量
      */
-    public long countActiveByClassId(Long classId) {
-        return studentRepository.countActiveByClassId(classId);
+    public long countActiveByClassId(Long orgUnitId) {
+        return studentRepository.countActiveByClassId(orgUnitId);
     }
 
     /**
@@ -420,7 +420,7 @@ public class StudentApplicationService {
                 .birthDate(student.getBirthDate())
                 .enrollmentDate(student.getEnrollmentDate())
                 .expectedGraduationDate(student.getExpectedGraduationDate())
-                .classId(student.getClassId())
+                .orgUnitId(student.getOrgUnitId())
                 .status(student.getStatus() != null ? student.getStatus().getCode() : null)
                 .statusText(student.getStatus() != null ? student.getStatus().getName() : null)
                 .avatarUrl(student.getAvatarUrl())

@@ -20,7 +20,7 @@ public interface PlaceClassAssignmentMapper extends BaseMapper<PlaceClassAssignm
     /**
      * 根据班级ID查询（带关联信息）
      */
-    List<PlaceClassAssignmentPO> selectByClassIdWithRelations(@Param("classId") Long classId);
+    List<PlaceClassAssignmentPO> selectByClassIdWithRelations(@Param("orgUnitId") Long orgUnitId);
 
     /**
      * 根据组织单元ID查询（带关联信息）
@@ -30,12 +30,12 @@ public interface PlaceClassAssignmentMapper extends BaseMapper<PlaceClassAssignm
     /**
      * 根据场所ID和班级ID查询
      */
-    PlaceClassAssignmentPO selectByPlaceIdAndClassId(@Param("placeId") Long placeId, @Param("classId") Long classId);
+    PlaceClassAssignmentPO selectByPlaceIdAndClassId(@Param("placeId") Long placeId, @Param("orgUnitId") Long orgUnitId);
 
     /**
      * 检查是否存在
      */
-    int checkExists(@Param("placeId") Long placeId, @Param("classId") Long classId);
+    int checkExists(@Param("placeId") Long placeId, @Param("orgUnitId") Long orgUnitId);
 
     /**
      * 统计场所的分配数量
@@ -45,7 +45,7 @@ public interface PlaceClassAssignmentMapper extends BaseMapper<PlaceClassAssignm
     /**
      * 统计班级的分配数量
      */
-    int countByClassId(@Param("classId") Long classId);
+    int countByClassId(@Param("orgUnitId") Long orgUnitId);
 
     /**
      * 删除场所的所有分配
@@ -55,7 +55,7 @@ public interface PlaceClassAssignmentMapper extends BaseMapper<PlaceClassAssignm
     /**
      * 删除班级的所有分配
      */
-    void deleteByClassId(@Param("classId") Long classId);
+    void deleteByClassId(@Param("orgUnitId") Long orgUnitId);
 
     /**
      * 批量插入

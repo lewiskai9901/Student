@@ -9,7 +9,7 @@ import com.school.management.domain.shared.event.BaseDomainEvent;
  */
 public class ClassStatusChangedEvent extends BaseDomainEvent {
 
-    private final Long classId;
+    private final Long orgUnitId;
     private final String classCode;
     private final String className;
     private final ClassStatus oldStatus;
@@ -18,7 +18,7 @@ public class ClassStatusChangedEvent extends BaseDomainEvent {
 
     public ClassStatusChangedEvent(SchoolClass schoolClass, ClassStatus oldStatus, ClassStatus newStatus) {
         super("SchoolClass", String.valueOf(schoolClass.getId()));
-        this.classId = schoolClass.getId();
+        this.orgUnitId = schoolClass.getId();
         this.classCode = schoolClass.getClassCode();
         this.className = schoolClass.getClassName();
         this.oldStatus = oldStatus;
@@ -26,8 +26,8 @@ public class ClassStatusChangedEvent extends BaseDomainEvent {
         this.updatedBy = schoolClass.getUpdatedBy();
     }
 
-    public Long getClassId() {
-        return classId;
+    public Long getOrgUnitId() {
+        return orgUnitId;
     }
 
     public String getClassCode() {

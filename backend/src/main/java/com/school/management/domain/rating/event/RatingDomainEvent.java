@@ -10,13 +10,13 @@ public abstract class RatingDomainEvent extends BaseDomainEvent {
 
     private final Long resultId;
     private final Long ratingConfigId;
-    private final Long classId;
+    private final Long orgUnitId;
 
-    protected RatingDomainEvent(Long resultId, Long ratingConfigId, Long classId) {
+    protected RatingDomainEvent(Long resultId, Long ratingConfigId, Long orgUnitId) {
         super("RatingResult", resultId);
         this.resultId = resultId;
         this.ratingConfigId = ratingConfigId;
-        this.classId = classId;
+        this.orgUnitId = orgUnitId;
     }
 
     public Long getResultId() {
@@ -27,7 +27,7 @@ public abstract class RatingDomainEvent extends BaseDomainEvent {
         return ratingConfigId;
     }
 
-    public Long getClassId() {
-        return classId;
+    public Long getOrgUnitId() {
+        return orgUnitId;
     }
 }

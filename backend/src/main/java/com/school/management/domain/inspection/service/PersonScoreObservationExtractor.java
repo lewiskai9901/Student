@@ -59,7 +59,7 @@ public class PersonScoreObservationExtractor implements ObservationExtractor {
                         .subjectType("USER")
                         .subjectId(studentId)
                         .subjectName(studentName)
-                        .classId(ctx.getClassId())
+                        .orgUnitId(ctx.getOrgUnitId())
                         .className(ctx.getClassName())
                         .score(personScore)
                         .negative(true)

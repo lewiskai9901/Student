@@ -48,7 +48,7 @@ public class InstanceGenerationService {
 
         // 3. 读基准课表
         List<Map<String, Object>> entries = jdbc.queryForList(
-            "SELECT id, course_id, class_id, teacher_id, classroom_id, " +
+            "SELECT id, course_id, org_unit_id, teacher_id, classroom_id, " +
             "weekday, start_slot, end_slot, start_week, end_week, week_type " +
             "FROM schedule_entries WHERE semester_id = ? AND deleted = 0 AND entry_status = 1",
             semesterId);
@@ -84,12 +84,12 @@ public class InstanceGenerationService {
 
                 jdbc.update(
                     "INSERT INTO schedule_instances (id, entry_id, semester_id, actual_date, weekday, " +
-                    "week_number, start_slot, end_slot, course_id, class_id, teacher_id, classroom_id, " +
+                    "week_number, start_slot, end_slot, course_id, org_unit_id, teacher_id, classroom_id, " +
                     "status, source_type, actual_hours, deleted) " +
                     "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, 0, ?, 0)",
                     IdWorker.getId(), entry.get("id"), semesterId, actualDate, weekday,
                     weekNum, startSlot, endSlot,
-                    entry.get("course_id"), entry.get("class_id"),
+                    entry.get("course_id"), entry.get("org_unit_id"),
                     entry.get("teacher_id"), entry.get("classroom_id"),
                     actualHours);
                 count++;
@@ -194,7 +194,7 @@ public class InstanceGenerationService {
                                              int sourceWeekday, Long eventId, String eventName) {
         // 查基准课表中该weekday的所有条目
         List<Map<String, Object>> entries = jdbc.queryForList(
-            "SELECT id, course_id, class_id, teacher_id, classroom_id, start_slot, end_slot " +
+            "SELECT id, course_id, org_unit_id, teacher_id, classroom_id, start_slot, end_slot " +
             "FROM schedule_entries WHERE semester_id = ? AND weekday = ? AND deleted = 0 AND entry_status = 1",
             semesterId, sourceWeekday);
 
@@ -205,13 +205,13 @@ public class InstanceGenerationService {
 
             jdbc.update(
                 "INSERT INTO schedule_instances (id, entry_id, semester_id, actual_date, weekday, " +
-                "start_slot, end_slot, course_id, class_id, teacher_id, classroom_id, " +
+                "start_slot, end_slot, course_id, org_unit_id, teacher_id, classroom_id, " +
                 "status, source_type, source_id, actual_hours, cancel_reason, deleted) " +
                 "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 3, 2, ?, ?, ?, 0)",
                 IdWorker.getId(), entry.get("id"), semesterId, substituteDate,
                 substituteDate.getDayOfWeek().getValue(),
                 startSlot, endSlot,
-                entry.get("course_id"), entry.get("class_id"),
+                entry.get("course_id"), entry.get("org_unit_id"),
                 entry.get("teacher_id"), entry.get("classroom_id"),
                 eventId, (double)(endSlot - startSlot + 1), "补课-" + eventName);
             count++;

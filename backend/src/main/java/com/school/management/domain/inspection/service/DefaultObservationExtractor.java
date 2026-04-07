@@ -41,7 +41,7 @@ public class DefaultObservationExtractor implements ObservationExtractor {
                 .subjectType(mapTargetType(ctx.getTargetType()))
                 .subjectId(ctx.getTargetId())
                 .subjectName(ctx.getTargetName())
-                .classId(ctx.getClassId())
+                .orgUnitId(ctx.getOrgUnitId())
                 .className(ctx.getClassName())
                 .score(score != null ? score : BigDecimal.ZERO)
                 .negative(true)

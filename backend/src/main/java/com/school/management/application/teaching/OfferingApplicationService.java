@@ -79,9 +79,9 @@ public class OfferingApplicationService {
 
     // --- Class Assignments ---
 
-    public List<ClassCourseAssignment> listAssignments(Long semesterId, Long classId) {
-        if (classId != null) {
-            return assignmentRepo.findBySemesterIdAndClassId(semesterId, classId);
+    public List<ClassCourseAssignment> listAssignments(Long semesterId, Long orgUnitId) {
+        if (orgUnitId != null) {
+            return assignmentRepo.findBySemesterIdAndClassId(semesterId, orgUnitId);
         }
         return assignmentRepo.findBySemesterId(semesterId);
     }
@@ -89,7 +89,7 @@ public class OfferingApplicationService {
     public ClassCourseAssignment createAssignment(Map<String, Object> data) {
         ClassCourseAssignment a = ClassCourseAssignment.create(
             toLong(data.get("semesterId")),
-            toLong(data.get("classId")),
+            toLong(data.get("orgUnitId")),
             toLong(data.get("offeringId")),
             toLong(data.get("courseId")),
             toInt(data.get("weeklyHours")),
@@ -102,8 +102,8 @@ public class OfferingApplicationService {
         assignmentRepo.deleteById(id);
     }
 
-    public void batchConfirmAssignments(Long semesterId, Long classId) {
-        List<ClassCourseAssignment> assignments = assignmentRepo.findBySemesterIdAndClassId(semesterId, classId);
+    public void batchConfirmAssignments(Long semesterId, Long orgUnitId) {
+        List<ClassCourseAssignment> assignments = assignmentRepo.findBySemesterIdAndClassId(semesterId, orgUnitId);
         for (ClassCourseAssignment a : assignments) {
             a.confirm();
             assignmentRepo.save(a);

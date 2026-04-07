@@ -12,7 +12,7 @@ import lombok.Data;
  * <pre>{@code
  * public class StudentQuery extends PageQuery {
  *     private String keyword;
- *     private Long classId;
+ *     private Long orgUnitId;
  *     private Integer status;
  * }
  * }</pre>

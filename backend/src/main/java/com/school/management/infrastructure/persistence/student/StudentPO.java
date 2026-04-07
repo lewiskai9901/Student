@@ -73,7 +73,7 @@ public class StudentPO {
     /**
      * 班级ID
      */
-    private Long classId;
+    private Long orgUnitId;
 
     /**
      * 学籍状态: 0-在读, 1-休学, 2-退学, 3-毕业, 4-转学, 5-开除

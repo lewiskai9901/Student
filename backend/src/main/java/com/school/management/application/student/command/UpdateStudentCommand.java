@@ -22,7 +22,7 @@ public class UpdateStudentCommand {
     private LocalDate birthDate;
     private LocalDate enrollmentDate;
     private LocalDate expectedGraduationDate;
-    private Long classId;
+    private Long orgUnitId;
     private String avatarUrl;
     private String homeAddress;
     private String emergencyContact;

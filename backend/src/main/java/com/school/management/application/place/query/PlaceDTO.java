@@ -48,7 +48,7 @@ public class PlaceDTO {
     // 归属
     private Long orgUnitId;
     private String orgUnitName;
-    private Long classId;                   // 归属班级ID
+    private Long orgUnitId;                   // 归属班级ID
     private String className;               // 归属班级名称
     private Long classTeacherId;            // 班主任ID
     private String classTeacherName;        // 班主任姓名

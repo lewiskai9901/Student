@@ -11,7 +11,7 @@ public class ClassCourseAssignmentPO {
     @TableId(type = IdType.AUTO)
     private Long id;
     private Long semesterId;
-    private Long classId;
+    private Long orgUnitId;
     private Long offeringId;
     private Long courseId;
     private Integer weeklyHours;

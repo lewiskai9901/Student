@@ -23,7 +23,7 @@ public class RatingResult extends AggregateRoot<Long> {
 
     private Long ratingConfigId;
     private Long checkPlanId;
-    private Long classId;
+    private Long orgUnitId;
     private String className;
     private RatingPeriodType periodType;
     private LocalDate periodStart;
@@ -59,7 +59,7 @@ public class RatingResult extends AggregateRoot<Long> {
      * @return new RatingResult instance
      */
     public static RatingResult create(Long ratingConfigId, Long checkPlanId,
-                                       Long classId, String className,
+                                       Long orgUnitId, String className,
                                        RatingPeriodType periodType,
                                        LocalDate periodStart, LocalDate periodEnd,
                                        Integer ranking, BigDecimal finalScore,
@@ -67,7 +67,7 @@ public class RatingResult extends AggregateRoot<Long> {
         RatingResult result = new RatingResult();
         result.ratingConfigId = Objects.requireNonNull(ratingConfigId);
         result.checkPlanId = checkPlanId;
-        result.classId = Objects.requireNonNull(classId);
+        result.orgUnitId = Objects.requireNonNull(orgUnitId);
         result.className = className;
         result.periodType = periodType;
         result.periodStart = periodStart;
@@ -82,7 +82,7 @@ public class RatingResult extends AggregateRoot<Long> {
 
         // Note: getId() is null before persistence; event consumers must handle null resultId
         result.registerEvent(RatingCalculatedEvent.of(
-            null, ratingConfigId, classId, className, ranking, finalScore, awarded));
+            null, ratingConfigId, orgUnitId, className, ranking, finalScore, awarded));
 
         return result;
     }
@@ -98,7 +98,7 @@ public class RatingResult extends AggregateRoot<Long> {
         this.status = RatingResultStatus.PENDING_APPROVAL;
         this.updatedAt = LocalDateTime.now();
 
-        registerEvent(RatingSubmittedEvent.of(getId(), ratingConfigId, classId));
+        registerEvent(RatingSubmittedEvent.of(getId(), ratingConfigId, orgUnitId));
     }
 
     /**
@@ -118,7 +118,7 @@ public class RatingResult extends AggregateRoot<Long> {
         this.approvalComment = comment;
         this.updatedAt = LocalDateTime.now();
 
-        registerEvent(RatingApprovedEvent.of(getId(), ratingConfigId, classId, approverId));
+        registerEvent(RatingApprovedEvent.of(getId(), ratingConfigId, orgUnitId, approverId));
     }
 
     /**
@@ -138,7 +138,7 @@ public class RatingResult extends AggregateRoot<Long> {
         this.approvalComment = reason;
         this.updatedAt = LocalDateTime.now();
 
-        registerEvent(RatingRejectedEvent.of(getId(), ratingConfigId, classId, reviewerId, reason));
+        registerEvent(RatingRejectedEvent.of(getId(), ratingConfigId, orgUnitId, reviewerId, reason));
     }
 
     /**
@@ -156,7 +156,7 @@ public class RatingResult extends AggregateRoot<Long> {
         this.publishedAt = LocalDateTime.now();
         this.updatedAt = LocalDateTime.now();
 
-        registerEvent(RatingPublishedEvent.of(getId(), ratingConfigId, classId, className, awarded));
+        registerEvent(RatingPublishedEvent.of(getId(), ratingConfigId, orgUnitId, className, awarded));
     }
 
     /**
@@ -172,7 +172,7 @@ public class RatingResult extends AggregateRoot<Long> {
         this.status = RatingResultStatus.REVOKED;
         this.updatedAt = LocalDateTime.now();
 
-        registerEvent(RatingRevokedEvent.of(getId(), ratingConfigId, classId, revokedBy));
+        registerEvent(RatingRevokedEvent.of(getId(), ratingConfigId, orgUnitId, revokedBy));
     }
 
     /**
@@ -196,7 +196,7 @@ public class RatingResult extends AggregateRoot<Long> {
 
     public Long getRatingConfigId() { return ratingConfigId; }
     public Long getCheckPlanId() { return checkPlanId; }
-    public Long getClassId() { return classId; }
+    public Long getOrgUnitId() { return orgUnitId; }
     public String getClassName() { return className; }
     public RatingPeriodType getPeriodType() { return periodType; }
     public LocalDate getPeriodStart() { return periodStart; }
@@ -222,7 +222,7 @@ public class RatingResult extends AggregateRoot<Long> {
         public Builder id(Long v) { r.setId(v); return this; }
         public Builder ratingConfigId(Long v) { r.ratingConfigId = v; return this; }
         public Builder checkPlanId(Long v) { r.checkPlanId = v; return this; }
-        public Builder classId(Long v) { r.classId = v; return this; }
+        public Builder classId(Long v) { r.orgUnitId = v; return this; }
         public Builder className(String v) { r.className = v; return this; }
         public Builder periodType(RatingPeriodType v) { r.periodType = v; return this; }
         public Builder periodStart(LocalDate v) { r.periodStart = v; return this; }

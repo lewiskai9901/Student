@@ -26,12 +26,12 @@ public interface StudentRepository extends Repository<Student, Long> {
     /**
      * 根据班级ID查询所有学生
      */
-    List<Student> findByClassId(Long classId);
+    List<Student> findByClassId(Long orgUnitId);
 
     /**
      * 根据班级ID和状态查询
      */
-    List<Student> findByClassIdAndStatus(Long classId, StudentStatus status);
+    List<Student> findByClassIdAndStatus(Long orgUnitId, StudentStatus status);
 
     /**
      * 检查学号是否存在
@@ -46,19 +46,19 @@ public interface StudentRepository extends Repository<Student, Long> {
     /**
      * 统计班级学生数量
      */
-    long countByClassId(Long classId);
+    long countByClassId(Long orgUnitId);
 
     /**
      * 统计班级在读学生数量
      */
-    long countActiveByClassId(Long classId);
+    long countActiveByClassId(Long orgUnitId);
 
     /**
      * 统计班级中指定性别的学生数量
      * @param classId 班级ID
      * @param gender 性别枚举
      */
-    long countByClassIdAndGender(Long classId, Gender gender);
+    long countByClassIdAndGender(Long orgUnitId, Gender gender);
 
     /**
      * 分页查询
@@ -75,15 +75,15 @@ public interface StudentRepository extends Repository<Student, Long> {
      */
     class StudentQueryCriteria {
         private String keyword;
-        private Long classId;
+        private Long orgUnitId;
         private Long orgUnitId;
         private Integer gradeLevel;
         private StudentStatus status;
 
         public String getKeyword() { return keyword; }
         public void setKeyword(String keyword) { this.keyword = keyword; }
-        public Long getClassId() { return classId; }
-        public void setClassId(Long classId) { this.classId = classId; }
+        public Long getOrgUnitId() { return orgUnitId; }
+        public void setOrgUnitId(Long orgUnitId) { this.orgUnitId = orgUnitId; }
         public Long getOrgUnitId() { return orgUnitId; }
         public void setOrgUnitId(Long orgUnitId) { this.orgUnitId = orgUnitId; }
         public Integer getGradeLevel() { return gradeLevel; }

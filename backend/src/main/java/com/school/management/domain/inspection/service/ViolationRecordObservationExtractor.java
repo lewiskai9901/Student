@@ -61,7 +61,7 @@ public class ViolationRecordObservationExtractor implements ObservationExtractor
                         .subjectType("USER")
                         .subjectId(studentId)
                         .subjectName(studentName)
-                        .classId(ctx.getClassId())
+                        .orgUnitId(ctx.getOrgUnitId())
                         .className(ctx.getClassName())
                         .score(score != null ? score : BigDecimal.ZERO)
                         .negative(true) // 违规记录天生负面

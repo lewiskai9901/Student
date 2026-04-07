@@ -34,7 +34,7 @@ public class TeachingTaskApplicationService {
         List<Map<String, Object>> records = new ArrayList<>();
         for (TeachingTask t : tasks) {
             Map<String, Object> record = toMap(t);
-            enrichWithNames(record, t.getCourseId(), t.getClassId());
+            enrichWithNames(record, t.getCourseId(), t.getOrgUnitId());
             records.add(record);
         }
 
@@ -52,7 +52,7 @@ public class TeachingTaskApplicationService {
         TeachingTask task = taskRepo.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("教学任务不存在: " + id));
         Map<String, Object> result = toMap(task);
-        enrichWithNames(result, task.getCourseId(), task.getClassId());
+        enrichWithNames(result, task.getCourseId(), task.getOrgUnitId());
         return result;
     }
 
@@ -67,7 +67,7 @@ public class TeachingTaskApplicationService {
                 taskCode,
                 toLong(data.get("semesterId")),
                 toLong(data.get("courseId")),
-                toLong(data.get("classId")),
+                toLong(data.get("orgUnitId")),
                 toLong(data.get("orgUnitId")),
                 toInt(data.get("studentCount")),
                 toInt(data.get("weeklyHours")),
@@ -95,7 +95,7 @@ public class TeachingTaskApplicationService {
                 .orElseThrow(() -> new IllegalArgumentException("教学任务不存在: " + id));
         task.update(
                 toLong(data.get("courseId")),
-                toLong(data.get("classId")),
+                toLong(data.get("orgUnitId")),
                 toLong(data.get("orgUnitId")),
                 toInt(data.get("studentCount")),
                 toInt(data.get("weeklyHours")),
@@ -159,7 +159,7 @@ public class TeachingTaskApplicationService {
         List<Map<String, Object>> createdTasks = new ArrayList<>();
 
         for (Number clsId : classIds) {
-            long classId = clsId.longValue();
+            long orgUnitId = clsId.longValue();
             for (Map<String, Object> pc : planCourses) {
                 long taskId = IdWorker.getId();
                 String taskCode = "TT" + taskId;
@@ -168,7 +168,7 @@ public class TeachingTaskApplicationService {
                 Integer totalHours = pc.get("total_hours") != null ? ((Number) pc.get("total_hours")).intValue() : null;
 
                 TeachingTask task = TeachingTask.create(
-                        taskCode, semesterId, courseId, classId, null,
+                        taskCode, semesterId, courseId, orgUnitId, null,
                         0, weeklyHours, totalHours, 1, 16,
                         TaskStatus.CONFIRMED, null, userId
                 );
@@ -180,7 +180,7 @@ public class TeachingTaskApplicationService {
                 result.put("taskCode", taskCode);
                 result.put("semesterId", semesterId);
                 result.put("courseId", courseId);
-                result.put("classId", classId);
+                result.put("orgUnitId", orgUnitId);
                 createdTasks.add(result);
             }
         }
@@ -196,7 +196,7 @@ public class TeachingTaskApplicationService {
         map.put("taskCode", t.getTaskCode());
         map.put("semesterId", t.getSemesterId());
         map.put("courseId", t.getCourseId());
-        map.put("classId", t.getClassId());
+        map.put("orgUnitId", t.getOrgUnitId());
         map.put("orgUnitId", t.getOrgUnitId());
         map.put("studentCount", t.getStudentCount());
         map.put("weeklyHours", t.getWeeklyHours());
@@ -209,7 +209,7 @@ public class TeachingTaskApplicationService {
         return map;
     }
 
-    private void enrichWithNames(Map<String, Object> record, Long courseId, Long classId) {
+    private void enrichWithNames(Map<String, Object> record, Long courseId, Long orgUnitId) {
         try {
             if (courseId != null) {
                 String courseName = jdbc.queryForObject(
@@ -220,9 +220,9 @@ public class TeachingTaskApplicationService {
             record.put("courseName", null);
         }
         try {
-            if (classId != null) {
+            if (orgUnitId != null) {
                 String className = jdbc.queryForObject(
-                        "SELECT class_name FROM classes WHERE id = ?", String.class, classId);
+                        "SELECT class_name FROM classes WHERE id = ?", String.class, orgUnitId);
                 record.put("className", className);
             }
         } catch (Exception e) {

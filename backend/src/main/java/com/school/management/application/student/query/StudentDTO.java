@@ -24,7 +24,7 @@ public class StudentDTO {
     private LocalDate birthDate;
     private LocalDate enrollmentDate;
     private LocalDate expectedGraduationDate;
-    private Long classId;
+    private Long orgUnitId;
     private String className;
     private Integer status;
     private String statusText;

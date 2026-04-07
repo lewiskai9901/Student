@@ -46,8 +46,8 @@ public class PlaceClassAssignmentRepositoryImpl implements PlaceClassAssignmentR
     }
 
     @Override
-    public List<PlaceClassAssignment> findByClassId(Long classId) {
-        return mapper.selectByClassIdWithRelations(classId).stream()
+    public List<PlaceClassAssignment> findByClassId(Long orgUnitId) {
+        return mapper.selectByClassIdWithRelations(orgUnitId).stream()
             .map(this::toDomain)
             .collect(Collectors.toList());
     }
@@ -60,8 +60,8 @@ public class PlaceClassAssignmentRepositoryImpl implements PlaceClassAssignmentR
     }
 
     @Override
-    public Optional<PlaceClassAssignment> findByPlaceIdAndClassId(Long placeId, Long classId) {
-        PlaceClassAssignmentPO po = mapper.selectByPlaceIdAndClassId(placeId, classId);
+    public Optional<PlaceClassAssignment> findByPlaceIdAndClassId(Long placeId, Long orgUnitId) {
+        PlaceClassAssignmentPO po = mapper.selectByPlaceIdAndClassId(placeId, orgUnitId);
         return Optional.ofNullable(po).map(this::toDomain);
     }
 
@@ -76,13 +76,13 @@ public class PlaceClassAssignmentRepositoryImpl implements PlaceClassAssignmentR
     }
 
     @Override
-    public void deleteByClassId(Long classId) {
-        mapper.deleteByClassId(classId);
+    public void deleteByClassId(Long orgUnitId) {
+        mapper.deleteByClassId(orgUnitId);
     }
 
     @Override
-    public boolean existsByPlaceIdAndClassId(Long placeId, Long classId) {
-        return mapper.checkExists(placeId, classId) > 0;
+    public boolean existsByPlaceIdAndClassId(Long placeId, Long orgUnitId) {
+        return mapper.checkExists(placeId, orgUnitId) > 0;
     }
 
     @Override
@@ -91,8 +91,8 @@ public class PlaceClassAssignmentRepositoryImpl implements PlaceClassAssignmentR
     }
 
     @Override
-    public int countByClassId(Long classId) {
-        return mapper.countByClassId(classId);
+    public int countByClassId(Long orgUnitId) {
+        return mapper.countByClassId(orgUnitId);
     }
 
     @Override
@@ -116,7 +116,7 @@ public class PlaceClassAssignmentRepositoryImpl implements PlaceClassAssignmentR
         PlaceClassAssignmentPO po = new PlaceClassAssignmentPO();
         po.setId(assignment.getId());
         po.setPlaceId(assignment.getPlaceId());
-        po.setClassId(assignment.getClassId());
+        po.setOrgUnitId(assignment.getOrgUnitId());
         po.setOrgUnitId(assignment.getOrgUnitId());
         po.setAssignedBeds(assignment.getAssignedBeds());
         po.setPriority(assignment.getPriority());
@@ -133,7 +133,7 @@ public class PlaceClassAssignmentRepositoryImpl implements PlaceClassAssignmentR
         return PlaceClassAssignment.reconstitute(
             po.getId(),
             po.getPlaceId(),
-            po.getClassId(),
+            po.getOrgUnitId(),
             po.getOrgUnitId(),
             po.getAssignedBeds(),
             po.getPriority(),

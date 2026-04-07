@@ -61,8 +61,8 @@ public class RatingResultRepositoryImpl implements RatingResultRepository {
     }
 
     @Override
-    public List<RatingResult> findByClassId(Long classId) {
-        return resultMapper.findByClassId(classId).stream()
+    public List<RatingResult> findByClassId(Long orgUnitId) {
+        return resultMapper.findByClassId(orgUnitId).stream()
                 .map(this::toDomain)
                 .collect(Collectors.toList());
     }
@@ -110,7 +110,7 @@ public class RatingResultRepositoryImpl implements RatingResultRepository {
         po.setId(domain.getId());
         po.setRatingConfigId(domain.getRatingConfigId());
         po.setCheckPlanId(domain.getCheckPlanId());
-        po.setClassId(domain.getClassId());
+        po.setOrgUnitId(domain.getOrgUnitId());
         po.setClassName(domain.getClassName());
         po.setPeriodType(domain.getPeriodType() != null ? domain.getPeriodType().name() : null);
         po.setPeriodStart(domain.getPeriodStart());
@@ -135,7 +135,7 @@ public class RatingResultRepositoryImpl implements RatingResultRepository {
                 .id(po.getId())
                 .ratingConfigId(po.getRatingConfigId())
                 .checkPlanId(po.getCheckPlanId())
-                .classId(po.getClassId())
+                .orgUnitId(po.getOrgUnitId())
                 .className(po.getClassName())
                 .periodType(po.getPeriodType() != null ? RatingPeriodType.fromString(po.getPeriodType()) : null)
                 .periodStart(po.getPeriodStart())

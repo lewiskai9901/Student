@@ -84,10 +84,10 @@ public class DataScopeItem implements Entity<Long> {
     /**
      * 创建班级范围项
      */
-    public static DataScopeItem createClass(Long classId, String className) {
+    public static DataScopeItem createClass(Long orgUnitId, String className) {
         return DataScopeItem.builder()
                 .itemTypeCode("CLASS")
-                .scopeId(classId)
+                .scopeId(orgUnitId)
                 .scopeName(className)
                 .includeChildren(false)
                 .build();

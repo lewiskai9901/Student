@@ -45,7 +45,7 @@ public class PlacePO {
     private Long primaryOrgRelationId;
 
     @TableField(updateStrategy = FieldStrategy.IGNORED)
-    private Long classId;              // 归属班级ID
+    private Long orgUnitId;              // 归属班级ID
 
     @TableField(updateStrategy = FieldStrategy.IGNORED)
     private Long responsibleUserId;

@@ -12,20 +12,20 @@ public class RatingCalculatedEvent extends RatingDomainEvent {
     private final BigDecimal finalScore;
     private final boolean awarded;
 
-    private RatingCalculatedEvent(Long resultId, Long ratingConfigId, Long classId,
+    private RatingCalculatedEvent(Long resultId, Long ratingConfigId, Long orgUnitId,
                                    String className, Integer ranking,
                                    BigDecimal finalScore, boolean awarded) {
-        super(resultId, ratingConfigId, classId);
+        super(resultId, ratingConfigId, orgUnitId);
         this.className = className;
         this.ranking = ranking;
         this.finalScore = finalScore;
         this.awarded = awarded;
     }
 
-    public static RatingCalculatedEvent of(Long resultId, Long ratingConfigId, Long classId,
+    public static RatingCalculatedEvent of(Long resultId, Long ratingConfigId, Long orgUnitId,
                                             String className, Integer ranking,
                                             BigDecimal finalScore, boolean awarded) {
-        return new RatingCalculatedEvent(resultId, ratingConfigId, classId,
+        return new RatingCalculatedEvent(resultId, ratingConfigId, orgUnitId,
             className, ranking, finalScore, awarded);
     }
 

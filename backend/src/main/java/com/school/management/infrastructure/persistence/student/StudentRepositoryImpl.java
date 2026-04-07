@@ -60,15 +60,15 @@ public class StudentRepositoryImpl implements StudentRepository {
     }
 
     @Override
-    public List<Student> findByClassId(Long classId) {
-        return studentMapper.selectByClassId(classId).stream()
+    public List<Student> findByClassId(Long orgUnitId) {
+        return studentMapper.selectByClassId(orgUnitId).stream()
                 .map(this::toDomain)
                 .collect(Collectors.toList());
     }
 
     @Override
-    public List<Student> findByClassIdAndStatus(Long classId, StudentStatus status) {
-        return studentMapper.selectByClassIdAndStatus(classId, status.getCode()).stream()
+    public List<Student> findByClassIdAndStatus(Long orgUnitId, StudentStatus status) {
+        return studentMapper.selectByClassIdAndStatus(orgUnitId, status.getCode()).stream()
                 .map(this::toDomain)
                 .collect(Collectors.toList());
     }
@@ -84,18 +84,18 @@ public class StudentRepositoryImpl implements StudentRepository {
     }
 
     @Override
-    public long countByClassId(Long classId) {
-        return studentMapper.countByClassId(classId);
+    public long countByClassId(Long orgUnitId) {
+        return studentMapper.countByClassId(orgUnitId);
     }
 
     @Override
-    public long countActiveByClassId(Long classId) {
-        return studentMapper.countActiveByClassId(classId);
+    public long countActiveByClassId(Long orgUnitId) {
+        return studentMapper.countActiveByClassId(orgUnitId);
     }
 
     @Override
-    public long countByClassIdAndGender(Long classId, Gender gender) {
-        return studentMapper.countByClassIdAndGender(classId, gender.getCode());
+    public long countByClassIdAndGender(Long orgUnitId, Gender gender) {
+        return studentMapper.countByClassIdAndGender(orgUnitId, gender.getCode());
     }
 
     @Override
@@ -136,7 +136,7 @@ public class StudentRepositoryImpl implements StudentRepository {
         po.setBirthDate(student.getBirthDate());
         po.setEnrollmentDate(student.getEnrollmentDate());
         po.setExpectedGraduationDate(student.getExpectedGraduationDate());
-        po.setClassId(student.getClassId());
+        po.setOrgUnitId(student.getOrgUnitId());
         po.setStatus(student.getStatus() != null ? student.getStatus().getCode() : null);
         po.setAvatarUrl(student.getAvatarUrl());
         po.setHomeAddress(student.getHomeAddress());
@@ -160,7 +160,7 @@ public class StudentRepositoryImpl implements StudentRepository {
                 po.getBirthDate(),
                 po.getEnrollmentDate(),
                 po.getExpectedGraduationDate(),
-                po.getClassId(),
+                po.getOrgUnitId(),
                 po.getStatus() != null ? StudentStatus.fromCode(po.getStatus()) : null,
                 po.getAvatarUrl(),
                 po.getHomeAddress(),

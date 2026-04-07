@@ -49,14 +49,14 @@ public interface DddStudentMapper extends BaseMapper<StudentPO> {
     /**
      * 根据班级ID查询
      */
-    @Select(BASE_JOIN_SELECT + " WHERE s.class_id = #{classId} AND s.deleted = 0")
-    List<StudentPO> selectByClassId(@Param("classId") Long classId);
+    @Select(BASE_JOIN_SELECT + " WHERE s.org_unit_id = #{classId} AND s.deleted = 0")
+    List<StudentPO> selectByClassId(@Param("orgUnitId") Long orgUnitId);
 
     /**
      * 根据班级ID和状态查询
      */
-    @Select(BASE_JOIN_SELECT + " WHERE s.class_id = #{classId} AND s.student_status = #{status} AND s.deleted = 0")
-    List<StudentPO> selectByClassIdAndStatus(@Param("classId") Long classId, @Param("status") Integer status);
+    @Select(BASE_JOIN_SELECT + " WHERE s.org_unit_id = #{classId} AND s.student_status = #{status} AND s.deleted = 0")
+    List<StudentPO> selectByClassIdAndStatus(@Param("orgUnitId") Long orgUnitId, @Param("status") Integer status);
 
     /**
      * 分页查询学生(带用户信息)
@@ -92,14 +92,14 @@ public interface DddStudentMapper extends BaseMapper<StudentPO> {
     /**
      * 统计班级学生数量
      */
-    @Select("SELECT COUNT(*) FROM students WHERE class_id = #{classId} AND deleted = 0")
-    long countByClassId(@Param("classId") Long classId);
+    @Select("SELECT COUNT(*) FROM students WHERE org_unit_id = #{classId} AND deleted = 0")
+    long countByClassId(@Param("orgUnitId") Long orgUnitId);
 
     /**
      * 统计班级在读学生数量 (status=0 表示在读)
      */
-    @Select("SELECT COUNT(*) FROM students WHERE class_id = #{classId} AND student_status = 0 AND deleted = 0")
-    long countActiveByClassId(@Param("classId") Long classId);
+    @Select("SELECT COUNT(*) FROM students WHERE org_unit_id = #{classId} AND student_status = 0 AND deleted = 0")
+    long countActiveByClassId(@Param("orgUnitId") Long orgUnitId);
 
     /**
      * 统计所有学生数量
@@ -125,6 +125,6 @@ public interface DddStudentMapper extends BaseMapper<StudentPO> {
      * @param classId 班级ID
      * @param gender 性别代码 (1=男, 2=女)
      */
-    @Select("SELECT COUNT(*) FROM students s LEFT JOIN users u ON s.user_id = u.id WHERE s.class_id = #{classId} AND u.gender = #{gender} AND s.deleted = 0")
-    long countByClassIdAndGender(@Param("classId") Long classId, @Param("gender") Integer gender);
+    @Select("SELECT COUNT(*) FROM students s LEFT JOIN users u ON s.user_id = u.id WHERE s.org_unit_id = #{classId} AND u.gender = #{gender} AND s.deleted = 0")
+    long countByClassIdAndGender(@Param("orgUnitId") Long orgUnitId, @Param("gender") Integer gender);
 }

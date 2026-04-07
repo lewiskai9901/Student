@@ -159,13 +159,13 @@ public class TeachingWorkflowService {
 
         List<Map<String, Object>> assignments = jdbc.queryForList(
             "SELECT a.id AS assignmentId, a.offering_id AS offeringId, a.course_id AS courseId, " +
-            "a.class_id AS classId, a.weekly_hours AS weeklyHours, a.student_count AS studentCount, " +
+            "a.org_unit_id AS orgUnitId, a.weekly_hours AS weeklyHours, a.student_count AS studentCount, " +
             "o.start_week AS offeringStartWeek, o.end_week AS offeringEndWeek " +
             "FROM class_course_assignments a " +
             "LEFT JOIN semester_course_offerings o ON o.id = a.offering_id " +
             "WHERE a.semester_id = ? AND a.status = 1 AND a.deleted = 0 " +
             "AND NOT EXISTS (SELECT 1 FROM teaching_tasks t WHERE t.semester_id = a.semester_id " +
-            "AND t.course_id = a.course_id AND t.class_id = a.class_id AND t.deleted = 0)",
+            "AND t.course_id = a.course_id AND t.org_unit_id = a.org_unit_id AND t.deleted = 0)",
             semesterId
         );
 
@@ -173,7 +173,7 @@ public class TeachingWorkflowService {
         for (Map<String, Object> a : assignments) {
             Long offeringId = toLong(a.get("offeringId"));
             Long courseId = toLong(a.get("courseId"));
-            Long classId = toLong(a.get("classId"));
+            Long orgUnitId = toLong(a.get("orgUnitId"));
             int weeklyHours = ((Number) a.get("weeklyHours")).intValue();
             int studentCount = a.get("studentCount") != null ? ((Number) a.get("studentCount")).intValue() : 0;
 
@@ -182,14 +182,14 @@ public class TeachingWorkflowService {
             int taskEndWeek = a.get("offeringEndWeek") != null ? ((Number) a.get("offeringEndWeek")).intValue() : endWeek;
             int totalHours = weeklyHours * (taskEndWeek - taskStartWeek + 1);
 
-            String taskCode = String.format("TK-%d-%d-%d", semesterId, courseId, classId);
+            String taskCode = String.format("TK-%d-%d-%d", semesterId, courseId, orgUnitId);
 
             jdbc.update(
-                "INSERT INTO teaching_tasks (id, task_code, semester_id, course_id, class_id, offering_id, " +
+                "INSERT INTO teaching_tasks (id, task_code, semester_id, course_id, org_unit_id, offering_id, " +
                 "student_count, weekly_hours, total_hours, start_week, end_week, " +
                 "scheduling_status, task_status, created_by, deleted, tenant_id) " +
                 "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, 1, ?, 0, 1)",
-                IdWorker.getId(), taskCode, semesterId, courseId, classId, offeringId,
+                IdWorker.getId(), taskCode, semesterId, courseId, orgUnitId, offeringId,
                 studentCount, weeklyHours, totalHours, taskStartWeek, taskEndWeek, createdBy
             );
             count++;
@@ -224,7 +224,7 @@ public class TeachingWorkflowService {
         int count = 0;
         for (Long taskId : taskIds) {
             Map<String, Object> task = jdbc.queryForMap(
-                "SELECT t.course_id, t.class_id, t.student_count, " +
+                "SELECT t.course_id, t.org_unit_id, t.student_count, " +
                 "COALESCE(c.exam_type, 1) AS course_exam_form, " +
                 "COALESCE(c.total_hours, 120) AS course_hours " +
                 "FROM teaching_tasks t " +
@@ -233,7 +233,7 @@ public class TeachingWorkflowService {
             );
 
             Long courseId = toLong(task.get("course_id"));
-            Long classId = toLong(task.get("class_id"));
+            Long orgUnitId = toLong(task.get("org_unit_id"));
             int studentCount = task.get("student_count") != null ? ((Number) task.get("student_count")).intValue() : 0;
             int examForm = ((Number) task.get("course_exam_form")).intValue();
             // 考试时长：根据课程总学时推算，最少60分钟，最多180分钟
@@ -247,10 +247,10 @@ public class TeachingWorkflowService {
             if (exists != null && exists > 0) continue;
 
             jdbc.update(
-                "INSERT INTO exam_arrangements (batch_id, course_id, task_id, class_id, exam_date, " +
+                "INSERT INTO exam_arrangements (batch_id, course_id, task_id, org_unit_id, exam_date, " +
                 "start_time, end_time, duration, exam_form, total_students, status, created_by) " +
                 "VALUES (?, ?, ?, ?, ?, '08:00', ADDTIME('08:00', SEC_TO_TIME(? * 60)), ?, ?, ?, 0, ?)",
-                batchId, courseId, taskId, classId,
+                batchId, courseId, taskId, orgUnitId,
                 batchStartDate != null ? batchStartDate : "CURDATE()",
                 duration, duration, examForm, studentCount, createdBy
             );
@@ -290,19 +290,19 @@ public class TeachingWorkflowService {
 
         // 为考试批次中的每个安排，生成对应的学生成绩待录入记录
         List<Map<String, Object>> arrangements = jdbc.queryForList(
-            "SELECT ea.task_id, ea.course_id, ea.class_id " +
+            "SELECT ea.task_id, ea.course_id, ea.org_unit_id " +
             "FROM exam_arrangements ea WHERE ea.batch_id = ?", examBatchId);
 
         int gradeCount = 0;
         for (Map<String, Object> arr : arrangements) {
             Long taskId = toLong(arr.get("task_id"));
             Long courseId = toLong(arr.get("course_id"));
-            Long classId = toLong(arr.get("class_id"));
+            Long orgUnitId = toLong(arr.get("org_unit_id"));
             if (taskId == null || courseId == null) continue;
 
             // 查找班级学生，为每人生成一条待录入记录
             List<Map<String, Object>> students = jdbc.queryForList(
-                "SELECT id FROM students WHERE class_id = ? AND status = 1 AND deleted = 0", classId);
+                "SELECT id FROM students WHERE org_unit_id = ? AND status = 1 AND deleted = 0", orgUnitId);
 
             for (Map<String, Object> s : students) {
                 Long studentId = toLong(s.get("id"));
@@ -314,9 +314,9 @@ public class TeachingWorkflowService {
                 if (exists != null && exists > 0) continue;
 
                 jdbc.update(
-                    "INSERT INTO student_grades (batch_id, semester_id, task_id, course_id, student_id, class_id, " +
+                    "INSERT INTO student_grades (batch_id, semester_id, task_id, course_id, student_id, org_unit_id, " +
                     "grade_status, deleted) VALUES (?, ?, ?, ?, ?, ?, 0, 0)",
-                    gradeBatchId, semesterId, taskId, courseId, studentId, classId);
+                    gradeBatchId, semesterId, taskId, courseId, studentId, orgUnitId);
                 gradeCount++;
             }
         }

@@ -14,7 +14,7 @@ public class StudentScore {
     private Long taskId;
     private Long courseId;
     private Long studentId;
-    private Long classId;
+    private Long orgUnitId;
     private BigDecimal totalScore;
     private String gradeLevel;
     private BigDecimal gradePoint;
@@ -30,12 +30,12 @@ public class StudentScore {
     protected StudentScore() {}
 
     public static StudentScore create(Long batchId, Long semesterId, Long taskId, Long courseId,
-                                       Long studentId, Long classId) {
+                                       Long studentId, Long orgUnitId) {
         if (studentId == null) throw new IllegalArgumentException("学生不能为空");
         if (courseId == null) throw new IllegalArgumentException("课程不能为空");
         StudentScore s = new StudentScore();
         s.batchId = batchId; s.semesterId = semesterId; s.taskId = taskId;
-        s.courseId = courseId; s.studentId = studentId; s.classId = classId;
+        s.courseId = courseId; s.studentId = studentId; s.orgUnitId = orgUnitId;
         s.gradeStatus = 0;
         s.isMakeup = false;
         s.isRetake = false;
@@ -45,14 +45,14 @@ public class StudentScore {
     }
 
     public static StudentScore reconstruct(Long id, Long batchId, Long semesterId, Long taskId,
-                                            Long courseId, Long studentId, Long classId,
+                                            Long courseId, Long studentId, Long orgUnitId,
                                             BigDecimal totalScore, String gradeLevel, BigDecimal gradePoint,
                                             Boolean passed, BigDecimal creditsEarned, Integer gradeStatus,
                                             Boolean isMakeup, Boolean isRetake, String remark,
                                             LocalDateTime createdAt, LocalDateTime updatedAt) {
         StudentScore s = new StudentScore();
         s.id = id; s.batchId = batchId; s.semesterId = semesterId; s.taskId = taskId;
-        s.courseId = courseId; s.studentId = studentId; s.classId = classId;
+        s.courseId = courseId; s.studentId = studentId; s.orgUnitId = orgUnitId;
         s.totalScore = totalScore; s.gradeLevel = gradeLevel; s.gradePoint = gradePoint;
         s.passed = passed; s.creditsEarned = creditsEarned; s.gradeStatus = gradeStatus;
         s.isMakeup = isMakeup; s.isRetake = isRetake; s.remark = remark;
@@ -103,7 +103,7 @@ public class StudentScore {
     public Long getTaskId() { return taskId; }
     public Long getCourseId() { return courseId; }
     public Long getStudentId() { return studentId; }
-    public Long getClassId() { return classId; }
+    public Long getOrgUnitId() { return orgUnitId; }
     public BigDecimal getTotalScore() { return totalScore; }
     public String getGradeLevel() { return gradeLevel; }
     public BigDecimal getGradePoint() { return gradePoint; }

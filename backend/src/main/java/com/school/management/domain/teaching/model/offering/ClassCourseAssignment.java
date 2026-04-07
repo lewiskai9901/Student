@@ -7,7 +7,7 @@ import lombok.Getter;
 public class ClassCourseAssignment implements Entity<Long> {
     private Long id;
     private Long semesterId;
-    private Long classId;
+    private Long orgUnitId;
     private Long offeringId;
     private Long courseId;
     private Integer weeklyHours;
@@ -19,11 +19,11 @@ public class ClassCourseAssignment implements Entity<Long> {
     @Override
     public Long getId() { return id; }
 
-    public static ClassCourseAssignment create(Long semesterId, Long classId, Long offeringId,
+    public static ClassCourseAssignment create(Long semesterId, Long orgUnitId, Long offeringId,
             Long courseId, Integer weeklyHours, Integer studentCount) {
         ClassCourseAssignment a = new ClassCourseAssignment();
         a.semesterId = semesterId;
-        a.classId = classId;
+        a.orgUnitId = orgUnitId;
         a.offeringId = offeringId;
         a.courseId = courseId;
         a.weeklyHours = weeklyHours;
@@ -32,12 +32,12 @@ public class ClassCourseAssignment implements Entity<Long> {
         return a;
     }
 
-    public static ClassCourseAssignment reconstruct(Long id, Long semesterId, Long classId,
+    public static ClassCourseAssignment reconstruct(Long id, Long semesterId, Long orgUnitId,
             Long offeringId, Long courseId, Integer weeklyHours, Integer studentCount, Integer status) {
         ClassCourseAssignment a = new ClassCourseAssignment();
         a.id = id;
         a.semesterId = semesterId;
-        a.classId = classId;
+        a.orgUnitId = orgUnitId;
         a.offeringId = offeringId;
         a.courseId = courseId;
         a.weeklyHours = weeklyHours;

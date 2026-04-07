@@ -8,16 +8,16 @@ public class RatingPublishedEvent extends RatingDomainEvent {
     private final String className;
     private final boolean awarded;
 
-    private RatingPublishedEvent(Long resultId, Long ratingConfigId, Long classId,
+    private RatingPublishedEvent(Long resultId, Long ratingConfigId, Long orgUnitId,
                                   String className, boolean awarded) {
-        super(resultId, ratingConfigId, classId);
+        super(resultId, ratingConfigId, orgUnitId);
         this.className = className;
         this.awarded = awarded;
     }
 
-    public static RatingPublishedEvent of(Long resultId, Long ratingConfigId, Long classId,
+    public static RatingPublishedEvent of(Long resultId, Long ratingConfigId, Long orgUnitId,
                                            String className, boolean awarded) {
-        return new RatingPublishedEvent(resultId, ratingConfigId, classId, className, awarded);
+        return new RatingPublishedEvent(resultId, ratingConfigId, orgUnitId, className, awarded);
     }
 
     @Override

@@ -12,7 +12,7 @@ public class PlaceClassAssignment implements Entity<Long> {
 
     private Long id;
     private Long placeId;
-    private Long classId;
+    private Long orgUnitId;
     private Long orgUnitId;         // 所属部门ID（冗余，便于权限控制）
     private Integer assignedBeds;    // 分配床位数（NULL表示不限）
     private Integer priority;        // 优先级（数值越大越优先）
@@ -29,7 +29,7 @@ public class PlaceClassAssignment implements Entity<Long> {
     @Override
     public Long getId() { return id; }
     public Long getPlaceId() { return placeId; }
-    public Long getClassId() { return classId; }
+    public Long getOrgUnitId() { return orgUnitId; }
     public Long getOrgUnitId() { return orgUnitId; }
     public Integer getAssignedBeds() { return assignedBeds; }
     public Integer getPriority() { return priority; }
@@ -43,11 +43,11 @@ public class PlaceClassAssignment implements Entity<Long> {
     /**
      * 创建新的场所-班级分配
      */
-    public static PlaceClassAssignment create(Long placeId, Long classId, Long orgUnitId,
+    public static PlaceClassAssignment create(Long placeId, Long orgUnitId, Long orgUnitId,
                                                Integer assignedBeds, Long assignedBy) {
         PlaceClassAssignment assignment = new PlaceClassAssignment();
         assignment.placeId = placeId;
-        assignment.classId = classId;
+        assignment.orgUnitId = orgUnitId;
         assignment.orgUnitId = orgUnitId;
         assignment.assignedBeds = assignedBeds;
         assignment.priority = 0;
@@ -61,14 +61,14 @@ public class PlaceClassAssignment implements Entity<Long> {
     /**
      * 从持久化数据重建
      */
-    public static PlaceClassAssignment reconstitute(Long id, Long placeId, Long classId, Long orgUnitId,
+    public static PlaceClassAssignment reconstitute(Long id, Long placeId, Long orgUnitId, Long orgUnitId,
                                                      Integer assignedBeds, Integer priority, Integer status,
                                                      String remark, Long assignedBy, LocalDateTime assignedAt,
                                                      LocalDateTime createdAt, LocalDateTime updatedAt) {
         PlaceClassAssignment assignment = new PlaceClassAssignment();
         assignment.id = id;
         assignment.placeId = placeId;
-        assignment.classId = classId;
+        assignment.orgUnitId = orgUnitId;
         assignment.orgUnitId = orgUnitId;
         assignment.assignedBeds = assignedBeds;
         assignment.priority = priority != null ? priority : 0;

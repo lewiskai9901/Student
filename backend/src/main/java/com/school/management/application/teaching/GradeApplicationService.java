@@ -160,7 +160,7 @@ public class GradeApplicationService {
         po.setTaskId(toLong(data.get("taskId")));
         po.setCourseId(toLong(data.get("courseId")));
         po.setStudentId(toLong(data.get("studentId")));
-        po.setClassId(toLong(data.get("classId")));
+        po.setOrgUnitId(toLong(data.get("orgUnitId")));
         po.setTotalScore(toBigDecimal(data.get("totalScore")));
         po.setGradePoint(toBigDecimal(data.get("gradePoint")));
         po.setPassed(toIntOrNull(data.get("passed")));
@@ -208,7 +208,7 @@ public class GradeApplicationService {
             po.setTaskId(toLong(grade.get("taskId")));
             po.setCourseId(toLong(grade.get("courseId")));
             po.setStudentId(toLong(grade.get("studentId")));
-            po.setClassId(toLong(grade.get("classId")));
+            po.setOrgUnitId(toLong(grade.get("orgUnitId")));
             po.setTotalScore(toBigDecimal(grade.get("totalScore")));
             po.setGradePoint(toBigDecimal(grade.get("gradePoint")));
             po.setPassed(toIntOrNull(grade.get("passed")));
@@ -231,7 +231,7 @@ public class GradeApplicationService {
             sql.append(
                 "SELECT g.id, g.batch_id AS batchId, g.semester_id AS semesterId, " +
                 "g.task_id AS taskId, g.course_id AS courseId, g.student_id AS studentId, " +
-                "g.class_id AS classId, g.total_score AS totalScore, " +
+                "g.org_unit_id AS orgUnitId, g.total_score AS totalScore, " +
                 "g.grade_point AS gradePoint, g.passed, g.credits_earned AS creditsEarned, " +
                 "g.grade_status AS gradeStatus, g.remark, " +
                 "c.course_name AS courseName " +
@@ -260,7 +260,7 @@ public class GradeApplicationService {
             sql.append(
                 "SELECT id, batch_id AS batchId, semester_id AS semesterId, " +
                 "task_id AS taskId, course_id AS courseId, student_id AS studentId, " +
-                "class_id AS classId, total_score AS totalScore, " +
+                "org_unit_id AS orgUnitId, total_score AS totalScore, " +
                 "grade_point AS gradePoint, passed, credits_earned AS creditsEarned, " +
                 "grade_status AS gradeStatus, remark " +
                 "FROM student_grades WHERE student_id = ? AND deleted = 0"
@@ -279,13 +279,13 @@ public class GradeApplicationService {
         }
     }
 
-    public List<Map<String, Object>> getClassGrades(Long classId) {
+    public List<Map<String, Object>> getClassGrades(Long orgUnitId) {
         try {
-            return gradeMapper.listByClassWithJoins(classId);
+            return gradeMapper.listByClassWithJoins(orgUnitId);
         } catch (Exception e) {
             log.warn("Failed to query class grades with joins, falling back: {}", e.getMessage());
             LambdaQueryWrapper<StudentGradePO> wrapper = new LambdaQueryWrapper<>();
-            wrapper.eq(StudentGradePO::getClassId, classId)
+            wrapper.eq(StudentGradePO::getOrgUnitId, orgUnitId)
                    .orderByAsc(StudentGradePO::getCourseId)
                    .orderByDesc(StudentGradePO::getTotalScore);
             List<StudentGradePO> list = gradeMapper.selectList(wrapper);
@@ -299,7 +299,7 @@ public class GradeApplicationService {
 
     // ==================== Statistics & Ranking ====================
 
-    public Map<String, Object> getStatistics(Long batchId, Long classId, Long courseId) {
+    public Map<String, Object> getStatistics(Long batchId, Long orgUnitId, Long courseId) {
         StringBuilder where = new StringBuilder(" WHERE deleted = 0");
         List<Object> params = new ArrayList<>();
 
@@ -307,9 +307,9 @@ public class GradeApplicationService {
             where.append(" AND batch_id = ?");
             params.add(batchId);
         }
-        if (classId != null) {
-            where.append(" AND class_id = ?");
-            params.add(classId);
+        if (orgUnitId != null) {
+            where.append(" AND org_unit_id = ?");
+            params.add(orgUnitId);
         }
         if (courseId != null) {
             where.append(" AND course_id = ?");
@@ -344,7 +344,7 @@ public class GradeApplicationService {
         return result;
     }
 
-    public List<Map<String, Object>> getRanking(Long classId, Long semesterId) {
+    public List<Map<String, Object>> getRanking(Long orgUnitId, Long semesterId) {
         StringBuilder sql = new StringBuilder();
         List<Object> params = new ArrayList<>();
         boolean joinStudents = true;
@@ -359,7 +359,7 @@ public class GradeApplicationService {
                 "COUNT(*) AS courseCount " +
                 "FROM student_grades g " +
                 "LEFT JOIN students s ON g.student_id = s.id " +
-                "WHERE g.class_id = ? AND g.deleted = 0"
+                "WHERE g.org_unit_id = ? AND g.deleted = 0"
             );
         } catch (Exception e) {
             joinStudents = false;
@@ -369,10 +369,10 @@ public class GradeApplicationService {
                 "AVG(total_score) AS avgScore, " +
                 "COUNT(*) AS courseCount " +
                 "FROM student_grades " +
-                "WHERE class_id = ? AND deleted = 0"
+                "WHERE org_unit_id = ? AND deleted = 0"
             );
         }
-        params.add(classId);
+        params.add(orgUnitId);
 
         if (semesterId != null) {
             sql.append(joinStudents ? " AND g.semester_id = ?" : " AND semester_id = ?");
@@ -394,7 +394,7 @@ public class GradeApplicationService {
 
     // ==================== Export ====================
 
-    public void exportGrades(Long semesterId, Long classId, Long courseId,
+    public void exportGrades(Long semesterId, Long orgUnitId, Long courseId,
                              HttpServletResponse response) throws IOException {
         StringBuilder sql = new StringBuilder(
             "SELECT sg.total_score, sg.grade_point, sg.passed, " +
@@ -403,11 +403,11 @@ public class GradeApplicationService {
             "FROM student_grades sg " +
             "LEFT JOIN students s ON s.id = sg.student_id " +
             "LEFT JOIN courses c ON c.id = sg.course_id " +
-            "LEFT JOIN school_classes sc ON sc.id = sg.class_id " +
+            "LEFT JOIN school_classes sc ON sc.id = sg.org_unit_id " +
             "WHERE sg.semester_id = ? AND sg.deleted = 0");
         List<Object> params = new ArrayList<>();
         params.add(semesterId);
-        if (classId != null) { sql.append(" AND sg.class_id = ?"); params.add(classId); }
+        if (orgUnitId != null) { sql.append(" AND sg.org_unit_id = ?"); params.add(orgUnitId); }
         if (courseId != null) { sql.append(" AND sg.course_id = ?"); params.add(courseId); }
         sql.append(" ORDER BY sc.name, s.student_no");
 
@@ -480,7 +480,7 @@ public class GradeApplicationService {
         map.put("taskId", g.getTaskId());
         map.put("courseId", g.getCourseId());
         map.put("studentId", g.getStudentId());
-        map.put("classId", g.getClassId());
+        map.put("orgUnitId", g.getOrgUnitId());
         map.put("totalScore", g.getTotalScore());
         map.put("gradePoint", g.getGradePoint());
         map.put("passed", g.getPassed());

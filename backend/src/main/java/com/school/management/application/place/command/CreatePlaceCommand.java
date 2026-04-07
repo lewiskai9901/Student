@@ -29,7 +29,7 @@ public class CreatePlaceCommand {
     private Integer capacity;
 
     private Long orgUnitId;
-    private Long classId;                // 归属班级ID（直接分配）
+    private Long orgUnitId;                // 归属班级ID（直接分配）
     private Long responsibleUserId;
 
     private String description;

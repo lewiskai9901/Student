@@ -57,7 +57,7 @@ public class ClassPlugin implements EntityTypePlugin {
     public void beforeDelete(ExtensionContext ctx) {
         try {
             Long count = jdbc.queryForObject(
-                "SELECT COUNT(*) FROM students WHERE class_id = ? AND status = 1 AND deleted = 0",
+                "SELECT COUNT(*) FROM students WHERE org_unit_id = ? AND status = 1 AND deleted = 0",
                 Long.class, ctx.getEntityId());
             if (count != null && count > 0) {
                 throw new BusinessException("班级下有 " + count + " 名在读学生，无法删除");

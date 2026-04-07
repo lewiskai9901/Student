@@ -11,7 +11,7 @@ import java.time.LocalDate;
  */
 public class TeacherAssignedEvent extends BaseDomainEvent {
 
-    private final Long classId;
+    private final Long orgUnitId;
     private final String classCode;
     private final String className;
     private final Long teacherId;
@@ -21,7 +21,7 @@ public class TeacherAssignedEvent extends BaseDomainEvent {
 
     public TeacherAssignedEvent(SchoolClass schoolClass, TeacherAssignment assignment) {
         super("SchoolClass", String.valueOf(schoolClass.getId()));
-        this.classId = schoolClass.getId();
+        this.orgUnitId = schoolClass.getId();
         this.classCode = schoolClass.getClassCode();
         this.className = schoolClass.getClassName();
         this.teacherId = assignment.getTeacherId();
@@ -30,8 +30,8 @@ public class TeacherAssignedEvent extends BaseDomainEvent {
         this.startDate = assignment.getStartDate();
     }
 
-    public Long getClassId() {
-        return classId;
+    public Long getOrgUnitId() {
+        return orgUnitId;
     }
 
     public String getClassCode() {

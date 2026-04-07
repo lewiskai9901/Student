@@ -12,7 +12,7 @@ public class ScheduleEntry extends AggregateRoot<Long> {
     private Long taskId;
     private Long teachingClassId;
     private Long courseId;
-    private Long classId;
+    private Long orgUnitId;
     private Long teacherId;
     private Long classroomId;
     private Integer weekday; // 1-7
@@ -31,7 +31,7 @@ public class ScheduleEntry extends AggregateRoot<Long> {
 
     protected ScheduleEntry() {}
 
-    public static ScheduleEntry create(Long semesterId, Long taskId, Long courseId, Long classId,
+    public static ScheduleEntry create(Long semesterId, Long taskId, Long courseId, Long orgUnitId,
                                         Long teacherId, Long classroomId, Integer weekday,
                                         Integer startSlot, Integer endSlot,
                                         Integer startWeek, Integer endWeek, WeekType weekType,
@@ -46,7 +46,7 @@ public class ScheduleEntry extends AggregateRoot<Long> {
         entry.semesterId = semesterId;
         entry.taskId = taskId;
         entry.courseId = courseId;
-        entry.classId = classId;
+        entry.orgUnitId = orgUnitId;
         entry.teacherId = teacherId;
         entry.classroomId = classroomId;
         entry.weekday = weekday;
@@ -65,7 +65,7 @@ public class ScheduleEntry extends AggregateRoot<Long> {
     }
 
     public static ScheduleEntry reconstruct(Long id, Long semesterId, Long taskId, Long teachingClassId,
-                                             Long courseId, Long classId, Long teacherId, Long classroomId,
+                                             Long courseId, Long orgUnitId, Long teacherId, Long classroomId,
                                              Integer weekday, Integer startSlot, Integer endSlot,
                                              Integer startWeek, Integer endWeek, WeekType weekType,
                                              String consecutiveGroup, Integer scheduleType,
@@ -73,7 +73,7 @@ public class ScheduleEntry extends AggregateRoot<Long> {
                                              Long createdBy, LocalDateTime createdAt, LocalDateTime updatedAt) {
         ScheduleEntry e = new ScheduleEntry();
         e.setId(id); e.semesterId = semesterId; e.taskId = taskId; e.teachingClassId = teachingClassId;
-        e.courseId = courseId; e.classId = classId; e.teacherId = teacherId; e.classroomId = classroomId;
+        e.courseId = courseId; e.orgUnitId = orgUnitId; e.teacherId = teacherId; e.classroomId = classroomId;
         e.weekday = weekday; e.startSlot = startSlot; e.endSlot = endSlot;
         e.startWeek = startWeek; e.endWeek = endWeek; e.weekType = weekType;
         e.consecutiveGroup = consecutiveGroup; e.scheduleType = scheduleType;
@@ -123,7 +123,7 @@ public class ScheduleEntry extends AggregateRoot<Long> {
     public Long getTaskId() { return taskId; }
     public Long getTeachingClassId() { return teachingClassId; }
     public Long getCourseId() { return courseId; }
-    public Long getClassId() { return classId; }
+    public Long getOrgUnitId() { return orgUnitId; }
     public Long getTeacherId() { return teacherId; }
     public Long getClassroomId() { return classroomId; }
     public Integer getWeekday() { return weekday; }

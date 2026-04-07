@@ -5,12 +5,12 @@ package com.school.management.domain.rating.event;
  */
 public class RatingSubmittedEvent extends RatingDomainEvent {
 
-    private RatingSubmittedEvent(Long resultId, Long ratingConfigId, Long classId) {
-        super(resultId, ratingConfigId, classId);
+    private RatingSubmittedEvent(Long resultId, Long ratingConfigId, Long orgUnitId) {
+        super(resultId, ratingConfigId, orgUnitId);
     }
 
-    public static RatingSubmittedEvent of(Long resultId, Long ratingConfigId, Long classId) {
-        return new RatingSubmittedEvent(resultId, ratingConfigId, classId);
+    public static RatingSubmittedEvent of(Long resultId, Long ratingConfigId, Long orgUnitId) {
+        return new RatingSubmittedEvent(resultId, ratingConfigId, orgUnitId);
     }
 
     @Override

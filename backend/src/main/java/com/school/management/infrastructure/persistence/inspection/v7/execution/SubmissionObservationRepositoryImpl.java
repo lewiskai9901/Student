@@ -56,7 +56,7 @@ public class SubmissionObservationRepositoryImpl implements SubmissionObservatio
         po.setSubjectType(obs.getSubjectType());
         po.setSubjectId(obs.getSubjectId());
         po.setSubjectName(obs.getSubjectName());
-        po.setClassId(obs.getClassId());
+        po.setOrgUnitId(obs.getOrgUnitId());
         po.setClassName(obs.getClassName());
         po.setScore(obs.getScore() != null ? obs.getScore() : BigDecimal.ZERO);
         po.setIsNegative(obs.isNegative() ? 1 : 0);
@@ -83,7 +83,7 @@ public class SubmissionObservationRepositoryImpl implements SubmissionObservatio
                 .subjectType(po.getSubjectType())
                 .subjectId(po.getSubjectId())
                 .subjectName(po.getSubjectName())
-                .classId(po.getClassId())
+                .orgUnitId(po.getOrgUnitId())
                 .className(po.getClassName())
                 .score(po.getScore())
                 .negative(po.getIsNegative() != null && po.getIsNegative() == 1)

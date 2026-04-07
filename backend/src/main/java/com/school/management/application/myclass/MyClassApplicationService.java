@@ -53,22 +53,22 @@ public class MyClassApplicationService {
     /**
      * 获取班级概览数据
      */
-    public MyClassOverviewDTO getClassOverview(Long classId, Long userId) {
-        SchoolClass schoolClass = schoolClassRepository.findById(classId)
+    public MyClassOverviewDTO getClassOverview(Long orgUnitId, Long userId) {
+        SchoolClass schoolClass = schoolClassRepository.findById(orgUnitId)
             .orElseThrow(() -> new BusinessException("班级不存在"));
 
         // 验证用户有权限访问该班级
-        validateAccess(classId, userId);
+        validateAccess(orgUnitId, userId);
 
         // 获取学生统计
-        long studentCount = studentRepository.countByClassId(classId);
+        long studentCount = studentRepository.countByClassId(orgUnitId);
 
         // 使用DDD仓储按性别统计
-        long maleCount = studentRepository.countByClassIdAndGender(classId, Gender.MALE);
-        long femaleCount = studentRepository.countByClassIdAndGender(classId, Gender.FEMALE);
+        long maleCount = studentRepository.countByClassIdAndGender(orgUnitId, Gender.MALE);
+        long femaleCount = studentRepository.countByClassIdAndGender(orgUnitId, Gender.FEMALE);
 
         return MyClassOverviewDTO.builder()
-            .classId(classId)
+            .orgUnitId(orgUnitId)
             .className(schoolClass.getClassName())
             .studentCount((int) studentCount)
             .maleCount((int) maleCount)
@@ -86,11 +86,11 @@ public class MyClassApplicationService {
     /**
      * 获取班级学生列表
      */
-    public List<MyClassStudentDTO> getClassStudents(Long classId, Long userId, String keyword, String status) {
-        validateAccess(classId, userId);
+    public List<MyClassStudentDTO> getClassStudents(Long orgUnitId, Long userId, String keyword, String status) {
+        validateAccess(orgUnitId, userId);
 
         // 使用DDD StudentRepository获取学生
-        List<Student> students = studentRepository.findByClassId(classId);
+        List<Student> students = studentRepository.findByClassId(orgUnitId);
 
         return students.stream()
             .filter(s -> {
@@ -117,14 +117,14 @@ public class MyClassApplicationService {
      * 获取班级宿舍分布
      * 使用DDD Place领域: PlaceClassAssignment查询班级-宿舍绑定, Place获取房间/楼栋信息, PlaceOccupant获取入住学生
      */
-    public List<DormitoryDistributionDTO> getDormitoryDistribution(Long classId, Long userId) {
-        log.info("获取班级宿舍分布 - classId: {}, userId: {}", classId, userId);
-        validateAccess(classId, userId);
+    public List<DormitoryDistributionDTO> getDormitoryDistribution(Long orgUnitId, Long userId) {
+        log.info("获取班级宿舍分布 - classId: {}, userId: {}", orgUnitId, userId);
+        validateAccess(orgUnitId, userId);
 
         // 1. 查询班级的场所分配关系 (PlaceClassAssignment)
-        List<PlaceClassAssignment> assignments = placeClassAssignmentRepository.findByClassId(classId);
+        List<PlaceClassAssignment> assignments = placeClassAssignmentRepository.findByClassId(orgUnitId);
 
-        log.info("班级 {} 的场所分配记录数: {}", classId, assignments.size());
+        log.info("班级 {} 的场所分配记录数: {}", orgUnitId, assignments.size());
         if (!assignments.isEmpty()) {
             log.info("分配的场所ID列表: {}", assignments.stream()
                 .map(PlaceClassAssignment::getPlaceId)
@@ -132,7 +132,7 @@ public class MyClassApplicationService {
         }
 
         if (assignments.isEmpty()) {
-            log.warn("班级 {} 没有分配任何宿舍场所", classId);
+            log.warn("班级 {} 没有分配任何宿舍场所", orgUnitId);
             return new ArrayList<>();
         }
 
@@ -350,10 +350,10 @@ public class MyClassApplicationService {
             .build();
     }
 
-    private void validateAccess(Long classId, Long userId) {
+    private void validateAccess(Long orgUnitId, Long userId) {
         List<SchoolClass> userClasses = schoolClassRepository.findByTeacherId(userId);
         boolean hasAccess = userClasses.stream()
-            .anyMatch(c -> c.getId().equals(classId));
+            .anyMatch(c -> c.getId().equals(orgUnitId));
         if (!hasAccess) {
             throw new BusinessException("无权访问该班级");
         }

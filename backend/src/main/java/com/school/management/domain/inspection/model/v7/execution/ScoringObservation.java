@@ -24,7 +24,7 @@ public class ScoringObservation {
     private final String subjectType;       // USER / ORG_UNIT / PLACE
     private final Long subjectId;
     private final String subjectName;
-    private final Long classId;             // 主体所属班级(冗余，加速查询)
+    private final Long orgUnitId;             // 主体所属班级(冗余，加速查询)
     private final String className;
 
     // ── 评分结果 ──
@@ -72,8 +72,8 @@ public class ScoringObservation {
             ctx.put("placeName", subjectName != null ? subjectName : "");
         }
         // 班级信息（ORG_UNIT 维度）
-        if (classId != null) {
-            ctx.put("classId", classId);
+        if (orgUnitId != null) {
+            ctx.put("orgUnitId", orgUnitId);
             ctx.put("className", className != null ? className : "");
         }
 

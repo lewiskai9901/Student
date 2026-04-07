@@ -8,7 +8,7 @@ import com.school.management.domain.shared.event.BaseDomainEvent;
  */
 public class ClassCreatedEvent extends BaseDomainEvent {
 
-    private final Long classId;
+    private final Long orgUnitId;
     private final String classCode;
     private final String className;
     private final Long orgUnitId;
@@ -17,7 +17,7 @@ public class ClassCreatedEvent extends BaseDomainEvent {
 
     public ClassCreatedEvent(SchoolClass schoolClass) {
         super("SchoolClass", String.valueOf(schoolClass.getId()));
-        this.classId = schoolClass.getId();
+        this.orgUnitId = schoolClass.getId();
         this.classCode = schoolClass.getClassCode();
         this.className = schoolClass.getClassName();
         this.orgUnitId = schoolClass.getOrgUnitId();
@@ -25,8 +25,8 @@ public class ClassCreatedEvent extends BaseDomainEvent {
         this.createdBy = schoolClass.getCreatedBy();
     }
 
-    public Long getClassId() {
-        return classId;
+    public Long getOrgUnitId() {
+        return orgUnitId;
     }
 
     public String getClassCode() {

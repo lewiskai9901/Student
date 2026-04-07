@@ -109,8 +109,8 @@ public class PlaceApplicationService {
         if (command.getOrgUnitId() != null) {
             place.assignToOrgUnit(command.getOrgUnitId());
         }
-        if (command.getClassId() != null) {
-            place.assignToClass(command.getClassId());
+        if (command.getOrgUnitId() != null) {
+            place.assignToClass(command.getOrgUnitId());
         }
         if (command.getResponsibleUserId() != null) {
             place.assignResponsible(command.getResponsibleUserId());
@@ -172,8 +172,8 @@ public class PlaceApplicationService {
             place.assignToOrgUnit(command.getOrgUnitId());
         }
         // 班级分配（允许设置为null来取消分配）
-        if (command.getClassId() != null) {
-            place.assignToClass(command.getClassId());
+        if (command.getOrgUnitId() != null) {
+            place.assignToClass(command.getOrgUnitId());
         }
         if (command.getResponsibleUserId() != null) {
             place.assignResponsible(command.getResponsibleUserId());
@@ -332,11 +332,11 @@ public class PlaceApplicationService {
      * 批量分配班级（直接分配到place表）
      */
     @Transactional
-    public void batchAssignClass(List<Long> placeIds, Long classId) {
+    public void batchAssignClass(List<Long> placeIds, Long orgUnitId) {
         for (Long placeId : placeIds) {
             Place place = placeRepository.findById(placeId)
                 .orElseThrow(() -> new BusinessException("场所不存在: " + placeId));
-            place.assignToClass(classId);
+            place.assignToClass(orgUnitId);
             placeRepository.save(place);
         }
     }
@@ -345,15 +345,15 @@ public class PlaceApplicationService {
      * 添加场所-班级分配（多对多关系）
      */
     @Transactional
-    public Long addClassAssignment(Long placeId, Long classId, Long orgUnitId,
+    public Long addClassAssignment(Long placeId, Long orgUnitId, Long orgUnitId,
                                     Integer assignedBeds, Long assignedBy) {
         // 检查是否已存在
-        if (classAssignmentRepository.existsByPlaceIdAndClassId(placeId, classId)) {
+        if (classAssignmentRepository.existsByPlaceIdAndClassId(placeId, orgUnitId)) {
             throw new BusinessException("该场所已分配给此班级");
         }
 
         PlaceClassAssignment assignment = PlaceClassAssignment.create(
-            placeId, classId, orgUnitId, assignedBeds, assignedBy);
+            placeId, orgUnitId, orgUnitId, assignedBeds, assignedBy);
         classAssignmentRepository.save(assignment);
         return assignment.getId();
     }
@@ -362,8 +362,8 @@ public class PlaceApplicationService {
      * 移除场所-班级分配
      */
     @Transactional
-    public void removeClassAssignment(Long placeId, Long classId) {
-        classAssignmentRepository.findByPlaceIdAndClassId(placeId, classId)
+    public void removeClassAssignment(Long placeId, Long orgUnitId) {
+        classAssignmentRepository.findByPlaceIdAndClassId(placeId, orgUnitId)
             .ifPresent(a -> classAssignmentRepository.delete(a.getId()));
     }
 
@@ -377,8 +377,8 @@ public class PlaceApplicationService {
     /**
      * 获取班级的场所分配列表
      */
-    public List<PlaceClassAssignment> getClassAssignmentsByClass(Long classId) {
-        return classAssignmentRepository.findByClassId(classId);
+    public List<PlaceClassAssignment> getClassAssignmentsByClass(Long orgUnitId) {
+        return classAssignmentRepository.findByClassId(orgUnitId);
     }
 
     /**
@@ -611,7 +611,7 @@ public class PlaceApplicationService {
         dto.setAvailableCapacity(place.getAvailableCapacity());
         dto.setOccupancyRate(place.getOccupancyRate());
         dto.setOrgUnitId(place.getOrgUnitId());
-        dto.setClassId(place.getClassId());
+        dto.setOrgUnitId(place.getOrgUnitId());
         dto.setResponsibleUserId(place.getResponsibleUserId());
         // 性别类型
         if (place.getGenderType() != null) {
@@ -634,7 +634,7 @@ public class PlaceApplicationService {
                 dto.setFloorId(poWithRelations.getFloorId());
                 dto.setFloorName(poWithRelations.getFloorName());
                 dto.setOrgUnitName(poWithRelations.getOrgUnitName());
-                if (place.getClassId() != null) {
+                if (place.getOrgUnitId() != null) {
                     dto.setClassName(poWithRelations.getClassName());
                     dto.setClassTeacherId(poWithRelations.getClassTeacherId());
                     dto.setClassTeacherName(poWithRelations.getClassTeacherName());
@@ -682,7 +682,7 @@ public class PlaceApplicationService {
         }
         dto.setOrgUnitId(po.getOrgUnitId());
         dto.setOrgUnitName(po.getOrgUnitName());
-        dto.setClassId(po.getClassId());
+        dto.setOrgUnitId(po.getOrgUnitId());
         dto.setClassName(po.getClassName());
         dto.setClassTeacherId(po.getClassTeacherId());
         dto.setClassTeacherName(po.getClassTeacherName());

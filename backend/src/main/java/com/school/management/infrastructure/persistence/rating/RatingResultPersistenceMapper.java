@@ -23,8 +23,8 @@ public interface RatingResultPersistenceMapper extends BaseMapper<RatingResultPO
     /**
      * 根据班级ID查找结果
      */
-    @Select("SELECT * FROM rating_results WHERE class_id = #{classId} AND deleted = 0")
-    List<RatingResultPO> findByClassId(@Param("classId") Long classId);
+    @Select("SELECT * FROM rating_results WHERE org_unit_id = #{classId} AND deleted = 0")
+    List<RatingResultPO> findByClassId(@Param("orgUnitId") Long orgUnitId);
 
     /**
      * 根据状态查找结果

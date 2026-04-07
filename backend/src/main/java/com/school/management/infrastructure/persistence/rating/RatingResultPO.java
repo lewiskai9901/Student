@@ -30,7 +30,7 @@ public class RatingResultPO {
     /**
      * 班级ID
      */
-    private Long classId;
+    private Long orgUnitId;
 
     /**
      * 班级名称

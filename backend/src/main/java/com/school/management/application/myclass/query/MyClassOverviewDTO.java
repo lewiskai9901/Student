@@ -10,7 +10,7 @@ import java.util.List;
 @Data
 @Builder
 public class MyClassOverviewDTO {
-    private Long classId;
+    private Long orgUnitId;
     private String className;
 
     // 统计数据

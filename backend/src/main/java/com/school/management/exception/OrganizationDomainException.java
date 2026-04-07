@@ -22,7 +22,7 @@ public class OrganizationDomainException extends BusinessException {
         return new OrganizationDomainException(ErrorCode.DATA_NOT_FOUND, "组织单元不存在: " + orgUnitId);
     }
 
-    public static OrganizationDomainException classNotFound(Long classId) {
+    public static OrganizationDomainException classNotFound(Long orgUnitId) {
         return new OrganizationDomainException(ErrorCode.CLASS_NOT_FOUND);
     }
 

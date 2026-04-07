@@ -182,8 +182,8 @@ public class RatingApplicationService {
     }
 
     @Transactional(readOnly = true)
-    public List<RatingResult> getResultsByClass(Long classId) {
-        return resultRepository.findByClassId(classId);
+    public List<RatingResult> getResultsByClass(Long orgUnitId) {
+        return resultRepository.findByClassId(orgUnitId);
     }
 
     @Transactional(readOnly = true)

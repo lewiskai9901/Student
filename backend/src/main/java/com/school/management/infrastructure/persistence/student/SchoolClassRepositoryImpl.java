@@ -240,8 +240,8 @@ public class SchoolClassRepositoryImpl implements SchoolClassRepository {
     /**
      * Calculate and set tree_path and tree_level for a class node.
      */
-    private void updateTreePosition(Long classId, Long parentOrgUnitId) {
-        OrgUnitPO classPO = orgUnitMapper.selectById(classId);
+    private void updateTreePosition(Long orgUnitId, Long parentOrgUnitId) {
+        OrgUnitPO classPO = orgUnitMapper.selectById(orgUnitId);
         if (classPO == null) return;
 
         if (parentOrgUnitId != null) {

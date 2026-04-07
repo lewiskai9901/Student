@@ -25,7 +25,7 @@ public class ScheduleExportService {
         "第6节", "第7节", "第8节", "第9节", "第10节"
     };
 
-    public byte[] exportClassSchedule(Long semesterId, Long classId) throws IOException {
+    public byte[] exportClassSchedule(Long semesterId, Long orgUnitId) throws IOException {
         List<Map<String, Object>> entries = jdbcTemplate.queryForList(
             "SELECT se.weekday, se.start_slot, se.end_slot, " +
             "c.course_name, u.real_name as teacher_name, " +
@@ -34,18 +34,18 @@ public class ScheduleExportService {
             "LEFT JOIN courses c ON c.id = se.course_id " +
             "LEFT JOIN users u ON u.id = se.teacher_id " +
             "LEFT JOIN universal_places up ON up.id = se.classroom_id " +
-            "WHERE se.semester_id = ? AND se.class_id = ? AND se.deleted = 0 " +
+            "WHERE se.semester_id = ? AND se.org_unit_id = ? AND se.deleted = 0 " +
             "ORDER BY se.weekday, se.start_slot",
-            semesterId, classId);
+            semesterId, orgUnitId);
 
         // Get class name for the title
         String className = "班级课表";
         try {
             Map<String, Object> cls = jdbcTemplate.queryForMap(
-                "SELECT name FROM school_classes WHERE id = ? AND deleted = 0", classId);
+                "SELECT name FROM school_classes WHERE id = ? AND deleted = 0", orgUnitId);
             className = cls.get("name") + " 课表";
         } catch (Exception e) {
-            log.warn("Failed to get class name for id={}", classId);
+            log.warn("Failed to get class name for id={}", orgUnitId);
         }
 
         return buildScheduleExcel(className, entries);
@@ -59,7 +59,7 @@ public class ScheduleExportService {
             "COALESCE(up.name, '') as classroom_name " +
             "FROM schedule_entries se " +
             "LEFT JOIN courses c ON c.id = se.course_id " +
-            "LEFT JOIN school_classes sc ON sc.id = se.class_id " +
+            "LEFT JOIN school_classes sc ON sc.id = se.org_unit_id " +
             "LEFT JOIN universal_places up ON up.id = se.classroom_id " +
             "WHERE se.semester_id = ? AND se.teacher_id = ? AND se.deleted = 0 " +
             "ORDER BY se.weekday, se.start_slot",

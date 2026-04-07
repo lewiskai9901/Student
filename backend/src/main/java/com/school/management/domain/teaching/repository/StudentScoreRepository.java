@@ -9,6 +9,6 @@ public interface StudentScoreRepository {
     Optional<StudentScore> findById(Long id);
     List<StudentScore> findByBatchId(Long batchId);
     List<StudentScore> findByStudentId(Long studentId, Long semesterId, Long courseId);
-    List<StudentScore> findByClassId(Long classId);
+    List<StudentScore> findByClassId(Long orgUnitId);
     void deleteById(Long id);
 }

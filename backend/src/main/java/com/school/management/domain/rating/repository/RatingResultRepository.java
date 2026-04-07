@@ -50,7 +50,7 @@ public interface RatingResultRepository {
      * @param classId the class ID
      * @return list of results
      */
-    List<RatingResult> findByClassId(Long classId);
+    List<RatingResult> findByClassId(Long orgUnitId);
 
     /**
      * Finds results by status.

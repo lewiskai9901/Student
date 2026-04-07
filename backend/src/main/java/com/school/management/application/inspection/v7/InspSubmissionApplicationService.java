@@ -200,13 +200,13 @@ public class InspSubmissionApplicationService {
 
             // 构建 ObservationContext（推断 classId）
             Map<Long, String> itemEventTypeMap = buildItemEventTypeMap(details);
-            Long classId = null;
+            Long orgUnitId = null;
             String className = null;
             if (submission.getTargetType() == TargetType.CLASS) {
-                classId = submission.getTargetId();
+                orgUnitId = submission.getTargetId();
                 className = submission.getTargetName();
             }
-            // TODO: 若 targetType 是 STUDENT，可通过 student.classId 查询班级
+            // TODO: 若 targetType 是 STUDENT，可通过 student.orgUnitId 查询班级
 
             ObservationContext ctx = ObservationContext.builder()
                     .submissionId(submission.getId())
@@ -216,7 +216,7 @@ public class InspSubmissionApplicationService {
                     .targetType(submission.getTargetType() != null ? submission.getTargetType().name() : null)
                     .targetId(submission.getTargetId())
                     .targetName(submission.getTargetName())
-                    .classId(classId)
+                    .orgUnitId(orgUnitId)
                     .className(className)
                     .observedAt(LocalDateTime.now())
                     .itemEventTypeMap(itemEventTypeMap)

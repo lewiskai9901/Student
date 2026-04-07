@@ -27,7 +27,7 @@ public class SubmissionObservationPO {
     private String subjectType;
     private Long subjectId;
     private String subjectName;
-    private Long classId;
+    private Long orgUnitId;
     private String className;
 
     private BigDecimal score;

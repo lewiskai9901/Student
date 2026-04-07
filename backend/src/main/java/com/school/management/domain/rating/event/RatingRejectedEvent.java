@@ -8,16 +8,16 @@ public class RatingRejectedEvent extends RatingDomainEvent {
     private final Long reviewerId;
     private final String reason;
 
-    private RatingRejectedEvent(Long resultId, Long ratingConfigId, Long classId,
+    private RatingRejectedEvent(Long resultId, Long ratingConfigId, Long orgUnitId,
                                  Long reviewerId, String reason) {
-        super(resultId, ratingConfigId, classId);
+        super(resultId, ratingConfigId, orgUnitId);
         this.reviewerId = reviewerId;
         this.reason = reason;
     }
 
-    public static RatingRejectedEvent of(Long resultId, Long ratingConfigId, Long classId,
+    public static RatingRejectedEvent of(Long resultId, Long ratingConfigId, Long orgUnitId,
                                           Long reviewerId, String reason) {
-        return new RatingRejectedEvent(resultId, ratingConfigId, classId, reviewerId, reason);
+        return new RatingRejectedEvent(resultId, ratingConfigId, orgUnitId, reviewerId, reason);
     }
 
     @Override

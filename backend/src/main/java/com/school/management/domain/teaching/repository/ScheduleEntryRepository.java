@@ -11,7 +11,7 @@ public interface ScheduleEntryRepository {
     List<ScheduleEntry> findByTaskId(Long taskId);
     List<ScheduleEntry> findByTeacherAndWeekday(Long semesterId, Long teacherId, Integer weekday);
     List<ScheduleEntry> findByClassroomAndWeekday(Long semesterId, Long classroomId, Integer weekday);
-    List<ScheduleEntry> findByClassAndWeekday(Long semesterId, Long classId, Integer weekday);
+    List<ScheduleEntry> findByClassAndWeekday(Long semesterId, Long orgUnitId, Integer weekday);
     void deleteById(Long id);
     void deleteByTaskId(Long taskId);
 }

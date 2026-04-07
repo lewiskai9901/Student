@@ -9,13 +9,13 @@ public class StudentEnrolledEvent extends BaseDomainEvent {
 
     private final String studentNo;
     private final String studentName;
-    private final Long classId;
+    private final Long orgUnitId;
 
-    public StudentEnrolledEvent(String aggregateId, String studentNo, String studentName, Long classId) {
+    public StudentEnrolledEvent(String aggregateId, String studentNo, String studentName, Long orgUnitId) {
         super("Student", aggregateId);
         this.studentNo = studentNo;
         this.studentName = studentName;
-        this.classId = classId;
+        this.orgUnitId = orgUnitId;
     }
 
     public String getStudentNo() {
@@ -26,7 +26,7 @@ public class StudentEnrolledEvent extends BaseDomainEvent {
         return studentName;
     }
 
-    public Long getClassId() {
-        return classId;
+    public Long getOrgUnitId() {
+        return orgUnitId;
     }
 }

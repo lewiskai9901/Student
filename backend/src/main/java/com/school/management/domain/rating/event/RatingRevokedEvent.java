@@ -7,13 +7,13 @@ public class RatingRevokedEvent extends RatingDomainEvent {
 
     private final Long revokedBy;
 
-    private RatingRevokedEvent(Long resultId, Long ratingConfigId, Long classId, Long revokedBy) {
-        super(resultId, ratingConfigId, classId);
+    private RatingRevokedEvent(Long resultId, Long ratingConfigId, Long orgUnitId, Long revokedBy) {
+        super(resultId, ratingConfigId, orgUnitId);
         this.revokedBy = revokedBy;
     }
 
-    public static RatingRevokedEvent of(Long resultId, Long ratingConfigId, Long classId, Long revokedBy) {
-        return new RatingRevokedEvent(resultId, ratingConfigId, classId, revokedBy);
+    public static RatingRevokedEvent of(Long resultId, Long ratingConfigId, Long orgUnitId, Long revokedBy) {
+        return new RatingRevokedEvent(resultId, ratingConfigId, orgUnitId, revokedBy);
     }
 
     @Override

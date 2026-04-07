@@ -16,7 +16,7 @@ public class StudentGradePO {
     private Long taskId;
     private Long courseId;
     private Long studentId;
-    private Long classId;
+    private Long orgUnitId;
     private BigDecimal totalScore;
     private String gradeLevel;
     private BigDecimal gradePoint;

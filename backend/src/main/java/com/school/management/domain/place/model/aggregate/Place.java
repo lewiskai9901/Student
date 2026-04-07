@@ -46,7 +46,7 @@ public class Place extends AggregateRoot<Long> {
 
     // 归属
     private Long orgUnitId;
-    private Long classId;              // 归属班级ID（班主任管理）
+    private Long orgUnitId;              // 归属班级ID（班主任管理）
     private Long responsibleUserId;
 
     // 性别限制
@@ -224,7 +224,7 @@ public class Place extends AggregateRoot<Long> {
                                      Long parentId, String path, Integer level,
                                      Long campusId, Long buildingId, Integer floorNumber,
                                      Integer maxCapacity, Integer currentOccupancy,
-                                     Long orgUnitId, Long classId, Long responsibleUserId,
+                                     Long orgUnitId, Long orgUnitId, Long responsibleUserId,
                                      GenderType genderType,
                                      PlaceStatus status, Map<String, Object> attributes, String description,
                                      Long createdBy, LocalDateTime createdAt,
@@ -248,7 +248,7 @@ public class Place extends AggregateRoot<Long> {
         place.floorNumber = floorNumber;
         place.capacity = Capacity.of(maxCapacity, currentOccupancy);
         place.orgUnitId = orgUnitId;
-        place.classId = classId;
+        place.orgUnitId = orgUnitId;
         place.responsibleUserId = responsibleUserId;
         place.genderType = genderType != null ? genderType : GenderType.MIXED;
         place.status = status;
@@ -272,7 +272,7 @@ public class Place extends AggregateRoot<Long> {
                                      Long parentId, String path, Integer level,
                                      Long campusId, Long buildingId, Integer floorNumber,
                                      Integer maxCapacity, Integer currentOccupancy,
-                                     Long orgUnitId, Long classId, Long responsibleUserId,
+                                     Long orgUnitId, Long orgUnitId, Long responsibleUserId,
                                      GenderType genderType,
                                      PlaceStatus status, Map<String, Object> attributes, String description,
                                      Long createdBy, LocalDateTime createdAt,
@@ -302,7 +302,7 @@ public class Place extends AggregateRoot<Long> {
         place.floorNumber = floorNumber;
         place.capacity = Capacity.of(maxCapacity, currentOccupancy);
         place.orgUnitId = orgUnitId;
-        place.classId = classId;
+        place.orgUnitId = orgUnitId;
         place.responsibleUserId = responsibleUserId;
         place.genderType = genderType != null ? genderType : GenderType.MIXED;
         place.status = status;
@@ -414,8 +414,8 @@ public class Place extends AggregateRoot<Long> {
     /**
      * 分配给班级
      */
-    public void assignToClass(Long classId) {
-        this.classId = classId;
+    public void assignToClass(Long orgUnitId) {
+        this.orgUnitId = orgUnitId;
         this.updatedAt = LocalDateTime.now();
     }
 
@@ -423,7 +423,7 @@ public class Place extends AggregateRoot<Long> {
      * 取消班级分配
      */
     public void unassignFromClass() {
-        this.classId = null;
+        this.orgUnitId = null;
         this.updatedAt = LocalDateTime.now();
     }
 
@@ -568,7 +568,7 @@ public class Place extends AggregateRoot<Long> {
      * 是否已分配给班级
      */
     public boolean isAssignedToClass() {
-        return this.classId != null;
+        return this.orgUnitId != null;
     }
 
     /**

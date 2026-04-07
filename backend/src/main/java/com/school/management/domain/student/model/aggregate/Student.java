@@ -63,7 +63,7 @@ public class Student extends AggregateRoot<Long> {
     /**
      * 班级ID
      */
-    private Long classId;
+    private Long orgUnitId;
 
     /**
      * 学籍状态
@@ -116,7 +116,7 @@ public class Student extends AggregateRoot<Long> {
             String name,
             Gender gender,
             String idCard,
-            Long classId,
+            Long orgUnitId,
             LocalDate enrollmentDate
     ) {
         Student student = new Student();
@@ -124,7 +124,7 @@ public class Student extends AggregateRoot<Long> {
         student.name = name;
         student.gender = gender;
         student.idCard = idCard;
-        student.classId = classId;
+        student.orgUnitId = orgUnitId;
         student.enrollmentDate = enrollmentDate;
         student.status = StudentStatus.STUDYING;
         student.createdAt = LocalDateTime.now();
@@ -155,7 +155,7 @@ public class Student extends AggregateRoot<Long> {
             LocalDate birthDate,
             LocalDate enrollmentDate,
             LocalDate expectedGraduationDate,
-            Long classId,
+            Long orgUnitId,
             StudentStatus status,
             String avatarUrl,
             String homeAddress,
@@ -176,7 +176,7 @@ public class Student extends AggregateRoot<Long> {
         student.birthDate = birthDate;
         student.enrollmentDate = enrollmentDate;
         student.expectedGraduationDate = expectedGraduationDate;
-        student.classId = classId;
+        student.orgUnitId = orgUnitId;
         student.status = status;
         student.avatarUrl = avatarUrl;
         student.homeAddress = homeAddress;
@@ -230,8 +230,8 @@ public class Student extends AggregateRoot<Long> {
         if (this.status != StudentStatus.STUDYING) {
             throw new IllegalStateException("只有在读学生可以转班");
         }
-        Long oldClassId = this.classId;
-        this.classId = newClassId;
+        Long oldClassId = this.orgUnitId;
+        this.orgUnitId = newClassId;
         this.updatedAt = LocalDateTime.now();
 
         // 可以发布转班事件
@@ -311,7 +311,7 @@ public class Student extends AggregateRoot<Long> {
     public LocalDate getBirthDate() { return birthDate; }
     public LocalDate getEnrollmentDate() { return enrollmentDate; }
     public LocalDate getExpectedGraduationDate() { return expectedGraduationDate; }
-    public Long getClassId() { return classId; }
+    public Long getOrgUnitId() { return orgUnitId; }
     public StudentStatus getStatus() { return status; }
     public String getAvatarUrl() { return avatarUrl; }
     public String getHomeAddress() { return homeAddress; }

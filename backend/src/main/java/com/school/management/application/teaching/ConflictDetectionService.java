@@ -165,10 +165,10 @@ public class ConflictDetectionService {
 
         // 3. Class conflicts (same admin class)
         List<Map<String, Object>> classConflicts = jdbcTemplate.queryForList(
-            "SELECT e1.id as id1, e2.id as id2, e1.class_id, " +
+            "SELECT e1.id as id1, e2.id as id2, e1.org_unit_id, " +
             "e1.weekday, e1.start_slot " +
             "FROM schedule_entries e1 " +
-            "JOIN schedule_entries e2 ON e1.class_id = e2.class_id " +
+            "JOIN schedule_entries e2 ON e1.org_unit_id = e2.org_unit_id " +
             "  AND e1.weekday = e2.weekday " +
             "  AND e1.start_slot <= e2.end_slot AND e1.end_slot >= e2.start_slot " +
             "  AND e1.start_week <= e2.end_week AND e1.end_week >= e2.start_week " +

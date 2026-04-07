@@ -27,7 +27,7 @@ public class AutoSchedulingService {
         Long taskId;
         Long courseId;
         Long teacherId;
-        Long classId;
+        Long orgUnitId;
         Long teachingClassId;
         int weeklyHours;
         int startWeek;
@@ -45,7 +45,7 @@ public class AutoSchedulingService {
         Long taskId;
         Long courseId;
         Long teacherId;
-        Long classId;
+        Long orgUnitId;
         Long teachingClassId;
         int dayOfWeek;    // 1-5
         int periodStart;  // 1-10
@@ -180,8 +180,8 @@ public class AutoSchedulingService {
     private List<TaskRequirement> loadRequirements(Long semesterId) {
         // Load tasks that are not fully scheduled
         List<Map<String, Object>> rows = jdbcTemplate.queryForList(
-            "SELECT t.id as task_id, t.course_id, t.class_id, t.weekly_hours, " +
-            "t.start_week, t.end_week, t.teaching_class_id, " +
+            "SELECT t.id as task_id, t.course_id, t.org_unit_id, t.weekly_hours, " +
+            "t.start_week, t.end_week, t.teaching_org_unit_id, " +
             "c.course_name, " +
             "tt.teacher_id " +
             "FROM teaching_tasks t " +
@@ -195,9 +195,9 @@ public class AutoSchedulingService {
             TaskRequirement req = new TaskRequirement();
             req.taskId = toLong(row.get("task_id"));
             req.courseId = toLong(row.get("course_id"));
-            req.classId = toLong(row.get("class_id"));
+            req.orgUnitId = toLong(row.get("org_unit_id"));
             req.teacherId = row.get("teacher_id") != null ? toLong(row.get("teacher_id")) : null;
-            req.teachingClassId = row.get("teaching_class_id") != null ? toLong(row.get("teaching_class_id")) : null;
+            req.teachingClassId = row.get("teaching_org_unit_id") != null ? toLong(row.get("teaching_org_unit_id")) : null;
             req.weeklyHours = toInt(row.get("weekly_hours"));
             req.startWeek = row.get("start_week") != null ? toInt(row.get("start_week")) : 1;
             req.endWeek = row.get("end_week") != null ? toInt(row.get("end_week")) : 16;
@@ -228,7 +228,7 @@ public class AutoSchedulingService {
     private void loadFixedEntries(Long semesterId,
             Set<String> teacherOcc, Set<String> classOcc, Set<String> roomOcc) {
         List<Map<String, Object>> fixed = jdbcTemplate.queryForList(
-            "SELECT teacher_id, class_id, classroom_id, weekday, start_slot, end_slot " +
+            "SELECT teacher_id, org_unit_id, classroom_id, weekday, start_slot, end_slot " +
             "FROM schedule_entries WHERE semester_id = ? AND deleted = 0", semesterId);
         for (Map<String, Object> f : fixed) {
             int day = toInt(f.get("weekday"));
@@ -237,7 +237,7 @@ public class AutoSchedulingService {
             for (int p = startSlot; p <= endSlot; p++) {
                 String key = day + "_" + p;
                 if (f.get("teacher_id") != null) teacherOcc.add(toLong(f.get("teacher_id")) + "_" + key);
-                if (f.get("class_id") != null) classOcc.add(toLong(f.get("class_id")) + "_" + key);
+                if (f.get("org_unit_id") != null) classOcc.add(toLong(f.get("org_unit_id")) + "_" + key);
                 if (f.get("classroom_id") != null) roomOcc.add(toLong(f.get("classroom_id")) + "_" + key);
             }
         }
@@ -301,7 +301,7 @@ public class AutoSchedulingService {
             String key = day + "_" + p;
             if (globalForbidden.contains(key)) return true;
             if (req.teacherId != null && teacherForbidden.getOrDefault(req.teacherId, Collections.emptySet()).contains(key)) return true;
-            if (req.classId != null && classForbidden.getOrDefault(req.classId, Collections.emptySet()).contains(key)) return true;
+            if (req.orgUnitId != null && classForbidden.getOrDefault(req.orgUnitId, Collections.emptySet()).contains(key)) return true;
             if (req.courseId != null && courseForbidden.getOrDefault(req.courseId, Collections.emptySet()).contains(key)) return true;
         }
         return false;
@@ -319,8 +319,8 @@ public class AutoSchedulingService {
                 boolean forbidden = globalForbidden.contains(key);
                 if (!forbidden && req.teacherId != null)
                     forbidden = teacherForbidden.getOrDefault(req.teacherId, Collections.emptySet()).contains(key);
-                if (!forbidden && req.classId != null)
-                    forbidden = classForbidden.getOrDefault(req.classId, Collections.emptySet()).contains(key);
+                if (!forbidden && req.orgUnitId != null)
+                    forbidden = classForbidden.getOrDefault(req.orgUnitId, Collections.emptySet()).contains(key);
                 if (!forbidden) count++;
             }
         }
@@ -352,7 +352,7 @@ public class AutoSchedulingService {
                 TaskRequirement session = new TaskRequirement();
                 session.taskId = req.taskId;
                 session.courseId = req.courseId;
-                session.classId = req.classId;
+                session.orgUnitId = req.orgUnitId;
                 session.teacherId = req.teacherId;
                 session.teachingClassId = req.teachingClassId;
                 session.startWeek = req.startWeek;
@@ -375,7 +375,7 @@ public class AutoSchedulingService {
             List<Long> allTaskIds = new ArrayList<>();
             int totalStudents = 0;
             for (TaskRequirement t : group) {
-                allClassIds.add(t.classId);
+                allClassIds.add(t.orgUnitId);
                 allTaskIds.add(t.taskId);
                 totalStudents += t.studentCount;
             }
@@ -384,7 +384,7 @@ public class AutoSchedulingService {
                 TaskRequirement session = new TaskRequirement();
                 session.taskId = primary.taskId;
                 session.courseId = primary.courseId;
-                session.classId = primary.classId; // 主班级
+                session.orgUnitId = primary.orgUnitId; // 主班级
                 session.teacherId = primary.teacherId;
                 session.teachingClassId = primary.teachingClassId;
                 session.startWeek = primary.startWeek;
@@ -457,7 +457,7 @@ public class AutoSchedulingService {
             slot.taskId = session.taskId;
             slot.courseId = session.courseId;
             slot.teacherId = session.teacherId;
-            slot.classId = session.classId;
+            slot.orgUnitId = session.orgUnitId;
             slot.teachingClassId = session.teachingClassId;
             slot.dayOfWeek = day;
             slot.periodStart = periodStart;
@@ -522,7 +522,7 @@ public class AutoSchedulingService {
                         if (wt == 0 && (teacherOcc.contains(tid + "_1") || teacherOcc.contains(tid + "_2"))) { occupied = true; break; }
                     }
                     // 检查所有涉及班级(合堂)
-                    List<Long> classIds = session.combinedClassIds != null ? session.combinedClassIds : (session.classId != null ? List.of(session.classId) : List.of());
+                    List<Long> classIds = session.combinedClassIds != null ? session.combinedClassIds : (session.orgUnitId != null ? List.of(session.orgUnitId) : List.of());
                     for (Long cid : classIds) {
                         String cidKey = cid + "_" + keyBase;
                         if (classOcc.contains(cidKey + "_0") || classOcc.contains(cidKey + "_" + wt)) { occupied = true; break; }
@@ -567,7 +567,7 @@ public class AutoSchedulingService {
                 slot.taskId = session.taskId;
                 slot.courseId = session.courseId;
                 slot.teacherId = session.teacherId;
-                slot.classId = session.classId;
+                slot.orgUnitId = session.orgUnitId;
                 slot.teachingClassId = session.teachingClassId;
                 slot.dayOfWeek = day;
                 slot.periodStart = periodStart;
@@ -712,7 +712,7 @@ public class AutoSchedulingService {
                             boolean matchesTarget = false;
                             switch (c.getConstraintLevel()) {
                                 case TEACHER: matchesTarget = c.getTargetId().equals(s.teacherId); break;
-                                case CLASS: matchesTarget = c.getTargetId().equals(s.classId); break;
+                                case CLASS: matchesTarget = c.getTargetId().equals(s.orgUnitId); break;
                                 case COURSE: matchesTarget = c.getTargetId().equals(s.courseId); break;
                                 default: matchesTarget = true;
                             }
@@ -847,8 +847,8 @@ public class AutoSchedulingService {
                     classOcc.add(ck);
                     addedClass.add(ck);
                 }
-            } else if (slot.classId != null) {
-                String ck = slot.classId + "_" + keyWt;
+            } else if (slot.orgUnitId != null) {
+                String ck = slot.orgUnitId + "_" + keyWt;
                 classOcc.add(ck);
                 addedClass.add(ck);
             }
@@ -867,7 +867,7 @@ public class AutoSchedulingService {
             c.taskId = s.taskId;
             c.courseId = s.courseId;
             c.teacherId = s.teacherId;
-            c.classId = s.classId;
+            c.orgUnitId = s.orgUnitId;
             c.teachingClassId = s.teachingClassId;
             c.dayOfWeek = s.dayOfWeek;
             c.periodStart = s.periodStart;
@@ -888,14 +888,14 @@ public class AutoSchedulingService {
                 // 合堂: 为每个 task(每个班级) 生成一条 entry, 共享相同时间和教室
                 for (int i = 0; i < slot.combinedTaskIds.size(); i++) {
                     Long taskId = slot.combinedTaskIds.get(i);
-                    Long classId = slot.combinedClassIds.get(i);
+                    Long orgUnitId = slot.combinedClassIds.get(i);
                     jdbcTemplate.update(
-                        "INSERT INTO schedule_entries (id, semester_id, task_id, course_id, class_id, teacher_id, " +
-                        "classroom_id, teaching_class_id, weekday, start_slot, end_slot, start_week, end_week, " +
+                        "INSERT INTO schedule_entries (id, semester_id, task_id, course_id, org_unit_id, teacher_id, " +
+                        "classroom_id, teaching_org_unit_id, weekday, start_slot, end_slot, start_week, end_week, " +
                         "week_type, schedule_type, entry_status, conflict_flag, deleted) " +
                         "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, 1, 0, 0)",
                         com.baomidou.mybatisplus.core.toolkit.IdWorker.getId(),
-                        semesterId, taskId, slot.courseId, classId, slot.teacherId,
+                        semesterId, taskId, slot.courseId, orgUnitId, slot.teacherId,
                         slot.classroomId, slot.teachingClassId,
                         slot.dayOfWeek, slot.periodStart, slot.periodEnd,
                         slot.weekStart, slot.weekEnd, slot.weekType);
@@ -904,12 +904,12 @@ public class AutoSchedulingService {
             } else {
                 // 普通课: 一条 entry
                 jdbcTemplate.update(
-                    "INSERT INTO schedule_entries (id, semester_id, task_id, course_id, class_id, teacher_id, " +
-                    "classroom_id, teaching_class_id, weekday, start_slot, end_slot, start_week, end_week, " +
+                    "INSERT INTO schedule_entries (id, semester_id, task_id, course_id, org_unit_id, teacher_id, " +
+                    "classroom_id, teaching_org_unit_id, weekday, start_slot, end_slot, start_week, end_week, " +
                     "week_type, schedule_type, entry_status, conflict_flag, deleted) " +
                     "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, 1, 0, 0)",
                     com.baomidou.mybatisplus.core.toolkit.IdWorker.getId(),
-                    semesterId, slot.taskId, slot.courseId, slot.classId, slot.teacherId,
+                    semesterId, slot.taskId, slot.courseId, slot.orgUnitId, slot.teacherId,
                     slot.classroomId, slot.teachingClassId,
                     slot.dayOfWeek, slot.periodStart, slot.periodEnd,
                     slot.weekStart, slot.weekEnd, slot.weekType);

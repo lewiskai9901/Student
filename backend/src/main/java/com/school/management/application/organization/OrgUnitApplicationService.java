@@ -411,9 +411,9 @@ public class OrgUnitApplicationService {
             .map(OrgUnit::getId)
             .collect(Collectors.toList());
 
-        if (classIds.isEmpty()) return;
+        if (orgUnitIds.isEmpty()) return;
 
-        List<SchoolClassPO> classPOs = schoolClassMapper.selectBatchIds(classIds);
+        List<SchoolClassPO> classPOs = schoolClassMapper.selectBatchIds(orgUnitIds);
         Map<Long, SchoolClassPO> classMap = classPOs.stream()
             .collect(Collectors.toMap(SchoolClassPO::getId, Function.identity(), (a, b) -> a));
 

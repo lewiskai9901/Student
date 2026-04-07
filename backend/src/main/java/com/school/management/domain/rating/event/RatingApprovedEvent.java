@@ -7,13 +7,13 @@ public class RatingApprovedEvent extends RatingDomainEvent {
 
     private final Long approverId;
 
-    private RatingApprovedEvent(Long resultId, Long ratingConfigId, Long classId, Long approverId) {
-        super(resultId, ratingConfigId, classId);
+    private RatingApprovedEvent(Long resultId, Long ratingConfigId, Long orgUnitId, Long approverId) {
+        super(resultId, ratingConfigId, orgUnitId);
         this.approverId = approverId;
     }
 
-    public static RatingApprovedEvent of(Long resultId, Long ratingConfigId, Long classId, Long approverId) {
-        return new RatingApprovedEvent(resultId, ratingConfigId, classId, approverId);
+    public static RatingApprovedEvent of(Long resultId, Long ratingConfigId, Long orgUnitId, Long approverId) {
+        return new RatingApprovedEvent(resultId, ratingConfigId, orgUnitId, approverId);
     }
 
     @Override

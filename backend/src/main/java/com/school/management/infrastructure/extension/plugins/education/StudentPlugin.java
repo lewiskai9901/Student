@@ -18,7 +18,7 @@ public class StudentPlugin implements EntityTypePlugin {
     public List<FieldDefinition> getSystemFields() {
         return List.of(
             FieldDefinition.of("studentNo", "学号", "text", "基本信息", true, Map.of()),
-            FieldDefinition.of("classId", "班级", "relation", "学籍信息", true,
+            FieldDefinition.of("orgUnitId", "班级", "relation", "学籍信息", true,
                 Map.of("target", "org_units", "targetTypeCode", "CLASS", "labelField", "unitName")),
             FieldDefinition.of("enrollmentDate", "入学日期", "date", "学籍信息", false, Map.of()),
             FieldDefinition.of("guardianName", "监护人姓名", "text", "家庭信息", false, Map.of()),

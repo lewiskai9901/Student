@@ -38,7 +38,7 @@ public class StudentEventHandler {
     @EventListener
     public void handle(StudentEnrolledEvent event) {
         log.info("Handling StudentEnrolledEvent: studentNo={}, studentName={}, classId={}",
-                 event.getStudentNo(), event.getStudentName(), event.getClassId());
+                 event.getStudentNo(), event.getStudentName(), event.getOrgUnitId());
 
         eventStore.store(event);
 
@@ -47,9 +47,9 @@ public class StudentEventHandler {
                 "学生入学: " + event.getStudentName() + " (" + event.getStudentNo() + ")");
 
         // TODO: resolve class teacher userId from classId via access_relations and send enrollment notification
-        if (event.getClassId() != null) {
+        if (event.getOrgUnitId() != null) {
             log.debug("Skipping class teacher notification for enrollment (no target user resolution yet): studentName={}, classId={}",
-                    event.getStudentName(), event.getClassId());
+                    event.getStudentName(), event.getOrgUnitId());
         }
 
         log.info("学生入学事件处理完成: studentNo={}", event.getStudentNo());
@@ -102,7 +102,7 @@ public class StudentEventHandler {
         eventStore.store(event);
 
         // 记录操作日志
-        saveOperationLog("CREATE", "CLASS", event.getClassId(),
+        saveOperationLog("CREATE", "CLASS", event.getOrgUnitId(),
                 "创建班级: " + event.getClassName() + " (" + event.getClassCode() + ")");
 
         // TODO: resolve department admin userId(s) from org unit and send notification
@@ -111,7 +111,7 @@ public class StudentEventHandler {
                     event.getClassName(), event.getOrgUnitId());
         }
 
-        log.info("班级创建事件处理完成: classId={}", event.getClassId());
+        log.info("班级创建事件处理完成: classId={}", event.getOrgUnitId());
     }
 
     /**
@@ -121,7 +121,7 @@ public class StudentEventHandler {
     @EventListener
     public void handle(ClassStatusChangedEvent event) {
         log.info("Handling ClassStatusChangedEvent: classId={}, {} -> {}",
-                 event.getClassId(), event.getOldStatus(), event.getNewStatus());
+                 event.getOrgUnitId(), event.getOldStatus(), event.getNewStatus());
 
         eventStore.store(event);
 
@@ -143,7 +143,7 @@ public class StudentEventHandler {
     @EventListener
     public void handle(TeacherAssignedEvent event) {
         log.info("Handling TeacherAssignedEvent: classId={}, teacherId={}, role={}",
-                 event.getClassId(), event.getTeacherId(), event.getRole());
+                 event.getOrgUnitId(), event.getTeacherId(), event.getRole());
 
         eventStore.store(event);
 
@@ -200,12 +200,12 @@ public class StudentEventHandler {
     private void handleClassGraduation(ClassStatusChangedEvent event) {
         log.info("Class {} graduated, processing graduation workflow", event.getClassName());
 
-        saveOperationLog("GRADUATE", "CLASS", event.getClassId(),
+        saveOperationLog("GRADUATE", "CLASS", event.getOrgUnitId(),
                 "班级毕业: " + event.getClassName());
 
         log.debug("Skipping class teacher notification for graduation (no target user resolution yet): className={}", event.getClassName());
 
-        log.info("班级毕业处理完成: classId={}, className={}", event.getClassId(), event.getClassName());
+        log.info("班级毕业处理完成: classId={}, className={}", event.getOrgUnitId(), event.getClassName());
     }
 
     /**
@@ -214,12 +214,12 @@ public class StudentEventHandler {
     private void handleClassActivation(ClassStatusChangedEvent event) {
         log.info("Class {} activated, initializing class configuration", event.getClassName());
 
-        saveOperationLog("ACTIVATE", "CLASS", event.getClassId(),
+        saveOperationLog("ACTIVATE", "CLASS", event.getOrgUnitId(),
                 "班级激活: " + event.getClassName());
 
         log.debug("Skipping activation notification (no target user resolution yet): className={}", event.getClassName());
 
-        log.info("班级激活处理完成: classId={}", event.getClassId());
+        log.info("班级激活处理完成: classId={}", event.getOrgUnitId());
     }
 
     /**
@@ -239,7 +239,7 @@ public class StudentEventHandler {
                 NotificationService.MessageType.TASK_ASSIGNED
         );
 
-        log.info("班主任任命处理完成: teacherId={}, classId={}", event.getTeacherId(), event.getClassId());
+        log.info("班主任任命处理完成: teacherId={}, classId={}", event.getTeacherId(), event.getOrgUnitId());
     }
 
     /**

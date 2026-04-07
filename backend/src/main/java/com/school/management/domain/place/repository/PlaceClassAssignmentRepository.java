@@ -28,7 +28,7 @@ public interface PlaceClassAssignmentRepository {
     /**
      * 根据班级ID查询所有分配
      */
-    List<PlaceClassAssignment> findByClassId(Long classId);
+    List<PlaceClassAssignment> findByClassId(Long orgUnitId);
 
     /**
      * 根据组织单元ID查询所有分配
@@ -38,7 +38,7 @@ public interface PlaceClassAssignmentRepository {
     /**
      * 根据场所ID和班级ID查询
      */
-    Optional<PlaceClassAssignment> findByPlaceIdAndClassId(Long placeId, Long classId);
+    Optional<PlaceClassAssignment> findByPlaceIdAndClassId(Long placeId, Long orgUnitId);
 
     /**
      * 删除分配记录
@@ -53,12 +53,12 @@ public interface PlaceClassAssignmentRepository {
     /**
      * 删除班级的所有分配
      */
-    void deleteByClassId(Long classId);
+    void deleteByClassId(Long orgUnitId);
 
     /**
      * 检查场所是否已分配给班级
      */
-    boolean existsByPlaceIdAndClassId(Long placeId, Long classId);
+    boolean existsByPlaceIdAndClassId(Long placeId, Long orgUnitId);
 
     /**
      * 统计场所的分配数量
@@ -68,7 +68,7 @@ public interface PlaceClassAssignmentRepository {
     /**
      * 统计班级的分配数量
      */
-    int countByClassId(Long classId);
+    int countByClassId(Long orgUnitId);
 
     /**
      * 批量保存
