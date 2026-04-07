@@ -2,20 +2,12 @@
   <el-dialog
     :model-value="visible"
     :title="dialogTitle"
-    :width="showClassForm ? '640px' : '520px'"
+    width="520px"
     :close-on-click-modal="false"
     @update:model-value="$emit('update:visible', $event)"
     @closed="handleClosed"
   >
-    <!-- CLASS type: render ClassForm instead -->
-    <ClassForm
-      v-if="showClassForm"
-      mode="add"
-      @success="handleClassFormSuccess"
-      @close="$emit('update:visible', false)"
-    />
-
-    <div v-else class="space-y-5">
+    <div class="space-y-5">
       <!-- Basic Info -->
       <div>
         <h4 class="mb-3 text-xs font-semibold uppercase tracking-wider text-gray-400">基本信息</h4>
@@ -162,7 +154,7 @@
       </div>
     </div>
 
-    <template v-if="!showClassForm" #footer>
+    <template #footer>
       <div class="flex items-center justify-end gap-3">
         <el-button @click="$emit('update:visible', false)">取消</el-button>
         <el-button type="primary" :loading="submitting" @click="handleSubmit">
@@ -184,7 +176,7 @@ import {
   type DepartmentResponse,
   type OrgUnitTypeConfig
 } from '@/api/organization'
-import ClassForm from '@/components/class/ClassForm.vue'
+// ClassForm removed - org management is now generic, class binding done in student module
 
 interface Props {
   visible: boolean
@@ -232,24 +224,14 @@ const positionTemplates = computed(() => {
   return selectedTypeConfig?.defaultPositions || []
 })
 
-// Show ClassForm when adding a child and GROUP category type is selected
-const showClassForm = computed(() => {
-  if (isEdit.value || !formData.unitType) return false
-  const selectedType = availableTypes.value.find(t => t.typeCode === formData.unitType)
-  return selectedType?.category === 'GROUP'
-})
-
 const dialogTitle = computed(() => {
   if (isEdit.value) return '编辑组织'
-  if (showClassForm.value) return `新建班级 — ${props.parentDepartment?.unitName || ''}`
-  if (props.parentDepartment) return `新建子组织 — ${props.parentDepartment.unitName}`
+  // 显示选中的类型名，如 "新建年级 — 经济与信息技术系"
+  const selectedType = availableTypes.value.find(t => t.typeCode === formData.unitType)
+  const typeName = selectedType?.typeName || '子组织'
+  if (props.parentDepartment) return `新建${typeName} — ${props.parentDepartment.unitName}`
   return '新建组织'
 })
-
-const handleClassFormSuccess = () => {
-  emit('update:visible', false)
-  emit('success')
-}
 
 const treeSelectProps = {
   value: 'id',
