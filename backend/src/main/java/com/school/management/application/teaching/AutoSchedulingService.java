@@ -35,6 +35,8 @@ public class AutoSchedulingService {
         int consecutivePeriods; // default 2 for double-period classes
         int timesPerWeek;      // number of sessions per week
         String courseName;
+        List<Long> combinedClassIds;  // 合堂: 所有涉及的班级ID
+        List<Long> combinedTaskIds;   // 合堂: 所有涉及的任务ID
     }
 
     static class ScheduleSlot {
@@ -50,6 +52,8 @@ public class AutoSchedulingService {
         int weekEnd;
         int weekType;     // 0=all
         Long classroomId;
+        List<Long> combinedClassIds;  // 合堂涉及的所有班级
+        List<Long> combinedTaskIds;   // 合堂涉及的所有任务
     }
 
     /**
@@ -178,17 +182,14 @@ public class AutoSchedulingService {
 
     private List<Map<String, Object>> loadClassrooms() {
         try {
+            // 从 places 表查教室类型的场所
             return jdbcTemplate.queryForList(
-                "SELECT id, name, capacity FROM universal_places WHERE deleted = 0 AND capacity > 0");
+                "SELECT id, place_name AS name, " +
+                "COALESCE(capacity, CAST(JSON_UNQUOTE(JSON_EXTRACT(attributes, '$.capacity')) AS UNSIGNED), 50) AS capacity " +
+                "FROM places WHERE deleted = 0 AND room_type = 'CLASSROOM' ORDER BY capacity DESC");
         } catch (Exception e) {
-            // Fallback: if universal_places doesn't have capacity, try classrooms table
-            try {
-                return jdbcTemplate.queryForList(
-                    "SELECT id, name, capacity FROM classrooms WHERE deleted = 0");
-            } catch (Exception e2) {
-                log.warn("无法加载教室数据，将不分配教室");
-                return Collections.emptyList();
-            }
+            log.warn("无法加载教室数据: {}", e.getMessage());
+            return Collections.emptyList();
         }
     }
 
@@ -297,8 +298,24 @@ public class AutoSchedulingService {
     // ==================== Session Expansion ====================
 
     private List<TaskRequirement> expandToSessions(List<TaskRequirement> requirements) {
-        List<TaskRequirement> sessions = new ArrayList<>();
+        // 1. 合堂合并: 同一 teachingClassId + courseId 的 task 合并为一组
+        //    合堂组只排一次, 但占用所有涉及班级的时段
+        Map<String, List<TaskRequirement>> combinedGroups = new LinkedHashMap<>();
+        List<TaskRequirement> normalTasks = new ArrayList<>();
+
         for (TaskRequirement req : requirements) {
+            if (req.teachingClassId != null) {
+                String groupKey = req.teachingClassId + "_" + req.courseId;
+                combinedGroups.computeIfAbsent(groupKey, k -> new ArrayList<>()).add(req);
+            } else {
+                normalTasks.add(req);
+            }
+        }
+
+        List<TaskRequirement> sessions = new ArrayList<>();
+
+        // 展开普通课程
+        for (TaskRequirement req : normalTasks) {
             for (int i = 0; i < req.timesPerWeek; i++) {
                 TaskRequirement session = new TaskRequirement();
                 session.taskId = req.taskId;
@@ -309,16 +326,45 @@ public class AutoSchedulingService {
                 session.startWeek = req.startWeek;
                 session.endWeek = req.endWeek;
                 session.courseName = req.courseName;
-
-                // Last session might be shorter
                 int remainingHours = req.weeklyHours - i * req.consecutivePeriods;
                 session.consecutivePeriods = Math.min(req.consecutivePeriods, remainingHours);
                 session.weeklyHours = session.consecutivePeriods;
                 session.timesPerWeek = 1;
-
                 sessions.add(session);
             }
         }
+
+        // 展开合堂课程: 取组内第一个 task 的参数, 但记录所有 classId
+        for (List<TaskRequirement> group : combinedGroups.values()) {
+            TaskRequirement primary = group.get(0);
+            // 合堂课的 combinedClassIds 记录所有班级
+            List<Long> allClassIds = new ArrayList<>();
+            List<Long> allTaskIds = new ArrayList<>();
+            for (TaskRequirement t : group) {
+                allClassIds.add(t.classId);
+                allTaskIds.add(t.taskId);
+            }
+
+            for (int i = 0; i < primary.timesPerWeek; i++) {
+                TaskRequirement session = new TaskRequirement();
+                session.taskId = primary.taskId;
+                session.courseId = primary.courseId;
+                session.classId = primary.classId; // 主班级
+                session.teacherId = primary.teacherId;
+                session.teachingClassId = primary.teachingClassId;
+                session.startWeek = primary.startWeek;
+                session.endWeek = primary.endWeek;
+                session.courseName = primary.courseName + "(合堂)";
+                session.combinedClassIds = allClassIds;
+                session.combinedTaskIds = allTaskIds;
+                int remainingHours = primary.weeklyHours - i * primary.consecutivePeriods;
+                session.consecutivePeriods = Math.min(primary.consecutivePeriods, remainingHours);
+                session.weeklyHours = session.consecutivePeriods;
+                session.timesPerWeek = 1;
+                sessions.add(session);
+            }
+        }
+
         return sessions;
     }
 
@@ -382,6 +428,8 @@ public class AutoSchedulingService {
             slot.weekEnd = session.endWeek;
             slot.weekType = 0;
             slot.classroomId = roomId;
+            slot.combinedClassIds = session.combinedClassIds;
+            slot.combinedTaskIds = session.combinedTaskIds;
 
             // Mark occupied
             Set<String> addedTeacher = new HashSet<>();
@@ -708,7 +756,14 @@ public class AutoSchedulingService {
                 teacherOcc.add(tk);
                 addedTeacher.add(tk);
             }
-            if (slot.classId != null) {
+            // 合堂: 占用所有涉及班级的时段
+            if (slot.combinedClassIds != null && !slot.combinedClassIds.isEmpty()) {
+                for (Long cid : slot.combinedClassIds) {
+                    String ck = cid + "_" + key;
+                    classOcc.add(ck);
+                    addedClass.add(ck);
+                }
+            } else if (slot.classId != null) {
                 String ck = slot.classId + "_" + key;
                 classOcc.add(ck);
                 addedClass.add(ck);
@@ -745,17 +800,37 @@ public class AutoSchedulingService {
     private int writeSolution(Long semesterId, List<ScheduleSlot> solution) {
         int count = 0;
         for (ScheduleSlot slot : solution) {
-            jdbcTemplate.update(
-                "INSERT INTO schedule_entries (id, semester_id, task_id, course_id, class_id, teacher_id, " +
-                "classroom_id, teaching_class_id, weekday, start_slot, end_slot, start_week, end_week, " +
-                "week_type, schedule_type, entry_status, conflict_flag, deleted) " +
-                "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, 1, 0, 0)",
-                com.baomidou.mybatisplus.core.toolkit.IdWorker.getId(),
-                semesterId, slot.taskId, slot.courseId, slot.classId, slot.teacherId,
-                slot.classroomId, slot.teachingClassId,
-                slot.dayOfWeek, slot.periodStart, slot.periodEnd,
-                slot.weekStart, slot.weekEnd, slot.weekType);
-            count++;
+            if (slot.combinedTaskIds != null && slot.combinedTaskIds.size() > 1) {
+                // 合堂: 为每个 task(每个班级) 生成一条 entry, 共享相同时间和教室
+                for (int i = 0; i < slot.combinedTaskIds.size(); i++) {
+                    Long taskId = slot.combinedTaskIds.get(i);
+                    Long classId = slot.combinedClassIds.get(i);
+                    jdbcTemplate.update(
+                        "INSERT INTO schedule_entries (id, semester_id, task_id, course_id, class_id, teacher_id, " +
+                        "classroom_id, teaching_class_id, weekday, start_slot, end_slot, start_week, end_week, " +
+                        "week_type, schedule_type, entry_status, conflict_flag, deleted) " +
+                        "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, 1, 0, 0)",
+                        com.baomidou.mybatisplus.core.toolkit.IdWorker.getId(),
+                        semesterId, taskId, slot.courseId, classId, slot.teacherId,
+                        slot.classroomId, slot.teachingClassId,
+                        slot.dayOfWeek, slot.periodStart, slot.periodEnd,
+                        slot.weekStart, slot.weekEnd, slot.weekType);
+                    count++;
+                }
+            } else {
+                // 普通课: 一条 entry
+                jdbcTemplate.update(
+                    "INSERT INTO schedule_entries (id, semester_id, task_id, course_id, class_id, teacher_id, " +
+                    "classroom_id, teaching_class_id, weekday, start_slot, end_slot, start_week, end_week, " +
+                    "week_type, schedule_type, entry_status, conflict_flag, deleted) " +
+                    "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, 1, 0, 0)",
+                    com.baomidou.mybatisplus.core.toolkit.IdWorker.getId(),
+                    semesterId, slot.taskId, slot.courseId, slot.classId, slot.teacherId,
+                    slot.classroomId, slot.teachingClassId,
+                    slot.dayOfWeek, slot.periodStart, slot.periodEnd,
+                    slot.weekStart, slot.weekEnd, slot.weekType);
+                count++;
+            }
         }
         return count;
     }
