@@ -30,17 +30,71 @@
           <tr v-else-if="scheduleList.length === 0">
             <td colspan="5" class="tm-empty">暂无排课方案</td>
           </tr>
-          <tr v-for="row in scheduleList" :key="row.id">
-            <td class="text-left" style="font-weight: 500;">{{ row.name }}</td>
+          <tr v-for="row in scheduleList" :key="row.id" :style="selectedPlan?.id === row.id ? 'background: #eff6ff;' : ''" @click="selectPlan(row)">
+            <td class="text-left" style="font-weight: 500; cursor: pointer;">{{ row.name }}</td>
             <td><span :class="['tm-chip', { 0:'tm-chip-gray', 1:'tm-chip-green', 2:'tm-chip-amber' }[row.status] || 'tm-chip-gray']">{{ getStatusName(row.status) }}</span></td>
             <td style="font-size: 12px; color: #6b7280;">{{ row.createdAt }}</td>
             <td class="tm-mono">{{ row.entryCount ?? '-' }}</td>
             <td>
               <button class="tm-action" style="color: #2563eb;" @click="handleAutoSchedule(row)">智能排课</button>
-              <button v-if="row.status === 0" class="tm-action" style="color: #16a34a;" @click="handlePublish(row)">��布</button>
+              <button v-if="row.status === 0" class="tm-action" style="color: #16a34a;" @click="handlePublish(row)">发布</button>
               <button v-if="row.status === 0" class="tm-action" style="color: #d97706;" @click="handleArchive(row)">归档</button>
               <button v-if="row.status === 0" class="tm-action tm-action-danger" @click="handleDelete(row)">删除</button>
             </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Selected plan entries -->
+    <div v-if="selectedPlan" style="border: 1px solid #e5e7eb; border-radius: 10px; background: #fff; overflow: hidden; margin-bottom: 16px;">
+      <div style="display: flex; align-items: center; justify-content: space-between; padding: 12px 20px; border-bottom: 1px solid #f3f4f6;">
+        <div>
+          <h3 style="font-size: 14px; font-weight: 600; color: #111827; margin: 0;">{{ selectedPlan.name }}</h3>
+          <div class="tm-stats" style="margin-top: 4px;">
+            <span>{{ getStatusName(selectedPlan.status) }}</span>
+            <span class="sep" />
+            <span>共 <b>{{ entries.length }}</b> 条排课</span>
+          </div>
+        </div>
+        <button class="tm-drawer-close" @click="selectedPlan = null">&times;</button>
+      </div>
+      <div v-if="entriesLoading" style="text-align: center; padding: 30px 0; color: #9ca3af; font-size: 13px;">
+        <span class="tm-spin" style="display:inline-block;width:16px;height:16px;border:2px solid #e5e7eb;border-top-color:#2563eb;border-radius:50%;" /> 加载中...
+      </div>
+      <div v-else-if="entries.length === 0" style="text-align: center; padding: 30px 0; color: #9ca3af; font-size: 13px;">
+        该方案暂无排课条目，可点击"智能排课"自动生成
+      </div>
+      <table v-else class="tm-table" style="border-radius: 0; border: none;">
+        <colgroup>
+          <col />
+          <col style="width: 100px" />
+          <col style="width: 80px" />
+          <col style="width: 80px" />
+          <col style="width: 100px" />
+          <col style="width: 100px" />
+          <col style="width: 80px" />
+        </colgroup>
+        <thead>
+          <tr>
+            <th class="text-left">课程</th>
+            <th>班级</th>
+            <th>星期</th>
+            <th>节次</th>
+            <th>教室</th>
+            <th>教师</th>
+            <th>周次</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr v-for="e in entries" :key="e.id">
+            <td class="text-left">{{ e.courseName || '-' }}</td>
+            <td>{{ e.className || '-' }}</td>
+            <td>{{ getWeekdayName(e.weekday) }}</td>
+            <td class="tm-mono">{{ e.startSlot }}-{{ e.endSlot }}</td>
+            <td>{{ e.classroomName || '-' }}</td>
+            <td>{{ e.teacherName || '-' }}</td>
+            <td class="tm-mono" style="font-size: 11px;">{{ e.startWeek }}-{{ e.endWeek }}</td>
           </tr>
         </tbody>
       </table>
@@ -79,7 +133,7 @@
       <div v-if="autoScheduleDialogVisible" class="tm-drawer-overlay" @click.self="!scheduling && (autoScheduleDialogVisible = false)">
         <div class="tm-drawer" style="width: 480px;">
           <div class="tm-drawer-header">
-            <h3 class="tm-drawer-title">���能排课</h3>
+            <h3 class="tm-drawer-title">智能排课</h3>
             <button v-if="!scheduling" class="tm-drawer-close" @click="autoScheduleDialogVisible = false">&times;</button>
           </div>
           <div class="tm-drawer-body">
@@ -125,12 +179,29 @@
 import { ref, watch } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { scheduleApi } from '@/api/teaching'
-import type { CourseSchedule } from '@/types/teaching'
+import type { CourseSchedule, ScheduleEntry } from '@/types/teaching'
+import { WEEKDAYS } from '@/types/teaching'
 
 const props = defineProps<{ semesterId: number | string | undefined }>()
 
 const loading = ref(false)
 const scheduleList = ref<CourseSchedule[]>([])
+const selectedPlan = ref<CourseSchedule | null>(null)
+const entries = ref<any[]>([])
+const entriesLoading = ref(false)
+
+function getWeekdayName(day: number) { return WEEKDAYS.find(w => w.value === day)?.label || `周${day}` }
+
+async function selectPlan(plan: CourseSchedule) {
+  selectedPlan.value = plan
+  entriesLoading.value = true
+  try {
+    const res = await scheduleApi.getEntries(plan.id)
+    entries.value = (res as any).data || res || []
+    if (!Array.isArray(entries.value)) entries.value = []
+  } catch { entries.value = [] }
+  finally { entriesLoading.value = false }
+}
 
 const createDialogVisible = ref(false)
 const createSaving = ref(false)
