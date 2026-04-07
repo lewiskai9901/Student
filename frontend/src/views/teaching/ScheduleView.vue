@@ -38,18 +38,8 @@
         <ConflictPanel v-else-if="activeTab === 'conflicts'" :semester-id="semesterId" />
         <AdjustmentPanel v-else-if="activeTab === 'adjustments'" :semester-id="semesterId" />
 
-        <!-- Constraints (lightweight inline) -->
-        <div v-else-if="activeTab === 'constraints'" style="border: 1px solid #e5e7eb; border-radius: 10px; background: #fff; padding: 40px; text-align: center;">
-          <p style="font-size: 13px; font-weight: 500; color: #6b7280; margin-bottom: 4px;">约束配置</p>
-          <p style="font-size: 12px; color: #9ca3af; margin-bottom: 12px;">约束规则管理已移至独立页面</p>
-          <router-link
-            v-if="constraintRouteExists"
-            :to="{ name: 'ConstraintConfig' }"
-            class="tm-btn tm-btn-primary"
-            style="text-decoration: none;"
-          >前往约束配置</router-link>
-          <span v-else style="font-size: 12px; color: #9ca3af;">约束配置页面尚未创建</span>
-        </div>
+        <!-- Constraints (inline) -->
+        <ConstraintConfig v-else-if="activeTab === 'constraints'" :semester-id="semesterId" />
 
         <!-- Export (lightweight inline) -->
         <div v-else-if="activeTab === 'export'" style="border: 1px solid #e5e7eb; border-radius: 10px; background: #fff; padding: 20px;">
@@ -79,7 +69,6 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
-import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { http as request } from '@/utils/request'
 import { scheduleApi } from '@/api/teaching'
@@ -91,6 +80,7 @@ import ScheduleManager from './schedule/ScheduleManager.vue'
 import TimetableViewer from './schedule/TimetableViewer.vue'
 import ConflictPanel from './schedule/ConflictPanel.vue'
 import AdjustmentPanel from './schedule/AdjustmentPanel.vue'
+import ConstraintConfig from './schedule/ConstraintConfig.vue'
 
 const tabs = [
   { key: 'overview', label: '排课总览' },
@@ -104,13 +94,10 @@ const tabs = [
 
 type TabKey = (typeof tabs)[number]['key']
 
-const router = useRouter()
 const globalLoading = ref(false)
 const activeTab = ref<TabKey>('overview')
 const semesterId = ref<number | string>()
 const semesters = ref<Semester[]>([])
-
-const constraintRouteExists = computed(() => router.getRoutes().some(r => r.name === 'ConstraintConfig'))
 
 const exportDimension = ref<'class' | 'teacher'>('class')
 const exportTargetId = ref<number | string>('')
