@@ -25,6 +25,7 @@ declare module 'vue' {
     DataTable: typeof import('./src/components/design-system/tables/DataTable.vue')['default']
     DecorationImageManager: typeof import('./src/components/settings/DecorationImageManager.vue')['default']
     DepartmentTreeNode: typeof import('./src/components/common/DepartmentTreeNode.vue')['default']
+    DynamicForm: typeof import('./src/components/extension/DynamicForm.vue')['default']
     ElAlert: typeof import('element-plus/es')['ElAlert']
     ElButton: typeof import('element-plus/es')['ElButton']
     ElCard: typeof import('element-plus/es')['ElCard']

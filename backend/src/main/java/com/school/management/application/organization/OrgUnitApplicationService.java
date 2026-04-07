@@ -18,6 +18,8 @@ import com.school.management.domain.organization.repository.UserPositionReposito
 import com.school.management.domain.organization.service.OrgUnitDomainService;
 import com.school.management.domain.access.repository.AccessRelationRepository;
 import com.school.management.domain.shared.event.DomainEventPublisher;
+import com.school.management.infrastructure.extension.ExtensionContext;
+import com.school.management.infrastructure.extension.ExtensionDispatcher;
 import com.school.management.infrastructure.persistence.student.SchoolClassMapper;
 import com.school.management.infrastructure.persistence.student.SchoolClassPO;
 import com.school.management.infrastructure.persistence.place.UniversalPlaceOccupantMapper;
@@ -60,6 +62,9 @@ public class OrgUnitApplicationService {
     @Autowired(required = false)
     private TriggerService triggerService;
 
+    @Autowired(required = false)
+    private ExtensionDispatcher extensionDispatcher;
+
     @Transactional
     public OrgUnitDTO createOrgUnit(CreateOrgUnitCommand command) {
         OrgUnit orgUnit = orgUnitDomainService.createOrgUnit(
@@ -78,8 +83,23 @@ public class OrgUnitApplicationService {
         // Create user-selected positions (or none if not provided)
         createSelectedPositions(orgUnit, command.getSelectedPositions());
 
-        // 联动: 如果类型 category=GROUP，自动创建 classes 扩展记录
-        autoCreateClassBinding(orgUnit);
+        // SPI: 触发插件生命周期钩子
+        if (extensionDispatcher != null && orgUnit.getUnitType() != null) {
+            try {
+                ExtensionContext ctx = ExtensionContext.builder()
+                    .entityType("ORG_UNIT")
+                    .typeCode(orgUnit.getUnitType())
+                    .entityId(orgUnit.getId())
+                    .entityName(orgUnit.getUnitName())
+                    .parentId(command.getParentId())
+                    .attributes(orgUnit.getAttributes())
+                    .operatorId(command.getCreatedBy())
+                    .build();
+                extensionDispatcher.fireAfterCreate("ORG_UNIT", orgUnit.getUnitType(), ctx);
+            } catch (Exception e) {
+                log.warn("SPI afterCreate 执行异常: {}", e.getMessage());
+            }
+        }
 
         // 触发事件: 组织单元创建
         if (triggerService != null) {
