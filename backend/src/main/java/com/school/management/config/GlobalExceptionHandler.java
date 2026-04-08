@@ -200,7 +200,7 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(HttpMessageNotReadableException.class)
     @ResponseStatus(HttpStatus.BAD_REQUEST)
     public Result<Void> handleHttpMessageNotReadableException(HttpMessageNotReadableException e) {
-        String message = "请求体格式错误，请检查JSON格式";
+        String message = "请求体格式错误: " + (e.getCause() != null ? e.getCause().getMessage() : e.getMessage());
         log.warn("HTTP消息不可读: {}", e.getMessage());
         return Result.error(ResultCode.VALIDATION_ERROR.getCode(), message);
     }

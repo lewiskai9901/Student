@@ -6,6 +6,7 @@ import jakarta.validation.constraints.Size;
 import lombok.Data;
 
 import java.util.List;
+import java.util.Map;
 
 /**
  * Request DTO for creating an organization unit.
@@ -33,6 +34,9 @@ public class CreateOrgUnitRequest {
 
     @Schema(description = "User-selected positions to create from template")
     private List<SelectedPositionRequest> selectedPositions;
+
+    @Schema(description = "Extension attributes from DynamicForm (stored in org_units.attributes JSON)")
+    private Map<String, Object> attributes;
 
     @Data
     public static class SelectedPositionRequest {

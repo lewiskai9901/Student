@@ -53,6 +53,7 @@ public class OrgUnitController {
             .parentId(request.getParentId())
             .createdBy(SecurityUtils.requireCurrentUserId())
             .selectedPositions(selectedPositions)
+            .attributes(request.getAttributes())
             .build();
 
         OrgUnitDTO result = orgUnitService.createOrgUnit(command);

@@ -677,7 +677,6 @@ import type { Position, OrgStatistics } from '@/types/position'
 import ActivityTimeline from '@/components/activity/ActivityTimeline.vue'
 import { AppointmentTypeLabels } from '@/types/position'
 import type { OrgMember } from '@/types/position'
-import { entityTypeApi } from '@/api/entityType'
 
 interface Props {
   node: DepartmentResponse
