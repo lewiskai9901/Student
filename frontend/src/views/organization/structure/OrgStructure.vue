@@ -1,7 +1,7 @@
 <template>
-  <div class="flex h-full bg-gray-50">
+  <div class="org-page">
     <!-- Left Sidebar -->
-    <div class="flex w-[280px] flex-shrink-0 flex-col border-r border-gray-200 bg-white">
+    <div class="org-sidebar-wrap">
       <OrgSidebar
         :tree-data="treeData"
         :selected-id="selectedNodeId"
@@ -12,54 +12,33 @@
     </div>
 
     <!-- Right Content Panel -->
-    <div class="flex flex-1 flex-col overflow-hidden">
+    <div class="org-main">
       <!-- Top Header Bar -->
-      <div class="flex items-center justify-between border-b border-gray-200 bg-white px-6 py-4">
+      <header class="tm-header">
         <div>
-          <h1 class="text-lg font-semibold text-gray-900">组织架构</h1>
-          <p class="mt-0.5 text-sm text-gray-500">管理学校的组织与院系结构</p>
+          <h1 class="tm-title">组织架构</h1>
+          <div class="tm-stats" style="margin-top: 4px;">管理学校的组织与院系结构</div>
         </div>
-        <router-link
-          to="/system/org-types"
-          class="inline-flex items-center gap-1.5 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50"
-        >
-          <Settings class="h-4 w-4" />
+        <router-link to="/system/org-types" class="tm-btn tm-btn-secondary">
+          <Settings style="width: 16px; height: 16px;" />
           管理类型
         </router-link>
-      </div>
+      </header>
 
       <!-- Stat Bar -->
-      <div class="flex items-center gap-5 border-b border-gray-200 bg-white px-6 py-2.5">
-        <div class="flex items-center gap-1.5">
-          <div class="flex h-6 w-6 items-center justify-center rounded bg-blue-50">
-            <Building2 class="h-3.5 w-3.5 text-blue-600" />
-          </div>
-          <span class="text-sm text-gray-500">总数</span>
-          <span class="text-sm font-semibold text-gray-900">{{ stats.total }}</span>
-        </div>
-        <div class="h-3 w-px bg-gray-200" />
-        <div class="flex items-center gap-1.5">
-          <div class="flex h-6 w-6 items-center justify-center rounded bg-emerald-50">
-            <CheckCircle class="h-3.5 w-3.5 text-emerald-600" />
-          </div>
-          <span class="text-sm text-gray-500">正常</span>
-          <span class="text-sm font-semibold text-gray-900">{{ stats.active }}</span>
-        </div>
-        <div class="h-3 w-px bg-gray-200" />
-        <div class="flex items-center gap-1.5">
-          <div class="flex h-6 w-6 items-center justify-center rounded bg-orange-50">
-            <XCircle class="h-3.5 w-3.5 text-orange-600" />
-          </div>
-          <span class="text-sm text-gray-500">冻结/撤销</span>
-          <span class="text-sm font-semibold text-gray-900">{{ stats.inactive }}</span>
-        </div>
+      <div class="tm-stats-bar">
+        <span class="tm-stats">总数 <b>{{ stats.total }}</b></span>
+        <i class="sep" />
+        <span class="tm-stats"><em class="dot dot-green" /> 正常 <b>{{ stats.active }}</b></span>
+        <i class="sep" />
+        <span class="tm-stats"><em class="dot dot-gray" /> 冻结/撤销 <b>{{ stats.inactive }}</b></span>
       </div>
 
       <!-- Main Content Area -->
-      <div class="flex-1 overflow-y-auto px-6 pt-5 pb-6">
+      <div class="org-content">
         <!-- Loading State -->
-        <div v-if="loading" class="flex items-center justify-center py-20">
-          <div class="h-8 w-8 animate-spin rounded-full border-2 border-blue-600 border-t-transparent"></div>
+        <div v-if="loading" class="org-loading">
+          <div class="org-spinner tm-spin"></div>
         </div>
 
         <!-- Detail Panel (when node selected) -->
@@ -306,3 +285,61 @@ const handleFormSuccess = async (createdId?: number) => {
 
 onMounted(loadData)
 </script>
+
+<style scoped>
+@import '@/styles/teaching-ui.css';
+
+.org-page {
+  display: flex;
+  height: 100%;
+  background: #f8f9fb;
+  font-family: 'DM Sans', sans-serif;
+}
+.org-sidebar-wrap {
+  display: flex;
+  flex-direction: column;
+  width: 280px;
+  flex-shrink: 0;
+  border-right: 1px solid #e5e7eb;
+  background: #fff;
+}
+.org-main {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  overflow: hidden;
+}
+.tm-stats-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 24px;
+  background: #fff;
+  border-bottom: 1px solid #e8eaed;
+  font-size: 12.5px;
+  color: #6b7280;
+}
+.tm-stats-bar .sep { display: block; width: 1px; height: 10px; background: #d1d5db; }
+.tm-stats-bar .dot { display: inline-block; width: 6px; height: 6px; border-radius: 50%; margin-right: 2px; vertical-align: middle; }
+.tm-stats-bar .dot-green { background: #10b981; }
+.tm-stats-bar .dot-gray { background: #9ca3af; }
+.tm-stats-bar b { font-weight: 600; color: #111827; }
+.org-content {
+  flex: 1;
+  overflow-y: auto;
+  padding: 20px 24px 24px;
+}
+.org-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 80px 0;
+}
+.org-spinner {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: 2px solid #2563eb;
+  border-top-color: transparent;
+}
+</style>

@@ -1,7 +1,7 @@
 <template>
-  <div class="flex h-full bg-gray-50">
+  <div class="pm-root">
     <!-- Left Sidebar -->
-    <div class="flex w-[280px] flex-shrink-0 flex-col border-r border-gray-200 bg-white">
+    <div class="pm-sidebar">
       <PlaceSidebar
         :tree-data="treeData"
         :selected-id="selectedNodeId"
@@ -11,435 +11,420 @@
     </div>
 
     <!-- Right Content Panel -->
-    <div class="flex flex-1 flex-col overflow-hidden">
+    <div class="pm-main">
       <!-- Top Header Bar -->
-      <div class="flex items-center justify-between border-b border-gray-200 bg-white px-6 py-4">
+      <header class="tm-header">
         <div>
-          <h1 class="text-lg font-semibold text-gray-900">场所管理</h1>
-          <p class="mt-0.5 text-sm text-gray-500">管理学校的场地与设施结构</p>
+          <h1 class="tm-title">场所管理</h1>
+          <div class="tm-stats" style="margin-top: 4px;">管理学校的场地与设施结构</div>
         </div>
-        <router-link
-          to="/system/place-types"
-          class="inline-flex items-center gap-1.5 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50"
-        >
-          <Settings class="h-4 w-4" />
+        <router-link to="/system/place-types" class="tm-btn tm-btn-secondary" style="text-decoration: none;">
+          <Settings style="width: 16px; height: 16px;" />
           类型配置
         </router-link>
-      </div>
+      </header>
 
       <!-- Stat Bar -->
-      <div class="flex items-center gap-4 border-b border-gray-200 bg-white px-6 py-2.5">
-        <span class="text-sm text-gray-500">总数 <span class="font-semibold text-gray-900">{{ stats.totalCount }}</span></span>
-        <div class="h-3 w-px bg-gray-200" />
-        <span class="text-sm text-gray-500">容量 <span class="font-semibold text-gray-900">{{ stats.totalCapacity }}</span></span>
-        <div class="h-3 w-px bg-gray-200" />
-        <span class="text-sm text-gray-500">占用 <span class="font-semibold text-gray-900">{{ stats.totalOccupancy }}</span></span>
-        <div class="h-3 w-px bg-gray-200" />
-        <span class="text-sm text-gray-500">占用率 <span class="font-semibold text-gray-900">{{ stats.occupancyRate?.toFixed(1) || 0 }}%</span></span>
+      <div class="tm-stats-bar">
+        <span class="tm-stats">总数 <b>{{ stats.totalCount }}</b></span>
+        <i class="tm-stats sep" />
+        <span class="tm-stats">容量 <b>{{ stats.totalCapacity }}</b></span>
+        <i class="tm-stats sep" />
+        <span class="tm-stats">占用 <b>{{ stats.totalOccupancy }}</b></span>
+        <i class="tm-stats sep" />
+        <span class="tm-stats">占用率 <b>{{ stats.occupancyRate?.toFixed(1) || 0 }}%</b></span>
       </div>
 
       <!-- Main Content Area -->
-      <div class="flex-1 overflow-y-auto px-6 pt-5 pb-6">
+      <div class="pm-content">
         <!-- Loading State -->
-        <div v-if="loading" class="flex items-center justify-center py-20">
-          <div class="h-8 w-8 animate-spin rounded-full border-2 border-blue-600 border-t-transparent"></div>
+        <div v-if="loading" class="pm-loading">
+          <div class="pm-spinner tm-spin"></div>
         </div>
 
         <!-- Detail Panel (when node selected) -->
-        <div v-else-if="selectedNode" class="space-y-3">
+        <div v-else-if="selectedNode" class="pm-detail-area">
           <!-- Detail Card -->
-          <div class="rounded-xl border border-gray-200 bg-white">
+          <div class="pm-card">
             <!-- Header (compact) -->
-            <div class="flex items-center justify-between px-5 py-3">
-              <div class="flex items-center gap-2 min-w-0">
-                <h2 class="truncate text-[15px] font-semibold text-gray-900">{{ selectedNode.placeName }}</h2>
-                <span class="rounded px-1.5 py-0.5 text-[10px] font-medium flex-shrink-0" :class="statusBadgeClass(selectedNode.status)">{{ getStatusLabel(selectedNode.status) }}</span>
-                <span v-if="genderLabel(selectedNode)" class="flex-shrink-0 text-[10px] font-medium px-1.5 py-0.5 rounded" :class="genderBadgeClass(selectedNode)">{{ genderLabel(selectedNode) }}</span>
+            <div class="pm-card-header">
+              <div class="pm-card-left">
+                <h2 class="pm-card-name">{{ selectedNode.placeName }}</h2>
+                <span class="tm-chip" :class="statusBadgeClass(selectedNode.status)">{{ getStatusLabel(selectedNode.status) }}</span>
+                <span v-if="genderLabel(selectedNode)" class="tm-chip" :class="genderBadgeClass(selectedNode)">{{ genderLabel(selectedNode) }}</span>
               </div>
-              <div class="flex items-center gap-1.5 flex-shrink-0">
-                <button class="inline-flex items-center gap-1 rounded-md border border-gray-200 px-2.5 py-1 text-xs font-medium text-gray-600 hover:bg-gray-50" @click="handleEdit(selectedNode)">
-                  <Pencil class="h-3 w-3" /> 编辑
+              <div class="pm-card-actions">
+                <button class="tm-action" @click="handleEdit(selectedNode)">
+                  <Pencil style="width: 12px; height: 12px;" /> 编辑
                 </button>
-                <button v-if="!selectedNode.leaf" class="inline-flex items-center gap-1 rounded-md border border-gray-200 px-2.5 py-1 text-xs font-medium text-gray-600 hover:bg-gray-50" @click="handleAddChild(selectedNode)">
-                  <Plus class="h-3 w-3" /> 子场所
+                <button v-if="!selectedNode.leaf" class="tm-action" @click="handleAddChild(selectedNode)">
+                  <Plus style="width: 12px; height: 12px;" /> 子场所
                 </button>
                 <button
                   v-if="selectedNode.occupiable || selectedNode.hasCapacity || selectedNode.leaf || selectedNode.attributes?.layout"
-                  class="inline-flex items-center gap-1 rounded-md border border-gray-200 px-2.5 py-1 text-xs font-medium text-gray-600 hover:bg-gray-50"
+                  class="tm-action"
                   @click="showFloorPlanDialog = true"
                 >
-                  <MapPin class="h-3 w-3" /> 平面图
+                  <MapPin style="width: 12px; height: 12px;" /> 平面图
                 </button>
-                <div class="relative" ref="dropdownRef">
-                  <button class="inline-flex h-6 w-6 items-center justify-center rounded-md border border-gray-200 text-gray-400 hover:bg-gray-50" @click="showDropdown = !showDropdown">
-                    <MoreHorizontal class="h-3.5 w-3.5" />
+                <div class="pm-dropdown-wrap" ref="dropdownRef">
+                  <button class="pm-more-btn" @click="showDropdown = !showDropdown">
+                    <MoreHorizontal style="width: 14px; height: 14px;" />
                   </button>
-                  <div v-if="showDropdown" class="absolute right-0 top-full z-10 mt-1 w-36 rounded-lg border border-gray-200 bg-white py-1 shadow-lg">
-                    <button v-if="selectedNode.status === 1" class="flex w-full items-center gap-2 px-3 py-1.5 text-xs text-gray-700 hover:bg-gray-50" @click="handleCommand('maintenance')"><Wrench class="h-3 w-3" /> 设为维护中</button>
-                    <button v-if="selectedNode.status !== 1" class="flex w-full items-center gap-2 px-3 py-1.5 text-xs text-gray-700 hover:bg-gray-50" @click="handleCommand('enable')"><CheckCircle class="h-3 w-3" /> 恢复正常</button>
-                    <button v-if="selectedNode.status === 1" class="flex w-full items-center gap-2 border-t border-gray-100 px-3 py-1.5 text-xs text-gray-700 hover:bg-gray-50" @click="handleCommand('disable')"><XCircle class="h-3 w-3" /> 停用</button>
-                    <button class="flex w-full items-center gap-2 border-t border-gray-100 px-3 py-1.5 text-xs text-red-500 hover:bg-red-50" @click="handleCommand('delete')"><Trash2 class="h-3 w-3" /> 删除</button>
+                  <div v-if="showDropdown" class="pm-dropdown">
+                    <button v-if="selectedNode.status === 1" class="pm-dropdown-item" @click="handleCommand('maintenance')"><Wrench style="width: 12px; height: 12px;" /> 设为维护中</button>
+                    <button v-if="selectedNode.status !== 1" class="pm-dropdown-item" @click="handleCommand('enable')"><CheckCircle style="width: 12px; height: 12px;" /> 恢复正常</button>
+                    <button v-if="selectedNode.status === 1" class="pm-dropdown-item pm-dropdown-sep" @click="handleCommand('disable')"><XCircle style="width: 12px; height: 12px;" /> 停用</button>
+                    <button class="pm-dropdown-item pm-dropdown-sep pm-dropdown-danger" @click="handleCommand('delete')"><Trash2 style="width: 12px; height: 12px;" /> 删除</button>
                   </div>
                 </div>
               </div>
             </div>
 
             <!-- Compact stats -->
-            <div class="flex items-center gap-4 border-t border-gray-100 px-5 py-2 text-xs text-gray-600">
-              <span>编号 <strong class="text-gray-900">{{ selectedNode.placeCode }}</strong></span>
-              <div class="h-3 w-px bg-gray-200" />
-              <span>类型 <strong class="text-gray-900">{{ selectedNode.typeName }}</strong></span>
-              <div class="h-3 w-px bg-gray-200" />
-              <span v-if="selectedNode.hasCapacity">容量 <strong class="text-gray-900">{{ selectedNode.currentOccupancy || 0 }}/{{ selectedNode.capacity || '-' }}</strong></span>
-              <span v-else>容量 <strong class="text-gray-300">不适用</strong></span>
+            <div class="pm-card-stats">
+              <span>编号 <strong>{{ selectedNode.placeCode }}</strong></span>
+              <i class="pm-sep" />
+              <span>类型 <strong>{{ selectedNode.typeName }}</strong></span>
+              <i class="pm-sep" />
+              <span v-if="selectedNode.hasCapacity">容量 <strong>{{ selectedNode.currentOccupancy || 0 }}/{{ selectedNode.capacity || '-' }}</strong></span>
+              <span v-else>容量 <strong style="color: #d1d5db;">不适用</strong></span>
             </div>
           </div>
 
           <!-- Tabs -->
-          <div class="rounded-xl border border-gray-200 bg-white">
-            <div class="flex border-b border-gray-200">
+          <div class="pm-card" style="margin-top: 12px;">
+            <div class="tm-tabs" style="padding: 0 20px;">
               <button
                 v-for="tab in placeTabs"
                 :key="tab.key"
-                :class="[
-                  'relative px-4 py-2.5 text-xs font-medium transition-colors',
-                  activePlaceTab === tab.key
-                    ? 'text-blue-600'
-                    : 'text-gray-500 hover:text-gray-700'
-                ]"
+                class="tm-tab"
+                :class="{ active: activePlaceTab === tab.key }"
                 @click="activePlaceTab = tab.key"
               >
                 {{ tab.label }}
                 <span
                   v-if="tab.count !== undefined && tab.count > 0"
-                  class="ml-1 rounded-full bg-gray-100 px-1.5 py-0.5 text-[10px] font-medium text-gray-600"
+                  class="pm-tab-count"
                 >{{ tab.count }}</span>
-                <div
-                  v-if="activePlaceTab === tab.key"
-                  class="absolute bottom-0 left-0 right-0 h-0.5 bg-blue-600"
-                ></div>
               </button>
             </div>
 
             <!-- Tab: 子场所 -->
             <div v-if="activePlaceTab === 'children'">
-              <div v-if="childPlaces.length > 0" class="flex flex-wrap gap-1.5 px-5 py-3">
+              <div v-if="childPlaces.length > 0" class="pm-child-grid">
                 <button
                   v-for="child in childPlaces"
                   :key="child.id"
-                  class="inline-flex items-center gap-1 rounded border border-gray-200 bg-gray-50 px-2 py-1 text-[11px] transition-colors hover:border-blue-300 hover:bg-blue-50"
+                  class="pm-child-chip"
                   @click="selectPlace(child)"
                 >
-                  <span class="font-medium text-gray-700">{{ child.placeName }}</span>
-                  <span class="text-gray-400">{{ child.typeName }}</span>
-                  <span v-if="child.capacity" class="rounded bg-gray-200 px-1 py-px text-[10px] text-gray-600">{{ child.currentOccupancy || 0 }}/{{ child.capacity }}</span>
+                  <span class="pm-child-name">{{ child.placeName }}</span>
+                  <span class="pm-child-type">{{ child.typeName }}</span>
+                  <span v-if="child.capacity" class="pm-child-cap">{{ child.currentOccupancy || 0 }}/{{ child.capacity }}</span>
                 </button>
               </div>
-              <div v-else class="px-5 py-4 text-center text-xs text-gray-400">暂无子场所</div>
+              <div v-else class="pm-empty-hint">暂无子场所</div>
             </div>
 
             <!-- Tab: 关联组织 -->
             <div v-if="activePlaceTab === 'orgs'">
-              <div class="flex items-center justify-end border-b border-gray-50 px-5 py-2.5">
-                <button
-                  class="inline-flex items-center gap-1 rounded-md bg-blue-600 px-2.5 py-1 text-[11px] font-medium text-white transition-colors hover:bg-blue-700"
-                  @click="openAddOrgRelDialog"
-                >
-                  <Plus class="h-3 w-3" /> 添加
+              <div class="pm-tab-toolbar" style="justify-content: flex-end;">
+                <button class="tm-btn tm-btn-primary" style="padding: 4px 10px; font-size: 11px;" @click="openAddOrgRelDialog">
+                  <Plus style="width: 12px; height: 12px;" /> 添加
                 </button>
               </div>
-              <table v-if="placeOrgRelations.length > 0" class="w-full text-xs">
+              <table v-if="placeOrgRelations.length > 0" class="tm-table">
+                <colgroup>
+                  <col />
+                  <col style="width: 120px" />
+                  <col style="width: 60px" />
+                </colgroup>
                 <thead>
-                  <tr class="border-b border-gray-100 bg-gray-50/50">
-                    <th class="px-4 py-2 text-left font-medium text-gray-500">组织名称</th>
-                    <th class="px-4 py-2 text-left font-medium text-gray-500">关系类型</th>
-                    <th class="w-12 px-2 py-2 text-right font-medium text-gray-400"></th>
+                  <tr>
+                    <th class="text-left">组织名称</th>
+                    <th class="text-left">关系类型</th>
+                    <th></th>
                   </tr>
                 </thead>
                 <tbody>
-                  <tr v-for="rel in placeOrgRelations" :key="rel.id" class="border-b border-gray-50 hover:bg-gray-50/50">
-                    <td class="px-4 py-2 font-medium text-gray-800">{{ rel.metadata?.subjectName || `组织#${rel.subjectId}` }}</td>
-                    <td class="px-4 py-2">
-                      <span class="rounded px-1.5 py-0.5 text-[10px] font-medium" :class="relTypeBadge(rel.metadata?.relationType)">
+                  <tr v-for="rel in placeOrgRelations" :key="rel.id">
+                    <td class="text-left" style="font-weight: 500; color: #1f2937;">{{ rel.metadata?.subjectName || `组织#${rel.subjectId}` }}</td>
+                    <td class="text-left">
+                      <span class="tm-chip" :class="relTypeBadge(rel.metadata?.relationType)">
                         {{ RelationLabels[rel.relation] || rel.relation }}
                       </span>
                     </td>
-                    <td class="whitespace-nowrap px-2 py-2 text-right">
-                      <button
-                        class="rounded px-1.5 py-0.5 text-[10px] font-medium text-red-400 transition-colors hover:bg-red-50 hover:text-red-500"
-                        @click="handleDeleteOrgRelation(rel)"
-                      >移除</button>
+                    <td style="text-align: right;">
+                      <button class="tm-action tm-action-danger" @click="handleDeleteOrgRelation(rel)">移除</button>
                     </td>
                   </tr>
                 </tbody>
               </table>
-              <div v-else class="px-5 py-4 text-center text-xs text-gray-400">暂无关联组织</div>
+              <div v-else class="pm-empty-hint">暂无关联组织</div>
             </div>
 
             <!-- Tab: 入住管理 -->
             <div v-if="activePlaceTab === 'occupants' && showOccupantPanel">
-            <div class="flex items-center justify-between border-b border-gray-50 px-5 py-2.5">
-              <div class="flex items-center gap-2">
-                <span v-if="selectedNode?.capacity" class="text-[11px] text-gray-400">
-                  容量 <span class="font-medium text-gray-600">{{ occupants.length }}/{{ selectedNode.capacity }}</span>{{ selectedNode.capacityUnit ? selectedNode.capacityUnit : '人' }}
-                </span>
-                <!-- View mode toggle -->
-                <div v-if="selectedNode?.capacity" class="ml-2 flex rounded border border-gray-200 overflow-hidden">
-                  <button
-                    class="px-1.5 py-0.5 text-[10px]"
-                    :class="occupantViewMode === 'list' ? 'bg-blue-50 text-blue-600 font-medium' : 'text-gray-400 hover:bg-gray-50'"
-                    @click="occupantViewMode = 'list'"
-                  >列表</button>
-                  <button
-                    class="px-1.5 py-0.5 text-[10px] border-l border-gray-200"
-                    :class="occupantViewMode === 'grid' ? 'bg-blue-50 text-blue-600 font-medium' : 'text-gray-400 hover:bg-gray-50'"
-                    @click="occupantViewMode = 'grid'"
-                  >网格</button>
-                  <button
-                    v-if="selectedNode?.attributes?.layout"
-                    class="px-1.5 py-0.5 text-[10px] border-l border-gray-200"
-                    :class="occupantViewMode === 'floor' ? 'bg-blue-50 text-blue-600 font-medium' : 'text-gray-400 hover:bg-gray-50'"
-                    @click="occupantViewMode = 'floor'"
-                  >平面</button>
+              <div class="pm-tab-toolbar">
+                <div style="display: flex; align-items: center; gap: 8px;">
+                  <span v-if="selectedNode?.capacity" style="font-size: 11px; color: #9ca3af;">
+                    容量 <span style="font-weight: 500; color: #4b5563;">{{ occupants.length }}/{{ selectedNode.capacity }}</span>{{ selectedNode.capacityUnit ? selectedNode.capacityUnit : '人' }}
+                  </span>
+                  <!-- View mode toggle -->
+                  <div v-if="selectedNode?.capacity" class="pm-view-toggle">
+                    <button
+                      class="pm-toggle-btn"
+                      :class="{ active: occupantViewMode === 'list' }"
+                      @click="occupantViewMode = 'list'"
+                    >列表</button>
+                    <button
+                      class="pm-toggle-btn"
+                      :class="{ active: occupantViewMode === 'grid' }"
+                      @click="occupantViewMode = 'grid'"
+                    >网格</button>
+                    <button
+                      v-if="selectedNode?.attributes?.layout"
+                      class="pm-toggle-btn"
+                      :class="{ active: occupantViewMode === 'floor' }"
+                      @click="occupantViewMode = 'floor'"
+                    >平面</button>
+                  </div>
                 </div>
+                <button class="tm-btn tm-btn-primary" style="padding: 4px 10px; font-size: 11px;" @click="openCheckInDialog">
+                  <Plus style="width: 12px; height: 12px;" /> 入住
+                </button>
               </div>
-              <button
-                class="inline-flex items-center gap-1 rounded-md bg-blue-600 px-2.5 py-1 text-[11px] font-medium text-white transition-colors hover:bg-blue-700"
-                @click="openCheckInDialog"
-              >
-                <Plus class="h-3 w-3" /> 入住
-              </button>
-            </div>
 
-            <!-- Floor Plan View -->
-            <div v-if="occupantViewMode === 'floor' && selectedNode?.attributes?.layout" class="border-t border-gray-100" style="height: 400px;">
-              <FloorPlanEditor
-                :place-id="selectedNode.id"
-                :initial-layout="selectedNode.attributes.layout"
-                :occupants="occupants"
-                mode="view"
-              />
-            </div>
+              <!-- Floor Plan View -->
+              <div v-if="occupantViewMode === 'floor' && selectedNode?.attributes?.layout" class="pm-section-border" style="height: 400px;">
+                <FloorPlanEditor
+                  :place-id="selectedNode.id"
+                  :initial-layout="selectedNode.attributes.layout"
+                  :occupants="occupants"
+                  mode="view"
+                />
+              </div>
 
-            <!-- Grid View -->
-            <div v-else-if="occupantViewMode === 'grid' && selectedNode?.capacity" class="border-t border-gray-100">
-              <SeatGrid
-                :capacity="selectedNode.capacity"
-                :occupants="occupants"
-                :capacity-unit="selectedNode.capacityUnit"
-                @check-in="(posNo) => { openCheckInDialog(); }"
-                @select="(occ) => startSwap(occ)"
-              />
-            </div>
+              <!-- Grid View -->
+              <div v-else-if="occupantViewMode === 'grid' && selectedNode?.capacity" class="pm-section-border">
+                <SeatGrid
+                  :capacity="selectedNode.capacity"
+                  :occupants="occupants"
+                  :capacity-unit="selectedNode.capacityUnit"
+                  @check-in="(posNo) => { openCheckInDialog(); }"
+                  @select="(occ) => startSwap(occ)"
+                />
+              </div>
 
-            <!-- Occupant Table (list view) -->
-            <div v-else class="border-t border-gray-100">
-              <table v-if="occupants.length > 0" class="w-full text-xs">
-                <thead>
-                  <tr class="border-b border-gray-100 bg-gray-50/50">
-                    <th class="px-4 py-2 text-left font-medium text-gray-500">位置</th>
-                    <th class="px-4 py-2 text-left font-medium text-gray-500">账号</th>
-                    <th class="px-4 py-2 text-left font-medium text-gray-500">姓名</th>
-                    <th class="px-4 py-2 text-left font-medium text-gray-500">类型</th>
-                    <th class="px-4 py-2 text-left font-medium text-gray-500">部门</th>
-                    <th class="px-4 py-2 text-left font-medium text-gray-500">性别</th>
-                    <th class="px-4 py-2 text-left font-medium text-gray-500">入住时间</th>
-                    <th class="px-4 py-2 text-right font-medium text-gray-500">操作</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr v-for="occ in occupants" :key="occ.id" class="border-b border-gray-50 hover:bg-gray-50/50">
-                    <td class="px-4 py-2 font-medium text-gray-700">{{ occ.positionNo || '-' }}</td>
-                    <td class="px-4 py-2 text-gray-600">{{ occ.username || '-' }}</td>
-                    <td class="px-4 py-2 text-gray-900">{{ occ.occupantName || '-' }}</td>
-                    <td class="px-4 py-2 text-gray-500">{{ occ.userTypeName || '-' }}</td>
-                    <td class="px-4 py-2 text-gray-500">{{ occ.orgUnitName || '-' }}</td>
-                    <td class="px-4 py-2">
-                      <span v-if="occ.gender === 1" class="text-blue-500">男</span>
-                      <span v-else-if="occ.gender === 2" class="text-pink-500">女</span>
-                      <span v-else class="text-gray-300">-</span>
-                    </td>
-                    <td class="px-4 py-2 text-gray-500">{{ formatDate(occ.checkInTime) }}</td>
-                    <td class="px-4 py-2 text-right">
-                      <div class="flex items-center justify-end gap-1">
-                        <button
-                          class="rounded px-1.5 py-0.5 text-[10px] font-medium text-red-500 transition-colors hover:bg-red-50"
-                          @click="handleCheckOut(occ)"
-                        >退出</button>
-                        <button
-                          v-if="occupants.length > 1"
-                          class="rounded px-1.5 py-0.5 text-[10px] font-medium text-blue-500 transition-colors hover:bg-blue-50"
-                          @click="startSwap(occ)"
-                        >交换</button>
-                      </div>
-                    </td>
-                  </tr>
-                </tbody>
-              </table>
-              <div v-else class="px-5 py-6 text-center text-xs text-gray-400">
-                暂无入住记录
+              <!-- Occupant Table (list view) -->
+              <div v-else class="pm-section-border">
+                <table v-if="occupants.length > 0" class="tm-table">
+                  <colgroup>
+                    <col style="width: 60px" />
+                    <col style="width: 90px" />
+                    <col style="width: 80px" />
+                    <col style="width: 70px" />
+                    <col />
+                    <col style="width: 50px" />
+                    <col style="width: 90px" />
+                    <col style="width: 90px" />
+                  </colgroup>
+                  <thead>
+                    <tr>
+                      <th class="text-left">位置</th>
+                      <th class="text-left">账号</th>
+                      <th class="text-left">姓名</th>
+                      <th class="text-left">类型</th>
+                      <th class="text-left">部门</th>
+                      <th class="text-left">性别</th>
+                      <th class="text-left">入住时间</th>
+                      <th class="text-right">操作</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr v-for="occ in occupants" :key="occ.id">
+                      <td class="text-left" style="font-weight: 500;">{{ occ.positionNo || '-' }}</td>
+                      <td class="text-left" style="color: #6b7280;">{{ occ.username || '-' }}</td>
+                      <td class="text-left" style="color: #111827;">{{ occ.occupantName || '-' }}</td>
+                      <td class="text-left" style="color: #9ca3af;">{{ occ.userTypeName || '-' }}</td>
+                      <td class="text-left" style="color: #9ca3af;">{{ occ.orgUnitName || '-' }}</td>
+                      <td class="text-left">
+                        <span v-if="occ.gender === 1" style="color: #3b82f6;">男</span>
+                        <span v-else-if="occ.gender === 2" style="color: #ec4899;">女</span>
+                        <span v-else style="color: #d1d5db;">-</span>
+                      </td>
+                      <td class="text-left" style="color: #9ca3af;">{{ formatDate(occ.checkInTime) }}</td>
+                      <td class="text-right">
+                        <button class="tm-action tm-action-danger" @click="handleCheckOut(occ)">退出</button>
+                        <button v-if="occupants.length > 1" class="tm-action" style="color: #3b82f6;" @click="startSwap(occ)">交换</button>
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+                <div v-else class="pm-empty-hint" style="padding: 24px 0;">暂无入住记录</div>
+              </div>
+
+              <!-- Empty slots hint -->
+              <div v-if="selectedNode?.capacity && occupants.length < selectedNode.capacity" class="pm-hint-bar">
+                剩余 {{ selectedNode.capacity - occupants.length }} 个空位
+              </div>
+
+              <!-- History toggle -->
+              <div class="pm-hint-bar">
+                <button class="pm-link-btn" @click="toggleHistory">
+                  {{ showHistory ? '收起历史记录' : '查看历史记录' }}
+                </button>
+              </div>
+
+              <!-- History Table -->
+              <div v-if="showHistory" class="pm-section-border">
+                <table v-if="occupantHistory.length > 0" class="tm-table">
+                  <colgroup>
+                    <col style="width: 55px" />
+                    <col style="width: 85px" />
+                    <col style="width: 75px" />
+                    <col style="width: 65px" />
+                    <col />
+                    <col style="width: 45px" />
+                    <col style="width: 85px" />
+                    <col style="width: 85px" />
+                    <col style="width: 60px" />
+                  </colgroup>
+                  <thead>
+                    <tr>
+                      <th class="text-left">位置</th>
+                      <th class="text-left">账号</th>
+                      <th class="text-left">姓名</th>
+                      <th class="text-left">类型</th>
+                      <th class="text-left">部门</th>
+                      <th class="text-left">性别</th>
+                      <th class="text-left">入住时间</th>
+                      <th class="text-left">退出时间</th>
+                      <th class="text-left">状态</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr v-for="occ in occupantHistory" :key="occ.id">
+                      <td class="text-left" style="color: #6b7280;">{{ occ.positionNo || '-' }}</td>
+                      <td class="text-left" style="color: #6b7280;">{{ occ.username || '-' }}</td>
+                      <td class="text-left" style="color: #374151;">{{ occ.occupantName || '-' }}</td>
+                      <td class="text-left" style="color: #9ca3af;">{{ occ.userTypeName || '-' }}</td>
+                      <td class="text-left" style="color: #9ca3af;">{{ occ.orgUnitName || '-' }}</td>
+                      <td class="text-left">
+                        <span v-if="occ.gender === 1" style="color: #3b82f6;">男</span>
+                        <span v-else-if="occ.gender === 2" style="color: #ec4899;">女</span>
+                        <span v-else style="color: #d1d5db;">-</span>
+                      </td>
+                      <td class="text-left" style="color: #9ca3af;">{{ formatDate(occ.checkInTime) }}</td>
+                      <td class="text-left" style="color: #9ca3af;">{{ occ.checkOutTime ? formatDate(occ.checkOutTime) : '-' }}</td>
+                      <td class="text-left">
+                        <span :style="{ color: occ.status === 1 ? '#059669' : '#9ca3af' }">
+                          {{ occ.status === 1 ? '在住' : '已退出' }}
+                        </span>
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+                <div v-else class="pm-empty-hint">暂无历史记录</div>
               </div>
             </div>
-
-            <!-- Empty slots hint -->
-            <div v-if="selectedNode?.capacity && occupants.length < selectedNode.capacity" class="border-t border-gray-100 px-5 py-2 text-[11px] text-gray-400">
-              剩余 {{ selectedNode.capacity - occupants.length }} 个空位
-            </div>
-
-            <!-- History toggle -->
-            <div class="border-t border-gray-100 px-5 py-2">
-              <button
-                class="text-[11px] font-medium text-blue-500 hover:text-blue-600"
-                @click="toggleHistory"
-              >
-                {{ showHistory ? '收起历史记录' : '查看历史记录' }}
-              </button>
-            </div>
-
-            <!-- History Table -->
-            <div v-if="showHistory" class="border-t border-gray-100">
-              <table v-if="occupantHistory.length > 0" class="w-full text-xs">
-                <thead>
-                  <tr class="border-b border-gray-100 bg-gray-50/50">
-                    <th class="px-4 py-2 text-left font-medium text-gray-500">位置</th>
-                    <th class="px-4 py-2 text-left font-medium text-gray-500">账号</th>
-                    <th class="px-4 py-2 text-left font-medium text-gray-500">姓名</th>
-                    <th class="px-4 py-2 text-left font-medium text-gray-500">类型</th>
-                    <th class="px-4 py-2 text-left font-medium text-gray-500">部门</th>
-                    <th class="px-4 py-2 text-left font-medium text-gray-500">性别</th>
-                    <th class="px-4 py-2 text-left font-medium text-gray-500">入住时间</th>
-                    <th class="px-4 py-2 text-left font-medium text-gray-500">退出时间</th>
-                    <th class="px-4 py-2 text-left font-medium text-gray-500">状态</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr v-for="occ in occupantHistory" :key="occ.id" class="border-b border-gray-50">
-                    <td class="px-4 py-2 text-gray-600">{{ occ.positionNo || '-' }}</td>
-                    <td class="px-4 py-2 text-gray-600">{{ occ.username || '-' }}</td>
-                    <td class="px-4 py-2 text-gray-700">{{ occ.occupantName || '-' }}</td>
-                    <td class="px-4 py-2 text-gray-500">{{ occ.userTypeName || '-' }}</td>
-                    <td class="px-4 py-2 text-gray-500">{{ occ.orgUnitName || '-' }}</td>
-                    <td class="px-4 py-2">
-                      <span v-if="occ.gender === 1" class="text-blue-500">男</span>
-                      <span v-else-if="occ.gender === 2" class="text-pink-500">女</span>
-                      <span v-else class="text-gray-300">-</span>
-                    </td>
-                    <td class="px-4 py-2 text-gray-500">{{ formatDate(occ.checkInTime) }}</td>
-                    <td class="px-4 py-2 text-gray-500">{{ occ.checkOutTime ? formatDate(occ.checkOutTime) : '-' }}</td>
-                    <td class="px-4 py-2">
-                      <span :class="occ.status === 1 ? 'text-emerald-600' : 'text-gray-400'">
-                        {{ occ.status === 1 ? '在住' : '已退出' }}
-                      </span>
-                    </td>
-                  </tr>
-                </tbody>
-              </table>
-              <div v-else class="px-5 py-4 text-center text-xs text-gray-400">
-                暂无历史记录
-              </div>
-            </div>
-          </div>
 
             <!-- Tab: 预订管理 -->
             <div v-if="activePlaceTab === 'bookings' && showBookingPanel">
-            <div class="flex items-center justify-end gap-2 border-b border-gray-50 px-5 py-2.5">
+              <div class="pm-tab-toolbar" style="justify-content: flex-end; gap: 8px;">
                 <button
-                  class="text-[11px] font-medium"
-                  :class="bookingShowAll ? 'text-blue-500' : 'text-gray-400'"
+                  class="pm-link-btn"
+                  :style="{ color: bookingShowAll ? '#3b82f6' : '#9ca3af' }"
                   @click="bookingShowAll = !bookingShowAll; loadBookings(selectedNode!.id)"
                 >{{ bookingShowAll ? '仅活跃' : '全部' }}</button>
-                <button
-                  class="inline-flex items-center gap-1 rounded-md bg-blue-600 px-2.5 py-1 text-[11px] font-medium text-white transition-colors hover:bg-blue-700"
-                  @click="openBookingDialog"
-                >
-                  <Plus class="h-3 w-3" /> 新建预订
+                <button class="tm-btn tm-btn-primary" style="padding: 4px 10px; font-size: 11px;" @click="openBookingDialog">
+                  <Plus style="width: 12px; height: 12px;" /> 新建预订
                 </button>
-            </div>
-            <div class="border-t border-gray-100">
-              <table v-if="bookings.length > 0" class="w-full text-xs">
-                <thead>
-                  <tr class="border-b border-gray-100 bg-gray-50/50">
-                    <th class="px-4 py-2 text-left font-medium text-gray-500">预订人</th>
-                    <th class="px-4 py-2 text-left font-medium text-gray-500">标题</th>
-                    <th class="px-4 py-2 text-left font-medium text-gray-500">开始时间</th>
-                    <th class="px-4 py-2 text-left font-medium text-gray-500">结束时间</th>
-                    <th class="px-4 py-2 text-left font-medium text-gray-500">状态</th>
-                    <th class="w-16 px-4 py-2 text-right font-medium text-gray-400"></th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr v-for="bk in bookings" :key="bk.id" class="border-b border-gray-50 hover:bg-gray-50/50">
-                    <td class="px-4 py-2 font-medium text-gray-800">{{ bk.bookerName || '-' }}</td>
-                    <td class="px-4 py-2 text-gray-700">{{ bk.title || '-' }}</td>
-                    <td class="px-4 py-2 text-gray-500">{{ formatDateTime(bk.startTime) }}</td>
-                    <td class="px-4 py-2 text-gray-500">{{ formatDateTime(bk.endTime) }}</td>
-                    <td class="px-4 py-2">
-                      <span class="rounded px-1.5 py-0.5 text-[10px] font-medium" :class="bookingStatusClass(bk.status)">
-                        {{ bookingStatusLabel(bk.status) }}
-                      </span>
-                    </td>
-                    <td class="px-4 py-2 text-right space-x-1">
-                      <button
-                        v-if="bk.status === 1 || bk.status === 2"
-                        class="rounded px-1.5 py-0.5 text-[10px] font-medium text-blue-500 transition-colors hover:bg-blue-50 hover:text-blue-600"
-                        @click="openSeatArrangement(bk)"
-                      >排座</button>
-                      <button
-                        v-if="bk.status === 1"
-                        class="rounded px-1.5 py-0.5 text-[10px] font-medium text-red-400 transition-colors hover:bg-red-50 hover:text-red-500"
-                        @click="handleCancelBooking(bk)"
-                      >取消</button>
-                    </td>
-                  </tr>
-                </tbody>
-              </table>
-              <div v-else class="px-5 py-4 text-center text-xs text-gray-400">
-                暂无预订记录
               </div>
-            </div>
+              <div class="pm-section-border">
+                <table v-if="bookings.length > 0" class="tm-table">
+                  <colgroup>
+                    <col style="width: 90px" />
+                    <col />
+                    <col style="width: 130px" />
+                    <col style="width: 130px" />
+                    <col style="width: 70px" />
+                    <col style="width: 80px" />
+                  </colgroup>
+                  <thead>
+                    <tr>
+                      <th class="text-left">预订人</th>
+                      <th class="text-left">标题</th>
+                      <th class="text-left">开始时间</th>
+                      <th class="text-left">结束时间</th>
+                      <th class="text-left">状态</th>
+                      <th class="text-right">操作</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr v-for="bk in bookings" :key="bk.id">
+                      <td class="text-left" style="font-weight: 500; color: #1f2937;">{{ bk.bookerName || '-' }}</td>
+                      <td class="text-left" style="color: #374151;">{{ bk.title || '-' }}</td>
+                      <td class="text-left" style="color: #9ca3af;">{{ formatDateTime(bk.startTime) }}</td>
+                      <td class="text-left" style="color: #9ca3af;">{{ formatDateTime(bk.endTime) }}</td>
+                      <td class="text-left">
+                        <span class="tm-chip" :class="bookingStatusClass(bk.status)">
+                          {{ bookingStatusLabel(bk.status) }}
+                        </span>
+                      </td>
+                      <td class="text-right">
+                        <button v-if="bk.status === 1 || bk.status === 2" class="tm-action" style="color: #3b82f6;" @click="openSeatArrangement(bk)">排座</button>
+                        <button v-if="bk.status === 1" class="tm-action tm-action-danger" @click="handleCancelBooking(bk)">取消</button>
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+                <div v-else class="pm-empty-hint">暂无预订记录</div>
+              </div>
             </div>
 
             <!-- Tab: 基本信息 -->
-            <div v-if="activePlaceTab === 'info'" class="grid grid-cols-2 gap-x-6 gap-y-3 px-5 py-4 text-xs lg:grid-cols-4">
+            <div v-if="activePlaceTab === 'info'" class="pm-info-grid">
               <div>
-                <dt class="font-medium text-gray-500">编号</dt>
-                <dd class="mt-0.5 text-gray-900">{{ selectedNode.placeCode }}</dd>
-              </div>
-              <div>
-                <dt class="font-medium text-gray-500">类型</dt>
-                <dd class="mt-0.5 text-gray-900">{{ selectedNode.typeName }}</dd>
+                <dt class="pm-info-label">编号</dt>
+                <dd class="pm-info-value">{{ selectedNode.placeCode }}</dd>
               </div>
               <div>
-                <dt class="font-medium text-gray-500">层级</dt>
-                <dd class="mt-0.5 text-gray-900">第{{ selectedNode.level }}级</dd>
+                <dt class="pm-info-label">类型</dt>
+                <dd class="pm-info-value">{{ selectedNode.typeName }}</dd>
               </div>
               <div>
-                <dt class="font-medium text-gray-500">上级</dt>
-                <dd class="mt-0.5 text-gray-900">{{ selectedNodeParentName || '(根节点)' }}</dd>
-              </div>
-              <div class="col-span-2">
-                <dt class="font-medium text-gray-500">所属部门</dt>
-                <dd class="mt-0.5 text-gray-900">{{ selectedNode.orgUnitName || selectedNode.effectiveOrgUnitName || '-' }}</dd>
-              </div>
-              <div class="col-span-2">
-                <dt class="font-medium text-gray-500">负责人</dt>
-                <dd class="mt-0.5 text-gray-900">{{ selectedNode.responsibleUserName || selectedNode.effectiveResponsibleUserName || '-' }}</dd>
+                <dt class="pm-info-label">层级</dt>
+                <dd class="pm-info-value">第{{ selectedNode.level }}级</dd>
               </div>
               <div>
-                <dt class="font-medium text-gray-500">性别限制</dt>
-                <dd class="mt-0.5 text-gray-900">{{ genderDisplay(selectedNode) }}</dd>
+                <dt class="pm-info-label">上级</dt>
+                <dd class="pm-info-value">{{ selectedNodeParentName || '(根节点)' }}</dd>
+              </div>
+              <div class="pm-info-span2">
+                <dt class="pm-info-label">所属部门</dt>
+                <dd class="pm-info-value">{{ selectedNode.orgUnitName || selectedNode.effectiveOrgUnitName || '-' }}</dd>
+              </div>
+              <div class="pm-info-span2">
+                <dt class="pm-info-label">负责人</dt>
+                <dd class="pm-info-value">{{ selectedNode.responsibleUserName || selectedNode.effectiveResponsibleUserName || '-' }}</dd>
               </div>
               <div>
-                <dt class="font-medium text-gray-500">容量</dt>
-                <dd class="mt-0.5 text-gray-900">{{ selectedNode.hasCapacity ? `${selectedNode.currentOccupancy || 0}/${selectedNode.capacity || '-'}` : '不适用' }}</dd>
+                <dt class="pm-info-label">性别限制</dt>
+                <dd class="pm-info-value">{{ genderDisplay(selectedNode) }}</dd>
               </div>
-              <div class="col-span-2">
-                <dt class="font-medium text-gray-500">路径</dt>
-                <dd class="mt-0.5 text-gray-900">{{ selectedNodePath }}</dd>
+              <div>
+                <dt class="pm-info-label">容量</dt>
+                <dd class="pm-info-value">{{ selectedNode.hasCapacity ? `${selectedNode.currentOccupancy || 0}/${selectedNode.capacity || '-'}` : '不适用' }}</dd>
               </div>
-              <div v-if="selectedNode.description" class="col-span-4">
-                <dt class="font-medium text-gray-500">描述</dt>
-                <dd class="mt-0.5 text-gray-600">{{ selectedNode.description }}</dd>
+              <div class="pm-info-span2">
+                <dt class="pm-info-label">路径</dt>
+                <dd class="pm-info-value">{{ selectedNodePath }}</dd>
+              </div>
+              <div v-if="selectedNode.description" class="pm-info-span4">
+                <dt class="pm-info-label">描述</dt>
+                <dd class="pm-info-value" style="color: #6b7280;">{{ selectedNode.description }}</dd>
               </div>
             </div>
 
@@ -457,7 +442,7 @@
         </div>
 
         <!-- Overview (when no node selected) -->
-        <div v-else class="space-y-4">
+        <div v-else style="display: flex; flex-direction: column; gap: 16px;">
           <CapacityAlertBanner
             :refreshInterval="60"
             :collapsible="true"
@@ -515,20 +500,20 @@
               <span class="ci-opt-name">{{ user.realName }}</span>
               <span class="ci-opt-user">{{ user.username }}</span>
               <span class="ci-opt-org">{{ user.orgUnitName || '-' }}</span>
-              <span class="ci-opt-gender" :class="user.gender === 1 ? 'text-blue-500' : user.gender === 2 ? 'text-pink-500' : 'text-gray-300'">{{ user.gender === 1 ? '男' : user.gender === 2 ? '女' : '-' }}</span>
+              <span class="ci-opt-gender" :style="{ color: user.gender === 1 ? '#3b82f6' : user.gender === 2 ? '#ec4899' : '#d1d5db' }">{{ user.gender === 1 ? '男' : user.gender === 2 ? '女' : '-' }}</span>
             </div>
           </el-option>
         </el-select>
         <el-popover :visible="showOrgPicker" placement="bottom-end" :width="300" trigger="click">
           <template #reference>
             <button class="ci-batch-btn" @click="showOrgPicker = !showOrgPicker">
-              <Users class="h-3.5 w-3.5" /> 批量添加
+              <Users style="width: 14px; height: 14px;" /> 批量添加
             </button>
           </template>
-          <div class="space-y-2 p-1">
+          <div style="display: flex; flex-direction: column; gap: 8px; padding: 4px;">
             <el-tree-select v-model="ciBatchOrgId" :data="ciOrgTreeData" :props="{ label: 'unitName', value: 'id', children: 'children' }" placeholder="选择组织/班级" filterable check-strictly style="width: 100%" />
-            <div class="flex items-center justify-end gap-2">
-              <span v-if="ciBatchOrgId" class="text-xs text-gray-400">加载该组织下所有用户</span>
+            <div style="display: flex; align-items: center; justify-content: flex-end; gap: 8px;">
+              <span v-if="ciBatchOrgId" style="font-size: 12px; color: #9ca3af;">加载该组织下所有用户</span>
               <el-button type="primary" size="small" :disabled="!ciBatchOrgId" :loading="ciBatchLoading" @click="handleBatchAddByOrg">确定</el-button>
             </div>
           </div>
@@ -539,7 +524,7 @@
       <div class="ci-list">
         <div class="ci-list-header">
           <span>已添加 <b>{{ ciPendingUsers.length }}</b> 人</span>
-          <div class="flex items-center gap-2">
+          <div style="display: flex; align-items: center; gap: 8px;">
             <button v-if="ciPendingUsers.length > 0" class="ci-auto-btn" @click="autoAssignPositions">自动分配位置</button>
             <button v-if="ciPendingUsers.length > 0" class="ci-clear-btn" @click="ciPendingUsers = []">清空</button>
           </div>
@@ -559,14 +544,14 @@
             <span class="ci-c-name ci-text-bold">{{ pu.realName }}</span>
             <span class="ci-c-user ci-text-dim">{{ pu.username }}</span>
             <span class="ci-c-org ci-text-dim">{{ pu.orgUnitName || '-' }}</span>
-            <span class="ci-c-gender" :class="pu.gender === 1 ? 'text-blue-500' : pu.gender === 2 ? 'text-pink-500' : 'ci-text-dim'">{{ pu.gender === 1 ? '男' : pu.gender === 2 ? '女' : '-' }}</span>
+            <span class="ci-c-gender" :style="{ color: pu.gender === 1 ? '#3b82f6' : pu.gender === 2 ? '#ec4899' : '#9ca3af' }">{{ pu.gender === 1 ? '男' : pu.gender === 2 ? '女' : '-' }}</span>
             <span class="ci-c-pos">
               <select v-model="pu.positionNo" class="ci-pos-select">
                 <option v-for="pos in getAvailablePositionsFor(pu.positionNo)" :key="pos" :value="pos">{{ pos }}</option>
               </select>
             </span>
             <span class="ci-c-act">
-              <button class="ci-rm-btn" @click="ciPendingUsers.splice(idx, 1)"><XCircle class="h-3.5 w-3.5" /></button>
+              <button class="ci-rm-btn" @click="ciPendingUsers.splice(idx, 1)"><XCircle style="width: 14px; height: 14px;" /></button>
             </span>
           </div>
         </div>
@@ -591,7 +576,7 @@
       <template #header><span /></template>
       <div class="sw-split">
         <div class="sw-left">
-          <div class="sw-avatar"><Users class="h-4 w-4 text-purple-600" /></div>
+          <div class="sw-avatar"><Users style="width: 16px; height: 16px; color: #7c3aed;" /></div>
           <div class="sw-name">{{ swapSource?.occupantName || '-' }}</div>
           <div class="sw-tag">{{ occupantTypeLabel(swapSource?.occupantType) }}</div>
           <div class="sw-divider" />
@@ -618,7 +603,7 @@
 
     <!-- Create Booking Dialog -->
     <el-dialog v-model="showBookingDialog" title="新建预订" width="480px" :close-on-click-modal="false" destroy-on-close align-center>
-      <el-form label-position="top" class="space-y-3">
+      <el-form label-position="top">
         <el-form-item label="标题">
           <el-input v-model="bookingForm.title" placeholder="预订标题（选填）" maxlength="100" />
         </el-form-item>
@@ -635,8 +620,8 @@
           />
         </el-form-item>
         <el-form-item label="参会人">
-          <div class="w-full space-y-2">
-            <div class="flex gap-2">
+          <div style="width: 100%; display: flex; flex-direction: column; gap: 8px;">
+            <div style="display: flex; gap: 8px;">
               <el-select
                 v-model="bookingForm.attendeeIds"
                 multiple
@@ -657,7 +642,7 @@
                   :label="u.realName || u.username"
                 >
                   <span>{{ u.realName || u.username }}</span>
-                  <span v-if="u.orgUnitName" class="ml-2 text-xs text-gray-400">{{ u.orgUnitName }}</span>
+                  <span v-if="u.orgUnitName" style="margin-left: 8px; font-size: 12px; color: #9ca3af;">{{ u.orgUnitName }}</span>
                 </el-option>
               </el-select>
               <el-popover trigger="click" :width="260" placement="bottom-end">
@@ -676,7 +661,7 @@
                 />
               </el-popover>
             </div>
-            <div v-if="bookingForm.attendeeIds.length > 0" class="text-xs text-gray-400">
+            <div v-if="bookingForm.attendeeIds.length > 0" style="font-size: 12px; color: #9ca3af;">
               已选 {{ bookingForm.attendeeIds.length }} 人
             </div>
           </div>
@@ -686,7 +671,7 @@
         </el-form-item>
       </el-form>
       <template #footer>
-        <div class="flex justify-end gap-2">
+        <div style="display: flex; justify-content: flex-end; gap: 8px;">
           <el-button @click="showBookingDialog = false">取消</el-button>
           <el-button type="primary" :loading="bookingSubmitting" :disabled="!bookingForm.timeRange || bookingForm.timeRange.length < 2" @click="handleCreateBooking">确认预订</el-button>
         </div>
@@ -695,7 +680,7 @@
 
     <!-- Add Org Relation Dialog -->
     <el-dialog v-model="showAddOrgRelDialog" title="添加关联组织" width="440px" :close-on-click-modal="false" destroy-on-close align-center>
-      <el-form label-position="top" class="space-y-3">
+      <el-form label-position="top">
         <el-form-item label="选择组织" required>
           <el-tree-select
             v-model="addOrgRelForm.orgUnitId"
@@ -716,7 +701,7 @@
         </el-form-item>
       </el-form>
       <template #footer>
-        <div class="flex justify-end gap-2">
+        <div style="display: flex; justify-content: flex-end; gap: 8px;">
           <el-button @click="showAddOrgRelDialog = false">取消</el-button>
           <el-button type="primary" :loading="addOrgRelLoading" :disabled="!addOrgRelForm.orgUnitId" @click="handleAddOrgRelation">确认</el-button>
         </div>
@@ -739,19 +724,17 @@
       class="fp-dialog"
     >
       <template #header>
-        <div class="flex items-center justify-between px-4 py-2 border-b border-gray-200">
-          <div class="flex items-center gap-2">
-            <MapPin class="h-4 w-4 text-gray-500" />
-            <span class="text-sm font-semibold text-gray-800">平面图编辑 - {{ selectedNode?.placeName }}</span>
+        <div class="fp-header-bar">
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <MapPin style="width: 16px; height: 16px; color: #6b7280;" />
+            <span style="font-size: 13px; font-weight: 600; color: #1f2937;">平面图编辑 - {{ selectedNode?.placeName }}</span>
           </div>
-          <div class="flex items-center gap-2">
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <button class="tm-btn tm-btn-secondary" style="padding: 6px 12px; font-size: 12px;" @click="showFloorPlanDialog = false">取消</button>
             <button
-              class="rounded-md border border-gray-300 px-3 py-1.5 text-xs font-medium text-gray-600 hover:bg-gray-50"
-              @click="showFloorPlanDialog = false"
-            >取消</button>
-            <button
-              class="rounded-md bg-blue-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-blue-700"
-              :class="{ 'opacity-50 cursor-not-allowed': floorPlanSaving }"
+              class="tm-btn tm-btn-primary"
+              style="padding: 6px 12px; font-size: 12px;"
+              :style="floorPlanSaving ? { opacity: '0.5', cursor: 'not-allowed' } : {}"
               :disabled="floorPlanSaving"
               @click="handleFloorPlanSave"
             >{{ floorPlanSaving ? '保存中...' : '保存' }}</button>
@@ -1779,47 +1762,341 @@ onBeforeUnmount(() => {
 </script>
 
 <style scoped>
-.detail-cell {
+@import '@/styles/teaching-ui.css';
+
+/* ============================================
+   Page Layout — Sidebar + Main
+   ============================================ */
+.pm-root {
   display: flex;
-  align-items: baseline;
-  gap: 6px;
-  border-bottom: 1px solid #f3f4f6;
-  padding: 5px 10px;
-  min-height: 28px;
+  height: 100%;
+  background: #f8f9fb;
+  font-family: 'DM Sans', sans-serif;
 }
-.detail-label {
+.pm-sidebar {
+  display: flex;
+  width: 280px;
   flex-shrink: 0;
-  font-size: 11px;
-  color: #9ca3af;
-  white-space: nowrap;
+  flex-direction: column;
+  border-right: 1px solid #e5e7eb;
+  background: #fff;
 }
-.detail-val {
-  font-size: 12px;
-  color: #1f2937;
+.pm-main {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+/* Stats bar below header */
+.tm-stats-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 24px;
+  background: #fff;
+  border-bottom: 1px solid #e8eaed;
+}
+.tm-stats-bar .sep {
+  display: block;
+  width: 1px;
+  height: 10px;
+  background: #d1d5db;
+}
+
+/* Main content scroll area */
+.pm-content {
+  flex: 1;
+  overflow-y: auto;
+  padding: 20px 24px 24px;
+}
+
+/* Loading spinner */
+.pm-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 80px 0;
+}
+.pm-spinner {
+  width: 32px;
+  height: 32px;
+  border: 2px solid #2563eb;
+  border-top-color: transparent;
+  border-radius: 50%;
+}
+
+/* Detail area */
+.pm-detail-area {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+/* ============================================
+   Detail Card
+   ============================================ */
+.pm-card {
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  overflow: hidden;
+}
+.pm-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 20px;
+}
+.pm-card-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+.pm-card-name {
+  font-size: 15px;
+  font-weight: 600;
+  color: #111827;
+  margin: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-.detail-link {
+.pm-card-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+.pm-card-actions .tm-action {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+/* More dropdown */
+.pm-dropdown-wrap { position: relative; }
+.pm-more-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+  background: #fff;
+  color: #9ca3af;
+  cursor: pointer;
+  transition: background 0.1s;
+}
+.pm-more-btn:hover { background: #f3f4f6; }
+.pm-dropdown {
+  position: absolute;
+  right: 0;
+  top: 100%;
+  z-index: 10;
+  margin-top: 4px;
+  width: 144px;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  background: #fff;
+  padding: 4px 0;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.1);
+}
+.pm-dropdown-item {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px;
+  font-size: 12px;
+  color: #374151;
+  background: none;
+  border: none;
+  cursor: pointer;
+  transition: background 0.1s;
+  font-family: inherit;
+}
+.pm-dropdown-item:hover { background: #f3f4f6; }
+.pm-dropdown-sep { border-top: 1px solid #f3f4f6; }
+.pm-dropdown-danger { color: #ef4444; }
+.pm-dropdown-danger:hover { background: #fef2f2; }
+
+/* Compact stats row */
+.pm-card-stats {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  border-top: 1px solid #f3f4f6;
+  padding: 8px 20px;
+  font-size: 12px;
+  color: #6b7280;
+}
+.pm-card-stats strong { color: #111827; }
+.pm-sep { display: block; width: 1px; height: 12px; background: #e5e7eb; }
+
+/* Tab count badge */
+.pm-tab-count {
+  margin-left: 4px;
+  padding: 1px 6px;
+  border-radius: 99px;
+  background: #f3f4f6;
+  font-size: 10px;
+  font-weight: 500;
+  color: #6b7280;
+}
+
+/* ============================================
+   Tab content helpers
+   ============================================ */
+.pm-tab-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 20px;
+  border-bottom: 1px solid #f3f4f6;
+}
+.pm-section-border { border-top: 1px solid #f3f4f6; }
+.pm-empty-hint {
+  padding: 16px 20px;
+  text-align: center;
+  font-size: 12px;
+  color: #9ca3af;
+}
+.pm-hint-bar {
+  border-top: 1px solid #f3f4f6;
+  padding: 8px 20px;
   font-size: 11px;
+  color: #9ca3af;
+}
+.pm-link-btn {
+  font-size: 11px;
+  font-weight: 500;
   color: #3b82f6;
   background: none;
   border: none;
   cursor: pointer;
   padding: 0;
+  font-family: inherit;
+  transition: color 0.15s;
 }
-.detail-link:hover {
+.pm-link-btn:hover { color: #2563eb; }
+
+/* Child place chips */
+.pm-child-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 12px 20px;
+}
+.pm-child-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 8px;
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+  background: #f9fafb;
+  font-size: 11px;
+  cursor: pointer;
+  transition: all 0.15s;
+  font-family: inherit;
+}
+.pm-child-chip:hover { border-color: #93c5fd; background: #eff6ff; }
+.pm-child-name { font-weight: 500; color: #374151; }
+.pm-child-type { color: #9ca3af; }
+.pm-child-cap {
+  padding: 0 4px;
+  border-radius: 3px;
+  background: #e5e7eb;
+  font-size: 10px;
+  color: #6b7280;
+}
+
+/* View mode toggle */
+.pm-view-toggle {
+  display: flex;
+  border: 1px solid #e5e7eb;
+  border-radius: 5px;
+  overflow: hidden;
+  margin-left: 8px;
+}
+.pm-toggle-btn {
+  padding: 2px 6px;
+  font-size: 10px;
+  color: #9ca3af;
+  background: #fff;
+  border: none;
+  border-right: 1px solid #e5e7eb;
+  cursor: pointer;
+  font-family: inherit;
+  transition: all 0.1s;
+}
+.pm-toggle-btn:last-child { border-right: none; }
+.pm-toggle-btn.active {
+  background: #eff6ff;
   color: #2563eb;
-  text-decoration: underline;
+  font-weight: 500;
 }
-/* ===== Check-in Dialog ===== */
+.pm-toggle-btn:not(.active):hover { background: #f9fafb; }
+
+/* Info grid */
+.pm-info-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr 1fr;
+  gap: 12px 24px;
+  padding: 16px 20px;
+  font-size: 12px;
+}
+.pm-info-span2 { grid-column: span 2; }
+.pm-info-span4 { grid-column: span 4; }
+.pm-info-label { font-weight: 500; color: #6b7280; }
+.pm-info-value { margin-top: 2px; color: #111827; }
+
+/* ============================================
+   Tailwind utility classes used by script fns
+   (statusBadgeClass, genderBadgeClass, etc.)
+   ============================================ */
+.bg-gray-100 { background: #f3f4f6; }
+.bg-gray-50 { background: #f9fafb; }
+.bg-emerald-100 { background: #d1fae5; }
+.bg-emerald-50 { background: #ecfdf5; }
+.bg-amber-100 { background: #fef3c7; }
+.bg-amber-50 { background: #fffbeb; }
+.bg-blue-50 { background: #eff6ff; }
+.bg-pink-50 { background: #fdf2f8; }
+.bg-purple-50 { background: #f5f3ff; }
+.text-gray-600 { color: #4b5563; }
+.text-gray-500 { color: #6b7280; }
+.text-emerald-700 { color: #047857; }
+.text-emerald-600 { color: #059669; }
+.text-amber-700 { color: #b45309; }
+.text-amber-600 { color: #d97706; }
+.text-blue-600 { color: #2563eb; }
+.text-pink-600 { color: #db2777; }
+.text-purple-600 { color: #7c3aed; }
+
+/* ============================================
+   Floor Plan Header
+   ============================================ */
+.fp-header-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 16px;
+  border-bottom: 1px solid #e8eaed;
+}
+
+/* ============================================
+   Check-in Dialog
+   ============================================ */
 .ci-dialog :deep(.el-dialog) { border-radius: 12px; }
 .ci-dialog :deep(.el-dialog__header) { padding: 0; margin: 0; }
 .ci-dialog :deep(.el-dialog__headerbtn) { top: 14px; right: 16px; z-index: 2; }
 .ci-dialog :deep(.el-dialog__body) { padding: 14px 20px 8px; }
 .ci-dialog :deep(.el-dialog__footer) { padding: 10px 20px 14px; }
 
-/* header */
 .ci-header { display: flex; align-items: center; justify-content: space-between; padding: 14px 40px 12px 20px; border-bottom: 1px solid #f3f4f6; }
 .ci-header-left { display: flex; align-items: center; gap: 10px; }
 .ci-header-title { font-size: 15px; font-weight: 600; color: #111827; }
@@ -1833,31 +2110,27 @@ onBeforeUnmount(() => {
 .ci-remain-full { color: #dc2626; background: #fef2f2; }
 .ci-header-gender { font-size: 10px; font-weight: 500; color: #3b82f6; background: #eff6ff; padding: 1px 6px; border-radius: 4px; }
 
-/* search + actions */
 .ci-actions { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; }
 .ci-search { flex: 1; }
-.ci-batch-btn { display: inline-flex; align-items: center; gap: 4px; padding: 0 12px; height: 32px; font-size: 12px; font-weight: 500; color: #374151; background: #fff; border: 1px solid #e5e7eb; border-radius: 6px; cursor: pointer; white-space: nowrap; transition: all 0.15s; }
+.ci-batch-btn { display: inline-flex; align-items: center; gap: 4px; padding: 0 12px; height: 32px; font-size: 12px; font-weight: 500; color: #374151; background: #fff; border: 1px solid #e5e7eb; border-radius: 6px; cursor: pointer; white-space: nowrap; transition: all 0.15s; font-family: inherit; }
 .ci-batch-btn:hover { border-color: #3b82f6; color: #3b82f6; }
 
-/* dropdown option row */
 .ci-opt { display: grid; grid-template-columns: 64px 80px 1fr 32px; gap: 6px; align-items: center; font-size: 12px; line-height: 1.5; }
 .ci-opt-name { color: #111827; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .ci-opt-user { color: #6b7280; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .ci-opt-org  { color: #9ca3af; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .ci-opt-gender { text-align: center; font-size: 11px; }
 
-/* list container */
 .ci-list { border: 1px solid #e5e7eb; border-radius: 8px; overflow: hidden; }
 .ci-list-header { display: flex; align-items: center; justify-content: space-between; padding: 6px 12px; background: #f9fafb; border-bottom: 1px solid #f3f4f6; font-size: 12px; color: #6b7280; }
 .ci-list-header b { color: #111827; }
-.ci-auto-btn { font-size: 11px; color: #3b82f6; background: none; border: none; cursor: pointer; padding: 0; }
+.ci-auto-btn { font-size: 11px; color: #3b82f6; background: none; border: none; cursor: pointer; padding: 0; font-family: inherit; }
 .ci-auto-btn:hover { text-decoration: underline; }
-.ci-clear-btn { font-size: 11px; color: #ef4444; background: none; border: none; cursor: pointer; padding: 0; }
+.ci-clear-btn { font-size: 11px; color: #ef4444; background: none; border: none; cursor: pointer; padding: 0; font-family: inherit; }
 .ci-clear-btn:hover { text-decoration: underline; }
 .ci-list-body { max-height: 260px; overflow-y: auto; }
 .ci-list-empty { padding: 32px 0; text-align: center; font-size: 12px; color: #9ca3af; }
 
-/* list grid rows */
 .ci-list-thead, .ci-list-row { display: grid; grid-template-columns: 28px 70px 80px 1fr 36px 72px 28px; align-items: center; padding: 0 12px; font-size: 12px; }
 .ci-list-thead { height: 28px; background: #f9fafb; border-bottom: 1px solid #f3f4f6; color: #9ca3af; font-size: 11px; font-weight: 500; position: sticky; top: 0; z-index: 1; }
 .ci-list-row { height: 34px; border-bottom: 1px solid #fafafa; transition: background 0.1s; }
@@ -1877,13 +2150,14 @@ onBeforeUnmount(() => {
 .ci-rm-btn { color: #d1d5db; background: none; border: none; cursor: pointer; padding: 0; display: flex; transition: color 0.15s; }
 .ci-rm-btn:hover { color: #ef4444; }
 
-/* remark */
-.ci-remark { display: block; width: 100%; margin-top: 10px; padding: 6px 10px; font-size: 12px; color: #374151; border: 1px solid #e5e7eb; border-radius: 6px; outline: none; }
+.ci-remark { display: block; width: 100%; margin-top: 10px; padding: 6px 10px; font-size: 12px; color: #374151; border: 1px solid #e5e7eb; border-radius: 6px; outline: none; box-sizing: border-box; }
 .ci-remark::placeholder { color: #d1d5db; }
 .ci-remark:focus { border-color: #93c5fd; }
 .ci-footer { display: flex; justify-content: flex-end; gap: 8px; }
 
-/* ===== Swap Dialog ===== */
+/* ============================================
+   Swap Dialog
+   ============================================ */
 .sw-dialog :deep(.el-dialog) { border-radius: 16px; overflow: hidden; box-shadow: 0 20px 60px rgba(0,0,0,0.13); }
 .sw-dialog :deep(.el-dialog__header) { display: none; }
 .sw-dialog :deep(.el-dialog__body) { padding: 0; }
@@ -1901,7 +2175,7 @@ onBeforeUnmount(() => {
 .sw-right { flex: 1; min-width: 0; padding: 24px 28px; max-height: 50vh; overflow-y: auto; }
 .sw-hd { font-size: 15px; font-weight: 600; color: #1f2937; margin-bottom: 16px; }
 .sw-list { display: flex; flex-direction: column; gap: 8px; }
-.sw-card { display: flex; align-items: center; justify-content: space-between; padding: 10px 14px; border: 1.5px solid #e5e7eb; border-radius: 10px; background: #fff; cursor: pointer; transition: all 0.15s; }
+.sw-card { display: flex; align-items: center; justify-content: space-between; padding: 10px 14px; border: 1.5px solid #e5e7eb; border-radius: 10px; background: #fff; cursor: pointer; transition: all 0.15s; font-family: inherit; }
 .sw-card:hover { border-color: #8b5cf6; background: #faf5ff; }
 .sw-card-name { font-size: 14px; font-weight: 600; color: #1f2937; margin-right: 8px; }
 .sw-card-pos { font-size: 12px; color: #9ca3af; }

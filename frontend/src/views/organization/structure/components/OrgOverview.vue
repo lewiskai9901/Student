@@ -1,80 +1,53 @@
 <template>
-  <div class="space-y-6">
+  <div class="ov-root">
     <!-- Stat Cards -->
-    <div class="grid grid-cols-4 gap-3">
-      <div class="flex items-center gap-3 rounded-lg border border-gray-200 bg-white px-4 py-3">
-        <div class="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-50">
-          <Building2 class="h-4 w-4 text-blue-600" />
-        </div>
-        <div>
-          <div class="text-lg font-bold text-gray-900">{{ stats.total }}</div>
-          <div class="text-xs text-gray-500">组织总数</div>
-        </div>
+    <div class="ov-cards">
+      <div class="ov-card">
+        <div class="ov-card-val">{{ stats.total }}</div>
+        <div class="ov-card-label">组织总数</div>
       </div>
-      <div class="flex items-center gap-3 rounded-lg border border-gray-200 bg-white px-4 py-3">
-        <div class="flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-50">
-          <CheckCircle class="h-4 w-4 text-emerald-600" />
-        </div>
-        <div>
-          <div class="text-lg font-bold text-gray-900">{{ stats.active }}</div>
-          <div class="text-xs text-gray-500">正常</div>
-        </div>
+      <div class="ov-card">
+        <div class="ov-card-val" style="color: #10b981;">{{ stats.active }}</div>
+        <div class="ov-card-label">正常</div>
       </div>
-      <div class="flex items-center gap-3 rounded-lg border border-gray-200 bg-white px-4 py-3">
-        <div class="flex h-8 w-8 items-center justify-center rounded-lg bg-orange-50">
-          <XCircle class="h-4 w-4 text-orange-600" />
-        </div>
-        <div>
-          <div class="text-lg font-bold text-gray-900">{{ stats.inactive }}</div>
-          <div class="text-xs text-gray-500">冻结/撤销</div>
-        </div>
+      <div class="ov-card">
+        <div class="ov-card-val" style="color: #f59e0b;">{{ stats.inactive }}</div>
+        <div class="ov-card-label">冻结/撤销</div>
       </div>
     </div>
 
     <!-- Type Distribution -->
-    <div class="rounded-xl border border-gray-200 bg-white">
-      <div class="border-b border-gray-100 px-6 py-4">
-        <h3 class="text-sm font-semibold text-gray-900">类型分布</h3>
-        <p class="mt-0.5 text-xs text-gray-500">各组织类型的数量统计</p>
+    <div class="ov-panel">
+      <div class="ov-panel-header">
+        <h3 class="ov-panel-title">类型分布</h3>
       </div>
-      <div class="px-6 py-4">
-        <div v-if="typeDistribution.length > 0" class="flex flex-wrap gap-x-6 gap-y-2">
-          <div
-            v-for="(item, index) in typeDistribution"
-            :key="item.type"
-            class="flex items-center gap-1.5"
-          >
-            <span class="text-sm text-gray-600">{{ item.name }}</span>
-            <span class="text-sm font-semibold text-gray-900">{{ item.count }}</span>
-            <span v-if="index < typeDistribution.length - 1" class="ml-4 text-gray-200">|</span>
-          </div>
+      <div class="ov-panel-body">
+        <div v-if="typeDistribution.length > 0" class="ov-type-list">
+          <template v-for="(item, index) in typeDistribution" :key="item.name">
+            <span class="ov-type-item">
+              {{ item.name }} <b>{{ item.count }}</b>
+            </span>
+            <i v-if="index < typeDistribution.length - 1" class="ov-sep" />
+          </template>
         </div>
-        <div v-else class="py-4 text-center text-sm text-gray-400">
-          暂无类型数据
-        </div>
+        <div v-else class="ov-empty">暂无类型数据</div>
       </div>
     </div>
 
     <!-- Getting Started Tip -->
-    <div v-if="stats.total === 0" class="rounded-xl border border-dashed border-gray-300 bg-gray-50 px-6 py-10 text-center">
-      <Building2 class="mx-auto h-12 w-12 text-gray-300" />
-      <h3 class="mt-4 text-sm font-semibold text-gray-700">开始创建组织架构</h3>
-      <p class="mt-1 text-sm text-gray-500">
+    <div v-if="stats.total === 0" class="ov-empty-box">
+      <h3 class="ov-empty-title">开始创建组织架构</h3>
+      <p class="ov-empty-desc">
         点击左侧底部"新增组织"按钮创建第一个组织单元，建立学校组织架构。
       </p>
     </div>
 
     <!-- Quick Guide -->
-    <div v-else class="rounded-xl border border-blue-100 bg-blue-50/50 px-6 py-4">
-      <div class="flex items-start gap-3">
-        <Info class="mt-0.5 h-5 w-5 flex-shrink-0 text-blue-500" />
-        <div>
-          <p class="text-sm font-medium text-blue-800">使用提示</p>
-          <p class="mt-1 text-sm text-blue-700">
-            在左侧树形目录中点击任意组织节点，可查看详细信息和下级组织列表。
-          </p>
-        </div>
-      </div>
+    <div v-else class="ov-tip">
+      <p class="ov-tip-title">使用提示</p>
+      <p class="ov-tip-desc">
+        在左侧树形目录中点击任意组织节点，可查看详细信息和下级组织列表。
+      </p>
     </div>
   </div>
 </template>
@@ -142,3 +115,75 @@ const typeDistribution = computed(() => {
 })
 
 </script>
+
+<style scoped>
+@import '@/styles/teaching-ui.css';
+
+.ov-root { display: flex; flex-direction: column; gap: 16px; }
+
+/* Stat cards */
+.ov-cards { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+.ov-card {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 16px;
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+}
+.ov-card-val { font-size: 18px; font-weight: 700; color: #111827; }
+.ov-card-label { font-size: 12px; color: #6b7280; }
+
+/* Panel */
+.ov-panel {
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  overflow: hidden;
+}
+.ov-panel-header {
+  padding: 14px 20px;
+  border-bottom: 1px solid #f3f4f6;
+}
+.ov-panel-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: #111827;
+  margin: 0;
+}
+.ov-panel-body { padding: 14px 20px; }
+
+/* Type list */
+.ov-type-list {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+.ov-type-item { font-size: 13px; color: #6b7280; }
+.ov-type-item b { font-weight: 600; color: #111827; margin-left: 2px; }
+.ov-sep { display: block; width: 1px; height: 12px; background: #d1d5db; }
+
+/* Empty */
+.ov-empty { padding: 16px 0; text-align: center; font-size: 13px; color: #9ca3af; }
+.ov-empty-box {
+  padding: 40px 24px;
+  text-align: center;
+  border: 1px dashed #d1d5db;
+  border-radius: 10px;
+  background: #fafafa;
+}
+.ov-empty-title { font-size: 14px; font-weight: 600; color: #374151; margin: 0 0 6px; }
+.ov-empty-desc { font-size: 13px; color: #6b7280; margin: 0; }
+
+/* Tip */
+.ov-tip {
+  padding: 14px 20px;
+  background: #eff6ff;
+  border: 1px solid #bfdbfe;
+  border-radius: 10px;
+}
+.ov-tip-title { font-size: 13px; font-weight: 600; color: #1e40af; margin: 0 0 4px; }
+.ov-tip-desc { font-size: 13px; color: #1d4ed8; margin: 0; }
+</style>

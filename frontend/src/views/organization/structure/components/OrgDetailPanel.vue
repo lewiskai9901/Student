@@ -1,229 +1,186 @@
 <template>
-  <div class="space-y-4">
+  <div class="dp-root">
     <!-- Header Card -->
-    <div class="rounded-xl border border-gray-200 bg-white">
-      <div class="flex items-center justify-between px-5 py-3">
-        <div class="flex items-center gap-2 min-w-0">
-          <h2 class="truncate text-[15px] font-semibold text-gray-900">{{ node.unitName }}</h2>
-          <code class="rounded bg-gray-100 px-1.5 py-0.5 font-mono text-[10px] text-gray-500 flex-shrink-0">{{ node.unitCode }}</code>
-          <span
-            class="inline-flex items-center rounded px-1.5 py-0.5 text-[10px] font-medium flex-shrink-0"
-            :style="typeBadgeStyle"
-          >
+    <div class="dp-card">
+      <div class="dp-card-header">
+        <div class="dp-name-row">
+          <h2 class="dp-name">{{ node.unitName }}</h2>
+          <code class="tm-code">{{ node.unitCode }}</code>
+          <span class="tm-chip" :style="typeBadgeStyle">
             {{ node.typeName || node.unitType }}
           </span>
-          <span class="rounded px-1.5 py-0.5 text-[10px] font-medium flex-shrink-0" :class="node.status === 'ACTIVE' ? 'bg-green-50 text-green-600' : node.status === 'FROZEN' ? 'bg-orange-50 text-orange-500' : 'bg-red-50 text-red-500'">
+          <span
+            class="tm-chip"
+            :class="node.status === 'ACTIVE' ? 'tm-chip-green' : node.status === 'FROZEN' ? 'tm-chip-amber' : 'tm-chip-red'"
+          >
             {{ node.statusLabel || node.status }}
           </span>
         </div>
-        <div class="flex items-center gap-1.5 flex-shrink-0">
-          <button
-            class="inline-flex items-center gap-1 rounded-md border border-gray-200 px-2.5 py-1 text-xs font-medium text-gray-600 hover:bg-gray-50"
-            @click="emit('addChild', node)"
-          >
-            <Plus class="h-3 w-3" />
+        <div class="dp-actions">
+          <button class="tm-btn tm-btn-secondary" style="padding: 4px 10px; font-size: 12px;" @click="emit('addChild', node)">
+            <Plus style="width: 12px; height: 12px;" />
             子组织
           </button>
-          <button
-            class="inline-flex items-center gap-1 rounded-md border border-gray-200 px-2.5 py-1 text-xs font-medium text-gray-600 hover:bg-gray-50"
-            @click="emit('edit', node)"
-          >
-            <Pencil class="h-3 w-3" />
+          <button class="tm-btn tm-btn-secondary" style="padding: 4px 10px; font-size: 12px;" @click="emit('edit', node)">
+            <Pencil style="width: 12px; height: 12px;" />
             编辑
           </button>
-          <el-dropdown v-if="node.status === 'ACTIVE' || node.status === 'FROZEN'" trigger="click">
-            <button class="inline-flex items-center justify-center h-6 w-6 rounded-md border border-gray-200 text-gray-400 hover:bg-gray-50">
-              <MoreHorizontal class="h-3.5 w-3.5" />
+          <!-- More menu -->
+          <div v-if="node.status === 'ACTIVE' || node.status === 'FROZEN'" class="dp-dropdown-wrap">
+            <button class="dp-more-btn" @click="moreMenuOpen = !moreMenuOpen">
+              <MoreHorizontal style="width: 14px; height: 14px;" />
             </button>
-            <template #dropdown>
-              <el-dropdown-menu>
-                <el-dropdown-item v-if="node.status === 'ACTIVE'" @click="emit('toggleStatus', node)">
-                  <Ban class="mr-2 h-4 w-4 text-orange-500" />冻结
-                </el-dropdown-item>
-                <el-dropdown-item v-if="node.status === 'FROZEN'" @click="emit('toggleStatus', node)">
-                  <Check class="mr-2 h-4 w-4 text-green-500" />解冻
-                </el-dropdown-item>
-                <el-dropdown-item v-if="node.status === 'ACTIVE'" divided @click="emit('merge', node)">
-                  <Merge class="mr-2 h-4 w-4 text-blue-500" />合并到...
-                </el-dropdown-item>
-                <el-dropdown-item v-if="node.status === 'ACTIVE'" @click="emit('split', node)">
-                  <Split class="mr-2 h-4 w-4 text-indigo-500" />拆分
-                </el-dropdown-item>
-                <el-dropdown-item v-if="node.status === 'ACTIVE'" divided @click="emit('dissolve', node)">
-                  <XCircle class="mr-2 h-4 w-4 text-red-500" />解散
-                </el-dropdown-item>
-                <el-dropdown-item divided @click="showExportDialog = true">
-                  <Download class="mr-2 h-4 w-4 text-gray-500" />导出数据
-                </el-dropdown-item>
-                <el-dropdown-item @click="showImportDialog = true">
-                  <Upload class="mr-2 h-4 w-4 text-gray-500" />导入数据
-                </el-dropdown-item>
-                <el-dropdown-item divided @click="emit('delete', node)">
-                  <Trash2 class="mr-2 h-4 w-4 text-red-500" />删除
-                </el-dropdown-item>
-              </el-dropdown-menu>
-            </template>
-          </el-dropdown>
+            <Teleport to="body">
+              <div v-if="moreMenuOpen" class="dp-dropdown-overlay" @click="moreMenuOpen = false"></div>
+            </Teleport>
+            <div v-if="moreMenuOpen" class="dp-dropdown-menu">
+              <button v-if="node.status === 'ACTIVE'" class="dp-menu-item" @click="moreMenuOpen = false; emit('toggleStatus', node)">
+                <Ban style="width: 14px; height: 14px; color: #f59e0b;" /> 冻结
+              </button>
+              <button v-if="node.status === 'FROZEN'" class="dp-menu-item" @click="moreMenuOpen = false; emit('toggleStatus', node)">
+                <Check style="width: 14px; height: 14px; color: #10b981;" /> 解冻
+              </button>
+              <div v-if="node.status === 'ACTIVE'" class="dp-menu-divider"></div>
+              <button v-if="node.status === 'ACTIVE'" class="dp-menu-item" @click="moreMenuOpen = false; emit('merge', node)">
+                <Merge style="width: 14px; height: 14px; color: #3b82f6;" /> 合并到...
+              </button>
+              <button v-if="node.status === 'ACTIVE'" class="dp-menu-item" @click="moreMenuOpen = false; emit('split', node)">
+                <Split style="width: 14px; height: 14px; color: #6366f1;" /> 拆分
+              </button>
+              <div v-if="node.status === 'ACTIVE'" class="dp-menu-divider"></div>
+              <button v-if="node.status === 'ACTIVE'" class="dp-menu-item dp-menu-danger" @click="moreMenuOpen = false; emit('dissolve', node)">
+                <XCircle style="width: 14px; height: 14px;" /> 解散
+              </button>
+              <div class="dp-menu-divider"></div>
+              <button class="dp-menu-item" @click="moreMenuOpen = false; showExportDialog = true">
+                <Download style="width: 14px; height: 14px; color: #6b7280;" /> 导出数据
+              </button>
+              <button class="dp-menu-item" @click="moreMenuOpen = false; showImportDialog = true">
+                <Upload style="width: 14px; height: 14px; color: #6b7280;" /> 导入数据
+              </button>
+              <div class="dp-menu-divider"></div>
+              <button class="dp-menu-item dp-menu-danger" @click="moreMenuOpen = false; emit('delete', node)">
+                <Trash2 style="width: 14px; height: 14px;" /> 删除
+              </button>
+            </div>
+          </div>
           <button
             v-else
-            class="inline-flex items-center gap-1 rounded-md border border-red-200 bg-red-50 px-2.5 py-1 text-xs font-medium text-red-600 transition-colors hover:bg-red-100"
+            class="tm-btn" style="padding: 4px 10px; font-size: 12px; background: #fef2f2; color: #dc2626; border: 1px solid #fecaca;"
             @click="emit('delete', node)"
           >
-            <Trash2 class="h-3 w-3" />
+            <Trash2 style="width: 12px; height: 12px;" />
             删除
           </button>
         </div>
       </div>
 
       <!-- Statistics Bar -->
-      <div v-if="stats" class="flex items-center gap-4 border-t border-gray-100 px-5 py-2 text-xs text-gray-600">
-        <span>成员 <strong class="text-gray-900">{{ stats.belongingCount }}</strong></span>
+      <div v-if="stats" class="dp-stat-bar">
+        <span>成员 <b>{{ stats.belongingCount }}</b></span>
         <template v-if="Object.keys(stats.countByUserType).length > 0">
-          <span class="text-gray-300">—</span>
+          <span style="color: #d1d5db;">—</span>
           <template v-for="(cnt, typeCode, idx) in stats.countByUserType" :key="typeCode">
-            <span v-if="idx > 0" class="text-gray-200">|</span>
-            <span>{{ userTypeNameMap[typeCode as string] || typeCode }} <strong class="text-gray-900">{{ cnt }}</strong></span>
+            <span v-if="idx > 0" style="color: #e5e7eb;">|</span>
+            <span>{{ userTypeNameMap[typeCode as string] || typeCode }} <b>{{ cnt }}</b></span>
           </template>
         </template>
       </div>
     </div>
 
     <!-- Extension Attributes (from SPI plugin, if any) -->
-    <div v-if="extensionSchema && extensionSchema.fields?.length > 0" class="rounded-xl border border-gray-200 bg-white p-5">
-      <h3 class="mb-3 text-xs font-semibold uppercase tracking-wider text-gray-400">扩展属性</h3>
+    <div v-if="extensionSchema && extensionSchema.fields?.length > 0" class="dp-card" style="padding: 20px;">
+      <h3 class="dp-section-label">扩展属性</h3>
       <DynamicForm :schema="extensionSchema" v-model="extensionAttrs" :disabled="true" />
     </div>
 
     <!-- Tabs -->
-    <div class="rounded-xl border border-gray-200 bg-white">
-      <div class="flex border-b border-gray-200">
+    <div class="dp-card">
+      <div class="tm-tabs">
         <button
           v-for="tab in tabs"
           :key="tab.key"
-          :class="[
-            'relative px-4 py-2.5 text-xs font-medium transition-colors',
-            activeTab === tab.key
-              ? 'text-blue-600'
-              : 'text-gray-500 hover:text-gray-700'
-          ]"
+          class="tm-tab"
+          :class="{ active: activeTab === tab.key }"
           @click="activeTab = tab.key"
         >
           {{ tab.label }}
-          <span
-            v-if="tab.count !== undefined"
-            class="ml-1.5 rounded-full bg-gray-100 px-1.5 py-0.5 text-[10px] font-medium text-gray-600"
-          >{{ tab.count }}</span>
-          <div
-            v-if="activeTab === tab.key"
-            class="absolute bottom-0 left-0 right-0 h-0.5 bg-blue-600"
-          ></div>
+          <span v-if="tab.count !== undefined" class="dp-tab-count">{{ tab.count }}</span>
         </button>
       </div>
 
       <!-- Tab: 下级组织 -->
       <div v-if="activeTab === 'children'">
-        <div class="flex items-center justify-between border-b border-gray-50 px-5 py-2.5">
-          <span class="text-xs text-gray-500">共 {{ children.length }} 个下级组织</span>
-          <button
-            class="inline-flex items-center gap-1 rounded-md bg-blue-600 px-2.5 py-1 text-[11px] font-medium text-white transition-colors hover:bg-blue-700"
-            @click="emit('addChild', node)"
-          >
-            <Plus class="h-3 w-3" />
+        <div class="dp-tab-toolbar">
+          <span class="dp-tab-info">共 {{ children.length }} 个下级组织</span>
+          <button class="tm-btn tm-btn-primary" style="padding: 4px 10px; font-size: 11px;" @click="emit('addChild', node)">
+            <Plus style="width: 12px; height: 12px;" />
             添加
           </button>
         </div>
-        <div v-if="children.length > 0" class="overflow-x-auto">
-          <table class="w-full">
+        <div v-if="children.length > 0" style="overflow-x: auto;">
+          <table class="tm-table">
+            <colgroup>
+              <col />
+              <col style="width: 120px;" />
+              <col style="width: 100px;" />
+              <col style="width: 80px;" />
+              <col style="width: 100px;" />
+            </colgroup>
             <thead>
-              <tr class="border-b border-gray-100 bg-gray-50/50">
-                <th class="px-4 py-2 text-left text-xs font-medium text-gray-500">名称</th>
-                <th class="px-4 py-2 text-left text-xs font-medium text-gray-500">编码</th>
-                <th class="px-4 py-2 text-left text-xs font-medium text-gray-500">类型</th>
-                <th class="px-4 py-2 text-center text-xs font-medium text-gray-500">状态</th>
-                <th class="px-4 py-2 text-right text-xs font-medium text-gray-500">操作</th>
+              <tr>
+                <th class="text-left">名称</th>
+                <th class="text-left">编码</th>
+                <th class="text-left">类型</th>
+                <th>状态</th>
+                <th class="text-right">操作</th>
               </tr>
             </thead>
-            <tbody class="divide-y divide-gray-50">
-              <tr
-                v-for="child in children"
-                :key="child.id"
-                class="transition-colors hover:bg-gray-50"
-              >
-                <td class="px-4 py-2">
-                  <div class="flex items-center gap-2">
-                    <span class="text-xs font-medium text-gray-900">{{ child.unitName }}</span>
-                    <span
-                      v-if="child.children?.length"
-                      class="rounded bg-gray-100 px-1 py-px text-[10px] text-gray-500"
-                    >
-                      {{ child.children.length }} 子级
-                    </span>
-                  </div>
+            <tbody>
+              <tr v-for="child in children" :key="child.id">
+                <td class="text-left">
+                  <span style="font-weight: 500;">{{ child.unitName }}</span>
+                  <span v-if="child.children?.length" class="tm-chip tm-chip-gray" style="margin-left: 6px;">
+                    {{ child.children.length }} 子级
+                  </span>
                 </td>
-                <td class="px-4 py-2">
-                  <code class="rounded bg-gray-100 px-1.5 py-0.5 font-mono text-[10px] text-gray-600">
-                    {{ child.unitCode }}
-                  </code>
+                <td class="text-left">
+                  <code class="tm-code">{{ child.unitCode }}</code>
                 </td>
-                <td class="px-4 py-2">
-                  <span class="text-xs text-gray-600">{{ child.typeName || child.unitType }}</span>
-                </td>
-                <td class="px-4 py-2 text-center">
+                <td class="text-left">{{ child.typeName || child.unitType }}</td>
+                <td>
                   <span
-                    :class="[
-                      'inline-flex items-center rounded px-1.5 py-0.5 text-[10px] font-medium',
-                      child.status === 'ACTIVE' ? 'bg-green-50 text-green-700' :
-                      child.status === 'FROZEN' ? 'bg-orange-50 text-orange-700' :
-                      'bg-red-50 text-red-700'
-                    ]"
+                    class="tm-chip"
+                    :class="child.status === 'ACTIVE' ? 'tm-chip-green' : child.status === 'FROZEN' ? 'tm-chip-amber' : 'tm-chip-red'"
                   >
                     {{ child.statusLabel || child.status }}
                   </span>
                 </td>
-                <td class="px-4 py-2 text-right">
-                  <div class="flex items-center justify-end gap-1">
-                    <button
-                      class="rounded p-1.5 text-gray-400 hover:bg-gray-100 hover:text-blue-600"
-                      title="编辑"
-                      @click="emit('edit', child)"
-                    >
-                      <Pencil class="h-3.5 w-3.5" />
-                    </button>
-                    <button
-                      v-if="child.status === 'ACTIVE' || child.status === 'FROZEN'"
-                      :class="[
-                        'rounded p-1.5 text-gray-400',
-                        child.status === 'ACTIVE'
-                          ? 'hover:bg-orange-50 hover:text-orange-600'
-                          : 'hover:bg-green-50 hover:text-green-600'
-                      ]"
-                      :title="child.status === 'ACTIVE' ? '冻结' : '解冻'"
-                      @click="emit('toggleStatus', child)"
-                    >
-                      <Ban v-if="child.status === 'ACTIVE'" class="h-3.5 w-3.5" />
-                      <Check v-else class="h-3.5 w-3.5" />
-                    </button>
-                    <button
-                      class="rounded p-1.5 text-gray-400 hover:bg-red-50 hover:text-red-600"
-                      title="删除"
-                      @click="emit('delete', child)"
-                    >
-                      <Trash2 class="h-3.5 w-3.5" />
-                    </button>
-                  </div>
+                <td class="text-right">
+                  <button class="tm-action" title="编辑" @click="emit('edit', child)">
+                    <Pencil style="width: 13px; height: 13px;" />
+                  </button>
+                  <button
+                    v-if="child.status === 'ACTIVE' || child.status === 'FROZEN'"
+                    class="tm-action"
+                    :title="child.status === 'ACTIVE' ? '冻结' : '解冻'"
+                    @click="emit('toggleStatus', child)"
+                  >
+                    <Ban v-if="child.status === 'ACTIVE'" style="width: 13px; height: 13px;" />
+                    <Check v-else style="width: 13px; height: 13px;" />
+                  </button>
+                  <button class="tm-action tm-action-danger" title="删除" @click="emit('delete', child)">
+                    <Trash2 style="width: 13px; height: 13px;" />
+                  </button>
                 </td>
               </tr>
             </tbody>
           </table>
         </div>
-        <div v-else class="flex flex-col items-center py-10">
-          <FolderOpen class="h-10 w-10 text-gray-300" />
-          <p class="mt-2 text-sm text-gray-500">暂无下级组织</p>
-          <button
-            class="mt-3 inline-flex items-center gap-1.5 rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-xs font-medium text-gray-700 transition-colors hover:bg-gray-50"
-            @click="emit('addChild', node)"
-          >
-            <Plus class="h-3.5 w-3.5" />
+        <div v-else class="dp-empty">
+          <p>暂无下级组织</p>
+          <button class="tm-btn tm-btn-secondary" style="margin-top: 10px; font-size: 12px;" @click="emit('addChild', node)">
+            <Plus style="width: 14px; height: 14px;" />
             添加子组织
           </button>
         </div>
@@ -231,151 +188,120 @@
 
       <!-- Tab: 成员 (仅本组织归属成员) -->
       <div v-if="activeTab === 'members'">
-        <div class="flex items-center justify-between border-b border-gray-50 px-6 py-3">
-          <span class="text-xs text-gray-500">共 {{ belongingMembers.length }} 人</span>
-          <button
-            class="inline-flex items-center gap-1.5 rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-xs font-medium text-gray-700 transition-colors hover:bg-gray-50"
-            @click="showAddMember = true"
-          >
-            <Plus class="h-3.5 w-3.5" />
+        <div class="dp-tab-toolbar">
+          <span class="dp-tab-info">共 {{ belongingMembers.length }} 人</span>
+          <button class="tm-btn tm-btn-secondary" style="padding: 4px 10px; font-size: 12px;" @click="showAddMember = true">
+            <Plus style="width: 12px; height: 12px;" />
             添加成员
           </button>
         </div>
-        <div v-if="membersLoading" class="flex items-center justify-center py-10">
-          <Loader2 class="h-5 w-5 animate-spin text-gray-400" />
-          <span class="ml-2 text-sm text-gray-500">加载中...</span>
+        <div v-if="membersLoading" class="dp-loading">
+          <Loader2 style="width: 18px; height: 18px; color: #9ca3af;" class="tm-spin" />
+          <span>加载中...</span>
         </div>
-        <div v-else-if="mergedMembers.length > 0" class="overflow-x-auto">
-          <table class="w-full">
+        <div v-else-if="mergedMembers.length > 0" style="overflow-x: auto;">
+          <table class="tm-table">
+            <colgroup>
+              <col />
+              <col style="width: 100px;" />
+              <col />
+              <col style="width: 90px;" />
+              <col style="width: 80px;" />
+            </colgroup>
             <thead>
-              <tr class="border-b border-gray-100 bg-gray-50/60">
-                <th class="px-6 py-2.5 text-left text-xs font-medium text-gray-500">姓名</th>
-                <th class="px-6 py-2.5 text-left text-xs font-medium text-gray-500">身份</th>
-                <th class="px-6 py-2.5 text-left text-xs font-medium text-gray-500">岗位</th>
-                <th class="px-6 py-2.5 text-left text-xs font-medium text-gray-500">任职方式</th>
-                <th class="px-6 py-2.5 text-right text-xs font-medium text-gray-500">操作</th>
+              <tr>
+                <th class="text-left">姓名</th>
+                <th class="text-left">身份</th>
+                <th class="text-left">岗位</th>
+                <th class="text-left">任职方式</th>
+                <th class="text-right">操作</th>
               </tr>
             </thead>
-            <tbody class="divide-y divide-gray-50">
+            <tbody>
               <tr
                 v-for="m in mergedMembers"
                 :key="`${m.userId}-${m.userPositionId || 'no-pos'}`"
-                class="transition-colors hover:bg-gray-50"
               >
-                <td class="px-6 py-3">
-                  <button
-                    class="text-sm font-medium text-blue-600 hover:text-blue-800 hover:underline"
-                    @click="openUserRelation(m)"
-                  >{{ m.userName }}</button>
+                <td class="text-left">
+                  <button class="dp-link" @click="openUserRelation(m)">{{ m.userName }}</button>
                 </td>
-                <td class="px-6 py-3">
-                  <span class="text-sm text-gray-600">{{ userTypeNameMap[m.userTypeCode || ''] || m.userTypeCode || '-' }}</span>
+                <td class="text-left">{{ userTypeNameMap[m.userTypeCode || ''] || m.userTypeCode || '-' }}</td>
+                <td class="text-left">
+                  <span v-if="m.localPositionName">
+                    {{ m.localPositionName }}
+                    <span v-if="m.isKeyPosition" class="tm-chip tm-chip-amber" style="margin-left: 4px;">关键</span>
+                  </span>
+                  <span v-else style="color: #9ca3af;">—</span>
                 </td>
-                <td class="px-6 py-3">
-                  <div v-if="m.localPositionName" class="flex items-center gap-1.5">
-                    <span class="text-sm text-gray-900">{{ m.localPositionName }}</span>
-                    <span
-                      v-if="m.isKeyPosition"
-                      class="rounded bg-amber-50 px-1 py-0.5 text-[10px] font-medium text-amber-600"
-                    >关键</span>
-                  </div>
-                  <span v-else class="text-sm text-gray-400">—</span>
-                </td>
-                <td class="px-6 py-3">
-                  <span
-                    v-if="m.appointmentType"
-                    class="inline-flex rounded-full px-2 py-0.5 text-xs font-medium"
-                    :class="appointmentTagClass(m.appointmentType)"
-                  >
+                <td class="text-left">
+                  <span v-if="m.appointmentType" class="tm-chip" :class="appointmentTagClass(m.appointmentType)">
                     {{ AppointmentTypeLabels[m.appointmentType] || m.appointmentType }}
                   </span>
-                  <span v-else class="text-sm text-gray-400">—</span>
+                  <span v-else style="color: #9ca3af;">—</span>
                 </td>
-                <td class="px-6 py-3 text-right">
-                  <div class="flex items-center justify-end gap-1">
-                    <button
-                      v-if="m.userPositionId"
-                      class="rounded p-1.5 text-gray-400 hover:bg-orange-50 hover:text-orange-600"
-                      title="移除岗位"
-                      @click="handleRemoveStaff(m)"
-                    >
-                      <UserMinus class="h-3.5 w-3.5" />
-                    </button>
-                    <button
-                      class="rounded p-1.5 text-gray-400 hover:bg-red-50 hover:text-red-600"
-                      title="移除成员"
-                      @click="handleRemoveMember(m)"
-                    >
-                      <Trash2 class="h-3.5 w-3.5" />
-                    </button>
-                  </div>
+                <td class="text-right">
+                  <button v-if="m.userPositionId" class="tm-action" title="移除岗位" @click="handleRemoveStaff(m)">
+                    <UserMinus style="width: 13px; height: 13px;" />
+                  </button>
+                  <button class="tm-action tm-action-danger" title="移除成员" @click="handleRemoveMember(m)">
+                    <Trash2 style="width: 13px; height: 13px;" />
+                  </button>
                 </td>
               </tr>
             </tbody>
           </table>
         </div>
-        <div v-else class="flex flex-col items-center py-10">
-          <Users class="h-10 w-10 text-gray-300" />
-          <p class="mt-2 text-sm text-gray-500">暂无成员</p>
+        <div v-else class="dp-empty">
+          <p>暂无成员</p>
         </div>
       </div>
 
       <!-- Tab: 关联场所 -->
       <div v-if="activeTab === 'places'">
-        <div class="flex items-center justify-between border-b border-gray-50 px-6 py-3">
-          <span class="text-xs text-gray-500">共 {{ places.length }} 个关联场所</span>
-          <button
-            class="inline-flex items-center gap-1.5 rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-xs font-medium text-gray-700 transition-colors hover:bg-gray-50"
-            @click="showAddPlace = true"
-          >
-            <Plus class="h-3.5 w-3.5" />
+        <div class="dp-tab-toolbar">
+          <span class="dp-tab-info">共 {{ places.length }} 个关联场所</span>
+          <button class="tm-btn tm-btn-secondary" style="padding: 4px 10px; font-size: 12px;" @click="showAddPlace = true">
+            <Plus style="width: 12px; height: 12px;" />
             关联场所
           </button>
         </div>
-        <div v-if="placesLoading" class="flex items-center justify-center py-10">
-          <Loader2 class="h-5 w-5 animate-spin text-gray-400" />
-          <span class="ml-2 text-sm text-gray-500">加载中...</span>
+        <div v-if="placesLoading" class="dp-loading">
+          <Loader2 style="width: 18px; height: 18px; color: #9ca3af;" class="tm-spin" />
+          <span>加载中...</span>
         </div>
-        <div v-else-if="places.length > 0" class="overflow-x-auto">
-          <table class="w-full">
+        <div v-else-if="places.length > 0" style="overflow-x: auto;">
+          <table class="tm-table">
+            <colgroup>
+              <col />
+              <col style="width: 120px;" />
+              <col style="width: 100px;" />
+              <col style="width: 60px;" />
+            </colgroup>
             <thead>
-              <tr class="border-b border-gray-100 bg-gray-50/50">
-                <th class="px-4 py-2 text-left text-xs font-medium text-gray-500">场所名称</th>
-                <th class="px-4 py-2 text-left text-xs font-medium text-gray-500">编码</th>
-                <th class="px-4 py-2 text-left text-xs font-medium text-gray-500">关系类型</th>
-                <th class="w-12 px-2 py-2 text-right font-medium text-gray-400"></th>
+              <tr>
+                <th class="text-left">场所名称</th>
+                <th class="text-left">编码</th>
+                <th class="text-left">关系类型</th>
+                <th class="text-right"></th>
               </tr>
             </thead>
-            <tbody class="divide-y divide-gray-50">
-              <tr
-                v-for="s in places"
-                :key="s.id"
-                class="transition-colors hover:bg-gray-50/50"
-              >
-                <td class="px-4 py-2">
-                  <span class="text-xs font-medium text-gray-900">{{ s.metadata?.placeName || `场所#${s.resourceId}` }}</span>
+            <tbody>
+              <tr v-for="s in places" :key="s.id">
+                <td class="text-left" style="font-weight: 500;">{{ s.metadata?.placeName || `场所#${s.resourceId}` }}</td>
+                <td class="text-left">
+                  <code class="tm-code">{{ s.metadata?.placeCode || '-' }}</code>
                 </td>
-                <td class="px-4 py-2">
-                  <code class="rounded bg-gray-100 px-1.5 py-0.5 font-mono text-[10px] text-gray-600">
-                    {{ s.metadata?.placeCode || '-' }}
-                  </code>
+                <td class="text-left">
+                  <span class="tm-chip tm-chip-purple">{{ RelationLabels[s.relation] || s.relation }}</span>
                 </td>
-                <td class="px-4 py-2">
-                  <span class="rounded px-1.5 py-0.5 text-[10px] font-medium bg-purple-50 text-purple-700">
-                    {{ RelationLabels[s.relation] || s.relation }}
-                  </span>
-                </td>
-                <td class="whitespace-nowrap px-2 py-2 text-right">
-                  <button
-                    class="rounded px-1.5 py-0.5 text-[10px] font-medium text-red-400 transition-colors hover:bg-red-50 hover:text-red-500"
-                    @click="handleRemovePlace(s)"
-                  >移除</button>
+                <td class="text-right">
+                  <button class="tm-action tm-action-danger" @click="handleRemovePlace(s)">移除</button>
                 </td>
               </tr>
             </tbody>
           </table>
         </div>
-        <div v-else class="px-5 py-4 text-center text-xs text-gray-400">
+        <div v-else class="dp-empty" style="padding: 16px;">
           暂无关联场所
         </div>
       </div>
@@ -383,154 +309,133 @@
       <!-- Tab: 岗位编制 -->
       <div v-if="activeTab === 'positions'">
         <!-- 本级岗位编制 -->
-        <div class="flex items-center justify-between border-b border-gray-50 px-6 py-3">
-          <span class="text-xs text-gray-500">本级岗位 {{ positions.length }} 个</span>
+        <div class="dp-tab-toolbar">
+          <span class="dp-tab-info">本级岗位 {{ positions.length }} 个</span>
         </div>
-        <div v-if="positionsLoading" class="flex items-center justify-center py-10">
-          <Loader2 class="h-5 w-5 animate-spin text-gray-400" />
-          <span class="ml-2 text-sm text-gray-500">加载中...</span>
+        <div v-if="positionsLoading" class="dp-loading">
+          <Loader2 style="width: 18px; height: 18px; color: #9ca3af;" class="tm-spin" />
+          <span>加载中...</span>
         </div>
-        <div v-else-if="positions.length > 0" class="overflow-x-auto">
-          <table class="w-full">
+        <div v-else-if="positions.length > 0" style="overflow-x: auto;">
+          <table class="tm-table">
+            <colgroup>
+              <col />
+              <col style="width: 90px;" />
+              <col />
+              <col style="width: 70px;" />
+              <col style="width: 60px;" />
+            </colgroup>
             <thead>
-              <tr class="border-b border-gray-100 bg-gray-50/60">
-                <th class="px-6 py-2.5 text-left text-xs font-medium text-gray-500">岗位名称</th>
-                <th class="px-6 py-2.5 text-center text-xs font-medium text-gray-500">编制/在岗</th>
-                <th class="px-6 py-2.5 text-left text-xs font-medium text-gray-500">在岗人员</th>
-                <th class="px-6 py-2.5 text-center text-xs font-medium text-gray-500">状态</th>
-                <th class="px-6 py-2.5 text-right text-xs font-medium text-gray-500">操作</th>
+              <tr>
+                <th class="text-left">岗位名称</th>
+                <th>编制/在岗</th>
+                <th class="text-left">在岗人员</th>
+                <th>状态</th>
+                <th class="text-right">操作</th>
               </tr>
             </thead>
-            <tbody class="divide-y divide-gray-50">
-              <tr
-                v-for="p in positions"
-                :key="p.id"
-                class="transition-colors hover:bg-gray-50"
-              >
-                <td class="px-6 py-3">
-                  <div class="flex items-center gap-2">
-                    <span class="text-sm font-medium text-gray-900">{{ p.positionName }}</span>
-                    <span
-                      v-if="p.isKeyPosition"
-                      class="rounded bg-amber-50 px-1.5 py-0.5 text-[10px] font-medium text-amber-600"
-                    >关键</span>
-                  </div>
+            <tbody>
+              <tr v-for="p in positions" :key="p.id">
+                <td class="text-left">
+                  <span style="font-weight: 500;">{{ p.positionName }}</span>
+                  <span v-if="p.isKeyPosition" class="tm-chip tm-chip-amber" style="margin-left: 6px;">关键</span>
                 </td>
-                <td class="px-6 py-3 text-center">
-                  <span
-                    class="text-sm font-medium"
-                    :class="staffingColor(p)"
-                  >
+                <td>
+                  <span class="tm-mono" :class="staffingColor(p)">
                     {{ p.currentCount ?? 0 }}/{{ p.headcount }}
                   </span>
                 </td>
-                <td class="px-6 py-3">
+                <td class="text-left">
                   <template v-if="getPositionHolders(p.id).length > 0">
-                    <span
-                      v-for="(h, i) in getPositionHolders(p.id)"
-                      :key="h.userPositionId"
-                      class="text-sm text-gray-600"
-                    >{{ i > 0 ? '、' : '' }}{{ h.userName }}<span
+                    <span v-for="(h, i) in getPositionHolders(p.id)" :key="h.userPositionId">{{ i > 0 ? ', ' : '' }}{{ h.userName }}<span
                         v-if="!belongingUserIds.has(String(h.userId)) && h.primaryOrgUnitName"
-                        class="ml-0.5 rounded bg-orange-50 px-1 py-0.5 text-[10px] font-medium text-orange-600"
+                        class="tm-chip tm-chip-amber"
+                        style="margin-left: 2px;"
                         :title="'归属: ' + h.primaryOrgUnitName"
                       >来自{{ h.primaryOrgUnitName }}</span><span
                         v-else-if="!belongingUserIds.has(String(h.userId))"
-                        class="ml-0.5 rounded bg-orange-50 px-1 py-0.5 text-[10px] font-medium text-orange-600"
+                        class="tm-chip tm-chip-amber"
+                        style="margin-left: 2px;"
                       >外部</span></span>
                   </template>
-                  <span v-else class="text-sm text-orange-500">(空缺)</span>
+                  <span v-else style="color: #f59e0b;">(空缺)</span>
                 </td>
-                <td class="px-6 py-3 text-center">
-                  <span
-                    :class="[
-                      'inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium',
-                      p.enabled ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'
-                    ]"
-                  >
+                <td>
+                  <span class="tm-chip" :class="p.enabled ? 'tm-chip-green' : 'tm-chip-red'">
                     {{ p.enabled ? '启用' : '禁用' }}
                   </span>
                 </td>
-                <td class="px-6 py-3 text-right">
-                  <button
-                    class="rounded p-1.5 text-gray-400 hover:bg-blue-50 hover:text-blue-600"
-                    title="任命人员"
-                    @click="openAppointDialog(p)"
-                  >
-                    <UserPlus class="h-3.5 w-3.5" />
+                <td class="text-right">
+                  <button class="tm-action" title="任命人员" @click="openAppointDialog(p)">
+                    <UserPlus style="width: 13px; height: 13px;" />
                   </button>
                 </td>
               </tr>
             </tbody>
           </table>
         </div>
-        <div v-else class="flex flex-col items-center py-10">
-          <Users class="h-10 w-10 text-gray-300" />
-          <p class="mt-2 text-sm text-gray-500">暂无岗位</p>
+        <div v-else class="dp-empty">
+          <p>暂无岗位</p>
         </div>
 
         <!-- 子组织岗位汇总（可折叠） -->
-        <div v-if="children.length > 0" class="border-t border-gray-100">
-          <button
-            class="flex w-full items-center justify-between px-6 py-3 text-left transition-colors hover:bg-gray-50"
-            @click="toggleChildPositions"
-          >
-            <span class="text-xs font-medium text-gray-600">
+        <div v-if="children.length > 0" style="border-top: 1px solid #f3f4f6;">
+          <button class="dp-collapse-btn" @click="toggleChildPositions">
+            <span>
               子组织岗位汇总
-              <span v-if="recursiveMembers.length > 0" class="ml-1 text-gray-400">({{ childOnlyMembers.length }}人)</span>
+              <span v-if="recursiveMembers.length > 0" style="color: #9ca3af; margin-left: 4px;">({{ childOnlyMembers.length }}人)</span>
             </span>
             <ChevronDown
-              class="h-3.5 w-3.5 text-gray-400 transition-transform"
-              :class="{ 'rotate-180': showChildPositions }"
+              style="width: 14px; height: 14px; color: #9ca3af; transition: transform 0.15s;"
+              :style="{ transform: showChildPositions ? 'rotate(180deg)' : 'none' }"
             />
           </button>
 
           <template v-if="showChildPositions">
-            <div v-if="recursiveLoading" class="flex items-center justify-center py-6">
-              <Loader2 class="h-4 w-4 animate-spin text-gray-400" />
-              <span class="ml-2 text-xs text-gray-500">加载中...</span>
+            <div v-if="recursiveLoading" class="dp-loading" style="padding: 24px 0;">
+              <Loader2 style="width: 16px; height: 16px; color: #9ca3af;" class="tm-spin" />
+              <span>加载中...</span>
             </div>
             <template v-else-if="childOnlyMembers.length > 0">
               <!-- 汇总统计条 -->
-              <div class="flex flex-wrap gap-x-4 gap-y-1 border-b border-gray-50 bg-gray-50/40 px-6 py-2">
-                <span
-                  v-for="s in childPositionSummary"
-                  :key="s.positionName"
-                  class="text-xs text-gray-500"
-                >{{ s.positionName }} <span class="font-medium text-gray-700">{{ s.count }}</span></span>
+              <div class="dp-summary-bar">
+                <span v-for="s in childPositionSummary" :key="s.positionName" class="dp-summary-item">
+                  {{ s.positionName }} <b>{{ s.count }}</b>
+                </span>
               </div>
               <!-- 明细表 -->
-              <div class="overflow-x-auto">
-                <table class="w-full">
+              <div style="overflow-x: auto;">
+                <table class="tm-table">
+                  <colgroup>
+                    <col />
+                    <col />
+                    <col />
+                    <col style="width: 90px;" />
+                  </colgroup>
                   <thead>
-                    <tr class="border-b border-gray-100 bg-gray-50/30">
-                      <th class="px-6 py-2 text-left text-xs font-medium text-gray-400">人员</th>
-                      <th class="px-6 py-2 text-left text-xs font-medium text-gray-400">岗位</th>
-                      <th class="px-6 py-2 text-left text-xs font-medium text-gray-400">所在组织</th>
-                      <th class="px-6 py-2 text-center text-xs font-medium text-gray-400">任职方式</th>
+                    <tr>
+                      <th class="text-left">人员</th>
+                      <th class="text-left">岗位</th>
+                      <th class="text-left">所在组织</th>
+                      <th>任职方式</th>
                     </tr>
                   </thead>
-                  <tbody class="divide-y divide-gray-50">
-                    <tr
-                      v-for="m in childOnlyMembers"
-                      :key="m.userPositionId"
-                      class="transition-colors hover:bg-gray-50"
-                    >
-                      <td class="px-6 py-2.5 text-sm text-gray-900">{{ m.userName }}</td>
-                      <td class="px-6 py-2.5 text-sm text-gray-600">{{ m.positionName }}</td>
-                      <td class="px-6 py-2.5 text-sm text-gray-500">{{ m.orgUnitName }}</td>
-                      <td class="px-6 py-2.5 text-center">
-                        <span
-                          v-if="m.appointmentType"
-                          :class="['inline-block rounded px-1.5 py-0.5 text-[10px] font-medium', appointmentTagClass(m.appointmentType)]"
-                        >{{ AppointmentTypeLabels[m.appointmentType] || m.appointmentType }}</span>
+                  <tbody>
+                    <tr v-for="m in childOnlyMembers" :key="m.userPositionId">
+                      <td class="text-left">{{ m.userName }}</td>
+                      <td class="text-left">{{ m.positionName }}</td>
+                      <td class="text-left">{{ m.orgUnitName }}</td>
+                      <td>
+                        <span v-if="m.appointmentType" class="tm-chip" :class="appointmentTagClass(m.appointmentType)">
+                          {{ AppointmentTypeLabels[m.appointmentType] || m.appointmentType }}
+                        </span>
                       </td>
                     </tr>
                   </tbody>
                 </table>
               </div>
             </template>
-            <div v-else class="px-6 py-6 text-center text-xs text-gray-400">
+            <div v-else class="dp-empty" style="padding: 24px;">
               子组织中暂无岗位人员
             </div>
           </template>
@@ -548,56 +453,41 @@
       </div>
 
       <!-- Tab: 基本信息 -->
-      <div v-if="activeTab === 'info'" class="grid grid-cols-2 gap-x-6 gap-y-3 px-5 py-4 lg:grid-cols-3">
-        <div>
-          <dt class="text-xs font-medium text-gray-500">组织编码</dt>
-          <dd class="mt-1 text-sm font-medium text-gray-900">
-            <code class="rounded bg-gray-100 px-2 py-0.5 font-mono text-xs">{{ node.unitCode }}</code>
-          </dd>
+      <div v-if="activeTab === 'info'" class="dp-info-grid">
+        <div class="dp-info-item">
+          <dt>组织编码</dt>
+          <dd><code class="tm-code">{{ node.unitCode }}</code></dd>
         </div>
-        <div>
-          <dt class="text-xs font-medium text-gray-500">组织类型</dt>
-          <dd class="mt-1">
-            <span
-              class="inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-medium"
-              :style="typeBadgeStyle"
-            >
-              <span class="h-1.5 w-1.5 rounded-full" :style="{ backgroundColor: typeColor }"></span>
+        <div class="dp-info-item">
+          <dt>组织类型</dt>
+          <dd>
+            <span class="tm-chip" :style="typeBadgeStyle">
               {{ node.typeName || node.unitType }}
             </span>
           </dd>
         </div>
-        <div>
-          <dt class="text-xs font-medium text-gray-500">编制人数</dt>
-          <dd class="mt-1 text-sm text-gray-900">{{ node.headcount ?? '-' }}</dd>
+        <div class="dp-info-item">
+          <dt>编制人数</dt>
+          <dd>{{ node.headcount ?? '-' }}</dd>
         </div>
-        <div>
-          <dt class="text-xs font-medium text-gray-500">上级组织</dt>
-          <dd class="mt-1 text-sm text-gray-900">
-            {{ parentName || '顶级组织' }}
-          </dd>
+        <div class="dp-info-item">
+          <dt>上级组织</dt>
+          <dd>{{ parentName || '顶级组织' }}</dd>
         </div>
-        <div>
-          <dt class="text-xs font-medium text-gray-500">当前状态</dt>
-          <dd class="mt-1">
+        <div class="dp-info-item">
+          <dt>当前状态</dt>
+          <dd>
             <span
-              :class="[
-                'inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium',
-                node.status === 'ACTIVE' ? 'bg-green-50 text-green-700' :
-                node.status === 'FROZEN' ? 'bg-orange-50 text-orange-700' :
-                node.status === 'DISSOLVED' ? 'bg-red-50 text-red-700' :
-                'bg-gray-50 text-gray-700'
-              ]"
+              class="tm-chip"
+              :class="node.status === 'ACTIVE' ? 'tm-chip-green' : node.status === 'FROZEN' ? 'tm-chip-amber' : node.status === 'DISSOLVED' ? 'tm-chip-red' : 'tm-chip-gray'"
             >
-              <CheckCircle v-if="node.status === 'ACTIVE'" class="h-3 w-3" />
-              <XCircle v-else class="h-3 w-3" />
               {{ node.statusLabel || node.status }}
             </span>
           </dd>
         </div>
-        <div>
-          <dt class="text-xs font-medium text-gray-500">排序号</dt>
-          <dd class="mt-1 text-sm text-gray-900">{{ node.sortOrder }}</dd>
+        <div class="dp-info-item">
+          <dt>排序号</dt>
+          <dd>{{ node.sortOrder }}</dd>
         </div>
       </div>
     </div>
@@ -611,71 +501,61 @@
     />
 
     <!-- 任命到岗位弹窗 (从岗位 Tab 触发) -->
-    <div
-      v-if="showAppointDialog"
-      class="fixed inset-0 z-50 flex items-center justify-center bg-black/40"
-      @click.self="showAppointDialog = false"
-    >
-      <div class="w-[480px] rounded-xl bg-white p-6 shadow-xl">
-        <h3 class="mb-4 text-base font-semibold text-gray-900">
-          任命人员到「{{ appointForm.positionName }}」
-        </h3>
-        <div class="space-y-4">
-          <div>
-            <label class="mb-1 block text-xs font-medium text-gray-600">选择用户</label>
-            <div
-              class="flex min-h-[36px] cursor-pointer items-center rounded-lg border border-gray-300 px-3 py-1.5 text-sm transition-colors hover:border-blue-400"
-              @click="showAppointUserSelector = true"
-            >
-              <span v-if="appointSelectedUser" class="text-gray-900">
-                {{ appointSelectedUser.realName }} ({{ appointSelectedUser.username }})
-              </span>
-              <span v-else class="text-gray-400">点击选择用户</span>
+    <Teleport to="body">
+      <div v-if="showAppointDialog" class="dp-modal-overlay" @click.self="showAppointDialog = false">
+        <div class="dp-modal">
+          <h3 class="dp-modal-title">
+            任命人员到「{{ appointForm.positionName }}」
+          </h3>
+          <div class="dp-modal-body">
+            <div class="tm-field">
+              <label class="tm-label">选择用户</label>
+              <div class="dp-user-pick" @click="showAppointUserSelector = true">
+                <span v-if="appointSelectedUser">
+                  {{ appointSelectedUser.realName }} ({{ appointSelectedUser.username }})
+                </span>
+                <span v-else style="color: #9ca3af;">点击选择用户</span>
+              </div>
+            </div>
+            <div class="tm-field">
+              <label class="tm-label">任命类型</label>
+              <el-select v-model="appointForm.appointmentType" style="width: 100%">
+                <el-option label="正式" value="FORMAL" />
+                <el-option label="代理" value="ACTING" />
+                <el-option label="兼职" value="CONCURRENT" />
+                <el-option label="试用" value="PROBATION" />
+              </el-select>
+            </div>
+            <div class="tm-field">
+              <label class="tm-label">任职日期</label>
+              <el-date-picker
+                v-model="appointForm.startDate"
+                type="date"
+                placeholder="选择日期"
+                style="width: 100%"
+                value-format="YYYY-MM-DD"
+              />
+            </div>
+            <div class="tm-field">
+              <label class="dp-checkbox-label">
+                <input v-model="appointForm.isPrimary" type="checkbox" />
+                主岗
+              </label>
             </div>
           </div>
-          <div>
-            <label class="mb-1 block text-xs font-medium text-gray-600">任命类型</label>
-            <el-select v-model="appointForm.appointmentType" style="width: 100%">
-              <el-option label="正式" value="FORMAL" />
-              <el-option label="代理" value="ACTING" />
-              <el-option label="兼职" value="CONCURRENT" />
-              <el-option label="试用" value="PROBATION" />
-            </el-select>
+          <div class="dp-modal-footer">
+            <button class="tm-btn tm-btn-secondary" @click="showAppointDialog = false">取消</button>
+            <button
+              class="tm-btn tm-btn-primary"
+              :disabled="!appointForm.userId || appointSubmitting"
+              @click="handleAppoint"
+            >
+              {{ appointSubmitting ? '任命中...' : '确定' }}
+            </button>
           </div>
-          <div>
-            <label class="mb-1 block text-xs font-medium text-gray-600">任职日期</label>
-            <el-date-picker
-              v-model="appointForm.startDate"
-              type="date"
-              placeholder="选择日期"
-              style="width: 100%"
-              value-format="YYYY-MM-DD"
-            />
-          </div>
-          <div class="flex items-center gap-4">
-            <label class="flex items-center gap-2 text-sm text-gray-700">
-              <input v-model="appointForm.isPrimary" type="checkbox" class="rounded" />
-              主岗
-            </label>
-          </div>
-        </div>
-        <div class="mt-6 flex justify-end gap-3">
-          <button
-            class="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
-            @click="showAppointDialog = false"
-          >
-            取消
-          </button>
-          <button
-            :disabled="!appointForm.userId || appointSubmitting"
-            class="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
-            @click="handleAppoint"
-          >
-            {{ appointSubmitting ? '任命中...' : '确定' }}
-          </button>
         </div>
       </div>
-    </div>
+    </Teleport>
     <!-- 任命用户选择器 -->
     <UserSelectorDialog
       v-model:visible="showAppointUserSelector"
@@ -704,65 +584,52 @@
     />
 
     <!-- 关联场所弹窗 -->
-    <div
-      v-if="showAddPlace"
-      class="fixed inset-0 z-50 flex items-center justify-center bg-black/40"
-      @click.self="showAddPlace = false"
-    >
-      <div class="w-[480px] rounded-xl bg-white p-6 shadow-xl">
-        <h3 class="mb-4 text-base font-semibold text-gray-900">关联场所到「{{ node.unitName }}」</h3>
-        <div class="space-y-4">
-          <div>
-            <label class="mb-1 block text-xs font-medium text-gray-600">选择场所</label>
-            <select
-              v-model="addPlaceForm.placeId"
-              class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+    <Teleport to="body">
+      <div v-if="showAddPlace" class="dp-modal-overlay" @click.self="showAddPlace = false">
+        <div class="dp-modal">
+          <h3 class="dp-modal-title">关联场所到「{{ node.unitName }}」</h3>
+          <div class="dp-modal-body">
+            <div class="tm-field">
+              <label class="tm-label">选择场所</label>
+              <select v-model="addPlaceForm.placeId" class="tm-field-select">
+                <option :value="0" disabled>请选择场所</option>
+                <option v-for="s in placeOptions" :key="s.id" :value="s.id">
+                  {{ s.placeName }} ({{ s.placeCode }})
+                </option>
+              </select>
+            </div>
+            <div class="tm-field">
+              <label class="tm-label">关系类型</label>
+              <select v-model="addPlaceForm.relationType" class="tm-field-select">
+                <option value="PRIMARY">主管</option>
+                <option value="SHARED">共享</option>
+                <option value="MANAGED">托管</option>
+              </select>
+            </div>
+            <div class="tm-field" style="display: flex; gap: 16px;">
+              <label class="dp-checkbox-label">
+                <input v-model="addPlaceForm.isPrimary" type="checkbox" />
+                主归属
+              </label>
+              <label class="dp-checkbox-label">
+                <input v-model="addPlaceForm.canInspect" type="checkbox" />
+                可检查
+              </label>
+            </div>
+          </div>
+          <div class="dp-modal-footer">
+            <button class="tm-btn tm-btn-secondary" @click="showAddPlace = false">取消</button>
+            <button
+              class="tm-btn tm-btn-primary"
+              :disabled="!addPlaceForm.placeId || addPlaceSubmitting"
+              @click="handleAddPlace"
             >
-              <option :value="0" disabled>请选择场所</option>
-              <option v-for="s in placeOptions" :key="s.id" :value="s.id">
-                {{ s.placeName }} ({{ s.placeCode }})
-              </option>
-            </select>
+              {{ addPlaceSubmitting ? '关联中...' : '确定' }}
+            </button>
           </div>
-          <div>
-            <label class="mb-1 block text-xs font-medium text-gray-600">关系类型</label>
-            <select
-              v-model="addPlaceForm.relationType"
-              class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-            >
-              <option value="PRIMARY">主管</option>
-              <option value="SHARED">共享</option>
-              <option value="MANAGED">托管</option>
-            </select>
-          </div>
-          <div class="flex items-center gap-4">
-            <label class="flex items-center gap-2 text-sm text-gray-700">
-              <input v-model="addPlaceForm.isPrimary" type="checkbox" class="rounded" />
-              主归属
-            </label>
-            <label class="flex items-center gap-2 text-sm text-gray-700">
-              <input v-model="addPlaceForm.canInspect" type="checkbox" class="rounded" />
-              可检查
-            </label>
-          </div>
-        </div>
-        <div class="mt-6 flex justify-end gap-3">
-          <button
-            class="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
-            @click="showAddPlace = false"
-          >
-            取消
-          </button>
-          <button
-            :disabled="!addPlaceForm.placeId || addPlaceSubmitting"
-            class="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
-            @click="handleAddPlace"
-          >
-            {{ addPlaceSubmitting ? '关联中...' : '确定' }}
-          </button>
         </div>
       </div>
-    </div>
+    </Teleport>
   </div>
 </template>
 
@@ -832,6 +699,7 @@ const emit = defineEmits<{
 
 // ==================== Tab state ====================
 const activeTab = ref<'children' | 'members' | 'places' | 'positions' | 'changelog' | 'info'>('children')
+const moreMenuOpen = ref(false)
 
 // ==================== Color mapping by category (OrgCategory enum) ====================
 const OrgCategoryColorMap: Record<string, string> = {
@@ -1379,3 +1247,292 @@ const onUserRelationChanged = () => {
   loadStats()
 }
 </script>
+
+<style scoped>
+@import '@/styles/teaching-ui.css';
+
+.dp-root { display: flex; flex-direction: column; gap: 16px; }
+
+/* Header card */
+.dp-card {
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  overflow: hidden;
+}
+.dp-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 20px;
+}
+.dp-name-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+.dp-name {
+  font-size: 15px;
+  font-weight: 600;
+  color: #111827;
+  margin: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.dp-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+.dp-stat-bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  border-top: 1px solid #f3f4f6;
+  padding: 8px 20px;
+  font-size: 12px;
+  color: #6b7280;
+}
+.dp-stat-bar b { font-weight: 600; color: #111827; }
+
+/* Section label */
+.dp-section-label {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: #9ca3af;
+  margin: 0 0 12px;
+}
+
+/* Tab extras */
+.dp-tab-count {
+  display: inline-block;
+  margin-left: 4px;
+  padding: 1px 6px;
+  border-radius: 99px;
+  background: #f3f4f6;
+  font-size: 10px;
+  font-weight: 500;
+  color: #6b7280;
+}
+.dp-tab-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 20px;
+  border-bottom: 1px solid #f3f4f6;
+}
+.dp-tab-info { font-size: 12px; color: #6b7280; }
+
+/* Empty / loading */
+.dp-empty {
+  text-align: center;
+  padding: 40px 0;
+  color: #9ca3af;
+  font-size: 13px;
+}
+.dp-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 40px 0;
+  font-size: 13px;
+  color: #9ca3af;
+}
+
+/* Link button */
+.dp-link {
+  background: none;
+  border: none;
+  padding: 0;
+  font-size: 13px;
+  font-weight: 500;
+  color: #2563eb;
+  cursor: pointer;
+  font-family: inherit;
+}
+.dp-link:hover { color: #1d4ed8; text-decoration: underline; }
+
+/* Collapse button */
+.dp-collapse-btn {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 20px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 500;
+  color: #4b5563;
+  font-family: inherit;
+  text-align: left;
+  transition: background 0.1s;
+}
+.dp-collapse-btn:hover { background: #f9fafb; }
+
+/* Summary bar (child positions) */
+.dp-summary-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  padding: 8px 20px;
+  border-bottom: 1px solid #f3f4f6;
+  background: #fafafa;
+}
+.dp-summary-item { font-size: 12px; color: #6b7280; }
+.dp-summary-item b { font-weight: 600; color: #374151; }
+
+/* Info grid (basic info tab) */
+.dp-info-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px 24px;
+  padding: 16px 20px;
+}
+.dp-info-item dt {
+  font-size: 12px;
+  font-weight: 500;
+  color: #6b7280;
+  margin-bottom: 4px;
+}
+.dp-info-item dd {
+  font-size: 13px;
+  color: #111827;
+  margin: 0;
+}
+
+/* More menu (native dropdown replacing el-dropdown) */
+.dp-dropdown-wrap { position: relative; }
+.dp-more-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+  background: #fff;
+  color: #9ca3af;
+  cursor: pointer;
+  transition: background 0.1s;
+}
+.dp-more-btn:hover { background: #f9fafb; color: #6b7280; }
+.dp-dropdown-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1999;
+}
+.dp-dropdown-menu {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 4px);
+  z-index: 2000;
+  min-width: 160px;
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.1);
+  padding: 4px 0;
+}
+.dp-menu-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 7px 14px;
+  font-size: 13px;
+  font-family: inherit;
+  color: #374151;
+  background: none;
+  border: none;
+  cursor: pointer;
+  text-align: left;
+  transition: background 0.1s;
+}
+.dp-menu-item:hover { background: #f3f4f6; }
+.dp-menu-danger { color: #dc2626; }
+.dp-menu-danger:hover { background: #fef2f2; }
+.dp-menu-divider { height: 1px; background: #f3f4f6; margin: 4px 0; }
+
+/* Modal (native dialog replacing fixed Tailwind modals) */
+.dp-modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 2000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0,0,0,0.35);
+  backdrop-filter: blur(2px);
+}
+.dp-modal {
+  width: 480px;
+  max-width: 90vw;
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.12);
+}
+.dp-modal-title {
+  padding: 20px 24px 0;
+  font-size: 15px;
+  font-weight: 600;
+  color: #111827;
+  margin: 0;
+}
+.dp-modal-body {
+  padding: 16px 24px;
+}
+.dp-modal-footer {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+  padding: 12px 24px 20px;
+}
+
+/* User pick field */
+.dp-user-pick {
+  display: flex;
+  align-items: center;
+  min-height: 36px;
+  padding: 6px 10px;
+  border: 1px solid #e5e7eb;
+  border-radius: 7px;
+  font-size: 13px;
+  color: #111827;
+  background: #fafafa;
+  cursor: pointer;
+  transition: border-color 0.15s;
+}
+.dp-user-pick:hover { border-color: #2563eb; }
+
+/* Checkbox label */
+.dp-checkbox-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  color: #374151;
+  cursor: pointer;
+}
+
+/* Tailwind class equivalents used by appointmentTagClass & staffingColor */
+.bg-blue-50 { background: #eff6ff; }
+.text-blue-700 { color: #1d4ed8; }
+.bg-amber-50 { background: #fffbeb; }
+.text-amber-700 { color: #b45309; }
+.bg-purple-50 { background: #f5f3ff; }
+.text-purple-700 { color: #6d28d9; }
+.bg-gray-100 { background: #f3f4f6; }
+.text-gray-600 { color: #4b5563; }
+.text-red-600 { color: #dc2626; }
+.text-green-600 { color: #16a34a; }
+.text-orange-500 { color: #f59e0b; }
+</style>
