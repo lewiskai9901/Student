@@ -902,29 +902,10 @@ const routes: RouteRecordRaw[] = [
               order: 4
             }
           },
-          {
-            path: '/system/org-types',
-            redirect: '/system/entity-types'
-          },
-          {
-            path: '/system/place-types',
-            redirect: '/system/entity-types'
-          },
-          {
-            path: '/system/user-types',
-            redirect: '/system/entity-types'
-          },
-          {
-            path: '/system/user-types-legacy',
-            name: 'SystemUserTypes',
-            component: () => import('@/views/system/UserTypeConfig.vue'),
-            meta: {
-              title: '用户类型配置(旧)',
-              requiresAuth: true,
-              permission: 'system:user:view',
-              order: 6
-            }
-          },
+          // 旧路由重定向到统一类型配置
+          { path: '/system/org-types', redirect: '/system/entity-types' },
+          { path: '/system/place-types', redirect: '/system/entity-types' },
+          { path: '/system/user-types', redirect: '/system/entity-types' },
           // 事件类型和触发器已移到"消息与事件"菜单下
           {
             path: '/system/configs',

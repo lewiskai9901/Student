@@ -11,8 +11,8 @@ import {
   updateIndicator, deleteIndicator,
 } from '@/api/insp/indicator'
 import { getGradeSchemes } from '@/api/insp/gradeScheme'
-import { orgTypeApi } from '@/api/orgType'
-import { userTypeApi } from '@/api/userType'
+
+import { entityTypeApi } from '@/api/entityType'
 import { universalPlaceTypeApi } from '@/api/universalPlaceType'
 import type { InspectionPlan, CreatePlanRequest } from '@/types/insp/template'
 import type { Indicator } from '@/types/insp/indicator'
@@ -106,8 +106,8 @@ const typeFilterOptions = ref<Array<{ code: string; name: string }>>([])
 async function loadTypeFilterOptions(countType: string) {
   try {
     let items: any[] = []
-    if (countType === 'USER') items = await userTypeApi.getEnabled()
-    else if (countType === 'ORG') items = await orgTypeApi.getEnabled()
+    if (countType === 'USER') items = await entityTypeApi.list('USER').then(r => ((r as any).data || r || []).map((t: any) => ({ typeCode: t.typeCode, typeName: t.typeName })))
+    else if (countType === 'ORG') items = await entityTypeApi.list('ORG_UNIT').then(r => ((r as any).data || r || []).map((t: any) => ({ typeCode: t.typeCode, typeName: t.typeName })))
     else if (countType === 'PLACE') items = await universalPlaceTypeApi.getEnabled()
     typeFilterOptions.value = items.map((t: any) => ({ code: t.typeCode || t.code || String(t.id), name: t.typeName || t.name || t.typeCode }))
   } catch { typeFilterOptions.value = [] }

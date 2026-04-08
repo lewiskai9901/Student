@@ -112,7 +112,7 @@ import { ref, computed, watch } from 'vue'
 import { Loader2, Search } from 'lucide-vue-next'
 import type { SimpleUser } from '@/types/user'
 import { getSimpleUserList } from '@/api/user'
-import { getEnabledUserTypes } from '@/api/userType'
+import { entityTypeApi } from '@/api/entityType'
 
 interface Props {
   visible: boolean
@@ -149,7 +149,7 @@ const loadData = async () => {
   try {
     const [users, types] = await Promise.all([
       getSimpleUserList(),
-      getEnabledUserTypes(),
+      entityTypeApi.list('USER').then(r => ((r as any).data || r || []).map((t: any) => ({ typeCode: t.typeCode, typeName: t.typeName }))),
     ])
     allUsers.value = users
     const map: Record<string, string> = {}

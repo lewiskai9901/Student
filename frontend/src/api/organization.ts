@@ -118,45 +118,7 @@ export function getOrgUnitChildren(id: number | string): Promise<OrgUnit[]> {
   return http.get<OrgUnit[]>(`${ORG_UNIT_URL}/${id}/children`)
 }
 
-// ==================== 组织类型配置 API ====================
-
-/**
- * 获取所有启用的组织类型
- */
-export function getEnabledOrgUnitTypes(): Promise<OrgUnitTypeConfig[]> {
-  return http.get<OrgUnitTypeConfig[]>(`${ORG_UNIT_TYPE_URL}/enabled`)
-}
-
-/**
- * 获取所有组织类型
- */
-export function getAllOrgUnitTypes(): Promise<OrgUnitTypeConfig[]> {
-  return http.get<OrgUnitTypeConfig[]>(ORG_UNIT_TYPE_URL)
-}
-
-/**
- * 获取组织类型树
- */
-export function getOrgUnitTypeTree(): Promise<OrgUnitTypeConfig[]> {
-  return http.get<OrgUnitTypeConfig[]>(`${ORG_UNIT_TYPE_URL}/tree`)
-}
-
-/**
- * 获取允许的子类型
- */
-export function getAllowedChildTypes(parentTypeCode: string): Promise<OrgUnitTypeConfig[]> {
-  return http.get<OrgUnitTypeConfig[]>(`${ORG_UNIT_URL}/allowed-child-types/${parentTypeCode}`)
-}
-
-/**
- * 组织类型 API 对象
- */
-export const orgTypeApi = {
-  getAll: getAllOrgUnitTypes,
-  getEnabled: getEnabledOrgUnitTypes,
-  getTree: getOrgUnitTypeTree,
-  getAllowedChildren: getAllowedChildTypes,
-}
+// 组织类型配置已迁移到 entity_type_configs，使用 entityTypeApi（@/api/entityType.ts）
 
 // ==================== 班级 API ====================
 

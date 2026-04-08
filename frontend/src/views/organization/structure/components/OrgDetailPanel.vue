@@ -677,7 +677,7 @@ import type { Position, OrgStatistics } from '@/types/position'
 import ActivityTimeline from '@/components/activity/ActivityTimeline.vue'
 import { AppointmentTypeLabels } from '@/types/position'
 import type { OrgMember } from '@/types/position'
-import { getEnabledUserTypes } from '@/api/userType'
+import { entityTypeApi } from '@/api/entityType'
 
 interface Props {
   node: DepartmentResponse
@@ -785,7 +785,7 @@ const userTypeNameMap = ref<Record<string, string>>({})
 
 const loadUserTypes = async () => {
   try {
-    const types = await getEnabledUserTypes()
+    const types = await entityTypeApi.list('USER').then(r => ((r as any).data || r || []).map((t: any) => ({ typeCode: t.typeCode, typeName: t.typeName })))
     const map: Record<string, string> = {}
     for (const t of types) {
       map[t.typeCode] = t.typeName

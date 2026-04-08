@@ -531,7 +531,6 @@ import {
   Clock
 } from 'lucide-vue-next'
 import StatCard from '@/components/design-system/cards/StatCard.vue'
-import { getEnabledUserTypes } from '@/api/userType'
 import { getOrgUnitTree } from '@/api/organization'
 import { universalPlaceApi } from '@/api/universalPlace'
 import type { UserType as UserTypeItem } from '@/types/userType'
