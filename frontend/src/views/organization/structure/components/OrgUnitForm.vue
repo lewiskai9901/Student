@@ -182,12 +182,9 @@ import DynamicForm from '@/components/extension/DynamicForm.vue'
 import { entityTypeApi } from '@/api/entityType'
 import {
   orgUnitApi,
-  getEnabledOrgUnitTypes,
-  getAllowedChildTypes,
   type DepartmentResponse,
   type OrgUnitTypeConfig
 } from '@/api/organization'
-// ClassForm removed - org management is now generic, class binding done in student module
 
 interface Props {
   visible: boolean
@@ -342,16 +339,29 @@ const parentOptions = computed(() => {
   return filterDepts(props.allDepartments)
 })
 
-// --- Load types ---
+// --- Load types (from entity_type_configs, single source of truth) ---
 const loadTypes = async () => {
   typesLoading.value = true
   try {
     if (props.parentDepartment) {
-      availableTypes.value = await getAllowedChildTypes(props.parentDepartment.unitType)
+      // 从 entity_type_configs 获取允许的子类型
+      const parentTypeCode = props.parentDepartment.typeCode || props.parentDepartment.unitType
+      const res = await entityTypeApi.getAllowedChildren('ORG_UNIT', parentTypeCode)
+      const data = (res as any).data || res || []
+      availableTypes.value = data.map((t: any) => ({
+        typeCode: t.typeCode, typeName: t.typeName, category: t.category,
+        parentTypeCode: t.parentTypeCode, defaultPositions: [],
+      }))
     } else {
-      // Root creation: only show top-level types (no parentTypeCode)
-      const allTypes = await getEnabledOrgUnitTypes()
-      availableTypes.value = allTypes.filter(t => !t.parentTypeCode)
+      // Root creation: show top-level types (no parentTypeCode)
+      const res = await entityTypeApi.list('ORG_UNIT')
+      const data = (res as any).data || res || []
+      availableTypes.value = data
+        .filter((t: any) => !t.parentTypeCode)
+        .map((t: any) => ({
+          typeCode: t.typeCode, typeName: t.typeName, category: t.category,
+          parentTypeCode: t.parentTypeCode, defaultPositions: [],
+        }))
     }
     // Auto-select if only one type available
     if (!isEdit.value && availableTypes.value.length === 1) {
