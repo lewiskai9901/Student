@@ -939,7 +939,14 @@ const loadAllRoles = async () => {
 
 const loadUserTypes = async () => {
   try {
-    userTypes.value = await getEnabledUserTypes()
+    // 从 entity_type_configs 统一读取用户类型
+    const res = await entityTypeApi.list('USER')
+    const data = (res as any).data || res || []
+    userTypes.value = data.map((t: any) => ({
+      typeCode: t.typeCode, typeName: t.typeName, category: t.category,
+      features: typeof t.features === 'string' ? JSON.parse(t.features) : t.features || {},
+      defaultRoleCodes: [],
+    }))
   } catch (error) {
     console.error('加载用户类型失败:', error)
   }
