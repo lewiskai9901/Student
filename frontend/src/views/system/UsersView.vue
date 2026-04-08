@@ -1,503 +1,359 @@
 <template>
-  <div class="min-h-screen bg-gray-50 p-6">
-    <!-- 统计卡片 -->
-    <div class="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
-      <StatCard
-        title="用户总数"
-        :value="total"
-        :icon="Users"
-        subtitle="系统用户"
-        color="blue"
-      />
-      <StatCard
-        title="启用用户"
-        :value="enabledCount"
-        :icon="UserCheck"
-        subtitle="正常使用"
-        color="emerald"
-      />
-      <StatCard
-        title="禁用用户"
-        :value="disabledCount"
-        :icon="UserX"
-        subtitle="已禁用"
-        color="rose"
-      />
-      <StatCard
-        title="今日登录"
-        :value="todayLoginCount"
-        :icon="LogIn"
-        subtitle="今天活跃"
-        color="purple"
-      />
-    </div>
-
-    <!-- 搜索和操作栏 -->
-    <div class="mb-6 rounded-lg border border-gray-200 bg-white p-4">
-      <div class="flex flex-wrap items-end gap-4">
-        <div class="w-44">
-          <label class="mb-1 block text-sm text-gray-600">账号</label>
-          <input
-            v-model="queryParams.username"
-            type="text"
-            placeholder="请输入账号"
-            class="h-9 w-full rounded-lg border border-gray-300 px-3 text-sm focus:border-blue-500 focus:outline-none"
-            @keyup.enter="handleQuery"
-          />
-        </div>
-        <div class="w-44">
-          <label class="mb-1 block text-sm text-gray-600">姓名</label>
-          <input
-            v-model="queryParams.realName"
-            type="text"
-            placeholder="请输入姓名"
-            class="h-9 w-full rounded-lg border border-gray-300 px-3 text-sm focus:border-blue-500 focus:outline-none"
-            @keyup.enter="handleQuery"
-          />
-        </div>
-        <div class="w-44">
-          <label class="mb-1 block text-sm text-gray-600">手机号</label>
-          <input
-            v-model="queryParams.phone"
-            type="text"
-            placeholder="请输入手机号"
-            class="h-9 w-full rounded-lg border border-gray-300 px-3 text-sm focus:border-blue-500 focus:outline-none"
-            @keyup.enter="handleQuery"
-          />
-        </div>
-        <div class="w-32">
-          <label class="mb-1 block text-sm text-gray-600">状态</label>
-          <select
-            v-model="queryParams.status"
-            class="h-9 w-full rounded-lg border border-gray-300 px-3 text-sm focus:border-blue-500 focus:outline-none"
-          >
-            <option :value="undefined">全部</option>
-            <option :value="1">启用</option>
-            <option :value="2">禁用</option>
-          </select>
-        </div>
-        <div class="flex gap-2">
-          <button
-            @click="handleQuery"
-            class="inline-flex h-9 items-center gap-1.5 rounded-lg bg-blue-600 px-4 text-sm font-medium text-white hover:bg-blue-700"
-          >
-            <Search class="h-4 w-4" />
-            查询
-          </button>
-          <button
-            @click="resetQuery"
-            class="inline-flex h-9 items-center gap-1.5 rounded-lg border border-gray-300 px-4 text-sm font-medium text-gray-700 hover:bg-gray-50"
-          >
-            <RotateCcw class="h-4 w-4" />
-            重置
-          </button>
-        </div>
-        <div class="ml-auto">
-          <button
-            @click="handleAdd"
-            class="inline-flex h-9 items-center gap-1.5 rounded-lg bg-blue-600 px-4 text-sm font-medium text-white hover:bg-blue-700"
-          >
-            <Plus class="h-4 w-4" />
-            新增用户
-          </button>
+  <div class="tm-page">
+    <!-- Header -->
+    <div class="tm-header">
+      <div>
+        <h1 class="tm-title">用户管理</h1>
+        <div class="tm-stats">
+          <span>总数 <b>{{ total }}</b></span>
+          <span class="sep" />
+          <span><span class="dot dot-green" />启用 <b>{{ enabledCount }}</b></span>
+          <span class="sep" />
+          <span><span class="dot dot-gray" />禁用 <b>{{ disabledCount }}</b></span>
+          <span class="sep" />
+          <span>今日登录 <b>{{ todayLoginCount }}</b></span>
         </div>
       </div>
+      <button class="tm-btn tm-btn-primary" @click="handleAdd">新增用户</button>
     </div>
 
-    <!-- 表格 -->
-    <div class="rounded-lg border border-gray-200 bg-white">
-      <div class="flex items-center justify-between border-b border-gray-200 px-4 py-3">
-        <div class="flex items-center gap-2">
-          <span class="font-medium text-gray-900">用户列表</span>
-          <span class="rounded bg-gray-100 px-2 py-0.5 text-xs text-gray-600">{{ total }} 条</span>
-        </div>
-        <div v-if="selectedIds.length > 0" class="flex items-center gap-2">
-          <span class="text-sm text-gray-500">已选 {{ selectedIds.length }} 项</span>
-          <button
-            @click="handleBatchDelete"
-            class="inline-flex items-center gap-1 rounded bg-red-50 px-2.5 py-1 text-sm text-red-600 hover:bg-red-100"
-          >
-            <Trash2 class="h-3.5 w-3.5" />
-            删除
-          </button>
-        </div>
-      </div>
+    <!-- Filter Bar -->
+    <div class="tm-filters">
+      <input
+        v-model="queryParams.username"
+        type="text"
+        placeholder="账号"
+        class="tm-input filter-input"
+        @keyup.enter="handleQuery"
+      />
+      <input
+        v-model="queryParams.realName"
+        type="text"
+        placeholder="姓名"
+        class="tm-input filter-input"
+        @keyup.enter="handleQuery"
+      />
+      <input
+        v-model="queryParams.phone"
+        type="text"
+        placeholder="手机号"
+        class="tm-input filter-input"
+        @keyup.enter="handleQuery"
+      />
+      <select v-model="queryParams.status" class="tm-select">
+        <option :value="undefined">全部状态</option>
+        <option :value="1">启用</option>
+        <option :value="2">禁用</option>
+      </select>
+      <button class="tm-btn tm-btn-primary" style="padding: 7px 16px;" @click="handleQuery">查询</button>
+      <button class="tm-btn-reset" @click="resetQuery">重置</button>
+    </div>
 
-      <table class="w-full">
+    <!-- Batch Actions Bar -->
+    <div v-if="selectedIds.length > 0" class="batch-bar">
+      <span class="batch-info">已选 {{ selectedIds.length }} 项</span>
+      <button class="tm-action tm-action-danger" @click="handleBatchDelete">批量删除</button>
+    </div>
+
+    <!-- Table -->
+    <div class="tm-table-wrap">
+      <table class="tm-table">
+        <colgroup>
+          <col style="width: 36px;" />
+          <col style="width: 10%;" />
+          <col style="width: 9%;" />
+          <col style="width: 11%;" />
+          <col style="width: 8%;" />
+          <col style="width: 12%;" />
+          <col style="width: 10%;" />
+          <col style="width: 7%;" />
+          <col style="width: 12%;" />
+          <col style="width: 13%;" />
+        </colgroup>
         <thead>
-          <tr class="border-b border-gray-200 bg-gray-50">
-            <th class="w-10 px-4 py-3">
+          <tr>
+            <th>
               <input
                 type="checkbox"
                 :checked="isAllSelected"
                 :indeterminate="isIndeterminate"
                 @change="handleSelectAll"
-                class="h-4 w-4 rounded border-gray-300"
+                class="row-checkbox"
               />
             </th>
-            <th class="px-4 py-3 text-left text-sm font-medium text-gray-900">账号</th>
-            <th class="px-4 py-3 text-left text-sm font-medium text-gray-900">姓名</th>
-            <th class="px-4 py-3 text-left text-sm font-medium text-gray-900">手机号</th>
-            <th class="px-4 py-3 text-left text-sm font-medium text-gray-900">用户类型</th>
-            <th class="px-4 py-3 text-left text-sm font-medium text-gray-900">角色</th>
-            <th class="px-4 py-3 text-left text-sm font-medium text-gray-900">组织</th>
-            <th class="px-4 py-3 text-center text-sm font-medium text-gray-900">状态</th>
-            <th class="px-4 py-3 text-left text-sm font-medium text-gray-900">最后登录</th>
-            <th class="px-4 py-3 text-center text-sm font-medium text-gray-900">操作</th>
+            <th class="text-left">账号</th>
+            <th class="text-left">姓名</th>
+            <th class="text-left">手机号</th>
+            <th>用户类型</th>
+            <th>角色</th>
+            <th class="text-left">组织</th>
+            <th>状态</th>
+            <th class="text-left">最后登录</th>
+            <th>操作</th>
           </tr>
         </thead>
-        <tbody v-if="loading">
-          <tr>
-            <td colspan="10" class="py-16 text-center">
-              <Loader2 class="mx-auto h-8 w-8 animate-spin text-blue-600" />
-              <div class="mt-2 text-sm text-gray-500">加载中...</div>
+        <tbody>
+          <tr v-if="loading">
+            <td colspan="10" class="tm-empty">
+              <span class="tm-spin" style="display: inline-block; width: 16px; height: 16px; border: 2px solid #e5e7eb; border-top-color: #2563eb; border-radius: 50%;" />
+              加载中...
             </td>
           </tr>
-        </tbody>
-        <tbody v-else-if="userList.length === 0">
-          <tr>
-            <td colspan="10" class="py-16 text-center">
-              <Users class="mx-auto h-12 w-12 text-gray-300" />
-              <div class="mt-2 text-sm text-gray-500">暂无数据</div>
-            </td>
+          <tr v-else-if="userList.length === 0">
+            <td colspan="10" class="tm-empty">暂无用户数据</td>
           </tr>
-        </tbody>
-        <tbody v-else>
-          <tr
-            v-for="row in userList"
-            :key="row.id"
-            class="border-b border-gray-100 hover:bg-gray-50"
-          >
-            <td class="px-4 py-3">
+          <tr v-for="row in userList" :key="row.id">
+            <td>
               <input
                 type="checkbox"
                 :checked="selectedIds.includes(row.id)"
                 @change="handleSelectRow(row)"
-                class="h-4 w-4 rounded border-gray-300"
+                class="row-checkbox"
               />
             </td>
-            <td class="px-4 py-3 font-medium text-gray-900">{{ row.username }}</td>
-            <td class="px-4 py-3 text-gray-700">{{ row.realName || '-' }}</td>
-            <td class="px-4 py-3 text-gray-600">{{ row.phone || '-' }}</td>
-            <td class="px-4 py-3">
-              <span v-if="getUserTypeName(row.userType)" class="rounded bg-purple-50 px-1.5 py-0.5 text-xs text-purple-600">{{ getUserTypeName(row.userType) }}</span>
-              <span v-else class="text-gray-400">-</span>
+            <td class="text-left" style="font-weight: 500; color: #111827;">{{ row.username }}</td>
+            <td class="text-left">{{ row.realName || '-' }}</td>
+            <td class="text-left" style="color: #6b7280;">{{ row.phone || '-' }}</td>
+            <td>
+              <span v-if="getUserTypeName(row.userType)" class="tm-chip tm-chip-purple">{{ getUserTypeName(row.userType) }}</span>
+              <span v-else style="color: #9ca3af;">-</span>
             </td>
-            <td class="px-4 py-3">
+            <td>
               <template v-if="row.roleNames && row.roleNames.length">
                 <span
                   v-for="(role, index) in row.roleNames"
                   :key="index"
-                  class="mr-1 rounded bg-blue-50 px-1.5 py-0.5 text-xs text-blue-600"
+                  class="tm-chip tm-chip-blue"
+                  style="margin: 1px 2px;"
                 >{{ role }}</span>
               </template>
-              <span v-else class="text-gray-400">-</span>
+              <span v-else style="color: #9ca3af;">-</span>
             </td>
-            <td class="px-4 py-3 text-gray-600">{{ row.orgUnitName || '-' }}</td>
-            <td class="px-4 py-3 text-center">
+            <td class="text-left" style="color: #6b7280;">{{ row.orgUnitName || '-' }}</td>
+            <td>
               <button
                 @click="handleStatusChange(row)"
-                :class="[
-                  'relative inline-flex h-5 w-9 items-center rounded-full transition-colors',
-                  normalizeStatus(row.status) === 1 ? 'bg-blue-600' : 'bg-gray-300'
-                ]"
+                :class="['tm-status', normalizeStatus(row.status) === 1 ? 'tm-status-active' : 'tm-status-inactive']"
               >
-                <span
-                  :class="[
-                    'inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform',
-                    normalizeStatus(row.status) === 1 ? 'translate-x-4' : 'translate-x-0.5'
-                  ]"
-                />
+                <em class="tm-status-dot" />
+                {{ normalizeStatus(row.status) === 1 ? '启用' : '禁用' }}
               </button>
             </td>
-            <td class="px-4 py-3 text-sm text-gray-500">{{ row.lastLoginTime || '-' }}</td>
-            <td class="px-4 py-3">
-              <div class="flex items-center justify-center gap-1">
-                <button
-                  @click="handleEdit(row)"
-                  class="rounded p-1.5 text-gray-500 hover:bg-blue-50 hover:text-blue-600"
-                  title="编辑"
-                >
-                  <Pencil class="h-4 w-4" />
-                </button>
-                <button
-                  @click="handleAssignRoles(row)"
-                  class="rounded p-1.5 text-gray-500 hover:bg-green-50 hover:text-green-600"
-                  title="分配角色"
-                >
-                  <Shield class="h-4 w-4" />
-                </button>
-                <!-- 数据范围按钮已移除 - 数据权限现在在角色级别配置 -->
-                <button
-                  @click="handleResetPassword(row)"
-                  class="rounded p-1.5 text-gray-500 hover:bg-amber-50 hover:text-amber-600"
-                  title="重置密码"
-                >
-                  <KeyRound class="h-4 w-4" />
-                </button>
-                <button
-                  @click="handleDelete(row)"
-                  class="rounded p-1.5 text-gray-500 hover:bg-red-50 hover:text-red-600"
-                  title="删除"
-                >
-                  <Trash2 class="h-4 w-4" />
-                </button>
-              </div>
+            <td class="text-left" style="font-size: 12px; color: #9ca3af;">{{ row.lastLoginTime || '-' }}</td>
+            <td>
+              <button class="tm-action" @click="handleEdit(row)">编辑</button>
+              <button class="tm-action" @click="handleAssignRoles(row)">角色</button>
+              <button class="tm-action" @click="handleResetPassword(row)">密码</button>
+              <button class="tm-action tm-action-danger" @click="handleDelete(row)">删除</button>
             </td>
           </tr>
         </tbody>
       </table>
+    </div>
 
-      <!-- 分页 -->
-      <div class="flex items-center justify-between border-t border-gray-200 px-4 py-3">
-        <div class="text-sm text-gray-500">
-          共 {{ total }} 条，第 {{ queryParams.pageNum }} / {{ Math.ceil(total / queryParams.pageSize) || 1 }} 页
-        </div>
-        <div class="flex items-center gap-2">
-          <select
-            v-model="queryParams.pageSize"
-            @change="loadUserList"
-            class="rounded border border-gray-300 pl-2 text-xs"
-          >
-            <option v-for="size in [10, 20, 50, 100]" :key="size" :value="size">{{ size }}条/页</option>
-          </select>
-          <div class="flex gap-1">
-            <button
-              @click="queryParams.pageNum = 1; loadUserList()"
-              :disabled="queryParams.pageNum <= 1"
-              class="rounded border border-gray-300 p-1.5 disabled:opacity-50 hover:bg-gray-50"
-            >
-              <ChevronsLeft class="h-4 w-4" />
-            </button>
-            <button
-              @click="queryParams.pageNum--; loadUserList()"
-              :disabled="queryParams.pageNum <= 1"
-              class="rounded border border-gray-300 p-1.5 disabled:opacity-50 hover:bg-gray-50"
-            >
-              <ChevronLeft class="h-4 w-4" />
-            </button>
-            <button
-              @click="queryParams.pageNum++; loadUserList()"
-              :disabled="queryParams.pageNum >= Math.ceil(total / queryParams.pageSize)"
-              class="rounded border border-gray-300 p-1.5 disabled:opacity-50 hover:bg-gray-50"
-            >
-              <ChevronRight class="h-4 w-4" />
-            </button>
-            <button
-              @click="queryParams.pageNum = Math.ceil(total / queryParams.pageSize); loadUserList()"
-              :disabled="queryParams.pageNum >= Math.ceil(total / queryParams.pageSize)"
-              class="rounded border border-gray-300 p-1.5 disabled:opacity-50 hover:bg-gray-50"
-            >
-              <ChevronsRight class="h-4 w-4" />
-            </button>
-          </div>
-        </div>
+    <!-- Pagination -->
+    <div class="tm-pagination">
+      <span class="tm-page-info">共 {{ total }} 条，第 {{ queryParams.pageNum }} / {{ Math.ceil(total / queryParams.pageSize) || 1 }} 页</span>
+      <div class="tm-page-controls">
+        <select
+          class="tm-page-select"
+          :value="queryParams.pageSize"
+          @change="queryParams.pageSize = Number(($event.target as HTMLSelectElement).value); loadUserList()"
+        >
+          <option :value="10">10 条/页</option>
+          <option :value="20">20 条/页</option>
+          <option :value="50">50 条/页</option>
+          <option :value="100">100 条/页</option>
+        </select>
+        <button
+          class="tm-page-btn"
+          :disabled="queryParams.pageNum <= 1"
+          @click="queryParams.pageNum = 1; loadUserList()"
+        >
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="11 17 6 12 11 7"/><polyline points="18 17 13 12 18 7"/></svg>
+        </button>
+        <button
+          class="tm-page-btn"
+          :disabled="queryParams.pageNum <= 1"
+          @click="queryParams.pageNum--; loadUserList()"
+        >
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+        </button>
+        <span class="tm-page-current">{{ queryParams.pageNum }}</span>
+        <button
+          class="tm-page-btn"
+          :disabled="queryParams.pageNum >= Math.ceil(total / queryParams.pageSize)"
+          @click="queryParams.pageNum++; loadUserList()"
+        >
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+        </button>
+        <button
+          class="tm-page-btn"
+          :disabled="queryParams.pageNum >= Math.ceil(total / queryParams.pageSize)"
+          @click="queryParams.pageNum = Math.ceil(total / queryParams.pageSize); loadUserList()"
+        >
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="13 17 18 12 13 7"/><polyline points="6 17 11 12 6 7"/></svg>
+        </button>
       </div>
     </div>
 
-    <!-- 新增/编辑对话框 -->
+    <!-- 新增/编辑 Drawer -->
     <Teleport to="body">
-      <Transition name="modal">
-        <div v-if="dialogVisible" class="fixed inset-0 z-50 flex items-center justify-center">
-          <div class="fixed inset-0 bg-black/50" @click="dialogVisible = false"></div>
-          <div class="relative w-full max-w-2xl rounded-lg bg-white shadow-xl">
-            <div class="flex items-center justify-between border-b border-gray-200 px-6 py-4">
-              <h3 class="text-lg font-medium text-gray-900">{{ dialogTitle }}</h3>
-              <button @click="dialogVisible = false" class="rounded p-1 hover:bg-gray-100">
-                <X class="h-5 w-5 text-gray-500" />
+      <Transition name="tm-drawer">
+        <div v-if="dialogVisible" class="tm-drawer-overlay" @click.self="dialogVisible = false">
+          <div class="tm-drawer" style="width: 620px;">
+            <div class="tm-drawer-header">
+              <h2 class="tm-drawer-title">{{ dialogTitle }}</h2>
+              <button class="tm-drawer-close" @click="dialogVisible = false">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
               </button>
             </div>
-            <div class="max-h-[60vh] overflow-y-auto p-6">
-              <div class="grid grid-cols-2 gap-4">
-                <!-- 账号信息 -->
-                <div class="col-span-2">
-                  <label class="mb-1 block text-sm text-gray-700">
-                    账号 <span class="text-red-500">*</span>
-                  </label>
+            <div class="tm-drawer-body">
+              <!-- Section: 账号信息 -->
+              <div class="tm-section">
+                <h3 class="tm-section-title">账号信息</h3>
+                <div class="tm-field">
+                  <label class="tm-label">账号 <span class="req">*</span></label>
                   <input
                     v-model="formData.username"
                     type="text"
                     placeholder="字母开头，仅限英文、数字、下划线（3-30位）"
                     :disabled="isEdit"
-                    :class="[
-                      'h-9 w-full rounded-lg border px-3 text-sm focus:outline-none',
-                      isEdit ? 'border-gray-200 bg-gray-100 text-gray-500' : usernameError ? 'border-red-400 focus:border-red-500' : 'border-gray-300 focus:border-blue-500'
-                    ]"
+                    :class="['tm-input', isEdit ? 'field-disabled' : '', usernameError ? 'field-error' : '']"
                     @input="validateUsername"
                   />
-                  <p v-if="usernameError" class="mt-0.5 text-xs text-red-500">{{ usernameError }}</p>
+                  <p v-if="usernameError" class="error-hint">{{ usernameError }}</p>
                 </div>
-                <div v-if="!isEdit" class="col-span-2">
-                  <label class="mb-1 block text-sm text-gray-700">
-                    密码 <span class="text-red-500">*</span>
-                  </label>
+                <div v-if="!isEdit" class="tm-field">
+                  <label class="tm-label">密码 <span class="req">*</span></label>
                   <input
                     v-model="formData.password"
                     type="password"
                     placeholder="请输入密码（6-20位）"
-                    class="h-9 w-full rounded-lg border border-gray-300 px-3 text-sm focus:border-blue-500 focus:outline-none"
+                    class="tm-input"
                   />
                 </div>
+              </div>
 
-                <!-- 基本信息 -->
-                <div>
-                  <label class="mb-1 block text-sm text-gray-700">
-                    姓名 <span class="text-red-500">*</span>
-                  </label>
-                  <input
-                    v-model="formData.realName"
-                    type="text"
-                    placeholder="请输入姓名"
-                    class="h-9 w-full rounded-lg border border-gray-300 px-3 text-sm focus:border-blue-500 focus:outline-none"
-                  />
-                </div>
-                <div>
-                  <label class="mb-1 block text-sm text-gray-700">工号</label>
-                  <input
-                    v-model="formData.employeeNo"
-                    type="text"
-                    placeholder="请输入工号"
-                    class="h-9 w-full rounded-lg border border-gray-300 px-3 text-sm focus:border-blue-500 focus:outline-none"
-                  />
-                </div>
-                <div>
-                  <label class="mb-1 block text-sm text-gray-700">手机号</label>
-                  <input
-                    v-model="formData.phone"
-                    type="text"
-                    placeholder="请输入11位手机号"
-                    :class="[
-                      'h-9 w-full rounded-lg border px-3 text-sm focus:outline-none',
-                      phoneError ? 'border-red-400 focus:border-red-500' : 'border-gray-300 focus:border-blue-500'
-                    ]"
-                    @input="validatePhone"
-                  />
-                  <p v-if="phoneError" class="mt-0.5 text-xs text-red-500">{{ phoneError }}</p>
-                </div>
-                <div>
-                  <label class="mb-1 block text-sm text-gray-700">邮箱</label>
-                  <input
-                    v-model="formData.email"
-                    type="email"
-                    placeholder="请输入邮箱"
-                    class="h-9 w-full rounded-lg border border-gray-300 px-3 text-sm focus:border-blue-500 focus:outline-none"
-                  />
-                </div>
-                <div>
-                  <label class="mb-1 block text-sm text-gray-700">性别</label>
-                  <div class="flex h-9 items-center gap-4">
-                    <label class="flex items-center gap-1.5">
-                      <input v-model="formData.gender" type="radio" :value="1" class="h-4 w-4" />
-                      <span class="text-sm text-gray-700">男</span>
-                    </label>
-                    <label class="flex items-center gap-1.5">
-                      <input v-model="formData.gender" type="radio" :value="2" class="h-4 w-4" />
-                      <span class="text-sm text-gray-700">女</span>
-                    </label>
+              <!-- Section: 基本信息 -->
+              <div class="tm-section">
+                <h3 class="tm-section-title">基本信息</h3>
+                <div class="tm-fields tm-cols-2">
+                  <div class="tm-field">
+                    <label class="tm-label">姓名 <span class="req">*</span></label>
+                    <input v-model="formData.realName" type="text" placeholder="请输入姓名" class="tm-input" />
+                  </div>
+                  <div class="tm-field">
+                    <label class="tm-label">工号</label>
+                    <input v-model="formData.employeeNo" type="text" placeholder="请输入工号" class="tm-input" />
                   </div>
                 </div>
-                <div>
-                  <label class="mb-1 block text-sm text-gray-700">出生日期</label>
-                  <input
-                    v-model="formData.birthDate"
-                    type="date"
-                    class="h-9 w-full rounded-lg border border-gray-300 px-3 text-sm focus:border-blue-500 focus:outline-none"
-                  />
+                <div class="tm-fields tm-cols-2">
+                  <div class="tm-field">
+                    <label class="tm-label">手机号</label>
+                    <input
+                      v-model="formData.phone"
+                      type="text"
+                      placeholder="请输入11位手机号"
+                      :class="['tm-input', phoneError ? 'field-error' : '']"
+                      @input="validatePhone"
+                    />
+                    <p v-if="phoneError" class="error-hint">{{ phoneError }}</p>
+                  </div>
+                  <div class="tm-field">
+                    <label class="tm-label">邮箱</label>
+                    <input v-model="formData.email" type="email" placeholder="请输入邮箱" class="tm-input" />
+                  </div>
                 </div>
-                <div class="col-span-2">
-                  <label class="mb-1 block text-sm text-gray-700">身份证号</label>
-                  <input
-                    v-model="formData.idCard"
-                    type="text"
-                    placeholder="请输入身份证号"
-                    class="h-9 w-full rounded-lg border border-gray-300 px-3 text-sm focus:border-blue-500 focus:outline-none"
-                  />
+                <div class="tm-fields tm-cols-2">
+                  <div class="tm-field">
+                    <label class="tm-label">性别</label>
+                    <div class="tm-radios">
+                      <label class="tm-radio" :class="{ active: formData.gender === 1 }">
+                        <input type="radio" :value="1" v-model="formData.gender" /> 男
+                      </label>
+                      <label class="tm-radio" :class="{ active: formData.gender === 2 }">
+                        <input type="radio" :value="2" v-model="formData.gender" /> 女
+                      </label>
+                    </div>
+                  </div>
+                  <div class="tm-field">
+                    <label class="tm-label">出生日期</label>
+                    <input v-model="formData.birthDate" type="date" class="tm-input" />
+                  </div>
                 </div>
+                <div class="tm-field">
+                  <label class="tm-label">身份证号</label>
+                  <input v-model="formData.idCard" type="text" placeholder="请输入身份证号" class="tm-input" />
+                </div>
+              </div>
 
-                <!-- 组织信息 -->
-                <div class="col-span-2">
-                  <label class="mb-1 block text-sm text-gray-700">
-                    用户类型 <span class="text-red-500">*</span>
-                  </label>
-                  <select
-                    v-model="formData.userTypeCode"
-                    class="h-9 w-full rounded-lg border px-3 text-sm focus:outline-none"
-                    :class="formData.userTypeCode ? 'border-gray-300 focus:border-blue-500' : 'border-red-300 focus:border-red-500'"
-                  >
+              <!-- Section: 组织信息 -->
+              <div class="tm-section">
+                <h3 class="tm-section-title">组织与类型</h3>
+                <div class="tm-field">
+                  <label class="tm-label">用户类型 <span class="req">*</span></label>
+                  <select v-model="formData.userTypeCode" class="tm-field-select">
                     <option value="">请选择用户类型</option>
                     <option v-for="ut in userTypes" :key="ut.typeCode" :value="ut.typeCode">
                       {{ ut.typeName }}
                     </option>
                   </select>
-                  <div v-if="selectedUserType" class="mt-1 flex gap-2">
-                    <span v-if="selectedUserType.features?.requiresOrg" class="text-xs text-orange-500">需关联组织</span>
-                    <span v-if="selectedUserType.features?.requiresPlace" class="text-xs text-orange-500">需关联场所</span>
-                    <span v-if="selectedUserType.defaultRoleCodes?.length" class="text-xs text-gray-400">默认角色: {{ selectedUserType.defaultRoleCodes.join(', ') }}</span>
+                  <div v-if="selectedUserType" style="margin-top: 4px; display: flex; gap: 8px;">
+                    <span v-if="selectedUserType.features?.requiresOrg" style="font-size: 11px; color: #d97706;">需关联组织</span>
+                    <span v-if="selectedUserType.features?.requiresPlace" style="font-size: 11px; color: #d97706;">需关联场所</span>
+                    <span v-if="selectedUserType.defaultRoleCodes?.length" style="font-size: 11px; color: #9ca3af;">默认角色: {{ selectedUserType.defaultRoleCodes.join(', ') }}</span>
                   </div>
                 </div>
-                <div>
-                  <label class="mb-1 block text-sm text-gray-700">
-                    所属组织
-                    <span v-if="selectedUserType?.features?.requiresOrg" class="text-red-500">*</span>
-                  </label>
-                  <select
-                    v-model="formData.orgUnitId"
-                    class="h-9 w-full rounded-lg border border-gray-300 px-3 text-sm focus:border-blue-500 focus:outline-none"
-                  >
-                    <option :value="undefined">请选择</option>
-                    <option v-for="org in flatOrgUnits" :key="org.id" :value="org.id">
-                      {{ org.label }}
-                    </option>
-                  </select>
-                </div>
-                <div>
-                  <label class="mb-1 block text-sm text-gray-700">
-                    关联场所
-                    <span v-if="selectedUserType?.features?.requiresPlace" class="text-red-500">*</span>
-                  </label>
-                  <select
-                    v-model="formData.placeId"
-                    class="h-9 w-full rounded-lg border border-gray-300 px-3 text-sm focus:border-blue-500 focus:outline-none"
-                  >
-                    <option :value="undefined">请选择场所</option>
-                    <option v-for="place in allPlaces" :key="place.placeId" :value="place.placeId">
-                      {{ place.placeName }}
-                    </option>
-                  </select>
-                </div>
-                <div class="col-span-2">
-                  <label class="mb-1 block text-sm text-gray-700">状态</label>
-                  <div class="flex h-9 items-center gap-4">
-                    <label class="flex items-center gap-1.5">
-                      <input v-model="formData.status" type="radio" :value="1" class="h-4 w-4" />
-                      <span class="text-sm text-gray-700">启用</span>
+                <div class="tm-fields tm-cols-2">
+                  <div class="tm-field">
+                    <label class="tm-label">
+                      所属组织
+                      <span v-if="selectedUserType?.features?.requiresOrg" class="req">*</span>
                     </label>
-                    <label class="flex items-center gap-1.5">
-                      <input v-model="formData.status" type="radio" :value="2" class="h-4 w-4" />
-                      <span class="text-sm text-gray-700">禁用</span>
+                    <select v-model="formData.orgUnitId" class="tm-field-select">
+                      <option :value="undefined">请选择</option>
+                      <option v-for="org in flatOrgUnits" :key="org.id" :value="org.id">
+                        {{ org.label }}
+                      </option>
+                    </select>
+                  </div>
+                  <div class="tm-field">
+                    <label class="tm-label">
+                      关联场所
+                      <span v-if="selectedUserType?.features?.requiresPlace" class="req">*</span>
+                    </label>
+                    <select v-model="formData.placeId" class="tm-field-select">
+                      <option :value="undefined">请选择场所</option>
+                      <option v-for="place in allPlaces" :key="place.placeId" :value="place.placeId">
+                        {{ place.placeName }}
+                      </option>
+                    </select>
+                  </div>
+                </div>
+                <div class="tm-field">
+                  <label class="tm-label">状态</label>
+                  <div class="tm-radios">
+                    <label class="tm-radio" :class="{ active: formData.status === 1 }">
+                      <input type="radio" :value="1" v-model="formData.status" /> 启用
+                    </label>
+                    <label class="tm-radio" :class="{ active: formData.status === 2 }">
+                      <input type="radio" :value="2" v-model="formData.status" /> 禁用
                     </label>
                   </div>
                 </div>
               </div>
+
+              <!-- Dynamic Extension Fields (from SPI plugins) -->
+              <div v-if="userTypeSchema && userTypeSchema.fields?.length > 0" class="tm-section">
+                <h3 class="tm-section-title">扩展属性</h3>
+                <DynamicForm :schema="userTypeSchema" v-model="formData.attributes" />
+              </div>
             </div>
-            <!-- Dynamic Extension Fields (from SPI plugins) -->
-            <div v-if="userTypeSchema && userTypeSchema.fields?.length > 0" class="px-6 pb-4">
-              <h3 class="mb-3 text-xs font-semibold uppercase tracking-wider text-gray-400">扩展属性</h3>
-              <DynamicForm :schema="userTypeSchema" v-model="formData.attributes" />
-            </div>
-            <div class="flex justify-end gap-3 border-t border-gray-200 px-6 py-4">
-              <button
-                @click="dialogVisible = false"
-                class="h-9 rounded-lg border border-gray-300 px-4 text-sm font-medium text-gray-700 hover:bg-gray-50"
-              >
-                取消
-              </button>
-              <button
-                @click="handleSubmit"
-                :disabled="submitLoading"
-                class="inline-flex h-9 items-center gap-1.5 rounded-lg bg-blue-600 px-4 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
-              >
-                <Loader2 v-if="submitLoading" class="h-4 w-4 animate-spin" />
+            <div class="tm-drawer-footer">
+              <button class="tm-btn tm-btn-secondary" @click="dialogVisible = false">取消</button>
+              <button class="tm-btn tm-btn-primary" :disabled="submitLoading" @click="handleSubmit">
+                <span v-if="submitLoading" class="tm-spin" style="display: inline-block; width: 14px; height: 14px; border: 2px solid rgba(255,255,255,0.3); border-top-color: #fff; border-radius: 50%;" />
                 确定
               </button>
             </div>
@@ -506,61 +362,53 @@
       </Transition>
     </Teleport>
 
-    <!-- 分配角色对话框 -->
+    <!-- 分配角色 Drawer -->
     <Teleport to="body">
-      <Transition name="modal">
-        <div v-if="roleDialogVisible" class="fixed inset-0 z-50 flex items-center justify-center">
-          <div class="fixed inset-0 bg-black/50" @click="roleDialogVisible = false"></div>
-          <div class="relative w-full max-w-3xl rounded-lg bg-white shadow-xl">
-            <div class="flex items-center justify-between border-b border-gray-200 px-6 py-4">
-              <h3 class="text-lg font-medium text-gray-900">分配角色 - {{ currentUserName }}</h3>
-              <button @click="roleDialogVisible = false" class="rounded p-1 hover:bg-gray-100">
-                <X class="h-5 w-5 text-gray-500" />
+      <Transition name="tm-drawer">
+        <div v-if="roleDialogVisible" class="tm-drawer-overlay" @click.self="roleDialogVisible = false">
+          <div class="tm-drawer" style="width: 680px;">
+            <div class="tm-drawer-header">
+              <h2 class="tm-drawer-title">分配角色 - {{ currentUserName }}</h2>
+              <button class="tm-drawer-close" @click="roleDialogVisible = false">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
               </button>
             </div>
-            <div class="max-h-[70vh] overflow-y-auto p-6">
+            <div class="tm-drawer-body">
               <!-- 当前角色列表 -->
-              <div v-if="currentUserRolesDetailed.length > 0" class="mb-5">
-                <h4 class="mb-2 text-sm font-medium text-gray-700">当前角色</h4>
-                <table class="w-full text-sm">
+              <div v-if="currentUserRolesDetailed.length > 0" class="tm-section">
+                <h3 class="tm-section-title">当前角色</h3>
+                <table class="role-table">
                   <thead>
-                    <tr class="border-b border-gray-200 bg-gray-50">
-                      <th class="px-3 py-2 text-left font-medium text-gray-600">角色名</th>
-                      <th class="px-3 py-2 text-left font-medium text-gray-600">作用域</th>
-                      <th class="px-3 py-2 text-left font-medium text-gray-600">过期时间</th>
-                      <th class="px-3 py-2 text-left font-medium text-gray-600">原因</th>
-                      <th class="px-3 py-2 text-center font-medium text-gray-600">状态</th>
-                      <th class="px-3 py-2 text-center font-medium text-gray-600">操作</th>
+                    <tr>
+                      <th class="text-left">角色名</th>
+                      <th class="text-left">作用域</th>
+                      <th class="text-left">过期时间</th>
+                      <th class="text-left">原因</th>
+                      <th>状态</th>
+                      <th>操作</th>
                     </tr>
                   </thead>
                   <tbody>
                     <tr
                       v-for="(ur, idx) in currentUserRolesDetailed"
                       :key="idx"
-                      class="border-b border-gray-100"
-                      :class="ur.isExpired ? 'opacity-50' : ''"
+                      :style="ur.isExpired ? 'opacity: 0.5' : ''"
                     >
-                      <td class="px-3 py-2 font-medium text-gray-900">{{ ur.roleName }}</td>
-                      <td class="px-3 py-2 text-gray-600">
-                        <span v-if="ur.scopeType === 'ALL'" class="rounded bg-blue-50 px-2 py-0.5 text-xs text-blue-600">全局</span>
-                        <span v-else class="text-sm">{{ ur.scopeName || '未指定' }}</span>
+                      <td class="text-left" style="font-weight: 500; color: #111827;">{{ ur.roleName }}</td>
+                      <td class="text-left">
+                        <span v-if="ur.scopeType === 'ALL'" class="tm-chip tm-chip-blue">全局</span>
+                        <span v-else style="font-size: 12px;">{{ ur.scopeName || '未指定' }}</span>
                       </td>
-                      <td class="px-3 py-2 text-gray-500">{{ ur.expiresAt ? ur.expiresAt.substring(0, 10) : '永久' }}</td>
-                      <td class="px-3 py-2 text-gray-400 text-xs truncate max-w-[150px]" :title="ur.reason">
+                      <td class="text-left" style="color: #9ca3af;">{{ ur.expiresAt ? ur.expiresAt.substring(0, 10) : '永久' }}</td>
+                      <td class="text-left" style="color: #9ca3af; font-size: 11px; max-width: 120px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" :title="ur.reason">
                         {{ ur.reason || '-' }}
                       </td>
-                      <td class="px-3 py-2 text-center">
-                        <span v-if="ur.isExpired" class="rounded bg-gray-100 px-1.5 py-0.5 text-xs text-gray-500">已过期</span>
-                        <span v-else class="rounded bg-green-100 px-1.5 py-0.5 text-xs text-green-600">有效</span>
+                      <td>
+                        <span v-if="ur.isExpired" class="tm-chip tm-chip-gray">已过期</span>
+                        <span v-else class="tm-chip tm-chip-green">有效</span>
                       </td>
-                      <td class="px-3 py-2 text-center">
-                        <button
-                          @click="handleRemoveSingleRole(ur)"
-                          class="rounded p-1 text-gray-400 hover:bg-red-50 hover:text-red-500"
-                          title="移除"
-                        >
-                          <Trash2 class="h-3.5 w-3.5" />
-                        </button>
+                      <td>
+                        <button class="tm-action tm-action-danger" @click="handleRemoveSingleRole(ur)">移除</button>
                       </td>
                     </tr>
                   </tbody>
@@ -568,76 +416,73 @@
               </div>
 
               <!-- 添加角色 -->
-              <div class="mb-3 rounded-lg bg-blue-50 p-3 text-sm text-blue-700">
-                勾选角色并选择作用域：「全局」不限范围，「指定组织」限定到某个组织节点及其子节点
-              </div>
-              <div class="max-h-72 space-y-2 overflow-y-auto">
-                <div
-                  v-for="role in allRoles"
-                  :key="role.id"
-                  class="rounded-lg border p-3"
-                  :class="isRoleSelected(role.id) ? 'border-blue-500 bg-blue-50/50' : 'border-gray-200'"
-                >
-                  <div class="flex flex-wrap items-center gap-3">
-                    <input
-                      type="checkbox"
-                      :checked="isRoleSelected(role.id)"
-                      @change="toggleRole(role.id)"
-                      class="h-4 w-4 shrink-0 rounded border-gray-300"
-                    />
-                    <span class="shrink-0 font-medium text-gray-900">{{ role.roleName }}</span>
-                    <span v-if="role.roleCode" class="shrink-0 text-xs text-gray-500">{{ role.roleCode }}</span>
-                  </div>
-                  <!-- 作用域 + 过期 + 原因（固定第二行，避免抖动） -->
-                  <div v-if="isRoleSelected(role.id)" class="mt-2 space-y-2 pl-7">
-                    <!-- 作用域选择 -->
-                    <div class="flex items-center gap-3 text-xs">
-                      <span class="text-gray-500 w-14 shrink-0">作用域</span>
-                      <label class="flex items-center gap-1 cursor-pointer">
-                        <input type="radio" :name="'scope-' + role.id" value="ALL"
-                          :checked="getRoleScope(role.id).scopeType === 'ALL'"
-                          @change="updateRoleScopeType(role.id, 'ALL')" class="accent-blue-600" />
-                        <span>全局</span>
-                      </label>
-                      <label class="flex items-center gap-1 cursor-pointer">
-                        <input type="radio" :name="'scope-' + role.id" value="ORG_UNIT"
-                          :checked="getRoleScope(role.id).scopeType === 'ORG_UNIT'"
-                          @change="updateRoleScopeType(role.id, 'ORG_UNIT')" class="accent-blue-600" />
-                        <span>指定组织</span>
-                      </label>
-                      <!-- 组织选择始终占位，禁用状态防抖动 -->
-                      <select
-                        :value="getRoleScope(role.id).scopeId"
-                        @change="updateRoleScopeId(role.id, Number(($event.target as HTMLSelectElement).value))"
-                        class="w-48 rounded border border-gray-300 pl-2 text-xs"
-                        :disabled="getRoleScope(role.id).scopeType !== 'ORG_UNIT'"
-                        :class="getRoleScope(role.id).scopeType !== 'ORG_UNIT' ? 'opacity-30' : ''"
-                      >
-                        <option :value="0">请选择组织</option>
-                        <option v-for="org in flatOrgUnits" :key="org.id" :value="org.id">
-                          {{ org.label }}
-                        </option>
-                      </select>
+              <div class="tm-section">
+                <h3 class="tm-section-title">角色选择</h3>
+                <div class="role-hint">
+                  勾选角色并选择作用域："全局"不限范围，"指定组织"限定到某个组织节点及其子节点
+                </div>
+                <div class="role-list">
+                  <div
+                    v-for="role in allRoles"
+                    :key="role.id"
+                    :class="['role-card', isRoleSelected(role.id) ? 'role-card-active' : '']"
+                  >
+                    <div class="role-card-header">
+                      <input
+                        type="checkbox"
+                        :checked="isRoleSelected(role.id)"
+                        @change="toggleRole(role.id)"
+                        class="row-checkbox"
+                      />
+                      <span style="font-weight: 500; color: #111827;">{{ role.roleName }}</span>
+                      <span v-if="role.roleCode" class="tm-code" style="margin-left: 4px;">{{ role.roleCode }}</span>
                     </div>
-                    <!-- 过期时间和原因 -->
-                    <div class="flex flex-wrap items-center gap-3 text-xs">
-                      <div class="flex items-center gap-1.5">
-                        <span class="text-gray-500 w-14 shrink-0">过期时间</span>
+                    <!-- Scope + Expiry + Reason -->
+                    <div v-if="isRoleSelected(role.id)" class="role-card-body">
+                      <!-- Scope -->
+                      <div class="scope-row">
+                        <span class="scope-label">作用域</span>
+                        <label class="scope-option">
+                          <input type="radio" :name="'scope-' + role.id" value="ALL"
+                            :checked="getRoleScope(role.id).scopeType === 'ALL'"
+                            @change="updateRoleScopeType(role.id, 'ALL')" />
+                          <span>全局</span>
+                        </label>
+                        <label class="scope-option">
+                          <input type="radio" :name="'scope-' + role.id" value="ORG_UNIT"
+                            :checked="getRoleScope(role.id).scopeType === 'ORG_UNIT'"
+                            @change="updateRoleScopeType(role.id, 'ORG_UNIT')" />
+                          <span>指定组织</span>
+                        </label>
+                        <select
+                          :value="getRoleScope(role.id).scopeId"
+                          @change="updateRoleScopeId(role.id, Number(($event.target as HTMLSelectElement).value))"
+                          class="scope-select"
+                          :disabled="getRoleScope(role.id).scopeType !== 'ORG_UNIT'"
+                          :style="getRoleScope(role.id).scopeType !== 'ORG_UNIT' ? 'opacity: 0.3' : ''"
+                        >
+                          <option :value="0">请选择组织</option>
+                          <option v-for="org in flatOrgUnits" :key="org.id" :value="org.id">
+                            {{ org.label }}
+                          </option>
+                        </select>
+                      </div>
+                      <!-- Expiry & Reason -->
+                      <div class="scope-row">
+                        <span class="scope-label">过期时间</span>
                         <input
                           type="date"
                           :value="getRoleScope(role.id).expiresAt || ''"
                           @input="updateRoleExpiry(role.id, ($event.target as HTMLInputElement).value)"
-                          class="rounded border border-gray-300 pl-2 text-xs"
+                          class="scope-date-input"
                           placeholder="空=永久"
                         />
-                      </div>
-                      <div class="flex items-center gap-1.5">
-                        <span class="text-gray-500 shrink-0">原因</span>
+                        <span class="scope-label" style="margin-left: 8px;">原因</span>
                         <input
                           type="text"
                           :value="getRoleScope(role.id).reason || ''"
                           @input="updateRoleReason(role.id, ($event.target as HTMLInputElement).value)"
-                          class="w-40 rounded border border-gray-300 pl-2 text-xs"
+                          class="scope-text-input"
                           placeholder="可选"
                         />
                       </div>
@@ -646,19 +491,10 @@
                 </div>
               </div>
             </div>
-            <div class="flex justify-end gap-3 border-t border-gray-200 px-6 py-4">
-              <button
-                @click="roleDialogVisible = false"
-                class="h-9 rounded-lg border border-gray-300 px-4 text-sm font-medium text-gray-700 hover:bg-gray-50"
-              >
-                取消
-              </button>
-              <button
-                @click="handleRoleSubmit"
-                :disabled="roleSubmitLoading"
-                class="inline-flex h-9 items-center gap-1.5 rounded-lg bg-blue-600 px-4 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
-              >
-                <Loader2 v-if="roleSubmitLoading" class="h-4 w-4 animate-spin" />
+            <div class="tm-drawer-footer">
+              <button class="tm-btn tm-btn-secondary" @click="roleDialogVisible = false">取消</button>
+              <button class="tm-btn tm-btn-primary" :disabled="roleSubmitLoading" @click="handleRoleSubmit">
+                <span v-if="roleSubmitLoading" class="tm-spin" style="display: inline-block; width: 14px; height: 14px; border: 2px solid rgba(255,255,255,0.3); border-top-color: #fff; border-radius: 50%;" />
                 确定
               </button>
             </div>
@@ -1312,14 +1148,192 @@ onMounted(() => {
 })
 </script>
 
+<style>
+@import '@/styles/teaching-ui.css';
+</style>
+
 <style scoped>
-.modal-enter-active,
-.modal-leave-active {
-  transition: opacity 0.2s ease;
+/* ============================================
+   UsersView — Page-specific overrides
+   ============================================ */
+
+/* Filter bar input sizing */
+.filter-input {
+  width: 150px;
+  flex: none;
+  padding: 7px 10px;
 }
-.modal-enter-from,
-.modal-leave-to {
-  opacity: 0;
+
+/* Batch actions bar */
+.batch-bar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 24px;
+  background: #fefce8;
+  border-bottom: 1px solid #fde68a;
+  font-size: 13px;
 }
-/* v2-force-refresh */
+.batch-info {
+  font-size: 12px;
+  color: #92400e;
+  font-weight: 500;
+}
+
+/* Checkbox styling */
+.row-checkbox {
+  width: 15px;
+  height: 15px;
+  border-radius: 3px;
+  cursor: pointer;
+  accent-color: #2563eb;
+}
+
+/* Field states in drawer */
+.field-disabled {
+  background: #f3f4f6 !important;
+  color: #9ca3af !important;
+  cursor: not-allowed;
+}
+.field-error {
+  border-color: #fca5a5 !important;
+  background: #fef2f2 !important;
+}
+.error-hint {
+  margin: 3px 0 0;
+  font-size: 11px;
+  color: #ef4444;
+}
+
+/* Role table (inside drawer) */
+.role-table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  font-size: 12px;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  overflow: hidden;
+}
+.role-table th {
+  padding: 7px 10px;
+  font-size: 10.5px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #6b7280;
+  background: #f9fafb;
+  border-bottom: 1px solid #e5e7eb;
+  text-align: center;
+}
+.role-table td {
+  padding: 7px 10px;
+  font-size: 12px;
+  color: #374151;
+  border-bottom: 1px solid #f3f4f6;
+  text-align: center;
+}
+.role-table .text-left { text-align: left !important; }
+.role-table tbody tr:last-child td { border-bottom: none; }
+
+/* Role hint */
+.role-hint {
+  padding: 8px 12px;
+  margin-bottom: 12px;
+  background: #eff6ff;
+  border-radius: 6px;
+  font-size: 12px;
+  color: #1d4ed8;
+  line-height: 1.5;
+}
+
+/* Role list (card-based) */
+.role-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: 400px;
+  overflow-y: auto;
+}
+.role-card {
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  padding: 10px 12px;
+  transition: all 0.15s;
+}
+.role-card-active {
+  border-color: #93c5fd;
+  background: #eff6ff;
+}
+.role-card-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.role-card-body {
+  margin-top: 10px;
+  padding-left: 23px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+/* Scope row (inside role card) */
+.scope-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  flex-wrap: wrap;
+}
+.scope-label {
+  font-size: 11px;
+  color: #6b7280;
+  flex-shrink: 0;
+  width: 50px;
+}
+.scope-option {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 12px;
+  color: #374151;
+  cursor: pointer;
+}
+.scope-option input {
+  accent-color: #2563eb;
+}
+.scope-select {
+  padding: 4px 8px;
+  border: 1px solid #e5e7eb;
+  border-radius: 5px;
+  font-size: 11px;
+  font-family: inherit;
+  color: #374151;
+  background: #fff;
+  outline: none;
+  max-width: 200px;
+  transition: opacity 0.15s;
+}
+.scope-date-input {
+  padding: 4px 8px;
+  border: 1px solid #e5e7eb;
+  border-radius: 5px;
+  font-size: 11px;
+  font-family: inherit;
+  color: #374151;
+  background: #fff;
+  outline: none;
+}
+.scope-text-input {
+  padding: 4px 8px;
+  border: 1px solid #e5e7eb;
+  border-radius: 5px;
+  font-size: 11px;
+  font-family: inherit;
+  color: #374151;
+  background: #fff;
+  outline: none;
+  width: 140px;
+}
 </style>
