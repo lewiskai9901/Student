@@ -88,6 +88,62 @@ public class EntityTypeConfigController {
         }
     }
 
+    @PostMapping
+    @CasbinAccess(resource = "system:config", action = "edit")
+    public Result<Map<String, Object>> create(@RequestBody Map<String, Object> data) {
+        try {
+            com.fasterxml.jackson.databind.ObjectMapper om = new com.fasterxml.jackson.databind.ObjectMapper();
+            jdbc.update(
+                "INSERT INTO entity_type_configs (entity_type, type_code, type_name, category, " +
+                "parent_type_code, allowed_child_type_codes, metadata_schema, features, " +
+                "is_plugin_registered, is_enabled, deleted) VALUES (?,?,?,?,?,?,?,?,0,1,0)",
+                data.get("entityType"), data.get("typeCode"), data.get("typeName"),
+                data.get("category"),
+                data.get("parentTypeCode"),
+                om.writeValueAsString(data.getOrDefault("allowedChildTypeCodes", List.of())),
+                data.getOrDefault("metadataSchema", "{\"fields\":[]}"),
+                data.getOrDefault("features", "{}"));
+            return Result.success(Map.of("message", "created"));
+        } catch (Exception e) {
+            return Result.error("创建失败: " + e.getMessage());
+        }
+    }
+
+    @PutMapping("/{id}")
+    @CasbinAccess(resource = "system:config", action = "edit")
+    public Result<Void> update(@PathVariable Long id, @RequestBody Map<String, Object> data) {
+        try {
+            com.fasterxml.jackson.databind.ObjectMapper om = new com.fasterxml.jackson.databind.ObjectMapper();
+            jdbc.update(
+                "UPDATE entity_type_configs SET type_name=?, category=?, parent_type_code=?, " +
+                "allowed_child_type_codes=? WHERE id=? AND deleted=0",
+                data.get("typeName"), data.get("category"), data.get("parentTypeCode"),
+                om.writeValueAsString(data.getOrDefault("allowedChildTypeCodes", List.of())),
+                id);
+            return Result.success();
+        } catch (Exception e) {
+            return Result.error("更新失败: " + e.getMessage());
+        }
+    }
+
+    @DeleteMapping("/{id}")
+    @CasbinAccess(resource = "system:config", action = "edit")
+    public Result<Void> delete(@PathVariable Long id) {
+        // 不允许删除插件注册的类型
+        try {
+            Integer isPlugin = jdbc.queryForObject(
+                "SELECT is_plugin_registered FROM entity_type_configs WHERE id=? AND deleted=0",
+                Integer.class, id);
+            if (isPlugin != null && isPlugin == 1) {
+                return Result.error("插件注册的类型不能删除");
+            }
+            jdbc.update("UPDATE entity_type_configs SET deleted=1 WHERE id=?", id);
+            return Result.success();
+        } catch (Exception e) {
+            return Result.error("删除失败: " + e.getMessage());
+        }
+    }
+
     @PostMapping("/{id}/custom-fields")
     @CasbinAccess(resource = "system:config", action = "edit")
     public Result<Void> addCustomField(@PathVariable Long id, @RequestBody Map<String, Object> field) {

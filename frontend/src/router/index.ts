@@ -892,33 +892,34 @@ const routes: RouteRecordRaw[] = [
             }
           },
           {
-            path: '/system/org-types',
-            name: 'SystemOrgTypes',
-            component: () => import('@/views/system/OrgTypeConfig.vue'),
+            path: '/system/entity-types',
+            name: 'EntityTypeConfig',
+            component: () => import('@/views/system/EntityTypeConfig.vue'),
             meta: {
-              title: '组织类型配置',
+              title: '类型配置',
               requiresAuth: true,
-              permission: 'system:org:view',
+              permission: 'system:config:view',
               order: 4
             }
           },
           {
+            path: '/system/org-types',
+            redirect: '/system/entity-types'
+          },
+          {
             path: '/system/place-types',
-            name: 'SystemPlaceTypes',
-            component: () => import('@/views/system/UniversalPlaceTypeConfig.vue'),
-            meta: {
-              title: '场所类型配置',
-              requiresAuth: true,
-              permission: 'system:place-type:view',
-              order: 5
-            }
+            redirect: '/system/entity-types'
           },
           {
             path: '/system/user-types',
+            redirect: '/system/entity-types'
+          },
+          {
+            path: '/system/user-types-legacy',
             name: 'SystemUserTypes',
             component: () => import('@/views/system/UserTypeConfig.vue'),
             meta: {
-              title: '用户类型配置',
+              title: '用户类型配置(旧)',
               requiresAuth: true,
               permission: 'system:user:view',
               order: 6
