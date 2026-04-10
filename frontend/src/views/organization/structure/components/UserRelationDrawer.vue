@@ -147,7 +147,7 @@
 import { ref, watch, computed } from 'vue'
 import { UserCircle, Loader2, X, ArrowRightLeft } from 'lucide-vue-next'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { userPositionApi } from '@/api/position'
+import { orgMemberApi } from '@/api/orgMember'
 import { getSimpleUserList } from '@/api/user'
 import type { UserPosition } from '@/types/position'
 import { AppointmentTypeLabels } from '@/types/position'
@@ -178,12 +178,9 @@ const loadData = async () => {
   if (!props.userId) return
   loading.value = true
   try {
-    const [allUsers, userPositions] = await Promise.all([
-      getSimpleUserList(),
-      userPositionApi.getByUser(props.userId),
-    ])
+    const allUsers = await getSimpleUserList()
     userInfo.value = allUsers.find(u => String(u.id) === String(props.userId)) || null
-    positions.value = userPositions
+    positions.value = []
   } catch (e: any) {
     console.error('Failed to load user relation data', e)
   } finally {
@@ -216,10 +213,7 @@ const handleEndAppointment = async (pos: UserPosition) => {
       '确认离任',
       { type: 'warning' }
     )
-    await userPositionApi.endAppointment(pos.id, {
-      endDate: new Date().toISOString().slice(0, 10),
-      reason: '管理员操作离任',
-    })
+    // Position appointments removed
     ElMessage.success('已离任')
     emit('changed')
     await loadData()
@@ -239,7 +233,7 @@ const handleChangeOrg = async () => {
   if (!changeOrgTarget.value || !props.userId) return
   changeOrgSubmitting.value = true
   try {
-    await userPositionApi.addMember(changeOrgTarget.value, props.userId)
+    await orgMemberApi.addMember(changeOrgTarget.value, props.userId)
     ElMessage.success('归属组织已变更')
     showChangeOrg.value = false
     changeOrgTarget.value = null

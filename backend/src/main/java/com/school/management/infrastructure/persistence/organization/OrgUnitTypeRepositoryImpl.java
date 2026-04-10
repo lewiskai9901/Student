@@ -1,9 +1,7 @@
 package com.school.management.infrastructure.persistence.organization;
 
-import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.school.management.domain.organization.model.entity.OrgType;
-import com.school.management.domain.organization.model.valueobject.PositionTemplate;
 import com.school.management.domain.organization.repository.OrgUnitTypeRepository;
 import com.school.management.infrastructure.shared.TypeJsonUtils;
 import org.springframework.stereotype.Repository;
@@ -50,7 +48,9 @@ public class OrgUnitTypeRepositoryImpl implements OrgUnitTypeRepository {
 
     @Override
     public List<OrgType> findAll() {
-        return orgUnitTypeMapper.selectList(null).stream()
+        com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<OrgUnitTypePO> qw = new com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<>();
+        qw.eq(OrgUnitTypePO::getEntityType, "ORG_UNIT");
+        return orgUnitTypeMapper.selectList(qw).stream()
                 .map(this::toDomain)
                 .collect(Collectors.toList());
     }
@@ -114,6 +114,7 @@ public class OrgUnitTypeRepositoryImpl implements OrgUnitTypeRepository {
     private OrgUnitTypePO toPO(OrgType entity) {
         OrgUnitTypePO po = new OrgUnitTypePO();
         po.setId(entity.getId());
+        po.setEntityType("ORG_UNIT");
         po.setTypeCode(entity.getTypeCode());
         po.setTypeName(entity.getTypeName());
         po.setCategory(entity.getCategory());
@@ -126,7 +127,6 @@ public class OrgUnitTypeRepositoryImpl implements OrgUnitTypeRepository {
         po.setMaxDepth(entity.getMaxDepth());
         po.setDefaultUserTypeCodes(TypeJsonUtils.toJson(objectMapper, entity.getDefaultUserTypeCodes()));
         po.setDefaultPlaceTypeCodes(TypeJsonUtils.toJson(objectMapper, entity.getDefaultPlaceTypeCodes()));
-        po.setDefaultPositions(TypeJsonUtils.toJson(objectMapper, entity.getDefaultPositions()));
         po.setIsSystem(entity.isSystem());
         po.setIsEnabled(entity.isEnabled());
         po.setSortOrder(entity.getSortOrder());
@@ -148,7 +148,6 @@ public class OrgUnitTypeRepositoryImpl implements OrgUnitTypeRepository {
                 .maxDepth(po.getMaxDepth())
                 .defaultUserTypeCodes(TypeJsonUtils.fromJsonList(objectMapper, po.getDefaultUserTypeCodes()))
                 .defaultPlaceTypeCodes(TypeJsonUtils.fromJsonList(objectMapper, po.getDefaultPlaceTypeCodes()))
-                .defaultPositions(TypeJsonUtils.fromJson(objectMapper, po.getDefaultPositions(), new TypeReference<List<PositionTemplate>>(){}))
                 .isSystem(Boolean.TRUE.equals(po.getIsSystem()))
                 .isEnabled(Boolean.TRUE.equals(po.getIsEnabled()))
                 .sortOrder(po.getSortOrder())

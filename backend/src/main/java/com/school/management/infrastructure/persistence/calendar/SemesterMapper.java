@@ -41,6 +41,9 @@ public interface SemesterMapper extends BaseMapper<SemesterPO> {
     @Select("SELECT COUNT(1) FROM semesters WHERE deleted = 0")
     long countAll();
 
+    @Select("SELECT * FROM semesters WHERE academic_year_id = #{yearId} AND deleted = 0 ORDER BY semester_type")
+    List<SemesterPO> findByAcademicYearId(@Param("yearId") Long yearId);
+
     @Update("UPDATE semesters SET is_current = 0, updated_at = NOW() WHERE is_current = 1 AND deleted = 0")
     void clearAllCurrentFlags();
 }

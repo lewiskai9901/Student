@@ -1,8 +1,11 @@
 package com.school.management.interfaces.rest.organization;
 
+import com.school.management.application.organization.OrgMemberService;
 import com.school.management.application.organization.OrgUnitApplicationService;
 import com.school.management.application.organization.command.CreateOrgUnitCommand;
 import com.school.management.application.organization.command.UpdateOrgUnitCommand;
+import com.school.management.application.organization.query.OrgMemberDTO;
+import com.school.management.application.organization.query.OrgStatisticsDTO;
 import com.school.management.application.organization.query.OrgUnitDTO;
 import com.school.management.application.organization.query.OrgUnitTreeDTO;
 import com.school.management.common.result.Result;
@@ -31,28 +34,18 @@ import java.util.stream.Collectors;
 public class OrgUnitController {
 
     private final OrgUnitApplicationService orgUnitService;
+    private final OrgMemberService orgMemberService;
 
     @Operation(summary = "Create organization unit")
     @PostMapping
     @CasbinAccess(resource = "system:org", action = "create")
     public Result<OrgUnitDTO> createOrgUnit(@RequestBody CreateOrgUnitRequest request) {
-        List<CreateOrgUnitCommand.SelectedPosition> selectedPositions = null;
-        if (request.getSelectedPositions() != null) {
-            selectedPositions = request.getSelectedPositions().stream().map(sp -> {
-                CreateOrgUnitCommand.SelectedPosition pos = new CreateOrgUnitCommand.SelectedPosition();
-                pos.setPositionName(sp.getPositionName());
-                pos.setHeadcount(sp.getHeadcount());
-                return pos;
-            }).collect(Collectors.toList());
-        }
-
         CreateOrgUnitCommand command = CreateOrgUnitCommand.builder()
             .unitCode(request.getUnitCode())
             .unitName(request.getUnitName())
             .unitType(request.getUnitType())
             .parentId(request.getParentId())
             .createdBy(SecurityUtils.requireCurrentUserId())
-            .selectedPositions(selectedPositions)
             .attributes(request.getAttributes())
             .build();
 
@@ -94,6 +87,14 @@ public class OrgUnitController {
     public Result<List<OrgUnitTreeDTO>> getOrgUnitTree() {
         List<OrgUnitTreeDTO> result = orgUnitService.getOrgUnitTree();
         return Result.success(result);
+    }
+
+    @Operation(summary = "Repair all tree paths")
+    @PostMapping("/repair-tree-paths")
+    @CasbinAccess(resource = "system:org", action = "edit")
+    public Result<Integer> repairTreePaths() {
+        int count = orgUnitService.repairTreePaths();
+        return Result.success(count);
     }
 
     @Operation(summary = "Get by type")
@@ -204,6 +205,52 @@ public class OrgUnitController {
         List<OrgUnitApplicationService.SplitRequest> splits = request.getSplits();
         List<OrgUnitDTO> result = orgUnitService.splitOrgUnit(id, splits, request.getReason(), SecurityUtils.requireCurrentUserId());
         return Result.success(result);
+    }
+
+    // ==================== Member management ====================
+
+    @Operation(summary = "Get belonging members")
+    @GetMapping("/{id}/members")
+    @CasbinAccess(resource = "system:org", action = "view")
+    public Result<List<OrgMemberDTO>> getBelongingMembers(
+            @Parameter(description = "Organization unit ID") @PathVariable Long id) {
+        return Result.success(orgMemberService.getBelongingMembers(id));
+    }
+
+    @Operation(summary = "Get members recursively (this org + descendants)")
+    @GetMapping("/{id}/members/recursive")
+    @CasbinAccess(resource = "system:org", action = "view")
+    public Result<List<OrgMemberDTO>> getMembersRecursive(
+            @Parameter(description = "Organization unit ID") @PathVariable Long id) {
+        return Result.success(orgMemberService.getMembersRecursive(id));
+    }
+
+    @Operation(summary = "Get organization statistics")
+    @GetMapping("/{id}/statistics")
+    @CasbinAccess(resource = "system:org", action = "view")
+    public Result<OrgStatisticsDTO> getOrgStatistics(
+            @Parameter(description = "Organization unit ID") @PathVariable Long id) {
+        return Result.success(orgMemberService.getOrgStatistics(id));
+    }
+
+    @Operation(summary = "Add member to organization")
+    @PostMapping("/{id}/members/{userId}")
+    @CasbinAccess(resource = "system:org", action = "update")
+    public Result<Void> addMember(
+            @Parameter(description = "Organization unit ID") @PathVariable Long id,
+            @Parameter(description = "User ID") @PathVariable Long userId) {
+        orgMemberService.addMember(id, userId);
+        return Result.success();
+    }
+
+    @Operation(summary = "Remove member from organization")
+    @DeleteMapping("/{id}/members/{userId}")
+    @CasbinAccess(resource = "system:org", action = "update")
+    public Result<Void> removeMember(
+            @Parameter(description = "Organization unit ID") @PathVariable Long id,
+            @Parameter(description = "User ID") @PathVariable Long userId) {
+        orgMemberService.removeMember(id, userId);
+        return Result.success();
     }
 
     @Data

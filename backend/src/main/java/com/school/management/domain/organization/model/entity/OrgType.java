@@ -1,6 +1,5 @@
 package com.school.management.domain.organization.model.entity;
 
-import com.school.management.domain.organization.model.valueobject.PositionTemplate;
 import com.school.management.domain.shared.ConfigurableType;
 
 import java.util.*;
@@ -33,9 +32,6 @@ public class OrgType implements ConfigurableType {
     private List<String> defaultUserTypeCodes;
     private List<String> defaultPlaceTypeCodes;
 
-    // ========== 岗位模板 ==========
-    private List<PositionTemplate> defaultPositions;
-
     // ========== 系统字段 ==========
     private boolean isSystem;
     private boolean isEnabled;
@@ -58,7 +54,6 @@ public class OrgType implements ConfigurableType {
     public Integer getMaxDepth() { return maxDepth; }
     public List<String> getDefaultUserTypeCodes() { return defaultUserTypeCodes; }
     public List<String> getDefaultPlaceTypeCodes() { return defaultPlaceTypeCodes; }
-    public List<PositionTemplate> getDefaultPositions() { return defaultPositions; }
     public boolean isSystem() { return isSystem; }
     public boolean isEnabled() { return isEnabled; }
     public Integer getSortOrder() { return sortOrder; }
@@ -134,13 +129,6 @@ public class OrgType implements ConfigurableType {
     }
 
     /**
-     * 更新岗位模板
-     */
-    public void updateDefaultPositions(List<PositionTemplate> defaultPositions) {
-        this.defaultPositions = defaultPositions;
-    }
-
-    /**
      * 更新排序号
      */
     public void updateSortOrder(Integer sortOrder) {
@@ -175,7 +163,6 @@ public class OrgType implements ConfigurableType {
         private Integer maxDepth;
         private List<String> defaultUserTypeCodes;
         private List<String> defaultPlaceTypeCodes;
-        private List<PositionTemplate> defaultPositions;
         private boolean isSystem;
         private boolean isEnabled;
         private Integer sortOrder;
@@ -193,7 +180,6 @@ public class OrgType implements ConfigurableType {
         public OrgTypeBuilder maxDepth(Integer maxDepth) { this.maxDepth = maxDepth; return this; }
         public OrgTypeBuilder defaultUserTypeCodes(List<String> defaultUserTypeCodes) { this.defaultUserTypeCodes = defaultUserTypeCodes; return this; }
         public OrgTypeBuilder defaultPlaceTypeCodes(List<String> defaultPlaceTypeCodes) { this.defaultPlaceTypeCodes = defaultPlaceTypeCodes; return this; }
-        public OrgTypeBuilder defaultPositions(List<PositionTemplate> defaultPositions) { this.defaultPositions = defaultPositions; return this; }
         public OrgTypeBuilder isSystem(boolean isSystem) { this.isSystem = isSystem; return this; }
         public OrgTypeBuilder isEnabled(boolean isEnabled) { this.isEnabled = isEnabled; return this; }
         public OrgTypeBuilder sortOrder(Integer sortOrder) { this.sortOrder = sortOrder; return this; }
@@ -213,7 +199,6 @@ public class OrgType implements ConfigurableType {
             type.maxDepth = this.maxDepth;
             type.defaultUserTypeCodes = this.defaultUserTypeCodes;
             type.defaultPlaceTypeCodes = this.defaultPlaceTypeCodes;
-            type.defaultPositions = this.defaultPositions;
             type.isSystem = this.isSystem;
             type.isEnabled = this.isEnabled;
             type.sortOrder = this.sortOrder;

@@ -12,6 +12,7 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 public class Semester extends AggregateRoot<Long> {
+    private Long academicYearId;
     private String semesterName;
     private String semesterCode;
     private LocalDate startDate;
@@ -27,10 +28,12 @@ public class Semester extends AggregateRoot<Long> {
 
     protected Semester() {}
 
-    private Semester(String semesterName, String semesterCode, LocalDate startDate,
-                     LocalDate endDate, Integer startYear, SemesterType semesterType) {
+    private Semester(Long academicYearId, String semesterName, String semesterCode,
+                     LocalDate startDate, LocalDate endDate, Integer startYear,
+                     SemesterType semesterType) {
         validateDates(startDate, endDate);
         validateSemesterCode(semesterCode);
+        this.academicYearId = academicYearId;
         this.semesterName = semesterName;
         this.semesterCode = semesterCode;
         this.startDate = startDate;
@@ -43,24 +46,25 @@ public class Semester extends AggregateRoot<Long> {
         this.updatedAt = LocalDateTime.now();
     }
 
-    public static Semester create(String semesterName, String semesterCode,
+    public static Semester create(Long academicYearId, String semesterName, String semesterCode,
                                    LocalDate startDate, LocalDate endDate,
                                    Integer startYear, SemesterType semesterType) {
-        Semester semester = new Semester(semesterName, semesterCode, startDate, endDate, startYear, semesterType);
+        Semester semester = new Semester(academicYearId, semesterName, semesterCode, startDate, endDate, startYear, semesterType);
         semester.registerEvent(new SemesterCreatedEvent(
                 semester.getId() != null ? semester.getId().toString() : null,
                 semesterName, semesterCode));
         return semester;
     }
 
-    public static Semester reconstruct(Long id, String semesterName, String semesterCode,
-                                        LocalDate startDate, LocalDate endDate,
+    public static Semester reconstruct(Long id, Long academicYearId, String semesterName,
+                                        String semesterCode, LocalDate startDate, LocalDate endDate,
                                         Integer startYear, SemesterType semesterType,
                                         Boolean isCurrent, SemesterStatus status,
                                         LocalDateTime createdAt, LocalDateTime updatedAt,
                                         Long createdBy, Long updatedBy) {
         Semester semester = new Semester();
         semester.setId(id);
+        semester.academicYearId = academicYearId;
         semester.semesterName = semesterName;
         semester.semesterCode = semesterCode;
         semester.startDate = startDate;
@@ -149,6 +153,7 @@ public class Semester extends AggregateRoot<Long> {
         if (!semesterCode.matches("\\d{4}-\\d{4}-[12]")) throw new IllegalArgumentException("学期编码格式不正确，应为: YYYY-YYYY-N");
     }
 
+    public Long getAcademicYearId() { return academicYearId; }
     public String getSemesterName() { return semesterName; }
     public String getSemesterCode() { return semesterCode; }
     public LocalDate getStartDate() { return startDate; }

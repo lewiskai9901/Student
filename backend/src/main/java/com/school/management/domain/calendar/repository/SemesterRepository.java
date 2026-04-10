@@ -15,6 +15,7 @@ public interface SemesterRepository extends Repository<Semester, Long> {
     boolean existsBySemesterCodeAndIdNot(String semesterCode, Long excludeId);
     List<Semester> findByDateRange(LocalDate startDate, LocalDate endDate);
     List<Semester> findByStartYear(Integer startYear);
+    List<Semester> findByAcademicYearId(Long yearId);
     List<Semester> findAllActive();
     List<Semester> findAllOrderByStartDateDesc();
     void deleteById(Long id);

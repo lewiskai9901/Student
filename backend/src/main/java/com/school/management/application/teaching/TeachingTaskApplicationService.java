@@ -210,21 +210,51 @@ public class TeachingTaskApplicationService {
     private void enrichWithNames(Map<String, Object> record, Long courseId, Long orgUnitId) {
         try {
             if (courseId != null) {
-                String courseName = jdbc.queryForObject(
-                        "SELECT course_name FROM courses WHERE id = ?", String.class, courseId);
-                record.put("courseName", courseName);
+                Map<String, Object> course = jdbc.queryForMap(
+                        "SELECT course_name, course_code FROM courses WHERE id = ?", courseId);
+                record.put("courseName", course.get("course_name"));
+                record.put("courseCode", course.get("course_code"));
             }
         } catch (Exception e) {
             record.put("courseName", null);
         }
         try {
             if (orgUnitId != null) {
-                String className = jdbc.queryForObject(
-                        "SELECT class_name FROM classes WHERE id = ?", String.class, orgUnitId);
+                // 先查 org_units，兼容新老表
+                String className = null;
+                try {
+                    className = jdbc.queryForObject(
+                            "SELECT unit_name FROM org_units WHERE id = ?", String.class, orgUnitId);
+                } catch (Exception ignored) {}
+                if (className == null) {
+                    try {
+                        className = jdbc.queryForObject(
+                                "SELECT class_name FROM classes WHERE id = ?", String.class, orgUnitId);
+                    } catch (Exception ignored) {}
+                }
                 record.put("className", className);
             }
         } catch (Exception e) {
             record.put("className", null);
+        }
+        // 教师名称
+        try {
+            Long taskId = (Long) record.get("id");
+            if (taskId != null) {
+                List<Map<String, Object>> teachers = jdbc.queryForList(
+                    "SELECT u.real_name FROM teaching_task_teachers ttt " +
+                    "JOIN users u ON u.id = ttt.teacher_id WHERE ttt.task_id = ?", taskId);
+                if (!teachers.isEmpty()) {
+                    String teacherName = teachers.stream()
+                        .map(t -> (String) t.get("real_name"))
+                        .filter(n -> n != null)
+                        .collect(java.util.stream.Collectors.joining(", "));
+                    record.put("teacherName", teacherName);
+                    record.put("teacherId", teachers.get(0).get("teacher_id"));
+                }
+            }
+        } catch (Exception e) {
+            // ignore
         }
     }
 

@@ -72,6 +72,9 @@ export const semesterApi = {
 
   generateWeeks: (semesterId: number | string) =>
     http.post<TeachingWeek[]>(`${BASE}/semesters/${semesterId}/generate-weeks`),
+
+  getCalendarGrid: (semesterId: number | string) =>
+    http.get(`${BASE}/semesters/${semesterId}/calendar-grid`),
 }
 
 // ==================== 校历事件 ====================

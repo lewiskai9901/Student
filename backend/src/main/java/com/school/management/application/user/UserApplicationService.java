@@ -90,7 +90,7 @@ public class UserApplicationService {
                 command.getUsername(),
                 encodedPassword,
                 command.getRealName(),
-                command.getUserTypeCode() != null ? command.getUserTypeCode() : "TEACHER"
+                command.getUserTypeCode() != null ? command.getUserTypeCode() : "STAFF"
         );
 
         // 设置可选信息
@@ -382,7 +382,8 @@ public class UserApplicationService {
     }
 
     /**
-     * 自动退房：退出指定用户的所有在住记录，并更新场所占用数
+     * 自动退房：退出指定用户的所有在住记录，并更新场所占用数。
+     * TODO: 应迁移到场所模块的事件监听器中（监听 UserDeletedEvent），消除跨模块耦合。
      */
     private void autoCheckOutByUser(Long userId) {
         List<UniversalPlaceOccupant> activeOccupancies = occupantRepository.findActiveByOccupantId(userId);

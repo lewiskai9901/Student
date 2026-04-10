@@ -375,6 +375,8 @@ export const offeringApi = {
     http.post(`${BASE_URL}/offerings/${id}/confirm`),
   importFromPlan: (data: { semesterId: number; planId: number; orgUnitIds?: number[] }) =>
     http.post(`${BASE_URL}/offerings/import-from-plan`, data),
+  generateTasks: (semesterId: number | string) =>
+    http.post(`${BASE_URL}/offerings/generate-tasks`, { semesterId }),
 }
 
 export const classAssignmentApi = {
@@ -456,6 +458,10 @@ export const conflictApi = {
 // ==================== 教务工作流 ====================
 
 export const workflowApi = {
+  /** 流水线统计 */
+  getStats: (semesterId: number | string) =>
+    http.get('/teaching/workflow/stats', { params: { semesterId } }),
+
   /** 自动生成年级-学期映射 */
   generateMappings: (semesterId: number | string) =>
     http.post<{ generated: number }>(`${BASE_URL}/workflow/cohort-mappings/generate`, { semesterId }),

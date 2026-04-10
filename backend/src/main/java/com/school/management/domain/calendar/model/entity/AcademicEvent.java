@@ -13,12 +13,16 @@ public class AcademicEvent {
     private LocalDate endDate;
     private Boolean allDay;
     private String description;
+    private Integer affectType;
+    private Integer substituteWeekday;
+    private String affectSlots;
 
     protected AcademicEvent() {}
 
     public static AcademicEvent create(Long yearId, Long semesterId, String eventName,
                                         EventType eventType, LocalDate startDate, LocalDate endDate,
-                                        Boolean allDay, String description) {
+                                        Boolean allDay, String description,
+                                        Integer affectType, Integer substituteWeekday, String affectSlots) {
         if (eventName == null || eventName.trim().isEmpty()) throw new IllegalArgumentException("事件名称不能为空");
         if (startDate == null) throw new IllegalArgumentException("开始日期不能为空");
         AcademicEvent event = new AcademicEvent();
@@ -30,12 +34,16 @@ public class AcademicEvent {
         event.endDate = endDate;
         event.allDay = allDay != null ? allDay : true;
         event.description = description;
+        event.affectType = affectType;
+        event.substituteWeekday = substituteWeekday;
+        event.affectSlots = affectSlots;
         return event;
     }
 
     public static AcademicEvent reconstruct(Long id, Long yearId, Long semesterId, String eventName,
                                              EventType eventType, LocalDate startDate, LocalDate endDate,
-                                             Boolean allDay, String description) {
+                                             Boolean allDay, String description,
+                                             Integer affectType, Integer substituteWeekday, String affectSlots) {
         AcademicEvent event = new AcademicEvent();
         event.id = id;
         event.yearId = yearId;
@@ -46,17 +54,24 @@ public class AcademicEvent {
         event.endDate = endDate;
         event.allDay = allDay;
         event.description = description;
+        event.affectType = affectType;
+        event.substituteWeekday = substituteWeekday;
+        event.affectSlots = affectSlots;
         return event;
     }
 
     public void update(String eventName, EventType eventType, LocalDate startDate,
-                       LocalDate endDate, String description) {
+                       LocalDate endDate, String description,
+                       Integer affectType, Integer substituteWeekday, String affectSlots) {
         if (eventName == null || eventName.trim().isEmpty()) throw new IllegalArgumentException("事件名称不能为空");
         this.eventName = eventName;
         this.eventType = eventType;
         this.startDate = startDate;
         this.endDate = endDate;
         this.description = description;
+        this.affectType = affectType;
+        this.substituteWeekday = substituteWeekday;
+        this.affectSlots = affectSlots;
     }
 
     public Long getId() { return id; }
@@ -69,4 +84,7 @@ public class AcademicEvent {
     public LocalDate getEndDate() { return endDate; }
     public Boolean getAllDay() { return allDay; }
     public String getDescription() { return description; }
+    public Integer getAffectType() { return affectType; }
+    public Integer getSubstituteWeekday() { return substituteWeekday; }
+    public String getAffectSlots() { return affectSlots; }
 }

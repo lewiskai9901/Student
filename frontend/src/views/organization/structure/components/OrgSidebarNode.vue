@@ -53,10 +53,10 @@
 
       <!-- Student count badge (CLASS nodes) -->
       <span
-        v-if="isClassNode && node.studentCount != null"
+        v-if="isClassNode && node.attributes?.studentCount != null"
         class="flex-shrink-0 rounded bg-blue-100 px-1 py-0.5 text-[10px] leading-none font-medium text-blue-600"
       >
-        {{ node.studentCount }}人
+        {{ node.attributes.studentCount }}人
       </span>
 
       <!-- Disabled Indicator -->

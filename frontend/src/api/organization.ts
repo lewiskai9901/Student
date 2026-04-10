@@ -478,11 +478,7 @@ export interface DepartmentResponse {
   createdAt: string
   updatedAt: string
   children?: DepartmentResponse[]
-  studentCount?: number
-  standardSize?: number
-  headTeacherName?: string
-  enrollmentYear?: number
-  classStatus?: string
+  attributes?: Record<string, any>
 }
 
 export interface DepartmentCreateRequest {

@@ -48,10 +48,6 @@ public class PlaceDTO {
     // 归属
     private Long orgUnitId;
     private String orgUnitName;
-    private String className;               // 归属班级名称
-    private Long classTeacherId;            // 班主任ID
-    private String classTeacherName;        // 班主任姓名
-    private String classTeacherPhone;       // 班主任电话
     private Long responsibleUserId;
     private String responsibleUserName;
 
@@ -70,67 +66,7 @@ public class PlaceDTO {
     // 子节点（树形结构用）
     private List<PlaceDTO> children;
 
-    // 扩展属性
-    private DormitoryExtDTO dormitoryExt;
-    private ClassroomExtDTO classroomExt;
-    private LabExtDTO labExt;
-    private OfficeExtDTO officeExt;
-
     // 审计
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
-
-    /**
-     * 宿舍扩展DTO
-     */
-    @Data
-    public static class DormitoryExtDTO {
-        private Integer genderType;
-        private String genderTypeText;
-        private Integer bedCount;
-        private String facilities;
-        private String assignedClassIds;
-        private String assignedClassNames;
-        private Long supervisorId;
-        private String supervisorName;
-    }
-
-    /**
-     * 教室扩展DTO
-     */
-    @Data
-    public static class ClassroomExtDTO {
-        private String classroomCategory;
-        private Long assignedClassId;
-        private String assignedClassName;
-        private Boolean hasProjector;
-        private Boolean hasAirConditioner;
-        private Boolean hasComputer;
-        private String equipmentInfo;
-    }
-
-    /**
-     * 实验室扩展DTO
-     */
-    @Data
-    public static class LabExtDTO {
-        private String labCategory;
-        private Integer safetyLevel;
-        private Long majorId;
-        private String majorName;
-        private String equipmentList;
-        private String safetyNotice;
-    }
-
-    /**
-     * 办公室扩展DTO
-     */
-    @Data
-    public static class OfficeExtDTO {
-        private String officeType;
-        private Long departmentId;
-        private String departmentName;
-        private Integer workstationCount;
-        private String phoneNumber;
-    }
 }

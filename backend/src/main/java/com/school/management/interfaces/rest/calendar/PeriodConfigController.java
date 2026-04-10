@@ -48,7 +48,7 @@ public class PeriodConfigController {
     @PostMapping
     @CasbinAccess(resource = "calendar", action = "edit")
     public Result<Map<String, Object>> create(@RequestBody Map<String, Object> data) {
-        Long semesterId = ((Number) data.get("semesterId")).longValue();
+        Long semesterId = Long.valueOf(data.get("semesterId").toString());
         String configName = (String) data.getOrDefault("configName", "默认作息表");
         int periodsPerDay = data.get("periodsPerDay") != null ? ((Number) data.get("periodsPerDay")).intValue() : 8;
         String scheduleDays = toJsonString(data.get("scheduleDays"));
@@ -86,7 +86,7 @@ public class PeriodConfigController {
     @PostMapping("/init-from-previous")
     @CasbinAccess(resource = "calendar", action = "edit")
     public Result<Map<String, Object>> initFromPrevious(@RequestBody Map<String, Object> data) {
-        Long semesterId = ((Number) data.get("semesterId")).longValue();
+        Long semesterId = Long.valueOf(data.get("semesterId").toString());
         // Check if already has config
         Long exists = jdbc.queryForObject(
             "SELECT COUNT(1) FROM period_configs WHERE semester_id=? AND deleted=0", Long.class, semesterId);

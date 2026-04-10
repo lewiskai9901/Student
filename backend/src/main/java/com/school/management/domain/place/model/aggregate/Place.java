@@ -11,8 +11,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 /**
- * 场所聚合根
- * 统一管理校区、楼宇、楼层、房间等各类场所
+ * 场所聚合根 — 通用多级场所树结构
  */
 @Getter
 @NoArgsConstructor
@@ -560,15 +559,11 @@ public class Place extends AggregateRoot<Long> {
     }
 
     /**
-     * 检查学生性别是否匹配
-     * @param studentGender 学生性别 ("男"/"女")
-     * @return 是否匹配
+     * 检查性别是否匹配场所限制
      */
-    public boolean matchesStudentGender(String studentGender) {
-        if (this.genderType == null || this.genderType == GenderType.MIXED) {
-            return true;
-        }
-        return this.genderType.matchesStudentGender(studentGender);
+    public boolean matchesGender(String gender) {
+        if (this.genderType == null || this.genderType == GenderType.MIXED) return true;
+        return this.genderType.matchesGender(gender);
     }
 
     /**

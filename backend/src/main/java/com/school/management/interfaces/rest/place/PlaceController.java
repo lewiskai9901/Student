@@ -38,7 +38,7 @@ import java.util.Map;
 @RestController
 @RequestMapping("/places")
 @RequiredArgsConstructor
-@Tag(name = "场所管理", description = "统一场所管理API，包括校区、楼宇、楼层、房间等")
+@Tag(name = "场所管理", description = "统一场所管理API，支持多级场所树结构")
 public class PlaceController {
 
     private final PlaceApplicationService placeService;

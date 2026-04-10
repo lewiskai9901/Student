@@ -5,26 +5,19 @@ import com.school.management.application.organization.command.UpdateOrgUnitComma
 import com.school.management.application.organization.query.OrgUnitDTO;
 import com.school.management.application.organization.query.OrgUnitTreeDTO;
 import com.school.management.domain.organization.model.OrgUnit;
-import com.school.management.domain.organization.model.Position;
 import com.school.management.domain.organization.model.entity.OrgType;
 import com.school.management.domain.organization.model.entity.OrgCategory;
 import com.school.management.domain.shared.model.valueobject.FieldChange;
 import com.school.management.domain.organization.repository.OrgUnitRepository;
 import com.school.management.infrastructure.activity.ActivityEventPublisher;
 import com.school.management.domain.organization.repository.OrgUnitTypeRepository;
-import com.school.management.domain.organization.repository.PositionRepository;
-import com.school.management.domain.student.repository.SchoolClassRepository;
-import com.school.management.domain.organization.repository.UserPositionRepository;
 import com.school.management.domain.organization.service.OrgUnitDomainService;
 import com.school.management.domain.access.repository.AccessRelationRepository;
 import com.school.management.domain.shared.event.DomainEventPublisher;
 import com.school.management.infrastructure.extension.ExtensionContext;
 import com.school.management.infrastructure.extension.ExtensionDispatcher;
-import com.school.management.infrastructure.persistence.student.SchoolClassMapper;
-import com.school.management.infrastructure.persistence.student.SchoolClassPO;
 import com.school.management.infrastructure.persistence.place.UniversalPlaceOccupantMapper;
 import com.school.management.infrastructure.persistence.user.UserDomainMapper;
-import com.school.management.infrastructure.persistence.user.UserPO;
 import com.school.management.application.event.TriggerService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -36,7 +29,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.function.Function;
 import java.util.stream.Collectors;
 
 /**
@@ -54,10 +46,6 @@ public class OrgUnitApplicationService {
     private final DomainEventPublisher eventPublisher;
     private final ActivityEventPublisher activityEventPublisher;
     private final AccessRelationRepository accessRelationRepository;
-    private final PositionRepository positionRepository;
-    private final UserPositionRepository userPositionRepository;
-    private final SchoolClassRepository schoolClassRepository;
-    private final SchoolClassMapper schoolClassMapper;
     private final UserDomainMapper userDomainMapper;
     private final UniversalPlaceOccupantMapper placeOccupantMapper;
 
@@ -86,9 +74,6 @@ public class OrgUnitApplicationService {
 
         orgUnit.getDomainEvents().forEach(eventPublisher::publish);
         orgUnit.clearDomainEvents();
-
-        // Create user-selected positions (or none if not provided)
-        createSelectedPositions(orgUnit, command.getSelectedPositions());
 
         // SPI: 触发插件生命周期钩子
         if (extensionDispatcher != null && orgUnit.getUnitType() != null) {
@@ -194,9 +179,6 @@ public class OrgUnitApplicationService {
             .map(root -> buildTreeFromMap(root, childrenMap, typeMap))
             .collect(Collectors.toList());
 
-        // Batch-fill class extension data for all CLASS type nodes
-        enrichClassNodes(tree, allUnits);
-
         return tree;
     }
 
@@ -221,20 +203,12 @@ public class OrgUnitApplicationService {
         for (int i = allDescendants.size() - 1; i >= 0; i--) {
             OrgUnit desc = allDescendants.get(i);
             cleanupOrgUnitData(desc.getId(), desc.getUnitName(), "组织删除");
-            if ("CLASS".equals(desc.getUnitType())) {
-                schoolClassRepository.deleteById(desc.getId());
-            } else {
-                orgUnitRepository.deleteById(desc.getId());
-            }
+            orgUnitRepository.deleteById(desc.getId());
         }
 
         // Clean up and delete the target unit itself
         cleanupOrgUnitData(id, orgUnit.getUnitName(), "组织删除");
-        if ("CLASS".equals(orgUnit.getUnitType())) {
-            schoolClassRepository.deleteById(id);
-        } else {
-            orgUnitRepository.deleteById(id);
-        }
+        orgUnitRepository.deleteById(id);
     }
 
     /**
@@ -252,13 +226,9 @@ public class OrgUnitApplicationService {
      * 清除组织关联的所有数据：成员归属、岗位任命、岗位定义、访问关系、场所入住快照
      */
     private void cleanupOrgUnitData(Long orgUnitId, String orgUnitName, String reason) {
-        // 1. 结束该组织下所有在任岗位任命
-        userPositionRepository.endAllByOrgUnitId(orgUnitId, reason);
-        // 2. 清除归属到该组织的用户（primary_org_unit_id → null）
+        // 1. 清除归属到该组织的用户（primary_org_unit_id → null）
         userDomainMapper.clearPrimaryOrgUnitId(orgUnitId);
-        // 3. 逻辑删除该组织下所有岗位定义
-        positionRepository.softDeleteByOrgUnitId(orgUnitId);
-        // 4. 删除访问关系
+        // 2. 删除访问关系
         accessRelationRepository.deleteByResource("org_unit", orgUnitId);
         // 5. 清空场所入住记录中的组织名称快照
         if (orgUnitName != null) {
@@ -311,10 +281,8 @@ public class OrgUnitApplicationService {
         List<FieldChange> changes = orgUnit.dissolve(reason, updatedBy);
         orgUnit = orgUnitRepository.save(orgUnit);
 
-        // 解散时清除成员归属、岗位任命、岗位定义、访问关系、场所入住快照
-        userPositionRepository.endAllByOrgUnitId(id, "组织解散: " + (reason != null ? reason : ""));
+        // 解散时清除成员归属、访问关系、场所入住快照
         userDomainMapper.clearPrimaryOrgUnitId(id);
-        positionRepository.softDeleteByOrgUnitId(id);
         accessRelationRepository.deleteByResource("org_unit", id);
         if (orgUnit.getUnitName() != null) {
             placeOccupantMapper.clearOrgUnitName(orgUnit.getUnitName());
@@ -371,90 +339,7 @@ public class OrgUnitApplicationService {
         private List<Long> childIds;
     }
 
-    // ==================== Position creation ====================
-
-    /**
-     * 根据用户选择的岗位列表创建岗位实例
-     */
-    private void createSelectedPositions(OrgUnit orgUnit, List<CreateOrgUnitCommand.SelectedPosition> selectedPositions) {
-        if (selectedPositions == null || selectedPositions.isEmpty()) return;
-
-        int sortOrder = 0;
-        for (CreateOrgUnitCommand.SelectedPosition sp : selectedPositions) {
-            if (sp.getPositionName() == null || sp.getPositionName().trim().isEmpty()) continue;
-
-            String positionCode = orgUnit.getId() + "_POS_" + System.currentTimeMillis() + "_" + sortOrder;
-
-            Position position = Position.create(
-                positionCode,
-                sp.getPositionName().trim(),
-                orgUnit.getId(),
-                sp.getHeadcount() > 0 ? sp.getHeadcount() : 1,
-                orgUnit.getCreatedBy()
-            );
-            position.update(
-                sp.getPositionName().trim(), null, sp.getHeadcount() > 0 ? sp.getHeadcount() : 1,
-                null, null, null, false, sortOrder,
-                orgUnit.getCreatedBy()
-            );
-            positionRepository.save(position);
-            sortOrder++;
-        }
-    }
-
     // ==================== Helper methods ====================
-
-    /**
-     * Batch-enrich CLASS type nodes with class-specific data.
-     */
-    private void enrichClassNodes(List<OrgUnitTreeDTO> tree, List<OrgUnit> allUnits) {
-        List<Long> classIds = allUnits.stream()
-            .filter(u -> "CLASS".equals(u.getUnitType()))
-            .map(OrgUnit::getId)
-            .collect(Collectors.toList());
-
-        if (classIds.isEmpty()) return;
-
-        List<SchoolClassPO> classPOs = schoolClassMapper.selectBatchIds(classIds);
-        Map<Long, SchoolClassPO> classMap = classPOs.stream()
-            .collect(Collectors.toMap(SchoolClassPO::getId, Function.identity(), (a, b) -> a));
-
-        Set<Long> teacherIds = classPOs.stream()
-            .filter(c -> c.getTeacherId() != null)
-            .map(SchoolClassPO::getTeacherId)
-            .collect(Collectors.toSet());
-
-        Map<Long, String> teacherNameMap = Map.of();
-        if (!teacherIds.isEmpty()) {
-            List<UserPO> teachers = userDomainMapper.selectBatchIds(new ArrayList<>(teacherIds));
-            teacherNameMap = teachers.stream()
-                .collect(Collectors.toMap(UserPO::getId, UserPO::getRealName, (a, b) -> a));
-        }
-
-        fillClassData(tree, classMap, teacherNameMap);
-    }
-
-    private void fillClassData(List<OrgUnitTreeDTO> nodes, Map<Long, SchoolClassPO> classMap,
-                               Map<Long, String> teacherNameMap) {
-        for (OrgUnitTreeDTO node : nodes) {
-            if ("CLASS".equals(node.getUnitType())) {
-                SchoolClassPO classPO = classMap.get(node.getId());
-                if (classPO != null) {
-                    node.setStudentCount(classPO.getStudentCount());
-                    node.setStandardSize(classPO.getStandardSize() != null ? classPO.getStandardSize() : 50);
-                    node.setEnrollmentYear(classPO.getEnrollmentYear());
-                    node.setClassStatus(classPO.getStatus() != null && classPO.getStatus() == 1
-                        ? "ACTIVE" : "PREPARING");
-                    if (classPO.getTeacherId() != null) {
-                        node.setHeadTeacherName(teacherNameMap.get(classPO.getTeacherId()));
-                    }
-                }
-            }
-            if (node.getChildren() != null && !node.getChildren().isEmpty()) {
-                fillClassData(node.getChildren(), classMap, teacherNameMap);
-            }
-        }
-    }
 
     private Map<String, OrgType> loadTypeMap() {
         return orgUnitTypeRepository.findAll().stream()
@@ -529,8 +414,14 @@ public class OrgUnitApplicationService {
             }
         }
 
+        // Populate generic attributes map
+        dto.setAttributes(orgUnit.getAttributes());
+
         return dto;
     }
 
-    // autoCreateClassBinding removed — replaced by SPI plugin (ClassPlugin.afterCreate)
+    @Transactional
+    public int repairTreePaths() {
+        return orgUnitDomainService.repairAllTreePaths();
+    }
 }

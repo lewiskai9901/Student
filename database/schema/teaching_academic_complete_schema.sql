@@ -35,6 +35,7 @@ CREATE TABLE IF NOT EXISTS `academic_years` (
 
 CREATE TABLE IF NOT EXISTS `semesters` (
     `id` BIGINT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+    `academic_year_id` BIGINT COMMENT '所属学年ID',
     `semester_code` VARCHAR(20) NOT NULL COMMENT '学期编码 (如 2024-2025-1)',
     `semester_name` VARCHAR(50) NOT NULL,
     `start_year` INT NOT NULL COMMENT '起始年份',
@@ -48,7 +49,8 @@ CREATE TABLE IF NOT EXISTS `semesters` (
     `updated_by` BIGINT,
     `updated_at` DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     `deleted` TINYINT DEFAULT 0,
-    UNIQUE KEY `uk_semester_code` (`semester_code`)
+    UNIQUE KEY `uk_semester_code` (`semester_code`),
+    INDEX `idx_semester_academic_year` (`academic_year_id`)
 ) COMMENT '学期表';
 
 CREATE TABLE IF NOT EXISTS `academic_weeks` (
@@ -73,6 +75,9 @@ CREATE TABLE IF NOT EXISTS `academic_event` (
     `end_date` DATE,
     `all_day` TINYINT DEFAULT 1,
     `description` VARCHAR(500),
+    `affect_type` TINYINT DEFAULT 0 COMMENT '排课影响: 0=无 1=全天停课 2=半天停课 3=补课日 4=考试周',
+    `substitute_weekday` TINYINT NULL COMMENT '补课日按周几课表(1=周一...5=周五)',
+    `affect_slots` VARCHAR(20) NULL COMMENT '半天停课节次范围(如1-4)',
     `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP,
     `updated_at` DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     `deleted` TINYINT DEFAULT 0,

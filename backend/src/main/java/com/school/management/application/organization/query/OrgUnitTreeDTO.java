@@ -5,9 +5,11 @@ import com.fasterxml.jackson.databind.ser.std.ToStringSerializer;
 import lombok.Data;
 
 import java.util.List;
+import java.util.Map;
 
 /**
  * DTO for organization unit tree structure.
+ * Generic — no industry-specific fields.
  */
 @Data
 public class OrgUnitTreeDTO {
@@ -26,12 +28,6 @@ public class OrgUnitTreeDTO {
     private String status;             // DRAFT/ACTIVE/FROZEN/MERGING/DISSOLVED
     private String statusLabel;
     private Integer headcount;
+    private Map<String, Object> attributes; // generic extension attributes from org_units.attributes JSON
     private List<OrgUnitTreeDTO> children;
-
-    // ===== Class extension fields (only populated for CLASS type nodes) =====
-    private Integer studentCount;      // current student count
-    private Integer standardSize;      // standard capacity
-    private String headTeacherName;    // head teacher name
-    private Integer enrollmentYear;    // enrollment year
-    private String classStatus;        // PREPARING/ACTIVE/GRADUATED/DISSOLVED
 }

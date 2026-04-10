@@ -10,4 +10,7 @@ public class UpdateAcademicEventCommand {
     private LocalDate startDate;
     private LocalDate endDate;
     private String description;
+    private Integer affectType;
+    private Integer substituteWeekday;
+    private String affectSlots;
 }

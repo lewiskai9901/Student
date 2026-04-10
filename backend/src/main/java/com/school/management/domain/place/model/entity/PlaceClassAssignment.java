@@ -5,8 +5,8 @@ import com.school.management.domain.shared.Entity;
 import java.time.LocalDateTime;
 
 /**
- * 场所-班级分配实体
- * 支持一个场所分配给多个班级的场景（如部门分配宿舍给多个班级）
+ * 场所-组织分配实体
+ * 支持将一个场所分配给多个组织单元
  */
 public class PlaceClassAssignment implements Entity<Long> {
 

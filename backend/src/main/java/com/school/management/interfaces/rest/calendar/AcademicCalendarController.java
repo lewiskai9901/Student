@@ -2,6 +2,7 @@ package com.school.management.interfaces.rest.calendar;
 
 import com.school.management.application.calendar.CalendarApplicationService;
 import com.school.management.application.calendar.command.*;
+import com.school.management.application.calendar.query.CalendarGridDTO;
 import com.school.management.common.result.Result;
 import com.school.management.domain.calendar.model.aggregate.AcademicYear;
 import com.school.management.domain.calendar.model.aggregate.Semester;
@@ -145,6 +146,14 @@ public class AcademicCalendarController {
     public Result<String> generateSemesterCode(@RequestParam Integer startYear,
                                                 @RequestParam Integer semesterType) {
         return Result.success(calendarService.generateSemesterCode(startYear, semesterType));
+    }
+
+    // ==================== 校历网格 ====================
+
+    @GetMapping("/semesters/{semesterId}/calendar-grid")
+    @CasbinAccess(resource = "calendar", action = "view")
+    public Result<CalendarGridDTO> getCalendarGrid(@PathVariable Long semesterId) {
+        return Result.success(calendarService.buildCalendarGrid(semesterId));
     }
 
     // ==================== 教学周 ====================

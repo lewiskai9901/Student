@@ -3,6 +3,7 @@ package com.school.management.infrastructure.persistence.organization;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.school.management.domain.organization.model.OrgUnit;
+import lombok.extern.slf4j.Slf4j;
 import com.school.management.domain.organization.model.valueobject.OrgUnitStatus;
 import com.school.management.domain.organization.repository.OrgUnitRepository;
 import org.springframework.stereotype.Repository;
@@ -23,6 +24,7 @@ import java.util.stream.Collectors;
  * 组织单元仓储实现
  * 映射到 org_units 表
  */
+@Slf4j
 @Repository
 public class OrgUnitRepositoryImpl implements OrgUnitRepository {
 
@@ -166,9 +168,11 @@ public class OrgUnitRepositoryImpl implements OrgUnitRepository {
     // ==================== 转换方法 ====================
 
     private OrgUnit toDomain(OrgUnitPO po) {
-        String unitType = po.getUnitType() != null && !po.getUnitType().isEmpty()
-            ? po.getUnitType()
-            : inferTypeFromLevel(po.getTreeLevel());
+        String unitType = po.getUnitType();
+        if (unitType == null || unitType.isEmpty()) {
+            log.warn("org_units row id={} has null unit_type, defaulting to DEPARTMENT", po.getId());
+            unitType = "DEPARTMENT";
+        }
 
         return OrgUnit.builder()
             .id(po.getId())
@@ -191,18 +195,6 @@ public class OrgUnitRepositoryImpl implements OrgUnitRepository {
             .updatedBy(po.getUpdatedBy())
             .createdAt(po.getCreatedAt())
             .build();
-    }
-
-    private String inferTypeFromLevel(Integer treeLevel) {
-        if (treeLevel == null) return "DEPARTMENT";
-        return switch (treeLevel) {
-            case 1 -> "ORGANIZATION";
-            case 2 -> "DIVISION";
-            case 3 -> "DEPARTMENT";
-            case 4 -> "SECTION";
-            case 5 -> "TEAM";
-            default -> "DEPARTMENT";
-        };
     }
 
     private Map<String, Object> parseAttributes(String json) {

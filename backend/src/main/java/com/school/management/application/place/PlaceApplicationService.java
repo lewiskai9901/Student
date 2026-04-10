@@ -627,12 +627,6 @@ public class PlaceApplicationService {
                 dto.setFloorId(poWithRelations.getFloorId());
                 dto.setFloorName(poWithRelations.getFloorName());
                 dto.setOrgUnitName(poWithRelations.getOrgUnitName());
-                if (place.getOrgUnitId() != null) {
-                    dto.setClassName(poWithRelations.getClassName());
-                    dto.setClassTeacherId(poWithRelations.getClassTeacherId());
-                    dto.setClassTeacherName(poWithRelations.getClassTeacherName());
-                    dto.setClassTeacherPhone(poWithRelations.getClassTeacherPhone());
-                }
             }
         }
         return dto;
@@ -676,10 +670,6 @@ public class PlaceApplicationService {
         dto.setOrgUnitId(po.getOrgUnitId());
         dto.setOrgUnitName(po.getOrgUnitName());
         dto.setOrgUnitId(po.getOrgUnitId());
-        dto.setClassName(po.getClassName());
-        dto.setClassTeacherId(po.getClassTeacherId());
-        dto.setClassTeacherName(po.getClassTeacherName());
-        dto.setClassTeacherPhone(po.getClassTeacherPhone());
         dto.setResponsibleUserId(po.getResponsibleUserId());
         dto.setResponsibleUserName(po.getResponsibleUserName());
         // 性别类型

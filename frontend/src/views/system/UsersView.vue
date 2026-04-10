@@ -751,8 +751,7 @@ const loadUserList = async () => {
   loading.value = true
   try {
     const res = await getUserPage(queryParams)
-    // 统一 status 为数字格式，过滤掉学生类型用户（学生在学生管理中维护）
-    const records = (res.records || []).filter((u: any) => u.userType !== 'STUDENT' && u.userTypeCode !== 'STUDENT')
+    const records = (res.records || [])
     records.forEach((u: any) => { u.status = normalizeStatus(u.status) })
     userList.value = records as any
     total.value = res.total || 0

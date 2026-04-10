@@ -178,13 +178,6 @@ public class MergedDataScope {
     }
 
     /**
-     * 获取班级ID集合
-     */
-    public Set<Long> getClassIds() {
-        return getScopeIds("CLASS");
-    }
-
-    /**
      * 判断指定组织单元是否包含子级
      */
     public boolean includesChildren(Long orgUnitId) {

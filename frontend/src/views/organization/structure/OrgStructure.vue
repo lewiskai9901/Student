@@ -13,26 +13,19 @@
 
     <!-- Right Content Panel -->
     <div class="org-main">
-      <!-- Top Header Bar -->
-      <header class="tm-header">
-        <div>
-          <h1 class="tm-title">组织架构</h1>
-          <div class="tm-stats" style="margin-top: 4px;">管理学校的组织与院系结构</div>
-        </div>
-        <router-link to="/system/org-types" class="tm-btn tm-btn-secondary">
-          <Settings style="width: 16px; height: 16px;" />
+      <!-- Compact Header -->
+      <header class="org-header-compact">
+        <h1 class="org-header-title">组织架构</h1>
+        <span class="org-header-sub">管理组织架构与层级关系</span>
+        <span class="org-header-sep">|</span>
+        <span class="org-header-stat">总数 <b>{{ stats.total }}</b></span>
+        <span class="org-header-stat"><em class="dot dot-green" /> 正常 <b>{{ stats.active }}</b></span>
+        <span class="org-header-stat"><em class="dot dot-gray" /> 冻结/撤销 <b>{{ stats.inactive }}</b></span>
+        <router-link to="/system/org-types" class="tm-btn tm-btn-secondary" style="margin-left: auto; padding: 3px 10px; font-size: 11px;">
+          <Settings style="width: 13px; height: 13px;" />
           管理类型
         </router-link>
       </header>
-
-      <!-- Stat Bar -->
-      <div class="tm-stats-bar">
-        <span class="tm-stats">总数 <b>{{ stats.total }}</b></span>
-        <i class="sep" />
-        <span class="tm-stats"><em class="dot dot-green" /> 正常 <b>{{ stats.active }}</b></span>
-        <i class="sep" />
-        <span class="tm-stats"><em class="dot dot-gray" /> 冻结/撤销 <b>{{ stats.inactive }}</b></span>
-      </div>
 
       <!-- Main Content Area -->
       <div class="org-content">
@@ -309,25 +302,40 @@ onMounted(loadData)
   flex: 1;
   overflow: hidden;
 }
-.tm-stats-bar {
+.org-header-compact {
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 8px 24px;
+  padding: 8px 16px;
   background: #fff;
   border-bottom: 1px solid #e8eaed;
-  font-size: 12.5px;
+}
+.org-header-title {
+  font-size: 15px;
+  font-weight: 700;
+  color: #111827;
+  margin: 0;
+}
+.org-header-sub {
+  font-size: 12px;
+  color: #9ca3af;
+}
+.org-header-sep {
+  color: #d1d5db;
+  font-size: 12px;
+}
+.org-header-stat {
+  font-size: 12px;
   color: #6b7280;
 }
-.tm-stats-bar .sep { display: block; width: 1px; height: 10px; background: #d1d5db; }
-.tm-stats-bar .dot { display: inline-block; width: 6px; height: 6px; border-radius: 50%; margin-right: 2px; vertical-align: middle; }
-.tm-stats-bar .dot-green { background: #10b981; }
-.tm-stats-bar .dot-gray { background: #9ca3af; }
-.tm-stats-bar b { font-weight: 600; color: #111827; }
+.org-header-stat b { font-weight: 600; color: #111827; }
+.org-header-stat .dot { display: inline-block; width: 5px; height: 5px; border-radius: 50%; margin-right: 2px; vertical-align: middle; }
+.org-header-stat .dot-green { background: #10b981; }
+.org-header-stat .dot-gray { background: #9ca3af; }
 .org-content {
   flex: 1;
   overflow-y: auto;
-  padding: 20px 24px 24px;
+  padding: 12px 16px 16px;
 }
 .org-loading {
   display: flex;

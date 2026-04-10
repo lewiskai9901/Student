@@ -1,15 +1,23 @@
 package com.school.management.application.teaching;
 
+import com.baomidou.mybatisplus.core.toolkit.IdWorker;
 import com.school.management.domain.teaching.model.offering.SemesterOffering;
 import com.school.management.domain.teaching.model.offering.ClassCourseAssignment;
+import com.school.management.domain.teaching.model.task.TaskStatus;
+import com.school.management.domain.teaching.model.task.TeachingTask;
 import com.school.management.domain.teaching.repository.SemesterOfferingRepository;
 import com.school.management.domain.teaching.repository.ClassCourseAssignmentRepository;
+import com.school.management.domain.teaching.repository.TeachingTaskRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 @Service
 @Transactional
@@ -17,9 +25,23 @@ import java.util.Map;
 public class OfferingApplicationService {
     private final SemesterOfferingRepository offeringRepo;
     private final ClassCourseAssignmentRepository assignmentRepo;
+    private final TeachingTaskRepository taskRepo;
+    private final JdbcTemplate jdbc;
 
-    public List<SemesterOffering> listOfferings(Long semesterId) {
-        return offeringRepo.findBySemesterId(semesterId);
+    @Transactional(readOnly = true)
+    public List<Map<String, Object>> listOfferingsWithCourse(Long semesterId) {
+        return jdbc.queryForList(
+            "SELECT o.id, o.semester_id AS semesterId, o.course_id AS courseId, " +
+            "c.course_code AS courseCode, c.course_name AS courseName, " +
+            "o.applicable_grade AS applicableGrade, o.weekly_hours AS weeklyHours, " +
+            "o.start_week AS startWeek, o.end_week AS endWeek, " +
+            "o.course_category AS courseCategory, o.course_type AS courseType, " +
+            "o.allow_combined AS allowCombined, o.max_combined_classes AS maxCombinedClasses, " +
+            "o.allow_walking AS allowWalking, o.status, o.remark " +
+            "FROM semester_course_offerings o " +
+            "LEFT JOIN courses c ON c.id = o.course_id " +
+            "WHERE o.semester_id = ? AND o.deleted = 0 " +
+            "ORDER BY o.id", semesterId);
     }
 
     public SemesterOffering createOffering(Map<String, Object> data, Long userId) {
@@ -108,6 +130,83 @@ public class OfferingApplicationService {
             a.confirm();
             assignmentRepo.save(a);
         }
+    }
+
+    public int importFromPlan(Long semesterId, Long planId, Long userId) {
+        Map<String, Object> plan = jdbc.queryForMap(
+            "SELECT grade_year FROM curriculum_plans WHERE id = ? AND deleted = 0", planId);
+        String grade = plan.get("grade_year") != null ? plan.get("grade_year").toString() + "级" : "全年级";
+
+        List<Map<String, Object>> planCourses = jdbc.queryForList(
+            "SELECT course_id, weekly_hours, total_hours, course_category, course_type " +
+            "FROM curriculum_plan_courses WHERE plan_id = ?", planId);
+
+        List<SemesterOffering> existing = offeringRepo.findBySemesterId(semesterId);
+        Set<String> existingKeys = new HashSet<>();
+        for (SemesterOffering o : existing) {
+            existingKeys.add(o.getCourseId() + "_" + o.getApplicableGrade());
+        }
+
+        int created = 0;
+        for (Map<String, Object> pc : planCourses) {
+            Long courseId = Long.valueOf(pc.get("course_id").toString());
+            if (existingKeys.contains(courseId + "_" + grade)) continue;
+
+            Integer weeklyHours = pc.get("weekly_hours") != null ? Integer.valueOf(pc.get("weekly_hours").toString()) : 2;
+            SemesterOffering offering = SemesterOffering.create(
+                semesterId, courseId, grade, weeklyHours, 1, null, userId);
+            offeringRepo.save(offering);
+            created++;
+        }
+        return created;
+    }
+
+    public int generateTasksFromAssignments(Long semesterId, Long userId) {
+        List<ClassCourseAssignment> assignments = assignmentRepo.findBySemesterId(semesterId);
+        assignments = assignments.stream()
+            .filter(a -> a.getStatus() != null && a.getStatus() == 1)
+            .collect(Collectors.toList());
+
+        List<Map<String, Object>> existingTasks = jdbc.queryForList(
+            "SELECT course_id, org_unit_id FROM teaching_tasks WHERE semester_id = ? AND deleted = 0",
+            semesterId);
+        Set<String> existingKeys = new HashSet<>();
+        for (Map<String, Object> t : existingTasks) {
+            existingKeys.add(t.get("course_id") + "_" + t.get("org_unit_id"));
+        }
+
+        int created = 0;
+        for (ClassCourseAssignment a : assignments) {
+            String key = a.getCourseId() + "_" + a.getOrgUnitId();
+            if (existingKeys.contains(key)) continue;
+
+            SemesterOffering offering = a.getOfferingId() != null ?
+                offeringRepo.findById(a.getOfferingId()).orElse(null) : null;
+
+            int weeklyHours = a.getWeeklyHours() != null ? a.getWeeklyHours() :
+                (offering != null && offering.getWeeklyHours() != null ? offering.getWeeklyHours() : 2);
+            int startWeek = offering != null && offering.getStartWeek() != null ? offering.getStartWeek() : 1;
+            Integer endWeek = offering != null ? offering.getEndWeek() : null;
+
+            // 查班级学生数
+            int studentCount = 0;
+            try {
+                Long cnt = jdbc.queryForObject(
+                    "SELECT COUNT(1) FROM students WHERE org_unit_id = ? AND deleted = 0", Long.class, a.getOrgUnitId());
+                if (cnt != null) studentCount = cnt.intValue();
+            } catch (Exception ignored) {}
+
+            long taskId = IdWorker.getId();
+            TeachingTask task = TeachingTask.create(
+                "TT" + taskId, semesterId, a.getCourseId(), a.getOrgUnitId(),
+                studentCount,
+                weeklyHours, null, startWeek, endWeek,
+                TaskStatus.CONFIRMED, null, userId);
+            task.setId(taskId);
+            taskRepo.save(task);
+            created++;
+        }
+        return created;
     }
 
     // Helper methods for type conversion from Map

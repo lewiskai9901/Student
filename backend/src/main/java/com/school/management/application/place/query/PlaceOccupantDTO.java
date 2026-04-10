@@ -26,9 +26,8 @@ public class PlaceOccupantDTO {
     private String remark;
     private LocalDateTime createdAt;
 
-    // 额外信息（学生/教师特有）
-    private String className;
-    private String departmentName;
+    // 额外信息
+    private String orgUnitName;
     private Integer gender;
     private String phone;
 }

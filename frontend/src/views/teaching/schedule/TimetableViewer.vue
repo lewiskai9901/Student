@@ -148,10 +148,10 @@ function showEntryDetail(entry: ScheduleEntry) { selectedEntry.value = entry; en
 async function onEntryDrop(entryId: number, newDay: number, newPeriod: number) {
   if (!props.semesterId) return
   try {
-    const check = await scheduleApi.checkMoveConflict({ entryId, semesterId: Number(props.semesterId), dayOfWeek: newDay, periodStart: newPeriod })
+    const check = await scheduleApi.checkMoveConflict({ entryId, semesterId: props.semesterId, dayOfWeek: newDay, periodStart: newPeriod })
     const checkData = (check as any).data || check
     if (checkData.hasConflict) { ElMessage.warning('无法移动: 存在时间冲突'); return }
-    await scheduleApi.moveEntry(entryId, { semesterId: Number(props.semesterId), dayOfWeek: newDay, periodStart: newPeriod })
+    await scheduleApi.moveEntry(entryId, { semesterId: props.semesterId, dayOfWeek: newDay, periodStart: newPeriod })
     ElMessage.success('课程已移动'); loadTimetable()
   } catch { ElMessage.error('移动失败') }
 }

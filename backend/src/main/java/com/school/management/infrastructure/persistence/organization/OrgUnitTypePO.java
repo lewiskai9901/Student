@@ -9,11 +9,14 @@ import java.time.LocalDateTime;
  * 组织类型持久化对象
  */
 @Data
-@TableName("org_unit_types")
+@TableName("entity_type_configs")
 public class OrgUnitTypePO {
 
     @TableId(type = IdType.AUTO)
     private Long id;
+
+    @TableField("entity_type")
+    private String entityType;
 
     @TableField("type_code")
     private String typeCode;
@@ -27,10 +30,10 @@ public class OrgUnitTypePO {
     @TableField(value = "parent_type_code", updateStrategy = FieldStrategy.ALWAYS)
     private String parentTypeCode;
 
-    @TableField(value = "icon", updateStrategy = FieldStrategy.ALWAYS)
+    @TableField(exist = false)
     private String icon;
 
-    @TableField(value = "description", updateStrategy = FieldStrategy.ALWAYS)
+    @TableField(exist = false)
     private String description;
 
     /** 行为特征 JSON: {"inspectionTarget": true, "memberManagement": true, ...} */
@@ -45,20 +48,16 @@ public class OrgUnitTypePO {
     @TableField(value = "allowed_child_type_codes", updateStrategy = FieldStrategy.ALWAYS)
     private String allowedChildTypeCodes;
 
-    @TableField(value = "max_depth", updateStrategy = FieldStrategy.ALWAYS)
+    @TableField(exist = false)
     private Integer maxDepth;
 
     /** 关联的默认用户类型编码 JSON: ["TEACHER", "STUDENT"] */
-    @TableField(value = "default_user_type_codes", updateStrategy = FieldStrategy.ALWAYS)
+    @TableField(exist = false)
     private String defaultUserTypeCodes;
 
     /** 关联的默认场所类型编码 JSON: ["CLASSROOM", "OFFICE"] */
-    @TableField(value = "default_place_type_codes", updateStrategy = FieldStrategy.ALWAYS)
+    @TableField(exist = false)
     private String defaultPlaceTypeCodes;
-
-    /** 默认岗位模板 JSON数组 */
-    @TableField(value = "default_positions", updateStrategy = FieldStrategy.ALWAYS)
-    private String defaultPositions;
 
     @TableField("is_system")
     private Boolean isSystem;

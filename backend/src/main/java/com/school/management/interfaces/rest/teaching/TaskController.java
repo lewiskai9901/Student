@@ -78,12 +78,17 @@ public class TaskController {
 
     // ==================== 教师分配 ====================
 
-    @SuppressWarnings("unchecked")
     @PostMapping("/tasks/{id}/assign-teachers")
     @CasbinAccess(resource = "teaching:task", action = "edit")
+    @SuppressWarnings("unchecked")
     public Result<Void> assignTeachers(@PathVariable Long id, @RequestBody Map<String, Object> data) {
-        List<Number> teacherIds = (List<Number>) data.get("teacherIds");
-        Number mainTeacherId = (Number) data.get("mainTeacherId");
+        // Handle both Number and String IDs (JS big number precision)
+        List<?> rawIds = (List<?>) data.get("teacherIds");
+        List<Number> teacherIds = rawIds != null ? rawIds.stream()
+            .map(v -> (Number) Long.valueOf(v.toString()))
+            .collect(java.util.stream.Collectors.toList()) : null;
+        Object rawMain = data.get("mainTeacherId");
+        Number mainTeacherId = rawMain != null ? Long.valueOf(rawMain.toString()) : null;
         taskService.assignTeachers(id, teacherIds, mainTeacherId);
         return Result.success();
     }

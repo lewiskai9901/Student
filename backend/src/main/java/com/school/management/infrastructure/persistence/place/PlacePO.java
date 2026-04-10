@@ -91,13 +91,5 @@ public class PlacePO {
     @TableField(exist = false)
     private String orgUnitName;
     @TableField(exist = false)
-    private String className;              // 归属班级名称
-    @TableField(exist = false)
-    private Long classTeacherId;           // 班主任ID
-    @TableField(exist = false)
-    private String classTeacherName;       // 班主任姓名
-    @TableField(exist = false)
-    private String classTeacherPhone;      // 班主任电话
-    @TableField(exist = false)
     private String responsibleUserName;
 }

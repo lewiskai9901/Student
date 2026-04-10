@@ -300,7 +300,7 @@ async function saveTeachingClass() {
   tcSaving.value = true
   try {
     const payload: Partial<TeachingClass> = {
-      semesterId: Number(props.semesterId), className: tcForm.value.className, courseId: tcForm.value.courseId,
+      semesterId: props.semesterId, className: tcForm.value.className, courseId: tcForm.value.courseId,
       classType: tcForm.value.classType, weeklyHours: tcForm.value.weeklyHours, startWeek: tcForm.value.startWeek,
       endWeek: tcForm.value.endWeek, requiredRoomType: tcForm.value.requiredRoomType || undefined, remark: tcForm.value.remark || undefined,
     }

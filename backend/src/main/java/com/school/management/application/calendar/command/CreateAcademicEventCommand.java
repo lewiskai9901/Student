@@ -13,4 +13,7 @@ public class CreateAcademicEventCommand {
     private LocalDate endDate;
     private Boolean allDay;
     private String description;
+    private Integer affectType;
+    private Integer substituteWeekday;
+    private String affectSlots;
 }

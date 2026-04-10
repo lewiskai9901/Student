@@ -26,13 +26,15 @@
     <!-- Tabs -->
     <div class="tm-tabs">
       <button :class="['tm-tab', { active: tab === 'overview' }]" @click="tab = 'overview'">学期总览</button>
+      <button :class="['tm-tab', { active: tab === 'grid' }]" @click="tab = 'grid'">校历表</button>
       <button :class="['tm-tab', { active: tab === 'events' }]" @click="tab = 'events'">校历事件</button>
       <button :class="['tm-tab', { active: tab === 'periods' }]" @click="tab = 'periods'">作息表</button>
     </div>
 
     <!-- Content -->
     <div style="flex: 1; overflow-y: auto; padding: 16px 24px;">
-      <SemesterOverview v-if="tab === 'overview'" :semester-id="semesterId" :weeks="weeks" :events="events" :current-week="currentWeek" />
+      <SemesterOverview v-if="tab === 'overview'" :semester-id="semesterId" :weeks="weeks" :events="events" :current-week="currentWeek" :calendar-grid="calendarGrid" />
+      <CalendarGrid v-else-if="tab === 'grid'" :semester-id="semesterId" :year-id="yearId" @loaded="onGridLoaded" />
       <CalendarEvents v-else-if="tab === 'events'" :semester-id="semesterId" :year-id="yearId" :events="events" @refresh="loadEvents" />
       <PeriodSettings v-else-if="tab === 'periods'" :semester-id="semesterId" />
     </div>
@@ -57,8 +59,10 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, watch } from 'vue'
 import { semesterApi, academicEventApi } from '@/api/calendar'
+import type { CalendarGrid as CalendarGridType } from '@/types/teaching'
 
 import SemesterOverview from './calendar-new/SemesterOverview.vue'
+import CalendarGrid from './calendar-new/CalendarGrid.vue'
 import CalendarEvents from './calendar-new/CalendarEvents.vue'
 import PeriodSettings from './calendar-new/PeriodSettings.vue'
 import YearSetupDrawer from './calendar-new/YearSetupDrawer.vue'
@@ -66,7 +70,12 @@ import YearSetupDrawer from './calendar-new/YearSetupDrawer.vue'
 const semesters = ref<any[]>([])
 const semesterId = ref<number | string>()
 const yearId = ref<number | string>()
-const tab = ref<'overview' | 'events' | 'periods'>('overview')
+const tab = ref<'overview' | 'grid' | 'events' | 'periods'>('overview')
+const calendarGrid = ref<CalendarGridType | null>(null)
+
+function onGridLoaded(g: CalendarGridType) {
+  calendarGrid.value = g
+}
 const setupVisible = ref(false)
 const weeks = ref<any[]>([])
 const events = ref<any[]>([])
@@ -100,10 +109,18 @@ async function loadEvents() {
   } catch { events.value = [] }
 }
 
-function onSemesterChange() { loadWeeks(); loadEvents() }
+async function loadCalendarGrid() {
+  if (!semesterId.value) { calendarGrid.value = null; return }
+  try {
+    const res = await semesterApi.getCalendarGrid(semesterId.value)
+    calendarGrid.value = res
+  } catch { calendarGrid.value = null }
+}
+
+function onSemesterChange() { loadWeeks(); loadEvents(); loadCalendarGrid() }
 function onSetupChanged() { loadSemesters() }
 
-watch(semesterId, () => { if (semesterId.value) { loadWeeks(); loadEvents() } })
+watch(semesterId, () => { if (semesterId.value) { loadWeeks(); loadEvents(); loadCalendarGrid() } })
 
 onMounted(async () => { await loadSemesters() })
 </script>

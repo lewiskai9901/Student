@@ -4,7 +4,6 @@ import com.school.management.application.shared.TypeTreeBuilder;
 import com.school.management.application.shared.TypeTreeBuilder.TypeTreeNode;
 import com.school.management.domain.organization.model.entity.OrgCategory;
 import com.school.management.domain.organization.model.entity.OrgType;
-import com.school.management.domain.organization.model.valueobject.PositionTemplate;
 import com.school.management.domain.organization.repository.OrgUnitTypeRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -57,7 +56,6 @@ public class OrgUnitTypeApplicationService {
                 .maxDepth(command.getMaxDepth())
                 .defaultUserTypeCodes(command.getDefaultUserTypeCodes())
                 .defaultPlaceTypeCodes(command.getDefaultPlaceTypeCodes())
-                .defaultPositions(command.getDefaultPositions())
                 .isSystem(false)
                 .isEnabled(true)
                 .sortOrder(command.getSortOrder())
@@ -99,10 +97,6 @@ public class OrgUnitTypeApplicationService {
                 command.getDefaultUserTypeCodes() != null ? command.getDefaultUserTypeCodes() : orgType.getDefaultUserTypeCodes(),
                 command.getDefaultPlaceTypeCodes() != null ? command.getDefaultPlaceTypeCodes() : orgType.getDefaultPlaceTypeCodes()
         );
-
-        if (command.getDefaultPositions() != null) {
-            orgType.updateDefaultPositions(command.getDefaultPositions());
-        }
 
         if (command.getSortOrder() != null) {
             orgType.updateSortOrder(command.getSortOrder());
@@ -221,7 +215,6 @@ public class OrgUnitTypeApplicationService {
         private Integer maxDepth;
         private List<String> defaultUserTypeCodes;
         private List<String> defaultPlaceTypeCodes;
-        private List<PositionTemplate> defaultPositions;
         private Integer sortOrder = 0;
 
         public String getTypeCode() { return typeCode; }
@@ -248,8 +241,6 @@ public class OrgUnitTypeApplicationService {
         public void setDefaultUserTypeCodes(List<String> defaultUserTypeCodes) { this.defaultUserTypeCodes = defaultUserTypeCodes; }
         public List<String> getDefaultPlaceTypeCodes() { return defaultPlaceTypeCodes; }
         public void setDefaultPlaceTypeCodes(List<String> defaultPlaceTypeCodes) { this.defaultPlaceTypeCodes = defaultPlaceTypeCodes; }
-        public List<PositionTemplate> getDefaultPositions() { return defaultPositions; }
-        public void setDefaultPositions(List<PositionTemplate> defaultPositions) { this.defaultPositions = defaultPositions; }
         public Integer getSortOrder() { return sortOrder; }
         public void setSortOrder(Integer sortOrder) { this.sortOrder = sortOrder; }
     }
@@ -265,7 +256,6 @@ public class OrgUnitTypeApplicationService {
         private Integer maxDepth;
         private List<String> defaultUserTypeCodes;
         private List<String> defaultPlaceTypeCodes;
-        private List<PositionTemplate> defaultPositions;
         private Integer sortOrder;
 
         public String getTypeName() { return typeName; }
@@ -288,8 +278,6 @@ public class OrgUnitTypeApplicationService {
         public void setDefaultUserTypeCodes(List<String> defaultUserTypeCodes) { this.defaultUserTypeCodes = defaultUserTypeCodes; }
         public List<String> getDefaultPlaceTypeCodes() { return defaultPlaceTypeCodes; }
         public void setDefaultPlaceTypeCodes(List<String> defaultPlaceTypeCodes) { this.defaultPlaceTypeCodes = defaultPlaceTypeCodes; }
-        public List<PositionTemplate> getDefaultPositions() { return defaultPositions; }
-        public void setDefaultPositions(List<PositionTemplate> defaultPositions) { this.defaultPositions = defaultPositions; }
         public Integer getSortOrder() { return sortOrder; }
         public void setSortOrder(Integer sortOrder) { this.sortOrder = sortOrder; }
     }

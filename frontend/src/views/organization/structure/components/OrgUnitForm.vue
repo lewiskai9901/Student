@@ -343,8 +343,13 @@ const parentOptions = computed(() => {
 const loadTypes = async () => {
   typesLoading.value = true
   try {
-    if (props.parentDepartment) {
-      // 从 entity_type_configs 获取允许的子类型
+    if (props.department) {
+      // Edit mode: show only the current type (locked)
+      const typeCode = props.department.typeCode || props.department.unitType
+      const typeName = props.department.typeName || typeCode
+      availableTypes.value = [{ typeCode, typeName, category: '', parentTypeCode: '', defaultPositions: [] }]
+    } else if (props.parentDepartment) {
+      // Add child: get allowed children from parent type
       const parentTypeCode = props.parentDepartment.typeCode || props.parentDepartment.unitType
       const res = await entityTypeApi.getAllowedChildren('ORG_UNIT', parentTypeCode)
       const data = (res as any).data || res || []
@@ -386,6 +391,13 @@ watch(() => props.visible, async (val) => {
       formData.unitCode = props.department.unitCode
       formData.unitType = props.department.unitType
       formData.parentId = props.department.parentId || null
+      // Load extension schema and populate existing attributes
+      if (formData.unitType) {
+        await loadTypeSchema(formData.unitType)
+        if (props.department.attributes) {
+          formData.attributes = { ...formData.attributes, ...props.department.attributes }
+        }
+      }
     } else if (props.parentDepartment) {
       // Add child mode
       formData.parentId = props.parentDepartment.id
@@ -400,7 +412,9 @@ const handleClosed = () => {
     unitCode: '',
     unitType: '',
     parentId: null,
+    attributes: {},
   })
+  typeSchema.value = null
   availableTypes.value = []
   typeError.value = ''
   positionSelections.value = []

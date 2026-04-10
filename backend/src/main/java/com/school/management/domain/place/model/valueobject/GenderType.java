@@ -32,18 +32,13 @@ public enum GenderType {
     }
 
     /**
-     * 检查学生性别是否与房间性别类型匹配
-     * @param studentGender 学生性别字符串 ("男"/"女")
-     * @return 是否匹配
+     * 检查性别是否与此类型匹配
+     * @param gender 性别描述 ("男"/"女")
      */
-    public boolean matchesStudentGender(String studentGender) {
-        if (this == MIXED) {
-            return true;
-        }
-        if (studentGender == null) {
-            return false;
-        }
-        return this.description.equals(studentGender);
+    public boolean matchesGender(String gender) {
+        if (this == MIXED) return true;
+        if (gender == null) return false;
+        return this.description.equals(gender);
     }
 
     /**

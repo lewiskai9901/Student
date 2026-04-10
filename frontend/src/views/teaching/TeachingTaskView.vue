@@ -1,5 +1,7 @@
 <template>
-  <div class="tm-page">
+  <div class="tm-page" style="flex-direction: row;">
+    <DeptTree @select="onTreeSelect" />
+    <div style="flex: 1; display: flex; flex-direction: column; overflow: hidden;">
     <!-- Header -->
     <div class="tm-header">
       <div>
@@ -24,6 +26,8 @@
         <button class="tm-btn tm-btn-primary" @click="showTaskDialog()">新建任务</button>
       </div>
     </div>
+
+    <!-- pipeline removed: navigation via sidebar + contextual buttons -->
 
     <!-- Filter Bar -->
     <div class="tm-filters">
@@ -345,12 +349,15 @@
         </div>
       </Transition>
     </Teleport>
+  </div><!-- end wrapper -->
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, reactive, computed, onMounted } from 'vue'
 import { ElMessage, ElMessageBox, type FormInstance } from 'element-plus'
+import TeachingPipeline from '@/components/teaching/TeachingPipeline.vue'
+import DeptTree from '@/components/teaching/DeptTree.vue'
 import { teachingTaskApi, workflowApi } from '@/api/teaching'
 import { semesterApi } from '@/api/calendar'
 import { courseApi, curriculumPlanApi } from '@/api/academic'
@@ -364,6 +371,11 @@ const loading = ref(false)
 const saving = ref(false)
 const tasks = ref<TeachingTask[]>([])
 const total = ref(0)
+const selectedTreeOrg = ref<{ type: string; id: number | string; name: string }>({ type: '', id: '', name: '' })
+function onTreeSelect(node: { type: string; id: number | string; name: string }) {
+  selectedTreeOrg.value = node
+}
+
 const semesters = ref<Semester[]>([])
 const courseOptions = ref<Course[]>([])
 const classOptions = ref<{ id: number | string; className: string }[]>([])

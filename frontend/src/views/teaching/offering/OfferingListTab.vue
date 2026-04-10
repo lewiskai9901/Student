@@ -65,18 +65,25 @@
           <td :style="{ color: row.allowCombined ? '#2563eb' : '#d1d5db', fontSize: '12px' }">{{ row.allowCombined ? '是' : '否' }}</td>
           <td :style="{ color: row.allowWalking ? '#2563eb' : '#d1d5db', fontSize: '12px' }">{{ row.allowWalking ? '是' : '否' }}</td>
           <td>
-            <span :class="['tm-chip', row.status === 1 ? 'tm-chip-green' : 'tm-chip-amber']">
+            <span :class="['tm-chip', String(row.status) === '1' ? 'tm-chip-green' : 'tm-chip-amber']">
               {{ getOfferingStatusName(row.status) }}
             </span>
           </td>
           <td>
             <button class="tm-action" @click="showOfferingDialog(row)">编辑</button>
-            <button v-if="row.status === 0" class="tm-action" @click="confirmOffering(row)">确认</button>
+            <button v-if="String(row.status) === '0'" class="tm-action" @click="confirmOffering(row)">确认</button>
             <button class="tm-action tm-action-danger" @click="deleteOffering(row)">删除</button>
           </td>
         </tr>
       </tbody>
     </table>
+
+    <!-- 下一步引导 -->
+    <div v-if="offerings.length > 0 && offerings.every(o => String(o.status) === '1')" style="text-align: center; padding: 16px 0;">
+      <button class="tm-btn tm-btn-primary" style="padding: 8px 24px;" @click="emit('allConfirmed')">
+        全部已确认 — 去任务落实 →
+      </button>
+    </div>
   </div>
 
   <!-- Offering Add/Edit Drawer -->
@@ -206,7 +213,9 @@ import type { SchoolClass } from '@/types/organization'
 
 const props = defineProps<{
   semesterId: number | string | null
+  selectedOrg?: any
 }>()
+const emit = defineEmits<{ allConfirmed: [] }>()
 
 // ==================== State ====================
 
@@ -262,7 +271,7 @@ function getCourseTypeChip(type: number) {
 }
 
 function getOfferingStatusName(status: number) {
-  return status === 1 ? '已确认' : '待确认'
+  return String(status) === '1' ? '已确认' : '待确认'
 }
 
 // ==================== Data Loading ====================
@@ -366,7 +375,7 @@ async function saveOffering() {
   offeringSaving.value = true
   try {
     const payload: Partial<SemesterOffering> = {
-      semesterId: Number(props.semesterId),
+      semesterId: props.semesterId,
       courseId: offeringForm.value.courseId,
       applicableGrade: offeringForm.value.applicableGrade,
       weeklyHours: offeringForm.value.weeklyHours,
@@ -437,7 +446,7 @@ async function doImportFromPlan() {
   importLoading.value = true
   try {
     await offeringApi.importFromPlan({
-      semesterId: Number(props.semesterId),
+      semesterId: props.semesterId,
       planId: importForm.value.planId,
       orgUnitIds: importForm.value.orgUnitIds.length > 0 ? importForm.value.orgUnitIds : undefined,
     })

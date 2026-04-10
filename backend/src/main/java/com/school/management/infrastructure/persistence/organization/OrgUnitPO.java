@@ -75,7 +75,7 @@ public class OrgUnitPO {
 
     @TableLogic
     @TableField("deleted")
-    private Integer deleted;
+    private Long deleted;
 
     @Version
     @TableField("version")

@@ -10,6 +10,7 @@ import java.time.LocalDateTime;
 public class SemesterPO {
     @TableId(type = IdType.ASSIGN_ID)
     private Long id;
+    private Long academicYearId;
     private String semesterName;
     private String semesterCode;
     private LocalDate startDate;

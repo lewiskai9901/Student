@@ -56,21 +56,14 @@ public class DataScopeItem implements Entity<Long> {
     }
 
     /**
-     * 判断是否为班级类型
+     * 判断是否为指定类型
      */
-    public boolean isClassType() {
-        return "CLASS".equals(itemTypeCode);
+    public boolean isType(String typeCode) {
+        return typeCode != null && typeCode.equals(itemTypeCode);
     }
 
     /**
-     * 判断是否为年级类型
-     */
-    public boolean isGradeType() {
-        return "GRADE".equals(itemTypeCode);
-    }
-
-    /**
-     * 创建部门范围项
+     * 创建组织范围项
      */
     public static DataScopeItem createOrgUnit(Long orgUnitId, String orgUnitName, boolean includeChildren) {
         return DataScopeItem.builder()
@@ -82,37 +75,13 @@ public class DataScopeItem implements Entity<Long> {
     }
 
     /**
-     * 创建班级范围项
+     * 创建通用范围项（按类型编码）
      */
-    public static DataScopeItem createClass(Long orgUnitId, String className) {
+    public static DataScopeItem create(String typeCode, Long scopeId, String scopeName) {
         return DataScopeItem.builder()
-                .itemTypeCode("CLASS")
-                .scopeId(orgUnitId)
-                .scopeName(className)
-                .includeChildren(false)
-                .build();
-    }
-
-    /**
-     * 创建年级范围项
-     */
-    public static DataScopeItem createGrade(Long gradeId, String gradeName) {
-        return DataScopeItem.builder()
-                .itemTypeCode("GRADE")
-                .scopeId(gradeId)
-                .scopeName(gradeName)
-                .includeChildren(false)
-                .build();
-    }
-
-    /**
-     * 创建楼栋范围项
-     */
-    public static DataScopeItem createBuilding(Long buildingId, String buildingName) {
-        return DataScopeItem.builder()
-                .itemTypeCode("BUILDING")
-                .scopeId(buildingId)
-                .scopeName(buildingName)
+                .itemTypeCode(typeCode)
+                .scopeId(scopeId)
+                .scopeName(scopeName)
                 .includeChildren(false)
                 .build();
     }

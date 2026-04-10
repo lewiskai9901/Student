@@ -19,6 +19,8 @@
     <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 12px;">
       <button class="tm-btn tm-btn-secondary" :disabled="!assignClassId" @click="importAssignmentsFromPlan">一键导入开课计划</button>
       <button class="tm-btn tm-btn-primary" :disabled="!assignClassId || assignments.length === 0" @click="batchConfirmAssignments">确认全部</button>
+      <span style="flex: 1;" />
+      <button class="tm-btn" style="background: #059669; color: #fff; border-color: #059669;" @click="generateTasks">生成教学任务</button>
     </div>
 
     <!-- Table -->
@@ -132,8 +134,8 @@ async function importAssignmentsFromPlan() {
     }
     for (const o of toImport) {
       await classAssignmentApi.create({
-        semesterId: Number(props.semesterId),
-        orgUnitId: Number(assignClassId.value),
+        semesterId: props.semesterId,
+        orgUnitId: assignClassId.value,
         offeringId: o.id,
         courseId: o.courseId,
         weeklyHours: o.weeklyHours,
@@ -156,6 +158,18 @@ async function batchConfirmAssignments() {
     await classAssignmentApi.batchConfirm(props.semesterId, assignClassId.value)
     ElMessage.success('全部确认成功')
     loadAssignments()
+  } catch {
+    // cancelled or error
+  }
+}
+
+async function generateTasks() {
+  if (!props.semesterId) return
+  try {
+    await ElMessageBox.confirm('将从已确认的班级分配生成教学任务，已存在的不会重复创建。', '生成教学任务', { type: 'info' })
+    const res = await offeringApi.generateTasks(props.semesterId)
+    const count = (res as any)?.generated ?? (res as any)?.data?.generated ?? 0
+    ElMessage.success(`已生成 ${count} 个教学任务`)
   } catch {
     // cancelled or error
   }

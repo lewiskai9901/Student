@@ -5,7 +5,6 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 import lombok.Data;
 
-import java.util.List;
 import java.util.Map;
 
 /**
@@ -32,18 +31,6 @@ public class CreateOrgUnitRequest {
     @Schema(description = "Parent organization ID", example = "1")
     private Long parentId;
 
-    @Schema(description = "User-selected positions to create from template")
-    private List<SelectedPositionRequest> selectedPositions;
-
     @Schema(description = "Extension attributes from DynamicForm (stored in org_units.attributes JSON)")
     private Map<String, Object> attributes;
-
-    @Data
-    public static class SelectedPositionRequest {
-        @Schema(description = "Position name", example = "主任")
-        private String positionName;
-
-        @Schema(description = "Headcount for this position", example = "1")
-        private int headcount;
-    }
 }

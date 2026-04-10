@@ -16,7 +16,7 @@
       <header class="tm-header">
         <div>
           <h1 class="tm-title">场所管理</h1>
-          <div class="tm-stats" style="margin-top: 4px;">管理学校的场地与设施结构</div>
+          <div class="tm-stats" style="margin-top: 4px;">管理场地与设施结构</div>
         </div>
         <router-link to="/system/place-types" class="tm-btn tm-btn-secondary" style="text-decoration: none;">
           <Settings style="width: 16px; height: 16px;" />
@@ -219,43 +219,25 @@
 
               <!-- Occupant Table (list view) -->
               <div v-else class="pm-section-border">
-                <table v-if="occupants.length > 0" class="tm-table">
-                  <colgroup>
-                    <col style="width: 60px" />
-                    <col style="width: 90px" />
-                    <col style="width: 80px" />
-                    <col style="width: 70px" />
-                    <col />
-                    <col style="width: 50px" />
-                    <col style="width: 90px" />
-                    <col style="width: 90px" />
-                  </colgroup>
+                <table v-if="occupants.length > 0" class="tm-table" style="table-layout: auto;">
                   <thead>
                     <tr>
                       <th class="text-left">位置</th>
-                      <th class="text-left">账号</th>
                       <th class="text-left">姓名</th>
                       <th class="text-left">类型</th>
-                      <th class="text-left">部门</th>
-                      <th class="text-left">性别</th>
-                      <th class="text-left">入住时间</th>
+                      <th class="text-left">组织</th>
+                      <th class="text-left">入住日期</th>
                       <th class="text-right">操作</th>
                     </tr>
                   </thead>
                   <tbody>
                     <tr v-for="occ in occupants" :key="occ.id">
                       <td class="text-left" style="font-weight: 500;">{{ occ.positionNo || '-' }}</td>
-                      <td class="text-left" style="color: #6b7280;">{{ occ.username || '-' }}</td>
                       <td class="text-left" style="color: #111827;">{{ occ.occupantName || '-' }}</td>
-                      <td class="text-left" style="color: #9ca3af;">{{ occ.userTypeName || '-' }}</td>
-                      <td class="text-left" style="color: #9ca3af;">{{ occ.orgUnitName || '-' }}</td>
-                      <td class="text-left">
-                        <span v-if="occ.gender === 1" style="color: #3b82f6;">男</span>
-                        <span v-else-if="occ.gender === 2" style="color: #ec4899;">女</span>
-                        <span v-else style="color: #d1d5db;">-</span>
-                      </td>
-                      <td class="text-left" style="color: #9ca3af;">{{ formatDate(occ.checkInTime) }}</td>
-                      <td class="text-right">
+                      <td class="text-left" style="color: #9ca3af; white-space: nowrap;">{{ occupantTypeLabel(occ.occupantType) }}</td>
+                      <td class="text-left" style="color: #6b7280;">{{ occ.orgUnitName || '-' }}</td>
+                      <td class="text-left" style="color: #9ca3af; white-space: nowrap;">{{ formatDate(occ.checkInTime) }}</td>
+                      <td class="text-right" style="white-space: nowrap;">
                         <button class="tm-action tm-action-danger" @click="handleCheckOut(occ)">退出</button>
                         <button v-if="occupants.length > 1" class="tm-action" style="color: #3b82f6;" @click="startSwap(occ)">交换</button>
                       </td>
@@ -294,10 +276,9 @@
                   <thead>
                     <tr>
                       <th class="text-left">位置</th>
-                      <th class="text-left">账号</th>
                       <th class="text-left">姓名</th>
                       <th class="text-left">类型</th>
-                      <th class="text-left">部门</th>
+                      <th class="text-left">组织</th>
                       <th class="text-left">性别</th>
                       <th class="text-left">入住时间</th>
                       <th class="text-left">退出时间</th>
@@ -307,9 +288,8 @@
                   <tbody>
                     <tr v-for="occ in occupantHistory" :key="occ.id">
                       <td class="text-left" style="color: #6b7280;">{{ occ.positionNo || '-' }}</td>
-                      <td class="text-left" style="color: #6b7280;">{{ occ.username || '-' }}</td>
                       <td class="text-left" style="color: #374151;">{{ occ.occupantName || '-' }}</td>
-                      <td class="text-left" style="color: #9ca3af;">{{ occ.userTypeName || '-' }}</td>
+                      <td class="text-left" style="color: #9ca3af;">{{ occupantTypeLabel(occ.occupantType) }}</td>
                       <td class="text-left" style="color: #9ca3af;">{{ occ.orgUnitName || '-' }}</td>
                       <td class="text-left">
                         <span v-if="occ.gender === 1" style="color: #3b82f6;">男</span>
@@ -443,11 +423,6 @@
 
         <!-- Overview (when no node selected) -->
         <div v-else style="display: flex; flex-direction: column; gap: 16px;">
-          <CapacityAlertBanner
-            :refreshInterval="60"
-            :collapsible="true"
-            :defaultExpanded="false"
-          />
           <PlaceOverview
             :tree-data="treeData"
             :statistics="statistics"
@@ -769,7 +744,6 @@ import PlaceFormDrawer from './components/PlaceFormDrawer.vue'
 import SeatGrid from './components/SeatGrid.vue'
 import FloorPlanEditor from './components/FloorPlanEditor.vue'
 import BookingSeatDialog from './components/BookingSeatDialog.vue'
-import CapacityAlertBanner from '@/components/place/CapacityAlertBanner.vue'
 import ActivityTimeline from '@/components/activity/ActivityTimeline.vue'
 import { universalPlaceApi, type PlaceStatistics } from '@/api/universalPlace'
 import { universalPlaceTypeApi } from '@/api/universalPlaceType'
@@ -1248,6 +1222,7 @@ function formatDateTime(dateStr?: string) {
   const pad = (n: number) => String(n).padStart(2, '0')
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`
 }
+
 
 // ========== Computed ==========
 const findNode = (nodes: PlaceTreeNode[], id: number): PlaceTreeNode | null => {
@@ -1769,9 +1744,11 @@ onBeforeUnmount(() => {
    ============================================ */
 .pm-root {
   display: flex;
-  height: 100%;
+  height: calc(100vh - 112px);
+  overflow: hidden;
   background: #f8f9fb;
   font-family: 'DM Sans', sans-serif;
+  margin: -24px;
 }
 .pm-sidebar {
   display: flex;
@@ -1780,6 +1757,7 @@ onBeforeUnmount(() => {
   flex-direction: column;
   border-right: 1px solid #e5e7eb;
   background: #fff;
+  overflow-y: auto;
 }
 .pm-main {
   display: flex;

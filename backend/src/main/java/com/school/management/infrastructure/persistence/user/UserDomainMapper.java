@@ -259,4 +259,18 @@ public interface UserDomainMapper extends BaseMapper<UserPO> {
     @Update("UPDATE users SET primary_org_unit_id = NULL, updated_at = NOW() " +
             "WHERE primary_org_unit_id = #{orgUnitId} AND deleted = 0")
     int clearPrimaryOrgUnitId(@Param("orgUnitId") Long orgUnitId);
+
+    /**
+     * 设置用户的归属组织（primary_org_unit_id）
+     */
+    @Update("UPDATE users SET primary_org_unit_id = #{orgUnitId}, updated_at = NOW() " +
+            "WHERE id = #{userId} AND deleted = 0")
+    int setPrimaryOrgUnitId(@Param("userId") Long userId, @Param("orgUnitId") Long orgUnitId);
+
+    /**
+     * 清除指定用户的归属组织（仅当匹配 orgUnitId 时）
+     */
+    @Update("UPDATE users SET primary_org_unit_id = NULL, updated_at = NOW() " +
+            "WHERE id = #{userId} AND primary_org_unit_id = #{orgUnitId} AND deleted = 0")
+    int clearPrimaryOrgUnitIdForUser(@Param("userId") Long userId, @Param("orgUnitId") Long orgUnitId);
 }

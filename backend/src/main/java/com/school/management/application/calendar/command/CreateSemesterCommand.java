@@ -5,6 +5,7 @@ import java.time.LocalDate;
 
 @Data
 public class CreateSemesterCommand {
+    private Long academicYearId;
     private String semesterName;
     private String semesterCode;
     private Integer semesterType;

@@ -6,8 +6,6 @@ import com.school.management.domain.organization.repository.OrgUnitRepository;
 import com.school.management.domain.organization.repository.OrgUnitTypeRepository;
 
 import lombok.RequiredArgsConstructor;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
@@ -36,15 +34,9 @@ public class OrgUnitDomainService {
             throw new IllegalArgumentException("Unit code already exists: " + unitCode);
         }
 
-        // Validate unitType exists and is enabled (check both org_unit_types and entity_type_configs)
-        OrgType typeEntity = orgUnitTypeRepository.findByTypeCode(unitType).orElse(null);
-        if (typeEntity == null) {
-            // Fallback: check entity_type_configs (unified type registry)
-            typeEntity = findTypeFromEntityTypeConfigs(unitType);
-            if (typeEntity == null) {
-                throw new IllegalArgumentException("Invalid unit type: " + unitType);
-            }
-        }
+        // Validate unitType exists and is enabled (reads from entity_type_configs)
+        OrgType typeEntity = orgUnitTypeRepository.findByTypeCode(unitType)
+                .orElseThrow(() -> new IllegalArgumentException("Invalid unit type: " + unitType));
         if (!typeEntity.isEnabled()) {
             throw new IllegalArgumentException("Unit type is disabled: " + unitType);
         }
@@ -284,37 +276,32 @@ public class OrgUnitDomainService {
         }
     }
 
-    // === entity_type_configs fallback ===
-    @Autowired(required = false)
-    private JdbcTemplate jdbcTemplate;
+    // ==================== Tree Path Repair ====================
 
-    private OrgType findTypeFromEntityTypeConfigs(String typeCode) {
-        if (jdbcTemplate == null) return null;
-        try {
-            var row = jdbcTemplate.queryForMap(
-                "SELECT type_code, type_name, category, parent_type_code, allowed_child_type_codes, " +
-                "is_enabled FROM entity_type_configs WHERE entity_type='ORG_UNIT' AND type_code=? AND deleted=0",
-                typeCode);
-            boolean enabled = row.get("is_enabled") != null && ((Number) row.get("is_enabled")).intValue() == 1;
-            String parentTC = (String) row.get("parent_type_code");
-            List<String> childCodes = null;
-            String childJson = (String) row.get("allowed_child_type_codes");
-            if (childJson != null && !childJson.equals("[]") && !childJson.equals("null")) {
-                try { childCodes = new com.fasterxml.jackson.databind.ObjectMapper().readValue(childJson, List.class); }
-                catch (Exception ignored) {}
-            }
-            // Use builder
-            OrgType type = OrgType.builder()
-                .typeCode((String) row.get("type_code"))
-                .typeName((String) row.get("type_name"))
-                .category((String) row.get("category"))
-                .isEnabled(enabled)
-                .build();
-            type.setParentTypeCode(parentTC);
-            if (childCodes != null) type.updateHierarchyConfig(childCodes, null);
-            return type;
-        } catch (Exception e) {
-            return null;
+    /**
+     * Repair all tree_path and tree_level values by recursing from roots.
+     */
+    public int repairAllTreePaths() {
+        List<OrgUnit> roots = orgUnitRepository.findRoots();
+        int count = 0;
+        for (OrgUnit root : roots) {
+            root.setTreePosition(null, 0); // sets path="/<id>/", level=1
+            orgUnitRepository.save(root);
+            count++;
+            count += repairChildren(root);
         }
+        return count;
+    }
+
+    private int repairChildren(OrgUnit parent) {
+        List<OrgUnit> children = orgUnitRepository.findByParentId(parent.getId());
+        int count = 0;
+        for (OrgUnit child : children) {
+            child.setTreePosition(parent.getTreePath(), parent.getTreeLevel());
+            orgUnitRepository.save(child);
+            count++;
+            count += repairChildren(child);
+        }
+        return count;
     }
 }

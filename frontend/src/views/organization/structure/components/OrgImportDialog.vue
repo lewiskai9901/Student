@@ -123,7 +123,7 @@ import { UploadFilled, Download, CircleCheckFilled, WarningFilled } from '@eleme
 import * as XLSX from 'xlsx'
 import { userApi } from '@/api/user'
 import { getOrgUnits } from '@/api/organization'
-import { positionApi, userPositionApi } from '@/api/position'
+import { orgMemberApi } from '@/api/orgMember'
 import type { OrgUnit } from '@/types'
 import type { SimpleUser } from '@/types/user'
 import type { Position, AppointmentType } from '@/types/position'
@@ -295,7 +295,7 @@ async function loadCaches() {
     // Collect unique position codes from parsed rows to preload
     // We load positions from orgUnitId as a starting point
     try {
-      positionCache = await positionApi.getByOrgUnit(props.orgUnitId)
+      positionCache = [] // positions removed
     } catch {
       positionCache = []
     }
@@ -390,17 +390,8 @@ async function handleImport() {
 
   for (const row of toImport) {
     try {
-      if (importMode.value === 'member') {
-        const targetOrg = row._orgUnitId ?? props.orgUnitId
-        await userPositionApi.addMember(targetOrg, row._userId!)
-      } else {
-        await userPositionApi.appoint({
-          userId: row._userId!,
-          positionId: row._positionId!,
-          appointmentType: row.appointmentType as AppointmentType,
-          startDate: today,
-        })
-      }
+      const targetOrg = row._orgUnitId ?? props.orgUnitId
+      await orgMemberApi.addMember(targetOrg, row._userId!)
       successCount.value++
     } catch (e: any) {
       failCount.value++

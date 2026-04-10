@@ -119,40 +119,42 @@ const typeDistribution = computed(() => {
 <style scoped>
 @import '@/styles/teaching-ui.css';
 
-.ov-root { display: flex; flex-direction: column; gap: 16px; }
+.ov-root { display: flex; flex-direction: column; gap: 8px; }
 
 /* Stat cards */
-.ov-cards { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+.ov-cards { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
 .ov-card {
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 12px 16px;
+  gap: 8px;
+  padding: 8px 12px;
   background: #fff;
   border: 1px solid #e5e7eb;
-  border-radius: 10px;
+  border-radius: 6px;
 }
-.ov-card-val { font-size: 18px; font-weight: 700; color: #111827; }
-.ov-card-label { font-size: 12px; color: #6b7280; }
+.ov-card-val { font-size: 16px; font-weight: 700; color: #111827; }
+.ov-card-label { font-size: 11px; color: #6b7280; }
 
 /* Panel */
 .ov-panel {
   background: #fff;
   border: 1px solid #e5e7eb;
-  border-radius: 10px;
+  border-radius: 6px;
   overflow: hidden;
 }
 .ov-panel-header {
-  padding: 14px 20px;
+  padding: 6px 12px;
   border-bottom: 1px solid #f3f4f6;
 }
 .ov-panel-title {
-  font-size: 13px;
+  font-size: 11px;
   font-weight: 600;
-  color: #111827;
+  color: #6b7280;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
   margin: 0;
 }
-.ov-panel-body { padding: 14px 20px; }
+.ov-panel-body { padding: 8px 12px; }
 
 /* Type list */
 .ov-type-list {
@@ -161,29 +163,29 @@ const typeDistribution = computed(() => {
   align-items: center;
   gap: 6px;
 }
-.ov-type-item { font-size: 13px; color: #6b7280; }
+.ov-type-item { font-size: 12px; color: #6b7280; }
 .ov-type-item b { font-weight: 600; color: #111827; margin-left: 2px; }
-.ov-sep { display: block; width: 1px; height: 12px; background: #d1d5db; }
+.ov-sep { display: block; width: 1px; height: 10px; background: #d1d5db; }
 
 /* Empty */
-.ov-empty { padding: 16px 0; text-align: center; font-size: 13px; color: #9ca3af; }
+.ov-empty { padding: 10px 0; text-align: center; font-size: 12px; color: #9ca3af; }
 .ov-empty-box {
-  padding: 40px 24px;
+  padding: 24px 16px;
   text-align: center;
   border: 1px dashed #d1d5db;
-  border-radius: 10px;
+  border-radius: 6px;
   background: #fafafa;
 }
-.ov-empty-title { font-size: 14px; font-weight: 600; color: #374151; margin: 0 0 6px; }
-.ov-empty-desc { font-size: 13px; color: #6b7280; margin: 0; }
+.ov-empty-title { font-size: 13px; font-weight: 600; color: #374151; margin: 0 0 4px; }
+.ov-empty-desc { font-size: 12px; color: #6b7280; margin: 0; }
 
 /* Tip */
 .ov-tip {
-  padding: 14px 20px;
+  padding: 8px 12px;
   background: #eff6ff;
   border: 1px solid #bfdbfe;
-  border-radius: 10px;
+  border-radius: 6px;
 }
-.ov-tip-title { font-size: 13px; font-weight: 600; color: #1e40af; margin: 0 0 4px; }
-.ov-tip-desc { font-size: 13px; color: #1d4ed8; margin: 0; }
+.ov-tip-title { font-size: 12px; font-weight: 600; color: #1e40af; margin: 0 0 2px; }
+.ov-tip-desc { font-size: 12px; color: #1d4ed8; margin: 0; }
 </style>

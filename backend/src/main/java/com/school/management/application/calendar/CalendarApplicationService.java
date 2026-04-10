@@ -1,6 +1,9 @@
 package com.school.management.application.calendar;
 
 import com.school.management.application.calendar.command.*;
+import com.school.management.application.calendar.query.CalendarDayDTO;
+import com.school.management.application.calendar.query.CalendarGridDTO;
+import com.school.management.application.calendar.query.CalendarWeekDTO;
 import com.school.management.domain.calendar.model.aggregate.AcademicYear;
 import com.school.management.domain.calendar.model.aggregate.Semester;
 import com.school.management.domain.calendar.model.entity.AcademicEvent;
@@ -19,7 +22,10 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 @Slf4j
@@ -91,9 +97,7 @@ public class CalendarApplicationService {
 
     @Transactional(readOnly = true)
     public List<Semester> listSemestersByYear(Long yearId) {
-        return academicYearRepository.findById(yearId)
-                .map(year -> semesterRepository.findByDateRange(year.getStartDate(), year.getEndDate()))
-                .orElseGet(this::listSemesters);
+        return semesterRepository.findByAcademicYearId(yearId);
     }
 
     @Transactional(readOnly = true)
@@ -109,6 +113,14 @@ public class CalendarApplicationService {
     @Transactional
     public Semester createSemester(CreateSemesterCommand command) {
         log.info("创建学期: {}", command.getSemesterName());
+
+        // 验证学年存在（必填）
+        if (command.getAcademicYearId() == null) {
+            throw new BusinessException("必须选择所属学年");
+        }
+        AcademicYear year = academicYearRepository.findById(command.getAcademicYearId())
+                .orElseThrow(() -> new BusinessException("学年不存在: " + command.getAcademicYearId()));
+
         SemesterType semesterType = command.getSemesterType() != null
                 ? SemesterType.fromCode(command.getSemesterType()) : SemesterType.FIRST;
         Integer startYear = command.getStartDate().getYear();
@@ -120,8 +132,8 @@ public class CalendarApplicationService {
             throw new BusinessException("学期编码已存在: " + semesterCode);
         }
 
-        Semester semester = Semester.create(command.getSemesterName(), semesterCode,
-                command.getStartDate(), command.getEndDate(), startYear, semesterType);
+        Semester semester = Semester.create(command.getAcademicYearId(), command.getSemesterName(),
+                semesterCode, command.getStartDate(), command.getEndDate(), startYear, semesterType);
         semester = semesterRepository.save(semester);
         publishEvents(semester);
         return semester;
@@ -231,7 +243,8 @@ public class CalendarApplicationService {
                 command.getYearId(), command.getSemesterId(), command.getEventName(),
                 EventType.fromCode(command.getEventType()),
                 command.getStartDate(), command.getEndDate(),
-                command.getAllDay(), command.getDescription());
+                command.getAllDay(), command.getDescription(),
+                command.getAffectType(), command.getSubstituteWeekday(), command.getAffectSlots());
         return academicEventRepository.save(event);
     }
 
@@ -240,13 +253,106 @@ public class CalendarApplicationService {
         AcademicEvent event = academicEventRepository.findById(id)
                 .orElseThrow(() -> new BusinessException("校历事件不存在: " + id));
         event.update(command.getEventName(), EventType.fromCode(command.getEventType()),
-                command.getStartDate(), command.getEndDate(), command.getDescription());
+                command.getStartDate(), command.getEndDate(), command.getDescription(),
+                command.getAffectType(), command.getSubstituteWeekday(), command.getAffectSlots());
         return academicEventRepository.save(event);
     }
 
     @Transactional
     public void deleteEvent(Long id) {
         academicEventRepository.deleteById(id);
+    }
+
+    // ==================== 校历网格 ====================
+
+    @Transactional(readOnly = true)
+    public CalendarGridDTO buildCalendarGrid(Long semesterId) {
+        Semester semester = semesterRepository.findById(semesterId)
+                .orElseThrow(() -> new BusinessException("学期不存在"));
+        List<AcademicEvent> events = academicEventRepository.findAll(null, semesterId, null);
+
+        Map<LocalDate, AcademicEvent> overrideMap = new LinkedHashMap<>();
+        Map<LocalDate, AcademicEvent> infoMap = new LinkedHashMap<>();
+        for (AcademicEvent e : events) {
+            LocalDate d = e.getStartDate();
+            LocalDate end = e.getEndDate() != null ? e.getEndDate() : d;
+            if (e.getAffectType() != null && e.getAffectType() > 0) {
+                while (!d.isAfter(end)) { overrideMap.put(d, e); d = d.plusDays(1); }
+            } else {
+                while (!d.isAfter(end)) { infoMap.put(d, e); d = d.plusDays(1); }
+            }
+        }
+
+        List<CalendarWeekDTO> weeks = new ArrayList<>();
+        LocalDate weekStart = semester.getStartDate();
+        int weekNum = 1;
+        int teachDays = 0, holidayDays = 0, makeupDays = 0, examDays = 0;
+
+        while (!weekStart.isAfter(semester.getEndDate())) {
+            List<CalendarDayDTO> days = new ArrayList<>();
+            for (int i = 0; i < 7; i++) {
+                LocalDate date = weekStart.plusDays(i);
+                if (date.isAfter(semester.getEndDate())) break;
+
+                int weekday = date.getDayOfWeek().getValue();
+                String dayType;
+                String eventName = null;
+                Integer followWeekday = null;
+
+                AcademicEvent override = overrideMap.get(date);
+                Long eventId = null;
+                if (override != null) {
+                    switch (override.getAffectType()) {
+                        case 1: dayType = "HOLIDAY"; holidayDays++; break;
+                        case 3: dayType = "MAKEUP"; makeupDays++;
+                                followWeekday = override.getSubstituteWeekday(); break;
+                        case 4: dayType = "EXAM"; examDays++; break;
+                        default: dayType = weekday <= 5 ? "TEACHING" : "WEEKEND";
+                    }
+                    eventName = override.getEventName();
+                    eventId = override.getId();
+                } else {
+                    dayType = weekday <= 5 ? "TEACHING" : "WEEKEND";
+                    AcademicEvent info = infoMap.get(date);
+                    if (info != null) {
+                        eventName = info.getEventName();
+                        eventId = info.getId();
+                    }
+                }
+                if ("TEACHING".equals(dayType)) teachDays++;
+
+                days.add(CalendarDayDTO.builder()
+                        .date(date.toString()).weekday(weekday)
+                        .dayType(dayType).eventName(eventName)
+                        .followWeekday(followWeekday)
+                        .eventId(eventId).build());
+            }
+            // compute weekType from weekday (Mon-Fri) day types
+            String weekType = "TEACHING";
+            long weekdayCount = days.stream().filter(d -> d.getWeekday() <= 5).count();
+            if (weekdayCount > 0) {
+                long holidays = days.stream().filter(d -> d.getWeekday() <= 5 && "HOLIDAY".equals(d.getDayType())).count();
+                long exams = days.stream().filter(d -> d.getWeekday() <= 5 && "EXAM".equals(d.getDayType())).count();
+                if (holidays == weekdayCount) weekType = "VACATION";
+                else if (exams == weekdayCount) weekType = "EXAM";
+            }
+
+            LocalDate weekEnd = weekStart.plusDays(6);
+            if (weekEnd.isAfter(semester.getEndDate())) weekEnd = semester.getEndDate();
+            weeks.add(CalendarWeekDTO.builder()
+                    .weekNumber(weekNum).startDate(weekStart.toString())
+                    .endDate(weekEnd.toString()).weekType(weekType).days(days).build());
+            weekStart = weekStart.plusDays(7);
+            weekNum++;
+        }
+
+        return CalendarGridDTO.builder()
+                .weeks(weeks)
+                .totalTeachingDays(teachDays)
+                .totalHolidayDays(holidayDays)
+                .totalMakeupDays(makeupDays)
+                .totalExamDays(examDays)
+                .build();
     }
 
     // ==================== Helper ====================

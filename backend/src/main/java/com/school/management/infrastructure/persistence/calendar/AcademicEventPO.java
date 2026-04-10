@@ -17,6 +17,9 @@ public class AcademicEventPO {
     private LocalDate endDate;
     private Integer allDay;
     private String description;
+    private Integer affectType;
+    private Integer substituteWeekday;
+    private String affectSlots;
     @TableLogic
     private Integer deleted;
 }

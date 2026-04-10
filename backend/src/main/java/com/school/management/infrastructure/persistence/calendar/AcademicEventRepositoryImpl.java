@@ -62,6 +62,9 @@ public class AcademicEventRepositoryImpl implements AcademicEventRepository {
         po.setEndDate(d.getEndDate());
         po.setAllDay(d.getAllDay() != null && d.getAllDay() ? 1 : 0);
         po.setDescription(d.getDescription());
+        po.setAffectType(d.getAffectType());
+        po.setSubstituteWeekday(d.getSubstituteWeekday());
+        po.setAffectSlots(d.getAffectSlots());
         return po;
     }
 
@@ -70,6 +73,7 @@ public class AcademicEventRepositoryImpl implements AcademicEventRepository {
                 po.getEventName(), EventType.fromCode(po.getEventType()),
                 po.getStartDate(), po.getEndDate(),
                 po.getAllDay() != null && po.getAllDay() == 1,
-                po.getDescription());
+                po.getDescription(),
+                po.getAffectType(), po.getSubstituteWeekday(), po.getAffectSlots());
     }
 }

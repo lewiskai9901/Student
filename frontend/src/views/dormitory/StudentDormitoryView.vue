@@ -28,16 +28,6 @@
             @keyup.enter="applyFilter"
           />
         </div>
-        <div class="w-36">
-          <label class="mb-1 block text-xs font-medium text-gray-600">学号/工号</label>
-          <input
-            v-model="query.username"
-            type="text"
-            placeholder="学号/工号"
-            class="h-9 w-full rounded-md border border-gray-300 px-3 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-            @keyup.enter="applyFilter"
-          />
-        </div>
         <div class="w-40">
           <label class="mb-1 block text-xs font-medium text-gray-600">宿舍楼</label>
           <select
@@ -80,7 +70,6 @@
       <table v-else class="w-full text-sm">
         <thead>
           <tr class="border-b border-gray-200 bg-gray-50/80">
-            <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500">学号/工号</th>
             <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500">姓名</th>
             <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500">组织</th>
             <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500">宿舍楼</th>
@@ -93,14 +82,13 @@
         </thead>
         <tbody>
           <tr v-if="paginatedRecords.length === 0">
-            <td colspan="9" class="py-12 text-center text-sm text-gray-400">暂无住宿记录</td>
+            <td colspan="8" class="py-12 text-center text-sm text-gray-400">暂无住宿记录</td>
           </tr>
           <tr
             v-for="record in paginatedRecords"
             :key="record.id"
             class="border-b border-gray-100 hover:bg-gray-50/50"
           >
-            <td class="px-4 py-3 text-xs text-gray-600">{{ record.username || '-' }}</td>
             <td class="px-4 py-3 font-medium text-gray-900">{{ record.occupantName || '-' }}</td>
             <td class="px-4 py-3 text-xs text-gray-600">{{ record.orgUnitName || '-' }}</td>
             <td class="px-4 py-3 text-xs text-gray-600">{{ record.buildingName || '-' }}</td>

@@ -70,6 +70,11 @@ public class SemesterRepositoryImpl implements SemesterRepository {
     }
 
     @Override
+    public List<Semester> findByAcademicYearId(Long yearId) {
+        return semesterMapper.findByAcademicYearId(yearId).stream().map(this::toDomain).collect(Collectors.toList());
+    }
+
+    @Override
     public List<Semester> findAllActive() {
         return semesterMapper.findAllActive().stream().map(this::toDomain).collect(Collectors.toList());
     }
@@ -107,6 +112,7 @@ public class SemesterRepositoryImpl implements SemesterRepository {
     private SemesterPO toPO(Semester d) {
         SemesterPO po = new SemesterPO();
         po.setId(d.getId());
+        po.setAcademicYearId(d.getAcademicYearId());
         po.setSemesterName(d.getSemesterName());
         po.setSemesterCode(d.getSemesterCode());
         po.setStartDate(d.getStartDate());
@@ -123,7 +129,8 @@ public class SemesterRepositoryImpl implements SemesterRepository {
     }
 
     private Semester toDomain(SemesterPO po) {
-        return Semester.reconstruct(po.getId(), po.getSemesterName(), po.getSemesterCode(),
+        return Semester.reconstruct(po.getId(), po.getAcademicYearId(),
+                po.getSemesterName(), po.getSemesterCode(),
                 po.getStartDate(), po.getEndDate(), po.getStartYear(),
                 po.getSemesterType() != null ? SemesterType.fromCode(po.getSemesterType()) : null,
                 po.getIsCurrent() != null && po.getIsCurrent() == 1,

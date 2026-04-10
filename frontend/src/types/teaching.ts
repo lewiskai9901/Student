@@ -16,6 +16,7 @@ export interface AcademicYear {
 
 export interface Semester {
   id: number | string
+  academicYearId?: number | string
   semesterName: string
   semesterCode: string
   startDate: string
@@ -573,4 +574,31 @@ export interface FeasibilityIssue {
   target: string
   description: string
   suggestion: string
+}
+
+// ==================== 校历日历网格 ====================
+
+export interface CalendarDay {
+  date: string
+  weekday: number
+  dayType: 'TEACHING' | 'WEEKEND' | 'HOLIDAY' | 'MAKEUP' | 'EXAM'
+  eventName?: string
+  followWeekday?: number
+  eventId?: number | string
+}
+
+export interface CalendarWeek {
+  weekNumber: number
+  startDate: string
+  endDate: string
+  weekType?: 'TEACHING' | 'EXAM' | 'VACATION'
+  days: CalendarDay[]
+}
+
+export interface CalendarGrid {
+  weeks: CalendarWeek[]
+  totalTeachingDays: number
+  totalHolidayDays: number
+  totalMakeupDays: number
+  totalExamDays: number
 }

@@ -88,17 +88,22 @@
       </div>
     </div>
 
-    <!-- Extension Attributes (from SPI plugin, if any) -->
-    <div v-if="extensionSchema && extensionSchema.fields?.length > 0" class="dp-card" style="padding: 20px;">
-      <h3 class="dp-section-label">扩展属性</h3>
-      <DynamicForm :schema="extensionSchema" v-model="extensionAttrs" :disabled="true" />
+    <!-- Basic Info (promoted from tab) -->
+    <div class="dp-card dp-basic-info">
+      <div class="dp-info-inline">
+        <span class="dp-info-kv"><em>编码</em> <code class="tm-code">{{ node.unitCode }}</code></span>
+        <span class="dp-info-kv"><em>类型</em> <span class="tm-chip" :style="typeBadgeStyle">{{ node.typeName || node.unitType }}</span></span>
+        <span class="dp-info-kv"><em>上级</em> {{ parentName || '顶级组织' }}</span>
+        <span class="dp-info-kv"><em>编制</em> {{ node.headcount ?? '-' }}</span>
+        <span class="dp-info-kv"><em>排序</em> {{ node.sortOrder }}</span>
+      </div>
     </div>
 
     <!-- Tabs -->
     <div class="dp-card">
       <div class="tm-tabs">
         <button
-          v-for="tab in tabs"
+          v-for="tab in allTabs"
           :key="tab.key"
           class="tm-tab"
           :class="{ active: activeTab === tab.key }"
@@ -204,45 +209,25 @@
             <colgroup>
               <col />
               <col style="width: 100px;" />
-              <col />
-              <col style="width: 90px;" />
               <col style="width: 80px;" />
             </colgroup>
             <thead>
               <tr>
                 <th class="text-left">姓名</th>
                 <th class="text-left">身份</th>
-                <th class="text-left">岗位</th>
-                <th class="text-left">任职方式</th>
                 <th class="text-right">操作</th>
               </tr>
             </thead>
             <tbody>
               <tr
                 v-for="m in mergedMembers"
-                :key="`${m.userId}-${m.userPositionId || 'no-pos'}`"
+                :key="m.userId"
               >
                 <td class="text-left">
                   <button class="dp-link" @click="openUserRelation(m)">{{ m.userName }}</button>
                 </td>
                 <td class="text-left">{{ userTypeNameMap[m.userTypeCode || ''] || m.userTypeCode || '-' }}</td>
-                <td class="text-left">
-                  <span v-if="m.localPositionName">
-                    {{ m.localPositionName }}
-                    <span v-if="m.isKeyPosition" class="tm-chip tm-chip-amber" style="margin-left: 4px;">关键</span>
-                  </span>
-                  <span v-else style="color: #9ca3af;">—</span>
-                </td>
-                <td class="text-left">
-                  <span v-if="m.appointmentType" class="tm-chip" :class="appointmentTagClass(m.appointmentType)">
-                    {{ AppointmentTypeLabels[m.appointmentType] || m.appointmentType }}
-                  </span>
-                  <span v-else style="color: #9ca3af;">—</span>
-                </td>
                 <td class="text-right">
-                  <button v-if="m.userPositionId" class="tm-action" title="移除岗位" @click="handleRemoveStaff(m)">
-                    <UserMinus style="width: 13px; height: 13px;" />
-                  </button>
                   <button class="tm-action tm-action-danger" title="移除成员" @click="handleRemoveMember(m)">
                     <Trash2 style="width: 13px; height: 13px;" />
                   </button>
@@ -306,189 +291,24 @@
         </div>
       </div>
 
-      <!-- Tab: 岗位编制 -->
-      <div v-if="activeTab === 'positions'">
-        <!-- 本级岗位编制 -->
-        <div class="dp-tab-toolbar">
-          <span class="dp-tab-info">本级岗位 {{ positions.length }} 个</span>
-        </div>
-        <div v-if="positionsLoading" class="dp-loading">
-          <Loader2 style="width: 18px; height: 18px; color: #9ca3af;" class="tm-spin" />
-          <span>加载中...</span>
-        </div>
-        <div v-else-if="positions.length > 0" style="overflow-x: auto;">
-          <table class="tm-table">
-            <colgroup>
-              <col />
-              <col style="width: 90px;" />
-              <col />
-              <col style="width: 70px;" />
-              <col style="width: 60px;" />
-            </colgroup>
-            <thead>
-              <tr>
-                <th class="text-left">岗位名称</th>
-                <th>编制/在岗</th>
-                <th class="text-left">在岗人员</th>
-                <th>状态</th>
-                <th class="text-right">操作</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr v-for="p in positions" :key="p.id">
-                <td class="text-left">
-                  <span style="font-weight: 500;">{{ p.positionName }}</span>
-                  <span v-if="p.isKeyPosition" class="tm-chip tm-chip-amber" style="margin-left: 6px;">关键</span>
-                </td>
-                <td>
-                  <span class="tm-mono" :class="staffingColor(p)">
-                    {{ p.currentCount ?? 0 }}/{{ p.headcount }}
-                  </span>
-                </td>
-                <td class="text-left">
-                  <template v-if="getPositionHolders(p.id).length > 0">
-                    <span v-for="(h, i) in getPositionHolders(p.id)" :key="h.userPositionId">{{ i > 0 ? ', ' : '' }}{{ h.userName }}<span
-                        v-if="!belongingUserIds.has(String(h.userId)) && h.primaryOrgUnitName"
-                        class="tm-chip tm-chip-amber"
-                        style="margin-left: 2px;"
-                        :title="'归属: ' + h.primaryOrgUnitName"
-                      >来自{{ h.primaryOrgUnitName }}</span><span
-                        v-else-if="!belongingUserIds.has(String(h.userId))"
-                        class="tm-chip tm-chip-amber"
-                        style="margin-left: 2px;"
-                      >外部</span></span>
-                  </template>
-                  <span v-else style="color: #f59e0b;">(空缺)</span>
-                </td>
-                <td>
-                  <span class="tm-chip" :class="p.enabled ? 'tm-chip-green' : 'tm-chip-red'">
-                    {{ p.enabled ? '启用' : '禁用' }}
-                  </span>
-                </td>
-                <td class="text-right">
-                  <button class="tm-action" title="任命人员" @click="openAppointDialog(p)">
-                    <UserPlus style="width: 13px; height: 13px;" />
-                  </button>
-                </td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-        <div v-else class="dp-empty">
-          <p>暂无岗位</p>
-        </div>
 
-        <!-- 子组织岗位汇总（可折叠） -->
-        <div v-if="children.length > 0" style="border-top: 1px solid #f3f4f6;">
-          <button class="dp-collapse-btn" @click="toggleChildPositions">
-            <span>
-              子组织岗位汇总
-              <span v-if="recursiveMembers.length > 0" style="color: #9ca3af; margin-left: 4px;">({{ childOnlyMembers.length }}人)</span>
-            </span>
-            <ChevronDown
-              style="width: 14px; height: 14px; color: #9ca3af; transition: transform 0.15s;"
-              :style="{ transform: showChildPositions ? 'rotate(180deg)' : 'none' }"
-            />
-          </button>
-
-          <template v-if="showChildPositions">
-            <div v-if="recursiveLoading" class="dp-loading" style="padding: 24px 0;">
-              <Loader2 style="width: 16px; height: 16px; color: #9ca3af;" class="tm-spin" />
-              <span>加载中...</span>
-            </div>
-            <template v-else-if="childOnlyMembers.length > 0">
-              <!-- 汇总统计条 -->
-              <div class="dp-summary-bar">
-                <span v-for="s in childPositionSummary" :key="s.positionName" class="dp-summary-item">
-                  {{ s.positionName }} <b>{{ s.count }}</b>
-                </span>
-              </div>
-              <!-- 明细表 -->
-              <div style="overflow-x: auto;">
-                <table class="tm-table">
-                  <colgroup>
-                    <col />
-                    <col />
-                    <col />
-                    <col style="width: 90px;" />
-                  </colgroup>
-                  <thead>
-                    <tr>
-                      <th class="text-left">人员</th>
-                      <th class="text-left">岗位</th>
-                      <th class="text-left">所在组织</th>
-                      <th>任职方式</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    <tr v-for="m in childOnlyMembers" :key="m.userPositionId">
-                      <td class="text-left">{{ m.userName }}</td>
-                      <td class="text-left">{{ m.positionName }}</td>
-                      <td class="text-left">{{ m.orgUnitName }}</td>
-                      <td>
-                        <span v-if="m.appointmentType" class="tm-chip" :class="appointmentTagClass(m.appointmentType)">
-                          {{ AppointmentTypeLabels[m.appointmentType] || m.appointmentType }}
-                        </span>
-                      </td>
-                    </tr>
-                  </tbody>
-                </table>
-              </div>
-            </template>
-            <div v-else class="dp-empty" style="padding: 24px;">
-              子组织中暂无岗位人员
-            </div>
-          </template>
-        </div>
-      </div>
-
-      <!-- Tab: 操作记录 -->
+      <!-- Tab: 变更日志 -->
       <div v-if="activeTab === 'changelog'">
         <ActivityTimeline
           resourceType="ORG_UNIT"
           :resourceId="node.id"
           :limit="50"
-          title="操作记录"
+          title="变更日志"
         />
       </div>
 
-      <!-- Tab: 基本信息 -->
-      <div v-if="activeTab === 'info'" class="dp-info-grid">
-        <div class="dp-info-item">
-          <dt>组织编码</dt>
-          <dd><code class="tm-code">{{ node.unitCode }}</code></dd>
-        </div>
-        <div class="dp-info-item">
-          <dt>组织类型</dt>
-          <dd>
-            <span class="tm-chip" :style="typeBadgeStyle">
-              {{ node.typeName || node.unitType }}
-            </span>
-          </dd>
-        </div>
-        <div class="dp-info-item">
-          <dt>编制人数</dt>
-          <dd>{{ node.headcount ?? '-' }}</dd>
-        </div>
-        <div class="dp-info-item">
-          <dt>上级组织</dt>
-          <dd>{{ parentName || '顶级组织' }}</dd>
-        </div>
-        <div class="dp-info-item">
-          <dt>当前状态</dt>
-          <dd>
-            <span
-              class="tm-chip"
-              :class="node.status === 'ACTIVE' ? 'tm-chip-green' : node.status === 'FROZEN' ? 'tm-chip-amber' : node.status === 'DISSOLVED' ? 'tm-chip-red' : 'tm-chip-gray'"
-            >
-              {{ node.statusLabel || node.status }}
-            </span>
-          </dd>
-        </div>
-        <div class="dp-info-item">
-          <dt>排序号</dt>
-          <dd>{{ node.sortOrder }}</dd>
-        </div>
+      <!-- Tab: Extension attribute groups (each group = 1 tab) -->
+      <div v-for="group in extensionGroups" :key="group.key" v-show="activeTab === group.key" class="dp-ext-tab-body">
+        <DynamicForm
+          :schema="{ fields: group.fields }"
+          v-model="extensionAttrs"
+          :disabled="true"
+        />
       </div>
     </div>
 
@@ -500,68 +320,6 @@
       @confirm="handleAddMemberFromSelector"
     />
 
-    <!-- 任命到岗位弹窗 (从岗位 Tab 触发) -->
-    <Teleport to="body">
-      <div v-if="showAppointDialog" class="dp-modal-overlay" @click.self="showAppointDialog = false">
-        <div class="dp-modal">
-          <h3 class="dp-modal-title">
-            任命人员到「{{ appointForm.positionName }}」
-          </h3>
-          <div class="dp-modal-body">
-            <div class="tm-field">
-              <label class="tm-label">选择用户</label>
-              <div class="dp-user-pick" @click="showAppointUserSelector = true">
-                <span v-if="appointSelectedUser">
-                  {{ appointSelectedUser.realName }} ({{ appointSelectedUser.username }})
-                </span>
-                <span v-else style="color: #9ca3af;">点击选择用户</span>
-              </div>
-            </div>
-            <div class="tm-field">
-              <label class="tm-label">任命类型</label>
-              <el-select v-model="appointForm.appointmentType" style="width: 100%">
-                <el-option label="正式" value="FORMAL" />
-                <el-option label="代理" value="ACTING" />
-                <el-option label="兼职" value="CONCURRENT" />
-                <el-option label="试用" value="PROBATION" />
-              </el-select>
-            </div>
-            <div class="tm-field">
-              <label class="tm-label">任职日期</label>
-              <el-date-picker
-                v-model="appointForm.startDate"
-                type="date"
-                placeholder="选择日期"
-                style="width: 100%"
-                value-format="YYYY-MM-DD"
-              />
-            </div>
-            <div class="tm-field">
-              <label class="dp-checkbox-label">
-                <input v-model="appointForm.isPrimary" type="checkbox" />
-                主岗
-              </label>
-            </div>
-          </div>
-          <div class="dp-modal-footer">
-            <button class="tm-btn tm-btn-secondary" @click="showAppointDialog = false">取消</button>
-            <button
-              class="tm-btn tm-btn-primary"
-              :disabled="!appointForm.userId || appointSubmitting"
-              @click="handleAppoint"
-            >
-              {{ appointSubmitting ? '任命中...' : '确定' }}
-            </button>
-          </div>
-        </div>
-      </div>
-    </Teleport>
-    <!-- 任命用户选择器 -->
-    <UserSelectorDialog
-      v-model:visible="showAppointUserSelector"
-      title="选择要任命的用户"
-      @confirm="handleAppointUserSelected"
-    />
 
     <!-- 导出/导入弹窗 (Step 5) -->
     <OrgExportDialog
@@ -571,7 +329,7 @@
     <OrgImportDialog
       v-model:visible="showImportDialog"
       :org-unit-id="node.id"
-      @imported="Promise.all([loadMembers(), loadPositions(), loadStats()])"
+      @imported="Promise.all([loadMembers(), loadStats()])"
     />
 
     <!-- 用户关系抽屉 (Step 3) -->
@@ -636,26 +394,18 @@
 <script setup lang="ts">
 import { computed, ref, watch, reactive } from 'vue'
 import {
-  Building2,
   Plus,
   Pencil,
   Trash2,
   Ban,
   Check,
-  CheckCircle,
   XCircle,
-  Users,
-  FolderOpen,
-  MapPin,
   Loader2,
   MoreHorizontal,
   Merge,
   Split,
-  UserPlus,
-  UserMinus,
   Download,
   Upload,
-  ChevronDown,
 } from 'lucide-vue-next'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import type { DepartmentResponse } from '@/api/organization'
@@ -670,13 +420,10 @@ import { RelationLabels } from '@/types/accessRelation'
 import { accessRelationApi } from '@/api/accessRelation'
 import type { SimpleUser } from '@/types/user'
 import type { UniversalPlace, PlaceTreeNode } from '@/types/universalPlace'
-import { getSimpleUserList } from '@/api/user'
 import { universalPlaceApi } from '@/api/universalPlace'
-import { positionApi, userPositionApi } from '@/api/position'
-import type { Position, OrgStatistics } from '@/types/position'
+import { orgMemberApi } from '@/api/orgMember'
+import type { OrgStatistics } from '@/types/position'
 import ActivityTimeline from '@/components/activity/ActivityTimeline.vue'
-import { AppointmentTypeLabels } from '@/types/position'
-import type { OrgMember } from '@/types/position'
 
 interface Props {
   node: DepartmentResponse
@@ -697,7 +444,7 @@ const emit = defineEmits<{
 }>()
 
 // ==================== Tab state ====================
-const activeTab = ref<'children' | 'members' | 'places' | 'positions' | 'changelog' | 'info'>('children')
+const activeTab = ref<string>('children')
 const moreMenuOpen = ref(false)
 
 // ==================== Color mapping by category (OrgCategory enum) ====================
@@ -752,26 +499,30 @@ const stats = ref<OrgStatistics | null>(null)
 
 const loadStats = async () => {
   try {
-    stats.value = await userPositionApi.getOrgStatistics(props.node.id)
+    stats.value = await orgMemberApi.getOrgStatistics(props.node.id)
   } catch (e: any) {
     console.error('Failed to load stats', e)
   }
 }
 
 // ==================== Members data ====================
-const belongingMembers = ref<OrgMember[]>([])
-const staffMembers = ref<OrgMember[]>([])
+interface OrgMemberItem {
+  userId: string | number
+  userName: string
+  userTypeCode?: string
+  userTypeName?: string
+  membershipType?: string
+  primaryOrgUnitId?: string | number
+  primaryOrgUnitName?: string
+}
+
+const belongingMembers = ref<OrgMemberItem[]>([])
 const membersLoading = ref(false)
 
 const loadMembers = async () => {
   membersLoading.value = true
   try {
-    const [belonging, staff] = await Promise.all([
-      userPositionApi.getBelongingMembers(props.node.id),
-      userPositionApi.getOrgMembers(props.node.id),
-    ])
-    belongingMembers.value = belonging
-    staffMembers.value = staff
+    belongingMembers.value = await orgMemberApi.getBelongingMembers(props.node.id)
   } catch (e: any) {
     console.error('Failed to load members', e)
   } finally {
@@ -801,121 +552,16 @@ interface MergedMember {
   userId: string | number
   userName: string
   userTypeCode?: string
-  localPositionName?: string     // position name in THIS org
-  appointmentType?: string
-  startDate?: string
-  isPrimary: boolean
-  isKeyPosition?: boolean
-  isExternal: boolean            // belongs to another org
-  userPositionId?: string | number  // for remove action
 }
 
 const mergedMembers = computed<MergedMember[]>(() => {
-  const result: MergedMember[] = []
-
-  // Group staff by userId for quick lookup
-  const staffByUser = new Map<string, OrgMember[]>()
-  for (const s of staffMembers.value) {
-    const key = String(s.userId)
-    if (!staffByUser.has(key)) staffByUser.set(key, [])
-    staffByUser.get(key)!.push(s)
-  }
-
-  // Only belonging members (primary_org_unit_id = this org)
-  for (const m of belongingMembers.value) {
-    const staffEntries = staffByUser.get(String(m.userId)) || []
-    if (staffEntries.length > 0) {
-      // 用户在当前组织有岗位 → 显示当前组织的岗位信息
-      for (const s of staffEntries) {
-        result.push({
-          userId: m.userId,
-          userName: m.userName,
-          userTypeCode: m.userTypeCode,
-          localPositionName: s.positionName,
-          appointmentType: s.appointmentType,
-          startDate: s.startDate,
-          isPrimary: s.isPrimary,
-          isKeyPosition: s.isKeyPosition,
-          isExternal: false,
-          userPositionId: s.userPositionId,
-        })
-      }
-    } else {
-      // 用户在当前组织无岗位 → 使用 getBelongingMembers 返回的主岗信息
-      result.push({
-        userId: m.userId,
-        userName: m.userName,
-        userTypeCode: m.userTypeCode,
-        localPositionName: m.positionName,
-        appointmentType: m.appointmentType,
-        startDate: m.startDate,
-        isPrimary: m.isPrimary,
-        isKeyPosition: m.isKeyPosition,
-        isExternal: false,
-        userPositionId: m.userPositionId,
-      })
-    }
-  }
-
-  return result
+  return belongingMembers.value.map(m => ({
+    userId: m.userId,
+    userName: m.userName,
+    userTypeCode: m.userTypeCode,
+  }))
 })
 
-// Belonging user IDs set (for positions tab "外部" tag)
-const belongingUserIds = computed(() => new Set(belongingMembers.value.map(m => String(m.userId))))
-
-// Appointment type tag color
-const appointmentTagClass = (type: string) => {
-  switch (type) {
-    case 'FORMAL': return 'bg-blue-50 text-blue-700'
-    case 'ACTING': return 'bg-amber-50 text-amber-700'
-    case 'CONCURRENT': return 'bg-purple-50 text-purple-700'
-    case 'PROBATION': return 'bg-gray-100 text-gray-600'
-    default: return 'bg-gray-100 text-gray-600'
-  }
-}
-
-// ==================== Child org positions (collapsible panel) ====================
-const showChildPositions = ref(false)
-const recursiveMembers = ref<OrgMember[]>([])
-const recursiveLoading = ref(false)
-const recursiveLoaded = ref(false)
-
-// 排除本级，只留子组织的成员
-const childOnlyMembers = computed(() => {
-  const currentOrgId = String(props.node.id)
-  return recursiveMembers.value.filter(m => String(m.orgUnitId) !== currentOrgId)
-})
-
-// 子组织岗位汇总统计
-const childPositionSummary = computed(() => {
-  const countMap = new Map<string, number>()
-  for (const m of childOnlyMembers.value) {
-    const name = m.positionName || '未知岗位'
-    countMap.set(name, (countMap.get(name) || 0) + 1)
-  }
-  return Array.from(countMap.entries())
-    .map(([positionName, count]) => ({ positionName, count }))
-    .sort((a, b) => b.count - a.count)
-})
-
-const loadRecursiveMembers = async () => {
-  recursiveLoading.value = true
-  try {
-    recursiveMembers.value = await userPositionApi.getOrgMembersRecursive(props.node.id)
-    recursiveLoaded.value = true
-  } catch (e: any) {
-    console.error('Failed to load recursive members', e)
-  } finally {
-    recursiveLoading.value = false
-  }
-}
-
-const toggleChildPositions = () => {
-  showChildPositions.value = !showChildPositions.value
-  if (showChildPositions.value && !recursiveLoaded.value) {
-    loadRecursiveMembers()
-  }
-}
 
 // ==================== Places data ====================
 const places = ref<AccessRelation[]>([])
@@ -932,42 +578,35 @@ const loadPlaces = async () => {
   }
 }
 
+// ==================== Extension groups as tabs ====================
+const extensionGroups = computed(() => {
+  const fields = extensionSchema.value?.fields || []
+  const groups = new Map<string, any[]>()
+  for (const f of fields) {
+    const g = f.group || '扩展属性'
+    if (!groups.has(g)) groups.set(g, [])
+    groups.get(g)!.push(f)
+  }
+  return Array.from(groups.entries()).map(([name, fields], i) => ({
+    key: `ext_${i}`,
+    label: name,
+    fields,
+  }))
+})
+
+
 // ==================== Tab counts ====================
-const tabs = computed(() => [
-  { key: 'children' as const, label: '下级组织', count: children.value.length },
-  { key: 'members' as const, label: '成员', count: belongingMembers.value.length || undefined },
-  { key: 'positions' as const, label: '岗位编制', count: positions.value.length },
-  { key: 'places' as const, label: '关联场所', count: places.value.length },
-  { key: 'changelog' as const, label: '操作记录', count: undefined },
-  { key: 'info' as const, label: '基本信息', count: undefined }
+const baseTabs = computed(() => [
+  { key: 'children', label: '下级组织', count: children.value.length },
+  { key: 'members', label: '成员', count: belongingMembers.value.length || undefined },
+  { key: 'places', label: '关联场所', count: places.value.length },
+  { key: 'changelog', label: '变更日志', count: undefined },
 ])
 
-// ==================== Positions data ====================
-const positions = ref<Position[]>([])
-const positionsLoading = ref(false)
-
-const loadPositions = async () => {
-  positionsLoading.value = true
-  try {
-    positions.value = await positionApi.getByOrgUnit(props.node.id)
-  } catch (e: any) {
-    console.error('Failed to load positions', e)
-  } finally {
-    positionsLoading.value = false
-  }
-}
-
-// Position tab helpers
-const getPositionHolders = (positionId: number | string) => {
-  return staffMembers.value.filter(m => String(m.positionId) === String(positionId))
-}
-
-const staffingColor = (p: Position) => {
-  const current = p.currentCount ?? 0
-  if (current > p.headcount) return 'text-red-600'
-  if (current === p.headcount) return 'text-green-600'
-  return 'text-orange-500'
-}
+const allTabs = computed(() => [
+  ...baseTabs.value,
+  ...extensionGroups.value.map(g => ({ key: g.key, label: g.label, count: undefined })),
+])
 
 // ==================== Load data on node change ====================
 // Extension schema from entity_type_configs (SPI plugin)
@@ -996,16 +635,10 @@ watch(
   () => props.node.id,
   () => {
     belongingMembers.value = []
-    staffMembers.value = []
     places.value = []
-    positions.value = []
     stats.value = null
-    showChildPositions.value = false
-    recursiveMembers.value = []
-    recursiveLoaded.value = false
     loadMembers()
     loadPlaces()
-    loadPositions()
     loadStats()
     loadExtensionSchema()
   },
@@ -1014,7 +647,6 @@ watch(
 
 // ==================== Add Member (直接添加到组织, using UserSelectorDialog) ====================
 const showAddMember = ref(false)
-const userOptions = ref<SimpleUser[]>([])
 
 const handleAddMemberFromSelector = async (users: SimpleUser[]) => {
   if (users.length === 0) return
@@ -1032,9 +664,9 @@ const handleAddMemberFromSelector = async (users: SimpleUser[]) => {
     }
   }
   try {
-    await userPositionApi.addMember(props.node.id, user.id)
+    await orgMemberApi.addMember(props.node.id, user.id)
     ElMessage.success('成员添加成功')
-    await Promise.all([loadMembers(), loadPositions(), loadStats()])
+    await Promise.all([loadMembers(), loadStats()])
   } catch (e: any) {
     ElMessage.error(e.message || '添加失败')
   }
@@ -1043,107 +675,18 @@ const handleAddMemberFromSelector = async (users: SimpleUser[]) => {
 const handleRemoveMember = async (m: MergedMember) => {
   try {
     await ElMessageBox.confirm(
-      `确定要将「${m.userName}」从本组织移除吗？${m.userPositionId ? '同时会移除其所有岗位。' : ''}`,
+      `确定要将「${m.userName}」从本组织移除吗？`,
       '确认移除成员',
       { type: 'warning' }
     )
-    await userPositionApi.removeMember(props.node.id, m.userId)
+    await orgMemberApi.removeMember(props.node.id, m.userId)
     ElMessage.success('已移除成员')
-    await Promise.all([loadMembers(), loadPositions(), loadStats()])
+    await Promise.all([loadMembers(), loadStats()])
   } catch {
     // cancelled
   }
 }
 
-const handleRemoveStaff = async (m: MergedMember) => {
-  if (!m.userPositionId) return
-  try {
-    await ElMessageBox.confirm(
-      `确定要移除「${m.userName}」的岗位「${m.localPositionName}」吗？`,
-      '确认移除岗位',
-      { type: 'warning' }
-    )
-    await userPositionApi.endAppointment(m.userPositionId, {
-      endDate: new Date().toISOString().slice(0, 10),
-      reason: '管理员移除',
-    })
-    ElMessage.success('已移除岗位')
-    await Promise.all([loadMembers(), loadPositions(), loadStats()])
-  } catch {
-    // cancelled
-  }
-}
-
-// ==================== Appoint to Position (从岗位 Tab 触发) ====================
-const showAppointDialog = ref(false)
-const showAppointUserSelector = ref(false)
-const appointSubmitting = ref(false)
-const appointSelectedUser = ref<SimpleUser | null>(null)
-const appointForm = reactive({
-  positionId: null as number | string | null,
-  positionName: '',
-  userId: null as number | string | null,
-  appointmentType: 'FORMAL',
-  isPrimary: true,
-  startDate: new Date().toISOString().slice(0, 10),
-})
-
-const openAppointDialog = (p: Position) => {
-  appointForm.positionId = p.id
-  appointForm.positionName = p.positionName
-  appointForm.userId = null
-  appointSelectedUser.value = null
-  appointForm.appointmentType = 'FORMAL'
-  appointForm.isPrimary = true
-  appointForm.startDate = new Date().toISOString().slice(0, 10)
-  showAppointDialog.value = true
-}
-
-const handleAppointUserSelected = (users: SimpleUser[]) => {
-  if (users.length > 0) {
-    const u = users[0]
-    appointSelectedUser.value = u
-    appointForm.userId = u.id
-  }
-}
-
-const handleAppoint = async () => {
-  if (!appointForm.userId || !appointForm.positionId) return
-  appointSubmitting.value = true
-  try {
-    // 查询用户现有岗位，如有则提示"从哪里到哪里"
-    const existingPositions = await userPositionApi.getByUser(appointForm.userId)
-    const currentPositions = existingPositions.filter(p => p.isCurrent)
-    if (currentPositions.length > 0) {
-      const fromList = currentPositions
-        .map(p => `「${p.orgUnitName || '?'}」${p.positionName || ''}(${AppointmentTypeLabels[p.appointmentType || ''] || p.appointmentType || ''})`)
-        .join('、')
-      const toLabel = `「${props.node.unitName}」${appointForm.positionName}`
-      await ElMessageBox.confirm(
-        `该用户当前任职于 ${fromList}，确定要任命到 ${toLabel} 吗？`,
-        '任命确认',
-        { type: 'warning' }
-      )
-    }
-
-    await userPositionApi.appoint({
-      userId: appointForm.userId,
-      positionId: appointForm.positionId,
-      isPrimary: appointForm.isPrimary,
-      appointmentType: appointForm.appointmentType,
-      startDate: appointForm.startDate,
-    })
-    ElMessage.success('任命成功')
-    showAppointDialog.value = false
-    await Promise.all([loadMembers(), loadPositions(), loadStats()])
-  } catch (e: any) {
-    if (e !== 'cancel' && e?.toString() !== 'cancel') {
-      ElMessage.error(e.message || '任命失败')
-    }
-  } finally {
-    appointSubmitting.value = false
-  }
-}
 
 // ==================== Add Place ====================
 const showAddPlace = ref(false)
@@ -1242,7 +785,6 @@ const openUserRelation = (m: MergedMember) => {
 
 const onUserRelationChanged = () => {
   loadMembers()
-  loadPositions()
   loadStats()
 }
 </script>
@@ -1250,20 +792,20 @@ const onUserRelationChanged = () => {
 <style scoped>
 @import '@/styles/teaching-ui.css';
 
-.dp-root { display: flex; flex-direction: column; gap: 16px; }
+.dp-root { display: flex; flex-direction: column; gap: 8px; }
 
 /* Header card */
 .dp-card {
   background: #fff;
   border: 1px solid #e5e7eb;
-  border-radius: 10px;
+  border-radius: 6px;
   overflow: hidden;
 }
 .dp-card-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 10px 20px;
+  padding: 6px 12px;
 }
 .dp-name-row {
   display: flex;
@@ -1291,7 +833,7 @@ const onUserRelationChanged = () => {
   align-items: center;
   gap: 10px;
   border-top: 1px solid #f3f4f6;
-  padding: 8px 20px;
+  padding: 4px 12px;
   font-size: 12px;
   color: #6b7280;
 }
@@ -1322,7 +864,7 @@ const onUserRelationChanged = () => {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 8px 20px;
+  padding: 4px 12px;
   border-bottom: 1px solid #f3f4f6;
 }
 .dp-tab-info { font-size: 12px; color: #6b7280; }
@@ -1356,37 +898,6 @@ const onUserRelationChanged = () => {
   font-family: inherit;
 }
 .dp-link:hover { color: #1d4ed8; text-decoration: underline; }
-
-/* Collapse button */
-.dp-collapse-btn {
-  display: flex;
-  width: 100%;
-  align-items: center;
-  justify-content: space-between;
-  padding: 10px 20px;
-  background: none;
-  border: none;
-  cursor: pointer;
-  font-size: 12px;
-  font-weight: 500;
-  color: #4b5563;
-  font-family: inherit;
-  text-align: left;
-  transition: background 0.1s;
-}
-.dp-collapse-btn:hover { background: #f9fafb; }
-
-/* Summary bar (child positions) */
-.dp-summary-bar {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 12px;
-  padding: 8px 20px;
-  border-bottom: 1px solid #f3f4f6;
-  background: #fafafa;
-}
-.dp-summary-item { font-size: 12px; color: #6b7280; }
-.dp-summary-item b { font-weight: 600; color: #374151; }
 
 /* Info grid (basic info tab) */
 .dp-info-grid {
@@ -1496,22 +1007,6 @@ const onUserRelationChanged = () => {
   padding: 12px 24px 20px;
 }
 
-/* User pick field */
-.dp-user-pick {
-  display: flex;
-  align-items: center;
-  min-height: 36px;
-  padding: 6px 10px;
-  border: 1px solid #e5e7eb;
-  border-radius: 7px;
-  font-size: 13px;
-  color: #111827;
-  background: #fafafa;
-  cursor: pointer;
-  transition: border-color 0.15s;
-}
-.dp-user-pick:hover { border-color: #2563eb; }
-
 /* Checkbox label */
 .dp-checkbox-label {
   display: flex;
@@ -1522,16 +1017,71 @@ const onUserRelationChanged = () => {
   cursor: pointer;
 }
 
-/* Tailwind class equivalents used by appointmentTagClass & staffingColor */
-.bg-blue-50 { background: #eff6ff; }
-.text-blue-700 { color: #1d4ed8; }
-.bg-amber-50 { background: #fffbeb; }
-.text-amber-700 { color: #b45309; }
-.bg-purple-50 { background: #f5f3ff; }
-.text-purple-700 { color: #6d28d9; }
-.bg-gray-100 { background: #f3f4f6; }
-.text-gray-600 { color: #4b5563; }
-.text-red-600 { color: #dc2626; }
-.text-green-600 { color: #16a34a; }
-.text-orange-500 { color: #f59e0b; }
+/* Basic info inline bar */
+.dp-basic-info { padding: 6px 12px; }
+.dp-info-inline {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 16px;
+}
+.dp-info-kv {
+  font-size: 12px;
+  color: #374151;
+}
+.dp-info-kv em {
+  font-style: normal;
+  color: #9ca3af;
+  margin-right: 4px;
+}
+
+/* Extension tab body */
+.dp-ext-tab-body { padding: 8px 12px; }
+.dp-ext-tab-body .df-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 2px 20px;
+}
+.dp-ext-tab-body .df-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 24px;
+}
+.dp-ext-tab-body .df-label {
+  flex-shrink: 0;
+  font-size: 12px;
+  font-weight: 500;
+  color: #9ca3af;
+  white-space: nowrap;
+  min-width: 48px;
+  text-align: right;
+}
+.dp-ext-tab-body .df-value {
+  flex: 1;
+  min-width: 0;
+  font-size: 13px;
+  font-weight: 500;
+  color: #111827;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.dp-ext-tab-body .df-value.df-empty {
+  color: #d1d5db;
+  font-weight: 400;
+}
+
+/* === DATA-COMPACT OVERRIDES === */
+.dp-name { font-size: 15px; }
+.dp-root :deep(.tm-tabs) { padding: 0 12px; gap: 12px; }
+.dp-root :deep(.tm-tab) { padding: 8px 0; font-size: 12px; }
+.dp-root :deep(.tm-table th) { padding: 5px 8px; font-size: 10px; }
+.dp-root :deep(.tm-table td) { padding: 4px 8px; font-size: 12px; }
+.dp-root :deep(.tm-table) { border-radius: 6px; }
+.dp-empty { padding: 24px 0; }
+.dp-loading { padding: 24px 0; }
+.dp-info-grid { padding: 8px 12px; gap: 6px 16px; }
+.dp-info-item dt { font-size: 11px; margin-bottom: 1px; }
+.dp-info-item dd { font-size: 12px; }
 </style>

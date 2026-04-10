@@ -22,7 +22,6 @@ export interface User {
   gender?: number
   birthDate?: string
   idCard?: string
-  managedClassId?: number | string
   userTypeCode?: string
   userType?: string
   orgUnitId?: number | string
