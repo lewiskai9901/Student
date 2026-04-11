@@ -101,8 +101,11 @@ public class OrgType implements ConfigurableType {
      * 更新 category 和 features
      */
     public void updateCategoryAndFeatures(String category, Map<String, Boolean> features) {
+        if (category == null || category.isBlank()) {
+            throw new IllegalArgumentException("组织类型分类不能为空");
+        }
         this.category = category;
-        this.features = features;
+        this.features = features != null ? features : new HashMap<>();
     }
 
     /**
@@ -116,6 +119,9 @@ public class OrgType implements ConfigurableType {
      * 更新层级约束
      */
     public void updateHierarchyConfig(List<String> allowedChildTypeCodes, Integer maxDepth) {
+        if (allowedChildTypeCodes != null && typeCode != null && allowedChildTypeCodes.contains(typeCode)) {
+            throw new IllegalArgumentException("allowedChildTypeCodes 不能包含自身 typeCode: " + typeCode);
+        }
         this.allowedChildTypeCodes = allowedChildTypeCodes;
         this.maxDepth = maxDepth;
     }

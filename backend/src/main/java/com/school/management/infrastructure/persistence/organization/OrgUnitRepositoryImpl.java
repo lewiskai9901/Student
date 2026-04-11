@@ -174,8 +174,8 @@ public class OrgUnitRepositoryImpl implements OrgUnitRepository {
     private OrgUnit toDomain(OrgUnitPO po) {
         String unitType = po.getUnitType();
         if (unitType == null || unitType.isEmpty()) {
-            log.warn("org_units row id={} has null unit_type, defaulting to DEPARTMENT", po.getId());
-            unitType = "DEPARTMENT";
+            throw new IllegalStateException(
+                "org_units 记录 id=" + po.getId() + " 的 unit_type 为空，数据不一致");
         }
 
         return OrgUnit.builder()
