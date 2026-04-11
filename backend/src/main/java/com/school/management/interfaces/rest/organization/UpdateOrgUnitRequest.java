@@ -14,7 +14,7 @@ import java.util.Map;
 public class UpdateOrgUnitRequest {
 
     @Schema(description = "Display name", example = "Computer Science Department")
-    @Size(max = 100, message = "Unit name cannot exceed 100 characters")
+    @Size(max = 100, message = "组织名称不能超过100个字符")
     private String unitName;
 
     @Schema(description = "Sort order", example = "1")

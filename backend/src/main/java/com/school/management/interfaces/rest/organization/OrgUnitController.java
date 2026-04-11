@@ -14,6 +14,7 @@ import com.school.management.common.util.SecurityUtils;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
 import lombok.Data;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -39,7 +40,7 @@ public class OrgUnitController {
     @Operation(summary = "Create organization unit")
     @PostMapping
     @CasbinAccess(resource = "system:org", action = "create")
-    public Result<OrgUnitDTO> createOrgUnit(@RequestBody CreateOrgUnitRequest request) {
+    public Result<OrgUnitDTO> createOrgUnit(@Valid @RequestBody CreateOrgUnitRequest request) {
         CreateOrgUnitCommand command = CreateOrgUnitCommand.builder()
             .unitCode(request.getUnitCode())
             .unitName(request.getUnitName())
@@ -58,7 +59,7 @@ public class OrgUnitController {
     @CasbinAccess(resource = "system:org", action = "update")
     public Result<OrgUnitDTO> updateOrgUnit(
             @Parameter(description = "Organization unit ID") @PathVariable Long id,
-            @RequestBody UpdateOrgUnitRequest request) {
+            @Valid @RequestBody UpdateOrgUnitRequest request) {
         UpdateOrgUnitCommand command = UpdateOrgUnitCommand.builder()
             .unitName(request.getUnitName())
             .sortOrder(request.getSortOrder())
