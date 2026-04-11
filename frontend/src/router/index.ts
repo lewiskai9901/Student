@@ -762,7 +762,7 @@ const routes: RouteRecordRaw[] = [
       {
         path: '/teaching',
         name: 'Teaching',
-        redirect: '/teaching/calendar',
+        redirect: '/teaching/workbench',
         meta: {
           title: '教务管理',
           icon: 'BookOpen',
@@ -771,6 +771,16 @@ const routes: RouteRecordRaw[] = [
           group: 'operations'
         },
         children: [
+          {
+            path: '/teaching/workbench',
+            name: 'TeachingWorkbench',
+            component: () => import('@/views/teaching/TeachingWorkbench.vue'),
+            meta: {
+              title: '教务工作台',
+              requiresAuth: true,
+              order: 0
+            }
+          },
           {
             path: '/teaching/calendar',
             name: 'TeachingCalendar',
@@ -799,6 +809,7 @@ const routes: RouteRecordRaw[] = [
             meta: {
               title: '开课管理',
               requiresAuth: true,
+              hidden: true,
               order: 4
             }
           },
@@ -809,6 +820,7 @@ const routes: RouteRecordRaw[] = [
             meta: {
               title: '排课中心',
               requiresAuth: true,
+              hidden: true,
               order: 5
             }
           },
@@ -819,6 +831,7 @@ const routes: RouteRecordRaw[] = [
             meta: {
               title: '教学任务',
               requiresAuth: true,
+              hidden: true,
               order: 7
             }
           },
@@ -903,9 +916,9 @@ const routes: RouteRecordRaw[] = [
             }
           },
           // 旧路由重定向到统一类型配置
-          { path: '/system/org-types', redirect: '/system/entity-types' },
-          { path: '/system/place-types', redirect: '/system/entity-types' },
-          { path: '/system/user-types', redirect: '/system/entity-types' },
+          { path: '/system/org-types', redirect: '/system/entity-types', meta: { hidden: true } },
+          { path: '/system/place-types', redirect: '/system/entity-types', meta: { hidden: true } },
+          { path: '/system/user-types', redirect: '/system/entity-types', meta: { hidden: true } },
           // 事件类型和触发器已移到"消息与事件"菜单下
           {
             path: '/system/configs',
