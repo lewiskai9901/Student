@@ -126,7 +126,7 @@ public class OrgUnitDomainService {
                 .orElseThrow(() -> new IllegalArgumentException("New parent not found: " + newParentId));
 
             // Check for circular reference
-            if (newParent.getTreePath().contains("/" + orgUnit.getId() + "/")) {
+            if (newParent.getTreePath() != null && newParent.getTreePath().contains("/" + orgUnit.getId() + "/")) {
                 throw new IllegalArgumentException("Cannot create circular reference in organization tree");
             }
 

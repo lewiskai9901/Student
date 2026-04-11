@@ -68,7 +68,10 @@ public class UniversalPlaceRepositoryImpl implements UniversalPlaceRepository {
 
         // 4. 重新查询以获取最新数据（含关联字段）
         UniversalPlacePO saved = mapper.selectById(po.getId());
-        return saved != null ? toDomain(saved) : toDomain(po);
+        if (saved == null) {
+            throw new IllegalStateException("保存后无法重新查询场所：ID=" + po.getId());
+        }
+        return toDomain(saved);
     }
 
     @Override

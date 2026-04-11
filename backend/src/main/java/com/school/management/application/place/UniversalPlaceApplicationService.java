@@ -822,7 +822,9 @@ public class UniversalPlaceApplicationService {
         occupantRepository.save(occupant);
 
         // 原子递减占用数
-        placeRepository.atomicDecrementOccupancy(placeId);
+        if (!placeRepository.atomicDecrementOccupancy(placeId)) {
+            log.warn("checkOut: 场所 {} 占用数递减失败（可能已为0），将由对账任务修正", placeId);
+        }
 
         // 发布审计事件
         activityEventPublisher.newEvent("place", "PLACE", "CHECK_OUT", "退出")

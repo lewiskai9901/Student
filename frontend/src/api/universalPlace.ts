@@ -129,13 +129,6 @@ export const universalPlaceApi = {
   },
 
   /**
-   * 获取场所有效性别
-   */
-  getEffectiveGender(id: number | string): Promise<string> {
-    return request.get(`${BASE_URL}/${id}/effective-gender`)
-  },
-
-  /**
    * 创建空间
    */
   create(data: CreatePlaceRequest): Promise<UniversalPlace> {
