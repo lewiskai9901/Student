@@ -7,6 +7,10 @@ import com.school.management.domain.place.model.entity.UniversalPlaceType;
 import com.school.management.domain.place.model.valueobject.PlaceStatus;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
+import jakarta.validation.constraints.Min;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Size;
 import lombok.Data;
 import lombok.RequiredArgsConstructor;
 import com.school.management.infrastructure.activity.annotation.AuditEvent;
@@ -107,7 +111,7 @@ public class UniversalPlaceController {
     @Operation(summary = "创建空间")
     @CasbinAccess(resource = "place", action = "add")
     @AuditEvent(module = "place", action = "CREATE", resourceType = "PLACE", label = "创建场所")
-    public Result<PlaceDTO> createPlace(@RequestBody CreatePlaceRequest request) {
+    public Result<PlaceDTO> createPlace(@Valid @RequestBody CreatePlaceRequest request) {
         CreatePlaceCommand command = new CreatePlaceCommand();
         command.setPlaceCode(request.getPlaceCode());
         command.setPlaceName(request.getPlaceName());
@@ -128,7 +132,7 @@ public class UniversalPlaceController {
     @Operation(summary = "更新空间")
     @CasbinAccess(resource = "place", action = "edit")
     @AuditEvent(module = "place", action = "UPDATE", resourceType = "PLACE", resourceId = "#id", label = "更新场所")
-    public Result<PlaceDTO> updatePlace(@PathVariable Long id, @RequestBody UpdatePlaceRequest request) {
+    public Result<PlaceDTO> updatePlace(@PathVariable Long id, @Valid @RequestBody UpdatePlaceRequest request) {
         UpdatePlaceCommand command = new UpdatePlaceCommand();
         command.setPlaceCode(request.getPlaceCode());
         command.setPlaceName(request.getPlaceName());
@@ -272,13 +276,24 @@ public class UniversalPlaceController {
 
     @Data
     public static class CreatePlaceRequest {
+        @NotBlank(message = "场所编码不能为空")
+        @Size(max = 50, message = "场所编码不能超过50个字符")
         private String placeCode;
+
+        @NotBlank(message = "场所名称不能为空")
+        @Size(max = 200, message = "场所名称不能超过200个字符")
         private String placeName;
+
+        @NotBlank(message = "场所类型不能为空")
         private String typeCode;
+
         private String description;
         private Long parentId;
         private Integer status;
+
+        @Min(value = 0, message = "容量不能为负数")
         private Integer capacity;
+
         private String gender;
         private Long orgUnitId;
         private Long responsibleUserId;
@@ -287,12 +302,22 @@ public class UniversalPlaceController {
 
     @Data
     public static class UpdatePlaceRequest {
+        @NotBlank(message = "场所编码不能为空")
+        @Size(max = 50, message = "场所编码不能超过50个字符")
         private String placeCode;
+
+        @NotBlank(message = "场所名称不能为空")
+        @Size(max = 200, message = "场所名称不能超过200个字符")
         private String placeName;
+
         private String description;
         private Integer status;
+
+        @Min(value = 0, message = "容量不能为负数")
         private Integer capacity;
+
         private String gender;
+        private Long parentId;
         private Long orgUnitId;
 
         /**
