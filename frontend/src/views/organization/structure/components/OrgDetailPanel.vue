@@ -634,6 +634,7 @@ async function loadExtensionSchema() {
 watch(
   () => props.node.id,
   () => {
+    activeTab.value = 'children'
     belongingMembers.value = []
     places.value = []
     stats.value = null

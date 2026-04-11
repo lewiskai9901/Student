@@ -5,11 +5,10 @@
  */
 import { ref, computed, watch, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
-import { Location, OfficeBuilding } from '@element-plus/icons-vue'
+import { Location } from '@element-plus/icons-vue'
 import { universalPlaceApi } from '@/api/universalPlace'
 import type { PlaceTreeNode } from '@/types/universalPlace'
 import type { RoomType } from '@/types/place'
-import { getRoomTypeName } from '@/types/place'
 
 // 使用新的空间树节点类型
 type PlaceDTO = PlaceTreeNode
@@ -102,8 +101,8 @@ function buildLocationName(path: number[]): string {
   for (const id of path) {
     const node = currentNodes.find(n => n.id === id)
     if (node) {
-      // 只取楼栋和房间名称
-      if (node.placeType === 'BUILDING' || node.placeType === 'ROOM') {
+      // 跳过校区和楼层，取楼栋和房间名称
+      if (node.typeCode && !['CAMPUS', 'FLOOR'].includes(node.typeCode.toUpperCase())) {
         names.push(node.placeName)
       }
       currentNodes = node.children || []
@@ -128,14 +127,13 @@ function inferRoomTypeFromBuilding(path: number[]): RoomType | null {
   for (const id of path) {
     const node = currentNodes.find(n => n.id === id)
     if (node) {
-      if (node.placeType === 'BUILDING' && node.buildingType) {
-        // 根据楼栋类型推断房间类型
-        const buildingToRoomType: Record<string, RoomType> = {
-          'DORMITORY': 'DORMITORY',
-          'TEACHING': 'CLASSROOM',
-          'OFFICE': 'OFFICE'
-        }
-        return buildingToRoomType[node.buildingType] || null
+      if (node.typeCode) {
+        const tc = node.typeCode.toUpperCase()
+        // 根据类型代码推断房间类型
+        if (tc.includes('DORM')) return 'DORMITORY'
+        if (tc.includes('TEACH') || tc.includes('CLASS')) return 'CLASSROOM'
+        if (tc.includes('OFFICE')) return 'OFFICE'
+        if (tc.includes('LAB')) return 'LAB'
       }
       currentNodes = node.children || []
     }
@@ -153,10 +151,11 @@ function handleCascaderChange(value: number[]) {
       emit('update:locationId', selectedId)
       emit('update:locationName', buildLocationName(value))
 
-      // 根据选中的房间类型自动更新 locationType
-      // 优先使用房间自带的类型，其次从楼栋类型推断
-      if (selectedNode.roomType) {
-        emit('update:locationType', selectedNode.roomType)
+      // 根据选中的场所类型自动更新 locationType
+      // 优先从 typeCode 推断，其次从路径中的父节点推断
+      const inferredFromNode = inferRoomTypeFromBuilding([selectedId])
+      if (inferredFromNode) {
+        emit('update:locationType', inferredFromNode)
       } else {
         const inferredType = inferRoomTypeFromBuilding(value)
         if (inferredType) {
@@ -238,13 +237,10 @@ onMounted(() => {
           <template #default="{ node, data }">
             <div class="flex items-center gap-1.5">
               <span class="text-xs text-gray-400 w-8">
-                {{ data.placeType === 'CAMPUS' ? '校区' :
-                   data.placeType === 'BUILDING' ? '楼栋' :
-                   data.placeType === 'FLOOR' ? (data.floorNumber || '') + 'F' :
-                   data.roomType ? getRoomTypeName(data.roomType) : '房间' }}
+                {{ data.typeName || data.typeCode || '' }}
               </span>
               <span>{{ data.placeName }}</span>
-              <span v-if="data.roomNo" class="text-gray-400">({{ data.roomNo }})</span>
+              <span v-if="data.placeCode" class="text-gray-400">({{ data.placeCode }})</span>
             </div>
           </template>
         </el-cascader>

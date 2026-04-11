@@ -68,10 +68,10 @@ const positions = computed<SeatPosition[]>(() => {
   }
 
   for (let i = 1; i <= props.capacity; i++) {
-    const no = String(i)
+    const no = String(i).padStart(2, '0')
     const occ = occupantMap.get(no)
     result.push({
-      no: String(i),
+      no,
       occupied: !!occ,
       occupantName: occ?.occupantName,
       occupant: occ
