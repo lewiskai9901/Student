@@ -163,6 +163,7 @@
 import { ref, reactive, watch } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { http as request } from '@/utils/request'
+import { universalPlaceApi } from '@/api/universalPlace'
 import { scheduleApi, adjustmentApi } from '@/api/teaching'
 import type { ScheduleEntry, ScheduleAdjustment, CourseSchedule } from '@/types/teaching'
 import { WEEKDAYS, DEFAULT_PERIODS } from '@/types/teaching'
@@ -198,8 +199,9 @@ async function loadAdjustments() {
 
 async function loadClassrooms() {
   try {
-    const res = await request.get('/places', { params: { roomType: 'CLASSROOM' } })
-    const data = (res as any).data || res; const items = Array.isArray(data) ? data : data.records || []
+    const allItems = await universalPlaceApi.getFlatList()
+    // Filter leaf nodes with capacity (classrooms)
+    const items = allItems.filter((p: any) => p.capacity && p.capacity > 0)
     classrooms.value = items.map((p: any) => ({ id: p.id, name: p.placeName || p.name }))
   } catch { /* */ }
 }

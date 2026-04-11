@@ -174,6 +174,7 @@
 import { ref, computed, watch } from 'vue'
 import { ElMessage } from 'element-plus'
 import { http as request } from '@/utils/request'
+import { universalPlaceApi } from '@/api/universalPlace'
 import { scheduleApi, periodConfigApi, teachingTaskApi } from '@/api/teaching'
 import { orgUnitApi } from '@/api/organization'
 import type { ScheduleEntry, PeriodConfig } from '@/types/teaching'
@@ -315,9 +316,7 @@ async function loadPeriodConfig() {
 // Data loading
 async function loadClassrooms() {
   try {
-    const res = await request.get('/places', { params: { pageSize: 500 } })
-    const data = (res as any).data || res
-    const allItems = Array.isArray(data) ? data : data.list || data.records || []
+    const allItems = await universalPlaceApi.getFlatList()
     // Filter: places with capacity (classrooms), exclude buildings/floors
     const filtered = allItems.filter((p: any) => {
       const cap = p.capacity || 0

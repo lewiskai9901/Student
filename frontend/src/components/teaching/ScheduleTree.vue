@@ -53,6 +53,7 @@
 import { ref, computed, watch, onMounted } from 'vue'
 import { orgUnitApi } from '@/api/organization'
 import { http as request } from '@/utils/request'
+import { universalPlaceApi } from '@/api/universalPlace'
 
 const props = defineProps<{
   mode: 'class' | 'teacher' | 'classroom'
@@ -129,9 +130,7 @@ function buildShortName(buildingName: string): string {
 
 async function loadClassroomTree() {
   try {
-    const res = await request.get('/places', { params: { pageSize: 500 } })
-    const data = (res as any).data || res
-    const allItems: any[] = Array.isArray(data) ? data : data.list || data.records || []
+    const allItems: any[] = await universalPlaceApi.getFlatList()
 
     // Find teaching buildings (level 1, name contains 教学)
     const buildings = allItems.filter((p: any) => p.level === 1 && /教学/.test(p.placeName || ''))

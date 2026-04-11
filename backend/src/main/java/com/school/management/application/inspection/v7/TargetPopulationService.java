@@ -5,10 +5,10 @@ import com.school.management.domain.inspection.model.v7.execution.ScopeType;
 import com.school.management.domain.inspection.model.v7.execution.TargetType;
 import com.school.management.domain.organization.model.OrgUnit;
 import com.school.management.domain.organization.repository.OrgUnitRepository;
-import com.school.management.domain.place.model.aggregate.Place;
+import com.school.management.domain.place.model.aggregate.UniversalPlace;
 import com.school.management.domain.place.model.entity.UniversalPlaceOccupant;
 import com.school.management.domain.place.repository.UniversalPlaceOccupantRepository;
-import com.school.management.domain.place.repository.PlaceRepository;
+import com.school.management.domain.place.repository.UniversalPlaceRepository;
 import com.school.management.domain.user.model.aggregate.User;
 import com.school.management.domain.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
@@ -33,7 +33,7 @@ public class TargetPopulationService {
     private static final int MAX_DEPTH = 10;
 
     private final OrgUnitRepository orgUnitRepository;
-    private final PlaceRepository placeRepository;
+    private final UniversalPlaceRepository universalPlaceRepository;
     private final UniversalPlaceOccupantRepository placeOccupantRepository;
     private final UserRepository userRepository;
     private final ObjectMapper objectMapper;
@@ -245,7 +245,7 @@ public class TargetPopulationService {
         if (scopeType == ScopeType.PLACE) {
             // 直接指定场所 ID
             return scopeIds.stream()
-                    .map(placeId -> placeRepository.findById(placeId).orElse(null))
+                    .map(placeId -> universalPlaceRepository.findById(placeId).orElse(null))
                     .filter(Objects::nonNull)
                     .map(p -> new TargetInfo(p.getId(), p.getPlaceName(), p.getOrgUnitId()))
                     .collect(Collectors.toList());
@@ -258,11 +258,11 @@ public class TargetPopulationService {
         List<TargetInfo> targets = new ArrayList<>();
         log.info("resolvePlaceTargets: {} org IDs expanded from scope", allOrgIds.size());
         for (Long orgId : allOrgIds) {
-            List<Place> places = placeRepository.findByOrgUnitId(orgId);
+            List<UniversalPlace> places = universalPlaceRepository.findByOrgUnitId(orgId);
             if (!places.isEmpty()) {
                 log.info("  orgId={} → {} places", orgId, places.size());
             }
-            for (Place p : places) {
+            for (UniversalPlace p : places) {
                 targets.add(new TargetInfo(p.getId(), p.getPlaceName(), p.getOrgUnitId()));
             }
         }
@@ -422,7 +422,7 @@ public class TargetPopulationService {
             }
             return filtered;
         } else if ("PLACE".equals(parentType)) {
-            return placeRepository.findById(parentId)
+            return universalPlaceRepository.findById(parentId)
                     .filter(p -> p.getOrgUnitId() != null)
                     .flatMap(p -> orgUnitRepository.findById(p.getOrgUnitId()))
                     .map(o -> List.of(new TargetInfo(o.getId(), buildOrgDisplayName(o), o.getParentId())))
@@ -439,10 +439,10 @@ public class TargetPopulationService {
      */
     private List<TargetInfo> derivePlaceTargets(Long parentId, String parentType, String filter) {
         if ("ORG".equals(parentType)) {
-            List<Place> places = placeRepository.findByOrgUnitId(parentId);
+            List<UniversalPlace> places = universalPlaceRepository.findByOrgUnitId(parentId);
             return applyPlaceFilter(places, filter);
         } else if ("PLACE".equals(parentType)) {
-            List<Place> children = placeRepository.findChildren(parentId);
+            List<UniversalPlace> children = universalPlaceRepository.findChildren(parentId);
             return applyPlaceFilter(children, filter);
         }
         log.warn("derivePlaceTargets: 不支持从 {} 派生 PLACE", parentType);
@@ -506,15 +506,13 @@ public class TargetPopulationService {
     /**
      * 对场所列表应用过滤条件
      */
-    private List<TargetInfo> applyPlaceFilter(List<Place> places, String filter) {
+    private List<TargetInfo> applyPlaceFilter(List<UniversalPlace> places, String filter) {
         Set<String> codes = parseFilterCodes(filter);
         if (!codes.isEmpty()) {
             places = places.stream()
                     .filter(p -> {
-                        // 匹配 categoryId、placeType 或 roomType
-                        if (p.getCategoryId() != null && codes.contains(String.valueOf(p.getCategoryId()))) return true;
-                        if (p.getPlaceType() != null && codes.contains(p.getPlaceType().name())) return true;
-                        if (p.getRoomType() != null && codes.contains(p.getRoomType().name())) return true;
+                        // 匹配 typeCode
+                        if (p.getTypeCode() != null && codes.contains(p.getTypeCode())) return true;
                         return false;
                     })
                     .collect(Collectors.toList());

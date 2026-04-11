@@ -41,12 +41,35 @@ export interface PlaceStatistics {
 /**
  * 通用空间管理 API
  */
+/**
+ * 将树结构扁平化为列表（递归遍历 children）
+ */
+function flattenTree(nodes: PlaceTreeNode[]): PlaceTreeNode[] {
+  const result: PlaceTreeNode[] = []
+  function walk(list: PlaceTreeNode[]) {
+    for (const n of list) {
+      result.push(n)
+      if (n.children && n.children.length > 0) walk(n.children)
+    }
+  }
+  walk(nodes)
+  return result
+}
+
 export const universalPlaceApi = {
   /**
    * 获取空间树
    */
   getTree(): Promise<PlaceTreeNode[]> {
     return request.get(`${BASE_URL}/tree`)
+  },
+
+  /**
+   * 获取所有空间的扁平列表（内部调用 /tree 并展开）
+   */
+  async getFlatList(): Promise<PlaceTreeNode[]> {
+    const tree: PlaceTreeNode[] = await request.get(`${BASE_URL}/tree`)
+    return flattenTree(tree)
   },
 
   /**

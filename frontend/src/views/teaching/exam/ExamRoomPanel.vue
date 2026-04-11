@@ -107,6 +107,7 @@ import { ref, watch } from 'vue'
 import { ElMessage } from 'element-plus'
 import { examApi } from '@/api/teaching'
 import { http as request } from '@/utils/request'
+import { universalPlaceApi } from '@/api/universalPlace'
 import type { ExamArrangement, ExamBatch } from '@/types/teaching'
 
 const props = defineProps<{
@@ -147,9 +148,9 @@ async function loadTeacherOptions() {
 
 async function loadClassroomOptions() {
   try {
-    const res = await request.get('/places', { params: { roomType: 'CLASSROOM', pageSize: 500 } })
-    const data = res.data || res
-    classroomOptions.value = Array.isArray(data) ? data : data.records || []
+    const allItems = await universalPlaceApi.getFlatList()
+    // Filter leaf nodes with capacity (classrooms)
+    classroomOptions.value = allItems.filter((p: any) => p.capacity && p.capacity > 0)
   } catch { /* */ }
 }
 

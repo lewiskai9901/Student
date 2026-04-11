@@ -136,6 +136,7 @@
 import { ref, computed, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { http as request } from '@/utils/request'
+import { universalPlaceApi } from '@/api/universalPlace'
 import { instanceApi, periodConfigApi } from '@/api/teaching'
 import type { PeriodConfig, ScheduleEntry } from '@/types/teaching'
 import { DEFAULT_PERIODS } from '@/types/teaching'
@@ -287,9 +288,8 @@ async function loadOptions() {
   } catch { teacherList.value = [] }
 
   try {
-    const r = await request.get('/places', { params: { pageSize: 500 } }); const d = (r as any).data || r
-    const items = Array.isArray(d) ? d : d.list || d.records || []
-    classroomList.value = items.filter((p: any) => (p.capacity || 0) > 0 && (p.capacity || 0) < 1000)
+    const allItems = await universalPlaceApi.getFlatList()
+    classroomList.value = allItems.filter((p: any) => (p.capacity || 0) > 0 && (p.capacity || 0) < 1000)
       .map((p: any) => ({ id: p.id, name: p.placeCode || p.placeName || p.name }))
   } catch { classroomList.value = [] }
 }
