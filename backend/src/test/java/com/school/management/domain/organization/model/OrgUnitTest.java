@@ -40,7 +40,7 @@ class OrgUnitTest {
             assertEquals("信息技术系", orgUnit.getUnitName());
             assertEquals("DEPARTMENT", orgUnit.getUnitType());
             assertNull(orgUnit.getParentId());
-            assertTrue(orgUnit.isEnabled());
+            assertTrue(orgUnit.isActive());
             assertEquals(CREATOR_ID, orgUnit.getCreatedBy());
             assertNotNull(orgUnit.getCreatedAt());
             assertFalse(orgUnit.getDomainEvents().isEmpty());

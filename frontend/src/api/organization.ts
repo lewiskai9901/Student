@@ -20,6 +20,12 @@ import type {
   PageResponse
 } from '@/types'
 
+/** 一次性加载所有记录的默认分页大小 */
+const LOAD_ALL_PAGE_SIZE = 1000
+
+/** 一次性加载所有记录的大分页大小（用于班级等数量较多的场景） */
+const LOAD_ALL_PAGE_SIZE_LARGE = 10000
+
 // 后端API路径
 const ORG_UNIT_URL = '/org-units'
 const ORG_UNIT_TYPE_URL = '/org-types'
@@ -212,7 +218,7 @@ export function endTeacherAssignment(orgUnitId: number | string, teacherId: numb
  */
 export function getClassesByOrgUnit(orgUnitId: number | string): Promise<SchoolClass[]> {
   return http.get(`${CLASS_URL}`, {
-    params: { orgUnitId, pageNum: 1, pageSize: 1000 }
+    params: { orgUnitId, pageNum: 1, pageSize: LOAD_ALL_PAGE_SIZE }
   }).then((res: any) => res.records || [])
 }
 
@@ -248,14 +254,14 @@ export function batchDeleteClasses(ids: (number | string)[]): Promise<number> {
  * 获取所有班级（不分页）
  */
 export function getAllClasses(): Promise<SchoolClass[]> {
-  return getClasses({ pageNum: 1, pageSize: 10000 }).then(res => res.records)
+  return getClasses({ pageNum: 1, pageSize: LOAD_ALL_PAGE_SIZE_LARGE }).then(res => res.records)
 }
 
 /**
  * 获取班级列表（兼容V1接口名）
  */
 export function getClassList(params?: { gradeId?: number | string; status?: ClassStatus }): Promise<SchoolClass[]> {
-  return getClasses({ ...params, pageNum: 1, pageSize: 10000 }).then(res => res.records)
+  return getClasses({ ...params, pageNum: 1, pageSize: LOAD_ALL_PAGE_SIZE_LARGE }).then(res => res.records)
 }
 
 /**
@@ -264,7 +270,7 @@ export function getClassList(params?: { gradeId?: number | string; status?: Clas
  */
 export async function exportClasses(params: ClassQueryParams): Promise<SchoolClass[]> {
   // 获取所有数据用于导出
-  const result = await getClasses({ ...params, pageNum: 1, pageSize: 10000 })
+  const result = await getClasses({ ...params, pageNum: 1, pageSize: LOAD_ALL_PAGE_SIZE_LARGE })
   return result.records
 }
 
@@ -274,7 +280,7 @@ export async function exportClasses(params: ClassQueryParams): Promise<SchoolCla
  */
 export function getDormitoriesByOrgUnit(orgUnitId: number | string): Promise<any[]> {
   return http.get('/dormitory/rooms', {
-    params: { orgUnitId, pageNum: 1, pageSize: 1000 }
+    params: { orgUnitId, pageNum: 1, pageSize: LOAD_ALL_PAGE_SIZE }
   }).then((res: any) => res.records || [])
 }
 
@@ -283,7 +289,7 @@ export function getDormitoriesByOrgUnit(orgUnitId: number | string): Promise<any
  */
 export function getClassroomList(): Promise<any[]> {
   return http.get('/teaching/classrooms', {
-    params: { pageNum: 1, pageSize: 1000, status: 1 }
+    params: { pageNum: 1, pageSize: LOAD_ALL_PAGE_SIZE, status: 1 }
   }).then((res: any) => res.records || [])
 }
 
@@ -292,7 +298,7 @@ export function getClassroomList(): Promise<any[]> {
  */
 export function getDormitoryList(): Promise<any[]> {
   return http.get('/dormitory/rooms', {
-    params: { pageNum: 1, pageSize: 1000, status: 1 }
+    params: { pageNum: 1, pageSize: LOAD_ALL_PAGE_SIZE, status: 1 }
   }).then((res: any) => res.records || [])
 }
 
@@ -308,7 +314,7 @@ export function getClassStudents(orgUnitId: number | string): Promise<any[]> {
  */
 export function getTeacherList(): Promise<any[]> {
   return http.get('/users', {
-    params: { pageNum: 1, pageSize: 1000 }
+    params: { pageNum: 1, pageSize: LOAD_ALL_PAGE_SIZE }
   }).then((res: any) => res.records || [])
 }
 

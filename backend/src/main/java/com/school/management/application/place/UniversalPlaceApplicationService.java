@@ -55,6 +55,7 @@ public class UniversalPlaceApplicationService {
     /**
      * 获取空间树
      */
+    @Transactional(readOnly = true)
     public List<PlaceTreeNode> getPlaceTree() {
         List<UniversalPlace> roots = placeRepository.findAllRoots();
         return roots.stream()
@@ -66,6 +67,7 @@ public class UniversalPlaceApplicationService {
      * 获取空间树（带深度限制）
      * @param maxDepth 最大深度，0表示不限制（等同于getPlaceTree()）
      */
+    @Transactional(readOnly = true)
     public List<PlaceTreeNode> getPlaceTree(int maxDepth) {
         if (maxDepth <= 0) {
             return getPlaceTree();
@@ -79,6 +81,7 @@ public class UniversalPlaceApplicationService {
     /**
      * 获取指定类型的空间树
      */
+    @Transactional(readOnly = true)
     public List<PlaceTreeNode> getPlaceTreeByType(String typeCode) {
         List<UniversalPlace> places = placeRepository.findByTypeCode(typeCode);
         List<UniversalPlace> roots = places.stream()
@@ -92,6 +95,7 @@ public class UniversalPlaceApplicationService {
     /**
      * 获取子空间
      */
+    @Transactional(readOnly = true)
     public List<PlaceDTO> getChildren(Long parentId) {
         List<UniversalPlace> children = placeRepository.findChildren(parentId);
         return children.stream()
@@ -102,6 +106,7 @@ public class UniversalPlaceApplicationService {
     /**
      * 根据ID获取空间
      */
+    @Transactional(readOnly = true)
     public PlaceDTO getPlaceById(Long id) {
         return placeRepository.findById(id)
                 .map(this::toDTO)
@@ -111,6 +116,7 @@ public class UniversalPlaceApplicationService {
     /**
      * 根据编码获取空间
      */
+    @Transactional(readOnly = true)
     public PlaceDTO getPlaceByCode(String placeCode) {
         return placeRepository.findByPlaceCode(placeCode)
                 .map(this::toDTO)
@@ -120,6 +126,7 @@ public class UniversalPlaceApplicationService {
     /**
      * 获取允许创建的子类型
      */
+    @Transactional(readOnly = true)
     public List<UniversalPlaceType> getAllowedChildTypes(Long parentId) {
         if (parentId == null) {
             // 根空间，返回所有根类型
@@ -139,6 +146,7 @@ public class UniversalPlaceApplicationService {
     /**
      * 获取统计数据
      */
+    @Transactional(readOnly = true)
     public PlaceStatistics getStatistics() {
         List<UniversalPlace> allPlaces = placeRepository.findAll();
 
@@ -302,6 +310,11 @@ public class UniversalPlaceApplicationService {
 
         String reason = command.getReason();
 
+        // 父节点变更：环路检测 + 路径级联更新
+        if (command.getParentId() != null && !command.getParentId().equals(place.getParentId())) {
+            validateAndMoveParent(id, place, command.getParentId());
+        }
+
         // 简单属性直接设置
         if (command.getPlaceName() != null) {
             place.setPlaceName(command.getPlaceName());
@@ -336,6 +349,49 @@ public class UniversalPlaceApplicationService {
 
         UniversalPlace saved = placeRepository.save(place);
         return toDTO(saved);
+    }
+
+    /**
+     * 验证父节点变更不会形成环路，并级联更新路径
+     */
+    private void validateAndMoveParent(Long placeId, UniversalPlace place, Long newParentId) {
+        // 1. 不能将场所设为自己的子节点
+        if (newParentId.equals(placeId)) {
+            throw new IllegalArgumentException("不能将场所设为自己的子节点");
+        }
+
+        // 2. 检查新父节点是否存在
+        UniversalPlace newParent = placeRepository.findById(newParentId)
+                .orElseThrow(() -> new IllegalArgumentException("父场所不存在: " + newParentId));
+
+        // 3. 检查新父节点是否是当前节点的后代（环路检测）
+        if (place.isAncestorOf(newParent)) {
+            throw new IllegalArgumentException("不能将场所移动到其后代节点下，这会形成循环引用");
+        }
+
+        // 4. 记录旧路径，用于级联更新后代
+        String oldPath = place.getPath();
+
+        // 5. 更新当前节点的 parentId、path、level
+        place.setParentId(newParentId);
+        String newPath = newParent.getPath() + placeId + "/";
+        int newLevel = newParent.getLevel() + 1;
+        place.setPath(newPath);
+        place.setLevel(newLevel);
+
+        // 6. 级联更新所有后代的 path 和 level
+        if (oldPath != null) {
+            List<UniversalPlace> descendants = placeRepository.findDescendants(placeId);
+            for (UniversalPlace desc : descendants) {
+                if (desc.getPath() != null && desc.getPath().startsWith(oldPath)) {
+                    String descNewPath = newPath + desc.getPath().substring(oldPath.length());
+                    desc.setPath(descNewPath);
+                    // level = 新路径中 "/" 的数量 - 2（路径格式: /id1/id2/id3/，根节点 /id1/ 有2个斜杠，level=0）
+                    desc.setLevel((int) descNewPath.chars().filter(c -> c == '/').count() - 2);
+                    placeRepository.save(desc);
+                }
+            }
+        }
     }
 
     /**
@@ -521,12 +577,14 @@ public class UniversalPlaceApplicationService {
 
     // ==================== 入住管理 ====================
 
+    @Transactional(readOnly = true)
     public List<OccupantDTO> getOccupants(Long placeId) {
         return occupantRepository.findActiveByPlaceId(placeId).stream()
                 .map(this::toOccupantDTO)
                 .collect(Collectors.toList());
     }
 
+    @Transactional(readOnly = true)
     public List<OccupantDTO> getOccupantHistory(Long placeId) {
         return occupantRepository.findAllByPlaceId(placeId).stream()
                 .map(this::toOccupantDTO)
@@ -536,6 +594,7 @@ public class UniversalPlaceApplicationService {
     /**
      * 查询指定场所列表中的所有活跃占用记录（带场所信息），用于住宿管理列表视图
      */
+    @Transactional(readOnly = true)
     public List<OccupantWithPlaceDTO> getOccupantsForPlaces(List<Long> placeIds, String occupantType) {
         List<UniversalPlaceOccupant> occupants = occupantRepository.findActiveByPlaceIds(placeIds, occupantType);
         // 批量加载场所信息
@@ -598,6 +657,7 @@ public class UniversalPlaceApplicationService {
     /**
      * 查询某个占用者的所有占用历史（跨场所），带场所信息
      */
+    @Transactional(readOnly = true)
     public List<OccupantWithPlaceDTO> getOccupantHistoryByOccupant(String occupantType, Long occupantId) {
         List<UniversalPlaceOccupant> records = occupantRepository.findAllByOccupant(occupantType, occupantId);
         Set<Long> uniquePlaceIds = records.stream()
@@ -981,6 +1041,7 @@ public class UniversalPlaceApplicationService {
         private Integer status;
         private Integer capacity;
         private String gender;
+        private Long parentId;
         private Long orgUnitId;
         private Boolean clearOrgOverride;
         private Long responsibleUserId;

@@ -321,11 +321,6 @@ public class OrgUnit extends AggregateRoot<Long> {
     public Long getCreatedBy() { return createdBy; }
     public Long getUpdatedBy() { return updatedBy; }
 
-    /** @deprecated Use getStatus() == OrgUnitStatus.ACTIVE instead */
-    public boolean isEnabled() {
-        return status == OrgUnitStatus.ACTIVE || status == OrgUnitStatus.DRAFT;
-    }
-
     // Builder
     public static Builder builder() {
         return new Builder();
@@ -371,14 +366,6 @@ public class OrgUnit extends AggregateRoot<Long> {
         public Builder createdBy(Long createdBy) { this.createdBy = createdBy; return this; }
         public Builder updatedBy(Long updatedBy) { this.updatedBy = updatedBy; return this; }
         public Builder createdAt(LocalDateTime createdAt) { this.createdAt = createdAt; return this; }
-
-        /** @deprecated Use status(OrgUnitStatus) instead */
-        public Builder enabled(Boolean enabled) {
-            if (enabled != null) {
-                this.status = enabled ? OrgUnitStatus.ACTIVE : OrgUnitStatus.FROZEN;
-            }
-            return this;
-        }
 
         public OrgUnit build() {
             return new OrgUnit(this);
