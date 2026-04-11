@@ -484,6 +484,19 @@ public class TeachingScheduleController {
         return Result.success();
     }
 
+    @GetMapping("/schedule-teachers")
+    @CasbinAccess(resource = "teaching:schedule", action = "view")
+    public Result<List<Map<String, Object>>> getTeachersGroupedByDept() {
+        return Result.success(jdbc.queryForList(
+            "SELECT u.id, u.real_name AS realName, u.username, " +
+            "COALESCE(ou.unit_name, '未分配') AS deptName, ou.id AS deptId " +
+            "FROM users u " +
+            "LEFT JOIN org_units ou ON ou.id = u.primary_org_unit_id AND ou.deleted = 0 " +
+            "WHERE u.user_type_code = 'TEACHER' AND u.deleted = 0 " +
+            "ORDER BY ou.unit_name, u.real_name"
+        ));
+    }
+
     @GetMapping("/schedules/by-class/{classId}")
     @CasbinAccess(resource = "teaching:schedule", action = "view")
     public Result<List<Map<String, Object>>> getSchedulesByClass(

@@ -12,9 +12,9 @@
         <div class="tv-controls-row">
           <!-- View type -->
           <div class="tm-radios" style="width: auto;">
-            <label :class="['tm-radio', { active: viewType === 'class' }]" @click="viewType = 'class'; onTypeChange()"><input type="radio" />班级课表</label>
-            <label :class="['tm-radio', { active: viewType === 'teacher' }]" @click="viewType = 'teacher'; onTypeChange()"><input type="radio" />教师课表</label>
-            <label :class="['tm-radio', { active: viewType === 'classroom' }]" @click="viewType = 'classroom'; onTypeChange()"><input type="radio" />教室课表</label>
+            <button :class="['tm-radio', { active: viewType === 'class' }]" @click="viewType = 'class'; onTypeChange()">班级课表</button>
+            <button :class="['tm-radio', { active: viewType === 'teacher' }]" @click="viewType = 'teacher'; onTypeChange()">教师课表</button>
+            <button :class="['tm-radio', { active: viewType === 'classroom' }]" @click="viewType = 'classroom'; onTypeChange()">教室课表</button>
           </div>
 
           <!-- Current target display -->

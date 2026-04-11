@@ -103,40 +103,13 @@ async function loadClassTree() {
 
 async function loadTeacherTree() {
   try {
-    // Load all users, filter TEACHER type
-    const res = await request.get('/users', { params: { pageNum: 1, pageSize: 1000 } })
+    const res = await request.get('/teaching/schedule-teachers')
     const data = (res as any).data || res
-    const items = Array.isArray(data) ? data : data.records || data.list || []
-    const teachers = items.filter((u: any) => u.userType === 'TEACHER')
+    const items = Array.isArray(data) ? data : []
 
-    if (teachers.length === 0) { teacherTree.value = []; return }
-
-    // Load org tree to get dept names for teacher grouping
-    let deptMap: Record<string, string> = {} // orgUnitId → deptName
-    try {
-      const tree = await orgUnitApi.getTree()
-      const treeData = Array.isArray(tree) ? tree : (tree as any).data || []
-      function walkDepts(nodes: any[], deptName?: string) {
-        for (const n of nodes) {
-          if (n.unitType === 'DEPARTMENT') deptMap[String(n.id)] = n.unitName
-          // Propagate dept name to children
-          if (n.children) walkDepts(n.children, n.unitType === 'DEPARTMENT' ? n.unitName : deptName)
-          if (deptName) deptMap[String(n.id)] = deptName
-        }
-      }
-      walkDepts(treeData)
-    } catch { /* */ }
-
-    // Match teachers to depts via access_relations or primaryOrgUnitId
-    // Since API doesn't return primaryOrgUnitId, try DB mapping
-    // Fallback: query access_relations for each teacher
-    // Simpler: just load from /users/with-departments if available, or group alphabetically
-
-    // Try to match by employeeNo pattern or just list all
     const groups: Record<string, { id: number; name: string }[]> = {}
-    for (const t of teachers) {
-      // Try to guess dept from user data - we'll use a simple grouping
-      const dept = '全部教师'
+    for (const t of items) {
+      const dept = t.deptName || '未分配'
       if (!groups[dept]) groups[dept] = []
       groups[dept].push({ id: t.id, name: t.realName || t.username })
     }
@@ -226,9 +199,12 @@ function loadData() {
   else if (props.mode === 'classroom') loadClassroomTree()
 }
 
-watch(() => props.mode, () => { selectedId.value = null; loadData() })
+watch(() => props.mode, (newMode) => {
+  selectedId.value = null
+  loadData()
+}, { immediate: true })
+
 watch(() => props.semesterId, () => loadData())
-onMounted(loadData)
 </script>
 
 <style scoped>
