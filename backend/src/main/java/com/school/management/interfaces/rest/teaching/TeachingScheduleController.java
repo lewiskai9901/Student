@@ -173,7 +173,7 @@ public class TeachingScheduleController {
     @PostMapping("/instances/{id}/substitute")
     @CasbinAccess(resource = "teaching:schedule", action = "edit")
     public Result<Void> substituteTeacher(@PathVariable Long id, @RequestBody Map<String, Object> data) {
-        Long newTeacherId = ((Number) data.get("teacherId")).longValue();
+        Long newTeacherId = Long.valueOf(data.get("teacherId").toString());
         String reason = (String) data.getOrDefault("reason", "代课");
         // 记录原教师, 改为代课状态
         jdbc.update(
