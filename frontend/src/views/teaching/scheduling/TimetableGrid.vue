@@ -4,7 +4,10 @@
       <thead>
         <tr>
           <th class="tt-period-col">节次</th>
-          <th v-for="day in displayWeekdays" :key="day.value" class="tt-day-col">{{ day.label }}</th>
+          <th v-for="day in displayWeekdays" :key="day.value" class="tt-day-col">
+            {{ day.label }}
+            <div v-if="weekDates && weekDates[day.value]" class="tt-day-date">{{ weekDates[day.value] }}</div>
+          </th>
         </tr>
       </thead>
       <tbody>
@@ -75,6 +78,7 @@ interface Props {
   entries: ScheduleEntry[]
   periods?: PeriodConfig[]
   weekdays?: { value: number; label: string }[]
+  weekDates?: Record<number, string>  // dayOfWeek → date string (e.g. "9/1")
   editable?: boolean
   constraintMatrix?: any[][]
 }
@@ -82,6 +86,7 @@ interface Props {
 const props = withDefaults(defineProps<Props>(), {
   periods: () => DEFAULT_PERIODS,
   weekdays: undefined,
+  weekDates: undefined,
   editable: false,
   constraintMatrix: undefined,
 })
@@ -263,6 +268,7 @@ function handleCellClick(day: number, period: number) {
 }
 .tt-period-col { width: 72px; }
 .tt-day-col { min-width: 100px; }
+.tt-day-date { font-size: 10px; font-weight: 400; color: #9ca3af; margin-top: 1px; }
 
 /* Period cell */
 .tt-period-cell {

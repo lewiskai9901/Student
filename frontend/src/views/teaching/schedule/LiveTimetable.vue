@@ -60,6 +60,7 @@
         <TimetableGrid
           :entries="gridEntries"
           :periods="periods"
+          :week-dates="weekDateMap"
           :editable="false"
           @entry-click="showDetail"
         />
@@ -140,6 +141,34 @@ const teacherList = ref<{ id: number; name: string }[]>([])
 const classroomList = ref<{ id: number; name: string }[]>([])
 
 const targetOptions = computed(() => viewType.value === 'class' ? classList.value : viewType.value === 'teacher' ? teacherList.value : classroomList.value)
+
+const semesterStartDate = ref<string>('') // e.g. "2025-09-01"
+
+// Calculate dates for selected week
+const weekDateMap = computed<Record<number, string>>(() => {
+  if (!weekNumber.value || !semesterStartDate.value) {
+    // When showing all weeks, extract dates from first instance of each weekday
+    const map: Record<number, string> = {}
+    if (instances.value.length > 0 && !weekNumber.value) return map // no dates for "all weeks"
+    for (const inst of instances.value) {
+      if (!map[inst.weekday] && inst.actualDate) {
+        const d = new Date(inst.actualDate)
+        map[inst.weekday] = `${d.getMonth() + 1}/${d.getDate()}`
+      }
+    }
+    return map
+  }
+  // Calculate from semester start + week offset
+  const start = new Date(semesterStartDate.value)
+  const weekOffset = (weekNumber.value - 1) * 7
+  const map: Record<number, string> = {}
+  for (let dow = 1; dow <= 7; dow++) {
+    const dayOffset = weekOffset + (dow - 1)
+    const d = new Date(start.getTime() + dayOffset * 86400000)
+    map[dow] = `${d.getMonth() + 1}/${d.getDate()}`
+  }
+  return map
+})
 
 // Map instances to TimetableGrid entries format
 const gridEntries = computed<ScheduleEntry[]>(() => {
@@ -243,7 +272,17 @@ async function loadOptions() {
   } catch { classroomList.value = [] }
 }
 
-onMounted(() => { loadPeriodConfig(); loadOptions() })
+async function loadSemesterStart() {
+  if (!props.semesterId) return
+  try {
+    const res = await request.get('/calendar/semesters')
+    const semesters = (res as any).data || res
+    const sem = (Array.isArray(semesters) ? semesters : []).find((s: any) => String(s.id) === String(props.semesterId))
+    if (sem?.startDate) semesterStartDate.value = sem.startDate
+  } catch { /* */ }
+}
+
+onMounted(() => { loadPeriodConfig(); loadSemesterStart(); loadOptions() })
 </script>
 
 <style scoped>
