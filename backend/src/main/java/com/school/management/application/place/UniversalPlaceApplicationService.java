@@ -65,6 +65,20 @@ public class UniversalPlaceApplicationService {
     }
 
     /**
+     * 获取空间树（带深度限制）
+     * @param maxDepth 最大深度，0表示不限制（等同于getPlaceTree()）
+     */
+    public List<PlaceTreeNode> getPlaceTree(int maxDepth) {
+        if (maxDepth <= 0) {
+            return getPlaceTree();
+        }
+        List<UniversalPlace> roots = placeRepository.findAllRoots();
+        return roots.stream()
+                .map(r -> buildTreeNodeWithDepth(r, 0, maxDepth))
+                .collect(Collectors.toList());
+    }
+
+    /**
      * 获取指定类型的空间树
      */
     public List<PlaceTreeNode> getPlaceTreeByType(String typeCode) {
@@ -386,6 +400,40 @@ public class UniversalPlaceApplicationService {
     // ==================== 私有方法 ====================
 
     private PlaceTreeNode buildTreeNode(UniversalPlace place) {
+        PlaceTreeNode node = populateTreeNode(place);
+
+        // 递归加载子节点（无深度限制）
+        List<UniversalPlace> children = placeRepository.findChildren(place.getId());
+        if (!children.isEmpty()) {
+            node.setChildren(children.stream()
+                    .map(this::buildTreeNode)
+                    .collect(Collectors.toList()));
+        }
+
+        return node;
+    }
+
+    private PlaceTreeNode buildTreeNodeWithDepth(UniversalPlace place, int currentDepth, int maxDepth) {
+        PlaceTreeNode node = populateTreeNode(place);
+
+        // 仅在未达到最大深度时加载子节点
+        if (currentDepth < maxDepth) {
+            List<UniversalPlace> children = placeRepository.findChildren(place.getId());
+            if (!children.isEmpty()) {
+                node.setChildren(children.stream()
+                        .map(c -> buildTreeNodeWithDepth(c, currentDepth + 1, maxDepth))
+                        .collect(Collectors.toList()));
+            }
+        }
+        // 达到 maxDepth 时 children 保持 null，前端可通过 /children 端点懒加载
+
+        return node;
+    }
+
+    /**
+     * 填充 PlaceTreeNode 的所有字段（不含子节点递归）
+     */
+    private PlaceTreeNode populateTreeNode(UniversalPlace place) {
         PlaceTreeNode node = new PlaceTreeNode();
         node.setId(place.getId());
         node.setPlaceCode(place.getPlaceCode());
@@ -452,14 +500,6 @@ public class UniversalPlaceApplicationService {
             node.setCapacityUnit(type.getCapacityUnit());
             node.setLeaf(type.getAllowedChildTypeCodes() == null || type.getAllowedChildTypeCodes().isEmpty());
         });
-
-        // 递归加载子节点
-        List<UniversalPlace> children = placeRepository.findChildren(place.getId());
-        if (!children.isEmpty()) {
-            node.setChildren(children.stream()
-                    .map(this::buildTreeNode)
-                    .collect(Collectors.toList()));
-        }
 
         return node;
     }

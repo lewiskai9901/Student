@@ -32,8 +32,9 @@ public class UniversalPlaceController {
     @GetMapping("/tree")
     @Operation(summary = "获取空间树")
     @CasbinAccess(resource = "place", action = "view")
-    public Result<List<PlaceTreeNode>> getPlaceTree() {
-        return Result.success(placeService.getPlaceTree());
+    public Result<List<PlaceTreeNode>> getPlaceTree(
+            @RequestParam(defaultValue = "0") int maxDepth) {
+        return Result.success(placeService.getPlaceTree(maxDepth));
     }
 
     @GetMapping("/tree/type/{typeCode}")
