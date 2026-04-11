@@ -268,75 +268,6 @@ export async function exportClasses(params: ClassQueryParams): Promise<SchoolCla
   return result.records
 }
 
-// ==================== 班级跨域操作 (教室/宿舍) ====================
-
-/**
- * 班级宿舍信息
- */
-export interface ClassDormitoryInfo {
-  dormitoryId: number
-  dormitoryName: string
-  buildingName: string
-  roomNo: string
-  allocatedBeds: number
-  usedBeds: number
-}
-
-/**
- * 获取班级详情
- */
-export function getClassDetail(id: number | string): Promise<SchoolClass> {
-  return http.get<SchoolClass>(`${CLASS_URL}/${id}`)
-}
-
-/**
- * 为班级分配教室
- */
-export function assignClassroom(orgUnitId: number | string, classroomId: number | string): Promise<void> {
-  return http.post(`/classes/${orgUnitId}/assign-classroom`, null, {
-    params: { classroomId }
-  })
-}
-
-/**
- * 取消班级教室分配
- */
-export function removeClassroom(orgUnitId: number | string): Promise<void> {
-  return http.delete(`/classes/${orgUnitId}/classroom`)
-}
-
-/**
- * 获取班级的教室信息
- */
-export function getClassClassroom(orgUnitId: number | string): Promise<any> {
-  return http.get(`/classes/${orgUnitId}/classroom`)
-}
-
-/**
- * 为班级添加宿舍
- * @param orgUnitId 支持 number 或 string 类型（大数字ID需要使用 string 避免精度丢失）
- */
-export function addClassDormitory(orgUnitId: number | string, dormitoryId: number | string, allocatedBeds: number): Promise<void> {
-  return http.post(`/classes/${orgUnitId}/dormitories`, null, {
-    params: { dormitoryId, allocatedBeds }
-  })
-}
-
-/**
- * 移除班级宿舍
- * @param orgUnitId 支持 number 或 string 类型（大数字ID需要使用 string 避免精度丢失）
- */
-export function removeClassDormitory(orgUnitId: number | string, dormitoryId: number | string): Promise<void> {
-  return http.delete(`/classes/${orgUnitId}/dormitories/${dormitoryId}`)
-}
-
-/**
- * 获取班级的宿舍列表
- */
-export function getClassDormitories(orgUnitId: number | string): Promise<ClassDormitoryInfo[]> {
-  return http.get<ClassDormitoryInfo[]>(`/classes/${orgUnitId}/dormitories`)
-}
-
 /**
  * 根据组织单元ID获取宿舍列表
  * @param orgUnitId 支持 number 或 string 类型（大数字ID需要使用 string 避免精度丢失）
@@ -444,14 +375,6 @@ export const schoolClassApi = {
   getByHeadTeacher: getClassesByHeadTeacher,
   getGraduating: getGraduatingClasses,
   checkCodeExists: checkClassCodeExists,
-  // 跨域操作
-  getDetail: getClassDetail,
-  assignClassroom,
-  removeClassroom,
-  getClassroom: getClassClassroom,
-  addDormitory: addClassDormitory,
-  removeDormitory: removeClassDormitory,
-  getDormitories: getClassDormitories,
   getStudents: getClassStudents
 }
 
@@ -678,8 +601,6 @@ export const systemModuleApi = {
 // ==================== V1 兼容别名 ====================
 // 保持向后兼容，逐步迁移后删除
 
-export const addDormitory = addClassDormitory
-export const removeDormitory = removeClassDormitory
 export const getDepartmentList = getOrgUnitTree
 export const listDepartments = getDepartmentTree
 export const existsDeptCode = (_code: string, _excludeId?: number | string) => Promise.resolve(false)

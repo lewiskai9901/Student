@@ -193,7 +193,7 @@
 import { ref, reactive, onMounted, watch, computed } from 'vue'
 import { ElMessage } from 'element-plus'
 import {
-  getClassDetail,
+  getClass,
   createClass,
   updateClass,
   getDepartmentList,
@@ -550,7 +550,7 @@ const loadClassDetail = async () => {
 
   loading.value = true
   try {
-    const data = await getClassDetail(props.orgUnitId)
+    const data = await getClass(props.orgUnitId)
     formData.gradeId = data.gradeId || null
     formData.gradeLevel = data.gradeLevel || null
     formData.majorId = data.majorId || null
