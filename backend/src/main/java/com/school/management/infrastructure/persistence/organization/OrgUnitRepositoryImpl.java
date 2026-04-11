@@ -148,6 +148,13 @@ public class OrgUnitRepositoryImpl implements OrgUnitRepository {
     }
 
     @Override
+    public List<OrgUnit> findByIds(Collection<Long> ids) {
+        if (ids == null || ids.isEmpty()) return Collections.emptyList();
+        List<OrgUnitPO> poList = orgUnitMapper.selectBatchIds(ids);
+        return poList.stream().map(this::toDomain).collect(Collectors.toList());
+    }
+
+    @Override
     public List<OrgUnit> findByParentIds(Collection<Long> parentIds) {
         if (parentIds == null || parentIds.isEmpty()) {
             return Collections.emptyList();

@@ -85,6 +85,14 @@ public interface OrgUnitRepository extends Repository<OrgUnit, Long> {
     List<OrgUnit> findAll();
 
     /**
+     * Batch finds organization units by their IDs.
+     *
+     * @param ids the IDs to look up
+     * @return list of matching org units
+     */
+    List<OrgUnit> findByIds(Collection<Long> ids);
+
+    /**
      * Batch finds all children of multiple parent organization units.
      *
      * @param parentIds the parent IDs

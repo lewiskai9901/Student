@@ -60,14 +60,10 @@ public class OrgMemberService {
             return Collections.emptyList();
         }
 
-        // Build orgId -> orgName map
-        Map<Long, String> orgNameMap = new HashMap<>();
-        orgNameMap.put(orgUnitId, orgUnit.getUnitName());
-        for (Long descId : allOrgIds) {
-            if (!orgNameMap.containsKey(descId)) {
-                orgUnitRepository.findById(descId).ifPresent(o -> orgNameMap.put(o.getId(), o.getUnitName()));
-            }
-        }
+        // Build orgId -> orgName map (batch query instead of N+1)
+        List<OrgUnit> allOrgs = orgUnitRepository.findByIds(allOrgIds);
+        Map<Long, String> orgNameMap = allOrgs.stream()
+                .collect(Collectors.toMap(OrgUnit::getId, OrgUnit::getUnitName, (a, b) -> a));
 
         List<UserPO> users = userDomainMapper.findByOrgUnitIdIn(allOrgIds);
         return users.stream()
