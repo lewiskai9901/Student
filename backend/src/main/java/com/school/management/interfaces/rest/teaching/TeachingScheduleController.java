@@ -90,7 +90,7 @@ public class TeachingScheduleController {
     @CasbinAccess(resource = "teaching:schedule", action = "edit")
     public Result<Map<String, Object>> generateInstances(@RequestBody Map<String, Object> data) {
         if (instanceService == null) return Result.error("服务未启用");
-        Long semesterId = ((Number) data.get("semesterId")).longValue();
+        Long semesterId = Long.valueOf(data.get("semesterId").toString());
         Map<String, Object> result = instanceService.generateInstances(semesterId);
         return Result.success(result);
     }
@@ -244,7 +244,7 @@ public class TeachingScheduleController {
     @PutMapping("/schedule-config")
     @CasbinAccess(resource = "teaching:schedule", action = "edit")
     public Result<Void> saveScheduleConfig(@RequestBody Map<String, Object> data) {
-        Long semesterId = ((Number) data.get("semesterId")).longValue();
+        Long semesterId = Long.valueOf(data.get("semesterId").toString());
         String key = "schedule.periods." + semesterId;
         try {
             // Remove semesterId from saved value
@@ -326,7 +326,7 @@ public class TeachingScheduleController {
     @PostMapping("/schedule-plans")
     @CasbinAccess(resource = "teaching:schedule", action = "edit")
     public Result<Map<String, Object>> createSchedulePlan(@RequestBody Map<String, Object> data) {
-        Long semesterId = ((Number) data.get("semesterId")).longValue();
+        Long semesterId = Long.valueOf(data.get("semesterId").toString());
         String name = (String) data.get("name");
         String description = (String) data.getOrDefault("description", "");
         jdbc.update(
