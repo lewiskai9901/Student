@@ -65,12 +65,14 @@ public class TeachingScheduleController {
             "si.actual_hours AS actualHours, si.teacher_id AS teacherId, " +
             "si.original_teacher_id AS originalTeacherId, si.classroom_id AS classroomId, " +
             "c.course_name AS courseName, c.course_code AS courseCode, " +
-            "cl.class_name AS className, " +
-            "COALESCE(p.place_name, '') AS classroomName " +
+            "ou.unit_name AS className, " +
+            "COALESCE(p.place_code, p.place_name, '') AS classroomName, " +
+            "u.real_name AS teacherName " +
             "FROM schedule_instances si " +
             "LEFT JOIN courses c ON c.id = si.course_id " +
-            "LEFT JOIN classes cl ON cl.id = si.org_unit_id " +
+            "LEFT JOIN org_units ou ON ou.id = si.org_unit_id " +
             "LEFT JOIN places p ON p.id = si.classroom_id " +
+            "LEFT JOIN users u ON u.id = si.teacher_id " +
             "WHERE si.semester_id = ? AND si.deleted = 0"
         );
         List<Object> params = new ArrayList<>();

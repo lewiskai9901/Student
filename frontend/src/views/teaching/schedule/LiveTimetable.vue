@@ -166,9 +166,34 @@ async function handleRestore(inst: any) {
 }
 
 async function loadOptions() {
-  try { const r = await request.get('/students/classes'); const d = (r as any).data || r; classList.value = (Array.isArray(d) ? d : d.records || []).map((c: any) => ({ id: c.id, name: c.className || c.name })) } catch { classList.value = [] }
-  try { const r = await request.get('/users', { params: { role: 'TEACHER' } }); const d = (r as any).data || r; teacherList.value = (Array.isArray(d) ? d : d.records || []).map((t: any) => ({ id: t.id, name: t.realName || t.username })) } catch { teacherList.value = [] }
-  try { const r = await request.get('/places', { params: { roomType: 'CLASSROOM' } }); const d = (r as any).data || r; classroomList.value = (Array.isArray(d) ? d : d.records || []).map((p: any) => ({ id: p.id, name: p.placeName || p.name })) } catch { classroomList.value = [] }
+  // Classes from org tree
+  try {
+    const r = await request.get('/org-units/tree'); const d = (r as any).data || r
+    const items = Array.isArray(d) ? d : []
+    const classes: { id: number; name: string }[] = []
+    function walk(nodes: any[]) {
+      for (const n of nodes) {
+        if (n.unitType === 'CLASS') classes.push({ id: n.id, name: n.unitName })
+        if (n.children) walk(n.children)
+      }
+    }
+    walk(items)
+    classList.value = classes
+  } catch { classList.value = [] }
+
+  // Teachers
+  try {
+    const r = await request.get('/teaching/schedule-teachers'); const d = (r as any).data || r
+    teacherList.value = (Array.isArray(d) ? d : []).map((t: any) => ({ id: t.id, name: t.realName || t.username }))
+  } catch { teacherList.value = [] }
+
+  // Classrooms
+  try {
+    const r = await request.get('/places', { params: { pageSize: 500 } }); const d = (r as any).data || r
+    const items = Array.isArray(d) ? d : d.list || d.records || []
+    classroomList.value = items.filter((p: any) => (p.capacity || 0) > 0 && (p.capacity || 0) < 1000)
+      .map((p: any) => ({ id: p.id, name: p.placeCode || p.placeName || p.name }))
+  } catch { classroomList.value = [] }
 }
 
 onMounted(loadOptions)
