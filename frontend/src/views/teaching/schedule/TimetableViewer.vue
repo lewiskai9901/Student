@@ -40,8 +40,11 @@
             <label :class="['tm-radio', { active: weekType === 2 }]" @click="weekType = 2"><input type="radio" />仅双周</label>
           </div>
 
-          <span v-if="viewType === 'class'" class="tv-sep" />
-          <button v-if="viewType === 'class'" :class="['tv-compare-btn', compareMode ? 'tv-compare-active' : '']" @click="toggleCompare">
+          <span class="tv-sep" />
+          <button :class="['tv-compare-btn', matrixMode ? 'tv-compare-active' : '']" @click="matrixMode = !matrixMode; if(matrixMode) compareMode = false">
+            {{ matrixMode ? '退出总览' : '总览' }}
+          </button>
+          <button v-if="viewType === 'class' && !matrixMode" :class="['tv-compare-btn', compareMode ? 'tv-compare-active' : '']" @click="toggleCompare">
             {{ compareMode ? '退出对比' : '对比' }}
           </button>
         </div>
@@ -61,8 +64,18 @@
         </div>
       </div>
 
+      <!-- Matrix overview mode -->
+      <TimetableMatrix
+        v-if="matrixMode"
+        :mode="viewType"
+        :semester-id="semesterId"
+        :periods="periods"
+        :options="matrixOptions"
+        data-source="schedule"
+      />
+
       <!-- Timetable grids (single or compare) -->
-      <div :class="compareMode && compareTargetId ? 'tv-grid-compare' : ''">
+      <div v-else :class="compareMode && compareTargetId ? 'tv-grid-compare' : ''">
         <div class="tv-grid-wrap" :style="compareMode && compareTargetId ? 'flex: 1;' : ''">
           <div v-if="compareMode && targetId" class="tv-grid-label">{{ currentTargetName }}</div>
           <TimetableGrid
@@ -166,6 +179,7 @@ import { orgUnitApi } from '@/api/organization'
 import type { ScheduleEntry, PeriodConfig } from '@/types/teaching'
 import { WEEKDAYS, DEFAULT_PERIODS } from '@/types/teaching'
 import TimetableGrid from '../scheduling/TimetableGrid.vue'
+import TimetableMatrix from '../scheduling/TimetableMatrix.vue'
 import ScheduleTree from '@/components/teaching/ScheduleTree.vue'
 
 const props = defineProps<{ semesterId: number | string | undefined }>()
@@ -184,6 +198,18 @@ const teacherList = ref<{ id: number; name: string }[]>([])
 
 const detailVisible = ref(false)
 const selectedEntry = ref<ScheduleEntry | null>(null)
+
+// Matrix mode
+const matrixMode = ref(false)
+const matrixOptions = computed(() => {
+  if (viewType.value === 'class') {
+    return classList.value.map(c => ({ id: c.id, name: c.name, group: c.dept || '其他' }))
+  }
+  if (viewType.value === 'teacher') {
+    return teacherList.value.map(t => ({ id: t.id, name: t.name, group: '教师' }))
+  }
+  return classrooms.value.map(c => ({ id: c.id, name: c.name, group: '教室' }))
+})
 
 // Compare mode state
 const compareMode = ref(false)

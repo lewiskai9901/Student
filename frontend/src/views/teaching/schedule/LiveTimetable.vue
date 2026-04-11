@@ -27,13 +27,16 @@
 
         <span style="display: inline-block; width: 1px; height: 18px; background: #d1d5db;" />
 
-        <!-- View toggle: grid / list -->
+        <!-- View toggle: grid / list / matrix -->
         <div class="view-toggle">
           <button :class="['vt-btn', displayMode === 'grid' && 'vt-active']" @click="displayMode = 'grid'" title="课表视图">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
           </button>
           <button :class="['vt-btn', displayMode === 'list' && 'vt-active']" @click="displayMode = 'list'" title="列表视图">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+          </button>
+          <button :class="['vt-btn', displayMode === 'matrix' && 'vt-active']" @click="displayMode = 'matrix'" title="总览视图">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="3" y1="15" x2="21" y2="15"/><line x1="9" y1="3" x2="9" y2="21"/></svg>
           </button>
         </div>
       </div>
@@ -53,6 +56,18 @@
     <div v-else-if="instances.length === 0" style="text-align: center; padding: 40px; color: #9ca3af;">
       {{ targetId ? '暂无实况数据' : '请选择查看对象' }}
     </div>
+
+    <!-- Matrix View -->
+    <template v-else-if="displayMode === 'matrix'">
+      <TimetableMatrix
+        :mode="viewType"
+        :semester-id="semesterId"
+        :periods="periods"
+        :options="matrixOptions"
+        :week-dates="weekDateMap"
+        data-source="instance"
+      />
+    </template>
 
     <!-- Grid View -->
     <template v-else-if="displayMode === 'grid'">
@@ -125,13 +140,20 @@ import { instanceApi, periodConfigApi } from '@/api/teaching'
 import type { PeriodConfig, ScheduleEntry } from '@/types/teaching'
 import { DEFAULT_PERIODS } from '@/types/teaching'
 import TimetableGrid from '../scheduling/TimetableGrid.vue'
+import TimetableMatrix from '../scheduling/TimetableMatrix.vue'
 
 const props = defineProps<{ semesterId: number | string | undefined }>()
 
 const viewType = ref<'class' | 'teacher' | 'classroom'>('class')
 const targetId = ref<number | string>()
 const weekNumber = ref<number | undefined>()
-const displayMode = ref<'grid' | 'list'>('grid')
+const displayMode = ref<'grid' | 'list' | 'matrix'>('grid')
+
+const matrixOptions = computed(() => {
+  if (viewType.value === 'class') return classList.value.map(c => ({ ...c, group: '班级' }))
+  if (viewType.value === 'teacher') return teacherList.value.map(t => ({ ...t, group: '教师' }))
+  return classroomList.value.map(c => ({ ...c, group: '教室' }))
+})
 const instances = ref<any[]>([])
 const loading = ref(false)
 const periods = ref<PeriodConfig[]>(DEFAULT_PERIODS)
