@@ -1,8 +1,8 @@
 <template>
   <div class="tv-layout">
-    <!-- Left tree (class mode only) -->
-    <div v-if="viewType === 'class'" class="tv-tree">
-      <DeptTree :semester-id="semesterId" @select="onTreeSelect" />
+    <!-- Left tree (all modes) -->
+    <div class="tv-tree">
+      <ScheduleTree :mode="viewType" :semester-id="semesterId" @select="onTreeSelect" />
     </div>
 
     <!-- Main content -->
@@ -17,14 +17,8 @@
             <label :class="['tm-radio', { active: viewType === 'classroom' }]" @click="viewType = 'classroom'; onTypeChange()"><input type="radio" />教室课表</label>
           </div>
 
-          <!-- Target selector (non-class modes) -->
-          <select v-if="viewType !== 'class'" v-model="targetId" class="tm-select" style="min-width: 140px;" @change="loadTimetable">
-            <option :value="undefined" disabled>{{ placeholder }}</option>
-            <option v-for="opt in targetOptions" :key="opt.id" :value="opt.id">{{ opt.name }}</option>
-          </select>
-
-          <!-- Current class display (class mode) -->
-          <span v-if="viewType === 'class' && targetId" class="tv-current-target">{{ currentTargetName }}</span>
+          <!-- Current target display -->
+          <span v-if="targetId" class="tv-current-target">{{ currentTargetName }}</span>
 
           <span class="tv-sep" />
 
@@ -172,7 +166,7 @@ import { orgUnitApi } from '@/api/organization'
 import type { ScheduleEntry, PeriodConfig } from '@/types/teaching'
 import { WEEKDAYS, DEFAULT_PERIODS } from '@/types/teaching'
 import TimetableGrid from '../scheduling/TimetableGrid.vue'
-import DeptTree from '@/components/teaching/DeptTree.vue'
+import ScheduleTree from '@/components/teaching/ScheduleTree.vue'
 
 const props = defineProps<{ semesterId: number | string | undefined }>()
 const periods = ref<PeriodConfig[]>(DEFAULT_PERIODS)
@@ -242,10 +236,7 @@ const availableTasks = ref<any[]>([])
 // Computed
 const placeholder = computed(() => ({ class: '选择班级', teacher: '选择教师', classroom: '选择教室' }[viewType.value]))
 const targetOptions = computed(() => viewType.value === 'teacher' ? teacherList.value : classrooms.value)
-const currentTargetName = computed(() => {
-  const cls = classList.value.find(c => String(c.id) === String(targetId.value))
-  return cls?.name || ''
-})
+const currentTargetName = computed(() => currentTargetNameFromTree.value || '')
 
 const filteredEntries = computed(() => {
   let result = entries.value
@@ -261,10 +252,14 @@ const filteredEntries = computed(() => {
 const dayCount = computed(() => new Set(filteredEntries.value.map(e => e.dayOfWeek)).size)
 const weeklyHours = computed(() => filteredEntries.value.reduce((sum, e) => sum + (e.periodEnd - e.periodStart + 1), 0))
 
-// Tree selection handler
+// Tree selection handler — works for all three modes
+const currentTargetNameFromTree = ref('')
 function onTreeSelect(node: { type: string; id: number | string; name: string; classIds?: (number | string)[] }) {
-  if (node.type === 'CLASS' && node.id) {
+  if (!node.id) { targetId.value = undefined; entries.value = []; currentTargetNameFromTree.value = ''; return }
+  // For CLASS/TEACHER/CLASSROOM leaf nodes, load timetable
+  if (['CLASS', 'TEACHER', 'CLASSROOM'].includes(node.type)) {
     targetId.value = node.id
+    currentTargetNameFromTree.value = node.name
     loadTimetable()
   }
 }
@@ -370,7 +365,10 @@ async function loadTimetable() {
 }
 
 // Handlers
-function onTypeChange() { targetId.value = undefined; entries.value = [] }
+function onTypeChange() {
+  targetId.value = undefined; entries.value = []; currentTargetNameFromTree.value = ''
+  if (compareMode.value) { compareMode.value = false; compareTargetId.value = undefined; compareEntries.value = [] }
+}
 function showEntryDetail(entry: ScheduleEntry) { selectedEntry.value = entry; detailVisible.value = true }
 function getWeekdayName(day: number) { return WEEKDAYS.find(w => w.value === day)?.label || '' }
 

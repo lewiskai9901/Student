@@ -499,7 +499,7 @@ public class TeachingScheduleController {
             "se.week_type AS weekType, se.schedule_type AS scheduleType, " +
             "se.entry_status AS entryStatus, " +
             "c.course_name AS courseName, u.real_name AS teacherName, " +
-            "p.place_name AS classroomName " +
+            "CONCAT(COALESCE((SELECT CASE WHEN pb.place_name LIKE '第一%' THEN '一教' WHEN pb.place_name LIKE '第二%' THEN '二教' WHEN pb.place_name LIKE '第三%' THEN '三教' ELSE LEFT(pb.place_name,2) END FROM places pf JOIN places pb ON pb.id=pf.parent_id WHERE pf.id=p.parent_id),''),'-',REPLACE(p.place_name,'教室','')) AS classroomName " +
             "FROM schedule_entries se " +
             "LEFT JOIN courses c ON c.id = se.course_id " +
             "LEFT JOIN users u ON u.id = se.teacher_id " +
@@ -532,7 +532,7 @@ public class TeachingScheduleController {
             "se.week_type AS weekType, se.schedule_type AS scheduleType, " +
             "se.entry_status AS entryStatus, " +
             "c.course_name AS courseName, u.real_name AS teacherName, " +
-            "p.place_name AS classroomName " +
+            "CONCAT(COALESCE((SELECT CASE WHEN pb.place_name LIKE '第一%' THEN '一教' WHEN pb.place_name LIKE '第二%' THEN '二教' WHEN pb.place_name LIKE '第三%' THEN '三教' ELSE LEFT(pb.place_name,2) END FROM places pf JOIN places pb ON pb.id=pf.parent_id WHERE pf.id=p.parent_id),''),'-',REPLACE(p.place_name,'教室','')) AS classroomName " +
             "FROM schedule_entries se " +
             "LEFT JOIN courses c ON c.id = se.course_id " +
             "LEFT JOIN users u ON u.id = se.teacher_id " +
@@ -565,7 +565,7 @@ public class TeachingScheduleController {
             "se.week_type AS weekType, se.schedule_type AS scheduleType, " +
             "se.entry_status AS entryStatus, " +
             "c.course_name AS courseName, u.real_name AS teacherName, " +
-            "p.place_name AS classroomName " +
+            "CONCAT(COALESCE((SELECT CASE WHEN pb.place_name LIKE '第一%' THEN '一教' WHEN pb.place_name LIKE '第二%' THEN '二教' WHEN pb.place_name LIKE '第三%' THEN '三教' ELSE LEFT(pb.place_name,2) END FROM places pf JOIN places pb ON pb.id=pf.parent_id WHERE pf.id=p.parent_id),''),'-',REPLACE(p.place_name,'教室','')) AS classroomName " +
             "FROM schedule_entries se " +
             "LEFT JOIN courses c ON c.id = se.course_id " +
             "LEFT JOIN users u ON u.id = se.teacher_id " +
