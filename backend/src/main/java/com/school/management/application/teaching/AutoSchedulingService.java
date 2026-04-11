@@ -22,6 +22,9 @@ public class AutoSchedulingService {
     private final SchedulingConstraintRepository constraintRepo;
     private final ObjectMapper objectMapper;
 
+    // Runtime config (set per scheduling run)
+    private int periodsPerDay = 10;
+
     // Inner data classes
     static class TaskRequirement {
         Long taskId;
@@ -70,12 +73,36 @@ public class AutoSchedulingService {
         log.info("开始自动排课: semesterId={}, maxIterations={}, populationSize={}",
             semesterId, maxIterations, populationSize);
 
+        // 0. Load period config from calendar (period_configs table)
+        int maxPeriodsPerDay = 10; // default
+        try {
+            List<Map<String, Object>> pconfigs = jdbcTemplate.queryForList(
+                "SELECT periods_per_day FROM period_configs WHERE semester_id = ? ORDER BY is_default DESC LIMIT 1", semesterId);
+            if (!pconfigs.isEmpty() && pconfigs.get(0).get("periods_per_day") != null) {
+                maxPeriodsPerDay = ((Number) pconfigs.get(0).get("periods_per_day")).intValue();
+            }
+        } catch (Exception e) {
+            log.warn("无法加载节次配置，使用默认值 {}", maxPeriodsPerDay);
+        }
+        this.periodsPerDay = maxPeriodsPerDay;
+        log.info("每日节次: {}", periodsPerDay);
+
         // 1. Load unscheduled task requirements
         List<TaskRequirement> requirements = loadRequirements(semesterId);
-        log.info("加载 {} 个待排教学任务", requirements.size());
+        // Count tasks without teachers (skipped)
+        long totalUnscheduled = jdbcTemplate.queryForObject(
+            "SELECT COUNT(*) FROM teaching_tasks WHERE semester_id = ? AND deleted = 0 AND scheduling_status != 2",
+            Long.class, semesterId);
+        int skippedNoTeacher = (int)(totalUnscheduled - requirements.size());
+        log.info("加载 {} 个待排教学任务 (跳过 {} 个未分配教师的任务)", requirements.size(), skippedNoTeacher);
 
         if (requirements.isEmpty()) {
-            return buildResult(true, 0, Collections.emptyList(), System.currentTimeMillis() - startTime);
+            Map<String, Object> result = buildResult(true, 0, Collections.emptyList(), System.currentTimeMillis() - startTime);
+            if (skippedNoTeacher > 0) {
+                result.put("skippedNoTeacher", skippedNoTeacher);
+                result.put("message", "有 " + skippedNoTeacher + " 个任务未分配教师，无法排课。请先在任务落实中分配教师。");
+            }
+            return result;
         }
 
         // 2. Load constraints
@@ -172,6 +199,9 @@ public class AutoSchedulingService {
         Map<String, Object> result = new HashMap<>(buildResult(solution != null && !solution.isEmpty(), entriesGenerated,
             Collections.emptyList(), elapsed));
         result.put("capacityWarnings", capacityWarnings);
+        if (skippedNoTeacher > 0) {
+            result.put("skippedNoTeacher", skippedNoTeacher);
+        }
         return result;
     }
 
@@ -181,12 +211,13 @@ public class AutoSchedulingService {
         // Load tasks that are not fully scheduled
         List<Map<String, Object>> rows = jdbcTemplate.queryForList(
             "SELECT t.id as task_id, t.course_id, t.org_unit_id, t.weekly_hours, " +
-            "t.start_week, t.end_week, t.teaching_org_unit_id, " +
+            "t.start_week, t.end_week, t.teaching_class_id, " +
+            "t.consecutive_periods, " +
             "c.course_name, " +
             "tt.teacher_id " +
             "FROM teaching_tasks t " +
             "LEFT JOIN courses c ON c.id = t.course_id " +
-            "LEFT JOIN teaching_task_teachers tt ON tt.task_id = t.id AND tt.teacher_role = 1 " +
+            "INNER JOIN teaching_task_teachers tt ON tt.task_id = t.id AND tt.teacher_role = 1 " +
             "WHERE t.semester_id = ? AND t.deleted = 0 AND t.scheduling_status != 2",
             semesterId);
 
@@ -197,15 +228,16 @@ public class AutoSchedulingService {
             req.courseId = toLong(row.get("course_id"));
             req.orgUnitId = toLong(row.get("org_unit_id"));
             req.teacherId = row.get("teacher_id") != null ? toLong(row.get("teacher_id")) : null;
-            req.teachingClassId = row.get("teaching_org_unit_id") != null ? toLong(row.get("teaching_org_unit_id")) : null;
+            req.teachingClassId = row.get("teaching_class_id") != null ? toLong(row.get("teaching_class_id")) : null;
             req.weeklyHours = toInt(row.get("weekly_hours"));
             req.startWeek = row.get("start_week") != null ? toInt(row.get("start_week")) : 1;
             req.endWeek = row.get("end_week") != null ? toInt(row.get("end_week")) : 16;
             req.courseName = (String) row.get("course_name");
             req.studentCount = row.get("student_count") != null ? toInt(row.get("student_count")) : 0;
-            req.weekType = 0; // 默认每周，可从 teaching_tasks 扩展
-            // Default: 2-period consecutive sessions
-            req.consecutivePeriods = Math.min(2, req.weeklyHours);
+            req.weekType = 0;
+            // Read consecutive_periods from task, default 2
+            int cp = row.get("consecutive_periods") != null ? toInt(row.get("consecutive_periods")) : 2;
+            req.consecutivePeriods = Math.min(cp, req.weeklyHours);
             req.timesPerWeek = (int) Math.ceil((double) req.weeklyHours / req.consecutivePeriods);
             reqs.add(req);
         }
@@ -218,7 +250,8 @@ public class AutoSchedulingService {
             return jdbcTemplate.queryForList(
                 "SELECT id, place_name AS name, " +
                 "COALESCE(capacity, CAST(JSON_UNQUOTE(JSON_EXTRACT(attributes, '$.capacity')) AS UNSIGNED), 50) AS capacity " +
-                "FROM places WHERE deleted = 0 AND room_type = 'CLASSROOM' ORDER BY capacity DESC");
+                "FROM places WHERE deleted = 0 AND type_code IN ('TYPE_CLASSROOM','CLASSROOM','TYPE_MULTIMEDIA','TYPE_COMPUTER_LAB','TYPE_LAB','TYPE_SMART_CLASS','TYPE_TRAINING') " +
+                "ORDER BY capacity DESC");
         } catch (Exception e) {
             log.warn("无法加载教室数据: {}", e.getMessage());
             return Collections.emptyList();
@@ -314,7 +347,7 @@ public class AutoSchedulingService {
             Map<Long, Set<String>> courseForbidden) {
         int count = 0;
         for (int day = 1; day <= 5; day++) {
-            for (int p = 1; p <= 10; p++) {
+            for (int p = 1; p <= periodsPerDay; p++) {
                 String key = day + "_" + p;
                 boolean forbidden = globalForbidden.contains(key);
                 if (!forbidden && req.teacherId != null)
@@ -502,7 +535,7 @@ public class AutoSchedulingService {
 
         List<int[]> candidates = new ArrayList<>();
         for (int day = 1; day <= 5; day++) {
-            for (int p = 1; p <= 10 - session.consecutivePeriods + 1; p++) {
+            for (int p = 1; p <= periodsPerDay - session.consecutivePeriods + 1; p++) {
                 int pEnd = p + session.consecutivePeriods - 1;
 
                 // Check forbidden
@@ -663,7 +696,7 @@ public class AutoSchedulingService {
                     ScheduleSlot m = child.get(mutIdx);
                     int span = m.periodEnd - m.periodStart;
                     int newDay = rand.nextInt(5) + 1;
-                    int maxStart = 10 - span;
+                    int maxStart = periodsPerDay - span;
                     int newStart = rand.nextInt(Math.max(1, maxStart)) + 1;
                     m.dayOfWeek = newDay;
                     m.periodStart = newStart;
@@ -891,7 +924,7 @@ public class AutoSchedulingService {
                     Long orgUnitId = slot.combinedClassIds.get(i);
                     jdbcTemplate.update(
                         "INSERT INTO schedule_entries (id, semester_id, task_id, course_id, org_unit_id, teacher_id, " +
-                        "classroom_id, teaching_org_unit_id, weekday, start_slot, end_slot, start_week, end_week, " +
+                        "classroom_id, teaching_class_id, weekday, start_slot, end_slot, start_week, end_week, " +
                         "week_type, schedule_type, entry_status, conflict_flag, deleted) " +
                         "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, 1, 0, 0)",
                         com.baomidou.mybatisplus.core.toolkit.IdWorker.getId(),
@@ -905,7 +938,7 @@ public class AutoSchedulingService {
                 // 普通课: 一条 entry
                 jdbcTemplate.update(
                     "INSERT INTO schedule_entries (id, semester_id, task_id, course_id, org_unit_id, teacher_id, " +
-                    "classroom_id, teaching_org_unit_id, weekday, start_slot, end_slot, start_week, end_week, " +
+                    "classroom_id, teaching_class_id, weekday, start_slot, end_slot, start_week, end_week, " +
                     "week_type, schedule_type, entry_status, conflict_flag, deleted) " +
                     "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, 1, 0, 0)",
                     com.baomidou.mybatisplus.core.toolkit.IdWorker.getId(),

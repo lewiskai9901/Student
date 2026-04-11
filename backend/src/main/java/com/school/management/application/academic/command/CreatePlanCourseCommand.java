@@ -18,7 +18,7 @@ public class CreatePlanCourseCommand {
     private Integer weeklyHours;
     private Integer theoryHours;
     private Integer practiceHours;
-    private Integer examType;
+    private Integer assessmentMethod;
     private Integer sortOrder;
     private String remark;
 }

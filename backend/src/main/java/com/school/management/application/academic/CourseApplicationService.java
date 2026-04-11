@@ -103,7 +103,7 @@ public class CourseApplicationService {
             .theoryHours(command.getTheoryHours())
             .practiceHours(command.getPracticeHours())
             .weeklyHours(command.getWeeklyHours())
-            .examType(command.getExamType())
+            .assessmentMethod(command.getAssessmentMethod())
             .orgUnitId(command.getOrgUnitId())
             .description(command.getDescription())
             .status(command.getStatus())
@@ -123,7 +123,7 @@ public class CourseApplicationService {
             command.getCourseName(), command.getCourseNameEn(),
             command.getCourseCategory(), command.getCourseType(), command.getCourseNature(),
             command.getCredits(), command.getTotalHours(), command.getTheoryHours(),
-            command.getPracticeHours(), command.getWeeklyHours(), command.getExamType(),
+            command.getPracticeHours(), command.getWeeklyHours(), command.getAssessmentMethod(),
             command.getOrgUnitId(), command.getDescription(), command.getUpdatedBy()
         );
 
@@ -164,7 +164,7 @@ public class CourseApplicationService {
         dto.setTheoryHours(course.getTheoryHours());
         dto.setPracticeHours(course.getPracticeHours());
         dto.setWeeklyHours(course.getWeeklyHours());
-        dto.setExamType(course.getExamType());
+        dto.setAssessmentMethod(course.getAssessmentMethod());
         dto.setOrgUnitId(course.getOrgUnitId());
         dto.setDescription(course.getDescription());
         dto.setStatus(course.getStatus());
@@ -188,7 +188,7 @@ public class CourseApplicationService {
         dto.setTheoryHours(po.getTheoryHours());
         dto.setPracticeHours(po.getPracticeHours());
         dto.setWeeklyHours(po.getWeeklyHours());
-        dto.setExamType(po.getExamType());
+        dto.setAssessmentMethod(po.getAssessmentMethod());
         dto.setOrgUnitId(po.getOrgUnitId());
         dto.setDescription(po.getDescription());
         dto.setStatus(po.getStatus());

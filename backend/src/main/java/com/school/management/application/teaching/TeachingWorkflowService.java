@@ -182,14 +182,15 @@ public class TeachingWorkflowService {
             int taskEndWeek = a.get("offeringEndWeek") != null ? ((Number) a.get("offeringEndWeek")).intValue() : endWeek;
             int totalHours = weeklyHours * (taskEndWeek - taskStartWeek + 1);
 
-            String taskCode = String.format("TK-%d-%d-%d", semesterId, courseId, orgUnitId);
+            long taskId = IdWorker.getId();
+            String taskCode = "TK" + taskId;
 
             jdbc.update(
                 "INSERT INTO teaching_tasks (id, task_code, semester_id, course_id, org_unit_id, offering_id, " +
                 "student_count, weekly_hours, total_hours, start_week, end_week, " +
                 "scheduling_status, task_status, created_by, deleted, tenant_id) " +
-                "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, 1, ?, 0, 1)",
-                IdWorker.getId(), taskCode, semesterId, courseId, orgUnitId, offeringId,
+                "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, 0, ?, 0, 1)",
+                taskId, taskCode, semesterId, courseId, orgUnitId, offeringId,
                 studentCount, weeklyHours, totalHours, taskStartWeek, taskEndWeek, createdBy
             );
             count++;
@@ -225,7 +226,7 @@ public class TeachingWorkflowService {
         for (Long taskId : taskIds) {
             Map<String, Object> task = jdbc.queryForMap(
                 "SELECT t.course_id, t.org_unit_id, t.student_count, " +
-                "COALESCE(c.exam_type, 1) AS course_exam_form, " +
+                "COALESCE(c.assessment_method, 1) AS course_exam_form, " +
                 "COALESCE(c.total_hours, 120) AS course_hours " +
                 "FROM teaching_tasks t " +
                 "LEFT JOIN courses c ON c.id = t.course_id " +

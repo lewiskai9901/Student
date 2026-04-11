@@ -187,7 +187,7 @@ public class CurriculumPlanApplicationService {
             .weeklyHours(command.getWeeklyHours())
             .theoryHours(command.getTheoryHours())
             .practiceHours(command.getPracticeHours())
-            .examType(command.getExamType())
+            .assessmentMethod(command.getAssessmentMethod())
             .sortOrder(command.getSortOrder())
             .remark(command.getRemark())
             .build();
@@ -210,7 +210,7 @@ public class CurriculumPlanApplicationService {
             command.getWeeklyHours(),
             command.getTheoryHours(),
             command.getPracticeHours(),
-            command.getExamType(),
+            command.getAssessmentMethod(),
             command.getSortOrder(),
             command.getRemark()
         );
@@ -286,7 +286,7 @@ public class CurriculumPlanApplicationService {
         dto.setWeeklyHours(pc.getWeeklyHours());
         dto.setTheoryHours(pc.getTheoryHours());
         dto.setPracticeHours(pc.getPracticeHours());
-        dto.setExamType(pc.getExamType());
+        dto.setAssessmentMethod(pc.getAssessmentMethod());
         dto.setSortOrder(pc.getSortOrder());
         dto.setRemark(pc.getRemark());
         dto.setCourseCode(pc.getCourseCode());

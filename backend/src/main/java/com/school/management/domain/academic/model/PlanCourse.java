@@ -42,7 +42,7 @@ public class PlanCourse {
     private Integer practiceHours;
 
     /** 考核方式 */
-    private Integer examType;
+    private Integer assessmentMethod;
 
     /** 排序 */
     private Integer sortOrder;
@@ -71,7 +71,7 @@ public class PlanCourse {
         this.weeklyHours = builder.weeklyHours;
         this.theoryHours = builder.theoryHours;
         this.practiceHours = builder.practiceHours;
-        this.examType = builder.examType;
+        this.assessmentMethod = builder.assessmentMethod;
         this.sortOrder = builder.sortOrder != null ? builder.sortOrder : 0;
         this.remark = builder.remark;
         this.courseCode = builder.courseCode;
@@ -86,7 +86,7 @@ public class PlanCourse {
     public void update(Integer semesterNumber, Integer courseCategory, Integer courseType,
                        BigDecimal credits, Integer totalHours, Integer weeklyHours,
                        Integer theoryHours, Integer practiceHours,
-                       Integer examType, Integer sortOrder, String remark) {
+                       Integer assessmentMethod, Integer sortOrder, String remark) {
         if (semesterNumber != null) this.semesterNumber = semesterNumber;
         if (courseCategory != null) this.courseCategory = courseCategory;
         if (courseType != null) this.courseType = courseType;
@@ -95,7 +95,7 @@ public class PlanCourse {
         if (weeklyHours != null) this.weeklyHours = weeklyHours;
         if (theoryHours != null) this.theoryHours = theoryHours;
         if (practiceHours != null) this.practiceHours = practiceHours;
-        if (examType != null) this.examType = examType;
+        if (assessmentMethod != null) this.assessmentMethod = assessmentMethod;
         if (sortOrder != null) this.sortOrder = sortOrder;
         if (remark != null) this.remark = remark;
         this.updatedAt = LocalDateTime.now();
@@ -116,7 +116,7 @@ public class PlanCourse {
             .weeklyHours(this.weeklyHours)
             .theoryHours(this.theoryHours)
             .practiceHours(this.practiceHours)
-            .examType(this.examType)
+            .assessmentMethod(this.assessmentMethod)
             .sortOrder(this.sortOrder)
             .remark(this.remark)
             .build();
@@ -135,7 +135,7 @@ public class PlanCourse {
     public Integer getWeeklyHours() { return weeklyHours; }
     public Integer getTheoryHours() { return theoryHours; }
     public Integer getPracticeHours() { return practiceHours; }
-    public Integer getExamType() { return examType; }
+    public Integer getAssessmentMethod() { return assessmentMethod; }
     public Integer getSortOrder() { return sortOrder; }
     public String getRemark() { return remark; }
     public String getCourseCode() { return courseCode; }
@@ -158,7 +158,7 @@ public class PlanCourse {
         private Integer weeklyHours;
         private Integer theoryHours;
         private Integer practiceHours;
-        private Integer examType;
+        private Integer assessmentMethod;
         private Integer sortOrder;
         private String remark;
         private String courseCode;
@@ -177,7 +177,7 @@ public class PlanCourse {
         public Builder weeklyHours(Integer v) { this.weeklyHours = v; return this; }
         public Builder theoryHours(Integer v) { this.theoryHours = v; return this; }
         public Builder practiceHours(Integer v) { this.practiceHours = v; return this; }
-        public Builder examType(Integer v) { this.examType = v; return this; }
+        public Builder assessmentMethod(Integer v) { this.assessmentMethod = v; return this; }
         public Builder sortOrder(Integer v) { this.sortOrder = v; return this; }
         public Builder remark(String v) { this.remark = v; return this; }
         public Builder courseCode(String v) { this.courseCode = v; return this; }

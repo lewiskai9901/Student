@@ -73,7 +73,10 @@ public class TeachingTaskApplicationService {
                 toInt(data.get("totalHours")),
                 toInt(data.get("startWeek")),
                 toInt(data.get("endWeek")),
-                data.get("taskStatus") != null ? TaskStatus.fromCode(toInt(data.get("taskStatus"))) : TaskStatus.CONFIRMED,
+                (String) data.get("roomTypeRequired"),
+                toInt(data.get("consecutivePeriods")),
+                toInt(data.get("courseNature")),
+                data.get("taskStatus") != null ? TaskStatus.fromCode(toInt(data.get("taskStatus"))) : TaskStatus.PENDING,
                 (String) data.get("remark"),
                 userId
         );
@@ -100,6 +103,9 @@ public class TeachingTaskApplicationService {
                 toInt(data.get("totalHours")),
                 toInt(data.get("startWeek")),
                 toInt(data.get("endWeek")),
+                (String) data.get("roomTypeRequired"),
+                toInt(data.get("consecutivePeriods")),
+                toInt(data.get("courseNature")),
                 (String) data.get("remark")
         );
         taskRepo.save(task);
@@ -123,19 +129,37 @@ public class TeachingTaskApplicationService {
     }
 
     /**
-     * 分配教师（替换所有）
+     * 分配教师（替换所有）— 支持多教师+各自课时
+     * 请求体: { "teachers": [{ "teacherId": "xxx", "role": 1, "weeklyHours": 2 }, ...] }
      */
-    public void assignTeachers(Long taskId, List<Number> teacherIds, Number mainTeacherId) {
+    @SuppressWarnings("unchecked")
+    public void assignTeachers(Long taskId, List<Map<String, Object>> teachers) {
         // 先删除旧分配
         teacherRepo.deleteByTaskId(taskId);
 
-        if (teacherIds != null) {
-            for (Number tid : teacherIds) {
-                long teacherId = tid.longValue();
-                int teacherRole = (mainTeacherId != null && teacherId == mainTeacherId.longValue()) ? 1 : 2;
-                TaskTeacher tt = TaskTeacher.create(taskId, teacherId, teacherRole);
+        if (teachers != null && !teachers.isEmpty()) {
+            for (Map<String, Object> t : teachers) {
+                Long teacherId = toLong(t.get("teacherId"));
+                int role = t.get("role") != null ? toInt(t.get("role")) : 2;
+                Integer weeklyHours = toInt(t.get("weeklyHours"));
+                TaskTeacher tt = TaskTeacher.create(taskId, teacherId, role, weeklyHours);
                 teacherRepo.save(tt);
             }
+            // 自动更新任务状态为"已分配教师"
+            taskRepo.findById(taskId).ifPresent(task -> {
+                if (task.getTaskStatus() == TaskStatus.PENDING) {
+                    task.updateStatus(TaskStatus.TEACHER_ASSIGNED);
+                    taskRepo.save(task);
+                }
+            });
+        } else {
+            // 清空教师后回退为"待落实"
+            taskRepo.findById(taskId).ifPresent(task -> {
+                if (task.getTaskStatus() == TaskStatus.TEACHER_ASSIGNED) {
+                    task.updateStatus(TaskStatus.PENDING);
+                    taskRepo.save(task);
+                }
+            });
         }
     }
 
@@ -168,7 +192,8 @@ public class TeachingTaskApplicationService {
                 TeachingTask task = TeachingTask.create(
                         taskCode, semesterId, courseId, orgUnitId,
                         0, weeklyHours, totalHours, 1, 16,
-                        TaskStatus.CONFIRMED, null, userId
+                        null, null, null,
+                        TaskStatus.PENDING, null, userId
                 );
                 task.setId(taskId);
                 taskRepo.save(task);
@@ -195,32 +220,36 @@ public class TeachingTaskApplicationService {
         map.put("semesterId", t.getSemesterId());
         map.put("courseId", t.getCourseId());
         map.put("orgUnitId", t.getOrgUnitId());
-        map.put("orgUnitId", t.getOrgUnitId());
         map.put("studentCount", t.getStudentCount());
         map.put("weeklyHours", t.getWeeklyHours());
         map.put("totalHours", t.getTotalHours());
         map.put("startWeek", t.getStartWeek());
         map.put("endWeek", t.getEndWeek());
+        map.put("roomTypeRequired", t.getRoomTypeRequired());
+        map.put("consecutivePeriods", t.getConsecutivePeriods());
+        map.put("courseNature", t.getCourseNature());
         map.put("schedulingStatus", t.getSchedulingStatus() != null ? t.getSchedulingStatus().getCode() : 0);
-        map.put("taskStatus", t.getTaskStatus() != null ? t.getTaskStatus().getCode() : 1);
+        map.put("taskStatus", t.getTaskStatus() != null ? t.getTaskStatus().getCode() : 0);
         map.put("remark", t.getRemark());
         return map;
     }
 
     private void enrichWithNames(Map<String, Object> record, Long courseId, Long orgUnitId) {
+        // 课程名称 + 考核方式
         try {
             if (courseId != null) {
                 Map<String, Object> course = jdbc.queryForMap(
-                        "SELECT course_name, course_code FROM courses WHERE id = ?", courseId);
+                        "SELECT course_name, course_code, assessment_method FROM courses WHERE id = ?", courseId);
                 record.put("courseName", course.get("course_name"));
                 record.put("courseCode", course.get("course_code"));
+                record.put("assessmentMethod", course.get("assessment_method"));
             }
         } catch (Exception e) {
             record.put("courseName", null);
         }
+        // 班级名称
         try {
             if (orgUnitId != null) {
-                // 先查 org_units，兼容新老表
                 String className = null;
                 try {
                     className = jdbc.queryForObject(
@@ -237,24 +266,37 @@ public class TeachingTaskApplicationService {
         } catch (Exception e) {
             record.put("className", null);
         }
-        // 教师名称
+        // 教室类型名称
+        try {
+            String roomType = (String) record.get("roomTypeRequired");
+            if (roomType != null && !roomType.isEmpty()) {
+                String roomTypeName = jdbc.queryForObject(
+                    "SELECT type_name FROM entity_type_configs WHERE type_code = ? AND entity_type = 'PLACE' LIMIT 1",
+                    String.class, roomType);
+                record.put("roomTypeName", roomTypeName);
+            }
+        } catch (Exception e) {
+            record.put("roomTypeName", null);
+        }
+        // 教师列表（含课时数）
         try {
             Long taskId = (Long) record.get("id");
             if (taskId != null) {
-                List<Map<String, Object>> teachers = jdbc.queryForList(
-                    "SELECT u.real_name FROM teaching_task_teachers ttt " +
-                    "JOIN users u ON u.id = ttt.teacher_id WHERE ttt.task_id = ?", taskId);
-                if (!teachers.isEmpty()) {
-                    String teacherName = teachers.stream()
-                        .map(t -> (String) t.get("real_name"))
-                        .filter(n -> n != null)
-                        .collect(java.util.stream.Collectors.joining(", "));
-                    record.put("teacherName", teacherName);
-                    record.put("teacherId", teachers.get(0).get("teacher_id"));
-                }
+                List<Map<String, Object>> teacherList = jdbc.queryForList(
+                    "SELECT ttt.teacher_id, u.real_name, ttt.teacher_role, ttt.weekly_hours " +
+                    "FROM teaching_task_teachers ttt " +
+                    "JOIN users u ON u.id = ttt.teacher_id " +
+                    "WHERE ttt.task_id = ?", taskId);
+                record.put("teachers", teacherList);
+                // 保留 teacherName 兼容
+                String names = teacherList.stream()
+                    .map(t -> (String) t.get("real_name"))
+                    .filter(n -> n != null)
+                    .collect(java.util.stream.Collectors.joining(", "));
+                record.put("teacherName", names.isEmpty() ? null : names);
             }
         } catch (Exception e) {
-            // ignore
+            record.put("teachers", List.of());
         }
     }
 

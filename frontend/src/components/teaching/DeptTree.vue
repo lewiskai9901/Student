@@ -38,7 +38,7 @@ import { orgUnitApi } from '@/api/organization'
 const props = defineProps<{ semesterId?: number | string }>()
 
 const emit = defineEmits<{
-  select: [node: { type: string; id: number | string; name: string }]
+  select: [node: { type: string; id: number | string; name: string; classIds?: (number | string)[] }]
 }>()
 
 const departments = ref<any[]>([])
@@ -67,9 +67,16 @@ async function loadTree() {
   }
 }
 
+function collectClassIds(node: any): (number | string)[] {
+  if (node.unitType === 'CLASS') return [node.id]
+  if (!node.children) return []
+  return node.children.flatMap((c: any) => collectClassIds(c))
+}
+
 function selectNode(node: any, type: string) {
   selectedId.value = node.id
-  emit('select', { type, id: node.id, name: node.unitName })
+  const classIds = type === 'CLASS' ? [node.id] : collectClassIds(node)
+  emit('select', { type, id: node.id, name: node.unitName, classIds })
 }
 
 function clearSelection() {

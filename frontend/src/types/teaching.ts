@@ -67,6 +67,7 @@ export type {
 
 export interface TeachingTask {
   id: number | string
+  taskCode?: string
   semesterId: number | string
   semesterName?: string
   courseId: number | string
@@ -76,21 +77,34 @@ export interface TeachingTask {
   className?: string
   studentCount: number
   weeklyHours: number
+  totalHours?: number
   startWeek: number
   endWeek: number
-  status: number // 0-待分配, 1-已分配, 2-已排课, 3-进行中, 4-已结束
+  roomTypeRequired?: string       // 教室类型需求 (场所 type_code)
+  roomTypeName?: string           // 教室类型名称 (enriched)
+  consecutivePeriods?: number     // 连排节数 1=不连排,2/3/4=连排
+  courseNature?: number            // 课程性质 1=理论,2=实验,3=实践,4=理论+实验
+  assessmentMethod?: number        // 考核方式 1=考试,2=考查,3=技能考试,4=考试+考查
+  schedulingStatus?: number        // 0=未排 1=部分 2=完成
+  taskStatus: number               // 0=待落实 1=已分配教师 2=已排课 3=进行中 4=已结束 9=已取消
   teachers?: TaskTeacher[]
+  teacherName?: string             // enriched: 逗号分隔教师名
   remark?: string
   createdAt?: string
   updatedAt?: string
 }
 
 export interface TaskTeacher {
-  id: number | string
-  taskId: number | string
+  id?: number | string
+  taskId?: number | string
   teacherId: number | string
   teacherName?: string
-  isMain: boolean // 是否主讲教师
+  real_name?: string               // enriched from backend JOIN
+  teacher_id?: number | string     // snake_case from backend
+  teacher_role?: number            // 1=主讲 2=辅助
+  weekly_hours?: number            // 该教师周课时数
+  role: number                     // 1=主讲 2=辅助
+  weeklyHours?: number             // camelCase alias
 }
 
 export interface TeachingTaskQueryParams {

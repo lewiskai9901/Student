@@ -201,7 +201,8 @@ public class OfferingApplicationService {
                 "TT" + taskId, semesterId, a.getCourseId(), a.getOrgUnitId(),
                 studentCount,
                 weeklyHours, null, startWeek, endWeek,
-                TaskStatus.CONFIRMED, null, userId);
+                null, null, null,
+                TaskStatus.PENDING, null, userId);
             task.setId(taskId);
             taskRepo.save(task);
             created++;

@@ -21,6 +21,9 @@ public class TeachingTaskPO {
     private Integer totalHours;
     private Integer startWeek;
     private Integer endWeek;
+    private String roomTypeRequired;
+    private Integer consecutivePeriods;
+    private Integer courseNature;
     private Integer schedulingStatus;
     private Integer taskStatus;
     private String remark;

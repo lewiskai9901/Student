@@ -89,7 +89,7 @@ public class CourseRepositoryImpl implements CourseRepository {
         po.setTheoryHours(domain.getTheoryHours());
         po.setPracticeHours(domain.getPracticeHours());
         po.setWeeklyHours(domain.getWeeklyHours());
-        po.setExamType(domain.getExamType());
+        po.setAssessmentMethod(domain.getAssessmentMethod());
         po.setOrgUnitId(domain.getOrgUnitId());
         po.setDescription(domain.getDescription());
         po.setStatus(domain.getStatus());
@@ -114,7 +114,7 @@ public class CourseRepositoryImpl implements CourseRepository {
             .theoryHours(po.getTheoryHours())
             .practiceHours(po.getPracticeHours())
             .weeklyHours(po.getWeeklyHours())
-            .examType(po.getExamType())
+            .assessmentMethod(po.getAssessmentMethod())
             .orgUnitId(po.getOrgUnitId())
             .description(po.getDescription())
             .status(po.getStatus())

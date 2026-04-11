@@ -28,7 +28,7 @@ public class CoursePO {
     private Integer theoryHours;
     private Integer practiceHours;
     private Integer weeklyHours;
-    private Integer examType;
+    private Integer assessmentMethod;
 
     @TableField("org_unit_id")
     private Long orgUnitId;

@@ -20,19 +20,24 @@
 
       <!-- 教学任务 -->
       <div class="check-row">
-        <div class="check-icon" :class="r.tasks?.status === 'ready' ? 'ok' : r.tasks?.status === 'warning' ? 'warn' : 'fail'">
-          {{ r.tasks?.status === 'ready' ? '&#10003;' : r.tasks?.status === 'warning' ? '!' : '&#10007;' }}
+        <div class="check-icon" :class="taskCheckClass">
+          {{ taskCheckIcon }}
         </div>
         <div class="check-info">
           <div class="check-label">教学任务</div>
           <div class="check-value">
             {{ r.tasks?.count || 0 }} 条
-            <span v-if="r.tasks?.withoutTeacher > 0" style="color: #d97706; margin-left: 6px;">（{{ r.tasks.withoutTeacher }} 条未分配教师）</span>
+            <span v-if="r.tasks?.withoutTeacher > 0" style="color: #dc2626; margin-left: 6px; font-weight: 500;">
+              （{{ r.tasks.withoutTeacher }} 条未分配教师，无法排课）
+            </span>
           </div>
         </div>
         <button v-if="r.tasks?.count === 0 && r.offerings?.count > 0" class="tm-btn tm-btn-workflow" style="font-size: 12px; padding: 5px 10px;" :disabled="generating.tasks" @click="generateTasks">
           {{ generating.tasks ? '生成中...' : '从开课计划生成' }}
         </button>
+        <a v-if="r.tasks?.withoutTeacher > 0" href="/teaching/offerings?tab=fulfillment" target="_blank" style="font-size: 12px; color: #2563eb; white-space: nowrap;">
+          去分配教师 →
+        </a>
       </div>
 
       <!-- 教室 -->
@@ -83,6 +88,16 @@ const emit = defineEmits<{ refresh: [] }>()
 
 const r = computed(() => props.readiness || {})
 const generating = reactive({ offerings: false, tasks: false })
+
+// Task check: fail if all unassigned, warn if some unassigned, ok if all assigned
+const taskCheckClass = computed(() => {
+  const tasks = r.value.tasks
+  if (!tasks || tasks.count === 0) return 'fail'
+  if (tasks.withoutTeacher > 0 && tasks.withoutTeacher === tasks.count) return 'fail'
+  if (tasks.withoutTeacher > 0) return 'fail'
+  return 'ok'
+})
+const taskCheckIcon = computed(() => taskCheckClass.value === 'ok' ? '\u2713' : '\u2717')
 
 async function generateOfferings() {
   if (!props.semesterId) return

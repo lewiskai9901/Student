@@ -46,8 +46,8 @@ public class Course extends AggregateRoot<Long> {
     /** 周学时 */
     private Integer weeklyHours;
 
-    /** 考核方式: 1-考试 2-考查 */
-    private Integer examType;
+    /** 考核方式: 1-考试 2-考查 3-技能考试 4-考试+考查 */
+    private Integer assessmentMethod;
 
     /** 开课组织单元ID */
     private Long orgUnitId;
@@ -79,7 +79,7 @@ public class Course extends AggregateRoot<Long> {
         this.theoryHours = builder.theoryHours != null ? builder.theoryHours : 0;
         this.practiceHours = builder.practiceHours != null ? builder.practiceHours : 0;
         this.weeklyHours = builder.weeklyHours != null ? builder.weeklyHours : 2;
-        this.examType = builder.examType != null ? builder.examType : 1;
+        this.assessmentMethod = builder.assessmentMethod != null ? builder.assessmentMethod : 1;
         this.orgUnitId = builder.orgUnitId;
         this.description = builder.description;
         this.status = builder.status != null ? builder.status : 1;
@@ -107,7 +107,7 @@ public class Course extends AggregateRoot<Long> {
     public void update(String courseName, String courseNameEn,
                        Integer courseCategory, Integer courseType, Integer courseNature,
                        BigDecimal credits, Integer totalHours, Integer theoryHours,
-                       Integer practiceHours, Integer weeklyHours, Integer examType,
+                       Integer practiceHours, Integer weeklyHours, Integer assessmentMethod,
                        Long orgUnitId, String description, Long updatedBy) {
         if (courseName != null) this.courseName = courseName;
         if (courseNameEn != null) this.courseNameEn = courseNameEn;
@@ -119,7 +119,7 @@ public class Course extends AggregateRoot<Long> {
         if (theoryHours != null) this.theoryHours = theoryHours;
         if (practiceHours != null) this.practiceHours = practiceHours;
         if (weeklyHours != null) this.weeklyHours = weeklyHours;
-        if (examType != null) this.examType = examType;
+        if (assessmentMethod != null) this.assessmentMethod = assessmentMethod;
         this.orgUnitId = orgUnitId; // allow null to clear
         if (description != null) this.description = description;
         this.updatedBy = updatedBy;
@@ -164,7 +164,7 @@ public class Course extends AggregateRoot<Long> {
     public Integer getTheoryHours() { return theoryHours; }
     public Integer getPracticeHours() { return practiceHours; }
     public Integer getWeeklyHours() { return weeklyHours; }
-    public Integer getExamType() { return examType; }
+    public Integer getAssessmentMethod() { return assessmentMethod; }
     public Long getOrgUnitId() { return orgUnitId; }
     public String getDescription() { return description; }
     public Integer getStatus() { return status; }
@@ -189,7 +189,7 @@ public class Course extends AggregateRoot<Long> {
         private Integer theoryHours;
         private Integer practiceHours;
         private Integer weeklyHours;
-        private Integer examType;
+        private Integer assessmentMethod;
         private Long orgUnitId;
         private String description;
         private Integer status;
@@ -207,7 +207,7 @@ public class Course extends AggregateRoot<Long> {
         public Builder theoryHours(Integer v) { this.theoryHours = v; return this; }
         public Builder practiceHours(Integer v) { this.practiceHours = v; return this; }
         public Builder weeklyHours(Integer v) { this.weeklyHours = v; return this; }
-        public Builder examType(Integer v) { this.examType = v; return this; }
+        public Builder assessmentMethod(Integer v) { this.assessmentMethod = v; return this; }
         public Builder orgUnitId(Long v) { this.orgUnitId = v; return this; }
         public Builder description(String v) { this.description = v; return this; }
         public Builder status(Integer v) { this.status = v; return this; }

@@ -4,9 +4,12 @@ import lombok.Getter;
 
 @Getter
 public enum TaskStatus {
-    DRAFT(0, "草稿"),
-    CONFIRMED(1, "已确认"),
-    CANCELLED(2, "已取消");
+    PENDING(0, "待落实"),
+    TEACHER_ASSIGNED(1, "已分配教师"),
+    SCHEDULED(2, "已排课"),
+    IN_PROGRESS(3, "进行中"),
+    FINISHED(4, "已结束"),
+    CANCELLED(9, "已取消");
 
     private final int code;
     private final String label;

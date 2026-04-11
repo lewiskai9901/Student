@@ -50,6 +50,7 @@ public class TaskTeacherRepositoryImpl implements TaskTeacherRepository {
         po.setTaskId(t.getTaskId());
         po.setTeacherId(t.getTeacherId());
         po.setTeacherRole(t.getTeacherRole());
+        po.setWeeklyHours(t.getWeeklyHours());
         po.setWorkloadRatio(t.getWorkloadRatio());
         po.setRemark(t.getRemark());
         return po;
@@ -58,7 +59,7 @@ public class TaskTeacherRepositoryImpl implements TaskTeacherRepository {
     private TaskTeacher toDomain(TaskTeacherPO po) {
         return TaskTeacher.reconstruct(
                 po.getId(), po.getTaskId(), po.getTeacherId(),
-                po.getTeacherRole(), po.getWorkloadRatio(), po.getRemark()
+                po.getTeacherRole(), po.getWeeklyHours(), po.getWorkloadRatio(), po.getRemark()
         );
     }
 }

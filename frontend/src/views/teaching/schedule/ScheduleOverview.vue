@@ -77,8 +77,8 @@
             <td class="tm-mono">{{ row.weeklyHours }}</td>
             <td class="tm-mono">{{ getScheduledHours(row) }}/{{ row.weeklyHours }}</td>
             <td>
-              <span :class="['tm-chip', { 0:'tm-chip-gray', 1:'tm-chip-amber', 2:'tm-chip-green', 3:'tm-chip-blue', 4:'tm-chip-red' }[row.status] || 'tm-chip-gray']">
-                {{ getTaskStatusName(row.status) }}
+              <span :class="['tm-chip', { 0:'tm-chip-gray', 1:'tm-chip-blue', 2:'tm-chip-green', 3:'tm-chip-amber', 4:'tm-chip-red' }[row.taskStatus] || 'tm-chip-gray']">
+                {{ getTaskStatusName(row.taskStatus) }}
               </span>
             </td>
             <td><button class="tm-action" style="color: #2563eb;" @click="showManualEntryDialog(row)">手动排</button></td>
@@ -255,9 +255,9 @@ const classrooms = ref<{ id: number; name: string }[]>([])
 
 const taskStats = computed(() => {
   const total = taskPagination.total
-  const scheduled = tasks.value.filter(t => t.status >= 2).length
-  const partial = tasks.value.filter(t => t.status === 1).length
-  const unscheduled = tasks.value.filter(t => t.status === 0).length
+  const scheduled = tasks.value.filter(t => t.taskStatus >= 2).length
+  const partial = tasks.value.filter(t => t.taskStatus === 1).length
+  const unscheduled = tasks.value.filter(t => t.taskStatus === 0).length
   return { total, scheduled, partial, unscheduled }
 })
 
@@ -327,9 +327,13 @@ async function handlePublish() {
   try { for (const s of draftSchedules) await scheduleApi.publish(s.id); ElMessage.success('发布成功'); loadScheduleList() } catch { ElMessage.error('发布失败') }
 }
 
-function getMainTeacher(task: TeachingTask) { return task.teachers?.length ? (task.teachers.find(t => t.isMain)?.teacherName || task.teachers[0]?.teacherName || '') : '' }
-function getScheduledHours(task: TeachingTask) { if (task.status >= 2) return task.weeklyHours; if (task.status === 1) return Math.floor(task.weeklyHours / 2); return 0 }
-function getTaskStatusName(s: number) { return ({ 0: '待分配', 1: '已分配', 2: '已排课', 3: '进行中', 4: '已结束' } as any)[s] || '未知' }
+function getMainTeacher(task: TeachingTask) {
+  if (!task.teachers?.length) return task.teacherName || ''
+  const main = task.teachers.find(t => (t.teacher_role || t.role) === 1)
+  return (main?.real_name || main?.teacherName || task.teachers[0]?.real_name || task.teachers[0]?.teacherName || '')
+}
+function getScheduledHours(task: TeachingTask) { if (task.taskStatus >= 2) return task.weeklyHours; if (task.taskStatus === 1) return Math.floor(task.weeklyHours / 2); return 0 }
+function getTaskStatusName(s: number) { return ({ 0: '待落实', 1: '已分配教师', 2: '已排课', 3: '进行中', 4: '已结束', 9: '已取消' } as any)[s] || '未知' }
 
 function showManualEntryDialog(task: TeachingTask) {
   if (scheduleList.value.length === 0) { ElMessage.warning('请先创建排课方案'); return }

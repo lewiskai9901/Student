@@ -42,6 +42,12 @@
         生成 <b>{{ result.entriesGenerated || 0 }}</b> 条排课 | 耗时 {{ ((result.executionTime || 0) / 1000).toFixed(1) }}s
         <span v-if="result.conflicts?.length > 0" style="color: #d97706; margin-left: 8px;">（{{ result.conflicts.length }} 个冲突）</span>
       </p>
+      <p v-if="result.skippedNoTeacher > 0" style="font-size: 13px; color: #dc2626; margin-top: 6px; font-weight: 500;">
+        ⚠ {{ result.skippedNoTeacher }} 个任务因未分配教师被跳过，请在
+        <a href="/teaching/offerings?tab=fulfillment" target="_blank" style="color: #2563eb;">任务落实</a>
+        中完成教师分配后重新排课。
+      </p>
+      <p v-if="result.message" style="font-size: 13px; color: #d97706; margin-top: 4px;">{{ result.message }}</p>
     </div>
 
     <!-- 容量警告 -->

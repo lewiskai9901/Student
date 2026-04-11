@@ -45,8 +45,8 @@ export const teachingTaskApi = {
 
   delete: (id: number | string) => http.delete(`${BASE_URL}/tasks/${id}`),
 
-  assignTeachers: (taskId: number | string, teacherIds: (number | string)[], mainTeacherId: number | string) =>
-    http.post(`${BASE_URL}/tasks/${taskId}/assign-teachers`, { teacherIds, mainTeacherId }),
+  assignTeachers: (taskId: number | string, teachers: { teacherId: number | string; role: number; weeklyHours?: number }[]) =>
+    http.post(`${BASE_URL}/tasks/${taskId}/assign-teachers`, { teachers }),
 
   removeTeacher: (taskId: number | string, teacherId: number | string) =>
     http.delete(`${BASE_URL}/tasks/${taskId}/teachers/${teacherId}`),
@@ -54,8 +54,8 @@ export const teachingTaskApi = {
   batchCreate: (semesterId: number | string, planId: number | string, orgUnitIds: (number | string)[]) =>
     http.post<TeachingTask[]>(`${BASE_URL}/tasks/batch-create`, { semesterId, planId, orgUnitIds }),
 
-  updateStatus: (id: number | string, status: number) =>
-    http.patch(`${BASE_URL}/tasks/${id}/status`, { status }),
+  updateStatus: (id: number | string, taskStatus: number) =>
+    http.patch(`${BASE_URL}/tasks/${id}/status`, { taskStatus }),
 }
 
 // ==================== 排课配置 & 就绪检查 ====================

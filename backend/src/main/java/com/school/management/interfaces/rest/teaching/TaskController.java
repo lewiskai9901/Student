@@ -82,14 +82,8 @@ public class TaskController {
     @CasbinAccess(resource = "teaching:task", action = "edit")
     @SuppressWarnings("unchecked")
     public Result<Void> assignTeachers(@PathVariable Long id, @RequestBody Map<String, Object> data) {
-        // Handle both Number and String IDs (JS big number precision)
-        List<?> rawIds = (List<?>) data.get("teacherIds");
-        List<Number> teacherIds = rawIds != null ? rawIds.stream()
-            .map(v -> (Number) Long.valueOf(v.toString()))
-            .collect(java.util.stream.Collectors.toList()) : null;
-        Object rawMain = data.get("mainTeacherId");
-        Number mainTeacherId = rawMain != null ? Long.valueOf(rawMain.toString()) : null;
-        taskService.assignTeachers(id, teacherIds, mainTeacherId);
+        List<Map<String, Object>> teachers = (List<Map<String, Object>>) data.get("teachers");
+        taskService.assignTeachers(id, teachers);
         return Result.success();
     }
 

@@ -280,7 +280,7 @@ public class TeachingScheduleController {
         String taskStatus = taskCount == 0 ? "empty" : (noTeacher > 0 ? "warning" : "ready");
         result.put("tasks", Map.of("count", taskCount, "withoutTeacher", noTeacher, "status", taskStatus));
         // 教室
-        Long classroomCount = jdbc.queryForObject("SELECT COUNT(1) FROM places WHERE deleted=0 AND room_type='CLASSROOM'", Long.class);
+        Long classroomCount = jdbc.queryForObject("SELECT COUNT(1) FROM places WHERE deleted=0 AND type_code IN ('TYPE_CLASSROOM','CLASSROOM','TYPE_MULTIMEDIA','TYPE_COMPUTER_LAB','TYPE_LAB','TYPE_SMART_CLASS','TYPE_TRAINING')", Long.class);
         result.put("classrooms", Map.of("count", classroomCount, "status", classroomCount > 0 ? "ready" : "empty"));
         // 约束
         Long constraintCount = jdbc.queryForObject("SELECT COUNT(1) FROM scheduling_constraints WHERE semester_id=? AND deleted=0 AND enabled=1", Long.class, semesterId);
@@ -487,20 +487,23 @@ public class TeachingScheduleController {
     @GetMapping("/schedules/by-class/{classId}")
     @CasbinAccess(resource = "teaching:schedule", action = "view")
     public Result<List<Map<String, Object>>> getSchedulesByClass(
-            @PathVariable Long orgUnitId,
+            @PathVariable("classId") Long orgUnitId,
             @RequestParam(required = false) Long semesterId) {
 
         StringBuilder sql = new StringBuilder(
             "SELECT se.id, se.semester_id AS semesterId, se.task_id AS taskId, " +
             "se.course_id AS courseId, se.org_unit_id AS orgUnitId, se.teacher_id AS teacherId, " +
-            "se.classroom_id AS classroomId, se.weekday, se.start_slot AS startSlot, " +
-            "se.end_slot AS endSlot, se.start_week AS startWeek, se.end_week AS endWeek, " +
+            "se.classroom_id AS classroomId, " +
+            "se.weekday AS dayOfWeek, se.start_slot AS periodStart, " +
+            "se.end_slot AS periodEnd, se.start_week AS weekStart, se.end_week AS weekEnd, " +
             "se.week_type AS weekType, se.schedule_type AS scheduleType, " +
             "se.entry_status AS entryStatus, " +
-            "c.course_name AS courseName, u.real_name AS teacherName " +
+            "c.course_name AS courseName, u.real_name AS teacherName, " +
+            "p.place_name AS classroomName " +
             "FROM schedule_entries se " +
             "LEFT JOIN courses c ON c.id = se.course_id " +
             "LEFT JOIN users u ON u.id = se.teacher_id " +
+            "LEFT JOIN places p ON p.id = se.classroom_id " +
             "WHERE se.org_unit_id = ? AND se.deleted = 0"
         );
         List<Object> params = new ArrayList<>();
@@ -523,14 +526,17 @@ public class TeachingScheduleController {
         StringBuilder sql = new StringBuilder(
             "SELECT se.id, se.semester_id AS semesterId, se.task_id AS taskId, " +
             "se.course_id AS courseId, se.org_unit_id AS orgUnitId, se.teacher_id AS teacherId, " +
-            "se.classroom_id AS classroomId, se.weekday, se.start_slot AS startSlot, " +
-            "se.end_slot AS endSlot, se.start_week AS startWeek, se.end_week AS endWeek, " +
+            "se.classroom_id AS classroomId, " +
+            "se.weekday AS dayOfWeek, se.start_slot AS periodStart, " +
+            "se.end_slot AS periodEnd, se.start_week AS weekStart, se.end_week AS weekEnd, " +
             "se.week_type AS weekType, se.schedule_type AS scheduleType, " +
             "se.entry_status AS entryStatus, " +
-            "c.course_name AS courseName, u.real_name AS teacherName " +
+            "c.course_name AS courseName, u.real_name AS teacherName, " +
+            "p.place_name AS classroomName " +
             "FROM schedule_entries se " +
             "LEFT JOIN courses c ON c.id = se.course_id " +
             "LEFT JOIN users u ON u.id = se.teacher_id " +
+            "LEFT JOIN places p ON p.id = se.classroom_id " +
             "WHERE se.teacher_id = ? AND se.deleted = 0"
         );
         List<Object> params = new ArrayList<>();
@@ -553,14 +559,17 @@ public class TeachingScheduleController {
         StringBuilder sql = new StringBuilder(
             "SELECT se.id, se.semester_id AS semesterId, se.task_id AS taskId, " +
             "se.course_id AS courseId, se.org_unit_id AS orgUnitId, se.teacher_id AS teacherId, " +
-            "se.classroom_id AS classroomId, se.weekday, se.start_slot AS startSlot, " +
-            "se.end_slot AS endSlot, se.start_week AS startWeek, se.end_week AS endWeek, " +
+            "se.classroom_id AS classroomId, " +
+            "se.weekday AS dayOfWeek, se.start_slot AS periodStart, " +
+            "se.end_slot AS periodEnd, se.start_week AS weekStart, se.end_week AS weekEnd, " +
             "se.week_type AS weekType, se.schedule_type AS scheduleType, " +
             "se.entry_status AS entryStatus, " +
-            "c.course_name AS courseName, u.real_name AS teacherName " +
+            "c.course_name AS courseName, u.real_name AS teacherName, " +
+            "p.place_name AS classroomName " +
             "FROM schedule_entries se " +
             "LEFT JOIN courses c ON c.id = se.course_id " +
             "LEFT JOIN users u ON u.id = se.teacher_id " +
+            "LEFT JOIN places p ON p.id = se.classroom_id " +
             "WHERE se.classroom_id = ? AND se.deleted = 0"
         );
         List<Object> params = new ArrayList<>();

@@ -14,6 +14,7 @@ public class TaskTeacherPO {
     private Long taskId;
     private Long teacherId;
     private Integer teacherRole;
+    private Integer weeklyHours;
     private BigDecimal workloadRatio;
     private String remark;
     private LocalDateTime createdAt;

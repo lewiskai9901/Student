@@ -9,13 +9,13 @@
         <div class="tm-stats">
           <span>总数 <b>{{ total }}</b></span>
           <span class="sep" />
-          <span><span class="dot dot-gray" />待分配 <b>{{ statusCounts[0] }}</b></span>
+          <span><span class="dot dot-gray" />待落实 <b>{{ statusCounts[0] }}</b></span>
           <span class="sep" />
-          <span><span class="dot dot-green" />已分配 <b>{{ statusCounts[1] }}</b></span>
+          <span><span class="dot dot-blue" />已分配教师 <b>{{ statusCounts[1] }}</b></span>
           <span class="sep" />
-          <span>已排课 <b>{{ statusCounts[2] }}</b></span>
+          <span><span class="dot dot-green" />已排课 <b>{{ statusCounts[2] }}</b></span>
           <span class="sep" />
-          <span><span class="dot dot-green" />进行中 <b>{{ statusCounts[3] }}</b></span>
+          <span>进行中 <b>{{ statusCounts[3] }}</b></span>
           <span class="sep" />
           <span>已结束 <b>{{ statusCounts[4] }}</b></span>
         </div>
@@ -37,11 +37,12 @@
       </select>
       <select v-model="queryParams.status" class="tm-select">
         <option :value="undefined">全部状态</option>
-        <option :value="0">待分配</option>
-        <option :value="1">已分配</option>
+        <option :value="0">待落实</option>
+        <option :value="1">已分配教师</option>
         <option :value="2">已排课</option>
         <option :value="3">进行中</option>
         <option :value="4">已结束</option>
+        <option :value="9">已取消</option>
       </select>
       <button class="tm-btn tm-btn-primary" style="padding: 7px 16px;" @click="search">查询</button>
       <button class="tm-btn-reset" @click="resetQuery">重置</button>
@@ -51,38 +52,45 @@
     <div class="tm-table-wrap">
       <table class="tm-table">
         <colgroup>
-          <col style="width: 18%;" />
-          <col style="width: 10%;" />
-          <col style="width: 12%;" />
-          <col style="width: 7%;" />
-          <col style="width: 16%;" />
+          <col style="width: 14%;" />
           <col style="width: 7%;" />
           <col style="width: 9%;" />
-          <col style="width: 8%;" />
+          <col style="width: 5%;" />
           <col style="width: 13%;" />
+          <col style="width: 5%;" />
+          <col style="width: 7%;" />
+          <col style="width: 8%;" />
+          <col style="width: 5%;" />
+          <col style="width: 5%;" />
+          <col style="width: 7%;" />
+          <col style="width: 15%;" />
         </colgroup>
         <thead>
           <tr>
             <th class="text-left">课程名称</th>
             <th>编码</th>
             <th>班级</th>
-            <th>学生数</th>
+            <th>人数</th>
             <th>教师</th>
             <th>周学时</th>
             <th>教学周</th>
+            <th>教室需求</th>
+            <th>连排</th>
+            <th>性质</th>
+            <th>考核</th>
             <th>状态</th>
             <th>操作</th>
           </tr>
         </thead>
         <tbody>
           <tr v-if="loading">
-            <td colspan="9" class="tm-empty">
+            <td colspan="13" class="tm-empty">
               <span class="tm-spin" style="display: inline-block; width: 16px; height: 16px; border: 2px solid #e5e7eb; border-top-color: #2563eb; border-radius: 50;" />
               加载中...
             </td>
           </tr>
           <tr v-else-if="tasks.length === 0">
-            <td colspan="9" class="tm-empty">暂无教学任务数据</td>
+            <td colspan="13" class="tm-empty">暂无教学任务数据</td>
           </tr>
           <tr v-for="row in tasks" :key="row.id">
             <td class="text-left">{{ row.courseName }}</td>
@@ -93,20 +101,25 @@
               <template v-if="row.teachers?.length">
                 <span
                   v-for="t in row.teachers"
-                  :key="t.teacherId"
-                  :class="['tm-chip', t.isMain ? 'tm-chip-blue' : 'tm-chip-gray']"
+                  :key="t.teacher_id || t.teacherId"
+                  :class="['tm-chip', (t.teacher_role || t.role) === 1 ? 'tm-chip-blue' : 'tm-chip-gray']"
                   style="margin: 1px 2px;"
                 >
-                  {{ t.teacherName }}{{ t.isMain ? '(主)' : '' }}
+                  {{ t.real_name || t.teacherName }}{{ (t.teacher_role || t.role) === 1 ? '(主)' : '' }}
                 </span>
               </template>
+              <span v-else-if="row.teacherName" class="tm-chip tm-chip-blue" style="margin: 1px 2px;">{{ row.teacherName }}</span>
               <span v-else style="color: #9ca3af; font-size: 12px;">未分配</span>
             </td>
             <td class="tm-mono">{{ row.weeklyHours }}</td>
             <td class="tm-mono">{{ row.startWeek }}-{{ row.endWeek }}周</td>
+            <td>{{ row.roomTypeName || (row.roomTypeRequired ? row.roomTypeRequired : '不限') }}</td>
+            <td class="tm-mono">{{ getConsecutiveLabel(row.consecutivePeriods) }}</td>
+            <td>{{ getCourseNatureLabel(row.courseNature) }}</td>
+            <td>{{ getAssessmentLabel(row.assessmentMethod) }}</td>
             <td>
-              <span :class="['tm-chip', { 0: 'tm-chip-gray', 1: 'tm-chip-amber', 2: 'tm-chip-blue', 3: 'tm-chip-green', 4: 'tm-chip-red' }[row.status] || 'tm-chip-gray']">
-                {{ getStatusName(row.status) }}
+              <span :class="['tm-chip', statusChipClass(row.taskStatus)]">
+                {{ getStatusName(row.taskStatus) }}
               </span>
             </td>
             <td>
@@ -356,7 +369,6 @@
 <script setup lang="ts">
 import { ref, reactive, computed, onMounted } from 'vue'
 import { ElMessage, ElMessageBox, type FormInstance } from 'element-plus'
-import TeachingPipeline from '@/components/teaching/TeachingPipeline.vue'
 import DeptTree from '@/components/teaching/DeptTree.vue'
 import { teachingTaskApi, workflowApi } from '@/api/teaching'
 import { semesterApi } from '@/api/calendar'
@@ -390,7 +402,6 @@ const batchDialogVisible = ref(false)
 
 // Form refs
 const taskFormRef = ref<FormInstance>()
-const assignFormRef = ref<FormInstance>()
 const batchFormRef = ref<FormInstance>()
 
 const queryParams = reactive<TeachingTaskQueryParams>({
@@ -408,9 +419,10 @@ const batchForm = ref({ semesterId: undefined as number | string | undefined, pl
 
 // Computed stats
 const statusCounts = computed(() => {
-  const counts: Record<number, number> = { 0: 0, 1: 0, 2: 0, 3: 0, 4: 0 }
+  const counts: Record<number, number> = { 0: 0, 1: 0, 2: 0, 3: 0, 4: 0, 9: 0 }
   tasks.value.forEach(t => {
-    if (counts[t.status] !== undefined) counts[t.status]++
+    const s = t.taskStatus ?? 0
+    if (counts[s] !== undefined) counts[s]++
   })
   return counts
 })
@@ -530,22 +542,22 @@ const saveTask = async () => {
 const showAssignDialog = (task: TeachingTask) => {
   currentTask.value = task
   assignForm.value = {
-    teacherIds: task.teachers?.map(t => t.teacherId) || [],
-    mainTeacherId: task.teachers?.find(t => t.isMain)?.teacherId,
+    teacherIds: task.teachers?.map(t => t.teacher_id || t.teacherId) || [],
+    mainTeacherId: task.teachers?.find(t => (t.teacher_role || t.role) === 1)?.teacher_id
+      || task.teachers?.find(t => (t.teacher_role || t.role) === 1)?.teacherId,
   }
   assignDialogVisible.value = true
 }
 
 const assignTeachers = async () => {
-  await assignFormRef.value?.validate()
   if (!currentTask.value || !assignForm.value.mainTeacherId) return
   saving.value = true
   try {
-    await teachingTaskApi.assignTeachers(
-      currentTask.value.id,
-      assignForm.value.teacherIds,
-      assignForm.value.mainTeacherId
-    )
+    const teachers = assignForm.value.teacherIds.map(tid => ({
+      teacherId: tid,
+      role: String(tid) === String(assignForm.value.mainTeacherId) ? 1 : 2,
+    }))
+    await teachingTaskApi.assignTeachers(currentTask.value.id, teachers)
     ElMessage.success('分配成功')
     assignDialogVisible.value = false
     loadTasks()
@@ -617,13 +629,41 @@ const handleDelete = async (task: TeachingTask) => {
 
 const getStatusName = (status: number) => {
   const names: Record<number, string> = {
-    0: '待分配',
-    1: '已分配',
+    0: '待落实',
+    1: '已分配教师',
     2: '已排课',
     3: '进行中',
     4: '已结束',
+    9: '已取消',
   }
-  return names[status] || '未知'
+  return names[status] ?? '未知'
+}
+
+const statusChipClass = (status: number) => {
+  const map: Record<number, string> = {
+    0: 'tm-chip-gray',
+    1: 'tm-chip-blue',
+    2: 'tm-chip-green',
+    3: 'tm-chip-amber',
+    4: 'tm-chip-red',
+    9: 'tm-chip-red',
+  }
+  return map[status] ?? 'tm-chip-gray'
+}
+
+const getConsecutiveLabel = (val?: number) => {
+  const map: Record<number, string> = { 1: '不连排', 2: '2节连', 3: '3节连', 4: '4节连' }
+  return map[val ?? 2] ?? `${val}节`
+}
+
+const getAssessmentLabel = (val?: number) => {
+  const map: Record<number, string> = { 1: '考试', 2: '考查', 3: '技能考试', 4: '考试+考查' }
+  return map[val ?? 1] ?? '考试'
+}
+
+const getCourseNatureLabel = (val?: number) => {
+  const map: Record<number, string> = { 1: '理论', 2: '实验', 3: '实践', 4: '理论+实验' }
+  return map[val ?? 1] ?? '未知'
 }
 
 

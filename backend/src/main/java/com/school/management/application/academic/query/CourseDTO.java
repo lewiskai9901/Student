@@ -22,7 +22,7 @@ public class CourseDTO {
     private Integer theoryHours;
     private Integer practiceHours;
     private Integer weeklyHours;
-    private Integer examType;
+    private Integer assessmentMethod;
     private Long orgUnitId;
     private String description;
     private Integer status;

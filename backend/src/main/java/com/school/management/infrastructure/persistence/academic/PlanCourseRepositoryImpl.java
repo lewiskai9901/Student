@@ -68,7 +68,7 @@ public class PlanCourseRepositoryImpl implements PlanCourseRepository {
         po.setWeeklyHours(domain.getWeeklyHours());
         po.setTheoryHours(domain.getTheoryHours());
         po.setPracticeHours(domain.getPracticeHours());
-        po.setExamType(domain.getExamType());
+        po.setAssessmentMethod(domain.getAssessmentMethod());
         po.setSortOrder(domain.getSortOrder());
         po.setRemark(domain.getRemark());
         po.setCreatedAt(domain.getCreatedAt());
@@ -89,7 +89,7 @@ public class PlanCourseRepositoryImpl implements PlanCourseRepository {
             .weeklyHours(po.getWeeklyHours())
             .theoryHours(po.getTheoryHours())
             .practiceHours(po.getPracticeHours())
-            .examType(po.getExamType())
+            .assessmentMethod(po.getAssessmentMethod())
             .sortOrder(po.getSortOrder())
             .remark(po.getRemark())
             .courseCode(po.getCourseCode())

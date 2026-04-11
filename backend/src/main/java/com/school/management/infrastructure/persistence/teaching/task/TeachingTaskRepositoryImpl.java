@@ -76,8 +76,11 @@ public class TeachingTaskRepositoryImpl implements TeachingTaskRepository {
         po.setTotalHours(t.getTotalHours());
         po.setStartWeek(t.getStartWeek());
         po.setEndWeek(t.getEndWeek());
+        po.setRoomTypeRequired(t.getRoomTypeRequired());
+        po.setConsecutivePeriods(t.getConsecutivePeriods());
+        po.setCourseNature(t.getCourseNature());
         po.setSchedulingStatus(t.getSchedulingStatus() != null ? t.getSchedulingStatus().getCode() : 0);
-        po.setTaskStatus(t.getTaskStatus() != null ? t.getTaskStatus().getCode() : 1);
+        po.setTaskStatus(t.getTaskStatus() != null ? t.getTaskStatus().getCode() : 0);
         po.setRemark(t.getRemark());
         po.setCreatedBy(t.getCreatedBy());
         return po;
@@ -89,8 +92,9 @@ public class TeachingTaskRepositoryImpl implements TeachingTaskRepository {
                 po.getCourseId(), po.getOrgUnitId(),
                 po.getStudentCount(), po.getWeeklyHours(), po.getTotalHours(),
                 po.getStartWeek(), po.getEndWeek(),
+                po.getRoomTypeRequired(), po.getConsecutivePeriods(), po.getCourseNature(),
                 po.getSchedulingStatus() != null ? SchedulingStatus.fromCode(po.getSchedulingStatus()) : SchedulingStatus.UNSCHEDULED,
-                po.getTaskStatus() != null ? TaskStatus.fromCode(po.getTaskStatus()) : TaskStatus.CONFIRMED,
+                po.getTaskStatus() != null ? TaskStatus.fromCode(po.getTaskStatus()) : TaskStatus.PENDING,
                 po.getRemark(), po.getCreatedBy()
         );
     }

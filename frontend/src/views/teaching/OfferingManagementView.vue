@@ -60,9 +60,9 @@ watch(() => route.query.tab, (tab) => {
   if (tab && typeof tab === 'string') activeTab.value = tab
 })
 
-const selectedOrg = ref<{ type: string; id: number | string; name: string }>({ type: '', id: '', name: '' })
+const selectedOrg = ref<{ type: string; id: number | string; name: string; classIds?: (number | string)[] }>({ type: '', id: '', name: '' })
 
-function onTreeSelect(node: { type: string; id: number | string; name: string }) {
+function onTreeSelect(node: { type: string; id: number | string; name: string; classIds?: (number | string)[] }) {
   selectedOrg.value = node
 }
 
