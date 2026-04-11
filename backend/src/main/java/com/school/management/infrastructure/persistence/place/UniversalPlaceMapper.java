@@ -7,6 +7,7 @@ import org.apache.ibatis.annotations.Select;
 import org.apache.ibatis.annotations.Update;
 
 import java.util.List;
+import java.util.Map;
 
 /**
  * 通用空间 Mapper
@@ -101,6 +102,28 @@ public interface UniversalPlaceMapper extends BaseMapper<UniversalPlacePO> {
             "WHERE id = #{id} AND deleted = 0 " +
             "AND COALESCE(current_occupancy, 0) > 0")
     int atomicDecrementOccupancy(@Param("id") Long id);
+
+    /**
+     * 查找 currentOccupancy 与实际占用数不匹配的场所
+     */
+    @Select("SELECT p.id, COALESCE(p.current_occupancy, 0) AS storedCount, " +
+            "COALESCE(oc.actual_count, 0) AS actualCount " +
+            "FROM places p " +
+            "LEFT JOIN (" +
+            "  SELECT place_id, COUNT(*) AS actual_count " +
+            "  FROM place_occupants " +
+            "  WHERE status = 1 AND deleted = 0 " +
+            "  GROUP BY place_id" +
+            ") oc ON p.id = oc.place_id " +
+            "WHERE p.deleted = 0 " +
+            "AND COALESCE(p.current_occupancy, 0) != COALESCE(oc.actual_count, 0)")
+    List<Map<String, Object>> findOccupancyMismatches();
+
+    /**
+     * 修正场所占用数
+     */
+    @Update("UPDATE places SET current_occupancy = #{actualCount} WHERE id = #{placeId} AND deleted = 0")
+    int fixOccupancy(@Param("placeId") Long placeId, @Param("actualCount") int actualCount);
 
     /**
      * 带关联信息查询
