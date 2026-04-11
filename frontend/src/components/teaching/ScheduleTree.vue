@@ -181,7 +181,7 @@ async function loadClassroomTree() {
             children: rooms.map((r: any) => ({
               id: r.id,
               name: r.placeName,
-              fullName: shortName + '-' + (r.placeName || '').replace(/教室$/, ''),
+              fullName: r.placeCode || r.place_code || (shortName + '-' + (r.placeName || '').replace(/教室$/, '')),
               capacity: r.capacity,
             })),
           })
