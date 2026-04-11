@@ -33,9 +33,16 @@ public class PlaceOccupancyReconciliationJob {
         log.warn("场所占用数对账：发现 {} 处偏差，开始修正", mismatches.size());
         int fixed = 0;
         for (Map<String, Object> row : mismatches) {
-            Long placeId = ((Number) row.get("id")).longValue();
-            int stored = ((Number) row.get("storedCount")).intValue();
-            int actual = ((Number) row.get("actualCount")).intValue();
+            Object idObj = row.get("id");
+            Object storedObj = row.get("storedCount");
+            Object actualObj = row.get("actualCount");
+            if (idObj == null || storedObj == null || actualObj == null) {
+                log.warn("对账查询返回了 null 字段，跳过: {}", row);
+                continue;
+            }
+            Long placeId = ((Number) idObj).longValue();
+            int stored = ((Number) storedObj).intValue();
+            int actual = ((Number) actualObj).intValue();
 
             placeMapper.fixOccupancy(placeId, actual);
             log.info("修正场所 {} 占用数: {} → {}", placeId, stored, actual);

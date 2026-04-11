@@ -389,6 +389,7 @@ public class OrgUnitApplicationService {
             dto.setTypeName(typeEntity.getTypeName());
             dto.setTypeIcon(typeEntity.getIcon());
             dto.setTypeColor(null);
+            dto.setCategory(typeEntity.getCategory());
         });
     }
 

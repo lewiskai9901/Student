@@ -206,7 +206,8 @@ public class OrgUnitRepositoryImpl implements OrgUnitRepository {
         try {
             return objectMapper.readValue(json, new TypeReference<Map<String, Object>>() {});
         } catch (Exception e) {
-            return null;
+            log.error("解析属性 JSON 失败: {}", json, e);
+            return Collections.emptyMap();
         }
     }
 
@@ -215,6 +216,7 @@ public class OrgUnitRepositoryImpl implements OrgUnitRepository {
         try {
             return objectMapper.writeValueAsString(attributes);
         } catch (Exception e) {
+            log.error("序列化属性失败: {}", attributes, e);
             return null;
         }
     }

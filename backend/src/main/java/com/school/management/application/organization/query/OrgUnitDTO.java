@@ -21,6 +21,7 @@ public class OrgUnitDTO {
     private String typeName;           // display name from org_unit_types
     private String typeIcon;           // icon from org_unit_types
     private String typeColor;          // color from org_unit_types
+    private String category;           // OrgCategory enum value (ROOT/BRANCH/FUNCTIONAL/GROUP/CONTAINER)
     @JsonSerialize(using = ToStringSerializer.class)
     private Long parentId;
     private String treePath;

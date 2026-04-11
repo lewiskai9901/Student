@@ -21,6 +21,7 @@ import lombok.extern.slf4j.Slf4j;
 import com.school.management.infrastructure.casbin.CasbinAccess;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -120,21 +121,32 @@ public class OrgUnitController {
     @GetMapping
     @CasbinAccess(resource = "system:org", action = "view")
     public Result<List<OrgUnitDTO>> getAll() {
-        // Return flat list from tree
         List<OrgUnitTreeDTO> tree = orgUnitService.getOrgUnitTree();
-        List<OrgUnitDTO> list = tree.stream()
-            .map(t -> {
-                OrgUnitDTO dto = new OrgUnitDTO();
-                dto.setId(t.getId());
-                dto.setUnitCode(t.getUnitCode());
-                dto.setUnitName(t.getUnitName());
-                dto.setUnitType(t.getUnitType());
-                dto.setStatus(t.getStatus());
-                dto.setStatusLabel(t.getStatusLabel());
-                return dto;
-            })
-            .collect(java.util.stream.Collectors.toList());
+        List<OrgUnitDTO> list = new ArrayList<>();
+        flattenTree(tree, list);
         return Result.success(list);
+    }
+
+    private void flattenTree(List<OrgUnitTreeDTO> nodes, List<OrgUnitDTO> result) {
+        if (nodes == null) return;
+        for (OrgUnitTreeDTO node : nodes) {
+            OrgUnitDTO dto = new OrgUnitDTO();
+            dto.setId(node.getId());
+            dto.setUnitCode(node.getUnitCode());
+            dto.setUnitName(node.getUnitName());
+            dto.setUnitType(node.getUnitType());
+            dto.setCategory(node.getCategory());
+            dto.setTypeName(node.getTypeName());
+            dto.setTypeIcon(node.getTypeIcon());
+            dto.setTypeColor(node.getTypeColor());
+            dto.setParentId(node.getParentId());
+            dto.setStatus(node.getStatus());
+            dto.setStatusLabel(node.getStatusLabel());
+            dto.setHeadcount(node.getHeadcount());
+            dto.setAttributes(node.getAttributes());
+            result.add(dto);
+            flattenTree(node.getChildren(), result);
+        }
     }
 
     @Operation(summary = "Get children")
