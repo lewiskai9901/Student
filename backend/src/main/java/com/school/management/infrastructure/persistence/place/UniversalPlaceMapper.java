@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 import org.apache.ibatis.annotations.Select;
+import org.apache.ibatis.annotations.Update;
 
 import java.util.List;
 
@@ -84,6 +85,22 @@ public interface UniversalPlaceMapper extends BaseMapper<UniversalPlacePO> {
      */
     @Select("SELECT COUNT(*) FROM places WHERE parent_id IS NULL AND place_code = #{placeCode} AND deleted = 0")
     int countRootByPlaceCode(@Param("placeCode") String placeCode);
+
+    /**
+     * 原子递增占用数（数据库级并发安全，仅在未超容量时生效）
+     */
+    @Update("UPDATE places SET current_occupancy = COALESCE(current_occupancy, 0) + 1 " +
+            "WHERE id = #{id} AND deleted = 0 " +
+            "AND (capacity IS NULL OR capacity = 0 OR COALESCE(current_occupancy, 0) < capacity)")
+    int atomicIncrementOccupancy(@Param("id") Long id);
+
+    /**
+     * 原子递减占用数（数据库级并发安全，仅在占用数 > 0 时生效）
+     */
+    @Update("UPDATE places SET current_occupancy = COALESCE(current_occupancy, 0) - 1 " +
+            "WHERE id = #{id} AND deleted = 0 " +
+            "AND COALESCE(current_occupancy, 0) > 0")
+    int atomicDecrementOccupancy(@Param("id") Long id);
 
     /**
      * 带关联信息查询

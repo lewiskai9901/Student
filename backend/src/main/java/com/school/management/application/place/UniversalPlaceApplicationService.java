@@ -630,14 +630,6 @@ public class UniversalPlaceApplicationService {
         UniversalPlace place = placeRepository.findById(placeId)
                 .orElseThrow(() -> new IllegalArgumentException("场所不存在"));
 
-        // 验证容量
-        if (place.getCapacity() != null && place.getCapacity() > 0) {
-            int current = place.getCurrentOccupancy() != null ? place.getCurrentOccupancy() : 0;
-            if (current >= place.getCapacity()) {
-                throw new IllegalStateException("场所已满，无法入住");
-            }
-        }
-
         // 验证位置是否被占用
         if (command.getPositionNo() != null && !command.getPositionNo().isEmpty()) {
             if (occupantRepository.isPositionOccupied(placeId, command.getPositionNo())) {
@@ -682,10 +674,12 @@ public class UniversalPlaceApplicationService {
         }
         occupant = occupantRepository.save(occupant);
 
-        // 更新场所占用数
-        place.checkIn();
-        placeRepository.save(place);
-        publishEvents(place);
+        // 原子递增占用数（数据库级并发安全）
+        if (!placeRepository.atomicIncrementOccupancy(placeId)) {
+            // 原子操作失败，场所已满，回滚占用记录
+            occupantRepository.deleteById(occupant.getId());
+            throw new IllegalStateException("场所已满，无法入住");
+        }
 
         // 发布审计事件
         activityEventPublisher.newEvent("place", "PLACE", "CHECK_IN", "入住")
@@ -742,9 +736,8 @@ public class UniversalPlaceApplicationService {
         occupant.checkOut();
         occupantRepository.save(occupant);
 
-        place.checkOut();
-        placeRepository.save(place);
-        publishEvents(place);
+        // 原子递减占用数
+        placeRepository.atomicDecrementOccupancy(placeId);
 
         // 发布审计事件
         activityEventPublisher.newEvent("place", "PLACE", "CHECK_OUT", "退出")

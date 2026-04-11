@@ -125,6 +125,16 @@ public class UniversalPlaceRepositoryImpl implements UniversalPlaceRepository {
     }
 
     @Override
+    public boolean atomicIncrementOccupancy(Long placeId) {
+        return mapper.atomicIncrementOccupancy(placeId) > 0;
+    }
+
+    @Override
+    public boolean atomicDecrementOccupancy(Long placeId) {
+        return mapper.atomicDecrementOccupancy(placeId) > 0;
+    }
+
+    @Override
     public boolean existsByPlaceCode(String placeCode) {
         return mapper.existsByPlaceCode(placeCode);
     }

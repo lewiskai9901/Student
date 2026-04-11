@@ -88,6 +88,18 @@ public interface UniversalPlaceRepository {
     int countRootByPlaceCode(String placeCode);
 
     /**
+     * 原子递增占用数（数据库级并发安全）
+     * @return true 如果成功递增（未超容量），false 如果场所已满
+     */
+    boolean atomicIncrementOccupancy(Long placeId);
+
+    /**
+     * 原子递减占用数（数据库级并发安全）
+     * @return true 如果成功递减，false 如果占用数已为0
+     */
+    boolean atomicDecrementOccupancy(Long placeId);
+
+    /**
      * 根据ID删除
      */
     void deleteById(Long id);
