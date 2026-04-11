@@ -78,9 +78,9 @@
       <!-- Statistics Bar -->
       <div v-if="stats" class="dp-stat-bar">
         <span>成员 <b>{{ stats.belongingCount }}</b></span>
-        <template v-if="Object.keys(stats.countByUserType).length > 0">
+        <template v-if="stats.countByUserType && Object.keys(stats.countByUserType).length > 0">
           <span style="color: #d1d5db;">—</span>
-          <template v-for="(cnt, typeCode, idx) in stats.countByUserType" :key="typeCode">
+          <template v-for="(cnt, typeCode, idx) in (stats.countByUserType || {})" :key="typeCode">
             <span v-if="idx > 0" style="color: #e5e7eb;">|</span>
             <span>{{ userTypeNameMap[typeCode as string] || typeCode }} <b>{{ cnt }}</b></span>
           </template>
@@ -616,7 +616,7 @@ const extensionAttrs = ref<Record<string, any>>({})
 async function loadExtensionSchema() {
   extensionSchema.value = null
   extensionAttrs.value = {}
-  const typeCode = props.node.typeCode || props.node.unitType
+  const typeCode = props.node.unitType
   if (!typeCode) return
   try {
     const res = await entityTypeApi.get('ORG_UNIT', typeCode)

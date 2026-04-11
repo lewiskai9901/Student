@@ -213,6 +213,7 @@ const formData = reactive({
   unitCode: '',
   unitType: '',
   parentId: null as number | null,
+  sortOrder: 0,
   attributes: {} as Record<string, any>,
 })
 
@@ -345,12 +346,12 @@ const loadTypes = async () => {
   try {
     if (props.department) {
       // Edit mode: show only the current type (locked)
-      const typeCode = props.department.typeCode || props.department.unitType
+      const typeCode = props.department.unitType
       const typeName = props.department.typeName || typeCode
       availableTypes.value = [{ typeCode, typeName, category: '', parentTypeCode: '', defaultPositions: [] }]
     } else if (props.parentDepartment) {
       // Add child: get allowed children from parent type
-      const parentTypeCode = props.parentDepartment.typeCode || props.parentDepartment.unitType
+      const parentTypeCode = props.parentDepartment.unitType
       const res = await entityTypeApi.getAllowedChildren('ORG_UNIT', parentTypeCode)
       const data = (res as any).data || res || []
       availableTypes.value = data.map((t: any) => ({
@@ -391,6 +392,7 @@ watch(() => props.visible, async (val) => {
       formData.unitCode = props.department.unitCode
       formData.unitType = props.department.unitType
       formData.parentId = props.department.parentId || null
+      formData.sortOrder = props.department.sortOrder ?? 0
       // Load extension schema and populate existing attributes
       if (formData.unitType) {
         await loadTypeSchema(formData.unitType)
@@ -412,6 +414,7 @@ const handleClosed = () => {
     unitCode: '',
     unitType: '',
     parentId: null,
+    sortOrder: 0,
     attributes: {},
   })
   typeSchema.value = null
@@ -446,7 +449,9 @@ const handleSubmit = async () => {
   try {
     if (isEdit.value && props.department) {
       await orgUnitApi.update(props.department.id, {
-        unitName: formData.unitName
+        unitName: formData.unitName,
+        sortOrder: formData.sortOrder,
+        attributes: Object.keys(formData.attributes).length > 0 ? formData.attributes : undefined,
       })
       ElMessage.success('组织更新成功')
     } else {

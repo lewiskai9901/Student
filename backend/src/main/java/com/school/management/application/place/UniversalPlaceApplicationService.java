@@ -512,9 +512,13 @@ public class UniversalPlaceApplicationService {
             node.setIsOrgInherited(false);
         }
         if (place.getParentId() != null) {
-            placeRepository.findById(place.getParentId()).ifPresent(parent ->
-                    node.setParentOrgUnitId(parent.getOrgUnitId())
-            );
+            placeRepository.findById(place.getParentId()).ifPresent(parent -> {
+                node.setParentOrgUnitId(parent.getOrgUnitId());
+                if (parent.getOrgUnitId() != null) {
+                    orgUnitRepository.findById(parent.getOrgUnitId())
+                            .ifPresent(org -> node.setParentOrgUnitName(org.getUnitName()));
+                }
+            });
         }
 
         // 负责人继承计算（防御性null检查）
@@ -972,6 +976,7 @@ public class UniversalPlaceApplicationService {
         private String effectiveOrgUnitName;
         private Boolean isOrgInherited;
         private Long parentOrgUnitId;
+        private String parentOrgUnitName;
 
         // 负责人继承
         private Long effectiveResponsibleUserId;
