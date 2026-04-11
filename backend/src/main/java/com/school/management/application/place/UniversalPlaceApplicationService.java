@@ -12,7 +12,6 @@ import com.school.management.domain.place.repository.UniversalPlaceTypeRepositor
 import com.school.management.domain.place.service.PlaceInheritanceService;
 import com.school.management.domain.access.model.entity.AccessRelation;
 import com.school.management.domain.access.repository.AccessRelationRepository;
-import com.school.management.domain.shared.event.DomainEventPublisher;
 import com.school.management.domain.shared.model.valueobject.FieldChange;
 import com.school.management.domain.user.model.aggregate.User;
 import com.school.management.domain.user.model.entity.UserType;
@@ -45,7 +44,6 @@ public class UniversalPlaceApplicationService {
     private final UserRepository userRepository;
     private final UserTypeRepository userTypeRepository;
     private final AccessRelationRepository accessRelationRepository;
-    private final DomainEventPublisher eventPublisher;
     private final PlaceInheritanceService inheritanceService;
     private final ActivityEventPublisher activityEventPublisher;
 
@@ -284,8 +282,6 @@ public class UniversalPlaceApplicationService {
         }
         saved = placeRepository.save(saved);
 
-        // 事件在原始对象上（save()会返回新对象，丢失事件）
-        publishEvents(place);
         return toDTO(saved);
     }
 
@@ -338,8 +334,6 @@ public class UniversalPlaceApplicationService {
             place.changeStatus(newStatus, reason);
         }
 
-        // 事件在原始对象上（save()会返回新对象，丢失事件）
-        publishEvents(place);
         UniversalPlace saved = placeRepository.save(place);
         return toDTO(saved);
     }
@@ -354,8 +348,6 @@ public class UniversalPlaceApplicationService {
 
         place.changeStatus(status, "状态变更");
 
-        // 事件在原始对象上（save()会返回新对象，丢失事件）
-        publishEvents(place);
         UniversalPlace saved = placeRepository.save(place);
         return toDTO(saved);
     }
@@ -388,13 +380,6 @@ public class UniversalPlaceApplicationService {
         }
 
         placeRepository.deleteById(id);
-    }
-
-    // ==================== 事件发布 ====================
-
-    private void publishEvents(UniversalPlace place) {
-        place.getDomainEvents().forEach(eventPublisher::publish);
-        place.clearDomainEvents();
     }
 
     // ==================== 私有方法 ====================

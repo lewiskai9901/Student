@@ -5,11 +5,14 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.school.management.domain.place.model.aggregate.UniversalPlace;
 import com.school.management.domain.place.model.valueobject.PlaceStatus;
 import com.school.management.domain.place.repository.UniversalPlaceRepository;
+import com.school.management.domain.shared.event.DomainEvent;
+import com.school.management.domain.shared.event.DomainEventPublisher;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.stereotype.Repository;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -24,14 +27,21 @@ public class UniversalPlaceRepositoryImpl implements UniversalPlaceRepository {
 
     private final UniversalPlaceMapper mapper;
     private final ObjectMapper objectMapper;
+    private final DomainEventPublisher eventPublisher;
 
-    public UniversalPlaceRepositoryImpl(UniversalPlaceMapper mapper, ObjectMapper objectMapper) {
+    public UniversalPlaceRepositoryImpl(UniversalPlaceMapper mapper, ObjectMapper objectMapper,
+                                        DomainEventPublisher eventPublisher) {
         this.mapper = mapper;
         this.objectMapper = objectMapper;
+        this.eventPublisher = eventPublisher;
     }
 
     @Override
     public UniversalPlace save(UniversalPlace place) {
+        // 1. 提取领域事件（save 后 toDomain 会创建新对象，事件会丢失）
+        List<DomainEvent> pendingEvents = new ArrayList<>(place.getDomainEvents());
+
+        // 2. 持久化状态
         UniversalPlacePO po = toPO(place);
         if (po.getId() == null) {
             mapper.insert(po);
@@ -49,7 +59,14 @@ public class UniversalPlaceRepositoryImpl implements UniversalPlaceRepository {
                 throw new IllegalStateException("更新场所失败：未找到 ID=" + po.getId() + " 的记录");
             }
         }
-        // 重新查询以获取最新数据（含关联字段）
+
+        // 3. 发布领域事件（同一事务内，状态已持久化）
+        if (!pendingEvents.isEmpty()) {
+            pendingEvents.forEach(eventPublisher::publish);
+            place.clearDomainEvents();
+        }
+
+        // 4. 重新查询以获取最新数据（含关联字段）
         UniversalPlacePO saved = mapper.selectById(po.getId());
         return saved != null ? toDomain(saved) : toDomain(po);
     }
