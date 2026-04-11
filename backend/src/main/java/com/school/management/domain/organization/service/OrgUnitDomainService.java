@@ -248,6 +248,10 @@ public class OrgUnitDomainService {
             if (spec.childIds != null) {
                 for (Long childId : spec.childIds) {
                     orgUnitRepository.findById(childId).ifPresent(child -> {
+                        if (!sourceId.equals(child.getParentId())) {
+                            throw new IllegalArgumentException(
+                                "子组织 " + childId + " 不属于源组织 " + sourceId + "，无法拆分");
+                        }
                         child.moveToParent(savedUnit.getId(), createdBy);
                         child.setTreePosition(savedUnit.getTreePath(), savedUnit.getTreeLevel());
                         orgUnitRepository.save(child);
