@@ -45,6 +45,11 @@ public interface AccessRelationRepository {
     void deleteByResource(String resourceType, Long resourceId);
 
     /**
+     * 删除指定资源与指定主体之间的所有关系记录
+     */
+    void deleteByResourceAndSubject(String resourceType, Long resourceId, String subjectType, Long subjectId);
+
+    /**
      * 删除指定主体的所有关系记录
      */
     void deleteBySubject(String subjectType, Long subjectId);

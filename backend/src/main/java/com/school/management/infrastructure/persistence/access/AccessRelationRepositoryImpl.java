@@ -104,6 +104,16 @@ public class AccessRelationRepositoryImpl implements AccessRelationRepository {
     }
 
     @Override
+    public void deleteByResourceAndSubject(String resourceType, Long resourceId, String subjectType, Long subjectId) {
+        LambdaQueryWrapper<AccessRelationPO> wrapper = new LambdaQueryWrapper<AccessRelationPO>()
+                .eq(AccessRelationPO::getResourceType, resourceType)
+                .eq(AccessRelationPO::getResourceId, resourceId)
+                .eq(AccessRelationPO::getSubjectType, subjectType)
+                .eq(AccessRelationPO::getSubjectId, subjectId);
+        mapper.delete(wrapper);
+    }
+
+    @Override
     public void deleteBySubject(String subjectType, Long subjectId) {
         LambdaQueryWrapper<AccessRelationPO> wrapper = new LambdaQueryWrapper<AccessRelationPO>()
                 .eq(AccessRelationPO::getSubjectType, subjectType)

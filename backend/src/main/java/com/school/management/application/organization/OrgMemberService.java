@@ -138,7 +138,7 @@ public class OrgMemberService {
         userDomainMapper.clearPrimaryOrgUnitIdForUser(userId, orgUnitId);
 
         // Remove access relation
-        accessRelationRepository.deleteByResource("org_unit", orgUnitId);
+        accessRelationRepository.deleteByResourceAndSubject("org_unit", orgUnitId, "user", userId);
 
         log.info("Removed user {} from org {}", userId, orgUnitId);
     }
