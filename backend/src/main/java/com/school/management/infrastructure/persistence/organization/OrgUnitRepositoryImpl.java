@@ -9,6 +9,7 @@ import com.school.management.domain.organization.repository.OrgUnitRepository;
 import org.springframework.stereotype.Repository;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
@@ -113,21 +114,17 @@ public class OrgUnitRepositoryImpl implements OrgUnitRepository {
         }
 
         String treePath = orgUnit.get().getTreePath();
-        String[] ids = treePath.split("/");
-        List<OrgUnit> ancestors = new ArrayList<>();
-        for (String idStr : ids) {
-            if (!idStr.isEmpty()) {
-                try {
-                    Long id = Long.parseLong(idStr);
-                    if (!id.equals(orgUnitId)) {
-                        findById(id).ifPresent(ancestors::add);
-                    }
-                } catch (NumberFormatException e) {
-                    // Skip invalid IDs
-                }
-            }
+        List<Long> ancestorIds = Arrays.stream(treePath.split("/"))
+                .filter(s -> !s.isEmpty())
+                .map(Long::parseLong)
+                .filter(id -> !id.equals(orgUnitId))
+                .collect(Collectors.toList());
+
+        if (ancestorIds.isEmpty()) {
+            return new ArrayList<>();
         }
-        return ancestors;
+
+        return findByIds(ancestorIds);
     }
 
     @Override
