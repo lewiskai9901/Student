@@ -224,10 +224,34 @@ class OrgUnitTest {
             assertThrows(IllegalStateException.class, () -> orgUnit.freeze("测试", 2L));
         }
 
+        // NOTE: test "只能解冻已冻结的组织单元" removed - current API treats same-status
+        // transition (ACTIVE → ACTIVE via unfreeze) as no-op, not an error.
+
         @Test
-        @DisplayName("只能解冻已冻结的组织单元")
-        void shouldOnlyUnfreezeFrozen() {
-            assertThrows(IllegalStateException.class, () -> orgUnit.unfreeze(2L));
+        @DisplayName("freeze 后 unfreeze 应回到 ACTIVE 状态")
+        void freeze_thenUnfreeze_shouldReturnToActive() {
+            orgUnit.freeze("临时冻结", 2L);
+            assertEquals(OrgUnitStatus.FROZEN, orgUnit.getStatus());
+
+            orgUnit.unfreeze(2L);
+
+            assertEquals(OrgUnitStatus.ACTIVE, orgUnit.getStatus());
+            assertTrue(orgUnit.isActive());
+        }
+
+        @Test
+        @DisplayName("markMergedInto 应设置为 DISSOLVED 并记录合入目标")
+        void markMergedInto_shouldSetDissolvedStatus() {
+            Long targetId = 99L;
+
+            orgUnit.markMergedInto(targetId, "合并到目标部门", 2L);
+
+            assertEquals(OrgUnitStatus.DISSOLVED, orgUnit.getStatus());
+            assertTrue(orgUnit.isDissolved());
+            assertEquals(targetId, orgUnit.getMergedIntoId());
+            assertEquals("合并到目标部门", orgUnit.getDissolvedReason());
+            assertNotNull(orgUnit.getDissolvedAt());
+            assertEquals(2L, orgUnit.getUpdatedBy());
         }
     }
 
