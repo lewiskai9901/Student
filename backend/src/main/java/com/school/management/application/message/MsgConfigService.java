@@ -6,12 +6,14 @@ import com.school.management.domain.message.model.MsgTemplate;
 import com.school.management.domain.message.repository.MsgNotificationRepository;
 import com.school.management.domain.message.repository.MsgSubscriptionRuleRepository;
 import com.school.management.domain.message.repository.MsgTemplateRepository;
+import com.school.management.exception.BusinessException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.regex.Pattern;
 
 /**
  * 消息中心管理配置应用服务（管理员操作）
@@ -24,6 +26,9 @@ public class MsgConfigService {
     private final MsgSubscriptionRuleRepository subscriptionRuleRepository;
     private final MsgTemplateRepository templateRepository;
     private final MsgNotificationRepository notificationRepository;
+
+    /** 模板编码格式：大写字母、数字、下划线，长度 3-50。 */
+    private static final Pattern TEMPLATE_CODE_PATTERN = Pattern.compile("^[A-Z0-9_]{3,50}$");
 
     // ── 订阅规则 CRUD ────────────────────────────────────────────────────────
 
@@ -70,15 +75,17 @@ public class MsgConfigService {
 
     @Transactional
     public MsgTemplate createTemplate(MsgTemplate template) {
+        validateTemplateCode(template.getTemplateCode());
         // 检查 code 唯一性
         templateRepository.findByCode(template.getTemplateCode()).ifPresent(existing -> {
-            throw new IllegalArgumentException("模板编码已存在: " + template.getTemplateCode());
+            throw new BusinessException("模板编码已存在: " + template.getTemplateCode());
         });
         return templateRepository.save(template);
     }
 
     @Transactional
     public MsgTemplate updateTemplate(Long id, MsgTemplate update) {
+        validateTemplateCode(update.getTemplateCode());
         MsgTemplate existing = templateRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("消息模板不存在: " + id));
         if (existing.getIsSystem() != null && existing.getIsSystem() == 1) {
@@ -96,6 +103,20 @@ public class MsgConfigService {
                 .createdBy(existing.getCreatedBy())
                 .build();
         return templateRepository.save(updated);
+    }
+
+    /**
+     * 校验模板编码格式：大写字母、数字、下划线，长度 3-50。
+     * 编码会被集成脚本、订阅规则等以字面值引用，
+     * 限制字符集可避免空格、特殊符号导致的匹配失败与注入风险。
+     */
+    private void validateTemplateCode(String code) {
+        if (code == null || code.isBlank()) {
+            throw new BusinessException("模板编码不能为空");
+        }
+        if (!TEMPLATE_CODE_PATTERN.matcher(code).matches()) {
+            throw new BusinessException("模板编码只能包含大写字母、数字和下划线，长度 3-50");
+        }
     }
 
     @Transactional

@@ -34,8 +34,20 @@ public class EntityEventDispatchListener {
         try {
             messageDispatcher.dispatch(event);
         } catch (Exception e) {
-            log.error("[事件通知] 消息分发失败: type={}, error={}",
-                    event.getEventType(), e.getMessage());
+            // 异常必须带上完整堆栈和上下文，便于排查分发失败原因。
+            // AFTER_COMMIT + @Async 下抛出异常只会被 AsyncUncaughtExceptionHandler 捕获，
+            // 这里改用 ERROR 级别 + 完整堆栈（传入 Throwable 而非仅 message）。
+            log.error("[事件通知] 消息分发失败: eventId={}, type={}, category={}, subject={}:{}/{}, error={}",
+                    event.getId(),
+                    event.getEventType(),
+                    event.getEventCategory(),
+                    event.getSubjectType(),
+                    event.getSubjectId(),
+                    event.getSubjectName(),
+                    e.getMessage(),
+                    e);
+            // TODO 死信队列：待引入 failed_event_notifications 表或 Redis list 后，
+            //   在此把 event 快照与异常信息写入，由定时任务重试。
         }
     }
 }

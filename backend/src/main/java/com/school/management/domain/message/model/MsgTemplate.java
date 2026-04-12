@@ -2,6 +2,7 @@ package com.school.management.domain.message.model;
 
 import lombok.Builder;
 import lombok.Getter;
+import org.springframework.web.util.HtmlUtils;
 
 import java.time.LocalDateTime;
 import java.util.Map;
@@ -42,11 +43,16 @@ public class MsgTemplate {
         if (template == null || variables == null) {
             return template;
         }
+        // 模板内容本身可能包含 HTML 结构（由管理员可信地定义），
+        // 但变量值来自外部输入，必须 HTML 转义以防 XSS。
+        // 前端用 {{ }} 渲染时会自动转义，这是第二道防线；
+        // 若未来改用 v-html 渲染富文本，此层转义已经就位。
         String result = template;
         for (Map.Entry<String, String> entry : variables.entrySet()) {
             String placeholder = "{{" + entry.getKey() + "}}";
-            String value = entry.getValue() != null ? entry.getValue() : "";
-            result = result.replace(placeholder, value);
+            String raw = entry.getValue() != null ? entry.getValue() : "";
+            String safeValue = HtmlUtils.htmlEscape(raw);
+            result = result.replace(placeholder, safeValue);
         }
         return result;
     }

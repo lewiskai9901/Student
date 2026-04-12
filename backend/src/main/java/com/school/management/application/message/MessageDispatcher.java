@@ -108,9 +108,16 @@ public class MessageDispatcher {
         }
 
         // 3. 为每个目标用户创建通知（携带完整主体/分类/模块信息）
+        // tenantId 必须从事件取得；若事件未携带则拒绝派发，避免落入默认租户。
+        Long tenantId = event.getTenantId();
+        if (tenantId == null) {
+            log.warn("[消息分发] 事件缺少 tenantId，跳过派发: eventId={}, type={}",
+                    event.getId(), event.getEventType());
+            return;
+        }
         for (Long userId : targetUserIds) {
             MsgNotification notification = MsgNotification.createFromEvent(
-                    event.getTenantId(), userId, title, content,
+                    tenantId, userId, title, content,
                     event.getEventType(),
                     event.getSourceRefType(), event.getSourceRefId(),
                     event.getSubjectType(), event.getSubjectId(), event.getSubjectName(),
