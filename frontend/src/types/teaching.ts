@@ -150,6 +150,7 @@ export interface ScheduleEntry {
   weekStart: number
   weekEnd: number
   weekType: number // 0-每周, 1-单周, 2-双周
+  scheduleType?: number // 1=普通, 2=实验, 3=实践, 4=自习
 }
 
 export interface ScheduleConflict {
@@ -446,6 +447,7 @@ export interface SemesterOffering {
   totalWeeks?: number
   startWeek: number
   endWeek?: number
+  weekType?: number // 0=每周 1=单周 2=双周
   courseCategory?: number
   courseType?: number
   allowCombined: boolean

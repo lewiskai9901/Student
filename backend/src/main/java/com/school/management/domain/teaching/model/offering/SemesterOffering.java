@@ -14,6 +14,7 @@ public class SemesterOffering extends AggregateRoot<Long> {
     private Integer totalWeeks;
     private Integer startWeek;
     private Integer endWeek;
+    private Integer weekType; // 0=每周 1=单周 2=双周
     private Integer courseCategory;
     private Integer courseType;
     private Boolean allowCombined;
@@ -34,6 +35,7 @@ public class SemesterOffering extends AggregateRoot<Long> {
         o.weeklyHours = weeklyHours;
         o.startWeek = startWeek != null ? startWeek : 1;
         o.endWeek = endWeek;
+        o.weekType = 0;
         o.allowCombined = false;
         o.maxCombinedClasses = 2;
         o.allowWalking = false;
@@ -45,7 +47,7 @@ public class SemesterOffering extends AggregateRoot<Long> {
     public static SemesterOffering reconstruct(Long id, Long semesterId, Long planId,
             Long planCourseId, Long courseId,
             String applicableGrade, Integer weeklyHours, Integer totalWeeks,
-            Integer startWeek, Integer endWeek, Integer courseCategory, Integer courseType,
+            Integer startWeek, Integer endWeek, Integer weekType, Integer courseCategory, Integer courseType,
             Boolean allowCombined, Integer maxCombinedClasses, Boolean allowWalking,
             Integer status, String remark, Long createdBy) {
         SemesterOffering o = new SemesterOffering();
@@ -59,6 +61,7 @@ public class SemesterOffering extends AggregateRoot<Long> {
         o.totalWeeks = totalWeeks;
         o.startWeek = startWeek;
         o.endWeek = endWeek;
+        o.weekType = weekType != null ? weekType : 0;
         o.courseCategory = courseCategory;
         o.courseType = courseType;
         o.allowCombined = allowCombined;
@@ -75,12 +78,13 @@ public class SemesterOffering extends AggregateRoot<Long> {
         this.status = 1;
     }
 
-    public void update(Integer weeklyHours, Integer startWeek, Integer endWeek,
+    public void update(Integer weeklyHours, Integer startWeek, Integer endWeek, Integer weekType,
             Integer courseCategory, Integer courseType, Boolean allowCombined,
             Integer maxCombinedClasses, Boolean allowWalking, String remark) {
         this.weeklyHours = weeklyHours;
         this.startWeek = startWeek;
         this.endWeek = endWeek;
+        this.weekType = weekType != null ? weekType : 0;
         this.courseCategory = courseCategory;
         this.courseType = courseType;
         this.allowCombined = allowCombined;

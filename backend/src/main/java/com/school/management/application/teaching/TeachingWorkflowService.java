@@ -147,20 +147,14 @@ public class TeachingWorkflowService {
     public int generateTasksFromOfferings(Long semesterId, Long createdBy) {
         log.info("从开课计划生成教学任务: semesterId={}", semesterId);
 
-        // 从学期获取教学周范围
+        // 从校历教学周表获取实际周数
         int startWeek = 1;
-        int endWeek = 16;
-        try {
-            Map<String, Object> semInfo = jdbc.queryForMap(
-                "SELECT DATEDIFF(end_date, start_date) DIV 7 AS total_weeks FROM semesters WHERE id = ? AND deleted = 0", semesterId);
-            endWeek = semInfo.get("total_weeks") != null ? ((Number) semInfo.get("total_weeks")).intValue() : 16;
-            if (endWeek <= 0) endWeek = 16;
-        } catch (Exception ignored) {}
+        int endWeek = getSemesterTeachingWeeks(semesterId);
 
         List<Map<String, Object>> assignments = jdbc.queryForList(
             "SELECT a.id AS assignmentId, a.offering_id AS offeringId, a.course_id AS courseId, " +
             "a.org_unit_id AS orgUnitId, a.weekly_hours AS weeklyHours, a.student_count AS studentCount, " +
-            "o.start_week AS offeringStartWeek, o.end_week AS offeringEndWeek " +
+            "o.start_week AS offeringStartWeek, o.end_week AS offeringEndWeek, o.week_type AS offeringWeekType " +
             "FROM class_course_assignments a " +
             "LEFT JOIN semester_course_offerings o ON o.id = a.offering_id " +
             "WHERE a.semester_id = ? AND a.status = 1 AND a.deleted = 0 " +
@@ -177,21 +171,24 @@ public class TeachingWorkflowService {
             int weeklyHours = ((Number) a.get("weeklyHours")).intValue();
             int studentCount = a.get("studentCount") != null ? ((Number) a.get("studentCount")).intValue() : 0;
 
-            // 从开课计划继承周次范围，否则用学期默认值
+            // 从开课计划继承周次范围和周次类型
             int taskStartWeek = a.get("offeringStartWeek") != null ? ((Number) a.get("offeringStartWeek")).intValue() : startWeek;
             int taskEndWeek = a.get("offeringEndWeek") != null ? ((Number) a.get("offeringEndWeek")).intValue() : endWeek;
+            int taskWeekType = a.get("offeringWeekType") != null ? ((Number) a.get("offeringWeekType")).intValue() : 0;
+            // 单双周总学时要减半
             int totalHours = weeklyHours * (taskEndWeek - taskStartWeek + 1);
+            if (taskWeekType == 1 || taskWeekType == 2) totalHours = Math.round(totalHours / 2.0f);
 
             long taskId = IdWorker.getId();
             String taskCode = "TK" + taskId;
 
             jdbc.update(
                 "INSERT INTO teaching_tasks (id, task_code, semester_id, course_id, org_unit_id, offering_id, " +
-                "student_count, weekly_hours, total_hours, start_week, end_week, " +
+                "student_count, weekly_hours, total_hours, start_week, end_week, week_type, " +
                 "scheduling_status, task_status, created_by, deleted, tenant_id) " +
-                "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, 0, ?, 0, 1)",
+                "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, 0, ?, 0, 1)",
                 taskId, taskCode, semesterId, courseId, orgUnitId, offeringId,
-                studentCount, weeklyHours, totalHours, taskStartWeek, taskEndWeek, createdBy
+                studentCount, weeklyHours, totalHours, taskStartWeek, taskEndWeek, taskWeekType, createdBy
             );
             count++;
         }
@@ -330,5 +327,17 @@ public class TeachingWorkflowService {
         if (val == null) return null;
         if (val instanceof Number) return ((Number) val).longValue();
         return Long.parseLong(val.toString());
+    }
+
+    /** 获取学期最后一个教学周号（week_type=1） */
+    private int getSemesterTeachingWeeks(Long semesterId) {
+        try {
+            Integer week = jdbc.queryForObject(
+                "SELECT MAX(week_number) FROM academic_weeks WHERE semester_id = ? AND week_type = 1",
+                Integer.class, semesterId);
+            return week != null && week > 0 ? week : 16;
+        } catch (Exception e) {
+            return 16;
+        }
     }
 }

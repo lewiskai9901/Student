@@ -11,7 +11,7 @@
         </tr>
       </thead>
       <tbody>
-        <template v-for="(period, pIdx) in periods" :key="period.period">
+        <template v-for="period in periods" :key="period.period">
           <!-- Section separator: 午休 (after period 4) / 晚间 (after period 8) -->
           <tr v-if="isSectionBreak(period.period)" class="tt-break-row">
             <td :colspan="displayWeekdays.length + 1" class="tt-break-cell">
@@ -45,16 +45,19 @@
               <div
                 v-for="entry in getEntriesForStart(day.value, period.period)"
                 :key="entry.id"
-                :class="['tt-entry', draggedEntry?.id === entry.id ? 'tt-entry-dragging' : '']"
+                :class="['tt-entry', draggedEntry?.id === entry.id ? 'tt-entry-dragging' : '', entry.scheduleType === 4 ? 'tt-entry-self-study' : '']"
                 :style="getEntryStyle(entry)"
-                :draggable="editable"
+                :draggable="editable && entry.scheduleType !== 4"
                 @click.stop="emit('entry-click', entry)"
                 @dragstart="onDragStart($event, entry)"
                 @dragend="onDragEnd"
               >
-                <div class="tt-entry-course">{{ entry.courseName }}</div>
-                <div class="tt-entry-detail">{{ entry.teacherName || '' }}</div>
-                <div class="tt-entry-detail">{{ entry.classroomName || '' }}</div>
+                <div class="tt-entry-course">
+                  <span v-if="(entry as any).isLocked" class="tt-entry-lock" title="已锁定，自动排课不会覆盖">🔒</span>
+                  {{ entry.scheduleType === 4 ? '自习' : entry.courseName }}
+                </div>
+                <div class="tt-entry-detail">{{ entry.scheduleType === 4 ? '' : (entry.teacherName || '') }}</div>
+                <div class="tt-entry-detail">{{ entry.scheduleType === 4 ? '' : (entry.classroomName || '') }}</div>
                 <div v-if="entry.weekStart && entry.weekEnd" class="tt-entry-weeks">
                   {{ entry.weekStart }}-{{ entry.weekEnd }}周{{ entry.weekType === 1 ? '(单)' : entry.weekType === 2 ? '(双)' : '' }}
                 </div>
@@ -113,6 +116,14 @@ const colorPalette = [
 ]
 
 function getEntryStyle(entry: ScheduleEntry) {
+  // Self-study: gray background + dashed border
+  if (entry.scheduleType === 4) {
+    return {
+      background: '#f9fafb',
+      borderLeft: '3px dashed #d1d5db',
+      color: '#9ca3af',
+    }
+  }
   const idx = Number(entry.taskId ?? entry.id ?? 0) % colorPalette.length
   const c = colorPalette[idx]
   return {
@@ -292,7 +303,24 @@ function handleCellClick(day: number, period: number) {
 }
 .tt-cell:last-child { border-right: none; }
 .tt-cell-editable { cursor: pointer; }
-.tt-cell-editable:hover { background: #f8faff; }
+.tt-cell-editable:not(.tt-cell-has-entry):hover {
+  background: #eff6ff;
+  outline: 2px dashed #3b82f6;
+  outline-offset: -2px;
+  position: relative;
+}
+.tt-cell-editable:not(.tt-cell-has-entry):hover::after {
+  content: '＋ 手动排课';
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  color: #2563eb;
+  font-weight: 500;
+  pointer-events: none;
+}
 .tt-cell-has-entry { padding: 2px; }
 .tt-cell-conflict { background: #FEF2F2 !important; outline: 2px solid #EF4444; outline-offset: -2px; }
 .tt-cell-dragover { background: #DBEAFE !important; outline: 2px dashed #3B82F6; outline-offset: -2px; }
@@ -314,7 +342,9 @@ function handleCellClick(day: number, period: number) {
 .tt-entry:hover { box-shadow: 0 1px 4px rgba(0,0,0,0.12); }
 .tt-entry:last-child { margin-bottom: 0; }
 .tt-entry-dragging { opacity: 0.4; transform: scale(0.95); }
+.tt-entry-self-study { border-style: dashed !important; opacity: 0.7; }
 
+.tt-entry-lock { font-size: 10px; margin-right: 2px; }
 .tt-entry-course {
   font-size: 11.5px;
   font-weight: 600;

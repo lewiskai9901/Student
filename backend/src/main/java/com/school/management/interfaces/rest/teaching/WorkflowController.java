@@ -9,6 +9,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -55,12 +56,22 @@ public class WorkflowController {
         else if (scheduled < taskTotal) currentStep = "scheduling";
         else currentStep = "done";
 
-        return Result.success(Map.of(
-            "offerings", Map.of("total", offeringTotal, "confirmed", offeringConfirmed),
-            "assignments", Map.of("total", assignTotal, "confirmed", assignConfirmed),
-            "tasks", Map.of("total", taskTotal, "teacherAssigned", teacherAssigned, "scheduled", scheduled),
-            "currentStep", currentStep
-        ));
+        // 从 academic_weeks 的 week_type 直接读取教学周数
+        int teachingWeeks = 16;
+        try {
+            Integer tw = jdbc.queryForObject(
+                "SELECT MAX(week_number) FROM academic_weeks WHERE semester_id = ? AND week_type = 1",
+                Integer.class, semesterId);
+            if (tw != null && tw > 0) teachingWeeks = tw;
+        } catch (Exception ignored) {}
+
+        Map<String, Object> result = new HashMap<>();
+        result.put("offerings", Map.of("total", offeringTotal, "confirmed", offeringConfirmed));
+        result.put("assignments", Map.of("total", assignTotal, "confirmed", assignConfirmed));
+        result.put("tasks", Map.of("total", taskTotal, "teacherAssigned", teacherAssigned, "scheduled", scheduled));
+        result.put("currentStep", currentStep);
+        result.put("teachingWeeks", teachingWeeks);
+        return Result.success(result);
     }
 
     // ==================== 年级-学期映射 ====================

@@ -75,6 +75,9 @@ export const semesterApi = {
 
   getCalendarGrid: (semesterId: number | string) =>
     http.get(`${BASE}/semesters/${semesterId}/calendar-grid`),
+
+  updateWeekType: (weekId: number | string, weekType: number) =>
+    http.put(`${BASE}/weeks/${weekId}/type`, { weekType }),
 }
 
 // ==================== 校历事件 ====================

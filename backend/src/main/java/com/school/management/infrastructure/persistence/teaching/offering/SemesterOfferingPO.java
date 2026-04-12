@@ -19,6 +19,7 @@ public class SemesterOfferingPO {
     private Integer totalWeeks;
     private Integer startWeek;
     private Integer endWeek;
+    private Integer weekType; // 0=每周 1=单周 2=双周
     private Integer courseCategory;
     private Integer courseType;
     private Boolean allowCombined;

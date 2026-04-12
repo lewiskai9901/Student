@@ -1,7 +1,7 @@
 <template>
   <!-- Stats bar -->
   <div class="tm-filters">
-    <span style="font-size: 12.5px; color: #6b7280;">共 <b>{{ offerings.length }}</b> 门课</span>
+    <span style="font-size: 12.5px; color: #6b7280;">共 <b>{{ filteredOfferings.length }}</b> 门课</span>
     <i class="tm-sep" />
     <span style="font-size: 12.5px; color: #6b7280;">必修 <b>{{ offeringRequiredCount }}</b></span>
     <i class="tm-sep" />
@@ -49,14 +49,18 @@
             <span class="tm-spin" style="display:inline-block;width:16px;height:16px;border:2px solid #e5e7eb;border-top-color:#2563eb;border-radius:50%;" /> 加载中...
           </td>
         </tr>
-        <tr v-else-if="offerings.length === 0">
+        <tr v-else-if="filteredOfferings.length === 0">
           <td colspan="9" class="tm-empty">暂无开课计划，请选择学期后添加</td>
         </tr>
-        <tr v-for="row in offerings" :key="row.id">
+        <tr v-for="row in filteredOfferings" :key="row.id">
           <td><span class="tm-code">{{ row.courseCode }}</span></td>
           <td class="text-left">{{ row.courseName }}</td>
           <td>{{ row.applicableGrade }}</td>
-          <td class="tm-mono">{{ row.weeklyHours }}</td>
+          <td class="tm-mono">
+            {{ row.weeklyHours }}
+            <span v-if="row.weekType === 1" class="tm-chip tm-chip-amber" style="margin-left: 4px; font-size: 10px;">单</span>
+            <span v-else-if="row.weekType === 2" class="tm-chip tm-chip-blue" style="margin-left: 4px; font-size: 10px;">双</span>
+          </td>
           <td>
             <span :class="['tm-chip', getCourseTypeChip(row.courseType)]">
               {{ getCourseTypeName(row.courseType) }}
@@ -122,7 +126,7 @@
                 </select>
               </div>
             </div>
-            <div class="tm-fields tm-cols-2">
+            <div class="tm-fields tm-cols-3">
               <div class="tm-field" :class="{ 'tm-error': errors.startWeek }">
                 <label class="tm-label">起始周 <span class="req">*</span></label>
                 <input v-model.number="offeringForm.startWeek" type="number" min="1" max="30" class="tm-input" />
@@ -130,6 +134,14 @@
               <div class="tm-field">
                 <label class="tm-label">结束周</label>
                 <input v-model.number="offeringForm.endWeek" type="number" :min="offeringForm.startWeek" max="30" class="tm-input" />
+              </div>
+              <div class="tm-field">
+                <label class="tm-label">周次类型</label>
+                <select v-model.number="offeringForm.weekType" class="tm-field-select">
+                  <option :value="0">每周</option>
+                  <option :value="1">单周</option>
+                  <option :value="2">双周</option>
+                </select>
               </div>
             </div>
           </div>
@@ -237,6 +249,7 @@ const offeringForm = ref({
   weeklyHours: 2,
   startWeek: 1,
   endWeek: undefined as number | undefined,
+  weekType: 0, // 0=每周 1=单周 2=双周
   courseType: 1,
   allowCombined: false,
   maxCombinedClasses: 2,
@@ -254,9 +267,29 @@ const importForm = ref({
 
 // ==================== Computed ====================
 
-const offeringRequiredCount = computed(() => offerings.value.filter(o => o.courseType === 1).length)
-const offeringElectiveCount = computed(() => offerings.value.filter(o => o.courseType === 2).length)
-const offeringTotalWeeklyHours = computed(() => offerings.value.reduce((sum, o) => sum + o.weeklyHours, 0))
+/** 根据左树选择过滤：GRADE匹配applicableGrade，CLASS匹配其所属年级 */
+const filteredOfferings = computed(() => {
+  const org = props.selectedOrg
+  if (!org?.id || !org.type) return offerings.value
+  if (org.type === 'GRADE') {
+    // org.name 类似 "2024级"
+    return offerings.value.filter(o => o.applicableGrade === org.name)
+  }
+  if (org.type === 'CLASS') {
+    // 从班级名提取年级，如 "经济2024-1班" → "2024级"
+    const m = org.name?.match(/(\d{4})/)
+    if (m) {
+      const grade = m[1] + '级'
+      return offerings.value.filter(o => o.applicableGrade === grade)
+    }
+  }
+  // DEPARTMENT: 选中系时，通过 classIds 推断包含的年级
+  return offerings.value
+})
+
+const offeringRequiredCount = computed(() => filteredOfferings.value.filter(o => o.courseType === 1).length)
+const offeringElectiveCount = computed(() => filteredOfferings.value.filter(o => o.courseType === 2).length)
+const offeringTotalWeeklyHours = computed(() => filteredOfferings.value.reduce((sum, o) => sum + o.weeklyHours, 0))
 
 // ==================== Helpers ====================
 
@@ -337,6 +370,7 @@ function showOfferingDialog(row?: SemesterOffering) {
       weeklyHours: row.weeklyHours,
       startWeek: row.startWeek,
       endWeek: row.endWeek,
+      weekType: (row as any).weekType ?? 0,
       courseType: row.courseType || 1,
       allowCombined: row.allowCombined,
       maxCombinedClasses: row.maxCombinedClasses || 2,
@@ -350,6 +384,7 @@ function showOfferingDialog(row?: SemesterOffering) {
       weeklyHours: 2,
       startWeek: 1,
       endWeek: undefined,
+      weekType: 0,
       courseType: 1,
       allowCombined: false,
       maxCombinedClasses: 2,

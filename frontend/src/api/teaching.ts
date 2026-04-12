@@ -182,6 +182,16 @@ export const scheduleApi = {
     http.get(`${BASE_URL}/schedules/export/teacher/${teacherId}`, { params: { semesterId }, responseType: 'blob' }),
 }
 
+// ==================== 自习课填充 ====================
+
+export const selfStudyApi = {
+  fill: (data: { semesterId: number | string; maxPeriods?: number; maxWeekday?: number; startWeek?: number; endWeek?: number }) =>
+    http.post<{ inserted: number; classCount: number }>(`${BASE_URL}/self-study/fill`, data),
+
+  clear: (semesterId: number | string) =>
+    http.delete<{ cleared: number }>(`${BASE_URL}/self-study/clear`, { params: { semesterId } }),
+}
+
 // ==================== 调课管理 ====================
 
 export const adjustmentApi = {

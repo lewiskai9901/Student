@@ -1,28 +1,55 @@
 <template>
   <div>
     <h3 class="setup-step-title">执行排课</h3>
-    <p class="setup-step-desc">系统将基于约束规则自动排课。已手动排定的课程不会被调整。</p>
+    <p class="setup-step-desc">系统将基于约束规则自动排课。已锁定或手动排定的课程不会被调整。</p>
 
-    <!-- Params -->
-    <div style="border: 1px solid #e5e7eb; border-radius: 10px; padding: 16px; margin-bottom: 16px;">
-      <div class="tm-fields tm-cols-3">
-        <div class="tm-field">
-          <label class="tm-label">最大迭代</label>
-          <input v-model.number="params.maxIterations" type="number" min="100" max="5000" step="100" class="tm-input" />
+    <!-- 排课模式选择 -->
+    <div style="border: 1px solid #e5e7eb; border-radius: 10px; padding: 16px; margin-bottom: 16px; background: #fff;">
+      <label class="tm-label" style="margin-bottom: 10px;">排课模式</label>
+      <div class="sch-presets">
+        <div
+          v-for="p in presets"
+          :key="p.key"
+          :class="['sch-preset', { active: preset === p.key }]"
+          @click="applyPreset(p.key)"
+        >
+          <div class="sch-preset-icon">{{ p.icon }}</div>
+          <div class="sch-preset-title">{{ p.title }}</div>
+          <div class="sch-preset-desc">{{ p.desc }}</div>
+          <div class="sch-preset-time">约 {{ p.timeEstimate }}</div>
         </div>
-        <div class="tm-field">
-          <label class="tm-label">种群大小</label>
-          <input v-model.number="params.populationSize" type="number" min="10" max="100" step="10" class="tm-input" />
-        </div>
-        <div class="tm-field">
-          <label class="tm-label">变异率: {{ params.mutationRate }}</label>
-          <input v-model.number="params.mutationRate" type="range" min="0.01" max="0.5" step="0.01" style="width: 100%;" />
+      </div>
+
+      <!-- 高级设置（折叠）-->
+      <div style="margin-top: 12px;">
+        <button class="sch-advanced-toggle" @click="showAdvanced = !showAdvanced">
+          <svg :style="{ transform: showAdvanced ? 'rotate(90deg)' : 'rotate(0)' }" width="10" height="10" viewBox="0 0 10 10" fill="none"><path d="M3 2l4 3-4 3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          高级参数（适用于有排课经验的用户）
+        </button>
+        <div v-if="showAdvanced" class="sch-advanced">
+          <div class="tm-fields tm-cols-3">
+            <div class="tm-field">
+              <label class="tm-label">迭代次数</label>
+              <input v-model.number="params.maxIterations" type="number" min="100" max="5000" step="100" class="tm-input" />
+              <p class="sch-hint">数字越大越精准但越慢</p>
+            </div>
+            <div class="tm-field">
+              <label class="tm-label">候选方案数</label>
+              <input v-model.number="params.populationSize" type="number" min="10" max="100" step="10" class="tm-input" />
+              <p class="sch-hint">同时探索的方案数量</p>
+            </div>
+            <div class="tm-field">
+              <label class="tm-label">变异率 {{ params.mutationRate }}</label>
+              <input v-model.number="params.mutationRate" type="range" min="0.01" max="0.5" step="0.01" style="width: 100%;" />
+              <p class="sch-hint">越高越激进探索新方案</p>
+            </div>
+          </div>
         </div>
       </div>
     </div>
 
-    <button class="tm-btn tm-btn-primary" :disabled="scheduling" @click="runSchedule" style="margin-bottom: 16px;">
-      {{ scheduling ? '排课中...' : '开始智能排课' }}
+    <button class="tm-btn tm-btn-primary" :disabled="scheduling" @click="runSchedule" style="margin-bottom: 16px; padding: 10px 24px; font-size: 14px;">
+      {{ scheduling ? '排课中...' : '▶ 开始智能排课' }}
     </button>
 
     <!-- Progress -->
@@ -72,6 +99,27 @@ const params = reactive({ maxIterations: 500, populationSize: 30, mutationRate: 
 const scheduling = ref(false)
 const progress = ref(0)
 const result = ref<any>(null)
+const preset = ref<'fast' | 'standard' | 'precise'>('standard')
+const showAdvanced = ref(false)
+
+const presets = [
+  { key: 'fast', icon: '⚡', title: '快速', desc: '适合任务少或初次排课', timeEstimate: '10-30秒',
+    params: { maxIterations: 200, populationSize: 20, mutationRate: 0.15 } },
+  { key: 'standard', icon: '⚖️', title: '标准', desc: '兼顾速度和质量（推荐）', timeEstimate: '30秒-2分钟',
+    params: { maxIterations: 500, populationSize: 30, mutationRate: 0.1 } },
+  { key: 'precise', icon: '🎯', title: '精细', desc: '大量任务、复杂约束', timeEstimate: '2-5分钟',
+    params: { maxIterations: 1500, populationSize: 50, mutationRate: 0.08 } },
+] as const
+
+function applyPreset(key: typeof preset.value) {
+  preset.value = key
+  const p = presets.find(x => x.key === key)
+  if (p) {
+    params.maxIterations = p.params.maxIterations
+    params.populationSize = p.params.populationSize
+    params.mutationRate = p.params.mutationRate
+  }
+}
 
 async function runSchedule() {
   if (!props.semesterId) return
@@ -95,4 +143,37 @@ async function runSchedule() {
 <style scoped>
 .setup-step-title { font-size: 16px; font-weight: 700; color: #111827; margin: 0 0 6px; }
 .setup-step-desc { font-size: 13px; color: #6b7280; margin: 0 0 20px; }
+
+/* 排课模式预设 */
+.sch-presets { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+.sch-preset {
+  border: 1.5px solid #e5e7eb; border-radius: 8px;
+  padding: 12px; cursor: pointer; text-align: center;
+  transition: all 0.15s; background: #fff;
+}
+.sch-preset:hover { border-color: #9ca3af; background: #f9fafb; }
+.sch-preset.active {
+  border-color: #2563eb; background: #eff6ff;
+  box-shadow: 0 0 0 3px rgba(37,99,235,0.08);
+}
+.sch-preset-icon { font-size: 22px; margin-bottom: 4px; }
+.sch-preset-title { font-size: 13px; font-weight: 600; color: #111827; margin-bottom: 2px; }
+.sch-preset.active .sch-preset-title { color: #2563eb; }
+.sch-preset-desc { font-size: 11px; color: #6b7280; line-height: 1.3; margin-bottom: 4px; }
+.sch-preset-time { font-size: 10.5px; color: #9ca3af; }
+
+/* 高级设置 */
+.sch-advanced-toggle {
+  display: inline-flex; align-items: center; gap: 6px;
+  font-size: 12px; color: #6b7280;
+  background: none; border: none; cursor: pointer;
+  padding: 4px 0;
+}
+.sch-advanced-toggle:hover { color: #2563eb; }
+.sch-advanced-toggle svg { transition: transform 0.15s; }
+.sch-advanced {
+  margin-top: 10px; padding: 12px; background: #f9fafb;
+  border: 1px solid #f3f4f6; border-radius: 8px;
+}
+.sch-hint { font-size: 10.5px; color: #9ca3af; margin-top: 3px; margin-bottom: 0; }
 </style>

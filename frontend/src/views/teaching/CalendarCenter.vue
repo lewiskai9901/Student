@@ -33,7 +33,7 @@
 
     <!-- Content -->
     <div style="flex: 1; overflow-y: auto; padding: 16px 24px;">
-      <SemesterOverview v-if="tab === 'overview'" :semester-id="semesterId" :weeks="weeks" :events="events" :current-week="currentWeek" :calendar-grid="calendarGrid" />
+      <SemesterOverview v-if="tab === 'overview'" :semester-id="semesterId" :weeks="weeks" :events="events" :current-week="currentWeek" :calendar-grid="calendarGrid" @refresh="loadWeeks(); loadCalendarGrid()" />
       <CalendarGrid v-else-if="tab === 'grid'" :semester-id="semesterId" :year-id="yearId" @loaded="onGridLoaded" />
       <CalendarEvents v-else-if="tab === 'events'" :semester-id="semesterId" :year-id="yearId" :events="events" @refresh="loadEvents" />
       <PeriodSettings v-else-if="tab === 'periods'" :semester-id="semesterId" />

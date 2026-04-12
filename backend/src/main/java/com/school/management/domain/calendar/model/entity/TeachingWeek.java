@@ -9,6 +9,7 @@ public class TeachingWeek {
     private String weekName;
     private LocalDate startDate;
     private LocalDate endDate;
+    private Integer weekType; // 1=教学 2=考试 3=假期
     private Boolean isCurrent;
     private Integer status; // 1=active, 0=inactive
 
@@ -25,13 +26,14 @@ public class TeachingWeek {
         week.weekName = weekName != null ? weekName : "第" + weekNumber + "周";
         week.startDate = startDate;
         week.endDate = endDate;
+        week.weekType = 1; // 默认教学周
         week.isCurrent = false;
         week.status = 1;
         return week;
     }
 
     public static TeachingWeek reconstruct(Long id, Long semesterId, Integer weekNumber, String weekName,
-                                            LocalDate startDate, LocalDate endDate,
+                                            LocalDate startDate, LocalDate endDate, Integer weekType,
                                             Boolean isCurrent, Integer status) {
         TeachingWeek week = new TeachingWeek();
         week.id = id;
@@ -40,6 +42,7 @@ public class TeachingWeek {
         week.weekName = weekName;
         week.startDate = startDate;
         week.endDate = endDate;
+        week.weekType = weekType != null ? weekType : 1;
         week.isCurrent = isCurrent;
         week.status = status;
         return week;
@@ -57,6 +60,7 @@ public class TeachingWeek {
     public String getWeekName() { return weekName; }
     public LocalDate getStartDate() { return startDate; }
     public LocalDate getEndDate() { return endDate; }
+    public Integer getWeekType() { return weekType; }
     public Boolean getIsCurrent() { return isCurrent; }
     public Integer getStatus() { return status; }
 }

@@ -45,6 +45,7 @@ public class TeachingWeekRepositoryImpl implements TeachingWeekRepository {
         po.setWeekName(d.getWeekName());
         po.setStartDate(d.getStartDate());
         po.setEndDate(d.getEndDate());
+        po.setWeekType(d.getWeekType());
         po.setIsCurrent(d.getIsCurrent() != null && d.getIsCurrent() ? 1 : 0);
         po.setStatus(d.getStatus());
         return po;
@@ -52,7 +53,7 @@ public class TeachingWeekRepositoryImpl implements TeachingWeekRepository {
 
     private TeachingWeek toDomain(TeachingWeekPO po) {
         return TeachingWeek.reconstruct(po.getId(), po.getSemesterId(), po.getWeekNumber(),
-                po.getWeekName(), po.getStartDate(), po.getEndDate(),
+                po.getWeekName(), po.getStartDate(), po.getEndDate(), po.getWeekType(),
                 po.getIsCurrent() != null && po.getIsCurrent() == 1, po.getStatus());
     }
 }

@@ -521,3 +521,37 @@
 /* Spinner */
 @keyframes tm-spin { to { transform: rotate(360deg); } }
 .tm-spin { animation: tm-spin 0.8s linear infinite; }
+
+/* ============================================
+   Workbench CSS Variables
+   ============================================ */
+:root {
+  --wb-bg: #f8f9fb;
+  --wb-border: #e8eaed;
+  --wb-accent: #2563eb;
+  --wb-text: #111827;
+  --wb-text-muted: #6b7280;
+  --wb-success: #10b981;
+  --wb-tree-width: 200px;
+  --wb-step-height: 42px;
+}
+
+/* Self-study entry in timetable */
+.tt-entry-self-study {
+  border-style: dashed !important;
+  opacity: 0.7;
+}
+.tt-entry-self-study .tt-entry-course {
+  font-style: italic;
+  font-weight: 400;
+}
+
+/* Separator used in various places */
+.tm-sep {
+  display: inline-block;
+  width: 1px;
+  height: 10px;
+  background: #d1d5db;
+  vertical-align: middle;
+  margin: 0 4px;
+}

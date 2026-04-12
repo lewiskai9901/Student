@@ -170,6 +170,14 @@ public class AcademicCalendarController {
         return Result.success(calendarService.generateWeeks(semesterId));
     }
 
+    @PutMapping("/weeks/{weekId}/type")
+    @CasbinAccess(resource = "calendar", action = "edit")
+    public Result<Void> updateWeekType(@PathVariable Long weekId, @RequestBody java.util.Map<String, Object> body) {
+        Integer weekType = ((Number) body.get("weekType")).intValue();
+        calendarService.updateWeekType(weekId, weekType);
+        return Result.success(null);
+    }
+
     // ==================== 校历事件 ====================
 
     @GetMapping("/events")

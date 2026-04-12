@@ -18,6 +18,7 @@ import com.school.management.domain.shared.event.DomainEventPublisher;
 import com.school.management.exception.BusinessException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -38,6 +39,7 @@ public class CalendarApplicationService {
     private final TeachingWeekRepository teachingWeekRepository;
     private final AcademicEventRepository academicEventRepository;
     private final DomainEventPublisher eventPublisher;
+    private final JdbcTemplate jdbc;
 
     // ==================== 学年管理 ====================
 
@@ -283,6 +285,17 @@ public class CalendarApplicationService {
             }
         }
 
+        // 从 academic_weeks 读取手动设定的周类型
+        Map<Integer, Integer> dbWeekTypes = new LinkedHashMap<>();
+        try {
+            List<Map<String, Object>> wtRows = jdbc.queryForList(
+                "SELECT week_number, week_type FROM academic_weeks WHERE semester_id = ?", semesterId);
+            for (Map<String, Object> r : wtRows) {
+                dbWeekTypes.put(((Number) r.get("week_number")).intValue(),
+                                ((Number) r.get("week_type")).intValue());
+            }
+        } catch (Exception ignored) {}
+
         List<CalendarWeekDTO> weeks = new ArrayList<>();
         LocalDate weekStart = semester.getStartDate();
         int weekNum = 1;
@@ -327,15 +340,9 @@ public class CalendarApplicationService {
                         .followWeekday(followWeekday)
                         .eventId(eventId).build());
             }
-            // compute weekType from weekday (Mon-Fri) day types
-            String weekType = "TEACHING";
-            long weekdayCount = days.stream().filter(d -> d.getWeekday() <= 5).count();
-            if (weekdayCount > 0) {
-                long holidays = days.stream().filter(d -> d.getWeekday() <= 5 && "HOLIDAY".equals(d.getDayType())).count();
-                long exams = days.stream().filter(d -> d.getWeekday() <= 5 && "EXAM".equals(d.getDayType())).count();
-                if (holidays == weekdayCount) weekType = "VACATION";
-                else if (exams == weekdayCount) weekType = "EXAM";
-            }
+            // 从数据库读取周类型（管理员手动设定）
+            int dbWt = dbWeekTypes.getOrDefault(weekNum, 1);
+            String weekType = dbWt == 2 ? "EXAM" : dbWt == 3 ? "VACATION" : "TEACHING";
 
             LocalDate weekEnd = weekStart.plusDays(6);
             if (weekEnd.isAfter(semester.getEndDate())) weekEnd = semester.getEndDate();
@@ -353,6 +360,13 @@ public class CalendarApplicationService {
                 .totalMakeupDays(makeupDays)
                 .totalExamDays(examDays)
                 .build();
+    }
+
+    public void updateWeekType(Long weekId, Integer weekType) {
+        if (weekType == null || weekType < 1 || weekType > 3) {
+            throw new IllegalArgumentException("周类型必须为 1(教学) 2(考试) 3(假期)");
+        }
+        jdbc.update("UPDATE academic_weeks SET week_type = ? WHERE id = ?", weekType, weekId);
     }
 
     // ==================== Helper ====================

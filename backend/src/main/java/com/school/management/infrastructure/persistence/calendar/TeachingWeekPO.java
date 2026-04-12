@@ -14,6 +14,7 @@ public class TeachingWeekPO {
     private String weekName;
     private LocalDate startDate;
     private LocalDate endDate;
+    private Integer weekType;  // 1=教学 2=考试 3=假期
     private Integer isCurrent;
     private Integer status;
 }

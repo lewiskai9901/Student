@@ -63,6 +63,7 @@ public class SemesterOfferingRepositoryImpl implements SemesterOfferingRepositor
         po.setTotalWeeks(o.getTotalWeeks());
         po.setStartWeek(o.getStartWeek());
         po.setEndWeek(o.getEndWeek());
+        po.setWeekType(o.getWeekType());
         po.setCourseCategory(o.getCourseCategory());
         po.setCourseType(o.getCourseType());
         po.setAllowCombined(o.getAllowCombined());
@@ -79,7 +80,7 @@ public class SemesterOfferingRepositoryImpl implements SemesterOfferingRepositor
                 po.getId(), po.getSemesterId(), po.getPlanId(),
                 po.getPlanCourseId(), po.getCourseId(),
                 po.getApplicableGrade(), po.getWeeklyHours(), po.getTotalWeeks(),
-                po.getStartWeek(), po.getEndWeek(), po.getCourseCategory(), po.getCourseType(),
+                po.getStartWeek(), po.getEndWeek(), po.getWeekType(), po.getCourseCategory(), po.getCourseType(),
                 po.getAllowCombined(), po.getMaxCombinedClasses(), po.getAllowWalking(),
                 po.getStatus(), po.getRemark(), po.getCreatedBy()
         );

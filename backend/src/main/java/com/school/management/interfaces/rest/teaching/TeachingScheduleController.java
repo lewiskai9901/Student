@@ -387,7 +387,7 @@ public class TeachingScheduleController {
             "course_id AS courseId, org_unit_id AS orgUnitId, teacher_id AS teacherId, " +
             "classroom_id AS classroomId, weekday, start_slot AS startSlot, " +
             "end_slot AS endSlot, start_week AS startWeek, end_week AS endWeek, " +
-            "week_type AS weekType, schedule_type AS scheduleType, " +
+            "week_type AS weekType, schedule_type AS scheduleType, is_locked AS isLocked, " +
             "entry_status AS entryStatus, conflict_flag AS conflictFlag, " +
             "created_at AS createdAt " +
             "FROM schedule_entries WHERE deleted = 0"
@@ -414,7 +414,7 @@ public class TeachingScheduleController {
             "course_id AS courseId, org_unit_id AS orgUnitId, teacher_id AS teacherId, " +
             "classroom_id AS classroomId, weekday, start_slot AS startSlot, " +
             "end_slot AS endSlot, start_week AS startWeek, end_week AS endWeek, " +
-            "week_type AS weekType, schedule_type AS scheduleType, " +
+            "week_type AS weekType, schedule_type AS scheduleType, is_locked AS isLocked, " +
             "entry_status AS entryStatus, conflict_flag AS conflictFlag, " +
             "created_at AS createdAt, updated_at AS updatedAt " +
             "FROM schedule_entries WHERE id = ? AND deleted = 0", id
@@ -436,7 +436,7 @@ public class TeachingScheduleController {
         Integer startSlot = data.get("startSlot") != null ? ((Number) data.get("startSlot")).intValue() : null;
         Integer endSlot = data.get("endSlot") != null ? ((Number) data.get("endSlot")).intValue() : null;
         Integer startWeek = data.get("startWeek") != null ? ((Number) data.get("startWeek")).intValue() : 1;
-        Integer endWeek = data.get("endWeek") != null ? ((Number) data.get("endWeek")).intValue() : 16;
+        Integer endWeek = data.get("endWeek") != null ? ((Number) data.get("endWeek")).intValue() : getSemesterTeachingWeeks(semesterId);
         Integer weekType = data.get("weekType") != null ? ((Number) data.get("weekType")).intValue() : 0;
         Integer scheduleType = data.get("scheduleType") != null ? ((Number) data.get("scheduleType")).intValue() : 1;
 
@@ -459,22 +459,47 @@ public class TeachingScheduleController {
     @PutMapping("/schedules/{id}")
     @CasbinAccess(resource = "teaching:schedule", action = "edit")
     public Result<Void> updateSchedule(@PathVariable Long id, @RequestBody Map<String, Object> data) {
-        Long teacherId = data.get("teacherId") != null ? ((Number) data.get("teacherId")).longValue() : null;
-        Long classroomId = data.get("classroomId") != null ? ((Number) data.get("classroomId")).longValue() : null;
-        Integer weekday = data.get("weekday") != null ? ((Number) data.get("weekday")).intValue() : null;
-        Integer startSlot = data.get("startSlot") != null ? ((Number) data.get("startSlot")).intValue() : null;
-        Integer endSlot = data.get("endSlot") != null ? ((Number) data.get("endSlot")).intValue() : null;
-        Integer startWeek = data.get("startWeek") != null ? ((Number) data.get("startWeek")).intValue() : null;
-        Integer endWeek = data.get("endWeek") != null ? ((Number) data.get("endWeek")).intValue() : null;
-        Integer weekType = data.get("weekType") != null ? ((Number) data.get("weekType")).intValue() : null;
-
+        // 构建动态 UPDATE：只更新传入的字段
+        List<String> sets = new ArrayList<>();
+        List<Object> params = new ArrayList<>();
+        if (data.containsKey("teacherId")) {
+            sets.add("teacher_id = ?");
+            params.add(data.get("teacherId") != null ? ((Number) data.get("teacherId")).longValue() : null);
+        }
+        if (data.containsKey("classroomId")) {
+            sets.add("classroom_id = ?");
+            params.add(data.get("classroomId") != null ? ((Number) data.get("classroomId")).longValue() : null);
+        }
+        if (data.containsKey("weekday")) {
+            sets.add("weekday = ?");
+            params.add(((Number) data.get("weekday")).intValue());
+        }
+        if (data.containsKey("startSlot")) {
+            sets.add("start_slot = ?");
+            params.add(((Number) data.get("startSlot")).intValue());
+        }
+        if (data.containsKey("endSlot")) {
+            sets.add("end_slot = ?");
+            params.add(((Number) data.get("endSlot")).intValue());
+        }
+        if (data.containsKey("startWeek")) {
+            sets.add("start_week = ?");
+            params.add(((Number) data.get("startWeek")).intValue());
+        }
+        if (data.containsKey("endWeek")) {
+            sets.add("end_week = ?");
+            params.add(((Number) data.get("endWeek")).intValue());
+        }
+        if (data.containsKey("weekType")) {
+            sets.add("week_type = ?");
+            params.add(((Number) data.get("weekType")).intValue());
+        }
+        if (sets.isEmpty()) return Result.success();
+        sets.add("updated_at = NOW()");
+        params.add(id);
         jdbc.update(
-            "UPDATE schedule_entries SET teacher_id = ?, classroom_id = ?, weekday = ?, " +
-            "start_slot = ?, end_slot = ?, start_week = ?, end_week = ?, " +
-            "week_type = ?, updated_at = NOW() " +
-            "WHERE id = ? AND deleted = 0",
-            teacherId, classroomId, weekday, startSlot, endSlot,
-            startWeek, endWeek, weekType, id
+            "UPDATE schedule_entries SET " + String.join(", ", sets) + " WHERE id = ? AND deleted = 0",
+            params.toArray()
         );
         return Result.success();
     }
@@ -484,6 +509,62 @@ public class TeachingScheduleController {
     public Result<Void> deleteSchedule(@PathVariable Long id) {
         jdbc.update("UPDATE schedule_entries SET deleted = 1 WHERE id = ?", id);
         return Result.success();
+    }
+
+    /** 锁定/解锁排课条目，锁定后自动排课不会覆盖 */
+    @PostMapping("/schedules/{id}/toggle-lock")
+    @CasbinAccess(resource = "teaching:schedule", action = "edit")
+    public Result<Map<String, Object>> toggleLock(@PathVariable Long id) {
+        jdbc.update("UPDATE schedule_entries SET is_locked = 1 - is_locked WHERE id = ? AND deleted = 0", id);
+        Integer locked = jdbc.queryForObject("SELECT is_locked FROM schedule_entries WHERE id = ?", Integer.class, id);
+        return Result.success(Map.of("isLocked", locked != null ? locked : 0));
+    }
+
+    /** 批量锁定/解锁 */
+    @PostMapping("/schedules/batch-lock")
+    @CasbinAccess(resource = "teaching:schedule", action = "edit")
+    public Result<Map<String, Object>> batchLock(@RequestBody Map<String, Object> body) {
+        @SuppressWarnings("unchecked")
+        List<Number> ids = (List<Number>) body.get("ids");
+        Integer lock = ((Number) body.getOrDefault("lock", 1)).intValue();
+        if (ids == null || ids.isEmpty()) return Result.success(Map.of("updated", 0));
+        String placeholders = String.join(",", ids.stream().map(i -> "?").toList());
+        Object[] args = new Object[ids.size() + 1];
+        args[0] = lock;
+        for (int i = 0; i < ids.size(); i++) args[i + 1] = ids.get(i).longValue();
+        int updated = jdbc.update(
+            "UPDATE schedule_entries SET is_locked = ? WHERE id IN (" + placeholders + ") AND deleted = 0", args);
+        return Result.success(Map.of("updated", updated));
+    }
+
+    /**
+     * 重置排课：清除排课条目 + 重置任务排课状态。已锁定的条目不会被清除。
+     */
+    @PostMapping("/schedules/reset")
+    @CasbinAccess(resource = "teaching:schedule", action = "edit")
+    public Result<Map<String, Object>> resetSchedule(@RequestBody Map<String, Object> body) {
+        Long semesterId = ((Number) body.get("semesterId")).longValue();
+        boolean keepLocked = body.get("keepLocked") == null || Boolean.TRUE.equals(body.get("keepLocked"));
+        int cleared;
+        if (keepLocked) {
+            cleared = jdbc.update(
+                "UPDATE schedule_entries SET deleted = 1 WHERE semester_id = ? AND deleted = 0 AND is_locked = 0", semesterId);
+        } else {
+            cleared = jdbc.update(
+                "UPDATE schedule_entries SET deleted = 1 WHERE semester_id = ? AND deleted = 0", semesterId);
+        }
+        // 重置任务状态：无排课条目的 → 0，只有部分锁定条目的 → 1
+        int reset = jdbc.update(
+            "UPDATE teaching_tasks t SET scheduling_status = 0 " +
+            "WHERE t.semester_id = ? AND t.deleted = 0 " +
+            "AND NOT EXISTS (SELECT 1 FROM schedule_entries e WHERE e.task_id = t.id AND e.deleted = 0)",
+            semesterId);
+        jdbc.update(
+            "UPDATE teaching_tasks t SET scheduling_status = 1 " +
+            "WHERE t.semester_id = ? AND t.deleted = 0 " +
+            "AND EXISTS (SELECT 1 FROM schedule_entries e WHERE e.task_id = t.id AND e.deleted = 0)",
+            semesterId);
+        return Result.success(Map.of("cleared", cleared, "reset", reset, "keepLocked", keepLocked));
     }
 
     @GetMapping("/schedule-teachers")
@@ -511,7 +592,7 @@ public class TeachingScheduleController {
             "se.classroom_id AS classroomId, " +
             "se.weekday AS dayOfWeek, se.start_slot AS periodStart, " +
             "se.end_slot AS periodEnd, se.start_week AS weekStart, se.end_week AS weekEnd, " +
-            "se.week_type AS weekType, se.schedule_type AS scheduleType, " +
+            "se.week_type AS weekType, se.schedule_type AS scheduleType, se.is_locked AS isLocked, " +
             "se.entry_status AS entryStatus, " +
             "c.course_name AS courseName, u.real_name AS teacherName, " +
             "COALESCE(p.place_code, p.place_name) AS classroomName " +
@@ -544,7 +625,7 @@ public class TeachingScheduleController {
             "se.classroom_id AS classroomId, " +
             "se.weekday AS dayOfWeek, se.start_slot AS periodStart, " +
             "se.end_slot AS periodEnd, se.start_week AS weekStart, se.end_week AS weekEnd, " +
-            "se.week_type AS weekType, se.schedule_type AS scheduleType, " +
+            "se.week_type AS weekType, se.schedule_type AS scheduleType, se.is_locked AS isLocked, " +
             "se.entry_status AS entryStatus, " +
             "c.course_name AS courseName, u.real_name AS teacherName, " +
             "COALESCE(p.place_code, p.place_name) AS classroomName " +
@@ -577,7 +658,7 @@ public class TeachingScheduleController {
             "se.classroom_id AS classroomId, " +
             "se.weekday AS dayOfWeek, se.start_slot AS periodStart, " +
             "se.end_slot AS periodEnd, se.start_week AS weekStart, se.end_week AS weekEnd, " +
-            "se.week_type AS weekType, se.schedule_type AS scheduleType, " +
+            "se.week_type AS weekType, se.schedule_type AS scheduleType, se.is_locked AS isLocked, " +
             "se.entry_status AS entryStatus, " +
             "c.course_name AS courseName, u.real_name AS teacherName, " +
             "COALESCE(p.place_code, p.place_name) AS classroomName " +
@@ -982,5 +1063,110 @@ public class TeachingScheduleController {
         result.put("records", records);
         result.put("total", total);
         return Result.success(result);
+    }
+
+    // ==================== 自习课填充 ====================
+
+    /**
+     * 自动填充自习课：扫描所有班级的空课位，插入 schedule_type=4 的自习课条目。
+     * 连续空节次合并为一个条目。
+     */
+    @PostMapping("/self-study/fill")
+    @CasbinAccess(resource = "teaching:schedule", action = "edit")
+    public Result<Map<String, Object>> fillSelfStudy(@RequestBody Map<String, Object> body) {
+        Long semesterId = ((Number) body.get("semesterId")).longValue();
+        int maxPeriods = body.get("maxPeriods") != null ? ((Number) body.get("maxPeriods")).intValue() : 8;
+        int maxWeekday = body.get("maxWeekday") != null ? ((Number) body.get("maxWeekday")).intValue() : 5;
+        int startWeek = body.get("startWeek") != null ? ((Number) body.get("startWeek")).intValue() : 1;
+        int endWeek = body.get("endWeek") != null ? ((Number) body.get("endWeek")).intValue() : getSemesterTeachingWeeks(semesterId);
+
+        // 1. Get all classes
+        List<Map<String, Object>> classes = jdbc.queryForList(
+            "SELECT id FROM org_units WHERE unit_type = 'CLASS' AND deleted = 0"
+        );
+
+        // 2. Get occupied slots per class
+        int inserted = 0;
+        long userId = SecurityUtils.requireCurrentUserId();
+
+        for (Map<String, Object> cls : classes) {
+            Long orgUnitId = ((Number) cls.get("id")).longValue();
+
+            // Get existing occupied slots for this class
+            List<Map<String, Object>> occupied = jdbc.queryForList(
+                "SELECT weekday, start_slot, end_slot FROM schedule_entries " +
+                "WHERE semester_id = ? AND org_unit_id = ? AND deleted = 0 AND entry_status = 1",
+                semesterId, orgUnitId
+            );
+
+            // Build occupied set: weekday -> set of periods
+            Map<Integer, Set<Integer>> occupiedMap = new HashMap<>();
+            for (Map<String, Object> row : occupied) {
+                int wd = ((Number) row.get("weekday")).intValue();
+                int ss = ((Number) row.get("start_slot")).intValue();
+                int es = ((Number) row.get("end_slot")).intValue();
+                occupiedMap.computeIfAbsent(wd, k -> new HashSet<>());
+                for (int p = ss; p <= es; p++) occupiedMap.get(wd).add(p);
+            }
+
+            // 3. For each weekday, find consecutive empty slots and insert self-study
+            for (int wd = 1; wd <= maxWeekday; wd++) {
+                Set<Integer> occ = occupiedMap.getOrDefault(wd, Set.of());
+                int runStart = -1;
+
+                for (int p = 1; p <= maxPeriods + 1; p++) {
+                    boolean empty = p <= maxPeriods && !occ.contains(p);
+                    if (empty && runStart == -1) {
+                        runStart = p;
+                    } else if (!empty && runStart != -1) {
+                        // Insert self-study block from runStart to p-1
+                        long id = IdWorker.getId();
+                        jdbc.update(
+                            "INSERT INTO schedule_entries (id, semester_id, task_id, course_id, org_unit_id, " +
+                            "teacher_id, classroom_id, weekday, start_slot, end_slot, " +
+                            "start_week, end_week, week_type, schedule_type, " +
+                            "entry_status, conflict_flag, created_by, created_at, updated_at, deleted) " +
+                            "VALUES (?, ?, NULL, NULL, ?, NULL, NULL, ?, ?, ?, ?, ?, 0, 4, 1, 0, ?, NOW(), NOW(), 0)",
+                            id, semesterId, orgUnitId, wd, runStart, p - 1,
+                            startWeek, endWeek, userId
+                        );
+                        inserted++;
+                        runStart = -1;
+                    }
+                }
+            }
+        }
+
+        Map<String, Object> result = new HashMap<>();
+        result.put("inserted", inserted);
+        result.put("classCount", classes.size());
+        return Result.success(result);
+    }
+
+    /**
+     * 清除所有自习课条目 (schedule_type=4)
+     */
+    @DeleteMapping("/self-study/clear")
+    @CasbinAccess(resource = "teaching:schedule", action = "edit")
+    public Result<Map<String, Object>> clearSelfStudy(@RequestParam Long semesterId) {
+        int deleted = jdbc.update(
+            "UPDATE schedule_entries SET deleted = 1 WHERE semester_id = ? AND schedule_type = 4 AND deleted = 0",
+            semesterId
+        );
+        Map<String, Object> result = new HashMap<>();
+        result.put("cleared", deleted);
+        return Result.success(result);
+    }
+
+    /** 获取学期最后一个教学周号（week_type=1） */
+    private int getSemesterTeachingWeeks(Long semesterId) {
+        try {
+            Integer week = jdbc.queryForObject(
+                "SELECT MAX(week_number) FROM academic_weeks WHERE semester_id = ? AND week_type = 1",
+                Integer.class, semesterId);
+            return week != null && week > 0 ? week : 16;
+        } catch (Exception e) {
+            return 16;
+        }
     }
 }

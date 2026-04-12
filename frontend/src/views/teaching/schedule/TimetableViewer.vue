@@ -2,7 +2,13 @@
   <div class="tv-layout">
     <!-- Left tree (all modes) -->
     <div class="tv-tree">
-      <ScheduleTree :mode="viewType" :semester-id="semesterId" @select="onTreeSelect" />
+      <ScheduleTree
+        :mode="viewType === 'overview' ? overviewMode : viewType"
+        :semester-id="semesterId"
+        :multiple="viewType === 'overview'"
+        @select="onTreeSelect"
+        @multi-select="onMultiSelect"
+      />
     </div>
 
     <!-- Main content -->
@@ -12,9 +18,16 @@
         <div class="tv-controls-row">
           <!-- View type -->
           <div class="tm-radios" style="width: auto;">
-            <button :class="['tm-radio', { active: viewType === 'class' }]" @click="viewType = 'class'; onTypeChange()">班级课表</button>
-            <button :class="['tm-radio', { active: viewType === 'teacher' }]" @click="viewType = 'teacher'; onTypeChange()">教师课表</button>
-            <button :class="['tm-radio', { active: viewType === 'classroom' }]" @click="viewType = 'classroom'; onTypeChange()">教室课表</button>
+            <button :class="['tm-radio', { active: viewType === 'class' }]" @click="setViewType('class')">班级课表</button>
+            <button :class="['tm-radio', { active: viewType === 'teacher' }]" @click="setViewType('teacher')">教师课表</button>
+            <button :class="['tm-radio', { active: viewType === 'classroom' }]" @click="setViewType('classroom')">教室课表</button>
+            <button :class="['tm-radio', { active: viewType === 'overview' }]" @click="setViewType('overview')">总览</button>
+          </div>
+          <!-- 总览模式下选择对象类型 -->
+          <div v-if="viewType === 'overview'" class="tm-radios" style="width: auto;">
+            <button :class="['tm-radio', { active: overviewMode === 'class' }]" @click="overviewMode = 'class'">按班级</button>
+            <button :class="['tm-radio', { active: overviewMode === 'teacher' }]" @click="overviewMode = 'teacher'">按教师</button>
+            <button :class="['tm-radio', { active: overviewMode === 'classroom' }]" @click="overviewMode = 'classroom'">按教室</button>
           </div>
 
           <!-- Current target display -->
@@ -22,8 +35,8 @@
 
           <span class="tv-sep" />
 
-          <!-- Week pager -->
-          <div class="tv-week-pager">
+          <!-- Week pager: 只在周次有差异时显示（有单双周 或 不同 start/end_week） -->
+          <div v-if="weekPagerNeeded" class="tv-week-pager" :title="weekPagerHint">
             <button class="tv-week-btn" :disabled="!week || week <= 1" @click="week && week--">
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 18 9 12 15 6"/></svg>
             </button>
@@ -34,17 +47,21 @@
           </div>
 
           <!-- Odd/even week -->
-          <div class="tm-radios" style="width: auto;">
+          <div class="tm-radios" style="width: auto;" :class="{ 'tv-week-disabled': !hasOddEvenWeek }" :title="hasOddEvenWeek ? '' : '当前无单双周课程'">
             <label :class="['tm-radio', { active: weekType === 0 }]" @click="weekType = 0"><input type="radio" />全部</label>
-            <label :class="['tm-radio', { active: weekType === 1 }]" @click="weekType = 1"><input type="radio" />仅单周</label>
-            <label :class="['tm-radio', { active: weekType === 2 }]" @click="weekType = 2"><input type="radio" />仅双周</label>
+            <label :class="['tm-radio', { active: weekType === 1, 'tm-radio-disabled': !hasOddWeek }]" @click="hasOddWeek && (weekType = 1)"><input type="radio" />仅单周</label>
+            <label :class="['tm-radio', { active: weekType === 2, 'tm-radio-disabled': !hasEvenWeek }]" @click="hasEvenWeek && (weekType = 2)"><input type="radio" />仅双周</label>
           </div>
+          <!-- 单双周醒目标注 -->
+          <span v-if="oddCount > 0" class="tv-week-badge tv-week-badge-odd" :title="`${oddCount}门课程按单周排课`">
+            <span class="tv-week-badge-dot" /> 单周 {{ oddCount }}
+          </span>
+          <span v-if="evenCount > 0" class="tv-week-badge tv-week-badge-even" :title="`${evenCount}门课程按双周排课`">
+            <span class="tv-week-badge-dot" /> 双周 {{ evenCount }}
+          </span>
 
-          <span class="tv-sep" />
-          <button :class="['tv-compare-btn', matrixMode ? 'tv-compare-active' : '']" @click="matrixMode = !matrixMode; if(matrixMode) compareMode = false">
-            {{ matrixMode ? '退出总览' : '总览' }}
-          </button>
-          <button v-if="viewType === 'class' && !matrixMode" :class="['tv-compare-btn', compareMode ? 'tv-compare-active' : '']" @click="toggleCompare">
+          <span v-if="viewType === 'class'" class="tv-sep" />
+          <button v-if="viewType === 'class'" :class="['tv-compare-btn', compareMode ? 'tv-compare-active' : '']" @click="toggleCompare">
             {{ compareMode ? '退出对比' : '对比' }}
           </button>
         </div>
@@ -66,11 +83,11 @@
 
       <!-- Matrix overview mode -->
       <TimetableMatrix
-        v-if="matrixMode"
-        :mode="viewType"
+        v-if="viewType === 'overview'"
+        :mode="overviewMode"
         :semester-id="semesterId"
         :periods="periods"
-        :options="matrixOptions"
+        :selected-targets="overviewSelected"
         data-source="schedule"
       />
 
@@ -112,7 +129,7 @@
     <Teleport to="body">
       <Transition name="tm-drawer">
         <div v-if="detailVisible" class="tm-drawer-overlay" @click.self="detailVisible = false">
-          <div class="tm-drawer" style="width: 380px;">
+          <div class="tm-drawer" style="width: 420px;">
             <div class="tm-drawer-header">
               <h3 class="tm-drawer-title">课程详情</h3>
               <button class="tm-drawer-close" @click="detailVisible = false">&times;</button>
@@ -124,8 +141,46 @@
                 <div class="detail-row"><span class="detail-label">班级:</span><span>{{ selectedEntry.className || '-' }}</span></div>
                 <div class="detail-row"><span class="detail-label">教室:</span><span>{{ selectedEntry.classroomName || '-' }}</span></div>
                 <div class="detail-row"><span class="detail-label">时间:</span><span>{{ getWeekdayName(selectedEntry.dayOfWeek) }} 第{{ selectedEntry.periodStart }}-{{ selectedEntry.periodEnd }}节</span></div>
-                <div class="detail-row"><span class="detail-label">周次:</span><span>{{ selectedEntry.weekStart }}-{{ selectedEntry.weekEnd }}周{{ selectedEntry.weekType === 1 ? '(单)' : selectedEntry.weekType === 2 ? '(双)' : '' }}</span></div>
+                <div class="detail-row"><span class="detail-label">周次范围:</span><span>{{ selectedEntry.weekStart }}-{{ selectedEntry.weekEnd }}周</span></div>
               </div>
+
+              <!-- 锁定状态 -->
+              <div v-if="selectedEntry && !compareMode" class="tm-section">
+                <h4 class="tm-section-title">排课锁定</h4>
+                <div style="display: flex; align-items: center; gap: 10px; padding: 10px; border: 1px solid #e5e7eb; border-radius: 8px; background: #fafafa;">
+                  <span style="font-size: 20px;">{{ (selectedEntry as any).isLocked ? '🔒' : '🔓' }}</span>
+                  <div style="flex: 1;">
+                    <div style="font-size: 13px; font-weight: 500; color: #111827;">
+                      {{ (selectedEntry as any).isLocked ? '已锁定' : '未锁定' }}
+                    </div>
+                    <div style="font-size: 11px; color: #6b7280; margin-top: 2px;">
+                      {{ (selectedEntry as any).isLocked ? '自动排课不会覆盖此课' : '自动排课时可被调整' }}
+                    </div>
+                  </div>
+                  <button class="tm-btn tm-btn-secondary" :disabled="lockSaving" @click="toggleLock">
+                    {{ lockSaving ? '...' : ((selectedEntry as any).isLocked ? '解锁' : '锁定') }}
+                  </button>
+                </div>
+              </div>
+
+              <!-- 单双周编辑 -->
+              <div v-if="selectedEntry && !compareMode" class="tm-section">
+                <h4 class="tm-section-title">周次类型</h4>
+                <div class="tm-radios" style="width: 100%;">
+                  <label :class="['tm-radio', { active: editWeekType === 0 }]" @click="editWeekType = 0"><input type="radio" />每周</label>
+                  <label :class="['tm-radio', { active: editWeekType === 1 }]" @click="editWeekType = 1"><input type="radio" />单周</label>
+                  <label :class="['tm-radio', { active: editWeekType === 2 }]" @click="editWeekType = 2"><input type="radio" />双周</label>
+                </div>
+                <p style="font-size: 11px; color: #9ca3af; margin-top: 8px;">
+                  单周：仅第1/3/5/7...周上课 | 双周：仅第2/4/6/8...周上课
+                </p>
+              </div>
+            </div>
+            <div v-if="selectedEntry && !compareMode" class="tm-drawer-footer">
+              <button class="tm-btn tm-btn-secondary" @click="detailVisible = false">取消</button>
+              <button class="tm-btn tm-btn-primary" :disabled="editSaving || editWeekType === selectedEntry.weekType" @click="saveWeekType">
+                {{ editSaving ? '保存中...' : '保存' }}
+              </button>
             </div>
           </div>
         </div>
@@ -187,11 +242,56 @@ const props = defineProps<{ semesterId: number | string | undefined }>()
 const periods = ref<PeriodConfig[]>(DEFAULT_PERIODS)
 
 // State
-const viewType = ref<'class' | 'teacher' | 'classroom'>('class')
+const viewType = ref<'class' | 'teacher' | 'classroom' | 'overview'>('class')
+const overviewMode = ref<'class' | 'teacher' | 'classroom'>('class')
+const overviewSelected = ref<{ id: number | string; name: string }[]>([])
 const targetId = ref<number | string>()
+
+function setViewType(t: typeof viewType.value) {
+  if (viewType.value === t) return
+  viewType.value = t
+  if (t !== 'overview') {
+    targetId.value = undefined
+    entries.value = []
+    currentTargetNameFromTree.value = ''
+    if (compareMode.value) { compareMode.value = false; compareTargetId.value = undefined; compareEntries.value = [] }
+  } else {
+    overviewSelected.value = []
+  }
+}
+
+function onMultiSelect(items: { id: number | string; name: string }[]) {
+  overviewSelected.value = items
+}
 const entries = ref<ScheduleEntry[]>([])
 const week = ref<number | undefined>()
 const weekType = ref(0)
+
+// 统计当前班级/教师/教室的单双周课程数量
+const oddCount = computed(() => new Set(entries.value.filter(e => e.weekType === 1).map(e => e.taskId)).size)
+const evenCount = computed(() => new Set(entries.value.filter(e => e.weekType === 2).map(e => e.taskId)).size)
+const hasOddWeek = computed(() => oddCount.value > 0)
+const hasEvenWeek = computed(() => evenCount.value > 0)
+const hasOddEvenWeek = computed(() => hasOddWeek.value || hasEvenWeek.value)
+
+// 周次翻页是否需要：存在单双周 或 不同课程起止周不同
+const weekPagerNeeded = computed(() => {
+  if (hasOddEvenWeek.value) return true
+  // 检查 start_week / end_week 是否存在差异
+  if (entries.value.length < 2) return false
+  const first = entries.value[0]
+  return entries.value.some(e => e.weekStart !== first.weekStart || e.weekEnd !== first.weekEnd)
+})
+const weekPagerHint = computed(() => {
+  if (hasOddEvenWeek.value) return '当前有单双周课程，不同周次显示可能不同'
+  return '当前有不同周次范围的课程'
+})
+
+// 当目标切换或条目更新时，如果当前筛选不可用则重置
+watch([hasOddWeek, hasEvenWeek], () => {
+  if (weekType.value === 1 && !hasOddWeek.value) weekType.value = 0
+  if (weekType.value === 2 && !hasEvenWeek.value) weekType.value = 0
+})
 
 const classrooms = ref<{ id: number; name: string }[]>([])
 const classList = ref<{ id: number; name: string; dept?: string }[]>([])
@@ -200,17 +300,7 @@ const teacherList = ref<{ id: number; name: string }[]>([])
 const detailVisible = ref(false)
 const selectedEntry = ref<ScheduleEntry | null>(null)
 
-// Matrix mode
-const matrixMode = ref(false)
-const matrixOptions = computed(() => {
-  if (viewType.value === 'class') {
-    return classList.value.map(c => ({ id: c.id, name: c.name, group: c.dept || '其他' }))
-  }
-  if (viewType.value === 'teacher') {
-    return teacherList.value.map(t => ({ id: t.id, name: t.name, group: '教师' }))
-  }
-  return classrooms.value.map(c => ({ id: c.id, name: c.name, group: '教室' }))
-})
+// Matrix mode - removed, replaced by viewType === 'overview'
 
 // Compare mode state
 const compareMode = ref(false)
@@ -261,8 +351,13 @@ const quickSaving = ref(false)
 const availableTasks = ref<any[]>([])
 
 // Computed
-const placeholder = computed(() => ({ class: '选择班级', teacher: '选择教师', classroom: '选择教室' }[viewType.value]))
+const placeholder = computed(() => {
+  const map: Record<string, string> = { class: '选择班级', teacher: '选择教师', classroom: '选择教室', overview: '总览' }
+  return map[viewType.value] || '选择'
+})
 const targetOptions = computed(() => viewType.value === 'teacher' ? teacherList.value : classrooms.value)
+// Suppress unused warnings
+void placeholder; void targetOptions
 const currentTargetName = computed(() => currentTargetNameFromTree.value || '')
 
 const filteredEntries = computed(() => {
@@ -389,13 +484,53 @@ async function loadTimetable() {
   } catch { /* */ }
 }
 
-// Handlers
-function onTypeChange() {
-  targetId.value = undefined; entries.value = []; currentTargetNameFromTree.value = ''
-  if (compareMode.value) { compareMode.value = false; compareTargetId.value = undefined; compareEntries.value = [] }
+// Handlers - replaced by setViewType()
+function showEntryDetail(entry: ScheduleEntry) {
+  selectedEntry.value = entry
+  editWeekType.value = entry.weekType ?? 0
+  detailVisible.value = true
 }
-function showEntryDetail(entry: ScheduleEntry) { selectedEntry.value = entry; detailVisible.value = true }
 function getWeekdayName(day: number) { return WEEKDAYS.find(w => w.value === day)?.label || '' }
+
+const editWeekType = ref(0)
+const editSaving = ref(false)
+const lockSaving = ref(false)
+
+async function toggleLock() {
+  if (!selectedEntry.value) return
+  lockSaving.value = true
+  try {
+    const res = await request.post(`/teaching/schedules/${selectedEntry.value.id}/toggle-lock`) as any
+    const newLocked = (res.data?.isLocked ?? res.isLocked ?? 0)
+    // 更新本地数据
+    const idx = entries.value.findIndex(e => e.id === selectedEntry.value!.id)
+    if (idx >= 0) (entries.value[idx] as any).isLocked = newLocked
+    if (selectedEntry.value) (selectedEntry.value as any).isLocked = newLocked
+    ElMessage.success(newLocked ? '已锁定' : '已解锁')
+  } catch (e: any) {
+    ElMessage.error(e?.message || '操作失败')
+  } finally {
+    lockSaving.value = false
+  }
+}
+
+async function saveWeekType() {
+  if (!selectedEntry.value) return
+  editSaving.value = true
+  try {
+    await scheduleApi.updateEntry(0, selectedEntry.value.id, { weekType: editWeekType.value })
+    // 更新本地数据
+    const idx = entries.value.findIndex(e => e.id === selectedEntry.value!.id)
+    if (idx >= 0) entries.value[idx].weekType = editWeekType.value
+    if (selectedEntry.value) selectedEntry.value.weekType = editWeekType.value
+    ElMessage.success('周次类型已更新')
+    detailVisible.value = false
+  } catch (e: any) {
+    ElMessage.error(e?.message || '保存失败')
+  } finally {
+    editSaving.value = false
+  }
+}
 
 async function onEntryDrop(entryId: number, newDay: number, newPeriod: number) {
   if (!props.semesterId) return
@@ -562,6 +697,34 @@ watch(() => props.semesterId, (val) => {
 }
 .tv-compare-btn:hover { border-color: #2563eb; color: #2563eb; }
 .tv-compare-active { background: #2563eb !important; color: #fff !important; border-color: #2563eb !important; }
+
+/* 单双周筛选禁用样式 */
+.tv-week-disabled { opacity: 0.5; }
+.tm-radio-disabled { cursor: not-allowed !important; color: #9ca3af !important; }
+.tm-radio-disabled:hover { background: transparent !important; }
+
+/* 单双周醒目标注 */
+.tv-week-badge {
+  display: inline-flex; align-items: center; gap: 5px;
+  padding: 3px 8px 3px 7px; border-radius: 99px;
+  font-size: 11.5px; font-weight: 500; letter-spacing: 0.02em;
+  animation: tv-badge-pulse 2s ease-in-out infinite;
+}
+.tv-week-badge-dot {
+  display: inline-block; width: 6px; height: 6px; border-radius: 50%;
+}
+.tv-week-badge-odd {
+  background: #fef3c7; color: #d97706; border: 1px solid #fde68a;
+}
+.tv-week-badge-odd .tv-week-badge-dot { background: #f59e0b; }
+.tv-week-badge-even {
+  background: #dbeafe; color: #2563eb; border: 1px solid #bfdbfe;
+}
+.tv-week-badge-even .tv-week-badge-dot { background: #3b82f6; }
+@keyframes tv-badge-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(251,191,36,0); }
+  50% { box-shadow: 0 0 0 3px rgba(251,191,36,0.15); }
+}
 .tv-compare-bar {
   display: flex;
   align-items: center;

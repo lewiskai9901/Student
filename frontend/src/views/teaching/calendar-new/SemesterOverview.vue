@@ -7,9 +7,10 @@
         <div
           v-for="w in gridWeeks"
           :key="w.weekNumber"
-          :title="getWeekTitle(w)"
-          class="wk-block"
+          :title="getWeekTitle(w) + ' — 点击切换类型'"
+          class="wk-block wk-editable"
           :style="getWeekBlockStyle(w)"
+          @click="cycleWeekType(w)"
         >{{ w.weekNumber }}</div>
       </div>
       <div class="tm-stats" style="margin-top: 0;">
@@ -74,6 +75,8 @@
 
 <script setup lang="ts">
 import { computed } from 'vue'
+import { semesterApi } from '@/api/calendar'
+import { ElMessage } from 'element-plus'
 
 const props = defineProps<{
   semesterId: number | string | undefined
@@ -82,6 +85,8 @@ const props = defineProps<{
   currentWeek: any
   calendarGrid: any
 }>()
+
+const emit = defineEmits<{ refresh: [] }>()
 
 const today = new Date().toISOString().slice(0, 10)
 
@@ -182,6 +187,30 @@ function getEventChip(type: number) {
   const map: Record<number, string> = { 1: 'tm-chip-red', 2: 'tm-chip-purple', 3: 'tm-chip-blue', 4: 'tm-chip-amber', 5: 'tm-chip-gray' }
   return map[type] || 'tm-chip-gray'
 }
+
+/** 点击周方块循环切换类型: 教学→考试→假期→教学 */
+const typeOrder = ['TEACHING', 'EXAM', 'VACATION'] as const
+const typeToNum: Record<string, number> = { TEACHING: 1, EXAM: 2, VACATION: 3 }
+const typeLabels: Record<string, string> = { TEACHING: '教学周', EXAM: '考试周', VACATION: '假期周' }
+
+async function cycleWeekType(gridWeek: any) {
+  // 找到对应的 weeks prop 中的周记录（含 id）
+  const weekData = props.weeks.find((w: any) => w.weekNumber === gridWeek.weekNumber)
+  if (!weekData?.id) return
+
+  const curIdx = typeOrder.indexOf(gridWeek.weekType || 'TEACHING')
+  const nextType = typeOrder[(curIdx + 1) % 3]
+  const nextNum = typeToNum[nextType]
+
+  try {
+    await semesterApi.updateWeekType(weekData.id, nextNum)
+    gridWeek.weekType = nextType
+    ElMessage.success(`第${gridWeek.weekNumber}周 → ${typeLabels[nextType]}`)
+    emit('refresh')
+  } catch {
+    ElMessage.error('更新失败')
+  }
+}
 </script>
 
 <style scoped>
@@ -199,4 +228,6 @@ function getEventChip(type: number) {
   cursor: default;
   transition: all 0.15s;
 }
+.wk-editable { cursor: pointer; }
+.wk-editable:hover { opacity: 0.7; transform: scale(1.1); }
 </style>

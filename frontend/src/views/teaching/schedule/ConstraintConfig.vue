@@ -144,7 +144,7 @@
                   </tr>
                 </thead>
                 <tbody>
-                  <tr v-for="period in DEFAULT_PERIODS" :key="period.period">
+                  <tr v-for="period in actualPeriods" :key="period.period">
                     <td style="font-weight: 500;">{{ period.name }}</td>
                     <td
                       v-for="wd in displayWeekdays"
@@ -217,7 +217,7 @@
                 <div class="tm-field">
                   <label class="tm-label">节次</label>
                   <div style="display: flex; flex-wrap: wrap; gap: 6px;">
-                    <label v-for="p in DEFAULT_PERIODS" :key="p.period" style="display:flex;align-items:center;gap:4px;font-size:12px;cursor:pointer;">
+                    <label v-for="p in actualPeriods" :key="p.period" style="display:flex;align-items:center;gap:4px;font-size:12px;cursor:pointer;">
                       <input type="checkbox" :value="p.period" v-model="paramPeriods" /> {{ p.name }}
                     </label>
                   </div>
@@ -236,7 +236,7 @@
                 <div class="tm-field">
                   <label class="tm-label">固定节次</label>
                   <div style="display: flex; flex-wrap: wrap; gap: 6px;">
-                    <label v-for="p in DEFAULT_PERIODS" :key="p.period" style="display:flex;align-items:center;gap:4px;font-size:12px;cursor:pointer;">
+                    <label v-for="p in actualPeriods" :key="p.period" style="display:flex;align-items:center;gap:4px;font-size:12px;cursor:pointer;">
                       <input type="checkbox" :value="p.period" v-model="paramPeriods" /> {{ p.name }}
                     </label>
                   </div>
@@ -265,7 +265,7 @@
                 <div class="tm-field">
                   <label class="tm-label">优先节次</label>
                   <div style="display: flex; flex-wrap: wrap; gap: 6px;">
-                    <label v-for="p in DEFAULT_PERIODS.slice(0, 4)" :key="p.period" style="display:flex;align-items:center;gap:4px;font-size:12px;cursor:pointer;">
+                    <label v-for="p in morningPeriods" :key="p.period" style="display:flex;align-items:center;gap:4px;font-size:12px;cursor:pointer;">
                       <input type="checkbox" :value="p.period" v-model="paramPeriods" /> {{ p.name }}
                     </label>
                   </div>
@@ -287,10 +287,10 @@
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { constraintApi } from '@/api/teaching'
+import { constraintApi, scheduleConfigApi } from '@/api/teaching'
 import { courseApi } from '@/api/academic'
 import { http } from '@/utils/request'
-import type { SchedulingConstraint, TimeSlotStatus, Course } from '@/types/teaching'
+import type { SchedulingConstraint, TimeSlotStatus, Course, PeriodConfig } from '@/types/teaching'
 import { CONSTRAINT_LEVELS, CONSTRAINT_TYPES, WEEKDAYS, DEFAULT_PERIODS } from '@/types/teaching'
 
 const props = defineProps<{
@@ -307,6 +307,26 @@ const matrixLoading = ref(false)
 const teachers = ref<{ value: number | string; label: string }[]>([])
 const classes = ref<{ value: number | string; label: string }[]>([])
 const courses = ref<{ value: number | string; label: string }[]>([])
+
+// 实际学期作息（来自 /teaching/schedule-config）
+const actualPeriods = ref<PeriodConfig[]>(DEFAULT_PERIODS)
+// 上午节次（开始时间<12:00）
+const morningPeriods = computed(() => actualPeriods.value.filter(p => (p.startTime || '00:00') < '12:00'))
+
+async function loadActualPeriods() {
+  if (!props.semesterId) return
+  try {
+    const res: any = await scheduleConfigApi.get(props.semesterId)
+    const data = res.data || res
+    if (data?.periods && Array.isArray(data.periods) && data.periods.length > 0) {
+      actualPeriods.value = data.periods
+    } else {
+      actualPeriods.value = DEFAULT_PERIODS
+    }
+  } catch {
+    actualPeriods.value = DEFAULT_PERIODS
+  }
+}
 
 const timeMatrix = ref<TimeSlotStatus[][]>([])
 const flatMatrix = computed<Map<string, TimeSlotStatus>>(() => {
@@ -500,7 +520,7 @@ async function handleToggle(c: SchedulingConstraint) {
 
 // Watch semesterId from parent
 watch(() => props.semesterId, () => {
-  if (props.semesterId) { loadTargetLists(); loadConstraints() }
+  if (props.semesterId) { loadActualPeriods(); loadTargetLists(); loadConstraints() }
 }, { immediate: true })
 </script>
 

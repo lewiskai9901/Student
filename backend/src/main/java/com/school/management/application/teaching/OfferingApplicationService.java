@@ -55,11 +55,12 @@ public class OfferingApplicationService {
             userId
         );
         // Apply optional fields
-        if (data.containsKey("courseCategory") || data.containsKey("allowCombined")) {
+        if (data.containsKey("courseCategory") || data.containsKey("allowCombined") || data.containsKey("weekType")) {
             offering.update(
                 toInt(data.get("weeklyHours")),
                 toInt(data.getOrDefault("startWeek", 1)),
                 toInt(data.get("endWeek")),
+                toInt(data.getOrDefault("weekType", 0)),
                 toInt(data.get("courseCategory")),
                 toInt(data.get("courseType")),
                 toBool(data.get("allowCombined")),
@@ -78,6 +79,7 @@ public class OfferingApplicationService {
             toInt(data.get("weeklyHours")),
             toInt(data.get("startWeek")),
             toInt(data.get("endWeek")),
+            toInt(data.getOrDefault("weekType", 0)),
             toInt(data.get("courseCategory")),
             toInt(data.get("courseType")),
             toBool(data.get("allowCombined")),

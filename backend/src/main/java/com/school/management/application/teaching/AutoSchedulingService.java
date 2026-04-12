@@ -211,14 +211,16 @@ public class AutoSchedulingService {
         // Load tasks that are not fully scheduled
         List<Map<String, Object>> rows = jdbcTemplate.queryForList(
             "SELECT t.id as task_id, t.course_id, t.org_unit_id, t.weekly_hours, " +
-            "t.start_week, t.end_week, t.teaching_class_id, " +
+            "t.start_week, t.end_week, t.week_type, t.teaching_class_id, " +
             "t.consecutive_periods, " +
             "c.course_name, " +
             "tt.teacher_id " +
             "FROM teaching_tasks t " +
             "LEFT JOIN courses c ON c.id = t.course_id " +
             "INNER JOIN teaching_task_teachers tt ON tt.task_id = t.id AND tt.teacher_role = 1 " +
-            "WHERE t.semester_id = ? AND t.deleted = 0 AND t.scheduling_status != 2",
+            "WHERE t.semester_id = ? AND t.deleted = 0 AND t.scheduling_status != 2 " +
+            // 跳过有锁定排课条目的任务 — 不重排
+            "AND NOT EXISTS (SELECT 1 FROM schedule_entries se WHERE se.task_id = t.id AND se.is_locked = 1 AND se.deleted = 0)",
             semesterId);
 
         List<TaskRequirement> reqs = new ArrayList<>();
@@ -234,7 +236,7 @@ public class AutoSchedulingService {
             req.endWeek = row.get("end_week") != null ? toInt(row.get("end_week")) : 16;
             req.courseName = (String) row.get("course_name");
             req.studentCount = row.get("student_count") != null ? toInt(row.get("student_count")) : 0;
-            req.weekType = 0;
+            req.weekType = row.get("week_type") != null ? toInt(row.get("week_type")) : 0;
             // Read consecutive_periods from task, default 2
             int cp = row.get("consecutive_periods") != null ? toInt(row.get("consecutive_periods")) : 2;
             req.consecutivePeriods = Math.min(cp, req.weeklyHours);
@@ -607,7 +609,7 @@ public class AutoSchedulingService {
                 slot.periodEnd = periodEnd;
                 slot.weekStart = session.startWeek;
                 slot.weekEnd = session.endWeek;
-                slot.weekType = 0;
+                slot.weekType = session.weekType;
                 slot.classroomId = findRoom(day, periodStart, periodEnd, rOcc, classrooms);
 
                 Set<String> at = new HashSet<>(), ac = new HashSet<>(), ar = new HashSet<>();
