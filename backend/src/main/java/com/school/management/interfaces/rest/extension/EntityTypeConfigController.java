@@ -144,9 +144,31 @@ public class EntityTypeConfigController {
         }
     }
 
+    private static final Set<String> ALLOWED_CUSTOM_FIELD_TYPES = Set.of(
+        "text", "number", "date", "datetime", "boolean", "select", "multiselect", "textarea", "radio");
+
     @PostMapping("/{id}/custom-fields")
     @CasbinAccess(resource = "system:config", action = "edit")
     public Result<Void> addCustomField(@PathVariable Long id, @RequestBody Map<String, Object> field) {
+        // 1. 验证必填字段
+        Object keyObj = field.get("key");
+        Object labelObj = field.get("label");
+        Object typeObj = field.get("type");
+
+        String key = keyObj instanceof String ? (String) keyObj : null;
+        String label = labelObj instanceof String ? (String) labelObj : null;
+        String type = typeObj instanceof String ? (String) typeObj : null;
+
+        if (key == null || !key.matches("^[a-zA-Z_][a-zA-Z0-9_]*$")) {
+            return Result.error("字段 key 只能包含字母、数字、下划线，且不能以数字开头");
+        }
+        if (label == null || label.isEmpty() || label.length() > 100) {
+            return Result.error("字段名称长度须在 1-100 之间");
+        }
+        if (type == null || !ALLOWED_CUSTOM_FIELD_TYPES.contains(type)) {
+            return Result.error("不支持的字段类型: " + type);
+        }
+
         // 读取当前 schema，追加自定义字段
         String schemaStr = jdbc.queryForObject(
             "SELECT metadata_schema FROM entity_type_configs WHERE id = ? AND deleted = 0", String.class, id);
@@ -154,7 +176,18 @@ public class EntityTypeConfigController {
             com.fasterxml.jackson.databind.ObjectMapper om = new com.fasterxml.jackson.databind.ObjectMapper();
             Map<String, Object> schema = om.readValue(schemaStr, Map.class);
             List<Map<String, Object>> fields = (List<Map<String, Object>>) schema.getOrDefault("fields", new ArrayList<>());
+
+            // 2. 检查 key 重复
+            for (Map<String, Object> existing : fields) {
+                if (key.equals(existing.get("key"))) {
+                    return Result.error("字段 key 已存在: " + key);
+                }
+            }
+
+            // 3. 标记为非系统字段
             field.put("system", false);
+
+            // 4. 追加到 fields
             fields.add(field);
             schema.put("fields", fields);
             jdbc.update("UPDATE entity_type_configs SET metadata_schema = ? WHERE id = ?",

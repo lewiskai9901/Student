@@ -1,10 +1,14 @@
 package com.school.management.application.organization;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.school.management.application.shared.TypeTreeBuilder;
 import com.school.management.application.shared.TypeTreeBuilder.TypeTreeNode;
 import com.school.management.domain.organization.model.entity.OrgCategory;
 import com.school.management.domain.organization.model.entity.OrgType;
 import com.school.management.domain.organization.repository.OrgUnitTypeRepository;
+import com.school.management.domain.place.repository.UniversalPlaceTypeRepository;
+import com.school.management.domain.user.repository.UserTypeRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -12,6 +16,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 /**
@@ -21,7 +26,12 @@ import java.util.stream.Collectors;
 @Service
 public class OrgUnitTypeApplicationService {
 
+    private static final Set<String> ALLOWED_SCHEMA_FIELD_TYPES = Set.of(
+            "text", "number", "date", "datetime", "boolean", "select", "multiselect", "textarea", "radio");
+
     private final OrgUnitTypeRepository orgUnitTypeRepository;
+    private final UserTypeRepository userTypeRepository;
+    private final UniversalPlaceTypeRepository placeTypeRepository;
 
     @Transactional
     public OrgType createOrgUnitType(CreateOrgUnitTypeCommand command) {
@@ -33,6 +43,9 @@ public class OrgUnitTypeApplicationService {
             orgUnitTypeRepository.findByTypeCode(command.getParentTypeCode())
                     .orElseThrow(() -> new IllegalArgumentException("父类型不存在: " + command.getParentTypeCode()));
         }
+
+        validateMetadataSchema(command.getMetadataSchema());
+        validateCrossReferences(command.getDefaultUserTypeCodes(), command.getDefaultPlaceTypeCodes());
 
         // 如果未提供 features，使用 category 的默认值
         Map<String, Boolean> features = command.getFeatures();
@@ -70,6 +83,9 @@ public class OrgUnitTypeApplicationService {
     public OrgType updateOrgUnitType(Long id, UpdateOrgUnitTypeCommand command) {
         OrgType orgType = orgUnitTypeRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("组织类型不存在: " + id));
+
+        validateMetadataSchema(command.getMetadataSchema());
+        validateCrossReferences(command.getDefaultUserTypeCodes(), command.getDefaultPlaceTypeCodes());
 
         orgType.update(
                 command.getTypeName() != null ? command.getTypeName() : orgType.getTypeName(),
@@ -110,6 +126,63 @@ public class OrgUnitTypeApplicationService {
         }
 
         return saved;
+    }
+
+    /**
+     * 校验 metadataSchema 结构
+     */
+    private void validateMetadataSchema(String schemaJson) {
+        if (schemaJson == null || schemaJson.isBlank()) return;
+        try {
+            ObjectMapper om = new ObjectMapper();
+            JsonNode node = om.readTree(schemaJson);
+
+            if (!node.has("fields")) {
+                throw new IllegalArgumentException("metadataSchema 必须包含 fields 数组");
+            }
+            JsonNode fields = node.get("fields");
+            if (!fields.isArray()) {
+                throw new IllegalArgumentException("fields 必须是数组");
+            }
+
+            for (JsonNode field : fields) {
+                if (!field.has("key") || !field.has("label") || !field.has("type")) {
+                    throw new IllegalArgumentException("每个字段必须有 key、label、type");
+                }
+                String key = field.get("key").asText();
+                if (!key.matches("^[a-zA-Z_][a-zA-Z0-9_]*$")) {
+                    throw new IllegalArgumentException("字段 key 只能包含字母、数字、下划线，且不能以数字开头: " + key);
+                }
+                String type = field.get("type").asText();
+                if (!ALLOWED_SCHEMA_FIELD_TYPES.contains(type)) {
+                    throw new IllegalArgumentException("不支持的字段类型: " + type);
+                }
+            }
+        } catch (com.fasterxml.jackson.core.JsonProcessingException e) {
+            throw new IllegalArgumentException("metadataSchema JSON 格式错误: " + e.getMessage());
+        }
+    }
+
+    /**
+     * 校验跨类型引用（默认用户类型 / 默认场所类型必须真实存在）
+     */
+    private void validateCrossReferences(List<String> defaultUserTypeCodes, List<String> defaultPlaceTypeCodes) {
+        if (defaultUserTypeCodes != null && !defaultUserTypeCodes.isEmpty()) {
+            for (String code : defaultUserTypeCodes) {
+                if (code == null || code.isBlank()) continue;
+                if (!userTypeRepository.existsByTypeCode(code)) {
+                    throw new IllegalArgumentException("引用的用户类型不存在: " + code);
+                }
+            }
+        }
+        if (defaultPlaceTypeCodes != null && !defaultPlaceTypeCodes.isEmpty()) {
+            for (String code : defaultPlaceTypeCodes) {
+                if (code == null || code.isBlank()) continue;
+                if (!placeTypeRepository.existsByTypeCode(code)) {
+                    throw new IllegalArgumentException("引用的场所类型不存在: " + code);
+                }
+            }
+        }
     }
 
     /**

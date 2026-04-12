@@ -1,5 +1,7 @@
 package com.school.management.application.place;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.school.management.application.shared.TypeTreeBuilder;
 import com.school.management.application.shared.TypeTreeBuilder.TypeTreeNode;
 import com.school.management.domain.place.model.entity.UniversalPlaceType;
@@ -19,6 +21,9 @@ import java.util.stream.Collectors;
 @Service
 @RequiredArgsConstructor
 public class UniversalPlaceTypeApplicationService {
+
+    private static final Set<String> ALLOWED_SCHEMA_FIELD_TYPES = Set.of(
+            "text", "number", "date", "datetime", "boolean", "select", "multiselect", "textarea", "radio");
 
     private final UniversalPlaceTypeRepository placeTypeRepository;
 
@@ -90,6 +95,9 @@ public class UniversalPlaceTypeApplicationService {
                     .orElseThrow(() -> new IllegalArgumentException("父类型不存在: " + command.getParentTypeCode()));
         }
 
+        validateMetadataSchema(command.getMetadataSchema());
+        validateSelfReference(command.getTypeCode(), command.getAllowedChildTypeCodes());
+
         // 如果未提供 features，使用 category 的默认值
         Map<String, Boolean> features = command.getFeatures();
         if (features == null && command.getCategory() != null) {
@@ -132,6 +140,9 @@ public class UniversalPlaceTypeApplicationService {
         if (placeType.isSystem()) {
             throw new IllegalStateException("系统预置类型不可修改");
         }
+
+        validateMetadataSchema(command.getMetadataSchema());
+        validateSelfReference(placeType.getTypeCode(), command.getAllowedChildTypeCodes());
 
         if (command.getTypeName() != null) {
             placeType.setTypeName(command.getTypeName());
@@ -213,6 +224,50 @@ public class UniversalPlaceTypeApplicationService {
 
     private String generateTypeCode() {
         return "PLACE_" + UUID.randomUUID().toString().substring(0, 8).toUpperCase();
+    }
+
+    /**
+     * 校验 metadataSchema 结构
+     */
+    private void validateMetadataSchema(String schemaJson) {
+        if (schemaJson == null || schemaJson.isBlank()) return;
+        try {
+            ObjectMapper om = new ObjectMapper();
+            JsonNode node = om.readTree(schemaJson);
+
+            if (!node.has("fields")) {
+                throw new IllegalArgumentException("metadataSchema 必须包含 fields 数组");
+            }
+            JsonNode fields = node.get("fields");
+            if (!fields.isArray()) {
+                throw new IllegalArgumentException("fields 必须是数组");
+            }
+
+            for (JsonNode field : fields) {
+                if (!field.has("key") || !field.has("label") || !field.has("type")) {
+                    throw new IllegalArgumentException("每个字段必须有 key、label、type");
+                }
+                String key = field.get("key").asText();
+                if (!key.matches("^[a-zA-Z_][a-zA-Z0-9_]*$")) {
+                    throw new IllegalArgumentException("字段 key 只能包含字母、数字、下划线，且不能以数字开头: " + key);
+                }
+                String type = field.get("type").asText();
+                if (!ALLOWED_SCHEMA_FIELD_TYPES.contains(type)) {
+                    throw new IllegalArgumentException("不支持的字段类型: " + type);
+                }
+            }
+        } catch (com.fasterxml.jackson.core.JsonProcessingException e) {
+            throw new IllegalArgumentException("metadataSchema JSON 格式错误: " + e.getMessage());
+        }
+    }
+
+    /**
+     * 校验 allowedChildTypeCodes 不能包含自身 typeCode
+     */
+    private void validateSelfReference(String typeCode, List<String> allowedChildTypeCodes) {
+        if (allowedChildTypeCodes != null && typeCode != null && allowedChildTypeCodes.contains(typeCode)) {
+            throw new IllegalArgumentException("allowedChildTypeCodes 不能包含自身 typeCode: " + typeCode);
+        }
     }
 
     // ==================== 命令对象 ====================
