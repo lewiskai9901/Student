@@ -14,6 +14,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 
 import javax.crypto.SecretKey;
+import java.time.Duration;
 import java.util.Arrays;
 import java.util.Date;
 import java.util.List;
@@ -192,13 +193,30 @@ public class JwtTokenService {
 
     /**
      * 验证刷新令牌
+     *
+     * 并发防护：使用 Redis 分布式锁防止同一用户的 refresh token 被并发重用。
+     * 当多个请求几乎同时到达时，仅一个能获得锁并完成验证，其他会被直接拒绝，
+     * 从而防止 token 被重复消费。
      */
     public boolean validateRefreshToken(String refreshToken, Long userId) {
-        try {
-            if (StrUtil.isBlank(refreshToken)) {
-                return false;
-            }
+        if (StrUtil.isBlank(refreshToken) || userId == null) {
+            return false;
+        }
 
+        String lockKey = "refresh_lock:" + userId;
+        Boolean locked;
+        try {
+            locked = redisTemplate.opsForValue().setIfAbsent(lockKey, "1", Duration.ofSeconds(5));
+        } catch (Exception e) {
+            log.error("获取 refresh token 分布式锁失败: {}", e.getMessage());
+            return false;
+        }
+        if (Boolean.FALSE.equals(locked) || locked == null) {
+            log.warn("检测到用户 {} 的并发 refresh 请求，已拒绝", userId);
+            return false;
+        }
+
+        try {
             Claims claims = Jwts.parser()
                     .verifyWith(getSigningKey())
                     .build()
@@ -229,6 +247,30 @@ public class JwtTokenService {
         } catch (JwtException | IllegalArgumentException e) {
             log.error("刷新令牌验证失败: {}", e.getMessage());
             return false;
+        } finally {
+            try {
+                redisTemplate.delete(lockKey);
+            } catch (Exception ex) {
+                log.warn("释放 refresh token 分布式锁失败: {}", ex.getMessage());
+            }
+        }
+    }
+
+    /**
+     * 吊销用户的所有 active tokens（删除 Redis 中的 refresh token）
+     *
+     * 注意：已签发的 access token 需要等它自然过期（除非实现 token version 机制）。
+     */
+    public void revokeAllTokensForUser(Long userId) {
+        if (userId == null) {
+            return;
+        }
+        try {
+            redisTemplate.delete("refresh_token:" + userId);
+            redisTemplate.delete("refresh_lock:" + userId);
+            log.info("已吊销用户 {} 的所有 refresh tokens", userId);
+        } catch (Exception e) {
+            log.warn("吊销用户 {} 的 tokens 失败: {}", userId, e.getMessage());
         }
     }
 

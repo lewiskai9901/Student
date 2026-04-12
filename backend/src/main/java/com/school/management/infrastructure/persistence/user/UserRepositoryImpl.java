@@ -6,7 +6,9 @@ import com.school.management.domain.user.repository.UserRepository;
 import org.springframework.stereotype.Repository;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
@@ -193,10 +195,38 @@ public class UserRepositoryImpl implements UserRepository {
     public List<User> findPagedWithConditions(int page, int size, String username, String realName,
                                               String phone, Long orgUnitId, Integer status) {
         int offset = (page - 1) * size;
-        return userMapper.findPagedWithConditions(offset, size, username, realName, phone, orgUnitId, status)
-                .stream()
-                .map(this::toDomainWithOrgUnitAndRoles)
-                .collect(Collectors.toList());
+        List<UserPO> pos = userMapper.findPagedWithConditions(offset, size, username, realName, phone, orgUnitId, status);
+        if (pos.isEmpty()) {
+            return new ArrayList<>();
+        }
+
+        // 一次性批量加载全部用户的角色，避免 N+1 查询
+        List<Long> userIds = pos.stream().map(UserPO::getId).collect(Collectors.toList());
+        Map<Long, List<Long>> roleIdsByUser = new HashMap<>();
+        Map<Long, List<String>> roleNamesByUser = new HashMap<>();
+        List<Map<String, Object>> rows = userMapper.findRolesByUserIds(userIds);
+        for (Map<String, Object> row : rows) {
+            Object uidObj = row.get("user_id");
+            if (uidObj == null) continue;
+            Long uid = ((Number) uidObj).longValue();
+            Object roleIdObj = row.get("role_id");
+            if (roleIdObj != null) {
+                roleIdsByUser.computeIfAbsent(uid, k -> new ArrayList<>()).add(((Number) roleIdObj).longValue());
+            }
+            Object roleNameObj = row.get("role_name");
+            if (roleNameObj != null) {
+                roleNamesByUser.computeIfAbsent(uid, k -> new ArrayList<>()).add(roleNameObj.toString());
+            }
+        }
+
+        return pos.stream().map(po -> {
+            User user = toDomainWithOrgUnit(po);
+            if (po.getId() != null) {
+                user.assignRoles(roleIdsByUser.getOrDefault(po.getId(), new ArrayList<>()));
+                user.setRoleNames(roleNamesByUser.getOrDefault(po.getId(), new ArrayList<>()));
+            }
+            return user;
+        }).collect(Collectors.toList());
     }
 
     @Override

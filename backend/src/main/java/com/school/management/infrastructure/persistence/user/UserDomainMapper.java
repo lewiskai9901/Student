@@ -242,6 +242,20 @@ public interface UserDomainMapper extends BaseMapper<UserPO> {
     List<String> findRoleNamesByUserId(@Param("userId") Long userId);
 
     /**
+     * 批量查询多用户的角色（避免 N+1 查询）
+     * 返回字段：user_id、role_id、role_name
+     */
+    @Select("<script>" +
+            "SELECT ur.user_id, r.id AS role_id, r.role_name " +
+            "FROM user_roles ur " +
+            "LEFT JOIN roles r ON ur.role_id = r.id AND r.deleted = 0 " +
+            "WHERE ur.user_id IN " +
+            "<foreach collection='userIds' item='uid' open='(' separator=',' close=')'>#{uid}</foreach> " +
+            "AND ur.is_active = 1 AND (ur.expires_at IS NULL OR ur.expires_at > NOW())" +
+            "</script>")
+    List<java.util.Map<String, Object>> findRolesByUserIds(@Param("userIds") List<Long> userIds);
+
+    /**
      * 删除用户的所有角色关联
      */
     @Delete("DELETE FROM user_roles WHERE user_id = #{userId}")

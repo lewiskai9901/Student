@@ -45,25 +45,35 @@ export const useAuthStore = defineStore('auth', () => {
     }
   }
 
+  // 清空本地认证状态（内部工具）
+  const clearLocalAuthState = () => {
+    token.value = ''
+    refreshTokenValue.value = ''
+    user.value = null
+    permissions.value = []
+    tenantId.value = undefined
+    tenantName.value = undefined
+    tokenStorage.clearAll()
+  }
+
   // 退出登录
+  // 策略：成功 → 清空；401/403（token 已失效）→ 清空；其他错误（网络/5xx）→ 保留状态并抛错
   const logoutAction = async () => {
     try {
       if (token.value) {
         await logout({ accessToken: token.value })
       }
-    } catch (error) {
-      console.error('退出登录失败:', error)
-    } finally {
-      // 清除状态
-      token.value = ''
-      refreshTokenValue.value = ''
-      user.value = null
-      permissions.value = []
-      tenantId.value = undefined
-      tenantName.value = undefined
-
-      // 清除安全存储
-      tokenStorage.clearAll()
+      clearLocalAuthState()
+    } catch (error: any) {
+      const status = error?.response?.status
+      if (status === 401 || status === 403) {
+        // token 已失效，安全起见清空
+        clearLocalAuthState()
+      } else {
+        // 其他错误（网络、5xx 等）保留本地状态并抛错，让调用方提示用户
+        console.error('退出登录失败:', error)
+        throw error
+      }
     }
   }
 

@@ -24,6 +24,16 @@ public class UserDomainResponse {
     private LocalDate birthDate;
     private String idCard;
     private String userType;
+
+    /**
+     * 身份证号脱敏：显示前3位和后4位，中间用*代替
+     */
+    public String getIdCard() {
+        if (idCard == null || idCard.length() < 8) {
+            return idCard;
+        }
+        return idCard.substring(0, 3) + "****" + idCard.substring(idCard.length() - 4);
+    }
     private Long orgUnitId;
     private String status;
     private LocalDateTime lastLoginTime;

@@ -16,6 +16,7 @@ import com.school.management.domain.user.model.entity.UserType;
 import com.school.management.domain.user.repository.UserRepository;
 import com.school.management.domain.user.repository.UserTypeRepository;
 import com.school.management.exception.BusinessException;
+import com.school.management.security.JwtTokenService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import lombok.extern.slf4j.Slf4j;
@@ -51,6 +52,7 @@ public class UserApplicationService {
     private final DomainEventPublisher eventPublisher;
     private final UniversalPlaceOccupantRepository occupantRepository;
     private final UniversalPlaceRepository placeRepository;
+    private final JwtTokenService jwtTokenService;
 
     @Value("${app.security.default-password:}")
     private String defaultPassword;
@@ -346,6 +348,9 @@ public class UserApplicationService {
             throw new BusinessException("用户不存在: " + userId);
         }
 
+        // 吊销该用户所有 active tokens（refresh token 会立即失效；access token 等自然过期）
+        jwtTokenService.revokeAllTokensForUser(userId);
+
         // 清理关联数据
         cleanupUserRelations(userId);
 
@@ -362,6 +367,8 @@ public class UserApplicationService {
     public void deleteUsers(List<Long> userIds) {
         log.info("批量删除用户: {}", userIds);
         for (Long userId : userIds) {
+            // 吊销每个用户的 refresh token
+            jwtTokenService.revokeAllTokensForUser(userId);
             cleanupUserRelations(userId);
             autoCheckOutByUser(userId);
         }
