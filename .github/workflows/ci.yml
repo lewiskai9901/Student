@@ -104,11 +104,17 @@ jobs:
           distribution: 'temurin'
           cache: maven
 
+      # SpotBugs 阻断门禁 (2026-04-12 起):
+      # 新增 Medium 及以上级别 Bug 将导致 CI 失败.
+      # 既有 ~924 个警告已通过 backend/spotbugs-exclude.xml 基线屏蔽,
+      # 后续按 TODO(baseline-cleanup) 分批清理并收紧规则.
       - name: Run SpotBugs
         working-directory: ./backend
         run: mvn compile spotbugs:check -Pcode-quality -B
-        continue-on-error: true
 
+      # Checkstyle 暂为报告性质 (pom.xml 中 failOnViolation=false, severity=error).
+      # 71k+ 既有违规来自 google_checks 与项目风格的错配;
+      # 待切换到自定义规则集后恢复阻断.
       - name: Run Checkstyle
         working-directory: ./backend
         run: mvn checkstyle:check -Pcode-quality -B
@@ -161,6 +167,9 @@ jobs:
         working-directory: ./frontend
         run: npm ci
 
+      # TODO(frontend-quality): 升级为阻断门禁.
+      # 当前 type-check 存在 ~594 个错误 (主要为 unused imports / 可选属性类型收窄),
+      # lint 因缺少 .gitignore 配置报 ENOENT. 分批清理后移除 continue-on-error.
       - name: Run type check
         working-directory: ./frontend
         run: npm run type-check
@@ -180,6 +189,141 @@ jobs:
         with:
           name: frontend-dist
           path: frontend/dist/
+
+  # Frontend E2E Tests (Playwright against real backend+frontend)
+  frontend-e2e:
+    name: Frontend E2E Tests
+    runs-on: ubuntu-latest
+    needs: [backend-build]
+    if: ${{ success() }}
+    timeout-minutes: 20
+
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: test123
+          MYSQL_DATABASE: student_management
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h localhost -uroot -ptest123"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=10
+
+      redis:
+        image: redis:7
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd="redis-cli ping"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=10
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up JDK ${{ env.JAVA_VERSION }}
+        uses: actions/setup-java@v4
+        with:
+          java-version: ${{ env.JAVA_VERSION }}
+          distribution: 'temurin'
+          cache: maven
+
+      - name: Set up Node.js ${{ env.NODE_VERSION }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Initialize database schema
+        run: |
+          mysql -h 127.0.0.1 -P 3306 -uroot -ptest123 student_management < database/schema/complete_schema_v2.sql || true
+          # init_data 目录下存在多个增量脚本,按存在情况尝试导入
+          for f in database/init/task_permissions.sql database/init/task_basic_permissions.sql database/init/task_role_permissions.sql database/init/task_workflow_init.sql database/init/msg_seed_data.sql; do
+            if [ -f "$f" ]; then
+              mysql -h 127.0.0.1 -P 3306 -uroot -ptest123 student_management < "$f" || true
+            fi
+          done
+
+      - name: Install frontend dependencies
+        working-directory: ./frontend
+        run: npm ci
+
+      - name: Install Playwright browsers
+        working-directory: ./frontend
+        run: npx playwright install --with-deps chromium
+
+      - name: Build backend JAR
+        working-directory: ./backend
+        run: mvn package -DskipTests -B -q
+
+      - name: Start backend
+        env:
+          DB_HOST: 127.0.0.1
+          DB_PORT: 3306
+          DB_NAME: student_management
+          DB_USERNAME: root
+          DB_PASSWORD: test123
+          REDIS_HOST: 127.0.0.1
+          REDIS_PORT: 6379
+          JWT_SECRET: test-jwt-secret-key-for-ci-testing-at-least-64-characters-long-hs512
+        run: |
+          # spring-boot-maven-plugin 会产生一个主 JAR 和一个 .original 备份,
+          # 挑选非 .original 的可执行 JAR.
+          JAR_FILE=$(ls backend/target/*.jar | grep -v '\.original$' | head -n1)
+          echo "Starting backend from: $JAR_FILE"
+          nohup java -jar "$JAR_FILE" > backend.log 2>&1 &
+          echo $! > backend.pid
+          # 最多等待 120 秒让后端就绪 (actuator health 或 TCP 探活)
+          for i in $(seq 1 60); do
+            if curl -fs http://localhost:8080/api/actuator/health > /dev/null 2>&1; then
+              echo "Backend ready (actuator health)"
+              exit 0
+            fi
+            if curl -fs -o /dev/null -w "%{http_code}" http://localhost:8080/api/ | grep -qE '^(200|401|403|404)$'; then
+              echo "Backend ready (HTTP responding on /api)"
+              exit 0
+            fi
+            sleep 2
+          done
+          echo "Backend failed to start within 120s. Last log:" >&2
+          tail -n 200 backend.log >&2 || true
+          exit 1
+
+      - name: Run Playwright E2E tests
+        working-directory: ./frontend
+        env:
+          CI: true
+        # playwright.config.ts 内置 webServer 会自动启动 `npm run dev` (reuseExistingServer=false in CI)
+        run: npx playwright test --project=chromium
+
+      - name: Upload Playwright report
+        if: always()
+        uses: actions/upload-artifact@v3
+        with:
+          name: playwright-report
+          path: frontend/playwright-report/
+          retention-days: 7
+
+      - name: Upload backend log
+        if: failure()
+        uses: actions/upload-artifact@v3
+        with:
+          name: backend-log
+          path: backend.log
+          retention-days: 7
+
+      - name: Stop backend
+        if: always()
+        run: |
+          if [ -f backend.pid ]; then
+            kill $(cat backend.pid) 2>/dev/null || true
+          fi
 
   # Security Scan
   security-scan:
@@ -204,15 +348,16 @@ jobs:
   ci-summary:
     name: CI Summary
     runs-on: ubuntu-latest
-    needs: [backend-build, frontend-test, security-scan]
+    needs: [backend-build, backend-quality, frontend-test, frontend-e2e, security-scan]
     if: always()
 
     steps:
       - name: Check job status
         run: |
-          echo "Backend Test: ${{ needs.backend-test.result }}"
           echo "Backend Build: ${{ needs.backend-build.result }}"
+          echo "Backend Quality: ${{ needs.backend-quality.result }}"
           echo "Frontend Test: ${{ needs.frontend-test.result }}"
+          echo "Frontend E2E: ${{ needs.frontend-e2e.result }}"
           echo "Security Scan: ${{ needs.security-scan.result }}"
 
       - name: Set final status
