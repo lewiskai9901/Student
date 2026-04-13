@@ -552,7 +552,7 @@ const currentUserId = ref<number | string>()
 const usernameError = ref('')
 const phoneError = ref('')
 
-const queryParams = reactive<UserQueryParams>({
+const queryParams = reactive<UserQueryParams & { pageNum: number; pageSize: number }>({
   pageNum: 1,
   pageSize: configStore.defaultPageSize
 })
@@ -605,7 +605,7 @@ const getUserTypeName = (typeCode?: string): string => {
 }
 
 // 将组织树扁平化为列表（带缩进标记）
-interface FlatOrgItem { id: number; label: string }
+interface FlatOrgItem { id: number | string; label: string }
 const flatOrgUnits = computed<FlatOrgItem[]>(() => {
   const result: FlatOrgItem[] = []
   const flatten = (nodes: OrgUnitTreeNode[], depth: number) => {
@@ -631,7 +631,7 @@ const enabledCount = computed(() => userList.value.filter(u => normalizeStatus(u
 const disabledCount = computed(() => userList.value.filter(u => normalizeStatus(u.status) === 2).length)
 const todayLoginCount = ref(0)
 
-const formData = reactive<UserFormData & { placeId?: number }>({
+const formData = reactive<UserFormData & { placeId?: number; attributes: Record<string, any> }>({
   username: '',
   realName: '',
   password: '',

@@ -300,7 +300,7 @@ const aggregatedTargetScores = computed(() => {
       total += (s.finalScore ?? 0)
       sections.push({
         sectionId: s.sectionId!,
-        sectionName: secInfo?.name || s.sectionName || `分区${s.sectionId}`,
+        sectionName: secInfo?.name || (s as any).sectionName || `分区${s.sectionId}`,
         score: s.finalScore ?? 0,
         grade: s.grade ?? null,
       })
@@ -419,7 +419,7 @@ async function loadProject() {
         const sections = await getSections(project.value.rootSectionId)
         const map = new Map<number, { name: string; targetType?: string }>()
         for (const sec of sections) {
-          map.set(Number(sec.id), { name: sec.sectionName, targetType: sec.targetType })
+          map.set(Number(sec.id), { name: sec.sectionName, targetType: sec.targetType ?? undefined })
         }
         sectionNameMap.value = map
         sectionTree.value = buildSectionTree(sections, project.value.rootSectionId)
@@ -679,7 +679,7 @@ onMounted(async () => {
                       :type="task.status === 'PUBLISHED' ? 'success' : task.status === 'REVIEWED' ? 'primary' : 'warning'"
                       size="small" round effect="plain"
                     >
-                      {{ { SUBMITTED:'已提交', UNDER_REVIEW:'审核中', REVIEWED:'已审核', PUBLISHED:'已发布' }[task.status] || task.status }}
+                      {{ ({ SUBMITTED:'已提交', UNDER_REVIEW:'审核中', REVIEWED:'已审核', PUBLISHED:'已发布' } as Record<string, string>)[task.status] || task.status }}
                     </el-tag>
                     <span class="text-xs text-gray-400">{{ task.completedTargets }}/{{ task.totalTargets }} 目标</span>
                   </div>
@@ -767,25 +767,25 @@ onMounted(async () => {
           <div v-if="dimensionStats" class="grid gap-4 mb-5"
                :class="dimensionHasGrades ? 'grid-cols-5' : 'grid-cols-3'">
             <div class="bg-white rounded-xl border border-gray-100 p-4 text-center">
-              <div class="text-2xl font-bold text-gray-800">{{ dimensionStats.total }}</div>
+              <div class="text-2xl font-bold text-gray-800">{{ dimensionStats!.total }}</div>
               <div class="text-xs text-gray-400 mt-1">已评目标</div>
             </div>
             <div class="bg-white rounded-xl border border-gray-100 p-4 text-center">
-              <div class="text-2xl font-bold text-blue-600">{{ dimensionStats.avg }}</div>
+              <div class="text-2xl font-bold text-blue-600">{{ dimensionStats!.avg }}</div>
               <div class="text-xs text-gray-400 mt-1">平均分</div>
             </div>
             <div class="bg-white rounded-xl border border-gray-100 p-4 text-center">
               <div class="text-2xl font-bold text-gray-600">
-                {{ dimensionStats.max }}<span class="text-sm font-normal text-gray-300"> / {{ dimensionStats.min }}</span>
+                {{ dimensionStats!.max }}<span class="text-sm font-normal text-gray-300"> / {{ dimensionStats!.min }}</span>
               </div>
               <div class="text-xs text-gray-400 mt-1">最高 / 最低</div>
             </div>
             <div v-if="dimensionHasGrades" class="bg-white rounded-xl border border-gray-100 p-4 text-center">
-              <div class="text-2xl font-bold text-emerald-600">{{ dimensionStats.passed }}</div>
+              <div class="text-2xl font-bold text-emerald-600">{{ dimensionStats!.passed }}</div>
               <div class="text-xs text-gray-400 mt-1">达标</div>
             </div>
             <div v-if="dimensionHasGrades" class="bg-white rounded-xl border border-gray-100 p-4 text-center">
-              <div class="text-2xl font-bold text-red-500">{{ dimensionStats.failed }}</div>
+              <div class="text-2xl font-bold text-red-500">{{ dimensionStats!.failed }}</div>
               <div class="text-xs text-gray-400 mt-1">未达标</div>
             </div>
           </div>
@@ -840,7 +840,7 @@ onMounted(async () => {
                           <span v-if="sec.grade" class="text-[11px] px-1.5 py-0.5 rounded font-medium"
                             :style="getGradeColor(sec.grade, sec.sectionId) ? {
                               background: getGradeColor(sec.grade, sec.sectionId) + '18',
-                              color: getGradeColor(sec.grade, sec.sectionId),
+                              color: getGradeColor(sec.grade, sec.sectionId) ?? undefined,
                             } : undefined"
                             :class="!getGradeColor(sec.grade, sec.sectionId) ? 'bg-blue-50 text-blue-600' : ''">
                             {{ sec.grade }}
@@ -884,7 +884,7 @@ onMounted(async () => {
                   <span v-if="row.grade" class="pdv-grade-badge"
                     :style="getGradeColor(row.grade) ? {
                       background: getGradeColor(row.grade) + '18',
-                      color: getGradeColor(row.grade),
+                      color: getGradeColor(row.grade) ?? undefined,
                       borderColor: getGradeColor(row.grade) + '30',
                     } : undefined"
                     :class="!getGradeColor(row.grade) ? (
@@ -893,7 +893,7 @@ onMounted(async () => {
                       row.grade === '合格' ? 'bg-amber-50 text-amber-600' :
                       'bg-blue-50 text-blue-600'
                     ) : ''">
-                    <span v-if="getGradeColor(row.grade)" class="pdv-grade-dot" :style="{ background: getGradeColor(row.grade) }" />
+                    <span v-if="getGradeColor(row.grade)" class="pdv-grade-dot" :style="{ background: getGradeColor(row.grade) ?? undefined }" />
                     {{ row.grade }}
                   </span>
                   <span v-else class="text-gray-300">-</span>

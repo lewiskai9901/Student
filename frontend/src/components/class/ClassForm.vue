@@ -424,7 +424,7 @@ const handleGradeChange = async () => {
 
   // 自动填充入学年份、年级等级
   formData.enrollmentYear = grade.enrollmentYear
-  formData.gradeLevel = grade.gradeLevel
+  formData.gradeLevel = (grade as any).gradeLevel ?? null
 
   // 使用入学年份加载该年级的专业方向列表（使用局部loading避免表单抖动）
   try {
@@ -550,20 +550,20 @@ const loadClassDetail = async () => {
 
   loading.value = true
   try {
-    const data = await getClass(props.orgUnitId)
-    formData.gradeId = data.gradeId || null
+    const data = await getClass(props.orgUnitId) as any
+    formData.gradeId = data.gradeId ? Number(data.gradeId) : null
     formData.gradeLevel = data.gradeLevel || null
-    formData.majorId = data.majorId || null
-    formData.majorDirectionId = data.majorDirectionId || null
+    formData.majorId = data.majorId ? Number(data.majorId) : null
+    formData.majorDirectionId = data.majorDirectionId ? Number(data.majorDirectionId) : null
     formData.classSequence = data.classSequence || null
     formData.className = data.className || ''
     formData.classCode = data.classCode || ''
-    formData.orgUnitId = data.orgUnitId || null
+    formData.orgUnitId = data.orgUnitId ? Number(data.orgUnitId) : null
     formData.enrollmentYear = data.enrollmentYear || null
     formData.graduationYear = data.graduationYear || null
     formData.classType = data.classType || 1
-    formData.teacherId = data.teacherId || null
-    formData.assistantTeacherId = data.assistantTeacherId || null
+    formData.teacherId = data.teacherId ? Number(data.teacherId) : null
+    formData.assistantTeacherId = data.assistantTeacherId ? Number(data.assistantTeacherId) : null
     formData.classroomLocation = data.classroomLocation || ''
     formData.educationSystem = data.educationSystem || ''
     formData.skillLevel = data.skillLevel || ''
@@ -587,7 +587,7 @@ const loadClassDetail = async () => {
 
         // 如果gradeLevel为空，从年级获取
         if (!formData.gradeLevel) {
-          formData.gradeLevel = grade.gradeLevel
+          formData.gradeLevel = (grade as any).gradeLevel ?? null
         }
       }
     }
@@ -647,7 +647,7 @@ const handleSubmit = async () => {
     }
 
     if (props.mode === 'add') {
-      await createClass(submitData)
+      await createClass(submitData as any)
       ElMessage.success('班级创建成功')
     } else if (props.orgUnitId) {
       await updateClass(props.orgUnitId, submitData)
