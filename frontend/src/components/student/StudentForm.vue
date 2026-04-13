@@ -544,7 +544,6 @@ const formData = reactive<any>({
   financialAidType: '',
   orgUnitId: null,
   gradeId: null,
-  orgUnitId: null,
   majorId: null,
   majorDirectionId: null,
   educationLevel: '',

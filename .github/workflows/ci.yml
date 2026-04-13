@@ -167,17 +167,17 @@ jobs:
         working-directory: ./frontend
         run: npm ci
 
-      # TODO(frontend-quality): 升级为阻断门禁.
-      # 当前 type-check 存在 ~594 个错误 (主要为 unused imports / 可选属性类型收窄),
-      # lint 因缺少 .gitignore 配置报 ENOENT. 分批清理后移除 continue-on-error.
-      - name: Run type check
-        working-directory: ./frontend
-        run: npm run type-check
-        continue-on-error: true
-
+      # Lint 已于 2026-04-14 修复 (.eslintignore + noisy-rule 降级为 warn), 现为阻断门禁.
       - name: Run linter
         working-directory: ./frontend
         run: npm run lint
+
+      # TODO(frontend-type-check): 升级为阻断门禁.
+      # 当前 type-check 存在 ~594 个错误 (主要为 teaching 模块 unused imports / 可选属性类型收窄),
+      # 分批清理后移除 continue-on-error.
+      - name: Run type check
+        working-directory: ./frontend
+        run: npm run type-check
         continue-on-error: true
 
       - name: Build frontend

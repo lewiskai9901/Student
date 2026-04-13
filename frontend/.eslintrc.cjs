@@ -14,9 +14,20 @@ module.exports = {
     ecmaVersion: 'latest'
   },
   rules: {
-    'vue/no-unused-vars': 'error',
-    '@typescript-eslint/no-unused-vars': 'error',
+    'vue/no-unused-vars': 'warn',
+    'vue/multi-word-component-names': 'warn',
+    'vue/valid-v-slot': 'warn',
+    '@typescript-eslint/no-unused-vars': ['warn', { argsIgnorePattern: '^_', varsIgnorePattern: '^_' }],
+    'no-empty': ['warn', { allowEmptyCatch: true }],
+    'no-inner-declarations': 'warn',
+    'no-case-declarations': 'warn',
     'no-console': process.env.NODE_ENV === 'production' ? 'warn' : 'off',
     'no-debugger': process.env.NODE_ENV === 'production' ? 'warn' : 'off'
-  }
+  },
+  overrides: [
+    {
+      files: ['*.config.js', '*.config.cjs', '.eslintrc.cjs', 'postcss.config.*'],
+      env: { node: true }
+    }
+  ]
 }
