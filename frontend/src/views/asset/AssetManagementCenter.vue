@@ -43,7 +43,7 @@ const categoryLoading = ref(false)
 // 分类数据
 const categoryTree = ref<AssetCategory[]>([])
 const selectedCategory = ref<AssetCategory | null>(null)
-const expandedCategoryIds = ref<number[]>([])
+const expandedCategoryIds = ref<(number | string)[]>([])
 
 // 资产数据
 const assetList = ref<Asset[]>([])
@@ -73,7 +73,7 @@ watch(viewDensity, () => {
 })
 
 // 状态筛选
-const activeStatus = ref<'all' | number>('all')
+const activeStatus = ref<'all' | number | AssetStatus>('all')
 
 // 搜索关键词
 const keyword = ref('')
@@ -97,12 +97,12 @@ const maintenanceAsset = ref<Asset | null>(null)
 
 // 标签打印
 const labelDialogVisible = ref(false)
-const labelAssets = ref<Array<{ id: number; assetCode: string; assetName: string; location?: string }>>([])
+const labelAssets = ref<Array<{ id: number | string; assetCode: string; assetName: string; location?: string | null }>>([])
 
 // ============ 计算属性 ============
 
 // 状态标签选项
-const statusTabs = computed(() => [
+const statusTabs = computed<Array<{ label: string; value: 'all' | AssetStatus; count: number; color?: string }>>(() => [
   { label: '全部', value: 'all', count: statistics.value.totalCount },
   { label: '在用', value: AssetStatus.IN_USE, count: statistics.value.inUseCount, color: 'text-green-600' },
   { label: '闲置', value: AssetStatus.IDLE, count: statistics.value.idleCount, color: 'text-gray-600' },
@@ -168,7 +168,7 @@ function handleCategoryClick(category: AssetCategory | null) {
 }
 
 // 切换分类展开
-function toggleCategory(categoryId: number) {
+function toggleCategory(categoryId: number | string) {
   const idx = expandedCategoryIds.value.indexOf(categoryId)
   if (idx >= 0) {
     expandedCategoryIds.value.splice(idx, 1)
@@ -178,7 +178,7 @@ function toggleCategory(categoryId: number) {
 }
 
 // 状态筛选变化
-function handleStatusChange(status: 'all' | number) {
+function handleStatusChange(status: 'all' | number | AssetStatus) {
   activeStatus.value = status
   currentPage.value = 1
   // 切换状态时清除分类筛选，让用户看到该状态下的所有资产

@@ -12,10 +12,10 @@ import { assetCodeApi, type LabelData } from '@/api/assetCode'
 const props = defineProps<{
   modelValue: boolean
   assets: Array<{
-    id: number
+    id: number | string
     assetCode: string
     assetName: string
-    location?: string
+    location?: string | null
   }>
 }>()
 

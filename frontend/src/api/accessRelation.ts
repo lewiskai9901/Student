@@ -1,7 +1,7 @@
 /**
  * 统一访问关系 API
  */
-import request from '@/utils/request'
+import { http as request } from '@/utils/request'
 import type {
   AccessRelation,
   CreateAccessRelationRequest,

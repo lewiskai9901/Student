@@ -1,4 +1,4 @@
-import request from '@/utils/request'
+import { http as request } from '@/utils/request'
 import type { AssetAlert, AlertStatistics } from '@/types/asset'
 
 const BASE_URL = '/asset-alerts'

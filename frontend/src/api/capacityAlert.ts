@@ -3,7 +3,7 @@
  * 对标: AWS CloudWatch Alarms API
  */
 
-import request from '@/utils/request'
+import { request } from '@/utils/request'
 import type { CapacityAlertDTO, TypeAlertSummary, AlertCheckResponse } from '@/types/capacityAlert'
 
 /**

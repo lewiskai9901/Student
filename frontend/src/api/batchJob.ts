@@ -3,7 +3,7 @@
  * 对标: AWS S3 Batch Operations API
  */
 
-import request from '@/utils/request'
+import { request } from '@/utils/request'
 import type {
   BatchJobDTO,
   BatchAssignOrgRequest,

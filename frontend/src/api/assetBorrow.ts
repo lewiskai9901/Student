@@ -1,7 +1,7 @@
 /**
  * 资产借用管理 API
  */
-import request from '@/utils/request'
+import { http as request } from '@/utils/request'
 import type {
   AssetBorrow,
   CreateBorrowRequest,

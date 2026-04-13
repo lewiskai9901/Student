@@ -51,7 +51,7 @@ async function loadHistory() {
   historyLoading.value = true
   try {
     const res = await assetApi.getAssetHistory(props.asset.id)
-    historyList.value = res.data || []
+    historyList.value = res || []
   } catch (error) {
     console.error('Failed to load history:', error)
   } finally {
@@ -64,7 +64,7 @@ async function loadMaintenance() {
   maintenanceLoading.value = true
   try {
     const res = await assetApi.getAssetMaintenanceRecords(props.asset.id)
-    maintenanceList.value = res.data || []
+    maintenanceList.value = res || []
   } catch (error) {
     console.error('Failed to load maintenance:', error)
   } finally {

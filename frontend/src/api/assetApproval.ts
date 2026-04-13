@@ -1,4 +1,4 @@
-import request from '@/utils/request'
+import { http as request } from '@/utils/request'
 import type {
   AssetApproval,
   CreateApprovalRequest,

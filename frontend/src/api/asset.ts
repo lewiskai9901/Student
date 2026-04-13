@@ -1,7 +1,7 @@
 /**
  * 固定资产管理 API
  */
-import request from '@/utils/request'
+import { http as request } from '@/utils/request'
 import type {
   Asset,
   AssetCategory,
