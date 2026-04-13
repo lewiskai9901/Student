@@ -269,7 +269,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { ref, computed, onUnmounted } from 'vue'
 import { Eye, Move } from 'lucide-vue-next'
 import type { LoginCustomizationConfig, SnapGuide, DecorationImage } from '@/types/loginCustomization'
 import { getFontFamily, getFontWeight, SNAP_GUIDES, SNAP_THRESHOLD } from '@/types/loginCustomization'

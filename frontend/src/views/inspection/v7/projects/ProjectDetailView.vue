@@ -3,16 +3,14 @@ import { ref, onMounted, computed, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import {
-  ArrowLeft, Play, Pause, CheckCircle, Send, Plus, Trash2, Save,
-  Calendar, Users, Building2, UserCircle, Settings, BarChart3, ClipboardList, Lock,
+  ArrowLeft, Play, Pause, CheckCircle, Send, Trash2, Save, Users, Settings, BarChart3, ClipboardList, Lock,
   ClipboardCheck, Check, X, ListTree, LayoutDashboard,
 } from 'lucide-vue-next'
 import { useInspExecutionStore } from '@/stores/insp/inspExecutionStore'
 import {
   ProjectStatusConfig, type ProjectStatus,
   InspectorRoleConfig, type InspectorRole,
-  AssignmentModeConfig, type AssignmentMode,
-  ScopeTypeConfig, type ScopeType,
+  AssignmentModeConfig, type AssignmentMode, type ScopeType,
 } from '@/types/insp/enums'
 import type { InspProject, ProjectInspector, InspTask, InspSubmission } from '@/types/insp/project'
 import { inspProjectApi, updateOperationalConfig } from '@/api/insp/project'

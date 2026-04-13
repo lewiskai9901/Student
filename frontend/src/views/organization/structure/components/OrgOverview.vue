@@ -54,12 +54,8 @@
 
 <script setup lang="ts">
 import { computed } from 'vue'
-import {
-  Building2,
-  CheckCircle,
-  XCircle,
-  Info
-} from 'lucide-vue-next'
+
+
 import type { DepartmentResponse } from '@/api/organization'
 
 interface Props {

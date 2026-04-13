@@ -152,14 +152,12 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch, markRaw, nextTick } from 'vue'
+import { ref, computed, watch, nextTick } from 'vue'
 import { ElMessage } from 'element-plus'
 import type { FormInstance, FormRules } from 'element-plus'
-import {
-  ArrowRight, School, OfficeBuilding, House, Menu, Location, Grid, Box
-} from '@element-plus/icons-vue'
+
 import { universalPlaceApi } from '@/api/universalPlace'
-import type { PlaceTreeNode, UniversalPlaceType, CreatePlaceRequest, UpdatePlaceRequest, AttributeFieldDefinition } from '@/types/universalPlace'
+import type { PlaceTreeNode, UniversalPlaceType, AttributeFieldDefinition } from '@/types/universalPlace'
 import { orgUnitApi } from '@/api/organization'
 import { userApi } from '@/api/user'
 

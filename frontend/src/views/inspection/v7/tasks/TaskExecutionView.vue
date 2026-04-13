@@ -18,8 +18,8 @@ import {
 } from 'lucide-vue-next'
 import { useInspExecutionStore } from '@/stores/insp/inspExecutionStore'
 import {
-  TaskStatusConfig, SubmissionStatusConfig, ScoringModeConfig,
-  type TaskStatus, type SubmissionStatus, type ScoringMode,
+  TaskStatusConfig, ScoringModeConfig,
+  type TaskStatus, type ScoringMode,
 } from '@/types/insp/enums'
 import type { InspTask, InspSubmission, SubmissionDetail } from '@/types/insp/project'
 import type { TemplateSection } from '@/types/insp/template'

@@ -2,8 +2,7 @@
 import { ref, reactive, computed, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import {
-  Plus, Search, Pencil, Trash2, RefreshCw, Library,
-  Tag, Package, ChevronDown, X,
+  Plus, Search, Pencil, Trash2, RefreshCw, Library, Package,
 } from 'lucide-vue-next'
 import type { LibraryItem, CreateLibraryItemRequest, UpdateLibraryItemRequest } from '@/types/insp/template'
 import type { ItemType } from '@/types/insp/enums'

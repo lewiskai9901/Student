@@ -6,7 +6,7 @@
  * Shows conditional fields based on the selected cycle type.
  */
 import { computed } from 'vue'
-import { CycleTypeConfig, type CycleType } from '@/types/insp/enums'
+import { CycleTypeConfig } from '@/types/insp/enums'
 
 interface CycleConfig {
   cycleType: string

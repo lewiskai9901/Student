@@ -2,9 +2,8 @@
 import { ref, computed, onMounted, watch } from 'vue'
 import { ElMessage } from 'element-plus'
 import {
-  BarChart3, RefreshCw, Trophy, TrendingUp, TrendingDown,
+  BarChart3, RefreshCw, Trophy,
   Users, Calendar, ArrowUpDown, Search, Layers, UserCheck,
-  ChevronDown, Download,
 } from 'lucide-vue-next'
 import { getIndicators, getIndicatorScores, computeIndicatorScores } from '@/api/insp/indicator'
 import { getGradeSchemes } from '@/api/insp/gradeScheme'

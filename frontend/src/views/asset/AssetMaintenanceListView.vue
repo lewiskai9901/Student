@@ -3,13 +3,13 @@
  * 资产维修记录列表
  * UI优化版本 - 使用设计系统组件
  */
-import { ref, computed, onMounted } from 'vue'
+import { ref, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
 import { Search, Refresh } from '@element-plus/icons-vue'
 import { Wrench, Settings, CheckCircle, Clock, Package, AlertCircle } from 'lucide-vue-next'
 import { assetApi } from '@/api/asset'
 import type { Asset, AssetMaintenance, AssetQueryCriteria } from '@/types/asset'
-import { MaintenanceStatus, MaintenanceStatusMap, MaintenanceType, MaintenanceTypeMap, AssetStatus } from '@/types/asset'
+import { MaintenanceStatus, MaintenanceType, AssetStatus } from '@/types/asset'
 import AssetMaintenanceDialog from './components/AssetMaintenanceDialog.vue'
 import AssetMaintenanceCompleteDialog from './components/AssetMaintenanceCompleteDialog.vue'
 

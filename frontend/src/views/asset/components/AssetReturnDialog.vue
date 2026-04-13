@@ -8,7 +8,7 @@ import { Box, Check, Warning, CircleClose } from '@element-plus/icons-vue'
 import type { FormInstance, FormRules } from 'element-plus'
 import { assetBorrowApi } from '@/api/assetBorrow'
 import type { AssetBorrow, ReturnBorrowRequest } from '@/types/asset'
-import { ReturnCondition, ReturnConditionMap } from '@/types/asset'
+import { ReturnCondition } from '@/types/asset'
 
 const props = defineProps<{
   visible: boolean

@@ -146,7 +146,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { Type, Upload, Trash2, Check } from 'lucide-vue-next'
 import { ElMessage } from 'element-plus'
 import type { CustomFont } from '@/types/loginCustomization'

@@ -638,7 +638,7 @@ import {
   MoveHorizontal, MoveVertical, Crosshair,
   Square, CircleDashed, Minus, BoxSelect,
 } from 'lucide-vue-next'
-import type { FloorPlanElement, FloorPlanLayout, FloorPlanElementType, PlaceOccupant, FloorStyleType } from '@/types/universalPlace'
+import type { FloorPlanElement, FloorPlanLayout, FloorPlanElementType, PlaceOccupant } from '@/types/universalPlace'
 import { useFloorPlan, TEMPLATES, type ActiveTool } from '../composables/useFloorPlan'
 
 // ===== Props & Emits =====

@@ -2,7 +2,6 @@ import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import { http } from '@/utils/request'
 import type { LoginCustomizationConfig, LoginFeature, BackgroundMode, TextPosition, DisplayMode, TitleFontFamily, TitleFontWeight, FormStyle, DecorationImage, BackgroundCarouselConfig, CustomFont } from '@/types/loginCustomization'
-import { defaultLoginConfig } from '@/types/loginCustomization'
 
 /**
  * 系统配置项接口

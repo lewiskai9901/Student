@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
-import { ElMessage } from 'element-plus'
-import { Plus, Check, ExternalLink } from 'lucide-vue-next'
+import { ExternalLink } from 'lucide-vue-next'
 import { responseSetApi } from '@/api/insp/responseSet'
 import type { ResponseSet, ResponseSetOption } from '@/types/insp/template'
 

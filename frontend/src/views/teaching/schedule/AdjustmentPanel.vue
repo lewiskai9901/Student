@@ -162,7 +162,6 @@
 <script setup lang="ts">
 import { ref, reactive, watch } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { http as request } from '@/utils/request'
 import { universalPlaceApi } from '@/api/universalPlace'
 import { scheduleApi, adjustmentApi } from '@/api/teaching'
 import type { ScheduleEntry, ScheduleAdjustment, CourseSchedule } from '@/types/teaching'

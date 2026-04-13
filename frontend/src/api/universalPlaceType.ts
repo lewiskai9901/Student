@@ -6,7 +6,6 @@ import { http } from '@/utils/request'
 import { createTypeApi } from './typeApiFactory'
 import type {
   UniversalPlaceType,
-  PlaceTypeTreeNode,
   CreatePlaceTypeRequest,
   UpdatePlaceTypeRequest,
   PlaceCategory

@@ -179,7 +179,7 @@
 import { ref, watch } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { scheduleApi } from '@/api/teaching'
-import type { CourseSchedule, ScheduleEntry } from '@/types/teaching'
+import type { CourseSchedule } from '@/types/teaching'
 import { WEEKDAYS } from '@/types/teaching'
 
 const props = defineProps<{ semesterId: number | string | undefined }>()

@@ -2,7 +2,7 @@
 import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { ChevronLeft, ChevronRight, Play, Eye, CheckCircle, Circle, Clock, Target } from 'lucide-vue-next'
+import { ChevronLeft, ChevronRight, Play, Eye, Target } from 'lucide-vue-next'
 import { useInspExecutionStore } from '@/stores/insp/inspExecutionStore'
 import { useAuthStore } from '@/stores/auth'
 import { getMyTasks, getAvailableTasks, withdrawTask } from '@/api/insp/task'

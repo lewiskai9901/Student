@@ -1,11 +1,10 @@
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { BarChart3, ChevronRight, Trophy } from 'lucide-vue-next'
 import { inspProjectApi } from '@/api/insp/project'
 import { getSubmissions } from '@/api/insp/submission'
-import { getSections } from '@/api/insp/template'
 import type { InspProject, InspSubmission } from '@/types/insp/project'
 
 const router = useRouter()

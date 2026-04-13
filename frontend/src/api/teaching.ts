@@ -4,8 +4,6 @@ import type {
   TeachingTaskQueryParams,
   CourseSchedule,
   ScheduleEntry,
-  AutoScheduleParams,
-  AutoScheduleResult,
   ScheduleAdjustment,
   AdjustmentQueryParams,
   ExamBatch,

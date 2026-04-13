@@ -1,10 +1,10 @@
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue'
-import { Edit, Position, Clock, Tools, Printer } from '@element-plus/icons-vue'
+import { Edit, Position, Printer } from '@element-plus/icons-vue'
 import { assetApi } from '@/api/asset'
 import { assetCodeApi } from '@/api/assetCode'
 import type { Asset, AssetHistory, AssetMaintenance } from '@/types/asset'
-import { AssetStatus, AssetStatusMap, MaintenanceTypeMap, MaintenanceStatusMap } from '@/types/asset'
+import { AssetStatus } from '@/types/asset'
 import AssetLabelDialog from '@/components/asset/AssetLabelDialog.vue'
 
 const props = defineProps<{

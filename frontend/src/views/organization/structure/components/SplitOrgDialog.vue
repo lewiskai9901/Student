@@ -122,7 +122,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch, reactive } from 'vue'
+import { ref, computed, watch } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Plus, X } from 'lucide-vue-next'
 import { splitOrgUnit, type DepartmentResponse } from '@/api/organization'

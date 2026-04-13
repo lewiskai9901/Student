@@ -9,7 +9,7 @@
 import { ref, computed } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Plus, Trash2, Search } from 'lucide-vue-next'
-import { InspectorRoleConfig, type InspectorRole } from '@/types/insp/enums'
+import { InspectorRoleConfig } from '@/types/insp/enums'
 
 interface InspectorEntry {
   userId: number
@@ -65,7 +65,7 @@ async function searchUsers() {
   searchLoading.value = true
   try {
     // In production, call userApi.search(searchKeyword.value)
-    const { default: request } = await import('@/api/request')
+    const { default: request } = await import('@/utils/request')
     const res = await request.get('/api/users', {
       params: { keyword: searchKeyword.value, size: 20 },
     })

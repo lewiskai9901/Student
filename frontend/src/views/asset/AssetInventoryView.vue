@@ -3,13 +3,12 @@
  * 资产盘点视图
  * UI优化版本 - 使用设计系统组件
  */
-import { ref, reactive, onMounted, computed } from 'vue'
+import { ref, reactive, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { Search, Refresh } from '@element-plus/icons-vue'
+import { Search } from '@element-plus/icons-vue'
 import {
   ClipboardList,
   Plus,
-  FileCheck,
   CheckCircle,
   XCircle,
   Eye,
@@ -26,7 +25,7 @@ import {
   cancelInventory
 } from '@/api/assetInventory'
 import type { AssetInventory, InventoryStatistics } from '@/types/asset'
-import { InventoryStatus, InventoryStatusMap } from '@/types/asset'
+import { InventoryStatus } from '@/types/asset'
 import AssetInventoryCreateDialog from './components/AssetInventoryCreateDialog.vue'
 import AssetInventoryDetailDialog from './components/AssetInventoryDetailDialog.vue'
 

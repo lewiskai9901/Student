@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, watch, computed } from 'vue'
 import { ElMessage } from 'element-plus'
-import { Check, Warning, CircleCheck, CircleClose, Search } from '@element-plus/icons-vue'
+import { Check, Search } from '@element-plus/icons-vue'
 import { getInventory, updateInventoryDetail } from '@/api/assetInventory'
 import type { AssetInventory, AssetInventoryDetail, UpdateInventoryDetailRequest } from '@/types/asset'
 import { InventoryStatus, InventoryResultType, InventoryResultTypeMap } from '@/types/asset'

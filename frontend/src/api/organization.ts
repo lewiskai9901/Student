@@ -7,7 +7,6 @@ import { http } from '@/utils/request'
 import type {
   OrgUnit,
   OrgUnitTreeNode,
-  OrgUnitTypeConfig,
   CreateOrgUnitRequest,
   UpdateOrgUnitRequest,
   SchoolClass,

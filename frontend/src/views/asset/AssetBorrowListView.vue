@@ -19,7 +19,7 @@ import {
 } from 'lucide-vue-next'
 import { assetBorrowApi } from '@/api/assetBorrow'
 import type { AssetBorrow, BorrowStatistics } from '@/types/asset'
-import { BorrowType, BorrowTypeMap, BorrowStatus, BorrowStatusMap } from '@/types/asset'
+import { BorrowTypeMap, BorrowStatus } from '@/types/asset'
 import AssetReturnDialog from './components/AssetReturnDialog.vue'
 
 // 设计系统组件

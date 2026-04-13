@@ -235,7 +235,6 @@
 <script setup lang="ts">
 import { ref, reactive, computed, watch } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { http as request } from '@/utils/request'
 import { universalPlaceApi } from '@/api/universalPlace'
 import { scheduleApi, teachingTaskApi, conflictApi } from '@/api/teaching'
 import type { CourseSchedule, ScheduleEntry, TeachingTask } from '@/types/teaching'

@@ -5,17 +5,12 @@ import {
   Box,
   Search,
   Plus,
-  Edit,
-  Delete,
   Position,
-  Tools,
   Refresh,
   Grid,
   List,
-  FolderOpened,
   Folder,
   DocumentAdd,
-  ArrowDown,
   Upload,
   Download,
   Printer
@@ -30,7 +25,7 @@ import type {
   BatchTransferResult,
   ImportResult
 } from '@/types/asset'
-import { AssetStatus, AssetStatusMap, LocationTypeMap, ManagementMode, ManagementModeMap } from '@/types/asset'
+import { AssetStatus, ManagementMode, ManagementModeMap } from '@/types/asset'
 import AssetFormDialog from './components/AssetFormDialog.vue'
 import AssetTransferDialog from './components/AssetTransferDialog.vue'
 import AssetDetailDrawer from './components/AssetDetailDrawer.vue'

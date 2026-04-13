@@ -702,13 +702,9 @@ import {
   Maximize,
   SplitSquareHorizontal,
   Layout,
-  Eye,
-  EyeOff,
-  Copyright,
   Sparkles,
   Square,
   Hexagon,
-  Circle,
   LayoutGrid,
   Brush
 } from 'lucide-vue-next'
@@ -720,7 +716,7 @@ import DecorationImageManager from '@/components/settings/DecorationImageManager
 import BackgroundCarouselManager from '@/components/settings/BackgroundCarouselManager.vue'
 import FontUploader from '@/components/settings/FontUploader.vue'
 import type { BackgroundMode, TextPosition, DisplayMode, LoginFeature, LoginCustomizationConfig, TitleFontFamily, TitleFontWeight, FormStyle, DecorationImage, BackgroundCarouselConfig, CustomFont } from '@/types/loginCustomization'
-import { defaultLoginConfig, fontOptions, fontWeightOptions, formStyleOptions, getFontFamily, getFontWeight } from '@/types/loginCustomization'
+import { defaultLoginConfig, fontOptions, fontWeightOptions, formStyleOptions } from '@/types/loginCustomization'
 
 const configStore = useConfigStore()
 

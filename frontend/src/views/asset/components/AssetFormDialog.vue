@@ -4,7 +4,7 @@
  */
 import { ref, computed, watch } from 'vue'
 import { ElMessage } from 'element-plus'
-import { User, Close, Calendar, Coin, Box, Tag } from '@element-plus/icons-vue'
+import { User, Close, Coin, Box } from '@element-plus/icons-vue'
 import type { FormInstance, FormRules } from 'element-plus'
 import { assetApi } from '@/api/asset'
 import type {

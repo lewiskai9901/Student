@@ -1,9 +1,8 @@
 <script setup lang="ts">
 import { ref, watch, computed, reactive, nextTick } from 'vue'
 import {
-  Save, HelpCircle, Plus, Trash2,
+  Save, Plus, Trash2,
   BarChart3, Clipboard, Info, ShieldCheck, Zap,
-  GripVertical, AlertTriangle,
 } from 'lucide-vue-next'
 import {
   ItemTypeConfig, ItemTypeGroups, type ItemType,

@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
-import { Check, X, Eye, ChevronRight } from 'lucide-vue-next'
+import { Check, X, Eye } from 'lucide-vue-next'
 import { getTasks, reviewTask, rejectTask, publishTask } from '@/api/insp/task'
 import { getSubmissions } from '@/api/insp/submission'
 import { getDetails } from '@/api/insp/submission'

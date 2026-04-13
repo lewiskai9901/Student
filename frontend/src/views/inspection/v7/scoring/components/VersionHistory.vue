@@ -80,7 +80,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref } from 'vue'
 import { History } from 'lucide-vue-next'
 import type { ScoringProfileVersion } from '@/types/insp/scoring'
 

@@ -3,7 +3,6 @@ import { computed, ref, watch } from 'vue'
 import { Plus, Trash2, X } from 'lucide-vue-next'
 import type { RuleType } from '@/types/insp/scoring'
 import { ScoringModeConfig, type ScoringMode } from '@/types/insp/enums'
-import type { TemplateItem, TemplateSection } from '@/types/insp/template'
 import * as inspTemplateApi from '@/api/insp/template'
 import FormulaEditor from './FormulaEditor.vue'
 

@@ -6,7 +6,7 @@
  * Each section is collapsible, and each item within is rendered by
  * the FormItemRenderer component.
  */
-import { ref, computed, watch } from 'vue'
+import { ref } from 'vue'
 import { ChevronDown, ChevronRight } from 'lucide-vue-next'
 import FormItemRenderer from './FormItemRenderer.vue'
 

@@ -53,7 +53,7 @@ function updateChart() {
   const minScore = Math.min(...scores)
   const yAxisMin = Math.max(0, Math.floor(minScore * 0.95))
 
-  const option: echarts.EChartsOption = {
+  const option: echarts.EChartsCoreOption = {
     grid: {
       top: 20,
       right: 20,

@@ -3,7 +3,7 @@ import { ref, computed, onMounted, watch } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import {
   Plus, Trash2, Pencil, Calendar, Users, Clock, X, Zap, Play,
-  BarChart3, Layers, AlertTriangle, Settings2, TrendingUp, ExternalLink,
+  BarChart3, Layers, AlertTriangle, Settings2, ExternalLink,
 } from 'lucide-vue-next'
 import { inspPlanApi, getProject } from '@/api/insp/project'
 import {

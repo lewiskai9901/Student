@@ -3,17 +3,17 @@ import { ref, reactive, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Plus, Search, Copy, Upload, Archive, Ban, Trash2, Eye } from 'lucide-vue-next'
-import { useInspTemplateStore } from '@/stores/insp/inspTemplateStore'
+import { useTemplateSectionStore } from '@/stores/insp/inspTemplateStore'
 import { TemplateStatusConfig, type TemplateStatus } from '@/types/insp/enums'
-import type { InspTemplate, TemplateCatalog } from '@/types/insp/template'
+import type { TemplateSection, TemplateCatalog } from '@/types/insp/template'
 import InspEmptyState from '../shared/InspEmptyState.vue'
 
 const router = useRouter()
-const store = useInspTemplateStore()
+const store = useTemplateSectionStore()
 
 // State
 const loading = ref(false)
-const templates = ref<InspTemplate[]>([])
+const templates = ref<TemplateSection[]>([])
 const total = ref(0)
 const catalogs = ref<TemplateCatalog[]>([])
 
@@ -75,11 +75,11 @@ function goCreate() {
   router.push('/inspection/v7/templates/create')
 }
 
-function goEdit(tpl: InspTemplate) {
+function goEdit(tpl: TemplateSection) {
   router.push(`/inspection/v7/templates/${tpl.id}/edit`)
 }
 
-async function handlePublish(tpl: InspTemplate) {
+async function handlePublish(tpl: TemplateSection) {
   try {
     await ElMessageBox.confirm('发布后将创建不可变版本快照，确认发布？', '确认发布模板', { type: 'warning' })
     await store.publish(tpl.id)
@@ -90,7 +90,7 @@ async function handlePublish(tpl: InspTemplate) {
   }
 }
 
-async function handleDeprecate(tpl: InspTemplate) {
+async function handleDeprecate(tpl: TemplateSection) {
   try {
     await ElMessageBox.confirm('废弃后新项目无法使用此模板，确认废弃？', '确认废弃模板', { type: 'warning' })
     await store.deprecate(tpl.id)
@@ -101,7 +101,7 @@ async function handleDeprecate(tpl: InspTemplate) {
   }
 }
 
-async function handleArchive(tpl: InspTemplate) {
+async function handleArchive(tpl: TemplateSection) {
   try {
     await ElMessageBox.confirm('归档后模板将不可见，确认归档？', '确认归档模板', { type: 'warning' })
     await store.archive(tpl.id)
@@ -112,7 +112,7 @@ async function handleArchive(tpl: InspTemplate) {
   }
 }
 
-async function handleDuplicate(tpl: InspTemplate) {
+async function handleDuplicate(tpl: TemplateSection) {
   try {
     await store.duplicate(tpl.id)
     ElMessage.success('复制成功')
@@ -122,7 +122,7 @@ async function handleDuplicate(tpl: InspTemplate) {
   }
 }
 
-async function handleDelete(tpl: InspTemplate) {
+async function handleDelete(tpl: TemplateSection) {
   try {
     await ElMessageBox.confirm(`确认删除模板「${tpl.templateName}」？`, '确认删除', { type: 'warning' })
     await store.removeTemplate(tpl.id)

@@ -7,7 +7,7 @@ function customTranslate(template: string, replacements?: Record<string, string>
   replacements = replacements || {}
 
   // 先尝试直接查找翻译
-  let translation = translations[template]
+  const translation = translations[template]
 
   if (translation) {
     // 替换占位符
@@ -29,7 +29,7 @@ function customTranslate(template: string, replacements?: Record<string, string>
         if (match) {
           // 找到匹配的模板，使用翻译后的值
           let result = tplValue
-          let i = 1
+          const i = 1
           for (const key of Object.keys(replacements)) {
             const value = replacements[key]
             const translatedValue = translations[value] || value

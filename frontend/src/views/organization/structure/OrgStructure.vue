@@ -86,7 +86,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { Building2, CheckCircle, XCircle, Settings } from 'lucide-vue-next'
+import { Settings } from 'lucide-vue-next'
 import OrgSidebar from './components/OrgSidebar.vue'
 import OrgDetailPanel from './components/OrgDetailPanel.vue'
 import OrgOverview from './components/OrgOverview.vue'

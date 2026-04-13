@@ -3,7 +3,7 @@
  * 资产Excel导入对话框
  */
 import { ref, computed, watch } from 'vue'
-import { ElMessage, ElMessageBox } from 'element-plus'
+import { ElMessage } from 'element-plus'
 import { Upload, Download, Check, Warning, Document, Close } from '@element-plus/icons-vue'
 import type { UploadInstance, UploadFile, UploadRawFile } from 'element-plus'
 import { assetApi } from '@/api/asset'

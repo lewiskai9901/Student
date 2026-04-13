@@ -3,7 +3,7 @@
  * 位置选择器组件 - 关联场所管理系统
  * 使用级联选择器，支持 校区 → 楼栋 → 楼层 → 房间
  */
-import { ref, computed, watch, onMounted } from 'vue'
+import { ref, watch, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
 import { Location } from '@element-plus/icons-vue'
 import { universalPlaceApi } from '@/api/universalPlace'

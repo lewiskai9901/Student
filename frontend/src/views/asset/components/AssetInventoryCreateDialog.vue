@@ -5,7 +5,7 @@ import type { FormInstance, FormRules } from 'element-plus'
 import { createInventory } from '@/api/assetInventory'
 import { getCategoryTree } from '@/api/asset'
 import type { CreateInventoryRequest, AssetCategory } from '@/types/asset'
-import { InventoryScopeType, InventoryScopeTypeMap } from '@/types/asset'
+import { InventoryScopeType } from '@/types/asset'
 
 const props = defineProps<{
   visible: boolean

@@ -5,10 +5,9 @@
  * Supports all 22 field types defined in the ItemType enum.
  * Delegates to appropriate Element Plus components based on item type.
  */
-import { computed, ref } from 'vue'
+import { computed } from 'vue'
 import { Camera, MapPin, ScanLine, PenTool } from 'lucide-vue-next'
 import type { ItemType } from '@/types/insp/enums'
-import { ItemTypeConfig } from '@/types/insp/enums'
 
 interface ItemDef {
   id: number

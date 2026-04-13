@@ -510,27 +510,8 @@
 <script setup lang="ts">
 import { ref, reactive, onMounted, computed, watch } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import {
-  Users,
-  UserCheck,
-  UserX,
-  LogIn,
-  Plus,
-  Search,
-  RotateCcw,
-  Pencil,
-  Trash2,
-  Shield,
-  KeyRound,
-  X,
-  Loader2,
-  ChevronLeft,
-  ChevronRight,
-  ChevronsLeft,
-  ChevronsRight,
-  Clock
-} from 'lucide-vue-next'
-import StatCard from '@/components/design-system/cards/StatCard.vue'
+
+
 import { getOrgUnitTree } from '@/api/organization'
 import { universalPlaceApi } from '@/api/universalPlace'
 import type { UserType as UserTypeItem } from '@/types/userType'
@@ -548,7 +529,6 @@ import {
   assignRoles
 } from '@/api/user'
 import type {
-  User,
   UserQueryParams,
   UserFormData,
   UserListItem

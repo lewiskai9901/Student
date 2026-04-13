@@ -303,7 +303,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, computed, onMounted } from 'vue'
+import { ref, reactive, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import type { FormInstance, FormRules } from 'element-plus'
 import { Plus, RefreshCw, Loader2 } from 'lucide-vue-next'
@@ -314,7 +314,6 @@ import {
   scanWarnings, getWarnings, getStatistics,
   confirmWarning, interveneWarning, dismissWarning
 } from '@/api/academicWarning'
-import type { WarningRule, AcademicWarning } from '@/types/academicWarning'
 import { WARNING_LEVELS, WARNING_TYPES, WARNING_STATUS } from '@/types/academicWarning'
 import type { Semester } from '@/types/teaching'
 

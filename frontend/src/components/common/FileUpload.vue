@@ -38,7 +38,7 @@
 import { ref, computed } from 'vue'
 import { ElMessage } from 'element-plus'
 import { Plus, Upload } from '@element-plus/icons-vue'
-import type { UploadProps, UploadUserFile, UploadFile } from 'element-plus'
+import type { UploadProps, UploadUserFile } from 'element-plus'
 import { getToken } from '@/utils/token'
 
 interface Props {

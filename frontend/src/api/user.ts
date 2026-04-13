@@ -10,7 +10,6 @@ import type {
   UpdateUserRequest,
   UserQueryParams,
   SimpleUser,
-  UserFormData,
   UserListItem
 } from '@/types/user'
 import type { PageResponse } from '@/types'

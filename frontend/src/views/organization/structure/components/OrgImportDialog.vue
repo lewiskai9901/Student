@@ -126,7 +126,7 @@ import { getOrgUnits } from '@/api/organization'
 import { orgMemberApi } from '@/api/orgMember'
 import type { OrgUnit } from '@/types'
 import type { SimpleUser } from '@/types/user'
-import type { Position, AppointmentType } from '@/types/position'
+import type { Position } from '@/types/position'
 
 const props = defineProps<{
   visible: boolean

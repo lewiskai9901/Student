@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { Plus, Trash2, Pencil, GripVertical, Layers, BarChart3 } from 'lucide-vue-next'
+import { Plus, Trash2, Pencil, Layers, BarChart3 } from 'lucide-vue-next'
 import {
   getIndicators, createLeafIndicator, createCompositeIndicator,
   updateIndicator, deleteIndicator,

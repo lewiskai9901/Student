@@ -6,7 +6,6 @@
  * optional file evidence, and root cause reference.
  */
 import { ref, reactive } from 'vue'
-import { ElMessage } from 'element-plus'
 import { Send, Upload } from 'lucide-vue-next'
 import type { UploadFile } from 'element-plus'
 

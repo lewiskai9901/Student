@@ -6,7 +6,6 @@
  * as the inspection scope.
  */
 import { ref, computed, watch, onMounted } from 'vue'
-import { ScopeTypeConfig, type ScopeType } from '@/types/insp/enums'
 import { previewTargetCount } from '@/api/insp/project'
 
 interface ScopeValue {

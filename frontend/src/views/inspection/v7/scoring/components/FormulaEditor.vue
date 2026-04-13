@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue'
-import { Code, ChevronRight, AlertCircle, Check, ChevronDown } from 'lucide-vue-next'
+import { Code, AlertCircle, Check, ChevronDown } from 'lucide-vue-next'
 
 // ==================== Types ====================
 

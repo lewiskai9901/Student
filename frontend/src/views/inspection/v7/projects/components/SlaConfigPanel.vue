@@ -6,7 +6,7 @@
  * for when SLA thresholds are breached.
  */
 import { ref, computed } from 'vue'
-import { Plus, Trash2, AlertTriangle, Search } from 'lucide-vue-next'
+import { Plus, Trash2, AlertTriangle } from 'lucide-vue-next'
 import { ElMessage } from 'element-plus'
 
 interface EscalationStep {

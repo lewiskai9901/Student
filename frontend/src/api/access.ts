@@ -8,10 +8,8 @@ import type {
   Permission,
   CreatePermissionRequest,
   UpdatePermissionRequest,
-  Role,
   CreateRoleRequest,
   UpdateRoleRequest,
-  SetPermissionsRequest,
   UserRole,
   AssignRoleWithScopeRequest,
   SetUserRolesRequest,
@@ -358,8 +356,7 @@ import type {
   DataScopeOption,
   RolePermissionConfig,
   DataModuleDTO,
-  ScopeItemTypeDTO,
-  ModulePermission
+  ScopeItemTypeDTO
 } from '@/types/access'
 
 const DATA_MODULE_URL = '/data-modules'
