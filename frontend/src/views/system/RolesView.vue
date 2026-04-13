@@ -21,7 +21,7 @@
         :value="disabledCount"
         :icon="ShieldOff"
         subtitle="已禁用"
-        color="rose"
+        color="red"
       />
       <StatCard
         title="系统角色"
@@ -948,8 +948,8 @@ const currentCustomScopeModule = ref<string>('')
 // 自定义范围相关状态
 const orgTreeData = ref<OrgUnitTreeNode[]>([])
 const orgTreeLoading = ref(false)
-const selectedOrgUnitIds = ref<number[]>([])
-const expandedOrgKeys = ref<number[]>([])
+const selectedOrgUnitIds = ref<(number | string)[]>([])
+const expandedOrgKeys = ref<(number | string)[]>([])
 const expandedCustomModule = ref<string>('') // 当前展开的自定义范围模块
 
 // 多维度自定义范围状态
@@ -957,16 +957,16 @@ const gradesData = ref<Cohort[]>([])
 const classesData = ref<SchoolClass[]>([])
 const gradesLoading = ref(false)
 const classesLoading = ref(false)
-const selectedGradeIds = ref<number[]>([])
-const selectedClassIds = ref<number[]>([])
-const classFilterGradeId = ref<number | null>(null) // 班级筛选的年级
+const selectedGradeIds = ref<(number | string)[]>([])
+const selectedClassIds = ref<(number | string)[]>([])
+const classFilterGradeId = ref<number | string | null>(null) // 班级筛选的年级
 
 // V3 统一树形结构状态
 interface UnifiedTreeNode {
-  id: number
+  id: number | string
   name: string
   children?: UnifiedTreeNode[]
-  grades?: { id: number; name: string; classes?: { id: number; name: string }[] }[]
+  grades?: { id: number | string; name: string; classes?: { id: number | string; name: string }[] }[]
 }
 const unifiedTreeData = ref<UnifiedTreeNode[]>([])
 const unifiedTreeLoading = ref(false)
@@ -1250,7 +1250,7 @@ const toggleModule = (code: string) => {
 const handleExpandAll = () => { expandedModules.value = permissionModules.value.map(m => m.code) }
 const handleCollapseAll = () => { expandedModules.value = [] }
 const handleCheckAll = () => {
-  const allIds: number[] = []
+  const allIds: (number | string)[] = []
   permissionModules.value.forEach(m => allIds.push(...getAllPermissionIds(m.permissions)))
   selectedPermissionIds.value = allIds
 }
@@ -1521,8 +1521,8 @@ const filteredClasses = computed(() => {
 })
 
 // 获取所有组织单元ID（用于全选）
-const getAllOrgIds = (nodes: OrgUnitTreeNode[]): number[] => {
-  const ids: number[] = []
+const getAllOrgIds = (nodes: OrgUnitTreeNode[]): (number | string)[] => {
+  const ids: (number | string)[] = []
   const traverse = (list: OrgUnitTreeNode[]) => {
     list.forEach(node => {
       ids.push(node.id)
@@ -1534,8 +1534,8 @@ const getAllOrgIds = (nodes: OrgUnitTreeNode[]): number[] => {
 }
 
 // 获取所有可展开的节点ID
-const getAllExpandableIds = (nodes: OrgUnitTreeNode[]): number[] => {
-  const ids: number[] = []
+const getAllExpandableIds = (nodes: OrgUnitTreeNode[]): (number | string)[] => {
+  const ids: (number | string)[] = []
   const traverse = (list: OrgUnitTreeNode[]) => {
     list.forEach(node => {
       if (node.children?.length) {
@@ -1564,7 +1564,7 @@ const openCustomScopeDialog = async (moduleCode: string) => {
 }
 
 // 切换节点展开状态
-const toggleOrgNode = (id: number) => {
+const toggleOrgNode = (id: number | string) => {
   const idx = expandedOrgKeys.value.indexOf(id)
   if (idx > -1) {
     expandedOrgKeys.value.splice(idx, 1)
@@ -1574,7 +1574,8 @@ const toggleOrgNode = (id: number) => {
 }
 
 // 处理节点选中
-const handleOrgNodeCheck = (id: number, checked: boolean) => {
+const handleOrgNodeCheck = (payload: { id: number | string; checked: boolean }) => {
+  const { id, checked } = payload
   if (checked) {
     if (!selectedOrgUnitIds.value.includes(id)) {
       selectedOrgUnitIds.value.push(id)
@@ -1640,7 +1641,7 @@ const buildUnifiedTree = async () => {
     ])
 
     // 将年级和班级按年级分组
-    const gradeMap = new Map<number, { id: number; name: string; classes: { id: number; name: string }[] }>()
+    const gradeMap = new Map<number | string, { id: number | string; name: string; classes: { id: number | string; name: string }[] }>()
     for (const grade of grades) {
       if (grade.id) {
         gradeMap.set(grade.id, {
@@ -1686,7 +1687,7 @@ const buildUnifiedTree = async () => {
 }
 
 // 切换节点展开/折叠
-const toggleUnifiedNode = (type: 'org' | 'grade', id: number) => {
+const toggleUnifiedNode = (type: 'org' | 'grade', id: number | string) => {
   const key = `${type}-${id}`
   if (unifiedExpandedNodes.value.has(key)) {
     unifiedExpandedNodes.value.delete(key)
@@ -1696,12 +1697,12 @@ const toggleUnifiedNode = (type: 'org' | 'grade', id: number) => {
 }
 
 // 检查节点是否展开
-const isUnifiedNodeExpanded = (type: 'org' | 'grade', id: number): boolean => {
+const isUnifiedNodeExpanded = (type: 'org' | 'grade', id: number | string): boolean => {
   return unifiedExpandedNodes.value.has(`${type}-${id}`)
 }
 
 // 检查节点是否选中
-const isNodeSelected = (type: 'org' | 'grade' | 'class', id: number): boolean => {
+const isNodeSelected = (type: 'org' | 'grade' | 'class', id: number | string): boolean => {
   switch (type) {
     case 'org': return selectedOrgUnitIds.value.includes(id)
     case 'grade': return selectedGradeIds.value.includes(id)
@@ -1710,8 +1711,8 @@ const isNodeSelected = (type: 'org' | 'grade' | 'class', id: number): boolean =>
 }
 
 // 切换节点选中状态
-const toggleNodeSelection = (type: 'org' | 'grade' | 'class', id: number) => {
-  let arr: number[]
+const toggleNodeSelection = (type: 'org' | 'grade' | 'class', id: number | string) => {
+  let arr: (number | string)[]
   switch (type) {
     case 'org': arr = selectedOrgUnitIds.value; break
     case 'grade': arr = selectedGradeIds.value; break

@@ -60,7 +60,7 @@ import type { PlaceTreeNode } from '@/types/universalPlace'
 
 interface Props {
   treeData: PlaceTreeNode[]
-  selectedId: number | null
+  selectedId: number | string | null
 }
 
 const props = defineProps<Props>()

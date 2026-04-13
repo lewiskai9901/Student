@@ -106,7 +106,7 @@ import type { PlaceTreeNode } from '@/types/universalPlace'
 interface Props {
   node: PlaceTreeNode
   level: number
-  selectedId: number | null
+  selectedId: number | string | null
   searchKeyword: string
 }
 

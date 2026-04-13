@@ -63,13 +63,13 @@ import type { OrgUnitTreeNode } from '@/types'
 
 const props = defineProps<{
   node: OrgUnitTreeNode
-  selectedIds: number[]
-  expandedKeys: number[]
+  selectedIds: (number | string)[]
+  expandedKeys: (number | string)[]
 }>()
 
 const emit = defineEmits<{
-  toggle: [id: number]
-  check: [payload: { id: number; checked: boolean }]
+  toggle: [id: number | string]
+  check: [payload: { id: number | string; checked: boolean }]
 }>()
 
 const hasChildren = computed(() => props.node.children && props.node.children.length > 0)

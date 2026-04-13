@@ -759,7 +759,7 @@ import type { PlaceTreeNode, UniversalPlace, UniversalPlaceType, PlaceOccupant, 
 // ========== Data ==========
 const loading = ref(false)
 const treeData = ref<PlaceTreeNode[]>([])
-const selectedNodeId = ref<number | null>(null)
+const selectedNodeId = ref<number | string | null>(null)
 const childPlaces = ref<UniversalPlace[]>([])
 const statistics = ref<PlaceStatistics | null>(null)
 const showDropdown = ref(false)
@@ -791,7 +791,7 @@ const floorPlanEditorRef = ref<InstanceType<typeof FloorPlanEditor> | null>(null
 
 // New batch check-in state
 interface PendingUser {
-  userId: number
+  userId: number | string
   username: string
   realName: string
   userType?: string
@@ -991,7 +991,7 @@ function relTypeBadge(type?: string): string {
   return 'bg-gray-50 text-gray-500'
 }
 
-async function loadPlaceOrgRelations(placeId: number) {
+async function loadPlaceOrgRelations(placeId: number | string) {
   try {
     const all = await accessRelationApi.getByResource('place', placeId)
     placeOrgRelations.value = all.filter(r => r.subjectType === 'org_unit')
@@ -1092,7 +1092,7 @@ const showBookingPanel = computed(() => {
   return !!node.bookable
 })
 
-async function loadBookings(placeId: number) {
+async function loadBookings(placeId: number | string) {
   try {
     bookings.value = await universalPlaceApi.getPlaceBookings(placeId, !bookingShowAll.value)
   } catch {
@@ -1225,7 +1225,7 @@ function formatDateTime(dateStr?: string) {
 
 
 // ========== Computed ==========
-const findNode = (nodes: PlaceTreeNode[], id: number): PlaceTreeNode | null => {
+const findNode = (nodes: PlaceTreeNode[], id: number | string): PlaceTreeNode | null => {
   for (const node of nodes) {
     if (String(node.id) === String(id)) return node
     if (node.children) {
@@ -1237,7 +1237,7 @@ const findNode = (nodes: PlaceTreeNode[], id: number): PlaceTreeNode | null => {
 }
 
 // Build path from tree by walking ancestors
-const buildPath = (nodes: PlaceTreeNode[], targetId: number, ancestors: string[] = []): string[] | null => {
+const buildPath = (nodes: PlaceTreeNode[], targetId: number | string, ancestors: string[] = []): string[] | null => {
   for (const node of nodes) {
     const current = [...ancestors, node.placeName]
     if (String(node.id) === String(targetId)) return current
@@ -1375,7 +1375,7 @@ async function loadStatistics() {
   }
 }
 
-async function loadChildPlaces(parentId: number) {
+async function loadChildPlaces(parentId: number | string) {
   try {
     childPlaces.value = await universalPlaceApi.getChildren(parentId)
   } catch {
@@ -1489,7 +1489,7 @@ function handleCommand(command: string) {
   }
 }
 
-async function changeStatus(id: number, status: number) {
+async function changeStatus(id: number | string, status: number) {
   try {
     await universalPlaceApi.changeStatus(id, status)
     ElMessage.success('状态更新成功')
@@ -1517,7 +1517,7 @@ async function handleDelete(place: PlaceTreeNode) {
 }
 
 // ========== Occupant Methods ==========
-async function loadOccupants(placeId: number) {
+async function loadOccupants(placeId: number | string) {
   try {
     occupants.value = await universalPlaceApi.getOccupants(placeId)
   } catch {
@@ -1525,7 +1525,7 @@ async function loadOccupants(placeId: number) {
   }
 }
 
-async function loadOccupantHistory(placeId: number) {
+async function loadOccupantHistory(placeId: number | string) {
   try {
     occupantHistory.value = await universalPlaceApi.getOccupantHistory(placeId)
   } catch {
