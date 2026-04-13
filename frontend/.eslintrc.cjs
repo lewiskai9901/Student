@@ -10,6 +10,7 @@ module.exports = {
     '@vue/eslint-config-prettier/skip-formatting',
     './.eslintrc-auto-import.json'
   ],
+  plugins: ['unused-imports'],
   parserOptions: {
     ecmaVersion: 'latest'
   },
@@ -17,7 +18,9 @@ module.exports = {
     'vue/no-unused-vars': 'warn',
     'vue/multi-word-component-names': 'warn',
     'vue/valid-v-slot': 'warn',
-    '@typescript-eslint/no-unused-vars': ['warn', { argsIgnorePattern: '^_', varsIgnorePattern: '^_' }],
+    '@typescript-eslint/no-unused-vars': 'off',
+    'unused-imports/no-unused-imports': 'warn',
+    'unused-imports/no-unused-vars': ['warn', { argsIgnorePattern: '^_', varsIgnorePattern: '^_' }],
     'no-empty': ['warn', { allowEmptyCatch: true }],
     'no-inner-declarations': 'warn',
     'no-case-declarations': 'warn',
