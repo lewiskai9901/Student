@@ -1,5 +1,6 @@
 package com.school.management.infrastructure.casbin;
 
+import com.school.management.domain.access.model.PermissionScope;
 import com.school.management.infrastructure.access.UserContext;
 import com.school.management.infrastructure.access.UserContextHolder;
 import com.school.management.infrastructure.tenant.TenantContextHolder;
@@ -39,6 +40,19 @@ public class CasbinAccessInterceptor {
             return joinPoint.proceed();
         }
 
+        // PUBLIC scope: authentication is enough, no role gate
+        if (annotation.scope() == PermissionScope.PUBLIC) {
+            return joinPoint.proceed();
+        }
+
+        // SELF scope: authentication is enough. Data filtering (user_id = currentUserId())
+        // is enforced inside the endpoint via SecurityUtils.requireCurrentUserId();
+        // ArchUnitMyEndpointTest guarantees endpoints cannot accept identity params.
+        // The permission engine would add no real gate here — a teacher can always see their own data.
+        if (annotation.scope() == PermissionScope.SELF) {
+            return joinPoint.proceed();
+        }
+
         String userId = String.valueOf(userContext.getUserId());
         String tenantId = String.valueOf(TenantContextHolder.getTenantId());
         String resource = annotation.resource();
@@ -47,14 +61,14 @@ public class CasbinAccessInterceptor {
         boolean allowed = enforcer.enforce(userId, tenantId, resource, action);
 
         if (!allowed) {
-            log.warn("Access denied: user={}, tenant={}, resource={}, action={}",
-                    userId, tenantId, resource, action);
+            log.warn("Access denied: user={}, tenant={}, resource={}, action={}, scope={}",
+                    userId, tenantId, resource, action, annotation.scope());
             throw new AccessDeniedException(
                     "Access denied for resource '" + resource + "' action '" + action + "'");
         }
 
-        log.debug("Access granted: user={}, tenant={}, resource={}, action={}",
-                userId, tenantId, resource, action);
+        log.debug("Access granted: user={}, tenant={}, resource={}, action={}, scope={}",
+                userId, tenantId, resource, action, annotation.scope());
         return joinPoint.proceed();
     }
 }

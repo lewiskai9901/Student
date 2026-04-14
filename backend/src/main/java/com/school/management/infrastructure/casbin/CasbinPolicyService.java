@@ -23,38 +23,31 @@ public class CasbinPolicyService implements PolicyEnforcementService {
     private final Enforcer enforcer;
     private final JdbcTemplate jdbcTemplate;
 
+    // 注:以下 4 个方法只做内存策略同步。真相持久化由调用方写业务表 (user_roles / role_permissions);
+    // CasbinConfig 启动时从这两张表重建内存策略,不依赖 casbin_rule 表。
+
     @Override
     public void assignRole(Long userId, String roleCode, Long tenantId) {
-        String sub = String.valueOf(userId);
-        String dom = String.valueOf(tenantId);
-        enforcer.addGroupingPolicy(sub, roleCode, dom);
-        enforcer.savePolicy();
-        log.info("Assigned role {} to user {} in tenant {}", roleCode, userId, tenantId);
+        enforcer.addGroupingPolicy(String.valueOf(userId), roleCode, String.valueOf(tenantId));
+        log.info("Assigned role {} to user {} in tenant {} (in-memory)", roleCode, userId, tenantId);
     }
 
     @Override
     public void removeRole(Long userId, String roleCode, Long tenantId) {
-        String sub = String.valueOf(userId);
-        String dom = String.valueOf(tenantId);
-        enforcer.removeGroupingPolicy(sub, roleCode, dom);
-        enforcer.savePolicy();
-        log.info("Removed role {} from user {} in tenant {}", roleCode, userId, tenantId);
+        enforcer.removeGroupingPolicy(String.valueOf(userId), roleCode, String.valueOf(tenantId));
+        log.info("Removed role {} from user {} in tenant {} (in-memory)", roleCode, userId, tenantId);
     }
 
     @Override
     public void grantPermission(String roleCode, Long tenantId, String resource, String action) {
-        String dom = String.valueOf(tenantId);
-        enforcer.addPolicy(roleCode, dom, resource, action);
-        enforcer.savePolicy();
-        log.info("Granted {}.{} to role {} in tenant {}", resource, action, roleCode, tenantId);
+        enforcer.addPolicy(roleCode, String.valueOf(tenantId), resource, action);
+        log.info("Granted {}.{} to role {} in tenant {} (in-memory)", resource, action, roleCode, tenantId);
     }
 
     @Override
     public void revokePermission(String roleCode, Long tenantId, String resource, String action) {
-        String dom = String.valueOf(tenantId);
-        enforcer.removePolicy(roleCode, dom, resource, action);
-        enforcer.savePolicy();
-        log.info("Revoked {}.{} from role {} in tenant {}", resource, action, roleCode, tenantId);
+        enforcer.removePolicy(roleCode, String.valueOf(tenantId), resource, action);
+        log.info("Revoked {}.{} from role {} in tenant {} (in-memory)", resource, action, roleCode, tenantId);
     }
 
     @Override
@@ -80,10 +73,10 @@ public class CasbinPolicyService implements PolicyEnforcementService {
 
             String resource;
             String action;
-            if (permCode.contains(":")) {
-                String[] parts = permCode.split(":", 2);
-                resource = parts[0];
-                action = parts[1];
+            int lastColon = permCode.lastIndexOf(':');
+            if (lastColon > 0 && lastColon < permCode.length() - 1) {
+                resource = permCode.substring(0, lastColon);
+                action = permCode.substring(lastColon + 1);
             } else {
                 resource = permCode;
                 action = "*";
@@ -110,7 +103,6 @@ public class CasbinPolicyService implements PolicyEnforcementService {
             gCount++;
         }
 
-        enforcer.savePolicy();
         log.info("Casbin policy sync complete: {} p-policies, {} g-policies", pCount, gCount);
     }
 
