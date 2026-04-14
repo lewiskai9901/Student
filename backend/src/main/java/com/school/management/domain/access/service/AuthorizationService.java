@@ -1,8 +1,5 @@
 package com.school.management.domain.access.service;
 
-import com.school.management.domain.access.model.DataScope;
-
-import java.util.List;
 import java.util.Set;
 
 /**
@@ -70,31 +67,6 @@ public interface AuthorizationService {
      * @return set of role codes
      */
     Set<String> getRoles(Long userId);
-
-    /**
-     * Gets the data scope for a user.
-     *
-     * @param userId the user ID
-     * @return the effective data scope
-     */
-    DataScope getDataScope(Long userId);
-
-    /**
-     * Gets the organization unit IDs that a user can access.
-     *
-     * @param userId the user ID
-     * @return list of accessible org unit IDs
-     */
-    List<Long> getAccessibleOrgUnitIds(Long userId);
-
-    /**
-     * Checks if a user can access data for a specific organization unit.
-     *
-     * @param userId    the user ID
-     * @param orgUnitId the organization unit ID
-     * @return true if the user can access the data
-     */
-    boolean canAccessOrgUnit(Long userId, Long orgUnitId);
 
     /**
      * Refreshes the permission cache for a user.

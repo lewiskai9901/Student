@@ -1,260 +1,383 @@
 <template>
-  <div>
-    <!-- Controls -->
-    <div style="border: 1px solid #e5e7eb; border-radius: 10px; background: #fff; padding: 14px 20px; margin-bottom: 16px;">
-      <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 10px;">
-        <div class="tm-radios" style="width: auto;">
-          <button :class="['tm-radio', { active: viewType === 'class' }]" @click="viewType = 'class'; targetId = undefined; instances = []">班级</button>
-          <button :class="['tm-radio', { active: viewType === 'teacher' }]" @click="viewType = 'teacher'; targetId = undefined; instances = []">教师</button>
-          <button :class="['tm-radio', { active: viewType === 'classroom' }]" @click="viewType = 'classroom'; targetId = undefined; instances = []">场所</button>
-        </div>
-        <select v-model="targetId" class="tm-select" @change="loadInstances">
-          <option :value="undefined" disabled>{{ viewType === 'class' ? '选择班级' : viewType === 'teacher' ? '选择教师' : '选择教室' }}</option>
-          <option v-for="o in targetOptions" :key="o.id" :value="o.id">{{ o.name }}</option>
-        </select>
-        <span style="display: inline-block; width: 1px; height: 18px; background: #d1d5db;" />
-
-        <!-- Week pager -->
-        <div class="tv-week-pager">
-          <button class="tv-week-btn" :disabled="!weekNumber || weekNumber <= 1" @click="weekNumber && weekNumber--; loadInstances()">
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 18 9 12 15 6"/></svg>
-          </button>
-          <span class="tv-week-label" @click="weekNumber = undefined; loadInstances()">{{ weekNumber ? `第${weekNumber}周` : '全部周次' }}</span>
-          <button class="tv-week-btn" :disabled="weekNumber !== undefined && weekNumber >= 20" @click="weekNumber = (weekNumber ?? 0) + 1; loadInstances()">
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"/></svg>
-          </button>
-        </div>
-
-        <span style="display: inline-block; width: 1px; height: 18px; background: #d1d5db;" />
-
-        <!-- View toggle: grid / list / matrix -->
-        <div class="view-toggle">
-          <button :class="['vt-btn', displayMode === 'grid' && 'vt-active']" @click="displayMode = 'grid'" title="课表视图">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
-          </button>
-          <button :class="['vt-btn', displayMode === 'list' && 'vt-active']" @click="displayMode = 'list'" title="列表视图">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
-          </button>
-          <button :class="['vt-btn', displayMode === 'matrix' && 'vt-active']" @click="displayMode = 'matrix'" title="总览视图">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="3" y1="15" x2="21" y2="15"/><line x1="9" y1="3" x2="9" y2="21"/></svg>
-          </button>
-        </div>
+  <div class="live-tt">
+    <!-- 时间轴 -->
+    <div v-if="weeks.length > 0" class="live-timeline">
+      <button class="tt-today-btn" @click="jumpToToday">
+        <span class="tt-today-dot" /> 今天 {{ todayLabel }}
+      </button>
+      <div class="tt-weeks">
+        <div
+          v-for="w in weeks"
+          :key="w.weekNumber"
+          :class="['tt-week', weekClass(w)]"
+          :title="`第${w.weekNumber}周 ${w.startDate} ~ ${w.endDate} (${weekTypeLabel(w.weekType)})`"
+          @click="jumpToWeek(w.weekNumber)"
+        >{{ w.weekNumber }}</div>
+      </div>
+      <div class="tt-legend">
+        <span class="tt-legend-item"><span class="tt-legend-dot tt-teach" /> 教学</span>
+        <span class="tt-legend-item"><span class="tt-legend-dot tt-exam" /> 考试</span>
+        <span class="tt-legend-item"><span class="tt-legend-dot tt-holi" /> 假期</span>
       </div>
     </div>
 
-    <!-- Legend -->
-    <div style="display: flex; gap: 16px; margin-bottom: 12px; font-size: 12px; color: #6b7280;">
-      <span><span class="legend-dot" style="background:#dcfce7;border-color:#bbf7d0;" />正常</span>
-      <span><span class="legend-dot" style="background:#fecaca;border-color:#fca5a5;" />已取消</span>
-      <span><span class="legend-dot" style="background:#bbf7d0;border-color:#86efac;" />补课</span>
-      <span><span class="legend-dot" style="background:#fed7aa;border-color:#fdba74;" />代课</span>
-      <span><span class="legend-dot" style="background:#e5e7eb;border-color:#d1d5db;" />已调走</span>
+    <!-- 控制栏 -->
+    <div class="live-controls">
+      <div class="tm-radios" style="width: auto;">
+        <button :class="['tm-radio', { active: viewType === 'class' }]" @click="onTypeChange('class')">班级课表</button>
+        <button :class="['tm-radio', { active: viewType === 'teacher' }]" @click="onTypeChange('teacher')">教师课表</button>
+        <button :class="['tm-radio', { active: viewType === 'classroom' }]" @click="onTypeChange('classroom')">教室课表</button>
+      </div>
+      <select v-model="targetId" class="tm-select" @change="loadInstances">
+        <option :value="undefined" disabled>{{ targetPlaceholder }}</option>
+        <option v-for="o in targetOptions" :key="o.id" :value="o.id">{{ o.name }}</option>
+      </select>
+      <span class="live-sep" />
+      <div class="live-week-pager">
+        <button class="live-arrow" :disabled="weekNumber <= 1" @click="weekNumber > 1 && (weekNumber--, loadInstances())">◀</button>
+        <span class="live-week-label">
+          第 {{ weekNumber }} 周
+          <span class="live-week-range">{{ weekRangeLabel }}</span>
+        </span>
+        <button class="live-arrow" :disabled="weekNumber >= weeks.length" @click="weekNumber < weeks.length && (weekNumber++, loadInstances())">▶</button>
+      </div>
+      <span v-if="currentWeekTag" class="live-tag" :class="'tag-' + currentWeekTag.type">{{ currentWeekTag.label }}</span>
     </div>
 
-    <!-- Loading / Empty -->
-    <div v-if="loading" style="text-align: center; padding: 40px; color: #9ca3af;">加载中...</div>
-    <div v-else-if="instances.length === 0" style="text-align: center; padding: 40px; color: #9ca3af;">
-      {{ targetId ? '暂无实况数据' : '请选择查看对象' }}
-    </div>
-
-    <!-- Matrix View -->
-    <template v-else-if="displayMode === 'matrix'">
-      <TimetableMatrix
-        :mode="viewType"
-        :semester-id="semesterId"
-        :periods="periods"
-        :options="matrixOptions"
-        :week-dates="weekDateMap"
-        data-source="instance"
-      />
-    </template>
-
-    <!-- Grid View -->
-    <template v-else-if="displayMode === 'grid'">
-      <div style="border: 1px solid #e5e7eb; border-radius: 10px; background: #fff; overflow: hidden;">
-        <TimetableGrid
-          :entries="gridEntries"
-          :periods="periods"
-          :week-dates="weekDateMap"
-          :editable="false"
-          @entry-click="showDetail"
-        />
-      </div>
-      <div class="tm-stats" style="margin-top: 10px;">
-        <span>共 <b>{{ instances.length }}</b> 条</span>
-        <span class="sep" />
-        <span>正常 <b>{{ instances.filter(i => i.status === 0).length }}</b></span>
-        <span class="sep" />
-        <span style="color:#dc2626;">取消 <b>{{ instances.filter(i => i.status === 1).length }}</b></span>
-      </div>
-    </template>
-
-    <!-- List View -->
-    <template v-else>
-      <table class="tm-table">
+    <!-- 日期+节次网格 -->
+    <div v-if="loading" class="live-empty">加载中...</div>
+    <div v-else-if="!targetId" class="live-empty">请选择查看对象</div>
+    <div v-else class="live-grid-wrap">
+      <table class="live-grid">
         <thead>
           <tr>
-            <th style="width:90px">日期</th>
-            <th style="width:50px">周次</th>
-            <th class="text-left">课程</th>
-            <th style="width:100px">班级</th>
-            <th style="width:70px">节次</th>
-            <th style="width:80px">教室</th>
-            <th style="width:70px">教师</th>
-            <th style="width:60px">状态</th>
-            <th class="text-left">备注</th>
-            <th style="width:90px">操作</th>
+            <th class="live-period-col">节次</th>
+            <th
+              v-for="d in weekDates"
+              :key="d.dateStr"
+              :class="['live-day-col', { 'is-today': d.isToday, 'is-holiday': d.isFullHoliday }]"
+            >
+              <div class="live-day-wd" :class="{ 'is-weekend': d.weekday > 5 }">
+                {{ weekdayName(d.weekday) }}
+              </div>
+              <div class="live-day-date">{{ d.monthDay }}</div>
+              <div v-if="d.event" class="live-day-event" :class="'event-' + d.eventType">
+                {{ d.event.eventName }}
+              </div>
+            </th>
           </tr>
         </thead>
         <tbody>
-          <tr v-for="inst in instances" :key="inst.id" :style="{ background: statusBg(inst.status) }">
-            <td style="font-size: 12px;">{{ inst.actualDate }}</td>
-            <td class="tm-mono">{{ inst.weekNumber }}</td>
-            <td class="text-left" style="font-weight: 500;">{{ inst.courseName }}</td>
-            <td style="font-size: 12px;">{{ inst.className }}</td>
-            <td class="tm-mono">{{ inst.startSlot }}-{{ inst.endSlot }}节</td>
-            <td style="font-size: 12px;">{{ inst.classroomName || '-' }}</td>
-            <td>{{ inst.teacherName || '-' }}</td>
-            <td><span :class="['tm-chip', statusChip(inst.status)]">{{ statusName(inst.status) }}</span></td>
-            <td class="text-left" style="font-size: 12px; color: #6b7280;">{{ inst.cancelReason || '' }}</td>
-            <td>
-              <template v-if="inst.status === 0">
-                <button class="tm-action tm-action-danger" style="font-size:11px" @click="handleCancel(inst)">取消</button>
+          <tr v-for="p in periods" :key="p.period">
+            <td class="live-period-cell">
+              <div class="live-period-name">{{ p.name }}</div>
+              <div class="live-period-time">{{ p.startTime }}<br>{{ p.endTime }}</div>
+            </td>
+            <td
+              v-for="d in weekDates"
+              :key="d.dateStr + '-' + p.period"
+              :class="['live-cell', { 'is-today': d.isToday, 'is-holiday': d.isFullHoliday }]"
+            >
+              <template v-if="d.isFullHoliday">
+                <!-- 整天假日：显示假期横幅 -->
               </template>
-              <template v-else-if="inst.status === 1">
-                <button class="tm-action" style="font-size:11px;color:#2563eb" @click="handleRestore(inst)">恢复</button>
+              <template v-else>
+                <div
+                  v-for="inst in instancesAt(d.dateStr, p.period)"
+                  :key="inst.id"
+                  :class="['live-entry', 'status-' + inst.status]"
+                  @click="showDetail(inst)"
+                >
+                  <div class="live-entry-title">
+                    <span v-if="inst.status === 1" class="live-status-tag tag-cancel">取消</span>
+                    <span v-else-if="inst.status === 2" class="live-status-tag tag-move">已调走</span>
+                    <span v-else-if="inst.status === 3" class="live-status-tag tag-makeup">调入</span>
+                    <span v-else-if="inst.status === 4" class="live-status-tag tag-sub">代课</span>
+                    {{ inst.courseName }}
+                  </div>
+                  <!-- 调走链接：显示去哪 -->
+                  <div v-if="parseLink(inst.movedTo)" class="live-entry-link link-out">
+                    → 去 {{ formatLink(parseLink(inst.movedTo)!) }}
+                  </div>
+                  <!-- 调入链接：显示来自哪 -->
+                  <div v-if="parseLink(inst.movedFrom)" class="live-entry-link link-in">
+                    ← 来自 {{ formatLink(parseLink(inst.movedFrom)!) }}
+                  </div>
+                  <!-- 班级视图: 教师 + 教室 -->
+                  <template v-if="viewType === 'class' && inst.status !== 2">
+                    <div v-if="inst.status === 4 && inst.originalTeacherName" class="live-entry-meta live-entry-sub">
+                      {{ inst.originalTeacherName }} → {{ inst.teacherName }}
+                    </div>
+                    <div v-else class="live-entry-meta">{{ inst.teacherName || '' }}</div>
+                    <div class="live-entry-meta">{{ inst.classroomName || '' }}</div>
+                  </template>
+                  <!-- 教师视图: 班级 + 教室 -->
+                  <template v-else-if="viewType === 'teacher' && inst.status !== 2">
+                    <div class="live-entry-meta">{{ inst.className || '' }}</div>
+                    <div class="live-entry-meta">{{ inst.classroomName || '' }}</div>
+                  </template>
+                  <!-- 教室视图: 班级 + 教师 -->
+                  <template v-else-if="viewType === 'classroom' && inst.status !== 2">
+                    <div class="live-entry-meta">{{ inst.className || '' }}</div>
+                    <div v-if="inst.status === 4 && inst.originalTeacherName" class="live-entry-meta live-entry-sub">
+                      {{ inst.originalTeacherName }} → {{ inst.teacherName }}
+                    </div>
+                    <div v-else class="live-entry-meta">{{ inst.teacherName || '' }}</div>
+                  </template>
+                  <div v-if="inst.cancelReason" class="live-entry-reason">💬 {{ inst.cancelReason }}</div>
+                </div>
               </template>
             </td>
           </tr>
         </tbody>
       </table>
-    </template>
+    </div>
+
+    <!-- 最近变动 -->
+    <div v-if="targetId && recentAdjustments.length > 0" class="live-feed">
+      <div class="live-feed-header">
+        <h3>📋 最近变动</h3>
+        <span>共 {{ recentAdjustments.length }} 条</span>
+      </div>
+      <div v-for="adj in recentAdjustments" :key="adj.id" class="live-feed-item" :class="'feed-' + adj.adjustmentType">
+        <span class="live-feed-type">{{ adjustmentTypeLabel(adj.adjustmentType) }}</span>
+        <span class="live-feed-time">{{ formatTime(adj.applyTime) }}</span>
+        <span class="live-feed-desc">{{ adj.applyReason || '' }}</span>
+      </div>
+    </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
-import { ElMessage, ElMessageBox } from 'element-plus'
+import { ref, computed, watch } from 'vue'
+import { ElMessage } from 'element-plus'
 import { http as request } from '@/utils/request'
 import { universalPlaceApi } from '@/api/universalPlace'
 import { instanceApi, periodConfigApi } from '@/api/teaching'
-import type { PeriodConfig, ScheduleEntry } from '@/types/teaching'
+import { semesterApi, academicEventApi } from '@/api/calendar'
+import type { PeriodConfig } from '@/types/teaching'
 import { DEFAULT_PERIODS } from '@/types/teaching'
-import TimetableGrid from '../scheduling/TimetableGrid.vue'
-import TimetableMatrix from '../scheduling/TimetableMatrix.vue'
 
 const props = defineProps<{ semesterId: number | string | undefined }>()
 
 const viewType = ref<'class' | 'teacher' | 'classroom'>('class')
 const targetId = ref<number | string>()
-const weekNumber = ref<number | undefined>()
-const displayMode = ref<'grid' | 'list' | 'matrix'>('grid')
-
-const matrixOptions = computed(() => {
-  if (viewType.value === 'class') return classList.value.map(c => ({ ...c, group: '班级' }))
-  if (viewType.value === 'teacher') return teacherList.value.map(t => ({ ...t, group: '教师' }))
-  return classroomList.value.map(c => ({ ...c, group: '教室' }))
-})
 const instances = ref<any[]>([])
+const weeks = ref<any[]>([]) // academic_weeks
+const events = ref<any[]>([]) // academic_events
+const recentAdjustments = ref<any[]>([])
 const loading = ref(false)
+const weekNumber = ref(1)
 const periods = ref<PeriodConfig[]>(DEFAULT_PERIODS)
 
 const classList = ref<{ id: number; name: string }[]>([])
 const teacherList = ref<{ id: number; name: string }[]>([])
 const classroomList = ref<{ id: number; name: string }[]>([])
 
-const targetOptions = computed(() => viewType.value === 'class' ? classList.value : viewType.value === 'teacher' ? teacherList.value : classroomList.value)
+const targetOptions = computed(() =>
+  viewType.value === 'class' ? classList.value
+  : viewType.value === 'teacher' ? teacherList.value
+  : classroomList.value
+)
+const targetPlaceholder = computed(() => ({ class: '选择班级', teacher: '选择教师', classroom: '选择教室' }[viewType.value] || '请选择'))
 
-const semesterStartDate = ref<string>('') // e.g. "2025-09-01"
-
-// Calculate dates for selected week
-const weekDateMap = computed<Record<number, string>>(() => {
-  if (!weekNumber.value || !semesterStartDate.value) {
-    // When showing all weeks, extract dates from first instance of each weekday
-    const map: Record<number, string> = {}
-    if (instances.value.length > 0 && !weekNumber.value) return map // no dates for "all weeks"
-    for (const inst of instances.value) {
-      if (!map[inst.weekday] && inst.actualDate) {
-        const d = new Date(inst.actualDate)
-        map[inst.weekday] = `${d.getMonth() + 1}/${d.getDate()}`
-      }
-    }
-    return map
-  }
-  // Calculate from semester start + week offset
-  const start = new Date(semesterStartDate.value)
-  const weekOffset = (weekNumber.value - 1) * 7
-  const map: Record<number, string> = {}
-  for (let dow = 1; dow <= 7; dow++) {
-    const dayOffset = weekOffset + (dow - 1)
-    const d = new Date(start.getTime() + dayOffset * 86400000)
-    map[dow] = `${d.getMonth() + 1}/${d.getDate()}`
-  }
-  return map
+const today = new Date().toISOString().slice(0, 10)
+const todayLabel = computed(() => {
+  const d = new Date(today)
+  return `${d.getMonth() + 1}/${d.getDate()}`
 })
 
-// Map instances to TimetableGrid entries format
-const gridEntries = computed<ScheduleEntry[]>(() => {
-  // Deduplicate: group by weekday+startSlot+endSlot (collapse same course across weeks)
-  const map = new Map<string, any>()
-  for (const inst of instances.value) {
-    if (inst.status === 1) continue // skip cancelled
-    const key = `${inst.weekday}-${inst.startSlot}-${inst.endSlot}-${inst.courseName}`
-    if (!map.has(key)) {
-      map.set(key, {
-        id: inst.id,
-        taskId: inst.entryId || inst.id,
-        dayOfWeek: inst.weekday,
-        periodStart: inst.startSlot,
-        periodEnd: inst.endSlot,
-        courseName: inst.courseName,
-        teacherName: inst.teacherName || '',
-        classroomName: inst.classroomName || '',
-        weekStart: inst.weekNumber,
-        weekEnd: inst.weekNumber,
-        weekType: 0,
-      })
-    } else {
-      // Extend week range
-      const existing = map.get(key)!
-      existing.weekEnd = Math.max(existing.weekEnd, inst.weekNumber)
-      existing.weekStart = Math.min(existing.weekStart, inst.weekNumber)
-    }
+// 当前周的日期数组（每天一个对象）
+const weekDates = computed(() => {
+  const w = weeks.value.find(x => x.weekNumber === weekNumber.value)
+  if (!w) return []
+  const start = new Date(w.startDate)
+  const result: Array<{
+    dateStr: string
+    weekday: number
+    monthDay: string
+    isToday: boolean
+    isFullHoliday: boolean
+    event: any | null
+    eventType: string
+  }> = []
+  // 只显示工作日（周一到周日，或根据配置）
+  const showDays = 7
+  for (let i = 0; i < showDays; i++) {
+    const d = new Date(start.getTime() + i * 86400000)
+    const dateStr = d.toISOString().slice(0, 10)
+    const weekday = d.getDay() === 0 ? 7 : d.getDay()
+    // 判断当天是否有事件（假期/考试/调课）
+    const dayEvents = events.value.filter(e => {
+      if (!e.startDate) return false
+      return e.startDate <= dateStr && (e.endDate || e.startDate) >= dateStr
+    })
+    const holidayEvent = dayEvents.find(e => String(e.eventType).toUpperCase() === 'HOLIDAY')
+    const examEvent = dayEvents.find(e => String(e.eventType).toUpperCase() === 'EXAM')
+    const otherEvent = dayEvents[0]
+    const mainEvent = holidayEvent || examEvent || otherEvent || null
+    let eventType = 'none'
+    if (holidayEvent) eventType = 'holiday'
+    else if (examEvent) eventType = 'exam'
+    else if (mainEvent) eventType = 'other'
+    result.push({
+      dateStr,
+      weekday,
+      monthDay: `${d.getMonth() + 1}/${d.getDate()}`,
+      isToday: dateStr === today,
+      isFullHoliday: !!holidayEvent,
+      event: mainEvent,
+      eventType,
+    })
   }
-  return Array.from(map.values())
+  return result
 })
+
+const weekRangeLabel = computed(() => {
+  const dates = weekDates.value
+  if (dates.length === 0) return ''
+  return `${dates[0].monthDay} ~ ${dates[dates.length - 1].monthDay}`
+})
+
+const currentWeekTag = computed(() => {
+  const w = weeks.value.find(x => x.weekNumber === weekNumber.value)
+  if (!w) return null
+  if (w.weekType === 2) return { type: 'exam', label: '🎯 考试周' }
+  if (w.weekType === 3) return { type: 'holi', label: '🏖 假期周' }
+  return null
+})
+
+function weekClass(w: any) {
+  const classes: string[] = []
+  if (w.weekNumber === weekNumber.value) classes.push('active')
+  if (w.weekType === 2) classes.push('week-exam')
+  else if (w.weekType === 3) classes.push('week-holi')
+  else classes.push('week-teach')
+  // 今天所在的周
+  const wStart = new Date(w.startDate)
+  const wEnd = new Date(w.endDate)
+  const t = new Date(today)
+  if (t >= wStart && t <= wEnd) classes.push('is-current')
+  return classes.join(' ')
+}
+
+function weekTypeLabel(t: number) {
+  return t === 2 ? '考试周' : t === 3 ? '假期周' : '教学周'
+}
+
+function weekdayName(w: number) {
+  return ['一', '二', '三', '四', '五', '六', '日'][w - 1] || ''
+}
+
+function jumpToToday() {
+  // 找今天所在周
+  const w = weeks.value.find((x: any) => {
+    const s = new Date(x.startDate)
+    const e = new Date(x.endDate)
+    const t = new Date(today)
+    return t >= s && t <= e
+  })
+  if (w) {
+    weekNumber.value = w.weekNumber
+    loadInstances()
+  }
+}
+
+function jumpToWeek(n: number) {
+  weekNumber.value = n
+  loadInstances()
+}
+
+function onTypeChange(t: typeof viewType.value) {
+  viewType.value = t
+  targetId.value = undefined
+  instances.value = []
+}
+
+/** 获取某天某节次的实况条目 */
+function instancesAt(dateStr: string, period: number): any[] {
+  return instances.value.filter(i =>
+    i.actualDate === dateStr && i.startSlot <= period && i.endSlot >= period
+  )
+}
 
 async function loadInstances() {
   if (!props.semesterId || !targetId.value) { instances.value = []; return }
   loading.value = true
   try {
-    const params: any = { semesterId: props.semesterId }
-    if (weekNumber.value) params.weekNumber = weekNumber.value
+    const params: any = { semesterId: props.semesterId, weekNumber: weekNumber.value }
     if (viewType.value === 'class') params.orgUnitId = targetId.value
     else if (viewType.value === 'teacher') params.teacherId = targetId.value
     else params.classroomId = targetId.value
     const res = await instanceApi.list(params)
     instances.value = (res as any).data || res || []
+    await loadRecentAdjustments()
   } catch { instances.value = [] } finally { loading.value = false }
 }
 
-function showDetail(entry: any) {
-  ElMessage.info(`${entry.courseName} | ${entry.teacherName} | ${entry.classroomName}`)
+async function loadRecentAdjustments() {
+  if (!props.semesterId) { recentAdjustments.value = []; return }
+  try {
+    const res = await request.get('/teaching/adjustments', { params: { semesterId: props.semesterId, size: 10 } })
+    const data = (res as any).data || res
+    recentAdjustments.value = data?.records || (Array.isArray(data) ? data : [])
+  } catch { recentAdjustments.value = [] }
 }
 
-function statusName(s: number) { return ({ 0: '正常', 1: '取消', 2: '调走', 3: '补课', 4: '代课' } as any)[s] || '?' }
-function statusChip(s: number) { return ({ 0: 'tm-chip-green', 1: 'tm-chip-red', 2: 'tm-chip-gray', 3: 'tm-chip-blue', 4: 'tm-chip-amber' } as any)[s] || 'tm-chip-gray' }
-function statusBg(s: number) { return ({ 1: '#fef2f2', 2: '#f9fafb', 3: '#f0fdf4', 4: '#fffbeb' } as any)[s] || '' }
-
-async function handleCancel(inst: any) {
-  const res = await ElMessageBox.prompt('请填写取消原因', '取消课程', { inputPlaceholder: '如: 教师请假' }).catch(() => null)
-  if (!res?.value) return
-  try { await instanceApi.cancel(inst.id, res.value); ElMessage.success('已取消'); loadInstances() } catch { ElMessage.error('操作失败') }
+function adjustmentTypeLabel(t: number) {
+  return ({ 1: '调课', 2: '停课', 3: '补课', 4: '代课' } as any)[t] || '变动'
 }
 
-async function handleRestore(inst: any) {
-  await ElMessageBox.confirm('确定恢复此课程为正常状态？', '确认')
-  try { await instanceApi.restore(inst.id); ElMessage.success('已恢复'); loadInstances() } catch { ElMessage.error('操作失败') }
+function formatTime(t: string) {
+  if (!t) return ''
+  const d = new Date(t)
+  return `${d.getMonth() + 1}/${d.getDate()} ${d.getHours().toString().padStart(2,'0')}:${d.getMinutes().toString().padStart(2,'0')}`
+}
+
+function showDetail(inst: any) {
+  const parts = [inst.courseName]
+  if (inst.teacherName) parts.push('👨‍🏫 ' + inst.teacherName)
+  if (inst.classroomName) parts.push('📍 ' + inst.classroomName)
+  if (inst.cancelReason) parts.push('💬 ' + inst.cancelReason)
+  const to = parseLink(inst.movedTo); if (to) parts.push('→ 去 ' + formatLink(to))
+  const from = parseLink(inst.movedFrom); if (from) parts.push('← 来自 ' + formatLink(from))
+  ElMessage.info(parts.join(' | '))
+}
+
+/** 解析后端返回的 JSON 字符串或对象 */
+function parseLink(raw: any): { date: string; slot: number; weekday: number } | null {
+  if (!raw) return null
+  try {
+    const obj = typeof raw === 'string' ? JSON.parse(raw) : raw
+    if (!obj.date || !obj.slot) return null
+    return obj
+  } catch { return null }
+}
+
+function formatLink(link: { date: string; slot: number; weekday: number }): string {
+  const d = new Date(link.date)
+  const monthDay = `${d.getMonth() + 1}/${d.getDate()}`
+  return `${monthDay}(${weekdayName(link.weekday)}) 第${link.slot}节`
+}
+
+// ==================== Lifecycle ====================
+
+async function loadWeeks() {
+  if (!props.semesterId) { weeks.value = []; return }
+  try {
+    const res = await semesterApi.getWeeks(props.semesterId)
+    const data = (res as any).data || res
+    weeks.value = Array.isArray(data) ? data : []
+  } catch { weeks.value = [] }
+}
+
+async function loadEvents() {
+  if (!props.semesterId) { events.value = []; return }
+  try {
+    const res = await academicEventApi.list({ semesterId: props.semesterId })
+    const data = (res as any).data || res
+    events.value = Array.isArray(data) ? data : []
+  } catch { events.value = [] }
 }
 
 async function loadPeriodConfig() {
@@ -281,12 +404,10 @@ async function loadOptions() {
     walk(Array.isArray(d) ? d : [])
     classList.value = classes
   } catch { classList.value = [] }
-
   try {
     const r = await request.get('/teaching/schedule-teachers'); const d = (r as any).data || r
     teacherList.value = (Array.isArray(d) ? d : []).map((t: any) => ({ id: t.id, name: t.realName || t.username }))
   } catch { teacherList.value = [] }
-
   try {
     const allItems = await universalPlaceApi.getFlatList()
     classroomList.value = allItems.filter((p: any) => (p.capacity || 0) > 0 && (p.capacity || 0) < 1000)
@@ -294,32 +415,243 @@ async function loadOptions() {
   } catch { classroomList.value = [] }
 }
 
-async function loadSemesterStart() {
-  if (!props.semesterId) return
-  try {
-    const res = await request.get('/calendar/semesters')
-    const semesters = (res as any).data || res
-    const sem = (Array.isArray(semesters) ? semesters : []).find((s: any) => String(s.id) === String(props.semesterId))
-    if (sem?.startDate) semesterStartDate.value = sem.startDate
-  } catch { /* */ }
-}
-
-onMounted(() => { loadPeriodConfig(); loadSemesterStart(); loadOptions() })
+watch(() => props.semesterId, async (v) => {
+  if (!v) return
+  await Promise.all([loadWeeks(), loadEvents(), loadPeriodConfig(), loadOptions()])
+  // 默认跳到今天所在周
+  jumpToToday()
+}, { immediate: true })
 </script>
 
 <style scoped>
-.legend-dot { display: inline-block; width: 10px; height: 10px; border-radius: 2px; border: 1px solid; margin-right: 4px; vertical-align: middle; }
-.tv-week-pager { display: inline-flex; align-items: center; gap: 2px; border: 1px solid #d1d5db; border-radius: 6px; overflow: hidden; }
-.tv-week-btn { display: flex; align-items: center; justify-content: center; width: 28px; height: 28px; border: none; background: #fff; color: #6b7280; cursor: pointer; }
-.tv-week-btn:hover:not(:disabled) { background: #f3f4f6; color: #111827; }
-.tv-week-btn:disabled { opacity: 0.3; cursor: not-allowed; }
-.tv-week-label { padding: 0 10px; font-size: 12.5px; font-weight: 500; color: #374151; cursor: pointer; white-space: nowrap; min-width: 60px; text-align: center; }
-.tv-week-label:hover { color: #2563eb; }
-.view-toggle { display: inline-flex; border: 1px solid #d1d5db; border-radius: 5px; overflow: hidden; }
-.vt-btn { display: flex; align-items: center; justify-content: center; width: 30px; height: 26px; background: #fff; border: none; color: #9ca3af; cursor: pointer; }
-.vt-btn:not(:last-child) { border-right: 1px solid #d1d5db; }
-.vt-btn:hover { background: #f3f4f6; color: #374151; }
-.vt-active { background: #2563eb !important; color: #fff !important; }
+.live-tt { padding: 0; }
+
+/* 时间轴 */
+.live-timeline {
+  display: flex; align-items: center; gap: 12px;
+  padding: 12px 16px; margin-bottom: 12px;
+  border: 1px solid #e5e7eb; border-radius: 10px; background: #fff;
+}
+.tt-today-btn {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 6px 12px; border: 1px solid #2563eb; border-radius: 99px;
+  background: #eff6ff; color: #1d4ed8;
+  font-size: 12px; font-weight: 600; cursor: pointer;
+  transition: all 0.15s;
+}
+.tt-today-btn:hover { background: #dbeafe; }
+.tt-today-dot { width: 6px; height: 6px; border-radius: 50%; background: #2563eb; animation: pulse 2s ease-in-out infinite; }
+@keyframes pulse { 50% { opacity: 0.4; } }
+
+.tt-weeks {
+  flex: 1; display: flex; gap: 2px; flex-wrap: wrap;
+}
+.tt-week {
+  width: 28px; height: 24px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 10.5px; font-weight: 500;
+  border-radius: 4px; cursor: pointer;
+  transition: all 0.15s;
+  position: relative;
+}
+.tt-week:hover { transform: translateY(-1px); box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+.tt-week.week-teach { background: #f0fdf4; color: #16a34a; }
+.tt-week.week-exam { background: #f5f3ff; color: #7c3aed; }
+.tt-week.week-holi { background: #fef2f2; color: #dc2626; }
+.tt-week.active { outline: 2px solid #2563eb; outline-offset: 1px; font-weight: 700; }
+.tt-week.is-current::after {
+  content: ''; position: absolute; bottom: -3px; left: 50%; transform: translateX(-50%);
+  width: 4px; height: 4px; border-radius: 50%; background: #2563eb;
+}
+
+.tt-legend { display: flex; gap: 10px; font-size: 11px; color: #6b7280; }
+.tt-legend-item { display: inline-flex; align-items: center; gap: 4px; }
+.tt-legend-dot { display: inline-block; width: 10px; height: 10px; border-radius: 2px; }
+.tt-legend-dot.tt-teach { background: #f0fdf4; border: 1px solid #bbf7d0; }
+.tt-legend-dot.tt-exam { background: #f5f3ff; border: 1px solid #ddd6fe; }
+.tt-legend-dot.tt-holi { background: #fef2f2; border: 1px solid #fecaca; }
+
+/* 控制栏 */
+.live-controls {
+  display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+  padding: 12px 16px; margin-bottom: 12px;
+  border: 1px solid #e5e7eb; border-radius: 10px; background: #fff;
+}
+.live-sep { display: inline-block; width: 1px; height: 18px; background: #d1d5db; }
+.live-week-pager { display: inline-flex; align-items: center; gap: 4px; border: 1px solid #d1d5db; border-radius: 6px; overflow: hidden; }
+.live-arrow {
+  width: 28px; height: 28px; border: none; background: #fff; color: #6b7280;
+  cursor: pointer; font-size: 11px;
+}
+.live-arrow:hover:not(:disabled) { background: #f3f4f6; color: #111827; }
+.live-arrow:disabled { opacity: 0.3; cursor: not-allowed; }
+.live-week-label {
+  padding: 4px 10px; font-size: 12.5px; font-weight: 600; color: #111827;
+  display: inline-flex; align-items: center; gap: 6px;
+  border-left: 1px solid #e5e7eb; border-right: 1px solid #e5e7eb;
+}
+.live-week-range { font-weight: 400; font-size: 11px; color: #9ca3af; }
+
+.live-tag {
+  padding: 3px 10px; border-radius: 99px;
+  font-size: 11px; font-weight: 500;
+}
+.live-tag.tag-exam { background: #f5f3ff; color: #7c3aed; border: 1px solid #ddd6fe; }
+.live-tag.tag-holi { background: #fef2f2; color: #dc2626; border: 1px solid #fecaca; }
+
+/* 课表网格 */
+.live-empty { text-align: center; padding: 60px 40px; color: #9ca3af; font-size: 13px; }
+.live-grid-wrap {
+  border: 1px solid #e5e7eb; border-radius: 10px; background: #fff; overflow: auto;
+}
+.live-grid {
+  width: 100%; border-collapse: collapse; table-layout: fixed;
+  font-family: 'DM Sans', system-ui, sans-serif;
+}
+
+/* 表头 */
+.live-grid thead th {
+  padding: 8px 6px; font-size: 12px; font-weight: 600; color: #374151;
+  background: #f9fafb; border-bottom: 2px solid #e5e7eb; text-align: center;
+}
+.live-period-col { width: 76px; background: #fafbfc !important; }
+.live-day-col { min-width: 130px; position: relative; }
+.live-day-col.is-today { background: #eff6ff !important; }
+.live-day-col.is-holiday { background: #fef2f2 !important; }
+.live-day-wd { font-size: 13px; font-weight: 600; color: #374151; }
+.live-day-wd.is-weekend { color: #9ca3af; }
+.live-day-col.is-today .live-day-wd { color: #2563eb; }
+.live-day-date { font-size: 11px; color: #9ca3af; margin-top: 1px; }
+.live-day-event {
+  margin-top: 3px; padding: 2px 6px; border-radius: 4px;
+  font-size: 10px; font-weight: 500;
+}
+.live-day-event.event-holiday { background: #fee2e2; color: #dc2626; }
+.live-day-event.event-exam { background: #ede9fe; color: #7c3aed; }
+.live-day-event.event-other { background: #fef3c7; color: #d97706; }
+
+/* 节次列 */
+.live-period-cell {
+  padding: 6px 4px; text-align: center;
+  background: #fafbfc; border-right: 1px solid #e5e7eb; border-bottom: 1px solid #f3f4f6;
+}
+.live-period-name { font-size: 12px; font-weight: 600; color: #374151; }
+.live-period-time { font-size: 10px; color: #9ca3af; margin-top: 2px; line-height: 1.2; }
+
+/* 数据格 */
+.live-cell {
+  padding: 4px; border-right: 1px solid #f3f4f6; border-bottom: 1px solid #f3f4f6;
+  vertical-align: top; min-height: 54px; height: 54px;
+  position: relative;
+}
+.live-cell:last-child { border-right: none; }
+.live-cell.is-today { background: rgba(239, 246, 255, 0.4); }
+.live-cell.is-holiday {
+  background: repeating-linear-gradient(
+    -45deg, #fef2f2, #fef2f2 5px, #fee2e2 5px, #fee2e2 10px
+  );
+}
+
+/* 课程条目 */
+.live-entry {
+  padding: 4px 6px; margin-bottom: 2px;
+  border-radius: 5px;
+  background: #dbeafe;
+  border-left: 3px solid #3b82f6;
+  color: #1e40af;
+  cursor: pointer; transition: all 0.15s;
+  overflow: hidden;
+}
+.live-entry:hover { transform: translateY(-1px); box-shadow: 0 1px 4px rgba(0,0,0,0.1); }
+.live-entry:last-child { margin-bottom: 0; }
+
+.live-entry.status-0 { /* 正常 - 默认蓝色 */ }
+.live-entry.status-1 {
+  background: #fee2e2; border-color: #dc2626; color: #991b1b;
+  opacity: 0.6; text-decoration: line-through;
+}
+.live-entry.status-2 {
+  background: #f3f4f6; border-color: #9ca3af; color: #6b7280;
+  opacity: 0.6;
+}
+.live-entry.status-3 {
+  background: #dcfce7; border-color: #16a34a; color: #14532d;
+}
+.live-entry.status-4 {
+  background: #ffedd5; border-color: #ea580c; color: #7c2d12;
+}
+
+.live-entry-title {
+  font-size: 11.5px; font-weight: 600; line-height: 1.3;
+  display: flex; align-items: center; gap: 4px;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.live-entry-meta {
+  font-size: 10px; line-height: 1.3;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  opacity: 0.85;
+}
+.live-entry-reason {
+  font-size: 9.5px; color: #6b7280; margin-top: 2px;
+  font-style: italic;
+}
+/* 调课链接：去哪 / 来自哪 */
+.live-entry-link {
+  font-size: 10px; margin-top: 1px; font-weight: 500;
+  padding: 1px 4px; border-radius: 3px;
+  display: inline-block;
+}
+.live-entry-link.link-out {
+  background: rgba(107,114,128,0.15); color: #6b7280;
+}
+.live-entry-link.link-in {
+  background: rgba(22,163,74,0.12); color: #16a34a;
+}
+/* 代课：原教师→代课教师 */
+.live-entry-sub {
+  color: #ea580c !important; font-weight: 500;
+}
+
+/* 状态标签 */
+.live-status-tag {
+  display: inline-block; padding: 0 4px;
+  font-size: 9px; font-weight: 700;
+  border-radius: 2px; color: #fff;
+  flex-shrink: 0;
+}
+.tag-cancel { background: #dc2626; }
+.tag-move { background: #6b7280; }
+.tag-makeup { background: #16a34a; }
+.tag-sub { background: #ea580c; }
+
+/* 最近变动 */
+.live-feed {
+  margin-top: 16px; border: 1px solid #e5e7eb; border-radius: 10px; background: #fff; overflow: hidden;
+}
+.live-feed-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 10px 16px; border-bottom: 1px solid #f3f4f6;
+  background: #fafafa;
+}
+.live-feed-header h3 { font-size: 13px; font-weight: 600; color: #111827; margin: 0; }
+.live-feed-header span { font-size: 11px; color: #6b7280; }
+.live-feed-item {
+  display: flex; align-items: center; gap: 10px;
+  padding: 8px 16px; border-bottom: 1px solid #f9fafb;
+  font-size: 12px;
+}
+.live-feed-item:last-child { border-bottom: none; }
+.live-feed-type {
+  padding: 2px 8px; border-radius: 99px;
+  font-size: 11px; font-weight: 500;
+  background: #eff6ff; color: #2563eb;
+}
+.live-feed-item.feed-1 .live-feed-type { background: #fef3c7; color: #d97706; }
+.live-feed-item.feed-2 .live-feed-type { background: #fee2e2; color: #dc2626; }
+.live-feed-item.feed-3 .live-feed-type { background: #dcfce7; color: #16a34a; }
+.live-feed-item.feed-4 .live-feed-type { background: #ffedd5; color: #ea580c; }
+.live-feed-time { color: #9ca3af; font-size: 11px; min-width: 90px; }
+.live-feed-desc { flex: 1; color: #374151; }
 </style>
 
 <style>

@@ -37,6 +37,11 @@ public class PermissionPO {
     private Integer resourceType;
 
     /**
+     * 权限作用域: PUBLIC | SELF | MANAGEMENT
+     */
+    private String permissionScope;
+
+    /**
      * 父权限ID
      */
     private Long parentId;

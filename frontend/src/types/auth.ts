@@ -40,6 +40,8 @@ export interface UserInfo {
   lastLoginTime?: string
   tenantId?: number | string
   tenantName?: string
+  // 用户类型编码（TEACHER / STUDENT / ADMIN / …），用于登录落地页路由决策
+  userTypeCode?: string
   orgUnit?: {
     orgUnitId: string
     orgUnitName: string

@@ -1,5 +1,6 @@
 package com.school.management.interfaces.rest.access;
 
+import com.school.management.domain.access.model.PermissionScope;
 import com.school.management.domain.access.model.PermissionType;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
@@ -33,6 +34,11 @@ public class CreatePermissionRequest {
 
     @NotNull(message = "Permission type is required")
     private PermissionType type;
+
+    /**
+     * Defaults to MANAGEMENT if absent; prefix inference runs on the domain side.
+     */
+    private PermissionScope scope;
 
     private Long parentId;
 

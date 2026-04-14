@@ -155,7 +155,6 @@ public class UserRoleController {
         response.setLevel(role.getLevel());
         response.setIsSystem(role.getIsSystem());
         response.setIsEnabled(role.getIsEnabled());
-        response.setDataScope(role.getDataScope());
         response.setPermissionIds(role.getPermissionIds());
         response.setCreatedAt(role.getCreatedAt());
         return response;

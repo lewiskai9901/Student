@@ -51,6 +51,20 @@ const routes: RouteRecordRaw[] = [
           group: 'daily'
         }
       },
+      // 教师工作台 — TEACHER 登录后自动落地；其它用户也可访问但为空态
+      {
+        path: '/my/dashboard',
+        name: 'MyDashboard',
+        component: () => import('@/views/my/MyDashboard.vue'),
+        meta: {
+          title: '工作台',
+          icon: 'Briefcase',
+          requiresAuth: true,
+          order: 1,
+          group: 'daily',
+          hidden: true
+        }
+      },
       {
         path: '/profile',
         name: 'Profile',

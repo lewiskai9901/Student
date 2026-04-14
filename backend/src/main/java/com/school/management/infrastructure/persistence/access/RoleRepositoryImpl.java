@@ -1,6 +1,5 @@
 package com.school.management.infrastructure.persistence.access;
 
-import com.school.management.domain.access.model.DataScope;
 import com.school.management.domain.access.model.Role;
 import com.school.management.domain.access.repository.RoleRepository;
 import lombok.extern.slf4j.Slf4j;
@@ -201,7 +200,6 @@ public class RoleRepositoryImpl implements RoleRepository {
             .isEnabled(po.getStatus() != null && po.getStatus() == 1)
             .createdBy(null)
             .permissionIds(new HashSet<>(permissionIds))
-            .dataScope(DataScope.ALL)
             .tenantId(po.getTenantId())
             .build();
     }

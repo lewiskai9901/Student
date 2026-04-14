@@ -77,6 +77,12 @@ public interface UserDomainMapper extends BaseMapper<UserPO> {
     List<UserPO> findByOrgUnitIdIn(@Param("orgUnitIds") List<Long> orgUnitIds);
 
     /**
+     * 根据用户类型编码查找所有用户
+     */
+    @Select("SELECT * FROM users WHERE user_type_code = #{userTypeCode} AND deleted = 0")
+    List<UserPO> findByUserTypeCode(@Param("userTypeCode") String userTypeCode);
+
+    /**
      * 分页查询用户
      */
     @Select("SELECT * FROM users WHERE deleted = 0 ORDER BY created_at DESC LIMIT #{offset}, #{size}")

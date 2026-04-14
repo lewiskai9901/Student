@@ -56,8 +56,21 @@
                   <span v-if="(entry as any).isLocked" class="tt-entry-lock" title="已锁定，自动排课不会覆盖">🔒</span>
                   {{ entry.scheduleType === 4 ? '自习' : entry.courseName }}
                 </div>
-                <div class="tt-entry-detail">{{ entry.scheduleType === 4 ? '' : (entry.teacherName || '') }}</div>
-                <div class="tt-entry-detail">{{ entry.scheduleType === 4 ? '' : (entry.classroomName || '') }}</div>
+                <!-- 班级视图：显示 教师 + 教室 -->
+                <template v-if="viewType === 'class'">
+                  <div class="tt-entry-detail">{{ entry.scheduleType === 4 ? '' : (entry.teacherName || '') }}</div>
+                  <div class="tt-entry-detail">{{ entry.scheduleType === 4 ? '' : (entry.classroomName || '') }}</div>
+                </template>
+                <!-- 教师视图：显示 班级 + 教室 -->
+                <template v-else-if="viewType === 'teacher'">
+                  <div class="tt-entry-detail">{{ entry.scheduleType === 4 ? '' : (entry.className || '') }}</div>
+                  <div class="tt-entry-detail">{{ entry.scheduleType === 4 ? '' : (entry.classroomName || '') }}</div>
+                </template>
+                <!-- 教室视图：显示 班级 + 教师 -->
+                <template v-else-if="viewType === 'classroom'">
+                  <div class="tt-entry-detail">{{ entry.scheduleType === 4 ? '' : (entry.className || '') }}</div>
+                  <div class="tt-entry-detail">{{ entry.scheduleType === 4 ? '' : (entry.teacherName || '') }}</div>
+                </template>
                 <div v-if="entry.weekStart && entry.weekEnd" class="tt-entry-weeks">
                   {{ entry.weekStart }}-{{ entry.weekEnd }}周{{ entry.weekType === 1 ? '(单)' : entry.weekType === 2 ? '(双)' : '' }}
                 </div>
@@ -84,6 +97,7 @@ interface Props {
   weekDates?: Record<number, string>  // dayOfWeek → date string (e.g. "9/1")
   editable?: boolean
   constraintMatrix?: any[][]
+  viewType?: 'class' | 'teacher' | 'classroom'  // 根据视图调整显示内容
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -92,6 +106,7 @@ const props = withDefaults(defineProps<Props>(), {
   weekDates: undefined,
   editable: false,
   constraintMatrix: undefined,
+  viewType: 'class',
 })
 
 const emit = defineEmits<{

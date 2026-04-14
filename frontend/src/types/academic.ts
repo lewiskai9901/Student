@@ -19,6 +19,7 @@ export interface Major {
   leadTeacherName?: string
   approvalYear?: number
   majorStatus?: string
+  directions?: MajorDirection[]
   createdAt: string
   updatedAt?: string
 }

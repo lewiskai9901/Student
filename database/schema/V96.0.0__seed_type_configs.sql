@@ -51,7 +51,7 @@ INSERT INTO user_types (type_code, type_name, category, parent_type_code, icon, 
 VALUES
 ('SUPER_ADMIN', '超级管理员', 'ADMIN', NULL, 'Shield', '系统最高权限管理员', '{"canLogin":true,"canManageAll":true}', 1, 1, 1, 0, 1),
 ('ADMIN', '管理员', 'ADMIN', NULL, 'ShieldCheck', '学校管理员', '{"canLogin":true,"canManageAll":false}', 1, 1, 2, 0, 1),
-('TEACHER', '教师', 'STAFF', NULL, 'GraduationCap', '教职工/授课教师', '{"canLogin":true,"requiresOrg":true,"canTeach":true}', 1, 1, 3, 0, 1),
+('TEACHER', '教师', 'STAFF', NULL, 'GraduationCap', '教职工/授课教师', '{"canLogin":true,"requiresOrg":true,"canTeach":true,"canViewOwnSchedule":true,"canViewOwnStudents":true,"canRecordAttendance":true,"canBeSubstitute":true,"canSubmitGrades":true}', 1, 1, 3, 0, 1),
 ('COUNSELOR', '辅导员', 'STAFF', NULL, 'UserCheck', '年级辅导员/学管人员', '{"canLogin":true,"requiresOrg":true,"canManageStudents":true}', 1, 1, 4, 0, 1),
 ('STUDENT', '学生', 'MEMBER', NULL, 'User', '在校学生', '{"canLogin":true,"requiresOrg":true,"requiresClass":true}', 1, 1, 5, 0, 1),
 ('STAFF', '职工', 'STAFF', NULL, 'Briefcase', '行政/后勤职工', '{"canLogin":true,"requiresOrg":true}', 1, 1, 6, 0, 1),

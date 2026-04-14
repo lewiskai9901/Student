@@ -99,6 +99,7 @@
             :entries="filteredEntries"
             :periods="periods"
             :editable="!compareMode"
+            :view-type="viewType"
             @entry-click="showEntryDetail"
             @entry-drop="onEntryDrop"
             @cell-click="onCellClick"
@@ -110,6 +111,7 @@
             :entries="filteredCompareEntries"
             :periods="periods"
             :editable="false"
+            :view-type="viewType"
             @entry-click="showEntryDetail"
           />
         </div>
@@ -357,7 +359,7 @@ const placeholder = computed(() => {
 })
 const targetOptions = computed(() => viewType.value === 'teacher' ? teacherList.value : classrooms.value)
 // Suppress unused warnings
-void placeholder; void targetOptions
+void placeholder.value; void targetOptions.value
 const currentTargetName = computed(() => currentTargetNameFromTree.value || '')
 
 const filteredEntries = computed(() => {

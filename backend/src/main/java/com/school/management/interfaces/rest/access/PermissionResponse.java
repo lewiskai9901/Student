@@ -2,6 +2,7 @@ package com.school.management.interfaces.rest.access;
 
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import com.fasterxml.jackson.databind.ser.std.ToStringSerializer;
+import com.school.management.domain.access.model.PermissionScope;
 import com.school.management.domain.access.model.PermissionType;
 import lombok.Data;
 
@@ -28,6 +29,8 @@ public class PermissionResponse {
     private String action;
 
     private PermissionType type;
+
+    private PermissionScope scope;
 
     @JsonSerialize(using = ToStringSerializer.class)
     private Long parentId;

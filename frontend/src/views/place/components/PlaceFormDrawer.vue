@@ -125,7 +125,7 @@
         </div>
         <!-- Org inheritance hint -->
         <div v-if="mode === 'edit' && editData?.isOrgInherited" class="mb-2 text-[11px] text-gray-400 pl-[72px]">
-          ↑ 当前从父级继承: {{ editData.parentOrgUnitName || '未设置' }}
+          ↑ 当前从父级继承: {{ (editData as any).parentOrgUnitName || '未设置' }}
         </div>
         <!-- Clear override -->
         <div v-if="mode === 'edit' && editData?.orgUnitId" class="mb-2 pl-[72px]">
@@ -225,7 +225,7 @@ function getStatusLabel(s?: number) { return s === 0 ? '停用' : s === 2 ? '维
 
 function selectType(type: UniversalPlaceType) { selectedTypeCode.value = type.typeCode; loadAttributeFields(type) }
 
-function parseMetadataSchema(schemaStr?: string): AttributeFieldDefinition[] {
+function parseMetadataSchema(schemaStr?: string | null): AttributeFieldDefinition[] {
   if (!schemaStr) return []
   try {
     const parsed = JSON.parse(schemaStr)
@@ -248,7 +248,7 @@ async function loadAttributeFields(type: UniversalPlaceType | undefined) {
         const existingKeys = new Set(fields.map(f => f.key))
         for (const pf of pluginSchema.fields) {
           if (!existingKeys.has(pf.key)) {
-            fields.push({ key: pf.key, label: pf.label, type: pf.type, group: pf.group, required: pf.required, defaultValue: pf.defaultValue || pf.config?.default, sortOrder: 100, config: pf.config })
+            fields.push({ key: pf.key, label: pf.label, type: pf.type, required: pf.required, defaultValue: pf.defaultValue || pf.config?.default, sortOrder: 100, ...(pf.group ? { group: pf.group } : {}), ...(pf.config ? { config: pf.config } : {}) } as AttributeFieldDefinition)
           }
         }
       }
@@ -293,7 +293,7 @@ async function handleSubmit() {
         clearOrgOverride: formData.value.clearOrgOverride,
         reason: formData.value.reason || undefined,
         attributes: hasAttrs ? attrs : undefined
-      })
+      } as any)
       ElMessage.success('更新成功')
     }
     emit('success'); handleClose()
@@ -338,8 +338,8 @@ watch(() => props.visible, (val) => {
           status: props.editData!.status ?? 1,
           capacity: props.editData!.capacity,
           gender: props.editData!.gender || undefined,
-          orgUnitId: props.editData!.orgUnitId,
-          responsibleUserId: props.editData!.responsibleUserId,
+          orgUnitId: props.editData!.orgUnitId != null ? Number(props.editData!.orgUnitId) : undefined,
+          responsibleUserId: props.editData!.responsibleUserId != null ? Number(props.editData!.responsibleUserId) : undefined,
           clearOrgOverride: false,
           reason: ''
         }

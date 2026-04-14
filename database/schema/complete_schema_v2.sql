@@ -60,7 +60,6 @@ CREATE TABLE `roles` (
     `role_code` VARCHAR(50) NOT NULL COMMENT '角色编码',
     `role_name` VARCHAR(100) NOT NULL COMMENT '角色名称',
     `description` VARCHAR(500) COMMENT '角色描述',
-    `data_scope` TINYINT DEFAULT 1 COMMENT '数据权限范围:1全部,2本部门,3本部门及子部门,4仅本人',
     `status` TINYINT DEFAULT 1 COMMENT '状态:0禁用,1启用',
     `sort_order` INT DEFAULT 0 COMMENT '排序',
     `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
@@ -84,6 +83,7 @@ CREATE TABLE `permissions` (
     `permission_name` VARCHAR(100) NOT NULL COMMENT '权限名称',
     `parent_id` BIGINT DEFAULT 0 COMMENT '父权限ID',
     `permission_type` TINYINT DEFAULT 1 COMMENT '类型:1目录,2菜单,3按钮',
+    `permission_scope` VARCHAR(20) NOT NULL DEFAULT 'MANAGEMENT' COMMENT '权限作用域: PUBLIC=公共, SELF=个人空间, MANAGEMENT=管理后台',
     `path` VARCHAR(255) COMMENT '路由路径',
     `component` VARCHAR(255) COMMENT '组件路径',
     `icon` VARCHAR(100) COMMENT '图标',
@@ -96,6 +96,7 @@ CREATE TABLE `permissions` (
     UNIQUE KEY `uk_permission_code` (`permission_code`),
     INDEX `idx_parent_id` (`parent_id`),
     INDEX `idx_status` (`status`),
+    INDEX `idx_permission_scope` (`permission_scope`),
     INDEX `idx_deleted` (`deleted`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='权限表';
 

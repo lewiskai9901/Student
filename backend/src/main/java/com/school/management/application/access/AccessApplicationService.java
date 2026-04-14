@@ -54,6 +54,7 @@ public class AccessApplicationService {
             .resource(command.getResource())
             .action(command.getAction())
             .type(command.getType())
+            .scope(command.getScope())
             .parentId(command.getParentId())
             .sortOrder(command.getSortOrder())
             .build();
@@ -69,6 +70,7 @@ public class AccessApplicationService {
             .orElseThrow(() -> new IllegalArgumentException("Permission not found: " + id));
 
         permission.updateInfo(command.getPermissionName(), command.getDescription());
+        permission.changeScope(command.getScope());
         return permissionRepository.save(permission);
     }
 
@@ -177,10 +179,6 @@ public class AccessApplicationService {
             command.getCreatedBy()
         );
 
-        if (command.getDataScope() != null) {
-            role.setDataScope(command.getDataScope());
-        }
-
         role = roleRepository.save(role);
         publishEvents(role);
         return role;
@@ -202,10 +200,6 @@ public class AccessApplicationService {
             .orElseThrow(() -> new IllegalArgumentException("Role not found: " + id));
 
         role.updateInfo(command.getRoleName(), command.getDescription());
-
-        if (command.getDataScope() != null) {
-            role.setDataScope(command.getDataScope());
-        }
 
         role = roleRepository.save(role);
         return role;

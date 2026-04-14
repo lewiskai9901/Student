@@ -54,7 +54,6 @@ class RoleTest {
             assertTrue(role.getIsEnabled());
             assertFalse(role.getIsSystem());
             assertEquals(100, role.getLevel());
-            assertEquals(DataScope.SELF, role.getDataScope());
             assertEquals(CREATOR_ID, role.getCreatedBy());
             assertNotNull(role.getCreatedAt());
             assertTrue(role.getPermissionIds().isEmpty());
@@ -271,27 +270,6 @@ class RoleTest {
     }
 
     @Nested
-    @DisplayName("数据范围测试")
-    class DataScopeTest {
-
-        @Test
-        @DisplayName("设置数据范围")
-        void shouldSetDataScope() {
-            role.setDataScope(DataScope.DEPARTMENT);
-
-            assertEquals(DataScope.DEPARTMENT, role.getDataScope());
-        }
-
-        @Test
-        @DisplayName("设置全部数据范围")
-        void shouldSetAllDataScope() {
-            role.setDataScope(DataScope.ALL);
-
-            assertEquals(DataScope.ALL, role.getDataScope());
-        }
-    }
-
-    @Nested
     @DisplayName("角色级别比较测试")
     class RoleLevelComparisonTest {
 
@@ -387,14 +365,12 @@ class RoleTest {
                 .isEnabled(true)
                 .createdBy(CREATOR_ID)
                 .permissionIds(permissions)
-                .dataScope(DataScope.DEPARTMENT)
                 .build();
 
             assertEquals(1L, built.getId());
             assertEquals("ROLE_CUSTOM", built.getRoleCode());
             assertEquals(50, built.getLevel());
             assertEquals(2, built.getPermissionIds().size());
-            assertEquals(DataScope.DEPARTMENT, built.getDataScope());
         }
 
         @Test
@@ -409,7 +385,6 @@ class RoleTest {
             assertEquals(100, minimal.getLevel());
             assertFalse(minimal.getIsSystem());
             assertTrue(minimal.getIsEnabled());
-            assertEquals(DataScope.SELF, minimal.getDataScope());
             assertTrue(minimal.getPermissionIds().isEmpty());
         }
     }

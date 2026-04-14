@@ -177,7 +177,7 @@ const captureNeedsExpandedInput = computed(() => {
             :step="params.step ?? 1"
             size="small" controls-position="right"
             style="width: 110px"
-            @update:model-value="(v: number) => emit('update:numberInput', detail.id, v)"
+            @update:model-value="(v: any) => emit('update:numberInput', detail.id, v)"
           />
           <el-button
             size="small" type="danger" plain
@@ -195,7 +195,7 @@ const captureNeedsExpandedInput = computed(() => {
             :step="params.step ?? 1"
             size="small" controls-position="right"
             style="width: 110px"
-            @update:model-value="(v: number) => emit('update:numberInput', detail.id, v)"
+            @update:model-value="(v: any) => emit('update:numberInput', detail.id, v)"
           />
           <el-button
             size="small" type="success" plain
@@ -213,7 +213,7 @@ const captureNeedsExpandedInput = computed(() => {
             :step="1"
             :show-tooltip="false"
             style="width: 120px"
-            @update:model-value="(v: number) => emit('update:numberInput', detail.id, v)"
+            @update:model-value="(v: any) => emit('update:numberInput', detail.id, v)"
           />
           <span class="text-xs font-medium w-10 text-center"
             :class="(numberInputs[detail.id] ?? 10) >= (params.maxScore ?? 10) * 0.8 ? 'text-green-600' :
@@ -267,7 +267,7 @@ const captureNeedsExpandedInput = computed(() => {
             :step="1"
             size="small" controls-position="right"
             style="width: 100px"
-            @update:model-value="(v: number) => emit('update:numberInput', detail.id, v)"
+            @update:model-value="(v: any) => emit('update:numberInput', detail.id, v)"
           />
           <span class="text-xs text-gray-500">
             {{ numberInputs[detail.id] ?? 0 }}次 × ({{ params.scorePerCount ?? -2 }}) = {{ (numberInputs[detail.id] ?? 0) * (params.scorePerCount ?? -2) }}分
@@ -287,7 +287,7 @@ const captureNeedsExpandedInput = computed(() => {
             :class="detail.responseValue === t.label
               ? 'bg-red-500 text-white shadow-sm'
               : 'text-gray-500 hover:text-red-700'"
-            :style="detail.responseValue !== t.label ? { backgroundColor: `rgba(239,68,68,${0.05 + ti * 0.08})` } : {}"
+            :style="detail.responseValue !== t.label ? { backgroundColor: `rgba(239,68,68,${0.05 + Number(ti) * 0.08})` } : {}"
             @click="emit('tieredDeduction', detail, t.label, t.score)" :disabled="scoringInProgress"
           >{{ t.label }} ({{ t.score }})</button>
         </div>
@@ -298,7 +298,7 @@ const captureNeedsExpandedInput = computed(() => {
             :model-value="numberInputs[detail.id] ?? 0"
             :max="params.maxStars ?? 5"
             :disabled="scoringInProgress"
-            @change="(v: number) => emit('ratingScale', detail, v)"
+            @change="(v: any) => emit('ratingScale', detail, v)"
           />
           <span class="text-xs text-gray-500">
             {{ numberInputs[detail.id] ?? 0 }}星 = {{ (numberInputs[detail.id] ?? 0) * (params.scorePerStar ?? 2) }}分
@@ -315,7 +315,7 @@ const captureNeedsExpandedInput = computed(() => {
               :min="0" :max="dim.maxScore ?? 10" :step="1"
               :show-tooltip="false"
               style="width: 80px"
-              @input="(v: number) => emit('update:multiInput', detail.id, dim.key, v)"
+              @input="(v: any) => emit('update:multiInput', detail.id, dim.key, v)"
             />
             <span class="text-[10px] text-gray-400 w-14">{{ (multiInputs[detail.id] || {})[dim.key] ?? 0 }}/{{ dim.maxScore }} ({{ dim.weight }}%)</span>
           </div>
@@ -357,7 +357,7 @@ const captureNeedsExpandedInput = computed(() => {
             :step="1"
             size="small" controls-position="right"
             style="width: 100px"
-            @update:model-value="(v: number) => emit('update:numberInput', detail.id, v)"
+            @update:model-value="(v: any) => emit('update:numberInput', detail.id, v)"
           />
           <span class="text-xs text-gray-400">{{ params.unit }}</span>
           <span v-if="selectInputs[detail.id]" class="text-xs font-medium"
@@ -376,7 +376,7 @@ const captureNeedsExpandedInput = computed(() => {
               :step="1"
               size="small" controls-position="right"
               style="width: 90px"
-              @change="(v: number) => emit('update:multiInput', detail.id, inp.key, v ?? 0)"
+              @change="(v: any) => emit('update:multiInput', detail.id, inp.key, v ?? 0)"
             />
           </div>
           <el-button size="small" type="primary" plain :disabled="scoringInProgress" @click="emit('formula', detail)">确认</el-button>
@@ -456,7 +456,7 @@ const captureNeedsExpandedInput = computed(() => {
           :model-value="numberInputs[detail.id] ?? 0"
           size="small" controls-position="right"
           style="width: 160px"
-          @update:model-value="(v: number) => { emit('update:numberInput', detail.id, v); emit('update:remarkInput', detail.id, String(v)) }"
+          @update:model-value="(v: any) => { emit('update:numberInput', detail.id, v); emit('update:remarkInput', detail.id, String(v)) }"
           @blur="emit('remarkChange', detail)"
         />
       </div>

@@ -1,5 +1,6 @@
 package com.school.management.application.access;
 
+import com.school.management.domain.access.model.PermissionScope;
 import lombok.Builder;
 import lombok.Data;
 
@@ -11,4 +12,5 @@ import lombok.Data;
 public class UpdatePermissionCommand {
     private String permissionName;
     private String description;
+    private PermissionScope scope;
 }

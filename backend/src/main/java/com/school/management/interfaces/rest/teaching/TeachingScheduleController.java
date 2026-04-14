@@ -67,7 +67,20 @@ public class TeachingScheduleController {
             "c.course_name AS courseName, c.course_code AS courseCode, " +
             "ou.unit_name AS className, " +
             "COALESCE(p.place_code, p.place_name, '') AS classroomName, " +
-            "u.real_name AS teacherName " +
+            "u.real_name AS teacherName, " +
+            // 调课链接信息：找出此实例是调走还是调入
+            "(SELECT JSON_OBJECT('date', adj.new_date, 'slot', adj.new_slot, 'weekday', adj.new_weekday) " +
+            " FROM schedule_adjustments adj " +
+            " WHERE adj.original_entry_id = si.entry_id " +
+            "   AND adj.original_date = si.actual_date AND adj.original_slot = si.start_slot " +
+            "   AND adj.deleted = 0 AND adj.executed = 1 LIMIT 1) AS movedTo, " +
+            "(SELECT JSON_OBJECT('date', adj.original_date, 'slot', adj.original_slot, 'weekday', adj.original_weekday) " +
+            " FROM schedule_adjustments adj " +
+            " WHERE adj.original_entry_id = si.entry_id " +
+            "   AND adj.new_date = si.actual_date AND adj.new_slot = si.start_slot " +
+            "   AND adj.deleted = 0 AND adj.executed = 1 LIMIT 1) AS movedFrom, " +
+            // 代课教师原教师姓名
+            "(SELECT u2.real_name FROM users u2 WHERE u2.id = si.original_teacher_id) AS originalTeacherName " +
             "FROM schedule_instances si " +
             "LEFT JOIN courses c ON c.id = si.course_id " +
             "LEFT JOIN org_units ou ON ou.id = si.org_unit_id " +
@@ -595,10 +608,12 @@ public class TeachingScheduleController {
             "se.week_type AS weekType, se.schedule_type AS scheduleType, se.is_locked AS isLocked, " +
             "se.entry_status AS entryStatus, " +
             "c.course_name AS courseName, u.real_name AS teacherName, " +
+            "ou.unit_name AS className, " +
             "COALESCE(p.place_code, p.place_name) AS classroomName " +
             "FROM schedule_entries se " +
             "LEFT JOIN courses c ON c.id = se.course_id " +
             "LEFT JOIN users u ON u.id = se.teacher_id " +
+            "LEFT JOIN org_units ou ON ou.id = se.org_unit_id " +
             "LEFT JOIN places p ON p.id = se.classroom_id " +
             "WHERE se.org_unit_id = ? AND se.deleted = 0"
         );
@@ -628,10 +643,12 @@ public class TeachingScheduleController {
             "se.week_type AS weekType, se.schedule_type AS scheduleType, se.is_locked AS isLocked, " +
             "se.entry_status AS entryStatus, " +
             "c.course_name AS courseName, u.real_name AS teacherName, " +
+            "ou.unit_name AS className, " +
             "COALESCE(p.place_code, p.place_name) AS classroomName " +
             "FROM schedule_entries se " +
             "LEFT JOIN courses c ON c.id = se.course_id " +
             "LEFT JOIN users u ON u.id = se.teacher_id " +
+            "LEFT JOIN org_units ou ON ou.id = se.org_unit_id " +
             "LEFT JOIN places p ON p.id = se.classroom_id " +
             "WHERE se.teacher_id = ? AND se.deleted = 0"
         );
@@ -661,10 +678,12 @@ public class TeachingScheduleController {
             "se.week_type AS weekType, se.schedule_type AS scheduleType, se.is_locked AS isLocked, " +
             "se.entry_status AS entryStatus, " +
             "c.course_name AS courseName, u.real_name AS teacherName, " +
+            "ou.unit_name AS className, " +
             "COALESCE(p.place_code, p.place_name) AS classroomName " +
             "FROM schedule_entries se " +
             "LEFT JOIN courses c ON c.id = se.course_id " +
             "LEFT JOIN users u ON u.id = se.teacher_id " +
+            "LEFT JOIN org_units ou ON ou.id = se.org_unit_id " +
             "LEFT JOIN places p ON p.id = se.classroom_id " +
             "WHERE se.classroom_id = ? AND se.deleted = 0"
         );

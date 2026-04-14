@@ -192,24 +192,45 @@ public class InstanceGenerationService {
      */
     private int generateSubstituteInstances(Long semesterId, LocalDate substituteDate,
                                              int sourceWeekday, Long eventId, String eventName) {
-        // 查基准课表中该weekday的所有条目
+        // 查基准课表中该weekday的所有条目（含周次范围和类型）
         List<Map<String, Object>> entries = jdbc.queryForList(
-            "SELECT id, course_id, org_unit_id, teacher_id, classroom_id, start_slot, end_slot " +
+            "SELECT id, course_id, org_unit_id, teacher_id, classroom_id, start_slot, end_slot, " +
+            "start_week, end_week, week_type " +
             "FROM schedule_entries WHERE semester_id = ? AND weekday = ? AND deleted = 0 AND entry_status = 1",
             semesterId, sourceWeekday);
+
+        // 查补课日所在的教学周号（从 academic_weeks）
+        Integer targetWeekNumber = null;
+        try {
+            targetWeekNumber = jdbc.queryForObject(
+                "SELECT week_number FROM academic_weeks WHERE semester_id = ? AND ? BETWEEN start_date AND end_date",
+                Integer.class, semesterId, substituteDate);
+        } catch (Exception ignored) {}
 
         int count = 0;
         for (Map<String, Object> entry : entries) {
             int startSlot = ((Number) entry.get("start_slot")).intValue();
             int endSlot = ((Number) entry.get("end_slot")).intValue();
+            int entryStartWeek = entry.get("start_week") != null ? ((Number) entry.get("start_week")).intValue() : 1;
+            int entryEndWeek = entry.get("end_week") != null ? ((Number) entry.get("end_week")).intValue() : 99;
+            int entryWeekType = entry.get("week_type") != null ? ((Number) entry.get("week_type")).intValue() : 0;
+
+            // 补课只补在该课程周次范围内的课
+            if (targetWeekNumber != null) {
+                if (targetWeekNumber < entryStartWeek || targetWeekNumber > entryEndWeek) continue;
+                // 单双周检查：单周课只补单周、双周课只补双周
+                if (entryWeekType == 1 && targetWeekNumber % 2 == 0) continue; // 单周课不补到双周
+                if (entryWeekType == 2 && targetWeekNumber % 2 == 1) continue; // 双周课不补到单周
+            }
 
             jdbc.update(
                 "INSERT INTO schedule_instances (id, entry_id, semester_id, actual_date, weekday, " +
-                "start_slot, end_slot, course_id, org_unit_id, teacher_id, classroom_id, " +
+                "week_number, start_slot, end_slot, course_id, org_unit_id, teacher_id, classroom_id, " +
                 "status, source_type, source_id, actual_hours, cancel_reason, deleted) " +
-                "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 3, 2, ?, ?, ?, 0)",
+                "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 3, 2, ?, ?, ?, 0)",
                 IdWorker.getId(), entry.get("id"), semesterId, substituteDate,
                 substituteDate.getDayOfWeek().getValue(),
+                targetWeekNumber,
                 startSlot, endSlot,
                 entry.get("course_id"), entry.get("org_unit_id"),
                 entry.get("teacher_id"), entry.get("classroom_id"),

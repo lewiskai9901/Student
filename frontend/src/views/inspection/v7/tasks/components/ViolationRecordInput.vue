@@ -18,7 +18,7 @@ import { ViolationSeverityConfig, type ViolationSeverity } from '@/types/insp/en
 const props = withDefaults(defineProps<{
   submissionId: number
   detailId: number
-  sectionId?: number
+  sectionId?: number | null
   itemId?: number
   disabled?: boolean
 }>(), {

@@ -2,16 +2,22 @@ package com.school.management.application.user;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.school.management.application.access.AccessApplicationService;
 import com.school.management.application.shared.TypeTreeBuilder;
 import com.school.management.application.shared.TypeTreeBuilder.TypeTreeNode;
+import com.school.management.domain.access.repository.RoleRepository;
+import com.school.management.domain.access.repository.UserRoleRepository;
+import com.school.management.domain.user.model.aggregate.User;
 import com.school.management.domain.user.model.entity.UserCategory;
 import com.school.management.domain.user.model.entity.UserType;
+import com.school.management.domain.user.repository.UserRepository;
 import com.school.management.domain.user.repository.UserTypeRepository;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -21,6 +27,7 @@ import java.util.stream.Collectors;
 /**
  * 用户类型应用服务（统一类型系统 Phase 2）
  */
+@Slf4j
 @RequiredArgsConstructor
 @Service
 public class UserTypeApplicationService {
@@ -29,6 +36,10 @@ public class UserTypeApplicationService {
             "text", "number", "date", "datetime", "boolean", "select", "multiselect", "textarea", "radio");
 
     private final UserTypeRepository userTypeRepository;
+    private final UserRepository userRepository;
+    private final RoleRepository roleRepository;
+    private final UserRoleRepository userRoleRepository;
+    private final AccessApplicationService accessApplicationService;
 
     // ==================== 查询 ====================
 
@@ -170,6 +181,72 @@ public class UserTypeApplicationService {
         return userTypeRepository.save(userType);
     }
 
+    /**
+     * Phase 2.6 — UserType.defaultRoleCodes 变更后的回溯同步。
+     *
+     * 对已有该类型的所有用户：
+     *   - 若用户目前没有任何角色 → 按 defaultRoleCodes 为其分配
+     *   - 若用户已有任意角色 → 跳过（避免覆盖人工配置，保持幂等）
+     *
+     * 返回统计：扫描用户数 / 新补齐用户数 / 跳过用户数 / 失败用户数。
+     *
+     * 仅补齐"零角色"用户，不做"diff 补齐"（例如用户已有一个管理员角色，
+     * 即使 defaultRoleCodes 里还有其它角色也不会再加）—— 这是一个保守选择，
+     * 避免把管理员显式移除过的默认角色又加回来。
+     */
+    @Transactional
+    public SyncDefaultRolesResult syncDefaultRolesToUsers(String typeCode) {
+        UserType type = userTypeRepository.findByTypeCode(typeCode)
+                .orElseThrow(() -> new IllegalArgumentException("用户类型不存在: " + typeCode));
+
+        List<String> defaultCodes = type.getDefaultRoleCodeList();
+        List<User> users = userRepository.findByUserTypeCode(typeCode);
+
+        int scanned = users.size();
+        int filled = 0;
+        int skipped = 0;
+        int failed = 0;
+
+        if (defaultCodes.isEmpty()) {
+            return new SyncDefaultRolesResult(scanned, 0, scanned, 0);
+        }
+
+        for (User user : users) {
+            Long userId = user.getId();
+            if (userId == null) {
+                continue;
+            }
+            if (!userRoleRepository.findByUserId(userId).isEmpty()) {
+                skipped++;
+                continue;
+            }
+            boolean anyAssigned = false;
+            for (String roleCode : defaultCodes) {
+                if (roleCode == null || roleCode.isBlank()) continue;
+                try {
+                    var roleOpt = roleRepository.findByRoleCode(roleCode.trim());
+                    if (roleOpt.isEmpty()) {
+                        log.warn("[UserType同步] 角色编码不存在: {}", roleCode);
+                        continue;
+                    }
+                    accessApplicationService.assignRoleToUser(userId, roleOpt.get().getId(), null);
+                    anyAssigned = true;
+                } catch (IllegalArgumentException e) {
+                    log.debug("[UserType同步] 用户 {} 角色 {} 分配跳过: {}", userId, roleCode, e.getMessage());
+                } catch (RuntimeException e) {
+                    log.warn("[UserType同步] 用户 {} 角色 {} 分配失败: {}", userId, roleCode, e.getMessage());
+                    failed++;
+                }
+            }
+            if (anyAssigned) {
+                filled++;
+            } else {
+                skipped++;
+            }
+        }
+        return new SyncDefaultRolesResult(scanned, filled, skipped, failed);
+    }
+
     // ==================== 内部方法 ====================
 
     /**
@@ -233,6 +310,19 @@ public class UserTypeApplicationService {
         private String code;
         private String label;
         private Map<String, Boolean> defaultFeatures;
+    }
+
+    @Data
+    @AllArgsConstructor
+    public static class SyncDefaultRolesResult {
+        /** 该类型下的用户总数 */
+        private int scannedUsers;
+        /** 新补齐默认角色的用户数 */
+        private int filledUsers;
+        /** 已有角色或无需处理而跳过的用户数 */
+        private int skippedUsers;
+        /** 角色分配过程中发生异常的用户数 */
+        private int failedUsers;
     }
 
     @Data

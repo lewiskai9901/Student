@@ -6,12 +6,16 @@
 // 权限类型
 export type PermissionType = 'MENU' | 'BUTTON' | 'API'
 
+// 权限作用域: PUBLIC=公共, SELF=个人空间, MANAGEMENT=管理后台
+export type PermissionScope = 'PUBLIC' | 'SELF' | 'MANAGEMENT'
+
 // 权限
 export interface Permission {
   id: string | number
   permissionCode: string
   permissionName: string
   type: PermissionType
+  scope: PermissionScope
   parentId: string | number | null
   path?: string
   icon?: string
@@ -26,6 +30,7 @@ export interface CreatePermissionRequest {
   permissionCode: string
   permissionName: string
   type: PermissionType
+  scope?: PermissionScope
   parentId?: number | string
   path?: string
   icon?: string
@@ -36,6 +41,7 @@ export interface CreatePermissionRequest {
 // 更新权限请求
 export interface UpdatePermissionRequest {
   permissionName?: string
+  scope?: PermissionScope
   path?: string
   icon?: string
   sortOrder?: number
@@ -43,16 +49,12 @@ export interface UpdatePermissionRequest {
   enabled?: boolean
 }
 
-// 数据权限范围
-export type DataScope = 'ALL' | 'DEPARTMENT_AND_BELOW' | 'DEPARTMENT' | 'CUSTOM' | 'SELF'
-
 // 角色 - roleType 改为自由字符串
 export interface Role {
   id: string | number
   roleCode: string
   roleName: string
   roleType: string
-  dataScope: DataScope
   level: number
   description?: string
   enabled: boolean
@@ -68,7 +70,6 @@ export interface CreateRoleRequest {
   roleName: string
   roleCode?: string
   roleType?: string
-  dataScope?: DataScope
   level?: number
   description?: string
 }
@@ -77,7 +78,6 @@ export interface CreateRoleRequest {
 export interface UpdateRoleRequest {
   roleName?: string
   roleType?: string
-  dataScope?: DataScope
   level?: number
   description?: string
   enabled?: boolean

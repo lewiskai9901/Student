@@ -160,6 +160,16 @@ public class UserRepositoryImpl implements UserRepository {
     }
 
     @Override
+    public List<User> findByUserTypeCode(String userTypeCode) {
+        if (userTypeCode == null || userTypeCode.isBlank()) {
+            return new ArrayList<>();
+        }
+        return userMapper.findByUserTypeCode(userTypeCode).stream()
+                .map(this::toDomain)
+                .collect(Collectors.toList());
+    }
+
+    @Override
     public void delete(User user) {
         if (user != null && user.getId() != null) {
             userMapper.softDeleteById(Long.parseLong(user.getId().toString()));

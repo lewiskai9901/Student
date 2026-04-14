@@ -718,7 +718,13 @@ const handleLogin = async () => {
     loading.value = true
     await authStore.loginAction(loginForm)
     ElMessage.success('登录成功')
-    router.push('/')
+    // 教师登录后自动落地工作台；其它用户走默认首页
+    const userTypeCode = authStore.user?.userTypeCode
+    if (userTypeCode === 'TEACHER') {
+      router.push('/my/dashboard')
+    } else {
+      router.push('/')
+    }
   } catch (error: any) {
     ElMessage.error(error.message || '登录失败，请检查账号和密码')
   } finally {

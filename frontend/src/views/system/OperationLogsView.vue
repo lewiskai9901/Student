@@ -218,7 +218,7 @@
                 <div v-if="row.resourceId" class="text-xs text-gray-400">{{ getResourceTypeName(row.resourceType) }} #{{ row.resourceId }}</div>
                 <div v-else class="text-xs text-gray-400">{{ getResourceTypeName(row.resourceType) }}</div>
               </td>
-              <td class="max-w-xs truncate px-4 py-3 text-gray-600" :title="row.actionLabel">
+              <td class="max-w-xs truncate px-4 py-3 text-gray-600" :title="row.actionLabel || undefined">
                 {{ row.actionLabel || row.action }}
               </td>
               <td class="whitespace-nowrap px-4 py-3 text-center">
@@ -434,7 +434,8 @@ const detailVisible = ref(false)
 const currentLog = ref<ActivityEvent>({} as ActivityEvent)
 
 // Module styles
-const getModuleClass = (module: string) => {
+const getModuleClass = (module: string | null | undefined) => {
+  if (!module) return 'rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-600'
   const classes: Record<string, string> = {
     organization: 'rounded-full bg-blue-100 px-2 py-0.5 text-xs font-medium text-blue-700',
     place: 'rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-700',
@@ -445,16 +446,18 @@ const getModuleClass = (module: string) => {
   return classes[module] || 'rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-600'
 }
 
-const getModuleName = (module: string) => {
+const getModuleName = (module: string | null | undefined) => {
+  if (!module) return '-'
   const map: Record<string, string> = {
     organization: '组织', place: '场所', user: '用户',
     access: '权限', inspection: '检查', student: '学生'
   }
-  return map[module] || module || '-'
+  return map[module] || module
 }
 
 // Action styles
-const getActionClass = (action: string) => {
+const getActionClass = (action: string | null | undefined) => {
+  if (!action) return 'rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-600'
   const classes: Record<string, string> = {
     CREATE: 'rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-700',
     UPDATE: 'rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-700',
@@ -471,7 +474,8 @@ const getActionClass = (action: string) => {
   return classes[action] || 'rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-600'
 }
 
-const getActionName = (action: string) => {
+const getActionName = (action: string | null | undefined) => {
+  if (!action) return '-'
   const map: Record<string, string> = {
     CREATE: '创建', UPDATE: '更新', DELETE: '删除', LOGIN: '登录',
     LOGOUT: '登出', FREEZE: '冻结', UNFREEZE: '解冻', DISSOLVE: '解散',
@@ -479,10 +483,11 @@ const getActionName = (action: string) => {
     CHECK_IN: '入住', CHECK_OUT: '退出', APPOINT: '任命',
     IMPORT: '导入', EXPORT: '导出'
   }
-  return map[action] || action || '-'
+  return map[action] || action
 }
 
-const getMethodClass = (method: string) => {
+const getMethodClass = (method: string | null | undefined) => {
+  if (!method) return 'rounded bg-gray-100 px-1.5 py-0.5 text-xs font-medium text-gray-600'
   const classes: Record<string, string> = {
     GET: 'rounded bg-blue-100 px-1.5 py-0.5 text-xs font-medium text-blue-700',
     POST: 'rounded bg-green-100 px-1.5 py-0.5 text-xs font-medium text-green-700',
@@ -498,7 +503,8 @@ const getResultClass = (result: string) => {
   return 'rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-700'
 }
 
-const getResourceTypeName = (type: string) => {
+const getResourceTypeName = (type: string | null | undefined) => {
+  if (!type) return '-'
   const map: Record<string, string> = {
     ORG_UNIT: '组织单元', PLACE: '场所', USER: '用户', ROLE: '角色',
     STUDENT: '学生', USER_POSITION: '人员岗位', POSITION: '岗位',

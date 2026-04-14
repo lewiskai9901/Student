@@ -378,7 +378,7 @@ const refreshData = () => {
   loadData()
 }
 
-const isSelectedDormitory = (id: number) => {
+const isSelectedDormitory = (id: number | string) => {
   return selectedDormitories.value.some(d => d.id === id)
 }
 
@@ -391,11 +391,11 @@ const toggleDormitorySelection = (dormitory: Dormitory) => {
   }
 }
 
-const getDormitoryBindings = (dormitoryId: number) => {
+const getDormitoryBindings = (dormitoryId: number | string) => {
   return bindings.value.filter(b => b.dormitoryId === dormitoryId)
 }
 
-const getClassBindings = (orgUnitId: number) => {
+const getClassBindings = (orgUnitId: number | string) => {
   return bindings.value.filter(b => b.orgUnitId === orgUnitId)
 }
 
@@ -414,8 +414,8 @@ const confirmAssign = async () => {
   assigning.value = true
   try {
     const count = await batchAssignDormitoriesToClass({
-      orgUnitId: targetClass.value.id,
-      dormitoryIds: selectedDormitories.value.map(d => d.id)
+      orgUnitId: Number(targetClass.value.id),
+      dormitoryIds: selectedDormitories.value.map(d => Number(d.id))
     })
     ElMessage.success(`成功分配 ${count} 间宿舍`)
     confirmDialogVisible.value = false

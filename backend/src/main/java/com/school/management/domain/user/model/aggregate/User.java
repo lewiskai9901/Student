@@ -5,6 +5,7 @@ import com.school.management.domain.user.event.UserCreatedEvent;
 import com.school.management.domain.user.event.UserStatusChangedEvent;
 import com.school.management.domain.user.event.UserUpdatedEvent;
 import com.school.management.domain.user.event.UserPasswordResetEvent;
+import com.school.management.domain.user.model.entity.UserType;
 import com.school.management.domain.user.model.valueobject.UserStatus;
 
 import java.time.LocalDate;
@@ -161,14 +162,37 @@ public class User extends AggregateRoot<Long> {
         user.updatedAt = LocalDateTime.now();
         user.passwordChangedAt = LocalDateTime.now();
 
-        user.registerEvent(new UserCreatedEvent(
-                "NEW",
-                username,
-                realName,
-                userTypeCode
-        ));
-
         return user;
+    }
+
+    /**
+     * 持久化后注册创建事件，确保 userId 为真实 ID 而非占位符。
+     * 必须在 userRepository.save(user) 返回后调用。
+     */
+    public void recordCreation() {
+        if (this.getId() == null) {
+            throw new IllegalStateException("recordCreation 必须在用户保存后调用");
+        }
+        registerEvent(new UserCreatedEvent(
+                this.getId().toString(),
+                this.username,
+                this.realName,
+                this.userTypeCode
+        ));
+    }
+
+    /**
+     * 根据 UserType 校验聚合状态。
+     * Phase 2.2: features.requiresOrg=true 必须有主归属组织。
+     */
+    public void validateAgainstType(UserType type) {
+        if (type == null) {
+            return;
+        }
+        if (type.isRequiresOrg() && this.primaryOrgUnitId == null) {
+            throw new IllegalArgumentException(
+                    "用户类型 " + type.getTypeCode() + " 要求必须指定主归属组织");
+        }
     }
 
     /**

@@ -1,6 +1,5 @@
 package com.school.management.domain.access.model;
 
-import com.school.management.domain.access.model.DataScope;
 import com.school.management.domain.access.event.RoleCreatedEvent;
 import com.school.management.domain.access.event.RolePermissionsChangedEvent;
 import com.school.management.domain.shared.AggregateRoot;
@@ -28,22 +27,13 @@ public class Role extends AggregateRoot<Long> {
 
     private Set<Long> permissionIds;
 
-    /**
-     * Legacy field: per-role data scope.
-     * The main data permission system now uses role_data_permissions_v5 table
-     * (via DataPermissionInterceptor + DataPermissionPolicyService) for fine-grained
-     * module-level scope control. This field is still read by CasbinAuthorizationService
-     * for backward compatibility but should not be relied upon for new features.
-     */
-    private DataScope dataScope;
-
     protected Role() {
         this.permissionIds = new HashSet<>();
     }
 
     public Role(Long id, String roleCode, String roleName, String description,
                 String roleType, Integer level, Boolean isSystem, Boolean isEnabled,
-                Long createdBy, Set<Long> permissionIds, DataScope dataScope) {
+                Long createdBy, Set<Long> permissionIds) {
         this.id = id;
         this.roleCode = Objects.requireNonNull(roleCode, "Role code is required");
         this.roleName = Objects.requireNonNull(roleName, "Role name is required");
@@ -56,7 +46,6 @@ public class Role extends AggregateRoot<Long> {
         this.updatedAt = this.createdAt;
         this.createdBy = createdBy;
         this.permissionIds = permissionIds != null ? new HashSet<>(permissionIds) : new HashSet<>();
-        this.dataScope = dataScope != null ? dataScope : DataScope.SELF;
 
         validate();
     }
@@ -134,14 +123,6 @@ public class Role extends AggregateRoot<Long> {
     }
 
     /**
-     * Sets the data scope for this role.
-     */
-    public void setDataScope(DataScope dataScope) {
-        this.dataScope = dataScope;
-        this.updatedAt = LocalDateTime.now();
-    }
-
-    /**
      * Updates role information.
      */
     public void updateInfo(String roleName, String description) {
@@ -208,7 +189,6 @@ public class Role extends AggregateRoot<Long> {
     public LocalDateTime getCreatedAt() { return createdAt; }
     public LocalDateTime getUpdatedAt() { return updatedAt; }
     public Long getCreatedBy() { return createdBy; }
-    public DataScope getDataScope() { return dataScope; }
     public Long getTenantId() { return tenantId; }
     public void setTenantId(Long tenantId) { this.tenantId = tenantId; }
 
@@ -228,7 +208,6 @@ public class Role extends AggregateRoot<Long> {
         private Boolean isEnabled;
         private Long createdBy;
         private Set<Long> permissionIds;
-        private DataScope dataScope;
         private Long tenantId;
 
         public RoleBuilder id(Long id) { this.id = id; return this; }
@@ -241,11 +220,10 @@ public class Role extends AggregateRoot<Long> {
         public RoleBuilder isEnabled(Boolean isEnabled) { this.isEnabled = isEnabled; return this; }
         public RoleBuilder createdBy(Long createdBy) { this.createdBy = createdBy; return this; }
         public RoleBuilder permissionIds(Set<Long> permissionIds) { this.permissionIds = permissionIds; return this; }
-        public RoleBuilder dataScope(DataScope dataScope) { this.dataScope = dataScope; return this; }
         public RoleBuilder tenantId(Long tenantId) { this.tenantId = tenantId; return this; }
 
         public Role build() {
-            Role role = new Role(id, roleCode, roleName, description, roleType, level, isSystem, isEnabled, createdBy, permissionIds, dataScope);
+            Role role = new Role(id, roleCode, roleName, description, roleType, level, isSystem, isEnabled, createdBy, permissionIds);
             role.tenantId = this.tenantId;
             return role;
         }

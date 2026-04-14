@@ -36,5 +36,7 @@ public class LoginResponse {
         private List<String> permissions;
         private Long orgUnitId;
         private Long tenantId;
+        /** 用户类型编码（TEACHER / STUDENT / …），前端用于登录落地页决策。 */
+        private String userTypeCode;
     }
 }

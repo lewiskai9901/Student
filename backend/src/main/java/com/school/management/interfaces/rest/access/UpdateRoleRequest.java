@@ -1,6 +1,5 @@
 package com.school.management.interfaces.rest.access;
 
-import com.school.management.domain.access.model.DataScope;
 import jakarta.validation.constraints.Size;
 import lombok.Data;
 
@@ -15,6 +14,4 @@ public class UpdateRoleRequest {
 
     @Size(max = 500, message = "Description must not exceed 500 characters")
     private String description;
-
-    private DataScope dataScope;
 }

@@ -67,6 +67,11 @@ public interface UserRepository extends Repository<User, Long> {
     List<User> findByOrgUnitIdIn(List<Long> orgUnitIds);
 
     /**
+     * 根据用户类型编码查找所有用户（用于 UserType 变更后的回溯同步）
+     */
+    List<User> findByUserTypeCode(String userTypeCode);
+
+    /**
      * 删除用户
      */
     void deleteById(Long id);

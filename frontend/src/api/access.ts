@@ -96,7 +96,6 @@ export interface RoleResponse {
   level?: number
   isSystem?: boolean
   isEnabled?: boolean
-  dataScope?: number
   permissionIds?: (string | number)[]  // 权限ID也可能是字符串
   createdAt?: string
 }

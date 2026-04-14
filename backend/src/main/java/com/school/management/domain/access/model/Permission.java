@@ -23,6 +23,7 @@ public class Permission implements Entity<Long> {
     private String resource;
     private String action;
     private PermissionType type;
+    private PermissionScope scope;
     private Long parentId;
     private Integer sortOrder;
     private Boolean isEnabled;
@@ -43,7 +44,8 @@ public class Permission implements Entity<Long> {
     @Builder
     public Permission(Long id, String permissionCode, String permissionName,
                       String description, String resource, String action,
-                      PermissionType type, Long parentId, Integer sortOrder,
+                      PermissionType type, PermissionScope scope,
+                      Long parentId, Integer sortOrder,
                       Boolean isEnabled, String path, String component, String icon) {
         this.id = id;
         this.permissionCode = Objects.requireNonNull(permissionCode, "Permission code is required");
@@ -52,6 +54,7 @@ public class Permission implements Entity<Long> {
         this.resource = resource;
         this.action = action;
         this.type = type != null ? type : PermissionType.OPERATION;
+        this.scope = scope != null ? scope : inferScope(permissionCode);
         this.parentId = parentId;
         this.sortOrder = sortOrder != null ? sortOrder : 0;
         this.isEnabled = isEnabled != null ? isEnabled : true;
@@ -62,6 +65,23 @@ public class Permission implements Entity<Long> {
         this.updatedAt = this.createdAt;
 
         validate();
+    }
+
+    /**
+     * Classify a permission code by prefix when scope is unspecified.
+     * Matches the seed-migration rules in V20260414_2__add_permission_scope.sql.
+     */
+    private static PermissionScope inferScope(String code) {
+        if (code == null) {
+            return PermissionScope.MANAGEMENT;
+        }
+        if (code.startsWith("my:")) {
+            return PermissionScope.SELF;
+        }
+        if (code.startsWith("public:")) {
+            return PermissionScope.PUBLIC;
+        }
+        return PermissionScope.MANAGEMENT;
     }
 
     /**
@@ -107,6 +127,14 @@ public class Permission implements Entity<Long> {
             this.permissionName = name;
         }
         this.description = description;
+        this.updatedAt = LocalDateTime.now();
+    }
+
+    public void changeScope(PermissionScope newScope) {
+        if (newScope == null) {
+            return;
+        }
+        this.scope = newScope;
         this.updatedAt = LocalDateTime.now();
     }
 

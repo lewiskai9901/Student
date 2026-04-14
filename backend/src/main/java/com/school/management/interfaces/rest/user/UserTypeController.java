@@ -135,6 +135,14 @@ public class UserTypeController {
         return Result.success(userTypeService.toggleStatus(id, false));
     }
 
+    @PostMapping("/{typeCode}/sync-to-users")
+    @Operation(summary = "回溯同步默认角色到该类型下已有用户",
+            description = "幂等：仅为零角色用户补齐 defaultRoleCodes，已有任意角色的用户会被跳过")
+    @CasbinAccess(resource = "system:user", action = "edit")
+    public Result<SyncDefaultRolesResult> syncDefaultRolesToUsers(@PathVariable String typeCode) {
+        return Result.success(userTypeService.syncDefaultRolesToUsers(typeCode));
+    }
+
     // ==================== Request DTOs ====================
 
     @Data

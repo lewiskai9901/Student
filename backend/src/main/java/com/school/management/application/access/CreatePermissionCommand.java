@@ -1,5 +1,6 @@
 package com.school.management.application.access;
 
+import com.school.management.domain.access.model.PermissionScope;
 import com.school.management.domain.access.model.PermissionType;
 import lombok.Builder;
 import lombok.Data;
@@ -16,6 +17,7 @@ public class CreatePermissionCommand {
     private String resource;
     private String action;
     private PermissionType type;
+    private PermissionScope scope;
     private Long parentId;
     private Integer sortOrder;
 }

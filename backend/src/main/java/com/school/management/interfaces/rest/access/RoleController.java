@@ -36,7 +36,6 @@ public class RoleController {
             .roleName(request.getRoleName())
             .description(request.getDescription())
             .roleType(request.getRoleType())
-            .dataScope(request.getDataScope())
             .createdBy(SecurityUtils.requireCurrentUserId())
             .build();
 
@@ -83,7 +82,6 @@ public class RoleController {
         UpdateRoleCommand command = UpdateRoleCommand.builder()
             .roleName(request.getRoleName())
             .description(request.getDescription())
-            .dataScope(request.getDataScope())
             .build();
 
         Role role = accessService.updateRole(id, command);
@@ -145,7 +143,6 @@ public class RoleController {
         response.setLevel(role.getLevel());
         response.setIsSystem(role.getIsSystem());
         response.setIsEnabled(role.getIsEnabled());
-        response.setDataScope(role.getDataScope());
         response.setPermissionIds(role.getPermissionIds());
         response.setCreatedAt(role.getCreatedAt());
         return response;

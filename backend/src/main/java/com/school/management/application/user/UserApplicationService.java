@@ -71,11 +71,11 @@ public class UserApplicationService {
             throw new BusinessException("用户名已存在: " + command.getUsername());
         }
 
-        // 验证用户类型编码
+        // 验证用户类型编码并加载实体（用于后续 features 校验）
+        UserType userType = null;
         if (command.getUserTypeCode() != null && !command.getUserTypeCode().isEmpty()) {
-            if (!userTypeRepository.existsByTypeCode(command.getUserTypeCode())) {
-                throw new BusinessException("无效的用户类型: " + command.getUserTypeCode());
-            }
+            userType = userTypeRepository.findByTypeCode(command.getUserTypeCode())
+                    .orElseThrow(() -> new BusinessException("无效的用户类型: " + command.getUserTypeCode()));
         }
 
         // 加密密码
@@ -120,8 +120,14 @@ public class UserApplicationService {
             user.assignRoles(roleIds);
         }
 
+        // Phase 2.2: features 校验（如 requiresOrg）
+        user.validateAgainstType(userType);
+
         // 保存用户
         user = userRepository.save(user);
+
+        // Phase 2.1: 持久化后注册创建事件，确保 userId 真实
+        user.recordCreation();
 
         // 关联组织（写入 access_relations）
         if (command.getOrgUnitId() != null) {
@@ -200,10 +206,10 @@ public class UserApplicationService {
         );
 
         // 更新用户类型（先验证再更新）
+        UserType updatedType = null;
         if (command.getUserTypeCode() != null && !command.getUserTypeCode().isEmpty()) {
-            if (!userTypeRepository.existsByTypeCode(command.getUserTypeCode())) {
-                throw new BusinessException("无效的用户类型: " + command.getUserTypeCode());
-            }
+            updatedType = userTypeRepository.findByTypeCode(command.getUserTypeCode())
+                    .orElseThrow(() -> new BusinessException("无效的用户类型: " + command.getUserTypeCode()));
             user.changeUserType(command.getUserTypeCode());
         }
 
@@ -248,6 +254,14 @@ public class UserApplicationService {
         if (command.getRoleIds() != null) {
             user.assignRoles(command.getRoleIds());
         }
+
+        // Phase 2.2: features 校验（若改了 userType 用新 type；否则用现有 type）
+        UserType effectiveType = updatedType != null
+                ? updatedType
+                : (user.getUserTypeCode() != null
+                    ? userTypeRepository.findByTypeCode(user.getUserTypeCode()).orElse(null)
+                    : null);
+        user.validateAgainstType(effectiveType);
 
         // 保存
         user = userRepository.save(user);

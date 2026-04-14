@@ -2,7 +2,6 @@ package com.school.management.interfaces.rest.access;
 
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import com.fasterxml.jackson.databind.ser.std.ToStringSerializer;
-import com.school.management.domain.access.model.DataScope;
 import lombok.Data;
 
 import java.time.LocalDateTime;
@@ -30,8 +29,6 @@ public class RoleResponse {
     private Boolean isSystem;
 
     private Boolean isEnabled;
-
-    private DataScope dataScope;
 
     @JsonSerialize(contentUsing = ToStringSerializer.class)
     private Set<Long> permissionIds;

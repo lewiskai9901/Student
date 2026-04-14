@@ -1,6 +1,7 @@
 package com.school.management.infrastructure.persistence.access;
 
 import com.school.management.domain.access.model.Permission;
+import com.school.management.domain.access.model.PermissionScope;
 import com.school.management.domain.access.model.PermissionType;
 import com.school.management.domain.access.repository.PermissionRepository;
 import org.springframework.stereotype.Repository;
@@ -119,6 +120,7 @@ public class PermissionRepositoryImpl implements PermissionRepository {
         po.setPermissionName(domain.getPermissionName());
         po.setPermissionDesc(domain.getDescription());
         po.setResourceType(toResourceType(domain.getType()));
+        po.setPermissionScope(domain.getScope() != null ? domain.getScope().name() : PermissionScope.MANAGEMENT.name());
         po.setParentId(domain.getParentId());
         po.setPath(domain.getPath());
         po.setComponent(domain.getComponent());
@@ -149,6 +151,7 @@ public class PermissionRepositoryImpl implements PermissionRepository {
             .resource(resource)
             .action(action)
             .type(fromResourceType(po.getResourceType()))
+            .scope(PermissionScope.fromCode(po.getPermissionScope()))
             .parentId(po.getParentId())
             .path(po.getPath())
             .component(po.getComponent())

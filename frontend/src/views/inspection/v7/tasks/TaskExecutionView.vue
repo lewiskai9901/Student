@@ -377,7 +377,7 @@ async function selectTarget(targetId: number) {
                 responseValue: '',
                 score: null as any,
                 maxScore: 100,
-              } as SubmissionDetail))
+              } as unknown as SubmissionDetail))
             } catch { /* skip */ }
           }
           if (leafDets.length === 0) continue
@@ -880,10 +880,12 @@ async function loadData() {
         // 再回退：从 submissions 的 sectionId 找根分区
         if (!rsi && submissions.value.length > 0) {
           const secId = submissions.value[0].sectionId
-          try {
-            const sec = await inspTemplateApi.getSection(secId)
-            rsi = sec.parentSectionId || secId
-          } catch (e: any) { console.warn('从提交记录推断分区失败', e) }
+          if (secId != null) {
+            try {
+              const sec = await inspTemplateApi.getSection(secId)
+              rsi = sec.parentSectionId || secId
+            } catch (e: any) { console.warn('从提交记录推断分区失败', e) }
+          }
         }
         if (rsi) {
           rootSectionId.value = Number(rsi)
@@ -1209,7 +1211,7 @@ onMounted(() => loadData())
                   <div class="card-top">
                     <span class="card-name">{{ detail.itemName }}</span>
                     <el-tag v-if="detail.scoringMode" size="small" effect="plain"
-                      :type="detail.scoringMode === 'DEDUCTION' ? 'danger' : detail.scoringMode === 'ADDITION' ? 'success' : detail.scoringMode === 'PASS_FAIL' ? '' : 'warning'"
+                      :type="detail.scoringMode === 'DEDUCTION' ? 'danger' : detail.scoringMode === 'ADDITION' ? 'success' : detail.scoringMode === 'PASS_FAIL' ? 'primary' : 'warning'"
                     >{{ ScoringModeConfig[detail.scoringMode]?.label ?? detail.scoringMode }}</el-tag>
                     <el-tag v-else size="small" type="info" effect="plain">采集</el-tag>
                   </div>
@@ -1267,7 +1269,7 @@ onMounted(() => loadData())
                   </div>
                   <div v-else-if="detail.scoringMode === 'DIRECT'" class="card-control card-control--direct">
                     <el-input-number v-model="numberInputs[detail.id]" :min="getDirectRange(detail).min" :max="getDirectRange(detail).max"
-                      :disabled="!isGroupEditable(group)" size="small" style="width: 120px" @change="(val: number) => handleDirectInput(detail, val)" />
+                      :disabled="!isGroupEditable(group)" size="small" style="width: 120px" @change="(val: any) => handleDirectInput(detail, val)" />
                     <span class="range-hint">范围 {{ getDirectRange(detail).min }}–{{ getDirectRange(detail).max }}</span>
                   </div>
                   <div v-else-if="detail.scoringMode === 'RATING_SCALE'" class="card-control">

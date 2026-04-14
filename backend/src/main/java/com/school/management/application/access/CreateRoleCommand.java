@@ -1,6 +1,5 @@
 package com.school.management.application.access;
 
-import com.school.management.domain.access.model.DataScope;
 import lombok.Builder;
 import lombok.Data;
 
@@ -14,6 +13,5 @@ public class CreateRoleCommand {
     private String roleName;
     private String description;
     private String roleType;
-    private DataScope dataScope;
     private Long createdBy;
 }

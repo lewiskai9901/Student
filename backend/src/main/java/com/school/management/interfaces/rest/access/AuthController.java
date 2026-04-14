@@ -183,6 +183,7 @@ public class AuthController {
                 .permissions(userDetails.getPermissions())
                 .orgUnitId(userDetails.getOrgUnitId())
                 .tenantId(userDetails.getTenantId())
+                .userTypeCode(user != null ? user.getUserTypeCode() : null)
                 .build();
     }
 

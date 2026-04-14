@@ -36,6 +36,7 @@ public class PermissionController {
             .resource(request.getResource())
             .action(request.getAction())
             .type(request.getType())
+            .scope(request.getScope())
             .parentId(request.getParentId())
             .sortOrder(request.getSortOrder())
             .build();
@@ -93,6 +94,7 @@ public class PermissionController {
         UpdatePermissionCommand command = UpdatePermissionCommand.builder()
             .permissionName(request.getPermissionName())
             .description(request.getDescription())
+            .scope(request.getScope())
             .build();
 
         Permission permission = accessService.updatePermission(id, command);
@@ -116,6 +118,7 @@ public class PermissionController {
         response.setResource(permission.getResource());
         response.setAction(permission.getAction());
         response.setType(permission.getType());
+        response.setScope(permission.getScope());
         response.setParentId(permission.getParentId());
         response.setSortOrder(permission.getSortOrder());
         response.setIsEnabled(permission.getIsEnabled());
