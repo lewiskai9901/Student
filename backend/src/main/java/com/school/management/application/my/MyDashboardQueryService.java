@@ -1,9 +1,5 @@
 package com.school.management.application.my;
 
-import com.school.management.interfaces.rest.my.MyDashboardController.DashboardSummaryDTO;
-import com.school.management.interfaces.rest.my.MyDashboardController.MyClassDTO;
-import com.school.management.interfaces.rest.my.MyDashboardController.SubstituteTaskDTO;
-import com.school.management.interfaces.rest.my.MyDashboardController.TodayLessonDTO;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -36,7 +32,7 @@ public class MyDashboardQueryService {
      *   weeklyHoursTotal — 本周内总计（同过滤）
      *   substituteRequests — 代课待办数（同 getSubstituteTasks 过滤）
      */
-    public DashboardSummaryDTO getSummary(Long userId) {
+    public DashboardSummary getSummary(Long userId) {
         LocalDate today = LocalDate.now();
         LocalDate weekStart = today.with(java.time.DayOfWeek.MONDAY);
         LocalDate weekEnd = weekStart.plusDays(6);
@@ -62,7 +58,7 @@ public class MyDashboardQueryService {
                 "  AND approval_status IN (0,1) AND deleted = 0",
                 Integer.class, userId);
 
-        return new DashboardSummaryDTO(
+        return new DashboardSummary(
                 nz(todayLessons),
                 nz(weekCurrent),
                 nz(weekTotal),
@@ -76,7 +72,7 @@ public class MyDashboardQueryService {
      * 今日课表 — 从 schedule_instances 查询（物化实况表，原生含代课/调课）。
      * 返回字段尽量扁平，前端一次渲染。
      */
-    public List<TodayLessonDTO> getTodaySchedule(Long userId, LocalDate date) {
+    public List<TodayLesson> getTodaySchedule(Long userId, LocalDate date) {
         String sql =
                 "SELECT si.id, si.start_slot, si.end_slot, si.status, " +
                 "       c.course_name, " +
@@ -96,7 +92,7 @@ public class MyDashboardQueryService {
             Integer status = rs.getObject("status", Integer.class);
             Integer startSlot = rs.getObject("start_slot", Integer.class);
             Integer endSlot = rs.getObject("end_slot", Integer.class);
-            return new TodayLessonDTO(
+            return new TodayLesson(
                     rs.getLong("id"),
                     startSlot,
                     endSlot,
@@ -116,7 +112,7 @@ public class MyDashboardQueryService {
      * 一个老师可能兼多角色，同一班级取权重最高的角色（HEAD_TEACHER > DEPUTY_HEAD_TEACHER > COUNSELOR > SUBJECT_TEACHER）。
      * 学生数由子查询聚合，subjects 由 schedule_instances 区分课程推断（没排课则为空）。
      */
-    public List<MyClassDTO> getMyClasses(Long userId) {
+    public List<MyClass> getMyClasses(Long userId) {
         // Step 1: 拉取该老师当前生效任职记录（去重后的班级集合）
         String assignSql =
                 "SELECT ta.org_unit_id, ta.role_type, ou.unit_name " +
@@ -172,11 +168,11 @@ public class MyDashboardQueryService {
                     .add(rs.getString("course_name"));
         }, args);
 
-        List<MyClassDTO> result = new ArrayList<>(classRoles.size());
+        List<MyClass> result = new ArrayList<>(classRoles.size());
         for (Map.Entry<Long, String> e : classRoles.entrySet()) {
             Long classId = e.getKey();
             String role = e.getValue();
-            result.add(new MyClassDTO(
+            result.add(new MyClass(
                     classId,
                     classNames.get(classId),
                     counts.getOrDefault(classId, 0),
@@ -218,7 +214,7 @@ public class MyDashboardQueryService {
      * 未执行 (executed=0)，非已拒绝/撤回 (approval_status IN 0,1)。
      * JOIN schedule_entries → courses 得课程名，JOIN users 得申请人姓名。
      */
-    public List<SubstituteTaskDTO> getSubstituteTasks(Long userId) {
+    public List<SubstituteTask> getSubstituteTasks(Long userId) {
         String sql =
                 "SELECT sa.id, c.course_name, " +
                 "       COALESCE(sa.new_date, sa.original_date) AS scheduled_date, " +
@@ -246,7 +242,7 @@ public class MyDashboardQueryService {
             }
             Integer startSlot = rs.getObject("start_slot", Integer.class);
             Integer endSlot = rs.getObject("end_slot", Integer.class);
-            return new SubstituteTaskDTO(
+            return new SubstituteTask(
                     rs.getLong("id"),
                     rs.getString("course_name"),
                     d != null ? d.toLocalDate() : null,

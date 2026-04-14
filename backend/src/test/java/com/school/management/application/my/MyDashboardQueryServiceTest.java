@@ -1,6 +1,5 @@
 package com.school.management.application.my;
 
-import com.school.management.interfaces.rest.my.MyDashboardController.DashboardSummaryDTO;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -19,7 +18,7 @@ import static org.mockito.Mockito.when;
  * 单元测试 {@link MyDashboardQueryService} 的纯逻辑部分:
  * <ul>
  *   <li>角色优先级 — 决定一个老师兼任多角色时在"我的班级"里显示哪一个</li>
- *   <li>DashboardSummaryDTO 空值保护 — DB 返回 null 时前端期望 0 而非 NPE</li>
+ *   <li>DashboardSummary 空值保护 — DB 返回 null 时前端期望 0 而非 NPE</li>
  * </ul>
  *
  * <p>未覆盖:
@@ -95,7 +94,7 @@ class MyDashboardQueryServiceTest {
             when(jdbcTemplate.queryForObject(anyString(), eq(Integer.class), any(Object[].class)))
                     .thenReturn(null);
 
-            DashboardSummaryDTO summary = new MyDashboardQueryService(jdbcTemplate).getSummary(100L);
+            DashboardSummary summary = new MyDashboardQueryService(jdbcTemplate).getSummary(100L);
 
             assertThat(summary.todayLessons()).isZero();
             assertThat(summary.weeklyHoursCurrent()).isZero();
