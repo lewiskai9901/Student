@@ -11,8 +11,10 @@ import java.lang.annotation.*;
  * <p>Scope semantics (see docs/security/access-control-guide.md):
  * <ul>
  *   <li>PUBLIC — any authenticated user passes; Casbin enforce is skipped</li>
- *   <li>SELF — Casbin enforces role grant; ownership check is the caller's responsibility
- *       (typically via V5 SELF scope at the mapper level)</li>
+ *   <li>SELF — Casbin enforce is skipped. Data isolation (user_id = currentUserId)
+ *       is the endpoint's responsibility, enforced via
+ *       {@code SecurityUtils.requireCurrentUserId()} and guarded at architecture
+ *       level by {@code ArchUnitMyEndpointTest} (forbids identity params on /my/*)</li>
  *   <li>MANAGEMENT (default) — Casbin enforces role grant normally</li>
  * </ul>
  */
