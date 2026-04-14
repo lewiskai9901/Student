@@ -2,16 +2,20 @@ package com.school.management.application.user;
 
 import com.school.management.application.user.command.CreateUserCommand;
 import com.school.management.application.user.command.UpdateUserCommand;
+import com.school.management.domain.access.model.Role;
 import com.school.management.domain.access.repository.AccessRelationRepository;
 import com.school.management.domain.access.repository.RoleRepository;
+import com.school.management.domain.access.repository.UserRoleRepository;
 import com.school.management.domain.place.repository.UniversalPlaceOccupantRepository;
 import com.school.management.domain.place.repository.UniversalPlaceRepository;
 import com.school.management.domain.shared.event.DomainEventPublisher;
 import com.school.management.domain.user.model.aggregate.User;
+import com.school.management.domain.user.model.entity.UserType;
 import com.school.management.domain.user.model.valueobject.UserStatus;
 import com.school.management.domain.user.repository.UserRepository;
 import com.school.management.domain.user.repository.UserTypeRepository;
 import com.school.management.exception.BusinessException;
+import com.school.management.security.JwtTokenService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -65,6 +69,12 @@ class UserApplicationServiceTest {
 
     @Mock
     private UniversalPlaceRepository placeRepository;
+
+    @Mock
+    private UserRoleRepository userRoleRepository;
+
+    @Mock
+    private JwtTokenService jwtTokenService;
 
     @InjectMocks
     private UserApplicationService service;
@@ -142,6 +152,8 @@ class UserApplicationServiceTest {
                     .build();
 
             when(userRepository.existsByUsername("testuser")).thenReturn(false);
+            when(userTypeRepository.findByTypeCode("TEACHER"))
+                    .thenReturn(Optional.of(UserType.builder().typeCode("TEACHER").typeName("教师").build()));
             when(passwordEncoder.encode("password123")).thenReturn("encodedPassword");
             when(userRepository.save(any(User.class))).thenAnswer(inv -> {
                 User u = inv.getArgument(0);
@@ -610,6 +622,9 @@ class UserApplicationServiceTest {
             User user = createTestUser(1L, "testuser", "测试用户");
             when(userRepository.findById(1L)).thenReturn(Optional.of(user));
             when(userRepository.save(any(User.class))).thenReturn(user);
+            when(roleRepository.findById(3L)).thenReturn(Optional.of(Role.builder().id(3L).roleCode("R3").roleName("角色3").build()));
+            when(roleRepository.findById(4L)).thenReturn(Optional.of(Role.builder().id(4L).roleCode("R4").roleName("角色4").build()));
+            when(roleRepository.findById(5L)).thenReturn(Optional.of(Role.builder().id(5L).roleCode("R5").roleName("角色5").build()));
 
             // When
             service.assignRoles(1L, Arrays.asList(3L, 4L, 5L));

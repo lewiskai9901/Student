@@ -1,5 +1,6 @@
 package com.school.management.application.student;
 
+import com.school.management.application.student.StatusChangeRecordService;
 import com.school.management.application.student.command.*;
 import com.school.management.application.student.query.StudentDTO;
 import com.school.management.application.student.query.StudentQueryCriteria;
@@ -40,6 +41,9 @@ class StudentApplicationServiceTest {
 
     @Mock
     private DomainEventPublisher eventPublisher;
+
+    @Mock
+    private StatusChangeRecordService statusChangeRecordService;
 
     @InjectMocks
     private StudentApplicationService service;
