@@ -192,11 +192,11 @@ public class MyDashboardQueryService {
         return result;
     }
 
-    private static String preferHigherRole(String a, String b) {
+    static String preferHigherRole(String a, String b) {
         return roleRank(a) <= roleRank(b) ? a : b;
     }
 
-    private static int roleRank(String role) {
+    static int roleRank(String role) {
         if (role == null) return 99;
         return switch (role) {
             case "HEAD_TEACHER" -> 0;
