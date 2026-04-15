@@ -135,10 +135,11 @@ public class AttendanceController {
             @RequestParam(required = false) Long courseId,
             @RequestParam(required = false) Integer period) {
 
-        // 1. 获取班级所有学生
+        // 1. 获取班级所有学生 (students 表无 name / status 列; 姓名在 users, 状态列名 student_status)
         List<Map<String, Object>> students = jdbc.queryForList(
-            "SELECT id AS studentId, student_no AS studentNo, name AS studentName " +
-            "FROM students WHERE org_unit_id = ? AND status = 0 ORDER BY student_no",
+            "SELECT s.id AS studentId, s.student_no AS studentNo, u.real_name AS studentName " +
+            "FROM students s LEFT JOIN users u ON s.user_id = u.id " +
+            "WHERE s.org_unit_id = ? AND s.student_status = 1 AND s.deleted = 0 ORDER BY s.student_no",
             orgUnitId
         );
 

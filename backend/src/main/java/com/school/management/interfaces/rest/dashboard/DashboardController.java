@@ -43,7 +43,7 @@ public class DashboardController {
         stats.put("classCount", countSafe(
             "SELECT COUNT(*) FROM classes WHERE deleted = 0 AND status = 'ACTIVE'"));
         stats.put("studentCount", countSafe(
-            "SELECT COUNT(*) FROM students WHERE deleted = 0 AND status = 1"));
+            "SELECT COUNT(*) FROM students WHERE deleted = 0 AND student_status = 1"));
         stats.put("teacherCount", countSafe(
             "SELECT COUNT(*) FROM users WHERE deleted = 0 AND user_type_code = 'TEACHER' AND status = 1"));
         return stats;

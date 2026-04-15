@@ -300,7 +300,7 @@ public class TeachingWorkflowService {
 
             // 查找班级学生，为每人生成一条待录入记录
             List<Map<String, Object>> students = jdbc.queryForList(
-                "SELECT id FROM students WHERE org_unit_id = ? AND status = 1 AND deleted = 0", orgUnitId);
+                "SELECT id FROM students WHERE org_unit_id = ? AND student_status = 1 AND deleted = 0", orgUnitId);
 
             for (Map<String, Object> s : students) {
                 Long studentId = toLong(s.get("id"));
