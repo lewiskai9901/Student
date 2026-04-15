@@ -215,7 +215,7 @@
               </div>
               <div class="hidden sm:block text-left">
                 <div class="text-sm font-semibold text-gray-900 group-hover:text-blue-700 transition-colors">{{ userStore.userName }}</div>
-                <div class="text-xs text-gray-500">系统管理员</div>
+                <div class="text-xs text-gray-500">{{ roleLabel }}</div>
               </div>
               <svg class="w-4 h-4 text-gray-400 hidden sm:block group-hover:text-blue-600 transition-all" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
@@ -243,7 +243,7 @@
                     </div>
                     <div class="flex-1 min-w-0">
                       <div class="font-semibold text-gray-900 truncate">{{ userStore.userName }}</div>
-                      <div class="text-xs text-gray-500 mt-0.5">系统管理员</div>
+                      <div class="text-xs text-gray-500 mt-0.5">{{ roleLabel }}</div>
                     </div>
                   </div>
                 </div>
@@ -327,6 +327,20 @@ const showUserMenu = ref(false)
 const userMenuRef = ref<HTMLElement | null>(null)
 const openSubmenus = ref<string[]>([])
 const userStore = authStore
+
+const ROLE_LABELS: Record<string, string> = {
+  SUPER_ADMIN: '超级管理员',
+  ADMIN: '系统管理员',
+  TEACHER: '教师',
+  STUDENT: '学生',
+  PARENT: '家长',
+  MANAGER: '管理员'
+}
+const roleLabel = computed(() => {
+  const code = authStore.userRoles?.[0]
+  if (!code) return ''
+  return ROLE_LABELS[code] || code
+})
 
 // 当前路由
 const currentRoute = computed(() => route.path)

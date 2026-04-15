@@ -24,6 +24,7 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 import org.springframework.web.multipart.MaxUploadSizeExceededException;
 import org.springframework.web.servlet.NoHandlerFoundException;
+import org.springframework.web.servlet.resource.NoResourceFoundException;
 
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.ConstraintViolation;
@@ -213,6 +214,16 @@ public class GlobalExceptionHandler {
     public Result<Void> handleNoHandlerFoundException(NoHandlerFoundException e) {
         String message = String.format("请求的资源不存在: %s %s", e.getHttpMethod(), e.getRequestURL());
         log.warn("404异常: {}", message);
+        return Result.error(ResultCode.NOT_FOUND.getCode(), "请求的资源不存在");
+    }
+
+    // Spring Boot 3.2+ 对未知路由抛的是 NoResourceFoundException
+    // (默认 throw-exception-if-no-handler-found=false 时 NoHandlerFoundException 不触发),
+    // 须单独处理, 否则会被兜底 Exception handler 吞成 500.
+    @ExceptionHandler(NoResourceFoundException.class)
+    @ResponseStatus(HttpStatus.NOT_FOUND)
+    public Result<Void> handleNoResourceFoundException(NoResourceFoundException e) {
+        log.warn("404异常: {}", e.getMessage());
         return Result.error(ResultCode.NOT_FOUND.getCode(), "请求的资源不存在");
     }
 
