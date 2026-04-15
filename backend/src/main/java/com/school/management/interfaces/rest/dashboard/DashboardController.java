@@ -1,6 +1,7 @@
 package com.school.management.interfaces.rest.dashboard;
 
 import com.school.management.common.result.Result;
+import com.school.management.infrastructure.casbin.CasbinAccess;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
@@ -25,6 +26,7 @@ public class DashboardController {
 
     @GetMapping("/overview")
     @Operation(summary = "Get dashboard overview with organization, teaching, inspection and system stats")
+    @CasbinAccess(resource = "dashboard", action = "view")
     public Result<Map<String, Object>> getOverview() {
         Map<String, Object> result = new LinkedHashMap<>();
         result.put("organization", getOrgStats());
@@ -140,6 +142,7 @@ public class DashboardController {
 
     @GetMapping("/statistics")
     @Operation(summary = "Get dashboard statistics (legacy)")
+    @CasbinAccess(resource = "dashboard", action = "view")
     public Result<Map<String, Object>> getStatistics(
             @RequestParam(defaultValue = "7") int days) {
         // Delegate to the new overview endpoint for backward compatibility
