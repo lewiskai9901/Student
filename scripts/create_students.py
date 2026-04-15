@@ -155,7 +155,7 @@ sql_values = []
 for s in valid:
     gid = s['gradeId'] if s['gradeId'] else 'NULL'
     sql_values.append(
-        f"({s['userId']}, '{s['sno']}', {s['userId']}, {s['orgUnitId']}, {gid}, 0, 0, 1)"
+        f"({s['userId']}, '{s['sno']}', {s['userId']}, {s['orgUnitId']}, {gid}, 1, 0, 1)"
     )
 
 # Insert in batches

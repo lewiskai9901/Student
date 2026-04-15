@@ -96,9 +96,9 @@ public interface DddStudentMapper extends BaseMapper<StudentPO> {
     long countByClassId(@Param("orgUnitId") Long orgUnitId);
 
     /**
-     * 统计班级在读学生数量 (status=0 表示在读)
+     * 统计班级在读学生数量 (student_status=1 即 StudentStatus.STUDYING)
      */
-    @Select("SELECT COUNT(*) FROM students WHERE org_unit_id = #{classId} AND student_status = 0 AND deleted = 0")
+    @Select("SELECT COUNT(*) FROM students WHERE org_unit_id = #{classId} AND student_status = 1 AND deleted = 0")
     long countActiveByClassId(@Param("orgUnitId") Long orgUnitId);
 
     /**
