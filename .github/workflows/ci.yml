@@ -242,13 +242,24 @@ jobs:
 
       - name: Initialize database schema
         run: |
-          mysql -h 127.0.0.1 -P 3306 -uroot -ptest123 student_management < database/schema/complete_schema_v2.sql || true
-          # init_data 目录下存在多个增量脚本,按存在情况尝试导入
+          MYSQL="mysql --default-character-set=utf8mb4 -h 127.0.0.1 -P 3306 -uroot -ptest123 student_management"
+          # 1) 基础 schema (schema_v2 是某一时刻的完整 DDL 快照, 可能滞后于最新迁移)
+          $MYSQL < database/schema/complete_schema_v2.sql || true
+          # 2) 追加迁移 (V*.sql) — 按文件名排序尽力执行, 重复 DDL 会被 MySQL 以错误忽略
+          for f in $(ls database/migrations/V*.sql 2>/dev/null | sort); do
+            $MYSQL < "$f" 2>&1 | grep -vE "Duplicate|already exists|doesn't exist|Can't DROP" || true
+          done
+          # 3) 增量业务数据
           for f in database/init/task_permissions.sql database/init/task_basic_permissions.sql database/init/task_role_permissions.sql database/init/task_workflow_init.sql database/init/msg_seed_data.sql; do
             if [ -f "$f" ]; then
-              mysql -h 127.0.0.1 -P 3306 -uroot -ptest123 student_management < "$f" || true
+              $MYSQL < "$f" || true
             fi
           done
+          # 4) E2E 最小账户/绑定数据 (admin / teacher01 / teacher02 + 角色 + 班主任关系)
+          $MYSQL < database/init/ci_e2e_seed.sql
+          # 5) 验证: admin + teacher01 必须存在, 否则所有 E2E 必挂
+          $MYSQL -N -e "SELECT username FROM users WHERE username IN ('admin','teacher01') AND deleted=0;" | tee /tmp/seeded_users.txt
+          grep -q '^admin$' /tmp/seeded_users.txt && grep -q '^teacher01$' /tmp/seeded_users.txt
 
       - name: Install frontend dependencies
         working-directory: ./frontend
