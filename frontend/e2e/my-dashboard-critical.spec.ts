@@ -75,6 +75,17 @@ test.describe('Critical teacher dashboard flow', () => {
     await expect(card.locator('.my-row-tag', { hasText: '班主任' }).first()).toBeVisible()
   })
 
+  // 回归: MainLayout 副标题过去硬编码"系统管理员", 所有角色均显示错误头衔.
+  // 修复后按 userRoles[0] 映射 ROLE_LABELS, teacher01 应显示"教师".
+  test('header subtitle shows role label "教师" for teacher01, not "系统管理员"', async ({ page }) => {
+    await loginAsTeacher(page)
+    await page.waitForLoadState('networkidle')
+    // 桌面端头像旁 text-xs 副标题
+    await expect(page.locator('text=教师').first()).toBeVisible({ timeout: 5000 })
+    // 反向断言: 不得出现"系统管理员"
+    await expect(page.locator('text=系统管理员')).toHaveCount(0)
+  })
+
   test('no 401/403 on /my/* — Casbin SELF scope must bypass enforcer', async ({ page }) => {
     const forbidden: { url: string; status: number }[] = []
     page.on('response', (resp: Response) => {

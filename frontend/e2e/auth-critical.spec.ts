@@ -50,8 +50,8 @@ test.describe('Critical auth flows', () => {
     await page.locator('button[type="submit"]:has-text("登录")').first().click()
     await page.waitForURL(/\/dashboard/, { timeout: 10000 })
 
-    // 打开右上角用户下拉菜单（触发器显示"系统管理员"小字）
-    await page.locator('text=系统管理员').first().click()
+    // 打开右上角用户下拉菜单 (admin 实际角色是 SUPER_ADMIN → "超级管理员")
+    await page.locator('text=超级管理员').first().click()
 
     // 点击"退出登录"按钮
     await page.locator('button:has-text("退出登录")').first().click()
