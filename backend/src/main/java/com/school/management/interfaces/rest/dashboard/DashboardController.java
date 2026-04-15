@@ -37,11 +37,11 @@ public class DashboardController {
     private Map<String, Object> getOrgStats() {
         Map<String, Object> stats = new LinkedHashMap<>();
         stats.put("orgUnitCount", countSafe(
-            "SELECT COUNT(*) FROM org_units WHERE deleted = 0 AND status = 1"));
+            "SELECT COUNT(*) FROM org_units WHERE deleted = 0 AND status = 'ACTIVE'"));
         stats.put("majorCount", countSafe(
             "SELECT COUNT(*) FROM majors WHERE deleted = 0 AND status = 1"));
         stats.put("classCount", countSafe(
-            "SELECT COUNT(*) FROM classes WHERE deleted = 0 AND status = 'ACTIVE'"));
+            "SELECT COUNT(*) FROM classes WHERE deleted = 0 AND status = 1"));
         stats.put("studentCount", countSafe(
             "SELECT COUNT(*) FROM students WHERE deleted = 0 AND student_status = 1"));
         stats.put("teacherCount", countSafe(
