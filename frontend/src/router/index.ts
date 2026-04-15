@@ -47,6 +47,7 @@ const routes: RouteRecordRaw[] = [
           title: '首页',
           icon: 'House',
           requiresAuth: true,
+          permission: 'dashboard:view',
           order: 1,
           group: 'daily'
         }
@@ -1324,6 +1325,12 @@ router.beforeEach(async (to, from, next) => {
 
     // 检查权限
     if (to.meta.permission && !authStore.hasPermission(to.meta.permission as string)) {
+      // /dashboard 专属兜底：教师或任何无 dashboard:view 权限的用户改去 /my/dashboard
+      // —— /my/dashboard 不受权限门控，对所有已登录用户开放
+      if (to.path === '/dashboard' && to.meta.permission === 'dashboard:view') {
+        next('/my/dashboard')
+        return
+      }
       next('/403')
       return
     }
