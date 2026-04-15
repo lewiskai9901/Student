@@ -56,8 +56,9 @@ test.describe('Organization management critical flows', () => {
     await page.waitForTimeout(500) // 等待菜单展开动画
 
     // 以下原始路径字符串绝不能作为菜单标签出现
-    await expect(page.locator('text=/system/org-types')).not.toBeVisible()
-    await expect(page.locator('text=/system/place-types')).not.toBeVisible()
-    await expect(page.locator('text=/system/user-types')).not.toBeVisible()
+    // 注意: Playwright 的 text=/.../ 会被当正则, 需引号包起来强制字面匹配
+    await expect(page.locator('text="/system/org-types"')).not.toBeVisible()
+    await expect(page.locator('text="/system/place-types"')).not.toBeVisible()
+    await expect(page.locator('text="/system/user-types"')).not.toBeVisible()
   })
 })
