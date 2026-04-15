@@ -109,13 +109,17 @@ public class DataPermissionInterceptor implements Interceptor {
         // Set new SQL
         metaObject.setValue("delegate.boundSql.sql", newSql);
 
-        // Add parameters
+        // Append parameter mappings for the `?` placeholders we added at the END of the SQL.
+        // MyBatis's ParameterHandler / BaseExecutor.createCacheKey read values via
+        // boundSql.hasAdditionalParameter(property) first, so setAdditionalParameter suffices.
+        // Inserting at a specific index was an old attempt to match prepend-style injection
+        // and broke with IndexOutOfBoundsException; we now always append.
         Configuration configuration = mappedStatement.getConfiguration();
         for (AdditionalParam param : condition.params) {
             ParameterMapping.Builder pmBuilder = new ParameterMapping.Builder(
                     configuration, param.property, param.javaType);
             pmBuilder.jdbcType(param.jdbcType);
-            boundSql.getParameterMappings().add(param.insertIndex, pmBuilder.build());
+            boundSql.getParameterMappings().add(pmBuilder.build());
             boundSql.setAdditionalParameter(param.property, param.value);
         }
 
@@ -245,7 +249,7 @@ public class DataPermissionInterceptor implements Interceptor {
             case DEPARTMENT_AND_BELOW:
                 if (orgPath != null) {
                     cond.sql = "(" + alias + orgField + " IN (" +
-                            "SELECT id FROM org_units WHERE tenant_id = ? AND path LIKE ?))";
+                            "SELECT id FROM org_units WHERE tenant_id = ? AND tree_path LIKE ?))";
                     cond.addParam("_dp_tenantId_" + paramOffset, tenantId, Long.class, JdbcType.BIGINT);
                     cond.addParam("_dp_orgPath_" + paramOffset, orgPath + "%", String.class, JdbcType.VARCHAR);
                 } else if (orgId != null) {
@@ -298,7 +302,7 @@ public class DataPermissionInterceptor implements Interceptor {
         // Use the scoped org root (not user's primary org)
         if (orgPath != null) {
             sb.append(" OR (ar.subject_type = 'org_unit' AND ar.subject_id IN (")
-              .append("SELECT id FROM org_units WHERE tenant_id = ? AND path LIKE ? AND deleted = 0))");
+              .append("SELECT id FROM org_units WHERE tenant_id = ? AND tree_path LIKE ? AND deleted = 0))");
             cond.addParam("_dp_tenantId2_" + paramOffset, tenantId, Long.class, JdbcType.BIGINT);
             cond.addParam("_dp_orgPath_" + paramOffset, orgPath + "%", String.class, JdbcType.VARCHAR);
         } else if (orgId != null) {
@@ -315,7 +319,7 @@ public class DataPermissionInterceptor implements Interceptor {
             sb.insert(0, "(");
             if (scope == DataScope.DEPARTMENT_AND_BELOW && orgPath != null) {
                 sb.append(" OR ").append(alias).append(orgField)
-                  .append(" IN (SELECT id FROM org_units WHERE tenant_id = ? AND path LIKE ?)");
+                  .append(" IN (SELECT id FROM org_units WHERE tenant_id = ? AND tree_path LIKE ?)");
                 cond.addParam("_dp_tenantId3_" + paramOffset, tenantId, Long.class, JdbcType.BIGINT);
                 cond.addParam("_dp_orgPath2_" + paramOffset, orgPath + "%", String.class, JdbcType.VARCHAR);
             } else {
@@ -382,7 +386,7 @@ public class DataPermissionInterceptor implements Interceptor {
             case DEPARTMENT_AND_BELOW:
                 if (userContext.getOrgUnitPath() != null) {
                     cond.sql = "(" + alias + orgField + " IN (" +
-                            "SELECT id FROM org_units WHERE tenant_id = ? AND path LIKE ?))";
+                            "SELECT id FROM org_units WHERE tenant_id = ? AND tree_path LIKE ?))";
                     cond.addParam("_dp_tenantId", tenantId, Long.class, JdbcType.BIGINT);
                     cond.addParam("_dp_orgPath", userContext.getOrgUnitPath() + "%", String.class, JdbcType.VARCHAR);
                 } else {
@@ -443,8 +447,8 @@ public class DataPermissionInterceptor implements Interceptor {
             for (Long orgId : withChildren) {
                 if (hasCondition) sb.append(" OR ");
                 sb.append(alias).append(orgField).append(" IN (")
-                  .append("SELECT id FROM org_units WHERE tenant_id = ? AND path LIKE (")
-                  .append("SELECT CONCAT(path, '%') FROM org_units WHERE id = ?))");
+                  .append("SELECT id FROM org_units WHERE tenant_id = ? AND tree_path LIKE (")
+                  .append("SELECT CONCAT(tree_path, '%') FROM org_units WHERE id = ?))");
                 cond.addParam("_dp_tenantOrg_" + paramIdx, tenantId, Long.class, JdbcType.BIGINT);
                 cond.addParam("_dp_childOrg_" + paramIdx, orgId, Long.class, JdbcType.BIGINT);
                 paramIdx++;
@@ -462,27 +466,31 @@ public class DataPermissionInterceptor implements Interceptor {
     }
 
     /**
-     * Inject filter condition into SQL
+     * Inject filter condition into SQL.
+     *
+     * Appends the filter at the END of the existing WHERE clause (or creates WHERE before
+     * GROUP BY/ORDER BY/LIMIT if none). Appending — rather than prepending — means the
+     * filter's `?` placeholders come AFTER the original query's `?`s, so parameter mappings
+     * can simply be appended to the existing list in the same order.
      */
     private String injectFilterCondition(String sql, String filterCondition) {
         String upperSql = sql.toUpperCase();
-
-        int whereIndex = upperSql.lastIndexOf(" WHERE ");
-        if (whereIndex > 0) {
-            int insertPos = whereIndex + 7;
-            return sql.substring(0, insertPos) + "(" + filterCondition + ") AND " + sql.substring(insertPos);
-        }
 
         int groupByIndex = upperSql.indexOf(" GROUP BY ");
         int orderByIndex = upperSql.indexOf(" ORDER BY ");
         int limitIndex = upperSql.indexOf(" LIMIT ");
 
-        int insertPos = sql.length();
-        if (groupByIndex > 0) insertPos = Math.min(insertPos, groupByIndex);
-        if (orderByIndex > 0) insertPos = Math.min(insertPos, orderByIndex);
-        if (limitIndex > 0) insertPos = Math.min(insertPos, limitIndex);
+        int tailPos = sql.length();
+        if (groupByIndex > 0) tailPos = Math.min(tailPos, groupByIndex);
+        if (orderByIndex > 0) tailPos = Math.min(tailPos, orderByIndex);
+        if (limitIndex > 0) tailPos = Math.min(tailPos, limitIndex);
 
-        return sql.substring(0, insertPos) + " WHERE " + filterCondition + sql.substring(insertPos);
+        int whereIndex = upperSql.lastIndexOf(" WHERE ", tailPos);
+        if (whereIndex > 0) {
+            return sql.substring(0, tailPos) + " AND (" + filterCondition + ")" + sql.substring(tailPos);
+        }
+
+        return sql.substring(0, tailPos) + " WHERE " + filterCondition + sql.substring(tailPos);
     }
 
     private DataPermission getDataPermissionAnnotation(String mapperId) {
@@ -543,7 +551,6 @@ public class DataPermissionInterceptor implements Interceptor {
             p.value = value;
             p.javaType = javaType;
             p.jdbcType = jdbcType;
-            p.insertIndex = -1; // Will be set when injecting
             params.add(p);
         }
     }
@@ -553,6 +560,5 @@ public class DataPermissionInterceptor implements Interceptor {
         Object value;
         Class<?> javaType;
         JdbcType jdbcType;
-        int insertIndex;
     }
 }

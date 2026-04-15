@@ -88,7 +88,7 @@ public class CustomUserDetailsService implements UserDetailsService {
         if (orgUnitId != null) {
             try {
                 orgUnitPath = jdbcTemplate.queryForObject(
-                        "SELECT path FROM org_units WHERE id = ? AND deleted = 0",
+                        "SELECT tree_path FROM org_units WHERE id = ? AND deleted = 0",
                         String.class, orgUnitId);
             } catch (Exception e) {
                 log.warn("查询组织路径失败, orgUnitId={}: {}", orgUnitId, e.getMessage());
@@ -123,7 +123,7 @@ public class CustomUserDetailsService implements UserDetailsService {
             if (ScopeType.ORG_UNIT.equals(ur.getScopeType()) && ur.getScopeId() != null && ur.getScopeId() > 0) {
                 try {
                     scopeOrgPath = jdbcTemplate.queryForObject(
-                            "SELECT path FROM org_units WHERE id = ? AND deleted = 0",
+                            "SELECT tree_path FROM org_units WHERE id = ? AND deleted = 0",
                             String.class, ur.getScopeId());
                 } catch (Exception e) {
                     log.warn("查询 scope org path 失败, scopeId={}: {}", ur.getScopeId(), e.getMessage());
