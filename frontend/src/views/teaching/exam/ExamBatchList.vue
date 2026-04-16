@@ -51,6 +51,7 @@
           <td>
             <button class="tm-action" @click.stop="emit('select', row)">安排</button>
             <button class="tm-action" @click.stop="showBatchDialog(row)">编辑</button>
+            <button class="tm-action" style="color: #d97706;" @click.stop="checkConflicts(row)">冲突检测</button>
             <button v-if="row.status === 0" class="tm-action" style="color: #16a34a;" @click.stop="publishBatch(row)">发布</button>
             <button v-if="row.status === 0" class="tm-action tm-action-danger" @click.stop="deleteBatch(row)">删除</button>
           </td>
@@ -131,6 +132,27 @@
       </div>
     </div>
   </Transition>
+
+  <!-- Conflict Detection Dialog -->
+  <el-dialog v-model="conflictDialogVisible" title="冲突检测结果" width="640px" :close-on-click-modal="true">
+    <el-alert v-if="!conflictLoading && conflicts.length === 0" type="success" title="未检测到冲突" :closable="false" />
+    <div v-else-if="conflictLoading" style="text-align: center; padding: 20px;">
+      <span class="tm-spin" style="display:inline-block;width:16px;height:16px;border:2px solid #e5e7eb;border-top-color:#2563eb;border-radius:50%;" /> 检测中...
+    </div>
+    <el-table v-else :data="conflicts" size="small" style="width: 100%">
+      <el-table-column prop="type" label="类型" width="80">
+        <template #default="{ row }">
+          <el-tag :type="row.type === 'ROOM' ? 'danger' : 'warning'" size="small">
+            {{ row.type === 'ROOM' ? '教室' : '教师' }}
+          </el-tag>
+        </template>
+      </el-table-column>
+      <el-table-column prop="description" label="冲突描述" />
+    </el-table>
+    <template #footer>
+      <button class="tm-btn tm-btn-secondary" @click="conflictDialogVisible = false">关闭</button>
+    </template>
+  </el-dialog>
 </template>
 
 <script setup lang="ts">
@@ -155,6 +177,10 @@ const total = ref(0)
 const batchDialogVisible = ref(false)
 const batchForm = ref<Partial<ExamBatch>>({})
 const formErrors = reactive({ name: false, semesterId: false, examType: false, startDate: false, endDate: false })
+
+const conflictDialogVisible = ref(false)
+const conflictLoading = ref(false)
+const conflicts = ref<{ type: string; description: string; arrangement1Id: number; arrangement2Id: number }[]>([])
 
 const queryParams = reactive<ExamBatchQueryParams>({
   semesterId: undefined,
@@ -260,6 +286,24 @@ const deleteBatch = async (batch: ExamBatch) => {
     loadBatches()
   } catch (error) {
     ElMessage.error('删除失败')
+  }
+}
+
+const checkConflicts = async (batch: ExamBatch) => {
+  conflicts.value = []
+  conflictLoading.value = true
+  conflictDialogVisible.value = true
+  try {
+    const res: any = await examApi.detectConflicts(batch.id)
+    conflicts.value = res.data || res || []
+    if (conflicts.value.length === 0) {
+      ElMessage.success('未检测到冲突')
+    }
+  } catch (error) {
+    ElMessage.error('冲突检测失败')
+    conflictDialogVisible.value = false
+  } finally {
+    conflictLoading.value = false
   }
 }
 

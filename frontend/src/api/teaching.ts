@@ -248,6 +248,12 @@ export const examApi = {
   publishBatch: (id: number | string) =>
     http.post(`${BASE_URL}/examinations/batches/${id}/publish`),
 
+  // 冲突检测
+  detectConflicts: (batchId: number | string) =>
+    http.get<{ type: string; description: string; arrangement1Id: number; arrangement2Id: number }[]>(
+      `${BASE_URL}/examinations/batches/${batchId}/conflicts`
+    ),
+
   // 考试安排
   getArrangements: (batchId: number | string) =>
     http.get<ExamArrangement[]>(`${BASE_URL}/examinations/batches/${batchId}/arrangements`),

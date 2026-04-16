@@ -221,6 +221,68 @@ public class ExamApplicationService {
         }
     }
 
+    // ==================== Conflict Detection ====================
+
+    /**
+     * 检测考试安排中的冲突（教室时段重叠 + 监考教师时段重叠）
+     */
+    public List<Map<String, Object>> detectExamConflicts(Long batchId) {
+        List<Map<String, Object>> conflicts = new ArrayList<>();
+
+        // 1. 教室冲突：同一教室、同一日期、时间重叠
+        String roomConflictSql =
+            "SELECT a1.id as arr1_id, a2.id as arr2_id, " +
+            "       r1.room_code, a1.exam_date, " +
+            "       a1.start_time as start1, a1.end_time as end1, " +
+            "       a2.start_time as start2, a2.end_time as end2 " +
+            "FROM exam_arrangements a1 " +
+            "JOIN exam_rooms r1 ON r1.arrangement_id = a1.id " +
+            "JOIN exam_rooms r2 ON r2.classroom_id = r1.classroom_id AND r2.id != r1.id " +
+            "JOIN exam_arrangements a2 ON a2.id = r2.arrangement_id AND a2.batch_id = ? " +
+            "WHERE a1.batch_id = ? AND a1.id < a2.id " +
+            "  AND a1.exam_date = a2.exam_date " +
+            "  AND a1.start_time < a2.end_time AND a2.start_time < a1.end_time";
+        List<Map<String, Object>> roomConflicts = jdbc.queryForList(roomConflictSql, batchId, batchId);
+        for (Map<String, Object> c : roomConflicts) {
+            Map<String, Object> conflict = new LinkedHashMap<>();
+            conflict.put("type", "ROOM");
+            conflict.put("description", "教室 " + c.get("room_code") + " 在 " + c.get("exam_date") +
+                " " + c.get("start1") + "-" + c.get("end1") + " 与 " +
+                c.get("start2") + "-" + c.get("end2") + " 时段冲突");
+            conflict.put("arrangement1Id", c.get("arr1_id"));
+            conflict.put("arrangement2Id", c.get("arr2_id"));
+            conflicts.add(conflict);
+        }
+
+        // 2. 监考教师冲突：同一教师、同一日期、时间重叠
+        String teacherConflictSql =
+            "SELECT i1.teacher_id, a1.id as arr1_id, a2.id as arr2_id, " +
+            "       a1.exam_date, a1.start_time as start1, a1.end_time as end1, " +
+            "       a2.start_time as start2, a2.end_time as end2 " +
+            "FROM exam_invigilators i1 " +
+            "JOIN exam_rooms r1 ON r1.id = i1.room_id " +
+            "JOIN exam_arrangements a1 ON a1.id = r1.arrangement_id AND a1.batch_id = ? " +
+            "JOIN exam_invigilators i2 ON i2.teacher_id = i1.teacher_id AND i2.id != i1.id " +
+            "JOIN exam_rooms r2 ON r2.id = i2.room_id " +
+            "JOIN exam_arrangements a2 ON a2.id = r2.arrangement_id AND a2.batch_id = ? " +
+            "WHERE a1.id < a2.id " +
+            "  AND a1.exam_date = a2.exam_date " +
+            "  AND a1.start_time < a2.end_time AND a2.start_time < a1.end_time";
+        List<Map<String, Object>> teacherConflicts = jdbc.queryForList(teacherConflictSql, batchId, batchId);
+        for (Map<String, Object> c : teacherConflicts) {
+            Map<String, Object> conflict = new LinkedHashMap<>();
+            conflict.put("type", "TEACHER");
+            conflict.put("description", "监考教师(ID:" + c.get("teacher_id") + ") 在 " + c.get("exam_date") +
+                " " + c.get("start1") + "-" + c.get("end1") + " 与 " +
+                c.get("start2") + "-" + c.get("end2") + " 时段冲突");
+            conflict.put("arrangement1Id", c.get("arr1_id"));
+            conflict.put("arrangement2Id", c.get("arr2_id"));
+            conflicts.add(conflict);
+        }
+
+        return conflicts;
+    }
+
     // ==================== Utility Methods ====================
 
     private Long toLong(Object val) {

@@ -73,6 +73,14 @@ public class ExamController {
         return Result.success();
     }
 
+    // ==================== 冲突检测 ====================
+
+    @GetMapping("/batches/{batchId}/conflicts")
+    @CasbinAccess(resource = "teaching:exam", action = "view")
+    public Result<List<Map<String, Object>>> detectConflicts(@PathVariable Long batchId) {
+        return Result.success(examService.detectExamConflicts(batchId));
+    }
+
     // ==================== 考试安排 ====================
 
     @GetMapping("/batches/{batchId}/arrangements")
