@@ -19,6 +19,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
+import java.io.InputStream;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
@@ -472,6 +473,327 @@ public class GradeApplicationService {
             wb.write(response.getOutputStream());
             response.getOutputStream().flush();
         }
+    }
+
+    // ==================== Import Template & Import ====================
+
+    /**
+     * 生成成绩导入 Excel 模板，预填该批次关联班级的学生信息
+     */
+    public void generateImportTemplate(Long batchId, HttpServletResponse response) throws IOException {
+        GradeBatchPO batch = batchMapper.selectById(batchId);
+        if (batch == null) throw new RuntimeException("成绩批次不存在: " + batchId);
+
+        // 查询关联学生列表
+        List<Map<String, Object>> students = queryStudentsForBatch(batch);
+
+        try (Workbook wb = new XSSFWorkbook()) {
+            Sheet sheet = wb.createSheet("成绩导入模板");
+
+            // Header style
+            CellStyle headerStyle = wb.createCellStyle();
+            Font headerFont = wb.createFont();
+            headerFont.setBold(true);
+            headerStyle.setFont(headerFont);
+            headerStyle.setAlignment(HorizontalAlignment.CENTER);
+            headerStyle.setBorderBottom(BorderStyle.THIN);
+            headerStyle.setBorderTop(BorderStyle.THIN);
+            headerStyle.setBorderLeft(BorderStyle.THIN);
+            headerStyle.setBorderRight(BorderStyle.THIN);
+
+            CellStyle cellStyle = wb.createCellStyle();
+            cellStyle.setBorderBottom(BorderStyle.THIN);
+            cellStyle.setBorderTop(BorderStyle.THIN);
+            cellStyle.setBorderLeft(BorderStyle.THIN);
+            cellStyle.setBorderRight(BorderStyle.THIN);
+            cellStyle.setAlignment(HorizontalAlignment.CENTER);
+
+            // Headers: A=学号, B=姓名, C=班级, D=成绩, E=备注, F=student_id(隐藏)
+            String[] headers = {"学号", "姓名", "班级", "成绩", "备注", "student_id"};
+            Row headerRow = sheet.createRow(0);
+            for (int i = 0; i < headers.length; i++) {
+                Cell cell = headerRow.createCell(i);
+                cell.setCellValue(headers[i]);
+                cell.setCellStyle(headerStyle);
+            }
+
+            // Fill student data rows
+            int rowIdx = 1;
+            for (Map<String, Object> stu : students) {
+                Row row = sheet.createRow(rowIdx++);
+
+                Cell c0 = row.createCell(0);
+                c0.setCellValue(str(stu.get("student_no")));
+                c0.setCellStyle(cellStyle);
+
+                Cell c1 = row.createCell(1);
+                c1.setCellValue(str(stu.get("name")));
+                c1.setCellStyle(cellStyle);
+
+                Cell c2 = row.createCell(2);
+                c2.setCellValue(str(stu.get("class_name")));
+                c2.setCellStyle(cellStyle);
+
+                Cell c3 = row.createCell(3);
+                c3.setCellValue(""); // 成绩留空
+                c3.setCellStyle(cellStyle);
+
+                Cell c4 = row.createCell(4);
+                c4.setCellValue(""); // 备注留空
+                c4.setCellStyle(cellStyle);
+
+                // Hidden column F: student_id
+                Cell c5 = row.createCell(5);
+                c5.setCellValue(str(stu.get("id")));
+                c5.setCellStyle(cellStyle);
+            }
+
+            // Auto-size visible columns
+            for (int i = 0; i < 5; i++) sheet.autoSizeColumn(i);
+
+            // Hide column F (student_id)
+            sheet.setColumnHidden(5, true);
+
+            // Response headers
+            String fileName = "grade_import_template_" + batchId + ".xlsx";
+            response.setContentType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+            response.setHeader("Content-Disposition", "attachment; filename=" + fileName);
+            wb.write(response.getOutputStream());
+            response.getOutputStream().flush();
+        }
+    }
+
+    /**
+     * 导入成绩 Excel 文件，解析并写入数据库
+     */
+    @Transactional
+    public Map<String, Object> importGrades(Long batchId, InputStream inputStream) throws IOException {
+        GradeBatchPO batch = batchMapper.selectById(batchId);
+        if (batch == null) throw new RuntimeException("成绩批次不存在: " + batchId);
+
+        int successCount = 0;
+        int errorCount = 0;
+        List<Map<String, Object>> errors = new ArrayList<>();
+
+        try (Workbook wb = WorkbookFactory.create(inputStream)) {
+            Sheet sheet = wb.getSheetAt(0);
+            int lastRow = sheet.getLastRowNum();
+
+            for (int i = 1; i <= lastRow; i++) {
+                Row row = sheet.getRow(i);
+                if (row == null) continue;
+
+                try {
+                    // Read cells
+                    String studentNo = getCellStringValue(row.getCell(0));
+                    String scoreStr = getCellStringValue(row.getCell(3));
+                    String remark = getCellStringValue(row.getCell(4));
+                    String studentIdStr = getCellStringValue(row.getCell(5));
+
+                    // Skip empty rows (no student_no and no student_id)
+                    if ((studentNo == null || studentNo.isBlank()) &&
+                        (studentIdStr == null || studentIdStr.isBlank())) {
+                        continue;
+                    }
+
+                    // Resolve studentId
+                    Long studentId = null;
+                    if (studentIdStr != null && !studentIdStr.isBlank()) {
+                        try {
+                            // Handle potential decimal format from Excel (e.g. "12345.0")
+                            if (studentIdStr.contains(".")) {
+                                studentId = new BigDecimal(studentIdStr).longValue();
+                            } else {
+                                studentId = Long.parseLong(studentIdStr);
+                            }
+                        } catch (NumberFormatException e) {
+                            // fall through to studentNo lookup
+                        }
+                    }
+                    if (studentId == null && studentNo != null && !studentNo.isBlank()) {
+                        try {
+                            List<Map<String, Object>> found = jdbc.queryForList(
+                                "SELECT id FROM students WHERE student_no = ? AND deleted = 0 LIMIT 1",
+                                studentNo.trim()
+                            );
+                            if (!found.isEmpty()) {
+                                studentId = ((Number) found.get(0).get("id")).longValue();
+                            }
+                        } catch (Exception e) {
+                            // ignore lookup errors
+                        }
+                    }
+                    if (studentId == null) {
+                        errorCount++;
+                        errors.add(Map.of("row", i + 1, "error", "无法识别学生: 学号=" + studentNo));
+                        continue;
+                    }
+
+                    // Parse and validate score
+                    if (scoreStr == null || scoreStr.isBlank()) {
+                        errorCount++;
+                        errors.add(Map.of("row", i + 1, "error", "成绩为空"));
+                        continue;
+                    }
+                    BigDecimal score;
+                    try {
+                        score = new BigDecimal(scoreStr.trim());
+                    } catch (NumberFormatException e) {
+                        errorCount++;
+                        errors.add(Map.of("row", i + 1, "error", "成绩格式不正确: " + scoreStr));
+                        continue;
+                    }
+                    if (score.compareTo(BigDecimal.ZERO) < 0 || score.compareTo(new BigDecimal("100")) > 0) {
+                        errorCount++;
+                        errors.add(Map.of("row", i + 1, "error", "成绩超出范围(0-100): " + score));
+                        continue;
+                    }
+
+                    // Calculate gradeLevel and gradePoint
+                    String gradeLevel = calcGradeLevel(score);
+                    BigDecimal gradePoint = calcGradePoint(score);
+                    int passed = score.compareTo(new BigDecimal("60")) >= 0 ? 1 : 0;
+
+                    // Upsert: find existing record by batchId + studentId
+                    LambdaQueryWrapper<StudentGradePO> existWrapper = new LambdaQueryWrapper<>();
+                    existWrapper.eq(StudentGradePO::getBatchId, batchId)
+                                .eq(StudentGradePO::getStudentId, studentId);
+                    StudentGradePO existing = gradeMapper.selectOne(existWrapper);
+
+                    if (existing != null) {
+                        // Update existing record
+                        existing.setTotalScore(score);
+                        existing.setGradeLevel(gradeLevel);
+                        existing.setGradePoint(gradePoint);
+                        existing.setPassed(passed);
+                        existing.setRemark(remark);
+                        existing.setGradeStatus(1);
+                        gradeMapper.updateById(existing);
+                    } else {
+                        // Insert new record
+                        StudentGradePO po = new StudentGradePO();
+                        po.setId(IdWorker.getId());
+                        po.setBatchId(batchId);
+                        po.setSemesterId(batch.getSemesterId());
+                        po.setCourseId(batch.getCourseId());
+                        po.setStudentId(studentId);
+                        po.setOrgUnitId(batch.getOrgUnitId());
+                        po.setTotalScore(score);
+                        po.setGradeLevel(gradeLevel);
+                        po.setGradePoint(gradePoint);
+                        po.setPassed(passed);
+                        po.setGradeStatus(1);
+                        po.setRemark(remark);
+                        po.setDeleted(0);
+                        gradeMapper.insert(po);
+                    }
+                    successCount++;
+                } catch (Exception e) {
+                    errorCount++;
+                    errors.add(Map.of("row", i + 1, "error", "处理异常: " + e.getMessage()));
+                }
+            }
+        }
+
+        Map<String, Object> result = new LinkedHashMap<>();
+        result.put("successCount", successCount);
+        result.put("errorCount", errorCount);
+        result.put("errors", errors);
+        return result;
+    }
+
+    // ---- Import helpers ----
+
+    private List<Map<String, Object>> queryStudentsForBatch(GradeBatchPO batch) {
+        Long orgUnitId = batch.getOrgUnitId();
+        if (orgUnitId != null) {
+            // orgUnitId is class_id in students table
+            try {
+                return jdbc.queryForList(
+                    "SELECT s.id, s.student_no, s.name, sc.name AS class_name " +
+                    "FROM students s " +
+                    "LEFT JOIN school_classes sc ON sc.id = s.class_id " +
+                    "WHERE s.class_id = ? AND s.deleted = 0 ORDER BY s.student_no",
+                    orgUnitId
+                );
+            } catch (Exception e) {
+                log.warn("Failed to query students by orgUnitId: {}", e.getMessage());
+            }
+        }
+
+        // Fallback: try courseId to find enrolled students
+        Long courseId = batch.getCourseId();
+        if (courseId != null) {
+            try {
+                return jdbc.queryForList(
+                    "SELECT DISTINCT s.id, s.student_no, s.name, sc.name AS class_name " +
+                    "FROM student_grades sg " +
+                    "JOIN students s ON s.id = sg.student_id " +
+                    "LEFT JOIN school_classes sc ON sc.id = s.class_id " +
+                    "WHERE sg.course_id = ? AND sg.deleted = 0 AND s.deleted = 0 " +
+                    "ORDER BY s.student_no",
+                    courseId
+                );
+            } catch (Exception e) {
+                log.warn("Failed to query students by courseId: {}", e.getMessage());
+            }
+        }
+
+        // Return empty list — template will have headers only
+        return Collections.emptyList();
+    }
+
+    private String getCellStringValue(Cell cell) {
+        if (cell == null) return null;
+        switch (cell.getCellType()) {
+            case STRING:
+                return cell.getStringCellValue().trim();
+            case NUMERIC:
+                // Avoid scientific notation for large numbers like student IDs
+                double numVal = cell.getNumericCellValue();
+                if (numVal == Math.floor(numVal) && !Double.isInfinite(numVal)) {
+                    return String.valueOf((long) numVal);
+                }
+                return BigDecimal.valueOf(numVal).toPlainString();
+            case BOOLEAN:
+                return String.valueOf(cell.getBooleanCellValue());
+            case FORMULA:
+                try {
+                    return BigDecimal.valueOf(cell.getNumericCellValue()).toPlainString();
+                } catch (Exception e) {
+                    return cell.getStringCellValue();
+                }
+            default:
+                return null;
+        }
+    }
+
+    private String calcGradeLevel(BigDecimal score) {
+        double s = score.doubleValue();
+        if (s >= 90) return "A";
+        if (s >= 85) return "B+";
+        if (s >= 82) return "B";
+        if (s >= 78) return "B-";
+        if (s >= 75) return "C+";
+        if (s >= 72) return "C";
+        if (s >= 68) return "C-";
+        if (s >= 64) return "D+";
+        if (s >= 60) return "D";
+        return "F";
+    }
+
+    private BigDecimal calcGradePoint(BigDecimal score) {
+        double s = score.doubleValue();
+        if (s >= 90) return new BigDecimal("4.0");
+        if (s >= 85) return new BigDecimal("3.7");
+        if (s >= 82) return new BigDecimal("3.3");
+        if (s >= 78) return new BigDecimal("3.0");
+        if (s >= 75) return new BigDecimal("2.7");
+        if (s >= 72) return new BigDecimal("2.3");
+        if (s >= 68) return new BigDecimal("2.0");
+        if (s >= 64) return new BigDecimal("1.5");
+        if (s >= 60) return new BigDecimal("1.0");
+        return BigDecimal.ZERO;
     }
 
     // ==================== Utility Methods ====================

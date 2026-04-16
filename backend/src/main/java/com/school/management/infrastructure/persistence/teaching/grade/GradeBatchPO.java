@@ -15,6 +15,7 @@ public class GradeBatchPO {
     private Long semesterId;
     private Long courseId;
     private Long orgUnitId;
+    @TableField(exist = false)
     private Long examBatchId;
     private Integer gradeType;
     private LocalDateTime startTime;

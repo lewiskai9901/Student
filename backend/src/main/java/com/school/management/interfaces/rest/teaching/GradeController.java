@@ -9,6 +9,7 @@ import com.school.management.infrastructure.persistence.teaching.grade.GradeBatc
 import com.school.management.infrastructure.persistence.teaching.grade.StudentGradePO;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
@@ -156,6 +157,23 @@ public class GradeController {
             @RequestParam Long orgUnitId,
             @RequestParam(required = false) Long semesterId) {
         return Result.success(gradeService.getRanking(orgUnitId, semesterId));
+    }
+
+    // ==================== 导入 ====================
+
+    @GetMapping("/batches/{batchId}/import-template")
+    @CasbinAccess(resource = "teaching:grade", action = "view")
+    public void downloadImportTemplate(@PathVariable Long batchId,
+                                       HttpServletResponse response) throws IOException {
+        gradeService.generateImportTemplate(batchId, response);
+    }
+
+    @PostMapping("/batches/{batchId}/import")
+    @CasbinAccess(resource = "teaching:grade", action = "edit")
+    public Result<Map<String, Object>> importGrades(
+            @PathVariable Long batchId,
+            @RequestParam("file") MultipartFile file) throws IOException {
+        return Result.success(gradeService.importGrades(batchId, file.getInputStream()));
     }
 
     // ==================== 导出 ====================
