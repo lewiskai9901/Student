@@ -13,6 +13,8 @@ public class GradeBatchPO {
     private String batchCode;
     private String batchName;
     private Long semesterId;
+    private Long courseId;
+    private Long orgUnitId;
     private Long examBatchId;
     private Integer gradeType;
     private LocalDateTime startTime;

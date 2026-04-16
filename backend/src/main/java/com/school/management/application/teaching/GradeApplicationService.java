@@ -66,6 +66,8 @@ public class GradeApplicationService {
         po.setBatchCode("GB" + id);
         po.setBatchName((String) data.get("batchName"));
         po.setSemesterId(toLong(data.get("semesterId")));
+        po.setCourseId(toLong(data.get("courseId")));
+        po.setOrgUnitId(toLong(data.get("orgUnitId")));
         po.setGradeType(toInt(data.get("gradeType"), 1));
         po.setStartTime(toLocalDateTime(data.get("startTime")));
         po.setEndTime(toLocalDateTime(data.get("endTime")));
@@ -83,6 +85,8 @@ public class GradeApplicationService {
 
         po.setBatchName((String) data.get("batchName"));
         po.setSemesterId(toLong(data.get("semesterId")));
+        po.setCourseId(toLong(data.get("courseId")));
+        po.setOrgUnitId(toLong(data.get("orgUnitId")));
         po.setGradeType(toIntOrNull(data.get("gradeType")));
         po.setStartTime(toLocalDateTime(data.get("startTime")));
         po.setEndTime(toLocalDateTime(data.get("endTime")));
