@@ -37,7 +37,7 @@ public class DataPermissionPolicyService {
      * Cache key uses sorted roleIds to avoid ordering issues.
      */
     @Cacheable(value = CACHE_NAME,
-            key = "'merged:' + #tenantId + ':' + T(java.util.stream.Collectors).joining(',', #roleIds.stream().sorted().map(T(String)::valueOf)) + ':' + #moduleCode",
+            key = "'merged:' + #tenantId + ':' + new java.util.TreeSet(#roleIds) + ':' + #moduleCode",
             unless = "#result == null")
     public MergedDataScope getMergedScope(Long tenantId, List<Long> roleIds, String moduleCode) {
         if (roleIds == null || roleIds.isEmpty()) {

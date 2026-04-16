@@ -3,8 +3,11 @@ package com.school.management.domain.access.model.valueobject;
 import com.school.management.domain.access.model.DataScope;
 import com.school.management.domain.access.model.entity.DataScopeItem;
 import com.school.management.domain.access.model.entity.RoleDataPermission;
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
+import lombok.NoArgsConstructor;
 
 import java.util.*;
 import java.util.stream.Collectors;
@@ -21,6 +24,8 @@ import java.util.stream.Collectors;
  */
 @Data
 @Builder
+@NoArgsConstructor
+@AllArgsConstructor
 public class MergedDataScope {
 
     /**
@@ -138,6 +143,7 @@ public class MergedDataScope {
     /**
      * 是否需要过滤数据
      */
+    @JsonIgnore
     public boolean needsFiltering() {
         return effectiveScope != DataScope.ALL;
     }
@@ -145,6 +151,7 @@ public class MergedDataScope {
     /**
      * 是否为ALL范围（无需过滤）
      */
+    @JsonIgnore
     public boolean isAllScope() {
         return effectiveScope == DataScope.ALL;
     }
@@ -152,6 +159,7 @@ public class MergedDataScope {
     /**
      * 是否为SELF范围
      */
+    @JsonIgnore
     public boolean isSelfScope() {
         return effectiveScope == DataScope.SELF;
     }
@@ -159,6 +167,7 @@ public class MergedDataScope {
     /**
      * 是否为CUSTOM范围
      */
+    @JsonIgnore
     public boolean isCustomScope() {
         return effectiveScope == DataScope.CUSTOM;
     }
@@ -173,6 +182,7 @@ public class MergedDataScope {
     /**
      * 获取组织单元ID集合
      */
+    @JsonIgnore
     public Set<Long> getOrgUnitIds() {
         return getScopeIds("ORG_UNIT");
     }
