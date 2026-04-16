@@ -11,7 +11,7 @@
     </div>
 
     <!-- Filter Bar -->
-    <div class="tm-filters">
+    <div class="tm-filters" style="display: flex; align-items: center; gap: 8px;">
       <select v-model="queryParams.semesterId" class="tm-select" @change="onFilterChange">
         <option :value="undefined">全部学期</option>
         <option v-for="sem in semesters" :key="sem.id" :value="sem.id">{{ sem.semesterName }}</option>
@@ -30,11 +30,13 @@
         <option :value="2">已审核</option>
         <option :value="3">已发布</option>
       </select>
+      <button class="tm-btn tm-btn-secondary" @click="showWeightDialog = true">加权总评</button>
     </div>
 
     <!-- Content: master-detail -->
     <div class="tm-table-wrap" style="display: flex; flex-direction: column; gap: 16px;">
       <GradeBatchList
+        :key="batchListKey"
         :semester-id="queryParams.semesterId"
         :grade-type="queryParams.gradeType"
         :status="queryParams.status"
@@ -52,6 +54,13 @@
         :batch-id="currentBatch?.id"
       />
     </div>
+
+    <!-- Weight Config Dialog -->
+    <WeightConfigDialog
+      v-model="showWeightDialog"
+      :semester-id="queryParams.semesterId"
+      @calculated="refreshBatches"
+    />
   </div>
 </template>
 
@@ -62,6 +71,7 @@ import type { GradeBatch } from '@/types/teaching'
 import GradeBatchList from './grade/GradeBatchList.vue'
 import GradeEntryPanel from './grade/GradeEntryPanel.vue'
 import GradeStatisticsPanel from './grade/GradeStatisticsPanel.vue'
+import WeightConfigDialog from './grade/WeightConfigDialog.vue'
 
 const sharedData = useSharedDataStore()
 const semesters = ref<any[]>([])
@@ -74,9 +84,16 @@ const queryParams = reactive({
 
 const currentBatch = ref<GradeBatch>()
 const entryBatch = ref<GradeBatch>()
+const showWeightDialog = ref(false)
+const batchListKey = ref(0)
 
 function onFilterChange() {
   currentBatch.value = undefined
+}
+
+function refreshBatches() {
+  // Force GradeBatchList to re-mount and reload data
+  batchListKey.value++
 }
 
 function onEnterGrades(batch: GradeBatch) {

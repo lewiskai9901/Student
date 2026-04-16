@@ -364,6 +364,16 @@ export const gradeApi = {
       headers: { 'Content-Type': 'multipart/form-data' },
     })
   },
+
+  // 加权配置
+  getWeightConfigs: (semesterId: number, courseId: number) =>
+    http.get<{ componentType: number; weightPercent: number }[]>(`${BASE_URL}/grades/weight-configs`, { params: { semesterId, courseId } }),
+
+  saveWeightConfigs: (data: { semesterId: number; courseId: number; configs: Array<{ componentType: number; weightPercent: number }> }) =>
+    http.put(`${BASE_URL}/grades/weight-configs`, data),
+
+  calculateOverall: (data: { semesterId: number; courseId: number }) =>
+    http.post<{ batchId: number; calculated: number; skipped: number }>(`${BASE_URL}/grades/calculate-overall`, data),
 }
 
 // =====================================================
