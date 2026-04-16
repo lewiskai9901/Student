@@ -21,6 +21,7 @@ import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.io.InputStream;
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
@@ -794,6 +795,137 @@ public class GradeApplicationService {
         if (s >= 64) return new BigDecimal("1.5");
         if (s >= 60) return new BigDecimal("1.0");
         return BigDecimal.ZERO;
+    }
+
+    // ==================== Weight Config & Overall Calculation ====================
+
+    public List<Map<String, Object>> getWeightConfigs(Long semesterId, Long courseId) {
+        return jdbc.queryForList(
+            "SELECT id, semester_id, course_id, component_type, weight_percent " +
+            "FROM grade_weight_configs WHERE semester_id = ? AND course_id = ? ORDER BY component_type",
+            semesterId, courseId);
+    }
+
+    @Transactional
+    public void saveWeightConfigs(Long semesterId, Long courseId, List<Map<String, Object>> configs) {
+        int totalWeight = 0;
+        for (Map<String, Object> c : configs) {
+            totalWeight += toInt(c.get("weightPercent"), 0);
+        }
+        if (totalWeight != 100) {
+            throw new RuntimeException("权重之和必须为100%，当前为" + totalWeight + "%");
+        }
+        jdbc.update("DELETE FROM grade_weight_configs WHERE semester_id = ? AND course_id = ?",
+            semesterId, courseId);
+        for (Map<String, Object> c : configs) {
+            jdbc.update(
+                "INSERT INTO grade_weight_configs (semester_id, course_id, component_type, weight_percent) VALUES (?, ?, ?, ?)",
+                semesterId, courseId, toInt(c.get("componentType"), 0), toInt(c.get("weightPercent"), 0));
+        }
+    }
+
+    @Transactional
+    public Map<String, Object> calculateOverallGrades(Long semesterId, Long courseId, Long currentUserId) {
+        // 1. Read weight configs
+        List<Map<String, Object>> weights = getWeightConfigs(semesterId, courseId);
+        if (weights.isEmpty()) throw new RuntimeException("请先配置成绩权重");
+
+        Map<Integer, Integer> weightMap = new HashMap<>();
+        for (Map<String, Object> w : weights) {
+            weightMap.put(toInt(w.get("component_type"), 0), toInt(w.get("weight_percent"), 0));
+        }
+
+        // 2. Query scores by type
+        String sql = "SELECT sg.student_id, gb.grade_type, sg.total_score, sg.org_unit_id " +
+                "FROM student_grades sg JOIN grade_batches gb ON sg.batch_id = gb.id " +
+                "WHERE gb.semester_id = ? AND sg.course_id = ? AND sg.deleted = 0 " +
+                "AND gb.grade_type IN (1,2,3)";
+        List<Map<String, Object>> scores = jdbc.queryForList(sql, semesterId, courseId);
+
+        // Group by student
+        Map<Long, Map<Integer, BigDecimal>> studentScores = new HashMap<>();
+        Map<Long, Long> studentOrgUnits = new HashMap<>();
+        for (Map<String, Object> row : scores) {
+            Long sid = toLong(row.get("student_id"));
+            int type = toInt(row.get("grade_type"), 0);
+            BigDecimal score = toBigDecimal(row.get("total_score"));
+            studentScores.computeIfAbsent(sid, k -> new HashMap<>()).put(type, score);
+            studentOrgUnits.putIfAbsent(sid, toLong(row.get("org_unit_id")));
+        }
+
+        // 3. Get or create overall batch (grade_type=4)
+        Long overallBatchId = getOrCreateOverallBatch(semesterId, courseId, currentUserId);
+
+        // 4. Calculate weighted scores
+        int calculated = 0;
+        int skipped = 0;
+        for (Map.Entry<Long, Map<Integer, BigDecimal>> entry : studentScores.entrySet()) {
+            Long studentId = entry.getKey();
+            Map<Integer, BigDecimal> typeScores = entry.getValue();
+
+            BigDecimal overall = BigDecimal.ZERO;
+            boolean complete = true;
+            for (Map.Entry<Integer, Integer> wEntry : weightMap.entrySet()) {
+                BigDecimal score = typeScores.get(wEntry.getKey());
+                if (score == null) { complete = false; break; }
+                overall = overall.add(score.multiply(BigDecimal.valueOf(wEntry.getValue()))
+                        .divide(BigDecimal.valueOf(100), 1, RoundingMode.HALF_UP));
+            }
+            if (!complete) { skipped++; continue; }
+            overall = overall.setScale(1, RoundingMode.HALF_UP);
+
+            // Upsert overall grade
+            String gradeLevel = calcGradeLevel(overall);
+            BigDecimal gradePoint = calcGradePoint(overall);
+            boolean passed = overall.compareTo(new BigDecimal("60")) >= 0;
+
+            LambdaQueryWrapper<StudentGradePO> qw = new LambdaQueryWrapper<StudentGradePO>()
+                    .eq(StudentGradePO::getBatchId, overallBatchId)
+                    .eq(StudentGradePO::getStudentId, studentId);
+            StudentGradePO existing = gradeMapper.selectOne(qw);
+            if (existing != null) {
+                existing.setTotalScore(overall);
+                existing.setGradeLevel(gradeLevel);
+                existing.setGradePoint(gradePoint);
+                existing.setPassed(passed ? 1 : 0);
+                existing.setGradeStatus(1);
+                existing.setUpdatedAt(LocalDateTime.now());
+                gradeMapper.updateById(existing);
+            } else {
+                StudentGradePO po = new StudentGradePO();
+                po.setId(IdWorker.getId());
+                po.setBatchId(overallBatchId);
+                po.setSemesterId(semesterId);
+                po.setCourseId(courseId);
+                po.setStudentId(studentId);
+                po.setOrgUnitId(studentOrgUnits.get(studentId));
+                po.setTotalScore(overall);
+                po.setGradeLevel(gradeLevel);
+                po.setGradePoint(gradePoint);
+                po.setPassed(passed ? 1 : 0);
+                po.setGradeStatus(1);
+                po.setCreatedAt(LocalDateTime.now());
+                po.setUpdatedAt(LocalDateTime.now());
+                gradeMapper.insert(po);
+            }
+            calculated++;
+        }
+
+        return Map.of("batchId", overallBatchId, "calculated", calculated, "skipped", skipped);
+    }
+
+    private Long getOrCreateOverallBatch(Long semesterId, Long courseId, Long userId) {
+        String sql = "SELECT id FROM grade_batches WHERE semester_id = ? AND course_id = ? AND grade_type = 4 LIMIT 1";
+        try {
+            return jdbc.queryForObject(sql, Long.class, semesterId, courseId);
+        } catch (Exception e) {
+            Long id = IdWorker.getId();
+            jdbc.update(
+                "INSERT INTO grade_batches (id, batch_code, batch_name, semester_id, course_id, grade_type, status, created_by, created_at, updated_at) " +
+                "VALUES (?, ?, ?, ?, ?, 4, 0, ?, NOW(), NOW())",
+                id, "GB" + id, "总评", semesterId, courseId, userId);
+            return id;
+        }
     }
 
     // ==================== Utility Methods ====================

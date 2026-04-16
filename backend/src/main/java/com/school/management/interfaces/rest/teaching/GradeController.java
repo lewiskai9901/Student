@@ -187,4 +187,33 @@ public class GradeController {
             HttpServletResponse response) throws IOException {
         gradeService.exportGrades(semesterId, orgUnitId, courseId, response);
     }
+
+    // ==================== 加权配置 & 总评计算 ====================
+
+    @GetMapping("/weight-configs")
+    @CasbinAccess(resource = "teaching:grade", action = "view")
+    public Result<List<Map<String, Object>>> getWeightConfigs(
+            @RequestParam Long semesterId, @RequestParam Long courseId) {
+        return Result.success(gradeService.getWeightConfigs(semesterId, courseId));
+    }
+
+    @PutMapping("/weight-configs")
+    @CasbinAccess(resource = "teaching:grade", action = "edit")
+    public Result<Void> saveWeightConfigs(@RequestBody Map<String, Object> body) {
+        Long semesterId = Long.valueOf(body.get("semesterId").toString());
+        Long courseId = Long.valueOf(body.get("courseId").toString());
+        @SuppressWarnings("unchecked")
+        List<Map<String, Object>> configs = (List<Map<String, Object>>) body.get("configs");
+        gradeService.saveWeightConfigs(semesterId, courseId, configs);
+        return Result.success(null);
+    }
+
+    @PostMapping("/calculate-overall")
+    @CasbinAccess(resource = "teaching:grade", action = "edit")
+    public Result<Map<String, Object>> calculateOverall(@RequestBody Map<String, Object> body) {
+        Long semesterId = Long.valueOf(body.get("semesterId").toString());
+        Long courseId = Long.valueOf(body.get("courseId").toString());
+        Long userId = SecurityUtils.getCurrentUserId();
+        return Result.success(gradeService.calculateOverallGrades(semesterId, courseId, userId));
+    }
 }
