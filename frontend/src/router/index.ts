@@ -100,19 +100,19 @@ const routes: RouteRecordRaw[] = [
             path: '/message/event-types',
             name: 'EventTypes',
             component: () => import('@/views/system/EventTypeManagementView.vue'),
-            meta: { title: '事件类型', requiresAuth: true, order: 2 }
+            meta: { title: '事件类型', requiresAuth: true, permission: 'system:config:view', order: 2 }
           },
           {
             path: '/message/triggers',
             name: 'EventTriggers',
             component: () => import('@/views/system/EventTriggerView.vue'),
-            meta: { title: '事件触发器', requiresAuth: true, order: 3 }
+            meta: { title: '事件触发器', requiresAuth: true, permission: 'system:config:view', order: 3 }
           },
           {
             path: '/message/subscriptions',
             name: 'MessageSubscriptions',
             component: () => import('@/views/message/MessageConfigView.vue'),
-            meta: { title: '订阅与模板', requiresAuth: true, order: 4 }
+            meta: { title: '订阅与模板', requiresAuth: true, permission: 'system:config:view', order: 4 }
           },
         ]
       },
@@ -174,6 +174,7 @@ const routes: RouteRecordRaw[] = [
             meta: {
               title: '专业管理',
               requiresAuth: true,
+              permission: 'academic:major:view',
               order: 1
             }
           },
@@ -184,6 +185,7 @@ const routes: RouteRecordRaw[] = [
             meta: {
               title: '课程管理',
               requiresAuth: true,
+              permission: 'academic:course:view',
               order: 2
             }
           },
@@ -194,6 +196,7 @@ const routes: RouteRecordRaw[] = [
             meta: {
               title: '培养方案',
               requiresAuth: true,
+              permission: 'academic:curriculum:view',
               order: 3
             }
           }
@@ -220,6 +223,7 @@ const routes: RouteRecordRaw[] = [
             meta: {
               title: '招生管理',
               requiresAuth: true,
+              permission: 'enrollment:view',
               order: 0
             }
           },
@@ -263,6 +267,7 @@ const routes: RouteRecordRaw[] = [
             meta: {
               title: '考勤管理',
               requiresAuth: true,
+              permission: 'student:info:view',
               order: 4
             }
           },
@@ -273,6 +278,7 @@ const routes: RouteRecordRaw[] = [
             meta: {
               title: '学业预警',
               requiresAuth: true,
+              permission: 'student:info:view',
               order: 5
             }
           }
@@ -793,6 +799,7 @@ const routes: RouteRecordRaw[] = [
             meta: {
               title: '教务工作台',
               requiresAuth: true,
+              permission: 'teaching:manage',
               order: 0
             }
           },
@@ -803,6 +810,7 @@ const routes: RouteRecordRaw[] = [
             meta: {
               title: '校历管理',
               requiresAuth: true,
+              permission: 'calendar:view',
               order: 1
             }
           },
@@ -824,6 +832,7 @@ const routes: RouteRecordRaw[] = [
             meta: {
               title: '开课管理',
               requiresAuth: true,
+              permission: 'teaching:manage',
               hidden: true,
               order: 4
             }
@@ -835,6 +844,7 @@ const routes: RouteRecordRaw[] = [
             meta: {
               title: '排课中心',
               requiresAuth: true,
+              permission: 'teaching:manage',
               hidden: true,
               order: 5
             }
@@ -846,6 +856,7 @@ const routes: RouteRecordRaw[] = [
             meta: {
               title: '教学任务',
               requiresAuth: true,
+              permission: 'teaching:manage',
               hidden: true,
               order: 7
             }
@@ -857,6 +868,7 @@ const routes: RouteRecordRaw[] = [
             meta: {
               title: '考试管理',
               requiresAuth: true,
+              permission: 'teaching:manage',
               order: 8
             }
           },
@@ -867,6 +879,7 @@ const routes: RouteRecordRaw[] = [
             meta: {
               title: '成绩管理',
               requiresAuth: true,
+              permission: 'teaching:manage',
               order: 9
             }
           }
