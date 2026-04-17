@@ -7,8 +7,7 @@ import com.school.management.application.shared.TypeTreeBuilder.TypeTreeNode;
 import com.school.management.domain.organization.model.entity.OrgCategory;
 import com.school.management.domain.organization.model.entity.OrgType;
 import com.school.management.domain.organization.repository.OrgUnitTypeRepository;
-import com.school.management.domain.place.repository.UniversalPlaceTypeRepository;
-import com.school.management.domain.user.repository.UserTypeRepository;
+import com.school.management.domain.shared.repository.EntityTypeConfigRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -30,8 +29,7 @@ public class OrgUnitTypeApplicationService {
             "text", "number", "date", "datetime", "boolean", "select", "multiselect", "textarea", "radio");
 
     private final OrgUnitTypeRepository orgUnitTypeRepository;
-    private final UserTypeRepository userTypeRepository;
-    private final UniversalPlaceTypeRepository placeTypeRepository;
+    private final EntityTypeConfigRepository entityTypeConfigRepository;
 
     @Transactional
     public OrgType createOrgUnitType(CreateOrgUnitTypeCommand command) {
@@ -170,7 +168,7 @@ public class OrgUnitTypeApplicationService {
         if (defaultUserTypeCodes != null && !defaultUserTypeCodes.isEmpty()) {
             for (String code : defaultUserTypeCodes) {
                 if (code == null || code.isBlank()) continue;
-                if (!userTypeRepository.existsByTypeCode(code)) {
+                if (!entityTypeConfigRepository.existsByTypeCode("USER", code)) {
                     throw new IllegalArgumentException("引用的用户类型不存在: " + code);
                 }
             }
@@ -178,7 +176,7 @@ public class OrgUnitTypeApplicationService {
         if (defaultPlaceTypeCodes != null && !defaultPlaceTypeCodes.isEmpty()) {
             for (String code : defaultPlaceTypeCodes) {
                 if (code == null || code.isBlank()) continue;
-                if (!placeTypeRepository.existsByTypeCode(code)) {
+                if (!entityTypeConfigRepository.existsByTypeCode("PLACE", code)) {
                     throw new IllegalArgumentException("引用的场所类型不存在: " + code);
                 }
             }

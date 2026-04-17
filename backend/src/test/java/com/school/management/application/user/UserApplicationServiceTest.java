@@ -9,11 +9,11 @@ import com.school.management.domain.access.repository.UserRoleRepository;
 import com.school.management.domain.place.repository.UniversalPlaceOccupantRepository;
 import com.school.management.domain.place.repository.UniversalPlaceRepository;
 import com.school.management.domain.shared.event.DomainEventPublisher;
+import com.school.management.domain.shared.model.EntityTypeConfig;
+import com.school.management.domain.shared.repository.EntityTypeConfigRepository;
 import com.school.management.domain.user.model.aggregate.User;
-import com.school.management.domain.user.model.entity.UserType;
 import com.school.management.domain.user.model.valueobject.UserStatus;
 import com.school.management.domain.user.repository.UserRepository;
-import com.school.management.domain.user.repository.UserTypeRepository;
 import com.school.management.exception.BusinessException;
 import com.school.management.security.JwtTokenService;
 import org.junit.jupiter.api.BeforeEach;
@@ -50,7 +50,7 @@ class UserApplicationServiceTest {
     private UserRepository userRepository;
 
     @Mock
-    private UserTypeRepository userTypeRepository;
+    private EntityTypeConfigRepository entityTypeConfigRepository;
 
     @Mock
     private RoleRepository roleRepository;
@@ -152,8 +152,12 @@ class UserApplicationServiceTest {
                     .build();
 
             when(userRepository.existsByUsername("testuser")).thenReturn(false);
-            when(userTypeRepository.findByTypeCode("TEACHER"))
-                    .thenReturn(Optional.of(UserType.builder().typeCode("TEACHER").typeName("教师").build()));
+            when(entityTypeConfigRepository.findByTypeCode("USER", "TEACHER"))
+                    .thenReturn(Optional.of(EntityTypeConfig.builder()
+                            .entityType("USER")
+                            .typeCode("TEACHER")
+                            .typeName("教师")
+                            .build()));
             when(passwordEncoder.encode("password123")).thenReturn("encodedPassword");
             when(userRepository.save(any(User.class))).thenAnswer(inv -> {
                 User u = inv.getArgument(0);

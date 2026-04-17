@@ -7,12 +7,11 @@ import com.school.management.domain.place.model.entity.UniversalPlaceOccupant;
 import com.school.management.domain.place.model.valueobject.PlaceStatus;
 import com.school.management.domain.place.repository.UniversalPlaceOccupantRepository;
 import com.school.management.domain.place.repository.UniversalPlaceRepository;
-import com.school.management.domain.place.repository.UniversalPlaceTypeRepository;
 import com.school.management.domain.place.service.PlaceInheritanceService;
+import com.school.management.domain.shared.repository.EntityTypeConfigRepository;
 import com.school.management.domain.user.model.aggregate.User;
 import com.school.management.domain.user.model.valueobject.UserStatus;
 import com.school.management.domain.user.repository.UserRepository;
-import com.school.management.domain.user.repository.UserTypeRepository;
 import com.school.management.infrastructure.activity.ActivityEventPublisher;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -53,11 +52,10 @@ import static org.mockito.Mockito.when;
 class UniversalPlaceCheckInTest {
 
     @Mock UniversalPlaceRepository placeRepository;
-    @Mock UniversalPlaceTypeRepository placeTypeRepository;
+    @Mock EntityTypeConfigRepository entityTypeConfigRepository;
     @Mock UniversalPlaceOccupantRepository occupantRepository;
     @Mock OrgUnitRepository orgUnitRepository;
     @Mock UserRepository userRepository;
-    @Mock UserTypeRepository userTypeRepository;
     @Mock AccessRelationRepository accessRelationRepository;
     @Mock PlaceInheritanceService inheritanceService;
     @Mock ActivityEventPublisher activityEventPublisher;

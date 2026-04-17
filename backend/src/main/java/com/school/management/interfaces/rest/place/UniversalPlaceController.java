@@ -3,8 +3,8 @@ package com.school.management.interfaces.rest.place;
 import com.school.management.application.place.UniversalPlaceApplicationService;
 import com.school.management.application.place.UniversalPlaceApplicationService.*;
 import com.school.management.common.result.Result;
-import com.school.management.domain.place.model.entity.UniversalPlaceType;
 import com.school.management.domain.place.model.valueobject.PlaceStatus;
+import com.school.management.domain.shared.model.EntityTypeConfig;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -79,14 +79,14 @@ public class UniversalPlaceController {
     @GetMapping("/allowed-child-types")
     @Operation(summary = "获取允许创建的子类型（根空间）")
     @CasbinAccess(resource = "place", action = "view")
-    public Result<List<UniversalPlaceType>> getAllowedChildTypesForRoot() {
+    public Result<List<EntityTypeConfig>> getAllowedChildTypesForRoot() {
         return Result.success(placeService.getAllowedChildTypes(null));
     }
 
     @GetMapping("/{parentId}/allowed-child-types")
     @Operation(summary = "获取允许创建的子类型")
     @CasbinAccess(resource = "place", action = "view")
-    public Result<List<UniversalPlaceType>> getAllowedChildTypes(@PathVariable Long parentId) {
+    public Result<List<EntityTypeConfig>> getAllowedChildTypes(@PathVariable Long parentId) {
         return Result.success(placeService.getAllowedChildTypes(parentId));
     }
 

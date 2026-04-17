@@ -3,9 +3,9 @@ package com.school.management.application.user;
 import com.school.management.application.access.AccessApplicationService;
 import com.school.management.domain.access.repository.RoleRepository;
 import com.school.management.domain.access.repository.UserRoleRepository;
+import com.school.management.domain.shared.model.EntityTypeConfig;
+import com.school.management.domain.shared.repository.EntityTypeConfigRepository;
 import com.school.management.domain.user.event.UserCreatedEvent;
-import com.school.management.domain.user.model.entity.UserType;
-import com.school.management.domain.user.repository.UserTypeRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
@@ -31,7 +31,7 @@ import java.util.List;
 @RequiredArgsConstructor
 public class UserTypeDefaultProvisioner {
 
-    private final UserTypeRepository userTypeRepository;
+    private final EntityTypeConfigRepository entityTypeConfigRepository;
     private final RoleRepository roleRepository;
     private final UserRoleRepository userRoleRepository;
     private final AccessApplicationService accessApplicationService;
@@ -55,14 +55,14 @@ public class UserTypeDefaultProvisioner {
             return;
         }
 
-        UserType type = userTypeRepository.findByTypeCode(typeCode).orElse(null);
+        EntityTypeConfig type = entityTypeConfigRepository.findByTypeCode("USER", typeCode).orElse(null);
         if (type == null) {
             log.warn("[UserType默认角色] 用户类型不存在: {}", typeCode);
             return;
         }
 
-        List<String> codes = type.getDefaultRoleCodeList();
-        if (codes.isEmpty()) {
+        List<String> codes = type.getDefaultRoleCodes();
+        if (codes == null || codes.isEmpty()) {
             return;
         }
 

@@ -1,6 +1,6 @@
 package com.school.management.application.user;
 
-import com.school.management.domain.user.model.entity.UserType;
+import com.school.management.domain.shared.ConfigurableType;
 import org.springframework.stereotype.Service;
 
 import java.util.Collections;
@@ -44,7 +44,7 @@ public class CapabilityPermissionService {
      * 读取 UserType.features 中值为 true 且在白名单内的 canXxx，返回对应的 SELF 权限编码列表。
      * features 为 null 或空 → 返回空列表。
      */
-    public List<String> getCapabilityPermissionCodes(UserType type) {
+    public List<String> getCapabilityPermissionCodes(ConfigurableType type) {
         if (type == null) {
             return Collections.emptyList();
         }

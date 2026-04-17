@@ -134,7 +134,7 @@ public interface UniversalPlaceMapper extends BaseMapper<UniversalPlacePO> {
             "o.unit_name AS org_unit_name, " +
             "u.real_name AS responsible_user_name " +
             "FROM places s " +
-            "LEFT JOIN place_types st ON s.type_code = st.type_code AND st.deleted = 0 " +
+            "LEFT JOIN entity_type_configs st ON st.entity_type = 'PLACE' AND s.type_code = st.type_code AND st.deleted = 0 " +
             "LEFT JOIN places p ON s.parent_id = p.id AND p.deleted = 0 " +
             "LEFT JOIN org_units o ON s.org_unit_id = o.id AND o.deleted = 0 " +
             "LEFT JOIN users u ON s.responsible_user_id = u.id AND u.deleted = 0 " +

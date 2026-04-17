@@ -4,20 +4,20 @@ import com.school.management.domain.organization.model.OrgUnit;
 import com.school.management.domain.organization.repository.OrgUnitRepository;
 import com.school.management.domain.place.model.aggregate.UniversalPlace;
 import com.school.management.domain.place.model.entity.UniversalPlaceOccupant;
-import com.school.management.domain.place.model.entity.UniversalPlaceType;
 import com.school.management.domain.place.model.valueobject.PlaceStatus;
 import com.school.management.domain.place.repository.UniversalPlaceOccupantRepository;
 import com.school.management.domain.place.repository.UniversalPlaceRepository;
-import com.school.management.domain.place.repository.UniversalPlaceTypeRepository;
 import com.school.management.domain.place.service.PlaceInheritanceService;
 import com.school.management.domain.access.model.entity.AccessRelation;
 import com.school.management.domain.access.repository.AccessRelationRepository;
+import com.school.management.domain.shared.model.EntityTypeConfig;
 import com.school.management.domain.shared.model.valueobject.FieldChange;
+import com.school.management.domain.shared.repository.EntityTypeConfigRepository;
 import com.school.management.domain.user.model.aggregate.User;
-import com.school.management.domain.user.model.entity.UserType;
 import com.school.management.domain.user.repository.UserRepository;
-import com.school.management.domain.user.repository.UserTypeRepository;
 import com.school.management.infrastructure.activity.ActivityEventPublisher;
+import com.school.management.infrastructure.extension.ExtensionContext;
+import com.school.management.infrastructure.extension.ExtensionDispatcher;
 import com.school.management.application.event.TriggerService;
 import lombok.Data;
 import lombok.RequiredArgsConstructor;
@@ -38,17 +38,19 @@ import java.util.stream.Collectors;
 public class UniversalPlaceApplicationService {
 
     private final UniversalPlaceRepository placeRepository;
-    private final UniversalPlaceTypeRepository placeTypeRepository;
+    private final EntityTypeConfigRepository entityTypeConfigRepository;
     private final UniversalPlaceOccupantRepository occupantRepository;
     private final OrgUnitRepository orgUnitRepository;
     private final UserRepository userRepository;
-    private final UserTypeRepository userTypeRepository;
     private final AccessRelationRepository accessRelationRepository;
     private final PlaceInheritanceService inheritanceService;
     private final ActivityEventPublisher activityEventPublisher;
 
     @Autowired(required = false)
     private TriggerService triggerService;
+
+    @Autowired(required = false)
+    private ExtensionDispatcher extensionDispatcher;
 
     // ==================== 查询 ====================
 
@@ -127,20 +129,22 @@ public class UniversalPlaceApplicationService {
      * 获取允许创建的子类型
      */
     @Transactional(readOnly = true)
-    public List<UniversalPlaceType> getAllowedChildTypes(Long parentId) {
+    public List<EntityTypeConfig> getAllowedChildTypes(Long parentId) {
         if (parentId == null) {
-            // 根空间，返回所有根类型
-            return placeTypeRepository.findAllRootTypes();
+            // 根空间：所有 enabled 且 ui_config.isRootType == true 的 PLACE 类型
+            return entityTypeConfigRepository.findAllEnabled("PLACE").stream()
+                    .filter(this::isRootPlaceType)
+                    .collect(Collectors.toList());
         }
         UniversalPlace parent = placeRepository.findById(parentId)
                 .orElseThrow(() -> new IllegalArgumentException("父空间不存在"));
-        UniversalPlaceType parentType = placeTypeRepository.findByTypeCode(parent.getTypeCode())
+        EntityTypeConfig parentType = entityTypeConfigRepository.findByTypeCode("PLACE", parent.getTypeCode())
                 .orElseThrow(() -> new IllegalArgumentException("父空间类型不存在"));
         List<String> allowedCodes = parentType.getAllowedChildTypeCodes();
         if (allowedCodes == null || allowedCodes.isEmpty()) {
             return new ArrayList<>();
         }
-        return placeTypeRepository.findByTypeCodes(allowedCodes);
+        return entityTypeConfigRepository.findByTypeCodes("PLACE", allowedCodes);
     }
 
     /**
@@ -216,7 +220,7 @@ public class UniversalPlaceApplicationService {
     @Transactional
     public PlaceDTO createPlace(CreatePlaceCommand command) {
         // 验证类型
-        UniversalPlaceType placeType = placeTypeRepository.findByTypeCode(command.getTypeCode())
+        EntityTypeConfig placeType = entityTypeConfigRepository.findByTypeCode("PLACE", command.getTypeCode())
                 .orElseThrow(() -> new IllegalArgumentException("空间类型不存在: " + command.getTypeCode()));
 
         if (!placeType.isEnabled()) {
@@ -241,7 +245,7 @@ public class UniversalPlaceApplicationService {
                     .orElseThrow(() -> new IllegalArgumentException("父空间不存在"));
 
             // 验证是否允许创建此类型的子空间
-            UniversalPlaceType parentType = placeTypeRepository.findByTypeCode(parent.getTypeCode())
+            EntityTypeConfig parentType = entityTypeConfigRepository.findByTypeCode("PLACE", parent.getTypeCode())
                     .orElseThrow(() -> new IllegalArgumentException("父空间类型不存在"));
 
             List<String> allowedChildren = parentType.getAllowedChildTypeCodes();
@@ -250,7 +254,7 @@ public class UniversalPlaceApplicationService {
             }
         } else {
             // 根空间必须是根类型
-            if (!placeType.isRootType()) {
+            if (!isRootPlaceType(placeType)) {
                 throw new IllegalArgumentException("此类型不能作为根空间");
             }
         }
@@ -289,6 +293,8 @@ public class UniversalPlaceApplicationService {
             saved.setPath("/" + saved.getId() + "/");
         }
         saved = placeRepository.save(saved);
+
+        firePlaceLifecycle("afterCreate", saved, null);
 
         return toDTO(saved);
     }
@@ -348,6 +354,7 @@ public class UniversalPlaceApplicationService {
         }
 
         UniversalPlace saved = placeRepository.save(place);
+        firePlaceLifecycle("afterUpdate", saved, null);
         return toDTO(saved);
     }
 
@@ -435,10 +442,57 @@ public class UniversalPlaceApplicationService {
             throw new IllegalArgumentException("场所有占用记录，请先清退后再删除");
         }
 
+        firePlaceLifecycle("beforeDelete", place, null);
         placeRepository.deleteById(id);
+        firePlaceLifecycle("afterDelete", place, null);
     }
 
     // ==================== 私有方法 ====================
+
+    private boolean isRootPlaceType(EntityTypeConfig t) {
+        if (t == null || t.getUiConfig() == null) return false;
+        Object v = t.getUiConfig().get("isRootType");
+        if (v instanceof Boolean) return (Boolean) v;
+        return v != null && Boolean.parseBoolean(v.toString());
+    }
+
+    private String placeCapacityUnit(EntityTypeConfig t) {
+        if (t == null || t.getUiConfig() == null) return null;
+        Object v = t.getUiConfig().get("capacityUnit");
+        return v != null ? v.toString() : null;
+    }
+
+    private void firePlaceLifecycle(String phase, UniversalPlace place, Long operatorId) {
+        if (extensionDispatcher == null || place == null || place.getTypeCode() == null) return;
+        try {
+            ExtensionContext ctx = ExtensionContext.builder()
+                    .entityType("PLACE")
+                    .typeCode(place.getTypeCode())
+                    .entityId(place.getId())
+                    .entityName(place.getPlaceName())
+                    .parentId(place.getParentId())
+                    .operatorId(operatorId)
+                    .build();
+            switch (phase) {
+                case "afterCreate":
+                    extensionDispatcher.fireAfterCreate("PLACE", place.getTypeCode(), ctx);
+                    break;
+                case "afterUpdate":
+                    extensionDispatcher.fireAfterUpdate("PLACE", place.getTypeCode(), ctx);
+                    break;
+                case "beforeDelete":
+                    extensionDispatcher.fireBeforeDelete("PLACE", place.getTypeCode(), ctx);
+                    break;
+                case "afterDelete":
+                    extensionDispatcher.fireAfterDelete("PLACE", place.getTypeCode(), ctx);
+                    break;
+                default:
+                    break;
+            }
+        } catch (Exception e) {
+            log.warn("SPI PLACE {} 异常: {}", phase, e.getMessage());
+        }
+    }
 
     private PlaceTreeNode buildTreeNode(UniversalPlace place) {
         PlaceTreeNode node = populateTreeNode(place);
@@ -536,13 +590,13 @@ public class UniversalPlaceApplicationService {
         }
 
         // 获取类型信息
-        placeTypeRepository.findByTypeCode(place.getTypeCode()).ifPresent(type -> {
+        entityTypeConfigRepository.findByTypeCode("PLACE", place.getTypeCode()).ifPresent(type -> {
             node.setTypeName(type.getTypeName());
-            node.setHasCapacity(type.isHasCapacity());
-            node.setBookable(type.isBookable());
-            node.setAssignable(type.isAssignable());
-            node.setOccupiable(type.isOccupiable());
-            node.setCapacityUnit(type.getCapacityUnit());
+            node.setHasCapacity(type.hasFeature("hasCapacity"));
+            node.setBookable(type.hasFeature("bookable"));
+            node.setAssignable(type.hasFeature("assignable"));
+            node.setOccupiable(type.hasFeature("occupiable"));
+            node.setCapacityUnit(placeCapacityUnit(type));
             node.setLeaf(type.getAllowedChildTypeCodes() == null || type.getAllowedChildTypeCodes().isEmpty());
         });
 
@@ -567,13 +621,13 @@ public class UniversalPlaceApplicationService {
         dto.setAttributes(place.getAttributes());
 
         // 获取类型信息
-        placeTypeRepository.findByTypeCode(place.getTypeCode()).ifPresent(type -> {
+        entityTypeConfigRepository.findByTypeCode("PLACE", place.getTypeCode()).ifPresent(type -> {
             dto.setTypeName(type.getTypeName());
-            dto.setHasCapacity(type.isHasCapacity());
-            dto.setBookable(type.isBookable());
-            dto.setAssignable(type.isAssignable());
-            dto.setOccupiable(type.isOccupiable());
-            dto.setCapacityUnit(type.getCapacityUnit());
+            dto.setHasCapacity(type.hasFeature("hasCapacity"));
+            dto.setBookable(type.hasFeature("bookable"));
+            dto.setAssignable(type.hasFeature("assignable"));
+            dto.setOccupiable(type.hasFeature("occupiable"));
+            dto.setCapacityUnit(placeCapacityUnit(type));
         });
 
         return dto;
@@ -896,7 +950,7 @@ public class UniversalPlaceApplicationService {
                 dto.setGender(user.getGender());
                 // 查用户类型名称
                 if (user.getUserTypeCode() != null) {
-                    userTypeRepository.findByTypeCode(user.getUserTypeCode())
+                    entityTypeConfigRepository.findByTypeCode("USER", user.getUserTypeCode())
                             .ifPresent(ut -> dto.setUserTypeName(ut.getTypeName()));
                 }
                 // 查当前组织

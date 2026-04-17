@@ -64,7 +64,7 @@ public class CreateUserCommand {
     private Long orgUnitId;
 
     /**
-     * 用户类型编码（引用 user_types 表）
+     * 用户类型编码（引用 entity_type_configs WHERE entity_type='USER'）
      */
     private String userTypeCode;
 

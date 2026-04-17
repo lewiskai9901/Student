@@ -11,13 +11,16 @@ import com.school.management.domain.access.repository.UserRoleRepository;
 import com.school.management.domain.place.model.entity.UniversalPlaceOccupant;
 import com.school.management.domain.place.repository.UniversalPlaceOccupantRepository;
 import com.school.management.domain.place.repository.UniversalPlaceRepository;
+import com.school.management.domain.shared.model.EntityTypeConfig;
+import com.school.management.domain.shared.repository.EntityTypeConfigRepository;
 import com.school.management.domain.user.model.aggregate.User;
-import com.school.management.domain.user.model.entity.UserType;
 import com.school.management.domain.user.repository.UserRepository;
-import com.school.management.domain.user.repository.UserTypeRepository;
 import com.school.management.exception.BusinessException;
+import com.school.management.infrastructure.extension.ExtensionContext;
+import com.school.management.infrastructure.extension.ExtensionDispatcher;
 import com.school.management.security.JwtTokenService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -44,7 +47,7 @@ import java.util.UUID;
 public class UserApplicationService {
 
     private final UserRepository userRepository;
-    private final UserTypeRepository userTypeRepository;
+    private final EntityTypeConfigRepository entityTypeConfigRepository;
     private final RoleRepository roleRepository;
     private final AccessRelationRepository accessRelationRepository;
     private final UserRoleRepository userRoleRepository;
@@ -53,6 +56,9 @@ public class UserApplicationService {
     private final UniversalPlaceOccupantRepository occupantRepository;
     private final UniversalPlaceRepository placeRepository;
     private final JwtTokenService jwtTokenService;
+
+    @Autowired(required = false)
+    private ExtensionDispatcher extensionDispatcher;
 
     @Value("${app.security.default-password:}")
     private String defaultPassword;
@@ -72,9 +78,9 @@ public class UserApplicationService {
         }
 
         // 验证用户类型编码并加载实体（用于后续 features 校验）
-        UserType userType = null;
+        EntityTypeConfig userType = null;
         if (command.getUserTypeCode() != null && !command.getUserTypeCode().isEmpty()) {
-            userType = userTypeRepository.findByTypeCode(command.getUserTypeCode())
+            userType = entityTypeConfigRepository.findByTypeCode("USER", command.getUserTypeCode())
                     .orElseThrow(() -> new BusinessException("无效的用户类型: " + command.getUserTypeCode()));
         }
 
@@ -160,6 +166,9 @@ public class UserApplicationService {
         // 发布领域事件
         publishEvents(user);
 
+        // SPI: 插件 afterCreate 钩子
+        fireUserLifecycle("afterCreate", user, command.getCreatedBy());
+
         log.info("用户创建成功: id={}, username={}", user.getId(), user.getUsername());
         return user;
     }
@@ -168,7 +177,7 @@ public class UserApplicationService {
      * 根据用户类型编码解析默认角色ID列表
      */
     private List<Long> resolveDefaultRoleIds(String userTypeCode) {
-        Optional<UserType> utOpt = userTypeRepository.findByTypeCode(userTypeCode);
+        Optional<EntityTypeConfig> utOpt = entityTypeConfigRepository.findByTypeCode("USER", userTypeCode);
         if (utOpt.isEmpty()) return List.of();
 
         List<String> codes = utOpt.get().getDefaultRoleCodes();
@@ -206,9 +215,9 @@ public class UserApplicationService {
         );
 
         // 更新用户类型（先验证再更新）
-        UserType updatedType = null;
+        EntityTypeConfig updatedType = null;
         if (command.getUserTypeCode() != null && !command.getUserTypeCode().isEmpty()) {
-            updatedType = userTypeRepository.findByTypeCode(command.getUserTypeCode())
+            updatedType = entityTypeConfigRepository.findByTypeCode("USER", command.getUserTypeCode())
                     .orElseThrow(() -> new BusinessException("无效的用户类型: " + command.getUserTypeCode()));
             user.changeUserType(command.getUserTypeCode());
         }
@@ -256,10 +265,10 @@ public class UserApplicationService {
         }
 
         // Phase 2.2: features 校验（若改了 userType 用新 type；否则用现有 type）
-        UserType effectiveType = updatedType != null
+        EntityTypeConfig effectiveType = updatedType != null
                 ? updatedType
                 : (user.getUserTypeCode() != null
-                    ? userTypeRepository.findByTypeCode(user.getUserTypeCode()).orElse(null)
+                    ? entityTypeConfigRepository.findByTypeCode("USER", user.getUserTypeCode()).orElse(null)
                     : null);
         user.validateAgainstType(effectiveType);
 
@@ -268,6 +277,9 @@ public class UserApplicationService {
 
         // 发布事件
         publishEvents(user);
+
+        // SPI: 插件 afterUpdate 钩子
+        fireUserLifecycle("afterUpdate", user, command.getUpdatedBy());
 
         log.info("用户更新成功: {}", userId);
         return user;
@@ -358,9 +370,11 @@ public class UserApplicationService {
     public void deleteUser(Long userId) {
         log.info("删除用户: {}", userId);
 
-        if (userRepository.findById(userId).isEmpty()) {
-            throw new BusinessException("用户不存在: " + userId);
-        }
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new BusinessException("用户不存在: " + userId));
+
+        // SPI: 插件 beforeDelete 钩子
+        fireUserLifecycle("beforeDelete", user, null);
 
         // 吊销该用户所有 active tokens（refresh token 会立即失效；access token 等自然过期）
         jwtTokenService.revokeAllTokensForUser(userId);
@@ -372,6 +386,9 @@ public class UserApplicationService {
         autoCheckOutByUser(userId);
 
         userRepository.deleteById(userId);
+
+        // SPI: 插件 afterDelete 钩子
+        fireUserLifecycle("afterDelete", user, null);
     }
 
     /**
@@ -585,5 +602,36 @@ public class UserApplicationService {
     private void publishEvents(User user) {
         user.getDomainEvents().forEach(eventPublisher::publish);
         user.clearDomainEvents();
+    }
+
+    private void fireUserLifecycle(String phase, User user, Long operatorId) {
+        if (extensionDispatcher == null || user == null || user.getUserTypeCode() == null) return;
+        try {
+            ExtensionContext ctx = ExtensionContext.builder()
+                    .entityType("USER")
+                    .typeCode(user.getUserTypeCode())
+                    .entityId(user.getId())
+                    .entityName(user.getRealName())
+                    .operatorId(operatorId)
+                    .build();
+            switch (phase) {
+                case "afterCreate":
+                    extensionDispatcher.fireAfterCreate("USER", user.getUserTypeCode(), ctx);
+                    break;
+                case "afterUpdate":
+                    extensionDispatcher.fireAfterUpdate("USER", user.getUserTypeCode(), ctx);
+                    break;
+                case "beforeDelete":
+                    extensionDispatcher.fireBeforeDelete("USER", user.getUserTypeCode(), ctx);
+                    break;
+                case "afterDelete":
+                    extensionDispatcher.fireAfterDelete("USER", user.getUserTypeCode(), ctx);
+                    break;
+                default:
+                    break;
+            }
+        } catch (Exception e) {
+            log.warn("SPI USER {} 异常: {}", phase, e.getMessage());
+        }
     }
 }

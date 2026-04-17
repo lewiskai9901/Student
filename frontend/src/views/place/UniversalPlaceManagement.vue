@@ -746,7 +746,7 @@ import FloorPlanEditor from './components/FloorPlanEditor.vue'
 import BookingSeatDialog from './components/BookingSeatDialog.vue'
 import ActivityTimeline from '@/components/activity/ActivityTimeline.vue'
 import { universalPlaceApi, type PlaceStatistics } from '@/api/universalPlace'
-import { universalPlaceTypeApi } from '@/api/universalPlaceType'
+import { entityTypeApi } from '@/api/entityType'
 import { getSimpleUserList, getUsersByOrgUnit } from '@/api/user'
 import { getOrgUnitTree } from '@/api/organization'
 import { accessRelationApi } from '@/api/accessRelation'
@@ -1285,7 +1285,10 @@ const resolvedAttributes = computed(() => {
   const typeConfig = allPlaceTypes.value.find(t => t.typeCode === node.typeCode)
   let fields: any[] | undefined
   if (typeConfig?.metadataSchema) {
-    try { fields = JSON.parse(typeConfig.metadataSchema)?.fields } catch { fields = undefined }
+    const schema = typeof typeConfig.metadataSchema === 'string'
+      ? (() => { try { return JSON.parse(typeConfig.metadataSchema as any) } catch { return undefined } })()
+      : typeConfig.metadataSchema
+    fields = (schema as any)?.fields
   }
   if (!fields || fields.length === 0) {
     // 无 schema，退化为 raw key/value
@@ -1361,7 +1364,8 @@ async function loadData() {
 
 async function loadPlaceTypes() {
   try {
-    allPlaceTypes.value = await universalPlaceTypeApi.getAll()
+    const result = await entityTypeApi.list('PLACE')
+    allPlaceTypes.value = ((result as any).data || result || []) as UniversalPlaceType[]
   } catch {
     // 非关键错误
   }

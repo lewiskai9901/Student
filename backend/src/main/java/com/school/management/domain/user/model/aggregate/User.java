@@ -5,7 +5,7 @@ import com.school.management.domain.user.event.UserCreatedEvent;
 import com.school.management.domain.user.event.UserStatusChangedEvent;
 import com.school.management.domain.user.event.UserUpdatedEvent;
 import com.school.management.domain.user.event.UserPasswordResetEvent;
-import com.school.management.domain.user.model.entity.UserType;
+import com.school.management.domain.shared.ConfigurableType;
 import com.school.management.domain.user.model.valueobject.UserStatus;
 
 import java.time.LocalDate;
@@ -70,7 +70,7 @@ public class User extends AggregateRoot<Long> {
     private String idCard;
 
     /**
-     * 用户类型编码（新，引用 user_types 表）
+     * 用户类型编码（引用 entity_type_configs WHERE entity_type='USER'）
      */
     private String userTypeCode;
 
@@ -185,11 +185,11 @@ public class User extends AggregateRoot<Long> {
      * 根据 UserType 校验聚合状态。
      * Phase 2.2: features.requiresOrg=true 必须有主归属组织。
      */
-    public void validateAgainstType(UserType type) {
+    public void validateAgainstType(ConfigurableType type) {
         if (type == null) {
             return;
         }
-        if (type.isRequiresOrg() && this.primaryOrgUnitId == null) {
+        if (type.hasFeature("requiresOrg") && this.primaryOrgUnitId == null) {
             throw new IllegalArgumentException(
                     "用户类型 " + type.getTypeCode() + " 要求必须指定主归属组织");
         }
