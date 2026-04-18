@@ -143,7 +143,7 @@ public class UserApplicationService {
                     .relation("member")
                     .subjectType("user")
                     .subjectId(user.getId())
-                    .accessLevel(1)
+                    .accessLevel("FULL")
                     .metadata(java.util.Map.of("isPrimary", true, "relationType", "PRIMARY"))
                     .createdBy(command.getCreatedBy())
                     .build());
@@ -157,7 +157,7 @@ public class UserApplicationService {
                     .relation("occupant")
                     .subjectType("user")
                     .subjectId(user.getId())
-                    .accessLevel(1)
+                    .accessLevel("FULL")
                     .metadata(java.util.Map.of("isPrimary", true, "relationType", "ASSIGNED"))
                     .createdBy(command.getCreatedBy())
                     .build());
@@ -240,7 +240,7 @@ public class UserApplicationService {
                             .relation("member")
                             .subjectType("user")
                             .subjectId(userId)
-                            .accessLevel(1)
+                            .accessLevel("FULL")
                             .metadata(java.util.Map.of("isPrimary", true, "relationType", "PRIMARY"))
                             .createdBy(command.getUpdatedBy())
                             .build());
@@ -252,7 +252,7 @@ public class UserApplicationService {
                         .relation("member")
                         .subjectType("user")
                         .subjectId(userId)
-                        .accessLevel(1)
+                        .accessLevel("FULL")
                         .metadata(java.util.Map.of("isPrimary", true, "relationType", "PRIMARY"))
                         .createdBy(command.getUpdatedBy())
                         .build());

@@ -211,7 +211,7 @@ public class GradeApplicationService {
 
         // 2) 学生级事件 → 对班级每个学生循环 fire
         //    - BY_SUBJECT 通知学生本人
-        //    - BY_RELATION(guardian_of, outward) 通知其家长
+        //    - BY_RELATION(guardian_of, inward) 通知其家长 (订阅规则里配置)
         if (orgUnitId > 0) {
             try {
                 List<Map<String, Object>> students = jdbc.queryForList(
