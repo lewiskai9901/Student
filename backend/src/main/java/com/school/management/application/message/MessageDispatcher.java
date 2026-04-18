@@ -165,14 +165,20 @@ public class MessageDispatcher {
         if (mode == null) return Collections.emptySet();
 
         return switch (mode) {
+            // === v3 四大核心模式（推荐使用）===
+            case "BY_SUBJECT" -> resolveBySubject(subjectId, subjectType);
+            case "BY_RELATION" -> resolveByRelation(rule.getTargetConfig(), subjectId, subjectType);
             case "BY_ROLE" -> resolveByRole(rule.getTargetConfig());
+            case "BY_FEATURE" -> resolveByFeature(rule.getTargetConfig());
+
+            // === 向后兼容（v2 遗留，建议逐步迁移到上面 4 种）===
             case "BY_ORG_ADMIN" -> resolveByOrgAdmin(subjectId, subjectType);
             case "BY_USER" -> resolveByUser(rule.getTargetConfig());
             case "BY_USER_TYPE" -> resolveByUserType(rule.getTargetConfig());
             case "BY_ORG_TYPE" -> resolveByOrgType(rule.getTargetConfig());
             case "BY_PLACE_TYPE" -> resolveByPlaceType(rule.getTargetConfig());
             case "BY_RELATED" -> resolveByRelated(subjectId, subjectType);
-            case "BY_SUBJECT" -> resolveBySubject(subjectId, subjectType);
+
             default -> {
                 log.warn("[消息分发] 未知 targetMode: {}", mode);
                 yield Collections.emptySet();
@@ -296,6 +302,131 @@ public class MessageDispatcher {
         } catch (Exception e) {
             log.warn("[消息分发] 查询关联用户失败: {}", e.getMessage());
             return Collections.emptySet();
+        }
+    }
+
+    /**
+     * BY_RELATION: 基于 access_relations 统一关系查询
+     *
+     * targetConfig JSON 格式:
+     *   {
+     *     "relation": "admin",            // 必填 - 关系码
+     *     "resource_type": "org_unit",    // 必填 - subject 面向的 resource 类型
+     *     "direction": "inward",          // 可选 - inward(默认) = 找"以 subject 为 resource 的 user"
+     *                                     //         outward = 找"subject 关联的 resources"
+     *     "include_deputies": true        // 可选 - 同时纳入 deputy 关系
+     *   }
+     *
+     * 典型场景:
+     *   - 成绩发布 (subject=班级 ORG_UNIT):
+     *     {relation:"admin", resource_type:"org_unit"}        → 通知该班班主任
+     *   - 学生扣分 (subject=学生 USER):
+     *     {relation:"guardian_of", resource_type:"user", direction:"outward"}  → 通知该学生的家长
+     */
+    private Set<Long> resolveByRelation(String targetConfig, Long subjectId, String subjectType) {
+        if (subjectId == null) return Collections.emptySet();
+        Map<String, Object> config = parseJsonObject(targetConfig);
+        String relation = (String) config.get("relation");
+        String resourceType = (String) config.get("resource_type");
+        String direction = (String) config.getOrDefault("direction", "inward");
+        boolean includeDeputies = Boolean.TRUE.equals(config.get("include_deputies"));
+
+        if (relation == null || relation.isBlank()) {
+            log.warn("[消息分发] BY_RELATION 缺少 relation 参数, config={}", targetConfig);
+            return Collections.emptySet();
+        }
+
+        List<String> relations = new ArrayList<>();
+        relations.add(relation);
+        if (includeDeputies) relations.add("deputy");
+
+        String placeholders = relations.stream().map(r -> "?").collect(Collectors.joining(","));
+        try {
+            String sql;
+            Object[] params;
+            if ("outward".equalsIgnoreCase(direction)) {
+                // subject 是我们的主体,找它关联的 user 们(resource_type 必须是 user)
+                sql = "SELECT DISTINCT ar.resource_id FROM access_relations ar " +
+                      "WHERE ar.subject_type = ? AND ar.subject_id = ? " +
+                      "  AND ar.resource_type = 'user' " +
+                      "  AND ar.relation IN (" + placeholders + ") " +
+                      "  AND ar.deleted = 0 " +
+                      "  AND (ar.valid_to IS NULL OR ar.valid_to > NOW())";
+                params = new Object[relations.size() + 2];
+                params[0] = subjectType != null ? subjectType.toLowerCase() : "user";
+                params[1] = subjectId;
+                for (int i = 0; i < relations.size(); i++) params[i + 2] = relations.get(i);
+            } else {
+                // inward(默认): subject 是 resource,找它的 user 们
+                sql = "SELECT DISTINCT ar.subject_id FROM access_relations ar " +
+                      "WHERE ar.resource_type = ? AND ar.resource_id = ? " +
+                      "  AND ar.subject_type = 'user' " +
+                      "  AND ar.relation IN (" + placeholders + ") " +
+                      "  AND ar.deleted = 0 " +
+                      "  AND (ar.valid_to IS NULL OR ar.valid_to > NOW())";
+                params = new Object[relations.size() + 2];
+                String rt = resourceType != null ? resourceType.toLowerCase()
+                        : (subjectType != null ? subjectType.toLowerCase() : "org_unit");
+                params[0] = rt;
+                params[1] = subjectId;
+                for (int i = 0; i < relations.size(); i++) params[i + 2] = relations.get(i);
+            }
+            List<Long> ids = jdbcTemplate.queryForList(sql, Long.class, params);
+            return new HashSet<>(ids);
+        } catch (Exception e) {
+            log.warn("[消息分发] BY_RELATION 查询失败: {}, config={}", e.getMessage(), targetConfig);
+            return Collections.emptySet();
+        }
+    }
+
+    /**
+     * BY_FEATURE: 根据类型能力(feature)筛选用户,替代学校耦合的 BY_USER_TYPE
+     *
+     * targetConfig: {"features":["isLearner"]} 或 {"features":["isLearner","receivesPersonalGrade"]}
+     * 多 feature 为 AND 关系(全部具备)。
+     *
+     * 通用化优势: 学校场景判断 isLearner 命中 STUDENT;培训机构场景 TRAINEE 也命中;
+     * 业务代码不需要知道具体类型码。
+     */
+    private Set<Long> resolveByFeature(String targetConfig) {
+        Map<String, Object> config = parseJsonObject(targetConfig);
+        @SuppressWarnings("unchecked")
+        List<String> features = (List<String>) config.get("features");
+        if (features == null || features.isEmpty()) {
+            log.warn("[消息分发] BY_FEATURE 缺少 features 参数, config={}", targetConfig);
+            return Collections.emptySet();
+        }
+
+        // 构造 JSON_EXTRACT 条件: 每个 feature 必须为 true
+        StringBuilder sb = new StringBuilder(
+                "SELECT u.id FROM users u " +
+                "JOIN entity_type_configs c ON c.entity_type = 'USER' " +
+                "  AND c.type_code = u.user_type_code AND c.deleted = 0 " +
+                "WHERE u.deleted = 0 AND u.status = 1 ");
+        for (String feature : features) {
+            // 白名单校验 feature code,防止注入
+            if (!feature.matches("[a-zA-Z0-9_]+")) {
+                log.warn("[消息分发] BY_FEATURE 非法 feature 名: {}", feature);
+                return Collections.emptySet();
+            }
+            sb.append("  AND JSON_EXTRACT(c.features, '$.").append(feature).append("') = true ");
+        }
+        try {
+            List<Long> ids = jdbcTemplate.queryForList(sb.toString(), Long.class);
+            return new HashSet<>(ids);
+        } catch (Exception e) {
+            log.warn("[消息分发] BY_FEATURE 查询失败: {}, config={}", e.getMessage(), targetConfig);
+            return Collections.emptySet();
+        }
+    }
+
+    @SuppressWarnings("unchecked")
+    private Map<String, Object> parseJsonObject(String json) {
+        if (json == null || json.isBlank()) return Collections.emptyMap();
+        try {
+            return objectMapper.readValue(json, new TypeReference<Map<String, Object>>() {});
+        } catch (Exception e) {
+            return Collections.emptyMap();
         }
     }
 
