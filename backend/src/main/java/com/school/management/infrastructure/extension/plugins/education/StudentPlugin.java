@@ -13,7 +13,7 @@ public class StudentPlugin implements EntityTypePlugin {
     public String getEntityType() { return "USER"; }
     public String getTypeCode() { return "STUDENT"; }
     public String getTypeName() { return "学生"; }
-    public String getCategory() { return "LEARNER"; }
+    public String getCategory() { return "MEMBER"; }
 
     public List<FieldDefinition> getSystemFields() {
         return List.of(

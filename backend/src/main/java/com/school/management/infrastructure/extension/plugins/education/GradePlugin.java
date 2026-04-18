@@ -13,7 +13,7 @@ public class GradePlugin implements EntityTypePlugin {
     public String getEntityType() { return "ORG_UNIT"; }
     public String getTypeCode() { return "GRADE"; }
     public String getTypeName() { return "年级"; }
-    public String getCategory() { return "ACADEMIC"; }
+    public String getCategory() { return "CONTAINER"; }
     public String getParentTypeCode() { return "DEPARTMENT"; }
     public List<String> getAllowedChildTypeCodes() { return List.of("CLASS"); }
 
