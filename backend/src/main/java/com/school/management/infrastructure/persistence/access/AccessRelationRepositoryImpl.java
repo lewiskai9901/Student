@@ -27,6 +27,19 @@ public class AccessRelationRepositoryImpl implements AccessRelationRepository {
     }
 
     @Override
+    public List<AccessRelation> listFiltered(String resourceType, String subjectType, String relation) {
+        LambdaQueryWrapper<AccessRelationPO> wrapper = new LambdaQueryWrapper<AccessRelationPO>()
+                .orderByDesc(AccessRelationPO::getId);
+        if (resourceType != null && !resourceType.isBlank())
+            wrapper.eq(AccessRelationPO::getResourceType, resourceType);
+        if (subjectType != null && !subjectType.isBlank())
+            wrapper.eq(AccessRelationPO::getSubjectType, subjectType);
+        if (relation != null && !relation.isBlank())
+            wrapper.eq(AccessRelationPO::getRelation, relation);
+        return mapper.selectList(wrapper).stream().map(this::toDomain).collect(Collectors.toList());
+    }
+
+    @Override
     public List<AccessRelation> findByResource(String resourceType, Long resourceId) {
         LambdaQueryWrapper<AccessRelationPO> wrapper = new LambdaQueryWrapper<AccessRelationPO>()
                 .eq(AccessRelationPO::getResourceType, resourceType)
@@ -157,7 +170,7 @@ public class AccessRelationRepositoryImpl implements AccessRelationRepository {
                 .subjectType(po.getSubjectType())
                 .subjectId(po.getSubjectId())
                 .includeChildren(Boolean.TRUE.equals(po.getIncludeChildren()))
-                .accessLevel(po.getAccessLevel() != null ? po.getAccessLevel() : 1)
+                .accessLevel(po.getAccessLevel() != null ? po.getAccessLevel() : "FULL")
                 .metadata(meta)
                 .remark(po.getRemark())
                 .createdBy(po.getCreatedBy())

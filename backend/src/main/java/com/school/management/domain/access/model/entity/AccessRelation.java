@@ -35,9 +35,9 @@ public class AccessRelation {
     @Builder.Default
     private boolean includeChildren = false;
 
-    /** 1=只读, 2=读写 */
+    /** 访问级别: READ_ONLY / FULL / OWNER */
     @Builder.Default
-    private int accessLevel = 1;
+    private String accessLevel = "FULL";
 
     /** 扩展字段 */
     private Map<String, Object> metadata;
@@ -58,7 +58,7 @@ public class AccessRelation {
     }
 
     public boolean isReadWrite() {
-        return accessLevel >= 2;
+        return "FULL".equals(accessLevel) || "OWNER".equals(accessLevel);
     }
 
     @SuppressWarnings("unchecked")

@@ -23,7 +23,7 @@ export interface MsgSubscriptionRule {
   ruleName: string
   eventCategory: string | null
   eventType: string | null
-  targetMode: 'BY_ROLE' | 'BY_ORG_ADMIN' | 'BY_USER' | 'BY_RELATED'
+  targetMode: 'BY_SUBJECT' | 'BY_RELATION' | 'BY_ROLE' | 'BY_FEATURE'
   targetConfig: string | null
   channel: 'IN_APP' | 'EMAIL' | 'WECHAT'
   templateId: number | null
@@ -41,10 +41,10 @@ export interface MsgTemplate {
 }
 
 export const TargetModeConfig: Record<MsgSubscriptionRule['targetMode'], { label: string; description: string }> = {
-  BY_ROLE: { label: '按角色', description: '通知指定角色的所有用户' },
-  BY_ORG_ADMIN: { label: '组织管理员', description: '通知相关组织的管理员' },
-  BY_USER: { label: '指定用户', description: '直接通知指定用户' },
-  BY_RELATED: { label: '关联人员', description: '通知事件关联的人员' },
+  BY_SUBJECT:  { label: '事件主体本人', description: '当事件主体是用户时，通知该用户本人' },
+  BY_RELATION: { label: '关系导航', description: '基于 access_relations 查询主体的关联人员（如"通知班级的管理员"）' },
+  BY_ROLE:     { label: '按角色', description: '通知拥有指定角色/权限的所有用户' },
+  BY_FEATURE:  { label: '按能力', description: '通知具备指定能力（feature）的所有用户（如所有 isLearner）' },
 }
 
 export const ChannelConfig: Record<MsgSubscriptionRule['channel'], { label: string }> = {

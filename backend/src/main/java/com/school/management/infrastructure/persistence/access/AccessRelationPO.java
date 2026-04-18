@@ -22,7 +22,8 @@ public class AccessRelationPO {
     private String subjectType;
     private Long subjectId;
     private Boolean includeChildren;
-    private Integer accessLevel;
+    /** 访问级别: READ_ONLY / FULL / OWNER (v3 语义化,替代 TINYINT) */
+    private String accessLevel;
 
     /** JSON 字符串，映射时转 Map */
     private String metadata;

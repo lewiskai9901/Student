@@ -38,35 +38,37 @@
     <!-- 关系列表 -->
     <el-table :data="rows" stripe size="small" v-loading="loading">
       <el-table-column label="ID" prop="id" width="80" />
-      <el-table-column label="主体" min-width="200">
+      <el-table-column label="主体" min-width="220">
         <template #default="{ row }">
-          <el-tag size="small" effect="plain">{{ row.subjectType }}</el-tag>
-          <span class="ml-2 text-xs">{{ row.subjectId }}</span>
+          <el-tag size="small" effect="plain">{{ subjectTypeLabel(row.subjectType) }}</el-tag>
+          <span class="ml-2">{{ displayName(row, 'subject') }}</span>
+          <div class="text-xs text-gray-400 font-mono">{{ shortId(row.subjectId) }}</div>
         </template>
       </el-table-column>
-      <el-table-column label="关系" prop="relation" width="140">
+      <el-table-column label="关系" prop="relation" width="150">
         <template #default="{ row }">
-          <el-tag size="small" :type="relationTagType(row.relation)">{{ row.relation }}</el-tag>
+          <el-tag size="small" :type="relationTagType(row.relation)">{{ relationLabel(row.relation) }}</el-tag>
+          <div class="text-xs text-gray-400">{{ row.relation }}</div>
         </template>
       </el-table-column>
-      <el-table-column label="资源" min-width="200">
+      <el-table-column label="资源" min-width="220">
         <template #default="{ row }">
-          <el-tag size="small" effect="plain">{{ row.resourceType }}</el-tag>
-          <span class="ml-2 text-xs">{{ row.resourceId }}</span>
+          <el-tag size="small" effect="plain">{{ resourceTypeLabel(row.resourceType) }}</el-tag>
+          <span class="ml-2">{{ displayName(row, 'resource') }}</span>
+          <div class="text-xs text-gray-400 font-mono">{{ shortId(row.resourceId) }}</div>
         </template>
       </el-table-column>
-      <el-table-column label="访问级别" prop="accessLevel" width="110" align="center">
+      <el-table-column label="级别" width="90" align="center">
         <template #default="{ row }">
-          <el-tag size="small">{{ row.accessLevel || 'FULL' }}</el-tag>
+          <el-tag size="small" :type="levelTagType(row.accessLevel)">{{ levelLabel(row.accessLevel) }}</el-tag>
         </template>
       </el-table-column>
-      <el-table-column label="生效期" width="200">
+      <el-table-column label="生效期" width="180">
         <template #default="{ row }">
           <div class="text-xs">
-            <div>{{ formatTime(row.validFrom) || '-' }}</div>
-            <div class="text-gray-400">
-              至 {{ row.validTo ? formatTime(row.validTo) : '永久' }}
-            </div>
+            <span class="text-gray-500">{{ formatTime(row.validFrom) || '—' }}</span>
+            <span class="mx-1 text-gray-300">至</span>
+            <span :class="row.validTo ? 'text-orange-500' : 'text-green-600'">{{ row.validTo ? formatTime(row.validTo) : '永久' }}</span>
           </div>
         </template>
       </el-table-column>
@@ -196,9 +198,48 @@ function relationTagType(relation: string): 'primary' | 'success' | 'warning' | 
   }[def.category] || 'info'
 }
 
+function relationLabel(code: string): string {
+  const def = relationOptions.value.find(r => r.relationCode === code)
+  return def ? def.relationName : code
+}
+
+function subjectTypeLabel(t: string): string {
+  return { user: '用户', org_unit: '组织', place: '场所' }[t as string] || t
+}
+const resourceTypeLabel = subjectTypeLabel
+
+function levelTagType(level: string): 'primary' | 'success' | 'warning' {
+  return {
+    READ_ONLY: 'primary' as const,
+    FULL: 'success' as const,
+    OWNER: 'warning' as const
+  }[level as string] || 'success'
+}
+function levelLabel(level: string): string {
+  return { READ_ONLY: '只读', FULL: '读写', OWNER: '所有者' }[level as string] || (level || 'FULL')
+}
+
+function displayName(row: any, side: 'subject' | 'resource'): string {
+  const meta = row.metadata || {}
+  if (side === 'subject') {
+    return meta.subjectName || meta.userName || '—'
+  }
+  // resource 根据 resourceType 选
+  if (row.resourceType === 'org_unit') return meta.orgUnitName || '—'
+  if (row.resourceType === 'place') return meta.placeName || '—'
+  if (row.resourceType === 'user') return meta.userName || meta.subjectName || '—'
+  return '—'
+}
+
+function shortId(id: number | string | null): string {
+  if (id == null) return ''
+  const s = String(id)
+  return s.length > 8 ? `…${s.slice(-6)}` : s
+}
+
 function formatTime(t: string | null): string {
   if (!t) return ''
-  return t.replace('T', ' ').substring(0, 16)
+  return t.replace('T', ' ').substring(5, 16)  // 去掉年份,紧凑显示
 }
 
 function resetFilter() {
@@ -210,34 +251,22 @@ function resetFilter() {
 async function load() {
   loading.value = true
   try {
-    // 后端目前 GET /api/access-relations 还不是完整筛选 API,
-    // 这里用 getByResource/getBySubject 简化
-    if (filter.value.resourceType) {
-      // 按资源类型 + 任一 ID 查(这里用 0 代表不限资源 ID, 后端需支持; 否则只能列举某个资源的关系)
-      // 暂用一个通用分页接口 - 如果后端没提供,后续建
-      const resp: any = await (await import('@/utils/request')).http.get('/access-relations', {
-        params: {
-          resourceType: filter.value.resourceType || undefined,
-          subjectType: filter.value.subjectType || undefined,
-          relation: filter.value.relation || undefined,
-          page: page.value,
-          size: pageSize.value
-        }
-      })
-      const data = resp?.records || resp?.data || resp || []
-      rows.value = Array.isArray(data) ? data : (data.records || [])
-      total.value = resp?.total || rows.value.length
-    } else {
-      const resp: any = await (await import('@/utils/request')).http.get('/access-relations', {
-        params: { page: page.value, size: pageSize.value }
-      })
-      const data = resp?.records || resp?.data || resp || []
-      rows.value = Array.isArray(data) ? data : (data.records || [])
-      total.value = resp?.total || rows.value.length
-    }
+    const { http } = await import('@/utils/request')
+    const resp: any = await http.get('/access-relations', {
+      params: {
+        resourceType: filter.value.resourceType || undefined,
+        subjectType: filter.value.subjectType || undefined,
+        relation: filter.value.relation || undefined,
+        page: page.value,
+        size: pageSize.value
+      }
+    })
+    rows.value = resp?.records || []
+    total.value = Number(resp?.total) || rows.value.length
   } catch (e: any) {
     ElMessage.error('加载关系失败: ' + (e?.message || e))
     rows.value = []
+    total.value = 0
   } finally {
     loading.value = false
   }

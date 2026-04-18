@@ -199,20 +199,46 @@
                   </div>
                 </div>
 
-                <!-- BY_ORG_ADMIN: 无额外配置 -->
-                <div v-if="ruleForm.targetMode === 'BY_ORG_ADMIN'" class="wizard-preview">
-                  将自动通知事件主体所在组织的管理员
+                <!-- BY_SUBJECT: 无额外配置 -->
+                <div v-if="ruleForm.targetMode === 'BY_SUBJECT'" class="wizard-preview">
+                  将通知事件主体本人（仅当主体类型为 USER 时生效）
                 </div>
 
-                <!-- BY_RELATED: 无额外配置 -->
-                <div v-if="ruleForm.targetMode === 'BY_RELATED'" class="wizard-preview">
-                  将自动通知与事件主体有关联关系的人员
+                <!-- BY_RELATION: 基于 access_relations 关系导航 -->
+                <div v-if="ruleForm.targetMode === 'BY_RELATION'" class="field">
+                  <label class="field-label">关系</label>
+                  <select v-model="relationConfig.relation" class="field-input" @change="syncRelationConfig">
+                    <option value="">请选择关系</option>
+                    <option v-for="r in relationTypeOptions" :key="`${r.relationCode}:${r.fromType}:${r.toType}`"
+                      :value="r.relationCode">{{ r.relationCode }} — {{ r.relationName }}（{{ r.fromType }} → {{ r.toType }}）</option>
+                  </select>
+                  <label class="field-label" style="margin-top:8px">资源类型</label>
+                  <select v-model="relationConfig.resource_type" class="field-input" @change="syncRelationConfig">
+                    <option value="org_unit">org_unit（组织）</option>
+                    <option value="place">place（场所）</option>
+                    <option value="user">user（用户）</option>
+                  </select>
+                  <label class="field-label" style="margin-top:8px">方向</label>
+                  <select v-model="relationConfig.direction" class="field-input" @change="syncRelationConfig">
+                    <option value="inward">inward — 查"对该主体有某关系的用户"</option>
+                    <option value="outward">outward — 查"主体对外有某关系的用户"</option>
+                  </select>
+                  <p class="field-hint">最终配置: {{ ruleForm.targetConfig }}</p>
                 </div>
 
-                <!-- BY_USER: 输入用户ID -->
-                <div v-if="ruleForm.targetMode === 'BY_USER'" class="field">
-                  <label class="field-label">指定用户ID（逗号分隔）</label>
-                  <input v-model="manualUserIds" placeholder="如: 1, 2, 3" class="field-input" />
+                <!-- BY_FEATURE: 类型能力筛选 -->
+                <div v-if="ruleForm.targetMode === 'BY_FEATURE'" class="field">
+                  <label class="field-label">能力（features，多选即 AND）</label>
+                  <div class="role-checks">
+                    <label v-for="f in commonFeatures" :key="f"
+                           class="role-check" :class="{ checked: selectedFeatures.includes(f) }">
+                      <input type="checkbox" :value="f"
+                             :checked="selectedFeatures.includes(f)"
+                             @change="toggleFeature(f)" />
+                      {{ f }}
+                    </label>
+                  </div>
+                  <p class="field-hint">将命中 entity_type_configs 里 features 包含这些标记的所有用户</p>
                 </div>
               </section>
 
@@ -275,8 +301,27 @@
                 </div>
               </section>
             </div>
+            <div v-if="previewResult" class="preview-panel" :class="{ 'has-warn': !!previewResult.warning }">
+              <div class="preview-head">
+                <span class="preview-title">预览结果</span>
+                <strong class="preview-count">{{ previewResult.previewable ? previewResult.totalCount + ' 人命中' : '需事件上下文' }}</strong>
+              </div>
+              <div v-if="previewResult.warning" class="preview-warn">{{ previewResult.warning }}</div>
+              <div v-if="previewResult.sampleUsers?.length" class="preview-samples">
+                <span class="preview-samples-label">样本：</span>
+                <span v-for="u in previewResult.sampleUsers" :key="u.id" class="preview-sample">
+                  {{ u.realName || u.username }}
+                </span>
+                <span v-if="previewResult.totalCount > previewResult.sampleUsers.length" class="preview-more">
+                  ...等 {{ previewResult.totalCount }} 人
+                </span>
+              </div>
+            </div>
             <div class="drawer-footer">
               <button class="btn-cancel" @click="showRuleDrawer = false">取消</button>
+              <button class="btn-preview" :disabled="previewLoading" @click="previewCurrentRule">
+                {{ previewLoading ? '计算中...' : '预览命中' }}
+              </button>
               <button class="btn-save" @click="saveRule">保存规则</button>
             </div>
           </div>
@@ -342,6 +387,7 @@ import { ElMessage, ElMessageBox } from 'element-plus'
 import { msgConfigApi } from '@/api/message'
 import { listEntityEventTypes } from '@/api/entityEvent'
 import { getRoles } from '@/api/access'
+import { http } from '@/utils/request'
 import type { MsgSubscriptionRule, MsgTemplate } from '@/types/message'
 import type { EntityEventType } from '@/types/entityEvent'
 import { TargetModeConfig, ChannelConfig } from '@/types/message'
@@ -362,9 +408,10 @@ const showRuleDrawer = ref(false)
 const editingRule = ref<MsgSubscriptionRule | null>(null)
 const ruleForm = ref<Partial<MsgSubscriptionRule>>({})
 const selectedRoleCodes = ref<string[]>([])
-const manualUserIds = ref('')
 const customTitle = ref('')
 const customContent = ref('')
+const previewResult = ref<import('@/api/message').RulePreviewResult | null>(null)
+const previewLoading = ref(false)
 
 // Template drawer
 const showTemplateDrawer = ref(false)
@@ -405,8 +452,12 @@ const autoRuleName = computed(() => {
     return r?.roleName || code
   }).join('+')
   const target = ruleForm.value.targetMode === 'BY_ROLE' && roles
-    ? `通知${roles}` : ruleForm.value.targetMode === 'BY_ORG_ADMIN'
-    ? '通知管理员' : '通知'
+    ? `通知${roles}`
+    : ruleForm.value.targetMode === 'BY_RELATION'
+    ? `通知${relationConfig.value.relation || '关联人'}`
+    : ruleForm.value.targetMode === 'BY_FEATURE'
+    ? '按能力通知'
+    : '通知主体'
   return `${type || cat}${target}`
 })
 
@@ -429,6 +480,36 @@ function toggleRole(code: string) {
   if (idx >= 0) selectedRoleCodes.value.splice(idx, 1)
   else selectedRoleCodes.value.push(code)
 }
+
+// ===== v3 BY_RELATION / BY_FEATURE 支持 =====
+const relationTypeOptions = ref<Array<{relationCode:string;fromType:string;toType:string;relationName:string}>>([])
+const relationConfig = ref({ relation: '', resource_type: 'org_unit', direction: 'inward' })
+const commonFeatures = ['isLearner', 'isStaff', 'receivesPersonalGrade', 'hasGuardian', 'attendanceTracked',
+                        'canBeAdminOfOrg', 'canBeResponsibleForPlace', 'canLogin']
+const selectedFeatures = ref<string[]>([])
+
+function syncRelationConfig() {
+  ruleForm.value.targetConfig = JSON.stringify({
+    relation: relationConfig.value.relation,
+    resource_type: relationConfig.value.resource_type,
+    direction: relationConfig.value.direction
+  })
+}
+
+function toggleFeature(f: string) {
+  const idx = selectedFeatures.value.indexOf(f)
+  if (idx >= 0) selectedFeatures.value.splice(idx, 1)
+  else selectedFeatures.value.push(f)
+  ruleForm.value.targetConfig = JSON.stringify({ features: selectedFeatures.value })
+}
+
+async function loadRelationTypes() {
+  try {
+    const { http } = await import('@/utils/request')
+    relationTypeOptions.value = await http.get('/relation-types') as any
+  } catch { /* silent */ }
+}
+loadRelationTypes()
 
 function onTemplateSelect() {
   // Clear custom fields when selecting a template
@@ -468,21 +549,33 @@ async function loadRoles() {
 
 // ==================== Rule Wizard Actions ====================
 function openRuleDrawer(existing?: MsgSubscriptionRule) {
+  previewResult.value = null
   if (existing) {
     editingRule.value = existing
     ruleForm.value = { ...existing }
-    // Parse targetConfig for BY_ROLE
     if (existing.targetMode === 'BY_ROLE' && existing.targetConfig) {
       try { selectedRoleCodes.value = JSON.parse(existing.targetConfig) }
       catch { selectedRoleCodes.value = existing.targetConfig.split(',').map(s => s.trim()) }
     } else {
       selectedRoleCodes.value = []
     }
-    if (existing.targetMode === 'BY_USER' && existing.targetConfig) {
-      try { manualUserIds.value = JSON.parse(existing.targetConfig).join(', ') }
-      catch { manualUserIds.value = existing.targetConfig }
+    if (existing.targetMode === 'BY_RELATION' && existing.targetConfig) {
+      try {
+        const cfg = JSON.parse(existing.targetConfig)
+        relationConfig.value = {
+          relation: cfg.relation || '',
+          resource_type: cfg.resource_type || 'org_unit',
+          direction: cfg.direction || 'inward'
+        }
+      } catch { /* ignore */ }
+    }
+    if (existing.targetMode === 'BY_FEATURE' && existing.targetConfig) {
+      try {
+        const cfg = JSON.parse(existing.targetConfig)
+        selectedFeatures.value = cfg.features || []
+      } catch { selectedFeatures.value = [] }
     } else {
-      manualUserIds.value = ''
+      selectedFeatures.value = []
     }
     customTitle.value = ''
     customContent.value = ''
@@ -494,23 +587,51 @@ function openRuleDrawer(existing?: MsgSubscriptionRule) {
       templateId: null, isEnabled: true,
     }
     selectedRoleCodes.value = []
-    manualUserIds.value = ''
+    selectedFeatures.value = []
+    relationConfig.value = { relation: '', resource_type: 'org_unit', direction: 'inward' }
     customTitle.value = ''
     customContent.value = ''
   }
   showRuleDrawer.value = true
 }
 
+async function previewCurrentRule() {
+  const mode = ruleForm.value.targetMode
+  if (!mode) { ElMessage.warning('请先选择通知对象模式'); return }
+  let targetConfig = ruleForm.value.targetConfig || ''
+  if (mode === 'BY_ROLE') {
+    if (!selectedRoleCodes.value.length) { ElMessage.warning('请至少选择一个角色'); return }
+    targetConfig = JSON.stringify(selectedRoleCodes.value)
+  } else if (mode === 'BY_FEATURE') {
+    if (!selectedFeatures.value.length) { ElMessage.warning('请至少选择一个能力'); return }
+    targetConfig = JSON.stringify({ features: selectedFeatures.value })
+  } else if (mode === 'BY_RELATION') {
+    if (!relationConfig.value.relation) { ElMessage.warning('请选择关系'); return }
+    targetConfig = JSON.stringify(relationConfig.value)
+  }
+  previewLoading.value = true
+  try {
+    previewResult.value = await msgConfigApi.previewRule({ targetMode: mode, targetConfig })
+  } catch (e: any) {
+    ElMessage.error('预览失败: ' + (e?.message || ''))
+  } finally {
+    previewLoading.value = false
+  }
+}
+
 async function saveRule() {
-  // Build targetConfig from wizard state
+  // Build targetConfig from wizard state (v3: 4 modes only)
   if (ruleForm.value.targetMode === 'BY_ROLE') {
     if (!selectedRoleCodes.value.length) { ElMessage.warning('请至少选择一个角色'); return }
     ruleForm.value.targetConfig = JSON.stringify(selectedRoleCodes.value)
-  } else if (ruleForm.value.targetMode === 'BY_USER') {
-    if (!manualUserIds.value.trim()) { ElMessage.warning('请输入用户ID'); return }
-    const ids = manualUserIds.value.split(',').map(s => Number(s.trim())).filter(n => !isNaN(n))
-    ruleForm.value.targetConfig = JSON.stringify(ids)
+  } else if (ruleForm.value.targetMode === 'BY_FEATURE') {
+    if (!selectedFeatures.value.length) { ElMessage.warning('请至少选择一个能力'); return }
+    ruleForm.value.targetConfig = JSON.stringify({ features: selectedFeatures.value })
+  } else if (ruleForm.value.targetMode === 'BY_RELATION') {
+    if (!relationConfig.value.relation) { ElMessage.warning('请选择关系'); return }
+    ruleForm.value.targetConfig = JSON.stringify(relationConfig.value)
   } else {
+    // BY_SUBJECT: 无需 targetConfig
     ruleForm.value.targetConfig = ''
   }
 
@@ -611,7 +732,9 @@ async function handleDeleteTemplate(tpl: MsgTemplate) {
 }
 
 // ==================== Lifecycle ====================
-onMounted(() => { loadRules(); loadTemplates(); loadEventTypes(); loadRoles() })
+onMounted(() => {
+  loadRules(); loadTemplates(); loadEventTypes(); loadRoles()
+})
 </script>
 
 <style scoped>
@@ -1047,6 +1170,50 @@ onMounted(() => { loadRules(); loadTemplates(); loadEventTypes(); loadRoles() })
   transition: all 0.15s;
 }
 .btn-save:hover { background: #1f2937; }
+.btn-preview {
+  padding: 8px 14px;
+  font-size: 13px;
+  font-weight: 500;
+  color: #374151;
+  background: #f3f4f6;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  cursor: pointer;
+  font-family: inherit;
+  transition: all 0.15s;
+}
+.btn-preview:hover:not(:disabled) { background: #e5e7eb; }
+.btn-preview:disabled { opacity: 0.6; cursor: not-allowed; }
+
+.preview-panel {
+  margin: 0 24px 12px;
+  padding: 12px 14px;
+  background: #f0f9ff;
+  border: 1px solid #bae6fd;
+  border-radius: 8px;
+  font-size: 12px;
+}
+.preview-panel.has-warn {
+  background: #fffbeb;
+  border-color: #fcd34d;
+}
+.preview-head { display: flex; justify-content: space-between; align-items: center; }
+.preview-title { color: #64748b; }
+.preview-count { color: #0369a1; font-size: 14px; }
+.preview-panel.has-warn .preview-count { color: #b45309; }
+.preview-warn { margin-top: 6px; color: #b45309; line-height: 1.5; }
+.preview-samples { margin-top: 8px; color: #475569; line-height: 1.7; }
+.preview-samples-label { color: #94a3b8; }
+.preview-sample {
+  display: inline-block;
+  padding: 2px 8px;
+  margin: 0 4px 2px 0;
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 4px;
+  color: #334155;
+}
+.preview-more { color: #94a3b8; margin-left: 4px; }
 
 /* Wizard step numbers */
 .step-num {

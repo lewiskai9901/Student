@@ -57,4 +57,10 @@ public interface AccessRelationRepository {
     int batchSave(List<AccessRelation> relations);
 
     int batchDeleteByIds(List<Long> ids);
+
+    /**
+     * 列出关系(按筛选),用于管理 UI 分页浏览
+     * 任意字段为 null 表示不过滤该条件。
+     */
+    List<AccessRelation> listFiltered(String resourceType, String subjectType, String relation);
 }

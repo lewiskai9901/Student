@@ -25,24 +25,32 @@ public class AccessRelationController {
     private final AccessRelationApplicationService service;
 
     /**
-     * 按资源查询关系
+     * 查询关系 (支持无筛选分页 / 按 resource / 按 subject / 按 relation)
      */
     @GetMapping
-    public Result<List<AccessRelation>> query(
+    public Result<Map<String, Object>> query(
             @RequestParam(required = false) String resourceType,
             @RequestParam(required = false) Long resourceId,
             @RequestParam(required = false) String subjectType,
-            @RequestParam(required = false) Long subjectId) {
+            @RequestParam(required = false) Long subjectId,
+            @RequestParam(required = false) String relation,
+            @RequestParam(defaultValue = "1") int page,
+            @RequestParam(defaultValue = "20") int size) {
         if (resourceType != null && resourceId != null) {
-            return Result.success(service.findByResource(resourceType, resourceId));
+            List<AccessRelation> rows = service.findByResource(resourceType, resourceId);
+            return Result.success(Map.of("records", rows, "total", (long) rows.size()));
         }
         if (subjectType != null && subjectId != null) {
             if (resourceType != null) {
-                return Result.success(service.findBySubjectAndResourceType(subjectType, subjectId, resourceType));
+                List<AccessRelation> rows = service.findBySubjectAndResourceType(subjectType, subjectId, resourceType);
+                return Result.success(Map.of("records", rows, "total", (long) rows.size()));
             }
-            return Result.success(service.findBySubject(subjectType, subjectId));
+            List<AccessRelation> rows = service.findBySubject(subjectType, subjectId);
+            return Result.success(Map.of("records", rows, "total", (long) rows.size()));
         }
-        return Result.error(400, "必须提供 resourceType+resourceId 或 subjectType+subjectId");
+        // 无筛选: 分页列出(按 id 倒序)
+        AccessRelationApplicationService.PagedResult pr = service.listPaged(resourceType, subjectType, relation, page, size);
+        return Result.success(Map.of("records", pr.records(), "total", pr.total()));
     }
 
     /**

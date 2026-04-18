@@ -5,6 +5,7 @@ import com.school.management.domain.access.repository.AccessRelationRepository;
 import com.school.management.domain.organization.repository.OrgUnitRepository;
 import com.school.management.domain.place.model.aggregate.UniversalPlace;
 import com.school.management.domain.place.repository.UniversalPlaceRepository;
+import com.school.management.domain.user.repository.UserRepository;
 import com.school.management.infrastructure.access.UserContextHolder;
 import lombok.Data;
 import lombok.RequiredArgsConstructor;
@@ -24,6 +25,7 @@ public class AccessRelationApplicationService {
     private final AccessRelationRepository accessRelationRepository;
     private final UniversalPlaceRepository placeRepository;
     private final OrgUnitRepository orgUnitRepository;
+    private final UserRepository userRepository;
 
     public List<AccessRelation> findByResource(String resourceType, Long resourceId) {
         List<AccessRelation> relations = accessRelationRepository.findByResource(resourceType, resourceId);
@@ -61,12 +63,30 @@ public class AccessRelationApplicationService {
                     orgUnitRepository.findById(rel.getResourceId()).ifPresent(org -> {
                         meta.put("orgUnitName", org.getUnitName());
                     });
+                } else if ("user".equals(rel.getResourceType()) && rel.getResourceId() != null) {
+                    userRepository.findById(rel.getResourceId()).ifPresent(user -> {
+                        meta.put("userName", user.getRealName());
+                        meta.put("username", user.getUsername());
+                    });
                 }
-                // 同样填充 subject 名称
+                // subject 名称
                 if ("org_unit".equals(rel.getSubjectType()) && rel.getSubjectId() != null) {
                     if (!meta.containsKey("subjectName")) {
                         orgUnitRepository.findById(rel.getSubjectId()).ifPresent(org -> {
                             meta.put("subjectName", org.getUnitName());
+                        });
+                    }
+                } else if ("user".equals(rel.getSubjectType()) && rel.getSubjectId() != null) {
+                    if (!meta.containsKey("subjectName")) {
+                        userRepository.findById(rel.getSubjectId()).ifPresent(user -> {
+                            meta.put("subjectName", user.getRealName());
+                            meta.put("username", user.getUsername());
+                        });
+                    }
+                } else if ("place".equals(rel.getSubjectType()) && rel.getSubjectId() != null) {
+                    if (!meta.containsKey("subjectName")) {
+                        placeRepository.findById(rel.getSubjectId()).ifPresent(place -> {
+                            meta.put("subjectName", place.getPlaceName());
                         });
                     }
                 }
@@ -143,6 +163,18 @@ public class AccessRelationApplicationService {
 
     // ---------- Command DTOs ----------
 
+    public PagedResult listPaged(String resourceType, String subjectType, String relation,
+                                  int page, int size) {
+        List<AccessRelation> all = accessRelationRepository.listFiltered(resourceType, subjectType, relation);
+        int from = Math.max(0, (page - 1) * size);
+        int to = Math.min(all.size(), from + size);
+        List<AccessRelation> slice = from < all.size() ? all.subList(from, to) : List.of();
+        enrichRelations(slice);
+        return new PagedResult(slice, (long) all.size());
+    }
+
+    public record PagedResult(List<AccessRelation> records, Long total) {}
+
     @Data
     public static class CreateCommand {
         private String resourceType;
@@ -151,7 +183,7 @@ public class AccessRelationApplicationService {
         private String subjectType;
         private Long subjectId;
         private boolean includeChildren;
-        private int accessLevel = 1;
+        private String accessLevel = "FULL";
         private Map<String, Object> metadata;
         private String remark;
     }
@@ -159,7 +191,7 @@ public class AccessRelationApplicationService {
     @Data
     public static class UpdateCommand {
         private String relation;
-        private Integer accessLevel;
+        private String accessLevel;
         private Boolean includeChildren;
         private Map<String, Object> metadata;
         private String remark;
