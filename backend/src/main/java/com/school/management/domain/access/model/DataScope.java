@@ -1,13 +1,13 @@
 package com.school.management.domain.access.model;
 
 /**
- * 数据权限范围枚举 (V5)
+ * 数据权限范围枚举 (v3 通用化,去教育术语"部门")
  * 定义用户可访问的数据范围级别
  */
 public enum DataScope {
     ALL("ALL", "全部数据", 100, CalcType.NONE, "可访问系统中所有数据"),
-    DEPARTMENT_AND_BELOW("DEPARTMENT_AND_BELOW", "本部门及下级", 80, CalcType.USER_ORG_TREE, "可访问用户所属部门及下级部门的数据"),
-    DEPARTMENT("DEPARTMENT", "仅本部门", 60, CalcType.USER_ORG, "只能访问用户所属部门的数据"),
+    DEPARTMENT_AND_BELOW("DEPARTMENT_AND_BELOW", "本组织及下级", 80, CalcType.USER_ORG_TREE, "可访问用户所属组织及下级组织的数据"),
+    DEPARTMENT("DEPARTMENT", "仅本组织", 60, CalcType.USER_ORG, "只能访问用户所属组织的数据"),
     CUSTOM("CUSTOM", "自定义范围", 40, CalcType.CUSTOM_CONFIG, "管理员配置的指定范围"),
     SELF("SELF", "仅本人", 20, CalcType.CREATOR, "只能访问自己创建或负责的数据");
 
