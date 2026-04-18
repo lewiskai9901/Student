@@ -134,21 +134,26 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
+import { useRoute } from 'vue-router'
 import { Plus } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { accessRelationApi } from '@/api/accessRelation'
 import { relationTypeApi, type RelationTypeDef } from '@/api/relationType'
 
+const route = useRoute()
 const loading = ref(false)
 const rows = ref<any[]>([])
 const page = ref(1)
 const pageSize = ref(20)
 const total = ref(0)
 
+// 从 URL query 预填 filter (如 /access/relations?subjectType=user&subjectId=9001)
 const filter = ref({
-  resourceType: '',
-  relation: '',
-  subjectType: ''
+  resourceType: (route.query.resourceType as string) || '',
+  relation: (route.query.relation as string) || '',
+  subjectType: (route.query.subjectType as string) || '',
+  subjectId: route.query.subjectId ? Number(route.query.subjectId) : null,
+  resourceId: route.query.resourceId ? Number(route.query.resourceId) : null
 })
 
 const relationOptions = ref<RelationTypeDef[]>([])
@@ -243,7 +248,7 @@ function formatTime(t: string | null): string {
 }
 
 function resetFilter() {
-  filter.value = { resourceType: '', relation: '', subjectType: '' }
+  filter.value = { resourceType: '', relation: '', subjectType: '', subjectId: null, resourceId: null }
   page.value = 1
   load()
 }
@@ -256,6 +261,8 @@ async function load() {
       params: {
         resourceType: filter.value.resourceType || undefined,
         subjectType: filter.value.subjectType || undefined,
+        subjectId: filter.value.subjectId || undefined,
+        resourceId: filter.value.resourceId || undefined,
         relation: filter.value.relation || undefined,
         page: page.value,
         size: pageSize.value

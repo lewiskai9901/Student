@@ -143,6 +143,7 @@
             <td>
               <button class="tm-action" @click="handleEdit(row)">编辑</button>
               <button class="tm-action" @click="handleAssignRoles(row)">角色</button>
+              <button class="tm-action" @click="handleViewRelations(row)">关系</button>
               <button class="tm-action" @click="handleResetPassword(row)">密码</button>
               <button class="tm-action tm-action-danger" @click="handleDelete(row)">删除</button>
             </td>
@@ -509,7 +510,18 @@
 
 <script setup lang="ts">
 import { ref, reactive, onMounted, computed, watch } from 'vue'
+import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
+
+const router = useRouter()
+
+function handleViewRelations(row: any) {
+  if (!row.id) return
+  router.push({
+    path: '/access/relations',
+    query: { subjectType: 'user', subjectId: String(row.id) }
+  })
+}
 
 
 import { getOrgUnitTree } from '@/api/organization'

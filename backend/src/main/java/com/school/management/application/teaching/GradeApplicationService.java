@@ -190,17 +190,52 @@ public class GradeApplicationService {
         po.setStatus(3);
         batchMapper.updateById(po);
 
-        // 触发事件: 成绩发布
-        if (triggerService != null) {
+        if (triggerService == null) return;
+
+        Long batchId = id;
+        String batchName = po.getBatchName() != null ? po.getBatchName() : "";
+        Long orgUnitId = po.getOrgUnitId() != null ? po.getOrgUnitId() : 0L;
+        Long semesterId = po.getSemesterId() != null ? po.getSemesterId() : 0L;
+        Long courseId = po.getCourseId() != null ? po.getCourseId() : 0L;
+
+        // 1) 班级级事件 → BY_RELATION(admin) 通知班主任
+        try {
+            triggerService.fire("GRADE_PUBLISHED", Map.of(
+                "batchId", batchId,
+                "batchName", batchName,
+                "semesterId", semesterId,
+                "courseId", courseId,
+                "orgUnitId", orgUnitId
+            ));
+        } catch (Exception ignored) {}
+
+        // 2) 学生级事件 → 对班级每个学生循环 fire
+        //    - BY_SUBJECT 通知学生本人
+        //    - BY_RELATION(guardian_of, outward) 通知其家长
+        if (orgUnitId > 0) {
             try {
-                triggerService.fire("GRADE_PUBLISHED", Map.of(
-                    "batchId", id,
-                    "batchName", po.getBatchName() != null ? po.getBatchName() : "",
-                    "semesterId", po.getSemesterId() != null ? po.getSemesterId() : 0L,
-                    "courseId", po.getCourseId() != null ? po.getCourseId() : 0L,
-                    "orgUnitId", po.getOrgUnitId() != null ? po.getOrgUnitId() : 0L
-                ));
-            } catch (Exception ignored) {}
+                List<Map<String, Object>> students = jdbc.queryForList(
+                    "SELECT s.user_id, u.real_name FROM user_student s " +
+                    "JOIN users u ON u.id = s.user_id AND u.deleted = 0 " +
+                    "WHERE s.org_unit_id = ? AND s.deleted = 0",
+                    orgUnitId);
+                for (Map<String, Object> stu : students) {
+                    Long studentId = ((Number) stu.get("user_id")).longValue();
+                    String studentName = (String) stu.get("real_name");
+                    triggerService.fire("GRADE_PUBLISHED_PERSONAL", Map.of(
+                        "studentId", studentId,
+                        "studentName", studentName != null ? studentName : "",
+                        "batchId", batchId,
+                        "batchName", batchName,
+                        "orgUnitId", orgUnitId,
+                        "_idempotencyKey", "grade-pub-" + batchId + "-" + studentId
+                    ));
+                }
+                log.info("[publishBatch] 班级 {} 发布成绩,对 {} 个学生触发 GRADE_PUBLISHED_PERSONAL",
+                    orgUnitId, students.size());
+            } catch (Exception e) {
+                log.warn("[publishBatch] 学生个人通知触发失败: {}", e.getMessage());
+            }
         }
     }
 
