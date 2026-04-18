@@ -31,12 +31,15 @@ import java.util.Set;
 })
 public class TenantInterceptor implements Interceptor {
 
-    // Tables that should have tenant filtering
+    // Tables that should have tenant filtering (v3)
     private static final Set<String> TENANT_TABLES = Set.of(
         "users", "roles", "permissions", "user_roles", "role_permissions",
-        "access_relations", "org_units", "classes", "students",
-        "data_modules", "scope_item_types", "module_scope_item_types",
-        "role_data_permissions_v5", "role_data_scope_items"
+        "access_relations", "access_relations_history", "relation_types",
+        "org_units", "classes", "students",
+        "data_resources", "role_data_scopes",
+        "entity_field_definitions", "entity_attribute_values",
+        "msg_notifications", "msg_subscription_rules", "msg_templates",
+        "outbox_events", "event_schemas", "channel_deliveries"
     );
 
     // Tables to skip (system-wide tables)
