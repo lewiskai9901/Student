@@ -117,6 +117,34 @@ const routes: RouteRecordRaw[] = [
         ]
       },
 
+      // ==================== 关系管理 /access (order: 1.7) ====================
+      {
+        path: '/access',
+        name: 'AccessCenter',
+        redirect: '/access/relations',
+        meta: {
+          title: '关系管理',
+          icon: 'Connection',
+          requiresAuth: true,
+          order: 1.7,
+          group: 'daily'
+        },
+        children: [
+          {
+            path: '/access/relations',
+            name: 'RelationManager',
+            component: () => import('@/views/access/RelationManagerView.vue'),
+            meta: { title: '关系管理', requiresAuth: true, permission: 'system:config:view', order: 1 }
+          },
+          {
+            path: '/access/relation-types',
+            name: 'RelationTypes',
+            component: () => import('@/views/access/RelationTypesView.vue'),
+            meta: { title: '关系字典', requiresAuth: true, permission: 'system:config:view', order: 2 }
+          }
+        ]
+      },
+
       // ==================== 我的班级 /my-class (order: 2) ====================
       {
         path: '/my-class',
@@ -799,7 +827,7 @@ const routes: RouteRecordRaw[] = [
             meta: {
               title: '教务工作台',
               requiresAuth: true,
-              permission: 'teaching:manage',
+              permission: 'teaching:grade:view',
               order: 0
             }
           },
@@ -868,7 +896,7 @@ const routes: RouteRecordRaw[] = [
             meta: {
               title: '考试管理',
               requiresAuth: true,
-              permission: 'teaching:manage',
+              permission: 'teaching:exam:view',
               order: 8
             }
           },
@@ -879,7 +907,7 @@ const routes: RouteRecordRaw[] = [
             meta: {
               title: '成绩管理',
               requiresAuth: true,
-              permission: 'teaching:manage',
+              permission: 'teaching:grade:view',
               order: 9
             }
           }
