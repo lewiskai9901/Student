@@ -60,6 +60,8 @@ public class TeacherPlugin implements EntityTypePlugin {
 
     @Override
     public String getExtensionTable() {
-        return "user_teacher";
+        // 历史遗留表名: teacher_profiles。TeacherProfileController 已有 CRUD 逻辑,
+        // 规范命名 user_teacher 保留空表作未来演进位。
+        return "teacher_profiles";
     }
 }

@@ -46,6 +46,9 @@ public class StudentPlugin implements EntityTypePlugin {
 
     @Override
     public String getExtensionTable() {
-        return "user_student";
+        // 历史遗留: 学生扩展表用的是 students (而非规范的 user_student)。
+        // 活跃 @TableName("students") 约 20 处,改名收益低风险高,保持现名。
+        // 新增类型插件应遵循 {entity}_{type} 规范 (user_teacher/user_parent/...)
+        return "students";
     }
 }
