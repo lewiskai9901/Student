@@ -185,7 +185,7 @@
                 ]"
               >{{ row.isEnabled !== false ? '启用' : '禁用' }}</span>
             </td>
-            <td class="px-4 py-3 text-sm text-gray-500">{{ row.createdAt || '-' }}</td>
+            <td class="px-4 py-3 text-sm text-gray-500">{{ formatCreatedAt(row.createdAt) }}</td>
             <td class="px-4 py-3">
               <div class="flex items-center justify-center gap-1">
                 <button
@@ -294,14 +294,28 @@
                     class="h-9 w-full rounded-lg border border-gray-300 px-3 text-sm focus:border-blue-500 focus:outline-none"
                   />
                 </div>
-                <div v-if="isEdit">
-                  <label class="mb-1 block text-sm text-gray-700">角色编码</label>
+                <div>
+                  <label class="mb-1 block text-sm text-gray-700">
+                    角色编码 <span v-if="!isEdit" class="text-red-500">*</span>
+                  </label>
                   <input
+                    v-if="!isEdit"
+                    v-model="formData.roleCode"
+                    type="text"
+                    placeholder="如 STUDENT、TEACHER_ASSISTANT（大写字母开头）"
+                    class="h-9 w-full rounded-lg border border-gray-300 px-3 font-mono text-sm uppercase focus:border-blue-500 focus:outline-none"
+                    @input="formData.roleCode = formData.roleCode.toUpperCase()"
+                  />
+                  <input
+                    v-else
                     :value="formData.roleCode"
                     type="text"
                     disabled
                     class="h-9 w-full rounded-lg border border-gray-200 bg-gray-100 px-3 font-mono text-sm text-gray-500"
                   />
+                  <p v-if="!isEdit" class="mt-1 text-xs text-gray-400">
+                    仅允许大写字母/数字/下划线，长度 3-50，创建后不可修改
+                  </p>
                 </div>
                 <div>
                   <label class="mb-1 block text-sm text-gray-700">角色描述</label>
@@ -924,6 +938,12 @@ import type {
   ScopeItem
 } from '@/types/access'
 
+function formatCreatedAt(iso?: string | null): string {
+  if (!iso) return '-'
+  // ISO "2026-04-18T17:10:25.486..." -> "2026-04-18 17:10"
+  return iso.replace('T', ' ').substring(0, 16)
+}
+
 const loading = ref(false)
 const submitLoading = ref(false)
 const permissionSubmitLoading = ref(false)
@@ -1171,6 +1191,16 @@ const handleSubmit = async () => {
     ElMessage.error('请填写角色名称')
     return
   }
+  if (!isEdit.value) {
+    if (!formData.roleCode) {
+      ElMessage.error('请填写角色编码')
+      return
+    }
+    if (!/^[A-Z][A-Z0-9_]{2,49}$/.test(formData.roleCode)) {
+      ElMessage.error('角色编码必须以大写字母开头，仅允许大写字母/数字/下划线，长度 3-50')
+      return
+    }
+  }
   try {
     submitLoading.value = true
     if (isEdit.value && currentRoleId.value) {
@@ -1191,6 +1221,7 @@ const handleSubmit = async () => {
     } else {
       // 创建请求
       const createData: CreateRoleRequest = {
+        roleCode: formData.roleCode,
         roleName: formData.roleName,
         description: formData.description,
         level: formData.sortOrder
