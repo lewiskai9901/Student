@@ -49,6 +49,7 @@ public class GradeApplicationService {
         wrapper.orderByDesc(GradeBatchPO::getCreatedAt);
 
         Page<GradeBatchPO> page = batchMapper.selectPage(new Page<>(pageNum, pageSize), wrapper);
+        enrichBatchNames(page.getRecords());
 
         Map<String, Object> result = new HashMap<>();
         result.put("records", page.getRecords());
@@ -56,8 +57,46 @@ public class GradeApplicationService {
         return result;
     }
 
+    /** Batch-load course/org/user names and map endTime → inputDeadline so list UI can render. */
+    private void enrichBatchNames(List<GradeBatchPO> records) {
+        if (records == null || records.isEmpty()) return;
+
+        Set<Long> courseIds = new HashSet<>();
+        Set<Long> orgIds = new HashSet<>();
+        Set<Long> userIds = new HashSet<>();
+        for (GradeBatchPO po : records) {
+            if (po.getCourseId() != null) courseIds.add(po.getCourseId());
+            if (po.getOrgUnitId() != null) orgIds.add(po.getOrgUnitId());
+            if (po.getCreatedBy() != null) userIds.add(po.getCreatedBy());
+        }
+
+        Map<Long, String> courses = fetchNameMap("courses", "course_name", courseIds);
+        Map<Long, String> orgs = fetchNameMap("org_units", "unit_name", orgIds);
+        Map<Long, String> users = fetchNameMap("users", "COALESCE(real_name, username)", userIds);
+
+        for (GradeBatchPO po : records) {
+            po.setCourseName(courses.get(po.getCourseId()));
+            po.setClassName(orgs.get(po.getOrgUnitId()));
+            po.setCreatedByName(users.get(po.getCreatedBy()));
+            po.setInputDeadline(po.getEndTime());
+        }
+    }
+
+    private Map<Long, String> fetchNameMap(String table, String nameExpr, Set<Long> ids) {
+        if (ids == null || ids.isEmpty()) return Collections.emptyMap();
+        String placeholders = String.join(",", Collections.nCopies(ids.size(), "?"));
+        String sql = "SELECT id, " + nameExpr + " AS name FROM " + table + " WHERE id IN (" + placeholders + ")";
+        Map<Long, String> map = new HashMap<>();
+        jdbc.query(sql, ids.toArray(), rs -> {
+            map.put(rs.getLong("id"), rs.getString("name"));
+        });
+        return map;
+    }
+
     public GradeBatchPO getBatch(Long id) {
-        return batchMapper.selectById(id);
+        GradeBatchPO po = batchMapper.selectById(id);
+        if (po != null) enrichBatchNames(List.of(po));
+        return po;
     }
 
     @Transactional
@@ -72,7 +111,7 @@ public class GradeApplicationService {
         po.setOrgUnitId(toLong(data.get("orgUnitId")));
         po.setGradeType(toInt(data.get("gradeType"), 1));
         po.setStartTime(toLocalDateTime(data.get("startTime")));
-        po.setEndTime(toLocalDateTime(data.get("endTime")));
+        po.setEndTime(toLocalDateTime(data.get("endTime") != null ? data.get("endTime") : data.get("inputDeadline")));
         po.setStatus(toInt(data.get("status"), 0));
         po.setCreatedBy(currentUserId);
 
@@ -91,7 +130,7 @@ public class GradeApplicationService {
         po.setOrgUnitId(toLong(data.get("orgUnitId")));
         po.setGradeType(toIntOrNull(data.get("gradeType")));
         po.setStartTime(toLocalDateTime(data.get("startTime")));
-        po.setEndTime(toLocalDateTime(data.get("endTime")));
+        po.setEndTime(toLocalDateTime(data.get("endTime") != null ? data.get("endTime") : data.get("inputDeadline")));
         po.setStatus(toIntOrNull(data.get("status")));
 
         batchMapper.updateById(po);
@@ -108,6 +147,19 @@ public class GradeApplicationService {
         if (po == null) throw new RuntimeException("成绩批次不存在: " + id);
         po.setStatus(1);
         batchMapper.updateById(po);
+
+        if (triggerService != null) {
+            try {
+                triggerService.fire("GRADE_SUBMITTED", Map.of(
+                    "batchId", id,
+                    "batchName", po.getBatchName() != null ? po.getBatchName() : "",
+                    "semesterId", po.getSemesterId() != null ? po.getSemesterId() : 0L,
+                    "courseId", po.getCourseId() != null ? po.getCourseId() : 0L,
+                    "orgUnitId", po.getOrgUnitId() != null ? po.getOrgUnitId() : 0L,
+                    "createdBy", po.getCreatedBy() != null ? po.getCreatedBy() : 0L
+                ));
+            } catch (Exception ignored) {}
+        }
     }
 
     @Transactional
@@ -116,6 +168,19 @@ public class GradeApplicationService {
         if (po == null) throw new RuntimeException("成绩批次不存在: " + id);
         po.setStatus(2);
         batchMapper.updateById(po);
+
+        if (triggerService != null) {
+            try {
+                triggerService.fire("GRADE_APPROVED", Map.of(
+                    "batchId", id,
+                    "batchName", po.getBatchName() != null ? po.getBatchName() : "",
+                    "semesterId", po.getSemesterId() != null ? po.getSemesterId() : 0L,
+                    "courseId", po.getCourseId() != null ? po.getCourseId() : 0L,
+                    "orgUnitId", po.getOrgUnitId() != null ? po.getOrgUnitId() : 0L,
+                    "createdBy", po.getCreatedBy() != null ? po.getCreatedBy() : 0L
+                ));
+            } catch (Exception ignored) {}
+        }
     }
 
     @Transactional
@@ -131,7 +196,9 @@ public class GradeApplicationService {
                 triggerService.fire("GRADE_PUBLISHED", Map.of(
                     "batchId", id,
                     "batchName", po.getBatchName() != null ? po.getBatchName() : "",
-                    "semesterId", po.getSemesterId() != null ? po.getSemesterId() : 0L
+                    "semesterId", po.getSemesterId() != null ? po.getSemesterId() : 0L,
+                    "courseId", po.getCourseId() != null ? po.getCourseId() : 0L,
+                    "orgUnitId", po.getOrgUnitId() != null ? po.getOrgUnitId() : 0L
                 ));
             } catch (Exception ignored) {}
         }
@@ -198,12 +265,11 @@ public class GradeApplicationService {
     public void batchRecordGrades(Long batchId, List<Map<String, Object>> grades) {
         if (grades == null || grades.isEmpty()) return;
 
-        // Get batch info for semesterId
-        Long semesterId = null;
         GradeBatchPO batch = batchMapper.selectById(batchId);
-        if (batch != null) {
-            semesterId = batch.getSemesterId();
-        }
+        if (batch == null) throw new RuntimeException("成绩批次不存在: " + batchId);
+        Long semesterId = batch.getSemesterId();
+        Long defaultCourseId = batch.getCourseId();
+        Long defaultOrgUnitId = batch.getOrgUnitId();
 
         for (Map<String, Object> grade : grades) {
             StudentGradePO po = new StudentGradePO();
@@ -212,10 +278,14 @@ public class GradeApplicationService {
             po.setBatchId(batchId);
             po.setSemesterId(semesterId);
             po.setTaskId(toLong(grade.get("taskId")));
-            po.setCourseId(toLong(grade.get("courseId")));
+            Long courseId = toLong(grade.get("courseId"));
+            po.setCourseId(courseId != null ? courseId : defaultCourseId);
             po.setStudentId(toLong(grade.get("studentId")));
-            po.setOrgUnitId(toLong(grade.get("orgUnitId")));
-            po.setTotalScore(toBigDecimal(grade.get("totalScore")));
+            Long orgUnitId = toLong(grade.get("orgUnitId"));
+            po.setOrgUnitId(orgUnitId != null ? orgUnitId : defaultOrgUnitId);
+            BigDecimal score = toBigDecimal(grade.get("totalScore"));
+            po.setTotalScore(score);
+            po.setGradeLevel(score != null ? calcGradeLevel(score) : null);
             po.setGradePoint(toBigDecimal(grade.get("gradePoint")));
             po.setPassed(toIntOrNull(grade.get("passed")));
             po.setCreditsEarned(toBigDecimal(grade.get("creditsEarned")));
@@ -708,13 +778,13 @@ public class GradeApplicationService {
     private List<Map<String, Object>> queryStudentsForBatch(GradeBatchPO batch) {
         Long orgUnitId = batch.getOrgUnitId();
         if (orgUnitId != null) {
-            // orgUnitId is class_id in students table
             try {
                 return jdbc.queryForList(
-                    "SELECT s.id, s.student_no, s.name, sc.name AS class_name " +
+                    "SELECT s.id, s.student_no, u.real_name AS name, o.unit_name AS class_name " +
                     "FROM students s " +
-                    "LEFT JOIN school_classes sc ON sc.id = s.class_id " +
-                    "WHERE s.class_id = ? AND s.deleted = 0 ORDER BY s.student_no",
+                    "JOIN users u ON u.id = s.user_id " +
+                    "LEFT JOIN org_units o ON o.id = s.org_unit_id " +
+                    "WHERE s.org_unit_id = ? AND s.deleted = 0 ORDER BY s.student_no",
                     orgUnitId
                 );
             } catch (Exception e) {
@@ -727,10 +797,11 @@ public class GradeApplicationService {
         if (courseId != null) {
             try {
                 return jdbc.queryForList(
-                    "SELECT DISTINCT s.id, s.student_no, s.name, sc.name AS class_name " +
+                    "SELECT DISTINCT s.id, s.student_no, u.real_name AS name, o.unit_name AS class_name " +
                     "FROM student_grades sg " +
                     "JOIN students s ON s.id = sg.student_id " +
-                    "LEFT JOIN school_classes sc ON sc.id = s.class_id " +
+                    "JOIN users u ON u.id = s.user_id " +
+                    "LEFT JOIN org_units o ON o.id = s.org_unit_id " +
                     "WHERE sg.course_id = ? AND sg.deleted = 0 AND s.deleted = 0 " +
                     "ORDER BY s.student_no",
                     courseId

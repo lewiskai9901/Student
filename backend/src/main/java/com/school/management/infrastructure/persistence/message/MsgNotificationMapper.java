@@ -40,6 +40,28 @@ public interface MsgNotificationMapper extends BaseMapper<MsgNotificationPO> {
     @Update("UPDATE msg_notifications SET deleted = 1 WHERE id = #{id} AND user_id = #{userId}")
     void softDelete(@Param("id") Long id, @Param("userId") Long userId);
 
+    /**
+     * 批量插入站内消息（单条 INSERT 多 VALUES），用于订阅规则命中多用户时减少 round-trip。
+     * 一次插入 N 条仅 1 次 DB round-trip，典型 1000 用户场景从 ~1000ms 降到 ~30ms。
+     */
+    @Insert("<script>" +
+            "INSERT INTO msg_notifications(" +
+            "  tenant_id, user_id, title, content, msg_type, source_event_type, " +
+            "  source_ref_type, source_ref_id, subject_type, subject_id, subject_name, " +
+            "  event_category, source_module, event_id, is_read, created_at, " +
+            "  send_status, retry_count, last_error, sent_at" +
+            ") VALUES " +
+            "<foreach collection='list' item='n' separator=','>" +
+            "(" +
+            "  #{n.tenantId}, #{n.userId}, #{n.title}, #{n.content}, #{n.msgType}, #{n.sourceEventType}," +
+            "  #{n.sourceRefType}, #{n.sourceRefId}, #{n.subjectType}, #{n.subjectId}, #{n.subjectName}," +
+            "  #{n.eventCategory}, #{n.sourceModule}, #{n.eventId}, #{n.isRead}, #{n.createdAt}," +
+            "  #{n.sendStatus}, #{n.retryCount}, #{n.lastError}, #{n.sentAt}" +
+            ")" +
+            "</foreach>" +
+            "</script>")
+    int insertBatch(@Param("list") List<MsgNotificationPO> notifications);
+
     @Select("<script>" +
             "SELECT * FROM msg_notifications WHERE user_id = #{userId} AND deleted = 0" +
             "<if test='isRead != null'> AND is_read = #{isRead}</if>" +

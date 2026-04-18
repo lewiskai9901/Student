@@ -33,6 +33,16 @@ public class MsgNotification {
     private LocalDateTime readAt;
     private LocalDateTime createdAt;
 
+    // P1-4 发送状态（为多通道 + 失败重试做准备；站内信默认 SENT）
+    private String sendStatus;      // PENDING / SENT / FAILED
+    private Integer retryCount;
+    private String lastError;
+    private LocalDateTime sentAt;
+
+    public static final String STATUS_PENDING = "PENDING";
+    public static final String STATUS_SENT = "SENT";
+    public static final String STATUS_FAILED = "FAILED";
+
     /**
      * 标记为已读
      */
@@ -45,6 +55,8 @@ public class MsgNotification {
                 .subjectType(this.subjectType).subjectId(this.subjectId).subjectName(this.subjectName)
                 .eventCategory(this.eventCategory).sourceModule(this.sourceModule).eventId(this.eventId)
                 .isRead(1).readAt(LocalDateTime.now()).createdAt(this.createdAt)
+                .sendStatus(this.sendStatus).retryCount(this.retryCount)
+                .lastError(this.lastError).sentAt(this.sentAt)
                 .build();
     }
 
@@ -69,6 +81,7 @@ public class MsgNotification {
         if (userId == null) {
             throw new IllegalArgumentException("userId 不能为空");
         }
+        LocalDateTime now = LocalDateTime.now();
         return MsgNotification.builder()
                 .tenantId(tenantId)
                 .userId(userId)
@@ -78,7 +91,9 @@ public class MsgNotification {
                 .sourceRefType(sourceRefType).sourceRefId(sourceRefId)
                 .subjectType(subjectType).subjectId(subjectId).subjectName(subjectName)
                 .eventCategory(eventCategory).sourceModule(sourceModule).eventId(eventId)
-                .isRead(0).createdAt(LocalDateTime.now())
+                .isRead(0).createdAt(now)
+                // 站内信落库即送达；后续多通道场景由 ChannelDispatcher 覆盖为 PENDING→SENT
+                .sendStatus(STATUS_SENT).retryCount(0).sentAt(now)
                 .build();
     }
 
@@ -97,6 +112,7 @@ public class MsgNotification {
         if (userId == null) {
             throw new IllegalArgumentException("userId 不能为空");
         }
+        LocalDateTime now = LocalDateTime.now();
         return MsgNotification.builder()
                 .tenantId(tenantId)
                 .userId(userId)
@@ -104,7 +120,8 @@ public class MsgNotification {
                 .msgType(msgType)
                 .sourceEventType(sourceEventType)
                 .sourceRefType(sourceRefType).sourceRefId(sourceRefId)
-                .isRead(0).createdAt(LocalDateTime.now())
+                .isRead(0).createdAt(now)
+                .sendStatus(STATUS_SENT).retryCount(0).sentAt(now)
                 .build();
     }
 }

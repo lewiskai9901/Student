@@ -10,12 +10,9 @@ import com.school.management.domain.message.repository.MsgNotificationRepository
 import com.school.management.domain.message.repository.MsgSubscriptionRuleRepository;
 import com.school.management.domain.message.repository.MsgTemplateRepository;
 import com.school.management.infrastructure.persistence.access.AccessRelationMapper;
-import com.school.management.infrastructure.persistence.access.DddRoleMapper;
-import com.school.management.infrastructure.persistence.access.DddUserRoleMapper;
-import com.school.management.infrastructure.persistence.access.RolePO;
-import com.school.management.infrastructure.persistence.access.UserRolePO;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 
 import java.util.*;
@@ -40,9 +37,8 @@ public class MessageDispatcher {
     private final MsgSubscriptionRuleRepository subscriptionRuleRepository;
     private final MsgTemplateRepository templateRepository;
     private final MsgNotificationRepository notificationRepository;
-    private final DddRoleMapper roleMapper;
-    private final DddUserRoleMapper userRoleMapper;
     private final AccessRelationMapper accessRelationMapper;
+    private final JdbcTemplate jdbcTemplate;
     private final ObjectMapper objectMapper;
 
     /**
@@ -107,28 +103,59 @@ public class MessageDispatcher {
             content = event.getSubjectName() + " - " + event.getEventLabel();
         }
 
-        // 3. 为每个目标用户创建通知（携带完整主体/分类/模块信息）
-        // tenantId 必须从事件取得；若事件未携带则拒绝派发，避免落入默认租户。
+        // 3. 规模保护：单条规则命中 > MAX_TARGETS_PER_RULE 直接截断，避免误配爆库
+        final int MAX_TARGETS_PER_RULE = 5000;
+        final int WARN_TARGETS_PER_RULE = 1000;
+        if (targetUserIds.size() > MAX_TARGETS_PER_RULE) {
+            log.error("[消息分发] 规则「{}」命中 {} 个用户，超过上限 {}，已截断。请检查规则配置是否合理。",
+                    rule.getRuleName(), targetUserIds.size(), MAX_TARGETS_PER_RULE);
+            targetUserIds = targetUserIds.stream().limit(MAX_TARGETS_PER_RULE).collect(Collectors.toSet());
+        } else if (targetUserIds.size() > WARN_TARGETS_PER_RULE) {
+            log.warn("[消息分发] 规则「{}」命中 {} 个用户（>{}），正在批量派发。",
+                    rule.getRuleName(), targetUserIds.size(), WARN_TARGETS_PER_RULE);
+        }
+
+        // 4. tenantId 必须从事件取得；缺失则拒绝派发，避免落入默认租户。
         Long tenantId = event.getTenantId();
         if (tenantId == null) {
             log.warn("[消息分发] 事件缺少 tenantId，跳过派发: eventId={}, type={}",
                     event.getId(), event.getEventType());
             return;
         }
+
+        // 5. 批量构建 + 批量 insert（单条 INSERT 多 VALUES，分片 500/批）
+        List<MsgNotification> notifications = new ArrayList<>(targetUserIds.size());
         for (Long userId : targetUserIds) {
-            MsgNotification notification = MsgNotification.createFromEvent(
+            notifications.add(MsgNotification.createFromEvent(
                     tenantId, userId, title, content,
                     event.getEventType(),
                     event.getSourceRefType(), event.getSourceRefId(),
                     event.getSubjectType(), event.getSubjectId(), event.getSubjectName(),
-                    event.getEventCategory(), event.getSourceModule(), event.getId());
-            notificationRepository.save(notification);
+                    event.getEventCategory(), event.getSourceModule(), event.getId()));
         }
+        int inserted = notificationRepository.saveAll(notifications);
 
-        log.info("[消息分发] 规则「{}」→ {} 个用户, 事件: {}/{}, 主体: {}/{}",
-                rule.getRuleName(), targetUserIds.size(),
+        log.info("[消息分发] 规则「{}」→ {} 个用户(写入 {} 条), 事件: {}/{}, 主体: {}/{}",
+                rule.getRuleName(), targetUserIds.size(), inserted,
                 event.getEventCategory(), event.getEventType(),
                 event.getSubjectType(), event.getSubjectName());
+    }
+
+    /**
+     * 预览模式：仅对与事件无关的 targetMode 返回命中用户集合；
+     * 需要 subject 的模式（BY_ORG_ADMIN / BY_RELATED / BY_SUBJECT）返回 null 表示「需事件才能预览」。
+     */
+    public Set<Long> previewTargets(String mode, String targetConfig) {
+        if (mode == null) return Collections.emptySet();
+        return switch (mode) {
+            case "BY_ROLE" -> resolveByRole(targetConfig);
+            case "BY_USER" -> resolveByUser(targetConfig);
+            case "BY_USER_TYPE" -> resolveByUserType(targetConfig);
+            case "BY_ORG_TYPE" -> resolveByOrgType(targetConfig);
+            case "BY_PLACE_TYPE" -> resolveByPlaceType(targetConfig);
+            case "BY_ORG_ADMIN", "BY_RELATED", "BY_SUBJECT" -> null;
+            default -> Collections.emptySet();
+        };
     }
 
     // ── 目标用户解析 ─────────────────────────────────────────────
@@ -141,7 +168,11 @@ public class MessageDispatcher {
             case "BY_ROLE" -> resolveByRole(rule.getTargetConfig());
             case "BY_ORG_ADMIN" -> resolveByOrgAdmin(subjectId, subjectType);
             case "BY_USER" -> resolveByUser(rule.getTargetConfig());
+            case "BY_USER_TYPE" -> resolveByUserType(rule.getTargetConfig());
+            case "BY_ORG_TYPE" -> resolveByOrgType(rule.getTargetConfig());
+            case "BY_PLACE_TYPE" -> resolveByPlaceType(rule.getTargetConfig());
             case "BY_RELATED" -> resolveByRelated(subjectId, subjectType);
+            case "BY_SUBJECT" -> resolveBySubject(subjectId, subjectType);
             default -> {
                 log.warn("[消息分发] 未知 targetMode: {}", mode);
                 yield Collections.emptySet();
@@ -149,19 +180,22 @@ public class MessageDispatcher {
         };
     }
 
-    /** BY_ROLE: targetConfig = ["admin","teacher"] → 查拥有这些角色的用户 */
+    /** BY_ROLE: targetConfig = ["admin","teacher"] → 单次 JOIN + IN 查询拥有这些角色的用户 */
     private Set<Long> resolveByRole(String targetConfig) {
         List<String> roleCodes = parseStringList(targetConfig);
         if (roleCodes.isEmpty()) return Collections.emptySet();
-        Set<Long> userIds = new HashSet<>();
-        for (String roleCode : roleCodes) {
-            RolePO role = roleMapper.findByRoleCode(roleCode);
-            if (role != null) {
-                List<UserRolePO> userRoles = userRoleMapper.findByRoleId(role.getId());
-                userRoles.forEach(ur -> userIds.add(ur.getUserId()));
-            }
+        String placeholders = roleCodes.stream().map(t -> "?").collect(Collectors.joining(","));
+        String sql = "SELECT DISTINCT ur.user_id " +
+                "FROM user_roles ur " +
+                "JOIN roles r ON r.id = ur.role_id AND r.deleted = 0 " +
+                "WHERE r.role_code IN (" + placeholders + ")";
+        try {
+            List<Long> ids = jdbcTemplate.queryForList(sql, Long.class, roleCodes.toArray());
+            return new HashSet<>(ids);
+        } catch (Exception e) {
+            log.warn("[消息分发] BY_ROLE 查询失败: {}", e.getMessage());
+            return Collections.emptySet();
         }
-        return userIds;
     }
 
     /** BY_ORG_ADMIN: 找主体所属组织的管理员 */
@@ -180,6 +214,76 @@ public class MessageDispatcher {
     /** BY_USER: targetConfig = [1, 2, 3] → 直接指定用户ID */
     private Set<Long> resolveByUser(String targetConfig) {
         return new HashSet<>(parseLongList(targetConfig));
+    }
+
+    /** BY_USER_TYPE: targetConfig = ["STUDENT","TEACHER"] → 单次 IN 查询命中这些 user_type_code 的用户 */
+    private Set<Long> resolveByUserType(String targetConfig) {
+        List<String> typeCodes = parseStringList(targetConfig);
+        if (typeCodes.isEmpty()) return Collections.emptySet();
+        String placeholders = typeCodes.stream().map(t -> "?").collect(Collectors.joining(","));
+        String sql = "SELECT id FROM users " +
+                "WHERE deleted = 0 " +
+                "  AND user_type_code IN (" + placeholders + ")";
+        try {
+            List<Long> ids = jdbcTemplate.queryForList(sql, Long.class, typeCodes.toArray());
+            return new HashSet<>(ids);
+        } catch (Exception e) {
+            log.warn("[消息分发] BY_USER_TYPE 查询失败: {}", e.getMessage());
+            return Collections.emptySet();
+        }
+    }
+
+    /**
+     * BY_ORG_TYPE: targetConfig = ["CLASS","GRADE"] → 命中这些 unit_type 组织的全部 member 用户
+     * 两跳：org_units(unit_type) → access_relations(resource=org_unit, subject=user)
+     */
+    private Set<Long> resolveByOrgType(String targetConfig) {
+        List<String> typeCodes = parseStringList(targetConfig);
+        if (typeCodes.isEmpty()) return Collections.emptySet();
+        String placeholders = typeCodes.stream().map(t -> "?").collect(Collectors.joining(","));
+        String sql = "SELECT DISTINCT ar.subject_id " +
+                "FROM access_relations ar " +
+                "JOIN org_units ou ON ou.id = ar.resource_id AND ou.deleted = 0 " +
+                "WHERE ar.resource_type = 'org_unit' " +
+                "  AND ar.subject_type = 'user' " +
+                "  AND ar.deleted = 0 " +
+                "  AND ou.unit_type IN (" + placeholders + ")";
+        try {
+            List<Long> ids = jdbcTemplate.queryForList(sql, Long.class, typeCodes.toArray());
+            return new HashSet<>(ids);
+        } catch (Exception e) {
+            log.warn("[消息分发] BY_ORG_TYPE 查询失败: {}", e.getMessage());
+            return Collections.emptySet();
+        }
+    }
+
+    /**
+     * BY_PLACE_TYPE: targetConfig = ["TYPE_TRAINING","TYPE_LAB"] → 命中这些场所当前的 occupants
+     * 两跳：places(type_code) → place_occupants(当前在住 check_out_time IS NULL)
+     */
+    private Set<Long> resolveByPlaceType(String targetConfig) {
+        List<String> typeCodes = parseStringList(targetConfig);
+        if (typeCodes.isEmpty()) return Collections.emptySet();
+        String placeholders = typeCodes.stream().map(t -> "?").collect(Collectors.joining(","));
+        String sql = "SELECT DISTINCT po.occupant_id " +
+                "FROM place_occupants po " +
+                "JOIN places p ON p.id = po.place_id AND p.deleted = 0 " +
+                "WHERE po.deleted = 0 " +
+                "  AND po.check_out_time IS NULL " +
+                "  AND p.type_code IN (" + placeholders + ")";
+        try {
+            List<Long> ids = jdbcTemplate.queryForList(sql, Long.class, typeCodes.toArray());
+            return new HashSet<>(ids);
+        } catch (Exception e) {
+            log.warn("[消息分发] BY_PLACE_TYPE 查询失败: {}", e.getMessage());
+            return Collections.emptySet();
+        }
+    }
+
+    /** BY_SUBJECT: 当主体就是 USER 时，直接把主体自己作为目标 */
+    private Set<Long> resolveBySubject(Long subjectId, String subjectType) {
+        if (subjectId == null || !"USER".equalsIgnoreCase(subjectType)) return Collections.emptySet();
+        return Set.of(subjectId);
     }
 
     /** BY_RELATED: 查询与主体有关联关系的用户 */

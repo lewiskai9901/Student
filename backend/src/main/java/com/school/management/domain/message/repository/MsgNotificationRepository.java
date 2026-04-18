@@ -12,6 +12,12 @@ public interface MsgNotificationRepository {
 
     MsgNotification save(MsgNotification notification);
 
+    /**
+     * 批量保存（无返回实体 —— 订阅分发场景不需要回读 id）
+     * @return 成功插入的行数
+     */
+    int saveAll(List<MsgNotification> notifications);
+
     Optional<MsgNotification> findById(Long id);
 
     List<MsgNotification> findByUserId(Long userId, Boolean isRead, int page, int size);

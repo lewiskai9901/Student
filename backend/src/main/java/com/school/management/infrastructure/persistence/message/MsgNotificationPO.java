@@ -33,6 +33,12 @@ public class MsgNotificationPO {
     private LocalDateTime readAt;
     private LocalDateTime createdAt;
 
+    // P1-4 发送状态追踪（为多通道 & 失败重试预留）
+    private String sendStatus;      // PENDING / SENT / FAILED
+    private Integer retryCount;
+    private String lastError;
+    private LocalDateTime sentAt;
+
     @TableLogic
     private Integer deleted;
 }

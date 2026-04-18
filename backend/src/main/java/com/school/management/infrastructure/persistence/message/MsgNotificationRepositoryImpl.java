@@ -32,6 +32,27 @@ public class MsgNotificationRepositoryImpl implements MsgNotificationRepository 
     }
 
     @Override
+    public int saveAll(List<MsgNotification> notifications) {
+        if (notifications == null || notifications.isEmpty()) return 0;
+        LocalDateTime now = LocalDateTime.now();
+        List<MsgNotificationPO> pos = notifications.stream()
+                .map(n -> {
+                    MsgNotificationPO po = toPO(n);
+                    if (po.getCreatedAt() == null) po.setCreatedAt(now);
+                    return po;
+                })
+                .collect(Collectors.toList());
+        // 大集合分片插入（每批 500 条），避免 SQL 过长 / packet size 超限
+        final int BATCH = 500;
+        int total = 0;
+        for (int i = 0; i < pos.size(); i += BATCH) {
+            List<MsgNotificationPO> slice = pos.subList(i, Math.min(i + BATCH, pos.size()));
+            total += notificationMapper.insertBatch(slice);
+        }
+        return total;
+    }
+
+    @Override
     public Optional<MsgNotification> findById(Long id) {
         MsgNotificationPO po = notificationMapper.selectById(id);
         return Optional.ofNullable(po).map(this::toDomain);
@@ -105,6 +126,10 @@ public class MsgNotificationRepositoryImpl implements MsgNotificationRepository 
                 .isRead(po.getIsRead())
                 .readAt(po.getReadAt())
                 .createdAt(po.getCreatedAt())
+                .sendStatus(po.getSendStatus())
+                .retryCount(po.getRetryCount())
+                .lastError(po.getLastError())
+                .sentAt(po.getSentAt())
                 .build();
     }
 
@@ -128,6 +153,11 @@ public class MsgNotificationRepositoryImpl implements MsgNotificationRepository 
         po.setIsRead(notification.getIsRead() != null ? notification.getIsRead() : 0);
         po.setReadAt(notification.getReadAt());
         po.setCreatedAt(notification.getCreatedAt());
+        // 发送状态字段；默认 SENT 兼容老调用路径
+        po.setSendStatus(notification.getSendStatus() != null ? notification.getSendStatus() : MsgNotification.STATUS_SENT);
+        po.setRetryCount(notification.getRetryCount() != null ? notification.getRetryCount() : 0);
+        po.setLastError(notification.getLastError());
+        po.setSentAt(notification.getSentAt());
         return po;
     }
 }
