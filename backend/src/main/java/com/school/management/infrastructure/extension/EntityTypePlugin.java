@@ -38,8 +38,28 @@ public interface EntityTypePlugin {
     /** 系统字段定义（管理员不可删除） */
     List<FieldDefinition> getSystemFields();
 
-    /** 功能开关 */
+    /**
+     * 能力声明 (Feature dictionary)
+     *
+     * 标准能力词 (所有插件应优先使用这些):
+     *   - isLearner / isStaff / isExternal              身份大类
+     *   - canLogin / profileEditableBySelf              通用能力
+     *   - receivesPersonalGrade / hasGuardian           学习场景
+     *   - attendanceTracked / canEnroll                 教务场景
+     *   - canBeAdminOfOrg / canBeResponsibleForPlace    管理能力
+     *   - bookable / occupiable / hasCapacity           场所能力
+     *
+     * 业务代码判断 user.hasFeature("isLearner"),
+     * 禁止 "STUDENT".equals(user.getType())。
+     */
     default Map<String, Boolean> getFeatures() { return Map.of(); }
+
+    /**
+     * 扩展表名 (如果此类型有独立扩展表存高频字段)。
+     * 命名规范: {entity}_{type} 小写,如 "user_student" / "place_classroom"。
+     * 返回 null 表示此类型无独立扩展表,所有字段走 entity_attribute_values (EAV)。
+     */
+    default String getExtensionTable() { return null; }
 
     /** UI 配置 */
     default Map<String, Object> getUiConfig() { return Map.of(); }

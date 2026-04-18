@@ -154,8 +154,13 @@ public class DashboardReadModel {
             FROM org_units d
             LEFT JOIN classes c ON c.org_unit_id = d.id AND c.deleted = 0
             LEFT JOIN students s ON s.org_unit_id = c.id AND s.deleted = 0
-            LEFT JOIN user_org_relations ud ON ud.org_unit_id = d.id
-            LEFT JOIN users u ON u.id = ud.user_id AND u.deleted = 0 AND u.status = 1
+            LEFT JOIN access_relations ar ON ar.resource_type = 'org_unit'
+                AND ar.resource_id = d.id
+                AND ar.subject_type = 'user'
+                AND ar.relation = 'member'
+                AND ar.deleted = 0
+                AND (ar.valid_to IS NULL OR ar.valid_to > NOW())
+            LEFT JOIN users u ON u.id = ar.subject_id AND u.deleted = 0 AND u.status = 1
             WHERE d.deleted = 0
             GROUP BY d.id, d.name
             ORDER BY d.name

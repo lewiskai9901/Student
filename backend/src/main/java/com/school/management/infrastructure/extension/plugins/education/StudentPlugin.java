@@ -29,4 +29,23 @@ public class StudentPlugin implements EntityTypePlugin {
     public Map<String, Object> getUiConfig() {
         return Map.of("icon", "graduation-cap", "color", "#2563eb");
     }
+
+    @Override
+    public Map<String, Boolean> getFeatures() {
+        return Map.of(
+            "isLearner", true,
+            "receivesPersonalGrade", true,
+            "hasGuardian", true,
+            "attendanceTracked", true,
+            "canEnroll", true,
+            "canBeAssignedToClass", true,
+            "canLogin", true,
+            "manageableByOrgAdmin", true
+        );
+    }
+
+    @Override
+    public String getExtensionTable() {
+        return "user_student";
+    }
 }

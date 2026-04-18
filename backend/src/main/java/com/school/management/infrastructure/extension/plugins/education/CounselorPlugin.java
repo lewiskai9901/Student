@@ -32,4 +32,20 @@ public class CounselorPlugin implements EntityTypePlugin {
     public Map<String, Object> getUiConfig() {
         return Map.of("icon", "user-check", "color", "#7c3aed");
     }
+
+    @Override
+    public Map<String, Boolean> getFeatures() {
+        return Map.of(
+            "isStaff", true,
+            "canLogin", true,
+            "profileEditableBySelf", true,
+            "canBeAdminOfOrg", true,
+            "canCounsel", true
+        );
+    }
+
+    @Override
+    public String getExtensionTable() {
+        return "user_counselor";
+    }
 }

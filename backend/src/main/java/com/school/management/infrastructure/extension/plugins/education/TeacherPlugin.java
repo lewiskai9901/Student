@@ -44,4 +44,22 @@ public class TeacherPlugin implements EntityTypePlugin {
     public Map<String, Object> getUiConfig() {
         return Map.of("icon", "user-check", "color", "#16a34a");
     }
+
+    @Override
+    public Map<String, Boolean> getFeatures() {
+        return Map.of(
+            "isStaff", true,
+            "canLogin", true,
+            "profileEditableBySelf", true,
+            "canBeAdminOfOrg", true,
+            "canBeResponsibleForPlace", true,
+            "canTeach", true,
+            "canApproveGrade", true
+        );
+    }
+
+    @Override
+    public String getExtensionTable() {
+        return "user_teacher";
+    }
 }

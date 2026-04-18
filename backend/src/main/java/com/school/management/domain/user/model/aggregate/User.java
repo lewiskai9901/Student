@@ -115,7 +115,9 @@ public class User extends AggregateRoot<Long> {
     private List<Long> roleIds = new ArrayList<>();
 
     /**
-     * 所属组织单元ID（查询时填充，非持久化字段，来自 user_org_relations）
+     * 所属组织单元ID（查询时填充，非持久化字段）。
+     * 数据源：access_relations 中 relation='member' 且 subject_type='user' 的首个活跃记录。
+     * 业务代码应通过 AuthorizationService.lookup() 获取完整归属列表。
      */
     private Long orgUnitId;
 
