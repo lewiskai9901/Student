@@ -13,7 +13,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.UUID;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -165,11 +164,21 @@ public class AccessApplicationService {
     // ==================== Role Operations ====================
 
     /**
-     * Creates a new role.
+     * Creates a new role. role_code 必须由调用方显式提供（业务 ID 不可自动生成）。
      */
     public Role createRole(CreateRoleCommand command) {
-        // 自动生成角色编码
-        String roleCode = generateRoleCode();
+        String roleCode = command.getRoleCode();
+        if (roleCode == null || roleCode.isBlank()) {
+            throw new IllegalArgumentException("角色编码不能为空");
+        }
+        roleCode = roleCode.trim();
+        if (!roleCode.matches("^[A-Z][A-Z0-9_]{2,49}$")) {
+            throw new IllegalArgumentException(
+                    "角色编码必须以大写字母开头，仅允许大写字母/数字/下划线，长度 3-50");
+        }
+        if (roleRepository.existsByRoleCode(roleCode)) {
+            throw new IllegalArgumentException("角色编码已存在: " + roleCode);
+        }
 
         Role role = Role.create(
             roleCode,
@@ -182,14 +191,6 @@ public class AccessApplicationService {
         role = roleRepository.save(role);
         publishEvents(role);
         return role;
-    }
-
-    private String generateRoleCode() {
-        String code;
-        do {
-            code = "ROLE_" + UUID.randomUUID().toString().substring(0, 8).toUpperCase();
-        } while (roleRepository.existsByRoleCode(code));
-        return code;
     }
 
     /**

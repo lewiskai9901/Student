@@ -4,7 +4,6 @@ import com.school.management.application.access.DynamicModuleService;
 import com.school.management.common.result.Result;
 import com.school.management.infrastructure.casbin.CasbinAccess;
 import com.school.management.infrastructure.persistence.access.DataModulePO;
-import com.school.management.infrastructure.persistence.access.ScopeItemTypePO;
 import com.school.management.infrastructure.tenant.TenantContextHolder;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
@@ -53,16 +52,4 @@ public class DataModuleController {
         return Result.success(null);
     }
 
-    @GetMapping("/{moduleCode}/scope-item-types")
-    public Result<List<ScopeItemTypePO>> listModuleScopeItemTypes(
-            @PathVariable String moduleCode) {
-        Long tenantId = TenantContextHolder.getTenantId();
-        return Result.success(dynamicModuleService.listScopeItemTypes(tenantId, moduleCode));
-    }
-
-    @GetMapping("/scope-item-types")
-    public Result<List<ScopeItemTypePO>> listAllScopeItemTypes() {
-        Long tenantId = TenantContextHolder.getTenantId();
-        return Result.success(dynamicModuleService.listAllScopeItemTypes(tenantId));
-    }
 }

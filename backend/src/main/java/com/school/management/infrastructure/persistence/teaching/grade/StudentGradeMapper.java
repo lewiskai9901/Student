@@ -19,9 +19,10 @@ public interface StudentGradeMapper extends BaseMapper<StudentGradePO> {
             "g.grade_point AS gradePoint, g.passed, g.credits_earned AS creditsEarned, " +
             "g.grade_status AS gradeStatus, g.remark, " +
             "g.created_at AS createdAt, g.updated_at AS updatedAt, " +
-            "s.name AS studentName, s.student_no AS studentNo " +
+            "u.real_name AS studentName, s.student_no AS studentNo " +
             "FROM student_grades g " +
-            "LEFT JOIN students s ON g.student_id = s.id " +
+            "LEFT JOIN user_student s ON g.student_id = s.id " +
+            "LEFT JOIN users u ON u.id = s.user_id " +
             "WHERE g.batch_id = #{batchId} AND g.deleted = 0 ORDER BY g.created_at DESC")
     List<Map<String, Object>> listByBatchWithStudentInfo(@Param("batchId") Long batchId);
 
@@ -31,22 +32,24 @@ public interface StudentGradeMapper extends BaseMapper<StudentGradePO> {
             "g.grade_point AS gradePoint, g.passed, g.credits_earned AS creditsEarned, " +
             "g.grade_status AS gradeStatus, g.remark, " +
             "c.course_name AS courseName, " +
-            "s.name AS studentName, s.student_no AS studentNo " +
+            "u.real_name AS studentName, s.student_no AS studentNo " +
             "FROM student_grades g " +
             "LEFT JOIN courses c ON g.course_id = c.id " +
-            "LEFT JOIN students s ON g.student_id = s.id " +
+            "LEFT JOIN user_student s ON g.student_id = s.id " +
+            "LEFT JOIN users u ON u.id = s.user_id " +
             "WHERE g.org_unit_id = #{classId} AND g.deleted = 0 " +
             "ORDER BY g.course_id, g.total_score DESC")
     List<Map<String, Object>> listByClassWithJoins(@Param("orgUnitId") Long orgUnitId);
 
     @Select("SELECT sg.total_score, sg.grade_point, sg.passed, " +
-            "s.student_no, s.name AS student_name, " +
-            "c.course_name, sc.name AS class_name " +
+            "s.student_no, u.real_name AS student_name, " +
+            "c.course_name, o.unit_name AS class_name " +
             "FROM student_grades sg " +
-            "LEFT JOIN students s ON s.id = sg.student_id " +
+            "LEFT JOIN user_student s ON s.id = sg.student_id " +
+            "LEFT JOIN users u ON u.id = s.user_id " +
             "LEFT JOIN courses c ON c.id = sg.course_id " +
-            "LEFT JOIN school_classes sc ON sc.id = sg.org_unit_id " +
+            "LEFT JOIN org_units o ON o.id = sg.org_unit_id " +
             "WHERE sg.semester_id = #{semesterId} AND sg.deleted = 0 " +
-            "ORDER BY sc.name, s.student_no")
+            "ORDER BY o.unit_name, s.student_no")
     List<Map<String, Object>> listForExport(@Param("semesterId") Long semesterId);
 }

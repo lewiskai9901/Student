@@ -30,7 +30,7 @@ import java.util.List;
 @RequiredArgsConstructor
 @Tag(name = "Cohorts", description = "Cohort management API")
 @RestController("cohortController")
-@RequestMapping("/students/cohorts")
+@RequestMapping("/user_student/cohorts")
 public class CohortController {
 
     private final CohortApplicationService cohortService;

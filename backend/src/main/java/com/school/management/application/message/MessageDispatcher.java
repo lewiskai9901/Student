@@ -9,7 +9,6 @@ import com.school.management.domain.message.model.MsgTemplate;
 import com.school.management.domain.message.repository.MsgNotificationRepository;
 import com.school.management.domain.message.repository.MsgSubscriptionRuleRepository;
 import com.school.management.domain.message.repository.MsgTemplateRepository;
-import com.school.management.infrastructure.persistence.access.AccessRelationMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -37,7 +36,6 @@ public class MessageDispatcher {
     private final MsgSubscriptionRuleRepository subscriptionRuleRepository;
     private final MsgTemplateRepository templateRepository;
     private final MsgNotificationRepository notificationRepository;
-    private final AccessRelationMapper accessRelationMapper;
     private final JdbcTemplate jdbcTemplate;
     private final ObjectMapper objectMapper;
 
@@ -142,45 +140,32 @@ public class MessageDispatcher {
     }
 
     /**
-     * 预览模式：仅对与事件无关的 targetMode 返回命中用户集合；
-     * 需要 subject 的模式（BY_ORG_ADMIN / BY_RELATED / BY_SUBJECT）返回 null 表示「需事件才能预览」。
+     * 预览模式：返回规则命中的目标用户集合 (用于 UI 调试)。
+     * BY_SUBJECT / BY_RELATION 依赖事件主体,无主体预览时返回 null。
      */
     public Set<Long> previewTargets(String mode, String targetConfig) {
         if (mode == null) return Collections.emptySet();
         return switch (mode) {
-            case "BY_ROLE" -> resolveByRole(targetConfig);
-            case "BY_USER" -> resolveByUser(targetConfig);
-            case "BY_USER_TYPE" -> resolveByUserType(targetConfig);
-            case "BY_ORG_TYPE" -> resolveByOrgType(targetConfig);
-            case "BY_PLACE_TYPE" -> resolveByPlaceType(targetConfig);
-            case "BY_ORG_ADMIN", "BY_RELATED", "BY_SUBJECT" -> null;
+            case "BY_ROLE"    -> resolveByRole(targetConfig);
+            case "BY_FEATURE" -> resolveByFeature(targetConfig);
+            case "BY_SUBJECT", "BY_RELATION" -> null;
             default -> Collections.emptySet();
         };
     }
 
-    // ── 目标用户解析 ─────────────────────────────────────────────
+    // ── 目标用户解析 (v3 四模式,无兼容遗留) ─────────────────────────
 
     private Set<Long> resolveTargetUsers(MsgSubscriptionRule rule, Long subjectId, String subjectType) {
         String mode = rule.getTargetMode();
         if (mode == null) return Collections.emptySet();
 
         return switch (mode) {
-            // === v3 四大核心模式（推荐使用）===
-            case "BY_SUBJECT" -> resolveBySubject(subjectId, subjectType);
+            case "BY_SUBJECT"  -> resolveBySubject(subjectId, subjectType);
             case "BY_RELATION" -> resolveByRelation(rule.getTargetConfig(), subjectId, subjectType);
-            case "BY_ROLE" -> resolveByRole(rule.getTargetConfig());
-            case "BY_FEATURE" -> resolveByFeature(rule.getTargetConfig());
-
-            // === 向后兼容（v2 遗留，建议逐步迁移到上面 4 种）===
-            case "BY_ORG_ADMIN" -> resolveByOrgAdmin(subjectId, subjectType);
-            case "BY_USER" -> resolveByUser(rule.getTargetConfig());
-            case "BY_USER_TYPE" -> resolveByUserType(rule.getTargetConfig());
-            case "BY_ORG_TYPE" -> resolveByOrgType(rule.getTargetConfig());
-            case "BY_PLACE_TYPE" -> resolveByPlaceType(rule.getTargetConfig());
-            case "BY_RELATED" -> resolveByRelated(subjectId, subjectType);
-
+            case "BY_ROLE"     -> resolveByRole(rule.getTargetConfig());
+            case "BY_FEATURE"  -> resolveByFeature(rule.getTargetConfig());
             default -> {
-                log.warn("[消息分发] 未知 targetMode: {}", mode);
+                log.warn("[消息分发] 未知 targetMode: {} (v3 仅支持 BY_SUBJECT/BY_RELATION/BY_ROLE/BY_FEATURE)", mode);
                 yield Collections.emptySet();
             }
         };
@@ -204,105 +189,10 @@ public class MessageDispatcher {
         }
     }
 
-    /** BY_ORG_ADMIN: 找主体所属组织的管理员 */
-    private Set<Long> resolveByOrgAdmin(Long subjectId, String subjectType) {
-        if (subjectId == null) return Collections.emptySet();
-        try {
-            List<Long> ids = accessRelationMapper.findAccessibleResourceIds(
-                    subjectType != null ? subjectType : "org_unit", "user", subjectId);
-            return new HashSet<>(ids);
-        } catch (Exception e) {
-            log.warn("[消息分发] 查询 org admin 失败: {}", e.getMessage());
-            return Collections.emptySet();
-        }
-    }
-
-    /** BY_USER: targetConfig = [1, 2, 3] → 直接指定用户ID */
-    private Set<Long> resolveByUser(String targetConfig) {
-        return new HashSet<>(parseLongList(targetConfig));
-    }
-
-    /** BY_USER_TYPE: targetConfig = ["STUDENT","TEACHER"] → 单次 IN 查询命中这些 user_type_code 的用户 */
-    private Set<Long> resolveByUserType(String targetConfig) {
-        List<String> typeCodes = parseStringList(targetConfig);
-        if (typeCodes.isEmpty()) return Collections.emptySet();
-        String placeholders = typeCodes.stream().map(t -> "?").collect(Collectors.joining(","));
-        String sql = "SELECT id FROM users " +
-                "WHERE deleted = 0 " +
-                "  AND user_type_code IN (" + placeholders + ")";
-        try {
-            List<Long> ids = jdbcTemplate.queryForList(sql, Long.class, typeCodes.toArray());
-            return new HashSet<>(ids);
-        } catch (Exception e) {
-            log.warn("[消息分发] BY_USER_TYPE 查询失败: {}", e.getMessage());
-            return Collections.emptySet();
-        }
-    }
-
-    /**
-     * BY_ORG_TYPE: targetConfig = ["CLASS","GRADE"] → 命中这些 unit_type 组织的全部 member 用户
-     * 两跳：org_units(unit_type) → access_relations(resource=org_unit, subject=user)
-     */
-    private Set<Long> resolveByOrgType(String targetConfig) {
-        List<String> typeCodes = parseStringList(targetConfig);
-        if (typeCodes.isEmpty()) return Collections.emptySet();
-        String placeholders = typeCodes.stream().map(t -> "?").collect(Collectors.joining(","));
-        String sql = "SELECT DISTINCT ar.subject_id " +
-                "FROM access_relations ar " +
-                "JOIN org_units ou ON ou.id = ar.resource_id AND ou.deleted = 0 " +
-                "WHERE ar.resource_type = 'org_unit' " +
-                "  AND ar.subject_type = 'user' " +
-                "  AND ar.deleted = 0 " +
-                "  AND ou.unit_type IN (" + placeholders + ")";
-        try {
-            List<Long> ids = jdbcTemplate.queryForList(sql, Long.class, typeCodes.toArray());
-            return new HashSet<>(ids);
-        } catch (Exception e) {
-            log.warn("[消息分发] BY_ORG_TYPE 查询失败: {}", e.getMessage());
-            return Collections.emptySet();
-        }
-    }
-
-    /**
-     * BY_PLACE_TYPE: targetConfig = ["TYPE_TRAINING","TYPE_LAB"] → 命中这些场所当前的 occupants
-     * 两跳：places(type_code) → place_occupants(当前在住 check_out_time IS NULL)
-     */
-    private Set<Long> resolveByPlaceType(String targetConfig) {
-        List<String> typeCodes = parseStringList(targetConfig);
-        if (typeCodes.isEmpty()) return Collections.emptySet();
-        String placeholders = typeCodes.stream().map(t -> "?").collect(Collectors.joining(","));
-        String sql = "SELECT DISTINCT po.occupant_id " +
-                "FROM place_occupants po " +
-                "JOIN places p ON p.id = po.place_id AND p.deleted = 0 " +
-                "WHERE po.deleted = 0 " +
-                "  AND po.check_out_time IS NULL " +
-                "  AND p.type_code IN (" + placeholders + ")";
-        try {
-            List<Long> ids = jdbcTemplate.queryForList(sql, Long.class, typeCodes.toArray());
-            return new HashSet<>(ids);
-        } catch (Exception e) {
-            log.warn("[消息分发] BY_PLACE_TYPE 查询失败: {}", e.getMessage());
-            return Collections.emptySet();
-        }
-    }
-
-    /** BY_SUBJECT: 当主体就是 USER 时，直接把主体自己作为目标 */
+    /** BY_SUBJECT: 主体本人 (subject_type=user 时) */
     private Set<Long> resolveBySubject(Long subjectId, String subjectType) {
         if (subjectId == null || !"USER".equalsIgnoreCase(subjectType)) return Collections.emptySet();
         return Set.of(subjectId);
-    }
-
-    /** BY_RELATED: 查询与主体有关联关系的用户 */
-    private Set<Long> resolveByRelated(Long subjectId, String subjectType) {
-        if (subjectId == null) return Collections.emptySet();
-        try {
-            List<Long> ids = accessRelationMapper.findAccessibleResourceIds(
-                    "user", subjectType != null ? subjectType : "student", subjectId);
-            return new HashSet<>(ids);
-        } catch (Exception e) {
-            log.warn("[消息分发] 查询关联用户失败: {}", e.getMessage());
-            return Collections.emptySet();
-        }
     }
 
     /**
@@ -472,12 +362,4 @@ public class MessageDispatcher {
         }
     }
 
-    private List<Long> parseLongList(String json) {
-        if (json == null || json.isBlank()) return Collections.emptyList();
-        try {
-            return objectMapper.readValue(json, new TypeReference<>() {});
-        } catch (Exception e) {
-            return Collections.emptyList();
-        }
-    }
 }

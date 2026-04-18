@@ -25,4 +25,11 @@ public class ExamBatchPO {
     private LocalDateTime updatedAt;
     @TableLogic
     private Integer deleted;
+
+    @TableField(exist = false)
+    private String name; // alias of batchName for UI compatibility
+    @TableField(exist = false)
+    private String semesterName;
+    @TableField(exist = false)
+    private String createdByName;
 }

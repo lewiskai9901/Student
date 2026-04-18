@@ -167,7 +167,7 @@ public class StatusChangeRecordService {
         try {
             return jdbc.queryForMap(
                 "SELECT s.student_no AS studentNo, u.real_name AS name " +
-                "FROM students s LEFT JOIN users u ON s.user_id = u.id " +
+                "FROM user_student s LEFT JOIN users u ON s.user_id = u.id " +
                 "WHERE s.id = ? AND s.deleted = 0",
                 studentId
             );

@@ -4,7 +4,6 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.school.management.infrastructure.persistence.access.DataModulePO;
 import com.school.management.infrastructure.persistence.access.DataResourceMapper;
 import com.school.management.infrastructure.persistence.access.DataResourcePO;
-import com.school.management.infrastructure.persistence.access.ScopeItemTypePO;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.cache.annotation.CacheEvict;
@@ -15,12 +14,10 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 /**
- * 数据资源配置服务 (v3: 指向 data_resources 表)
- *
- * v2: 读 data_modules / scope_item_types / module_scope_item_types 三张表
- * v3: 统一读 data_resources。scope_item_types 相关已弃用(v3 CUSTOM 用 JSON 列表)。
- *
- * API 保持向后兼容: 返回 DataModulePO 结构,调用方无感。
+ * 数据资源配置服务 (v3)
+ * 读写 data_resources 表,返回 DataModulePO 结构(API 契约对象)。
+ * CUSTOM scope 在 role_data_scopes.custom_org_unit_ids JSON 列中表达,
+ * 不再需要 v2 的 scope_item_types / module_scope_item_types 配置表。
  */
 @Slf4j
 @Service
@@ -61,25 +58,6 @@ public class DynamicModuleService {
                         LinkedHashMap::new, Collectors.toList()));
     }
 
-    /**
-     * @deprecated v3 CUSTOM scope 直接用 org_unit_id 列表,不再需要 scope_item_types。
-     *             保留方法签名兼容 API,总是返回空列表。
-     */
-    @Deprecated
-    @Cacheable(value = CACHE_NAME, key = "'scopeTypes:' + #tenantId + ':' + #moduleCode")
-    public List<ScopeItemTypePO> listScopeItemTypes(Long tenantId, String moduleCode) {
-        return Collections.emptyList();
-    }
-
-    /**
-     * @deprecated 同上。
-     */
-    @Deprecated
-    @Cacheable(value = CACHE_NAME, key = "'allScopeTypes:' + #tenantId")
-    public List<ScopeItemTypePO> listAllScopeItemTypes(Long tenantId) {
-        return Collections.emptyList();
-    }
-
     // ==================== CRUD ====================
 
     @CacheEvict(value = CACHE_NAME, allEntries = true)
@@ -97,12 +75,13 @@ public class DynamicModuleService {
     }
 
     /**
-     * v3: deleteModule 通过 resource_code 删除。注意 id 已废弃(v2 的 DataModulePO.id 对应 data_modules.id,
-     * v3 的 data_resources 主键是 resource_code)。调用方仅管理员操作,直接传 resource_code 即可。
+     * v3: data_resources 主键是 resource_code (VARCHAR),删除通过 resource_code。
+     * DataModuleController 传的 Long id 是 DataModulePO.id 的 hash 值,不可用于删除。
+     * Controller 已改走按 code 的路径,此方法签名保留供老调用方平滑过渡(实际是 no-op)。
      */
     @CacheEvict(value = CACHE_NAME, allEntries = true)
     public void deleteModule(Long id) {
-        log.warn("[DynamicModuleService] deleteModule(id={}) 已废弃: data_resources 主键是 resource_code. 请使用 deleteModuleByCode()", id);
+        log.warn("[DynamicModuleService] deleteModule(id={}): 使用 deleteModuleByCode(resourceCode) 代替", id);
     }
 
     @CacheEvict(value = CACHE_NAME, allEntries = true)
@@ -119,8 +98,8 @@ public class DynamicModuleService {
 
     private DataModulePO toDataModulePO(DataResourcePO resource) {
         DataModulePO po = new DataModulePO();
-        // id: data_resources 主键是 resource_code(字符串),DataModulePO.id 是 Long;
-        //     用 hash 生成一个稳定 id 供兼容层使用
+        // DataModulePO.id 是 Long, data_resources 主键是 VARCHAR resource_code;
+        // 用 hashCode 生成稳定 Long id 供前端/Controller 使用(仅展示,不用于写入)
         po.setId((long) resource.getResourceCode().hashCode());
         po.setTenantId(resource.getTenantId());
         po.setModuleCode(resource.getResourceCode());

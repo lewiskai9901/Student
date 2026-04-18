@@ -41,23 +41,6 @@ public class RoleDataPermissionController {
         return Result.success(dataPermissionService.getAllScopeTypes());
     }
 
-    @GetMapping("/data-permissions/v5/scope-item-types")
-    @Operation(summary = "获取所有范围项类型（V5）")
-    @CasbinAccess(resource = "system:role", action = "view")
-    public Result<List<ScopeItemTypeDTO>> getScopeItemTypes() {
-        return Result.success(dataPermissionService.getAllScopeItemTypes());
-    }
-
-    @GetMapping("/data-permissions/v5/scope-items")
-    @Operation(summary = "搜索自定义范围可选项（V5）")
-    @CasbinAccess(resource = "system:role", action = "view")
-    public Result<List<ScopeItemDTO>> searchScopeItems(
-            @Parameter(description = "范围项类型代码") @RequestParam String itemTypeCode,
-            @Parameter(description = "搜索关键字") @RequestParam(defaultValue = "") String keyword,
-            @Parameter(description = "返回数量限制") @RequestParam(defaultValue = "20") int limit) {
-        return Result.success(dataPermissionService.searchScopeItems(itemTypeCode, keyword, limit));
-    }
-
     @GetMapping("/{roleId}/data-permissions/v5")
     @Operation(summary = "获取角色数据权限配置（V5）")
     @CasbinAccess(resource = "system:role", action = "view")

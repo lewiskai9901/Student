@@ -97,7 +97,7 @@ public class AttendanceController {
             "s.name AS studentName, s.student_no AS studentNo, " +
             "c.name AS courseName " +
             "FROM attendance_records ar " +
-            "LEFT JOIN students s ON ar.student_id = s.id " +
+            "LEFT JOIN user_student s ON ar.student_id = s.id " +
             "LEFT JOIN courses c ON ar.course_id = c.id " +
             "WHERE 1=1"
         );
@@ -135,10 +135,10 @@ public class AttendanceController {
             @RequestParam(required = false) Long courseId,
             @RequestParam(required = false) Integer period) {
 
-        // 1. 获取班级所有学生 (students 表无 name / status 列; 姓名在 users, 状态列名 student_status)
-        List<Map<String, Object>> students = jdbc.queryForList(
+        // 1. 获取班级所有学生 (user_student 表无 name / status 列; 姓名在 users, 状态列名 student_status)
+        List<Map<String, Object>> user_student = jdbc.queryForList(
             "SELECT s.id AS studentId, s.student_no AS studentNo, u.real_name AS studentName " +
-            "FROM students s LEFT JOIN users u ON s.user_id = u.id " +
+            "FROM user_student s LEFT JOIN users u ON s.user_id = u.id " +
             "WHERE s.org_unit_id = ? AND s.student_status = 1 AND s.deleted = 0 ORDER BY s.student_no",
             orgUnitId
         );
@@ -163,7 +163,7 @@ public class AttendanceController {
 
         // 3. 合并结果
         List<Map<String, Object>> result = new ArrayList<>();
-        for (Map<String, Object> stu : students) {
+        for (Map<String, Object> stu : user_student) {
             Map<String, Object> row = new HashMap<>(stu);
             Long sid = ((Number) stu.get("studentId")).longValue();
             Map<String, Object> rec = recordMap.get(sid);
@@ -230,12 +230,12 @@ public class AttendanceController {
         Integer period = toInt(body.get("period"));
         Integer attendanceType = toInt(body.get("attendanceType"));
         if (attendanceType == null) attendanceType = 1;
-        List<Map<String, Object>> students = (List<Map<String, Object>>) body.get("students");
+        List<Map<String, Object>> user_student = (List<Map<String, Object>>) body.get("user_student");
 
         Long recordedBy = SecurityUtils.getCurrentUserId();
         int count = 0;
 
-        for (Map<String, Object> s : students) {
+        for (Map<String, Object> s : user_student) {
             Long studentId = toLong(s.get("studentId"));
             int status = toInt(s.get("status"));
             String remark = (String) s.get("remark");
@@ -294,7 +294,7 @@ public class AttendanceController {
                         String className = "";
                         try {
                             Map<String, Object> stuInfo = jdbc.queryForMap(
-                                "SELECT s.name, sc.name AS class_name FROM students s " +
+                                "SELECT s.name, sc.name AS class_name FROM user_student s " +
                                 "LEFT JOIN school_classes sc ON s.org_unit_id = sc.id WHERE s.id = ?", studentId);
                             studentName = (String) stuInfo.getOrDefault("name", "");
                             className = (String) stuInfo.getOrDefault("class_name", "");
@@ -480,7 +480,7 @@ public class AttendanceController {
             "lr.created_at AS createdAt, " +
             "s.name AS studentName, s.student_no AS studentNo " +
             "FROM leave_requests lr " +
-            "LEFT JOIN students s ON lr.student_id = s.id " +
+            "LEFT JOIN user_student s ON lr.student_id = s.id " +
             "WHERE 1=1"
         );
         List<Object> params = new ArrayList<>();
@@ -544,7 +544,7 @@ public class AttendanceController {
             "lr.reason, lr.created_at AS createdAt, " +
             "s.name AS studentName, s.student_no AS studentNo, s.org_unit_id AS classId " +
             "FROM leave_requests lr " +
-            "LEFT JOIN students s ON lr.student_id = s.id " +
+            "LEFT JOIN user_student s ON lr.student_id = s.id " +
             "WHERE lr.approval_status = 0 " +
             "ORDER BY lr.created_at ASC"
         );
@@ -567,7 +567,7 @@ public class AttendanceController {
             "s.student_no, s.name AS student_name, " +
             "c.name AS course_name, sc.name AS class_name " +
             "FROM attendance_records ar " +
-            "LEFT JOIN students s ON s.id = ar.student_id " +
+            "LEFT JOIN user_student s ON s.id = ar.student_id " +
             "LEFT JOIN courses c ON c.id = ar.course_id " +
             "LEFT JOIN school_classes sc ON sc.id = ar.org_unit_id " +
             "WHERE ar.semester_id = ?");

@@ -24,7 +24,7 @@ public interface DddStudentMapper extends BaseMapper<StudentPO> {
 
     String BASE_JOIN_SELECT = """
         SELECT s.*, u.real_name as name, u.gender, u.phone, u.identity_card as idCard
-        FROM students s
+        FROM user_student s
         LEFT JOIN users u ON s.user_id = u.id
         """;
 
@@ -80,38 +80,38 @@ public interface DddStudentMapper extends BaseMapper<StudentPO> {
     /**
      * 检查学号是否存在
      */
-    @Select("SELECT COUNT(*) FROM students WHERE student_no = #{studentNo} AND deleted = 0")
+    @Select("SELECT COUNT(*) FROM user_student WHERE student_no = #{studentNo} AND deleted = 0")
     long countByStudentNo(@Param("studentNo") String studentNo);
 
     /**
      * 检查身份证号是否存在
      */
-    @Select("SELECT COUNT(*) FROM students s LEFT JOIN users u ON s.user_id = u.id WHERE u.identity_card = #{idCard} AND s.deleted = 0 AND u.deleted = 0")
+    @Select("SELECT COUNT(*) FROM user_student s LEFT JOIN users u ON s.user_id = u.id WHERE u.identity_card = #{idCard} AND s.deleted = 0 AND u.deleted = 0")
     long countByIdCard(@Param("idCard") String idCard);
 
     /**
      * 统计班级学生数量
      */
-    @Select("SELECT COUNT(*) FROM students WHERE org_unit_id = #{classId} AND deleted = 0")
+    @Select("SELECT COUNT(*) FROM user_student WHERE org_unit_id = #{classId} AND deleted = 0")
     long countByClassId(@Param("orgUnitId") Long orgUnitId);
 
     /**
      * 统计班级在读学生数量 (student_status=1 即 StudentStatus.STUDYING)
      */
-    @Select("SELECT COUNT(*) FROM students WHERE org_unit_id = #{classId} AND student_status = 1 AND deleted = 0")
+    @Select("SELECT COUNT(*) FROM user_student WHERE org_unit_id = #{classId} AND student_status = 1 AND deleted = 0")
     long countActiveByClassId(@Param("orgUnitId") Long orgUnitId);
 
     /**
      * 统计所有学生数量
      */
-    @Select("SELECT COUNT(*) FROM students WHERE deleted = 0")
+    @Select("SELECT COUNT(*) FROM user_student WHERE deleted = 0")
     long countAll();
 
     /**
      * 按关键字统计学生数量
      */
     @Select("""
-        SELECT COUNT(*) FROM students s
+        SELECT COUNT(*) FROM user_student s
         LEFT JOIN users u ON s.user_id = u.id
         WHERE s.deleted = 0
         AND (s.student_no LIKE CONCAT('%', #{keyword}, '%')
@@ -125,6 +125,6 @@ public interface DddStudentMapper extends BaseMapper<StudentPO> {
      * @param classId 班级ID
      * @param gender 性别代码 (1=男, 2=女)
      */
-    @Select("SELECT COUNT(*) FROM students s LEFT JOIN users u ON s.user_id = u.id WHERE s.org_unit_id = #{classId} AND u.gender = #{gender} AND s.deleted = 0")
+    @Select("SELECT COUNT(*) FROM user_student s LEFT JOIN users u ON s.user_id = u.id WHERE s.org_unit_id = #{classId} AND u.gender = #{gender} AND s.deleted = 0")
     long countByClassIdAndGender(@Param("orgUnitId") Long orgUnitId, @Param("gender") Integer gender);
 }

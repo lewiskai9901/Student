@@ -10,7 +10,7 @@ import java.time.LocalDateTime;
  * 学生持久化对象
  */
 @Data
-@TableName("students")
+@TableName("user_student")
 public class StudentPO {
 
     @TableId(type = IdType.ASSIGN_ID)
@@ -27,25 +27,25 @@ public class StudentPO {
     private Long userId;
 
     /**
-     * 姓名 (来自users表，非students表字段)
+     * 姓名 (来自users表，非user_student表字段)
      */
     @TableField(exist = false)
     private String name;
 
     /**
-     * 性别: 1-男, 2-女 (来自users表，非students表字段)
+     * 性别: 1-男, 2-女 (来自users表，非user_student表字段)
      */
     @TableField(exist = false)
     private Integer gender;
 
     /**
-     * 身份证号 (来自users表，非students表字段)
+     * 身份证号 (来自users表，非user_student表字段)
      */
     @TableField(exist = false)
     private String idCard;
 
     /**
-     * 手机号 (来自users表，非students表字段)
+     * 手机号 (来自users表，非user_student表字段)
      */
     @TableField(exist = false)
     private String phone;

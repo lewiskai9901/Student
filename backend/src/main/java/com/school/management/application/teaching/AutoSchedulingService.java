@@ -177,17 +177,17 @@ public class AutoSchedulingService {
             for (ScheduleSlot slot : solution) {
                 if (slot.classroomId != null) {
                     int cap = roomCapMap.getOrDefault(slot.classroomId, 0);
-                    int students = slot.combinedClassIds != null ? sessions.stream()
+                    int user_student = slot.combinedClassIds != null ? sessions.stream()
                         .filter(s -> s.taskId.equals(slot.taskId)).findFirst().map(s -> s.studentCount).orElse(0) : 0;
-                    if (students == 0) {
-                        students = requirements.stream().filter(r -> r.taskId.equals(slot.taskId))
+                    if (user_student == 0) {
+                        user_student = requirements.stream().filter(r -> r.taskId.equals(slot.taskId))
                             .findFirst().map(r -> r.studentCount).orElse(0);
                     }
-                    if (cap > 0 && students > cap) {
+                    if (cap > 0 && user_student > cap) {
                         capacityWarnings.add(Map.of(
                             "taskId", slot.taskId, "classroomId", slot.classroomId,
-                            "capacity", cap, "studentCount", students,
-                            "message", String.format("教室容量%d不足，学生%d人", cap, students)));
+                            "capacity", cap, "studentCount", user_student,
+                            "message", String.format("教室容量%d不足，学生%d人", cap, user_student)));
                     }
                 }
             }

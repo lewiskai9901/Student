@@ -359,10 +359,10 @@ public class StudentApplicationService {
         int pageNum = criteria.getPageNum() != null ? criteria.getPageNum() : 1;
         int pageSize = criteria.getPageSize() != null ? criteria.getPageSize() : 10;
 
-        List<Student> students = studentRepository.findByPage(repoCriteria, pageNum, pageSize);
+        List<Student> user_student = studentRepository.findByPage(repoCriteria, pageNum, pageSize);
         long total = studentRepository.countByCriteria(repoCriteria);
 
-        List<StudentDTO> dtos = students.stream()
+        List<StudentDTO> dtos = user_student.stream()
                 .map(this::toDTO)
                 .collect(Collectors.toList());
 

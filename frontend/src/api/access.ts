@@ -354,8 +354,7 @@ export function checkPermissionSync(): Promise<{
 import type {
   DataScopeOption,
   RolePermissionConfig,
-  DataModuleDTO,
-  ScopeItemTypeDTO
+  DataModuleDTO
 } from '@/types/access'
 
 const DATA_MODULE_URL = '/data-modules'
@@ -389,41 +388,11 @@ export function getDataScopes(): Promise<DataScopeOption[]> {
 }
 
 /**
- * 获取所有范围项类型
- */
-export function getScopeItemTypes(): Promise<ScopeItemTypeDTO[]> {
-  return http.get<ScopeItemTypeDTO[]>(`${DATA_MODULE_URL}/scope-item-types`)
-}
-
-/**
- * 获取某模块可用的范围项类型
- */
-export function getModuleScopeItemTypes(moduleCode: string): Promise<ScopeItemTypeDTO[]> {
-  return http.get<ScopeItemTypeDTO[]>(`${DATA_MODULE_URL}/${moduleCode}/scope-item-types`)
-}
-
-/**
- * 搜索自定义范围可选项
- */
-export function searchScopeItems(
-  itemTypeCode: string,
-  keyword: string = '',
-  limit: number = 20
-): Promise<{ id: number | string; name: string; parentId?: number | string }[]> {
-  return http.get(`${DATA_MODULE_URL}/scope-items`, {
-    params: { itemTypeCode, keyword, limit }
-  })
-}
-
-/**
- * 数据权限 API 对象
+ * 数据权限 API 对象 (v3: 无 scope-item-types, CUSTOM 直接用 org_unit_id 列表)
  */
 export const dataPermissionApi = {
   getConfig: getRoleDataPermissions,
   saveConfig: saveRoleDataPermissions,
   getModules: getDataModules,
-  getScopes: getDataScopes,
-  getScopeItemTypes,
-  getModuleScopeItemTypes,
-  searchScopeItems
+  getScopes: getDataScopes
 }

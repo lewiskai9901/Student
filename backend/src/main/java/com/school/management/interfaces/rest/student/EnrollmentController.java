@@ -435,7 +435,7 @@ public class EnrollmentController {
         try {
             maxSeq = jdbc.queryForObject(
                 "SELECT MAX(CAST(SUBSTRING(student_no, " + (yearPrefix.length() + 1) + ") AS UNSIGNED)) " +
-                "FROM students WHERE student_no LIKE ? AND deleted=0",
+                "FROM user_student WHERE student_no LIKE ? AND deleted=0",
                 Integer.class, yearPrefix + "%");
         } catch (Exception e) {
             maxSeq = null;
@@ -446,7 +446,7 @@ public class EnrollmentController {
         // 3. Insert student record
         Long createdBy = SecurityUtils.getCurrentUserId();
         jdbc.update(
-            "INSERT INTO students (student_no, name, gender, id_card, phone, org_unit_id, " +
+            "INSERT INTO user_student (student_no, name, gender, id_card, phone, org_unit_id, " +
             "enrollment_date, status, created_by, created_at) " +
             "VALUES (?,?,?,?,?,?,?,1,?,NOW())",
             studentNo,

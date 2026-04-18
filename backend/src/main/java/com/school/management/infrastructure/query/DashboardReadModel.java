@@ -45,7 +45,7 @@ public class DashboardReadModel {
 
         // Student count
         Long studentCount = jdbcTemplate.queryForObject(
-            "SELECT COUNT(*) FROM students WHERE deleted = 0",
+            "SELECT COUNT(*) FROM user_student WHERE deleted = 0",
             Long.class
         );
 
@@ -153,7 +153,7 @@ public class DashboardReadModel {
                 COUNT(DISTINCT u.id) as user_count
             FROM org_units d
             LEFT JOIN classes c ON c.org_unit_id = d.id AND c.deleted = 0
-            LEFT JOIN students s ON s.org_unit_id = c.id AND s.deleted = 0
+            LEFT JOIN user_student s ON s.org_unit_id = c.id AND s.deleted = 0
             LEFT JOIN access_relations ar ON ar.resource_type = 'org_unit'
                 AND ar.resource_id = d.id
                 AND ar.subject_type = 'user'

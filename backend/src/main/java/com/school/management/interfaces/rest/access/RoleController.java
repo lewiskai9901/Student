@@ -33,6 +33,7 @@ public class RoleController {
     @AuditEvent(module = "access", action = "CREATE", resourceType = "ROLE", label = "创建角色")
     public Result<RoleResponse> createRole(@Valid @RequestBody CreateRoleRequest request) {
         CreateRoleCommand command = CreateRoleCommand.builder()
+            .roleCode(request.getRoleCode())
             .roleName(request.getRoleName())
             .description(request.getDescription())
             .roleType(request.getRoleType())

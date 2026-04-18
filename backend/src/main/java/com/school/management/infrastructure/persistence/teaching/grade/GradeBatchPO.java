@@ -25,4 +25,13 @@ public class GradeBatchPO {
     private LocalDateTime createdAt;
     private Long updatedBy;
     private LocalDateTime updatedAt;
+
+    @TableField(exist = false)
+    private String courseName;
+    @TableField(exist = false)
+    private String className;
+    @TableField(exist = false)
+    private String createdByName;
+    @TableField(exist = false)
+    private java.time.LocalDateTime inputDeadline; // alias of endTime for UI
 }

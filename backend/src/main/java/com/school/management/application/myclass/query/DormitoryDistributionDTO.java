@@ -23,7 +23,7 @@ public class DormitoryDistributionDTO {
         private String roomNo;
         private Integer floor;
         private Integer studentCount;
-        private List<StudentBedDTO> students;
+        private List<StudentBedDTO> user_student;
     }
 
     @Data

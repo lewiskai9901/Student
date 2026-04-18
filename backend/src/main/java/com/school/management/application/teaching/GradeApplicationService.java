@@ -426,7 +426,7 @@ public class GradeApplicationService {
         boolean joinStudents = true;
 
         try {
-            jdbc.queryForObject("SELECT 1 FROM students LIMIT 1", Integer.class);
+            jdbc.queryForObject("SELECT 1 FROM user_student LIMIT 1", Integer.class);
             sql.append(
                 "SELECT g.student_id AS studentId, " +
                 "s.name AS studentName, s.student_no AS studentNo, " +
@@ -434,7 +434,7 @@ public class GradeApplicationService {
                 "AVG(g.total_score) AS avgScore, " +
                 "COUNT(*) AS courseCount " +
                 "FROM student_grades g " +
-                "LEFT JOIN students s ON g.student_id = s.id " +
+                "LEFT JOIN user_student s ON g.student_id = s.id " +
                 "WHERE g.org_unit_id = ? AND g.deleted = 0"
             );
         } catch (Exception e) {
@@ -477,7 +477,7 @@ public class GradeApplicationService {
             "s.student_no, s.name AS student_name, " +
             "c.course_name, sc.name AS class_name " +
             "FROM student_grades sg " +
-            "LEFT JOIN students s ON s.id = sg.student_id " +
+            "LEFT JOIN user_student s ON s.id = sg.student_id " +
             "LEFT JOIN courses c ON c.id = sg.course_id " +
             "LEFT JOIN school_classes sc ON sc.id = sg.org_unit_id " +
             "WHERE sg.semester_id = ? AND sg.deleted = 0");
@@ -556,7 +556,7 @@ public class GradeApplicationService {
         if (batch == null) throw new RuntimeException("成绩批次不存在: " + batchId);
 
         // 查询关联学生列表
-        List<Map<String, Object>> students = queryStudentsForBatch(batch);
+        List<Map<String, Object>> user_student = queryStudentsForBatch(batch);
 
         try (Workbook wb = new XSSFWorkbook()) {
             Sheet sheet = wb.createSheet("成绩导入模板");
@@ -590,7 +590,7 @@ public class GradeApplicationService {
 
             // Fill student data rows
             int rowIdx = 1;
-            for (Map<String, Object> stu : students) {
+            for (Map<String, Object> stu : user_student) {
                 Row row = sheet.createRow(rowIdx++);
 
                 Cell c0 = row.createCell(0);
@@ -684,7 +684,7 @@ public class GradeApplicationService {
                     if (studentId == null && studentNo != null && !studentNo.isBlank()) {
                         try {
                             List<Map<String, Object>> found = jdbc.queryForList(
-                                "SELECT id FROM students WHERE student_no = ? AND deleted = 0 LIMIT 1",
+                                "SELECT id FROM user_student WHERE student_no = ? AND deleted = 0 LIMIT 1",
                                 studentNo.trim()
                             );
                             if (!found.isEmpty()) {
@@ -781,25 +781,25 @@ public class GradeApplicationService {
             try {
                 return jdbc.queryForList(
                     "SELECT s.id, s.student_no, u.real_name AS name, o.unit_name AS class_name " +
-                    "FROM students s " +
+                    "FROM user_student s " +
                     "JOIN users u ON u.id = s.user_id " +
                     "LEFT JOIN org_units o ON o.id = s.org_unit_id " +
                     "WHERE s.org_unit_id = ? AND s.deleted = 0 ORDER BY s.student_no",
                     orgUnitId
                 );
             } catch (Exception e) {
-                log.warn("Failed to query students by orgUnitId: {}", e.getMessage());
+                log.warn("Failed to query user_student by orgUnitId: {}", e.getMessage());
             }
         }
 
-        // Fallback: try courseId to find enrolled students
+        // Fallback: try courseId to find enrolled user_student
         Long courseId = batch.getCourseId();
         if (courseId != null) {
             try {
                 return jdbc.queryForList(
                     "SELECT DISTINCT s.id, s.student_no, u.real_name AS name, o.unit_name AS class_name " +
                     "FROM student_grades sg " +
-                    "JOIN students s ON s.id = sg.student_id " +
+                    "JOIN user_student s ON s.id = sg.student_id " +
                     "JOIN users u ON u.id = s.user_id " +
                     "LEFT JOIN org_units o ON o.id = s.org_unit_id " +
                     "WHERE sg.course_id = ? AND sg.deleted = 0 AND s.deleted = 0 " +
@@ -807,7 +807,7 @@ public class GradeApplicationService {
                     courseId
                 );
             } catch (Exception e) {
-                log.warn("Failed to query students by courseId: {}", e.getMessage());
+                log.warn("Failed to query user_student by courseId: {}", e.getMessage());
             }
         }
 

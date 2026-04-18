@@ -35,7 +35,7 @@ public class TenantInterceptor implements Interceptor {
     private static final Set<String> TENANT_TABLES = Set.of(
         "users", "roles", "permissions", "user_roles", "role_permissions",
         "access_relations", "access_relations_history", "relation_types",
-        "org_units", "classes", "students",
+        "org_units", "classes", "user_student",
         "data_resources", "role_data_scopes",
         "entity_field_definitions", "entity_attribute_values",
         "msg_notifications", "msg_subscription_rules", "msg_templates",

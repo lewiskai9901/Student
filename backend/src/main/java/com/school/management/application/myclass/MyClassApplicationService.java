@@ -86,9 +86,9 @@ public class MyClassApplicationService {
         validateAccess(orgUnitId, userId);
 
         // 使用DDD StudentRepository获取学生
-        List<Student> students = studentRepository.findByClassId(orgUnitId);
+        List<Student> user_student = studentRepository.findByClassId(orgUnitId);
 
-        return students.stream()
+        return user_student.stream()
             .filter(s -> {
                 if (keyword != null && !keyword.isEmpty()) {
                     String name = s.getName() != null ? s.getName() : "";
@@ -229,7 +229,7 @@ public class MyClassApplicationService {
                     .roomNo(roomNoStr)
                     .floor(floorNumber)
                     .studentCount(roomOccupants.size())
-                    .students(studentBeds)
+                    .user_student(studentBeds)
                     .build());
             }
 

@@ -140,7 +140,7 @@ public class MyDashboardQueryService {
         // Step 2: 学生数（一次 SQL 拉全，内存 group）
         String studentSql =
                 "SELECT org_unit_id, COUNT(*) AS cnt " +
-                "FROM students " +
+                "FROM user_student " +
                 "WHERE deleted = 0 AND org_unit_id IN (" +
                 inPlaceholders(classRoles.size()) + ") " +
                 "GROUP BY org_unit_id";

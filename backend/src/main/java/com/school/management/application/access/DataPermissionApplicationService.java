@@ -5,7 +5,6 @@ import com.school.management.domain.access.model.entity.DataScopeItem;
 import com.school.management.domain.access.model.entity.RoleDataPermission;
 import com.school.management.infrastructure.access.DataPermissionPolicyService;
 import com.school.management.infrastructure.persistence.access.DataModulePO;
-import com.school.management.infrastructure.persistence.access.ScopeItemTypePO;
 import com.school.management.infrastructure.tenant.TenantContextHolder;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -59,52 +58,6 @@ public class DataPermissionApplicationService {
         return Arrays.stream(DataScope.values())
                 .sorted(Comparator.comparingInt(DataScope::getLevel).reversed())
                 .map(s -> new ScopeTypeDTO(s.getCode(), s.getDisplayName(), s.getDescription()))
-                .collect(Collectors.toList());
-    }
-
-    /**
-     * 获取所有范围项类型
-     */
-    public List<ScopeItemTypeDTO> getAllScopeItemTypes() {
-        Long tenantId = TenantContextHolder.getTenantId();
-        return dynamicModuleService.listAllScopeItemTypes(tenantId).stream()
-                .map(t -> new ScopeItemTypeDTO(t.getItemTypeCode(), t.getItemTypeName(), t.getSupportChildren()))
-                .collect(Collectors.toList());
-    }
-
-    /**
-     * 搜索自定义范围可选项
-     */
-    public List<ScopeItemDTO> searchScopeItems(String itemTypeCode, String keyword, int limit) {
-        Long tenantId = TenantContextHolder.getTenantId();
-        List<ScopeItemTypePO> types = dynamicModuleService.listAllScopeItemTypes(tenantId);
-        ScopeItemTypePO config = types.stream()
-                .filter(t -> t.getItemTypeCode().equals(itemTypeCode))
-                .findFirst()
-                .orElse(null);
-
-        if (config == null) {
-            return Collections.emptyList();
-        }
-
-        // Use parameterized query with sanitized identifiers
-        String refTable = sanitizeIdentifier(config.getRefTable());
-        String refIdField = sanitizeIdentifier(config.getRefIdField());
-        String refNameField = sanitizeIdentifier(config.getRefNameField());
-
-        String sql = String.format(
-                "SELECT %s as id, %s as name FROM %s WHERE %s LIKE ? LIMIT ?",
-                refIdField, refNameField, refTable, refNameField
-        );
-
-        List<Map<String, Object>> rows = jdbcTemplate.queryForList(sql, "%" + keyword + "%", limit);
-
-        return rows.stream()
-                .map(row -> new ScopeItemDTO(
-                        getLongValue(row, "id"),
-                        (String) row.get("name"),
-                        itemTypeCode
-                ))
                 .collect(Collectors.toList());
     }
 
@@ -263,14 +216,6 @@ public class DataPermissionApplicationService {
         private String code;
         private String name;
         private String description;
-    }
-
-    @lombok.Data
-    @lombok.AllArgsConstructor
-    public static class ScopeItemTypeDTO {
-        private String code;
-        private String name;
-        private boolean supportChildren;
     }
 
     @lombok.Data

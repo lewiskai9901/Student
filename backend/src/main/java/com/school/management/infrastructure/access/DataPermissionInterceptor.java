@@ -79,6 +79,12 @@ public class DataPermissionInterceptor implements Interceptor {
         MappedStatement mappedStatement = (MappedStatement) metaObject.getValue("delegate.mappedStatement");
         String mapperId = mappedStatement.getId();
 
+        // INSERT statements have no WHERE clause — appending filter produces invalid SQL.
+        // Ownership for new rows is enforced by the application layer, not by row-level filters.
+        if (mappedStatement.getSqlCommandType() == org.apache.ibatis.mapping.SqlCommandType.INSERT) {
+            return invocation.proceed();
+        }
+
         DataPermission dataPermission = getDataPermissionAnnotation(mapperId);
         if (dataPermission == null || !dataPermission.enabled()) {
             return invocation.proceed();

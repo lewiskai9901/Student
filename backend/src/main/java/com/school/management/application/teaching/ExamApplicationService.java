@@ -3,12 +3,14 @@ package com.school.management.application.teaching;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.toolkit.IdWorker;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.school.management.application.event.TriggerService;
 import com.school.management.infrastructure.persistence.teaching.exam.ExamArrangementMapper;
 import com.school.management.infrastructure.persistence.teaching.exam.ExamArrangementPO;
 import com.school.management.infrastructure.persistence.teaching.exam.ExamBatchMapper;
 import com.school.management.infrastructure.persistence.teaching.exam.ExamBatchPO;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -26,6 +28,9 @@ public class ExamApplicationService {
     private final ExamArrangementMapper arrangementMapper;
     private final JdbcTemplate jdbc; // for exam_rooms and exam_invigilators join tables
 
+    @Autowired(required = false)
+    private TriggerService triggerService;
+
     // ==================== Batch Methods ====================
 
     public Map<String, Object> listBatches(Long semesterId, Integer examType, Integer status,
@@ -37,6 +42,7 @@ public class ExamApplicationService {
         wrapper.orderByDesc(ExamBatchPO::getCreatedAt);
 
         Page<ExamBatchPO> page = batchMapper.selectPage(new Page<>(pageNum, pageSize), wrapper);
+        enrichBatchNames(page.getRecords());
 
         Map<String, Object> result = new HashMap<>();
         result.put("records", page.getRecords());
@@ -44,8 +50,42 @@ public class ExamApplicationService {
         return result;
     }
 
+    /** Populate name alias + semesterName/createdByName for UI rendering. */
+    private void enrichBatchNames(List<ExamBatchPO> records) {
+        if (records == null || records.isEmpty()) return;
+
+        Set<Long> semesterIds = new HashSet<>();
+        Set<Long> userIds = new HashSet<>();
+        for (ExamBatchPO po : records) {
+            if (po.getSemesterId() != null) semesterIds.add(po.getSemesterId());
+            if (po.getCreatedBy() != null) userIds.add(po.getCreatedBy());
+        }
+
+        Map<Long, String> semesters = fetchNameMap("semesters", "semester_name", semesterIds);
+        Map<Long, String> users = fetchNameMap("users", "COALESCE(real_name, username)", userIds);
+
+        for (ExamBatchPO po : records) {
+            po.setName(po.getBatchName());
+            po.setSemesterName(semesters.get(po.getSemesterId()));
+            po.setCreatedByName(users.get(po.getCreatedBy()));
+        }
+    }
+
+    private Map<Long, String> fetchNameMap(String table, String nameExpr, Set<Long> ids) {
+        if (ids == null || ids.isEmpty()) return Collections.emptyMap();
+        String placeholders = String.join(",", Collections.nCopies(ids.size(), "?"));
+        String sql = "SELECT id, " + nameExpr + " AS name FROM " + table + " WHERE id IN (" + placeholders + ")";
+        Map<Long, String> map = new HashMap<>();
+        jdbc.query(sql, ids.toArray(), rs -> {
+            map.put(rs.getLong("id"), rs.getString("name"));
+        });
+        return map;
+    }
+
     public ExamBatchPO getBatch(Long id) {
-        return batchMapper.selectById(id);
+        ExamBatchPO po = batchMapper.selectById(id);
+        if (po != null) enrichBatchNames(List.of(po));
+        return po;
     }
 
     @Transactional
@@ -54,9 +94,13 @@ public class ExamApplicationService {
         long id = IdWorker.getId();
         po.setId(id);
         po.setBatchCode("EX" + id);
-        po.setBatchName((String) data.get("batchName"));
+        po.setBatchName((String) (data.get("batchName") != null ? data.get("batchName") : data.get("name")));
         po.setSemesterId(toLong(data.get("semesterId")));
-        po.setExamType(toInt(data.get("examType"), 1));
+        Integer examType = toIntOrNull(data.get("examType"));
+        if (examType == null || examType < 1 || examType > 4) {
+            throw new IllegalArgumentException("考试类型必填（1=期中 2=期末 3=补考 4=重修）");
+        }
+        po.setExamType(examType);
         po.setStartDate(toLocalDate(data.get("startDate")));
         po.setEndDate(toLocalDate(data.get("endDate")));
         po.setStatus(toInt(data.get("status"), 0));
@@ -73,7 +117,7 @@ public class ExamApplicationService {
         ExamBatchPO po = batchMapper.selectById(id);
         if (po == null) throw new RuntimeException("考试批次不存在: " + id);
 
-        po.setBatchName((String) data.get("batchName"));
+        po.setBatchName((String) (data.get("batchName") != null ? data.get("batchName") : data.get("name")));
         po.setSemesterId(toLong(data.get("semesterId")));
         po.setExamType(toIntOrNull(data.get("examType")));
         po.setStartDate(toLocalDate(data.get("startDate")));
@@ -95,6 +139,19 @@ public class ExamApplicationService {
         if (po == null) throw new RuntimeException("考试批次不存在: " + id);
         po.setStatus(2);
         batchMapper.updateById(po);
+
+        if (triggerService != null) {
+            try {
+                triggerService.fire("EXAM_PUBLISHED", Map.of(
+                    "batchId", id,
+                    "batchName", po.getBatchName() != null ? po.getBatchName() : "",
+                    "semesterId", po.getSemesterId() != null ? po.getSemesterId() : 0L,
+                    "examType", po.getExamType() != null ? po.getExamType() : 0,
+                    "startDate", po.getStartDate() != null ? po.getStartDate().toString() : "",
+                    "endDate", po.getEndDate() != null ? po.getEndDate().toString() : ""
+                ));
+            } catch (Exception ignored) {}
+        }
     }
 
     // ==================== Arrangement Methods ====================

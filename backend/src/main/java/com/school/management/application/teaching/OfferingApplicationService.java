@@ -194,7 +194,7 @@ public class OfferingApplicationService {
             int studentCount = 0;
             try {
                 Long cnt = jdbc.queryForObject(
-                    "SELECT COUNT(1) FROM students WHERE org_unit_id = ? AND deleted = 0", Long.class, a.getOrgUnitId());
+                    "SELECT COUNT(1) FROM user_student WHERE org_unit_id = ? AND deleted = 0", Long.class, a.getOrgUnitId());
                 if (cnt != null) studentCount = cnt.intValue();
             } catch (Exception ignored) {}
 

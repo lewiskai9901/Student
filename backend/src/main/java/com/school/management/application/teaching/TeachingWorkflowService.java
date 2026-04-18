@@ -299,10 +299,10 @@ public class TeachingWorkflowService {
             if (taskId == null || courseId == null) continue;
 
             // 查找班级学生，为每人生成一条待录入记录
-            List<Map<String, Object>> students = jdbc.queryForList(
-                "SELECT id FROM students WHERE org_unit_id = ? AND student_status = 1 AND deleted = 0", orgUnitId);
+            List<Map<String, Object>> user_student = jdbc.queryForList(
+                "SELECT id FROM user_student WHERE org_unit_id = ? AND student_status = 1 AND deleted = 0", orgUnitId);
 
-            for (Map<String, Object> s : students) {
+            for (Map<String, Object> s : user_student) {
                 Long studentId = toLong(s.get("id"));
                 // 避免重复
                 Long exists = jdbc.queryForObject(

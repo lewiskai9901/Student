@@ -39,7 +39,7 @@ import java.util.stream.Collectors;
 @Slf4j
 @RequiredArgsConstructor
 @RestController("schoolClassController")
-@RequestMapping("/students/classes")
+@RequestMapping("/user_student/classes")
 @Tag(name = "班级管理V2", description = "DDD架构的班级管理接口")
 public class SchoolClassController {
 

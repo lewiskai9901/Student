@@ -25,7 +25,7 @@ import java.util.Map;
  */
 @Tag(name = "Student Management V2", description = "学生管理API - DDD架构")
 @RestController("studentController")
-@RequestMapping("/students")
+@RequestMapping("/user_student")
 @RequiredArgsConstructor
 public class StudentController {
 
