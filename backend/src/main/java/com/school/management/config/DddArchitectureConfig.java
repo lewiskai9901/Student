@@ -29,12 +29,14 @@ import org.springframework.context.annotation.Configuration;
     "com.school.management.infrastructure.persistence.task",
     "com.school.management.infrastructure.persistence.student",
     "com.school.management.infrastructure.persistence.rating",
-    "com.school.management.infrastructure.persistence.calendar",
+    "com.school.management.infrastructure.extension.plugins.education.infrastructure.persistence.calendar",
     "com.school.management.infrastructure.persistence.user",
     "com.school.management.infrastructure.persistence.query",
     "com.school.management.infrastructure.persistence.place",
     "com.school.management.infrastructure.persistence.inspection.v7",
-    "com.school.management.infrastructure.activity.impl"
+    "com.school.management.infrastructure.activity.impl",
+    // Phase 3.5: 覆盖教育插件下迁来的 mappers (calendar/teaching/academic/student 4 包)
+    "com.school.management.infrastructure.extension.plugins.education.infrastructure.persistence"
 })
 public class DddArchitectureConfig {
     // Configuration is handled through annotations

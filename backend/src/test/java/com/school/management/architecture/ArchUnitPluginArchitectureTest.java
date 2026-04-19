@@ -154,7 +154,7 @@ class ArchUnitPluginArchitectureTest {
 
     @Test
     void business_code_must_not_depend_on_industry_plugin_impls_directly() {
-        // 业务层 (application/domain/interfaces) 只能依赖 SPI 接口,
+        // 业务层 (**平台顶层的** application/domain/interfaces) 只能依赖 SPI 接口,
         // 禁止直接 import 具体插件实现类 (如 StudentPlugin / DormitoryMessagingPlugin).
         //
         // 例外白名单: 允许依赖纯常量契约类 — 类名以下列后缀结尾:
@@ -162,6 +162,10 @@ class ArchUnitPluginArchitectureTest {
         //
         // 原则: 业务代码 + 核心插件可引用契约常量(文字语义稳定),
         //       但不能引用行业插件的实现 Bean(会制造硬耦合,违反可拆卸性).
+        //
+        // Phase 3.5 后注意: 匹配用精确前缀 com.school.management.{domain,application,interfaces}..
+        // 而非通配 ..domain.. / ..application.. / ..interfaces.., 否则教育插件内部自己
+        // (plugins.education.domain.calendar 等) 会被误判为业务层而和自己发生"跨层依赖".
         com.tngtech.archunit.base.DescribedPredicate<com.tngtech.archunit.core.domain.JavaClass> nonContractClass =
             new com.tngtech.archunit.base.DescribedPredicate<>("行业插件的非契约实现类(非 Constants/TriggerPoints/Relations/Permissions)") {
                 @Override
@@ -175,7 +179,10 @@ class ArchUnitPluginArchitectureTest {
             };
 
         ArchRule rule = noClasses()
-                .that().resideInAnyPackage("..domain..", "..application..", "..interfaces..")
+                .that().resideInAnyPackage(
+                    "com.school.management.domain..",
+                    "com.school.management.application..",
+                    "com.school.management.interfaces..")
                 .should().dependOnClassesThat(
                     com.tngtech.archunit.core.domain.JavaClass.Predicates.resideInAPackage("..plugins.education..")
                         .and(nonContractClass)
