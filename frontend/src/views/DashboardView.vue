@@ -223,8 +223,13 @@ const allQuickActions = [
   { label: '系统配置', path: '/system/configs',     perm: 'system:config:view' },
 ]
 
+// Phase 4A 扩展: 过滤掉路由未注册的入口 (如 EDU 禁用后 /student/list 不存在)
 const quickActions = computed(() =>
-  allQuickActions.filter(a => !a.perm || authStore.hasPermission(a.perm))
+  allQuickActions.filter(a => {
+    if (a.perm && !authStore.hasPermission(a.perm)) return false
+    const resolved = router.resolve(a.path)
+    return resolved.matched[0]?.name !== 'NotFound'
+  })
 )
 
 const goTo = (path: string) => {
