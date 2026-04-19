@@ -1,11 +1,11 @@
-package com.school.management.infrastructure.persistence.student;
+package com.school.management.infrastructure.extension.plugins.education.infrastructure.persistence.student;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
-import com.school.management.domain.student.model.aggregate.Student;
-import com.school.management.domain.student.model.valueobject.Gender;
-import com.school.management.domain.student.model.valueobject.StudentStatus;
-import com.school.management.domain.student.repository.StudentRepository;
+import com.school.management.infrastructure.extension.plugins.education.domain.student.model.aggregate.Student;
+import com.school.management.infrastructure.extension.plugins.education.domain.student.model.valueobject.Gender;
+import com.school.management.infrastructure.extension.plugins.education.domain.student.model.valueobject.StudentStatus;
+import com.school.management.infrastructure.extension.plugins.education.domain.student.repository.StudentRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Repository;
 import org.springframework.util.StringUtils;

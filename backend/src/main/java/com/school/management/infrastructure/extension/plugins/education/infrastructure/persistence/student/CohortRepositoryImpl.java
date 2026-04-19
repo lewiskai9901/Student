@@ -1,8 +1,8 @@
-package com.school.management.infrastructure.persistence.student;
+package com.school.management.infrastructure.extension.plugins.education.infrastructure.persistence.student;
 
-import com.school.management.domain.student.model.Cohort;
-import com.school.management.domain.student.model.CohortStatus;
-import com.school.management.domain.student.repository.CohortRepository;
+import com.school.management.infrastructure.extension.plugins.education.domain.student.model.Cohort;
+import com.school.management.infrastructure.extension.plugins.education.domain.student.model.CohortStatus;
+import com.school.management.infrastructure.extension.plugins.education.domain.student.repository.CohortRepository;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;

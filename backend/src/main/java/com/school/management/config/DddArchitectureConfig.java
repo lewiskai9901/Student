@@ -27,7 +27,7 @@ import org.springframework.context.annotation.Configuration;
     "com.school.management.infrastructure.persistence.access",
     "com.school.management.infrastructure.persistence.asset",
     "com.school.management.infrastructure.persistence.task",
-    "com.school.management.infrastructure.persistence.student",
+    "com.school.management.infrastructure.extension.plugins.education.infrastructure.persistence.student",
     "com.school.management.infrastructure.persistence.rating",
     "com.school.management.infrastructure.extension.plugins.education.infrastructure.persistence.calendar",
     "com.school.management.infrastructure.persistence.user",

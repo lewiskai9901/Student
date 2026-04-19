@@ -1,4 +1,4 @@
-package com.school.management.application.student.command;
+package com.school.management.infrastructure.extension.plugins.education.application.student.command;
 
 import lombok.Data;
 

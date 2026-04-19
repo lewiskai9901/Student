@@ -1,4 +1,4 @@
-package com.school.management.application.academic.query;
+package com.school.management.infrastructure.extension.plugins.education.application.academic.query;
 
 import lombok.Data;
 

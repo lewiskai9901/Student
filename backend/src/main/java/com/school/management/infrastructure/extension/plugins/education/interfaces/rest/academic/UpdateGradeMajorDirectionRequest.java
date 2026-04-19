@@ -1,4 +1,4 @@
-package com.school.management.interfaces.rest.academic;
+package com.school.management.infrastructure.extension.plugins.education.interfaces.rest.academic;
 
 import lombok.Data;
 

@@ -1,9 +1,9 @@
-package com.school.management.infrastructure.persistence.student;
+package com.school.management.infrastructure.extension.plugins.education.infrastructure.persistence.student;
 
-import com.school.management.domain.student.model.ClassStatus;
-import com.school.management.domain.student.model.SchoolClass;
-import com.school.management.domain.student.model.TeacherAssignment;
-import com.school.management.domain.student.repository.SchoolClassRepository;
+import com.school.management.infrastructure.extension.plugins.education.domain.student.model.ClassStatus;
+import com.school.management.infrastructure.extension.plugins.education.domain.student.model.SchoolClass;
+import com.school.management.infrastructure.extension.plugins.education.domain.student.model.TeacherAssignment;
+import com.school.management.infrastructure.extension.plugins.education.domain.student.repository.SchoolClassRepository;
 import com.school.management.infrastructure.persistence.organization.OrgUnitMapper;
 import com.school.management.infrastructure.persistence.organization.OrgUnitPO;
 import com.school.management.infrastructure.persistence.user.UserDomainMapper;

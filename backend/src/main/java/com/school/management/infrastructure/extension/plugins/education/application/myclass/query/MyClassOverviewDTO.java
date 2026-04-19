@@ -1,4 +1,4 @@
-package com.school.management.application.myclass.query;
+package com.school.management.infrastructure.extension.plugins.education.application.myclass.query;
 
 import lombok.Data;
 import lombok.Builder;

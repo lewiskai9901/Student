@@ -1,9 +1,9 @@
-package com.school.management.interfaces.rest.academic;
+package com.school.management.infrastructure.extension.plugins.education.interfaces.rest.academic;
 
-import com.school.management.application.academic.MajorApplicationService;
-import com.school.management.application.academic.command.CreateMajorDirectionCommand;
-import com.school.management.application.academic.command.UpdateMajorDirectionCommand;
-import com.school.management.application.academic.query.MajorDirectionDTO;
+import com.school.management.infrastructure.extension.plugins.education.application.academic.MajorApplicationService;
+import com.school.management.infrastructure.extension.plugins.education.application.academic.command.CreateMajorDirectionCommand;
+import com.school.management.infrastructure.extension.plugins.education.application.academic.command.UpdateMajorDirectionCommand;
+import com.school.management.infrastructure.extension.plugins.education.application.academic.query.MajorDirectionDTO;
 import com.school.management.common.result.Result;
 import com.school.management.common.util.SecurityUtils;
 import io.swagger.v3.oas.annotations.Operation;

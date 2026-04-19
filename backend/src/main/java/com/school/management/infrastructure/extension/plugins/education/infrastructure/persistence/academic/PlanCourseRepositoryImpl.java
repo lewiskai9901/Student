@@ -1,7 +1,7 @@
-package com.school.management.infrastructure.persistence.academic;
+package com.school.management.infrastructure.extension.plugins.education.infrastructure.persistence.academic;
 
-import com.school.management.domain.academic.model.PlanCourse;
-import com.school.management.domain.academic.repository.PlanCourseRepository;
+import com.school.management.infrastructure.extension.plugins.education.domain.academic.model.PlanCourse;
+import com.school.management.infrastructure.extension.plugins.education.domain.academic.repository.PlanCourseRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Repository;
 

@@ -1,9 +1,9 @@
-package com.school.management.infrastructure.persistence.student;
+package com.school.management.infrastructure.extension.plugins.education.infrastructure.persistence.student;
 
-import com.school.management.domain.student.model.CohortOpenedDirection;
-import com.school.management.domain.student.repository.CohortOpenedDirectionRepository;
-import com.school.management.infrastructure.persistence.academic.GradeMajorDirectionMapper;
-import com.school.management.infrastructure.persistence.academic.GradeMajorDirectionPO;
+import com.school.management.infrastructure.extension.plugins.education.domain.student.model.CohortOpenedDirection;
+import com.school.management.infrastructure.extension.plugins.education.domain.student.repository.CohortOpenedDirectionRepository;
+import com.school.management.infrastructure.extension.plugins.education.infrastructure.persistence.academic.GradeMajorDirectionMapper;
+import com.school.management.infrastructure.extension.plugins.education.infrastructure.persistence.academic.GradeMajorDirectionPO;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;

@@ -1,10 +1,10 @@
-package com.school.management.interfaces.rest.academic;
+package com.school.management.infrastructure.extension.plugins.education.interfaces.rest.academic;
 
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
-import com.school.management.application.academic.CourseApplicationService;
-import com.school.management.application.academic.command.CreateCourseCommand;
-import com.school.management.application.academic.command.UpdateCourseCommand;
-import com.school.management.application.academic.query.CourseDTO;
+import com.school.management.infrastructure.extension.plugins.education.application.academic.CourseApplicationService;
+import com.school.management.infrastructure.extension.plugins.education.application.academic.command.CreateCourseCommand;
+import com.school.management.infrastructure.extension.plugins.education.application.academic.command.UpdateCourseCommand;
+import com.school.management.infrastructure.extension.plugins.education.application.academic.query.CourseDTO;
 import com.school.management.common.audit.Audited;
 import com.school.management.common.result.Result;
 import com.school.management.common.util.SecurityUtils;

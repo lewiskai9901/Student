@@ -1,9 +1,9 @@
-package com.school.management.infrastructure.persistence.academic;
+package com.school.management.infrastructure.extension.plugins.education.infrastructure.persistence.academic;
 
-import com.school.management.domain.academic.model.Major;
-import com.school.management.domain.academic.model.MajorDirection;
-import com.school.management.domain.academic.model.MajorStatus;
-import com.school.management.domain.academic.repository.MajorRepository;
+import com.school.management.infrastructure.extension.plugins.education.domain.academic.model.Major;
+import com.school.management.infrastructure.extension.plugins.education.domain.academic.model.MajorDirection;
+import com.school.management.infrastructure.extension.plugins.education.domain.academic.model.MajorStatus;
+import com.school.management.infrastructure.extension.plugins.education.domain.academic.repository.MajorRepository;
 import org.springframework.stereotype.Repository;
 
 import lombok.RequiredArgsConstructor;

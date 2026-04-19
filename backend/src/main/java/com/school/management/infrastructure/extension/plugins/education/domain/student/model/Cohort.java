@@ -1,7 +1,7 @@
-package com.school.management.domain.student.model;
+package com.school.management.infrastructure.extension.plugins.education.domain.student.model;
 
-import com.school.management.domain.student.event.CohortCreatedEvent;
-import com.school.management.domain.student.event.CohortStatusChangedEvent;
+import com.school.management.infrastructure.extension.plugins.education.domain.student.event.CohortCreatedEvent;
+import com.school.management.infrastructure.extension.plugins.education.domain.student.event.CohortStatusChangedEvent;
 import com.school.management.domain.shared.AggregateRoot;
 
 import java.time.LocalDateTime;

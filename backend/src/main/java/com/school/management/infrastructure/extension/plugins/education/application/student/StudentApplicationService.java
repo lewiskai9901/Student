@@ -1,14 +1,14 @@
-package com.school.management.application.student;
+package com.school.management.infrastructure.extension.plugins.education.application.student;
 
-import com.school.management.application.student.command.*;
-import com.school.management.application.student.query.StudentDTO;
-import com.school.management.application.student.query.StudentQueryCriteria;
+import com.school.management.infrastructure.extension.plugins.education.application.student.command.*;
+import com.school.management.infrastructure.extension.plugins.education.application.student.query.StudentDTO;
+import com.school.management.infrastructure.extension.plugins.education.application.student.query.StudentQueryCriteria;
 import com.school.management.common.PageResult;
 import com.school.management.domain.shared.event.DomainEventPublisher;
-import com.school.management.domain.student.model.aggregate.Student;
-import com.school.management.domain.student.model.valueobject.Gender;
-import com.school.management.domain.student.model.valueobject.StudentStatus;
-import com.school.management.domain.student.repository.StudentRepository;
+import com.school.management.infrastructure.extension.plugins.education.domain.student.model.aggregate.Student;
+import com.school.management.infrastructure.extension.plugins.education.domain.student.model.valueobject.Gender;
+import com.school.management.infrastructure.extension.plugins.education.domain.student.model.valueobject.StudentStatus;
+import com.school.management.infrastructure.extension.plugins.education.domain.student.repository.StudentRepository;
 import com.school.management.exception.BusinessException;
 import com.school.management.application.event.TriggerService;
 import static com.school.management.infrastructure.extension.plugins.education.constants.EducationTriggerPoints.STUDENT_ENROLLED;

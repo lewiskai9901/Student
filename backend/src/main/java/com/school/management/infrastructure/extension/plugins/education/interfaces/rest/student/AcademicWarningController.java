@@ -1,4 +1,4 @@
-package com.school.management.interfaces.rest.student;
+package com.school.management.infrastructure.extension.plugins.education.interfaces.rest.student;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;

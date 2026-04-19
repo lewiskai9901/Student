@@ -1,14 +1,14 @@
-package com.school.management.application.academic;
+package com.school.management.infrastructure.extension.plugins.education.application.academic;
 
-import com.school.management.application.academic.query.GradeMajorDirectionDTO;
-import com.school.management.domain.student.model.CohortOpenedDirection;
-import com.school.management.domain.student.repository.CohortOpenedDirectionRepository;
-import com.school.management.domain.student.repository.CohortRepository;
-import com.school.management.domain.academic.repository.MajorRepository;
-import com.school.management.infrastructure.persistence.academic.GradeMajorDirectionMapper;
-import com.school.management.infrastructure.persistence.academic.GradeMajorDirectionPO;
-import com.school.management.infrastructure.persistence.student.CohortPersistenceMapper;
-import com.school.management.infrastructure.persistence.student.CohortPO;
+import com.school.management.infrastructure.extension.plugins.education.application.academic.query.GradeMajorDirectionDTO;
+import com.school.management.infrastructure.extension.plugins.education.domain.student.model.CohortOpenedDirection;
+import com.school.management.infrastructure.extension.plugins.education.domain.student.repository.CohortOpenedDirectionRepository;
+import com.school.management.infrastructure.extension.plugins.education.domain.student.repository.CohortRepository;
+import com.school.management.infrastructure.extension.plugins.education.domain.academic.repository.MajorRepository;
+import com.school.management.infrastructure.extension.plugins.education.infrastructure.persistence.academic.GradeMajorDirectionMapper;
+import com.school.management.infrastructure.extension.plugins.education.infrastructure.persistence.academic.GradeMajorDirectionPO;
+import com.school.management.infrastructure.extension.plugins.education.infrastructure.persistence.student.CohortPersistenceMapper;
+import com.school.management.infrastructure.extension.plugins.education.infrastructure.persistence.student.CohortPO;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;

@@ -1,6 +1,6 @@
-package com.school.management.application.student.command;
+package com.school.management.infrastructure.extension.plugins.education.application.student.command;
 
-import com.school.management.domain.student.model.valueobject.StudentStatus;
+import com.school.management.infrastructure.extension.plugins.education.domain.student.model.valueobject.StudentStatus;
 import lombok.Builder;
 import lombok.Data;
 

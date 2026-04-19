@@ -1,11 +1,11 @@
-package com.school.management.domain.student.model.aggregate;
+package com.school.management.infrastructure.extension.plugins.education.domain.student.model.aggregate;
 
 import com.school.management.domain.shared.AggregateRoot;
-import com.school.management.domain.student.event.StudentEnrolledEvent;
-import com.school.management.domain.student.event.StudentStatusChangedEvent;
-import com.school.management.domain.student.event.StudentUpdatedEvent;
-import com.school.management.domain.student.model.valueobject.Gender;
-import com.school.management.domain.student.model.valueobject.StudentStatus;
+import com.school.management.infrastructure.extension.plugins.education.domain.student.event.StudentEnrolledEvent;
+import com.school.management.infrastructure.extension.plugins.education.domain.student.event.StudentStatusChangedEvent;
+import com.school.management.infrastructure.extension.plugins.education.domain.student.event.StudentUpdatedEvent;
+import com.school.management.infrastructure.extension.plugins.education.domain.student.model.valueobject.Gender;
+import com.school.management.infrastructure.extension.plugins.education.domain.student.model.valueobject.StudentStatus;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;

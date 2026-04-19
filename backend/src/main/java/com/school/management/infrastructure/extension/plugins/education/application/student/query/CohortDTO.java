@@ -1,6 +1,6 @@
-package com.school.management.application.student.query;
+package com.school.management.infrastructure.extension.plugins.education.application.student.query;
 
-import com.school.management.domain.student.model.CohortStatus;
+import com.school.management.infrastructure.extension.plugins.education.domain.student.model.CohortStatus;
 import lombok.Data;
 
 import java.time.LocalDateTime;

@@ -1,7 +1,7 @@
-package com.school.management.domain.student.repository;
+package com.school.management.infrastructure.extension.plugins.education.domain.student.repository;
 
-import com.school.management.domain.student.model.ClassStatus;
-import com.school.management.domain.student.model.SchoolClass;
+import com.school.management.infrastructure.extension.plugins.education.domain.student.model.ClassStatus;
+import com.school.management.infrastructure.extension.plugins.education.domain.student.model.SchoolClass;
 import com.school.management.domain.shared.Repository;
 
 import java.util.List;

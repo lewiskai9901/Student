@@ -1,6 +1,6 @@
-package com.school.management.domain.academic.repository;
+package com.school.management.infrastructure.extension.plugins.education.domain.academic.repository;
 
-import com.school.management.domain.academic.model.CurriculumPlan;
+import com.school.management.infrastructure.extension.plugins.education.domain.academic.model.CurriculumPlan;
 import com.school.management.domain.shared.Repository;
 
 /**

@@ -1,4 +1,4 @@
-package com.school.management.interfaces.rest.student;
+package com.school.management.infrastructure.extension.plugins.education.interfaces.rest.student;
 
 import com.school.management.common.audit.Audited;
 import com.school.management.common.result.Result;

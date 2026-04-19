@@ -1,4 +1,4 @@
-package com.school.management.application.student;
+package com.school.management.infrastructure.extension.plugins.education.application.student;
 
 import com.school.management.common.PageResult;
 import com.school.management.common.util.SecurityUtils;

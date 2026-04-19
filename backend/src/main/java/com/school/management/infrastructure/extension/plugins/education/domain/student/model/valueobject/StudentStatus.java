@@ -1,4 +1,4 @@
-package com.school.management.domain.student.model.valueobject;
+package com.school.management.infrastructure.extension.plugins.education.domain.student.model.valueobject;
 
 /**
  * 学籍状态值对象

@@ -1,7 +1,7 @@
-package com.school.management.domain.academic.repository;
+package com.school.management.infrastructure.extension.plugins.education.domain.academic.repository;
 
-import com.school.management.domain.academic.model.Major;
-import com.school.management.domain.academic.model.MajorDirection;
+import com.school.management.infrastructure.extension.plugins.education.domain.academic.model.Major;
+import com.school.management.infrastructure.extension.plugins.education.domain.academic.model.MajorDirection;
 import com.school.management.domain.shared.Repository;
 
 import java.util.List;

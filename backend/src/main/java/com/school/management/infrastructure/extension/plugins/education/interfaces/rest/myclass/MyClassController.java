@@ -1,10 +1,10 @@
-package com.school.management.interfaces.rest.myclass;
+package com.school.management.infrastructure.extension.plugins.education.interfaces.rest.myclass;
 
-import com.school.management.application.myclass.MyClassApplicationService;
-import com.school.management.application.myclass.query.DormitoryDistributionDTO;
-import com.school.management.application.myclass.query.MyClassDTO;
-import com.school.management.application.myclass.query.MyClassOverviewDTO;
-import com.school.management.application.myclass.query.MyClassStudentDTO;
+import com.school.management.infrastructure.extension.plugins.education.application.myclass.MyClassApplicationService;
+import com.school.management.infrastructure.extension.plugins.education.application.myclass.query.DormitoryDistributionDTO;
+import com.school.management.infrastructure.extension.plugins.education.application.myclass.query.MyClassDTO;
+import com.school.management.infrastructure.extension.plugins.education.application.myclass.query.MyClassOverviewDTO;
+import com.school.management.infrastructure.extension.plugins.education.application.myclass.query.MyClassStudentDTO;
 import com.school.management.common.result.Result;
 import com.school.management.security.CustomUserDetails;
 import io.swagger.v3.oas.annotations.Operation;

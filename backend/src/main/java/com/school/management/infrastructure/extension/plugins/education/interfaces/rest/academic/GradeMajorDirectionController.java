@@ -1,7 +1,7 @@
-package com.school.management.interfaces.rest.academic;
+package com.school.management.infrastructure.extension.plugins.education.interfaces.rest.academic;
 
-import com.school.management.application.academic.GradeMajorDirectionApplicationService;
-import com.school.management.application.academic.query.GradeMajorDirectionDTO;
+import com.school.management.infrastructure.extension.plugins.education.application.academic.GradeMajorDirectionApplicationService;
+import com.school.management.infrastructure.extension.plugins.education.application.academic.query.GradeMajorDirectionDTO;
 import com.school.management.common.result.Result;
 import com.school.management.common.util.SecurityUtils;
 import io.swagger.v3.oas.annotations.Operation;

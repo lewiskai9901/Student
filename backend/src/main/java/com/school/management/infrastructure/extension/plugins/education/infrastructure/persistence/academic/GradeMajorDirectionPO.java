@@ -1,4 +1,4 @@
-package com.school.management.infrastructure.persistence.academic;
+package com.school.management.infrastructure.extension.plugins.education.infrastructure.persistence.academic;
 
 import com.baomidou.mybatisplus.annotation.*;
 

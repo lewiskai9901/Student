@@ -1,8 +1,8 @@
-package com.school.management.domain.student.model;
+package com.school.management.infrastructure.extension.plugins.education.domain.student.model;
 
-import com.school.management.domain.student.event.ClassCreatedEvent;
-import com.school.management.domain.student.event.ClassStatusChangedEvent;
-import com.school.management.domain.student.event.TeacherAssignedEvent;
+import com.school.management.infrastructure.extension.plugins.education.domain.student.event.ClassCreatedEvent;
+import com.school.management.infrastructure.extension.plugins.education.domain.student.event.ClassStatusChangedEvent;
+import com.school.management.infrastructure.extension.plugins.education.domain.student.event.TeacherAssignedEvent;
 import com.school.management.domain.shared.AggregateRoot;
 
 import java.time.LocalDate;

@@ -1,13 +1,13 @@
-package com.school.management.interfaces.rest.academic;
+package com.school.management.infrastructure.extension.plugins.education.interfaces.rest.academic;
 
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
-import com.school.management.application.academic.CurriculumPlanApplicationService;
-import com.school.management.application.academic.command.CreateCurriculumPlanCommand;
-import com.school.management.application.academic.command.CreatePlanCourseCommand;
-import com.school.management.application.academic.command.UpdateCurriculumPlanCommand;
-import com.school.management.application.academic.command.UpdatePlanCourseCommand;
-import com.school.management.application.academic.query.CurriculumPlanDTO;
-import com.school.management.application.academic.query.PlanCourseDTO;
+import com.school.management.infrastructure.extension.plugins.education.application.academic.CurriculumPlanApplicationService;
+import com.school.management.infrastructure.extension.plugins.education.application.academic.command.CreateCurriculumPlanCommand;
+import com.school.management.infrastructure.extension.plugins.education.application.academic.command.CreatePlanCourseCommand;
+import com.school.management.infrastructure.extension.plugins.education.application.academic.command.UpdateCurriculumPlanCommand;
+import com.school.management.infrastructure.extension.plugins.education.application.academic.command.UpdatePlanCourseCommand;
+import com.school.management.infrastructure.extension.plugins.education.application.academic.query.CurriculumPlanDTO;
+import com.school.management.infrastructure.extension.plugins.education.application.academic.query.PlanCourseDTO;
 import com.school.management.common.audit.Audited;
 import com.school.management.common.result.Result;
 import com.school.management.common.util.SecurityUtils;

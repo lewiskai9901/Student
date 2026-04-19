@@ -1,9 +1,9 @@
-package com.school.management.domain.student.repository;
+package com.school.management.infrastructure.extension.plugins.education.domain.student.repository;
 
 import com.school.management.domain.shared.Repository;
-import com.school.management.domain.student.model.aggregate.Student;
-import com.school.management.domain.student.model.valueobject.Gender;
-import com.school.management.domain.student.model.valueobject.StudentStatus;
+import com.school.management.infrastructure.extension.plugins.education.domain.student.model.aggregate.Student;
+import com.school.management.infrastructure.extension.plugins.education.domain.student.model.valueobject.Gender;
+import com.school.management.infrastructure.extension.plugins.education.domain.student.model.valueobject.StudentStatus;
 
 import java.util.List;
 import java.util.Optional;

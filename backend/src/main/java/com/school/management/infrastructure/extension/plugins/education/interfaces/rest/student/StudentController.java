@@ -1,14 +1,14 @@
-package com.school.management.interfaces.rest.student;
+package com.school.management.infrastructure.extension.plugins.education.interfaces.rest.student;
 
-import com.school.management.application.student.StatusChangeRecordService;
-import com.school.management.application.student.StudentApplicationService;
-import com.school.management.application.student.command.*;
-import com.school.management.application.student.query.StudentDTO;
-import com.school.management.application.student.query.StudentQueryCriteria;
+import com.school.management.infrastructure.extension.plugins.education.application.student.StatusChangeRecordService;
+import com.school.management.infrastructure.extension.plugins.education.application.student.StudentApplicationService;
+import com.school.management.infrastructure.extension.plugins.education.application.student.command.*;
+import com.school.management.infrastructure.extension.plugins.education.application.student.query.StudentDTO;
+import com.school.management.infrastructure.extension.plugins.education.application.student.query.StudentQueryCriteria;
 import com.school.management.common.PageResult;
 import com.school.management.common.result.Result;
-import com.school.management.interfaces.rest.student.dto.EnrollStudentRequest;
-import com.school.management.interfaces.rest.student.dto.UpdateStudentRequest;
+import com.school.management.infrastructure.extension.plugins.education.interfaces.rest.student.dto.EnrollStudentRequest;
+import com.school.management.infrastructure.extension.plugins.education.interfaces.rest.student.dto.UpdateStudentRequest;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -151,7 +151,7 @@ public class StudentController {
             @Parameter(description = "原因") @RequestParam(required = false) String reason) {
         ChangeStudentStatusCommand command = ChangeStudentStatusCommand.builder()
                 .studentId(id)
-                .newStatus(com.school.management.domain.student.model.valueobject.StudentStatus.fromCode(status))
+                .newStatus(com.school.management.infrastructure.extension.plugins.education.domain.student.model.valueobject.StudentStatus.fromCode(status))
                 .reason(reason)
                 .build();
         studentService.changeStatus(command);

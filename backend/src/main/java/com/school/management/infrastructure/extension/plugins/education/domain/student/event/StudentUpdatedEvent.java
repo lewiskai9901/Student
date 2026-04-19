@@ -1,4 +1,4 @@
-package com.school.management.domain.student.event;
+package com.school.management.infrastructure.extension.plugins.education.domain.student.event;
 
 import com.school.management.domain.shared.event.BaseDomainEvent;
 

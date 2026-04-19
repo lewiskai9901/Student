@@ -1,14 +1,14 @@
-package com.school.management.application.academic;
+package com.school.management.infrastructure.extension.plugins.education.application.academic;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
-import com.school.management.application.academic.command.CreateCourseCommand;
-import com.school.management.application.academic.command.UpdateCourseCommand;
-import com.school.management.application.academic.query.CourseDTO;
-import com.school.management.domain.academic.model.Course;
-import com.school.management.domain.academic.repository.CourseRepository;
-import com.school.management.infrastructure.persistence.academic.CoursePO;
-import com.school.management.infrastructure.persistence.academic.CoursePersistenceMapper;
+import com.school.management.infrastructure.extension.plugins.education.application.academic.command.CreateCourseCommand;
+import com.school.management.infrastructure.extension.plugins.education.application.academic.command.UpdateCourseCommand;
+import com.school.management.infrastructure.extension.plugins.education.application.academic.query.CourseDTO;
+import com.school.management.infrastructure.extension.plugins.education.domain.academic.model.Course;
+import com.school.management.infrastructure.extension.plugins.education.domain.academic.repository.CourseRepository;
+import com.school.management.infrastructure.extension.plugins.education.infrastructure.persistence.academic.CoursePO;
+import com.school.management.infrastructure.extension.plugins.education.infrastructure.persistence.academic.CoursePersistenceMapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;

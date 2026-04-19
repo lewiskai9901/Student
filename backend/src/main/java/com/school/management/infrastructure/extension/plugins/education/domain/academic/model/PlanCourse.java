@@ -1,4 +1,4 @@
-package com.school.management.domain.academic.model;
+package com.school.management.infrastructure.extension.plugins.education.domain.academic.model;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;

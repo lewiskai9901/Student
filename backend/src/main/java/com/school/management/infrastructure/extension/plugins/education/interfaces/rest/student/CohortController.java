@@ -1,16 +1,16 @@
-package com.school.management.interfaces.rest.student;
+package com.school.management.infrastructure.extension.plugins.education.interfaces.rest.student;
 
-import com.school.management.application.student.CohortApplicationService;
-import com.school.management.application.student.command.AssignCohortLeaderCommand;
-import com.school.management.application.student.command.CreateCohortCommand;
-import com.school.management.application.student.command.UpdateCohortCommand;
-import com.school.management.application.student.query.CohortDTO;
+import com.school.management.infrastructure.extension.plugins.education.application.student.CohortApplicationService;
+import com.school.management.infrastructure.extension.plugins.education.application.student.command.AssignCohortLeaderCommand;
+import com.school.management.infrastructure.extension.plugins.education.application.student.command.CreateCohortCommand;
+import com.school.management.infrastructure.extension.plugins.education.application.student.command.UpdateCohortCommand;
+import com.school.management.infrastructure.extension.plugins.education.application.student.query.CohortDTO;
 import com.school.management.common.result.Result;
-import com.school.management.domain.student.model.CohortStatus;
+import com.school.management.infrastructure.extension.plugins.education.domain.student.model.CohortStatus;
 import com.school.management.common.util.SecurityUtils;
-import com.school.management.interfaces.rest.student.dto.AssignCohortLeaderRequest;
-import com.school.management.interfaces.rest.student.dto.CreateCohortRequest;
-import com.school.management.interfaces.rest.student.dto.UpdateCohortRequest;
+import com.school.management.infrastructure.extension.plugins.education.interfaces.rest.student.dto.AssignCohortLeaderRequest;
+import com.school.management.infrastructure.extension.plugins.education.interfaces.rest.student.dto.CreateCohortRequest;
+import com.school.management.infrastructure.extension.plugins.education.interfaces.rest.student.dto.UpdateCohortRequest;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;

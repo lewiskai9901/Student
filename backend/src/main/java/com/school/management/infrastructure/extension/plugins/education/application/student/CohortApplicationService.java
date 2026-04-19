@@ -1,13 +1,13 @@
-package com.school.management.application.student;
+package com.school.management.infrastructure.extension.plugins.education.application.student;
 
-import com.school.management.application.student.command.AssignCohortLeaderCommand;
-import com.school.management.application.student.command.CreateCohortCommand;
-import com.school.management.application.student.command.UpdateCohortCommand;
-import com.school.management.application.student.query.CohortDTO;
-import com.school.management.domain.student.model.Cohort;
-import com.school.management.domain.student.model.CohortStatus;
-import com.school.management.domain.student.repository.CohortRepository;
-import com.school.management.domain.student.repository.SchoolClassRepository;
+import com.school.management.infrastructure.extension.plugins.education.application.student.command.AssignCohortLeaderCommand;
+import com.school.management.infrastructure.extension.plugins.education.application.student.command.CreateCohortCommand;
+import com.school.management.infrastructure.extension.plugins.education.application.student.command.UpdateCohortCommand;
+import com.school.management.infrastructure.extension.plugins.education.application.student.query.CohortDTO;
+import com.school.management.infrastructure.extension.plugins.education.domain.student.model.Cohort;
+import com.school.management.infrastructure.extension.plugins.education.domain.student.model.CohortStatus;
+import com.school.management.infrastructure.extension.plugins.education.domain.student.repository.CohortRepository;
+import com.school.management.infrastructure.extension.plugins.education.domain.student.repository.SchoolClassRepository;
 import com.school.management.domain.shared.event.DomainEventPublisher;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;

@@ -1,11 +1,11 @@
-package com.school.management.application.student;
+package com.school.management.infrastructure.extension.plugins.education.application.student;
 
-import com.school.management.application.student.query.StudentDTO;
-import com.school.management.application.student.query.StudentQueryCriteria;
+import com.school.management.infrastructure.extension.plugins.education.application.student.query.StudentDTO;
+import com.school.management.infrastructure.extension.plugins.education.application.student.query.StudentQueryCriteria;
 import com.school.management.common.PageResult;
-import com.school.management.domain.student.model.aggregate.Student;
-import com.school.management.domain.student.model.valueobject.StudentStatus;
-import com.school.management.domain.student.repository.StudentRepository;
+import com.school.management.infrastructure.extension.plugins.education.domain.student.model.aggregate.Student;
+import com.school.management.infrastructure.extension.plugins.education.domain.student.model.valueobject.StudentStatus;
+import com.school.management.infrastructure.extension.plugins.education.domain.student.repository.StudentRepository;
 import com.school.management.exception.BusinessException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;

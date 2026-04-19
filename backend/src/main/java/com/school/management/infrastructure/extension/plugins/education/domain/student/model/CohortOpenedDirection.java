@@ -1,4 +1,4 @@
-package com.school.management.domain.student.model;
+package com.school.management.infrastructure.extension.plugins.education.domain.student.model;
 
 import com.school.management.domain.shared.Entity;
 
