@@ -1,58 +1,90 @@
-import { test, expect } from './fixtures/auth.fixture'
+import { test, expect } from '@playwright/test'
 
 /**
  * Phase 4A Gate — 动态路由注册
  *
- * 验证: 启用 EDU 时 /student/list 可达, 禁用 EDU 后变 404 (NotFound),
- * 重新启用后恢复.
+ * 验证路径 (覆盖 commit d8ecf1c3 + e37234b1 两个 fix):
+ *   1. EDU enabled  → /student/list 正常渲染 (包含 "学生列表" 标题)
+ *   2. EDU enabled  → 侧栏含教育菜单 (学生/学术/教务/宿舍)
+ *   3. EDU disabled → /student/list 落到 NotFound ("页面不存在")
+ *   4. EDU disabled → 侧栏失去所有教育菜单
+ *
+ * 本 spec 不使用 auth.fixture 的快捷注入 (key 不匹配 tokenStorage),
+ * 而是走完整 login form 触发 auth store loginAction → bootstrap.
  */
 
 const API_BASE = 'http://localhost:8080/api'
+const TEST_USER = { username: 'admin', password: 'admin123' }
+const EDU_MENU_TITLES = ['学术管理', '学生管理', '教务管理', '宿舍管理']
 
-async function toggleEdu(token: string, enable: boolean) {
-  const url = `${API_BASE}/plugin-platform/EDU/${enable ? 'enable' : 'disable'}`
-  const res = await fetch(url, {
+async function apiLogin(): Promise<string> {
+  const res = await fetch(`${API_BASE}/auth/login`, {
     method: 'POST',
-    headers: { Authorization: `Bearer ${token}` }
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(TEST_USER)
   })
+  const json = await res.json()
+  if (json.code !== 200) throw new Error(`login failed: ${json.message}`)
+  return json.data.accessToken
+}
+
+async function toggleEdu(token: string, enable: boolean): Promise<void> {
+  const url = `${API_BASE}/plugin-platform/EDU/${enable ? 'enable' : 'disable'}`
+  const res = await fetch(url, { method: 'POST', headers: { Authorization: `Bearer ${token}` } })
   if (!res.ok) throw new Error(`toggleEdu ${enable}: HTTP ${res.status}`)
 }
 
+/** 走完整登录表单 → 触发 auth store loginAction → bootstrap */
+async function loginViaForm(page: import('@playwright/test').Page) {
+  await page.goto('/login')
+  await page.fill('input[type="text"]', TEST_USER.username)
+  await page.fill('input[type="password"]', TEST_USER.password)
+  await page.click('button[type="submit"]')
+  await page.waitForURL(/\/dashboard/, { timeout: 10000 })
+}
+
 test.describe('Phase 4A 动态路由注册', () => {
-  test.afterEach(async ({ authToken }) => {
-    // 总是重置为 enabled, 避免影响后续测试
-    await toggleEdu(authToken, true)
+  test.afterEach(async () => {
+    // 每个用例结束后恢复 EDU enabled, 避免相互污染
+    const token = await apiLogin()
+    await toggleEdu(token, true)
   })
 
-  test('EDU enabled → /student/list 正常渲染', async ({ authenticatedPage, authToken }) => {
-    await toggleEdu(authToken, true)
-    await authenticatedPage.goto('/student/list')
-    // 不 404: 页面标题或页面内容应包含 "学生" 相关字样
-    await expect(authenticatedPage.locator('body')).not.toContainText('NotFound', { timeout: 5000 })
-    // URL 保持 /student/list (不会被 catchAll 重写)
-    await expect(authenticatedPage).toHaveURL(/\/student\/list/)
-  })
+  test('EDU enabled: /student/list 渲染 + 侧栏有 EDU 菜单', async ({ page }) => {
+    await toggleEdu(await apiLogin(), true)
 
-  test('EDU disabled + 冷启动 → /student/list 落到 NotFound', async ({ page, authToken }) => {
-    // 先禁用 EDU
-    await toggleEdu(authToken, false)
-
-    // 注入 token 到 localStorage, 让 SPA 启动时已认证 (冷启动路径会触发 bootstrap)
-    await page.addInitScript((token) => {
-      localStorage.setItem('accessToken', token)
-    }, authToken)
-
-    // 直接访问 /student/list — SPA 启动时调用 loadEnabledPlugins,
-    // 由于 EDU 已禁用, edu.ts 不会被 import, /student/list 没有路由 → NotFound catchAll
+    await loginViaForm(page)
     await page.goto('/student/list')
-    // 等待 SPA 完成启动 (router resolve)
     await page.waitForLoadState('networkidle', { timeout: 10000 })
 
-    // 断言: NotFound 页会显示特定文字 (@/views/error/NotFound.vue)
-    // 保险起见, 断言 URL 依然在 /student/list 但页面没有 "学生列表" 标题
-    const bodyText = await page.locator('body').innerText()
-    expect(bodyText).not.toContain('学生列表')
-    // 也可检查 NotFound.vue 特征文字. 根据项目习惯可能是 "404" / "页面不存在" / "NotFound"
-    // 这里用保守断言: StudentList 的专属内容不出现
+    // 1. 页面内容: StudentList 组件有 "学生列表" 标题
+    await expect(page.locator('body')).toContainText('学生列表')
+    await expect(page).toHaveURL(/\/student\/list/)
+
+    // 2. 侧栏菜单: 4 个教育菜单都出现 (覆盖 e37234b1 fix)
+    const sidebar = page.locator('aside')
+    for (const title of EDU_MENU_TITLES) {
+      await expect(sidebar).toContainText(title)
+    }
+  })
+
+  test('EDU disabled: /student/list 落到 NotFound + dashboard 侧栏清空 EDU 菜单', async ({ page }) => {
+    await toggleEdu(await apiLogin(), false)
+
+    await loginViaForm(page)
+
+    // 在 dashboard 检查侧栏 (NotFound 可能无 Layout, 直接在 dashboard 上检查)
+    await expect(page).toHaveURL(/\/dashboard/)
+    await page.waitForLoadState('networkidle', { timeout: 10000 })
+    const dashSidebarText = await page.locator('aside').innerText()
+    for (const title of EDU_MENU_TITLES) {
+      expect(dashSidebarText).not.toMatch(new RegExp(`\\n${title}\\n`))
+    }
+
+    // 再访问 /student/list, 应落到 NotFound
+    await page.goto('/student/list')
+    await page.waitForLoadState('networkidle', { timeout: 10000 })
+    await expect(page.locator('body')).toContainText('页面不存在')
+    await expect(page.locator('body')).not.toContainText('学生列表')
   })
 })
