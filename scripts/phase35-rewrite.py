@@ -58,7 +58,7 @@ def main(pkg: str) -> None:
 
 
 if __name__ == "__main__":
-    if len(sys.argv) != 2 or sys.argv[1] not in {"calendar", "teaching", "academic", "student"}:
-        print("usage: python scripts/phase35-rewrite.py {calendar|teaching|academic|student}")
+    if len(sys.argv) != 2 or sys.argv[1] not in {"calendar", "teaching", "academic", "student", "myclass"}:
+        print("usage: python scripts/phase35-rewrite.py {calendar|teaching|academic|student|myclass}")
         sys.exit(2)
     main(sys.argv[1])

@@ -1,7 +1,7 @@
-package com.school.management.application.events;
+package com.school.management.infrastructure.extension.plugins.education.application.events;
 
-import com.school.management.domain.student.event.*;
-import com.school.management.domain.student.model.valueobject.StudentStatus;
+import com.school.management.infrastructure.extension.plugins.education.domain.student.event.*;
+import com.school.management.infrastructure.extension.plugins.education.domain.student.model.valueobject.StudentStatus;
 import com.school.management.infrastructure.event.DomainEventStore;
 import com.school.management.infrastructure.external.NotificationService;
 import com.school.management.infrastructure.activity.ActivityEventPublisher;

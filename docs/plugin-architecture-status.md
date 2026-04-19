@@ -1,12 +1,12 @@
 # 插件架构推进状态
 
-> **最近更新**: 2026-04-19 (Phase 2 完成)
-> **当前架构等级**: **A** (B+ → A, 距 A+ 还差 2 个 Phase)
-> **A+ 判定进度**: 13/15 (87%)
+> **最近更新**: 2026-04-19 (Phase 2 + Phase 3.5 完成)
+> **当前架构等级**: **A** (B+ → A, 距 A+ 还差 1 个 Phase)
+> **A+ 判定进度**: 14/15 (93%)
 
 ---
 
-## 已完成 (13 Phase, 48 任务)
+## 已完成 (14 Phase, 52 任务)
 
 | Phase | 内容 |
 |---|---|
@@ -15,6 +15,7 @@
 | **1** origin 归一 | 8 张表加 `origin` 字段 (PLUGIN:CORE@1.0.0 / TENANT:CUSTOM#1) |
 | **2** 统一 SPI 顶层 | `PluginPackage` + `Contribution` sealed(8) + `ContributionDispatcher`(@Order 60) + 7 旧 SPI `@Deprecated` |
 | **3** 事务+冲突+Casbin | @Transactional + 跨插件冲突 fail-fast + Casbin 自动 reload 事件 |
+| **3.5** DDD 物理包重组 | student/academic/teaching/calendar 4 包 260 Java 文件迁至 `plugins/education/` + myclass/StudentEventHandler 并迁 + ArchUnit 守护防复现 |
 | **5** 多租户 | `tenant_plugin_enablement` 表 + Service + enable/disable/config API |
 | **6** 治理 API | enable/disable/uninstall/health/dependency-graph + UI 按钮 |
 | **7** create-plugin CLI | `scripts/create-plugin.sh` (实测生成 HEALTH) |
@@ -25,10 +26,10 @@
 ### 架构测试 (49/49 全绿)
 
 ```
-ArchUnitPluginArchitectureTest       13   (原 12, Phase 2 新增 PluginPackage @Component 规则)
+ArchUnitPluginArchitectureTest       14   (原 12, Phase 2 +1, Phase 3.5 +1 migrated-domain-allowlist)
 ArchUnitDashboardEndpointTest         1
 ArchUnitMyEndpointTest                2
-DddLayerTest                          4
+DddLayerTest                          4   (Phase 3.5 规则收紧为 com.school.management.domain.. 前缀)
 NoMagicTriggerStringTest              1
 PluginDeclarationCoverageTest         4
 PluginMatrixIntegrationTest           6
@@ -55,49 +56,7 @@ UnifiedPluginPackageTest             11   (Phase 2 新增)
 
 ---
 
-## 待完成 (2 Phase, 剩余约 6-8 周)
-
-### Phase 3.5 — DDD 物理包重组 (3 周, 最重)
-
-**目标**: 把教育特定的领域聚合从 `domain/` 迁到 `plugins/education/domain/`
-
-**当前状态** (问题):
-```
-backend/src/main/java/com/school/management/domain/
-├── access/          ← 真通用 ✓
-├── organization/    ← 真通用 ✓
-├── place/           ← 真通用 ✓
-├── shared/          ← 真通用 ✓
-├── student/         ← ❌ 教育特定,应该在 plugins/education/
-├── academic/        ← ❌ 教育特定
-├── teaching/        ← ❌ 教育特定
-└── calendar/        ← ❌ 教育特定
-```
-
-**目标状态**:
-```
-├── domain/                               ← 纯通用 4 个包
-│   ├── access/ organization/ place/ shared/
-├── infrastructure/extension/plugins/education/
-│   ├── domain/                           ← ✅ 迁入
-│   │   ├── student/ academic/ teaching/ calendar/
-│   ├── application/                      ← 同步迁
-│   ├── infrastructure/                   ← 同步迁
-│   └── interfaces/                       ← 同步迁
-```
-
-**约束**:
-- 100+ 文件 import 改动
-- **必须用 IDE (IntelliJ Refactor > Move Package)**, 禁止 sed 批量替换
-- 每迁一个包 commit 一次, 便于回滚
-- ArchUnit 新增规则: `domain/` 包只允许 access/organization/place/shared
-
-**验证**:
-- 架构测试继续全绿
-- 端到端业务测试 (学生 CRUD / 成绩录入 / 考勤) 通过
-- 冷启动正常
-
----
+## 待完成 (1 Phase, 剩余约 3 周)
 
 ### Phase 4 — 前端 Module Federation (3 周)
 
@@ -142,25 +101,6 @@ for (const p of plugins) {
 ---
 
 ## 每个新会话的启动提示
-
-### Phase 3.5 提示词
-```
-请继续插件架构 Phase 3.5 — DDD 物理包重组。
-
-前置状态:
-- Phase 2 已完成
-- 详见 docs/plugin-architecture-status.md
-
-本会话目标: 把 domain/student, domain/academic, domain/teaching, domain/calendar 迁到 plugins/education/domain/
-
-约束:
-- 必须用 IDE 的 Refactor Move Package (如 IntelliJ), 不要 sed 批量替换
-- 每迁一个包 commit 一次, 便于 revert
-- 加 ArchUnit 规则: domain/ 只能有 access/organization/place/shared 4 个子包
-- 架构测试全绿 + 端到端业务测试通过
-
-第一步: 列出所有需要迁移的文件, 估计工作量
-```
 
 ### Phase 4 提示词
 ```

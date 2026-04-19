@@ -82,6 +82,25 @@ class ArchUnitPluginArchitectureTest {
         rule.check(classes);
     }
 
+    // ─── Phase 3.5: 已迁出的 4 个教育特定领域不得复现 ───
+
+    @Test
+    void migrated_education_domains_must_not_return_to_top_level_domain() {
+        // Phase 3.5 把 student/academic/teaching/calendar 迁到 plugins/education/domain/,
+        // 本规则阻止未来有人在顶层 com.school.management.domain.{pkg} 里再建这 4 个子包.
+        //
+        // 注意用精确前缀 com.school.management.domain.{pkg} 而非 ..domain.{pkg}..,
+        // 否则 plugins/education/domain/student 会误伤 (那是插件本地的, 允许).
+        ArchRule rule = noClasses()
+                .should().resideInAnyPackage(
+                    "com.school.management.domain.student..",
+                    "com.school.management.domain.academic..",
+                    "com.school.management.domain.teaching..",
+                    "com.school.management.domain.calendar.."
+                );
+        rule.check(classes);
+    }
+
     @Test
     void all_EntityTypePlugin_implementations_must_be_components() {
         ArchRule rule = classes()
