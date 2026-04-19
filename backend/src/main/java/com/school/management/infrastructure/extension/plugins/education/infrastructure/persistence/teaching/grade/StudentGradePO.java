@@ -1,0 +1,33 @@
+package com.school.management.infrastructure.extension.plugins.education.infrastructure.persistence.teaching.grade;
+
+import com.baomidou.mybatisplus.annotation.*;
+import lombok.Data;
+
+import java.math.BigDecimal;
+import java.time.LocalDateTime;
+
+@Data
+@TableName("student_grades")
+public class StudentGradePO {
+    @TableId(type = IdType.ASSIGN_ID)
+    private Long id;
+    private Long batchId;
+    private Long semesterId;
+    private Long taskId;
+    private Long courseId;
+    private Long studentId;
+    private Long orgUnitId;
+    private BigDecimal totalScore;
+    private String gradeLevel;
+    private BigDecimal gradePoint;
+    private Integer passed;
+    private BigDecimal creditsEarned;
+    private Integer gradeStatus;
+    private Integer isMakeup;
+    private Integer isRetake;
+    private String remark;
+    private LocalDateTime createdAt;
+    private LocalDateTime updatedAt;
+    @TableLogic
+    private Integer deleted;
+}
