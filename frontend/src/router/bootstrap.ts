@@ -49,8 +49,14 @@ export async function loadEnabledPlugins(router: Router): Promise<void> {
 
       const mod = await loader()
       const routes = mod.default
+      // router.addRoute('Layout', r) 会注册到 matcher, 但不会 push 到 layoutRoute.children 数组;
+      // MainLayout 的 menuList 是 router.getRoutes().find('Layout').children — 需手动同步.
+      const layoutRoute = router.getRoutes().find(r => r.name === 'Layout')
       for (const route of routes) {
         router.addRoute('Layout', route)
+        if (layoutRoute?.children && !layoutRoute.children.some(c => c.path === route.path)) {
+          layoutRoute.children.push(route as never)
+        }
       }
       loaded.add(ind.code)
       console.info(`[plugin-bootstrap] 加载 ${ind.code} ${routes.length} 顶级路由`)
