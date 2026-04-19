@@ -8,6 +8,7 @@ import zhCn from 'element-plus/es/locale/lang/zh-cn'
 import VueKonva from 'vue-konva'
 import App from './App.vue'
 import router from './router'
+import { loadEnabledPlugins } from './router/bootstrap'
 import { useAuthStore } from './stores/auth'
 
 // 引入设计系统令牌 (最高优先级)
@@ -24,6 +25,11 @@ app.use(createPinia())
 // 初始化认证状态
 const authStore = useAuthStore()
 authStore.initAuth()
+
+// Phase 4A: 已登录则预装启用的插件路由 (未登录时 bootstrap 会静默 401 跳过)
+if (authStore.isAuthenticated) {
+  await loadEnabledPlugins(router)
+}
 
 app.use(router)
 app.use(VueKonva)

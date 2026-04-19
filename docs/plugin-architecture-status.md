@@ -1,12 +1,12 @@
 # 插件架构推进状态
 
-> **最近更新**: 2026-04-19 (Phase 2 + Phase 3.5 完成)
-> **当前架构等级**: **A** (B+ → A, 距 A+ 还差 1 个 Phase)
-> **A+ 判定进度**: 14/15 (93%)
+> **最近更新**: 2026-04-19 (Phase 2 + Phase 3.5 + Phase 4A 完成)
+> **当前架构等级**: **A+** (已达 15/15 指标, 插件化重构完整落地)
+> **A+ 判定进度**: 15/15 (100%)
 
 ---
 
-## 已完成 (14 Phase, 52 任务)
+## 已完成 (15 Phase, 59 任务)
 
 | Phase | 内容 |
 |---|---|
@@ -16,6 +16,7 @@
 | **2** 统一 SPI 顶层 | `PluginPackage` + `Contribution` sealed(8) + `ContributionDispatcher`(@Order 60) + 7 旧 SPI `@Deprecated` |
 | **3** 事务+冲突+Casbin | @Transactional + 跨插件冲突 fail-fast + Casbin 自动 reload 事件 |
 | **3.5** DDD 物理包重组 | student/academic/teaching/calendar 4 包 260 Java 文件迁至 `plugins/education/` + myclass/StudentEventHandler 并迁 + ArchUnit 守护防复现 |
+| **4A** 前端动态路由 | router 拆分 + `router/bootstrap.ts` + `router/plugins/edu.ts`, 启用/禁用 EDU 插件 → 前端路由跟随, Playwright e2e 双测通过 |
 | **5** 多租户 | `tenant_plugin_enablement` 表 + Service + enable/disable/config API |
 | **6** 治理 API | enable/disable/uninstall/health/dependency-graph + UI 按钮 |
 | **7** create-plugin CLI | `scripts/create-plugin.sh` (实测生成 HEALTH) |
@@ -56,9 +57,16 @@ UnifiedPluginPackageTest             11   (Phase 2 新增)
 
 ---
 
-## 待完成 (1 Phase, 剩余约 3 周)
+## 已替代 Phase 4 (MF)
 
-### Phase 4 — 前端 Module Federation (3 周)
+Phase 4 原计划引入 Module Federation. 评估后 (2026-04-19) 判定:
+- 用户核心目标是"运行时根据后端配置切换前端路由", 不是"独立部署/多团队协作"
+- Module Federation 会引入 remote build/singleton 陷阱/CSS 注入顺序等 5+ 类风险
+- 纯动态路由注册同样满足目标, 零新增依赖, 保留完整 HMR 节奏
+
+→ 采用 **Phase 4A 动态路由注册方案**, Phase 4 (MF) 暂不启动. 若未来需要真正的 remote 独立部署 (如多租户定制版/企业分仓), 再启动 Phase 4。
+
+### (已替代) Phase 4 — 前端 Module Federation
 
 **目标**: 启用/禁用 EDU → 前端**自动**加载/卸载路由和组件,无需前端改代码
 

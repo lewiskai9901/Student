@@ -38,6 +38,18 @@ export const useAuthStore = defineStore('auth', () => {
       tokenStorage.setRefreshToken(newRefreshToken)
       tokenStorage.setUserInfo(userInfo)
 
+      // Phase 4A: 登录成功后装载启用的行业插件路由 (首次或换账号时)
+      // 用 dynamic import 规避 auth ↔ router 循环依赖
+      try {
+        const [{ default: router }, { loadEnabledPlugins }] = await Promise.all([
+          import('@/router'),
+          import('@/router/bootstrap')
+        ])
+        await loadEnabledPlugins(router)
+      } catch (e) {
+        console.warn('登录后加载插件路由失败, 不影响主流程:', e)
+      }
+
       return response
     } catch (error) {
       console.error('登录失败:', error)
