@@ -19,6 +19,7 @@ import com.school.management.infrastructure.activity.ActivityEventPublisher;
 import com.school.management.infrastructure.extension.ExtensionContext;
 import com.school.management.infrastructure.extension.ExtensionDispatcher;
 import com.school.management.application.event.TriggerService;
+import com.school.management.infrastructure.extension.plugins.core.constants.CorePlaceTriggerPoints;
 import lombok.Data;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -824,6 +825,24 @@ public class UniversalPlaceApplicationService {
             throw new IllegalStateException("场所已满，无法入住");
         }
 
+        // 同步一份 occupies 关系到 access_relations(关系面板/权限查询用,业务表仍为主)
+        try {
+            Map<String, Object> meta = new java.util.HashMap<>();
+            meta.put("occupantName", occupantName);
+            meta.put("placeName", place.getPlaceName());
+            if (command.getPositionNo() != null) meta.put("positionNo", command.getPositionNo());
+            accessRelationRepository.save(AccessRelation.builder()
+                    .subjectType("user").subjectId(command.getOccupantId())
+                    .resourceType("place").resourceId(placeId)
+                    .relation("occupies")
+                    .accessLevel("FULL")
+                    .metadata(meta)
+                    .build());
+        } catch (Exception e) {
+            log.warn("checkIn: 同步 occupies 关系失败 (user={}, place={}): {}",
+                    command.getOccupantId(), placeId, e.getMessage());
+        }
+
         // 发布审计事件
         activityEventPublisher.newEvent("place", "PLACE", "CHECK_IN", "入住")
                 .resourceId(placeId)
@@ -839,11 +858,12 @@ public class UniversalPlaceApplicationService {
         // 触发事件
         if (triggerService != null) {
             try {
-                triggerService.fire("DORM_CHECKIN", Map.of(
+                triggerService.fire(CorePlaceTriggerPoints.PLACE_OCCUPIED, Map.of(
                     "occupantId", command.getOccupantId(),
                     "occupantName", occupantName != null ? occupantName : "",
                     "placeId", placeId,
-                    "placeName", place.getPlaceName() != null ? place.getPlaceName() : ""
+                    "placeName", place.getPlaceName() != null ? place.getPlaceName() : "",
+                    "placeTypeCode", place.getTypeCode() != null ? place.getTypeCode() : ""
                 ));
             } catch (Exception ignored) {}
         }
@@ -879,6 +899,18 @@ public class UniversalPlaceApplicationService {
         occupant.checkOut();
         occupantRepository.save(occupant);
 
+        // 清理 access_relations 中的 occupies 关系 (同一 user 对同一 place 只会有一条)
+        try {
+            accessRelationRepository
+                    .findBySubjectAndResourceType("user", occupant.getOccupantId(), "place")
+                    .stream()
+                    .filter(r -> placeId.equals(r.getResourceId()) && "occupies".equals(r.getRelation()))
+                    .forEach(r -> accessRelationRepository.deleteById(r.getId()));
+        } catch (Exception e) {
+            log.warn("checkOut: 清理 occupies 关系失败 (user={}, place={}): {}",
+                    occupant.getOccupantId(), placeId, e.getMessage());
+        }
+
         // 原子递减占用数
         if (!placeRepository.atomicDecrementOccupancy(placeId)) {
             log.warn("checkOut: 场所 {} 占用数递减失败（可能已为0），将由对账任务修正", placeId);
@@ -898,11 +930,12 @@ public class UniversalPlaceApplicationService {
         // 触发事件
         if (triggerService != null) {
             try {
-                triggerService.fire("DORM_CHECKOUT", Map.of(
+                triggerService.fire(CorePlaceTriggerPoints.PLACE_VACATED, Map.of(
                     "occupantId", occupant.getOccupantId(),
                     "occupantName", occupantName != null ? occupantName : "",
                     "placeId", placeId,
-                    "placeName", place.getPlaceName() != null ? place.getPlaceName() : ""
+                    "placeName", place.getPlaceName() != null ? place.getPlaceName() : "",
+                    "placeTypeCode", place.getTypeCode() != null ? place.getTypeCode() : ""
                 ));
             } catch (Exception ignored) {}
         }

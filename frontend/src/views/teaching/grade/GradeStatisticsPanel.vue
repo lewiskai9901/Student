@@ -35,15 +35,15 @@
           </div>
           <div class="stat-card">
             <div class="stat-label">及格人数</div>
-            <div class="stat-value">{{ statistics.passCount }} <span class="stat-pct">({{ (statistics.passRate * 100).toFixed(1) }}%)</span></div>
+            <div class="stat-value">{{ statistics.passCount ?? 0 }} <span class="stat-pct">({{ ((statistics.passRate ?? 0) * 100).toFixed(1) }}%)</span></div>
           </div>
           <div class="stat-card">
             <div class="stat-label">优秀人数</div>
-            <div class="stat-value">{{ statistics.excellentCount }} <span class="stat-pct">({{ (statistics.excellentRate * 100).toFixed(1) }}%)</span></div>
+            <div class="stat-value">{{ statistics.excellentCount ?? 0 }} <span class="stat-pct">({{ ((statistics.excellentRate ?? 0) * 100).toFixed(1) }}%)</span></div>
           </div>
           <div class="stat-card">
             <div class="stat-label">平均分</div>
-            <div class="stat-value">{{ statistics.averageScore?.toFixed(1) }}</div>
+            <div class="stat-value">{{ statistics.averageScore?.toFixed(1) ?? '-' }}</div>
           </div>
         </div>
 
@@ -58,7 +58,7 @@
                 <div style="flex: 1; height: 18px; background: #f3f4f6; border-radius: 4px; overflow: hidden;">
                   <div style="height: 100%; background: #3b82f6; border-radius: 4px; transition: width 0.3s;" :style="{ width: `${item.percentage}%` }" />
                 </div>
-                <span style="width: 80px; text-align: right; font-size: 11px; color: #6b7280;">{{ item.count }}人 ({{ item.percentage.toFixed(1) }}%)</span>
+                <span style="width: 80px; text-align: right; font-size: 11px; color: #6b7280;">{{ item.count }}人 ({{ (item.percentage ?? 0).toFixed(1) }}%)</span>
               </div>
             </div>
           </div>
@@ -71,8 +71,8 @@
                 <tbody>
                   <tr><td class="text-left" style="font-size: 12px; color: #6b7280;">最高分</td><td class="tm-mono" style="font-weight: 600;">{{ statistics.maxScore }}</td></tr>
                   <tr><td class="text-left" style="font-size: 12px; color: #6b7280;">最低分</td><td class="tm-mono" style="font-weight: 600;">{{ statistics.minScore }}</td></tr>
-                  <tr><td class="text-left" style="font-size: 12px; color: #6b7280;">及格率</td><td class="tm-mono" style="font-weight: 600;">{{ (statistics.passRate * 100).toFixed(1) }}%</td></tr>
-                  <tr><td class="text-left" style="font-size: 12px; color: #6b7280;">优秀率</td><td class="tm-mono" style="font-weight: 600;">{{ (statistics.excellentRate * 100).toFixed(1) }}%</td></tr>
+                  <tr><td class="text-left" style="font-size: 12px; color: #6b7280;">及格率</td><td class="tm-mono" style="font-weight: 600;">{{ ((statistics.passRate ?? 0) * 100).toFixed(1) }}%</td></tr>
+                  <tr><td class="text-left" style="font-size: 12px; color: #6b7280;">优秀率</td><td class="tm-mono" style="font-weight: 600;">{{ ((statistics.excellentRate ?? 0) * 100).toFixed(1) }}%</td></tr>
                 </tbody>
               </table>
             </div>

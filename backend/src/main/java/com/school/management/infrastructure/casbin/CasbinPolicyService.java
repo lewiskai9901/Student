@@ -1,9 +1,11 @@
 package com.school.management.infrastructure.casbin;
 
 import com.school.management.domain.access.service.PolicyEnforcementService;
+import com.school.management.infrastructure.extension.event.PermissionsRefreshedEvent;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.casbin.jcasbin.main.Enforcer;
+import org.springframework.context.event.EventListener;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -48,6 +50,17 @@ public class CasbinPolicyService implements PolicyEnforcementService {
     public void revokePermission(String roleCode, Long tenantId, String resource, String action) {
         enforcer.removePolicy(roleCode, String.valueOf(tenantId), resource, action);
         log.info("Revoked {}.{} from role {} in tenant {} (in-memory)", resource, action, roleCode, tenantId);
+    }
+
+    /**
+     * 监听 {@link PermissionsRefreshedEvent} 自动重载 Casbin 策略.
+     * 由 PermissionRegistrar / RolePresetRegistrar 启动完成后发出,
+     * 保证插件同步完数据后 Casbin enforcer 内存策略与 DB 一致.
+     */
+    @EventListener
+    public void onPermissionsRefreshed(PermissionsRefreshedEvent event) {
+        log.info("[Casbin] 收到 PermissionsRefreshedEvent (source={}), 开始重载策略", event.getSourceName());
+        syncFromDatabase();
     }
 
     @Override

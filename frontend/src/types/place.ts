@@ -1,5 +1,19 @@
 /**
  * 统一场所管理类型定义
+ *
+ * ⚠️ DEPRECATED — 本文件里的 RoomType / PlaceType / BuildingType 等枚举
+ * 与 ROOM_TYPE_CONFIG / ROOM_TYPE_ALLOCATION_RULES 硬表都属于**前端硬编码行业概念**,
+ * 违反"通用核心 + 行业插件"原则.
+ *
+ * 正确做法:
+ *   - 类型字典: 走后端 `/api/entity-type-configs?entityType=PLACE` 动态加载,
+ *     由 DormitoryPlugin / ClassroomPlugin 等插件声明
+ *   - UI 配置 (icon/color): 从后端 `uiConfig` 字段读
+ *   - 分配规则: 通过 entity_type_configs.features + plugin 钩子判断
+ *
+ * 本文件暂保留以支持存量代码,新代码请改用:
+ *   - 类型: `import type { UniversalPlace } from '@/types/universalPlace'`
+ *   - 动态字典: `entityTypeApi.list('PLACE')`
  */
 
 // ========== 枚举类型 ==========

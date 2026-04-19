@@ -2,6 +2,7 @@ package com.school.management.application.inspection.v7;
 
 import com.school.management.application.event.EntityEventApplicationService;
 import com.school.management.application.event.TriggerService;
+import static com.school.management.infrastructure.extension.plugins.core.constants.InspectionTriggerPoints.*;
 import com.school.management.common.util.SecurityUtils;
 import com.school.management.domain.inspection.model.v7.execution.*;
 import com.school.management.domain.inspection.model.v7.scoring.*;
@@ -202,11 +203,12 @@ public class InspSubmissionApplicationService {
             Map<Long, String> itemEventTypeMap = buildItemEventTypeMap(details);
             Long orgUnitId = null;
             String className = null;
-            if (submission.getTargetType() == TargetType.CLASS) {
+            // 所有 ORG 类型目标都视为组织单元;具体是班级/年级/部门 由 orgUnit.unitType 决定
+            // (不再硬编码 CLASS 特化,更通用,医疗行业等可直接复用)
+            if (submission.getTargetType() == TargetType.ORG) {
                 orgUnitId = submission.getTargetId();
-                className = submission.getTargetName();
+                className = submission.getTargetName();  // 字段名保留 className 只是传参历史,实际是 orgUnitName
             }
-            // TODO: 若 targetType 是 STUDENT，可通过 student.orgUnitId 查询班级
 
             ObservationContext ctx = ObservationContext.builder()
                     .submissionId(submission.getId())
@@ -243,7 +245,7 @@ public class InspSubmissionApplicationService {
                     context.put("_refType", "inspection_submission");
                     context.put("_refId", submission.getId());
                     context.put("projectName", project.getProjectName() != null ? project.getProjectName() : "");
-                    triggerService.fire("INSP_ITEM_RESULT", context);
+                    triggerService.fire(INSP_ITEM_RESULT, context);
                 } catch (Exception e) {
                     log.warn("触发 INSP_ITEM_RESULT 失败, obs={}: {}", obs.getItemName(), e.getMessage());
                 }
@@ -265,7 +267,7 @@ public class InspSubmissionApplicationService {
                     gradeCtx.put("projectName", project.getProjectName() != null ? project.getProjectName() : "");
                     gradeCtx.put("_refType", "inspection_submission");
                     gradeCtx.put("_refId", submission.getId());
-                    triggerService.fire("INSP_GRADE_RESULT", gradeCtx);
+                    triggerService.fire(INSP_GRADE_RESULT, gradeCtx);
                 } catch (Exception e) {
                     log.warn("触发 INSP_GRADE_RESULT 失败: {}", e.getMessage());
                 }
@@ -284,7 +286,7 @@ public class InspSubmissionApplicationService {
                 completeCtx.put("inspectorName", inspectorName);
                 completeCtx.put("_refType", "inspection_submission");
                 completeCtx.put("_refId", submission.getId());
-                triggerService.fire("INSP_RECORD_COMPLETE", completeCtx);
+                triggerService.fire(INSP_RECORD_COMPLETE, completeCtx);
             } catch (Exception e) {
                 log.warn("触发 INSP_RECORD_COMPLETE 失败: {}", e.getMessage());
             }

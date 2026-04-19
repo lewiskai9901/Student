@@ -30,6 +30,14 @@ public class RoleRepositoryImpl implements RoleRepository {
     public Role save(Role aggregate) {
         RolePO po = toPO(aggregate);
         if (aggregate.getId() == null) {
+            // 新建: admin 自定义角色,industry + origin 默认 CUSTOM
+            if (po.getIndustry() == null && po.getPluginClass() == null) {
+                po.setIndustry("CUSTOM");
+                if (po.getOrigin() == null) {
+                    long tenantId = po.getTenantId() != null ? po.getTenantId() : 1L;
+                    po.setOrigin("TENANT:CUSTOM#" + tenantId);
+                }
+            }
             roleMapper.insert(po);
             aggregate.setId(po.getId());
         } else {
@@ -179,6 +187,9 @@ public class RoleRepositoryImpl implements RoleRepository {
         po.setTenantId(domain.getTenantId());
         po.setCreatedAt(domain.getCreatedAt());
         po.setUpdatedAt(domain.getUpdatedAt());
+        po.setIndustry(domain.getIndustry());
+        po.setPluginClass(domain.getPluginClass());
+        po.setOrigin(domain.getOrigin());
         return po;
     }
 
@@ -189,7 +200,7 @@ public class RoleRepositoryImpl implements RoleRepository {
 
         boolean isSystem = "SUPER_ADMIN".equals(roleType) || "SYSTEM_ADMIN".equals(roleType);
 
-        return Role.builder()
+        Role role = Role.builder()
             .id(po.getId())
             .roleCode(po.getRoleCode())
             .roleName(po.getRoleName())
@@ -202,5 +213,9 @@ public class RoleRepositoryImpl implements RoleRepository {
             .permissionIds(new HashSet<>(permissionIds))
             .tenantId(po.getTenantId())
             .build();
+        role.setIndustry(po.getIndustry());
+        role.setPluginClass(po.getPluginClass());
+        role.setOrigin(po.getOrigin());
+        return role;
     }
 }

@@ -1,6 +1,7 @@
 package com.school.management.infrastructure.persistence.place;
 
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
+import com.school.management.infrastructure.access.DataPermission;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 import org.apache.ibatis.annotations.Select;
@@ -24,6 +25,7 @@ public interface UniversalPlaceMapper extends BaseMapper<UniversalPlacePO> {
     /**
      * 查询所有根空间
      */
+    @DataPermission(module = "place", orgUnitField = "org_unit_id")
     @Select("SELECT * FROM places WHERE parent_id IS NULL AND deleted = 0 ORDER BY place_name")
     List<UniversalPlacePO> findAllRoots();
 

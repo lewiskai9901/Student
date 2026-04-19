@@ -75,26 +75,32 @@
           <el-input v-model="formData.description" type="textarea" :rows="1" placeholder="选填" maxlength="500" />
         </el-form-item>
 
-        <!-- Extended Attributes -->
-        <template v-if="sortedAttributeFields.length > 0">
-          <div class="pf-sep" />
-          <div class="pf-section">{{ selectedType?.typeName }}属性</div>
+        <!-- Extended Attributes (按 group 分组渲染) -->
+        <template v-for="group in groupedAttributeFields" :key="group.name">
+          <div class="pf-section-title">{{ group.name }}</div>
           <div class="pf-row">
-            <template v-for="field in sortedAttributeFields" :key="field.key">
+            <template v-for="field in group.fields" :key="field.key">
               <div v-if="field.type === 'textarea'" class="pf-full">
-                <label class="pf-attr-lbl">{{ field.label }}<span v-if="field.required" class="text-red-500 ml-0.5">*</span></label>
-                <el-input v-model="attributeValues[field.key]" type="textarea" :rows="1" :placeholder="field.placeholder || ''" :maxlength="field.maxLength" />
+                <label class="pf-attr-lbl">{{ field.label }}<span v-if="field.required" class="pf-req">*</span></label>
+                <el-input v-model="attributeValues[field.key]" type="textarea" :rows="2" :placeholder="field.placeholder || '选填'" :maxlength="field.maxLength" />
               </div>
               <div v-else class="pf-col pf-attr-row">
-                <label class="pf-attr-lbl">{{ field.label }}<span v-if="field.required" class="text-red-500 ml-0.5">*</span></label>
-                <div class="flex-1 min-w-0">
-                  <el-input v-if="field.type === 'string'" v-model="attributeValues[field.key]" :placeholder="field.placeholder || ''" :maxlength="field.maxLength" />
-                  <el-input-number v-else-if="field.type === 'number'" v-model="attributeValues[field.key]" :min="field.min" :max="field.max" :step="field.step || 1" :precision="field.precision" controls-position="right" style="width: 100%" />
+                <label class="pf-attr-lbl">{{ field.label }}<span v-if="field.required" class="pf-req">*</span></label>
+                <div class="pf-attr-control">
+                  <el-input-number v-if="field.type === 'number'" v-model="attributeValues[field.key]" :min="field.min ?? field.config?.min" :max="field.max ?? field.config?.max" :step="field.step || 1" :precision="field.precision" controls-position="right" style="width: 100%" />
                   <el-select v-else-if="field.type === 'select'" v-model="attributeValues[field.key]" :placeholder="field.placeholder || '请选择'" :multiple="field.multiple" clearable style="width: 100%">
-                    <el-option v-for="opt in field.options" :key="opt.value" :label="opt.label" :value="opt.value" />
+                    <el-option v-for="opt in (field.options || field.config?.options || [])" :key="opt.value" :label="opt.label" :value="opt.value" />
                   </el-select>
                   <el-switch v-else-if="field.type === 'boolean'" v-model="attributeValues[field.key]" />
                   <el-date-picker v-else-if="field.type === 'date'" v-model="attributeValues[field.key]" type="date" :placeholder="field.placeholder || '选择日期'" :format="field.format || 'YYYY-MM-DD'" :value-format="field.format || 'YYYY-MM-DD'" style="width: 100%" />
+                  <el-select v-else-if="field.type === 'user'" v-model="attributeValues[field.key]" placeholder="选择用户" clearable filterable style="width: 100%">
+                    <el-option v-for="u in userOptions" :key="u.id" :label="u.realName" :value="u.id" />
+                  </el-select>
+                  <el-select v-else-if="field.type === 'relation'" v-model="attributeValues[field.key]" :placeholder="field.placeholder || '请选择'" clearable filterable style="width: 100%">
+                    <el-option v-for="opt in relationOptions[field.config?.target || ''] || []" :key="opt.id" :label="opt.label" :value="opt.id" />
+                  </el-select>
+                  <!-- text/string/fallback -->
+                  <el-input v-else v-model="attributeValues[field.key]" :placeholder="field.placeholder || '选填'" :maxlength="field.maxLength" />
                 </div>
               </div>
             </template>
@@ -102,8 +108,7 @@
         </template>
 
         <!-- Relations -->
-        <div class="pf-sep" />
-        <div class="pf-section text-gray-400">关联（选填）</div>
+        <div class="pf-section-title">关联</div>
         <div class="pf-row">
           <el-form-item label="所属组织" class="pf-col">
             <el-tree-select
@@ -221,6 +226,46 @@ const showGenderSection = computed(() => !!selectedType.value)
 const capacityUnit = computed(() => selectedType.value?.capacityUnit || '')
 const sortedAttributeFields = computed(() => [...attributeFields.value].sort((a, b) => (a.sortOrder || 0) - (b.sortOrder || 0)))
 
+// 按 group 分组展示扩展字段; 无 group 的归到类型名属性组
+const groupedAttributeFields = computed(() => {
+  const fallback = (selectedType.value?.typeName || '扩展') + '属性'
+  const groups = new Map<string, AttributeFieldDefinition[]>()
+  for (const f of sortedAttributeFields.value) {
+    const g = (f as any).group || fallback
+    if (!groups.has(g)) groups.set(g, [])
+    groups.get(g)!.push(f)
+  }
+  return Array.from(groups.entries()).map(([name, fields]) => ({ name, fields }))
+})
+
+// relation 字段目标数据缓存 (target → [{id, label}])
+const relationOptions = ref<Record<string, { id: number; label: string }[]>>({})
+async function loadRelationOptions() {
+  const targets = new Set<string>()
+  for (const f of attributeFields.value) {
+    if (f.type === 'relation' && (f as any).config?.target) {
+      targets.add((f as any).config.target)
+    }
+  }
+  for (const target of targets) {
+    if (relationOptions.value[target]) continue
+    try {
+      const { http } = await import('@/utils/request')
+      let url = `/${target}`
+      let labelField = 'name'
+      if (target === 'org_units') { url = '/org-units/list'; labelField = 'unitName' }
+      else if (target === 'majors') { url = '/academic/majors'; labelField = 'majorName' }
+      const res: any = await http.get(url)
+      const items = Array.isArray(res) ? res : (res?.records || res?.data || [])
+      relationOptions.value[target] = items.map((i: any) => ({
+        id: i.id, label: i[labelField] || i.name || `#${i.id}`
+      }))
+    } catch {
+      relationOptions.value[target] = []
+    }
+  }
+}
+
 function getStatusLabel(s?: number) { return s === 0 ? '停用' : s === 2 ? '维护中' : '正常' }
 
 function selectType(type: UniversalPlaceType) { selectedTypeCode.value = type.typeCode; loadAttributeFields(type) }
@@ -260,13 +305,33 @@ async function loadAttributeFields(type: UniversalPlaceType | undefined) {
     for (const f of fields) { if (f.defaultValue != null) v[f.key] = f.defaultValue; else if (f.type === 'boolean') v[f.key] = false }
     attributeValues.value = v
   } else { attributeFields.value = []; attributeValues.value = {} }
+  loadRelationOptions()
 }
 
-function loadAttributeFieldsForEdit() {
+async function loadAttributeFieldsForEdit() {
   if (!props.editData) return
   const full = props.allowedTypes?.find(t => t.typeCode === props.editData!.typeCode)
-  attributeFields.value = parseMetadataSchema(full?.metadataSchema)
+  let fields = parseMetadataSchema(full?.metadataSchema)
+  // 合并 entity_type_configs 中插件注册的字段 (同 create 模式一致)
+  try {
+    const { entityTypeApi } = await import('@/api/entityType')
+    const res = await entityTypeApi.get('PLACE', props.editData!.typeCode)
+    const data = (res as any).data || res
+    if (data?.metadataSchema) {
+      const pluginSchema = typeof data.metadataSchema === 'string' ? JSON.parse(data.metadataSchema) : data.metadataSchema
+      if (pluginSchema?.fields?.length > 0) {
+        const existingKeys = new Set(fields.map(f => f.key))
+        for (const pf of pluginSchema.fields) {
+          if (!existingKeys.has(pf.key)) {
+            fields.push({ key: pf.key, label: pf.label, type: pf.type, required: pf.required, defaultValue: pf.defaultValue || pf.config?.default, sortOrder: 100, ...(pf.group ? { group: pf.group } : {}), ...(pf.config ? { config: pf.config } : {}) } as AttributeFieldDefinition)
+          }
+        }
+      }
+    }
+  } catch { /* no plugin */ }
+  attributeFields.value = fields
   if (props.editData.attributes) attributeValues.value = { ...props.editData.attributes }
+  loadRelationOptions()
 }
 
 async function handleSubmit() {
@@ -382,13 +447,26 @@ watch(() => props.allowedTypes, (t) => {
 .pf-form :deep(.el-input-number) { --el-component-size: 30px; }
 .pf-form :deep(.el-textarea__inner) { min-height: 30px !important; }
 
-.pf-row { display: grid; grid-template-columns: 1fr 1fr; gap: 0 12px; }
+.pf-row { display: grid; grid-template-columns: 1fr 1fr; gap: 0 14px; }
 .pf-col { min-width: 0; }
 .pf-full { grid-column: 1 / -1; margin-bottom: 10px; }
-.pf-sep { height: 1px; background: #f3f4f6; margin: 4px 0 8px; }
-.pf-section { font-size: 11px; font-weight: 600; color: #6b7280; margin-bottom: 8px; }
 
-/* Attribute inline */
-.pf-attr-row { display: flex; align-items: center; gap: 0; margin-bottom: 10px; }
-.pf-attr-lbl { font-size: 12px; font-weight: 500; color: #6b7280; white-space: nowrap; width: 72px; flex-shrink: 0; padding-right: 8px; }
+/* 分组小标题,左竖条装饰 */
+.pf-section-title {
+  font-size: 12px; font-weight: 600; color: #374151;
+  margin: 12px 0 8px;
+  padding-left: 8px;
+  border-left: 3px solid #3b82f6;
+  line-height: 1;
+}
+.pf-section-title + .pf-row { margin-top: 2px; }
+
+/* Attribute row (label-left + control-right) */
+.pf-attr-row { display: flex; align-items: center; gap: 6px; margin-bottom: 10px; }
+.pf-attr-lbl {
+  font-size: 12px; font-weight: 500; color: #6b7280; white-space: nowrap;
+  width: 72px; flex-shrink: 0; padding-right: 8px; text-align: right;
+}
+.pf-attr-control { flex: 1; min-width: 0; }
+.pf-req { color: #ef4444; margin-left: 2px; }
 </style>

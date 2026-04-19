@@ -30,6 +30,23 @@ public class RoleResponse {
 
     private Boolean isEnabled;
 
+    /** 行业包: CORE / EDU / ... null 表示 admin 自定义. @deprecated 用 origin 字段 */
+    @Deprecated
+    private String industry;
+
+    /** 来源插件全限定类名,null 表示非插件声明. @deprecated 用 origin 字段 */
+    @Deprecated
+    private String pluginClass;
+
+    /**
+     * 统一来源字段 (Phase 1 引入,将替代 industry + pluginClass).
+     * 格式:
+     *   "PLUGIN:CORE@1.0.0"   插件主流声明
+     *   "TENANT:CUSTOM#<id>"  租户自定义
+     *   null                  未归属 (脏数据)
+     */
+    private String origin;
+
     @JsonSerialize(contentUsing = ToStringSerializer.class)
     private Set<Long> permissionIds;
 

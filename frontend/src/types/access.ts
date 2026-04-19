@@ -65,10 +65,10 @@ export interface Role {
   updatedAt: string
 }
 
-// 创建角色请求
+// 创建角色请求（roleCode 必填：业务 ID 稳定、可读，禁止自动生成）
 export interface CreateRoleRequest {
   roleName: string
-  roleCode?: string
+  roleCode: string
   roleType?: string
   level?: number
   description?: string

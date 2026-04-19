@@ -81,15 +81,6 @@
               </div>
             </div>
 
-            <!-- Compact stats -->
-            <div class="pm-card-stats">
-              <span>编号 <strong>{{ selectedNode.placeCode }}</strong></span>
-              <i class="pm-sep" />
-              <span>类型 <strong>{{ selectedNode.typeName }}</strong></span>
-              <i class="pm-sep" />
-              <span v-if="selectedNode.hasCapacity">容量 <strong>{{ selectedNode.currentOccupancy || 0 }}/{{ selectedNode.capacity || '-' }}</strong></span>
-              <span v-else>容量 <strong style="color: #d1d5db;">不适用</strong></span>
-            </div>
           </div>
 
           <!-- Tabs -->
@@ -125,43 +116,6 @@
                 </button>
               </div>
               <div v-else class="pm-empty-hint">暂无子场所</div>
-            </div>
-
-            <!-- Tab: 关联组织 -->
-            <div v-if="activePlaceTab === 'orgs'">
-              <div class="pm-tab-toolbar" style="justify-content: flex-end;">
-                <button class="tm-btn tm-btn-primary" style="padding: 4px 10px; font-size: 11px;" @click="openAddOrgRelDialog">
-                  <Plus style="width: 12px; height: 12px;" /> 添加
-                </button>
-              </div>
-              <table v-if="placeOrgRelations.length > 0" class="tm-table">
-                <colgroup>
-                  <col />
-                  <col style="width: 120px" />
-                  <col style="width: 60px" />
-                </colgroup>
-                <thead>
-                  <tr>
-                    <th class="text-left">组织名称</th>
-                    <th class="text-left">关系类型</th>
-                    <th></th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr v-for="rel in placeOrgRelations" :key="rel.id">
-                    <td class="text-left" style="font-weight: 500; color: #1f2937;">{{ rel.metadata?.subjectName || `组织#${rel.subjectId}` }}</td>
-                    <td class="text-left">
-                      <span class="tm-chip" :class="relTypeBadge(rel.metadata?.relationType)">
-                        {{ RelationLabels[rel.relation] || rel.relation }}
-                      </span>
-                    </td>
-                    <td style="text-align: right;">
-                      <button class="tm-action tm-action-danger" @click="handleDeleteOrgRelation(rel)">移除</button>
-                    </td>
-                  </tr>
-                </tbody>
-              </table>
-              <div v-else class="pm-empty-hint">暂无关联组织</div>
             </div>
 
             <!-- Tab: 入住管理 -->
@@ -364,11 +318,22 @@
               </div>
             </div>
 
-            <!-- Tab: 基本信息 -->
+            <!-- Tab: 关系 -->
+            <div v-if="activePlaceTab === 'relations'" style="padding: 12px 16px;">
+              <RelationsPanel
+                entity-type="place"
+                :entity-id="selectedNode.id"
+                :resource-capacity="selectedNode.capacity"
+                :resource-subtype="selectedNode.typeCode"
+                :show-header="false"
+              />
+            </div>
+
+            <!-- Tab: 基本信息 (系统字段) -->
             <div v-if="activePlaceTab === 'info'" class="pm-info-grid">
               <div>
                 <dt class="pm-info-label">编号</dt>
-                <dd class="pm-info-value">{{ selectedNode.placeCode }}</dd>
+                <dd class="pm-info-value"><code class="tm-code">{{ selectedNode.placeCode }}</code></dd>
               </div>
               <div>
                 <dt class="pm-info-label">类型</dt>
@@ -380,7 +345,7 @@
               </div>
               <div>
                 <dt class="pm-info-label">上级</dt>
-                <dd class="pm-info-value">{{ selectedNodeParentName || '(根节点)' }}</dd>
+                <dd class="pm-info-value">{{ selectedNodeParentName || '根节点' }}</dd>
               </div>
               <div class="pm-info-span2">
                 <dt class="pm-info-label">所属部门</dt>
@@ -406,6 +371,20 @@
                 <dt class="pm-info-label">描述</dt>
                 <dd class="pm-info-value" style="color: #6b7280;">{{ selectedNode.description }}</dd>
               </div>
+            </div>
+
+            <!-- Tab: 类型插件扩展字段分组 (每个 group 一个独立 tab) -->
+            <div
+              v-for="group in extensionGroups"
+              :key="group.key"
+              v-show="activePlaceTab === group.key"
+              class="pm-ext-tab-body"
+            >
+              <DynamicForm
+                :schema="{ fields: group.fields }"
+                v-model="extensionAttrs"
+                :disabled="true"
+              />
             </div>
 
             <!-- Tab: 操作记录 -->
@@ -653,36 +632,6 @@
       </template>
     </el-dialog>
 
-    <!-- Add Org Relation Dialog -->
-    <el-dialog v-model="showAddOrgRelDialog" title="添加关联组织" width="440px" :close-on-click-modal="false" destroy-on-close align-center>
-      <el-form label-position="top">
-        <el-form-item label="选择组织" required>
-          <el-tree-select
-            v-model="addOrgRelForm.orgUnitId"
-            :data="ciOrgTreeData"
-            :props="{ label: 'unitName', value: 'id', children: 'children' }"
-            placeholder="选择组织"
-            filterable
-            check-strictly
-            style="width: 100%"
-          />
-        </el-form-item>
-        <el-form-item label="关系类型">
-          <el-radio-group v-model="addOrgRelForm.relationType">
-            <el-radio value="PRIMARY">主归属</el-radio>
-            <el-radio value="SHARED">共用</el-radio>
-            <el-radio value="MANAGED">托管</el-radio>
-          </el-radio-group>
-        </el-form-item>
-      </el-form>
-      <template #footer>
-        <div style="display: flex; justify-content: flex-end; gap: 8px;">
-          <el-button @click="showAddOrgRelDialog = false">取消</el-button>
-          <el-button type="primary" :loading="addOrgRelLoading" :disabled="!addOrgRelForm.orgUnitId" @click="handleAddOrgRelation">确认</el-button>
-        </div>
-      </template>
-    </el-dialog>
-
     <!-- Booking Seat Arrangement Dialog -->
     <BookingSeatDialog
       v-model:visible="showSeatDialog"
@@ -745,13 +694,12 @@ import SeatGrid from './components/SeatGrid.vue'
 import FloorPlanEditor from './components/FloorPlanEditor.vue'
 import BookingSeatDialog from './components/BookingSeatDialog.vue'
 import ActivityTimeline from '@/components/activity/ActivityTimeline.vue'
+import RelationsPanel from '@/components/access/RelationsPanel.vue'
+import DynamicForm from '@/components/extension/DynamicForm.vue'
 import { universalPlaceApi, type PlaceStatistics } from '@/api/universalPlace'
 import { entityTypeApi } from '@/api/entityType'
 import { getSimpleUserList, getUsersByOrgUnit } from '@/api/user'
 import { getOrgUnitTree } from '@/api/organization'
-import { accessRelationApi } from '@/api/accessRelation'
-import type { AccessRelation } from '@/types/accessRelation'
-import { RelationLabels } from '@/types/accessRelation'
 import type { SimpleUser, User } from '@/types/user'
 import type { OrgUnitTreeNode } from '@/types'
 import type { PlaceTreeNode, UniversalPlace, UniversalPlaceType, PlaceOccupant, PlaceBooking } from '@/types/universalPlace'
@@ -764,7 +712,7 @@ const childPlaces = ref<UniversalPlace[]>([])
 const statistics = ref<PlaceStatistics | null>(null)
 const showDropdown = ref(false)
 const dropdownRef = ref<HTMLElement | null>(null)
-const activePlaceTab = ref<string>('children')
+const activePlaceTab = ref<string>('info')
 
 // ========== Place Types (for schema lookups) ==========
 const allPlaceTypes = ref<UniversalPlaceType[]>([])
@@ -966,110 +914,6 @@ async function handleBatchAddByOrg() {
 
 const showSwapDialog = ref(false)
 const swapSource = ref<PlaceOccupant | null>(null)
-
-// ========== Place-Org Relation Management ==========
-const placeOrgRelations = ref<AccessRelation[]>([])
-const showAddOrgRelDialog = ref(false)
-const addOrgRelLoading = ref(false)
-const addOrgRelForm = ref({
-  orgUnitId: undefined as number | undefined,
-  relationType: 'SHARED' as string,
-  canUse: true,
-  canManage: false,
-  canInspect: false
-})
-
-function relTypeLabel(type?: string): string {
-  const map: Record<string, string> = { PRIMARY: '主归属', SHARED: '共用', MANAGED: '托管' }
-  return type ? (map[type] || type) : '未知'
-}
-
-function relTypeBadge(type?: string): string {
-  if (type === 'PRIMARY') return 'bg-blue-50 text-blue-600'
-  if (type === 'SHARED') return 'bg-purple-50 text-purple-600'
-  if (type === 'MANAGED') return 'bg-amber-50 text-amber-600'
-  return 'bg-gray-50 text-gray-500'
-}
-
-async function loadPlaceOrgRelations(placeId: number | string) {
-  try {
-    const all = await accessRelationApi.getByResource('place', placeId)
-    placeOrgRelations.value = all.filter(r => r.subjectType === 'org_unit')
-  } catch {
-    placeOrgRelations.value = []
-  }
-}
-
-async function openAddOrgRelDialog() {
-  // Reset form
-  addOrgRelForm.value = {
-    orgUnitId: undefined,
-    relationType: 'SHARED',
-    canUse: true,
-    canManage: false,
-    canInspect: false
-  }
-  // Load org tree (lazy load once, shared with check-in dialog)
-  if (ciOrgTreeData.value.length === 0) {
-    try {
-      ciOrgTreeData.value = await getOrgUnitTree()
-    } catch { /* non-critical */ }
-  }
-  showAddOrgRelDialog.value = true
-}
-
-async function handleAddOrgRelation() {
-  if (!selectedNode.value || !addOrgRelForm.value.orgUnitId) return
-  addOrgRelLoading.value = true
-  try {
-    await accessRelationApi.create({
-      resourceType: 'place',
-      resourceId: selectedNode.value.id,
-      relation: addOrgRelForm.value.relationType === 'PRIMARY' ? 'owner' : addOrgRelForm.value.relationType === 'MANAGED' ? 'manager' : 'user',
-      subjectType: 'org_unit',
-      subjectId: addOrgRelForm.value.orgUnitId!,
-      accessLevel: addOrgRelForm.value.relationType === 'PRIMARY' || addOrgRelForm.value.relationType === 'MANAGED' ? 2 : 1,
-      metadata: {
-        relationType: addOrgRelForm.value.relationType,
-        canUse: addOrgRelForm.value.canUse,
-        canManage: addOrgRelForm.value.canManage,
-        canAssign: false,
-        canInspect: addOrgRelForm.value.canInspect
-      }
-    })
-    ElMessage.success('添加成功')
-    showAddOrgRelDialog.value = false
-    addOrgRelForm.value = {
-      orgUnitId: undefined,
-      relationType: 'SHARED',
-      canUse: true,
-      canManage: false,
-      canInspect: false
-    }
-    await loadPlaceOrgRelations(selectedNode.value.id)
-  } catch {
-    /* axios 拦截器已处理 */
-  } finally {
-    addOrgRelLoading.value = false
-  }
-}
-
-async function handleDeleteOrgRelation(rel: AccessRelation) {
-  try {
-    await ElMessageBox.confirm(
-      `确定要移除该组织的使用关系吗？`,
-      '确认移除',
-      { type: 'warning', confirmButtonText: '移除', cancelButtonText: '取消' }
-    )
-    await accessRelationApi.delete(rel.id)
-    ElMessage.success('移除成功')
-    if (selectedNode.value) {
-      await loadPlaceOrgRelations(selectedNode.value.id)
-    }
-  } catch (error: any) {
-    if (error !== 'cancel') { /* axios 拦截器已处理 */ }
-  }
-}
 
 // ========== Booking Management ==========
 const bookings = ref<PlaceBooking[]>([])
@@ -1277,49 +1121,42 @@ const stats = computed(() => statistics.value || {
 })
 
 /**
- * 根据类型 schema 解析属性展示列表（label + 格式化 value）
+ * 扩展字段分组 (entity_type_configs.metadataSchema → 按 field.group 分组)
+ * 在"基本信息"tab 底部以只读 DynamicForm 形式渲染
  */
-const resolvedAttributes = computed(() => {
+const extensionSchema = computed<{ fields: any[] } | null>(() => {
   const node = selectedNode.value
-  if (!node) return []
-  const typeConfig = allPlaceTypes.value.find(t => t.typeCode === node.typeCode)
-  let fields: any[] | undefined
-  if (typeConfig?.metadataSchema) {
-    const schema = typeof typeConfig.metadataSchema === 'string'
-      ? (() => { try { return JSON.parse(typeConfig.metadataSchema as any) } catch { return undefined } })()
-      : typeConfig.metadataSchema
-    fields = (schema as any)?.fields
+  if (!node) return null
+  const cfg = allPlaceTypes.value.find(t => t.typeCode === node.typeCode)
+  if (!cfg?.metadataSchema) return null
+  const schema = typeof cfg.metadataSchema === 'string'
+    ? (() => { try { return JSON.parse(cfg.metadataSchema as any) } catch { return null } })()
+    : cfg.metadataSchema
+  return (schema as any)?.fields?.length ? schema : null
+})
+
+const extensionAttrs = computed({
+  get: () => selectedNode.value?.attributes || {},
+  set: () => { /* disabled, ignored */ }
+})
+
+// 与系统 tab 重名的 group 自动加类型前缀(如"宿舍·基本信息")
+const PM_SYSTEM_TAB_LABELS = new Set(['基本信息', '子场所', '入住管理', '预订管理', '关系', '操作记录'])
+const extensionGroups = computed(() => {
+  const fields = extensionSchema.value?.fields || []
+  const visible = fields.filter((f: any) => f.showInDetail !== false)
+  const groups = new Map<string, any[]>()
+  for (const f of visible) {
+    const g = f.group || '扩展属性'
+    if (!groups.has(g)) groups.set(g, [])
+    groups.get(g)!.push(f)
   }
-  if (!fields || fields.length === 0) {
-    // 无 schema，退化为 raw key/value
-    if (node.attributes && Object.keys(node.attributes).length > 0) {
-      return Object.entries(node.attributes).map(([key, value]) => ({
-        key, label: key, value: String(value ?? ''), isEmpty: false
-      }))
-    }
-    return []
-  }
-  // 按 sortOrder 排序，过滤 showInDetail !== false
-  return fields
-    .filter(f => f.showInDetail !== false)
-    .sort((a, b) => (a.sortOrder || 0) - (b.sortOrder || 0))
-    .map(f => {
-      const raw = node.attributes?.[f.key]
-      const hasValue = raw !== undefined && raw !== null && raw !== ''
-      let displayValue = '未设置'
-      if (hasValue) {
-        displayValue = String(raw)
-        // select 类型展示 label
-        if (f.type === 'select' && f.options) {
-          const opt = f.options.find(o => o.value === String(raw))
-          if (opt) displayValue = opt.label
-        }
-        if (f.type === 'boolean') {
-          displayValue = raw ? '是' : '否'
-        }
-      }
-      return { key: f.key, label: f.label, value: displayValue, isEmpty: !hasValue }
-    })
+  const typePrefix = selectedNode.value?.typeName || '扩展'
+  return Array.from(groups.entries()).map(([name, fs], i) => ({
+    key: `ext_${i}`,
+    label: PM_SYSTEM_TAB_LABELS.has(name) ? `${typePrefix}·${name}` : name,
+    fields: fs.sort((a: any, b: any) => (a.sortOrder || 0) - (b.sortOrder || 0))
+  }))
 })
 
 const showOccupantPanel = computed(() => {
@@ -1330,8 +1167,8 @@ const showOccupantPanel = computed(() => {
 
 const placeTabs = computed(() => {
   const tabs: { key: string; label: string; count?: number }[] = [
+    { key: 'info', label: '基本信息' },
     { key: 'children', label: '子场所', count: childPlaces.value.length },
-    { key: 'orgs', label: '关联组织', count: placeOrgRelations.value.length },
   ]
   if (showOccupantPanel.value) {
     tabs.push({ key: 'occupants', label: '入住管理', count: occupants.value.length })
@@ -1339,7 +1176,11 @@ const placeTabs = computed(() => {
   if (showBookingPanel.value) {
     tabs.push({ key: 'bookings', label: '预订管理', count: bookings.value.filter((b: any) => b.status === 1 || b.status === 2).length })
   }
-  tabs.push({ key: 'info', label: '基本信息' })
+  // 类型插件声明的扩展字段按 group 追加独立 tab
+  for (const group of extensionGroups.value) {
+    tabs.push({ key: group.key, label: group.label })
+  }
+  tabs.push({ key: 'relations', label: '关系' })
   tabs.push({ key: 'logs', label: '操作记录' })
   return tabs
 })
@@ -1393,10 +1234,8 @@ function handleSelectNode(node: PlaceTreeNode) {
   showHistory.value = false
   occupants.value = []
   occupantHistory.value = []
-  placeOrgRelations.value = []
   bookings.value = []
   loadChildPlaces(node.id)
-  loadPlaceOrgRelations(node.id)
   // Load occupants if this node supports them
   if (node.occupiable || node.hasCapacity) {
     loadOccupants(node.id)
@@ -1414,10 +1253,8 @@ function selectPlace(place: UniversalPlace) {
     showHistory.value = false
     occupants.value = []
     occupantHistory.value = []
-    placeOrgRelations.value = []
     bookings.value = []
     loadChildPlaces(place.id)
-    loadPlaceOrgRelations(place.id)
     if (node.occupiable || node.hasCapacity) {
       loadOccupants(place.id)
     }
@@ -2035,6 +1872,18 @@ onBeforeUnmount(() => {
 .pm-info-span4 { grid-column: span 4; }
 .pm-info-label { font-weight: 500; color: #6b7280; }
 .pm-info-value { margin-top: 2px; color: #111827; }
+.pm-ext-tab-body { padding: 14px 20px; }
+
+/* Basic info inline row (与 OrgDetailPanel 风格一致) */
+.pm-basic-info { padding: 6px 14px; margin-top: 10px; }
+.pm-info-inline {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 18px;
+}
+.pm-info-kv { font-size: 12px; color: #374151; }
+.pm-info-kv em { font-style: normal; color: #9ca3af; margin-right: 4px; }
 
 /* ============================================
    Tailwind utility classes used by script fns

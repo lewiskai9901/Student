@@ -60,7 +60,7 @@ public class MyDashboardController {
 
     @GetMapping("/classes")
     @Operation(summary = "我授课/班主任的班级列表")
-    @CasbinAccess(resource = "my:students", action = "view", scope = PermissionScope.SELF)
+    @CasbinAccess(resource = "my:user_student", action = "view", scope = PermissionScope.SELF)
     public Result<List<MyClass>> getMyClasses() {
         Long userId = SecurityUtils.requireCurrentUserId();
         return Result.success(queryService.getMyClasses(userId));

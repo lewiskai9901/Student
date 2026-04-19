@@ -11,6 +11,8 @@ import com.school.management.domain.student.model.valueobject.StudentStatus;
 import com.school.management.domain.student.repository.StudentRepository;
 import com.school.management.exception.BusinessException;
 import com.school.management.application.event.TriggerService;
+import static com.school.management.infrastructure.extension.plugins.education.constants.EducationTriggerPoints.STUDENT_ENROLLED;
+import static com.school.management.infrastructure.extension.plugins.education.constants.EducationTriggerPoints.STUDENT_STATUS_CHANGED;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -90,7 +92,7 @@ public class StudentApplicationService {
         // 触发事件
         if (triggerService != null) {
             try {
-                triggerService.fire("STUDENT_ENROLLED", Map.of(
+                triggerService.fire(STUDENT_ENROLLED, Map.of(
                     "studentId", saved.getId(),
                     "studentName", saved.getName() != null ? saved.getName() : "",
                     "studentNo", saved.getStudentNo() != null ? saved.getStudentNo() : "",
@@ -216,7 +218,7 @@ public class StudentApplicationService {
         // 触发事件
         if (triggerService != null) {
             try {
-                triggerService.fire("STUDENT_STATUS_CHANGED", Map.of(
+                triggerService.fire(STUDENT_STATUS_CHANGED, Map.of(
                     "studentId", command.getStudentId(),
                     "studentName", student.getName() != null ? student.getName() : "",
                     "oldStatus", oldStatus != null ? oldStatus.name() : "",

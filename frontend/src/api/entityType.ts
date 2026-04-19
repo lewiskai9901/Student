@@ -30,6 +30,13 @@ export interface FieldSchema {
   config?: Record<string, any>
 }
 
+export interface CategoryOption {
+  code: string
+  label: string
+  defaultFeatures: Record<string, boolean>
+  allowedChildCodes?: string[]   // PLACE only
+}
+
 export const entityTypeApi = {
   /** 查询某实体类型的所有类型配置 */
   list: (entityType: string) =>
@@ -42,6 +49,10 @@ export const entityTypeApi = {
   /** 获取某父类型下允许的子类型 */
   getAllowedChildren: (entityType: string, parentTypeCode: string) =>
     http.get<EntityTypeConfig[]>('/entity-type-configs/allowed-children', { params: { entityType, parentTypeCode } }),
+
+  /** 获取某实体类型的可选分类（附带默认 features 与 PLACE 的允许子分类）*/
+  getCategories: (entityType: string) =>
+    http.get<CategoryOption[]>('/entity-type-configs/categories', { params: { entityType } }),
 
   /** 管理员添加自定义字段 */
   addCustomField: (id: number, field: FieldSchema) =>

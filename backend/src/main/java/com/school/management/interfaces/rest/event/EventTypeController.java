@@ -100,8 +100,8 @@ public class EventTypeController {
         jdbcTemplate.update(
             "INSERT INTO entity_event_types (tenant_id, category_code, category_name, category_polarity, " +
             "type_code, type_name, icon, color, applicable_subjects, " +
-            "is_system, is_enabled, sort_order) " +
-            "VALUES (1, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+            "is_system, is_enabled, sort_order, industry) " +
+            "VALUES (1, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'CUSTOM')",
             body.get("categoryCode"), body.get("categoryName"), categoryPolarity,
             body.get("typeCode"), body.get("typeName"),
             body.get("icon"), body.get("color"),
@@ -116,6 +116,25 @@ public class EventTypeController {
     @Operation(summary = "更新事件类型")
     @CasbinAccess(resource = "entity-event-type", action = "edit")
     public Result<Void> update(@PathVariable Long id, @RequestBody Map<String, Object> body) {
+        // 系统预置类型：只允许修改分类归属与排序/启用状态，
+        // 核心定义字段（typeName/icon/color/applicableSubjects）强制保留原值，
+        // 防止 UI 误改造成业务语义漂移；分类级元数据（categoryCode/Name/Polarity）仍可改，
+        // 以支持"分类重命名/合并"场景。
+        List<Map<String, Object>> rows = jdbcTemplate.queryForList(
+            "SELECT is_system, type_name, icon, color, applicable_subjects " +
+            "FROM entity_event_types WHERE id = ? AND deleted = 0", id);
+        if (rows.isEmpty()) {
+            return Result.error("事件类型不存在");
+        }
+        Map<String, Object> row = rows.get(0);
+        Object isSystem = row.get("is_system");
+        boolean locked = isSystem != null && (Integer.valueOf(1).equals(isSystem) || Boolean.TRUE.equals(isSystem));
+
+        Object typeName = locked ? row.get("type_name") : body.get("typeName");
+        Object icon = locked ? row.get("icon") : body.get("icon");
+        Object color = locked ? row.get("color") : body.get("color");
+        Object applicableSubjects = locked ? row.get("applicable_subjects") : body.get("applicableSubjects");
+
         jdbcTemplate.update(
             "UPDATE entity_event_types SET category_code = ?, category_name = ?, category_polarity = ?, " +
             "type_name = ?, icon = ?, color = ?, applicable_subjects = ?, " +
@@ -123,9 +142,7 @@ public class EventTypeController {
             "WHERE id = ? AND deleted = 0",
             body.get("categoryCode"), body.get("categoryName"),
             body.getOrDefault("categoryPolarity", "NEUTRAL"),
-            body.get("typeName"),
-            body.get("icon"), body.get("color"),
-            body.get("applicableSubjects"),
+            typeName, icon, color, applicableSubjects,
             body.getOrDefault("isEnabled", 1),
             body.getOrDefault("sortOrder", 0),
             id);

@@ -26,6 +26,14 @@ public abstract class AggregateRoot<ID extends Serializable> implements Entity<I
         return id;
     }
 
+    /**
+     * ⚠️ 该方法仅用于 ORM 反射赋值 / 仓储层在新建保存时设置数据库生成的 ID.
+     *
+     * 业务代码不应调用该方法修改聚合根 ID — 聚合的身份 (identity) 是不可变的,
+     * 在 aggregate 创建时就已确定,变更会破坏 equals/hashCode/ 领域事件一致性.
+     *
+     * @see #getId()
+     */
     public void setId(ID id) {
         this.id = id;
     }

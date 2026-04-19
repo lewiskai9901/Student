@@ -63,7 +63,7 @@ public class OpenApiConfig {
                                 ### V1 API (已弃用)
                                 V1 API 将在90天后下线，请尽快迁移:
                                 - `/api/classes/*` → `/api/v2/organization/classes/*`
-                                - `/api/students/*` → `/api/v2/students/*`
+                                - `/api/user_student/*` → `/api/v2/user_student/*`
                                 - `/api/roles/*` → `/api/v2/roles/*`
                                 - `/api/permissions/*` → `/api/v2/permissions/*`
                                 - `/api/quantification/*` → `/api/v2/inspection/*`
@@ -170,7 +170,7 @@ public class OpenApiConfig {
         return GroupedOpenApi.builder()
                 .group("V2-4-学生管理")
                 .displayName("V2 学生管理 (推荐)")
-                .pathsToMatch("/api/v2/students/**")
+                .pathsToMatch("/api/v2/user_student/**")
                 .build();
     }
 
@@ -256,7 +256,7 @@ public class OpenApiConfig {
     public GroupedOpenApi v1StudentApiDeprecated() {
         return GroupedOpenApi.builder()
                 .group("V1-2-学生模块(已弃用)")
-                .pathsToMatch("/api/students/**")
+                .pathsToMatch("/api/user_student/**")
                 .build();
     }
 

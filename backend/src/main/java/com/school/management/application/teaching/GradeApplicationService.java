@@ -8,6 +8,7 @@ import com.school.management.infrastructure.persistence.teaching.grade.GradeBatc
 import com.school.management.infrastructure.persistence.teaching.grade.StudentGradeMapper;
 import com.school.management.infrastructure.persistence.teaching.grade.StudentGradePO;
 import com.school.management.application.event.TriggerService;
+import static com.school.management.infrastructure.extension.plugins.education.constants.EducationTriggerPoints.*;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.poi.ss.usermodel.*;
@@ -150,7 +151,7 @@ public class GradeApplicationService {
 
         if (triggerService != null) {
             try {
-                triggerService.fire("GRADE_SUBMITTED", Map.of(
+                triggerService.fire(GRADE_SUBMITTED, Map.of(
                     "batchId", id,
                     "batchName", po.getBatchName() != null ? po.getBatchName() : "",
                     "semesterId", po.getSemesterId() != null ? po.getSemesterId() : 0L,
@@ -171,7 +172,7 @@ public class GradeApplicationService {
 
         if (triggerService != null) {
             try {
-                triggerService.fire("GRADE_APPROVED", Map.of(
+                triggerService.fire(GRADE_APPROVED, Map.of(
                     "batchId", id,
                     "batchName", po.getBatchName() != null ? po.getBatchName() : "",
                     "semesterId", po.getSemesterId() != null ? po.getSemesterId() : 0L,
@@ -200,7 +201,7 @@ public class GradeApplicationService {
 
         // 1) 班级级事件 → BY_RELATION(admin) 通知班主任
         try {
-            triggerService.fire("GRADE_PUBLISHED", Map.of(
+            triggerService.fire(GRADE_PUBLISHED, Map.of(
                 "batchId", batchId,
                 "batchName", batchName,
                 "semesterId", semesterId,
@@ -222,7 +223,7 @@ public class GradeApplicationService {
                 for (Map<String, Object> stu : students) {
                     Long studentId = ((Number) stu.get("user_id")).longValue();
                     String studentName = (String) stu.get("real_name");
-                    triggerService.fire("GRADE_PUBLISHED_PERSONAL", Map.of(
+                    triggerService.fire(GRADE_PUBLISHED_PERSONAL, Map.of(
                         "studentId", studentId,
                         "studentName", studentName != null ? studentName : "",
                         "batchId", batchId,

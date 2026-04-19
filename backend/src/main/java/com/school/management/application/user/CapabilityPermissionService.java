@@ -33,7 +33,7 @@ public class CapabilityPermissionService {
     static {
         Map<String, String> map = new LinkedHashMap<>();
         map.put("canViewOwnSchedule",   "my:schedule:view");
-        map.put("canViewOwnStudents",   "my:students:view");
+        map.put("canViewOwnStudents",   "my:user_student:view");
         map.put("canRecordAttendance",  "my:attendance:record");
         map.put("canBeSubstitute",      "my:substitute:view");
         map.put("canSubmitGrades",      "my:grades:submit");

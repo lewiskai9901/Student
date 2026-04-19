@@ -971,6 +971,17 @@ const routes: RouteRecordRaw[] = [
               order: 4
             }
           },
+          {
+            path: '/system/plugins',
+            name: 'PluginManagement',
+            component: () => import('@/views/system/PluginManagementView.vue'),
+            meta: {
+              title: '插件平台',
+              requiresAuth: true,
+              permission: 'system:config:view',
+              order: 5
+            }
+          },
           // 旧路由重定向到统一类型配置
           { path: '/system/org-types', redirect: '/system/entity-types', meta: { hidden: true } },
           { path: '/system/place-types', redirect: '/system/entity-types', meta: { hidden: true } },

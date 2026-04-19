@@ -1,10 +1,7 @@
 package com.school.management.infrastructure.extension;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.boot.ApplicationArguments;
-import org.springframework.boot.ApplicationRunner;
 import org.springframework.core.annotation.Order;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Component;
@@ -12,76 +9,93 @@ import org.springframework.stereotype.Component;
 import java.util.List;
 
 /**
- * 关系类型插件注册器 — 启动时扫描所有 {@link RelationTypePlugin},
- * 将声明的关系类型 UPSERT 到 relation_types 表.
+ * 关系类型 Registrar — 扫描 {@link RelationTypePlugin}, UPSERT 到 relation_types 表.
  *
- * 关键设计:
- *  - 关系类型由 Java 代码驱动 (不靠 SQL 迁移硬写),插件卸载 → 禁用关系
- *  - UPSERT 以 (relation_code, from_type, to_type, tenant_id) 为主键
- *  - 历史关系实例 (access_relations 表数据) 不受影响
+ * 继承 {@link AbstractPluginRegistrar}. 注意 industry 解析走
+ * {@code packageRegistrar.resolveIndustryBySource(plugin.getSourceName())}
+ * 不是默认的 resolveIndustry(Class).
  *
- * 执行顺序: 晚于 PluginRegistrar (类型先就位,再注册关系)
+ * @Order(200): 在 EntityType(100) 之后, Messaging(300) 之前.
  */
 @Slf4j
 @Component
 @Order(200)
-@RequiredArgsConstructor
-public class RelationTypePluginRegistrar implements ApplicationRunner {
+public class RelationTypePluginRegistrar extends AbstractPluginRegistrar<RelationTypePlugin, RelationTypePlugin.RelationTypeDef> {
 
     private final List<RelationTypePlugin> plugins;
-    private final JdbcTemplate jdbc;
     private final ObjectMapper objectMapper;
 
-    @Override
-    public void run(ApplicationArguments args) {
-        if (plugins.isEmpty()) {
-            log.info("[RelationTypePluginRegistrar] 无插件需要注册");
-            return;
-        }
-
-        int total = 0, inserted = 0, updated = 0;
-        for (RelationTypePlugin plugin : plugins) {
-            for (RelationTypePlugin.RelationTypeDef def : plugin.getRelationTypes()) {
-                total++;
-                try {
-                    boolean isNew = upsert(plugin, def);
-                    if (isNew) inserted++; else updated++;
-                } catch (Exception e) {
-                    log.error("[RelationTypePluginRegistrar] 注册失败 {} {}→{}: {}",
-                        def.relationCode(), def.fromType(), def.toType(), e.getMessage());
-                }
-            }
-        }
-        log.info("[RelationTypePluginRegistrar] 扫描 {} 个插件,{} 个关系类型 (新增 {} / 更新 {})",
-            plugins.size(), total, inserted, updated);
+    public RelationTypePluginRegistrar(List<RelationTypePlugin> plugins,
+                                        JdbcTemplate jdbc,
+                                        PluginPackageRegistrar packageRegistrar,
+                                        ObjectMapper objectMapper) {
+        super(jdbc, packageRegistrar);
+        this.plugins = plugins;
+        this.objectMapper = objectMapper;
     }
 
-    private boolean upsert(RelationTypePlugin plugin, RelationTypePlugin.RelationTypeDef def) {
+    @Override protected List<RelationTypePlugin> getPluginList() { return plugins; }
+
+    @Override protected List<RelationTypePlugin.RelationTypeDef> extractDefs(RelationTypePlugin p) {
+        return p.getRelationTypes();
+    }
+
+    @Override protected String describeDef(RelationTypePlugin.RelationTypeDef def) {
+        return def.relationCode() + " " + def.fromType() + "→" + def.toType();
+    }
+
+    /** 关系插件的 industry 来自 sourceName 字符串 (而非类包路径) */
+    @Override
+    protected String resolveIndustry(RelationTypePlugin plugin) {
+        return packageRegistrar.resolveIndustryBySource(plugin.getSourceName());
+    }
+
+    @Override
+    protected UpsertResult upsertOne(RelationTypePlugin plugin,
+                                      RelationTypePlugin.RelationTypeDef def,
+                                      String industry, String pluginClass) throws Exception {
+        // relation_types 复合主键 (code + from + to + tenant), CUSTOM 保护同样按 code+from+to
+        if (isCustomProtected(
+                "SELECT industry FROM relation_types " +
+                "WHERE relation_code=? AND from_type=? AND to_type=? AND tenant_id=1",
+                def.relationCode(), def.fromType(), def.toType())) {
+            return UpsertResult.SKIPPED;
+        }
         Long exists = jdbc.queryForObject(
             "SELECT COUNT(1) FROM relation_types " +
             "WHERE relation_code=? AND from_type=? AND to_type=? AND tenant_id=1",
             Long.class, def.relationCode(), def.fromType(), def.toType());
 
+        String maxBySubtypeJson = null;
+        if (def.maxBySubtype() != null && !def.maxBySubtype().isEmpty()) {
+            maxBySubtypeJson = objectMapper.writeValueAsString(def.maxBySubtype());
+        }
+
+        String origin = packageRegistrar.resolveOriginBySource(plugin.getSourceName());
         if (exists == null || exists == 0) {
             jdbc.update(
                 "INSERT INTO relation_types " +
                 "(relation_code, from_type, to_type, relation_name, is_transitive, category, " +
-                " tier, registered_by, description, is_enabled, tenant_id, created_at) " +
-                "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 1, 1, NOW())",
+                " tier, registered_by, description, capacity_bound, max_per_resource, max_by_subtype, " +
+                " industry, plugin_class, origin, is_enabled, tenant_id, created_at) " +
+                "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, 1, NOW())",
                 def.relationCode(), def.fromType(), def.toType(), def.relationName(),
                 def.isTransitive() ? 1 : 0, def.category(),
-                plugin.getTier(), plugin.getSourceName(), def.description());
-            return true;
-        } else {
-            jdbc.update(
-                "UPDATE relation_types SET " +
-                "relation_name=?, is_transitive=?, category=?, tier=?, registered_by=?, description=?, " +
-                "is_enabled=1 " +
-                "WHERE relation_code=? AND from_type=? AND to_type=? AND tenant_id=1",
-                def.relationName(), def.isTransitive() ? 1 : 0, def.category(),
                 plugin.getTier(), plugin.getSourceName(), def.description(),
-                def.relationCode(), def.fromType(), def.toType());
-            return false;
+                def.capacityBound() ? 1 : 0, def.maxPerResource(), maxBySubtypeJson,
+                industry, pluginClass, origin);
+            return UpsertResult.CREATED;
         }
+        jdbc.update(
+            "UPDATE relation_types SET " +
+            "relation_name=?, is_transitive=?, category=?, tier=?, registered_by=?, description=?, " +
+            "capacity_bound=?, max_per_resource=?, max_by_subtype=?, industry=?, plugin_class=?, origin=?, is_enabled=1 " +
+            "WHERE relation_code=? AND from_type=? AND to_type=? AND tenant_id=1",
+            def.relationName(), def.isTransitive() ? 1 : 0, def.category(),
+            plugin.getTier(), plugin.getSourceName(), def.description(),
+            def.capacityBound() ? 1 : 0, def.maxPerResource(), maxBySubtypeJson,
+            industry, pluginClass, origin,
+            def.relationCode(), def.fromType(), def.toType());
+        return UpsertResult.UPDATED;
     }
 }

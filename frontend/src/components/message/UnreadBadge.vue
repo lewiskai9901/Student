@@ -1,34 +1,21 @@
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted } from 'vue'
-import { messageApi } from '@/api/message'
+import { computed, onMounted } from 'vue'
+import { storeToRefs } from 'pinia'
+import { useMessageStore } from '@/stores/message'
 
-const count = ref(0)
-let timer: ReturnType<typeof setInterval> | null = null
+const store = useMessageStore()
+const { unreadCount } = storeToRefs(store)
 
-async function fetchCount() {
-  try {
-    const res = await messageApi.getUnreadCount()
-    count.value = res?.count ?? 0
-  } catch {
-    // silent
-  }
-}
+const displayCount = computed(() => unreadCount.value > 99 ? '99+' : unreadCount.value)
 
 onMounted(() => {
-  fetchCount()
-  timer = setInterval(fetchCount, 30000)
+  store.startPolling(30000)
 })
-
-onUnmounted(() => {
-  if (timer) clearInterval(timer)
-})
-
-defineExpose({ refresh: fetchCount })
 </script>
 
 <template>
-  <span v-if="count > 0" class="unread-badge">
-    {{ count > 99 ? '99+' : count }}
+  <span v-if="unreadCount > 0" class="unread-badge">
+    {{ displayCount }}
   </span>
 </template>
 

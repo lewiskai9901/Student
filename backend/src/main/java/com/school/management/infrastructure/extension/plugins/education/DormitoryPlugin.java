@@ -8,7 +8,6 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Component;
 
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
@@ -25,14 +24,8 @@ public class DormitoryPlugin implements EntityTypePlugin {
     public String getParentTypeCode() { return "DORM_FLOOR"; }
 
     public List<FieldDefinition> getSystemFields() {
+        // 注: 床位数/性别限制 复用系统字段 places.capacity / places.gender,不在此声明
         return List.of(
-            FieldDefinition.of("bedCount", "床位数", "number", "基本信息", true,
-                Map.of("min", 1, "max", 12, "default", 6)),
-            FieldDefinition.of("genderLimit", "性别限制", "select", "基本信息", false,
-                Map.of("options", List.of(
-                    Map.of("value", "MALE", "label", "男生"),
-                    Map.of("value", "FEMALE", "label", "女生"),
-                    Map.of("value", "NONE", "label", "不限")))),
             FieldDefinition.of("floorNumber", "楼层", "number", "位置信息", false, Map.of()),
             FieldDefinition.of("roomManager", "舍长", "user", "人员配置", false,
                 Map.of("role", "STUDENT"))
@@ -60,11 +53,5 @@ public class DormitoryPlugin implements EntityTypePlugin {
         catch (Exception ignored) {}
     }
 
-    @Override
-    public List<String> validate(ExtensionContext ctx) {
-        List<String> errors = new ArrayList<>();
-        Object bedCount = ctx.get("bedCount");
-        if (bedCount == null) errors.add("床位数不能为空");
-        return errors;
-    }
+    // capacity 由系统层保证非空,无需插件再校验
 }

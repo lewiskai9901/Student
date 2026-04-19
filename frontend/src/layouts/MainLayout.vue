@@ -49,7 +49,8 @@
               >
                 <div v-if="currentRoute === item.children[0].path && !isCollapse" class="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-8 bg-white rounded-r-full"></div>
                 <component :is="getIcon(item.icon)" class="w-5 h-5 flex-shrink-0 transition-transform group-hover:scale-110" />
-                <span v-if="!isCollapse" class="text-sm font-medium">{{ item.title }}</span>
+                <span v-if="!isCollapse" class="flex-1 text-sm font-medium">{{ item.title }}</span>
+                <UnreadBadge v-if="!isCollapse && item.path && String(item.path).startsWith('/message')" />
               </router-link>
               <!-- 多个子项：展开子菜单 -->
               <button
@@ -152,7 +153,7 @@
               <div v-if="currentRoute === item.path && !isCollapse" class="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-8 bg-white rounded-r-full"></div>
               <component :is="getIcon(item.icon)" class="w-5 h-5 flex-shrink-0 transition-transform group-hover:scale-110" />
               <span v-if="!isCollapse" class="flex-1 text-sm font-medium">{{ item.title }}</span>
-              <UnreadBadge v-if="!isCollapse && item.path === '/messages'" />
+              <UnreadBadge v-if="!isCollapse && item.path && String(item.path).startsWith('/message')" />
             </router-link>
           </template>
         </div>
@@ -313,6 +314,7 @@ import { ElMessageBox } from 'element-plus'
 import { useAuthStore } from '@/stores/auth'
 import { useConfigStore } from '@/stores/config'
 import { generateMenuFromRoutes, sortMenuItems } from '@/utils/menu-generator'
+import { menusApi, type BackendMenuItem } from '@/api/menus'
 import Breadcrumb from '@/components/common/Breadcrumb.vue'
 import UnreadBadge from '@/components/message/UnreadBadge.vue'
 import type { MenuItem } from '@/types/common'
@@ -367,7 +369,51 @@ const showSeparator = (index: number): boolean => {
   return !!(prev.group && curr.group && prev.group !== curr.group)
 }
 
-// 从路由自动生成菜单
+// 后端动态菜单 — 由 MenuContributionPlugin 插件体系下发.
+// 当 backendMenus 可用时,以后端返回的 path 集合 + order 过滤/排序前端路由菜单,
+// 失败时回退到纯路由生成,保持向后兼容.
+const backendMenus = ref<BackendMenuItem[]>([])
+
+// 收集后端菜单中所有允许的路径
+const backendAllowedPaths = computed<Set<string>>(() => {
+  const set = new Set<string>()
+  const walk = (items: BackendMenuItem[]) => {
+    for (const it of items) {
+      if (it.path) set.add(it.path)
+      if (it.children?.length) walk(it.children)
+    }
+  }
+  walk(backendMenus.value)
+  return set
+})
+
+// 后端 path → order,用于覆盖前端路由 meta.order
+const backendOrderMap = computed<Record<string, number>>(() => {
+  const map: Record<string, number> = {}
+  const walk = (items: BackendMenuItem[]) => {
+    for (const it of items) {
+      if (it.path && typeof it.order === 'number') map[it.path] = it.order
+      if (it.children?.length) walk(it.children)
+    }
+  }
+  walk(backendMenus.value)
+  return map
+})
+
+// 用后端结果过滤路由菜单(保持 component 由前端静态声明,仅受后端控制可见性/顺序)
+const applyBackendFilter = (items: MenuItem[]): MenuItem[] => {
+  const allowed = backendAllowedPaths.value
+  if (allowed.size === 0) return items // 后端未就绪 → 全放行
+  const orders = backendOrderMap.value
+  return items
+    .filter(m => allowed.has(m.path))
+    .map(m => ({
+      ...m,
+      order: orders[m.path] ?? m.order,
+      children: m.children ? applyBackendFilter(m.children) : undefined
+    }))
+}
+
 const menuList = computed<MenuItem[]>(() => {
   const mainRoute = router.getRoutes().find(r => r.path === '/')
   if (!mainRoute || !mainRoute.children) {
@@ -380,7 +426,7 @@ const menuList = computed<MenuItem[]>(() => {
       userInfo: authStore.user
     }
   )
-  return sortMenuItems(menus)
+  return sortMenuItems(applyBackendFilter(menus))
 })
 
 // 图标映射
@@ -537,6 +583,14 @@ const handleCommand = async (command: string) => {
 onMounted(async () => {
   document.addEventListener('click', handleClickOutside)
   await configStore.refreshConfig()
+
+  // 拉取后端动态菜单(由插件系统下发),失败则静默回退到纯路由模式
+  try {
+    const data = await menusApi.my()
+    backendMenus.value = Array.isArray(data) ? data : []
+  } catch (e) {
+    console.warn('[Menu] 后端菜单获取失败,回退到路由生成模式', e)
+  }
 
   // 自动展开当前路由所在的子菜单（支持三级菜单）
   menuList.value.forEach(item => {

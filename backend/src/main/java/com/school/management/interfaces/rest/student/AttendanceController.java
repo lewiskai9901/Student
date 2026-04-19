@@ -19,6 +19,7 @@ import java.time.LocalDateTime;
 import java.util.*;
 import com.school.management.infrastructure.casbin.CasbinAccess;
 import com.school.management.application.event.TriggerService;
+import static com.school.management.infrastructure.extension.plugins.education.constants.EducationTriggerPoints.ATTENDANCE_RECORDED;
 
 /**
  * 考勤管理 REST Controller
@@ -309,7 +310,7 @@ public class AttendanceController {
                         ctx.put("eventTypeHint", eventHint);
                         ctx.put("date", dateStr != null ? dateStr : "");
                         ctx.put("_refType", "attendance_record");
-                        triggerService.fire("ATTENDANCE_RECORDED", ctx);
+                        triggerService.fire(ATTENDANCE_RECORDED, ctx);
                     }
                 } catch (Exception ignored) {}
             }

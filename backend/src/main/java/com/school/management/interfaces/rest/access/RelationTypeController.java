@@ -25,8 +25,11 @@ public class RelationTypeController {
 
     private static final String SELECT_ALL =
         "SELECT relation_code, from_type, to_type, relation_name, is_transitive, " +
-        "       category, tier, registered_by, description, is_enabled " +
+        "       category, tier, registered_by, description, capacity_bound, max_per_resource, max_by_subtype, " +
+        "       industry, plugin_class, origin, is_enabled " +
         "FROM relation_types WHERE is_enabled = 1";
+
+    private static final com.fasterxml.jackson.databind.ObjectMapper MAPPER = new com.fasterxml.jackson.databind.ObjectMapper();
 
     @GetMapping
     public Result<List<Map<String, Object>>> list(
@@ -64,10 +67,18 @@ public class RelationTypeController {
         return Result.success(grouped);
     }
 
-    /** snake_case -> camelCase 字段名转换 */
+    /** snake_case -> camelCase 字段名转换;max_by_subtype JSON 字符串解析为对象 */
     private Map<String, Object> toCamelCase(Map<String, Object> row) {
         Map<String, Object> out = new LinkedHashMap<>();
-        row.forEach((k, v) -> out.put(snakeToCamel(k), v));
+        row.forEach((k, v) -> {
+            String key = snakeToCamel(k);
+            if ("maxBySubtype".equals(key) && v instanceof String s && !s.isBlank()) {
+                try { out.put(key, MAPPER.readValue(s, Map.class)); }
+                catch (Exception e) { out.put(key, null); }
+            } else {
+                out.put(key, v);
+            }
+        });
         return out;
     }
 

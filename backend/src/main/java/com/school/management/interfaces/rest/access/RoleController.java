@@ -144,6 +144,9 @@ public class RoleController {
         response.setLevel(role.getLevel());
         response.setIsSystem(role.getIsSystem());
         response.setIsEnabled(role.getIsEnabled());
+        response.setIndustry(role.getIndustry());
+        response.setPluginClass(role.getPluginClass());
+        response.setOrigin(role.getOrigin());
         response.setPermissionIds(role.getPermissionIds());
         response.setCreatedAt(role.getCreatedAt());
         return response;

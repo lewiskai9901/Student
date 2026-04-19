@@ -26,7 +26,9 @@ public class DataScopeItem implements Entity<Long> {
     private Long roleDataPermissionId;
 
     /**
-     * 范围项类型代码（ORG_UNIT, CLASS, GRADE, BUILDING, MAJOR）
+     * 范围项类型代码 — 通用核心只认 ORG_UNIT / PLACE / USER.
+     * 具体子类型(班级/年级/部门/专业 等)通过 scopeId 关联的实体的 typeCode 区分,
+     * 不再硬编码行业枚举值.插件可通过 {@code DataScopePlugin} 扩展自定义维度.
      */
     private String itemTypeCode;
 

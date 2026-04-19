@@ -74,7 +74,7 @@ public class RedisConfig {
         cacheConfigurations.put("checkTemplates", buildCacheConfig(Duration.ofMinutes(30)));
 
         // 动态数据 - 短TTL (5-10分钟) - 学生、检查记录等频繁变动的数据
-        cacheConfigurations.put("students", buildCacheConfig(Duration.ofMinutes(5)));
+        cacheConfigurations.put("user_student", buildCacheConfig(Duration.ofMinutes(5)));
         cacheConfigurations.put("student", buildCacheConfig(Duration.ofMinutes(5)));
         cacheConfigurations.put("checkRecords", buildCacheConfig(Duration.ofMinutes(10)));
 

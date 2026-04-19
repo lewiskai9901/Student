@@ -4,6 +4,7 @@ import com.school.management.application.message.MsgNotificationService;
 import com.school.management.common.PageResult;
 import com.school.management.common.result.Result;
 import com.school.management.common.util.SecurityUtils;
+import com.school.management.domain.access.model.PermissionScope;
 import com.school.management.domain.message.model.MsgNotification;
 import com.school.management.infrastructure.casbin.CasbinAccess;
 import io.swagger.v3.oas.annotations.Operation;
@@ -26,7 +27,7 @@ public class MsgNotificationController {
 
     @GetMapping
     @Operation(summary = "获取当前用户消息列表")
-    @CasbinAccess(resource = "msg-notification", action = "view")
+    @CasbinAccess(resource = "msg-notification", action = "view", scope = PermissionScope.SELF)
     public Result<PageResult<MsgNotification>> getMyNotifications(
             @RequestParam(required = false) Boolean isRead,
             @RequestParam(required = false) String msgType,
@@ -38,7 +39,7 @@ public class MsgNotificationController {
 
     @GetMapping("/unread-count")
     @Operation(summary = "获取未读消息数")
-    @CasbinAccess(resource = "msg-notification", action = "view")
+    @CasbinAccess(resource = "msg-notification", action = "view", scope = PermissionScope.SELF)
     public Result<Map<String, Long>> getUnreadCount() {
         Long userId = SecurityUtils.requireCurrentUserId();
         long count = notificationService.getUnreadCount(userId);
@@ -47,7 +48,7 @@ public class MsgNotificationController {
 
     @PutMapping("/{id}/read")
     @Operation(summary = "标记单条消息已读")
-    @CasbinAccess(resource = "msg-notification", action = "edit")
+    @CasbinAccess(resource = "msg-notification", action = "edit", scope = PermissionScope.SELF)
     public Result<Void> markRead(@PathVariable Long id) {
         Long userId = SecurityUtils.requireCurrentUserId();
         notificationService.markRead(id, userId);
@@ -56,7 +57,7 @@ public class MsgNotificationController {
 
     @PutMapping("/read-all")
     @Operation(summary = "全部标记已读")
-    @CasbinAccess(resource = "msg-notification", action = "edit")
+    @CasbinAccess(resource = "msg-notification", action = "edit", scope = PermissionScope.SELF)
     public Result<Void> markAllRead() {
         Long userId = SecurityUtils.requireCurrentUserId();
         notificationService.markAllRead(userId);
@@ -65,7 +66,7 @@ public class MsgNotificationController {
 
     @DeleteMapping("/{id}")
     @Operation(summary = "删除消息（软删除）")
-    @CasbinAccess(resource = "msg-notification", action = "delete")
+    @CasbinAccess(resource = "msg-notification", action = "delete", scope = PermissionScope.SELF)
     public Result<Void> deleteMessage(@PathVariable Long id) {
         Long userId = SecurityUtils.requireCurrentUserId();
         notificationService.deleteMessage(id, userId);

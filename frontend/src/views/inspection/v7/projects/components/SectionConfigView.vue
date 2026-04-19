@@ -13,7 +13,6 @@ import {
 import { getGradeSchemes } from '@/api/insp/gradeScheme'
 
 import { entityTypeApi } from '@/api/entityType'
-import { universalPlaceTypeApi } from '@/api/universalPlaceType'
 import type { InspectionPlan, CreatePlanRequest } from '@/types/insp/template'
 import type { Indicator } from '@/types/insp/indicator'
 import type { GradeScheme } from '@/types/insp/gradeScheme'
@@ -108,7 +107,7 @@ async function loadTypeFilterOptions(countType: string) {
     let items: any[] = []
     if (countType === 'USER') items = await entityTypeApi.list('USER').then(r => ((r as any).data || r || []).map((t: any) => ({ typeCode: t.typeCode, typeName: t.typeName })))
     else if (countType === 'ORG') items = await entityTypeApi.list('ORG_UNIT').then(r => ((r as any).data || r || []).map((t: any) => ({ typeCode: t.typeCode, typeName: t.typeName })))
-    else if (countType === 'PLACE') items = await universalPlaceTypeApi.getEnabled()
+    else if (countType === 'PLACE') items = await entityTypeApi.list('PLACE').then(r => ((r as any).data || r || []).filter((t: any) => t.isEnabled !== false).map((t: any) => ({ typeCode: t.typeCode, typeName: t.typeName })))
     typeFilterOptions.value = items.map((t: any) => ({ code: t.typeCode || t.code || String(t.id), name: t.typeName || t.name || t.typeCode }))
   } catch { typeFilterOptions.value = [] }
 }

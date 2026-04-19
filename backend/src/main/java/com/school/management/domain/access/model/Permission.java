@@ -39,6 +39,20 @@ public class Permission implements Entity<Long> {
     @Setter
     private List<Permission> children;
 
+    /** 行业包 (CORE/EDU/...) — 由插件写入,admin 自定义为 null. @deprecated 用 origin */
+    @Deprecated
+    @Setter
+    private String industry;
+
+    /** 来源插件全限定类名 — null 表示非插件声明. @deprecated 用 origin */
+    @Deprecated
+    @Setter
+    private String pluginClass;
+
+    /** 统一来源字段: "PLUGIN:CORE@1.0.0" / "TENANT:CUSTOM#1" */
+    @Setter
+    private String origin;
+
     protected Permission() {}
 
     @Builder

@@ -209,17 +209,23 @@ const system = reactive({
   todayLoginCount: 0
 })
 
-const quickActions = [
-  { label: '组织架构', path: '/organization/units' },
-  { label: '班级管理', path: '/organization/classes' },
-  { label: '学生管理', path: '/organization/students' },
-  { label: '用户管理', path: '/access/users' },
-  { label: '角色管理', path: '/access/roles' },
-  { label: '课程管理', path: '/teaching/courses' },
-  { label: '检查项目', path: '/inspection/v7/projects' },
-  { label: '模板管理', path: '/inspection/v7/templates' },
-  { label: '系统配置', path: '/settings/configs' },
+const allQuickActions = [
+  { label: '组织架构', path: '/organization/units', perm: 'system:org:view' },
+  { label: '班级管理', path: '/student/classes',    perm: 'student:class:view' },
+  { label: '学生管理', path: '/student/list',       perm: 'student:info:view' },
+  { label: '课程管理', path: '/academic/courses',   perm: 'academic:course:view' },
+  { label: '考试管理', path: '/teaching/examinations', perm: 'teaching:exam:view' },
+  { label: '成绩管理', path: '/teaching/grades',    perm: 'teaching:grade:view' },
+  { label: '用户管理', path: '/system/users',       perm: 'system:user:view' },
+  { label: '角色管理', path: '/system/roles',       perm: 'system:role:view' },
+  { label: '检查项目', path: '/inspection/v7/projects',  perm: 'inspection:project:view' },
+  { label: '模板管理', path: '/inspection/v7/templates', perm: 'inspection:template:view' },
+  { label: '系统配置', path: '/system/configs',     perm: 'system:config:view' },
 ]
+
+const quickActions = computed(() =>
+  allQuickActions.filter(a => !a.perm || authStore.hasPermission(a.perm))
+)
 
 const goTo = (path: string) => {
   router.push(path)

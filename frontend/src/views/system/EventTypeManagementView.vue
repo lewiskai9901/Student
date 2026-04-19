@@ -51,14 +51,18 @@
           <div v-for="t in group.items" :key="t.id" class="type-row">
             <em class="dot" :style="{ background: t.color || getPolarityColor(group.polarity) }" />
             <span class="type-name">{{ t.typeName }}</span>
+            <span v-if="t.isSystem" class="system-badge" title="系统预置，不可修改或删除">预置</span>
             <code class="type-code">{{ t.typeCode }}</code>
             <div class="type-subjects">
               <span v-for="s in parseSubjects(t.applicableSubjects)" :key="s" class="subject-tag" :class="'subj-' + s.toLowerCase()">{{ s }}</span>
               <span v-if="!parseSubjects(t.applicableSubjects).length" class="subject-none">--</span>
             </div>
             <div class="type-row-actions">
-              <button class="action-btn" @click="openTypeDialog(group.categoryCode, group.categoryName, t)">编辑</button>
-              <button class="action-btn action-danger" @click="handleDeleteType(t)">删除</button>
+              <template v-if="!t.isSystem">
+                <button class="action-btn" @click="openTypeDialog(group.categoryCode, group.categoryName, t)">编辑</button>
+                <button class="action-btn action-danger" @click="handleDeleteType(t)">删除</button>
+              </template>
+              <span v-else class="system-hint">不可修改</span>
             </div>
           </div>
         </div>
@@ -123,18 +127,8 @@
             <div class="modal-body">
               <div class="fld-row">
                 <div class="fld">
-                  <label>类型编码 <span class="req">*</span></label>
-                  <input v-model="typeForm.typeCode" class="fld-input" placeholder="如 REWARD_COMPETITION" :disabled="!!typeForm.id" />
-                </div>
-                <div class="fld">
                   <label>类型名称 <span class="req">*</span></label>
                   <input v-model="typeForm.typeName" class="fld-input" placeholder="如 竞赛获奖" />
-                </div>
-              </div>
-              <div class="fld-row">
-                <div class="fld">
-                  <label>图标</label>
-                  <input v-model="typeForm.icon" class="fld-input" placeholder="可选，如 trophy" />
                 </div>
                 <div class="fld">
                   <label>颜色</label>
@@ -143,6 +137,10 @@
                     <input type="color" v-model="typeForm.color" class="color-picker" />
                   </div>
                 </div>
+              </div>
+              <div v-if="typeForm.id" class="fld">
+                <label>类型编码</label>
+                <input :value="typeForm.typeCode" class="fld-input fld-readonly" readonly />
               </div>
               <div class="fld">
                 <label>适用主体</label>
@@ -188,7 +186,6 @@ const SUBJECT_OPTIONS = [
   { value: 'USER', label: '用户' },
   { value: 'ORG_UNIT', label: '组织' },
   { value: 'PLACE', label: '场所' },
-  { value: 'STUDENT', label: '学生' },
 ]
 
 // ==================== Computed ====================
@@ -335,7 +332,6 @@ const typeForm = reactive({
   categoryName: '',
   typeCode: '',
   typeName: '',
-  icon: '',
   color: '#6b7280',
   selectedSubjects: [] as string[],
   sortOrder: 0,
@@ -347,6 +343,12 @@ function typeMaskClick(e: MouseEvent) {
   typeMaskTarget.value = null
 }
 
+function autoGenerateTypeCode(categoryCode: string): string {
+  // CategoryCode + 6-char base36 timestamp suffix → 唯一且人眼可读
+  const suffix = Date.now().toString(36).toUpperCase().slice(-6)
+  return `${categoryCode}_${suffix}`
+}
+
 function openTypeDialog(categoryCode: string, categoryName: string, existing?: EntityEventType) {
   if (existing) {
     typeForm.id = existing.id
@@ -354,7 +356,6 @@ function openTypeDialog(categoryCode: string, categoryName: string, existing?: E
     typeForm.categoryName = existing.categoryName
     typeForm.typeCode = existing.typeCode
     typeForm.typeName = existing.typeName
-    typeForm.icon = existing.icon || ''
     typeForm.color = existing.color || '#6b7280'
     typeForm.selectedSubjects = parseSubjects(existing.applicableSubjects)
     typeForm.sortOrder = existing.sortOrder
@@ -362,9 +363,8 @@ function openTypeDialog(categoryCode: string, categoryName: string, existing?: E
     typeForm.id = null
     typeForm.categoryCode = categoryCode
     typeForm.categoryName = categoryName
-    typeForm.typeCode = ''
+    typeForm.typeCode = autoGenerateTypeCode(categoryCode)
     typeForm.typeName = ''
-    typeForm.icon = ''
     typeForm.color = '#6b7280'
     typeForm.selectedSubjects = []
     typeForm.sortOrder = 0
@@ -373,8 +373,8 @@ function openTypeDialog(categoryCode: string, categoryName: string, existing?: E
 }
 
 async function handleSaveType() {
-  if (!typeForm.typeCode.trim()) { ElMessage.warning('请填写类型编码'); return }
   if (!typeForm.typeName.trim()) { ElMessage.warning('请填写类型名称'); return }
+  if (!typeForm.typeCode) typeForm.typeCode = autoGenerateTypeCode(typeForm.categoryCode)
 
   const cmd: CreateEntityEventTypeCommand = {
     categoryCode: typeForm.categoryCode.trim().toUpperCase(),
@@ -383,7 +383,7 @@ async function handleSaveType() {
     typeName: typeForm.typeName.trim(),
     hasScore: false,
     hasSeverity: false,
-    icon: typeForm.icon || null,
+    icon: null,
     color: typeForm.color || null,
     applicableSubjects: typeForm.selectedSubjects.length ? JSON.stringify(typeForm.selectedSubjects) : null,
     sortOrder: typeForm.sortOrder,
@@ -565,12 +565,21 @@ onMounted(() => { loadTypes() })
 .subj-user { background: #eff6ff; color: #2563eb; }
 .subj-org_unit { background: #fefce8; color: #ca8a04; }
 .subj-place { background: #f0fdf4; color: #16a34a; }
-.subj-student { background: #fdf2f8; color: #db2777; }
-.subj-org { background: #fefce8; color: #ca8a04; }
-.subj-asset { background: #f5f3ff; color: #7c3aed; }
 .subject-none { font-size: 11px; color: #d1d5db; }
 
-.type-row-actions { display: flex; gap: 4px; margin-left: auto; }
+.type-row-actions { display: flex; gap: 4px; margin-left: auto; align-items: center; }
+.system-badge {
+  display: inline-block;
+  padding: 1px 6px;
+  font-size: 10px;
+  font-weight: 600;
+  color: #6b7280;
+  background: #f3f4f6;
+  border: 1px solid #e5e7eb;
+  border-radius: 3px;
+  letter-spacing: 0.02em;
+}
+.system-hint { font-size: 11.5px; color: #9ca3af; padding: 0 8px; }
 .action-btn {
   padding: 4px 8px;
   font-size: 12px;
@@ -655,6 +664,7 @@ onMounted(() => { loadTypes() })
 .fld-input:focus { border-color: #2563eb; background: #fff; box-shadow: 0 0 0 3px rgba(37,99,235,0.08); }
 .fld-input:disabled { background: #f3f4f6; color: #9ca3af; }
 .fld-narrow { max-width: 120px; }
+.fld-readonly { background: #f3f4f6; color: #6b7280; cursor: not-allowed; font-family: 'JetBrains Mono', monospace; font-size: 12px; }
 .fld-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
 
 .color-field { display: flex; gap: 6px; align-items: center; }

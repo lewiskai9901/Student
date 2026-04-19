@@ -9,11 +9,17 @@ import com.school.management.domain.message.repository.MsgTemplateRepository;
 import com.school.management.exception.BusinessException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 
 /**
  * 消息中心管理配置应用服务（管理员操作）
@@ -26,6 +32,8 @@ public class MsgConfigService {
     private final MsgSubscriptionRuleRepository subscriptionRuleRepository;
     private final MsgTemplateRepository templateRepository;
     private final MsgNotificationRepository notificationRepository;
+    private final MessageDispatcher messageDispatcher;
+    private final JdbcTemplate jdbcTemplate;
 
     /** 模板编码格式：大写字母、数字、下划线，长度 3-50。 */
     private static final Pattern TEMPLATE_CODE_PATTERN = Pattern.compile("^[A-Z0-9_]{3,50}$");
@@ -65,6 +73,50 @@ public class MsgConfigService {
     @Transactional
     public void deleteRule(Long id) {
         subscriptionRuleRepository.deleteById(id);
+    }
+
+    // ── 订阅规则预览 ─────────────────────────────────────────────────────────
+
+    public PreviewResult previewRule(String mode, String targetConfig) {
+        Set<Long> userIds = messageDispatcher.previewTargets(mode, targetConfig);
+        // 需要事件上下文才能解析的模式：返回提示，不给数字
+        if (userIds == null) {
+            return PreviewResult.notPreviewable(
+                    "模式「" + mode + "」依赖具体事件上下文（主体/关联关系），无法静态预览。仅在事件触发时解析。");
+        }
+        int total = userIds.size();
+        if (total == 0) {
+            return new PreviewResult(0, Collections.emptyList(), null, true);
+        }
+        // 取前 10 个样本用户信息（id / username / real_name）
+        List<Long> sampleIds = userIds.stream().limit(10).collect(Collectors.toList());
+        String placeholders = sampleIds.stream().map(x -> "?").collect(Collectors.joining(","));
+        String sql = "SELECT id, username, real_name FROM users " +
+                "WHERE id IN (" + placeholders + ") AND deleted = 0";
+        List<Map<String, Object>> rows = jdbcTemplate.queryForList(sql, sampleIds.toArray());
+        List<SampleUser> samples = new ArrayList<>(rows.size());
+        for (Map<String, Object> row : rows) {
+            samples.add(new SampleUser(
+                    ((Number) row.get("id")).longValue(),
+                    (String) row.get("username"),
+                    (String) row.get("real_name")));
+        }
+        String warning = null;
+        if (total > 5000) {
+            warning = "命中 " + total + " 人，超过单次派发上限 5000，实际派发将被截断。请收窄目标条件。";
+        } else if (total > 1000) {
+            warning = "命中 " + total + " 人（>1000），将产生大量通知，请确认是否符合预期。";
+        }
+        return new PreviewResult(total, samples, warning, true);
+    }
+
+    public record SampleUser(Long id, String username, String realName) {}
+
+    public record PreviewResult(int totalCount, List<SampleUser> sampleUsers,
+                                String warning, boolean previewable) {
+        public static PreviewResult notPreviewable(String warning) {
+            return new PreviewResult(0, Collections.emptyList(), warning, false);
+        }
     }
 
     // ── 消息模板 CRUD ────────────────────────────────────────────────────────

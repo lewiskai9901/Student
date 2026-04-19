@@ -58,20 +58,27 @@ interface SeatPosition {
   occupant?: PlaceOccupant
 }
 
+// 归一化 positionNo 作为匹配 key: "01" / "1" 都视为 1
+function normalizePos(v: any): string {
+  if (v == null || v === '') return ''
+  const s = String(v).trim()
+  const n = Number(s)
+  return Number.isFinite(n) ? String(n) : s
+}
+
 const positions = computed<SeatPosition[]>(() => {
   const result: SeatPosition[] = []
   const occupantMap = new Map<string, PlaceOccupant>()
   for (const occ of props.occupants) {
-    if (occ.positionNo) {
-      occupantMap.set(String(occ.positionNo), occ)
-    }
+    const key = normalizePos(occ.positionNo)
+    if (key) occupantMap.set(key, occ)
   }
 
   for (let i = 1; i <= props.capacity; i++) {
-    const no = String(i).padStart(2, '0')
-    const occ = occupantMap.get(no)
+    const key = String(i)
+    const occ = occupantMap.get(key)
     result.push({
-      no,
+      no: key.padStart(2, '0'),
       occupied: !!occ,
       occupantName: occ?.occupantName,
       occupant: occ

@@ -101,7 +101,7 @@ public class DashboardOverviewQueryService {
                 "deleted = 0 AND status = 1", "org_unit_id", filter));
         stats.put("classCount", countByOrgColumn("classes",
                 "deleted = 0 AND status = 1", "org_unit_id", filter));
-        stats.put("studentCount", countByOrgColumn("students",
+        stats.put("studentCount", countByOrgColumn("user_student",
                 "deleted = 0 AND student_status = 1", "org_unit_id", filter));
         stats.put("teacherCount", countByOrgColumn("users",
                 "deleted = 0 AND user_type_code = 'TEACHER' AND status = 1",

@@ -15,6 +15,8 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 
 import com.school.management.application.event.TriggerService;
+import static com.school.management.infrastructure.extension.plugins.education.constants.EducationTriggerPoints.ENROLLMENT_ADMITTED;
+import static com.school.management.infrastructure.extension.plugins.education.constants.EducationTriggerPoints.ENROLLMENT_REGISTERED;
 import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.time.LocalDate;
@@ -374,7 +376,7 @@ public class EnrollmentController {
                     applicantName = jdbc.queryForObject(
                         "SELECT applicant_name FROM enrollment_applications WHERE id=?", String.class, id);
                 } catch (Exception ignored) {}
-                triggerService.fire("ENROLLMENT_ADMITTED", Map.of(
+                triggerService.fire(ENROLLMENT_ADMITTED, Map.of(
                     "applicationId", id,
                     "applicantName", applicantName != null ? applicantName : ""
                 ));
@@ -480,7 +482,7 @@ public class EnrollmentController {
                     className = jdbc.queryForObject(
                         "SELECT name FROM school_classes WHERE id=?", String.class, orgUnitId);
                 } catch (Exception ignored) {}
-                triggerService.fire("ENROLLMENT_REGISTERED", Map.of(
+                triggerService.fire(ENROLLMENT_REGISTERED, Map.of(
                     "studentId", studentId,
                     "studentName", app.get("applicantName") != null ? app.get("applicantName") : "",
                     "className", className != null ? className : "",

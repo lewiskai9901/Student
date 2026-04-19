@@ -26,6 +26,11 @@ public class PermissionRepositoryImpl implements PermissionRepository {
     public Permission save(Permission aggregate) {
         PermissionPO po = toPO(aggregate);
         if (aggregate.getId() == null) {
+            // 新建: 无插件声明视为 admin 自定义,industry + origin 默认 CUSTOM
+            if (po.getIndustry() == null && po.getPluginClass() == null) {
+                po.setIndustry("CUSTOM");
+                if (po.getOrigin() == null) po.setOrigin("TENANT:CUSTOM#1");
+            }
             permissionMapper.insert(po);
             aggregate.setId(po.getId());
         } else {
@@ -129,6 +134,9 @@ public class PermissionRepositoryImpl implements PermissionRepository {
         po.setStatus(domain.getIsEnabled() ? 1 : 0);
         po.setCreatedAt(domain.getCreatedAt());
         po.setUpdatedAt(domain.getUpdatedAt());
+        po.setIndustry(domain.getIndustry());
+        po.setPluginClass(domain.getPluginClass());
+        po.setOrigin(domain.getOrigin());
         return po;
     }
 
@@ -143,7 +151,7 @@ public class PermissionRepositoryImpl implements PermissionRepository {
             action = code.substring(lastColon + 1);
         }
 
-        return Permission.builder()
+        Permission p = Permission.builder()
             .id(po.getId())
             .permissionCode(po.getPermissionCode())
             .permissionName(po.getPermissionName())
@@ -159,6 +167,10 @@ public class PermissionRepositoryImpl implements PermissionRepository {
             .sortOrder(po.getSortOrder())
             .isEnabled(po.getStatus() != null && po.getStatus() == 1)
             .build();
+        p.setIndustry(po.getIndustry());
+        p.setPluginClass(po.getPluginClass());
+        p.setOrigin(po.getOrigin());
+        return p;
     }
 
     /**

@@ -26,6 +26,19 @@ export interface SendManualParams {
   content: string
 }
 
+export interface RulePreviewSampleUser {
+  id: number
+  username: string
+  realName: string
+}
+
+export interface RulePreviewResult {
+  totalCount: number
+  sampleUsers: RulePreviewSampleUser[]
+  warning?: string | null
+  previewable: boolean
+}
+
 // ==================== 用户消息 ====================
 
 export const messageApi = {
@@ -76,6 +89,11 @@ export const msgConfigApi = {
   /** 删除订阅规则 */
   deleteRule(id: number): Promise<void> {
     return http.delete(`/msg/config/rules/${id}`)
+  },
+
+  /** 预览订阅规则命中用户（不保存规则） */
+  previewRule(data: { targetMode: string; targetConfig: string }): Promise<RulePreviewResult> {
+    return http.post('/msg/config/rules/preview', data)
   },
 
   /** 获取消息模板列表 */

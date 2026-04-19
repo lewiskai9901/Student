@@ -1,8 +1,9 @@
 package com.school.management.application.access;
 
-import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.boot.context.event.ApplicationReadyEvent;
+import org.springframework.context.event.EventListener;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Component;
 
@@ -15,6 +16,12 @@ import java.util.concurrent.ConcurrentHashMap;
  * 使用:
  *   RelationCodes.MEMBER, RelationCodes.ADMIN, ...
  *   RelationTypeRegistry.isRegistered(code, from, to)
+ *
+ * 启动时序:
+ *   旧实现 @PostConstruct 会在 RelationTypePluginRegistrar(@Order 200, ApplicationRunner)
+ *   写入之前就执行, 冷启动首次读到空表.
+ *   现改为 @EventListener(ApplicationReadyEvent) — 在所有 ApplicationRunner 执行完毕后加载,
+ *   保证字典与插件声明一致.
  */
 @Slf4j
 @Component
@@ -26,7 +33,7 @@ public class RelationTypeRegistry {
     /** key = "{code}|{from}|{to}", value = tier (CORE/COMMON_EXT/DOMAIN) */
     private final Map<String, String> registry = new ConcurrentHashMap<>();
 
-    @PostConstruct
+    @EventListener(ApplicationReadyEvent.class)
     public void load() {
         registry.clear();
         jdbcTemplate.query(

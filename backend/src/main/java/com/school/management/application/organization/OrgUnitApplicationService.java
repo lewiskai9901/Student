@@ -19,6 +19,7 @@ import com.school.management.infrastructure.extension.ExtensionDispatcher;
 import com.school.management.infrastructure.persistence.place.UniversalPlaceOccupantMapper;
 import com.school.management.infrastructure.persistence.user.UserDomainMapper;
 import com.school.management.application.event.TriggerService;
+import static com.school.management.infrastructure.extension.plugins.core.constants.CoreTriggerPoints.ORG_UNIT_CREATED;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -96,7 +97,7 @@ public class OrgUnitApplicationService {
         // 触发事件: 组织单元创建
         if (triggerService != null) {
             try {
-                triggerService.fire("ORG_UNIT_CREATED", Map.of(
+                triggerService.fire(ORG_UNIT_CREATED, Map.of(
                     "orgUnitId", orgUnit.getId(),
                     "orgUnitName", orgUnit.getUnitName() != null ? orgUnit.getUnitName() : "",
                     "orgUnitType", orgUnit.getUnitType() != null ? orgUnit.getUnitType() : "",

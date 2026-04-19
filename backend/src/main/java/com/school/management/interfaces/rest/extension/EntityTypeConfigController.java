@@ -1,6 +1,9 @@
 package com.school.management.interfaces.rest.extension;
 
 import com.school.management.common.result.Result;
+import com.school.management.domain.organization.model.entity.OrgCategory;
+import com.school.management.domain.place.model.valueobject.BaseCategory;
+import com.school.management.domain.user.model.entity.UserCategory;
 import com.school.management.infrastructure.casbin.CasbinAccess;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -8,6 +11,7 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.*;
+import java.util.stream.Stream;
 
 /**
  * 统一实体类型配置 API
@@ -24,7 +28,8 @@ public class EntityTypeConfigController {
         "id, entity_type AS entityType, type_code AS typeCode, type_name AS typeName, " +
         "category, parent_type_code AS parentTypeCode, allowed_child_type_codes AS allowedChildTypeCodes, " +
         "metadata_schema AS metadataSchema, features, ui_config AS uiConfig, " +
-        "is_plugin_registered AS isPluginRegistered, is_enabled AS isEnabled, sort_order AS sortOrder";
+        "is_plugin_registered AS isPluginRegistered, is_enabled AS isEnabled, sort_order AS sortOrder, " +
+        "plugin_class AS pluginClass, industry, origin";
 
     @GetMapping
     public Result<List<Map<String, Object>>> list(
@@ -47,6 +52,41 @@ public class EntityTypeConfigController {
             "SELECT " + SELECT_COLS + " FROM entity_type_configs WHERE entity_type = ? AND type_code = ? AND deleted = 0",
             entityType, typeCode);
         return Result.success(row);
+    }
+
+    @GetMapping("/categories")
+    public Result<List<Map<String, Object>>> categories(@RequestParam String entityType) {
+        List<Map<String, Object>> list;
+        switch (entityType) {
+            case "ORG_UNIT":
+                list = Stream.of(OrgCategory.values())
+                        .map(c -> Map.<String, Object>of(
+                                "code", c.name(),
+                                "label", c.getLabel(),
+                                "defaultFeatures", c.getDefaultFeatures()))
+                        .toList();
+                break;
+            case "USER":
+                list = Stream.of(UserCategory.values())
+                        .map(c -> Map.<String, Object>of(
+                                "code", c.name(),
+                                "label", c.getLabel(),
+                                "defaultFeatures", c.getDefaultFeatures()))
+                        .toList();
+                break;
+            case "PLACE":
+                list = Stream.of(BaseCategory.values())
+                        .map(c -> Map.<String, Object>of(
+                                "code", c.name(),
+                                "label", c.getLabel(),
+                                "allowedChildCodes", c.getAllowedChildCategories(),
+                                "defaultFeatures", c.getDefaultFeatures()))
+                        .toList();
+                break;
+            default:
+                return Result.error("未知的 entityType: " + entityType);
+        }
+        return Result.success(list);
     }
 
     @GetMapping("/allowed-children")
@@ -96,7 +136,7 @@ public class EntityTypeConfigController {
             jdbc.update(
                 "INSERT INTO entity_type_configs (entity_type, type_code, type_name, category, " +
                 "parent_type_code, allowed_child_type_codes, metadata_schema, features, " +
-                "is_plugin_registered, is_enabled, deleted) VALUES (?,?,?,?,?,?,?,?,0,1,0)",
+                "is_plugin_registered, is_enabled, deleted, industry) VALUES (?,?,?,?,?,?,?,?,0,1,0,'CUSTOM')",
                 data.get("entityType"), data.get("typeCode"), data.get("typeName"),
                 data.get("category"),
                 data.get("parentTypeCode"),

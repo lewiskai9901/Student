@@ -1,6 +1,7 @@
 package com.school.management.infrastructure.persistence.user;
 
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
+import com.school.management.infrastructure.access.DataPermission;
 import org.apache.ibatis.annotations.Delete;
 import org.apache.ibatis.annotations.Insert;
 import org.apache.ibatis.annotations.Mapper;
@@ -61,12 +62,14 @@ public interface UserDomainMapper extends BaseMapper<UserPO> {
     /**
      * 根据组织单元ID查找用户（通过 primary_org_unit_id）
      */
+    @DataPermission(module = "user", orgUnitField = "primary_org_unit_id")
     @Select("SELECT * FROM users WHERE primary_org_unit_id = #{orgUnitId} AND deleted = 0")
     List<UserPO> findByOrgUnitId(@Param("orgUnitId") Long orgUnitId);
 
     /**
      * 根据组织单元ID列表查找用户（通过 primary_org_unit_id）
      */
+    @DataPermission(module = "user", orgUnitField = "primary_org_unit_id")
     @Select("<script>" +
             "SELECT * FROM users WHERE primary_org_unit_id IN " +
             "<foreach collection='orgUnitIds' item='id' open='(' separator=',' close=')'>" +
@@ -79,12 +82,14 @@ public interface UserDomainMapper extends BaseMapper<UserPO> {
     /**
      * 根据用户类型编码查找所有用户
      */
+    @DataPermission(module = "user", orgUnitField = "primary_org_unit_id")
     @Select("SELECT * FROM users WHERE user_type_code = #{userTypeCode} AND deleted = 0")
     List<UserPO> findByUserTypeCode(@Param("userTypeCode") String userTypeCode);
 
     /**
      * 分页查询用户
      */
+    @DataPermission(module = "user", orgUnitField = "primary_org_unit_id")
     @Select("SELECT * FROM users WHERE deleted = 0 ORDER BY created_at DESC LIMIT #{offset}, #{size}")
     List<UserPO> findAllPaged(@Param("offset") int offset, @Param("size") int size);
 

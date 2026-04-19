@@ -1,10 +1,8 @@
 package com.school.management.infrastructure.extension;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.boot.ApplicationArguments;
-import org.springframework.boot.ApplicationRunner;
+import org.springframework.core.annotation.Order;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Component;
 
@@ -12,51 +10,54 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 /**
- * 插件注册器 — 应用启动时扫描所有 EntityTypePlugin，注册/合并到 entity_type_configs 表。
+ * EntityType 插件 Registrar — 扫描所有 {@link EntityTypePlugin},
+ * 注册/合并到 {@code entity_type_configs} 表.
  *
- * 合并策略:
- * - 新类型: 直接插入，metadata_schema = 插件的 systemFields
- * - 已有类型: 保留管理员自定义字段(system=false)，更新插件系统字段(system=true)
+ * 继承 {@link AbstractPluginRegistrar}. 比其他 Registrar 复杂之处:
+ *  - metadata_schema 需要合并 (保留 admin 自定义字段 system=false)
+ *  - 声明是"一插件一类型" (EntityTypePlugin 的方法直接返回 typeCode/typeName)
+ *
+ * @Order(100): 最早运行的数据型 Registrar.
  */
 @Slf4j
 @Component
-@RequiredArgsConstructor
-public class PluginRegistrar implements ApplicationRunner {
+@Order(100)
+public class PluginRegistrar extends AbstractPluginRegistrar<EntityTypePlugin, EntityTypePlugin> {
 
     private final ExtensionDispatcher dispatcher;
-    private final JdbcTemplate jdbc;
     private final ObjectMapper objectMapper;
 
-    @Override
-    public void run(ApplicationArguments args) {
-        List<EntityTypePlugin> plugins = dispatcher.getAllPlugins();
-        if (plugins.isEmpty()) {
-            log.info("PluginRegistrar: 无插件需要注册");
-            return;
-        }
-
-        int created = 0, updated = 0;
-        for (EntityTypePlugin plugin : plugins) {
-            try {
-                boolean isNew = registerOrMerge(plugin);
-                if (isNew) created++; else updated++;
-            } catch (Exception e) {
-                log.error("注册插件失败: {}/{} - {}",
-                    plugin.getEntityType(), plugin.getTypeCode(), e.getMessage());
-            }
-        }
-        log.info("PluginRegistrar: 完成注册 {} 个插件 (新增: {}, 更新: {})",
-            plugins.size(), created, updated);
+    public PluginRegistrar(ExtensionDispatcher dispatcher,
+                            JdbcTemplate jdbc,
+                            PluginPackageRegistrar packageRegistrar,
+                            ObjectMapper objectMapper) {
+        super(jdbc, packageRegistrar);
+        this.dispatcher = dispatcher;
+        this.objectMapper = objectMapper;
     }
 
-    /**
-     * 注册或合并插件到 entity_type_configs
-     * @return true=新注册, false=已存在(合并更新)
-     */
-    private boolean registerOrMerge(EntityTypePlugin plugin) throws Exception {
+    @Override protected List<EntityTypePlugin> getPluginList() { return dispatcher.getAllPlugins(); }
+
+    /** EntityTypePlugin 本身即声明 — 一个插件只声明一个类型 */
+    @Override protected List<EntityTypePlugin> extractDefs(EntityTypePlugin p) {
+        return List.of(p);
+    }
+
+    @Override protected String describeDef(EntityTypePlugin p) {
+        return p.getEntityType() + "/" + p.getTypeCode();
+    }
+
+    @Override
+    protected UpsertResult upsertOne(EntityTypePlugin plugin, EntityTypePlugin def,
+                                      String industry, String pluginClass) throws Exception {
         String entityType = plugin.getEntityType();
         String typeCode = plugin.getTypeCode();
 
+        if (isCustomProtected(
+                "SELECT industry FROM entity_type_configs WHERE entity_type=? AND type_code=? AND deleted=0",
+                entityType, typeCode)) {
+            return UpsertResult.SKIPPED;
+        }
         Long exists = jdbc.queryForObject(
             "SELECT COUNT(1) FROM entity_type_configs WHERE entity_type=? AND type_code=? AND deleted=0",
             Long.class, entityType, typeCode);
@@ -65,84 +66,62 @@ public class PluginRegistrar implements ApplicationRunner {
         String featuresJson = objectMapper.writeValueAsString(plugin.getFeatures());
         String uiConfigJson = objectMapper.writeValueAsString(plugin.getUiConfig());
 
+        String origin = resolveOrigin(plugin);
         if (exists == null || exists == 0) {
-            // 新注册
             String schemaJson = buildSchemaJson(plugin.getSystemFields(), List.of());
             jdbc.update(
                 "INSERT INTO entity_type_configs (entity_type, type_code, type_name, category, " +
                 "parent_type_code, allowed_child_type_codes, metadata_schema, features, ui_config, " +
-                "is_plugin_registered, plugin_class, is_enabled, deleted) " +
-                "VALUES (?,?,?,?,?,?,?,?,?,1,?,1,0)",
+                "is_plugin_registered, plugin_class, industry, origin, is_enabled, deleted) " +
+                "VALUES (?,?,?,?,?,?,?,?,?,1,?,?,?,1,0)",
                 entityType, typeCode, plugin.getTypeName(), plugin.getCategory(),
                 plugin.getParentTypeCode(), childCodesJson, schemaJson,
-                featuresJson, uiConfigJson, plugin.getClass().getName());
-
-            log.info("  注册新类型: {}/{} ({})", entityType, typeCode, plugin.getTypeName());
-            return true;
-        } else {
-            // 已存在: 合并 — 保留管理员自定义字段，更新系统字段
-            String currentSchemaStr = jdbc.queryForObject(
-                "SELECT metadata_schema FROM entity_type_configs WHERE entity_type=? AND type_code=? AND deleted=0",
-                String.class, entityType, typeCode);
-
-            List<FieldDefinition> customFields = extractCustomFields(currentSchemaStr);
-            String mergedSchema = buildSchemaJson(plugin.getSystemFields(), customFields);
-
-            jdbc.update(
-                "UPDATE entity_type_configs SET type_name=?, category=?, parent_type_code=?, " +
-                "allowed_child_type_codes=?, metadata_schema=?, features=?, ui_config=?, " +
-                "is_plugin_registered=1, plugin_class=? " +
-                "WHERE entity_type=? AND type_code=? AND deleted=0",
-                plugin.getTypeName(), plugin.getCategory(), plugin.getParentTypeCode(),
-                childCodesJson, mergedSchema, featuresJson, uiConfigJson,
-                plugin.getClass().getName(), entityType, typeCode);
-
-            log.info("  更新类型: {}/{} (保留 {} 个自定义字段)",
-                entityType, typeCode, customFields.size());
-            return false;
+                featuresJson, uiConfigJson, pluginClass, industry, origin);
+            return UpsertResult.CREATED;
         }
+        // 合并: 保留 admin 自定义字段
+        String currentSchemaStr = jdbc.queryForObject(
+            "SELECT metadata_schema FROM entity_type_configs WHERE entity_type=? AND type_code=? AND deleted=0",
+            String.class, entityType, typeCode);
+        List<FieldDefinition> customFields = extractCustomFields(currentSchemaStr);
+        String mergedSchema = buildSchemaJson(plugin.getSystemFields(), customFields);
+
+        jdbc.update(
+            "UPDATE entity_type_configs SET type_name=?, category=?, parent_type_code=?, " +
+            "allowed_child_type_codes=?, metadata_schema=?, features=?, ui_config=?, " +
+            "is_plugin_registered=1, plugin_class=?, industry=?, origin=? " +
+            "WHERE entity_type=? AND type_code=? AND deleted=0",
+            plugin.getTypeName(), plugin.getCategory(), plugin.getParentTypeCode(),
+            childCodesJson, mergedSchema, featuresJson, uiConfigJson,
+            pluginClass, industry, origin, entityType, typeCode);
+        return UpsertResult.UPDATED;
     }
 
-    /**
-     * 构建合并后的 metadata_schema JSON
-     */
+    // ═══════════════ schema 合并辅助 ═══════════════
+
     private String buildSchemaJson(List<FieldDefinition> systemFields, List<FieldDefinition> customFields)
             throws Exception {
-        // 系统字段标记 system=true
         List<Map<String, Object>> allFields = new ArrayList<>();
-        for (FieldDefinition f : systemFields) {
-            Map<String, Object> m = new LinkedHashMap<>();
-            m.put("key", f.getKey());
-            m.put("label", f.getLabel());
-            m.put("type", f.getType());
-            m.put("group", f.getGroup());
-            m.put("required", f.isRequired());
-            m.put("system", true);
-            if (f.getDefaultValue() != null) m.put("defaultValue", f.getDefaultValue());
-            if (f.getConfig() != null && !f.getConfig().isEmpty()) m.put("config", f.getConfig());
-            allFields.add(m);
-        }
-        // 管理员自定义字段标记 system=false
-        for (FieldDefinition f : customFields) {
-            Map<String, Object> m = new LinkedHashMap<>();
-            m.put("key", f.getKey());
-            m.put("label", f.getLabel());
-            m.put("type", f.getType());
-            m.put("group", f.getGroup() != null ? f.getGroup() : "自定义");
-            m.put("required", f.isRequired());
-            m.put("system", false);
-            if (f.getConfig() != null) m.put("config", f.getConfig());
-            allFields.add(m);
-        }
-
+        for (FieldDefinition f : systemFields) allFields.add(toMap(f, true));
+        for (FieldDefinition f : customFields) allFields.add(toMap(f, false));
         Map<String, Object> schema = new LinkedHashMap<>();
         schema.put("fields", allFields);
         return objectMapper.writeValueAsString(schema);
     }
 
-    /**
-     * 从现有 schema JSON 中提取管理员自定义字段(system=false)
-     */
+    private Map<String, Object> toMap(FieldDefinition f, boolean system) {
+        Map<String, Object> m = new LinkedHashMap<>();
+        m.put("key", f.getKey());
+        m.put("label", f.getLabel());
+        m.put("type", f.getType());
+        m.put("group", system ? f.getGroup() : (f.getGroup() != null ? f.getGroup() : "自定义"));
+        m.put("required", f.isRequired());
+        m.put("system", system);
+        if (system && f.getDefaultValue() != null) m.put("defaultValue", f.getDefaultValue());
+        if (f.getConfig() != null && !f.getConfig().isEmpty()) m.put("config", f.getConfig());
+        return m;
+    }
+
     @SuppressWarnings("unchecked")
     private List<FieldDefinition> extractCustomFields(String schemaJson) {
         if (schemaJson == null || schemaJson.isBlank()) return List.of();

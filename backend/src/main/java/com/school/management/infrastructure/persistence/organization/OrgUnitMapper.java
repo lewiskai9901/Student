@@ -1,6 +1,7 @@
 package com.school.management.infrastructure.persistence.organization;
 
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
+import com.school.management.infrastructure.access.DataPermission;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 import org.apache.ibatis.annotations.Select;
@@ -31,12 +32,14 @@ public interface OrgUnitMapper extends BaseMapper<OrgUnitPO> {
     /**
      * 查询所有启用的组织
      */
+    @DataPermission(module = "org_unit", orgUnitField = "id")
     @Select("SELECT * FROM org_units WHERE status = 'ACTIVE' AND deleted = 0 ORDER BY sort_order")
     List<OrgUnitPO> findAllEnabled();
 
     /**
      * 查询所有组织（包含禁用的）
      */
+    @DataPermission(module = "org_unit", orgUnitField = "id")
     @Select("SELECT * FROM org_units WHERE deleted = 0 ORDER BY sort_order")
     List<OrgUnitPO> findAllIncludeDisabled();
 

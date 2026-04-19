@@ -62,15 +62,17 @@ public class DefaultObservationExtractor implements ObservationExtractor {
     }
 
     /**
-     * 将检查目标类型映射为标准主体类型
+     * 将检查目标类型映射为标准主体类型.
+     * ORG 包含班级/年级/部门等(由 orgUnit.unitType 区分),不再识别 CLASS/DEPARTMENT 等行业特定码.
      */
     private String mapTargetType(String targetType) {
         if (targetType == null) return "ORG_UNIT";
         return switch (targetType.toUpperCase()) {
-            case "STUDENT" -> "USER";
-            case "CLASS", "DEPARTMENT" -> "ORG_UNIT";
+            case "USER"  -> "USER";
             case "PLACE" -> "PLACE";
-            default -> "ORG_UNIT";
+            case "ASSET" -> "ASSET";
+            case "ORG"   -> "ORG_UNIT";
+            default      -> "ORG_UNIT";
         };
     }
 }

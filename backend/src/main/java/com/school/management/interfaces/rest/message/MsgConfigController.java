@@ -80,6 +80,13 @@ public class MsgConfigController {
         return Result.success();
     }
 
+    @PostMapping("/rules/preview")
+    @Operation(summary = "预览订阅规则命中用户（不保存规则）")
+    @CasbinAccess(resource = "msg-config", action = "view")
+    public Result<MsgConfigService.PreviewResult> previewRule(@RequestBody PreviewRuleRequest request) {
+        return Result.success(configService.previewRule(request.getTargetMode(), request.getTargetConfig()));
+    }
+
     // ── 消息模板 ─────────────────────────────────────────────────────────────
 
     @GetMapping("/templates")

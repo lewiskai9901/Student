@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.toolkit.IdWorker;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.school.management.application.event.TriggerService;
+import static com.school.management.infrastructure.extension.plugins.education.constants.EducationTriggerPoints.EXAM_PUBLISHED;
 import com.school.management.infrastructure.persistence.teaching.exam.ExamArrangementMapper;
 import com.school.management.infrastructure.persistence.teaching.exam.ExamArrangementPO;
 import com.school.management.infrastructure.persistence.teaching.exam.ExamBatchMapper;
@@ -142,7 +143,7 @@ public class ExamApplicationService {
 
         if (triggerService != null) {
             try {
-                triggerService.fire("EXAM_PUBLISHED", Map.of(
+                triggerService.fire(EXAM_PUBLISHED, Map.of(
                     "batchId", id,
                     "batchName", po.getBatchName() != null ? po.getBatchName() : "",
                     "semesterId", po.getSemesterId() != null ? po.getSemesterId() : 0L,

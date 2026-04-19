@@ -39,6 +39,17 @@ public class PermissionResponse {
 
     private Boolean isEnabled;
 
+    /** 行业包: CORE / EDU / ... @deprecated 用 origin */
+    @Deprecated
+    private String industry;
+
+    /** 来源插件全限定类名. @deprecated 用 origin */
+    @Deprecated
+    private String pluginClass;
+
+    /** 统一来源: "PLUGIN:CORE@1.0.0" / "TENANT:CUSTOM#<id>" */
+    private String origin;
+
     private LocalDateTime createdAt;
 
     // Children for tree structure

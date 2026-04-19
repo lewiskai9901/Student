@@ -55,7 +55,7 @@
           <tr v-for="t in currentTypes" :key="t.id">
             <td><span class="tm-code">{{ t.typeCode }}</span></td>
             <td class="text-left" style="font-weight: 500;">{{ t.typeName }}</td>
-            <td><span class="tm-chip tm-chip-gray">{{ t.category || '-' }}</span></td>
+            <td><span class="tm-chip tm-chip-gray">{{ categoryLabel(t.entityType, t.category) }}</span></td>
             <td style="font-size: 12px; color: #6b7280;">{{ t.parentTypeCode || '-' }}</td>
             <td>
               <span :class="['tm-chip', t.isPluginRegistered ? 'tm-chip-blue' : 'tm-chip-amber']">
@@ -88,13 +88,8 @@
           <div class="tm-drawer-body">
             <div class="tm-section">
               <h4 class="tm-section-title">基本信息</h4>
-              <div class="tm-field">
-                <label class="tm-label">实体类型 <span class="req">*</span></label>
-                <select v-model="form.entityType" class="tm-field-select" :disabled="!!editingType">
-                  <option value="ORG_UNIT">组织类型</option>
-                  <option value="PLACE">场所类型</option>
-                  <option value="USER">用户类型</option>
-                </select>
+              <div class="tm-hint" style="margin-bottom: 12px;">
+                实体类型：<b>{{ entityTypeLabel(form.entityType) }}</b>
               </div>
               <div class="tm-fields tm-cols-2">
                 <div class="tm-field">
@@ -106,19 +101,34 @@
                   <input v-model="form.typeName" class="tm-input" placeholder="如 教研室" />
                 </div>
               </div>
-              <div class="tm-fields tm-cols-2">
-                <div class="tm-field">
-                  <label class="tm-label">分类</label>
-                  <input v-model="form.category" class="tm-input" placeholder="如 GROUP" />
-                </div>
-                <div class="tm-field">
-                  <label class="tm-label">父类型编码</label>
-                  <input v-model="form.parentTypeCode" class="tm-input" placeholder="留空为顶级类型" />
-                </div>
+              <div class="tm-field">
+                <label class="tm-label">分类</label>
+                <select v-model="form.category" class="tm-field-select">
+                  <option value="">— 请选择分类 —</option>
+                  <option v-for="c in currentCategories" :key="c.code" :value="c.code">
+                    {{ c.label }}
+                  </option>
+                </select>
+                <div v-if="selectedCategoryHint" class="tm-hint">{{ selectedCategoryHint }}</div>
               </div>
               <div class="tm-field">
-                <label class="tm-label">允许的子类型（逗号分隔）</label>
-                <input v-model="form.allowedChildCodes" class="tm-input" placeholder="如 CLASS,TEACHING_GROUP" />
+                <label class="tm-label">父类型</label>
+                <select v-model="form.parentTypeCode" class="tm-field-select">
+                  <option value="">— 顶级类型 —</option>
+                  <option v-for="t in parentCandidates" :key="t.typeCode" :value="t.typeCode">
+                    {{ t.typeName }}（{{ t.typeCode }}）
+                  </option>
+                </select>
+              </div>
+              <div class="tm-field">
+                <label class="tm-label">允许的子类型</label>
+                <div class="tm-checkgrid">
+                  <label v-for="t in childCandidates" :key="t.typeCode" class="tm-checkitem">
+                    <input type="checkbox" :value="t.typeCode" v-model="form.allowedChildCodesArr" />
+                    <span>{{ t.typeName }}（{{ t.typeCode }}）</span>
+                  </label>
+                  <div v-if="childCandidates.length === 0" style="color:#9ca3af;font-size:12px;">暂无可选子类型</div>
+                </div>
               </div>
             </div>
           </div>
@@ -191,7 +201,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { entityTypeApi } from '@/api/entityType'
+import { entityTypeApi, type CategoryOption } from '@/api/entityType'
 import { http } from '@/utils/request'
 
 const tab = ref<'ORG_UNIT' | 'PLACE' | 'USER'>('ORG_UNIT')
@@ -207,10 +217,41 @@ const schemaType = ref<any>(null)
 const schemaFields = ref<any[]>([])
 const newField = ref({ key: '', label: '', type: 'text' })
 
+const categoryMap = ref<Record<string, CategoryOption[]>>({ ORG_UNIT: [], PLACE: [], USER: [] })
+const currentCategories = computed(() => categoryMap.value[form.value.entityType] || [])
+function categoryLabel(entityType: string, code?: string) {
+  if (!code) return '-'
+  const opt = (categoryMap.value[entityType] || []).find(c => c.code === code)
+  return opt ? opt.label : code
+}
+const selectedCategoryHint = computed(() => {
+  const opt = currentCategories.value.find(c => c.code === form.value.category)
+  if (!opt) return ''
+  const enabled = Object.entries(opt.defaultFeatures || {}).filter(([, v]) => v).map(([k]) => k)
+  return enabled.length ? `默认启用：${enabled.join('、')}` : '此分类默认不启用任何 feature'
+})
+
 const orgTypes = computed(() => allTypes.value.filter(t => t.entityType === 'ORG_UNIT'))
 const placeTypes = computed(() => allTypes.value.filter(t => t.entityType === 'PLACE'))
 const userTypes = computed(() => allTypes.value.filter(t => t.entityType === 'USER'))
 const currentTypes = computed(() => allTypes.value.filter(t => t.entityType === tab.value))
+
+const ENTITY_TYPE_LABELS: Record<string, string> = { ORG_UNIT: '组织类型', PLACE: '场所类型', USER: '用户类型' }
+function entityTypeLabel(et: string) { return ENTITY_TYPE_LABELS[et] || et }
+
+// 父类型/子类型候选：同 entityType 下、排除自己
+const parentCandidates = computed(() =>
+  allTypes.value.filter(t =>
+    t.entityType === form.value.entityType &&
+    t.typeCode !== form.value.typeCode
+  )
+)
+const childCandidates = computed(() =>
+  allTypes.value.filter(t =>
+    t.entityType === form.value.entityType &&
+    t.typeCode !== form.value.typeCode
+  )
+)
 
 async function loadAll() {
   loading.value = true
@@ -228,16 +269,40 @@ async function loadAll() {
   } catch { allTypes.value = [] } finally { loading.value = false }
 }
 
+async function loadCategories() {
+  const types: Array<'ORG_UNIT' | 'PLACE' | 'USER'> = ['ORG_UNIT', 'PLACE', 'USER']
+  const results = await Promise.allSettled(types.map(t => entityTypeApi.getCategories(t)))
+  const map: Record<string, CategoryOption[]> = { ORG_UNIT: [], PLACE: [], USER: [] }
+  results.forEach((r, i) => {
+    if (r.status === 'fulfilled') {
+      const v: any = r.value
+      map[types[i]] = (Array.isArray(v) ? v : (v?.data || [])) as CategoryOption[]
+    } else {
+      console.warn(`[EntityTypeConfig] load categories ${types[i]} failed:`, r.reason)
+    }
+  })
+  categoryMap.value = map
+}
+
 function showCreateDialog() {
   editingType.value = null
-  form.value = { entityType: tab.value, typeCode: '', typeName: '', category: '', parentTypeCode: '', allowedChildCodes: '' }
+  form.value = { entityType: tab.value, typeCode: '', typeName: '', category: '', parentTypeCode: '', allowedChildCodesArr: [] }
   dialogVisible.value = true
 }
 
 function showEditDialog(t: any) {
   editingType.value = t
-  const children = t.allowedChildTypeCodes ? (typeof t.allowedChildTypeCodes === 'string' ? JSON.parse(t.allowedChildTypeCodes) : t.allowedChildTypeCodes) : []
-  form.value = { entityType: t.entityType, typeCode: t.typeCode, typeName: t.typeName, category: t.category || '', parentTypeCode: t.parentTypeCode || '', allowedChildCodes: children.join(',') }
+  const children = t.allowedChildTypeCodes
+    ? (typeof t.allowedChildTypeCodes === 'string' ? JSON.parse(t.allowedChildTypeCodes) : t.allowedChildTypeCodes)
+    : []
+  form.value = {
+    entityType: t.entityType,
+    typeCode: t.typeCode,
+    typeName: t.typeName,
+    category: t.category || '',
+    parentTypeCode: t.parentTypeCode || '',
+    allowedChildCodesArr: Array.isArray(children) ? children : [],
+  }
   dialogVisible.value = true
 }
 
@@ -251,7 +316,7 @@ async function handleSave() {
       typeName: form.value.typeName.trim(),
       category: form.value.category || null,
       parentTypeCode: form.value.parentTypeCode || null,
-      allowedChildTypeCodes: form.value.allowedChildCodes ? form.value.allowedChildCodes.split(',').map((s: string) => s.trim()).filter(Boolean) : [],
+      allowedChildTypeCodes: Array.isArray(form.value.allowedChildCodesArr) ? form.value.allowedChildCodesArr : [],
       metadataSchema: '{"fields":[]}',
       features: '{}',
       isPluginRegistered: false,
@@ -304,9 +369,34 @@ async function removeCustomField(idx: number) {
   } catch { ElMessage.error('删除失败') }
 }
 
-onMounted(loadAll)
+onMounted(() => { loadAll(); loadCategories() })
 </script>
 
 <style>
 @import '@/styles/teaching-ui.css';
+
+.tm-checkgrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 8px 12px;
+  padding: 10px 12px;
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+  max-height: 200px;
+  overflow-y: auto;
+  background: #fafafa;
+}
+.tm-checkitem {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  color: #374151;
+  cursor: pointer;
+  user-select: none;
+}
+.tm-checkitem input[type="checkbox"] {
+  margin: 0;
+  cursor: pointer;
+}
 </style>

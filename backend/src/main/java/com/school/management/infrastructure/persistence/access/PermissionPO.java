@@ -79,4 +79,15 @@ public class PermissionPO {
 
     @TableLogic
     private Integer deleted;
+
+    /** 行业包: CORE / EDU / MED / ... @deprecated 用 origin */
+    @Deprecated
+    private String industry;
+
+    /** 来源插件全限定类名(由 PermissionRegistrar 写入). @deprecated 用 origin */
+    @Deprecated
+    private String pluginClass;
+
+    /** 统一来源字段: "PLUGIN:CORE@1.0.0" / "TENANT:CUSTOM#1" */
+    private String origin;
 }

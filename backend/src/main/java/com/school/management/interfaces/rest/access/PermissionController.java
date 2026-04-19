@@ -122,6 +122,9 @@ public class PermissionController {
         response.setParentId(permission.getParentId());
         response.setSortOrder(permission.getSortOrder());
         response.setIsEnabled(permission.getIsEnabled());
+        response.setIndustry(permission.getIndustry());
+        response.setPluginClass(permission.getPluginClass());
+        response.setOrigin(permission.getOrigin());
         response.setCreatedAt(permission.getCreatedAt());
 
         // Recursively convert children

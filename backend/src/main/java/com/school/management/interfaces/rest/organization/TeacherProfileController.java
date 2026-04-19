@@ -76,13 +76,13 @@ public class TeacherProfileController {
             params.add(like);
         }
 
-        String countSql = "SELECT COUNT(*) FROM teacher_profiles tp " +
+        String countSql = "SELECT COUNT(*) FROM user_teacher tp " +
             "LEFT JOIN users u ON tp.user_id = u.id" + where;
         Long total = jdbc.queryForObject(countSql, Long.class, params.toArray());
 
         int offset = (pageNum - 1) * pageSize;
         String dataSql = "SELECT " + PROFILE_COLUMNS +
-            " FROM teacher_profiles tp" +
+            " FROM user_teacher tp" +
             " LEFT JOIN users u ON tp.user_id = u.id" +
             " LEFT JOIN org_units ou ON tp.org_unit_id = ou.id" +
             where +
@@ -107,7 +107,7 @@ public class TeacherProfileController {
     public Result<Map<String, Object>> getProfile(@PathVariable Long id) {
         Map<String, Object> profile = jdbc.queryForMap(
             "SELECT " + PROFILE_COLUMNS +
-            " FROM teacher_profiles tp" +
+            " FROM user_teacher tp" +
             " LEFT JOIN users u ON tp.user_id = u.id" +
             " LEFT JOIN org_units ou ON tp.org_unit_id = ou.id" +
             " WHERE tp.id = ? AND tp.deleted = 0", id
@@ -124,7 +124,7 @@ public class TeacherProfileController {
         try {
             Map<String, Object> profile = jdbc.queryForMap(
                 "SELECT " + PROFILE_COLUMNS +
-                " FROM teacher_profiles tp" +
+                " FROM user_teacher tp" +
                 " LEFT JOIN users u ON tp.user_id = u.id" +
                 " LEFT JOIN org_units ou ON tp.org_unit_id = ou.id" +
                 " WHERE tp.user_id = ? AND tp.deleted = 0", userId
@@ -148,7 +148,7 @@ public class TeacherProfileController {
             return Result.error("userId is required");
         }
         Long existCount = jdbc.queryForObject(
-            "SELECT COUNT(*) FROM teacher_profiles WHERE user_id = ? AND deleted = 0",
+            "SELECT COUNT(*) FROM user_teacher WHERE user_id = ? AND deleted = 0",
             Long.class, userId
         );
         if (existCount != null && existCount > 0) {
@@ -157,7 +157,7 @@ public class TeacherProfileController {
 
         long id = IdWorker.getId();
         jdbc.update(
-            "INSERT INTO teacher_profiles (id, user_id, employee_no, title, title_level, " +
+            "INSERT INTO user_teacher (id, user_id, employee_no, title, title_level, " +
             "org_unit_id, teaching_group, max_weekly_hours, qualification, specialties, " +
             "hire_date, status, remark) " +
             "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
@@ -185,7 +185,7 @@ public class TeacherProfileController {
     @Transactional
     public Result<Void> updateProfile(@PathVariable Long id, @RequestBody Map<String, Object> data) {
         jdbc.update(
-            "UPDATE teacher_profiles SET " +
+            "UPDATE user_teacher SET " +
             "employee_no = ?, title = ?, title_level = ?, org_unit_id = ?, " +
             "teaching_group = ?, max_weekly_hours = ?, qualification = ?, " +
             "specialties = ?, hire_date = ?, status = ?, remark = ? " +
@@ -213,7 +213,7 @@ public class TeacherProfileController {
     @CasbinAccess(resource = "teacher:profile", action = "edit")
     @Transactional
     public Result<Void> deleteProfile(@PathVariable Long id) {
-        jdbc.update("UPDATE teacher_profiles SET deleted = 1 WHERE id = ?", id);
+        jdbc.update("UPDATE user_teacher SET deleted = 1 WHERE id = ?", id);
         return Result.success();
     }
 
@@ -290,7 +290,7 @@ public class TeacherProfileController {
             "SELECT " + PROFILE_COLUMNS + ", " +
             "tcq.qualification_level AS qualificationLevel " +
             "FROM teacher_course_qualifications tcq " +
-            "JOIN teacher_profiles tp ON tcq.teacher_profile_id = tp.id " +
+            "JOIN user_teacher tp ON tcq.teacher_profile_id = tp.id " +
             "LEFT JOIN users u ON tp.user_id = u.id " +
             "LEFT JOIN org_units ou ON tp.org_unit_id = ou.id " +
             "WHERE tcq.course_id = ? AND tp.deleted = 0 AND tp.status = 1 " +

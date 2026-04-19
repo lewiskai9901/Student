@@ -50,8 +50,16 @@ public class User extends AggregateRoot<Long> {
     private String avatar;
 
     /**
-     * 工号
+     * 工号 — ⚠️ 类型特定字段(仅 STAFF/TEACHER 等用户类型有此概念).
+     *
+     * 按"通用核心 + 行业插件"原则,此字段应迁移到 {@code user_teacher.attributes.employeeNo}
+     * 或由 TeacherPlugin.getSystemFields() 声明. 通用核心 User 聚合不该认识"工号"概念.
+     *
+     * 暂保留以兼容现有业务代码,后续专项重构会将其移除并同步到 plugin attributes.
+     *
+     * @deprecated 新代码请用 User.attributes 配合类型插件声明
      */
+    @Deprecated
     private String employeeNo;
 
     /**

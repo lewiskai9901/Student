@@ -25,6 +25,15 @@ public class Role extends AggregateRoot<Long> {
     private Long createdBy;
     private Long tenantId;
 
+    /** 行业包 (CORE / EDU / MED ...) — 由插件注册时写入,admin 新建时为 null. @deprecated 用 origin */
+    @Deprecated
+    private String industry;
+    /** 来源插件全限定类名 — 标识是否由插件声明. @deprecated 用 origin */
+    @Deprecated
+    private String pluginClass;
+    /** 统一来源字段: "PLUGIN:CORE@1.0.0" / "TENANT:CUSTOM#1" */
+    private String origin;
+
     private Set<Long> permissionIds;
 
     protected Role() {
@@ -191,6 +200,12 @@ public class Role extends AggregateRoot<Long> {
     public Long getCreatedBy() { return createdBy; }
     public Long getTenantId() { return tenantId; }
     public void setTenantId(Long tenantId) { this.tenantId = tenantId; }
+    public String getIndustry() { return industry; }
+    public void setIndustry(String industry) { this.industry = industry; }
+    public String getPluginClass() { return pluginClass; }
+    public void setPluginClass(String pluginClass) { this.pluginClass = pluginClass; }
+    public String getOrigin() { return origin; }
+    public void setOrigin(String origin) { this.origin = origin; }
 
     // Builder pattern
     public static RoleBuilder builder() {

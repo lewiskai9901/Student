@@ -75,28 +75,6 @@
         </div>
       </div>
 
-      <!-- Statistics Bar -->
-      <div v-if="stats" class="dp-stat-bar">
-        <span>成员 <b>{{ stats.belongingCount }}</b></span>
-        <template v-if="stats.countByUserType && Object.keys(stats.countByUserType).length > 0">
-          <span style="color: #d1d5db;">—</span>
-          <template v-for="(cnt, typeCode, idx) in (stats.countByUserType || {})" :key="typeCode">
-            <span v-if="idx > 0" style="color: #e5e7eb;">|</span>
-            <span>{{ userTypeNameMap[typeCode as string] || typeCode }} <b>{{ cnt }}</b></span>
-          </template>
-        </template>
-      </div>
-    </div>
-
-    <!-- Basic Info (promoted from tab) -->
-    <div class="dp-card dp-basic-info">
-      <div class="dp-info-inline">
-        <span class="dp-info-kv"><em>编码</em> <code class="tm-code">{{ node.unitCode }}</code></span>
-        <span class="dp-info-kv"><em>类型</em> <span class="tm-chip" :style="typeBadgeStyle">{{ node.typeName || node.unitType }}</span></span>
-        <span class="dp-info-kv"><em>上级</em> {{ parentName || '顶级组织' }}</span>
-        <span class="dp-info-kv"><em>编制</em> {{ node.headcount ?? '-' }}</span>
-        <span class="dp-info-kv"><em>排序</em> {{ node.sortOrder }}</span>
-      </div>
     </div>
 
     <!-- Tabs -->
@@ -112,6 +90,59 @@
           {{ tab.label }}
           <span v-if="tab.count !== undefined" class="dp-tab-count">{{ tab.count }}</span>
         </button>
+      </div>
+
+      <!-- Tab: 基本信息 (系统字段) -->
+      <div v-if="activeTab === 'info'" class="dp-info-grid">
+        <div>
+          <dt class="dp-info-label">编码</dt>
+          <dd class="dp-info-value"><code class="tm-code">{{ node.unitCode }}</code></dd>
+        </div>
+        <div>
+          <dt class="dp-info-label">类型</dt>
+          <dd class="dp-info-value">
+            <span class="tm-chip" :style="typeBadgeStyle">{{ node.typeName || node.unitType }}</span>
+          </dd>
+        </div>
+        <div>
+          <dt class="dp-info-label">状态</dt>
+          <dd class="dp-info-value">{{ node.statusLabel || node.status }}</dd>
+        </div>
+        <div>
+          <dt class="dp-info-label">类别</dt>
+          <dd class="dp-info-value">{{ node.category || '-' }}</dd>
+        </div>
+        <div class="dp-info-span2">
+          <dt class="dp-info-label">上级</dt>
+          <dd class="dp-info-value">{{ parentName || '顶级组织' }}</dd>
+        </div>
+        <div>
+          <dt class="dp-info-label">编制</dt>
+          <dd class="dp-info-value">{{ node.headcount ?? '-' }}</dd>
+        </div>
+        <div>
+          <dt class="dp-info-label">排序</dt>
+          <dd class="dp-info-value">{{ node.sortOrder }}</dd>
+        </div>
+        <div v-if="stats" class="dp-info-span2">
+          <dt class="dp-info-label">成员</dt>
+          <dd class="dp-info-value">
+            <b>{{ stats.belongingCount }}</b>
+            <template v-if="stats.countByUserType && Object.keys(stats.countByUserType).length > 0">
+              <span v-for="(cnt, typeCode) in stats.countByUserType" :key="typeCode" style="margin-left: 12px; font-size: 11px; color: #6b7280;">
+                {{ userTypeNameMap[typeCode as string] || typeCode }} <b style="color: #111827;">{{ cnt }}</b>
+              </span>
+            </template>
+          </dd>
+        </div>
+        <div>
+          <dt class="dp-info-label">创建时间</dt>
+          <dd class="dp-info-value" style="color: #6b7280;">{{ node.createdAt || '-' }}</dd>
+        </div>
+        <div>
+          <dt class="dp-info-label">更新时间</dt>
+          <dd class="dp-info-value" style="color: #6b7280;">{{ node.updatedAt || '-' }}</dd>
+        </div>
       </div>
 
       <!-- Tab: 下级组织 -->
@@ -241,56 +272,15 @@
         </div>
       </div>
 
-      <!-- Tab: 关联场所 -->
-      <div v-if="activeTab === 'places'">
-        <div class="dp-tab-toolbar">
-          <span class="dp-tab-info">共 {{ places.length }} 个关联场所</span>
-          <button class="tm-btn tm-btn-secondary" style="padding: 4px 10px; font-size: 12px;" @click="showAddPlace = true">
-            <Plus style="width: 12px; height: 12px;" />
-            关联场所
-          </button>
-        </div>
-        <div v-if="placesLoading" class="dp-loading">
-          <Loader2 style="width: 18px; height: 18px; color: #9ca3af;" class="tm-spin" />
-          <span>加载中...</span>
-        </div>
-        <div v-else-if="places.length > 0" style="overflow-x: auto;">
-          <table class="tm-table">
-            <colgroup>
-              <col />
-              <col style="width: 120px;" />
-              <col style="width: 100px;" />
-              <col style="width: 60px;" />
-            </colgroup>
-            <thead>
-              <tr>
-                <th class="text-left">场所名称</th>
-                <th class="text-left">编码</th>
-                <th class="text-left">关系类型</th>
-                <th class="text-right"></th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr v-for="s in places" :key="s.id">
-                <td class="text-left" style="font-weight: 500;">{{ s.metadata?.placeName || `场所#${s.resourceId}` }}</td>
-                <td class="text-left">
-                  <code class="tm-code">{{ s.metadata?.placeCode || '-' }}</code>
-                </td>
-                <td class="text-left">
-                  <span class="tm-chip tm-chip-purple">{{ RelationLabels[s.relation] || s.relation }}</span>
-                </td>
-                <td class="text-right">
-                  <button class="tm-action tm-action-danger" @click="handleRemovePlace(s)">移除</button>
-                </td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-        <div v-else class="dp-empty" style="padding: 16px;">
-          暂无关联场所
-        </div>
+      <!-- Tab: 关系 -->
+      <div v-if="activeTab === 'relations'" style="padding: 12px 16px;">
+        <RelationsPanel
+          entity-type="org_unit"
+          :entity-id="node.id"
+          :resource-subtype="node.unitType"
+          :show-header="false"
+        />
       </div>
-
 
       <!-- Tab: 变更日志 -->
       <div v-if="activeTab === 'changelog'">
@@ -341,58 +331,11 @@
       @changed="onUserRelationChanged"
     />
 
-    <!-- 关联场所弹窗 -->
-    <Teleport to="body">
-      <div v-if="showAddPlace" class="dp-modal-overlay" @click.self="showAddPlace = false">
-        <div class="dp-modal">
-          <h3 class="dp-modal-title">关联场所到「{{ node.unitName }}」</h3>
-          <div class="dp-modal-body">
-            <div class="tm-field">
-              <label class="tm-label">选择场所</label>
-              <select v-model="addPlaceForm.placeId" class="tm-field-select">
-                <option :value="0" disabled>请选择场所</option>
-                <option v-for="s in placeOptions" :key="s.id" :value="s.id">
-                  {{ s.placeName }} ({{ s.placeCode }})
-                </option>
-              </select>
-            </div>
-            <div class="tm-field">
-              <label class="tm-label">关系类型</label>
-              <select v-model="addPlaceForm.relationType" class="tm-field-select">
-                <option value="PRIMARY">主管</option>
-                <option value="SHARED">共享</option>
-                <option value="MANAGED">托管</option>
-              </select>
-            </div>
-            <div class="tm-field" style="display: flex; gap: 16px;">
-              <label class="dp-checkbox-label">
-                <input v-model="addPlaceForm.isPrimary" type="checkbox" />
-                主归属
-              </label>
-              <label class="dp-checkbox-label">
-                <input v-model="addPlaceForm.canInspect" type="checkbox" />
-                可检查
-              </label>
-            </div>
-          </div>
-          <div class="dp-modal-footer">
-            <button class="tm-btn tm-btn-secondary" @click="showAddPlace = false">取消</button>
-            <button
-              class="tm-btn tm-btn-primary"
-              :disabled="!addPlaceForm.placeId || addPlaceSubmitting"
-              @click="handleAddPlace"
-            >
-              {{ addPlaceSubmitting ? '关联中...' : '确定' }}
-            </button>
-          </div>
-        </div>
-      </div>
-    </Teleport>
   </div>
 </template>
 
 <script setup lang="ts">
-import { computed, ref, watch, reactive } from 'vue'
+import { computed, ref, watch } from 'vue'
 import {
   Plus,
   Pencil,
@@ -410,17 +353,13 @@ import {
 import { ElMessage, ElMessageBox } from 'element-plus'
 import type { DepartmentResponse } from '@/api/organization'
 import DynamicForm from '@/components/extension/DynamicForm.vue'
+import RelationsPanel from '@/components/access/RelationsPanel.vue'
 import { entityTypeApi } from '@/api/entityType'
 import UserRelationDrawer from './UserRelationDrawer.vue'
 import UserSelectorDialog from '@/components/common/UserSelectorDialog.vue'
 import OrgExportDialog from './OrgExportDialog.vue'
 import OrgImportDialog from './OrgImportDialog.vue'
-import type { AccessRelation } from '@/types/accessRelation'
-import { RelationLabels } from '@/types/accessRelation'
-import { accessRelationApi } from '@/api/accessRelation'
 import type { SimpleUser } from '@/types/user'
-import type { UniversalPlace, PlaceTreeNode } from '@/types/universalPlace'
-import { universalPlaceApi } from '@/api/universalPlace'
 import { orgMemberApi } from '@/api/orgMember'
 import type { OrgStatistics } from '@/types/position'
 import ActivityTimeline from '@/components/activity/ActivityTimeline.vue'
@@ -444,7 +383,7 @@ const emit = defineEmits<{
 }>()
 
 // ==================== Tab state ====================
-const activeTab = ref<string>('children')
+const activeTab = ref<string>('info')
 const moreMenuOpen = ref(false)
 
 // ==================== Color mapping by category (OrgCategory enum) ====================
@@ -563,22 +502,9 @@ const mergedMembers = computed<MergedMember[]>(() => {
 })
 
 
-// ==================== Places data ====================
-const places = ref<AccessRelation[]>([])
-const placesLoading = ref(false)
-
-const loadPlaces = async () => {
-  placesLoading.value = true
-  try {
-    places.value = await accessRelationApi.getBySubject('org_unit', props.node.id, 'place')
-  } catch (e: any) {
-    console.error('Failed to load places', e)
-  } finally {
-    placesLoading.value = false
-  }
-}
-
 // ==================== Extension groups as tabs ====================
+// 插件声明的每个 group 都是独立 tab; 如果 group 名与系统 tab 冲突(如"基本信息"),加类型前缀区分
+const SYSTEM_TAB_LABELS = new Set(['基本信息', '下级组织', '成员', '关系', '变更日志'])
 const extensionGroups = computed(() => {
   const fields = extensionSchema.value?.fields || []
   const groups = new Map<string, any[]>()
@@ -587,19 +513,21 @@ const extensionGroups = computed(() => {
     if (!groups.has(g)) groups.set(g, [])
     groups.get(g)!.push(f)
   }
-  return Array.from(groups.entries()).map(([name, fields], i) => ({
+  const typePrefix = props.node.typeName || props.node.unitType || '扩展'
+  return Array.from(groups.entries()).map(([name, fs], i) => ({
     key: `ext_${i}`,
-    label: name,
-    fields,
+    label: SYSTEM_TAB_LABELS.has(name) ? `${typePrefix}·${name}` : name,
+    fields: fs,
   }))
 })
 
 
 // ==================== Tab counts ====================
 const baseTabs = computed(() => [
+  { key: 'info', label: '基本信息', count: undefined },
   { key: 'children', label: '下级组织', count: children.value.length },
   { key: 'members', label: '成员', count: belongingMembers.value.length || undefined },
-  { key: 'places', label: '关联场所', count: places.value.length },
+  { key: 'relations', label: '关系', count: undefined },
   { key: 'changelog', label: '变更日志', count: undefined },
 ])
 
@@ -634,12 +562,10 @@ async function loadExtensionSchema() {
 watch(
   () => props.node.id,
   () => {
-    activeTab.value = 'children'
+    activeTab.value = 'info'
     belongingMembers.value = []
-    places.value = []
     stats.value = null
     loadMembers()
-    loadPlaces()
     loadStats()
     loadExtensionSchema()
   },
@@ -688,86 +614,6 @@ const handleRemoveMember = async (m: MergedMember) => {
   }
 }
 
-
-// ==================== Add Place ====================
-const showAddPlace = ref(false)
-const addPlaceSubmitting = ref(false)
-const placeOptions = ref<UniversalPlace[]>([])
-const addPlaceForm = reactive({
-  placeId: 0,
-  relationType: 'PRIMARY',
-  isPrimary: false,
-  canInspect: false
-})
-
-const flattenTree = (nodes: PlaceTreeNode[]): UniversalPlace[] => {
-  const result: UniversalPlace[] = []
-  const walk = (list: PlaceTreeNode[]) => {
-    for (const n of list) {
-      result.push(n)
-      if (n.children?.length) walk(n.children)
-    }
-  }
-  walk(nodes)
-  return result
-}
-
-watch(showAddPlace, async (show) => {
-  if (show && placeOptions.value.length === 0) {
-    try {
-      const tree = await universalPlaceApi.getTree()
-      placeOptions.value = flattenTree(tree)
-    } catch (e) {
-      console.error('Failed to load places', e)
-    }
-  }
-  if (show) {
-    addPlaceForm.placeId = 0
-    addPlaceForm.relationType = 'PRIMARY'
-    addPlaceForm.isPrimary = false
-    addPlaceForm.canInspect = false
-  }
-})
-
-const handleAddPlace = async () => {
-  if (!addPlaceForm.placeId) return
-  addPlaceSubmitting.value = true
-  try {
-    await accessRelationApi.create({
-      resourceType: 'place',
-      resourceId: addPlaceForm.placeId,
-      subjectType: 'org_unit',
-      subjectId: props.node.id,
-      relation: addPlaceForm.relationType,
-      metadata: {
-        isPrimary: addPlaceForm.isPrimary,
-        canInspect: addPlaceForm.canInspect
-      }
-    })
-    ElMessage.success('场所关联成功')
-    showAddPlace.value = false
-    await loadPlaces()
-  } catch (e: any) {
-    ElMessage.error(e.message || '关联失败')
-  } finally {
-    addPlaceSubmitting.value = false
-  }
-}
-
-const handleRemovePlace = async (s: AccessRelation) => {
-  try {
-    await ElMessageBox.confirm(
-      `确定要移除场所「${s.metadata?.placeName || '场所#' + s.resourceId}」的关联吗？`,
-      '确认移除',
-      { type: 'warning' }
-    )
-    await accessRelationApi.delete(s.id)
-    ElMessage.success('已移除关联')
-    await loadPlaces()
-  } catch {
-    // cancelled
-  }
-}
 
 // ==================== Export / Import Dialogs (Step 5) ====================
 const showExportDialog = ref(false)
@@ -1020,6 +866,18 @@ const onUserRelationChanged = () => {
 
 /* Basic info inline bar */
 .dp-basic-info { padding: 6px 12px; }
+/* 基本信息 tab grid(和 Place 一致) */
+.dp-info-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr 1fr;
+  gap: 12px 24px;
+  padding: 16px 20px;
+  font-size: 12px;
+}
+.dp-info-span2 { grid-column: span 2; }
+.dp-info-span4 { grid-column: span 4; }
+.dp-info-label { font-weight: 500; color: #6b7280; }
+.dp-info-value { margin-top: 2px; color: #111827; }
 .dp-info-inline {
   display: flex;
   flex-wrap: wrap;

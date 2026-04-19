@@ -98,19 +98,19 @@ class AccessApplicationServiceTest {
         @DisplayName("应成功创建角色")
         void shouldCreateRoleSuccessfully() {
             CreateRoleCommand command = CreateRoleCommand.builder()
+                    .roleCode("ADMIN_CUSTOM")
                     .roleName("管理员")
                     .description("系统管理员角色")
                     .build();
 
-            // createRole now auto-generates roleCode, so existsByRoleCode is called with a generated code
-            when(roleRepository.existsByRoleCode(anyString())).thenReturn(false);
+            when(roleRepository.existsByRoleCode("ADMIN_CUSTOM")).thenReturn(false);
             when(roleRepository.save(any(Role.class)))
                     .thenAnswer(invocation -> invocation.getArgument(0));
 
             Role result = service.createRole(command);
 
             assertThat(result).isNotNull();
-            assertThat(result.getRoleCode()).startsWith("ROLE_");
+            assertThat(result.getRoleCode()).isEqualTo("ADMIN_CUSTOM");
             assertThat(result.getRoleName()).isEqualTo("管理员");
             verify(roleRepository).save(any(Role.class));
         }

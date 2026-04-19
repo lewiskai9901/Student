@@ -239,16 +239,14 @@
               <!-- Section: 基本信息 -->
               <div class="tm-section">
                 <h3 class="tm-section-title">基本信息</h3>
-                <div class="tm-fields tm-cols-2">
+                <div class="tm-fields">
                   <div class="tm-field">
                     <label class="tm-label">姓名 <span class="req">*</span></label>
                     <input v-model="formData.realName" type="text" placeholder="请输入姓名" class="tm-input" />
                   </div>
-                  <div class="tm-field">
-                    <label class="tm-label">工号</label>
-                    <input v-model="formData.employeeNo" type="text" placeholder="请输入工号" class="tm-input" />
-                  </div>
                 </div>
+                <!-- 工号字段已迁移到 TeacherPlugin.metadataSchema,通过 DynamicForm 在扩展字段部分渲染 -->
+
                 <div class="tm-fields tm-cols-2">
                   <div class="tm-field">
                     <label class="tm-label">手机号</label>
@@ -505,22 +503,36 @@
     </Teleport>
 
     <!-- 数据范围对话框已移除 - 数据权限现在在角色级别配置 -->
+
+    <!-- Relations Dialog (嵌入式面板) -->
+    <el-dialog
+      v-model="relationsDialogVisible"
+      :title="`${relationsUser?.realName || relationsUser?.username || '用户'} 的关系`"
+      width="680px"
+      destroy-on-close
+    >
+      <RelationsPanel
+        v-if="relationsDialogVisible && relationsUser?.id"
+        entity-type="user"
+        :entity-id="relationsUser.id"
+        :show-header="false"
+      />
+    </el-dialog>
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, reactive, onMounted, computed, watch } from 'vue'
-import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
+import RelationsPanel from '@/components/access/RelationsPanel.vue'
 
-const router = useRouter()
+const relationsDialogVisible = ref(false)
+const relationsUser = ref<any>(null)
 
 function handleViewRelations(row: any) {
   if (!row.id) return
-  router.push({
-    path: '/access/relations',
-    query: { subjectType: 'user', subjectId: String(row.id) }
-  })
+  relationsUser.value = row
+  relationsDialogVisible.value = true
 }
 
 
@@ -607,6 +619,14 @@ const allPlaces = ref<PlaceItem[]>([])
 const selectedUserType = computed<UserTypeItem | null>(() => {
   if (!formData.userTypeCode) return null
   return userTypes.value.find(ut => ut.typeCode === formData.userTypeCode) || null
+})
+
+// 当前类型的 features 映射(从 plugin 声明)
+const userTypeFeatures = computed<Record<string, boolean>>(() => {
+  const t = selectedUserType.value as any
+  if (!t?.features) return {}
+  if (typeof t.features === 'object') return t.features
+  try { return JSON.parse(t.features) || {} } catch { return {} }
 })
 
 // 根据 typeCode 获取用户类型名称

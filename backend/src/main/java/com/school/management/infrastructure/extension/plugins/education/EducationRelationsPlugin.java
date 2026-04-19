@@ -4,6 +4,7 @@ import com.school.management.infrastructure.extension.RelationTypePlugin;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
+import java.util.Map;
 
 import static com.school.management.infrastructure.extension.RelationTypePlugin.RelationTypeDef.of;
 
@@ -35,11 +36,15 @@ public class EducationRelationsPlugin implements RelationTypePlugin {
                "家长监护学生 (subject=家长, resource=学生). " +
                "消息扇出时用 BY_RELATION(guardian_of, inward) 查学生的家长"),
 
+            // 教师任课: 按班级数量限制(例: 班级最多 10 个任课老师)
             of(EducationRelations.TEACHES, "user", "org_unit", "任课",
-               "ASSOCIATION", "教师任教班级,绑定课程和学期"),
+               "ASSOCIATION", "教师任教班级,绑定课程和学期")
+                .withMaxBySubtype(Map.of("CLASS", 10)),
 
+            // 辅导员: 班级 1 人 (班主任),年级可多人 (年级主任团队),其他组织不限
             of(EducationRelations.ADVISOR_OF, "user", "org_unit", "辅导员",
-               "OWNERSHIP", "辅导员负责年级或班级").transitive(),
+               "OWNERSHIP", "辅导员负责年级或班级").transitive()
+                .withMaxBySubtype(Map.of("CLASS", 1, "GRADE", 3)),
 
             of(EducationRelations.MENTOR_OF, "user", "user", "导师",
                "ASSOCIATION", "导师指导学生")

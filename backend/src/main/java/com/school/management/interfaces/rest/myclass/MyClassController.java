@@ -44,16 +44,16 @@ public class MyClassController {
         return Result.success(overview);
     }
 
-    @GetMapping("/classes/{classId}/students")
+    @GetMapping("/classes/{classId}/user_student")
     @Operation(summary = "获取班级学生列表")
     public Result<List<MyClassStudentDTO>> getClassStudents(
             @PathVariable Long orgUnitId,
             @RequestParam(required = false) String keyword,
             @RequestParam(required = false) String status,
             @AuthenticationPrincipal CustomUserDetails userDetails) {
-        List<MyClassStudentDTO> students = myClassService.getClassStudents(
+        List<MyClassStudentDTO> user_student = myClassService.getClassStudents(
             orgUnitId, userDetails.getUserId(), keyword, status);
-        return Result.success(students);
+        return Result.success(user_student);
     }
 
     @GetMapping("/classes/{classId}/dormitory-distribution")
