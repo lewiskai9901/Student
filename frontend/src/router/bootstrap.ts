@@ -14,10 +14,10 @@ import request from '@/utils/request'
  */
 
 const PLUGIN_LOADERS: Record<string, () => Promise<{ default: RouteRecordRaw[] }>> = {
-  EDU: () => import('./plugins/edu')
+  EDU:    () => import('./plugins/edu'),
+  HEALTH: () => import('./plugins/health')
   // 未来行业:
-  // HEALTH: () => import('./plugins/health'),
-  // CARE:   () => import('./plugins/care'),
+  // CARE: () => import('./plugins/care'),
 }
 
 const loaded = new Set<string>()
