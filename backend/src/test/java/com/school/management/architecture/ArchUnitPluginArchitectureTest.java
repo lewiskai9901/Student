@@ -4,6 +4,7 @@ import com.school.management.infrastructure.extension.EntityTypePlugin;
 import com.school.management.infrastructure.extension.MessagingDomainPlugin;
 import com.school.management.infrastructure.extension.PermissionProvider;
 import com.school.management.infrastructure.extension.PluginManifest;
+import com.school.management.infrastructure.extension.PluginPackage;
 import com.school.management.infrastructure.extension.RelationTypePlugin;
 import com.school.management.infrastructure.extension.RolePresetPlugin;
 import com.tngtech.archunit.core.domain.JavaClasses;
@@ -69,6 +70,14 @@ class ArchUnitPluginArchitectureTest {
     void all_PluginManifest_implementations_must_be_components() {
         ArchRule rule = classes()
                 .that().implement(PluginManifest.class)
+                .should().beAnnotatedWith(Component.class);
+        rule.check(classes);
+    }
+
+    @Test
+    void all_PluginPackage_implementations_must_be_components() {
+        ArchRule rule = classes()
+                .that().implement(PluginPackage.class)
                 .should().beAnnotatedWith(Component.class);
         rule.check(classes);
     }

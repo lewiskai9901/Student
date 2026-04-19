@@ -12,7 +12,12 @@ import java.util.Map;
  * 3. 校验: 自定义业务校验逻辑
  *
  * Spring 自动扫描所有 @Component 实现类并注册。
+ *
+ * @deprecated since 1.1.0 — 用 {@link PluginPackage#contribute()} 返回
+ *   {@link Contribution.EntityTypeContribution} 替代. 旧 API 仍被
+ *   {@link PluginRegistrar} 扫描, 运行时等价, 现有实现无需立即迁移.
  */
+@Deprecated(since = "1.1.0", forRemoval = false)
 public interface EntityTypePlugin {
 
     // ========== 类型注册 ==========

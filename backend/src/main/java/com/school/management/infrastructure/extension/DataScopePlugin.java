@@ -24,7 +24,12 @@ import java.util.List;
  * </pre>
  *
  * Registrar (@Order 600) 启动时 UPSERT 到 data_scope_dims 表.
+ *
+ * @deprecated since 1.1.0 — 用 {@link PluginPackage#contribute()} 返回
+ *   {@link Contribution.DataScopeContribution} 替代. 旧 API 仍被
+ *   {@link DataScopeRegistrar} 扫描, 运行时等价, 现有实现无需立即迁移.
  */
+@Deprecated(since = "1.1.0", forRemoval = false)
 public interface DataScopePlugin {
 
     /** 业务域码,用于分组展示 */

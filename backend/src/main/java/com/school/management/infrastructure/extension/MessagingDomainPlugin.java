@@ -23,7 +23,12 @@ import java.util.Map;
  *       ...
  *   }
  * </pre>
+ *
+ * @deprecated since 1.1.0 — 用 {@link PluginPackage#contribute()} 返回
+ *   {@link Contribution.EventDomainContribution} (一域打包触发点/事件类型/默认触发器) 替代.
+ *   旧 API 仍被 {@link MessagingRegistrar} 扫描, 运行时等价, 现有实现无需立即迁移.
  */
+@Deprecated(since = "1.1.0", forRemoval = false)
 public interface MessagingDomainPlugin {
 
     /** 业务域码,如 "dormitory" / "grade" / "inspection" */

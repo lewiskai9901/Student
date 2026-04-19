@@ -14,7 +14,12 @@ import java.util.Map;
  *  - 平台自带的通用关系 → {@code CoreRelationsPlugin}
  *  - 行业特有关系 → 各行业插件 (如 EducationRelationsPlugin)
  *  - 业务代码引用关系应使用 Java 常量,不用裸字符串
+ *
+ * @deprecated since 1.1.0 — 用 {@link PluginPackage#contribute()} 返回
+ *   {@link Contribution.RelationTypeContribution} 替代. 旧 API 仍被
+ *   {@link RelationTypePluginRegistrar} 扫描, 运行时等价, 现有实现无需立即迁移.
  */
+@Deprecated(since = "1.1.0", forRemoval = false)
 public interface RelationTypePlugin {
 
     /** 来源标识 (对应 relation_types.registered_by),通常是插件类名或行业标识 */

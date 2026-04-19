@@ -1,6 +1,6 @@
 package com.school.management.infrastructure.extension.plugins.education;
 
-import com.school.management.infrastructure.extension.PluginManifest;
+import com.school.management.infrastructure.extension.PluginPackage;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
@@ -15,9 +15,12 @@ import java.util.List;
  *  - 关系: guardian_of / teaches / advisor_of / mentor_of (EducationRelationsPlugin)
  *  - 预置角色: CLASS_TEACHER / SUBJECT_TEACHER / GRADE_DIRECTOR 等
  *  - 业务消息: 入学 / 成绩 / 入住 / 考勤 (后续阶段加)
+ *
+ * Phase 2: 升级为 PluginPackage (继承自 PluginManifest, 默认 contribute()=空流).
+ * 现有所有贡献仍通过旧 @Component SPI 路径扫描, 行为不变.
  */
 @Component
-public class EducationManifest implements PluginManifest {
+public class EducationManifest implements PluginPackage {
 
     @Override
     public String getIndustryCode() { return "EDU"; }

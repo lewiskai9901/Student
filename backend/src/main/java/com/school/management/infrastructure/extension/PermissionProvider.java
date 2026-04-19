@@ -14,7 +14,12 @@ import java.util.List;
  *  - 新模块加权限只改一个 provider 文件,不用手写 SQL migration
  *
  * 权限码格式建议: {@code module:resource:action}  (如 "system:user:view" / "teaching:schedule:publish")
+ *
+ * @deprecated since 1.1.0 — 用 {@link PluginPackage#contribute()} 返回
+ *   {@link Contribution.PermissionContribution} 替代. 旧 API 仍被
+ *   {@link PermissionRegistrar} 扫描, 运行时等价, 现有实现无需立即迁移.
  */
+@Deprecated(since = "1.1.0", forRemoval = false)
 public interface PermissionProvider {
 
     /** 模块码(用于分组展示,如 "system" / "education.teaching") */

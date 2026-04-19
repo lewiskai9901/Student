@@ -16,7 +16,12 @@ import java.util.Set;
  *   - 但不能删除 plugin 声明的角色
  *
  * 权限关联留给 {@link PermissionProvider} + 单独的角色-权限配置,避免职责耦合.
+ *
+ * @deprecated since 1.1.0 — 用 {@link PluginPackage#contribute()} 返回
+ *   {@link Contribution.RoleContribution} 替代. 旧 API 仍被
+ *   {@code RolePresetRegistrar} 扫描, 运行时等价, 现有实现无需立即迁移.
  */
+@Deprecated(since = "1.1.0", forRemoval = false)
 public interface RolePresetPlugin {
 
     /** 返回本插件声明的预置角色列表 */

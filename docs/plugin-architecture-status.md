@@ -1,18 +1,19 @@
 # 插件架构推进状态
 
-> **最近更新**: 2026-04-19
-> **当前架构等级**: **A** (B+ → A, 距 A+ 还差 3 个 Phase)
-> **A+ 判定进度**: 12/15 (80%)
+> **最近更新**: 2026-04-19 (Phase 2 完成)
+> **当前架构等级**: **A** (B+ → A, 距 A+ 还差 2 个 Phase)
+> **A+ 判定进度**: 13/15 (87%)
 
 ---
 
-## 已完成 (12 Phase, 47 任务)
+## 已完成 (13 Phase, 48 任务)
 
 | Phase | 内容 |
 |---|---|
 | **-1** 紧急止血 | 冷启动可用 / ArchUnit 全启用 / Legacy 合并 / tmp 清理 |
 | **0** 抽象 Registrar | `AbstractPluginRegistrar<P,D>` 基类, 6 Registrar 继承 |
 | **1** origin 归一 | 8 张表加 `origin` 字段 (PLUGIN:CORE@1.0.0 / TENANT:CUSTOM#1) |
+| **2** 统一 SPI 顶层 | `PluginPackage` + `Contribution` sealed(8) + `ContributionDispatcher`(@Order 60) + 7 旧 SPI `@Deprecated` |
 | **3** 事务+冲突+Casbin | @Transactional + 跨插件冲突 fail-fast + Casbin 自动 reload 事件 |
 | **5** 多租户 | `tenant_plugin_enablement` 表 + Service + enable/disable/config API |
 | **6** 治理 API | enable/disable/uninstall/health/dependency-graph + UI 按钮 |
@@ -21,10 +22,10 @@
 | **9** Metrics + 矩阵测试 | 启动耗时 + `/metrics` + 6 矩阵集成测试 |
 | **10** 开发者文档 | `docs/plugin-developer-guide.md` 完整 |
 
-### 架构测试 (37/37 全绿)
+### 架构测试 (49/49 全绿)
 
 ```
-ArchUnitPluginArchitectureTest       12
+ArchUnitPluginArchitectureTest       13   (原 12, Phase 2 新增 PluginPackage @Component 规则)
 ArchUnitDashboardEndpointTest         1
 ArchUnitMyEndpointTest                2
 DddLayerTest                          4
@@ -32,6 +33,7 @@ NoMagicTriggerStringTest              1
 PluginDeclarationCoverageTest         4
 PluginMatrixIntegrationTest           6
 SemVerTest                            7
+UnifiedPluginPackageTest             11   (Phase 2 新增)
 ```
 
 ### 启动日志(每次冷启动应看到)
@@ -39,6 +41,7 @@ SemVerTest                            7
 ```
 [PluginPackageRegistrar]   版本兼容: EDU (v1.0.0) ⇒ 依赖 CORE@>=1.0.0 <2.0.0 满足
 [PluginPackageRegistrar] 已加载 2 个行业包 - 启动顺序: [CORE, EDU]
+[ContributionDispatcher]       扫描 2 个包, 收到 0 条 Contribution (Phase 2 铺底, 实际声明仍走旧 SPI)
 [PluginRegistrar]              扫描 32 插件, 32 声明   耗时 ~500ms
 [RelationTypePluginRegistrar]  扫描  2 插件, 13 声明   耗时 ~270ms
 [MessagingRegistrar]           13 插件: 触发点 17 / 事件 53 / 默认触发 6
@@ -52,42 +55,7 @@ SemVerTest                            7
 
 ---
 
-## 待完成 (3 Phase, 剩余约 8-10 周)
-
-### Phase 2 — 统一 SPI 顶层协议 (2 周)
-
-**目标**: 把当前 8 个 SPI 接口 (`PluginManifest`/`EntityTypePlugin`/`RelationTypePlugin`/`MessagingDomainPlugin`/`PermissionProvider`/`RolePresetPlugin`/`DataScopePlugin`/`MenuContributionPlugin`) 收敛为**一个** `PluginPackage` + `sealed Contribution` 契约。
-
-**入口文件**: `backend/.../extension/AbstractPluginRegistrar.java`
-
-**核心设计**:
-```java
-interface PluginPackage {
-    PluginMetadata metadata();
-    Stream<Contribution> contribute();
-}
-
-sealed interface Contribution permits
-    EntityTypeContribution,
-    RelationTypeContribution,
-    EventDomainContribution,
-    PermissionContribution,
-    RoleContribution,
-    MenuContribution,
-    DataScopeContribution,
-    DomainContribution {
-    String uniqueKey();
-}
-```
-
-**约束**:
-- 旧 8 SPI **必须保留**向下兼容 (打 `@Deprecated`)
-- 新 SPI 作为组合层,内部分发到对应 Registrar
-- 37 架构测试必须继续全绿
-
-**验证**: 写一个 `UnifiedPluginPackageTest` 证明新旧 SPI 同时工作
-
----
+## 待完成 (2 Phase, 剩余约 6-8 周)
 
 ### Phase 3.5 — DDD 物理包重组 (3 周, 最重)
 
@@ -174,27 +142,6 @@ for (const p of plugins) {
 ---
 
 ## 每个新会话的启动提示
-
-### Phase 2 提示词(复制粘贴)
-```
-请继续插件架构 Phase 2 的工作。
-
-前置状态:
-- 已完成 Phase -1 至 Phase 10, 12/15 A+ 指标达成
-- 详见 docs/plugin-architecture-status.md
-- 37 架构测试全绿, 冷启动正常
-
-本会话目标: Phase 2 — 统一 SPI 顶层协议 (把 8 SPI 收敛为 1 PluginPackage + Contribution 契约)
-
-约束:
-- 旧 8 SPI 必须保留 @Deprecated 向下兼容
-- 一次完成, 不要拖到下会话
-- 架构测试必须继续 37+ 全绿
-- 冷启动 mvn spring-boot:run 必须成功
-- 数据无回归 (310 perms / 15 roles / 32 types)
-
-开始前: git log --oneline | head -10 了解最近提交
-```
 
 ### Phase 3.5 提示词
 ```

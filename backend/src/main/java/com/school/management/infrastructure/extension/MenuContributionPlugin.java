@@ -27,7 +27,12 @@ import java.util.List;
  *       }
  *   }
  * </pre>
+ *
+ * @deprecated since 1.1.0 — 用 {@link PluginPackage#contribute()} 返回
+ *   {@link Contribution.MenuContribution} 替代. 旧 API 仍被
+ *   {@link MenuRegistrar} 扫描, 运行时等价, 现有实现无需立即迁移.
  */
+@Deprecated(since = "1.1.0", forRemoval = false)
 public interface MenuContributionPlugin {
 
     /** 插件业务域码(用于前端分组/审计) */
