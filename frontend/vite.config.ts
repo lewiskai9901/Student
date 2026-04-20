@@ -77,10 +77,6 @@ export default defineConfig({
           // 将 node_modules 中的依赖分离成单独的 chunk
           if (id.includes('node_modules')) {
             // ===== 重度依赖拆分 (P0优化) =====
-            // BPMN工作流设计器 (~1.5MB) - 仅工作流页面加载
-            if (id.includes('bpmn-js') || id.includes('camunda')) {
-              return 'bpmn-designer'
-            }
             // ECharts图表库 (~800KB) - 仅图表页面加载
             if (id.includes('echarts')) {
               return 'echarts'
@@ -88,14 +84,6 @@ export default defineConfig({
             // Excel处理库 (~600KB) - 仅导入导出时加载
             if (id.includes('xlsx')) {
               return 'xlsx'
-            }
-            // 富文本编辑器 (~500KB)
-            if (id.includes('@wangeditor')) {
-              return 'editor'
-            }
-            // TinyMCE 富文本编辑器
-            if (id.includes('tinymce')) {
-              return 'tinymce'
             }
 
             // ===== 中型依赖拆分 =====
@@ -105,10 +93,6 @@ export default defineConfig({
             }
             if (id.includes('@heroicons')) {
               return 'icons-heroicons'
-            }
-            // Markdown 解析
-            if (id.includes('marked') || id.includes('dompurify')) {
-              return 'markdown'
             }
             // 拖拽库
             if (id.includes('vuedraggable') || id.includes('sortablejs')) {

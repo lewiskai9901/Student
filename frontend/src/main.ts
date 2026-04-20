@@ -22,19 +22,18 @@ const app = createApp(App)
 
 app.use(createPinia())
 
-// 初始化认证状态
 const authStore = useAuthStore()
 authStore.initAuth()
 
-// Phase 4A: 已登录则预装启用的插件路由 (未登录时 bootstrap 会静默 401 跳过)
-if (authStore.isAuthenticated) {
-  await loadEnabledPlugins(router)
+async function bootstrap() {
+  // Phase 4A: 已登录则预装启用的插件路由 (未登录时 bootstrap 会静默 401 跳过)
+  if (authStore.isAuthenticated) {
+    await loadEnabledPlugins(router)
+  }
+  app.use(router)
+  app.use(VueKonva)
+  app.use(ElementPlus, { locale: zhCn })
+  app.mount('#app')
 }
 
-app.use(router)
-app.use(VueKonva)
-app.use(ElementPlus, {
-  locale: zhCn
-})
-
-app.mount('#app')
+bootstrap()
