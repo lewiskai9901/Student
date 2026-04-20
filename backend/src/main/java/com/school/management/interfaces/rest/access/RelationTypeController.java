@@ -28,7 +28,7 @@ public class RelationTypeController {
     private static final String SELECT_ALL =
         "SELECT relation_code, from_type, to_type, relation_name, is_transitive, " +
         "       category, tier, registered_by, description, capacity_bound, max_per_resource, max_by_subtype, " +
-        "       industry, plugin_class, origin, is_enabled " +
+        "       implied_relations, industry, plugin_class, origin, is_enabled " +
         "FROM relation_types WHERE is_enabled = 1";
 
     private static final com.fasterxml.jackson.databind.ObjectMapper MAPPER = new com.fasterxml.jackson.databind.ObjectMapper();
@@ -76,6 +76,9 @@ public class RelationTypeController {
             String key = snakeToCamel(k);
             if ("maxBySubtype".equals(key) && v instanceof String s && !s.isBlank()) {
                 try { out.put(key, MAPPER.readValue(s, Map.class)); }
+                catch (Exception e) { out.put(key, null); }
+            } else if ("impliedRelations".equals(key) && v instanceof String s && !s.isBlank()) {
+                try { out.put(key, MAPPER.readValue(s, List.class)); }
                 catch (Exception e) { out.put(key, null); }
             } else {
                 out.put(key, v);

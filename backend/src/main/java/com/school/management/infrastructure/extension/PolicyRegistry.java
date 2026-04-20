@@ -28,6 +28,11 @@ public class PolicyRegistry {
         this.policies = List.copyOf(policies);
     }
 
+    /** 所有已注册 Policy bean (immutable). 供管理面板内省使用. */
+    public List<Policy<?>> getPolicies() {
+        return policies;
+    }
+
     /** 返回所有匹配 supports(ctx) 的策略产生的违规; 不抛异常 */
     @SuppressWarnings({"unchecked", "rawtypes"})
     public List<Violation> check(PolicyContext<?> ctx) {

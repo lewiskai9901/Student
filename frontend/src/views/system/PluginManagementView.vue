@@ -78,6 +78,24 @@
           <div class="stat-count"><b>{{ tenantPluginList.length }}</b><span> 条</span></div>
         </div>
       </div>
+      <div class="stat-card" :class="{ active: activeTab === 'policies' }" @click="activeTab = 'policies'">
+        <div class="stat-icon" style="background: #fef3c7; color: #b45309;">
+          <ShieldCheck />
+        </div>
+        <div class="stat-body">
+          <div class="stat-label">策略</div>
+          <div class="stat-count"><b>{{ policyStats.total }}</b><span> 个</span></div>
+        </div>
+      </div>
+      <div class="stat-card" :class="{ active: activeTab === 'dataScopes' }" @click="activeTab = 'dataScopes'">
+        <div class="stat-icon" style="background: #f3e8ff; color: #7c3aed;">
+          <Filter />
+        </div>
+        <div class="stat-body">
+          <div class="stat-label">数据维度</div>
+          <div class="stat-count"><b>{{ dataScopeStats.total }}</b><span> 个</span></div>
+        </div>
+      </div>
     </div>
 
     <!-- Main area -->
@@ -200,6 +218,7 @@
                 <th>方向</th>
                 <th>类别</th>
                 <th>约束</th>
+                <th>关系链</th>
                 <th>层级</th>
                 <th>来源插件</th>
                 <th>行业</th>
@@ -224,6 +243,15 @@
                   <span v-else-if="r.maxPerResource" class="pp-chip pp-chip-primary">≤ {{ r.maxPerResource }}</span>
                   <span v-else-if="r.maxBySubtype" class="pp-chip pp-chip-primary" :title="JSON.stringify(r.maxBySubtype)">按子类型</span>
                   <span v-else class="pp-muted">无限</span>
+                </td>
+                <td>
+                  <div v-if="parseImplied(r.impliedRelations).length" class="pp-implied">
+                    <div v-for="(imp, i) in parseImplied(r.impliedRelations)" :key="i" style="font-size: 11px; color: #7c3aed; line-height: 1.4;">
+                      → {{ imp.relation }} <span class="pp-muted">on</span> {{ subjectTypeLabel(imp.targetType) }}
+                      <code v-if="imp.discoveryRule" style="font-size: 10px; margin-left: 2px; background: #f3e8ff; color: #7c3aed; padding: 0 3px; border-radius: 2px;">{{ imp.discoveryRule }}</code>
+                    </div>
+                  </div>
+                  <span v-else class="pp-muted">—</span>
                 </td>
                 <td>
                   <span class="pp-chip" :class="'pp-chip-' + tierTagType(r.tier)">{{ tierLabel(r.tier) }}</span>
@@ -478,6 +506,98 @@
           </table>
           <div v-if="!tenantPluginList.length" class="pp-empty">暂无数据</div>
         </div>
+
+        <!-- Tab: Policies (A+ W1 Policy SPI 可视化) -->
+        <div v-if="activeTab === 'policies'" class="pp-list">
+          <div class="pp-group">
+            <div class="pp-group-header">
+              <span class="pp-group-title">已注册策略</span>
+              <span class="pp-group-badge">{{ policies.length }}</span>
+            </div>
+            <div v-if="!policies.length" class="pp-empty">暂无策略 — 插件可通过 PolicyContribution 注册 Policy bean</div>
+            <table v-else class="pp-table">
+              <thead>
+                <tr>
+                  <th>代码</th>
+                  <th>名称</th>
+                  <th>作用点</th>
+                  <th>来源</th>
+                  <th>插件</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="p in policies" :key="p.code">
+                  <td><code class="pp-code">{{ p.code }}</code></td>
+                  <td>{{ p.name }}</td>
+                  <td>
+                    <span v-for="h in (p.supports || [])" :key="h" class="pp-feat-chip">{{ h }}</span>
+                    <span v-if="!(p.supports || []).length" class="pp-muted">无匹配点</span>
+                  </td>
+                  <td><code class="pp-code pp-code-thin">{{ shortClass(p.sourceClass) }}</code></td>
+                  <td>
+                    <span class="pp-industry-chip" :style="industryChipStyle(p.sourcePlugin)">
+                      {{ industryLabel(p.sourcePlugin) || p.sourcePlugin }}
+                    </span>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <div class="pp-group">
+            <div class="pp-group-header">
+              <span class="pp-group-title">可用 Hook Points (core 开放)</span>
+              <span class="pp-group-badge">{{ hookPoints.length }}</span>
+            </div>
+            <table class="pp-table">
+              <thead>
+                <tr>
+                  <th>实体类型</th>
+                  <th>阶段</th>
+                  <th>监听者</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="h in hookPoints" :key="h.entityType + '/' + h.phase">
+                  <td><code class="pp-code">{{ subjectTypeLabel(h.entityType) }}</code></td>
+                  <td><code class="pp-code pp-code-thin">{{ h.phase }}</code></td>
+                  <td>
+                    <span v-for="p in listenersFor(h)" :key="p.code" class="pp-feat-chip">{{ p.code }}</span>
+                    <span v-if="!listenersFor(h).length" class="pp-muted">无</span>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Tab: DataScopes (A+ W3 动态维度可视化) -->
+        <div v-if="activeTab === 'dataScopes'" class="pp-list">
+          <div v-if="!dataScopes.length" class="pp-empty">暂无数据权限维度</div>
+          <table v-else class="pp-table">
+            <thead>
+              <tr>
+                <th>维度代码</th>
+                <th>名称</th>
+                <th>描述</th>
+                <th>来源</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="d in dataScopes" :key="d.scopeCode || d.code">
+                <td><code class="pp-code">{{ d.scopeCode || d.code }}</code></td>
+                <td>{{ d.scopeName || d.name }}</td>
+                <td>
+                  <span class="pp-muted">{{ d.description || '—' }}</span>
+                </td>
+                <td>
+                  <span class="pp-industry-chip" :style="industryChipStyle(parseDataScopeSource(d.source))">
+                    {{ d.source || 'CORE' }}
+                  </span>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
       </section>
     </div>
 
@@ -502,14 +622,14 @@
 import { ref, computed, onMounted, watch } from 'vue'
 import { ElMessage } from 'element-plus'
 import { Refresh } from '@element-plus/icons-vue'
-import { LayoutGrid, Link2, Bell, Shield, UserCog, Package, Building2 } from 'lucide-vue-next'
+import { LayoutGrid, Link2, Bell, Shield, UserCog, Package, Building2, ShieldCheck, Filter } from 'lucide-vue-next'
 import { pluginPlatformApi, type TenantPluginRow, type PluginHealthInfo } from '@/api/pluginPlatform'
 import { ElMessageBox } from 'element-plus'
 import { http } from '@/utils/request'
 
 // ───────── State ─────────
 const loading = ref(false)
-const activeTab = ref<'types' | 'relations' | 'events' | 'permissions' | 'roles' | 'industries' | 'tenants'>('types')
+const activeTab = ref<'types' | 'relations' | 'events' | 'permissions' | 'roles' | 'industries' | 'tenants' | 'policies' | 'dataScopes'>('types')
 
 // ═══ Phase 6 生命周期治理 + Phase 5 租户管理 ═══
 const tenantSelect = ref(1)
@@ -606,6 +726,11 @@ const events = ref<any[]>([])
 const permissions = ref<any[]>([])
 const roles = ref<any[]>([])
 
+// A+ 第二轮新扩展点数据
+const policies = ref<any[]>([])
+const hookPoints = ref<any[]>([])
+const dataScopes = ref<any[]>([])
+
 // 新 API overview 数据(权威行业包信息)
 const overview = ref<any>(null)
 
@@ -617,13 +742,15 @@ async function loadAll() {
     const typeReqs = ['USER', 'ORG_UNIT', 'PLACE'].map(et =>
       http.get('/entity-type-configs', { params: { entityType: et } }).catch(() => [])
     )
-    const [ov, r, e, p, ro, ...typeResults] = await Promise.all([
+    const [ov, r, e, p, ro, pol, ds, ...typeResults] = await Promise.all([
       http.get('/plugin-platform/overview').catch(() => null),
       http.get('/relation-types').catch(() => []),
       // /event/types 返回 [{categoryCode, categoryName, types:[...]}, ...] 需要打平
       http.get('/event/types').catch(() => []),
       http.get('/permissions', { params: { pageSize: 1000 } }).catch(() => []),
       http.get('/roles', { params: { pageSize: 200 } }).catch(() => []),
+      http.get('/plugin-platform/policies').catch(() => ({ policies: [], hookPoints: [] })),
+      http.get('/roles/data-permissions/scopes').catch(() => []),
       ...typeReqs
     ])
     overview.value = ov
@@ -636,6 +763,10 @@ async function loadAll() {
     events.value = eventRaw.flatMap((g: any) => Array.isArray(g?.types) ? g.types : [g])
     permissions.value = Array.isArray(p) ? p : (p?.records || p?.list || [])
     roles.value = Array.isArray(ro) ? ro : (ro?.records || ro?.list || [])
+    // A+ 新扩展点
+    policies.value = Array.isArray((pol as any)?.policies) ? (pol as any).policies : []
+    hookPoints.value = Array.isArray((pol as any)?.hookPoints) ? (pol as any).hookPoints : []
+    dataScopes.value = Array.isArray(ds) ? ds : ((ds as any)?.records || [])
   } catch (err: any) {
     ElMessage.error('加载失败: ' + (err?.message || err))
   } finally {
@@ -666,6 +797,13 @@ const permissionStats = computed(() => ({
 const roleStats = computed(() => ({
   total: overview.value?.summary?.roles ?? roles.value.length,
   plugin: roles.value.filter((r: any) => r.pluginClass || r.industry).length
+}))
+// A+ 新扩展点 stats — 优先用 overview.summary (与后端对齐), 回退到前端数组长度
+const policyStats = computed(() => ({
+  total: overview.value?.summary?.policies ?? policies.value.length
+}))
+const dataScopeStats = computed(() => ({
+  total: overview.value?.summary?.dataScopes ?? dataScopes.value.length
 }))
 
 // ───────── Industries aggregation ─────────
@@ -982,6 +1120,26 @@ function parseSubjects(raw: any): string[] {
   try { return JSON.parse(raw) } catch { return [String(raw)] }
 }
 
+// ─── A+ 第二轮新扩展点辅助函数 ───
+// Policy hook 反查: 该 hook point 有哪些监听 policy
+function listenersFor(h: any): any[] {
+  const key = h.entityType + '/' + h.phase
+  return policies.value.filter(p => (p.supports || []).includes(key))
+}
+// data_scope_dims.source 解析: "CORE" / "PLUGIN:EDU@1.0.0" → 颜色键
+function parseDataScopeSource(src?: string): string {
+  if (!src) return 'CORE'
+  if (src === 'CORE') return 'CORE'
+  const m = src.match(/^PLUGIN:([A-Z_]+)/)
+  return m ? m[1] : 'CUSTOM'
+}
+// relation_types.implied_relations: 后端已 JSON 反序列化; 兼容 string 回退解析
+function parseImplied(raw: any): any[] {
+  if (!raw) return []
+  if (Array.isArray(raw)) return raw
+  try { return JSON.parse(raw) } catch { return [] }
+}
+
 // ───────── Filtering ─────────
 function matchesFilters(row: any, opts: { industryFrom?: string; tierField?: string; searchFields?: string[] }) {
   if (industryFilter.value) {
@@ -1023,7 +1181,9 @@ const filteredCount = computed(() => {
     events: filteredEvents.value.length,
     permissions: filteredPermissions.value.length,
     roles: filteredRoles.value.length,
-    industries: industries.value.length
+    industries: industries.value.length,
+    policies: policies.value.length,
+    dataScopes: dataScopes.value.length
   } as any)[activeTab.value] || 0
 })
 
@@ -1108,7 +1268,7 @@ const groupedPermissions = computed(() => {
 .pp-subtitle { font-size: 12px; color: #6b7280; margin: 4px 0 0; max-width: 700px; }
 
 /* Stats row */
-.pp-stats { display: grid; grid-template-columns: repeat(6, 1fr); gap: 10px; margin-bottom: 16px; }
+.pp-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 10px; margin-bottom: 16px; }
 .stat-card {
   display: flex; align-items: center; gap: 10px;
   background: #fff; border: 1px solid #e5e7eb; border-radius: 8px;

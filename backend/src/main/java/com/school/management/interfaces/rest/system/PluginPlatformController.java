@@ -2,6 +2,9 @@ package com.school.management.interfaces.rest.system;
 
 import com.school.management.common.result.Result;
 import com.school.management.infrastructure.casbin.CasbinAccess;
+import com.school.management.infrastructure.extension.Policy;
+import com.school.management.infrastructure.extension.PolicyContext;
+import com.school.management.infrastructure.extension.PolicyRegistry;
 import com.school.management.infrastructure.extension.PluginManifest;
 import com.school.management.infrastructure.extension.PluginPackageRegistrar;
 import com.school.management.infrastructure.extension.event.PermissionsRefreshedEvent;
@@ -25,6 +28,7 @@ public class PluginPlatformController {
     private final JdbcTemplate jdbc;
     private final ApplicationEventPublisher eventPublisher;
     private final com.school.management.infrastructure.extension.TenantPluginService tenantPluginService;
+    private final PolicyRegistry policyRegistry;
 
     /**
      * GET /api/plugin-platform/overview
@@ -85,6 +89,16 @@ public class PluginPlatformController {
         summary.put("roles", sumOf(roleByIndustry));
         summary.put("permissions", sumOf(permByIndustry));
         summary.put("industries", (long) industries.size());
+        // A+ 第二轮新扩展点计数
+        Long dataScopeDims = 0L;
+        try {
+            dataScopeDims = jdbc.queryForObject(
+                "SELECT COUNT(*) FROM data_scope_dims WHERE is_enabled=1", Long.class);
+        } catch (Exception ignored) {
+            // 表可能未就绪 (老环境) — 兜底 0
+        }
+        summary.put("dataScopes", dataScopeDims != null ? dataScopeDims : 0L);
+        summary.put("policies", (long) policyRegistry.getPolicies().size());
 
         Map<String, Object> result = new LinkedHashMap<>();
         result.put("industries", industries);
@@ -93,6 +107,68 @@ public class PluginPlatformController {
             packageRegistrar.getSortedManifests().stream()
                 .map(PluginManifest::getIndustryCode).toList());
         return Result.success(result);
+    }
+
+    /**
+     * GET /api/plugin-platform/policies
+     * 列出所有 Policy&lt;?&gt; bean — code / name / 作用的 (entityType, phase) 组合 / 来源类名 / 来源插件.
+     *
+     * 内省策略: 对 9 个核心 hook 组合调 supports(), 收集 true 的视为该策略监听点.
+     * 同时附带 "可用 hook points" 清单 (无论是否有监听者), 帮助插件开发者导航.
+     */
+    @GetMapping("/policies")
+    @CasbinAccess(resource = "admin", action = "access")
+    public Result<Map<String, Object>> policies() {
+        // 9 个核心 hook 点 (与 docs/plugin-extension-catalog.md 保持一致)
+        List<PolicyContext<?>> probes = List.of(
+            new PolicyContext<>("place",    "BEFORE_CHECKIN",       null),
+            new PolicyContext<>("place",    "AFTER_CHECKIN",        null),
+            new PolicyContext<>("place",    "BEFORE_CHECKOUT",      null),
+            new PolicyContext<>("place",    "AFTER_CHECKOUT",       null),
+            new PolicyContext<>("org_unit", "BEFORE_CREATE",        null),
+            new PolicyContext<>("org_unit", "AFTER_CREATE",         null),
+            new PolicyContext<>("org_unit", "BEFORE_UPDATE",        null),
+            new PolicyContext<>("org_unit", "AFTER_UPDATE",         null),
+            new PolicyContext<>("org_unit", "BEFORE_DELETE",        null),
+            new PolicyContext<>("org_unit", "BEFORE_ADD_MEMBER",    null),
+            new PolicyContext<>("org_unit", "AFTER_ADD_MEMBER",     null),
+            new PolicyContext<>("org_unit", "BEFORE_REMOVE_MEMBER", null),
+            new PolicyContext<>("org_unit", "AFTER_REMOVE_MEMBER",  null)
+        );
+
+        List<Map<String, Object>> items = new ArrayList<>();
+        for (Policy<?> p : policyRegistry.getPolicies()) {
+            List<String> hits = probes.stream()
+                .filter(p::supports)
+                .map(c -> c.entityType() + "/" + c.phase())
+                .toList();
+            Map<String, Object> row = new LinkedHashMap<>();
+            row.put("code", p.code());
+            row.put("name", p.name());
+            row.put("supports", hits);
+            row.put("sourceClass", p.getClass().getName());
+            row.put("sourcePlugin", inferPluginFromClass(p.getClass().getName()));
+            items.add(row);
+        }
+
+        List<Map<String, String>> hookPoints = probes.stream()
+            .map(c -> Map.of("entityType", c.entityType(), "phase", c.phase()))
+            .toList();
+
+        Map<String, Object> result = new LinkedHashMap<>();
+        result.put("policies", items);
+        result.put("hookPoints", hookPoints);
+        return Result.success(result);
+    }
+
+    /** 从类 FQCN 反推 plugin 代号 (与前端 inferIndustry 一致). */
+    private String inferPluginFromClass(String fqcn) {
+        if (fqcn == null) return "UNKNOWN";
+        if (fqcn.contains(".plugins.core.") || fqcn.contains(".plugins.core.policy.")) return "CORE";
+        if (fqcn.contains(".plugins.education.")) return "EDU";
+        if (fqcn.contains(".plugins.healthcare.")) return "HEALTH";
+        if (fqcn.contains(".plugins.eldercare."))  return "CARE";
+        return "UNKNOWN";
     }
 
     private Map<String, Long> groupCount(String sql) {
