@@ -172,13 +172,12 @@ jobs:
         working-directory: ./frontend
         run: npm run lint
 
-      # TODO(frontend-type-check): 升级为阻断门禁.
-      # 当前 type-check 存在 ~594 个错误 (主要为 teaching 模块 unused imports / 可选属性类型收窄),
-      # 分批清理后移除 continue-on-error.
-      - name: Run type check
+      # Phase 6 (2026-04-20 升级): type-check 走 ceiling gate — 不回退, 但允许暂未清理的 baseline
+      # 当前基线: frontend/.typecheck-baseline (158 errors / 73 files, 2026-04-20)
+      # 目标: 每次 PR 把基线降一点, 最终归 0.
+      - name: Run type check (ceiling gate)
         working-directory: ./frontend
-        run: npm run type-check
-        continue-on-error: true
+        run: npm run type-check:ceiling
 
       - name: Build frontend
         working-directory: ./frontend
