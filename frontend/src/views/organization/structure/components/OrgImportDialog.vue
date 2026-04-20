@@ -305,11 +305,9 @@ async function loadCaches() {
 function validateRows(parsed: ParsedRow[]) {
   // Build lookup maps
   const userByUsername = new Map<string, SimpleUser>()
-  const userByEmployeeNo = new Map<string, SimpleUser>()
   for (const u of userCache) {
     userByUsername.set(u.username.toLowerCase(), u)
   }
-  // SimpleUser may not have employeeNo, also check username as fallback
   const orgByCode = new Map<string, OrgUnit>()
   for (const o of orgCache) {
     orgByCode.set(o.unitCode.toLowerCase(), o)

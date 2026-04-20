@@ -32,7 +32,6 @@ export interface UserInfo {
   phone?: string
   email?: string
   avatar?: string
-  employeeNo?: string
   gender?: number
   status: number
   roles: string[]

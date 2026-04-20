@@ -669,7 +669,6 @@ const formData = reactive<UserFormData & { placeId?: number; attributes: Record<
   password: '',
   phone: '',
   email: '',
-  employeeNo: '',
   gender: 1,
   birthDate: '',
   idCard: '',
@@ -852,7 +851,6 @@ const handleAdd = () => {
     password: '',
     phone: '',
     email: '',
-    employeeNo: '',
     gender: 1,
     birthDate: '',
     idCard: '',
@@ -877,7 +875,6 @@ const handleEdit = async (row: UserListItem) => {
     realName: row.realName,
     phone: row.phone || '',
     email: row.email || '',
-    employeeNo: row.employeeNo || '',
     gender: row.gender,
     birthDate: row.birthDate ? String(row.birthDate).substring(0, 10) : '',
     idCard: row.idCard || '',
@@ -936,7 +933,6 @@ const handleSubmit = async () => {
     const payload = { ...formData } as any
     if (!payload.phone) payload.phone = undefined
     if (!payload.email) payload.email = undefined
-    if (!payload.employeeNo) payload.employeeNo = undefined
     if (!payload.idCard) payload.idCard = undefined
     if (!payload.birthDate) payload.birthDate = undefined
     if (isEdit.value && currentUserId.value) {

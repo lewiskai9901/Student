@@ -18,7 +18,6 @@ export interface User {
   phone?: string
   email?: string
   avatar?: string
-  employeeNo?: string
   gender?: number
   birthDate?: string
   idCard?: string
@@ -46,7 +45,6 @@ export interface CreateUserRequest {
   realName: string
   phone?: string
   email?: string
-  employeeNo?: string
   gender?: number
   birthDate?: string
   idCard?: string
@@ -63,7 +61,6 @@ export interface UpdateUserRequest {
   realName?: string
   phone?: string
   email?: string
-  employeeNo?: string
   gender?: number
   birthDate?: string
   idCard?: string
@@ -108,7 +105,6 @@ export interface UserFormData {
   phone?: string
   email?: string
   avatar?: string
-  employeeNo?: string
   gender?: number
   birthDate?: string
   idCard?: string
