@@ -246,6 +246,87 @@ Stream.of(
 
 ---
 
+## B+. Policy / Validator SPI (Track W1)
+
+**用途**: 声明业务规则检查点 — core 变更边界调用时自动执行, 规则可阻断 (BLOCK) 或仅告警 (WARN/INFO).
+
+**适用场景**:
+- "宿舍入住人数 < 4 时警告"
+- "CLASS 删除前必须无归属学生"
+- "创建医院科室时必须关联一位主治医师"
+
+### 契约
+
+`Policy<T>` 接口三方法:
+- `code()` — 全局唯一策略码
+- `supports(ctx)` — 过滤适用哪些 (entityType, phase) 组合
+- `check(ctx)` — 返回 `List<Violation>`, 空=通过
+
+`Violation` 三级:
+- `BLOCK` — `PolicyRegistry.enforce()` 会抛 `PolicyViolationException`, 事务回滚
+- `WARN` — 落日志/通知, 不阻断
+- `INFO` — 审计用
+
+### core 已接入的 hook 点
+
+| entityType | phase | ApplicationService | commit |
+|---|---|---|---|
+| `place` | BEFORE_CHECKIN / AFTER_CHECKIN | `UniversalPlaceApplicationService.checkIn` | ad7a2327 |
+| `place` | BEFORE_CHECKOUT / AFTER_CHECKOUT | `UniversalPlaceApplicationService.checkOut` | ad7a2327 |
+| `org_unit` | BEFORE_CREATE / AFTER_CREATE | `OrgUnitApplicationService.createOrgUnit` | 297b73dd |
+| `org_unit` | BEFORE_UPDATE / AFTER_UPDATE | `OrgUnitApplicationService.updateOrgUnit` | 297b73dd |
+| `org_unit` | BEFORE_DELETE | `OrgUnitApplicationService.deleteOrgUnit` | 297b73dd |
+| `org_unit` | BEFORE_ADD_MEMBER / AFTER_ADD_MEMBER | `OrgMemberService.addMember` | 297b73dd |
+| `org_unit` | BEFORE_REMOVE_MEMBER / AFTER_REMOVE_MEMBER | `OrgMemberService.removeMember` | 297b73dd |
+
+新 hook 点由 core 扩展, 插件不能自己加, 需 core PR.
+
+### 最小示例
+
+```java
+@Component
+public class MinOccupantsPolicy implements Policy<Object> {
+
+    private final int threshold;
+
+    public MinOccupantsPolicy(@Value("${policy.place.min-occupants:4}") int threshold) {
+        this.threshold = threshold;
+    }
+
+    @Override public String code() { return "MIN_OCCUPANTS"; }
+
+    @Override
+    public boolean supports(PolicyContext<?> ctx) {
+        return threshold > 0
+            && "place".equals(ctx.entityType())
+            && "AFTER_CHECKIN".equals(ctx.phase());
+    }
+
+    @Override
+    public List<Violation> check(PolicyContext<Object> ctx) {
+        // ... 返回违规列表, 空 = 通过
+    }
+}
+```
+
+参考实现: `infrastructure/extension/plugins/core/policy/MinOccupantsPolicy.java` — core 内置 reference impl, 演示契约.
+
+### 对比其他校验手段
+
+| 手段 | 位置 | 时机 | 失败响应 | 适用 |
+|---|---|---|---|---|
+| Spring `@Valid` | Controller/DTO | 入参时 | 400 | 请求体字段/格式 |
+| JPA `@NotNull` | Entity | save 时 | 数据库异常 | 持久化必填 |
+| DDD 聚合 invariant | Aggregate | 状态变更时 | 业务异常 | 聚合内不变量 |
+| **Policy SPI** | Application 边界 | BEFORE/AFTER | BLOCK 抛 + WARN 日志 | **跨聚合/跨插件业务规则** |
+
+**陷阱**:
+- `supports()` 记得加开关 (阈值为 0 时 return false), 否则禁用也会进 `check()`
+- BLOCK 会回滚事务, AFTER 阶段的 BLOCK 意味着"撤销已完成的操作", 慎用
+- 业务代码要用常量引用 code, 不要裸字符串
+
+---
+
 ## C. PluginConfigSchema (Phase 7.5)
 
 声明插件接受的**运行时配置项**, 管理员 UI 可自动渲染表单.
