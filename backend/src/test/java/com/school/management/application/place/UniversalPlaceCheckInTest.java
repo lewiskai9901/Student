@@ -13,6 +13,7 @@ import com.school.management.domain.user.model.aggregate.User;
 import com.school.management.domain.user.model.valueobject.UserStatus;
 import com.school.management.domain.user.repository.UserRepository;
 import com.school.management.infrastructure.activity.ActivityEventPublisher;
+import com.school.management.infrastructure.extension.PolicyRegistry;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -59,6 +60,7 @@ class UniversalPlaceCheckInTest {
     @Mock AccessRelationRepository accessRelationRepository;
     @Mock PlaceInheritanceService inheritanceService;
     @Mock ActivityEventPublisher activityEventPublisher;
+    @Mock PolicyRegistry policyRegistry;
 
     @InjectMocks UniversalPlaceApplicationService service;
 

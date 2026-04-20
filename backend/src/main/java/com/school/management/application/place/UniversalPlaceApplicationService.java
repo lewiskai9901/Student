@@ -18,6 +18,9 @@ import com.school.management.domain.user.repository.UserRepository;
 import com.school.management.infrastructure.activity.ActivityEventPublisher;
 import com.school.management.infrastructure.extension.ExtensionContext;
 import com.school.management.infrastructure.extension.ExtensionDispatcher;
+import com.school.management.infrastructure.extension.PolicyContext;
+import com.school.management.infrastructure.extension.PolicyRegistry;
+import com.school.management.infrastructure.extension.Violation;
 import com.school.management.application.event.TriggerService;
 import com.school.management.infrastructure.extension.plugins.core.constants.CorePlaceTriggerPoints;
 import lombok.Data;
@@ -46,6 +49,7 @@ public class UniversalPlaceApplicationService {
     private final AccessRelationRepository accessRelationRepository;
     private final PlaceInheritanceService inheritanceService;
     private final ActivityEventPublisher activityEventPublisher;
+    private final PolicyRegistry policyRegistry;
 
     @Autowired(required = false)
     private TriggerService triggerService;
@@ -771,6 +775,9 @@ public class UniversalPlaceApplicationService {
 
     @Transactional
     public OccupantDTO checkIn(Long placeId, CheckInCommand command) {
+        // BEFORE — 策略阻断检查 (任何 BLOCK 违规抛 PolicyViolationException, 事务回滚)
+        policyRegistry.enforce(new PolicyContext<>("place", "BEFORE_CHECKIN", command));
+
         UniversalPlace place = placeRepository.findById(placeId)
                 .orElseThrow(() -> new IllegalArgumentException("场所不存在"));
 
@@ -868,6 +875,14 @@ public class UniversalPlaceApplicationService {
             } catch (Exception ignored) {}
         }
 
+        // AFTER — 策略警告收集 (WARN/INFO 级, 不阻断; notification 接入留待后续)
+        List<Violation> warnings = policyRegistry.check(
+                new PolicyContext<>("place", "AFTER_CHECKIN", command));
+        if (!warnings.isEmpty()) {
+            warnings.forEach(w -> log.warn("[Policy/{}] {}: {}",
+                    w.severity(), w.code(), w.message()));
+        }
+
         return toOccupantDTO(occupant);
     }
 
@@ -882,6 +897,11 @@ public class UniversalPlaceApplicationService {
 
     @Transactional
     public void checkOut(Long placeId, Long recordId) {
+        // BEFORE — 策略阻断检查 (任何 BLOCK 违规抛 PolicyViolationException, 事务回滚)
+        // payload 用 (placeId, recordId) Map 让策略能按需拉取 occupant 详情.
+        policyRegistry.enforce(new PolicyContext<>("place", "BEFORE_CHECKOUT",
+                Map.of("placeId", placeId, "recordId", recordId)));
+
         UniversalPlace place = placeRepository.findById(placeId)
                 .orElseThrow(() -> new IllegalArgumentException("场所不存在"));
 
@@ -938,6 +958,16 @@ public class UniversalPlaceApplicationService {
                     "placeTypeCode", place.getTypeCode() != null ? place.getTypeCode() : ""
                 ));
             } catch (Exception ignored) {}
+        }
+
+        // AFTER — 策略警告收集 (WARN/INFO 级, 不阻断)
+        List<Violation> warnings = policyRegistry.check(
+                new PolicyContext<>("place", "AFTER_CHECKOUT",
+                        Map.of("placeId", placeId, "recordId", recordId,
+                                "occupantId", occupant.getOccupantId())));
+        if (!warnings.isEmpty()) {
+            warnings.forEach(w -> log.warn("[Policy/{}] {}: {}",
+                    w.severity(), w.code(), w.message()));
         }
     }
 
