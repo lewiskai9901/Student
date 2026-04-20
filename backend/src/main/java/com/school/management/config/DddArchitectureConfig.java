@@ -1,18 +1,14 @@
 package com.school.management.config;
 
-import org.mybatis.spring.annotation.MapperScan;
 import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.Configuration;
 
 /**
  * Configuration for DDD Architecture components.
  *
- * This configuration enables scanning of:
- * - Domain layer components (domain services)
- * - Application layer components (application services)
- * - Infrastructure layer components (repositories, adapters)
- * - Interface layer components (REST controllers)
- * - MyBatis mappers for the new v2 architecture
+ * 只负责 ComponentScan. @MapperScan 归一到 StudentManagementApplication 上,
+ * 避免和主 app 扫描重叠导致 "Bean already defined with the same name" 警告
+ * (Phase 6.3 启动优化, 2026-04-20).
  */
 @Configuration
 @ComponentScan(basePackages = {
@@ -20,23 +16,6 @@ import org.springframework.context.annotation.Configuration;
     "com.school.management.application",
     "com.school.management.infrastructure",
     "com.school.management.interfaces"
-})
-@MapperScan(basePackages = {
-    "com.school.management.infrastructure.persistence.organization",
-    "com.school.management.infrastructure.persistence.inspection",
-    "com.school.management.infrastructure.persistence.access",
-    "com.school.management.infrastructure.persistence.asset",
-    "com.school.management.infrastructure.persistence.task",
-    "com.school.management.infrastructure.extension.plugins.education.infrastructure.persistence.student",
-    "com.school.management.infrastructure.persistence.rating",
-    "com.school.management.infrastructure.extension.plugins.education.infrastructure.persistence.calendar",
-    "com.school.management.infrastructure.persistence.user",
-    "com.school.management.infrastructure.persistence.query",
-    "com.school.management.infrastructure.persistence.place",
-    "com.school.management.infrastructure.persistence.inspection.v7",
-    "com.school.management.infrastructure.activity.impl",
-    // Phase 3.5: 覆盖教育插件下迁来的 mappers (calendar/teaching/academic/student 4 包)
-    "com.school.management.infrastructure.extension.plugins.education.infrastructure.persistence"
 })
 public class DddArchitectureConfig {
     // Configuration is handled through annotations

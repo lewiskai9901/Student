@@ -7,6 +7,27 @@ app:
     default-password: admin123
 
 spring:
+  # Phase 6.3: 开发态启动优化 — lazy bean init 可砍 20-40s 启动时间
+  main:
+    lazy-initialization: true
+  # 开发态跳过 Flowable 自动装配 (22s 启动开销). 真要调工作流: SPRING_PROFILES_ACTIVE=dev,workflow
+  autoconfigure:
+    exclude:
+      - org.flowable.spring.boot.FlowableAutoConfiguration
+      - org.flowable.spring.boot.actuate.info.FlowableInfoAutoConfiguration
+      - org.flowable.spring.boot.actuate.endpoint.ProcessEngineEndpointAutoConfiguration
+      - org.flowable.spring.boot.actuate.endpoint.ProcessEngineMvcEndpointAutoConfiguration
+      - org.flowable.spring.boot.EndpointAutoConfiguration
+      - org.flowable.spring.boot.ProcessEngineAutoConfiguration
+      - org.flowable.spring.boot.ProcessEngineServicesAutoConfiguration
+      - org.flowable.spring.boot.EndpointAutoConfiguration
+      - org.flowable.spring.boot.ContentEngineAutoConfiguration
+      - org.flowable.spring.boot.DmnEngineAutoConfiguration
+      - org.flowable.spring.boot.IdmEngineAutoConfiguration
+      - org.flowable.spring.boot.EventRegistryAutoConfiguration
+      - org.flowable.spring.boot.AppEngineAutoConfiguration
+      - org.flowable.spring.boot.CmmnEngineAutoConfiguration
+
   datasource:
     url: jdbc:mysql://${DB_HOST:localhost}:${DB_PORT:3306}/${DB_NAME:student_management}?useUnicode=true&characterEncoding=UTF-8&useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true
     username: ${DB_USERNAME:root}
