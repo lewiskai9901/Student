@@ -16,6 +16,9 @@ import com.school.management.domain.access.repository.AccessRelationRepository;
 import com.school.management.domain.shared.event.DomainEventPublisher;
 import com.school.management.infrastructure.extension.ExtensionContext;
 import com.school.management.infrastructure.extension.ExtensionDispatcher;
+import com.school.management.infrastructure.extension.PolicyContext;
+import com.school.management.infrastructure.extension.PolicyRegistry;
+import com.school.management.infrastructure.extension.Violation;
 import com.school.management.infrastructure.persistence.place.UniversalPlaceOccupantMapper;
 import com.school.management.infrastructure.persistence.user.UserDomainMapper;
 import com.school.management.application.event.TriggerService;
@@ -49,6 +52,7 @@ public class OrgUnitApplicationService {
     private final AccessRelationRepository accessRelationRepository;
     private final UserDomainMapper userDomainMapper;
     private final UniversalPlaceOccupantMapper placeOccupantMapper;
+    private final PolicyRegistry policyRegistry;
 
     @Autowired(required = false)
     private TriggerService triggerService;
@@ -58,6 +62,9 @@ public class OrgUnitApplicationService {
 
     @Transactional
     public OrgUnitDTO createOrgUnit(CreateOrgUnitCommand command) {
+        // W1.5: Policy hook — BEFORE_CREATE 允许插件阻止创建 (如父子层级校验)
+        policyRegistry.enforce(new PolicyContext<>("org_unit", "BEFORE_CREATE", command));
+
         OrgUnit orgUnit = orgUnitDomainService.createOrgUnit(
             command.getUnitCode(),
             command.getUnitName(),
@@ -106,11 +113,19 @@ public class OrgUnitApplicationService {
             } catch (Exception ignored) {}
         }
 
+        // W1.5: Policy hook — AFTER_CREATE WARN/INFO 仅记日志
+        List<Violation> warns = policyRegistry.check(
+            new PolicyContext<>("org_unit", "AFTER_CREATE", orgUnit));
+        warns.forEach(w -> log.warn("[Policy/{}] {}: {}", w.severity(), w.code(), w.message()));
+
         return toDTO(orgUnit);
     }
 
     @Transactional
     public OrgUnitDTO updateOrgUnit(Long id, UpdateOrgUnitCommand command) {
+        // W1.5: Policy hook — BEFORE_UPDATE 允许插件阻止更新
+        policyRegistry.enforce(new PolicyContext<>("org_unit", "BEFORE_UPDATE", command));
+
         OrgUnit orgUnit = orgUnitRepository.findById(id)
             .orElseThrow(() -> new IllegalArgumentException("OrgUnit not found: " + id));
 
@@ -137,6 +152,11 @@ public class OrgUnitApplicationService {
                 .reason(command.getReason())
                 .publish();
         }
+
+        // W1.5: Policy hook — AFTER_UPDATE WARN/INFO 仅记日志
+        List<Violation> warns = policyRegistry.check(
+            new PolicyContext<>("org_unit", "AFTER_UPDATE", orgUnit));
+        warns.forEach(w -> log.warn("[Policy/{}] {}: {}", w.severity(), w.code(), w.message()));
 
         return toDTO(orgUnit);
     }
@@ -193,6 +213,9 @@ public class OrgUnitApplicationService {
 
     @Transactional
     public void deleteOrgUnit(Long id) {
+        // W1.5: Policy hook — BEFORE_DELETE 允许插件阻止删除 (如 CLASS 删除前必须无归属学生)
+        policyRegistry.enforce(new PolicyContext<>("org_unit", "BEFORE_DELETE", id));
+
         OrgUnit orgUnit = orgUnitRepository.findById(id)
             .orElseThrow(() -> new IllegalArgumentException("OrgUnit not found: " + id));
 

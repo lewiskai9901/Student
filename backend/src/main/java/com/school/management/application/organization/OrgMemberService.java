@@ -6,6 +6,9 @@ import com.school.management.domain.access.model.entity.AccessRelation;
 import com.school.management.domain.access.repository.AccessRelationRepository;
 import com.school.management.domain.organization.model.OrgUnit;
 import com.school.management.domain.organization.repository.OrgUnitRepository;
+import com.school.management.infrastructure.extension.PolicyContext;
+import com.school.management.infrastructure.extension.PolicyRegistry;
+import com.school.management.infrastructure.extension.Violation;
 import com.school.management.infrastructure.persistence.user.UserDomainMapper;
 import com.school.management.infrastructure.persistence.user.UserPO;
 import lombok.RequiredArgsConstructor;
@@ -28,6 +31,7 @@ public class OrgMemberService {
     private final UserDomainMapper userDomainMapper;
     private final OrgUnitRepository orgUnitRepository;
     private final AccessRelationRepository accessRelationRepository;
+    private final PolicyRegistry policyRegistry;
 
     /**
      * 获取归属成员列表（primary_org_unit_id = orgUnitId）
@@ -104,6 +108,10 @@ public class OrgMemberService {
      */
     @Transactional
     public void addMember(Long orgUnitId, Long userId) {
+        // W1.5: Policy hook — BEFORE_ADD_MEMBER 允许插件阻止加入 (如班级不允许教师归属)
+        policyRegistry.enforce(new PolicyContext<>("org_unit", "BEFORE_ADD_MEMBER",
+                Map.of("orgUnitId", orgUnitId, "userId", userId)));
+
         OrgUnit orgUnit = orgUnitRepository.findById(orgUnitId)
                 .orElseThrow(() -> new IllegalArgumentException("OrgUnit not found: " + orgUnitId));
 
@@ -123,6 +131,12 @@ public class OrgMemberService {
         }
 
         log.info("Added user {} as member of org {}", userId, orgUnitId);
+
+        // W1.5: Policy hook — AFTER_ADD_MEMBER WARN/INFO 仅记日志 (如超过班级 headcount 警告)
+        List<Violation> warns = policyRegistry.check(new PolicyContext<>(
+                "org_unit", "AFTER_ADD_MEMBER",
+                Map.of("orgUnitId", orgUnitId, "userId", userId)));
+        warns.forEach(w -> log.warn("[Policy/{}] {}: {}", w.severity(), w.code(), w.message()));
     }
 
     /**
@@ -130,6 +144,10 @@ public class OrgMemberService {
      */
     @Transactional
     public void removeMember(Long orgUnitId, Long userId) {
+        // W1.5: Policy hook — BEFORE_REMOVE_MEMBER 允许插件阻止移除
+        policyRegistry.enforce(new PolicyContext<>("org_unit", "BEFORE_REMOVE_MEMBER",
+                Map.of("orgUnitId", orgUnitId, "userId", userId)));
+
         // Clear user's primary org unit (only if it matches)
         userDomainMapper.clearPrimaryOrgUnitIdForUser(userId, orgUnitId);
 
@@ -137,6 +155,12 @@ public class OrgMemberService {
         accessRelationRepository.deleteByResourceAndSubject("org_unit", orgUnitId, "user", userId);
 
         log.info("Removed user {} from org {}", userId, orgUnitId);
+
+        // W1.5: Policy hook — AFTER_REMOVE_MEMBER WARN/INFO 仅记日志
+        List<Violation> warns = policyRegistry.check(new PolicyContext<>(
+                "org_unit", "AFTER_REMOVE_MEMBER",
+                Map.of("orgUnitId", orgUnitId, "userId", userId)));
+        warns.forEach(w -> log.warn("[Policy/{}] {}: {}", w.severity(), w.code(), w.message()));
     }
 
     /**

@@ -2,6 +2,8 @@ package com.school.management.application.organization;
 
 import com.school.management.domain.access.repository.AccessRelationRepository;
 import com.school.management.domain.organization.repository.OrgUnitRepository;
+import com.school.management.infrastructure.extension.PolicyContext;
+import com.school.management.infrastructure.extension.PolicyRegistry;
 import com.school.management.infrastructure.persistence.user.UserDomainMapper;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -9,9 +11,14 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import java.util.Collections;
+
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.lenient;
 
 /**
  * Regression test for {@link OrgMemberService#removeMember(Long, Long)}.
@@ -35,8 +42,20 @@ class OrgMemberServiceTest {
     @Mock
     AccessRelationRepository accessRelationRepository;
 
+    @Mock
+    PolicyRegistry policyRegistry;
+
     @InjectMocks
     OrgMemberService service;
+
+    @org.junit.jupiter.api.BeforeEach
+    void stubPolicyRegistryDefaults() {
+        // Default: no policy violations; tests that care should override per-case.
+        lenient().when(policyRegistry.enforce(any(PolicyContext.class)))
+                .thenReturn(Collections.emptyList());
+        lenient().when(policyRegistry.check(any(PolicyContext.class)))
+                .thenReturn(Collections.emptyList());
+    }
 
     @Test
     void removeMember_shouldOnlyDeleteSpecificUserRelation_notAllOrgRelations() {
