@@ -19,7 +19,7 @@ import static org.junit.jupiter.api.Assertions.*;
  *
  * 保证:
  *  - {@link PluginPackage} 作为顶层接口, 继承 PluginManifest
- *  - {@link Contribution} sealed, permits 恰好 8 种
+ *  - {@link Contribution} sealed, permits 恰好 10 种
  *  - 每种 permitted Contribution 都实现 uniqueKey()
  *  - 7 个旧 SPI 都打了 @Deprecated (强化向下兼容承诺)
  *  - CoreManifest / EducationManifest 现在都是 PluginPackage 实例
@@ -55,11 +55,11 @@ class UnifiedPluginPackageTest {
     }
 
     @Test
-    @DisplayName("Contribution 恰好有 9 个 permitted 子类型")
-    void contributionPermitsExactly9Subtypes() {
+    @DisplayName("Contribution 恰好有 10 个 permitted 子类型")
+    void contributionPermitsExactly10Subtypes() {
         Class<?>[] permitted = Contribution.class.getPermittedSubclasses();
-        assertEquals(9, permitted.length,
-            "Phase 7.1 约定 9 种 Contribution: entity/relation/event-domain/perm/role/menu/data-scope/route/domain, 实际=" + permitted.length);
+        assertEquals(10, permitted.length,
+            "Track W1 约定 10 种 Contribution: entity/relation/event-domain/perm/role/menu/data-scope/route/policy/domain, 实际=" + permitted.length);
     }
 
     @Test

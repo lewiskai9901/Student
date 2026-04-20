@@ -6,7 +6,7 @@ import java.util.List;
  * 统一贡献契约 — 插件通过 {@link PluginPackage#contribute()} 返回 Stream&lt;Contribution&gt;
  * 声明本包向平台贡献的所有内容.
  *
- * sealed 限定 8 个 permitted subtype, 对应旧 SPI 的 7 种职责 + 1 个扩展位.
+ * sealed 限定 10 个 permitted subtype, 对应旧 SPI 的 7 种职责 + 3 个扩展位 (route/policy/domain).
  * 每种 Contribution 封装一条 def 记录, 在 ContributionDispatcher 里
  * 通过 pattern-matching switch 分发到对应 Registrar 的 upsert 方法.
  *
@@ -22,12 +22,13 @@ public sealed interface Contribution permits
     Contribution.MenuContribution,
     Contribution.DataScopeContribution,
     Contribution.RouteContribution,
+    Contribution.PolicyContribution,
     Contribution.DomainContribution {
 
     /** 跨 Contribution 唯一标识, 用于冲突检测/日志 */
     String uniqueKey();
 
-    // ═════════════════════════ 8 个 permitted 记录 ═════════════════════════
+    // ═════════════════════════ 10 个 permitted 记录 ═════════════════════════
 
     /** 实体类型贡献 (对应旧 EntityTypePlugin 一个实例) */
     record EntityTypeContribution(EntityTypePlugin plugin) implements Contribution {
@@ -98,6 +99,16 @@ public sealed interface Contribution permits
         public static RouteContribution of(String industry, String path, String title) {
             return new RouteContribution(industry, path, title, true);
         }
+    }
+
+    /**
+     * 策略贡献 (Track W1) — 插件通过此 record 注入 Policy 实现.
+     *
+     * PolicyRegistry 通过 Spring DI 直接收集所有 Policy bean, 本 contribution
+     * 只做登记/日志, 不需 Registrar 写 DB.
+     */
+    record PolicyContribution(Policy<?> policy) implements Contribution {
+        @Override public String uniqueKey() { return "policy:" + policy.code(); }
     }
 
     /**
