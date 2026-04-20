@@ -96,7 +96,6 @@ class UserApplicationServiceTest {
                 "13800138000",
                 "test@example.com",
                 null, // avatar
-                "EMP001",
                 1, // male
                 LocalDate.of(1990, 1, 1),
                 "110101199001011234",
@@ -120,7 +119,7 @@ class UserApplicationServiceTest {
                 username,
                 "encodedPassword",
                 "禁用用户",
-                null, null, null, null, null, null, null,
+                null, null, null, null, null, null,
                 null, // primaryOrgUnitId
                 "TEACHER", // userTypeCode
                 UserStatus.DISABLED,
@@ -717,7 +716,7 @@ class UserApplicationServiceTest {
             // Given
             User user = User.reconstruct(
                     1L, "testuser", "password", "测试用户",
-                    null, null, null, null, null, null, null,
+                    null, null, null, null, null, null,
                     null, // primaryOrgUnitId
                     "TEACHER", // userTypeCode
                     UserStatus.ENABLED,

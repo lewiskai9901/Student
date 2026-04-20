@@ -19,7 +19,6 @@ public class UserPO {
     private String phone;
     private String email;
     private String avatar;
-    private String employeeNo;
     private Integer gender;
     private LocalDate birthDate;
     @TableField("identity_card")
@@ -54,7 +53,6 @@ public class UserPO {
     public String getPhone() { return phone; }
     public String getEmail() { return email; }
     public String getAvatar() { return avatar; }
-    public String getEmployeeNo() { return employeeNo; }
     public Integer getGender() { return gender; }
     public LocalDate getBirthDate() { return birthDate; }
     public String getIdCard() { return idCard; }
@@ -83,7 +81,6 @@ public class UserPO {
     public void setPhone(String phone) { this.phone = phone; }
     public void setEmail(String email) { this.email = email; }
     public void setAvatar(String avatar) { this.avatar = avatar; }
-    public void setEmployeeNo(String employeeNo) { this.employeeNo = employeeNo; }
     public void setGender(Integer gender) { this.gender = gender; }
     public void setBirthDate(LocalDate birthDate) { this.birthDate = birthDate; }
     public void setIdCard(String idCard) { this.idCard = idCard; }

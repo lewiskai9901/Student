@@ -37,11 +37,6 @@ public interface UserRepository extends Repository<User, Long> {
     Optional<User> findByEmail(String email);
 
     /**
-     * 根据工号查找用户
-     */
-    Optional<User> findByEmployeeNo(String employeeNo);
-
-    /**
      * 根据微信OpenID查找用户
      */
     Optional<User> findByWechatOpenid(String openid);

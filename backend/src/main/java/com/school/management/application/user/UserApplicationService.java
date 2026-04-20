@@ -106,7 +106,6 @@ public class UserApplicationService {
                 command.getRealName(),
                 command.getPhone(),
                 command.getEmail(),
-                command.getEmployeeNo(),
                 command.getGender(),
                 command.getBirthDate(),
                 command.getIdCard()
@@ -208,7 +207,6 @@ public class UserApplicationService {
                 command.getRealName(),
                 command.getPhone(),
                 command.getEmail(),
-                command.getEmployeeNo(),
                 command.getGender(),
                 command.getBirthDate(),
                 command.getIdCard()

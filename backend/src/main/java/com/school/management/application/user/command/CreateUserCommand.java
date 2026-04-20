@@ -39,11 +39,6 @@ public class CreateUserCommand {
     private String email;
 
     /**
-     * 工号
-     */
-    private String employeeNo;
-
-    /**
      * 性别: 1男 2女
      */
     private Integer gender;

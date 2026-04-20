@@ -23,8 +23,6 @@ public class UpdateUserRequest {
     @Size(max = 100, message = "邮箱不能超过100字符")
     private String email;
 
-    private String employeeNo;
-
     private Integer gender;
 
     private LocalDate birthDate;

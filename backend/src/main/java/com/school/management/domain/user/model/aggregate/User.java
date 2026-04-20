@@ -50,19 +50,6 @@ public class User extends AggregateRoot<Long> {
     private String avatar;
 
     /**
-     * 工号 — ⚠️ 类型特定字段(仅 STAFF/TEACHER 等用户类型有此概念).
-     *
-     * 按"通用核心 + 行业插件"原则,此字段应迁移到 {@code user_teacher.attributes.employeeNo}
-     * 或由 TeacherPlugin.getSystemFields() 声明. 通用核心 User 聚合不该认识"工号"概念.
-     *
-     * 暂保留以兼容现有业务代码,后续专项重构会将其移除并同步到 plugin attributes.
-     *
-     * @deprecated 新代码请用 User.attributes 配合类型插件声明
-     */
-    @Deprecated
-    private String employeeNo;
-
-    /**
      * 性别: 1男 2女
      */
     private Integer gender;
@@ -216,7 +203,6 @@ public class User extends AggregateRoot<Long> {
             String phone,
             String email,
             String avatar,
-            String employeeNo,
             Integer gender,
             LocalDate birthDate,
             String idCard,
@@ -240,7 +226,6 @@ public class User extends AggregateRoot<Long> {
         user.phone = phone;
         user.email = email;
         user.avatar = avatar;
-        user.employeeNo = employeeNo;
         user.gender = gender;
         user.birthDate = birthDate;
         user.idCard = idCard;
@@ -265,7 +250,6 @@ public class User extends AggregateRoot<Long> {
             String realName,
             String phone,
             String email,
-            String employeeNo,
             Integer gender,
             LocalDate birthDate,
             String idCard
@@ -273,7 +257,6 @@ public class User extends AggregateRoot<Long> {
         this.realName = realName;
         this.phone = phone;
         this.email = email;
-        this.employeeNo = employeeNo;
         this.gender = gender;
         this.birthDate = birthDate;
         this.idCard = idCard;
@@ -410,7 +393,6 @@ public class User extends AggregateRoot<Long> {
     public String getPhone() { return phone; }
     public String getEmail() { return email; }
     public String getAvatar() { return avatar; }
-    public String getEmployeeNo() { return employeeNo; }
     public Integer getGender() { return gender; }
     public LocalDate getBirthDate() { return birthDate; }
     public String getIdCard() { return idCard; }

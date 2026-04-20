@@ -19,7 +19,6 @@ public class UserDomainResponse {
     private String phone;
     private String email;
     private String avatar;
-    private String employeeNo;
     private Integer gender;
     private LocalDate birthDate;
     private String idCard;
@@ -62,7 +61,6 @@ public class UserDomainResponse {
         response.setPhone(user.getPhone());
         response.setEmail(user.getEmail());
         response.setAvatar(user.getAvatar());
-        response.setEmployeeNo(user.getEmployeeNo());
         response.setGender(user.getGender());
         response.setBirthDate(user.getBirthDate());
         response.setIdCard(user.getIdCard());

@@ -90,7 +90,7 @@ class UniversalPlaceCheckInTest {
                 "alice",
                 "encodedpwd",
                 "Alice",
-                null, null, null, null,
+                null, null, null,
                 1,                   // gender
                 null, null,
                 null,                // primaryOrgUnitId

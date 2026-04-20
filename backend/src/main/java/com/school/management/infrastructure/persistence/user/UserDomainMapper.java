@@ -36,12 +36,6 @@ public interface UserDomainMapper extends BaseMapper<UserPO> {
     UserPO findByEmail(@Param("email") String email);
 
     /**
-     * 根据工号查找用户
-     */
-    @Select("SELECT * FROM users WHERE employee_no = #{employeeNo} AND deleted = 0")
-    UserPO findByEmployeeNo(@Param("employeeNo") String employeeNo);
-
-    /**
      * 根据微信OpenID查找用户
      */
     @Select("SELECT * FROM users WHERE wechat_openid = #{openid} AND deleted = 0")

@@ -24,7 +24,6 @@ CREATE TABLE `users` (
     `phone` VARCHAR(20) COMMENT '手机号',
     `email` VARCHAR(100) COMMENT '邮箱',
     `avatar` VARCHAR(255) COMMENT '头像URL',
-    `employee_no` VARCHAR(50) COMMENT '工号',
     `gender` TINYINT DEFAULT 0 COMMENT '性别:0未知,1男,2女',
     `birth_date` DATE COMMENT '出生日期',
     `identity_card` VARCHAR(20) COMMENT '身份证号',

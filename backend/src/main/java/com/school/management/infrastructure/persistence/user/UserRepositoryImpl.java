@@ -105,20 +105,6 @@ public class UserRepositoryImpl implements UserRepository {
     }
 
     @Override
-    public Optional<User> findByEmployeeNo(String employeeNo) {
-        UserPO po = userMapper.findByEmployeeNo(employeeNo);
-        if (po == null) {
-            return Optional.empty();
-        }
-        User user = toDomain(po);
-        if (po.getId() != null) {
-            List<Long> roleIds = userMapper.findRoleIdsByUserId(po.getId());
-            user.assignRoles(roleIds);
-        }
-        return Optional.of(user);
-    }
-
-    @Override
     public Optional<User> findByWechatOpenid(String openid) {
         UserPO po = userMapper.findByWechatOpenid(openid);
         if (po == null) {
@@ -280,7 +266,6 @@ public class UserRepositoryImpl implements UserRepository {
         po.setPhone(domain.getPhone());
         po.setEmail(domain.getEmail());
         po.setAvatar(domain.getAvatar());
-        po.setEmployeeNo(domain.getEmployeeNo());
         po.setGender(domain.getGender());
         po.setBirthDate(domain.getBirthDate());
         po.setIdCard(domain.getIdCard());
@@ -306,7 +291,6 @@ public class UserRepositoryImpl implements UserRepository {
                 po.getPhone(),
                 po.getEmail(),
                 po.getAvatar(),
-                po.getEmployeeNo(),
                 po.getGender(),
                 po.getBirthDate(),
                 po.getIdCard(),

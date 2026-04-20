@@ -17,7 +17,7 @@ public class TeacherPlugin implements EntityTypePlugin {
 
     public List<FieldDefinition> getSystemFields() {
         return List.of(
-            // 工号 — 原 User.employeeNo 硬编码字段,现由 TeacherPlugin 声明,存 user_teacher.employee_no
+            // 工号 — 已于 V104 从 users 表删除, 现由 TeacherPlugin 声明, 存 user_teacher.employee_no
             FieldDefinition.of("employeeNo", "工号", "text", "基本信息", false,
                 Map.of("maxLength", 50)),
             FieldDefinition.of("subject", "学科", "select", "教学信息", false,
