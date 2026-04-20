@@ -24,11 +24,15 @@ public class CoreMenuPlugin implements MenuContributionPlugin {
             // ─── 首页 ───
             of("/dashboard", "首页", "home", 1),
 
-            // ─── 消息与事件 ───
-            of("/messaging", "消息与事件", "bell", 10).children(List.of(
-                of("/messaging/list", "我的消息", "inbox", 1),
-                of("/messaging/config", "消息配置", "settings-2", 2)
-                    .requiredPermissions(List.of("system:admin"))
+            // ─── 消息与事件 (路径与前端 router 对齐: /message) ───
+            of("/message", "消息与事件", "bell", 2).children(List.of(
+                of("/message/list", "消息通知", "inbox", 1),
+                of("/message/event-types", "事件类型", "settings-2", 2)
+                    .requiredPermissions(List.of("system:config:view")),
+                of("/message/triggers", "事件触发器", "zap", 3)
+                    .requiredPermissions(List.of("system:config:view")),
+                of("/message/subscriptions", "订阅与模板", "list-checks", 4)
+                    .requiredPermissions(List.of("system:config:view"))
             )),
 
             // ─── 关系管理 ───
@@ -37,6 +41,18 @@ public class CoreMenuPlugin implements MenuContributionPlugin {
                     .requiredPermissions(List.of("system:admin")),
                 of("/access/relation-types", "关系字典", "book", 2)
                     .requiredPermissions(List.of("system:admin"))
+            )),
+
+            // ─── 资产管理 (通用核心, 非行业特定) ───
+            of("/asset", "资产管理", "package", 22).children(List.of(
+                of("/asset/center",       "资产总览",   "layout-dashboard", 1).requiredPermissions(List.of("asset:manage:view")),
+                of("/asset/categories",   "资产类别",   "tags",             2).requiredPermissions(List.of("asset:manage:view")),
+                of("/asset/inventory",    "资产清册",   "clipboard-list",   3).requiredPermissions(List.of("asset:manage:view")),
+                of("/asset/borrows",      "借用归还",   "hand",             4).requiredPermissions(List.of("asset:manage:view")),
+                of("/asset/maintenance",  "维保工单",   "wrench",           5).requiredPermissions(List.of("asset:manage:view")),
+                of("/asset/approvals",    "审批流",     "file-check",       6).requiredPermissions(List.of("asset:approval:view")),
+                of("/asset/alerts",       "告警中心",   "bell-ring",        7).requiredPermissions(List.of("asset:manage:view")),
+                of("/asset/depreciation", "折旧核算",   "trending-down",    8).requiredPermissions(List.of("asset:manage:view"))
             )),
 
             // ─── 系统设置 ───
