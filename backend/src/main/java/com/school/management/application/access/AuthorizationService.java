@@ -50,10 +50,19 @@ public class AuthorizationService {
     /**
      * 关系推导索引: (targetType + targetRelation) → 所有可能派生出它的
      * (sourceRelation, fromType, Implied) 三元组。启动加载, 变更时 refresh。
+     * (保留用于历史语义兼容 — 非递归路径不再使用, 仍为 refresh 统一维护)
      */
     private final Map<String, List<ImpliedSource>> impliedIndex = new ConcurrentHashMap<>();
+    /**
+     * 正向推导索引: (sourceFromType + sourceRelation) → 所有"由它派生出"的
+     * (targetType, targetRelation, discoveryRule) 三元组。BFS 展开时使用。
+     */
+    private final Map<String, List<ImpliedTarget>> impliedOutgoing = new ConcurrentHashMap<>();
     /** discoveryRule code → 实现 */
     private final Map<String, RelationDiscoveryRule> discoveryByCode = new ConcurrentHashMap<>();
+
+    /** BFS 展开 implied 的最大深度 (防止恶意/错误声明造成的无限环) */
+    static final int MAX_IMPLIED_DEPTH = 5;
 
     @PostConstruct
     void bootImpliedCache() {
@@ -61,13 +70,14 @@ public class AuthorizationService {
             discoveryByCode.put(r.code(), r);
         }
         refreshImpliedCache();
-        log.info("[Authorization] implied relation cache ready — {} entries, {} discovery rules",
-            impliedIndex.size(), discoveryByCode.size());
+        log.info("[Authorization] implied relation cache ready — {} reverse entries, {} forward entries, {} discovery rules",
+            impliedIndex.size(), impliedOutgoing.size(), discoveryByCode.size());
     }
 
     /** 重新从 relation_types.implied_relations 加载索引 (DDL 变更后调用) */
     public void refreshImpliedCache() {
-        Map<String, List<ImpliedSource>> fresh = new HashMap<>();
+        Map<String, List<ImpliedSource>> freshReverse = new HashMap<>();
+        Map<String, List<ImpliedTarget>> freshForward = new HashMap<>();
         List<Map<String, Object>> rows = jdbcTemplate.queryForList(
             "SELECT relation_code, from_type, to_type, implied_relations FROM relation_types " +
             "WHERE is_enabled = 1 AND implied_relations IS NOT NULL");
@@ -87,17 +97,25 @@ public class AuthorizationService {
             String sourceRelation = (String) row.get("relation_code");
             String sourceToType = (String) row.get("to_type");
             for (Implied i : implied) {
-                String key = impliedKey(i.targetType(), i.relation());
-                fresh.computeIfAbsent(key, k -> new ArrayList<>())
+                String revKey = impliedKey(i.targetType(), i.relation());
+                freshReverse.computeIfAbsent(revKey, k -> new ArrayList<>())
                     .add(new ImpliedSource(fromType, sourceRelation, sourceToType, i));
+                // 正向索引: (sourceToType + sourceRelation) → 派生目标
+                // 注意: BFS 展开时是从"已拥有的 (resourceType, relation)" 出发找派生,
+                // 所以 key 是 sourceToType (resource 类型) + sourceRelation
+                String fwdKey = impliedKey(sourceToType, sourceRelation);
+                freshForward.computeIfAbsent(fwdKey, k -> new ArrayList<>())
+                    .add(new ImpliedTarget(i.targetType(), i.relation(), i.discoveryRule()));
             }
         }
         impliedIndex.clear();
-        impliedIndex.putAll(fresh);
+        impliedIndex.putAll(freshReverse);
+        impliedOutgoing.clear();
+        impliedOutgoing.putAll(freshForward);
     }
 
-    private static String impliedKey(String targetType, String relation) {
-        return targetType + "#" + relation;
+    private static String impliedKey(String typeOrResource, String relation) {
+        return typeOrResource + "#" + relation;
     }
 
     // ═══════════════════════════════════════════════════════════════
@@ -143,59 +161,94 @@ public class AuthorizationService {
     }
 
     /**
-     * 展开 implied: 对 target (resourceType, resourceId, relation) 查询,
-     * 是否存在某条 "subject - 上游关系 - 上游 resource" 能通过 discoveryRule
-     * 覆盖到本 resourceId。
+     * 展开 implied — 多层 BFS 递归版.
      *
-     * 算法 (MVP, 不做递归):
-     *  1. 从 impliedIndex 查所有能派生到 (resourceType + relation) 的 ImpliedSource
-     *  2. 对每个 source, 用 discoveryRule 的"逆向"能力检查 — MVP 实现是:
-     *     遍历用户所有 "sourceRelation -> sourceToType resource" 的直接关系,
-     *     对每条 resource 执行 discoveryRule.discover(), 看 resourceId 是否在返回列表里
-     *  3. 命中任一即返 true
+     * 思路 (Zanzibar 标准):
+     *  1. worklist 放 (resourceType, resourceId, relation) 三元组, 代表
+     *     "subject 对此 resource 有此 relation (直接或已展开得到)".
+     *  2. 初始化: 查 subject 所有直接关系作为起点.
+     *  3. 每轮取一个节点:
+     *     - 若匹配 target (resourceType, resourceId, relation) → 返 true.
+     *     - 否则查 impliedOutgoing 找派生规则, 通过 discoveryRule 展开得到一批新节点,
+     *       压入 worklist (depth+1).
+     *  4. visited set 防环, MAX_IMPLIED_DEPTH 防恶意死循环.
      */
     private boolean checkImplied(String subjectType, Long subjectId,
                                   String relation,
                                   String resourceType, Long resourceId,
                                   LocalDateTime at) {
-        List<ImpliedSource> sources = impliedIndex.get(impliedKey(resourceType, relation));
-        if (sources == null || sources.isEmpty()) return false;
+        if (impliedOutgoing.isEmpty()) return false;
 
-        for (ImpliedSource src : sources) {
-            // 只处理 subject_type 匹配的 source (派生关系的来源 subject_type == 当前 subjectType)
-            if (!src.fromType.equals(subjectType)) continue;
-            RelationDiscoveryRule rule = discoveryByCode.get(src.implied.discoveryRule());
-            if (rule == null) {
-                log.debug("[Authorization] implied 跳过 — unknown discoveryRule: {}",
-                    src.implied.discoveryRule());
+        // 1. 起点: subject 所有直接关系
+        List<Map<String, Object>> directRows = jdbcTemplate.queryForList(
+            "SELECT resource_type, resource_id, relation FROM access_relations " +
+            "WHERE subject_type = ? AND subject_id = ? " +
+            "  AND deleted = 0 " +
+            "  AND (valid_from IS NULL OR valid_from <= ?) " +
+            "  AND (valid_to IS NULL OR valid_to > ?)",
+            subjectType, subjectId, at, at);
+
+        Deque<WorkItem> work = new ArrayDeque<>(directRows.size() + 8);
+        Set<String> visited = new HashSet<>();
+        for (Map<String, Object> row : directRows) {
+            String rt = (String) row.get("resource_type");
+            Number rid = (Number) row.get("resource_id");
+            String rel = (String) row.get("relation");
+            if (rt == null || rid == null || rel == null) continue;
+            String key = rt + ":" + rid.longValue() + "#" + rel;
+            if (visited.add(key)) {
+                work.add(new WorkItem(rt, rid.longValue(), rel, 0));
+            }
+        }
+
+        // 2. BFS 展开
+        while (!work.isEmpty()) {
+            WorkItem cur = work.poll();
+            // 命中
+            if (cur.resourceType.equals(resourceType)
+                && cur.relation.equals(relation)
+                && cur.resourceId.equals(resourceId)) {
+                log.debug("[Authorization] implied 命中 (depth={}): {}:{} -> {}:{} {}",
+                    cur.depth, subjectType, subjectId, resourceType, resourceId, relation);
+                return true;
+            }
+            // 深度限制
+            if (cur.depth >= MAX_IMPLIED_DEPTH) {
+                log.warn("[Authorization] implied BFS 深度超限 ({}), subject={}:{} stop at {}:{} {}",
+                    MAX_IMPLIED_DEPTH, subjectType, subjectId, cur.resourceType, cur.resourceId, cur.relation);
                 continue;
             }
-            // 查用户所有 "sourceRelation -> sourceToType" 的直接关系 resource_id
-            List<Long> userUpstreamResources = jdbcTemplate.queryForList(
-                "SELECT DISTINCT resource_id FROM access_relations " +
-                "WHERE subject_type = ? AND subject_id = ? " +
-                "  AND relation = ? AND resource_type = ? " +
-                "  AND deleted = 0 " +
-                "  AND (valid_from IS NULL OR valid_from <= ?) " +
-                "  AND (valid_to IS NULL OR valid_to > ?)",
-                Long.class,
-                subjectType, subjectId, src.sourceRelation, src.sourceToType, at, at);
-            for (Long upstreamResourceId : userUpstreamResources) {
-                List<Long> discovered = rule.discover(src.sourceToType, upstreamResourceId);
-                if (discovered != null && discovered.contains(resourceId)) {
-                    log.debug("[Authorization] implied 命中: {}:{} via {} on {}:{} -> {}:{} {}",
-                        subjectType, subjectId, src.sourceRelation, src.sourceToType, upstreamResourceId,
-                        resourceType, resourceId, relation);
-                    return true;
+            // 展开派生
+            List<ImpliedTarget> derivations = impliedOutgoing.get(impliedKey(cur.resourceType, cur.relation));
+            if (derivations == null || derivations.isEmpty()) continue;
+            for (ImpliedTarget d : derivations) {
+                RelationDiscoveryRule rule = discoveryByCode.get(d.discoveryRule());
+                if (rule == null) {
+                    log.debug("[Authorization] implied 跳过 — unknown discoveryRule: {}", d.discoveryRule());
+                    continue;
+                }
+                List<Long> derivedIds = rule.discover(cur.resourceType, cur.resourceId);
+                if (derivedIds == null || derivedIds.isEmpty()) continue;
+                for (Long did : derivedIds) {
+                    String key = d.targetType() + ":" + did + "#" + d.relation();
+                    if (visited.add(key)) {
+                        work.add(new WorkItem(d.targetType(), did, d.relation(), cur.depth + 1));
+                    }
                 }
             }
         }
         return false;
     }
 
-    /** 内部类: 一条推导规则的源端信息 */
+    /** BFS 节点 */
+    private record WorkItem(String resourceType, Long resourceId, String relation, int depth) {}
+
+    /** 反向索引: 一条推导规则的源端信息 (targetType+relation → sources) */
     private record ImpliedSource(String fromType, String sourceRelation,
                                   String sourceToType, Implied implied) {}
+
+    /** 正向索引: 从 (sourceToType + sourceRelation) 派生得到的 target 描述 */
+    private record ImpliedTarget(String targetType, String relation, String discoveryRule) {}
 
     /** 批量判定(消息扇出等批处理场景) */
     public Map<String, Boolean> batchCheck(List<CheckRequest> requests) {
