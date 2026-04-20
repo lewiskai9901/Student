@@ -1,5 +1,6 @@
 package com.school.management.application.organization;
 
+import com.school.management.application.access.AuthorizationService;
 import com.school.management.application.organization.query.OrgMemberDTO;
 import com.school.management.application.organization.query.OrgStatisticsDTO;
 import com.school.management.domain.access.model.entity.AccessRelation;
@@ -16,6 +17,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -31,6 +33,7 @@ public class OrgMemberService {
     private final UserDomainMapper userDomainMapper;
     private final OrgUnitRepository orgUnitRepository;
     private final AccessRelationRepository accessRelationRepository;
+    private final AuthorizationService authorizationService;
     private final PolicyRegistry policyRegistry;
 
     /**
@@ -119,7 +122,11 @@ public class OrgMemberService {
         userDomainMapper.setPrimaryOrgUnitId(userId, orgUnitId);
 
         // Create access relation (user -> org_unit, member)
-        if (!accessRelationRepository.exists("org_unit", orgUnitId, "member", "user", userId)) {
+        // W4.5: 成员判定走 AuthorizationService.checkDirect, 让授权查询集中,
+        // 不走 implied 展开 (这里要的是真实 member, 派生 viewer 不算)
+        boolean alreadyMember = authorizationService.checkDirect(
+                "user", userId, "member", "org_unit", orgUnitId, LocalDateTime.now());
+        if (!alreadyMember) {
             AccessRelation relation = AccessRelation.builder()
                     .resourceType("org_unit")
                     .resourceId(orgUnitId)
