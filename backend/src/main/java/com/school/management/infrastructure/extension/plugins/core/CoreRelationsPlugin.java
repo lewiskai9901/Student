@@ -1,6 +1,7 @@
 package com.school.management.infrastructure.extension.plugins.core;
 
 import com.school.management.infrastructure.extension.RelationTypePlugin;
+import com.school.management.infrastructure.extension.RelationTypePlugin.RelationTypeDef.Implied;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
@@ -37,8 +38,13 @@ public class CoreRelationsPlugin implements RelationTypePlugin {
             // 管理关系 (place) — 负责人单一,管理者可多人
             of("admin", "user", "place", "场所负责人",
                "OWNERSHIP", "场所的主负责人").withMaxPerResource(1),
+            // W4.4 reference demo: 场所管理者 → 自动对场所内所有 occupant(user) 有 viewer 权限
+            // 语义: "能管场所" 意味着 "能看到场所里的人",派生规则走 OCCUPANTS_OF_PLACE discovery
             of("manages", "user", "place", "场所管理者",
-               "OWNERSHIP", "非主责管理者 (保洁/物业等)"),
+               "OWNERSHIP", "非主责管理者 (保洁/物业等)")
+               .withImplied(List.of(
+                   new Implied("user", "viewer", Implied.OCCUPANTS_OF_PLACE)
+               )),
 
             // 归属 — 一个场所只能归属一个主组织
             of("belongs_to", "place", "org_unit", "归属",

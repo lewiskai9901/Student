@@ -113,6 +113,53 @@ class AuthorizationServiceImpliedTest {
         assertThat(svc.check("user", 1L, "viewer", "user", 2L)).isFalse();
     }
 
+    /**
+     * W4.4 reference demo: CoreRelationsPlugin 的 manages(user→place) 声明了
+     * implied viewer(user→user) via OCCUPANTS_OF_PLACE。
+     *
+     * 场景: userA 是 place=101 的 manages, userB 是 place=101 的 occupies
+     *  → check(userA viewer userB) 通过 implied 推导命中, 返回 true。
+     *
+     * 本测试 stub JdbcTemplate/discovery, 验证 CoreRelationsPlugin 声明
+     * 能被 AuthorizationService 正确展开 (不依赖真实 DB)。
+     */
+    @Test
+    void check_managesImpliesViewerOverOccupants_demoFromCorePlugin() {
+        // 1. checkDirect 不命中 (userA 对 userB 没直接 viewer 关系)
+        when(jdbc.queryForObject(
+            ArgumentMatchers.contains("SELECT COUNT(1) FROM access_relations"),
+            eq(Integer.class), any(Object[].class)))
+            .thenReturn(0);
+
+        // 2. impliedIndex 从 relation_types 加载到 manages(user→place) 的 implied
+        //    (与 CoreRelationsPlugin.withImplied(...) 声明对齐)
+        Map<String, Object> row = Map.of(
+            "relation_code", "manages",
+            "from_type", "user",
+            "to_type", "place",
+            "implied_relations",
+            "[{\"targetType\":\"user\",\"relation\":\"viewer\",\"discoveryRule\":\"OCCUPANTS_OF_PLACE\"}]"
+        );
+        when(jdbc.queryForList(
+            ArgumentMatchers.contains("WHERE is_enabled = 1 AND implied_relations IS NOT NULL")))
+            .thenReturn(List.of(row));
+
+        // 3. userA 对 place 123 有 manages 关系 → lookup 返回 [123]
+        when(jdbc.queryForList(
+            ArgumentMatchers.contains("SELECT DISTINCT resource_id FROM access_relations"),
+            eq(Long.class), any(Object[].class)))
+            .thenReturn(List.of(123L));
+
+        // 4. FakeOccupantsDiscovery: place 123 → occupants [777, 888] (userB=777)
+        svc.bootImpliedCache();
+
+        // userA(42) managed place 123, userB(777) occupies 123 → viewer 推导命中
+        assertThat(svc.check("user", 42L, "viewer", "user", 777L)).isTrue();
+
+        // 反面: 随机 user 999 不在 occupants → 不命中
+        assertThat(svc.check("user", 42L, "viewer", "user", 999L)).isFalse();
+    }
+
     @Test
     void checkDirect_bypassesImpliedExpansion() {
         when(jdbc.queryForObject(
