@@ -71,29 +71,35 @@ public class RelationTypePluginRegistrar extends AbstractPluginRegistrar<Relatio
             maxBySubtypeJson = objectMapper.writeValueAsString(def.maxBySubtype());
         }
 
+        String impliedJson = null;
+        if (def.impliedRelations() != null && !def.impliedRelations().isEmpty()) {
+            impliedJson = objectMapper.writeValueAsString(def.impliedRelations());
+        }
+
         String origin = packageRegistrar.resolveOriginBySource(plugin.getSourceName());
         if (exists == null || exists == 0) {
             jdbc.update(
                 "INSERT INTO relation_types " +
                 "(relation_code, from_type, to_type, relation_name, is_transitive, category, " +
                 " tier, registered_by, description, capacity_bound, max_per_resource, max_by_subtype, " +
-                " industry, plugin_class, origin, is_enabled, tenant_id, created_at) " +
-                "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, 1, NOW())",
+                " implied_relations, industry, plugin_class, origin, is_enabled, tenant_id, created_at) " +
+                "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, 1, NOW())",
                 def.relationCode(), def.fromType(), def.toType(), def.relationName(),
                 def.isTransitive() ? 1 : 0, def.category(),
                 plugin.getTier(), plugin.getSourceName(), def.description(),
                 def.capacityBound() ? 1 : 0, def.maxPerResource(), maxBySubtypeJson,
-                industry, pluginClass, origin);
+                impliedJson, industry, pluginClass, origin);
             return UpsertResult.CREATED;
         }
         jdbc.update(
             "UPDATE relation_types SET " +
             "relation_name=?, is_transitive=?, category=?, tier=?, registered_by=?, description=?, " +
-            "capacity_bound=?, max_per_resource=?, max_by_subtype=?, industry=?, plugin_class=?, origin=?, is_enabled=1 " +
+            "capacity_bound=?, max_per_resource=?, max_by_subtype=?, implied_relations=?, " +
+            "industry=?, plugin_class=?, origin=?, is_enabled=1 " +
             "WHERE relation_code=? AND from_type=? AND to_type=? AND tenant_id=1",
             def.relationName(), def.isTransitive() ? 1 : 0, def.category(),
             plugin.getTier(), plugin.getSourceName(), def.description(),
-            def.capacityBound() ? 1 : 0, def.maxPerResource(), maxBySubtypeJson,
+            def.capacityBound() ? 1 : 0, def.maxPerResource(), maxBySubtypeJson, impliedJson,
             industry, pluginClass, origin,
             def.relationCode(), def.fromType(), def.toType());
         return UpsertResult.UPDATED;

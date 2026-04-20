@@ -1,6 +1,9 @@
 package com.school.management.application.access;
 
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.school.management.infrastructure.extension.RelationTypePlugin.RelationTypeDef.Implied;
+import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.ApplicationEventPublisher;
@@ -10,6 +13,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * 统一授权服务 (Zanzibar 风格 6 API)
@@ -41,23 +45,90 @@ public class AuthorizationService {
     private final JdbcTemplate jdbcTemplate;
     private final ApplicationEventPublisher eventPublisher;
     private final ObjectMapper objectMapper;
+    private final List<RelationDiscoveryRule> discoveryRules;
+
+    /**
+     * 关系推导索引: (targetType + targetRelation) → 所有可能派生出它的
+     * (sourceRelation, fromType, Implied) 三元组。启动加载, 变更时 refresh。
+     */
+    private final Map<String, List<ImpliedSource>> impliedIndex = new ConcurrentHashMap<>();
+    /** discoveryRule code → 实现 */
+    private final Map<String, RelationDiscoveryRule> discoveryByCode = new ConcurrentHashMap<>();
+
+    @PostConstruct
+    void bootImpliedCache() {
+        for (RelationDiscoveryRule r : discoveryRules) {
+            discoveryByCode.put(r.code(), r);
+        }
+        refreshImpliedCache();
+        log.info("[Authorization] implied relation cache ready — {} entries, {} discovery rules",
+            impliedIndex.size(), discoveryByCode.size());
+    }
+
+    /** 重新从 relation_types.implied_relations 加载索引 (DDL 变更后调用) */
+    public void refreshImpliedCache() {
+        Map<String, List<ImpliedSource>> fresh = new HashMap<>();
+        List<Map<String, Object>> rows = jdbcTemplate.queryForList(
+            "SELECT relation_code, from_type, to_type, implied_relations FROM relation_types " +
+            "WHERE is_enabled = 1 AND implied_relations IS NOT NULL");
+        TypeReference<List<Implied>> typeRef = new TypeReference<>() {};
+        for (Map<String, Object> row : rows) {
+            String impliedJson = (String) row.get("implied_relations");
+            if (impliedJson == null || impliedJson.isBlank()) continue;
+            List<Implied> implied;
+            try {
+                implied = objectMapper.readValue(impliedJson, typeRef);
+            } catch (Exception e) {
+                log.warn("[Authorization] skip malformed implied_relations for {}: {}",
+                    row.get("relation_code"), e.getMessage());
+                continue;
+            }
+            String fromType = (String) row.get("from_type");
+            String sourceRelation = (String) row.get("relation_code");
+            String sourceToType = (String) row.get("to_type");
+            for (Implied i : implied) {
+                String key = impliedKey(i.targetType(), i.relation());
+                fresh.computeIfAbsent(key, k -> new ArrayList<>())
+                    .add(new ImpliedSource(fromType, sourceRelation, sourceToType, i));
+            }
+        }
+        impliedIndex.clear();
+        impliedIndex.putAll(fresh);
+    }
+
+    private static String impliedKey(String targetType, String relation) {
+        return targetType + "#" + relation;
+    }
 
     // ═══════════════════════════════════════════════════════════════
     // check / checkAt
     // ═══════════════════════════════════════════════════════════════
 
-    /** 当前时间点:某主体对某资源是否有某关系? */
+    /** 当前时间点:某主体对某资源是否有某关系? (包含 implied 推导) */
     public boolean check(String subjectType, Long subjectId,
                          String relation,
                          String resourceType, Long resourceId) {
         return checkAt(subjectType, subjectId, relation, resourceType, resourceId, LocalDateTime.now());
     }
 
-    /** 指定时间点:某主体对某资源是否有某关系? */
+    /** 指定时间点:某主体对某资源是否有某关系? (包含 implied 推导) */
     public boolean checkAt(String subjectType, Long subjectId,
                            String relation,
                            String resourceType, Long resourceId,
                            LocalDateTime at) {
+        // 1. 直接关系
+        if (checkDirect(subjectType, subjectId, relation, resourceType, resourceId, at)) {
+            return true;
+        }
+        // 2. 展开 implied: 是否有任何"上游关系"能推导到 (resourceType, resourceId, relation) ?
+        return checkImplied(subjectType, subjectId, relation, resourceType, resourceId, at);
+    }
+
+    /** 仅查直接写在 access_relations 表的关系 (不展开推导) */
+    public boolean checkDirect(String subjectType, Long subjectId,
+                               String relation,
+                               String resourceType, Long resourceId,
+                               LocalDateTime at) {
         Integer cnt = jdbcTemplate.queryForObject(
             "SELECT COUNT(1) FROM access_relations " +
             "WHERE resource_type = ? AND resource_id = ? " +
@@ -70,6 +141,61 @@ public class AuthorizationService {
             resourceType, resourceId, relation, subjectType, subjectId, at, at);
         return cnt != null && cnt > 0;
     }
+
+    /**
+     * 展开 implied: 对 target (resourceType, resourceId, relation) 查询,
+     * 是否存在某条 "subject - 上游关系 - 上游 resource" 能通过 discoveryRule
+     * 覆盖到本 resourceId。
+     *
+     * 算法 (MVP, 不做递归):
+     *  1. 从 impliedIndex 查所有能派生到 (resourceType + relation) 的 ImpliedSource
+     *  2. 对每个 source, 用 discoveryRule 的"逆向"能力检查 — MVP 实现是:
+     *     遍历用户所有 "sourceRelation -> sourceToType resource" 的直接关系,
+     *     对每条 resource 执行 discoveryRule.discover(), 看 resourceId 是否在返回列表里
+     *  3. 命中任一即返 true
+     */
+    private boolean checkImplied(String subjectType, Long subjectId,
+                                  String relation,
+                                  String resourceType, Long resourceId,
+                                  LocalDateTime at) {
+        List<ImpliedSource> sources = impliedIndex.get(impliedKey(resourceType, relation));
+        if (sources == null || sources.isEmpty()) return false;
+
+        for (ImpliedSource src : sources) {
+            // 只处理 subject_type 匹配的 source (派生关系的来源 subject_type == 当前 subjectType)
+            if (!src.fromType.equals(subjectType)) continue;
+            RelationDiscoveryRule rule = discoveryByCode.get(src.implied.discoveryRule());
+            if (rule == null) {
+                log.debug("[Authorization] implied 跳过 — unknown discoveryRule: {}",
+                    src.implied.discoveryRule());
+                continue;
+            }
+            // 查用户所有 "sourceRelation -> sourceToType" 的直接关系 resource_id
+            List<Long> userUpstreamResources = jdbcTemplate.queryForList(
+                "SELECT DISTINCT resource_id FROM access_relations " +
+                "WHERE subject_type = ? AND subject_id = ? " +
+                "  AND relation = ? AND resource_type = ? " +
+                "  AND deleted = 0 " +
+                "  AND (valid_from IS NULL OR valid_from <= ?) " +
+                "  AND (valid_to IS NULL OR valid_to > ?)",
+                Long.class,
+                subjectType, subjectId, src.sourceRelation, src.sourceToType, at, at);
+            for (Long upstreamResourceId : userUpstreamResources) {
+                List<Long> discovered = rule.discover(src.sourceToType, upstreamResourceId);
+                if (discovered != null && discovered.contains(resourceId)) {
+                    log.debug("[Authorization] implied 命中: {}:{} via {} on {}:{} -> {}:{} {}",
+                        subjectType, subjectId, src.sourceRelation, src.sourceToType, upstreamResourceId,
+                        resourceType, resourceId, relation);
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    /** 内部类: 一条推导规则的源端信息 */
+    private record ImpliedSource(String fromType, String sourceRelation,
+                                  String sourceToType, Implied implied) {}
 
     /** 批量判定(消息扇出等批处理场景) */
     public Map<String, Boolean> batchCheck(List<CheckRequest> requests) {
