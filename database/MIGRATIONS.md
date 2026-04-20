@@ -115,3 +115,12 @@ Flyway config (application.yml) 已支持 `locations` 多路径, 之后添加 `c
 ## 8. 历史教训
 
 - **V97.0.0__event_trigger_system.sql 多次就地修订** — 同一个文件反复改 `INSERT applicable_subjects 字符串` 的格式, 造成 Flyway checksum 不一致. 教训: **已 release 的 migration 不改**, 新开 V{N+1} 增量改.
+
+## 9. Seed 数据拆分 (2026-04-20, W2.3)
+
+`database/init/task_basic_permissions.sql` 原混合 core (`system:*`) 与 EDU (`student:*` / `quantification:*`) 权限绑定, 违反通用核心 + 插件架构. 已拆分:
+
+- `database/init/task_basic_permissions.sql` — 只保留 core 绑定 (role 2/3/4 的 `system:*`)
+- `database/init/plugins/education/edu_basic_permissions.sql` — EDU 启用时执行 (role 2/3/4/5 的 `student:*` / `quantification:*`)
+
+role 5 (班主任) 所有基础权限均为 EDU 专属, core seed 中整块 INSERT 被移除. 详见 `database/init/README.md`.
