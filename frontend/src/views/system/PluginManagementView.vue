@@ -672,7 +672,7 @@ const roleStats = computed(() => ({
 // 优先使用新 overview API 的权威行业包数据;失败则回退到前端聚合
 // Phase 1: 优先用 origin 字段解析 (PLUGIN:CORE@1.0.0 / TENANT:CUSTOM#<id>)
 // 向下兼容: 回退到 industry / pluginClass (旧数据)
-export function parseOrigin(origin?: string): { kind: 'PLUGIN'|'TENANT'|'UNKNOWN', code: string, version?: string } {
+function parseOrigin(origin?: string): { kind: 'PLUGIN'|'TENANT'|'UNKNOWN', code: string, version?: string } {
   if (!origin) return { kind: 'UNKNOWN', code: '' }
   const m1 = origin.match(/^PLUGIN:([A-Z_]+)@([\w\.\-]+)(?::.*)?$/)
   if (m1) return { kind: 'PLUGIN', code: m1[1], version: m1[2] }
