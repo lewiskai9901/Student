@@ -34,6 +34,7 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import { orgUnitApi } from '@/api/organization'
+import { EduOrgTypes } from '@/types/plugins/education-types'
 
 const props = defineProps<{ semesterId?: number | string }>()
 
@@ -68,14 +69,14 @@ async function loadTree() {
 }
 
 function collectClassIds(node: any): (number | string)[] {
-  if (node.unitType === 'CLASS') return [node.id]
+  if (node.unitType === EduOrgTypes.CLASS) return [node.id]
   if (!node.children) return []
   return node.children.flatMap((c: any) => collectClassIds(c))
 }
 
 function selectNode(node: any, type: string) {
   selectedId.value = node.id
-  const classIds = type === 'CLASS' ? [node.id] : collectClassIds(node)
+  const classIds = type === EduOrgTypes.CLASS ? [node.id] : collectClassIds(node)
   emit('select', { type, id: node.id, name: node.unitName, classIds })
 }
 

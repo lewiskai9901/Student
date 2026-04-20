@@ -222,6 +222,7 @@ import { courseApi, curriculumPlanApi } from '@/api/academic'
 import { schoolClassApi } from '@/api/organization'
 import type { SemesterOffering, Course, CurriculumPlan } from '@/types/teaching'
 import type { SchoolClass } from '@/types/organization'
+import { EduOrgTypes } from '@/types/plugins/education-types'
 
 const props = defineProps<{
   semesterId: number | string | null
@@ -271,11 +272,11 @@ const importForm = ref({
 const filteredOfferings = computed(() => {
   const org = props.selectedOrg
   if (!org?.id || !org.type) return offerings.value
-  if (org.type === 'GRADE') {
+  if (org.type === EduOrgTypes.GRADE) {
     // org.name 类似 "2024级"
     return offerings.value.filter(o => o.applicableGrade === org.name)
   }
-  if (org.type === 'CLASS') {
+  if (org.type === EduOrgTypes.CLASS) {
     // 从班级名提取年级，如 "经济2024-1班" → "2024级"
     const m = org.name?.match(/(\d{4})/)
     if (m) {
