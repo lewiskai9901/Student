@@ -84,3 +84,11 @@ backend/_disabled_sources/
 backend/temp_disabled/
 .xhs-chrome-data/
 .github/
+
+# 自动生成 (unplugin-auto-import / unplugin-vue-components)
+frontend/auto-imports.d.ts
+frontend/components.d.ts
+frontend/.eslintrc-auto-import.json
+
+# Claude Code 运行时状态
+.claude/scheduled_tasks.lock
