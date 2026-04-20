@@ -52,13 +52,42 @@ public class DataPermissionApplicationService {
     }
 
     /**
-     * 获取所有数据范围类型
+     * 获取所有数据范围类型.
+     *
+     * 返回: core hardcoded 5 种 (source="CORE") + data_scope_dims 表里 is_enabled=1 的插件维度
+     * (source="PLUGIN:<domainCode>", 如 PLUGIN:education 的 BY_MAJOR/BY_GRADE/BY_CLASS).
+     *
+     * ScopeTypeDTO 新增 source 字段, 前端 Vue 对未知字段宽容, 不会 break 现有调用方.
      */
     public List<ScopeTypeDTO> getAllScopeTypes() {
-        return Arrays.stream(DataScope.values())
+        List<ScopeTypeDTO> hardcoded = Arrays.stream(DataScope.values())
                 .sorted(Comparator.comparingInt(DataScope::getLevel).reversed())
-                .map(s -> new ScopeTypeDTO(s.getCode(), s.getDisplayName(), s.getDescription()))
+                .map(s -> new ScopeTypeDTO(s.getCode(), s.getDisplayName(), s.getDescription(), "CORE"))
                 .collect(Collectors.toList());
+
+        List<ScopeTypeDTO> dynamic;
+        try {
+            dynamic = jdbcTemplate.query(
+                "SELECT dim_code, dim_name, description, domain_code " +
+                "FROM data_scope_dims " +
+                "WHERE is_enabled = 1 " +
+                "ORDER BY dim_code",
+                (rs, i) -> new ScopeTypeDTO(
+                    rs.getString("dim_code"),
+                    rs.getString("dim_name"),
+                    rs.getString("description"),
+                    "PLUGIN:" + Optional.ofNullable(rs.getString("domain_code")).orElse("UNKNOWN")
+                ));
+        } catch (Exception e) {
+            // 表不存在 / 查询失败 -> 只返 core, 不 break API
+            log.warn("[DataPermissionApplicationService] failed to query data_scope_dims: {}", e.getMessage());
+            dynamic = Collections.emptyList();
+        }
+
+        List<ScopeTypeDTO> combined = new ArrayList<>(hardcoded.size() + dynamic.size());
+        combined.addAll(hardcoded);
+        combined.addAll(dynamic);
+        return combined;
     }
 
     /**
@@ -212,10 +241,17 @@ public class DataPermissionApplicationService {
 
     @lombok.Data
     @lombok.AllArgsConstructor
+    @lombok.NoArgsConstructor
     public static class ScopeTypeDTO {
         private String code;
         private String name;
         private String description;
+        /** 来源标识: "CORE" = hardcoded 5 种; "PLUGIN:<domainCode>" = 插件贡献维度 */
+        private String source;
+
+        public ScopeTypeDTO(String code, String name, String description) {
+            this(code, name, description, "CORE");
+        }
     }
 
     @lombok.Data

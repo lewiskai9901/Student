@@ -46,6 +46,10 @@ public class DataPermissionInterceptor implements Interceptor {
     @org.springframework.context.annotation.Lazy
     private DataPermissionPolicyService dataPermissionPolicyService;
 
+    @Autowired
+    @org.springframework.context.annotation.Lazy
+    private PluginDataScopeRouter pluginDataScopeRouter;
+
     @Override
     public Object intercept(Invocation invocation) throws Throwable {
         if (!UserContextHolder.isDataPermissionEnabled()) {
@@ -160,10 +164,30 @@ public class DataPermissionInterceptor implements Interceptor {
         int globalParamIdx = 0;
 
         for (UserContext.ScopedRoleInfo sr : scopedRoles) {
-            // Get this role's data permission for the module
-            DataScope dataScope = dataPermissionPolicyService.getScopeForRole(
+            // Get this role's raw scope code (could be core enum OR plugin dim code like BY_MAJOR)
+            String rawScopeCode = dataPermissionPolicyService.getScopeCodeForRole(
                     tenantId, sr.getRoleId(), moduleCode);
 
+            DataScope coreScope = DataScope.fromCodeStrict(rawScopeCode);
+
+            // Plugin dim path: rawScopeCode is non-null but not a core enum
+            if (rawScopeCode != null && coreScope == null) {
+                String resourceType = annotation.resourceType();
+                if (resourceType.isEmpty() && moduleConfig.getResourceType() != null) {
+                    resourceType = moduleConfig.getResourceType();
+                }
+                ParameterizedCondition pluginCond = buildPluginDimCondition(
+                        rawScopeCode, annotation, resourceType, userContext, globalParamIdx);
+                if (pluginCond != null && !pluginCond.sql.isEmpty()) {
+                    roleSqls.add(pluginCond.sql);
+                    combinedCond.params.addAll(pluginCond.params);
+                    globalParamIdx += pluginCond.params.size();
+                }
+                continue;
+            }
+
+            // Core path: rawScopeCode is null (unconfigured) OR a core enum
+            DataScope dataScope = coreScope;
             if (dataScope == null) {
                 // No data permission configured for this role+module → default SELF
                 dataScope = DataScope.SELF;
@@ -211,6 +235,51 @@ public class DataPermissionInterceptor implements Interceptor {
         }
 
         return combinedCond;
+    }
+
+    /**
+     * Build condition for a plugin-contributed data scope dimension (e.g. BY_MAJOR).
+     *
+     * Routes to {@link PluginDataScopeRouter} which looks up data_scope_dims.resolver_type
+     * and invokes the resolver's resolve(userId, resourceType).
+     *
+     * Return semantics:
+     *   null from router       → degrade to SELF (safe: creator filter)
+     *   empty list from router → deny all ("1 = 0")
+     *   non-empty list         → {alias}id IN (?, ?, ...)
+     */
+    private ParameterizedCondition buildPluginDimCondition(
+            String dimCode, DataPermission annotation, String resourceType,
+            UserContext userContext, int paramOffset) {
+
+        String alias = annotation.tableAlias().isEmpty() ? "" : sanitizeIdentifier(annotation.tableAlias()) + ".";
+        ParameterizedCondition cond = new ParameterizedCondition();
+
+        List<Long> ids = pluginDataScopeRouter.resolve(dimCode, userContext.getUserId(), resourceType);
+
+        if (ids == null) {
+            // Dim not found or resolver unavailable → safe degrade to SELF
+            log.warn("[DataPermission] plugin dim '{}' unavailable, degrading to SELF", dimCode);
+            String creatorField = sanitizeIdentifier(
+                    annotation.creatorField() == null || annotation.creatorField().isEmpty()
+                            ? "created_by" : annotation.creatorField());
+            cond.sql = alias + creatorField + " = ?";
+            cond.addParam("_dp_pluginSelf_" + paramOffset, userContext.getUserId(),
+                    Long.class, JdbcType.BIGINT);
+            return cond;
+        }
+
+        if (ids.isEmpty()) {
+            // Resolver explicitly says "no access"
+            cond.sql = "1 = 0";
+            return cond;
+        }
+
+        // Numeric IDs are safe to inline (no injection surface). Keeps the param
+        // mapping list simple given that id counts can be large.
+        String csv = ids.stream().map(String::valueOf).collect(Collectors.joining(","));
+        cond.sql = alias + "id IN (" + csv + ")";
+        return cond;
     }
 
     /**

@@ -69,6 +69,23 @@ public enum DataScope {
     }
 
     /**
+     * 按 code 严格匹配 hardcoded enum, 找不到返回 null (不 fallback).
+     *
+     * 用于区分 core 的 5 种 hardcoded 维度 vs 插件贡献的动态维度(如 BY_MAJOR).
+     * 调用方 (如 DataPermissionInterceptor) 拿到 null 后应路由到 PluginDataScopeRouter
+     * 解析 data_scope_dims 表里的插件维度.
+     */
+    public static DataScope fromCodeStrict(String code) {
+        if (code == null) return null;
+        for (DataScope scope : values()) {
+            if (scope.code.equalsIgnoreCase(code)) {
+                return scope;
+            }
+        }
+        return null;
+    }
+
+    /**
      * 比较两个范围的优先级，返回更高优先级的范围
      * 用于多角色权限合并时取最大范围
      */

@@ -95,11 +95,11 @@ public class RoleDataPermissionController {
     }
 
     @GetMapping("/data-permissions/scopes")
-    @Operation(summary = "获取所有数据范围选项")
+    @Operation(summary = "获取所有数据范围选项 (合并 CORE 5 种 + 插件贡献维度)")
     @CasbinAccess(resource = "system:role", action = "view")
     public Result<List<DataScopeOptionDTO>> getScopes() {
         return Result.success(dataPermissionService.getAllScopeTypes().stream()
-                .map(s -> new DataScopeOptionDTO(s.getCode(), s.getName(), s.getDescription()))
+                .map(s -> new DataScopeOptionDTO(s.getCode(), s.getName(), s.getDescription(), s.getSource()))
                 .collect(java.util.stream.Collectors.toList()));
     }
 
@@ -128,9 +128,16 @@ public class RoleDataPermissionController {
 
     @lombok.Data
     @lombok.AllArgsConstructor
+    @lombok.NoArgsConstructor
     public static class DataScopeOptionDTO {
         private String scopeCode;
         private String scopeName;
         private String description;
+        /** "CORE" for hardcoded 5 enums, "PLUGIN:<domain>" for plugin-contributed dims */
+        private String source;
+
+        public DataScopeOptionDTO(String scopeCode, String scopeName, String description) {
+            this(scopeCode, scopeName, description, "CORE");
+        }
     }
 }

@@ -162,23 +162,33 @@ public class DataPermissionPolicyService {
         return permissions;
     }
 
-    /** 获取单角色在某资源上的 DataScope */
+    /** 获取单角色在某资源上的 DataScope (仅 core hardcoded 5 种). 插件维度返回 null. */
     public DataScope getScopeForRole(Long tenantId, Long roleId, String moduleCode) {
+        String scopeCode = getScopeCodeForRole(tenantId, roleId, moduleCode);
+        if (scopeCode == null) return null;
+        DataScope core = DataScope.fromCodeStrict(scopeCode);
+        if (core == null) {
+            // 插件维度, 由 interceptor 走 PluginDataScopeRouter 路由
+            log.debug("scope_type '{}' is a plugin dim for role {} resource {}", scopeCode, roleId, moduleCode);
+        }
+        return core;
+    }
+
+    /**
+     * 获取单角色在某资源上的原始 scope code 字符串.
+     *
+     * 相比 {@link #getScopeForRole} 这个不做 enum 转换, 调用方可自行判断是否是 core 维度
+     * (DataScope.fromCodeStrict) 还是插件维度(走 PluginDataScopeRouter).
+     */
+    public String getScopeCodeForRole(Long tenantId, Long roleId, String moduleCode) {
         String sql = "SELECT scope_type FROM role_data_scopes " +
                 "WHERE tenant_id = ? AND role_id = ? AND resource_code = ? AND deleted = 0 LIMIT 1";
         try {
-            String scopeCode = jdbcTemplate.queryForObject(sql, String.class, tenantId, roleId, moduleCode);
-            if (scopeCode != null) {
-                try {
-                    return DataScope.valueOf(scopeCode);
-                } catch (IllegalArgumentException e) {
-                    log.warn("Unknown scope_type '{}' for role {} resource {}", scopeCode, roleId, moduleCode);
-                }
-            }
+            return jdbcTemplate.queryForObject(sql, String.class, tenantId, roleId, moduleCode);
         } catch (Exception e) {
             // No config found → return null
+            return null;
         }
-        return null;
     }
 
     @CacheEvict(value = CACHE_NAME, allEntries = true)
