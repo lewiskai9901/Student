@@ -21,6 +21,7 @@ public sealed interface Contribution permits
     Contribution.RoleContribution,
     Contribution.MenuContribution,
     Contribution.DataScopeContribution,
+    Contribution.RouteContribution,
     Contribution.DomainContribution {
 
     /** 跨 Contribution 唯一标识, 用于冲突检测/日志 */
@@ -73,6 +74,30 @@ public sealed interface Contribution permits
     record DataScopeContribution(String domainCode,
                                   DataScopePlugin.DimensionDef def) implements Contribution {
         @Override public String uniqueKey() { return "data-scope:" + def.code(); }
+    }
+
+    /**
+     * 前端路由贡献 (Phase 7.1)
+     *
+     * 声明插件向前端提供的 SPA 路由元数据. 前端 bootstrap 拉 overview 时
+     * 会读这批元数据, 和 frontend/src/router/plugins/{code}.ts 里的静态 routes
+     * 互补: SPI 用于 admin 审计/UI 可视化, 静态 routes 用于懒加载组件.
+     *
+     * 当前 ContributionDispatcher 只登记不下发到前端. Phase 8 可加 endpoint
+     * /api/plugin-platform/routes 让前端动态构造.
+     *
+     * @param industryCode 所属行业 (EDU/HEALTH/...), 供前端 router/plugins/loader 查找
+     * @param routePath    顶级路由路径 (如 /patient, /student), 与前端一致
+     * @param title        导航显示名
+     * @param requiresAuth 是否需要登录 (默认 true)
+     */
+    record RouteContribution(String industryCode, String routePath, String title,
+                              boolean requiresAuth) implements Contribution {
+        @Override public String uniqueKey() { return "route:" + industryCode + ":" + routePath; }
+
+        public static RouteContribution of(String industry, String path, String title) {
+            return new RouteContribution(industry, path, title, true);
+        }
     }
 
     /**

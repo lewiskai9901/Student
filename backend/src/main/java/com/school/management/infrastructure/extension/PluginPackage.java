@@ -44,4 +44,39 @@ public interface PluginPackage extends PluginManifest {
     default Stream<Contribution> contribute() {
         return Stream.empty();
     }
+
+    /**
+     * Phase 7.5: 声明本插件接受的运行时配置项.
+     *
+     * 默认返回空 schema — 插件不接受任何配置. 若需要让管理员配置
+     * (如 HEALTH 的"默认病区前缀"、"自动床位分配"开关), 覆盖此方法.
+     *
+     * 读配置走 {@code TenantPluginService.getConfig()}.
+     */
+    default PluginConfigSchema configSchema() {
+        return PluginConfigSchema.empty();
+    }
+
+    /**
+     * Phase 7.4 skeleton: 声明本插件期望的 DB schema 版本.
+     *
+     * 默认 0 — 无 schema. 插件声明自己 schema 版本后, 启动时可以:
+     * - 检查对应 database/plugins/{industryCode}/V*.sql migrations 是否执行
+     * - 禁用插件前写入 "disabled" 标记, 后续启用时跳过冲突 migrations
+     *
+     * 当前仅 SPI 骨架, Flyway 实际布线留 Phase 8+.
+     */
+    default int schemaVersion() {
+        return 0;
+    }
+
+    /**
+     * Phase 7.4 skeleton: 插件 schema migrations 所在 classpath 位置.
+     *
+     * 约定: {@code classpath:db/migration/plugins/{industryCode}/}.
+     * 返回 null 表示此插件无独立 migrations.
+     */
+    default String schemaMigrationLocation() {
+        return null;
+    }
 }

@@ -54,6 +54,7 @@ public class ContributionDispatcher implements ApplicationRunner {
         AtomicInteger roles = new AtomicInteger();
         AtomicInteger menus = new AtomicInteger();
         AtomicInteger scopes = new AtomicInteger();
+        AtomicInteger routes = new AtomicInteger();
         AtomicInteger domains = new AtomicInteger();
 
         Set<String> seenKeys = new HashSet<>();
@@ -76,15 +77,16 @@ public class ContributionDispatcher implements ApplicationRunner {
                 else if (c instanceof Contribution.RoleContribution)         roles.incrementAndGet();
                 else if (c instanceof Contribution.MenuContribution)         menus.incrementAndGet();
                 else if (c instanceof Contribution.DataScopeContribution)    scopes.incrementAndGet();
+                else if (c instanceof Contribution.RouteContribution)        routes.incrementAndGet();
                 else if (c instanceof Contribution.DomainContribution)       domains.incrementAndGet();
                 log.debug("[ContributionDispatcher]   {} ← {}", key, industry);
             });
         }
 
         log.info("[ContributionDispatcher] 扫描 {} 个包, 收到 {} 条 Contribution " +
-                "(entity {}, relation {}, event-domain {}, perm {}, role {}, menu {}, scope {}, domain {})",
+                "(entity {}, relation {}, event-domain {}, perm {}, role {}, menu {}, scope {}, route {}, domain {})",
             packages.size(), total.get(),
             entities.get(), relations.get(), events.get(), perms.get(),
-            roles.get(), menus.get(), scopes.get(), domains.get());
+            roles.get(), menus.get(), scopes.get(), routes.get(), domains.get());
     }
 }

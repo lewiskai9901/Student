@@ -55,11 +55,11 @@ class UnifiedPluginPackageTest {
     }
 
     @Test
-    @DisplayName("Contribution 恰好有 8 个 permitted 子类型")
-    void contributionPermitsExactly8Subtypes() {
+    @DisplayName("Contribution 恰好有 9 个 permitted 子类型")
+    void contributionPermitsExactly9Subtypes() {
         Class<?>[] permitted = Contribution.class.getPermittedSubclasses();
-        assertEquals(8, permitted.length,
-            "Phase 2 约定 8 种 Contribution: entity/relation/event-domain/perm/role/menu/data-scope/domain, 实际=" + permitted.length);
+        assertEquals(9, permitted.length,
+            "Phase 7.1 约定 9 种 Contribution: entity/relation/event-domain/perm/role/menu/data-scope/route/domain, 实际=" + permitted.length);
     }
 
     @Test
@@ -135,5 +135,45 @@ class UnifiedPluginPackageTest {
         assertEquals(0, core.contribute().count(), "默认 contribute() 必须返回空流");
         assertNotNull(core.metadata(), "默认 metadata() 必须非 null");
         assertEquals("CORE", core.metadata().industryCode());
+    }
+
+    // ═══════════════════════ Phase 7 ═══════════════════════
+
+    @Test
+    @DisplayName("Phase 7.1: RouteContribution 进入 permitted 清单")
+    void routeContributionInPermittedList() {
+        boolean found = java.util.Arrays.stream(Contribution.class.getPermittedSubclasses())
+            .anyMatch(c -> c.getSimpleName().equals("RouteContribution"));
+        assertTrue(found, "RouteContribution 必须在 sealed permits 清单里");
+    }
+
+    @Test
+    @DisplayName("Phase 7.5: PluginPackage.configSchema() 默认空, 可被覆盖")
+    void pluginPackageConfigSchemaDefaultEmpty() {
+        PluginPackage core = new CoreManifest();
+        var schema = core.configSchema();
+        assertNotNull(schema, "默认 configSchema() 必须非 null");
+        assertTrue(schema.isEmpty(), "CoreManifest 没覆盖时 configSchema() 应该空");
+    }
+
+    @Test
+    @DisplayName("Phase 7.5: HealthcareManifest 覆盖 configSchema() 返回 3 个字段")
+    void healthcareHasConfigSchema() {
+        PluginPackage health =
+            new com.school.management.infrastructure.extension.plugins.healthcare.HealthcareManifest();
+        var schema = health.configSchema();
+        assertNotNull(schema);
+        assertFalse(schema.isEmpty(), "HealthcareManifest 应该覆盖 configSchema() 返回非空");
+        assertEquals(3, schema.fields().size(),
+            "HEALTH 示例实现提供 3 个配置字段: admissionWardPrefix / autoAssignBed / dischargeNotifyChannel");
+    }
+
+    @Test
+    @DisplayName("Phase 7.4: PluginPackage.schemaVersion() 默认 0, HEALTH 覆盖为 1")
+    void schemaVersionDefault() {
+        assertEquals(0, new CoreManifest().schemaVersion(), "CoreManifest 未覆盖 schemaVersion() 应返回 0");
+        assertEquals(1,
+            new com.school.management.infrastructure.extension.plugins.healthcare.HealthcareManifest().schemaVersion(),
+            "HealthcareManifest 覆盖 schemaVersion() 应返回 1");
     }
 }
