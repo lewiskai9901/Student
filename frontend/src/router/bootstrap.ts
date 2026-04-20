@@ -1,14 +1,16 @@
 import type { Router, RouteRecordRaw } from 'vue-router'
 import request from '@/utils/request'
+import { usePluginsStore } from '@/stores/plugins'
 
 /**
- * Phase 4A — 动态路由注册
+ * Phase 4A — 动态路由注册 + Phase 6.4 响应式化
  *
  * 启动/登录后调用 loadEnabledPlugins(router), 从后端拉 /api/plugin-platform/overview,
  * 对 enabled === true 且非 CORE 的行业码, 动态 import 对应 plugins/*.ts 并注册到 Layout 下.
  *
  * 特性:
- * - 幂等: 用 loaded Set 防重复注册 (login/re-login 场景)
+ * - 幂等: 通过 Pinia store (usePluginsStore) 追踪已加载码, 防重复注册
+ * - 响应式: store 变化驱动 MainLayout.menuList 重算, 加载即刷新侧栏 (不再需要 F5)
  * - 降级: 401/403 静默 (登录前或 token 失效), 其他 log 但不 throw (不阻塞 app 启动)
  * - 扩展: 新行业只需在 PLUGIN_LOADERS 里加一条 loader
  */
@@ -20,8 +22,6 @@ const PLUGIN_LOADERS: Record<string, () => Promise<{ default: RouteRecordRaw[] }
   // CARE: () => import('./plugins/care'),
 }
 
-const loaded = new Set<string>()
-
 interface Industry {
   code: string
   enabled: boolean
@@ -32,6 +32,7 @@ interface Overview {
 }
 
 export async function loadEnabledPlugins(router: Router): Promise<void> {
+  const store = usePluginsStore()
   try {
     // request 拦截器已把 response.data 展开, 这里直接拿到业务 data
     const overview = (await request.get('/plugin-platform/overview')) as unknown as Overview
@@ -39,7 +40,7 @@ export async function loadEnabledPlugins(router: Router): Promise<void> {
 
     for (const ind of industries) {
       if (ind.code === 'CORE' || !ind.enabled) continue
-      if (loaded.has(ind.code)) continue
+      if (store.isLoaded(ind.code)) continue
 
       const loader = PLUGIN_LOADERS[ind.code]
       if (!loader) {
@@ -58,7 +59,7 @@ export async function loadEnabledPlugins(router: Router): Promise<void> {
           layoutRoute.children.push(route as never)
         }
       }
-      loaded.add(ind.code)
+      store.markLoaded(ind.code)
       console.info(`[plugin-bootstrap] 加载 ${ind.code} ${routes.length} 顶级路由`)
     }
   } catch (err: unknown) {
@@ -73,5 +74,6 @@ export async function loadEnabledPlugins(router: Router): Promise<void> {
  * 仅用于测试: 清空已加载状态. 生产环境不用.
  */
 export function __resetLoadedForTest(): void {
-  loaded.clear()
+  const store = usePluginsStore()
+  for (const code of store.codes) store.markUnloaded(code)
 }

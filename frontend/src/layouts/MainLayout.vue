@@ -313,6 +313,7 @@ import { useRouter, useRoute } from 'vue-router'
 import { ElMessageBox } from 'element-plus'
 import { useAuthStore } from '@/stores/auth'
 import { useConfigStore } from '@/stores/config'
+import { usePluginsStore } from '@/stores/plugins'
 import { generateMenuFromRoutes, sortMenuItems } from '@/utils/menu-generator'
 import { menusApi, type BackendMenuItem } from '@/api/menus'
 import Breadcrumb from '@/components/common/Breadcrumb.vue'
@@ -323,6 +324,7 @@ const router = useRouter()
 const route = useRoute()
 const authStore = useAuthStore()
 const configStore = useConfigStore()
+const pluginsStore = usePluginsStore()
 
 const isCollapse = ref(false)
 const showUserMenu = ref(false)
@@ -415,6 +417,11 @@ const applyBackendFilter = (items: MenuItem[]): MenuItem[] => {
 }
 
 const menuList = computed<MenuItem[]>(() => {
+  // Phase 6.4: 显式依赖 pluginsStore.loadVersion — bootstrap addRoute 完成后
+  // 会 markLoaded() 自增, 驱动此 computed 重算, 侧栏菜单实时刷新 (无需 F5)
+  // 下面这行的目的就是让 Vue 把 loadVersion 登记为本 computed 的依赖
+  void pluginsStore.loadVersion
+
   const mainRoute = router.getRoutes().find(r => r.path === '/')
   if (!mainRoute || !mainRoute.children) {
     return []
