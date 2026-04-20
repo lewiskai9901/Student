@@ -1,0 +1,57 @@
+{
+  "title": "JVM Overview — Student Management",
+  "uid": "sm-jvm-overview",
+  "schemaVersion": 38,
+  "tags": ["student-management", "jvm"],
+  "timezone": "Asia/Shanghai",
+  "refresh": "30s",
+  "panels": [
+    {
+      "type": "timeseries",
+      "title": "Heap Memory",
+      "gridPos": {"h": 8, "w": 12, "x": 0, "y": 0},
+      "targets": [
+        {"expr": "sum(jvm_memory_used_bytes{area=\"heap\"})", "legendFormat": "used"},
+        {"expr": "sum(jvm_memory_max_bytes{area=\"heap\"})", "legendFormat": "max"}
+      ],
+      "fieldConfig": {"defaults": {"unit": "bytes"}}
+    },
+    {
+      "type": "timeseries",
+      "title": "Non-Heap Memory",
+      "gridPos": {"h": 8, "w": 12, "x": 12, "y": 0},
+      "targets": [
+        {"expr": "sum(jvm_memory_used_bytes{area=\"nonheap\"})", "legendFormat": "used"}
+      ],
+      "fieldConfig": {"defaults": {"unit": "bytes"}}
+    },
+    {
+      "type": "timeseries",
+      "title": "Live Threads",
+      "gridPos": {"h": 8, "w": 8, "x": 0, "y": 8},
+      "targets": [
+        {"expr": "jvm_threads_live_threads", "legendFormat": "live"},
+        {"expr": "jvm_threads_daemon_threads", "legendFormat": "daemon"}
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "GC Pause",
+      "gridPos": {"h": 8, "w": 8, "x": 8, "y": 8},
+      "targets": [
+        {"expr": "rate(jvm_gc_pause_seconds_sum[1m])", "legendFormat": "{{action}} {{cause}}"}
+      ],
+      "fieldConfig": {"defaults": {"unit": "s"}}
+    },
+    {
+      "type": "timeseries",
+      "title": "CPU",
+      "gridPos": {"h": 8, "w": 8, "x": 16, "y": 8},
+      "targets": [
+        {"expr": "process_cpu_usage", "legendFormat": "process"},
+        {"expr": "system_cpu_usage", "legendFormat": "system"}
+      ],
+      "fieldConfig": {"defaults": {"unit": "percentunit"}}
+    }
+  ]
+}

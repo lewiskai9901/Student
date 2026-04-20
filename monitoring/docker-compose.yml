@@ -1,0 +1,22 @@
+version: "3.8"
+# Phase 8.3: 本地 Prometheus + Grafana (可选启动, prod 走托管方案)
+services:
+  prometheus:
+    image: prom/prometheus:v2.50.1
+    container_name: sm-prometheus
+    ports: ["9090:9090"]
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml:ro
+    command: ["--config.file=/etc/prometheus/prometheus.yml"]
+    extra_hosts: ["host.docker.internal:host-gateway"]
+
+  grafana:
+    image: grafana/grafana:10.4.0
+    container_name: sm-grafana
+    ports: ["3001:3000"]
+    environment:
+      GF_SECURITY_ADMIN_USER: admin
+      GF_SECURITY_ADMIN_PASSWORD: admin
+    volumes:
+      - ./grafana/dashboards:/etc/grafana/provisioning/dashboards-json:ro
+    depends_on: [prometheus]

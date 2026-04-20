@@ -1,0 +1,46 @@
+{
+  "title": "HTTP API — Student Management",
+  "uid": "sm-http-api",
+  "schemaVersion": 38,
+  "tags": ["student-management", "http"],
+  "timezone": "Asia/Shanghai",
+  "refresh": "30s",
+  "panels": [
+    {
+      "type": "timeseries",
+      "title": "Requests Per Second (by status)",
+      "gridPos": {"h": 8, "w": 12, "x": 0, "y": 0},
+      "targets": [
+        {"expr": "sum(rate(http_server_requests_seconds_count[1m])) by (status)", "legendFormat": "{{status}}"}
+      ],
+      "fieldConfig": {"defaults": {"unit": "reqps"}}
+    },
+    {
+      "type": "timeseries",
+      "title": "Top 5 URIs by QPS",
+      "gridPos": {"h": 8, "w": 12, "x": 12, "y": 0},
+      "targets": [
+        {"expr": "topk(5, sum(rate(http_server_requests_seconds_count[1m])) by (uri))", "legendFormat": "{{uri}}"}
+      ],
+      "fieldConfig": {"defaults": {"unit": "reqps"}}
+    },
+    {
+      "type": "timeseries",
+      "title": "P95 Latency (by URI)",
+      "gridPos": {"h": 8, "w": 12, "x": 0, "y": 8},
+      "targets": [
+        {"expr": "histogram_quantile(0.95, sum(rate(http_server_requests_seconds_bucket[5m])) by (le, uri))", "legendFormat": "{{uri}}"}
+      ],
+      "fieldConfig": {"defaults": {"unit": "s"}}
+    },
+    {
+      "type": "timeseries",
+      "title": "Error Rate (4xx + 5xx)",
+      "gridPos": {"h": 8, "w": 12, "x": 12, "y": 8},
+      "targets": [
+        {"expr": "sum(rate(http_server_requests_seconds_count{status=~\"4..|5..\"}[1m]))", "legendFormat": "errors/s"}
+      ],
+      "fieldConfig": {"defaults": {"unit": "reqps"}}
+    }
+  ]
+}

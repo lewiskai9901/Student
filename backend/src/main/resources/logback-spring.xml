@@ -1,0 +1,131 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Phase 8.2: logback-spring.xml
+  - dev profile: 彩色文本 (开发时 tail 好读), 带 traceId/userId 上下文
+  - prod/ci profile: JSON structured (logstash encoder), ELK/Loki 能消费
+  - 所有 log 行均附 MDC (traceId/userId/requestUri/requestMethod)
+-->
+<configuration scan="true" scanPeriod="30 seconds">
+
+    <!-- 共用属性 -->
+    <property name="APP_NAME" value="${spring.application.name:-student-management}"/>
+    <property name="LOG_DIR" value="${LOG_DIR:-logs}"/>
+
+    <!-- Dev 文本格式: 时间 [thread] LEVEL [traceId=.. userId=..] logger - msg -->
+    <property name="DEV_PATTERN"
+              value="%d{HH:mm:ss.SSS} [%thread] %highlight(%-5level) [traceId=%X{traceId:-} userId=%X{userId:-} uri=%X{requestUri:-}] %cyan(%logger{30}) - %msg%n"/>
+
+    <!-- ==================== Dev: 控制台 + 滚动文件 ==================== -->
+    <springProfile name="dev">
+        <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
+            <encoder>
+                <pattern>${DEV_PATTERN}</pattern>
+            </encoder>
+        </appender>
+
+        <appender name="FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
+            <file>${LOG_DIR}/student-management-dev.log</file>
+            <rollingPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy">
+                <fileNamePattern>${LOG_DIR}/student-management-dev-%d{yyyy-MM-dd}.%i.log.gz</fileNamePattern>
+                <maxFileSize>50MB</maxFileSize>
+                <maxHistory>7</maxHistory>
+                <totalSizeCap>500MB</totalSizeCap>
+            </rollingPolicy>
+            <encoder>
+                <pattern>${DEV_PATTERN}</pattern>
+            </encoder>
+        </appender>
+
+        <root level="INFO">
+            <appender-ref ref="CONSOLE"/>
+            <appender-ref ref="FILE"/>
+        </root>
+        <logger name="com.school.management" level="DEBUG"/>
+        <logger name="org.springframework.security" level="INFO"/>
+    </springProfile>
+
+    <!-- ==================== Prod / CI: JSON 结构化 ==================== -->
+    <springProfile name="prod,ci">
+        <appender name="JSON_CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
+            <encoder class="net.logstash.logback.encoder.LoggingEventCompositeJsonEncoder">
+                <providers>
+                    <timestamp>
+                        <timeZone>Asia/Shanghai</timeZone>
+                    </timestamp>
+                    <pattern>
+                        <pattern>
+                            {
+                              "app": "${APP_NAME}",
+                              "env": "${SPRING_PROFILES_ACTIVE:-prod}",
+                              "level": "%level",
+                              "thread": "%thread",
+                              "logger": "%logger",
+                              "message": "%message",
+                              "traceId": "%X{traceId}",
+                              "userId": "%X{userId}",
+                              "requestUri": "%X{requestUri}",
+                              "requestMethod": "%X{requestMethod}"
+                            }
+                        </pattern>
+                    </pattern>
+                    <stackTrace>
+                        <throwableConverter class="net.logstash.logback.stacktrace.ShortenedThrowableConverter">
+                            <maxDepthPerThrowable>30</maxDepthPerThrowable>
+                            <maxLength>4096</maxLength>
+                            <rootCauseFirst>true</rootCauseFirst>
+                        </throwableConverter>
+                    </stackTrace>
+                </providers>
+            </encoder>
+        </appender>
+
+        <appender name="JSON_FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
+            <file>${LOG_DIR}/student-management.json</file>
+            <rollingPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy">
+                <fileNamePattern>${LOG_DIR}/student-management-%d{yyyy-MM-dd}.%i.json.gz</fileNamePattern>
+                <maxFileSize>100MB</maxFileSize>
+                <maxHistory>30</maxHistory>
+                <totalSizeCap>5GB</totalSizeCap>
+            </rollingPolicy>
+            <encoder class="net.logstash.logback.encoder.LoggingEventCompositeJsonEncoder">
+                <providers>
+                    <timestamp><timeZone>Asia/Shanghai</timeZone></timestamp>
+                    <pattern>
+                        <pattern>
+                            {
+                              "app": "${APP_NAME}",
+                              "env": "${SPRING_PROFILES_ACTIVE:-prod}",
+                              "level": "%level",
+                              "thread": "%thread",
+                              "logger": "%logger",
+                              "message": "%message",
+                              "traceId": "%X{traceId}",
+                              "userId": "%X{userId}",
+                              "requestUri": "%X{requestUri}",
+                              "requestMethod": "%X{requestMethod}"
+                            }
+                        </pattern>
+                    </pattern>
+                    <stackTrace/>
+                </providers>
+            </encoder>
+        </appender>
+
+        <root level="INFO">
+            <appender-ref ref="JSON_CONSOLE"/>
+            <appender-ref ref="JSON_FILE"/>
+        </root>
+        <logger name="com.school.management" level="INFO"/>
+    </springProfile>
+
+    <!-- ==================== 默认 (无 profile 时) ==================== -->
+    <springProfile name="default">
+        <appender name="CONSOLE_DEFAULT" class="ch.qos.logback.core.ConsoleAppender">
+            <encoder><pattern>${DEV_PATTERN}</pattern></encoder>
+        </appender>
+        <root level="INFO">
+            <appender-ref ref="CONSOLE_DEFAULT"/>
+        </root>
+    </springProfile>
+
+</configuration>
