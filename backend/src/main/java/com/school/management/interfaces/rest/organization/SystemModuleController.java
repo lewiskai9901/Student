@@ -6,6 +6,7 @@ import com.school.management.domain.organization.model.SystemModule;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -21,6 +22,7 @@ import java.util.stream.Collectors;
 @RestController
 @RequestMapping("/system-modules")
 @RequiredArgsConstructor
+@PreAuthorize("isAuthenticated()")  // Phase 6.7: 模块树公共只读, 要求登录即可
 public class SystemModuleController {
 
     private final SystemModuleService systemModuleService;

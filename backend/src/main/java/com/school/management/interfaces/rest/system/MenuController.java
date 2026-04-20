@@ -6,6 +6,7 @@ import com.school.management.infrastructure.extension.MenuContributionPlugin;
 import com.school.management.infrastructure.extension.MenuRegistrar;
 import lombok.RequiredArgsConstructor;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -22,6 +23,7 @@ import java.util.stream.Collectors;
 @RestController
 @RequestMapping("/menus")
 @RequiredArgsConstructor
+@PreAuthorize("isAuthenticated()")  // Phase 6.7: 菜单查询必登录; /all 额外限 admin
 public class MenuController {
 
     private final MenuRegistrar menuRegistrar;
@@ -41,6 +43,7 @@ public class MenuController {
 
     /** 全量菜单(admin 查看 / 插件管理页用) */
     @GetMapping("/all")
+    @PreAuthorize("hasAuthority('system:admin') or hasAuthority('system:config:view')")
     public Result<List<Map<String, Object>>> allMenus() {
         List<Map<String, Object>> tree = menuRegistrar.getAllMenus().stream()
             .map(this::serialize)

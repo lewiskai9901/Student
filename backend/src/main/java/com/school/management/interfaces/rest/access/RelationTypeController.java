@@ -4,6 +4,7 @@ import com.school.management.common.result.Result;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.*;
@@ -19,6 +20,7 @@ import java.util.*;
 @RestController
 @RequestMapping("/relation-types")
 @RequiredArgsConstructor
+@PreAuthorize("isAuthenticated()")  // Phase 6.7: 关系字典只读公共数据, 要求登录即可
 public class RelationTypeController {
 
     private final JdbcTemplate jdbcTemplate;

@@ -20,6 +20,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
@@ -113,6 +114,7 @@ public class AuthController {
     }
 
     @PostMapping("/logout")
+    @PreAuthorize("isAuthenticated()")  // Phase 6.7: logout 必须登录态
     @Operation(summary = "退出登录")
     @AuditEvent(module = "access", action = "LOGOUT", resourceType = "AUTH", label = "退出登录")
     public Result<Void> logout(@RequestBody(required = false) LogoutRequest request, HttpServletRequest httpRequest) {
@@ -142,6 +144,7 @@ public class AuthController {
     }
 
     @GetMapping("/me")
+    @PreAuthorize("isAuthenticated()")  // Phase 6.7: /me 必须登录态
     @Operation(summary = "获取当前用户信息")
     public Result<LoginResponse.UserInfo> getCurrentUser() {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
