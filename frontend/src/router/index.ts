@@ -702,7 +702,7 @@ const routes: RouteRecordRaw[] = [
           {
             path: '/system/plugins',
             name: 'PluginManagement',
-            component: () => import('@/views/system/PluginManagementView.vue'),
+            component: () => import('@/views/system/plugin-platform/PluginPlatformLayout.vue'),
             meta: {
               title: '插件平台',
               requiresAuth: true,
