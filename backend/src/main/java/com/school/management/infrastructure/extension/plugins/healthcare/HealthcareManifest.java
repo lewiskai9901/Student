@@ -38,9 +38,9 @@ public class HealthcareManifest implements PluginPackage {
     }
 
     /**
-     * Phase 7.5 示例: 声明 HEALTH 插件可被管理员配置的 2 个字段.
+     * Phase 7.5: 声明 HEALTH 插件可被管理员配置的字段.
      * 管理员 UI 会据此渲染表单, 值存到 tenant_plugin_enablement.config_json,
-     * 业务代码 via TenantPluginService.getConfig(tenantId, "HEALTH", "admissionWardPrefix") 读取.
+     * 业务代码 via TenantPluginService.getConfig(tenantId, "HEALTH", key) 读取.
      */
     @Override
     public PluginConfigSchema configSchema() {
@@ -54,7 +54,20 @@ public class HealthcareManifest implements PluginPackage {
             PluginConfigSchema.Field.enumField(
                 "dischargeNotifyChannel", "出院通知渠道",
                 List.of("NONE", "SMS", "WECHAT"), "SMS")
-                .withDescription("病人出院时通过何种渠道通知家属.")
+                .withDescription("病人出院时通过何种渠道通知家属."),
+            PluginConfigSchema.Field.stringField(
+                "hospitalName", "医院名称", "示例医院", false)
+                .withDescription("模板/表头/通知签名等使用的医院名称."),
+            PluginConfigSchema.Field.numberField(
+                "wardMaxBedsDefault", "默认床位数", 20, false)
+                .withDescription("新建病区时默认的床位数上限, 超过 MaxBedCapacityPolicy 会 BLOCK."),
+            PluginConfigSchema.Field.stringField(
+                "admissionAutonumberPrefix", "入院号前缀", "ADM", false)
+                .withDescription("入院号自动编号前缀, 如 ADM20260421-0001."),
+            PluginConfigSchema.Field.enumField(
+                "genderPolicy", "性别分区策略",
+                List.of("STRICT", "WARN", "NONE"), "WARN")
+                .withDescription("STRICT=性别不符 BLOCK, WARN=仅警告, NONE=不检查.")
         ));
     }
 
