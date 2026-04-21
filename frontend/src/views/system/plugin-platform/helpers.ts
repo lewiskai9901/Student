@@ -40,10 +40,14 @@ export function subjectTypeLabel(code?: string): string {
     ORG: '组织',
     PLACE: '场所',
     OTHER: '其他',
+    ACCESS_RELATION: '访问关系',
     place: '场所',
     org_unit: '组织',
     user: '用户',
-    role: '角色'
+    role: '角色',
+    access_relation: '访问关系',
+    permission: '权限',
+    data_scope: '数据维度'
   } as Record<string, string>)[code] || code
 }
 
