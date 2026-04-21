@@ -1,6 +1,7 @@
 package com.school.management.interfaces.rest.system;
 
 import com.school.management.application.event.TriggerPipelineHealthCheck;
+import com.school.management.application.plugin.PluginLifecycleService;
 import com.school.management.common.result.Result;
 import com.school.management.infrastructure.casbin.CasbinAccess;
 import com.school.management.infrastructure.extension.Policy;
@@ -34,6 +35,7 @@ public class PluginPlatformController {
     private final List<TargetModeResolver> targetModeResolvers;
     private final TriggerPipelineHealthCheck triggerPipelineHealthCheck;
     private final org.springframework.beans.factory.ObjectProvider<List<com.school.management.infrastructure.extension.MenuContributionPlugin>> menuPluginsProvider;
+    private final PluginLifecycleService pluginLifecycleService;
 
     /**
      * GET /api/plugin-platform/overview
@@ -243,35 +245,34 @@ public class PluginPlatformController {
 
     /**
      * POST /api/plugin-platform/{code}/enable
-     * 启用插件包. 仅修改 plugin_packages.enabled=1, 下次启动重新扫描数据.
-     * 立即刷 Casbin 保证 UI 层生效.
+     * 启用插件包 + 级联恢复所有贡献的 plugin_enabled=1.
+     * (管理员手动 is_enabled=0 的条目保留不变.)
      */
     @PostMapping("/{code}/enable")
     @CasbinAccess(resource = "admin", action = "access")
     public Result<Map<String, Object>> enable(@PathVariable String code) {
-        if ("CORE".equalsIgnoreCase(code)) {
-            return Result.error("CORE 包不可禁用");
+        try {
+            pluginLifecycleService.enable(code);
+        } catch (IllegalStateException e) {
+            return Result.error(e.getMessage());
         }
-        int n = jdbc.update("UPDATE plugin_packages SET enabled=1 WHERE industry_code=?", code);
-        if (n == 0) return Result.error("插件不存在: " + code);
-        eventPublisher.publishEvent(new PermissionsRefreshedEvent(this, "ENABLE:" + code));
-        return Result.success(Map.of("code", code, "enabled", true, "updated", n));
+        return Result.success(Map.of("code", code, "enabled", true));
     }
 
     /**
      * POST /api/plugin-platform/{code}/disable
-     * 禁用插件包. 数据保留但 enabled=0, UI 菜单不再出现.
+     * 禁用插件包 + 级联软失效 9 表的 plugin_enabled=0.
+     * 依赖检查: 有其他启用插件依赖本插件则拒绝.
      */
     @PostMapping("/{code}/disable")
     @CasbinAccess(resource = "admin", action = "access")
     public Result<Map<String, Object>> disable(@PathVariable String code) {
-        if ("CORE".equalsIgnoreCase(code)) {
-            return Result.error("CORE 包不可禁用");
+        try {
+            pluginLifecycleService.disable(code);
+        } catch (IllegalStateException e) {
+            return Result.error(e.getMessage());
         }
-        int n = jdbc.update("UPDATE plugin_packages SET enabled=0 WHERE industry_code=?", code);
-        if (n == 0) return Result.error("插件不存在: " + code);
-        eventPublisher.publishEvent(new PermissionsRefreshedEvent(this, "DISABLE:" + code));
-        return Result.success(Map.of("code", code, "enabled", false, "updated", n));
+        return Result.success(Map.of("code", code, "enabled", false));
     }
 
     /**

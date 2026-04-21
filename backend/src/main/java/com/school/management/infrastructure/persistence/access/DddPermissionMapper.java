@@ -17,16 +17,16 @@ public interface DddPermissionMapper extends BaseMapper<PermissionPO> {
     @Select("SELECT * FROM permissions WHERE permission_code = #{code} AND deleted = 0")
     PermissionPO findByPermissionCode(@Param("code") String code);
 
-    @Select("SELECT * FROM permissions WHERE resource_type = #{resourceType} AND deleted = 0 ORDER BY sort_order")
+    @Select("SELECT * FROM permissions WHERE resource_type = #{resourceType} AND deleted = 0 AND plugin_enabled = 1 ORDER BY sort_order")
     List<PermissionPO> findByResourceType(@Param("resourceType") Integer resourceType);
 
-    @Select("SELECT * FROM permissions WHERE status = 1 AND deleted = 0 ORDER BY sort_order")
+    @Select("SELECT * FROM permissions WHERE status = 1 AND plugin_enabled = 1 AND deleted = 0 ORDER BY sort_order")
     List<PermissionPO> findAllEnabled();
 
-    @Select("SELECT * FROM permissions WHERE parent_id = #{parentId} AND deleted = 0 ORDER BY sort_order")
+    @Select("SELECT * FROM permissions WHERE parent_id = #{parentId} AND deleted = 0 AND plugin_enabled = 1 ORDER BY sort_order")
     List<PermissionPO> findByParentId(@Param("parentId") Long parentId);
 
-    @Select("SELECT * FROM permissions WHERE (parent_id IS NULL OR parent_id = 0) AND deleted = 0 ORDER BY sort_order")
+    @Select("SELECT * FROM permissions WHERE (parent_id IS NULL OR parent_id = 0) AND deleted = 0 AND plugin_enabled = 1 ORDER BY sort_order")
     List<PermissionPO> findRoots();
 
     @Select("SELECT * FROM permissions WHERE permission_code LIKE CONCAT(#{resource}, ':%') AND deleted = 0 ORDER BY sort_order")

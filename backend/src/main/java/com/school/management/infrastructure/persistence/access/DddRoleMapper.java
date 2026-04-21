@@ -17,10 +17,10 @@ public interface DddRoleMapper extends BaseMapper<RolePO> {
     @Select("SELECT * FROM roles WHERE role_code = #{code} AND deleted = 0")
     RolePO findByRoleCode(@Param("code") String code);
 
-    @Select("SELECT * FROM roles WHERE deleted = 0 ORDER BY sort_order")
+    @Select("SELECT * FROM roles WHERE deleted = 0 AND plugin_enabled = 1 ORDER BY sort_order")
     List<RolePO> findAll();
 
-    @Select("SELECT * FROM roles WHERE status = 1 AND deleted = 0 ORDER BY sort_order")
+    @Select("SELECT * FROM roles WHERE status = 1 AND plugin_enabled = 1 AND deleted = 0 ORDER BY sort_order")
     List<RolePO> findAllEnabled();
 
     @Select("SELECT COUNT(*) > 0 FROM roles WHERE role_code = #{code} AND deleted = 0")

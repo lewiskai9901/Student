@@ -31,7 +31,7 @@ public class EventTypeController {
     @CasbinAccess(resource = "entity-event-type", action = "view")
     public Result<List<Map<String, Object>>> listGrouped(
             @RequestParam(required = false) String category) {
-        String sql = "SELECT * FROM entity_event_types WHERE deleted = 0";
+        String sql = "SELECT * FROM entity_event_types WHERE deleted = 0 AND plugin_enabled = 1";
         List<Object> params = new ArrayList<>();
         if (category != null && !category.isBlank()) {
             sql += " AND category_code = ?";

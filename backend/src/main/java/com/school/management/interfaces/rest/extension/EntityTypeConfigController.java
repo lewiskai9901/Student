@@ -36,7 +36,7 @@ public class EntityTypeConfigController {
             @RequestParam String entityType,
             @RequestParam(required = false) String category) {
         StringBuilder sql = new StringBuilder("SELECT " + SELECT_COLS +
-            " FROM entity_type_configs WHERE entity_type = ? AND deleted = 0 AND is_enabled = 1");
+            " FROM entity_type_configs WHERE entity_type = ? AND deleted = 0 AND is_enabled = 1 AND plugin_enabled = 1");
         List<Object> params = new ArrayList<>();
         params.add(entityType);
         if (category != null) { sql.append(" AND category = ?"); params.add(category); }
@@ -119,7 +119,7 @@ public class EntityTypeConfigController {
             params.addAll(childCodes);
 
             List<Map<String, Object>> children = jdbc.queryForList(
-                "SELECT " + SELECT_COLS + " FROM entity_type_configs WHERE entity_type = ? AND type_code IN (" + placeholders + ") AND deleted = 0 AND is_enabled = 1 ORDER BY sort_order",
+                "SELECT " + SELECT_COLS + " FROM entity_type_configs WHERE entity_type = ? AND type_code IN (" + placeholders + ") AND deleted = 0 AND is_enabled = 1 AND plugin_enabled = 1 ORDER BY sort_order",
                 params.toArray());
             return Result.success(children);
         } catch (Exception e) {

@@ -63,7 +63,7 @@ public class TriggerService {
             validateContextSchema(pointCode, context);
 
             List<Map<String, Object>> triggers = jdbcTemplate.queryForList(
-                "SELECT * FROM event_triggers WHERE trigger_point_code = ? AND is_enabled = 1 AND deleted = 0",
+                "SELECT * FROM event_triggers WHERE trigger_point_code = ? AND is_enabled = 1 AND plugin_enabled = 1 AND deleted = 0",
                 pointCode);
 
             if (triggers.isEmpty()) {
@@ -90,7 +90,7 @@ public class TriggerService {
      */
     public List<Map<String, Object>> testFire(String pointCode, Map<String, Object> context) {
         List<Map<String, Object>> triggers = jdbcTemplate.queryForList(
-            "SELECT * FROM event_triggers WHERE trigger_point_code = ? AND is_enabled = 1 AND deleted = 0",
+            "SELECT * FROM event_triggers WHERE trigger_point_code = ? AND is_enabled = 1 AND plugin_enabled = 1 AND deleted = 0",
             pointCode);
 
         List<Map<String, Object>> results = new ArrayList<>();

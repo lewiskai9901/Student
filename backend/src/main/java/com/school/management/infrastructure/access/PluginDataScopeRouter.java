@@ -87,7 +87,7 @@ public class PluginDataScopeRouter {
         String resolverType;
         try {
             resolverType = jdbc.queryForObject(
-                "SELECT resolver_type FROM data_scope_dims WHERE dim_code = ? AND is_enabled = 1",
+                "SELECT resolver_type FROM data_scope_dims WHERE dim_code = ? AND is_enabled = 1 AND plugin_enabled = 1",
                 String.class, dimCode);
         } catch (Exception e) {
             log.warn("[PluginDataScopeRouter] dim {} not found in data_scope_dims: {}",

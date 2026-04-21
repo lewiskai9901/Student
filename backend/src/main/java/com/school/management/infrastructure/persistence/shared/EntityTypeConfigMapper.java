@@ -20,7 +20,7 @@ public interface EntityTypeConfigMapper extends BaseMapper<EntityTypeConfigPO> {
     @Select("SELECT * FROM entity_type_configs WHERE entity_type = #{entityType} AND deleted = 0 ORDER BY sort_order, type_name")
     List<EntityTypeConfigPO> findAll(@Param("entityType") String entityType);
 
-    @Select("SELECT * FROM entity_type_configs WHERE entity_type = #{entityType} AND is_enabled = 1 AND deleted = 0 ORDER BY sort_order, type_name")
+    @Select("SELECT * FROM entity_type_configs WHERE entity_type = #{entityType} AND is_enabled = 1 AND plugin_enabled = 1 AND deleted = 0 ORDER BY sort_order, type_name")
     List<EntityTypeConfigPO> findAllEnabled(@Param("entityType") String entityType);
 
     @Select("SELECT * FROM entity_type_configs WHERE entity_type = #{entityType} AND parent_type_code = #{parentTypeCode} AND deleted = 0 ORDER BY sort_order")

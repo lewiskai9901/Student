@@ -29,7 +29,7 @@ public class RelationTypeController {
         "SELECT relation_code, from_type, to_type, relation_name, is_transitive, " +
         "       category, tier, registered_by, description, capacity_bound, max_per_resource, max_by_subtype, " +
         "       implied_relations, industry, plugin_class, origin, is_enabled " +
-        "FROM relation_types WHERE is_enabled = 1";
+        "FROM relation_types WHERE is_enabled = 1 AND plugin_enabled = 1";
 
     private static final com.fasterxml.jackson.databind.ObjectMapper MAPPER = new com.fasterxml.jackson.databind.ObjectMapper();
 

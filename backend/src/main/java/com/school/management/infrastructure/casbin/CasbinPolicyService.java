@@ -71,11 +71,13 @@ public class CasbinPolicyService implements PolicyEnforcementService {
         enforcer.clearPolicy();
 
         // 1. Sync role-permission mappings (p policies)
+        // 过滤 plugin_enabled=1 保证被禁插件的角色/权限不再生效
         String rpSql = "SELECT r.role_code, r.tenant_id, p.permission_code " +
                 "FROM role_permissions rp " +
                 "JOIN roles r ON r.id = rp.role_id " +
                 "JOIN permissions p ON p.id = rp.permission_id " +
-                "WHERE r.status = 1 AND r.deleted = 0";
+                "WHERE r.status = 1 AND r.deleted = 0 " +
+                "  AND r.plugin_enabled = 1 AND p.plugin_enabled = 1";
 
         List<Map<String, Object>> rpRows = jdbcTemplate.queryForList(rpSql);
         int pCount = 0;
@@ -103,7 +105,7 @@ public class CasbinPolicyService implements PolicyEnforcementService {
         String urSql = "SELECT ur.user_id, r.role_code, r.tenant_id " +
                 "FROM user_roles ur " +
                 "JOIN roles r ON r.id = ur.role_id " +
-                "WHERE r.status = 1 AND r.deleted = 0";
+                "WHERE r.status = 1 AND r.deleted = 0 AND r.plugin_enabled = 1";
 
         List<Map<String, Object>> urRows = jdbcTemplate.queryForList(urSql);
         int gCount = 0;

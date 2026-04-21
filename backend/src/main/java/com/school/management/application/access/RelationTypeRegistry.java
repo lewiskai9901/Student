@@ -38,7 +38,7 @@ public class RelationTypeRegistry {
         registry.clear();
         jdbcTemplate.query(
             "SELECT relation_code, from_type, to_type, tier, is_enabled " +
-            "FROM relation_types WHERE is_enabled = 1",
+            "FROM relation_types WHERE is_enabled = 1 AND plugin_enabled = 1",
             rs -> {
                 String key = rs.getString("relation_code") + "|" +
                              rs.getString("from_type") + "|" +

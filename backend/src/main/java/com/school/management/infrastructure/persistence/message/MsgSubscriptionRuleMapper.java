@@ -11,11 +11,11 @@ import java.util.List;
 @Mapper
 public interface MsgSubscriptionRuleMapper extends BaseMapper<MsgSubscriptionRulePO> {
 
-    @Select("SELECT * FROM msg_subscription_rules WHERE is_enabled = 1 AND deleted = 0 ORDER BY sort_order")
+    @Select("SELECT * FROM msg_subscription_rules WHERE is_enabled = 1 AND plugin_enabled = 1 AND deleted = 0 ORDER BY sort_order")
     List<MsgSubscriptionRulePO> findEnabled();
 
     @Select("<script>" +
-            "SELECT * FROM msg_subscription_rules WHERE is_enabled = 1 AND deleted = 0" +
+            "SELECT * FROM msg_subscription_rules WHERE is_enabled = 1 AND plugin_enabled = 1 AND deleted = 0" +
             " AND (event_category IS NULL" +
             "   <if test='eventCategory != null'> OR event_category = #{eventCategory}</if>)" +
             " AND (event_type IS NULL" +

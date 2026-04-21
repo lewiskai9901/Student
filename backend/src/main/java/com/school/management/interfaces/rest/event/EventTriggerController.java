@@ -40,7 +40,7 @@ public class EventTriggerController {
             "SELECT t.*, tp.point_name AS trigger_point_name, tp.module_code, tp.module_name " +
             "FROM event_triggers t " +
             "LEFT JOIN trigger_points tp ON t.trigger_point_code = tp.point_code AND tp.deleted = 0 " +
-            "WHERE t.deleted = 0");
+            "WHERE t.deleted = 0 AND t.plugin_enabled = 1");
         List<Object> params = new ArrayList<>();
 
         if (pointCode != null && !pointCode.isBlank()) {

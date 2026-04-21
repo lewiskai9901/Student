@@ -30,7 +30,7 @@ public class TriggerPointController {
     @CasbinAccess(resource = "event-trigger", action = "view")
     public Result<List<Map<String, Object>>> list(
             @RequestParam(required = false) String module) {
-        String sql = "SELECT * FROM trigger_points WHERE deleted = 0";
+        String sql = "SELECT * FROM trigger_points WHERE deleted = 0 AND plugin_enabled = 1";
         if (module != null && !module.isBlank()) {
             sql += " AND module_code = '" + module.replace("'", "") + "'";
         }

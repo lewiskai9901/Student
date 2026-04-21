@@ -217,24 +217,27 @@ public interface UserDomainMapper extends BaseMapper<UserPO> {
      */
     @Select("SELECT r.role_code FROM roles r " +
             "INNER JOIN user_roles ur ON r.id = ur.role_id " +
-            "WHERE ur.user_id = #{userId} AND r.deleted = 0 " +
+            "WHERE ur.user_id = #{userId} AND r.deleted = 0 AND r.plugin_enabled = 1 " +
             "AND ur.is_active = 1 AND (ur.expires_at IS NULL OR ur.expires_at > NOW())")
     List<String> findRoleCodesByUserId(@Param("userId") Long userId);
 
     /**
      * 根据用户ID查询权限代码列表（过滤已过期和已停用的角色分配）
+     * plugin_enabled=1 保证被禁插件的角色/权限不再返回.
      */
     @Select("SELECT DISTINCT p.permission_code FROM permissions p " +
             "INNER JOIN role_permissions rp ON p.id = rp.permission_id " +
             "INNER JOIN user_roles ur ON rp.role_id = ur.role_id " +
+            "INNER JOIN roles r ON r.id = rp.role_id " +
             "WHERE ur.user_id = #{userId} " +
+            "AND p.plugin_enabled = 1 AND r.plugin_enabled = 1 " +
             "AND ur.is_active = 1 AND (ur.expires_at IS NULL OR ur.expires_at > NOW())")
     List<String> findPermissionCodesByUserId(@Param("userId") Long userId);
 
     /**
      * 获取系统中所有权限代码（用于超级管理员）
      */
-    @Select("SELECT DISTINCT permission_code FROM permissions WHERE permission_code IS NOT NULL")
+    @Select("SELECT DISTINCT permission_code FROM permissions WHERE permission_code IS NOT NULL AND plugin_enabled = 1")
     List<String> findAllPermissionCodes();
 
     /**
