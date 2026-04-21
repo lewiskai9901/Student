@@ -2,6 +2,7 @@ package com.school.management.infrastructure.persistence.message;
 
 import com.school.management.domain.message.model.MsgNotification;
 import com.school.management.domain.message.repository.MsgNotificationRepository;
+import com.school.management.infrastructure.tenant.TenantContextHolder;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Repository;
 
@@ -12,6 +13,10 @@ import java.util.stream.Collectors;
 
 /**
  * 站内消息仓储实现
+ *
+ * tenant_id 写入策略: 实体自身若携带 tenantId 则优先使用 (分发器已从事件取值);
+ * 否则回退到 TenantContextHolder 当前租户。最后仍为 null 会由 NOT NULL 约束拦截,
+ * 不再悄悄落默认 0。
  */
 @Repository
 @RequiredArgsConstructor
@@ -53,57 +58,57 @@ public class MsgNotificationRepositoryImpl implements MsgNotificationRepository 
     }
 
     @Override
-    public Optional<MsgNotification> findById(Long id) {
-        MsgNotificationPO po = notificationMapper.selectById(id);
+    public Optional<MsgNotification> findById(Long tenantId, Long id) {
+        MsgNotificationPO po = notificationMapper.findByIdScoped(tenantId, id);
         return Optional.ofNullable(po).map(this::toDomain);
     }
 
     @Override
-    public List<MsgNotification> findByUserId(Long userId, Boolean isRead, int page, int size) {
+    public List<MsgNotification> findByUserId(Long tenantId, Long userId, Boolean isRead, int page, int size) {
         Integer isReadInt = isRead != null ? (isRead ? 1 : 0) : null;
         int offset = (page - 1) * size;
-        return notificationMapper.findByUserId(userId, isReadInt, offset, size)
+        return notificationMapper.findByUserId(tenantId, userId, isReadInt, offset, size)
                 .stream().map(this::toDomain).collect(Collectors.toList());
     }
 
     @Override
-    public long countTotal(Long userId, Boolean isRead) {
+    public long countTotal(Long tenantId, Long userId, Boolean isRead) {
         Integer isReadInt = isRead != null ? (isRead ? 1 : 0) : null;
-        return notificationMapper.countByUserId(userId, isReadInt);
+        return notificationMapper.countByUserId(tenantId, userId, isReadInt);
     }
 
     @Override
-    public long countUnread(Long userId) {
-        return notificationMapper.countUnread(userId);
+    public long countUnread(Long tenantId, Long userId) {
+        return notificationMapper.countUnread(tenantId, userId);
     }
 
     @Override
-    public void markRead(Long id) {
-        notificationMapper.markRead(id);
+    public void markRead(Long tenantId, Long id) {
+        notificationMapper.markRead(tenantId, id);
     }
 
     @Override
-    public void markAllRead(Long userId) {
-        notificationMapper.markAllRead(userId);
+    public void markAllRead(Long tenantId, Long userId) {
+        notificationMapper.markAllRead(tenantId, userId);
     }
 
     @Override
-    public void softDelete(Long id, Long userId) {
-        notificationMapper.softDelete(id, userId);
+    public void softDelete(Long tenantId, Long id, Long userId) {
+        notificationMapper.softDelete(tenantId, id, userId);
     }
 
     @Override
-    public List<MsgNotification> findByUserId(Long userId, Boolean isRead, String msgType, int page, int size) {
+    public List<MsgNotification> findByUserId(Long tenantId, Long userId, Boolean isRead, String msgType, int page, int size) {
         Integer isReadInt = isRead != null ? (isRead ? 1 : 0) : null;
         int offset = (page - 1) * size;
-        return notificationMapper.findByUserIdWithType(userId, isReadInt, msgType, offset, size)
+        return notificationMapper.findByUserIdWithType(tenantId, userId, isReadInt, msgType, offset, size)
                 .stream().map(this::toDomain).collect(Collectors.toList());
     }
 
     @Override
-    public long countTotal(Long userId, Boolean isRead, String msgType) {
+    public long countTotal(Long tenantId, Long userId, Boolean isRead, String msgType) {
         Integer isReadInt = isRead != null ? (isRead ? 1 : 0) : null;
-        return notificationMapper.countByUserIdWithType(userId, isReadInt, msgType);
+        return notificationMapper.countByUserIdWithType(tenantId, userId, isReadInt, msgType);
     }
 
     private MsgNotification toDomain(MsgNotificationPO po) {
@@ -136,7 +141,12 @@ public class MsgNotificationRepositoryImpl implements MsgNotificationRepository 
     private MsgNotificationPO toPO(MsgNotification notification) {
         MsgNotificationPO po = new MsgNotificationPO();
         po.setId(notification.getId());
-        po.setTenantId(notification.getTenantId() != null ? notification.getTenantId() : 0L);
+        // tenant 填充优先级: 实体自带 → 当前线程上下文 → 默认 0 (多租户禁用时的回退)
+        Long tenantId = notification.getTenantId();
+        if (tenantId == null) {
+            tenantId = TenantContextHolder.getTenantId();
+        }
+        po.setTenantId(tenantId != null ? tenantId : 0L);
         po.setUserId(notification.getUserId());
         po.setTitle(notification.getTitle());
         po.setContent(notification.getContent());

@@ -7,6 +7,7 @@ import com.school.management.domain.message.repository.MsgNotificationRepository
 import com.school.management.domain.message.repository.MsgSubscriptionRuleRepository;
 import com.school.management.domain.message.repository.MsgTemplateRepository;
 import com.school.management.exception.BusinessException;
+import com.school.management.infrastructure.tenant.TenantContextHolder;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -191,11 +192,13 @@ public class MsgConfigService {
         if (userIds == null || userIds.isEmpty()) {
             throw new IllegalArgumentException("接收用户列表不能为空");
         }
+        // 手动派发必须承载当前操作者所在租户,防止跨租户消息注入
+        Long tenantId = TenantContextHolder.getTenantId();
         for (Long userId : userIds) {
             MsgNotification notification = MsgNotification.create(
-                    0L, userId, title, content, "MANUAL", null, null, null);
+                    tenantId, userId, title, content, "MANUAL", null, null, null);
             notificationRepository.save(notification);
         }
-        log.info("[消息中心] 手动发送消息给 {} 个用户", userIds.size());
+        log.info("[消息中心] 手动发送消息给 {} 个用户 (tenant={})", userIds.size(), tenantId);
     }
 }

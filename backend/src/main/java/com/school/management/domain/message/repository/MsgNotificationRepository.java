@@ -7,6 +7,9 @@ import java.util.Optional;
 
 /**
  * 站内消息仓储接口
+ *
+ * 多租户: 所有读/改 API 均强制传 tenantId, 由应用层从 TenantContextHolder 读取,
+ * 确保同一 userId 在不同租户的消息完全隔离。
  */
 public interface MsgNotificationRepository {
 
@@ -18,21 +21,22 @@ public interface MsgNotificationRepository {
      */
     int saveAll(List<MsgNotification> notifications);
 
-    Optional<MsgNotification> findById(Long id);
+    /** 按 id 读取单条消息, 需租户作用域。 */
+    Optional<MsgNotification> findById(Long tenantId, Long id);
 
-    List<MsgNotification> findByUserId(Long userId, Boolean isRead, int page, int size);
+    List<MsgNotification> findByUserId(Long tenantId, Long userId, Boolean isRead, int page, int size);
 
-    long countTotal(Long userId, Boolean isRead);
+    long countTotal(Long tenantId, Long userId, Boolean isRead);
 
-    long countUnread(Long userId);
+    long countUnread(Long tenantId, Long userId);
 
-    void markRead(Long id);
+    void markRead(Long tenantId, Long id);
 
-    void markAllRead(Long userId);
+    void markAllRead(Long tenantId, Long userId);
 
-    void softDelete(Long id, Long userId);
+    void softDelete(Long tenantId, Long id, Long userId);
 
-    List<MsgNotification> findByUserId(Long userId, Boolean isRead, String msgType, int page, int size);
+    List<MsgNotification> findByUserId(Long tenantId, Long userId, Boolean isRead, String msgType, int page, int size);
 
-    long countTotal(Long userId, Boolean isRead, String msgType);
+    long countTotal(Long tenantId, Long userId, Boolean isRead, String msgType);
 }
