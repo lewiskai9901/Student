@@ -7,6 +7,9 @@ import com.school.management.domain.place.model.aggregate.UniversalPlace;
 import com.school.management.domain.place.repository.UniversalPlaceRepository;
 import com.school.management.domain.user.repository.UserRepository;
 import com.school.management.infrastructure.access.UserContextHolder;
+import com.school.management.infrastructure.extension.PolicyContext;
+import com.school.management.infrastructure.extension.PolicyRegistry;
+import com.school.management.infrastructure.extension.Violation;
 import lombok.Data;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -26,6 +29,7 @@ public class AccessRelationApplicationService {
     private final UniversalPlaceRepository placeRepository;
     private final OrgUnitRepository orgUnitRepository;
     private final UserRepository userRepository;
+    private final PolicyRegistry policyRegistry;
 
     public List<AccessRelation> findByResource(String resourceType, Long resourceId) {
         List<AccessRelation> relations = accessRelationRepository.findByResource(resourceType, resourceId);
@@ -103,6 +107,10 @@ public class AccessRelationApplicationService {
 
     @Transactional
     public AccessRelation create(CreateCommand cmd) {
+        // Policy hook — BEFORE_GRANT (grant = 授予关系, 即 create AccessRelation)
+        // 例: 家属监护必须身份证校验 / 禁止给离职用户授权
+        policyRegistry.enforce(new PolicyContext<>("access_relation", "BEFORE_GRANT", cmd));
+
         AccessRelation relation = AccessRelation.builder()
                 .resourceType(cmd.getResourceType())
                 .resourceId(cmd.getResourceId())
@@ -115,7 +123,14 @@ public class AccessRelationApplicationService {
                 .remark(cmd.getRemark())
                 .createdBy(UserContextHolder.getUserId())
                 .build();
-        return accessRelationRepository.save(relation);
+        AccessRelation saved = accessRelationRepository.save(relation);
+
+        // Policy hook — AFTER_GRANT WARN/INFO 仅记日志 (审计/通知)
+        List<Violation> warns = policyRegistry.check(
+                new PolicyContext<>("access_relation", "AFTER_GRANT", saved));
+        warns.forEach(w -> log.warn("[Policy/{}] {}: {}", w.severity(), w.code(), w.message()));
+
+        return saved;
     }
 
     @Transactional
@@ -136,7 +151,18 @@ public class AccessRelationApplicationService {
 
     @Transactional
     public void delete(Long id) {
+        // Policy hook — BEFORE_REVOKE (revoke = 撤销关系, 即 delete AccessRelation)
+        policyRegistry.enforce(new PolicyContext<>("access_relation", "BEFORE_REVOKE", id));
+
+        // 在删除前读出 relation, 以便 AFTER 能拿到 payload
+        AccessRelation existing = accessRelationRepository.findById(id).orElse(null);
+
         accessRelationRepository.deleteById(id);
+
+        // Policy hook — AFTER_REVOKE WARN/INFO 仅记日志
+        List<Violation> warns = policyRegistry.check(
+                new PolicyContext<>("access_relation", "AFTER_REVOKE", existing));
+        warns.forEach(w -> log.warn("[Policy/{}] {}: {}", w.severity(), w.code(), w.message()));
     }
 
     @Transactional

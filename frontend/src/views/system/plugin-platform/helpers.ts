@@ -64,7 +64,13 @@ export function phaseLabel(phase?: string): string {
     BEFORE_ADD_MEMBER: '加成员前',
     AFTER_ADD_MEMBER: '加成员后',
     BEFORE_REMOVE_MEMBER: '移成员前',
-    AFTER_REMOVE_MEMBER: '移成员后'
+    AFTER_REMOVE_MEMBER: '移成员后',
+    BEFORE_GRANT: '授权前',
+    AFTER_GRANT: '授权后',
+    BEFORE_REVOKE: '撤销前',
+    AFTER_REVOKE: '撤销后',
+    BEFORE_MOVE: '移动前',
+    AFTER_MOVE: '移动后'
   } as Record<string, string>)[phase] || phase
 }
 
@@ -75,19 +81,39 @@ export function phaseLabel(phase?: string): string {
 export function hookCallSite(entityType?: string, phase?: string): { method: string; desc: string } {
   const key = `${entityType}/${phase}`
   const sites: Record<string, { method: string; desc: string }> = {
+    // Place occupancy
     'place/BEFORE_CHECKIN':           { method: 'UniversalPlaceApplicationService.checkIn', desc: '用户入住场所前检查 — BLOCK 级违规会阻止入住' },
     'place/AFTER_CHECKIN':            { method: 'UniversalPlaceApplicationService.checkIn', desc: '用户入住完成后触发 — WARN/INFO 级提示, 不阻断' },
     'place/BEFORE_CHECKOUT':          { method: 'UniversalPlaceApplicationService.checkOut', desc: '用户退宿前检查 — BLOCK 可拒绝退宿' },
     'place/AFTER_CHECKOUT':           { method: 'UniversalPlaceApplicationService.checkOut', desc: '用户退宿完成后触发' },
+    // Place CRUD
+    'place/BEFORE_CREATE':            { method: 'UniversalPlaceApplicationService.createPlace', desc: '场所创建前 — 可拒绝非法结构/命名' },
+    'place/AFTER_CREATE':             { method: 'UniversalPlaceApplicationService.createPlace', desc: '场所创建完成后 — 审计/通知/挂载物联设备' },
+    'place/BEFORE_UPDATE':            { method: 'UniversalPlaceApplicationService.updatePlace', desc: '场所属性更新前 — 例: 容量缩减前检查当前入住数' },
+    'place/AFTER_UPDATE':             { method: 'UniversalPlaceApplicationService.updatePlace', desc: '场所属性更新完成后' },
+    'place/BEFORE_DELETE':            { method: 'UniversalPlaceApplicationService.deletePlace', desc: '场所删除前 — 可拒绝 (例: 还有占用者/预订)' },
+    // OrgUnit CRUD
     'org_unit/BEFORE_CREATE':         { method: 'OrgUnitApplicationService.createOrgUnit', desc: '创建组织节点前 — 可拒绝非法结构' },
     'org_unit/AFTER_CREATE':          { method: 'OrgUnitApplicationService.createOrgUnit', desc: '创建完成后触发' },
     'org_unit/BEFORE_UPDATE':         { method: 'OrgUnitApplicationService.updateOrgUnit', desc: '更新组织前' },
     'org_unit/AFTER_UPDATE':          { method: 'OrgUnitApplicationService.updateOrgUnit', desc: '更新完成后触发' },
     'org_unit/BEFORE_DELETE':         { method: 'OrgUnitApplicationService.deleteOrgUnit', desc: '删除组织前 — 可拒绝 (例: CLASS 删前必须无归属学生)' },
+    // OrgUnit membership
     'org_unit/BEFORE_ADD_MEMBER':     { method: 'OrgMemberService.addMember', desc: '成员加入组织前' },
     'org_unit/AFTER_ADD_MEMBER':      { method: 'OrgMemberService.addMember', desc: '成员加入完成后' },
     'org_unit/BEFORE_REMOVE_MEMBER':  { method: 'OrgMemberService.removeMember', desc: '成员移除前' },
-    'org_unit/AFTER_REMOVE_MEMBER':   { method: 'OrgMemberService.removeMember', desc: '成员移除完成后' }
+    'org_unit/AFTER_REMOVE_MEMBER':   { method: 'OrgMemberService.removeMember', desc: '成员移除完成后' },
+    // User CRUD
+    'user/BEFORE_CREATE':             { method: 'UserApplicationService.createUser', desc: '用户创建前 — 可拒绝无效输入 (例: 邮箱重复/禁用词/身份证校验)' },
+    'user/AFTER_CREATE':              { method: 'UserApplicationService.createUser', desc: '用户创建完成后 — 可发欢迎邮件/审计' },
+    'user/BEFORE_UPDATE':             { method: 'UserApplicationService.updateUser', desc: '用户更新前 — 可拒绝敏感字段修改' },
+    'user/AFTER_UPDATE':              { method: 'UserApplicationService.updateUser', desc: '用户更新完成后' },
+    'user/BEFORE_DELETE':             { method: 'UserApplicationService.deleteUser', desc: '用户删除前 — 禁删超管/级联处理关系' },
+    // AccessRelation grant/revoke
+    'access_relation/BEFORE_GRANT':   { method: 'AccessRelationApplicationService.create', desc: '授予关系前 — 例: 家属监护必须身份证校验/禁止给离职用户授权' },
+    'access_relation/AFTER_GRANT':    { method: 'AccessRelationApplicationService.create', desc: '授予关系完成后 — 审计/通知被授权人' },
+    'access_relation/BEFORE_REVOKE':  { method: 'AccessRelationApplicationService.delete', desc: '撤销关系前 — 可拒绝 (例: 必须由授权人本人撤销)' },
+    'access_relation/AFTER_REVOKE':   { method: 'AccessRelationApplicationService.delete', desc: '撤销关系完成后 — 审计/清理派生数据' }
   }
   return sites[key] || { method: '', desc: '' }
 }

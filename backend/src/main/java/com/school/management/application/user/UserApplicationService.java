@@ -18,6 +18,9 @@ import com.school.management.domain.user.repository.UserRepository;
 import com.school.management.exception.BusinessException;
 import com.school.management.infrastructure.extension.ExtensionContext;
 import com.school.management.infrastructure.extension.ExtensionDispatcher;
+import com.school.management.infrastructure.extension.PolicyContext;
+import com.school.management.infrastructure.extension.PolicyRegistry;
+import com.school.management.infrastructure.extension.Violation;
 import com.school.management.security.JwtTokenService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -56,6 +59,7 @@ public class UserApplicationService {
     private final UniversalPlaceOccupantRepository occupantRepository;
     private final UniversalPlaceRepository placeRepository;
     private final JwtTokenService jwtTokenService;
+    private final PolicyRegistry policyRegistry;
 
     @Autowired(required = false)
     private ExtensionDispatcher extensionDispatcher;
@@ -71,6 +75,9 @@ public class UserApplicationService {
     @Transactional
     public User createUser(CreateUserCommand command) {
         log.info("创建用户: {}", command.getUsername());
+
+        // Policy hook — BEFORE_CREATE 允许插件阻止创建 (BLOCK 级违规抛 PolicyViolationException, 事务回滚)
+        policyRegistry.enforce(new PolicyContext<>("user", "BEFORE_CREATE", command));
 
         // 检查用户名是否已存在
         if (userRepository.existsByUsername(command.getUsername())) {
@@ -168,6 +175,11 @@ public class UserApplicationService {
         // SPI: 插件 afterCreate 钩子
         fireUserLifecycle("afterCreate", user, command.getCreatedBy());
 
+        // Policy hook — AFTER_CREATE WARN/INFO 仅记日志
+        List<Violation> createWarns = policyRegistry.check(
+                new PolicyContext<>("user", "AFTER_CREATE", user));
+        createWarns.forEach(w -> log.warn("[Policy/{}] {}: {}", w.severity(), w.code(), w.message()));
+
         log.info("用户创建成功: id={}, username={}", user.getId(), user.getUsername());
         return user;
     }
@@ -199,6 +211,9 @@ public class UserApplicationService {
     @Transactional
     public User updateUser(Long userId, UpdateUserCommand command) {
         log.info("更新用户: {}", userId);
+
+        // Policy hook — BEFORE_UPDATE 允许插件阻止更新
+        policyRegistry.enforce(new PolicyContext<>("user", "BEFORE_UPDATE", command));
 
         User user = getUserOrThrow(userId);
 
@@ -278,6 +293,11 @@ public class UserApplicationService {
 
         // SPI: 插件 afterUpdate 钩子
         fireUserLifecycle("afterUpdate", user, command.getUpdatedBy());
+
+        // Policy hook — AFTER_UPDATE WARN/INFO 仅记日志
+        List<Violation> updateWarns = policyRegistry.check(
+                new PolicyContext<>("user", "AFTER_UPDATE", user));
+        updateWarns.forEach(w -> log.warn("[Policy/{}] {}: {}", w.severity(), w.code(), w.message()));
 
         log.info("用户更新成功: {}", userId);
         return user;
@@ -367,6 +387,9 @@ public class UserApplicationService {
     @Transactional
     public void deleteUser(Long userId) {
         log.info("删除用户: {}", userId);
+
+        // Policy hook — BEFORE_DELETE 允许插件阻止删除 (例: 禁删超管 / 级联处理关系)
+        policyRegistry.enforce(new PolicyContext<>("user", "BEFORE_DELETE", userId));
 
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new BusinessException("用户不存在: " + userId));

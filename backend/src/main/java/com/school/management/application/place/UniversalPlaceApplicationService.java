@@ -224,6 +224,9 @@ public class UniversalPlaceApplicationService {
      */
     @Transactional
     public PlaceDTO createPlace(CreatePlaceCommand command) {
+        // Policy hook — BEFORE_CREATE 允许插件阻止创建
+        policyRegistry.enforce(new PolicyContext<>("place", "BEFORE_CREATE", command));
+
         // 验证类型
         EntityTypeConfig placeType = entityTypeConfigRepository.findByTypeCode("PLACE", command.getTypeCode())
                 .orElseThrow(() -> new IllegalArgumentException("空间类型不存在: " + command.getTypeCode()));
@@ -301,6 +304,11 @@ public class UniversalPlaceApplicationService {
 
         firePlaceLifecycle("afterCreate", saved, null);
 
+        // Policy hook — AFTER_CREATE WARN/INFO 仅记日志
+        List<Violation> createWarns = policyRegistry.check(
+                new PolicyContext<>("place", "AFTER_CREATE", saved));
+        createWarns.forEach(w -> log.warn("[Policy/{}] {}: {}", w.severity(), w.code(), w.message()));
+
         return toDTO(saved);
     }
 
@@ -311,6 +319,9 @@ public class UniversalPlaceApplicationService {
      */
     @Transactional
     public PlaceDTO updatePlace(Long id, UpdatePlaceCommand command) {
+        // Policy hook — BEFORE_UPDATE 允许插件阻止更新 (例: 容量缩减前检查当前入住数)
+        policyRegistry.enforce(new PolicyContext<>("place", "BEFORE_UPDATE", command));
+
         UniversalPlace place = placeRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("空间不存在"));
 
@@ -360,6 +371,12 @@ public class UniversalPlaceApplicationService {
 
         UniversalPlace saved = placeRepository.save(place);
         firePlaceLifecycle("afterUpdate", saved, null);
+
+        // Policy hook — AFTER_UPDATE WARN/INFO 仅记日志
+        List<Violation> updateWarns = policyRegistry.check(
+                new PolicyContext<>("place", "AFTER_UPDATE", saved));
+        updateWarns.forEach(w -> log.warn("[Policy/{}] {}: {}", w.severity(), w.code(), w.message()));
+
         return toDTO(saved);
     }
 
@@ -427,6 +444,9 @@ public class UniversalPlaceApplicationService {
      */
     @Transactional
     public void deletePlace(Long id) {
+        // Policy hook — BEFORE_DELETE 允许插件阻止删除 (例: 还有占用者 / 有活跃预订)
+        policyRegistry.enforce(new PolicyContext<>("place", "BEFORE_DELETE", id));
+
         UniversalPlace place = placeRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("空间不存在"));
 

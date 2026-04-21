@@ -137,21 +137,45 @@ public class PluginPlatformController {
     @GetMapping("/policies")
     @CasbinAccess(resource = "admin", action = "access")
     public Result<Map<String, Object>> policies() {
-        // 9 个核心 hook 点 (与 docs/plugin-extension-catalog.md 保持一致)
+        // 27 个核心 hook 点 (真 A+ 覆盖, 与 docs/plugin-extension-catalog.md 保持一致)
+        // Place: CHECKIN/CHECKOUT 4 + CRUD 5 = 9
+        // OrgUnit: CRUD 5 + MEMBER 4 = 9  (MOVE 暂缺业务方法, 跳过)
+        // User: CRUD 5
+        // AccessRelation: GRANT/REVOKE 4
         List<PolicyContext<?>> probes = List.of(
+            // Place occupancy (既有)
             new PolicyContext<>("place",    "BEFORE_CHECKIN",       null),
             new PolicyContext<>("place",    "AFTER_CHECKIN",        null),
             new PolicyContext<>("place",    "BEFORE_CHECKOUT",      null),
             new PolicyContext<>("place",    "AFTER_CHECKOUT",       null),
+            // Place CRUD (新增)
+            new PolicyContext<>("place",    "BEFORE_CREATE",        null),
+            new PolicyContext<>("place",    "AFTER_CREATE",         null),
+            new PolicyContext<>("place",    "BEFORE_UPDATE",        null),
+            new PolicyContext<>("place",    "AFTER_UPDATE",         null),
+            new PolicyContext<>("place",    "BEFORE_DELETE",        null),
+            // OrgUnit CRUD (既有)
             new PolicyContext<>("org_unit", "BEFORE_CREATE",        null),
             new PolicyContext<>("org_unit", "AFTER_CREATE",         null),
             new PolicyContext<>("org_unit", "BEFORE_UPDATE",        null),
             new PolicyContext<>("org_unit", "AFTER_UPDATE",         null),
             new PolicyContext<>("org_unit", "BEFORE_DELETE",        null),
+            // OrgUnit membership (既有)
             new PolicyContext<>("org_unit", "BEFORE_ADD_MEMBER",    null),
             new PolicyContext<>("org_unit", "AFTER_ADD_MEMBER",     null),
             new PolicyContext<>("org_unit", "BEFORE_REMOVE_MEMBER", null),
-            new PolicyContext<>("org_unit", "AFTER_REMOVE_MEMBER",  null)
+            new PolicyContext<>("org_unit", "AFTER_REMOVE_MEMBER",  null),
+            // User CRUD (新增)
+            new PolicyContext<>("user",     "BEFORE_CREATE",        null),
+            new PolicyContext<>("user",     "AFTER_CREATE",         null),
+            new PolicyContext<>("user",     "BEFORE_UPDATE",        null),
+            new PolicyContext<>("user",     "AFTER_UPDATE",         null),
+            new PolicyContext<>("user",     "BEFORE_DELETE",        null),
+            // AccessRelation grant/revoke (新增)
+            new PolicyContext<>("access_relation", "BEFORE_GRANT",  null),
+            new PolicyContext<>("access_relation", "AFTER_GRANT",   null),
+            new PolicyContext<>("access_relation", "BEFORE_REVOKE", null),
+            new PolicyContext<>("access_relation", "AFTER_REVOKE",  null)
         );
 
         List<Map<String, Object>> items = new ArrayList<>();
