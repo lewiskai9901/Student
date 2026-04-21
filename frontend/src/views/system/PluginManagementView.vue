@@ -96,6 +96,32 @@
           <div class="stat-count"><b>{{ dataScopeStats.total }}</b><span> 个</span></div>
         </div>
       </div>
+      <!-- M5: 触发点 -->
+      <div class="stat-card" :class="{ active: activeTab === 'triggerPoints' }" @click="activeTab = 'triggerPoints'">
+        <div class="stat-icon" style="background: #fef9c3; color: #a16207;">
+          <Zap />
+        </div>
+        <div class="stat-body">
+          <div class="stat-label">触发点</div>
+          <div class="stat-count"><b>{{ triggerPointStats.total }}</b><span> 个</span></div>
+        </div>
+      </div>
+      <!-- M5: 订阅规则 -->
+      <div class="stat-card" :class="{ active: activeTab === 'subscriptionRules' }" @click="activeTab = 'subscriptionRules'">
+        <div class="stat-icon" style="background: #fee2e2; color: #b91c1c;">
+          <BellRing />
+        </div>
+        <div class="stat-body">
+          <div class="stat-label">订阅规则</div>
+          <div class="stat-count"><b>{{ subRuleStats.total }}</b><span> 个</span></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- M5: 消息管道健康指示 (missingTables 不为空时显示) -->
+    <div v-if="!messagingHealth.healthy && messagingHealth.missingTables.length" class="pp-alert pp-alert-danger">
+      消息事件管道不完整: <b>{{ messagingHealth.missingTables.join(' / ') }}</b> — triggerService.fire() 将静默 no-op,
+      需确认 V97 / V98 / V68 migration 是否 apply 完毕.
     </div>
 
     <!-- Main area -->
@@ -570,6 +596,124 @@
           </div>
         </div>
 
+        <!-- Tab: TriggerPoints (M5 触发点可视化) -->
+        <div v-if="activeTab === 'triggerPoints'" class="pp-list">
+          <div v-if="!triggerPoints.length" class="pp-empty">暂无触发点 — 插件需通过 TriggerPointContribution 声明</div>
+          <table v-else class="pp-table">
+            <thead>
+              <tr>
+                <th>模块</th>
+                <th>触发点码</th>
+                <th>名称</th>
+                <th>说明</th>
+                <th>Context 字段</th>
+                <th>触发器数</th>
+                <th>状态</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="t in triggerPoints" :key="t.point_code">
+                <td>
+                  <span class="pp-chip pp-chip-info">{{ t.module_name || t.module_code }}</span>
+                </td>
+                <td><code class="pp-code">{{ t.point_code }}</code></td>
+                <td>{{ t.point_name }}</td>
+                <td><span class="pp-muted">{{ t.description || '—' }}</span></td>
+                <td>
+                  <template v-for="(v, k) in parseSchema(t.context_schema)" :key="k">
+                    <span class="pp-feat-chip" :title="`${k}: ${v}`">{{ k }}</span>
+                  </template>
+                  <span v-if="!Object.keys(parseSchema(t.context_schema)).length" class="pp-muted">—</span>
+                </td>
+                <td><b>{{ t.trigger_count ?? 0 }}</b></td>
+                <td>
+                  <span :class="Number(t.is_enabled) === 1 ? 'pp-chip pp-chip-success' : 'pp-chip pp-chip-info'">
+                    {{ Number(t.is_enabled) === 1 ? '启用' : '禁用' }}
+                  </span>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+          <!-- M5: TargetMode SPI 小表,与触发点同屏展示 -->
+          <div v-if="targetModes.length" class="pp-group" style="margin-top: 16px;">
+            <div class="pp-group-header">
+              <span class="pp-group-title">TargetMode SPI</span>
+              <span class="pp-group-badge">{{ targetModes.length }}</span>
+            </div>
+            <table class="pp-table">
+              <thead>
+                <tr>
+                  <th>模式码</th>
+                  <th>名称</th>
+                  <th>支持预览</th>
+                  <th>源类</th>
+                  <th>来源插件</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="m in targetModes" :key="m.modeCode">
+                  <td><code class="pp-code">{{ m.modeCode }}</code></td>
+                  <td>{{ m.displayName }}</td>
+                  <td>
+                    <span :class="m.supportsPreview ? 'pp-chip pp-chip-success' : 'pp-chip pp-chip-info'">
+                      {{ m.supportsPreview ? '是' : '否' }}
+                    </span>
+                  </td>
+                  <td><code class="pp-code pp-code-thin">{{ shortClass(m.sourceClass) }}</code></td>
+                  <td>
+                    <span class="pp-industry-chip" :style="industryChipStyle(m.sourcePlugin)">
+                      {{ industryLabel(m.sourcePlugin) || m.sourcePlugin }}
+                    </span>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Tab: SubscriptionRules (M5 订阅规则可视化) -->
+        <div v-if="activeTab === 'subscriptionRules'" class="pp-list">
+          <div v-if="!subscriptionRules.length" class="pp-empty">暂无订阅规则 — 前往 /message/config 新建</div>
+          <table v-else class="pp-table">
+            <thead>
+              <tr>
+                <th>规则名</th>
+                <th>事件匹配</th>
+                <th>目标模式</th>
+                <th>渠道</th>
+                <th>目标配置</th>
+                <th>租户</th>
+                <th>状态</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="r in subscriptionRules" :key="r.id">
+                <td>{{ r.rule_name || '—' }}</td>
+                <td>
+                  <code class="pp-code">{{ [r.event_category, r.event_type].filter(Boolean).join(' / ') || '全部' }}</code>
+                </td>
+                <td><span class="pp-chip pp-chip-primary">{{ r.target_mode }}</span></td>
+                <td><span class="pp-muted">{{ r.channel || 'IN_APP' }}</span></td>
+                <td>
+                  <code v-if="r.target_config && String(r.target_config) !== '{}'"
+                        class="pp-code pp-code-thin"
+                        :title="String(r.target_config)"
+                        style="display: inline-block; max-width: 260px; overflow: hidden; text-overflow: ellipsis; vertical-align: bottom;">
+                    {{ String(r.target_config).length > 40 ? String(r.target_config).slice(0, 40) + '…' : r.target_config }}
+                  </code>
+                  <span v-else class="pp-muted">无</span>
+                </td>
+                <td><span class="pp-muted">T-{{ r.tenant_id ?? 0 }}</span></td>
+                <td>
+                  <span :class="Number(r.is_enabled) === 1 ? 'pp-chip pp-chip-success' : 'pp-chip pp-chip-info'">
+                    {{ Number(r.is_enabled) === 1 ? '启用' : '禁用' }}
+                  </span>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
         <!-- Tab: DataScopes (A+ W3 动态维度可视化) -->
         <div v-if="activeTab === 'dataScopes'" class="pp-list">
           <div v-if="!dataScopes.length" class="pp-empty">暂无数据权限维度</div>
@@ -622,14 +766,18 @@
 import { ref, computed, onMounted, watch } from 'vue'
 import { ElMessage } from 'element-plus'
 import { Refresh } from '@element-plus/icons-vue'
-import { LayoutGrid, Link2, Bell, Shield, UserCog, Package, Building2, ShieldCheck, Filter } from 'lucide-vue-next'
+import { LayoutGrid, Link2, Bell, Shield, UserCog, Package, Building2, ShieldCheck, Filter, Zap, BellRing } from 'lucide-vue-next'
 import { pluginPlatformApi, type TenantPluginRow, type PluginHealthInfo } from '@/api/pluginPlatform'
 import { ElMessageBox } from 'element-plus'
 import { http } from '@/utils/request'
 
 // ───────── State ─────────
 const loading = ref(false)
-const activeTab = ref<'types' | 'relations' | 'events' | 'permissions' | 'roles' | 'industries' | 'tenants' | 'policies' | 'dataScopes'>('types')
+const activeTab = ref<
+  'types' | 'relations' | 'events' | 'permissions' | 'roles'
+  | 'industries' | 'tenants' | 'policies' | 'dataScopes'
+  | 'triggerPoints' | 'subscriptionRules'
+>('types')
 
 // ═══ Phase 6 生命周期治理 + Phase 5 租户管理 ═══
 const tenantSelect = ref(1)
@@ -731,6 +879,12 @@ const policies = ref<any[]>([])
 const hookPoints = ref<any[]>([])
 const dataScopes = ref<any[]>([])
 
+// M5: 触发点 / 订阅规则 / target_mode / messaging health
+const triggerPoints = ref<any[]>([])
+const subscriptionRules = ref<any[]>([])
+const targetModes = ref<any[]>([])
+const messagingHealth = ref<{ healthy: boolean; missingTables: string[] }>({ healthy: true, missingTables: [] })
+
 // 新 API overview 数据(权威行业包信息)
 const overview = ref<any>(null)
 
@@ -742,7 +896,7 @@ async function loadAll() {
     const typeReqs = ['USER', 'ORG_UNIT', 'PLACE'].map(et =>
       http.get('/entity-type-configs', { params: { entityType: et } }).catch(() => [])
     )
-    const [ov, r, e, p, ro, pol, ds, ...typeResults] = await Promise.all([
+    const [ov, r, e, p, ro, pol, ds, tps, srs, tms, mh, ...typeResults] = await Promise.all([
       http.get('/plugin-platform/overview').catch(() => null),
       http.get('/relation-types').catch(() => []),
       // /event/types 返回 [{categoryCode, categoryName, types:[...]}, ...] 需要打平
@@ -751,6 +905,11 @@ async function loadAll() {
       http.get('/roles', { params: { pageSize: 200 } }).catch(() => []),
       http.get('/plugin-platform/policies').catch(() => ({ policies: [], hookPoints: [] })),
       http.get('/roles/data-permissions/scopes').catch(() => []),
+      // M5 新增: 触发点 / 订阅规则 / target-mode SPI / 健康
+      http.get('/plugin-platform/trigger-points').catch(() => []),
+      http.get('/plugin-platform/subscription-rules').catch(() => []),
+      http.get('/plugin-platform/target-modes').catch(() => []),
+      http.get('/plugin-platform/messaging-health').catch(() => ({ healthy: true, missingTables: [] })),
       ...typeReqs
     ])
     overview.value = ov
@@ -767,6 +926,15 @@ async function loadAll() {
     policies.value = Array.isArray((pol as any)?.policies) ? (pol as any).policies : []
     hookPoints.value = Array.isArray((pol as any)?.hookPoints) ? (pol as any).hookPoints : []
     dataScopes.value = Array.isArray(ds) ? ds : ((ds as any)?.records || [])
+    // M5 新扩展点
+    triggerPoints.value = Array.isArray(tps) ? tps : ((tps as any)?.records || [])
+    subscriptionRules.value = Array.isArray(srs) ? srs : ((srs as any)?.records || [])
+    targetModes.value = Array.isArray(tms) ? tms : ((tms as any)?.records || [])
+    const mhObj: any = mh ?? {}
+    messagingHealth.value = {
+      healthy: Boolean(mhObj.healthy),
+      missingTables: Array.isArray(mhObj.missingTables) ? mhObj.missingTables : []
+    }
   } catch (err: any) {
     ElMessage.error('加载失败: ' + (err?.message || err))
   } finally {
@@ -806,6 +974,13 @@ const policyStats = computed(() => ({
 }))
 const dataScopeStats = computed(() => ({
   total: dataScopes.value.length
+}))
+// M5 stats
+const triggerPointStats = computed(() => ({
+  total: overview.value?.summary?.triggerPoints ?? triggerPoints.value.length
+}))
+const subRuleStats = computed(() => ({
+  total: overview.value?.summary?.subscriptionRules ?? subscriptionRules.value.length
 }))
 
 // ───────── Industries aggregation ─────────
@@ -849,6 +1024,9 @@ function countByIndustry(code: string): number {
     case 'roles':       return roles.value.filter(x => resolveIndustry(x) === code).length
     case 'policies':    return policies.value.filter(x => x.sourcePlugin === code).length
     case 'dataScopes':  return dataScopes.value.filter(x => parseDataScopeSource(x.source) === code).length
+    // M5: trigger_points 按 module_code 做宽松映射; subscription_rules 无行业信息则一律归入 CORE
+    case 'triggerPoints':     return triggerPoints.value.filter(x => moduleCodeToIndustry(x.module_code) === code).length
+    case 'subscriptionRules': return code === 'CORE' ? subscriptionRules.value.length : 0
     default:
       // industries tab / fallback:总和 = 所有维度求和
       return types.value.filter(x => resolveIndustry(x, 'pluginClass') === code).length
@@ -952,6 +1130,8 @@ const totalPluginCount = computed(() => {
     case 'roles':       return roles.value.length
     case 'policies':    return policies.value.length
     case 'dataScopes':  return dataScopes.value.length
+    case 'triggerPoints':     return triggerPoints.value.length
+    case 'subscriptionRules': return subscriptionRules.value.length
     default: return industries.value.reduce((s, i) => s + i.pluginCount, 0)
   }
 })
@@ -1146,6 +1326,31 @@ function parseImplied(raw: any): any[] {
   try { return JSON.parse(raw) } catch { return [] }
 }
 
+// M5: trigger_points.context_schema → { field: type } 展示
+function parseSchema(raw: any): Record<string, string> {
+  if (!raw) return {}
+  try {
+    const obj = typeof raw === 'string' ? JSON.parse(raw) : raw
+    if (!obj || typeof obj !== 'object') return {}
+    const out: Record<string, string> = {}
+    for (const k of Object.keys(obj)) {
+      const v: any = (obj as any)[k]
+      out[k] = (v && typeof v === 'object' && v.type) ? String(v.type) : String(v)
+    }
+    return out
+  } catch { return {} }
+}
+
+// M5: trigger_point.module_code → industry 代号 (宽松映射, 未知归 CORE)
+function moduleCodeToIndustry(moduleCode?: string): string {
+  if (!moduleCode) return 'CORE'
+  const c = String(moduleCode).toLowerCase()
+  if (/student|class|grade|exam|academic|teaching|dorm|attendance|inspection/.test(c)) return 'EDU'
+  if (/patient|ward|clinic|medical|health/.test(c)) return 'HEALTH'
+  if (/elder|care/.test(c)) return 'CARE'
+  return 'CORE'
+}
+
 // ───────── Filtering ─────────
 function matchesFilters(row: any, opts: { industryFrom?: string; tierField?: string; searchFields?: string[] }) {
   if (industryFilter.value) {
@@ -1189,7 +1394,9 @@ const filteredCount = computed(() => {
     roles: filteredRoles.value.length,
     industries: industries.value.length,
     policies: policies.value.length,
-    dataScopes: dataScopes.value.length
+    dataScopes: dataScopes.value.length,
+    triggerPoints: triggerPoints.value.length,
+    subscriptionRules: subscriptionRules.value.length
   } as any)[activeTab.value] || 0
 })
 
@@ -1405,6 +1612,16 @@ const groupedPermissions = computed(() => {
 .pp-chip-warning { color: #d97706; border-color: #fcd34d; background: #fffbeb; }
 .pp-chip-danger  { color: #dc2626; border-color: #fca5a5; background: #fef2f2; }
 .pp-chip-info    { color: #6b7280; border-color: #e5e7eb; background: #f9fafb; }
+
+/* M5: 消息管道健康 banner */
+.pp-alert {
+  padding: 10px 14px; border-radius: 6px; margin-bottom: 12px;
+  font-size: 13px; line-height: 1.5;
+}
+.pp-alert-danger {
+  background: #fef2f2; color: #991b1b; border: 1px solid #fca5a5;
+}
+.pp-alert b { font-weight: 600; }
 
 .pp-tenants {
   padding: 4px 0;

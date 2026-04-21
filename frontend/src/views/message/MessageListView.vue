@@ -268,6 +268,10 @@ onMounted(() => {
             <div class="msg-title-line">
               <span class="msg-title" :class="{ 'msg-title-unread': !n.isRead }">{{ n.title }}</span>
               <code class="code-badge">{{ getMsgTypeLabel(n.msgType) }}</code>
+              <!-- M5.3: 来源事件类型追溯 -->
+              <code v-if="n.sourceEventType" class="code-badge code-badge-source" :title="`来源事件: ${n.sourceEventType}`">
+                {{ n.sourceEventType }}
+              </code>
             </div>
             <div v-if="n.content" class="msg-preview">{{ n.content }}</div>
           </div>
@@ -609,6 +613,13 @@ onMounted(() => {
   color: #475569;
   white-space: nowrap;
   flex-shrink: 0;
+}
+/* M5.3: 来源事件追溯 badge (更淡, 以便与 msgType 区分) */
+.code-badge-source {
+  background: #eff6ff;
+  border-color: #bfdbfe;
+  color: #1d4ed8;
+  font-size: 10.5px;
 }
 
 .msg-delete {

@@ -16,6 +16,18 @@
       </button>
     </header>
 
+    <!-- M5.2: 消息管道健康指示 -->
+    <div v-if="!messagingHealth.healthy && messagingHealth.missingTables.length" class="health-alert">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" style="flex-shrink: 0;">
+        <path d="M12 9v4m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"
+              stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+      <span>
+        消息事件管道不完整: <b>{{ messagingHealth.missingTables.join(' / ') }}</b>
+        — 事件触发将静默 no-op, 请检查 V97/V98/V68 migration 是否 apply.
+      </span>
+    </div>
+
     <!-- Tab Bar -->
     <div class="tab-bar">
       <button class="tab-btn" :class="{ active: activeTab === 'rules' }" @click="activeTab = 'rules'">
@@ -731,9 +743,24 @@ async function handleDeleteTemplate(tpl: MsgTemplate) {
   } catch (e: any) { if (e !== 'cancel') ElMessage.error(e.message || '删除失败') }
 }
 
+// ==================== Messaging Health (M5.2) ====================
+const messagingHealth = ref<{ healthy: boolean; missingTables: string[] }>({ healthy: true, missingTables: [] })
+async function loadMessagingHealth() {
+  try {
+    const data: any = await http.get('/plugin-platform/messaging-health')
+    messagingHealth.value = {
+      healthy: Boolean(data?.healthy),
+      missingTables: Array.isArray(data?.missingTables) ? data.missingTables : [],
+    }
+  } catch {
+    // 健康接口失败默认认为健康,避免白屏
+    messagingHealth.value = { healthy: true, missingTables: [] }
+  }
+}
+
 // ==================== Lifecycle ====================
 onMounted(() => {
-  loadRules(); loadTemplates(); loadEventTypes(); loadRoles()
+  loadRules(); loadTemplates(); loadEventTypes(); loadRoles(); loadMessagingHealth()
 })
 </script>
 
@@ -792,6 +819,22 @@ onMounted(() => {
   font-family: inherit;
 }
 .btn-create:hover { background: #1f2937; transform: translateY(-1px); box-shadow: 0 4px 12px rgba(0,0,0,0.15); }
+
+/* M5.2: 健康 banner */
+.health-alert {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 12px 24px 0;
+  padding: 10px 14px;
+  background: #fef2f2;
+  border: 1px solid #fca5a5;
+  border-radius: 8px;
+  color: #991b1b;
+  font-size: 12.5px;
+  line-height: 1.5;
+}
+.health-alert b { font-weight: 600; }
 
 /* Tab Bar */
 .tab-bar {
