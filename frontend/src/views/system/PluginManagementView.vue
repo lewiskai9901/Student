@@ -798,12 +798,14 @@ const roleStats = computed(() => ({
   total: overview.value?.summary?.roles ?? roles.value.length,
   plugin: roles.value.filter((r: any) => r.pluginClass || r.industry).length
 }))
-// A+ 新扩展点 stats — 优先用 overview.summary (与后端对齐), 回退到前端数组长度
+// A+ 新扩展点 stats — 用实际列表长度
+// dataScopes 的列表包含 core hardcoded (5) + plugin dims (后端 overview.summary.dataScopes 只含 plugin),
+// 所以直接读 .length 保证 stats 卡片与列表显示一致 (避免 "卡片 3 / 列表 8" 的撞车)
 const policyStats = computed(() => ({
-  total: overview.value?.summary?.policies ?? policies.value.length
+  total: policies.value.length
 }))
 const dataScopeStats = computed(() => ({
-  total: overview.value?.summary?.dataScopes ?? dataScopes.value.length
+  total: dataScopes.value.length
 }))
 
 // ───────── Industries aggregation ─────────
@@ -845,6 +847,8 @@ function countByIndustry(code: string): number {
     case 'events':      return events.value.filter(x => resolveIndustry(x) === code).length
     case 'permissions': return permissions.value.filter(x => resolveIndustry(x) === code).length
     case 'roles':       return roles.value.filter(x => resolveIndustry(x) === code).length
+    case 'policies':    return policies.value.filter(x => x.sourcePlugin === code).length
+    case 'dataScopes':  return dataScopes.value.filter(x => parseDataScopeSource(x.source) === code).length
     default:
       // industries tab / fallback:总和 = 所有维度求和
       return types.value.filter(x => resolveIndustry(x, 'pluginClass') === code).length
@@ -946,6 +950,8 @@ const totalPluginCount = computed(() => {
     case 'events':      return events.value.length
     case 'permissions': return permissions.value.length
     case 'roles':       return roles.value.length
+    case 'policies':    return policies.value.length
+    case 'dataScopes':  return dataScopes.value.length
     default: return industries.value.reduce((s, i) => s + i.pluginCount, 0)
   }
 })
