@@ -17,6 +17,15 @@ export interface EntityTypeConfig {
   uiConfig?: Record<string, any>
   isPluginRegistered?: boolean
   isEnabled?: boolean
+  /**
+   * 插件级启用状态 (两状态模型).
+   * false 或 0 = 所属插件被禁 → 前端应灰显.
+   * tinyint 字段, 可能是 number (0/1) 或 boolean
+   */
+  pluginEnabled?: boolean | number
+  industry?: string
+  origin?: string
+  pluginClass?: string
 }
 
 export interface FieldSchema {
@@ -38,9 +47,12 @@ export interface CategoryOption {
 }
 
 export const entityTypeApi = {
-  /** 查询某实体类型的所有类型配置 */
-  list: (entityType: string) =>
-    http.get<EntityTypeConfig[]>('/entity-type-configs', { params: { entityType } }),
+  /**
+   * 查询某实体类型的所有类型配置
+   * @param includeDisabled 管理员视角: true 时返回所属插件被禁的类型 (pluginEnabled=0). 业务调用不传.
+   */
+  list: (entityType: string, includeDisabled?: boolean) =>
+    http.get<EntityTypeConfig[]>('/entity-type-configs', { params: { entityType, includeDisabled } }),
 
   /** 查询单个类型配置 */
   get: (entityType: string, typeCode: string) =>

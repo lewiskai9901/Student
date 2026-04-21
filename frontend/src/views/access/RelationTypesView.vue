@@ -23,10 +23,20 @@
         <span class="text-xs text-gray-500">{{ sourceDesc(src) }}</span>
         <span class="text-xs text-gray-400">· {{ bySource(src).length }} 条</span>
       </div>
-      <el-table :data="bySource(src)" stripe size="small" class="rounded">
-        <el-table-column label="关系码" prop="relationCode" width="140">
+      <el-table
+        :data="bySource(src)"
+        stripe size="small"
+        class="rounded"
+        :row-class-name="relationRowClass"
+      >
+        <el-table-column label="关系码" prop="relationCode" width="180">
           <template #default="{ row }">
             <code class="relation-code">{{ row.relationCode }}</code>
+            <span
+              v-if="isPluginDisabled(row)"
+              class="disabled-by-plugin-badge ml-1"
+              title="所属插件已禁用 — 此关系级联软失效"
+            >插件禁用</span>
           </template>
         </el-table-column>
         <el-table-column label="中文名" prop="relationName" width="90" />
@@ -113,9 +123,24 @@ function typeLabel(t: string): string {
   return { user: '用户', org_unit: '组织', place: '场所' }[t as string] || t
 }
 
+/** pluginEnabled 后端可能返回 0/1 (tinyint) 或 boolean — 统一判定 */
+function isPluginDisabled(row: RelationTypeDef): boolean {
+  const v = row.pluginEnabled
+  if (v === false) return true
+  if (v === 0) return true
+  return false
+}
+
+function relationRowClass({ row }: { row: RelationTypeDef }): string {
+  return isPluginDisabled(row) ? 'row-disabled-by-plugin' : ''
+}
+
 async function load() {
   loading.value = true
-  try { types.value = await relationTypeApi.list() }
+  try {
+    // 管理员视角: 显示所属插件被禁的关系 (灰显)
+    types.value = await relationTypeApi.list({ includeDisabled: true })
+  }
   catch (e: any) { ElMessage.error('加载失败: ' + (e?.message || e)) }
   finally { loading.value = false }
 }
@@ -141,5 +166,28 @@ onMounted(load)
   background: #eff6ff;
   padding: 1px 6px;
   border-radius: 3px;
+}
+
+/* 插件级联禁用行灰显 (需要用 :deep 穿透 Element Plus 行) */
+:deep(.row-disabled-by-plugin) {
+  opacity: 0.55;
+  background-color: #fafaf9 !important;
+}
+:deep(.row-disabled-by-plugin:hover > td) {
+  background-color: #fef3c7 !important;
+}
+
+.disabled-by-plugin-badge {
+  display: inline-block;
+  padding: 1px 7px;
+  border-radius: 10px;
+  font-size: 10px;
+  font-weight: 600;
+  color: #a16207;
+  background: #fef3c7;
+  border: 1px solid #fcd34d;
+  line-height: 1.4;
+  cursor: help;
+  vertical-align: middle;
 }
 </style>

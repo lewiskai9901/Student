@@ -48,6 +48,7 @@
           v-if="view === 'plugins'"
           :plugin-code="selectedCode"
           @jump-resource="onJumpResource"
+          @enable-plugin="onEnablePlugin"
         />
         <HookPointDetail
           v-else-if="view === 'hooks'"

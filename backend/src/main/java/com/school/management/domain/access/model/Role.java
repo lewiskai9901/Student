@@ -34,6 +34,15 @@ public class Role extends AggregateRoot<Long> {
     /** 统一来源字段: "PLUGIN:CORE@1.0.0" / "TENANT:CUSTOM#1" */
     private String origin;
 
+    /**
+     * 插件级启用状态 (两状态模型):
+     *   - isEnabled:     管理员手动开关
+     *   - pluginEnabled: 所属插件级开关 (PluginLifecycleService 级联维护)
+     * 实际生效 = isEnabled AND pluginEnabled
+     * null 视为 true (兼容旧数据)
+     */
+    private Boolean pluginEnabled;
+
     private Set<Long> permissionIds;
 
     protected Role() {
@@ -206,6 +215,8 @@ public class Role extends AggregateRoot<Long> {
     public void setPluginClass(String pluginClass) { this.pluginClass = pluginClass; }
     public String getOrigin() { return origin; }
     public void setOrigin(String origin) { this.origin = origin; }
+    public Boolean getPluginEnabled() { return pluginEnabled; }
+    public void setPluginEnabled(Boolean pluginEnabled) { this.pluginEnabled = pluginEnabled; }
 
     // Builder pattern
     public static RoleBuilder builder() {

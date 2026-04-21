@@ -50,6 +50,12 @@ public class PermissionResponse {
     /** 统一来源: "PLUGIN:CORE@1.0.0" / "TENANT:CUSTOM#<id>" */
     private String origin;
 
+    /**
+     * 插件级启用状态 (两状态模型).
+     * true = 所属插件启用, false = 被级联软失效 (前端应灰显).
+     */
+    private Boolean pluginEnabled;
+
     private LocalDateTime createdAt;
 
     // Children for tree structure

@@ -28,15 +28,22 @@ public class EntityTypeConfigController {
         "id, entity_type AS entityType, type_code AS typeCode, type_name AS typeName, " +
         "category, parent_type_code AS parentTypeCode, allowed_child_type_codes AS allowedChildTypeCodes, " +
         "metadata_schema AS metadataSchema, features, ui_config AS uiConfig, " +
-        "is_plugin_registered AS isPluginRegistered, is_enabled AS isEnabled, sort_order AS sortOrder, " +
+        "is_plugin_registered AS isPluginRegistered, is_enabled AS isEnabled, " +
+        "plugin_enabled AS pluginEnabled, sort_order AS sortOrder, " +
         "plugin_class AS pluginClass, industry, origin";
 
     @GetMapping
     public Result<List<Map<String, Object>>> list(
             @RequestParam String entityType,
-            @RequestParam(required = false) String category) {
+            @RequestParam(required = false) String category,
+            @RequestParam(required = false, defaultValue = "false") Boolean includeDisabled) {
+        // includeDisabled=true: 管理员视角, 返回所属插件被禁的类型 (灰显)
+        boolean admin = Boolean.TRUE.equals(includeDisabled);
         StringBuilder sql = new StringBuilder("SELECT " + SELECT_COLS +
-            " FROM entity_type_configs WHERE entity_type = ? AND deleted = 0 AND is_enabled = 1 AND plugin_enabled = 1");
+            " FROM entity_type_configs WHERE entity_type = ? AND deleted = 0");
+        if (!admin) {
+            sql.append(" AND is_enabled = 1 AND plugin_enabled = 1");
+        }
         List<Object> params = new ArrayList<>();
         params.add(entityType);
         if (category != null) { sql.append(" AND category = ?"); params.add(category); }

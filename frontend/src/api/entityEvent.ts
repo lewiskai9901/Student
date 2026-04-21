@@ -12,9 +12,12 @@ const EVENT_BASE = '/event/events'
 
 // ==================== Event Types ====================
 
-/** 获取所有事件类型（后端返回按分类分组，这里展平为列表） */
-export async function listEntityEventTypes(): Promise<EntityEventType[]> {
-  const data = await http.get<any>(TYPE_BASE)
+/**
+ * 获取所有事件类型（后端返回按分类分组，这里展平为列表）
+ * @param includeDisabled 管理员视角: true 时包含所属插件被禁的事件类型 (pluginEnabled=0, 前端灰显)
+ */
+export async function listEntityEventTypes(includeDisabled?: boolean): Promise<EntityEventType[]> {
+  const data = await http.get<any>(TYPE_BASE, { params: { includeDisabled } })
   // 后端返回 [{categoryCode, categoryName, categoryPolarity, types: [...]}]
   // 展平为 EntityEventType[]
   if (Array.isArray(data)) {

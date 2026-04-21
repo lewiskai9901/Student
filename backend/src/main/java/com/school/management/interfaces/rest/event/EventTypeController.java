@@ -27,11 +27,17 @@ public class EventTypeController {
     private final JdbcTemplate jdbcTemplate;
 
     @GetMapping
-    @Operation(summary = "获取事件类型列表（按分类分组）")
+    @Operation(summary = "获取事件类型列表（按分类分组）",
+        description = "includeDisabled=true 时返回所属插件被禁的事件类型 (pluginEnabled=false), 用于管理员视图灰显")
     @CasbinAccess(resource = "entity-event-type", action = "view")
     public Result<List<Map<String, Object>>> listGrouped(
-            @RequestParam(required = false) String category) {
-        String sql = "SELECT * FROM entity_event_types WHERE deleted = 0 AND plugin_enabled = 1";
+            @RequestParam(required = false) String category,
+            @RequestParam(required = false, defaultValue = "false") Boolean includeDisabled) {
+        boolean admin = Boolean.TRUE.equals(includeDisabled);
+        String sql = "SELECT * FROM entity_event_types WHERE deleted = 0";
+        if (!admin) {
+            sql += " AND plugin_enabled = 1";
+        }
         List<Object> params = new ArrayList<>();
         if (category != null && !category.isBlank()) {
             sql += " AND category_code = ?";

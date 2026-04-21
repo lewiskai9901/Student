@@ -55,16 +55,20 @@ public class PermissionController {
     }
 
     @GetMapping
-    @Operation(summary = "List all permissions")
+    @Operation(summary = "List all permissions",
+        description = "includeDisabled=true 时返回所属插件被禁的权限 (pluginEnabled=false), 用于管理员视图灰显. " +
+                      "权限计算链不应传 true.")
     @CasbinAccess(resource = "system:permission", action = "view")
     public Result<List<PermissionResponse>> listPermissions(
-            @RequestParam(required = false) PermissionType type) {
+            @RequestParam(required = false) PermissionType type,
+            @RequestParam(required = false, defaultValue = "false") Boolean includeDisabled) {
 
+        boolean admin = Boolean.TRUE.equals(includeDisabled);
         List<Permission> permissions;
         if (type != null) {
-            permissions = accessService.listPermissionsByType(type);
+            permissions = accessService.listPermissionsByTypeForAdmin(type, admin);
         } else {
-            permissions = accessService.listAllPermissions();
+            permissions = accessService.listAllPermissionsForAdmin(admin);
         }
 
         List<PermissionResponse> responses = permissions.stream()
@@ -125,6 +129,7 @@ public class PermissionController {
         response.setIndustry(permission.getIndustry());
         response.setPluginClass(permission.getPluginClass());
         response.setOrigin(permission.getOrigin());
+        response.setPluginEnabled(permission.getPluginEnabled() == null ? Boolean.TRUE : permission.getPluginEnabled());
         response.setCreatedAt(permission.getCreatedAt());
 
         // Recursively convert children

@@ -53,6 +53,13 @@ public class Permission implements Entity<Long> {
     @Setter
     private String origin;
 
+    /**
+     * 插件级启用状态 (两状态模型, 与 isEnabled 区分).
+     * null 视为 true (兼容旧数据).
+     */
+    @Setter
+    private Boolean pluginEnabled;
+
     protected Permission() {}
 
     @Builder

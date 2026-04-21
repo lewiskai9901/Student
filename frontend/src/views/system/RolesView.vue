@@ -154,7 +154,11 @@
           <tr
             v-for="row in roleList"
             :key="row.id"
-            class="border-b border-gray-100 hover:bg-gray-50"
+            :class="[
+              'border-b border-gray-100 hover:bg-gray-50',
+              row.pluginEnabled === false ? 'row-disabled-by-plugin' : ''
+            ]"
+            :title="row.pluginEnabled === false ? '所属插件已禁用 — 此角色级联软失效 (不参与权限计算)' : undefined"
           >
             <td class="px-4 py-3">
               <input
@@ -170,6 +174,11 @@
                   <Shield class="h-4 w-4 text-blue-600" />
                 </div>
                 <span class="font-medium text-gray-900">{{ row.roleName }}</span>
+                <span
+                  v-if="row.pluginEnabled === false"
+                  class="disabled-by-plugin-badge"
+                  title="所属插件已禁用"
+                >插件禁用</span>
               </div>
             </td>
             <td class="px-4 py-3">
@@ -1124,7 +1133,9 @@ const loadRoleList = async () => {
     const res = await getRolesPage({
       pageNum: queryParams.pageNum,
       pageSize: queryParams.pageSize,
-      roleType: queryParams.roleType
+      roleType: queryParams.roleType,
+      // 管理员视图: 显示所属插件被禁的角色 (pluginEnabled=false), 由前端灰显
+      includeDisabled: true
     })
     roleList.value = res.records
     total.value = res.total
@@ -1899,5 +1910,22 @@ onMounted(() => {
 .expand-enter-to, .expand-leave-from {
   opacity: 1;
   max-height: 500px;
+}
+
+/* 插件级联禁用的行: 灰显 + 鼠标悬停轻提示 (由所属插件禁用级联引起) */
+.row-disabled-by-plugin { opacity: 0.55; background-color: #fafaf9; }
+.row-disabled-by-plugin:hover { background-color: #fef3c7 !important; opacity: 0.8; }
+
+.disabled-by-plugin-badge {
+  display: inline-block;
+  padding: 1px 7px;
+  border-radius: 10px;
+  font-size: 10px;
+  font-weight: 600;
+  color: #a16207;
+  background: #fef3c7;
+  border: 1px solid #fcd34d;
+  line-height: 1.4;
+  cursor: help;
 }
 </style>

@@ -83,6 +83,20 @@ public class PermissionRepositoryImpl implements PermissionRepository {
     }
 
     @Override
+    public List<Permission> findAllForAdmin(boolean includeDisabled) {
+        return permissionMapper.findAllEnabledForAdmin(includeDisabled).stream()
+            .map(this::toDomain)
+            .collect(Collectors.toList());
+    }
+
+    @Override
+    public List<Permission> findByTypeForAdmin(PermissionType type, boolean includeDisabled) {
+        return permissionMapper.findByResourceTypeForAdmin(toResourceType(type), includeDisabled).stream()
+            .map(this::toDomain)
+            .collect(Collectors.toList());
+    }
+
+    @Override
     public List<Permission> findByParentId(Long parentId) {
         return permissionMapper.findByParentId(parentId).stream()
             .map(this::toDomain)
@@ -170,6 +184,7 @@ public class PermissionRepositoryImpl implements PermissionRepository {
         p.setIndustry(po.getIndustry());
         p.setPluginClass(po.getPluginClass());
         p.setOrigin(po.getOrigin());
+        p.setPluginEnabled(po.getPluginEnabled() == null || po.getPluginEnabled() == 1);
         return p;
     }
 

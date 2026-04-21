@@ -19,17 +19,25 @@ export interface RelationTypeDef {
   maxPerResource?: number | null
   /** 按资源子类型细化的上限,如 { CLASS: 1, GRADE: 3 } (优先于 maxPerResource) */
   maxBySubtype?: Record<string, number> | null
+  /**
+   * 插件级启用状态 (两状态模型, Phase 2 加).
+   * false = 所属插件被禁 → 前端应灰显.
+   */
+  pluginEnabled?: boolean | number
 }
 
 const BASE = '/relation-types'
 
 export const relationTypeApi = {
-  list(params?: { tier?: string; fromType?: string; toType?: string }): Promise<RelationTypeDef[]> {
+  /**
+   * @param includeDisabled 管理员视角: true 返回所属插件被禁的关系 (pluginEnabled=false)
+   */
+  list(params?: { tier?: string; fromType?: string; toType?: string; includeDisabled?: boolean }): Promise<RelationTypeDef[]> {
     return request.get(BASE, { params })
   },
 
-  listByTier(): Promise<Record<string, RelationTypeDef[]>> {
-    return request.get(`${BASE}/tiers`)
+  listByTier(params?: { includeDisabled?: boolean }): Promise<Record<string, RelationTypeDef[]>> {
+    return request.get(`${BASE}/tiers`, { params })
   }
 }
 

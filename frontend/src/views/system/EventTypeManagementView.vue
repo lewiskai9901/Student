@@ -48,9 +48,18 @@
         <!-- Type List -->
         <div class="type-list">
           <div v-if="group.items.length === 0" class="type-empty">暂无类型，点击「添加子类型」</div>
-          <div v-for="t in group.items" :key="t.id" class="type-row">
+          <div
+            v-for="t in group.items" :key="t.id"
+            :class="['type-row', isTypePluginDisabled(t) ? 'row-disabled-by-plugin' : '']"
+            :title="isTypePluginDisabled(t) ? '所属插件已禁用 — 此事件类型级联软失效 (fire 不触发)' : undefined"
+          >
             <em class="dot" :style="{ background: t.color || getPolarityColor(group.polarity) }" />
             <span class="type-name">{{ t.typeName }}</span>
+            <span
+              v-if="isTypePluginDisabled(t)"
+              class="disabled-by-plugin-badge"
+              title="所属插件已禁用"
+            >插件禁用</span>
             <!-- 来源标签: 行业/插件 chip 替代以前笼统的"预置", 展示真实贡献方 -->
             <span
               v-if="resolveSource(t).code"
@@ -246,6 +255,13 @@ function parseSubjects(json: string | null): string[] {
   try { return JSON.parse(json) } catch { return [] }
 }
 
+/** 判断事件类型是否因所属插件被禁而级联软失效 (Phase 2) */
+function isTypePluginDisabled(t: any): boolean {
+  const v = t?.pluginEnabled
+  if (v === false || v === 0) return true
+  return false
+}
+
 // ==================== 来源解析 ====================
 // 优先 origin (PLUGIN:CORE@1.0.0 / TENANT:CUSTOM), 回退 industry, 再退 is_system 推断
 function resolveSource(t: any): { code: string; label: string; tooltip: string } {
@@ -280,7 +296,8 @@ function sourceChipStyle(code: string): Record<string, string> {
 async function loadTypes() {
   loading.value = true
   try {
-    allTypes.value = await listEntityEventTypes()
+    // 管理员视角: 包含所属插件被禁的事件类型 (pluginEnabled=0), 前端灰显
+    allTypes.value = await listEntityEventTypes(true)
   } catch (e: any) {
     ElMessage.error(e.message || '加载失败')
   } finally {
@@ -792,4 +809,22 @@ onMounted(() => { loadTypes() })
 .modal-enter-from, .modal-leave-to { opacity: 0; }
 .modal-enter-from .modal-box { transform: scale(0.95) translateY(10px); }
 .modal-leave-to .modal-box { transform: scale(0.95) translateY(10px); }
+
+/* 插件级联禁用的事件类型行: 灰显 (Phase 2) */
+.row-disabled-by-plugin { opacity: 0.55; background-color: #fafaf9; }
+.row-disabled-by-plugin:hover { background-color: #fef3c7 !important; opacity: 0.8; }
+
+.disabled-by-plugin-badge {
+  display: inline-block;
+  padding: 1px 7px;
+  border-radius: 10px;
+  font-size: 10px;
+  font-weight: 600;
+  color: #a16207;
+  background: #fef3c7;
+  border: 1px solid #fcd34d;
+  line-height: 1.4;
+  cursor: help;
+  margin-right: 4px;
+}
 </style>

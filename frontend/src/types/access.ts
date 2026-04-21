@@ -21,6 +21,11 @@ export interface Permission {
   icon?: string
   sortOrder: number
   enabled: boolean
+  /** 插件级启用状态 (两状态模型): false = 所属插件被禁 (级联软失效), 前端应灰显 */
+  pluginEnabled?: boolean
+  isEnabled?: boolean
+  origin?: string
+  industry?: string
   description?: string
   children?: Permission[]
 }

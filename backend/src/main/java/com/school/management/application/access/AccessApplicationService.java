@@ -90,6 +90,23 @@ public class AccessApplicationService {
     }
 
     /**
+     * 管理员视角: 可选包含被禁插件的权限 (用于灰显).
+     * 权限计算必须用 listAllPermissions().
+     */
+    @Transactional(readOnly = true)
+    public List<Permission> listAllPermissionsForAdmin(boolean includeDisabled) {
+        return permissionRepository.findAllForAdmin(includeDisabled);
+    }
+
+    /**
+     * 管理员视角: 按类型查, 可选包含被禁插件.
+     */
+    @Transactional(readOnly = true)
+    public List<Permission> listPermissionsByTypeForAdmin(PermissionType type, boolean includeDisabled) {
+        return permissionRepository.findByTypeForAdmin(type, includeDisabled);
+    }
+
+    /**
      * Lists permissions by type.
      */
     @Transactional(readOnly = true)
@@ -220,6 +237,15 @@ public class AccessApplicationService {
     @Transactional(readOnly = true)
     public List<Role> listAllRoles() {
         return roleRepository.findAllEnabled();
+    }
+
+    /**
+     * 管理员视角: 可选包含被禁插件贡献的角色 (用于灰显).
+     * 用户权限计算必须用 listAllRoles().
+     */
+    @Transactional(readOnly = true)
+    public List<Role> listAllRolesForAdmin(boolean includeDisabled) {
+        return roleRepository.findAllForAdmin(includeDisabled);
     }
 
     /**

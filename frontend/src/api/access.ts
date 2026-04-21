@@ -27,8 +27,9 @@ const USER_URL = '/users'
 
 /**
  * 获取权限列表
+ * @param includeDisabled 管理员视角: true 时返回所属插件被禁的权限 (pluginEnabled=false).
  */
-export function getPermissions(params?: PermissionQueryParams): Promise<Permission[]> {
+export function getPermissions(params?: PermissionQueryParams & { includeDisabled?: boolean }): Promise<Permission[]> {
   return http.get<Permission[]>(PERMISSION_URL, { params })
 }
 
@@ -96,6 +97,16 @@ export interface RoleResponse {
   level?: number
   isSystem?: boolean
   isEnabled?: boolean
+  /**
+   * 插件级启用状态 (两状态模型):
+   *   - isEnabled:     管理员手动开关
+   *   - pluginEnabled: 所属插件级开关 (PluginLifecycleService 级联维护)
+   * false = 所属插件被禁 → 前端应灰显 + "插件禁用"徽章 + tooltip
+   */
+  pluginEnabled?: boolean
+  industry?: string
+  pluginClass?: string
+  origin?: string
   permissionIds?: (string | number)[]  // 权限ID也可能是字符串
   createdAt?: string
 }
@@ -103,15 +114,22 @@ export interface RoleResponse {
 /**
  * 获取角色列表
  * 注意: V2 API 返回数组，需要前端分页
+ * @param includeDisabled 管理员视角: true 时返回所属插件被禁的角色 (pluginEnabled=false).
+ *                        权限计算链不应传 true.
  */
-export function getRoles(params?: RoleQueryParams): Promise<RoleResponse[]> {
-  return http.get<RoleResponse[]>(ROLE_URL, { params: { roleType: params?.roleType, enabled: params?.enabled, keyword: params?.keyword } })
+export function getRoles(params?: RoleQueryParams & { includeDisabled?: boolean }): Promise<RoleResponse[]> {
+  return http.get<RoleResponse[]>(ROLE_URL, { params: {
+    roleType: params?.roleType,
+    enabled: params?.enabled,
+    keyword: params?.keyword,
+    includeDisabled: params?.includeDisabled
+  }})
 }
 
 /**
  * 获取角色分页列表（前端分页）
  */
-export function getRolesPage(params: RoleQueryParams & { pageNum: number; pageSize: number }) {
+export function getRolesPage(params: RoleQueryParams & { pageNum: number; pageSize: number; includeDisabled?: boolean }) {
   return getRoles(params).then(roles => {
     const start = (params.pageNum - 1) * params.pageSize
     const end = start + params.pageSize

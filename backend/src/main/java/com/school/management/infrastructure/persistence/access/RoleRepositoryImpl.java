@@ -143,6 +143,13 @@ public class RoleRepositoryImpl implements RoleRepository {
     }
 
     @Override
+    public List<Role> findAllForAdmin(boolean includeDisabled) {
+        return roleMapper.findAllEnabledForAdmin(includeDisabled).stream()
+            .map(this::toDomainWithPermissions)
+            .collect(Collectors.toList());
+    }
+
+    @Override
     public List<Role> findSystemRoles() {
         // The database doesn't have is_system column, filter by role_code pattern.
         // Optimization: filter on PO level first to avoid loading permissions for non-system roles.
@@ -216,6 +223,8 @@ public class RoleRepositoryImpl implements RoleRepository {
         role.setIndustry(po.getIndustry());
         role.setPluginClass(po.getPluginClass());
         role.setOrigin(po.getOrigin());
+        // plugin_enabled: null/1 -> true, 0 -> false
+        role.setPluginEnabled(po.getPluginEnabled() == null || po.getPluginEnabled() == 1);
         return role;
     }
 }

@@ -52,8 +52,19 @@
           <tr v-else-if="currentTypes.length === 0">
             <td colspan="7" class="tm-empty">暂无类型配置</td>
           </tr>
-          <tr v-for="t in currentTypes" :key="t.id">
-            <td><span class="tm-code">{{ t.typeCode }}</span></td>
+          <tr
+            v-for="t in currentTypes" :key="t.id"
+            :class="isPluginDisabled(t) ? 'row-disabled-by-plugin' : ''"
+            :title="isPluginDisabled(t) ? '所属插件已禁用 — 此类型级联软失效' : undefined"
+          >
+            <td>
+              <span class="tm-code">{{ t.typeCode }}</span>
+              <span
+                v-if="isPluginDisabled(t)"
+                class="disabled-by-plugin-badge"
+                title="所属插件已禁用"
+              >插件禁用</span>
+            </td>
             <td class="text-left" style="font-weight: 500;">{{ t.typeName }}</td>
             <td><span class="tm-chip tm-chip-gray">{{ categoryLabel(t.entityType, t.category) }}</span></td>
             <td style="font-size: 12px; color: #6b7280;">{{ t.parentTypeCode || '-' }}</td>
@@ -253,13 +264,22 @@ const childCandidates = computed(() =>
   )
 )
 
+/** pluginEnabled 从后端返回的 tinyint 字段可能是 0/1 (number) 或 boolean */
+function isPluginDisabled(t: any): boolean {
+  const v = t?.pluginEnabled
+  if (v === false) return true
+  if (v === 0) return true
+  return false
+}
+
 async function loadAll() {
   loading.value = true
   try {
+    // includeDisabled=true: 管理员视角包含所属插件被禁的类型 (灰显显示)
     const results = await Promise.all([
-      entityTypeApi.list('ORG_UNIT'),
-      entityTypeApi.list('PLACE'),
-      entityTypeApi.list('USER'),
+      entityTypeApi.list('ORG_UNIT', true),
+      entityTypeApi.list('PLACE', true),
+      entityTypeApi.list('USER', true),
     ])
     allTypes.value = [
       ...((results[0] as any).data || results[0] || []),
@@ -398,5 +418,28 @@ onMounted(() => { loadAll(); loadCategories() })
 .tm-checkitem input[type="checkbox"] {
   margin: 0;
   cursor: pointer;
+}
+
+/* 插件级联禁用的类型行: 灰显 */
+.row-disabled-by-plugin > td {
+  opacity: 0.55;
+  background-color: #fafaf9;
+}
+.row-disabled-by-plugin:hover > td {
+  background-color: #fef3c7 !important;
+}
+
+.disabled-by-plugin-badge {
+  display: inline-block;
+  padding: 1px 7px;
+  border-radius: 10px;
+  font-size: 10px;
+  font-weight: 600;
+  color: #a16207;
+  background: #fef3c7;
+  border: 1px solid #fcd34d;
+  line-height: 1.4;
+  cursor: help;
+  margin-left: 4px;
 }
 </style>

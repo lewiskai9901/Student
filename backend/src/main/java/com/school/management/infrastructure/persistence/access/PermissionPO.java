@@ -90,4 +90,12 @@ public class PermissionPO {
 
     /** 统一来源字段: "PLUGIN:CORE@1.0.0" / "TENANT:CUSTOM#1" */
     private String origin;
+
+    /**
+     * 插件级启用状态 (0=所属插件被禁)
+     * 两状态模型: 实际生效 = status AND plugin_enabled
+     * 该字段由 PluginLifecycleService 级联维护, 不由管理员直接 update
+     */
+    @TableField(value = "plugin_enabled", updateStrategy = FieldStrategy.NEVER)
+    private Integer pluginEnabled;
 }

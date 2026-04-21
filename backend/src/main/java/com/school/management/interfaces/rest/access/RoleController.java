@@ -54,16 +54,20 @@ public class RoleController {
     }
 
     @GetMapping
-    @Operation(summary = "List all roles")
+    @Operation(summary = "List all roles",
+        description = "includeDisabled=true 时返回所属插件被禁的角色 (pluginEnabled=false), 用于管理员视图灰显. " +
+                      "权限计算链不应传 true.")
     @CasbinAccess(resource = "system:role", action = "view")
     public Result<List<RoleResponse>> listRoles(
-            @RequestParam(required = false) String roleType) {
+            @RequestParam(required = false) String roleType,
+            @RequestParam(required = false, defaultValue = "false") Boolean includeDisabled) {
 
         List<Role> roles;
         if (roleType != null) {
             roles = accessService.listRolesByType(roleType);
         } else {
-            roles = accessService.listAllRoles();
+            // includeDisabled=true: 管理员视角, 返回含 plugin_enabled=0 的行
+            roles = accessService.listAllRolesForAdmin(Boolean.TRUE.equals(includeDisabled));
         }
 
         List<RoleResponse> responses = roles.stream()
@@ -147,6 +151,7 @@ public class RoleController {
         response.setIndustry(role.getIndustry());
         response.setPluginClass(role.getPluginClass());
         response.setOrigin(role.getOrigin());
+        response.setPluginEnabled(role.getPluginEnabled() == null ? Boolean.TRUE : role.getPluginEnabled());
         response.setPermissionIds(role.getPermissionIds());
         response.setCreatedAt(role.getCreatedAt());
         return response;

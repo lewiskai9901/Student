@@ -27,6 +27,13 @@ public interface RoleRepository extends Repository<Role, Long> {
     List<Role> findAllEnabled();
 
     /**
+     * 管理员视角: 可选包含 plugin_enabled=0 的 (被禁插件贡献的) 角色.
+     * 权限计算链请仍用 findAllEnabled() — 必须过滤被禁插件.
+     * @param includeDisabled true 返回所有 (含灰显), false 等同 findAllEnabled
+     */
+    List<Role> findAllForAdmin(boolean includeDisabled);
+
+    /**
      * Finds all system roles.
      */
     List<Role> findSystemRoles();

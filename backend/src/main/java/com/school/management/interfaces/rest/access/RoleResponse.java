@@ -47,6 +47,13 @@ public class RoleResponse {
      */
     private String origin;
 
+    /**
+     * 插件级启用状态 (两状态模型, 与 isEnabled 区分).
+     * true = 所属插件处于启用状态, false = 插件被禁 (级联软失效).
+     * 前端列表应对 pluginEnabled=false 的行做灰显 + 徽章提示.
+     */
+    private Boolean pluginEnabled;
+
     @JsonSerialize(contentUsing = ToStringSerializer.class)
     private Set<Long> permissionIds;
 

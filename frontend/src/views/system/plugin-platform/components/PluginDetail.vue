@@ -25,6 +25,25 @@
       </div>
     </header>
 
+    <!-- Phase 2: 插件禁用警示 banner -->
+    <div v-if="plugin.enabled === false" class="pd-alert">
+      <AlertTriangle :size="16" class="pd-alert-icon" />
+      <div class="pd-alert-body">
+        <b>{{ plugin.label }} 已禁用</b>
+        <span class="pd-alert-desc">
+          — {{ counts.types }} 类型 · {{ counts.relations }} 关系 · {{ counts.events }} 事件 ·
+          {{ counts.roles }} 角色 · {{ counts.permissions }} 权限
+          已级联软失效<br />
+          <span class="pd-alert-note">
+            权限计算 / fire 事件 / 前端路由不生效; 管理员视图保留灰显 (点击"重新启用"可恢复)
+          </span>
+        </span>
+      </div>
+      <button class="pd-alert-btn" @click="emit('enable-plugin', plugin.code)" title="恢复插件并级联解冻所有贡献">
+        重新启用
+      </button>
+    </div>
+
     <!-- Contribution summary -->
     <div class="pd-summary">
       <span class="pd-sum-item"><b>{{ counts.types }}</b> 类型</span>
@@ -310,7 +329,7 @@
 import { computed, inject, reactive } from 'vue'
 import {
   Package, ChevronDown, ChevronRight, LayoutGrid, Link2, Bell, Zap,
-  ShieldCheck, Filter, Shield, UserCog
+  ShieldCheck, Filter, Shield, UserCog, AlertTriangle
 } from 'lucide-vue-next'
 import {
   industryColor, shortClass, subjectTypeLabel, countFields, topFeatures,
@@ -323,6 +342,7 @@ import {
 const props = defineProps<{ pluginCode: string }>()
 const emit = defineEmits<{
   (e: 'jump-resource', payload: { type: ResourceKey; pluginCode?: string }): void
+  (e: 'enable-plugin', pluginCode: string): void
 }>()
 
 const data = inject<PluginData>('pluginData')!
@@ -512,4 +532,34 @@ function toggle(k: string) { openMap[k] = !openMap[k] }
   margin-left: auto; font-size: 10px; color: #6b7280;
   background: #f3f4f6; padding: 1px 6px; border-radius: 4px;
 }
+
+/* Phase 2: 插件禁用警示 banner */
+.pd-alert {
+  display: flex; align-items: flex-start; gap: 10px;
+  padding: 10px 14px;
+  border-radius: 8px;
+  background: #fef3c7;
+  border: 1px solid #fcd34d;
+  color: #92400e;
+  font-size: 12px;
+  line-height: 1.5;
+}
+.pd-alert-icon { flex-shrink: 0; margin-top: 2px; color: #d97706; }
+.pd-alert-body { flex: 1; }
+.pd-alert-body b { color: #78350f; font-weight: 700; }
+.pd-alert-desc { color: #92400e; }
+.pd-alert-note {
+  display: inline-block; margin-top: 4px;
+  font-size: 11px; color: #78350f; opacity: 0.85;
+}
+.pd-alert-btn {
+  margin-left: auto; flex-shrink: 0;
+  padding: 5px 12px;
+  background: #d97706; color: #fff;
+  border: none; border-radius: 4px;
+  font-size: 11px; font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.pd-alert-btn:hover { background: #b45309; }
 </style>

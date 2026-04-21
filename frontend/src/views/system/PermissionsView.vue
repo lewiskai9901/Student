@@ -74,12 +74,22 @@
           <div
             v-for="perm in group.permissions"
             :key="perm.permissionCode"
-            class="flex items-center gap-3 px-5 py-2 hover:bg-gray-50/50"
+            :class="[
+              'flex items-center gap-3 px-5 py-2 hover:bg-gray-50/50',
+              (perm as any).pluginEnabled === false ? 'row-disabled-by-plugin' : ''
+            ]"
+            :title="(perm as any).pluginEnabled === false ? '所属插件已禁用 — 此权限级联软失效' : undefined"
           >
             <!-- Code -->
             <span class="w-72 shrink-0 truncate font-mono text-xs text-gray-500">{{ perm.permissionCode }}</span>
             <!-- Name -->
             <span class="flex-1 text-sm text-gray-900">{{ perm.permissionName || '-' }}</span>
+            <!-- Plugin-disabled badge -->
+            <span
+              v-if="(perm as any).pluginEnabled === false"
+              class="disabled-by-plugin-badge shrink-0"
+              title="所属插件已禁用"
+            >插件禁用</span>
             <!-- Type badge -->
             <span
               class="shrink-0 rounded px-2 py-0.5 text-[10px] font-medium"
@@ -338,7 +348,8 @@ function toggle(module: string) {
 async function loadPermissions() {
   loading.value = true
   try {
-    const data = await getPermissions()
+    // 管理员视角: 包含所属插件被禁的权限 (pluginEnabled=false), 前端灰显
+    const data = await getPermissions({ includeDisabled: true } as any)
     allPermissions.value = data || []
     // Expand all groups by default
     for (const group of allGroups.value) {
@@ -379,5 +390,22 @@ onMounted(() => {
 .modal-enter-from,
 .modal-leave-to {
   opacity: 0;
+}
+
+/* 插件级联禁用的权限条目: 灰显 */
+.row-disabled-by-plugin { opacity: 0.55; background-color: #fafaf9; }
+.row-disabled-by-plugin:hover { background-color: #fef3c7 !important; opacity: 0.8; }
+
+.disabled-by-plugin-badge {
+  display: inline-block;
+  padding: 1px 7px;
+  border-radius: 10px;
+  font-size: 10px;
+  font-weight: 600;
+  color: #a16207;
+  background: #fef3c7;
+  border: 1px solid #fcd34d;
+  line-height: 1.4;
+  cursor: help;
 }
 </style>

@@ -28,6 +28,17 @@ public interface PermissionRepository extends Repository<Permission, Long> {
     List<Permission> findAllEnabled();
 
     /**
+     * 管理员视角: 可选包含 plugin_enabled=0 的权限.
+     * 权限计算链仍用 findAllEnabled() — 必须过滤.
+     */
+    List<Permission> findAllForAdmin(boolean includeDisabled);
+
+    /**
+     * 管理员视角: 按类型查, 可选包含 plugin_enabled=0.
+     */
+    List<Permission> findByTypeForAdmin(PermissionType type, boolean includeDisabled);
+
+    /**
      * Finds all child permissions of a parent.
      */
     List<Permission> findByParentId(Long parentId);
