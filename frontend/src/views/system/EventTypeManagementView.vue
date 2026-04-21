@@ -51,7 +51,14 @@
           <div v-for="t in group.items" :key="t.id" class="type-row">
             <em class="dot" :style="{ background: t.color || getPolarityColor(group.polarity) }" />
             <span class="type-name">{{ t.typeName }}</span>
-            <span v-if="t.isSystem" class="system-badge" title="系统预置，不可修改或删除">预置</span>
+            <!-- 来源标签: 行业/插件 chip 替代以前笼统的"预置", 展示真实贡献方 -->
+            <span
+              v-if="resolveSource(t).code"
+              class="source-chip"
+              :style="sourceChipStyle(resolveSource(t).code)"
+              :title="resolveSource(t).tooltip"
+            >{{ resolveSource(t).label }}</span>
+            <span v-else class="source-chip source-custom" title="管理员本地创建">自定义</span>
             <code class="type-code">{{ t.typeCode }}</code>
             <div class="type-subjects">
               <span v-for="s in parseSubjects(t.applicableSubjects)" :key="s" class="subject-tag" :class="'subj-' + s.toLowerCase()">{{ s }}</span>
@@ -237,6 +244,36 @@ function getPolarityColor(p: string): string {
 function parseSubjects(json: string | null): string[] {
   if (!json) return []
   try { return JSON.parse(json) } catch { return [] }
+}
+
+// ==================== 来源解析 ====================
+// 优先 origin (PLUGIN:CORE@1.0.0 / TENANT:CUSTOM), 回退 industry, 再退 is_system 推断
+function resolveSource(t: any): { code: string; label: string; tooltip: string } {
+  const orig = t.origin as string | undefined
+  if (orig) {
+    const m = orig.match(/^PLUGIN:([A-Z_]+)@/)
+    if (m) {
+      const code = m[1]
+      return { code, label: industryLabel(code), tooltip: `来源: ${t.pluginClass || orig}` }
+    }
+    if (orig.startsWith('TENANT:CUSTOM')) {
+      return { code: 'CUSTOM', label: '自定义', tooltip: '管理员本地创建' }
+    }
+  }
+  if (t.industry) {
+    return { code: t.industry, label: industryLabel(t.industry), tooltip: t.pluginClass || t.industry }
+  }
+  if (t.isSystem) return { code: 'CORE', label: '通用核心', tooltip: '系统内置' }
+  return { code: '', label: '', tooltip: '' }
+}
+
+function industryLabel(code: string): string {
+  return ({ CORE: '通用核心', EDU: '教育行业', HEALTH: '医疗行业', CARE: '养老行业', CUSTOM: '自定义' } as any)[code] || code
+}
+
+function sourceChipStyle(code: string): Record<string, string> {
+  const color = ({ CORE: '#2563eb', EDU: '#d97706', HEALTH: '#be185d', CARE: '#059669', CUSTOM: '#6b7280' } as any)[code] || '#6b7280'
+  return { color, borderColor: color + '60', background: color + '12' }
 }
 
 // ==================== Load ====================
@@ -579,6 +616,18 @@ onMounted(() => { loadTypes() })
   border-radius: 3px;
   letter-spacing: 0.02em;
 }
+/* 来源 chip — 与插件平台页风格一致, 按 industry 着色 */
+.source-chip {
+  display: inline-flex; align-items: center;
+  padding: 1px 8px;
+  font-size: 10.5px;
+  font-weight: 500;
+  border-radius: 10px;
+  border: 1px solid;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+}
+.source-custom { color: #6b7280; background: #f9fafb; border-color: #e5e7eb; }
 .system-hint { font-size: 11.5px; color: #9ca3af; padding: 0 8px; }
 .action-btn {
   padding: 4px 8px;
