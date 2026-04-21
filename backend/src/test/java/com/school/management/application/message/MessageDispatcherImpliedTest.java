@@ -1,17 +1,16 @@
 package com.school.management.application.message;
 
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.school.management.application.access.AuthorizationService;
-import com.school.management.domain.message.repository.MsgNotificationRepository;
-import com.school.management.domain.message.repository.MsgSubscriptionRuleRepository;
-import com.school.management.domain.message.repository.MsgTemplateRepository;
+import com.school.management.application.message.targetmode.ByRelationTargetMode;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.jdbc.core.JdbcTemplate;
 
-import java.lang.reflect.Method;
+import java.util.HashMap;
 import java.util.List;
-import java.util.Set;
+import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
@@ -23,34 +22,35 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 /**
- * M1.2 — MessageDispatcher.resolveByRelation 走 AuthorizationService.findSubjectsWithRelation,
+ * M1.2 — BY_RELATION 走 AuthorizationService.findSubjectsWithRelation,
  * 不再裸 SQL — 确保 implied 派生关系的订阅者能收到.
  *
- * 注: resolveByRelation 是 private, 用反射调用测试以验证分发逻辑.
+ * M2 后重构为直接测试 {@link ByRelationTargetMode} resolver.
  */
 class MessageDispatcherImpliedTest {
 
     private AuthorizationService authService;
-    private MessageDispatcher dispatcher;
+    private JdbcTemplate jdbcTemplate;
+    private ByRelationTargetMode resolver;
+    private ObjectMapper objectMapper;
 
     @BeforeEach
     void setup() {
         authService = mock(AuthorizationService.class);
-        dispatcher = new MessageDispatcher(
-            mock(MsgSubscriptionRuleRepository.class),
-            mock(MsgTemplateRepository.class),
-            mock(MsgNotificationRepository.class),
-            mock(JdbcTemplate.class),
-            new ObjectMapper(),
-            authService);
+        jdbcTemplate = mock(JdbcTemplate.class);
+        resolver = new ByRelationTargetMode(authService, jdbcTemplate);
+        objectMapper = new ObjectMapper();
     }
 
-    @SuppressWarnings("unchecked")
-    private Set<Long> invokeResolveByRelation(String targetConfig, Long subjectId, String subjectType) throws Exception {
-        Method m = MessageDispatcher.class.getDeclaredMethod(
-            "resolveByRelation", String.class, Long.class, String.class);
-        m.setAccessible(true);
-        return (Set<Long>) m.invoke(dispatcher, targetConfig, subjectId, subjectType);
+    private Map<String, Object> parseConfig(String json) throws Exception {
+        return objectMapper.readValue(json, new TypeReference<Map<String, Object>>() {});
+    }
+
+    private Map<String, Object> eventMap(Long subjectId, String subjectType) {
+        Map<String, Object> m = new HashMap<>();
+        if (subjectId != null) m.put("subjectId", subjectId);
+        if (subjectType != null) m.put("subjectType", subjectType);
+        return m;
     }
 
     @Test
@@ -59,8 +59,9 @@ class MessageDispatcherImpliedTest {
             eq("place"), eq(101L), eq("viewer"), eq("user"), eq(true)))
             .thenReturn(List.of(42L, 77L));
 
-        String config = "{\"relation\":\"viewer\",\"resource_type\":\"place\"}";
-        Set<Long> ids = invokeResolveByRelation(config, 101L, "PLACE");
+        List<Long> ids = resolver.resolve(
+            parseConfig("{\"relation\":\"viewer\",\"resource_type\":\"place\"}"),
+            eventMap(101L, "PLACE"));
 
         assertThat(ids).containsExactlyInAnyOrder(42L, 77L);
         verify(authService).findSubjectsWithRelation("place", 101L, "viewer", "user", true);
@@ -73,15 +74,18 @@ class MessageDispatcherImpliedTest {
         when(authService.findSubjectsWithRelation(eq("org_unit"), eq(5L), eq("deputy"), eq("user"), eq(true)))
             .thenReturn(List.of(3L));
 
-        String config = "{\"relation\":\"admin\",\"resource_type\":\"org_unit\",\"include_deputies\":true}";
-        Set<Long> ids = invokeResolveByRelation(config, 5L, "ORG_UNIT");
+        List<Long> ids = resolver.resolve(
+            parseConfig("{\"relation\":\"admin\",\"resource_type\":\"org_unit\",\"include_deputies\":true}"),
+            eventMap(5L, "ORG_UNIT"));
 
         assertThat(ids).containsExactlyInAnyOrder(1L, 2L, 3L);
     }
 
     @Test
     void inward_returnsEmpty_whenSubjectIdNull() throws Exception {
-        Set<Long> ids = invokeResolveByRelation("{\"relation\":\"viewer\"}", null, "USER");
+        List<Long> ids = resolver.resolve(
+            parseConfig("{\"relation\":\"viewer\"}"),
+            eventMap(null, "USER"));
         assertThat(ids).isEmpty();
         verify(authService, never()).findSubjectsWithRelation(
             any(), any(), any(), anyBoolean());
@@ -91,9 +95,10 @@ class MessageDispatcherImpliedTest {
 
     @Test
     void outward_doesNotCallAuthService_usesDirectJdbc() throws Exception {
-        // outward 路径仍用裸 JDBC (见 dispatcher 里的注释), 不会走 AuthorizationService
-        String config = "{\"relation\":\"guardian_of\",\"resource_type\":\"user\",\"direction\":\"outward\"}";
-        invokeResolveByRelation(config, 100L, "USER");
+        // outward 路径仍用裸 JDBC, 不会走 AuthorizationService
+        resolver.resolve(
+            parseConfig("{\"relation\":\"guardian_of\",\"resource_type\":\"user\",\"direction\":\"outward\"}"),
+            eventMap(100L, "USER"));
         verify(authService, never()).findSubjectsWithRelation(
             any(), any(), any(), anyBoolean());
         verify(authService, never()).findSubjectsWithRelation(

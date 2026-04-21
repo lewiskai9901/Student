@@ -56,6 +56,7 @@ public class ContributionDispatcher implements ApplicationRunner {
         AtomicInteger scopes = new AtomicInteger();
         AtomicInteger routes = new AtomicInteger();
         AtomicInteger policies = new AtomicInteger();
+        AtomicInteger targetModes = new AtomicInteger();
         AtomicInteger domains = new AtomicInteger();
 
         Set<String> seenKeys = new HashSet<>();
@@ -84,15 +85,21 @@ public class ContributionDispatcher implements ApplicationRunner {
                     log.info("[ContributionDispatcher] registered Policy: {} ({})",
                              pc.policy().code(), pc.policy().getClass().getSimpleName());
                 }
+                else if (c instanceof Contribution.TargetModeResolverContribution tmrc) {
+                    targetModes.incrementAndGet();
+                    log.info("[ContributionDispatcher] registered TargetModeResolver: {} ({})",
+                             tmrc.resolver().modeCode(), tmrc.resolver().getClass().getSimpleName());
+                    // TargetModeResolverRegistry 通过 Spring DI 直接收集 bean, 这里只登记日志 (与 Policy 同模式)
+                }
                 else if (c instanceof Contribution.DomainContribution)       domains.incrementAndGet();
                 log.debug("[ContributionDispatcher]   {} ← {}", key, industry);
             });
         }
 
         log.info("[ContributionDispatcher] 扫描 {} 个包, 收到 {} 条 Contribution " +
-                "(entity {}, relation {}, event-domain {}, perm {}, role {}, menu {}, scope {}, route {}, policy {}, domain {})",
+                "(entity {}, relation {}, event-domain {}, perm {}, role {}, menu {}, scope {}, route {}, policy {}, target-mode {}, domain {})",
             packages.size(), total.get(),
             entities.get(), relations.get(), events.get(), perms.get(),
-            roles.get(), menus.get(), scopes.get(), routes.get(), policies.get(), domains.get());
+            roles.get(), menus.get(), scopes.get(), routes.get(), policies.get(), targetModes.get(), domains.get());
     }
 }

@@ -2,7 +2,6 @@ package com.school.management.application.message;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.school.management.application.access.AuthorizationService;
 import com.school.management.domain.event.model.EntityEvent;
 import com.school.management.domain.message.model.MsgNotification;
 import com.school.management.domain.message.model.MsgSubscriptionRule;
@@ -10,12 +9,22 @@ import com.school.management.domain.message.model.MsgTemplate;
 import com.school.management.domain.message.repository.MsgNotificationRepository;
 import com.school.management.domain.message.repository.MsgSubscriptionRuleRepository;
 import com.school.management.domain.message.repository.MsgTemplateRepository;
+import com.school.management.infrastructure.extension.TargetModeResolver;
+import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.Set;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 /**
@@ -28,6 +37,11 @@ import java.util.stream.Collectors;
  *   msg_subscription_rules.event_category IS NULL → 匹配所有类别
  *   msg_subscription_rules.event_type IS NULL     → 匹配类别下所有类型
  *   两者都 NULL → 匹配所有事件（全局规则）
+ *
+ * Track M2: target_mode 解析不再 switch 硬编码, 改为 Spring DI 收集
+ * {@link TargetModeResolver} bean, 按 modeCode 查找. 行业要加 BY_WARD/BY_DEPARTMENT
+ * 等新模式, 只需 implements TargetModeResolver + @Component (或
+ * Contribution.TargetModeResolverContribution), 不改 core.
  */
 @Slf4j
 @Service
@@ -37,9 +51,23 @@ public class MessageDispatcher {
     private final MsgSubscriptionRuleRepository subscriptionRuleRepository;
     private final MsgTemplateRepository templateRepository;
     private final MsgNotificationRepository notificationRepository;
-    private final JdbcTemplate jdbcTemplate;
     private final ObjectMapper objectMapper;
-    private final AuthorizationService authorizationService;
+    private final List<TargetModeResolver> resolvers;
+
+    private Map<String, TargetModeResolver> resolverByMode;
+
+    @PostConstruct
+    void initResolverMap() {
+        resolverByMode = resolvers.stream()
+            .collect(Collectors.toMap(TargetModeResolver::modeCode, Function.identity(),
+                (a, b) -> {
+                    log.error("[MessageDispatcher] duplicate TargetModeResolver for {}: {} vs {}",
+                        a.modeCode(), a.getClass(), b.getClass());
+                    return a;
+                }));
+        log.info("[MessageDispatcher] 加载 {} target mode resolvers: {}",
+            resolverByMode.size(), resolverByMode.keySet());
+    }
 
     /**
      * 根据 EntityEvent 分发消息
@@ -79,7 +107,7 @@ public class MessageDispatcher {
     private void processRule(MsgSubscriptionRule rule, EntityEvent event,
                              Map<String, String> variables) {
         // 1. 解析目标用户
-        Set<Long> targetUserIds = resolveTargetUsers(rule, event.getSubjectId(), event.getSubjectType());
+        Set<Long> targetUserIds = resolveTargetUsers(rule, event);
         if (targetUserIds.isEmpty()) {
             log.debug("[消息分发] 规则 {} 无目标用户", rule.getRuleName());
             return;
@@ -123,7 +151,7 @@ public class MessageDispatcher {
             return;
         }
 
-        // 5. 批量构建 + 批量 insert（单条 INSERT 多 VALUES，分片 500/批）
+        // 5. 批量构建 + 批量 insert
         List<MsgNotification> notifications = new ArrayList<>(targetUserIds.size());
         for (Long userId : targetUserIds) {
             notifications.add(MsgNotification.createFromEvent(
@@ -143,182 +171,96 @@ public class MessageDispatcher {
 
     /**
      * 预览模式：返回规则命中的目标用户集合 (用于 UI 调试)。
-     * BY_SUBJECT / BY_RELATION 依赖事件主体,无主体预览时返回 null。
+     * 依赖事件上下文的模式 ({@link #CONTEXT_DEPENDENT_MODES}) 无事件时返回 null,
+     * 让前端提示 "该模式需具体事件触发才能解析".
      */
     public Set<Long> previewTargets(String mode, String targetConfig) {
         if (mode == null) return Collections.emptySet();
-        return switch (mode) {
-            case "BY_ROLE"    -> resolveByRole(targetConfig);
-            case "BY_FEATURE" -> resolveByFeature(targetConfig);
-            case "BY_SUBJECT", "BY_RELATION" -> null;
-            default -> Collections.emptySet();
-        };
+        TargetModeResolver r = resolverByMode.get(mode);
+        if (r == null) {
+            log.warn("[消息分发] previewTargets: 未知 target_mode {}", mode);
+            return Collections.emptySet();
+        }
+        if (!r.supportsPreview()) return null;   // 依赖事件上下文, 无法静态预览
+        try {
+            Map<String, Object> cfg = parseConfig(targetConfig);
+            List<Long> ids = r.resolve(cfg, Collections.emptyMap());
+            return ids == null ? Collections.emptySet() : new LinkedHashSet<>(ids);
+        } catch (Exception e) {
+            log.warn("[消息分发] previewTargets 异常, mode={}, config={}, err={}",
+                mode, targetConfig, e.getMessage());
+            return Collections.emptySet();
+        }
     }
 
-    // ── 目标用户解析 (v3 四模式,无兼容遗留) ─────────────────────────
+    // ── 目标用户解析 ────────────────────────────────────────────────
 
-    private Set<Long> resolveTargetUsers(MsgSubscriptionRule rule, Long subjectId, String subjectType) {
+    /**
+     * 通过 SPI 查找 resolver, 不硬编码 switch. 未知 mode / resolver 异常均降级空集.
+     */
+    private Set<Long> resolveTargetUsers(MsgSubscriptionRule rule, EntityEvent event) {
         String mode = rule.getTargetMode();
         if (mode == null) return Collections.emptySet();
 
-        return switch (mode) {
-            case "BY_SUBJECT"  -> resolveBySubject(subjectId, subjectType);
-            case "BY_RELATION" -> resolveByRelation(rule.getTargetConfig(), subjectId, subjectType);
-            case "BY_ROLE"     -> resolveByRole(rule.getTargetConfig());
-            case "BY_FEATURE"  -> resolveByFeature(rule.getTargetConfig());
-            default -> {
-                log.warn("[消息分发] 未知 targetMode: {} (v3 仅支持 BY_SUBJECT/BY_RELATION/BY_ROLE/BY_FEATURE)", mode);
-                yield Collections.emptySet();
-            }
-        };
-    }
-
-    /** BY_ROLE: targetConfig = ["admin","teacher"] → 单次 JOIN + IN 查询拥有这些角色的用户 */
-    private Set<Long> resolveByRole(String targetConfig) {
-        List<String> roleCodes = parseStringList(targetConfig);
-        if (roleCodes.isEmpty()) return Collections.emptySet();
-        String placeholders = roleCodes.stream().map(t -> "?").collect(Collectors.joining(","));
-        String sql = "SELECT DISTINCT ur.user_id " +
-                "FROM user_roles ur " +
-                "JOIN roles r ON r.id = ur.role_id AND r.deleted = 0 " +
-                "WHERE r.role_code IN (" + placeholders + ")";
-        try {
-            List<Long> ids = jdbcTemplate.queryForList(sql, Long.class, roleCodes.toArray());
-            return new HashSet<>(ids);
-        } catch (Exception e) {
-            log.warn("[消息分发] BY_ROLE 查询失败: {}", e.getMessage());
-            return Collections.emptySet();
-        }
-    }
-
-    /** BY_SUBJECT: 主体本人 (subject_type=user 时) */
-    private Set<Long> resolveBySubject(Long subjectId, String subjectType) {
-        if (subjectId == null || !"USER".equalsIgnoreCase(subjectType)) return Collections.emptySet();
-        return Set.of(subjectId);
-    }
-
-    /**
-     * BY_RELATION: 基于 access_relations 统一关系查询
-     *
-     * targetConfig JSON 格式:
-     *   {
-     *     "relation": "admin",            // 必填 - 关系码
-     *     "resource_type": "org_unit",    // 必填 - subject 面向的 resource 类型
-     *     "direction": "inward",          // 可选 - inward(默认) = 找"以 subject 为 resource 的 user"
-     *                                     //         outward = 找"subject 关联的 resources"
-     *     "include_deputies": true        // 可选 - 同时纳入 deputy 关系
-     *   }
-     *
-     * 典型场景:
-     *   - 成绩发布 (subject=班级 ORG_UNIT):
-     *     {relation:"admin", resource_type:"org_unit"}        → 通知该班班主任
-     *   - 学生扣分 (subject=学生 USER):
-     *     {relation:"guardian_of", resource_type:"user", direction:"outward"}  → 通知该学生的家长
-     */
-    private Set<Long> resolveByRelation(String targetConfig, Long subjectId, String subjectType) {
-        if (subjectId == null) return Collections.emptySet();
-        Map<String, Object> config = parseJsonObject(targetConfig);
-        String relation = (String) config.get("relation");
-        String resourceType = (String) config.get("resource_type");
-        String direction = (String) config.getOrDefault("direction", "inward");
-        boolean includeDeputies = Boolean.TRUE.equals(config.get("include_deputies"));
-
-        if (relation == null || relation.isBlank()) {
-            log.warn("[消息分发] BY_RELATION 缺少 relation 参数, config={}", targetConfig);
+        TargetModeResolver r = resolverByMode.get(mode);
+        if (r == null) {
+            log.warn("[消息分发] 未知 targetMode: {} — 请确认该模式对应 TargetModeResolver 已注册", mode);
             return Collections.emptySet();
         }
 
-        List<String> relations = new ArrayList<>();
-        relations.add(relation);
-        if (includeDeputies) relations.add("deputy");
-
         try {
-            if ("outward".equalsIgnoreCase(direction)) {
-                // subject 是我们的主体,找它关联的 user 们(resource_type 必须是 user)
-                // 保留裸 SQL: outward 语义是"subject 作为 subject 反查 resource", implied 在此方向
-                // 需要另一套反向 BFS, 当前 MVP 暂不覆盖 (后续按需扩展).
-                String placeholders = relations.stream().map(r -> "?").collect(Collectors.joining(","));
-                String sql = "SELECT DISTINCT ar.resource_id FROM access_relations ar " +
-                      "WHERE ar.subject_type = ? AND ar.subject_id = ? " +
-                      "  AND ar.resource_type = 'user' " +
-                      "  AND ar.relation IN (" + placeholders + ") " +
-                      "  AND ar.deleted = 0 " +
-                      "  AND (ar.valid_to IS NULL OR ar.valid_to > NOW())";
-                Object[] params = new Object[relations.size() + 2];
-                params[0] = subjectType != null ? subjectType.toLowerCase() : "user";
-                params[1] = subjectId;
-                for (int i = 0; i < relations.size(); i++) params[i + 2] = relations.get(i);
-                List<Long> ids = jdbcTemplate.queryForList(sql, Long.class, params);
-                return new HashSet<>(ids);
-            }
-
-            // inward(默认): subject 是 resource, 找它的 user 们
-            // M1.2: 走 AuthorizationService 含 implied 派生展开, 不再裸 SQL,
-            // 避免遗漏 "manages → viewer via OCCUPANTS_OF_PLACE" 等派生关系的订阅者.
-            String rt = resourceType != null ? resourceType.toLowerCase()
-                    : (subjectType != null ? subjectType.toLowerCase() : "org_unit");
-            Set<Long> result = new LinkedHashSet<>();
-            for (String rel : relations) {
-                List<Long> ids = authorizationService.findSubjectsWithRelation(
-                    rt, subjectId, rel, /* subjectTypeFilter= */ "user", /* expandImplied= */ true);
-                result.addAll(ids);
-            }
-            return result;
+            Map<String, Object> cfg = parseConfig(rule.getTargetConfig());
+            Map<String, Object> eventMap = toEventMap(event);
+            List<Long> ids = r.resolve(cfg, eventMap);
+            return ids == null ? Collections.emptySet() : new LinkedHashSet<>(ids);
         } catch (Exception e) {
-            log.warn("[消息分发] BY_RELATION 查询失败: {}, config={}", e.getMessage(), targetConfig);
+            log.warn("[消息分发] resolver {} 解析失败, ruleId={}, err={}",
+                mode, rule.getId(), e.getMessage());
             return Collections.emptySet();
         }
     }
 
     /**
-     * BY_FEATURE: 根据类型能力(feature)筛选用户,替代学校耦合的 BY_USER_TYPE
-     *
-     * targetConfig: {"features":["isLearner"]} 或 {"features":["isLearner","receivesPersonalGrade"]}
-     * 多 feature 为 AND 关系(全部具备)。
-     *
-     * 通用化优势: 学校场景判断 isLearner 命中 STUDENT;培训机构场景 TRAINEE 也命中;
-     * 业务代码不需要知道具体类型码。
+     * targetConfig 兼容两种 JSON 形态:
+     *   - 对象: {"relation":"admin", ...}      → 原样返回
+     *   - 数组: ["admin","teacher"]            → 包装为 {"__list__": [...]} (历史 BY_ROLE 契约)
      */
-    private Set<Long> resolveByFeature(String targetConfig) {
-        Map<String, Object> config = parseJsonObject(targetConfig);
-        @SuppressWarnings("unchecked")
-        List<String> features = (List<String>) config.get("features");
-        if (features == null || features.isEmpty()) {
-            log.warn("[消息分发] BY_FEATURE 缺少 features 参数, config={}", targetConfig);
-            return Collections.emptySet();
-        }
-
-        // 构造 JSON_EXTRACT 条件: 每个 feature 必须为 true
-        StringBuilder sb = new StringBuilder(
-                "SELECT u.id FROM users u " +
-                "JOIN entity_type_configs c ON c.entity_type = 'USER' " +
-                "  AND c.type_code = u.user_type_code AND c.deleted = 0 " +
-                "WHERE u.deleted = 0 AND u.status = 1 ");
-        for (String feature : features) {
-            // 白名单校验 feature code,防止注入
-            if (!feature.matches("[a-zA-Z0-9_]+")) {
-                log.warn("[消息分发] BY_FEATURE 非法 feature 名: {}", feature);
-                return Collections.emptySet();
-            }
-            sb.append("  AND JSON_EXTRACT(c.features, '$.").append(feature).append("') = true ");
-        }
-        try {
-            List<Long> ids = jdbcTemplate.queryForList(sb.toString(), Long.class);
-            return new HashSet<>(ids);
-        } catch (Exception e) {
-            log.warn("[消息分发] BY_FEATURE 查询失败: {}, config={}", e.getMessage(), targetConfig);
-            return Collections.emptySet();
-        }
-    }
-
-    @SuppressWarnings("unchecked")
-    private Map<String, Object> parseJsonObject(String json) {
+    private Map<String, Object> parseConfig(String json) {
         if (json == null || json.isBlank()) return Collections.emptyMap();
         try {
             return objectMapper.readValue(json, new TypeReference<Map<String, Object>>() {});
-        } catch (Exception e) {
-            return Collections.emptyMap();
+        } catch (Exception eObj) {
+            // 尝试数组形态
+            try {
+                List<Object> list = objectMapper.readValue(json, new TypeReference<List<Object>>() {});
+                Map<String, Object> wrapped = new HashMap<>();
+                wrapped.put("__list__", list);
+                return wrapped;
+            } catch (Exception eList) {
+                // 逗号分隔字符串兜底 (与历史 parseStringList 同步)
+                Map<String, Object> wrapped = new HashMap<>();
+                wrapped.put("__list__", Arrays.asList(json.split(",")));
+                return wrapped;
+            }
         }
+    }
+
+    /** 将 EntityEvent 展平为 resolver 可读的 Map, 避免跨 layer 依赖 domain model. */
+    private Map<String, Object> toEventMap(EntityEvent event) {
+        Map<String, Object> m = new HashMap<>();
+        m.put("id", event.getId());
+        m.put("tenantId", event.getTenantId());
+        m.put("subjectType", event.getSubjectType());
+        m.put("subjectId", event.getSubjectId());
+        m.put("subjectName", event.getSubjectName());
+        m.put("eventCategory", event.getEventCategory());
+        m.put("eventType", event.getEventType());
+        m.put("eventLabel", event.getEventLabel());
+        m.put("sourceModule", event.getSourceModule());
+        m.put("sourceRefType", event.getSourceRefType());
+        m.put("sourceRefId", event.getSourceRefId());
+        m.put("payload", event.getPayload());
+        return m;
     }
 
     // ── 模板变量构建 ─────────────────────────────────────────────
@@ -350,17 +292,4 @@ public class MessageDispatcher {
     }
 
     private String safe(String s) { return s != null ? s : ""; }
-
-    // ── JSON 解析工具 ─────────────────────────────────────────────
-
-    private List<String> parseStringList(String json) {
-        if (json == null || json.isBlank()) return Collections.emptyList();
-        try {
-            return objectMapper.readValue(json, new TypeReference<>() {});
-        } catch (Exception e) {
-            // 可能是逗号分隔的字符串而非JSON数组
-            return Arrays.asList(json.split(","));
-        }
-    }
-
 }

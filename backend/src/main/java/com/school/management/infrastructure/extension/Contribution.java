@@ -6,9 +6,10 @@ import java.util.List;
  * 统一贡献契约 — 插件通过 {@link PluginPackage#contribute()} 返回 Stream&lt;Contribution&gt;
  * 声明本包向平台贡献的所有内容.
  *
- * sealed 限定 10 个 permitted subtype, 对应旧 SPI 的 7 种职责 + 3 个扩展位 (route/policy/domain).
- * 每种 Contribution 封装一条 def 记录, 在 ContributionDispatcher 里
- * 通过 pattern-matching switch 分发到对应 Registrar 的 upsert 方法.
+ * sealed 限定 11 个 permitted subtype, 对应旧 SPI 的 7 种职责 + 4 个扩展位
+ * (route/policy/target-mode/domain). 每种 Contribution 封装一条 def 记录, 在
+ * ContributionDispatcher 里通过 pattern-matching switch 分发到对应 Registrar 的
+ * upsert 方法.
  *
  * Phase 2 只铺设新路径, 旧 7 SPI 的 @Component 实现仍被原 Registrar 直接扫,
  * 两条路径到同一张表 UPSERT 幂等, 不冲突.
@@ -23,12 +24,13 @@ public sealed interface Contribution permits
     Contribution.DataScopeContribution,
     Contribution.RouteContribution,
     Contribution.PolicyContribution,
+    Contribution.TargetModeResolverContribution,
     Contribution.DomainContribution {
 
     /** 跨 Contribution 唯一标识, 用于冲突检测/日志 */
     String uniqueKey();
 
-    // ═════════════════════════ 10 个 permitted 记录 ═════════════════════════
+    // ═════════════════════════ 11 个 permitted 记录 ═════════════════════════
 
     /** 实体类型贡献 (对应旧 EntityTypePlugin 一个实例) */
     record EntityTypeContribution(EntityTypePlugin plugin) implements Contribution {
@@ -109,6 +111,17 @@ public sealed interface Contribution permits
      */
     record PolicyContribution(Policy<?> policy) implements Contribution {
         @Override public String uniqueKey() { return "policy:" + policy.code(); }
+    }
+
+    /**
+     * 消息目标模式解析贡献 (Track M2) — 插件通过此 record 注入 TargetModeResolver.
+     *
+     * MessageDispatcher 通过 Spring DI 直接收集所有 TargetModeResolver bean 并按
+     * {@link TargetModeResolver#modeCode()} 建立 Map, 本 contribution 只做登记/日志,
+     * 不需 Registrar 写 DB (与 PolicyContribution 同模式).
+     */
+    record TargetModeResolverContribution(TargetModeResolver resolver) implements Contribution {
+        @Override public String uniqueKey() { return "target-mode:" + resolver.modeCode(); }
     }
 
     /**
