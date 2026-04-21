@@ -33,6 +33,7 @@ public class PluginPlatformController {
     private final PolicyRegistry policyRegistry;
     private final List<TargetModeResolver> targetModeResolvers;
     private final TriggerPipelineHealthCheck triggerPipelineHealthCheck;
+    private final org.springframework.beans.factory.ObjectProvider<List<com.school.management.infrastructure.extension.MenuContributionPlugin>> menuPluginsProvider;
 
     /**
      * GET /api/plugin-platform/overview
@@ -275,40 +276,198 @@ public class PluginPlatformController {
 
     /**
      * GET /api/plugin-platform/{code}/health
-     * 返回插件健康状态: 贡献数量 vs Manifest 声明.
+     * 返回插件健康状态 + 贡献样本 + 依赖链 + 警告.
+     *
+     * 返回结构 (flat, 前端卡片 UI 直接消费):
+     *   code / name / version / status / enabled / lastStartedAt / installedAt / manifestClass
+     *   contributions: { types, relations, events, triggerPoints, permissions, roles, menus, policies, dataScopes }
+     *   samples:       { types:[], relations:[], events:[], permissions:[], roles:[] }
+     *   dependencies:  [{ code, version, status, enabled }]
+     *   warnings:      []
      */
     @GetMapping("/{code}/health")
     @CasbinAccess(resource = "admin", action = "access")
     public Result<Map<String, Object>> health(@PathVariable String code) {
-        Map<String, Object> pkg = null;
+        Map<String, Object> pkg;
         try {
             pkg = jdbc.queryForMap(
-                "SELECT industry_code, industry_name, version, enabled, installed_at, last_started_at " +
+                "SELECT industry_code, industry_name, version, enabled, installed_at, " +
+                "       last_started_at, manifest_class, depends_on " +
                 "FROM plugin_packages WHERE industry_code=?", code);
         } catch (Exception e) {
             return Result.error("插件不存在: " + code);
         }
 
-        Long types = jdbc.queryForObject(
-            "SELECT COUNT(*) FROM entity_type_configs WHERE industry=? AND deleted=0", Long.class, code);
-        Long relations = jdbc.queryForObject(
-            "SELECT COUNT(*) FROM relation_types WHERE industry=? AND is_enabled=1", Long.class, code);
-        Long events = jdbc.queryForObject(
-            "SELECT COUNT(*) FROM entity_event_types WHERE industry=? AND deleted=0", Long.class, code);
-        Long roles = jdbc.queryForObject(
-            "SELECT COUNT(*) FROM roles WHERE industry=? AND deleted=0", Long.class, code);
-        Long permissions = jdbc.queryForObject(
-            "SELECT COUNT(*) FROM permissions WHERE industry=? AND deleted=0", Long.class, code);
+        // ─── 贡献计数 ───
+        Long types = safeCount(
+            "SELECT COUNT(*) FROM entity_type_configs WHERE industry=? AND deleted=0", code);
+        Long relations = safeCount(
+            "SELECT COUNT(*) FROM relation_types WHERE industry=? AND is_enabled=1", code);
+        Long events = safeCount(
+            "SELECT COUNT(*) FROM entity_event_types WHERE industry=? AND deleted=0", code);
+        Long roles = safeCount(
+            "SELECT COUNT(*) FROM roles WHERE industry=? AND deleted=0", code);
+        Long permissions = safeCount(
+            "SELECT COUNT(*) FROM permissions WHERE industry=? AND deleted=0", code);
+        Long triggerPoints = safeCount(
+            "SELECT COUNT(*) FROM event_triggers WHERE industry=? AND deleted=0 AND is_enabled=1", code);
+        Long dataScopes = safeCount(
+            "SELECT COUNT(*) FROM data_scope_dims WHERE industry=? AND is_enabled=1", code);
 
+        // 菜单 / 策略: 按 manifestClass 所在包反推 (非 DB 数据, 从 registrar 取)
+        long menus = countMenusOfPlugin(code);
+        long policies = countPoliciesOfPlugin(code);
+
+        Map<String, Long> contributions = new LinkedHashMap<>();
+        contributions.put("types", types);
+        contributions.put("relations", relations);
+        contributions.put("events", events);
+        contributions.put("triggerPoints", triggerPoints);
+        contributions.put("permissions", permissions);
+        contributions.put("roles", roles);
+        contributions.put("menus", menus);
+        contributions.put("policies", policies);
+        contributions.put("dataScopes", dataScopes);
+
+        long total = contributions.values().stream().mapToLong(Long::longValue).sum();
+
+        // ─── 贡献样本 (前 3 条) ───
+        Map<String, List<String>> samples = new LinkedHashMap<>();
+        samples.put("types", queryStringList(
+            "SELECT CONCAT(type_code, ' ', COALESCE(type_name, '')) " +
+            "FROM entity_type_configs WHERE industry=? AND deleted=0 LIMIT 3", code));
+        samples.put("relations", queryStringList(
+            "SELECT CONCAT(relation_code, ' ', COALESCE(relation_name, '')) " +
+            "FROM relation_types WHERE industry=? AND is_enabled=1 LIMIT 3", code));
+        samples.put("events", queryStringList(
+            "SELECT CONCAT(type_code, ' ', COALESCE(type_name, '')) " +
+            "FROM entity_event_types WHERE industry=? AND deleted=0 LIMIT 3", code));
+        samples.put("permissions", queryStringList(
+            "SELECT CONCAT(permission_code, ' ', COALESCE(permission_name, '')) " +
+            "FROM permissions WHERE industry=? AND deleted=0 LIMIT 3", code));
+        samples.put("roles", queryStringList(
+            "SELECT CONCAT(role_code, ' ', COALESCE(role_name, '')) " +
+            "FROM roles WHERE industry=? AND deleted=0 LIMIT 3", code));
+
+        // ─── 依赖链 ───
+        List<Map<String, Object>> dependencies = new ArrayList<>();
+        Object depsJson = pkg.get("depends_on");
+        if (depsJson != null && !depsJson.toString().isBlank()) {
+            try {
+                com.fasterxml.jackson.databind.ObjectMapper om =
+                    new com.fasterxml.jackson.databind.ObjectMapper();
+                List<?> deps = om.readValue(depsJson.toString(), List.class);
+                for (Object d : deps) {
+                    String depCode = d.toString();
+                    Map<String, Object> dep = new LinkedHashMap<>();
+                    dep.put("code", depCode);
+                    try {
+                        Map<String, Object> depPkg = jdbc.queryForMap(
+                            "SELECT version, enabled FROM plugin_packages WHERE industry_code=?",
+                            depCode);
+                        int depEnabled = ((Number) depPkg.getOrDefault("enabled", 0)).intValue();
+                        dep.put("version", depPkg.get("version"));
+                        dep.put("enabled", depEnabled == 1);
+                        dep.put("status", depEnabled == 1 ? "HEALTHY" : "DISABLED");
+                    } catch (Exception ex) {
+                        dep.put("version", null);
+                        dep.put("enabled", false);
+                        dep.put("status", "MISSING");
+                    }
+                    dependencies.add(dep);
+                }
+            } catch (Exception ignored) { /* bad JSON → empty deps */ }
+        }
+
+        // ─── 警告 (MVP: 依赖异常) ───
+        List<String> warnings = new ArrayList<>();
+        for (Map<String, Object> dep : dependencies) {
+            if ("MISSING".equals(dep.get("status"))) {
+                warnings.add("依赖 " + dep.get("code") + " 缺失");
+            } else if ("DISABLED".equals(dep.get("status"))) {
+                warnings.add("依赖 " + dep.get("code") + " 已禁用");
+            }
+        }
+        int pkgEnabled = ((Number) pkg.getOrDefault("enabled", 0)).intValue();
+        if (pkgEnabled == 0) {
+            warnings.add("插件当前处于禁用状态");
+        }
+
+        // ─── 组装 flat response ───
         Map<String, Object> health = new LinkedHashMap<>();
-        health.put("package", pkg);
-        health.put("contributions", Map.of(
-            "types", types, "relations", relations, "events", events,
-            "roles", roles, "permissions", permissions));
-        long total = types + relations + events + roles + permissions;
-        health.put("status", total > 0 ? "HEALTHY" : "NO_CONTRIBUTIONS");
+        health.put("code", pkg.get("industry_code"));
+        health.put("name", pkg.get("industry_name"));
+        health.put("version", pkg.get("version"));
+        health.put("enabled", pkgEnabled == 1);
+        health.put("lastStartedAt", pkg.get("last_started_at"));
+        health.put("installedAt", pkg.get("installed_at"));
+        health.put("manifestClass", pkg.get("manifest_class"));
+        String status;
+        if (!warnings.isEmpty() && warnings.stream().anyMatch(w -> w.contains("缺失"))) {
+            status = "UNHEALTHY";
+        } else if (total > 0) {
+            status = "HEALTHY";
+        } else {
+            status = "NO_CONTRIBUTIONS";
+        }
+        health.put("status", status);
+        health.put("contributions", contributions);
         health.put("totalContributions", total);
+        health.put("samples", samples);
+        health.put("dependencies", dependencies);
+        health.put("warnings", warnings);
+        // 保留 legacy 字段给老 UI 兼容 (如有)
+        health.put("package", pkg);
         return Result.success(health);
+    }
+
+    private Long safeCount(String sql, Object... args) {
+        try {
+            Long c = jdbc.queryForObject(sql, Long.class, args);
+            return c != null ? c : 0L;
+        } catch (Exception e) {
+            return 0L;
+        }
+    }
+
+    private List<String> queryStringList(String sql, Object... args) {
+        try {
+            return jdbc.queryForList(sql, String.class, args);
+        } catch (Exception e) {
+            return List.of();
+        }
+    }
+
+    /** 根据 MenuContributionPlugin bean 的类路径推断所属插件, 累加其顶级菜单数. */
+    private long countMenusOfPlugin(String code) {
+        try {
+            List<com.school.management.infrastructure.extension.MenuContributionPlugin> menuPlugins =
+                menuPluginsProvider.getIfAvailable();
+            if (menuPlugins == null) return 0L;
+            long sum = 0;
+            for (var mp : menuPlugins) {
+                if (code.equalsIgnoreCase(inferPluginFromClass(mp.getClass().getName()))) {
+                    try {
+                        var menus = mp.getMenus();
+                        if (menus != null) sum += menus.size();
+                    } catch (Exception ignored) {}
+                }
+            }
+            return sum;
+        } catch (Exception e) {
+            return 0L;
+        }
+    }
+
+    /** 枚举 PolicyRegistry 中源类落在该插件包下的 Policy 数. */
+    private long countPoliciesOfPlugin(String code) {
+        try {
+            return policyRegistry.getPolicies().stream()
+                .filter(p -> code.equalsIgnoreCase(inferPluginFromClass(p.getClass().getName())))
+                .count();
+        } catch (Exception e) {
+            return 0L;
+        }
     }
 
     /**

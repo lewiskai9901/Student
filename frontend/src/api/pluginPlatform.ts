@@ -8,23 +8,47 @@
 import { http } from '@/utils/request'
 
 export interface PluginHealthInfo {
-  package: {
-    industry_code: string
-    industry_name: string
-    version: string
-    enabled: number
-    installed_at?: string
-    last_started_at?: string
-  }
+  code: string
+  name: string
+  version: string
+  status: 'HEALTHY' | 'UNHEALTHY' | 'NO_CONTRIBUTIONS'
+  enabled: boolean
+  lastStartedAt?: string
+  installedAt?: string
+  manifestClass?: string
+
   contributions: {
     types: number
     relations: number
     events: number
-    roles: number
+    triggerPoints: number
     permissions: number
+    roles: number
+    menus: number
+    policies: number
+    dataScopes: number
   }
-  status: 'HEALTHY' | 'NO_CONTRIBUTIONS'
   totalContributions: number
+
+  samples?: {
+    types?: string[]
+    relations?: string[]
+    events?: string[]
+    permissions?: string[]
+    roles?: string[]
+  }
+
+  dependencies?: {
+    code: string
+    version?: string
+    status: 'HEALTHY' | 'DISABLED' | 'MISSING'
+    enabled: boolean
+  }[]
+
+  warnings?: string[]
+
+  // legacy: 旧 UI 兼容字段, 新 UI 不需读
+  package?: Record<string, unknown>
 }
 
 export interface RegistrarMetrics {

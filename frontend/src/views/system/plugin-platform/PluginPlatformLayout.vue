@@ -73,24 +73,12 @@
       />
     </div>
 
-    <!-- Health dialog -->
-    <el-dialog v-model="healthDialog.show" :title="`健康检查 - ${healthDialog.code}`" width="500px">
-      <div v-if="healthDialog.data" class="pp-health">
-        <p><b>状态</b>:
-          <span class="pp-chip" :class="healthDialog.data.status === 'HEALTHY' ? 'pp-chip-success' : 'pp-chip-warning'">
-            {{ healthDialog.data.status }}
-          </span>
-        </p>
-        <p><b>总贡献</b>: {{ healthDialog.data.totalContributions }}</p>
-        <p><b>分项</b>:</p>
-        <ul>
-          <li v-for="(v, k) in healthDialog.data.contributions" :key="k">{{ k }}: {{ v }}</li>
-        </ul>
-        <p v-if="healthDialog.data.package">
-          <b>版本</b>: v{{ healthDialog.data.package.version }}
-        </p>
-      </div>
-    </el-dialog>
+    <!-- Health dialog (卡片式重设计) -->
+    <PluginHealthDialog
+      :code="healthDialog.code"
+      :visible="healthDialog.show"
+      @close="healthDialog.show = false"
+    />
 
     <!-- Global search palette -->
     <GlobalSearchPalette
@@ -106,13 +94,14 @@ import { useRoute, useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Search, RefreshCw, AlertTriangle, Timer } from 'lucide-vue-next'
 import { http } from '@/utils/request'
-import { pluginPlatformApi, type PluginHealthInfo } from '@/api/pluginPlatform'
+import { pluginPlatformApi } from '@/api/pluginPlatform'
 import PluginExplorer from './components/PluginExplorer.vue'
 import PluginDetail from './components/PluginDetail.vue'
 import HookPointDetail from './components/HookPointDetail.vue'
 import ResourceListDetail from './components/ResourceListDetail.vue'
 import PluginContextPanel from './components/PluginContextPanel.vue'
 import GlobalSearchPalette from './components/GlobalSearchPalette.vue'
+import PluginHealthDialog from './components/PluginHealthDialog.vue'
 import type { PluginData, ResourceKey } from './helpers'
 import { inferIndustry, inferIndustryFromRegisteredBy, resolveIndustry, relationIndustry } from './helpers'
 
@@ -334,8 +323,8 @@ async function loadAll() {
 }
 
 // ───────── Plugin governance actions ─────────
-const healthDialog = ref<{ show: boolean; code: string; data: PluginHealthInfo | null }>({
-  show: false, code: '', data: null
+const healthDialog = ref<{ show: boolean; code: string }>({
+  show: false, code: ''
 })
 
 async function onEnablePlugin(code: string) {
@@ -371,13 +360,9 @@ async function onUninstallPlugin(code: string) {
     ElMessage.error('卸载失败: ' + (e?.message || e))
   }
 }
-async function onShowHealth(code: string) {
-  try {
-    const dat = await pluginPlatformApi.health(code)
-    healthDialog.value = { show: true, code, data: dat as PluginHealthInfo }
-  } catch (e: any) {
-    ElMessage.error('健康检查失败: ' + (e?.message || e))
-  }
+function onShowHealth(code: string) {
+  // 新组件自己加载 + 处理 error, 这里只负责触发
+  healthDialog.value = { show: true, code }
 }
 
 // ───────── Search palette ─────────
