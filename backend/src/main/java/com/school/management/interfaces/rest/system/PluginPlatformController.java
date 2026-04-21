@@ -203,13 +203,26 @@ public class PluginPlatformController {
         return Result.success(result);
     }
 
-    /** 从类 FQCN 反推 plugin 代号 (与前端 inferIndustry 一致). */
+    /**
+     * 从类 FQCN 反推 plugin 代号 (与前端 inferIndustry 一致).
+     * core 规则:
+     *   1. plugins.core.* 下的 reference 实现
+     *   2. com.school.management.application.* 下的 core 内置 SPI 实现 (非行业插件)
+     *   3. com.school.management.infrastructure.* 下的 core 基础设施
+     */
     private String inferPluginFromClass(String fqcn) {
         if (fqcn == null) return "UNKNOWN";
-        if (fqcn.contains(".plugins.core.") || fqcn.contains(".plugins.core.policy.")) return "CORE";
+        // 行业插件优先匹配
         if (fqcn.contains(".plugins.education.")) return "EDU";
         if (fqcn.contains(".plugins.healthcare.")) return "HEALTH";
         if (fqcn.contains(".plugins.eldercare."))  return "CARE";
+        // core 匹配: 既包括 .plugins.core.* 也包括 application/infrastructure 里的 core SPI 实现
+        // (例: BySubjectTargetMode 在 application.message.targetmode, 属 core 内置)
+        if (fqcn.contains(".plugins.core.")
+                || fqcn.startsWith("com.school.management.application.")
+                || fqcn.startsWith("com.school.management.infrastructure.")) {
+            return "CORE";
+        }
         return "UNKNOWN";
     }
 
