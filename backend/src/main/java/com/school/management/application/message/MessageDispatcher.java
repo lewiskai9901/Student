@@ -10,9 +10,11 @@ import com.school.management.domain.message.repository.MsgNotificationRepository
 import com.school.management.domain.message.repository.MsgSubscriptionRuleRepository;
 import com.school.management.domain.message.repository.MsgTemplateRepository;
 import com.school.management.infrastructure.extension.TargetModeResolver;
+import com.school.management.infrastructure.tenant.TenantContextHolder;
 import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
@@ -53,6 +55,7 @@ public class MessageDispatcher {
     private final MsgNotificationRepository notificationRepository;
     private final ObjectMapper objectMapper;
     private final List<TargetModeResolver> resolvers;
+    private final JdbcTemplate jdbcTemplate;
 
     private Map<String, TargetModeResolver> resolverByMode;
 
@@ -152,6 +155,8 @@ public class MessageDispatcher {
         }
 
         // 5. 批量构建 + 批量 insert
+        //    M4.2: 先做一次 saveAll (高性能路径); 若整批失败, 降级 per-user save + 写 DLQ,
+        //    保证单用户数据问题不让整批派发失败.
         List<MsgNotification> notifications = new ArrayList<>(targetUserIds.size());
         for (Long userId : targetUserIds) {
             notifications.add(MsgNotification.createFromEvent(
@@ -161,12 +166,57 @@ public class MessageDispatcher {
                     event.getSubjectType(), event.getSubjectId(), event.getSubjectName(),
                     event.getEventCategory(), event.getSourceModule(), event.getId()));
         }
-        int inserted = notificationRepository.saveAll(notifications);
+        int inserted;
+        int dlqWritten = 0;
+        try {
+            inserted = notificationRepository.saveAll(notifications);
+        } catch (Exception batchEx) {
+            log.warn("[消息分发] 批量 saveAll 失败, 降级 per-user 保存 + DLQ: ruleId={}, err={}",
+                    rule.getId(), batchEx.getMessage());
+            inserted = 0;
+            for (MsgNotification notification : notifications) {
+                try {
+                    notificationRepository.save(notification);
+                    inserted++;
+                } catch (Exception singleEx) {
+                    writeDlq(event, rule, notification.getUserId(), singleEx);
+                    dlqWritten++;
+                }
+            }
+        }
 
-        log.info("[消息分发] 规则「{}」→ {} 个用户(写入 {} 条), 事件: {}/{}, 主体: {}/{}",
-                rule.getRuleName(), targetUserIds.size(), inserted,
+        log.info("[消息分发] 规则「{}」→ {} 个用户(写入 {} 条, DLQ {} 条), 事件: {}/{}, 主体: {}/{}",
+                rule.getRuleName(), targetUserIds.size(), inserted, dlqWritten,
                 event.getEventCategory(), event.getEventType(),
                 event.getSubjectType(), event.getSubjectName());
+    }
+
+    /**
+     * M4.2: 写消息派发死信表. 不抛异常 (DLQ 写失败只打 error 日志, 不影响主链路).
+     * 5 分钟后可重试一次; 生产环境应有定时 job 消费 next_retry_at < NOW() AND retry_count < N 的记录.
+     */
+    private void writeDlq(EntityEvent event, MsgSubscriptionRule rule, Long targetUserId, Exception ex) {
+        try {
+            Long tenantId = event.getTenantId() != null
+                    ? event.getTenantId()
+                    : TenantContextHolder.getTenantId();
+            if (tenantId == null) tenantId = 1L;
+            String errMsg = ex.getClass().getSimpleName() + ": "
+                    + (ex.getMessage() != null ? ex.getMessage() : "");
+            // error_message 是 TEXT 列, 做长度保护避免异常链过长
+            if (errMsg.length() > 4000) errMsg = errMsg.substring(0, 4000);
+            jdbcTemplate.update(
+                    "INSERT INTO msg_notification_failures " +
+                    "(event_id, rule_id, target_user_id, error_message, retry_count, next_retry_at, tenant_id) " +
+                    "VALUES (?, ?, ?, ?, 0, DATE_ADD(NOW(), INTERVAL 5 MINUTE), ?)",
+                    event.getId(), rule.getId(), targetUserId, errMsg, tenantId);
+            log.warn("[消息分发] DLQ 写入成功: eventId={}, ruleId={}, userId={}, err={}",
+                    event.getId(), rule.getId(), targetUserId, errMsg);
+        } catch (Exception dlqEx) {
+            // DLQ 自身失败不能再抛了; 只记 error
+            log.error("[消息分发] DLQ 写入失败 (原异常被吞): eventId={}, ruleId={}, userId={}, dlqErr={}, origErr={}",
+                    event.getId(), rule.getId(), targetUserId, dlqEx.getMessage(), ex.getMessage());
+        }
     }
 
     /**

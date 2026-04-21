@@ -11,4 +11,11 @@ public final class CoreTriggerPoints {
 
     /** 组织单元创建 */
     public static final String ORG_UNIT_CREATED = "ORG_UNIT_CREATED";
+
+    /**
+     * Policy SPI 产生的 WARN/INFO 违规. 由 PolicyRegistry → PolicyWarningEvent →
+     * PolicyWarningToNotificationListener 触发 (M4.3).
+     * Seeded in V20260425_2__policy_warning_trigger_point.sql.
+     */
+    public static final String POLICY_WARNING = "POLICY_WARNING";
 }

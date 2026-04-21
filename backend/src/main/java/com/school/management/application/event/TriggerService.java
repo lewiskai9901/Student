@@ -241,8 +241,14 @@ public class TriggerService {
 
         // 9. Idempotency prefix — 业务可选传入；最终 key 拼接 triggerId + subject 维度，
         //    保证同一业务操作对每个 trigger/subject 只产生一条事件。
+        //    M4.2: 业务未传 _idempotencyKey 时自动按严格 hash (无时间戳) 生成前缀,
+        //    保守选"严格幂等": 同一 (triggerPoint + _refType + _refId) 反复 fire 去重.
+        //    若业务场景确需"每次都发", 请显式传 _idempotencyKey=时间戳或 UUID.
         String idempotencyPrefix = context.get("_idempotencyKey") != null
             ? context.get("_idempotencyKey").toString() : null;
+        if (idempotencyPrefix == null || idempotencyPrefix.isBlank()) {
+            idempotencyPrefix = autoIdempotencyPrefix(pointCode, context);
+        }
 
         // 10. Insert one event per subject + publish Spring event for notification dispatch
         int inserted = 0;
@@ -341,5 +347,32 @@ public class TriggerService {
         } catch (Exception e) {
             return null;
         }
+    }
+
+    /**
+     * M4.2: 自动生成幂等前缀.
+     *
+     * 策略: 纯业务字段 hash (不加时间戳) — 严格幂等.
+     *   basis = pointCode + _refType + _refId
+     *   (如 _refType/_refId 缺失, 退化到 pointCode + 全 context 的字段名 sorted hash)
+     *
+     * 效果: 同一业务对象对同一触发点反复 fire, 只会记录一次事件;
+     *       业务如果想每次都产生事件, 应显式传入 _idempotencyKey=UUID/timestamp.
+     */
+    private String autoIdempotencyPrefix(String pointCode, Map<String, Object> context) {
+        Object refType = context.get("_refType");
+        Object refId = context.get("_refId");
+        String basis;
+        if (refType != null && refId != null) {
+            basis = pointCode + ":" + refType + ":" + refId;
+        } else {
+            // 没有来源记录 ID 时, 用 subject 相关字段兜底
+            basis = pointCode + ":"
+                + context.getOrDefault("subjectId", "")
+                + ":" + context.getOrDefault("subjectType", "USER")
+                + ":" + context.getOrDefault("studentId", "")
+                + ":" + context.getOrDefault("userId", "");
+        }
+        return "AUTO-" + Integer.toHexString(basis.hashCode());
     }
 }
