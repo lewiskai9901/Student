@@ -39,6 +39,7 @@ public class TriggerService {
     private final JdbcTemplate jdbcTemplate;
     private final ObjectMapper objectMapper;
     private final ApplicationEventPublisher eventPublisher;
+    private final TriggerPipelineHealthCheck healthCheck;
 
     private static final TypeReference<List<Map<String, String>>> SUBJECTS_TYPE_REF =
         new TypeReference<>() {};
@@ -52,6 +53,11 @@ public class TriggerService {
      */
     @Transactional
     public void fire(String pointCode, Map<String, Object> context) {
+        if (!healthCheck.isHealthy()) {
+            log.warn("[trigger] fire({}) skipped — pipeline unhealthy, missing: {}",
+                pointCode, healthCheck.getMissingTables());
+            return;
+        }
         try {
             // 契约校验：trigger_points.context_schema 声明了业务代码必须传入的 key
             validateContextSchema(pointCode, context);
