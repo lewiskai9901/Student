@@ -1,8 +1,10 @@
 package com.school.management.infrastructure.access;
 
 import com.school.management.infrastructure.extension.DataScopePlugin.DataScopeResolver;
+import com.school.management.infrastructure.extension.event.PermissionsRefreshedEvent;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.ApplicationContext;
+import org.springframework.context.event.EventListener;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Component;
 
@@ -66,8 +68,17 @@ public class PluginDataScopeRouter {
     }
 
     /**
-     * 清空缓存 (用于插件热重载场景 / 测试).
+     * 清空缓存 — 插件 enable/disable/uninstall 或 data_scope_dims 配置变更时触发.
+     * PluginPlatformController 的生命周期操作会 publish PermissionsRefreshedEvent, 此处监听清缓存.
      */
+    @EventListener
+    public void onPermissionsRefreshed(PermissionsRefreshedEvent event) {
+        int n = cache.size();
+        cache.clear();
+        log.info("[PluginDataScopeRouter] cleared {} cached resolvers (source: {})", n, event.getSourceName());
+    }
+
+    /** 清空缓存 (供测试/手动触发使用). */
     public void clearCache() {
         cache.clear();
     }

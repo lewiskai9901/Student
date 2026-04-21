@@ -30,8 +30,15 @@ public class CoreRelationsPlugin implements RelationTypePlugin {
                "MEMBERSHIP", "用户属于某组织"),
 
             // 管理关系 (organization) — 主管理员单一,副管理员可多人
+            // W4 reference demo: admin(org) 派生两条 implied:
+            //   1) viewer on user via MEMBERS_OF_ORG — 能管组织就能看组织里的人
+            //   2) admin on org_unit via DESCENDANTS_OF_ORG — 管理权沿组织树下沉 (isTransitive 的显式展开)
             of("admin", "user", "org_unit", "主管理员",
-               "OWNERSHIP", "组织的主负责人(如班主任/部门主管),沿子组织传递").transitive().withMaxPerResource(1),
+               "OWNERSHIP", "组织的主负责人(如班主任/部门主管),沿子组织传递").transitive().withMaxPerResource(1)
+               .withImplied(List.of(
+                   new Implied("user",     "viewer", Implied.MEMBERS_OF_ORG),
+                   new Implied("org_unit", "admin",  Implied.DESCENDANTS_OF_ORG)
+               )),
             of("deputy", "user", "org_unit", "副管理员",
                "OWNERSHIP", "组织副负责人").transitive(),
 

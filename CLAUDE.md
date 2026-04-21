@@ -77,15 +77,26 @@ npm run lint
 
 ### Database
 
-**Initialize database:**
+**Initialize database (完整新库):**
 ```bash
-# Create database
-mysql -u root -p -e "CREATE DATABASE student_management CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;"
+# 一键执行: baseline + 全部 migrations (schema/V*.sql + migrations/V*.sql) + seed
+DB_PASSWORD=your-pw bash database/scripts/init-all.sh
+```
 
-# Import schema and initial data
+**手动逐步 (不推荐):**
+```bash
+mysql -u root -p -e "CREATE DATABASE student_management CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;"
+# 1. baseline (V2, 88 legacy 表)
 mysql -u root -p student_management < database/schema/complete_schema_v2.sql
+# 2. 所有 migrations 必须按顺序 apply — 项目未用 Flyway
+for f in $(ls database/schema/V*.sql database/migrations/V*.sql | grep -v complete_schema_v2 | sort -V); do
+  mysql -u root -p student_management < "$f"
+done
+# 3. seed
 mysql -u root -p student_management < database/init/init_data.sql
 ```
+
+**已升级的库追加新 migration**: 把新文件放到 `database/schema/V<N>.0.0__*.sql` 或 `database/migrations/V20260XXX_N__*.sql`, 然后单独 apply 即可 — 所有 migration 都写成 `information_schema` 条件化 (参考 V97/V104), 可重复执行。
 
 **Backup database (Windows):**
 ```bash
