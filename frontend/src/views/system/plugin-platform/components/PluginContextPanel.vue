@@ -134,7 +134,7 @@ import {
 } from '../helpers'
 
 const props = defineProps<{
-  view: 'plugins' | 'hooks' | 'resources'
+  view: 'plugins' | 'hooks' | 'resources' | 'sandbox'
   pluginCode: string
   hookKey: string
   resourceType: ResourceKey

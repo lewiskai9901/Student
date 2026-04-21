@@ -57,7 +57,7 @@
     </div>
 
     <!-- Resources view -->
-    <div v-else class="ex-body">
+    <div v-else-if="view === 'resources'" class="ex-body">
       <div class="ex-section-title">资源类型</div>
       <button
         v-for="r in RESOURCE_TYPES"
@@ -73,6 +73,13 @@
         <span class="ex-item-count">{{ countFor(r.key) }}</span>
       </button>
     </div>
+
+    <!-- Sandbox view: 无左栏条目, 主区展开工作台 -->
+    <div v-else class="ex-body ex-body-empty">
+      <FlaskConical :size="24" />
+      <p class="ex-empty-title">测试沙箱工作台</p>
+      <p class="ex-empty-sub">右侧主区填表测试各扩展点</p>
+    </div>
   </aside>
 </template>
 
@@ -80,19 +87,21 @@
 import { computed, inject } from 'vue'
 import {
   Package, Webhook, LayoutGrid, Link2, Bell, Shield, UserCog,
-  ShieldCheck, Filter, Zap, BellRing
+  ShieldCheck, Filter, Zap, BellRing, FlaskConical
 } from 'lucide-vue-next'
 import { RESOURCE_TYPES, industryColor, subjectTypeLabel, phaseLabel, type PluginData, type ResourceKey } from '../helpers'
 
+type ViewKind = 'plugins' | 'hooks' | 'resources' | 'sandbox'
+
 const props = defineProps<{
-  view: 'plugins' | 'hooks' | 'resources'
+  view: ViewKind
   selectedCode: string
   selectedHookKey: string
   selectedResource: ResourceKey
 }>()
 
 const emit = defineEmits<{
-  (e: 'change-view', v: 'plugins' | 'hooks' | 'resources'): void
+  (e: 'change-view', v: ViewKind): void
   (e: 'select-plugin', code: string): void
   (e: 'select-hook', key: string): void
   (e: 'select-resource', key: ResourceKey): void
@@ -103,7 +112,8 @@ const data = inject<PluginData>('pluginData')!
 const tabs = [
   { key: 'plugins' as const, label: '插件', icon: Package },
   { key: 'hooks' as const, label: 'Hook', icon: Webhook },
-  { key: 'resources' as const, label: '资源', icon: LayoutGrid }
+  { key: 'resources' as const, label: '资源', icon: LayoutGrid },
+  { key: 'sandbox' as const, label: '沙箱', icon: FlaskConical }
 ]
 
 const resourceIcons: Record<ResourceKey, any> = {
@@ -164,9 +174,15 @@ void props
   min-height: 0; overflow: hidden;
 }
 .ex-tabs {
-  display: grid; grid-template-columns: 1fr 1fr 1fr;
+  display: grid; grid-template-columns: 1fr 1fr 1fr 1fr;
   border-bottom: 1px solid #e5e7eb;
 }
+.ex-body-empty {
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 8px; padding: 40px 12px; color: #9ca3af;
+}
+.ex-empty-title { margin: 0; font-size: 12px; color: #4b5563; font-weight: 600; }
+.ex-empty-sub { margin: 0; font-size: 11px; color: #9ca3af; text-align: center; }
 .ex-tab {
   display: inline-flex; align-items: center; justify-content: center; gap: 4px;
   padding: 8px 4px; border: none; background: transparent;

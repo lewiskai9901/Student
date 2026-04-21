@@ -53,6 +53,9 @@
           v-else-if="view === 'hooks'"
           :hook-key="selectedHookKey"
         />
+        <PluginTestSandbox
+          v-else-if="view === 'sandbox'"
+        />
         <ResourceListDetail
           v-else
           :resource-type="selectedResource"
@@ -102,6 +105,7 @@ import ResourceListDetail from './components/ResourceListDetail.vue'
 import PluginContextPanel from './components/PluginContextPanel.vue'
 import GlobalSearchPalette from './components/GlobalSearchPalette.vue'
 import PluginHealthDialog from './components/PluginHealthDialog.vue'
+import PluginTestSandbox from './components/PluginTestSandbox.vue'
 import type { PluginData, ResourceKey } from './helpers'
 import { inferIndustry, inferIndustryFromRegisteredBy, resolveIndustry, relationIndustry } from './helpers'
 
@@ -109,7 +113,7 @@ import { inferIndustry, inferIndustryFromRegisteredBy, resolveIndustry, relation
 const route = useRoute()
 const router = useRouter()
 
-type ViewKind = 'plugins' | 'hooks' | 'resources'
+type ViewKind = 'plugins' | 'hooks' | 'resources' | 'sandbox'
 const view = ref<ViewKind>((route.query.view as ViewKind) || 'plugins')
 const selectedCode = ref<string>(String(route.query.code || ''))
 const selectedHookKey = ref<string>(
