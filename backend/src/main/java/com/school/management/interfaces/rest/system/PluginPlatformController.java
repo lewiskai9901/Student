@@ -1,5 +1,6 @@
 package com.school.management.interfaces.rest.system;
 
+import com.school.management.application.event.TriggerPipelineHealthCheck;
 import com.school.management.common.result.Result;
 import com.school.management.infrastructure.casbin.CasbinAccess;
 import com.school.management.infrastructure.extension.Policy;
@@ -7,6 +8,7 @@ import com.school.management.infrastructure.extension.PolicyContext;
 import com.school.management.infrastructure.extension.PolicyRegistry;
 import com.school.management.infrastructure.extension.PluginManifest;
 import com.school.management.infrastructure.extension.PluginPackageRegistrar;
+import com.school.management.infrastructure.extension.TargetModeResolver;
 import com.school.management.infrastructure.extension.event.PermissionsRefreshedEvent;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.ApplicationEventPublisher;
@@ -29,6 +31,8 @@ public class PluginPlatformController {
     private final ApplicationEventPublisher eventPublisher;
     private final com.school.management.infrastructure.extension.TenantPluginService tenantPluginService;
     private final PolicyRegistry policyRegistry;
+    private final List<TargetModeResolver> targetModeResolvers;
+    private final TriggerPipelineHealthCheck triggerPipelineHealthCheck;
 
     /**
      * GET /api/plugin-platform/overview
@@ -99,6 +103,20 @@ public class PluginPlatformController {
         }
         summary.put("dataScopes", dataScopeDims != null ? dataScopeDims : 0L);
         summary.put("policies", (long) policyRegistry.getPolicies().size());
+        // M5: 触发点 / 订阅规则 / TargetMode SPI 计数
+        Long tpCount = null;
+        try {
+            tpCount = jdbc.queryForObject(
+                "SELECT COUNT(*) FROM trigger_points WHERE deleted=0", Long.class);
+        } catch (Exception ignored) { /* 表未就绪兜底 */ }
+        Long ruleCount = null;
+        try {
+            ruleCount = jdbc.queryForObject(
+                "SELECT COUNT(*) FROM msg_subscription_rules WHERE is_enabled=1 AND deleted=0", Long.class);
+        } catch (Exception ignored) { /* 表未就绪兜底 */ }
+        summary.put("triggerPoints", tpCount != null ? tpCount : 0L);
+        summary.put("subscriptionRules", ruleCount != null ? ruleCount : 0L);
+        summary.put("targetModes", (long) targetModeResolvers.size());
 
         Map<String, Object> result = new LinkedHashMap<>();
         result.put("industries", industries);
@@ -463,5 +481,75 @@ public class PluginPlatformController {
             com.school.management.infrastructure.extension.AbstractPluginRegistrar
                 .STARTUP_DURATION_MS.values().stream().mapToLong(Long::longValue).sum());
         return Result.success(result);
+    }
+
+    // ═══════════════ M5: 消息/事件子系统可视化 ═══════════════
+
+    /**
+     * GET /api/plugin-platform/trigger-points
+     * 列出全部触发点 + 每个上已配置的触发器数.
+     */
+    @GetMapping("/trigger-points")
+    @CasbinAccess(resource = "admin", action = "access")
+    public Result<List<Map<String, Object>>> triggerPoints() {
+        return Result.success(jdbc.queryForList(
+            "SELECT tp.module_code, tp.module_name, tp.point_code, tp.point_name, " +
+            "       tp.description, tp.context_schema, tp.is_enabled, tp.sort_order, " +
+            "       (SELECT COUNT(*) FROM event_triggers et " +
+            "          WHERE et.trigger_point_code = tp.point_code " +
+            "            AND et.deleted = 0 AND et.is_enabled = 1) AS trigger_count " +
+            "FROM trigger_points tp WHERE tp.deleted = 0 " +
+            "ORDER BY tp.module_code, tp.sort_order, tp.point_code"));
+    }
+
+    /**
+     * GET /api/plugin-platform/subscription-rules
+     * 全部订阅规则 (target_mode / 匹配条件 / 目标范围).
+     * 注: 列名用 event_type (V68 schema), 非 event_type_code.
+     */
+    @GetMapping("/subscription-rules")
+    @CasbinAccess(resource = "admin", action = "access")
+    public Result<List<Map<String, Object>>> subscriptionRules() {
+        return Result.success(jdbc.queryForList(
+            "SELECT id, rule_name, event_category, event_type, target_mode, target_config, " +
+            "       channel, is_enabled, tenant_id, created_at " +
+            "FROM msg_subscription_rules " +
+            "WHERE deleted = 0 " +
+            "ORDER BY event_category, event_type, id"));
+    }
+
+    /**
+     * GET /api/plugin-platform/target-modes
+     * 后端当前注册的所有 TargetModeResolver (M2 SPI).
+     * 展示 modeCode / displayName / 源类 / 源插件 (CORE/EDU/...).
+     */
+    @GetMapping("/target-modes")
+    @CasbinAccess(resource = "admin", action = "access")
+    public Result<List<Map<String, Object>>> targetModes() {
+        return Result.success(
+            targetModeResolvers.stream()
+                .map(r -> {
+                    Map<String, Object> row = new LinkedHashMap<>();
+                    row.put("modeCode", r.modeCode());
+                    row.put("displayName", r.displayName());
+                    row.put("supportsPreview", r.supportsPreview());
+                    row.put("sourceClass", r.getClass().getName());
+                    row.put("sourcePlugin", inferPluginFromClass(r.getClass().getName()));
+                    return row;
+                })
+                .toList()
+        );
+    }
+
+    /**
+     * GET /api/plugin-platform/messaging-health
+     * M1 TriggerPipelineHealthCheck 结果 — healthy + 空/缺的表清单.
+     */
+    @GetMapping("/messaging-health")
+    public Result<Map<String, Object>> messagingHealth() {
+        Map<String, Object> body = new LinkedHashMap<>();
+        body.put("healthy", triggerPipelineHealthCheck.isHealthy());
+        body.put("missingTables", triggerPipelineHealthCheck.getMissingTables());
+        return Result.success(body);
     }
 }
