@@ -2,6 +2,7 @@ package com.school.management.application.message;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.school.management.application.access.AuthorizationService;
 import com.school.management.domain.event.model.EntityEvent;
 import com.school.management.domain.message.model.MsgNotification;
 import com.school.management.domain.message.model.MsgSubscriptionRule;
@@ -38,6 +39,7 @@ public class MessageDispatcher {
     private final MsgNotificationRepository notificationRepository;
     private final JdbcTemplate jdbcTemplate;
     private final ObjectMapper objectMapper;
+    private final AuthorizationService authorizationService;
 
     /**
      * 根据 EntityEvent 分发消息
@@ -230,39 +232,38 @@ public class MessageDispatcher {
         relations.add(relation);
         if (includeDeputies) relations.add("deputy");
 
-        String placeholders = relations.stream().map(r -> "?").collect(Collectors.joining(","));
         try {
-            String sql;
-            Object[] params;
             if ("outward".equalsIgnoreCase(direction)) {
                 // subject 是我们的主体,找它关联的 user 们(resource_type 必须是 user)
-                sql = "SELECT DISTINCT ar.resource_id FROM access_relations ar " +
+                // 保留裸 SQL: outward 语义是"subject 作为 subject 反查 resource", implied 在此方向
+                // 需要另一套反向 BFS, 当前 MVP 暂不覆盖 (后续按需扩展).
+                String placeholders = relations.stream().map(r -> "?").collect(Collectors.joining(","));
+                String sql = "SELECT DISTINCT ar.resource_id FROM access_relations ar " +
                       "WHERE ar.subject_type = ? AND ar.subject_id = ? " +
                       "  AND ar.resource_type = 'user' " +
                       "  AND ar.relation IN (" + placeholders + ") " +
                       "  AND ar.deleted = 0 " +
                       "  AND (ar.valid_to IS NULL OR ar.valid_to > NOW())";
-                params = new Object[relations.size() + 2];
+                Object[] params = new Object[relations.size() + 2];
                 params[0] = subjectType != null ? subjectType.toLowerCase() : "user";
                 params[1] = subjectId;
                 for (int i = 0; i < relations.size(); i++) params[i + 2] = relations.get(i);
-            } else {
-                // inward(默认): subject 是 resource,找它的 user 们
-                sql = "SELECT DISTINCT ar.subject_id FROM access_relations ar " +
-                      "WHERE ar.resource_type = ? AND ar.resource_id = ? " +
-                      "  AND ar.subject_type = 'user' " +
-                      "  AND ar.relation IN (" + placeholders + ") " +
-                      "  AND ar.deleted = 0 " +
-                      "  AND (ar.valid_to IS NULL OR ar.valid_to > NOW())";
-                params = new Object[relations.size() + 2];
-                String rt = resourceType != null ? resourceType.toLowerCase()
-                        : (subjectType != null ? subjectType.toLowerCase() : "org_unit");
-                params[0] = rt;
-                params[1] = subjectId;
-                for (int i = 0; i < relations.size(); i++) params[i + 2] = relations.get(i);
+                List<Long> ids = jdbcTemplate.queryForList(sql, Long.class, params);
+                return new HashSet<>(ids);
             }
-            List<Long> ids = jdbcTemplate.queryForList(sql, Long.class, params);
-            return new HashSet<>(ids);
+
+            // inward(默认): subject 是 resource, 找它的 user 们
+            // M1.2: 走 AuthorizationService 含 implied 派生展开, 不再裸 SQL,
+            // 避免遗漏 "manages → viewer via OCCUPANTS_OF_PLACE" 等派生关系的订阅者.
+            String rt = resourceType != null ? resourceType.toLowerCase()
+                    : (subjectType != null ? subjectType.toLowerCase() : "org_unit");
+            Set<Long> result = new LinkedHashSet<>();
+            for (String rel : relations) {
+                List<Long> ids = authorizationService.findSubjectsWithRelation(
+                    rt, subjectId, rel, /* subjectTypeFilter= */ "user", /* expandImplied= */ true);
+                result.addAll(ids);
+            }
+            return result;
         } catch (Exception e) {
             log.warn("[消息分发] BY_RELATION 查询失败: {}, config={}", e.getMessage(), targetConfig);
             return Collections.emptySet();

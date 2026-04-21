@@ -283,6 +283,93 @@ public class AuthorizationService {
             resourceType, resourceId, relation);
     }
 
+    /**
+     * 找对给定 resource 拥有 relation 关系的所有 subject id (含 implied 派生).
+     *
+     * <p>直查 access_relations 获得直接授权的 subject, 再扫 impliedIndex 反向展开一层
+     * implied — 对于每个能派生到 (resourceType, relation) 的 (sourceFromType, sourceRelation),
+     * 通过 {@link RelationDiscoveryRule#reverseDiscover} 反查哪些 source resource 能派生到
+     * 当前 resourceId, 再查这些 source resource 上的直接关系 subject, 并入结果.
+     *
+     * <p>注意 (MVP 限制):
+     * <ul>
+     *   <li>只反展开一层 implied. 多层链 (A 派生 B 派生 C) 暂不覆盖; 如业务真的需要,
+     *       可升级为反向 BFS (对称于 {@code checkImplied}).</li>
+     *   <li>依赖具体 {@link RelationDiscoveryRule#reverseDiscover} 实现. 未覆写的规则
+     *       返回空列表并打 debug 日志, 相当于跳过该派生路径.</li>
+     * </ul>
+     *
+     * @param resourceType  资源类型 (如 "user" / "place" / "org_unit")
+     * @param resourceId    资源 ID
+     * @param relation      关系码 (如 "viewer" / "admin")
+     * @param expandImplied true 则展开 implied 派生; false 等价于 {@link #expand} 取 id 列表
+     * @return 拥有此关系的 subject id 列表 (subject_type 可混合; 调用方若只要 user 自行过滤)
+     */
+    public List<Long> findSubjectsWithRelation(String resourceType, Long resourceId,
+                                                String relation, boolean expandImplied) {
+        return findSubjectsWithRelation(resourceType, resourceId, relation, null, expandImplied);
+    }
+
+    /**
+     * 带 subject_type 过滤的版本 — 通常调用方希望只拿 "user" 主体 (如消息派发).
+     *
+     * @param subjectTypeFilter 若非 null, 仅返回 subject_type = 此值的 subject; null 则不过滤
+     */
+    public List<Long> findSubjectsWithRelation(String resourceType, Long resourceId,
+                                                String relation, String subjectTypeFilter,
+                                                boolean expandImplied) {
+        // 1. 直查
+        String directSql = "SELECT DISTINCT subject_id FROM access_relations " +
+            "WHERE resource_type = ? AND resource_id = ? AND relation = ? " +
+            "  AND deleted = 0 " +
+            "  AND (valid_to IS NULL OR valid_to > NOW())" +
+            (subjectTypeFilter != null ? " AND subject_type = ?" : "");
+        List<Long> direct = subjectTypeFilter != null
+            ? jdbcTemplate.queryForList(directSql, Long.class, resourceType, resourceId, relation, subjectTypeFilter)
+            : jdbcTemplate.queryForList(directSql, Long.class, resourceType, resourceId, relation);
+        if (!expandImplied) return direct;
+
+        Set<Long> result = new LinkedHashSet<>(direct);
+
+        // 2. 反向展开 implied (一层)
+        // impliedIndex key = targetType#relation, value = List<ImpliedSource>
+        //   每个 ImpliedSource(fromType, sourceRelation, sourceToType, implied) 表达:
+        //   "拥有 (sourceToType, sourceRelation) 的 subject (subject_type=fromType)
+        //    会派生到 (targetType, relation)"
+        List<ImpliedSource> sources = impliedIndex.get(impliedKey(resourceType, relation));
+        if (sources == null || sources.isEmpty()) {
+            return new ArrayList<>(result);
+        }
+
+        for (ImpliedSource s : sources) {
+            // subject_type 过滤: source 端关系的 subject_type = ImpliedSource.fromType,
+            // 若调用方指定 subjectTypeFilter 且不匹配, 跳过该派生.
+            if (subjectTypeFilter != null && !subjectTypeFilter.equals(s.fromType())) continue;
+
+            RelationDiscoveryRule rule = discoveryByCode.get(s.implied().discoveryRule());
+            if (rule == null) {
+                log.debug("[Authorization] findSubjectsWithRelation: 跳过未知 discoveryRule={}",
+                    s.implied().discoveryRule());
+                continue;
+            }
+            // 反查: 给定目标 (resourceType, resourceId), 哪些 source resource 能派生到它?
+            List<Long> sourceResourceIds = rule.reverseDiscover(resourceType, resourceId);
+            if (sourceResourceIds == null || sourceResourceIds.isEmpty()) continue;
+
+            for (Long srcResId : sourceResourceIds) {
+                List<Long> implied = jdbcTemplate.queryForList(
+                    "SELECT DISTINCT subject_id FROM access_relations " +
+                    "WHERE resource_type = ? AND resource_id = ? " +
+                    "  AND relation = ? AND subject_type = ? " +
+                    "  AND deleted = 0 " +
+                    "  AND (valid_to IS NULL OR valid_to > NOW())",
+                    Long.class, s.sourceToType(), srcResId, s.sourceRelation(), s.fromType());
+                result.addAll(implied);
+            }
+        }
+        return new ArrayList<>(result);
+    }
+
     /** 某资源上的所有关系(不限 relation) */
     public List<RelationEdge> expandAll(String resourceType, Long resourceId) {
         return jdbcTemplate.query(

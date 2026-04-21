@@ -44,4 +44,34 @@ public class DescendantsOfOrgDiscovery implements RelationDiscoveryRule {
             "SELECT id FROM org_units WHERE tree_path LIKE ? AND id <> ? AND deleted = 0",
             Long.class, rootPath + "%", fromResourceId);
     }
+
+    /**
+     * 反向: 给定目标 org_unit id, 返回其所有祖先 org_unit id 列表 (不含自身).
+     * 通过解析目标 org 的 tree_path ("/1/2/3/") 逐级拆分得到祖先 id.
+     */
+    @Override
+    public List<Long> reverseDiscover(String targetResourceType, Long targetResourceId) {
+        if (!"org_unit".equals(targetResourceType) || targetResourceId == null) {
+            return List.of();
+        }
+        List<String> paths = jdbcTemplate.queryForList(
+            "SELECT tree_path FROM org_units WHERE id = ? AND deleted = 0",
+            String.class, targetResourceId);
+        if (paths.isEmpty() || paths.get(0) == null || paths.get(0).isBlank()) {
+            return List.of();
+        }
+        String treePath = paths.get(0);
+        // tree_path 形如 "/1/2/3/" — 拆分得 [1, 2, 3], 排除自身 targetResourceId
+        java.util.List<Long> ancestors = new java.util.ArrayList<>();
+        for (String seg : treePath.split("/")) {
+            if (seg.isEmpty()) continue;
+            try {
+                long id = Long.parseLong(seg);
+                if (id != targetResourceId) ancestors.add(id);
+            } catch (NumberFormatException ignored) {
+                // tree_path 段不是数字 — 跳过
+            }
+        }
+        return ancestors;
+    }
 }

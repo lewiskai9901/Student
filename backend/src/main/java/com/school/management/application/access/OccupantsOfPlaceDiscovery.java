@@ -37,4 +37,22 @@ public class OccupantsOfPlaceDiscovery implements RelationDiscoveryRule {
             "  AND (valid_to IS NULL OR valid_to > NOW())",
             Long.class, fromResourceId);
     }
+
+    /**
+     * 反向: 给定目标 user, 反查该 user 作为 occupant 所属的 place id 列表.
+     */
+    @Override
+    public List<Long> reverseDiscover(String targetResourceType, Long targetResourceId) {
+        if (!"user".equals(targetResourceType) || targetResourceId == null) {
+            return List.of();
+        }
+        return jdbcTemplate.queryForList(
+            "SELECT DISTINCT resource_id FROM access_relations " +
+            "WHERE subject_type = 'user' AND subject_id = ? " +
+            "  AND resource_type = 'place' " +
+            "  AND relation IN ('occupies', 'occupant') " +
+            "  AND deleted = 0 " +
+            "  AND (valid_to IS NULL OR valid_to > NOW())",
+            Long.class, targetResourceId);
+    }
 }

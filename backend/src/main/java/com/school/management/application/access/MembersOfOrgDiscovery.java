@@ -43,4 +43,22 @@ public class MembersOfOrgDiscovery implements RelationDiscoveryRule {
             "  AND (valid_to IS NULL OR valid_to > NOW())",
             Long.class, fromResourceId);
     }
+
+    /**
+     * 反向: 给定目标 user, 反查该 user 作为 member 所属的 org_unit id 列表.
+     */
+    @Override
+    public List<Long> reverseDiscover(String targetResourceType, Long targetResourceId) {
+        if (!"user".equals(targetResourceType) || targetResourceId == null) {
+            return List.of();
+        }
+        return jdbcTemplate.queryForList(
+            "SELECT DISTINCT resource_id FROM access_relations " +
+            "WHERE subject_type = 'user' AND subject_id = ? " +
+            "  AND resource_type = 'org_unit' " +
+            "  AND relation = 'member' " +
+            "  AND deleted = 0 " +
+            "  AND (valid_to IS NULL OR valid_to > NOW())",
+            Long.class, targetResourceId);
+    }
 }
