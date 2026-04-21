@@ -39,8 +39,57 @@ export function subjectTypeLabel(code?: string): string {
     ORG_UNIT: '组织',
     ORG: '组织',
     PLACE: '场所',
-    OTHER: '其他'
+    OTHER: '其他',
+    place: '场所',
+    org_unit: '组织',
+    user: '用户',
+    role: '角色'
   } as Record<string, string>)[code] || code
+}
+
+/** Hook phase 中文标签 */
+export function phaseLabel(phase?: string): string {
+  if (!phase) return ''
+  return ({
+    BEFORE_CREATE: '创建前',
+    AFTER_CREATE: '创建后',
+    BEFORE_UPDATE: '更新前',
+    AFTER_UPDATE: '更新后',
+    BEFORE_DELETE: '删除前',
+    AFTER_DELETE: '删除后',
+    BEFORE_CHECKIN: '入住前',
+    AFTER_CHECKIN: '入住后',
+    BEFORE_CHECKOUT: '退出前',
+    AFTER_CHECKOUT: '退出后',
+    BEFORE_ADD_MEMBER: '加成员前',
+    AFTER_ADD_MEMBER: '加成员后',
+    BEFORE_REMOVE_MEMBER: '移成员前',
+    AFTER_REMOVE_MEMBER: '移成员后'
+  } as Record<string, string>)[phase] || phase
+}
+
+/**
+ * Hook 点的调用位置 — 告诉开发者 core 是在哪个 Service 方法里触发这个 hook.
+ * 修改 core Policy hook 接入位置时, 同步更新此映射.
+ */
+export function hookCallSite(entityType?: string, phase?: string): { method: string; desc: string } {
+  const key = `${entityType}/${phase}`
+  const sites: Record<string, { method: string; desc: string }> = {
+    'place/BEFORE_CHECKIN':           { method: 'UniversalPlaceApplicationService.checkIn', desc: '用户入住场所前检查 — BLOCK 级违规会阻止入住' },
+    'place/AFTER_CHECKIN':            { method: 'UniversalPlaceApplicationService.checkIn', desc: '用户入住完成后触发 — WARN/INFO 级提示, 不阻断' },
+    'place/BEFORE_CHECKOUT':          { method: 'UniversalPlaceApplicationService.checkOut', desc: '用户退宿前检查 — BLOCK 可拒绝退宿' },
+    'place/AFTER_CHECKOUT':           { method: 'UniversalPlaceApplicationService.checkOut', desc: '用户退宿完成后触发' },
+    'org_unit/BEFORE_CREATE':         { method: 'OrgUnitApplicationService.createOrgUnit', desc: '创建组织节点前 — 可拒绝非法结构' },
+    'org_unit/AFTER_CREATE':          { method: 'OrgUnitApplicationService.createOrgUnit', desc: '创建完成后触发' },
+    'org_unit/BEFORE_UPDATE':         { method: 'OrgUnitApplicationService.updateOrgUnit', desc: '更新组织前' },
+    'org_unit/AFTER_UPDATE':          { method: 'OrgUnitApplicationService.updateOrgUnit', desc: '更新完成后触发' },
+    'org_unit/BEFORE_DELETE':         { method: 'OrgUnitApplicationService.deleteOrgUnit', desc: '删除组织前 — 可拒绝 (例: CLASS 删前必须无归属学生)' },
+    'org_unit/BEFORE_ADD_MEMBER':     { method: 'OrgMemberService.addMember', desc: '成员加入组织前' },
+    'org_unit/AFTER_ADD_MEMBER':      { method: 'OrgMemberService.addMember', desc: '成员加入完成后' },
+    'org_unit/BEFORE_REMOVE_MEMBER':  { method: 'OrgMemberService.removeMember', desc: '成员移除前' },
+    'org_unit/AFTER_REMOVE_MEMBER':   { method: 'OrgMemberService.removeMember', desc: '成员移除完成后' }
+  }
+  return sites[key] || { method: '', desc: '' }
 }
 
 export function shortClass(fqcn?: string): string {

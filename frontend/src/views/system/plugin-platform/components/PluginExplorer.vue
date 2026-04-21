@@ -48,7 +48,8 @@
         >
           <Webhook :size="11" class="ex-icon-muted" />
           <span class="ex-item-main">
-            <span class="ex-item-name">{{ h.phase }}</span>
+            <span class="ex-item-name">{{ phaseLabel(h.phase) }}</span>
+            <span class="ex-item-sub">{{ h.phase }}</span>
           </span>
           <span class="ex-item-count">{{ listenersFor(h).length || '' }}</span>
         </button>
@@ -81,7 +82,7 @@ import {
   Package, Webhook, LayoutGrid, Link2, Bell, Shield, UserCog,
   ShieldCheck, Filter, Zap, BellRing
 } from 'lucide-vue-next'
-import { RESOURCE_TYPES, industryColor, subjectTypeLabel, type PluginData, type ResourceKey } from '../helpers'
+import { RESOURCE_TYPES, industryColor, subjectTypeLabel, phaseLabel, type PluginData, type ResourceKey } from '../helpers'
 
 const props = defineProps<{
   view: 'plugins' | 'hooks' | 'resources'

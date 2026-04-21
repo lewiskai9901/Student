@@ -8,17 +8,28 @@
     <header class="hp-head">
       <div>
         <h2 class="hp-title">
-          <code class="hp-code">{{ subjectTypeLabel(hook.entityType) }}</code>
-          <span class="hp-sep">/</span>
-          <code class="hp-code hp-code-phase">{{ hook.phase }}</code>
+          <span class="hp-zh">{{ subjectTypeLabel(hook.entityType) }}{{ phaseLabel(hook.phase) }}</span>
+          <code class="hp-raw">{{ hook.entityType }}/{{ hook.phase }}</code>
         </h2>
-        <p class="hp-desc">Core 开放的 hook point — 插件可通过 Policy SPI 监听此点</p>
+        <p class="hp-desc">扩展点 — 插件通过 Policy SPI 在此挂接同步规则 (BLOCK 阻断 / WARN 提示)</p>
       </div>
       <span class="hp-badge">
         <span class="hp-badge-num">{{ listeners.length }}</span>
         监听者
       </span>
     </header>
+
+    <!-- 调用位置 (告诉开发者 core 是在哪个 Service 方法触发) -->
+    <section v-if="callSite.method" class="hp-sec">
+      <div class="hp-sec-head">
+        <FileCode :size="13" />
+        调用位置
+      </div>
+      <div class="hp-callsite">
+        <code class="hp-mono hp-mono-blue">{{ callSite.method }}</code>
+        <p class="hp-callsite-desc">{{ callSite.desc }}</p>
+      </div>
+    </section>
 
     <!-- Listeners -->
     <section class="hp-sec">
@@ -88,7 +99,8 @@
 import { computed, inject } from 'vue'
 import { Webhook, ShieldCheck, FileCode, Zap } from 'lucide-vue-next'
 import {
-  subjectTypeLabel, shortClass, industryChipStyle, industryLabel,
+  subjectTypeLabel, phaseLabel, hookCallSite,
+  shortClass, industryChipStyle, industryLabel,
   type PluginData
 } from '../helpers'
 
@@ -109,6 +121,11 @@ const listeners = computed(() => {
 const contextKeys = computed(() => {
   if (!hook.value?.contextSchema) return []
   return Object.keys(hook.value.contextSchema)
+})
+
+const callSite = computed(() => {
+  if (!hook.value) return { method: '', desc: '' }
+  return hookCallSite(hook.value.entityType, hook.value.phase)
 })
 
 // Related trigger points: match by entityType prefix
@@ -136,16 +153,20 @@ const relatedTriggers = computed(() => {
   padding-bottom: 8px; border-bottom: 1px solid #f3f4f6;
 }
 .hp-title {
-  margin: 0; display: flex; align-items: center; gap: 6px;
+  margin: 0; display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
   font-size: 15px; font-weight: 700;
 }
-.hp-code {
+.hp-zh { color: #111827; }
+.hp-raw {
   font-family: 'JetBrains Mono', Menlo, monospace;
-  font-size: 13px; background: #eff6ff; color: #2563eb;
-  padding: 2px 8px; border-radius: 4px;
+  font-size: 11px; background: #f3f4f6; color: #6b7280;
+  padding: 2px 6px; border-radius: 3px; font-weight: 400;
 }
-.hp-code-phase { background: #fffbeb; color: #d97706; }
-.hp-sep { color: #d1d5db; }
+.hp-callsite {
+  padding: 10px 12px; background: #fafbfc;
+  border: 1px solid #f3f4f6; border-radius: 6px;
+}
+.hp-callsite-desc { margin: 6px 0 0; font-size: 12px; color: #4b5563; line-height: 1.5; }
 .hp-desc { margin: 4px 0 0; font-size: 11px; color: #9ca3af; }
 .hp-badge {
   display: inline-flex; align-items: center; gap: 5px;
