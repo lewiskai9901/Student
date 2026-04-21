@@ -19,6 +19,12 @@ import java.util.List;
  *   - {@link EventTypeSubRegistrar}        写 entity_event_types
  *   - {@link DefaultTriggerSubRegistrar}  写 event_triggers (仅 INSERT, 不覆盖 admin 修改)
  *
+ * Track M3: 3 个 upsert 方法提取为 public, 让 {@link ContributionDispatcher}
+ * 能直接调用以处理新的 TriggerPointContribution / EventTypeContribution permit.
+ * 签名由 plugin 对象改为 (domainCode, domainName, def, industry, pluginClass) —
+ * 既服务旧 MessagingDomainPlugin 扫描路径, 也服务新 Contribution 分发路径,
+ * 两条路径写同一 SQL, UPSERT 幂等.
+ *
  * @Order(300): EntityType(100) + Relation(200) 之后.
  */
 @Slf4j
@@ -45,8 +51,9 @@ public class MessagingRegistrar implements ApplicationRunner {
         for (MessagingDomainPlugin p : plugins) {
             String industry = packageRegistrar.resolveIndustry(p.getClass());
             String pluginClass = p.getClass().getName();
+            String origin = packageRegistrar.resolveOrigin(p.getClass());
             for (var def : p.triggerPoints()) {
-                try { upsertTriggerPoint(p, def, industry, pluginClass); tp++; }
+                try { upsertTriggerPoint(p.getDomainCode(), p.getDomainName(), def, industry, pluginClass, origin); tp++; }
                 catch (Exception e) { log.error("[MessagingRegistrar] 触发点写入失败 {}: {}", def.pointCode(), e.getMessage()); }
             }
         }
@@ -55,8 +62,9 @@ public class MessagingRegistrar implements ApplicationRunner {
         for (MessagingDomainPlugin p : plugins) {
             String industry = packageRegistrar.resolveIndustry(p.getClass());
             String pluginClass = p.getClass().getName();
+            String origin = packageRegistrar.resolveOrigin(p.getClass());
             for (var def : p.eventTypes()) {
-                try { upsertEventType(p, def, industry, pluginClass); et++; }
+                try { upsertEventType(p.getDomainCode(), p.getDomainName(), def, industry, pluginClass, origin); et++; }
                 catch (Exception e) { log.error("[MessagingRegistrar] 事件类型写入失败 {}: {}", def.typeCode(), e.getMessage()); }
             }
         }
@@ -64,8 +72,10 @@ public class MessagingRegistrar implements ApplicationRunner {
         // 3. 默认触发器
         for (MessagingDomainPlugin p : plugins) {
             String pluginClass = p.getClass().getName();
+            String industry = packageRegistrar.resolveIndustry(p.getClass());
+            String origin = packageRegistrar.resolveOrigin(p.getClass());
             for (var def : p.defaultTriggers()) {
-                try { upsertDefaultTrigger(p, def, pluginClass); dt++; }
+                try { upsertDefaultTrigger(def, industry, pluginClass, origin); dt++; }
                 catch (Exception e) { log.error("[MessagingRegistrar] 默认触发器写入失败 {}->{}: {}",
                         def.pointCode(), def.eventTypeCode(), e.getMessage()); }
             }
@@ -75,19 +85,36 @@ public class MessagingRegistrar implements ApplicationRunner {
             plugins.size(), tp, et, dt);
     }
 
-    // ═══════════════ 3 个写入子方法 ═══════════════
-    // 注: 使用 AbstractPluginRegistrar 把这 3 个拆成 3 个 Sub-Registrar 也可行,
-    //     但需要协调 @Order 子序, 且总日志拆成 3 条. 此处用组合聚合更清晰.
+    // ═══════════════ 3 个写入方法 (public, Track M3 供 ContributionDispatcher 复用) ═══════════════
 
-    private void upsertTriggerPoint(MessagingDomainPlugin plugin,
-                                     MessagingDomainPlugin.TriggerPointDef def,
-                                     String industry, String pluginClass) throws Exception {
+    /**
+     * Track M3 便捷重载 — ContributionDispatcher 只有 domainCode/domainName/pluginClass,
+     * 内部计算 industry/origin.
+     */
+    public void upsertTriggerPoint(String domainCode, String domainName,
+                                    MessagingDomainPlugin.TriggerPointDef def,
+                                    Class<?> pluginClass) throws Exception {
+        String industry = packageRegistrar.resolveIndustry(pluginClass);
+        String origin = packageRegistrar.resolveOrigin(pluginClass);
+        upsertTriggerPoint(domainCode, domainName, def, industry, pluginClass.getName(), origin);
+    }
+
+    public void upsertEventType(String domainCode, String domainName,
+                                 MessagingDomainPlugin.EventTypeDef def,
+                                 Class<?> pluginClass) {
+        String industry = packageRegistrar.resolveIndustry(pluginClass);
+        String origin = packageRegistrar.resolveOrigin(pluginClass);
+        upsertEventType(domainCode, domainName, def, industry, pluginClass.getName(), origin);
+    }
+
+    public void upsertTriggerPoint(String domainCode, String domainName,
+                                    MessagingDomainPlugin.TriggerPointDef def,
+                                    String industry, String pluginClassName, String origin) throws Exception {
         String existingIndustry = jdbc.query(
             "SELECT industry FROM trigger_points WHERE point_code=? AND tenant_id=1 AND deleted=0",
             rs -> rs.next() ? rs.getString(1) : null, def.pointCode());
         if ("CUSTOM".equals(existingIndustry)) return;
 
-        String origin = packageRegistrar.resolveOrigin(plugin.getClass());
         Long exists = jdbc.queryForObject(
             "SELECT COUNT(1) FROM trigger_points WHERE point_code=? AND tenant_id=1 AND deleted=0",
             Long.class, def.pointCode());
@@ -101,28 +128,27 @@ public class MessagingRegistrar implements ApplicationRunner {
                 "INSERT INTO trigger_points (module_code, module_name, point_code, point_name, " +
                 "description, context_schema, is_enabled, tenant_id, industry, plugin_class, origin, created_at) " +
                 "VALUES (?, ?, ?, ?, ?, ?, 1, 1, ?, ?, ?, NOW())",
-                plugin.getDomainCode(), plugin.getDomainName(),
+                domainCode, domainName,
                 def.pointCode(), def.pointName(), def.description(), contextSchemaJson,
-                industry, pluginClass, origin);
+                industry, pluginClassName, origin);
         } else {
             jdbc.update(
                 "UPDATE trigger_points SET module_code=?, module_name=?, point_name=?, " +
                 "description=?, context_schema=?, industry=?, plugin_class=?, origin=?, is_enabled=1 " +
                 "WHERE point_code=? AND tenant_id=1 AND deleted=0",
-                plugin.getDomainCode(), plugin.getDomainName(), def.pointName(),
-                def.description(), contextSchemaJson, industry, pluginClass, origin, def.pointCode());
+                domainCode, domainName, def.pointName(),
+                def.description(), contextSchemaJson, industry, pluginClassName, origin, def.pointCode());
         }
     }
 
-    private void upsertEventType(MessagingDomainPlugin plugin,
-                                  MessagingDomainPlugin.EventTypeDef def,
-                                  String industry, String pluginClass) {
+    public void upsertEventType(String domainCode, String domainName,
+                                 MessagingDomainPlugin.EventTypeDef def,
+                                 String industry, String pluginClassName, String origin) {
         String existingIndustry = jdbc.query(
             "SELECT industry FROM entity_event_types WHERE type_code=? AND tenant_id=1 AND deleted=0",
             rs -> rs.next() ? rs.getString(1) : null, def.typeCode());
         if ("CUSTOM".equals(existingIndustry)) return;
 
-        String origin = packageRegistrar.resolveOrigin(plugin.getClass());
         Long exists = jdbc.queryForObject(
             "SELECT COUNT(1) FROM entity_event_types WHERE type_code=? AND tenant_id=1 AND deleted=0",
             Long.class, def.typeCode());
@@ -139,7 +165,7 @@ public class MessagingRegistrar implements ApplicationRunner {
                 "VALUES (1, ?, ?, ?, ?, ?, ?, ?, ?, 1, 1, ?, ?, ?, NOW())",
                 def.categoryCode(), def.categoryName(),
                 def.typeCode(), def.typeName(), def.categoryPolarity(),
-                def.icon(), def.color(), applicableSubjects, industry, pluginClass, origin);
+                def.icon(), def.color(), applicableSubjects, industry, pluginClassName, origin);
         } else {
             jdbc.update(
                 "UPDATE entity_event_types SET category_code=?, category_name=?, type_name=?, " +
@@ -148,16 +174,12 @@ public class MessagingRegistrar implements ApplicationRunner {
                 "WHERE type_code=? AND tenant_id=1 AND deleted=0",
                 def.categoryCode(), def.categoryName(), def.typeName(),
                 def.categoryPolarity(), def.icon(), def.color(), applicableSubjects,
-                industry, pluginClass, origin, def.typeCode());
+                industry, pluginClassName, origin, def.typeCode());
         }
     }
 
-    private void upsertDefaultTrigger(MessagingDomainPlugin plugin,
-                                       MessagingDomainPlugin.DefaultTriggerDef def,
-                                       String pluginClass) throws Exception {
-        String origin = packageRegistrar.resolveOrigin(plugin.getClass());
-        String industry = packageRegistrar.resolveIndustry(plugin.getClass());
-
+    public void upsertDefaultTrigger(MessagingDomainPlugin.DefaultTriggerDef def,
+                                      String industry, String pluginClassName, String origin) {
         Long exists = jdbc.queryForObject(
             "SELECT COUNT(1) FROM event_triggers " +
             "WHERE trigger_point_code=? AND event_type_code=? AND deleted=0",
@@ -169,17 +191,17 @@ public class MessagingRegistrar implements ApplicationRunner {
                 "UPDATE event_triggers SET industry=?, plugin_class=?, origin=? " +
                 "WHERE trigger_point_code=? AND event_type_code=? AND deleted=0 " +
                 "AND (industry IS NULL OR origin IS NULL)",
-                industry, pluginClass, origin, def.pointCode(), def.eventTypeCode());
+                industry, pluginClassName, origin, def.pointCode(), def.eventTypeCode());
             return;
         }
 
         String name = "默认: " + def.pointCode() + " → " + def.eventTypeCode();
-        String description = "由插件 " + pluginClass + " 注册的默认触发器";
+        String description = "由插件 " + pluginClassName + " 注册的默认触发器";
         jdbc.update(
             "INSERT INTO event_triggers (tenant_id, name, trigger_point_code, event_type_mode, " +
             "event_type_code, description, is_enabled, industry, plugin_class, origin, created_at) " +
             "VALUES (1, ?, ?, 'FIXED', ?, ?, 1, ?, ?, ?, NOW())",
             name, def.pointCode(), def.eventTypeCode(), description,
-            industry, pluginClass, origin);
+            industry, pluginClassName, origin);
     }
 }

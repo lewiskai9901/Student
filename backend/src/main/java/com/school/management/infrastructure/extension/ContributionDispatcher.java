@@ -38,6 +38,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 public class ContributionDispatcher implements ApplicationRunner {
 
     private final List<PluginPackage> packages;
+    private final MessagingRegistrar messagingRegistrar;
 
     @Override
     public void run(ApplicationArguments args) {
@@ -50,6 +51,8 @@ public class ContributionDispatcher implements ApplicationRunner {
         AtomicInteger entities = new AtomicInteger();
         AtomicInteger relations = new AtomicInteger();
         AtomicInteger events = new AtomicInteger();
+        AtomicInteger triggerPoints = new AtomicInteger();
+        AtomicInteger eventTypes = new AtomicInteger();
         AtomicInteger perms = new AtomicInteger();
         AtomicInteger roles = new AtomicInteger();
         AtomicInteger menus = new AtomicInteger();
@@ -63,6 +66,7 @@ public class ContributionDispatcher implements ApplicationRunner {
 
         for (PluginPackage pkg : packages) {
             String industry = pkg.metadata().industryCode();
+            Class<?> pkgClass = pkg.getClass();
             pkg.contribute().forEach(c -> {
                 String key = c.uniqueKey();
                 if (!seenKeys.add(key)) {
@@ -75,6 +79,30 @@ public class ContributionDispatcher implements ApplicationRunner {
                 if (c instanceof Contribution.EntityTypeContribution)      entities.incrementAndGet();
                 else if (c instanceof Contribution.RelationTypeContribution) relations.incrementAndGet();
                 else if (c instanceof Contribution.EventDomainContribution)  events.incrementAndGet();
+                else if (c instanceof Contribution.TriggerPointContribution tpc) {
+                    triggerPoints.incrementAndGet();
+                    try {
+                        messagingRegistrar.upsertTriggerPoint(
+                            tpc.domainCode(), tpc.domainName(), tpc.def(), pkgClass);
+                        log.info("[ContributionDispatcher] registered TriggerPoint: {} (domain={}, from={})",
+                                 tpc.def().pointCode(), tpc.domainCode(), pkgClass.getSimpleName());
+                    } catch (Exception e) {
+                        log.error("[ContributionDispatcher] 触发点写入失败 {}: {}",
+                                  tpc.def().pointCode(), e.getMessage());
+                    }
+                }
+                else if (c instanceof Contribution.EventTypeContribution etc) {
+                    eventTypes.incrementAndGet();
+                    try {
+                        messagingRegistrar.upsertEventType(
+                            etc.domainCode(), etc.domainName(), etc.def(), pkgClass);
+                        log.info("[ContributionDispatcher] registered EventType: {} (domain={}, from={})",
+                                 etc.def().typeCode(), etc.domainCode(), pkgClass.getSimpleName());
+                    } catch (Exception e) {
+                        log.error("[ContributionDispatcher] 事件类型写入失败 {}: {}",
+                                  etc.def().typeCode(), e.getMessage());
+                    }
+                }
                 else if (c instanceof Contribution.PermissionContribution)   perms.incrementAndGet();
                 else if (c instanceof Contribution.RoleContribution)         roles.incrementAndGet();
                 else if (c instanceof Contribution.MenuContribution)         menus.incrementAndGet();
@@ -97,9 +125,11 @@ public class ContributionDispatcher implements ApplicationRunner {
         }
 
         log.info("[ContributionDispatcher] 扫描 {} 个包, 收到 {} 条 Contribution " +
-                "(entity {}, relation {}, event-domain {}, perm {}, role {}, menu {}, scope {}, route {}, policy {}, target-mode {}, domain {})",
+                "(entity {}, relation {}, event-domain {}, trigger-point {}, event-type {}, perm {}, role {}, menu {}, scope {}, route {}, policy {}, target-mode {}, domain {})",
             packages.size(), total.get(),
-            entities.get(), relations.get(), events.get(), perms.get(),
-            roles.get(), menus.get(), scopes.get(), routes.get(), policies.get(), targetModes.get(), domains.get());
+            entities.get(), relations.get(), events.get(),
+            triggerPoints.get(), eventTypes.get(),
+            perms.get(), roles.get(), menus.get(), scopes.get(), routes.get(),
+            policies.get(), targetModes.get(), domains.get());
     }
 }

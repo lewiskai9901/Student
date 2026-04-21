@@ -145,8 +145,13 @@ class ArchUnitPluginArchitectureTest {
 
     @Test
     void manifest_classes_must_have_Manifest_suffix() {
+        // 行业顶级 Manifest 必须 Manifest 后缀.
+        // 例外: 细粒度 messaging 插件实现 PluginPackage (transitively PluginManifest) 以
+        // 走 contribute() 渠道, 它们按类型职责命名 (*MessagingPlugin), 不在本规则约束内.
+        // 通过 residesOutsideOfPackages 排除 messaging 子包.
         ArchRule rule = classes()
                 .that().implement(PluginManifest.class)
+                .and().resideOutsideOfPackages("..plugins..messaging..")
                 .should().haveSimpleNameEndingWith("Manifest");
         rule.check(classes);
     }

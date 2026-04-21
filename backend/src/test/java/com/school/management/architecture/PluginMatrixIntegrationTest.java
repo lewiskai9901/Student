@@ -64,12 +64,29 @@ class PluginMatrixIntegrationTest {
 
     @Test
     void industryCodesAreUnique() {
+        // Track M3 后语义放宽: 允许多个 PluginPackage bean 共享同一 industry_code,
+        // 只要它们的 Manifest 描述一致 (industryName/version/dependsOn 相同即同一行业的扩展声明).
+        //
+        // 例: HealthcareManifest + PatientAdmissionMessagingPlugin 都声明 industry=HEALTH,
+        //     后者只是 contribute() 通道下细粒度 messaging 声明. UPSERT 到 plugin_packages
+        //     同行幂等.
         List<PluginManifest> manifests = discoverManifests();
-        Set<String> codes = new HashSet<>();
+        java.util.Map<String, PluginManifest> firstByCode = new java.util.HashMap<>();
         for (PluginManifest m : manifests) {
             String code = m.getIndustryCode();
-            assertTrue(codes.add(code),
-                "插件包 code 重复: " + code + " (" + m.getClass().getName() + ")");
+            PluginManifest existing = firstByCode.putIfAbsent(code, m);
+            if (existing != null) {
+                // 同 code 的多个声明必须 industryName/version/dependsOn 完全一致
+                assertEquals(existing.getIndustryName(), m.getIndustryName(),
+                    "industry=" + code + " 的多个 Manifest industryName 不一致: "
+                        + existing.getClass().getSimpleName() + " vs " + m.getClass().getSimpleName());
+                assertEquals(existing.getVersion(), m.getVersion(),
+                    "industry=" + code + " 的多个 Manifest version 不一致: "
+                        + existing.getClass().getSimpleName() + " vs " + m.getClass().getSimpleName());
+                assertEquals(existing.getDependsOn(), m.getDependsOn(),
+                    "industry=" + code + " 的多个 Manifest dependsOn 不一致: "
+                        + existing.getClass().getSimpleName() + " vs " + m.getClass().getSimpleName());
+            }
         }
     }
 

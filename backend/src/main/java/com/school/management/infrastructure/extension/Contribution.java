@@ -6,18 +6,24 @@ import java.util.List;
  * 统一贡献契约 — 插件通过 {@link PluginPackage#contribute()} 返回 Stream&lt;Contribution&gt;
  * 声明本包向平台贡献的所有内容.
  *
- * sealed 限定 11 个 permitted subtype, 对应旧 SPI 的 7 种职责 + 4 个扩展位
- * (route/policy/target-mode/domain). 每种 Contribution 封装一条 def 记录, 在
- * ContributionDispatcher 里通过 pattern-matching switch 分发到对应 Registrar 的
- * upsert 方法.
+ * sealed 限定 13 个 permitted subtype, 对应旧 SPI 的 7 种职责 + 6 个扩展位
+ * (route/policy/target-mode/domain/trigger-point/event-type). 每种 Contribution
+ * 封装一条 def 记录, 在 ContributionDispatcher 里通过 instanceof 链分发到对应
+ * Registrar 的 upsert 方法.
  *
  * Phase 2 只铺设新路径, 旧 7 SPI 的 @Component 实现仍被原 Registrar 直接扫,
  * 两条路径到同一张表 UPSERT 幂等, 不冲突.
+ *
+ * Track M3 (Phase 7.2 补齐): EventDomainContribution 仍保留 (整域打包语义),
+ * 同时新增 TriggerPointContribution / EventTypeContribution 细粒度 permit,
+ * 插件可按需选择整包或细粒度.
  */
 public sealed interface Contribution permits
     Contribution.EntityTypeContribution,
     Contribution.RelationTypeContribution,
     Contribution.EventDomainContribution,
+    Contribution.TriggerPointContribution,
+    Contribution.EventTypeContribution,
     Contribution.PermissionContribution,
     Contribution.RoleContribution,
     Contribution.MenuContribution,
@@ -54,6 +60,28 @@ public sealed interface Contribution permits
                                     List<MessagingDomainPlugin.DefaultTriggerDef> defaultTriggers)
             implements Contribution {
         @Override public String uniqueKey() { return "event-domain:" + domainCode; }
+    }
+
+    /**
+     * 单个触发点贡献 (Track M3) — 允许插件按需细粒度声明, 不必整 EventDomain 打包.
+     *
+     * domainCode / domainName 写入 trigger_points.module_code / module_name,
+     * 与旧 MessagingDomainPlugin.getDomainCode()/getDomainName() 语义一致.
+     *
+     * DefaultTriggerDef (触发点→事件类型映射) 不进此 permit: 默认触发器偏 admin 配置,
+     * 留给 DB seed 或 admin UI 管, 不用 SPI 声明. 若需要整包声明, 仍用 EventDomainContribution.
+     */
+    record TriggerPointContribution(String domainCode, String domainName,
+                                     MessagingDomainPlugin.TriggerPointDef def)
+            implements Contribution {
+        @Override public String uniqueKey() { return "trigger-point:" + def.pointCode(); }
+    }
+
+    /** 单个事件类型贡献 (Track M3) — 参考 TriggerPointContribution 的细粒度语义. */
+    record EventTypeContribution(String domainCode, String domainName,
+                                  MessagingDomainPlugin.EventTypeDef def)
+            implements Contribution {
+        @Override public String uniqueKey() { return "event-type:" + def.typeCode(); }
     }
 
     /** 权限贡献 (对应旧 PermissionDef) */

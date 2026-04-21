@@ -1,58 +1,69 @@
 package com.school.management.infrastructure.extension.plugins.education.messaging;
 
+import com.school.management.infrastructure.extension.Contribution;
 import com.school.management.infrastructure.extension.MessagingDomainPlugin;
+import com.school.management.infrastructure.extension.PluginPackage;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
-import java.util.Map;
-
-import static com.school.management.infrastructure.extension.plugins.core.constants.CorePlaceTriggerPoints.PLACE_OCCUPIED;
-import static com.school.management.infrastructure.extension.plugins.core.constants.CorePlaceTriggerPoints.PLACE_VACATED;
+import java.util.stream.Stream;
 
 /**
- * 宿舍业务消息插件 — 订阅核心 PLACE_OCCUPIED / PLACE_VACATED 触发点,
- * 转译为宿舍特定事件 DORM_CHECKIN_EVT / DORM_CHECKOUT_EVT.
+ * Track M3 reference: 宿舍业务消息插件 — 已从 {@code MessagingDomainPlugin} (@Deprecated)
+ * 迁移至 {@link PluginPackage#contribute()} + {@link Contribution.EventTypeContribution}.
  *
- * 架构边界: 通用核心场所 Place 只 fire 通用 PLACE_OCCUPIED;
- *          教育行业的"宿舍入住"语义由此插件认领,
- *          让 core Place 服务对 EDU 插件零依赖.
+ * <h3>架构边界</h3>
+ * 通用核心场所 Place 只 fire 通用触发点 PLACE_OCCUPIED / PLACE_VACATED.
+ * 教育行业的 "宿舍入住" 语义由本插件认领为事件类型 (DORM_CHECKIN_EVT / DORM_CHECKOUT_EVT),
+ * 让 core Place 服务对 EDU 插件零依赖.
+ *
+ * <h3>本插件声明</h3>
+ * <ul>
+ *   <li>0 触发点: 复用 CORE 的 PLACE_OCCUPIED / PLACE_VACATED, 无需重复声明</li>
+ *   <li>2 事件类型: DORM_CHECKIN_EVT / DORM_CHECKOUT_EVT</li>
+ * </ul>
+ *
+ * <h3>默认触发器不走 SPI</h3>
+ * 原 {@code defaultTriggers()} 把 PLACE_OCCUPIED → DORM_CHECKIN_EVT 的默认绑定声明在
+ * 代码里. Track M3 决定把默认触发器语义交给 admin UI / DB seed 管理 —
+ * 不同租户可能想绑不同事件类型, 编码强绑不够灵活.
  */
 @Component
-public class DormitoryMessagingPlugin implements MessagingDomainPlugin {
+public class DormitoryMessagingPlugin implements PluginPackage {
+
+    private static final String DOMAIN_CODE = "dormitory";
+    private static final String DOMAIN_NAME = "宿舍";
+
+    // ═════════ PluginManifest 元数据 (复用 EDU industry) ═════════
+
+    @Override public String getIndustryCode() { return "EDU"; }
+    @Override public String getIndustryName() { return "教育行业"; }
+    @Override public List<String> getDependsOn() { return List.of("CORE"); }
 
     @Override
-    public String getDomainCode() { return "dormitory"; }
-
-    @Override
-    public String getDomainName() { return "宿舍"; }
-
-    // 不声明 triggerPoints — 复用核心 PLACE_OCCUPIED / PLACE_VACATED
-
-    @Override
-    public List<EventTypeDef> eventTypes() {
-        return List.of(
-            new EventTypeDef("DORM_CHECKIN_EVT", "入住登记",
-                "PLACE", "场所", "NEUTRAL",
-                "bed-double", "#0d9488",
-                List.of("USER"),
-                "学生新入住宿舍"),
-
-            new EventTypeDef("DORM_CHECKOUT_EVT", "退宿登记",
-                "PLACE", "场所", "NEUTRAL",
-                "log-out", "#6b7280",
-                List.of("USER"),
-                "学生退出宿舍")
-        );
+    public boolean owns(Class<?> pluginClass) {
+        return pluginClass.getPackageName().contains(".plugins.education");
     }
 
-    /** 订阅核心触发点,映射到宿舍事件 */
+    // ═════════ Track M3: 细粒度 Contribution (仅 event type) ═════════
+
     @Override
-    public List<DefaultTriggerDef> defaultTriggers() {
-        return List.of(
-            new DefaultTriggerDef(PLACE_OCCUPIED, "DORM_CHECKIN_EVT",
-                List.of(Map.of("type", "USER", "id", "{{occupantId}}"))),
-            new DefaultTriggerDef(PLACE_VACATED, "DORM_CHECKOUT_EVT",
-                List.of(Map.of("type", "USER", "id", "{{occupantId}}")))
+    public Stream<Contribution> contribute() {
+        return Stream.of(
+            new Contribution.EventTypeContribution(DOMAIN_CODE, DOMAIN_NAME,
+                new MessagingDomainPlugin.EventTypeDef(
+                    "DORM_CHECKIN_EVT", "入住登记",
+                    "PLACE", "场所", "NEUTRAL",
+                    "bed-double", "#0d9488",
+                    List.of("USER"),
+                    "学生新入住宿舍")),
+            new Contribution.EventTypeContribution(DOMAIN_CODE, DOMAIN_NAME,
+                new MessagingDomainPlugin.EventTypeDef(
+                    "DORM_CHECKOUT_EVT", "退宿登记",
+                    "PLACE", "场所", "NEUTRAL",
+                    "log-out", "#6b7280",
+                    List.of("USER"),
+                    "学生退出宿舍"))
         );
     }
 }

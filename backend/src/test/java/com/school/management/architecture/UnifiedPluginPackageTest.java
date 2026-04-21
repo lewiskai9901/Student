@@ -55,11 +55,11 @@ class UnifiedPluginPackageTest {
     }
 
     @Test
-    @DisplayName("Contribution 恰好有 11 个 permitted 子类型")
-    void contributionPermitsExactly11Subtypes() {
+    @DisplayName("Contribution 恰好有 13 个 permitted 子类型")
+    void contributionPermitsExactly13Subtypes() {
         Class<?>[] permitted = Contribution.class.getPermittedSubclasses();
-        assertEquals(11, permitted.length,
-            "Track M2 扩展后约定 11 种 Contribution: entity/relation/event-domain/perm/role/menu/data-scope/route/policy/target-mode/domain, 实际=" + permitted.length);
+        assertEquals(13, permitted.length,
+            "Track M3 扩展后约定 13 种 Contribution: entity/relation/event-domain/trigger-point/event-type/perm/role/menu/data-scope/route/policy/target-mode/domain, 实际=" + permitted.length);
     }
 
     @Test
