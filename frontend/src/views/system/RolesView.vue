@@ -553,11 +553,39 @@
 
             <!-- 模块卡片列表 -->
             <div class="max-h-[500px] overflow-y-auto p-6">
-              <div v-for="(modules, domain) in groupedModules" :key="domain" class="mb-6 last:mb-0">
-                <!-- 领域标题 -->
+              <div v-for="(modules, industry) in groupedModules" :key="industry" class="mb-6 last:mb-0">
+                <!-- 行业标题 (一级分组) -->
                 <div class="mb-3 flex items-center gap-2">
-                  <component :is="getDomainIcon(domain)" class="h-4 w-4 text-gray-400" />
-                  <span class="text-sm font-medium text-gray-500">{{ getDomainLabel(domain) }}</span>
+                  <span
+                    class="inline-block h-2.5 w-2.5 rounded-full"
+                    :style="{ background: industryColor(industry as string) }"
+                  ></span>
+                  <component :is="industryIcon(industry as string)" class="h-4 w-4 text-gray-400" />
+                  <span class="text-sm font-medium text-gray-700">{{ industryLabel(industry as string) }}</span>
+                  <span class="rounded bg-gray-100 px-1.5 py-0.5 text-xs text-gray-500">{{ modules.length }}</span>
+                  <span
+                    v-if="isIndustryDisabled(modules)"
+                    class="ml-1 inline-flex items-center gap-1 rounded-full bg-orange-50 px-2 py-0.5 text-xs font-medium text-orange-600"
+                  >
+                    <AlertTriangle class="h-3 w-3" />
+                    插件已禁用
+                  </span>
+                </div>
+
+                <!-- 禁用提示 banner -->
+                <div
+                  v-if="isIndustryDisabled(modules)"
+                  class="mb-3 flex items-center gap-2 rounded-lg border border-orange-200 bg-orange-50 px-3 py-2 text-xs text-orange-700"
+                >
+                  <AlertTriangle class="h-3.5 w-3.5 flex-shrink-0" />
+                  <span class="flex-1">此行业插件已禁用, 配置的数据权限不会生效 (用户实际无权访问).</span>
+                  <button
+                    v-if="industry !== 'CORE' && industry !== 'CUSTOM'"
+                    @click="onEnableIndustry(industry as string)"
+                    class="rounded border border-orange-300 bg-white px-2 py-0.5 text-xs font-medium text-orange-600 hover:bg-orange-100"
+                  >
+                    一键启用
+                  </button>
                 </div>
 
                 <!-- 模块卡片 -->
@@ -566,7 +594,10 @@
                     v-for="module in modules"
                     :key="module.code"
                     class="rounded-lg border border-gray-200 bg-white transition-shadow hover:shadow-sm"
-                    :class="{ 'ring-2 ring-blue-500 ring-offset-1': expandedCustomModule === module.code }"
+                    :class="{
+                      'ring-2 ring-blue-500 ring-offset-1': expandedCustomModule === module.code,
+                      'opacity-60 bg-gray-50': module.pluginEnabled === false
+                    }"
                   >
                     <!-- 卡片头部 -->
                     <div class="flex items-center justify-between px-4 py-3">
@@ -575,6 +606,13 @@
                           <component :is="getModuleIcon(module.code)" class="h-4 w-4 text-gray-500" />
                         </div>
                         <span class="font-medium text-gray-900">{{ module.name }}</span>
+                        <span
+                          v-if="module.pluginEnabled === false"
+                          class="inline-flex items-center gap-1 rounded-full bg-gray-100 px-1.5 py-0.5 text-xs text-gray-500"
+                        >
+                          <Lock class="h-3 w-3" />
+                          已禁用
+                        </span>
                       </div>
 
                       <!-- 范围选择下拉 -->
@@ -582,10 +620,11 @@
                         <select
                           :value="getModuleScope(module.code)"
                           @change="handleScopeChange(module.code, ($event.target as HTMLSelectElement).value)"
-                          class="h-9 rounded-lg border border-gray-200 bg-white px-3 pr-8 text-sm font-medium text-gray-700 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                          :disabled="module.pluginEnabled === false"
+                          class="h-9 rounded-lg border border-gray-200 bg-white px-3 pr-8 text-sm font-medium text-gray-700 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 disabled:bg-gray-100 disabled:text-gray-400"
                         >
                           <option v-for="scope in dataScopeOptions" :key="scope.scopeCode" :value="scope.scopeCode">
-                            {{ scope.scopeName }}
+                            {{ scope.scopeName }}{{ scope.source && scope.source !== 'CORE' ? ` (${scope.source.replace('PLUGIN:', '')})` : '' }}
                           </option>
                         </select>
 
@@ -922,7 +961,9 @@ import {
   GraduationCap,
   Building2,
   BookOpen,
-  ChevronDown
+  ChevronDown,
+  AlertTriangle,
+  Briefcase
 } from 'lucide-vue-next'
 // DDD API
 import {
@@ -940,6 +981,7 @@ import {
   type RoleResponse
 } from '@/api/access'
 import { getOrgUnitTree, getAllCohorts, getAllClasses, type Cohort, type SchoolClass } from '@/api/organization'
+import { pluginPlatformApi } from '@/api/pluginPlatform'
 import type { OrgUnitTreeNode } from '@/types'
 import OrgTreeNode from '@/components/common/OrgTreeNode.vue'
 import type {
@@ -972,9 +1014,17 @@ const currentRoleId = ref<string | number>()
 const expandedModules = ref<string[]>([])
 
 // 数据权限相关状态
-const groupedModules = ref<Record<string, { code: string; name: string; domainCode: string }[]>>({})
+// 按 industry 一级分组 (CORE/EDU/HEALTH/CARE/CUSTOM), 与插件平台 + 权限管理页对齐
+interface ModuleGroupItem {
+  code: string
+  name: string
+  domainCode: string
+  industry: string
+  pluginEnabled: boolean
+}
+const groupedModules = ref<Record<string, ModuleGroupItem[]>>({})
 const domainNameMap = ref<Record<string, string>>({})
-const dataScopeOptions = ref<DataScopeOption[]>([])
+const dataScopeOptions = ref<(DataScopeOption & { source?: string })[]>([])
 const rolePermissionConfig = ref<RolePermissionConfig | null>(null)
 const currentCustomScopeModule = ref<string>('')
 
@@ -1341,19 +1391,68 @@ const handlePermissionSubmit = async () => {
 
 // ==================== 数据权限相关 ====================
 
-// 获取领域标签（从 API 加载的 domainNameMap 中获取）
-const getDomainLabel = (domain: string): string => {
-  return domainNameMap.value[domain] || domain
+// ---- Industry labels (与权限管理页 + 插件平台完全一致) ----
+const INDUSTRY_LABELS: Record<string, string> = {
+  CORE: '通用核心',
+  EDU: '教育行业',
+  HEALTH: '医疗行业',
+  CARE: '养老行业',
+  CUSTOM: '自定义'
+}
+const INDUSTRY_ORDER = ['CORE', 'EDU', 'HEALTH', 'CARE', 'CUSTOM']
+
+const industryLabel = (code: string): string => INDUSTRY_LABELS[code] || code
+
+const industryColor = (code: string): string => {
+  return ({
+    CORE: '#2563eb',
+    EDU: '#d97706',
+    HEALTH: '#be185d',
+    CARE: '#059669',
+    CUSTOM: '#6b7280'
+  } as Record<string, string>)[code] || '#6b7280'
 }
 
-// 获取领域图标
-const getDomainIcon = (domain: string) => {
-  const icons: Record<string, any> = {
-    organization: Building2,
-    inspection: CheckSquare,
-    task: BookOpen
+const industryIcon = (code: string) => {
+  const map: Record<string, any> = {
+    CORE: Building2,
+    EDU: GraduationCap,
+    HEALTH: ShieldCheck,
+    CARE: Users,
+    CUSTOM: Briefcase
   }
-  return icons[domain] || Folder
+  return map[code] || Folder
+}
+
+// 该 industry 下是否有禁用插件的模块 → 显示 banner
+const isIndustryDisabled = (modules: ModuleGroupItem[]): boolean => {
+  return modules.some(m => m.pluginEnabled === false)
+}
+
+// 一键启用该行业插件
+const onEnableIndustry = async (industryCode: string) => {
+  if (industryCode === 'CORE' || industryCode === 'CUSTOM') return
+  try {
+    await ElMessageBox.confirm(
+      `确认启用 ${industryLabel(industryCode)} 插件? 将级联恢复其所有贡献.`,
+      '启用插件',
+      { type: 'info' }
+    )
+    await pluginPlatformApi.enable(industryCode)
+    ElMessage.success(`${industryLabel(industryCode)} 已启用`)
+    await loadDataPermissionMeta()
+  } catch (e: any) {
+    if (e !== 'cancel') ElMessage.error('启用失败: ' + (e?.message || e))
+  }
+}
+
+// 查找 module 元数据 (用于 save guard)
+const findModule = (moduleCode: string): ModuleGroupItem | undefined => {
+  for (const list of Object.values(groupedModules.value)) {
+    const m = list.find(x => x.code === moduleCode)
+    if (m) return m
+  }
+  return undefined
 }
 
 // 获取模块的当前范围
@@ -1823,32 +1922,53 @@ const getModuleIcon = (moduleCode: string) => {
 const loadDataPermissionMeta = async () => {
   try {
     const [modules, scopes] = await Promise.all([
-      dataPermissionApi.getModules(),
+      dataPermissionApi.getModules(true),   // 含禁用插件模块 (灰显)
       dataPermissionApi.getScopes()
     ])
 
-    // 将扁平的 DataModuleDTO[] 按 domainCode 分组，同时构建领域名称映射
-    const grouped: Record<string, { code: string; name: string; domainCode: string }[]> = {}
+    // 按 industry 分组 (CORE → EDU → HEALTH → CARE → CUSTOM)
+    const byIndustry: Record<string, ModuleGroupItem[]> = {}
     const domains: Record<string, string> = {}
     for (const m of modules) {
-      if (!grouped[m.domainCode]) {
-        grouped[m.domainCode] = []
-      }
-      grouped[m.domainCode].push({
+      const industry = (m as any).industry || inferIndustryFromDomain(m.domainCode)
+      if (!byIndustry[industry]) byIndustry[industry] = []
+      byIndustry[industry].push({
         code: m.moduleCode,
         name: m.moduleName,
-        domainCode: m.domainCode
+        domainCode: m.domainCode,
+        industry,
+        pluginEnabled: (m as any).pluginEnabled !== false
       })
       if (m.domainName) {
         domains[m.domainCode] = m.domainName
       }
     }
-    groupedModules.value = grouped
+    // 按 INDUSTRY_ORDER 重排
+    const ordered: Record<string, ModuleGroupItem[]> = {}
+    for (const ind of INDUSTRY_ORDER) {
+      if (byIndustry[ind]?.length) ordered[ind] = byIndustry[ind]
+    }
+    // 追加未列入标准顺序的 (安全兜底)
+    for (const [ind, list] of Object.entries(byIndustry)) {
+      if (!(ind in ordered)) ordered[ind] = list
+    }
+    groupedModules.value = ordered
     domainNameMap.value = domains
     dataScopeOptions.value = scopes
   } catch (error) {
     console.error('加载数据权限元数据失败:', error)
   }
+}
+
+// 兜底: 后端没返 industry 时按 domain 推断
+function inferIndustryFromDomain(domainCode: string): string {
+  if (!domainCode) return 'CUSTOM'
+  const d = domainCode.toLowerCase()
+  if (d === 'core' || d === 'inspection') return 'CORE'
+  if (d === 'education' || d === 'edu') return 'EDU'
+  if (d === 'healthcare' || d === 'health') return 'HEALTH'
+  if (d === 'care' || d === 'elderly') return 'CARE'
+  return 'CUSTOM'
 }
 
 // 打开数据权限配置对话框
@@ -1874,6 +1994,19 @@ const handleDataPermissions = async (row: RoleResponse) => {
 // 保存数据权限配置
 const handleDataPermissionSubmit = async () => {
   if (!currentRoleId.value || !rolePermissionConfig.value) return
+
+  // Guard: 禁用插件的模块不允许配置非 SELF 权限 (配了也不生效)
+  const violators = rolePermissionConfig.value.modulePermissions.filter(mp => {
+    const mod = findModule(mp.moduleCode)
+    return mod?.pluginEnabled === false && mp.scopeCode && mp.scopeCode !== 'SELF'
+  })
+  if (violators.length) {
+    ElMessage.warning(
+      `${violators.length} 个模块所属插件已禁用, 请先启用插件或将其范围设为"仅本人"`
+    )
+    return
+  }
+
   try {
     dataPermissionSubmitLoading.value = true
 

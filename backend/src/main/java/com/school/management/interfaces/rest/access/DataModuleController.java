@@ -19,15 +19,17 @@ public class DataModuleController {
     private final DynamicModuleService dynamicModuleService;
 
     @GetMapping
-    public Result<List<DataModulePO>> listModules() {
+    public Result<List<DataModulePO>> listModules(
+            @RequestParam(required = false, defaultValue = "false") Boolean includeDisabled) {
         Long tenantId = TenantContextHolder.getTenantId();
-        return Result.success(dynamicModuleService.listModules(tenantId));
+        return Result.success(dynamicModuleService.listModules(tenantId, Boolean.TRUE.equals(includeDisabled)));
     }
 
     @GetMapping("/grouped")
-    public Result<Map<String, List<DataModulePO>>> listModulesGrouped() {
+    public Result<Map<String, List<DataModulePO>>> listModulesGrouped(
+            @RequestParam(required = false, defaultValue = "false") Boolean includeDisabled) {
         Long tenantId = TenantContextHolder.getTenantId();
-        return Result.success(dynamicModuleService.listByDomain(tenantId));
+        return Result.success(dynamicModuleService.listByDomain(tenantId, Boolean.TRUE.equals(includeDisabled)));
     }
 
     @PostMapping

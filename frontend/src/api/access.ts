@@ -392,10 +392,13 @@ export function saveRoleDataPermissions(roleId: string | number, config: RolePer
 }
 
 /**
- * 获取所有数据模块（动态，按领域分组）
+ * 获取所有数据模块（动态，按领域分组）.
+ * @param includeDisabled true=返回所有, 包括所属插件已禁用的模块 (前端可灰显).
  */
-export function getDataModules(): Promise<DataModuleDTO[]> {
-  return http.get<DataModuleDTO[]>(DATA_MODULE_URL)
+export function getDataModules(includeDisabled = false): Promise<DataModuleDTO[]> {
+  return http.get<DataModuleDTO[]>(DATA_MODULE_URL, {
+    params: { includeDisabled }
+  })
 }
 
 /**

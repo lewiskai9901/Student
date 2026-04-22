@@ -30,8 +30,9 @@ public class RoleDataPermissionController {
     @GetMapping("/data-permissions/v5/modules")
     @Operation(summary = "获取所有数据模块（V5按领域分组）")
     @CasbinAccess(resource = "system:role", action = "view")
-    public Result<List<DomainModulesDTO>> getModulesV5() {
-        return Result.success(dataPermissionService.getAllModulesGroupedByDomain());
+    public Result<List<DomainModulesDTO>> getModulesV5(
+            @RequestParam(required = false, defaultValue = "false") Boolean includeDisabled) {
+        return Result.success(dataPermissionService.getAllModulesGroupedByDomain(Boolean.TRUE.equals(includeDisabled)));
     }
 
     @GetMapping("/data-permissions/v5/scopes")
@@ -106,8 +107,9 @@ public class RoleDataPermissionController {
     @GetMapping("/data-permissions/modules")
     @Operation(summary = "获取所有数据模块列表（按领域分组）- Legacy")
     @CasbinAccess(resource = "system:role", action = "view")
-    public Result<Map<String, List<Map<String, String>>>> getModules() {
-        return Result.success(dataPermissionService.getAllModules());
+    public Result<Map<String, List<Map<String, String>>>> getModules(
+            @RequestParam(required = false, defaultValue = "false") Boolean includeDisabled) {
+        return Result.success(dataPermissionService.getAllModules(Boolean.TRUE.equals(includeDisabled)));
     }
 
     // ==================== DTO for frontend contract ====================

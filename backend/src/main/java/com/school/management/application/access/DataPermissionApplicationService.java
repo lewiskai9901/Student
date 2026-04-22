@@ -29,11 +29,21 @@ public class DataPermissionApplicationService {
     private final JdbcTemplate jdbcTemplate;
 
     /**
-     * 获取所有数据模块（按领域分组）
+     * 获取所有数据模块（按领域分组）.
+     * 默认只返启用的 (plugin_enabled=1).
      */
     public List<DomainModulesDTO> getAllModulesGroupedByDomain() {
+        return getAllModulesGroupedByDomain(false);
+    }
+
+    /**
+     * 获取所有数据模块（按领域分组）.
+     * @param includeDisabled true = 连同 plugin_enabled=0 的模块一起返回 (DTO 带 pluginEnabled 字段).
+     *                        对话框配置页需要 true, 以便把禁用模块灰显并引导启用插件.
+     */
+    public List<DomainModulesDTO> getAllModulesGroupedByDomain(boolean includeDisabled) {
         Long tenantId = TenantContextHolder.getTenantId();
-        Map<String, List<DataModulePO>> grouped = dynamicModuleService.listByDomain(tenantId);
+        Map<String, List<DataModulePO>> grouped = dynamicModuleService.listByDomain(tenantId, includeDisabled);
 
         return grouped.entrySet().stream()
                 .map(entry -> {
@@ -43,7 +53,13 @@ public class DataPermissionApplicationService {
                             .map(DataModulePO::getDomainName)
                             .orElse(domainCode);
                     List<ModuleDTO> modules = entry.getValue().stream()
-                            .map(m -> new ModuleDTO(m.getModuleCode(), m.getModuleName()))
+                            .map(m -> new ModuleDTO(
+                                    m.getModuleCode(),
+                                    m.getModuleName(),
+                                    m.getDomainCode(),
+                                    m.getIndustry(),
+                                    m.getPluginEnabled() == null || m.getPluginEnabled()
+                            ))
                             .collect(Collectors.toList());
                     return new DomainModulesDTO(domainCode, domainName, modules);
                 })
@@ -171,11 +187,16 @@ public class DataPermissionApplicationService {
     }
 
     /**
-     * Get all data modules (flat list format for API)
+     * Get all data modules (flat list format for API).
+     * 默认只返启用模块.
      */
     public Map<String, List<Map<String, String>>> getAllModules() {
+        return getAllModules(false);
+    }
+
+    public Map<String, List<Map<String, String>>> getAllModules(boolean includeDisabled) {
         Long tenantId = TenantContextHolder.getTenantId();
-        Map<String, List<DataModulePO>> grouped = dynamicModuleService.listByDomain(tenantId);
+        Map<String, List<DataModulePO>> grouped = dynamicModuleService.listByDomain(tenantId, includeDisabled);
         Map<String, List<Map<String, String>>> result = new LinkedHashMap<>();
 
         grouped.forEach((domain, modules) -> {
@@ -185,6 +206,9 @@ public class DataPermissionApplicationService {
                         map.put("code", m.getModuleCode());
                         map.put("name", m.getModuleName());
                         map.put("domain", m.getDomainCode());
+                        map.put("industry", m.getIndustry() != null ? m.getIndustry() : "CUSTOM");
+                        map.put("pluginEnabled", String.valueOf(
+                                m.getPluginEnabled() == null || m.getPluginEnabled()));
                         return map;
                     })
                     .collect(Collectors.toList());
@@ -234,9 +258,21 @@ public class DataPermissionApplicationService {
 
     @lombok.Data
     @lombok.AllArgsConstructor
+    @lombok.NoArgsConstructor
     public static class ModuleDTO {
         private String code;
         private String name;
+        /** 领域 code (CORE / education / inspection ...) — 保留为二级标签 */
+        private String domainCode;
+        /** 行业 code (CORE / EDU / HEALTH / CARE / CUSTOM) — 一级分组 */
+        private String industry;
+        /** 所属插件是否启用 (false 时前端灰显 + banner) */
+        private Boolean pluginEnabled;
+
+        public ModuleDTO(String code, String name) {
+            this.code = code;
+            this.name = name;
+        }
     }
 
     @lombok.Data

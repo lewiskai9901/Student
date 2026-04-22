@@ -31,7 +31,7 @@ public class PluginLifecycleService {
     private final JdbcTemplate jdbc;
     private final ApplicationEventPublisher eventPublisher;
 
-    /** 9 张贡献表 + 其 industry 归属列 (此项目所有 9 表都叫 industry). */
+    /** 10 张贡献表 + 其 industry 归属列 (此项目所有 10 表都叫 industry). */
     public static final List<String[]> CONTRIBUTION_TABLES = List.of(
         new String[]{"entity_type_configs",  "industry"},
         new String[]{"relation_types",       "industry"},
@@ -40,7 +40,8 @@ public class PluginLifecycleService {
         new String[]{"event_triggers",       "industry"},
         new String[]{"roles",                "industry"},
         new String[]{"permissions",          "industry"},
-        new String[]{"data_scope_dims",      "industry"}
+        new String[]{"data_scope_dims",      "industry"},
+        new String[]{"data_resources",       "industry"}
         // msg_subscription_rules 无 industry 列, 单独按 event_type 级联 (见下)
     );
 

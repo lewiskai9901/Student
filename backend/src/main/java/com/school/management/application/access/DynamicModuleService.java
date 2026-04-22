@@ -43,16 +43,33 @@ public class DynamicModuleService {
 
     @Cacheable(value = CACHE_NAME, key = "'allModules:' + #tenantId")
     public List<DataModulePO> listModules(Long tenantId) {
-        return dataResourceMapper.selectList(
-            new LambdaQueryWrapper<DataResourcePO>()
+        return listModules(tenantId, false);
+    }
+
+    /**
+     * 列出所有模块.
+     * @param includeDisabled 是否包含 plugin_enabled=0 的禁用插件贡献模块.
+     *                        false (默认) = 只返启用模块;
+     *                        true = 返回全部, DTO 带 pluginEnabled 字段供前端灰显.
+     */
+    public List<DataModulePO> listModules(Long tenantId, boolean includeDisabled) {
+        LambdaQueryWrapper<DataResourcePO> wrapper = new LambdaQueryWrapper<DataResourcePO>()
                 .eq(DataResourcePO::getTenantId, tenantId)
                 .eq(DataResourcePO::getEnabled, 1)
-                .orderByAsc(DataResourcePO::getSortOrder)
-        ).stream().map(this::toDataModulePO).collect(Collectors.toList());
+                .orderByAsc(DataResourcePO::getSortOrder);
+        if (!includeDisabled) {
+            wrapper.eq(DataResourcePO::getPluginEnabled, true);
+        }
+        return dataResourceMapper.selectList(wrapper)
+                .stream().map(this::toDataModulePO).collect(Collectors.toList());
     }
 
     public Map<String, List<DataModulePO>> listByDomain(Long tenantId) {
-        return listModules(tenantId).stream()
+        return listByDomain(tenantId, false);
+    }
+
+    public Map<String, List<DataModulePO>> listByDomain(Long tenantId, boolean includeDisabled) {
+        return listModules(tenantId, includeDisabled).stream()
                 .collect(Collectors.groupingBy(
                         m -> m.getDomainCode() != null ? m.getDomainCode() : "CORE",
                         LinkedHashMap::new, Collectors.toList()));
@@ -106,12 +123,15 @@ public class DynamicModuleService {
         po.setModuleName(resource.getResourceName());
         po.setDomainCode(resource.getDomainCode());
         po.setDomainName(resource.getDomainName());
+        po.setIndustry(resource.getIndustry());
         // accessResourceType 单独控制"是否走 access_relations 子查询"
         po.setResourceType(resource.getAccessResourceType());
         po.setOrgUnitField(resource.getOrgUnitField());
         po.setCreatorField(resource.getCreatorField());
         po.setSortOrder(resource.getSortOrder());
         po.setEnabled(resource.getEnabled() != null && resource.getEnabled() == 1);
+        // null 视为启用 (DB 默认 1)
+        po.setPluginEnabled(resource.getPluginEnabled() == null || resource.getPluginEnabled());
         return po;
     }
 

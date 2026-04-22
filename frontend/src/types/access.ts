@@ -163,11 +163,15 @@ export interface DataModuleDTO {
   moduleName: string
   domainCode: string
   domainName: string
+  /** 所属行业 CORE / EDU / HEALTH / CARE / CUSTOM (插件架构一级分组) */
+  industry?: string
   resourceType?: string
   orgUnitField: string
   creatorField: string
   sortOrder: number
   enabled: boolean
+  /** 所属插件是否启用 — false 时前端灰显并提示启用插件 */
+  pluginEnabled?: boolean
 }
 
 /**
@@ -193,6 +197,8 @@ export interface DataScopeOption {
   scopeCode: DataScope
   scopeName: string
   description: string
+  /** 来源标识: "CORE" = hardcoded 5 种; "PLUGIN:<domainCode>" = 插件贡献维度 */
+  source?: string
 }
 
 /**
