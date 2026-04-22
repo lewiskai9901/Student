@@ -275,6 +275,8 @@
 }
 .tm-action:hover { background: #f3f4f6; color: #111827; }
 .tm-action-danger:hover { background: #fef2f2; color: #dc2626; }
+.tm-action:disabled { opacity: 0.4; cursor: not-allowed; }
+.tm-action:disabled:hover { background: none; color: #4b5563; }
 
 /* Empty state */
 .tm-empty { text-align: center; padding: 40px 0 !important; color: #9ca3af; font-size: 13px; }

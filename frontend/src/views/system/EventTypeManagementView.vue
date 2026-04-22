@@ -75,8 +75,14 @@
             </div>
             <div class="type-row-actions">
               <template v-if="!t.isSystem">
-                <button class="action-btn" @click="openTypeDialog(group.categoryCode, group.categoryName, t)">编辑</button>
-                <button class="action-btn action-danger" @click="handleDeleteType(t)">删除</button>
+                <button class="action-btn"
+                        :disabled="isTypePluginDisabled(t)"
+                        :title="isTypePluginDisabled(t) ? '所属插件已禁用, 请先启用' : ''"
+                        @click="openTypeDialog(group.categoryCode, group.categoryName, t)">编辑</button>
+                <button class="action-btn action-danger"
+                        :disabled="isTypePluginDisabled(t)"
+                        :title="isTypePluginDisabled(t) ? '所属插件已禁用, 请先启用' : ''"
+                        @click="handleDeleteType(t)">删除</button>
               </template>
               <span v-else class="system-hint">不可修改</span>
             </div>
@@ -658,6 +664,8 @@ onMounted(() => { loadTypes() })
   transition: all 0.1s;
 }
 .action-btn:hover { background: #f3f4f6; color: #111827; }
+.action-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+.action-btn:disabled:hover { background: none; color: #4b5563; }
 .action-primary { color: #2563eb; }
 .action-primary:hover { background: #eff6ff; color: #1d4ed8; }
 .action-danger:hover { background: #fef2f2; color: #dc2626; }

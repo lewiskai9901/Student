@@ -2,6 +2,7 @@ package com.school.management.interfaces.rest.message;
 
 import com.school.management.application.message.MsgConfigService;
 import com.school.management.common.result.Result;
+import com.school.management.common.util.PluginEnabledGuard;
 import com.school.management.common.util.SecurityUtils;
 import com.school.management.domain.message.model.MsgSubscriptionRule;
 import com.school.management.domain.message.model.MsgTemplate;
@@ -23,6 +24,7 @@ import java.util.List;
 public class MsgConfigController {
 
     private final MsgConfigService configService;
+    private final PluginEnabledGuard pluginEnabledGuard;
 
     // ── 订阅规则 ─────────────────────────────────────────────────────────────
 
@@ -58,6 +60,7 @@ public class MsgConfigController {
     @CasbinAccess(resource = "msg-config", action = "edit")
     public Result<MsgSubscriptionRule> updateRule(@PathVariable Long id,
                                                    @RequestBody CreateSubscriptionRuleRequest request) {
+        pluginEnabledGuard.check("msg_subscription_rules", id);
         MsgSubscriptionRule rule = MsgSubscriptionRule.builder()
                 .ruleName(request.getRuleName())
                 .eventCategory(request.getEventCategory())
@@ -76,6 +79,7 @@ public class MsgConfigController {
     @Operation(summary = "删除订阅规则")
     @CasbinAccess(resource = "msg-config", action = "delete")
     public Result<Void> deleteRule(@PathVariable Long id) {
+        pluginEnabledGuard.check("msg_subscription_rules", id);
         configService.deleteRule(id);
         return Result.success();
     }

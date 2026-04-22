@@ -1,6 +1,7 @@
 package com.school.management.interfaces.rest.event;
 
 import com.school.management.common.result.Result;
+import com.school.management.common.util.PluginEnabledGuard;
 import com.school.management.infrastructure.casbin.CasbinAccess;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -25,6 +26,7 @@ import static com.school.management.common.util.SnakeToCamelUtil.toCamelCaseList
 public class EventTypeController {
 
     private final JdbcTemplate jdbcTemplate;
+    private final PluginEnabledGuard pluginEnabledGuard;
 
     @GetMapping
     @Operation(summary = "获取事件类型列表（按分类分组）",
@@ -122,6 +124,7 @@ public class EventTypeController {
     @Operation(summary = "更新事件类型")
     @CasbinAccess(resource = "entity-event-type", action = "edit")
     public Result<Void> update(@PathVariable Long id, @RequestBody Map<String, Object> body) {
+        pluginEnabledGuard.check("entity_event_types", id);
         // 系统预置类型：只允许修改分类归属与排序/启用状态，
         // 核心定义字段（typeName/icon/color/applicableSubjects）强制保留原值，
         // 防止 UI 误改造成业务语义漂移；分类级元数据（categoryCode/Name/Polarity）仍可改，
@@ -159,6 +162,7 @@ public class EventTypeController {
     @Operation(summary = "删除事件类型")
     @CasbinAccess(resource = "entity-event-type", action = "delete")
     public Result<Void> delete(@PathVariable Long id) {
+        pluginEnabledGuard.check("entity_event_types", id);
         // Check if it's a system type
         List<Map<String, Object>> rows = jdbcTemplate.queryForList(
             "SELECT is_system FROM entity_event_types WHERE id = ? AND deleted = 0", id);

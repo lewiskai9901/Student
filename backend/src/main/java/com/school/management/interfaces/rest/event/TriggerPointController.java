@@ -1,6 +1,7 @@
 package com.school.management.interfaces.rest.event;
 
 import com.school.management.common.result.Result;
+import com.school.management.common.util.PluginEnabledGuard;
 import com.school.management.infrastructure.casbin.CasbinAccess;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -24,6 +25,7 @@ import static com.school.management.common.util.SnakeToCamelUtil.toCamelCaseList
 public class TriggerPointController {
 
     private final JdbcTemplate jdbcTemplate;
+    private final PluginEnabledGuard pluginEnabledGuard;
 
     @GetMapping
     @Operation(summary = "获取触发点列表")
@@ -71,6 +73,7 @@ public class TriggerPointController {
     @Operation(summary = "更新触发点")
     @CasbinAccess(resource = "event-trigger", action = "edit")
     public Result<Void> update(@PathVariable Long id, @RequestBody Map<String, Object> body) {
+        pluginEnabledGuard.check("trigger_points", id);
         jdbcTemplate.update(
             "UPDATE trigger_points SET module_code = ?, module_name = ?, point_code = ?, " +
             "point_name = ?, description = ?, context_schema = ?, sort_order = ? " +
@@ -88,6 +91,7 @@ public class TriggerPointController {
     @Operation(summary = "删除触发点")
     @CasbinAccess(resource = "event-trigger", action = "delete")
     public Result<Void> delete(@PathVariable Long id) {
+        pluginEnabledGuard.check("trigger_points", id);
         jdbcTemplate.update("UPDATE trigger_points SET deleted = 1 WHERE id = ?", id);
         return Result.success();
     }
@@ -96,6 +100,7 @@ public class TriggerPointController {
     @Operation(summary = "启用触发点")
     @CasbinAccess(resource = "event-trigger", action = "edit")
     public Result<Void> enable(@PathVariable Long id) {
+        pluginEnabledGuard.check("trigger_points", id);
         jdbcTemplate.update("UPDATE trigger_points SET is_enabled = 1 WHERE id = ? AND deleted = 0", id);
         return Result.success();
     }
@@ -104,6 +109,7 @@ public class TriggerPointController {
     @Operation(summary = "禁用触发点")
     @CasbinAccess(resource = "event-trigger", action = "edit")
     public Result<Void> disable(@PathVariable Long id) {
+        pluginEnabledGuard.check("trigger_points", id);
         jdbcTemplate.update("UPDATE trigger_points SET is_enabled = 0 WHERE id = ? AND deleted = 0", id);
         return Result.success();
     }

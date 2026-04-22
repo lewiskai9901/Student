@@ -2,6 +2,7 @@ package com.school.management.interfaces.rest.event;
 
 import com.school.management.application.event.EntityEventTypeApplicationService;
 import com.school.management.common.result.Result;
+import com.school.management.common.util.PluginEnabledGuard;
 import com.school.management.domain.event.model.EntityEventType;
 import com.school.management.infrastructure.casbin.CasbinAccess;
 import io.swagger.v3.oas.annotations.Operation;
@@ -21,6 +22,7 @@ import java.util.List;
 public class EntityEventTypeController {
 
     private final EntityEventTypeApplicationService typeService;
+    private final PluginEnabledGuard pluginEnabledGuard;
 
     @GetMapping
     @Operation(summary = "获取所有事件类型")
@@ -52,6 +54,7 @@ public class EntityEventTypeController {
     @CasbinAccess(resource = "entity-event-type", action = "edit")
     public Result<EntityEventType> update(@PathVariable Long id,
                                            @RequestBody EntityEventType type) {
+        pluginEnabledGuard.check("entity_event_types", id);
         return Result.success(typeService.update(id, type));
     }
 
@@ -59,6 +62,7 @@ public class EntityEventTypeController {
     @Operation(summary = "删除事件类型")
     @CasbinAccess(resource = "entity-event-type", action = "delete")
     public Result<Void> delete(@PathVariable Long id) {
+        pluginEnabledGuard.check("entity_event_types", id);
         typeService.delete(id);
         return Result.success();
     }

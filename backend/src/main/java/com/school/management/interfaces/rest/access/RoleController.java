@@ -2,6 +2,7 @@ package com.school.management.interfaces.rest.access;
 
 import com.school.management.application.access.*;
 import com.school.management.common.result.Result;
+import com.school.management.common.util.PluginEnabledGuard;
 import com.school.management.infrastructure.activity.annotation.AuditEvent;
 import com.school.management.domain.access.model.Role;
 import com.school.management.common.util.SecurityUtils;
@@ -26,6 +27,7 @@ import java.util.stream.Collectors;
 public class RoleController {
 
     private final AccessApplicationService accessService;
+    private final PluginEnabledGuard pluginEnabledGuard;
 
     @PostMapping
     @Operation(summary = "Create a new role")
@@ -84,6 +86,8 @@ public class RoleController {
             @PathVariable Long id,
             @Valid @RequestBody UpdateRoleRequest request) {
 
+        pluginEnabledGuard.check("roles", id);
+
         UpdateRoleCommand command = UpdateRoleCommand.builder()
             .roleName(request.getRoleName())
             .description(request.getDescription())
@@ -98,6 +102,7 @@ public class RoleController {
     @CasbinAccess(resource = "system:role", action = "delete")
     @AuditEvent(module = "access", action = "DELETE", resourceType = "ROLE", resourceId = "#id", label = "删除角色")
     public Result<Void> deleteRole(@PathVariable Long id) {
+        pluginEnabledGuard.check("roles", id);
         accessService.deleteRole(id);
         return Result.success(null);
     }
@@ -110,6 +115,7 @@ public class RoleController {
             @PathVariable Long id,
             @Valid @RequestBody SetPermissionsRequest request) {
 
+        pluginEnabledGuard.check("roles", id);
         Role role = accessService.grantPermissions(id, request.getPermissionIds());
         return Result.success(toResponse(role));
     }
@@ -122,6 +128,8 @@ public class RoleController {
             @PathVariable Long id,
             @PathVariable Long permissionId) {
 
+        pluginEnabledGuard.check("roles", id);
+        pluginEnabledGuard.check("permissions", permissionId);
         Role role = accessService.addPermissionToRole(id, permissionId);
         return Result.success(toResponse(role));
     }
@@ -134,6 +142,7 @@ public class RoleController {
             @PathVariable Long id,
             @PathVariable Long permissionId) {
 
+        pluginEnabledGuard.check("roles", id);
         Role role = accessService.removePermissionFromRole(id, permissionId);
         return Result.success(toResponse(role));
     }

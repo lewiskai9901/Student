@@ -3,6 +3,7 @@ package com.school.management.interfaces.rest.event;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.school.management.application.event.TriggerService;
 import com.school.management.common.result.Result;
+import com.school.management.common.util.PluginEnabledGuard;
 import com.school.management.infrastructure.casbin.CasbinAccess;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -28,6 +29,7 @@ public class EventTriggerController {
 
     private final JdbcTemplate jdbcTemplate;
     private final TriggerService triggerService;
+    private final PluginEnabledGuard pluginEnabledGuard;
     private final ObjectMapper objectMapper;
 
     @GetMapping
@@ -97,6 +99,7 @@ public class EventTriggerController {
     @Operation(summary = "更新触发器")
     @CasbinAccess(resource = "event-trigger", action = "edit")
     public Result<Void> update(@PathVariable Long id, @RequestBody Map<String, Object> body) {
+        pluginEnabledGuard.check("event_triggers", id);
         String conditionJson = toJsonString(body.get("conditionJson"));
         String subjectsJson = toJsonString(body.get("subjectsJson"));
 
@@ -119,6 +122,7 @@ public class EventTriggerController {
     @Operation(summary = "删除触发器")
     @CasbinAccess(resource = "event-trigger", action = "delete")
     public Result<Void> delete(@PathVariable Long id) {
+        pluginEnabledGuard.check("event_triggers", id);
         jdbcTemplate.update("UPDATE event_triggers SET deleted = 1 WHERE id = ?", id);
         return Result.success();
     }
@@ -127,6 +131,7 @@ public class EventTriggerController {
     @Operation(summary = "启用触发器")
     @CasbinAccess(resource = "event-trigger", action = "edit")
     public Result<Void> enable(@PathVariable Long id) {
+        pluginEnabledGuard.check("event_triggers", id);
         jdbcTemplate.update("UPDATE event_triggers SET is_enabled = 1 WHERE id = ? AND deleted = 0", id);
         return Result.success();
     }
@@ -135,6 +140,7 @@ public class EventTriggerController {
     @Operation(summary = "禁用触发器")
     @CasbinAccess(resource = "event-trigger", action = "edit")
     public Result<Void> disable(@PathVariable Long id) {
+        pluginEnabledGuard.check("event_triggers", id);
         jdbcTemplate.update("UPDATE event_triggers SET is_enabled = 0 WHERE id = ? AND deleted = 0", id);
         return Result.success();
     }

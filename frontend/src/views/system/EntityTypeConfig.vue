@@ -79,9 +79,18 @@
               </span>
             </td>
             <td>
-              <button class="tm-action" @click="showEditDialog(t)">编辑</button>
-              <button class="tm-action" @click="showSchemaDialog(t)">字段</button>
-              <button v-if="!t.isPluginRegistered" class="tm-action tm-action-danger" @click="handleDelete(t)">删除</button>
+              <button class="tm-action"
+                      :disabled="isPluginDisabled(t)"
+                      :title="isPluginDisabled(t) ? '所属插件已禁用, 请先启用' : ''"
+                      @click="showEditDialog(t)">编辑</button>
+              <button class="tm-action"
+                      :disabled="isPluginDisabled(t)"
+                      :title="isPluginDisabled(t) ? '所属插件已禁用, 请先启用' : ''"
+                      @click="showSchemaDialog(t)">字段</button>
+              <button v-if="!t.isPluginRegistered" class="tm-action tm-action-danger"
+                      :disabled="isPluginDisabled(t)"
+                      :title="isPluginDisabled(t) ? '所属插件已禁用, 请先启用' : ''"
+                      @click="handleDelete(t)">删除</button>
             </td>
           </tr>
         </tbody>

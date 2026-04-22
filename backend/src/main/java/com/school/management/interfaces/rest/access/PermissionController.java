@@ -2,6 +2,7 @@ package com.school.management.interfaces.rest.access;
 
 import com.school.management.application.access.*;
 import com.school.management.common.result.Result;
+import com.school.management.common.util.PluginEnabledGuard;
 import com.school.management.domain.access.model.Permission;
 import com.school.management.domain.access.model.PermissionType;
 import io.swagger.v3.oas.annotations.Operation;
@@ -24,6 +25,7 @@ import java.util.stream.Collectors;
 public class PermissionController {
 
     private final AccessApplicationService accessService;
+    private final PluginEnabledGuard pluginEnabledGuard;
 
     @PostMapping
     @Operation(summary = "Create a new permission")
@@ -95,6 +97,8 @@ public class PermissionController {
             @PathVariable Long id,
             @Valid @RequestBody UpdatePermissionRequest request) {
 
+        pluginEnabledGuard.check("permissions", id);
+
         UpdatePermissionCommand command = UpdatePermissionCommand.builder()
             .permissionName(request.getPermissionName())
             .description(request.getDescription())
@@ -109,6 +113,7 @@ public class PermissionController {
     @Operation(summary = "Delete a permission")
     @CasbinAccess(resource = "system:permission", action = "delete")
     public Result<Void> deletePermission(@PathVariable Long id) {
+        pluginEnabledGuard.check("permissions", id);
         accessService.deletePermission(id);
         return Result.success(null);
     }

@@ -199,29 +199,33 @@
               <div class="flex items-center justify-center gap-1">
                 <button
                   @click="handleEdit(row)"
-                  class="rounded p-1.5 text-gray-500 hover:bg-blue-50 hover:text-blue-600"
-                  title="编辑"
+                  :disabled="row.pluginEnabled === false"
+                  class="rounded p-1.5 text-gray-500 hover:bg-blue-50 hover:text-blue-600 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-transparent disabled:hover:text-gray-500"
+                  :title="row.pluginEnabled === false ? '所属插件已禁用, 请先启用' : '编辑'"
                 >
                   <Pencil class="h-4 w-4" />
                 </button>
                 <button
                   @click="handleAssignPermissions(row)"
-                  class="rounded p-1.5 text-gray-500 hover:bg-green-50 hover:text-green-600"
-                  title="分配权限"
+                  :disabled="row.pluginEnabled === false"
+                  class="rounded p-1.5 text-gray-500 hover:bg-green-50 hover:text-green-600 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-transparent disabled:hover:text-gray-500"
+                  :title="row.pluginEnabled === false ? '所属插件已禁用, 请先启用' : '分配权限'"
                 >
                   <Lock class="h-4 w-4" />
                 </button>
                 <button
                   @click="handleDataPermissions(row)"
-                  class="rounded p-1.5 text-gray-500 hover:bg-purple-50 hover:text-purple-600"
-                  title="数据权限"
+                  :disabled="row.pluginEnabled === false"
+                  class="rounded p-1.5 text-gray-500 hover:bg-purple-50 hover:text-purple-600 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-transparent disabled:hover:text-gray-500"
+                  :title="row.pluginEnabled === false ? '所属插件已禁用, 请先启用' : '数据权限'"
                 >
                   <Settings class="h-4 w-4" />
                 </button>
                 <button
                   @click="handleDelete(row)"
-                  class="rounded p-1.5 text-gray-500 hover:bg-red-50 hover:text-red-600"
-                  title="删除"
+                  :disabled="row.pluginEnabled === false"
+                  class="rounded p-1.5 text-gray-500 hover:bg-red-50 hover:text-red-600 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-transparent disabled:hover:text-gray-500"
+                  :title="row.pluginEnabled === false ? '所属插件已禁用, 请先启用' : '删除'"
                 >
                   <Trash2 class="h-4 w-4" />
                 </button>

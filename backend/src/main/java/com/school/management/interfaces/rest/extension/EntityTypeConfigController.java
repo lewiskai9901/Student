@@ -1,6 +1,7 @@
 package com.school.management.interfaces.rest.extension;
 
 import com.school.management.common.result.Result;
+import com.school.management.common.util.PluginEnabledGuard;
 import com.school.management.domain.organization.model.entity.OrgCategory;
 import com.school.management.domain.place.model.valueobject.BaseCategory;
 import com.school.management.domain.user.model.entity.UserCategory;
@@ -23,6 +24,7 @@ import java.util.stream.Stream;
 public class EntityTypeConfigController {
 
     private final JdbcTemplate jdbc;
+    private final PluginEnabledGuard pluginEnabledGuard;
 
     private static final String SELECT_COLS =
         "id, entity_type AS entityType, type_code AS typeCode, type_name AS typeName, " +
@@ -159,6 +161,7 @@ public class EntityTypeConfigController {
     @PutMapping("/{id}")
     @CasbinAccess(resource = "system:config", action = "edit")
     public Result<Void> update(@PathVariable Long id, @RequestBody Map<String, Object> data) {
+        pluginEnabledGuard.check("entity_type_configs", id);
         try {
             com.fasterxml.jackson.databind.ObjectMapper om = new com.fasterxml.jackson.databind.ObjectMapper();
             jdbc.update(
@@ -176,6 +179,7 @@ public class EntityTypeConfigController {
     @DeleteMapping("/{id}")
     @CasbinAccess(resource = "system:config", action = "edit")
     public Result<Void> delete(@PathVariable Long id) {
+        pluginEnabledGuard.check("entity_type_configs", id);
         // 不允许删除插件注册的类型
         try {
             Integer isPlugin = jdbc.queryForObject(
@@ -197,6 +201,7 @@ public class EntityTypeConfigController {
     @PostMapping("/{id}/custom-fields")
     @CasbinAccess(resource = "system:config", action = "edit")
     public Result<Void> addCustomField(@PathVariable Long id, @RequestBody Map<String, Object> field) {
+        pluginEnabledGuard.check("entity_type_configs", id);
         // 1. 验证必填字段
         Object keyObj = field.get("key");
         Object labelObj = field.get("label");
@@ -248,6 +253,7 @@ public class EntityTypeConfigController {
     @DeleteMapping("/{id}/custom-fields/{fieldKey}")
     @CasbinAccess(resource = "system:config", action = "edit")
     public Result<Void> removeCustomField(@PathVariable Long id, @PathVariable String fieldKey) {
+        pluginEnabledGuard.check("entity_type_configs", id);
         String schemaStr = jdbc.queryForObject(
             "SELECT metadata_schema FROM entity_type_configs WHERE id = ? AND deleted = 0", String.class, id);
         try {
