@@ -44,6 +44,8 @@
           ref="configuratorRef"
           :current-role="currentRole"
           :grouped-modules="groupedModules"
+          :advanced-grouped-modules="advancedGroupedModules"
+          :filter-meta="filterMeta"
           :data-scope-options="dataScopeOptions"
           :module-name-map="moduleNameMap"
           @open-templates="showTemplates = true"
@@ -168,6 +170,15 @@ const showCompareDialog = ref(false)
 const compareLoading = ref(false)
 
 const groupedModules = ref<Record<string, ModuleGroupItem[]>>({})
+const advancedGroupedModules = ref<Record<string, ModuleGroupItem[]>>({})
+const filterMeta = ref<{
+  filtered: boolean
+  filterRule?: string
+  totalRelevant?: number
+  totalAdvanced?: number
+  roleIndustry?: string
+  rolePermModules?: string[]
+}>({ filtered: false })
 const moduleNameMap = ref<Record<string, string>>({})
 const dataScopeOptions = ref<DataScopeOption[]>([])
 const allRoles = ref<RoleResponse[]>([])
@@ -202,37 +213,60 @@ const totalModules = computed(() =>
   Object.values(groupedModules.value).reduce((s, l) => s + l.length, 0)
 )
 
+function groupByIndustry(mods: any[]): Record<string, ModuleGroupItem[]> {
+  const byIndustry: Record<string, ModuleGroupItem[]> = {}
+  for (const m of mods) {
+    const industry = (m as any).industry || inferIndustry(m.domainCode)
+    if (!byIndustry[industry]) byIndustry[industry] = []
+    byIndustry[industry].push({
+      code: m.moduleCode,
+      name: m.moduleName,
+      industry,
+      pluginEnabled: (m as any).pluginEnabled !== false,
+    })
+  }
+  const order = ['CORE', 'EDU', 'HEALTH', 'CARE', 'CUSTOM']
+  const ordered: Record<string, ModuleGroupItem[]> = {}
+  for (const ind of order) if (byIndustry[ind]?.length) ordered[ind] = byIndustry[ind]
+  for (const [ind, list] of Object.entries(byIndustry))
+    if (!(ind in ordered)) ordered[ind] = list
+  return ordered
+}
+
 async function loadMeta() {
   try {
-    const [modules, scopes] = await Promise.all([
-      dataPermissionApi.getModules(true),
-      dataPermissionApi.getScopes(),
-    ])
-    const byIndustry: Record<string, ModuleGroupItem[]> = {}
-    const nameMap: Record<string, string> = {}
-    for (const m of modules) {
-      const industry = (m as any).industry || inferIndustry(m.domainCode)
-      if (!byIndustry[industry]) byIndustry[industry] = []
-      byIndustry[industry].push({
-        code: m.moduleCode,
-        name: m.moduleName,
-        industry,
-        pluginEnabled: (m as any).pluginEnabled !== false,
-      })
-      nameMap[m.moduleCode] = m.moduleName
-    }
-    const order = ['CORE', 'EDU', 'HEALTH', 'CARE', 'CUSTOM']
-    const ordered: Record<string, ModuleGroupItem[]> = {}
-    for (const ind of order) if (byIndustry[ind]?.length) ordered[ind] = byIndustry[ind]
-    for (const [ind, list] of Object.entries(byIndustry))
-      if (!(ind in ordered)) ordered[ind] = list
-    groupedModules.value = ordered
-    moduleNameMap.value = nameMap
+    const scopes = await dataPermissionApi.getScopes()
     dataScopeOptions.value = scopes
+    // 先加载无过滤的全部模块作为兜底 (当无角色选中时展示)
+    await loadModulesForRole(null)
   } catch (e) {
     ElMessage.error('加载元数据失败')
   }
 }
+
+async function loadModulesForRole(roleId: string | number | null) {
+  try {
+    const data = await dataPermissionApi.getModulesForRole({
+      roleId: roleId ?? undefined,
+      includeDisabled: true,
+    })
+    groupedModules.value = groupByIndustry(data.relevant)
+    advancedGroupedModules.value = groupByIndustry(data.advanced)
+    filterMeta.value = data.meta
+    const nameMap: Record<string, string> = {}
+    for (const m of [...data.relevant, ...data.advanced]) {
+      nameMap[m.moduleCode] = m.moduleName
+    }
+    moduleNameMap.value = nameMap
+  } catch (e) {
+    ElMessage.error('加载模块失败')
+  }
+}
+
+// 角色变化时刷新模块分流
+watch(selectedRoleId, (id) => {
+  loadModulesForRole(id)
+})
 
 function inferIndustry(domain: string): string {
   const d = (domain || '').toLowerCase()

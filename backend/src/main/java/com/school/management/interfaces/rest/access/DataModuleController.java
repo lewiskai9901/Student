@@ -1,5 +1,6 @@
 package com.school.management.interfaces.rest.access;
 
+import com.school.management.application.access.DataPermissionApplicationService;
 import com.school.management.application.access.DynamicModuleService;
 import com.school.management.common.result.Result;
 import com.school.management.infrastructure.casbin.CasbinAccess;
@@ -17,6 +18,7 @@ import java.util.Map;
 public class DataModuleController {
 
     private final DynamicModuleService dynamicModuleService;
+    private final DataPermissionApplicationService dataPermissionApplicationService;
 
     @GetMapping
     public Result<List<DataModulePO>> listModules(
@@ -30,6 +32,23 @@ public class DataModuleController {
             @RequestParam(required = false, defaultValue = "false") Boolean includeDisabled) {
         Long tenantId = TenantContextHolder.getTenantId();
         return Result.success(dynamicModuleService.listByDomain(tenantId, Boolean.TRUE.equals(includeDisabled)));
+    }
+
+    /**
+     * 按角色智能过滤数据模块.
+     * 返回 {relevant: [...], advanced: [...], meta: {...}}
+     *
+     * 过滤规则 (3 层):
+     *   1. SUPER_ADMIN 豁免 — 全部放 relevant
+     *   2. industry 对齐 — 角色 industry != 模块 industry (CORE 除外) 进 advanced
+     *   3. 功能权限反查 — 非 CORE 模块需要角色有对应 permission 前缀才进 relevant
+     */
+    @GetMapping("/for-role")
+    public Result<Map<String, Object>> listModulesForRole(
+            @RequestParam(required = false) Long roleId,
+            @RequestParam(required = false, defaultValue = "false") Boolean includeDisabled) {
+        return Result.success(dataPermissionApplicationService.getModulesForRole(
+                roleId, Boolean.TRUE.equals(includeDisabled)));
     }
 
     @PostMapping

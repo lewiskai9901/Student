@@ -109,6 +109,8 @@
       <div v-else>
         <AdvancedModuleEditor
           :grouped-modules="groupedModules"
+          :advanced-grouped-modules="advancedGroupedModules"
+          :filter-meta="filterMeta"
           :module-permissions="modulePermissions"
           :data-scope-options="dataScopeOptions"
           @update:module-permissions="onModulePermissionsUpdate"
@@ -143,9 +145,20 @@ import {
   type SceneDecision,
 } from '../composables/useSceneTemplate'
 
+interface FilterMeta {
+  filtered: boolean
+  filterRule?: string
+  totalRelevant?: number
+  totalAdvanced?: number
+  roleIndustry?: string
+  rolePermModules?: string[]
+}
+
 interface Props {
   currentRole: RoleResponse | null
   groupedModules: Record<string, ModuleGroupItem[]>
+  advancedGroupedModules?: Record<string, ModuleGroupItem[]>
+  filterMeta?: FilterMeta
   dataScopeOptions: DataScopeOption[]
   moduleNameMap: Record<string, string>
 }
@@ -168,9 +181,11 @@ const mode = ref<'scene' | 'advanced'>('scene')
 const decision = ref<SceneDecision>({ primary: 'SELF', bizAutoFollow: true })
 const modulePermissions = ref<ModulePermission[]>([])
 
-const totalModules = computed(() =>
-  Object.values(props.groupedModules).reduce((sum, list) => sum + list.length, 0)
-)
+const totalModules = computed(() => {
+  const rel = Object.values(props.groupedModules).reduce((sum, list) => sum + list.length, 0)
+  const adv = Object.values(props.advancedGroupedModules ?? {}).reduce((sum, list) => sum + list.length, 0)
+  return rel + adv
+})
 
 const eduEnabled = computed(() => {
   const list = props.groupedModules['EDU']
@@ -184,7 +199,22 @@ const flatModules = computed(() => {
       out.push({ code: m.code, industry: ind })
     }
   }
+  // 也纳入 advanced 列表, 确保 applyScene 时 advanced 模块被显式写入 SELF
+  for (const [ind, list] of Object.entries(props.advancedGroupedModules ?? {})) {
+    for (const m of list) {
+      out.push({ code: m.code, industry: ind })
+    }
+  }
   return out
+})
+
+/** "相关" 模块的 code 集合 — 传给 applySceneToModules 用作 relevantCodes 参数 */
+const relevantCodes = computed<Set<string>>(() => {
+  const s = new Set<string>()
+  for (const list of Object.values(props.groupedModules)) {
+    for (const m of list) s.add(m.code)
+  }
+  return s
 })
 
 watch(
@@ -219,7 +249,7 @@ function onDecisionUpdate(next: SceneDecision) {
   decision.value = next
   // 场景模式下同步应用到 modulePermissions (实时映射)
   if (mode.value === 'scene') {
-    modulePermissions.value = applySceneToModules(next, flatModules.value, modulePermissions.value)
+    modulePermissions.value = applySceneToModules(next, flatModules.value, modulePermissions.value, relevantCodes.value)
   }
   emit('config-changed', modulePermissions.value, decision.value)
 }

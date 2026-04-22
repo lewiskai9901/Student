@@ -402,6 +402,38 @@ export function getDataModules(includeDisabled = false): Promise<DataModuleDTO[]
 }
 
 /**
+ * 按角色智能过滤的数据模块 (3 层规则: SUPER_ADMIN 豁免 + industry 对齐 + 权限反查)
+ *
+ * - SUPER_ADMIN / 无 roleId → relevant=全部, advanced=[], meta.filtered=false
+ * - 其他角色 → relevant=本行业 + 权限匹配; advanced=跨行业或无对应权限 (折叠展示)
+ */
+export interface ForRoleModulesResponse {
+  relevant: DataModuleDTO[]
+  advanced: (DataModuleDTO & { reason?: string })[]
+  meta: {
+    filtered: boolean
+    filterRule?: string
+    totalRelevant?: number
+    totalAdvanced?: number
+    roleIndustry?: string
+    roleType?: string
+    rolePermModules?: string[]
+  }
+}
+
+export function getDataModulesForRole(params: {
+  roleId?: string | number
+  includeDisabled?: boolean
+}): Promise<ForRoleModulesResponse> {
+  return http.get<ForRoleModulesResponse>(`${DATA_MODULE_URL}/for-role`, {
+    params: {
+      roleId: params.roleId != null ? String(params.roleId) : undefined,
+      includeDisabled: params.includeDisabled ?? false,
+    },
+  })
+}
+
+/**
  * 获取所有数据范围选项
  */
 export function getDataScopes(): Promise<DataScopeOption[]> {
@@ -415,5 +447,6 @@ export const dataPermissionApi = {
   getConfig: getRoleDataPermissions,
   saveConfig: saveRoleDataPermissions,
   getModules: getDataModules,
+  getModulesForRole: getDataModulesForRole,
   getScopes: getDataScopes
 }

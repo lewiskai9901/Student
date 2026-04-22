@@ -67,7 +67,8 @@ export interface SimpleModule {
  */
 export function sceneToModuleScopes(
   decision: SceneDecision,
-  modules: SimpleModule[]
+  modules: SimpleModule[],
+  relevantCodes?: Set<string>
 ): Record<string, { scopeCode: string; scopeItems?: ScopeItem[] }> {
   const result: Record<string, { scopeCode: string; scopeItems?: ScopeItem[] }> = {}
 
@@ -86,6 +87,12 @@ export function sceneToModuleScopes(
 
   for (const mod of modules) {
     const code = mod.code
+
+    // 智能过滤: 非相关模块 (跨行业 / 权限未匹配) 保持 SELF (最小权限默认)
+    if (relevantCodes && !relevantCodes.has(code)) {
+      result[code] = { scopeCode: 'SELF' }
+      continue
+    }
 
     // EDU 学生数据特化
     if (EDU_STUDENT_MODULES.has(code) && decision.studentScope) {
@@ -217,9 +224,10 @@ export function moduleScopesToScene(mps: ModulePermission[]): SceneDecision {
 export function applySceneToModules(
   decision: SceneDecision,
   modules: SimpleModule[],
-  existing: ModulePermission[]
+  existing: ModulePermission[],
+  relevantCodes?: Set<string>
 ): ModulePermission[] {
-  const mapping = sceneToModuleScopes(decision, modules)
+  const mapping = sceneToModuleScopes(decision, modules, relevantCodes)
   const result: ModulePermission[] = []
   const seen = new Set<string>()
 

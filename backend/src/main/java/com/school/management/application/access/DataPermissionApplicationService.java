@@ -219,6 +219,171 @@ public class DataPermissionApplicationService {
     }
 
     /**
+     * 按角色智能过滤数据模块.
+     *
+     * 3 层规则 (优先级):
+     *   1. SUPER_ADMIN 豁免 — 返全部 28 模块, relevant=all, advanced=[]
+     *   2. industry 对齐 — role.industry=HEALTH → 只允许 CORE+HEALTH; role.industry=CUSTOM/NULL → 全部;
+     *   3. 功能权限反查 — 非 CORE 模块 必须有 role_permissions 的 permission_code 前缀匹配
+     *
+     * 返回 {relevant: [...], advanced: [...], meta: {...}}.
+     */
+    public Map<String, Object> getModulesForRole(Long roleId, boolean includeDisabled) {
+        Long tenantId = TenantContextHolder.getTenantId();
+        List<DataModulePO> all = dynamicModuleService.listModules(tenantId, includeDisabled);
+        List<Map<String, Object>> allDto = all.stream()
+                .map(this::toFlatMap)
+                .collect(Collectors.toList());
+
+        // roleId 为空 — 返兼容路径
+        if (roleId == null) {
+            Map<String, Object> out = new LinkedHashMap<>();
+            out.put("relevant", allDto);
+            out.put("advanced", Collections.emptyList());
+            out.put("meta", Map.of("filtered", false));
+            return out;
+        }
+
+        // 1. 查角色
+        Map<String, Object> role;
+        try {
+            role = jdbcTemplate.queryForMap(
+                    "SELECT id, role_code, role_name, role_type, industry " +
+                    "FROM roles WHERE id = ? AND deleted = 0",
+                    roleId);
+        } catch (Exception e) {
+            log.warn("[getModulesForRole] role {} not found: {}", roleId, e.getMessage());
+            Map<String, Object> out = new LinkedHashMap<>();
+            out.put("relevant", allDto);
+            out.put("advanced", Collections.emptyList());
+            out.put("meta", Map.of("filtered", false, "filterRule", "角色不存在, 返全部"));
+            return out;
+        }
+
+        String roleCode = (String) role.get("role_code");
+        String industry = (String) role.get("industry");
+        String roleType = (String) role.get("role_type");
+
+        // 2. 规则 1: SUPER_ADMIN 豁免
+        if ("SUPER_ADMIN".equals(roleCode)) {
+            Map<String, Object> out = new LinkedHashMap<>();
+            out.put("relevant", allDto);
+            out.put("advanced", Collections.emptyList());
+            Map<String, Object> meta = new LinkedHashMap<>();
+            meta.put("filtered", false);
+            meta.put("filterRule", "超管豁免 — 可配置所有模块");
+            meta.put("roleIndustry", industry != null ? industry : "CORE");
+            out.put("meta", meta);
+            return out;
+        }
+
+        // 3. industry 对齐集合 (CORE 永远允许)
+        Set<String> allowedIndustries = new LinkedHashSet<>();
+        allowedIndustries.add("CORE");
+        if (industry == null || industry.isBlank() || "CUSTOM".equals(industry)) {
+            // CUSTOM/NULL 角色 — 管理员自主选, 所有行业都允许
+            allowedIndustries.addAll(Arrays.asList("CORE", "EDU", "HEALTH", "CARE", "CUSTOM"));
+        } else {
+            allowedIndustries.add(industry);
+        }
+
+        // 4. 查角色的权限码前缀集合 (permission_code 形如 "student:info:view")
+        Set<String> permModulePrefixes = new HashSet<>();
+        try {
+            List<String> codes = jdbcTemplate.queryForList(
+                    "SELECT DISTINCT p.permission_code FROM role_permissions rp " +
+                    "JOIN permissions p ON p.id = rp.permission_id " +
+                    "WHERE rp.role_id = ? AND p.deleted = 0 AND p.plugin_enabled = 1",
+                    String.class, roleId);
+            for (String c : codes) {
+                if (c == null || c.isBlank()) continue;
+                String first = c.split(":")[0];
+                if (!first.isBlank()) permModulePrefixes.add(first);
+            }
+        } catch (Exception e) {
+            log.warn("[getModulesForRole] query perms failed: {}", e.getMessage());
+        }
+
+        boolean hasPerms = !permModulePrefixes.isEmpty();
+
+        // 5. 分流
+        List<Map<String, Object>> relevant = new ArrayList<>();
+        List<Map<String, Object>> advanced = new ArrayList<>();
+
+        for (Map<String, Object> m : allDto) {
+            String mInd = Optional.ofNullable((String) m.get("industry")).orElse("CORE");
+            String mCode = (String) m.get("moduleCode");
+
+            boolean industryOk = allowedIndustries.contains(mInd);
+
+            // permOk 逻辑:
+            //   - CORE 模块 → 永远保留 (通用)
+            //   - 非 CORE 且 role 无任何 permission → 降级: 只按 industry 决定 (给默认权限留出显示)
+            //   - 非 CORE 且 role 有 permissions → 必须有前缀匹配
+            boolean permOk;
+            if ("CORE".equals(mInd)) {
+                permOk = true;
+            } else if (!hasPerms) {
+                // 未配置权限的角色, 不再二次过滤, 按 industry 判断
+                permOk = true;
+            } else {
+                permOk = permModulePrefixes.stream().anyMatch(p ->
+                        mCode.equals(p)
+                        || mCode.startsWith(p + "_")
+                        || mCode.startsWith(p)
+                        || p.startsWith(mCode));
+            }
+
+            if (industryOk && permOk) {
+                relevant.add(m);
+            } else {
+                Map<String, Object> advCopy = new LinkedHashMap<>(m);
+                String reason;
+                if (!industryOk) reason = "跨行业模块 (" + mInd + "), 默认隐藏";
+                else reason = "角色无 " + mCode + " 相关功能权限";
+                advCopy.put("reason", reason);
+                advanced.add(advCopy);
+            }
+        }
+
+        Map<String, Object> out = new LinkedHashMap<>();
+        out.put("relevant", relevant);
+        out.put("advanced", advanced);
+        Map<String, Object> meta = new LinkedHashMap<>();
+        meta.put("filtered", true);
+        String ruleDesc = "industry=" + (industry != null ? industry : "NONE");
+        if (hasPerms) ruleDesc += " + perms(" + permModulePrefixes.size() + ")";
+        else ruleDesc += " + (未绑权限, 仅按 industry 过滤)";
+        meta.put("filterRule", ruleDesc);
+        meta.put("totalRelevant", relevant.size());
+        meta.put("totalAdvanced", advanced.size());
+        meta.put("roleIndustry", industry != null ? industry : "NONE");
+        meta.put("roleType", roleType != null ? roleType : "");
+        meta.put("rolePermModules", new ArrayList<>(permModulePrefixes));
+        out.put("meta", meta);
+        return out;
+    }
+
+    /** 把 DataModulePO 平铺成 Map (前端契约对齐 DataModuleDTO) */
+    private Map<String, Object> toFlatMap(DataModulePO m) {
+        Map<String, Object> map = new LinkedHashMap<>();
+        map.put("id", m.getId());
+        map.put("tenantId", m.getTenantId());
+        map.put("moduleCode", m.getModuleCode());
+        map.put("moduleName", m.getModuleName());
+        map.put("domainCode", m.getDomainCode());
+        map.put("domainName", m.getDomainName());
+        map.put("industry", m.getIndustry() != null ? m.getIndustry() : "CORE");
+        map.put("resourceType", m.getResourceType());
+        map.put("orgUnitField", m.getOrgUnitField());
+        map.put("creatorField", m.getCreatorField());
+        map.put("sortOrder", m.getSortOrder());
+        map.put("enabled", Boolean.TRUE.equals(m.getEnabled()));
+        map.put("pluginEnabled", m.getPluginEnabled() == null || m.getPluginEnabled());
+        return map;
+    }
+
+    /**
      * Get all data scope options
      */
     public List<Map<String, String>> getAllScopes() {
