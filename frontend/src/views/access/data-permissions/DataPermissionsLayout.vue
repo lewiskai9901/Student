@@ -173,12 +173,12 @@ const dataScopeOptions = ref<DataScopeOption[]>([])
 const allRoles = ref<RoleResponse[]>([])
 
 // 当前角色 id (同步 URL)
-const selectedRoleId = computed<number | string | null>({
+// 保持字符串形式. 后端 snowflake id 超过 JS Number 2^53 精度, 不能 Number() 转.
+const selectedRoleId = computed<string | null>({
   get() {
     const raw = route.query.role
     if (raw == null || raw === '') return null
-    const n = Number(raw)
-    return isNaN(n) ? String(raw) : n
+    return String(raw)
   },
   set(v) {
     const next: Record<string, any> = { ...route.query }
