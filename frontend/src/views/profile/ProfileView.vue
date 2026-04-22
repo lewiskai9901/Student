@@ -123,9 +123,29 @@
           </div>
           <div>
             <label class="block text-sm font-medium text-gray-500 mb-1">角色</label>
-            <div class="flex flex-wrap gap-2">
-              <el-tag v-for="role in userInfo.roles" :key="role" size="small">{{ role }}</el-tag>
-              <span v-if="!userInfo.roles?.length" class="text-gray-400">-</span>
+            <div class="flex flex-wrap gap-2 items-center">
+              <!-- #7 优先用 roleDetails 渲染 (含插件禁用状态), 回退到 roles 字符串数组 -->
+              <template v-if="userInfo.roleDetails?.length">
+                <span
+                  v-for="r in userInfo.roleDetails"
+                  :key="r.code"
+                  class="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs border"
+                  :class="isRoleDisabled(r)
+                    ? 'bg-amber-50 border-amber-200 text-amber-800 opacity-80'
+                    : 'bg-blue-50 border-blue-200 text-blue-700'"
+                >
+                  <span>{{ r.name || r.code }}</span>
+                  <span
+                    v-if="isRoleDisabled(r)"
+                    class="inline-flex items-center rounded-full border border-amber-300 bg-amber-100 px-1.5 text-[10px] font-semibold text-amber-800"
+                    title="此角色所属插件已被禁用, 权限计算时被跳过"
+                  >插件禁用中</span>
+                </span>
+              </template>
+              <template v-else>
+                <el-tag v-for="role in userInfo.roles" :key="role" size="small">{{ role }}</el-tag>
+              </template>
+              <span v-if="!userInfo.roles?.length && !userInfo.roleDetails?.length" class="text-gray-400">-</span>
             </div>
           </div>
           <div>
@@ -231,8 +251,13 @@ const userInfo = ref<UserInfo>({
   realName: '',
   status: 1,
   roles: [],
+  roleDetails: [],
   permissions: []
 })
+
+// #7 判断角色是否因插件禁用而失效 (后端返回 tinyint, 兼容 boolean)
+const isRoleDisabled = (r: { pluginEnabled?: number | boolean }) =>
+  r?.pluginEnabled === 0 || r?.pluginEnabled === false
 
 // 表单引用
 const profileFormRef = ref<FormInstance>()

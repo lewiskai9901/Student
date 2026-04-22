@@ -17,6 +17,15 @@ export interface LoginResponse {
 // 班级角色类型
 export type ClassRole = 'HEAD_TEACHER' | 'DEPUTY_HEAD_TEACHER' | 'SUBJECT_TEACHER' | 'COUNSELOR'
 
+// #7 用户端角色禁用提示: 角色详情 (含插件禁用状态)
+export interface RoleDetail {
+  code: string
+  name: string
+  industry?: string
+  pluginEnabled?: number | boolean
+  status?: number
+}
+
 // 分配的班级信息
 export interface AssignedClass {
   id: number | string
@@ -35,6 +44,11 @@ export interface UserInfo {
   gender?: number
   status: number
   roles: string[]
+  /**
+   * #7 新增: 角色详情数组, 含 pluginEnabled 标志. 旧字段 roles:string[] 保留兼容.
+   * pluginEnabled=false 时表示该角色所属插件已被管理员禁用, Casbin 会跳过此角色权限计算.
+   */
+  roleDetails?: RoleDetail[]
   permissions: string[]
   lastLoginTime?: string
   tenantId?: number | string

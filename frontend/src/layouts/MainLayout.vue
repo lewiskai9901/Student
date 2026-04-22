@@ -216,7 +216,14 @@
               </div>
               <div class="hidden sm:block text-left">
                 <div class="text-sm font-semibold text-gray-900 group-hover:text-blue-700 transition-colors">{{ userStore.userName }}</div>
-                <div class="text-xs text-gray-500">{{ roleLabel }}</div>
+                <div class="text-xs text-gray-500 flex items-center gap-1">
+                  <span>{{ roleLabel }}</span>
+                  <span
+                    v-if="hasDisabledRole"
+                    class="role-warning-badge"
+                    :title="disabledRoleTooltip"
+                  >!</span>
+                </div>
               </div>
               <svg class="w-4 h-4 text-gray-400 hidden sm:block group-hover:text-blue-600 transition-all" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
@@ -244,7 +251,20 @@
                     </div>
                     <div class="flex-1 min-w-0">
                       <div class="font-semibold text-gray-900 truncate">{{ userStore.userName }}</div>
-                      <div class="text-xs text-gray-500 mt-0.5">{{ roleLabel }}</div>
+                      <div class="text-xs text-gray-500 mt-0.5 flex items-center gap-1">
+                        <span>{{ roleLabel }}</span>
+                        <span
+                          v-if="hasDisabledRole"
+                          class="role-warning-badge"
+                          :title="disabledRoleTooltip"
+                        >!</span>
+                      </div>
+                      <div
+                        v-if="hasDisabledRole"
+                        class="mt-2 rounded-md border border-amber-200 bg-amber-50 px-2 py-1 text-[11px] leading-snug text-amber-700"
+                      >
+                        {{ disabledRoleDetails.length }} 个角色所属插件已被禁用, 权限暂时失效
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -292,6 +312,17 @@
           </div>
         </div>
       </header>
+
+      <!-- #7 全局 banner: 所有角色都因插件禁用而失效 -->
+      <div
+        v-if="allRolesDisabled"
+        class="px-6 py-2 bg-amber-50 border-b border-amber-200 text-sm text-amber-800 flex items-center gap-2"
+      >
+        <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
+        </svg>
+        <span>你的所有角色所属插件均已被禁用, 权限当前全部失效, 请联系管理员开启相关插件或重新分配角色.</span>
+      </div>
 
       <!-- 页面内容 -->
       <main class="flex-1 overflow-auto">
@@ -344,6 +375,23 @@ const roleLabel = computed(() => {
   const code = authStore.userRoles?.[0]
   if (!code) return ''
   return ROLE_LABELS[code] || code
+})
+
+// #7 用户端角色禁用提示: 统计 plugin_enabled=0 的角色数 (后端 roleDetails 为 tinyint/number)
+const disabledRoleDetails = computed(() => {
+  const details = (authStore.user as any)?.roleDetails as Array<{ code: string; name: string; pluginEnabled?: number | boolean }> | undefined
+  if (!Array.isArray(details)) return []
+  // pluginEnabled 为 0 / false 视为禁用
+  return details.filter(d => d.pluginEnabled === 0 || d.pluginEnabled === false)
+})
+const hasDisabledRole = computed(() => disabledRoleDetails.value.length > 0)
+const allRolesDisabled = computed(() => {
+  const details = (authStore.user as any)?.roleDetails as Array<any> | undefined
+  return Array.isArray(details) && details.length > 0 && disabledRoleDetails.value.length === details.length
+})
+const disabledRoleTooltip = computed(() => {
+  const names = disabledRoleDetails.value.map(d => d.name || d.code).join('、')
+  return `你有 ${disabledRoleDetails.value.length} 个角色所属插件已被禁用, 相关权限当前失效: ${names}`
 })
 
 // 当前路由
@@ -641,5 +689,23 @@ onUnmounted(() => {
 .fade-enter-from,
 .fade-leave-to {
   opacity: 0;
+}
+
+/* #7 用户端角色禁用提示徽章 */
+.role-warning-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 16px;
+  height: 16px;
+  padding: 0 5px;
+  background: #fef3c7;
+  color: #b45309;
+  border: 1px solid #fcd34d;
+  border-radius: 10px;
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 1;
+  cursor: help;
 }
 </style>
