@@ -266,6 +266,23 @@ const MODULE_LABELS: Record<string, string> = {
   ward: '病房管理',
 }
 
+// ---- Module label override by industry (上下文化二级分组标签) ----
+// 某些 module 在不同 industry 下含义不同, 这里按 industry override.
+// 例如 EDU 下的 system:* 实际是 building / dormitory_building / semester, 非通用系统管理.
+const MODULE_LABELS_BY_INDUSTRY: Record<string, Record<string, string>> = {
+  EDU: {
+    system: '学校设施/学期',
+  },
+}
+
+function getModuleLabel(moduleCode: string, industry: string): string {
+  return (
+    MODULE_LABELS_BY_INDUSTRY[industry]?.[moduleCode] ||
+    MODULE_LABELS[moduleCode] ||
+    moduleCode
+  )
+}
+
 // ---- Industry labels (一级分组) ----
 const INDUSTRY_LABELS: Record<string, string> = {
   CORE: '通用核心',
@@ -386,7 +403,7 @@ const industryGroups = computed<IndustryGroup[]>(() => {
     const modules: ModuleGroup[] = Object.entries(byModule)
       .map(([m, ps]) => ({
         moduleCode: m,
-        moduleLabel: MODULE_LABELS[m] || m,
+        moduleLabel: getModuleLabel(m, industry),
         permissions: ps.sort((a, b) =>
           a.permissionCode.localeCompare(b.permissionCode)
         ),

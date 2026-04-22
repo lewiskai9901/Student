@@ -157,7 +157,27 @@ public class EducationPermissionProvider implements PermissionProvider {
             of("teaching:workflow:view", "查看教学流程", ""),
 
             // ─── inspection 检查记录(教育特定) ───
-            of("inspection_record:view", "查看检查记录", "")
+            of("inspection_record:view", "查看检查记录", ""),
+
+            // ═══════════════════════════════════════════════════════════════
+            // 自 CorePermissionProvider 迁入 (2026-04-21) — 教育场景特有
+            // 对应 V20260427_1 migration 的 industry=EDU 修正
+            // ═══════════════════════════════════════════════════════════════
+
+            // ─── calendar / schedule 日程 (校历+排班是教育场景特有) ───
+            of("calendar", "校历管理", ""),
+            of("calendar:edit", "编辑校历", ""),
+            of("calendar:view", "查看校历", ""),
+            of("schedule:policy:manage", "排班策略管理", ""),
+            of("schedule:policy:view", "排班管理", ""),
+
+            // ─── quantification 量化考核 (学生工作场景特有) ───
+            of("quantification:check-record:publish", "发布检查记录", ""),
+            of("quantification:check-record:review", "审核检查记录", ""),
+            of("quantification:config:add", "新增量化配置", ""),
+            of("quantification:config:delete", "删除量化配置", ""),
+            of("quantification:config:edit", "编辑量化配置", ""),
+            of("quantification:config:view", "查看量化配置", "")
         );
     }
 }

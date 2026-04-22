@@ -109,11 +109,8 @@ public class CorePermissionProvider implements PermissionProvider {
             of("asset:approval:view", "查看资产审批", ""),
 
             // ─── calendar / schedule 日程 ───
-            of("calendar", "校历管理", ""),
-            of("calendar:edit", "编辑校历", ""),
-            of("calendar:view", "查看校历", ""),
-            of("schedule:policy:manage", "排班策略管理", ""),
-            of("schedule:policy:view", "排班管理", ""),
+            // calendar:* / schedule:policy:* 已迁至 EducationPermissionProvider (2026-04-21)
+            // 原因: 校历和排班策略是教育场景特有, 不属于通用核心
 
             // ─── inspection V7 检查平台 ───
             of("insp:alert:edit", "编辑预警", ""),
@@ -276,15 +273,11 @@ public class CorePermissionProvider implements PermissionProvider {
             // ─── my:* 自我相关 ───
             of("my:schedule:view", "查看我的课表", ""),
             of("my:substitute:view", "查看我的代课", ""),
-            of("my:user_student:view", "查看我的学生", ""),
+            of("my:user_student:view", "查看我的学生", "")
 
             // ─── quantification 量化考核 ───
-            of("quantification:check-record:publish", "发布检查记录", ""),
-            of("quantification:check-record:review", "审核检查记录", ""),
-            of("quantification:config:add", "新增量化配置", ""),
-            of("quantification:config:delete", "删除量化配置", ""),
-            of("quantification:config:edit", "编辑量化配置", ""),
-            of("quantification:config:view", "查看量化配置", "")
+            // quantification:* 已迁至 EducationPermissionProvider (2026-04-21)
+            // 原因: 量化考核是学生工作场景特有, 不属于通用核心
         );
     }
 }
