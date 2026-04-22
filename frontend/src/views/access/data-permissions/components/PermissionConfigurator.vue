@@ -17,22 +17,27 @@
       </div>
       <div v-if="currentRole" class="flex items-center gap-2">
         <button
-          class="flex h-9 items-center gap-1.5 rounded-md border border-gray-200 bg-white px-3 text-xs font-medium text-gray-600 hover:bg-gray-50"
+          class="flex h-9 items-center gap-1.5 rounded-md border border-gray-200 bg-white px-3 text-xs font-medium text-gray-600 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed"
+          :disabled="isRoleDisabled"
+          :title="isRoleDisabled ? '所属插件已禁用, 请先启用' : ''"
           @click="$emit('open-templates')"
         >
           <Library class="h-3.5 w-3.5" />
           模板库
         </button>
         <button
-          class="flex h-9 items-center gap-1.5 rounded-md border border-gray-200 bg-white px-3 text-xs font-medium text-gray-600 hover:bg-red-50 hover:text-red-600 hover:border-red-200"
+          class="flex h-9 items-center gap-1.5 rounded-md border border-gray-200 bg-white px-3 text-xs font-medium text-gray-600 hover:bg-red-50 hover:text-red-600 hover:border-red-200 disabled:opacity-40 disabled:cursor-not-allowed"
+          :disabled="isRoleDisabled"
+          :title="isRoleDisabled ? '所属插件已禁用, 请先启用' : ''"
           @click="handleReset"
         >
           <Trash2 class="h-3.5 w-3.5" />
           重置
         </button>
         <button
-          class="flex h-9 items-center gap-1.5 rounded-md bg-blue-600 px-4 text-xs font-medium text-white hover:bg-blue-700 disabled:opacity-50"
-          :disabled="saving"
+          class="flex h-9 items-center gap-1.5 rounded-md bg-blue-600 px-4 text-xs font-medium text-white hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+          :disabled="saving || isRoleDisabled"
+          :title="isRoleDisabled ? '所属插件已禁用, 请先启用' : ''"
           @click="handleSave"
         >
           <Loader2 v-if="saving" class="h-3.5 w-3.5 animate-spin" />
@@ -40,6 +45,24 @@
           保存
         </button>
       </div>
+    </div>
+
+    <!-- 插件禁用警示 banner -->
+    <div
+      v-if="currentRole && isRoleDisabled"
+      class="flex items-start gap-2 border-b border-amber-200 bg-amber-50 px-5 py-3"
+    >
+      <AlertTriangle class="mt-0.5 h-4 w-4 flex-shrink-0 text-amber-600" />
+      <div class="flex-1 text-xs text-amber-900">
+        <b>"{{ currentRole.roleName }}"</b> 所属插件 <b>{{ currentRole.industry }}</b> 已禁用.
+        可以查看配置, 但<b>无法编辑或保存</b>. 请先在插件平台启用 {{ currentRole.industry }} 插件.
+      </div>
+      <button
+        class="flex-shrink-0 rounded-md border border-amber-300 bg-white px-2.5 py-1 text-[11px] font-medium text-amber-700 hover:bg-amber-100"
+        @click="$emit('enable-industry', currentRole.industry)"
+      >
+        一键启用
+      </button>
     </div>
 
     <div v-if="!currentRole" class="flex flex-1 items-center justify-center">
@@ -107,6 +130,7 @@ import {
   Trash2,
   Sparkles,
   Settings2,
+  AlertTriangle,
 } from 'lucide-vue-next'
 import SceneTemplatePanel from './SceneTemplatePanel.vue'
 import AdvancedModuleEditor, { type ModuleGroupItem } from './AdvancedModuleEditor.vue'
@@ -132,7 +156,10 @@ const emit = defineEmits<{
   'config-loaded': [modulePermissions: ModulePermission[], decision: SceneDecision]
   'config-changed': [modulePermissions: ModulePermission[], decision: SceneDecision]
   'saved': []
+  'enable-industry': [industry: string]
 }>()
+
+const isRoleDisabled = computed(() => props.currentRole?.pluginEnabled === false)
 
 const loading = ref(false)
 const saving = ref(false)

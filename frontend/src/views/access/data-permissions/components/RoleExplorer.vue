@@ -209,10 +209,8 @@ function toggleGroup(industry: string) {
 }
 
 function selectRole(role: RoleResponse) {
-  if (role.pluginEnabled === false) {
-    ElMessage.warning('该角色所属插件已禁用')
-    return
-  }
+  // 允许选中 pluginEnabled=false 的角色 — 管理员需要查看被禁角色配置.
+  // 主区 PermissionConfigurator 会顶部显 "插件已禁用" banner + 禁用保存按钮.
   emit('update:modelValue', role.id)
 }
 

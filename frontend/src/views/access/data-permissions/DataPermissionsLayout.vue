@@ -50,6 +50,7 @@
           @config-loaded="onConfigLoaded"
           @config-changed="onConfigChanged"
           @saved="onSaved"
+          @enable-industry="onEnableIndustry"
         />
       </div>
 
@@ -136,7 +137,8 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, watch, shallowRef } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { ElMessage } from 'element-plus'
+import { ElMessage, ElMessageBox } from 'element-plus'
+import { pluginPlatformApi } from '@/api/pluginPlatform'
 import { Shield, Library, Columns3, X, Loader2 } from 'lucide-vue-next'
 import RoleExplorer from './components/RoleExplorer.vue'
 import PermissionConfigurator from './components/PermissionConfigurator.vue'
@@ -262,6 +264,21 @@ function onConfigChanged(mps: ModulePermission[], d: SceneDecision) {
 
 function onSaved() {
   // no-op MVP
+}
+
+async function onEnableIndustry(industry: string) {
+  if (!industry || industry === 'CORE' || industry === 'CUSTOM') return
+  try {
+    await ElMessageBox.confirm(
+      `启用 ${industry} 插件? 其所有角色/权限/类型等贡献将级联恢复.`,
+      '确认', { type: 'info' }
+    )
+    await pluginPlatformApi.enable(industry)
+    ElMessage.success(`${industry} 已启用`)
+    await loadRoles()  // 刷新 roles pluginEnabled 状态
+  } catch (e: any) {
+    if (e !== 'cancel') ElMessage.error('启用失败: ' + (e?.message || e))
+  }
 }
 
 function onApplyTemplate(tpl: RoleTemplate) {
