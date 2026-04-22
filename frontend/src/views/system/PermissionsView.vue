@@ -1,182 +1,214 @@
 <template>
-  <div class="flex h-full flex-col bg-gray-50">
+  <div class="permissions-redesign">
     <!-- Header -->
-    <div class="flex items-center justify-between border-b border-gray-200 bg-white px-6 py-4">
+    <header class="ph-header">
       <div>
-        <h1 class="text-lg font-semibold text-gray-900">权限目录</h1>
-        <p class="mt-0.5 text-sm text-gray-500">系统所有权限点一览（由代码注解自动管理，不可手动编辑）</p>
+        <h1 class="ph-title">权限目录</h1>
+        <p class="ph-subtitle">按行业插件分组展示所有权限点 (代码注解自动声明, 管理员只读)</p>
       </div>
-      <button
-        @click="runSyncCheck"
-        :disabled="syncing"
-        class="inline-flex h-9 items-center gap-1.5 rounded-lg border border-gray-300 bg-white px-4 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50"
-      >
-        <Loader2 v-if="syncing" class="h-4 w-4 animate-spin" />
-        <RefreshCw v-else class="h-4 w-4" />
-        {{ syncing ? '检查中...' : '从代码同步检查' }}
-      </button>
-    </div>
+      <div class="ph-actions">
+        <button class="ph-btn" @click="runSyncCheck" :disabled="syncing">
+          <Loader2 v-if="syncing" class="spinning" :size="14" />
+          <RefreshCw v-else :size="14" />
+          {{ syncing ? '检查中...' : '同步检查' }}
+        </button>
+      </div>
+    </header>
 
     <!-- Stats bar -->
-    <div class="flex items-center gap-1 border-b border-gray-100 bg-white px-6 py-2.5 text-sm text-gray-600">
-      <span>权限总数 <strong class="text-gray-900">{{ totalCount }}</strong></span>
-      <span class="mx-2 text-gray-300">|</span>
-      <span>模块 <strong class="text-gray-900">{{ moduleCount }}</strong></span>
-      <span class="mx-2 text-gray-300">|</span>
-      <span>菜单 <strong class="text-gray-900">{{ menuCount }}</strong></span>
-      <span class="mx-2 text-gray-300">|</span>
-      <span>API/按钮 <strong class="text-gray-900">{{ apiCount }}</strong></span>
+    <div class="ph-stats">
+      <span class="ph-stat-total">总数 <b>{{ totalCount }}</b></span>
+      <span class="ph-sep">·</span>
+      <template v-for="(g, i) in industryGroups" :key="g.industryCode">
+        <span v-if="i > 0" class="ph-sep">·</span>
+        <span :class="['ph-stat', { 'ph-stat-disabled': !g.pluginEnabled }]">
+          <span class="ph-stat-dot" :style="{ background: industryColor(g.industryCode) }"></span>
+          {{ g.industryLabel }} <b>{{ g.total }}</b>
+          <AlertTriangle v-if="!g.pluginEnabled" :size="11" class="ph-stat-warn" />
+        </span>
+      </template>
     </div>
 
-    <!-- Search -->
-    <div class="border-b border-gray-100 bg-white px-6 py-3">
-      <div class="relative max-w-md">
-        <Search class="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+    <!-- Filters -->
+    <div class="ph-filters">
+      <div class="ph-search-wrap">
+        <Search :size="14" class="ph-search-icon" />
         <input
           v-model="searchQuery"
-          type="text"
-          placeholder="搜索权限代码或名称..."
-          class="h-9 w-full rounded-lg border border-gray-300 pl-9 pr-3 text-sm text-gray-900 placeholder-gray-400 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+          class="ph-search"
+          placeholder="搜索权限码或名称..."
         />
       </div>
+      <select v-model="typeFilter" class="ph-select">
+        <option value="">全部类型</option>
+        <option value="MENU">菜单</option>
+        <option value="OPERATION">按钮</option>
+        <option value="API">API</option>
+        <option value="DATA">数据</option>
+      </select>
+      <label class="ph-checkbox">
+        <input type="checkbox" v-model="showOnlyDisabled" />
+        <span>仅显示禁用</span>
+      </label>
     </div>
 
     <!-- Loading -->
-    <div v-if="loading" class="flex flex-1 items-center justify-center">
-      <Loader2 class="h-8 w-8 animate-spin text-blue-600" />
+    <div v-if="loading" class="ph-loading">
+      <Loader2 class="spinning" :size="28" />
     </div>
 
-    <!-- Module cards -->
-    <div v-else class="flex-1 space-y-4 overflow-y-auto px-6 py-5">
+    <!-- Industry groups -->
+    <div v-else class="ph-body">
       <div
-        v-for="group in filteredGroups"
-        :key="group.module"
-        class="overflow-hidden rounded-xl border border-gray-200 bg-white"
+        v-for="ig in filteredIndustryGroups"
+        :key="ig.industryCode"
+        :class="['ig-card', { 'ig-disabled': !ig.pluginEnabled }]"
       >
-        <!-- Module header -->
-        <div
-          class="flex cursor-pointer select-none items-center justify-between border-b border-gray-100 px-5 py-3 hover:bg-gray-50"
-          @click="toggle(group.module)"
-        >
-          <div class="flex items-center gap-2">
-            <span class="text-sm font-semibold text-gray-900">{{ group.label }}</span>
-            <span class="text-xs text-gray-400">({{ group.module }})</span>
-            <span class="rounded-full bg-gray-100 px-2 py-0.5 text-[11px] text-gray-500">{{ group.permissions.length }}个权限</span>
+        <!-- Industry header -->
+        <div class="ig-head" :style="{ borderLeftColor: industryColor(ig.industryCode) }">
+          <div class="ig-head-main">
+            <span
+              class="ig-icon"
+              :style="{
+                background: industryColor(ig.industryCode) + '18',
+                color: industryColor(ig.industryCode)
+              }"
+            >
+              <component :is="industryIcon(ig.industryCode)" :size="16" />
+            </span>
+            <div class="ig-head-text">
+              <h2 class="ig-title">{{ ig.industryLabel }}</h2>
+              <p class="ig-subtitle">
+                <code class="ig-code">{{ ig.industryCode }}</code>
+                <span class="ig-dot">·</span>
+                <b>{{ ig.total }}</b> 个权限
+                <span class="ig-dot">·</span>
+                <b>{{ ig.modules.length }}</b> 模块
+              </p>
+            </div>
           </div>
-          <ChevronDown
-            class="h-4 w-4 text-gray-400 transition-transform duration-200"
-            :class="{ '-rotate-180': expanded[group.module] }"
-          />
+          <div class="ig-head-status">
+            <span v-if="ig.pluginEnabled" class="ig-tag ig-tag-ok">
+              <CheckCircle :size="11" /> 启用
+            </span>
+            <span v-else class="ig-tag ig-tag-bad">
+              <AlertTriangle :size="11" /> 插件已禁用
+            </span>
+            <button
+              v-if="!ig.pluginEnabled && ig.industryCode !== 'CUSTOM' && ig.industryCode !== 'CORE'"
+              class="ig-btn-enable"
+              @click="onEnablePlugin(ig.industryCode)"
+              :disabled="enabling === ig.industryCode"
+            >
+              <Loader2 v-if="enabling === ig.industryCode" class="spinning" :size="12" />
+              {{ enabling === ig.industryCode ? '启用中...' : '一键启用' }}
+            </button>
+          </div>
         </div>
 
-        <!-- Permission list (collapsible) -->
-        <div v-if="expanded[group.module]" class="divide-y divide-gray-50">
-          <div
-            v-for="perm in group.permissions"
-            :key="perm.permissionCode"
-            :class="[
-              'flex items-center gap-3 px-5 py-2 hover:bg-gray-50/50',
-              (perm as any).pluginEnabled === false ? 'row-disabled-by-plugin' : ''
-            ]"
-            :title="(perm as any).pluginEnabled === false ? '所属插件已禁用 — 此权限级联软失效' : undefined"
-          >
-            <!-- Code -->
-            <span class="w-72 shrink-0 truncate font-mono text-xs text-gray-500">{{ perm.permissionCode }}</span>
-            <!-- Name -->
-            <span class="flex-1 text-sm text-gray-900">{{ perm.permissionName || '-' }}</span>
-            <!-- Plugin-disabled badge -->
-            <span
-              v-if="(perm as any).pluginEnabled === false"
-              class="disabled-by-plugin-badge shrink-0"
-              title="所属插件已禁用"
-            >插件禁用</span>
-            <!-- Type badge -->
-            <span
-              class="shrink-0 rounded px-2 py-0.5 text-[10px] font-medium"
-              :class="typeClass(perm.type)"
-            >{{ typeName(perm.type) }}</span>
-            <!-- Status -->
-            <span
-              class="shrink-0 text-xs"
-              :class="isEnabled(perm) ? 'text-emerald-500' : 'text-gray-300'"
-            >{{ isEnabled(perm) ? '&#10003;' : '&#10005;' }}</span>
+        <!-- Disabled banner -->
+        <div v-if="!ig.pluginEnabled" class="ig-alert">
+          <AlertTriangle :size="13" />
+          <span>
+            下列 <b>{{ ig.total }}</b> 条权限级联失效, 绑定它们的用户实际已无权限. 启用插件后自动恢复.
+          </span>
+        </div>
+
+        <!-- Modules -->
+        <div class="ig-modules">
+          <div v-for="mg in ig.modules" :key="mg.moduleCode" class="mg-card">
+            <div
+              class="mg-head"
+              @click="toggle(ig.industryCode + ':' + mg.moduleCode)"
+            >
+              <ChevronDown
+                :size="13"
+                class="mg-chevron"
+                :class="{ 'mg-chevron-open': expanded[ig.industryCode + ':' + mg.moduleCode] }"
+              />
+              <span class="mg-name">{{ mg.moduleLabel }}</span>
+              <code class="mg-modcode">{{ mg.moduleCode }}</code>
+              <span class="mg-count">{{ mg.permissions.length }}</span>
+            </div>
+            <div
+              v-if="expanded[ig.industryCode + ':' + mg.moduleCode]"
+              class="mg-perms"
+            >
+              <div
+                v-for="p in mg.permissions"
+                :key="p.permissionCode"
+                :class="['p-row', { 'p-disabled': (p as any).pluginEnabled === false }]"
+                :title="(p as any).pluginEnabled === false ? '所属插件已禁用 — 级联软失效' : undefined"
+              >
+                <code class="p-code">{{ p.permissionCode }}</code>
+                <span class="p-name">{{ p.permissionName || '-' }}</span>
+                <span v-if="(p as any).pluginEnabled === false" class="p-badge-disabled">
+                  插件禁用
+                </span>
+                <span class="p-type" :class="'p-type-' + (p.type || '').toLowerCase()">
+                  {{ typeName(p.type) }}
+                </span>
+              </div>
+            </div>
           </div>
         </div>
       </div>
 
-      <!-- Empty state -->
-      <div v-if="filteredGroups.length === 0 && !loading" class="py-16 text-center">
-        <Lock class="mx-auto h-12 w-12 text-gray-300" />
-        <div class="mt-2 text-sm text-gray-500">
-          {{ searchQuery ? '没有匹配的权限' : '暂无权限数据' }}
-        </div>
+      <!-- Empty -->
+      <div v-if="!filteredIndustryGroups.length" class="ph-empty">
+        <Lock :size="32" />
+        <p>{{ hasFilter ? '无匹配权限' : '暂无权限数据' }}</p>
       </div>
     </div>
 
-    <!-- Sync check dialog -->
+    <!-- Sync check dialog (retained from original) -->
     <Teleport to="body">
       <Transition name="modal">
-        <div v-if="syncDialogVisible" class="fixed inset-0 z-50 flex items-center justify-center">
-          <div class="fixed inset-0 bg-black/50" @click="syncDialogVisible = false"></div>
-          <div class="relative w-full max-w-lg rounded-xl bg-white shadow-xl">
-            <div class="flex items-center justify-between border-b border-gray-200 px-6 py-4">
-              <h3 class="text-base font-semibold text-gray-900">权限同步检查结果</h3>
-              <button @click="syncDialogVisible = false" class="rounded p-1 hover:bg-gray-100">
-                <X class="h-5 w-5 text-gray-500" />
+        <div v-if="syncDialogVisible" class="sync-modal">
+          <div class="sync-backdrop" @click="syncDialogVisible = false"></div>
+          <div class="sync-dialog">
+            <div class="sync-head">
+              <h3>权限同步检查结果</h3>
+              <button class="sync-close" @click="syncDialogVisible = false">
+                <X :size="16" />
               </button>
             </div>
-            <div v-if="syncResult" class="max-h-[60vh] overflow-y-auto px-6 py-4">
-              <!-- Summary -->
-              <div class="space-y-2 text-sm">
-                <div class="flex items-center gap-2">
-                  <span class="text-emerald-500">&#10003;</span>
-                  <span class="text-gray-700">代码中的权限注解: <strong>{{ syncResult.codeAnnotationCount }}</strong> 个</span>
+            <div v-if="syncResult" class="sync-body">
+              <div class="sync-summary">
+                <div class="sync-line">
+                  <CheckCircle :size="14" class="sync-ok" />
+                  <span>代码中的权限注解: <b>{{ syncResult.codeAnnotationCount }}</b> 个</span>
                 </div>
-                <div class="flex items-center gap-2">
-                  <span class="text-emerald-500">&#10003;</span>
-                  <span class="text-gray-700">数据库权限: <strong>{{ syncResult.dbPermissionCount }}</strong> 条</span>
+                <div class="sync-line">
+                  <CheckCircle :size="14" class="sync-ok" />
+                  <span>数据库权限: <b>{{ syncResult.dbPermissionCount }}</b> 条</span>
                 </div>
               </div>
-
-              <!-- Missing in DB -->
-              <div v-if="syncResult.missingInDbCount > 0" class="mt-4">
-                <div class="flex items-center gap-1.5 text-sm font-medium text-amber-600">
-                  <AlertTriangle class="h-4 w-4" />
+              <div v-if="syncResult.missingInDbCount > 0" class="sync-section">
+                <div class="sync-section-title sync-warn">
+                  <AlertTriangle :size="14" />
                   代码中有但数据库缺失: {{ syncResult.missingInDbCount }} 条
                 </div>
-                <div class="mt-2 rounded-lg bg-amber-50 p-3">
-                  <div
-                    v-for="code in syncResult.missingInDb"
-                    :key="code"
-                    class="py-0.5 font-mono text-xs text-amber-800"
-                  >{{ code }}</div>
+                <div class="sync-codes sync-codes-warn">
+                  <div v-for="code in syncResult.missingInDb" :key="code">{{ code }}</div>
                 </div>
               </div>
-              <div v-else class="mt-4 flex items-center gap-1.5 text-sm text-emerald-600">
-                <CheckCircle class="h-4 w-4" />
+              <div v-else class="sync-line sync-ok" style="margin-top: 16px">
+                <CheckCircle :size="14" />
                 代码权限与数据库完全同步
               </div>
-
-              <!-- Potentially obsolete in DB -->
-              <div v-if="syncResult.potentiallyObsoleteCount > 0" class="mt-4">
-                <div class="flex items-center gap-1.5 text-sm font-medium text-gray-500">
-                  <Info class="h-4 w-4" />
+              <div v-if="syncResult.potentiallyObsoleteCount > 0" class="sync-section">
+                <div class="sync-section-title sync-info">
+                  <Info :size="14" />
                   数据库中可能过时的权限: {{ syncResult.potentiallyObsoleteCount }} 条
                 </div>
-                <div class="mt-2 max-h-40 overflow-y-auto rounded-lg bg-gray-50 p-3">
-                  <div
-                    v-for="code in syncResult.potentiallyObsoleteInDb"
-                    :key="code"
-                    class="py-0.5 font-mono text-xs text-gray-600"
-                  >{{ code }}</div>
+                <div class="sync-codes sync-codes-info">
+                  <div v-for="code in syncResult.potentiallyObsoleteInDb" :key="code">{{ code }}</div>
                 </div>
               </div>
             </div>
-            <div class="flex justify-end border-t border-gray-200 px-6 py-3">
-              <button
-                @click="syncDialogVisible = false"
-                class="h-9 rounded-lg border border-gray-300 px-4 text-sm font-medium text-gray-700 hover:bg-gray-50"
-              >关闭</button>
+            <div class="sync-foot">
+              <button class="ph-btn" @click="syncDialogVisible = false">关闭</button>
             </div>
           </div>
         </div>
@@ -187,7 +219,7 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted, reactive } from 'vue'
-import { ElMessage } from 'element-plus'
+import { ElMessage, ElMessageBox } from 'element-plus'
 import {
   Search,
   Lock,
@@ -197,12 +229,18 @@ import {
   X,
   AlertTriangle,
   CheckCircle,
-  Info
+  Info,
+  Shield,
+  GraduationCap,
+  HeartPulse,
+  Users,
+  Settings,
 } from 'lucide-vue-next'
 import { getPermissions, checkPermissionSync } from '@/api/access'
+import { pluginPlatformApi } from '@/api/pluginPlatform'
 import type { Permission } from '@/types'
 
-// ---- Module label mapping ----
+// ---- Module label mapping (二级分组标签) ----
 const MODULE_LABELS: Record<string, string> = {
   academic: '学术管理',
   analytics: '数据分析',
@@ -212,44 +250,77 @@ const MODULE_LABELS: Record<string, string> = {
   enrollment: '招生管理',
   insp: '检查平台(V7)',
   inspection: '检查通用',
+  patient: '患者管理',
   place: '场所管理',
+  plugin: '插件管理',
+  'plugin-platform': '插件平台',
+  role: '角色管理',
   schedule: '排班管理',
   student: '学生管理',
   system: '系统管理',
   task: '任务管理',
   teacher: '教师档案',
   teaching: '教学管理',
+  tenant: '租户管理',
+  user: '用户管理',
+  ward: '病房管理',
+}
+
+// ---- Industry labels (一级分组) ----
+const INDUSTRY_LABELS: Record<string, string> = {
+  CORE: '通用核心',
+  EDU: '教育行业',
+  HEALTH: '医疗行业',
+  CARE: '养老行业',
+  CUSTOM: '自定义',
+}
+
+const INDUSTRY_ORDER = ['CORE', 'EDU', 'HEALTH', 'CARE', 'CUSTOM']
+
+function industryColor(code: string): string {
+  const map: Record<string, string> = {
+    CORE: '#2563eb',
+    EDU: '#d97706',
+    HEALTH: '#be185d',
+    CARE: '#059669',
+    CUSTOM: '#6b7280',
+  }
+  return map[code] || '#6b7280'
+}
+
+function industryIcon(code: string) {
+  const map: Record<string, any> = {
+    CORE: Shield,
+    EDU: GraduationCap,
+    HEALTH: HeartPulse,
+    CARE: Users,
+    CUSTOM: Settings,
+  }
+  return map[code] || Settings
 }
 
 // ---- Type display helpers ----
 type PermType = 'MENU' | 'OPERATION' | 'API' | 'DATA' | 'BUTTON' | string
 
 function typeName(type: PermType): string {
-  const map: Record<string, string> = { MENU: '菜单', OPERATION: '按钮', BUTTON: '按钮', API: 'API', DATA: '数据' }
-  return map[type] || type || '未知'
-}
-
-function typeClass(type: PermType): string {
   const map: Record<string, string> = {
-    MENU: 'bg-blue-50 text-blue-600',
-    OPERATION: 'bg-amber-50 text-amber-600',
-    BUTTON: 'bg-amber-50 text-amber-600',
-    API: 'bg-emerald-50 text-emerald-600',
-    DATA: 'bg-purple-50 text-purple-600',
+    MENU: '菜单',
+    OPERATION: '按钮',
+    BUTTON: '按钮',
+    API: 'API',
+    DATA: '数据',
   }
-  return map[type] || 'bg-gray-100 text-gray-500'
-}
-
-// ---- Enabled check (backend returns isEnabled, frontend type has enabled) ----
-function isEnabled(perm: any): boolean {
-  return perm.isEnabled ?? perm.enabled ?? true
+  return map[type] || type || '未知'
 }
 
 // ---- State ----
 const loading = ref(false)
 const searchQuery = ref('')
+const typeFilter = ref('')
+const showOnlyDisabled = ref(false)
 const allPermissions = ref<Permission[]>([])
 const expanded = reactive<Record<string, boolean>>({})
+const enabling = ref<string>('')
 
 // ---- Sync check state ----
 const syncing = ref(false)
@@ -263,16 +334,24 @@ const syncResult = ref<{
   potentiallyObsoleteCount: number
 } | null>(null)
 
-// ---- Grouping logic ----
-interface PermissionGroup {
-  module: string
-  label: string
+// ---- Grouping types ----
+interface ModuleGroup {
+  moduleCode: string
+  moduleLabel: string
   permissions: Permission[]
+}
+
+interface IndustryGroup {
+  industryCode: string
+  industryLabel: string
+  pluginEnabled: boolean
+  total: number
+  modules: ModuleGroup[]
 }
 
 function flattenTree(nodes: Permission[]): Permission[] {
   const result: Permission[] = []
-  for (const node of nodes) {
+  for (const node of nodes || []) {
     result.push(node)
     if (node.children?.length) {
       result.push(...flattenTree(node.children))
@@ -281,80 +360,110 @@ function flattenTree(nodes: Permission[]): Permission[] {
   return result
 }
 
-const allGroups = computed<PermissionGroup[]>(() => {
-  // Flatten tree into a flat list
-  const flat = flattenTree(allPermissions.value)
-
-  // Group by first segment of permission_code
-  const groupMap = new Map<string, Permission[]>()
-  for (const perm of flat) {
-    const module = perm.permissionCode?.split(':')[0] || 'other'
-    if (!groupMap.has(module)) groupMap.set(module, [])
-    groupMap.get(module)!.push(perm)
+function groupBy<T>(arr: T[], keyFn: (item: T) => string): Record<string, T[]> {
+  const out: Record<string, T[]> = {}
+  for (const item of arr) {
+    const k = keyFn(item)
+    if (!out[k]) out[k] = []
+    out[k].push(item)
   }
+  return out
+}
 
-  // Sort groups by label
-  const groups: PermissionGroup[] = []
-  for (const [module, perms] of groupMap) {
-    groups.push({
-      module,
-      label: MODULE_LABELS[module] || module,
-      permissions: perms.sort((a, b) => a.permissionCode.localeCompare(b.permissionCode)),
+// ---- Industry groups (一级分组: 基于全量数据, 不含过滤) ----
+const industryGroups = computed<IndustryGroup[]>(() => {
+  const flat = flattenTree(allPermissions.value)
+  const byIndustry = groupBy(flat, (p: any) => p.industry || 'CUSTOM')
+  const result: IndustryGroup[] = []
+
+  for (const [industry, perms] of Object.entries(byIndustry)) {
+    const byModule = groupBy(
+      perms,
+      p => p.permissionCode?.split(':')[0] || 'other'
+    )
+    // 任一条 pluginEnabled=false 则视为整行业插件禁用
+    const anyDisabled = perms.some((p: any) => p.pluginEnabled === false)
+    const modules: ModuleGroup[] = Object.entries(byModule)
+      .map(([m, ps]) => ({
+        moduleCode: m,
+        moduleLabel: MODULE_LABELS[m] || m,
+        permissions: ps.sort((a, b) =>
+          a.permissionCode.localeCompare(b.permissionCode)
+        ),
+      }))
+      .sort((a, b) => a.moduleLabel.localeCompare(b.moduleLabel, 'zh-CN'))
+
+    result.push({
+      industryCode: industry,
+      industryLabel: INDUSTRY_LABELS[industry] || industry,
+      pluginEnabled: !anyDisabled,
+      total: perms.length,
+      modules,
     })
   }
-  groups.sort((a, b) => a.label.localeCompare(b.label, 'zh-CN'))
-  return groups
+
+  result.sort((a, b) => {
+    const ia = INDUSTRY_ORDER.indexOf(a.industryCode)
+    const ib = INDUSTRY_ORDER.indexOf(b.industryCode)
+    const sa = ia === -1 ? 99 : ia
+    const sb = ib === -1 ? 99 : ib
+    return sa - sb
+  })
+  return result
 })
 
-const filteredGroups = computed<PermissionGroup[]>(() => {
-  const q = searchQuery.value.toLowerCase().trim()
-  if (!q) return allGroups.value
+const hasFilter = computed(
+  () => !!searchQuery.value || !!typeFilter.value || showOnlyDisabled.value
+)
 
-  return allGroups.value
-    .map(group => ({
-      ...group,
-      permissions: group.permissions.filter(
-        p =>
-          p.permissionCode.toLowerCase().includes(q) ||
-          (p.permissionName && p.permissionName.toLowerCase().includes(q))
-      ),
-    }))
-    .filter(group => group.permissions.length > 0)
+// ---- Filtered industry groups (应用 search / type / disabled 过滤) ----
+const filteredIndustryGroups = computed<IndustryGroup[]>(() => {
+  const q = searchQuery.value.toLowerCase().trim()
+  const t = typeFilter.value
+  const onlyDisabled = showOnlyDisabled.value
+
+  return industryGroups.value
+    .map(ig => {
+      const modules = ig.modules
+        .map(mg => ({
+          ...mg,
+          permissions: mg.permissions.filter(p => {
+            if (onlyDisabled && (p as any).pluginEnabled !== false) return false
+            if (t && p.type !== t) return false
+            if (q) {
+              const code = (p.permissionCode || '').toLowerCase()
+              const name = (p.permissionName || '').toLowerCase()
+              if (!code.includes(q) && !name.includes(q)) return false
+            }
+            return true
+          }),
+        }))
+        .filter(mg => mg.permissions.length > 0)
+      return { ...ig, modules }
+    })
+    .filter(ig => ig.modules.length > 0)
 })
 
 // ---- Stats ----
-const totalCount = computed(() => {
-  return allGroups.value.reduce((sum, g) => sum + g.permissions.length, 0)
-})
-const moduleCount = computed(() => allGroups.value.length)
-const menuCount = computed(() => {
-  return allGroups.value.reduce(
-    (sum, g) => sum + g.permissions.filter(p => p.type === 'MENU').length,
-    0
-  )
-})
-const apiCount = computed(() => {
-  return allGroups.value.reduce(
-    (sum, g) => sum + g.permissions.filter(p => p.type !== 'MENU').length,
-    0
-  )
-})
+const totalCount = computed(() =>
+  industryGroups.value.reduce((s, g) => s + g.total, 0)
+)
 
 // ---- Actions ----
-function toggle(module: string) {
-  expanded[module] = !expanded[module]
+function toggle(key: string) {
+  expanded[key] = !expanded[key]
 }
 
 async function loadPermissions() {
   loading.value = true
   try {
-    // 管理员视角: 包含所属插件被禁的权限 (pluginEnabled=false), 前端灰显
     const data = await getPermissions({ includeDisabled: true } as any)
     allPermissions.value = data || []
-    // Expand all groups by default
-    for (const group of allGroups.value) {
-      if (!(group.module in expanded)) {
-        expanded[group.module] = true
+    // 默认展开每个行业的第一个 module
+    for (const ig of industryGroups.value) {
+      for (const mg of ig.modules) {
+        const k = ig.industryCode + ':' + mg.moduleCode
+        if (!(k in expanded)) expanded[k] = true
       }
     }
   } catch (error) {
@@ -377,27 +486,438 @@ async function runSyncCheck() {
   }
 }
 
+async function onEnablePlugin(industryCode: string) {
+  try {
+    await ElMessageBox.confirm(
+      `确认启用 ${industryCode} 插件? 将级联恢复所有被禁的 ${industryCode} 贡献项 (角色/权限/类型/关系等).`,
+      '确认启用',
+      { type: 'info', confirmButtonText: '启用', cancelButtonText: '取消' }
+    )
+    enabling.value = industryCode
+    await pluginPlatformApi.enable(industryCode)
+    ElMessage.success(`${industryCode} 插件已启用`)
+    await loadPermissions()
+  } catch (e: any) {
+    if (e !== 'cancel' && e?.message !== 'cancel') {
+      ElMessage.error('启用失败: ' + (e?.message || e))
+    }
+  } finally {
+    enabling.value = ''
+  }
+}
+
 onMounted(() => {
   loadPermissions()
 })
 </script>
 
 <style scoped>
-.modal-enter-active,
-.modal-leave-active {
-  transition: opacity 0.2s ease;
-}
-.modal-enter-from,
-.modal-leave-to {
-  opacity: 0;
+.permissions-redesign {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  background: #f9fafb;
+  overflow: hidden;
 }
 
-/* 插件级联禁用的权限条目: 灰显 */
-.row-disabled-by-plugin { opacity: 0.55; background-color: #fafaf9; }
-.row-disabled-by-plugin:hover { background-color: #fef3c7 !important; opacity: 0.8; }
+/* ========== Header ========== */
+.ph-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 24px;
+  background: #fff;
+  border-bottom: 1px solid #e5e7eb;
+  flex-shrink: 0;
+}
+.ph-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: #111827;
+  margin: 0;
+}
+.ph-subtitle {
+  margin: 2px 0 0;
+  font-size: 13px;
+  color: #6b7280;
+}
+.ph-actions {
+  display: flex;
+  gap: 8px;
+}
+.ph-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 34px;
+  padding: 0 14px;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  background: #fff;
+  color: #374151;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.ph-btn:hover:not(:disabled) {
+  background: #f3f4f6;
+}
+.ph-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+.spinning {
+  animation: spin 1s linear infinite;
+}
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
 
-.disabled-by-plugin-badge {
+/* ========== Stats bar ========== */
+.ph-stats {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4px 10px;
+  padding: 10px 24px;
+  background: #fff;
+  border-bottom: 1px solid #f3f4f6;
+  font-size: 13px;
+  color: #6b7280;
+}
+.ph-stat-total b { color: #111827; font-weight: 600; }
+.ph-sep { color: #d1d5db; }
+.ph-stat {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+.ph-stat b {
+  color: #111827;
+  font-weight: 600;
+}
+.ph-stat-disabled {
+  color: #9ca3af;
+}
+.ph-stat-disabled b {
+  color: #6b7280;
+}
+.ph-stat-dot {
   display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+.ph-stat-warn {
+  color: #d97706;
+  margin-left: 2px;
+}
+
+/* ========== Filters ========== */
+.ph-filters {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 24px;
+  background: #fff;
+  border-bottom: 1px solid #f3f4f6;
+}
+.ph-search-wrap {
+  position: relative;
+  flex: 1;
+  max-width: 360px;
+}
+.ph-search-icon {
+  position: absolute;
+  left: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #9ca3af;
+  pointer-events: none;
+}
+.ph-search {
+  width: 100%;
+  height: 34px;
+  padding: 0 12px 0 32px;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  font-size: 13px;
+  color: #111827;
+  outline: none;
+  transition: border-color 0.15s;
+}
+.ph-search:focus {
+  border-color: #2563eb;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
+}
+.ph-select {
+  height: 34px;
+  padding: 0 28px 0 10px;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  font-size: 13px;
+  color: #374151;
+  background: #fff;
+  cursor: pointer;
+  outline: none;
+}
+.ph-checkbox {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  color: #374151;
+  cursor: pointer;
+  user-select: none;
+}
+.ph-checkbox input {
+  width: 14px;
+  height: 14px;
+  cursor: pointer;
+  accent-color: #2563eb;
+}
+
+/* ========== Body ========== */
+.ph-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 16px 24px 32px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.ph-loading {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #2563eb;
+}
+
+/* ========== Industry card ========== */
+.ig-card {
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.02);
+  transition: all 0.2s;
+}
+.ig-card.ig-disabled {
+  background: #fffbeb;
+  border-color: #fcd34d;
+}
+
+/* Industry header */
+.ig-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 18px;
+  border-left: 4px solid transparent;
+  background: transparent;
+}
+.ig-head-main {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+.ig-icon {
+  width: 32px;
+  height: 32px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  flex-shrink: 0;
+}
+.ig-head-text { min-width: 0; }
+.ig-title {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 600;
+  color: #111827;
+}
+.ig-subtitle {
+  margin: 2px 0 0;
+  font-size: 12px;
+  color: #6b7280;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+.ig-subtitle b { color: #111827; font-weight: 600; }
+.ig-code {
+  font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+  background: #f3f4f6;
+  padding: 1px 6px;
+  border-radius: 4px;
+  font-size: 11px;
+  color: #374151;
+}
+.ig-dot { color: #d1d5db; }
+
+.ig-head-status {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+.ig-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 2px 8px;
+  border-radius: 10px;
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1.5;
+}
+.ig-tag-ok {
+  background: #d1fae5;
+  color: #065f46;
+  border: 1px solid #a7f3d0;
+}
+.ig-tag-bad {
+  background: #fef3c7;
+  color: #92400e;
+  border: 1px solid #fcd34d;
+}
+.ig-btn-enable {
+  height: 26px;
+  padding: 0 12px;
+  border: 1px solid #d97706;
+  background: #d97706;
+  color: #fff;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  transition: background 0.15s;
+}
+.ig-btn-enable:hover:not(:disabled) {
+  background: #b45309;
+  border-color: #b45309;
+}
+.ig-btn-enable:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* Disabled banner */
+.ig-alert {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 18px;
+  background: #fef3c7;
+  color: #92400e;
+  font-size: 12px;
+  border-top: 1px solid #fde68a;
+  border-bottom: 1px solid #fde68a;
+}
+.ig-alert b { font-weight: 600; }
+
+/* Modules */
+.ig-modules {
+  padding: 12px 18px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.mg-card {
+  border: 1px solid #f3f4f6;
+  border-radius: 8px;
+  overflow: hidden;
+  background: #fafafa;
+}
+.mg-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  cursor: pointer;
+  user-select: none;
+  background: #fafafa;
+  transition: background 0.15s;
+}
+.mg-head:hover {
+  background: #f3f4f6;
+}
+.mg-chevron {
+  color: #9ca3af;
+  transition: transform 0.2s;
+}
+.mg-chevron-open {
+  transform: rotate(180deg);
+  color: #2563eb;
+}
+.mg-name {
+  font-size: 13px;
+  font-weight: 500;
+  color: #111827;
+}
+.mg-modcode {
+  font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+  font-size: 11px;
+  color: #9ca3af;
+}
+.mg-count {
+  margin-left: auto;
+  padding: 1px 8px;
+  border-radius: 10px;
+  background: #e5e7eb;
+  color: #4b5563;
+  font-size: 11px;
+  font-weight: 500;
+}
+
+/* Permission rows */
+.mg-perms {
+  background: #fff;
+  border-top: 1px solid #f3f4f6;
+}
+.p-row {
+  display: grid;
+  grid-template-columns: minmax(240px, 280px) 1fr auto auto;
+  align-items: center;
+  gap: 10px;
+  padding: 7px 14px;
+  font-size: 12px;
+  border-bottom: 1px solid #fafafa;
+  transition: background 0.1s;
+}
+.p-row:last-child { border-bottom: none; }
+.p-row:hover { background: #f9fafb; }
+.p-row.p-disabled {
+  opacity: 0.55;
+  background: #fafaf9;
+}
+.p-row.p-disabled:hover {
+  background: #fef3c7;
+  opacity: 0.8;
+}
+.p-code {
+  font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+  font-size: 11px;
+  color: #6b7280;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.p-name {
+  color: #111827;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.p-badge-disabled {
   padding: 1px 7px;
   border-radius: 10px;
   font-size: 10px;
@@ -407,5 +927,136 @@ onMounted(() => {
   border: 1px solid #fcd34d;
   line-height: 1.4;
   cursor: help;
+}
+.p-type {
+  padding: 1px 7px;
+  border-radius: 4px;
+  font-size: 10px;
+  font-weight: 500;
+  line-height: 1.5;
+}
+.p-type-menu      { background: #dbeafe; color: #1d4ed8; }
+.p-type-operation { background: #fef3c7; color: #a16207; }
+.p-type-button    { background: #fef3c7; color: #a16207; }
+.p-type-api       { background: #d1fae5; color: #065f46; }
+.p-type-data      { background: #ede9fe; color: #6d28d9; }
+
+/* Empty */
+.ph-empty {
+  padding: 60px 16px;
+  text-align: center;
+  color: #9ca3af;
+}
+.ph-empty p {
+  margin: 8px 0 0;
+  font-size: 13px;
+}
+
+/* ========== Sync dialog ========== */
+.sync-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.sync-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+}
+.sync-dialog {
+  position: relative;
+  width: 100%;
+  max-width: 520px;
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: 0 20px 48px rgba(0, 0, 0, 0.2);
+}
+.sync-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 20px;
+  border-bottom: 1px solid #e5e7eb;
+}
+.sync-head h3 {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 600;
+  color: #111827;
+}
+.sync-close {
+  border: none;
+  background: transparent;
+  padding: 4px;
+  border-radius: 6px;
+  cursor: pointer;
+  color: #6b7280;
+}
+.sync-close:hover {
+  background: #f3f4f6;
+}
+.sync-body {
+  max-height: 60vh;
+  overflow-y: auto;
+  padding: 16px 20px;
+}
+.sync-summary {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.sync-line {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: #374151;
+}
+.sync-line b { color: #111827; font-weight: 600; }
+.sync-ok { color: #10b981; }
+.sync-warn { color: #d97706; }
+.sync-info { color: #6b7280; }
+.sync-section { margin-top: 16px; }
+.sync-section-title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 500;
+}
+.sync-codes {
+  margin-top: 8px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  max-height: 160px;
+  overflow-y: auto;
+}
+.sync-codes-warn { background: #fef3c7; }
+.sync-codes-warn div { color: #92400e; }
+.sync-codes-info { background: #f3f4f6; }
+.sync-codes-info div { color: #4b5563; }
+.sync-codes div {
+  font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+  font-size: 11px;
+  padding: 2px 0;
+}
+.sync-foot {
+  display: flex;
+  justify-content: flex-end;
+  padding: 12px 20px;
+  border-top: 1px solid #e5e7eb;
+}
+
+/* Modal transition */
+.modal-enter-active,
+.modal-leave-active {
+  transition: opacity 0.2s ease;
+}
+.modal-enter-from,
+.modal-leave-to {
+  opacity: 0;
 }
 </style>
