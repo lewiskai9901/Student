@@ -68,7 +68,7 @@ export const useSharedDataStore = defineStore('sharedData', () => {
   // Class list
   async function getClassList(force = false): Promise<any[]> {
     if (!force && !isExpired(classList.value)) return classList.value!.data
-    const res = await http.get('/students/classes', { params: { page: 1, size: 500 } })
+    const res = await http.get('/user_student/classes', { params: { page: 1, size: 500 } })
     const data = res?.records || res?.data?.records || (Array.isArray(res) ? res : [])
     classList.value = { data, timestamp: Date.now() }
     return data

@@ -368,7 +368,7 @@ async function loadTargetLists() {
   try {
     const [teacherRes, classRes, courseRes] = await Promise.allSettled([
       http.get<any>('/users', { params: { role: 'TEACHER', pageSize: 500 } }),
-      http.get<any>('/students/classes'),
+      http.get<any>('/user_student/classes'),
       courseApi.listAll(),
     ])
     if (teacherRes.status === 'fulfilled') {

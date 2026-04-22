@@ -41,7 +41,7 @@ const targetList = computed(() => dimension.value === 'class' ? classList.value 
 
 async function loadLists() {
   try {
-    const res = await request.get('/students/classes')
+    const res = await request.get('/user_student/classes')
     const data = (res as any).data || res
     const items = Array.isArray(data) ? data : data.records || []
     classList.value = items.map((c: any) => ({ id: c.id, name: c.className || c.name }))

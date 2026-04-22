@@ -187,7 +187,7 @@ const filteredClasses = computed(() => {
 async function loadClasses() {
   loading.value = true
   try {
-    const res = await http.get('/students/classes')
+    const res = await http.get('/user_student/classes')
     const data = (res as any).data || res
     classes.value = Array.isArray(data) ? data : data.records || []
   } catch { classes.value = [] } finally { loading.value = false }
@@ -226,7 +226,7 @@ function showEditDrawer(cls: any) {
 async function saveEdit() {
   saving.value = true
   try {
-    await http.put(`/students/classes/${editForm.value.id}`, {
+    await http.put(`/user_student/classes/${editForm.value.id}`, {
       gradeId: editForm.value.gradeId,
       majorId: editForm.value.majorId,
       teacherId: editForm.value.teacherId,

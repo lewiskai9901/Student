@@ -28,7 +28,7 @@ const LOAD_ALL_PAGE_SIZE_LARGE = 10000
 // 后端API路径
 const ORG_UNIT_URL = '/org-units'
 const ORG_UNIT_TYPE_URL = '/org-types'
-const CLASS_URL = '/students/classes'
+const CLASS_URL = '/user_student/classes'
 
 // ==================== 组织单元 API ====================
 
@@ -498,7 +498,7 @@ export function dissolveDepartment(id: number | string, reason: string): Promise
 
 // ==================== 年级(Cohort)管理 (兼容V1 grade.ts) ====================
 
-const COHORT_URL = '/students/cohorts'
+const COHORT_URL = '/user_student/cohorts'
 
 export interface Cohort {
   id?: number
