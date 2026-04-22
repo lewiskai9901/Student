@@ -141,6 +141,12 @@ const routes: RouteRecordRaw[] = [
             name: 'RelationTypes',
             component: () => import('@/views/access/RelationTypesView.vue'),
             meta: { title: '关系字典', requiresAuth: true, permission: 'system:config:view', order: 2 }
+          },
+          {
+            path: '/access/data-permissions',
+            name: 'DataPermissions',
+            component: () => import('@/views/access/data-permissions/DataPermissionsLayout.vue'),
+            meta: { title: '数据权限', requiresAuth: true, permission: 'system:role:view', order: 3 }
           }
         ]
       },
