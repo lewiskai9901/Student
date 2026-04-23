@@ -172,6 +172,8 @@ export interface DataModuleDTO {
   enabled: boolean
   /** 所属插件是否启用 — false 时前端灰显并提示启用插件 */
   pluginEnabled?: boolean
+  /** 本模块支持的 scope 代码数组 — null/undefined 表示用默认全集 */
+  allowedScopes?: string[] | null
 }
 
 /**

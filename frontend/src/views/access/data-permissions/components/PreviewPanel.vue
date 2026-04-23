@@ -39,6 +39,32 @@
         </div>
       </div>
 
+      <!-- Fallback 提示 (场景模板应用时某些模块不支持目标 scope, 自动降级) -->
+      <div
+        v-if="fallbacks && fallbacks.length"
+        class="mb-4 rounded-lg border border-amber-200 bg-amber-50 p-3"
+      >
+        <div class="mb-1.5 flex items-center gap-1.5 text-[11px] font-medium text-amber-800">
+          <AlertTriangle class="h-3.5 w-3.5" />
+          {{ fallbacks.length }} 个模块已自动降级
+        </div>
+        <ul class="space-y-0.5 text-[10.5px] text-amber-700">
+          <li v-for="f in fallbacks.slice(0, 6)" :key="f.moduleCode" class="flex items-center gap-1">
+            <span class="truncate">{{ f.moduleName }}</span>
+            <span class="text-amber-500">:</span>
+            <code class="rounded bg-amber-100 px-1 text-[10px]">{{ scopeName(f.from) }}</code>
+            <span class="text-amber-500">→</span>
+            <code class="rounded bg-amber-100 px-1 text-[10px]">{{ scopeName(f.to) }}</code>
+          </li>
+          <li v-if="fallbacks.length > 6" class="text-[10px] text-amber-600">
+            … 共 {{ fallbacks.length }} 条
+          </li>
+        </ul>
+        <p class="mt-1.5 text-[10px] text-amber-600">
+          这些模块的 scope 配置集不含所选主范围, 系统按 FALLBACK 阶梯自动选择最接近的范围.
+        </p>
+      </div>
+
       <!-- 能看到的数据 (可读摘要) -->
       <div class="mb-4 rounded-lg border border-gray-200 bg-white p-3">
         <div class="mb-2 text-[11px] font-medium uppercase tracking-wide text-gray-500">
@@ -95,9 +121,10 @@ import {
   CheckCircle2,
   XCircle,
   ChevronRight,
+  AlertTriangle,
 } from 'lucide-vue-next'
 import type { ModulePermission, DataScopeOption } from '@/types/access'
-import type { SceneDecision } from '../composables/useSceneTemplate'
+import type { SceneDecision, ScopeFallbackInfo } from '../composables/useSceneTemplate'
 
 interface Props {
   decision: SceneDecision
@@ -105,6 +132,7 @@ interface Props {
   dataScopeOptions: DataScopeOption[]
   moduleNameMap: Record<string, string>
   totalModules: number
+  fallbacks?: ScopeFallbackInfo[]
 }
 
 const props = defineProps<Props>()

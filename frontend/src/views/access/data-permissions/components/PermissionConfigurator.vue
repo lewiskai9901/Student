@@ -139,10 +139,10 @@ import AdvancedModuleEditor, { type ModuleGroupItem } from './AdvancedModuleEdit
 import { dataPermissionApi, type RoleResponse } from '@/api/access'
 import type { ModulePermission, DataScopeOption } from '@/types/access'
 import {
-  sceneToModuleScopes,
   moduleScopesToScene,
   applySceneToModules,
   type SceneDecision,
+  type ScopeFallbackInfo,
 } from '../composables/useSceneTemplate'
 
 interface FilterMeta {
@@ -166,8 +166,8 @@ interface Props {
 const props = defineProps<Props>()
 const emit = defineEmits<{
   'open-templates': []
-  'config-loaded': [modulePermissions: ModulePermission[], decision: SceneDecision]
-  'config-changed': [modulePermissions: ModulePermission[], decision: SceneDecision]
+  'config-loaded': [modulePermissions: ModulePermission[], decision: SceneDecision, fallbacks: ScopeFallbackInfo[]]
+  'config-changed': [modulePermissions: ModulePermission[], decision: SceneDecision, fallbacks: ScopeFallbackInfo[]]
   'saved': []
   'enable-industry': [industry: string]
 }>()
@@ -180,6 +180,7 @@ const mode = ref<'scene' | 'advanced'>('scene')
 
 const decision = ref<SceneDecision>({ primary: 'SELF', bizAutoFollow: true })
 const modulePermissions = ref<ModulePermission[]>([])
+const fallbacks = ref<ScopeFallbackInfo[]>([])
 
 const totalModules = computed(() => {
   const rel = Object.values(props.groupedModules).reduce((sum, list) => sum + list.length, 0)
@@ -193,16 +194,16 @@ const eduEnabled = computed(() => {
 })
 
 const flatModules = computed(() => {
-  const out: { code: string; industry: string }[] = []
+  const out: { code: string; industry: string; allowedScopes?: string[] | null }[] = []
   for (const [ind, list] of Object.entries(props.groupedModules)) {
     for (const m of list) {
-      out.push({ code: m.code, industry: ind })
+      out.push({ code: m.code, industry: ind, allowedScopes: m.allowedScopes ?? null })
     }
   }
   // 也纳入 advanced 列表, 确保 applyScene 时 advanced 模块被显式写入 SELF
   for (const [ind, list] of Object.entries(props.advancedGroupedModules ?? {})) {
     for (const m of list) {
-      out.push({ code: m.code, industry: ind })
+      out.push({ code: m.code, industry: ind, allowedScopes: m.allowedScopes ?? null })
     }
   }
   return out
@@ -237,7 +238,9 @@ async function loadConfig() {
     const config = await dataPermissionApi.getConfig(props.currentRole.id)
     modulePermissions.value = config.modulePermissions || []
     decision.value = moduleScopesToScene(modulePermissions.value)
-    emit('config-loaded', modulePermissions.value, decision.value)
+    // 加载时不生成 fallback (显示的是已存配置的原值)
+    fallbacks.value = []
+    emit('config-loaded', modulePermissions.value, decision.value, fallbacks.value)
   } catch (e: any) {
     ElMessage.error('加载数据权限失败: ' + (e?.message || e))
   } finally {
@@ -249,34 +252,60 @@ function onDecisionUpdate(next: SceneDecision) {
   decision.value = next
   // 场景模式下同步应用到 modulePermissions (实时映射)
   if (mode.value === 'scene') {
-    modulePermissions.value = applySceneToModules(next, flatModules.value, modulePermissions.value, relevantCodes.value)
+    const res = applySceneToModules(next, flatModules.value, modulePermissions.value, relevantCodes.value)
+    modulePermissions.value = res.modulePermissions
+    fallbacks.value = res.fallbacks
+  } else {
+    fallbacks.value = []
   }
-  emit('config-changed', modulePermissions.value, decision.value)
+  emit('config-changed', modulePermissions.value, decision.value, fallbacks.value)
 }
 
 function onModulePermissionsUpdate(next: ModulePermission[]) {
   modulePermissions.value = next
   // 高级模式修改时反推 scene (让预览区同步)
   decision.value = moduleScopesToScene(next)
-  emit('config-changed', modulePermissions.value, decision.value)
+  // 手动编辑的值已经是用户意图, 无 fallback
+  fallbacks.value = []
+  emit('config-changed', modulePermissions.value, decision.value, fallbacks.value)
 }
 
 function onBatchSet(scopeCode: string) {
-  const next: ModulePermission[] = modulePermissions.value.map(mp => ({
-    ...mp,
-    scopeCode,
-    scopeItems: scopeCode !== 'CUSTOM' ? [] : mp.scopeItems,
-  }))
-  // 如果原本无条目 (新角色), 用 flatModules 补齐
+  // 模块感知: 逐模块检查 scope 是否在 allowedScopes 内, 不在则保留原值 (或降级 SELF)
+  const allowedMap = new Map<string, string[] | null | undefined>(
+    flatModules.value.map(m => [m.code, m.allowedScopes])
+  )
+  const violations: string[] = []
+  function pickScope(code: string, existing?: string): string {
+    const allowed = allowedMap.get(code)
+    if (!allowed || allowed.length === 0) return scopeCode
+    if (allowed.includes(scopeCode)) return scopeCode
+    violations.push(code)
+    // 不降级, 保留原值避免意外改写
+    return existing || (allowed.includes('SELF') ? 'SELF' : allowed[0])
+  }
+  const next: ModulePermission[] = modulePermissions.value.map(mp => {
+    const finalScope = pickScope(mp.moduleCode, mp.scopeCode)
+    return {
+      ...mp,
+      scopeCode: finalScope,
+      scopeItems: finalScope !== 'CUSTOM' ? [] : mp.scopeItems,
+    }
+  })
   if (next.length === 0) {
     for (const m of flatModules.value) {
-      next.push({ moduleCode: m.code, scopeCode, scopeItems: [] })
+      next.push({ moduleCode: m.code, scopeCode: pickScope(m.code), scopeItems: [] })
     }
   }
   modulePermissions.value = next
   decision.value = moduleScopesToScene(next)
-  emit('config-changed', modulePermissions.value, decision.value)
-  ElMessage.success(`已批量设为 ${scopeName(scopeCode)}`)
+  fallbacks.value = []
+  emit('config-changed', modulePermissions.value, decision.value, fallbacks.value)
+  if (violations.length) {
+    ElMessage.warning(`已批量设为 ${scopeName(scopeCode)} (${violations.length} 个模块不支持此范围已跳过)`)
+  } else {
+    ElMessage.success(`已批量设为 ${scopeName(scopeCode)}`)
+  }
 }
 
 function scopeName(code: string) {
@@ -321,13 +350,15 @@ async function handleReset() {
     await ElMessageBox.confirm('确定重置所有配置为 SELF? 此操作需保存后生效.', '重置确认', {
       type: 'warning',
     })
+    // SELF 是所有模块都支持的 — 无需校验
     modulePermissions.value = modulePermissions.value.map(mp => ({
       ...mp,
       scopeCode: 'SELF',
       scopeItems: [],
     }))
     decision.value = { primary: 'SELF', bizAutoFollow: true }
-    emit('config-changed', modulePermissions.value, decision.value)
+    fallbacks.value = []
+    emit('config-changed', modulePermissions.value, decision.value, fallbacks.value)
   } catch (e) {
     /* cancelled */
   }
@@ -336,10 +367,16 @@ async function handleReset() {
 /** 由父组件调用: 从模板应用 scene */
 function applyTemplateScene(scene: SceneDecision) {
   decision.value = { ...scene }
-  modulePermissions.value = applySceneToModules(decision.value, flatModules.value, modulePermissions.value)
+  const res = applySceneToModules(decision.value, flatModules.value, modulePermissions.value, relevantCodes.value)
+  modulePermissions.value = res.modulePermissions
+  fallbacks.value = res.fallbacks
   mode.value = 'scene'
-  emit('config-changed', modulePermissions.value, decision.value)
-  ElMessage.success('模板已应用, 点击保存生效')
+  emit('config-changed', modulePermissions.value, decision.value, fallbacks.value)
+  if (res.fallbacks.length) {
+    ElMessage.info(`模板已应用, ${res.fallbacks.length} 个模块自动降级 (详见右侧预览), 点击保存生效`)
+  } else {
+    ElMessage.success('模板已应用, 点击保存生效')
+  }
 }
 
 defineExpose({ applyTemplateScene, reload: loadConfig })

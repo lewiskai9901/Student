@@ -3,6 +3,7 @@ package com.school.management.application.access;
 import com.school.management.domain.access.model.DataScope;
 import com.school.management.domain.access.model.entity.DataScopeItem;
 import com.school.management.domain.access.model.entity.RoleDataPermission;
+import com.school.management.exception.BusinessException;
 import com.school.management.infrastructure.access.DataPermissionPolicyService;
 import com.school.management.infrastructure.persistence.access.DataModulePO;
 import com.school.management.infrastructure.tenant.TenantContextHolder;
@@ -157,6 +158,28 @@ public class DataPermissionApplicationService {
     @Transactional
     public void saveRoleDataPermissions(Long roleId, List<SavePermissionCommand> commands) {
         Long tenantId = TenantContextHolder.getTenantId();
+
+        // 模块感知范围校验: 每个 scope 必须在该模块的 allowed_scopes 集合内
+        // 未配置 allowed_scopes (null) 的模块 → 宽松放行 (兼容旧数据)
+        List<DataModulePO> allModules = dynamicModuleService.listModules(tenantId, true);
+        Map<String, List<String>> allowedByModule = allModules.stream()
+                .filter(m -> m.getAllowedScopes() != null && !m.getAllowedScopes().isEmpty())
+                .collect(Collectors.toMap(DataModulePO::getModuleCode, DataModulePO::getAllowedScopes, (a, b) -> a));
+
+        for (SavePermissionCommand cmd : commands) {
+            List<String> allowed = allowedByModule.get(cmd.getModuleCode());
+            if (allowed == null || allowed.isEmpty()) continue;
+            if (!allowed.contains(cmd.getScopeCode())) {
+                String moduleName = allModules.stream()
+                        .filter(m -> cmd.getModuleCode().equals(m.getModuleCode()))
+                        .findFirst()
+                        .map(DataModulePO::getModuleName)
+                        .orElse(cmd.getModuleCode());
+                throw new BusinessException(String.format(
+                        "模块 [%s] 不支持范围 [%s], 可选: %s",
+                        moduleName, cmd.getScopeCode(), allowed));
+            }
+        }
 
         List<RoleDataPermission> permissions = commands.stream()
                 .map(cmd -> {
@@ -380,6 +403,8 @@ public class DataPermissionApplicationService {
         map.put("sortOrder", m.getSortOrder());
         map.put("enabled", Boolean.TRUE.equals(m.getEnabled()));
         map.put("pluginEnabled", m.getPluginEnabled() == null || m.getPluginEnabled());
+        // 本模块支持的 scope 代码数组 (null = 前端用默认全集)
+        map.put("allowedScopes", m.getAllowedScopes());
         return map;
     }
 

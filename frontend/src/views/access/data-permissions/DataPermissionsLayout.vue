@@ -64,6 +64,7 @@
           :data-scope-options="dataScopeOptions"
           :module-name-map="moduleNameMap"
           :total-modules="totalModules"
+          :fallbacks="currentFallbacks"
         />
       </div>
     </div>
@@ -156,7 +157,7 @@ import type {
   DataScopeOption,
   ModulePermission,
 } from '@/types/access'
-import type { SceneDecision, PrimaryScope } from './composables/useSceneTemplate'
+import type { SceneDecision, PrimaryScope, ScopeFallbackInfo } from './composables/useSceneTemplate'
 import { moduleScopesToScene } from './composables/useSceneTemplate'
 import type { RoleTemplate } from './composables/useTemplateLibrary'
 
@@ -208,6 +209,7 @@ const currentRole = computed<RoleResponse | null>(() => {
 // 当前配置状态 (供预览实时显示)
 const currentModulePermissions = ref<ModulePermission[]>([])
 const currentDecision = ref<SceneDecision>({ primary: 'SELF', bizAutoFollow: true })
+const currentFallbacks = ref<ScopeFallbackInfo[]>([])
 
 const totalModules = computed(() =>
   Object.values(groupedModules.value).reduce((s, l) => s + l.length, 0)
@@ -223,6 +225,7 @@ function groupByIndustry(mods: any[]): Record<string, ModuleGroupItem[]> {
       name: m.moduleName,
       industry,
       pluginEnabled: (m as any).pluginEnabled !== false,
+      allowedScopes: (m as any).allowedScopes ?? null,
     })
   }
   const order = ['CORE', 'EDU', 'HEALTH', 'CARE', 'CUSTOM']
@@ -286,14 +289,16 @@ async function loadRoles() {
   }
 }
 
-function onConfigLoaded(mps: ModulePermission[], d: SceneDecision) {
+function onConfigLoaded(mps: ModulePermission[], d: SceneDecision, fbs: ScopeFallbackInfo[]) {
   currentModulePermissions.value = mps
   currentDecision.value = d
+  currentFallbacks.value = fbs
 }
 
-function onConfigChanged(mps: ModulePermission[], d: SceneDecision) {
+function onConfigChanged(mps: ModulePermission[], d: SceneDecision, fbs: ScopeFallbackInfo[]) {
   currentModulePermissions.value = mps
   currentDecision.value = d
+  currentFallbacks.value = fbs
 }
 
 function onSaved() {

@@ -34,4 +34,12 @@ public class DataResourcePO {
 
     /** 所属插件是否启用 — 由 PluginLifecycleService 级联控制, 默认 1 */
     private Boolean pluginEnabled;
+
+    /**
+     * 本模块支持的 scope 代码数组 (JSON 字符串).
+     * 例: ["ALL","BY_CLASS","SELF","CUSTOM"]
+     * null/空 = 兼容旧数据, 前端按 fallback 全集渲染
+     */
+    @TableField("allowed_scopes")
+    private String allowedScopes;
 }

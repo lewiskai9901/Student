@@ -24,4 +24,11 @@ public class DataModulePO {
     private Boolean enabled;
     /** 所属插件是否启用 — 从 data_resources.plugin_enabled 透传 */
     private Boolean pluginEnabled;
+
+    /**
+     * 本模块支持的 scope 代码数组 (从 data_resources.allowed_scopes 解析).
+     * null = 未配置, 前端按默认全集渲染.
+     */
+    @TableField(exist = false)
+    private java.util.List<String> allowedScopes;
 }

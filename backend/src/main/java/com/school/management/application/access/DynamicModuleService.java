@@ -1,6 +1,8 @@
 package com.school.management.application.access;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.school.management.infrastructure.persistence.access.DataModulePO;
 import com.school.management.infrastructure.persistence.access.DataResourceMapper;
 import com.school.management.infrastructure.persistence.access.DataResourcePO;
@@ -25,6 +27,8 @@ import java.util.stream.Collectors;
 public class DynamicModuleService {
 
     private static final String CACHE_NAME = "dynamicModules";
+    private static final ObjectMapper JSON = new ObjectMapper();
+    private static final TypeReference<List<String>> STR_LIST = new TypeReference<List<String>>() {};
 
     private final DataResourceMapper dataResourceMapper;
 
@@ -132,6 +136,16 @@ public class DynamicModuleService {
         po.setEnabled(resource.getEnabled() != null && resource.getEnabled() == 1);
         // null 视为启用 (DB 默认 1)
         po.setPluginEnabled(resource.getPluginEnabled() == null || resource.getPluginEnabled());
+        // 解析 allowed_scopes JSON (null/空 → null, 前端按默认全集渲染)
+        String rawScopes = resource.getAllowedScopes();
+        if (rawScopes != null && !rawScopes.isBlank()) {
+            try {
+                po.setAllowedScopes(JSON.readValue(rawScopes, STR_LIST));
+            } catch (Exception e) {
+                log.warn("[DynamicModuleService] failed to parse allowed_scopes for {}: {}",
+                        resource.getResourceCode(), e.getMessage());
+            }
+        }
         return po;
     }
 

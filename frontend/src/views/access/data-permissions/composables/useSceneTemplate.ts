@@ -55,6 +55,50 @@ export const EDU_STUDENT_MODULES = new Set([
 export interface SimpleModule {
   code: string
   industry: string
+  /** 本模块支持的 scope 代码数组; null/undefined 表示默认全集 */
+  allowedScopes?: string[] | null
+}
+
+/**
+ * Fallback 阶梯: 当主决策的 scope 不在模块 allowedScopes 中时, 按此顺序找首个可用替代.
+ * 都不可用时, 兜底 SELF (最保守).
+ */
+const FALLBACK_CHAIN: Record<string, string[]> = {
+  ALL: ['DEPARTMENT_AND_BELOW', 'DEPARTMENT', 'SELF'],
+  DEPARTMENT_AND_BELOW: ['DEPARTMENT', 'ALL', 'SELF'],
+  DEPARTMENT: ['DEPARTMENT_AND_BELOW', 'ALL', 'SELF'],
+  BY_GRADE: ['BY_CLASS', 'BY_MAJOR', 'ALL', 'SELF'],
+  BY_CLASS: ['BY_GRADE', 'BY_MAJOR', 'ALL', 'SELF'],
+  BY_MAJOR: ['BY_GRADE', 'BY_CLASS', 'ALL', 'SELF'],
+  BY_WARD: ['DEPARTMENT', 'DEPARTMENT_AND_BELOW', 'ALL', 'SELF'],
+  BY_ATTENDING_DOCTOR: ['BY_WARD', 'DEPARTMENT', 'ALL', 'SELF'],
+  SELF: [],
+  CUSTOM: ['SELF'],
+}
+
+/**
+ * 解析目标 scope 对模块是否可用, 不可用则找 fallback.
+ * @returns { final: 最终 scope, fallback: 是否降级 }
+ */
+function resolveScopeWithFallback(
+  target: string,
+  allowed: string[] | null | undefined,
+): { final: string; fallback: boolean } {
+  if (!allowed || allowed.length === 0) return { final: target, fallback: false }
+  if (allowed.includes(target)) return { final: target, fallback: false }
+  for (const candidate of FALLBACK_CHAIN[target] || []) {
+    if (allowed.includes(candidate)) return { final: candidate, fallback: true }
+  }
+  // 兜底: 取 allowed 里的第一项 (通常 SELF)
+  return { final: allowed.includes('SELF') ? 'SELF' : allowed[0], fallback: true }
+}
+
+/** Fallback 降级提示 (给 PreviewPanel / UI 使用) */
+export interface ScopeFallbackInfo {
+  moduleCode: string
+  moduleName?: string
+  from: string
+  to: string
 }
 
 /**
@@ -64,13 +108,20 @@ export interface SimpleModule {
  *   - EDU_STUDENT_MODULES 且 decision.studentScope 有值 → 用 studentScope
  *   - 其他所有 module → 用 primary (bizAutoFollow=true 时)
  *   - CUSTOM 主决策时附带 scopeItems
+ *   - 模块感知范围: 主决策 scope 不在模块 allowedScopes 时按 FALLBACK_CHAIN 降级
+ *
+ * @returns { scopes: 模块 scope map, fallbacks: 被降级的模块列表 (透明给 UI 显提示) }
  */
 export function sceneToModuleScopes(
   decision: SceneDecision,
   modules: SimpleModule[],
   relevantCodes?: Set<string>
-): Record<string, { scopeCode: string; scopeItems?: ScopeItem[] }> {
-  const result: Record<string, { scopeCode: string; scopeItems?: ScopeItem[] }> = {}
+): {
+  scopes: Record<string, { scopeCode: string; scopeItems?: ScopeItem[] }>
+  fallbacks: ScopeFallbackInfo[]
+} {
+  const scopes: Record<string, { scopeCode: string; scopeItems?: ScopeItem[] }> = {}
+  const fallbacks: ScopeFallbackInfo[] = []
 
   const customItems: ScopeItem[] = []
   if (decision.primary === 'CUSTOM') {
@@ -90,56 +141,40 @@ export function sceneToModuleScopes(
 
     // 智能过滤: 非相关模块 (跨行业 / 权限未匹配) 保持 SELF (最小权限默认)
     if (relevantCodes && !relevantCodes.has(code)) {
-      result[code] = { scopeCode: 'SELF' }
+      const { final, fallback } = resolveScopeWithFallback('SELF', mod.allowedScopes)
+      scopes[code] = { scopeCode: final }
+      if (fallback) fallbacks.push({ moduleCode: code, from: 'SELF', to: final })
       continue
     }
 
-    // EDU 学生数据特化
+    // 计算 target scope
+    let target: string
     if (EDU_STUDENT_MODULES.has(code) && decision.studentScope) {
-      // BY_CLASS / BY_GRADE / BY_MAJOR 目前映射为自定义 (由实际选择的 class/grade 决定)
-      // 如果用户没选具体 class, 退回 ALL
-      const mapped = mapStudentScopeToSystemScope(decision.studentScope)
-      result[code] = { scopeCode: mapped }
-      continue
+      target = mapStudentScopeToSystemScope(decision.studentScope)
+    } else if (decision.bizAutoFollow) {
+      target = decision.primary
+    } else {
+      target = 'SELF'
     }
 
-    // 业务跟随: 直接用 primary
-    if (decision.bizAutoFollow) {
-      result[code] = {
-        scopeCode: decision.primary,
-        scopeItems: decision.primary === 'CUSTOM' ? customItems : undefined,
-      }
-    } else {
-      // bizAutoFollow=false 时不跟随 → 默认 SELF (保守)
-      result[code] = { scopeCode: 'SELF' }
-    }
+    // 模块感知范围 fallback
+    const { final, fallback } = resolveScopeWithFallback(target, mod.allowedScopes)
+    const scopeItems = final === 'CUSTOM' ? customItems : undefined
+    scopes[code] = { scopeCode: final, scopeItems }
+    if (fallback) fallbacks.push({ moduleCode: code, from: target, to: final })
   }
 
-  return result
+  return { scopes, fallbacks }
 }
 
 /**
- * StudentScope → 系统 DataScope 代码的降级映射
+ * StudentScope → 系统 DataScope 代码.
  *
- * BY_CLASS / BY_GRADE / BY_MAJOR 目前在后端 DataScope 中没有一等公民,
- * 先全部映射成 ALL (走 access_relations 由运行时过滤),
- * 等后端加上对应 scope 后改成直接传递
+ * v2: BY_CLASS/BY_GRADE/BY_MAJOR 作为一等公民 (data_scope_dims 插件维度注册),
+ *     直接传递; 当模块 allowed_scopes 不包含时会在 resolveScopeWithFallback 里降级.
  */
 function mapStudentScopeToSystemScope(s: StudentScope): string {
-  switch (s) {
-    case 'ALL':
-      return 'ALL'
-    case 'SELF':
-      return 'SELF'
-    case 'BY_CLASS':
-    case 'BY_GRADE':
-    case 'BY_MAJOR':
-      // 这三个是用户侧概念, 后端目前通过 access_relations 过滤
-      // 所以 scope 给 ALL, 让 relation 做实际过滤
-      return 'ALL'
-    default:
-      return 'SELF'
-  }
+  return s
 }
 
 /**
@@ -181,8 +216,8 @@ export function moduleScopesToScene(mps: ModulePermission[]): SceneDecision {
   let studentScope: StudentScope | undefined
   if (studentMps.length > 0) {
     const studentCode = studentMps[0].scopeCode || 'SELF'
-    // 目前 BY_CLASS/BY_GRADE/BY_MAJOR 都映射为 ALL, 反推时保守用 ALL
-    if (['ALL', 'SELF'].includes(studentCode)) {
+    // v2: BY_CLASS/BY_GRADE/BY_MAJOR 也是 StudentScope 的合法值
+    if (['ALL', 'SELF', 'BY_CLASS', 'BY_GRADE', 'BY_MAJOR'].includes(studentCode)) {
       studentScope = studentCode as StudentScope
     }
   }
@@ -220,19 +255,21 @@ export function moduleScopesToScene(mps: ModulePermission[]): SceneDecision {
  * SceneDecision 合并到现有 modulePermissions (非破坏性)
  * - 没有现有配置的模块: 按 Scene 新增
  * - 已有配置的模块: 覆盖 scope + scopeItems
+ *
+ * @returns { modulePermissions, fallbacks } — fallbacks 给 UI 提示用
  */
 export function applySceneToModules(
   decision: SceneDecision,
   modules: SimpleModule[],
   existing: ModulePermission[],
   relevantCodes?: Set<string>
-): ModulePermission[] {
-  const mapping = sceneToModuleScopes(decision, modules, relevantCodes)
+): { modulePermissions: ModulePermission[]; fallbacks: ScopeFallbackInfo[] } {
+  const { scopes, fallbacks } = sceneToModuleScopes(decision, modules, relevantCodes)
   const result: ModulePermission[] = []
   const seen = new Set<string>()
 
   for (const mod of modules) {
-    const m = mapping[mod.code]
+    const m = scopes[mod.code]
     if (!m) continue
     seen.add(mod.code)
     result.push({
@@ -249,5 +286,5 @@ export function applySceneToModules(
     }
   }
 
-  return result
+  return { modulePermissions: result, fallbacks }
 }

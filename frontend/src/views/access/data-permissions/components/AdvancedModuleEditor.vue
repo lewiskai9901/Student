@@ -84,15 +84,25 @@
               </div>
               <div class="flex items-center gap-2">
                 <select
+                  v-if="availableScopesFor(module).length > 1"
                   :value="getScope(module.code)"
                   :disabled="module.pluginEnabled === false"
                   class="h-7 rounded border border-gray-200 bg-white px-2 text-xs text-gray-700 focus:border-blue-500 focus:outline-none disabled:bg-gray-100"
                   @change="onScopeChange(module.code, ($event.target as HTMLSelectElement).value)"
+                  :title="scopeCountHint(module)"
                 >
-                  <option v-for="s in dataScopeOptions" :key="s.scopeCode" :value="s.scopeCode">
+                  <option v-for="s in availableScopesFor(module)" :key="s.scopeCode" :value="s.scopeCode">
                     {{ s.scopeName }}
                   </option>
                 </select>
+                <span
+                  v-else
+                  class="flex h-7 items-center gap-1 rounded border border-gray-200 bg-gray-50 px-2 text-[11px] text-gray-600"
+                  :title="'此模块仅支持单一范围'"
+                >
+                  <Lock class="h-3 w-3 text-gray-400" />
+                  {{ availableScopesFor(module)[0]?.scopeName || '—' }}
+                </span>
                 <button
                   v-if="getScope(module.code) === 'CUSTOM'"
                   class="flex h-7 items-center gap-1 rounded px-2 text-[11px] font-medium transition"
@@ -175,15 +185,24 @@
                 </div>
                 <div class="flex items-center gap-2">
                   <select
+                    v-if="availableScopesFor(module).length > 1"
                     :value="getScope(module.code)"
                     :disabled="module.pluginEnabled === false"
                     class="h-7 rounded border border-gray-200 bg-white px-2 text-xs text-gray-600 focus:border-blue-500 focus:outline-none disabled:bg-gray-100"
                     @change="onScopeChange(module.code, ($event.target as HTMLSelectElement).value)"
+                    :title="scopeCountHint(module)"
                   >
-                    <option v-for="s in dataScopeOptions" :key="s.scopeCode" :value="s.scopeCode">
+                    <option v-for="s in availableScopesFor(module)" :key="s.scopeCode" :value="s.scopeCode">
                       {{ s.scopeName }}
                     </option>
                   </select>
+                  <span
+                    v-else
+                    class="flex h-7 items-center gap-1 rounded border border-gray-200 bg-gray-50 px-2 text-[11px] text-gray-500"
+                  >
+                    <Lock class="h-3 w-3 text-gray-400" />
+                    {{ availableScopesFor(module)[0]?.scopeName || '—' }}
+                  </span>
                 </div>
               </div>
             </div>
@@ -205,6 +224,8 @@ export interface ModuleGroupItem {
   name: string
   industry: string
   pluginEnabled: boolean
+  /** 本模块支持的 scope 代码数组; null/undefined 表示默认全集 */
+  allowedScopes?: string[] | null
 }
 
 interface FilterMeta {
@@ -266,6 +287,25 @@ const quickScopes = [
   { code: 'DEPARTMENT', label: '仅本部门' },
   { code: 'SELF', label: '仅本人' },
 ]
+
+/**
+ * 按模块的 allowedScopes 过滤出可选项.
+ * null/空 = 返回全部选项 (兼容旧模块).
+ */
+function availableScopesFor(module: ModuleGroupItem): DataScopeOption[] {
+  const allowed = module.allowedScopes
+  if (!allowed || allowed.length === 0) {
+    return props.dataScopeOptions
+  }
+  return props.dataScopeOptions.filter(s => allowed.includes(s.scopeCode))
+}
+
+function scopeCountHint(module: ModuleGroupItem): string {
+  const n = availableScopesFor(module).length
+  const total = props.dataScopeOptions.length
+  if (n === total) return ''
+  return `此模块支持 ${n} / ${total} 种范围`
+}
 
 function getScope(code: string): string {
   return props.modulePermissions.find(p => p.moduleCode === code)?.scopeCode || 'SELF'
