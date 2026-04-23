@@ -78,6 +78,75 @@
         </ul>
       </div>
 
+      <!-- 模拟用户预览 -->
+      <div class="mb-4 rounded-lg border border-blue-200 bg-blue-50 p-3">
+        <div class="mb-2 flex items-center justify-between">
+          <span class="flex items-center gap-1 text-[11px] font-medium text-blue-700">
+            <User class="h-3 w-3" />
+            模拟用户
+          </span>
+          <button
+            v-if="simulateResults.length"
+            class="text-[10px] text-blue-500 hover:underline"
+            @click="resetSimulation"
+          >
+            清空
+          </button>
+        </div>
+
+        <div class="mb-2 flex items-center gap-2">
+          <input
+            v-model.number="simulateUserId"
+            type="number"
+            placeholder="输入用户 ID (如 1)"
+            class="h-7 flex-1 rounded border border-gray-300 px-2 text-[11px] outline-none focus:border-blue-500"
+            @keyup.enter="runSimulate"
+          />
+          <button
+            class="h-7 rounded bg-blue-600 px-3 text-[11px] font-medium text-white hover:bg-blue-700 disabled:opacity-50"
+            :disabled="!simulateUserId || simulating || !modulePermissions.length"
+            @click="runSimulate"
+          >
+            <Loader2 v-if="simulating" class="inline h-2.5 w-2.5 animate-spin" />
+            <span v-else>▶ 模拟</span>
+          </button>
+        </div>
+
+        <div v-if="simulateResults.length" class="space-y-1">
+          <div
+            v-for="r in topResults"
+            :key="r.moduleCode"
+            class="flex items-start gap-1 text-[10.5px]"
+          >
+            <span class="w-20 flex-shrink-0 truncate font-medium text-blue-900">
+              {{ moduleLabel(r.moduleCode) }}
+            </span>
+            <span class="flex-1">
+              <span v-if="r.accessibleCount >= 0" class="font-semibold text-blue-800">
+                {{ r.accessibleCount }} 条
+              </span>
+              <span v-else class="italic text-amber-600">
+                {{ r.note || '未支持' }}
+              </span>
+              <span v-if="r.samples?.length" class="ml-1 text-[10px] text-gray-500">
+                · {{ r.samples.map(s => s.name || s.id).join(', ') }}
+              </span>
+            </span>
+          </div>
+          <button
+            v-if="simulateResults.length > 5"
+            class="mt-1 w-full text-[10px] text-blue-500 hover:underline"
+            @click="expandAll = !expandAll"
+          >
+            {{ expandAll ? '收起' : `展开全部 ${simulateResults.length} 个模块` }}
+          </button>
+        </div>
+
+        <div v-else class="text-[10px] text-blue-600">
+          输入用户 ID 预览此角色下该用户实际能访问的数据
+        </div>
+      </div>
+
       <!-- 模块清单 -->
       <div class="rounded-lg border border-gray-200 bg-white p-3">
         <div class="mb-2 flex items-center justify-between">
@@ -110,7 +179,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 import {
   Eye,
   Globe,
@@ -122,9 +191,12 @@ import {
   XCircle,
   ChevronRight,
   AlertTriangle,
+  Loader2,
 } from 'lucide-vue-next'
+import { ElMessage } from 'element-plus'
 import type { ModulePermission, DataScopeOption } from '@/types/access'
 import type { SceneDecision, ScopeFallbackInfo } from '../composables/useSceneTemplate'
+import { dataPermissionSimulateApi, type SimulateResult } from '@/api/access'
 
 interface Props {
   decision: SceneDecision
@@ -233,6 +305,45 @@ function moduleLabel(code: string): string {
 function scopeName(code: string): string {
   const found = props.dataScopeOptions.find(s => s.scopeCode === code)
   return found?.scopeName || code
+}
+
+// ==================== 模拟用户预览 ====================
+const simulateUserId = ref<number | null>(null)
+const simulating = ref(false)
+const simulateResults = ref<SimulateResult[]>([])
+const expandAll = ref(false)
+
+const topResults = computed(() =>
+  expandAll.value ? simulateResults.value : simulateResults.value.slice(0, 5)
+)
+
+function resetSimulation() {
+  simulateResults.value = []
+  expandAll.value = false
+}
+
+async function runSimulate() {
+  if (!simulateUserId.value || !props.modulePermissions.length) return
+  simulating.value = true
+  try {
+    const res = await dataPermissionSimulateApi.simulate({
+      userId: simulateUserId.value,
+      modulePermissions: props.modulePermissions.map(mp => ({
+        moduleCode: mp.moduleCode,
+        scopeCode: mp.scopeCode,
+        scopeItems: mp.scopeItems as any,
+      })),
+    })
+    simulateResults.value = (res?.results as SimulateResult[]) || []
+    if (!simulateResults.value.length) {
+      ElMessage.warning('未配置任何模块, 无法模拟')
+    }
+  } catch (e: any) {
+    const msg = e?.response?.data?.message || e?.message || String(e)
+    ElMessage.error('模拟失败: ' + msg)
+  } finally {
+    simulating.value = false
+  }
 }
 
 function scopeBadge(code: string): string {

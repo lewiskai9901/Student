@@ -450,3 +450,51 @@ export const dataPermissionApi = {
   getModulesForRole: getDataModulesForRole,
   getScopes: getDataScopes
 }
+
+// ==================== 数据权限模拟预览 ====================
+
+/**
+ * 模拟单个模块在某用户上下文下的可访问数据快照
+ */
+export interface SimulateModulePermission {
+  moduleCode: string
+  scopeCode: string
+  /** 兼容 List<Long> 或 List<{scopeId}> 两种格式 */
+  scopeItems?: (number | string | { scopeId?: number | string; id?: number | string })[]
+}
+
+export interface SimulateRequest {
+  userId: number | string
+  modulePermissions: SimulateModulePermission[]
+}
+
+export interface SimulateSample {
+  id: string
+  name?: string
+}
+
+export interface SimulateResult {
+  moduleCode: string
+  scopeCode: string
+  accessibleCount: number
+  samples?: SimulateSample[]
+  note?: string
+}
+
+export interface SimulateResponse {
+  userId: string
+  userOrgUnitId?: string | null
+  results: SimulateResult[]
+  error?: string
+}
+
+/**
+ * 数据权限模拟预览 API
+ *
+ * 用于 /access/data-permissions 右栏 "模拟用户" 功能:
+ * 管理员未保存的配置快照即可预览.
+ */
+export const dataPermissionSimulateApi = {
+  simulate: (req: SimulateRequest): Promise<SimulateResponse> =>
+    http.post<SimulateResponse>('/access/data-permissions/simulate', req)
+}
