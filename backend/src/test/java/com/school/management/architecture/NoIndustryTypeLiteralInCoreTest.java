@@ -39,9 +39,9 @@ class NoIndustryTypeLiteralInCoreTest {
     /** 排除的子包 (插件 / 仍保留在 core 的历史包) */
     private static final String[] EXCLUDED_PATH_FRAGMENTS = {
         "/plugins/",        // 行业插件
-        "/inspection/",     // 检查平台 (未迁出, 包含历史 STUDENT 引用)
         "/test/",           // 测试代码自身可以写
         "/architecture/"    // 本测试文件也会包含字面量
+        // 检查平台 (inspection/) 已于 2026-04-25 完成行业去耦, 纳入守护
     };
 
     @Test

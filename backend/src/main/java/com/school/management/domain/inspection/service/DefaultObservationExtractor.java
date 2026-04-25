@@ -1,7 +1,7 @@
 package com.school.management.domain.inspection.service;
 
-import com.school.management.domain.inspection.model.v7.execution.ScoringObservation;
-import com.school.management.domain.inspection.model.v7.execution.SubmissionDetail;
+import com.school.management.domain.inspection.model.execution.ScoringObservation;
+import com.school.management.domain.inspection.model.execution.SubmissionDetail;
 import org.springframework.core.Ordered;
 import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
@@ -42,7 +42,7 @@ public class DefaultObservationExtractor implements ObservationExtractor {
                 .subjectId(ctx.getTargetId())
                 .subjectName(ctx.getTargetName())
                 .orgUnitId(ctx.getOrgUnitId())
-                .className(ctx.getClassName())
+                .orgUnitName(ctx.getOrgUnitName())
                 .score(score != null ? score : BigDecimal.ZERO)
                 .negative(true)
                 .severity(ScoringObservation.calcSeverity(score, Boolean.TRUE.equals(detail.getIsFlagged())))

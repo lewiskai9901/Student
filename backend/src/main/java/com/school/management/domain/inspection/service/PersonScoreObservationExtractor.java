@@ -2,8 +2,8 @@ package com.school.management.domain.inspection.service;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.school.management.domain.inspection.model.v7.execution.ScoringObservation;
-import com.school.management.domain.inspection.model.v7.execution.SubmissionDetail;
+import com.school.management.domain.inspection.model.execution.ScoringObservation;
+import com.school.management.domain.inspection.model.execution.SubmissionDetail;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.core.annotation.Order;
@@ -60,7 +60,7 @@ public class PersonScoreObservationExtractor implements ObservationExtractor {
                         .subjectId(studentId)
                         .subjectName(studentName)
                         .orgUnitId(ctx.getOrgUnitId())
-                        .className(ctx.getClassName())
+                        .orgUnitName(ctx.getOrgUnitName())
                         .score(personScore)
                         .negative(true)
                         .severity(ScoringObservation.calcSeverity(personScore, false))
