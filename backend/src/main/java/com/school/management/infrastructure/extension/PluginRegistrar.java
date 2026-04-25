@@ -1,5 +1,6 @@
 package com.school.management.infrastructure.extension;
 
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.core.annotation.Order;
@@ -80,21 +81,60 @@ public class PluginRegistrar extends AbstractPluginRegistrar<EntityTypePlugin, E
             return UpsertResult.CREATED;
         }
         // 合并: 保留 admin 自定义字段
-        String currentSchemaStr = jdbc.queryForObject(
-            "SELECT metadata_schema FROM entity_type_configs WHERE entity_type=? AND type_code=? AND deleted=0",
-            String.class, entityType, typeCode);
+        Map<String, Object> existingRow = jdbc.queryForMap(
+            "SELECT metadata_schema, type_name, category, ui_config, features, overridden_fields " +
+            "FROM entity_type_configs WHERE entity_type=? AND type_code=? AND deleted=0",
+            entityType, typeCode);
+        String currentSchemaStr = (String) existingRow.get("metadata_schema");
         List<FieldDefinition> customFields = extractCustomFields(currentSchemaStr);
         String mergedSchema = buildSchemaJson(plugin.getSystemFields(), customFields);
+
+        // ── 字段级合并: 被管理员覆写的字段保留现值, 其他跟插件声明走 ──
+        // overridden_fields 是 JSON 数组, 如 ["typeName","category"]
+        Set<String> overridden = parseOverriddenFields(existingRow.get("overridden_fields"));
+
+        String finalTypeName = overridden.contains("typeName")
+                ? (String) existingRow.get("type_name")
+                : plugin.getTypeName();
+        String finalCategory = overridden.contains("category")
+                ? (String) existingRow.get("category")
+                : plugin.getCategory();
+        String finalUiConfig = overridden.contains("uiConfig")
+                ? (String) existingRow.get("ui_config")
+                : uiConfigJson;
+        // features 和 category 绑定 — category 被覆写时 features 也跟着保留
+        String finalFeatures = overridden.contains("category")
+                ? (String) existingRow.get("features")
+                : featuresJson;
 
         jdbc.update(
             "UPDATE entity_type_configs SET type_name=?, category=?, parent_type_code=?, " +
             "allowed_child_type_codes=?, metadata_schema=?, features=?, ui_config=?, " +
             "is_plugin_registered=1, plugin_class=?, industry=?, origin=? " +
             "WHERE entity_type=? AND type_code=? AND deleted=0",
-            plugin.getTypeName(), plugin.getCategory(), plugin.getParentTypeCode(),
-            childCodesJson, mergedSchema, featuresJson, uiConfigJson,
+            finalTypeName, finalCategory, plugin.getParentTypeCode(),
+            childCodesJson, mergedSchema, finalFeatures, finalUiConfig,
             pluginClass, industry, origin, entityType, typeCode);
+        if (!overridden.isEmpty()) {
+            log.info("[PluginRegistrar] {}/{} 有管理员覆写字段: {}", entityType, typeCode, overridden);
+        }
         return UpsertResult.UPDATED;
+    }
+
+    /**
+     * 解析 overridden_fields JSON 数组; 异常或空值返回空集合 (等同"无覆写").
+     */
+    private Set<String> parseOverriddenFields(Object raw) {
+        if (raw == null) return Collections.emptySet();
+        String str = raw.toString();
+        if (str.isBlank()) return Collections.emptySet();
+        try {
+            List<String> list = objectMapper.readValue(str, new TypeReference<List<String>>() {});
+            return new HashSet<>(list);
+        } catch (Exception e) {
+            log.warn("[PluginRegistrar] 解析 overridden_fields 失败: {} - {}", str, e.getMessage());
+            return Collections.emptySet();
+        }
     }
 
     // ═══════════════ schema 合并辅助 ═══════════════

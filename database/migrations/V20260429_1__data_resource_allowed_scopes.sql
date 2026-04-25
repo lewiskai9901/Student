@@ -5,6 +5,13 @@
 --       (不是 DEPT_AND_BELOW), 请勿混淆
 -- 插件贡献维度 (data_scope_dims): BY_GRADE / BY_CLASS / BY_MAJOR (education),
 --                                  BY_WARD / BY_ATTENDING_DOCTOR (healthcare)
+--
+-- !!! SPI 所有权转移 (2026-04-23) !!!
+-- 本文件的 seed 只用于空库 bootstrap. 运行时真正源头已改为
+-- DataResourceProvider (infrastructure/extension/) 的各插件实现:
+--   - CoreDataResourceProvider / EducationDataResourceProvider / HealthcareDataResourceProvider
+-- 启动 @Order(700) 的 DataResourceRegistrar 会 UPDATE allowed_scopes 覆盖本 seed.
+-- 新增模块时: 写对应 Provider, 不再改本 migration.
 
 -- ==================== 1. 加列 (幂等) ====================
 SET @col = (SELECT COUNT(*) FROM information_schema.columns

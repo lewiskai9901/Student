@@ -26,6 +26,8 @@ export interface EntityTypeConfig {
   industry?: string
   origin?: string
   pluginClass?: string
+  /** 管理员显式覆写的字段集合 (JSON 数组字符串 或 已解析的数组) — 插件启动时被这些字段会保留 */
+  overriddenFields?: string[] | string | null
 }
 
 export interface FieldSchema {
@@ -73,4 +75,8 @@ export const entityTypeApi = {
   /** 管理员删除自定义字段 */
   removeCustomField: (id: number, fieldKey: string) =>
     http.delete(`/entity-type-configs/${id}/custom-fields/${fieldKey}`),
+
+  /** 恢复某个字段为插件默认值 (从 overridden_fields 移除并回填插件声明) */
+  resetField: (id: number | string, field: string) =>
+    http.post(`/entity-type-configs/${id}/reset-field`, null, { params: { field } }),
 }

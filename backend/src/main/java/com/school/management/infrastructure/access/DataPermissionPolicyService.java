@@ -120,9 +120,13 @@ public class DataPermissionPolicyService {
             }
         }
 
+        // uk_role_res (role_id, resource_code, tenant_id) 不含 deleted, 软删后再 INSERT 会撞 unique.
+        // 用 ON DUPLICATE KEY 覆盖同一行, 顺便把 deleted 翻回 0.
         jdbcTemplate.update(
                 "INSERT INTO role_data_scopes (tenant_id, role_id, resource_code, scope_type, custom_org_unit_ids, priority, created_at, deleted) " +
-                "VALUES (?, ?, ?, ?, ?, ?, NOW(), 0)",
+                "VALUES (?, ?, ?, ?, ?, ?, NOW(), 0) " +
+                "ON DUPLICATE KEY UPDATE scope_type=VALUES(scope_type), custom_org_unit_ids=VALUES(custom_org_unit_ids), " +
+                "priority=VALUES(priority), updated_at=NOW(), deleted=0",
                 tenantId, permission.getRoleId(), permission.getModuleCode(),
                 permission.getScopeCode(), customJson,
                 0);

@@ -158,12 +158,11 @@ public class DataPermissionSimulateController {
 
             case "DEPARTMENT_AND_BELOW":
                 if (meta.orgCol == null || userOrgId == null) return null;
-                // 使用 tree_path 子树: org_units.tree_path LIKE 'xxx/userOrgId/%' OR id = userOrgId
-                // 这里按 org_unit_id IN (子树 id 列表)
+                // tree_path 本身已包含当前节点 id (且以 '/' 结尾), 子节点的 tree_path 以父的 tree_path 为前缀.
+                // 所以子树 = tree_path LIKE '<parent_tree_path>%'
                 return meta.orgCol + " IN (" +
-                        "SELECT id FROM org_units WHERE id = " + userOrgId +
-                        " OR tree_path LIKE CONCAT((SELECT IFNULL(tree_path,'') FROM org_units o2 WHERE o2.id = " + userOrgId +
-                        "), '/', " + userOrgId + ", '%')" +
+                        "SELECT id FROM org_units WHERE tree_path LIKE CONCAT(" +
+                        "(SELECT IFNULL(tree_path,'') FROM org_units WHERE id = " + userOrgId + "), '%')" +
                         ")" + delFilter;
 
             case "CUSTOM":

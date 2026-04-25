@@ -25,7 +25,7 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 /**
- * Data Permission Interceptor (V7 - Scoped Roles)
+ * Data Permission Interceptor (Scoped Roles)
  *
  * MyBatis interceptor that injects parameterized data permission filtering.
  * Supports scoped role assignments: each role's scope determines the org root
@@ -114,24 +114,50 @@ public class DataPermissionInterceptor implements Interceptor {
         // Inject into SQL
         BoundSql boundSql = statementHandler.getBoundSql();
         String originalSql = boundSql.getSql();
-        String newSql = injectFilterCondition(originalSql, condition.sql);
+        // If the SQL does not actually use the configured tableAlias (e.g. generated
+        // COUNT(*) queries from BaseMapper don't alias the table), strip the alias prefix
+        // from the filter so we don't reference a non-existent alias.
+        String effectiveFilter = stripAliasIfNotInSql(condition.sql, originalSql,
+                dataPermission.tableAlias());
+        String newSql = injectFilterCondition(originalSql, effectiveFilter);
 
         // Set new SQL
         metaObject.setValue("delegate.boundSql.sql", newSql);
 
-        // Append parameter mappings for the `?` placeholders we added at the END of the SQL.
-        // MyBatis's ParameterHandler / BaseExecutor.createCacheKey read values via
-        // boundSql.hasAdditionalParameter(property) first, so setAdditionalParameter suffices.
-        // Inserting at a specific index was an old attempt to match prepend-style injection
-        // and broke with IndexOutOfBoundsException; we now always append.
+        // Our filter is injected BEFORE ORDER BY / LIMIT clause (see injectFilterCondition),
+        // so the `?` placeholders sit between the original WHERE's `?`s and any trailing
+        // LIMIT `?, ?` added by MyBatis-Plus PaginationInterceptor.
+        //
+        // Parameter mappings must match positional order:  [origWhere..., filter..., LIMIT...]
+        // If we append at the end, our values would bind to LIMIT slots and vice versa →
+        // SQL syntax error when a tree_path string ends up in LIMIT.
+        //
+        // Fix: find the first LIMIT mapping (if any) and insert ours before it; otherwise append.
         Configuration configuration = mappedStatement.getConfiguration();
+        // BoundSql.getParameterMappings() may return an unmodifiable list — copy to mutable
+        // ArrayList, mutate, then write back via MetaObject (the underlying field is private).
+        List<ParameterMapping> mappings = new ArrayList<>(boundSql.getParameterMappings());
+        // Count `?` placeholders that come AFTER our injection point (i.e. in ORDER BY / LIMIT).
+        // Parameter mappings are positional — those trailing `?`s bind to the LAST N entries.
+        // So we insert before them to keep the order [origWhere..., filter..., trailing...].
+        int trailingPlaceholders = countPlaceholdersAfterInjection(newSql, effectiveFilter);
+        int insertAt = trailingPlaceholders > 0 && trailingPlaceholders <= mappings.size()
+                ? mappings.size() - trailingPlaceholders : -1;
         for (AdditionalParam param : condition.params) {
             ParameterMapping.Builder pmBuilder = new ParameterMapping.Builder(
                     configuration, param.property, param.javaType);
             pmBuilder.jdbcType(param.jdbcType);
-            boundSql.getParameterMappings().add(pmBuilder.build());
+            ParameterMapping pm = pmBuilder.build();
+            if (insertAt < 0) {
+                mappings.add(pm);
+            } else {
+                mappings.add(insertAt, pm);
+                insertAt++;
+            }
             boundSql.setAdditionalParameter(param.property, param.value);
         }
+        // Write the mutated list back into BoundSql's private field
+        SystemMetaObject.forObject(boundSql).setValue("parameterMappings", mappings);
 
         if (log.isDebugEnabled()) {
             log.debug("Data permission filter applied: module={}, params={}",
@@ -591,6 +617,47 @@ public class DataPermissionInterceptor implements Interceptor {
             log.debug("Failed to get DataPermission annotation for {}: {}", mapperId, e.getMessage());
             return null;
         }
+    }
+
+    /**
+     * If the original SQL does not reference the configured tableAlias (e.g. "SELECT COUNT(*)
+     * FROM user_student WHERE ..." has no alias), strip "{alias}." prefix from the filter so
+     * the injected SQL doesn't reference an undefined alias.
+     */
+    private String stripAliasIfNotInSql(String filterSql, String originalSql, String alias) {
+        if (filterSql == null || alias == null || alias.isEmpty()) return filterSql;
+        String san = sanitizeIdentifier(alias);
+        if (san == null || san.isEmpty()) return filterSql;
+        // Does original SQL actually declare this alias? Look for patterns "<alias>." /
+        // " <alias> " / "AS <alias>". Be lenient — if any appear, keep the alias.
+        String upperOrig = " " + originalSql.toUpperCase() + " ";
+        String a = san.toUpperCase();
+        if (upperOrig.contains(" " + a + ".") ||
+            upperOrig.contains(" " + a + " ") ||
+            upperOrig.contains(" AS " + a + " ") ||
+            upperOrig.contains(" AS " + a + ",") ||
+            upperOrig.contains("(" + a + ".")) {
+            return filterSql;
+        }
+        // Alias missing — strip "alias." occurrences
+        return filterSql.replace(san + ".", "");
+    }
+
+    /**
+     * Count `?` placeholders in {@code newSql} that come AFTER our injected {@code filterSql}.
+     * The injected filter itself is skipped — only placeholders in the trailing ORDER BY /
+     * LIMIT region are counted. These typically come from MyBatis-Plus pagination.
+     */
+    private int countPlaceholdersAfterInjection(String newSql, String filterSql) {
+        if (newSql == null || filterSql == null || filterSql.isEmpty()) return 0;
+        int idx = newSql.indexOf(filterSql);
+        if (idx < 0) return 0;
+        int tailStart = idx + filterSql.length();
+        int count = 0;
+        for (int i = tailStart; i < newSql.length(); i++) {
+            if (newSql.charAt(i) == '?') count++;
+        }
+        return count;
     }
 
     /**

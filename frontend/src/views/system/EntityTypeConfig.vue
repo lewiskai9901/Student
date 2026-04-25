@@ -1,301 +1,150 @@
 <template>
-  <div class="tm-page">
+  <div class="flex h-[calc(100vh-64px)] flex-col bg-gray-100">
     <!-- Header -->
-    <div class="tm-header">
+    <div class="flex items-center justify-between border-b border-gray-200 bg-white px-5 py-3">
       <div>
-        <h1 class="tm-title">类型配置</h1>
-        <div class="tm-stats">
-          <span>组织类型 <b>{{ orgTypes.length }}</b></span>
-          <span class="sep" />
-          <span>场所类型 <b>{{ placeTypes.length }}</b></span>
-          <span class="sep" />
-          <span>用户类型 <b>{{ userTypes.length }}</b></span>
+        <h1 class="flex items-center gap-2 text-base font-semibold text-gray-800">
+          <Layers class="h-4 w-4 text-blue-500" />
+          类型配置
+          <span class="text-xs font-normal text-gray-400">统一管理组织/场所/用户类型</span>
+        </h1>
+        <div class="mt-1 flex items-center gap-3 text-[11px] text-gray-500">
+          <span>组织 <b class="text-gray-700">{{ countByEntity.ORG_UNIT }}</b></span>
+          <span class="text-gray-300">|</span>
+          <span>场所 <b class="text-gray-700">{{ countByEntity.PLACE }}</b></span>
+          <span class="text-gray-300">|</span>
+          <span>用户 <b class="text-gray-700">{{ countByEntity.USER }}</b></span>
+          <span class="text-gray-300">|</span>
+          <span>自定义 <b class="text-amber-600">{{ customCount }}</b></span>
+          <span v-if="pluginDisabledCount > 0" class="text-gray-300">|</span>
+          <span v-if="pluginDisabledCount > 0">
+            插件禁用级联 <b class="text-orange-600">{{ pluginDisabledCount }}</b>
+          </span>
         </div>
       </div>
-      <button class="tm-btn tm-btn-primary" @click="showCreateDialog">新建类型</button>
+      <button
+        class="flex h-8 items-center gap-1 rounded-md border border-gray-200 bg-white px-3 text-xs text-gray-600 hover:bg-gray-50"
+        @click="loadAll"
+      >
+        <RefreshCw class="h-3.5 w-3.5" :class="loading ? 'animate-spin' : ''" />
+        刷新
+      </button>
     </div>
 
-    <!-- Tabs -->
-    <div class="tm-tabs">
-      <button :class="['tm-tab', { active: tab === 'ORG_UNIT' }]" @click="tab = 'ORG_UNIT'">组织类型</button>
-      <button :class="['tm-tab', { active: tab === 'PLACE' }]" @click="tab = 'PLACE'">场所类型</button>
-      <button :class="['tm-tab', { active: tab === 'USER' }]" @click="tab = 'USER'">用户类型</button>
-    </div>
+    <!-- 3-column IDE layout -->
+    <div class="flex min-h-0 flex-1">
+      <!-- Left: explorer -->
+      <div class="w-[260px] flex-shrink-0 border-r border-gray-200 bg-white">
+        <TypeExplorer
+          :types="allTypes"
+          :loading="loading"
+          :selected-id="selectedId"
+          @select="onSelect"
+          @create="onCreate"
+        />
+      </div>
 
-    <!-- Content -->
-    <div class="tm-table-wrap">
-      <table class="tm-table">
-        <colgroup>
-          <col style="width: 110px" />
-          <col />
-          <col style="width: 80px" />
-          <col style="width: 100px" />
-          <col style="width: 80px" />
-          <col style="width: 80px" />
-          <col style="width: 130px" />
-        </colgroup>
-        <thead>
-          <tr>
-            <th>编码</th>
-            <th class="text-left">类型名称</th>
-            <th>分类</th>
-            <th>父类型</th>
-            <th>来源</th>
-            <th>状态</th>
-            <th>操作</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr v-if="loading">
-            <td colspan="7" class="tm-empty"><span class="tm-spin" style="display:inline-block;width:16px;height:16px;border:2px solid #e5e7eb;border-top-color:#2563eb;border-radius:50%;" /> 加载中...</td>
-          </tr>
-          <tr v-else-if="currentTypes.length === 0">
-            <td colspan="7" class="tm-empty">暂无类型配置</td>
-          </tr>
-          <tr
-            v-for="t in currentTypes" :key="t.id"
-            :class="isPluginDisabled(t) ? 'row-disabled-by-plugin' : ''"
-            :title="isPluginDisabled(t) ? '所属插件已禁用 — 此类型级联软失效' : undefined"
-          >
-            <td>
-              <span class="tm-code">{{ t.typeCode }}</span>
-              <span
-                v-if="isPluginDisabled(t)"
-                class="disabled-by-plugin-badge"
-                title="所属插件已禁用"
-              >插件禁用</span>
-            </td>
-            <td class="text-left" style="font-weight: 500;">{{ t.typeName }}</td>
-            <td><span class="tm-chip tm-chip-gray">{{ categoryLabel(t.entityType, t.category) }}</span></td>
-            <td style="font-size: 12px; color: #6b7280;">{{ t.parentTypeCode || '-' }}</td>
-            <td>
-              <span :class="['tm-chip', t.isPluginRegistered ? 'tm-chip-blue' : 'tm-chip-amber']">
-                {{ t.isPluginRegistered ? '插件' : '自定义' }}
-              </span>
-            </td>
-            <td>
-              <span :class="['tm-chip', t.isEnabled ? 'tm-chip-green' : 'tm-chip-red']">
-                {{ t.isEnabled ? '启用' : '禁用' }}
-              </span>
-            </td>
-            <td>
-              <button class="tm-action"
-                      :disabled="isPluginDisabled(t)"
-                      :title="isPluginDisabled(t) ? '所属插件已禁用, 请先启用' : ''"
-                      @click="showEditDialog(t)">编辑</button>
-              <button class="tm-action"
-                      :disabled="isPluginDisabled(t)"
-                      :title="isPluginDisabled(t) ? '所属插件已禁用, 请先启用' : ''"
-                      @click="showSchemaDialog(t)">字段</button>
-              <button v-if="!t.isPluginRegistered" class="tm-action tm-action-danger"
-                      :disabled="isPluginDisabled(t)"
-                      :title="isPluginDisabled(t) ? '所属插件已禁用, 请先启用' : ''"
-                      @click="handleDelete(t)">删除</button>
-            </td>
-          </tr>
-        </tbody>
-      </table>
-    </div>
-
-    <!-- Create/Edit Drawer -->
-    <Transition name="tm-drawer">
-      <div v-if="dialogVisible" class="tm-drawer-overlay" @click.self="dialogVisible = false">
-        <div class="tm-drawer">
-          <div class="tm-drawer-header">
-            <h3 class="tm-drawer-title">{{ editingType ? '编辑类型' : '新建类型' }}</h3>
-            <button class="tm-drawer-close" @click="dialogVisible = false">&times;</button>
-          </div>
-          <div class="tm-drawer-body">
-            <div class="tm-section">
-              <h4 class="tm-section-title">基本信息</h4>
-              <div class="tm-hint" style="margin-bottom: 12px;">
-                实体类型：<b>{{ entityTypeLabel(form.entityType) }}</b>
-              </div>
-              <div class="tm-fields tm-cols-2">
-                <div class="tm-field">
-                  <label class="tm-label">类型编码 <span class="req">*</span></label>
-                  <input v-model="form.typeCode" class="tm-input" :disabled="!!editingType" placeholder="如 TEACHING_GROUP" />
-                </div>
-                <div class="tm-field">
-                  <label class="tm-label">类型名称 <span class="req">*</span></label>
-                  <input v-model="form.typeName" class="tm-input" placeholder="如 教研室" />
-                </div>
-              </div>
-              <div class="tm-field">
-                <label class="tm-label">分类</label>
-                <select v-model="form.category" class="tm-field-select">
-                  <option value="">— 请选择分类 —</option>
-                  <option v-for="c in currentCategories" :key="c.code" :value="c.code">
-                    {{ c.label }}
-                  </option>
-                </select>
-                <div v-if="selectedCategoryHint" class="tm-hint">{{ selectedCategoryHint }}</div>
-              </div>
-              <div class="tm-field">
-                <label class="tm-label">父类型</label>
-                <select v-model="form.parentTypeCode" class="tm-field-select">
-                  <option value="">— 顶级类型 —</option>
-                  <option v-for="t in parentCandidates" :key="t.typeCode" :value="t.typeCode">
-                    {{ t.typeName }}（{{ t.typeCode }}）
-                  </option>
-                </select>
-              </div>
-              <div class="tm-field">
-                <label class="tm-label">允许的子类型</label>
-                <div class="tm-checkgrid">
-                  <label v-for="t in childCandidates" :key="t.typeCode" class="tm-checkitem">
-                    <input type="checkbox" :value="t.typeCode" v-model="form.allowedChildCodesArr" />
-                    <span>{{ t.typeName }}（{{ t.typeCode }}）</span>
-                  </label>
-                  <div v-if="childCandidates.length === 0" style="color:#9ca3af;font-size:12px;">暂无可选子类型</div>
-                </div>
-              </div>
-            </div>
-          </div>
-          <div class="tm-drawer-footer">
-            <button class="tm-btn tm-btn-secondary" @click="dialogVisible = false">取消</button>
-            <button class="tm-btn tm-btn-primary" :disabled="saving" @click="handleSave">{{ saving ? '保存中...' : '保存' }}</button>
-          </div>
+      <!-- Middle: editor -->
+      <div class="min-w-0 flex-1 bg-white">
+        <TypeEditor
+          v-if="selectedType || isNew"
+          :type="selectedType"
+          :is-new="isNew"
+          :all-types="allTypes"
+          :category-map="categoryMap"
+          @saved="onSaved"
+          @cancel="onEditorCancel"
+          @select="onSelect"
+        />
+        <div v-else class="flex h-full flex-col items-center justify-center text-gray-400">
+          <Layers class="mb-3 h-12 w-12 text-gray-200" />
+          <div class="text-sm">从左侧选一个类型查看/编辑</div>
+          <div class="mt-1 text-xs text-gray-300">或点底部 "+ 新建类型"</div>
         </div>
       </div>
-    </Transition>
 
-    <!-- Schema Editor Drawer -->
-    <Transition name="tm-drawer">
-      <div v-if="schemaVisible" class="tm-drawer-overlay" @click.self="schemaVisible = false">
-        <div class="tm-drawer" style="width: 600px;">
-          <div class="tm-drawer-header">
-            <h3 class="tm-drawer-title">{{ schemaType?.typeName }} — 字段配置</h3>
-            <button class="tm-drawer-close" @click="schemaVisible = false">&times;</button>
-          </div>
-          <div class="tm-drawer-body">
-            <div class="tm-section">
-              <div v-if="schemaFields.length === 0" style="color: #9ca3af; font-size: 13px; padding: 20px 0; text-align: center;">
-                暂无扩展字段
-              </div>
-              <div v-for="(f, i) in schemaFields" :key="i" style="display: flex; align-items: center; gap: 8px; padding: 8px 0; border-bottom: 1px solid #f3f4f6;">
-                <span style="font-size: 13px; font-weight: 500; flex: 1;">{{ f.label }} <span class="tm-code" style="margin-left: 4px;">{{ f.key }}</span></span>
-                <span class="tm-chip tm-chip-gray">{{ f.type }}</span>
-                <span v-if="f.required" class="tm-chip tm-chip-red">必填</span>
-                <span :class="['tm-chip', f.system ? 'tm-chip-blue' : 'tm-chip-amber']">{{ f.system ? '系统' : '自定义' }}</span>
-                <button v-if="!f.system" class="tm-action tm-action-danger" @click="removeCustomField(i)">删</button>
-              </div>
-            </div>
-
-            <!-- Add custom field -->
-            <div class="tm-section">
-              <h4 class="tm-section-title">添加自定义字段</h4>
-              <div class="tm-fields tm-cols-3">
-                <div class="tm-field">
-                  <label class="tm-label">字段Key</label>
-                  <input v-model="newField.key" class="tm-input" placeholder="如 motto" />
-                </div>
-                <div class="tm-field">
-                  <label class="tm-label">显示名</label>
-                  <input v-model="newField.label" class="tm-input" placeholder="如 班训" />
-                </div>
-                <div class="tm-field">
-                  <label class="tm-label">类型</label>
-                  <select v-model="newField.type" class="tm-field-select">
-                    <option value="text">文本</option>
-                    <option value="number">数字</option>
-                    <option value="date">日期</option>
-                    <option value="boolean">布尔</option>
-                    <option value="select">下拉选择</option>
-                    <option value="textarea">多行文本</option>
-                  </select>
-                </div>
-              </div>
-              <button class="tm-btn tm-btn-secondary" style="margin-top: 8px;" @click="addCustomField">添加字段</button>
-            </div>
-          </div>
-          <div class="tm-drawer-footer">
-            <button class="tm-btn tm-btn-secondary" @click="schemaVisible = false">关闭</button>
-          </div>
-        </div>
+      <!-- Right: usage -->
+      <div class="w-[300px] flex-shrink-0 border-l border-gray-200 bg-gray-50">
+        <TypeUsagePanel
+          :type="selectedType"
+          :is-new="isNew"
+          :all-types="allTypes"
+          @select="onSelect"
+          @delete="onDelete"
+          @reset-field="onResetField"
+          @reset-all="onResetAll"
+        />
       </div>
-    </Transition>
+    </div>
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
+import { Layers, RefreshCw } from 'lucide-vue-next'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { entityTypeApi, type CategoryOption } from '@/api/entityType'
+import { entityTypeApi, type EntityTypeConfig, type CategoryOption } from '@/api/entityType'
 import { http } from '@/utils/request'
+import TypeExplorer from './entity-types/TypeExplorer.vue'
+import TypeEditor from './entity-types/TypeEditor.vue'
+import TypeUsagePanel from './entity-types/TypeUsagePanel.vue'
 
-const tab = ref<'ORG_UNIT' | 'PLACE' | 'USER'>('ORG_UNIT')
-const allTypes = ref<any[]>([])
-const loading = ref(false)
-const dialogVisible = ref(false)
-const saving = ref(false)
-const editingType = ref<any>(null)
-const form = ref<any>({ entityType: 'ORG_UNIT' })
+const route = useRoute()
+const router = useRouter()
 
-const schemaVisible = ref(false)
-const schemaType = ref<any>(null)
-const schemaFields = ref<any[]>([])
-const newField = ref({ key: '', label: '', type: 'text' })
-
+const allTypes = ref<EntityTypeConfig[]>([])
 const categoryMap = ref<Record<string, CategoryOption[]>>({ ORG_UNIT: [], PLACE: [], USER: [] })
-const currentCategories = computed(() => categoryMap.value[form.value.entityType] || [])
-function categoryLabel(entityType: string, code?: string) {
-  if (!code) return '-'
-  const opt = (categoryMap.value[entityType] || []).find(c => c.code === code)
-  return opt ? opt.label : code
-}
-const selectedCategoryHint = computed(() => {
-  const opt = currentCategories.value.find(c => c.code === form.value.category)
-  if (!opt) return ''
-  const enabled = Object.entries(opt.defaultFeatures || {}).filter(([, v]) => v).map(([k]) => k)
-  return enabled.length ? `默认启用：${enabled.join('、')}` : '此分类默认不启用任何 feature'
+const loading = ref(false)
+const isNew = ref(false)
+
+const selectedId = computed<string | null>({
+  get() {
+    const raw = route.query.type
+    if (raw == null || raw === '') return null
+    return String(raw)
+  },
+  set(v) {
+    router.replace({ query: { ...route.query, type: v ?? undefined } })
+  },
 })
 
-const orgTypes = computed(() => allTypes.value.filter(t => t.entityType === 'ORG_UNIT'))
-const placeTypes = computed(() => allTypes.value.filter(t => t.entityType === 'PLACE'))
-const userTypes = computed(() => allTypes.value.filter(t => t.entityType === 'USER'))
-const currentTypes = computed(() => allTypes.value.filter(t => t.entityType === tab.value))
+const selectedType = computed<EntityTypeConfig | null>(() => {
+  if (isNew.value) return null
+  const id = selectedId.value
+  if (!id) return null
+  return allTypes.value.find(t => String(t.id) === id) || null
+})
 
-const ENTITY_TYPE_LABELS: Record<string, string> = { ORG_UNIT: '组织类型', PLACE: '场所类型', USER: '用户类型' }
-function entityTypeLabel(et: string) { return ENTITY_TYPE_LABELS[et] || et }
+const countByEntity = computed(() => ({
+  ORG_UNIT: allTypes.value.filter(t => t.entityType === 'ORG_UNIT').length,
+  PLACE:    allTypes.value.filter(t => t.entityType === 'PLACE').length,
+  USER:     allTypes.value.filter(t => t.entityType === 'USER').length,
+}))
 
-// 父类型/子类型候选：同 entityType 下、排除自己
-const parentCandidates = computed(() =>
-  allTypes.value.filter(t =>
-    t.entityType === form.value.entityType &&
-    t.typeCode !== form.value.typeCode
-  )
+const customCount = computed(() => allTypes.value.filter(t => !t.isPluginRegistered).length)
+
+const pluginDisabledCount = computed(() =>
+  allTypes.value.filter(t => t.pluginEnabled === false || t.pluginEnabled === 0).length
 )
-const childCandidates = computed(() =>
-  allTypes.value.filter(t =>
-    t.entityType === form.value.entityType &&
-    t.typeCode !== form.value.typeCode
-  )
-)
-
-/** pluginEnabled 从后端返回的 tinyint 字段可能是 0/1 (number) 或 boolean */
-function isPluginDisabled(t: any): boolean {
-  const v = t?.pluginEnabled
-  if (v === false) return true
-  if (v === 0) return true
-  return false
-}
 
 async function loadAll() {
   loading.value = true
   try {
-    // includeDisabled=true: 管理员视角包含所属插件被禁的类型 (灰显显示)
-    const results = await Promise.all([
-      entityTypeApi.list('ORG_UNIT', true),
-      entityTypeApi.list('PLACE', true),
-      entityTypeApi.list('USER', true),
-    ])
-    allTypes.value = [
-      ...((results[0] as any).data || results[0] || []),
-      ...((results[1] as any).data || results[1] || []),
-      ...((results[2] as any).data || results[2] || []),
-    ]
-  } catch { allTypes.value = [] } finally { loading.value = false }
+    const types: Array<'ORG_UNIT' | 'PLACE' | 'USER'> = ['ORG_UNIT', 'PLACE', 'USER']
+    const results = await Promise.all(types.map(t => entityTypeApi.list(t, true)))
+    const merged: EntityTypeConfig[] = []
+    for (const r of results) {
+      const list = ((r as any).data || r || []) as EntityTypeConfig[]
+      merged.push(...list)
+    }
+    allTypes.value = merged
+  } catch {
+    allTypes.value = []
+    ElMessage.error('加载类型失败')
+  } finally {
+    loading.value = false
+  }
 }
 
 async function loadCategories() {
@@ -306,149 +155,87 @@ async function loadCategories() {
     if (r.status === 'fulfilled') {
       const v: any = r.value
       map[types[i]] = (Array.isArray(v) ? v : (v?.data || [])) as CategoryOption[]
-    } else {
-      console.warn(`[EntityTypeConfig] load categories ${types[i]} failed:`, r.reason)
     }
   })
   categoryMap.value = map
 }
 
-function showCreateDialog() {
-  editingType.value = null
-  form.value = { entityType: tab.value, typeCode: '', typeName: '', category: '', parentTypeCode: '', allowedChildCodesArr: [] }
-  dialogVisible.value = true
+function onSelect(t: EntityTypeConfig) {
+  isNew.value = false
+  selectedId.value = String(t.id)
 }
 
-function showEditDialog(t: any) {
-  editingType.value = t
-  const children = t.allowedChildTypeCodes
-    ? (typeof t.allowedChildTypeCodes === 'string' ? JSON.parse(t.allowedChildTypeCodes) : t.allowedChildTypeCodes)
-    : []
-  form.value = {
-    entityType: t.entityType,
-    typeCode: t.typeCode,
-    typeName: t.typeName,
-    category: t.category || '',
-    parentTypeCode: t.parentTypeCode || '',
-    allowedChildCodesArr: Array.isArray(children) ? children : [],
+function onCreate() {
+  isNew.value = true
+  selectedId.value = null
+}
+
+function onEditorCancel() {
+  isNew.value = false
+}
+
+async function onSaved(t: EntityTypeConfig) {
+  isNew.value = false
+  await loadAll()
+  if (t?.id) selectedId.value = String(t.id)
+}
+
+async function onResetField(t: EntityTypeConfig, field: string) {
+  try {
+    await ElMessageBox.confirm(
+      `恢复字段 "${field}" 为插件默认值?\n当前管理员修改会丢失。`,
+      '恢复确认', { type: 'warning' }
+    )
+    await entityTypeApi.resetField(t.id, field)
+    ElMessage.success(`字段 ${field} 已恢复`)
+    await loadAll()
+  } catch (e: any) {
+    if (e === 'cancel' || e?.message === 'cancel') return
+    ElMessage.error('恢复失败')
   }
-  dialogVisible.value = true
 }
 
-async function handleSave() {
-  if (!form.value.typeCode?.trim() || !form.value.typeName?.trim()) { ElMessage.warning('请填写编码和名称'); return }
-  saving.value = true
+async function onResetAll(t: EntityTypeConfig) {
+  const raw = t.overriddenFields
+  const list: string[] = raw
+    ? (typeof raw === 'string' ? JSON.parse(raw) : raw) as string[]
+    : []
+  if (list.length === 0) return
   try {
-    const payload = {
-      entityType: form.value.entityType,
-      typeCode: form.value.typeCode.trim(),
-      typeName: form.value.typeName.trim(),
-      category: form.value.category || null,
-      parentTypeCode: form.value.parentTypeCode || null,
-      allowedChildTypeCodes: Array.isArray(form.value.allowedChildCodesArr) ? form.value.allowedChildCodesArr : [],
-      metadataSchema: '{"fields":[]}',
-      features: '{}',
-      isPluginRegistered: false,
-      isEnabled: true,
+    await ElMessageBox.confirm(
+      `恢复所有 ${list.length} 个覆写字段为插件默认?\n所有管理员修改将丢失。`,
+      '批量恢复', { type: 'warning', confirmButtonText: '全部恢复', cancelButtonText: '取消' }
+    )
+    for (const f of list) {
+      await entityTypeApi.resetField(t.id, f)
     }
-    if (editingType.value) {
-      await http.put(`/entity-type-configs/${editingType.value.id}`, payload)
-    } else {
-      await http.post('/entity-type-configs', payload)
-    }
-    ElMessage.success('保存成功'); dialogVisible.value = false; loadAll()
-  } catch { ElMessage.error('保存失败') } finally { saving.value = false }
+    ElMessage.success(`已恢复 ${list.length} 个字段`)
+    await loadAll()
+  } catch (e: any) {
+    if (e === 'cancel' || e?.message === 'cancel') return
+    ElMessage.error('批量恢复失败')
+  }
 }
 
-async function handleDelete(t: any) {
+async function onDelete(t: EntityTypeConfig) {
   if (t.isPluginRegistered) { ElMessage.warning('插件注册的类型不能删除'); return }
-  await ElMessageBox.confirm(`确定删除类型"${t.typeName}"？`, '删除', { type: 'warning' })
   try {
+    await ElMessageBox.confirm(
+      `确定删除类型 "${t.typeName}" (${t.typeCode}) ?\n此操作不可恢复。`,
+      '删除确认', { type: 'warning' }
+    )
     await http.delete(`/entity-type-configs/${t.id}`)
-    ElMessage.success('已删除'); loadAll()
-  } catch { ElMessage.error('删除失败') }
+    ElMessage.success('已删除')
+    selectedId.value = null
+    await loadAll()
+  } catch (e: any) {
+    if (e === 'cancel' || e?.message === 'cancel') return
+    ElMessage.error('删除失败')
+  }
 }
 
-function showSchemaDialog(t: any) {
-  schemaType.value = t
-  const schema = typeof t.metadataSchema === 'string' ? JSON.parse(t.metadataSchema || '{"fields":[]}') : t.metadataSchema || { fields: [] }
-  schemaFields.value = schema.fields || []
-  newField.value = { key: '', label: '', type: 'text' }
-  schemaVisible.value = true
-}
-
-async function addCustomField() {
-  if (!newField.value.key || !newField.value.label) { ElMessage.warning('请填写字段Key和显示名'); return }
-  try {
-    await entityTypeApi.addCustomField(schemaType.value.id, { key: newField.value.key, label: newField.value.label, type: newField.value.type, group: '自定义', required: false, system: false })
-    ElMessage.success('已添加')
-    schemaFields.value.push({ ...newField.value, system: false, required: false, group: '自定义' })
-    newField.value = { key: '', label: '', type: 'text' }
-    loadAll()
-  } catch { ElMessage.error('添加失败') }
-}
-
-async function removeCustomField(idx: number) {
-  const field = schemaFields.value[idx]
-  if (field.system) { ElMessage.warning('系统字段不能删除'); return }
-  try {
-    await entityTypeApi.removeCustomField(schemaType.value.id, field.key)
-    schemaFields.value.splice(idx, 1)
-    ElMessage.success('已删除'); loadAll()
-  } catch { ElMessage.error('删除失败') }
-}
-
-onMounted(() => { loadAll(); loadCategories() })
+onMounted(() => {
+  loadAll()
+  loadCategories()
+})
 </script>
-
-<style>
-@import '@/styles/teaching-ui.css';
-
-.tm-checkgrid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
-  gap: 8px 12px;
-  padding: 10px 12px;
-  border: 1px solid #e5e7eb;
-  border-radius: 6px;
-  max-height: 200px;
-  overflow-y: auto;
-  background: #fafafa;
-}
-.tm-checkitem {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 13px;
-  color: #374151;
-  cursor: pointer;
-  user-select: none;
-}
-.tm-checkitem input[type="checkbox"] {
-  margin: 0;
-  cursor: pointer;
-}
-
-/* 插件级联禁用的类型行: 灰显 */
-.row-disabled-by-plugin > td {
-  opacity: 0.55;
-  background-color: #fafaf9;
-}
-.row-disabled-by-plugin:hover > td {
-  background-color: #fef3c7 !important;
-}
-
-.disabled-by-plugin-badge {
-  display: inline-block;
-  padding: 1px 7px;
-  border-radius: 10px;
-  font-size: 10px;
-  font-weight: 600;
-  color: #a16207;
-  background: #fef3c7;
-  border: 1px solid #fcd34d;
-  line-height: 1.4;
-  cursor: help;
-  margin-left: 4px;
-}
-</style>
