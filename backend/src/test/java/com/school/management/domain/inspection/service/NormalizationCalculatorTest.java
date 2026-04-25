@@ -1,6 +1,6 @@
 package com.school.management.domain.inspection.service;
 
-import com.school.management.domain.inspection.model.v7.scoring.NormalizationMode;
+import com.school.management.domain.inspection.model.scoring.NormalizationMode;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;

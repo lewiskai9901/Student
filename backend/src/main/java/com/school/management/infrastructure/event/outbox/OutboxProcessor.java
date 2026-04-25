@@ -1,7 +1,7 @@
 package com.school.management.infrastructure.event.outbox;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.school.management.domain.inspection.event.v7.*;
+import com.school.management.domain.inspection.event.*;
 import com.school.management.domain.shared.event.DomainEvent;
 import com.school.management.infrastructure.event.DomainEventStore;
 import jakarta.annotation.PostConstruct;
@@ -61,7 +61,7 @@ public class OutboxProcessor {
     }
 
     @PostConstruct
-    public void registerV7EventTypes() {
+    public void registerEventTypes() {
         // Template events
         registerEventType("TemplatePublishedEvent", TemplatePublishedEvent.class);
         // Project events
@@ -95,7 +95,7 @@ public class OutboxProcessor {
         registerEventType("DailySummaryUpdatedEvent", DailySummaryUpdatedEvent.class);
         registerEventType("PeriodSummaryCalculatedEvent", PeriodSummaryCalculatedEvent.class);
 
-        log.info("Registered {} V7 event types in OutboxProcessor", eventTypeRegistry.size());
+        log.info("Registered {}  event types in OutboxProcessor", eventTypeRegistry.size());
     }
 
     /**

@@ -1,6 +1,6 @@
 package com.school.management.domain.inspection.service;
 
-import com.school.management.domain.inspection.model.v7.scoring.*;
+import com.school.management.domain.inspection.model.scoring.*;
 import com.school.management.domain.inspection.service.ScoreCalculationDomainService.*;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -287,7 +287,7 @@ class ScoreCalculationDomainServiceTest {
                     buildDeductionInput("VETO_ITEM", 1L, new BigDecimal("-5"), 1)
             );
 
-            CalculationRuleV7 vetoRule = CalculationRuleV7.builder()
+            CalculationRule vetoRule = CalculationRule.builder()
                     .id(1L)
                     .ruleCode("VETO_SAFETY")
                     .ruleType(RuleType.VETO)
@@ -317,7 +317,7 @@ class ScoreCalculationDomainServiceTest {
                     buildAdditionInput("BONUS_B", 1L, new BigDecimal("2"), 1)
             );
 
-            CalculationRuleV7 bonusRule = CalculationRuleV7.builder()
+            CalculationRule bonusRule = CalculationRule.builder()
                     .id(1L)
                     .ruleCode("BONUS_EXTRA")
                     .ruleType(RuleType.BONUS)
@@ -346,7 +346,7 @@ class ScoreCalculationDomainServiceTest {
                     buildAdditionInput("ITEM_A", 1L, new BigDecimal("15"), 1)
             );
 
-            CalculationRuleV7 disabledRule = CalculationRuleV7.builder()
+            CalculationRule disabledRule = CalculationRule.builder()
                     .id(1L)
                     .ruleCode("VETO_TEST")
                     .ruleType(RuleType.VETO)

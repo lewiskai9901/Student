@@ -1,5 +1,5 @@
 /**
- * V7 检查平台 - 知识库类型
+ * 检查平台 - 知识库类型
  */
 
 export interface KnowledgeArticle {

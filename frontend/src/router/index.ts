@@ -19,11 +19,11 @@ const routes: RouteRecordRaw[] = [
       requiresAuth: false
     }
   },
-  // V7 大屏展示（独立全屏页面）
+  // 大屏展示（独立全屏页面）
   {
-    path: '/inspection/v7/big-screen',
-    name: 'V7BigScreen',
-    component: () => import('@/views/inspection/v7/analytics/BigScreenView.vue'),
+    path: '/inspection/big-screen',
+    name: 'BigScreen',
+    component: () => import('@/views/inspection/analytics/BigScreenView.vue'),
     meta: {
       title: '检查大屏',
       requiresAuth: true
@@ -211,11 +211,11 @@ const routes: RouteRecordRaw[] = [
         ]
       },
 
-      // ==================== V7 检查平台 (order: 12) ====================
+      // ==================== 检查平台 (order: 12) ====================
       {
-        path: '/inspection/v7',
-        name: 'InspectionV7',
-        redirect: '/inspection/v7/config',
+        path: '/inspection',
+        name: 'Inspection',
+        redirect: '/inspection/config',
         meta: {
           title: '检查平台',
           icon: 'ClipboardCheck',
@@ -226,9 +226,9 @@ const routes: RouteRecordRaw[] = [
         children: [
           // 统一检查配置（合并模板列表、模板分类、选项集、评分配置列表）
           {
-            path: '/inspection/v7/config',
-            name: 'V7InspectionConfig',
-            component: () => import('@/views/inspection/v7/config/InspectionConfigView.vue'),
+            path: '/inspection/config',
+            name: 'InspectionConfig',
+            component: () => import('@/views/inspection/config/InspectionConfigView.vue'),
             meta: {
               title: '检查配置',
               icon: 'Settings2',
@@ -238,9 +238,9 @@ const routes: RouteRecordRaw[] = [
             }
           },
           {
-            path: '/inspection/v7/templates/create',
-            name: 'V7TemplateCreate',
-            component: () => import('@/views/inspection/v7/templates/TemplateEditorView.vue'),
+            path: '/inspection/templates/create',
+            name: 'TemplateCreate',
+            component: () => import('@/views/inspection/templates/TemplateEditorView.vue'),
             meta: {
               title: '创建模板',
               hidden: true,
@@ -249,9 +249,9 @@ const routes: RouteRecordRaw[] = [
             }
           },
           {
-            path: '/inspection/v7/templates/:id/edit',
-            name: 'V7TemplateEdit',
-            component: () => import('@/views/inspection/v7/templates/TemplateEditorView.vue'),
+            path: '/inspection/templates/:id/edit',
+            name: 'TemplateEdit',
+            component: () => import('@/views/inspection/templates/TemplateEditorView.vue'),
             meta: {
               title: '编辑模板',
               hidden: true,
@@ -260,9 +260,9 @@ const routes: RouteRecordRaw[] = [
             }
           },
           {
-            path: '/inspection/v7/scoring/:id',
-            name: 'V7ScoringProfileEdit',
-            component: () => import('@/views/inspection/v7/scoring/ScoringProfileEditor.vue'),
+            path: '/inspection/scoring/:id',
+            name: 'ScoringProfileEdit',
+            component: () => import('@/views/inspection/scoring/ScoringProfileEditor.vue'),
             meta: {
               title: '评分配置',
               hidden: true,
@@ -271,9 +271,9 @@ const routes: RouteRecordRaw[] = [
             }
           },
           {
-            path: '/inspection/v7/scoring',
-            name: 'V7ScoringProfileByTemplate',
-            component: () => import('@/views/inspection/v7/scoring/ScoringProfileEditor.vue'),
+            path: '/inspection/scoring',
+            name: 'ScoringProfileByTemplate',
+            component: () => import('@/views/inspection/scoring/ScoringProfileEditor.vue'),
             meta: {
               title: '评分配置',
               hidden: true,
@@ -283,9 +283,9 @@ const routes: RouteRecordRaw[] = [
           },
           // ---------- Item Library ----------
           {
-            path: '/inspection/v7/library',
-            name: 'V7ItemLibrary',
-            component: () => import('@/views/inspection/v7/templates/ItemLibraryView.vue'),
+            path: '/inspection/library',
+            name: 'ItemLibrary',
+            component: () => import('@/views/inspection/templates/ItemLibraryView.vue'),
             meta: {
               title: '检查项库',
               icon: 'Library',
@@ -295,9 +295,9 @@ const routes: RouteRecordRaw[] = [
           },
           // 等级方案管理
           {
-            path: '/inspection/v7/grade-schemes',
-            name: 'V7GradeSchemes',
-            component: () => import('@/views/inspection/v7/scoring/GradeSchemeListView.vue'),
+            path: '/inspection/grade-schemes',
+            name: 'GradeSchemes',
+            component: () => import('@/views/inspection/scoring/GradeSchemeListView.vue'),
             meta: {
               title: '等级方案',
               icon: 'Award',
@@ -308,15 +308,15 @@ const routes: RouteRecordRaw[] = [
           },
           // ---------- My Inspection (hidden, redirect to /tasks) ----------
           {
-            path: '/inspection/v7/my',
-            redirect: '/inspection/v7/tasks',
+            path: '/inspection/my',
+            redirect: '/inspection/tasks',
             meta: { hidden: true }
           },
           // ---------- Execution BC ----------
           {
-            path: '/inspection/v7/projects',
-            name: 'V7ProjectList',
-            component: () => import('@/views/inspection/v7/projects/ProjectListView.vue'),
+            path: '/inspection/projects',
+            name: 'ProjectList',
+            component: () => import('@/views/inspection/projects/ProjectListView.vue'),
             meta: {
               title: '检查项目',
               icon: 'Briefcase',
@@ -326,9 +326,9 @@ const routes: RouteRecordRaw[] = [
             }
           },
           {
-            path: '/inspection/v7/projects/create',
-            name: 'V7ProjectWizard',
-            component: () => import('@/views/inspection/v7/projects/ProjectWizardView.vue'),
+            path: '/inspection/projects/create',
+            name: 'ProjectWizard',
+            component: () => import('@/views/inspection/projects/ProjectWizardView.vue'),
             meta: {
               title: '创建检查项目',
               hidden: true,
@@ -337,9 +337,9 @@ const routes: RouteRecordRaw[] = [
             }
           },
           {
-            path: '/inspection/v7/projects/:id',
-            name: 'V7ProjectDetail',
-            component: () => import('@/views/inspection/v7/projects/ProjectDetailView.vue'),
+            path: '/inspection/projects/:id',
+            name: 'ProjectDetail',
+            component: () => import('@/views/inspection/projects/ProjectDetailView.vue'),
             meta: {
               title: '项目详情',
               hidden: true,
@@ -348,9 +348,9 @@ const routes: RouteRecordRaw[] = [
             }
           },
           {
-            path: '/inspection/v7/tasks',
-            name: 'V7TaskList',
-            component: () => import('@/views/inspection/v7/MyInspectionView.vue'),
+            path: '/inspection/tasks',
+            name: 'TaskList',
+            component: () => import('@/views/inspection/MyInspectionView.vue'),
             meta: {
               title: '我的任务',
               icon: 'ClipboardList',
@@ -360,9 +360,9 @@ const routes: RouteRecordRaw[] = [
             }
           },
           {
-            path: '/inspection/v7/tasks/review',
-            name: 'V7TaskReviewWorkbench',
-            component: () => import('@/views/inspection/v7/tasks/TaskReviewWorkbenchView.vue'),
+            path: '/inspection/tasks/review',
+            name: 'TaskReviewWorkbench',
+            component: () => import('@/views/inspection/tasks/TaskReviewWorkbenchView.vue'),
             meta: {
               title: '审核工作台',
               hidden: true,
@@ -372,9 +372,9 @@ const routes: RouteRecordRaw[] = [
             }
           },
           {
-            path: '/inspection/v7/tasks/:id/execute',
-            name: 'V7TaskExecution',
-            component: () => import('@/views/inspection/v7/tasks/TaskExecutionView.vue'),
+            path: '/inspection/tasks/:id/execute',
+            name: 'TaskExecution',
+            component: () => import('@/views/inspection/tasks/TaskExecutionView.vue'),
             meta: {
               title: '执行检查',
               hidden: true,
@@ -383,9 +383,9 @@ const routes: RouteRecordRaw[] = [
             }
           },
           {
-            path: '/inspection/v7/tasks/:id/execute-mobile',
-            name: 'V7TaskExecutionMobile',
-            component: () => import('@/views/inspection/v7/tasks/TaskExecutionMobileView.vue'),
+            path: '/inspection/tasks/:id/execute-mobile',
+            name: 'TaskExecutionMobile',
+            component: () => import('@/views/inspection/tasks/TaskExecutionMobileView.vue'),
             meta: {
               title: '移动端检查',
               hidden: true,
@@ -395,9 +395,9 @@ const routes: RouteRecordRaw[] = [
           },
           // 成绩公示
           {
-            path: '/inspection/v7/results',
-            name: 'V7InspectionResults',
-            component: () => import('@/views/inspection/v7/projects/InspectionResultsView.vue'),
+            path: '/inspection/results',
+            name: 'InspectionResults',
+            component: () => import('@/views/inspection/projects/InspectionResultsView.vue'),
             meta: {
               title: '检查结果',
               icon: 'BarChart3',
@@ -406,11 +406,11 @@ const routes: RouteRecordRaw[] = [
               order: 7
             }
           },
-          // V7 单维度排名详情
+          // 单维度排名详情
           {
-            path: '/inspection/v7/rating-dimensions/:id/rankings',
-            name: 'V7RatingDimensionRankings',
-            component: () => import('@/views/inspection/v7/projects/RatingRankingView.vue'),
+            path: '/inspection/rating-dimensions/:id/rankings',
+            name: 'RatingDimensionRankings',
+            component: () => import('@/views/inspection/projects/RatingRankingView.vue'),
             meta: {
               title: '评级排名',
               hidden: true,
@@ -418,11 +418,11 @@ const routes: RouteRecordRaw[] = [
               permission: 'insp:project:view'
             }
           },
-          // V7 整改管理
+          // 整改管理
           {
-            path: '/inspection/v7/corrective',
-            name: 'V7CorrectiveCaseList',
-            component: () => import('@/views/inspection/v7/corrective/CorrectiveCaseListView.vue'),
+            path: '/inspection/corrective',
+            name: 'CorrectiveCaseList',
+            component: () => import('@/views/inspection/corrective/CorrectiveCaseListView.vue'),
             meta: {
               title: '整改管理',
               requiresAuth: true,
@@ -430,9 +430,9 @@ const routes: RouteRecordRaw[] = [
             }
           },
           {
-            path: '/inspection/v7/corrective/:id',
-            name: 'V7CorrectiveCaseDetail',
-            component: () => import('@/views/inspection/v7/corrective/CorrectiveCaseDetailView.vue'),
+            path: '/inspection/corrective/:id',
+            name: 'CorrectiveCaseDetail',
+            component: () => import('@/views/inspection/corrective/CorrectiveCaseDetailView.vue'),
             meta: {
               title: '整改详情',
               hidden: true,
@@ -440,11 +440,11 @@ const routes: RouteRecordRaw[] = [
               permission: 'insp:corrective:view'
             }
           },
-          // V7 分析报表
+          // 分析报表
           {
-            path: '/inspection/v7/analytics',
-            name: 'V7AnalyticsDashboard',
-            component: () => import('@/views/inspection/v7/analytics/AnalyticsDashboardView.vue'),
+            path: '/inspection/analytics',
+            name: 'AnalyticsDashboard',
+            component: () => import('@/views/inspection/analytics/AnalyticsDashboardView.vue'),
             meta: {
               title: '分析报表',
               requiresAuth: true,
@@ -452,9 +452,9 @@ const routes: RouteRecordRaw[] = [
             }
           },
           {
-            path: '/inspection/v7/observations',
-            name: 'V7Observations',
-            component: () => import('@/views/inspection/v7/analytics/ObservationListView.vue'),
+            path: '/inspection/observations',
+            name: 'Observations',
+            component: () => import('@/views/inspection/analytics/ObservationListView.vue'),
             meta: {
               title: '评分观察',
               requiresAuth: true,
@@ -462,9 +462,9 @@ const routes: RouteRecordRaw[] = [
             }
           },
           {
-            path: '/inspection/v7/rankings',
-            name: 'V7RatingRankings',
-            component: () => import('@/views/inspection/v7/analytics/RatingRankingView.vue'),
+            path: '/inspection/rankings',
+            name: 'RatingRankings',
+            component: () => import('@/views/inspection/analytics/RatingRankingView.vue'),
             meta: {
               title: '评级排名',
               icon: 'Trophy',
@@ -473,11 +473,11 @@ const routes: RouteRecordRaw[] = [
               order: 8
             }
           },
-          // V7 仪表盘
+          // 仪表盘
           {
-            path: '/inspection/v7/dashboard',
-            name: 'V7Dashboard',
-            component: () => import('@/views/inspection/v7/dashboard/V7DashboardView.vue'),
+            path: '/inspection/dashboard',
+            name: 'Dashboard',
+            component: () => import('@/views/inspection/dashboard/DashboardView.vue'),
             meta: {
               title: '检查平台总览',
               icon: 'LayoutDashboard',
@@ -487,11 +487,11 @@ const routes: RouteRecordRaw[] = [
             }
           },
           // ---------- Platform BC ----------
-          // V7 通知规则
+          // 通知规则
           {
-            path: '/inspection/v7/notification-rules',
-            name: 'V7NotificationRuleList',
-            component: () => import('@/views/inspection/v7/platform/NotificationRuleListView.vue'),
+            path: '/inspection/notification-rules',
+            name: 'NotificationRuleList',
+            component: () => import('@/views/inspection/platform/NotificationRuleListView.vue'),
             meta: {
               title: '通知规则',
               icon: 'Bell',
@@ -500,11 +500,11 @@ const routes: RouteRecordRaw[] = [
               order: 10
             }
           },
-          // V7 Webhook 订阅
+          // Webhook 订阅
           {
-            path: '/inspection/v7/webhooks',
-            name: 'V7WebhookList',
-            component: () => import('@/views/inspection/v7/platform/WebhookListView.vue'),
+            path: '/inspection/webhooks',
+            name: 'WebhookList',
+            component: () => import('@/views/inspection/platform/WebhookListView.vue'),
             meta: {
               title: 'Webhook',
               icon: 'Webhook',
@@ -513,11 +513,11 @@ const routes: RouteRecordRaw[] = [
               order: 11
             }
           },
-          // V7 审计日志
+          // 审计日志
           {
-            path: '/inspection/v7/audit-trail',
-            name: 'V7AuditTrail',
-            component: () => import('@/views/inspection/v7/platform/AuditTrailView.vue'),
+            path: '/inspection/audit-trail',
+            name: 'AuditTrail',
+            component: () => import('@/views/inspection/platform/AuditTrailView.vue'),
             meta: {
               title: '审计日志',
               icon: 'FileSearch',
@@ -526,11 +526,11 @@ const routes: RouteRecordRaw[] = [
               order: 12
             }
           },
-          // V7 问题分类
+          // 问题分类
           {
-            path: '/inspection/v7/issue-categories',
-            name: 'V7IssueCategoryManagement',
-            component: () => import('@/views/inspection/v7/platform/IssueCategoryManagementView.vue'),
+            path: '/inspection/issue-categories',
+            name: 'IssueCategoryManagement',
+            component: () => import('@/views/inspection/platform/IssueCategoryManagementView.vue'),
             meta: {
               title: '问题分类',
               icon: 'Tags',
@@ -539,11 +539,11 @@ const routes: RouteRecordRaw[] = [
               order: 13
             }
           },
-          // V7 报表模板
+          // 报表模板
           {
-            path: '/inspection/v7/report-templates',
-            name: 'V7ReportTemplateList',
-            component: () => import('@/views/inspection/v7/platform/ReportTemplateListView.vue'),
+            path: '/inspection/report-templates',
+            name: 'ReportTemplateList',
+            component: () => import('@/views/inspection/platform/ReportTemplateListView.vue'),
             meta: {
               title: '报表模板',
               icon: 'FileSpreadsheet',
@@ -552,11 +552,11 @@ const routes: RouteRecordRaw[] = [
               order: 14
             }
           },
-          // V7 假日日历
+          // 假日日历
           {
-            path: '/inspection/v7/holiday-calendar',
-            name: 'V7HolidayCalendar',
-            component: () => import('@/views/inspection/v7/platform/HolidayCalendarView.vue'),
+            path: '/inspection/holiday-calendar',
+            name: 'HolidayCalendar',
+            component: () => import('@/views/inspection/platform/HolidayCalendarView.vue'),
             meta: {
               title: '假日日历',
               icon: 'CalendarDays',
@@ -567,9 +567,9 @@ const routes: RouteRecordRaw[] = [
           },
           // Phase 2: Compliance
           {
-            path: '/inspection/v7/compliance',
-            name: 'V7ComplianceStandards',
-            component: () => import('@/views/inspection/v7/compliance/ComplianceStandardListView.vue'),
+            path: '/inspection/compliance',
+            name: 'ComplianceStandards',
+            component: () => import('@/views/inspection/compliance/ComplianceStandardListView.vue'),
             meta: {
               title: '合规标准',
               icon: 'Shield',
@@ -580,9 +580,9 @@ const routes: RouteRecordRaw[] = [
           },
           // Phase 4: Alerts
           {
-            path: '/inspection/v7/alerts',
-            name: 'V7AlertDashboard',
-            component: () => import('@/views/inspection/v7/analytics/AlertDashboardView.vue'),
+            path: '/inspection/alerts',
+            name: 'AlertDashboard',
+            component: () => import('@/views/inspection/analytics/AlertDashboardView.vue'),
             meta: {
               title: '预警看板',
               icon: 'Bell',
@@ -593,9 +593,9 @@ const routes: RouteRecordRaw[] = [
           },
           // Phase 5: Knowledge Base
           {
-            path: '/inspection/v7/knowledge',
-            name: 'V7KnowledgeBase',
-            component: () => import('@/views/inspection/v7/knowledge/KnowledgeBaseView.vue'),
+            path: '/inspection/knowledge',
+            name: 'KnowledgeBase',
+            component: () => import('@/views/inspection/knowledge/KnowledgeBaseView.vue'),
             meta: {
               title: '知识库',
               icon: 'BookOpen',
@@ -606,9 +606,9 @@ const routes: RouteRecordRaw[] = [
           },
           // Phase 6: NFC Tags
           {
-            path: '/inspection/v7/nfc-tags',
-            name: 'V7NfcTags',
-            component: () => import('@/views/inspection/v7/platform/NfcTagManagementView.vue'),
+            path: '/inspection/nfc-tags',
+            name: 'NfcTags',
+            component: () => import('@/views/inspection/platform/NfcTagManagementView.vue'),
             meta: {
               title: 'NFC标签',
               icon: 'Wifi',
@@ -619,9 +619,9 @@ const routes: RouteRecordRaw[] = [
           },
           // Phase 6: IoT Sensors
           {
-            path: '/inspection/v7/iot-sensors',
-            name: 'V7IoTSensors',
-            component: () => import('@/views/inspection/v7/platform/IoTSensorView.vue'),
+            path: '/inspection/iot-sensors',
+            name: 'IoTSensors',
+            component: () => import('@/views/inspection/platform/IoTSensorView.vue'),
             meta: {
               title: 'IoT传感器',
               icon: 'Activity',
@@ -632,9 +632,9 @@ const routes: RouteRecordRaw[] = [
           },
           // Phase 3.5: Rating Leaderboard
           {
-            path: '/inspection/v7/ratings',
-            name: 'V7RatingLeaderboard',
-            component: () => import('@/views/inspection/v7/ratings/RatingLeaderboardView.vue'),
+            path: '/inspection/ratings',
+            name: 'RatingLeaderboard',
+            component: () => import('@/views/inspection/ratings/RatingLeaderboardView.vue'),
             meta: {
               title: '评级排名榜',
               icon: 'Trophy',

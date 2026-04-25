@@ -101,15 +101,15 @@
         <!-- Quick links -->
         <div class="mt-4 flex gap-2">
           <button
-            @click="goTo('/inspection/v7/projects')"
+            @click="goTo('/inspection/projects')"
             class="rounded-md bg-gray-50 px-3 py-1.5 text-xs font-medium text-gray-600 transition-colors hover:bg-gray-100"
           >检查项目</button>
           <button
-            @click="goTo('/inspection/v7/tasks')"
+            @click="goTo('/inspection/tasks')"
             class="rounded-md bg-gray-50 px-3 py-1.5 text-xs font-medium text-gray-600 transition-colors hover:bg-gray-100"
           >检查任务</button>
           <button
-            @click="goTo('/inspection/v7/templates')"
+            @click="goTo('/inspection/templates')"
             class="rounded-md bg-gray-50 px-3 py-1.5 text-xs font-medium text-gray-600 transition-colors hover:bg-gray-100"
           >模板管理</button>
         </div>
@@ -218,8 +218,8 @@ const allQuickActions = [
   { label: '成绩管理', path: '/teaching/grades',    perm: 'teaching:grade:view' },
   { label: '用户管理', path: '/system/users',       perm: 'system:user:view' },
   { label: '角色管理', path: '/system/roles',       perm: 'system:role:view' },
-  { label: '检查项目', path: '/inspection/v7/projects',  perm: 'inspection:project:view' },
-  { label: '模板管理', path: '/inspection/v7/templates', perm: 'inspection:template:view' },
+  { label: '检查项目', path: '/inspection/projects',  perm: 'inspection:project:view' },
+  { label: '模板管理', path: '/inspection/templates', perm: 'inspection:template:view' },
   { label: '系统配置', path: '/system/configs',     perm: 'system:config:view' },
 ]
 

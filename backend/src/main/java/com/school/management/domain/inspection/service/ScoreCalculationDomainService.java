@@ -1,6 +1,6 @@
 package com.school.management.domain.inspection.service;
 
-import com.school.management.domain.inspection.model.v7.scoring.*;
+import com.school.management.domain.inspection.model.scoring.*;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
@@ -12,7 +12,7 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 /**
- * V7 评分计算领域服务
+ * 评分计算领域服务
  *
  * 完整流程:
  * 1. 各 item 按 scoringConfig 计算原始分 (DEDUCTION/ADDITION/FIXED/RESPONSE_MAPPED)
@@ -43,7 +43,7 @@ public class ScoreCalculationDomainService {
      */
     public ScoreResult calculate(ScoringProfile profile,
                                  List<ScoreDimension> dimensions,
-                                 List<CalculationRuleV7> rules,
+                                 List<CalculationRule> rules,
                                  List<GradeBand> gradeBands,
                                  List<ItemScoreInput> itemScoreInputs,
                                  int population) {
@@ -71,16 +71,16 @@ public class ScoreCalculationDomainService {
 
         // Step 6: 执行规则链
         List<RuleApplication> ruleApplications = new ArrayList<>();
-        List<CalculationRuleV7> sortedRules = rules.stream()
+        List<CalculationRule> sortedRules = rules.stream()
                 .filter(r -> Boolean.TRUE.equals(r.getIsEnabled()))
-                .sorted(Comparator.comparingInt(CalculationRuleV7::getPriority))
+                .sorted(Comparator.comparingInt(CalculationRule::getPriority))
                 .collect(Collectors.toList());
 
         BigDecimal adjustedScore = totalScore;
         BigDecimal deductionTotal = BigDecimal.ZERO;
         BigDecimal bonusTotal = BigDecimal.ZERO;
 
-        for (CalculationRuleV7 rule : sortedRules) {
+        for (CalculationRule rule : sortedRules) {
             RuleApplication application = applyRule(rule, adjustedScore, itemOutputs, profile, precision);
             ruleApplications.add(application);
             if (application.isApplied()) {
@@ -240,7 +240,7 @@ public class ScoreCalculationDomainService {
 
     // ========== 规则链 ==========
 
-    private RuleApplication applyRule(CalculationRuleV7 rule,
+    private RuleApplication applyRule(CalculationRule rule,
                                       BigDecimal currentScore,
                                       List<ItemScoreOutput> itemOutputs,
                                       ScoringProfile profile,

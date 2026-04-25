@@ -1,5 +1,5 @@
 /**
- * V7 检查平台 - 评价指标类型定义
+ * 检查平台 - 评价指标类型定义
  */
 
 export interface Indicator {

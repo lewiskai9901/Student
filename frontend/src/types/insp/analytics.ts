@@ -1,5 +1,5 @@
 /**
- * V7 检查平台 - 分析报表类型
+ * 检查平台 - 分析报表类型
  */
 import type { PeriodType, TrendDirection } from './enums'
 

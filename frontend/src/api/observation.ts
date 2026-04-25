@@ -13,10 +13,10 @@ export interface ObservationListParams {
 
 export const observationApi = {
   list(params?: ObservationListParams): Promise<ObservationPageResult> {
-    return http.get('/v7/insp/observations', { params })
+    return http.get('/inspection/observations', { params })
   },
 
   bySubmission(submissionId: number) {
-    return http.get(`/v7/insp/observations/by-submission/${submissionId}`)
+    return http.get(`/inspection/observations/by-submission/${submissionId}`)
   },
 }

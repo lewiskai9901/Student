@@ -1,5 +1,5 @@
 /**
- * V7 检查平台 - 整改管理类型
+ * 检查平台 - 整改管理类型
  */
 import type { CaseStatus, CasePriority } from './enums'
 

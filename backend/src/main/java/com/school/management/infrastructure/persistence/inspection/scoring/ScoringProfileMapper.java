@@ -1,0 +1,13 @@
+package com.school.management.infrastructure.persistence.inspection.scoring;
+
+import com.baomidou.mybatisplus.core.mapper.BaseMapper;
+import org.apache.ibatis.annotations.Mapper;
+import org.apache.ibatis.annotations.Param;
+import org.apache.ibatis.annotations.Select;
+
+@Mapper
+public interface ScoringProfileMapper extends BaseMapper<ScoringProfilePO> {
+
+    @Select("SELECT * FROM insp_scoring_profiles WHERE section_id = #{sectionId} AND deleted = 0")
+    ScoringProfilePO findBySectionId(@Param("sectionId") Long sectionId);
+}

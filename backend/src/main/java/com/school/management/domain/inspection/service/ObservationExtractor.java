@@ -1,7 +1,7 @@
 package com.school.management.domain.inspection.service;
 
-import com.school.management.domain.inspection.model.v7.execution.ScoringObservation;
-import com.school.management.domain.inspection.model.v7.execution.SubmissionDetail;
+import com.school.management.domain.inspection.model.execution.ScoringObservation;
+import com.school.management.domain.inspection.model.execution.SubmissionDetail;
 
 import java.util.List;
 

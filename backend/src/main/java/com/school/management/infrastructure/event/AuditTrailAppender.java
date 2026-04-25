@@ -1,7 +1,7 @@
 package com.school.management.infrastructure.event;
 
-import com.school.management.application.inspection.v7.AuditTrailApplicationService;
-import com.school.management.domain.inspection.event.v7.InspV7DomainEvent;
+import com.school.management.application.inspection.AuditTrailApplicationService;
+import com.school.management.domain.inspection.event.InspDomainEvent;
 import com.school.management.domain.shared.event.DomainEvent;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -12,7 +12,7 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 
 /**
- * 审计日志追加器 — 监听所有 InspV7DomainEvent，自动记录审计日志。
+ * 审计日志追加器 — 监听所有 InspDomainEvent，自动记录审计日志。
  */
 @Slf4j
 @RequiredArgsConstructor
@@ -23,7 +23,7 @@ public class AuditTrailAppender {
 
     @Async
     @EventListener
-    public void onInspV7Event(InspV7DomainEvent event) {
+    public void onInspEvent(InspDomainEvent event) {
         try {
             DomainEvent domainEvent = (DomainEvent) event;
             String eventType = event.getClass().getSimpleName();

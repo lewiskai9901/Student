@@ -1,9 +1,9 @@
 package com.school.management.infrastructure.event;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.school.management.domain.inspection.event.v7.InspV7DomainEvent;
-import com.school.management.domain.inspection.model.v7.platform.WebhookSubscription;
-import com.school.management.domain.inspection.repository.v7.WebhookSubscriptionRepository;
+import com.school.management.domain.inspection.event.InspDomainEvent;
+import com.school.management.domain.inspection.model.platform.WebhookSubscription;
+import com.school.management.domain.inspection.repository.WebhookSubscriptionRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.event.EventListener;
@@ -22,7 +22,7 @@ import java.util.HexFormat;
 import java.util.List;
 
 /**
- * Webhook 分发器 — 监听 InspV7DomainEvent，将事件以 HTTP POST 发送给订阅者。
+ * Webhook 分发器 — 监听 InspDomainEvent，将事件以 HTTP POST 发送给订阅者。
  * 支持 HMAC-SHA256 签名、重试机制。
  */
 @Slf4j
@@ -39,7 +39,7 @@ public class WebhookDispatcher {
 
     @Async
     @EventListener
-    public void onInspV7Event(InspV7DomainEvent event) {
+    public void onInspEvent(InspDomainEvent event) {
         String eventType = event.getClass().getSimpleName();
         log.debug("WebhookDispatcher received event: {}", eventType);
 
@@ -61,7 +61,7 @@ public class WebhookDispatcher {
         return eventTypes.contains(eventType) || eventTypes.contains("*");
     }
 
-    private void dispatchWebhook(WebhookSubscription sub, String eventType, InspV7DomainEvent event) {
+    private void dispatchWebhook(WebhookSubscription sub, String eventType, InspDomainEvent event) {
         int maxRetries = sub.getRetryCount() != null ? sub.getRetryCount() : 3;
 
         for (int attempt = 1; attempt <= maxRetries; attempt++) {

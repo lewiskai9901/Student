@@ -1,14 +1,14 @@
 package com.school.management.infrastructure.scheduler;
 
-import com.school.management.application.inspection.v7.InspSubmissionApplicationService;
-import com.school.management.domain.inspection.model.v7.execution.InspSubmission;
-import com.school.management.domain.inspection.model.v7.execution.SubmissionStatus;
-import com.school.management.domain.inspection.repository.v7.InspSubmissionRepository;
-import com.school.management.domain.inspection.repository.v7.InspTaskRepository;
-import com.school.management.domain.inspection.repository.v7.TemplateSectionRepository;
-import com.school.management.domain.inspection.model.v7.execution.InspTask;
-import com.school.management.domain.inspection.model.v7.execution.TaskStatus;
-import com.school.management.domain.inspection.model.v7.template.TemplateSection;
+import com.school.management.application.inspection.InspSubmissionApplicationService;
+import com.school.management.domain.inspection.model.execution.InspSubmission;
+import com.school.management.domain.inspection.model.execution.SubmissionStatus;
+import com.school.management.domain.inspection.repository.InspSubmissionRepository;
+import com.school.management.domain.inspection.repository.InspTaskRepository;
+import com.school.management.domain.inspection.repository.TemplateSectionRepository;
+import com.school.management.domain.inspection.model.execution.InspTask;
+import com.school.management.domain.inspection.model.execution.TaskStatus;
+import com.school.management.domain.inspection.model.template.TemplateSection;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Scheduled;

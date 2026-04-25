@@ -248,7 +248,7 @@ const MODULE_LABELS: Record<string, string> = {
   calendar: '校历管理',
   dormitory: '宿舍管理',
   enrollment: '招生管理',
-  insp: '检查平台(V7)',
+  insp: '检查平台',
   inspection: '检查通用',
   patient: '患者管理',
   place: '场所管理',
