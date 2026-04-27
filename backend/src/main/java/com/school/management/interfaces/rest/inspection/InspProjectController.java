@@ -100,6 +100,16 @@ public class InspProjectController {
         return Result.success(projectService.publishProject(id, request.getTemplateVersionId()));
     }
 
+    /**
+     * P1#7 follow-up: 已发布项目升级模板版本至最新.
+     * 用于解决模板被改后 publish 导致的快照漂移.
+     */
+    @PostMapping("/{id}/upgrade-template-version")
+    @CasbinAccess(resource = "insp:project", action = "publish")
+    public Result<InspProject> upgradeTemplateVersion(@PathVariable Long id) {
+        return Result.success(projectService.upgradeTemplateVersion(id));
+    }
+
     @PostMapping("/{id}/pause")
     @CasbinAccess(resource = "insp:project", action = "edit")
     public Result<InspProject> pauseProject(@PathVariable Long id) {

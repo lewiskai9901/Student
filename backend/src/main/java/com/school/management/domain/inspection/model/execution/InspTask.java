@@ -42,8 +42,15 @@ public class InspTask extends AggregateRoot<Long> {
     private String assignedSectionIds;     // JSON: 分配的分区ID（空=全部）
     private String assignedTargetIds;      // JSON: 分配的目标ID（空=全部）
     private Long inspectionPlanId;         // 关联的检查计划
+    private Integer rejectionCount;        // P1#5: 驳回次数
+    private LocalDate extendedTo;          // P1#5: 驳回后延期到的有效日期 (空=无延期, 用 task_date)
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
+
+    /** 自动驳回上限 — 超过即不再允许审核驳回, 须项目管理员手动重派或延期 (P1#5) */
+    public static final int MAX_AUTO_REJECT_COUNT = 3;
+    /** 单次驳回的默认延期天数 (P1#5) */
+    public static final int REJECT_EXTEND_DAYS = 1;
 
     protected InspTask() {
     }
@@ -75,6 +82,8 @@ public class InspTask extends AggregateRoot<Long> {
         this.assignedSectionIds = builder.assignedSectionIds;
         this.assignedTargetIds = builder.assignedTargetIds;
         this.inspectionPlanId = builder.inspectionPlanId;
+        this.rejectionCount = builder.rejectionCount != null ? builder.rejectionCount : 0;
+        this.extendedTo = builder.extendedTo;
         this.createdAt = builder.createdAt != null ? builder.createdAt : LocalDateTime.now();
         this.updatedAt = builder.updatedAt;
     }
@@ -186,16 +195,58 @@ public class InspTask extends AggregateRoot<Long> {
 
     /**
      * 驳回 — SUBMITTED/UNDER_REVIEW → IN_PROGRESS
-     * 审核不通过，退回给检查员修改
+     * 审核不通过，退回给检查员修改.
+     *
+     * <p>P1#5 改进:
+     * <ul>
+     *   <li>累计 rejectionCount, 超过 {@link #MAX_AUTO_REJECT_COUNT} 抛异常 — 必须由项目管理员介入</li>
+     *   <li>每次驳回自动延期 {@link #REJECT_EXTEND_DAYS} 天, 累计在 extendedTo 上</li>
+     *   <li>发出 {@link com.school.management.domain.inspection.event.TaskRejectedEvent} 通知检查员</li>
+     * </ul>
      */
     public void reject(String comment) {
         if (this.status != TaskStatus.SUBMITTED && this.status != TaskStatus.UNDER_REVIEW) {
             throw new IllegalStateException("只有已提交或审核中的任务才能驳回");
         }
+        int currentCount = this.rejectionCount != null ? this.rejectionCount : 0;
+        if (currentCount >= MAX_AUTO_REJECT_COUNT) {
+            throw new IllegalStateException(
+                    "任务已达自动驳回上限 " + MAX_AUTO_REJECT_COUNT + " 次, 须项目管理员手动重派或延期");
+        }
         this.reviewComment = comment;
         this.status = TaskStatus.IN_PROGRESS;
         this.submittedAt = null;
+        this.rejectionCount = currentCount + 1;
+        // 自动延期: 基于当前有效期限再延 1 天
+        LocalDate base = this.extendedTo != null ? this.extendedTo : this.taskDate;
+        if (base != null) {
+            this.extendedTo = base.plusDays(REJECT_EXTEND_DAYS);
+        }
         this.updatedAt = LocalDateTime.now();
+        registerEvent(new com.school.management.domain.inspection.event.TaskRejectedEvent(
+                this.id, this.taskCode, this.inspectorId,
+                this.rejectionCount, this.extendedTo, comment));
+    }
+
+    /**
+     * 项目管理员手动延期 (P1#5) — 驳回上限后或其他业务原因主动延期.
+     * 不改状态, 仅推后 extendedTo, 不计入 rejectionCount.
+     */
+    public void extendDeadline(LocalDate newDeadline) {
+        if (newDeadline == null) {
+            throw new IllegalArgumentException("延期日期不能为空");
+        }
+        LocalDate base = this.extendedTo != null ? this.extendedTo : this.taskDate;
+        if (base != null && !newDeadline.isAfter(base)) {
+            throw new IllegalArgumentException("新延期日期必须晚于当前期限 " + base);
+        }
+        this.extendedTo = newDeadline;
+        this.updatedAt = LocalDateTime.now();
+    }
+
+    /** 当前有效期限 (P1#5): 优先取 extendedTo, 否则用原 taskDate */
+    public LocalDate getEffectiveDeadline() {
+        return extendedTo != null ? extendedTo : taskDate;
     }
 
     /**
@@ -289,6 +340,8 @@ public class InspTask extends AggregateRoot<Long> {
     public String getAssignedSectionIds() { return assignedSectionIds; }
     public String getAssignedTargetIds() { return assignedTargetIds; }
     public Long getInspectionPlanId() { return inspectionPlanId; }
+    public Integer getRejectionCount() { return rejectionCount; }
+    public LocalDate getExtendedTo() { return extendedTo; }
     public LocalDateTime getCreatedAt() { return createdAt; }
     public LocalDateTime getUpdatedAt() { return updatedAt; }
 
@@ -321,6 +374,8 @@ public class InspTask extends AggregateRoot<Long> {
         private String assignedSectionIds;
         private String assignedTargetIds;
         private Long inspectionPlanId;
+        private Integer rejectionCount;
+        private LocalDate extendedTo;
         private LocalDateTime createdAt;
         private LocalDateTime updatedAt;
 
@@ -350,6 +405,8 @@ public class InspTask extends AggregateRoot<Long> {
         public Builder assignedSectionIds(String assignedSectionIds) { this.assignedSectionIds = assignedSectionIds; return this; }
         public Builder assignedTargetIds(String assignedTargetIds) { this.assignedTargetIds = assignedTargetIds; return this; }
         public Builder inspectionPlanId(Long inspectionPlanId) { this.inspectionPlanId = inspectionPlanId; return this; }
+        public Builder rejectionCount(Integer rejectionCount) { this.rejectionCount = rejectionCount; return this; }
+        public Builder extendedTo(LocalDate extendedTo) { this.extendedTo = extendedTo; return this; }
         public Builder createdAt(LocalDateTime createdAt) { this.createdAt = createdAt; return this; }
         public Builder updatedAt(LocalDateTime updatedAt) { this.updatedAt = updatedAt; return this; }
 

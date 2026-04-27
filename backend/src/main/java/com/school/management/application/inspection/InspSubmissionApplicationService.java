@@ -147,8 +147,13 @@ public class InspSubmissionApplicationService {
         List<SubmissionDetail> details = detailRepository.findBySubmissionId(id);
         log.info("details count: {}", details.size());
         try {
+            // 传入 subject 信息以启用 EscalationPolicy 重复违规递增 (P0#3)
+            String subjectType = submission.getTargetType() != null
+                    ? (submission.getTargetType() == TargetType.ORG ? "ORG_UNIT"
+                       : submission.getTargetType().name()) : null;
             ScoreAggregationService.ScoreFields fields =
-                    scoreAggregationService.computeScoreFields(project, details, submission.getSectionId());
+                    scoreAggregationService.computeScoreFields(project, details, submission.getSectionId(),
+                            subjectType, submission.getTargetId());
             log.info("score computed: base={}, final={}", fields.baseScore, fields.finalScore);
 
             submission.complete(fields.baseScore, fields.finalScore,

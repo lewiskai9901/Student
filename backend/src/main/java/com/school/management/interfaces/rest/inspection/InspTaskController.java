@@ -131,6 +131,17 @@ public class InspTaskController {
         return Result.success(taskService.repopulateSubmissions(id));
     }
 
+    /**
+     * 项目管理员手动延期任务 (P1#5).
+     * 用于驳回上限达到后或其他业务原因主动延长 deadline.
+     */
+    @PostMapping("/{id}/extend-deadline")
+    @CasbinAccess(resource = "insp:task", action = "edit")
+    public Result<InspTask> extendDeadline(@PathVariable Long id,
+                                            @RequestBody ExtendDeadlineRequest request) {
+        return Result.success(taskService.extendTaskDeadline(id, request.getNewDeadline()));
+    }
+
     // --- Request DTOs ---
 
     @lombok.Data
@@ -162,5 +173,10 @@ public class InspTaskController {
     @lombok.Data
     public static class RejectTaskRequest {
         private String comment;
+    }
+
+    @lombok.Data
+    public static class ExtendDeadlineRequest {
+        private LocalDate newDeadline;
     }
 }

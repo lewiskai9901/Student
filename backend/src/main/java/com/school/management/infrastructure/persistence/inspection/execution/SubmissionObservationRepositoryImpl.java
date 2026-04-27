@@ -42,6 +42,20 @@ public class SubmissionObservationRepositoryImpl implements SubmissionObservatio
                 .eq(SubmissionObservationPO::getSubmissionId, submissionId));
     }
 
+    @Override
+    public long countNegativeForSubjectInPeriod(String subjectType, Long subjectId,
+                                                 String itemCode, int sinceUtcDays) {
+        if (subjectType == null || subjectId == null || itemCode == null) return 0L;
+        LocalDateTime since = LocalDateTime.now().minusDays(sinceUtcDays);
+        Long count = mapper.selectCount(new LambdaQueryWrapper<SubmissionObservationPO>()
+                .eq(SubmissionObservationPO::getSubjectType, subjectType)
+                .eq(SubmissionObservationPO::getSubjectId, subjectId)
+                .eq(SubmissionObservationPO::getItemCode, itemCode)
+                .eq(SubmissionObservationPO::getIsNegative, 1)
+                .ge(SubmissionObservationPO::getObservedAt, since));
+        return count == null ? 0L : count;
+    }
+
     private SubmissionObservationPO toPO(ScoringObservation obs) {
         SubmissionObservationPO po = new SubmissionObservationPO();
         po.setTenantId(1L);

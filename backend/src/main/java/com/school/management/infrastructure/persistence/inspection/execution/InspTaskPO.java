@@ -39,6 +39,8 @@ public class InspTaskPO {
     private String assignedSectionIds;    // JSON: assigned section IDs
     private String assignedTargetIds;     // JSON: assigned target IDs
     private Long inspectionPlanId;
+    private Integer rejectionCount;       // P1#5: 驳回次数
+    private LocalDate extendedTo;         // P1#5: 驳回延期到的日期
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 

@@ -138,6 +138,33 @@ public class SubmissionDetail implements Entity<Long> {
         this.updatedAt = LocalDateTime.now();
     }
 
+    /**
+     * 申诉审核通过后调整分数 (P1#8 follow-up).
+     *
+     * <p>finalAdjustment 语义按 scoringMode 解释:
+     * <ul>
+     *   <li>DEDUCTION: 减少扣分量 — score 字段保存的是 (负的) 扣分, finalAdjustment 取正值表示退回多少分,
+     *       即 newScore = score + finalAdjustment (向 0 收敛)</li>
+     *   <li>ADDITION / DIRECT / LEVEL: 直接覆盖为 finalAdjustment 表示的目标分数</li>
+     * </ul>
+     *
+     * <p>同时清除 isFlagged 标记 — 申诉通过即认为该扣分项不再视为问题.
+     */
+    public void applyAppealAdjustment(BigDecimal finalAdjustment) {
+        if (finalAdjustment == null) {
+            return; // 没有调整, 仅清旗标
+        }
+        if (this.scoringMode == ScoringMode.DEDUCTION) {
+            BigDecimal current = this.score != null ? this.score : BigDecimal.ZERO;
+            this.score = current.add(finalAdjustment);
+        } else {
+            this.score = finalAdjustment;
+        }
+        this.isFlagged = false;
+        this.flagReason = null;
+        this.updatedAt = LocalDateTime.now();
+    }
+
     // Getters
     @Override
     public Long getId() { return id; }

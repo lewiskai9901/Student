@@ -1,6 +1,7 @@
 package com.school.management.application.inspection;
 
 import com.baomidou.mybatisplus.core.toolkit.IdWorker;
+import com.school.management.application.event.TriggerService;
 import com.school.management.domain.inspection.model.execution.*;
 import com.school.management.domain.inspection.model.template.TemplateItem;
 import com.school.management.domain.inspection.model.template.TemplateSection;
@@ -10,6 +11,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -18,6 +20,7 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -40,6 +43,10 @@ public class InspTaskApplicationService {
     private final ScoreAggregationService scoreAggregationService;
     private final SpringDomainEventPublisher eventPublisher;
     private final ObjectMapper objectMapper;
+    private final TemplateVersionRepository templateVersionRepository;
+
+    @Autowired(required = false)
+    private TriggerService triggerService;
 
     // ========== Task CRUD ==========
 
@@ -181,6 +188,38 @@ public class InspTaskApplicationService {
                 submissionRepository.save(sub);
             }
         }
+        InspTask saved = taskRepository.save(task);
+        eventPublisher.publishAll(saved.getDomainEvents());
+        saved.clearDomainEvents();
+        // P1#9: 触发任务驳回通知点 — 检查员需重新提交
+        if (triggerService != null) {
+            try {
+                Map<String, Object> ctx = new HashMap<>();
+                ctx.put("taskId", saved.getId());
+                ctx.put("taskCode", saved.getTaskCode());
+                ctx.put("inspectorId", saved.getInspectorId());
+                ctx.put("rejectionCount", saved.getRejectionCount() != null
+                        ? saved.getRejectionCount().longValue() : 0L);
+                ctx.put("extendedTo", saved.getExtendedTo() != null ? saved.getExtendedTo().toString() : "");
+                ctx.put("comment", comment != null ? comment : "");
+                ctx.put("_refType", "inspection_task");
+                ctx.put("_refId", saved.getId());
+                triggerService.fire(InspectionTriggerPoints.INSP_TASK_REJECTED, ctx);
+            } catch (Exception e) {
+                log.warn("触发 INSP_TASK_REJECTED 失败: {}", e.getMessage());
+            }
+        }
+        return saved;
+    }
+
+    /**
+     * 项目管理员手动延期任务 (P1#5) — 驳回上限后或其他业务原因.
+     */
+    @Transactional
+    public InspTask extendTaskDeadline(Long id, LocalDate newDeadline) {
+        InspTask task = taskRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("任务不存在: " + id));
+        task.extendDeadline(newDeadline);
         return taskRepository.save(task);
     }
 
@@ -261,6 +300,11 @@ public class InspTaskApplicationService {
             log.warn("任务 {} 关联的项目不存在: {}", task.getTaskCode(), task.getProjectId());
             return;
         }
+
+        // P1#7: 模板版本快照漂移检查 — 项目锁定的快照与模板当前最新版本不一致时记 WARN.
+        // 表示项目发布后模板又被修改并重新 publish, 任务执行将基于 live 数据 (与快照不一致).
+        // 真正的快照重放暂未实现, 这里仅记录漂移让运维感知.
+        checkTemplateVersionDrift(project, task);
 
         // V66: rootSectionId 优先从项目取，为空则从检查计划取
         Long rootSectionId = project.getRootSectionId();
@@ -461,6 +505,41 @@ public class InspTaskApplicationService {
             }
         }
         return items;
+    }
+
+    /**
+     * P1#7 (强化): 模板版本快照漂移检查 — 项目锁定的快照与模板当前最新版本不一致时硬拒绝.
+     *
+     * <p>不一致意味着项目发布后模板又被改并 publish, 此时 live sections/items
+     * 已经与项目原始合约不符. 由于现实现仍按 live 数据填充任务, 必须阻断而非仅告警,
+     * 否则数据将与项目发布时的承诺脱节, 影响考核公平性和审计追溯.
+     *
+     * <p>恢复路径 (任一即可):
+     * <ul>
+     *   <li>运维把项目 templateVersionId 升到最新 (确认采用新规则)</li>
+     *   <li>运维把模板的新版本回滚 / 撤回</li>
+     *   <li>未来支持快照重放后, 改为按 snapshot 填充 (此处可移除拒绝逻辑)</li>
+     * </ul>
+     */
+    private void checkTemplateVersionDrift(InspProject project, InspTask task) {
+        Long lockedVersionId = project.getTemplateVersionId();
+        Long rootSectionId = project.getRootSectionId();
+        if (lockedVersionId == null || rootSectionId == null) {
+            return; // 多模板项目或未锁定 — 不做漂移检查
+        }
+        TemplateSection root = sectionRepository.findById(rootSectionId).orElse(null);
+        if (root == null || root.getTemplateId() == null) return;
+        templateVersionRepository.findLatestByTemplateId(root.getTemplateId()).ifPresent(latest -> {
+            if (!lockedVersionId.equals(latest.getId())) {
+                String msg = String.format(
+                        "TEMPLATE_DRIFT: 项目 %s 锁定 templateVersionId=%d, 但模板 %d 最新版本是 %d. " +
+                        "任务 %s 拒绝填充 — 请管理员决定: 升级项目至最新版本, 或回滚模板新版本.",
+                        project.getProjectCode(), lockedVersionId,
+                        root.getTemplateId(), latest.getId(), task.getTaskCode());
+                log.error(msg);
+                throw new IllegalStateException(msg);
+            }
+        });
     }
 
     /**

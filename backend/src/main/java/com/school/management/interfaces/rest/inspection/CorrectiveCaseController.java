@@ -131,6 +131,28 @@ public class CorrectiveCaseController {
         return Result.success(caseService.escalateCase(id));
     }
 
+    /**
+     * P1#6: 批量重派 — 当 userId 离职 / 退出项目时, 解除其所有非终态案例,
+     * 可选自动重派给 fallbackAssigneeId.
+     */
+    @PostMapping("/reassign-departed-user/{userId}")
+    @CasbinAccess(resource = "insp:corrective", action = "manage")
+    public Result<Integer> reassignDepartedUser(@PathVariable Long userId,
+                                                  @RequestBody ReassignDepartedRequest request) {
+        int affected = caseService.reassignDepartedAssignee(userId,
+                request.getReason(),
+                request.getFallbackAssigneeId(),
+                request.getFallbackAssigneeName());
+        return Result.success(affected);
+    }
+
+    @lombok.Data
+    public static class ReassignDepartedRequest {
+        private String reason;
+        private Long fallbackAssigneeId;
+        private String fallbackAssigneeName;
+    }
+
     // ========== Subtasks ==========
 
     @GetMapping("/{caseId}/subtasks")

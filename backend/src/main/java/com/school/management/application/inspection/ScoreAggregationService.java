@@ -39,6 +39,8 @@ public class ScoreAggregationService {
     private final CalculationRuleRepository ruleRepository;
     private final GradeBandRepository gradeBandRepository;
     private final TemplateSectionRepository sectionRepository;
+    private final EscalationPolicyRepository escalationPolicyRepository;
+    private final SubmissionObservationRepository observationRepository;
     private final ScoreCalculationDomainService scoreCalculationService;
     private final ObjectMapper objectMapper;
 
@@ -112,7 +114,8 @@ public class ScoreAggregationService {
 
         // 2. 读取所有明细，重新计算 submission 分数
         List<SubmissionDetail> details = detailRepository.findBySubmissionId(submissionId);
-        ScoreFields fields = computeScoreFields(project, details, submission.getSectionId());
+        ScoreFields fields = computeScoreFields(project, details, submission.getSectionId(),
+                mapTargetTypeToSubject(submission.getTargetType()), submission.getTargetId());
 
         // 3. 更新 submission 分数（recalculate 不改变状态，可在 COMPLETED 状态下调用）
         submission.recalculate(fields.baseScore, fields.finalScore,
@@ -133,9 +136,22 @@ public class ScoreAggregationService {
     }
 
     /**
-     * 计算 submission 的分数字段（与 completeSubmission 逻辑共享）
+     * 兼容旧调用 — 不应用重复违规递增 (无主体信息).
+     * @deprecated 改用 5 参数重载传入 subject 信息以启用 EscalationPolicy
      */
+    @Deprecated
     ScoreFields computeScoreFields(InspProject project, List<SubmissionDetail> details, Long sectionId) {
+        return computeScoreFields(project, details, sectionId, null, null);
+    }
+
+    /**
+     * 计算 submission 的分数字段（与 completeSubmission 逻辑共享）.
+     *
+     * @param subjectType 主体类型 USER/ORG_UNIT/PLACE/ASSET — 提供时启用重复违规递增 (P0#3)
+     * @param subjectId   主体 ID
+     */
+    ScoreFields computeScoreFields(InspProject project, List<SubmissionDetail> details, Long sectionId,
+                                    String subjectType, Long subjectId) {
         Long profileId = project.getScoringProfileId();
         if (profileId != null) {
             ScoringProfile profile = scoringProfileRepository.findById(profileId)
@@ -145,6 +161,8 @@ public class ScoreAggregationService {
             List<GradeBand> gradeBands = gradeBandRepository.findByScoringProfileId(profileId);
 
             List<ScoreCalculationDomainService.ItemScoreInput> inputs = buildItemScoreInputs(details);
+            // 重复违规递增: 按 EscalationPolicy 放大本次扣分基数
+            applyEscalationPolicies(profileId, subjectType, subjectId, inputs);
             ScoreCalculationDomainService.ScoreResult result = scoreCalculationService.calculate(
                     profile, dimensions, rules, gradeBands, inputs, 0);
 
@@ -356,6 +374,111 @@ public class ScoreAggregationService {
                     configScore, responseNumericValue, quantity, null));
         }
         return inputs;
+    }
+
+    /**
+     * TargetType → ScoringObservation.subjectType 映射
+     * (ORG→ORG_UNIT, 其余原样保留, COMPOSITE 视为 null)
+     */
+    private static String mapTargetTypeToSubject(TargetType type) {
+        if (type == null) return null;
+        return switch (type) {
+            case ORG -> "ORG_UNIT";
+            case USER -> "USER";
+            case PLACE -> "PLACE";
+            case ASSET -> "ASSET";
+            default -> null;
+        };
+    }
+
+    /**
+     * 应用重复违规递增策略 — 在 inputs 进入 ScoreCalculationDomainService 前
+     * 按 EscalationPolicy 放大 DEDUCTION 项的扣分基数 (P0#3, V42 配置接入).
+     *
+     * <p>规则: 对每个 DEDUCTION input, 按 policy.matchBy 找过去 lookupPeriodDays
+     * 内同主体的负面观察次数 N. 当 N >= 1 时, 按 mode 计算 factor:
+     * <ul>
+     *   <li>MULTIPLY: factor = multiplier^N (累乘), 受 maxEscalationFactor 上限</li>
+     *   <li>ADD: factor = 1 + adder * N (累加比例)</li>
+     *   <li>FIXED_TABLE: 查 fixedTable 中 occurrence == N+1 的 factor</li>
+     * </ul>
+     * 当前主体或 itemCode 缺失时跳过, 回退到原始扣分.
+     */
+    private void applyEscalationPolicies(Long profileId, String subjectType, Long subjectId,
+                                          List<ScoreCalculationDomainService.ItemScoreInput> inputs) {
+        if (subjectType == null || subjectId == null || profileId == null) return;
+        List<EscalationPolicy> policies = escalationPolicyRepository.findByProfileId(profileId);
+        if (policies == null || policies.isEmpty()) return;
+        // 取第一个启用的策略 (V42 一个 profile 一般一条; 多策略合并是后续优化)
+        EscalationPolicy policy = policies.stream()
+                .filter(p -> Boolean.TRUE.equals(p.getIsEnabled()))
+                .findFirst().orElse(null);
+        if (policy == null) return;
+        // 只支持 ITEM_CODE 匹配 (DIMENSION/SECTION/CATEGORY 留作 P1)
+        if (!"ITEM_CODE".equals(policy.getMatchBy())) {
+            log.debug("EscalationPolicy matchBy={} 暂未实现, 跳过", policy.getMatchBy());
+            return;
+        }
+
+        int lookbackDays = policy.getLookupPeriodDays() != null ? policy.getLookupPeriodDays() : 30;
+        BigDecimal cap = policy.getMaxEscalationFactor() != null
+                ? policy.getMaxEscalationFactor() : new BigDecimal("5.0");
+
+        for (int i = 0; i < inputs.size(); i++) {
+            ScoreCalculationDomainService.ItemScoreInput in = inputs.get(i);
+            if (!"DEDUCTION".equals(in.getScoringMode())) continue;
+            if (in.getItemCode() == null) continue;
+
+            long pastN = observationRepository.countNegativeForSubjectInPeriod(
+                    subjectType, subjectId, in.getItemCode(), lookbackDays);
+            if (pastN <= 0) continue;
+
+            BigDecimal factor = computeEscalationFactor(policy, (int) pastN);
+            if (factor == null || factor.compareTo(BigDecimal.ONE) <= 0) continue;
+            if (factor.compareTo(cap) > 0) factor = cap;
+
+            BigDecimal newConfigScore = in.getConfigScore() != null
+                    ? in.getConfigScore().multiply(factor) : in.getConfigScore();
+
+            inputs.set(i, new ScoreCalculationDomainService.ItemScoreInput(
+                    in.getItemCode(), in.getDimensionId(), in.getScoringMode(),
+                    newConfigScore, in.getResponseNumericValue(), in.getQuantity(), null));
+
+            log.debug("EscalationPolicy 应用: itemCode={}, subject={}/{}, pastN={}, factor={}, deductionAdjusted={}->{}",
+                    in.getItemCode(), subjectType, subjectId, pastN, factor,
+                    in.getConfigScore(), newConfigScore);
+        }
+    }
+
+    private BigDecimal computeEscalationFactor(EscalationPolicy policy, int pastN) {
+        String mode = policy.getEscalationMode();
+        if ("ADD".equals(mode)) {
+            BigDecimal adder = policy.getAdder() != null ? policy.getAdder() : BigDecimal.ZERO;
+            return BigDecimal.ONE.add(adder.multiply(BigDecimal.valueOf(pastN)));
+        }
+        if ("FIXED_TABLE".equals(mode) && policy.getFixedTable() != null) {
+            try {
+                JsonNode arr = objectMapper.readTree(policy.getFixedTable());
+                if (arr.isArray()) {
+                    int target = pastN + 1; // 当次为第 N+1 次出现
+                    for (JsonNode entry : arr) {
+                        if (entry.has("occurrence") && entry.get("occurrence").asInt() == target
+                                && entry.has("factor")) {
+                            return new BigDecimal(entry.get("factor").asText());
+                        }
+                    }
+                }
+            } catch (Exception e) {
+                log.warn("解析 EscalationPolicy.fixedTable 失败: {}", e.getMessage());
+            }
+            return BigDecimal.ONE;
+        }
+        // 默认 MULTIPLY: factor = multiplier^pastN
+        BigDecimal multiplier = policy.getMultiplier() != null
+                ? policy.getMultiplier() : new BigDecimal("2.0");
+        BigDecimal factor = BigDecimal.ONE;
+        for (int k = 0; k < pastN; k++) factor = factor.multiply(multiplier);
+        return factor;
     }
 
     private String mapScoringMode(ScoringMode mode) {

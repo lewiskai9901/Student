@@ -115,6 +115,8 @@ public class InspTaskRepositoryImpl implements InspTaskRepository {
         po.setAssignedSectionIds(d.getAssignedSectionIds());
         po.setAssignedTargetIds(d.getAssignedTargetIds());
         po.setInspectionPlanId(d.getInspectionPlanId());
+        po.setRejectionCount(d.getRejectionCount());
+        po.setExtendedTo(d.getExtendedTo());
         po.setCreatedAt(d.getCreatedAt());
         po.setUpdatedAt(d.getUpdatedAt());
         return po;
@@ -148,6 +150,8 @@ public class InspTaskRepositoryImpl implements InspTaskRepository {
                 .assignedSectionIds(po.getAssignedSectionIds())
                 .assignedTargetIds(po.getAssignedTargetIds())
                 .inspectionPlanId(po.getInspectionPlanId())
+                .rejectionCount(po.getRejectionCount())
+                .extendedTo(po.getExtendedTo())
                 .createdAt(po.getCreatedAt())
                 .updatedAt(po.getUpdatedAt()));
     }

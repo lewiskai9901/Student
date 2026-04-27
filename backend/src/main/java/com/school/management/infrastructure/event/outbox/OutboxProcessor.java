@@ -78,8 +78,13 @@ public class OutboxProcessor {
         registerEventType("TaskPublishedEvent", TaskPublishedEvent.class);
         registerEventType("TaskCancelledEvent", TaskCancelledEvent.class);
         registerEventType("TaskExpiredEvent", TaskExpiredEvent.class);
+        registerEventType("TaskRejectedEvent", TaskRejectedEvent.class);
         // Submission events
         registerEventType("SubmissionCompletedEvent", SubmissionCompletedEvent.class);
+        // Appeal events (P1#8)
+        registerEventType("AppealSubmittedEvent", AppealSubmittedEvent.class);
+        registerEventType("AppealApprovedEvent", AppealApprovedEvent.class);
+        registerEventType("AppealRejectedEvent", AppealRejectedEvent.class);
         // Corrective events
         registerEventType("CorrectiveCaseCreatedEvent", CorrectiveCaseCreatedEvent.class);
         registerEventType("CaseAssignedEvent", CaseAssignedEvent.class);
@@ -91,6 +96,8 @@ public class OutboxProcessor {
         registerEventType("EffectivenessConfirmedEvent", EffectivenessConfirmedEvent.class);
         registerEventType("EffectivenessFailedEvent", EffectivenessFailedEvent.class);
         registerEventType("SlaBreachedEvent", SlaBreachedEvent.class);
+        registerEventType("AutoCorrectiveCreationFailedEvent", AutoCorrectiveCreationFailedEvent.class);
+        registerEventType("AssigneeUnassignedEvent", AssigneeUnassignedEvent.class);
         // Analytics events
         registerEventType("DailySummaryUpdatedEvent", DailySummaryUpdatedEvent.class);
         registerEventType("PeriodSummaryCalculatedEvent", PeriodSummaryCalculatedEvent.class);

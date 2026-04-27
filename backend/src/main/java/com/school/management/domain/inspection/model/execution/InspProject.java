@@ -168,6 +168,21 @@ public class InspProject extends AggregateRoot<Long> {
         this.updatedAt = LocalDateTime.now();
     }
 
+    /**
+     * P1#7 follow-up: 已发布项目升级到新的模板版本快照.
+     * 仅 PUBLISHED / PAUSED 状态允许. 不改其他字段, 仅推 templateVersionId 至新值.
+     */
+    public void relockTemplateVersion(Long newTemplateVersionId) {
+        if (this.status != ProjectStatus.PUBLISHED && this.status != ProjectStatus.PAUSED) {
+            throw new IllegalStateException("只有已发布或已暂停的项目才能升级模板版本");
+        }
+        if (newTemplateVersionId == null) {
+            throw new IllegalArgumentException("新模板版本ID不能为空");
+        }
+        this.templateVersionId = newTemplateVersionId;
+        this.updatedAt = LocalDateTime.now();
+    }
+
     public void updateInfo(String projectName, Long rootSectionId, Long scoringProfileId,
                            ScopeType scopeType, String scopeConfig,
                            LocalDate startDate, LocalDate endDate,

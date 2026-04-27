@@ -154,6 +154,28 @@ public class CorrectiveCase extends AggregateRoot<Long> {
     }
 
     /**
+     * 责任人退出 / 重派准备 (P1#6) — ASSIGNED/IN_PROGRESS → OPEN.
+     *
+     * <p>用于 assignee 离职 / 退出项目 / 调岗等场景: 把 assigneeId 清空, 状态回到 OPEN
+     * 等待重新分派. 已 SUBMITTED/VERIFIED/CLOSED 的案例不能 unassign — 已经走完整改流程.
+     *
+     * @param reason 退出原因 (用于审计 + 通知)
+     */
+    public void unassign(String reason) {
+        if (this.status != CaseStatus.ASSIGNED && this.status != CaseStatus.IN_PROGRESS) {
+            throw new IllegalStateException(
+                    "只有已分配或进行中的案例才能解除责任人, 当前状态: " + this.status);
+        }
+        Long previousAssigneeId = this.assigneeId;
+        this.assigneeId = null;
+        this.assigneeName = null;
+        this.status = CaseStatus.OPEN;
+        this.updatedAt = LocalDateTime.now();
+        registerEvent(new AssigneeUnassignedEvent(
+                this.id, this.caseCode, previousAssigneeId, reason));
+    }
+
+    /**
      * 开始整改 — ASSIGNED → IN_PROGRESS
      */
     public void startWork() {
@@ -245,8 +267,15 @@ public class CorrectiveCase extends AggregateRoot<Long> {
         registerEvent(new EffectivenessConfirmedEvent(this.id, this.caseCode));
     }
 
+    /** 自动升级上限 — 超过即不再自动重新打开,等待人工接管 (P0#2) */
+    public static final int MAX_AUTO_ESCALATION_LEVEL = 3;
+
     /**
      * 效果验证不达标 — 重新打开案例
+     *
+     * <p>升级链有上限: escalationLevel 已达 {@link #MAX_AUTO_ESCALATION_LEVEL}
+     * 时不再自动重新打开,而是保持 CLOSED + effectivenessStatus=FAILED,
+     * 需上级人工介入. 避免整改方应付式提交导致案例无限循环升级.
      */
     public void failEffectiveness(String note) {
         if (this.status != CaseStatus.CLOSED || this.effectivenessStatus != EffectivenessStatus.PENDING) {
@@ -254,10 +283,15 @@ public class CorrectiveCase extends AggregateRoot<Long> {
         }
         this.effectivenessStatus = EffectivenessStatus.FAILED;
         this.effectivenessNote = note;
-        // 重新打开，升级
+        this.updatedAt = LocalDateTime.now();
+        if (this.escalationLevel >= MAX_AUTO_ESCALATION_LEVEL) {
+            // 不再升级,只标记 FAILED,触发事件让上级关注 (escalationLevel 携带当前值)
+            registerEvent(new EffectivenessFailedEvent(this.id, this.caseCode, this.escalationLevel));
+            return;
+        }
+        // 重新打开,升级
         this.status = CaseStatus.OPEN;
         this.escalationLevel = this.escalationLevel + 1;
-        this.updatedAt = LocalDateTime.now();
         registerEvent(new EffectivenessFailedEvent(this.id, this.caseCode, this.escalationLevel));
     }
 
@@ -289,6 +323,10 @@ public class CorrectiveCase extends AggregateRoot<Long> {
         if (this.status == CaseStatus.CLOSED) {
             throw new IllegalStateException("已关闭的案例不能升级");
         }
+        if (this.escalationLevel >= MAX_AUTO_ESCALATION_LEVEL) {
+            throw new IllegalStateException(
+                "案例已达自动升级上限 " + MAX_AUTO_ESCALATION_LEVEL + " 级, 需人工介入");
+        }
         this.escalationLevel = this.escalationLevel + 1;
         this.status = CaseStatus.OPEN;
         this.assigneeId = null;
@@ -298,9 +336,15 @@ public class CorrectiveCase extends AggregateRoot<Long> {
     }
 
     /**
-     * SLA 超时自动升级
+     * SLA 超时自动升级 — 受 {@link #MAX_AUTO_ESCALATION_LEVEL} 上限保护,
+     * 超限后不再加级别,Job 端可据此停止重复触发.
      */
     public void slaBreach() {
+        if (this.escalationLevel >= MAX_AUTO_ESCALATION_LEVEL) {
+            // 不再升级,仍发事件让监控告警感知
+            registerEvent(new SlaBreachedEvent(this.id, this.caseCode, this.escalationLevel, this.deadline));
+            return;
+        }
         this.escalationLevel = this.escalationLevel + 1;
         this.updatedAt = LocalDateTime.now();
         registerEvent(new SlaBreachedEvent(this.id, this.caseCode, this.escalationLevel, this.deadline));
