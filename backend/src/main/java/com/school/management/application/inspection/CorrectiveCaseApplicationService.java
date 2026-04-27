@@ -26,6 +26,7 @@ public class CorrectiveCaseApplicationService {
     private final CorrectiveCaseRepository caseRepository;
     private final CorrectiveSubtaskRepository subtaskRepository;
     private final SpringDomainEventPublisher eventPublisher;
+    private final InspectionAuditLogger auditLogger;
 
     @Autowired(required = false)
     private TriggerService triggerService;
@@ -209,9 +210,9 @@ public class CorrectiveCaseApplicationService {
         caseRepository.save(c);
         eventPublisher.publishAll(c.getDomainEvents());
         c.clearDomainEvents();
-        // P1#9: 通知触发点 — 通知当事人和责任人验证未通过
+        // P1#9 + review #B: 触发驳回通知点 — 用独立 INSP_CORRECTIVE_REJECTED 避免与 VERIFIED 共享幂等 key
         final CorrectiveCase finalCase = c;
-        fireTrigger(InspectionTriggerPoints.INSP_CORRECTIVE_VERIFIED, ctx -> {
+        fireTrigger(InspectionTriggerPoints.INSP_CORRECTIVE_REJECTED, ctx -> {
             ctx.put("caseId", finalCase.getId());
             ctx.put("caseCode", finalCase.getCaseCode());
             ctx.put("verificationResult", "REJECTED");
@@ -285,6 +286,11 @@ public class CorrectiveCaseApplicationService {
                 eventPublisher.publishAll(c.getDomainEvents());
                 c.clearDomainEvents();
                 affected++;
+                // C: 审计日志
+                auditLogger.log("CorrectiveCase", c.getId(), c.getCaseCode(),
+                        "CASE_UNASSIGNED", reason,
+                        Map.of("previousAssigneeId", userId,
+                                "fallbackAssigneeId", fallbackAssigneeId != null ? fallbackAssigneeId : 0L));
                 log.info("Case {} reassigned: previousAssignee={} → {}, reason={}",
                         c.getCaseCode(), userId,
                         fallbackAssigneeId != null ? fallbackAssigneeId : "[unassigned]",

@@ -44,6 +44,7 @@ public class InspTaskApplicationService {
     private final SpringDomainEventPublisher eventPublisher;
     private final ObjectMapper objectMapper;
     private final TemplateVersionRepository templateVersionRepository;
+    private final InspectionAuditLogger auditLogger;
 
     @Autowired(required = false)
     private TriggerService triggerService;
@@ -191,6 +192,12 @@ public class InspTaskApplicationService {
         InspTask saved = taskRepository.save(task);
         eventPublisher.publishAll(saved.getDomainEvents());
         saved.clearDomainEvents();
+        // C: 审计日志
+        auditLogger.log("InspTask", saved.getId(), saved.getTaskCode(),
+                "TASK_REJECTED", comment,
+                Map.of("rejectionCount", saved.getRejectionCount() != null ? saved.getRejectionCount() : 0,
+                        "extendedTo", saved.getExtendedTo() != null ? saved.getExtendedTo().toString() : "",
+                        "inspectorId", saved.getInspectorId() != null ? saved.getInspectorId() : 0L));
         // P1#9: 触发任务驳回通知点 — 检查员需重新提交
         if (triggerService != null) {
             try {
@@ -219,8 +226,15 @@ public class InspTaskApplicationService {
     public InspTask extendTaskDeadline(Long id, LocalDate newDeadline) {
         InspTask task = taskRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("任务不存在: " + id));
+        LocalDate previous = task.getEffectiveDeadline();
         task.extendDeadline(newDeadline);
-        return taskRepository.save(task);
+        InspTask saved = taskRepository.save(task);
+        // C: 审计日志
+        auditLogger.log("InspTask", saved.getId(), saved.getTaskCode(),
+                "TASK_DEADLINE_EXTENDED", null,
+                Map.of("previousDeadline", previous != null ? previous.toString() : "",
+                        "newDeadline", newDeadline.toString()));
+        return saved;
     }
 
     @Transactional

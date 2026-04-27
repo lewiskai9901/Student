@@ -21,8 +21,11 @@ public final class InspectionTriggerPoints {
     /** 整改责任人分配 — 通知 assignee */
     public static final String INSP_CORRECTIVE_ASSIGNED = "INSP_CORRECTIVE_ASSIGNED";
 
-    /** 整改验证完成 (通过/不通过) — 通知当事人和责任人 */
+    /** 整改验证通过 — 通知当事人和责任人 (review #B: 与 REJECTED 拆分避免幂等去重命中) */
     public static final String INSP_CORRECTIVE_VERIFIED = "INSP_CORRECTIVE_VERIFIED";
+
+    /** 整改验证驳回 — 通知当事人和责任人 (review #B 拆分新增) */
+    public static final String INSP_CORRECTIVE_REJECTED = "INSP_CORRECTIVE_REJECTED";
 
     /** 申诉提交 — 通知申诉人 (确认收到) + 审核员 (有待审) */
     public static final String INSP_APPEAL_SUBMITTED = "INSP_APPEAL_SUBMITTED";

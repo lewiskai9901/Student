@@ -16,6 +16,7 @@ import com.school.management.infrastructure.event.SpringDomainEventPublisher;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.dao.DuplicateKeyException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -50,6 +51,7 @@ public class InspAppealApplicationService {
     private final InspSubmissionRepository submissionRepository;
     private final InspTaskRepository taskRepository;
     private final SpringDomainEventPublisher eventPublisher;
+    private final InspectionAuditLogger auditLogger;
 
     @Autowired(required = false)
     private TriggerService triggerService;
@@ -97,7 +99,13 @@ public class InspAppealApplicationService {
                 appealCode, submissionDetailId, submissionId, taskId, projectId,
                 subjectType, subjectId, submitterUserId, submitterName,
                 reason, attachments, expectedAdjustment);
-        InspAppeal saved = appealRepository.save(appeal);
+        InspAppeal saved;
+        try {
+            saved = appealRepository.save(appeal);
+        } catch (DuplicateKeyException dup) {
+            // A: pending_lock_key 唯一约束命中 — 并发提交场景, 应用层 anyMatch 校验和 DB 之间被穿透
+            throw new IllegalStateException("该扣分明细已存在待审核的申诉, 请勿重复提交", dup);
+        }
         eventPublisher.publishAll(saved.getDomainEvents());
         saved.clearDomainEvents();
         // P1#9: 触发当事人通知点 — 申诉人确认收到 + 审核员有待审
@@ -137,6 +145,12 @@ public class InspAppealApplicationService {
             ctx.put("_refType", "inspection_appeal");
             ctx.put("_refId", saved.getId());
         });
+        // C: 审计日志
+        auditLogger.log("InspAppeal", saved.getId(), saved.getAppealCode(),
+                "APPEAL_APPROVED", comment,
+                Map.of("finalAdjustment", finalAdjustment != null ? finalAdjustment : BigDecimal.ZERO,
+                        "submitterUserId", saved.getSubmitterUserId() != null ? saved.getSubmitterUserId() : 0L,
+                        "submissionDetailId", saved.getSubmissionDetailId() != null ? saved.getSubmissionDetailId() : 0L));
         return saved;
     }
 
@@ -160,6 +174,11 @@ public class InspAppealApplicationService {
             ctx.put("_refType", "inspection_appeal");
             ctx.put("_refId", saved.getId());
         });
+        // C: 审计日志
+        auditLogger.log("InspAppeal", saved.getId(), saved.getAppealCode(),
+                "APPEAL_REJECTED", comment,
+                Map.of("submitterUserId", saved.getSubmitterUserId() != null ? saved.getSubmitterUserId() : 0L,
+                        "submissionDetailId", saved.getSubmissionDetailId() != null ? saved.getSubmissionDetailId() : 0L));
         return saved;
     }
 

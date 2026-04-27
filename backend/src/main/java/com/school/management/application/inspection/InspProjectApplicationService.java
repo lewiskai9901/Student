@@ -39,6 +39,7 @@ public class InspProjectApplicationService {
     private final ObjectMapper objectMapper;
     private final TemplateSectionRepository templateSectionRepository;
     private final TemplateVersionRepository templateVersionRepository;
+    private final InspectionAuditLogger auditLogger;
 
     public InspProjectApplicationService(InspProjectRepository projectRepository,
                                           ProjectInspectorRepository inspectorRepository,
@@ -48,7 +49,8 @@ public class InspProjectApplicationService {
                                           TargetPopulationService targetPopulationService,
                                           ObjectMapper objectMapper,
                                           TemplateSectionRepository templateSectionRepository,
-                                          TemplateVersionRepository templateVersionRepository) {
+                                          TemplateVersionRepository templateVersionRepository,
+                                          InspectionAuditLogger auditLogger) {
         this.projectRepository = projectRepository;
         this.inspectorRepository = inspectorRepository;
         this.scoreRepository = scoreRepository;
@@ -58,6 +60,7 @@ public class InspProjectApplicationService {
         this.objectMapper = objectMapper;
         this.templateSectionRepository = templateSectionRepository;
         this.templateVersionRepository = templateVersionRepository;
+        this.auditLogger = auditLogger;
     }
 
     // ========== Project CRUD ==========
@@ -220,6 +223,11 @@ public class InspProjectApplicationService {
 
         project.relockTemplateVersion(latest.getId());
         InspProject saved = projectRepository.save(project);
+        // C: 审计日志
+        auditLogger.log("InspProject", saved.getId(), saved.getProjectCode(),
+                "PROJECT_TEMPLATE_UPGRADED", null,
+                Map.of("previousVersionId", currentVersionId != null ? currentVersionId : 0L,
+                        "newVersionId", latest.getId()));
         log.info("项目 {} 模板版本已从 {} 升级到 {}",
                 saved.getProjectCode(), currentVersionId, latest.getId());
         return saved;
