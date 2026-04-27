@@ -220,3 +220,14 @@ export const CasePriorityConfig: Record<CasePriority, { label: string; type: str
   HIGH: { label: '高', type: 'danger', color: '#F56C6C' },
   CRITICAL: { label: '紧急', type: 'danger', color: '#CC0000' },
 }
+
+// ========== Appeal (申诉) ==========
+
+export type AppealStatus = 'PENDING' | 'APPROVED' | 'REJECTED' | 'WITHDRAWN'
+
+export const AppealStatusConfig: Record<AppealStatus, { label: string; type: string; color: string }> = {
+  PENDING: { label: '待审核', type: 'warning', color: '#E6A23C' },
+  APPROVED: { label: '已通过', type: 'success', color: '#67C23A' },
+  REJECTED: { label: '已驳回', type: 'danger', color: '#F56C6C' },
+  WITHDRAWN: { label: '已撤回', type: 'info', color: '#909399' },
+}

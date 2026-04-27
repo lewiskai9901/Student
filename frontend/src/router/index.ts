@@ -440,6 +440,27 @@ const routes: RouteRecordRaw[] = [
               permission: 'insp:corrective:view'
             }
           },
+          // 申诉管理 (P1#8)
+          {
+            path: '/inspection/appeals/my',
+            name: 'MyAppeals',
+            component: () => import('@/views/inspection/appeals/MyAppealsView.vue'),
+            meta: {
+              title: '我的申诉',
+              requiresAuth: true,
+              permission: 'inspection:appeal:view'
+            }
+          },
+          {
+            path: '/inspection/appeals/review',
+            name: 'AppealReview',
+            component: () => import('@/views/inspection/appeals/AppealReviewView.vue'),
+            meta: {
+              title: '申诉审核',
+              requiresAuth: true,
+              permission: 'inspection:appeal:review'
+            }
+          },
           // 分析报表
           {
             path: '/inspection/analytics',
