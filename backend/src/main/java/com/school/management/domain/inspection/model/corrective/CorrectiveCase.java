@@ -278,18 +278,23 @@ public class CorrectiveCase extends AggregateRoot<Long> {
      * 需上级人工介入. 避免整改方应付式提交导致案例无限循环升级.
      */
     public void failEffectiveness(String note) {
+        failEffectiveness(note, MAX_AUTO_ESCALATION_LEVEL);
+    }
+
+    /** review #E: 接受项目级上限. NULL/<=0 沿用系统默认. */
+    public void failEffectiveness(String note, Integer maxEscalationLevel) {
         if (this.status != CaseStatus.CLOSED || this.effectivenessStatus != EffectivenessStatus.PENDING) {
             throw new IllegalStateException("只有已关闭且待效果验证的案例才能标记效果不达标");
         }
+        int effectiveMax = maxEscalationLevel != null && maxEscalationLevel > 0
+                ? maxEscalationLevel : MAX_AUTO_ESCALATION_LEVEL;
         this.effectivenessStatus = EffectivenessStatus.FAILED;
         this.effectivenessNote = note;
         this.updatedAt = LocalDateTime.now();
-        if (this.escalationLevel >= MAX_AUTO_ESCALATION_LEVEL) {
-            // 不再升级,只标记 FAILED,触发事件让上级关注 (escalationLevel 携带当前值)
+        if (this.escalationLevel >= effectiveMax) {
             registerEvent(new EffectivenessFailedEvent(this.id, this.caseCode, this.escalationLevel));
             return;
         }
-        // 重新打开,升级
         this.status = CaseStatus.OPEN;
         this.escalationLevel = this.escalationLevel + 1;
         registerEvent(new EffectivenessFailedEvent(this.id, this.caseCode, this.escalationLevel));
@@ -320,12 +325,19 @@ public class CorrectiveCase extends AggregateRoot<Long> {
      * 给更高级别的责任人处理，而不是停留在无法流转的死胡同状态。
      */
     public void escalate() {
+        escalate(MAX_AUTO_ESCALATION_LEVEL);
+    }
+
+    /** review #E: 接受项目级上限. */
+    public void escalate(Integer maxEscalationLevel) {
         if (this.status == CaseStatus.CLOSED) {
             throw new IllegalStateException("已关闭的案例不能升级");
         }
-        if (this.escalationLevel >= MAX_AUTO_ESCALATION_LEVEL) {
+        int effectiveMax = maxEscalationLevel != null && maxEscalationLevel > 0
+                ? maxEscalationLevel : MAX_AUTO_ESCALATION_LEVEL;
+        if (this.escalationLevel >= effectiveMax) {
             throw new IllegalStateException(
-                "案例已达自动升级上限 " + MAX_AUTO_ESCALATION_LEVEL + " 级, 需人工介入");
+                "案例已达自动升级上限 " + effectiveMax + " 级, 需人工介入");
         }
         this.escalationLevel = this.escalationLevel + 1;
         this.status = CaseStatus.OPEN;
@@ -340,8 +352,14 @@ public class CorrectiveCase extends AggregateRoot<Long> {
      * 超限后不再加级别,Job 端可据此停止重复触发.
      */
     public void slaBreach() {
-        if (this.escalationLevel >= MAX_AUTO_ESCALATION_LEVEL) {
-            // 不再升级,仍发事件让监控告警感知
+        slaBreach(MAX_AUTO_ESCALATION_LEVEL);
+    }
+
+    /** review #E: 接受项目级上限. */
+    public void slaBreach(Integer maxEscalationLevel) {
+        int effectiveMax = maxEscalationLevel != null && maxEscalationLevel > 0
+                ? maxEscalationLevel : MAX_AUTO_ESCALATION_LEVEL;
+        if (this.escalationLevel >= effectiveMax) {
             registerEvent(new SlaBreachedEvent(this.id, this.caseCode, this.escalationLevel, this.deadline));
             return;
         }

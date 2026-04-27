@@ -88,6 +88,9 @@ public class InspProjectRepositoryImpl implements InspProjectRepository {
         po.setCalibrationMethod(d.getCalibrationMethod());
         po.setSplitStrategy(d.getSplitStrategy());
         po.setScoringConfigSnapshot(d.getScoringConfigSnapshot());
+        po.setMaxRejectCount(d.getMaxRejectCount());
+        po.setMaxEscalationLevel(d.getMaxEscalationLevel());
+        po.setAppealWindowDays(d.getAppealWindowDays());
         po.setStatus(d.getStatus() != null ? d.getStatus().name() : null);
         po.setCreatedBy(d.getCreatedBy());
         po.setCreatedAt(d.getCreatedAt());
@@ -124,6 +127,9 @@ public class InspProjectRepositoryImpl implements InspProjectRepository {
                 .calibrationMethod(po.getCalibrationMethod())
                 .splitStrategy(po.getSplitStrategy())
                 .scoringConfigSnapshot(po.getScoringConfigSnapshot())
+                .maxRejectCount(po.getMaxRejectCount())
+                .maxEscalationLevel(po.getMaxEscalationLevel())
+                .appealWindowDays(po.getAppealWindowDays())
                 .status(po.getStatus() != null ? ProjectStatus.valueOf(po.getStatus()) : null)
                 .createdBy(po.getCreatedBy())
                 .createdAt(po.getCreatedAt())

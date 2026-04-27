@@ -142,6 +142,25 @@ public class InspTaskController {
         return Result.success(taskService.extendTaskDeadline(id, request.getNewDeadline()));
     }
 
+    /** review #D: 检查员离职 / 退出时批量解除其所有非终态任务 */
+    @PostMapping("/reassign-departed-inspector/{userId}")
+    @CasbinAccess(resource = "insp:task", action = "edit")
+    public Result<Integer> reassignDepartedInspector(@PathVariable Long userId,
+                                                       @RequestBody ReassignDepartedInspectorRequest request) {
+        int affected = taskService.reassignDepartedInspector(userId,
+                request.getReason(),
+                request.getFallbackInspectorId(),
+                request.getFallbackInspectorName());
+        return Result.success(affected);
+    }
+
+    @lombok.Data
+    public static class ReassignDepartedInspectorRequest {
+        private String reason;
+        private Long fallbackInspectorId;
+        private String fallbackInspectorName;
+    }
+
     // --- Request DTOs ---
 
     @lombok.Data

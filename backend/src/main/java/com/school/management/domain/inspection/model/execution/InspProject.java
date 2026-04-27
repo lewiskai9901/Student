@@ -52,6 +52,10 @@ public class InspProject extends AggregateRoot<Long> {
     private String calibrationMethod;    // Z_SCORE, MIN_MAX, PERCENTILE_RANK
     private String splitStrategy;        // NONE, BY_TARGET, BY_SECTION, MANUAL
     private String scoringConfigSnapshot; // JSON 快照，发布时锁定
+    // review #E + #F: 项目级业务策略 (NULL=系统默认)
+    private Integer maxRejectCount;       // 任务自动驳回上限, NULL=3
+    private Integer maxEscalationLevel;   // 整改自动升级上限, NULL=3
+    private Integer appealWindowDays;     // 申诉时效 (从 task 发布起的天数), NULL=7
     private ProjectStatus status;
     private Long createdBy;
     private LocalDateTime createdAt;
@@ -86,6 +90,9 @@ public class InspProject extends AggregateRoot<Long> {
         this.calibrationMethod = builder.calibrationMethod;
         this.splitStrategy = builder.splitStrategy != null ? builder.splitStrategy : "NONE";
         this.scoringConfigSnapshot = builder.scoringConfigSnapshot;
+        this.maxRejectCount = builder.maxRejectCount;
+        this.maxEscalationLevel = builder.maxEscalationLevel;
+        this.appealWindowDays = builder.appealWindowDays;
         this.reviewRequired = builder.reviewRequired != null ? builder.reviewRequired : true;
         this.autoPublish = builder.autoPublish != null ? builder.autoPublish : false;
         this.status = builder.status != null ? builder.status : ProjectStatus.DRAFT;
@@ -264,6 +271,9 @@ public class InspProject extends AggregateRoot<Long> {
     public String getCalibrationMethod() { return calibrationMethod; }
     public String getSplitStrategy() { return splitStrategy; }
     public String getScoringConfigSnapshot() { return scoringConfigSnapshot; }
+    public Integer getMaxRejectCount() { return maxRejectCount; }
+    public Integer getMaxEscalationLevel() { return maxEscalationLevel; }
+    public Integer getAppealWindowDays() { return appealWindowDays; }
     public ProjectStatus getStatus() { return status; }
     public Long getCreatedBy() { return createdBy; }
     public LocalDateTime getCreatedAt() { return createdAt; }
@@ -303,6 +313,9 @@ public class InspProject extends AggregateRoot<Long> {
         private String calibrationMethod;
         private String splitStrategy;
         private String scoringConfigSnapshot;
+        private Integer maxRejectCount;
+        private Integer maxEscalationLevel;
+        private Integer appealWindowDays;
         private ProjectStatus status;
         private Long createdBy;
         private LocalDateTime createdAt;
@@ -335,6 +348,9 @@ public class InspProject extends AggregateRoot<Long> {
         public Builder calibrationMethod(String calibrationMethod) { this.calibrationMethod = calibrationMethod; return this; }
         public Builder splitStrategy(String splitStrategy) { this.splitStrategy = splitStrategy; return this; }
         public Builder scoringConfigSnapshot(String scoringConfigSnapshot) { this.scoringConfigSnapshot = scoringConfigSnapshot; return this; }
+        public Builder maxRejectCount(Integer v) { this.maxRejectCount = v; return this; }
+        public Builder maxEscalationLevel(Integer v) { this.maxEscalationLevel = v; return this; }
+        public Builder appealWindowDays(Integer v) { this.appealWindowDays = v; return this; }
         public Builder status(ProjectStatus status) { this.status = status; return this; }
         public Builder createdBy(Long createdBy) { this.createdBy = createdBy; return this; }
         public Builder createdAt(LocalDateTime createdAt) { this.createdAt = createdAt; return this; }

@@ -38,6 +38,9 @@ public class InspProjectPO {
     private String calibrationMethod;
     private String splitStrategy;
     private String scoringConfigSnapshot;
+    private Integer maxRejectCount;          // E: 项目级业务策略 (NULL=系统默认)
+    private Integer maxEscalationLevel;
+    private Integer appealWindowDays;        // F: 申诉时效
     private String status;
     private Long createdBy;
     private LocalDateTime createdAt;

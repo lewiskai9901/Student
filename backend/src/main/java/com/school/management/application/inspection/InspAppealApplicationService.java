@@ -4,11 +4,13 @@ import com.baomidou.mybatisplus.core.toolkit.IdWorker;
 import com.school.management.application.event.TriggerService;
 import com.school.management.domain.inspection.model.appeal.AppealStatus;
 import com.school.management.domain.inspection.model.appeal.InspAppeal;
+import com.school.management.domain.inspection.model.execution.InspProject;
 import com.school.management.domain.inspection.model.execution.InspSubmission;
 import com.school.management.domain.inspection.model.execution.InspTask;
 import com.school.management.domain.inspection.model.execution.SubmissionDetail;
 import com.school.management.domain.inspection.model.execution.TargetType;
 import com.school.management.domain.inspection.repository.InspAppealRepository;
+import com.school.management.domain.inspection.repository.InspProjectRepository;
 import com.school.management.domain.inspection.repository.InspSubmissionRepository;
 import com.school.management.domain.inspection.repository.InspTaskRepository;
 import com.school.management.domain.inspection.repository.SubmissionDetailRepository;
@@ -50,8 +52,12 @@ public class InspAppealApplicationService {
     private final SubmissionDetailRepository detailRepository;
     private final InspSubmissionRepository submissionRepository;
     private final InspTaskRepository taskRepository;
+    private final InspProjectRepository projectRepository;
     private final SpringDomainEventPublisher eventPublisher;
     private final InspectionAuditLogger auditLogger;
+
+    /** review #F: 系统默认申诉时效 (天) — 项目可通过 InspProject.appealWindowDays 覆盖 */
+    private static final int DEFAULT_APPEAL_WINDOW_DAYS = 7;
 
     @Autowired(required = false)
     private TriggerService triggerService;
@@ -75,6 +81,7 @@ public class InspAppealApplicationService {
         Long projectId = null;
         String subjectType = null;
         Long subjectId = null;
+        InspTask task = null;
         if (submissionId != null) {
             Optional<InspSubmission> subOpt = submissionRepository.findById(submissionId);
             if (subOpt.isPresent()) {
@@ -90,7 +97,24 @@ public class InspAppealApplicationService {
         if (taskId != null) {
             Optional<InspTask> taskOpt = taskRepository.findById(taskId);
             if (taskOpt.isPresent()) {
-                projectId = taskOpt.get().getProjectId();
+                task = taskOpt.get();
+                projectId = task.getProjectId();
+            }
+        }
+
+        // review #F: 申诉时效 — 从 task 发布起 N 天内可申诉, 超期拒绝
+        if (task != null && task.getPublishedAt() != null) {
+            Integer windowDays = projectId != null
+                    ? projectRepository.findById(projectId)
+                            .map(InspProject::getAppealWindowDays).orElse(null)
+                    : null;
+            int effectiveWindow = windowDays != null && windowDays > 0
+                    ? windowDays : DEFAULT_APPEAL_WINDOW_DAYS;
+            LocalDateTime cutoff = task.getPublishedAt().plusDays(effectiveWindow);
+            if (LocalDateTime.now().isAfter(cutoff)) {
+                throw new IllegalStateException(
+                        "申诉时效已过 — 任务发布后 " + effectiveWindow + " 天内方可申诉, " +
+                        "已发布至: " + task.getPublishedAt());
             }
         }
 

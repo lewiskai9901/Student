@@ -205,13 +205,21 @@ public class InspTask extends AggregateRoot<Long> {
      * </ul>
      */
     public void reject(String comment) {
+        reject(comment, MAX_AUTO_REJECT_COUNT);
+    }
+
+    /**
+     * review #E: 驳回 — 接受项目级配置的上限. 业务可传 null 沿用系统默认 ({@link #MAX_AUTO_REJECT_COUNT}).
+     */
+    public void reject(String comment, Integer maxRejectCount) {
         if (this.status != TaskStatus.SUBMITTED && this.status != TaskStatus.UNDER_REVIEW) {
             throw new IllegalStateException("只有已提交或审核中的任务才能驳回");
         }
+        int effectiveMax = maxRejectCount != null && maxRejectCount > 0 ? maxRejectCount : MAX_AUTO_REJECT_COUNT;
         int currentCount = this.rejectionCount != null ? this.rejectionCount : 0;
-        if (currentCount >= MAX_AUTO_REJECT_COUNT) {
+        if (currentCount >= effectiveMax) {
             throw new IllegalStateException(
-                    "任务已达自动驳回上限 " + MAX_AUTO_REJECT_COUNT + " 次, 须项目管理员手动重派或延期");
+                    "任务已达自动驳回上限 " + effectiveMax + " 次, 须项目管理员手动重派或延期");
         }
         this.reviewComment = comment;
         this.status = TaskStatus.IN_PROGRESS;
@@ -247,6 +255,30 @@ public class InspTask extends AggregateRoot<Long> {
     /** 当前有效期限 (P1#5): 优先取 extendedTo, 否则用原 taskDate */
     public LocalDate getEffectiveDeadline() {
         return extendedTo != null ? extendedTo : taskDate;
+    }
+
+    /**
+     * 检查员退出 / 重派准备 (review #D) — CLAIMED/IN_PROGRESS → PENDING.
+     *
+     * <p>用于 inspector 离职 / 退出项目场景: 清空 inspectorId, 状态回到 PENDING
+     * 等待重新领取或分派. 已 SUBMITTED 之后的状态不能 unclaim — 检查员已完成提交,
+     * 后续走审核/驳回链路.
+     *
+     * @param reason 退出原因 (审计 + 通知)
+     */
+    public void unclaim(String reason) {
+        if (this.status != TaskStatus.CLAIMED && this.status != TaskStatus.IN_PROGRESS) {
+            throw new IllegalStateException(
+                    "只有已领取或进行中的任务才能解除检查员, 当前状态: " + this.status);
+        }
+        Long previousInspectorId = this.inspectorId;
+        this.inspectorId = null;
+        this.inspectorName = null;
+        this.status = TaskStatus.PENDING;
+        this.executionStartedAt = null;
+        this.updatedAt = LocalDateTime.now();
+        registerEvent(new com.school.management.domain.inspection.event.InspectorUnclaimedEvent(
+                this.id, this.taskCode, previousInspectorId, reason));
     }
 
     /**

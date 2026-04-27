@@ -98,6 +98,7 @@ public class OutboxProcessor {
         registerEventType("SlaBreachedEvent", SlaBreachedEvent.class);
         registerEventType("AutoCorrectiveCreationFailedEvent", AutoCorrectiveCreationFailedEvent.class);
         registerEventType("AssigneeUnassignedEvent", AssigneeUnassignedEvent.class);
+        registerEventType("InspectorUnclaimedEvent", InspectorUnclaimedEvent.class);
         // Analytics events
         registerEventType("DailySummaryUpdatedEvent", DailySummaryUpdatedEvent.class);
         registerEventType("PeriodSummaryCalculatedEvent", PeriodSummaryCalculatedEvent.class);

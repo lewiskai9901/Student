@@ -2,8 +2,10 @@ package com.school.management.application.inspection;
 
 import com.school.management.application.event.TriggerService;
 import com.school.management.domain.inspection.model.corrective.*;
+import com.school.management.domain.inspection.model.execution.InspProject;
 import com.school.management.domain.inspection.repository.CorrectiveCaseRepository;
 import com.school.management.domain.inspection.repository.CorrectiveSubtaskRepository;
+import com.school.management.domain.inspection.repository.InspProjectRepository;
 import com.school.management.infrastructure.event.SpringDomainEventPublisher;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -27,6 +29,7 @@ public class CorrectiveCaseApplicationService {
     private final CorrectiveSubtaskRepository subtaskRepository;
     private final SpringDomainEventPublisher eventPublisher;
     private final InspectionAuditLogger auditLogger;
+    private final InspProjectRepository projectRepository;
 
     @Autowired(required = false)
     private TriggerService triggerService;
@@ -308,7 +311,12 @@ public class CorrectiveCaseApplicationService {
     public CorrectiveCase escalateCase(Long id) {
         CorrectiveCase c = caseRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("整改案例不存在: " + id));
-        c.escalate();
+        // review #E: 项目级 maxEscalationLevel 优先
+        Integer projectMax = c.getProjectId() != null
+                ? projectRepository.findById(c.getProjectId())
+                        .map(InspProject::getMaxEscalationLevel).orElse(null)
+                : null;
+        c.escalate(projectMax);
         caseRepository.save(c);
         eventPublisher.publishAll(c.getDomainEvents());
         c.clearDomainEvents();

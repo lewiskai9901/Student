@@ -180,7 +180,10 @@ public class InspTaskApplicationService {
     public InspTask rejectTask(Long id, String comment) {
         InspTask task = taskRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("任务不存在: " + id));
-        task.reject(comment);
+        // review #E: 项目级 maxRejectCount 优先, NULL 沿用系统默认
+        Integer projectMax = projectRepository.findById(task.getProjectId())
+                .map(InspProject::getMaxRejectCount).orElse(null);
+        task.reject(comment, projectMax);
         // 将关联的 COMPLETED submissions 重新打开
         List<InspSubmission> submissions = submissionRepository.findByTaskId(id);
         for (InspSubmission sub : submissions) {
@@ -217,6 +220,55 @@ public class InspTaskApplicationService {
             }
         }
         return saved;
+    }
+
+    /**
+     * review #D: 检查员退出自动重派 — 当 userId 因离职/退出项目无法继续负责任务时,
+     * 批量解除其所有 CLAIMED/IN_PROGRESS 任务, 状态回 PENDING, 等待重新领取或分派.
+     *
+     * @param userId 离职/退出的检查员 ID
+     * @param reason 退出原因 (审计 + 通知)
+     * @param fallbackInspectorId 可选 — 自动重派给此检查员
+     * @param fallbackInspectorName 可选 — 自动重派的检查员姓名
+     * @return 受影响的任务数
+     */
+    @Transactional
+    public int reassignDepartedInspector(Long userId, String reason,
+                                          Long fallbackInspectorId, String fallbackInspectorName) {
+        if (userId == null) {
+            throw new IllegalArgumentException("userId 不能为空");
+        }
+        List<InspTask> tasks = taskRepository.findByInspectorId(userId);
+        int affected = 0;
+        for (InspTask t : tasks) {
+            if (t.getStatus() != TaskStatus.CLAIMED && t.getStatus() != TaskStatus.IN_PROGRESS) {
+                continue;
+            }
+            try {
+                t.unclaim(reason);
+                if (fallbackInspectorId != null) {
+                    // 状态此时已回 PENDING, 可以直接 assign 给 fallback
+                    t.assign(fallbackInspectorId, fallbackInspectorName);
+                }
+                taskRepository.save(t);
+                eventPublisher.publishAll(t.getDomainEvents());
+                t.clearDomainEvents();
+                affected++;
+                auditLogger.log("InspTask", t.getId(), t.getTaskCode(),
+                        "TASK_INSPECTOR_REASSIGNED", reason,
+                        Map.of("previousInspectorId", userId,
+                                "fallbackInspectorId", fallbackInspectorId != null ? fallbackInspectorId : 0L));
+                log.info("Task {} inspector reassigned: previous={} → {}, reason={}",
+                        t.getTaskCode(), userId,
+                        fallbackInspectorId != null ? fallbackInspectorId : "[unclaimed]",
+                        reason);
+            } catch (Exception e) {
+                log.error("Reassign task {} inspector failed: {}", t.getTaskCode(), e.getMessage());
+            }
+        }
+        log.info("Departed inspector {} reassign summary: {} tasks affected (reason={})",
+                userId, affected, reason);
+        return affected;
     }
 
     /**
