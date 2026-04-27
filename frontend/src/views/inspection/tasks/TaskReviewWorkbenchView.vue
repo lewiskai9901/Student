@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
-import { Check, X, Eye } from 'lucide-vue-next'
+import { Check, X, Eye, MessageCircleWarning } from 'lucide-vue-next'
+import SubmitAppealDialog from '@/views/inspection/appeals/components/SubmitAppealDialog.vue'
 import { getTasks, reviewTask, rejectTask, publishTask } from '@/api/inspection/task'
 import { getSubmissions } from '@/api/inspection/submission'
 import { getDetails } from '@/api/inspection/submission'
@@ -20,6 +21,19 @@ const reviewing = ref(false)
 const taskSubmissions = ref<InspSubmission[]>([])
 const submissionDetails = ref<Map<number, SubmissionDetail[]>>(new Map())
 const loadingDetails = ref(false)
+
+// 申诉对话框状态
+const appealDialog = ref(false)
+const appealDetailId = ref<number | null>(null)
+const appealItemName = ref<string | undefined>(undefined)
+const appealCurrentScore = ref<number | undefined>(undefined)
+
+function openAppealDialog(d: SubmissionDetail) {
+  appealDetailId.value = d.id
+  appealItemName.value = d.itemName
+  appealCurrentScore.value = d.score ?? undefined
+  appealDialog.value = true
+}
 
 const selectedTask = computed(() =>
   submittedTasks.value.find(t => t.id === selectedTaskId.value) ?? null
@@ -191,6 +205,11 @@ onMounted(() => loadSubmittedTasks())
                   <span class="rd-detail-score" v-if="d.score != null" :style="{ color: getScoreColor(d.score) }">
                     {{ d.score }}分
                   </span>
+                  <el-button link type="warning" size="small"
+                             title="对此扣分项发起申诉"
+                             @click="openAppealDialog(d)">
+                    <MessageCircleWarning class="w-4 h-4" />
+                  </el-button>
                 </div>
               </div>
             </div>
@@ -220,6 +239,15 @@ onMounted(() => loadSubmittedTasks())
         </div>
       </div>
     </div>
+
+    <!-- 申诉提交对话框 -->
+    <SubmitAppealDialog
+      v-if="appealDetailId != null"
+      v-model="appealDialog"
+      :submission-detail-id="appealDetailId"
+      :item-name="appealItemName"
+      :current-score="appealCurrentScore"
+    />
   </div>
 </template>
 
