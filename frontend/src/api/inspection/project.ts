@@ -53,6 +53,11 @@ export function publishProject(id: number, data: PublishProjectRequest): Promise
   return http.post<InspProject>(`${BASE}/${id}/publish`, data)
 }
 
+/** review #1: 升级项目模板版本至模板的最新已发布版本 */
+export function upgradeTemplateVersion(id: number): Promise<InspProject> {
+  return http.post<InspProject>(`${BASE}/${id}/upgrade-template-version`)
+}
+
 export function pauseProject(id: number): Promise<InspProject> {
   return http.post<InspProject>(`${BASE}/${id}/pause`)
 }
@@ -216,6 +221,7 @@ export const inspProjectApi = {
   update: updateProject,
   delete: deleteProject,
   publish: publishProject,
+  upgradeTemplateVersion,
   pause: pauseProject,
   resume: resumeProject,
   complete: completeProject,

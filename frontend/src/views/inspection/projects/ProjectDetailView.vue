@@ -509,6 +509,29 @@ async function handleRemoveInspector(insp: ProjectInspector) { try { await ElMes
 
 function goBack() { router.push('/inspection/projects') }
 function goExecuteTask(taskId: number) { router.push(`/inspection/tasks/${taskId}/execute`) }
+
+// review #1: 升级模板版本至最新
+async function handleUpgradeTemplate() {
+  if (!project.value) return
+  try {
+    await ElMessageBox.confirm(
+      '将把项目的模板快照升级到该模板的最新已发布版本. 升级后新生成的任务将按新模板结构填充. 确认?',
+      '升级模板版本', { type: 'warning' },
+    )
+    const oldVersionId = project.value.templateVersionId
+    const updated = await inspProjectApi.upgradeTemplateVersion(projectId)
+    if (updated.templateVersionId === oldVersionId) {
+      ElMessage.info('已是最新版本, 无需升级')
+    } else {
+      ElMessage.success(`模板版本已从 ${oldVersionId} 升级到 ${updated.templateVersionId}`)
+      loadProject()
+    }
+  } catch (e: any) {
+    if (e !== 'cancel' && e?.toString?.() !== 'cancel') {
+      ElMessage.error(e.message || '升级失败')
+    }
+  }
+}
 onMounted(async () => {
   await loadOrgTree()
   await loadProject()
@@ -559,6 +582,11 @@ onMounted(async () => {
         </el-button>
         <el-button v-if="project.status === 'PAUSED'" type="success" @click="handleResume" size="small" round>
           <Play class="w-3.5 h-3.5 mr-1" />恢复
+        </el-button>
+        <el-button v-if="['PUBLISHED','PAUSED'].includes(project.status) && project.rootSectionId"
+                   @click="handleUpgradeTemplate" size="small" round plain
+                   title="把项目锁定的模板快照升级至该模板的最新已发布版本; 模板被改后已发布项目可能无法创建新任务">
+          升级模板版本
         </el-button>
         <el-button v-if="['PUBLISHED','PAUSED'].includes(project.status)" @click="handleComplete" size="small" round>
           <CheckCircle class="w-3.5 h-3.5 mr-1" />完结
