@@ -440,6 +440,17 @@ const routes: RouteRecordRaw[] = [
               permission: 'insp:corrective:view'
             }
           },
+          // 离职用户重派 (review #D + P1#6)
+          {
+            path: '/inspection/admin/reassign-departed',
+            name: 'DepartedUserReassign',
+            component: () => import('@/views/inspection/admin/DepartedUserReassignView.vue'),
+            meta: {
+              title: '离职用户重派',
+              requiresAuth: true,
+              permission: 'insp:corrective:manage'
+            }
+          },
           // 申诉管理 (P1#8)
           {
             path: '/inspection/appeals/my',

@@ -45,6 +45,14 @@ export function deleteCase(id: number): Promise<void> {
   return http.delete(`${BASE}/${id}`)
 }
 
+/** P1#6: 责任人离职批量重派 — 返回受影响案例数 */
+export function reassignDepartedUser(
+  userId: number,
+  data: { reason: string; fallbackAssigneeId?: number; fallbackAssigneeName?: string },
+): Promise<number> {
+  return http.post<number>(`${BASE}/reassign-departed-user/${userId}`, data)
+}
+
 // ==================== Lifecycle ====================
 
 export function assignCase(id: number, data: AssignCaseRequest): Promise<CorrectiveCase> {

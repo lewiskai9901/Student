@@ -74,6 +74,19 @@ export function assignTask(id: number, data: AssignTaskRequest): Promise<InspTas
   return http.post<InspTask>(`${BASE}/${id}/assign`, data)
 }
 
+/** P1#5: 项目管理员手动延期任务 */
+export function extendTaskDeadline(id: number, newDeadline: string): Promise<InspTask> {
+  return http.post<InspTask>(`${BASE}/${id}/extend-deadline`, { newDeadline })
+}
+
+/** review #D: 检查员离职批量重派 — 返回受影响任务数 */
+export function reassignDepartedInspector(
+  userId: number,
+  data: { reason: string; fallbackInspectorId?: number; fallbackInspectorName?: string },
+): Promise<number> {
+  return http.post<number>(`${BASE}/reassign-departed-inspector/${userId}`, data)
+}
+
 // ==================== API 对象 ====================
 
 export const inspTaskApi = {
@@ -91,4 +104,6 @@ export const inspTaskApi = {
   publish: publishTask,
   cancel: cancelTask,
   assign: assignTask,
+  extendDeadline: extendTaskDeadline,
+  reassignDepartedInspector,
 }
