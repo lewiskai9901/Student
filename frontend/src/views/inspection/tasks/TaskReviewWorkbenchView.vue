@@ -1,8 +1,9 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
-import { ElMessage } from 'element-plus'
-import { Check, X, Eye, MessageCircleWarning } from 'lucide-vue-next'
+import { ElMessage, ElMessageBox } from 'element-plus'
+import { Check, X, Eye, MessageCircleWarning, Calendar, AlertTriangle } from 'lucide-vue-next'
 import SubmitAppealDialog from '@/views/inspection/appeals/components/SubmitAppealDialog.vue'
+import { extendTaskDeadline } from '@/api/inspection/task'
 import { getTasks, reviewTask, rejectTask, publishTask } from '@/api/inspection/task'
 import { getSubmissions } from '@/api/inspection/submission'
 import { getDetails } from '@/api/inspection/submission'
@@ -33,6 +34,30 @@ function openAppealDialog(d: SubmissionDetail) {
   appealItemName.value = d.itemName
   appealCurrentScore.value = d.score ?? undefined
   appealDialog.value = true
+}
+
+const MAX_AUTO_REJECT_COUNT = 3 // 与后端 InspTask.MAX_AUTO_REJECT_COUNT 保持一致
+
+async function handleExtendDeadline() {
+  if (!selectedTaskId.value || !selectedTask.value) return
+  const current = selectedTask.value.extendedTo || selectedTask.value.taskDate
+  try {
+    const { value } = await ElMessageBox.prompt(
+      `当前期限: ${current}\n请输入新延期日期 (YYYY-MM-DD), 必须晚于当前期限`,
+      '延长任务期限',
+      {
+        inputPattern: /^\d{4}-\d{2}-\d{2}$/,
+        inputErrorMessage: '日期格式必须为 YYYY-MM-DD',
+        inputValue: '',
+      },
+    )
+    await extendTaskDeadline(selectedTaskId.value, value)
+    ElMessage.success(`已延期到 ${value}`)
+    // 更新本地状态
+    if (selectedTask.value) selectedTask.value.extendedTo = value
+  } catch (e: any) {
+    if (e?.message) ElMessage.error(e.message)
+  }
 }
 
 const selectedTask = computed(() =>
@@ -179,7 +204,33 @@ onMounted(() => loadSubmittedTasks())
               <span class="rd-code">{{ selectedTask.taskCode }}</span>
               <span class="rd-inspector">检查员: {{ selectedTask.inspectorName || '-' }}</span>
             </div>
-            <span class="rd-date">{{ selectedTask.taskDate }}</span>
+            <span class="rd-date">
+              {{ selectedTask.taskDate }}
+              <span v-if="selectedTask.extendedTo" class="text-orange-500 ml-1" :title="`原始期限 ${selectedTask.taskDate}, 已延期`">
+                → {{ selectedTask.extendedTo }}
+              </span>
+            </span>
+          </div>
+
+          <!-- P1#5 状态条: 驳回次数 + 延期入口 -->
+          <div v-if="(selectedTask.rejectionCount ?? 0) > 0 || selectedTask.extendedTo" class="rd-rejection-bar">
+            <div class="flex items-center gap-3 text-sm">
+              <span v-if="(selectedTask.rejectionCount ?? 0) > 0" class="flex items-center gap-1">
+                <AlertTriangle class="w-4 h-4 text-orange-500" />
+                <span class="text-gray-700">已驳回 <strong :class="(selectedTask.rejectionCount ?? 0) >= MAX_AUTO_REJECT_COUNT ? 'text-red-600' : 'text-orange-600'">{{ selectedTask.rejectionCount }}</strong> 次</span>
+                <span class="text-gray-400">/ 上限 {{ MAX_AUTO_REJECT_COUNT }}</span>
+              </span>
+              <span v-if="selectedTask.extendedTo" class="flex items-center gap-1 text-gray-700">
+                <Calendar class="w-4 h-4 text-blue-500" />
+                有效期已延至 <strong>{{ selectedTask.extendedTo }}</strong>
+              </span>
+              <el-button link type="primary" size="small" @click="handleExtendDeadline">
+                <Calendar class="w-4 h-4 mr-1" />延期
+              </el-button>
+              <span v-if="(selectedTask.rejectionCount ?? 0) >= MAX_AUTO_REJECT_COUNT" class="text-red-600 text-xs ml-auto">
+                已达自动驳回上限, 再驳回将被拒, 请延期或重新分派检查员
+              </span>
+            </div>
           </div>
 
           <!-- Submissions & Scores -->
@@ -299,6 +350,11 @@ onMounted(() => loadSubmittedTasks())
 .rd-code { font-size: 14px; font-weight: 700; color: #1a1a2e; margin-right: 12px; }
 .rd-inspector { font-size: 12px; color: #6b7280; }
 .rd-date { font-size: 12px; color: #9ca3af; }
+
+.rd-rejection-bar {
+  background: #fff7ed; border: 1px solid #fed7aa; border-radius: 8px;
+  padding: 8px 12px; margin-bottom: 12px;
+}
 
 .rd-submissions { margin-bottom: 16px; }
 .rd-sub-card {

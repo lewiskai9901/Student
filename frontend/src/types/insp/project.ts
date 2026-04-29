@@ -108,6 +108,10 @@ export interface InspTask {
   collaborationMode: string | null  // SINGLE / COLLABORATIVE
   reviewComment: string | null
   submittedAt: string | null
+  /** P1#5: 累计驳回次数 */
+  rejectionCount?: number | null
+  /** P1#5: 驳回延期到的有效日期 (YYYY-MM-DD) */
+  extendedTo?: string | null
   createdAt: string
   updatedAt: string
 }
