@@ -2,6 +2,8 @@ package com.school.management.application.inspection;
 
 import com.baomidou.mybatisplus.core.toolkit.IdWorker;
 import com.school.management.application.event.TriggerService;
+import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.transaction.support.TransactionTemplate;
 import com.school.management.domain.inspection.model.execution.*;
 import com.school.management.domain.inspection.model.template.TemplateItem;
 import com.school.management.domain.inspection.model.template.TemplateSection;
@@ -45,6 +47,8 @@ public class InspTaskApplicationService {
     private final ObjectMapper objectMapper;
     private final TemplateVersionRepository templateVersionRepository;
     private final InspectionAuditLogger auditLogger;
+    private final TransactionTemplate transactionTemplate;
+    private final JdbcTemplate jdbcTemplate;
 
     @Autowired(required = false)
     private TriggerService triggerService;
@@ -55,6 +59,13 @@ public class InspTaskApplicationService {
     public InspTask createTask(Long projectId, LocalDate taskDate,
                                String timeSlotCode, java.time.LocalTime timeSlotStart,
                                java.time.LocalTime timeSlotEnd) {
+        // review #6: drift check 提前到 save 之前 — 避免抛异常时 task 已入库变僵尸
+        // (此处虽然 @Transactional 会回滚, 但失败前移让 caller 拿到更明确的错误)
+        InspProject project = projectRepository.findById(projectId).orElse(null);
+        if (project != null) {
+            preCheckTemplateDrift(project);
+        }
+
         String taskCode = generateTaskCode();
         InspTask task = InspTask.create(taskCode, projectId, taskDate);
         InspTask saved = taskRepository.save(task);
@@ -65,6 +76,23 @@ public class InspTaskApplicationService {
         populateSubmissions(saved);
 
         return saved;
+    }
+
+    /** review #6: 创建 task 前预检模板漂移 — 一致才允许创建 */
+    private void preCheckTemplateDrift(InspProject project) {
+        Long lockedVersionId = project.getTemplateVersionId();
+        Long rootSectionId = project.getRootSectionId();
+        if (lockedVersionId == null || rootSectionId == null) return;
+        TemplateSection root = sectionRepository.findById(rootSectionId).orElse(null);
+        if (root == null || root.getTemplateId() == null) return;
+        templateVersionRepository.findLatestByTemplateId(root.getTemplateId()).ifPresent(latest -> {
+            if (!lockedVersionId.equals(latest.getId())) {
+                throw new IllegalStateException(String.format(
+                        "TEMPLATE_DRIFT: 项目 %s 锁定 templateVersionId=%d, 但模板 %d 最新版本是 %d. " +
+                        "请管理员先调用 POST /inspection/projects/{id}/upgrade-template-version 升级版本.",
+                        project.getProjectCode(), lockedVersionId, root.getTemplateId(), latest.getId()));
+            }
+        });
     }
 
     @Transactional(readOnly = true)
@@ -232,11 +260,19 @@ public class InspTaskApplicationService {
      * @param fallbackInspectorName 可选 — 自动重派的检查员姓名
      * @return 受影响的任务数
      */
-    @Transactional
+    /** review #5 + #11: 每条 task 独立事务, 校验 fallback 用户合法性 */
     public int reassignDepartedInspector(Long userId, String reason,
                                           Long fallbackInspectorId, String fallbackInspectorName) {
         if (userId == null) {
             throw new IllegalArgumentException("userId 不能为空");
+        }
+        if (fallbackInspectorId != null) {
+            Integer count = jdbcTemplate.queryForObject(
+                    "SELECT COUNT(*) FROM users WHERE id = ? AND deleted = 0",
+                    Integer.class, fallbackInspectorId);
+            if (count == null || count == 0) {
+                throw new IllegalArgumentException("fallbackInspectorId 对应用户不存在或已删除: " + fallbackInspectorId);
+            }
         }
         List<InspTask> tasks = taskRepository.findByInspectorId(userId);
         int affected = 0;
@@ -244,27 +280,29 @@ public class InspTaskApplicationService {
             if (t.getStatus() != TaskStatus.CLAIMED && t.getStatus() != TaskStatus.IN_PROGRESS) {
                 continue;
             }
-            try {
-                t.unclaim(reason);
-                if (fallbackInspectorId != null) {
-                    // 状态此时已回 PENDING, 可以直接 assign 给 fallback
-                    t.assign(fallbackInspectorId, fallbackInspectorName);
+            Boolean ok = transactionTemplate.execute(status -> {
+                try {
+                    InspTask fresh = taskRepository.findById(t.getId()).orElse(null);
+                    if (fresh == null) return false;
+                    fresh.unclaim(reason);
+                    if (fallbackInspectorId != null) {
+                        fresh.assign(fallbackInspectorId, fallbackInspectorName);
+                    }
+                    taskRepository.save(fresh);
+                    eventPublisher.publishAll(fresh.getDomainEvents());
+                    fresh.clearDomainEvents();
+                    auditLogger.log("InspTask", fresh.getId(), fresh.getTaskCode(),
+                            "TASK_INSPECTOR_REASSIGNED", reason,
+                            Map.of("previousInspectorId", userId,
+                                    "fallbackInspectorId", fallbackInspectorId != null ? fallbackInspectorId : 0L));
+                    return true;
+                } catch (Exception e) {
+                    log.error("Reassign task {} inspector failed (rolled back): {}", t.getTaskCode(), e.getMessage());
+                    status.setRollbackOnly();
+                    return false;
                 }
-                taskRepository.save(t);
-                eventPublisher.publishAll(t.getDomainEvents());
-                t.clearDomainEvents();
-                affected++;
-                auditLogger.log("InspTask", t.getId(), t.getTaskCode(),
-                        "TASK_INSPECTOR_REASSIGNED", reason,
-                        Map.of("previousInspectorId", userId,
-                                "fallbackInspectorId", fallbackInspectorId != null ? fallbackInspectorId : 0L));
-                log.info("Task {} inspector reassigned: previous={} → {}, reason={}",
-                        t.getTaskCode(), userId,
-                        fallbackInspectorId != null ? fallbackInspectorId : "[unclaimed]",
-                        reason);
-            } catch (Exception e) {
-                log.error("Reassign task {} inspector failed: {}", t.getTaskCode(), e.getMessage());
-            }
+            });
+            if (Boolean.TRUE.equals(ok)) affected++;
         }
         log.info("Departed inspector {} reassign summary: {} tasks affected (reason={})",
                 userId, affected, reason);

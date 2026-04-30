@@ -7,6 +7,8 @@ import com.school.management.domain.inspection.repository.CorrectiveCaseReposito
 import com.school.management.domain.inspection.repository.CorrectiveSubtaskRepository;
 import com.school.management.domain.inspection.repository.InspProjectRepository;
 import com.school.management.domain.inspection.repository.InspSubmissionRepository;
+import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.transaction.support.TransactionTemplate;
 import com.school.management.infrastructure.event.SpringDomainEventPublisher;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -32,6 +34,8 @@ public class CorrectiveCaseApplicationService {
     private final InspectionAuditLogger auditLogger;
     private final InspProjectRepository projectRepository;
     private final InspSubmissionRepository submissionRepository;
+    private final TransactionTemplate transactionTemplate;
+    private final JdbcTemplate jdbcTemplate;
 
     @Autowired(required = false)
     private TriggerService triggerService;
@@ -281,45 +285,68 @@ public class CorrectiveCaseApplicationService {
      * @param fallbackAssigneeName 可选 — 自动重派的用户名
      * @return 受影响的案例数
      */
-    @Transactional
+    /**
+     * review #5 + #11: 每条 case 独立事务 (partial-success 语义), 校验 fallback 用户合法性.
+     */
     public int reassignDepartedAssignee(Long userId, String reason,
                                          Long fallbackAssigneeId, String fallbackAssigneeName) {
         if (userId == null) {
             throw new IllegalArgumentException("userId 不能为空");
         }
+        // review #11: 后端校验 fallbackUserId 是否为合法且未被禁用的用户
+        if (fallbackAssigneeId != null) {
+            validateUserExists(fallbackAssigneeId, "fallbackAssigneeId");
+        }
         List<CorrectiveCase> cases = caseRepository.findByAssigneeId(userId);
         int affected = 0;
         for (CorrectiveCase c : cases) {
-            // 只处理还未走完整改流程的: ASSIGNED, IN_PROGRESS
             if (c.getStatus() != CaseStatus.ASSIGNED && c.getStatus() != CaseStatus.IN_PROGRESS) {
                 continue;
             }
-            try {
-                c.unassign(reason);
-                if (fallbackAssigneeId != null) {
-                    // 状态此时已回 OPEN, 可以直接 assign 给 fallback
-                    c.assign(fallbackAssigneeId, fallbackAssigneeName);
+            // review #5: 每条用独立事务, 一条失败不回滚之前已成功的
+            Boolean ok = transactionTemplate.execute(status -> {
+                try {
+                    CorrectiveCase fresh = caseRepository.findById(c.getId()).orElse(null);
+                    if (fresh == null) return false;
+                    fresh.unassign(reason);
+                    if (fallbackAssigneeId != null) {
+                        fresh.assign(fallbackAssigneeId, fallbackAssigneeName);
+                    }
+                    caseRepository.save(fresh);
+                    eventPublisher.publishAll(fresh.getDomainEvents());
+                    fresh.clearDomainEvents();
+                    auditLogger.log("CorrectiveCase", fresh.getId(), fresh.getCaseCode(),
+                            "CASE_UNASSIGNED", reason,
+                            Map.of("previousAssigneeId", userId,
+                                    "fallbackAssigneeId", fallbackAssigneeId != null ? fallbackAssigneeId : 0L));
+                    return true;
+                } catch (Exception e) {
+                    log.error("Reassign case {} failed (rolled back): {}", c.getCaseCode(), e.getMessage());
+                    status.setRollbackOnly();
+                    return false;
                 }
-                caseRepository.save(c);
-                eventPublisher.publishAll(c.getDomainEvents());
-                c.clearDomainEvents();
+            });
+            if (Boolean.TRUE.equals(ok)) {
                 affected++;
-                // C: 审计日志
-                auditLogger.log("CorrectiveCase", c.getId(), c.getCaseCode(),
-                        "CASE_UNASSIGNED", reason,
-                        Map.of("previousAssigneeId", userId,
-                                "fallbackAssigneeId", fallbackAssigneeId != null ? fallbackAssigneeId : 0L));
                 log.info("Case {} reassigned: previousAssignee={} → {}, reason={}",
                         c.getCaseCode(), userId,
                         fallbackAssigneeId != null ? fallbackAssigneeId : "[unassigned]",
                         reason);
-            } catch (Exception e) {
-                log.error("Reassign case {} failed: {}", c.getCaseCode(), e.getMessage());
             }
         }
         log.info("Departed user {} reassign summary: {} cases affected (reason={})",
                 userId, affected, reason);
         return affected;
+    }
+
+    /** review #11: 校验用户存在且未被删除/禁用 */
+    private void validateUserExists(Long userId, String paramName) {
+        Integer count = jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM users WHERE id = ? AND deleted = 0",
+                Integer.class, userId);
+        if (count == null || count == 0) {
+            throw new IllegalArgumentException(paramName + " 对应用户不存在或已删除: " + userId);
+        }
     }
 
     @Transactional

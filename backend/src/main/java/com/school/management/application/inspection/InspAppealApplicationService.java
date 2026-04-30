@@ -102,8 +102,12 @@ public class InspAppealApplicationService {
             }
         }
 
-        // review #F: 申诉时效 — 从 task 发布起 N 天内可申诉, 超期拒绝
-        if (task != null && task.getPublishedAt() != null) {
+        // review #4: 双层校验 — 任务必须 PUBLISHED 且在时效窗内
+        if (task != null) {
+            if (task.getPublishedAt() == null) {
+                throw new IllegalStateException(
+                        "任务尚未发布, 扣分判定未正式生效, 暂不能申诉. 请等待任务发布后再申诉.");
+            }
             Integer windowDays = projectId != null
                     ? projectRepository.findById(projectId)
                             .map(InspProject::getAppealWindowDays).orElse(null)
@@ -112,9 +116,11 @@ public class InspAppealApplicationService {
                     ? windowDays : DEFAULT_APPEAL_WINDOW_DAYS;
             LocalDateTime cutoff = task.getPublishedAt().plusDays(effectiveWindow);
             if (LocalDateTime.now().isAfter(cutoff)) {
+                // 友好格式化日期: 只显示日期不显示毫秒
+                String publishedDate = task.getPublishedAt().toLocalDate().toString();
                 throw new IllegalStateException(
                         "申诉时效已过 — 任务发布后 " + effectiveWindow + " 天内方可申诉, " +
-                        "已发布至: " + task.getPublishedAt());
+                        "任务于 " + publishedDate + " 发布.");
             }
         }
 
