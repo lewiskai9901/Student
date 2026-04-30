@@ -110,6 +110,13 @@ public class InspProjectController {
         return Result.success(projectService.upgradeTemplateVersion(id));
     }
 
+    /** review #12: 查询项目模板版本状态 — 让前端显示当前锁定 vs 模板最新, 并明示是否漂移 */
+    @GetMapping("/{id}/template-version-status")
+    @CasbinAccess(resource = "insp:project", action = "view")
+    public Result<java.util.Map<String, Object>> getTemplateVersionStatus(@PathVariable Long id) {
+        return Result.success(projectService.getTemplateVersionStatus(id));
+    }
+
     /** review #7: 更新项目级业务策略 (驳回/升级上限 + 申诉时效) */
     @PutMapping("/{id}/policy")
     @CasbinAccess(resource = "insp:project", action = "edit")

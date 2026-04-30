@@ -58,6 +58,21 @@ export function upgradeTemplateVersion(id: number): Promise<InspProject> {
   return http.post<InspProject>(`${BASE}/${id}/upgrade-template-version`)
 }
 
+/** review #12: 查询模板版本对比状态 */
+export interface TemplateVersionStatus {
+  drifted: boolean
+  currentVersionId: number | null
+  currentVersionNumber?: number
+  latestVersionId?: number
+  latestVersionNumber?: number
+  templateId?: number
+  rootSectionId?: number | null
+  multiTemplate?: boolean
+}
+export function getTemplateVersionStatus(id: number): Promise<TemplateVersionStatus> {
+  return http.get<TemplateVersionStatus>(`${BASE}/${id}/template-version-status`)
+}
+
 export function pauseProject(id: number): Promise<InspProject> {
   return http.post<InspProject>(`${BASE}/${id}/pause`)
 }
@@ -222,6 +237,7 @@ export const inspProjectApi = {
   delete: deleteProject,
   publish: publishProject,
   upgradeTemplateVersion,
+  getTemplateVersionStatus,
   pause: pauseProject,
   resume: resumeProject,
   complete: completeProject,

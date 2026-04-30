@@ -413,6 +413,8 @@ async function loadProject() {
       rootSectionName.value = ''
     }
     await loadScopeNames()
+    // review #12: 加载模板版本状态 (异步, 不阻塞主流程)
+    loadTemplateVersionStatus()
     // Load section tree
     if (project.value.rootSectionId) {
       try {
@@ -510,6 +512,26 @@ async function handleRemoveInspector(insp: ProjectInspector) { try { await ElMes
 function goBack() { router.push('/inspection/projects') }
 function goExecuteTask(taskId: number) { router.push(`/inspection/tasks/${taskId}/execute`) }
 
+// review #12: 模板版本状态 (drifted / 当前 / 最新)
+const templateVersionStatus = ref<{
+  drifted: boolean
+  currentVersionNumber?: number
+  latestVersionNumber?: number
+  multiTemplate?: boolean
+} | null>(null)
+
+async function loadTemplateVersionStatus() {
+  if (!project.value || !project.value.rootSectionId) {
+    templateVersionStatus.value = null
+    return
+  }
+  try {
+    templateVersionStatus.value = await inspProjectApi.getTemplateVersionStatus(projectId)
+  } catch (e) {
+    templateVersionStatus.value = null
+  }
+}
+
 // review #1: 升级模板版本至最新
 async function handleUpgradeTemplate() {
   if (!project.value) return
@@ -584,9 +606,19 @@ onMounted(async () => {
           <Play class="w-3.5 h-3.5 mr-1" />恢复
         </el-button>
         <el-button v-if="['PUBLISHED','PAUSED'].includes(project.status) && project.rootSectionId"
-                   @click="handleUpgradeTemplate" size="small" round plain
+                   @click="handleUpgradeTemplate" size="small" round
+                   :type="templateVersionStatus?.drifted ? 'warning' : ''"
+                   :plain="!templateVersionStatus?.drifted"
                    title="把项目锁定的模板快照升级至该模板的最新已发布版本; 模板被改后已发布项目可能无法创建新任务">
-          升级模板版本
+          <span v-if="templateVersionStatus?.drifted">
+            升级模板版本 (v{{ templateVersionStatus.currentVersionNumber ?? '?' }} → v{{ templateVersionStatus.latestVersionNumber }})
+          </span>
+          <span v-else-if="templateVersionStatus">
+            模板版本 v{{ templateVersionStatus.currentVersionNumber ?? '?' }} (最新)
+          </span>
+          <span v-else>
+            升级模板版本
+          </span>
         </el-button>
         <el-button v-if="['PUBLISHED','PAUSED'].includes(project.status)" @click="handleComplete" size="small" round>
           <CheckCircle class="w-3.5 h-3.5 mr-1" />完结

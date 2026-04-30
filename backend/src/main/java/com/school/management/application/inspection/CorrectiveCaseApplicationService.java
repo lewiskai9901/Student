@@ -95,7 +95,7 @@ public class CorrectiveCaseApplicationService {
             ctx.put("subjectId", targetId);
             ctx.put("subjectName", targetName != null ? targetName : "");
             ctx.put("priority", priority != null ? priority.name() : "");
-            ctx.put("deadline", deadline != null ? deadline.toString() : "");
+            ctx.put("deadline", deadline != null ? deadline.toLocalDate().toString() : ""); // review #3: 仅日期
             ctx.put("issueDescription", issueDescription != null ? issueDescription : "");
             ctx.put("_refType", "corrective_case");
             ctx.put("_refId", saved.getId());
@@ -171,7 +171,7 @@ public class CorrectiveCaseApplicationService {
             ctx.put("caseCode", finalCase.getCaseCode());
             ctx.put("assigneeId", assigneeId);
             ctx.put("assigneeName", assigneeName != null ? assigneeName : "");
-            ctx.put("deadline", finalCase.getDeadline() != null ? finalCase.getDeadline().toString() : "");
+            ctx.put("deadline", finalCase.getDeadline() != null ? finalCase.getDeadline().toLocalDate().toString() : ""); // review #3: 仅日期
             ctx.put("_refType", "corrective_case");
             ctx.put("_refId", finalCase.getId());
         });

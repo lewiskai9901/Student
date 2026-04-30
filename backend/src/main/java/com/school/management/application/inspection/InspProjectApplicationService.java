@@ -212,6 +212,42 @@ public class InspProjectApplicationService {
     }
 
     /**
+     * review #12: 查询项目模板版本状态 (当前锁定 vs 模板最新).
+     * 返回字段: drifted (是否漂移), currentVersionId, currentVersionNumber,
+     *         latestVersionId, latestVersionNumber, templateId.
+     */
+    @Transactional(readOnly = true)
+    public Map<String, Object> getTemplateVersionStatus(Long projectId) {
+        InspProject project = projectRepository.findById(projectId)
+                .orElseThrow(() -> new IllegalArgumentException("项目不存在: " + projectId));
+        Map<String, Object> result = new HashMap<>();
+        result.put("drifted", false);
+        result.put("currentVersionId", project.getTemplateVersionId());
+        result.put("rootSectionId", project.getRootSectionId());
+
+        if (project.getRootSectionId() == null) {
+            result.put("multiTemplate", true);
+            return result; // 多模板项目无须在 project 层比对
+        }
+        TemplateSection section = templateSectionRepository.findById(project.getRootSectionId()).orElse(null);
+        if (section == null || section.getTemplateId() == null) return result;
+        result.put("templateId", section.getTemplateId());
+
+        // 当前锁定版本号
+        if (project.getTemplateVersionId() != null) {
+            templateVersionRepository.findById(project.getTemplateVersionId())
+                    .ifPresent(cur -> result.put("currentVersionNumber", cur.getVersion()));
+        }
+        // 最新版本
+        templateVersionRepository.findLatestByTemplateId(section.getTemplateId()).ifPresent(latest -> {
+            result.put("latestVersionId", latest.getId());
+            result.put("latestVersionNumber", latest.getVersion());
+            result.put("drifted", !latest.getId().equals(project.getTemplateVersionId()));
+        });
+        return result;
+    }
+
+    /**
      * P1#7 follow-up: 把已发布项目的模板快照升级到模板的最新已发布版本.
      * 用于解决模板漂移导致的任务创建被拒.
      *
