@@ -33,7 +33,7 @@ const routes: RouteRecordRaw[] = [
     path: '/',
     name: 'Layout',
     component: () => import('@/layouts/MainLayout.vue'),
-    redirect: '/dashboard',
+    redirect: '/my/dashboard',
     meta: {
       requiresAuth: true
     },

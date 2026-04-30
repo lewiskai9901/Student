@@ -227,8 +227,10 @@ function selectSection(section: TemplateSection) {
 async function handleCreate() {
   submitting.value = true
   try {
+    // Bug 2: create 时传 rootSectionId, 否则项目和模板脱钩
     const project = await inspProjectApi.create({
       projectName: form.projectName,
+      rootSectionId: form.rootSectionId as number,
       startDate: form.startDate,
     })
 
@@ -242,15 +244,15 @@ async function handleCreate() {
       })
     }
 
-    const hasExtra = form.scopeIds.length > 0 || form.endDate || form.scopeType !== 'ORG'
-    if (hasExtra) {
-      const updateData: Record<string, any> = {
-        scopeType: form.scopeType,
-      }
-      if (form.endDate) updateData.endDate = form.endDate
-      if (form.scopeIds.length > 0) updateData.scopeConfig = JSON.stringify(form.scopeIds.map(String))
-      await updateProject(project.id, updateData)
+    // Bug 2: scope+date 总是 update, 不依赖 hasExtra 兜底, 否则向导 step2 选的范围会丢
+    const updateData: Record<string, any> = {
+      scopeType: form.scopeType,
     }
+    if (form.endDate) updateData.endDate = form.endDate
+    if (form.scopeIds.length > 0) {
+      updateData.scopeConfig = JSON.stringify(form.scopeIds.map(String))
+    }
+    await updateProject(project.id, updateData)
 
     ElMessage.success('项目已创建')
     router.push(`/inspection/projects/${project.id}`)

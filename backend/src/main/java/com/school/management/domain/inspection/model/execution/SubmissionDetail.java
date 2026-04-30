@@ -119,6 +119,17 @@ public class SubmissionDetail implements Entity<Long> {
         this.score = score;
         this.dimensions = dimensions;
         this.updatedAt = LocalDateTime.now();
+        // Bug 3: 自动 flag 负面结果, 让 CorrectiveAutoCreationHandler 触发
+        // PASS_FAIL: responseValue=FAIL 视为问题
+        // DEDUCTION/其他: score<0 视为扣分项 (有问题)
+        boolean isNegative = "FAIL".equalsIgnoreCase(responseValue)
+                || (score != null && score.compareTo(BigDecimal.ZERO) < 0);
+        if (isNegative) {
+            this.isFlagged = true;
+            if (this.flagReason == null || this.flagReason.isBlank()) {
+                this.flagReason = "FAIL".equalsIgnoreCase(responseValue) ? "未通过" : "扣分项";
+            }
+        }
     }
 
     public void updateRemark(String remark) {
