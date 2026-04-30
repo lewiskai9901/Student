@@ -440,6 +440,17 @@ const routes: RouteRecordRaw[] = [
               permission: 'insp:corrective:view'
             }
           },
+          // 检查平台总台 (Audit Console redesign)
+          {
+            path: '/inspection',
+            name: 'InspectionCommandDeck',
+            component: () => import('@/views/inspection/InspectionCommandDeck.vue'),
+            meta: {
+              title: '检查平台',
+              requiresAuth: true,
+              hidden: true
+            }
+          },
           // 离职用户重派 (review #D + P1#6)
           {
             path: '/inspection/admin/reassign-departed',

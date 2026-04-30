@@ -1,0 +1,478 @@
+/* ============================================================
+ * Inspection — "Audit Console" design tokens
+ * Editorial-utilitarian. Operator density. Single accent.
+ * ============================================================ */
+
+@import url('https://fonts.googleapis.com/css2?family=Manrope:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&family=Newsreader:opsz,wght@6..72,400;6..72,500;6..72,600&display=swap');
+
+:root {
+  /* ---------- Typography ---------- */
+  --insp-font-display: 'Newsreader', 'Source Han Serif SC', 'Noto Serif SC', Georgia, serif;
+  --insp-font-body: 'Manrope', 'PingFang SC', 'Source Han Sans SC', 'HarmonyOS Sans', system-ui, sans-serif;
+  --insp-font-mono: 'JetBrains Mono', 'Source Han Mono SC', 'SF Mono', Menlo, monospace;
+
+  --insp-text-2xs: 10px;
+  --insp-text-xs: 11px;
+  --insp-text-sm: 12px;
+  --insp-text-base: 13px;
+  --insp-text-md: 14px;
+  --insp-text-lg: 16px;
+  --insp-text-xl: 20px;
+  --insp-text-2xl: 26px;
+  --insp-text-3xl: 36px;
+  --insp-text-display: 56px;
+
+  --insp-leading-tight: 1.2;
+  --insp-leading-snug: 1.35;
+  --insp-leading-normal: 1.55;
+  --insp-leading-relaxed: 1.7;
+
+  --insp-tracking-display: -0.02em;
+  --insp-tracking-tight: -0.01em;
+  --insp-tracking-mono: 0;
+  --insp-tracking-caps: 0.08em;
+
+  /* ---------- Color · Editorial neutrals (warm) ---------- */
+  --insp-bg-page: #FAFAF7;
+  --insp-bg-surface: #FFFFFF;
+  --insp-bg-subtle: #F4F4ED;
+  --insp-bg-sunken: #EFEFE7;
+  --insp-bg-overlay: rgba(20, 20, 18, 0.55);
+  --insp-bg-grain: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='200' height='200'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0.04 0'/></filter><rect width='200' height='200' filter='url(%23n)'/></svg>");
+
+  --insp-ink-primary: #161614;
+  --insp-ink-secondary: #4A4A45;
+  --insp-ink-tertiary: #8A8A82;
+  --insp-ink-quaternary: #BCBCB3;
+  --insp-ink-disabled: #D8D8D0;
+
+  /* Single brand accent — vermillion, evokes 印章/朱砂 */
+  --insp-accent: #C9412B;
+  --insp-accent-hover: #B33820;
+  --insp-accent-active: #9D2F18;
+  --insp-accent-pale: #F5DDD7;
+  --insp-accent-paler: #FBEDE9;
+
+  /* Status — desaturated, semantic */
+  --insp-pass: #2D7B3C;
+  --insp-pass-pale: #DDEBE0;
+  --insp-fail: #C9412B;
+  --insp-fail-pale: #F5DDD7;
+  --insp-warn: #B5781A;
+  --insp-warn-pale: #F2E5C9;
+  --insp-info: #2A5D8F;
+  --insp-info-pale: #D5DFEA;
+  --insp-pending: #6B6B62;
+  --insp-pending-pale: #E2E2D9;
+
+  /* ---------- Borders · hairline ---------- */
+  --insp-border-subtle: #EAEAE0;
+  --insp-border-default: #D5D5C9;
+  --insp-border-strong: #B0B0A0;
+  --insp-border-ink: #161614;
+  --insp-border-hot: #C9412B;
+
+  /* ---------- Spacing · 4px grid ---------- */
+  --insp-sp-1: 4px;
+  --insp-sp-2: 8px;
+  --insp-sp-3: 12px;
+  --insp-sp-4: 16px;
+  --insp-sp-5: 20px;
+  --insp-sp-6: 24px;
+  --insp-sp-7: 32px;
+  --insp-sp-8: 40px;
+  --insp-sp-9: 48px;
+  --insp-sp-10: 64px;
+  --insp-sp-12: 80px;
+  --insp-sp-14: 96px;
+
+  /* ---------- Radius · sharp, near-rectangular ---------- */
+  --insp-radius-sm: 2px;
+  --insp-radius-md: 3px;
+  --insp-radius-lg: 4px;
+  --insp-radius-pill: 999px;
+
+  /* ---------- Shadow · paper-dry ---------- */
+  --insp-shadow-xs: 0 1px 1px rgba(20, 20, 18, 0.04);
+  --insp-shadow-sm: 0 1px 2px rgba(20, 20, 18, 0.06), 0 0 0 1px rgba(20, 20, 18, 0.03);
+  --insp-shadow-md: 0 4px 12px rgba(20, 20, 18, 0.08), 0 1px 3px rgba(20, 20, 18, 0.04);
+  --insp-shadow-lg: 0 12px 32px rgba(20, 20, 18, 0.10), 0 4px 8px rgba(20, 20, 18, 0.06);
+  --insp-shadow-press: inset 0 1px 2px rgba(20, 20, 18, 0.10);
+
+  /* ---------- Motion · brisk ---------- */
+  --insp-t-fast: 90ms;
+  --insp-t-medium: 140ms;
+  --insp-t-slow: 220ms;
+  --insp-ease-out: cubic-bezier(0.2, 0.7, 0.3, 1);
+  --insp-ease-in: cubic-bezier(0.7, 0.0, 0.8, 0.4);
+  --insp-ease-spring: cubic-bezier(0.5, 1.5, 0.5, 1);
+
+  /* ---------- Layers ---------- */
+  --insp-z-sticky: 100;
+  --insp-z-overlay: 1000;
+  --insp-z-modal: 2000;
+  --insp-z-toast: 3000;
+}
+
+/* ============================================================
+ * Reset & utilities scoped to .insp-shell
+ * ============================================================ */
+
+.insp-shell {
+  font-family: var(--insp-font-body);
+  color: var(--insp-ink-primary);
+  background: var(--insp-bg-page);
+  font-size: var(--insp-text-base);
+  line-height: var(--insp-leading-normal);
+  font-feature-settings: 'cv11' 1, 'ss01' 1;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+.insp-shell * {
+  font-feature-settings: inherit;
+}
+
+/* Tabular numerals everywhere by default for headlines/numbers */
+.insp-num,
+.insp-shell time,
+.insp-shell .num,
+.insp-shell [data-num],
+.insp-shell .insp-stat__value,
+.insp-shell .insp-tabular {
+  font-family: var(--insp-font-mono);
+  font-feature-settings: 'tnum' 1, 'lnum' 1, 'zero' 1;
+  letter-spacing: var(--insp-tracking-mono);
+}
+
+/* Display headers — the editorial voice */
+.insp-display {
+  font-family: var(--insp-font-display);
+  font-weight: 500;
+  letter-spacing: var(--insp-tracking-display);
+  line-height: var(--insp-leading-tight);
+}
+
+/* Caps label */
+.insp-caps {
+  font-size: var(--insp-text-2xs);
+  font-weight: 600;
+  letter-spacing: var(--insp-tracking-caps);
+  text-transform: uppercase;
+  color: var(--insp-ink-tertiary);
+}
+
+/* ============================================================
+ * Atom · Status chip (text-led, dot-prefixed)
+ * ============================================================ */
+
+.insp-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 2px 8px 2px 7px;
+  font-size: var(--insp-text-xs);
+  font-weight: 500;
+  line-height: 1;
+  border-radius: var(--insp-radius-sm);
+  border: 1px solid transparent;
+  white-space: nowrap;
+}
+
+.insp-chip::before {
+  content: '';
+  display: inline-block;
+  width: 6px; height: 6px;
+  border-radius: var(--insp-radius-pill);
+  background: currentColor;
+  opacity: 0.85;
+  flex-shrink: 0;
+}
+
+.insp-chip--pass     { color: var(--insp-pass);    background: var(--insp-pass-pale);    border-color: color-mix(in oklab, var(--insp-pass) 25%, transparent); }
+.insp-chip--fail     { color: var(--insp-fail);    background: var(--insp-fail-pale);    border-color: color-mix(in oklab, var(--insp-fail) 25%, transparent); }
+.insp-chip--warn     { color: var(--insp-warn);    background: var(--insp-warn-pale);    border-color: color-mix(in oklab, var(--insp-warn) 25%, transparent); }
+.insp-chip--info     { color: var(--insp-info);    background: var(--insp-info-pale);    border-color: color-mix(in oklab, var(--insp-info) 25%, transparent); }
+.insp-chip--pending  { color: var(--insp-pending); background: var(--insp-pending-pale); border-color: color-mix(in oklab, var(--insp-pending) 25%, transparent); }
+
+/* Variant: outline-only (for headers) */
+.insp-chip--ghost {
+  background: transparent;
+}
+
+/* ============================================================
+ * Atom · KBD key (keyboard hint badge)
+ * ============================================================ */
+
+.insp-kbd {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 4px;
+  font-family: var(--insp-font-mono);
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--insp-ink-secondary);
+  background: var(--insp-bg-surface);
+  border: 1px solid var(--insp-border-default);
+  border-bottom-width: 2px;
+  border-radius: 3px;
+  box-shadow: var(--insp-shadow-xs);
+  letter-spacing: 0;
+}
+
+.insp-kbd--inverted {
+  color: var(--insp-bg-surface);
+  background: var(--insp-ink-primary);
+  border-color: var(--insp-ink-primary);
+}
+
+/* ============================================================
+ * Atom · Button
+ * ============================================================ */
+
+.insp-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--insp-sp-2);
+  padding: 6px 12px;
+  font-family: inherit;
+  font-size: var(--insp-text-sm);
+  font-weight: 500;
+  line-height: 1.3;
+  color: var(--insp-ink-primary);
+  background: var(--insp-bg-surface);
+  border: 1px solid var(--insp-border-default);
+  border-radius: var(--insp-radius-md);
+  cursor: pointer;
+  transition: background var(--insp-t-fast) var(--insp-ease-out),
+              border-color var(--insp-t-fast) var(--insp-ease-out),
+              transform var(--insp-t-fast) var(--insp-ease-out);
+  user-select: none;
+}
+
+.insp-btn:hover { border-color: var(--insp-border-strong); background: var(--insp-bg-subtle); }
+.insp-btn:active { transform: translateY(0.5px); box-shadow: var(--insp-shadow-press); }
+.insp-btn:focus-visible { outline: 2px solid var(--insp-accent); outline-offset: 1px; }
+
+.insp-btn--primary {
+  color: #FFFFFF;
+  background: var(--insp-ink-primary);
+  border-color: var(--insp-ink-primary);
+}
+.insp-btn--primary:hover { background: #2A2A26; border-color: #2A2A26; }
+
+.insp-btn--accent {
+  color: #FFFFFF;
+  background: var(--insp-accent);
+  border-color: var(--insp-accent);
+}
+.insp-btn--accent:hover { background: var(--insp-accent-hover); border-color: var(--insp-accent-hover); }
+
+.insp-btn--ghost {
+  background: transparent;
+  border-color: transparent;
+  color: var(--insp-ink-secondary);
+}
+.insp-btn--ghost:hover { background: var(--insp-bg-subtle); color: var(--insp-ink-primary); }
+
+.insp-btn--sm { padding: 4px 8px; font-size: var(--insp-text-xs); }
+.insp-btn--lg { padding: 10px 18px; font-size: var(--insp-text-md); }
+
+.insp-btn--icon {
+  width: 28px; height: 28px;
+  padding: 0;
+}
+
+/* ============================================================
+ * Atom · Card / Surface
+ * ============================================================ */
+
+.insp-card {
+  background: var(--insp-bg-surface);
+  border: 1px solid var(--insp-border-subtle);
+  border-radius: var(--insp-radius-lg);
+}
+
+.insp-card__head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--insp-sp-3);
+  padding: var(--insp-sp-4) var(--insp-sp-5);
+  border-bottom: 1px solid var(--insp-border-subtle);
+}
+
+.insp-card__title {
+  font-family: var(--insp-font-display);
+  font-size: var(--insp-text-lg);
+  font-weight: 500;
+  letter-spacing: var(--insp-tracking-display);
+}
+
+.insp-card__body { padding: var(--insp-sp-5); }
+.insp-card__body--flush { padding: 0; }
+
+/* ============================================================
+ * Layout · Grid utilities
+ * ============================================================ */
+
+.insp-page {
+  padding: var(--insp-sp-6) var(--insp-sp-7);
+  min-height: 100vh;
+}
+
+.insp-stack { display: flex; flex-direction: column; }
+.insp-stack > * + * { margin-top: var(--insp-sp-3); }
+.insp-stack--lg > * + * { margin-top: var(--insp-sp-6); }
+
+.insp-row { display: flex; align-items: center; gap: var(--insp-sp-3); }
+.insp-row--between { justify-content: space-between; }
+
+/* ============================================================
+ * Editorial elements
+ * ============================================================ */
+
+.insp-rule {
+  height: 1px;
+  background: var(--insp-border-subtle);
+  border: 0;
+}
+
+.insp-rule--strong { background: var(--insp-border-ink); height: 2px; }
+
+.insp-eyebrow {
+  display: inline-block;
+  font-family: var(--insp-font-mono);
+  font-size: var(--insp-text-2xs);
+  font-weight: 500;
+  letter-spacing: var(--insp-tracking-caps);
+  text-transform: uppercase;
+  color: var(--insp-ink-tertiary);
+  margin-bottom: var(--insp-sp-2);
+}
+
+.insp-eyebrow::before {
+  content: '§ ';
+  color: var(--insp-accent);
+  font-weight: 600;
+}
+
+/* Stat block: large mono number + caps label */
+.insp-stat { display: flex; flex-direction: column; gap: 2px; }
+.insp-stat__value {
+  font-family: var(--insp-font-mono);
+  font-size: var(--insp-text-2xl);
+  font-weight: 500;
+  line-height: 1.05;
+  letter-spacing: -0.02em;
+  color: var(--insp-ink-primary);
+}
+.insp-stat__label {
+  font-size: var(--insp-text-xs);
+  color: var(--insp-ink-tertiary);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+.insp-stat__delta {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  font-family: var(--insp-font-mono);
+  font-size: var(--insp-text-xs);
+}
+.insp-stat__delta--pos { color: var(--insp-pass); }
+.insp-stat__delta--neg { color: var(--insp-fail); }
+
+/* ============================================================
+ * Table · operator density
+ * ============================================================ */
+
+.insp-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--insp-text-sm);
+}
+.insp-table th,
+.insp-table td {
+  padding: var(--insp-sp-3) var(--insp-sp-4);
+  text-align: left;
+  vertical-align: middle;
+  border-bottom: 1px solid var(--insp-border-subtle);
+}
+.insp-table th {
+  font-weight: 500;
+  font-size: var(--insp-text-2xs);
+  letter-spacing: var(--insp-tracking-caps);
+  text-transform: uppercase;
+  color: var(--insp-ink-tertiary);
+  background: var(--insp-bg-subtle);
+  border-bottom: 1px solid var(--insp-border-default);
+}
+.insp-table tbody tr {
+  transition: background var(--insp-t-fast);
+}
+.insp-table tbody tr:hover {
+  background: var(--insp-bg-subtle);
+}
+.insp-table .insp-num,
+.insp-table td.num {
+  font-family: var(--insp-font-mono);
+  font-feature-settings: 'tnum' 1;
+  text-align: right;
+}
+
+/* ============================================================
+ * Stamp / banner — vermillion accent strip used sparingly
+ * ============================================================ */
+
+.insp-stamp {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--insp-sp-2);
+  padding: 4px var(--insp-sp-3);
+  font-family: var(--insp-font-mono);
+  font-size: var(--insp-text-xs);
+  font-weight: 600;
+  letter-spacing: var(--insp-tracking-caps);
+  text-transform: uppercase;
+  color: var(--insp-accent);
+  border: 1px solid var(--insp-accent);
+  background: transparent;
+  border-radius: 0;
+}
+
+/* ============================================================
+ * Element-Plus surgical overrides (only when inside .insp-shell)
+ * ============================================================ */
+
+.insp-shell .el-button {
+  border-radius: var(--insp-radius-md);
+  font-family: inherit;
+}
+
+.insp-shell .el-table {
+  font-family: inherit;
+  font-size: var(--insp-text-sm);
+}
+
+.insp-shell .el-input__inner,
+.insp-shell .el-textarea__inner {
+  font-family: inherit;
+  border-radius: var(--insp-radius-md);
+}
+
+/* Subtle grain overlay layer for top-level shells (optional) */
+.insp-shell--grained::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  background-image: var(--insp-bg-grain);
+  opacity: 0.5;
+  mix-blend-mode: multiply;
+  z-index: 1;
+}

@@ -13,6 +13,8 @@ import { useAuthStore } from './stores/auth'
 
 // 引入设计系统令牌 (最高优先级)
 import '@/styles/design-tokens.css'
+// Inspection 模块设计令牌 — Audit Console 美学
+import '@/styles/inspection-tokens.css'
 // 引入 Tailwind CSS 全局样式
 import '@/assets/styles/globals.css'
 // 保留原有样式（暂时兼容）
