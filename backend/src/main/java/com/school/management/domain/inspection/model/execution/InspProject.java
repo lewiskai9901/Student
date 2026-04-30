@@ -176,6 +176,31 @@ public class InspProject extends AggregateRoot<Long> {
     }
 
     /**
+     * review #7: 更新项目级业务策略 (review/E 加的字段). 任何状态都允许调整 (ARCHIVED 除外),
+     * 因为这些是运行时策略, 不影响数据结构. NULL 表示沿用系统默认.
+     */
+    public void updatePolicyConfig(Integer maxRejectCount, Integer maxEscalationLevel,
+                                    Integer appealWindowDays, Long updatedBy) {
+        if (this.status == ProjectStatus.ARCHIVED) {
+            throw new IllegalStateException("已归档的项目不能修改策略配置");
+        }
+        if (maxRejectCount != null && maxRejectCount < 0) {
+            throw new IllegalArgumentException("maxRejectCount 不能为负");
+        }
+        if (maxEscalationLevel != null && maxEscalationLevel < 0) {
+            throw new IllegalArgumentException("maxEscalationLevel 不能为负");
+        }
+        if (appealWindowDays != null && appealWindowDays < 0) {
+            throw new IllegalArgumentException("appealWindowDays 不能为负");
+        }
+        this.maxRejectCount = maxRejectCount;
+        this.maxEscalationLevel = maxEscalationLevel;
+        this.appealWindowDays = appealWindowDays;
+        this.updatedBy = updatedBy;
+        this.updatedAt = LocalDateTime.now();
+    }
+
+    /**
      * P1#7 follow-up: 已发布项目升级到新的模板版本快照.
      * 仅 PUBLISHED / PAUSED 状态允许. 不改其他字段, 仅推 templateVersionId 至新值.
      */

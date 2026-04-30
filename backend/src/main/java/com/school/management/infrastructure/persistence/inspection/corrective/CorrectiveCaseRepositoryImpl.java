@@ -106,6 +106,7 @@ public class CorrectiveCaseRepositoryImpl implements CorrectiveCaseRepository {
         po.setTargetType(d.getTargetType());
         po.setTargetId(d.getTargetId());
         po.setTargetName(d.getTargetName());
+        po.setOrgUnitId(d.getOrgUnitId());
         po.setIssueDescription(d.getIssueDescription());
         po.setRequiredAction(d.getRequiredAction());
         po.setIssueCategoryId(d.getIssueCategoryId());
@@ -147,6 +148,7 @@ public class CorrectiveCaseRepositoryImpl implements CorrectiveCaseRepository {
                 .targetType(po.getTargetType())
                 .targetId(po.getTargetId())
                 .targetName(po.getTargetName())
+                .orgUnitId(po.getOrgUnitId())
                 .issueDescription(po.getIssueDescription())
                 .requiredAction(po.getRequiredAction())
                 .issueCategoryId(po.getIssueCategoryId())

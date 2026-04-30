@@ -34,6 +34,9 @@ public class CorrectiveCase extends AggregateRoot<Long> {
     private Long targetId;
     private String targetName;
 
+    /** review #1 follow-up: 数据权限过滤字段, 自动创建时从 submission.orgUnitId 继承 */
+    private Long orgUnitId;
+
     // 问题描述
     private String issueDescription;
     private String requiredAction;
@@ -91,6 +94,7 @@ public class CorrectiveCase extends AggregateRoot<Long> {
         this.targetType = builder.targetType;
         this.targetId = builder.targetId;
         this.targetName = builder.targetName;
+        this.orgUnitId = builder.orgUnitId;
         this.issueDescription = builder.issueDescription;
         this.requiredAction = builder.requiredAction;
         this.issueCategoryId = builder.issueCategoryId;
@@ -393,6 +397,8 @@ public class CorrectiveCase extends AggregateRoot<Long> {
     public String getTargetType() { return targetType; }
     public Long getTargetId() { return targetId; }
     public String getTargetName() { return targetName; }
+    public Long getOrgUnitId() { return orgUnitId; }
+    public void setOrgUnitId(Long orgUnitId) { this.orgUnitId = orgUnitId; }
     public String getIssueDescription() { return issueDescription; }
     public String getRequiredAction() { return requiredAction; }
     public Long getIssueCategoryId() { return issueCategoryId; }
@@ -433,6 +439,7 @@ public class CorrectiveCase extends AggregateRoot<Long> {
         private String targetType;
         private Long targetId;
         private String targetName;
+        private Long orgUnitId;
         private String issueDescription;
         private String requiredAction;
         private Long issueCategoryId;
@@ -470,6 +477,7 @@ public class CorrectiveCase extends AggregateRoot<Long> {
         public Builder targetType(String targetType) { this.targetType = targetType; return this; }
         public Builder targetId(Long targetId) { this.targetId = targetId; return this; }
         public Builder targetName(String targetName) { this.targetName = targetName; return this; }
+        public Builder orgUnitId(Long orgUnitId) { this.orgUnitId = orgUnitId; return this; }
         public Builder issueDescription(String issueDescription) { this.issueDescription = issueDescription; return this; }
         public Builder requiredAction(String requiredAction) { this.requiredAction = requiredAction; return this; }
         public Builder issueCategoryId(Long issueCategoryId) { this.issueCategoryId = issueCategoryId; return this; }

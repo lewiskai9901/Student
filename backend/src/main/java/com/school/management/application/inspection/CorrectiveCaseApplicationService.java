@@ -6,6 +6,7 @@ import com.school.management.domain.inspection.model.execution.InspProject;
 import com.school.management.domain.inspection.repository.CorrectiveCaseRepository;
 import com.school.management.domain.inspection.repository.CorrectiveSubtaskRepository;
 import com.school.management.domain.inspection.repository.InspProjectRepository;
+import com.school.management.domain.inspection.repository.InspSubmissionRepository;
 import com.school.management.infrastructure.event.SpringDomainEventPublisher;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -30,6 +31,7 @@ public class CorrectiveCaseApplicationService {
     private final SpringDomainEventPublisher eventPublisher;
     private final InspectionAuditLogger auditLogger;
     private final InspProjectRepository projectRepository;
+    private final InspSubmissionRepository submissionRepository;
 
     @Autowired(required = false)
     private TriggerService triggerService;
@@ -47,6 +49,18 @@ public class CorrectiveCaseApplicationService {
 
         // Set additional fields via builder + reconstruct is not possible after create,
         // so we use the builder approach directly
+        // review #1: 从 submission 继承 orgUnitId, 否则数据权限会过滤掉本案例
+        Long orgUnitId = null;
+        if (submissionId != null) {
+            orgUnitId = submissionRepository.findById(submissionId)
+                    .map(s -> s.getOrgUnitId())
+                    .orElse(null);
+        }
+        // 兜底: 当 targetType=ORG 时直接用 targetId
+        if (orgUnitId == null && "ORG".equals(targetType) && targetId != null) {
+            orgUnitId = targetId;
+        }
+
         CorrectiveCase fullCase = CorrectiveCase.reconstruct(CorrectiveCase.builder()
                 .caseCode(caseCode)
                 .issueDescription(issueDescription)
@@ -58,6 +72,7 @@ public class CorrectiveCaseApplicationService {
                 .targetType(targetType)
                 .targetId(targetId)
                 .targetName(targetName)
+                .orgUnitId(orgUnitId)
                 .requiredAction(requiredAction)
                 .deadline(deadline)
                 .createdBy(createdBy)

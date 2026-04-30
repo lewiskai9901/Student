@@ -192,6 +192,26 @@ public class InspProjectApplicationService {
     }
 
     /**
+     * review #7: 更新项目级策略 (max_reject_count / max_escalation_level / appeal_window_days).
+     */
+    @Transactional
+    public InspProject updatePolicyConfig(Long id, Integer maxRejectCount,
+                                           Integer maxEscalationLevel, Integer appealWindowDays,
+                                           Long updatedBy) {
+        InspProject project = projectRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("项目不存在: " + id));
+        project.updatePolicyConfig(maxRejectCount, maxEscalationLevel, appealWindowDays, updatedBy);
+        InspProject saved = projectRepository.save(project);
+        auditLogger.log("InspProject", saved.getId(), saved.getProjectCode(),
+                "PROJECT_POLICY_UPDATED", null,
+                java.util.Map.of(
+                        "maxRejectCount", maxRejectCount != null ? maxRejectCount : "default",
+                        "maxEscalationLevel", maxEscalationLevel != null ? maxEscalationLevel : "default",
+                        "appealWindowDays", appealWindowDays != null ? appealWindowDays : "default"));
+        return saved;
+    }
+
+    /**
      * P1#7 follow-up: 把已发布项目的模板快照升级到模板的最新已发布版本.
      * 用于解决模板漂移导致的任务创建被拒.
      *

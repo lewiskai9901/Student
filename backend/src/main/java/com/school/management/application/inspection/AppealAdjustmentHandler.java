@@ -9,10 +9,11 @@ import com.school.management.domain.inspection.repository.InspTaskRepository;
 import com.school.management.domain.inspection.repository.SubmissionDetailRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.context.event.EventListener;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.event.TransactionPhase;
+import org.springframework.transaction.event.TransactionalEventListener;
 
 /**
  * 申诉审核通过后的副作用处理 (P1#8 follow-up — 修复申诉成空头支票的问题).
@@ -30,8 +31,11 @@ public class AppealAdjustmentHandler {
     private final InspTaskRepository taskRepository;
     private final ScoreAggregationService scoreAggregationService;
 
+    /**
+     * review #2: 改用 AFTER_COMMIT 阶段 — 主事务提交后才触发, 避免读到未提交的 detail/submission 状态.
+     */
     @Async
-    @EventListener
+    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT, fallbackExecution = true)
     @Transactional
     public void handle(AppealApprovedEvent event) {
         Long detailId = event.getSubmissionDetailId();

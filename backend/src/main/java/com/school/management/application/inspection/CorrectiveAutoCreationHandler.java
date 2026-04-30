@@ -12,10 +12,11 @@ import com.school.management.domain.inspection.repository.SubmissionDetailReposi
 import com.school.management.infrastructure.event.SpringDomainEventPublisher;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.context.event.EventListener;
 import org.springframework.scheduling.TaskScheduler;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.event.TransactionPhase;
+import org.springframework.transaction.event.TransactionalEventListener;
 
 import java.time.Instant;
 import java.time.LocalDateTime;
@@ -48,7 +49,7 @@ public class CorrectiveAutoCreationHandler {
     private static final int MAX_RETRY_ATTEMPTS = 3;
 
     @Async
-    @EventListener
+    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT, fallbackExecution = true)
     public void handle(SubmissionCompletedEvent event) {
         log.info("Handling SubmissionCompletedEvent: submissionId={}", event.getSubmissionId());
 

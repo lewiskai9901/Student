@@ -110,6 +110,26 @@ public class InspProjectController {
         return Result.success(projectService.upgradeTemplateVersion(id));
     }
 
+    /** review #7: 更新项目级业务策略 (驳回/升级上限 + 申诉时效) */
+    @PutMapping("/{id}/policy")
+    @CasbinAccess(resource = "insp:project", action = "edit")
+    public Result<InspProject> updatePolicyConfig(@PathVariable Long id,
+                                                    @RequestBody UpdatePolicyConfigRequest request) {
+        Long userId = com.school.management.common.util.SecurityUtils.getCurrentUserId();
+        return Result.success(projectService.updatePolicyConfig(id,
+                request.getMaxRejectCount(),
+                request.getMaxEscalationLevel(),
+                request.getAppealWindowDays(),
+                userId));
+    }
+
+    @lombok.Data
+    public static class UpdatePolicyConfigRequest {
+        private Integer maxRejectCount;
+        private Integer maxEscalationLevel;
+        private Integer appealWindowDays;
+    }
+
     @PostMapping("/{id}/pause")
     @CasbinAccess(resource = "insp:project", action = "edit")
     public Result<InspProject> pauseProject(@PathVariable Long id) {
