@@ -236,3 +236,11 @@ management:
       enabled: true
     java:
       enabled: true
+
+# ============================================================
+# Inspection AI 辅助打分 (Track 5)
+# ============================================================
+inspection:
+  ai:
+    # provider: heuristic (默认, 本地启发式) | claude (调 Anthropic API, 需 ANTHROPIC_API_KEY)
+    provider: ${INSPECTION_AI_PROVIDER:heuristic}
