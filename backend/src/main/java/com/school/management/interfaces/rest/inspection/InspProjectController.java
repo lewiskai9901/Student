@@ -1,6 +1,7 @@
 package com.school.management.interfaces.rest.inspection;
 
 import com.school.management.application.inspection.InspProjectApplicationService;
+import com.school.management.application.inspection.dto.ProjectStatsSummary;
 import com.school.management.application.inspection.ScoreAggregationService;
 import com.school.management.application.inspection.ScoringProfileApplicationService;
 import com.school.management.application.inspection.TargetPopulationService;
@@ -50,6 +51,21 @@ public class InspProjectController {
             }
         }
         return Result.success(projectService.listProjects());
+    }
+
+    /**
+     * 列表页聚合视图 (消除 N+1) — 项目 + 任务统计 + 检查员人数.
+     */
+    @GetMapping("/with-stats")
+    @CasbinAccess(resource = "insp:project", action = "view")
+    public Result<List<ProjectStatsSummary>> listProjectsWithStats(
+            @RequestParam(required = false) String status) {
+        ProjectStatus s = null;
+        if (status != null && !status.isBlank()) {
+            try { s = ProjectStatus.valueOf(status); }
+            catch (IllegalArgumentException e) { throw new IllegalArgumentException("无效的项目状态: " + status); }
+        }
+        return Result.success(projectService.listProjectsWithStats(s));
     }
 
     @GetMapping("/{id}")

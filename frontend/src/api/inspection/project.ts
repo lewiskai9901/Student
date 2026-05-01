@@ -31,6 +31,19 @@ export function getProjects(params?: {
   return http.get<InspProject[]>(BASE, { params })
 }
 
+/** 列表页聚合视图 — 项目 + 任务统计 + 检查员人数 (单次查询消除 N+1) */
+export interface ProjectStatsSummary {
+  project: InspProject
+  taskTotal: number
+  taskDone: number
+  taskOverdue: number
+  taskPendingReview: number
+  inspectorCount: number
+}
+export function getProjectsWithStats(params?: { status?: ProjectStatus }): Promise<ProjectStatsSummary[]> {
+  return http.get<ProjectStatsSummary[]>(`${BASE}/with-stats`, { params })
+}
+
 export function getProject(id: number): Promise<InspProject> {
   return http.get<InspProject>(`${BASE}/${id}`)
 }
@@ -231,6 +244,7 @@ export function deleteViolationRecord(recordId: number): Promise<void> {
 
 export const inspProjectApi = {
   getList: getProjects,
+  getListWithStats: getProjectsWithStats,
   getById: getProject,
   create: createProject,
   update: updateProject,

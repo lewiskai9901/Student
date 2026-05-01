@@ -1,11 +1,14 @@
 package com.school.management.application.inspection;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.school.management.application.inspection.dto.ProjectStatsSummary;
+import com.school.management.application.inspection.dto.ProjectTaskStats;
 import com.school.management.domain.inspection.model.execution.*;
 import com.school.management.domain.inspection.model.scoring.ScoringProfile;
 import com.school.management.domain.inspection.model.template.TemplateSection;
 import com.school.management.domain.inspection.model.template.TemplateVersion;
 import com.school.management.domain.inspection.repository.InspProjectRepository;
+import com.school.management.domain.inspection.repository.InspTaskRepository;
 import com.school.management.domain.inspection.repository.ProjectInspectorRepository;
 import com.school.management.domain.inspection.repository.ProjectScoreRepository;
 import com.school.management.domain.inspection.repository.ScoringProfileRepository;
@@ -40,6 +43,7 @@ public class InspProjectApplicationService {
     private final TemplateSectionRepository templateSectionRepository;
     private final TemplateVersionRepository templateVersionRepository;
     private final InspectionAuditLogger auditLogger;
+    private final InspTaskRepository taskRepoForStats;
 
     public InspProjectApplicationService(InspProjectRepository projectRepository,
                                           ProjectInspectorRepository inspectorRepository,
@@ -50,7 +54,8 @@ public class InspProjectApplicationService {
                                           ObjectMapper objectMapper,
                                           TemplateSectionRepository templateSectionRepository,
                                           TemplateVersionRepository templateVersionRepository,
-                                          InspectionAuditLogger auditLogger) {
+                                          InspectionAuditLogger auditLogger,
+                                          InspTaskRepository taskRepoForStats) {
         this.projectRepository = projectRepository;
         this.inspectorRepository = inspectorRepository;
         this.scoreRepository = scoreRepository;
@@ -61,6 +66,7 @@ public class InspProjectApplicationService {
         this.templateSectionRepository = templateSectionRepository;
         this.templateVersionRepository = templateVersionRepository;
         this.auditLogger = auditLogger;
+        this.taskRepoForStats = taskRepoForStats;
     }
 
     // ========== Project CRUD ==========
@@ -90,6 +96,34 @@ public class InspProjectApplicationService {
     @Transactional(readOnly = true)
     public List<InspProject> listProjectsByStatus(ProjectStatus status) {
         return projectRepository.findByStatus(status);
+    }
+
+    /**
+     * 列表页 N+1 消除: 一次返回项目 + 任务统计 + 检查员人数.
+     */
+    @Transactional(readOnly = true)
+    public List<ProjectStatsSummary> listProjectsWithStats(ProjectStatus status) {
+        List<InspProject> projects = (status != null)
+                ? projectRepository.findByStatus(status)
+                : projectRepository.findAll();
+        if (projects.isEmpty()) return java.util.Collections.emptyList();
+        List<Long> ids = projects.stream().map(InspProject::getId).toList();
+        Map<Long, ProjectTaskStats> statsMap = new HashMap<>();
+        // taskRepository 需要 lazy 注入, 否则会循环依赖. 这里直接用 lookup.
+        for (ProjectTaskStats s : taskRepoForStats.findStatsByProjectIds(ids)) {
+            statsMap.put(s.getProjectId(), s);
+        }
+        Map<Long, Integer> inspectorCountMap = inspectorRepository.countByProjectIds(ids);
+        return projects.stream().map(p -> {
+            ProjectTaskStats s = statsMap.get(p.getId());
+            return new ProjectStatsSummary(
+                    p,
+                    s == null ? 0 : s.getTotal(),
+                    s == null ? 0 : s.getDone(),
+                    s == null ? 0 : s.getOverdue(),
+                    s == null ? 0 : s.getPendingReview(),
+                    inspectorCountMap.getOrDefault(p.getId(), 0));
+        }).toList();
     }
 
     @Transactional

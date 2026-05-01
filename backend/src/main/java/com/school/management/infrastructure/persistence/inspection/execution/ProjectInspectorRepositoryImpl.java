@@ -6,7 +6,10 @@ import com.school.management.domain.inspection.model.execution.ProjectInspector;
 import com.school.management.domain.inspection.repository.ProjectInspectorRepository;
 import org.springframework.stereotype.Repository;
 
+import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
@@ -59,6 +62,16 @@ public class ProjectInspectorRepositoryImpl implements ProjectInspectorRepositor
     @Override
     public void deleteByProjectId(Long projectId) {
         mapper.delete(new LambdaQueryWrapper<ProjectInspectorPO>().eq(ProjectInspectorPO::getProjectId, projectId));
+    }
+
+    @Override
+    public Map<Long, Integer> countByProjectIds(List<Long> projectIds) {
+        if (projectIds == null || projectIds.isEmpty()) return Collections.emptyMap();
+        Map<Long, Integer> map = new HashMap<>();
+        for (ProjectInspectorCountRow row : mapper.countByProjectIds(projectIds)) {
+            map.put(row.getProjectId(), row.getInspectorCount() == null ? 0 : row.getInspectorCount());
+        }
+        return map;
     }
 
     private ProjectInspectorPO toPO(ProjectInspector d) {

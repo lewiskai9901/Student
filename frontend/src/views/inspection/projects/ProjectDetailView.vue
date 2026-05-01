@@ -254,15 +254,37 @@ const dayTasks = computed<DayTask[]>(() => {
 })
 
 const inspectorStats = computed(() => {
-  const map = new Map<string, { name: string; assigned: number; completed: number; targets: number }>()
+  const todayStr = new Date().toISOString().slice(0, 10)
+  const map = new Map<string, {
+    name: string; assigned: number; completed: number; targets: number;
+    active: number; overdue: number;
+  }>()
   for (const task of filteredTasks.value) {
     const name = task.inspectorName || '未分配'
-    if (!map.has(name)) map.set(name, { name, assigned: 0, completed: 0, targets: 0 })
+    if (!map.has(name)) map.set(name, { name, assigned: 0, completed: 0, targets: 0, active: 0, overdue: 0 })
     const s = map.get(name)!; s.assigned++
     if (['SUBMITTED', 'UNDER_REVIEW', 'REVIEWED', 'PUBLISHED'].includes(task.status)) s.completed++
+    if (['CLAIMED', 'IN_PROGRESS'].includes(task.status)) s.active++
+    const eff = (task as any).extendedTo || task.taskDate
+    if (eff && eff < todayStr && !['REVIEWED', 'PUBLISHED', 'CANCELLED', 'EXPIRED'].includes(task.status)) {
+      s.overdue++
+    }
     s.targets += task.completedTargets
   }
-  return [...map.values()].sort((a, b) => b.assigned - a.assigned)
+  return [...map.values()].sort((a, b) => {
+    // 优先排序: 逾期数 > 进行中数 > 总分配数
+    if (b.overdue !== a.overdue) return b.overdue - a.overdue
+    if (b.active !== a.active) return b.active - a.active
+    return b.assigned - a.assigned
+  })
+})
+
+// 检查员搜索 (人员卡片过滤)
+const inspectorFilter = ref('')
+const filteredInspectors = computed(() => {
+  const q = inspectorFilter.value.trim().toLowerCase()
+  if (!q) return inspectors.value
+  return inspectors.value.filter(i => (i.userName || '').toLowerCase().includes(q))
 })
 
 const targetScores = computed(() => {
@@ -489,11 +511,32 @@ async function handlePublish() {
     if (e !== 'cancel' && e?.toString?.() !== 'cancel') { console.error('发布项目失败', e); ElMessage.error('发布项目失败，请重试') }
   }
 }
-async function handlePause() { try { await store.pauseProject(projectId); ElMessage.success('已暂停'); loadProject() } catch (e: any) { ElMessage.error(e.message || '失败') } }
+async function handlePause() {
+  const live = taskStats.value.total - taskStats.value.done
+  const tip = live > 0
+    ? `当前还有 ${live} 个未完成任务, 暂停后将冻结. 继续?`
+    : '确定暂停此项目?'
+  try {
+    await ElMessageBox.confirm(tip, '确认暂停', { type: 'warning' })
+    await store.pauseProject(projectId); ElMessage.success('已暂停'); loadProject()
+  } catch (e: any) {
+    if (e !== 'cancel' && e?.toString?.() !== 'cancel') { ElMessage.error(e.message || '暂停失败') }
+  }
+}
 async function handleResume() { try { await store.resumeProject(projectId); ElMessage.success('已恢复'); loadProject() } catch (e: any) { ElMessage.error(e.message || '失败') } }
-async function handleComplete() { try { await ElMessageBox.confirm('确定完结？', '确认', { type: 'warning' }); await store.completeProject(projectId); ElMessage.success('已完结'); loadProject() } catch (e: any) {
+async function handleComplete() {
+  if (!project.value) return
+  const live = taskStats.value.total - taskStats.value.done
+  const tip = live > 0
+    ? `还有 ${live} 个未完成任务. 完结后项目不可恢复, 任务会被强制归档. 确认?`
+    : '完结操作不可逆. 确认?'
+  try {
+    await ElMessageBox.confirm(tip, '确认完结 (不可逆)', { type: 'warning', confirmButtonText: '确认完结', confirmButtonClass: 'el-button--danger' })
+    await store.completeProject(projectId); ElMessage.success('已完结'); loadProject()
+  } catch (e: any) {
     if (e !== 'cancel' && e?.toString?.() !== 'cancel') { console.error('完结项目失败', e); ElMessage.error('完结项目失败，请重试') }
-  } }
+  }
+}
 async function handleArchive() { try { await ElMessageBox.confirm('确定归档？归档后不可恢复为活跃状态。', '确认归档', { type: 'warning' }); await inspProjectApi.archive(projectId); ElMessage.success('已归档'); loadProject() } catch (e: any) {
     if (e !== 'cancel' && e?.toString?.() !== 'cancel') { console.error('归档项目失败', e); ElMessage.error('归档项目失败，请重试') }
   } }
@@ -606,10 +649,11 @@ onMounted(async () => {
         <el-button v-if="isDraft" type="primary" :disabled="!canPublish" @click="handlePublish" size="small" round>
           <Send class="w-3.5 h-3.5 mr-1" />发布项目
         </el-button>
-        <el-button v-if="project.status === 'PUBLISHED'" type="warning" @click="handlePause" size="small" round>
+        <el-button v-if="project.status === 'PUBLISHED'" plain @click="handlePause" size="small" round
+                   title="暂停: 项目可恢复, 任务被冻结">
           <Pause class="w-3.5 h-3.5 mr-1" />暂停
         </el-button>
-        <el-button v-if="project.status === 'PAUSED'" type="success" @click="handleResume" size="small" round>
+        <el-button v-if="project.status === 'PAUSED'" type="primary" @click="handleResume" size="small" round>
           <Play class="w-3.5 h-3.5 mr-1" />恢复
         </el-button>
         <el-button v-if="['PUBLISHED','PAUSED'].includes(project.status) && project.rootSectionId"
@@ -627,27 +671,28 @@ onMounted(async () => {
             升级模板版本
           </span>
         </el-button>
-        <el-button v-if="['PUBLISHED','PAUSED'].includes(project.status)" @click="handleComplete" size="small" round>
+        <el-button v-if="['PUBLISHED','PAUSED'].includes(project.status)" type="danger" @click="handleComplete" size="small" round plain
+                   title="完结: 不可逆, 任务被强制归档">
           <CheckCircle class="w-3.5 h-3.5 mr-1" />完结
         </el-button>
         <el-button v-if="project.status === 'COMPLETED'" type="info" @click="handleArchive" size="small" round plain>归档</el-button>
       </div>
     </div>
 
-    <!-- ====== Pill Tabs ====== -->
+    <!-- ====== Pill Tabs (顺序: 总览 → 检查配置 → 人员与任务 → 成绩统计 → 设置) ====== -->
     <div class="pdv-tabs">
       <button :class="['pdv-tab', activeTab === 'overview' && 'active']" @click="activeTab = 'overview'">
         <LayoutDashboard class="w-3.5 h-3.5" />总览
       </button>
-      <button :class="['pdv-tab', activeTab === 'scores' && 'active']" @click="activeTab = 'scores'">
-        <BarChart3 class="w-3.5 h-3.5" />成绩统计
+      <button :class="['pdv-tab', activeTab === 'config' && 'active']" @click="activeTab = 'config'">
+        <ListTree class="w-3.5 h-3.5" />检查配置
       </button>
       <button :class="['pdv-tab', activeTab === 'team' && 'active']" @click="activeTab = 'team'">
         <Users class="w-3.5 h-3.5" />人员与任务
         <span v-if="pendingReviewCount > 0 || pendingAssignTasks.length > 0" class="pdv-tab-badge">{{ pendingReviewCount + pendingAssignTasks.length }}</span>
       </button>
-      <button :class="['pdv-tab', activeTab === 'config' && 'active']" @click="activeTab = 'config'">
-        <ListTree class="w-3.5 h-3.5" />检查配置
+      <button :class="['pdv-tab', activeTab === 'scores' && 'active']" @click="activeTab = 'scores'">
+        <BarChart3 class="w-3.5 h-3.5" />成绩统计
       </button>
       <button :class="['pdv-tab', activeTab === 'settings' && 'active']" @click="activeTab = 'settings'">
         <Settings class="w-3.5 h-3.5" />设置
@@ -1041,28 +1086,54 @@ onMounted(async () => {
             </div>
           </div>
 
-          <!-- 工作量 -->
-          <div v-if="inspectorStats.length > 0 && !isDraft" class="cfg-workload-grid">
-            <div v-for="stat in inspectorStats" :key="stat.name" class="cfg-workload-item">
-              <div class="cfg-workload-name">{{ stat.name }}</div>
-              <div class="cfg-workload-stats">
-                <span class="cfg-hint">分配 </span><span class="cfg-workload-val">{{ stat.assigned }}</span>
-                <span class="cfg-hint">完成 </span><span class="cfg-workload-val cfg-workload-val--done">{{ stat.completed }}</span>
-              </div>
-            </div>
+          <!-- 检查员搜索 -->
+          <div v-if="inspectors.length > 4" class="cfg-add-insp" style="padding-top: 8px">
+            <input v-model="inspectorFilter" placeholder="按姓名筛选检查员…"
+                   class="pdv-insp-search" />
           </div>
 
-          <!-- 列表 -->
+          <!-- 列表 (升级版: 含负载饱和度 + 进行中 + 逾期) -->
           <div v-if="inspectors.length === 0" class="cfg-empty">暂无检查员</div>
-          <div v-else class="cfg-insp-grid">
-            <div v-for="insp in inspectors" :key="insp.id" class="cfg-insp-item">
-              <div class="cfg-insp-avatar">{{ (insp.userName || '?')[0] }}</div>
-              <div class="cfg-insp-info">
-                <div class="cfg-insp-name">{{ insp.userName }}</div>
-                <div class="cfg-hint">{{ InspectorRoleConfig[insp.role as InspectorRole]?.label }}</div>
+          <div v-else class="pdv-insp-list">
+            <div v-for="insp in filteredInspectors" :key="insp.id"
+                 class="pdv-insp-row"
+                 :class="{ 'pdv-insp-row--overdue': (inspectorStats.find(s => s.name === insp.userName)?.overdue ?? 0) > 0 }">
+              <div class="pdv-insp-avatar">{{ (insp.userName || '?')[0] }}</div>
+              <div class="pdv-insp-meta">
+                <div class="pdv-insp-name-line">
+                  <span class="pdv-insp-name">{{ insp.userName }}</span>
+                  <span class="pdv-insp-role">{{ InspectorRoleConfig[insp.role as InspectorRole]?.label }}</span>
+                </div>
+                <div class="pdv-insp-stats" v-if="!isDraft">
+                  <template v-if="inspectorStats.find(s => s.name === insp.userName)">
+                    <span class="pdv-stat">
+                      分配 <b>{{ inspectorStats.find(s => s.name === insp.userName)!.assigned }}</b>
+                    </span>
+                    <span class="pdv-stat">
+                      完成 <b style="color: var(--insp-pass)">{{ inspectorStats.find(s => s.name === insp.userName)!.completed }}</b>
+                    </span>
+                    <span class="pdv-stat" v-if="inspectorStats.find(s => s.name === insp.userName)!.active > 0">
+                      进行中 <b style="color: var(--insp-info)">{{ inspectorStats.find(s => s.name === insp.userName)!.active }}</b>
+                    </span>
+                    <span class="pdv-stat pdv-stat--alert" v-if="inspectorStats.find(s => s.name === insp.userName)!.overdue > 0">
+                      逾期 <b>{{ inspectorStats.find(s => s.name === insp.userName)!.overdue }}</b>
+                    </span>
+                  </template>
+                  <span v-else class="pdv-stat-empty">暂无任务</span>
+                </div>
+                <!-- 负载饱和度条 -->
+                <div v-if="!isDraft && inspectorStats.find(s => s.name === insp.userName)" class="pdv-insp-bar">
+                  <div class="pdv-insp-bar-bg">
+                    <div class="pdv-insp-bar-done"
+                         :style="{ width: ((inspectorStats.find(s => s.name === insp.userName)!.completed / Math.max(inspectorStats.find(s => s.name === insp.userName)!.assigned, 1)) * 100) + '%' }" />
+                  </div>
+                </div>
               </div>
               <el-tag :type="insp.isActive ? 'success' : 'info'" size="small" round effect="plain">{{ insp.isActive ? '启用' : '禁用' }}</el-tag>
               <el-button link type="danger" size="small" @click="handleRemoveInspector(insp)"><Trash2 class="w-3.5 h-3.5" /></el-button>
+            </div>
+            <div v-if="inspectorFilter && filteredInspectors.length === 0" class="cfg-empty" style="padding: 16px">
+              没有匹配 "{{ inspectorFilter }}" 的检查员
             </div>
           </div>
         </div>
@@ -1309,14 +1380,13 @@ onMounted(async () => {
   margin: 0 auto;
 }
 
-/* ========== Header ========== */
+/* ========== Header (与 Tabs 视觉整合, 去掉硬分隔线) ========== */
 .pdv-header {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
-  padding-bottom: var(--insp-sp-5);
-  border-bottom: 2px solid var(--insp-ink-primary);
-  margin-bottom: var(--insp-sp-6);
+  padding-bottom: var(--insp-sp-4);
+  margin-bottom: var(--insp-sp-3);
 }
 .pdv-header-left {
   display: flex;
@@ -1379,15 +1449,17 @@ onMounted(async () => {
 .pdv-subtitle-sep { color: #d1d5db; }
 .pdv-header-actions { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
 
-/* ========== Pill Tabs ========== */
+/* ========== Pill Tabs (集成在 header 下方, 同卡片视觉) ========== */
 .pdv-tabs {
   display: flex;
   gap: 4px;
   background: #f3f4f6;
   border-radius: 10px;
   padding: 3px;
-  margin-bottom: 20px;
+  margin-bottom: 16px;
   width: fit-content;
+  position: relative;
+  top: -4px;
 }
 .pdv-tab {
   display: inline-flex;
@@ -1848,6 +1920,70 @@ onMounted(async () => {
   text-align: center;
   font-size: 12px;
   color: #9ca3af;
+}
+
+/* ===== 人员与任务 升级版 ===== */
+.pdv-insp-search {
+  width: 100%;
+  height: 28px;
+  padding: 0 10px;
+  font-size: 12px; font-family: inherit;
+  border: 1px solid var(--insp-border-default);
+  border-radius: var(--insp-radius-sm);
+  background: var(--insp-bg-surface);
+}
+.pdv-insp-search:focus { outline: none; border-color: var(--insp-accent); box-shadow: 0 0 0 3px var(--insp-accent-paler); }
+
+.pdv-insp-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 8px;
+  margin-top: 8px;
+}
+.pdv-insp-row {
+  display: flex; align-items: flex-start; gap: 10px;
+  padding: 10px 12px;
+  background: #fff;
+  border: 1px solid var(--insp-border-default);
+  border-radius: var(--insp-radius-md);
+  transition: border-color var(--insp-t-fast);
+}
+.pdv-insp-row:hover { border-color: var(--insp-accent-pale); }
+.pdv-insp-row--overdue {
+  background: var(--insp-fail-pale);
+  border-color: var(--insp-fail-border);
+}
+.pdv-insp-avatar {
+  width: 32px; height: 32px; border-radius: 50%;
+  background: linear-gradient(135deg, #60a5fa, #2563eb);
+  color: #fff;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 12px; font-weight: 700; flex-shrink: 0;
+}
+.pdv-insp-meta { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 4px; }
+.pdv-insp-name-line { display: flex; align-items: baseline; gap: 8px; }
+.pdv-insp-name { font-size: 13px; font-weight: 600; color: var(--insp-ink-primary); }
+.pdv-insp-role { font-size: 10px; color: var(--insp-ink-tertiary); }
+.pdv-insp-stats {
+  display: flex; flex-wrap: wrap; gap: 8px;
+  font-size: 11px; color: var(--insp-ink-tertiary);
+  font-family: var(--insp-font-mono);
+}
+.pdv-insp-stats .pdv-stat b { color: var(--insp-ink-primary); font-weight: 700; }
+.pdv-insp-stats .pdv-stat--alert { color: var(--insp-fail); font-weight: 600; }
+.pdv-insp-stats .pdv-stat--alert b { color: var(--insp-fail); }
+.pdv-stat-empty { font-size: 11px; color: var(--insp-ink-quaternary); font-style: italic; }
+.pdv-insp-bar { margin-top: 2px; }
+.pdv-insp-bar-bg {
+  height: 3px;
+  background: var(--insp-bg-sunken);
+  border-radius: 2px;
+  overflow: hidden;
+}
+.pdv-insp-bar-done {
+  height: 100%;
+  background: var(--insp-pass);
+  transition: width var(--insp-t-medium);
 }
 
 .cfg-insp-grid {

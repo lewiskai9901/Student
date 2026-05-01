@@ -1,11 +1,13 @@
 package com.school.management.infrastructure.persistence.inspection.execution;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.school.management.application.inspection.dto.ProjectTaskStats;
 import com.school.management.domain.inspection.model.execution.*;
 import com.school.management.domain.inspection.repository.InspTaskRepository;
 import org.springframework.stereotype.Repository;
 
 import java.time.LocalDate;
+import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
@@ -85,6 +87,19 @@ public class InspTaskRepositoryImpl implements InspTaskRepository {
     @Override
     public void deleteByProjectId(Long projectId) {
         mapper.delete(new LambdaQueryWrapper<InspTaskPO>().eq(InspTaskPO::getProjectId, projectId));
+    }
+
+    @Override
+    public List<ProjectTaskStats> findStatsByProjectIds(List<Long> projectIds) {
+        if (projectIds == null || projectIds.isEmpty()) return Collections.emptyList();
+        return mapper.findStatsByProjectIds(projectIds).stream()
+                .map(r -> new ProjectTaskStats(
+                        r.getProjectId(),
+                        r.getTotal() == null ? 0 : r.getTotal(),
+                        r.getDone() == null ? 0 : r.getDone(),
+                        r.getOverdue() == null ? 0 : r.getOverdue(),
+                        r.getPendingReview() == null ? 0 : r.getPendingReview()))
+                .collect(Collectors.toList());
     }
 
     private InspTaskPO toPO(InspTask d) {

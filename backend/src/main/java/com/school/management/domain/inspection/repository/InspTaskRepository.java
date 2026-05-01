@@ -1,5 +1,6 @@
 package com.school.management.domain.inspection.repository;
 
+import com.school.management.application.inspection.dto.ProjectTaskStats;
 import com.school.management.domain.inspection.model.execution.InspTask;
 import com.school.management.domain.inspection.model.execution.TaskStatus;
 
@@ -32,4 +33,7 @@ public interface InspTaskRepository {
     void deleteById(Long id);
 
     void deleteByProjectId(Long projectId);
+
+    /** 项目列表批量任务统计 (列表页 N+1 消除). */
+    List<ProjectTaskStats> findStatsByProjectIds(List<Long> projectIds);
 }

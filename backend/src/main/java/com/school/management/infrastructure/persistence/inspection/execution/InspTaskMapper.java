@@ -66,4 +66,22 @@ public interface InspTaskMapper extends BaseMapper<InspTaskPO> {
     @DataPermission(module = "inspection_record", orgUnitField = "org_unit_id", creatorField = "created_by")
     @Select("SELECT * FROM insp_tasks WHERE status = 'PENDING' AND inspector_id IS NULL AND deleted = 0 ORDER BY task_date")
     List<InspTaskPO> findAvailableTasks();
+
+    /**
+     * 按项目批量聚合任务统计 — 用于列表页消除 N+1.
+     * 不带 @DataPermission: 调用方需先用 @DataPermission 收窄项目集.
+     */
+    @Select("<script>"
+            + "SELECT project_id AS projectId,"
+            + "  COUNT(*) AS total,"
+            + "  SUM(CASE WHEN status IN ('REVIEWED','PUBLISHED') THEN 1 ELSE 0 END) AS done,"
+            + "  SUM(CASE WHEN status NOT IN ('REVIEWED','PUBLISHED','CANCELLED','EXPIRED') "
+            + "       AND COALESCE(extended_to, task_date) &lt; CURDATE() THEN 1 ELSE 0 END) AS overdue,"
+            + "  SUM(CASE WHEN status = 'SUBMITTED' THEN 1 ELSE 0 END) AS pendingReview"
+            + " FROM insp_tasks"
+            + " WHERE deleted = 0 AND project_id IN"
+            + " <foreach item='id' collection='projectIds' open='(' separator=',' close=')'>#{id}</foreach>"
+            + " GROUP BY project_id"
+            + "</script>")
+    List<ProjectStatsRow> findStatsByProjectIds(@Param("projectIds") List<Long> projectIds);
 }

@@ -31,4 +31,16 @@ public interface ProjectInspectorMapper extends BaseMapper<ProjectInspectorPO> {
     @DataPermission(module = "inspection_record", orgUnitField = "org_unit_id", creatorField = "created_by")
     @Select("SELECT * FROM insp_project_inspectors WHERE user_id = #{userId} AND deleted = 0")
     List<ProjectInspectorPO> findByUserId(@Param("userId") Long userId);
+
+    /**
+     * 按项目批量统计检查员人数 — 列表页 N+1 消除.
+     */
+    @Select("<script>"
+            + "SELECT project_id AS projectId, COUNT(*) AS inspectorCount"
+            + " FROM insp_project_inspectors"
+            + " WHERE deleted = 0 AND project_id IN"
+            + " <foreach item='id' collection='projectIds' open='(' separator=',' close=')'>#{id}</foreach>"
+            + " GROUP BY project_id"
+            + "</script>")
+    List<ProjectInspectorCountRow> countByProjectIds(@Param("projectIds") List<Long> projectIds);
 }
