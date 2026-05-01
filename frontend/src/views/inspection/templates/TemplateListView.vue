@@ -1,43 +1,53 @@
 <script setup lang="ts">
+/**
+ * TemplateListView — 检查模板档案 (Audit Console redesign)
+ * 卷宗式行 · 状态计数标签栏 · 行尾操作集
+ */
 import { ref, reactive, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { Plus, Search, Copy, Upload, Archive, Ban, Trash2, Eye } from 'lucide-vue-next'
-import { useTemplateSectionStore } from '@/stores/inspection/inspTemplateStore'
+import { useInspTemplateStore } from '@/stores/inspection/inspTemplateStore'
 import { TemplateStatusConfig, type TemplateStatus } from '@/types/insp/enums'
-import type { TemplateSection, TemplateCatalog } from '@/types/insp/template'
-import InspEmptyState from '../shared/InspEmptyState.vue'
+import type { TemplateSection } from '@/types/insp/template'
 
 const router = useRouter()
-const store = useTemplateSectionStore()
+const store = useInspTemplateStore()
 
-// State
 const loading = ref(false)
 const templates = ref<TemplateSection[]>([])
 const total = ref(0)
-const catalogs = ref<TemplateCatalog[]>([])
 
 const queryParams = reactive({
   page: 1,
-  size: 20,
+  size: 50,
   keyword: '',
   status: undefined as TemplateStatus | undefined,
-  catalogId: undefined as number | undefined,
 })
 
-// Computed
-const statusOptions = computed(() =>
-  Object.entries(TemplateStatusConfig).map(([key, val]) => ({
-    value: key,
-    label: val.label,
-  }))
-)
+const filtered = computed(() => {
+  const kw = queryParams.keyword.trim().toLowerCase()
+  if (!kw) return templates.value
+  return templates.value.filter((t: any) =>
+    (t.templateName || t.sectionName || '').toLowerCase().includes(kw) ||
+    (t.sectionCode || '').toLowerCase().includes(kw)
+  )
+})
 
-// Actions
+const counts = computed(() => ({
+  all: templates.value.length,
+  DRAFT: templates.value.filter(t => t.status === 'DRAFT').length,
+  PUBLISHED: templates.value.filter(t => t.status === 'PUBLISHED').length,
+  DEPRECATED: templates.value.filter(t => t.status === 'DEPRECATED').length,
+  ARCHIVED: templates.value.filter(t => t.status === 'ARCHIVED').length,
+}))
+
 async function loadData() {
   loading.value = true
   try {
-    const result = await store.loadTemplates(queryParams)
+    const result = await store.loadTemplates({
+      page: 1, size: 200,
+      status: queryParams.status,
+    })
     templates.value = result.records
     total.value = result.total
   } catch (e: any) {
@@ -47,69 +57,49 @@ async function loadData() {
   }
 }
 
-async function loadCatalogs() {
-  try {
-    catalogs.value = await store.loadCatalogs()
-  } catch { /* ignore */ }
-}
-
-function handleSearch() {
-  queryParams.page = 1
+function setStatusFilter(s?: TemplateStatus) {
+  queryParams.status = s
   loadData()
 }
 
-function resetQuery() {
-  queryParams.keyword = ''
-  queryParams.status = undefined
-  queryParams.catalogId = undefined
-  queryParams.page = 1
-  loadData()
+function statusVariant(s: TemplateStatus): string {
+  return ({ DRAFT: 'pending', PUBLISHED: 'pass', DEPRECATED: 'warn', ARCHIVED: 'fail' } as const)[s] || 'pending'
 }
 
-function handlePageChange(page: number) {
-  queryParams.page = page
-  loadData()
+function fmtDate(s?: string | null) {
+  if (!s) return '—'
+  const d = new Date(s)
+  return `${d.getFullYear()}.${String(d.getMonth() + 1).padStart(2, '0')}.${String(d.getDate()).padStart(2, '0')}`
 }
 
-function goCreate() {
-  router.push('/inspection/templates/create')
-}
-
-function goEdit(tpl: TemplateSection) {
-  router.push(`/inspection/templates/${tpl.id}/edit`)
-}
+function goCreate() { router.push('/inspection/templates/create') }
+function goEdit(tpl: TemplateSection) { router.push(`/inspection/templates/${tpl.id}/edit`) }
 
 async function handlePublish(tpl: TemplateSection) {
   try {
-    await ElMessageBox.confirm('发布后将创建不可变版本快照，确认发布？', '确认发布模板', { type: 'warning' })
+    await ElMessageBox.confirm('发布后将创建不可变版本快照, 确认发布?', '确认发布模板', { type: 'warning' })
     await store.publish(tpl.id)
     ElMessage.success('发布成功')
     loadData()
-  } catch (e: any) {
-    if (e !== 'cancel') ElMessage.error(e.message || '发布失败')
-  }
+  } catch (e: any) { if (e !== 'cancel') ElMessage.error(e.message || '发布失败') }
 }
 
 async function handleDeprecate(tpl: TemplateSection) {
   try {
-    await ElMessageBox.confirm('废弃后新项目无法使用此模板，确认废弃？', '确认废弃模板', { type: 'warning' })
+    await ElMessageBox.confirm('废弃后新项目无法使用此模板, 确认废弃?', '确认废弃模板', { type: 'warning' })
     await store.deprecate(tpl.id)
     ElMessage.success('已废弃')
     loadData()
-  } catch (e: any) {
-    if (e !== 'cancel') ElMessage.error(e.message || '操作失败')
-  }
+  } catch (e: any) { if (e !== 'cancel') ElMessage.error(e.message || '操作失败') }
 }
 
 async function handleArchive(tpl: TemplateSection) {
   try {
-    await ElMessageBox.confirm('归档后模板将不可见，确认归档？', '确认归档模板', { type: 'warning' })
+    await ElMessageBox.confirm('归档后模板将不可见, 确认归档?', '确认归档模板', { type: 'warning' })
     await store.archive(tpl.id)
     ElMessage.success('已归档')
     loadData()
-  } catch (e: any) {
-    if (e !== 'cancel') ElMessage.error(e.message || '操作失败')
-  }
+  } catch (e: any) { if (e !== 'cancel') ElMessage.error(e.message || '操作失败') }
 }
 
 async function handleDuplicate(tpl: TemplateSection) {
@@ -117,190 +107,292 @@ async function handleDuplicate(tpl: TemplateSection) {
     await store.duplicate(tpl.id)
     ElMessage.success('复制成功')
     loadData()
-  } catch (e: any) {
-    ElMessage.error(e.message || '复制失败')
-  }
+  } catch (e: any) { ElMessage.error(e.message || '复制失败') }
 }
 
 async function handleDelete(tpl: TemplateSection) {
   try {
-    await ElMessageBox.confirm(`确认删除模板「${tpl.templateName}」？`, '确认删除', { type: 'warning' })
+    await ElMessageBox.confirm(`确认删除模板「${(tpl as any).templateName || tpl.sectionName}」?`, '确认删除', { type: 'warning' })
     await store.removeTemplate(tpl.id)
     ElMessage.success('已删除')
     loadData()
-  } catch (e: any) {
-    if (e !== 'cancel') ElMessage.error(e.message || '删除失败')
-  }
+  } catch (e: any) { if (e !== 'cancel') ElMessage.error(e.message || '删除失败') }
 }
 
-function getStatusStyle(status: TemplateStatus) {
-  const cfg = TemplateStatusConfig[status]
-  return cfg ? { color: cfg.color } : {}
-}
-
-onMounted(() => {
-  loadData()
-  loadCatalogs()
-})
+onMounted(() => loadData())
 </script>
 
 <template>
-  <div class="p-6">
-    <!-- Header -->
-    <div class="mb-5 flex items-center justify-between">
-      <h2 class="text-lg font-semibold text-gray-800">模板列表</h2>
-      <button
-        class="flex items-center gap-1.5 rounded-md bg-blue-500 px-4 py-2 text-sm text-white transition hover:bg-blue-600"
-        @click="goCreate"
-      >
-        <Plus :size="16" />
-        创建模板
-      </button>
-    </div>
-
-    <!-- Filters -->
-    <div class="mb-4 flex flex-wrap items-center gap-3">
-      <div class="relative">
-        <Search :size="16" class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-        <input
-          v-model="queryParams.keyword"
-          type="text"
-          placeholder="搜索模板名称..."
-          class="h-9 rounded-md border border-gray-300 pl-9 pr-3 text-sm outline-none transition focus:border-blue-400 focus:ring-1 focus:ring-blue-100"
-          @keyup.enter="handleSearch"
-        />
+  <div class="insp-shell template-archive">
+    <!-- ── Editorial header ─────────── -->
+    <header class="page-head">
+      <div>
+        <div class="insp-eyebrow">模板档案 / Template Archive</div>
+        <h1 class="insp-display page-title">检查模板</h1>
       </div>
-      <select
-        v-model="queryParams.status"
-        class="h-9 rounded-md border border-gray-300 px-3 text-sm outline-none focus:border-blue-400"
-        @change="handleSearch"
-      >
-        <option :value="undefined">全部状态</option>
-        <option v-for="opt in statusOptions" :key="opt.value" :value="opt.value">{{ opt.label }}</option>
-      </select>
-      <select
-        v-model="queryParams.catalogId"
-        class="h-9 rounded-md border border-gray-300 px-3 text-sm outline-none focus:border-blue-400"
-        @change="handleSearch"
-      >
-        <option :value="undefined">全部分类</option>
-        <option v-for="cat in catalogs" :key="cat.id" :value="cat.id">{{ cat.catalogName }}</option>
-      </select>
-      <button class="h-9 rounded-md border border-gray-300 px-3 text-sm text-gray-500 hover:bg-gray-50" @click="resetQuery">
-        重置
-      </button>
-    </div>
-
-    <!-- Table -->
-    <div v-if="loading" class="py-16 text-center text-gray-400">加载中...</div>
-    <InspEmptyState
-      v-else-if="templates.length === 0"
-      title="暂无模板"
-      description="创建第一个检查模板开始使用"
-      action-label="创建模板"
-      @action="goCreate"
-    />
-    <div v-else class="overflow-hidden rounded-lg border border-gray-200">
-      <table class="w-full text-left text-sm">
-        <thead class="border-b border-gray-200 bg-gray-50">
-          <tr>
-            <th class="px-4 py-3 font-medium text-gray-600">模板名称</th>
-            <th class="px-4 py-3 font-medium text-gray-600">编码</th>
-            <th class="px-4 py-3 font-medium text-gray-600">状态</th>
-            <th class="px-4 py-3 font-medium text-gray-600">版本</th>
-            <th class="px-4 py-3 font-medium text-gray-600">使用次数</th>
-            <th class="px-4 py-3 font-medium text-gray-600">更新时间</th>
-            <th class="px-4 py-3 font-medium text-gray-600">操作</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr
-            v-for="tpl in templates"
-            :key="tpl.id"
-            class="group border-b border-gray-100 transition hover:bg-blue-50/30"
-          >
-            <td class="px-4 py-3">
-              <span class="cursor-pointer font-medium text-blue-600 hover:underline" @click="goEdit(tpl)">
-                {{ tpl.templateName }}
-              </span>
-              <span v-if="tpl.description" class="ml-2 text-xs text-gray-400">{{ tpl.description }}</span>
-            </td>
-            <td class="px-4 py-3 text-gray-500">{{ tpl.templateCode }}</td>
-            <td class="px-4 py-3">
-              <span class="inline-block rounded px-2 py-0.5 text-xs font-medium" :style="getStatusStyle(tpl.status)">
-                {{ TemplateStatusConfig[tpl.status]?.label }}
-              </span>
-            </td>
-            <td class="px-4 py-3 text-gray-500">v{{ tpl.latestVersion }}</td>
-            <td class="px-4 py-3 text-gray-500">{{ tpl.useCount }}</td>
-            <td class="px-4 py-3 text-gray-400 text-xs">{{ tpl.updatedAt?.slice(0, 16) }}</td>
-            <td class="px-4 py-3">
-              <div class="flex items-center gap-2 opacity-0 transition group-hover:opacity-100">
-                <button class="text-gray-400 hover:text-blue-500" title="编辑" @click="goEdit(tpl)">
-                  <Eye :size="16" />
-                </button>
-                <button
-                  v-if="tpl.status === 'DRAFT'"
-                  class="text-gray-400 hover:text-green-500"
-                  title="发布"
-                  @click="handlePublish(tpl)"
-                >
-                  <Upload :size="16" />
-                </button>
-                <button class="text-gray-400 hover:text-blue-500" title="复制" @click="handleDuplicate(tpl)">
-                  <Copy :size="16" />
-                </button>
-                <button
-                  v-if="tpl.status === 'PUBLISHED'"
-                  class="text-gray-400 hover:text-yellow-500"
-                  title="废弃"
-                  @click="handleDeprecate(tpl)"
-                >
-                  <Ban :size="16" />
-                </button>
-                <button
-                  v-if="tpl.status !== 'ARCHIVED'"
-                  class="text-gray-400 hover:text-gray-600"
-                  title="归档"
-                  @click="handleArchive(tpl)"
-                >
-                  <Archive :size="16" />
-                </button>
-                <button
-                  v-if="tpl.status === 'DRAFT'"
-                  class="text-gray-400 hover:text-red-500"
-                  title="删除"
-                  @click="handleDelete(tpl)"
-                >
-                  <Trash2 :size="16" />
-                </button>
-              </div>
-            </td>
-          </tr>
-        </tbody>
-      </table>
-    </div>
-
-    <!-- Pagination -->
-    <div v-if="total > queryParams.size" class="mt-4 flex items-center justify-between text-sm text-gray-500">
-      <span>共 {{ total }} 条</span>
-      <div class="flex items-center gap-1">
-        <button
-          class="rounded border px-3 py-1 hover:bg-gray-50 disabled:opacity-50"
-          :disabled="queryParams.page <= 1"
-          @click="handlePageChange(queryParams.page - 1)"
-        >
-          上一页
-        </button>
-        <span class="px-3">{{ queryParams.page }} / {{ Math.ceil(total / queryParams.size) }}</span>
-        <button
-          class="rounded border px-3 py-1 hover:bg-gray-50 disabled:opacity-50"
-          :disabled="queryParams.page >= Math.ceil(total / queryParams.size)"
-          @click="handlePageChange(queryParams.page + 1)"
-        >
-          下一页
+      <div class="head-stats">
+        <div class="insp-stat">
+          <span class="insp-stat__value">{{ counts.all }}</span>
+          <span class="insp-stat__label">总数</span>
+        </div>
+        <div class="head-rule" />
+        <div class="insp-stat">
+          <span class="insp-stat__value" :style="{ color: 'var(--insp-pass)' }">{{ counts.PUBLISHED }}</span>
+          <span class="insp-stat__label">已发布</span>
+        </div>
+        <div class="head-rule" />
+        <div class="insp-stat">
+          <span class="insp-stat__value">{{ counts.DRAFT }}</span>
+          <span class="insp-stat__label">草稿</span>
+        </div>
+        <button class="head-cta insp-btn insp-btn--accent insp-btn--lg" @click="goCreate">
+          <span>新建模板</span>
         </button>
       </div>
-    </div>
+    </header>
+
+    <hr class="insp-rule insp-rule--strong head-divider" />
+
+    <!-- ── Filter rail ─────────── -->
+    <nav class="filter-rail">
+      <button class="filter-tab" :class="{ 'is-active': queryParams.status === undefined }" @click="setStatusFilter(undefined)">
+        <span class="filter-tab__label">全部</span>
+        <span class="filter-tab__count">{{ counts.all }}</span>
+      </button>
+      <button class="filter-tab" :class="{ 'is-active': queryParams.status === 'DRAFT' }" @click="setStatusFilter('DRAFT')">
+        <span class="filter-tab__label">草稿</span>
+        <span class="filter-tab__count">{{ counts.DRAFT }}</span>
+      </button>
+      <button class="filter-tab" :class="{ 'is-active': queryParams.status === 'PUBLISHED' }" @click="setStatusFilter('PUBLISHED')">
+        <span class="filter-tab__label">已发布</span>
+        <span class="filter-tab__count">{{ counts.PUBLISHED }}</span>
+      </button>
+      <button class="filter-tab" :class="{ 'is-active': queryParams.status === 'DEPRECATED' }" @click="setStatusFilter('DEPRECATED')">
+        <span class="filter-tab__label">已废弃</span>
+        <span class="filter-tab__count">{{ counts.DEPRECATED }}</span>
+      </button>
+      <button class="filter-tab" :class="{ 'is-active': queryParams.status === 'ARCHIVED' }" @click="setStatusFilter('ARCHIVED')">
+        <span class="filter-tab__label">已归档</span>
+        <span class="filter-tab__count">{{ counts.ARCHIVED }}</span>
+      </button>
+      <div class="filter-spacer" />
+      <div class="filter-search">
+        <input v-model="queryParams.keyword" placeholder="搜索模板名称 · 编码..." />
+      </div>
+    </nav>
+
+    <!-- ── Archive register ─────────── -->
+    <section v-loading="loading" class="archive">
+      <article
+        v-for="(tpl, i) in filtered" :key="tpl.id"
+        class="archive-row"
+        @click="goEdit(tpl)"
+      >
+        <!-- Index -->
+        <div class="row-num insp-num">{{ String(i + 1).padStart(3, '0') }}</div>
+
+        <!-- Name + meta -->
+        <div class="row-meta">
+          <div class="row-name-line">
+            <span class="row-name">{{ (tpl as any).templateName || tpl.sectionName }}</span>
+            <span class="insp-chip" :class="`insp-chip--${statusVariant(tpl.status)}`">
+              {{ TemplateStatusConfig[tpl.status]?.label }}
+            </span>
+            <span v-if="tpl.latestVersion" class="version-tag insp-num">
+              v{{ tpl.latestVersion }}
+            </span>
+          </div>
+          <div class="row-code-line">
+            <span class="row-code">{{ tpl.sectionCode }}</span>
+            <span class="row-sep">·</span>
+            <span class="insp-num">{{ fmtDate(tpl.updatedAt) }}</span>
+          </div>
+        </div>
+
+        <!-- Description -->
+        <div class="row-desc">{{ (tpl as any).description || '—' }}</div>
+
+        <!-- Actions -->
+        <div class="row-actions" @click.stop>
+          <button v-if="tpl.status === 'DRAFT'" class="insp-btn insp-btn--sm" @click="handlePublish(tpl)">发布</button>
+          <button v-if="tpl.status === 'PUBLISHED'" class="insp-btn insp-btn--sm" @click="handleDeprecate(tpl)">废弃</button>
+          <button v-if="tpl.status === 'DEPRECATED' || tpl.status === 'PUBLISHED'" class="insp-btn insp-btn--sm" @click="handleArchive(tpl)">归档</button>
+          <button class="insp-btn insp-btn--sm" @click="handleDuplicate(tpl)">复制</button>
+          <button class="insp-btn insp-btn--sm insp-btn--ghost" @click="handleDelete(tpl)" title="删除">×</button>
+        </div>
+      </article>
+
+      <div v-if="!loading && filtered.length === 0" class="empty">
+        <div class="insp-stamp">无记录</div>
+        <p class="empty-hint">{{ queryParams.keyword ? '未找到匹配的模板' : '尚未创建任何检查模板' }}</p>
+        <button v-if="!queryParams.keyword" class="insp-btn insp-btn--accent insp-btn--lg" @click="goCreate">
+          创建第一个模板
+        </button>
+      </div>
+    </section>
   </div>
 </template>
+
+<style scoped>
+.template-archive {
+  padding: 32px 48px 64px;
+  max-width: 1500px;
+  margin: 0 auto;
+  min-height: 100vh;
+  background: var(--insp-bg-page);
+}
+
+/* ─ Header ─────── */
+.page-head {
+  display: flex; align-items: flex-end; justify-content: space-between;
+  gap: var(--insp-sp-7);
+  margin-bottom: var(--insp-sp-4);
+}
+.page-title { font-size: 44px; margin: 0; font-weight: 500; }
+.head-stats {
+  display: flex; align-items: center; gap: var(--insp-sp-6);
+  padding: 4px 0;
+}
+.head-rule { width: 1px; height: 32px; background: var(--insp-border-default); }
+.head-cta { margin-left: var(--insp-sp-5); }
+.head-divider { margin: 0 0 var(--insp-sp-7); }
+
+/* ─ Filter rail ─────── */
+.filter-rail {
+  display: flex; align-items: center; gap: 0;
+  margin-bottom: var(--insp-sp-5);
+  border-bottom: 1px solid var(--insp-border-subtle);
+}
+.filter-tab {
+  position: relative;
+  display: inline-flex; align-items: baseline; gap: var(--insp-sp-2);
+  padding: 10px 18px 12px;
+  border: 0; background: transparent; cursor: pointer;
+  font-family: inherit; font-size: var(--insp-text-md); font-weight: 500;
+  color: var(--insp-ink-tertiary);
+  transition: color var(--insp-t-fast);
+}
+.filter-tab:hover { color: var(--insp-ink-primary); }
+.filter-tab.is-active { color: var(--insp-ink-primary); }
+.filter-tab.is-active::after {
+  content: ''; position: absolute; left: 18px; right: 18px; bottom: -1px;
+  height: 2px; background: var(--insp-accent);
+}
+.filter-tab__count {
+  font-family: var(--insp-font-mono);
+  font-size: var(--insp-text-xs); font-weight: 500;
+  color: var(--insp-ink-quaternary);
+}
+.filter-tab.is-active .filter-tab__count { color: var(--insp-accent); }
+.filter-spacer { flex: 1; }
+.filter-search input {
+  padding: 6px 12px;
+  border: 1px solid var(--insp-border-default);
+  border-radius: var(--insp-radius-md);
+  font-family: inherit;
+  font-size: var(--insp-text-sm);
+  width: 240px;
+  background: var(--insp-bg-surface);
+  color: var(--insp-ink-primary);
+}
+.filter-search input:focus {
+  outline: none;
+  border-color: var(--insp-accent);
+  box-shadow: 0 0 0 3px var(--insp-accent-paler);
+}
+
+/* ─ Archive rows ─────── */
+.archive { display: flex; flex-direction: column; }
+
+.archive-row {
+  display: grid;
+  grid-template-columns: 56px 320px 1fr 280px;
+  gap: var(--insp-sp-5);
+  align-items: start;
+  padding: var(--insp-sp-5) 0;
+  border-bottom: 1px solid var(--insp-border-subtle);
+  cursor: pointer;
+  transition: background var(--insp-t-fast);
+}
+.archive-row:hover {
+  background: linear-gradient(to right, var(--insp-bg-subtle), transparent 80%);
+}
+
+.row-num {
+  font-size: 26px; font-weight: 500;
+  color: var(--insp-ink-quaternary);
+  letter-spacing: -0.02em; line-height: 1;
+  padding-top: 2px;
+}
+
+.row-meta { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.row-name-line {
+  display: flex; align-items: center; gap: var(--insp-sp-2);
+  flex-wrap: wrap;
+}
+.row-name {
+  font-family: var(--insp-font-display);
+  font-size: 18px; font-weight: 500;
+  color: var(--insp-ink-primary);
+  letter-spacing: var(--insp-tracking-tight);
+}
+.version-tag {
+  font-family: var(--insp-font-mono);
+  font-size: var(--insp-text-xs); font-weight: 600;
+  color: var(--insp-accent);
+  padding: 1px 6px;
+  border: 1px solid var(--insp-accent);
+  border-radius: var(--insp-radius-sm);
+}
+.row-code-line {
+  display: flex; align-items: center; gap: 6px;
+  font-size: var(--insp-text-xs);
+  color: var(--insp-ink-tertiary);
+}
+.row-code {
+  font-family: var(--insp-font-mono);
+  font-weight: 500;
+  color: var(--insp-ink-secondary);
+}
+.row-sep { color: var(--insp-ink-quaternary); }
+
+.row-desc {
+  font-size: var(--insp-text-md);
+  line-height: var(--insp-leading-snug);
+  color: var(--insp-ink-secondary);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.row-actions {
+  display: flex; gap: var(--insp-sp-2);
+  justify-content: flex-end;
+  align-items: flex-start;
+  flex-wrap: wrap;
+  padding-top: 2px;
+}
+
+/* ─ Empty ─────── */
+.empty {
+  padding: 80px 0; text-align: center;
+}
+.empty-hint {
+  margin: var(--insp-sp-4) 0 var(--insp-sp-5);
+  color: var(--insp-ink-tertiary);
+  font-size: var(--insp-text-sm);
+}
+
+/* ─ Responsive ─────── */
+@media (max-width: 1100px) {
+  .archive-row { grid-template-columns: 44px 1fr 280px; }
+  .row-desc { display: none; }
+}
+@media (max-width: 800px) {
+  .template-archive { padding: 20px 16px 64px; }
+  .page-title { font-size: 32px; }
+  .archive-row { grid-template-columns: 44px 1fr; gap: var(--insp-sp-3); }
+  .row-actions { grid-column: 2; }
+}
+</style>

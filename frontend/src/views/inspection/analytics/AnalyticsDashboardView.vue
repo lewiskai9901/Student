@@ -1,44 +1,67 @@
 <template>
-  <div class="analytics-dashboard">
-    <!-- Filters -->
-    <el-card shadow="never" class="mb-4">
-      <div class="flex items-center gap-4 flex-wrap">
-        <div class="flex items-center gap-2">
-          <span class="text-sm text-gray-500">项目</span>
-          <el-select v-model="filters.projectId" placeholder="选择项目" class="w-52" @change="onProjectChange">
+  <div class="analytics-dashboard insp-shell">
+    <!-- ── Editorial header ─────────── -->
+    <header class="page-head">
+      <div>
+        <div class="insp-eyebrow">数据分析 / Operations Analytics</div>
+        <h1 class="insp-display page-title">分析报表</h1>
+      </div>
+      <!-- Filters -->
+      <div class="filter-bar">
+        <div class="filter-group">
+          <span class="insp-caps">项目</span>
+          <el-select v-model="filters.projectId" placeholder="选择项目" class="w-52" @change="onProjectChange" size="small">
             <el-option v-for="p in projects" :key="p.id" :label="p.projectName" :value="p.id" />
           </el-select>
         </div>
-        <div class="flex items-center gap-2">
-          <span class="text-sm text-gray-500">日期</span>
-          <el-date-picker v-model="filters.date" type="date" value-format="YYYY-MM-DD" placeholder="选择日期" class="w-40" />
+        <div class="filter-group">
+          <span class="insp-caps">日期</span>
+          <el-date-picker v-model="filters.date" type="date" value-format="YYYY-MM-DD" placeholder="选择日期" class="w-40" size="small" />
         </div>
-        <div class="flex items-center gap-2">
-          <span class="text-sm text-gray-500">周期</span>
-          <el-select v-model="filters.periodType" class="w-28">
+        <div class="filter-group">
+          <span class="insp-caps">周期</span>
+          <el-select v-model="filters.periodType" class="w-28" size="small">
             <el-option v-for="(cfg, key) in PeriodTypeConfig" :key="key" :label="cfg.label" :value="key" />
           </el-select>
         </div>
-        <el-button type="primary" :icon="Refresh" @click="loadDashboard">刷新</el-button>
+        <button class="insp-btn insp-btn--accent insp-btn--sm" @click="loadDashboard">刷新</button>
       </div>
-    </el-card>
+    </header>
 
-    <!-- Stats Bar -->
-    <el-card shadow="never" class="mb-4" v-if="correctiveSummary">
-      <div class="flex items-center gap-6 text-sm">
-        <span>整改总数 <b>{{ correctiveSummary.total }}</b></span>
-        <el-divider direction="vertical" />
-        <span>待分配 <b class="text-gray-500">{{ correctiveSummary.open }}</b></span>
-        <el-divider direction="vertical" />
-        <span>整改中 <b class="text-warning">{{ correctiveSummary.inProgress }}</b></span>
-        <el-divider direction="vertical" />
-        <span>已验证 <b class="text-success">{{ correctiveSummary.verified }}</b></span>
-        <el-divider direction="vertical" />
-        <span>逾期 <b class="text-danger">{{ correctiveSummary.overdue }}</b></span>
-        <el-divider direction="vertical" />
-        <span>紧急 <b class="text-danger">{{ correctiveSummary.critical }}</b></span>
+    <hr class="insp-rule insp-rule--strong head-divider" />
+
+    <!-- KPI Bar -->
+    <section v-if="correctiveSummary" class="kpi-row">
+      <div class="kpi-cell">
+        <span class="insp-stat__label">整改总数</span>
+        <span class="kpi-cell__value insp-num">{{ correctiveSummary.total }}</span>
       </div>
-    </el-card>
+      <div class="kpi-rule" />
+      <div class="kpi-cell">
+        <span class="insp-stat__label">待分配</span>
+        <span class="kpi-cell__value insp-num" style="color: var(--insp-pending)">{{ correctiveSummary.open }}</span>
+      </div>
+      <div class="kpi-rule" />
+      <div class="kpi-cell">
+        <span class="insp-stat__label">整改中</span>
+        <span class="kpi-cell__value insp-num" style="color: var(--insp-warn)">{{ correctiveSummary.inProgress }}</span>
+      </div>
+      <div class="kpi-rule" />
+      <div class="kpi-cell">
+        <span class="insp-stat__label">已验证</span>
+        <span class="kpi-cell__value insp-num" style="color: var(--insp-pass)">{{ correctiveSummary.verified }}</span>
+      </div>
+      <div class="kpi-rule" />
+      <div class="kpi-cell">
+        <span class="insp-stat__label">逾期</span>
+        <span class="kpi-cell__value insp-num" style="color: var(--insp-fail)">{{ correctiveSummary.overdue }}</span>
+      </div>
+      <div class="kpi-rule" />
+      <div class="kpi-cell">
+        <span class="insp-stat__label">紧急</span>
+        <span class="kpi-cell__value insp-num" style="color: var(--insp-fail)">{{ correctiveSummary.critical }}</span>
+      </div>
+    </section>
 
     <!-- Top Row: Ranking + Trend -->
     <div class="grid grid-cols-1 xl:grid-cols-2 gap-4 mb-4">
@@ -406,7 +429,55 @@ function passRate(row: DailySummary): string {
 
 <style scoped>
 .analytics-dashboard {
-  padding: 0;
+  padding: 32px 48px 64px;
+  max-width: 1500px;
+  margin: 0 auto;
+  min-height: 100vh;
+  background: var(--insp-bg-page);
+}
+
+/* ── Editorial header ── */
+.page-head {
+  display: flex; align-items: flex-end; justify-content: space-between;
+  gap: var(--insp-sp-7);
+  margin-bottom: var(--insp-sp-4);
+}
+.page-title { font-size: 44px; margin: 0; font-weight: 500; }
+.head-divider { margin: 0 0 var(--insp-sp-7); }
+
+.filter-bar {
+  display: flex; align-items: center;
+  gap: var(--insp-sp-4); flex-wrap: wrap;
+}
+.filter-group {
+  display: flex; align-items: center; gap: var(--insp-sp-2);
+}
+.filter-group .insp-caps { color: var(--insp-ink-tertiary); }
+
+/* ── KPI row ── */
+.kpi-row {
+  display: flex; align-items: stretch;
+  background: var(--insp-bg-surface);
+  border: 1px solid var(--insp-border-subtle);
+  border-radius: var(--insp-radius-md);
+  padding: var(--insp-sp-5) var(--insp-sp-4);
+  margin-bottom: var(--insp-sp-6);
+}
+.kpi-cell {
+  flex: 1;
+  display: flex; flex-direction: column;
+  gap: 4px;
+  padding: 0 var(--insp-sp-4);
+}
+.kpi-cell__value {
+  font-family: var(--insp-font-mono);
+  font-size: 32px; font-weight: 600;
+  letter-spacing: -0.025em; line-height: 1;
+  color: var(--insp-ink-primary);
+}
+.kpi-rule {
+  width: 1px; background: var(--insp-border-subtle);
+  margin: 4px 0;
 }
 
 .chart-container {
