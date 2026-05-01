@@ -562,26 +562,33 @@ onMounted(async () => {
 </script>
 
 <template>
-  <div class="pdv" v-loading="loading">
-    <!-- ====== Header ====== -->
+  <div class="pdv insp-shell" v-loading="loading">
+    <!-- ====== Header (Audit Console redesign) ====== -->
     <div class="pdv-header">
       <div class="pdv-header-left">
-        <button class="pdv-back-btn" @click="goBack">
+        <button class="pdv-back-btn" @click="goBack" title="返回">
           <ArrowLeft class="w-4 h-4" />
         </button>
-        <div>
+        <div class="pdv-head-block">
+          <div class="insp-eyebrow">检查项目 · {{ project?.projectCode || '加载中' }}</div>
           <div class="pdv-title">
-            <span>{{ project?.projectName || '加载中...' }}</span>
-            <span v-if="project" class="pdv-status-dot" :class="`status-${project.status.toLowerCase()}`">
+            <span class="pdv-title__name">{{ project?.projectName || '加载中...' }}</span>
+            <span v-if="project" class="insp-chip" :class="{
+              'insp-chip--pending': project.status === 'DRAFT',
+              'insp-chip--info': project.status === 'PUBLISHED',
+              'insp-chip--warn': project.status === 'PAUSED',
+              'insp-chip--pass': project.status === 'COMPLETED',
+              'insp-chip--fail': project.status === 'ARCHIVED',
+            }">
               {{ ProjectStatusConfig[project.status as ProjectStatus]?.label }}
             </span>
           </div>
           <div class="pdv-subtitle" v-if="project">
-            <span v-if="project.startDate">{{ project.startDate }}<template v-if="project.endDate"> ~ {{ project.endDate }}</template></span>
+            <span v-if="project.startDate" class="insp-num">{{ project.startDate }}<template v-if="project.endDate"> ~ {{ project.endDate }}</template></span>
             <span v-if="rootSectionName" class="pdv-subtitle-sep">·</span>
             <span v-if="rootSectionName">{{ rootSectionName }}</span>
             <span v-if="inspectors.length" class="pdv-subtitle-sep">·</span>
-            <span v-if="inspectors.length">{{ inspectors.length }} 人</span>
+            <span v-if="inspectors.length"><span class="insp-num">{{ inspectors.length }}</span> 人</span>
           </div>
         </div>
       </div>
@@ -1307,12 +1314,14 @@ onMounted(async () => {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
-  margin-bottom: 18px;
+  padding-bottom: var(--insp-sp-5);
+  border-bottom: 2px solid var(--insp-ink-primary);
+  margin-bottom: var(--insp-sp-6);
 }
 .pdv-header-left {
   display: flex;
   align-items: flex-start;
-  gap: 12px;
+  gap: var(--insp-sp-3);
 }
 .pdv-back-btn {
   display: flex;
@@ -1320,25 +1329,34 @@ onMounted(async () => {
   justify-content: center;
   width: 32px;
   height: 32px;
-  border: 1px solid #e5e7eb;
-  border-radius: 8px;
-  background: #fff;
-  color: #6b7280;
+  border: 1px solid var(--insp-border-default);
+  border-radius: var(--insp-radius-md);
+  background: var(--insp-bg-surface);
+  color: var(--insp-ink-secondary);
   cursor: pointer;
-  transition: all 0.15s;
+  transition: background var(--insp-t-fast), border-color var(--insp-t-fast), color var(--insp-t-fast);
   flex-shrink: 0;
-  margin-top: 2px;
+  margin-top: 4px;
 }
-.pdv-back-btn:hover { background: #f3f4f6; color: #374151; }
+.pdv-back-btn:hover {
+  background: var(--insp-bg-subtle);
+  border-color: var(--insp-border-strong);
+  color: var(--insp-ink-primary);
+}
+.pdv-head-block { display: flex; flex-direction: column; gap: 4px; }
 .pdv-title {
   display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 18px;
-  font-weight: 700;
-  color: #111827;
-  line-height: 1.3;
+  align-items: baseline;
+  gap: var(--insp-sp-3);
+  font-family: var(--insp-font-display);
+  font-size: 28px;
+  font-weight: 500;
+  letter-spacing: var(--insp-tracking-display);
+  color: var(--insp-ink-primary);
+  line-height: 1.15;
+  margin-top: 2px;
 }
+.pdv-title__name { display: inline-block; }
 .pdv-status-dot {
   font-size: 11px;
   font-weight: 600;

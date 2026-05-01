@@ -17,6 +17,7 @@ import {
   Star, Search, Target,
 } from 'lucide-vue-next'
 import { useInspExecutionStore } from '@/stores/inspection/inspExecutionStore'
+import { useScoringShortcuts } from '@/composables/useScoringShortcuts'
 import {
   TaskStatusConfig, ScoringModeConfig,
   type TaskStatus, type ScoringMode,
@@ -229,6 +230,17 @@ function goToNextTarget() {
 function goToPrevTarget() {
   if (hasPrevTarget.value) selectTarget(filteredTargets.value[currentTargetIdx.value - 1].targetId)
 }
+
+// Audit Console redesign: 键盘快捷键 (J/K 切换目标 · S 提交 · / 搜索)
+useScoringShortcuts({
+  onPrev: goToPrevTarget,
+  onNext: goToNextTarget,
+  onSubmit: () => { handleSubmitTask?.() },
+  onSearch: () => {
+    const el = document.querySelector('input[placeholder*="搜索目标"]') as HTMLElement | null
+    if (el) el.focus()
+  },
+})
 
 const currentTargetName = computed(() => {
   const t = uniqueTargets.value.find(t => t.targetId === selectedTargetId.value)

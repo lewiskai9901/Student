@@ -1,76 +1,68 @@
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+/**
+ * TaskReviewWorkbenchView — 任务审核工作台 (Audit Console redesign)
+ * 双栏 + 键盘驱动 (J/K 切换 · A 通过+发布 · R 驳回 · E 延期 · Esc 取消)
+ */
+import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { Check, X, Eye, MessageCircleWarning, Calendar, AlertTriangle } from 'lucide-vue-next'
 import SubmitAppealDialog from '@/views/inspection/appeals/components/SubmitAppealDialog.vue'
-import { extendTaskDeadline } from '@/api/inspection/task'
-import { getTasks, reviewTask, rejectTask, publishTask } from '@/api/inspection/task'
-import { getSubmissions } from '@/api/inspection/submission'
-import { getDetails } from '@/api/inspection/submission'
+import {
+  getTasks, reviewTask, rejectTask, publishTask, extendTaskDeadline,
+} from '@/api/inspection/task'
+import { getSubmissions, getDetails } from '@/api/inspection/submission'
 import type { InspTask, InspSubmission, SubmissionDetail } from '@/types/insp/project'
 import { useAuthStore } from '@/stores/auth'
 import { TaskStatusConfig, type TaskStatus } from '@/types/insp/enums'
 
 const authStore = useAuthStore()
+
+const MAX_AUTO_REJECT = 3
+
+// ── State ──
 const loading = ref(false)
+const loadingDetails = ref(false)
+const submitting = ref(false)
 const submittedTasks = ref<InspTask[]>([])
 const selectedTaskId = ref<number | null>(null)
-const reviewComment = ref('')
-const reviewing = ref(false)
-
-// Detail data for selected task
 const taskSubmissions = ref<InspSubmission[]>([])
 const submissionDetails = ref<Map<number, SubmissionDetail[]>>(new Map())
-const loadingDetails = ref(false)
 
-// 申诉对话框状态
+const reviewComment = ref('')
+const showRejectInline = ref(false)
+
+// 申诉对话框
 const appealDialog = ref(false)
 const appealDetailId = ref<number | null>(null)
 const appealItemName = ref<string | undefined>(undefined)
 const appealCurrentScore = ref<number | undefined>(undefined)
 
-function openAppealDialog(d: SubmissionDetail) {
-  appealDetailId.value = d.id
-  appealItemName.value = d.itemName
-  appealCurrentScore.value = d.score ?? undefined
-  appealDialog.value = true
-}
-
-const MAX_AUTO_REJECT_COUNT = 3 // 与后端 InspTask.MAX_AUTO_REJECT_COUNT 保持一致
-
-async function handleExtendDeadline() {
-  if (!selectedTaskId.value || !selectedTask.value) return
-  const current = selectedTask.value.extendedTo || selectedTask.value.taskDate
-  try {
-    const { value } = await ElMessageBox.prompt(
-      `当前期限: ${current}\n请输入新延期日期 (YYYY-MM-DD), 必须晚于当前期限`,
-      '延长任务期限',
-      {
-        inputPattern: /^\d{4}-\d{2}-\d{2}$/,
-        inputErrorMessage: '日期格式必须为 YYYY-MM-DD',
-        inputValue: '',
-      },
-    )
-    await extendTaskDeadline(selectedTaskId.value, value)
-    ElMessage.success(`已延期到 ${value}`)
-    // 更新本地状态
-    if (selectedTask.value) selectedTask.value.extendedTo = value
-  } catch (e: any) {
-    if (e?.message) ElMessage.error(e.message)
-  }
-}
-
 const selectedTask = computed(() =>
   submittedTasks.value.find(t => t.id === selectedTaskId.value) ?? null
 )
 
+const subjectAggregate = computed(() => {
+  const subs = taskSubmissions.value
+  const total = subs.length
+  const scored = subs.filter(s => s.finalScore != null).length
+  const passed = subs.filter(s => s.passed === true).length
+  const failed = subs.filter(s => s.passed === false).length
+  const avgScore = subs.length > 0
+    ? subs.reduce((sum, s) => sum + Number(s.finalScore ?? 0), 0) / subs.length
+    : 0
+  return { total, scored, passed, failed, avgScore }
+})
+
+// ── Loaders ──
 async function loadSubmittedTasks() {
   loading.value = true
   try {
-    const allTasks = await getTasks()
-    submittedTasks.value = allTasks.filter(t => t.status === 'SUBMITTED' || t.status === 'UNDER_REVIEW')
+    const all = await getTasks()
+    submittedTasks.value = all.filter(t => t.status === 'SUBMITTED' || t.status === 'UNDER_REVIEW')
+    if (!selectedTaskId.value && submittedTasks.value.length > 0) {
+      await selectTask(submittedTasks.value[0])
+    }
   } catch (e: any) {
-    ElMessage.error(e.message || '加载待审核任务失败')
+    ElMessage.error(e.message || '加载待审任务失败')
   } finally {
     loading.value = false
   }
@@ -79,17 +71,15 @@ async function loadSubmittedTasks() {
 async function selectTask(task: InspTask) {
   selectedTaskId.value = task.id
   reviewComment.value = ''
-  // Load submissions and details for this task
+  showRejectInline.value = false
   loadingDetails.value = true
   try {
-    const subs = await getSubmissions(task.projectId)
+    const subs = await getSubmissions(task.projectId as any)
     taskSubmissions.value = subs.filter(s => s.taskId === task.id)
-    // Load details for each submission
     const detailMap = new Map<number, SubmissionDetail[]>()
     for (const sub of taskSubmissions.value) {
       try {
-        const details = await getDetails(sub.id)
-        detailMap.set(sub.id, details)
+        detailMap.set(sub.id, await getDetails(sub.id))
       } catch { /* ignore */ }
     }
     submissionDetails.value = detailMap
@@ -100,198 +90,371 @@ async function selectTask(task: InspTask) {
   }
 }
 
-async function handleApprove() {
+// ── Verdict actions ──
+async function approve() {
   if (!selectedTaskId.value) return
-  reviewing.value = true
+  submitting.value = true
   try {
-    const userName = authStore.userName || 'admin'
-    // Start review + complete review + publish in sequence
     await reviewTask(selectedTaskId.value, {
-      reviewerName: userName,
+      reviewerName: authStore.userName || 'admin',
       comment: reviewComment.value || '审核通过',
     })
-    // After startReview (SUBMITTED→UNDER_REVIEW) + review (→REVIEWED), then publish
     await publishTask(selectedTaskId.value)
     ElMessage.success('已通过并发布')
-    submittedTasks.value = submittedTasks.value.filter(t => t.id !== selectedTaskId.value)
-    selectedTaskId.value = null
-    reviewComment.value = ''
+    moveToNext()
   } catch (e: any) {
     ElMessage.error(e.message || '审批失败')
   } finally {
-    reviewing.value = false
+    submitting.value = false
   }
 }
 
-async function handleReject() {
+async function reject() {
   if (!selectedTaskId.value) return
   if (!reviewComment.value.trim()) {
-    ElMessage.warning('驳回时请填写审核意见')
+    ElMessage.warning('驳回必须填写审核意见')
     return
   }
-  reviewing.value = true
+  submitting.value = true
   try {
     await rejectTask(selectedTaskId.value, reviewComment.value)
-    ElMessage.success('已驳回，任务退回给检查员修改')
-    submittedTasks.value = submittedTasks.value.filter(t => t.id !== selectedTaskId.value)
-    selectedTaskId.value = null
-    reviewComment.value = ''
+    ElMessage.success('已驳回, 任务退回给检查员修改')
+    moveToNext()
   } catch (e: any) {
     ElMessage.error(e.message || '驳回失败')
   } finally {
-    reviewing.value = false
+    submitting.value = false
   }
 }
 
-function getStatusLabel(status: string): string {
-  return TaskStatusConfig[status as TaskStatus]?.label || status
+async function extend() {
+  if (!selectedTaskId.value || !selectedTask.value) return
+  const current = (selectedTask.value as any).extendedTo || selectedTask.value.taskDate
+  try {
+    const { value } = await ElMessageBox.prompt(
+      `当前期限: ${current}\n输入新延期日期 YYYY-MM-DD, 必须晚于当前`,
+      '延长任务期限',
+      { inputPattern: /^\d{4}-\d{2}-\d{2}$/, inputErrorMessage: '日期格式必须为 YYYY-MM-DD', inputValue: '' },
+    )
+    await extendTaskDeadline(selectedTaskId.value, value)
+    ElMessage.success(`已延期到 ${value}`)
+    if (selectedTask.value) (selectedTask.value as any).extendedTo = value
+  } catch (e: any) {
+    if (e?.message) ElMessage.error(e.message)
+  }
 }
 
-function getScoreColor(score: number): string {
-  if (score >= 85) return '#10b981'
-  if (score >= 60) return '#f59e0b'
-  return '#ef4444'
+function moveToNext() {
+  const remaining = submittedTasks.value.filter(t => t.id !== selectedTaskId.value)
+  submittedTasks.value = remaining
+  if (remaining.length) {
+    selectTask(remaining[0])
+  } else {
+    selectedTaskId.value = null
+    taskSubmissions.value = []
+    submissionDetails.value = new Map()
+    loadSubmittedTasks()
+  }
 }
 
-onMounted(() => loadSubmittedTasks())
+// ── Appeal launcher ──
+function openAppeal(d: SubmissionDetail) {
+  appealDetailId.value = d.id
+  appealItemName.value = d.itemName
+  appealCurrentScore.value = d.score ?? undefined
+  appealDialog.value = true
+}
+
+// ── Helpers ──
+function fmtDate(s?: string | null) {
+  if (!s) return '—'
+  const d = new Date(s)
+  return `${d.getFullYear()}.${String(d.getMonth() + 1).padStart(2, '0')}.${String(d.getDate()).padStart(2, '0')}`
+}
+
+function passVariant(passed: boolean | null | undefined): string {
+  if (passed === true) return 'pass'
+  if (passed === false) return 'fail'
+  return 'pending'
+}
+
+function rejectionVariant(count?: number) {
+  if (!count) return 'pending'
+  if (count >= MAX_AUTO_REJECT) return 'fail'
+  if (count >= 2) return 'warn'
+  return 'info'
+}
+
+// ── Keyboard hotkeys ──
+function onKey(e: KeyboardEvent) {
+  const tag = (e.target as HTMLElement)?.tagName
+  if (tag === 'INPUT' || tag === 'TEXTAREA') return
+  if (e.metaKey || e.ctrlKey || e.altKey) return
+
+  const idx = submittedTasks.value.findIndex(t => t.id === selectedTaskId.value)
+  switch (e.key) {
+    case 'j': case 'ArrowDown':
+      if (idx < submittedTasks.value.length - 1) selectTask(submittedTasks.value[idx + 1])
+      e.preventDefault()
+      break
+    case 'k': case 'ArrowUp':
+      if (idx > 0) selectTask(submittedTasks.value[idx - 1])
+      e.preventDefault()
+      break
+    case 'a':
+      if (selectedTask.value && !showRejectInline.value) approve()
+      e.preventDefault()
+      break
+    case 'r':
+      showRejectInline.value = true
+      e.preventDefault()
+      break
+    case 'e':
+      extend()
+      e.preventDefault()
+      break
+    case 'Escape':
+      showRejectInline.value = false
+      break
+  }
+}
+
+watch(selectedTaskId, () => { reviewComment.value = ''; showRejectInline.value = false })
+
+onMounted(() => {
+  loadSubmittedTasks()
+  window.addEventListener('keydown', onKey)
+})
+onUnmounted(() => window.removeEventListener('keydown', onKey))
 </script>
 
 <template>
-  <div class="review-page">
-    <header class="review-header">
-      <span class="review-title">审核工作台</span>
-      <span class="review-count" v-if="submittedTasks.length > 0">{{ submittedTasks.length }} 个待审核</span>
+  <div class="insp-shell task-review">
+    <!-- ── Operator bar ─────────────── -->
+    <header class="op-bar">
+      <div class="op-bar__lead">
+        <span class="insp-stamp">审核台 · 待审 {{ submittedTasks.length }}</span>
+        <h1 class="op-title">检查任务审核工作台</h1>
+      </div>
+      <div class="op-bar__right">
+        <div class="kbd-tray">
+          <span class="kbd-pair"><kbd class="insp-kbd">J</kbd><kbd class="insp-kbd">K</kbd> 切换</span>
+          <span class="kbd-pair"><kbd class="insp-kbd insp-kbd--inverted">A</kbd> 通过+发布</span>
+          <span class="kbd-pair"><kbd class="insp-kbd">R</kbd> 驳回</span>
+          <span class="kbd-pair"><kbd class="insp-kbd">E</kbd> 延期</span>
+        </div>
+        <button class="insp-btn insp-btn--ghost" @click="loadSubmittedTasks">刷新</button>
+      </div>
     </header>
 
-    <div class="review-body">
-      <!-- Left: Task List -->
-      <div class="review-sidebar">
-        <div v-loading="loading" class="review-task-list">
-          <div v-if="submittedTasks.length === 0 && !loading" class="review-empty">
-            <Check class="w-8 h-8 text-green-300 mx-auto mb-2" />
-            <div>暂无待审核任务</div>
-          </div>
-          <div
-            v-for="task in submittedTasks" :key="task.id"
-            class="review-task-item"
-            :class="{ selected: selectedTaskId === task.id }"
-            @click="selectTask(task)"
+    <!-- ── Two-pane ─────────────── -->
+    <div class="pane">
+      <!-- Queue -->
+      <aside class="queue" v-loading="loading">
+        <div class="queue-meta">
+          <span class="insp-caps">待审清单</span>
+          <span class="queue-meta__count insp-num">{{ submittedTasks.length }}</span>
+        </div>
+        <ol class="queue-list">
+          <li
+            v-for="(t, i) in submittedTasks" :key="t.id"
+            class="queue-item"
+            :class="{ 'is-selected': selectedTaskId === t.id }"
+            @click="selectTask(t)"
           >
-            <div class="rti-top">
-              <span class="rti-code">{{ task.taskCode }}</span>
-              <span class="rti-status">{{ getStatusLabel(task.status) }}</span>
+            <span class="queue-item__idx insp-num">{{ String(i + 1).padStart(2, '0') }}</span>
+            <div class="queue-item__body">
+              <div class="queue-item__code">{{ t.taskCode }}</div>
+              <div class="queue-item__sub">
+                <span>{{ t.inspectorName || `检查员#${t.inspectorId}` }}</span>
+                <span class="queue-item__sep">·</span>
+                <span class="insp-num">{{ fmtDate(t.taskDate) }}</span>
+              </div>
+              <div class="queue-item__metrics">
+                <span class="insp-chip insp-chip--info">
+                  {{ TaskStatusConfig[t.status]?.label || t.status }}
+                </span>
+                <span class="queue-item__progress insp-num">
+                  {{ t.completedTargets || 0 }}<span class="dim">/{{ t.totalTargets || 0 }}</span>
+                </span>
+              </div>
             </div>
-            <div class="rti-meta">
-              <span>{{ task.inspectorName || '未知' }}</span>
-              <span>{{ task.taskDate }}</span>
-              <span>{{ task.completedTargets }}/{{ task.totalTargets }}目标</span>
+            <span
+              v-if="(t as any).rejectionCount && (t as any).rejectionCount > 0"
+              class="insp-chip insp-chip--ghost"
+              :class="`insp-chip--${rejectionVariant((t as any).rejectionCount)}`"
+              :title="`已驳回 ${(t as any).rejectionCount}/${MAX_AUTO_REJECT} 次`"
+            >驳{{ (t as any).rejectionCount }}</span>
+          </li>
+          <li v-if="!loading && submittedTasks.length === 0" class="queue-empty">
+            <div class="insp-stamp">无待审</div>
+          </li>
+        </ol>
+      </aside>
+
+      <!-- Detail -->
+      <main class="detail" v-loading="loadingDetails">
+        <template v-if="selectedTask">
+          <!-- Detail head -->
+          <div class="detail-head">
+            <div class="detail-head__lead">
+              <div class="insp-eyebrow">案件 · 当前正在审理</div>
+              <h2 class="detail-code">{{ selectedTask.taskCode }}</h2>
+              <div class="detail-meta">
+                <span>{{ selectedTask.inspectorName || `检查员#${selectedTask.inspectorId}` }} 提交</span>
+                <span class="dot">·</span>
+                <span class="insp-num">{{ fmtDate(selectedTask.taskDate) }}</span>
+                <span v-if="(selectedTask as any).extendedTo" class="dot">·</span>
+                <span v-if="(selectedTask as any).extendedTo" class="extended-tag">
+                  延至 <span class="insp-num">{{ (selectedTask as any).extendedTo }}</span>
+                </span>
+              </div>
+            </div>
+            <!-- Aggregate stats -->
+            <div class="detail-head__metrics">
+              <div class="insp-stat">
+                <span class="insp-stat__value">{{ subjectAggregate.scored }}<span class="dim">/{{ subjectAggregate.total }}</span></span>
+                <span class="insp-stat__label">已评分</span>
+              </div>
+              <div class="insp-rule rule-vert" />
+              <div class="insp-stat">
+                <span class="insp-stat__value" :style="{ color: subjectAggregate.avgScore < 0 ? 'var(--insp-fail)' : 'var(--insp-pass)' }">
+                  {{ subjectAggregate.avgScore.toFixed(1) }}
+                </span>
+                <span class="insp-stat__label">平均得分</span>
+              </div>
+              <div class="insp-rule rule-vert" />
+              <div class="insp-stat">
+                <span class="insp-stat__value">
+                  <span class="metric-pass">{{ subjectAggregate.passed }}</span>
+                  <span class="dim"> / </span>
+                  <span class="metric-fail">{{ subjectAggregate.failed }}</span>
+                </span>
+                <span class="insp-stat__label">通过 / 未达标</span>
+              </div>
             </div>
           </div>
-        </div>
-      </div>
 
-      <!-- Right: Review Panel -->
-      <div class="review-main">
-        <div v-if="!selectedTask" class="review-placeholder">
-          <Eye class="w-10 h-10 text-gray-300 mx-auto mb-3" />
-          <div class="text-gray-400">选择左侧任务查看打分详情</div>
-        </div>
-
-        <div v-else class="review-detail" v-loading="loadingDetails">
-          <!-- Task Info -->
-          <div class="rd-header">
-            <div>
-              <span class="rd-code">{{ selectedTask.taskCode }}</span>
-              <span class="rd-inspector">检查员: {{ selectedTask.inspectorName || '-' }}</span>
-            </div>
-            <span class="rd-date">
-              {{ selectedTask.taskDate }}
-              <span v-if="selectedTask.extendedTo" class="text-orange-500 ml-1" :title="`原始期限 ${selectedTask.taskDate}, 已延期`">
-                → {{ selectedTask.extendedTo }}
-              </span>
+          <!-- Rejection notice -->
+          <div
+            v-if="(selectedTask as any).rejectionCount > 0 || (selectedTask as any).extendedTo"
+            class="alert-strip"
+            :class="{ 'alert-strip--max': (selectedTask as any).rejectionCount >= MAX_AUTO_REJECT }"
+          >
+            <span class="alert-strip__icon">!</span>
+            <span class="alert-strip__text">
+              已驳回 <strong class="insp-num">{{ (selectedTask as any).rejectionCount || 0 }}/{{ MAX_AUTO_REJECT }}</strong> 次
+              <template v-if="(selectedTask as any).rejectionCount >= MAX_AUTO_REJECT">
+                · 已达自动驳回上限, 再驳回将被拒, 请延期或重新分派检查员
+              </template>
             </span>
+            <button class="insp-btn insp-btn--sm" @click="extend">
+              <kbd class="insp-kbd">E</kbd> 延期
+            </button>
           </div>
 
-          <!-- P1#5 状态条: 驳回次数 + 延期入口 -->
-          <div v-if="(selectedTask.rejectionCount ?? 0) > 0 || selectedTask.extendedTo" class="rd-rejection-bar">
-            <div class="flex items-center gap-3 text-sm">
-              <span v-if="(selectedTask.rejectionCount ?? 0) > 0" class="flex items-center gap-1">
-                <AlertTriangle class="w-4 h-4 text-orange-500" />
-                <span class="text-gray-700">已驳回 <strong :class="(selectedTask.rejectionCount ?? 0) >= MAX_AUTO_REJECT_COUNT ? 'text-red-600' : 'text-orange-600'">{{ selectedTask.rejectionCount }}</strong> 次</span>
-                <span class="text-gray-400">/ 上限 {{ MAX_AUTO_REJECT_COUNT }}</span>
-              </span>
-              <span v-if="selectedTask.extendedTo" class="flex items-center gap-1 text-gray-700">
-                <Calendar class="w-4 h-4 text-blue-500" />
-                有效期已延至 <strong>{{ selectedTask.extendedTo }}</strong>
-              </span>
-              <el-button link type="primary" size="small" @click="handleExtendDeadline">
-                <Calendar class="w-4 h-4 mr-1" />延期
-              </el-button>
-              <span v-if="(selectedTask.rejectionCount ?? 0) >= MAX_AUTO_REJECT_COUNT" class="text-red-600 text-xs ml-auto">
-                已达自动驳回上限, 再驳回将被拒, 请延期或重新分派检查员
-              </span>
+          <hr class="insp-rule" />
+
+          <!-- Submissions -->
+          <section class="subs">
+            <div class="subs-head">
+              <span class="insp-eyebrow">受检对象 · {{ taskSubmissions.length }} 个</span>
             </div>
-          </div>
-
-          <!-- Submissions & Scores -->
-          <div class="rd-submissions">
-            <div v-for="sub in taskSubmissions" :key="sub.id" class="rd-sub-card">
-              <div class="rd-sub-header">
-                <span class="rd-sub-target">{{ sub.targetName || `目标#${sub.targetId}` }}</span>
-                <span v-if="sub.finalScore != null" class="rd-sub-score" :style="{ color: getScoreColor(sub.finalScore) }">
-                  {{ sub.finalScore }}分
-                </span>
-                <span v-if="sub.grade" class="rd-sub-grade">{{ sub.grade }}</span>
-                <span class="rd-sub-status" :class="sub.passed === true ? 'pass' : sub.passed === false ? 'fail' : ''">
-                  {{ sub.passed === true ? '达标' : sub.passed === false ? '未达标' : '' }}
-                </span>
-              </div>
-
-              <!-- Detail Items -->
-              <div v-if="submissionDetails.get(sub.id)?.length" class="rd-detail-list">
-                <div v-for="d in submissionDetails.get(sub.id)" :key="d.id" class="rd-detail-row">
-                  <span class="rd-detail-name">{{ d.itemName }}</span>
-                  <span class="rd-detail-mode" v-if="d.scoringMode">{{ d.scoringMode }}</span>
-                  <span class="rd-detail-response">{{ d.responseValue || '-' }}</span>
-                  <span class="rd-detail-score" v-if="d.score != null" :style="{ color: getScoreColor(d.score) }">
-                    {{ d.score }}分
+            <article v-for="sub in taskSubmissions" :key="sub.id" class="sub-card">
+              <header class="sub-card__head">
+                <div class="sub-card__lead">
+                  <span class="sub-card__name">{{ sub.targetName || `目标#${sub.targetId}` }}</span>
+                  <span class="insp-chip" :class="`insp-chip--${passVariant(sub.passed)}`">
+                    {{ sub.passed === true ? '达标' : sub.passed === false ? '未达标' : '未评定' }}
                   </span>
-                  <el-button link type="warning" size="small"
-                             title="对此扣分项发起申诉"
-                             @click="openAppealDialog(d)">
-                    <MessageCircleWarning class="w-4 h-4" />
-                  </el-button>
                 </div>
+                <div class="sub-card__metrics">
+                  <span v-if="sub.grade" class="insp-stamp">{{ sub.grade }}</span>
+                  <span v-if="sub.finalScore != null" class="sub-card__score insp-num"
+                        :style="{ color: Number(sub.finalScore) < 0 ? 'var(--insp-fail)' : 'var(--insp-pass)' }">
+                    {{ Number(sub.finalScore).toFixed(1) }}
+                  </span>
+                </div>
+              </header>
+              <ul v-if="(submissionDetails.get(sub.id) || []).length" class="detail-rows">
+                <li v-for="d in submissionDetails.get(sub.id)" :key="d.id" class="detail-row"
+                    :class="{ 'is-flagged': d.isFlagged }">
+                  <span class="detail-row__name">{{ d.itemName }}</span>
+                  <span class="detail-row__resp">{{ d.responseValue || '—' }}</span>
+                  <span class="detail-row__score insp-num"
+                        :style="{ color: Number(d.score ?? 0) < 0 ? 'var(--insp-fail)' : 'var(--insp-ink-secondary)' }">
+                    {{ d.score != null ? Number(d.score).toFixed(1) : '—' }}
+                  </span>
+                  <button class="detail-row__appeal insp-btn insp-btn--ghost insp-btn--sm"
+                          title="对此扣分项发起申诉" @click="openAppeal(d)">
+                    申诉
+                  </button>
+                </li>
+              </ul>
+            </article>
+
+            <div v-if="!loadingDetails && taskSubmissions.length === 0" class="subs-empty">
+              <span class="insp-stamp">无打分数据</span>
+            </div>
+          </section>
+
+          <hr class="insp-rule insp-rule--strong" />
+
+          <!-- Verdict panel -->
+          <section class="verdict">
+            <div class="verdict-head">
+              <span class="insp-eyebrow">裁决</span>
+              <span class="verdict-hint">
+                <kbd class="insp-kbd insp-kbd--inverted">A</kbd> 通过+发布 ·
+                <kbd class="insp-kbd">R</kbd> 驳回 ·
+                <kbd class="insp-kbd">E</kbd> 延期
+              </span>
+            </div>
+
+            <div v-if="!showRejectInline" class="verdict-form">
+              <label class="verdict-field">
+                <span class="insp-caps">审核备注 · 可选</span>
+                <textarea v-model="reviewComment" rows="2" class="verdict-input"
+                          placeholder="可选 · 通过时附加给申诉记录的备注" />
+              </label>
+              <div class="verdict-actions">
+                <button class="insp-btn" @click="showRejectInline = true">
+                  <kbd class="insp-kbd">R</kbd> 改为驳回
+                </button>
+                <button class="insp-btn insp-btn--accent"
+                        :disabled="submitting" @click="approve">
+                  <kbd class="insp-kbd insp-kbd--inverted">A</kbd> 通过 + 发布
+                </button>
               </div>
             </div>
 
-            <div v-if="taskSubmissions.length === 0" class="review-empty" style="padding: 24px">
-              暂无打分数据
+            <div v-else class="verdict-form verdict-form--reject">
+              <div class="reject-head">
+                <span class="insp-stamp">驳回</span>
+                <span class="reject-warn">驳回必须填写明确理由让检查员理解需要修改什么</span>
+              </div>
+              <textarea v-model="reviewComment" rows="4" class="verdict-input"
+                        placeholder="例: 经济2025-2 班的卫生扣分缺乏照片证据, 请补充后重新提交"
+                        autofocus />
+              <div class="verdict-actions">
+                <button class="insp-btn" @click="showRejectInline = false">取消</button>
+                <button class="insp-btn insp-btn--primary"
+                        :disabled="submitting" @click="reject">确认驳回</button>
+              </div>
             </div>
-          </div>
+          </section>
+        </template>
 
-          <!-- Review Form -->
-          <div class="rd-review-form">
-            <label class="rd-label">审核意见</label>
-            <el-input
-              v-model="reviewComment"
-              type="textarea" :rows="2"
-              placeholder="输入审核意见（驳回时必填）"
-            />
-            <div class="rd-actions">
-              <el-button type="success" :loading="reviewing" @click="handleApprove">
-                <Check class="w-4 h-4 mr-1" />通过并发布
-              </el-button>
-              <el-button type="danger" plain :loading="reviewing" @click="handleReject">
-                <X class="w-4 h-4 mr-1" />驳回
-              </el-button>
-            </div>
-          </div>
+        <div v-else class="detail-empty">
+          <div class="insp-stamp">无待审</div>
+          <p class="detail-empty__hint">
+            待审清单为空 · 全部任务都已审核通过
+          </p>
         </div>
-      </div>
+      </main>
     </div>
 
-    <!-- 申诉提交对话框 -->
+    <!-- 申诉对话框 -->
     <SubmitAppealDialog
       v-if="appealDetailId != null"
       v-model="appealDialog"
@@ -303,91 +466,325 @@ onMounted(() => loadSubmittedTasks())
 </template>
 
 <style scoped>
-.review-page { background: #f7f8fa; min-height: 100vh; }
-.review-header {
-  position: sticky; top: 0; z-index: 10;
-  height: 48px; background: #fff; border-bottom: 1px solid #e5e7eb;
-  display: flex; align-items: center; gap: 10px; padding: 0 24px;
-}
-.review-title { font-size: 16px; font-weight: 700; color: #1a1a2e; }
-.review-count { font-size: 12px; color: #f59e0b; background: #fffbeb; padding: 2px 10px; border-radius: 10px; font-weight: 600; }
-
-.review-body {
-  display: flex; height: calc(100vh - 48px);
+.task-review {
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background: var(--insp-bg-page);
 }
 
-/* Sidebar */
-.review-sidebar {
-  width: 320px; flex-shrink: 0;
-  background: #fff; border-right: 1px solid #e5e7eb;
+/* ─ Operator bar ─────── */
+.op-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--insp-sp-5);
+  padding: var(--insp-sp-4) var(--insp-sp-7);
+  background: var(--insp-bg-surface);
+  border-bottom: 1px solid var(--insp-border-default);
+  flex-shrink: 0;
+}
+
+.op-bar__lead { display: flex; align-items: center; gap: var(--insp-sp-5); }
+.op-title {
+  font-family: var(--insp-font-display);
+  font-size: 22px; font-weight: 500; margin: 0;
+  letter-spacing: var(--insp-tracking-display);
+  color: var(--insp-ink-primary);
+}
+.op-bar__right { display: flex; align-items: center; gap: var(--insp-sp-5); }
+.kbd-tray {
+  display: flex; align-items: center; gap: var(--insp-sp-4);
+  padding-right: var(--insp-sp-4);
+  border-right: 1px solid var(--insp-border-subtle);
+}
+.kbd-pair {
+  display: inline-flex; align-items: center; gap: 6px;
+  font-size: var(--insp-text-xs); color: var(--insp-ink-tertiary);
+}
+
+/* ─ Pane ─────── */
+.pane {
+  display: grid;
+  grid-template-columns: 380px 1fr;
+  flex: 1;
+  min-height: 0;
+}
+
+/* ─ Queue ─────── */
+.queue {
+  border-right: 1px solid var(--insp-border-subtle);
+  background: var(--insp-bg-surface);
+  display: flex; flex-direction: column;
+  overflow: hidden;
+}
+.queue-meta {
+  display: flex; align-items: baseline; justify-content: space-between;
+  padding: var(--insp-sp-4) var(--insp-sp-5) var(--insp-sp-3);
+  border-bottom: 1px solid var(--insp-border-subtle);
+}
+.queue-meta__count { font-size: var(--insp-text-md); font-weight: 600; color: var(--insp-accent); }
+.queue-list { flex: 1; overflow-y: auto; list-style: none; margin: 0; padding: 0; }
+
+.queue-item {
+  display: grid;
+  grid-template-columns: 32px 1fr auto;
+  gap: var(--insp-sp-3);
+  align-items: start;
+  padding: var(--insp-sp-4) var(--insp-sp-5);
+  border-bottom: 1px solid var(--insp-border-subtle);
+  cursor: pointer;
+  transition: background var(--insp-t-fast);
+  position: relative;
+}
+.queue-item:hover { background: var(--insp-bg-subtle); }
+.queue-item.is-selected { background: var(--insp-bg-subtle); }
+.queue-item.is-selected::before {
+  content: ''; position: absolute; left: 0; top: 0; bottom: 0;
+  width: 3px; background: var(--insp-accent);
+}
+
+.queue-item__idx {
+  font-family: var(--insp-font-mono);
+  font-size: var(--insp-text-xs); font-weight: 500;
+  color: var(--insp-ink-quaternary);
+  padding-top: 2px;
+}
+.queue-item__body { min-width: 0; }
+.queue-item__code {
+  font-family: var(--insp-font-mono);
+  font-size: var(--insp-text-sm); font-weight: 600;
+  color: var(--insp-ink-primary);
+}
+.queue-item__sub {
+  margin-top: 4px;
+  display: flex; align-items: center; gap: 4px;
+  font-size: var(--insp-text-xs);
+  color: var(--insp-ink-secondary);
+}
+.queue-item__sub .queue-item__sep { color: var(--insp-ink-quaternary); }
+.queue-item__metrics {
+  margin-top: 8px;
+  display: flex; align-items: center; gap: var(--insp-sp-2);
+}
+.queue-item__progress { font-family: var(--insp-font-mono); font-size: var(--insp-text-xs); color: var(--insp-ink-tertiary); }
+.queue-item__progress .dim { color: var(--insp-ink-quaternary); }
+
+.queue-empty { padding: var(--insp-sp-8) var(--insp-sp-5); text-align: center; }
+
+/* ─ Detail ─────── */
+.detail {
   overflow-y: auto;
-}
-.review-task-list { padding: 8px; }
-.review-task-item {
-  padding: 10px 12px; border-radius: 8px;
-  cursor: pointer; margin-bottom: 4px;
-  transition: background 0.15s;
-}
-.review-task-item:hover { background: #f3f4f6; }
-.review-task-item.selected { background: #e8f0fe; border-left: 3px solid #1a6dff; }
-
-.rti-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 4px; }
-.rti-code { font-size: 13px; font-weight: 600; color: #1a1a2e; }
-.rti-status { font-size: 11px; color: #f59e0b; background: #fffbeb; padding: 1px 8px; border-radius: 8px; }
-.rti-meta { display: flex; gap: 8px; font-size: 11px; color: #9ca3af; }
-
-/* Main */
-.review-main { flex: 1; overflow-y: auto; padding: 16px 20px; }
-.review-placeholder { text-align: center; padding: 80px 20px; }
-.review-empty { text-align: center; padding: 40px; color: #9ca3af; font-size: 13px; }
-
-/* Detail */
-.rd-header {
-  display: flex; justify-content: space-between; align-items: center;
-  padding: 12px 16px; background: #fff; border: 1px solid #e5e7eb; border-radius: 8px;
-  margin-bottom: 12px;
-}
-.rd-code { font-size: 14px; font-weight: 700; color: #1a1a2e; margin-right: 12px; }
-.rd-inspector { font-size: 12px; color: #6b7280; }
-.rd-date { font-size: 12px; color: #9ca3af; }
-
-.rd-rejection-bar {
-  background: #fff7ed; border: 1px solid #fed7aa; border-radius: 8px;
-  padding: 8px 12px; margin-bottom: 12px;
+  padding: var(--insp-sp-7) var(--insp-sp-9);
+  max-width: 1080px;
+  width: 100%;
 }
 
-.rd-submissions { margin-bottom: 16px; }
-.rd-sub-card {
-  background: #fff; border: 1px solid #e5e7eb; border-radius: 8px;
-  margin-bottom: 8px; overflow: hidden;
+.detail-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--insp-sp-7);
+  margin-bottom: var(--insp-sp-5);
 }
-.rd-sub-header {
-  display: flex; align-items: center; gap: 8px;
-  padding: 10px 14px; background: #fafbfc; border-bottom: 1px solid #f3f4f6;
+.detail-code {
+  font-family: var(--insp-font-display);
+  font-size: 36px; font-weight: 500;
+  letter-spacing: var(--insp-tracking-display);
+  margin: 4px 0 var(--insp-sp-2);
 }
-.rd-sub-target { font-size: 13px; font-weight: 600; color: #1a1a2e; flex: 1; }
-.rd-sub-score { font-size: 14px; font-weight: 700; }
-.rd-sub-grade { font-size: 11px; padding: 1px 8px; border-radius: 8px; background: #f3f4f6; color: #6b7280; }
-.rd-sub-status { font-size: 11px; font-weight: 600; }
-.rd-sub-status.pass { color: #10b981; }
-.rd-sub-status.fail { color: #ef4444; }
+.detail-meta {
+  display: flex; align-items: center; gap: 6px;
+  font-size: var(--insp-text-sm); color: var(--insp-ink-secondary);
+  flex-wrap: wrap;
+}
+.detail-meta .dot { color: var(--insp-ink-quaternary); }
+.extended-tag {
+  display: inline-flex; align-items: center; gap: 4px;
+  padding: 1px 8px;
+  background: var(--insp-info-pale);
+  color: var(--insp-info);
+  font-size: var(--insp-text-xs);
+  border-radius: var(--insp-radius-sm);
+  font-weight: 500;
+}
 
-.rd-detail-list { padding: 6px 14px; }
-.rd-detail-row {
-  display: flex; align-items: center; gap: 8px;
-  padding: 5px 0; border-bottom: 1px solid #f9fafb;
-  font-size: 12px;
+.detail-head__metrics {
+  display: flex; align-items: stretch; gap: var(--insp-sp-5);
+  padding: var(--insp-sp-3) 0;
+  flex-shrink: 0;
 }
-.rd-detail-row:last-child { border-bottom: none; }
-.rd-detail-name { flex: 1; color: #374151; }
-.rd-detail-mode { font-size: 10px; color: #9ca3af; background: #f3f4f6; padding: 1px 6px; border-radius: 4px; }
-.rd-detail-response { color: #6b7280; min-width: 40px; text-align: right; }
-.rd-detail-score { font-weight: 700; min-width: 40px; text-align: right; }
+.detail-head__metrics .insp-stat__value { font-size: 28px; }
+.rule-vert { width: 1px; height: 40px; background: var(--insp-border-subtle); align-self: center; }
+.metric-pass { color: var(--insp-pass); }
+.metric-fail { color: var(--insp-fail); }
+.dim { color: var(--insp-ink-quaternary); }
 
-.rd-review-form {
-  background: #fff; border: 1px solid #e5e7eb; border-radius: 8px;
-  padding: 14px 16px;
+/* ─ Alert strip ─────── */
+.alert-strip {
+  display: flex; align-items: center; gap: var(--insp-sp-3);
+  padding: 10px var(--insp-sp-4);
+  background: var(--insp-warn-pale);
+  border: 1px solid color-mix(in oklab, var(--insp-warn) 35%, transparent);
+  border-radius: var(--insp-radius-md);
+  margin-bottom: var(--insp-sp-5);
 }
-.rd-label { font-size: 13px; font-weight: 600; color: #374151; margin-bottom: 8px; display: block; }
-.rd-actions { display: flex; gap: 10px; margin-top: 12px; }
+.alert-strip--max {
+  background: var(--insp-fail-pale);
+  border-color: var(--insp-fail);
+}
+.alert-strip__icon {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 22px; height: 22px;
+  background: var(--insp-warn); color: white;
+  border-radius: var(--insp-radius-pill);
+  font-family: var(--insp-font-mono); font-weight: 700; font-size: 13px;
+  flex-shrink: 0;
+}
+.alert-strip--max .alert-strip__icon { background: var(--insp-fail); }
+.alert-strip__text {
+  flex: 1;
+  font-size: var(--insp-text-sm);
+  color: var(--insp-ink-secondary);
+}
+.alert-strip--max .alert-strip__text { color: var(--insp-fail); font-weight: 500; }
+
+/* ─ Submissions ─────── */
+.subs { padding: var(--insp-sp-5) 0; }
+.subs-head { margin-bottom: var(--insp-sp-3); }
+
+.sub-card {
+  background: var(--insp-bg-surface);
+  border: 1px solid var(--insp-border-subtle);
+  border-radius: var(--insp-radius-md);
+  margin-bottom: var(--insp-sp-3);
+  overflow: hidden;
+}
+.sub-card__head {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: var(--insp-sp-3);
+  padding: var(--insp-sp-3) var(--insp-sp-4);
+  background: var(--insp-bg-subtle);
+  border-bottom: 1px solid var(--insp-border-subtle);
+}
+.sub-card__lead { display: flex; align-items: center; gap: var(--insp-sp-2); }
+.sub-card__name {
+  font-size: var(--insp-text-md); font-weight: 600;
+  color: var(--insp-ink-primary);
+}
+.sub-card__metrics {
+  display: flex; align-items: center; gap: var(--insp-sp-3);
+}
+.sub-card__score {
+  font-family: var(--insp-font-mono);
+  font-size: var(--insp-text-lg); font-weight: 600;
+  letter-spacing: -0.02em;
+}
+
+.detail-rows { list-style: none; margin: 0; padding: 0; }
+.detail-row {
+  display: grid;
+  grid-template-columns: 1fr 100px 80px 56px;
+  gap: var(--insp-sp-3);
+  align-items: center;
+  padding: 8px var(--insp-sp-4);
+  border-bottom: 1px solid var(--insp-border-subtle);
+  font-size: var(--insp-text-sm);
+}
+.detail-row:last-child { border-bottom: 0; }
+.detail-row.is-flagged {
+  background: linear-gradient(to right, var(--insp-fail-pale) 0, transparent 60%);
+}
+.detail-row__name { color: var(--insp-ink-primary); }
+.detail-row__resp {
+  font-family: var(--insp-font-mono);
+  font-size: var(--insp-text-xs);
+  color: var(--insp-ink-tertiary);
+}
+.detail-row__score {
+  font-family: var(--insp-font-mono);
+  font-weight: 500;
+  text-align: right;
+}
+.detail-row__appeal {
+  justify-self: end;
+  color: var(--insp-accent);
+}
+.detail-row__appeal:hover { background: var(--insp-accent-paler); }
+
+.subs-empty { padding: var(--insp-sp-8); text-align: center; }
+
+/* ─ Verdict ─────── */
+.verdict { margin-top: var(--insp-sp-5); }
+.verdict-head {
+  display: flex; align-items: baseline; justify-content: space-between;
+  margin-bottom: var(--insp-sp-4);
+}
+.verdict-hint {
+  font-size: var(--insp-text-xs); color: var(--insp-ink-tertiary);
+  display: inline-flex; align-items: center; gap: 4px;
+}
+.verdict-form {
+  display: flex; flex-direction: column; gap: var(--insp-sp-4);
+}
+.verdict-field { display: flex; flex-direction: column; gap: 6px; }
+
+.verdict-input {
+  padding: 10px 14px;
+  border: 1px solid var(--insp-border-default);
+  border-radius: var(--insp-radius-md);
+  font-family: inherit;
+  font-size: var(--insp-text-md);
+  line-height: var(--insp-leading-snug);
+  color: var(--insp-ink-primary);
+  background: var(--insp-bg-surface);
+  resize: vertical;
+}
+.verdict-input:focus {
+  outline: none;
+  border-color: var(--insp-accent);
+  box-shadow: 0 0 0 3px var(--insp-accent-paler);
+}
+
+.verdict-form--reject {
+  padding: var(--insp-sp-5);
+  background: var(--insp-fail-pale);
+  border: 1px solid var(--insp-fail);
+  border-radius: var(--insp-radius-md);
+}
+.reject-head {
+  display: flex; align-items: center; gap: var(--insp-sp-3);
+}
+.reject-warn { font-size: var(--insp-text-sm); color: var(--insp-fail); font-weight: 500; }
+
+.verdict-actions {
+  display: flex; justify-content: flex-end; gap: var(--insp-sp-3);
+}
+.verdict-actions .insp-btn .insp-kbd { margin-right: 4px; }
+
+/* ─ Empty ─────── */
+.detail-empty {
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  height: 100%;
+  text-align: center;
+  padding: var(--insp-sp-10);
+}
+.detail-empty__hint {
+  margin-top: var(--insp-sp-4);
+  color: var(--insp-ink-tertiary);
+  font-size: var(--insp-text-md);
+}
+
+/* ─ Responsive ─────── */
+@media (max-width: 1100px) {
+  .pane { grid-template-columns: 320px 1fr; }
+  .detail { padding: var(--insp-sp-5) var(--insp-sp-6); }
+  .detail-head { flex-direction: column; gap: var(--insp-sp-4); }
+}
+@media (max-width: 800px) {
+  .pane { grid-template-columns: 1fr; }
+  .queue { display: none; }
+  .kbd-tray { display: none; }
+}
 </style>
