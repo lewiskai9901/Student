@@ -1,110 +1,126 @@
 /* ============================================================
- * Inspection — "Audit Console" design tokens
- * Editorial-utilitarian. Operator density. Single accent.
+ * Inspection design tokens — aligned to 插件平台 visual language.
+ *
+ * 关键决策 (与插件平台一致):
+ *   · 背景 cool gray-blue #f8fafc (非暖白)
+ *   · 主色 蓝色 #2563eb (非朱砂红)
+ *   · 字体 system + Menlo monospace (无 Newsreader 衬线)
+ *   · 字号紧凑: body 13px / heading 14-15px / aux 10-12px
+ *   · 圆角 5-8px (非 2-4px sharp)
+ *   · padding 紧凑: 8-14px (非 32-64px)
+ *   · chip 用浅色三件套 color/border/background
  * ============================================================ */
 
-@import url('https://fonts.googleapis.com/css2?family=Manrope:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&family=Newsreader:opsz,wght@6..72,400;6..72,500;6..72,600&display=swap');
-
 :root {
-  /* ---------- Typography ---------- */
-  --insp-font-display: 'Newsreader', 'Source Han Serif SC', 'Noto Serif SC', Georgia, serif;
-  --insp-font-body: 'Manrope', 'PingFang SC', 'Source Han Sans SC', 'HarmonyOS Sans', system-ui, sans-serif;
-  --insp-font-mono: 'JetBrains Mono', 'Source Han Mono SC', 'SF Mono', Menlo, monospace;
+  /* ---------- Typography (system / mono only) ---------- */
+  --insp-font-display: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC',
+                       'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
+  --insp-font-body: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC',
+                    'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
+  --insp-font-mono: Menlo, Monaco, 'Courier New', monospace;
 
   --insp-text-2xs: 10px;
   --insp-text-xs: 11px;
   --insp-text-sm: 12px;
   --insp-text-base: 13px;
-  --insp-text-md: 14px;
-  --insp-text-lg: 16px;
-  --insp-text-xl: 20px;
-  --insp-text-2xl: 26px;
-  --insp-text-3xl: 36px;
-  --insp-text-display: 56px;
+  --insp-text-md: 13px;
+  --insp-text-lg: 14px;
+  --insp-text-xl: 15px;
+  --insp-text-2xl: 16px;
+  --insp-text-3xl: 18px;
+  --insp-text-display: 22px;
 
   --insp-leading-tight: 1.2;
-  --insp-leading-snug: 1.35;
+  --insp-leading-snug: 1.4;
   --insp-leading-normal: 1.55;
   --insp-leading-relaxed: 1.7;
 
-  --insp-tracking-display: -0.02em;
-  --insp-tracking-tight: -0.01em;
+  --insp-tracking-display: 0;
+  --insp-tracking-tight: 0;
   --insp-tracking-mono: 0;
-  --insp-tracking-caps: 0.08em;
+  --insp-tracking-caps: 0.06em;
 
-  /* ---------- Color · Editorial neutrals (warm) ---------- */
-  --insp-bg-page: #FAFAF7;
-  --insp-bg-surface: #FFFFFF;
-  --insp-bg-subtle: #F4F4ED;
-  --insp-bg-sunken: #EFEFE7;
-  --insp-bg-overlay: rgba(20, 20, 18, 0.55);
-  --insp-bg-grain: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='200' height='200'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0.04 0'/></filter><rect width='200' height='200' filter='url(%23n)'/></svg>");
+  /* ---------- Color · Cool gray-blue (插件平台同源) ---------- */
+  --insp-bg-page: #f8fafc;
+  --insp-bg-surface: #ffffff;
+  --insp-bg-subtle: #f3f4f6;
+  --insp-bg-sunken: #e5e7eb;
+  --insp-bg-overlay: rgba(15, 23, 42, 0.4);
 
-  --insp-ink-primary: #161614;
-  --insp-ink-secondary: #4A4A45;
-  --insp-ink-tertiary: #8A8A82;
-  --insp-ink-quaternary: #BCBCB3;
-  --insp-ink-disabled: #D8D8D0;
+  --insp-ink-primary: #111827;
+  --insp-ink-secondary: #374151;
+  --insp-ink-tertiary: #6b7280;
+  --insp-ink-quaternary: #9ca3af;
+  --insp-ink-disabled: #d1d5db;
 
-  /* Single brand accent — vermillion, evokes 印章/朱砂 */
-  --insp-accent: #C9412B;
-  --insp-accent-hover: #B33820;
-  --insp-accent-active: #9D2F18;
-  --insp-accent-pale: #F5DDD7;
-  --insp-accent-paler: #FBEDE9;
+  /* Brand · 蓝色 #2563eb (与插件平台一致) */
+  --insp-accent: #2563eb;
+  --insp-accent-hover: #1d4ed8;
+  --insp-accent-active: #1e40af;
+  --insp-accent-pale: #dbeafe;
+  --insp-accent-paler: #eff6ff;
 
-  /* Status — desaturated, semantic */
-  --insp-pass: #2D7B3C;
-  --insp-pass-pale: #DDEBE0;
-  --insp-fail: #C9412B;
-  --insp-fail-pale: #F5DDD7;
-  --insp-warn: #B5781A;
-  --insp-warn-pale: #F2E5C9;
-  --insp-info: #2A5D8F;
-  --insp-info-pale: #D5DFEA;
-  --insp-pending: #6B6B62;
-  --insp-pending-pale: #E2E2D9;
+  /* Status · 浅色三件套 — 与插件 pp-chip 一致 */
+  --insp-pass: #059669;
+  --insp-pass-pale: #ecfdf5;
+  --insp-pass-border: #a7f3d0;
 
-  /* ---------- Borders · hairline ---------- */
-  --insp-border-subtle: #EAEAE0;
-  --insp-border-default: #D5D5C9;
-  --insp-border-strong: #B0B0A0;
-  --insp-border-ink: #161614;
-  --insp-border-hot: #C9412B;
+  --insp-fail: #dc2626;
+  --insp-fail-pale: #fef2f2;
+  --insp-fail-border: #fca5a5;
 
-  /* ---------- Spacing · 4px grid ---------- */
-  --insp-sp-1: 4px;
-  --insp-sp-2: 8px;
-  --insp-sp-3: 12px;
-  --insp-sp-4: 16px;
-  --insp-sp-5: 20px;
-  --insp-sp-6: 24px;
-  --insp-sp-7: 32px;
-  --insp-sp-8: 40px;
-  --insp-sp-9: 48px;
-  --insp-sp-10: 64px;
-  --insp-sp-12: 80px;
-  --insp-sp-14: 96px;
+  --insp-warn: #d97706;
+  --insp-warn-pale: #fffbeb;
+  --insp-warn-border: #fcd34d;
 
-  /* ---------- Radius · sharp, near-rectangular ---------- */
-  --insp-radius-sm: 2px;
-  --insp-radius-md: 3px;
-  --insp-radius-lg: 4px;
+  --insp-info: #2563eb;
+  --insp-info-pale: #eff6ff;
+  --insp-info-border: #93c5fd;
+
+  --insp-pending: #6b7280;
+  --insp-pending-pale: #f3f4f6;
+  --insp-pending-border: #d1d5db;
+
+  /* ---------- Borders · 1px ---------- */
+  --insp-border-subtle: #f1f5f9;
+  --insp-border-default: #e5e7eb;
+  --insp-border-strong: #d1d5db;
+  --insp-border-ink: #6b7280;
+  --insp-border-hot: #2563eb;
+
+  /* ---------- Spacing · 4px grid (compact) ---------- */
+  --insp-sp-1: 2px;
+  --insp-sp-2: 4px;
+  --insp-sp-3: 6px;
+  --insp-sp-4: 8px;
+  --insp-sp-5: 10px;
+  --insp-sp-6: 12px;
+  --insp-sp-7: 14px;
+  --insp-sp-8: 16px;
+  --insp-sp-9: 20px;
+  --insp-sp-10: 24px;
+  --insp-sp-12: 32px;
+  --insp-sp-14: 48px;
+
+  /* ---------- Radius · soft corners (与插件平台一致) ---------- */
+  --insp-radius-sm: 4px;
+  --insp-radius-md: 6px;
+  --insp-radius-lg: 8px;
   --insp-radius-pill: 999px;
 
-  /* ---------- Shadow · paper-dry ---------- */
-  --insp-shadow-xs: 0 1px 1px rgba(20, 20, 18, 0.04);
-  --insp-shadow-sm: 0 1px 2px rgba(20, 20, 18, 0.06), 0 0 0 1px rgba(20, 20, 18, 0.03);
-  --insp-shadow-md: 0 4px 12px rgba(20, 20, 18, 0.08), 0 1px 3px rgba(20, 20, 18, 0.04);
-  --insp-shadow-lg: 0 12px 32px rgba(20, 20, 18, 0.10), 0 4px 8px rgba(20, 20, 18, 0.06);
-  --insp-shadow-press: inset 0 1px 2px rgba(20, 20, 18, 0.10);
+  /* ---------- Shadow · ultra subtle ---------- */
+  --insp-shadow-xs: 0 1px 2px rgba(15, 23, 42, 0.04);
+  --insp-shadow-sm: 0 1px 3px rgba(15, 23, 42, 0.06);
+  --insp-shadow-md: 0 4px 12px rgba(15, 23, 42, 0.08);
+  --insp-shadow-lg: 0 12px 32px rgba(15, 23, 42, 0.12);
+  --insp-shadow-press: inset 0 1px 2px rgba(15, 23, 42, 0.06);
 
-  /* ---------- Motion · brisk ---------- */
-  --insp-t-fast: 90ms;
-  --insp-t-medium: 140ms;
+  /* ---------- Motion ---------- */
+  --insp-t-fast: 100ms;
+  --insp-t-medium: 150ms;
   --insp-t-slow: 220ms;
   --insp-ease-out: cubic-bezier(0.2, 0.7, 0.3, 1);
-  --insp-ease-in: cubic-bezier(0.7, 0.0, 0.8, 0.4);
+  --insp-ease-in: cubic-bezier(0.7, 0, 0.8, 0.4);
   --insp-ease-spring: cubic-bezier(0.5, 1.5, 0.5, 1);
 
   /* ---------- Layers ---------- */
@@ -115,7 +131,7 @@
 }
 
 /* ============================================================
- * Reset & utilities scoped to .insp-shell
+ * .insp-shell · base wrapper
  * ============================================================ */
 
 .insp-shell {
@@ -124,33 +140,26 @@
   background: var(--insp-bg-page);
   font-size: var(--insp-text-base);
   line-height: var(--insp-leading-normal);
-  font-feature-settings: 'cv11' 1, 'ss01' 1;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
 
-.insp-shell * {
-  font-feature-settings: inherit;
-}
-
-/* Tabular numerals everywhere by default for headlines/numbers */
+/* Tabular numerals only on explicit num classes (no longer all big numbers) */
 .insp-num,
-.insp-shell time,
 .insp-shell .num,
 .insp-shell [data-num],
-.insp-shell .insp-stat__value,
 .insp-shell .insp-tabular {
   font-family: var(--insp-font-mono);
-  font-feature-settings: 'tnum' 1, 'lnum' 1, 'zero' 1;
-  letter-spacing: var(--insp-tracking-mono);
+  font-variant-numeric: tabular-nums;
 }
 
-/* Display headers — the editorial voice */
+/* Display headers — system font, modest size */
 .insp-display {
   font-family: var(--insp-font-display);
-  font-weight: 500;
-  letter-spacing: var(--insp-tracking-display);
+  font-weight: 700;
+  letter-spacing: 0;
   line-height: var(--insp-leading-tight);
+  color: var(--insp-ink-primary);
 }
 
 /* Caps label */
@@ -162,64 +171,160 @@
   color: var(--insp-ink-tertiary);
 }
 
+/* ─────────── Down-scaled overrides for previously oversized headers ─────────── */
+/* 之前的 redesign 各页面用了 32px / 44px / 56px 大字 — 现在统一降到 15-18px */
+.insp-shell .page-title {
+  font-size: 18px !important;
+  font-weight: 700 !important;
+  margin: 0 !important;
+  color: var(--insp-ink-primary) !important;
+  font-family: var(--insp-font-display) !important;
+  letter-spacing: 0 !important;
+}
+
+.insp-shell .page-head {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  gap: var(--insp-sp-7) !important;
+  padding: var(--insp-sp-7) var(--insp-sp-8) !important;
+  margin: 0 !important;
+  background: var(--insp-bg-surface) !important;
+  border: 1px solid var(--insp-border-default) !important;
+  border-radius: var(--insp-radius-lg) !important;
+  margin-bottom: var(--insp-sp-6) !important;
+}
+
+.insp-shell .head-stats {
+  gap: var(--insp-sp-9) !important;
+}
+
+.insp-shell .head-rule {
+  width: 1px !important;
+  height: 24px !important;
+  background: var(--insp-border-default) !important;
+}
+
+.insp-shell .insp-stat__value {
+  font-family: var(--insp-font-mono) !important;
+  font-size: 17px !important;
+  font-weight: 600 !important;
+  letter-spacing: 0 !important;
+  line-height: 1.1 !important;
+  color: var(--insp-ink-primary) !important;
+}
+
+.insp-shell .insp-stat__label {
+  font-size: 10px !important;
+  letter-spacing: 0.04em !important;
+  color: var(--insp-ink-tertiary) !important;
+  text-transform: uppercase !important;
+}
+
+.insp-shell .insp-eyebrow {
+  font-family: var(--insp-font-mono) !important;
+  font-size: 10px !important;
+  font-weight: 500 !important;
+  letter-spacing: 0.06em !important;
+  color: var(--insp-ink-tertiary) !important;
+  text-transform: uppercase !important;
+  margin-bottom: var(--insp-sp-2) !important;
+}
+.insp-shell .insp-eyebrow::before {
+  content: none !important;
+}
+
+.insp-shell .head-divider {
+  display: none !important;
+}
+
+/* Compact page padding */
+.insp-shell {
+  padding: 12px 16px !important;
+  max-width: none !important;
+}
+
+/* Override per-page padding statements */
+.insp-shell.my-appeals,
+.insp-shell.case-register,
+.insp-shell.template-archive,
+.insp-shell.my-inspection,
+.insp-shell.lib-archive,
+.insp-shell.obs-ledger,
+.insp-shell.ranking-page,
+.insp-shell.analytics-dashboard,
+.insp-shell.command-deck {
+  padding: 12px 16px !important;
+  max-width: none !important;
+  background: var(--insp-bg-page) !important;
+}
+
 /* ============================================================
- * Atom · Status chip (text-led, dot-prefixed)
+ * Atom · Status chip (与插件 pp-chip 一致)
  * ============================================================ */
 
 .insp-chip {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  padding: 2px 8px 2px 7px;
-  font-size: var(--insp-text-xs);
+  gap: 4px;
+  padding: 1px 8px;
+  font-size: 11px;
   font-weight: 500;
-  line-height: 1;
-  border-radius: var(--insp-radius-sm);
-  border: 1px solid transparent;
-  white-space: nowrap;
-}
-
-.insp-chip::before {
-  content: '';
-  display: inline-block;
-  width: 6px; height: 6px;
+  line-height: 1.5;
   border-radius: var(--insp-radius-pill);
-  background: currentColor;
-  opacity: 0.85;
-  flex-shrink: 0;
+  border: 1px solid;
+  white-space: nowrap;
+  letter-spacing: 0;
 }
 
-.insp-chip--pass     { color: var(--insp-pass);    background: var(--insp-pass-pale);    border-color: color-mix(in oklab, var(--insp-pass) 25%, transparent); }
-.insp-chip--fail     { color: var(--insp-fail);    background: var(--insp-fail-pale);    border-color: color-mix(in oklab, var(--insp-fail) 25%, transparent); }
-.insp-chip--warn     { color: var(--insp-warn);    background: var(--insp-warn-pale);    border-color: color-mix(in oklab, var(--insp-warn) 25%, transparent); }
-.insp-chip--info     { color: var(--insp-info);    background: var(--insp-info-pale);    border-color: color-mix(in oklab, var(--insp-info) 25%, transparent); }
-.insp-chip--pending  { color: var(--insp-pending); background: var(--insp-pending-pale); border-color: color-mix(in oklab, var(--insp-pending) 25%, transparent); }
+.insp-chip::before { content: none; }
 
-/* Variant: outline-only (for headers) */
-.insp-chip--ghost {
-  background: transparent;
+.insp-chip--pass {
+  color: var(--insp-pass);
+  background: var(--insp-pass-pale);
+  border-color: var(--insp-pass-border);
 }
+.insp-chip--fail {
+  color: var(--insp-fail);
+  background: var(--insp-fail-pale);
+  border-color: var(--insp-fail-border);
+}
+.insp-chip--warn {
+  color: var(--insp-warn);
+  background: var(--insp-warn-pale);
+  border-color: var(--insp-warn-border);
+}
+.insp-chip--info {
+  color: var(--insp-info);
+  background: var(--insp-info-pale);
+  border-color: var(--insp-info-border);
+}
+.insp-chip--pending {
+  color: var(--insp-pending);
+  background: var(--insp-pending-pale);
+  border-color: var(--insp-pending-border);
+}
+
+.insp-chip--ghost { background: transparent; }
 
 /* ============================================================
- * Atom · KBD key (keyboard hint badge)
+ * Atom · KBD key (Menlo 风格, 与插件平台一致)
  * ============================================================ */
 
 .insp-kbd {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-width: 18px;
-  height: 18px;
+  min-width: 16px;
+  height: 16px;
   padding: 0 4px;
   font-family: var(--insp-font-mono);
   font-size: 10px;
-  font-weight: 600;
-  color: var(--insp-ink-secondary);
+  font-weight: 500;
+  color: var(--insp-ink-tertiary);
   background: var(--insp-bg-surface);
-  border: 1px solid var(--insp-border-default);
-  border-bottom-width: 2px;
+  border: 1px solid var(--insp-border-strong);
   border-radius: 3px;
-  box-shadow: var(--insp-shadow-xs);
   letter-spacing: 0;
 }
 
@@ -230,57 +335,59 @@
 }
 
 /* ============================================================
- * Atom · Button
+ * Atom · Button (与插件 pp-btn 一致)
  * ============================================================ */
 
 .insp-btn {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: var(--insp-sp-2);
-  padding: 6px 12px;
+  gap: 5px;
+  padding: 4px 10px;
+  height: 28px;
   font-family: inherit;
-  font-size: var(--insp-text-sm);
+  font-size: 12px;
   font-weight: 500;
-  line-height: 1.3;
-  color: var(--insp-ink-primary);
+  line-height: 1;
+  color: var(--insp-ink-secondary);
   background: var(--insp-bg-surface);
-  border: 1px solid var(--insp-border-default);
-  border-radius: var(--insp-radius-md);
+  border: 1px solid var(--insp-border-strong);
+  border-radius: var(--insp-radius-sm);
   cursor: pointer;
-  transition: background var(--insp-t-fast) var(--insp-ease-out),
-              border-color var(--insp-t-fast) var(--insp-ease-out),
-              transform var(--insp-t-fast) var(--insp-ease-out);
+  transition: all var(--insp-t-fast) var(--insp-ease-out);
   user-select: none;
 }
 
-.insp-btn:hover { border-color: var(--insp-border-strong); background: var(--insp-bg-subtle); }
-.insp-btn:active { transform: translateY(0.5px); box-shadow: var(--insp-shadow-press); }
+.insp-btn:hover {
+  border-color: var(--insp-accent);
+  color: var(--insp-accent);
+}
+.insp-btn:active { box-shadow: var(--insp-shadow-press); }
 .insp-btn:focus-visible { outline: 2px solid var(--insp-accent); outline-offset: 1px; }
 
 .insp-btn--primary {
-  color: #FFFFFF;
-  background: var(--insp-ink-primary);
-  border-color: var(--insp-ink-primary);
-}
-.insp-btn--primary:hover { background: #2A2A26; border-color: #2A2A26; }
-
-.insp-btn--accent {
-  color: #FFFFFF;
+  color: #ffffff;
   background: var(--insp-accent);
   border-color: var(--insp-accent);
 }
-.insp-btn--accent:hover { background: var(--insp-accent-hover); border-color: var(--insp-accent-hover); }
+.insp-btn--primary:hover { background: var(--insp-accent-hover); border-color: var(--insp-accent-hover); color: #ffffff; }
+
+.insp-btn--accent {
+  color: #ffffff;
+  background: var(--insp-accent);
+  border-color: var(--insp-accent);
+}
+.insp-btn--accent:hover { background: var(--insp-accent-hover); border-color: var(--insp-accent-hover); color: #ffffff; }
 
 .insp-btn--ghost {
   background: transparent;
   border-color: transparent;
-  color: var(--insp-ink-secondary);
+  color: var(--insp-ink-tertiary);
 }
-.insp-btn--ghost:hover { background: var(--insp-bg-subtle); color: var(--insp-ink-primary); }
+.insp-btn--ghost:hover { background: var(--insp-bg-subtle); color: var(--insp-ink-primary); border-color: transparent; }
 
-.insp-btn--sm { padding: 4px 8px; font-size: var(--insp-text-xs); }
-.insp-btn--lg { padding: 10px 18px; font-size: var(--insp-text-md); }
+.insp-btn--sm { padding: 2px 8px; height: 22px; font-size: 11px; }
+.insp-btn--lg { padding: 6px 14px; height: 32px; font-size: 13px; }
 
 .insp-btn--icon {
   width: 28px; height: 28px;
@@ -293,47 +400,48 @@
 
 .insp-card {
   background: var(--insp-bg-surface);
-  border: 1px solid var(--insp-border-subtle);
+  border: 1px solid var(--insp-border-default);
   border-radius: var(--insp-radius-lg);
 }
 
 .insp-card__head {
   display: flex;
-  align-items: baseline;
+  align-items: center;
   justify-content: space-between;
-  gap: var(--insp-sp-3);
-  padding: var(--insp-sp-4) var(--insp-sp-5);
+  gap: var(--insp-sp-6);
+  padding: var(--insp-sp-7) var(--insp-sp-8);
   border-bottom: 1px solid var(--insp-border-subtle);
 }
 
 .insp-card__title {
   font-family: var(--insp-font-display);
-  font-size: var(--insp-text-lg);
-  font-weight: 500;
-  letter-spacing: var(--insp-tracking-display);
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--insp-ink-primary);
+  margin: 0;
 }
 
-.insp-card__body { padding: var(--insp-sp-5); }
+.insp-card__body { padding: var(--insp-sp-8); }
 .insp-card__body--flush { padding: 0; }
 
 /* ============================================================
- * Layout · Grid utilities
+ * Layout
  * ============================================================ */
 
 .insp-page {
-  padding: var(--insp-sp-6) var(--insp-sp-7);
+  padding: 12px 16px;
   min-height: 100vh;
 }
 
 .insp-stack { display: flex; flex-direction: column; }
-.insp-stack > * + * { margin-top: var(--insp-sp-3); }
-.insp-stack--lg > * + * { margin-top: var(--insp-sp-6); }
+.insp-stack > * + * { margin-top: var(--insp-sp-6); }
+.insp-stack--lg > * + * { margin-top: var(--insp-sp-9); }
 
-.insp-row { display: flex; align-items: center; gap: var(--insp-sp-3); }
+.insp-row { display: flex; align-items: center; gap: var(--insp-sp-6); }
 .insp-row--between { justify-content: space-between; }
 
 /* ============================================================
- * Editorial elements
+ * Editorial elements (downscaled)
  * ============================================================ */
 
 .insp-rule {
@@ -341,72 +449,64 @@
   background: var(--insp-border-subtle);
   border: 0;
 }
-
-.insp-rule--strong { background: var(--insp-border-ink); height: 2px; }
+.insp-rule--strong { background: var(--insp-border-default); height: 1px; }
 
 .insp-eyebrow {
   display: inline-block;
   font-family: var(--insp-font-mono);
-  font-size: var(--insp-text-2xs);
+  font-size: 10px;
   font-weight: 500;
-  letter-spacing: var(--insp-tracking-caps);
+  letter-spacing: 0.06em;
   text-transform: uppercase;
   color: var(--insp-ink-tertiary);
   margin-bottom: var(--insp-sp-2);
 }
 
-.insp-eyebrow::before {
-  content: '§ ';
-  color: var(--insp-accent);
-  font-weight: 600;
-}
-
-/* Stat block: large mono number + caps label */
-.insp-stat { display: flex; flex-direction: column; gap: 2px; }
+.insp-stat { display: flex; flex-direction: column; gap: 1px; }
 .insp-stat__value {
   font-family: var(--insp-font-mono);
-  font-size: var(--insp-text-2xl);
-  font-weight: 500;
-  line-height: 1.05;
-  letter-spacing: -0.02em;
+  font-size: 17px;
+  font-weight: 600;
+  line-height: 1.1;
   color: var(--insp-ink-primary);
 }
 .insp-stat__label {
-  font-size: var(--insp-text-xs);
+  font-size: 10px;
   color: var(--insp-ink-tertiary);
   letter-spacing: 0.04em;
   text-transform: uppercase;
 }
+
 .insp-stat__delta {
   display: inline-flex;
   align-items: center;
   gap: 2px;
   font-family: var(--insp-font-mono);
-  font-size: var(--insp-text-xs);
+  font-size: 11px;
 }
 .insp-stat__delta--pos { color: var(--insp-pass); }
 .insp-stat__delta--neg { color: var(--insp-fail); }
 
 /* ============================================================
- * Table · operator density
+ * Table · operator density (与插件 list 同源)
  * ============================================================ */
 
 .insp-table {
   width: 100%;
   border-collapse: collapse;
-  font-size: var(--insp-text-sm);
+  font-size: 12px;
 }
 .insp-table th,
 .insp-table td {
-  padding: var(--insp-sp-3) var(--insp-sp-4);
+  padding: 8px 12px;
   text-align: left;
   vertical-align: middle;
   border-bottom: 1px solid var(--insp-border-subtle);
 }
 .insp-table th {
-  font-weight: 500;
-  font-size: var(--insp-text-2xs);
-  letter-spacing: var(--insp-tracking-caps);
+  font-weight: 600;
+  font-size: 11px;
+  letter-spacing: 0.04em;
   text-transform: uppercase;
   color: var(--insp-ink-tertiary);
   background: var(--insp-bg-subtle);
@@ -416,63 +516,78 @@
   transition: background var(--insp-t-fast);
 }
 .insp-table tbody tr:hover {
-  background: var(--insp-bg-subtle);
-}
-.insp-table .insp-num,
-.insp-table td.num {
-  font-family: var(--insp-font-mono);
-  font-feature-settings: 'tnum' 1;
-  text-align: right;
+  background: var(--insp-accent-paler);
 }
 
 /* ============================================================
- * Stamp / banner — vermillion accent strip used sparingly
+ * Stamp (downscaled)
  * ============================================================ */
 
 .insp-stamp {
   display: inline-flex;
   align-items: center;
-  gap: var(--insp-sp-2);
-  padding: 4px var(--insp-sp-3);
-  font-family: var(--insp-font-mono);
-  font-size: var(--insp-text-xs);
-  font-weight: 600;
-  letter-spacing: var(--insp-tracking-caps);
-  text-transform: uppercase;
+  gap: 4px;
+  padding: 2px 8px;
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0;
   color: var(--insp-accent);
-  border: 1px solid var(--insp-accent);
-  background: transparent;
-  border-radius: 0;
+  background: var(--insp-accent-paler);
+  border: 1px solid var(--insp-accent-pale);
+  border-radius: var(--insp-radius-sm);
+  text-transform: none;
 }
 
 /* ============================================================
- * Element-Plus surgical overrides (only when inside .insp-shell)
+ * Element-Plus surgical overrides
  * ============================================================ */
 
 .insp-shell .el-button {
-  border-radius: var(--insp-radius-md);
+  border-radius: var(--insp-radius-sm);
   font-family: inherit;
 }
 
 .insp-shell .el-table {
   font-family: inherit;
-  font-size: var(--insp-text-sm);
+  font-size: 12px;
 }
 
 .insp-shell .el-input__inner,
 .insp-shell .el-textarea__inner {
   font-family: inherit;
-  border-radius: var(--insp-radius-md);
+  border-radius: var(--insp-radius-sm);
 }
 
-/* Subtle grain overlay layer for top-level shells (optional) */
-.insp-shell--grained::before {
-  content: '';
-  position: fixed;
-  inset: 0;
-  pointer-events: none;
-  background-image: var(--insp-bg-grain);
-  opacity: 0.5;
-  mix-blend-mode: multiply;
-  z-index: 1;
+/* ============================================================
+ * Compact filter rail (覆盖之前的大间距)
+ * ============================================================ */
+
+.insp-shell .filter-rail {
+  margin-bottom: var(--insp-sp-6) !important;
+  padding: 0 !important;
+  background: var(--insp-bg-surface) !important;
+  border: 1px solid var(--insp-border-default) !important;
+  border-radius: var(--insp-radius-md) !important;
+}
+
+.insp-shell .filter-tab {
+  padding: 8px 14px 9px !important;
+  font-size: 12px !important;
+  font-weight: 500 !important;
+  color: var(--insp-ink-tertiary) !important;
+}
+
+.insp-shell .filter-tab.is-active::after {
+  bottom: -1px !important;
+  left: 14px !important; right: 14px !important;
+  background: var(--insp-accent) !important;
+  height: 2px !important;
+}
+.insp-shell .filter-tab.is-active { color: var(--insp-ink-primary) !important; }
+.insp-shell .filter-tab.is-active .filter-tab__count { color: var(--insp-accent) !important; }
+
+.insp-shell .filter-tab__count {
+  font-family: var(--insp-font-mono) !important;
+  font-size: 11px !important;
+  color: var(--insp-ink-quaternary) !important;
 }
