@@ -223,164 +223,110 @@ onMounted(() => { loadTemplates() })
 </script>
 
 <template>
-  <div class="cfg" @click="closeDropdowns">
-    <!-- Header -->
-    <div class="cfg-header">
-      <div class="cfg-header-left">
-        <LayoutGrid :size="18" class="cfg-header-icon" />
+  <div class="insp-shell cfg" @click="closeDropdowns">
+    <!-- Header (Audit Hub style) -->
+    <header class="cfg-head">
+      <div class="cfg-head__lead">
+        <span class="insp-eyebrow">检查模板 · Inspection Templates</span>
         <h1 class="cfg-title">检查配置</h1>
       </div>
-      <button class="btn-primary" @click="goCreate">
-        <Plus :size="14" />
-        新建模板
-      </button>
-    </div>
+      <div class="cfg-head__stats">
+        <button class="stat-pill" :class="{ 'is-active': activeFilter === 'ALL' }" @click="activeFilter = 'ALL'">
+          <span class="stat-pill__num insp-num">{{ stats.all }}</span>
+          <span class="stat-pill__label">全部</span>
+        </button>
+        <button class="stat-pill" :class="{ 'is-active': activeFilter === 'DRAFT' }" @click="activeFilter = 'DRAFT'">
+          <span class="stat-pill__num insp-num">{{ stats.draft }}</span>
+          <span class="stat-pill__label">草稿</span>
+        </button>
+        <button class="stat-pill" :class="{ 'is-active': activeFilter === 'PUBLISHED' }" @click="activeFilter = 'PUBLISHED'">
+          <span class="stat-pill__num insp-num" :style="{ color: 'var(--insp-pass)' }">{{ stats.published }}</span>
+          <span class="stat-pill__label">已发布</span>
+        </button>
+        <button class="stat-pill" :class="{ 'is-active': activeFilter === 'ARCHIVED' }" @click="activeFilter = 'ARCHIVED'">
+          <span class="stat-pill__num insp-num">{{ stats.archived }}</span>
+          <span class="stat-pill__label">已归档</span>
+        </button>
+        <button class="cfg-cta insp-btn insp-btn--accent" @click="goCreate">
+          <Plus :size="13" />新建模板
+        </button>
+      </div>
+    </header>
 
-    <!-- Stats bar -->
-    <div class="cfg-stats">
-      <button
-        class="stat-item" :class="{ active: activeFilter === 'ALL' }"
-        @click="activeFilter = 'ALL'"
-      >
-        <span class="stat-label">全部</span>
-        <span class="stat-value">{{ stats.all }}</span>
-      </button>
-      <span class="stat-sep">│</span>
-      <button
-        class="stat-item" :class="{ active: activeFilter === 'DRAFT' }"
-        @click="activeFilter = 'DRAFT'"
-      >
-        <span class="stat-label">草稿</span>
-        <span class="stat-value">{{ stats.draft }}</span>
-      </button>
-      <span class="stat-sep">│</span>
-      <button
-        class="stat-item" :class="{ active: activeFilter === 'PUBLISHED' }"
-        @click="activeFilter = 'PUBLISHED'"
-      >
-        <span class="stat-label">已发布</span>
-        <span class="stat-value published">{{ stats.published }}</span>
-      </button>
-      <span class="stat-sep">│</span>
-      <button
-        class="stat-item" :class="{ active: activeFilter === 'ARCHIVED' }"
-        @click="activeFilter = 'ARCHIVED'"
-      >
-        <span class="stat-label">已归档</span>
-        <span class="stat-value">{{ stats.archived }}</span>
-      </button>
-    </div>
-
-    <!-- Search + filter bar -->
+    <!-- Toolbar -->
     <div class="cfg-toolbar">
-      <div class="cfg-toolbar-left">
-        <div class="search-wrap">
-          <Search :size="13" class="search-icon" />
+      <div class="cfg-toolbar__lead">
+        <div class="cfg-search">
+          <Search :size="12" class="cfg-search__icon" />
           <input
-            v-model="query.keyword"
-            type="text"
-            placeholder="搜索模板名称..."
-            class="search-input"
+            v-model="query.keyword" type="text"
+            placeholder="搜索模板名称..." class="cfg-search__input"
             @keyup.enter="handleSearch"
           />
         </div>
-        <select v-model="query.sort" class="filter-select" @change="handleSortChange">
+        <select v-model="query.sort" class="cfg-sort" @change="handleSortChange">
           <option value="updated">最近更新</option>
           <option value="name">名称</option>
           <option value="status">状态</option>
         </select>
       </div>
-      <span class="cfg-total">{{ filteredSections.length }} 个模板</span>
+      <span class="cfg-total"><span class="insp-num">{{ filteredSections.length }}</span> 个模板</span>
     </div>
 
-    <!-- Card Grid -->
-    <div class="cfg-content">
-      <!-- Loading -->
-      <div v-if="loading" class="state-loading">
-        <div class="spinner" />
-        <span>加载中...</span>
-      </div>
+    <!-- List -->
+    <section class="cfg-list">
+      <div v-if="loading" class="cfg-state">加载中…</div>
 
-      <!-- Empty -->
-      <div v-else-if="filteredSections.length === 0" class="state-empty">
-        <FileText :size="48" class="empty-icon" />
-        <p class="empty-title">{{ activeFilter === 'ALL' ? '暂无检查模板' : `暂无${TemplateStatusConfig[activeFilter as TemplateStatus]?.label}模板` }}</p>
-        <p class="empty-sub">检查模板定义检查表单结构、字段和评分规则</p>
-        <button v-if="activeFilter === 'ALL'" class="btn-primary" @click="goCreate">
-          <Plus :size="14" /> 创建第一个模板
+      <div v-else-if="filteredSections.length === 0" class="cfg-empty">
+        <p class="cfg-empty__title">
+          {{ activeFilter === 'ALL' ? '暂无检查模板' : `暂无${TemplateStatusConfig[activeFilter as TemplateStatus]?.label}模板` }}
+        </p>
+        <p class="cfg-empty__sub">检查模板定义检查表单结构、字段和评分规则</p>
+        <button v-if="activeFilter === 'ALL'" class="insp-btn insp-btn--accent" @click="goCreate">
+          <Plus :size="13" /> 创建第一个模板
         </button>
       </div>
 
-      <!-- Grid -->
-      <div v-else class="card-grid">
-        <div
-          v-for="sec in filteredSections"
-          :key="sec.id"
-          class="tpl-card"
-          :class="['st-' + sec.status.toLowerCase()]"
+      <ul v-else class="tpl-rows">
+        <li
+          v-for="(sec, i) in filteredSections" :key="sec.id"
+          class="tpl-row"
           @click="goEdit(sec)"
         >
-          <!-- Card header -->
-          <div class="card-head">
-            <div class="card-title-row">
-              <span class="card-name">{{ sec.sectionName }}</span>
-              <span class="status-dot" :class="'dot-' + sec.status.toLowerCase()" />
+          <span class="tpl-row__num insp-num">{{ String(i + 1).padStart(2, '0') }}</span>
+
+          <div class="tpl-row__main">
+            <div class="tpl-row__line1">
+              <span class="tpl-row__name">{{ sec.sectionName }}</span>
+              <span class="insp-chip"
+                    :class="`insp-chip--${({DRAFT:'pending',PUBLISHED:'pass',DEPRECATED:'warn',ARCHIVED:'fail'} as any)[sec.status]}`">
+                {{ TemplateStatusConfig[sec.status]?.label }}
+              </span>
+              <span class="tpl-row__version insp-num">v{{ sec.latestVersion }}</span>
+            </div>
+            <div class="tpl-row__meta">
+              <span class="insp-num">{{ getSectionCount(sec.id) }} 分区</span>
+              <span class="tpl-row__sep">·</span>
+              <span class="insp-num">{{ formatDate(sec.updatedAt) }}</span>
+              <template v-if="getTargetTypes(sec.id).length > 0">
+                <span class="tpl-row__sep">·</span>
+                <span v-for="tt in getTargetTypes(sec.id)" :key="tt" class="tpl-row__tt">
+                  {{ TargetTypeConfig[tt]?.label }}
+                </span>
+              </template>
             </div>
           </div>
 
-          <!-- Card body -->
-          <div class="card-body">
-            <div class="card-meta">
-              <span class="meta-count">{{ getSectionCount(sec.id) }} 分区</span>
-              <span class="meta-dot">·</span>
-              <span class="meta-count">v{{ sec.latestVersion }}</span>
-            </div>
-
-            <!-- Target type tags -->
-            <div class="card-tags" v-if="getTargetTypes(sec.id).length > 0">
-              <span
-                v-for="tt in getTargetTypes(sec.id)"
-                :key="tt"
-                class="target-tag"
-                :class="'tt-' + tt.toLowerCase()"
-              >{{ TargetTypeConfig[tt]?.label }}</span>
-            </div>
-            <div v-else class="card-tags">
-              <span class="target-tag tt-none">通用</span>
-            </div>
+          <div class="tpl-row__actions" @click.stop>
+            <button class="insp-btn insp-btn--sm" @click="goEdit(sec)">编辑</button>
+            <button class="insp-btn insp-btn--sm" @click="handleDuplicate(sec)">复制</button>
+            <button class="insp-btn insp-btn--sm insp-btn--ghost" @click.stop="toggleDropdown(Number(sec.id), $event)">
+              <MoreHorizontal :size="13" />
+            </button>
           </div>
-
-          <!-- Card footer -->
-          <div class="card-footer" @click.stop>
-            <span class="card-time">{{ formatDate(sec.updatedAt) }} 更新</span>
-            <div class="card-actions">
-              <button
-                class="act-btn"
-                title="编辑"
-                @click.stop="goEdit(sec)"
-              >
-                <Pencil :size="13" />
-                编辑
-              </button>
-              <button
-                class="act-btn"
-                title="复制"
-                @click.stop="handleDuplicate(sec)"
-              >
-                <Copy :size="13" />
-                复制
-              </button>
-              <button
-                class="act-btn act-btn-icon"
-                @click.stop="toggleDropdown(Number(sec.id), $event)"
-              >
-                <MoreHorizontal :size="14" />
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
+        </li>
+      </ul>
+    </section>
 
     <!-- Dropdown Menu (Teleported to body) -->
     <Teleport to="body">
@@ -451,517 +397,358 @@ onMounted(() => { loadTemplates() })
 </template>
 
 <style scoped>
-/* ==================== Root ==================== */
 .cfg {
-  display: flex;
-  flex-direction: column;
-  height: 100%;
-  background: #f0f2f5;
-  font-family: -apple-system, BlinkMacSystemFont, 'PingFang SC', 'Microsoft YaHei', sans-serif;
+  padding: 12px 16px;
 }
 
-/* ==================== Header ==================== */
-.cfg-header {
+/* ─ Header ─────── */
+.cfg-head {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 16px 24px 14px;
-  background: #fff;
-  border-bottom: 1px solid #e8ecf0;
-  flex-shrink: 0;
+  gap: 16px;
+  background: var(--insp-bg-surface);
+  border: 1px solid var(--insp-border-default);
+  border-radius: var(--insp-radius-lg);
+  padding: 12px 16px;
+  margin-bottom: 10px;
 }
-.cfg-header-left {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-.cfg-header-icon {
-  color: #1a6dff;
-}
+.cfg-head__lead { display: flex; flex-direction: column; gap: 2px; }
 .cfg-title {
-  font-size: 16px;
-  font-weight: 600;
-  color: #1e2a3a;
-  margin: 0;
+  font-size: 17px;
+  font-weight: 700;
+  margin: 2px 0 0;
+  color: var(--insp-ink-primary);
 }
-
-/* ==================== Stats bar ==================== */
-.cfg-stats {
+.cfg-head__stats {
   display: flex;
-  align-items: center;
-  gap: 0;
-  padding: 10px 24px;
-  background: #fff;
-  border-bottom: 1px solid #e8ecf0;
-  flex-shrink: 0;
-}
-.stat-sep {
-  color: #dce1e8;
-  font-size: 14px;
-  padding: 0 16px;
-  user-select: none;
-}
-.stat-item {
-  display: inline-flex;
   align-items: center;
   gap: 6px;
-  padding: 4px 10px;
-  background: none;
-  border: none;
-  border-radius: 6px;
-  cursor: pointer;
-  transition: background 0.15s;
-}
-.stat-item:hover {
-  background: #f4f6f9;
-}
-.stat-item.active {
-  background: #e8f0ff;
-}
-.stat-label {
-  font-size: 13px;
-  color: #5a6474;
-  font-weight: 500;
-}
-.stat-item.active .stat-label {
-  color: #1a6dff;
-}
-.stat-value {
-  font-size: 13px;
-  font-weight: 700;
-  color: #1e2a3a;
-}
-.stat-value.published {
-  color: #10b981;
-}
-.stat-item.active .stat-value {
-  color: #1a6dff;
 }
 
-/* ==================== Toolbar ==================== */
+.stat-pill {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0;
+  min-width: 60px;
+  padding: 4px 12px;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: var(--insp-radius-sm);
+  cursor: pointer;
+  transition: all var(--insp-t-fast);
+  font-family: inherit;
+}
+.stat-pill:hover {
+  background: var(--insp-bg-subtle);
+}
+.stat-pill.is-active {
+  background: var(--insp-accent-paler);
+  border-color: var(--insp-accent-pale);
+}
+.stat-pill__num {
+  font-family: var(--insp-font-mono);
+  font-size: 17px;
+  font-weight: 700;
+  line-height: 1;
+  color: var(--insp-ink-primary);
+}
+.stat-pill.is-active .stat-pill__num { color: var(--insp-accent); }
+.stat-pill__label {
+  font-size: 10px;
+  color: var(--insp-ink-tertiary);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  margin-top: 2px;
+}
+
+.cfg-cta { margin-left: 6px; }
+
+/* ─ Toolbar ─────── */
 .cfg-toolbar {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 12px 24px;
-  background: #fff;
-  border-bottom: 1px solid #e8ecf0;
-  flex-shrink: 0;
-  gap: 12px;
+  gap: 8px;
+  background: var(--insp-bg-surface);
+  border: 1px solid var(--insp-border-default);
+  border-radius: var(--insp-radius-lg);
+  padding: 8px 14px;
+  margin-bottom: 10px;
 }
-.cfg-toolbar-left {
+.cfg-toolbar__lead {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
+}
+.cfg-search {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+.cfg-search__icon {
+  position: absolute;
+  left: 8px;
+  color: var(--insp-ink-tertiary);
+}
+.cfg-search__input {
+  height: 26px;
+  padding: 0 10px 0 24px;
+  border: 1px solid var(--insp-border-default);
+  border-radius: var(--insp-radius-sm);
+  font-size: 12px;
+  font-family: inherit;
+  width: 220px;
+  background: var(--insp-bg-surface);
+}
+.cfg-search__input:focus {
+  outline: none;
+  border-color: var(--insp-accent);
+  box-shadow: 0 0 0 3px var(--insp-accent-paler);
+}
+.cfg-sort {
+  height: 26px;
+  padding: 0 24px 0 8px;
+  border: 1px solid var(--insp-border-default);
+  border-radius: var(--insp-radius-sm);
+  font-size: 12px;
+  font-family: inherit;
+  background: var(--insp-bg-surface) url("data:image/svg+xml,%3Csvg width='10' height='6' viewBox='0 0 10 6' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%238A8A82' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") right 8px center no-repeat;
+  appearance: none;
+  cursor: pointer;
 }
 .cfg-total {
   font-size: 12px;
-  color: #b8c0cc;
-}
-.search-wrap {
-  position: relative;
-}
-.search-icon {
-  position: absolute;
-  left: 10px;
-  top: 50%;
-  transform: translateY(-50%);
-  color: #b8c0cc;
-  pointer-events: none;
-}
-.search-input {
-  height: 34px;
-  width: 240px;
-  border: 1px solid #dce1e8;
-  border-radius: 6px;
-  padding: 0 12px 0 32px;
-  font-size: 13px;
-  outline: none;
-  background: #fff;
-  color: #3d4757;
-  transition: border-color 0.2s, box-shadow 0.2s;
-}
-.search-input::placeholder {
-  color: #b8c0cc;
-}
-.search-input:focus {
-  border-color: #7aadff;
-  box-shadow: 0 0 0 3px rgba(26, 109, 255, 0.08);
-}
-.filter-select {
-  height: 34px;
-  border: 1px solid #dce1e8;
-  border-radius: 6px;
-  padding: 0 10px;
-  font-size: 13px;
-  outline: none;
-  background: #fff;
-  color: #3d4757;
-  cursor: pointer;
-  transition: border-color 0.2s;
-}
-.filter-select:focus {
-  border-color: #7aadff;
+  color: var(--insp-ink-tertiary);
 }
 
-/* ==================== Content area ==================== */
-.cfg-content {
-  flex: 1;
-  overflow-y: auto;
-  padding: 20px 24px;
-}
-
-/* ==================== Card Grid ==================== */
-.card-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-  gap: 14px;
-}
-
-/* ==================== Template Card ==================== */
-.tpl-card {
-  background: #fff;
-  border: 1px solid #e8ecf0;
-  border-radius: 10px;
-  border-left: 3px solid #dce1e8;
-  cursor: pointer;
-  transition: transform 0.18s, box-shadow 0.18s, border-color 0.18s;
-  display: flex;
-  flex-direction: column;
-}
-.tpl-card:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
-  border-color: #c8d4e3;
-}
-
-/* Status-based left border */
-.tpl-card.st-published {
-  border-left-color: #10b981;
-}
-.tpl-card.st-draft {
-  border-left-color: #1a6dff;
-  border-left-style: dashed;
-}
-.tpl-card.st-deprecated {
-  border-left-color: #f59e0b;
-}
-.tpl-card.st-archived {
-  border-left-color: #d1d5db;
-}
-
-/* Card head */
-.card-head {
-  padding: 14px 16px 8px;
-}
-.card-title-row {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 10px;
-}
-.card-name {
-  font-size: 14px;
-  font-weight: 600;
-  color: #1e2a3a;
-  line-height: 1.4;
-  flex: 1;
-  min-width: 0;
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
+/* ─ List ─────── */
+.cfg-list {
+  background: var(--insp-bg-surface);
+  border: 1px solid var(--insp-border-default);
+  border-radius: var(--insp-radius-lg);
   overflow: hidden;
 }
-.tpl-card:hover .card-name {
-  color: #1a6dff;
+
+.cfg-state {
+  padding: 60px 20px;
+  text-align: center;
+  font-size: 13px;
+  color: var(--insp-ink-tertiary);
 }
 
-/* Status dot */
-.status-dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  flex-shrink: 0;
-  margin-top: 4px;
+.cfg-empty {
+  padding: 80px 20px;
+  text-align: center;
 }
-.dot-published { background: #10b981; }
-.dot-draft { background: #94a3b8; }
-.dot-deprecated { background: #f59e0b; }
-.dot-archived { background: #d1d5db; }
-
-/* Card body */
-.card-body {
-  padding: 2px 16px 10px;
-  flex: 1;
+.cfg-empty__title {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--insp-ink-primary);
+  margin: 0 0 6px;
 }
-.card-meta {
-  display: flex;
-  align-items: center;
-  gap: 5px;
-  margin-bottom: 8px;
-}
-.meta-count {
+.cfg-empty__sub {
   font-size: 12px;
-  color: #8c95a3;
+  color: var(--insp-ink-tertiary);
+  margin: 0 0 16px;
 }
-.meta-dot {
-  font-size: 11px;
-  color: #c8d0db;
+
+/* ─ Template rows ─────── */
+.tpl-rows {
+  list-style: none;
+  margin: 0;
+  padding: 0;
 }
-.card-tags {
+.tpl-row {
+  display: grid;
+  grid-template-columns: 40px 1fr auto;
+  gap: 12px;
+  align-items: center;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--insp-border-subtle);
+  cursor: pointer;
+  transition: background var(--insp-t-fast);
+}
+.tpl-row:last-child { border-bottom: 0; }
+.tpl-row:hover { background: var(--insp-bg-subtle); }
+
+.tpl-row__num {
+  font-family: var(--insp-font-mono);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--insp-ink-quaternary);
+}
+
+.tpl-row__main { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.tpl-row__line1 {
   display: flex;
+  align-items: center;
+  gap: 8px;
   flex-wrap: wrap;
-  gap: 5px;
 }
-
-/* Target type tags */
-.target-tag {
+.tpl-row__name {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--insp-ink-primary);
+}
+.tpl-row__version {
+  font-family: var(--insp-font-mono);
   font-size: 11px;
-  font-weight: 500;
-  padding: 2px 8px;
-  border-radius: 4px;
-  white-space: nowrap;
+  font-weight: 600;
+  color: var(--insp-accent);
+  padding: 1px 6px;
+  border: 1px solid var(--insp-accent-pale);
+  border-radius: 3px;
 }
-.tt-org { background: #e8f0ff; color: #2563eb; }
-.tt-place { background: #ecfdf5; color: #059669; }
-.tt-user { background: #f5f3ff; color: #7c3aed; }
-.tt-asset { background: #fff7ed; color: #d97706; }
-.tt-composite { background: #fdf2f8; color: #be185d; }
-.tt-none { background: #f4f6f9; color: #8c95a3; }
-
-/* Card footer */
-.card-footer {
+.tpl-row__meta {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  padding: 9px 12px 9px 16px;
-  border-top: 1px solid #f0f2f5;
-  background: #fafbfc;
-}
-.card-time {
+  gap: 6px;
   font-size: 11px;
-  color: #b8c0cc;
+  color: var(--insp-ink-tertiary);
+  flex-wrap: wrap;
 }
-.card-actions {
-  display: flex;
-  align-items: center;
-  gap: 2px;
-}
-.act-btn {
+.tpl-row__sep { color: var(--insp-ink-quaternary); }
+.tpl-row__tt {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
-  padding: 4px 9px;
-  background: none;
-  border: none;
-  border-radius: 5px;
-  font-size: 12px;
-  color: #6b7685;
-  cursor: pointer;
-  transition: all 0.12s;
-  white-space: nowrap;
-}
-.act-btn:hover {
-  background: #f0f2f5;
-  color: #1a6dff;
-}
-.act-btn-icon {
-  padding: 4px 6px;
+  padding: 1px 6px;
+  background: var(--insp-bg-subtle);
+  border-radius: 3px;
+  color: var(--insp-ink-secondary);
 }
 
-/* Dropdown (Teleported to body) */
+.tpl-row__actions {
+  display: flex;
+  gap: 4px;
+}
+
+/* ─ Dropdown ─────── */
 .dropdown-menu {
   position: fixed;
-  min-width: 130px;
-  background: #fff;
-  border: 1px solid #e8ecf0;
-  border-radius: 10px;
-  padding: 4px;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
   z-index: 9999;
+  background: var(--insp-bg-surface);
+  border: 1px solid var(--insp-border-default);
+  border-radius: var(--insp-radius-md);
+  box-shadow: var(--insp-shadow-md);
+  min-width: 140px;
+  padding: 4px;
 }
 .dropdown-menu button {
   display: flex;
   align-items: center;
-  gap: 7px;
+  gap: 6px;
   width: 100%;
-  padding: 7px 11px;
-  font-size: 13px;
-  color: #3d4757;
-  background: none;
-  border: none;
-  border-radius: 6px;
-  cursor: pointer;
-  transition: background 0.12s;
-  text-align: left;
-  white-space: nowrap;
-}
-.dropdown-menu button:hover { background: #f4f6f9; }
-.dropdown-menu button.warn { color: #c47a00; }
-.dropdown-menu button.warn:hover { background: #fff7e6; }
-.dropdown-menu button.danger { color: #d93025; }
-.dropdown-menu button.danger:hover { background: #fef2f2; }
-.dropdown-divider { height: 1px; background: #f0f2f5; margin: 3px 6px; }
-
-.dropdown-enter-active { transition: all 0.15s ease-out; }
-.dropdown-leave-active { transition: all 0.1s ease-in; }
-.dropdown-enter-from, .dropdown-leave-to { opacity: 0; transform: translateY(-4px); }
-
-/* ==================== State views ==================== */
-.state-loading {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 10px;
-  padding: 80px 0;
-  color: #b8c0cc;
-  font-size: 13px;
-}
-.spinner {
-  width: 20px;
-  height: 20px;
-  border: 2px solid #e8ecf0;
-  border-top-color: #1a6dff;
-  border-radius: 50%;
-  animation: spin 0.6s linear infinite;
-}
-@keyframes spin { to { transform: rotate(360deg); } }
-
-.state-empty {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  padding: 80px 0;
-  gap: 10px;
-}
-.empty-icon { color: #dce1e8; }
-.empty-title {
-  font-size: 15px;
-  font-weight: 600;
-  color: #6b7685;
-  margin: 0;
-}
-.empty-sub {
+  padding: 7px 10px;
+  background: transparent;
+  border: 0;
+  border-radius: var(--insp-radius-sm);
+  font-family: inherit;
   font-size: 12px;
-  color: #b8c0cc;
-  margin: 0;
+  color: var(--insp-ink-secondary);
+  cursor: pointer;
+  text-align: left;
+}
+.dropdown-menu button:hover { background: var(--insp-bg-subtle); color: var(--insp-ink-primary); }
+.dropdown-menu button.warn:hover { background: var(--insp-warn-pale); color: var(--insp-warn); }
+.dropdown-menu button.danger:hover { background: var(--insp-fail-pale); color: var(--insp-fail); }
+.dropdown-divider {
+  height: 1px;
+  background: var(--insp-border-subtle);
+  margin: 4px 2px;
 }
 
-/* ==================== Buttons ==================== */
-.btn-primary {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  padding: 8px 16px;
-  background: #1a6dff;
-  color: #fff;
-  border: none;
-  border-radius: 8px;
-  font-size: 13px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: background 0.15s;
-  white-space: nowrap;
-}
-.btn-primary:hover { background: #1558d6; }
-.btn-ghost {
-  padding: 8px 16px;
-  background: none;
-  border: 1px solid #dce1e8;
-  border-radius: 8px;
-  font-size: 13px;
-  color: #5a6474;
-  cursor: pointer;
-  transition: background 0.15s;
-}
-.btn-ghost:hover { background: #f4f6f9; }
+.dropdown-enter-active, .dropdown-leave-active { transition: opacity var(--insp-t-fast); }
+.dropdown-enter-from, .dropdown-leave-to { opacity: 0; }
 
-/* ==================== Modal ==================== */
+/* ─ Modal ─────── */
 .modal-mask {
-  position: fixed;
-  inset: 0;
-  z-index: 1000;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: rgba(15, 23, 42, 0.4);
-  backdrop-filter: blur(2px);
+  position: fixed; inset: 0; z-index: 9000;
+  background: var(--insp-bg-overlay);
+  display: flex; align-items: center; justify-content: center;
 }
 .modal-box {
-  width: 460px;
-  background: #fff;
-  border-radius: 14px;
-  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.18);
-  overflow: hidden;
+  width: 480px;
+  background: var(--insp-bg-surface);
+  border: 1px solid var(--insp-border-strong);
+  border-radius: var(--insp-radius-lg);
+  box-shadow: var(--insp-shadow-lg);
 }
 .modal-head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 20px 24px 0;
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--insp-border-subtle);
 }
 .modal-head h3 {
-  font-size: 16px;
+  font-size: 14px;
   font-weight: 600;
-  color: #1e2a3a;
+  color: var(--insp-ink-primary);
   margin: 0;
 }
 .modal-close {
-  background: none;
-  border: none;
-  font-size: 22px;
-  color: #b8c0cc;
+  background: transparent;
+  border: 0;
+  font-size: 18px;
+  color: var(--insp-ink-tertiary);
   cursor: pointer;
-  padding: 0 4px;
-  line-height: 1;
 }
-.modal-close:hover { color: #5a6474; }
-.modal-body {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-  padding: 20px 24px;
-}
+.modal-body { padding: 14px 16px; display: flex; flex-direction: column; gap: 12px; }
 .modal-foot {
-  display: flex;
-  justify-content: flex-end;
-  gap: 10px;
-  padding: 0 24px 20px;
+  display: flex; justify-content: flex-end; gap: 8px;
+  padding: 10px 16px;
+  border-top: 1px solid var(--insp-border-subtle);
+}
+.fld {
+  display: flex; flex-direction: column; gap: 4px;
 }
 .fld label {
-  display: block;
   font-size: 12px;
   font-weight: 500;
-  color: #5a6474;
-  margin-bottom: 5px;
+  color: var(--insp-ink-secondary);
 }
+.fld .req { color: var(--insp-fail); }
 .fld input, .fld textarea {
-  width: 100%;
-  box-sizing: border-box;
-  border: 1px solid #dce1e8;
-  border-radius: 6px;
-  padding: 8px 12px;
-  font-size: 13px;
-  outline: none;
-  color: #1e2a3a;
-  background: #fff;
-  transition: border-color 0.2s, box-shadow 0.2s;
+  padding: 6px 10px;
+  border: 1px solid var(--insp-border-default);
+  border-radius: var(--insp-radius-sm);
   font-family: inherit;
+  font-size: 13px;
+  background: var(--insp-bg-surface);
   resize: vertical;
 }
-.fld input::placeholder, .fld textarea::placeholder { color: #b8c0cc; }
 .fld input:focus, .fld textarea:focus {
-  border-color: #7aadff;
-  box-shadow: 0 0 0 3px rgba(26, 109, 255, 0.08);
+  outline: none;
+  border-color: var(--insp-accent);
+  box-shadow: 0 0 0 3px var(--insp-accent-paler);
 }
-.req { color: #d93025; }
+.btn-primary, .btn-ghost {
+  height: 28px;
+  padding: 0 12px;
+  border-radius: var(--insp-radius-sm);
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all var(--insp-t-fast);
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+.btn-primary {
+  background: var(--insp-accent);
+  color: white;
+  border: 1px solid var(--insp-accent);
+}
+.btn-primary:hover { background: var(--insp-accent-hover); }
+.btn-ghost {
+  background: var(--insp-bg-surface);
+  color: var(--insp-ink-secondary);
+  border: 1px solid var(--insp-border-strong);
+}
+.btn-ghost:hover { border-color: var(--insp-accent); color: var(--insp-accent); }
 
-/* Modal transition */
-.modal-enter-active { transition: all 0.2s ease-out; }
-.modal-leave-active { transition: all 0.15s ease-in; }
-.modal-enter-from { opacity: 0; }
-.modal-enter-from .modal-box { transform: translateY(12px) scale(0.97); }
-.modal-leave-to { opacity: 0; }
-.modal-leave-to .modal-box { transform: translateY(-8px) scale(0.98); }
+.modal-enter-active, .modal-leave-active { transition: opacity var(--insp-t-fast); }
+.modal-enter-from, .modal-leave-to { opacity: 0; }
 </style>
+
