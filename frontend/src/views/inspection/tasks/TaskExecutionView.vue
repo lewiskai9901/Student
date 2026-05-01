@@ -14,7 +14,7 @@ import { ElMessage, ElMessageBox } from 'element-plus'
 import {
   ArrowLeft, Play, Send, RotateCcw,
   ChevronLeft, ChevronRight,
-  Star, Search, Target,
+  Star, Search, Target, Sparkles,
 } from 'lucide-vue-next'
 import { useInspExecutionStore } from '@/stores/inspection/inspExecutionStore'
 import { useScoringShortcuts } from '@/composables/useScoringShortcuts'
@@ -33,6 +33,8 @@ import { buildSectionTree, flattenTree, type SectionTreeNode } from '@/utils/sec
 import ViolationRecordInput from './components/ViolationRecordInput.vue'
 import PersonScoreGrid from './components/PersonScoreGrid.vue'
 import EventStreamRecorder from './components/EventStreamRecorder.vue'
+import AiSuggestionDialog from './components/AiSuggestionDialog.vue'
+import type { SuggestScoreResponse } from '@/api/inspection/aiScoring'
 
 const route = useRoute()
 const router = useRouter()
@@ -54,6 +56,41 @@ const sectionTree = ref<SectionTreeNode[]>([])
 const numberInputs = ref<Record<number, number>>({})
 const selectInputs = ref<Record<number, string>>({})
 const textInputs = ref<Record<number, string>>({})
+
+// AI 辅助打分对话框 (Track 5)
+const aiDialogOpen = ref(false)
+const aiDialogDetail = ref<SubmissionDetail | null>(null)
+const aiDialogGroup = ref<any>(null)
+function openAiDialog(detail: SubmissionDetail, group: any) {
+  aiDialogDetail.value = detail
+  aiDialogGroup.value = group
+  aiDialogOpen.value = true
+}
+function handleAiApply(s: SuggestScoreResponse) {
+  const d = aiDialogDetail.value
+  const g = aiDialogGroup.value
+  if (!d || !g) return
+  // 按打分模式应用建议
+  const mode = d.scoringMode
+  if (mode === 'PASS_FAIL' && s.suggestedVerdict) {
+    handlePassFail(d, s.suggestedVerdict as 'PASS' | 'FAIL')
+  } else if (mode === 'DEDUCTION' && s.suggestedScore != null) {
+    // 建议是"扣多少", 转为负数累加 numberInputs
+    numberInputs.value[d.id] = -Math.abs(s.suggestedScore)
+    handleDeductionStep(d, 0) // 触发保存逻辑
+  } else if (mode === 'ADDITION' && s.suggestedScore != null) {
+    numberInputs.value[d.id] = Math.abs(s.suggestedScore)
+    handleAdditionStep(d, 0)
+  } else if (mode === 'DIRECT' && s.suggestedScore != null) {
+    handleDirectInput(d, s.suggestedScore)
+  } else {
+    ElMessage.info('AI 建议已显示, 请检查员手工应用')
+  }
+  aiDialogOpen.value = false
+  if (s.reasoning) {
+    ElMessage.success(`已应用 AI 建议: ${s.reasoning}`)
+  }
+}
 
 const isEditable = computed(() => {
   // In target mode, editable if ANY non-intermediate submission for the target is IN_PROGRESS
@@ -1226,6 +1263,12 @@ onMounted(() => loadData())
                       :type="detail.scoringMode === 'DEDUCTION' ? 'danger' : detail.scoringMode === 'ADDITION' ? 'success' : detail.scoringMode === 'PASS_FAIL' ? 'primary' : 'warning'"
                     >{{ ScoringModeConfig[detail.scoringMode]?.label ?? detail.scoringMode }}</el-tag>
                     <el-tag v-else size="small" type="info" effect="plain">采集</el-tag>
+                    <button v-if="detail.scoringMode" class="ai-suggest-btn"
+                      :disabled="!isGroupEditable(group)"
+                      @click="openAiDialog(detail, group)"
+                      title="AI 辅助打分">
+                      <Sparkles :size="13" />AI 辅助
+                    </button>
                   </div>
                   <!-- EVENT_STREAM mode: show search+record interface -->
                   <template v-if="detail.inputMode === 'EVENT_STREAM'">
@@ -1367,6 +1410,16 @@ onMounted(() => loadData())
       <!-- /scoring-panel -->
     </div>
     <!-- /main-body -->
+
+    <!-- AI 辅助打分对话框 -->
+    <AiSuggestionDialog
+      v-if="aiDialogDetail"
+      v-model="aiDialogOpen"
+      :item-title="aiDialogDetail.itemName"
+      :item-max-score="100"
+      :scoring-mode="(aiDialogDetail.scoringMode === 'PASS_FAIL' ? 'PASS_FAIL' : aiDialogDetail.scoringMode === 'DEDUCTION' ? 'DEDUCTION' : 'SCORE')"
+      @apply="handleAiApply"
+    />
   </div>
 </template>
 
@@ -1786,7 +1839,7 @@ onMounted(() => loadData())
 .card-top {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  gap: 8px;
   margin-bottom: 8px;
 }
 
@@ -1794,7 +1847,25 @@ onMounted(() => loadData())
   font-size: 13px;
   font-weight: 500;
   color: #1f2937;
+  flex: 1;
+  min-width: 0;
 }
+
+.ai-suggest-btn {
+  display: inline-flex; align-items: center; gap: 3px;
+  padding: 2px 8px; height: 22px;
+  border: 1px solid #bfdbfe; border-radius: 4px;
+  background: linear-gradient(135deg, #eff6ff 0%, #f0f9ff 100%);
+  color: #1e40af;
+  font-size: 11px; font-family: inherit; cursor: pointer;
+  transition: all 0.15s;
+  margin-left: auto;
+}
+.ai-suggest-btn:hover:not(:disabled) {
+  background: linear-gradient(135deg, #dbeafe 0%, #e0f2fe 100%);
+  border-color: #93c5fd;
+}
+.ai-suggest-btn:disabled { opacity: 0.4; cursor: not-allowed; }
 
 /* Card controls */
 .card-control { display: flex; align-items: center; gap: 6px; }

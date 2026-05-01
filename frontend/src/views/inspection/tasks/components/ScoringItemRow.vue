@@ -6,9 +6,11 @@
  * remark input, flag toggle, and score display.
  * Supports both scored items (13 scoring modes) and capture items (input-only).
  */
-import { computed } from 'vue'
-import { Check, X, Flag } from 'lucide-vue-next'
+import { computed, ref } from 'vue'
+import { Check, X, Flag, Sparkles } from 'lucide-vue-next'
 import type { SubmissionDetail } from '@/types/insp/project'
+import AiSuggestionDialog from './AiSuggestionDialog.vue'
+import type { SuggestScoreResponse } from '@/api/inspection/aiScoring'
 
 const props = defineProps<{
   detail: SubmissionDetail
@@ -36,6 +38,7 @@ const props = defineProps<{
 const emit = defineEmits<{
   passFail: [detail: SubmissionDetail, value: 'PASS' | 'FAIL']
   deduction: [detail: SubmissionDetail]
+  aiSuggest: [detail: SubmissionDetail, suggestion: SuggestScoreResponse]
   addition: [detail: SubmissionDetail]
   direct: [detail: SubmissionDetail]
   level: [detail: SubmissionDetail, label: string, score: number]
@@ -58,6 +61,12 @@ const emit = defineEmits<{
 // Shorthand
 const mode = props.resolveMode(props.detail)
 const params = props.getScoringParams(props.detail)
+
+// AI 辅助打分对话框
+const aiDialogOpen = ref(false)
+function handleAiApply(s: SuggestScoreResponse) {
+  emit('aiSuggest', props.detail, s)
+}
 
 // Capture item type label
 const captureTypeLabel = computed(() => {
@@ -382,8 +391,16 @@ const captureNeedsExpandedInput = computed(() => {
           <el-button size="small" type="primary" plain :disabled="scoringInProgress" @click="emit('formula', detail)">确认</el-button>
         </div>
 
-        <!-- Flag + Score display (only for scored items) -->
+        <!-- AI 辅助 + Flag + Score display (only for scored items) -->
         <template v-if="!isNonScoring(detail)">
+          <button
+            class="p-1 rounded transition-all"
+            :class="'text-blue-500 bg-blue-50/40 hover:bg-blue-100'"
+            @click="aiDialogOpen = true" title="AI 辅助打分"
+            :disabled="scoringInProgress"
+          >
+            <Sparkles class="w-3.5 h-3.5" />
+          </button>
           <button
             class="p-1 rounded transition-all"
             :class="detail.isFlagged
@@ -548,5 +565,14 @@ const captureNeedsExpandedInput = computed(() => {
         />
       </div>
     </template>
+
+    <!-- AI 辅助打分对话框 -->
+    <AiSuggestionDialog
+      v-model="aiDialogOpen"
+      :item-title="detail.itemName"
+      :item-max-score="getMaxScoreForMode(detail)"
+      :scoring-mode="(resolveMode(detail) as any)"
+      @apply="handleAiApply"
+    />
   </div>
 </template>
