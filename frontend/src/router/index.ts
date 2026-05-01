@@ -440,6 +440,17 @@ const routes: RouteRecordRaw[] = [
               permission: 'insp:corrective:view'
             }
           },
+          // 当事人记录页 (UX gap fix · 学生/部门看针对自己的检查)
+          {
+            path: '/inspection/about-me',
+            name: 'InspectionAboutMe',
+            component: () => import('@/views/inspection/AboutMeView.vue'),
+            meta: {
+              title: '关于我的检查',
+              requiresAuth: true,
+              hidden: true,
+            }
+          },
           // 检查员驾驶舱 (Cockpit redesign · Sweep+Matrix+Focus)
           {
             path: '/inspection/tasks/:id/cockpit',
