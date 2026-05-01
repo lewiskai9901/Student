@@ -1,96 +1,103 @@
 <template>
-  <div class="obs-page">
-    <!-- Header -->
-    <header class="obs-header">
-      <div class="header-left">
-        <h1 class="page-title">评分观察记录</h1>
-        <div class="stats-row">
-          <span class="stat">总数 <b>{{ total }}</b></span>
-          <i class="stat-sep" />
-          <span class="stat"><em class="dot dot-neg" /> 负面 <b class="c-neg">{{ negativeCount }}</b></span>
+  <div class="insp-shell obs-ledger">
+    <!-- ── Editorial header ─────────── -->
+    <header class="page-head">
+      <div>
+        <div class="insp-eyebrow">观察记录 / Observations</div>
+        <h1 class="insp-display page-title">评分观察</h1>
+      </div>
+      <div class="head-stats">
+        <div class="insp-stat">
+          <span class="insp-stat__value">{{ total }}</span>
+          <span class="insp-stat__label">观察总数</span>
+        </div>
+        <div class="head-rule" />
+        <div class="insp-stat">
+          <span class="insp-stat__value" :style="{ color: 'var(--insp-fail)' }">{{ negativeCount }}</span>
+          <span class="insp-stat__label">负面记录</span>
         </div>
       </div>
     </header>
 
-    <!-- Filter Bar -->
-    <div class="filter-bar">
+    <hr class="insp-rule insp-rule--strong head-divider" />
+
+    <!-- ── Filter rail ─────────── -->
+    <nav class="filter-rail">
       <div class="filter-group">
+        <span class="insp-caps">主体</span>
         <select v-model="filters.subjectType" class="filter-select" @change="loadData">
-          <option value="">全部主体</option>
+          <option value="">全部</option>
           <option value="USER">用户</option>
           <option value="ORG_UNIT">组织</option>
           <option value="PLACE">场所</option>
         </select>
+      </div>
+      <div class="filter-group">
+        <span class="insp-caps">严重度</span>
         <select v-model="filters.severity" class="filter-select" @change="loadData">
-          <option value="">全部程度</option>
+          <option value="">全部</option>
           <option value="LOW">轻微</option>
           <option value="MEDIUM">中等</option>
           <option value="HIGH">严重</option>
           <option value="CRITICAL">危急</option>
         </select>
-        <label class="neg-toggle" :class="{ active: filters.isNegative }">
-          <input type="checkbox" v-model="filters.isNegative" @change="loadData" />
-          仅负面
-        </label>
-        <button v-if="hasFilters" class="btn-reset" @click="resetFilters">清除筛选</button>
       </div>
-    </div>
+      <label class="neg-toggle" :class="{ 'is-active': filters.isNegative }">
+        <input type="checkbox" v-model="filters.isNegative" @change="loadData" />
+        仅显示负面
+      </label>
+      <div class="filter-spacer" />
+      <button v-if="hasFilters" class="insp-btn insp-btn--ghost" @click="resetFilters">清除筛选</button>
+      <button class="insp-btn insp-btn--ghost" @click="loadData">刷新</button>
+    </nav>
 
-    <!-- Table -->
-    <div class="table-container" v-loading="loading">
-      <table class="obs-table">
-        <colgroup>
-          <col style="width: 160px" />
-          <col style="width: 120px" />
-          <col style="width: 100px" />
-          <col style="width: 80px" />
-          <col style="width: 80px" />
-          <col style="width: 100px" />
-          <col style="width: 140px" />
-        </colgroup>
+    <!-- ── Ledger table ─────────── -->
+    <section v-loading="loading" class="ledger-wrap">
+      <table class="insp-table ledger-table">
         <thead>
           <tr>
+            <th class="th-time">时间</th>
             <th>检查项</th>
             <th>主体</th>
             <th>班级</th>
-            <th>分数</th>
-            <th>程度</th>
+            <th class="th-num">分数</th>
+            <th>严重度</th>
             <th>事件类型</th>
-            <th>时间</th>
           </tr>
         </thead>
         <tbody>
-          <tr v-for="row in records" :key="row.id" class="obs-row">
-            <td class="cell-name">{{ row.itemName || '--' }}</td>
+          <tr v-for="row in records" :key="row.id" class="ledger-row" :class="{ 'is-neg': (row.score || 0) < 0 }">
+            <td class="td-time insp-num">{{ formatTime(row.observedAt) }}</td>
+            <td class="td-name">{{ row.itemName || '—' }}</td>
             <td>
-              <span class="subject-chip" :class="'st-' + row.subjectType">{{ row.subjectName || '--' }}</span>
+              <span class="insp-chip" :class="'subject-' + row.subjectType">
+                {{ row.subjectName || '—' }}
+              </span>
             </td>
-            <td class="cell-muted">{{ row.className || '--' }}</td>
+            <td class="td-muted">{{ row.className || '—' }}</td>
+            <td class="td-num insp-num" :class="{ 'is-neg': (row.score || 0) < 0 }">{{ row.score }}</td>
             <td>
-              <span class="score-val" :class="{ negative: row.score < 0 }">{{ row.score }}</span>
-            </td>
-            <td>
-              <span v-if="row.severity" class="severity-badge" :style="severityStyle(row.severity)">
+              <span v-if="row.severity" class="insp-chip" :class="`insp-chip--${severityChipVariant(row.severity)}`">
                 {{ severityLabel(row.severity) }}
               </span>
-              <span v-else>--</span>
+              <span v-else class="td-muted">—</span>
             </td>
-            <td class="cell-muted">{{ row.linkedEventTypeCode || '--' }}</td>
-            <td class="cell-muted">{{ formatTime(row.observedAt) }}</td>
+            <td class="td-muted insp-num">{{ row.linkedEventTypeCode || '—' }}</td>
           </tr>
           <tr v-if="!loading && records.length === 0">
-            <td colspan="7" class="empty-cell">暂无评分观察数据</td>
+            <td colspan="7" class="empty-cell">
+              <div class="insp-stamp">无观察记录</div>
+            </td>
           </tr>
         </tbody>
       </table>
 
-      <!-- Pagination -->
       <div v-if="total > filters.size" class="pagination">
-        <button class="page-btn" :disabled="filters.page <= 1" @click="filters.page--; loadData()">上一页</button>
-        <span class="page-info">{{ filters.page }} / {{ totalPages }}</span>
-        <button class="page-btn" :disabled="filters.page >= totalPages" @click="filters.page++; loadData()">下一页</button>
+        <button class="insp-btn insp-btn--sm" :disabled="filters.page <= 1" @click="filters.page--; loadData()">← 上一页</button>
+        <span class="page-info insp-num">{{ filters.page }} / {{ totalPages }}</span>
+        <button class="insp-btn insp-btn--sm" :disabled="filters.page >= totalPages" @click="filters.page++; loadData()">下一页 →</button>
       </div>
-    </div>
+    </section>
   </div>
 </template>
 
@@ -155,9 +162,8 @@ async function loadData() {
 }
 
 function severityLabel(s: string) { return SEVERITY_CONFIG[s]?.label || s }
-function severityStyle(s: string) {
-  const cfg = SEVERITY_CONFIG[s]
-  return cfg ? { color: cfg.color, background: cfg.bg } : {}
+function severityChipVariant(s: string): string {
+  return ({ LOW: 'pending', MEDIUM: 'info', HIGH: 'warn', CRITICAL: 'fail' } as Record<string, string>)[s] || 'pending'
 }
 
 function formatTime(t: string) {
@@ -169,90 +175,120 @@ onMounted(() => loadData())
 </script>
 
 <style scoped>
-.obs-page {
-  display: flex; flex-direction: column; height: 100%;
-  background: #f8f9fb; font-family: 'DM Sans', sans-serif;
+.obs-ledger {
+  padding: 32px 48px 64px;
+  max-width: 1500px;
+  margin: 0 auto;
+  min-height: 100vh;
+  background: var(--insp-bg-page);
 }
 
-.obs-header {
-  display: flex; align-items: flex-start; justify-content: space-between;
-  padding: 20px 24px 16px; background: #fff; border-bottom: 1px solid #e8eaed;
+/* ─ Header ─────── */
+.page-head {
+  display: flex; align-items: flex-end; justify-content: space-between;
+  gap: var(--insp-sp-7);
+  margin-bottom: var(--insp-sp-4);
 }
-.page-title { font-family: 'Plus Jakarta Sans', sans-serif; font-size: 20px; font-weight: 700; color: #111827; margin: 0; }
-.stats-row { display: flex; align-items: center; gap: 8px; margin-top: 6px; }
-.stat { font-size: 12.5px; color: #6b7280; }
-.stat b { font-weight: 600; }
-.c-neg { color: #dc2626; }
-.stat-sep { display: block; width: 1px; height: 10px; background: #d1d5db; }
-.dot { display: inline-block; width: 6px; height: 6px; border-radius: 50%; margin-right: 2px; vertical-align: middle; }
-.dot-neg { background: #ef4444; }
+.page-title { font-size: 44px; margin: 0; font-weight: 500; }
+.head-stats {
+  display: flex; align-items: center; gap: var(--insp-sp-6);
+  padding: 4px 0;
+}
+.head-rule { width: 1px; height: 32px; background: var(--insp-border-default); }
+.head-divider { margin: 0 0 var(--insp-sp-7); }
 
-.filter-bar {
-  display: flex; align-items: center; gap: 12px;
-  padding: 10px 24px; background: #fff; border-bottom: 1px solid #e8eaed;
+/* ─ Filter rail ─────── */
+.filter-rail {
+  display: flex; align-items: center; gap: var(--insp-sp-4);
+  padding: var(--insp-sp-3) 0;
+  margin-bottom: var(--insp-sp-5);
+  border-bottom: 1px solid var(--insp-border-subtle);
+  flex-wrap: wrap;
 }
-.filter-group { display: flex; gap: 8px; align-items: center; }
+.filter-group {
+  display: flex; align-items: center; gap: var(--insp-sp-2);
+}
+.filter-group .insp-caps { color: var(--insp-ink-tertiary); }
 .filter-select {
-  padding: 7px 28px 7px 10px; border: 1px solid #e5e7eb; border-radius: 7px;
-  font-size: 13px; color: #374151; background: #f9fafb url("data:image/svg+xml,%3Csvg width='10' height='6' viewBox='0 0 10 6' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%239ca3af' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") right 10px center no-repeat;
-  appearance: none; cursor: pointer; outline: none; font-family: inherit;
+  padding: 6px 26px 6px 10px;
+  border: 1px solid var(--insp-border-default);
+  border-radius: var(--insp-radius-md);
+  font-family: inherit;
+  font-size: var(--insp-text-sm);
+  color: var(--insp-ink-primary);
+  background: var(--insp-bg-surface) url("data:image/svg+xml,%3Csvg width='10' height='6' viewBox='0 0 10 6' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%238A8A82' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") right 8px center no-repeat;
+  appearance: none; cursor: pointer; outline: none;
+}
+.filter-select:focus {
+  border-color: var(--insp-accent);
+  box-shadow: 0 0 0 3px var(--insp-accent-paler);
 }
 .neg-toggle {
-  display: inline-flex; align-items: center; gap: 4px;
-  padding: 6px 12px; border: 1px solid #e5e7eb; border-radius: 7px;
-  font-size: 13px; color: #6b7280; cursor: pointer; user-select: none;
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 6px 12px;
+  border: 1px solid var(--insp-border-default);
+  border-radius: var(--insp-radius-md);
+  font-size: var(--insp-text-sm);
+  color: var(--insp-ink-secondary);
+  cursor: pointer; user-select: none;
+  transition: all var(--insp-t-fast);
 }
-.neg-toggle input { display: none; }
-.neg-toggle.active { border-color: #dc2626; color: #dc2626; background: #fef2f2; }
-.btn-reset {
-  padding: 7px 12px; font-size: 12px; color: #6b7280; background: none;
-  border: 1px dashed #d1d5db; border-radius: 6px; cursor: pointer; font-family: inherit;
+.neg-toggle input { accent-color: var(--insp-accent); }
+.neg-toggle.is-active {
+  border-color: var(--insp-accent);
+  color: var(--insp-accent);
+  background: var(--insp-accent-paler);
 }
+.filter-spacer { flex: 1; }
 
-.table-container { flex: 1; overflow-y: auto; padding: 16px 24px; }
-.obs-table {
-  width: 100%; table-layout: fixed; border-collapse: separate; border-spacing: 0;
-  background: #fff; border: 1px solid #e5e7eb; border-radius: 10px; overflow: hidden;
+/* ─ Ledger table ─────── */
+.ledger-wrap {
+  background: var(--insp-bg-surface);
+  border: 1px solid var(--insp-border-subtle);
+  border-radius: var(--insp-radius-md);
+  overflow: hidden;
 }
-.obs-table th, .obs-table td {
-  padding: 10px 12px; vertical-align: middle; text-align: left;
-  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+.ledger-table { width: 100%; }
+.ledger-table th { white-space: nowrap; }
+.th-time { width: 130px; }
+.th-num { text-align: right; width: 80px; }
+.ledger-row { transition: background var(--insp-t-fast); }
+.ledger-row.is-neg {
+  background: linear-gradient(to right, var(--insp-fail-pale), transparent 70%);
 }
-.obs-table th {
-  font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em;
-  color: #6b7280; background: #f9fafb; border-bottom: 1px solid #e5e7eb;
+.td-time {
+  font-family: var(--insp-font-mono);
+  font-size: var(--insp-text-xs);
+  color: var(--insp-ink-tertiary);
+  white-space: nowrap;
 }
-.obs-table td { font-size: 13px; color: #374151; border-bottom: 1px solid #f3f4f6; }
-.obs-row:hover { background: #f0f5ff; }
-.obs-row:last-child td { border-bottom: none; }
-
-.cell-name { font-weight: 500; color: #111827; }
-.cell-muted { font-size: 12px; color: #9ca3af; }
-
-.subject-chip { font-size: 12px; font-weight: 500; padding: 2px 8px; border-radius: 4px; }
-.st-USER { background: #eff6ff; color: #1d4ed8; }
-.st-ORG_UNIT { background: #f0fdf4; color: #15803d; }
-.st-PLACE { background: #fefce8; color: #a16207; }
-
-.score-val { font-family: 'JetBrains Mono', monospace; font-size: 13px; font-weight: 600; }
-.score-val.negative { color: #dc2626; }
-
-.severity-badge {
-  display: inline-block; padding: 2px 8px; border-radius: 4px;
-  font-size: 11px; font-weight: 600;
+.td-name {
+  font-weight: 500;
+  color: var(--insp-ink-primary);
 }
+.td-muted { color: var(--insp-ink-tertiary); }
+.td-num {
+  font-family: var(--insp-font-mono);
+  font-weight: 600;
+  text-align: right;
+}
+.td-num.is-neg { color: var(--insp-fail); }
 
-.empty-cell { text-align: center; padding: 40px 12px !important; color: #9ca3af; }
+.subject-USER { background: var(--insp-info-pale); color: var(--insp-info); border-color: color-mix(in oklab, var(--insp-info) 25%, transparent); }
+.subject-ORG_UNIT { background: var(--insp-pass-pale); color: var(--insp-pass); border-color: color-mix(in oklab, var(--insp-pass) 25%, transparent); }
+.subject-PLACE { background: var(--insp-warn-pale); color: var(--insp-warn); border-color: color-mix(in oklab, var(--insp-warn) 25%, transparent); }
+
+.empty-cell { text-align: center; padding: 80px 12px !important; }
 
 .pagination {
-  display: flex; align-items: center; justify-content: center; gap: 12px;
-  padding: 12px 0; margin-top: 8px;
+  display: flex; align-items: center; justify-content: center; gap: var(--insp-sp-4);
+  padding: var(--insp-sp-4) 0;
+  border-top: 1px solid var(--insp-border-subtle);
 }
-.page-btn {
-  padding: 6px 14px; font-size: 13px; border: 1px solid #e5e7eb; border-radius: 6px;
-  background: #fff; color: #374151; cursor: pointer; font-family: inherit;
+.page-info {
+  font-family: var(--insp-font-mono);
+  font-size: var(--insp-text-sm);
+  color: var(--insp-ink-secondary);
+  font-weight: 500;
 }
-.page-btn:disabled { opacity: 0.4; cursor: not-allowed; }
-.page-btn:not(:disabled):hover { background: #f9fafb; }
-.page-info { font-size: 13px; color: #6b7280; }
 </style>
