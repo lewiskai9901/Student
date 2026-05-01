@@ -440,6 +440,17 @@ const routes: RouteRecordRaw[] = [
               permission: 'insp:corrective:view'
             }
           },
+          // 检查员驾驶舱 (Cockpit redesign · Sweep+Matrix+Focus)
+          {
+            path: '/inspection/tasks/:id/cockpit',
+            name: 'TaskCockpit',
+            component: () => import('@/views/inspection/tasks/TaskCockpitView.vue'),
+            meta: {
+              title: '检查员驾驶舱',
+              requiresAuth: true,
+              hidden: true,
+            }
+          },
           // 检查平台总台 (Audit Console redesign)
           {
             path: '/inspection',

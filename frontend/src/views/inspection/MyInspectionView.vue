@@ -184,7 +184,8 @@ async function handleWithdraw(t: InspTask) {
 }
 
 function goExecute(t: InspTask) {
-  router.push(`/inspection/tasks/${t.id}/execute`)
+  // Cockpit 模式默认 (新 redesign), 老 execute 保留: /inspection/tasks/:id/execute
+  router.push(`/inspection/tasks/${t.id}/cockpit`)
 }
 
 async function handleStart(t: InspTask) {
