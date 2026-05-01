@@ -33,7 +33,7 @@ const routes: RouteRecordRaw[] = [
     path: '/',
     name: 'Layout',
     component: () => import('@/layouts/MainLayout.vue'),
-    redirect: '/my/dashboard',
+    redirect: '/inspection',
     meta: {
       requiresAuth: true
     },
@@ -440,15 +440,16 @@ const routes: RouteRecordRaw[] = [
               permission: 'insp:corrective:view'
             }
           },
-          // 当事人记录页 (UX gap fix · 学生/部门看针对自己的检查)
+          // 当事人记录页 (UX gap fix · 所有用户可见, 在主菜单)
           {
             path: '/inspection/about-me',
             name: 'InspectionAboutMe',
             component: () => import('@/views/inspection/AboutMeView.vue'),
             meta: {
               title: '关于我的检查',
+              icon: 'User',
               requiresAuth: true,
-              hidden: true,
+              order: 0.5,
             }
           },
           // 检查员驾驶舱 (Cockpit redesign · Sweep+Matrix+Focus)
@@ -473,36 +474,43 @@ const routes: RouteRecordRaw[] = [
               hidden: true
             }
           },
-          // 离职用户重派 (review #D + P1#6)
+          // 离职用户重派 - 显示在管理员菜单
           {
             path: '/inspection/admin/reassign-departed',
             name: 'DepartedUserReassign',
             component: () => import('@/views/inspection/admin/DepartedUserReassignView.vue'),
             meta: {
-              title: '离职用户重派',
+              title: '离职重派',
+              icon: 'UserMinus',
               requiresAuth: true,
-              permission: 'insp:corrective:manage'
+              permission: 'insp:corrective:manage',
+              order: 90,
             }
           },
-          // 申诉管理 (P1#8)
+          // 我的申诉 - 主菜单可见
           {
             path: '/inspection/appeals/my',
             name: 'MyAppeals',
             component: () => import('@/views/inspection/appeals/MyAppealsView.vue'),
             meta: {
               title: '我的申诉',
+              icon: 'MessageSquareWarning',
               requiresAuth: true,
-              permission: 'inspection:appeal:view'
+              permission: 'inspection:appeal:view',
+              order: 6,
             }
           },
+          // 申诉审核 - 主菜单可见
           {
             path: '/inspection/appeals/review',
             name: 'AppealReview',
             component: () => import('@/views/inspection/appeals/AppealReviewView.vue'),
             meta: {
               title: '申诉审核',
+              icon: 'Gavel',
               requiresAuth: true,
-              permission: 'inspection:appeal:review'
+              permission: 'inspection:appeal:review',
+              order: 7,
             }
           },
           // 分析报表

@@ -5,6 +5,7 @@ import { ElMessage, ElMessageBox } from 'element-plus'
 import { ArrowLeft, UserPlus, PlayCircle, Send, Check, X, AlertTriangle, Lock } from 'lucide-vue-next'
 import { useInspCorrectiveStore } from '@/stores/inspection/inspCorrectiveStore'
 import { CaseStatusConfig, CasePriorityConfig, type CaseStatus, type CasePriority } from '@/types/insp/enums'
+import StatusTimeline from '@/views/inspection/shared/StatusTimeline.vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -140,27 +141,96 @@ async function handleEscalate() {
   } catch { /* cancelled */ }
 }
 
+// ── Timeline ──
+const caseTimeline = computed(() => {
+  if (!currentCase.value) return []
+  const c = currentCase.value
+  const status = c.status as string
+  return [
+    {
+      code: 'OPEN', label: '待分配责任人',
+      hint: '管理员需指定整改责任人',
+      at: c.createdAt,
+      by: c.createdBy ? `创建于 #${c.createdBy}` : null,
+    },
+    {
+      code: 'ASSIGNED', label: '已分配',
+      hint: status === 'ASSIGNED' ? `${c.assigneeName || '责任人'} 待开始整改` : '',
+      at: c.assigneeId ? c.updatedAt : null,
+      by: c.assigneeName ? `分配给 ${c.assigneeName}` : null,
+    },
+    {
+      code: 'IN_PROGRESS', label: '整改中',
+      hint: status === 'IN_PROGRESS' ? `${c.assigneeName || '责任人'} 正在执行` : '',
+    },
+    {
+      code: 'SUBMITTED', label: '已提交整改',
+      hint: status === 'SUBMITTED' ? '等待验证' : '',
+      at: c.correctedAt,
+    },
+    {
+      code: 'VERIFIED', label: '验证通过',
+      at: c.verifiedAt, by: c.verifierName,
+    },
+    {
+      code: 'CLOSED', label: '已关闭',
+      at: status === 'CLOSED' ? c.updatedAt : null,
+    },
+  ].filter(s => {
+    // 如果当前是 REJECTED, 则在 SUBMITTED 后插入 REJECTED 节点
+    if (status === 'REJECTED' && s.code === 'VERIFIED') return false
+    return true
+  })
+})
+
+const timelineCurrentCode = computed(() => {
+  if (!currentCase.value) return 'OPEN'
+  const status = currentCase.value.status as string
+  if (status === 'REJECTED') return 'IN_PROGRESS'  // 驳回 = 回到待整改
+  if (status === 'ESCALATED') return 'IN_PROGRESS'
+  return status
+})
+
 onMounted(() => loadData())
 </script>
 
 <template>
-  <div class="p-5" v-loading="loading">
-    <!-- Header -->
-    <div class="flex items-center gap-3 mb-5">
-      <el-button @click="router.push('/inspection/corrective')" text>
-        <ArrowLeft class="w-4 h-4 mr-1" />返回
-      </el-button>
-      <h2 class="text-lg font-semibold">{{ currentCase?.caseCode || '整改详情' }}</h2>
-      <el-tag v-if="currentCase" :type="getStatusConfig(currentCase.status).type" class="ml-2">
-        {{ getStatusConfig(currentCase.status).label }}
-      </el-tag>
-      <el-tag v-if="currentCase" :type="getPriorityConfig(currentCase.priority).type" class="ml-1">
-        {{ getPriorityConfig(currentCase.priority).label }}
-      </el-tag>
-      <el-tag v-if="isOverdue()" type="danger" class="ml-1">逾期</el-tag>
-    </div>
+  <div class="insp-shell case-detail" v-loading="loading">
+    <!-- Header (Audit Hub style) -->
+    <header class="cd-head">
+      <button class="cd-back" @click="router.push('/inspection/corrective')" title="返回">
+        <ArrowLeft :size="14" />
+      </button>
+      <div class="cd-head__lead">
+        <span class="insp-eyebrow">整改案例 · {{ currentCase?.caseCode || '加载中' }}</span>
+        <h1 class="cd-title">{{ currentCase?.issueDescription || '整改详情' }}</h1>
+        <div class="cd-meta">
+          <span v-if="currentCase" class="insp-chip"
+                :class="`insp-chip--${({OPEN:'pending',ASSIGNED:'info',IN_PROGRESS:'warn',SUBMITTED:'info',VERIFIED:'pass',REJECTED:'fail',CLOSED:'pass',ESCALATED:'fail'} as any)[currentCase.status]}`">
+            {{ getStatusConfig(currentCase.status).label }}
+          </span>
+          <span v-if="currentCase" class="insp-chip"
+                :class="`insp-chip--${({LOW:'pending',MEDIUM:'info',HIGH:'warn',CRITICAL:'fail'} as any)[currentCase.priority]}`">
+            优先级 · {{ getPriorityConfig(currentCase.priority).label }}
+          </span>
+          <span v-if="isOverdue()" class="insp-chip insp-chip--fail">已逾期</span>
+          <span v-if="currentCase?.escalationLevel" class="insp-stamp">升级 L{{ currentCase.escalationLevel }}</span>
+        </div>
+      </div>
+    </header>
 
     <template v-if="currentCase">
+      <!-- Status Timeline (新加) -->
+      <section class="cd-card cd-timeline-card">
+        <header class="cd-card__head">
+          <span class="cd-card__title">流转进度</span>
+          <span class="cd-card__hint">当前: {{ getStatusConfig(currentCase.status).label }}</span>
+        </header>
+        <div class="cd-card__body">
+          <StatusTimeline :steps="caseTimeline as any" :current="timelineCurrentCode" />
+        </div>
+      </section>
+
       <!-- Action Buttons -->
       <div class="flex gap-2 mb-5">
         <el-button v-if="currentCase.status === 'OPEN' || currentCase.status === 'REJECTED'"
@@ -294,3 +364,67 @@ onMounted(() => loadData())
     </el-dialog>
   </div>
 </template>
+
+<style scoped>
+.case-detail { padding: 12px 16px; }
+
+.cd-head {
+  background: var(--insp-bg-surface);
+  border: 1px solid var(--insp-border-default);
+  border-radius: var(--insp-radius-lg);
+  padding: 12px 16px;
+  margin-bottom: 10px;
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+}
+.cd-back {
+  display: inline-flex;
+  align-items: center; justify-content: center;
+  width: 28px; height: 28px;
+  background: var(--insp-bg-surface);
+  border: 1px solid var(--insp-border-strong);
+  border-radius: var(--insp-radius-sm);
+  color: var(--insp-ink-tertiary);
+  cursor: pointer;
+  transition: all var(--insp-t-fast);
+  margin-top: 2px;
+}
+.cd-back:hover { color: var(--insp-accent); border-color: var(--insp-accent); }
+.cd-head__lead { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.cd-title {
+  font-size: 16px; font-weight: 700;
+  margin: 0;
+  color: var(--insp-ink-primary);
+}
+.cd-meta {
+  display: flex; align-items: center; gap: 6px;
+  margin-top: 4px;
+  flex-wrap: wrap;
+}
+
+.cd-card {
+  background: var(--insp-bg-surface);
+  border: 1px solid var(--insp-border-default);
+  border-radius: var(--insp-radius-lg);
+  margin-bottom: 10px;
+}
+.cd-card__head {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--insp-border-subtle);
+}
+.cd-card__title {
+  font-size: 13px; font-weight: 600;
+  color: var(--insp-ink-primary);
+}
+.cd-card__hint {
+  font-size: 11px;
+  color: var(--insp-ink-tertiary);
+}
+.cd-card__body { padding: 12px 14px; }
+
+.cd-timeline-card {
+  background: var(--insp-bg-surface);
+}
+</style>
