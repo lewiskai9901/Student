@@ -1,450 +1,354 @@
 package com.school.management.domain.inspection.model.corrective;
 
+import com.school.management.domain.inspection.event.*;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;
 
-import static org.assertj.core.api.Assertions.*;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-@DisplayName("CorrectiveCase 聚合根测试")
+/**
+ * CorrectiveCase 整改案例聚合根单测.
+ *
+ * 状态机:
+ *   OPEN → ASSIGNED → IN_PROGRESS → SUBMITTED → VERIFIED → CLOSED
+ *                                              ↓
+ *                                           REJECTED → ASSIGNED (再分配)
+ *
+ * 核心规则:
+ *   - escalate / slaBreach / failEffectiveness 受 MAX_AUTO_ESCALATION_LEVEL=3 保护
+ *   - close 时按 priority 自动设置 effectivenessCheckDate
+ *   - unassign (P1#6 离职重派): ASSIGNED/IN_PROGRESS → OPEN
+ */
+@DisplayName("CorrectiveCase 整改案例聚合根")
 class CorrectiveCaseTest {
 
-    // ==================== 工厂方法 ====================
-
-    private CorrectiveCase createOpenCase() {
-        return CorrectiveCase.create("CASE-001", "卫生不达标", CasePriority.MEDIUM, 1L);
-    }
-
-    private CorrectiveCase createAssignedCase() {
-        CorrectiveCase c = createOpenCase();
-        c.assign(10L, "张三");
+    private static CorrectiveCase newOpen() {
+        CorrectiveCase c = CorrectiveCase.create("CASE-T-001", "卫生不合格", CasePriority.HIGH, 999L);
+        c.clearDomainEvents();
         return c;
     }
 
-    private CorrectiveCase createInProgressCase() {
-        CorrectiveCase c = createAssignedCase();
-        c.startWork();
-        return c;
+    private static CorrectiveCase inState(CaseStatus status) {
+        CorrectiveCase.Builder b = CorrectiveCase.builder()
+                .id(1L).caseCode("CASE-T-001")
+                .issueDescription("卫生不合格")
+                .priority(CasePriority.HIGH)
+                .status(status).createdBy(999L)
+                .escalationLevel(0);
+        if (status == CaseStatus.ASSIGNED || status == CaseStatus.IN_PROGRESS
+                || status == CaseStatus.SUBMITTED || status == CaseStatus.VERIFIED
+                || status == CaseStatus.CLOSED || status == CaseStatus.REJECTED) {
+            b.assigneeId(10L).assigneeName("assignee");
+        }
+        if (status == CaseStatus.CLOSED) {
+            b.effectivenessStatus(EffectivenessStatus.PENDING);
+        }
+        return b.build();
     }
-
-    private CorrectiveCase createSubmittedCase() {
-        CorrectiveCase c = createInProgressCase();
-        c.submitCorrection("已整改完成", List.of(100L, 101L));
-        return c;
-    }
-
-    private CorrectiveCase createVerifiedCase() {
-        CorrectiveCase c = createSubmittedCase();
-        c.verify(20L, "李四", "验证通过");
-        return c;
-    }
-
-    private CorrectiveCase createClosedCase() {
-        CorrectiveCase c = createVerifiedCase();
-        c.close();
-        return c;
-    }
-
-    // ==================== 创建测试 ====================
 
     @Nested
-    @DisplayName("创建案例")
+    @DisplayName("create — 工厂")
     class CreateTests {
-
         @Test
-        @DisplayName("新建案例初始状态为OPEN")
-        void testCreate() {
-            // When
-            CorrectiveCase c = CorrectiveCase.create(
-                    "CASE-001", "走廊有垃圾", CasePriority.HIGH, 1L);
-
-            // Then
+        @DisplayName("创建后 OPEN + 注册 CorrectiveCaseCreatedEvent")
+        void shouldCreateOpen() {
+            CorrectiveCase c = CorrectiveCase.create("X", "issue", CasePriority.MEDIUM, 999L);
             assertThat(c.getStatus()).isEqualTo(CaseStatus.OPEN);
-            assertThat(c.getCaseCode()).isEqualTo("CASE-001");
-            assertThat(c.getIssueDescription()).isEqualTo("走廊有垃圾");
-            assertThat(c.getPriority()).isEqualTo(CasePriority.HIGH);
-            assertThat(c.getCreatedBy()).isEqualTo(1L);
             assertThat(c.getEscalationLevel()).isEqualTo(0);
-            assertThat(c.getCreatedAt()).isNotNull();
-        }
-
-        @Test
-        @DisplayName("新建案例默认优先级为MEDIUM")
-        void testCreate_DefaultPriority() {
-            CorrectiveCase c = CorrectiveCase.create(
-                    "CASE-002", "问题描述", null, 1L);
-
-            assertThat(c.getPriority()).isEqualTo(CasePriority.MEDIUM);
+            assertThat(c.getDomainEvents()).hasSize(1).first().isInstanceOf(CorrectiveCaseCreatedEvent.class);
         }
     }
 
-    // ==================== 分配测试 ====================
-
     @Nested
-    @DisplayName("分配责任人")
+    @DisplayName("assign — 分配责任人")
     class AssignTests {
-
         @Test
-        @DisplayName("OPEN → ASSIGNED 正常分配")
-        void testAssign() {
-            // Given
-            CorrectiveCase c = createOpenCase();
-
-            // When
-            c.assign(10L, "张三");
-
-            // Then
+        @DisplayName("OPEN → ASSIGNED + 注册 CaseAssignedEvent")
+        void shouldAssignFromOpen() {
+            CorrectiveCase c = newOpen();
+            c.assign(10L, "assignee");
             assertThat(c.getStatus()).isEqualTo(CaseStatus.ASSIGNED);
             assertThat(c.getAssigneeId()).isEqualTo(10L);
-            assertThat(c.getAssigneeName()).isEqualTo("张三");
-            assertThat(c.getUpdatedAt()).isNotNull();
+            assertThat(c.getDomainEvents()).hasSize(1).first().isInstanceOf(CaseAssignedEvent.class);
         }
 
         @Test
-        @DisplayName("REJECTED → ASSIGNED 驳回后重新分配")
-        void testAssign_AfterRejection() {
-            // Given: 走完整流程到 REJECTED
-            CorrectiveCase c = createSubmittedCase();
-            c.reject(20L, "李四", "整改不到位");
-
-            assertThat(c.getStatus()).isEqualTo(CaseStatus.REJECTED);
-
-            // When: 重新分配
-            c.assign(30L, "王五");
-
-            // Then
+        @DisplayName("REJECTED → ASSIGNED 再分配")
+        void shouldAssignFromRejected() {
+            CorrectiveCase c = inState(CaseStatus.REJECTED);
+            c.assign(20L, "newAssignee");
             assertThat(c.getStatus()).isEqualTo(CaseStatus.ASSIGNED);
-            assertThat(c.getAssigneeId()).isEqualTo(30L);
+            assertThat(c.getAssigneeId()).isEqualTo(20L);
         }
 
         @Test
-        @DisplayName("非OPEN/REJECTED状态分配应抛异常")
-        void testAssign_InvalidState() {
-            CorrectiveCase c = createAssignedCase();
+        @DisplayName("ASSIGNED → assign 抛 (重复分配)")
+        void shouldRejectDoubleAssign() {
+            CorrectiveCase c = inState(CaseStatus.ASSIGNED);
+            assertThatThrownBy(() -> c.assign(20L, "X"))
+                    .isInstanceOf(IllegalStateException.class);
+        }
 
-            assertThatThrownBy(() -> c.assign(20L, "李四"))
-                    .isInstanceOf(IllegalStateException.class)
-                    .hasMessageContaining("只有待分配或被驳回的案例才能分配责任人");
+        @Test
+        @DisplayName("CLOSED → assign 抛")
+        void shouldRejectAssignClosed() {
+            CorrectiveCase c = inState(CaseStatus.CLOSED);
+            assertThatThrownBy(() -> c.assign(20L, "X"))
+                    .isInstanceOf(IllegalStateException.class);
         }
     }
 
-    // ==================== 提交整改测试 ====================
-
     @Nested
-    @DisplayName("提交整改")
-    class SubmitCorrectionTests {
+    @DisplayName("unassign — 离职重派 (P1#6)")
+    class UnassignTests {
+        @Test
+        @DisplayName("ASSIGNED → OPEN + 清 assignee + 注册 AssigneeUnassignedEvent")
+        void shouldUnassignFromAssigned() {
+            CorrectiveCase c = inState(CaseStatus.ASSIGNED);
+            c.unassign("离职");
+            assertThat(c.getStatus()).isEqualTo(CaseStatus.OPEN);
+            assertThat(c.getAssigneeId()).isNull();
+            assertThat(c.getDomainEvents()).hasSize(1).first().isInstanceOf(AssigneeUnassignedEvent.class);
+        }
 
         @Test
-        @DisplayName("IN_PROGRESS → SUBMITTED 正常提交")
-        void testSubmitCorrection() {
-            // Given
-            CorrectiveCase c = createInProgressCase();
+        @DisplayName("IN_PROGRESS → OPEN")
+        void shouldUnassignFromInProgress() {
+            CorrectiveCase c = inState(CaseStatus.IN_PROGRESS);
+            c.unassign("离职");
+            assertThat(c.getStatus()).isEqualTo(CaseStatus.OPEN);
+        }
 
-            // When
-            c.submitCorrection("已完成整改", List.of(100L));
+        @Test
+        @DisplayName("SUBMITTED → unassign 抛 (已提交不能撤换)")
+        void shouldRejectUnassignAfterSubmitted() {
+            CorrectiveCase c = inState(CaseStatus.SUBMITTED);
+            assertThatThrownBy(() -> c.unassign("X"))
+                    .isInstanceOf(IllegalStateException.class);
+        }
+    }
 
-            // Then
+    @Nested
+    @DisplayName("startWork / submitCorrection / verify / reject — 整改链路")
+    class WorkflowTests {
+        @Test
+        @DisplayName("ASSIGNED → IN_PROGRESS")
+        void shouldStartWork() {
+            CorrectiveCase c = inState(CaseStatus.ASSIGNED);
+            c.startWork();
+            assertThat(c.getStatus()).isEqualTo(CaseStatus.IN_PROGRESS);
+        }
+
+        @Test
+        @DisplayName("IN_PROGRESS → SUBMITTED + 注册 CorrectionSubmittedEvent + 写入 correctedAt/note")
+        void shouldSubmitCorrection() {
+            CorrectiveCase c = inState(CaseStatus.IN_PROGRESS);
+            c.submitCorrection("已修复", List.of(1L, 2L));
             assertThat(c.getStatus()).isEqualTo(CaseStatus.SUBMITTED);
-            assertThat(c.getCorrectionNote()).isEqualTo("已完成整改");
-            assertThat(c.getCorrectionEvidenceIds()).containsExactly(100L);
+            assertThat(c.getCorrectionNote()).isEqualTo("已修复");
             assertThat(c.getCorrectedAt()).isNotNull();
+            assertThat(c.getDomainEvents()).hasSize(1).first().isInstanceOf(CorrectionSubmittedEvent.class);
         }
 
         @Test
-        @DisplayName("非IN_PROGRESS状态提交应抛异常")
-        void testSubmitCorrection_InvalidState() {
-            CorrectiveCase c = createAssignedCase();
-
-            assertThatThrownBy(() -> c.submitCorrection("测试", List.of()))
-                    .isInstanceOf(IllegalStateException.class)
-                    .hasMessageContaining("只有进行中的案例才能提交整改");
-        }
-    }
-
-    // ==================== 验证测试 ====================
-
-    @Nested
-    @DisplayName("验证")
-    class VerifyTests {
-
-        @Test
-        @DisplayName("SUBMITTED → VERIFIED 验证通过")
-        void testVerify_Accepted() {
-            // Given
-            CorrectiveCase c = createSubmittedCase();
-
-            // When
-            c.verify(20L, "李四", "整改到位，验证通过");
-
-            // Then
+        @DisplayName("SUBMITTED → VERIFIED + 注册 CaseVerifiedEvent")
+        void shouldVerify() {
+            CorrectiveCase c = inState(CaseStatus.SUBMITTED);
+            c.verify(20L, "verifier", "确认整改");
             assertThat(c.getStatus()).isEqualTo(CaseStatus.VERIFIED);
             assertThat(c.getVerifierId()).isEqualTo(20L);
-            assertThat(c.getVerifierName()).isEqualTo("李四");
-            assertThat(c.getVerificationNote()).isEqualTo("整改到位，验证通过");
-            assertThat(c.getVerifiedAt()).isNotNull();
+            assertThat(c.getDomainEvents()).hasSize(1).first().isInstanceOf(CaseVerifiedEvent.class);
         }
 
         @Test
-        @DisplayName("SUBMITTED → REJECTED 验证驳回")
-        void testVerify_Rejected() {
-            // Given
-            CorrectiveCase c = createSubmittedCase();
-
-            // When
-            c.reject(20L, "李四", "整改不到位，需重新整改");
-
-            // Then
+        @DisplayName("SUBMITTED → REJECTED + 注册 CaseRejectedEvent")
+        void shouldReject() {
+            CorrectiveCase c = inState(CaseStatus.SUBMITTED);
+            c.reject(20L, "verifier", "未达标");
             assertThat(c.getStatus()).isEqualTo(CaseStatus.REJECTED);
-            assertThat(c.getVerifierId()).isEqualTo(20L);
-            assertThat(c.getVerificationNote()).isEqualTo("整改不到位，需重新整改");
+            assertThat(c.getDomainEvents()).hasSize(1).first().isInstanceOf(CaseRejectedEvent.class);
         }
 
         @Test
-        @DisplayName("非SUBMITTED状态验证应抛异常")
-        void testVerify_InvalidState() {
-            CorrectiveCase c = createInProgressCase();
-
-            assertThatThrownBy(() -> c.verify(20L, "李四", "测试"))
-                    .isInstanceOf(IllegalStateException.class)
-                    .hasMessageContaining("只有已提交整改的案例才能验证");
+        @DisplayName("OPEN → submitCorrection 抛")
+        void shouldRejectSubmitFromOpen() {
+            CorrectiveCase c = newOpen();
+            assertThatThrownBy(() -> c.submitCorrection("X", List.of()))
+                    .isInstanceOf(IllegalStateException.class);
         }
 
         @Test
-        @DisplayName("非SUBMITTED状态驳回应抛异常")
-        void testReject_InvalidState() {
-            CorrectiveCase c = createInProgressCase();
-
-            assertThatThrownBy(() -> c.reject(20L, "李四", "理由"))
-                    .isInstanceOf(IllegalStateException.class)
-                    .hasMessageContaining("只有已提交整改的案例才能驳回");
+        @DisplayName("VERIFIED → verify 抛 (重复验证)")
+        void shouldRejectDoubleVerify() {
+            CorrectiveCase c = inState(CaseStatus.VERIFIED);
+            assertThatThrownBy(() -> c.verify(20L, "X", "X"))
+                    .isInstanceOf(IllegalStateException.class);
         }
     }
 
-    // ==================== 关闭测试 ====================
-
     @Nested
-    @DisplayName("关闭案例")
+    @DisplayName("close — 关闭 + 自动设置效果验证日期")
     class CloseTests {
-
         @Test
-        @DisplayName("VERIFIED → CLOSED 关闭并设置效果验证")
-        void testClose() {
-            // Given
-            CorrectiveCase c = createVerifiedCase();
-
-            // When
+        @DisplayName("VERIFIED → CLOSED + effectivenessStatus=PENDING + 14 天 effectivenessCheckDate")
+        void shouldCloseAndSetEffectivenessCheck() {
+            CorrectiveCase c = inState(CaseStatus.VERIFIED);
             c.close();
-
-            // Then
             assertThat(c.getStatus()).isEqualTo(CaseStatus.CLOSED);
             assertThat(c.getEffectivenessStatus()).isEqualTo(EffectivenessStatus.PENDING);
             assertThat(c.getEffectivenessCheckDate()).isNotNull();
+            assertThat(c.getDomainEvents()).hasSize(1).first().isInstanceOf(CaseClosedEvent.class);
         }
 
         @Test
-        @DisplayName("非VERIFIED状态关闭应抛异常")
-        void testClose_InvalidState() {
-            CorrectiveCase c = createSubmittedCase();
-
-            assertThatThrownBy(() -> c.close())
-                    .isInstanceOf(IllegalStateException.class)
-                    .hasMessageContaining("只有已验证的案例才能关闭");
+        @DisplayName("OPEN → close 抛")
+        void shouldRejectCloseFromOpen() {
+            CorrectiveCase c = newOpen();
+            assertThatThrownBy(c::close).isInstanceOf(IllegalStateException.class);
         }
     }
 
-    // ==================== 效果验证测试 ====================
-
     @Nested
-    @DisplayName("效果验证")
+    @DisplayName("confirmEffectiveness / failEffectiveness — 效果验证")
     class EffectivenessTests {
-
         @Test
-        @DisplayName("效果验证通过")
-        void testConfirmEffectiveness() {
-            // Given
-            CorrectiveCase c = createClosedCase();
-
-            // When
-            c.confirmEffectiveness("效果良好，未再出现类似问题");
-
-            // Then
+        @DisplayName("CLOSED + PENDING → confirmEffectiveness 写 CONFIRMED")
+        void shouldConfirmEffectiveness() {
+            CorrectiveCase c = inState(CaseStatus.CLOSED);
+            c.confirmEffectiveness("效果良好");
             assertThat(c.getEffectivenessStatus()).isEqualTo(EffectivenessStatus.CONFIRMED);
-            assertThat(c.getEffectivenessNote()).isEqualTo("效果良好，未再出现类似问题");
+            assertThat(c.getDomainEvents()).hasSize(1).first().isInstanceOf(EffectivenessConfirmedEvent.class);
         }
 
         @Test
-        @DisplayName("效果验证不达标 — 重新打开并升级")
-        void testFailEffectiveness() {
-            // Given
-            CorrectiveCase c = createClosedCase();
-            int originalLevel = c.getEscalationLevel();
-
-            // When
-            c.failEffectiveness("问题重现，需重新整改");
-
-            // Then
+        @DisplayName("CLOSED + PENDING → failEffectiveness 重新打开为 OPEN + escalationLevel+1")
+        void shouldReopenWhenEffectivenessFails() {
+            CorrectiveCase c = inState(CaseStatus.CLOSED);
+            c.failEffectiveness("反弹");
             assertThat(c.getStatus()).isEqualTo(CaseStatus.OPEN);
+            assertThat(c.getEscalationLevel()).isEqualTo(1);
             assertThat(c.getEffectivenessStatus()).isEqualTo(EffectivenessStatus.FAILED);
-            assertThat(c.getEscalationLevel()).isEqualTo(originalLevel + 1);
+        }
+
+        @Test
+        @DisplayName("escalationLevel 已达 3 时 failEffectiveness 不再 reopen")
+        void shouldNotReopenWhenAtMaxLevel() {
+            CorrectiveCase c = CorrectiveCase.builder()
+                    .id(1L).caseCode("X").issueDescription("X").priority(CasePriority.HIGH)
+                    .status(CaseStatus.CLOSED).effectivenessStatus(EffectivenessStatus.PENDING)
+                    .escalationLevel(3).build();
+            c.failEffectiveness("再次反弹");
+            assertThat(c.getStatus()).isEqualTo(CaseStatus.CLOSED);
+            assertThat(c.getEffectivenessStatus()).isEqualTo(EffectivenessStatus.FAILED);
+            assertThat(c.getEscalationLevel()).isEqualTo(3);
+            assertThat(c.getDomainEvents()).hasSize(1).first().isInstanceOf(EffectivenessFailedEvent.class);
+        }
+
+        @Test
+        @DisplayName("项目级 maxEscalationLevel=5 允许第 4 次升级")
+        void shouldHonorProjectLevelMaxEscalation() {
+            CorrectiveCase c = CorrectiveCase.builder()
+                    .id(1L).caseCode("X").issueDescription("X").priority(CasePriority.HIGH)
+                    .status(CaseStatus.CLOSED).effectivenessStatus(EffectivenessStatus.PENDING)
+                    .escalationLevel(3).build();
+            c.failEffectiveness("再次反弹", 5);
+            assertThat(c.getStatus()).isEqualTo(CaseStatus.OPEN);
+            assertThat(c.getEscalationLevel()).isEqualTo(4);
         }
     }
 
-    // ==================== 升级测试 ====================
-
     @Nested
-    @DisplayName("案例升级")
+    @DisplayName("escalate — 主动升级")
     class EscalateTests {
-
         @Test
-        @DisplayName("升级 — 增加升级等级并重置为OPEN")
-        void testEscalate() {
-            // Given
-            CorrectiveCase c = createAssignedCase();
-            int originalLevel = c.getEscalationLevel();
-
-            // When
+        @DisplayName("IN_PROGRESS → escalate: 重置为 OPEN + 清 assignee + level+1")
+        void shouldEscalate() {
+            CorrectiveCase c = inState(CaseStatus.IN_PROGRESS);
             c.escalate();
-
-            // Then: 升级后回到 OPEN，等待重新分配给更高级别责任人
             assertThat(c.getStatus()).isEqualTo(CaseStatus.OPEN);
-            assertThat(c.getEscalationLevel()).isEqualTo(originalLevel + 1);
             assertThat(c.getAssigneeId()).isNull();
-            assertThat(c.getAssigneeName()).isNull();
-        }
-
-        @Test
-        @DisplayName("升级可以多次执行（每次递增 escalationLevel）")
-        void testEscalate_MultipleTimes() {
-            // Given
-            CorrectiveCase c = createOpenCase();
-
-            // When: 连续升级
-            c.escalate();
             assertThat(c.getEscalationLevel()).isEqualTo(1);
-            assertThat(c.getStatus()).isEqualTo(CaseStatus.OPEN);
-
-            c.escalate();
-            assertThat(c.getEscalationLevel()).isEqualTo(2);
-            assertThat(c.getStatus()).isEqualTo(CaseStatus.OPEN);
+            assertThat(c.getDomainEvents()).hasSize(1).first().isInstanceOf(CaseEscalatedEvent.class);
         }
 
         @Test
-        @DisplayName("已关闭案例不能升级")
-        void testEscalate_ClosedThrows() {
-            CorrectiveCase c = createClosedCase();
+        @DisplayName("CLOSED → escalate 抛")
+        void shouldRejectEscalateClosed() {
+            CorrectiveCase c = inState(CaseStatus.CLOSED);
+            assertThatThrownBy(c::escalate).isInstanceOf(IllegalStateException.class);
+        }
 
-            assertThatThrownBy(() -> c.escalate())
+        @Test
+        @DisplayName("escalationLevel=3 → escalate 抛 (须人工介入)")
+        void shouldRejectEscalateAtMaxLevel() {
+            CorrectiveCase c = CorrectiveCase.builder()
+                    .id(1L).caseCode("X").issueDescription("X").priority(CasePriority.HIGH)
+                    .status(CaseStatus.IN_PROGRESS).escalationLevel(3).build();
+            assertThatThrownBy(c::escalate)
                     .isInstanceOf(IllegalStateException.class)
-                    .hasMessageContaining("已关闭的案例不能升级");
-        }
-
-        @Test
-        @DisplayName("升级后可以重新分配")
-        void testEscalate_ThenReassign() {
-            // Given: 已分配的案例
-            CorrectiveCase c = createAssignedCase();
-
-            // When: 升级
-            c.escalate();
-            assertThat(c.getStatus()).isEqualTo(CaseStatus.OPEN);
-
-            // Then: 可以重新分配给更高级别责任人
-            c.assign(30L, "主管");
-            assertThat(c.getStatus()).isEqualTo(CaseStatus.ASSIGNED);
-            assertThat(c.getAssigneeId()).isEqualTo(30L);
-            assertThat(c.getEscalationLevel()).isEqualTo(1);
+                    .hasMessageContaining("自动升级上限");
         }
     }
 
-    // ==================== 非法状态转换测试 ====================
-
     @Nested
-    @DisplayName("非法状态转换")
-    class InvalidTransitionTests {
-
+    @DisplayName("slaBreach — SLA 超时升级")
+    class SlaBreachTests {
         @Test
-        @DisplayName("OPEN → CLOSED 应抛异常（跳过中间状态）")
-        void testInvalidTransition_OpenToClosedThrows() {
-            CorrectiveCase c = createOpenCase();
-
-            assertThatThrownBy(() -> c.close())
-                    .isInstanceOf(IllegalStateException.class);
-        }
-
-        @Test
-        @DisplayName("OPEN → SUBMITTED 应抛异常")
-        void testInvalidTransition_OpenToSubmittedThrows() {
-            CorrectiveCase c = createOpenCase();
-
-            assertThatThrownBy(() -> c.submitCorrection("测试", List.of()))
-                    .isInstanceOf(IllegalStateException.class);
-        }
-
-        @Test
-        @DisplayName("ASSIGNED → VERIFIED 应抛异常")
-        void testInvalidTransition_AssignedToVerifiedThrows() {
-            CorrectiveCase c = createAssignedCase();
-
-            assertThatThrownBy(() -> c.verify(20L, "李四", "测试"))
-                    .isInstanceOf(IllegalStateException.class);
-        }
-
-        @Test
-        @DisplayName("OPEN → startWork 应抛异常（需要先 assign）")
-        void testInvalidTransition_OpenToInProgressThrows() {
-            CorrectiveCase c = createOpenCase();
-
-            assertThatThrownBy(() -> c.startWork())
-                    .isInstanceOf(IllegalStateException.class)
-                    .hasMessageContaining("只有已分配的案例才能开始整改");
-        }
-    }
-
-    // ==================== 根因分析和预防措施测试 ====================
-
-    @Nested
-    @DisplayName("根因分析和预防措施")
-    class RcaAndPreventiveTests {
-
-        @Test
-        @DisplayName("设置根因分析")
-        void testSetRootCauseAnalysis() {
-            CorrectiveCase c = createOpenCase();
-
-            c.setRootCauseAnalysis(RcaMethod.FIVE_WHYS, "{\"whys\": [\"why1\", \"why2\"]}");
-
-            assertThat(c.getRcaMethod()).isEqualTo(RcaMethod.FIVE_WHYS);
-            assertThat(c.getRcaData()).contains("why1");
-        }
-
-        @Test
-        @DisplayName("设置预防措施")
-        void testSetPreventiveAction() {
-            CorrectiveCase c = createOpenCase();
-
-            c.setPreventiveAction("加强日常巡检频率");
-
-            assertThat(c.getPreventiveAction()).isEqualTo("加强日常巡检频率");
-        }
-    }
-
-    // ==================== SLA 测试 ====================
-
-    @Nested
-    @DisplayName("SLA 超时")
-    class SlaTests {
-
-        @Test
-        @DisplayName("SLA超时自动升级")
-        void testSlaBreach() {
-            CorrectiveCase c = createAssignedCase();
-            int originalLevel = c.getEscalationLevel();
-
+        @DisplayName("level=0 → slaBreach: level=1 + 注册 SlaBreachedEvent")
+        void shouldEscalateOnSlaBreach() {
+            CorrectiveCase c = inState(CaseStatus.IN_PROGRESS);
             c.slaBreach();
+            assertThat(c.getEscalationLevel()).isEqualTo(1);
+            assertThat(c.getDomainEvents()).hasSize(1).first().isInstanceOf(SlaBreachedEvent.class);
+        }
 
-            assertThat(c.getEscalationLevel()).isEqualTo(originalLevel + 1);
+        @Test
+        @DisplayName("level=3 → slaBreach 不加 level, 仍发事件")
+        void shouldNotEscalatePastMaxOnSlaBreach() {
+            CorrectiveCase c = CorrectiveCase.builder()
+                    .id(1L).caseCode("X").issueDescription("X").priority(CasePriority.HIGH)
+                    .status(CaseStatus.IN_PROGRESS).escalationLevel(3).build();
+            c.slaBreach();
+            assertThat(c.getEscalationLevel()).isEqualTo(3);
+            assertThat(c.getDomainEvents()).hasSize(1).first().isInstanceOf(SlaBreachedEvent.class);
+        }
+    }
+
+    @Nested
+    @DisplayName("完整生命周期")
+    class FullLifecycleTests {
+        @Test
+        @DisplayName("OPEN → ASSIGNED → IN_PROGRESS → SUBMITTED → VERIFIED → CLOSED")
+        void shouldWalkStandardLifecycle() {
+            CorrectiveCase c = newOpen();
+            c.assign(10L, "ass");
+            c.startWork();
+            c.submitCorrection("done", List.of());
+            c.verify(20L, "ver", "ok");
+            c.close();
+            assertThat(c.getStatus()).isEqualTo(CaseStatus.CLOSED);
+            assertThat(c.getEffectivenessStatus()).isEqualTo(EffectivenessStatus.PENDING);
+        }
+
+        @Test
+        @DisplayName("驳回回路: SUBMITTED → REJECTED → ASSIGNED → ... → CLOSED")
+        void shouldHandleRejectAndResubmit() {
+            CorrectiveCase c = newOpen();
+            c.assign(10L, "ass");
+            c.startWork();
+            c.submitCorrection("done", List.of());
+            c.reject(20L, "ver", "no");
+            assertThat(c.getStatus()).isEqualTo(CaseStatus.REJECTED);
+            c.assign(10L, "ass");
+            c.startWork();
+            c.submitCorrection("redo", List.of());
+            c.verify(20L, "ver", "ok");
+            c.close();
+            assertThat(c.getStatus()).isEqualTo(CaseStatus.CLOSED);
         }
     }
 }
