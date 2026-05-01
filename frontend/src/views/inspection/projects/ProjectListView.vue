@@ -1,71 +1,53 @@
 <script setup lang="ts">
+/**
+ * ProjectListView — 检查项目总台 (3 视图重设计)
+ *
+ * 不再是单一 Kanban 看板. 三视图智能切换:
+ *   ① 列表 (默认) — 信息密度优先, 一屏 8-10 项目, 紧迫度智能排序
+ *   ② 看板 — 按"关注度"分组 (需我处理 / 监控中 / 已闭环), 非按机械状态机
+ *   ③ 时间轴 — 横向甘特带, 看时间分布
+ *
+ * 顶部 4 个 KPI: 总数 / 进行中 / 草稿 / 逾期
+ * 多筛选条: 状态 / 时段 / 模板 / 我管理的
+ * 行内主动作 CTA 按状态自适应
+ */
 import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { Plus } from 'lucide-vue-next'
+import { Plus, AlertTriangle } from 'lucide-vue-next'
 import { useInspExecutionStore } from '@/stores/inspection/inspExecutionStore'
 import { inspProjectApi } from '@/api/inspection/project'
 import { getTasks } from '@/api/inspection/task'
-import {
-  ProjectStatusConfig, type ProjectStatus,
-} from '@/types/insp/enums'
+import { ProjectStatusConfig, type ProjectStatus } from '@/types/insp/enums'
 import type { InspProject, InspTask } from '@/types/insp/project'
 
 const router = useRouter()
 const store = useInspExecutionStore()
 
-// State
+// ── State ──
 const loading = ref(false)
 const projects = ref<InspProject[]>([])
 const taskListMap = ref<Map<number, InspTask[]>>(new Map())
 const inspectorCountMap = ref<Map<number, number>>(new Map())
 const today = new Date().toISOString().slice(0, 10)
 
-const viewMode = ref<'kanban' | 'list'>('kanban')
+const view = ref<'list' | 'kanban' | 'timeline'>('list')
 const searchQuery = ref('')
+const statusFilter = ref<ProjectStatus | 'all'>('all')
+const periodFilter = ref<'all' | 'this-week' | 'this-month' | 'overdue'>('all')
 
-// Group projects by status for kanban
-const kanbanColumns = computed(() => {
-  const cols = [
-    { key: 'DRAFT', label: '草稿', color: '#9ca3af', cssClass: 'draft', projects: [] as InspProject[] },
-    { key: 'PUBLISHED', label: '进行中', color: '#1a6dff', cssClass: 'active', projects: [] as InspProject[] },
-    { key: 'COMPLETED', label: '已完结', color: '#10b981', cssClass: 'completed', projects: [] as InspProject[] },
-    { key: 'ARCHIVED', label: '已归档', color: '#64748b', cssClass: 'archived', projects: [] as InspProject[] },
-  ]
-  const q = searchQuery.value.toLowerCase()
-  for (const p of projects.value) {
-    if (q && !p.projectName.toLowerCase().includes(q)) continue
-    const col = cols.find(c => c.key === p.status)
-    if (col) col.projects.push(p)
-    else if (p.status === 'PAUSED') {
-      const pubCol = cols.find(c => c.key === 'PUBLISHED')
-      if (pubCol) pubCol.projects.push(p)
-    }
-  }
-  return cols
-})
-
-// Filtered projects for list view
-const filteredProjects = computed(() => {
-  const q = searchQuery.value.toLowerCase()
-  if (!q) return projects.value
-  return projects.value.filter(p => p.projectName.toLowerCase().includes(q))
-})
-
-// Actions
+// ── Loaders ──
 async function loadData() {
   loading.value = true
   try {
     projects.value = await store.loadProjects()
-
-    // Load tasks and inspector counts in parallel
     await Promise.all(projects.value.map(async (p) => {
       try {
         const tasks = await getTasks({ projectId: p.id }).catch(() => [] as InspTask[])
         taskListMap.value.set(p.id, tasks)
         const inspectors = await inspProjectApi.getInspectors(p.id).catch(() => [])
         inspectorCountMap.value.set(p.id, inspectors.length)
-      } catch (e: any) { console.warn(`加载项目 ${p.id} 数据失败`, e) }
+      } catch { /* ignore */ }
     }))
   } catch (e: any) {
     ElMessage.error(e.message || '加载项目列表失败')
@@ -74,717 +56,956 @@ async function loadData() {
   }
 }
 
-function goCreate() {
-  router.push('/inspection/projects/create')
+// ── Helpers ──
+function isOverdue(p: InspProject): boolean {
+  if (p.status !== 'PUBLISHED' && p.status !== 'PAUSED') return false
+  if (!p.endDate) return false
+  return p.endDate < today
 }
 
-function goDetail(project: InspProject) {
-  router.push(`/inspection/projects/${project.id}`)
+function isPending(p: InspProject): boolean {
+  return p.status === 'DRAFT'
 }
 
-function getProjectTasks(pid: number): InspTask[] {
+function tasksOf(pid: number): InspTask[] {
   return taskListMap.value.get(pid) || []
 }
 
-function getTodayTasks(pid: number): InspTask[] {
-  return getProjectTasks(pid).filter(t => t.taskDate === today)
+function taskStats(pid: number) {
+  const tasks = tasksOf(pid)
+  const total = tasks.length
+  const done = tasks.filter(t => ['REVIEWED', 'PUBLISHED'].includes(t.status)).length
+  const pending = tasks.filter(t => ['PENDING', 'CLAIMED', 'IN_PROGRESS'].includes(t.status)).length
+  const overdue = tasks.filter(t => {
+    if (!t.taskDate) return false
+    if (['PUBLISHED', 'CANCELLED', 'EXPIRED'].includes(t.status)) return false
+    const eff = (t as any).extendedTo || t.taskDate
+    return eff < today
+  }).length
+  const pct = total === 0 ? 0 : Math.round((done / total) * 100)
+  return { total, done, pending, overdue, pct }
 }
 
-function getTaskStats(pid: number) {
-  const tasks = getProjectTasks(pid)
+function urgencyScore(p: InspProject): number {
+  // 紧迫度评分: 越大越紧急, 用于默认排序
+  if (isOverdue(p)) return 1000
+  const s = taskStats(p.id)
+  if (s.overdue > 0) return 800 + s.overdue
+  if (p.status === 'DRAFT') return 600
+  if (p.status === 'PUBLISHED' && p.endDate) {
+    const days = Math.ceil((new Date(p.endDate).getTime() - Date.now()) / 86400000)
+    if (days <= 3) return 400 - days
+    return 300 - days
+  }
+  if (p.status === 'PAUSED') return 200
+  if (p.status === 'COMPLETED') return 50
+  if (p.status === 'ARCHIVED') return 10
+  return 100
+}
+
+function projectChip(p: InspProject): string {
+  if (isOverdue(p)) return 'fail'
+  if (taskStats(p.id).overdue > 0) return 'warn'
+  return ({
+    DRAFT: 'pending', PUBLISHED: 'info', PAUSED: 'warn',
+    COMPLETED: 'pass', ARCHIVED: 'pending',
+  } as any)[p.status] || 'pending'
+}
+
+function fmtDate(s?: string | null) {
+  if (!s) return '—'
+  return s.replace(/^\d{4}-/, '').replace(/-/g, '.')
+}
+
+function fmtRange(p: InspProject): string {
+  if (!p.startDate) return '—'
+  if (!p.endDate) return `${fmtDate(p.startDate)} 起`
+  return `${fmtDate(p.startDate)} → ${fmtDate(p.endDate)}`
+}
+
+function daysRemaining(p: InspProject): string | null {
+  if (!p.endDate || (p.status !== 'PUBLISHED' && p.status !== 'PAUSED')) return null
+  const d = Math.ceil((new Date(p.endDate).getTime() - Date.now()) / 86400000)
+  if (d < 0) return `逾期 ${Math.abs(d)} 天`
+  if (d === 0) return '今日截止'
+  if (d === 1) return '明日截止'
+  if (d <= 7) return `剩 ${d} 天`
+  return null
+}
+
+// ── Filters / sort ──
+const filtered = computed(() => {
+  const q = searchQuery.value.toLowerCase()
+  let list = projects.value.slice()
+  if (q) list = list.filter(p => p.projectName.toLowerCase().includes(q))
+  if (statusFilter.value !== 'all') list = list.filter(p => p.status === statusFilter.value)
+  if (periodFilter.value === 'this-week') {
+    const wkEnd = new Date(); wkEnd.setDate(wkEnd.getDate() + 7)
+    const wkEndS = wkEnd.toISOString().slice(0, 10)
+    list = list.filter(p => p.endDate && p.endDate >= today && p.endDate <= wkEndS)
+  } else if (periodFilter.value === 'this-month') {
+    const moEnd = new Date(); moEnd.setMonth(moEnd.getMonth() + 1)
+    const moEndS = moEnd.toISOString().slice(0, 10)
+    list = list.filter(p => p.endDate && p.endDate >= today && p.endDate <= moEndS)
+  } else if (periodFilter.value === 'overdue') {
+    list = list.filter(p => isOverdue(p) || taskStats(p.id).overdue > 0)
+  }
+  return list.sort((a, b) => urgencyScore(b) - urgencyScore(a))
+})
+
+// ── KPI ──
+const kpi = computed(() => ({
+  total: projects.value.length,
+  active: projects.value.filter(p => p.status === 'PUBLISHED' || p.status === 'PAUSED').length,
+  draft: projects.value.filter(p => p.status === 'DRAFT').length,
+  overdue: projects.value.filter(p => isOverdue(p) || taskStats(p.id).overdue > 0).length,
+}))
+
+// ── Kanban (关注度分组, 非状态机) ──
+const buckets = computed(() => {
+  const data = filtered.value
+  return [
+    {
+      key: 'attention',
+      label: '需要我处理',
+      hint: '逾期 · 任务积压 · 草稿待发布',
+      tone: 'fail',
+      items: data.filter(p => isOverdue(p) || taskStats(p.id).overdue > 0 || p.status === 'DRAFT'),
+    },
+    {
+      key: 'monitor',
+      label: '监控中',
+      hint: '正常进行 / 暂停',
+      tone: 'info',
+      items: data.filter(p => (p.status === 'PUBLISHED' || p.status === 'PAUSED')
+        && !isOverdue(p) && taskStats(p.id).overdue === 0),
+    },
+    {
+      key: 'done',
+      label: '已闭环',
+      hint: '完结 / 归档',
+      tone: 'pass',
+      items: data.filter(p => p.status === 'COMPLETED' || p.status === 'ARCHIVED'),
+    },
+  ]
+})
+
+// ── Timeline ──
+const timelineRange = computed(() => {
+  if (filtered.value.length === 0) return null
+  const dates = filtered.value
+    .flatMap(p => [p.startDate, p.endDate])
+    .filter(Boolean) as string[]
+  if (dates.length === 0) return null
+  const min = dates.reduce((a, b) => a < b ? a : b)
+  const max = dates.reduce((a, b) => a > b ? a : b)
+  return { min, max }
+})
+
+function timelineBar(p: InspProject) {
+  const range = timelineRange.value
+  if (!range || !p.startDate || !p.endDate) return { left: '0%', width: '0%' }
+  const minMs = new Date(range.min).getTime()
+  const maxMs = new Date(range.max).getTime()
+  const span = maxMs - minMs || 1
+  const startMs = new Date(p.startDate).getTime()
+  const endMs = new Date(p.endDate).getTime()
   return {
-    total: tasks.length,
-    done: tasks.filter(t => ['SUBMITTED', 'UNDER_REVIEW', 'REVIEWED', 'PUBLISHED'].includes(t.status)).length,
-    pending: tasks.filter(t => t.status === 'PENDING').length,
-    inProgress: tasks.filter(t => ['CLAIMED', 'IN_PROGRESS'].includes(t.status)).length,
+    left: `${((startMs - minMs) / span) * 100}%`,
+    width: `${((endMs - startMs) / span) * 100}%`,
   }
 }
 
-function getProgressPercent(pid: number): number {
-  const stats = getTaskStats(pid)
-  if (stats.total === 0) return 0
-  return Math.round(stats.done / stats.total * 100)
-}
+const todayMarker = computed(() => {
+  const range = timelineRange.value
+  if (!range) return null
+  const minMs = new Date(range.min).getTime()
+  const maxMs = new Date(range.max).getTime()
+  const todayMs = Date.now()
+  if (todayMs < minMs || todayMs > maxMs) return null
+  return `${((todayMs - minMs) / (maxMs - minMs)) * 100}%`
+})
 
-function getProgressColor(pid: number): string {
-  const pct = getProgressPercent(pid)
-  if (pct >= 100) return 'green'
-  if (pct >= 50) return 'blue'
-  if (pct > 0) return 'orange'
-  return 'gray'
-}
+// ── Actions ──
+function goCreate() { router.push('/inspection/projects/create') }
+function goDetail(p: InspProject) { router.push(`/inspection/projects/${p.id}`) }
 
-async function handleDelete(project: InspProject) {
+async function handleAction(p: InspProject, action: string) {
   try {
-    await ElMessageBox.confirm(`确定删除项目「${project.projectName}」？`, '确认删除', { type: 'warning' })
-    await store.removeProject(project.id)
-    ElMessage.success('删除成功')
+    if (action === 'publish') {
+      router.push(`/inspection/projects/${p.id}`)
+      return
+    }
+    if (action === 'pause') {
+      await store.pauseProject(p.id); ElMessage.success('已暂停')
+    } else if (action === 'resume') {
+      await store.resumeProject(p.id); ElMessage.success('已恢复')
+    } else if (action === 'complete') {
+      await ElMessageBox.confirm('确定完结此项目?', '确认', { type: 'warning' })
+      await store.completeProject(p.id); ElMessage.success('已完结')
+    } else if (action === 'archive') {
+      await store.archiveProject(p.id); ElMessage.success('已归档')
+    } else if (action === 'delete') {
+      await ElMessageBox.confirm(`删除项目「${p.projectName}」?`, '确认删除', { type: 'warning' })
+      await store.removeProject(p.id); ElMessage.success('已删除')
+    }
     loadData()
   } catch (e: any) {
-    if (e !== 'cancel' && e?.toString?.() !== 'cancel') { console.error('删除项目失败', e); ElMessage.error('删除项目失败，请重试') }
+    if (e !== 'cancel' && e?.toString?.() !== 'cancel') {
+      ElMessage.error(e?.message || '操作失败')
+    }
   }
 }
 
-async function handlePause(project: InspProject) {
-  try {
-    await store.pauseProject(project.id)
-    ElMessage.success('已暂停')
-    loadData()
-  } catch (e: any) { ElMessage.error(e.message || '操作失败') }
+function primaryAction(p: InspProject): { label: string; key: string; emphasized?: boolean } {
+  if (p.status === 'DRAFT') return { label: '配置 + 发布', key: 'publish', emphasized: true }
+  if (p.status === 'PUBLISHED' && taskStats(p.id).overdue > 0) return { label: '处理逾期', key: 'detail', emphasized: true }
+  if (p.status === 'PAUSED') return { label: '恢复', key: 'resume', emphasized: true }
+  return { label: '详情', key: 'detail' }
 }
 
-async function handleResume(project: InspProject) {
-  try {
-    await store.resumeProject(project.id)
-    ElMessage.success('已恢复')
-    loadData()
-  } catch (e: any) { ElMessage.error(e.message || '操作失败') }
-}
-
-async function handleComplete(project: InspProject) {
-  try {
-    await ElMessageBox.confirm('确定完结该项目？完结后不可恢复。', '确认完结', { type: 'warning' })
-    await store.completeProject(project.id)
-    ElMessage.success('已完结')
-    loadData()
-  } catch (e: any) {
-    if (e !== 'cancel' && e?.toString?.() !== 'cancel') { console.error('完结项目失败', e); ElMessage.error('完结项目失败，请重试') }
-  }
-}
-
-async function handleArchive(project: InspProject) {
-  try {
-    await store.archiveProject(project.id)
-    ElMessage.success('已归档')
-    loadData()
-  } catch (e: any) { ElMessage.error(e.message || '操作失败') }
-}
-
-onMounted(() => { loadData() })
+onMounted(loadData)
 </script>
 
 <template>
-  <div class="pm-page">
-    <!-- Header -->
-    <div class="pm-header">
-      <h2 class="pm-title">项目管理</h2>
-      <el-button type="primary" @click="goCreate">
-        <Plus :size="14" style="margin-right: 4px;" />新建项目
-      </el-button>
-    </div>
-
-    <!-- Filter bar -->
-    <div class="pm-filters">
-      <el-input v-model="searchQuery" placeholder="搜索项目名..." size="small" clearable class="pm-search" />
-      <div class="pm-view-toggle">
-        <button :class="{ active: viewMode === 'kanban' }" @click="viewMode = 'kanban'">看板</button>
-        <button :class="{ active: viewMode === 'list' }" @click="viewMode = 'list'">列表</button>
+  <div class="insp-shell prj-page">
+    <!-- ── Header + KPIs ─────────── -->
+    <header class="prj-head">
+      <div class="prj-head__lead">
+        <span class="insp-eyebrow">检查项目 · Inspection Campaigns</span>
+        <h1 class="prj-title">检查项目</h1>
       </div>
+      <div class="prj-kpi">
+        <button class="kpi" :class="{ 'is-active': statusFilter === 'all' }" @click="statusFilter = 'all'">
+          <span class="kpi__num insp-num">{{ kpi.total }}</span>
+          <span class="kpi__label">总数</span>
+        </button>
+        <button class="kpi" :class="{ 'is-active': statusFilter === 'PUBLISHED' }" @click="statusFilter = 'PUBLISHED'">
+          <span class="kpi__num insp-num" style="color: var(--insp-info)">{{ kpi.active }}</span>
+          <span class="kpi__label">进行中</span>
+        </button>
+        <button class="kpi" :class="{ 'is-active': statusFilter === 'DRAFT' }" @click="statusFilter = 'DRAFT'">
+          <span class="kpi__num insp-num">{{ kpi.draft }}</span>
+          <span class="kpi__label">草稿</span>
+        </button>
+        <button class="kpi" :class="{ 'is-active': periodFilter === 'overdue' }" @click="periodFilter = periodFilter === 'overdue' ? 'all' : 'overdue'">
+          <span class="kpi__num insp-num" :style="{ color: kpi.overdue ? 'var(--insp-fail)' : 'var(--insp-ink-primary)' }">
+            {{ kpi.overdue }}
+          </span>
+          <span class="kpi__label">告警</span>
+        </button>
+      </div>
+      <button class="prj-cta insp-btn insp-btn--accent" @click="goCreate">
+        <Plus :size="13" />新建项目
+      </button>
+    </header>
+
+    <!-- ── Toolbar (view + filters + search) ─────────── -->
+    <div class="prj-toolbar">
+      <!-- View toggle -->
+      <div class="view-tabs">
+        <button class="view-tab" :class="{ 'is-active': view === 'list' }" @click="view = 'list'">
+          列表
+        </button>
+        <button class="view-tab" :class="{ 'is-active': view === 'kanban' }" @click="view = 'kanban'">
+          看板
+        </button>
+        <button class="view-tab" :class="{ 'is-active': view === 'timeline' }" @click="view = 'timeline'">
+          时间轴
+        </button>
+      </div>
+
+      <!-- Filter chips -->
+      <div class="filter-chips">
+        <button class="chip" :class="{ 'is-active': periodFilter === 'all' }" @click="periodFilter = 'all'">全部时段</button>
+        <button class="chip" :class="{ 'is-active': periodFilter === 'this-week' }" @click="periodFilter = 'this-week'">本周到期</button>
+        <button class="chip" :class="{ 'is-active': periodFilter === 'this-month' }" @click="periodFilter = 'this-month'">本月</button>
+      </div>
+
+      <div class="prj-toolbar__spacer" />
+
+      <input v-model="searchQuery" class="prj-search" placeholder="搜索项目名称…" />
     </div>
 
-    <!-- Kanban Board -->
-    <div v-if="viewMode === 'kanban'" v-loading="loading" class="kanban-container">
-      <div class="kanban-board">
-        <div v-for="col in kanbanColumns" :key="col.key" class="kanban-column" :class="{ 'col-active': col.key === 'PUBLISHED' }">
-          <div class="col-header">
-            <div class="col-header-content">
-              <span class="col-title">{{ col.label }}</span>
-              <span class="col-count" :class="col.cssClass">{{ col.projects.length }}</span>
-            </div>
+    <!-- ============ List View ============ -->
+    <section v-if="view === 'list'" class="prj-list" v-loading="loading">
+      <div class="row row--head">
+        <span class="col col-num">#</span>
+        <span class="col col-name">项目</span>
+        <span class="col col-status">状态</span>
+        <span class="col col-period">期间</span>
+        <span class="col col-progress">进度</span>
+        <span class="col col-tasks">任务</span>
+        <span class="col col-alert">告警</span>
+        <span class="col col-actions">操作</span>
+      </div>
+
+      <div
+        v-for="(p, i) in filtered" :key="p.id"
+        class="row row--data"
+        :class="{ 'row--overdue': isOverdue(p) || taskStats(p.id).overdue > 0 }"
+        @click="goDetail(p)"
+      >
+        <span class="col col-num insp-num">{{ String(i + 1).padStart(2, '0') }}</span>
+
+        <div class="col col-name">
+          <div class="name-line">
+            <span class="name-text">{{ p.projectName }}</span>
+            <span v-if="isPending(p)" class="dot dot--draft" title="待配置发布" />
           </div>
-          <div class="col-accent" :class="col.cssClass" />
-          <div class="col-body">
-            <div v-for="p in col.projects" :key="p.id"
-              class="card" :class="{ 'card-active': col.key === 'PUBLISHED' }"
-              @click="goDetail(p)">
-              <!-- Card name -->
-              <div class="card-name">
-                {{ p.projectName }}
-                <span v-if="col.key === 'PUBLISHED' && p.status === 'PUBLISHED'" class="pulse-dot" />
-              </div>
-              <div class="card-meta">
-                <span>{{ p.projectCode }}</span>
-                <span v-if="p.startDate">{{ p.startDate }}{{ p.endDate ? ' ~ ' + p.endDate : '' }}</span>
-              </div>
-
-              <!-- Active projects: execution stats -->
-              <template v-if="col.key === 'PUBLISHED'">
-                <div class="card-section">
-                  <div class="card-section-title">今日执行</div>
-                  <div class="progress-row">
-                    <div class="progress-bar">
-                      <div class="progress-fill" :class="getProgressColor(p.id)" :style="{ width: getProgressPercent(p.id) + '%' }" />
-                    </div>
-                    <span class="progress-label"><b>{{ getTaskStats(p.id).done }}</b>/{{ getTaskStats(p.id).total }}</span>
-                  </div>
-                  <div class="card-stats">
-                    <span>检查员 <span class="val">{{ inspectorCountMap.get(p.id) || 0 }}</span> 人</span>
-                    <span>任务 <span class="val">{{ getTodayTasks(p.id).length }}</span> 今日</span>
-                  </div>
-                </div>
-                <div v-if="p.status === 'PAUSED'" style="margin-top: 6px;">
-                  <span class="card-tag paused">已暂停</span>
-                </div>
-              </template>
-
-              <!-- Draft cards -->
-              <template v-if="col.key === 'DRAFT'">
-                <div class="card-meta" style="margin-top: 6px;">
-                  <span>创建于 {{ p.createdAt?.slice(5, 10) }}</span>
-                </div>
-              </template>
-
-              <!-- Completed cards -->
-              <template v-if="col.key === 'COMPLETED'">
-                <div class="final-stats">
-                  <div class="final-stat">
-                    <span class="fs-label">总任务</span>
-                    <span class="fs-value">{{ getTaskStats(p.id).total }}</span>
-                  </div>
-                  <div class="final-stat">
-                    <span class="fs-label">已完成</span>
-                    <span class="fs-value good">{{ getTaskStats(p.id).done }}</span>
-                  </div>
-                </div>
-              </template>
-
-              <!-- Archived cards -->
-              <template v-if="col.key === 'ARCHIVED'">
-                <div style="margin-top: 8px;">
-                  <span class="card-tag">完成 {{ getTaskStats(p.id).done }}/{{ getTaskStats(p.id).total }}</span>
-                </div>
-              </template>
-
-              <!-- Actions -->
-              <div class="card-actions" @click.stop>
-                <button v-if="p.status === 'DRAFT'" class="btn btn-sm btn-danger-ghost" @click="handleDelete(p)">删除</button>
-                <button v-if="p.status === 'PUBLISHED'" class="btn btn-sm btn-ghost" @click="handlePause(p)">暂停</button>
-                <button v-if="p.status === 'PAUSED'" class="btn btn-sm btn-green" @click="handleResume(p)">恢复</button>
-                <button v-if="p.status === 'PUBLISHED' || p.status === 'PAUSED'" class="btn btn-sm btn-ghost" @click="handleComplete(p)">完结</button>
-                <button v-if="p.status === 'COMPLETED'" class="btn btn-sm btn-ghost" @click="handleArchive(p)">归档</button>
-                <button class="btn btn-sm" @click="goDetail(p)">
-                  详情
-                  <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
-                </button>
-              </div>
-            </div>
-
-            <div v-if="col.projects.length === 0" class="kanban-empty">无项目</div>
+          <div class="name-meta">
+            <span class="insp-num">{{ p.projectCode }}</span>
+            <span class="sep">·</span>
+            <span><span class="insp-num">{{ inspectorCountMap.get(p.id) || 0 }}</span> 检查员</span>
           </div>
         </div>
-      </div>
-    </div>
 
-    <!-- List View -->
-    <div v-else v-loading="loading" class="list-view">
-      <table class="list-table">
-        <thead>
-          <tr>
-            <th>项目名称</th>
-            <th>状态</th>
-            <th>日期</th>
-            <th>检查员</th>
-            <th>完成率</th>
-            <th>操作</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr v-for="p in filteredProjects" :key="p.id" @click="goDetail(p)">
-            <td class="list-name">{{ p.projectName }}</td>
-            <td>
-              <span class="status-badge"
-                :class="{
-                  draft: p.status === 'DRAFT',
-                  active: p.status === 'PUBLISHED',
-                  paused: p.status === 'PAUSED',
-                  completed: p.status === 'COMPLETED',
-                  archived: p.status === 'ARCHIVED',
-                }">
-                <span class="sd" />
+        <span class="col col-status">
+          <span class="insp-chip" :class="`insp-chip--${projectChip(p)}`">
+            {{ ProjectStatusConfig[p.status as ProjectStatus]?.label }}
+          </span>
+        </span>
+
+        <span class="col col-period">
+          <span class="period-line insp-num">{{ fmtRange(p) }}</span>
+          <span v-if="daysRemaining(p)" class="period-rel"
+                :class="{ 'is-urgent': daysRemaining(p)?.startsWith('逾期') || daysRemaining(p)?.startsWith('今日') }">
+            {{ daysRemaining(p) }}
+          </span>
+        </span>
+
+        <span class="col col-progress">
+          <div class="prog-wrap">
+            <div class="prog-bar">
+              <div class="prog-fill" :style="{ width: taskStats(p.id).pct + '%' }" />
+            </div>
+            <span class="prog-text insp-num">{{ taskStats(p.id).pct }}%</span>
+          </div>
+        </span>
+
+        <span class="col col-tasks insp-num">
+          {{ taskStats(p.id).done }}<span class="dim">/{{ taskStats(p.id).total }}</span>
+        </span>
+
+        <span class="col col-alert">
+          <span v-if="taskStats(p.id).overdue > 0" class="alert-tag">
+            <AlertTriangle :size="11" />
+            <span class="insp-num">{{ taskStats(p.id).overdue }}</span> 逾期
+          </span>
+          <span v-else-if="p.status === 'DRAFT'" class="alert-tag alert-tag--draft">待发布</span>
+          <span v-else class="dim">—</span>
+        </span>
+
+        <div class="col col-actions" @click.stop>
+          <button
+            class="insp-btn insp-btn--sm"
+            :class="{ 'insp-btn--accent': primaryAction(p).emphasized }"
+            @click="primaryAction(p).key === 'detail' || primaryAction(p).key === 'publish' ? goDetail(p) : handleAction(p, primaryAction(p).key)"
+          >{{ primaryAction(p).label }}</button>
+          <button v-if="p.status === 'PUBLISHED'" class="insp-btn insp-btn--sm" @click="handleAction(p, 'pause')">暂停</button>
+          <button v-if="['PUBLISHED','PAUSED'].includes(p.status)" class="insp-btn insp-btn--sm" @click="handleAction(p, 'complete')">完结</button>
+          <button v-if="p.status === 'COMPLETED'" class="insp-btn insp-btn--sm" @click="handleAction(p, 'archive')">归档</button>
+          <button v-if="p.status === 'DRAFT' || p.status === 'ARCHIVED'" class="insp-btn insp-btn--sm insp-btn--ghost" @click="handleAction(p, 'delete')" title="删除">×</button>
+        </div>
+      </div>
+
+      <div v-if="!loading && filtered.length === 0" class="empty">
+        <p class="empty-title">未找到匹配的项目</p>
+        <p class="empty-sub">尝试调整筛选条件, 或新建一个项目</p>
+        <button class="insp-btn insp-btn--accent" @click="goCreate">
+          <Plus :size="13" />新建项目
+        </button>
+      </div>
+    </section>
+
+    <!-- ============ Kanban View (按关注度) ============ -->
+    <section v-else-if="view === 'kanban'" class="prj-kanban" v-loading="loading">
+      <article v-for="b in buckets" :key="b.key" class="bucket" :class="`bucket--${b.tone}`">
+        <header class="bucket-head">
+          <div class="bucket-head__lead">
+            <span class="bucket-name">{{ b.label }}</span>
+            <span class="bucket-count insp-num">{{ b.items.length }}</span>
+          </div>
+          <span class="bucket-hint">{{ b.hint }}</span>
+        </header>
+        <div class="bucket-body">
+          <div v-for="p in b.items" :key="p.id"
+               class="kban-card"
+               :class="{ 'is-overdue': isOverdue(p) || taskStats(p.id).overdue > 0 }"
+               @click="goDetail(p)">
+            <div class="kban-line1">
+              <span class="kban-name">{{ p.projectName }}</span>
+              <span class="insp-chip" :class="`insp-chip--${projectChip(p)}`">
                 {{ ProjectStatusConfig[p.status as ProjectStatus]?.label }}
               </span>
-            </td>
-            <td class="list-date">{{ p.startDate || '—' }}{{ p.endDate ? ' ~ ' + p.endDate : '' }}</td>
-            <td>{{ inspectorCountMap.get(p.id) || 0 }}</td>
-            <td>
-              <span class="mini-progress">
-                <span class="mp-fill" :style="{ width: getProgressPercent(p.id) + '%', background: getProgressPercent(p.id) >= 80 ? 'var(--pm-green)' : getProgressPercent(p.id) >= 50 ? 'var(--pm-blue)' : 'var(--pm-orange)' }" />
+            </div>
+            <div class="kban-meta insp-num">{{ fmtRange(p) }}</div>
+            <div class="kban-progress">
+              <div class="prog-bar"><div class="prog-fill" :style="{ width: taskStats(p.id).pct + '%' }" /></div>
+              <span class="kban-progress__text insp-num">{{ taskStats(p.id).done }}/{{ taskStats(p.id).total }}</span>
+            </div>
+            <div v-if="taskStats(p.id).overdue > 0 || daysRemaining(p)" class="kban-alert">
+              <span v-if="taskStats(p.id).overdue > 0" class="alert-tag">
+                <AlertTriangle :size="10" />
+                <span class="insp-num">{{ taskStats(p.id).overdue }}</span> 逾期
               </span>
-              <b>{{ getTaskStats(p.id).done }}/{{ getTaskStats(p.id).total }}</b>
-            </td>
-            <td @click.stop>
-              <button v-if="p.status === 'DRAFT'" class="btn btn-sm btn-danger-ghost" @click="handleDelete(p)">删除</button>
-              <button v-if="p.status === 'PUBLISHED'" class="btn btn-sm btn-ghost" @click="handlePause(p)">暂停</button>
-              <button v-if="p.status === 'PAUSED'" class="btn btn-sm btn-green" @click="handleResume(p)">恢复</button>
-              <button v-if="p.status === 'PUBLISHED' || p.status === 'PAUSED'" class="btn btn-sm btn-ghost" @click="handleComplete(p)">完结</button>
-              <button v-if="p.status === 'COMPLETED'" class="btn btn-sm btn-ghost" @click="handleArchive(p)">归档</button>
-              <button class="btn btn-sm" @click="goDetail(p)">详情</button>
-            </td>
-          </tr>
-          <tr v-if="filteredProjects.length === 0">
-            <td colspan="6" class="kanban-empty">暂无检查项目</td>
-          </tr>
-        </tbody>
-      </table>
-    </div>
+              <span v-else-if="daysRemaining(p)" class="period-rel"
+                    :class="{ 'is-urgent': daysRemaining(p)?.startsWith('逾期') || daysRemaining(p)?.startsWith('今日') }">
+                {{ daysRemaining(p) }}
+              </span>
+            </div>
+          </div>
+          <div v-if="b.items.length === 0" class="bucket-empty">无项目</div>
+        </div>
+      </article>
+    </section>
+
+    <!-- ============ Timeline View ============ -->
+    <section v-else class="prj-timeline" v-loading="loading">
+      <div v-if="!timelineRange" class="empty">
+        <p class="empty-title">无法生成时间轴</p>
+        <p class="empty-sub">项目未设置开始/结束日期</p>
+      </div>
+      <template v-else>
+        <header class="tl-head">
+          <span class="tl-axis-label insp-num">{{ timelineRange.min }}</span>
+          <div class="tl-axis-spacer" />
+          <span class="tl-axis-label insp-num">{{ timelineRange.max }}</span>
+        </header>
+        <div class="tl-grid">
+          <div v-if="todayMarker" class="tl-today" :style="{ left: todayMarker }">
+            <span class="tl-today__label insp-num">今天</span>
+          </div>
+          <div v-for="p in filtered" :key="p.id" class="tl-row" @click="goDetail(p)">
+            <span class="tl-name">{{ p.projectName }}</span>
+            <div class="tl-track">
+              <div
+                class="tl-bar"
+                :class="`tl-bar--${projectChip(p)}`"
+                :style="timelineBar(p)"
+              >
+                <span class="tl-bar__pct insp-num">{{ taskStats(p.id).pct }}%</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </template>
+    </section>
   </div>
 </template>
 
 <style scoped>
-:root {
-  --pm-blue: #1a6dff;
-  --pm-green: #10b981;
-  --pm-orange: #f59e0b;
-  --pm-red: #ef4444;
-  --pm-gray: #9ca3af;
-  --pm-slate: #64748b;
-  --pm-border: #e5e7eb;
-  --pm-border-light: #f0f0f0;
-  --pm-bg: #f0f2f5;
-}
+.prj-page { padding: 12px 16px; }
 
-.pm-page {
-  background: #f0f2f5;
-  min-height: 100%;
-}
-
-/* ── Header ── */
-.pm-header {
+/* ─ Head + KPI ─────── */
+.prj-head {
   display: flex;
-  justify-content: space-between;
   align-items: center;
-  padding: 16px 24px 0;
+  gap: 16px;
+  background: var(--insp-bg-surface);
+  border: 1px solid var(--insp-border-default);
+  border-radius: var(--insp-radius-lg);
+  padding: 12px 16px;
+  margin-bottom: 10px;
 }
-.pm-title {
-  font-size: 16px;
+.prj-head__lead { display: flex; flex-direction: column; gap: 2px; }
+.prj-title {
+  font-size: 17px;
   font-weight: 700;
-  letter-spacing: -0.3px;
-  color: #1a1a2e;
+  margin: 2px 0 0;
+  color: var(--insp-ink-primary);
 }
+.prj-kpi {
+  display: flex;
+  margin-left: auto;
+  gap: 6px;
+}
+.kpi {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0;
+  min-width: 64px;
+  padding: 4px 14px;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: var(--insp-radius-sm);
+  cursor: pointer;
+  transition: all var(--insp-t-fast);
+  font-family: inherit;
+}
+.kpi:hover { background: var(--insp-bg-subtle); }
+.kpi.is-active {
+  background: var(--insp-accent-paler);
+  border-color: var(--insp-accent-pale);
+}
+.kpi__num {
+  font-family: var(--insp-font-mono);
+  font-size: 18px;
+  font-weight: 700;
+  line-height: 1;
+  color: var(--insp-ink-primary);
+}
+.kpi__label {
+  font-size: 10px;
+  color: var(--insp-ink-tertiary);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  margin-top: 2px;
+}
+.prj-cta { margin-left: 4px; }
 
-/* ── Filter Bar ── */
-.pm-filters {
+/* ─ Toolbar ─────── */
+.prj-toolbar {
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 12px 24px;
-  flex-wrap: wrap;
+  background: var(--insp-bg-surface);
+  border: 1px solid var(--insp-border-default);
+  border-radius: var(--insp-radius-lg);
+  padding: 6px 8px 6px 12px;
+  margin-bottom: 10px;
 }
-.pm-search {
-  width: 220px;
-}
-.pm-view-toggle {
+
+.view-tabs {
   display: flex;
-  border: 1px solid #e5e7eb;
-  border-radius: 6px;
-  overflow: hidden;
-  margin-left: auto;
+  gap: 2px;
+  padding: 2px;
+  background: var(--insp-bg-subtle);
+  border-radius: var(--insp-radius-sm);
 }
-.pm-view-toggle button {
-  padding: 5px 14px;
-  font-size: 12px;
-  border: none;
-  background: #fff;
-  color: #6b7280;
-  cursor: pointer;
-  transition: all 0.2s ease;
+.view-tab {
+  height: 24px;
+  padding: 0 12px;
+  background: transparent;
+  border: 0;
+  border-radius: 3px;
   font-family: inherit;
+  font-size: 12px;
   font-weight: 500;
+  color: var(--insp-ink-tertiary);
+  cursor: pointer;
+  transition: all var(--insp-t-fast);
 }
-.pm-view-toggle button + button {
-  border-left: 1px solid #e5e7eb;
-}
-.pm-view-toggle button.active {
-  background: #1a6dff;
-  color: #fff;
-}
-.pm-view-toggle button:hover:not(.active) {
-  background: #f3f4f6;
-}
-
-/* ── Kanban Board ── */
-.kanban-container {
-  padding: 0 20px 16px;
-  overflow-x: auto;
-  scrollbar-width: thin;
-  scrollbar-color: #d1d5db transparent;
-}
-.kanban-board {
-  display: flex;
-  gap: 14px;
-  min-height: calc(100vh - 200px);
-  padding-bottom: 16px;
-}
-.kanban-column {
-  flex: 0 0 290px;
-  min-width: 290px;
-  display: flex;
-  flex-direction: column;
-  background: #f7f8fa;
-  border-radius: 12px;
-  max-height: calc(100vh - 190px);
-  transition: all 0.2s ease;
-}
-.kanban-column.col-active {
-  background: #f5f8ff;
-  flex: 0 0 320px;
-  min-width: 320px;
+.view-tab:hover { color: var(--insp-ink-primary); }
+.view-tab.is-active {
+  background: var(--insp-bg-surface);
+  color: var(--insp-ink-primary);
+  box-shadow: var(--insp-shadow-xs);
+  font-weight: 600;
 }
 
-/* Column header */
-.col-header {
+.filter-chips {
   display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 12px 14px 8px;
-  flex-shrink: 0;
+  gap: 4px;
 }
-.col-header-content {
-  display: flex;
-  align-items: center;
-  gap: 8px;
+.chip {
+  height: 24px;
+  padding: 0 10px;
+  background: transparent;
+  border: 1px solid var(--insp-border-default);
+  border-radius: var(--insp-radius-pill);
+  font-family: inherit;
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--insp-ink-tertiary);
+  cursor: pointer;
+  transition: all var(--insp-t-fast);
 }
-.col-title {
+.chip:hover { color: var(--insp-ink-primary); border-color: var(--insp-border-strong); }
+.chip.is-active {
+  background: var(--insp-accent);
+  color: white;
+  border-color: var(--insp-accent);
+}
+
+.prj-toolbar__spacer { flex: 1; }
+
+.prj-search {
+  height: 26px;
+  padding: 0 10px;
+  border: 1px solid var(--insp-border-default);
+  border-radius: var(--insp-radius-sm);
+  font-size: 12px;
+  font-family: inherit;
+  width: 220px;
+  background: var(--insp-bg-surface);
+}
+.prj-search:focus {
+  outline: none;
+  border-color: var(--insp-accent);
+  box-shadow: 0 0 0 3px var(--insp-accent-paler);
+}
+
+/* ============ List view ============ */
+.prj-list {
+  background: var(--insp-bg-surface);
+  border: 1px solid var(--insp-border-default);
+  border-radius: var(--insp-radius-lg);
+  overflow: hidden;
+}
+
+.row {
+  display: grid;
+  grid-template-columns: 36px 2fr 90px 140px 130px 70px 90px 220px;
+  gap: 10px;
+  align-items: center;
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--insp-border-subtle);
+  transition: background var(--insp-t-fast);
+}
+.row--head {
+  background: var(--insp-bg-subtle);
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--insp-ink-tertiary);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  padding: 8px 14px;
+}
+.row--data { cursor: pointer; }
+.row--data:hover { background: var(--insp-bg-subtle); }
+.row--data.row--overdue {
+  background: linear-gradient(to right, var(--insp-fail-pale), transparent 60%);
+}
+.row--data.row--overdue:hover {
+  background: linear-gradient(to right, color-mix(in oklab, var(--insp-fail-pale) 80%, var(--insp-bg-subtle)), var(--insp-bg-subtle) 60%);
+}
+
+.col { min-width: 0; }
+.col-num {
+  font-family: var(--insp-font-mono);
+  font-size: 11px;
+  color: var(--insp-ink-quaternary);
+}
+
+.name-line { display: flex; align-items: center; gap: 6px; }
+.name-text {
   font-size: 13px;
   font-weight: 600;
-  color: #1a1a2e;
+  color: var(--insp-ink-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
-.col-count {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-width: 20px;
-  height: 20px;
-  padding: 0 6px;
-  border-radius: 10px;
-  font-size: 11px;
-  font-weight: 600;
-  color: #fff;
+.dot {
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  flex-shrink: 0;
 }
-.col-count.draft { background: #9ca3af; }
-.col-count.active { background: #1a6dff; }
-.col-count.completed { background: #10b981; }
-.col-count.archived { background: #64748b; }
-
-.col-accent {
-  height: 2px;
-  margin: 0 14px 4px;
-  border-radius: 1px;
-}
-.col-accent.draft { background: #9ca3af; }
-.col-accent.active { background: #1a6dff; }
-.col-accent.completed { background: #10b981; }
-.col-accent.archived { background: #64748b; }
-
-.col-body {
-  flex: 1;
-  overflow-y: auto;
-  padding: 4px 10px 10px;
-  scrollbar-width: thin;
-  scrollbar-color: #d1d5db transparent;
-}
-
-/* ── Cards ── */
-.card {
-  background: #fff;
-  border: 1px solid #e5e7eb;
-  border-radius: 10px;
-  padding: 14px;
-  margin-bottom: 10px;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  position: relative;
-}
-.card:hover {
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-  border-color: #d0d5dd;
-  transform: translateY(-1px);
-}
-.card:last-child { margin-bottom: 4px; }
-.card-active {
-  border-left: 3px solid #1a6dff;
-  padding-left: 12px;
-}
-
-.card-name {
-  font-size: 13.5px;
-  font-weight: 600;
-  color: #1a1a2e;
-  margin-bottom: 4px;
+.dot--draft { background: var(--insp-warn); }
+.name-meta {
   display: flex;
   align-items: center;
   gap: 6px;
-}
-.pulse-dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background: #1a6dff;
-  position: relative;
-  flex-shrink: 0;
-}
-.pulse-dot::after {
-  content: '';
-  position: absolute;
-  inset: -3px;
-  border-radius: 50%;
-  background: rgba(26, 109, 255, 0.3);
-  animation: pulse 2s ease-in-out infinite;
-}
-@keyframes pulse {
-  0%, 100% { transform: scale(1); opacity: 0.6; }
-  50% { transform: scale(1.8); opacity: 0; }
-}
-
-.card-meta {
-  font-size: 11.5px;
-  color: #9ca3af;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 4px 0;
-  margin-bottom: 2px;
-}
-.card-meta span + span::before {
-  content: '\00B7';
-  margin: 0 5px;
-  color: #e5e7eb;
-}
-
-.card-section {
-  margin-top: 10px;
-  padding-top: 8px;
-  border-top: 1px solid #f0f0f0;
-}
-.card-section-title {
   font-size: 11px;
+  color: var(--insp-ink-tertiary);
+  margin-top: 2px;
+}
+.sep { color: var(--insp-ink-quaternary); }
+
+.period-line {
+  font-family: var(--insp-font-mono);
+  font-size: 12px;
+  color: var(--insp-ink-secondary);
+  display: block;
+}
+.period-rel {
+  display: block;
+  font-size: 10px;
+  color: var(--insp-ink-tertiary);
+  margin-top: 2px;
+}
+.period-rel.is-urgent {
+  color: var(--insp-fail);
   font-weight: 600;
-  color: #6b7280;
-  margin-bottom: 6px;
-  letter-spacing: 0.3px;
 }
 
-.progress-row {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-bottom: 4px;
-}
-.progress-bar {
+.prog-wrap { display: flex; align-items: center; gap: 6px; }
+.prog-bar {
   flex: 1;
-  height: 4px;
-  background: #e5e7eb;
-  border-radius: 2px;
+  height: 5px;
+  background: var(--insp-bg-sunken);
+  border-radius: 3px;
   overflow: hidden;
 }
-.progress-fill {
+.prog-fill {
   height: 100%;
-  border-radius: 2px;
-  transition: width 0.4s ease;
+  background: var(--insp-accent);
+  transition: width var(--insp-t-medium);
 }
-.progress-fill.blue { background: #1a6dff; }
-.progress-fill.green { background: #10b981; }
-.progress-fill.orange { background: #f59e0b; }
-.progress-fill.gray { background: #9ca3af; }
-
-.progress-label {
+.row--overdue .prog-fill { background: var(--insp-fail); }
+.prog-text {
+  font-family: var(--insp-font-mono);
   font-size: 11px;
-  color: #6b7280;
-  white-space: nowrap;
-  flex-shrink: 0;
-}
-.progress-label b {
-  color: #1a1a2e;
   font-weight: 600;
+  color: var(--insp-ink-primary);
+  min-width: 32px;
+  text-align: right;
 }
 
-.card-stats {
-  display: flex;
-  gap: 12px;
-  margin-top: 4px;
-  font-size: 11px;
-  color: #9ca3af;
+.col-tasks {
+  font-family: var(--insp-font-mono);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--insp-ink-primary);
 }
-.card-stats span {
-  display: flex;
+.col-tasks .dim { color: var(--insp-ink-quaternary); font-weight: 400; }
+
+.alert-tag {
+  display: inline-flex;
   align-items: center;
   gap: 3px;
-}
-.card-stats .val {
+  font-size: 11px;
   font-weight: 600;
-  color: #6b7280;
-}
-
-.card-tag {
-  display: inline-flex;
-  align-items: center;
-  padding: 2px 8px;
+  color: var(--insp-fail);
+  padding: 1px 6px;
+  background: var(--insp-fail-pale);
+  border: 1px solid var(--insp-fail-border);
   border-radius: 3px;
-  font-size: 10.5px;
-  font-weight: 500;
-  background: #f3f4f6;
-  color: #6b7280;
+  white-space: nowrap;
 }
-.card-tag.paused {
-  background: #fffbeb;
-  color: #f59e0b;
+.alert-tag--draft {
+  color: var(--insp-warn);
+  background: var(--insp-warn-pale);
+  border-color: var(--insp-warn-border);
 }
 
-/* Final stats for completed/archived */
-.final-stats {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 6px;
-  margin-top: 8px;
+.col-actions {
+  display: flex;
+  gap: 4px;
+  justify-content: flex-end;
+  flex-wrap: wrap;
 }
-.final-stat {
+
+.dim { color: var(--insp-ink-quaternary); }
+
+.empty {
+  padding: 60px 20px;
+  text-align: center;
+}
+.empty-title { font-size: 14px; font-weight: 600; color: var(--insp-ink-primary); margin: 0 0 4px; }
+.empty-sub { font-size: 12px; color: var(--insp-ink-tertiary); margin: 0 0 14px; }
+
+/* ============ Kanban view ============ */
+.prj-kanban {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+}
+
+.bucket {
+  background: var(--insp-bg-surface);
+  border: 1px solid var(--insp-border-default);
+  border-radius: var(--insp-radius-lg);
   display: flex;
   flex-direction: column;
-  padding: 6px 10px;
-  border-radius: 6px;
-  background: #f3f4f6;
+  min-height: 360px;
 }
-.final-stat .fs-label {
-  font-size: 10px;
-  color: #9ca3af;
-}
-.final-stat .fs-value {
-  font-size: 15px;
-  font-weight: 700;
-  color: #1a1a2e;
-}
-.final-stat .fs-value.good {
-  color: #10b981;
-}
+.bucket--fail { border-top: 3px solid var(--insp-fail); }
+.bucket--info { border-top: 3px solid var(--insp-info); }
+.bucket--pass { border-top: 3px solid var(--insp-pass); }
 
-/* Card actions */
-.card-actions {
-  display: flex;
-  justify-content: flex-end;
-  gap: 4px;
-  margin-top: 10px;
-  padding-top: 8px;
-  border-top: 1px solid #f0f0f0;
-}
-
-/* Buttons (matching mockup style) */
-.btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  padding: 6px 14px;
-  border-radius: 6px;
-  font-size: 12.5px;
-  font-weight: 500;
-  cursor: pointer;
-  border: 1px solid #e5e7eb;
-  background: #fff;
-  color: #1a1a2e;
-  transition: all 0.2s ease;
-  user-select: none;
-  white-space: nowrap;
-  font-family: inherit;
-}
-.btn:hover { border-color: #bbb; background: #f3f4f6; }
-.btn-sm { padding: 4px 10px; font-size: 11.5px; }
-.btn-ghost { border: none; background: transparent; color: #6b7280; }
-.btn-ghost:hover { background: #f3f4f6; color: #1a1a2e; }
-.btn-danger-ghost { border: none; background: transparent; color: #ef4444; }
-.btn-danger-ghost:hover { background: #fef2f2; color: #ef4444; }
-.btn-green { background: #10b981; color: #fff; border-color: #10b981; }
-.btn-green:hover { background: #0da472; border-color: #0da472; }
-
-.kanban-empty {
-  text-align: center;
-  padding: 24px 12px;
-  font-size: 12px;
-  color: #d1d5db;
-}
-
-/* ── List View ── */
-.list-view {
-  padding: 0 24px 16px;
-}
-.list-table {
-  width: 100%;
-  border-collapse: separate;
-  border-spacing: 0;
-  background: #fff;
-  border-radius: 10px;
-  border: 1px solid #e5e7eb;
-  overflow: hidden;
-}
-.list-table thead {
-  background: #f3f4f6;
-}
-.list-table th {
-  padding: 9px 14px;
-  text-align: left;
-  font-size: 11.5px;
-  font-weight: 600;
-  color: #6b7280;
-  border-bottom: 1px solid #e5e7eb;
-  white-space: nowrap;
-}
-.list-table td {
+.bucket-head {
   padding: 10px 14px;
-  font-size: 12.5px;
-  color: #1a1a2e;
-  border-bottom: 1px solid #f0f0f0;
-  vertical-align: middle;
+  border-bottom: 1px solid var(--insp-border-subtle);
 }
-.list-table tr:last-child td { border-bottom: none; }
-.list-table tbody tr { cursor: pointer; }
-.list-table tbody tr:hover td { background: #fafbfc; }
-.list-name { font-weight: 600; }
-.list-date { color: #9ca3af; font-size: 12px; }
-
-/* Status badge */
-.status-badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  padding: 2px 8px;
-  border-radius: 10px;
+.bucket-head__lead {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+.bucket-name {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--insp-ink-primary);
+}
+.bucket-count {
+  font-family: var(--insp-font-mono);
   font-size: 11px;
-  font-weight: 500;
+  font-weight: 600;
+  color: var(--insp-accent);
 }
-.status-badge.draft { background: #f3f4f6; color: #9ca3af; }
-.status-badge.active { background: #e8f0fe; color: #1a6dff; }
-.status-badge.paused { background: #fffbeb; color: #f59e0b; }
-.status-badge.completed { background: #ecfdf5; color: #10b981; }
-.status-badge.archived { background: #f1f5f9; color: #64748b; }
-.status-badge .sd {
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: currentColor;
+.bucket-hint {
+  display: block;
+  margin-top: 3px;
+  font-size: 11px;
+  color: var(--insp-ink-tertiary);
 }
 
-/* Mini progress bar for list view */
-.mini-progress {
-  width: 60px;
-  height: 3px;
-  background: #e5e7eb;
-  border-radius: 2px;
-  display: inline-block;
-  vertical-align: middle;
-  margin-right: 6px;
+.bucket-body {
+  padding: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  flex: 1;
+}
+
+.kban-card {
+  padding: 10px 12px;
+  background: var(--insp-bg-page);
+  border: 1px solid var(--insp-border-subtle);
+  border-radius: var(--insp-radius-sm);
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  transition: all var(--insp-t-fast);
+}
+.kban-card:hover {
+  border-color: var(--insp-accent);
+  background: var(--insp-bg-surface);
+}
+.kban-card.is-overdue {
+  border-color: var(--insp-fail-border);
+  background: var(--insp-fail-pale);
+}
+
+.kban-line1 {
+  display: flex; align-items: center; gap: 6px;
+}
+.kban-name {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--insp-ink-primary);
+  flex: 1;
+  white-space: nowrap;
   overflow: hidden;
+  text-overflow: ellipsis;
 }
-.mini-progress .mp-fill {
-  height: 100%;
-  border-radius: 2px;
+.kban-meta {
+  font-family: var(--insp-font-mono);
+  font-size: 11px;
+  color: var(--insp-ink-tertiary);
+}
+.kban-progress {
+  display: flex; align-items: center; gap: 6px;
+}
+.kban-progress .prog-bar { height: 4px; }
+.kban-progress__text {
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--insp-ink-secondary);
+}
+.kban-alert {
+  display: flex;
+  align-items: center;
 }
 
-/* ── Scrollbar (webkit) ── */
-::-webkit-scrollbar { width: 5px; height: 5px; }
-::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: #d1d5db; border-radius: 4px; }
-::-webkit-scrollbar-thumb:hover { background: #b0b5bd; }
+.bucket-empty {
+  padding: 30px 10px;
+  text-align: center;
+  font-size: 11px;
+  color: var(--insp-ink-quaternary);
+}
 
-/* ── Responsive ── */
-@media (max-width: 1200px) {
-  .kanban-column { flex: 0 0 260px; min-width: 260px; }
-  .kanban-column.col-active { flex: 0 0 290px; min-width: 290px; }
+/* ============ Timeline view ============ */
+.prj-timeline {
+  background: var(--insp-bg-surface);
+  border: 1px solid var(--insp-border-default);
+  border-radius: var(--insp-radius-lg);
+  padding: 10px 14px;
+}
+.tl-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 10px 6px 220px;
+  font-size: 11px;
+  color: var(--insp-ink-tertiary);
+}
+.tl-axis-label {
+  font-family: var(--insp-font-mono);
+}
+.tl-axis-spacer { flex: 1; border-bottom: 1px dashed var(--insp-border-default); height: 1px; }
+
+.tl-grid {
+  position: relative;
+  border-top: 1px solid var(--insp-border-subtle);
+}
+.tl-today {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  background: var(--insp-accent);
+  z-index: 2;
+  pointer-events: none;
+  margin-left: 220px;
+}
+.tl-today__label {
+  position: absolute;
+  top: -16px;
+  left: 4px;
+  font-family: var(--insp-font-mono);
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--insp-accent);
+}
+.tl-row {
+  display: grid;
+  grid-template-columns: 220px 1fr;
+  gap: 10px;
+  align-items: center;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--insp-border-subtle);
+  cursor: pointer;
+  transition: background var(--insp-t-fast);
+}
+.tl-row:hover { background: var(--insp-bg-subtle); }
+.tl-name {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--insp-ink-primary);
+  padding: 0 6px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.tl-track {
+  position: relative;
+  height: 22px;
+  background: var(--insp-bg-subtle);
+  border-radius: 3px;
+}
+.tl-bar {
+  position: absolute;
+  top: 2px; bottom: 2px;
+  border-radius: 3px;
+  display: flex;
+  align-items: center;
+  padding: 0 8px;
+  font-family: var(--insp-font-mono);
+  font-size: 10px;
+  font-weight: 600;
+  color: white;
+  min-width: 36px;
+  overflow: hidden;
+  white-space: nowrap;
+}
+.tl-bar--info { background: var(--insp-info); }
+.tl-bar--warn { background: var(--insp-warn); }
+.tl-bar--fail { background: var(--insp-fail); }
+.tl-bar--pass { background: var(--insp-pass); }
+.tl-bar--pending { background: var(--insp-pending); }
+
+@media (max-width: 1100px) {
+  .row {
+    grid-template-columns: 28px 2fr 70px 110px 100px 50px 70px 160px;
+    gap: 6px;
+    font-size: 11px;
+  }
+  .prj-kanban { grid-template-columns: 1fr; }
+}
+
+@media (max-width: 768px) {
+  .row {
+    grid-template-columns: 1fr;
+    gap: 4px;
+    padding: 10px;
+  }
+  .row--head { display: none; }
+  .col-actions { justify-content: flex-start; }
+  .prj-kpi { flex-wrap: wrap; }
 }
 </style>
