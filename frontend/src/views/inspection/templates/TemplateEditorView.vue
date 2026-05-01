@@ -501,28 +501,41 @@ function getItemTypeLabel(item: TemplateItem) {
 </script>
 
 <template>
-  <div class="te-root">
+  <div class="te-root insp-shell">
     <InspErrorState v-if="loadError" :message="loadError" @retry="loadData" />
     <div v-else-if="!rootSection" class="te-loading">加载中...</div>
 
     <template v-else>
-      <!-- ===== Top bar ===== -->
+      <!-- ===== Top bar (Audit Hub style) ===== -->
       <header class="te-header">
-        <div class="te-header-left">
-          <button class="te-icon-btn" @click="router.push('/inspection/config')"><ArrowLeft :size="16" /></button>
-          <div class="te-header-info">
-            <span class="te-header-name">{{ rootSection.sectionName }}</span>
-            <span class="te-header-status" :style="{ color: TemplateStatusConfig[rootSection.status]?.color }">{{ TemplateStatusConfig[rootSection.status]?.label }}</span>
-            <span class="te-header-code">{{ rootSection.sectionCode }} · v{{ rootSection.latestVersion }}</span>
+        <button class="te-back" @click="router.push('/inspection/config')" title="返回">
+          <ArrowLeft :size="14" />
+        </button>
+        <div class="te-header-info">
+          <span class="insp-eyebrow">检查模板 · {{ rootSection.sectionCode }}</span>
+          <div class="te-name-line">
+            <h1 class="te-header-name">{{ rootSection.sectionName }}</h1>
+            <span class="insp-chip"
+                  :class="`insp-chip--${({DRAFT:'pending',PUBLISHED:'pass',DEPRECATED:'warn',ARCHIVED:'fail'} as any)[rootSection.status]}`">
+              {{ TemplateStatusConfig[rootSection.status]?.label }}
+            </span>
+            <span class="te-version insp-num">v{{ rootSection.latestVersion }}</span>
           </div>
         </div>
         <div class="te-header-actions">
           <template v-if="isReadonly">
-            <span class="te-readonly-hint">已发布 v{{ rootSection.latestVersion }}</span>
-            <button class="te-btn te-btn-primary" @click="handleUnlockForEdit">解锁编辑</button>
+            <span class="te-readonly-hint">
+              <span class="insp-stamp">已发布 v{{ rootSection.latestVersion }}</span>
+              发布后不可直接编辑
+            </span>
+            <button class="insp-btn insp-btn--accent" @click="handleUnlockForEdit">解锁编辑</button>
           </template>
-          <button class="te-btn te-btn-ghost" @click="showPreview = !showPreview"><Eye :size="13" />{{ showPreview ? '编辑' : '预览' }}</button>
-          <button v-if="rootSection.status === 'DRAFT'" class="te-btn te-btn-green" @click="handlePublish"><Upload :size="13" />发布</button>
+          <button class="insp-btn" @click="showPreview = !showPreview">
+            <Eye :size="13" />{{ showPreview ? '编辑' : '预览' }}
+          </button>
+          <button v-if="rootSection.status === 'DRAFT'" class="insp-btn insp-btn--accent" @click="handlePublish">
+            <Upload :size="13" />发布
+          </button>
         </div>
       </header>
 
@@ -721,16 +734,65 @@ function getItemTypeLabel(item: TemplateItem) {
 </template>
 
 <style scoped>
-.te-root { display: flex; flex-direction: column; height: 100%; background: #f5f6f8; }
-.te-loading { display: flex; align-items: center; justify-content: center; flex: 1; font-size: 13px; color: #9ca3af; }
+.te-root { display: flex; flex-direction: column; height: 100%; background: var(--insp-bg-page); }
+.te-loading { display: flex; align-items: center; justify-content: center; flex: 1; font-size: 13px; color: var(--insp-ink-tertiary); }
 
-/* Header */
-.te-header { display: flex; align-items: center; justify-content: space-between; padding: 8px 16px; background: #fff; border-bottom: 1px solid #e5e7eb; flex-shrink: 0; }
-.te-header-left { display: flex; align-items: center; gap: 10px; }
-.te-header-info { display: flex; align-items: baseline; gap: 8px; }
-.te-header-name { font-size: 14px; font-weight: 600; color: #111827; }
-.te-header-status { font-size: 11px; font-weight: 500; }
-.te-header-code { font-size: 11px; color: #9ca3af; }
+/* Header (Audit Hub aligned) */
+.te-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 16px;
+  background: var(--insp-bg-surface);
+  border-bottom: 1px solid var(--insp-border-default);
+  flex-shrink: 0;
+}
+.te-back {
+  display: inline-flex;
+  align-items: center; justify-content: center;
+  width: 28px; height: 28px;
+  background: var(--insp-bg-surface);
+  border: 1px solid var(--insp-border-strong);
+  border-radius: var(--insp-radius-sm);
+  color: var(--insp-ink-tertiary);
+  cursor: pointer;
+  transition: all var(--insp-t-fast);
+}
+.te-back:hover { color: var(--insp-accent); border-color: var(--insp-accent); }
+.te-header-info {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+}
+.te-name-line {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.te-header-name {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--insp-ink-primary);
+  margin: 0;
+  letter-spacing: 0;
+}
+.te-version {
+  font-family: var(--insp-font-mono);
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--insp-accent);
+  padding: 1px 6px;
+  border: 1px solid var(--insp-accent-pale);
+  border-radius: 3px;
+}
+.te-readonly-hint {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  color: var(--insp-ink-tertiary);
+}
 
 /* Buttons */
 .te-icon-btn { background: none; border: none; padding: 6px; color: #9ca3af; cursor: pointer; border-radius: 8px; display: flex; }

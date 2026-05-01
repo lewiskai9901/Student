@@ -9,6 +9,7 @@ import type { OrgUnitTreeNode } from '@/types'
 import type { OrgUnit } from '@/types'
 import type { TemplateSection } from '@/types/insp/template'
 import { ScopeTypeConfig, TargetTypeConfig, type ScopeType, type TargetType } from '@/types/insp/enums'
+import { ArrowLeft, Check } from 'lucide-vue-next'
 
 const router = useRouter()
 
@@ -307,163 +308,162 @@ onMounted(() => {
 </script>
 
 <template>
-  <div class="wz-page">
+  <div class="insp-shell wz-page">
     <!-- Header -->
-    <div class="wz-header">
+    <header class="wz-head">
       <button class="wz-back" @click="router.back()" title="返回">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+        <ArrowLeft :size="14" />
       </button>
-      <h1 class="wz-title">创建检查项目</h1>
-    </div>
+      <div class="wz-head__lead">
+        <span class="insp-eyebrow">新建项目 · New Campaign</span>
+        <h1 class="wz-title">创建检查项目</h1>
+      </div>
+      <div class="wz-head__hint">
+        共 3 步 · 当前 <strong class="insp-num">{{ currentStep + 1 }}</strong> / 3
+      </div>
+    </header>
 
     <!-- Step indicator -->
-    <div class="wz-steps">
-      <template v-for="idx in [0, 1, 2]" :key="idx">
-        <div
-          class="wz-step"
-          :class="{
-            'is-done': idx < currentStep,
-            'is-active': idx === currentStep,
-            'is-pending': idx > currentStep,
-          }"
-          @click="idx < currentStep ? (currentStep = idx) : undefined"
-        >
-          <div class="wz-dot">
-            <svg v-if="idx < currentStep" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
-            <span v-else>{{ idx + 1 }}</span>
-          </div>
-          <div class="wz-step-label">{{ ['选择模板', '配置范围', '确认创建'][idx] }}</div>
-        </div>
-        <div v-if="idx < 2" class="wz-line" :class="idx < currentStep ? 'wz-line--done' : 'wz-line--pending'" />
-      </template>
-    </div>
+    <nav class="wz-rail">
+      <button
+        v-for="(label, idx) in ['选择模板', '配置范围', '确认创建']" :key="idx"
+        class="wz-rail__step"
+        :class="{
+          'is-done': idx < currentStep,
+          'is-active': idx === currentStep,
+          'is-pending': idx > currentStep,
+          'is-clickable': idx < currentStep,
+        }"
+        :disabled="idx > currentStep"
+        @click="idx < currentStep && (currentStep = idx)"
+      >
+        <span class="wz-rail__num">
+          <Check v-if="idx < currentStep" :size="11" />
+          <span v-else class="insp-num">{{ idx + 1 }}</span>
+        </span>
+        <span class="wz-rail__label">{{ label }}</span>
+        <span v-if="idx === currentStep" class="wz-rail__cursor">▼</span>
+      </button>
+    </nav>
 
     <!-- ==================== Step 0: 选择模板 ==================== -->
-    <div v-show="currentStep === 0" class="wz-body">
-      <div class="wz-search">
-        <svg class="wz-search-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-        <input v-model="searchKeyword" type="text" class="wz-search-input" placeholder="搜索模板..." />
-        <button v-if="searchKeyword" class="wz-search-clear" @click="searchKeyword = ''">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-        </button>
-      </div>
+    <section v-show="currentStep === 0" class="wz-card">
+      <header class="wz-card__head">
+        <span class="wz-card__title">选择检查模板</span>
+        <div class="wz-card__search">
+          <input v-model="searchKeyword" type="text" placeholder="搜索模板名称..." />
+          <button v-if="searchKeyword" class="wz-card__clear" @click="searchKeyword = ''" title="清除">×</button>
+        </div>
+      </header>
 
-      <div v-if="loadingTemplates" class="wz-empty">加载模板中...</div>
-      <div v-else-if="rootSections.length === 0" class="wz-empty">暂无模板，请先在模板管理中创建模板</div>
-      <div v-else-if="filteredSections.length === 0" class="wz-empty">未找到匹配的模板</div>
+      <div v-if="loadingTemplates" class="wz-state">加载模板中…</div>
+      <div v-else-if="rootSections.length === 0" class="wz-state">暂无模板, 请先在模板管理中创建</div>
+      <div v-else-if="filteredSections.length === 0" class="wz-state">未找到匹配的模板</div>
 
-      <div v-else class="tpl-list">
-        <div
-          v-for="section in filteredSections"
-          :key="section.id"
+      <ul v-else class="tpl-list">
+        <li
+          v-for="section in filteredSections" :key="section.id"
           class="tpl-row"
           :class="{
-            'tpl-row--selected': Number(form.rootSectionId) === Number(section.id),
-            'tpl-row--disabled': !isPublished(section),
+            'is-selected': Number(form.rootSectionId) === Number(section.id),
+            'is-disabled': !isPublished(section),
           }"
           @click="selectSection(section)"
         >
+          <div class="tpl-radio">
+            <span class="tpl-radio__dot" :class="{ 'is-on': Number(form.rootSectionId) === Number(section.id) }" />
+          </div>
           <div class="tpl-main">
-            <div class="tpl-name-line">
+            <div class="tpl-line1">
               <span class="tpl-name">{{ section.sectionName }}</span>
-              <span class="tpl-version">v{{ section.latestVersion }}</span>
-              <span v-if="isPublished(section)" class="tpl-status tpl-status--published">已发布</span>
-              <span v-else class="tpl-status tpl-status--draft">未发布</span>
-              <span v-if="section.targetType" class="tpl-target-badge">
+              <span class="tpl-version insp-num">v{{ section.latestVersion }}</span>
+              <span class="insp-chip"
+                    :class="isPublished(section) ? 'insp-chip--pass' : 'insp-chip--pending'">
+                {{ isPublished(section) ? '已发布' : '未发布' }}
+              </span>
+              <span v-if="section.targetType" class="insp-chip insp-chip--info">
                 {{ TargetTypeConfig[section.targetType as TargetType]?.label || section.targetType }}
               </span>
             </div>
             <div v-if="section.description" class="tpl-desc">{{ section.description }}</div>
-            <div v-if="!isPublished(section)" class="tpl-hint">需要先发布才能选择</div>
+            <div v-if="!isPublished(section)" class="tpl-warn">→ 需要先在模板编辑页发布才能选择</div>
           </div>
-          <div class="tpl-radio">
-            <div
-              v-if="isPublished(section)"
-              class="tpl-radio-dot"
-              :class="{ 'tpl-radio-dot--on': Number(form.rootSectionId) === Number(section.id) }"
-            />
-            <span v-else class="tpl-radio-disabled">--</span>
-          </div>
-        </div>
-      </div>
-    </div>
+        </li>
+      </ul>
+    </section>
 
     <!-- ==================== Step 1: 配置范围 ==================== -->
-    <div v-show="currentStep === 1" class="wz-body">
+    <section v-show="currentStep === 1" class="wz-card">
+      <header class="wz-card__head">
+        <span class="wz-card__title">配置项目信息与检查范围</span>
+      </header>
+
       <div class="wz-form">
-        <!-- 项目名称 -->
-        <div class="wz-field">
-          <label class="wz-label">项目名称 <span class="wz-req">*</span></label>
+        <!-- Name -->
+        <label class="wz-fld">
+          <span class="wz-fld__label">项目名称 <span class="wz-req">*</span></span>
           <input v-model="form.projectName" type="text" class="wz-input" placeholder="输入项目名称" maxlength="100" />
+        </label>
+
+        <!-- Date row -->
+        <div class="wz-row">
+          <label class="wz-fld">
+            <span class="wz-fld__label">开始日期 <span class="wz-req">*</span></span>
+            <input v-model="form.startDate" type="date" class="wz-input" />
+          </label>
+          <label class="wz-fld">
+            <span class="wz-fld__label">结束日期 · 可选</span>
+            <input v-model="form.endDate" type="date" class="wz-input" />
+          </label>
         </div>
 
-        <!-- 检查范围 -->
-        <div class="wz-field">
-          <label class="wz-label">
-            检查范围
-            <span v-if="templateTargetType" class="wz-label-hint">
+        <!-- Scope -->
+        <div class="wz-fld">
+          <span class="wz-fld__label">
+            检查范围 <span class="wz-req">*</span>
+            <span v-if="templateTargetType" class="wz-fld__hint">
               模板目标: {{ TargetTypeConfig[templateTargetType]?.label || templateTargetType }}
             </span>
-          </label>
+          </span>
 
-          <!-- Quick filter buttons -->
-          <div class="scope-toolbar">
-            <div class="scope-type-filters">
-              <button
-                v-for="ut in availableUnitTypes"
-                :key="ut.code"
-                class="scope-type-btn"
-                :class="{ 'scope-type-btn--active': activeTypeFilter === ut.code }"
-                @click="toggleTypeFilter(ut.code)"
-              >
-                {{ ut.name }}
-                <span class="scope-type-count">{{ ut.count }}</span>
-              </button>
-            </div>
-            <div class="scope-actions">
-              <button class="scope-action-btn" @click="selectAll" title="全选">全选</button>
-              <button class="scope-action-btn" @click="deselectAll" title="取消全选">清空</button>
-              <template v-if="availableUnitTypes.length > 0">
-                <span class="scope-divider" />
-                <button
-                  v-for="ut in availableUnitTypes"
-                  :key="'sel-' + ut.code"
-                  class="scope-action-btn scope-action-btn--type"
-                  @click="selectByType(ut.code)"
-                  :title="`选中所有${ut.name}`"
-                >
-                  选全部{{ ut.name }}
-                </button>
-              </template>
-            </div>
+          <!-- Type filter row -->
+          <div v-if="availableUnitTypes.length > 0" class="scope-types">
+            <button
+              v-for="ut in availableUnitTypes" :key="ut.code"
+              class="scope-type"
+              :class="{ 'is-active': activeTypeFilter === ut.code }"
+              @click="toggleTypeFilter(ut.code)"
+            >
+              {{ ut.name }}
+              <span class="insp-num scope-type__count">{{ ut.count }}</span>
+            </button>
           </div>
 
-          <!-- Search -->
-          <div class="scope-search">
-            <svg class="scope-search-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-            <input
-              v-model="scopeSearchKeyword"
-              type="text"
-              class="scope-search-input"
-              placeholder="搜索组织..."
-            />
+          <!-- Action buttons + search -->
+          <div class="scope-actions">
+            <button class="insp-btn insp-btn--sm" @click="selectAll">全选</button>
+            <button class="insp-btn insp-btn--sm" @click="deselectAll">清空</button>
+            <template v-if="availableUnitTypes.length > 0">
+              <span class="scope-actions__sep" />
+              <button
+                v-for="ut in availableUnitTypes" :key="'sel-' + ut.code"
+                class="insp-btn insp-btn--sm"
+                @click="selectByType(ut.code)"
+              >选全部 {{ ut.name }}</button>
+            </template>
+            <div class="scope-actions__spacer" />
+            <input v-model="scopeSearchKeyword" class="scope-search" placeholder="搜索组织..." />
           </div>
 
           <!-- Tree -->
-          <div v-if="loadingOrg" class="wz-org-list">
-            <div class="wz-empty" style="border: none; padding: 24px 0;">加载中...</div>
-          </div>
-          <div v-else-if="treeData.length === 0" class="wz-org-list">
-            <div class="wz-empty" style="border: none; padding: 24px 0;">暂无组织单元</div>
-          </div>
-          <div v-else class="scope-tree-container">
+          <div class="scope-tree-wrap">
+            <div v-if="loadingOrg" class="wz-state wz-state--small">加载中...</div>
+            <div v-else-if="treeData.length === 0" class="wz-state wz-state--small">暂无组织单元</div>
             <el-tree
+              v-else
               ref="treeRef"
-              :data="treeData"
-              show-checkbox
-              node-key="id"
-              :default-expand-all="true"
-              :check-strictly="true"
+              :data="treeData" show-checkbox node-key="id"
+              :default-expand-all="true" :check-strictly="true"
               :default-checked-keys="form.scopeIds"
               :props="{ label: 'label', children: 'children' }"
               @check="handleTreeCheck"
@@ -478,831 +478,584 @@ onMounted(() => {
             </el-tree>
           </div>
 
-          <!-- Selection summary -->
           <div v-if="form.scopeIds.length > 0" class="scope-summary">
-            已选 <strong>{{ form.scopeIds.length }}</strong> 个目标
-          </div>
-        </div>
-
-        <!-- 起止日期 -->
-        <div class="wz-row2">
-          <div class="wz-field">
-            <label class="wz-label">开始日期 <span class="wz-req">*</span></label>
-            <input v-model="form.startDate" type="date" class="wz-input" />
-          </div>
-          <div class="wz-field">
-            <label class="wz-label">结束日期</label>
-            <input v-model="form.endDate" type="date" class="wz-input" />
+            <Check :size="12" />
+            已选 <strong class="insp-num">{{ form.scopeIds.length }}</strong> 个目标
           </div>
         </div>
       </div>
-    </div>
+    </section>
 
     <!-- ==================== Step 2: 确认创建 ==================== -->
-    <div v-show="currentStep === 2" class="wz-body">
-      <table class="wz-summary">
-        <tbody>
-          <tr>
-            <td class="wz-sk">项目名称</td>
-            <td class="wz-sv">{{ form.projectName || '--' }}</td>
-          </tr>
-          <tr>
-            <td class="wz-sk">模板</td>
-            <td class="wz-sv">
-              {{ selectedSection?.sectionName || '--' }}
-              <span v-if="selectedSection" class="wz-sv-tag">v{{ selectedSection.latestVersion }}</span>
-              <span v-if="templateTargetType" class="wz-sv-tag wz-sv-tag--target">
-                {{ TargetTypeConfig[templateTargetType]?.label }}
-              </span>
-            </td>
-          </tr>
-          <tr>
-            <td class="wz-sk">检查范围</td>
-            <td class="wz-sv">
-              {{ selectedOrgNames }}
-              <span v-if="form.scopeIds.length > 0" class="wz-sv-count">共{{ form.scopeIds.length }}个</span>
-            </td>
-          </tr>
-          <tr>
-            <td class="wz-sk">日期</td>
-            <td class="wz-sv">{{ dateRange }}</td>
-          </tr>
-        </tbody>
-      </table>
+    <section v-show="currentStep === 2" class="wz-card">
+      <header class="wz-card__head">
+        <span class="wz-card__title">确认创建</span>
+        <span class="wz-card__hint">检查信息无误后点击右下"创建项目"</span>
+      </header>
+
+      <dl class="wz-summary">
+        <div class="wz-srow">
+          <dt>项目名称</dt>
+          <dd class="wz-srow__value">{{ form.projectName || '—' }}</dd>
+        </div>
+        <div class="wz-srow">
+          <dt>模板</dt>
+          <dd class="wz-srow__value">
+            {{ selectedSection?.sectionName || '—' }}
+            <span v-if="selectedSection" class="insp-chip insp-chip--info">v{{ selectedSection.latestVersion }}</span>
+            <span v-if="templateTargetType" class="insp-chip insp-chip--pending">
+              {{ TargetTypeConfig[templateTargetType]?.label }}
+            </span>
+          </dd>
+        </div>
+        <div class="wz-srow">
+          <dt>检查范围</dt>
+          <dd class="wz-srow__value">
+            {{ selectedOrgNames }}
+            <span v-if="form.scopeIds.length > 0" class="wz-srow__count insp-num">{{ form.scopeIds.length }} 个</span>
+          </dd>
+        </div>
+        <div class="wz-srow">
+          <dt>日期</dt>
+          <dd class="wz-srow__value insp-num">{{ dateRange }}</dd>
+        </div>
+      </dl>
 
       <div class="wz-tip">
-        创建后可在详情页继续配置检查计划、评级维度和检查员，发布后将自动生成检查任务。
+        <span class="wz-tip__icon">i</span>
+        创建后将进入项目详情页, 可继续配置检查计划/评级维度/检查员; 发布后系统自动生成检查任务.
       </div>
-    </div>
+    </section>
 
-    <!-- ==================== 底部操作栏 ==================== -->
-    <div class="wz-footer">
-      <button v-if="currentStep > 0" class="wz-btn wz-btn--outline" @click="prevStep">
-        上一步
+    <!-- Footer -->
+    <footer class="wz-foot">
+      <button v-if="currentStep > 0" class="insp-btn" @click="prevStep">
+        ← 上一步
       </button>
       <span v-else />
-
+      <div class="wz-foot__spacer" />
       <button
         v-if="currentStep < 2"
-        class="wz-btn wz-btn--primary"
+        class="insp-btn insp-btn--accent"
         :disabled="currentStep === 0 ? !canProceedStep0 : !canProceedStep1"
         @click="nextStep"
       >
-        下一步
+        下一步 →
       </button>
       <button
         v-if="currentStep === 2"
-        class="wz-btn wz-btn--create"
+        class="insp-btn insp-btn--accent"
         :disabled="submitting"
         @click="handleCreate"
       >
-        {{ submitting ? '创建中...' : '创建项目' }}
+        {{ submitting ? '创建中…' : '创建项目' }}
       </button>
-    </div>
+    </footer>
   </div>
 </template>
 
 <style scoped>
-/* ===== Variables ===== */
-:root {
-  --wz-primary: #1a6dff;
-  --wz-primary-light: #e8f0ff;
-  --wz-success: #10b981;
-  --wz-success-light: #ecfdf5;
-  --wz-bg: #f7f8fa;
-  --wz-card: #fff;
-  --wz-border: #e5e7eb;
-  --wz-text: #1d2129;
-  --wz-text2: #4b5563;
-  --wz-text3: #9ca3af;
-}
-
-/* ===== Page ===== */
 .wz-page {
-  max-width: 720px;
+  padding: 12px 16px;
+  max-width: 1100px;
   margin: 0 auto;
-  padding: 24px 20px 32px;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-  color: #1d2129;
 }
 
-/* ===== Header ===== */
-.wz-header {
+/* ─ Head ─────── */
+.wz-head {
   display: flex;
   align-items: center;
   gap: 10px;
-  margin-bottom: 28px;
+  background: var(--insp-bg-surface);
+  border: 1px solid var(--insp-border-default);
+  border-radius: var(--insp-radius-lg);
+  padding: 10px 14px;
+  margin-bottom: 10px;
 }
-
 .wz-back {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 32px;
-  height: 32px;
-  border: none;
-  background: none;
-  color: #6b7280;
+  display: inline-flex;
+  align-items: center; justify-content: center;
+  width: 28px; height: 28px;
+  background: var(--insp-bg-surface);
+  border: 1px solid var(--insp-border-strong);
+  border-radius: var(--insp-radius-sm);
+  color: var(--insp-ink-tertiary);
   cursor: pointer;
-  border-radius: 6px;
-  transition: all 0.15s;
+  transition: all var(--insp-t-fast);
 }
-
-.wz-back:hover {
-  background: #f0f2f5;
-  color: #1a6dff;
-}
-
+.wz-back:hover { color: var(--insp-accent); border-color: var(--insp-accent); }
+.wz-head__lead { display: flex; flex-direction: column; gap: 2px; }
 .wz-title {
-  font-size: 18px;
-  font-weight: 700;
-  color: #1d2129;
+  font-size: 16px; font-weight: 700;
   margin: 0;
+  color: var(--insp-ink-primary);
 }
-
-/* ===== Step Indicator ===== */
-.wz-steps {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  margin-bottom: 32px;
-  padding: 0 60px;
-}
-
-.wz-step {
-  flex-shrink: 0;
-  text-align: center;
-}
-
-.wz-step.is-done {
-  cursor: pointer;
-}
-
-.wz-step-label {
-  font-size: 11px;
-  margin-top: 4px;
-  color: #9ca3af;
-}
-
-.is-active .wz-step-label {
-  color: #1a6dff;
-  font-weight: 500;
-}
-
-.is-done .wz-step-label {
-  color: #1a6dff;
-}
-
-.wz-dot {
-  width: 28px;
-  height: 28px;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+.wz-head__hint {
+  margin-left: auto;
   font-size: 12px;
-  font-weight: 600;
-  transition: all 0.2s;
-  margin: 0 auto;
+  color: var(--insp-ink-tertiary);
+}
+.wz-head__hint strong {
+  color: var(--insp-accent);
+  font-weight: 700;
 }
 
-.is-done .wz-dot {
-  background: #1a6dff;
-  color: #fff;
-}
-
-.is-active .wz-dot {
-  background: #1a6dff;
-  color: #fff;
-  box-shadow: 0 0 0 4px rgba(26, 109, 255, 0.12);
-}
-
-.is-pending .wz-dot {
-  background: #e5e7eb;
-  color: #9ca3af;
-}
-
-.wz-line {
-  width: 80px;
-  height: 2px;
-  margin: 0 6px;
-  margin-bottom: 20px;
-  border-radius: 1px;
-}
-
-.wz-line--done {
-  background: #1a6dff;
-}
-
-.wz-line--pending {
-  background: #e5e7eb;
-}
-
-/* ===== Body ===== */
-.wz-body {
-  min-height: 300px;
-  margin-bottom: 16px;
-}
-
-/* ===== Search ===== */
-.wz-search {
-  position: relative;
-  margin-bottom: 16px;
-}
-
-.wz-search-icon {
-  position: absolute;
-  left: 12px;
-  top: 50%;
-  transform: translateY(-50%);
-  color: #9ca3af;
-  pointer-events: none;
-}
-
-.wz-search-input {
-  width: 100%;
-  height: 38px;
-  padding: 0 36px 0 38px;
-  border: 1px solid #e5e7eb;
-  border-radius: 8px;
-  font-size: 13px;
-  color: #1d2129;
-  background: #fff;
-  outline: none;
-  transition: border-color 0.15s;
-  box-sizing: border-box;
-}
-
-.wz-search-input::placeholder {
-  color: #b0b8c4;
-}
-
-.wz-search-input:focus {
-  border-color: #1a6dff;
-}
-
-.wz-search-clear {
-  position: absolute;
-  right: 8px;
-  top: 50%;
-  transform: translateY(-50%);
+/* ─ Step rail ─────── */
+.wz-rail {
   display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 22px;
-  height: 22px;
-  border: none;
-  background: none;
-  color: #9ca3af;
-  cursor: pointer;
-  border-radius: 4px;
-}
-
-.wz-search-clear:hover {
-  color: #4b5563;
-}
-
-/* ===== Empty ===== */
-.wz-empty {
-  text-align: center;
-  color: #9ca3af;
-  font-size: 13px;
-  padding: 56px 0;
-  border: 1px dashed #e5e7eb;
-  border-radius: 8px;
-  background: #fafbfc;
-}
-
-/* ===== Template List ===== */
-.tpl-list {
-  display: flex;
-  flex-direction: column;
-  gap: 1px;
-  border: 1px solid #e5e7eb;
-  border-radius: 8px;
+  align-items: stretch;
+  background: var(--insp-bg-surface);
+  border: 1px solid var(--insp-border-default);
+  border-radius: var(--insp-radius-lg);
+  padding: 0;
+  margin-bottom: 10px;
   overflow: hidden;
-  background: #e5e7eb;
 }
-
-.tpl-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 12px 16px;
-  background: #fff;
-  cursor: pointer;
-  transition: background 0.12s;
-  gap: 16px;
-}
-
-.tpl-row:hover:not(.tpl-row--disabled) {
-  background: #f7f9fc;
-}
-
-.tpl-row--selected {
-  background: #eff5ff !important;
-}
-
-.tpl-row--disabled {
-  cursor: not-allowed;
-  opacity: 0.6;
-}
-
-.tpl-main {
+.wz-rail__step {
   flex: 1;
-  min-width: 0;
-}
-
-.tpl-name-line {
   display: flex;
   align-items: center;
   gap: 8px;
-  flex-wrap: wrap;
-}
-
-.tpl-name {
-  font-size: 13px;
-  font-weight: 600;
-  color: #1d2129;
-}
-
-.tpl-version {
-  font-size: 11px;
-  color: #6b7280;
-  background: #f3f4f6;
-  padding: 1px 6px;
-  border-radius: 4px;
-  flex-shrink: 0;
-}
-
-.tpl-status {
-  font-size: 11px;
-  padding: 1px 6px;
-  border-radius: 4px;
-  flex-shrink: 0;
-}
-
-.tpl-status--published {
-  color: #10b981;
-  background: #ecfdf5;
-}
-
-.tpl-status--draft {
-  color: #9ca3af;
-  background: #f3f4f6;
-}
-
-.tpl-target-badge {
-  font-size: 10px;
-  padding: 1px 5px;
-  border-radius: 3px;
-  color: #1a6dff;
-  background: #e8f0ff;
-  flex-shrink: 0;
-}
-
-.tpl-desc {
+  padding: 10px 14px;
+  background: transparent;
+  border: 0;
+  border-right: 1px solid var(--insp-border-subtle);
+  cursor: not-allowed;
+  font-family: inherit;
   font-size: 12px;
-  color: #6b7280;
-  margin-top: 4px;
+  color: var(--insp-ink-tertiary);
+  position: relative;
+  transition: all var(--insp-t-fast);
+}
+.wz-rail__step:last-child { border-right: 0; }
+.wz-rail__step.is-clickable { cursor: pointer; }
+.wz-rail__step.is-clickable:hover { background: var(--insp-bg-subtle); }
+.wz-rail__step.is-active {
+  background: var(--insp-accent-paler);
+  color: var(--insp-accent);
+  font-weight: 600;
+}
+.wz-rail__step.is-done { color: var(--insp-pass); }
+
+.wz-rail__num {
+  display: inline-flex;
+  align-items: center; justify-content: center;
+  width: 22px; height: 22px;
+  border-radius: 50%;
+  background: var(--insp-bg-subtle);
+  border: 1px solid var(--insp-border-default);
+  font-family: var(--insp-font-mono);
+  font-size: 11px; font-weight: 600;
+  color: var(--insp-ink-tertiary);
+}
+.wz-rail__step.is-active .wz-rail__num {
+  background: var(--insp-accent);
+  border-color: var(--insp-accent);
+  color: white;
+}
+.wz-rail__step.is-done .wz-rail__num {
+  background: var(--insp-pass);
+  border-color: var(--insp-pass);
+  color: white;
 }
 
-.tpl-hint {
+.wz-rail__label {
+  font-size: 13px;
+  font-weight: 500;
+}
+.wz-rail__cursor {
+  margin-left: auto;
+  color: var(--insp-accent);
+  font-size: 9px;
+}
+
+/* ─ Card ─────── */
+.wz-card {
+  background: var(--insp-bg-surface);
+  border: 1px solid var(--insp-border-default);
+  border-radius: var(--insp-radius-lg);
+  margin-bottom: 10px;
+  overflow: hidden;
+}
+.wz-card__head {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 10px;
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--insp-border-subtle);
+}
+.wz-card__title {
+  font-size: 13px; font-weight: 600;
+  color: var(--insp-ink-primary);
+}
+.wz-card__hint {
   font-size: 11px;
-  color: #b0b8c4;
-  margin-top: 3px;
+  color: var(--insp-ink-tertiary);
+}
+
+.wz-card__search {
+  position: relative;
+  display: flex; align-items: center;
+}
+.wz-card__search input {
+  height: 26px;
+  padding: 0 10px;
+  border: 1px solid var(--insp-border-default);
+  border-radius: var(--insp-radius-sm);
+  font-size: 12px;
+  font-family: inherit;
+  width: 200px;
+  background: var(--insp-bg-surface);
+}
+.wz-card__search input:focus {
+  outline: none;
+  border-color: var(--insp-accent);
+  box-shadow: 0 0 0 3px var(--insp-accent-paler);
+}
+.wz-card__clear {
+  position: absolute;
+  right: 4px;
+  width: 18px; height: 18px;
+  border: 0;
+  background: transparent;
+  font-size: 14px;
+  color: var(--insp-ink-tertiary);
+  cursor: pointer;
+}
+
+/* ─ State ─────── */
+.wz-state {
+  padding: 40px 20px;
+  text-align: center;
+  font-size: 12px;
+  color: var(--insp-ink-tertiary);
+}
+.wz-state--small { padding: 20px; }
+
+/* ─ Template list ─────── */
+.tpl-list {
+  list-style: none; margin: 0; padding: 0;
+}
+.tpl-row {
+  display: grid;
+  grid-template-columns: 28px 1fr;
+  gap: 10px;
+  align-items: start;
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--insp-border-subtle);
+  cursor: pointer;
+  transition: background var(--insp-t-fast);
+}
+.tpl-row:last-child { border-bottom: 0; }
+.tpl-row:hover { background: var(--insp-bg-subtle); }
+.tpl-row.is-selected {
+  background: var(--insp-accent-paler);
+}
+.tpl-row.is-disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
 }
 
 .tpl-radio {
-  flex-shrink: 0;
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 20px;
+  margin-top: 2px;
 }
-
-.tpl-radio-dot {
-  width: 16px;
-  height: 16px;
+.tpl-radio__dot {
+  display: block;
+  width: 14px; height: 14px;
+  border: 2px solid var(--insp-border-strong);
   border-radius: 50%;
-  border: 2px solid #d1d5db;
-  transition: all 0.15s;
+  background: var(--insp-bg-surface);
   position: relative;
 }
-
-.tpl-radio-dot--on {
-  border-color: #1a6dff;
+.tpl-radio__dot.is-on {
+  border-color: var(--insp-accent);
+  background: var(--insp-accent);
 }
-
-.tpl-radio-dot--on::after {
+.tpl-radio__dot.is-on::after {
   content: '';
   position: absolute;
-  top: 3px;
-  left: 3px;
-  width: 6px;
-  height: 6px;
+  inset: 3px;
+  background: white;
   border-radius: 50%;
-  background: #1a6dff;
 }
 
-.tpl-radio-disabled {
-  font-size: 11px;
-  color: #d1d5db;
+.tpl-main { min-width: 0; display: flex; flex-direction: column; gap: 4px; }
+.tpl-line1 {
+  display: flex; align-items: center; gap: 6px;
+  flex-wrap: wrap;
 }
-
-/* ===== Form (Step 1) ===== */
-.wz-form {
-  display: flex;
-  flex-direction: column;
-  gap: 20px;
+.tpl-name {
+  font-size: 13px; font-weight: 600;
+  color: var(--insp-ink-primary);
 }
-
-.wz-row2 {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 16px;
+.tpl-version {
+  font-family: var(--insp-font-mono);
+  font-size: 11px; font-weight: 600;
+  color: var(--insp-accent);
+  padding: 1px 6px;
+  border: 1px solid var(--insp-accent-pale);
+  border-radius: 3px;
 }
-
-.wz-field {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-
-.wz-label {
+.tpl-desc {
   font-size: 12px;
-  font-weight: 600;
-  color: #4b5563;
+  color: var(--insp-ink-tertiary);
+  line-height: 1.5;
+}
+.tpl-warn {
+  font-size: 11px;
+  color: var(--insp-fail);
+  font-weight: 500;
+}
+
+/* ─ Form ─────── */
+.wz-form {
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.wz-fld {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.wz-fld__label {
   display: flex;
   align-items: center;
   gap: 6px;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--insp-ink-secondary);
 }
-
-.wz-label-hint {
-  font-weight: 400;
+.wz-fld__hint {
   font-size: 11px;
-  color: #1a6dff;
-  background: #e8f0ff;
-  padding: 1px 6px;
-  border-radius: 3px;
+  color: var(--insp-ink-tertiary);
+  font-weight: 400;
 }
-
 .wz-req {
-  color: #ef4444;
+  color: var(--insp-fail);
+  font-weight: 700;
 }
-
 .wz-input {
-  height: 36px;
+  height: 32px;
   padding: 0 10px;
-  border: 1px solid #e5e7eb;
-  border-radius: 6px;
+  border: 1px solid var(--insp-border-default);
+  border-radius: var(--insp-radius-sm);
   font-size: 13px;
-  color: #1d2129;
-  background: #fff;
-  outline: none;
-  transition: border-color 0.15s;
-  box-sizing: border-box;
+  font-family: inherit;
+  background: var(--insp-bg-surface);
+  color: var(--insp-ink-primary);
 }
-
 .wz-input:focus {
-  border-color: #1a6dff;
+  outline: none;
+  border-color: var(--insp-accent);
+  box-shadow: 0 0 0 3px var(--insp-accent-paler);
 }
 
-.wz-input::placeholder {
-  color: #b0b8c4;
+.wz-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
 }
 
-/* ===== Scope Selector ===== */
-.scope-toolbar {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-
-.scope-type-filters {
-  display: flex;
+/* ─ Scope ─────── */
+.scope-types {
+  display: flex; gap: 4px;
+  margin-top: 6px;
+  margin-bottom: 6px;
   flex-wrap: wrap;
-  gap: 4px;
 }
-
-.scope-type-btn {
+.scope-type {
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  padding: 3px 8px;
-  border: 1px solid #e5e7eb;
-  border-radius: 4px;
-  background: #fff;
+  height: 24px;
+  padding: 0 10px;
+  border: 1px solid var(--insp-border-default);
+  border-radius: var(--insp-radius-pill);
+  background: var(--insp-bg-surface);
+  font-family: inherit;
   font-size: 11px;
-  color: #4b5563;
+  font-weight: 500;
+  color: var(--insp-ink-secondary);
   cursor: pointer;
-  transition: all 0.12s;
+  transition: all var(--insp-t-fast);
 }
-
-.scope-type-btn:hover {
-  border-color: #1a6dff;
-  color: #1a6dff;
+.scope-type:hover { border-color: var(--insp-accent); color: var(--insp-accent); }
+.scope-type.is-active {
+  background: var(--insp-accent);
+  color: white;
+  border-color: var(--insp-accent);
 }
-
-.scope-type-btn--active {
-  border-color: #1a6dff;
-  background: #e8f0ff;
-  color: #1a6dff;
-}
-
-.scope-type-count {
+.scope-type__count {
+  font-family: var(--insp-font-mono);
   font-size: 10px;
-  color: #9ca3af;
-  background: #f3f4f6;
-  padding: 0 4px;
-  border-radius: 3px;
-  line-height: 16px;
-}
-
-.scope-type-btn--active .scope-type-count {
-  background: #bfdbfe;
-  color: #1a6dff;
+  opacity: 0.85;
 }
 
 .scope-actions {
-  display: flex;
+  display: flex; gap: 4px;
   align-items: center;
-  gap: 4px;
+  margin-bottom: 6px;
   flex-wrap: wrap;
 }
-
-.scope-action-btn {
-  padding: 2px 8px;
-  border: none;
-  border-radius: 3px;
-  background: none;
-  font-size: 11px;
-  color: #1a6dff;
-  cursor: pointer;
-  transition: background 0.12s;
+.scope-actions__sep {
+  width: 1px; height: 16px;
+  background: var(--insp-border-default);
+  margin: 0 4px;
 }
-
-.scope-action-btn:hover {
-  background: #e8f0ff;
-}
-
-.scope-action-btn--type {
-  color: #10b981;
-}
-
-.scope-action-btn--type:hover {
-  background: #ecfdf5;
-}
-
-.scope-divider {
-  width: 1px;
-  height: 14px;
-  background: #e5e7eb;
-  margin: 0 2px;
-}
-
+.scope-actions__spacer { flex: 1; }
 .scope-search {
-  position: relative;
+  height: 24px;
+  padding: 0 10px;
+  border: 1px solid var(--insp-border-default);
+  border-radius: var(--insp-radius-sm);
+  font-size: 11px;
+  font-family: inherit;
+  width: 180px;
+  background: var(--insp-bg-surface);
 }
-
-.scope-search-icon {
-  position: absolute;
-  left: 10px;
-  top: 50%;
-  transform: translateY(-50%);
-  color: #9ca3af;
-  pointer-events: none;
-}
-
-.scope-search-input {
-  width: 100%;
-  height: 32px;
-  padding: 0 10px 0 30px;
-  border: 1px solid #e5e7eb;
-  border-radius: 6px;
-  font-size: 12px;
-  color: #1d2129;
-  background: #fafbfc;
+.scope-search:focus {
   outline: none;
-  transition: border-color 0.15s;
-  box-sizing: border-box;
+  border-color: var(--insp-accent);
 }
 
-.scope-search-input:focus {
-  border-color: #1a6dff;
-  background: #fff;
-}
-
-.scope-search-input::placeholder {
-  color: #b0b8c4;
-}
-
-.scope-tree-container {
-  border: 1px solid #e5e7eb;
-  border-radius: 6px;
-  background: #fff;
+.scope-tree-wrap {
+  border: 1px solid var(--insp-border-default);
+  border-radius: var(--insp-radius-sm);
+  background: var(--insp-bg-surface);
   max-height: 320px;
   overflow-y: auto;
-}
-
-.scope-tree {
   padding: 4px 0;
 }
-
 .scope-tree :deep(.el-tree-node__content) {
-  height: 32px;
+  height: 28px;
+  font-size: 12px;
 }
-
 .scope-tree-node {
-  display: flex;
+  display: inline-flex;
   align-items: center;
   gap: 6px;
-  flex: 1;
-  min-width: 0;
 }
-
 .scope-tree-name {
-  font-size: 13px;
-  color: #1d2129;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  font-size: 12px;
+  color: var(--insp-ink-primary);
 }
-
 .scope-tree-type {
+  font-family: var(--insp-font-mono);
   font-size: 10px;
-  color: #9ca3af;
-  background: #f3f4f6;
-  padding: 1px 5px;
+  color: var(--insp-ink-tertiary);
+  padding: 0 4px;
+  background: var(--insp-bg-subtle);
   border-radius: 3px;
-  flex-shrink: 0;
 }
 
 .scope-summary {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 8px;
+  padding: 4px 10px;
+  background: var(--insp-pass-pale);
+  border: 1px solid var(--insp-pass-border);
+  border-radius: var(--insp-radius-sm);
   font-size: 12px;
-  color: #1a6dff;
-  background: #e8f0ff;
-  padding: 6px 10px;
-  border-radius: 5px;
+  color: var(--insp-pass);
 }
-
 .scope-summary strong {
-  font-weight: 600;
+  font-family: var(--insp-font-mono);
+  font-weight: 700;
 }
 
-/* ===== Org list fallback (compat) ===== */
-.wz-org-list {
-  border: 1px solid #e5e7eb;
-  border-radius: 6px;
-  background: #fafbfc;
-  max-height: 240px;
-  overflow-y: auto;
-  font-size: 12px;
-  color: #9ca3af;
-}
-
-/* ===== Summary (Step 2) ===== */
+/* ─ Summary ─────── */
 .wz-summary {
-  width: 100%;
-  border-collapse: collapse;
-  border: 1px solid #e5e7eb;
-  border-radius: 8px;
-  overflow: hidden;
-  margin-bottom: 16px;
+  margin: 0;
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
 }
-
-.wz-summary tr {
-  border-bottom: 1px solid #f3f4f6;
+.wz-srow {
+  display: grid;
+  grid-template-columns: 100px 1fr;
+  gap: 14px;
+  align-items: center;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--insp-border-subtle);
 }
-
-.wz-summary tr:last-child {
-  border-bottom: none;
-}
-
-.wz-sk {
-  width: 90px;
-  padding: 11px 16px;
-  font-size: 12px;
-  color: #6b7280;
-  background: #f9fafb;
-  text-align: left;
-  vertical-align: top;
+.wz-srow:last-child { border-bottom: 0; }
+.wz-srow dt {
+  font-size: 11px;
   font-weight: 500;
+  color: var(--insp-ink-tertiary);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  margin: 0;
 }
-
-.wz-sv {
-  padding: 11px 16px;
+.wz-srow__value {
   font-size: 13px;
-  color: #1d2129;
-  font-weight: 500;
+  color: var(--insp-ink-primary);
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
 }
-
-.wz-sv-tag {
-  display: inline-block;
+.wz-srow__count {
+  font-family: var(--insp-font-mono);
   font-size: 11px;
-  color: #1a6dff;
-  background: #eff6ff;
+  font-weight: 600;
+  color: var(--insp-accent);
   padding: 1px 6px;
-  border-radius: 4px;
-  margin-left: 6px;
-  font-weight: 500;
-}
-
-.wz-sv-tag--target {
-  color: #10b981;
-  background: #ecfdf5;
-}
-
-.wz-sv-count {
-  font-size: 11px;
-  color: #9ca3af;
-  margin-left: 6px;
+  background: var(--insp-accent-paler);
+  border-radius: 3px;
 }
 
 .wz-tip {
+  margin: 0 14px 14px;
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 10px 12px;
+  background: var(--insp-info-pale);
+  border: 1px solid var(--insp-info-border);
+  border-radius: var(--insp-radius-sm);
   font-size: 12px;
-  color: #4b5563;
-  background: #eff6ff;
-  border: 1px solid #bfdbfe;
-  border-radius: 6px;
-  padding: 10px 14px;
-  line-height: 1.6;
+  color: var(--insp-info);
+  line-height: 1.5;
+}
+.wz-tip__icon {
+  display: inline-flex;
+  align-items: center; justify-content: center;
+  width: 16px; height: 16px;
+  background: var(--insp-info);
+  color: white;
+  border-radius: 50%;
+  font-style: italic;
+  font-weight: 700;
+  font-size: 10px;
+  flex-shrink: 0;
+  margin-top: 1px;
 }
 
-/* ===== Footer ===== */
-.wz-footer {
+/* ─ Footer ─────── */
+.wz-foot {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  padding-top: 20px;
-  border-top: 1px solid #e5e7eb;
-  margin-top: 8px;
+  gap: 8px;
+  padding: 10px 14px;
+  background: var(--insp-bg-surface);
+  border: 1px solid var(--insp-border-default);
+  border-radius: var(--insp-radius-lg);
+  position: sticky;
+  bottom: 8px;
 }
+.wz-foot__spacer { flex: 1; }
 
-.wz-btn {
-  height: 36px;
-  padding: 0 20px;
-  border-radius: 6px;
-  font-size: 13px;
-  font-weight: 500;
-  cursor: pointer;
-  border: none;
-  outline: none;
-  transition: all 0.15s;
-}
-
-.wz-btn--outline {
-  background: #fff;
-  color: #4b5563;
-  border: 1px solid #d1d5db;
-}
-
-.wz-btn--outline:hover {
-  background: #f5f7fa;
-  border-color: #b0b8c4;
-}
-
-.wz-btn--primary {
-  background: #1a6dff;
-  color: #fff;
-}
-
-.wz-btn--primary:hover:not(:disabled) {
-  background: #1558d8;
-}
-
-.wz-btn--primary:disabled {
-  opacity: 0.4;
-  cursor: not-allowed;
-}
-
-.wz-btn--create {
-  background: #10b981;
-  color: #fff;
-  padding: 0 24px;
-}
-
-.wz-btn--create:hover:not(:disabled) {
-  background: #059669;
-}
-
-.wz-btn--create:disabled {
-  opacity: 0.4;
-  cursor: not-allowed;
-}
-
-/* ===== Responsive ===== */
-@media (max-width: 600px) {
-  .wz-row2 {
-    grid-template-columns: 1fr;
-  }
-
-  .wz-steps {
-    padding: 0 20px;
-  }
-
-  .wz-line {
-    width: 48px;
-  }
+@media (max-width: 720px) {
+  .wz-rail__label { display: none; }
+  .wz-row { grid-template-columns: 1fr; }
 }
 </style>
