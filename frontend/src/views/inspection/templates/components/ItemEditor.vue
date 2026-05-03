@@ -1,8 +1,9 @@
 <script setup lang="ts">
-import { ref, watch, computed, reactive, nextTick } from 'vue'
+import { ref, watch, computed, reactive, nextTick, onMounted, onUnmounted } from 'vue'
 import {
   Save, Plus, Trash2,
   BarChart3, Clipboard, Info, ShieldCheck, Zap,
+  ChevronDown, ChevronUp, Keyboard,
 } from 'lucide-vue-next'
 import {
   ItemTypeConfig, ItemTypeGroups, type ItemType,
@@ -36,6 +37,55 @@ const availableEventTypes = ref<EventType[]>([])
 
 // ==================== Tab State ====================
 const activeTab = ref<'scoring' | 'validation' | 'condition'>('scoring')
+
+// ==================== A+ 优化: 评分模式分组 + 折叠 ====================
+// 90% 用户只用前 3 个 (PASS_FAIL/DEDUCTION/ADDITION), 其它折叠到"更多"
+const COMMON_MODES: ScoringMode[] = ['PASS_FAIL', 'DEDUCTION', 'ADDITION']
+const ADVANCED_MODES_BY_GROUP: Record<string, ScoringMode[]> = {
+  '直接打分类': ['DIRECT', 'GRADE', 'SCORE_TABLE'] as ScoringMode[],
+  '量表 / 评级': ['CUMULATIVE', 'TIERED_DEDUCTION', 'GRADE_TIER', 'WEIGHTED'] as ScoringMode[],
+  '高级算法': ['RISK_MATRIX', 'THRESHOLD', 'FORMULA'] as ScoringMode[],
+}
+const showAdvancedModes = ref(false)
+// 如果当前模式是高级模式, 自动展开
+watch(() => activeTab.value, () => {
+  // tab change reset
+})
+
+// ==================== A+ 优化: 全局键盘快捷键 ====================
+function onItemEditorKey(e: KeyboardEvent) {
+  const t = e.target as HTMLElement
+  const tag = t?.tagName
+  if (tag === 'INPUT' || tag === 'TEXTAREA' || t?.isContentEditable) return
+  if (e.metaKey || e.ctrlKey || e.altKey) return
+  // Tab 切 stage (1=评分配置 / 2=验证规则 / 3=条件逻辑)
+  if (e.key === '1') { activeTab.value = 'scoring'; e.preventDefault(); return }
+  if (e.key === '2') { activeTab.value = 'validation'; e.preventDefault(); return }
+  if (e.key === '3') { activeTab.value = 'condition'; e.preventDefault(); return }
+  // 数字键 4-9 / 0 / - / = 快捷选评分模式
+  if (activeTab.value !== 'scoring') return
+  const allModes: ScoringMode[] = [
+    ...COMMON_MODES,
+    ...Object.values(ADVANCED_MODES_BY_GROUP).flat(),
+  ]
+  const numKey = ['4','5','6','7','8','9','0','-','='].indexOf(e.key)
+  if (numKey >= 0 && numKey + 3 < allModes.length) {
+    const target = allModes[numKey + 3]
+    if (target && allModes.includes(target)) {
+      scoring.mode = target as any
+      // 选高级模式时自动展开
+      const isAdvanced = !COMMON_MODES.includes(target)
+      if (isAdvanced) showAdvancedModes.value = true
+      e.preventDefault()
+    }
+  }
+}
+
+const showKbdHint = ref(localStorage.getItem('insp_ie_kbd_hint_dismissed') !== '1')
+function dismissKbdHint() { showKbdHint.value = false; localStorage.setItem('insp_ie_kbd_hint_dismissed', '1') }
+
+onMounted(() => window.addEventListener('keydown', onItemEditorKey))
+onUnmounted(() => window.removeEventListener('keydown', onItemEditorKey))
 
 // ==================== Form State ====================
 
@@ -847,15 +897,67 @@ const scoringFromResponseSet = computed(() =>
           </template>
           <!-- Scoring mode inline (when NOT driven by response set) -->
           <template v-if="!scoringFromResponseSet">
-            <!-- Mode selector -->
+            <!-- Mode selector — 分组折叠 (A+ 优化) -->
             <div class="ie-fld">
               <label>评分模式</label>
-              <div class="ie-mode-grid">
-                <button v-for="(cfg, key) in ScoringModeConfig" :key="key"
-                  :class="['ie-mode-chip', scoring.mode === key && 'active']"
-                  @click="scoring.mode = key as any">{{ cfg.label }}</button>
+
+              <!-- 常用 3 个 (始终显示) -->
+              <div class="ie-mode-section">
+                <div class="ie-mode-section__head">
+                  <span class="ie-mode-section__label">常用</span>
+                </div>
+                <div class="ie-mode-grid">
+                  <button v-for="(key, idx) in COMMON_MODES" :key="key"
+                    :class="['ie-mode-chip', scoring.mode === key && 'active']"
+                    :title="`快捷键 ${idx + 1}`"
+                    @click="scoring.mode = key as any">
+                    {{ ScoringModeConfig[key]?.label }}
+                    <kbd class="ie-mode-kbd">{{ idx + 1 }}</kbd>
+                  </button>
+                </div>
               </div>
+
+              <!-- 高级模式 (折叠) -->
+              <button class="ie-mode-toggle" @click="showAdvancedModes = !showAdvancedModes">
+                <ChevronDown v-if="!showAdvancedModes" :size="12" />
+                <ChevronUp v-else :size="12" />
+                <span>{{ showAdvancedModes ? '收起高级模式' : '更多评分模式' }}</span>
+                <span class="ie-mode-toggle__count">
+                  {{ Object.values(ADVANCED_MODES_BY_GROUP).flat().length }} 种
+                </span>
+              </button>
+
+              <Transition name="ie-mode-expand">
+                <div v-if="showAdvancedModes" class="ie-mode-advanced">
+                  <div v-for="(modes, groupName) in ADVANCED_MODES_BY_GROUP" :key="groupName"
+                       class="ie-mode-section">
+                    <div class="ie-mode-section__head">
+                      <span class="ie-mode-section__label">{{ groupName }}</span>
+                    </div>
+                    <div class="ie-mode-grid">
+                      <button v-for="key in modes" :key="key"
+                        :class="['ie-mode-chip', scoring.mode === key && 'active']"
+                        @click="scoring.mode = key as any">
+                        {{ ScoringModeConfig[key]?.label }}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </Transition>
+
               <div class="ie-desc-box"><Info :size="11" /><span>{{ ScoringModeConfig[scoring.mode]?.description }}</span></div>
+            </div>
+
+            <!-- 键盘提示条 (仅 scoring tab) -->
+            <div v-if="showKbdHint" class="ie-kbd-hint">
+              <Keyboard :size="11" />
+              <span class="ie-kbd-hint__group">
+                <kbd class="insp-kbd">1</kbd><kbd class="insp-kbd">2</kbd><kbd class="insp-kbd">3</kbd> 切 Tab
+              </span>
+              <span class="ie-kbd-hint__group">
+                <kbd class="insp-kbd">1</kbd>~<kbd class="insp-kbd">3</kbd> 选常用模式
+              </span>
+              <button class="ie-kbd-hint__close" @click="dismissKbdHint" title="不再显示">×</button>
             </div>
             <!-- Mode params inline -->
             <div class="ie-params">
@@ -1230,4 +1332,132 @@ const scoringFromResponseSet = computed(() =>
   font-size:11px; color:#1e2a3a; background:#fff; outline:none; appearance:auto; cursor:pointer;
 }
 .ie-event-select:focus { border-color:#7aadff; }
+
+/* ═══════ A+ 优化: 评分模式分组 + 折叠 ═══════ */
+.ie-mode-section { margin-bottom: 8px; }
+.ie-mode-section__head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 6px;
+}
+.ie-mode-section__label {
+  font-size: 9px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #94a3b8;
+  font-weight: 600;
+}
+
+.ie-mode-kbd {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 13px;
+  height: 13px;
+  margin-left: 4px;
+  background: rgba(26, 109, 255, 0.08);
+  border: 1px solid rgba(26, 109, 255, 0.2);
+  border-radius: 2px;
+  font-family: var(--insp-font-mono, monospace);
+  font-size: 9px;
+  font-weight: 700;
+  color: #1a6dff;
+  line-height: 1;
+}
+.ie-mode-chip.active .ie-mode-kbd {
+  background: rgba(255, 255, 255, 0.25);
+  border-color: rgba(255, 255, 255, 0.4);
+  color: white;
+}
+.ie-mode-chip.active { background: #1a6dff; color: white; border-color: #1a6dff; }
+
+.ie-mode-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 10px;
+  background: transparent;
+  border: 1px dashed #c7cfdb;
+  border-radius: 5px;
+  font-size: 11px;
+  font-family: inherit;
+  color: #64748b;
+  cursor: pointer;
+  transition: all 0.15s;
+  margin: 6px 0 4px;
+}
+.ie-mode-toggle:hover {
+  background: #f4f6f9;
+  border-color: #94a3b8;
+  color: #1e2a3a;
+}
+.ie-mode-toggle__count {
+  margin-left: 4px;
+  padding: 1px 6px;
+  background: #f4f6f9;
+  border-radius: 8px;
+  font-size: 10px;
+  color: #94a3b8;
+  font-weight: 500;
+}
+
+.ie-mode-advanced {
+  border-left: 2px solid #e8ecf0;
+  padding-left: 10px;
+  margin-top: 4px;
+}
+
+.ie-mode-expand-enter-active,
+.ie-mode-expand-leave-active {
+  transition: opacity 0.18s ease, max-height 0.25s ease;
+  overflow: hidden;
+}
+.ie-mode-expand-enter-from,
+.ie-mode-expand-leave-to {
+  opacity: 0;
+  max-height: 0;
+}
+.ie-mode-expand-enter-to,
+.ie-mode-expand-leave-from {
+  opacity: 1;
+  max-height: 320px;
+}
+
+/* 键盘提示条 */
+.ie-kbd-hint {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 5px 10px;
+  margin: 8px 0 0;
+  background: linear-gradient(90deg, rgba(26, 109, 255, 0.05) 0%, transparent 100%);
+  border: 1px solid rgba(26, 109, 255, 0.15);
+  border-radius: 5px;
+  font-size: 10.5px;
+  color: #64748b;
+}
+.ie-kbd-hint__group {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+}
+.ie-kbd-hint__close {
+  margin-left: auto;
+  width: 18px;
+  height: 18px;
+  border: 0;
+  background: transparent;
+  font-size: 14px;
+  color: #c7cfdb;
+  border-radius: 3px;
+  cursor: pointer;
+}
+.ie-kbd-hint__close:hover { background: rgba(0,0,0,0.05); color: #1e2a3a; }
+
+/* 响应式: 中屏 chip 折行 */
+@media (max-width: 1366px) {
+  .ie-mode-grid { flex-wrap: wrap; }
+  .ie-mode-chip { flex: 0 0 auto; }
+}
 </style>
