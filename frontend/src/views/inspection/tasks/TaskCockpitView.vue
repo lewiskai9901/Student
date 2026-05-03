@@ -152,8 +152,8 @@ async function loadAll() {
       errorMsg.value = '任务不存在'
       return
     }
-    const subs = await getSubmissions(task.value.projectId as any)
-    submissions.value = subs.filter(s => s.taskId === taskId)
+    const subs = await getSubmissions({ taskId })
+    submissions.value = (subs || []).filter(s => Number(s.taskId) === taskId)
 
     const allDets: SubmissionDetail[] = []
     for (const sub of submissions.value) {
