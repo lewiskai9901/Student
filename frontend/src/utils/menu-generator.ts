@@ -174,8 +174,9 @@ export function generateBreadcrumb(
 export function sortMenuItems(menus: MenuItem[]): MenuItem[] {
   return menus
     .sort((a, b) => {
-      const orderA = (a as any).order || 999
-      const orderB = (b as any).order || 999
+      // 用 ?? 不要用 || — order=0 (合法首位) 不能被 falsy 覆盖成 999
+      const orderA = (a as any).order ?? 999
+      const orderB = (b as any).order ?? 999
       return orderA - orderB
     })
     .map(menu => {

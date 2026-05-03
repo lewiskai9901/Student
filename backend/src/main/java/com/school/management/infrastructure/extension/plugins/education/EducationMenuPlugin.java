@@ -61,10 +61,11 @@ public class EducationMenuPlugin implements MenuContributionPlugin {
 
             // ─── 检查平台 ───
             of("/inspection", "检查平台", "clipboard-check", 12).children(List.of(
-                of("/inspection/config",   "检查配置", "settings",      1),
-                of("/inspection/projects", "检查项目", "folder-search", 2),
-                of("/inspection/tasks",    "我的任务", "list-todo",     3),
-                of("/inspection/analytics","数据分析", "bar-chart-3",   4)
+                of("/inspection/dashboard","检查平台总览", "layout-dashboard", 0),
+                of("/inspection/config",   "检查配置",     "settings",         1),
+                of("/inspection/projects", "检查项目",     "folder-search",    2),
+                of("/inspection/tasks",    "我的任务",     "list-todo",        3),
+                of("/inspection/analytics","数据分析",     "bar-chart-3",      4)
             )),
 
             // ─── 教务管理 ───
