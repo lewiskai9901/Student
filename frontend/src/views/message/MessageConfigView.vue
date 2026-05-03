@@ -71,7 +71,30 @@
               <code class="code-badge">{{ [rule.eventCategory, rule.eventType].filter(Boolean).join(' / ') || '全部' }}</code>
             </td>
             <td>{{ getTargetModeLabel(rule.targetMode) }}</td>
-            <td class="cell-config">{{ rule.targetConfig || '--' }}</td>
+            <td class="cell-config">
+              <template v-if="rule.targetMode === 'BY_ROLE'">
+                <span v-for="r in parseRoleList(rule.targetConfig)" :key="r" class="cfg-chip cfg-chip--role">
+                  {{ getRoleLabel(r) }}
+                </span>
+                <span v-if="parseRoleList(rule.targetConfig).length === 0" class="cell-dim">未指定</span>
+              </template>
+              <template v-else-if="rule.targetMode === 'BY_RELATION'">
+                <span class="cfg-chip cfg-chip--relation">
+                  {{ getRelationLabel(rule.targetConfig) }}
+                </span>
+              </template>
+              <template v-else-if="rule.targetMode === 'BY_FEATURE'">
+                <span class="cfg-chip cfg-chip--feature">
+                  按能力 · {{ getFeatureLabel(rule.targetConfig) }}
+                </span>
+              </template>
+              <template v-else-if="rule.targetMode === 'BY_SUBJECT'">
+                <span class="cell-dim">事件主体本人</span>
+              </template>
+              <template v-else>
+                <span class="cell-dim">{{ rule.targetConfig || '--' }}</span>
+              </template>
+            </td>
             <td>
               <span class="channel-chip" :class="'ch-' + rule.channel">{{ getChannelLabel(rule.channel) }}</span>
             </td>
@@ -487,6 +510,58 @@ function getChannelLabel(ch: MsgSubscriptionRule['channel']): string {
 function getTemplateName(id: number | null): string {
   if (!id) return '-'
   return templates.value.find(t => t.id === id)?.templateName ?? String(id)
+}
+
+// ==================== S-4: 订阅规则配置可视化 ====================
+function safeJsonParse(s: string | null | undefined): any {
+  if (!s) return null
+  try { return JSON.parse(s) } catch { return null }
+}
+
+/** BY_ROLE: 解析角色码列表. 支持 ["ADMIN"] 或 {"__list__":["ADMIN"]} 两种历史契约 */
+function parseRoleList(targetConfig: string | null | undefined): string[] {
+  const v = safeJsonParse(targetConfig || '')
+  if (Array.isArray(v)) return v
+  if (v && Array.isArray(v.__list__)) return v.__list__
+  return []
+}
+
+function getRoleLabel(roleCode: string): string {
+  return availableRoles.value.find(r => r.roleCode === roleCode)?.roleName || roleCode
+}
+
+/** BY_RELATION: 解析关系导航配置, 转中文 */
+const RELATION_LABELS: Record<string, string> = {
+  guardian_of: '监护人',
+  admin: '管理员',
+  member_of: '成员',
+  in_class: '所在班级',
+  teacher_of: '任课教师',
+  manages: '管理',
+}
+const DIRECTION_LABELS: Record<string, string> = {
+  inward: '入向',
+  outward: '出向',
+}
+const RESOURCE_TYPE_LABELS: Record<string, string> = {
+  user: '用户', org_unit: '组织', place: '场所',
+}
+
+function getRelationLabel(targetConfig: string | null | undefined): string {
+  const cfg = safeJsonParse(targetConfig || '')
+  if (!cfg) return '关系导航 (未配置)'
+  const rel = RELATION_LABELS[cfg.relation] || cfg.relation || '?'
+  const dir = DIRECTION_LABELS[cfg.direction] || cfg.direction || ''
+  const rt = RESOURCE_TYPE_LABELS[cfg.resource_type] || cfg.resource_type || ''
+  return [dir, rt, '·', rel].filter(Boolean).join(' ')
+}
+
+/** BY_FEATURE: 能力码 */
+function getFeatureLabel(targetConfig: string | null | undefined): string {
+  const cfg = safeJsonParse(targetConfig || '')
+  if (!cfg) return '未配置'
+  if (typeof cfg === 'string') return cfg
+  return cfg.feature || cfg.code || JSON.stringify(cfg).slice(0, 30)
 }
 
 function toggleRole(code: string) {
@@ -926,7 +1001,35 @@ onMounted(() => {
 .text-muted { color: #d1d5db; font-size: 12px; }
 
 .cell-name { font-weight: 500; color: var(--insp-ink-primary); }
-.cell-config { font-size: 12px; color: #6b7280; }
+.cell-config { font-size: var(--insp-text-sm); color: var(--insp-ink-tertiary); }
+.cell-dim { color: var(--insp-ink-quaternary); font-size: var(--insp-text-sm); }
+
+/* S-4: 配置可视化 chip */
+.cfg-chip {
+  display: inline-flex; align-items: center;
+  padding: 1px var(--insp-sp-2);
+  margin-right: var(--insp-sp-1);
+  font-size: var(--insp-text-xs);
+  font-weight: var(--insp-fw-medium);
+  border-radius: var(--insp-radius-sm);
+  border: 1px solid;
+  white-space: nowrap;
+}
+.cfg-chip--role {
+  background: var(--insp-info-pale);
+  color: var(--insp-info);
+  border-color: var(--insp-info-border);
+}
+.cfg-chip--relation {
+  background: var(--insp-pass-pale);
+  color: var(--insp-pass);
+  border-color: var(--insp-pass-border);
+}
+.cfg-chip--feature {
+  background: var(--insp-warn-pale);
+  color: var(--insp-warn);
+  border-color: var(--insp-warn-border);
+}
 .cell-tpl { font-size: 12px; color: #6b7280; font-family: monospace; }
 .cell-content { max-width: 0; }
 
