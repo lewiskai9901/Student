@@ -114,6 +114,12 @@ const routes: RouteRecordRaw[] = [
             component: () => import('@/views/message/MessageConfigView.vue'),
             meta: { title: '订阅与模板', requiresAuth: true, permission: 'system:config:view', order: 4 }
           },
+          {
+            path: '/message/preferences',
+            name: 'MessagePreferences',
+            component: () => import('@/views/message/MessagePreferencesView.vue'),
+            meta: { title: '消息偏好', requiresAuth: true, order: 5 }
+          },
         ]
       },
 
