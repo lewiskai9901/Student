@@ -66,6 +66,20 @@ const lastActionTime = ref(Date.now())
 const actionCount = ref(0)
 const recentInterval = ref(0)
 
+// 打分动画反馈: 最近被触发动画的格子 (fieldCode + submissionId 复合键)
+const flashCell = ref<{ key: string; type: 'pass' | 'fail' } | null>(null)
+function triggerFlash(key: string, type: 'pass' | 'fail') {
+  flashCell.value = { key, type }
+  setTimeout(() => {
+    if (flashCell.value?.key === key && flashCell.value?.type === type) {
+      flashCell.value = null
+    }
+  }, 500)
+}
+function isFlashed(key: string, type: 'pass' | 'fail'): boolean {
+  return flashCell.value?.key === key && flashCell.value?.type === type
+}
+
 // ── Derived ──
 const uniqueFields = computed(() => {
   const seen = new Map<string, { code: string; name: string; sectionName: string | null; itemType: string; mode: string | null }>()
@@ -164,7 +178,15 @@ async function loadAll() {
     }
     allDetails.value = allDets
   } catch (e: any) {
-    errorMsg.value = e?.message || '加载失败'
+    // 友好化错误提示: 网络错/会话过期 → 直接说人话, 不抛底层异常文案
+    const status = e?.response?.status
+    if (status === 401 || status === 403) {
+      errorMsg.value = '会话已过期或权限不足, 请刷新或重新登录'
+    } else if (e?.code === 'ECONNABORTED' || !navigator.onLine) {
+      errorMsg.value = '网络连接异常, 请检查后重试'
+    } else {
+      errorMsg.value = '加载失败 — ' + (e?.response?.data?.message || e?.message || '未知错误')
+    }
     ElMessage.error(errorMsg.value)
   } finally {
     loading.value = false
@@ -194,22 +216,16 @@ async function setResponse(detail: SubmissionDetail, value: string, score?: numb
 async function passCurrent() {
   const d = detailForCurrentCell.value
   if (!d) return
-  if (d.scoringMode === 'PASS_FAIL') {
-    await setResponse(d, 'PASS', 0)
-  } else {
-    await setResponse(d, 'PASS', 0)
-  }
+  triggerFlash(`${d.itemCode}-${d.submissionId}`, 'pass')
+  await setResponse(d, 'PASS', 0)
   advanceTarget()
 }
 
 async function failCurrent() {
   const d = detailForCurrentCell.value
   if (!d) return
-  if (d.scoringMode === 'PASS_FAIL') {
-    await setResponse(d, 'FAIL', -5)
-  } else {
-    await setResponse(d, 'FAIL', -5)
-  }
+  triggerFlash(`${d.itemCode}-${d.submissionId}`, 'fail')
+  await setResponse(d, 'FAIL', -5)
   advanceTarget()
 }
 
@@ -479,13 +495,19 @@ watch(currentField, () => { targetIdx.value = 0 })
           <!-- Score buttons (PASS_FAIL) -->
           <template v-if="currentField.mode === 'PASS_FAIL'">
             <button class="grade-btn grade-btn--pass"
-                    :class="{ 'is-on': detailIndex.get(currentField.code)?.get(s.id)?.responseValue === 'PASS' }"
+                    :class="{
+                      'is-on': detailIndex.get(currentField.code)?.get(s.id)?.responseValue === 'PASS',
+                      'just-pass': isFlashed(`${currentField.code}-${s.id}`, 'pass'),
+                    }"
                     @click.stop="targetIdx = i; passCurrent()">
               <span class="grade-btn__glyph">✓</span>
               <span class="grade-btn__label">通过</span>
             </button>
             <button class="grade-btn grade-btn--fail"
-                    :class="{ 'is-on': detailIndex.get(currentField.code)?.get(s.id)?.responseValue === 'FAIL' }"
+                    :class="{
+                      'is-on': detailIndex.get(currentField.code)?.get(s.id)?.responseValue === 'FAIL',
+                      'just-fail': isFlashed(`${currentField.code}-${s.id}`, 'fail'),
+                    }"
                     @click.stop="targetIdx = i; failCurrent()">
               <span class="grade-btn__glyph">✗</span>
               <span class="grade-btn__label">不通过</span>
@@ -533,7 +555,11 @@ watch(currentField, () => { targetIdx.value = 0 })
         <table class="matrix">
           <thead>
             <tr>
-              <th class="m-corner">目标 ╲ 字段</th>
+              <th class="m-corner">
+                <span class="m-corner__y">目标</span>
+                <span class="m-corner__sep">／</span>
+                <span class="m-corner__x">字段</span>
+              </th>
               <th
                 v-for="(f, fi) in uniqueFields" :key="f.code"
                 :class="{ 'is-cursor': fi === fieldIdx }"
@@ -587,14 +613,20 @@ watch(currentField, () => { targetIdx.value = 0 })
         <!-- PASS_FAIL big buttons -->
         <div v-if="currentField.mode === 'PASS_FAIL'" class="focus-grades">
           <button class="big-grade big-grade--pass"
-                  :class="{ 'is-on': detailForCurrentCell?.responseValue === 'PASS' }"
+                  :class="{
+                    'is-on': detailForCurrentCell?.responseValue === 'PASS',
+                    'just-pass': detailForCurrentCell && isFlashed(`${currentField.code}-${detailForCurrentCell.submissionId}`, 'pass'),
+                  }"
                   @click="passCurrent">
             <span class="big-grade__glyph">✓</span>
             <span class="big-grade__name">通过</span>
             <span class="big-grade__kbd"><kbd class="insp-kbd insp-kbd--inverted">1</kbd></span>
           </button>
           <button class="big-grade big-grade--fail"
-                  :class="{ 'is-on': detailForCurrentCell?.responseValue === 'FAIL' }"
+                  :class="{
+                    'is-on': detailForCurrentCell?.responseValue === 'FAIL',
+                    'just-fail': detailForCurrentCell && isFlashed(`${currentField.code}-${detailForCurrentCell.submissionId}`, 'fail'),
+                  }"
                   @click="failCurrent">
             <span class="big-grade__glyph">✗</span>
             <span class="big-grade__name">不通过</span>
@@ -1282,5 +1314,54 @@ watch(currentField, () => { targetIdx.value = 0 })
 @media (max-width: 768px) {
   .cmd-bar { padding: 8px var(--insp-sp-3); }
   .cmd-bar__left { display: none; }
+}
+
+/* ===== 打分动画反馈 (P1 优化) ===== */
+@keyframes pulse-pass {
+  0%   { transform: scale(1);    box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.55); }
+  50%  { transform: scale(1.06); box-shadow: 0 0 0 12px rgba(16, 185, 129, 0); }
+  100% { transform: scale(1);    box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
+}
+@keyframes pulse-fail {
+  0%   { transform: scale(1);    box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.55); }
+  50%  { transform: scale(1.06); box-shadow: 0 0 0 12px rgba(239, 68, 68, 0); }
+  100% { transform: scale(1);    box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
+}
+.grade-btn.just-pass,
+.big-grade.just-pass {
+  animation: pulse-pass 0.45s ease-out;
+}
+.grade-btn.just-fail,
+.big-grade.just-fail {
+  animation: pulse-fail 0.45s ease-out;
+}
+
+/* ===== 矩阵转角表头美化 (P2 优化) ===== */
+.m-corner {
+  position: relative;
+  background: linear-gradient(135deg, var(--insp-bg-subtle) 0%, var(--insp-bg-sunken) 100%) !important;
+  font-size: 10px !important;
+  font-weight: 600 !important;
+  color: var(--insp-ink-tertiary) !important;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  vertical-align: middle;
+  padding: 0 12px !important;
+}
+.m-corner__y {
+  display: inline-block;
+  padding-right: 4px;
+  color: var(--insp-ink-secondary);
+}
+.m-corner__sep {
+  display: inline-block;
+  color: var(--insp-ink-quaternary);
+  font-weight: 400;
+  margin: 0 2px;
+}
+.m-corner__x {
+  display: inline-block;
+  padding-left: 4px;
+  color: var(--insp-ink-secondary);
 }
 </style>
