@@ -131,10 +131,26 @@ public class InspTask extends AggregateRoot<Long> {
 
     /**
      * 提交任务 — IN_PROGRESS → SUBMITTED
+     *
+     * 业务规则: 检查员只有把任务推到 IN_PROGRESS 才能提交.
+     * 注: 任务过了 task_date (前端标"逾期") 仍可提交 — 数据应保留, 由审核环节
+     * 决定是否标记为延迟交付; 状态机本身不阻断逾期提交.
      */
     public void submit() {
         if (this.status != TaskStatus.IN_PROGRESS) {
-            throw new IllegalStateException("只有进行中的任务才能提交");
+            // 给出具体当前状态, 避免用户误以为是"逾期"导致禁止
+            String hint = switch (this.status) {
+                case PENDING -> "任务尚未领取, 请先领取并开始检查";
+                case CLAIMED -> "任务尚未开始, 请先点击 \"开始检查\"";
+                case SUBMITTED -> "任务已提交, 不能重复提交";
+                case UNDER_REVIEW -> "任务正在审核中, 不能再提交";
+                case REVIEWED -> "任务已审核完成, 不能再提交";
+                case PUBLISHED -> "任务已发布, 不能再提交";
+                case CANCELLED -> "任务已取消";
+                case EXPIRED -> "任务已过期失效";
+                default -> "当前状态不允许提交";
+            };
+            throw new IllegalStateException(hint + " (状态: " + this.status + ")");
         }
         this.status = TaskStatus.SUBMITTED;
         this.submittedAt = LocalDateTime.now();

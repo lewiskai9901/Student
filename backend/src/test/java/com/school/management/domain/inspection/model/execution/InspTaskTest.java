@@ -149,7 +149,7 @@ class InspTaskTest {
 
             assertThatThrownBy(() -> task.submit())
                     .isInstanceOf(IllegalStateException.class)
-                    .hasMessageContaining("只有进行中的任务才能提交");
+                    .hasMessageContaining("任务尚未开始");
         }
     }
 

@@ -120,7 +120,12 @@ const grouped = computed((): DateBucket[] => {
 // ── Helpers ──
 function isOverdue(t: InspTask): boolean {
   if (!t.taskDate) return false
-  if (t.status === 'PUBLISHED' || t.status === 'CANCELLED' || t.status === 'EXPIRED') return false
+  // 已提交/审核中/已审/已发布/已取消/已过期 都不算"逾期" — 检查员已交差
+  // 真正算逾期的是: 截止日期已过但仍未提交 (PENDING / CLAIMED / IN_PROGRESS)
+  if (
+    t.status === 'SUBMITTED' || t.status === 'UNDER_REVIEW' || t.status === 'REVIEWED' ||
+    t.status === 'PUBLISHED' || t.status === 'CANCELLED' || t.status === 'EXPIRED'
+  ) return false
   const eff = (t as any).extendedTo || t.taskDate
   return eff < today
 }
