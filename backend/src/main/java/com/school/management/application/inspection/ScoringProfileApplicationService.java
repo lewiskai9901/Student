@@ -45,15 +45,15 @@ public class ScoringProfileApplicationService {
         return profileRepository.save(profile);
     }
 
-    /** P0-B Redis 缓存 */
+    /** P0-B Redis 缓存. Spring Cache 自动解包 Optional, #result 即为 ScoringProfile (或 null). */
     @Transactional(readOnly = true)
-    @Cacheable(value = "ratingConfig", key = "'scoringProfile:' + #id", unless = "#result == null || !#result.isPresent()")
+    @Cacheable(value = "ratingConfig", key = "'scoringProfile:' + #id", unless = "#result == null")
     public Optional<ScoringProfile> getProfile(Long id) {
         return profileRepository.findById(id);
     }
 
     @Transactional(readOnly = true)
-    @Cacheable(value = "ratingConfig", key = "'scoringProfile:section:' + #sectionId", unless = "#result == null || !#result.isPresent()")
+    @Cacheable(value = "ratingConfig", key = "'scoringProfile:section:' + #sectionId", unless = "#result == null")
     public Optional<ScoringProfile> getProfileBySectionId(Long sectionId) {
         return profileRepository.findBySectionId(sectionId);
     }
