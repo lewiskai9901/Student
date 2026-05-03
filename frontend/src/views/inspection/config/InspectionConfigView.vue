@@ -5,6 +5,7 @@ import { ElMessage, ElMessageBox } from 'element-plus'
 import {
   Plus, Search, Copy, Upload, Archive, Ban, Trash2,
   Pencil, MoreHorizontal, LayoutGrid, FileText,
+  Library, ListTree, Award, Tag, ArrowRight, List, Rows3,
 } from 'lucide-vue-next'
 import { useInspTemplateStore } from '@/stores/inspection/inspTemplateStore'
 import { inspTemplateApi } from '@/api/inspection/template'
@@ -14,20 +15,28 @@ import type { TemplateSection } from '@/types/insp/template'
 const router = useRouter()
 const templateStore = useInspTemplateStore()
 
-// ==================== Tabs (P0-1: 配置中心) ====================
-type ConfigTab = 'templates' | 'library' | 'grades' | 'categories' | 'profiles'
-const activeTab = ref<ConfigTab>('templates')
+// ==================== 快捷入口 (替代假 tab — 4 个 ↗ 不再伪装成 tab) ====================
+interface QuickAccess {
+  key: string
+  title: string
+  desc: string
+  icon: any
+  to: string
+  count?: number
+}
+const quickAccess = computed<QuickAccess[]>(() => [
+  { key: 'library',    title: '检查项库',   desc: '可复用的检查项条目',      icon: Library,  to: '/inspection/library' },
+  { key: 'profiles',   title: '评分方案',   desc: '维度权重、聚合规则',      icon: Award,    to: '/inspection/scoring-profiles' },
+  { key: 'grades',     title: '等级方案',   desc: '分值到等级的映射',        icon: ListTree, to: '/inspection/grade-schemes' },
+  { key: 'categories', title: '问题类目',   desc: '违规分类与整改归类',      icon: Tag,      to: '/inspection/issue-categories' },
+])
 
-function goToSubModule(tab: ConfigTab) {
-  // 嵌入式 tab; 用户可点链接进独立页面 (大型管理操作不嵌入这里)
-  const map: Record<ConfigTab, string> = {
-    templates: '/inspection/config',
-    library: '/inspection/library',
-    grades: '/inspection/grade-schemes',
-    profiles: '/inspection/scoring-profiles',
-    categories: '/inspection/issue-categories',
-  }
-  router.push(map[tab])
+// ==================== 视图模式 ====================
+type ViewMode = 'compact' | 'standard'
+const viewMode = ref<ViewMode>((localStorage.getItem('insp_cfg_view_mode') as ViewMode) || 'compact')
+function setViewMode(m: ViewMode) {
+  viewMode.value = m
+  localStorage.setItem('insp_cfg_view_mode', m)
 }
 
 // ==================== State ====================
@@ -306,24 +315,25 @@ onMounted(() => { loadTemplates() })
       </div>
     </header>
 
-    <!-- Tabs (P0-1: 配置中心) -->
-    <nav class="cfg-tabs">
-      <button class="cfg-tab" :class="{ 'is-active': activeTab === 'templates' }" @click="activeTab = 'templates'">
-        模板
+    <!-- 快捷入口 (4 卡片网格 — 替代之前的假 tab) -->
+    <section class="cfg-quick">
+      <button v-for="qa in quickAccess" :key="qa.key" class="cfg-quick__card" @click="router.push(qa.to)">
+        <span class="cfg-quick__icon">
+          <component :is="qa.icon" :size="14" />
+        </span>
+        <span class="cfg-quick__body">
+          <span class="cfg-quick__title">{{ qa.title }}</span>
+          <span class="cfg-quick__desc">{{ qa.desc }}</span>
+        </span>
+        <ArrowRight :size="12" class="cfg-quick__chev" />
       </button>
-      <button class="cfg-tab" @click="goToSubModule('library')">
-        检查项库 ↗
-      </button>
-      <button class="cfg-tab" @click="goToSubModule('profiles')">
-        评分方案 ↗
-      </button>
-      <button class="cfg-tab" @click="goToSubModule('grades')">
-        等级方案 ↗
-      </button>
-      <button class="cfg-tab" @click="goToSubModule('categories')">
-        问题类目 ↗
-      </button>
-    </nav>
+    </section>
+
+    <!-- 主区块标题: 模板 (单 tab, 不再伪装) -->
+    <div class="cfg-section-head">
+      <h2 class="cfg-section-title">检查模板</h2>
+      <span class="cfg-section-hint">定义检查表单结构、字段和评分规则</span>
+    </div>
 
     <!-- Toolbar -->
     <div class="cfg-toolbar">
@@ -342,7 +352,19 @@ onMounted(() => { loadTemplates() })
           <option value="status">状态</option>
         </select>
       </div>
-      <span class="cfg-total"><span class="insp-num">{{ filteredSections.length }}</span> 个模板</span>
+      <div class="cfg-toolbar__right">
+        <span class="cfg-total"><span class="insp-num">{{ filteredSections.length }}</span> 个模板</span>
+        <div class="cfg-view-toggle">
+          <button class="cfg-view-btn" :class="{ 'is-active': viewMode === 'compact' }"
+                  @click="setViewMode('compact')" title="紧凑模式">
+            <Rows3 :size="13" />
+          </button>
+          <button class="cfg-view-btn" :class="{ 'is-active': viewMode === 'standard' }"
+                  @click="setViewMode('standard')" title="标准模式">
+            <List :size="13" />
+          </button>
+        </div>
+      </div>
     </div>
 
     <!-- List -->
@@ -359,7 +381,7 @@ onMounted(() => { loadTemplates() })
         </button>
       </div>
 
-      <ul v-else class="tpl-rows">
+      <ul v-else class="tpl-rows" :class="`tpl-rows--${viewMode}`">
         <li
           v-for="(sec, i) in filteredSections" :key="sec.id"
           class="tpl-row"
@@ -375,22 +397,28 @@ onMounted(() => { loadTemplates() })
                 {{ TemplateStatusConfig[sec.status]?.label }}
               </span>
               <span class="tpl-row__version insp-num">v{{ sec.latestVersion }}</span>
-            </div>
-            <div class="tpl-row__meta">
-              <span class="insp-num">{{ getSectionCount(sec.id) }} 分区</span>
-              <span class="tpl-row__sep">·</span>
-              <span class="insp-num">{{ formatDate(sec.updatedAt) }}</span>
               <template v-if="getTargetTypes(sec.id).length > 0">
-                <span class="tpl-row__sep">·</span>
                 <span v-for="tt in getTargetTypes(sec.id)" :key="tt" class="tpl-row__tt">
                   {{ TargetTypeConfig[tt]?.label }}
                 </span>
               </template>
               <template v-if="usageMap[Number(sec.id)] > 0">
-                <span class="tpl-row__sep">·</span>
-                <span class="tpl-row__usage">
-                  <span class="insp-num">{{ usageMap[Number(sec.id)] }}</span> 个项目在用
+                <span class="tpl-row__usage" :title="`此模板正在被 ${usageMap[Number(sec.id)]} 个项目引用`">
+                  <span class="insp-num">{{ usageMap[Number(sec.id)] }}</span> 项目在用
                 </span>
+              </template>
+            </div>
+            <div class="tpl-row__meta">
+              <span class="tpl-row__metric"><span class="insp-num">{{ getSectionCount(sec.id) }}</span> 分区</span>
+              <span class="tpl-row__sep">·</span>
+              <span class="tpl-row__date" :title="sec.updatedAt">更新于 <span class="insp-num">{{ formatDate(sec.updatedAt) }}</span></span>
+              <template v-if="(sec as any).createdBy">
+                <span class="tpl-row__sep">·</span>
+                <span class="tpl-row__owner">创建人 <span class="insp-num">#{{ (sec as any).createdBy }}</span></span>
+              </template>
+              <template v-if="sec.sectionCode">
+                <span class="tpl-row__sep">·</span>
+                <span class="tpl-row__code insp-num" :title="`模板编码 ${sec.sectionCode}`">{{ sec.sectionCode }}</span>
               </template>
             </div>
           </div>
@@ -604,29 +632,122 @@ onMounted(() => { loadTemplates() })
 
 .cfg-cta { margin-left: 6px; }
 
-/* ─ Tabs (配置中心 P0-1) ─────── */
-.cfg-tabs {
-  display: flex; gap: 2px;
+/* ─ 快捷入口 (替代假 tab) ─────── */
+.cfg-quick {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+  margin-bottom: 14px;
+}
+.cfg-quick__card {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
   background: var(--insp-bg-surface);
   border: 1px solid var(--insp-border-default);
-  border-radius: var(--insp-radius-lg);
-  padding: 4px;
-  margin-bottom: 10px;
+  border-radius: var(--insp-radius-md);
+  cursor: pointer;
+  transition: all var(--insp-t-fast);
+  text-align: left;
+  font-family: inherit;
 }
-.cfg-tab {
-  padding: 6px 14px; height: 28px;
-  background: transparent; border: 0;
-  border-radius: var(--insp-radius-sm);
-  font-family: inherit; font-size: 12px; font-weight: 500;
-  color: var(--insp-ink-tertiary);
-  cursor: pointer; transition: all var(--insp-t-fast);
+.cfg-quick__card:hover {
+  border-color: var(--insp-accent);
+  background: var(--insp-accent-paler);
 }
-.cfg-tab:hover { color: var(--insp-ink-primary); background: var(--insp-bg-subtle); }
-.cfg-tab.is-active {
+.cfg-quick__card:hover .cfg-quick__chev { color: var(--insp-accent); transform: translateX(2px); }
+.cfg-quick__icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px; height: 28px;
   background: var(--insp-bg-subtle);
-  color: var(--insp-accent);
-  font-weight: 600;
+  color: var(--insp-ink-secondary);
+  border-radius: var(--insp-radius-sm);
+  flex-shrink: 0;
 }
+.cfg-quick__card:hover .cfg-quick__icon {
+  background: var(--insp-accent);
+  color: white;
+}
+.cfg-quick__body {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  flex: 1;
+  min-width: 0;
+}
+.cfg-quick__title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--insp-ink-primary);
+  line-height: 1.2;
+}
+.cfg-quick__desc {
+  font-size: 10px;
+  color: var(--insp-ink-tertiary);
+  line-height: 1.3;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.cfg-quick__chev {
+  color: var(--insp-ink-quaternary);
+  flex-shrink: 0;
+  transition: all var(--insp-t-fast);
+}
+
+/* 主区块标题 */
+.cfg-section-head {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  margin-bottom: 10px;
+  padding: 0 2px;
+}
+.cfg-section-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--insp-ink-primary);
+  margin: 0;
+  letter-spacing: -0.01em;
+}
+.cfg-section-hint {
+  font-size: 11px;
+  color: var(--insp-ink-tertiary);
+}
+
+/* ─ 视图模式切换 ─────── */
+.cfg-toolbar__right {
+  display: flex; align-items: center; gap: 10px;
+}
+.cfg-view-toggle {
+  display: inline-flex;
+  border: 1px solid var(--insp-border-default);
+  border-radius: var(--insp-radius-sm);
+  overflow: hidden;
+}
+.cfg-view-btn {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 26px; height: 26px;
+  background: transparent;
+  border: 0;
+  color: var(--insp-ink-tertiary);
+  cursor: pointer;
+  transition: all var(--insp-t-fast);
+}
+.cfg-view-btn:hover { color: var(--insp-ink-primary); }
+.cfg-view-btn.is-active {
+  background: var(--insp-accent);
+  color: white;
+}
+.cfg-view-btn + .cfg-view-btn {
+  border-left: 1px solid var(--insp-border-default);
+}
+.cfg-view-btn.is-active + .cfg-view-btn,
+.cfg-view-btn:has(+ .is-active),
+.cfg-view-toggle .is-active { border-left-color: var(--insp-accent); }
 
 /* ─ Toolbar ─────── */
 .cfg-toolbar {
@@ -790,7 +911,31 @@ onMounted(() => { loadTemplates() })
   border-radius: 3px;
   color: var(--insp-info);
   font-weight: 500;
+  font-size: 10px;
 }
+.tpl-row__metric { color: var(--insp-ink-secondary); font-weight: 500; }
+.tpl-row__date { color: var(--insp-ink-tertiary); }
+.tpl-row__owner { color: var(--insp-ink-tertiary); }
+.tpl-row__code {
+  font-family: var(--insp-font-mono);
+  font-size: 10px;
+  color: var(--insp-ink-quaternary);
+  padding: 0 4px;
+  background: var(--insp-bg-subtle);
+  border-radius: 2px;
+}
+
+/* 紧凑模式 */
+.tpl-rows--compact .tpl-row {
+  padding: 7px 14px;
+  grid-template-columns: 32px 1fr auto;
+  gap: 10px;
+}
+.tpl-rows--compact .tpl-row__main { gap: 2px; }
+.tpl-rows--compact .tpl-row__line1 { gap: 6px; }
+.tpl-rows--compact .tpl-row__name { font-size: 12.5px; }
+.tpl-rows--compact .tpl-row__meta { font-size: 10.5px; gap: 5px; }
+.tpl-rows--compact .tpl-row__num { font-size: 11px; }
 
 .tpl-row__actions {
   display: flex;
