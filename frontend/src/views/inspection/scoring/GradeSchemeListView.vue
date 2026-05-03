@@ -157,6 +157,23 @@ async function handleDelete(scheme: GradeScheme) {
   } catch (e: any) { if (e !== 'cancel') ElMessage.error(e.message || '删除失败') }
 }
 
+// ============== S+ 设计样板 ==============
+const searchKw = ref('')
+function highlightHtml(text: string, kw: string): string {
+  if (!kw) return text
+  const escaped = kw.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+  return text.replace(new RegExp(`(${escaped})`, 'gi'), '<mark class="gs-mark">$1</mark>')
+}
+function matchesSearch(s: GradeScheme): boolean {
+  const q = searchKw.value.trim().toLowerCase()
+  if (!q) return true
+  return s.displayName.toLowerCase().includes(q) ||
+         (s.description || '').toLowerCase().includes(q) ||
+         s.grades.some(g => g.name.toLowerCase().includes(q))
+}
+const filteredSystem = computed(() => systemSchemes.value.filter(matchesSearch))
+const filteredCustom = computed(() => customSchemes.value.filter(matchesSearch))
+
 onMounted(() => loadSchemes())
 </script>
 
@@ -169,18 +186,19 @@ onMounted(() => loadSchemes())
         <span class="gs-title">等级方案</span>
         <span class="gs-count" v-if="schemes.length">{{ schemes.length }}</span>
       </div>
+      <input v-model="searchKw" class="gs-search" placeholder="搜索方案 / 等级名..." />
       <button class="gs-btn primary" @click="openCreate">
         <Plus class="w-3.5 h-3.5" /> 新建方案
       </button>
     </div>
 
     <!-- System presets -->
-    <div v-if="systemSchemes.length > 0" class="gs-section">
-      <div class="gs-section-title">系统预设</div>
+    <div v-if="filteredSystem.length > 0" class="gs-section">
+      <div class="gs-section-title">系统预设 <span class="gs-section-count" v-if="searchKw">({{ filteredSystem.length }})</span></div>
       <div class="gs-grid">
-        <div v-for="s in systemSchemes" :key="s.id" class="gs-card system">
+        <div v-for="s in filteredSystem" :key="s.id" class="gs-card system">
           <div class="gs-card-head">
-            <span class="gs-card-name">{{ s.displayName }}</span>
+            <span class="gs-card-name" v-html="highlightHtml(s.displayName, searchKw)"></span>
             <button class="gs-icon-btn" @click="handleClone(s)" title="克隆为自定义"><Copy class="w-3.5 h-3.5" /></button>
           </div>
           <div class="gs-card-desc" v-if="s.description">{{ s.description }}</div>
@@ -195,14 +213,14 @@ onMounted(() => loadSchemes())
 
     <!-- Custom schemes -->
     <div class="gs-section">
-      <div class="gs-section-title">自定义方案</div>
-      <div v-if="customSchemes.length === 0" class="gs-empty">
-        暂无自定义方案，点击「新建方案」创建，或从系统预设克隆
+      <div class="gs-section-title">自定义方案 <span class="gs-section-count" v-if="searchKw">({{ filteredCustom.length }})</span></div>
+      <div v-if="filteredCustom.length === 0" class="gs-empty">
+        {{ searchKw ? '没有匹配的方案' : '暂无自定义方案，点击「新建方案」创建，或从系统预设克隆' }}
       </div>
       <div v-else class="gs-grid">
-        <div v-for="s in customSchemes" :key="s.id" class="gs-card">
+        <div v-for="s in filteredCustom" :key="s.id" class="gs-card">
           <div class="gs-card-head">
-            <span class="gs-card-name">{{ s.displayName }}</span>
+            <span class="gs-card-name" v-html="highlightHtml(s.displayName, searchKw)"></span>
             <div class="gs-card-actions">
               <button class="gs-icon-btn" @click="openEdit(s)" title="编辑"><Pencil class="w-3.5 h-3.5" /></button>
               <button class="gs-icon-btn danger" @click="handleDelete(s)" title="删除"><Trash2 class="w-3.5 h-3.5" /></button>
@@ -386,5 +404,35 @@ onMounted(() => loadSchemes())
 
 @media (max-width: 700px) {
   .gs-grid { grid-template-columns: 1fr; }
+}
+
+/* ─ S+ 搜索 + 高亮 ─────── */
+.gs-search {
+  height: 30px;
+  padding: 0 12px;
+  border: 1px solid var(--insp-border-default, #e0e0e0);
+  border-radius: 6px;
+  background: var(--insp-bg-surface, #fff);
+  font-size: 12px;
+  font-family: inherit;
+  margin-left: auto;
+  width: 220px;
+}
+.gs-search:focus {
+  outline: none;
+  border-color: var(--insp-accent, #1a6dff);
+  box-shadow: 0 0 0 3px rgba(26, 109, 255, 0.1);
+}
+.gs-section-count {
+  font-size: 11px;
+  color: var(--insp-ink-tertiary, #999);
+  font-weight: 400;
+}
+:deep(.gs-mark) {
+  background: rgba(245, 200, 70, 0.4);
+  color: var(--insp-ink-primary, #1f2937);
+  padding: 0 2px;
+  border-radius: 2px;
+  font-weight: 600;
 }
 </style>

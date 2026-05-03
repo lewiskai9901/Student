@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { Plus, Pencil, Trash2 } from 'lucide-vue-next'
+import { Plus, Pencil, Trash2, Search } from 'lucide-vue-next'
 import { useInspPlatformStore } from '@/stores/inspection/inspPlatformStore'
 import type { IssueCategory } from '@/types/insp/platform'
 
@@ -120,6 +120,37 @@ function flattenCategories(nodes: IssueCategory[], level = 0): { id: number; lab
   return result
 }
 
+// ============== S+ 设计样板 ==============
+const searchKw = ref('')
+function filterTree(nodes: IssueCategory[]): IssueCategory[] {
+  const q = searchKw.value.trim().toLowerCase()
+  if (!q) return nodes
+  return nodes.reduce<IssueCategory[]>((acc, n) => {
+    const selfMatch = n.categoryName.toLowerCase().includes(q) || n.categoryCode.toLowerCase().includes(q)
+    const childrenFiltered = n.children ? filterTree(n.children) : []
+    if (selfMatch || childrenFiltered.length > 0) {
+      acc.push({ ...n, children: childrenFiltered.length > 0 ? childrenFiltered : n.children })
+    }
+    return acc
+  }, [])
+}
+const filteredTreeData = computed(() => filterTree(treeData.value))
+
+const stats = computed(() => {
+  function flatten(nodes: IssueCategory[]): IssueCategory[] {
+    const out: IssueCategory[] = []
+    for (const n of nodes) { out.push(n); if (n.children) out.push(...flatten(n.children)) }
+    return out
+  }
+  const all = flatten(treeData.value)
+  return {
+    total: all.length,
+    enabled: all.filter(n => n.isEnabled).length,
+    disabled: all.filter(n => !n.isEnabled).length,
+    topLevel: treeData.value.length,
+  }
+})
+
 onMounted(() => loadData())
 </script>
 
@@ -127,18 +158,33 @@ onMounted(() => loadData())
   <div class="p-5 space-y-4">
     <div class="flex items-center justify-between">
       <h2 class="text-lg font-semibold">问题分类管理</h2>
-      <el-button type="primary" @click="openCreate()">
-        <Plus class="w-4 h-4 mr-1" />新建分类
-      </el-button>
+      <div class="flex items-center gap-3 ic-stats">
+        <span class="ic-stat"><span class="ic-stat__num">{{ stats.total }}</span><span class="ic-stat__label">分类总数</span></span>
+        <span class="ic-stat-rule" />
+        <span class="ic-stat"><span class="ic-stat__num">{{ stats.topLevel }}</span><span class="ic-stat__label">顶级</span></span>
+        <span class="ic-stat-rule" />
+        <span class="ic-stat"><span class="ic-stat__num" :style="{ color: stats.enabled > 0 ? '#10b981' : '' }">{{ stats.enabled }}</span><span class="ic-stat__label">启用</span></span>
+        <el-button type="primary" @click="openCreate()" class="ml-3">
+          <Plus class="w-4 h-4 mr-1" />新建分类
+        </el-button>
+      </div>
+    </div>
+
+    <div class="ic-search-bar">
+      <Search class="w-4 h-4 ic-search-icon" />
+      <input v-model="searchKw" placeholder="搜索分类编码 / 名称..." class="ic-search-input" />
     </div>
 
     <el-card shadow="never" v-loading="loading">
       <div v-if="treeData.length === 0 && !loading" class="py-12 text-center text-gray-400 text-sm">
         暂无问题分类，点击"新建分类"添加
       </div>
+      <div v-else-if="filteredTreeData.length === 0" class="py-12 text-center text-gray-400 text-sm">
+        没有匹配 "{{ searchKw }}" 的分类
+      </div>
       <el-tree
         v-else
-        :data="treeData"
+        :data="filteredTreeData"
         :props="treeProps"
         node-key="id"
         default-expand-all
@@ -202,3 +248,34 @@ onMounted(() => loadData())
     </el-dialog>
   </div>
 </template>
+
+<style scoped>
+.ic-stats { display: flex; align-items: center; gap: 12px; }
+.ic-stat { display: inline-flex; flex-direction: column; align-items: center; min-width: 56px; padding: 2px 8px; }
+.ic-stat__num { font-family: var(--insp-font-mono, monospace); font-size: 16px; font-weight: 700; color: var(--insp-ink-primary, #1f2937); line-height: 1; }
+.ic-stat__label { font-size: 10px; color: var(--insp-ink-tertiary, #999); margin-top: 2px; letter-spacing: 0.04em; }
+.ic-stat-rule { width: 1px; height: 18px; background: var(--insp-border-subtle, #eee); }
+
+.ic-search-bar {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 10px;
+  background: var(--insp-bg-surface, #fff);
+  border: 1px solid var(--insp-border-default, #e5e7eb);
+  border-radius: 6px;
+  max-width: 320px;
+}
+.ic-search-icon { color: var(--insp-ink-tertiary, #999); }
+.ic-search-input {
+  flex: 1;
+  height: 30px;
+  border: 0;
+  background: transparent;
+  font-size: 12px;
+  font-family: inherit;
+  outline: none;
+  color: var(--insp-ink-primary, #1f2937);
+}
+</style>

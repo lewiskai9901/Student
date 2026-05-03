@@ -5,10 +5,10 @@
  * 评分方案是跨模板复用的强独立资源 (一套规则可被 N 个模板挂),
  * 之前只能从模板编辑器进, 没有列表页. 这里补上一等公民入口.
  */
-import { ref, onMounted, computed } from 'vue'
+import { ref, onMounted, onUnmounted, computed, nextTick } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
-import { Search, ExternalLink } from 'lucide-vue-next'
+import { Search, ExternalLink, Keyboard } from 'lucide-vue-next'
 import { getProfiles } from '@/api/inspection/scoring'
 import type { ScoringProfile } from '@/types/insp/scoring'
 
@@ -52,7 +52,70 @@ function goSection(sectionId: number) {
   router.push(`/inspection/templates/${sectionId}/edit`)
 }
 
-onMounted(load)
+// ============== S+ 设计样板 ==============
+function highlightHtml(text: string, kw: string): string {
+  if (!kw) return text
+  const escaped = kw.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+  return text.replace(new RegExp(`(${escaped})`, 'gi'), '<mark class="sp-mark">$1</mark>')
+}
+
+const focusedIdx = ref<number>(-1)
+function focusNext() { focusedIdx.value = Math.min(focusedIdx.value + 1, filtered.value.length - 1); nextTick(scrollFocused) }
+function focusPrev() { focusedIdx.value = Math.max(0, focusedIdx.value - 1); nextTick(scrollFocused) }
+function scrollFocused() {
+  const cur = filtered.value[focusedIdx.value]
+  if (!cur) return
+  document.querySelector(`[data-sp-id="${cur.id}"]`)?.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
+}
+
+const showKbdHint = ref(localStorage.getItem('insp_sp_kbd_hint_dismissed') !== '1')
+function dismissKbdHint() { showKbdHint.value = false; localStorage.setItem('insp_sp_kbd_hint_dismissed', '1') }
+
+function onKeySP(e: KeyboardEvent) {
+  const t = e.target as HTMLElement
+  if (t?.tagName === 'INPUT' || t?.tagName === 'TEXTAREA') return
+  if (e.metaKey || e.ctrlKey || e.altKey) return
+  switch (e.key) {
+    case 'j': case 'ArrowDown': e.preventDefault(); focusNext(); break
+    case 'k': case 'ArrowUp': e.preventDefault(); focusPrev(); break
+    case 'Enter': case 'e': {
+      const cur = filtered.value[focusedIdx.value]
+      if (cur) { e.preventDefault(); goEdit(cur) }
+      break
+    }
+    case '/': e.preventDefault(); (document.querySelector('.sp-search__input') as HTMLElement)?.focus(); break
+    case 'Escape': focusedIdx.value = -1; break
+  }
+}
+
+const previewVisible = ref(false)
+const previewTarget = ref<ScoringProfile | null>(null)
+const previewPos = ref({ top: '0px', left: '0px' })
+let previewShowTimer: any = null
+let previewHideTimer: any = null
+function showPreview(p: ScoringProfile, e: MouseEvent) {
+  clearTimeout(previewHideTimer); clearTimeout(previewShowTimer)
+  const target = e.currentTarget as HTMLElement
+  previewShowTimer = setTimeout(() => {
+    previewTarget.value = p
+    const rect = target.getBoundingClientRect()
+    const pw = 320
+    if (rect.right + pw + 16 < window.innerWidth) previewPos.value = { top: `${rect.top}px`, left: `${rect.right + 8}px` }
+    else previewPos.value = { top: `${rect.bottom + 8}px`, left: `${rect.left}px` }
+    previewVisible.value = true
+  }, 600)
+}
+function hidePreview() {
+  clearTimeout(previewShowTimer)
+  previewHideTimer = setTimeout(() => { previewVisible.value = false }, 100)
+}
+function keepPreview() { clearTimeout(previewHideTimer) }
+
+onMounted(() => {
+  load()
+  window.addEventListener('keydown', onKeySP)
+})
+onUnmounted(() => window.removeEventListener('keydown', onKeySP))
 </script>
 
 <template>
@@ -90,6 +153,15 @@ onMounted(load)
       <span class="sp-total"><span class="insp-num">{{ filtered.length }}</span> 个方案</span>
     </div>
 
+    <!-- 键盘快捷键提示 (S+) -->
+    <div v-if="showKbdHint" class="sp-kbd-hint">
+      <Keyboard :size="12" />
+      <span class="sp-kbd-hint__group"><kbd class="insp-kbd">J</kbd><kbd class="insp-kbd">K</kbd> 浏览</span>
+      <span class="sp-kbd-hint__group"><kbd class="insp-kbd">E</kbd> 编辑</span>
+      <span class="sp-kbd-hint__group"><kbd class="insp-kbd">/</kbd> 搜索</span>
+      <button class="sp-kbd-hint__close" @click="dismissKbdHint" title="不再显示">×</button>
+    </div>
+
     <section class="sp-list" v-loading="loading">
       <div v-if="!loading && filtered.length === 0" class="sp-empty">
         <p>暂无评分方案</p>
@@ -106,8 +178,14 @@ onMounted(load)
           <span class="col col-actions">操作</span>
         </div>
 
-        <div v-for="p in filtered" :key="p.id" class="sp-row sp-row--data" @click="goEdit(p)">
-          <span class="col col-id insp-num">#{{ p.id }}</span>
+        <div v-for="(p, i) in filtered" :key="p.id"
+             :data-sp-id="p.id"
+             class="sp-row sp-row--data"
+             :class="{ 'is-focused': focusedIdx === i }"
+             @click="goEdit(p)"
+             @mouseenter="(e) => showPreview(p, e)"
+             @mouseleave="hidePreview">
+          <span class="col col-id insp-num" v-html="highlightHtml('#' + p.id, keyword)"></span>
 
           <span class="col col-section">
             <button v-if="p.sectionId" class="sp-section-link" @click.stop="goSection(p.sectionId)">
@@ -137,6 +215,56 @@ onMounted(load)
         </div>
       </div>
     </section>
+
+    <!-- 评分方案悬浮预览 (S+) -->
+    <Teleport to="body">
+      <Transition name="sp-popover">
+        <div v-if="previewVisible && previewTarget"
+             class="sp-popover"
+             :style="{ top: previewPos.top, left: previewPos.left }"
+             @mouseenter="keepPreview"
+             @mouseleave="hidePreview">
+          <div class="sp-popover__head">
+            <div class="sp-popover__title">评分方案 #{{ previewTarget.id }}</div>
+            <div class="sp-popover__sub">
+              <span v-if="previewTarget.sectionId" class="insp-num">分区 #{{ previewTarget.sectionId }}</span>
+              <span v-else class="dim">未关联分区</span>
+              <span class="sp-popover__sep">·</span>
+              <span class="insp-num">{{ previewTarget.precisionDigits }} 位精度</span>
+            </div>
+          </div>
+          <div class="sp-popover__body">
+            <div class="sp-popover__metrics">
+              <div class="sp-popover__metric">
+                <div class="sp-popover__metric-num insp-num">{{ previewTarget.minScore }}</div>
+                <div class="sp-popover__metric-label">最低分</div>
+              </div>
+              <div class="sp-popover__metric-rule" />
+              <div class="sp-popover__metric">
+                <div class="sp-popover__metric-num insp-num">{{ previewTarget.maxScore }}</div>
+                <div class="sp-popover__metric-label">满分</div>
+              </div>
+              <div class="sp-popover__metric-rule" />
+              <div class="sp-popover__metric">
+                <div class="sp-popover__metric-num">{{ previewTarget.multiRaterMode || '—' }}</div>
+                <div class="sp-popover__metric-label">多评模式</div>
+              </div>
+            </div>
+            <div class="sp-popover__features">
+              <div class="sp-popover__label">高级特性</div>
+              <div class="sp-popover__feat-list">
+                <span v-if="previewTarget.calibrationEnabled" class="sp-feat sp-feat--info">校准</span>
+                <span v-if="previewTarget.trendFactorEnabled" class="sp-feat sp-feat--pass">趋势</span>
+                <span v-if="previewTarget.decayEnabled" class="sp-feat sp-feat--warn">衰减</span>
+                <span v-if="!previewTarget.calibrationEnabled && !previewTarget.trendFactorEnabled && !previewTarget.decayEnabled"
+                      class="sp-popover__feat-none">仅基础规则</span>
+              </div>
+            </div>
+          </div>
+          <div class="sp-popover__foot">点击进入编辑 · 按 E 进入</div>
+        </div>
+      </Transition>
+    </Teleport>
   </div>
 </template>
 
@@ -236,4 +364,32 @@ onMounted(load)
 .sp-feat--warn { background: var(--insp-warn-pale, #fef3c7); color: var(--insp-warn); }
 
 .col-actions { display: flex; gap: 4px; justify-content: flex-end; }
+
+/* ─ S+ 设计样板 ─────── */
+:deep(.sp-mark) { background: rgba(245, 200, 70, 0.4); color: var(--insp-ink-primary); padding: 0 2px; border-radius: 2px; font-weight: 600; }
+.sp-row.is-focused { outline: 2px solid var(--insp-accent); outline-offset: -2px; }
+.sp-kbd-hint { display: flex; align-items: center; gap: 14px; padding: 6px 12px; margin-bottom: 10px; background: linear-gradient(90deg, rgba(26,109,255,0.06) 0%, transparent 100%); border: 1px solid rgba(26,109,255,0.18); border-radius: var(--insp-radius-md); font-size: 11px; color: var(--insp-ink-secondary); }
+.sp-kbd-hint__group { display: inline-flex; align-items: center; gap: 4px; }
+.sp-kbd-hint__close { margin-left: auto; width: 20px; height: 20px; border: 0; background: transparent; font-size: 16px; color: var(--insp-ink-quaternary); border-radius: 3px; cursor: pointer; }
+.sp-kbd-hint__close:hover { background: rgba(0,0,0,0.06); color: var(--insp-ink-primary); }
+
+.sp-popover { position: fixed; z-index: 9500; width: 320px; background: var(--insp-bg-surface); border: 1px solid var(--insp-border-strong); border-radius: var(--insp-radius-lg); box-shadow: 0 12px 32px rgba(0,0,0,0.18); overflow: hidden; }
+.sp-popover__head { padding: 12px 14px; border-bottom: 1px solid var(--insp-border-subtle); }
+.sp-popover__title { font-size: 13.5px; font-weight: 600; color: var(--insp-ink-primary); margin-bottom: 4px; }
+.sp-popover__sub { display: flex; align-items: center; gap: 5px; font-size: 11px; color: var(--insp-ink-tertiary); }
+.sp-popover__sep { color: var(--insp-ink-quaternary); }
+.sp-popover__body { padding: 12px 14px; display: flex; flex-direction: column; gap: 12px; }
+.sp-popover__metrics { display: flex; align-items: center; gap: 8px; }
+.sp-popover__metric { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 2px; }
+.sp-popover__metric-num { font-family: var(--insp-font-mono); font-size: 16px; font-weight: 700; color: var(--insp-ink-primary); line-height: 1; }
+.sp-popover__metric-label { font-size: 9px; color: var(--insp-ink-tertiary); letter-spacing: 0.04em; text-transform: uppercase; }
+.sp-popover__metric-rule { width: 1px; height: 20px; background: var(--insp-border-subtle); }
+.sp-popover__features { display: flex; flex-direction: column; gap: 4px; }
+.sp-popover__label { font-size: 10px; color: var(--insp-ink-tertiary); letter-spacing: 0.04em; text-transform: uppercase; font-weight: 600; }
+.sp-popover__feat-list { display: flex; flex-wrap: wrap; gap: 4px; }
+.sp-popover__feat-none { font-size: 11px; color: var(--insp-ink-quaternary); font-style: italic; }
+.sp-popover__foot { padding: 8px 14px; background: var(--insp-bg-subtle); border-top: 1px solid var(--insp-border-subtle); font-size: 10.5px; color: var(--insp-ink-tertiary); text-align: center; }
+.sp-popover-enter-active, .sp-popover-leave-active { transition: all 0.15s ease; }
+.sp-popover-enter-from { opacity: 0; transform: translateX(-4px) scale(0.98); }
+.sp-popover-leave-to { opacity: 0; }
 </style>
