@@ -2,6 +2,7 @@
 import { ref, computed, onMounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { storeToRefs } from 'pinia'
+import { Settings } from 'lucide-vue-next'
 import { messageApi } from '@/api/message'
 import { useMessageStore } from '@/stores/message'
 import type { MsgNotification } from '@/types/message'
@@ -187,27 +188,24 @@ onMounted(() => {
 </script>
 
 <template>
-  <div class="msg-page">
-    <!-- Header -->
+  <div class="msg-page insp-shell">
+    <!-- Header (token 化) -->
     <header class="msg-header">
-      <div class="header-left">
-        <h1 class="page-title">消息中心</h1>
+      <div class="msg-head__lead">
+        <span class="insp-eyebrow">消息中心 · Notification Center</span>
+        <h1 class="msg-title">消息中心</h1>
         <div class="stats-row">
-          <span class="stat">全部 <b>{{ total }}</b></span>
+          <span class="stat">全部 <b class="insp-num">{{ total }}</b></span>
           <i class="stat-sep" />
           <span class="stat stat-unread">
-            <span class="dot dot-unread" />未读 <b>{{ unreadTotal }}</b>
+            <span class="dot dot-unread" />未读 <b class="insp-num">{{ unreadTotal }}</b>
           </span>
         </div>
       </div>
       <div class="header-right">
-        <button v-if="unreadTotal > 0" class="btn-ghost" @click="handleMarkAllRead">全部已读</button>
-        <button class="btn-create" @click="goConfig">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
-            <path d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" stroke="currentColor" stroke-width="1.8"/>
-            <path d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" stroke="currentColor" stroke-width="1.8"/>
-          </svg>
-          消息配置
+        <button v-if="unreadTotal > 0" class="insp-btn" @click="handleMarkAllRead">全部已读</button>
+        <button class="insp-btn insp-btn--accent" @click="goConfig">
+          <Settings :size="13" />消息配置
         </button>
       </div>
     </header>
@@ -365,113 +363,99 @@ onMounted(() => {
   font-family: 'DM Sans', sans-serif;
 }
 
-/* Header */
+/* Header (token 化) */
 .msg-header {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   justify-content: space-between;
-  padding: 20px 24px 16px;
-  background: #fff;
-  border-bottom: 1px solid #e8eaed;
+  gap: var(--insp-sp-4);
+  padding: var(--insp-sp-3) var(--insp-sp-4);
+  background: var(--insp-bg-surface);
+  border: 1px solid var(--insp-border-default);
+  border-radius: var(--insp-radius-lg);
+  margin: var(--insp-sp-3) var(--insp-sp-4) var(--insp-sp-3);
 }
-.header-left { display: flex; flex-direction: column; }
-.page-title {
-  font-family: 'Plus Jakarta Sans', sans-serif;
-  font-size: 20px;
-  font-weight: 700;
-  color: #111827;
-  letter-spacing: -0.025em;
-  margin: 0;
+.msg-head__lead { display: flex; flex-direction: column; gap: 2px; }
+.msg-title {
+  font-family: var(--insp-font-display);
+  font-size: var(--insp-text-h1);
+  font-weight: var(--insp-fw-bold);
+  color: var(--insp-ink-primary);
+  letter-spacing: var(--insp-tracking-tight);
+  margin: 2px 0 0;
+  line-height: var(--insp-leading-tight);
 }
 .stats-row {
   display: flex;
   align-items: center;
-  gap: 8px;
-  margin-top: 6px;
+  gap: var(--insp-sp-2);
+  margin-top: var(--insp-sp-1);
 }
 .stat {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
-  font-size: 12.5px;
-  color: #6b7280;
+  gap: var(--insp-sp-1);
+  font-size: var(--insp-text-sm);
+  color: var(--insp-ink-tertiary);
 }
-.stat b { font-weight: 600; color: #111827; }
-.stat-unread b { color: #ef4444; }
-.stat-sep { display: block; width: 1px; height: 10px; background: #d1d5db; }
-
-.header-right { display: flex; gap: 8px; align-items: center; }
-
-.btn-ghost {
-  padding: 7px 14px;
-  background: none;
-  border: 1px solid #e5e7eb;
-  border-radius: 7px;
-  font-size: 13px;
-  font-weight: 500;
-  color: #6b7280;
-  cursor: pointer;
-  font-family: inherit;
-  transition: all 0.15s;
+.stat b { font-weight: var(--insp-fw-semibold); color: var(--insp-ink-primary); }
+.stat-unread b { color: var(--insp-fail); }
+.stat-sep {
+  display: block;
+  width: 1px; height: 10px;
+  background: var(--insp-border-strong);
 }
-.btn-ghost:hover { border-color: #9ca3af; color: #374151; }
 
-.btn-create {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 7px 14px;
-  background: #111827;
-  color: #fff;
-  border: none;
-  border-radius: 7px;
-  font-size: 13px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.15s;
-  font-family: inherit;
-}
-.btn-create:hover { background: #1f2937; transform: translateY(-1px); box-shadow: 0 4px 12px rgba(0,0,0,0.15); }
+.header-right { display: flex; gap: var(--insp-sp-2); align-items: center; }
 
-/* Tab Bar */
+/* Tab Bar (token 化) */
 .tab-bar {
   display: flex;
   gap: 0;
-  padding: 0 24px;
-  background: #fff;
-  border-bottom: 1px solid #e8eaed;
+  padding: 0 var(--insp-sp-4);
+  background: var(--insp-bg-surface);
+  border: 1px solid var(--insp-border-default);
+  border-radius: var(--insp-radius-lg);
+  margin: 0 var(--insp-sp-4) var(--insp-sp-3);
 }
 .tab-btn {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  padding: 10px 16px;
-  font-size: 13px;
-  font-weight: 500;
-  color: #6b7280;
+  gap: var(--insp-sp-1);
+  padding: var(--insp-sp-2) var(--insp-sp-3);
+  font-size: var(--insp-text-sm);
+  font-weight: var(--insp-fw-medium);
+  color: var(--insp-ink-tertiary);
   background: none;
   border: none;
   border-bottom: 2px solid transparent;
   cursor: pointer;
   font-family: inherit;
-  transition: all 0.15s;
+  transition: color var(--insp-t-fast), border-color var(--insp-t-fast);
 }
-.tab-btn:hover { color: #374151; }
-.tab-btn.active { color: #111827; border-bottom-color: #111827; font-weight: 600; }
+.tab-btn:hover { color: var(--insp-ink-primary); }
+.tab-btn.active {
+  color: var(--insp-accent);
+  border-bottom-color: var(--insp-accent);
+  font-weight: var(--insp-fw-semibold);
+}
 .tab-count {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   min-width: 18px;
   height: 18px;
-  padding: 0 5px;
-  font-size: 11px;
-  font-weight: 600;
-  background: #f3f4f6;
-  color: #6b7280;
-  border-radius: 9px;
+  padding: 0 var(--insp-sp-1);
+  font-size: 10px;
+  font-weight: var(--insp-fw-semibold);
+  background: var(--insp-bg-subtle);
+  color: var(--insp-ink-tertiary);
+  border-radius: var(--insp-radius-pill);
 }
-.tab-btn.active .tab-count { background: #111827; color: #fff; }
+.tab-btn.active .tab-count {
+  background: var(--insp-accent);
+  color: #fff;
+}
 
 /* Filter Bar */
 .filter-bar {
@@ -587,7 +571,7 @@ onMounted(() => {
   flex-shrink: 1;
   min-width: 0;
 }
-.msg-title-unread { color: #111827; font-weight: 600; }
+.msg-title-unread { color: var(--insp-ink-primary); font-weight: 600; }
 .msg-preview {
   font-size: 12px;
   color: #9ca3af;
@@ -660,7 +644,7 @@ onMounted(() => {
   font-family: inherit;
   transition: all 0.15s;
 }
-.btn-load:hover:not(:disabled) { color: #111827; border-color: #9ca3af; }
+.btn-load:hover:not(:disabled) { color: var(--insp-ink-primary); border-color: #9ca3af; }
 .btn-load:disabled { opacity: 0.6; cursor: not-allowed; }
 
 .no-more {
@@ -687,7 +671,7 @@ onMounted(() => {
   width: 20px;
   height: 20px;
   border: 2px solid #e5e7eb;
-  border-top-color: #111827;
+  border-top-color: var(--insp-ink-primary);
   border-radius: 50%;
   animation: spin 0.6s linear infinite;
 }
@@ -733,7 +717,7 @@ onMounted(() => {
 .drawer-head h3 {
   font-size: 15px;
   font-weight: 700;
-  color: #111827;
+  color: var(--insp-ink-primary);
   margin: 0;
 }
 .drawer-body {
@@ -747,7 +731,7 @@ onMounted(() => {
 .detail-title {
   font-size: 15px;
   font-weight: 600;
-  color: #111827;
+  color: var(--insp-ink-primary);
   line-height: 1.5;
 }
 .detail-meta {
@@ -831,7 +815,7 @@ onMounted(() => {
   padding: 16px 20px;
   border-bottom: 1px solid #e8eaed;
 }
-.modal-head h3 { font-size: 15px; font-weight: 700; color: #111827; margin: 0; }
+.modal-head h3 { font-size: 15px; font-weight: 700; color: var(--insp-ink-primary); margin: 0; }
 .modal-close {
   display: flex;
   align-items: center;
@@ -846,7 +830,7 @@ onMounted(() => {
   line-height: 1;
   cursor: pointer;
 }
-.modal-close:hover { background: #e5e7eb; color: #111827; }
+.modal-close:hover { background: #e5e7eb; color: var(--insp-ink-primary); }
 .modal-body { padding: 16px 20px; }
 .modal-foot {
   display: flex;
@@ -870,19 +854,21 @@ onMounted(() => {
 }
 .btn-cancel:hover { background: #e5e7eb; }
 .btn-save {
-  padding: 7px 16px;
-  background: #111827;
+  height: var(--insp-h-md);
+  padding: 0 var(--insp-sp-4);
+  background: var(--insp-accent);
   color: #fff;
-  border: none;
-  border-radius: 7px;
-  font-size: 13px;
-  font-weight: 600;
+  border: 1px solid var(--insp-accent);
+  border-radius: var(--insp-radius-md);
+  font-size: var(--insp-text-sm);
+  font-weight: var(--insp-fw-medium);
   cursor: pointer;
   font-family: inherit;
+  transition: background var(--insp-t-fast);
 }
-.btn-save:hover { background: #1f2937; }
-.btn-save-danger { background: #ef4444; }
-.btn-save-danger:hover { background: #dc2626; }
+.btn-save:hover { background: var(--insp-accent-hover); }
+.btn-save-danger { background: var(--insp-fail); border-color: var(--insp-fail); }
+.btn-save-danger:hover { background: #b91c1c; border-color: #b91c1c; }
 
 /* Modal transitions */
 .modal-enter-active, .modal-leave-active { transition: opacity 0.2s; }

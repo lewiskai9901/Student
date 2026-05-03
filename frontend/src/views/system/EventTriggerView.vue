@@ -1,20 +1,20 @@
 <template>
-  <div class="trg-page">
-    <!-- Header -->
+  <div class="trg-page insp-shell">
+    <!-- Header (token 化, 浅色 InspCard 风格) -->
     <header class="trg-header">
-      <div class="header-left">
-        <h1 class="page-title">事件触发器</h1>
+      <div class="trg-head__lead">
+        <span class="insp-eyebrow">事件触发器 · Event Triggers</span>
+        <h1 class="trg-title">事件触发器</h1>
         <div class="stats-row">
-          <span class="stat">总数 <b>{{ totalCount }}</b></span>
+          <span class="stat">总数 <b class="insp-num">{{ totalCount }}</b></span>
           <i class="stat-sep" />
-          <span class="stat"><em class="dot dot-active" /> 启用 <b class="c-enabled">{{ enabledCount }}</b></span>
+          <span class="stat"><em class="dot dot-active" /> 启用 <b class="c-enabled insp-num">{{ enabledCount }}</b></span>
           <i class="stat-sep" />
-          <span class="stat"><em class="dot dot-inactive" /> 禁用 <b>{{ disabledCount }}</b></span>
+          <span class="stat"><em class="dot dot-inactive" /> 禁用 <b class="insp-num">{{ disabledCount }}</b></span>
         </div>
       </div>
-      <button class="btn-create" @click="openTriggerDialog()">
-        <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M7 1v12M1 7h12" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
-        新建触发器
+      <button class="insp-btn insp-btn--accent" @click="openTriggerDialog()">
+        <Plus :size="13" />新建触发器
       </button>
     </header>
 
@@ -295,6 +295,7 @@
 <script setup lang="ts">
 import { ref, computed, reactive, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
+import { Plus } from 'lucide-vue-next'
 import { eventTriggerApi, triggerPointApi, eventTypeApi } from '@/api/event'
 import type { EventTrigger, TriggerPoint, EventType, ConditionOperator, SubjectConfig } from '@/types/event'
 import { CONDITION_OPERATORS, SUBJECT_TYPES } from '@/types/event'
@@ -719,66 +720,66 @@ onMounted(() => { loadAll() })
   display: flex;
   flex-direction: column;
   height: 100%;
-  background: #f8f9fb;
-  font-family: 'DM Sans', sans-serif;
+  background: var(--insp-bg-page);
+  font-family: var(--insp-font-body);
 }
 
-/* Header */
+/* Header (token 化, 浅色 InspCard) */
 .trg-header {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   justify-content: space-between;
-  padding: 20px 24px 16px;
-  background: #fff;
-  border-bottom: 1px solid #e8eaed;
+  gap: var(--insp-sp-4);
+  padding: var(--insp-sp-3) var(--insp-sp-4);
+  background: var(--insp-bg-surface);
+  border: 1px solid var(--insp-border-default);
+  border-radius: var(--insp-radius-lg);
+  margin: var(--insp-sp-3) var(--insp-sp-4) var(--insp-sp-3);
 }
-.page-title {
-  font-family: 'Plus Jakarta Sans', sans-serif;
-  font-size: 20px;
-  font-weight: 700;
-  color: #111827;
-  letter-spacing: -0.025em;
-  margin: 0;
+.trg-head__lead { display: flex; flex-direction: column; gap: 2px; }
+.trg-title {
+  font-family: var(--insp-font-display);
+  font-size: var(--insp-text-h1);
+  font-weight: var(--insp-fw-bold);
+  color: var(--insp-ink-primary);
+  letter-spacing: var(--insp-tracking-tight);
+  margin: 2px 0 0;
+  line-height: var(--insp-leading-tight);
 }
 .stats-row {
   display: flex;
   align-items: center;
-  gap: 8px;
-  margin-top: 6px;
+  gap: var(--insp-sp-2);
+  margin-top: var(--insp-sp-1);
 }
-.stat { font-size: 12.5px; color: #6b7280; }
-.stat b { font-weight: 600; }
-.c-enabled { color: #16a34a; }
-.stat-sep { display: block; width: 1px; height: 10px; background: #d1d5db; }
-.dot { display: inline-block; width: 6px; height: 6px; border-radius: 50%; margin-right: 2px; vertical-align: middle; }
-.dot-active { background: #10b981; }
-.dot-inactive { background: #9ca3af; }
-
-.btn-create {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 8px 16px;
-  background: #111827;
-  color: #fff;
-  border: none;
-  border-radius: 8px;
-  font-size: 13px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.15s;
-  font-family: inherit;
+.stat { font-size: var(--insp-text-sm); color: var(--insp-ink-tertiary); }
+.stat b { font-weight: var(--insp-fw-semibold); color: var(--insp-ink-primary); }
+.c-enabled { color: var(--insp-pass); }
+.stat-sep {
+  display: block;
+  width: 1px; height: 10px;
+  background: var(--insp-border-strong);
 }
-.btn-create:hover { background: #1f2937; transform: translateY(-1px); box-shadow: 0 4px 12px rgba(0,0,0,0.15); }
+.dot {
+  display: inline-block;
+  width: 6px; height: 6px;
+  border-radius: var(--insp-radius-pill);
+  margin-right: 2px;
+  vertical-align: middle;
+}
+.dot-active   { background: var(--insp-pass); }
+.dot-inactive { background: var(--insp-ink-quaternary); }
 
-/* Filter Bar */
+/* Filter Bar (token 化) */
 .filter-bar {
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding: 10px 24px;
-  background: #fff;
-  border-bottom: 1px solid #e8eaed;
+  gap: var(--insp-sp-3);
+  padding: var(--insp-sp-2) var(--insp-sp-3);
+  background: var(--insp-bg-surface);
+  border: 1px solid var(--insp-border-default);
+  border-radius: var(--insp-radius-lg);
+  margin: 0 var(--insp-sp-4) var(--insp-sp-3);
 }
 .search-box {
   position: relative;
@@ -786,26 +787,30 @@ onMounted(() => { loadAll() })
 }
 .search-icon {
   position: absolute;
-  left: 10px;
+  left: var(--insp-sp-3);
   top: 50%;
   transform: translateY(-50%);
-  color: #9ca3af;
+  color: var(--insp-ink-tertiary);
   pointer-events: none;
 }
 .search-input {
   width: 100%;
-  padding: 7px 10px 7px 32px;
-  border: 1px solid #e5e7eb;
-  border-radius: 7px;
-  font-size: 13px;
+  height: var(--insp-h-md);
+  padding: 0 var(--insp-sp-3) 0 var(--insp-sp-7);
+  border: 1px solid var(--insp-border-default);
+  border-radius: var(--insp-radius-md);
+  font-size: var(--insp-text-sm);
   font-family: inherit;
-  color: #374151;
-  background: #f9fafb;
-  transition: all 0.15s;
+  color: var(--insp-ink-primary);
+  background: var(--insp-bg-surface);
+  transition: border-color var(--insp-t-fast), box-shadow var(--insp-t-fast);
   outline: none;
 }
-.search-input:focus { border-color: #2563eb; background: #fff; box-shadow: 0 0 0 3px rgba(37,99,235,0.08); }
-.search-input::placeholder { color: #9ca3af; }
+.search-input:focus {
+  border-color: var(--insp-accent);
+  box-shadow: var(--insp-shadow-focus);
+}
+.search-input::placeholder { color: var(--insp-ink-quaternary); }
 
 .filter-group { display: flex; gap: 8px; align-items: center; }
 .filter-select {
@@ -881,7 +886,7 @@ onMounted(() => { loadAll() })
 .trg-row:last-child td { border-bottom: none; }
 .text-right { text-align: right !important; }
 
-.cell-name { font-weight: 500; color: #111827; }
+.cell-name { font-weight: 500; color: var(--insp-ink-primary); }
 .cell-module { font-size: 12px; color: #6b7280; }
 .cell-condition { font-size: 12px; color: #6b7280; }
 
@@ -936,7 +941,7 @@ onMounted(() => { loadAll() })
   font-family: inherit;
   transition: all 0.1s;
 }
-.action-btn:hover { background: #f3f4f6; color: #111827; }
+.action-btn:hover { background: #f3f4f6; color: var(--insp-ink-primary); }
 .action-danger:hover { background: #fef2f2; color: #dc2626; }
 .empty-cell { text-align: center; padding: 40px 0 !important; color: #9ca3af; font-size: 13px; }
 
@@ -972,7 +977,7 @@ onMounted(() => { loadAll() })
   font-family: 'Plus Jakarta Sans', sans-serif;
   font-size: 17px;
   font-weight: 700;
-  color: #111827;
+  color: var(--insp-ink-primary);
   margin: 0;
 }
 .drawer-close {
@@ -988,7 +993,7 @@ onMounted(() => { loadAll() })
   cursor: pointer;
   transition: all 0.15s;
 }
-.drawer-close:hover { background: #e5e7eb; color: #111827; }
+.drawer-close:hover { background: #e5e7eb; color: var(--insp-ink-primary); }
 
 .drawer-body {
   flex: 1;
@@ -1034,7 +1039,7 @@ onMounted(() => { loadAll() })
   border-radius: 7px;
   font-size: 13px;
   font-family: inherit;
-  color: #111827;
+  color: var(--insp-ink-primary);
   background: #fafafa;
   outline: none;
   transition: border-color 0.15s;
@@ -1195,7 +1200,7 @@ onMounted(() => { loadAll() })
 .subject-card:hover { border-color: #93c5fd; background: #f0f7ff; }
 .subject-card.checked { border-color: #2563eb; background: #eff6ff; }
 .subject-card-body { flex: 1; display: flex; flex-direction: column; gap: 2px; }
-.subject-card-type { font-size: 13px; font-weight: 600; color: #111827; }
+.subject-card-type { font-size: 13px; font-weight: 600; color: var(--insp-ink-primary); }
 .subject-card.checked .subject-card-type { color: #1d4ed8; }
 .subject-card-fields { font-size: 11px; color: #6b7280; }
 .subject-check { flex-shrink: 0; }
@@ -1262,18 +1267,20 @@ onMounted(() => { loadAll() })
 .btn-save {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  padding: 8px 16px;
-  background: #111827;
+  gap: var(--insp-sp-1);
+  height: var(--insp-h-md);
+  padding: 0 var(--insp-sp-4);
+  background: var(--insp-accent);
   color: #fff;
-  border: none;
-  border-radius: 7px;
-  font-size: 13px;
-  font-weight: 600;
+  border: 1px solid var(--insp-accent);
+  border-radius: var(--insp-radius-md);
+  font-size: var(--insp-text-sm);
+  font-weight: var(--insp-fw-medium);
   cursor: pointer;
   font-family: inherit;
+  transition: background var(--insp-t-fast);
 }
-.btn-save:hover { background: #1f2937; }
+.btn-save:hover { background: var(--insp-accent-hover); }
 .btn-save:disabled { opacity: 0.5; cursor: not-allowed; }
 
 @keyframes spin { to { transform: rotate(360deg); } }
