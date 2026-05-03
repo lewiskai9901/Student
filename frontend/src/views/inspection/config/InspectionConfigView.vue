@@ -6,6 +6,7 @@ import {
   Plus, Search, Copy, Upload, Archive, Ban, Trash2,
   Pencil, MoreHorizontal, LayoutGrid, FileText,
   Library, ListTree, Award, Tag, ArrowRight, List, Rows3,
+  Check, Download, X,
 } from 'lucide-vue-next'
 import { useInspTemplateStore } from '@/stores/inspection/inspTemplateStore'
 import { inspTemplateApi } from '@/api/inspection/template'
@@ -79,6 +80,90 @@ const filteredSections = computed(() => {
   }
   return list
 })
+
+// ==================== 批量选择 ====================
+const selectedIds = ref<Set<number>>(new Set())
+const allSelectedInView = computed(() =>
+  filteredSections.value.length > 0 &&
+  filteredSections.value.every(s => selectedIds.value.has(Number(s.id)))
+)
+const someSelectedInView = computed(() =>
+  !allSelectedInView.value &&
+  filteredSections.value.some(s => selectedIds.value.has(Number(s.id)))
+)
+function toggleSelect(id: number, e?: Event) {
+  e?.stopPropagation()
+  const n = Number(id)
+  const next = new Set(selectedIds.value)
+  if (next.has(n)) next.delete(n); else next.add(n)
+  selectedIds.value = next
+}
+function toggleSelectAll() {
+  if (allSelectedInView.value) {
+    selectedIds.value = new Set()
+  } else {
+    selectedIds.value = new Set(filteredSections.value.map(s => Number(s.id)))
+  }
+}
+function clearSelection() { selectedIds.value = new Set() }
+
+async function batchPublish() {
+  const ids = Array.from(selectedIds.value).filter(id => {
+    const s = rootSections.value.find(x => Number(x.id) === id)
+    return s?.status === 'DRAFT'
+  })
+  if (ids.length === 0) { ElMessage.warning('当前选中的模板里没有可发布的草稿'); return }
+  try {
+    await ElMessageBox.confirm(`将批量发布 ${ids.length} 个草稿模板, 每个会创建不可变快照. 确认?`, '批量发布', { type: 'warning' })
+    let ok = 0, fail = 0
+    for (const id of ids) {
+      try { await templateStore.publish(id as any); ok++ } catch { fail++ }
+    }
+    ElMessage.success(`成功 ${ok} 条${fail > 0 ? `, 失败 ${fail} 条` : ''}`)
+    clearSelection()
+    loadTemplates()
+  } catch { /* cancel */ }
+}
+async function batchArchive() {
+  const ids = Array.from(selectedIds.value)
+  if (ids.length === 0) return
+  try {
+    await ElMessageBox.confirm(`将批量归档 ${ids.length} 个模板, 归档后从默认列表隐藏. 确认?`, '批量归档', { type: 'warning' })
+    let ok = 0, fail = 0
+    for (const id of ids) {
+      try { await templateStore.archive(id as any); ok++ } catch { fail++ }
+    }
+    ElMessage.success(`已归档 ${ok} 条${fail > 0 ? `, 失败 ${fail} 条` : ''}`)
+    clearSelection()
+    loadTemplates()
+  } catch { /* cancel */ }
+}
+async function batchDuplicate() {
+  const ids = Array.from(selectedIds.value)
+  if (ids.length === 0) return
+  let ok = 0, fail = 0
+  for (const id of ids) {
+    try { await templateStore.duplicate(id as any); ok++ } catch { fail++ }
+  }
+  ElMessage.success(`复制 ${ok} 条${fail > 0 ? `, 失败 ${fail} 条` : ''}`)
+  clearSelection()
+  loadTemplates()
+}
+function batchExport() {
+  const ids = Array.from(selectedIds.value)
+  const rows = filteredSections.value.filter(s => ids.includes(Number(s.id)))
+  const csv = ['ID,名称,状态,版本,模板编码,创建时间,更新时间', ...rows.map(s =>
+    [s.id, s.sectionName, s.status, `v${s.latestVersion}`, s.sectionCode || '', s.createdAt || '', s.updatedAt || ''].join(',')
+  )].join('\n')
+  const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8;' })
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = `templates-${new Date().toISOString().slice(0,10)}.csv`
+  a.click()
+  URL.revokeObjectURL(url)
+  ElMessage.success(`已导出 ${rows.length} 条`)
+}
 
 // ==================== Dropdown ====================
 const openDropdownId = ref<number | null>(null)
@@ -367,6 +452,31 @@ onMounted(() => { loadTemplates() })
       </div>
     </div>
 
+    <!-- 批量操作工具栏 (仅当有选中) -->
+    <Transition name="batch-bar">
+      <div v-if="selectedIds.size > 0" class="cfg-batch-bar">
+        <span class="cfg-batch-bar__count">
+          已选 <strong class="insp-num">{{ selectedIds.size }}</strong> 条
+        </span>
+        <div class="cfg-batch-bar__rule" />
+        <button class="cfg-batch-btn" @click="batchPublish" title="批量发布选中的草稿">
+          <Upload :size="13" /> 发布
+        </button>
+        <button class="cfg-batch-btn" @click="batchDuplicate" title="批量复制为新草稿">
+          <Copy :size="13" /> 复制
+        </button>
+        <button class="cfg-batch-btn" @click="batchArchive" title="批量归档">
+          <Archive :size="13" /> 归档
+        </button>
+        <button class="cfg-batch-btn" @click="batchExport" title="导出 CSV">
+          <Download :size="13" /> 导出 CSV
+        </button>
+        <button class="cfg-batch-btn cfg-batch-btn--ghost" @click="clearSelection" title="取消选中">
+          <X :size="13" /> 取消
+        </button>
+      </div>
+    </Transition>
+
     <!-- List -->
     <section class="cfg-list">
       <div v-if="loading" class="cfg-state">加载中…</div>
@@ -381,12 +491,38 @@ onMounted(() => { loadTemplates() })
         </button>
       </div>
 
-      <ul v-else class="tpl-rows" :class="`tpl-rows--${viewMode}`">
+      <div v-else class="tpl-list-wrap">
+        <!-- 全选行 (仅当有项目时显示) -->
+        <div class="tpl-select-all" :class="`tpl-select-all--${viewMode}`">
+          <label class="tpl-checkbox" @click.stop>
+            <input
+              type="checkbox"
+              :checked="allSelectedInView"
+              :indeterminate.prop="someSelectedInView"
+              @change="toggleSelectAll"
+            />
+            <span class="tpl-checkbox__box"><Check :size="10" /></span>
+          </label>
+          <span class="tpl-select-all__hint">
+            {{ selectedIds.size > 0 ? `已选 ${selectedIds.size} / ${filteredSections.length}` : `选择全部 ${filteredSections.length} 条` }}
+          </span>
+        </div>
+
+      <ul class="tpl-rows" :class="`tpl-rows--${viewMode}`">
         <li
           v-for="(sec, i) in filteredSections" :key="sec.id"
           class="tpl-row"
+          :class="{ 'is-selected': selectedIds.has(Number(sec.id)) }"
           @click="goEdit(sec)"
         >
+          <label class="tpl-checkbox tpl-row__checkbox" @click.stop>
+            <input
+              type="checkbox"
+              :checked="selectedIds.has(Number(sec.id))"
+              @change="toggleSelect(Number(sec.id))"
+            />
+            <span class="tpl-checkbox__box"><Check :size="10" /></span>
+          </label>
           <span class="tpl-row__num insp-num">{{ String(i + 1).padStart(2, '0') }}</span>
 
           <div class="tpl-row__main">
@@ -441,6 +577,7 @@ onMounted(() => { loadTemplates() })
           </div>
         </li>
       </ul>
+      </div>
     </section>
 
     <!-- Dropdown Menu (Teleported to body) -->
@@ -846,14 +983,15 @@ onMounted(() => { loadTemplates() })
 }
 .tpl-row {
   display: grid;
-  grid-template-columns: 40px 1fr auto;
-  gap: 12px;
+  grid-template-columns: 22px 36px 1fr auto;
+  gap: 10px;
   align-items: center;
   padding: 12px 16px;
   border-bottom: 1px solid var(--insp-border-subtle);
   cursor: pointer;
   transition: background var(--insp-t-fast);
 }
+.tpl-row__checkbox { padding: 4px; margin: -4px; }
 .tpl-row:last-child { border-bottom: 0; }
 .tpl-row:hover { background: var(--insp-bg-subtle); }
 
@@ -925,11 +1063,137 @@ onMounted(() => { loadTemplates() })
   border-radius: 2px;
 }
 
+/* ─ 批量操作工具栏 ─────── */
+.cfg-batch-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 14px;
+  margin-bottom: 8px;
+  background: var(--insp-ink-primary);
+  border-radius: var(--insp-radius-md);
+  color: white;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+}
+.cfg-batch-bar__count {
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.85);
+}
+.cfg-batch-bar__count strong { color: white; font-size: 14px; }
+.cfg-batch-bar__rule {
+  width: 1px;
+  height: 14px;
+  background: rgba(255, 255, 255, 0.18);
+  margin: 0 4px;
+}
+.cfg-batch-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 10px;
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: var(--insp-radius-sm);
+  color: white;
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all var(--insp-t-fast);
+}
+.cfg-batch-btn:hover {
+  background: rgba(255, 255, 255, 0.2);
+  border-color: rgba(255, 255, 255, 0.32);
+}
+.cfg-batch-btn--ghost {
+  background: transparent;
+  margin-left: auto;
+  color: rgba(255, 255, 255, 0.6);
+  border-color: rgba(255, 255, 255, 0.12);
+}
+.cfg-batch-btn--ghost:hover {
+  color: white;
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.batch-bar-enter-active, .batch-bar-leave-active { transition: all 0.2s ease; }
+.batch-bar-enter-from, .batch-bar-leave-to { opacity: 0; transform: translateY(-4px); }
+
+/* ─ Checkbox ─────── */
+.tpl-checkbox {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  user-select: none;
+}
+.tpl-checkbox input {
+  position: absolute;
+  opacity: 0;
+  width: 0;
+  height: 0;
+  pointer-events: none;
+}
+.tpl-checkbox__box {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  border: 1.5px solid var(--insp-border-strong);
+  border-radius: 3px;
+  background: var(--insp-bg-surface);
+  color: transparent;
+  transition: all var(--insp-t-fast);
+}
+.tpl-checkbox:hover .tpl-checkbox__box { border-color: var(--insp-accent); }
+.tpl-checkbox input:checked ~ .tpl-checkbox__box {
+  background: var(--insp-accent);
+  border-color: var(--insp-accent);
+  color: white;
+}
+.tpl-checkbox input:indeterminate ~ .tpl-checkbox__box {
+  background: var(--insp-accent);
+  border-color: var(--insp-accent);
+  color: white;
+  position: relative;
+}
+.tpl-checkbox input:indeterminate ~ .tpl-checkbox__box::after {
+  content: '';
+  position: absolute;
+  width: 8px;
+  height: 2px;
+  background: white;
+  border-radius: 1px;
+}
+.tpl-checkbox input:indeterminate ~ .tpl-checkbox__box svg { display: none; }
+
+/* 全选行 */
+.tpl-select-all {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 16px;
+  border-bottom: 1px solid var(--insp-border-subtle);
+  background: var(--insp-bg-subtle);
+}
+.tpl-select-all--compact { padding: 6px 14px; }
+.tpl-select-all__hint {
+  font-size: 11px;
+  color: var(--insp-ink-tertiary);
+}
+
+/* 选中行高亮 */
+.tpl-row.is-selected {
+  background: var(--insp-accent-paler);
+  box-shadow: inset 3px 0 0 var(--insp-accent);
+}
+
 /* 紧凑模式 */
 .tpl-rows--compact .tpl-row {
   padding: 7px 14px;
-  grid-template-columns: 32px 1fr auto;
-  gap: 10px;
+  grid-template-columns: 22px 28px 1fr auto;
+  gap: 8px;
 }
 .tpl-rows--compact .tpl-row__main { gap: 2px; }
 .tpl-rows--compact .tpl-row__line1 { gap: 6px; }
