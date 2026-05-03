@@ -1,72 +1,68 @@
 <template>
-  <div class="h-full flex flex-col" style="background:#f4f6f9;">
+  <div class="sp-root insp-shell">
     <!-- Top bar -->
-    <div class="sp-topbar">
-      <div class="flex items-center gap-3">
-        <button class="sp-ic" @click="goBack">
-          <ArrowLeft class="w-4 h-4" />
+    <header class="sp-topbar">
+      <div class="sp-topbar__lead">
+        <button class="sp-back" @click="goBack" title="返回">
+          <ArrowLeft :size="14" />
         </button>
-        <h1 class="text-base font-semibold" style="color:#1e2a3a;">汇总规则</h1>
-        <span v-if="profile" style="font-size:12px; color:#8c95a3;">分区 #{{ profile.sectionId }}</span>
+        <div class="sp-head-text">
+          <span class="insp-eyebrow">评分方案</span>
+          <h1 class="sp-title">汇总规则</h1>
+        </div>
+        <span v-if="profile" class="insp-chip insp-chip--info">分区 #{{ profile.sectionId }}</span>
       </div>
-      <div class="flex items-center gap-2">
-        <button
-          v-if="profile && dirty"
-          class="sp-btn-primary"
-          @click="saveProfile"
-        >
+      <div class="sp-topbar__actions">
+        <InspButton v-if="profile && dirty" variant="accent" @click="saveProfile">
           保存配置
-        </button>
+        </InspButton>
       </div>
-    </div>
+    </header>
 
     <!-- Loading -->
-    <div v-if="loading" class="flex-1 flex items-center justify-center">
-      <div style="color:#8c95a3; font-size:13px;">加载中...</div>
+    <div v-if="loading" class="sp-state">
+      <InspSpinner />
     </div>
 
     <!-- No profile yet (fallback, normally auto-created) -->
-    <div v-else-if="!profile" class="flex-1 flex items-center justify-center">
-      <div class="text-center">
-        <div style="color:#8c95a3; font-size:13px; margin-bottom:12px;">初始化配置失败</div>
-        <button class="sp-btn-primary" @click="initProfile">重试</button>
-      </div>
+    <div v-else-if="!profile" class="sp-state">
+      <InspEmptyState title="初始化配置失败" description="请检查分区配置或重试">
+        <template #action>
+          <InspButton variant="accent" @click="initProfile">重试</InspButton>
+        </template>
+      </InspEmptyState>
     </div>
 
     <!-- Main 2-column layout -->
-    <div v-else class="flex-1 overflow-hidden flex">
+    <div v-else class="sp-body">
       <!-- LEFT: Scrollable config column -->
       <div class="sp-left">
         <!-- Inline settings -->
-        <div class="sp-card">
-          <div class="sp-section-head">
+        <section class="sp-card">
+          <header class="sp-section-head">
             <h3 class="sp-section-title">基础设置</h3>
-          </div>
-          <div class="grid grid-cols-3 gap-4">
+          </header>
+          <div class="sp-grid-3">
             <div class="sp-fld">
               <label title="分数的绝对上限">最高分</label>
-              <input v-model.number="profileForm.maxScore" type="number" @input="dirty = true" />
+              <input class="insp-input" v-model.number="profileForm.maxScore" type="number" @input="dirty = true" />
             </div>
             <div class="sp-fld">
               <label title="分数的绝对下限">最低分</label>
-              <input v-model.number="profileForm.minScore" type="number" @input="dirty = true" />
+              <input class="insp-input" v-model.number="profileForm.minScore" type="number" @input="dirty = true" />
             </div>
             <div class="sp-fld">
               <label title="最终分数保留的小数位数">精度</label>
-              <input v-model.number="profileForm.precisionDigits" type="number" min="0" max="4" @input="dirty = true" />
+              <input class="insp-input" v-model.number="profileForm.precisionDigits" type="number" min="0" max="4" @input="dirty = true" />
             </div>
           </div>
-        </div>
+        </section>
 
-        <!-- Dimensions -->
-        <div class="sp-card">
-          <DimensionTable
-            :dimensions="store.dimensions"
-          />
-        </div>
+        <section class="sp-card">
+          <DimensionTable :dimensions="store.dimensions" />
+        </section>
 
-        <!-- Grade Bands -->
-        <div class="sp-card">
+        <section class="sp-card">
           <GradeBandEditor
             :grade-bands="store.gradeBands"
             @create="handleCreateGradeBand"
@@ -74,26 +70,24 @@
             @delete="handleDeleteGradeBand"
             @apply-preset="handleApplyPreset"
           />
-        </div>
+        </section>
 
-        <!-- Calculation Rules -->
-        <div class="sp-card">
+        <section class="sp-card">
           <CalcRuleChain
             :rules="store.rules"
             @create="handleCreateRule"
             @update="handleUpdateRule"
             @delete="handleDeleteRule"
           />
-        </div>
+        </section>
 
-        <!-- Advanced Settings (1.9-1.12) -->
-        <div class="sp-card">
+        <section class="sp-card">
           <AdvancedScoringSettings
             v-if="profile"
             :profile="profile"
             @save="handleSaveAdvancedSettings"
           />
-        </div>
+        </section>
       </div>
 
       <!-- RIGHT: Sticky sidebar -->
@@ -158,6 +152,9 @@ import CalcRuleChain from './components/CalcRuleChain.vue'
 import ScoreSimulator from './components/ScoreSimulator.vue'
 import VersionHistory from './components/VersionHistory.vue'
 import AdvancedScoringSettings from './components/AdvancedScoringSettings.vue'
+import InspButton from '../shared/InspButton.vue'
+import InspSpinner from '../shared/InspSpinner.vue'
+import InspEmptyState from '../shared/InspEmptyState.vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -368,56 +365,151 @@ async function handlePublishVersion(changeSummary: string) {
 </script>
 
 <style scoped>
-/* ---- Buttons ---- */
-.sp-btn-primary { display:inline-flex; align-items:center; gap:5px; padding:8px 16px; background:#1a6dff; color:#fff; border:none; border-radius:8px; font-size:13px; font-weight:500; cursor:pointer; transition:background 0.15s; white-space:nowrap; }
-.sp-btn-primary:hover { background:#1558d6; }
-.sp-ic { background:none; border:none; padding:5px; color:#8c95a3; cursor:pointer; border-radius:6px; display:flex; align-items:center; transition:all 0.12s; }
-.sp-ic:hover { color:#1a6dff; background:#f0f4ff; }
+/* ============================================================
+ * ScoringProfileEditor — A 级 token 化
+ * ============================================================ */
+.sp-root {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  background: var(--insp-bg-page);
+}
 
-/* ---- Form fields ---- */
-.sp-fld label { display:block; font-size:12px; font-weight:500; color:#5a6474; margin-bottom:5px; }
-.sp-fld input, .sp-fld select, .sp-fld textarea { width:100%; border:1px solid #dce1e8; border-radius:8px; padding:8px 12px; font-size:13px; outline:none; transition:border-color 0.2s, box-shadow 0.2s; color:#1e2a3a; background:#fff; }
-.sp-fld input::placeholder, .sp-fld textarea::placeholder { color:#b8c0cc; }
-.sp-fld input:focus, .sp-fld select:focus, .sp-fld textarea:focus { border-color:#7aadff; box-shadow:0 0 0 3px rgba(26,109,255,0.08); }
+/* Top bar */
+.sp-topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--insp-sp-3) var(--insp-sp-4);
+  background: var(--insp-bg-surface);
+  border-bottom: 1px solid var(--insp-border-default);
+  flex-shrink: 0;
+}
+.sp-topbar__lead { display: flex; align-items: center; gap: var(--insp-sp-3); }
+.sp-topbar__actions { display: flex; align-items: center; gap: var(--insp-sp-2); }
 
-/* ---- Top bar ---- */
-.sp-topbar { background:#fff; border-bottom:1px solid #e8ecf1; padding:12px 20px; display:flex; align-items:center; justify-content:space-between; flex-shrink:0; }
+.sp-back {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--insp-h-md);
+  height: var(--insp-h-md);
+  border: 1px solid var(--insp-border-default);
+  border-radius: var(--insp-radius-md);
+  background: var(--insp-bg-surface);
+  color: var(--insp-ink-tertiary);
+  cursor: pointer;
+  transition: background var(--insp-t-fast), color var(--insp-t-fast), border-color var(--insp-t-fast);
+}
+.sp-back:hover {
+  background: var(--insp-bg-subtle);
+  color: var(--insp-ink-primary);
+  border-color: var(--insp-border-strong);
+}
 
-/* ---- 2-column layout ---- */
+.sp-head-text { display: flex; flex-direction: column; gap: 2px; }
+.sp-title {
+  font-family: var(--insp-font-display);
+  font-size: var(--insp-text-h2);
+  font-weight: var(--insp-fw-bold);
+  letter-spacing: var(--insp-tracking-tight);
+  color: var(--insp-ink-primary);
+  margin: 0;
+  line-height: var(--insp-leading-tight);
+}
+
+/* States (loading / empty) */
+.sp-state {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Body 2-column */
+.sp-body { flex: 1; display: flex; overflow: hidden; }
 .sp-left {
   flex: 1;
   overflow-y: auto;
-  padding: 20px;
+  padding: var(--insp-sp-4);
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: var(--insp-sp-3);
   min-width: 0;
 }
 .sp-right {
-  width: 380px;
+  width: 360px;
   flex-shrink: 0;
-  border-left: 1px solid #e8ecf1;
-  background: #fff;
+  border-left: 1px solid var(--insp-border-default);
+  background: var(--insp-bg-surface);
   overflow-y: auto;
   display: flex;
   flex-direction: column;
 }
 
-/* ---- Card ---- */
-.sp-card { background:#fff; border-radius:14px; box-shadow:0 1px 3px rgba(0,0,0,0.04), 0 1px 2px rgba(0,0,0,0.02); padding:20px; }
+/* Card */
+.sp-card {
+  background: var(--insp-bg-surface);
+  border: 1px solid var(--insp-border-default);
+  border-radius: var(--insp-radius-lg);
+  padding: var(--insp-sp-4);
+}
 
-/* ---- Section head ---- */
-.sp-section-head { display:flex; align-items:center; justify-content:space-between; margin-bottom:14px; }
-.sp-section-title { font-size:13px; font-weight:600; color:#1e2a3a; margin:0; }
+/* Section head */
+.sp-section-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--insp-sp-3);
+}
+.sp-section-title {
+  font-size: var(--insp-text-md);
+  font-weight: var(--insp-fw-semibold);
+  color: var(--insp-ink-primary);
+  margin: 0;
+}
 
-/* ---- Health check ---- */
-.sp-health { padding:16px; border-bottom:1px solid #eef0f3; }
-.sp-health-title { display:flex; align-items:center; gap:6px; font-size:13px; font-weight:600; color:#1e2a3a; margin-bottom:12px; }
-.sp-health-icon { color:#8c95a3; }
+/* Form fields */
+.sp-grid-3 {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--insp-sp-3);
+}
+.sp-fld { display: flex; flex-direction: column; gap: var(--insp-sp-1); }
+.sp-fld label {
+  display: block;
+  font-size: var(--insp-text-xs);
+  font-weight: var(--insp-fw-medium);
+  color: var(--insp-ink-tertiary);
+}
+.sp-fld .insp-input { width: 100%; }
 
-.sp-checks { display:flex; flex-direction:column; gap:6px; }
-.sp-check { display:flex; align-items:center; gap:8px; font-size:12px; padding:5px 8px; border-radius:8px; }
-.sp-check.ok { color:#059669; background:#f0fdf4; }
-.sp-check.warn { color:#d97706; background:#fffbeb; }
-.sp-check.error { color:#dc2626; background:#fef2f2; }
+/* Health check */
+.sp-health {
+  padding: var(--insp-sp-3) var(--insp-sp-4);
+  border-bottom: 1px solid var(--insp-border-subtle);
+}
+.sp-health-title {
+  display: flex;
+  align-items: center;
+  gap: var(--insp-sp-1);
+  font-size: var(--insp-text-md);
+  font-weight: var(--insp-fw-semibold);
+  color: var(--insp-ink-primary);
+  margin-bottom: var(--insp-sp-3);
+}
+.sp-health-icon { color: var(--insp-ink-tertiary); }
+
+.sp-checks { display: flex; flex-direction: column; gap: var(--insp-sp-1); }
+.sp-check {
+  display: flex;
+  align-items: center;
+  gap: var(--insp-sp-2);
+  font-size: var(--insp-text-sm);
+  padding: var(--insp-sp-1) var(--insp-sp-2);
+  border-radius: var(--insp-radius-sm);
+}
+.sp-check.ok    { color: var(--insp-pass); background: var(--insp-pass-pale); }
+.sp-check.warn  { color: var(--insp-warn); background: var(--insp-warn-pale); }
+.sp-check.error { color: var(--insp-fail); background: var(--insp-fail-pale); }
 </style>
