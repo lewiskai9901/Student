@@ -46,6 +46,7 @@ const taskId = Number(route.params.id)
 const loading = ref(false)
 const detailLoading = ref(false)
 const task = ref<InspTask | null>(null)
+const project = ref<any | null>(null)
 const submissions = ref<InspSubmission[]>([])
 const details = ref<SubmissionDetail[]>([])
 const allSections = ref<TemplateSection[]>([])
@@ -321,6 +322,17 @@ const targetScore = computed(() => {
     }
   }
   return total
+})
+
+/** F4: 当前目标是否有任何评分项被打过分 (用于禁用"完成并下一个") */
+const hasAnyScored = computed(() => {
+  for (const g of targetSectionGroups.value) {
+    if (g.isIntermediate) continue
+    for (const d of g.details) {
+      if (isDetailScored(d)) return true
+    }
+  }
+  return false
 })
 
 function isDetailScored(detail: SubmissionDetail): boolean {
@@ -914,9 +926,9 @@ async function loadData() {
 
     if (task.value) {
       try {
-        const project = await getProject(task.value.projectId)
+        project.value = await getProject(task.value.projectId)
         // 多模板项目：从计划获取 rootSectionId，回退到项目的
-        let rsi = project.rootSectionId
+        let rsi = project.value.rootSectionId
         if (!rsi) {
           try {
             const plans = await http.get<any[]>('/inspection/plans', { params: { projectId: task.value.projectId } })
@@ -1109,7 +1121,7 @@ onMounted(() => loadData())
         </button>
         <div class="topbar-info">
           <div class="topbar-title">
-            <span class="task-code">{{ task?.taskCode || '—' }}</span>
+            <span v-if="project" class="project-name">{{ project.projectName }}</span>
             <el-tag
               v-if="task"
               :type="(TaskStatusConfig[task.status as TaskStatus]?.type as any)"
@@ -1120,9 +1132,10 @@ onMounted(() => loadData())
             </el-tag>
           </div>
           <div class="topbar-sub" v-if="task">
-            {{ task.taskDate }}
-            <span v-if="task.inspectorName">· {{ task.inspectorName }}</span>
-            <span class="progress-text">进度 {{ progressText }}</span>
+            <span class="task-code-sub">{{ task.taskCode }}</span>
+            <span>· {{ task.taskDate }}</span>
+            <span v-if="task.inspectorName">· 检查员 {{ task.inspectorName }}</span>
+            <span class="progress-text">· 进度 {{ progressText }}</span>
           </div>
         </div>
       </div>
@@ -1136,7 +1149,15 @@ onMounted(() => loadData())
         </el-button>
         <el-button
           v-if="task.status === 'IN_PROGRESS'"
-          type="warning" size="small"
+          size="small"
+          @click="goBack"
+          title="保留当前评分, 稍后继续"
+        >
+          暂存退出
+        </el-button>
+        <el-button
+          v-if="task.status === 'IN_PROGRESS'"
+          type="primary" size="small"
           @click="handleSubmitTask"
         >
           <Send :size="13" class="btn-icon" />提交任务
@@ -1186,7 +1207,8 @@ onMounted(() => loadData())
             class="target-item" :class="{ active: selectedTargetId === t.targetId }"
             @click="selectTarget(t.targetId)"
           >
-            <span class="target-dot" :class="getTargetDotClass(t.targetId)" />
+            <span class="target-dot" :class="getTargetDotClass(t.targetId)"
+                  :title="getTargetDotClass(t.targetId) === 'done' ? '已完成' : getTargetDotClass(t.targetId) === 'progress' ? '进行中' : '待检'" />
             <span class="target-name">{{ t.targetName }}</span>
             <span class="target-score">{{ getTargetProgress(t.targetId).done }}/{{ getTargetProgress(t.targetId).total }}</span>
           </div>
@@ -1397,10 +1419,12 @@ onMounted(() => loadData())
           <div class="bottom-score">
             <div class="score-display">
               <div class="score-label">当前得分</div>
-              <div class="score-value">{{ targetScore }}</div>
+              <div class="score-value" :class="{ 'score-value--zero': targetScore === 0 }">{{ targetScore }}</div>
             </div>
-            <el-button type="primary" :disabled="getTargetStatus(selectedTargetId) === 'COMPLETED'"
-              @click="handleCompleteTarget">
+            <el-button type="primary"
+              :disabled="getTargetStatus(selectedTargetId) === 'COMPLETED' || !hasAnyScored"
+              @click="handleCompleteTarget"
+              :title="hasAnyScored ? '完成此目标并跳到下一个' : '请先评分至少一项'">
               完成并下一个 <ChevronRight :size="14" />
             </el-button>
           </div>
@@ -1479,6 +1503,17 @@ onMounted(() => loadData())
   font-size: var(--insp-text-md);
   font-weight: var(--insp-fw-semibold);
   color: var(--insp-ink-primary);
+}
+.project-name {
+  font-size: var(--insp-text-lg);
+  font-weight: var(--insp-fw-bold);
+  color: var(--insp-ink-primary);
+  letter-spacing: var(--insp-tracking-tight);
+}
+.task-code-sub {
+  font-family: var(--insp-font-mono);
+  font-size: var(--insp-text-xs);
+  color: var(--insp-ink-tertiary);
 }
 
 .topbar-sub {
@@ -1666,15 +1701,19 @@ onMounted(() => loadData())
 .progress-bar-wrap {
   width: 120px;
   height: 4px;
-  background: #e5e7eb;
+  background: var(--insp-bg-sunken);
   border-radius: 2px;
   overflow: hidden;
 }
 .progress-bar-fill {
   height: 100%;
-  background: #1a6dff;
+  background: var(--insp-accent);
   border-radius: 2px;
-  transition: width 0.3s;
+  transition: width var(--insp-t-medium);
+}
+/* F5: 0% 时填充透明 (避免视觉错位) */
+.progress-bar-fill[style*="width: 0%"] {
+  background: transparent;
 }
 .progress-pct {
   font-weight: 500;
@@ -2012,8 +2051,12 @@ onMounted(() => loadData())
 .score-value {
   font-size: 20px;
   font-weight: 700;
-  color: #111827;
+  color: var(--insp-ink-primary);
   font-variant-numeric: tabular-nums;
   line-height: 1.2;
+}
+.score-value--zero {
+  color: var(--insp-ink-quaternary);
+  font-weight: var(--insp-fw-medium);
 }
 </style>
