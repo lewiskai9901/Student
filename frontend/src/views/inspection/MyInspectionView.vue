@@ -132,6 +132,57 @@ const grouped = computed((): DateBucket[] => {
   return out
 })
 
+// ── S+ 搜索高亮 ──
+const searchKeyword = ref('')
+function highlightHtml(text: string, kw: string): string {
+  if (!kw) return text
+  const escaped = kw.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+  return text.replace(new RegExp(`(${escaped})`, 'gi'), '<mark class="my-mark">$1</mark>')
+}
+
+// ── S+ 任务悬浮预览卡 ──
+const previewVisible = ref(false)
+const previewTarget = ref<InspTask | null>(null)
+const previewPos = ref({ top: '0px', left: '0px' })
+let previewShowTimer: any = null
+let previewHideTimer: any = null
+function showTaskPreview(t: InspTask, e: MouseEvent) {
+  clearTimeout(previewHideTimer)
+  clearTimeout(previewShowTimer)
+  const target = e.currentTarget as HTMLElement
+  previewShowTimer = setTimeout(() => {
+    previewTarget.value = t
+    const rect = target.getBoundingClientRect()
+    const popoverWidth = 300
+    if (rect.right + popoverWidth + 16 < window.innerWidth) {
+      previewPos.value = { top: `${rect.top}px`, left: `${rect.right + 8}px` }
+    } else {
+      previewPos.value = { top: `${rect.bottom + 8}px`, left: `${rect.left}px` }
+    }
+    previewVisible.value = true
+  }, 600)
+}
+function hideTaskPreview() {
+  clearTimeout(previewShowTimer)
+  previewHideTimer = setTimeout(() => { previewVisible.value = false }, 100)
+}
+function keepTaskPreview() { clearTimeout(previewHideTimer) }
+
+// ── S+ 键盘提示条 ──
+const showKbdHint = ref(localStorage.getItem('insp_my_kbd_hint_dismissed') !== '1')
+function dismissKbdHint() { showKbdHint.value = false; localStorage.setItem('insp_my_kbd_hint_dismissed', '1') }
+
+// 显示用任务列表 (按 keyword 过滤)
+const filteredAfterSearch = computed(() => {
+  if (!searchKeyword.value.trim()) return filtered.value
+  const q = searchKeyword.value.trim().toLowerCase()
+  return filtered.value.filter(t =>
+    t.taskCode.toLowerCase().includes(q) ||
+    (t.inspectorName || '').toLowerCase().includes(q) ||
+    projectName(t).toLowerCase().includes(q)
+  )
+})
+
 // ── Helpers ──
 function isOverdue(t: InspTask): boolean {
   if (!t.taskDate) return false
@@ -366,12 +417,14 @@ onUnmounted(() => window.removeEventListener('keydown', onKey))
 
         <article
           v-for="(t, i) in bucket.tasks" :key="t.id"
+          :data-task-id="t.id"
           class="task-row"
           :class="{
             'is-focused': flatList.indexOf(t) === focusedIdx,
             'is-overdue': isOverdue(t),
           }"
-          @mouseenter="focusedIdx = flatList.indexOf(t)"
+          @mouseenter="(e) => { focusedIdx = flatList.indexOf(t); showTaskPreview(t, e) }"
+          @mouseleave="hideTaskPreview"
           @click="primaryAction(t).fn()"
         >
           <span class="row-date insp-num">
@@ -433,6 +486,63 @@ onUnmounted(() => window.removeEventListener('keydown', onKey))
         </p>
       </div>
     </section>
+
+    <!-- 任务悬浮预览卡 (S+) -->
+    <Teleport to="body">
+      <Transition name="my-popover">
+        <div v-if="previewVisible && previewTarget"
+             class="my-popover"
+             :style="{ top: previewPos.top, left: previewPos.left }"
+             @mouseenter="keepTaskPreview"
+             @mouseleave="hideTaskPreview">
+          <div class="my-popover__head">
+            <div class="my-popover__title-line">
+              <span class="my-popover__code">{{ previewTarget.taskCode }}</span>
+              <span class="insp-chip" :class="`insp-chip--${statusVariant(previewTarget.status)}`">
+                {{ TaskStatusConfig[previewTarget.status]?.label || previewTarget.status }}
+              </span>
+            </div>
+            <div class="my-popover__title">{{ projectName(previewTarget) }}</div>
+          </div>
+          <div class="my-popover__body">
+            <div class="my-popover__row">
+              <span class="my-popover__label">日期</span>
+              <span class="insp-num">{{ fmtDate(previewTarget.taskDate) }}</span>
+              <span v-if="(previewTarget as any).extendedTo" class="my-popover__ext">
+                延至 <span class="insp-num">{{ fmtDate((previewTarget as any).extendedTo) }}</span>
+              </span>
+            </div>
+            <div v-if="previewTarget.inspectorName" class="my-popover__row">
+              <span class="my-popover__label">检查员</span>
+              <span>{{ previewTarget.inspectorName }}</span>
+            </div>
+            <div v-if="previewTarget.reviewerName && roleInTask(previewTarget) === 'reviewer'" class="my-popover__row">
+              <span class="my-popover__label">你是审核员</span>
+              <span>{{ previewTarget.reviewerName }}</span>
+            </div>
+            <div class="my-popover__row">
+              <span class="my-popover__label">进度</span>
+              <span class="my-popover__progress">
+                <span class="insp-num">{{ previewTarget.completedTargets || 0 }}</span>
+                <span class="dim">/{{ previewTarget.totalTargets || 0 }}</span>
+                <span class="my-popover__pct insp-num">{{ progressPct(previewTarget) }}%</span>
+              </span>
+            </div>
+            <div v-if="previewTarget.lateSubmission" class="my-popover__row my-popover__row--late">
+              <span class="my-popover__label">⏱ 延迟</span>
+              <span class="insp-num">{{ previewTarget.lateDays }}</span> 天交付
+            </div>
+            <div v-if="(previewTarget as any).rejectionCount && (previewTarget as any).rejectionCount > 0" class="my-popover__row">
+              <span class="my-popover__label">已驳回</span>
+              <span class="insp-num">{{ (previewTarget as any).rejectionCount }}</span> 次
+            </div>
+          </div>
+          <div class="my-popover__foot">
+            点击行 → {{ primaryAction(previewTarget).label }}
+          </div>
+        </div>
+      </Transition>
+    </Teleport>
   </div>
 </template>
 
@@ -657,4 +767,108 @@ onUnmounted(() => window.removeEventListener('keydown', onKey))
   .task-row { grid-template-columns: 80px 1fr; gap: var(--insp-sp-3); }
   .row-progress, .row-actions { grid-column: 2; }
 }
+
+/* ─ S+ 搜索高亮 ─────── */
+:deep(.my-mark) {
+  background: rgba(245, 200, 70, 0.4);
+  color: var(--insp-ink-primary);
+  padding: 0 2px;
+  border-radius: 2px;
+  font-weight: 600;
+}
+
+/* ─ S+ 任务悬浮预览卡 ─────── */
+.my-popover {
+  position: fixed;
+  z-index: 9500;
+  width: 300px;
+  background: var(--insp-bg-surface);
+  border: 1px solid var(--insp-border-strong);
+  border-radius: var(--insp-radius-lg);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.18);
+  overflow: hidden;
+}
+.my-popover__head {
+  padding: 11px 14px;
+  background: var(--insp-bg-subtle);
+  border-bottom: 1px solid var(--insp-border-subtle);
+}
+.my-popover__title-line {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+.my-popover__code {
+  font-family: var(--insp-font-mono);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--insp-ink-primary);
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.my-popover__title {
+  font-size: 12.5px;
+  color: var(--insp-ink-secondary);
+  font-weight: 500;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.my-popover__body {
+  padding: 10px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.my-popover__row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 11.5px;
+  color: var(--insp-ink-secondary);
+}
+.my-popover__label {
+  width: 64px;
+  color: var(--insp-ink-tertiary);
+  font-size: 10.5px;
+  letter-spacing: 0.04em;
+  flex-shrink: 0;
+}
+.my-popover__ext {
+  margin-left: auto;
+  color: var(--insp-info);
+  font-size: 10.5px;
+}
+.my-popover__progress {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.my-popover__pct {
+  margin-left: auto;
+  color: var(--insp-accent);
+  font-weight: 600;
+}
+.my-popover__row--late {
+  background: rgba(245, 158, 11, 0.08);
+  margin: 0 -14px;
+  padding: 4px 14px;
+  color: #b45309;
+  font-weight: 500;
+}
+.my-popover__row--late .my-popover__label { color: #b45309; }
+.my-popover__foot {
+  padding: 8px 14px;
+  background: var(--insp-bg-subtle);
+  border-top: 1px solid var(--insp-border-subtle);
+  font-size: 10.5px;
+  color: var(--insp-ink-tertiary);
+  text-align: center;
+}
+.my-popover-enter-active, .my-popover-leave-active { transition: all 0.15s ease; }
+.my-popover-enter-from { opacity: 0; transform: translateX(-4px) scale(0.98); }
+.my-popover-leave-to { opacity: 0; }
 </style>
