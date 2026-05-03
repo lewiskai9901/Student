@@ -567,7 +567,7 @@ const routes: RouteRecordRaw[] = [
           // 仪表盘
           {
             path: '/inspection/dashboard',
-            name: 'Dashboard',
+            name: 'InspectionDashboard',
             component: () => import('@/views/inspection/dashboard/DashboardView.vue'),
             meta: {
               title: '检查平台总览',
