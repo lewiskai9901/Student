@@ -7,6 +7,8 @@ import com.school.management.domain.inspection.model.template.TemplateSection;
 import com.school.management.domain.inspection.repository.*;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -43,22 +45,27 @@ public class ScoringProfileApplicationService {
         return profileRepository.save(profile);
     }
 
+    /** P0-B Redis 缓存 */
     @Transactional(readOnly = true)
+    @Cacheable(value = "ratingConfig", key = "'scoringProfile:' + #id", unless = "#result == null || !#result.isPresent()")
     public Optional<ScoringProfile> getProfile(Long id) {
         return profileRepository.findById(id);
     }
 
     @Transactional(readOnly = true)
+    @Cacheable(value = "ratingConfig", key = "'scoringProfile:section:' + #sectionId", unless = "#result == null || !#result.isPresent()")
     public Optional<ScoringProfile> getProfileBySectionId(Long sectionId) {
         return profileRepository.findBySectionId(sectionId);
     }
 
     @Transactional(readOnly = true)
+    @Cacheable(value = "ratingConfig", key = "'scoringProfiles:all'")
     public List<ScoringProfile> listProfiles() {
         return profileRepository.findAll();
     }
 
     @Transactional
+    @CacheEvict(value = "ratingConfig", allEntries = true)
     public ScoringProfile updateProfile(Long id, BigDecimal maxScore,
                                          BigDecimal minScore, Integer precisionDigits,
                                          Long updatedBy) {
@@ -69,6 +76,7 @@ public class ScoringProfileApplicationService {
     }
 
     @Transactional
+    @CacheEvict(value = "ratingConfig", allEntries = true)
     public ScoringProfile updateAdvancedSettings(Long id,
             Boolean trendFactorEnabled, Integer trendLookbackDays,
             BigDecimal trendBonusPerPercent, BigDecimal trendPenaltyPerPercent,
@@ -92,6 +100,7 @@ public class ScoringProfileApplicationService {
     }
 
     @Transactional
+    @CacheEvict(value = "ratingConfig", allEntries = true)
     public void deleteProfile(Long id) {
         ruleRepository.deleteByScoringProfileId(id);
         gradeBandRepository.deleteByScoringProfileId(id);

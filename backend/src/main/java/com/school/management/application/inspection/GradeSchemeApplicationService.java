@@ -5,6 +5,8 @@ import com.school.management.domain.inspection.model.scoring.GradeScheme;
 import com.school.management.domain.inspection.repository.GradeDefinitionRepository;
 import com.school.management.domain.inspection.repository.GradeSchemeRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -17,12 +19,15 @@ public class GradeSchemeApplicationService {
     private final GradeSchemeRepository schemeRepository;
     private final GradeDefinitionRepository definitionRepository;
 
+    /** P0-B Redis 缓存: 等级方案列表读多写少, 跨用户共享, 30 分钟 TTL. */
+    @Cacheable(value = "ratingConfig", key = "'gradeSchemes:tenant:' + #tenantId")
     public List<GradeScheme> listSchemes(Long tenantId) {
         List<GradeScheme> schemes = schemeRepository.findByTenantIdOrSystem(tenantId);
         schemes.forEach(s -> s.setGrades(definitionRepository.findByGradeSchemeId(s.getId())));
         return schemes;
     }
 
+    @Cacheable(value = "ratingConfig", key = "'gradeScheme:' + #id")
     public GradeScheme getScheme(Long id) {
         GradeScheme scheme = schemeRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("等级方案不存在: " + id));
@@ -31,6 +36,7 @@ public class GradeSchemeApplicationService {
     }
 
     @Transactional
+    @CacheEvict(value = "ratingConfig", allEntries = true)
     public GradeScheme createScheme(Long tenantId, String displayName, String description,
                                      String schemeType, List<GradeDefinition> grades, Long createdBy) {
         GradeScheme scheme = GradeScheme.create(tenantId, displayName, description, schemeType, createdBy);
@@ -41,6 +47,7 @@ public class GradeSchemeApplicationService {
     }
 
     @Transactional
+    @CacheEvict(value = "ratingConfig", allEntries = true)
     public GradeScheme cloneFromPreset(Long sourceId, String displayName, Long tenantId, Long createdBy) {
         GradeScheme source = getScheme(sourceId);
         GradeScheme clone = GradeScheme.create(tenantId, displayName, source.getDescription(),
@@ -58,6 +65,7 @@ public class GradeSchemeApplicationService {
     }
 
     @Transactional
+    @CacheEvict(value = "ratingConfig", allEntries = true)
     public GradeScheme updateScheme(Long id, String displayName, String description,
                                      List<GradeDefinition> grades) {
         GradeScheme scheme = schemeRepository.findById(id)
@@ -73,6 +81,7 @@ public class GradeSchemeApplicationService {
     }
 
     @Transactional
+    @CacheEvict(value = "ratingConfig", allEntries = true)
     public void deleteScheme(Long id) {
         GradeScheme scheme = schemeRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("等级方案不存在: " + id));

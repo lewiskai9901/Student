@@ -73,6 +73,10 @@ public class RedisConfig {
         cacheConfigurations.put("class", buildCacheConfig(Duration.ofHours(1)));
         cacheConfigurations.put("checkTemplates", buildCacheConfig(Duration.ofMinutes(30)));
 
+        // P0-B 检查平台评分配置 (评分方案 / 等级方案 / 维度) - 30 分钟 TTL
+        // 写入路径都已加 @CacheEvict, 实际生效快, 30 分钟更多是兜底防 Redis 异常情况
+        cacheConfigurations.put("ratingConfig", buildCacheConfig(Duration.ofMinutes(30)));
+
         // 动态数据 - 短TTL (5-10分钟) - 学生、检查记录等频繁变动的数据
         cacheConfigurations.put("user_student", buildCacheConfig(Duration.ofMinutes(5)));
         cacheConfigurations.put("student", buildCacheConfig(Duration.ofMinutes(5)));
