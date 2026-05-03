@@ -16,6 +16,11 @@ public class MsgNotificationPO {
     private Long id;
 
     private Long tenantId;
+    /** S-1: 接收人多态 — USER (默认) / GROUP / ROLE */
+    private String receiverType;
+    /** S-1: 接收人 ID — USER 时 = user_id, GROUP 时 = group_id, ROLE 时 = role_id */
+    private Long receiverId;
+    /** 向后兼容 — 当 receiverType=USER 时与 receiverId 同值, 其它类型时为 null */
     private Long userId;
     private String title;
     private String content;

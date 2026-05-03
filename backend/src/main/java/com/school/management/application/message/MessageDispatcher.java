@@ -220,6 +220,44 @@ public class MessageDispatcher {
     }
 
     /**
+     * S-5: 触发器 dry-run — 给定 mock event 预览会派发给哪些接收人, 但不真落库.
+     *
+     * 用于运营/管理员调试: "假设此事件发生, 哪些规则会命中, 各自给谁推?"
+     *
+     * @param mockEvent 事件的快照 (eventCategory/eventType/subjectType/subjectId/payload 等)
+     * @return 每条命中规则的预览结果
+     */
+    public List<DryRunRuleResult> dryRun(EntityEvent mockEvent) {
+        List<MsgSubscriptionRule> rules = subscriptionRuleRepository.findByEventType(
+                mockEvent.getEventCategory(), mockEvent.getEventType());
+        List<DryRunRuleResult> results = new ArrayList<>();
+        for (MsgSubscriptionRule rule : rules) {
+            try {
+                Set<Long> userIds = resolveTargetUsers(rule, mockEvent);
+                results.add(new DryRunRuleResult(
+                        rule.getId(), rule.getRuleName(), rule.getTargetMode(),
+                        rule.getChannel(), rule.getIsEnabled() != null && rule.getIsEnabled() == 1,
+                        new ArrayList<>(userIds), null));
+            } catch (Exception e) {
+                results.add(new DryRunRuleResult(
+                        rule.getId(), rule.getRuleName(), rule.getTargetMode(),
+                        rule.getChannel(), false, List.of(), e.getMessage()));
+            }
+        }
+        return results;
+    }
+
+    public record DryRunRuleResult(
+            Long ruleId,
+            String ruleName,
+            String targetMode,
+            String channel,
+            boolean enabled,
+            List<Long> targetUserIds,
+            String error
+    ) {}
+
+    /**
      * 预览模式：返回规则命中的目标用户集合 (用于 UI 调试)。
      * 依赖事件上下文的模式 ({@link #CONTEXT_DEPENDENT_MODES}) 无事件时返回 null,
      * 让前端提示 "该模式需具体事件触发才能解析".

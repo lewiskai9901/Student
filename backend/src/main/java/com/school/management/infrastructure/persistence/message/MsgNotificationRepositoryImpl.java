@@ -115,6 +115,8 @@ public class MsgNotificationRepositoryImpl implements MsgNotificationRepository 
         return MsgNotification.builder()
                 .id(po.getId())
                 .tenantId(po.getTenantId())
+                .receiverType(po.getReceiverType())
+                .receiverId(po.getReceiverId())
                 .userId(po.getUserId())
                 .title(po.getTitle())
                 .content(po.getContent())
@@ -147,7 +149,16 @@ public class MsgNotificationRepositoryImpl implements MsgNotificationRepository 
             tenantId = TenantContextHolder.getTenantId();
         }
         po.setTenantId(tenantId != null ? tenantId : 0L);
-        po.setUserId(notification.getUserId());
+        // S-1: 接收人多态. 兼容旧调用 (只设 userId 不设 receiverType) 时, 默认 USER
+        String rt = notification.getReceiverType();
+        Long rid = notification.getReceiverId();
+        if (rt == null) {
+            rt = "USER";
+            rid = notification.getUserId();
+        }
+        po.setReceiverType(rt);
+        po.setReceiverId(rid != null ? rid : 0L);
+        po.setUserId("USER".equals(rt) ? rid : notification.getUserId());
         po.setTitle(notification.getTitle());
         po.setContent(notification.getContent());
         po.setMsgType(notification.getMsgType());

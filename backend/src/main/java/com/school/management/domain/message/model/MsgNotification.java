@@ -14,6 +14,11 @@ public class MsgNotification {
 
     private Long id;
     private Long tenantId;
+    /** S-1: 接收人类型 — USER (默认) / GROUP / ROLE — 想发给"组织通知组"或"角色组"时用 */
+    private String receiverType;
+    /** S-1: 接收人 ID — receiverType=USER 时 = userId, GROUP/ROLE 时 = 对应组 ID */
+    private Long receiverId;
+    /** 向后兼容 — receiverType=USER 时与 receiverId 同步; 其它类型时建议为 null */
     private Long userId;
     private String title;
     private String content;
@@ -48,7 +53,9 @@ public class MsgNotification {
      */
     public MsgNotification markRead() {
         return MsgNotification.builder()
-                .id(this.id).tenantId(this.tenantId).userId(this.userId)
+                .id(this.id).tenantId(this.tenantId)
+                .receiverType(this.receiverType).receiverId(this.receiverId)
+                .userId(this.userId)
                 .title(this.title).content(this.content).msgType(this.msgType)
                 .sourceEventType(this.sourceEventType)
                 .sourceRefType(this.sourceRefType).sourceRefId(this.sourceRefId)
@@ -75,16 +82,40 @@ public class MsgNotification {
                                                    String sourceRefType, Long sourceRefId,
                                                    String subjectType, Long subjectId, String subjectName,
                                                    String eventCategory, String sourceModule, Long eventId) {
+        return createForReceiver(tenantId, "USER", userId, title, content,
+                sourceEventType, sourceRefType, sourceRefId,
+                subjectType, subjectId, subjectName,
+                eventCategory, sourceModule, eventId);
+    }
+
+    /**
+     * S-1: 多态接收人工厂 — 支持 USER / GROUP / ROLE.
+     *
+     * @param receiverType USER (用户) / GROUP (通知组) / ROLE (角色) — null 默认 USER
+     * @param receiverId   USER 时 = userId, GROUP 时 = group_id, ROLE 时 = role_id
+     */
+    public static MsgNotification createForReceiver(Long tenantId, String receiverType, Long receiverId,
+                                                     String title, String content,
+                                                     String sourceEventType,
+                                                     String sourceRefType, Long sourceRefId,
+                                                     String subjectType, Long subjectId, String subjectName,
+                                                     String eventCategory, String sourceModule, Long eventId) {
         if (tenantId == null) {
             throw new IllegalArgumentException("tenantId 不能为空，必须从安全上下文或事件租户信息获取");
         }
-        if (userId == null) {
-            throw new IllegalArgumentException("userId 不能为空");
+        if (receiverId == null) {
+            throw new IllegalArgumentException("receiverId 不能为空");
+        }
+        String rt = receiverType == null || receiverType.isBlank() ? "USER" : receiverType.toUpperCase();
+        if (!rt.equals("USER") && !rt.equals("GROUP") && !rt.equals("ROLE")) {
+            throw new IllegalArgumentException("receiverType 必须是 USER/GROUP/ROLE 之一: " + receiverType);
         }
         LocalDateTime now = LocalDateTime.now();
         return MsgNotification.builder()
                 .tenantId(tenantId)
-                .userId(userId)
+                .receiverType(rt)
+                .receiverId(receiverId)
+                .userId(rt.equals("USER") ? receiverId : null)
                 .title(title).content(content)
                 .msgType("EVENT")
                 .sourceEventType(sourceEventType)
@@ -92,7 +123,6 @@ public class MsgNotification {
                 .subjectType(subjectType).subjectId(subjectId).subjectName(subjectName)
                 .eventCategory(eventCategory).sourceModule(sourceModule).eventId(eventId)
                 .isRead(0).createdAt(now)
-                // 站内信落库即送达；后续多通道场景由 ChannelDispatcher 覆盖为 PENDING→SENT
                 .sendStatus(STATUS_SENT).retryCount(0).sentAt(now)
                 .build();
     }
@@ -115,6 +145,8 @@ public class MsgNotification {
         LocalDateTime now = LocalDateTime.now();
         return MsgNotification.builder()
                 .tenantId(tenantId)
+                .receiverType("USER")
+                .receiverId(userId)
                 .userId(userId)
                 .title(title).content(content)
                 .msgType(msgType)

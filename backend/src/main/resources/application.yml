@@ -244,3 +244,7 @@ inspection:
   ai:
     # provider: heuristic (默认, 本地启发式) | claude (调 Anthropic API, 需 ANTHROPIC_API_KEY)
     provider: ${INSPECTION_AI_PROVIDER:heuristic}
+  message:
+    # S-2: 邮件通道 — 默认关闭. 启用前先在 spring.mail 配置 SMTP.
+    email:
+      enabled: ${INSPECTION_EMAIL_ENABLED:false}
