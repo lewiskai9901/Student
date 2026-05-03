@@ -7,18 +7,39 @@
 DELETE FROM insp_template_items WHERE section_id IN (
   SELECT id FROM (SELECT id FROM insp_template_sections WHERE section_code LIKE 'CMP_%') AS s
 );
+DELETE FROM insp_template_versions WHERE template_id IN (
+  SELECT id FROM (SELECT id FROM insp_templates WHERE template_code = 'TPL_CMP_ROOT') AS t
+);
 DELETE FROM insp_template_sections WHERE section_code LIKE 'CMP_%';
+DELETE FROM insp_templates WHERE template_code = 'TPL_CMP_ROOT';
 
--- ───────── 根分区: 综合校园检查 (id 100) ─────────
+-- ───────── 模板实体 (id 200) ─────────
+-- insp_templates 是模板的元数据/容器, root section 通过 template_id 反查它
+INSERT INTO insp_templates
+  (id, tenant_id, template_code, template_name, description, latest_version,
+   status, target_type, created_by, created_at)
+VALUES
+  (200, 0, 'TPL_CMP_ROOT', '综合校园检查',
+   '覆盖卫生/安全/教学/学生 4 大维度的综合性巡检模板, 含 25 检查项',
+   1, 'PUBLISHED', 'ORG', 1, NOW());
+
+-- ───────── 根分区: 综合校园检查 (id 100, 关联 template_id 200) ─────────
 INSERT INTO insp_template_sections
-  (id, tenant_id, parent_section_id, section_code, section_name, target_type,
+  (id, tenant_id, template_id, parent_section_id, section_code, section_name, target_type,
    description, tags, status, latest_version, sort_order, input_mode,
    inspection_mode, target_type_filter, created_by, created_at)
 VALUES
-  (100, 0, NULL, 'CMP_ROOT', '综合校园检查',
+  (100, 0, 200, NULL, 'CMP_ROOT', '综合校园检查',
    'ORG', '覆盖卫生/安全/教学/学生 4 大维度的综合性巡检模板, 含 25 检查项',
-   '综合,巡检,周检', 'DRAFT', 0, 100, 'INLINE',
+   '综合,巡检,周检', 'PUBLISHED', 1, 100, 'INLINE',
    'SNAPSHOT', '["教学班","年级","系部","学校"]', 1, NOW());
+
+-- ───────── 模板版本快照 (template_id=200, version=1) ─────────
+-- 项目发布时需要拿到 latest published version, 否则报"未关联模板"
+INSERT INTO insp_template_versions
+  (tenant_id, template_id, version, structure_snapshot, created_by, created_at)
+VALUES
+  (0, 200, 1, JSON_OBJECT('rootSectionId', 100, 'sectionCount', 13, 'itemCount', 25), 1, NOW());
 
 -- ───────── 4 个一级分区 ─────────
 INSERT INTO insp_template_sections
