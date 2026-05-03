@@ -33,6 +33,8 @@ public class InspTask extends AggregateRoot<Long> {
     private Integer completedTargets;
     private Integer skippedTargets;
     private LocalDateTime submittedAt;
+    private Boolean lateSubmission;        // P2: 是否延迟交付 (submit() 时基于 effective_due_date 计算)
+    private Integer lateDays;              // P2: 延迟天数 (0=按时)
     private LocalDateTime reviewedAt;
     private LocalDateTime publishedAt;
     private String reviewComment;
@@ -73,6 +75,8 @@ public class InspTask extends AggregateRoot<Long> {
         this.completedTargets = builder.completedTargets != null ? builder.completedTargets : 0;
         this.skippedTargets = builder.skippedTargets != null ? builder.skippedTargets : 0;
         this.submittedAt = builder.submittedAt;
+        this.lateSubmission = builder.lateSubmission != null ? builder.lateSubmission : Boolean.FALSE;
+        this.lateDays = builder.lateDays != null ? builder.lateDays : 0;
         this.reviewedAt = builder.reviewedAt;
         this.publishedAt = builder.publishedAt;
         this.reviewComment = builder.reviewComment;
@@ -153,8 +157,21 @@ public class InspTask extends AggregateRoot<Long> {
             throw new IllegalStateException(hint + " (状态: " + this.status + ")");
         }
         this.status = TaskStatus.SUBMITTED;
-        this.submittedAt = LocalDateTime.now();
-        this.updatedAt = LocalDateTime.now();
+        LocalDateTime now = LocalDateTime.now();
+        this.submittedAt = now;
+        this.updatedAt = now;
+        // P2: 延迟交付计算 — effective due date 优先 extendedTo, 否则 taskDate
+        LocalDate dueDate = this.extendedTo != null ? this.extendedTo : this.taskDate;
+        if (dueDate != null) {
+            LocalDate today = now.toLocalDate();
+            if (today.isAfter(dueDate)) {
+                this.lateSubmission = Boolean.TRUE;
+                this.lateDays = (int) java.time.temporal.ChronoUnit.DAYS.between(dueDate, today);
+            } else {
+                this.lateSubmission = Boolean.FALSE;
+                this.lateDays = 0;
+            }
+        }
         registerEvent(new TaskSubmittedEvent(this.id, this.taskCode, this.inspectorId, this.projectId));
     }
 
@@ -379,6 +396,8 @@ public class InspTask extends AggregateRoot<Long> {
     public Integer getCompletedTargets() { return completedTargets; }
     public Integer getSkippedTargets() { return skippedTargets; }
     public LocalDateTime getSubmittedAt() { return submittedAt; }
+    public Boolean getLateSubmission() { return lateSubmission; }
+    public Integer getLateDays() { return lateDays; }
     public LocalDateTime getReviewedAt() { return reviewedAt; }
     public LocalDateTime getPublishedAt() { return publishedAt; }
     public String getReviewComment() { return reviewComment; }
@@ -413,6 +432,8 @@ public class InspTask extends AggregateRoot<Long> {
         private Integer completedTargets;
         private Integer skippedTargets;
         private LocalDateTime submittedAt;
+        private Boolean lateSubmission;
+        private Integer lateDays;
         private LocalDateTime reviewedAt;
         private LocalDateTime publishedAt;
         private String reviewComment;
@@ -444,6 +465,8 @@ public class InspTask extends AggregateRoot<Long> {
         public Builder completedTargets(Integer completedTargets) { this.completedTargets = completedTargets; return this; }
         public Builder skippedTargets(Integer skippedTargets) { this.skippedTargets = skippedTargets; return this; }
         public Builder submittedAt(LocalDateTime submittedAt) { this.submittedAt = submittedAt; return this; }
+        public Builder lateSubmission(Boolean lateSubmission) { this.lateSubmission = lateSubmission; return this; }
+        public Builder lateDays(Integer lateDays) { this.lateDays = lateDays; return this; }
         public Builder reviewedAt(LocalDateTime reviewedAt) { this.reviewedAt = reviewedAt; return this; }
         public Builder publishedAt(LocalDateTime publishedAt) { this.publishedAt = publishedAt; return this; }
         public Builder reviewComment(String reviewComment) { this.reviewComment = reviewComment; return this; }

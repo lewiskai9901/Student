@@ -108,6 +108,10 @@ export interface InspTask {
   collaborationMode: string | null  // SINGLE / COLLABORATIVE
   reviewComment: string | null
   submittedAt: string | null
+  /** P2: 提交时是否已延迟 (today > effective_due_date) */
+  lateSubmission?: boolean | null
+  /** P2: 延迟天数 (0=按时, >0=延迟天数) */
+  lateDays?: number | null
   /** P1#5: 累计驳回次数 */
   rejectionCount?: number | null
   /** P1#5: 驳回延期到的有效日期 (YYYY-MM-DD) */

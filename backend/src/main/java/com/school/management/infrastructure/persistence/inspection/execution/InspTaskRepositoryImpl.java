@@ -121,6 +121,8 @@ public class InspTaskRepositoryImpl implements InspTaskRepository {
         po.setCompletedTargets(d.getCompletedTargets());
         po.setSkippedTargets(d.getSkippedTargets());
         po.setSubmittedAt(d.getSubmittedAt());
+        po.setLateSubmission(d.getLateSubmission());
+        po.setLateDays(d.getLateDays());
         po.setReviewedAt(d.getReviewedAt());
         po.setPublishedAt(d.getPublishedAt());
         po.setReviewComment(d.getReviewComment());
@@ -156,6 +158,8 @@ public class InspTaskRepositoryImpl implements InspTaskRepository {
                 .completedTargets(po.getCompletedTargets())
                 .skippedTargets(po.getSkippedTargets())
                 .submittedAt(po.getSubmittedAt())
+                .lateSubmission(po.getLateSubmission())
+                .lateDays(po.getLateDays())
                 .reviewedAt(po.getReviewedAt())
                 .publishedAt(po.getPublishedAt())
                 .reviewComment(po.getReviewComment())

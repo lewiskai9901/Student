@@ -23,6 +23,12 @@ const loading = ref(false)
 const loadingDetails = ref(false)
 const submitting = ref(false)
 const submittedTasks = ref<InspTask[]>([])
+// P2: 仅看延迟交付 (审核侧 cherry pick)
+const lateOnly = ref(false)
+const filteredTasks = computed(() =>
+  lateOnly.value ? submittedTasks.value.filter(t => t.lateSubmission) : submittedTasks.value
+)
+const lateCount = computed(() => submittedTasks.value.filter(t => t.lateSubmission).length)
 const selectedTaskId = ref<number | null>(null)
 const taskSubmissions = ref<InspSubmission[]>([])
 const submissionDetails = ref<Map<number, SubmissionDetail[]>>(new Map())
@@ -253,11 +259,20 @@ onUnmounted(() => window.removeEventListener('keydown', onKey))
       <aside class="queue" v-loading="loading">
         <div class="queue-meta">
           <span class="insp-caps">待审清单</span>
-          <span class="queue-meta__count insp-num">{{ submittedTasks.length }}</span>
+          <span class="queue-meta__count insp-num">{{ filteredTasks.length }}<span v-if="lateOnly" class="dim">/{{ submittedTasks.length }}</span></span>
+          <button
+            v-if="lateCount > 0"
+            class="late-filter-btn"
+            :class="{ 'is-active': lateOnly }"
+            @click="lateOnly = !lateOnly"
+            :title="lateOnly ? '点击查看全部' : `仅看延迟交付 (${lateCount} 条)`"
+          >
+            ⏱ 延迟 {{ lateCount }}
+          </button>
         </div>
         <ol class="queue-list">
           <li
-            v-for="(t, i) in submittedTasks" :key="t.id"
+            v-for="(t, i) in filteredTasks" :key="t.id"
             class="queue-item"
             :class="{ 'is-selected': selectedTaskId === t.id }"
             @click="selectTask(t)"
@@ -285,6 +300,14 @@ onUnmounted(() => window.removeEventListener('keydown', onKey))
               :class="`insp-chip--${rejectionVariant((t as any).rejectionCount)}`"
               :title="`已驳回 ${(t as any).rejectionCount}/${MAX_AUTO_REJECT} 次`"
             >驳{{ (t as any).rejectionCount }}</span>
+            <span
+              v-if="t.lateSubmission"
+              class="late-badge"
+              :title="`延迟 ${t.lateDays} 天交付`"
+            >迟{{ t.lateDays }}</span>
+          </li>
+          <li v-if="!loading && filteredTasks.length === 0 && lateOnly" class="queue-empty">
+            <div class="insp-stamp">没有延迟交付任务</div>
           </li>
           <li v-if="!loading && submittedTasks.length === 0" class="queue-empty">
             <div class="insp-stamp">无待审</div>
@@ -307,6 +330,10 @@ onUnmounted(() => window.removeEventListener('keydown', onKey))
                 <span v-if="(selectedTask as any).extendedTo" class="dot">·</span>
                 <span v-if="(selectedTask as any).extendedTo" class="extended-tag">
                   延至 <span class="insp-num">{{ (selectedTask as any).extendedTo }}</span>
+                </span>
+                <span v-if="selectedTask.lateSubmission" class="dot">·</span>
+                <span v-if="selectedTask.lateSubmission" class="late-tag" :title="`延迟 ${selectedTask.lateDays} 天提交`">
+                  延迟交付 <span class="insp-num">{{ selectedTask.lateDays }}</span> 天
                 </span>
               </div>
             </div>
@@ -607,6 +634,52 @@ onUnmounted(() => window.removeEventListener('keydown', onKey))
   font-size: var(--insp-text-xs);
   border-radius: var(--insp-radius-sm);
   font-weight: 500;
+}
+.late-tag {
+  display: inline-flex; align-items: center; gap: 4px;
+  padding: 1px 8px;
+  background: rgba(245, 158, 11, 0.12);
+  color: #b45309;
+  border: 1px solid rgba(245, 158, 11, 0.35);
+  font-size: var(--insp-text-xs);
+  border-radius: var(--insp-radius-sm);
+  font-weight: 600;
+}
+.late-badge {
+  display: inline-flex; align-items: center; justify-content: center;
+  min-width: 28px;
+  padding: 0 5px; height: 18px;
+  background: rgba(245, 158, 11, 0.14);
+  color: #b45309;
+  border: 1px solid rgba(245, 158, 11, 0.4);
+  border-radius: 9px;
+  font-size: 10px;
+  font-weight: 600;
+  margin-left: 4px;
+  font-family: var(--insp-font-mono);
+}
+.late-filter-btn {
+  margin-left: auto;
+  padding: 2px 8px;
+  height: 22px;
+  border-radius: 11px;
+  border: 1px solid rgba(245, 158, 11, 0.4);
+  background: rgba(245, 158, 11, 0.1);
+  color: #b45309;
+  font-size: 11px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all var(--insp-t-fast);
+}
+.late-filter-btn:hover { background: rgba(245, 158, 11, 0.2); }
+.late-filter-btn.is-active {
+  background: #b45309;
+  color: white;
+  border-color: #b45309;
+}
+.queue-meta__count .dim {
+  color: var(--insp-ink-quaternary);
+  font-weight: 400;
 }
 
 .detail-head__metrics {

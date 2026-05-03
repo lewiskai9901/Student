@@ -30,6 +30,8 @@ public class InspTaskPO {
     private Integer completedTargets;
     private Integer skippedTargets;
     private LocalDateTime submittedAt;
+    private Boolean lateSubmission;        // P2: 是否延迟交付
+    private Integer lateDays;              // P2: 延迟天数 (0=按时)
     private LocalDateTime reviewedAt;
     private LocalDateTime publishedAt;
     private String reviewComment;
