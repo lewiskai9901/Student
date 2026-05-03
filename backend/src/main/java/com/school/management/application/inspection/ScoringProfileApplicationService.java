@@ -35,6 +35,7 @@ public class ScoringProfileApplicationService {
     // ===== ScoringProfile =====
 
     @Transactional
+    @CacheEvict(value = "ratingConfig", allEntries = true)
     public ScoringProfile createProfile(Long sectionId, Long createdBy) {
         // 如果已存在则直接返回，不报错（支持幂等调用）
         Optional<ScoringProfile> existing = profileRepository.findBySectionId(sectionId);
@@ -42,7 +43,15 @@ public class ScoringProfileApplicationService {
             return existing.get();
         }
         ScoringProfile profile = ScoringProfile.create(sectionId, createdBy);
-        return profileRepository.save(profile);
+        try {
+            return profileRepository.save(profile);
+        } catch (org.springframework.dao.DuplicateKeyException dup) {
+            // 真并发场景: 检查通过后另一线程已 INSERT, 此处再 find 返回它创建的
+            log.warn("[ScoringProfile] race detected on sectionId={}, fallback to refind", sectionId);
+            return profileRepository.findBySectionId(sectionId)
+                    .orElseThrow(() -> new IllegalStateException(
+                            "评分配置创建失败 (并发竞争且复查未命中, sectionId=" + sectionId + ")", dup));
+        }
     }
 
     /** P0-B Redis 缓存. Spring Cache 自动解包 Optional, #result 即为 ScoringProfile (或 null). */
