@@ -361,6 +361,11 @@ public class MessageDispatcher {
         vars.put("eventCategory", safe(event.getEventCategory()));
         vars.put("sourceModule", safe(event.getSourceModule()));
         vars.put("time", event.getOccurredAt() != null ? event.getOccurredAt().toString() : "");
+        // 模板常用变量补全
+        vars.put("occurredAt", event.getOccurredAt() != null
+                ? event.getOccurredAt().format(java.time.format.DateTimeFormatter.ofPattern("MM-dd HH:mm"))
+                : "");
+        vars.put("createdByName", safe(event.getCreatedByName()));
 
         // 从 payload JSON 注入所有字段为模板变量
         if (event.getPayload() != null) {

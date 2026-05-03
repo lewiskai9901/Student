@@ -58,14 +58,15 @@ public interface MsgNotificationMapper extends BaseMapper<MsgNotificationPO> {
      */
     @Insert("<script>" +
             "INSERT INTO msg_notifications(" +
-            "  tenant_id, user_id, title, content, msg_type, source_event_type, " +
+            "  tenant_id, receiver_type, receiver_id, user_id, title, content, msg_type, source_event_type, " +
             "  source_ref_type, source_ref_id, subject_type, subject_id, subject_name, " +
             "  event_category, source_module, event_id, is_read, created_at, " +
             "  send_status, retry_count, last_error, sent_at" +
             ") VALUES " +
             "<foreach collection='list' item='n' separator=','>" +
             "(" +
-            "  #{n.tenantId}, #{n.userId}, #{n.title}, #{n.content}, #{n.msgType}, #{n.sourceEventType}," +
+            "  #{n.tenantId}, #{n.receiverType}, #{n.receiverId}, #{n.userId}, " +
+            "  #{n.title}, #{n.content}, #{n.msgType}, #{n.sourceEventType}," +
             "  #{n.sourceRefType}, #{n.sourceRefId}, #{n.subjectType}, #{n.subjectId}, #{n.subjectName}," +
             "  #{n.eventCategory}, #{n.sourceModule}, #{n.eventId}, #{n.isRead}, #{n.createdAt}," +
             "  #{n.sendStatus}, #{n.retryCount}, #{n.lastError}, #{n.sentAt}" +
