@@ -15,10 +15,10 @@
  *  - KPI 告警去重
  *  - 完成不可逆 → primary, 暂停 → ghost
  */
-import { ref, computed, onMounted, watch } from 'vue'
+import { ref, computed, onMounted, onUnmounted, watch, nextTick } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { Plus, AlertTriangle, EyeOff, Eye, Inbox } from 'lucide-vue-next'
+import { Plus, AlertTriangle, EyeOff, Eye, Inbox, Keyboard } from 'lucide-vue-next'
 import { useInspExecutionStore } from '@/stores/inspection/inspExecutionStore'
 import { useAuthStore } from '@/stores/auth'
 import { inspProjectApi, type ProjectStatsSummary } from '@/api/inspection/project'
@@ -90,6 +90,93 @@ async function loadData() {
     loading.value = false
   }
 }
+
+// ── S+ 搜索高亮 ──
+function highlightHtml(text: string, kw: string): string {
+  if (!kw) return text
+  const escaped = kw.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+  return text.replace(new RegExp(`(${escaped})`, 'gi'), '<mark class="prj-mark">$1</mark>')
+}
+
+// ── S+ 键盘聚焦 ──
+const focusedIdx = ref<number>(-1)
+function focusNext() {
+  focusedIdx.value = Math.min(focusedIdx.value + 1, filtered.value.length - 1)
+  nextTick(scrollFocusedIntoView)
+}
+function focusPrev() {
+  focusedIdx.value = Math.max(0, focusedIdx.value - 1)
+  nextTick(scrollFocusedIntoView)
+}
+function scrollFocusedIntoView() {
+  const cur = filtered.value[focusedIdx.value]
+  if (!cur) return
+  const el = document.querySelector(`[data-prj-id="${cur.project.id}"]`)
+  el?.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
+}
+function cycleViewMode() {
+  const order: ViewMode[] = ['list', 'kanban', 'timeline']
+  const i = order.indexOf(view.value)
+  view.value = order[(i + 1) % order.length]
+}
+
+const showKbdHint = ref(localStorage.getItem('insp_prj_kbd_hint_dismissed') !== '1')
+function dismissKbdHint() { showKbdHint.value = false; localStorage.setItem('insp_prj_kbd_hint_dismissed', '1') }
+
+function onGlobalKeyPrj(e: KeyboardEvent) {
+  const t = e.target as HTMLElement
+  const tag = t?.tagName
+  if (tag === 'INPUT' || tag === 'TEXTAREA' || t?.isContentEditable) return
+  if (e.metaKey || e.ctrlKey || e.altKey) return
+  switch (e.key) {
+    case 'j':
+    case 'ArrowDown': e.preventDefault(); focusNext(); break
+    case 'k':
+    case 'ArrowUp': e.preventDefault(); focusPrev(); break
+    case 'Enter':
+    case 'e': {
+      const cur = filtered.value[focusedIdx.value]
+      if (cur) { e.preventDefault(); router.push(`/inspection/projects/${cur.project.id}`) }
+      break
+    }
+    case '/': e.preventDefault(); (document.querySelector('.prj-search') as HTMLElement)?.focus(); break
+    case 'v': e.preventDefault(); cycleViewMode(); break
+    case 'Escape': focusedIdx.value = -1; break
+  }
+}
+
+// ── S+ 项目悬浮预览 ──
+const previewVisible = ref(false)
+const previewTarget = ref<ProjectStatsSummary | null>(null)
+const previewPos = ref({ top: '0px', left: '0px', placement: 'right' as 'right' | 'left' | 'bottom' })
+let previewShowTimer: any = null
+let previewHideTimer: any = null
+function showPreview(s: ProjectStatsSummary, e: MouseEvent) {
+  clearTimeout(previewHideTimer)
+  clearTimeout(previewShowTimer)
+  const target = e.currentTarget as HTMLElement
+  previewShowTimer = setTimeout(() => {
+    previewTarget.value = s
+    const rect = target.getBoundingClientRect()
+    const popoverWidth = 320
+    if (rect.right + popoverWidth + 16 < window.innerWidth) {
+      previewPos.value = { top: `${rect.top}px`, left: `${rect.right + 8}px`, placement: 'right' }
+    } else if (rect.left > popoverWidth + 16) {
+      previewPos.value = { top: `${rect.top}px`, left: `${rect.left - popoverWidth - 8}px`, placement: 'left' }
+    } else {
+      previewPos.value = { top: `${rect.bottom + 8}px`, left: `${rect.left}px`, placement: 'bottom' }
+    }
+    previewVisible.value = true
+  }, 600)
+}
+function hidePreview() {
+  clearTimeout(previewShowTimer)
+  previewHideTimer = setTimeout(() => { previewVisible.value = false }, 100)
+}
+function keepPreview() { clearTimeout(previewHideTimer) }
+
+onMounted(() => { window.addEventListener('keydown', onGlobalKeyPrj) })
+onUnmounted(() => { window.removeEventListener('keydown', onGlobalKeyPrj) })
 
 // ── Helpers ──
 function isOverdueProject(p: InspProject): boolean {
@@ -452,6 +539,16 @@ onMounted(loadData)
       <input v-model="searchQuery" class="prj-search" placeholder="搜索项目名称…" />
     </div>
 
+    <!-- 键盘快捷键提示 (S+) -->
+    <div v-if="showKbdHint" class="prj-kbd-hint">
+      <Keyboard :size="12" />
+      <span class="prj-kbd-hint__group"><kbd class="insp-kbd">J</kbd><kbd class="insp-kbd">K</kbd> 浏览</span>
+      <span class="prj-kbd-hint__group"><kbd class="insp-kbd">E</kbd> 详情</span>
+      <span class="prj-kbd-hint__group"><kbd class="insp-kbd">V</kbd> 切视图</span>
+      <span class="prj-kbd-hint__group"><kbd class="insp-kbd">/</kbd> 搜索</span>
+      <button class="prj-kbd-hint__close" @click="dismissKbdHint" title="不再显示">×</button>
+    </div>
+
     <!-- ============ List View ============ -->
     <section v-if="view === 'list'" class="prj-list">
       <InspSpinner v-if="loading" overlay />
@@ -474,14 +571,20 @@ onMounted(loadData)
       <TransitionGroup name="row-stagger" tag="div" class="row-list">
       <div
         v-for="(s, idx) in filtered" :key="s.project.id"
+        :data-prj-id="s.project.id"
         class="row row--data"
-        :class="{ 'row--overdue': isOverdueProject(s.project) || s.taskOverdue > 0 }"
+        :class="{
+          'row--overdue': isOverdueProject(s.project) || s.taskOverdue > 0,
+          'row--focused': focusedIdx === idx,
+        }"
         :style="{ '--stagger-delay': `${idx * 30}ms` }"
         @click="goDetail(s.project)"
+        @mouseenter="(e: any) => showPreview(s, e)"
+        @mouseleave="hidePreview"
       >
         <div class="col col-name">
           <div class="name-line">
-            <span class="name-text">{{ s.project.projectName }}</span>
+            <span class="name-text" v-html="highlightHtml(s.project.projectName, searchQuery)"></span>
             <span v-if="s.project.status === 'DRAFT'" class="dot dot--draft" title="待配置发布" />
           </div>
           <div class="name-meta">
@@ -642,6 +745,78 @@ onMounted(loadData)
         </div>
       </template>
     </section>
+
+    <!-- 项目悬浮预览卡 (S+) -->
+    <Teleport to="body">
+      <Transition name="prj-popover">
+        <div v-if="previewVisible && previewTarget"
+             class="prj-popover"
+             :style="{ top: previewPos.top, left: previewPos.left }"
+             @mouseenter="keepPreview"
+             @mouseleave="hidePreview">
+          <div class="prj-popover__head">
+            <div class="prj-popover__title-line">
+              <h3 class="prj-popover__title">{{ previewTarget.project.projectName }}</h3>
+              <span class="insp-chip" :class="`insp-chip--${projectChip(previewTarget)}`">
+                {{ ProjectStatusConfig[previewTarget.project.status as ProjectStatus]?.label }}
+              </span>
+            </div>
+            <div class="prj-popover__sub">
+              <span class="insp-num">{{ previewTarget.project.projectCode }}</span>
+              <span class="prj-popover__sep">·</span>
+              <span class="insp-num">{{ previewTarget.inspectorCount }}</span> 检查员
+              <span class="prj-popover__sep">·</span>
+              <span class="insp-num">{{ fmtRange(previewTarget.project) }}</span>
+            </div>
+          </div>
+          <div class="prj-popover__body">
+            <div class="prj-popover__metrics">
+              <div class="prj-popover__metric">
+                <div class="prj-popover__metric-num insp-num">{{ previewTarget.taskTotal }}</div>
+                <div class="prj-popover__metric-label">总任务</div>
+              </div>
+              <div class="prj-popover__metric-rule" />
+              <div class="prj-popover__metric">
+                <div class="prj-popover__metric-num insp-num" style="color: var(--insp-pass)">
+                  {{ previewTarget.taskDone }}
+                </div>
+                <div class="prj-popover__metric-label">已完成</div>
+              </div>
+              <div class="prj-popover__metric-rule" />
+              <div class="prj-popover__metric">
+                <div class="prj-popover__metric-num insp-num"
+                     :style="{ color: previewTarget.taskOverdue > 0 ? 'var(--insp-fail)' : 'var(--insp-ink-quaternary)' }">
+                  {{ previewTarget.taskOverdue }}
+                </div>
+                <div class="prj-popover__metric-label">逾期</div>
+              </div>
+              <div class="prj-popover__metric-rule" />
+              <div class="prj-popover__metric">
+                <div class="prj-popover__metric-num insp-num"
+                     :style="{ color: previewTarget.taskPendingReview > 0 ? 'var(--insp-info)' : 'var(--insp-ink-quaternary)' }">
+                  {{ previewTarget.taskPendingReview }}
+                </div>
+                <div class="prj-popover__metric-label">待审</div>
+              </div>
+            </div>
+            <div class="prj-popover__progress">
+              <div class="prj-popover__progress-label">
+                <span>整体进度</span>
+                <span class="insp-num">{{ pct(previewTarget) }}%</span>
+              </div>
+              <div class="prj-popover__progress-bar">
+                <div class="prj-popover__progress-fill" :style="{ width: pct(previewTarget) + '%' }" />
+              </div>
+            </div>
+            <div v-if="daysRemaining(previewTarget.project)" class="prj-popover__deadline"
+                 :class="{ 'is-urgent': daysRemaining(previewTarget.project)?.startsWith('逾期') }">
+              {{ daysRemaining(previewTarget.project) }}
+            </div>
+          </div>
+          <div class="prj-popover__foot">点击行查看详情 · 按 E 进入</div>
+        </div>
+      </Transition>
+    </Teleport>
   </div>
 </template>
 
@@ -899,4 +1074,159 @@ onMounted(loadData)
   .col-actions { justify-content: flex-start; }
   .prj-kpi { flex-wrap: wrap; }
 }
+
+/* ─ S+ 搜索高亮 ─────── */
+:deep(.prj-mark) {
+  background: rgba(245, 200, 70, 0.4);
+  color: var(--insp-ink-primary);
+  padding: 0 2px;
+  border-radius: 2px;
+  font-weight: 600;
+}
+
+/* ─ S+ 键盘聚焦行 ─────── */
+.row--focused {
+  outline: 2px solid var(--insp-accent);
+  outline-offset: -2px;
+}
+
+/* ─ S+ 键盘提示条 ─────── */
+.prj-kbd-hint {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 6px 12px;
+  margin-bottom: 10px;
+  background: linear-gradient(90deg, rgba(26, 109, 255, 0.06) 0%, transparent 100%);
+  border: 1px solid rgba(26, 109, 255, 0.18);
+  border-radius: var(--insp-radius-md);
+  font-size: 11px;
+  color: var(--insp-ink-secondary);
+}
+.prj-kbd-hint__group { display: inline-flex; align-items: center; gap: 4px; }
+.prj-kbd-hint__close {
+  margin-left: auto;
+  width: 20px; height: 20px;
+  border: 0;
+  background: transparent;
+  font-size: 16px;
+  color: var(--insp-ink-quaternary);
+  border-radius: 3px;
+  cursor: pointer;
+}
+.prj-kbd-hint__close:hover { background: rgba(0,0,0,0.06); color: var(--insp-ink-primary); }
+
+/* ─ S+ 项目悬浮预览卡 ─────── */
+.prj-popover {
+  position: fixed;
+  z-index: 9500;
+  width: 320px;
+  background: var(--insp-bg-surface);
+  border: 1px solid var(--insp-border-strong);
+  border-radius: var(--insp-radius-lg);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.18);
+  overflow: hidden;
+}
+.prj-popover__head {
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--insp-border-subtle);
+}
+.prj-popover__title-line {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+.prj-popover__title {
+  margin: 0;
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--insp-ink-primary);
+  letter-spacing: -0.01em;
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.prj-popover__sub {
+  font-size: 11px;
+  color: var(--insp-ink-tertiary);
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  flex-wrap: wrap;
+}
+.prj-popover__sep { color: var(--insp-ink-quaternary); }
+.prj-popover__body {
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.prj-popover__metrics {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.prj-popover__metric {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
+.prj-popover__metric-num {
+  font-family: var(--insp-font-mono);
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--insp-ink-primary);
+  line-height: 1;
+}
+.prj-popover__metric-label {
+  font-size: 9px;
+  color: var(--insp-ink-tertiary);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+.prj-popover__metric-rule {
+  width: 1px;
+  height: 24px;
+  background: var(--insp-border-subtle);
+}
+.prj-popover__progress { display: flex; flex-direction: column; gap: 4px; }
+.prj-popover__progress-label {
+  display: flex;
+  justify-content: space-between;
+  font-size: 11px;
+  color: var(--insp-ink-secondary);
+}
+.prj-popover__progress-bar {
+  height: 4px;
+  background: var(--insp-bg-subtle);
+  border-radius: 2px;
+  overflow: hidden;
+}
+.prj-popover__progress-fill {
+  height: 100%;
+  background: var(--insp-accent);
+  transition: width 0.4s ease;
+}
+.prj-popover__deadline {
+  font-size: 11px;
+  color: var(--insp-ink-tertiary);
+  text-align: center;
+  padding: 4px 0;
+  border-top: 1px solid var(--insp-border-subtle);
+}
+.prj-popover__deadline.is-urgent { color: var(--insp-fail); font-weight: 600; }
+.prj-popover__foot {
+  padding: 8px 14px;
+  background: var(--insp-bg-subtle);
+  border-top: 1px solid var(--insp-border-subtle);
+  font-size: 10px;
+  color: var(--insp-ink-tertiary);
+}
+.prj-popover-enter-active, .prj-popover-leave-active { transition: all 0.15s ease; }
+.prj-popover-enter-from { opacity: 0; transform: translateX(-4px) scale(0.98); }
+.prj-popover-leave-to { opacity: 0; }
 </style>
