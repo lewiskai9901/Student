@@ -18,12 +18,16 @@
 import { ref, computed, onMounted, watch } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { Plus, AlertTriangle, EyeOff, Eye } from 'lucide-vue-next'
+import { Plus, AlertTriangle, EyeOff, Eye, Inbox } from 'lucide-vue-next'
 import { useInspExecutionStore } from '@/stores/inspection/inspExecutionStore'
 import { useAuthStore } from '@/stores/auth'
 import { inspProjectApi, type ProjectStatsSummary } from '@/api/inspection/project'
 import { ProjectStatusConfig, type ProjectStatus } from '@/types/insp/enums'
 import type { InspProject } from '@/types/insp/project'
+import InspButton from '../shared/InspButton.vue'
+import InspChip from '../shared/InspChip.vue'
+import InspSpinner from '../shared/InspSpinner.vue'
+import InspEmptyState from '../shared/InspEmptyState.vue'
 
 const router = useRouter()
 const route = useRoute()
@@ -449,7 +453,8 @@ onMounted(loadData)
     </div>
 
     <!-- ============ List View ============ -->
-    <section v-if="view === 'list'" class="prj-list" v-loading="loading">
+    <section v-if="view === 'list'" class="prj-list">
+      <InspSpinner v-if="loading" overlay />
       <div class="row row--head">
         <span class="col col-name sortable" @click="toggleSort('name')">
           项目<span class="sort-arrow" v-if="sortKey === 'name'">{{ sortDir === 'desc' ? '↓' : '↑' }}</span>
@@ -466,10 +471,12 @@ onMounted(loadData)
         <span class="col col-actions">操作</span>
       </div>
 
+      <TransitionGroup name="row-stagger" tag="div" class="row-list">
       <div
-        v-for="s in filtered" :key="s.project.id"
+        v-for="(s, idx) in filtered" :key="s.project.id"
         class="row row--data"
         :class="{ 'row--overdue': isOverdueProject(s.project) || s.taskOverdue > 0 }"
+        :style="{ '--stagger-delay': `${idx * 30}ms` }"
         @click="goDetail(s.project)"
       >
         <div class="col col-name">
@@ -533,13 +540,17 @@ onMounted(loadData)
         </div>
       </div>
 
-      <div v-if="!loading && filtered.length === 0" class="empty">
-        <p class="empty-title">未找到匹配的项目</p>
-        <p class="empty-sub">尝试调整筛选条件, 或新建一个项目</p>
-        <button class="insp-btn insp-btn--accent" @click="goCreate">
-          <Plus :size="13" />新建项目
-        </button>
-      </div>
+      </TransitionGroup>
+      <InspEmptyState v-if="!loading && filtered.length === 0"
+        title="未找到匹配的项目"
+        description="尝试调整筛选条件, 或新建一个项目">
+        <template #icon><Inbox :size="28" /></template>
+        <template #action>
+          <InspButton variant="accent" @click="goCreate">
+            <Plus :size="13" />新建项目
+          </InspButton>
+        </template>
+      </InspEmptyState>
     </section>
 
     <!-- ============ Kanban View ============ -->
@@ -706,7 +717,29 @@ onMounted(loadData)
 .prj-search:focus { outline: none; border-color: var(--insp-accent); box-shadow: 0 0 0 3px var(--insp-accent-paler); }
 
 /* ============ List view ============ */
-.prj-list { background: var(--insp-bg-surface); border: 1px solid var(--insp-border-default); border-radius: var(--insp-radius-lg); overflow: hidden; }
+.prj-list {
+  position: relative;
+  background: var(--insp-bg-surface);
+  border: 1px solid var(--insp-border-default);
+  border-radius: var(--insp-radius-lg);
+  overflow: hidden;
+}
+
+/* List stagger 进入动画 */
+.row-stagger-enter-active {
+  transition: opacity var(--insp-t-medium) var(--insp-ease-out),
+              transform var(--insp-t-medium) var(--insp-ease-out);
+  transition-delay: var(--stagger-delay, 0ms);
+}
+.row-stagger-enter-from {
+  opacity: 0;
+  transform: translateY(6px);
+}
+.row-stagger-leave-active {
+  transition: opacity var(--insp-t-fast) var(--insp-ease-out);
+  position: absolute;
+}
+.row-stagger-leave-to { opacity: 0; }
 .row {
   display: grid;
   grid-template-columns: 2fr 90px 140px 130px 70px 90px 220px;

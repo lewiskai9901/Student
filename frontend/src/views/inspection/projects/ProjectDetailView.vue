@@ -26,6 +26,10 @@ import { getRootSection } from '@/api/inspection/template'
 import SectionConfigView from './components/SectionConfigView.vue'
 import { buildSectionTree, type SectionTreeNode } from '@/utils/sectionTree'
 import IndicatorScoreView from './components/IndicatorScoreView.vue'
+import InspButton from '../shared/InspButton.vue'
+import InspChip from '../shared/InspChip.vue'
+import InspCard from '../shared/InspCard.vue'
+import InspSpinner from '../shared/InspSpinner.vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -605,7 +609,8 @@ onMounted(async () => {
 </script>
 
 <template>
-  <div class="pdv insp-shell" v-loading="loading">
+  <div class="pdv insp-shell">
+    <InspSpinner v-if="loading" overlay />
     <!-- ====== Header (Audit Console redesign) ====== -->
     <div class="pdv-header">
       <div class="pdv-header-left">
@@ -616,15 +621,12 @@ onMounted(async () => {
           <div class="insp-eyebrow">检查项目 · {{ project?.projectCode || '加载中' }}</div>
           <div class="pdv-title">
             <span class="pdv-title__name">{{ project?.projectName || '加载中...' }}</span>
-            <span v-if="project" class="insp-chip" :class="{
-              'insp-chip--pending': project.status === 'DRAFT',
-              'insp-chip--info': project.status === 'PUBLISHED',
-              'insp-chip--warn': project.status === 'PAUSED',
-              'insp-chip--pass': project.status === 'COMPLETED',
-              'insp-chip--fail': project.status === 'ARCHIVED',
-            }">
+            <InspChip v-if="project" :tone="({
+              DRAFT: 'pending', PUBLISHED: 'info', PAUSED: 'warn',
+              COMPLETED: 'pass', ARCHIVED: 'pending',
+            } as const)[project.status as ProjectStatus]">
               {{ ProjectStatusConfig[project.status as ProjectStatus]?.label }}
-            </span>
+            </InspChip>
           </div>
           <div class="pdv-subtitle" v-if="project">
             <span v-if="project.startDate" class="insp-num">{{ project.startDate }}<template v-if="project.endDate"> ~ {{ project.endDate }}</template></span>
@@ -636,46 +638,41 @@ onMounted(async () => {
         </div>
       </div>
       <div class="pdv-header-actions" v-if="project">
-        <el-button
+        <InspButton
           v-if="configDirty && !isArchived && activeTab === 'settings'"
-          type="primary"
-          :loading="saving"
-          @click="saveConfig"
-          size="small"
-          round
-        >
-          <Save class="w-3.5 h-3.5 mr-1" />保存配置
-        </el-button>
-        <el-button v-if="isDraft" type="primary" :disabled="!canPublish" @click="handlePublish" size="small" round>
-          <Send class="w-3.5 h-3.5 mr-1" />发布项目
-        </el-button>
-        <el-button v-if="project.status === 'PUBLISHED'" plain @click="handlePause" size="small" round
-                   title="暂停: 项目可恢复, 任务被冻结">
-          <Pause class="w-3.5 h-3.5 mr-1" />暂停
-        </el-button>
-        <el-button v-if="project.status === 'PAUSED'" type="primary" @click="handleResume" size="small" round>
-          <Play class="w-3.5 h-3.5 mr-1" />恢复
-        </el-button>
-        <el-button v-if="['PUBLISHED','PAUSED'].includes(project.status) && project.rootSectionId"
-                   @click="handleUpgradeTemplate" size="small" round
-                   :type="templateVersionStatus?.drifted ? 'warning' : ''"
-                   :plain="!templateVersionStatus?.drifted"
-                   title="把项目锁定的模板快照升级至该模板的最新已发布版本; 模板被改后已发布项目可能无法创建新任务">
+          variant="accent" size="sm" :loading="saving" @click="saveConfig">
+          <Save :size="13" />保存配置
+        </InspButton>
+        <InspButton v-if="isDraft" variant="accent" size="sm" :disabled="!canPublish" @click="handlePublish">
+          <Send :size="13" />发布项目
+        </InspButton>
+        <InspButton v-if="project.status === 'PUBLISHED'" size="sm" @click="handlePause"
+                    title="暂停: 项目可恢复, 任务被冻结">
+          <Pause :size="13" />暂停
+        </InspButton>
+        <InspButton v-if="project.status === 'PAUSED'" variant="accent" size="sm" @click="handleResume">
+          <Play :size="13" />恢复
+        </InspButton>
+        <InspButton v-if="['PUBLISHED','PAUSED'].includes(project.status) && project.rootSectionId"
+                    size="sm" @click="handleUpgradeTemplate"
+                    :variant="templateVersionStatus?.drifted ? 'danger' : 'default'"
+                    title="把项目锁定的模板快照升级至该模板的最新已发布版本">
           <span v-if="templateVersionStatus?.drifted">
-            升级模板版本 (v{{ templateVersionStatus.currentVersionNumber ?? '?' }} → v{{ templateVersionStatus.latestVersionNumber }})
+            升级 v{{ templateVersionStatus.currentVersionNumber ?? '?' }} → v{{ templateVersionStatus.latestVersionNumber }}
           </span>
           <span v-else-if="templateVersionStatus">
-            模板版本 v{{ templateVersionStatus.currentVersionNumber ?? '?' }} (最新)
+            模板 v{{ templateVersionStatus.currentVersionNumber ?? '?' }}
           </span>
-          <span v-else>
-            升级模板版本
-          </span>
-        </el-button>
-        <el-button v-if="['PUBLISHED','PAUSED'].includes(project.status)" type="danger" @click="handleComplete" size="small" round plain
-                   title="完结: 不可逆, 任务被强制归档">
-          <CheckCircle class="w-3.5 h-3.5 mr-1" />完结
-        </el-button>
-        <el-button v-if="project.status === 'COMPLETED'" type="info" @click="handleArchive" size="small" round plain>归档</el-button>
+          <span v-else>升级模板版本</span>
+        </InspButton>
+        <InspButton v-if="['PUBLISHED','PAUSED'].includes(project.status)" variant="danger" size="sm"
+                    @click="handleComplete"
+                    title="完结: 不可逆, 任务被强制归档">
+          <CheckCircle :size="13" />完结
+        </InspButton>
+        <InspButton v-if="project.status === 'COMPLETED'" variant="ghost" size="sm" @click="handleArchive">
+          归档
+        </InspButton>
       </div>
     </div>
 
@@ -1373,19 +1370,22 @@ onMounted(async () => {
 </template>
 
 <style scoped>
-/* ========== Layout ========== */
+/* ========== Header (token 化 A 级) ========== */
 .pdv {
-  padding: 24px;
-  max-width: 1200px;
+  position: relative;
+  padding: var(--insp-sp-3) var(--insp-sp-4);
+  max-width: 1280px;
   margin: 0 auto;
 }
-
-/* ========== Header (与 Tabs 视觉整合, 去掉硬分隔线) ========== */
 .pdv-header {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
-  padding-bottom: var(--insp-sp-4);
+  gap: var(--insp-sp-4);
+  background: var(--insp-bg-surface);
+  border: 1px solid var(--insp-border-default);
+  border-radius: var(--insp-radius-lg);
+  padding: var(--insp-sp-3) var(--insp-sp-4);
   margin-bottom: var(--insp-sp-3);
 }
 .pdv-header-left {
@@ -1397,16 +1397,16 @@ onMounted(async () => {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 32px;
-  height: 32px;
+  width: var(--insp-h-md);
+  height: var(--insp-h-md);
   border: 1px solid var(--insp-border-default);
   border-radius: var(--insp-radius-md);
   background: var(--insp-bg-surface);
-  color: var(--insp-ink-secondary);
+  color: var(--insp-ink-tertiary);
   cursor: pointer;
   transition: background var(--insp-t-fast), border-color var(--insp-t-fast), color var(--insp-t-fast);
   flex-shrink: 0;
-  margin-top: 4px;
+  margin-top: var(--insp-sp-1);
 }
 .pdv-back-btn:hover {
   background: var(--insp-bg-subtle);
@@ -1417,13 +1417,13 @@ onMounted(async () => {
 .pdv-title {
   display: flex;
   align-items: baseline;
-  gap: var(--insp-sp-3);
+  gap: var(--insp-sp-2);
   font-family: var(--insp-font-display);
-  font-size: 28px;
-  font-weight: 500;
+  font-size: var(--insp-text-h1);
+  font-weight: var(--insp-fw-bold);
   letter-spacing: var(--insp-tracking-display);
   color: var(--insp-ink-primary);
-  line-height: 1.15;
+  line-height: var(--insp-leading-tight);
   margin-top: 2px;
 }
 .pdv-title__name { display: inline-block; }
@@ -1449,41 +1449,54 @@ onMounted(async () => {
 .pdv-subtitle-sep { color: #d1d5db; }
 .pdv-header-actions { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
 
-/* ========== Pill Tabs (集成在 header 下方, 同卡片视觉) ========== */
+/* ========== Pill Tabs (token 化) ========== */
 .pdv-tabs {
   display: flex;
-  gap: 4px;
-  background: #f3f4f6;
-  border-radius: 10px;
-  padding: 3px;
-  margin-bottom: 16px;
+  gap: var(--insp-sp-1);
+  background: var(--insp-bg-surface);
+  border: 1px solid var(--insp-border-default);
+  border-radius: var(--insp-radius-lg);
+  padding: var(--insp-sp-1);
+  margin-bottom: var(--insp-sp-3);
   width: fit-content;
-  position: relative;
-  top: -4px;
 }
 .pdv-tab {
   display: inline-flex;
   align-items: center;
-  gap: 5px;
-  padding: 6px 14px;
-  border-radius: 8px;
-  font-size: 13px;
-  font-weight: 500;
-  color: #6b7280;
+  gap: var(--insp-sp-1);
+  height: var(--insp-h-md);
+  padding: 0 var(--insp-sp-3);
+  border-radius: var(--insp-radius-md);
+  font-family: inherit;
+  font-size: var(--insp-text-sm);
+  font-weight: var(--insp-fw-medium);
+  color: var(--insp-ink-tertiary);
   background: transparent;
   border: none;
   cursor: pointer;
-  transition: all 0.15s;
+  transition: background var(--insp-t-fast), color var(--insp-t-fast);
   white-space: nowrap;
 }
-.pdv-tab:hover { color: #374151; background: rgba(255,255,255,0.6); }
-.pdv-tab.active { color: #1a6dff; background: #fff; box-shadow: 0 1px 4px rgba(0,0,0,0.1); font-weight: 600; }
-.pdv-tab-dot { width: 6px; height: 6px; border-radius: 50%; background: #f59e0b; flex-shrink: 0; }
+.pdv-tab:hover { color: var(--insp-ink-primary); background: var(--insp-bg-subtle); }
+.pdv-tab.active {
+  color: var(--insp-accent);
+  background: var(--insp-accent-paler);
+  font-weight: var(--insp-fw-semibold);
+}
+.pdv-tab-dot {
+  width: 6px; height: 6px;
+  border-radius: var(--insp-radius-pill);
+  background: var(--insp-warn);
+  flex-shrink: 0;
+}
 .pdv-tab-badge {
-  font-size: 10px; min-width: 16px; height: 16px; line-height: 16px;
-  text-align: center; border-radius: 8px;
-  background: #ef4444; color: #fff; font-weight: 700;
-  padding: 0 4px; flex-shrink: 0;
+  display: inline-flex; align-items: center; justify-content: center;
+  font-size: 10px; min-width: 16px; height: 16px;
+  padding: 0 var(--insp-sp-1);
+  border-radius: var(--insp-radius-pill);
+  background: var(--insp-fail); color: #fff;
+  font-weight: var(--insp-fw-bold);
+  flex-shrink: 0;
 }
 
 /* ========== Body ========== */
