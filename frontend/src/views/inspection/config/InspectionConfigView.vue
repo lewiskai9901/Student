@@ -6,7 +6,7 @@ import {
   Plus, Search, Copy, Upload, Archive, Ban, Trash2,
   Pencil, MoreHorizontal, LayoutGrid, FileText,
   Library, ListTree, Award, Tag, ArrowRight, List, Rows3,
-  Check, Download, X,
+  Check, Download, X, Grid3x3, AlertTriangle, CheckCircle2,
 } from 'lucide-vue-next'
 import { useInspTemplateStore } from '@/stores/inspection/inspTemplateStore'
 import { inspTemplateApi } from '@/api/inspection/template'
@@ -33,11 +33,19 @@ const quickAccess = computed<QuickAccess[]>(() => [
 ])
 
 // ==================== 视图模式 ====================
-type ViewMode = 'compact' | 'standard'
+type ViewMode = 'compact' | 'standard' | 'grid'
 const viewMode = ref<ViewMode>((localStorage.getItem('insp_cfg_view_mode') as ViewMode) || 'compact')
 function setViewMode(m: ViewMode) {
   viewMode.value = m
   localStorage.setItem('insp_cfg_view_mode', m)
+}
+
+// 模板缩略色: 用名称 hash 派生 HSL, 同名稳定, 不同模板色相分散
+function thumbGradient(name: string): string {
+  let hash = 0
+  for (let i = 0; i < name.length; i++) hash = ((hash << 5) - hash + name.charCodeAt(i)) | 0
+  const h = Math.abs(hash) % 360
+  return `linear-gradient(135deg, hsl(${h}, 65%, 55%) 0%, hsl(${(h + 35) % 360}, 60%, 45%) 100%)`
 }
 
 // ==================== State ====================
@@ -107,22 +115,75 @@ function toggleSelectAll() {
 }
 function clearSelection() { selectedIds.value = new Set() }
 
+// ==================== 批量发布预校验 ====================
+interface PrecheckRow {
+  id: number
+  name: string
+  ok: boolean
+  reason?: string
+  sectionCount: number
+  itemCount: number
+}
+const precheckDialogVisible = ref(false)
+const precheckRunning = ref(false)
+const precheckRows = ref<PrecheckRow[]>([])
+const precheckPublishing = ref(false)
+
 async function batchPublish() {
   const ids = Array.from(selectedIds.value).filter(id => {
     const s = rootSections.value.find(x => Number(x.id) === id)
     return s?.status === 'DRAFT'
   })
   if (ids.length === 0) { ElMessage.warning('当前选中的模板里没有可发布的草稿'); return }
-  try {
-    await ElMessageBox.confirm(`将批量发布 ${ids.length} 个草稿模板, 每个会创建不可变快照. 确认?`, '批量发布', { type: 'warning' })
-    let ok = 0, fail = 0
-    for (const id of ids) {
-      try { await templateStore.publish(id as any); ok++ } catch { fail++ }
+
+  // 打开校验对话, 边校验边显示进度
+  precheckDialogVisible.value = true
+  precheckRunning.value = true
+  precheckRows.value = []
+  for (const id of ids) {
+    const sec = rootSections.value.find(x => Number(x.id) === id)!
+    const row: PrecheckRow = {
+      id, name: sec.sectionName, ok: false,
+      sectionCount: 0, itemCount: 0,
     }
-    ElMessage.success(`成功 ${ok} 条${fail > 0 ? `, 失败 ${fail} 条` : ''}`)
-    clearSelection()
-    loadTemplates()
-  } catch { /* cancel */ }
+    try {
+      const children = await inspTemplateApi.getSections(id as any)
+      const leaves = (children || []).filter((c: any) => !c.parentSectionId || c.parentSectionId === id)
+      row.sectionCount = leaves.length
+      let itemTotal = 0
+      for (const leaf of leaves) {
+        try {
+          const items = await inspTemplateApi.getItems(leaf.id)
+          itemTotal += (items || []).length
+        } catch { /* skip */ }
+      }
+      row.itemCount = itemTotal
+      if (row.sectionCount === 0) row.reason = '无任何分区'
+      else if (row.itemCount === 0) row.reason = '所有分区均无检查项'
+      else row.ok = true
+    } catch (e: any) {
+      row.reason = e?.message || '加载失败'
+    }
+    precheckRows.value = [...precheckRows.value, row]
+  }
+  precheckRunning.value = false
+}
+async function confirmBatchPublishAfterPrecheck() {
+  const okIds = precheckRows.value.filter(r => r.ok).map(r => r.id)
+  if (okIds.length === 0) {
+    ElMessage.warning('没有可发布的模板')
+    return
+  }
+  precheckPublishing.value = true
+  let ok = 0, fail = 0
+  for (const id of okIds) {
+    try { await templateStore.publish(id as any); ok++ } catch { fail++ }
+  }
+  precheckPublishing.value = false
+  precheckDialogVisible.value = false
+  ElMessage.success(`成功 ${ok} 条${fail > 0 ? `, 失败 ${fail} 条` : ''}`)
+  clearSelection()
+  loadTemplates()
 }
 async function batchArchive() {
   const ids = Array.from(selectedIds.value)
@@ -448,6 +509,10 @@ onMounted(() => { loadTemplates() })
                   @click="setViewMode('standard')" title="标准模式">
             <List :size="13" />
           </button>
+          <button class="cfg-view-btn" :class="{ 'is-active': viewMode === 'grid' }"
+                  @click="setViewMode('grid')" title="网格模式">
+            <Grid3x3 :size="13" />
+          </button>
         </div>
       </div>
     </div>
@@ -508,7 +573,71 @@ onMounted(() => { loadTemplates() })
           </span>
         </div>
 
-      <ul class="tpl-rows" :class="`tpl-rows--${viewMode}`">
+      <!-- 网格模式 (3 列卡片 + 缩略图) -->
+      <div v-if="viewMode === 'grid'" class="tpl-grid">
+        <article
+          v-for="(sec, i) in filteredSections" :key="sec.id"
+          class="tpl-card"
+          :class="{ 'is-selected': selectedIds.has(Number(sec.id)) }"
+          @click="goEdit(sec)"
+        >
+          <div class="tpl-card__thumb" :style="{ background: thumbGradient(sec.sectionName) }">
+            <span class="tpl-card__thumb-letter">{{ sec.sectionName.slice(0, 1) }}</span>
+            <span class="tpl-card__thumb-version insp-num">v{{ sec.latestVersion }}</span>
+            <label class="tpl-checkbox tpl-card__checkbox" @click.stop>
+              <input type="checkbox" :checked="selectedIds.has(Number(sec.id))" @change="toggleSelect(Number(sec.id))" />
+              <span class="tpl-checkbox__box"><Check :size="10" /></span>
+            </label>
+            <span class="tpl-card__index insp-num">{{ String(i + 1).padStart(2, '0') }}</span>
+          </div>
+          <div class="tpl-card__body">
+            <div class="tpl-card__title-line">
+              <h3 class="tpl-card__title">{{ sec.sectionName }}</h3>
+              <span class="insp-chip"
+                    :class="`insp-chip--${({DRAFT:'pending',PUBLISHED:'pass',DEPRECATED:'warn',ARCHIVED:'pending'} as any)[sec.status]}`">
+                {{ TemplateStatusConfig[sec.status]?.label }}
+              </span>
+            </div>
+            <div class="tpl-card__metrics">
+              <div class="tpl-card__metric">
+                <span class="tpl-card__metric-num insp-num">{{ getSectionCount(sec.id) }}</span>
+                <span class="tpl-card__metric-label">分区</span>
+              </div>
+              <div class="tpl-card__metric-rule" />
+              <div class="tpl-card__metric">
+                <span class="tpl-card__metric-num insp-num"
+                      :style="{ color: usageMap[Number(sec.id)] > 0 ? 'var(--insp-info)' : '' }">
+                  {{ usageMap[Number(sec.id)] || 0 }}
+                </span>
+                <span class="tpl-card__metric-label">在用</span>
+              </div>
+              <div class="tpl-card__metric-rule" />
+              <div class="tpl-card__metric">
+                <span class="tpl-card__metric-num insp-num">{{ formatDate(sec.updatedAt) }}</span>
+                <span class="tpl-card__metric-label">更新</span>
+              </div>
+            </div>
+            <div class="tpl-card__footer">
+              <div class="tpl-card__tts">
+                <span v-for="tt in getTargetTypes(sec.id)" :key="tt" class="tpl-row__tt">
+                  {{ TargetTypeConfig[tt]?.label }}
+                </span>
+                <span v-if="getTargetTypes(sec.id).length === 0" class="tpl-card__no-tt">— 待配置 —</span>
+              </div>
+              <div class="tpl-card__actions" @click.stop>
+                <button class="insp-btn insp-btn--xs" @click="goEdit(sec)">编辑</button>
+                <button class="insp-btn insp-btn--xs insp-btn--ghost"
+                        @click.stop="toggleDropdown(Number(sec.id), $event)">
+                  <MoreHorizontal :size="12" />
+                </button>
+              </div>
+            </div>
+          </div>
+        </article>
+      </div>
+
+      <!-- 列表模式 (compact / standard) -->
+      <ul v-else class="tpl-rows" :class="`tpl-rows--${viewMode}`">
         <li
           v-for="(sec, i) in filteredSections" :key="sec.id"
           class="tpl-row"
@@ -601,6 +730,70 @@ onMounted(() => { loadTemplates() })
               </button>
             </template>
           </template>
+        </div>
+      </Transition>
+    </Teleport>
+
+    <!-- 批量发布预校验 Dialog (P3) -->
+    <Teleport to="body">
+      <Transition name="modal">
+        <div v-if="precheckDialogVisible" class="modal-mask"
+             @mousedown="onMaskMouseDown"
+             @click="onMaskClick($event, () => { if (!precheckRunning && !precheckPublishing) precheckDialogVisible = false })">
+          <div class="modal-box modal-box--wide">
+            <div class="modal-head">
+              <h3>批量发布 · 预校验</h3>
+              <button class="modal-close" :disabled="precheckRunning || precheckPublishing"
+                      @click="precheckDialogVisible = false">&times;</button>
+            </div>
+            <div class="modal-body">
+              <div class="precheck-summary">
+                <span v-if="precheckRunning" class="precheck-summary__loading">
+                  正在校验 <span class="insp-num">{{ precheckRows.length }}</span> 个模板…
+                </span>
+                <template v-else>
+                  <span class="precheck-summary__ok">
+                    <CheckCircle2 :size="14" />
+                    可发布 <strong class="insp-num">{{ precheckRows.filter(r => r.ok).length }}</strong>
+                  </span>
+                  <span v-if="precheckRows.some(r => !r.ok)" class="precheck-summary__fail">
+                    <AlertTriangle :size="14" />
+                    待修复 <strong class="insp-num">{{ precheckRows.filter(r => !r.ok).length }}</strong>
+                  </span>
+                </template>
+              </div>
+              <ul class="precheck-list">
+                <li v-for="row in precheckRows" :key="row.id" class="precheck-row" :class="{ 'is-fail': !row.ok }">
+                  <span class="precheck-row__icon">
+                    <CheckCircle2 v-if="row.ok" :size="14" style="color: var(--insp-pass)" />
+                    <AlertTriangle v-else :size="14" style="color: var(--insp-warn)" />
+                  </span>
+                  <div class="precheck-row__main">
+                    <div class="precheck-row__name">{{ row.name }}</div>
+                    <div class="precheck-row__meta">
+                      <span><span class="insp-num">{{ row.sectionCount }}</span> 分区</span>
+                      <span class="precheck-row__sep">·</span>
+                      <span><span class="insp-num">{{ row.itemCount }}</span> 检查项</span>
+                      <template v-if="row.reason">
+                        <span class="precheck-row__sep">·</span>
+                        <span class="precheck-row__reason">{{ row.reason }}</span>
+                      </template>
+                    </div>
+                  </div>
+                </li>
+              </ul>
+            </div>
+            <div class="modal-foot">
+              <button class="btn-ghost" :disabled="precheckPublishing" @click="precheckDialogVisible = false">
+                取消
+              </button>
+              <button class="insp-btn insp-btn--accent"
+                      :disabled="precheckRunning || precheckPublishing || precheckRows.filter(r => r.ok).length === 0"
+                      @click="confirmBatchPublishAfterPrecheck">
+                {{ precheckPublishing ? '发布中…' : `发布 ${precheckRows.filter(r => r.ok).length} 条可用模板` }}
+              </button>
+            </div>
+          </div>
         </div>
       </Transition>
     </Teleport>
@@ -1187,6 +1380,238 @@ onMounted(() => { loadTemplates() })
 .tpl-row.is-selected {
   background: var(--insp-accent-paler);
   box-shadow: inset 3px 0 0 var(--insp-accent);
+}
+
+/* ─ 网格视图 (P3) ─────── */
+.tpl-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 12px;
+  padding: 14px;
+}
+.tpl-card {
+  display: flex;
+  flex-direction: column;
+  background: var(--insp-bg-surface);
+  border: 1px solid var(--insp-border-default);
+  border-radius: var(--insp-radius-md);
+  overflow: hidden;
+  cursor: pointer;
+  transition: all var(--insp-t-fast);
+}
+.tpl-card:hover {
+  border-color: var(--insp-accent);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
+}
+.tpl-card.is-selected {
+  border-color: var(--insp-accent);
+  box-shadow: 0 0 0 2px var(--insp-accent), 0 8px 24px rgba(26, 109, 255, 0.18);
+}
+.tpl-card__thumb {
+  position: relative;
+  height: 100px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+.tpl-card__thumb-letter {
+  font-size: 48px;
+  font-weight: 700;
+  color: rgba(255, 255, 255, 0.95);
+  line-height: 1;
+  letter-spacing: -0.05em;
+  text-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+  user-select: none;
+}
+.tpl-card__thumb-version {
+  position: absolute;
+  bottom: 8px;
+  right: 10px;
+  padding: 2px 8px;
+  background: rgba(255, 255, 255, 0.22);
+  backdrop-filter: blur(8px);
+  border-radius: 10px;
+  color: white;
+  font-size: 10px;
+  font-weight: 600;
+}
+.tpl-card__index {
+  position: absolute;
+  bottom: 8px;
+  left: 10px;
+  font-family: var(--insp-font-mono);
+  font-size: 10px;
+  color: rgba(255, 255, 255, 0.7);
+  font-weight: 600;
+}
+.tpl-card__checkbox {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  z-index: 1;
+}
+.tpl-card__checkbox .tpl-checkbox__box {
+  background: rgba(255, 255, 255, 0.85);
+  border-color: rgba(255, 255, 255, 0.6);
+}
+.tpl-card__body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px 14px;
+}
+.tpl-card__title-line {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+}
+.tpl-card__title {
+  margin: 0;
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--insp-ink-primary);
+  line-height: 1.3;
+  letter-spacing: -0.01em;
+  flex: 1;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.tpl-card__metrics {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 0;
+  border-top: 1px solid var(--insp-border-subtle);
+  border-bottom: 1px solid var(--insp-border-subtle);
+}
+.tpl-card__metric {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1px;
+}
+.tpl-card__metric-num {
+  font-family: var(--insp-font-mono);
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--insp-ink-primary);
+  line-height: 1;
+}
+.tpl-card__metric-label {
+  font-size: 9px;
+  color: var(--insp-ink-tertiary);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+.tpl-card__metric-rule {
+  width: 1px;
+  height: 18px;
+  background: var(--insp-border-subtle);
+}
+.tpl-card__footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.tpl-card__tts {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-wrap: wrap;
+  flex: 1;
+  min-width: 0;
+}
+.tpl-card__no-tt {
+  font-size: 10px;
+  color: var(--insp-ink-quaternary);
+  font-style: italic;
+}
+.tpl-card__actions {
+  display: flex;
+  gap: 4px;
+  flex-shrink: 0;
+}
+.insp-btn--xs {
+  padding: 3px 8px;
+  font-size: 11px;
+  height: 22px;
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+}
+
+/* ─ 批量发布预校验 (P3) ─────── */
+.precheck-summary {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 8px 12px;
+  margin: 0 0 10px;
+  background: var(--insp-bg-subtle);
+  border-radius: var(--insp-radius-sm);
+  font-size: 12px;
+}
+.precheck-summary__loading { color: var(--insp-ink-tertiary); }
+.precheck-summary__ok {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--insp-pass);
+}
+.precheck-summary__ok strong { color: var(--insp-ink-primary); }
+.precheck-summary__fail {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--insp-warn);
+}
+.precheck-summary__fail strong { color: var(--insp-ink-primary); }
+
+.precheck-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  max-height: 360px;
+  overflow-y: auto;
+  border: 1px solid var(--insp-border-subtle);
+  border-radius: var(--insp-radius-sm);
+}
+.precheck-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 9px 12px;
+  border-bottom: 1px solid var(--insp-border-subtle);
+}
+.precheck-row:last-child { border-bottom: 0; }
+.precheck-row.is-fail { background: var(--insp-warn-pale, rgba(245, 158, 11, 0.06)); }
+.precheck-row__icon { padding-top: 1px; flex-shrink: 0; }
+.precheck-row__main { flex: 1; min-width: 0; }
+.precheck-row__name {
+  font-size: 12.5px;
+  font-weight: 500;
+  color: var(--insp-ink-primary);
+  margin-bottom: 2px;
+}
+.precheck-row__meta {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 10.5px;
+  color: var(--insp-ink-tertiary);
+}
+.precheck-row__sep { color: var(--insp-ink-quaternary); }
+.precheck-row__reason {
+  color: var(--insp-warn);
+  font-weight: 500;
 }
 
 /* 紧凑模式 */
