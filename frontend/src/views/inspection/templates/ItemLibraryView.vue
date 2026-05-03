@@ -1,8 +1,8 @@
 <script setup lang="ts">
-import { ref, reactive, computed, onMounted } from 'vue'
+import { ref, reactive, computed, onMounted, onUnmounted, nextTick } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import {
-  Plus, Search, Pencil, Trash2, RefreshCw, Library, Package,
+  Plus, Search, Pencil, Trash2, RefreshCw, Library, Package, Keyboard,
 } from 'lucide-vue-next'
 import type { LibraryItem, CreateLibraryItemRequest, UpdateLibraryItemRequest } from '@/types/insp/template'
 import type { ItemType } from '@/types/insp/enums'
@@ -73,6 +73,86 @@ const itemTypeOptions: { value: ItemType; label: string }[] = [
 ]
 
 const filteredItems = computed(() => items.value)
+
+// ============== S+ 设计 (复用 inspection-config 样板) ==============
+function highlightHtml(text: string, kw: string): string {
+  if (!kw) return text
+  const escaped = kw.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+  return text.replace(new RegExp(`(${escaped})`, 'gi'), '<mark class="lib-mark">$1</mark>')
+}
+
+const focusedIdx = ref<number>(-1)
+function focusNext() {
+  focusedIdx.value = Math.min(focusedIdx.value + 1, filteredItems.value.length - 1)
+  nextTick(scrollFocusedIntoView)
+}
+function focusPrev() {
+  focusedIdx.value = Math.max(0, focusedIdx.value - 1)
+  nextTick(scrollFocusedIntoView)
+}
+function scrollFocusedIntoView() {
+  const cur = filteredItems.value[focusedIdx.value]
+  if (!cur) return
+  const el = document.querySelector(`[data-lib-id="${cur.id}"]`)
+  el?.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
+}
+
+const showKbdHint = ref(localStorage.getItem('insp_lib_kbd_hint_dismissed') !== '1')
+function dismissKbdHint() {
+  showKbdHint.value = false
+  localStorage.setItem('insp_lib_kbd_hint_dismissed', '1')
+}
+
+function onGlobalKeyLib(e: KeyboardEvent) {
+  const t = e.target as HTMLElement
+  const tag = t?.tagName
+  if (tag === 'INPUT' || tag === 'TEXTAREA' || t?.isContentEditable) return
+  if (dialogVisible.value) return
+  if (e.metaKey || e.ctrlKey || e.altKey) return
+  switch (e.key) {
+    case 'j':
+    case 'ArrowDown': e.preventDefault(); focusNext(); break
+    case 'k':
+    case 'ArrowUp': e.preventDefault(); focusPrev(); break
+    case 'Enter':
+    case 'e': {
+      const cur = filteredItems.value[focusedIdx.value]
+      if (cur) { e.preventDefault(); openEdit(cur) }
+      break
+    }
+    case '/': e.preventDefault(); (document.querySelector('.filter-search input') as HTMLElement)?.focus(); break
+    case 'n': e.preventDefault(); openCreate(); break
+    case 'Escape': focusedIdx.value = -1; break
+  }
+}
+
+// 悬浮预览
+const previewVisible = ref(false)
+const previewTarget = ref<LibraryItem | null>(null)
+const previewPos = ref({ top: '0px', left: '0px' })
+let previewShowTimer: any = null
+let previewHideTimer: any = null
+function showPreview(item: LibraryItem, e: MouseEvent) {
+  clearTimeout(previewHideTimer)
+  clearTimeout(previewShowTimer)
+  const target = e.currentTarget as HTMLElement
+  previewShowTimer = setTimeout(() => {
+    previewTarget.value = item
+    const rect = target.getBoundingClientRect()
+    const popoverWidth = 320
+    if (rect.right + popoverWidth + 16 < window.innerWidth) {
+      previewPos.value = { top: `${rect.top}px`, left: `${rect.right + 8}px` }
+    } else {
+      previewPos.value = { top: `${rect.bottom + 8}px`, left: `${rect.left}px` }
+    }
+    previewVisible.value = true
+  }, 600)
+}
+function hidePreview() {
+  clearTimeout(previewShowTimer)
+  previewHideTimer = setTimeout(() => { previewVisible.value = false }, 100)
+}
+function keepPreview() { clearTimeout(previewHideTimer) }
 
 // ==================== Actions ====================
 async function loadItems() {
@@ -207,7 +287,9 @@ function getTagList(tags: string | null): string[] {
 onMounted(() => {
   loadItems()
   loadCategories()
+  window.addEventListener('keydown', onGlobalKeyLib)
 })
+onUnmounted(() => window.removeEventListener('keydown', onGlobalKeyLib))
 </script>
 
 <template>
@@ -259,19 +341,36 @@ onMounted(() => {
       </div>
     </nav>
 
+    <!-- 键盘快捷键提示 (S+) -->
+    <div v-if="showKbdHint" class="lib-kbd-hint">
+      <Keyboard :size="12" />
+      <span class="lib-kbd-hint__group"><kbd class="insp-kbd">J</kbd><kbd class="insp-kbd">K</kbd> 浏览</span>
+      <span class="lib-kbd-hint__group"><kbd class="insp-kbd">E</kbd> 编辑</span>
+      <span class="lib-kbd-hint__group"><kbd class="insp-kbd">N</kbd> 新建</span>
+      <span class="lib-kbd-hint__group"><kbd class="insp-kbd">/</kbd> 搜索</span>
+      <button class="lib-kbd-hint__close" @click="dismissKbdHint" title="不再显示">×</button>
+    </div>
+
     <!-- ── Library register ─────────── -->
     <section v-loading="loading" class="library">
-      <article v-for="(item, i) in filteredItems" :key="item.id" class="lib-row">
+      <article
+        v-for="(item, i) in filteredItems" :key="item.id"
+        :data-lib-id="item.id"
+        class="lib-row"
+        :class="{ 'is-focused': focusedIdx === i }"
+        @mouseenter="(e) => showPreview(item, e)"
+        @mouseleave="hidePreview"
+      >
         <div class="row-num insp-num">{{ String(i + 1).padStart(3, '0') }}</div>
 
         <div class="row-meta">
           <div class="row-name-line">
-            <span class="row-name">{{ item.itemName }}</span>
+            <span class="row-name" v-html="highlightHtml(item.itemName, query.keyword)"></span>
             <span class="insp-chip insp-chip--info">{{ getTypeLabel(item.itemType) }}</span>
             <span v-if="item.isStandard" class="insp-stamp">标准</span>
           </div>
           <div class="row-code-line">
-            <span class="row-code">{{ item.itemCode }}</span>
+            <span class="row-code" v-html="highlightHtml(item.itemCode, query.keyword)"></span>
             <span v-if="item.category" class="row-sep">·</span>
             <span v-if="item.category" class="row-cat">{{ item.category }}</span>
           </div>
@@ -359,6 +458,44 @@ onMounted(() => {
         </div>
       </div>
     </Transition>
+
+    <!-- S+ 悬浮预览卡 -->
+    <Teleport to="body">
+      <Transition name="lib-popover">
+        <div v-if="previewVisible && previewTarget"
+             class="lib-popover"
+             :style="{ top: previewPos.top, left: previewPos.left }"
+             @mouseenter="keepPreview"
+             @mouseleave="hidePreview">
+          <div class="lib-popover__head">
+            <div class="lib-popover__title-line">
+              <span class="lib-popover__name">{{ previewTarget.itemName }}</span>
+              <span v-if="previewTarget.isStandard" class="insp-stamp">标准</span>
+            </div>
+            <div class="lib-popover__sub">
+              <span class="lib-popover__code insp-num">{{ previewTarget.itemCode }}</span>
+              <span class="lib-popover__sep">·</span>
+              <span class="insp-chip insp-chip--info">{{ getTypeLabel(previewTarget.itemType) }}</span>
+              <span v-if="previewTarget.category" class="lib-popover__sep">·</span>
+              <span v-if="previewTarget.category">{{ previewTarget.category }}</span>
+            </div>
+          </div>
+          <div class="lib-popover__body">
+            <div v-if="previewTarget.description" class="lib-popover__desc">
+              {{ previewTarget.description }}
+            </div>
+            <div v-if="getTagList(previewTarget.tags).length > 0" class="lib-popover__tags">
+              <span v-for="tag in getTagList(previewTarget.tags)" :key="tag" class="row-tag">#{{ tag }}</span>
+            </div>
+            <div class="lib-popover__usage">
+              <span class="lib-popover__usage-num insp-num">{{ previewTarget.usageCount || 0 }}</span>
+              <span class="lib-popover__usage-label">次模板引用</span>
+            </div>
+          </div>
+          <div class="lib-popover__foot">按 E 编辑此条目</div>
+        </div>
+      </Transition>
+    </Teleport>
   </div>
 </template>
 
@@ -626,4 +763,131 @@ onMounted(() => {
   .form-grid { grid-template-columns: 1fr; }
   .lib-fld--full { grid-column: span 1; }
 }
+
+/* ─ S+ 搜索高亮 ─────── */
+:deep(.lib-mark) {
+  background: rgba(245, 200, 70, 0.4);
+  color: var(--insp-ink-primary);
+  padding: 0 2px;
+  border-radius: 2px;
+  font-weight: 600;
+}
+
+/* ─ S+ 键盘聚焦 ─────── */
+.lib-row.is-focused {
+  outline: 2px solid var(--insp-accent);
+  outline-offset: -2px;
+}
+
+/* ─ S+ 键盘提示条 ─────── */
+.lib-kbd-hint {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 6px 12px;
+  margin-bottom: 10px;
+  background: linear-gradient(90deg, rgba(26, 109, 255, 0.06) 0%, transparent 100%);
+  border: 1px solid rgba(26, 109, 255, 0.18);
+  border-radius: var(--insp-radius-md);
+  font-size: 11px;
+  color: var(--insp-ink-secondary);
+}
+.lib-kbd-hint__group { display: inline-flex; align-items: center; gap: 4px; }
+.lib-kbd-hint__close {
+  margin-left: auto;
+  width: 20px; height: 20px;
+  border: 0;
+  background: transparent;
+  font-size: 16px;
+  color: var(--insp-ink-quaternary);
+  border-radius: 3px;
+  cursor: pointer;
+}
+.lib-kbd-hint__close:hover { background: rgba(0,0,0,0.06); color: var(--insp-ink-primary); }
+
+/* ─ S+ 悬浮预览卡 ─────── */
+.lib-popover {
+  position: fixed;
+  z-index: 9500;
+  width: 320px;
+  background: var(--insp-bg-surface);
+  border: 1px solid var(--insp-border-strong);
+  border-radius: var(--insp-radius-lg);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.18);
+  overflow: hidden;
+}
+.lib-popover__head {
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--insp-border-subtle);
+}
+.lib-popover__title-line {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+.lib-popover__name {
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--insp-ink-primary);
+  letter-spacing: -0.01em;
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.lib-popover__sub {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  color: var(--insp-ink-tertiary);
+  flex-wrap: wrap;
+}
+.lib-popover__code { font-family: var(--insp-font-mono); }
+.lib-popover__sep { color: var(--insp-ink-quaternary); }
+.lib-popover__body {
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.lib-popover__desc {
+  font-size: 12px;
+  color: var(--insp-ink-secondary);
+  line-height: 1.5;
+}
+.lib-popover__tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+.lib-popover__usage {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  background: var(--insp-bg-subtle);
+  border-radius: var(--insp-radius-sm);
+}
+.lib-popover__usage-num {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--insp-accent);
+}
+.lib-popover__usage-label {
+  font-size: 11px;
+  color: var(--insp-ink-tertiary);
+}
+.lib-popover__foot {
+  padding: 8px 14px;
+  background: var(--insp-bg-subtle);
+  border-top: 1px solid var(--insp-border-subtle);
+  font-size: 10.5px;
+  color: var(--insp-ink-tertiary);
+  text-align: center;
+}
+.lib-popover-enter-active, .lib-popover-leave-active { transition: all 0.15s ease; }
+.lib-popover-enter-from { opacity: 0; transform: translateX(-4px) scale(0.98); }
+.lib-popover-leave-to { opacity: 0; }
 </style>

@@ -3,9 +3,10 @@
  * CorrectiveCaseListView — 整改案例总册 (Audit Console redesign)
  * 卷宗式列表 · 带统计刊头 · 标签栏(计数) · 行内紧急度+逾期提示
  */
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted, nextTick } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
+import { Keyboard } from 'lucide-vue-next'
 import { useInspCorrectiveStore } from '@/stores/inspection/inspCorrectiveStore'
 import {
   CaseStatusConfig, CasePriorityConfig,
@@ -115,6 +116,77 @@ function goDetail(c: CorrectiveCase) {
   router.push(`/inspection/corrective/${c.id}`)
 }
 
+// ============== S+ 设计样板 ==============
+const searchKw = ref('')
+function highlightHtml(text: string, kw: string): string {
+  if (!kw) return text
+  const escaped = kw.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+  return text.replace(new RegExp(`(${escaped})`, 'gi'), '<mark class="cc-mark">$1</mark>')
+}
+const filteredCases = computed(() => {
+  const q = searchKw.value.trim().toLowerCase()
+  if (!q) return cases.value
+  return cases.value.filter(c =>
+    c.caseCode.toLowerCase().includes(q) ||
+    (c.title || '').toLowerCase().includes(q) ||
+    (c.assigneeName || '').toLowerCase().includes(q)
+  )
+})
+
+const focusedIdx = ref<number>(-1)
+function focusNext() { focusedIdx.value = Math.min(focusedIdx.value + 1, filteredCases.value.length - 1); nextTick(scrollFocused) }
+function focusPrev() { focusedIdx.value = Math.max(0, focusedIdx.value - 1); nextTick(scrollFocused) }
+function scrollFocused() {
+  const cur = filteredCases.value[focusedIdx.value]
+  if (!cur) return
+  document.querySelector(`[data-cc-id="${cur.id}"]`)?.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
+}
+
+const showKbdHint = ref(localStorage.getItem('insp_cc_kbd_hint_dismissed') !== '1')
+function dismissKbdHint() { showKbdHint.value = false; localStorage.setItem('insp_cc_kbd_hint_dismissed', '1') }
+
+function onGlobalKeyCC(e: KeyboardEvent) {
+  const t = e.target as HTMLElement
+  if (t?.tagName === 'INPUT' || t?.tagName === 'TEXTAREA' || t?.isContentEditable) return
+  if (e.metaKey || e.ctrlKey || e.altKey) return
+  switch (e.key) {
+    case 'j': case 'ArrowDown': e.preventDefault(); focusNext(); break
+    case 'k': case 'ArrowUp': e.preventDefault(); focusPrev(); break
+    case 'Enter': case 'e': {
+      const cur = filteredCases.value[focusedIdx.value]
+      if (cur) { e.preventDefault(); goDetail(cur) }
+      break
+    }
+    case '/': e.preventDefault(); (document.querySelector('.cc-search-input') as HTMLElement)?.focus(); break
+    case 'Escape': focusedIdx.value = -1; break
+  }
+}
+
+// 悬浮预览
+const previewVisible = ref(false)
+const previewTarget = ref<CorrectiveCase | null>(null)
+const previewPos = ref({ top: '0px', left: '0px' })
+let previewShowTimer: any = null
+let previewHideTimer: any = null
+function showPreview(c: CorrectiveCase, e: MouseEvent) {
+  clearTimeout(previewHideTimer)
+  clearTimeout(previewShowTimer)
+  const target = e.currentTarget as HTMLElement
+  previewShowTimer = setTimeout(() => {
+    previewTarget.value = c
+    const rect = target.getBoundingClientRect()
+    const pw = 320
+    if (rect.right + pw + 16 < window.innerWidth) previewPos.value = { top: `${rect.top}px`, left: `${rect.right + 8}px` }
+    else previewPos.value = { top: `${rect.bottom + 8}px`, left: `${rect.left}px` }
+    previewVisible.value = true
+  }, 600)
+}
+function hidePreview() {
+  clearTimeout(previewShowTimer)
+  previewHideTimer = setTimeout(() => { previewVisible.value = false }, 100)
+}
+function keepPreview() { clearTimeout(previewHideTimer) }
+
 async function handleEscalate(c: CorrectiveCase) {
   try {
     await ElMessageBox.confirm(`升级案例「${c.caseCode}」?`, '确认升级', { type: 'warning' })
@@ -133,7 +205,11 @@ async function handleDelete(c: CorrectiveCase) {
   } catch { /* cancelled */ }
 }
 
-onMounted(() => loadData())
+onMounted(() => {
+  loadData()
+  window.addEventListener('keydown', onGlobalKeyCC)
+})
+onUnmounted(() => window.removeEventListener('keydown', onGlobalKeyCC))
 </script>
 
 <template>
@@ -186,13 +262,26 @@ onMounted(() => loadData())
       <button class="insp-btn insp-btn--ghost" @click="loadData">刷新</button>
     </nav>
 
+    <!-- 键盘快捷键提示 (S+) -->
+    <div v-if="showKbdHint" class="cc-kbd-hint">
+      <Keyboard :size="12" />
+      <span class="cc-kbd-hint__group"><kbd class="insp-kbd">J</kbd><kbd class="insp-kbd">K</kbd> 浏览</span>
+      <span class="cc-kbd-hint__group"><kbd class="insp-kbd">E</kbd> 详情</span>
+      <span class="cc-kbd-hint__group"><kbd class="insp-kbd">/</kbd> 搜索</span>
+      <input class="cc-search-input" v-model="searchKw" placeholder="搜索 编码 / 标题 / 责任人..." />
+      <button class="cc-kbd-hint__close" @click="dismissKbdHint" title="不再显示">×</button>
+    </div>
+
     <!-- ── Document register ─────────── -->
     <section v-loading="loading" class="register">
       <article
-        v-for="c in cases" :key="c.id"
+        v-for="(c, i) in filteredCases" :key="c.id"
+        :data-cc-id="c.id"
         class="register-row"
-        :class="{ 'is-overdue': isOverdue(c) }"
+        :class="{ 'is-overdue': isOverdue(c), 'is-focused': focusedIdx === i }"
         @click="goDetail(c)"
+        @mouseenter="(e) => showPreview(c, e)"
+        @mouseleave="hidePreview"
       >
         <!-- Number -->
         <div class="row-num insp-num">{{ String(c.id).padStart(3, '0') }}</div>
@@ -200,7 +289,7 @@ onMounted(() => loadData())
         <!-- Code + status badges -->
         <div class="row-meta">
           <div class="row-code-line">
-            <span class="row-code">{{ c.caseCode }}</span>
+            <span class="row-code" v-html="highlightHtml(c.caseCode, searchKw)"></span>
             <span class="insp-chip" :class="`insp-chip--${priorityVariant(c.priority)}`">
               {{ CasePriorityConfig[c.priority]?.label }}
             </span>
@@ -249,6 +338,52 @@ onMounted(() => loadData())
         </p>
       </div>
     </section>
+
+    <!-- 整改案例悬浮预览 (S+) -->
+    <Teleport to="body">
+      <Transition name="cc-popover">
+        <div v-if="previewVisible && previewTarget"
+             class="cc-popover"
+             :style="{ top: previewPos.top, left: previewPos.left }"
+             @mouseenter="keepPreview"
+             @mouseleave="hidePreview">
+          <div class="cc-popover__head">
+            <div class="cc-popover__title-line">
+              <span class="cc-popover__code">{{ previewTarget.caseCode }}</span>
+              <span class="insp-chip" :class="`insp-chip--${priorityVariant(previewTarget.priority)}`">
+                {{ CasePriorityConfig[previewTarget.priority]?.label }}
+              </span>
+              <span class="insp-chip" :class="`insp-chip--${statusVariant(previewTarget.status)}`">
+                {{ CaseStatusConfig[previewTarget.status]?.label }}
+              </span>
+            </div>
+            <div v-if="previewTarget.title" class="cc-popover__title">{{ previewTarget.title }}</div>
+          </div>
+          <div class="cc-popover__body">
+            <div v-if="previewTarget.targetName" class="cc-popover__row">
+              <span class="cc-popover__label">受检对象</span>
+              <span>{{ previewTarget.targetName }}</span>
+            </div>
+            <div v-if="previewTarget.assigneeName" class="cc-popover__row">
+              <span class="cc-popover__label">责任人</span>
+              <span>{{ previewTarget.assigneeName }}</span>
+            </div>
+            <div v-if="previewTarget.deadline" class="cc-popover__row" :class="{ 'cc-popover__row--late': isOverdue(previewTarget) }">
+              <span class="cc-popover__label">截止</span>
+              <span class="insp-num">{{ fmtDate(previewTarget.deadline) }}</span>
+              <span class="cc-popover__deadline-label" :class="{ 'is-urgent': isOverdue(previewTarget) }">
+                {{ deadlineLabel(previewTarget) }}
+              </span>
+            </div>
+            <div v-if="previewTarget.escalationLevel && previewTarget.escalationLevel > 0" class="cc-popover__row">
+              <span class="cc-popover__label">升级</span>
+              <span class="insp-stamp">L{{ previewTarget.escalationLevel }}</span>
+            </div>
+          </div>
+          <div class="cc-popover__foot">点击查看完整详情 · 按 E 进入</div>
+        </div>
+      </Transition>
+    </Teleport>
   </div>
 </template>
 
@@ -414,4 +549,143 @@ onMounted(() => loadData())
   }
   .row-issue, .row-deadline, .row-actions { grid-column: 2; }
 }
+
+/* ─ S+ 搜索高亮 ─────── */
+:deep(.cc-mark) {
+  background: rgba(245, 200, 70, 0.4);
+  color: var(--insp-ink-primary);
+  padding: 0 2px;
+  border-radius: 2px;
+  font-weight: 600;
+}
+
+/* ─ S+ 键盘聚焦 ─────── */
+.register-row.is-focused {
+  outline: 2px solid var(--insp-accent);
+  outline-offset: -2px;
+}
+
+/* ─ S+ 键盘提示条 + 搜索框 ─────── */
+.cc-kbd-hint {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 6px 12px;
+  margin-bottom: 10px;
+  background: linear-gradient(90deg, rgba(26, 109, 255, 0.06) 0%, transparent 100%);
+  border: 1px solid rgba(26, 109, 255, 0.18);
+  border-radius: var(--insp-radius-md);
+  font-size: 11px;
+  color: var(--insp-ink-secondary);
+}
+.cc-kbd-hint__group { display: inline-flex; align-items: center; gap: 4px; }
+.cc-search-input {
+  flex: 1;
+  max-width: 240px;
+  margin-left: auto;
+  height: 24px;
+  padding: 0 8px;
+  border: 1px solid var(--insp-border-default);
+  border-radius: var(--insp-radius-sm);
+  font-size: 11px;
+  background: var(--insp-bg-surface);
+  font-family: inherit;
+}
+.cc-search-input:focus {
+  outline: none;
+  border-color: var(--insp-accent);
+  box-shadow: 0 0 0 3px var(--insp-accent-paler);
+}
+.cc-kbd-hint__close {
+  width: 20px; height: 20px;
+  border: 0;
+  background: transparent;
+  font-size: 16px;
+  color: var(--insp-ink-quaternary);
+  border-radius: 3px;
+  cursor: pointer;
+}
+.cc-kbd-hint__close:hover { background: rgba(0,0,0,0.06); color: var(--insp-ink-primary); }
+
+/* ─ S+ 整改悬浮预览卡 ─────── */
+.cc-popover {
+  position: fixed;
+  z-index: 9500;
+  width: 320px;
+  background: var(--insp-bg-surface);
+  border: 1px solid var(--insp-border-strong);
+  border-radius: var(--insp-radius-lg);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.18);
+  overflow: hidden;
+}
+.cc-popover__head {
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--insp-border-subtle);
+}
+.cc-popover__title-line {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-bottom: 5px;
+}
+.cc-popover__code {
+  font-family: var(--insp-font-mono);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--insp-ink-primary);
+}
+.cc-popover__title {
+  font-size: 12.5px;
+  color: var(--insp-ink-secondary);
+  line-height: 1.4;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.cc-popover__body {
+  padding: 10px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.cc-popover__row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 11.5px;
+  color: var(--insp-ink-secondary);
+}
+.cc-popover__label {
+  width: 60px;
+  color: var(--insp-ink-tertiary);
+  font-size: 10.5px;
+  letter-spacing: 0.04em;
+  flex-shrink: 0;
+}
+.cc-popover__row--late {
+  background: rgba(239, 68, 68, 0.08);
+  margin: 0 -14px;
+  padding: 4px 14px;
+  color: var(--insp-fail);
+  font-weight: 500;
+}
+.cc-popover__deadline-label {
+  margin-left: auto;
+  color: var(--insp-ink-tertiary);
+  font-size: 10.5px;
+}
+.cc-popover__deadline-label.is-urgent { color: var(--insp-fail); font-weight: 600; }
+.cc-popover__foot {
+  padding: 8px 14px;
+  background: var(--insp-bg-subtle);
+  border-top: 1px solid var(--insp-border-subtle);
+  font-size: 10.5px;
+  color: var(--insp-ink-tertiary);
+  text-align: center;
+}
+.cc-popover-enter-active, .cc-popover-leave-active { transition: all 0.15s ease; }
+.cc-popover-enter-from { opacity: 0; transform: translateX(-4px) scale(0.98); }
+.cc-popover-leave-to { opacity: 0; }
 </style>
