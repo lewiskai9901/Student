@@ -19,6 +19,8 @@ import org.springframework.stereotype.Service;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicLong;
 
 /**
  * 自定义用户详情服务 - 使用DDD UserDomainMapper
@@ -32,6 +34,38 @@ public class CustomUserDetailsService implements UserDetailsService {
     private final AccessRelationRepository accessRelationRepository;
     private final UserRoleRepository userRoleRepository;
     private final JdbcTemplate jdbcTemplate;
+
+    /**
+     * P0-A SQL 性能优化: userDetails 短期缓存 (TTL 30s).
+     * 痛点: JwtAuthenticationFilter 在每个 HTTP 请求里都调用 loadUserByUserId,
+     * 内部至少 5 条 SQL (user / roles / permissions / orgPath / scopedRoles).
+     * 高频请求场景下重复跑这 5 条 SQL 是巨大浪费.
+     * 30s TTL 平衡: 角色权限变更最多 30s 内生效, 避免实时重查.
+     * 主动失效: invalidateUserCache(userId) — 角色/权限变更时调用.
+     */
+    private static final long CACHE_TTL_MS = 30_000L;
+    private final ConcurrentHashMap<Long, CachedDetails> userDetailsCache = new ConcurrentHashMap<>();
+    private static final AtomicLong cacheHits = new AtomicLong(0);
+    private static final AtomicLong cacheMisses = new AtomicLong(0);
+
+    private record CachedDetails(CustomUserDetails details, long expiresAt) {
+        boolean isFresh() { return System.currentTimeMillis() < expiresAt; }
+    }
+
+    /** 角色 / 权限 / 用户信息变更时调用, 强制刷新. */
+    public void invalidateUserCache(Long userId) {
+        if (userId != null) {
+            userDetailsCache.remove(userId);
+            log.debug("UserDetails cache invalidated for userId={}", userId);
+        }
+    }
+    /** 全清, 用于批量权限变更后. */
+    public void invalidateAllUserCache() {
+        userDetailsCache.clear();
+        log.info("UserDetails cache fully cleared");
+    }
+    public long getCacheHits() { return cacheHits.get(); }
+    public long getCacheMisses() { return cacheMisses.get(); }
 
     @Override
     public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
@@ -59,6 +93,14 @@ public class CustomUserDetailsService implements UserDetailsService {
     }
 
     public CustomUserDetails loadUserByUserId(Long userId) {
+        // P0-A: 命中缓存直接返回, 节省 5+ 条 SQL
+        CachedDetails cached = userDetailsCache.get(userId);
+        if (cached != null && cached.isFresh()) {
+            cacheHits.incrementAndGet();
+            return cached.details();
+        }
+        cacheMisses.incrementAndGet();
+
         UserPO user = userDomainMapper.selectById(userId);
         if (user == null) {
             throw new UsernameNotFoundException("用户不存在: " + userId);
@@ -73,7 +115,13 @@ public class CustomUserDetailsService implements UserDetailsService {
             permissions = userDomainMapper.findPermissionCodesByUserId(user.getId());
         }
 
-        return buildUserDetails(user, roles, permissions);
+        CustomUserDetails details = buildUserDetails(user, roles, permissions);
+        userDetailsCache.put(userId, new CachedDetails(details, System.currentTimeMillis() + CACHE_TTL_MS));
+        // 简单 TTL 清理: 缓存超过 1000 条时整体清一次 (开发期单租户场景足够)
+        if (userDetailsCache.size() > 1000) {
+            userDetailsCache.entrySet().removeIf(e -> !e.getValue().isFresh());
+        }
+        return details;
     }
 
     private CustomUserDetails buildUserDetails(UserPO user, List<String> roles, List<String> permissions) {
