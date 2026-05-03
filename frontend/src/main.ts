@@ -10,6 +10,7 @@ import App from './App.vue'
 import router from './router'
 import { loadEnabledPlugins } from './router/bootstrap'
 import { useAuthStore } from './stores/auth'
+import { installErrorReporter } from './utils/errorReporter'
 
 // 引入设计系统令牌 (最高优先级)
 import '@/styles/design-tokens.css'
@@ -21,6 +22,9 @@ import '@/assets/styles/globals.css'
 import '@/assets/styles/index.scss'
 
 const app = createApp(App)
+
+// P3 客户端错误上报 (Vue + window.onerror + unhandledrejection)
+installErrorReporter(app)
 
 app.use(createPinia())
 

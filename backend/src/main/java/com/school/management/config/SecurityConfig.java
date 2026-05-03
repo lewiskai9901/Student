@@ -130,6 +130,7 @@ public class SecurityConfig {
                                 new AntPathRequestMatcher("/actuator/prometheus"),  // Phase 8.1: metrics scrape 公开 (防火墙侧控制来源)
                                 new AntPathRequestMatcher("/actuator/info"),
                                 new AntPathRequestMatcher("/system/configs/public/**"),  // 公开的系统配置接口
+                                new AntPathRequestMatcher("/errors/log"),                // P3 客户端错误上报 (匿名也可记日志)
                                 // 已移除: /druid/** Druid监控需要认证，配置在DruidConfig中
                                 new AntPathRequestMatcher("/dmn-api/**")                 // Flowable DMN API
                                 // 已移除: /teaching/** 教务管理API不应公开访问，需要认证
