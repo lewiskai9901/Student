@@ -24,7 +24,20 @@ const myTaskList = ref<InspTask[]>([])
 const availableTaskList = ref<InspTask[]>([])
 const projectMap = ref<Map<number, InspProject>>(new Map())
 const claimingIds = ref<Set<number>>(new Set())
-const filter = ref<'all' | 'available' | 'mine' | 'inprogress' | 'overdue'>('all')
+const filter = ref<'all' | 'available' | 'mine' | 'inprogress' | 'toreview' | 'overdue'>('all')
+
+// 当前用户角色判定: 我在该任务里是检查员还是审核员?
+function roleInTask(t: InspTask): 'inspector' | 'reviewer' | null {
+  const me = authStore.user?.userId ?? authStore.user?.id
+  if (!me) return null
+  if (Number(t.inspectorId) === Number(me)) return 'inspector'
+  if (Number(t.reviewerId) === Number(me)) return 'reviewer'
+  return null
+}
+function isReviewable(t: InspTask): boolean {
+  return roleInTask(t) === 'reviewer' &&
+    (t.status === 'SUBMITTED' || t.status === 'UNDER_REVIEW')
+}
 
 // ── Today ──
 const today = new Date().toISOString().slice(0, 10)
@@ -65,6 +78,7 @@ const counts = computed(() => {
     available: availableTaskList.value.length,
     mine: myTaskList.value.length,
     inprogress: myTaskList.value.filter(t => t.status === 'IN_PROGRESS').length,
+    toreview: myTaskList.value.filter(isReviewable).length,
     overdue: allTasks.value.filter(isOverdue).length,
   }
 })
@@ -75,6 +89,7 @@ const filtered = computed(() => {
     case 'available': list = availableTaskList.value; break
     case 'mine': list = myTaskList.value; break
     case 'inprogress': list = myTaskList.value.filter(t => t.status === 'IN_PROGRESS'); break
+    case 'toreview': list = myTaskList.value.filter(isReviewable); break
     case 'overdue': list = allTasks.value.filter(isOverdue); break
     default: list = allTasks.value
   }
@@ -204,8 +219,12 @@ async function handleStart(t: InspTask) {
   }
 }
 
-// Primary CTA per status
+// Primary CTA per status — 审核员视角优先
 function primaryAction(t: InspTask) {
+  // 我作为审核员且任务待审/审核中 → "去审核" (跳到审核台)
+  if (isReviewable(t)) {
+    return { label: '去审核', accent: true, fn: () => goReview(t) }
+  }
   if (t.status === 'PENDING' && !t.inspectorId) {
     return { label: '领取', accent: true, fn: () => handleClaim(t) }
   }
@@ -219,6 +238,11 @@ function primaryAction(t: InspTask) {
     return { label: '查看', accent: false, fn: () => goExecute(t) }
   }
   return { label: '查看', accent: false, fn: () => goExecute(t) }
+}
+
+function goReview(t: InspTask) {
+  // 跳到审核工作台并预选当前任务
+  router.push({ path: '/inspection/tasks/review', query: { taskId: String(t.id) } })
 }
 
 // ── Keyboard shortcuts ──
@@ -310,6 +334,13 @@ onUnmounted(() => window.removeEventListener('keydown', onKey))
         <span class="filter-tab__label">进行中</span>
         <span class="filter-tab__count">{{ counts.inprogress }}</span>
       </button>
+      <button v-if="counts.toreview > 0 || filter === 'toreview'"
+              class="filter-tab filter-tab--review"
+              :class="{ 'is-active': filter === 'toreview' }"
+              @click="filter = 'toreview'">
+        <span class="filter-tab__label">待我审核</span>
+        <span class="filter-tab__count" :style="{ color: counts.toreview ? 'var(--insp-info)' : '' }">{{ counts.toreview }}</span>
+      </button>
       <button class="filter-tab filter-tab--alert" :class="{ 'is-active': filter === 'overdue' }" @click="filter = 'overdue'">
         <span class="filter-tab__label">逾期</span>
         <span class="filter-tab__count" :style="{ color: counts.overdue ? 'var(--insp-fail)' : '' }">{{ counts.overdue }}</span>
@@ -354,6 +385,12 @@ onUnmounted(() => window.removeEventListener('keydown', onKey))
               <span class="insp-chip" :class="`insp-chip--${statusVariant(t.status)}`">
                 {{ TaskStatusConfig[t.status]?.label || t.status }}
               </span>
+              <span v-if="roleInTask(t) === 'reviewer'" class="role-chip role-chip--reviewer" title="你作为审核员">
+                审核
+              </span>
+              <span v-if="t.lateSubmission" class="role-chip role-chip--late" :title="`延迟交付 ${t.lateDays} 天`">
+                迟{{ t.lateDays }}
+              </span>
               <span v-if="(t as any).rejectionCount && (t as any).rejectionCount > 0" class="insp-stamp">
                 驳{{ (t as any).rejectionCount }}
               </span>
@@ -391,6 +428,7 @@ onUnmounted(() => window.removeEventListener('keydown', onKey))
         <p class="empty-hint">
           {{ filter === 'overdue' ? '没有逾期任务' :
              filter === 'available' ? '暂无可领取任务' :
+             filter === 'toreview' ? '暂无待你审核的任务' :
              filter === 'inprogress' ? '没有进行中的任务' : '当前无检查任务' }}
         </p>
       </div>
@@ -448,6 +486,32 @@ onUnmounted(() => window.removeEventListener('keydown', onKey))
   color: var(--insp-ink-quaternary);
 }
 .filter-tab.is-active .filter-tab__count { color: var(--insp-accent); }
+.filter-tab--review.is-active .filter-tab__count { color: var(--insp-info); }
+.filter-tab--review.is-active::after { background: var(--insp-info) !important; }
+
+/* 角色徽章 (审核员/延迟交付) */
+.role-chip {
+  display: inline-flex; align-items: center;
+  padding: 1px 7px;
+  height: 18px;
+  border-radius: 9px;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  margin-left: 4px;
+  font-family: var(--insp-font-mono);
+}
+.role-chip--reviewer {
+  background: rgba(99, 102, 241, 0.12);
+  color: #4338ca;
+  border: 1px solid rgba(99, 102, 241, 0.4);
+}
+.role-chip--late {
+  background: rgba(245, 158, 11, 0.14);
+  color: #b45309;
+  border: 1px solid rgba(245, 158, 11, 0.4);
+}
+
 .filter-spacer { flex: 1; }
 .kbd-tray {
   display: flex; align-items: center; gap: var(--insp-sp-3);

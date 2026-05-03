@@ -31,6 +31,16 @@ public interface InspTaskMapper extends BaseMapper<InspTaskPO> {
     List<InspTaskPO> findByInspectorId(@Param("inspectorId") Long inspectorId);
 
     /**
+     * 我的任务: 我作为检查员 OR 我作为审核员 (status 在审核相关阶段) — 应用数据权限过滤
+     */
+    @DataPermission(module = "inspection_record", orgUnitField = "org_unit_id", creatorField = "created_by")
+    @Select("SELECT * FROM insp_tasks WHERE deleted = 0 AND (" +
+            "  inspector_id = #{userId} " +
+            "  OR (reviewer_id = #{userId} AND status IN ('SUBMITTED','UNDER_REVIEW','REVIEWED'))" +
+            ") ORDER BY task_date DESC")
+    List<InspTaskPO> findByInspectorOrReviewerId(@Param("userId") Long userId);
+
+    /**
      * 按项目和日期查询任务列表 — 应用数据权限过滤
      */
     @DataPermission(module = "inspection_record", orgUnitField = "org_unit_id", creatorField = "created_by")

@@ -106,8 +106,9 @@ public class InspTaskApplicationService {
     }
 
     @Transactional(readOnly = true)
-    public List<InspTask> listMyTasks(Long inspectorId) {
-        return taskRepository.findByInspectorId(inspectorId);
+    public List<InspTask> listMyTasks(Long userId) {
+        // 我的任务 = 我作为检查员的全部 + 我作为审核员的待审/审核中/已审 (P3 修复)
+        return taskRepository.findByInspectorOrReviewerId(userId);
     }
 
     @Transactional(readOnly = true)

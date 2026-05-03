@@ -54,6 +54,11 @@ public class InspTaskRepositoryImpl implements InspTaskRepository {
     }
 
     @Override
+    public List<InspTask> findByInspectorOrReviewerId(Long userId) {
+        return mapper.findByInspectorOrReviewerId(userId).stream().map(this::toDomain).collect(Collectors.toList());
+    }
+
+    @Override
     public List<InspTask> findByProjectIdAndTaskDate(Long projectId, LocalDate taskDate) {
         return mapper.findByProjectIdAndTaskDate(projectId, taskDate).stream().map(this::toDomain).collect(Collectors.toList());
     }

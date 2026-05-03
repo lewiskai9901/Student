@@ -20,6 +20,11 @@ public interface InspTaskRepository {
 
     List<InspTask> findByInspectorId(Long inspectorId);
 
+    /**
+     * 我的任务: 作为检查员 OR 作为审核员 (审核相关阶段)
+     */
+    List<InspTask> findByInspectorOrReviewerId(Long userId);
+
     List<InspTask> findByProjectIdAndTaskDate(Long projectId, LocalDate taskDate);
 
     List<InspTask> findByProjectIdAndTaskDateBetween(Long projectId, LocalDate startDate, LocalDate endDate);
