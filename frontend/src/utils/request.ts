@@ -132,8 +132,15 @@ service.interceptors.response.use(
       }
     } else if (error.code === 'ECONNABORTED') {
       ElMessage.error('请求超时，请稍后重试')
+    } else if (error.code === 'ERR_NETWORK' || error.message?.includes('Network Error')) {
+      // 区分浏览器真正离线 vs 后端连不上 (后端 down / 重启中)
+      if (!navigator.onLine) {
+        ElMessage.error('设备已离线, 请检查网络连接')
+      } else {
+        ElMessage.error('服务器暂时无响应, 请稍后再试 (后端可能正在重启)')
+      }
     } else {
-      ElMessage.error('网络连接失败，请检查网络设置')
+      ElMessage.error('网络连接失败，请稍后再试')
     }
 
     return Promise.reject(error)
