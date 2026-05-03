@@ -48,6 +48,79 @@ function thumbGradient(name: string): string {
   return `linear-gradient(135deg, hsl(${h}, 65%, 55%) 0%, hsl(${(h + 35) % 360}, 60%, 45%) 100%)`
 }
 
+// ==================== 搜索高亮 ====================
+function highlightHtml(text: string, kw: string): string {
+  if (!kw) return text
+  const escaped = kw.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+  return text.replace(new RegExp(`(${escaped})`, 'gi'), '<mark class="cfg-mark">$1</mark>')
+}
+
+// ==================== Hover 预览悬浮卡 (S+ 标志) ====================
+interface PreviewData {
+  sections: TemplateSection[]
+  itemTotal: number
+  scoringModes: Record<string, number>
+  loading: boolean
+}
+const previewVisible = ref(false)
+const previewTarget = ref<TemplateSection | null>(null)
+const previewData = ref<PreviewData>({ sections: [], itemTotal: 0, scoringModes: {}, loading: false })
+const previewPos = ref({ top: '0px', left: '0px', placement: 'right' as 'right' | 'left' | 'bottom' })
+let previewShowTimer: any = null
+let previewHideTimer: any = null
+const previewCache = new Map<number, PreviewData>()
+
+async function showPreview(sec: TemplateSection, e: MouseEvent) {
+  clearTimeout(previewHideTimer)
+  clearTimeout(previewShowTimer)
+  const target = e.currentTarget as HTMLElement
+  previewShowTimer = setTimeout(async () => {
+    previewTarget.value = sec
+    // 定位: 卡片右侧, 不够空间放下方
+    const rect = target.getBoundingClientRect()
+    const popoverWidth = 320
+    if (rect.right + popoverWidth + 16 < window.innerWidth) {
+      previewPos.value = { top: `${rect.top}px`, left: `${rect.right + 8}px`, placement: 'right' }
+    } else if (rect.left > popoverWidth + 16) {
+      previewPos.value = { top: `${rect.top}px`, left: `${rect.left - popoverWidth - 8}px`, placement: 'left' }
+    } else {
+      previewPos.value = { top: `${rect.bottom + 8}px`, left: `${rect.left}px`, placement: 'bottom' }
+    }
+    previewVisible.value = true
+    // cache hit?
+    const cached = previewCache.get(Number(sec.id))
+    if (cached) { previewData.value = cached; return }
+    previewData.value = { sections: [], itemTotal: 0, scoringModes: {}, loading: true }
+    try {
+      const sections = await inspTemplateApi.getSections(sec.id) || []
+      const leaves = sections.filter((c: any) => !c.parentSectionId || c.parentSectionId === sec.id)
+      let itemTotal = 0
+      const modes: Record<string, number> = {}
+      for (const leaf of leaves) {
+        try {
+          const items = await inspTemplateApi.getItems(leaf.id)
+          itemTotal += (items || []).length
+          for (const it of (items || [])) {
+            const m = (it.scoringMode || 'OTHER') as string
+            modes[m] = (modes[m] || 0) + 1
+          }
+        } catch { /* skip */ }
+      }
+      const data: PreviewData = { sections: leaves, itemTotal, scoringModes: modes, loading: false }
+      previewCache.set(Number(sec.id), data)
+      // 仅当鼠标仍 hover 在同一目标上才展示
+      if (previewTarget.value && Number(previewTarget.value.id) === Number(sec.id)) {
+        previewData.value = data
+      }
+    } catch { previewData.value.loading = false }
+  }, 600)
+}
+function hidePreview() {
+  clearTimeout(previewShowTimer)
+  previewHideTimer = setTimeout(() => { previewVisible.value = false }, 100)
+}
+function keepPreview() { clearTimeout(previewHideTimer) }
+
 // ==================== State ====================
 const loading = ref(false)
 const rootSections = ref<TemplateSection[]>([])
@@ -250,8 +323,83 @@ function closeDropdowns() { openDropdownId.value = null }
 // 点击外部关闭
 import { onUnmounted } from 'vue'
 function onDocClick() { openDropdownId.value = null }
-onMounted(() => document.addEventListener('click', onDocClick))
-onUnmounted(() => document.removeEventListener('click', onDocClick))
+
+// ==================== 全局键盘快捷键 ====================
+const focusedIdx = ref<number>(-1)
+const flatRows = computed(() => filteredSections.value)
+function focusNext() {
+  focusedIdx.value = Math.min(focusedIdx.value + 1, flatRows.value.length - 1)
+  scrollFocusedIntoView()
+}
+function focusPrev() {
+  focusedIdx.value = Math.max(0, focusedIdx.value - 1)
+  scrollFocusedIntoView()
+}
+function scrollFocusedIntoView() {
+  const sec = flatRows.value[focusedIdx.value]
+  if (!sec) return
+  nextTick(() => {
+    const el = document.querySelector(`[data-section-id="${sec.id}"]`)
+    el?.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
+  })
+}
+function cycleViewMode() {
+  const order: ViewMode[] = ['compact', 'standard', 'grid']
+  const i = order.indexOf(viewMode.value)
+  setViewMode(order[(i + 1) % order.length])
+}
+function onGlobalKey(e: KeyboardEvent) {
+  const t = e.target as HTMLElement
+  const tag = t?.tagName
+  if (tag === 'INPUT' || tag === 'TEXTAREA' || t?.isContentEditable) return
+  if (createDialogVisible.value || versionsDialogVisible.value || precheckDialogVisible.value) return
+  const cmdKey = e.metaKey || e.ctrlKey
+  // ⌘A 全选
+  if (cmdKey && e.key === 'a') { e.preventDefault(); toggleSelectAll(); return }
+  // ⌘E 导出选中
+  if (cmdKey && e.key === 'e') {
+    if (selectedIds.value.size > 0) { e.preventDefault(); batchExport() }
+    return
+  }
+  // ⌘P 发布选中
+  if (cmdKey && e.key === 'p') {
+    if (selectedIds.value.size > 0) { e.preventDefault(); batchPublish() }
+    return
+  }
+  if (cmdKey || e.altKey) return
+  switch (e.key) {
+    case 'j':
+    case 'ArrowDown': e.preventDefault(); focusNext(); break
+    case 'k':
+    case 'ArrowUp': e.preventDefault(); focusPrev(); break
+    case ' ': {
+      const sec = flatRows.value[focusedIdx.value]
+      if (sec) { e.preventDefault(); toggleSelect(Number(sec.id)) }
+      break
+    }
+    case 'Enter':
+    case 'e': {
+      const sec = flatRows.value[focusedIdx.value]
+      if (sec) { e.preventDefault(); goEdit(sec) }
+      break
+    }
+    case '/': e.preventDefault(); (document.querySelector('.cfg-search__input') as HTMLElement)?.focus(); break
+    case 'v': e.preventDefault(); cycleViewMode(); break
+    case 'Escape': clearSelection(); focusedIdx.value = -1; break
+  }
+}
+import { nextTick } from 'vue'
+const showKbdHint = ref(localStorage.getItem('insp_cfg_kbd_hint_dismissed') !== '1')
+function dismissKbdHint() { showKbdHint.value = false; localStorage.setItem('insp_cfg_kbd_hint_dismissed', '1') }
+
+onMounted(() => {
+  document.addEventListener('click', onDocClick)
+  window.addEventListener('keydown', onGlobalKey)
+})
+onUnmounted(() => {
+  document.removeEventListener('click', onDocClick)
+  window.removeEventListener('keydown', onGlobalKey)
+})
 
 // ==================== Load ====================
 async function loadTemplates() {
@@ -542,9 +690,53 @@ onMounted(() => { loadTemplates() })
       </div>
     </Transition>
 
+    <!-- 键盘快捷键提示条 -->
+    <div v-if="showKbdHint" class="cfg-kbd-hint">
+      <span class="cfg-kbd-hint__group">
+        <kbd class="insp-kbd">J</kbd><kbd class="insp-kbd">K</kbd> 浏览
+      </span>
+      <span class="cfg-kbd-hint__group">
+        <kbd class="insp-kbd">Space</kbd> 选中
+      </span>
+      <span class="cfg-kbd-hint__group">
+        <kbd class="insp-kbd">E</kbd> 编辑
+      </span>
+      <span class="cfg-kbd-hint__group">
+        <kbd class="insp-kbd">V</kbd> 切视图
+      </span>
+      <span class="cfg-kbd-hint__group">
+        <kbd class="insp-kbd">/</kbd> 搜索
+      </span>
+      <span class="cfg-kbd-hint__group">
+        <kbd class="insp-kbd">⌘A</kbd> 全选
+      </span>
+      <span class="cfg-kbd-hint__group">
+        <kbd class="insp-kbd">⌘E</kbd> 导出
+      </span>
+      <button class="cfg-kbd-hint__close" @click="dismissKbdHint" title="不再显示">×</button>
+    </div>
+
     <!-- List -->
     <section class="cfg-list">
-      <div v-if="loading" class="cfg-state">加载中…</div>
+      <!-- 骨架占位 (S+ 加载体验) -->
+      <div v-if="loading" class="cfg-skeleton" :class="`cfg-skeleton--${viewMode}`">
+        <template v-if="viewMode === 'grid'">
+          <div v-for="n in 6" :key="n" class="sk-card">
+            <div class="sk-thumb" />
+            <div class="sk-body">
+              <div class="sk-line sk-line--lg" />
+              <div class="sk-line sk-line--md" />
+              <div class="sk-line sk-line--sm" />
+            </div>
+          </div>
+        </template>
+        <template v-else>
+          <div v-for="n in 6" :key="n" class="sk-row">
+            <div class="sk-line sk-line--lg" />
+            <div class="sk-line sk-line--sm" />
+          </div>
+        </template>
+      </div>
 
       <div v-else-if="filteredSections.length === 0" class="cfg-empty">
         <p class="cfg-empty__title">
@@ -577,9 +769,15 @@ onMounted(() => { loadTemplates() })
       <div v-if="viewMode === 'grid'" class="tpl-grid">
         <article
           v-for="(sec, i) in filteredSections" :key="sec.id"
+          :data-section-id="sec.id"
           class="tpl-card"
-          :class="{ 'is-selected': selectedIds.has(Number(sec.id)) }"
+          :class="{
+            'is-selected': selectedIds.has(Number(sec.id)),
+            'is-focused': focusedIdx === i,
+          }"
           @click="goEdit(sec)"
+          @mouseenter="(e: any) => showPreview(sec, e)"
+          @mouseleave="hidePreview"
         >
           <div class="tpl-card__thumb" :style="{ background: thumbGradient(sec.sectionName) }">
             <span class="tpl-card__thumb-letter">{{ sec.sectionName.slice(0, 1) }}</span>
@@ -592,7 +790,7 @@ onMounted(() => { loadTemplates() })
           </div>
           <div class="tpl-card__body">
             <div class="tpl-card__title-line">
-              <h3 class="tpl-card__title">{{ sec.sectionName }}</h3>
+              <h3 class="tpl-card__title" v-html="highlightHtml(sec.sectionName, query.keyword)"></h3>
               <span class="insp-chip"
                     :class="`insp-chip--${({DRAFT:'pending',PUBLISHED:'pass',DEPRECATED:'warn',ARCHIVED:'pending'} as any)[sec.status]}`">
                 {{ TemplateStatusConfig[sec.status]?.label }}
@@ -640,9 +838,15 @@ onMounted(() => { loadTemplates() })
       <ul v-else class="tpl-rows" :class="`tpl-rows--${viewMode}`">
         <li
           v-for="(sec, i) in filteredSections" :key="sec.id"
+          :data-section-id="sec.id"
           class="tpl-row"
-          :class="{ 'is-selected': selectedIds.has(Number(sec.id)) }"
+          :class="{
+            'is-selected': selectedIds.has(Number(sec.id)),
+            'is-focused': focusedIdx === i,
+          }"
           @click="goEdit(sec)"
+          @mouseenter="(e: any) => showPreview(sec, e)"
+          @mouseleave="hidePreview"
         >
           <label class="tpl-checkbox tpl-row__checkbox" @click.stop>
             <input
@@ -656,7 +860,7 @@ onMounted(() => { loadTemplates() })
 
           <div class="tpl-row__main">
             <div class="tpl-row__line1">
-              <span class="tpl-row__name">{{ sec.sectionName }}</span>
+              <span class="tpl-row__name" v-html="highlightHtml(sec.sectionName, query.keyword)"></span>
               <span class="insp-chip"
                     :class="`insp-chip--${({DRAFT:'pending',PUBLISHED:'pass',DEPRECATED:'warn',ARCHIVED:'pending'} as any)[sec.status]}`">
                 {{ TemplateStatusConfig[sec.status]?.label }}
@@ -730,6 +934,78 @@ onMounted(() => { loadTemplates() })
               </button>
             </template>
           </template>
+        </div>
+      </Transition>
+    </Teleport>
+
+    <!-- 模板悬浮预览卡 (S+ 标志) -->
+    <Teleport to="body">
+      <Transition name="popover">
+        <div v-if="previewVisible && previewTarget"
+             class="cfg-popover"
+             :class="`cfg-popover--${previewPos.placement}`"
+             :style="{ top: previewPos.top, left: previewPos.left }"
+             @mouseenter="keepPreview"
+             @mouseleave="hidePreview">
+          <div class="cfg-popover__head">
+            <span class="cfg-popover__chip"
+                  :style="{ background: thumbGradient(previewTarget.sectionName) }">
+              {{ previewTarget.sectionName.slice(0, 1) }}
+            </span>
+            <div class="cfg-popover__head-text">
+              <div class="cfg-popover__title">{{ previewTarget.sectionName }}</div>
+              <div class="cfg-popover__sub">
+                v{{ previewTarget.latestVersion }} · {{ TemplateStatusConfig[previewTarget.status]?.label }}
+              </div>
+            </div>
+          </div>
+          <div class="cfg-popover__body">
+            <template v-if="previewData.loading">
+              <div class="cfg-popover__loading">
+                <span class="sk-line sk-line--md" />
+                <span class="sk-line sk-line--sm" />
+                <span class="sk-line sk-line--md" />
+              </div>
+            </template>
+            <template v-else>
+              <!-- 评分模式分布 -->
+              <div v-if="Object.keys(previewData.scoringModes).length > 0" class="cfg-popover__modes">
+                <div class="cfg-popover__label">评分模式分布</div>
+                <div class="cfg-popover__mode-bars">
+                  <span v-for="(cnt, mode) in previewData.scoringModes" :key="mode"
+                        class="cfg-popover__mode"
+                        :title="`${mode} · ${cnt} 项`">
+                    <span class="cfg-popover__mode-name">{{ mode }}</span>
+                    <span class="cfg-popover__mode-count insp-num">{{ cnt }}</span>
+                  </span>
+                </div>
+              </div>
+              <!-- 分区树 -->
+              <div class="cfg-popover__sections">
+                <div class="cfg-popover__label">
+                  分区结构
+                  <span class="cfg-popover__total">
+                    {{ previewData.sections.length }} 分区 · {{ previewData.itemTotal }} 检查项
+                  </span>
+                </div>
+                <ul class="cfg-popover__sec-list">
+                  <li v-for="s in previewData.sections.slice(0, 8)" :key="s.id" class="cfg-popover__sec-item">
+                    <span class="cfg-popover__sec-dot" />
+                    <span class="cfg-popover__sec-name">{{ s.sectionName }}</span>
+                  </li>
+                  <li v-if="previewData.sections.length > 8" class="cfg-popover__sec-more">
+                    + {{ previewData.sections.length - 8 }} 更多
+                  </li>
+                  <li v-if="previewData.sections.length === 0" class="cfg-popover__sec-empty">
+                    — 暂无分区, 点击编辑去添加 —
+                  </li>
+                </ul>
+              </div>
+            </template>
+          </div>
+          <div class="cfg-popover__foot">
+            <span class="cfg-popover__hint">点击卡片进入编辑</span>
+          </div>
         </div>
       </Transition>
     </Teleport>
@@ -1613,6 +1889,253 @@ onMounted(() => { loadTemplates() })
   color: var(--insp-warn);
   font-weight: 500;
 }
+
+/* ─ 搜索高亮 ─────── */
+:deep(.cfg-mark) {
+  background: rgba(245, 200, 70, 0.4);
+  color: var(--insp-ink-primary);
+  padding: 0 2px;
+  border-radius: 2px;
+  font-weight: 600;
+}
+
+/* ─ 键盘聚焦行 ─────── */
+.tpl-row.is-focused,
+.tpl-card.is-focused {
+  outline: 2px solid var(--insp-accent);
+  outline-offset: -2px;
+}
+
+/* ─ 键盘提示条 (S+ onboarding) ─────── */
+.cfg-kbd-hint {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 7px 12px;
+  margin-bottom: 10px;
+  background: linear-gradient(90deg, rgba(26, 109, 255, 0.06) 0%, transparent 100%);
+  border: 1px solid rgba(26, 109, 255, 0.18);
+  border-radius: var(--insp-radius-md);
+  font-size: 11px;
+  color: var(--insp-ink-secondary);
+}
+.cfg-kbd-hint__group {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+.cfg-kbd-hint__close {
+  margin-left: auto;
+  width: 20px;
+  height: 20px;
+  border: 0;
+  background: transparent;
+  font-size: 16px;
+  color: var(--insp-ink-quaternary);
+  border-radius: 3px;
+  cursor: pointer;
+}
+.cfg-kbd-hint__close:hover {
+  background: rgba(0, 0, 0, 0.06);
+  color: var(--insp-ink-primary);
+}
+
+/* ─ 加载骨架 ─────── */
+.cfg-skeleton { padding: 14px; }
+.cfg-skeleton--grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 12px;
+}
+.sk-card {
+  background: var(--insp-bg-surface);
+  border: 1px solid var(--insp-border-default);
+  border-radius: var(--insp-radius-md);
+  overflow: hidden;
+}
+.sk-thumb { height: 100px; }
+.sk-body { padding: 12px 14px; display: flex; flex-direction: column; gap: 8px; }
+.sk-row {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--insp-border-subtle);
+}
+.sk-line {
+  height: 12px;
+  background: linear-gradient(90deg,
+    var(--insp-bg-subtle) 0%,
+    var(--insp-bg-sunken) 50%,
+    var(--insp-bg-subtle) 100%);
+  background-size: 200% 100%;
+  border-radius: 3px;
+  animation: sk-shimmer 1.4s ease-in-out infinite;
+}
+.sk-line--lg { height: 16px; width: 70%; }
+.sk-line--md { width: 55%; }
+.sk-line--sm { width: 35%; height: 10px; }
+.sk-thumb {
+  background: linear-gradient(90deg,
+    var(--insp-bg-subtle) 0%,
+    var(--insp-bg-sunken) 50%,
+    var(--insp-bg-subtle) 100%);
+  background-size: 200% 100%;
+  animation: sk-shimmer 1.4s ease-in-out infinite;
+}
+@keyframes sk-shimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+/* ─ 模板悬浮预览卡 (S+ 标志) ─────── */
+.cfg-popover {
+  position: fixed;
+  z-index: 9500;
+  width: 320px;
+  background: var(--insp-bg-surface);
+  border: 1px solid var(--insp-border-strong);
+  border-radius: var(--insp-radius-lg);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.18);
+  overflow: hidden;
+  pointer-events: auto;
+}
+.cfg-popover__head {
+  display: flex;
+  gap: 10px;
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--insp-border-subtle);
+}
+.cfg-popover__chip {
+  width: 36px; height: 36px;
+  border-radius: var(--insp-radius-sm);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  font-weight: 700;
+  color: white;
+  text-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+  flex-shrink: 0;
+}
+.cfg-popover__head-text { flex: 1; min-width: 0; }
+.cfg-popover__title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--insp-ink-primary);
+  letter-spacing: -0.01em;
+  margin-bottom: 2px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.cfg-popover__sub {
+  font-size: 11px;
+  color: var(--insp-ink-tertiary);
+}
+.cfg-popover__body {
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.cfg-popover__loading { display: flex; flex-direction: column; gap: 6px; }
+.cfg-popover__label {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 10px;
+  color: var(--insp-ink-tertiary);
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  font-weight: 600;
+  margin-bottom: 6px;
+}
+.cfg-popover__total {
+  text-transform: none;
+  letter-spacing: 0;
+  color: var(--insp-ink-secondary);
+  font-weight: 500;
+}
+.cfg-popover__mode-bars {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+.cfg-popover__mode {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 7px;
+  background: var(--insp-bg-subtle);
+  border-radius: 10px;
+  font-size: 10px;
+}
+.cfg-popover__mode-name {
+  font-family: var(--insp-font-mono);
+  color: var(--insp-ink-secondary);
+}
+.cfg-popover__mode-count {
+  font-weight: 600;
+  color: var(--insp-accent);
+}
+.cfg-popover__sec-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+.cfg-popover__sec-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11.5px;
+  color: var(--insp-ink-secondary);
+}
+.cfg-popover__sec-dot {
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: var(--insp-accent);
+  flex-shrink: 0;
+}
+.cfg-popover__sec-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.cfg-popover__sec-more {
+  font-size: 11px;
+  color: var(--insp-ink-tertiary);
+  font-style: italic;
+  padding-left: 10px;
+}
+.cfg-popover__sec-empty {
+  font-size: 11px;
+  color: var(--insp-ink-quaternary);
+  font-style: italic;
+  text-align: center;
+  padding: 6px 0;
+}
+.cfg-popover__foot {
+  padding: 8px 14px;
+  background: var(--insp-bg-subtle);
+  border-top: 1px solid var(--insp-border-subtle);
+}
+.cfg-popover__hint {
+  font-size: 10px;
+  color: var(--insp-ink-tertiary);
+}
+.popover-enter-active, .popover-leave-active { transition: all 0.15s ease; }
+.popover-enter-from {
+  opacity: 0;
+  transform: translateX(-4px) scale(0.98);
+}
+.cfg-popover--left.popover-enter-from { transform: translateX(4px) scale(0.98); }
+.cfg-popover--bottom.popover-enter-from { transform: translateY(-4px) scale(0.98); }
+.popover-leave-to { opacity: 0; }
 
 /* 紧凑模式 */
 .tpl-rows--compact .tpl-row {
