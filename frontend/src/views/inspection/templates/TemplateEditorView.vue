@@ -2,7 +2,7 @@
 import { ref, computed, watch, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { ArrowLeft, Eye, Upload } from 'lucide-vue-next'
+import { ArrowLeft, Eye, Upload, FileText, Layers, Save, AlertCircle } from 'lucide-vue-next'
 import { useInspTemplateStore } from '@/stores/inspection/inspTemplateStore'
 import { useTemplateEditor } from '@/composables/inspection/useTemplateEditor'
 import { http } from '@/utils/request'
@@ -53,6 +53,66 @@ const currentItems = computed(() => {
   return editor.itemsBySection.value.get(String(selectedSectionId.value)) || []
 })
 const allItems = computed(() => { const r: TemplateItem[] = []; for (const l of editor.itemsBySection.value.values()) r.push(...l); return r })
+
+// ==================== S+ 顶栏 KPI 概览 ====================
+const sectionsCount = computed(() => editor.sections.value.length)
+const itemsCount = computed(() => allItems.value.length)
+const scoredItemsCount = computed(() => allItems.value.filter(i => i.isScored).length)
+const lastUpdated = computed(() => {
+  const all = [
+    rootSection.value?.updatedAt,
+    ...editor.sections.value.map(s => s.updatedAt),
+    ...allItems.value.map(i => (i as any).updatedAt),
+  ].filter(Boolean) as string[]
+  if (all.length === 0) return null
+  return all.sort().reverse()[0]
+})
+function fmtTime(t?: string | null): string {
+  if (!t) return '—'
+  const d = new Date(t)
+  return `${(d.getMonth()+1).toString().padStart(2,'0')}/${d.getDate().toString().padStart(2,'0')} ${d.getHours().toString().padStart(2,'0')}:${d.getMinutes().toString().padStart(2,'0')}`
+}
+
+// ==================== S+ 未保存改动指示 + 全局 ⌘S ====================
+const hasUnsavedChanges = computed(() => rootInfoDirty.value || sfDirty.value)
+
+function onGlobalKeyTpl(e: KeyboardEvent) {
+  const t = e.target as HTMLElement
+  const tag = t?.tagName
+  // ⌘S 总是拦截 (即使在 input 内)
+  if ((e.metaKey || e.ctrlKey) && e.key === 's') {
+    e.preventDefault()
+    if (isReadonly.value) {
+      ElMessage.info('已发布版本不可直接编辑, 请先解锁')
+      return
+    }
+    if (rootInfoDirty.value) saveRootProps()
+    else if (sfDirty.value) saveSection()
+    else ElMessage.info('当前无未保存改动')
+    return
+  }
+  // 编辑态保护
+  if (tag === 'INPUT' || tag === 'TEXTAREA' || t?.isContentEditable) return
+  if (e.metaKey || e.ctrlKey || e.altKey) return
+  if (e.key === 'Escape') {
+    selectedItem.value = null
+  } else if (e.key === 'p' && rootSection.value?.status === 'DRAFT') {
+    e.preventDefault(); handlePublish()
+  }
+}
+import { onUnmounted } from 'vue'
+window.addEventListener('keydown', onGlobalKeyTpl)
+onUnmounted(() => window.removeEventListener('keydown', onGlobalKeyTpl))
+
+// 离开页面提醒 (有未保存改动)
+function beforeUnloadHandler(e: BeforeUnloadEvent) {
+  if (hasUnsavedChanges.value && !isReadonly.value) {
+    e.preventDefault()
+    e.returnValue = ''
+  }
+}
+window.addEventListener('beforeunload', beforeUnloadHandler)
+onUnmounted(() => window.removeEventListener('beforeunload', beforeUnloadHandler))
 
 // ===== Root info =====
 const editingInfo = ref(false)
@@ -523,7 +583,33 @@ function getItemTypeLabel(item: TemplateItem) {
             <span class="te-version insp-num">v{{ rootSection.latestVersion }}</span>
           </div>
         </div>
+        <!-- KPI 概览 (S+) -->
+        <div class="te-kpis">
+          <div class="te-kpi" :title="`${sectionsCount} 个分区`">
+            <Layers :size="13" class="te-kpi__icon" />
+            <span class="te-kpi__num insp-num">{{ sectionsCount }}</span>
+            <span class="te-kpi__label">分区</span>
+          </div>
+          <div class="te-kpi" :title="`${itemsCount} 个检查项, 其中 ${scoredItemsCount} 项参与评分`">
+            <FileText :size="13" class="te-kpi__icon" />
+            <span class="te-kpi__num insp-num">{{ itemsCount }}</span>
+            <span class="te-kpi__label">
+              检查项<span v-if="itemsCount !== scoredItemsCount" class="te-kpi__sub"> · {{ scoredItemsCount }} 评分</span>
+            </span>
+          </div>
+          <div class="te-kpi te-kpi--time" v-if="lastUpdated" :title="lastUpdated">
+            <span class="te-kpi__num insp-num">{{ fmtTime(lastUpdated) }}</span>
+            <span class="te-kpi__label">最近更新</span>
+          </div>
+        </div>
+
         <div class="te-header-actions">
+          <!-- 未保存改动指示 (S+) -->
+          <span v-if="hasUnsavedChanges && !isReadonly" class="te-unsaved" title="按 ⌘S 保存">
+            <span class="te-unsaved__dot" />
+            未保存改动
+            <kbd class="insp-kbd">⌘S</kbd>
+          </span>
           <template v-if="isReadonly">
             <span class="te-readonly-hint">
               <span class="insp-stamp">已发布 v{{ rootSection.latestVersion }}</span>
@@ -793,6 +879,70 @@ function getItemTypeLabel(item: TemplateItem) {
   gap: 6px;
   font-size: 11px;
   color: var(--insp-ink-tertiary);
+}
+
+/* KPI 概览 (S+) */
+.te-kpis {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-left: auto;
+  padding: 0 14px;
+  height: 38px;
+  background: var(--insp-bg-subtle);
+  border-radius: var(--insp-radius-md);
+  border: 1px solid var(--insp-border-subtle);
+}
+.te-kpi {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11px;
+  color: var(--insp-ink-tertiary);
+}
+.te-kpi__icon { color: var(--insp-ink-quaternary); }
+.te-kpi__num {
+  font-family: var(--insp-font-mono);
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--insp-ink-primary);
+  letter-spacing: -0.01em;
+}
+.te-kpi__label { font-size: 10px; letter-spacing: 0.04em; }
+.te-kpi__sub { color: var(--insp-accent); font-weight: 600; }
+.te-kpi--time .te-kpi__num {
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--insp-ink-secondary);
+}
+
+/* 未保存指示 (S+) */
+.te-unsaved {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 2px 9px;
+  background: rgba(245, 158, 11, 0.12);
+  color: #b45309;
+  border: 1px solid rgba(245, 158, 11, 0.4);
+  border-radius: 11px;
+  font-size: 11px;
+  font-weight: 600;
+}
+.te-unsaved__dot {
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  background: #f59e0b;
+  animation: unsaved-pulse 1.5s ease-in-out infinite;
+}
+@keyframes unsaved-pulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.6; transform: scale(1.2); }
+}
+.te-unsaved kbd {
+  background: rgba(180, 83, 9, 0.15);
+  border-color: rgba(180, 83, 9, 0.3);
+  color: #b45309;
 }
 
 /* Buttons */
