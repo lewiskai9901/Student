@@ -8,13 +8,14 @@
  *     左：目标导航（target nav）+ 完成进度指示
  *     右：顶部目标选择器 + 字段列表（按 scoringMode 渲染不同控件）+ 底部实时得分
  */
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch, nextTick } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import {
   ArrowLeft, Play, Send, RotateCcw,
   ChevronLeft, ChevronRight,
   Star, Search, Target, Sparkles,
+  Keyboard, LayoutGrid, List, Check,
 } from 'lucide-vue-next'
 import { useInspExecutionStore } from '@/stores/inspection/inspExecutionStore'
 import { useScoringShortcuts } from '@/composables/useScoringShortcuts'
@@ -57,6 +58,47 @@ const sectionTree = ref<SectionTreeNode[]>([])
 const numberInputs = ref<Record<number, number>>({})
 const selectInputs = ref<Record<number, string>>({})
 const textInputs = ref<Record<number, string>>({})
+
+// G1: 当前键盘聚焦的 detail (用于 1/2 键 PASS_FAIL)
+const focusedDetailId = ref<number | null>(null)
+// G1: 键盘提示条折叠状态 (用户可关掉)
+const showKeyboardHints = ref(localStorage.getItem('insp_kbd_hints_dismissed') !== '1')
+function dismissKeyboardHints() {
+  showKeyboardHints.value = false
+  localStorage.setItem('insp_kbd_hints_dismissed', '1')
+}
+
+// G2: 视图模式 row(紧凑行) | card(卡片网格) — 默认 row, 持久化
+type ViewMode = 'row' | 'card'
+const viewMode = ref<ViewMode>((localStorage.getItem('insp_exec_view_mode') as ViewMode) || 'row')
+function setViewMode(m: ViewMode) {
+  viewMode.value = m
+  localStorage.setItem('insp_exec_view_mode', m)
+}
+
+// G3: 自动保存指示
+const lastSavedAt = ref<number | null>(null)
+const savingActive = ref(false)
+const lastSavedText = computed(() => {
+  if (!lastSavedAt.value) return ''
+  const d = new Date(lastSavedAt.value)
+  const hh = String(d.getHours()).padStart(2, '0')
+  const mm = String(d.getMinutes()).padStart(2, '0')
+  const ss = String(d.getSeconds()).padStart(2, '0')
+  return `${hh}:${mm}:${ss}`
+})
+
+// 任意 input 变化即视为 "已保存" (失败时各 handler 自己 ElMessage.error)
+watch([numberInputs, selectInputs, textInputs], () => {
+  if (Object.keys(numberInputs.value).length === 0 &&
+      Object.keys(selectInputs.value).length === 0 &&
+      Object.keys(textInputs.value).length === 0) return
+  savingActive.value = true
+  setTimeout(() => {
+    lastSavedAt.value = Date.now()
+    savingActive.value = false
+  }, 250)
+}, { deep: true })
 
 // AI 辅助打分对话框 (Track 5)
 const aiDialogOpen = ref(false)
@@ -269,16 +311,94 @@ function goToPrevTarget() {
   if (hasPrevTarget.value) selectTarget(filteredTargets.value[currentTargetIdx.value - 1].targetId)
 }
 
-// Audit Console redesign: 键盘快捷键 (J/K 切换目标 · S 提交 · / 搜索)
+// G1: 当前 target 内所有可用 detail (扁平, 已展开 + 非中间节点)
+const flatDetails = computed(() => {
+  const out: { detail: SubmissionDetail; group: TargetSectionGroup }[] = []
+  for (const g of targetSectionGroups.value) {
+    if (g.isIntermediate) continue
+    for (const d of g.details) out.push({ detail: d, group: g })
+  }
+  return out
+})
+
+function findFocused() {
+  return flatDetails.value.find(x => x.detail.id === focusedDetailId.value) ?? null
+}
+function moveFocusToNextUnscored() {
+  const list = flatDetails.value
+  if (list.length === 0) { focusedDetailId.value = null; return }
+  const curIdx = list.findIndex(x => x.detail.id === focusedDetailId.value)
+  // 从当前位置向后找首个未评分
+  for (let i = curIdx + 1; i < list.length; i++) {
+    if (!isDetailScored(list[i].detail)) { focusedDetailId.value = list[i].detail.id; return }
+  }
+  // 没有未评分, 落到下一项 (或保留)
+  if (curIdx >= 0 && curIdx < list.length - 1) focusedDetailId.value = list[curIdx + 1].detail.id
+}
+function moveFocus(delta: 1 | -1) {
+  const list = flatDetails.value
+  if (list.length === 0) return
+  const curIdx = list.findIndex(x => x.detail.id === focusedDetailId.value)
+  const nextIdx = curIdx < 0 ? 0 : Math.max(0, Math.min(list.length - 1, curIdx + delta))
+  focusedDetailId.value = list[nextIdx].detail.id
+  // 滚动到视口
+  nextTick(() => {
+    const el = document.querySelector(`[data-detail-id="${focusedDetailId.value}"]`)
+    el?.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
+  })
+}
+
+// Audit Console redesign: 键盘快捷键
 useScoringShortcuts({
-  onPrev: goToPrevTarget,
-  onNext: goToNextTarget,
+  onPass: () => {
+    const f = findFocused()
+    if (!f || !isGroupEditable(f.group)) return
+    if (f.detail.scoringMode === 'PASS_FAIL') {
+      handlePassFail(f.detail, 'PASS')
+      moveFocusToNextUnscored()
+    }
+  },
+  onFail: () => {
+    const f = findFocused()
+    if (!f || !isGroupEditable(f.group)) return
+    if (f.detail.scoringMode === 'PASS_FAIL') {
+      handlePassFail(f.detail, 'FAIL')
+      moveFocusToNextUnscored()
+    }
+  },
+  onPrev: () => {
+    // J/K: 在目标内切换 detail; 已到顶则跳上一个目标
+    const list = flatDetails.value
+    const curIdx = list.findIndex(x => x.detail.id === focusedDetailId.value)
+    if (curIdx > 0) moveFocus(-1)
+    else goToPrevTarget()
+  },
+  onNext: () => {
+    const list = flatDetails.value
+    const curIdx = list.findIndex(x => x.detail.id === focusedDetailId.value)
+    if (curIdx < list.length - 1) moveFocus(1)
+    else goToNextTarget()
+  },
   onSubmit: () => { handleSubmitTask?.() },
   onSearch: () => {
-    const el = document.querySelector('input[placeholder*="搜索目标"]') as HTMLElement | null
+    const el = document.querySelector('input[placeholder*="搜索"]') as HTMLElement | null
     if (el) el.focus()
   },
+  onEscape: () => {
+    if (task.value?.status === 'IN_PROGRESS') confirmExit()
+  },
 })
+
+async function confirmExit() {
+  try {
+    await ElMessageBox.confirm(
+      '当前评分已自动保存. 确认退出回到任务列表?',
+      '暂存退出',
+      { confirmButtonText: '退出', cancelButtonText: '继续打分', type: 'info' }
+    )
+    goBack()
+  } catch { /* cancel */ }
+}
 
 const currentTargetName = computed(() => {
   const t = uniqueTargets.value.find(t => t.targetId === selectedTargetId.value)
@@ -524,6 +644,12 @@ async function selectTarget(targetId: number) {
     // Init inputs for all details across all groups
     const allDets = targetSectionGroups.value.flatMap(g => g.details)
     initInputs(allDets)
+    // G1: 自动聚焦首个未评分 detail
+    nextTick(() => {
+      const list = flatDetails.value
+      const firstUnscored = list.find(x => !isDetailScored(x.detail))
+      focusedDetailId.value = firstUnscored?.detail.id ?? list[0]?.detail.id ?? null
+    })
   } finally {
     detailLoading.value = false
   }
@@ -1136,10 +1262,26 @@ onMounted(() => loadData())
             <span>· {{ task.taskDate }}</span>
             <span v-if="task.inspectorName">· 检查员 {{ task.inspectorName }}</span>
             <span class="progress-text">· 进度 {{ progressText }}</span>
+            <span v-if="lastSavedAt" class="autosave-tag" :class="{ 'autosave-tag--saving': savingActive }">
+              <Check :size="11" />
+              <template v-if="savingActive">保存中…</template>
+              <template v-else>已自动保存 {{ lastSavedText }}</template>
+            </span>
           </div>
         </div>
       </div>
       <div class="topbar-actions" v-if="task">
+        <!-- G2: 视图模式切换 -->
+        <div v-if="task.status === 'IN_PROGRESS'" class="view-toggle" role="tablist" aria-label="视图模式">
+          <button class="view-toggle-btn" :class="{ active: viewMode === 'row' }"
+                  @click="setViewMode('row')" title="紧凑行模式 (推荐, 一屏看更多)">
+            <List :size="13" />行
+          </button>
+          <button class="view-toggle-btn" :class="{ active: viewMode === 'card' }"
+                  @click="setViewMode('card')" title="卡片网格模式">
+            <LayoutGrid :size="13" />卡片
+          </button>
+        </div>
         <el-button
           v-if="task.status === 'CLAIMED'"
           type="primary" size="small"
@@ -1150,8 +1292,8 @@ onMounted(() => loadData())
         <el-button
           v-if="task.status === 'IN_PROGRESS'"
           size="small"
-          @click="goBack"
-          title="保留当前评分, 稍后继续"
+          @click="confirmExit"
+          title="评分已自动保存, 稍后可继续 (Esc)"
         >
           暂存退出
         </el-button>
@@ -1159,6 +1301,7 @@ onMounted(() => loadData())
           v-if="task.status === 'IN_PROGRESS'"
           type="primary" size="small"
           @click="handleSubmitTask"
+          title="提交整张任务 (S)"
         >
           <Send :size="13" class="btn-icon" />提交任务
         </el-button>
@@ -1179,7 +1322,7 @@ onMounted(() => loadData())
       <div class="sidebar">
         <div class="sidebar-header">
           <div class="search-box">
-            <el-input v-model="targetSearch" placeholder="搜索目标..." size="small" clearable>
+            <el-input v-model="targetSearch" placeholder="按名称/序号搜索 (/)" size="small" clearable>
               <template #prefix><Search :size="13" /></template>
             </el-input>
           </div>
@@ -1240,7 +1383,15 @@ onMounted(() => loadData())
         </div>
 
         <!-- Scrollable Body -->
-        <div class="panel-body" v-loading="detailLoading">
+        <div class="panel-body" :class="{ 'panel-body--row': viewMode === 'row' }" v-loading="detailLoading">
+          <!-- G1: 键盘快捷键提示条 -->
+          <div v-if="selectedTargetId && showKeyboardHints && task?.status === 'IN_PROGRESS'" class="kbd-hint">
+            <Keyboard :size="13" />
+            <span class="kbd-hint-text">
+              <kbd>1</kbd> 通过 · <kbd>2</kbd> 不通过 · <kbd>J</kbd>/<kbd>K</kbd> 切换 · <kbd>/</kbd> 搜索 · <kbd>S</kbd> 提交 · <kbd>Esc</kbd> 暂存退出
+            </span>
+            <button class="kbd-hint-close" @click="dismissKeyboardHints" title="不再显示">×</button>
+          </div>
           <div v-if="!selectedTargetId" class="panel-empty">
             <Target :size="28" style="color: var(--gray-300)" />
             <p>请在左侧选择检查目标</p>
@@ -1278,7 +1429,14 @@ onMounted(() => loadData())
               <div v-if="!group.isIntermediate" class="section-body">
                 <!-- Field cards with scoring controls -->
                 <div v-for="detail in group.details" :key="detail.id"
-                  class="score-card" :class="{ scored: isDetailScored(detail), 'score-card--fullwidth': detail.inputMode === 'EVENT_STREAM' }">
+                  :data-detail-id="detail.id"
+                  class="score-card"
+                  :class="{
+                    scored: isDetailScored(detail),
+                    'score-card--fullwidth': detail.inputMode === 'EVENT_STREAM',
+                    'score-card--focused': focusedDetailId === detail.id,
+                  }"
+                  @click="focusedDetailId = detail.id">
                   <div class="card-top">
                     <span class="card-name">{{ detail.itemName }}</span>
                     <el-tag v-if="detail.scoringMode" size="small" effect="plain"
@@ -1287,8 +1445,8 @@ onMounted(() => loadData())
                     <el-tag v-else size="small" type="info" effect="plain">采集</el-tag>
                     <button v-if="detail.scoringMode" class="ai-suggest-btn"
                       :disabled="!isGroupEditable(group)"
-                      @click="openAiDialog(detail, group)"
-                      title="AI 辅助打分">
+                      @click.stop="openAiDialog(detail, group)"
+                      title="上传现场照片或描述, AI 给评分建议">
                       <Sparkles :size="13" />AI 辅助
                     </button>
                   </div>
@@ -1413,8 +1571,7 @@ onMounted(() => loadData())
         <!-- Bottom Bar -->
         <div class="bottom-bar" v-if="selectedTargetId">
           <div class="bottom-info">
-            目标 <strong>{{ currentTargetIdx + 1 }}</strong> / {{ filteredTargets.length }}
-            &nbsp;&middot;&nbsp; 分区 <strong>{{ completedSectionCount }}</strong>/{{ leafSectionCount }} 已完成
+            <span class="bottom-target-idx">目标 {{ currentTargetIdx + 1 }} / {{ filteredTargets.length }}</span>
           </div>
           <div class="bottom-score">
             <div class="score-display">
@@ -2059,4 +2216,148 @@ onMounted(() => loadData())
   color: var(--insp-ink-quaternary);
   font-weight: var(--insp-fw-medium);
 }
+
+/* ===== G3 Autosave tag ===== */
+.autosave-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 0 6px;
+  height: 18px;
+  border-radius: 9px;
+  background: rgba(16, 185, 129, 0.12);
+  color: #047857;
+  font-size: 10px;
+  font-weight: 500;
+  margin-left: var(--insp-sp-2);
+}
+.autosave-tag--saving {
+  background: rgba(26, 109, 255, 0.12);
+  color: var(--insp-accent);
+}
+
+/* ===== G2 View mode toggle ===== */
+.view-toggle {
+  display: inline-flex;
+  border: 1px solid var(--insp-border-default);
+  border-radius: var(--insp-radius-md);
+  overflow: hidden;
+  margin-right: var(--insp-sp-2);
+  background: var(--insp-bg-surface);
+}
+.view-toggle-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 0 8px;
+  height: 26px;
+  border: none;
+  background: transparent;
+  color: var(--insp-ink-tertiary);
+  font-size: 11px;
+  cursor: pointer;
+  transition: all var(--insp-t-fast);
+  font-family: inherit;
+}
+.view-toggle-btn:hover { color: var(--insp-ink-primary); }
+.view-toggle-btn.active {
+  background: var(--insp-accent);
+  color: #fff;
+}
+.view-toggle-btn + .view-toggle-btn { border-left: 1px solid var(--insp-border-default); }
+.view-toggle-btn.active + .view-toggle-btn,
+.view-toggle-btn:has(+ .active),
+.view-toggle .active { border-left-color: var(--insp-accent); }
+
+/* ===== G1 Keyboard hint bar ===== */
+.kbd-hint {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px;
+  margin-bottom: 12px;
+  background: rgba(26, 109, 255, 0.06);
+  border: 1px solid rgba(26, 109, 255, 0.18);
+  border-radius: var(--insp-radius-md);
+  font-size: 11px;
+  color: var(--insp-ink-secondary);
+}
+.kbd-hint > svg { flex-shrink: 0; color: var(--insp-accent); }
+.kbd-hint-text { flex: 1; line-height: 1.6; }
+.kbd-hint kbd {
+  display: inline-block;
+  padding: 1px 5px;
+  margin: 0 1px;
+  background: #fff;
+  border: 1px solid var(--insp-border-default);
+  border-bottom-width: 2px;
+  border-radius: 3px;
+  font-family: var(--insp-font-mono);
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--insp-ink-primary);
+  line-height: 1;
+}
+.kbd-hint-close {
+  width: 18px;
+  height: 18px;
+  border: none;
+  background: transparent;
+  color: var(--insp-ink-quaternary);
+  font-size: 16px;
+  line-height: 1;
+  cursor: pointer;
+  border-radius: 3px;
+}
+.kbd-hint-close:hover { background: rgba(0,0,0,0.06); color: var(--insp-ink-primary); }
+
+/* ===== G1 Score card focused ===== */
+.score-card { cursor: pointer; }
+.score-card--focused {
+  border-color: var(--insp-accent) !important;
+  box-shadow: 0 0 0 2px rgba(26, 109, 255, 0.18);
+}
+.score-card--focused.scored { border-left-color: var(--insp-accent); }
+
+/* ===== G2 Compact ROW mode ===== */
+/* 单列, 行内布局, 控件压在右侧 */
+.panel-body--row .section-body {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.panel-body--row .score-card {
+  display: flex;
+  align-items: center;
+  gap: var(--insp-sp-2);
+  padding: 6px 12px;
+  border-radius: 6px;
+  border-left-width: 3px;
+}
+.panel-body--row .score-card .card-top {
+  flex: 1;
+  margin-bottom: 0;
+  min-width: 0;
+}
+.panel-body--row .score-card .card-name {
+  font-size: 13px;
+  font-weight: 500;
+}
+.panel-body--row .score-card .card-control {
+  flex-shrink: 0;
+}
+.panel-body--row .score-card .ai-suggest-btn {
+  margin-left: 4px;
+}
+.panel-body--row .score-card.score-card--fullwidth {
+  flex-direction: column;
+  align-items: stretch;
+}
+.panel-body--row .score-card.score-card--fullwidth .card-top {
+  margin-bottom: var(--insp-sp-2);
+}
+/* 行模式中分区头更紧凑 */
+.panel-body--row .section { margin-bottom: 8px; }
+.panel-body--row .section-header { padding: 6px 10px; }
+.panel-body--row .section-body { margin-top: 4px; }
 </style>
