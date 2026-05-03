@@ -33,7 +33,7 @@ public class InspTemplateController {
         Long userId = SecurityUtils.getCurrentUserId();
         TemplateSection root = templateService.createRootSection(
                 request.name(), request.description(),
-                request.catalogId(), request.tags(), userId);
+                request.catalogId(), request.tags(), request.targetType(), userId);
         return Result.success(root);
     }
 
@@ -52,6 +52,16 @@ public class InspTemplateController {
             throw new IllegalArgumentException("无效的模板状态: " + status);
         }
         return Result.success(templateService.listRootSections(page, size, ts, catalogId, keyword));
+    }
+
+    /**
+     * P1-160: 批量查询模板使用计数 (用于列表页 + 废弃/归档前提示)
+     */
+    @GetMapping("/usage")
+    @CasbinAccess(resource = "insp:template", action = "view")
+    public Result<java.util.Map<Long, Integer>> getRootSectionUsage(
+            @RequestParam("ids") java.util.List<Long> ids) {
+        return Result.success(templateService.getRootSectionUsage(ids));
     }
 
     @GetMapping("/{id}")
@@ -132,7 +142,9 @@ public class InspTemplateController {
             String name,
             String description,
             Long catalogId,
-            String tags
+            String tags,
+            /** P0: 创建时即指定检查对象类型 (ORG/USER/PLACE) */
+            String targetType
     ) {}
 
     public record UpdateTemplateRequest(

@@ -114,17 +114,18 @@ async function loadTypeFilterOptions(targetType: string | null) {
   typeFilterOptions.value = []
   if (!targetType) return
   try {
+    // P1: P5 收敛后 user_types/place_types 表已 DROP, 统一走 entity_type_configs
+    // ORG 仍保留独立 /org-types (org_types 是组织管理域独立表, 未并入 entity_type_configs)
     if (targetType === 'ORG') {
       const types = await http.get<any[]>('/org-types')
       typeFilterOptions.value = (types || []).map((t: any) => ({ code: t.typeCode || t.code, name: t.typeName || t.name }))
-    } else if (targetType === 'USER') {
-      const types = await http.get<any[]>('/user-types')
-      typeFilterOptions.value = (types || []).map((t: any) => ({ code: t.typeCode || t.code, name: t.typeName || t.name }))
-    } else if (targetType === 'PLACE') {
-      const types = await http.get<any[]>('/place-types')
-      typeFilterOptions.value = (types || []).map((t: any) => ({ code: t.typeCode || t.code, name: t.typeName || t.name }))
+    } else if (targetType === 'USER' || targetType === 'PLACE') {
+      const types = await http.get<any[]>('/entity-type-configs', { params: { entityType: targetType } })
+      typeFilterOptions.value = (types || []).map((t: any) => ({ code: t.typeCode || t.code, name: t.displayName || t.typeName || t.name }))
     }
-  } catch { /* ignore */ }
+  } catch (e) {
+    // ignore — 类型配置可选, 失败不阻塞
+  }
 }
 
 // 解析 targetTypeFilter 字符串为数组

@@ -45,9 +45,11 @@ const templateTargetType = computed<TargetType | null>(() => {
 
 // ========== Computed ==========
 const filteredSections = computed(() => {
+  // P0: 项目向导只允许选 PUBLISHED 模板, 草稿/废弃/归档模板不可用
+  let list = rootSections.value.filter(s => s.status === 'PUBLISHED')
   const kw = searchKeyword.value.trim().toLowerCase()
-  if (!kw) return rootSections.value
-  return rootSections.value.filter(s =>
+  if (!kw) return list
+  return list.filter(s =>
     s.sectionName.toLowerCase().includes(kw) ||
     s.sectionCode.toLowerCase().includes(kw) ||
     (s.description || '').toLowerCase().includes(kw)

@@ -2,6 +2,9 @@ package com.school.management.application.inspection;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.school.management.domain.inspection.model.execution.TargetType;
+import com.school.management.domain.inspection.model.scoring.CalculationRule;
+import com.school.management.domain.inspection.model.scoring.GradeBand;
+import com.school.management.domain.inspection.model.scoring.ScoringProfile;
 import com.school.management.domain.inspection.model.template.*;
 import com.school.management.domain.inspection.repository.*;
 import com.school.management.infrastructure.event.SpringDomainEventPublisher;
@@ -33,15 +36,23 @@ public class InspTemplateApplicationService {
     private final TemplateItemRepository itemRepository;
     private final SpringDomainEventPublisher eventPublisher;
     private final ObjectMapper objectMapper;
+    // P0-3: 模板发布快照需要包含评分配置 (避免发布后 ScoringProfile/GradeBand 被改导致漂移)
+    private final ScoringProfileRepository scoringProfileRepository;
+    private final GradeBandRepository gradeBandRepository;
+    private final CalculationRuleRepository calculationRuleRepository;
+    // P1-160: 查模板使用计数, 用于列表显示和废弃/归档前提示影响范围
+    private final InspProjectRepository inspProjectRepository;
 
     // ========== 根分区 CRUD ==========
 
     /**
      * 创建根分区（即创建新模板）
+     * P0: 增加 targetType 入参 (创建时即设定检查对象类型)
      */
     @Transactional
     public TemplateSection createRootSection(String name, String description,
                                               Long catalogId, String tags,
+                                              String targetType,
                                               Long createdBy) {
         String code = generateSectionCode();
         TemplateSection root = TemplateSection.createRoot(code, name, createdBy);
@@ -53,9 +64,25 @@ public class InspTemplateApplicationService {
             root.updateInfo(name, description, tags, catalogId, createdBy);
             root = sectionRepository.save(root);
         }
+        if (targetType != null && !targetType.isBlank()) {
+            try {
+                root.setTargetType(TargetType.valueOf(targetType));
+                root = sectionRepository.save(root);
+            } catch (IllegalArgumentException e) {
+                log.warn("无效的 targetType: {}, 已忽略", targetType);
+            }
+        }
 
-        log.info("创建根分区: id={}, code={}, name={}", root.getId(), code, name);
+        log.info("创建根分区: id={}, code={}, name={}, targetType={}", root.getId(), code, name, targetType);
         return root;
+    }
+
+    /** 4 参兼容版本 (旧调用点) */
+    @Transactional
+    public TemplateSection createRootSection(String name, String description,
+                                              Long catalogId, String tags,
+                                              Long createdBy) {
+        return createRootSection(name, description, catalogId, tags, null, createdBy);
     }
 
     /**
@@ -81,6 +108,14 @@ public class InspTemplateApplicationService {
                 offset, size, statusStr, catalogId, keyword);
         int total = sectionRepository.countRootSections(statusStr, catalogId, keyword);
         return PageResult.of(records, total, page, size);
+    }
+
+    /**
+     * P1-160: 批量查询模板的使用计数 (在用项目数, 排除 ARCHIVED).
+     */
+    @Transactional(readOnly = true)
+    public Map<Long, Integer> getRootSectionUsage(List<Long> rootSectionIds) {
+        return inspProjectRepository.countByRootSectionIds(rootSectionIds);
     }
 
     /**
@@ -155,13 +190,16 @@ public class InspTemplateApplicationService {
             throw new IllegalStateException("模板至少需要一个检查项才能发布");
         }
 
-        // 构建结构快照 JSON
+        // P0-3: 构建结构 + 评分快照 — 评分必须随结构一起冻结, 否则发布后改 GradeBand
+        // 已发布项目会用新等级线评分, 违背快照不可变契约.
         String structureSnapshot;
         try {
             Map<String, Object> structure = new LinkedHashMap<>();
             structure.put("rootSection", root);
             structure.put("sections", descendants);
             structure.put("items", allItems);
+            structure.put("scoring", buildScoringSnapshot(root, descendants));
+            structure.put("snapshotAt", LocalDateTime.now().toString());
             structureSnapshot = objectMapper.writeValueAsString(structure);
         } catch (Exception e) {
             throw new RuntimeException("序列化模板结构失败", e);
@@ -178,6 +216,35 @@ public class InspTemplateApplicationService {
 
         log.info("发布根分区: id={}, version={}", id, version.getVersion());
         return version;
+    }
+
+    /**
+     * P0-3: 构建评分快照 — 把根分区 + 所有子分区的 ScoringProfile 各自的
+     * GradeBand 和 CalculationRule 全部冻结进 templateVersion.structureSnapshot,
+     * 已发布项目从快照取等级线 / 规则链, 不再实时查 ScoringProfile.
+     */
+    private Map<String, Object> buildScoringSnapshot(TemplateSection root, List<TemplateSection> descendants) {
+        Map<String, Object> scoring = new LinkedHashMap<>();
+        List<Map<String, Object>> profilesSnapshot = new ArrayList<>();
+
+        List<Long> sectionIds = new ArrayList<>();
+        sectionIds.add(root.getId());
+        for (TemplateSection s : descendants) {
+            sectionIds.add(s.getId());
+        }
+
+        for (Long sid : sectionIds) {
+            scoringProfileRepository.findBySectionId(sid).ifPresent(profile -> {
+                Map<String, Object> p = new LinkedHashMap<>();
+                p.put("profile", profile);
+                p.put("sectionId", sid);
+                p.put("gradeBands", gradeBandRepository.findByScoringProfileId(profile.getId()));
+                p.put("rules", calculationRuleRepository.findByScoringProfileIdOrderByPriority(profile.getId()));
+                profilesSnapshot.add(p);
+            });
+        }
+        scoring.put("profiles", profilesSnapshot);
+        return scoring;
     }
 
     /**

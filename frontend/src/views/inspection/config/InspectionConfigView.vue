@@ -14,11 +14,29 @@ import type { TemplateSection } from '@/types/insp/template'
 const router = useRouter()
 const templateStore = useInspTemplateStore()
 
+// ==================== Tabs (P0-1: 配置中心) ====================
+type ConfigTab = 'templates' | 'library' | 'grades' | 'categories' | 'profiles'
+const activeTab = ref<ConfigTab>('templates')
+
+function goToSubModule(tab: ConfigTab) {
+  // 嵌入式 tab; 用户可点链接进独立页面 (大型管理操作不嵌入这里)
+  const map: Record<ConfigTab, string> = {
+    templates: '/inspection/config',
+    library: '/inspection/library',
+    grades: '/inspection/grade-schemes',
+    profiles: '/inspection/scoring-profiles',
+    categories: '/inspection/issue-categories',
+  }
+  router.push(map[tab])
+}
+
 // ==================== State ====================
 const loading = ref(false)
 const rootSections = ref<TemplateSection[]>([])
 const total = ref(0)
 const childSectionsMap = ref<Map<number, TemplateSection[]>>(new Map())
+// P1-160: 使用计数 (rootSectionId → 在用项目数)
+const usageMap = ref<Record<number, number>>({})
 
 const query = reactive({
   page: 1,
@@ -93,6 +111,12 @@ async function loadTemplates() {
     rootSections.value = result.records
     total.value = result.total
 
+    // P1-160: 批量取使用计数 — 一次请求, 不用 N+1
+    try {
+      const ids = result.records.map(r => Number(r.id))
+      usageMap.value = await inspTemplateApi.getRootSectionUsage(ids)
+    } catch { usageMap.value = {} }
+
     // Load first-level children for each root section to show target type tags
     const map = new Map<number, TemplateSection[]>()
     await Promise.all(result.records.map(async (root) => {
@@ -131,7 +155,7 @@ function handleSortChange() { /* already reactive via computed */ }
 
 // ==================== Create ====================
 const createDialogVisible = ref(false)
-const createForm = ref({ name: '', description: '' })
+const createForm = ref({ name: '', description: '', targetType: 'ORG' as 'ORG' | 'USER' | 'PLACE' })
 const maskMouseDownTarget = ref<EventTarget | null>(null)
 
 function onMaskMouseDown(e: MouseEvent) { maskMouseDownTarget.value = e.target }
@@ -141,15 +165,20 @@ function onMaskClick(e: MouseEvent, closeFn: () => void) {
 }
 
 function goCreate() {
-  createForm.value = { name: '', description: '' }
+  createForm.value = { name: '', description: '', targetType: 'ORG' }
   createDialogVisible.value = true
 }
 
 async function handleCreate() {
   const name = createForm.value.name.trim()
   if (!name) { ElMessage.warning('请输入模板名称'); return }
+  if (!createForm.value.targetType) { ElMessage.warning('请选择检查对象类型'); return }
   try {
-    const section = await templateStore.addRootSection({ name, description: createForm.value.description || undefined })
+    const section = await templateStore.addRootSection({
+      name,
+      description: createForm.value.description || undefined,
+      targetType: createForm.value.targetType,
+    })
     createDialogVisible.value = false
     router.push(`/inspection/templates/${section.id}/edit`)
   } catch (e: any) {
@@ -160,6 +189,22 @@ async function handleCreate() {
 // ==================== Actions ====================
 function goEdit(section: TemplateSection) {
   router.push(`/inspection/templates/${section.id}/edit`)
+}
+
+// 版本管理弹窗状态
+const versionsDialogVisible = ref(false)
+const versionsTarget = ref<TemplateSection | null>(null)
+const versionsList = ref<any[]>([])
+async function goVersions(section: TemplateSection) {
+  versionsTarget.value = section
+  versionsList.value = []
+  versionsDialogVisible.value = true
+  try {
+    const list = await inspTemplateApi.getVersions(section.id)
+    versionsList.value = list || []
+  } catch (e: any) {
+    ElMessage.error(e.message || '加载版本失败')
+  }
 }
 
 async function handlePublish(section: TemplateSection) {
@@ -173,8 +218,12 @@ async function handlePublish(section: TemplateSection) {
 }
 
 async function handleDeprecate(section: TemplateSection) {
+  const inUse = usageMap.value[Number(section.id)] || 0
+  const tip = inUse > 0
+    ? `⚠ 此模板正被 ${inUse} 个进行中的项目引用. 废弃后这些项目将继续运行 (使用快照), 但新项目无法选用此模板. 确认?`
+    : '废弃后新项目无法使用此模板. 确认?'
   try {
-    await ElMessageBox.confirm('废弃后新项目无法使用此模板', '确认废弃', { type: 'warning' })
+    await ElMessageBox.confirm(tip, '确认废弃', { type: 'warning' })
     await templateStore.deprecate(section.id)
     ElMessage.success('已废弃')
     loadTemplates()
@@ -183,8 +232,12 @@ async function handleDeprecate(section: TemplateSection) {
 }
 
 async function handleArchive(section: TemplateSection) {
+  const inUse = usageMap.value[Number(section.id)] || 0
+  const tip = inUse > 0
+    ? `⚠ 此模板正被 ${inUse} 个项目引用. 归档后将从默认列表隐藏. 确认?`
+    : '归档后将不可见 (可在筛选中找回). 确认?'
   try {
-    await ElMessageBox.confirm('归档后将不可见', '确认归档', { type: 'warning' })
+    await ElMessageBox.confirm(tip, '确认归档', { type: 'warning' })
     await templateStore.archive(section.id)
     ElMessage.success('已归档')
     loadTemplates()
@@ -227,8 +280,8 @@ onMounted(() => { loadTemplates() })
     <!-- Header (Audit Hub style) -->
     <header class="cfg-head">
       <div class="cfg-head__lead">
-        <span class="insp-eyebrow">检查模板 · Inspection Templates</span>
-        <h1 class="cfg-title">检查配置</h1>
+        <span class="insp-eyebrow">检查配置 · Inspection Configuration</span>
+        <h1 class="cfg-title">检查配置中心</h1>
       </div>
       <div class="cfg-head__stats">
         <button class="stat-pill" :class="{ 'is-active': activeFilter === 'ALL' }" @click="activeFilter = 'ALL'">
@@ -252,6 +305,25 @@ onMounted(() => { loadTemplates() })
         </button>
       </div>
     </header>
+
+    <!-- Tabs (P0-1: 配置中心) -->
+    <nav class="cfg-tabs">
+      <button class="cfg-tab" :class="{ 'is-active': activeTab === 'templates' }" @click="activeTab = 'templates'">
+        模板
+      </button>
+      <button class="cfg-tab" @click="goToSubModule('library')">
+        检查项库 ↗
+      </button>
+      <button class="cfg-tab" @click="goToSubModule('profiles')">
+        评分方案 ↗
+      </button>
+      <button class="cfg-tab" @click="goToSubModule('grades')">
+        等级方案 ↗
+      </button>
+      <button class="cfg-tab" @click="goToSubModule('categories')">
+        问题类目 ↗
+      </button>
+    </nav>
 
     <!-- Toolbar -->
     <div class="cfg-toolbar">
@@ -299,7 +371,7 @@ onMounted(() => { loadTemplates() })
             <div class="tpl-row__line1">
               <span class="tpl-row__name">{{ sec.sectionName }}</span>
               <span class="insp-chip"
-                    :class="`insp-chip--${({DRAFT:'pending',PUBLISHED:'pass',DEPRECATED:'warn',ARCHIVED:'fail'} as any)[sec.status]}`">
+                    :class="`insp-chip--${({DRAFT:'pending',PUBLISHED:'pass',DEPRECATED:'warn',ARCHIVED:'pending'} as any)[sec.status]}`">
                 {{ TemplateStatusConfig[sec.status]?.label }}
               </span>
               <span class="tpl-row__version insp-num">v{{ sec.latestVersion }}</span>
@@ -314,12 +386,27 @@ onMounted(() => { loadTemplates() })
                   {{ TargetTypeConfig[tt]?.label }}
                 </span>
               </template>
+              <template v-if="usageMap[Number(sec.id)] > 0">
+                <span class="tpl-row__sep">·</span>
+                <span class="tpl-row__usage">
+                  <span class="insp-num">{{ usageMap[Number(sec.id)] }}</span> 个项目在用
+                </span>
+              </template>
             </div>
           </div>
 
           <div class="tpl-row__actions" @click.stop>
+            <!-- 行内 primary action 按状态自适应 -->
+            <button v-if="sec.status === 'DRAFT'"
+              class="insp-btn insp-btn--sm insp-btn--accent"
+              @click="handlePublish(sec)">发布</button>
+            <button v-else-if="sec.status === 'PUBLISHED'"
+              class="insp-btn insp-btn--sm"
+              @click="goVersions(sec)">版本</button>
+            <button v-else-if="sec.status === 'DEPRECATED'"
+              class="insp-btn insp-btn--sm"
+              @click="handleDuplicate(sec)">复制为新模板</button>
             <button class="insp-btn insp-btn--sm" @click="goEdit(sec)">编辑</button>
-            <button class="insp-btn insp-btn--sm" @click="handleDuplicate(sec)">复制</button>
             <button class="insp-btn insp-btn--sm insp-btn--ghost" @click.stop="toggleDropdown(Number(sec.id), $event)">
               <MoreHorizontal :size="13" />
             </button>
@@ -353,6 +440,43 @@ onMounted(() => { loadTemplates() })
       </Transition>
     </Teleport>
 
+    <!-- Versions Dialog (P1-163) -->
+    <Teleport to="body">
+      <Transition name="modal">
+        <div v-if="versionsDialogVisible" class="modal-mask"
+             @mousedown="onMaskMouseDown"
+             @click="onMaskClick($event, () => versionsDialogVisible = false)">
+          <div class="modal-box modal-box--wide">
+            <div class="modal-head">
+              <h3>版本历史 · {{ versionsTarget?.sectionName }}</h3>
+              <button class="modal-close" @click="versionsDialogVisible = false">&times;</button>
+            </div>
+            <div class="modal-body">
+              <div v-if="versionsList.length === 0" class="ver-empty">暂无已发布版本</div>
+              <ul v-else class="ver-list">
+                <li v-for="v in versionsList" :key="v.id" class="ver-item">
+                  <div class="ver-item__head">
+                    <span class="ver-num insp-num">v{{ v.version }}</span>
+                    <span v-if="v.version === versionsTarget?.latestVersion" class="ver-badge">最新</span>
+                    <span class="ver-time insp-num">{{ formatDate(v.createdAt) }}</span>
+                  </div>
+                  <div class="ver-item__meta">
+                    <span class="ver-meta-item">快照大小 <span class="insp-num">{{
+                      v.structureSnapshot ? Math.round(v.structureSnapshot.length / 1024) : 0
+                    }} KB</span></span>
+                    <span v-if="v.createdBy" class="ver-meta-item">创建人 <span class="insp-num">#{{ v.createdBy }}</span></span>
+                  </div>
+                </li>
+              </ul>
+            </div>
+            <div class="modal-foot">
+              <button class="btn-ghost" @click="versionsDialogVisible = false">关闭</button>
+            </div>
+          </div>
+        </div>
+      </Transition>
+    </Teleport>
+
     <!-- Create Dialog -->
     <Teleport to="body">
       <Transition name="modal">
@@ -375,6 +499,21 @@ onMounted(() => { loadTemplates() })
                   placeholder="如：宿舍卫生全面检查"
                   @keyup.enter="handleCreate"
                 />
+              </div>
+              <div class="fld">
+                <label>检查对象类型 <span class="req">*</span></label>
+                <div class="seg">
+                  <button type="button" class="seg-btn"
+                    :class="{ 'is-on': createForm.targetType === 'ORG' }"
+                    @click="createForm.targetType = 'ORG'">组织</button>
+                  <button type="button" class="seg-btn"
+                    :class="{ 'is-on': createForm.targetType === 'USER' }"
+                    @click="createForm.targetType = 'USER'">人员</button>
+                  <button type="button" class="seg-btn"
+                    :class="{ 'is-on': createForm.targetType === 'PLACE' }"
+                    @click="createForm.targetType = 'PLACE'">场所</button>
+                </div>
+                <p class="fld-hint">决定模板适用的检查对象, 创建后可在编辑器中调整子分区类型</p>
               </div>
               <div class="fld">
                 <label>描述</label>
@@ -464,6 +603,30 @@ onMounted(() => { loadTemplates() })
 }
 
 .cfg-cta { margin-left: 6px; }
+
+/* ─ Tabs (配置中心 P0-1) ─────── */
+.cfg-tabs {
+  display: flex; gap: 2px;
+  background: var(--insp-bg-surface);
+  border: 1px solid var(--insp-border-default);
+  border-radius: var(--insp-radius-lg);
+  padding: 4px;
+  margin-bottom: 10px;
+}
+.cfg-tab {
+  padding: 6px 14px; height: 28px;
+  background: transparent; border: 0;
+  border-radius: var(--insp-radius-sm);
+  font-family: inherit; font-size: 12px; font-weight: 500;
+  color: var(--insp-ink-tertiary);
+  cursor: pointer; transition: all var(--insp-t-fast);
+}
+.cfg-tab:hover { color: var(--insp-ink-primary); background: var(--insp-bg-subtle); }
+.cfg-tab.is-active {
+  background: var(--insp-bg-subtle);
+  color: var(--insp-accent);
+  font-weight: 600;
+}
 
 /* ─ Toolbar ─────── */
 .cfg-toolbar {
@@ -618,6 +781,16 @@ onMounted(() => { loadTemplates() })
   border-radius: 3px;
   color: var(--insp-ink-secondary);
 }
+.tpl-row__usage {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 1px 6px;
+  background: var(--insp-info-pale, var(--insp-bg-subtle));
+  border-radius: 3px;
+  color: var(--insp-info);
+  font-weight: 500;
+}
 
 .tpl-row__actions {
   display: flex;
@@ -675,6 +848,39 @@ onMounted(() => { loadTemplates() })
   border-radius: var(--insp-radius-lg);
   box-shadow: var(--insp-shadow-lg);
 }
+.modal-box--wide { width: 640px; }
+
+/* Versions list */
+.ver-empty {
+  padding: 30px 0; text-align: center;
+  color: var(--insp-ink-tertiary); font-size: 12px;
+}
+.ver-list {
+  list-style: none; margin: 0; padding: 0;
+  display: flex; flex-direction: column; gap: 8px;
+}
+.ver-item {
+  border: 1px solid var(--insp-border-subtle);
+  border-radius: var(--insp-radius-sm);
+  padding: 10px 12px;
+  background: var(--insp-bg-page);
+}
+.ver-item__head { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; }
+.ver-num {
+  font-family: var(--insp-font-mono);
+  font-size: 14px; font-weight: 700;
+  color: var(--insp-accent);
+}
+.ver-badge {
+  font-size: 10px; padding: 1px 6px;
+  border-radius: 3px;
+  background: var(--insp-pass-pale, #dcfce7);
+  color: var(--insp-pass);
+  font-weight: 600;
+}
+.ver-time { font-size: 11px; color: var(--insp-ink-tertiary); margin-left: auto; }
+.ver-item__meta { display: flex; gap: 12px; font-size: 11px; color: var(--insp-ink-tertiary); }
+.ver-meta-item .insp-num { color: var(--insp-ink-secondary); font-weight: 600; }
 .modal-head {
   display: flex; align-items: center; justify-content: space-between;
   padding: 12px 16px;
@@ -721,6 +927,33 @@ onMounted(() => { loadTemplates() })
   outline: none;
   border-color: var(--insp-accent);
   box-shadow: 0 0 0 3px var(--insp-accent-paler);
+}
+.fld-hint {
+  font-size: 11px;
+  color: var(--insp-ink-tertiary);
+  margin: 2px 0 0;
+}
+.seg {
+  display: inline-flex; gap: 0;
+  background: var(--insp-bg-subtle);
+  border: 1px solid var(--insp-border-default);
+  border-radius: var(--insp-radius-sm);
+  padding: 2px;
+}
+.seg-btn {
+  padding: 4px 14px;
+  background: transparent; border: 0;
+  font-family: inherit; font-size: 12px; font-weight: 500;
+  color: var(--insp-ink-tertiary);
+  border-radius: 4px;
+  cursor: pointer; transition: all var(--insp-t-fast);
+}
+.seg-btn:hover { color: var(--insp-ink-primary); }
+.seg-btn.is-on {
+  background: var(--insp-bg-surface);
+  color: var(--insp-accent);
+  font-weight: 600;
+  box-shadow: var(--insp-shadow-xs);
 }
 .btn-primary, .btn-ghost {
   height: 28px;

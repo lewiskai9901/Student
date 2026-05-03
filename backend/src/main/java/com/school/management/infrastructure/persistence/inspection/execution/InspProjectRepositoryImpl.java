@@ -4,7 +4,10 @@ import com.school.management.domain.inspection.model.execution.*;
 import com.school.management.domain.inspection.repository.InspProjectRepository;
 import org.springframework.stereotype.Repository;
 
+import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
@@ -58,6 +61,16 @@ public class InspProjectRepositoryImpl implements InspProjectRepository {
     @Override
     public void deleteById(Long id) {
         mapper.deleteById(id);
+    }
+
+    @Override
+    public Map<Long, Integer> countByRootSectionIds(List<Long> rootSectionIds) {
+        if (rootSectionIds == null || rootSectionIds.isEmpty()) return Collections.emptyMap();
+        Map<Long, Integer> result = new HashMap<>();
+        for (RootSectionUsageRow row : mapper.countByRootSectionIds(rootSectionIds)) {
+            result.put(row.getRootSectionId(), row.getCnt() == null ? 0 : row.getCnt());
+        }
+        return result;
     }
 
     private InspProjectPO toPO(InspProject d) {

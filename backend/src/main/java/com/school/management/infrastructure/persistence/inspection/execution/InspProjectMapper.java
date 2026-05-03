@@ -35,4 +35,17 @@ public interface InspProjectMapper extends BaseMapper<InspProjectPO> {
     @DataPermission(module = "inspection_project", orgUnitField = "org_unit_id", creatorField = "created_by")
     @Select("SELECT * FROM insp_projects WHERE deleted = 0 ORDER BY created_at DESC")
     List<InspProjectPO> findAll();
+
+    /**
+     * P1-160: 按 rootSectionId (DB 列 template_id) 批量统计在用项目数 (排除归档).
+     */
+    @Select("<script>"
+            + "SELECT template_id AS rootSectionId, COUNT(*) AS cnt"
+            + " FROM insp_projects"
+            + " WHERE deleted = 0 AND status != 'ARCHIVED'"
+            + " AND template_id IN"
+            + " <foreach item='id' collection='ids' open='(' separator=',' close=')'>#{id}</foreach>"
+            + " GROUP BY template_id"
+            + "</script>")
+    List<RootSectionUsageRow> countByRootSectionIds(@Param("ids") List<Long> ids);
 }

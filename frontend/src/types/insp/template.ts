@@ -92,6 +92,8 @@ export interface CreateRootSectionRequest {
   description?: string
   catalogId?: number | null
   tags?: string
+  /** 检查对象类型 — 创建时即必填, 避免进编辑器后再补 (P0 修复) */
+  targetType?: 'ORG' | 'USER' | 'PLACE' | string
 }
 
 export interface UpdateRootSectionRequest {

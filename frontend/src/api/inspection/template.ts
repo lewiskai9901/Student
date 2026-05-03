@@ -80,6 +80,12 @@ export function getVersions(rootSectionId: number): Promise<TemplateVersion[]> {
   return http.get<TemplateVersion[]>(`${TEMPLATE_BASE}/${rootSectionId}/versions`)
 }
 
+/** P1-160: 批量查询模板使用计数 — { rootSectionId: count } */
+export function getRootSectionUsage(ids: number[]): Promise<Record<number, number>> {
+  if (!ids.length) return Promise.resolve({})
+  return http.get<Record<number, number>>(`${TEMPLATE_BASE}/usage`, { params: { ids: ids.join(',') } })
+}
+
 export function getVersion(rootSectionId: number, version: number): Promise<TemplateVersion> {
   return http.get<TemplateVersion>(`${TEMPLATE_BASE}/${rootSectionId}/versions/${version}`)
 }
@@ -155,6 +161,7 @@ export const inspTemplateApi = {
   duplicate: duplicateRootSection,
   export: exportRootSection,
   getVersions,
+  getRootSectionUsage,
   getVersion,
   // 分区
   getSections,
