@@ -34,6 +34,7 @@ import {
   getSubmissions, getDetails, updateDetailResponse, flagDetail, unflagDetail,
 } from '@/api/inspection/submission'
 import { getTask, submitTask } from '@/api/inspection/task'
+import { getProject } from '@/api/inspection/project'
 import type { InspTask, InspSubmission, SubmissionDetail } from '@/types/insp/project'
 
 const route = useRoute()
@@ -44,6 +45,7 @@ const taskId = Number(route.params.id)
 const loading = ref(false)
 const submitting = ref(false)
 const task = ref<InspTask | null>(null)
+const project = ref<any | null>(null)
 const submissions = ref<InspSubmission[]>([])
 const allDetails = ref<SubmissionDetail[]>([])
 const errorMsg = ref('')
@@ -165,6 +167,10 @@ async function loadAll() {
     if (!task.value) {
       errorMsg.value = '任务不存在'
       return
+    }
+    // 项目名 (顶栏上下文, 失败不致命)
+    if (task.value.projectId) {
+      try { project.value = await getProject(Number(task.value.projectId)) } catch { /* non-fatal */ }
     }
     const subs = await getSubmissions({ taskId })
     submissions.value = (subs || []).filter(s => Number(s.taskId) === taskId)
@@ -406,8 +412,14 @@ watch(currentField, () => { targetIdx.value = 0 })
     <header class="strip">
       <div class="strip-left">
         <span class="insp-stamp">驾驶舱</span>
-        <h1 class="strip-title">{{ task?.taskCode || 'TSK …' }}</h1>
-        <span class="strip-meta insp-num">{{ task?.taskDate || '' }}</span>
+        <div class="strip-titles">
+          <h1 class="strip-project" v-if="project">{{ project.projectName }}</h1>
+          <div class="strip-subline">
+            <span class="strip-task-code">{{ task?.taskCode || 'TSK …' }}</span>
+            <span class="strip-meta insp-num">· {{ task?.taskDate || '' }}</span>
+            <span v-if="task?.inspectorName" class="strip-meta">· {{ task.inspectorName }}</span>
+          </div>
+        </div>
       </div>
 
       <!-- ECG bars -->
@@ -710,46 +722,69 @@ watch(currentField, () => { targetIdx.value = 0 })
   font-family: var(--insp-font-body);
 }
 
-/* ── Top stripe ─────── */
+/* ── Top stripe (紧凑版) ─────── */
 .strip {
   display: grid;
-  grid-template-columns: minmax(280px, 1fr) minmax(400px, 2fr) minmax(220px, auto);
-  gap: var(--insp-sp-5);
+  grid-template-columns: minmax(260px, 1fr) minmax(380px, 2fr) minmax(200px, auto);
+  gap: var(--insp-sp-4);
   align-items: center;
-  padding: var(--insp-sp-4) var(--insp-sp-7);
+  padding: 10px var(--insp-sp-6);
   background: var(--insp-ink-primary);
   color: var(--insp-bg-surface);
   border-bottom: 2px solid var(--insp-accent);
   flex-shrink: 0;
 }
 
-.strip-left { display: flex; align-items: center; gap: var(--insp-sp-4); }
+.strip-left { display: flex; align-items: center; gap: var(--insp-sp-3); min-width: 0; }
+.strip-titles { display: flex; flex-direction: column; min-width: 0; gap: 2px; }
 
-.strip-title {
-  font-family: var(--insp-font-mono);
-  font-size: 18px; font-weight: 600;
+.strip-project {
   margin: 0;
+  font-family: var(--insp-font-display);
+  font-size: 15px;
+  font-weight: 600;
+  color: white;
   letter-spacing: -0.01em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 320px;
+  line-height: 1.15;
 }
 
+.strip-subline {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  white-space: nowrap;
+  overflow: hidden;
+}
+.strip-task-code {
+  font-family: var(--insp-font-mono);
+  color: rgba(255, 255, 255, 0.75);
+  font-weight: 500;
+  letter-spacing: -0.01em;
+}
 .strip-meta {
   font-family: var(--insp-font-mono);
-  font-size: var(--insp-text-xs);
-  color: rgba(255, 255, 255, 0.55);
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.5);
 }
 
 .strip .insp-stamp {
   background: var(--insp-accent);
   color: white;
   border-color: var(--insp-accent);
+  flex-shrink: 0;
 }
 
-/* ── ECG strip ─────── */
+/* ── ECG strip (紧凑版) ─────── */
 .ecg {
   display: flex;
   align-items: stretch;
   gap: 2px;
-  height: 38px;
+  height: 32px;
 }
 
 .ecg-bar {
@@ -794,8 +829,8 @@ watch(currentField, () => { targetIdx.value = 0 })
   border-top: 4px solid var(--insp-accent);
 }
 
-/* ── Strip KPIs ─────── */
-.strip-right { display: flex; align-items: center; gap: var(--insp-sp-5); justify-content: flex-end; }
+/* ── Strip KPIs (紧凑版) ─────── */
+.strip-right { display: flex; align-items: center; gap: var(--insp-sp-4); justify-content: flex-end; }
 
 .kpi {
   display: flex; flex-direction: column;
@@ -803,7 +838,7 @@ watch(currentField, () => { targetIdx.value = 0 })
 }
 .kpi__num {
   font-family: var(--insp-font-mono);
-  font-size: 22px; font-weight: 600;
+  font-size: 18px; font-weight: 600;
   color: white;
   letter-spacing: -0.025em; line-height: 1;
 }
@@ -827,8 +862,8 @@ watch(currentField, () => { targetIdx.value = 0 })
 
 .mode-btn {
   display: flex; flex-direction: column;
-  align-items: flex-start; gap: 2px;
-  padding: 10px 22px;
+  align-items: flex-start; gap: 1px;
+  padding: 6px 18px;
   background: transparent;
   border: 0; border-right: 1px solid var(--insp-border-subtle);
   cursor: pointer;
@@ -839,17 +874,19 @@ watch(currentField, () => { targetIdx.value = 0 })
 .mode-btn:hover { background: var(--insp-bg-subtle); }
 .mode-btn.is-active {
   background: var(--insp-bg-page);
-  box-shadow: inset 0 -3px 0 var(--insp-accent);
+  box-shadow: inset 0 -2px 0 var(--insp-accent);
 }
 .mode-btn__name {
   font-family: var(--insp-font-display);
-  font-size: 15px; font-weight: 500;
+  font-size: 13px; font-weight: 500;
   color: var(--insp-ink-primary);
+  line-height: 1.3;
 }
 .mode-btn__hint {
-  font-size: var(--insp-text-2xs);
+  font-size: 10px;
   color: var(--insp-ink-tertiary);
-  letter-spacing: 0.04em;
+  letter-spacing: 0.02em;
+  line-height: 1.2;
 }
 .mode-spacer { flex: 1; }
 .field-counter {
@@ -861,11 +898,11 @@ watch(currentField, () => { targetIdx.value = 0 })
 }
 .field-counter .dim { color: var(--insp-ink-quaternary); font-weight: 400; }
 
-/* ── Sweep mode ─────── */
+/* ── Sweep mode (紧凑版) ─────── */
 .sweep {
   flex: 1;
   overflow-y: auto;
-  padding: var(--insp-sp-7) var(--insp-sp-9);
+  padding: var(--insp-sp-5) var(--insp-sp-7);
   max-width: 1200px;
   width: 100%;
   margin: 0 auto;
@@ -874,22 +911,23 @@ watch(currentField, () => { targetIdx.value = 0 })
 .field-head {
   display: flex; align-items: flex-end; justify-content: space-between;
   gap: var(--insp-sp-5);
-  margin-bottom: var(--insp-sp-6);
-  padding-bottom: var(--insp-sp-4);
-  border-bottom: 2px solid var(--insp-ink-primary);
+  margin-bottom: var(--insp-sp-4);
+  padding-bottom: var(--insp-sp-3);
+  border-bottom: 1px solid var(--insp-border-default);
 }
 
-.field-head__lead { display: flex; flex-direction: column; gap: 4px; }
+.field-head__lead { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
 .field-name {
   font-family: var(--insp-font-display);
-  font-size: 36px; font-weight: 500;
+  font-size: 24px; font-weight: 500;
   letter-spacing: var(--insp-tracking-display);
   margin: 0;
   color: var(--insp-ink-primary);
+  line-height: 1.2;
 }
 .field-meta {
-  display: flex; align-items: center; gap: var(--insp-sp-3);
-  margin-top: 6px;
+  display: flex; align-items: center; gap: var(--insp-sp-2);
+  margin-top: 4px;
 }
 .field-meta__count {
   font-family: var(--insp-font-mono);
@@ -907,40 +945,45 @@ watch(currentField, () => { targetIdx.value = 0 })
 
 .sweep-row {
   display: grid;
-  grid-template-columns: 48px 1fr auto auto 36px;
-  gap: var(--insp-sp-4);
+  grid-template-columns: 36px 1fr auto auto 32px;
+  gap: var(--insp-sp-3);
   align-items: center;
-  padding: var(--insp-sp-3) var(--insp-sp-4);
+  padding: 6px var(--insp-sp-3);
   border-bottom: 1px solid var(--insp-border-subtle);
   cursor: pointer;
   transition: background var(--insp-t-fast);
   position: relative;
+  min-height: 44px;
 }
 .sweep-row:hover { background: var(--insp-bg-subtle); }
 .sweep-row.is-cursor {
   background: var(--insp-bg-subtle);
-  box-shadow: inset 4px 0 0 var(--insp-accent);
+  box-shadow: inset 3px 0 0 var(--insp-accent);
 }
 
 .sweep-row__idx {
   font-family: var(--insp-font-mono);
-  font-size: var(--insp-text-md); font-weight: 600;
-  color: var(--insp-ink-tertiary);
+  font-size: 11px; font-weight: 500;
+  color: var(--insp-ink-quaternary);
+  letter-spacing: 0.05em;
 }
 .sweep-row__name {
-  font-size: var(--insp-text-md);
+  font-size: 13px;
   color: var(--insp-ink-primary);
   font-weight: 500;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .grade-btn {
-  display: inline-flex; align-items: center; gap: var(--insp-sp-2);
-  padding: 8px 14px;
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 5px 11px;
   border: 1px solid var(--insp-border-default);
   background: var(--insp-bg-surface);
-  border-radius: var(--insp-radius-md);
+  border-radius: var(--insp-radius-sm);
   font-family: inherit;
-  font-size: var(--insp-text-sm); font-weight: 500;
+  font-size: 12px; font-weight: 500;
   color: var(--insp-ink-secondary);
   cursor: pointer;
   transition: all var(--insp-t-fast);
@@ -951,7 +994,7 @@ watch(currentField, () => { targetIdx.value = 0 })
 }
 .grade-btn__glyph {
   font-family: var(--insp-font-mono);
-  font-size: 18px; font-weight: 700;
+  font-size: 14px; font-weight: 700;
   line-height: 1;
 }
 .grade-btn--pass.is-on {
