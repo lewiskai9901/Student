@@ -4,6 +4,7 @@
  * 双栏 + 键盘驱动 (J/K 切换 · A 通过+发布 · R 驳回 · E 延期 · Esc 取消)
  */
 import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
+import { useRoute } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import SubmitAppealDialog from '@/views/inspection/appeals/components/SubmitAppealDialog.vue'
 import {
@@ -13,6 +14,8 @@ import { getSubmissions, getDetails } from '@/api/inspection/submission'
 import type { InspTask, InspSubmission, SubmissionDetail } from '@/types/insp/project'
 import { useAuthStore } from '@/stores/auth'
 import { TaskStatusConfig, type TaskStatus } from '@/types/insp/enums'
+
+const route = useRoute()
 
 const authStore = useAuthStore()
 
@@ -64,6 +67,15 @@ async function loadSubmittedTasks() {
   try {
     const all = await getTasks()
     submittedTasks.value = all.filter(t => t.status === 'SUBMITTED' || t.status === 'UNDER_REVIEW')
+    // 优先选择 URL ?taskId=N 指定的任务 (从我的任务页 "去审核" 跳转过来)
+    const queryTaskId = Number(route.query.taskId)
+    if (queryTaskId && !selectedTaskId.value) {
+      const target = submittedTasks.value.find(t => Number(t.id) === queryTaskId)
+      if (target) {
+        await selectTask(target)
+        return
+      }
+    }
     if (!selectedTaskId.value && submittedTasks.value.length > 0) {
       await selectTask(submittedTasks.value[0])
     }
@@ -80,8 +92,8 @@ async function selectTask(task: InspTask) {
   showRejectInline.value = false
   loadingDetails.value = true
   try {
-    const subs = await getSubmissions(task.projectId as any)
-    taskSubmissions.value = subs.filter(s => s.taskId === task.id)
+    const subs = await getSubmissions({ taskId: task.id })
+    taskSubmissions.value = (subs || []).filter(s => Number(s.taskId) === Number(task.id))
     const detailMap = new Map<number, SubmissionDetail[]>()
     for (const sub of taskSubmissions.value) {
       try {
