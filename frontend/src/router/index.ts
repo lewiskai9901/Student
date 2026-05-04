@@ -669,10 +669,10 @@ const routes: RouteRecordRaw[] = [
               order: 11
             }
           },
-          // 审计日志
+          // 审计日志 (检查平台专属)
           {
             path: '/inspection/audit-trail',
-            name: 'AuditTrail',
+            name: 'InspectionAuditTrail',
             component: () => import('@/views/inspection/platform/AuditTrailView.vue'),
             meta: {
               title: '审计日志',
