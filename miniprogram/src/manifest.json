@@ -1,0 +1,16 @@
+{
+  "name": "通用组织管理小程序",
+  "appid": "",
+  "description": "插件化通用组织管理平台移动端",
+  "versionName": "0.1.0",
+  "versionCode": "1",
+  "transformPx": false,
+  "mp-weixin": {
+    "appid": "",
+    "setting": { "urlCheck": false },
+    "usingComponents": true
+  },
+  "h5": { "router": { "mode": "history" } },
+  "uniStatistics": { "enable": false },
+  "vueVersion": "3"
+}

@@ -1,0 +1,47 @@
+{
+  "name": "miniprogram-platform",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev:mp-weixin": "node scripts/build-pages-json.js && uni -p mp-weixin",
+    "dev:h5": "node scripts/build-pages-json.js && uni",
+    "build:mp-weixin": "node scripts/build-pages-json.js && uni build -p mp-weixin",
+    "type-check": "vue-tsc --noEmit",
+    "lint": "eslint --ext .ts,.vue src",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "verify-manifest": "node scripts/verify-manifest.js",
+    "ci": "npm run lint && npm run type-check && npm run verify-manifest && npm run test"
+  },
+  "dependencies": {
+    "@dcloudio/uni-app": "3.0.0-4080420251103001",
+    "@dcloudio/uni-app-plus": "3.0.0-4080420251103001",
+    "@dcloudio/uni-components": "3.0.0-4080420251103001",
+    "@dcloudio/uni-h5": "3.0.0-4080420251103001",
+    "@dcloudio/uni-mp-weixin": "3.0.0-4080420251103001",
+    "pinia": "^2.1.7",
+    "vue": "^3.4.21",
+    "wot-design-uni": "^1.14.0",
+    "z-paging": "^2.8.8"
+  },
+  "devDependencies": {
+    "@dcloudio/types": "^3.4.8",
+    "@dcloudio/uni-cli-shared": "3.0.0-4080420251103001",
+    "@dcloudio/vite-plugin-uni": "3.0.0-4080420251103001",
+    "@types/node": "^20.11.0",
+    "@typescript-eslint/eslint-plugin": "^6.21.0",
+    "@typescript-eslint/parser": "^6.21.0",
+    "@vue/runtime-core": "^3.4.21",
+    "@vue/tsconfig": "^0.5.1",
+    "ajv": "^8.12.0",
+    "eslint": "^8.57.0",
+    "eslint-plugin-vue": "^9.21.0",
+    "fast-glob": "^3.3.2",
+    "sass": "^1.78.0",
+    "typescript": "^5.3.3",
+    "vite": "^5.2.8",
+    "vitest": "^1.4.0",
+    "vue-eslint-parser": "^9.4.2",
+    "vue-tsc": "^2.0.6"
+  }
+}
