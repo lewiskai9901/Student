@@ -92,3 +92,7 @@ frontend/.eslintrc-auto-import.json
 
 # Claude Code 运行时状态
 .claude/scheduled_tasks.lock
+
+# Git worktrees
+.worktrees/
+worktrees/
