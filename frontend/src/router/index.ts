@@ -577,6 +577,19 @@ const routes: RouteRecordRaw[] = [
               order: 3
             }
           },
+          // 整改责任人移动端 — 后勤/班长/维修工 用 (deadline 驱动 + 一键操作)
+          {
+            path: '/inspection/my-corrective',
+            name: 'InspMyCorrective',
+            component: () => import('@/views/inspection/corrective/MyCorrectiveView.vue'),
+            meta: {
+              title: '我的整改',
+              icon: 'Wrench',
+              requiresAuth: true,
+              permission: 'insp:corrective:execute',
+              order: 4
+            }
+          },
           // 仪表盘
           {
             path: '/inspection/dashboard',
