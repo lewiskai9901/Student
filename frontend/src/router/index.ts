@@ -590,6 +590,19 @@ const routes: RouteRecordRaw[] = [
               order: 4
             }
           },
+          // 治理工作台 — 校长/督查办主任/部门头 用 (红线/检查员/申诉/整改 4 象限)
+          {
+            path: '/inspection/governance',
+            name: 'InspGovernance',
+            component: () => import('@/views/inspection/governance/GovernanceView.vue'),
+            meta: {
+              title: '治理工作台',
+              icon: 'ShieldCheck',
+              requiresAuth: true,
+              permission: 'insp:analytics:view',
+              order: 9
+            }
+          },
           // 仪表盘
           {
             path: '/inspection/dashboard',
