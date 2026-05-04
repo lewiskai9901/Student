@@ -76,6 +76,9 @@ class UserApplicationServiceTest {
     @Mock
     private JwtTokenService jwtTokenService;
 
+    @Mock
+    private com.school.management.infrastructure.extension.PolicyRegistry policyRegistry;
+
     @InjectMocks
     private UserApplicationService service;
 

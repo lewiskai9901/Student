@@ -1,6 +1,6 @@
 package com.school.management.domain.inspection.repository;
 
-import com.school.management.application.inspection.dto.ProjectTaskStats;
+import com.school.management.domain.inspection.repository.projection.ProjectTaskStats;
 import com.school.management.domain.inspection.model.execution.InspTask;
 import com.school.management.domain.inspection.model.execution.TaskStatus;
 

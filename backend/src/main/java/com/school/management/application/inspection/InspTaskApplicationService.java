@@ -343,28 +343,31 @@ public class InspTaskApplicationService {
         }
     }
 
-    /** V108: 写项目检查模式配置 */
+    /** V108: 写项目检查模式配置 (原始字段, 不依赖 Controller 层 DTO). */
     @Transactional
     public java.util.Map<String, Object> updateInspectionMode(
             Long projectId,
-            com.school.management.interfaces.rest.inspection.InspTaskController.InspectionModeRequest req) {
-        if (req.getInspectionMode() != null
+            String inspectionMode,
+            Boolean allowAdHoc,
+            Boolean allowSelfCheck,
+            Integer adHocQuotaPerInspector) {
+        if (inspectionMode != null
                 && !java.util.Set.of("PLANNED","HYBRID","SPOT_CHECK","SELF_AUDIT","EMERGENCY")
-                       .contains(req.getInspectionMode())) {
-            throw new IllegalArgumentException("非法的 inspection_mode: " + req.getInspectionMode());
+                       .contains(inspectionMode)) {
+            throw new IllegalArgumentException("非法的 inspection_mode: " + inspectionMode);
         }
         // PLANNED 模式禁止 allow_ad_hoc
-        boolean allowAdHoc = Boolean.TRUE.equals(req.getAllowAdHoc())
-                && !"PLANNED".equals(req.getInspectionMode());
-        boolean allowSelfCheck = Boolean.TRUE.equals(req.getAllowSelfCheck());
+        boolean adHoc = Boolean.TRUE.equals(allowAdHoc)
+                && !"PLANNED".equals(inspectionMode);
+        boolean selfCheck = Boolean.TRUE.equals(allowSelfCheck);
 
         jdbcTemplate.update(
                 "UPDATE insp_projects SET inspection_mode = ?, allow_ad_hoc = ?, " +
                 "allow_self_check = ?, ad_hoc_quota_per_inspector = ? WHERE id = ?",
-                req.getInspectionMode() != null ? req.getInspectionMode() : "PLANNED",
-                allowAdHoc ? 1 : 0,
-                allowSelfCheck ? 1 : 0,
-                req.getAdHocQuotaPerInspector(),
+                inspectionMode != null ? inspectionMode : "PLANNED",
+                adHoc ? 1 : 0,
+                selfCheck ? 1 : 0,
+                adHocQuotaPerInspector,
                 projectId);
         return getInspectionMode(projectId);
     }

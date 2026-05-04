@@ -2,7 +2,7 @@ package com.school.management.application.inspection;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.school.management.application.inspection.dto.ProjectStatsSummary;
-import com.school.management.application.inspection.dto.ProjectTaskStats;
+import com.school.management.domain.inspection.repository.projection.ProjectTaskStats;
 import com.school.management.domain.inspection.model.execution.*;
 import com.school.management.domain.inspection.model.scoring.ScoringProfile;
 import com.school.management.domain.inspection.model.template.TemplateSection;

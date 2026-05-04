@@ -109,7 +109,11 @@ public class InspTaskController {
     @CasbinAccess(resource = "insp:project", action = "edit")
     public Result<java.util.Map<String, Object>> updateInspectionMode(
             @PathVariable Long id, @RequestBody InspectionModeRequest request) {
-        return Result.success(taskService.updateInspectionMode(id, request));
+        return Result.success(taskService.updateInspectionMode(id,
+                request.getInspectionMode(),
+                request.getAllowAdHoc(),
+                request.getAllowSelfCheck(),
+                request.getAdHocQuotaPerInspector()));
     }
 
     public static class InspectionModeRequest {

@@ -492,7 +492,7 @@ function strictnessHint(s?: string): string {
 }
 async function loadPolicies() {
   // 并发加载所有项目策略
-  const ids = stats.value.map(s => s.project.id).filter(Boolean) as number[]
+  const ids = summaries.value.map(s => s.project.id).filter(Boolean) as number[]
   await Promise.all(ids.map(async id => {
     try {
       const p = await http.get<any>(`/inspection/corrective/projects/${id}/policy`)
@@ -500,7 +500,7 @@ async function loadPolicies() {
     } catch { /* ignore individual failure */ }
   }))
 }
-watch(() => stats.value.length, () => { loadPolicies() }, { immediate: false })
+watch(() => summaries.value.length, () => { loadPolicies() }, { immediate: false })
 
 onMounted(async () => {
   await loadData()

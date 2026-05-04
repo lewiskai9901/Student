@@ -1,7 +1,7 @@
 package com.school.management.infrastructure.persistence.inspection.execution;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
-import com.school.management.application.inspection.dto.ProjectTaskStats;
+import com.school.management.domain.inspection.repository.projection.ProjectTaskStats;
 import com.school.management.domain.inspection.model.execution.*;
 import com.school.management.domain.inspection.repository.InspTaskRepository;
 import org.springframework.stereotype.Repository;
