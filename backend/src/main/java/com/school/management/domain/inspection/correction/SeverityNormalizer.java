@@ -24,8 +24,8 @@ public interface SeverityNormalizer {
         switch (mode) {
             case PASS_FAIL:        return new PassFailNormalizer();
             case DEDUCTION:
-            case TIERED_DEDUCTION:
             case CUMULATIVE:       return new DeductionNormalizer();
+            case TIERED_DEDUCTION: return new TieredDeductionNormalizer();
             case LEVEL:            return new LevelNormalizer();
             case RATING_SCALE:     return new RatingScaleNormalizer();
             case DIRECT:
@@ -33,9 +33,8 @@ public interface SeverityNormalizer {
             case SCORE_TABLE:
             case THRESHOLD:
             case FORMULA:          return new DirectNormalizer();
-            // 复杂 mode 在 Sprint 2 引入: WEIGHTED_MULTI / RISK_MATRIX
-            case WEIGHTED_MULTI:
-            case RISK_MATRIX:      return new DeductionNormalizer();  // 暂用扣分降级
+            case WEIGHTED_MULTI:   return new WeightedMultiNormalizer();
+            case RISK_MATRIX:      return new RiskMatrixNormalizer();
             default:               return new DeductionNormalizer();
         }
     }

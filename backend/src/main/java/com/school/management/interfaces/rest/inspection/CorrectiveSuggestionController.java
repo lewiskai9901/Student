@@ -161,4 +161,64 @@ public class CorrectiveSuggestionController {
         public Long submissionId;
         public List<Long> detailIds;
     }
+
+    // ==================== 项目策略 GET / PUT ====================
+
+    /** 取项目整改策略. 缺省 NORMAL. */
+    @GetMapping("/projects/{projectId}/policy")
+    @CasbinAccess(resource = "insp:project", action = "view")
+    public Result<PolicyView> getPolicy(@PathVariable Long projectId) {
+        var p = suggestionService.loadPolicy(projectId);
+        PolicyView v = new PolicyView();
+        v.strictness = p.strictness();
+        v.thresholdHigh = p.thresholds().high();
+        v.thresholdMedium = p.thresholds().medium();
+        v.thresholdLow = p.thresholds().low();
+        v.deadlineHigh = p.deadlines().high();
+        v.deadlineMedium = p.deadlines().medium();
+        v.deadlineLow = p.deadlines().low();
+        return Result.success(v);
+    }
+
+    /** 更新项目整改策略. strictness ∈ {STRICT,NORMAL,LENIENT,OFF}. */
+    @PutMapping("/projects/{projectId}/policy")
+    @CasbinAccess(resource = "insp:project", action = "update")
+    public Result<PolicyView> updatePolicy(@PathVariable Long projectId,
+                                           @RequestBody PolicyView req) {
+        if (req.strictness == null
+                || !List.of("STRICT","NORMAL","LENIENT","OFF")
+                       .contains(req.strictness.toUpperCase())) {
+            throw new IllegalArgumentException("strictness 必须是 STRICT/NORMAL/LENIENT/OFF");
+        }
+
+        // thresholds JSON (允许 null 走默认)
+        String tjson = null;
+        if (req.thresholdHigh != null && req.thresholdMedium != null && req.thresholdLow != null) {
+            tjson = String.format("{\"high\":%s,\"medium\":%s,\"low\":%s}",
+                    req.thresholdHigh, req.thresholdMedium, req.thresholdLow);
+        }
+        String djson = null;
+        if (req.deadlineHigh != null && req.deadlineMedium != null && req.deadlineLow != null) {
+            djson = String.format("{\"high\":%d,\"medium\":%d,\"low\":%d}",
+                    req.deadlineHigh, req.deadlineMedium, req.deadlineLow);
+        }
+
+        jdbcTemplate.update(
+                "UPDATE insp_projects SET corrective_strictness=?, " +
+                " corrective_severity_thresholds=?, corrective_default_deadlines=? " +
+                " WHERE id=?",
+                req.strictness.toUpperCase(), tjson, djson, projectId);
+
+        return getPolicy(projectId);
+    }
+
+    public static class PolicyView {
+        public String strictness;
+        public Double thresholdHigh;
+        public Double thresholdMedium;
+        public Double thresholdLow;
+        public Integer deadlineHigh;
+        public Integer deadlineMedium;
+        public Integer deadlineLow;
+    }
 }

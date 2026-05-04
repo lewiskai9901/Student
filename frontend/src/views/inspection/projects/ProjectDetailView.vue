@@ -111,6 +111,14 @@ const saving = ref(false)
 const cf = ref({ scopeType: 'ORG', scopeIds: [] as string[], startDate: '', endDate: '', assignmentMode: 'FREE', reviewRequired: true, autoPublish: false, projectName: '', evaluationMode: 'SINGLE', multiRaterMode: 'AVERAGE', trendEnabled: false, decayEnabled: false, calibrationEnabled: false,
   // V108: 检查模式
   inspectionMode: 'PLANNED' as 'PLANNED'|'HYBRID'|'SPOT_CHECK'|'SELF_AUDIT'|'EMERGENCY',
+  // V110: 整改判定策略
+  correctiveStrictness: 'NORMAL' as 'STRICT'|'NORMAL'|'LENIENT'|'OFF',
+  correctiveThresholdHigh: null as number | null,
+  correctiveThresholdMedium: null as number | null,
+  correctiveThresholdLow: null as number | null,
+  correctiveDeadlineHigh: null as number | null,
+  correctiveDeadlineMedium: null as number | null,
+  correctiveDeadlineLow: null as number | null,
   allowAdHoc: false, allowSelfCheck: false, adHocQuotaPerInspector: null as number | null,
 })
 
@@ -579,6 +587,19 @@ async function loadInspectionModeFallback() {
       cf.value.adHocQuotaPerInspector = r.ad_hoc_quota_per_inspector ?? r.adHocQuotaPerInspector ?? null
     }
   } catch { /* skip */ }
+  // V110: 加载整改判定策略
+  try {
+    const p = await http.get<any>('/inspection/corrective/projects/' + projectId + '/policy')
+    if (p) {
+      cf.value.correctiveStrictness = (p.strictness || 'NORMAL') as any
+      cf.value.correctiveThresholdHigh = p.thresholdHigh ?? null
+      cf.value.correctiveThresholdMedium = p.thresholdMedium ?? null
+      cf.value.correctiveThresholdLow = p.thresholdLow ?? null
+      cf.value.correctiveDeadlineHigh = p.deadlineHigh ?? null
+      cf.value.correctiveDeadlineMedium = p.deadlineMedium ?? null
+      cf.value.correctiveDeadlineLow = p.deadlineLow ?? null
+    }
+  } catch { /* skip */ }
 }
 
 // Watch cf changes after initial sync
@@ -614,6 +635,20 @@ async function saveConfig() {
       })
     } catch (e: any) {
       console.warn('保存检查模式失败:', e?.message)
+    }
+    // V110: 保存整改判定策略
+    try {
+      await http.put('/inspection/corrective/projects/' + projectId + '/policy', {
+        strictness: cf.value.correctiveStrictness,
+        thresholdHigh: cf.value.correctiveThresholdHigh,
+        thresholdMedium: cf.value.correctiveThresholdMedium,
+        thresholdLow: cf.value.correctiveThresholdLow,
+        deadlineHigh: cf.value.correctiveDeadlineHigh,
+        deadlineMedium: cf.value.correctiveDeadlineMedium,
+        deadlineLow: cf.value.correctiveDeadlineLow,
+      })
+    } catch (e: any) {
+      console.warn('保存整改策略失败:', e?.message)
     }
     ElMessage.success('已保存'); configDirty.value = false; loadProject()
   } catch (e: any) { ElMessage.error(e.message || '保存失败') } finally { saving.value = false }
@@ -1560,6 +1595,95 @@ onMounted(async () => {
           </div>
         </div>
 
+        <!-- V110: 整改判定策略 -->
+        <div class="cfg-card">
+          <div class="cfg-card-title">整改判定策略 (V110)</div>
+          <div class="cfg-desc">
+            控制系统如何识别"需要整改的检查项". 99% 项目选预设即可,
+            高级用户可自定义阈值与 deadline.
+          </div>
+          <div class="cfg-row2">
+            <div class="cfg-field">
+              <label class="cfg-label">严格度预设</label>
+              <select v-model="cf.correctiveStrictness" class="cfg-select" :disabled="isArchived">
+                <option value="STRICT">严格 — 任何不达标都建整改单 (医院/食药监)</option>
+                <option value="NORMAL">标准 — 中等及以上严重度才建 (推荐)</option>
+                <option value="LENIENT">宽松 — 仅严重问题建单 (学校/社区)</option>
+                <option value="OFF">关闭 — 完全人工建单</option>
+              </select>
+              <div class="cfg-hint">
+                {{ cf.correctiveStrictness === 'STRICT' ? '阈值 H=0.5/M=0.3/L=0.1, 自动建单' :
+                   cf.correctiveStrictness === 'NORMAL' ? '阈值 H=0.8/M=0.5/L=0.3, 引擎建议+人工确认' :
+                   cf.correctiveStrictness === 'LENIENT' ? '阈值 H=0.9/M=0.7/L=0.5, 仅严重问题建议' :
+                   '不启用引擎, 检查员自主决定' }}
+              </div>
+            </div>
+            <div class="cfg-field">
+              <label class="cfg-label">建单流程</label>
+              <div class="cfg-readonly">
+                {{ cf.correctiveStrictness === 'STRICT'
+                    ? '✓ 提交后自动建立整改单'
+                    : cf.correctiveStrictness === 'OFF'
+                      ? '✗ 不自动判定'
+                      : '✓ 提交后弹候选确认对话框' }}
+              </div>
+              <div class="cfg-hint">
+                STRICT 自动建单 / NORMAL+LENIENT 候选确认 / OFF 完全人工
+              </div>
+            </div>
+          </div>
+
+          <details class="cfg-advanced" :open="false">
+            <summary>高级: 自定义阈值与 deadline</summary>
+            <div class="cfg-row3">
+              <div class="cfg-field">
+                <label class="cfg-label">HIGH 阈值 (0-1)</label>
+                <el-input-number v-model="cf.correctiveThresholdHigh"
+                  :min="0" :max="1" :step="0.05" :precision="2"
+                  :disabled="isArchived || cf.correctiveStrictness === 'OFF'"
+                  placeholder="留空=用预设" class="w-full" />
+              </div>
+              <div class="cfg-field">
+                <label class="cfg-label">MEDIUM 阈值</label>
+                <el-input-number v-model="cf.correctiveThresholdMedium"
+                  :min="0" :max="1" :step="0.05" :precision="2"
+                  :disabled="isArchived || cf.correctiveStrictness === 'OFF'"
+                  placeholder="留空=用预设" class="w-full" />
+              </div>
+              <div class="cfg-field">
+                <label class="cfg-label">LOW 阈值</label>
+                <el-input-number v-model="cf.correctiveThresholdLow"
+                  :min="0" :max="1" :step="0.05" :precision="2"
+                  :disabled="isArchived || cf.correctiveStrictness === 'OFF'"
+                  placeholder="留空=用预设" class="w-full" />
+              </div>
+            </div>
+            <div class="cfg-row3">
+              <div class="cfg-field">
+                <label class="cfg-label">HIGH deadline (天)</label>
+                <el-input-number v-model="cf.correctiveDeadlineHigh"
+                  :min="1" :max="60"
+                  :disabled="isArchived || cf.correctiveStrictness === 'OFF'"
+                  placeholder="默认 3 天" class="w-full" />
+              </div>
+              <div class="cfg-field">
+                <label class="cfg-label">MEDIUM deadline (天)</label>
+                <el-input-number v-model="cf.correctiveDeadlineMedium"
+                  :min="1" :max="60"
+                  :disabled="isArchived || cf.correctiveStrictness === 'OFF'"
+                  placeholder="默认 7 天" class="w-full" />
+              </div>
+              <div class="cfg-field">
+                <label class="cfg-label">LOW deadline (天)</label>
+                <el-input-number v-model="cf.correctiveDeadlineLow"
+                  :min="1" :max="60"
+                  :disabled="isArchived || cf.correctiveStrictness === 'OFF'"
+                  placeholder="默认 14 天" class="w-full" />
+              </div>
+            </div>
+          </details>
+        </div>
+
         <!-- 高级评分设置 -->
         <div class="cfg-card">
           <div class="cfg-card-title">高级评分设置</div>
@@ -2272,6 +2396,29 @@ onMounted(async () => {
   gap: 16px;
   margin-top: 12px;
 }
+
+/* ========== V110 整改策略 ========== */
+.cfg-readonly {
+  font-size: 13px;
+  color: #15803d;
+  padding: 8px 12px;
+  background: #f0fdf4;
+  border: 1px solid #bbf7d0;
+  border-radius: 4px;
+}
+.cfg-advanced {
+  margin-top: 14px;
+  border-top: 1px dashed #e5e7eb;
+  padding-top: 12px;
+}
+.cfg-advanced summary {
+  cursor: pointer;
+  font-size: 13px;
+  color: #6b7280;
+  user-select: none;
+}
+.cfg-advanced summary:hover { color: #374151; }
+.cfg-advanced[open] summary { color: #111827; font-weight: 500; }
 
 /* ========== Readonly display ========== */
 .cfg-readonly-text {
