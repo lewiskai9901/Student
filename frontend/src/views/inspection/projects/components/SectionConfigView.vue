@@ -34,7 +34,24 @@ const props = defineProps<{
   sectionTree?: SectionTreeNode[]
   rootSectionId?: number | string | null
   rootSectionName?: string
+  // P1 升级: 父组件传入项目任务列表用于计算调度组运营数据
+  projectTasks?: Array<{ id: number | string; inspectionPlanId?: number | string | null; status?: string; taskDate?: string }>
 }>()
+
+// 调度组运营数据 (按 inspectionPlanId 聚合任务)
+function planStats(planId: number | string) {
+  const tasks = (props.projectTasks || []).filter(t => Number(t.inspectionPlanId) === Number(planId))
+  if (tasks.length === 0) return null
+  const today = new Date().toISOString().slice(0, 10)
+  return {
+    total: tasks.length,
+    done: tasks.filter(t => ['REVIEWED','PUBLISHED','SUBMITTED','UNDER_REVIEW'].includes(t.status || '')).length,
+    overdue: tasks.filter(t => t.taskDate && t.taskDate < today &&
+      !['REVIEWED','PUBLISHED','CANCELLED','EXPIRED'].includes(t.status || '')).length,
+    lastTaskDate: tasks.map(t => t.taskDate).filter(Boolean).sort().reverse()[0] || null,
+    nextTaskDate: tasks.map(t => t.taskDate).filter(d => d && d >= today).sort()[0] || null,
+  }
+}
 
 // ══════════════════════════════════════════════
 //  State
@@ -796,6 +813,33 @@ defineExpose({ reload: loadAll })
           </div>
           <div class="sc-card-sections">
             {{ fmtSections(plan) }}
+          </div>
+          <!-- P1 升级: 调度组运营数据 -->
+          <div v-if="planStats(plan.id)" class="sc-card-ops-data">
+            <div class="sc-data-stat">
+              <span class="sc-data-num">{{ planStats(plan.id)!.total }}</span>
+              <span class="sc-data-lbl">已生成任务</span>
+            </div>
+            <div class="sc-data-rule" />
+            <div class="sc-data-stat">
+              <span class="sc-data-num" style="color: #10b981">{{ planStats(plan.id)!.done }}</span>
+              <span class="sc-data-lbl">已完成</span>
+            </div>
+            <div v-if="planStats(plan.id)!.overdue > 0" class="sc-data-rule" />
+            <div v-if="planStats(plan.id)!.overdue > 0" class="sc-data-stat">
+              <span class="sc-data-num" style="color: #ef4444">{{ planStats(plan.id)!.overdue }}</span>
+              <span class="sc-data-lbl">逾期</span>
+            </div>
+            <span v-if="planStats(plan.id)!.lastTaskDate" class="sc-data-time">
+              <Clock class="w-3 h-3" />
+              上次 <b>{{ planStats(plan.id)!.lastTaskDate }}</b>
+            </span>
+            <span v-if="planStats(plan.id)!.nextTaskDate" class="sc-data-time">
+              下次 <b>{{ planStats(plan.id)!.nextTaskDate }}</b>
+            </span>
+          </div>
+          <div v-else-if="!loading" class="sc-card-ops-data sc-card-ops-data--empty">
+            <span class="sc-data-empty">暂未生成任务 — 点击右上 ▶ 触发, 或等待定时调度</span>
           </div>
         </div>
       </div>
@@ -1776,4 +1820,60 @@ defineExpose({ reload: loadAll })
 .fd-btn.primary { background: #8b5cf6; color: #fff; }
 .fd-btn.primary:hover { background: #7c3aed; }
 .fd-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+/* P1 升级: 调度组运营数据条 */
+.sc-card-ops-data {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-top: 8px;
+  padding: 8px 10px;
+  background: linear-gradient(90deg, rgba(139, 92, 246, 0.04) 0%, transparent 100%);
+  border-top: 1px dashed #e5e7eb;
+  font-size: 11px;
+  flex-wrap: wrap;
+}
+.sc-card-ops-data--empty {
+  background: rgba(245, 158, 11, 0.04);
+  border-color: rgba(245, 158, 11, 0.2);
+}
+.sc-data-stat {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 4px;
+}
+.sc-data-num {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 14px;
+  font-weight: 700;
+  color: #1f2937;
+  letter-spacing: -0.02em;
+}
+.sc-data-lbl {
+  font-size: 10px;
+  color: #9ca3af;
+}
+.sc-data-rule {
+  width: 1px;
+  height: 14px;
+  background: #e5e7eb;
+}
+.sc-data-time {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  margin-left: auto;
+  color: #6b7280;
+  font-size: 10.5px;
+}
+.sc-data-time b {
+  color: #1f2937;
+  font-weight: 600;
+  font-family: 'JetBrains Mono', monospace;
+}
+.sc-data-empty {
+  color: #b45309;
+  font-style: italic;
+  font-size: 10.5px;
+}
 </style>

@@ -1170,7 +1170,7 @@ onMounted(async () => {
 
       <!-- ===== 检查配置 Tab ===== -->
       <div v-if="activeTab === 'config'">
-        <SectionConfigView :project-id="projectId" :sections="sectionList" :section-tree="sectionTree" :root-section-id="project?.rootSectionId" :root-section-name="rootSectionName" :inspectors="inspectors" />
+        <SectionConfigView :project-id="projectId" :sections="sectionList" :section-tree="sectionTree" :root-section-id="project?.rootSectionId" :root-section-name="rootSectionName" :inspectors="inspectors" :project-tasks="allTasks" />
       </div>
 
       <!-- ===== 设置 Tab ===== -->
@@ -1317,12 +1317,32 @@ onMounted(async () => {
 
       <div v-if="activeTab === 'settings'" class="cfg-section">
 
-        <!-- 锁定提示 -->
+        <!-- 锁定提示 (P1 升级: 显式列出锁定/可改字段) -->
         <div v-if="!isDraft" class="pdv-lock-notice">
           <Lock class="w-4 h-4 text-amber-500 mt-0.5 flex-shrink-0" />
-          <div>
-            <div class="cfg-lock-title">部分配置已锁定</div>
-            <div class="cfg-lock-desc">发布后，检查范围和根分区不可更改。项目名称和运营配置可随时调整。</div>
+          <div class="pdv-lock-body">
+            <div class="cfg-lock-title">部分配置已锁定 ({{ project?.status === 'PUBLISHED' ? '已发布' : project?.status === 'PAUSED' ? '已暂停' : '运行中' }})</div>
+            <div class="pdv-lock-grid">
+              <div class="pdv-lock-col">
+                <span class="pdv-lock-col__label">🔒 已锁定</span>
+                <ul class="pdv-lock-list">
+                  <li>检查范围 (受检组织 / 班级)</li>
+                  <li>根分区 (绑定的模板)</li>
+                  <li>评分配置快照 (满分 / 精度 / 多评模式)</li>
+                  <li>开始日期</li>
+                </ul>
+              </div>
+              <div class="pdv-lock-col">
+                <span class="pdv-lock-col__label">✓ 可调整</span>
+                <ul class="pdv-lock-list">
+                  <li>项目名称 / 描述</li>
+                  <li>结束日期 (可延期)</li>
+                  <li>分配模式 / 审核要求 / 自动发布</li>
+                  <li>检查员名单 (添加 / 移除)</li>
+                  <li>调度组 / 检查计划</li>
+                </ul>
+              </div>
+            </div>
           </div>
         </div>
 
@@ -1661,6 +1681,48 @@ onMounted(async () => {
   padding: 60px 0;
   text-align: center;
 }
+
+/* ========== P1 升级: 锁定提示双栏 ========== */
+.pdv-lock-body { flex: 1; }
+.pdv-lock-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 24px;
+  margin-top: 8px;
+}
+.pdv-lock-col__label {
+  display: inline-block;
+  font-size: 11px;
+  font-weight: 700;
+  color: #b45309;
+  letter-spacing: 0.04em;
+  margin-bottom: 4px;
+}
+.pdv-lock-col:nth-child(2) .pdv-lock-col__label {
+  color: #047857;
+}
+.pdv-lock-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+.pdv-lock-list li {
+  font-size: 11.5px;
+  color: #4b5563;
+  position: relative;
+  padding-left: 12px;
+}
+.pdv-lock-list li::before {
+  content: '·';
+  position: absolute;
+  left: 0;
+  color: #9ca3af;
+  font-weight: 700;
+}
+@media (max-width: 720px) { .pdv-lock-grid { grid-template-columns: 1fr; } }
 
 /* ========== A 级升级: 顶部告警条 ========== */
 .pdv-alert-strip {
