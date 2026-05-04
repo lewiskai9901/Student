@@ -49,6 +49,10 @@ const detailLoading = ref(false)
 const task = ref<InspTask | null>(null)
 const project = ref<any | null>(null)
 const submissions = ref<InspSubmission[]>([])
+
+// 上次同类检查问题提示 (顶部 banner)
+const prevIssuesHint = ref<{ itemName: string; itemCode: string; sectionName: string }[]>([])
+const prevIssuesDate = ref<string>('')
 const details = ref<SubmissionDetail[]>([])
 const allSections = ref<TemplateSection[]>([])
 const rootSectionId = ref<number | null>(null)
@@ -1104,10 +1108,58 @@ async function loadData() {
       const pending = uniqueTargets.value.find(t => getTargetStatus(t.targetId) !== 'COMPLETED')
       await selectTarget((pending || uniqueTargets.value[0]).targetId)
     }
+
+    // 加载上次同 (project, target_set) 检查的扣分项 (置顶提示, 防止漏判)
+    loadPrevIssues().catch(() => { /* non-fatal */ })
   } catch (e: any) {
     ElMessage.error(e.message || '加载失败')
   } finally {
     loading.value = false
+  }
+}
+
+/** 拉同项目最近一次已发布任务的 flagged 明细, 提示当前检查员上次问题点 */
+async function loadPrevIssues() {
+  if (!task.value || !task.value.projectId) return
+  try {
+    const allTasks = await http.get<any[]>('/inspection/tasks', {
+      params: { projectId: task.value.projectId, size: 5 }
+    }) as any[]
+    // 找最近一个已发布且不是当前任务的
+    const prev = allTasks
+      .filter(t => Number(t.id) !== Number(task.value!.id) &&
+                   (t.status === 'PUBLISHED' || t.status === 'REVIEWED'))
+      .sort((a, b) => (b.taskDate || '').localeCompare(a.taskDate || ''))[0]
+    if (!prev) return
+
+    const subs = await http.get<any>('/inspection/submissions', {
+      params: { projectId: task.value.projectId, taskId: prev.id, size: 50 }
+    }) as any
+    const subList = (subs?.records ?? subs ?? []) as any[]
+    if (!subList.length) return
+
+    // 聚合: 优先 isFlagged, 次取 score < weight*3 (大约 60% 通过线下方) 的低分项
+    const issues = new Map<string, { itemName: string; itemCode: string; sectionName: string; score: number }>()
+    for (const s of subList) {
+      try {
+        const details = await http.get<any[]>('/inspection/submissions/' + s.id + '/details') as any[]
+        for (const d of details) {
+          const flagged = d.isFlagged || (Number(d.score ?? 5) < 3 && d.score != null)
+          if (!flagged) continue
+          const key = d.itemCode || d.itemName
+          if (!issues.has(key) || (issues.get(key)!.score > Number(d.score ?? 5))) {
+            issues.set(key, {
+              itemName: d.itemName, itemCode: d.itemCode,
+              sectionName: d.sectionName, score: Number(d.score ?? 5),
+            })
+          }
+        }
+      } catch { /* skip */ }
+    }
+    prevIssuesHint.value = Array.from(issues.values()).sort((a, b) => a.score - b.score)
+    prevIssuesDate.value = prev.taskDate || ''
+  } catch (e) {
+    /* non-fatal */
   }
 }
 
@@ -1313,6 +1365,19 @@ onMounted(() => loadData())
           <RotateCcw :size="13" class="btn-icon" />撤回
         </el-button>
       </div>
+    </div>
+
+    <!-- ===== 上次同类问题提示 ===== -->
+    <div v-if="prevIssuesHint.length" class="prev-issues-banner">
+      <span class="prev-icon">⚠</span>
+      <span class="prev-text">
+        上次检查 ({{ prevIssuesDate }}) 在该目标存在 {{ prevIssuesHint.length }} 个扣分项,
+        优先关注:
+        <span v-for="(p, i) in prevIssuesHint.slice(0, 3)" :key="i" class="prev-pill">
+          {{ p.itemName }}
+        </span>
+      </span>
+      <button class="prev-dismiss" @click="prevIssuesHint = []">×</button>
     </div>
 
     <!-- ===== MAIN BODY ===== -->
@@ -1605,6 +1670,29 @@ onMounted(() => loadData())
 </template>
 
 <style scoped>
+/* ===== 上次问题提示 banner ===== */
+.prev-issues-banner {
+  display: flex; align-items: center; gap: 10px;
+  padding: 10px 16px;
+  background: linear-gradient(90deg, #fffbeb, #fef3c7);
+  border-bottom: 1px solid #fcd34d;
+  font-size: 13px; color: #92400e;
+}
+.prev-icon { font-size: 16px; }
+.prev-text { flex: 1; line-height: 1.5; }
+.prev-pill {
+  display: inline-block; margin: 0 4px;
+  padding: 2px 8px; background: rgba(255,255,255,0.7);
+  border: 1px solid #fcd34d; border-radius: 10px;
+  font-weight: 500; color: #78350f;
+}
+.prev-dismiss {
+  width: 22px; height: 22px; border-radius: 11px;
+  border: none; background: rgba(0,0,0,0.05); color: #78350f;
+  cursor: pointer; font-size: 14px; line-height: 1;
+}
+.prev-dismiss:hover { background: rgba(0,0,0,0.1); }
+
 /* ===== Root ===== */
 .exec-root {
   display: flex;
