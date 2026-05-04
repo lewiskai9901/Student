@@ -65,7 +65,13 @@ public class EducationMenuPlugin implements MenuContributionPlugin {
                 of("/inspection/config",   "检查配置",     "settings",         1),
                 of("/inspection/projects", "检查项目",     "folder-search",    2),
                 of("/inspection/tasks",    "我的任务",     "list-todo",        3),
-                of("/inspection/analytics","数据分析",     "bar-chart-3",      4)
+                // 角色驱动 IA 新增 5 项 (受检主体/整改人/审核员/管理者/数据消费者)
+                of("/inspection/my-record",        "我的成绩单", "badge-check",  5),
+                of("/inspection/my-corrective",    "我的整改",   "wrench",       6),
+                of("/inspection/tasks/review-risk","待审风险池", "list-checks",  7),
+                of("/inspection/governance",       "治理工作台", "shield-check", 8),
+                of("/inspection/analytics","分析报表",     "bar-chart-3",      9),
+                of("/inspection/export",   "导出中心",     "download",        10)
             )),
 
             // ─── 教务管理 ───
