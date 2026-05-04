@@ -14,6 +14,7 @@ import { responseSetApi } from '@/api/inspection/responseSet'
 import { eventTypeApi } from '@/api/event'
 import type { EventType } from '@/types/event'
 import ConditionBuilder from '@/components/insp/ConditionBuilder.vue'
+import CorrectiveOverrideEditor from './CorrectiveOverrideEditor.vue'
 
 const props = defineProps<{
   item: TemplateItem
@@ -1177,6 +1178,12 @@ const scoringFromResponseSet = computed(() =>
         </div>
 
       </div>
+
+      <!-- V110: 整改触发覆盖 (跨 tab 通用, 仅评分项显示) -->
+      <CorrectiveOverrideEditor
+        v-if="itemCategory === 'scored' && props.item?.id"
+        :item-id="props.item.id"
+      />
     </div>
 
   </div>

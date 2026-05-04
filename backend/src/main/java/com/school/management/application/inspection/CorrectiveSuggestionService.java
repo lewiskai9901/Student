@@ -127,18 +127,46 @@ public class CorrectiveSuggestionService {
         }
     }
 
-    /** 近 30 天同 itemCode + 同主体 已建整改单的次数. */
+    /**
+     * 近 30 天同 itemCode + 同主体的"问题次数".
+     *
+     * <p>按 submission_details 维度统计 (而非 corrective_cases) — 修复 OFF 模式
+     * 不建 case 导致复发数永远 0 的硬伤.
+     *
+     * <p>"问题"判定:
+     * <ul>
+     *   <li>response_value = FAIL / D / 1 (RATING) → 计入</li>
+     *   <li>score 为负 (扣分) → 计入</li>
+     *   <li>score 为正但 < weight×0.5 (得分严重偏低) → 计入</li>
+     *   <li>is_flagged=1 → 计入</li>
+     * </ul>
+     * 按 (submission_id, item_code) 去重避免同一次提交被重复计算.
+     */
     public int countRecentRecurrence(Long projectId, Long subjectOrgId, String itemCode) {
         if (projectId == null || subjectOrgId == null || itemCode == null) return 0;
         try {
             Integer n = jdbcTemplate.queryForObject(
-                    "SELECT COUNT(*) FROM insp_corrective_cases c " +
-                    " JOIN insp_submission_details d ON c.detail_id = d.id " +
-                    " WHERE c.project_id=? AND c.target_id=? AND d.item_code=? " +
-                    "   AND c.deleted=0 AND c.created_at >= NOW() - INTERVAL 30 DAY",
+                    "SELECT COUNT(DISTINCT d.submission_id) " +
+                    "  FROM insp_submission_details d " +
+                    "  JOIN insp_submissions s ON d.submission_id = s.id " +
+                    "  JOIN insp_tasks t ON s.task_id = t.id " +
+                    " WHERE t.project_id = ? " +
+                    "   AND s.target_id = ? " +
+                    "   AND d.item_code = ? " +
+                    "   AND d.deleted = 0 " +
+                    "   AND s.deleted = 0 " +
+                    "   AND s.created_at >= NOW() - INTERVAL 30 DAY " +
+                    "   AND ( " +
+                    "        UPPER(d.response_value) IN ('FAIL','D','NO','FALSE','0') " +
+                    "        OR d.score < 0 " +
+                    "        OR (d.score IS NOT NULL AND d.item_weight > 0 " +
+                    "            AND d.score / d.item_weight < 0.5) " +
+                    "        OR d.is_flagged = 1 " +
+                    "   )",
                     Integer.class, projectId, subjectOrgId, itemCode);
             return n == null ? 0 : n;
         } catch (Exception e) {
+            log.debug("countRecentRecurrence failed: {}", e.getMessage());
             return 0;
         }
     }

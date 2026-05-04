@@ -20,6 +20,8 @@ const store = useInspCorrectiveStore()
 const loading = ref(false)
 const cases = ref<CorrectiveCase[]>([])
 const activeTab = ref<'all' | 'my' | 'overdue'>('all')
+// V110 来源筛选: all / engine (系统建议) / manual (人工)
+const sourceFilter = ref<'all' | 'engine' | 'manual'>('all')
 
 // ── Loaders ──
 async function loadData() {
@@ -124,14 +126,26 @@ function highlightHtml(text: string, kw: string): string {
   return text.replace(new RegExp(`(${escaped})`, 'gi'), '<mark class="cc-mark">$1</mark>')
 }
 const filteredCases = computed(() => {
+  let list = cases.value
+  if (sourceFilter.value === 'engine') {
+    list = list.filter(c => c.suggestedBySystem === 1)
+  } else if (sourceFilter.value === 'manual') {
+    list = list.filter(c => c.suggestedBySystem !== 1)
+  }
   const q = searchKw.value.trim().toLowerCase()
-  if (!q) return cases.value
-  return cases.value.filter(c =>
+  if (!q) return list
+  return list.filter(c =>
     c.caseCode.toLowerCase().includes(q) ||
     (c.title || '').toLowerCase().includes(q) ||
     (c.assigneeName || '').toLowerCase().includes(q)
   )
 })
+
+// 来源统计 (用于 chip 显示数字)
+const sourceStats = computed(() => ({
+  engine: cases.value.filter(c => c.suggestedBySystem === 1).length,
+  manual: cases.value.filter(c => c.suggestedBySystem !== 1).length,
+}))
 
 const focusedIdx = ref<number>(-1)
 function focusNext() { focusedIdx.value = Math.min(focusedIdx.value + 1, filteredCases.value.length - 1); nextTick(scrollFocused) }
@@ -259,6 +273,19 @@ onUnmounted(() => window.removeEventListener('keydown', onGlobalKeyCC))
         <span class="filter-tab__count" :style="{ color: 'var(--insp-fail)' }">{{ stats.overdue }}</span>
       </button>
       <div class="filter-spacer" />
+      <div class="src-filter">
+        <span class="src-filter-label">来源:</span>
+        <button class="src-filter-btn" :class="{ 'is-active': sourceFilter === 'all' }"
+                @click="sourceFilter = 'all'">全部</button>
+        <button class="src-filter-btn src-filter-engine" :class="{ 'is-active': sourceFilter === 'engine' }"
+                @click="sourceFilter = 'engine'">
+          系统建议 <span class="src-filter-count">{{ sourceStats.engine }}</span>
+        </button>
+        <button class="src-filter-btn" :class="{ 'is-active': sourceFilter === 'manual' }"
+                @click="sourceFilter = 'manual'">
+          人工 <span class="src-filter-count">{{ sourceStats.manual }}</span>
+        </button>
+      </div>
       <button class="insp-btn insp-btn--ghost" @click="loadData">刷新</button>
     </nav>
 
@@ -296,6 +323,14 @@ onUnmounted(() => window.removeEventListener('keydown', onGlobalKeyCC))
             <span class="insp-chip" :class="`insp-chip--${statusVariant(c.status)}`">
               {{ CaseStatusConfig[c.status]?.label }}
             </span>
+            <span v-if="c.suggestedBySystem === 1" class="src-chip src-engine"
+                  :title="c.suggestionReason || '系统判定建议'">
+              系统建议
+              <span v-if="c.severityScore != null" class="src-score">
+                {{ Math.round(c.severityScore * 100) }}%
+              </span>
+            </span>
+            <span v-else class="src-chip src-manual">人工</span>
             <span v-if="c.escalationLevel && c.escalationLevel > 0" class="insp-stamp">
               升级 L{{ c.escalationLevel }}
             </span>
@@ -388,6 +423,58 @@ onUnmounted(() => window.removeEventListener('keydown', onGlobalKeyCC))
 </template>
 
 <style scoped>
+/* V110 来源 chip */
+.src-chip {
+  display: inline-flex; align-items: center; gap: 4px;
+  padding: 1px 7px;
+  border-radius: 3px;
+  font-size: 11px; font-weight: 500;
+  letter-spacing: 0.02em;
+}
+.src-engine {
+  background: #ede9fe; color: #6d28d9;
+  border: 1px solid #ddd6fe;
+}
+.src-engine .src-score {
+  font-family: ui-monospace, monospace;
+  background: #6d28d9; color: #fff;
+  padding: 0 4px; border-radius: 2px;
+  font-size: 10px;
+}
+.src-manual {
+  background: #f3f4f6; color: #6b7280;
+  border: 1px solid #e5e7eb;
+}
+
+/* V110 来源筛选 */
+.src-filter {
+  display: inline-flex; align-items: center; gap: 6px;
+  margin-right: 12px;
+}
+.src-filter-label { font-size: 12px; color: #6b7280; }
+.src-filter-btn {
+  font-size: 12px; padding: 3px 10px;
+  border: 1px solid #e5e7eb; background: #fff;
+  border-radius: 4px; cursor: pointer;
+  color: #6b7280; transition: all 0.15s;
+}
+.src-filter-btn:hover { border-color: #d1d5db; color: #111827; }
+.src-filter-btn.is-active {
+  background: #1f2937; color: #fff; border-color: #1f2937;
+}
+.src-filter-engine.is-active { background: #6d28d9; border-color: #6d28d9; }
+.src-filter-count {
+  display: inline-block; min-width: 14px;
+  padding: 0 4px;
+  background: rgba(0,0,0,0.08);
+  border-radius: 8px;
+  font-size: 10px; font-family: ui-monospace, monospace;
+  margin-left: 4px;
+}
+.src-filter-btn.is-active .src-filter-count {
+  background: rgba(255,255,255,0.2);
+}
+
 .case-register {
   padding: 32px 48px 64px;
   max-width: 1500px;
