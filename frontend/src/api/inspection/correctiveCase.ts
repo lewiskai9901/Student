@@ -114,6 +114,25 @@ export function confirmCorrectiveCandidates(
   })
 }
 
+// ==================== 复发警示 ====================
+
+export interface RecurrenceItem {
+  itemCode: string
+  itemName: string
+  recurCount: number
+  lastSeenAt: string | null
+}
+
+/** 拉过去 30 天该项目+该主体的复发计数 (按 itemCode 聚合). */
+export function getRecurrenceForSubject(
+  projectId: number,
+  subjectId: number,
+): Promise<RecurrenceItem[]> {
+  return http.get<RecurrenceItem[]>('/inspection/corrective/recurrence', {
+    params: { projectId, subjectId },
+  })
+}
+
 export const inspCorrectiveCaseApi = {
   getCases,
   getCase,

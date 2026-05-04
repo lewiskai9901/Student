@@ -36,6 +36,7 @@ import PersonScoreGrid from './components/PersonScoreGrid.vue'
 import EventStreamRecorder from './components/EventStreamRecorder.vue'
 import AiSuggestionDialog from './components/AiSuggestionDialog.vue'
 import CorrectiveCandidatesDialog from './components/CorrectiveCandidatesDialog.vue'
+import { getRecurrenceForSubject } from '@/api/inspection/correctiveCase'
 import type { SuggestScoreResponse } from '@/api/inspection/aiScoring'
 
 const route = useRoute()
@@ -505,6 +506,7 @@ async function selectTarget(targetId: number) {
   numberInputs.value = {}
   selectInputs.value = {}
   textInputs.value = {}
+  loadRecurrence(targetId)
 
   detailLoading.value = true
   try {
@@ -1043,6 +1045,7 @@ async function loadData() {
   try {
     task.value = await store.loadTask(taskId)
     submissions.value = await store.loadSubmissions(taskId)
+    loadPolicyForBanner()
 
     // 如果 submissions 为空，尝试重新填充
     if (task.value && submissions.value.length === 0 && task.value.totalTargets === 0) {
@@ -1189,6 +1192,49 @@ async function handleStartTask() {
 // V110: 整改候选确认对话框
 const correctiveDialogVisible = ref(false)
 const correctiveDialogSubmissions = ref<number[]>([])
+
+// V110: 复发警示 - 该 target 在过去 30 天的 itemCode → recurCount 映射
+const recurrenceMap = ref<Record<string, { recurCount: number; lastSeenAt: string | null }>>({})
+async function loadRecurrence(targetId: number) {
+  recurrenceMap.value = {}
+  if (!task.value?.projectId || !targetId) return
+  try {
+    const list = await getRecurrenceForSubject(task.value.projectId, targetId)
+    const m: Record<string, { recurCount: number; lastSeenAt: string | null }> = {}
+    for (const r of list) m[r.itemCode] = { recurCount: r.recurCount, lastSeenAt: r.lastSeenAt }
+    recurrenceMap.value = m
+  } catch (e) {
+    console.warn('加载复发数据失败', e)
+  }
+}
+function recurOf(itemCode?: string | null): number {
+  if (!itemCode) return 0
+  return recurrenceMap.value[itemCode]?.recurCount || 0
+}
+
+// V110: 项目整改策略 banner
+const policyStrictness = ref<string | null>(null)
+function policyLabel(s: string): string {
+  return s === 'STRICT' ? '严格 (自动建单)'
+       : s === 'NORMAL' ? '标准 (引擎建议+确认)'
+       : s === 'LENIENT' ? '宽松 (仅严重)'
+       : s === 'OFF' ? '关闭 (人工)'
+       : ''
+}
+function policyHint(s: string): string {
+  return s === 'STRICT' ? '提交后任何不达标都会自动建立整改单'
+       : s === 'NORMAL' ? '提交后会弹出整改候选确认对话框, 你可勾选/跳过'
+       : s === 'LENIENT' ? '只有 HIGH 级别问题会建议建单'
+       : s === 'OFF' ? '不会自动判定, 整改单需手动建立'
+       : ''
+}
+async function loadPolicyForBanner() {
+  if (!task.value?.projectId) return
+  try {
+    const p = await http.get<any>(`/inspection/corrective/projects/${task.value.projectId}/policy`)
+    if (p?.strictness) policyStrictness.value = p.strictness
+  } catch { /* ignore */ }
+}
 
 async function handleSubmitTask() {
   try {
@@ -1382,6 +1428,17 @@ onMounted(() => loadData())
       </div>
     </div>
 
+    <!-- V110: 项目策略提示 banner -->
+    <div v-if="policyStrictness" class="policy-banner" :class="`policy-${policyStrictness.toLowerCase()}`">
+      <span class="policy-icon">●</span>
+      <span class="policy-text">
+        本项目整改策略:
+        <strong>{{ policyLabel(policyStrictness) }}</strong>
+        ·
+        {{ policyHint(policyStrictness) }}
+      </span>
+    </div>
+
     <!-- ===== 上次同类问题提示 ===== -->
     <div v-if="prevIssuesHint.length" class="prev-issues-banner">
       <span class="prev-icon">!</span>
@@ -1523,6 +1580,10 @@ onMounted(() => loadData())
                       :type="detail.scoringMode === 'DEDUCTION' ? 'danger' : detail.scoringMode === 'ADDITION' ? 'success' : detail.scoringMode === 'PASS_FAIL' ? 'primary' : 'warning'"
                     >{{ ScoringModeConfig[detail.scoringMode]?.label ?? detail.scoringMode }}</el-tag>
                     <el-tag v-else size="small" type="info" effect="plain">采集</el-tag>
+                    <span v-if="recurOf(detail.itemCode) > 0" class="recur-chip"
+                          :title="`此目标过去 30 天 ${recurOf(detail.itemCode)} 次同问题, 需重点关注`">
+                      复发 {{ recurOf(detail.itemCode) }} 次
+                    </span>
                     <button v-if="detail.scoringMode" class="ai-suggest-btn"
                       :disabled="!isGroupEditable(group)"
                       @click.stop="openAiDialog(detail, group)"
@@ -1698,6 +1759,39 @@ onMounted(() => loadData())
   background: linear-gradient(90deg, #fffbeb, #fef3c7);
   border-bottom: 1px solid #fcd34d;
   font-size: 13px; color: #92400e;
+}
+
+/* V110 项目策略 banner */
+.policy-banner {
+  display: flex; align-items: center; gap: 10px;
+  padding: 6px 16px;
+  border-bottom: 1px solid;
+  font-size: 12px;
+}
+.policy-strict  { background: #fef2f2; color: #991b1b; border-color: #fecaca; }
+.policy-normal  { background: #faf5ff; color: #6d28d9; border-color: #ddd6fe; }
+.policy-lenient { background: #f0fdf4; color: #047857; border-color: #bbf7d0; }
+.policy-off     { background: #f9fafb; color: #6b7280; border-color: #e5e7eb; }
+.policy-icon { font-size: 8px; }
+.policy-text strong { font-weight: 600; }
+
+/* V110 复发警示 chip (打分卡片) */
+.recur-chip {
+  display: inline-block;
+  padding: 1px 7px;
+  margin-left: 4px;
+  background: #fee2e2;
+  color: #b91c1c;
+  border: 1px solid #fca5a5;
+  border-radius: 3px;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: help;
+  animation: recur-pulse 2.4s ease-in-out infinite;
+}
+@keyframes recur-pulse {
+  0%, 100% { background: #fee2e2; }
+  50%      { background: #fecaca; }
 }
 .prev-icon { font-size: 16px; }
 .prev-text { flex: 1; line-height: 1.5; }

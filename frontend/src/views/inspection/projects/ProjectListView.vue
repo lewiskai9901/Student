@@ -16,6 +16,7 @@
  *  - 完成不可逆 > primary, 暂停 > ghost
  */
 import { ref, computed, onMounted, onUnmounted, watch, nextTick } from 'vue'
+import { http } from '@/utils/request'
 import { useRouter, useRoute } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Plus, AlertTriangle, EyeOff, Eye, Inbox, Keyboard } from 'lucide-vue-next'
@@ -466,7 +467,45 @@ function primaryAction(s: ProjectStatsSummary): { label: string; key: string; em
   return { label: '详情', key: 'detail' }
 }
 
-onMounted(loadData)
+// V110: 项目策略 chip
+const policyMap = ref<Record<number, string>>({})
+function strictnessOf(projectId: number): string | undefined {
+  return policyMap.value[projectId]
+}
+function strictnessLabel(s?: string): string {
+  switch (s) {
+    case 'STRICT':  return '严格'
+    case 'NORMAL':  return '标准'
+    case 'LENIENT': return '宽松'
+    case 'OFF':     return '关闭'
+    default:        return ''
+  }
+}
+function strictnessHint(s?: string): string {
+  switch (s) {
+    case 'STRICT':  return '整改自动建单 (任何不达标都建)'
+    case 'NORMAL':  return '引擎建议 + 人工确认 (推荐)'
+    case 'LENIENT': return '仅严重问题建议建单'
+    case 'OFF':     return '不启用引擎, 完全人工'
+    default:        return ''
+  }
+}
+async function loadPolicies() {
+  // 并发加载所有项目策略
+  const ids = stats.value.map(s => s.project.id).filter(Boolean) as number[]
+  await Promise.all(ids.map(async id => {
+    try {
+      const p = await http.get<any>(`/inspection/corrective/projects/${id}/policy`)
+      if (p?.strictness) policyMap.value[id] = p.strictness
+    } catch { /* ignore individual failure */ }
+  }))
+}
+watch(() => stats.value.length, () => { loadPolicies() }, { immediate: false })
+
+onMounted(async () => {
+  await loadData()
+  loadPolicies()
+})
 </script>
 
 <template>
@@ -597,6 +636,11 @@ onMounted(loadData)
         <span class="col col-status">
           <span class="insp-chip" :class="`insp-chip--${projectChip(s)}`">
             {{ ProjectStatusConfig[s.project.status as ProjectStatus]?.label }}
+          </span>
+          <span v-if="strictnessOf(s.project.id)"
+                class="strict-chip" :class="`strict-${strictnessOf(s.project.id)?.toLowerCase()}`"
+                :title="strictnessHint(strictnessOf(s.project.id))">
+            {{ strictnessLabel(strictnessOf(s.project.id)) }}
           </span>
         </span>
 
@@ -822,6 +866,21 @@ onMounted(loadData)
 
 <style scoped>
 .prj-page { padding: 12px 16px; }
+
+/* V110 严格度 chip */
+.strict-chip {
+  display: inline-block;
+  margin-left: 6px;
+  padding: 1px 7px;
+  font-size: 11px;
+  border-radius: 3px;
+  font-weight: 500;
+  cursor: help;
+}
+.strict-strict  { background: #fee2e2; color: #b91c1c; }
+.strict-normal  { background: #ede9fe; color: #6d28d9; }
+.strict-lenient { background: #d1fae5; color: #047857; }
+.strict-off     { background: #f3f4f6; color: #9ca3af; }
 
 /* ─ Head + KPI ─────── */
 .prj-head {

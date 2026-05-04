@@ -212,6 +212,162 @@ public class CorrectiveSuggestionController {
         return getPolicy(projectId);
     }
 
+    // ==================== 复发警示 ====================
+
+    /**
+     * 拉取该任务每个 itemCode 在该主体过去 30 天的复发计数.
+     * <p>用于检查员开始打分前/打分时的"该项历史问题"提示.
+     */
+    @GetMapping("/recurrence")
+    @CasbinAccess(resource = "insp:corrective", action = "view")
+    public Result<List<RecurrenceView>> recurrence(
+            @RequestParam Long projectId,
+            @RequestParam Long subjectId) {
+        if (projectId == null || subjectId == null) {
+            throw new IllegalArgumentException("projectId 与 subjectId 必填");
+        }
+
+        // 单 SQL 拿所有 itemCode 复发数
+        List<Map<String, Object>> rows = jdbcTemplate.queryForList(
+                "SELECT d.item_code AS itemCode, " +
+                "       MAX(d.item_name) AS itemName, " +
+                "       COUNT(DISTINCT d.submission_id) AS recurCount, " +
+                "       MAX(s.created_at) AS lastSeenAt " +
+                "  FROM insp_submission_details d " +
+                "  JOIN insp_submissions s ON d.submission_id = s.id " +
+                "  JOIN insp_tasks t ON s.task_id = t.id " +
+                " WHERE t.project_id = ? AND s.target_id = ? " +
+                "   AND d.deleted = 0 AND s.deleted = 0 " +
+                "   AND s.created_at >= NOW() - INTERVAL 30 DAY " +
+                "   AND ( UPPER(d.response_value) IN ('FAIL','D','NO','FALSE','0') " +
+                "      OR d.score < 0 " +
+                "      OR (d.score IS NOT NULL AND d.item_weight > 0 " +
+                "          AND d.score / d.item_weight < 0.5) " +
+                "      OR d.is_flagged = 1 ) " +
+                " GROUP BY d.item_code " +
+                "HAVING recurCount >= 1",
+                projectId, subjectId);
+
+        List<RecurrenceView> out = new ArrayList<>(rows.size());
+        for (Map<String, Object> r : rows) {
+            RecurrenceView v = new RecurrenceView();
+            v.itemCode = (String) r.get("itemCode");
+            v.itemName = (String) r.get("itemName");
+            v.recurCount = ((Number) r.get("recurCount")).intValue();
+            Object t = r.get("lastSeenAt");
+            v.lastSeenAt = t == null ? null : t.toString();
+            out.add(v);
+        }
+        return Result.success(out);
+    }
+
+    public static class RecurrenceView {
+        public String itemCode;
+        public String itemName;
+        public Integer recurCount;
+        public String lastSeenAt;
+    }
+
+    // ==================== 引擎 KPI ====================
+
+    /**
+     * 引擎 KPI 看板: 系统/人工占比 + Top10 复发 itemCode + severity 分布.
+     * <p>项目级 (传 projectId) / 全局 (不传).
+     */
+    @GetMapping("/kpi")
+    @CasbinAccess(resource = "insp:corrective", action = "view")
+    public Result<EngineKpi> kpi(@RequestParam(required = false) Long projectId) {
+        EngineKpi kpi = new EngineKpi();
+        String pidFilter = projectId == null ? "" : " AND project_id = " + projectId.longValue();
+
+        // 1. 系统建议 vs 人工
+        Map<String, Object> srcRow = jdbcTemplate.queryForMap(
+                "SELECT " +
+                "  SUM(CASE WHEN suggested_by_system = 1 THEN 1 ELSE 0 END) AS engine_cnt, " +
+                "  SUM(CASE WHEN suggested_by_system <> 1 OR suggested_by_system IS NULL THEN 1 ELSE 0 END) AS manual_cnt, " +
+                "  COUNT(*) AS total_cnt " +
+                "  FROM insp_corrective_cases " +
+                " WHERE deleted = 0" + pidFilter);
+        kpi.engineCount = num(srcRow.get("engine_cnt"));
+        kpi.manualCount = num(srcRow.get("manual_cnt"));
+        kpi.totalCount = num(srcRow.get("total_cnt"));
+        kpi.engineRatio = kpi.totalCount == 0 ? 0.0
+                : Math.round(kpi.engineCount * 1000.0 / kpi.totalCount) / 10.0;
+
+        // 2. severity 分布 (基于 priority 字段 — engine 写 LOW/MEDIUM/HIGH 同 priority)
+        List<Map<String, Object>> sevRows = jdbcTemplate.queryForList(
+                "SELECT priority, COUNT(*) AS c " +
+                "  FROM insp_corrective_cases " +
+                " WHERE deleted = 0 AND suggested_by_system = 1" + pidFilter +
+                " GROUP BY priority");
+        kpi.severityDist = new HashMap<>();
+        for (Map<String, Object> r : sevRows) {
+            kpi.severityDist.put((String) r.get("priority"), num(r.get("c")));
+        }
+
+        // 3. 关闭率
+        Map<String, Object> closeRow = jdbcTemplate.queryForMap(
+                "SELECT " +
+                "  SUM(CASE WHEN status IN ('CLOSED','VERIFIED') THEN 1 ELSE 0 END) AS closed, " +
+                "  COUNT(*) AS total " +
+                "  FROM insp_corrective_cases WHERE deleted = 0" + pidFilter);
+        long closed = num(closeRow.get("closed"));
+        long total = num(closeRow.get("total"));
+        kpi.closeRate = total == 0 ? 0.0 : Math.round(closed * 1000.0 / total) / 10.0;
+
+        // 4. 平均严重度分
+        Double avgSev = jdbcTemplate.queryForObject(
+                "SELECT AVG(severity_score) FROM insp_corrective_cases " +
+                " WHERE deleted = 0 AND severity_score IS NOT NULL" + pidFilter,
+                Double.class);
+        kpi.avgSeverityScore = avgSev == null ? 0.0
+                : Math.round(avgSev * 1000.0) / 1000.0;
+
+        // 5. Top10 复发 itemCode (基于 submission_details 30 天)
+        String pidJoin = projectId == null ? "" : " AND t.project_id = " + projectId.longValue();
+        List<Map<String, Object>> top = jdbcTemplate.queryForList(
+                "SELECT d.item_code AS itemCode, MAX(d.item_name) AS itemName, " +
+                "       COUNT(DISTINCT d.submission_id) AS recur " +
+                "  FROM insp_submission_details d " +
+                "  JOIN insp_submissions s ON d.submission_id = s.id " +
+                "  JOIN insp_tasks t ON s.task_id = t.id " +
+                " WHERE d.deleted = 0 AND s.deleted = 0 " +
+                "   AND s.created_at >= NOW() - INTERVAL 30 DAY " +
+                "   AND ( UPPER(d.response_value) IN ('FAIL','D','NO','FALSE','0') " +
+                "      OR d.score < 0 " +
+                "      OR (d.score IS NOT NULL AND d.item_weight > 0 AND d.score / d.item_weight < 0.5) " +
+                "      OR d.is_flagged = 1 ) " +
+                pidJoin +
+                " GROUP BY d.item_code " +
+                " ORDER BY recur DESC LIMIT 10");
+        kpi.topRecurring = new ArrayList<>();
+        for (Map<String, Object> r : top) {
+            Map<String, Object> e = new HashMap<>();
+            e.put("itemCode", r.get("itemCode"));
+            e.put("itemName", r.get("itemName"));
+            e.put("recurCount", num(r.get("recur")));
+            kpi.topRecurring.add(e);
+        }
+        return Result.success(kpi);
+    }
+
+    private static long num(Object o) {
+        if (o == null) return 0L;
+        if (o instanceof Number) return ((Number) o).longValue();
+        try { return Long.parseLong(o.toString()); } catch (Exception e) { return 0L; }
+    }
+
+    public static class EngineKpi {
+        public long engineCount;
+        public long manualCount;
+        public long totalCount;
+        public double engineRatio;       // 0-100 系统建议占比 %
+        public Map<String, Long> severityDist;
+        public double closeRate;          // 0-100 关闭率 %
+        public double avgSeverityScore;   // 0-1 平均严重度
+        public List<Map<String, Object>> topRecurring;
+    }
+
     public static class PolicyView {
         public String strictness;
         public Double thresholdHigh;

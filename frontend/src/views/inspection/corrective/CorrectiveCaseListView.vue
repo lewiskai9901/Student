@@ -4,6 +4,7 @@
  * 卷宗式列表 · 带统计刊头 · 标签栏(计数) · 行内紧急度+逾期提示
  */
 import { ref, computed, onMounted, onUnmounted, nextTick } from 'vue'
+import { http } from '@/utils/request'
 import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Keyboard } from 'lucide-vue-next'
@@ -22,6 +23,20 @@ const cases = ref<CorrectiveCase[]>([])
 const activeTab = ref<'all' | 'my' | 'overdue'>('all')
 // V110 来源筛选: all / engine (系统建议) / manual (人工)
 const sourceFilter = ref<'all' | 'engine' | 'manual'>('all')
+
+// V110 引擎 KPI
+interface EngineKpi {
+  engineCount: number; manualCount: number; totalCount: number
+  engineRatio: number; closeRate: number; avgSeverityScore: number
+  severityDist: Record<string, number>
+  topRecurring: Array<{ itemCode: string; itemName: string; recurCount: number }>
+}
+const kpi = ref<EngineKpi | null>(null)
+async function loadKpi() {
+  try {
+    kpi.value = await http.get<EngineKpi>('/inspection/corrective/kpi')
+  } catch (e) { console.warn('加载 KPI 失败', e) }
+}
 
 // ── Loaders ──
 async function loadData() {
@@ -221,6 +236,7 @@ async function handleDelete(c: CorrectiveCase) {
 
 onMounted(() => {
   loadData()
+  loadKpi()
   window.addEventListener('keydown', onGlobalKeyCC)
 })
 onUnmounted(() => window.removeEventListener('keydown', onGlobalKeyCC))
@@ -254,8 +270,37 @@ onUnmounted(() => window.removeEventListener('keydown', onGlobalKeyCC))
           <span class="insp-stat__value" :style="{ color: 'var(--insp-pass)' }">{{ stats.closed }}</span>
           <span class="insp-stat__label">已结案</span>
         </div>
+        <!-- V110 引擎 KPI -->
+        <div v-if="kpi" class="head-rule" />
+        <div v-if="kpi" class="insp-stat" title="系统建议占比">
+          <span class="insp-stat__value" style="color:#6d28d9">{{ kpi.engineRatio }}%</span>
+          <span class="insp-stat__label">引擎占比</span>
+        </div>
+        <div v-if="kpi" class="head-rule" />
+        <div v-if="kpi" class="insp-stat" title="案件关闭率">
+          <span class="insp-stat__value" :style="{ color: kpi.closeRate >= 70 ? 'var(--insp-pass)' : 'var(--insp-warn)' }">
+            {{ kpi.closeRate }}%
+          </span>
+          <span class="insp-stat__label">关闭率</span>
+        </div>
+        <div v-if="kpi" class="head-rule" />
+        <div v-if="kpi" class="insp-stat" title="引擎平均严重度分">
+          <span class="insp-stat__value">{{ (kpi.avgSeverityScore * 100).toFixed(0) }}%</span>
+          <span class="insp-stat__label">平均严重度</span>
+        </div>
       </div>
     </header>
+
+    <!-- V110 Top10 复发 itemCode -->
+    <div v-if="kpi?.topRecurring?.length" class="kpi-recur-bar">
+      <span class="kpi-recur-title">高频复发 Top {{ Math.min(kpi.topRecurring.length, 10) }} (近 30 天):</span>
+      <span v-for="(t, i) in kpi.topRecurring.slice(0, 10)" :key="t.itemCode"
+            class="kpi-recur-pill" :class="{ 'kpi-recur-pill--top': i < 3 }"
+            :title="`${t.itemCode} · ${t.recurCount} 次`">
+        {{ t.itemName || t.itemCode }}
+        <span class="kpi-recur-pill__num">{{ t.recurCount }}</span>
+      </span>
+    </div>
 
     <hr class="insp-rule insp-rule--strong head-divider" />
 
@@ -423,6 +468,44 @@ onUnmounted(() => window.removeEventListener('keydown', onGlobalKeyCC))
 </template>
 
 <style scoped>
+/* V110 引擎 KPI Top10 复发 */
+.kpi-recur-bar {
+  display: flex; align-items: center; flex-wrap: wrap; gap: 8px;
+  padding: 8px 16px;
+  margin: 8px 0 0;
+  background: #fafaf9;
+  border: 1px solid #e7e5e4;
+  border-radius: 6px;
+  font-size: 12px;
+}
+.kpi-recur-title { color: #57534e; font-weight: 500; margin-right: 4px; }
+.kpi-recur-pill {
+  display: inline-flex; align-items: center; gap: 4px;
+  padding: 2px 8px;
+  background: #fff;
+  border: 1px solid #d6d3d1;
+  border-radius: 12px;
+  color: #44403c;
+  font-size: 12px;
+  cursor: help;
+}
+.kpi-recur-pill--top {
+  background: #fef2f2;
+  border-color: #fecaca;
+  color: #991b1b;
+  font-weight: 500;
+}
+.kpi-recur-pill__num {
+  display: inline-block; min-width: 16px;
+  padding: 0 5px;
+  background: #1f2937;
+  color: #fff;
+  border-radius: 8px;
+  font-size: 10px;
+  font-family: ui-monospace, monospace;
+}
+.kpi-recur-pill--top .kpi-recur-pill__num { background: #b91c1c; }
+
 /* V110 来源 chip */
 .src-chip {
   display: inline-flex; align-items: center; gap: 4px;
