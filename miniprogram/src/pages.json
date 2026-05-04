@@ -6,9 +6,8 @@
       "^(?!z-paging-refresh|z-paging-load-more)z-paging(.*)": "z-paging/components/z-paging$1/z-paging$1.vue"
     }
   },
-  "pages": [
-    { "path": "core/pages/login/index", "style": { "navigationStyle": "custom" } }
-  ],
+  "pages": [],
+  "subPackages": [],
   "globalStyle": {
     "navigationBarTextStyle": "black",
     "navigationBarBackgroundColor": "#f3f5f8",
