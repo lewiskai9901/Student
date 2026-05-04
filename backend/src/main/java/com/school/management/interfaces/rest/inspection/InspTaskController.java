@@ -48,6 +48,36 @@ public class InspTaskController {
         return Result.success(taskService.listAdHocAllowedProjects());
     }
 
+    /** V108: 单独读项目检查模式配置 */
+    @GetMapping("/projects/{id}/inspection-mode")
+    @CasbinAccess(resource = "insp:project", action = "view")
+    public Result<java.util.Map<String, Object>> getInspectionMode(@PathVariable Long id) {
+        return Result.success(taskService.getInspectionMode(id));
+    }
+
+    /** V108: 单独写项目检查模式配置 */
+    @PutMapping("/projects/{id}/inspection-mode")
+    @CasbinAccess(resource = "insp:project", action = "edit")
+    public Result<java.util.Map<String, Object>> updateInspectionMode(
+            @PathVariable Long id, @RequestBody InspectionModeRequest request) {
+        return Result.success(taskService.updateInspectionMode(id, request));
+    }
+
+    public static class InspectionModeRequest {
+        private String inspectionMode;
+        private Boolean allowAdHoc;
+        private Boolean allowSelfCheck;
+        private Integer adHocQuotaPerInspector;
+        public String getInspectionMode() { return inspectionMode; }
+        public void setInspectionMode(String inspectionMode) { this.inspectionMode = inspectionMode; }
+        public Boolean getAllowAdHoc() { return allowAdHoc; }
+        public void setAllowAdHoc(Boolean allowAdHoc) { this.allowAdHoc = allowAdHoc; }
+        public Boolean getAllowSelfCheck() { return allowSelfCheck; }
+        public void setAllowSelfCheck(Boolean allowSelfCheck) { this.allowSelfCheck = allowSelfCheck; }
+        public Integer getAdHocQuotaPerInspector() { return adHocQuotaPerInspector; }
+        public void setAdHocQuotaPerInspector(Integer v) { this.adHocQuotaPerInspector = v; }
+    }
+
     public static class AdHocRequest {
         private Long projectId;
         private String reason;

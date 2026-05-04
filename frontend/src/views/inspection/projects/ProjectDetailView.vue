@@ -14,6 +14,7 @@ import {
 } from '@/types/insp/enums'
 import type { InspProject, ProjectInspector, InspTask, InspSubmission } from '@/types/insp/project'
 import { inspProjectApi, updateOperationalConfig } from '@/api/inspection/project'
+import { http } from '@/utils/request'
 import { getTasks, assignTask } from '@/api/inspection/task'
 import { getSubmissions } from '@/api/inspection/submission'
 import { getSections } from '@/api/inspection/template'
@@ -107,7 +108,11 @@ const configDirty = ref(false)
 const saving = ref(false)
 
 // 配置表单
-const cf = ref({ scopeType: 'ORG', scopeIds: [] as string[], startDate: '', endDate: '', assignmentMode: 'FREE', reviewRequired: true, autoPublish: false, projectName: '', evaluationMode: 'SINGLE', multiRaterMode: 'AVERAGE', trendEnabled: false, decayEnabled: false, calibrationEnabled: false })
+const cf = ref({ scopeType: 'ORG', scopeIds: [] as string[], startDate: '', endDate: '', assignmentMode: 'FREE', reviewRequired: true, autoPublish: false, projectName: '', evaluationMode: 'SINGLE', multiRaterMode: 'AVERAGE', trendEnabled: false, decayEnabled: false, calibrationEnabled: false,
+  // V108: 检查模式
+  inspectionMode: 'PLANNED' as 'PLANNED'|'HYBRID'|'SPOT_CHECK'|'SELF_AUDIT'|'EMERGENCY',
+  allowAdHoc: false, allowSelfCheck: false, adHocQuotaPerInspector: null as number | null,
+})
 
 // 范围树
 const scopeTreeRef = ref<any>(null)
@@ -553,7 +558,27 @@ function syncForm() {
   if (!project.value) return; const p = project.value
   let rawIds: (number | string)[] = []; try { rawIds = p.scopeConfig ? JSON.parse(p.scopeConfig) : [] } catch (e: any) { console.warn('解析 scopeConfig 失败', e) }
   const ids: string[] = rawIds.map(String)
-  cf.value = { scopeType: p.scopeType || 'ORG', scopeIds: ids, startDate: p.startDate || '', endDate: p.endDate || '', assignmentMode: p.assignmentMode || 'FREE', reviewRequired: p.reviewRequired ?? true, autoPublish: p.autoPublish ?? false, projectName: p.projectName, evaluationMode: (p as any).evaluationMode || 'SINGLE', multiRaterMode: (p as any).multiRaterMode || 'AVERAGE', trendEnabled: (p as any).trendEnabled ?? false, decayEnabled: (p as any).decayEnabled ?? false, calibrationEnabled: (p as any).calibrationEnabled ?? false }
+  cf.value = { scopeType: p.scopeType || 'ORG', scopeIds: ids, startDate: p.startDate || '', endDate: p.endDate || '', assignmentMode: p.assignmentMode || 'FREE', reviewRequired: p.reviewRequired ?? true, autoPublish: p.autoPublish ?? false, projectName: p.projectName, evaluationMode: (p as any).evaluationMode || 'SINGLE', multiRaterMode: (p as any).multiRaterMode || 'AVERAGE', trendEnabled: (p as any).trendEnabled ?? false, decayEnabled: (p as any).decayEnabled ?? false, calibrationEnabled: (p as any).calibrationEnabled ?? false,
+    // V108
+    inspectionMode: ((p as any).inspectionMode || 'PLANNED') as any,
+    allowAdHoc: !!((p as any).allowAdHoc),
+    allowSelfCheck: !!((p as any).allowSelfCheck),
+    adHocQuotaPerInspector: (p as any).adHocQuotaPerInspector ?? null,
+  }
+  // V108: project DTO 可能没暴露 inspection_mode 字段, 单独 GET 一次
+  loadInspectionModeFallback()
+}
+
+async function loadInspectionModeFallback() {
+  try {
+    const r = await http.get<any>('/inspection/tasks/projects/' + projectId + '/inspection-mode')
+    if (r) {
+      cf.value.inspectionMode = (r.inspection_mode || r.inspectionMode || 'PLANNED') as any
+      cf.value.allowAdHoc = !!(r.allow_ad_hoc ?? r.allowAdHoc)
+      cf.value.allowSelfCheck = !!(r.allow_self_check ?? r.allowSelfCheck)
+      cf.value.adHocQuotaPerInspector = r.ad_hoc_quota_per_inspector ?? r.adHocQuotaPerInspector ?? null
+    }
+  } catch { /* skip */ }
 }
 
 // Watch cf changes after initial sync
@@ -578,6 +603,17 @@ async function saveConfig() {
       await inspProjectApi.update(projectId, { projectName: cf.value.projectName, rootSectionId: project.value.rootSectionId, scopeType: cf.value.scopeType as ScopeType, scopeConfig: cf.value.scopeIds.length > 0 ? JSON.stringify(cf.value.scopeIds) : undefined, startDate: cf.value.startDate || undefined, endDate: cf.value.endDate || undefined, assignmentMode: cf.value.assignmentMode as AssignmentMode, reviewRequired: cf.value.reviewRequired, autoPublish: cf.value.autoPublish })
     } else {
       await updateOperationalConfig(projectId, { projectName: cf.value.projectName, assignmentMode: cf.value.assignmentMode, reviewRequired: cf.value.reviewRequired, autoPublish: cf.value.autoPublish })
+    }
+    // V108: 单独 PUT 检查模式 (不依赖现有 update DTO)
+    try {
+      await http.put('/inspection/tasks/projects/' + projectId + '/inspection-mode', {
+        inspectionMode: cf.value.inspectionMode,
+        allowAdHoc: cf.value.allowAdHoc,
+        allowSelfCheck: cf.value.allowSelfCheck,
+        adHocQuotaPerInspector: cf.value.adHocQuotaPerInspector,
+      })
+    } catch (e: any) {
+      console.warn('保存检查模式失败:', e?.message)
     }
     ElMessage.success('已保存'); configDirty.value = false; loadProject()
   } catch (e: any) { ElMessage.error(e.message || '保存失败') } finally { saving.value = false }
@@ -1470,6 +1506,56 @@ onMounted(async () => {
                 <el-switch v-model="cf.autoPublish" :disabled="isArchived" />
               </div>
               <div class="cfg-hint">{{ cf.autoPublish ? '审核通过后自动发布分数' : '需手动发布检查结果' }}</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- V108: 检查模式配置 -->
+        <div class="cfg-card">
+          <div class="cfg-card-title">⚡ 检查模式 (Day3)</div>
+          <div class="cfg-desc">控制本项目允许哪些检查行为 — 计划任务/临时抽查/自查 等.</div>
+          <div class="cfg-row2">
+            <div class="cfg-field">
+              <label class="cfg-label">运行模式</label>
+              <select v-model="cf.inspectionMode" class="cfg-select" :disabled="isArchived">
+                <option value="PLANNED">计划制 — 仅按调度生成</option>
+                <option value="HYBRID">混合制 — 计划 + 临时抽查</option>
+                <option value="SPOT_CHECK">抽查制 — 不生成计划任务</option>
+                <option value="SELF_AUDIT">自查制 — 受检主体自评</option>
+                <option value="EMERGENCY">突击专项 — 一次性</option>
+              </select>
+              <div class="cfg-hint">
+                {{ cf.inspectionMode === 'PLANNED' ? '只有计划生成的任务, 不允许临时抽查' :
+                   cf.inspectionMode === 'HYBRID' ? '计划 + 抽查并存 (推荐)' :
+                   cf.inspectionMode === 'SPOT_CHECK' ? '完全靠检查员自助发起' :
+                   cf.inspectionMode === 'SELF_AUDIT' ? '受检主体自我评估' :
+                   '一次性突击, 完成后归档' }}
+              </div>
+            </div>
+            <div class="cfg-field">
+              <label class="cfg-label">允许临时抽查</label>
+              <div class="cfg-toggle-row">
+                <el-switch v-model="cf.allowAdHoc" :disabled="isArchived || cf.inspectionMode === 'PLANNED'" />
+              </div>
+              <div class="cfg-hint">
+                {{ cf.allowAdHoc ? '检查员可在任务列表点 "⚡ 发起抽查"' : '只能由调度自动生成任务' }}
+              </div>
+            </div>
+          </div>
+          <div class="cfg-row2">
+            <div class="cfg-field">
+              <label class="cfg-label">允许自查</label>
+              <div class="cfg-toggle-row">
+                <el-switch v-model="cf.allowSelfCheck" :disabled="isArchived" />
+              </div>
+              <div class="cfg-hint">
+                {{ cf.allowSelfCheck ? '受检主体可主动发起自评' : '受检主体不可自查' }}
+              </div>
+            </div>
+            <div class="cfg-field">
+              <label class="cfg-label">月度抽查配额</label>
+              <el-input-number v-model="cf.adHocQuotaPerInspector" :min="0" :disabled="isArchived || !cf.allowAdHoc" placeholder="留空=无限" class="w-full" />
+              <div class="cfg-hint">每检查员每月最多抽查次数, 0/留空 = 无限制</div>
             </div>
           </div>
         </div>

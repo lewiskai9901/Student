@@ -121,6 +121,49 @@ public class InspTaskApplicationService {
                 "ORDER BY id DESC LIMIT 200");
     }
 
+    /** V108: 读项目检查模式配置 */
+    public java.util.Map<String, Object> getInspectionMode(Long projectId) {
+        try {
+            return jdbcTemplate.queryForMap(
+                    "SELECT inspection_mode, allow_ad_hoc, allow_self_check, ad_hoc_quota_per_inspector " +
+                    "FROM insp_projects WHERE id = ? AND deleted = 0", projectId);
+        } catch (Exception e) {
+            // 项目不存在或字段缺失, 返回默认值
+            java.util.Map<String, Object> m = new java.util.HashMap<>();
+            m.put("inspection_mode", "PLANNED");
+            m.put("allow_ad_hoc", 0);
+            m.put("allow_self_check", 0);
+            m.put("ad_hoc_quota_per_inspector", null);
+            return m;
+        }
+    }
+
+    /** V108: 写项目检查模式配置 */
+    @Transactional
+    public java.util.Map<String, Object> updateInspectionMode(
+            Long projectId,
+            com.school.management.interfaces.rest.inspection.InspTaskController.InspectionModeRequest req) {
+        if (req.getInspectionMode() != null
+                && !java.util.Set.of("PLANNED","HYBRID","SPOT_CHECK","SELF_AUDIT","EMERGENCY")
+                       .contains(req.getInspectionMode())) {
+            throw new IllegalArgumentException("非法的 inspection_mode: " + req.getInspectionMode());
+        }
+        // PLANNED 模式禁止 allow_ad_hoc
+        boolean allowAdHoc = Boolean.TRUE.equals(req.getAllowAdHoc())
+                && !"PLANNED".equals(req.getInspectionMode());
+        boolean allowSelfCheck = Boolean.TRUE.equals(req.getAllowSelfCheck());
+
+        jdbcTemplate.update(
+                "UPDATE insp_projects SET inspection_mode = ?, allow_ad_hoc = ?, " +
+                "allow_self_check = ?, ad_hoc_quota_per_inspector = ? WHERE id = ?",
+                req.getInspectionMode() != null ? req.getInspectionMode() : "PLANNED",
+                allowAdHoc ? 1 : 0,
+                allowSelfCheck ? 1 : 0,
+                req.getAdHocQuotaPerInspector(),
+                projectId);
+        return getInspectionMode(projectId);
+    }
+
     /** 反射读 InspProject 的字段 — 兼容 PO 是否已加 allowAdHoc 字段 */
     private Boolean readBooleanField(InspProject project, String fieldName) {
         try {
