@@ -113,6 +113,53 @@ public class InspTaskApplicationService {
         return saved;
     }
 
+    /**
+     * V108: 系统/事件自动触发的核查任务 (TRIGGERED).
+     * 由申诉/告警/投诉 listener 调用, 不需要用户手动发起.
+     *
+     * @param projectId  关联项目 ID
+     * @param refType    源单据类型 (Appeal/Alert/Complaint)
+     * @param refId      源单据 ID
+     * @param reason     触发说明
+     */
+    @Transactional
+    public InspTask createTriggeredTask(Long projectId, String refType, Long refId, String reason) {
+        InspProject project = projectRepository.findById(projectId).orElse(null);
+        if (project == null) {
+            log.warn("createTriggeredTask: 项目 {} 不存在, 跳过", projectId);
+            return null;
+        }
+        // 防重: 同一 refType+refId 已有 task → 跳过
+        try {
+            Integer existing = jdbcTemplate.queryForObject(
+                    "SELECT COUNT(*) FROM insp_tasks " +
+                    "WHERE source_ref_type = ? AND source_ref_id = ? AND deleted = 0",
+                    Integer.class, refType, refId);
+            if (existing != null && existing > 0) {
+                log.info("createTriggeredTask: refType={} refId={} 已触发过 task, 跳过", refType, refId);
+                return null;
+            }
+        } catch (Exception ignored) { /* skip dedup if query fails */ }
+
+        try {
+            preCheckTemplateDrift(project);
+        } catch (Exception e) {
+            log.warn("createTriggeredTask: 模板漂移检查失败 — projectId={}, msg={}", projectId, e.getMessage());
+            return null;
+        }
+
+        String taskCode = generateTaskCode();
+        InspTask task = InspTask.createTriggered(taskCode, projectId, refType, refId, reason);
+        InspTask saved = taskRepository.save(task);
+        eventPublisher.publishAll(saved.getDomainEvents());
+        saved.clearDomainEvents();
+        metrics.taskCreated();
+
+        populateSubmissions(saved);
+        log.info("[V108] 触发核查任务已创建: code={}, refType={}, refId={}", taskCode, refType, refId);
+        return saved;
+    }
+
     /** V108: 列出允许抽查的项目 (jdbcTemplate 直查 DB, 不依赖 InspProject 字段) */
     public java.util.List<java.util.Map<String, Object>> listAdHocAllowedProjects() {
         return jdbcTemplate.queryForList(
