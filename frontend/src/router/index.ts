@@ -218,10 +218,16 @@ const routes: RouteRecordRaw[] = [
       },
 
       // ==================== 检查平台 (order: 12) ====================
+      // P1: 旧路径重定向 (向后兼容书签/外链)
+      { path: '/inspection/about-me', redirect: '/inspection/my-record', meta: { hidden: true } },
+      { path: '/inspection/ratings', redirect: '/inspection/rankings', meta: { hidden: true } },
+      { path: '/inspection/observations', redirect: '/inspection/analytics', meta: { hidden: true } },
+      { path: '/inspection/library', redirect: '/inspection/config', meta: { hidden: true } },
+      { path: '/inspection/scoring', redirect: '/inspection/scoring-profiles', meta: { hidden: true } },
       {
         path: '/inspection',
         name: 'Inspection',
-        redirect: '/inspection/config',
+        redirect: '/inspection/dashboard',
         meta: {
           title: '检查平台',
           icon: 'ClipboardCheck',
@@ -286,29 +292,6 @@ const routes: RouteRecordRaw[] = [
               hidden: true,
               requiresAuth: true,
               permission: 'insp:scoring-profile:edit'
-            }
-          },
-          {
-            path: '/inspection/scoring',
-            name: 'ScoringProfileByTemplate',
-            component: () => import('@/views/inspection/scoring/ScoringProfileEditor.vue'),
-            meta: {
-              title: '评分配置',
-              hidden: true,
-              requiresAuth: true,
-              permission: 'insp:scoring-profile:view'
-            }
-          },
-          // ---------- Item Library ----------
-          {
-            path: '/inspection/library',
-            name: 'ItemLibrary',
-            component: () => import('@/views/inspection/templates/ItemLibraryView.vue'),
-            meta: {
-              title: '检查项库',
-              icon: 'Library',
-              requiresAuth: true,
-              permission: 'insp:template:view'
             }
           },
           // 等级方案管理
@@ -458,18 +441,6 @@ const routes: RouteRecordRaw[] = [
               permission: 'insp:corrective:view'
             }
           },
-          // 当事人记录页 (UX gap fix · 所有用户可见, 在主菜单)
-          {
-            path: '/inspection/about-me',
-            name: 'InspectionAboutMe',
-            component: () => import('@/views/inspection/AboutMeView.vue'),
-            meta: {
-              title: '关于我的检查',
-              icon: 'User',
-              requiresAuth: true,
-              order: 0.5,
-            }
-          },
           // 检查员驾驶舱 (Cockpit redesign · Sweep+Matrix+Focus)
           {
             path: '/inspection/tasks/:id/cockpit',
@@ -538,16 +509,6 @@ const routes: RouteRecordRaw[] = [
             component: () => import('@/views/inspection/analytics/AnalyticsDashboardView.vue'),
             meta: {
               title: '分析报表',
-              requiresAuth: true,
-              permission: 'insp:analytics:view'
-            }
-          },
-          {
-            path: '/inspection/observations',
-            name: 'Observations',
-            component: () => import('@/views/inspection/analytics/ObservationListView.vue'),
-            meta: {
-              title: '评分观察',
               requiresAuth: true,
               permission: 'insp:analytics:view'
             }
@@ -643,33 +604,7 @@ const routes: RouteRecordRaw[] = [
               order: 0
             }
           },
-          // ---------- Platform BC ----------
-          // 通知规则
-          {
-            path: '/inspection/notification-rules',
-            name: 'NotificationRuleList',
-            component: () => import('@/views/inspection/platform/NotificationRuleListView.vue'),
-            meta: {
-              title: '通知规则',
-              icon: 'Bell',
-              requiresAuth: true,
-              permission: 'insp:platform:view',
-              order: 10
-            }
-          },
-          // Webhook 订阅
-          {
-            path: '/inspection/webhooks',
-            name: 'WebhookList',
-            component: () => import('@/views/inspection/platform/WebhookListView.vue'),
-            meta: {
-              title: 'Webhook',
-              icon: 'Webhook',
-              requiresAuth: true,
-              permission: 'insp:platform:view',
-              order: 11
-            }
-          },
+
           // 审计日志 (检查平台专属)
           {
             path: '/inspection/audit-trail',
@@ -696,19 +631,7 @@ const routes: RouteRecordRaw[] = [
               order: 13
             }
           },
-          // 报表模板
-          {
-            path: '/inspection/report-templates',
-            name: 'ReportTemplateList',
-            component: () => import('@/views/inspection/platform/ReportTemplateListView.vue'),
-            meta: {
-              title: '报表模板',
-              icon: 'FileSpreadsheet',
-              requiresAuth: true,
-              permission: 'insp:platform:view',
-              order: 14
-            }
-          },
+
           // 假日日历
           {
             path: '/inspection/holiday-calendar',
@@ -722,19 +645,7 @@ const routes: RouteRecordRaw[] = [
               order: 15
             }
           },
-          // Phase 2: Compliance
-          {
-            path: '/inspection/compliance',
-            name: 'ComplianceStandards',
-            component: () => import('@/views/inspection/compliance/ComplianceStandardListView.vue'),
-            meta: {
-              title: '合规标准',
-              icon: 'Shield',
-              requiresAuth: true,
-              permission: 'insp:template:view',
-              order: 16
-            }
-          },
+
           // Phase 4: Alerts
           {
             path: '/inspection/alerts',
@@ -746,58 +657,6 @@ const routes: RouteRecordRaw[] = [
               requiresAuth: true,
               permission: 'insp:analytics:view',
               order: 17
-            }
-          },
-          // Phase 5: Knowledge Base
-          {
-            path: '/inspection/knowledge',
-            name: 'KnowledgeBase',
-            component: () => import('@/views/inspection/knowledge/KnowledgeBaseView.vue'),
-            meta: {
-              title: '知识库',
-              icon: 'BookOpen',
-              requiresAuth: true,
-              permission: 'insp:corrective:view',
-              order: 18
-            }
-          },
-          // Phase 6: NFC Tags
-          {
-            path: '/inspection/nfc-tags',
-            name: 'NfcTags',
-            component: () => import('@/views/inspection/platform/NfcTagManagementView.vue'),
-            meta: {
-              title: 'NFC标签',
-              icon: 'Wifi',
-              requiresAuth: true,
-              permission: 'insp:platform:view',
-              order: 19
-            }
-          },
-          // Phase 6: IoT Sensors
-          {
-            path: '/inspection/iot-sensors',
-            name: 'IoTSensors',
-            component: () => import('@/views/inspection/platform/IoTSensorView.vue'),
-            meta: {
-              title: 'IoT传感器',
-              icon: 'Activity',
-              requiresAuth: true,
-              permission: 'insp:platform:view',
-              order: 20
-            }
-          },
-          // Phase 3.5: Rating Leaderboard
-          {
-            path: '/inspection/ratings',
-            name: 'RatingLeaderboard',
-            component: () => import('@/views/inspection/ratings/RatingLeaderboardView.vue'),
-            meta: {
-              title: '评级排名榜',
-              icon: 'Trophy',
-              requiresAuth: true,
-              permission: 'insp:analytics:view',
-              order: 8.5
             }
           }
         ]
