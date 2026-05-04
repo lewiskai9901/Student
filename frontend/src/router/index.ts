@@ -629,11 +629,12 @@ const routes: RouteRecordRaw[] = [
               order: 9
             }
           },
-          // 仪表盘
+          // 检查平台总览 — 多角色聚合首页 (我的任务/待审/申诉/整改 widget)
+          // 改用 InspectionCommandDeck (原 /inspection 隐藏页), 替代占位 DashboardView
           {
             path: '/inspection/dashboard',
             name: 'InspectionDashboard',
-            component: () => import('@/views/inspection/dashboard/DashboardView.vue'),
+            component: () => import('@/views/inspection/InspectionCommandDeck.vue'),
             meta: {
               title: '检查平台总览',
               icon: 'LayoutDashboard',
