@@ -116,6 +116,9 @@
       </div>
     </div>
 
+    <!-- 受检主体个人成绩单 widget -->
+    <MyInspectionWidget />
+
     <!-- System stats bar -->
     <div class="rounded-lg border border-gray-200 bg-white px-5 py-4">
       <div class="mb-2 text-sm font-medium text-gray-500">系统状态</div>
@@ -152,6 +155,7 @@ import { ref, reactive, computed, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { getDashboardOverview, type DashboardOverview } from '@/api/dashboard'
+import MyInspectionWidget from '@/components/inspection/MyInspectionWidget.vue'
 
 const router = useRouter()
 const authStore = useAuthStore()
