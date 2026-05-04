@@ -32,7 +32,14 @@
       }
     }
   ],
-  "subPackages": [],
+  "subPackages": [
+    {
+      "root": "plugins/demo",
+      "pages": [
+        "pages/hello"
+      ]
+    }
+  ],
   "tabBar": {
     "color": "#c0c8d0",
     "selectedColor": "#3a7bd5",
