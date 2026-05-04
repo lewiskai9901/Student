@@ -1,7 +1,6 @@
 package com.school.management.application.inspection.ai;
 
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
@@ -21,7 +20,6 @@ import java.util.Map;
  */
 @Slf4j
 @Service
-@ConditionalOnProperty(name = "inspection.ai.provider", havingValue = "heuristic", matchIfMissing = true)
 public class HeuristicScoringSuggestionService implements ScoringSuggestionService {
 
     private static final Map<String, List<String>> CATEGORY_KEYWORDS = Map.of(
