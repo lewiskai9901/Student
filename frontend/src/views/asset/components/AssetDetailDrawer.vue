@@ -119,17 +119,17 @@ function getStatusClass(status: number) {
 function getChangeTypeIcon(type: string) {
   switch (type) {
     case 'CREATE':
-      return '➕'
+      return '+'
     case 'UPDATE':
-      return '✏️'
+      return '编辑️'
     case 'TRANSFER':
-      return '📦'
+      return ''
     case 'REPAIR':
-      return '🔧'
+      return ''
     case 'SCRAP':
-      return '🗑️'
+      return '️'
     default:
-      return '📝'
+      return ''
   }
 }
 
@@ -287,7 +287,7 @@ function handleTransfer() {
                       {{ item.changeTypeDesc }}
                     </div>
                     <div v-if="item.changeType === 'TRANSFER'" class="text-sm text-gray-600 mt-1">
-                      {{ item.oldLocationName || '未分配' }} → {{ item.newLocationName }}
+                      {{ item.oldLocationName || '未分配' }} > {{ item.newLocationName }}
                     </div>
                     <div v-if="item.remark" class="text-sm text-gray-500 mt-1">
                       {{ item.remark }}

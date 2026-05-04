@@ -68,6 +68,7 @@ public class ClassCourseAssignmentRepositoryImpl implements ClassCourseAssignmen
         po.setWeeklyHours(a.getWeeklyHours());
         po.setStudentCount(a.getStudentCount());
         po.setStatus(a.getStatus());
+        po.setCreatedBy(a.getCreatedBy());
         return po;
     }
 
@@ -75,7 +76,7 @@ public class ClassCourseAssignmentRepositoryImpl implements ClassCourseAssignmen
         return ClassCourseAssignment.reconstruct(
                 po.getId(), po.getSemesterId(), po.getOrgUnitId(),
                 po.getOfferingId(), po.getCourseId(), po.getWeeklyHours(),
-                po.getStudentCount(), po.getStatus()
+                po.getStudentCount(), po.getStatus(), po.getCreatedBy()
         );
     }
 }

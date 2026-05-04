@@ -188,7 +188,7 @@ function getEventChip(type: number) {
   return map[type] || 'tm-chip-gray'
 }
 
-/** 点击周方块循环切换类型: 教学→考试→假期→教学 */
+/** 点击周方块循环切换类型: 教学>考试>假期>教学 */
 const typeOrder = ['TEACHING', 'EXAM', 'VACATION'] as const
 const typeToNum: Record<string, number> = { TEACHING: 1, EXAM: 2, VACATION: 3 }
 const typeLabels: Record<string, string> = { TEACHING: '教学周', EXAM: '考试周', VACATION: '假期周' }
@@ -205,7 +205,7 @@ async function cycleWeekType(gridWeek: any) {
   try {
     await semesterApi.updateWeekType(weekData.id, nextNum)
     gridWeek.weekType = nextType
-    ElMessage.success(`第${gridWeek.weekNumber}周 → ${typeLabels[nextType]}`)
+    ElMessage.success(`第${gridWeek.weekNumber}周 > ${typeLabels[nextType]}`)
     emit('refresh')
   } catch {
     ElMessage.error('更新失败')

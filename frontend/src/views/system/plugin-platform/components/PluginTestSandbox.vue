@@ -76,7 +76,7 @@
           <button class="sb-btn sb-btn-primary" @click="onTriggerFire">
             <Play :size="12" /> fire
           </button>
-          <p class="sb-hint">⚠️ 实际 fire 会写 entity_events + msg_notifications</p>
+          <p class="sb-hint">!️ 实际 fire 会写 entity_events + msg_notifications</p>
         </div>
       </section>
 
@@ -189,7 +189,7 @@
         <div v-if="!logs.length" class="sb-log-empty">点击任一卡片的按钮开始测试...</div>
         <div v-for="(l, i) in logs" :key="i" class="sb-log-line" :class="'sb-log-' + l.level">
           <span class="sb-log-time">{{ l.time }}</span>
-          <span class="sb-log-icon">{{ l.level === 'ok' ? '✓' : l.level === 'err' ? '✗' : '▶' }}</span>
+          <span class="sb-log-icon">{{ l.level === 'ok' ? '√' : l.level === 'err' ? '×' : '>' }}</span>
           <span class="sb-log-kind">{{ l.kind }}</span>
           <span class="sb-log-msg">{{ l.msg }}</span>
           <pre v-if="l.detail" class="sb-log-detail">{{ l.detail }}</pre>
@@ -276,10 +276,10 @@ async function onPolicyCheck() {
       payload
     })
     if (r.matched === 0) {
-      addLog('info', 'Policy', `${policyForm.value.entityType}/${policyForm.value.phase} → 0 监听者匹配`)
+      addLog('info', 'Policy', `${policyForm.value.entityType}/${policyForm.value.phase} > 0 监听者匹配`)
     } else {
       addLog('ok', 'Policy',
-        `${policyForm.value.entityType}/${policyForm.value.phase} → ${r.matched} 违规 (BLOCK=${r.hasBlock})`,
+        `${policyForm.value.entityType}/${policyForm.value.phase} > ${r.matched} 违规 (BLOCK=${r.hasBlock})`,
         r.violations)
     }
   } catch (e: any) {
@@ -300,7 +300,7 @@ async function onTriggerFire() {
     })
     if (r.triggered) {
       addLog('ok', 'Trigger',
-        `fire(${triggerForm.value.code}) → 新增事件 ${r.eventsCreated}, 通知 ${r.notificationsCreated}`)
+        `fire(${triggerForm.value.code}) > 新增事件 ${r.eventsCreated}, 通知 ${r.notificationsCreated}`)
     } else {
       addLog('err', 'Trigger', r.error || '触发失败')
     }
@@ -316,7 +316,7 @@ async function onRelationFind() {
       addLog('err', 'Relation', r.error)
     } else {
       addLog('ok', 'Relation',
-        `${relForm.value.relation} on ${relForm.value.resourceType}:${relForm.value.resourceId} → ${r.count} 个 subject${relForm.value.expandImplied ? ' (含 implied)' : ''}`,
+        `${relForm.value.relation} on ${relForm.value.resourceType}:${relForm.value.resourceId} > ${r.count} 个 subject${relForm.value.expandImplied ? ' (含 implied)' : ''}`,
         r.subjectIds)
     }
   } catch (e: any) {
@@ -328,7 +328,7 @@ async function onScopeResolve() {
   try {
     const r: any = await http.post('/plugin-platform/sandbox/datascope/resolve', scopeForm.value)
     addLog('ok', 'DataScope',
-      `${scopeForm.value.dimCode}(user=${scopeForm.value.userId}, ${scopeForm.value.resourceType}) → ${r.count} ids ${r.interpretation}`,
+      `${scopeForm.value.dimCode}(user=${scopeForm.value.userId}, ${scopeForm.value.resourceType}) > ${r.count} ids ${r.interpretation}`,
       r.ids)
   } catch (e: any) {
     addLog('err', 'DataScope', e?.message || String(e))
@@ -345,7 +345,7 @@ async function onTargetResolve() {
     if (r.error) {
       addLog('err', 'TargetMode', r.error, r.available)
     } else {
-      addLog('ok', 'TargetMode', `${targetForm.value.modeCode} → ${r.count} 用户`, r.userIds)
+      addLog('ok', 'TargetMode', `${targetForm.value.modeCode} > ${r.count} 用户`, r.userIds)
     }
   } catch (e: any) {
     addLog('err', 'TargetMode', e?.message || String(e))

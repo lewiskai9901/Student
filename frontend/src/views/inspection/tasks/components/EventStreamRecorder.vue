@@ -3,7 +3,7 @@
  * EventStreamRecorder — generalized event-stream scoring component
  *
  * Supports all 3 target types (ORG / USER / PLACE) and all scoring modes.
- * Flow: Search target → select → score all items → save → next target
+ * Flow: Search target > select > score all items > save > next target
  */
 import { ref, computed, watch, nextTick } from 'vue'
 import { ElMessage, ElInputNumber } from 'element-plus'

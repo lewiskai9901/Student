@@ -35,7 +35,7 @@
           <span class="sp-band-name">{{ band.gradeName }}</span>
           <span class="sp-band-range">{{ band.minScore }}~{{ band.maxScore }}</span>
           <div class="sp-band-actions">
-            <button class="sp-ic-s" @click="startEdit(band)">✎</button>
+            <button class="sp-ic-s" @click="startEdit(band)">编辑</button>
             <button class="sp-ic-s danger" @click="$emit('delete', band.id)">×</button>
           </div>
         </div>

@@ -35,6 +35,7 @@ public class GradeApplicationService {
     private final GradeBatchMapper batchMapper;
     private final StudentGradeMapper gradeMapper;
     private final JdbcTemplate jdbc; // for complex queries with dynamic filters
+    private final org.springframework.context.ApplicationEventPublisher events;
 
     @Autowired(required = false)
     private TriggerService triggerService;
@@ -123,7 +124,7 @@ public class GradeApplicationService {
     @Transactional
     public void updateBatch(Long id, Map<String, Object> data) {
         GradeBatchPO po = batchMapper.selectById(id);
-        if (po == null) throw new RuntimeException("成绩批次不存在: " + id);
+        if (po == null) throw com.school.management.exception.TeachingDomainException.gradeBatchNotFound(id);
 
         po.setBatchName((String) data.get("batchName"));
         po.setSemesterId(toLong(data.get("semesterId")));
@@ -145,8 +146,8 @@ public class GradeApplicationService {
     @Transactional
     public void submitBatch(Long id) {
         GradeBatchPO po = batchMapper.selectById(id);
-        if (po == null) throw new RuntimeException("成绩批次不存在: " + id);
-        po.setStatus(1);
+        if (po == null) throw com.school.management.exception.TeachingDomainException.gradeBatchNotFound(id);
+        po.submit();
         batchMapper.updateById(po);
 
         if (triggerService != null) {
@@ -166,8 +167,8 @@ public class GradeApplicationService {
     @Transactional
     public void approveBatch(Long id) {
         GradeBatchPO po = batchMapper.selectById(id);
-        if (po == null) throw new RuntimeException("成绩批次不存在: " + id);
-        po.setStatus(2);
+        if (po == null) throw com.school.management.exception.TeachingDomainException.gradeBatchNotFound(id);
+        po.approve();
         batchMapper.updateById(po);
 
         if (triggerService != null) {
@@ -187,9 +188,16 @@ public class GradeApplicationService {
     @Transactional
     public void publishBatch(Long id) {
         GradeBatchPO po = batchMapper.selectById(id);
-        if (po == null) throw new RuntimeException("成绩批次不存在: " + id);
-        po.setStatus(3);
+        if (po == null) throw com.school.management.exception.TeachingDomainException.gradeBatchNotFound(id);
+        po.publish();
         batchMapper.updateById(po);
+
+        // 发布领域事件 - Saga listener AFTER_COMMIT 触发后续编排
+        events.publishEvent(new com.school.management.infrastructure.extension.plugins.education
+                .domain.teaching.event.GradeBatchPublishedEvent(
+                po.getId(), po.getBatchName(), po.getSemesterId(),
+                po.getCourseId(), po.getOrgUnitId(),
+                com.school.management.common.util.SecurityUtils.getCurrentUserId()));
 
         if (triggerService == null) return;
 
@@ -285,7 +293,8 @@ public class GradeApplicationService {
     @Transactional
     public void updateGrade(Long gradeId, Map<String, Object> data) {
         StudentGradePO po = gradeMapper.selectById(gradeId);
-        if (po == null) throw new RuntimeException("成绩记录不存在: " + gradeId);
+        if (po == null) throw new com.school.management.exception.TeachingDomainException(
+                "成绩记录不存在: " + gradeId);
 
         po.setTotalScore(toBigDecimal(data.get("totalScore")));
         po.setGradePoint(toBigDecimal(data.get("gradePoint")));
@@ -302,7 +311,7 @@ public class GradeApplicationService {
         if (grades == null || grades.isEmpty()) return;
 
         GradeBatchPO batch = batchMapper.selectById(batchId);
-        if (batch == null) throw new RuntimeException("成绩批次不存在: " + batchId);
+        if (batch == null) throw com.school.management.exception.TeachingDomainException.gradeBatchNotFound(batchId);
         Long semesterId = batch.getSemesterId();
         Long defaultCourseId = batch.getCourseId();
         Long defaultOrgUnitId = batch.getOrgUnitId();
@@ -589,7 +598,7 @@ public class GradeApplicationService {
      */
     public void generateImportTemplate(Long batchId, HttpServletResponse response) throws IOException {
         GradeBatchPO batch = batchMapper.selectById(batchId);
-        if (batch == null) throw new RuntimeException("成绩批次不存在: " + batchId);
+        if (batch == null) throw com.school.management.exception.TeachingDomainException.gradeBatchNotFound(batchId);
 
         // 查询关联学生列表
         List<Map<String, Object>> user_student = queryStudentsForBatch(batch);
@@ -676,7 +685,7 @@ public class GradeApplicationService {
     @Transactional
     public Map<String, Object> importGrades(Long batchId, InputStream inputStream) throws IOException {
         GradeBatchPO batch = batchMapper.selectById(batchId);
-        if (batch == null) throw new RuntimeException("成绩批次不存在: " + batchId);
+        if (batch == null) throw com.school.management.exception.TeachingDomainException.gradeBatchNotFound(batchId);
 
         int successCount = 0;
         int errorCount = 0;

@@ -335,7 +335,7 @@ function recalculate() {
           )
           if (triggered) {
             const vetoScore = config.vetoScore ?? 0
-            steps.push(`[VETO] ${rule.ruleName}: 触发一票否决 → ${vetoScore}`)
+            steps.push(`[VETO] ${rule.ruleName}: 触发一票否决 > ${vetoScore}`)
             total = vetoScore
           }
           break
@@ -360,7 +360,7 @@ function recalculate() {
             if (deductionCount >= t.count) penalty = t.penalty
           }
           if (penalty > 0) {
-            steps.push(`[PROGRESSIVE] ${rule.ruleName}: ${deductionCount}项违规 → -${penalty}`)
+            steps.push(`[PROGRESSIVE] ${rule.ruleName}: ${deductionCount}项违规 > -${penalty}`)
             total -= penalty
           }
           break

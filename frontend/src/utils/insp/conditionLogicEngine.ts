@@ -82,7 +82,7 @@ function evaluateNode(node: ConditionRule | ConditionGroup, getVal: ValueResolve
 }
 
 // =========================================================
-// V1 → V2 转换
+// V1 > V2 转换
 // =========================================================
 
 export function normalizeV1toV2(v1: ConditionLogicV1): ConditionLogicV2 {
@@ -106,8 +106,8 @@ export function normalizeV1toV2(v1: ConditionLogicV1): ConditionLogicV2 {
 
 /**
  * 评估条件逻辑 JSON 字符串，返回满足时的动作列表。
- * - null → 无条件或条件未满足
- * - ConditionAction[] → 条件满足，返回要执行的动作
+ * - null > 无条件或条件未满足
+ * - ConditionAction[] > 条件满足，返回要执行的动作
  */
 export function evaluateConditionLogic(
   json: string | null | undefined,
@@ -147,14 +147,14 @@ export function resolveItemState(
   getVal: ValueResolver,
   sectionVisible: boolean = true,
 ): ItemConditionState {
-  // 分区隐藏 → 强制全隐藏
+  // 分区隐藏 > 强制全隐藏
   if (!sectionVisible) {
     return { visible: false, required: false, disabled: false, scoreOverride: null, clearValue: false }
   }
 
   const actions = evaluateConditionLogic(conditionLogicJson, getVal)
 
-  // 无条件 → 需要判断是否有 "show" 类型动作定义（show 语义：默认隐藏，满足时才显示）
+  // 无条件 > 需要判断是否有 "show" 类型动作定义（show 语义：默认隐藏，满足时才显示）
   if (actions === null) {
     // 检查是否定义了条件但未满足
     if (conditionLogicJson) {
@@ -164,7 +164,7 @@ export function resolveItemState(
         if (v2) {
           const hasShowAction = v2.actions.some((a: ConditionAction) => a.type === 'show')
           if (hasShowAction) {
-            // "show" 动作存在但条件不满足 → 隐藏
+            // "show" 动作存在但条件不满足 > 隐藏
             return { visible: false, required: false, disabled: false, scoreOverride: null, clearValue: false }
           }
         }
@@ -214,7 +214,7 @@ export function evaluateSectionVisibility(
 ): boolean {
   const actions = evaluateConditionLogic(sectionConditionLogicJson, getVal)
   if (actions === null) {
-    // 检查是否定义了 show 动作（未满足 → 隐藏）
+    // 检查是否定义了 show 动作（未满足 > 隐藏）
     if (sectionConditionLogicJson) {
       try {
         const parsed = JSON.parse(sectionConditionLogicJson)
@@ -279,7 +279,7 @@ export function topologicalSort(details: DetailLike[]): string[] {
   const graph = buildDependencyGraph(details)
   const allCodes = details.map(d => d.itemCode)
 
-  // 构建正向图 dep → code（dep 先求值）
+  // 构建正向图 dep > code（dep 先求值）
   const forward = new Map<string, string[]>()
   for (const code of allCodes) forward.set(code, [])
 
@@ -342,7 +342,7 @@ interface SectionCondition {
  * 评估所有 Item 的条件状态。
  * @param details           提交明细列表
  * @param sectionConditions 分区条件列表（可选）
- * @param detailSectionMap  detail.itemCode → sectionId 映射（可选，用于分区级条件）
+ * @param detailSectionMap  detail.itemCode > sectionId 映射（可选，用于分区级条件）
  */
 export function evaluateAllConditions(
   details: DetailLike[],
@@ -448,7 +448,7 @@ export function humanizeCondition(
   const resolver = getLabel || ((code: string) => code)
   const condStr = humanizeGroup(v2.conditions, resolver)
   const actStr = humanizeActions(v2.actions)
-  return `当 ${condStr} → ${actStr}`
+  return `当 ${condStr} > ${actStr}`
 }
 
 /**

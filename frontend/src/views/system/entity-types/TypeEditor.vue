@@ -101,7 +101,7 @@
               <span v-if="isOverridden('typeName')"
                     class="ml-1 inline-flex cursor-help items-center gap-0.5 rounded-full bg-indigo-100 px-1.5 py-0 text-[9px] font-semibold text-indigo-700"
                     title="已被管理员覆写, 不受插件重启影响">
-                ✎ 已覆写
+                编辑 已覆写
               </span>
               <button v-if="isOverridden('typeName')"
                       class="ml-auto text-[10px] font-normal text-blue-600 hover:underline"
@@ -135,7 +135,7 @@
             <span v-if="isOverridden('category')"
                   class="ml-1 inline-flex cursor-help items-center gap-0.5 rounded-full bg-indigo-100 px-1.5 py-0 text-[9px] font-semibold text-indigo-700"
                   title="已被管理员覆写, 不受插件重启影响">
-              ✎ 已覆写
+              编辑 已覆写
             </span>
             <button v-if="isOverridden('category')"
                     class="ml-auto text-[10px] font-normal text-blue-600 hover:underline"
@@ -472,7 +472,7 @@ async function onCategoryChange() {
     const opt = currentCategories.value.find(c => c.code === cat)
     form.value.features = opt?.defaultFeatures ? { ...opt.defaultFeatures } : {}
   } catch (e: any) {
-    // 取消 → 回滚 category
+    // 取消 > 回滚 category
     form.value.category = originalCat
   }
 }

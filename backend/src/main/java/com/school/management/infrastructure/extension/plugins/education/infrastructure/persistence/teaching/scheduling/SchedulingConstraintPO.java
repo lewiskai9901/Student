@@ -15,6 +15,7 @@ public class SchedulingConstraintPO {
     private Integer constraintLevel;
     private Long targetId;
     private String targetName;
+    private Long orgUnitId;
     private String constraintType;
     private Boolean isHard;
     private Integer priority;

@@ -404,7 +404,7 @@ const RULE_TYPE_OPTIONS: { value: RuleType; label: string }[] = [
   { value: 'pattern', label: '正则匹配' },
 ]
 
-// Scoring mode → allowed validation rule types
+// Scoring mode > allowed validation rule types
 const SCORING_MODE_ALLOWED_RULES: Record<string, RuleType[]> = {
   PASS_FAIL: ['required', 'requiredIfFail', 'minPhotos', 'maxPhotos'],
   DEDUCTION: ['required', 'minPhotos', 'maxPhotos'],
@@ -421,7 +421,7 @@ const SCORING_MODE_ALLOWED_RULES: Record<string, RuleType[]> = {
   FORMULA: ['required', 'minPhotos', 'maxPhotos'],
 }
 
-// Capture type → allowed validation rule types
+// Capture type > allowed validation rule types
 const CAPTURE_TYPE_ALLOWED_RULES: Record<string, RuleType[]> = {
   TEXT: ['required', 'minLength', 'maxLength', 'pattern'],
   TEXTAREA: ['required', 'minLength', 'maxLength'],

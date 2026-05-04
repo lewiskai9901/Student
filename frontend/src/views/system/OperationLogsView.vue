@@ -360,7 +360,7 @@
                   <div v-for="(fc, i) in currentLog.changedFields" :key="i" class="text-xs text-gray-600">
                     <span class="font-medium text-gray-700">{{ getFieldLabel(fc.fieldName) }}</span>:
                     <span v-if="fc.oldValue" class="text-red-500 line-through">{{ fc.oldValue }}</span>
-                    <span v-if="fc.oldValue && fc.newValue"> → </span>
+                    <span v-if="fc.oldValue && fc.newValue"> > </span>
                     <span v-if="fc.newValue" class="text-green-600">{{ fc.newValue }}</span>
                   </div>
                 </div>

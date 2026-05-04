@@ -238,7 +238,7 @@ const groupedAttributeFields = computed(() => {
   return Array.from(groups.entries()).map(([name, fields]) => ({ name, fields }))
 })
 
-// relation 字段目标数据缓存 (target → [{id, label}])
+// relation 字段目标数据缓存 (target > [{id, label}])
 const relationOptions = ref<Record<string, { id: number; label: string }[]>>({})
 async function loadRelationOptions() {
   const targets = new Set<string>()

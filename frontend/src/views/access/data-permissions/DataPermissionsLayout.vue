@@ -125,7 +125,7 @@
                     class="mt-3 h-7 w-full rounded bg-blue-50 text-[11px] font-medium text-blue-600 hover:bg-blue-100"
                     @click="jumpToRole(cd.role.id)"
                   >
-                    打开配置 →
+                    打开配置 >
                   </button>
                 </div>
               </div>

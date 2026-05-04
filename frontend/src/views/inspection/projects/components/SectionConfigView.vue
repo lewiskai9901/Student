@@ -839,7 +839,7 @@ defineExpose({ reload: loadAll })
             </span>
           </div>
           <div v-else-if="!loading" class="sc-card-ops-data sc-card-ops-data--empty">
-            <span class="sc-data-empty">暂未生成任务 — 点击右上 ▶ 触发, 或等待定时调度</span>
+            <span class="sc-data-empty">暂未生成任务 — 点击右上 > 触发, 或等待定时调度</span>
           </div>
         </div>
       </div>
@@ -1337,10 +1337,10 @@ defineExpose({ reload: loadAll })
             {{ normConfig.typeFilter
               ? `仅统计类型为「${normConfig.typeFilter}」的${normConfig.countType === 'USER' ? '用户' : normConfig.countType === 'PLACE' ? '场所' : '组织'}数量进行归一化`
               : normConfig.countType === 'USER'
-              ? '示例: A班50人得85分→人均1.7, B班20人得85分→人均4.25, 消除人数差异'
+              ? '示例: A班50人得85分>人均1.7, B班20人得85分>人均4.25, 消除人数差异'
               : normConfig.countType === 'PLACE'
-              ? '示例: A区10间得80分→每间8分, B区5间得80分→每间16分, 消除场所数差异'
-              : '示例: A部门3个子组织得90分→每个30, B部门1个→每个90, 消除规模差异' }}
+              ? '示例: A区10间得80分>每间8分, B区5间得80分>每间16分, 消除场所数差异'
+              : '示例: A部门3个子组织得90分>每个30, B部门1个>每个90, 消除规模差异' }}
           </div>
         </div>
         <div v-if="evalForm.normalization === 'FIXED_VALUE'" class="norm-config-box">

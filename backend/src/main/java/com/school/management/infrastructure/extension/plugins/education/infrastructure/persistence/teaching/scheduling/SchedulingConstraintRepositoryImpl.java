@@ -78,6 +78,7 @@ public class SchedulingConstraintRepositoryImpl implements SchedulingConstraintR
         po.setConstraintLevel(c.getConstraintLevel() != null ? c.getConstraintLevel().getCode() : null);
         po.setTargetId(c.getTargetId());
         po.setTargetName(c.getTargetName());
+        po.setOrgUnitId(c.getOrgUnitId());
         po.setConstraintType(c.getConstraintType() != null ? c.getConstraintType().name() : null);
         po.setIsHard(c.getIsHard());
         po.setPriority(c.getPriority());
@@ -92,7 +93,7 @@ public class SchedulingConstraintRepositoryImpl implements SchedulingConstraintR
         return SchedulingConstraint.reconstruct(
                 po.getId(), po.getSemesterId(), po.getConstraintName(),
                 po.getConstraintLevel() != null ? ConstraintLevel.fromCode(po.getConstraintLevel()) : null,
-                po.getTargetId(), po.getTargetName(),
+                po.getTargetId(), po.getTargetName(), po.getOrgUnitId(),
                 po.getConstraintType() != null ? ConstraintType.valueOf(po.getConstraintType()) : null,
                 po.getIsHard(), po.getPriority(),
                 po.getParams(), po.getEffectiveWeeks(),

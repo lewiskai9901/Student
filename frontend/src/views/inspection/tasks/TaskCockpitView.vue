@@ -6,7 +6,7 @@
  *
  * ① **Sweep Mode (扫射模式)** — 默认
  *    一次锁定一个字段, 所有目标垂直排列, 1/2 数字键给当前目标打分自动跳下一个,
- *    类似批量阅卷, 6 个目标 × 5 个字段 = 30 次点击 → 1 秒一格的连续节奏.
+ *    类似批量阅卷, 6 个目标 × 5 个字段 = 30 次点击 > 1 秒一格的连续节奏.
  *
  * ② **Matrix Mode (矩阵视图)** — 全景概览
  *    目标×字段二维表格, 一眼看到所有评分进度, 点格直接编辑.
@@ -16,11 +16,11 @@
  *    J/K 切目标 (字段内)
  *    1   通过 / 2 不通过 / 3 跳过 (PASS_FAIL)
  *    数字 直接打分 (DEDUCTION 模式)
- *    Tab 切换模式 (Sweep ↔ Matrix)
+ *    Tab 切换模式 (Sweep <> Matrix)
  *    F   切聚焦/全屏
  *    Cmd+S 提交 / 普通 S 也可
- *    ⏎    确认+前进
- *    ⎋    取消
+ *    Enter    确认+前进
+ *    Esc    取消
  *
  * ④ **心电图进度条** — 顶部一格代表一个目标, 颜色直观表达 通过/不通过/未评/进行中.
  *
@@ -184,7 +184,7 @@ async function loadAll() {
     }
     allDetails.value = allDets
   } catch (e: any) {
-    // 友好化错误提示: 网络错/会话过期 → 直接说人话, 不抛底层异常文案
+    // 友好化错误提示: 网络错/会话过期 > 直接说人话, 不抛底层异常文案
     const status = e?.response?.status
     if (status === 401 || status === 403) {
       errorMsg.value = '会话已过期或权限不足, 请刷新或重新登录'
@@ -396,8 +396,8 @@ function fmtTargetName(s: InspSubmission) {
 function cellDisplay(d: SubmissionDetail | undefined): { glyph: string; cls: string } {
   if (!d) return { glyph: '·', cls: 'cell--empty' }
   if (d.responseValue == null) return { glyph: '·', cls: 'cell--empty' }
-  if (d.responseValue === 'PASS') return { glyph: '✓', cls: 'cell--pass' }
-  if (d.responseValue === 'FAIL') return { glyph: '✗', cls: 'cell--fail' }
+  if (d.responseValue === 'PASS') return { glyph: '√', cls: 'cell--pass' }
+  if (d.responseValue === 'FAIL') return { glyph: '×', cls: 'cell--fail' }
   if (d.responseValue === 'SKIP') return { glyph: '–', cls: 'cell--skip' }
   if (d.score != null) return { glyph: String(d.score), cls: d.score < 0 ? 'cell--fail' : 'cell--pass' }
   return { glyph: '?', cls: 'cell--empty' }
@@ -512,7 +512,7 @@ watch(currentField, () => { targetIdx.value = 0 })
                       'just-pass': isFlashed(`${currentField.code}-${s.id}`, 'pass'),
                     }"
                     @click.stop="targetIdx = i; passCurrent()">
-              <span class="grade-btn__glyph">✓</span>
+              <span class="grade-btn__glyph">√</span>
               <span class="grade-btn__label">通过</span>
             </button>
             <button class="grade-btn grade-btn--fail"
@@ -521,7 +521,7 @@ watch(currentField, () => { targetIdx.value = 0 })
                       'just-fail': isFlashed(`${currentField.code}-${s.id}`, 'fail'),
                     }"
                     @click.stop="targetIdx = i; failCurrent()">
-              <span class="grade-btn__glyph">✗</span>
+              <span class="grade-btn__glyph">×</span>
               <span class="grade-btn__label">不通过</span>
             </button>
           </template>
@@ -555,7 +555,7 @@ watch(currentField, () => { targetIdx.value = 0 })
             @click.stop="targetIdx = i; flagCurrent()"
             title="标记为问题项 (空格)"
           >
-            <span class="flag-glyph">▲</span>
+            <span class="flag-glyph">^</span>
           </button>
         </li>
       </ol>
@@ -630,7 +630,7 @@ watch(currentField, () => { targetIdx.value = 0 })
                     'just-pass': detailForCurrentCell && isFlashed(`${currentField.code}-${detailForCurrentCell.submissionId}`, 'pass'),
                   }"
                   @click="passCurrent">
-            <span class="big-grade__glyph">✓</span>
+            <span class="big-grade__glyph">√</span>
             <span class="big-grade__name">通过</span>
             <span class="big-grade__kbd"><kbd class="insp-kbd insp-kbd--inverted">1</kbd></span>
           </button>
@@ -640,7 +640,7 @@ watch(currentField, () => { targetIdx.value = 0 })
                     'just-fail': detailForCurrentCell && isFlashed(`${currentField.code}-${detailForCurrentCell.submissionId}`, 'fail'),
                   }"
                   @click="failCurrent">
-            <span class="big-grade__glyph">✗</span>
+            <span class="big-grade__glyph">×</span>
             <span class="big-grade__name">不通过</span>
             <span class="big-grade__kbd"><kbd class="insp-kbd insp-kbd--inverted">2</kbd></span>
           </button>
@@ -672,9 +672,9 @@ watch(currentField, () => { targetIdx.value = 0 })
         <span class="cmd-pair"><kbd class="insp-kbd">H</kbd><kbd class="insp-kbd">L</kbd> 字段</span>
         <span class="cmd-pair"><kbd class="insp-kbd">J</kbd><kbd class="insp-kbd">K</kbd> 目标</span>
         <span class="cmd-divider" />
-        <span class="cmd-pair"><kbd class="insp-kbd">⎵</kbd> 标记</span>
+        <span class="cmd-pair"><kbd class="insp-kbd">Space</kbd> 标记</span>
         <span class="cmd-pair"><kbd class="insp-kbd">N</kbd> 备注</span>
-        <span class="cmd-pair"><kbd class="insp-kbd">⇥</kbd> 切模式</span>
+        <span class="cmd-pair"><kbd class="insp-kbd">Tab</kbd> 切模式</span>
         <span class="cmd-pair"><kbd class="insp-kbd">F</kbd> 聚焦</span>
       </div>
       <div class="cmd-bar__right">
@@ -1157,7 +1157,7 @@ watch(currentField, () => { targetIdx.value = 0 })
   position: relative;
 }
 .m-cell.is-flagged::after {
-  content: '▲';
+  content: '^';
   position: absolute;
   top: 1px; right: 3px;
   font-size: 8px;

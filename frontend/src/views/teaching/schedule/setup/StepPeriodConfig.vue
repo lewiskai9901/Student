@@ -1,7 +1,7 @@
 <template>
   <div>
     <h3 class="setup-step-title">确认作息表</h3>
-    <p class="setup-step-desc">排课将使用校历中配置的作息表。如需修改，请前往校历管理 → 作息表。</p>
+    <p class="setup-step-desc">排课将使用校历中配置的作息表。如需修改，请前往校历管理 > 作息表。</p>
 
     <div v-if="loading" style="text-align: center; padding: 30px; color: #9ca3af;">加载中...</div>
 

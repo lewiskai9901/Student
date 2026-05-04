@@ -1,7 +1,7 @@
 /**
  * 统一场所管理类型定义
  *
- * ⚠️ DEPRECATED — 本文件里的 RoomType / PlaceType / BuildingType 等枚举
+ * !️ DEPRECATED — 本文件里的 RoomType / PlaceType / BuildingType 等枚举
  * 与 ROOM_TYPE_CONFIG / ROOM_TYPE_ALLOCATION_RULES 硬表都属于**前端硬编码行业概念**,
  * 违反"通用核心 + 行业插件"原则.
  *
@@ -524,13 +524,13 @@ export const ROOM_TYPE_ALLOCATION_RULES: Record<RoomType, RoomTypeAllocationRule
     needsOrgUnit: true,
     needsClass: true,
     supportsOccupancy: true,
-    allocationDesc: '部门 → 班级 → 学生入住'
+    allocationDesc: '部门 > 班级 > 学生入住'
   },
   CLASSROOM: {
     needsOrgUnit: true,
     needsClass: true,
     supportsOccupancy: false,
-    allocationDesc: '部门 → 班级（固定教室）'
+    allocationDesc: '部门 > 班级（固定教室）'
   },
   LAB: {
     needsOrgUnit: true,
@@ -560,7 +560,7 @@ export const ROOM_TYPE_ALLOCATION_RULES: Record<RoomType, RoomTypeAllocationRule
     needsOrgUnit: true,
     needsClass: false,
     supportsOccupancy: true,
-    allocationDesc: '部门 → 人员入驻'
+    allocationDesc: '部门 > 人员入驻'
   },
   STORAGE: {
     needsOrgUnit: true,

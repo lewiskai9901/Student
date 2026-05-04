@@ -4,13 +4,13 @@ import { test, expect } from '@playwright/test'
  * Phase 4A Gate — 动态路由注册
  *
  * 验证路径 (覆盖 commit d8ecf1c3 + e37234b1 两个 fix):
- *   1. EDU enabled  → /student/list 正常渲染 (包含 "学生列表" 标题)
- *   2. EDU enabled  → 侧栏含教育菜单 (学生/学术/教务/宿舍)
- *   3. EDU disabled → /student/list 落到 NotFound ("页面不存在")
- *   4. EDU disabled → 侧栏失去所有教育菜单
+ *   1. EDU enabled  > /student/list 正常渲染 (包含 "学生列表" 标题)
+ *   2. EDU enabled  > 侧栏含教育菜单 (学生/学术/教务/宿舍)
+ *   3. EDU disabled > /student/list 落到 NotFound ("页面不存在")
+ *   4. EDU disabled > 侧栏失去所有教育菜单
  *
  * 本 spec 不使用 auth.fixture 的快捷注入 (key 不匹配 tokenStorage),
- * 而是走完整 login form 触发 auth store loginAction → bootstrap.
+ * 而是走完整 login form 触发 auth store loginAction > bootstrap.
  */
 
 const API_BASE = 'http://localhost:8080/api'
@@ -34,7 +34,7 @@ async function toggleEdu(token: string, enable: boolean): Promise<void> {
   if (!res.ok) throw new Error(`toggleEdu ${enable}: HTTP ${res.status}`)
 }
 
-/** 走完整登录表单 → 触发 auth store loginAction → bootstrap */
+/** 走完整登录表单 > 触发 auth store loginAction > bootstrap */
 async function loginViaForm(page: import('@playwright/test').Page) {
   await page.goto('/login')
   await page.fill('input[type="text"]', TEST_USER.username)

@@ -10,6 +10,7 @@ public class SchedulingConstraint extends AggregateRoot<Long> {
     private ConstraintLevel constraintLevel;
     private Long targetId;
     private String targetName;
+    private Long orgUnitId;
     private ConstraintType constraintType;
     private Boolean isHard;
     private Integer priority;
@@ -21,7 +22,7 @@ public class SchedulingConstraint extends AggregateRoot<Long> {
     protected SchedulingConstraint() {}
 
     public static SchedulingConstraint create(Long semesterId, String constraintName,
-            ConstraintLevel level, Long targetId, String targetName,
+            ConstraintLevel level, Long targetId, String targetName, Long orgUnitId,
             ConstraintType type, Boolean isHard, Integer priority,
             String params, String effectiveWeeks, Long createdBy) {
         SchedulingConstraint c = new SchedulingConstraint();
@@ -30,6 +31,7 @@ public class SchedulingConstraint extends AggregateRoot<Long> {
         c.constraintLevel = level;
         c.targetId = targetId;
         c.targetName = targetName;
+        c.orgUnitId = orgUnitId;
         c.constraintType = type;
         c.isHard = isHard != null ? isHard : true;
         c.priority = priority != null ? priority : 50;
@@ -41,7 +43,7 @@ public class SchedulingConstraint extends AggregateRoot<Long> {
     }
 
     public static SchedulingConstraint reconstruct(Long id, Long semesterId, String constraintName,
-            ConstraintLevel level, Long targetId, String targetName,
+            ConstraintLevel level, Long targetId, String targetName, Long orgUnitId,
             ConstraintType type, Boolean isHard, Integer priority,
             String params, String effectiveWeeks, Boolean enabled, Long createdBy) {
         SchedulingConstraint c = new SchedulingConstraint();
@@ -51,6 +53,7 @@ public class SchedulingConstraint extends AggregateRoot<Long> {
         c.constraintLevel = level;
         c.targetId = targetId;
         c.targetName = targetName;
+        c.orgUnitId = orgUnitId;
         c.constraintType = type;
         c.isHard = isHard;
         c.priority = priority;

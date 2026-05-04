@@ -26,7 +26,7 @@ public class ConflictController {
     @PostMapping("/detect")
     @CasbinAccess(resource = "teaching:schedule", action = "view")
     public Result<List<ScheduleConflictRecord>> detect(@RequestParam Long semesterId) {
-        return Result.success(service.detectConflicts(semesterId));
+        return Result.success(service.detectConflicts(semesterId, SecurityUtils.getCurrentUserId()));
     }
 
     @GetMapping

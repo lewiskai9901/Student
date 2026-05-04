@@ -2,6 +2,7 @@ package com.school.management.infrastructure.extension.plugins.education.interfa
 
 import com.school.management.infrastructure.extension.plugins.education.application.teaching.OfferingApplicationService;
 import com.school.management.common.result.Result;
+import com.school.management.common.util.SecurityUtils;
 import com.school.management.infrastructure.extension.plugins.education.domain.teaching.model.offering.ClassCourseAssignment;
 import com.school.management.infrastructure.casbin.CasbinAccess;
 import lombok.RequiredArgsConstructor;
@@ -27,7 +28,7 @@ public class ClassAssignmentController {
     @PostMapping
     @CasbinAccess(resource = "teaching:offering", action = "edit")
     public Result<ClassCourseAssignment> create(@RequestBody Map<String, Object> body) {
-        return Result.success(service.createAssignment(body));
+        return Result.success(service.createAssignment(body, SecurityUtils.getCurrentUserId()));
     }
 
     @DeleteMapping("/{id}")

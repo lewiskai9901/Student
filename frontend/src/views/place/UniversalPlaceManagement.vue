@@ -1121,7 +1121,7 @@ const stats = computed(() => statistics.value || {
 })
 
 /**
- * 扩展字段分组 (entity_type_configs.metadataSchema → 按 field.group 分组)
+ * 扩展字段分组 (entity_type_configs.metadataSchema > 按 field.group 分组)
  * 在"基本信息"tab 底部以只读 DynamicForm 形式渲染
  */
 const extensionSchema = computed<{ fields: any[] } | null>(() => {

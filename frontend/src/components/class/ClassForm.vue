@@ -285,7 +285,7 @@ const computedLevelDisplay = computed(() => {
   if (!selectedDirection.value) return '-'
   const direction = selectedDirection.value
   if (direction.isSegmented === 1 && direction.phase1Level && direction.phase2Level) {
-    return `${direction.phase1Level}→${direction.phase2Level}`
+    return `${direction.phase1Level}>${direction.phase2Level}`
   }
   return direction.level || '-'
 })

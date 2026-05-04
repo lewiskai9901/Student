@@ -76,7 +76,7 @@
                     </div>
                     <span v-if="hasOverride(t)"
                           class="flex-shrink-0 rounded-full bg-indigo-100 px-1 py-0.5 text-[9px] font-semibold text-indigo-700"
-                          title="管理员覆写: 插件重启不会覆盖">✎</span>
+                          title="管理员覆写: 插件重启不会覆盖">编辑</span>
                     <span v-if="!t.isPluginRegistered"
                           class="flex-shrink-0 rounded-full bg-amber-100 px-1 py-0.5 text-[9px] text-amber-700"
                           title="管理员自创">自</span>

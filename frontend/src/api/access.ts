@@ -101,7 +101,7 @@ export interface RoleResponse {
    * 插件级启用状态 (两状态模型):
    *   - isEnabled:     管理员手动开关
    *   - pluginEnabled: 所属插件级开关 (PluginLifecycleService 级联维护)
-   * false = 所属插件被禁 → 前端应灰显 + "插件禁用"徽章 + tooltip
+   * false = 所属插件被禁 > 前端应灰显 + "插件禁用"徽章 + tooltip
    */
   pluginEnabled?: boolean
   industry?: string
@@ -404,8 +404,8 @@ export function getDataModules(includeDisabled = false): Promise<DataModuleDTO[]
 /**
  * 按角色智能过滤的数据模块 (3 层规则: SUPER_ADMIN 豁免 + industry 对齐 + 权限反查)
  *
- * - SUPER_ADMIN / 无 roleId → relevant=全部, advanced=[], meta.filtered=false
- * - 其他角色 → relevant=本行业 + 权限匹配; advanced=跨行业或无对应权限 (折叠展示)
+ * - SUPER_ADMIN / 无 roleId > relevant=全部, advanced=[], meta.filtered=false
+ * - 其他角色 > relevant=本行业 + 权限匹配; advanced=跨行业或无对应权限 (折叠展示)
  */
 export interface ForRoleModulesResponse {
   relevant: DataModuleDTO[]

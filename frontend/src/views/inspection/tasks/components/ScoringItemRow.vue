@@ -531,7 +531,7 @@ const captureNeedsExpandedInput = computed(() => {
         class="px-3 pb-2"
       >
         <div class="flex items-center gap-2 text-xs text-gray-400 py-1">
-          <span>{{ detail.itemType === 'PHOTO' ? '📷' : '📹' }} {{ detail.itemType === 'PHOTO' ? '拍照' : '视频' }}功能将在移动端支持</span>
+          <span>{{ detail.itemType === 'PHOTO' ? '' : '' }} {{ detail.itemType === 'PHOTO' ? '拍照' : '视频' }}功能将在移动端支持</span>
         </div>
       </div>
 

@@ -182,7 +182,7 @@ onMounted(load)
           <label>静默时段 <span class="hint">(此时段内全部通道关闭, 跨天填写如 22:00 - 08:00)</span></label>
           <div class="quiet-row">
             <input v-model="globalPref.quietHoursStart" type="time" class="insp-input" />
-            <span class="quiet-sep">→</span>
+            <span class="quiet-sep">></span>
             <input v-model="globalPref.quietHoursEnd" type="time" class="insp-input" />
             <button v-if="globalPref.quietHoursStart || globalPref.quietHoursEnd"
                     class="insp-btn insp-btn--sm insp-btn--ghost"
@@ -233,7 +233,7 @@ onMounted(load)
               </td>
               <td>
                 <input v-model="p.quietHoursStart" type="time" class="insp-input quiet-mini" />
-                <span class="quiet-sep">→</span>
+                <span class="quiet-sep">></span>
                 <input v-model="p.quietHoursEnd" type="time" class="insp-input quiet-mini" />
               </td>
               <td>
@@ -269,7 +269,7 @@ onMounted(load)
               </td>
               <td>
                 <input v-model="newOverride.quietHoursStart" type="time" class="insp-input quiet-mini" />
-                <span class="quiet-sep">→</span>
+                <span class="quiet-sep">></span>
                 <input v-model="newOverride.quietHoursEnd" type="time" class="insp-input quiet-mini" />
               </td>
               <td>—</td>

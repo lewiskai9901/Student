@@ -117,7 +117,7 @@ test.describe('V108 任务多类型', () => {
       })
       return { status: r.status, body: await r.json() }
     })
-    // 后端抛 IllegalStateException → 通常 500 或 400
+    // 后端抛 IllegalStateException > 通常 500 或 400
     expect([400, 422, 500]).toContain(result.status)
     expect(JSON.stringify(result.body)).toContain('不允许临时抽查')
   })
@@ -136,7 +136,7 @@ test.describe('V108 任务多类型', () => {
     expect(JSON.stringify(result.body)).toContain('原因')
   })
 
-  test('我的任务页有 ⚡ 抽查 tab + ⚡ 发起抽查按钮', async ({ page }) => {
+  test('我的任务页有  抽查 tab +  发起抽查按钮', async ({ page }) => {
     await page.goto('/inspection/tasks')
     await page.waitForLoadState('networkidle', { timeout: 10000 })
     // 发起按钮

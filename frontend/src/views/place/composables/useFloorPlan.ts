@@ -150,10 +150,10 @@ function generateEventTemplate(): FloorPlanElement[] {
 }
 
 export const TEMPLATES: FloorPlanTemplate[] = [
-  { id: 'classroom', name: '教室/培训室', icon: '🏫', seats: 64, description: '8×8 座位 + 展示区', generate: generateClassroomTemplate },
-  { id: 'conference', name: '会议室', icon: '🤝', seats: 13, description: 'U型桌 + 13座', generate: generateConferenceTemplate },
-  { id: 'open-office', name: '开放办公', icon: '🏢', seats: 24, description: '4排工位 + 会议区', generate: generateOpenOfficeTemplate },
-  { id: 'event', name: '活动场地', icon: '🎭', seats: 94, description: '舞台 + 阶梯座位 + VIP区', generate: generateEventTemplate },
+  { id: 'classroom', name: '教室/培训室', icon: '', seats: 64, description: '8×8 座位 + 展示区', generate: generateClassroomTemplate },
+  { id: 'conference', name: '会议室', icon: '', seats: 13, description: 'U型桌 + 13座', generate: generateConferenceTemplate },
+  { id: 'open-office', name: '开放办公', icon: '', seats: 24, description: '4排工位 + 会议区', generate: generateOpenOfficeTemplate },
+  { id: 'event', name: '活动场地', icon: '', seats: 94, description: '舞台 + 阶梯座位 + VIP区', generate: generateEventTemplate },
 ]
 
 // ==================== Main Composable ====================

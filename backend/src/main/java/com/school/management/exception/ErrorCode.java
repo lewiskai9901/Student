@@ -54,6 +54,19 @@ public enum ErrorCode {
     PERMISSION_DENIED(3401, "权限不足"),
     ROLE_NOT_FOUND(3402, "角色不存在"),
 
+    // 教务相关 (3500-3599)
+    EXAM_BATCH_NOT_FOUND(3501, "考试批次不存在"),
+    EXAM_BATCH_ALREADY_PUBLISHED(3502, "考试批次已发布"),
+    EXAM_BATCH_NOT_READY(3503, "考试批次未就绪, 不能发布"),
+    GRADE_BATCH_NOT_FOUND(3511, "成绩批次不存在"),
+    GRADE_BATCH_ALREADY_PUBLISHED(3512, "成绩批次已发布"),
+    GRADE_BATCH_NOT_READY(3513, "成绩批次未就绪, 不能发布"),
+    TEACHING_TASK_NOT_FOUND(3521, "教学任务不存在"),
+    SCHEDULE_CONFLICT(3522, "排课冲突"),
+    OFFERING_NOT_FOUND(3531, "开课计划不存在"),
+    OFFERING_NOT_DRAFT(3532, "只能确认草稿状态的开课计划"),
+    SCHEDULING_CONSTRAINT_NOT_FOUND(3541, "排课约束不存在"),
+
     // 系统错误 (9000-9999)
     SYSTEM_ERROR(9001, "系统错误"),
     DATABASE_ERROR(9002, "数据库错误"),

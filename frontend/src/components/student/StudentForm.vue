@@ -613,7 +613,7 @@ const handleMajorDirectionChange = () => {
       // 处理分段培养情况
       if (selected.isSegmented === 1) {
         // 分段培养：显示两个阶段的层次和学制
-        formData.educationLevel = `${selected.phase1Level || ''} → ${selected.phase2Level || ''}`
+        formData.educationLevel = `${selected.phase1Level || ''} > ${selected.phase2Level || ''}`
         formData.studyLength = `${selected.phase1Years || 0}+${selected.phase2Years || 0}年`
       } else {
         // 非分段培养：直接显示

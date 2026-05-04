@@ -201,7 +201,7 @@
                   </select>
                 </div>
                 <div v-if="ruleForm.eventCategory" class="wizard-preview">
-                  匹配：{{ selectedCategoryName }}{{ ruleForm.eventType ? ' → ' + selectedTypeName : '（所有类型）' }}
+                  匹配：{{ selectedCategoryName }}{{ ruleForm.eventType ? ' > ' + selectedTypeName : '（所有类型）' }}
                 </div>
               </section>
 
@@ -246,7 +246,7 @@
                   <select v-model="relationConfig.relation" class="field-input" @change="syncRelationConfig">
                     <option value="">请选择关系</option>
                     <option v-for="r in relationTypeOptions" :key="`${r.relationCode}:${r.fromType}:${r.toType}`"
-                      :value="r.relationCode">{{ r.relationCode }} — {{ r.relationName }}（{{ r.fromType }} → {{ r.toType }}）</option>
+                      :value="r.relationCode">{{ r.relationCode }} — {{ r.relationName }}（{{ r.fromType }} > {{ r.toType }}）</option>
                   </select>
                   <label class="field-label" style="margin-top:8px">资源类型</label>
                   <select v-model="relationConfig.resource_type" class="field-input" @change="syncRelationConfig">

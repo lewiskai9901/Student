@@ -8,8 +8,13 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.baomidou.mybatisplus.core.toolkit.IdWorker;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 /**
  * 教务工作流编排服务
@@ -100,6 +105,15 @@ public class TeachingWorkflowService {
             "WHERE m.semester_id = ? AND m.status = 1 AND m.plan_id IS NOT NULL",
             semesterId);
 
+        // 批量预取该学期所有已存在的 (course_id, applicable_grade), 避免内层 N+1
+        Set<String> existingKeys = new HashSet<>();
+        for (Map<String, Object> row : jdbc.queryForList(
+                "SELECT course_id, applicable_grade FROM semester_course_offerings " +
+                "WHERE semester_id = ? AND deleted = 0",
+                semesterId)) {
+            existingKeys.add(row.get("course_id") + "_" + row.get("applicable_grade"));
+        }
+
         int count = 0;
         for (Map<String, Object> m : mappings) {
             Long planId = toLong(m.get("plan_id"));
@@ -115,12 +129,8 @@ public class TeachingWorkflowService {
 
             for (Map<String, Object> c : courses) {
                 Long courseId = toLong(c.get("course_id"));
-
-                Long exists = jdbc.queryForObject(
-                    "SELECT COUNT(1) FROM semester_course_offerings " +
-                    "WHERE semester_id = ? AND course_id = ? AND applicable_grade = ? AND deleted = 0",
-                    Long.class, semesterId, courseId, gradeName);
-                if (exists != null && exists > 0) continue;
+                String key = courseId + "_" + gradeName;
+                if (existingKeys.contains(key)) continue;
 
                 jdbc.update(
                     "INSERT INTO semester_course_offerings (semester_id, plan_id, plan_course_id, course_id, " +
@@ -128,6 +138,7 @@ public class TeachingWorkflowService {
                     "VALUES (?, ?, ?, ?, ?, ?, ?, ?, 0, ?, 0)",
                     semesterId, planId, c.get("plan_course_id"), courseId,
                     gradeName, c.get("weekly_hours"), c.get("course_category"), c.get("course_type"), createdBy);
+                existingKeys.add(key);
                 count++;
             }
         }
@@ -218,31 +229,42 @@ public class TeachingWorkflowService {
         Object batchStartDate = batch.get("start_date");
         int examType = batch.get("exam_type") != null ? ((Number) batch.get("exam_type")).intValue() : 1;
 
-        // 考试形式：从课程的 exam_type 字段读取，默认笔试
+        if (taskIds == null || taskIds.isEmpty()) return 0;
+
+        // 批量查所有 task 信息, 解决 N+1
+        String taskPlaceholders = String.join(",", Collections.nCopies(taskIds.size(), "?"));
+        List<Map<String, Object>> taskRows = jdbc.queryForList(
+            "SELECT t.id, t.course_id, t.org_unit_id, t.student_count, " +
+            "COALESCE(c.assessment_method, 1) AS course_exam_form, " +
+            "COALESCE(c.total_hours, 120) AS course_hours " +
+            "FROM teaching_tasks t " +
+            "LEFT JOIN courses c ON c.id = t.course_id " +
+            "WHERE t.id IN (" + taskPlaceholders + ") AND t.deleted = 0",
+            taskIds.toArray());
+        Map<Long, Map<String, Object>> taskById = new HashMap<>();
+        for (Map<String, Object> row : taskRows) {
+            taskById.put(((Number) row.get("id")).longValue(), row);
+        }
+
+        // 批量查已存在的 (batch, task) 组合
+        Set<Long> existingTaskIds = new HashSet<>();
+        for (Map<String, Object> row : jdbc.queryForList(
+                "SELECT task_id FROM exam_arrangements WHERE batch_id = ?", batchId)) {
+            existingTaskIds.add(((Number) row.get("task_id")).longValue());
+        }
+
         int count = 0;
         for (Long taskId : taskIds) {
-            Map<String, Object> task = jdbc.queryForMap(
-                "SELECT t.course_id, t.org_unit_id, t.student_count, " +
-                "COALESCE(c.assessment_method, 1) AS course_exam_form, " +
-                "COALESCE(c.total_hours, 120) AS course_hours " +
-                "FROM teaching_tasks t " +
-                "LEFT JOIN courses c ON c.id = t.course_id " +
-                "WHERE t.id = ? AND t.deleted = 0", taskId
-            );
+            if (existingTaskIds.contains(taskId)) continue;
+            Map<String, Object> task = taskById.get(taskId);
+            if (task == null) continue;
 
             Long courseId = toLong(task.get("course_id"));
             Long orgUnitId = toLong(task.get("org_unit_id"));
             int studentCount = task.get("student_count") != null ? ((Number) task.get("student_count")).intValue() : 0;
             int examForm = ((Number) task.get("course_exam_form")).intValue();
-            // 考试时长：根据课程总学时推算，最少60分钟，最多180分钟
             int courseHours = ((Number) task.get("course_hours")).intValue();
             int duration = Math.max(60, Math.min(180, courseHours >= 64 ? 120 : 90));
-
-            // 检查重复
-            Long exists = jdbc.queryForObject(
-                "SELECT COUNT(1) FROM exam_arrangements WHERE batch_id = ? AND task_id = ?",
-                Long.class, batchId, taskId);
-            if (exists != null && exists > 0) continue;
 
             jdbc.update(
                 "INSERT INTO exam_arrangements (batch_id, course_id, task_id, org_unit_id, exam_date, " +
@@ -252,6 +274,7 @@ public class TeachingWorkflowService {
                 batchStartDate != null ? batchStartDate : "CURDATE()",
                 duration, duration, examForm, studentCount, createdBy
             );
+            existingTaskIds.add(taskId);
             count++;
         }
 
@@ -291,32 +314,58 @@ public class TeachingWorkflowService {
             "SELECT ea.task_id, ea.course_id, ea.org_unit_id " +
             "FROM exam_arrangements ea WHERE ea.batch_id = ?", examBatchId);
 
-        int gradeCount = 0;
+        // 批量预取该 grade_batch 已存在的 (student_id, course_id) 组合, 避免内层 N+1 查重
+        Set<String> existingGrades = new HashSet<>();
+        for (Map<String, Object> row : jdbc.queryForList(
+                "SELECT student_id, course_id FROM student_grades WHERE batch_id = ? AND semester_id = ?",
+                gradeBatchId, semesterId)) {
+            existingGrades.add(row.get("student_id") + "_" + row.get("course_id"));
+        }
+
+        // 批量预取所有相关班级的学生
+        Set<Long> orgUnitIds = new HashSet<>();
+        for (Map<String, Object> arr : arrangements) {
+            Long oid = toLong(arr.get("org_unit_id"));
+            if (oid != null) orgUnitIds.add(oid);
+        }
+        Map<Long, List<Long>> studentsByOrg = new HashMap<>();
+        if (!orgUnitIds.isEmpty()) {
+            String placeholders = String.join(",", Collections.nCopies(orgUnitIds.size(), "?"));
+            try {
+                List<Map<String, Object>> rows = jdbc.queryForList(
+                    "SELECT id, org_unit_id FROM user_student " +
+                    "WHERE org_unit_id IN (" + placeholders + ") AND student_status = 1 AND deleted = 0",
+                    orgUnitIds.toArray());
+                for (Map<String, Object> row : rows) {
+                    Long oid = ((Number) row.get("org_unit_id")).longValue();
+                    studentsByOrg.computeIfAbsent(oid, k -> new ArrayList<>())
+                            .add(((Number) row.get("id")).longValue());
+                }
+            } catch (Exception ignored) { /* 表不存在跳过 */ }
+        }
+
+        // 批量 INSERT
+        List<Object[]> batchArgs = new ArrayList<>();
         for (Map<String, Object> arr : arrangements) {
             Long taskId = toLong(arr.get("task_id"));
             Long courseId = toLong(arr.get("course_id"));
             Long orgUnitId = toLong(arr.get("org_unit_id"));
             if (taskId == null || courseId == null) continue;
 
-            // 查找班级学生，为每人生成一条待录入记录
-            List<Map<String, Object>> user_student = jdbc.queryForList(
-                "SELECT id FROM user_student WHERE org_unit_id = ? AND student_status = 1 AND deleted = 0", orgUnitId);
-
-            for (Map<String, Object> s : user_student) {
-                Long studentId = toLong(s.get("id"));
-                // 避免重复
-                Long exists = jdbc.queryForObject(
-                    "SELECT COUNT(1) FROM student_grades " +
-                    "WHERE batch_id = ? AND student_id = ? AND course_id = ? AND semester_id = ?",
-                    Long.class, gradeBatchId, studentId, courseId, semesterId);
-                if (exists != null && exists > 0) continue;
-
-                jdbc.update(
-                    "INSERT INTO student_grades (batch_id, semester_id, task_id, course_id, student_id, org_unit_id, " +
-                    "grade_status, deleted) VALUES (?, ?, ?, ?, ?, ?, 0, 0)",
-                    gradeBatchId, semesterId, taskId, courseId, studentId, orgUnitId);
-                gradeCount++;
+            for (Long studentId : studentsByOrg.getOrDefault(orgUnitId, Collections.emptyList())) {
+                String key = studentId + "_" + courseId;
+                if (existingGrades.contains(key)) continue;
+                batchArgs.add(new Object[]{ gradeBatchId, semesterId, taskId, courseId, studentId, orgUnitId });
+                existingGrades.add(key);
             }
+        }
+        int gradeCount = 0;
+        if (!batchArgs.isEmpty()) {
+            int[] result = jdbc.batchUpdate(
+                "INSERT INTO student_grades (batch_id, semester_id, task_id, course_id, student_id, org_unit_id, " +
+                "grade_status, deleted) VALUES (?, ?, ?, ?, ?, ?, 0, 0)",
+                batchArgs);
+            for (int n : result) gradeCount += Math.max(n, 0);
         }
 
         log.info("从考试批次 {} 创建成绩批次 {}, 生成 {} 条待录入成绩", examBatchId, gradeBatchId, gradeCount);

@@ -21,14 +21,14 @@
 
       <!-- 紧急区 -->
       <div v-if="activeTab === 'todo' && urgent.length" class="urgent-banner">
-        <span class="urgent-icon">⏰</span>
+        <span class="urgent-icon"></span>
         <span class="urgent-text">{{ urgent.length }} 单 24 小时内截止, 优先处理</span>
       </div>
 
       <!-- 列表 -->
       <div v-if="loading" class="loading-area"><el-icon class="is-loading"><Loading /></el-icon> 加载中...</div>
       <div v-else-if="filteredCases.length === 0" class="empty-area">
-        <div class="empty-emoji">{{ activeTab === 'todo' ? '✨' : '📋' }}</div>
+        <div class="empty-emoji">{{ activeTab === 'todo' ? '' : '' }}</div>
         <div>{{ activeTab === 'todo' ? '当前无待办整改, 状态优秀' : '暂无记录' }}</div>
       </div>
       <div v-else class="case-list">
@@ -41,17 +41,17 @@
           <div class="case-target">{{ c.targetName || '—' }}</div>
           <div class="case-issue">{{ c.issueDescription }}</div>
           <div class="case-meta">
-            <span v-if="c.deadline" class="meta-item">📅 {{ c.deadline.slice(0, 10) }}</span>
+            <span v-if="c.deadline" class="meta-item"> {{ c.deadline.slice(0, 10) }}</span>
             <span class="meta-item">#{{ c.caseCode }}</span>
           </div>
 
           <!-- 行动按钮 (按状态分支) -->
           <div class="case-actions">
             <template v-if="c.status === 'OPEN' || c.status === 'ASSIGNED'">
-              <el-button type="primary" size="small" @click="onStart(c)">▶ 开始整改</el-button>
+              <el-button type="primary" size="small" @click="onStart(c)">> 开始整改</el-button>
             </template>
             <template v-else-if="c.status === 'IN_PROGRESS' || c.status === 'REJECTED'">
-              <el-button type="success" size="small" @click="openSubmit(c)">📷 上传整改</el-button>
+              <el-button type="success" size="small" @click="openSubmit(c)"> 上传整改</el-button>
               <el-button size="small" @click="goDetail(c)">详情</el-button>
             </template>
             <template v-else>
@@ -239,9 +239,9 @@ function deadlineLabel(c: CorrectiveCase) {
   const ms = new Date(c.deadline).getTime() - Date.now()
   const days = Math.ceil(ms / 86400000)
   const hours = Math.ceil(ms / 3600000)
-  if (ms < 0) return `⚠ 已超期 ${-days}d`
-  if (hours <= 24) return `⏰ ${hours}h 内`
-  if (days <= 2) return `⏰ ${days} 天内`
+  if (ms < 0) return `! 已超期 ${-days}d`
+  if (hours <= 24) return ` ${hours}h 内`
+  if (days <= 2) return ` ${days} 天内`
   if (days <= 7) return `${days} 天后`
   return new Date(c.deadline).toISOString().slice(5, 10)
 }

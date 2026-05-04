@@ -4,11 +4,11 @@ import type { RouteRecordRaw } from 'vue-router'
  * 教育行业 (EDU) 路由 — Phase 4A 条件加载
  *
  * 这些路由只在 /api/plugin-platform/overview 返回 EDU.enabled=true 时注册 (见 router/bootstrap.ts).
- * 禁用 EDU 时前端自动失去这些入口, 访问对应 URL 走 catchAll → NotFound.
+ * 禁用 EDU 时前端自动失去这些入口, 访问对应 URL 走 catchAll > NotFound.
  *
  * 对应后端 plugins/education/domain/{student,academic,teaching,calendar} + dormitory / myclass.
  * /organization/* 下的 6 个 legacy redirect 仍留在 router/index.ts —
- * 它们禁用 EDU 后会 redirect → NotFound, 这是预期行为 (兼容老链接)。
+ * 它们禁用 EDU 后会 redirect > NotFound, 这是预期行为 (兼容老链接)。
  */
 const eduRoutes: RouteRecordRaw[] = [
   // ==================== 我的班级 /my-class (order: 2) ====================

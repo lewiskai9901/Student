@@ -4,7 +4,8 @@
       <thead>
         <tr>
           <th class="tt-period-col">节次</th>
-          <th v-for="day in displayWeekdays" :key="day.value" class="tt-day-col">
+          <th v-for="day in displayWeekdays" :key="day.value"
+              :class="['tt-day-col', { 'tt-day-today': todayWeekday === day.value }]">
             {{ day.label }}
             <div v-if="weekDates && weekDates[day.value]" class="tt-day-date">{{ weekDates[day.value] }}</div>
           </th>
@@ -53,7 +54,7 @@
                 @dragend="onDragEnd"
               >
                 <div class="tt-entry-course">
-                  <span v-if="(entry as any).isLocked" class="tt-entry-lock" title="已锁定，自动排课不会覆盖">🔒</span>
+                  <span v-if="(entry as any).isLocked" class="tt-entry-lock" title="已锁定，自动排课不会覆盖"></span>
                   {{ entry.scheduleType === 4 ? '自习' : entry.courseName }}
                 </div>
                 <!-- 班级视图：显示 教师 + 教室 -->
@@ -94,7 +95,8 @@ interface Props {
   entries: ScheduleEntry[]
   periods?: PeriodConfig[]
   weekdays?: { value: number; label: string }[]
-  weekDates?: Record<number, string>  // dayOfWeek → date string (e.g. "9/1")
+  weekDates?: Record<number, string>  // dayOfWeek > date string (e.g. "9/1")
+  todayWeekday?: number  // 1-7, 0=不在显示周内
   editable?: boolean
   constraintMatrix?: any[][]
   viewType?: 'class' | 'teacher' | 'classroom'  // 根据视图调整显示内容
@@ -295,6 +297,19 @@ function handleCellClick(day: number, period: number) {
 .tt-period-col { width: 72px; }
 .tt-day-col { min-width: 100px; }
 .tt-day-date { font-size: 10px; font-weight: 400; color: #9ca3af; margin-top: 1px; }
+.tt-day-today {
+  background: #eff6ff !important;
+  color: #1d4ed8 !important;
+  position: relative;
+}
+.tt-day-today::after {
+  content: '';
+  position: absolute;
+  left: 0; right: 0; bottom: 0;
+  height: 2px;
+  background: #2563eb;
+}
+.tt-day-today .tt-day-date { color: #2563eb; font-weight: 600; }
 
 /* Period cell */
 .tt-period-cell {

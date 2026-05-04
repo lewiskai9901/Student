@@ -1,7 +1,7 @@
 import { test, expect, type Page } from '@playwright/test'
 
 /**
- * Inspection 主链路 e2e — 检查员打分 → 提交 → 审核 → 发布
+ * Inspection 主链路 e2e — 检查员打分 > 提交 > 审核 > 发布
  *
  * 覆盖本会话修过的 5+ 个 bug 路径:
  *   - getSubmissions(taskId) 类型不匹配 (cockpit + review)
@@ -131,7 +131,7 @@ test.describe('S+ UI 规范守护 — 检查配置页', () => {
     // J 键 — focused 行变化
     await page.keyboard.press('j')
     await page.waitForTimeout(150)
-    // V 键 — 视图切换 (compact → standard)
+    // V 键 — 视图切换 (compact > standard)
     await page.keyboard.press('v')
     await page.waitForTimeout(150)
     // 视图持久化到 localStorage

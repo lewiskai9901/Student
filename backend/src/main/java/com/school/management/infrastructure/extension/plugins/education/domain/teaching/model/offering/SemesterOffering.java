@@ -10,6 +10,7 @@ public class SemesterOffering extends AggregateRoot<Long> {
     private Long planCourseId;
     private Long courseId;
     private String applicableGrade;
+    private Long orgUnitId;
     private Integer weeklyHours;
     private Integer totalWeeks;
     private Integer startWeek;
@@ -27,11 +28,12 @@ public class SemesterOffering extends AggregateRoot<Long> {
     protected SemesterOffering() {}
 
     public static SemesterOffering create(Long semesterId, Long courseId, String applicableGrade,
-            Integer weeklyHours, Integer startWeek, Integer endWeek, Long createdBy) {
+            Long orgUnitId, Integer weeklyHours, Integer startWeek, Integer endWeek, Long createdBy) {
         SemesterOffering o = new SemesterOffering();
         o.semesterId = semesterId;
         o.courseId = courseId;
         o.applicableGrade = applicableGrade;
+        o.orgUnitId = orgUnitId;
         o.weeklyHours = weeklyHours;
         o.startWeek = startWeek != null ? startWeek : 1;
         o.endWeek = endWeek;
@@ -46,7 +48,7 @@ public class SemesterOffering extends AggregateRoot<Long> {
 
     public static SemesterOffering reconstruct(Long id, Long semesterId, Long planId,
             Long planCourseId, Long courseId,
-            String applicableGrade, Integer weeklyHours, Integer totalWeeks,
+            String applicableGrade, Long orgUnitId, Integer weeklyHours, Integer totalWeeks,
             Integer startWeek, Integer endWeek, Integer weekType, Integer courseCategory, Integer courseType,
             Boolean allowCombined, Integer maxCombinedClasses, Boolean allowWalking,
             Integer status, String remark, Long createdBy) {
@@ -57,6 +59,7 @@ public class SemesterOffering extends AggregateRoot<Long> {
         o.planCourseId = planCourseId;
         o.courseId = courseId;
         o.applicableGrade = applicableGrade;
+        o.orgUnitId = orgUnitId;
         o.weeklyHours = weeklyHours;
         o.totalWeeks = totalWeeks;
         o.startWeek = startWeek;

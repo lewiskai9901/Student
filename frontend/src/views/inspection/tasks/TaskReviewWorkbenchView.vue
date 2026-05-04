@@ -279,7 +279,7 @@ onUnmounted(() => window.removeEventListener('keydown', onKey))
             @click="lateOnly = !lateOnly"
             :title="lateOnly ? '点击查看全部' : `仅看延迟交付 (${lateCount} 条)`"
           >
-            ⏱ 延迟 {{ lateCount }}
+             延迟 {{ lateCount }}
           </button>
         </div>
         <ol class="queue-list">

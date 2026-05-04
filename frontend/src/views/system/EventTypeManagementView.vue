@@ -405,7 +405,7 @@ function typeMaskClick(e: MouseEvent) {
 }
 
 function autoGenerateTypeCode(categoryCode: string): string {
-  // CategoryCode + 6-char base36 timestamp suffix → 唯一且人眼可读
+  // CategoryCode + 6-char base36 timestamp suffix > 唯一且人眼可读
   const suffix = Date.now().toString(36).toUpperCase().slice(-6)
   return `${categoryCode}_${suffix}`
 }

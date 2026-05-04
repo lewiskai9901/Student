@@ -1369,7 +1369,7 @@ onMounted(() => loadData())
 
     <!-- ===== 上次同类问题提示 ===== -->
     <div v-if="prevIssuesHint.length" class="prev-issues-banner">
-      <span class="prev-icon">⚠</span>
+      <span class="prev-icon">!</span>
       <span class="prev-text">
         上次检查 ({{ prevIssuesDate }}) 在该目标存在 {{ prevIssuesHint.length }} 个扣分项,
         优先关注:

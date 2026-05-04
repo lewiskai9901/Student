@@ -26,31 +26,31 @@
       </div>
       <div class="kpi-rule" />
       <div class="kpi-cell clickable" :class="{active: kpiFilter==='overdue'}" @click="kpiFilter='overdue'">
-        <div class="kpi-label">🕐 临期未审</div>
+        <div class="kpi-label"> 临期未审</div>
         <div class="kpi-num text-danger">{{ kpiCount.overdue }}</div>
         <div class="kpi-sub">提交超 24h</div>
       </div>
       <div class="kpi-rule" />
       <div class="kpi-cell clickable" :class="{active: kpiFilter==='high-spike'}" @click="kpiFilter='high-spike'">
-        <div class="kpi-label">⚠ 高分突变</div>
+        <div class="kpi-label">! 高分突变</div>
         <div class="kpi-num text-warning">{{ kpiCount.highSpike }}</div>
         <div class="kpi-sub">>均值 +15</div>
       </div>
       <div class="kpi-rule" />
       <div class="kpi-cell clickable" :class="{active: kpiFilter==='low-spike'}" @click="kpiFilter='low-spike'">
-        <div class="kpi-label">⚠ 低分突变</div>
+        <div class="kpi-label">! 低分突变</div>
         <div class="kpi-num text-warning">{{ kpiCount.lowSpike }}</div>
         <div class="kpi-sub">&lt;均值 -15</div>
       </div>
       <div class="kpi-rule" />
       <div class="kpi-cell clickable" :class="{active: kpiFilter==='inconsistent'}" @click="kpiFilter='inconsistent'">
-        <div class="kpi-label">📍 检查员差异</div>
+        <div class="kpi-label"> 检查员差异</div>
         <div class="kpi-num text-warning">{{ kpiCount.inconsistent }}</div>
         <div class="kpi-sub">同目标差 >20</div>
       </div>
       <div class="kpi-rule" />
       <div class="kpi-cell clickable" :class="{active: kpiFilter==='late'}" @click="kpiFilter='late'">
-        <div class="kpi-label">⏰ 延迟交付</div>
+        <div class="kpi-label"> 延迟交付</div>
         <div class="kpi-num text-warning">{{ kpiCount.late }}</div>
         <div class="kpi-sub">超 deadline 提交</div>
       </div>
@@ -68,7 +68,7 @@
         <el-icon class="is-loading"><Loading /></el-icon> 计算风险分...
       </div>
       <div v-else-if="!filteredAndSorted.length" class="text-center py-12 text-gray-400">
-        <div class="text-4xl mb-2">✨</div>
+        <div class="text-4xl mb-2"></div>
         当前无符合条件的待审任务
       </div>
       <div v-else class="task-list">
@@ -84,15 +84,15 @@
             <div class="task-head">
               <span class="task-code">#{{ t.taskCode }}</span>
               <el-tag size="small" :type="statusType(t.status)">{{ statusLabel(t.status) }}</el-tag>
-              <span v-if="t.lateSubmission" class="badge late">⏰ 延迟</span>
-              <span v-if="t.flags.overdue" class="badge overdue">🕐 临期</span>
-              <span v-if="t.flags.highSpike" class="badge spike-up">⚠ 高分突变</span>
-              <span v-if="t.flags.lowSpike" class="badge spike-down">⚠ 低分突变</span>
-              <span v-if="t.flags.inconsistent" class="badge incon">📍 差异</span>
+              <span v-if="t.lateSubmission" class="badge late"> 延迟</span>
+              <span v-if="t.flags.overdue" class="badge overdue"> 临期</span>
+              <span v-if="t.flags.highSpike" class="badge spike-up">! 高分突变</span>
+              <span v-if="t.flags.lowSpike" class="badge spike-down">! 低分突变</span>
+              <span v-if="t.flags.inconsistent" class="badge incon"> 差异</span>
             </div>
             <div class="task-meta">
-              <span>📅 {{ t.taskDate }}</span>
-              <span v-if="t.inspectorName">👤 {{ t.inspectorName }}</span>
+              <span> {{ t.taskDate }}</span>
+              <span v-if="t.inspectorName"> {{ t.inspectorName }}</span>
               <span v-if="t.submittedAt">提交于 {{ formatRelative(t.submittedAt) }}</span>
             </div>
           </div>

@@ -318,7 +318,7 @@ async function handleStart(t: InspTask) {
 
 // Primary CTA per status — 审核员视角优先
 function primaryAction(t: InspTask) {
-  // 我作为审核员且任务待审/审核中 → "去审核" (跳到审核台)
+  // 我作为审核员且任务待审/审核中 > "去审核" (跳到审核台)
   if (isReviewable(t)) {
     return { label: '去审核', accent: true, fn: () => goReview(t) }
   }
@@ -445,20 +445,20 @@ onUnmounted(() => window.removeEventListener('keydown', onKey))
       </button>
       <button v-if="counts.adhoc > 0 || filter === 'adhoc'" class="filter-tab filter-tab--adhoc"
               :class="{ 'is-active': filter === 'adhoc' }" @click="filter = 'adhoc'">
-        <span class="filter-tab__label">⚡ 抽查</span>
+        <span class="filter-tab__label"> 抽查</span>
         <span class="filter-tab__count">{{ counts.adhoc }}</span>
       </button>
       <div class="filter-spacer" />
       <div class="kbd-tray">
         <span class="kbd-pair"><kbd class="insp-kbd">J</kbd><kbd class="insp-kbd">K</kbd> 切换</span>
-        <span class="kbd-pair"><kbd class="insp-kbd insp-kbd--inverted">⏎</kbd> 领取/继续</span>
+        <span class="kbd-pair"><kbd class="insp-kbd insp-kbd--inverted">Enter</kbd> 领取/继续</span>
       </div>
-      <button class="insp-btn insp-btn--accent" @click="adhocDialog = true">⚡ 发起抽查</button>
+      <button class="insp-btn insp-btn--accent" @click="adhocDialog = true"> 发起抽查</button>
       <button class="insp-btn insp-btn--ghost" @click="loadAll">刷新</button>
     </nav>
 
-    <!-- ⚡ 抽查发起对话框 -->
-    <el-dialog v-model="adhocDialog" title="⚡ 发起临时抽查" width="500px" append-to-body>
+    <!--  抽查发起对话框 -->
+    <el-dialog v-model="adhocDialog" title=" 发起临时抽查" width="500px" append-to-body>
       <el-form :model="adhocForm" label-width="90px">
         <el-form-item label="项目" required>
           <el-select v-model="adhocForm.projectId" placeholder="选择允许抽查的项目" class="w-full"
@@ -479,7 +479,7 @@ onUnmounted(() => window.removeEventListener('keydown', onKey))
       </el-form>
       <template #footer>
         <el-button @click="adhocDialog = false">取消</el-button>
-        <el-button type="primary" :loading="adhocSubmitting" @click="submitAdhoc">⚡ 立即发起</el-button>
+        <el-button type="primary" :loading="adhocSubmitting" @click="submitAdhoc"> 立即发起</el-button>
       </template>
     </el-dialog>
 
@@ -508,7 +508,7 @@ onUnmounted(() => window.removeEventListener('keydown', onKey))
         >
           <span class="row-date insp-num">
             {{ fmtDate(t.taskDate) }}
-            <span v-if="(t as any).extendedTo" class="row-date__ext">→ {{ fmtDate((t as any).extendedTo) }}</span>
+            <span v-if="(t as any).extendedTo" class="row-date__ext">> {{ fmtDate((t as any).extendedTo) }}</span>
           </span>
 
           <div class="row-meta">
@@ -608,7 +608,7 @@ onUnmounted(() => window.removeEventListener('keydown', onKey))
               </span>
             </div>
             <div v-if="previewTarget.lateSubmission" class="my-popover__row my-popover__row--late">
-              <span class="my-popover__label">⏱ 延迟</span>
+              <span class="my-popover__label"> 延迟</span>
               <span class="insp-num">{{ previewTarget.lateDays }}</span> 天交付
             </div>
             <div v-if="(previewTarget as any).rejectionCount && (previewTarget as any).rejectionCount > 0" class="my-popover__row">
@@ -617,7 +617,7 @@ onUnmounted(() => window.removeEventListener('keydown', onKey))
             </div>
           </div>
           <div class="my-popover__foot">
-            点击行 → {{ primaryAction(previewTarget).label }}
+            点击行 > {{ primaryAction(previewTarget).label }}
           </div>
         </div>
       </Transition>

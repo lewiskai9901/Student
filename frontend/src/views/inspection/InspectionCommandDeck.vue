@@ -137,7 +137,7 @@ async function loadAll() {
 // V108: 接受 string deadline 或 task object (有 deadlinePolicy 字段)
 function isOverdue(deadlineOrTask?: any) {
   if (!deadlineOrTask) return false
-  // 如果是 object 且 deadlinePolicy=NONE → 永不逾期
+  // 如果是 object 且 deadlinePolicy=NONE > 永不逾期
   if (typeof deadlineOrTask === 'object' && deadlineOrTask?.deadlinePolicy === 'NONE') return false
   const deadline = typeof deadlineOrTask === 'string'
     ? deadlineOrTask
@@ -217,7 +217,7 @@ onMounted(() => loadAll())
         <p class="deck-greet__sub">
           <template v-if="loading">载入中…</template>
           <template v-else-if="totalActionable === 0">
-            <span class="deck-greet__zero">✓ 当前无待办</span>
+            <span class="deck-greet__zero">√ 当前无待办</span>
           </template>
           <template v-else>
             待你处理 <strong class="insp-num">{{ totalActionable }}</strong> 项
@@ -267,7 +267,7 @@ onMounted(() => loadAll())
               <span class="bin-row__deadline" :class="{ 'is-overdue': isOverdue(t.taskDate) }">
                 {{ isOverdue(t.taskDate) ? '已逾期' : `${fmtDate(t.taskDate)}` }}
               </span>
-              <button class="bin-cta">{{ actionLabel(t) }} →</button>
+              <button class="bin-cta">{{ actionLabel(t) }} ></button>
             </div>
           </li>
         </ul>
@@ -276,7 +276,7 @@ onMounted(() => loadAll())
           <span>无待执行任务</span>
         </div>
         <button v-if="myTasks.length > 5" class="bin-more" @click="router.push('/inspection/my-tasks')">
-          查看全部 {{ myTasks.length }} 条 →
+          查看全部 {{ myTasks.length }} 条 >
         </button>
       </section>
 
@@ -297,7 +297,7 @@ onMounted(() => loadAll())
             <span class="summary-text">个任务等你裁决</span>
           </div>
           <button class="bin-primary-cta" @click="goReviewTasks">
-            进入审核工作台 →
+            进入审核工作台 >
           </button>
         </div>
         <div v-else class="bin-empty">
@@ -323,7 +323,7 @@ onMounted(() => loadAll())
             <span class="summary-text">条申诉待审</span>
           </div>
           <button class="bin-primary-cta" @click="goReviewAppeals">
-            进入申诉审核台 →
+            进入申诉审核台 >
           </button>
         </div>
         <div v-else class="bin-empty">
@@ -356,7 +356,7 @@ onMounted(() => loadAll())
               <span class="bin-row__deadline" :class="{ 'is-overdue': isOverdue(c.deadline) }">
                 <Clock :size="11" /> {{ deadlineLabel(c.deadline) }}
               </span>
-              <button class="bin-cta">处理 →</button>
+              <button class="bin-cta">处理 ></button>
             </div>
           </li>
         </ul>
@@ -373,7 +373,7 @@ onMounted(() => loadAll())
             <FileWarning :size="14" class="bin-icon" />
             <span class="bin-title">我的申诉</span>
           </div>
-          <button class="bin-link" @click="router.push('/inspection/appeals/my')">查看全部 →</button>
+          <button class="bin-link" @click="router.push('/inspection/appeals/my')">查看全部 ></button>
         </header>
         <div class="bin-stats-row" v-if="myAppeals.length">
           <div class="stat-cell">
@@ -409,13 +409,13 @@ onMounted(() => loadAll())
             <Sparkles :size="14" class="bin-icon" />
             <span class="bin-title">关于我的检查</span>
           </div>
-          <button class="bin-link" @click="goAboutMe">完整记录 →</button>
+          <button class="bin-link" @click="goAboutMe">完整记录 ></button>
         </header>
         <p class="bin-hint">
           查看针对你或你所在组织的检查记录, 不服扣分可发起申诉.
         </p>
         <button class="bin-primary-cta" @click="goAboutMe">
-          打开我的检查记录 →
+          打开我的检查记录 >
         </button>
       </section>
 
@@ -452,7 +452,7 @@ onMounted(() => loadAll())
             <span class="health-cell__label">待审申诉</span>
           </button>
           <button class="health-cell" @click="goReassign">
-            <span class="health-cell__num insp-num">→</span>
+            <span class="health-cell__num insp-num">></span>
             <span class="health-cell__label">离职重派</span>
           </button>
         </div>

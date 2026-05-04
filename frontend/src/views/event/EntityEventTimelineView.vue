@@ -129,13 +129,13 @@ function getEventDotClass(event: EntityEvent): string {
 function getEventIcon(event: EntityEvent): string {
   const type = event.eventType?.toUpperCase() || ''
   const cat = event.eventCategory?.toUpperCase() || ''
-  if (type.includes('VIOLATION')) return '🔴'
-  if (type.includes('RATING')) return '🏆'
-  if (type.includes('HONOR')) return '🏅'
-  if (cat.startsWith('ORG')) return '👥'
-  if (cat.startsWith('PLACE')) return '📍'
-  if (cat.includes('INSP')) return '🟢'
-  return '📋'
+  if (type.includes('VIOLATION')) return ''
+  if (type.includes('RATING')) return ''
+  if (type.includes('HONOR')) return ''
+  if (cat.startsWith('ORG')) return ''
+  if (cat.startsWith('PLACE')) return ''
+  if (cat.includes('INSP')) return ''
+  return ''
 }
 
 function getEventLabel(event: EntityEvent): string {
@@ -275,7 +275,7 @@ onMounted(() => {
     <div class="timeline-container" v-loading="loading">
       <template v-if="!loading && groupedEvents.length === 0">
         <div class="empty-state">
-          <div class="empty-icon">📋</div>
+          <div class="empty-icon"></div>
           <div class="empty-text">暂无事件记录</div>
         </div>
       </template>

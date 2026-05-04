@@ -24,6 +24,8 @@ public class AutoSchedulingService {
 
     // Runtime config (set per scheduling run)
     private int periodsPerDay = 10;
+    /** 当前排课运行的教师→偏好教室映射, autoSchedule 入口设置 */
+    private Map<Long, Set<Long>> currentTeacherPreferredRooms = Collections.emptyMap();
 
     // Inner data classes
     static class TaskRequirement {
@@ -114,6 +116,11 @@ public class AutoSchedulingService {
         Map<Long, Set<String>> classForbidden = new HashMap<>();
         Map<Long, Set<String>> courseForbidden = new HashMap<>();
         buildForbiddenSets(constraints, globalForbidden, teacherForbidden, classForbidden, courseForbidden);
+
+        // 3.1 教师偏好接入: type=1 不可用时间合并进 teacherForbidden
+        Map<Long, Set<Long>> teacherPreferredRooms = new HashMap<>();
+        applyTeacherPreferences(semesterId, teacherForbidden, teacherPreferredRooms);
+        this.currentTeacherPreferredRooms = teacherPreferredRooms;
 
         // 4. Load classrooms
         List<Map<String, Object>> classrooms = loadClassrooms();
@@ -326,6 +333,56 @@ public class AutoSchedulingService {
         }
     }
 
+    /**
+     * 接入 teacher_preferences:
+     *   preference_type=1 (不可用时间) → 合并进 teacherForbidden 作为硬约束
+     *   preference_type=3 (偏好教室)   → 按 teacher 分组返回, 用于 findRoom 优先匹配
+     *
+     * preference_type=2 (偏好时间) 暂不接入硬约束 (会与 type=1 互斥, 改进点);
+     * 后续可在 ga 阶段作为软约束加分.
+     */
+    private void applyTeacherPreferences(Long semesterId,
+            Map<Long, Set<String>> teacherForbidden,
+            Map<Long, Set<Long>> teacherPreferredRooms) {
+        try {
+            List<Map<String, Object>> rows = jdbcTemplate.queryForList(
+                "SELECT teacher_id, preference_type, weekday, time_slot, classroom_id " +
+                "FROM teacher_preferences " +
+                "WHERE semester_id = ? AND status = 1",
+                semesterId);
+            int unavailable = 0, preferred = 0;
+            for (Map<String, Object> r : rows) {
+                Long teacherId = toLong(r.get("teacher_id"));
+                Integer type = r.get("preference_type") != null ? toInt(r.get("preference_type")) : 0;
+                if (teacherId == null) continue;
+                if (type == 1) {
+                    Integer day = r.get("weekday") != null ? toInt(r.get("weekday")) : null;
+                    Integer slot = r.get("time_slot") != null ? toInt(r.get("time_slot")) : null;
+                    if (day == null) continue;
+                    Set<String> set = teacherForbidden.computeIfAbsent(teacherId, k -> new HashSet<>());
+                    if (slot != null) {
+                        set.add(day + "_" + slot);
+                    } else {
+                        // 整天不可用
+                        for (int p = 1; p <= periodsPerDay; p++) set.add(day + "_" + p);
+                    }
+                    unavailable++;
+                } else if (type == 3) {
+                    Long roomId = r.get("classroom_id") != null ? toLong(r.get("classroom_id")) : null;
+                    if (roomId != null) {
+                        teacherPreferredRooms.computeIfAbsent(teacherId, k -> new LinkedHashSet<>()).add(roomId);
+                        preferred++;
+                    }
+                }
+            }
+            if (unavailable + preferred > 0) {
+                log.info("加载教师偏好: 不可用时段 {} 条, 偏好教室 {} 条", unavailable, preferred);
+            }
+        } catch (Exception e) {
+            log.warn("加载教师偏好失败 (跳过): {}", e.getMessage());
+        }
+    }
+
     private boolean isForbidden(int day, int periodStart, int periodEnd,
             TaskRequirement req,
             Set<String> globalForbidden,
@@ -483,9 +540,11 @@ public class AutoSchedulingService {
             int day = c[0], periodStart = c[1];
             int periodEnd = periodStart + session.consecutivePeriods - 1;
 
-            // Find a room (with capacity check)
+            // Find a room (with capacity check, 教师偏好教室优先)
+            Set<Long> preferRooms = session.teacherId != null
+                    ? currentTeacherPreferredRooms.get(session.teacherId) : null;
             Long roomId = findRoom(day, periodStart, periodEnd, roomOcc, classrooms,
-                session.studentCount, session.weekType);
+                session.studentCount, session.weekType, preferRooms);
 
             // Create slot
             ScheduleSlot slot = new ScheduleSlot();
@@ -610,7 +669,10 @@ public class AutoSchedulingService {
                 slot.weekStart = session.startWeek;
                 slot.weekEnd = session.endWeek;
                 slot.weekType = session.weekType;
-                slot.classroomId = findRoom(day, periodStart, periodEnd, rOcc, classrooms);
+                Set<Long> prefer = session.teacherId != null
+                        ? currentTeacherPreferredRooms.get(session.teacherId) : null;
+                slot.classroomId = findRoom(day, periodStart, periodEnd, rOcc, classrooms,
+                        session.studentCount, session.weekType, prefer);
 
                 Set<String> at = new HashSet<>(), ac = new HashSet<>(), ar = new HashSet<>();
                 markOccupied(slot, tOcc, cOcc, rOcc, at, ac, ar);
@@ -825,36 +887,58 @@ public class AutoSchedulingService {
     private Long findRoom(int day, int periodStart, int periodEnd,
             Set<String> roomOcc, List<Map<String, Object>> classrooms,
             int studentCount, int weekType) {
-        Long fallbackRoom = null; // 容量不足但时间可用的教室(作为兜底)
+        return findRoom(day, periodStart, periodEnd, roomOcc, classrooms,
+                studentCount, weekType, null);
+    }
+
+    /**
+     * 选教室. preferredRoomIds 非空时优先匹配教师偏好教室 (LinkedHashSet 保留优先级).
+     * 偏好教室不可用时回落到普通搜索, 不视为失败.
+     */
+    private Long findRoom(int day, int periodStart, int periodEnd,
+            Set<String> roomOcc, List<Map<String, Object>> classrooms,
+            int studentCount, int weekType, Set<Long> preferredRoomIds) {
+        Long fallbackRoom = null;
+
+        // 第一轮: 偏好教室优先尝试
+        if (preferredRoomIds != null && !preferredRoomIds.isEmpty()) {
+            for (Long preferId : preferredRoomIds) {
+                Map<String, Object> room = null;
+                for (Map<String, Object> r : classrooms) {
+                    if (preferId.equals(toLong(r.get("id")))) { room = r; break; }
+                }
+                if (room == null) continue;
+                if (isRoomFree(preferId, day, periodStart, periodEnd, weekType, roomOcc)) {
+                    int capacity = room.get("capacity") != null ? toInt(room.get("capacity")) : 0;
+                    if (studentCount <= 0 || capacity >= studentCount) return preferId;
+                    if (fallbackRoom == null) fallbackRoom = preferId;
+                }
+            }
+        }
+
+        // 第二轮: 全教室搜索
         for (Map<String, Object> room : classrooms) {
             Long roomId = toLong(room.get("id"));
             int capacity = room.get("capacity") != null ? toInt(room.get("capacity")) : 0;
-            boolean occupied = false;
-            for (int p = periodStart; p <= periodEnd; p++) {
-                String keyEvery = roomId + "_" + day + "_" + p + "_0";
-                String keyThis = roomId + "_" + day + "_" + p + "_" + weekType;
-                // 检查冲突: 每周课(0)与任何课冲突; 单周(1)只与每周(0)和单周(1)冲突
-                if (roomOcc.contains(keyEvery) || roomOcc.contains(keyThis)) {
-                    occupied = true;
-                    break;
-                }
-                // 如果当前是每周课，还要检查单双周是否有占用
-                if (weekType == 0) {
-                    if (roomOcc.contains(roomId + "_" + day + "_" + p + "_1") ||
-                        roomOcc.contains(roomId + "_" + day + "_" + p + "_2")) {
-                        occupied = true;
-                        break;
-                    }
-                }
-            }
-            if (!occupied) {
-                if (studentCount <= 0 || capacity >= studentCount) {
-                    return roomId; // 容量匹配
-                }
-                if (fallbackRoom == null) fallbackRoom = roomId; // 容量不足但可用
+            if (!isRoomFree(roomId, day, periodStart, periodEnd, weekType, roomOcc)) continue;
+            if (studentCount <= 0 || capacity >= studentCount) return roomId;
+            if (fallbackRoom == null) fallbackRoom = roomId;
+        }
+        return fallbackRoom;
+    }
+
+    private boolean isRoomFree(Long roomId, int day, int periodStart, int periodEnd,
+            int weekType, Set<String> roomOcc) {
+        for (int p = periodStart; p <= periodEnd; p++) {
+            String keyEvery = roomId + "_" + day + "_" + p + "_0";
+            String keyThis = roomId + "_" + day + "_" + p + "_" + weekType;
+            if (roomOcc.contains(keyEvery) || roomOcc.contains(keyThis)) return false;
+            if (weekType == 0) {
+                if (roomOcc.contains(roomId + "_" + day + "_" + p + "_1") ||
+                    roomOcc.contains(roomId + "_" + day + "_" + p + "_2")) return false;
             }
         }
-        return fallbackRoom; // 返回兜底(可能容量不足，后续标警告)
+        return true;
     }
 
     // 兼容旧调用

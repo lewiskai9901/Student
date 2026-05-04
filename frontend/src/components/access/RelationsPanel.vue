@@ -86,8 +86,8 @@
               </el-tag>
             </td>
             <td class="rel-dir">
-              <span :title="r._side === 'outward' ? '当前实体 → 对方' : '对方 → 当前实体'">
-                {{ r._side === 'outward' ? '→' : '←' }}
+              <span :title="r._side === 'outward' ? '当前实体 > 对方' : '对方 > 当前实体'">
+                {{ r._side === 'outward' ? '>' : '<' }}
               </span>
             </td>
             <td class="rel-other">{{ displayOther(r) }}</td>
@@ -103,7 +103,7 @@
     </div>
 
     <div v-else-if="!loading && !relations.length" class="empty-state">
-      <div class="empty-icon">🔗</div>
+      <div class="empty-icon"></div>
       <div class="empty-text">暂无关系</div>
       <el-button v-if="!readonly" size="small" type="primary" plain class="mt-2" @click="openAddDialog">
         添加第一条关系
@@ -381,7 +381,7 @@ function relationLabelOfInstance(r: any): string {
 
 async function revoke(r: any) {
   await ElMessageBox.confirm(
-    `撤销该关系: ${relationLabelOfInstance(r)} → ${displayOther(r)}`,
+    `撤销该关系: ${relationLabelOfInstance(r)} > ${displayOther(r)}`,
     '确认撤销', { type: 'warning' }
   )
   try {
@@ -405,7 +405,7 @@ const availableRelations = computed(() => {
   const result: any[] = []
   for (const rt of allRelationTypes.value) {
     if (rt.fromType === props.entityType) {
-      // 当前实体可以作为 subject → outward
+      // 当前实体可以作为 subject > outward
       result.push({
         relationCode: rt.relationCode,
         relationName: rt.relationName,
@@ -414,7 +414,7 @@ const availableRelations = computed(() => {
       })
     }
     if (rt.toType === props.entityType && rt.fromType !== props.entityType) {
-      // 当前实体可以作为 resource → inward (排除自反的重复)
+      // 当前实体可以作为 resource > inward (排除自反的重复)
       result.push({
         relationCode: rt.relationCode,
         relationName: `${rt.relationName} (反向)`,

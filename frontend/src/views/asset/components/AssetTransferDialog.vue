@@ -126,7 +126,7 @@ function handleClose() {
     <div v-if="asset" class="mb-5 p-4 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl border border-blue-100">
       <div class="flex items-center gap-3">
         <div class="w-12 h-12 rounded-lg bg-white shadow-sm flex items-center justify-center">
-          <span class="text-xl">📦</span>
+          <span class="text-xl"></span>
         </div>
         <div class="flex-1 min-w-0">
           <div class="font-semibold text-gray-900 truncate">{{ asset.assetName }}</div>

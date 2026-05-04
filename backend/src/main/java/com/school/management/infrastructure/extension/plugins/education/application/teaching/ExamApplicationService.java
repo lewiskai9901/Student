@@ -4,6 +4,8 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.toolkit.IdWorker;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.school.management.application.event.TriggerService;
+import com.school.management.common.util.SecurityUtils;
+import com.school.management.infrastructure.extension.plugins.education.domain.teaching.event.ExamBatchPublishedEvent;
 import static com.school.management.infrastructure.extension.plugins.education.constants.EducationTriggerPoints.EXAM_PUBLISHED;
 import com.school.management.infrastructure.extension.plugins.education.infrastructure.persistence.teaching.exam.ExamArrangementMapper;
 import com.school.management.infrastructure.extension.plugins.education.infrastructure.persistence.teaching.exam.ExamArrangementPO;
@@ -12,6 +14,7 @@ import com.school.management.infrastructure.extension.plugins.education.infrastr
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -28,6 +31,7 @@ public class ExamApplicationService {
     private final ExamBatchMapper batchMapper;
     private final ExamArrangementMapper arrangementMapper;
     private final JdbcTemplate jdbc; // for exam_rooms and exam_invigilators join tables
+    private final ApplicationEventPublisher events;
 
     @Autowired(required = false)
     private TriggerService triggerService;
@@ -116,7 +120,7 @@ public class ExamApplicationService {
     @Transactional
     public void updateBatch(Long id, Map<String, Object> data) {
         ExamBatchPO po = batchMapper.selectById(id);
-        if (po == null) throw new RuntimeException("考试批次不存在: " + id);
+        if (po == null) throw com.school.management.exception.TeachingDomainException.examBatchNotFound(id);
 
         po.setBatchName((String) (data.get("batchName") != null ? data.get("batchName") : data.get("name")));
         po.setSemesterId(toLong(data.get("semesterId")));
@@ -137,9 +141,14 @@ public class ExamApplicationService {
     @Transactional
     public void publishBatch(Long id) {
         ExamBatchPO po = batchMapper.selectById(id);
-        if (po == null) throw new RuntimeException("考试批次不存在: " + id);
-        po.setStatus(2);
+        if (po == null) throw com.school.management.exception.TeachingDomainException.examBatchNotFound(id);
+        po.publish(); // 业务规则在 PO; 校验失败抛 TeachingDomainException
         batchMapper.updateById(po);
+
+        // 发布领域事件 — listener 用 AFTER_COMMIT 触发后续编排
+        events.publishEvent(new ExamBatchPublishedEvent(
+                po.getId(), po.getBatchName(), po.getSemesterId(),
+                po.getExamType(), SecurityUtils.getCurrentUserId()));
 
         if (triggerService != null) {
             try {
@@ -214,7 +223,8 @@ public class ExamApplicationService {
         wrapper.eq(ExamArrangementPO::getId, arrangementId)
                .eq(ExamArrangementPO::getBatchId, batchId);
         ExamArrangementPO po = arrangementMapper.selectOne(wrapper);
-        if (po == null) throw new RuntimeException("考试安排不存在: " + arrangementId);
+        if (po == null) throw new com.school.management.exception.TeachingDomainException(
+                "考试安排不存在: " + arrangementId);
 
         po.setCourseId(toLong(data.get("courseId")));
         po.setExamDate(toLocalDate(data.get("examDate")));

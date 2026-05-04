@@ -19,7 +19,7 @@ export interface EntityTypeConfig {
   isEnabled?: boolean
   /**
    * 插件级启用状态 (两状态模型).
-   * false 或 0 = 所属插件被禁 → 前端应灰显.
+   * false 或 0 = 所属插件被禁 > 前端应灰显.
    * tinyint 字段, 可能是 number (0/1) 或 boolean
    */
   pluginEnabled?: boolean | number

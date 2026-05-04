@@ -93,7 +93,7 @@
           <div v-else class="pd-empty-inline">无</div>
           <button v-if="pluginTypes.length > 5" class="pd-more"
                   @click="emit('jump-resource', { type: 'types', pluginCode: plugin!.code })">
-            查看全部 {{ pluginTypes.length }} →
+            查看全部 {{ pluginTypes.length }} >
           </button>
         </div>
       </section>
@@ -117,7 +117,7 @@
                 <td>{{ r.relationName }}</td>
                 <td>
                   <span class="pd-muted">{{ subjectTypeLabel(r.fromType) }}</span>
-                  <span class="pd-arrow">→</span>
+                  <span class="pd-arrow">></span>
                   <span class="pd-muted">{{ subjectTypeLabel(r.toType) }}</span>
                 </td>
                 <td>
@@ -128,7 +128,7 @@
                 <td>
                   <div v-if="parseImplied(r.impliedRelations).length">
                     <div v-for="(imp, i) in parseImplied(r.impliedRelations)" :key="i" class="pd-implied">
-                      → {{ imp.relation }}
+                      > {{ imp.relation }}
                     </div>
                   </div>
                   <span v-else class="pd-muted">—</span>
@@ -139,7 +139,7 @@
           <div v-else class="pd-empty-inline">无</div>
           <button v-if="pluginRelations.length > 5" class="pd-more"
                   @click="emit('jump-resource', { type: 'relations', pluginCode: plugin!.code })">
-            查看全部 {{ pluginRelations.length }} →
+            查看全部 {{ pluginRelations.length }} >
           </button>
         </div>
       </section>
@@ -204,7 +204,7 @@
           <div v-else class="pd-empty-inline">无</div>
           <button v-if="pluginEvents.length > 5" class="pd-more"
                   @click="emit('jump-resource', { type: 'events', pluginCode: plugin!.code })">
-            查看全部 {{ pluginEvents.length }} →
+            查看全部 {{ pluginEvents.length }} >
           </button>
         </div>
       </section>
@@ -288,7 +288,7 @@
           </div>
           <button v-if="counts.permissions > 10" class="pd-more"
                   @click="emit('jump-resource', { type: 'permissions', pluginCode: plugin!.code })">
-            查看全部 {{ counts.permissions }} →
+            查看全部 {{ counts.permissions }} >
           </button>
         </div>
       </section>
@@ -317,7 +317,7 @@
           <div v-else class="pd-empty-inline">无</div>
           <button v-if="pluginRoles.length > 5" class="pd-more"
                   @click="emit('jump-resource', { type: 'roles', pluginCode: plugin!.code })">
-            查看全部 {{ pluginRoles.length }} →
+            查看全部 {{ pluginRoles.length }} >
           </button>
         </div>
       </section>

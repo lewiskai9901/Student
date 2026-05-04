@@ -15,7 +15,7 @@
         </el-select>
         <span class="datetime">{{ currentTime }}</span>
         <el-button size="small" text :style="{color: tvMode ? '#fbbf24' : '#8cf'}" @click="toggleTvMode">
-          {{ tvMode ? '⏸ 退出 TV' : '▶ TV 模式' }}
+          {{ tvMode ? '|| 退出 TV' : '> TV 模式' }}
         </el-button>
         <el-button size="small" text style="color:#8cf" @click="loadAll">刷新</el-button>
         <el-button size="small" text style="color:#8cf" @click="toggleFullscreen">

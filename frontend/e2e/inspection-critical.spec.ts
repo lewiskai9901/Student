@@ -11,7 +11,7 @@ import { test, expect } from '@playwright/test'
  *   5. KPI "进行中" 按钮筛选: 激活 + URL status=PUBLISHED
  *   6. ARCHIVED toggle: URL archived=1 切换
  *   7. 列头点击排序 (项目): URL sort=name&dir=desc
- *   8. 详情页 5 tab 顺序正确 (总览→检查配置→人员与任务→成绩统计→设置)
+ *   8. 详情页 5 tab 顺序正确 (总览>检查配置>人员与任务>成绩统计>设置)
  *   9. 详情页切到 "检查配置" tab 内容渲染
  *   10. 时间轴 "本季" 缩放: URL scale=quarter
  */
@@ -96,7 +96,7 @@ test.describe('Inspection 检查项目页', () => {
     await expect(page.locator('.sort-arrow').first()).toBeVisible()
   })
 
-  test('8. 详情页 5 tab 顺序: 总览 → 检查配置 → 人员与任务 → 成绩统计 → 设置', async ({ page }) => {
+  test('8. 详情页 5 tab 顺序: 总览 > 检查配置 > 人员与任务 > 成绩统计 > 设置', async ({ page }) => {
     // 列表至少有 1 项目可点
     await page.goto('/inspection/projects')
     await page.waitForSelector('.row--data', { timeout: 10000 })

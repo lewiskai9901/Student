@@ -217,10 +217,10 @@ function onCellClick(day: CalendarDay | undefined, e: MouseEvent) {
   if (selectedDates.value.size > 1) return
 
   if (day.eventId) {
-    // Click existing event → view popover
+    // Click existing event > view popover
     openViewPopover(day, e)
   } else {
-    // Click empty day → create popover
+    // Click empty day > create popover
     openCreatePopover([day.date], e)
   }
 }

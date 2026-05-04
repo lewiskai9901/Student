@@ -56,7 +56,7 @@ test.describe('Critical dashboard access-control flow', () => {
     expect(studentCount, 'admin sees full-school aggregate').toBeGreaterThan(100)
   })
 
-  test('direct API: admin GET /api/dashboard/overview → 200 with all sections', async ({ request }) => {
+  test('direct API: admin GET /api/dashboard/overview > 200 with all sections', async ({ request }) => {
     const token = await getAccessToken(request, ADMIN)
     const resp = await request.get('http://localhost:8080/api/dashboard/overview', {
       headers: { Authorization: `Bearer ${token}` }
@@ -127,7 +127,7 @@ test.describe('Critical dashboard access-control flow', () => {
 
   // ============ No-permission user (student) test ============
 
-  test('direct API: student user without dashboard:view → 403', async ({ request }) => {
+  test('direct API: student user without dashboard:view > 403', async ({ request }) => {
     // stu0001 只有 ROLE_A0739787（学生角色），无 dashboard:view
     const resp = await request.post('http://localhost:8080/api/auth/login', {
       data: { username: 'stu0001', password: 'admin123' },

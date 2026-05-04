@@ -162,7 +162,7 @@ const formulaPreview = computed(() => {
   // Replace operators
   text = text.replace(/ \* /g, ' × ')
   text = text.replace(/ \/ /g, ' ÷ ')
-  text = text.replace(/ \? /g, ' → ')
+  text = text.replace(/ \? /g, ' > ')
   text = text.replace(/ : /g, ' 否则 ')
   return text
 })

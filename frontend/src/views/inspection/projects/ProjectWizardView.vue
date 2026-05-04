@@ -344,7 +344,7 @@ onMounted(() => {
           <span v-else class="insp-num">{{ idx + 1 }}</span>
         </span>
         <span class="wz-rail__label">{{ label }}</span>
-        <span v-if="idx === currentStep" class="wz-rail__cursor">▼</span>
+        <span v-if="idx === currentStep" class="wz-rail__cursor">v</span>
       </button>
     </nav>
 
@@ -388,7 +388,7 @@ onMounted(() => {
               </span>
             </div>
             <div v-if="section.description" class="tpl-desc">{{ section.description }}</div>
-            <div v-if="!isPublished(section)" class="tpl-warn">→ 需要先在模板编辑页发布才能选择</div>
+            <div v-if="!isPublished(section)" class="tpl-warn">> 需要先在模板编辑页发布才能选择</div>
           </div>
         </li>
       </ul>
@@ -532,7 +532,7 @@ onMounted(() => {
     <!-- Footer -->
     <footer class="wz-foot">
       <button v-if="currentStep > 0" class="insp-btn" @click="prevStep">
-        ← 上一步
+        < 上一步
       </button>
       <span v-else />
       <div class="wz-foot__spacer" />
@@ -542,7 +542,7 @@ onMounted(() => {
         :disabled="currentStep === 0 ? !canProceedStep0 : !canProceedStep1"
         @click="nextStep"
       >
-        下一步 →
+        下一步 >
       </button>
       <button
         v-if="currentStep === 2"

@@ -62,7 +62,7 @@
       <el-card shadow="never">
         <template #header>
           <div class="card-head">
-            <span>🔴 红线监控</span>
+            <span> 红线监控</span>
             <span class="hint">绩效红线 = 累计扣 -100</span>
           </div>
         </template>
@@ -88,14 +88,14 @@
       <el-card shadow="never">
         <template #header>
           <div class="card-head">
-            <span>🎲 检查行为分析 (V108)</span>
+            <span> 检查行为分析 (V108)</span>
             <span class="hint">按任务类型拆分 KPI</span>
           </div>
         </template>
         <div v-if="!taskKpi" class="empty-card">加载中...</div>
         <div v-else class="kpi-by-type">
           <div class="kpi-line">
-            <span class="kpi-line__icon">📅</span>
+            <span class="kpi-line__icon"></span>
             <span class="kpi-line__name">计划完成率</span>
             <span class="kpi-line__num" :class="kpiColor(taskKpi.scheduled?.completionRate)">
               {{ taskKpi.scheduled?.completionRate ?? 0 }}%
@@ -103,25 +103,25 @@
             <span class="kpi-line__sub">{{ taskKpi.scheduled?.completed ?? 0 }} / {{ taskKpi.scheduled?.total ?? 0 }}</span>
           </div>
           <div class="kpi-line">
-            <span class="kpi-line__icon">⚡</span>
+            <span class="kpi-line__icon"></span>
             <span class="kpi-line__name">抽查活跃度 (30 天)</span>
             <span class="kpi-line__num text-warning">{{ taskKpi.adHoc?.last30d ?? 0 }}</span>
             <span class="kpi-line__sub">{{ taskKpi.adHoc?.uniqueInspectors ?? 0 }} 检查员主动发起</span>
           </div>
           <div class="kpi-line">
-            <span class="kpi-line__icon">🔔</span>
+            <span class="kpi-line__icon"></span>
             <span class="kpi-line__name">事件响应时长</span>
             <span class="kpi-line__num">{{ taskKpi.triggered?.avgResponseHours ?? 0 }}h</span>
             <span class="kpi-line__sub">{{ taskKpi.triggered?.responded ?? 0 }} / {{ taskKpi.triggered?.total ?? 0 }} 已响应</span>
           </div>
           <div class="kpi-line">
-            <span class="kpi-line__icon">🔄</span>
+            <span class="kpi-line__icon"></span>
             <span class="kpi-line__name">自查参与度</span>
             <span class="kpi-line__num text-success">{{ taskKpi.selfCheck?.uniqueSubjects ?? 0 }}</span>
             <span class="kpi-line__sub">{{ taskKpi.selfCheck?.submitted ?? 0 }} 自查提交</span>
           </div>
           <div class="kpi-line">
-            <span class="kpi-line__icon">👁</span>
+            <span class="kpi-line__icon"></span>
             <span class="kpi-line__name">互查覆盖</span>
             <span class="kpi-line__num">{{ taskKpi.crossAudit?.total ?? 0 }}</span>
             <span class="kpi-line__sub">{{ taskKpi.crossAudit?.uniqueAuditors ?? 0 }} 审计员</span>
@@ -133,7 +133,7 @@
       <el-card shadow="never">
         <template #header>
           <div class="card-head">
-            <span>⚖ 申诉处理质量</span>
+            <span> 申诉处理质量</span>
             <span class="hint">透明度指标</span>
           </div>
         </template>
@@ -152,10 +152,10 @@
           </div>
         </div>
         <div class="appeal-hint" v-if="pendingAppeals === 0">
-          ✅ 当前无积压, 透明度良好
+          √ 当前无积压, 透明度良好
         </div>
         <el-button class="mt-2 w-full" size="small" @click="goAppeals" link type="primary">
-          查看申诉详情 →
+          查看申诉详情 >
         </el-button>
       </el-card>
 
@@ -163,7 +163,7 @@
       <el-card shadow="never">
         <template #header>
           <div class="card-head">
-            <span>🔄 整改闭环</span>
+            <span> 整改闭环</span>
             <span class="hint">SLA 履约</span>
           </div>
         </template>
@@ -191,8 +191,8 @@
     <el-card shadow="never" class="alert-card">
       <template #header>
         <div class="card-head">
-          <span>🔔 活跃预警</span>
-          <el-button link type="primary" size="small" @click="goAlerts">完整列表 →</el-button>
+          <span> 活跃预警</span>
+          <el-button link type="primary" size="small" @click="goAlerts">完整列表 ></el-button>
         </div>
       </template>
       <el-table :data="activeAlerts.slice(0, 8)" size="small" v-loading="loading">

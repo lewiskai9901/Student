@@ -188,21 +188,21 @@ const overviewAlerts = computed(() => {
   const out: { type: 'warn' | 'info' | 'fail'; icon: string; text: string; action?: { label: string; tab: string } }[] = []
   if (richKpis.value.overdue > 0) {
     out.push({
-      type: 'fail', icon: '⚠',
+      type: 'fail', icon: '!',
       text: `${richKpis.value.overdue} 个任务已逾期未提交`,
       action: { label: '查看', tab: 'team' }
     })
   }
   if (richKpis.value.pendingReview > 0) {
     out.push({
-      type: 'warn', icon: '⏱',
+      type: 'warn', icon: '',
       text: `${richKpis.value.pendingReview} 个任务等待审核`,
       action: { label: '去审核', tab: 'team' }
     })
   }
   if (pendingAssignTasks.value.length > 0) {
     out.push({
-      type: 'info', icon: '👥',
+      type: 'info', icon: '',
       text: `${pendingAssignTasks.value.length} 个任务尚未分配检查员`,
       action: { label: '分配', tab: 'team' }
     })
@@ -780,7 +780,7 @@ onMounted(async () => {
                     :variant="templateVersionStatus?.drifted ? 'danger' : 'default'"
                     title="把项目锁定的模板快照升级至该模板的最新已发布版本">
           <span v-if="templateVersionStatus?.drifted">
-            升级 v{{ templateVersionStatus.currentVersionNumber ?? '?' }} → v{{ templateVersionStatus.latestVersionNumber }}
+            升级 v{{ templateVersionStatus.currentVersionNumber ?? '?' }} > v{{ templateVersionStatus.latestVersionNumber }}
           </span>
           <span v-else-if="templateVersionStatus">
             模板 v{{ templateVersionStatus.currentVersionNumber ?? '?' }}
@@ -798,7 +798,7 @@ onMounted(async () => {
       </div>
     </div>
 
-    <!-- ====== Pill Tabs (顺序: 总览 → 检查配置 → 人员与任务 → 成绩统计 → 设置) ====== -->
+    <!-- ====== Pill Tabs (顺序: 总览 > 检查配置 > 人员与任务 > 成绩统计 > 设置) ====== -->
     <div class="pdv-tabs">
       <button :class="['pdv-tab', activeTab === 'overview' && 'active']" @click="activeTab = 'overview'">
         <LayoutDashboard class="w-3.5 h-3.5" />总览
@@ -843,7 +843,7 @@ onMounted(async () => {
               <span class="pdv-alert__icon">{{ a.icon }}</span>
               <span class="pdv-alert__text">{{ a.text }}</span>
               <button v-if="a.action" class="pdv-alert__action"
-                      @click="activeTab = a.action.tab">{{ a.action.label }} →</button>
+                      @click="activeTab = a.action.tab">{{ a.action.label }} ></button>
             </div>
           </div>
 
@@ -1360,7 +1360,7 @@ onMounted(async () => {
             <div class="cfg-lock-title">部分配置已锁定 ({{ project?.status === 'PUBLISHED' ? '已发布' : project?.status === 'PAUSED' ? '已暂停' : '运行中' }})</div>
             <div class="pdv-lock-grid">
               <div class="pdv-lock-col">
-                <span class="pdv-lock-col__label">🔒 已锁定</span>
+                <span class="pdv-lock-col__label"> 已锁定</span>
                 <ul class="pdv-lock-list">
                   <li>检查范围 (受检组织 / 班级)</li>
                   <li>根分区 (绑定的模板)</li>
@@ -1369,7 +1369,7 @@ onMounted(async () => {
                 </ul>
               </div>
               <div class="pdv-lock-col">
-                <span class="pdv-lock-col__label">✓ 可调整</span>
+                <span class="pdv-lock-col__label">√ 可调整</span>
                 <ul class="pdv-lock-list">
                   <li>项目名称 / 描述</li>
                   <li>结束日期 (可延期)</li>
@@ -1512,7 +1512,7 @@ onMounted(async () => {
 
         <!-- V108: 检查模式配置 -->
         <div class="cfg-card">
-          <div class="cfg-card-title">⚡ 检查模式 (Day3)</div>
+          <div class="cfg-card-title"> 检查模式 (Day3)</div>
           <div class="cfg-desc">控制本项目允许哪些检查行为 — 计划任务/临时抽查/自查 等.</div>
           <div class="cfg-row2">
             <div class="cfg-field">
@@ -1538,7 +1538,7 @@ onMounted(async () => {
                 <el-switch v-model="cf.allowAdHoc" :disabled="isArchived || cf.inspectionMode === 'PLANNED'" />
               </div>
               <div class="cfg-hint">
-                {{ cf.allowAdHoc ? '检查员可在任务列表点 "⚡ 发起抽查"' : '只能由调度自动生成任务' }}
+                {{ cf.allowAdHoc ? '检查员可在任务列表点 " 发起抽查"' : '只能由调度自动生成任务' }}
               </div>
             </div>
           </div>

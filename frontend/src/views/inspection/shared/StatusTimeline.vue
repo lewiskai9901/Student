@@ -71,7 +71,7 @@ function fmtTime(s?: string | null): string {
     >
       <div class="tl-marker">
         <span class="tl-dot">
-          <span v-if="step.isPast" class="tl-glyph">✓</span>
+          <span v-if="step.isPast" class="tl-glyph">√</span>
           <span v-else-if="step.isCurrent" class="tl-pulse" />
           <span v-else>{{ i + 1 }}</span>
         </span>
@@ -84,7 +84,7 @@ function fmtTime(s?: string | null): string {
           <span v-if="step.at" class="tl-time insp-num">{{ fmtTime(step.at) }}</span>
         </div>
         <div v-if="step.isCurrent && step.hint" class="tl-hint">
-          ↳ {{ step.hint }}
+          -> {{ step.hint }}
         </div>
         <div v-if="step.by" class="tl-by">{{ step.by }}</div>
       </div>

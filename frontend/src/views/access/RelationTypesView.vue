@@ -40,10 +40,10 @@
           </template>
         </el-table-column>
         <el-table-column label="中文名" prop="relationName" width="90" />
-        <el-table-column label="主体 → 资源" width="200">
+        <el-table-column label="主体 > 资源" width="200">
           <template #default="{ row }">
             <el-tag size="small">{{ typeLabel(row.fromType) }}</el-tag>
-            <span class="mx-2 text-gray-400">→</span>
+            <span class="mx-2 text-gray-400">></span>
             <el-tag size="small">{{ typeLabel(row.toType) }}</el-tag>
           </template>
         </el-table-column>
@@ -54,7 +54,7 @@
         </el-table-column>
         <el-table-column label="传递" width="60" align="center">
           <template #default="{ row }">
-            <span v-if="row.isTransitive" class="text-green-600">✓</span>
+            <span v-if="row.isTransitive" class="text-green-600">√</span>
             <span v-else class="text-gray-300">—</span>
           </template>
         </el-table-column>

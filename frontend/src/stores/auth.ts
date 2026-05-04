@@ -39,7 +39,7 @@ export const useAuthStore = defineStore('auth', () => {
       tokenStorage.setUserInfo(userInfo)
 
       // Phase 4A: 登录成功后装载启用的行业插件路由 (首次或换账号时)
-      // 用 dynamic import 规避 auth ↔ router 循环依赖
+      // 用 dynamic import 规避 auth <> router 循环依赖
       try {
         const [{ default: router }, { loadEnabledPlugins }] = await Promise.all([
           import('@/router'),
@@ -69,7 +69,7 @@ export const useAuthStore = defineStore('auth', () => {
   }
 
   // 退出登录
-  // 策略：成功 → 清空；401/403（token 已失效）→ 清空；其他错误（网络/5xx）→ 保留状态并抛错
+  // 策略：成功 > 清空；401/403（token 已失效）> 清空；其他错误（网络/5xx）> 保留状态并抛错
   const logoutAction = async () => {
     try {
       if (token.value) {

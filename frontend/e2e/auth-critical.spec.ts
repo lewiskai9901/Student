@@ -4,9 +4,9 @@ import { test, expect } from '@playwright/test'
  * Task 2.1: 关键认证流程 E2E 测试
  *
  * 覆盖场景（UI 层面，补充 auth.spec.ts 中 API 层面的测试）：
- * 1. 管理员登录成功 → 跳转到 /dashboard 且侧边栏加载完成
- * 2. 错误凭据 → 显示错误提示且仍停留在 /login
- * 3. 登录 → 点击用户菜单 → 退出登录 → 返回 /login
+ * 1. 管理员登录成功 > 跳转到 /dashboard 且侧边栏加载完成
+ * 2. 错误凭据 > 显示错误提示且仍停留在 /login
+ * 3. 登录 > 点击用户菜单 > 退出登录 > 返回 /login
  *
  * 备注：登录页使用 tailwind 原生 input（非 el-input），表单存在移动端 + 桌面端
  *       两份（sm:hidden / hidden sm:block），因此选择器需加 .first() 或可见过滤。
@@ -50,7 +50,7 @@ test.describe('Critical auth flows', () => {
     await page.locator('button[type="submit"]:has-text("登录")').first().click()
     await page.waitForURL(/\/dashboard/, { timeout: 10000 })
 
-    // 打开右上角用户下拉菜单 (admin 实际角色是 SUPER_ADMIN → "超级管理员")
+    // 打开右上角用户下拉菜单 (admin 实际角色是 SUPER_ADMIN > "超级管理员")
     await page.locator('text=超级管理员').first().click()
 
     // 点击"退出登录"按钮

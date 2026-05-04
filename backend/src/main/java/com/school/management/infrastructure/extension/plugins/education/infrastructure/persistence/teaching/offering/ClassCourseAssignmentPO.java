@@ -17,6 +17,7 @@ public class ClassCourseAssignmentPO {
     private Integer weeklyHours;
     private Integer studentCount;
     private Integer status;
+    private Long createdBy;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
     @TableLogic

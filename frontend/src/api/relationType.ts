@@ -21,7 +21,7 @@ export interface RelationTypeDef {
   maxBySubtype?: Record<string, number> | null
   /**
    * 插件级启用状态 (两状态模型, Phase 2 加).
-   * false = 所属插件被禁 → 前端应灰显.
+   * false = 所属插件被禁 > 前端应灰显.
    */
   pluginEnabled?: boolean | number
 }

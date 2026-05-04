@@ -156,7 +156,7 @@ function lessonDotClass(l: TodayLesson): string {
   return 'dot-green'
 }
 
-// 简易节次→分钟映射 (8:00 第1节 起，每节 45 分钟 + 10 分钟间隔)
+// 简易节次>分钟映射 (8:00 第1节 起，每节 45 分钟 + 10 分钟间隔)
 function slotToMinutes(slot: number): number {
   if (slot < 1) return 0
   return 8 * 60 + (slot - 1) * 55

@@ -1,11 +1,11 @@
 import { test, expect, type Page } from '@playwright/test'
 
 /**
- * 离线同步 e2e — 验证 useOfflineSync 在 offline → online 切换时的 4 条核心路径:
- *   1. 离线状态下 saveDraft → IndexedDB 写入草稿
- *   2. 重新上线后 pushToServer → 草稿出队
- *   3. server 版本超前 → 标记 conflict
- *   4. resolveKeepLocal/resolveKeepServer → 冲突清空
+ * 离线同步 e2e — 验证 useOfflineSync 在 offline > online 切换时的 4 条核心路径:
+ *   1. 离线状态下 saveDraft > IndexedDB 写入草稿
+ *   2. 重新上线后 pushToServer > 草稿出队
+ *   3. server 版本超前 > 标记 conflict
+ *   4. resolveKeepLocal/resolveKeepServer > 冲突清空
  *
  * 测试在浏览器内通过 page.evaluate 直接调 IndexedDB + composable, 不依赖
  * 移动端真实 UI (避免相机/定位权限弹窗). 用 context.setOffline 模拟断网.

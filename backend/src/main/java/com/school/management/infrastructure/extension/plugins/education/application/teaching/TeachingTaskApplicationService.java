@@ -30,13 +30,12 @@ public class TeachingTaskApplicationService {
         int offset = (page - 1) * size;
         List<TeachingTask> tasks = taskRepo.findByFilter(semesterId, status, offset, size);
 
-        // 补充课程名称和班级名称
-        List<Map<String, Object>> records = new ArrayList<>();
+        List<Map<String, Object>> records = new ArrayList<>(tasks.size());
         for (TeachingTask t : tasks) {
-            Map<String, Object> record = toMap(t);
-            enrichWithNames(record, t.getCourseId(), t.getOrgUnitId());
-            records.add(record);
+            records.add(toMap(t));
         }
+        // 批量 enrich, 避免 N+1
+        enrichListWithNames(records);
 
         Map<String, Object> result = new HashMap<>();
         result.put("records", records);
@@ -234,70 +233,134 @@ public class TeachingTaskApplicationService {
         return map;
     }
 
+    /**
+     * 单条 enrich (用于详情查询).
+     */
     private void enrichWithNames(Map<String, Object> record, Long courseId, Long orgUnitId) {
-        // 课程名称 + 考核方式
-        try {
-            if (courseId != null) {
-                Map<String, Object> course = jdbc.queryForMap(
-                        "SELECT course_name, course_code, assessment_method FROM courses WHERE id = ?", courseId);
-                record.put("courseName", course.get("course_name"));
-                record.put("courseCode", course.get("course_code"));
-                record.put("assessmentMethod", course.get("assessment_method"));
-            }
-        } catch (Exception e) {
-            record.put("courseName", null);
+        enrichListWithNames(Collections.singletonList(record));
+    }
+
+    /**
+     * 批量 enrich: 5 次 IN 查询代替 N×5 单条查询, 解决 N+1.
+     * Per-record 字段: courseName/courseCode/assessmentMethod, className,
+     *                  roomTypeName, teachers (List<Map>), teacherName (String).
+     */
+    private void enrichListWithNames(List<Map<String, Object>> records) {
+        if (records == null || records.isEmpty()) return;
+
+        Set<Long> courseIds  = new HashSet<>();
+        Set<Long> orgUnitIds = new HashSet<>();
+        Set<Long> taskIds    = new HashSet<>();
+        Set<String> roomTypes = new HashSet<>();
+        for (Map<String, Object> r : records) {
+            Object cid = r.get("courseId");      if (cid != null) courseIds.add(((Number) cid).longValue());
+            Object oid = r.get("orgUnitId");     if (oid != null) orgUnitIds.add(((Number) oid).longValue());
+            Object tid = r.get("id");            if (tid != null) taskIds.add(((Number) tid).longValue());
+            Object rt  = r.get("roomTypeRequired");
+            if (rt instanceof String && !((String) rt).isEmpty()) roomTypes.add((String) rt);
         }
-        // 班级名称
-        try {
-            if (orgUnitId != null) {
-                String className = null;
-                try {
-                    className = jdbc.queryForObject(
-                            "SELECT unit_name FROM org_units WHERE id = ?", String.class, orgUnitId);
-                } catch (Exception ignored) {}
-                if (className == null) {
-                    try {
-                        className = jdbc.queryForObject(
-                                "SELECT class_name FROM classes WHERE id = ?", String.class, orgUnitId);
-                    } catch (Exception ignored) {}
-                }
-                record.put("className", className);
-            }
-        } catch (Exception e) {
-            record.put("className", null);
+
+        // 1. courses
+        Map<Long, Map<String, Object>> coursesById = batchSelect(
+                "SELECT id, course_name, course_code, assessment_method FROM courses WHERE id IN ",
+                courseIds);
+
+        // 2. org_units (优先) + classes (fallback)
+        Map<Long, String> orgUnitNames = batchSelectName(
+                "SELECT id, unit_name AS name FROM org_units WHERE id IN ",
+                orgUnitIds);
+        Set<Long> missing = new HashSet<>(orgUnitIds);
+        missing.removeAll(orgUnitNames.keySet());
+        if (!missing.isEmpty()) {
+            try {
+                Map<Long, String> classNames = batchSelectName(
+                        "SELECT id, class_name AS name FROM classes WHERE id IN ",
+                        missing);
+                orgUnitNames.putAll(classNames);
+            } catch (Exception ignored) { /* classes 表可能已废弃 */ }
         }
-        // 教室类型名称
-        try {
-            String roomType = (String) record.get("roomTypeRequired");
-            if (roomType != null && !roomType.isEmpty()) {
-                String roomTypeName = jdbc.queryForObject(
-                    "SELECT type_name FROM entity_type_configs WHERE type_code = ? AND entity_type = 'PLACE' LIMIT 1",
-                    String.class, roomType);
-                record.put("roomTypeName", roomTypeName);
-            }
-        } catch (Exception e) {
-            record.put("roomTypeName", null);
+
+        // 3. room types
+        Map<String, String> roomTypeNames = new HashMap<>();
+        if (!roomTypes.isEmpty()) {
+            String placeholders = String.join(",", Collections.nCopies(roomTypes.size(), "?"));
+            String sql = "SELECT type_code, type_name FROM entity_type_configs " +
+                    "WHERE entity_type = 'PLACE' AND type_code IN (" + placeholders + ")";
+            jdbc.query(sql, roomTypes.toArray(), rs -> {
+                roomTypeNames.put(rs.getString("type_code"), rs.getString("type_name"));
+            });
         }
-        // 教师列表（含课时数）
-        try {
-            Long taskId = (Long) record.get("id");
-            if (taskId != null) {
-                List<Map<String, Object>> teacherList = jdbc.queryForList(
-                    "SELECT ttt.teacher_id, u.real_name, ttt.teacher_role, ttt.weekly_hours " +
+
+        // 4. teachers (一次查所有, 按 task_id 分组)
+        Map<Long, List<Map<String, Object>>> teachersByTask = new HashMap<>();
+        if (!taskIds.isEmpty()) {
+            String placeholders = String.join(",", Collections.nCopies(taskIds.size(), "?"));
+            String sql = "SELECT ttt.task_id, ttt.teacher_id, u.real_name, ttt.teacher_role, ttt.weekly_hours " +
                     "FROM teaching_task_teachers ttt " +
                     "JOIN users u ON u.id = ttt.teacher_id " +
-                    "WHERE ttt.task_id = ?", taskId);
-                record.put("teachers", teacherList);
-                // 保留 teacherName 兼容
-                String names = teacherList.stream()
-                    .map(t -> (String) t.get("real_name"))
-                    .filter(n -> n != null)
-                    .collect(java.util.stream.Collectors.joining(", "));
-                record.put("teacherName", names.isEmpty() ? null : names);
+                    "WHERE ttt.task_id IN (" + placeholders + ")";
+            List<Map<String, Object>> rows = jdbc.queryForList(sql, taskIds.toArray());
+            for (Map<String, Object> row : rows) {
+                Long taskId = ((Number) row.get("task_id")).longValue();
+                teachersByTask.computeIfAbsent(taskId, k -> new ArrayList<>()).add(row);
             }
-        } catch (Exception e) {
-            record.put("teachers", List.of());
         }
+
+        // 5. 落到每条 record
+        for (Map<String, Object> r : records) {
+            Object cid = r.get("courseId");
+            if (cid != null) {
+                Map<String, Object> course = coursesById.get(((Number) cid).longValue());
+                if (course != null) {
+                    r.put("courseName", course.get("course_name"));
+                    r.put("courseCode", course.get("course_code"));
+                    r.put("assessmentMethod", course.get("assessment_method"));
+                }
+            }
+            Object oid = r.get("orgUnitId");
+            if (oid != null) {
+                r.put("className", orgUnitNames.get(((Number) oid).longValue()));
+            }
+            Object rt = r.get("roomTypeRequired");
+            if (rt instanceof String && !((String) rt).isEmpty()) {
+                r.put("roomTypeName", roomTypeNames.get(rt));
+            }
+            Object tid = r.get("id");
+            if (tid != null) {
+                List<Map<String, Object>> teachers = teachersByTask.getOrDefault(
+                        ((Number) tid).longValue(), Collections.emptyList());
+                r.put("teachers", teachers);
+                String names = teachers.stream()
+                        .map(t -> (String) t.get("real_name"))
+                        .filter(Objects::nonNull)
+                        .collect(java.util.stream.Collectors.joining(", "));
+                r.put("teacherName", names.isEmpty() ? null : names);
+            } else {
+                r.put("teachers", Collections.emptyList());
+            }
+        }
+    }
+
+    private Map<Long, Map<String, Object>> batchSelect(String sqlPrefix, Set<Long> ids) {
+        if (ids == null || ids.isEmpty()) return Collections.emptyMap();
+        String placeholders = String.join(",", Collections.nCopies(ids.size(), "?"));
+        List<Map<String, Object>> rows = jdbc.queryForList(sqlPrefix + "(" + placeholders + ")", ids.toArray());
+        Map<Long, Map<String, Object>> map = new HashMap<>();
+        for (Map<String, Object> row : rows) {
+            Object id = row.get("id");
+            if (id != null) map.put(((Number) id).longValue(), row);
+        }
+        return map;
+    }
+
+    private Map<Long, String> batchSelectName(String sqlPrefix, Set<Long> ids) {
+        if (ids == null || ids.isEmpty()) return new HashMap<>();
+        String placeholders = String.join(",", Collections.nCopies(ids.size(), "?"));
+        Map<Long, String> map = new HashMap<>();
+        jdbc.query(sqlPrefix + "(" + placeholders + ")", ids.toArray(), rs -> {
+            map.put(rs.getLong("id"), rs.getString("name"));
+        });
+        return map;
     }
 
     private Long toLong(Object val) {

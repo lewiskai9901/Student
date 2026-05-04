@@ -555,7 +555,7 @@ const showItemPicker = ref(false)
             <template v-else-if="i < getConditions().length - 1">；</template>
           </template>
           <template v-if="hasHistoricalCondition()">（最近 <strong>{{ config.lookbackDays ?? 30 }}</strong> 天）</template>
-          → {{ ruleType === 'VETO' ? `否决，设为 ${config.vetoScore ?? 0} 分` : ruleType === 'PENALTY' ? `额外扣 ${config.penaltyScore ?? 5} 分` : `加 ${config.bonusScore ?? 5} 分` }}
+          > {{ ruleType === 'VETO' ? `否决，设为 ${config.vetoScore ?? 0} 分` : ruleType === 'PENALTY' ? `额外扣 ${config.penaltyScore ?? 5} 分` : `加 ${config.bonusScore ?? 5} 分` }}
         </div>
       </div>
     </template>

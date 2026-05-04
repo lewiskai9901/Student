@@ -38,6 +38,7 @@ public class ConstraintApplicationService {
             ConstraintLevel.fromCode(toInt(data.get("constraintLevel"))),
             toLong(data.get("targetId")),
             (String) data.get("targetName"),
+            toLong(data.get("orgUnitId")),
             ConstraintType.valueOf((String) data.get("constraintType")),
             toBool(data.getOrDefault("isHard", true)),
             toInt(data.getOrDefault("priority", 50)),

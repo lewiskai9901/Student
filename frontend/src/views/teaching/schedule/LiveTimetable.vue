@@ -34,12 +34,12 @@
       </select>
       <span class="live-sep" />
       <div class="live-week-pager">
-        <button class="live-arrow" :disabled="weekNumber <= 1" @click="weekNumber > 1 && (weekNumber--, loadInstances())">◀</button>
+        <button class="live-arrow" :disabled="weekNumber <= 1" @click="weekNumber > 1 && (weekNumber--, loadInstances())"><</button>
         <span class="live-week-label">
           第 {{ weekNumber }} 周
           <span class="live-week-range">{{ weekRangeLabel }}</span>
         </span>
-        <button class="live-arrow" :disabled="weekNumber >= weeks.length" @click="weekNumber < weeks.length && (weekNumber++, loadInstances())">▶</button>
+        <button class="live-arrow" :disabled="weekNumber >= weeks.length" @click="weekNumber < weeks.length && (weekNumber++, loadInstances())">></button>
       </div>
       <span v-if="currentWeekTag" class="live-tag" :class="'tag-' + currentWeekTag.type">{{ currentWeekTag.label }}</span>
     </div>
@@ -97,16 +97,16 @@
                   </div>
                   <!-- 调走链接：显示去哪 -->
                   <div v-if="parseLink(inst.movedTo)" class="live-entry-link link-out">
-                    → 去 {{ formatLink(parseLink(inst.movedTo)!) }}
+                    > 去 {{ formatLink(parseLink(inst.movedTo)!) }}
                   </div>
                   <!-- 调入链接：显示来自哪 -->
                   <div v-if="parseLink(inst.movedFrom)" class="live-entry-link link-in">
-                    ← 来自 {{ formatLink(parseLink(inst.movedFrom)!) }}
+                    < 来自 {{ formatLink(parseLink(inst.movedFrom)!) }}
                   </div>
                   <!-- 班级视图: 教师 + 教室 -->
                   <template v-if="viewType === 'class' && inst.status !== 2">
                     <div v-if="inst.status === 4 && inst.originalTeacherName" class="live-entry-meta live-entry-sub">
-                      {{ inst.originalTeacherName }} → {{ inst.teacherName }}
+                      {{ inst.originalTeacherName }} > {{ inst.teacherName }}
                     </div>
                     <div v-else class="live-entry-meta">{{ inst.teacherName || '' }}</div>
                     <div class="live-entry-meta">{{ inst.classroomName || '' }}</div>
@@ -120,11 +120,11 @@
                   <template v-else-if="viewType === 'classroom' && inst.status !== 2">
                     <div class="live-entry-meta">{{ inst.className || '' }}</div>
                     <div v-if="inst.status === 4 && inst.originalTeacherName" class="live-entry-meta live-entry-sub">
-                      {{ inst.originalTeacherName }} → {{ inst.teacherName }}
+                      {{ inst.originalTeacherName }} > {{ inst.teacherName }}
                     </div>
                     <div v-else class="live-entry-meta">{{ inst.teacherName || '' }}</div>
                   </template>
-                  <div v-if="inst.cancelReason" class="live-entry-reason">💬 {{ inst.cancelReason }}</div>
+                  <div v-if="inst.cancelReason" class="live-entry-reason"> {{ inst.cancelReason }}</div>
                 </div>
               </template>
             </td>
@@ -136,7 +136,7 @@
     <!-- 最近变动 -->
     <div v-if="targetId && recentAdjustments.length > 0" class="live-feed">
       <div class="live-feed-header">
-        <h3>📋 最近变动</h3>
+        <h3> 最近变动</h3>
         <span>共 {{ recentAdjustments.length }} 条</span>
       </div>
       <div v-for="adj in recentAdjustments" :key="adj.id" class="live-feed-item" :class="'feed-' + adj.adjustmentType">
@@ -242,8 +242,8 @@ const weekRangeLabel = computed(() => {
 const currentWeekTag = computed(() => {
   const w = weeks.value.find(x => x.weekNumber === weekNumber.value)
   if (!w) return null
-  if (w.weekType === 2) return { type: 'exam', label: '🎯 考试周' }
-  if (w.weekType === 3) return { type: 'holi', label: '🏖 假期周' }
+  if (w.weekType === 2) return { type: 'exam', label: ' 考试周' }
+  if (w.weekType === 3) return { type: 'holi', label: ' 假期周' }
   return null
 })
 
@@ -336,11 +336,11 @@ function formatTime(t: string) {
 
 function showDetail(inst: any) {
   const parts = [inst.courseName]
-  if (inst.teacherName) parts.push('👨‍🏫 ' + inst.teacherName)
-  if (inst.classroomName) parts.push('📍 ' + inst.classroomName)
-  if (inst.cancelReason) parts.push('💬 ' + inst.cancelReason)
-  const to = parseLink(inst.movedTo); if (to) parts.push('→ 去 ' + formatLink(to))
-  const from = parseLink(inst.movedFrom); if (from) parts.push('← 来自 ' + formatLink(from))
+  if (inst.teacherName) parts.push('‍ ' + inst.teacherName)
+  if (inst.classroomName) parts.push(' ' + inst.classroomName)
+  if (inst.cancelReason) parts.push(' ' + inst.cancelReason)
+  const to = parseLink(inst.movedTo); if (to) parts.push('> 去 ' + formatLink(to))
+  const from = parseLink(inst.movedFrom); if (from) parts.push('< 来自 ' + formatLink(from))
   ElMessage.info(parts.join(' | '))
 }
 
@@ -607,7 +607,7 @@ watch(() => props.semesterId, async (v) => {
 .live-entry-link.link-in {
   background: rgba(22,163,74,0.12); color: #16a34a;
 }
-/* 代课：原教师→代课教师 */
+/* 代课：原教师>代课教师 */
 .live-entry-sub {
   color: #ea580c !important; font-weight: 500;
 }

@@ -117,7 +117,7 @@ function getItemLabel(item: TemplateItem): string {
         @click="emit('selectSection', Number(rootSection.id))"
       >
         <div class="st-node-content">
-          <span class="st-root-icon">◆</span>
+          <span class="st-root-icon"></span>
           <span class="st-node-name st-root-name">{{ rootSection.sectionName || '未命名' }}</span>
           <span v-if="rootSection.targetType" class="st-tag st-tag-target">
             {{ TargetTypeConfig[rootSection.targetType as TargetType]?.label }}

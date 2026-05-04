@@ -81,25 +81,33 @@
         </div>
       </div>
 
-      <!-- Matrix overview mode -->
+      <!-- Matrix overview mode (支持拖拽移动课表) -->
       <TimetableMatrix
         v-if="viewType === 'overview'"
         :mode="overviewMode"
         :semester-id="semesterId"
         :periods="periods"
         :selected-targets="overviewSelected"
+        :week-dates="weekDates"
         data-source="schedule"
+        :draggable="true"
+        @moved="onScheduleMoved"
       />
 
       <!-- Timetable grids (single or compare) -->
       <div v-else :class="compareMode && compareTargetId ? 'tv-grid-compare' : ''">
         <div class="tv-grid-wrap" :style="compareMode && compareTargetId ? 'flex: 1;' : ''">
           <div v-if="compareMode && targetId" class="tv-grid-label">{{ currentTargetName }}</div>
+          <div v-if="weekDateLabel" class="tv-week-date-banner">
+            {{ weekDateLabel }}<span v-if="todayWeekday" class="tv-today-pill">今天 · 周{{ ['日','一','二','三','四','五','六'][todayWeekday] }}</span>
+          </div>
           <TimetableGrid
             :entries="filteredEntries"
             :periods="periods"
             :editable="!compareMode"
             :view-type="viewType"
+            :week-dates="weekDates"
+            :today-weekday="todayWeekday"
             @entry-click="showEntryDetail"
             @entry-drop="onEntryDrop"
             @cell-click="onCellClick"
@@ -112,6 +120,8 @@
             :periods="periods"
             :editable="false"
             :view-type="viewType"
+            :week-dates="weekDates"
+            :today-weekday="todayWeekday"
             @entry-click="showEntryDetail"
           />
         </div>
@@ -150,7 +160,7 @@
               <div v-if="selectedEntry && !compareMode" class="tm-section">
                 <h4 class="tm-section-title">排课锁定</h4>
                 <div style="display: flex; align-items: center; gap: 10px; padding: 10px; border: 1px solid #e5e7eb; border-radius: 8px; background: #fafafa;">
-                  <span style="font-size: 20px;">{{ (selectedEntry as any).isLocked ? '🔒' : '🔓' }}</span>
+                  <span style="font-size: 20px;">{{ (selectedEntry as any).isLocked ? '' : '' }}</span>
                   <div style="flex: 1;">
                     <div style="font-size: 13px; font-weight: 500; color: #111827;">
                       {{ (selectedEntry as any).isLocked ? '已锁定' : '未锁定' }}
@@ -234,7 +244,8 @@ import { http as request } from '@/utils/request'
 import { universalPlaceApi } from '@/api/universalPlace'
 import { scheduleApi, periodConfigApi, teachingTaskApi } from '@/api/teaching'
 import { orgUnitApi } from '@/api/organization'
-import type { ScheduleEntry, PeriodConfig } from '@/types/teaching'
+import { semesterApi } from '@/api/calendar'
+import type { ScheduleEntry, PeriodConfig, TeachingWeek } from '@/types/teaching'
 import { WEEKDAYS, DEFAULT_PERIODS } from '@/types/teaching'
 import TimetableGrid from '../scheduling/TimetableGrid.vue'
 import TimetableMatrix from '../scheduling/TimetableMatrix.vue'
@@ -265,6 +276,75 @@ function setViewType(t: typeof viewType.value) {
 function onMultiSelect(items: { id: number | string; name: string }[]) {
   overviewSelected.value = items
 }
+
+function onScheduleMoved(_entry: any) {
+  // TimetableMatrix 内部已 reload 自身; 这里仅作为外部 hook 备用
+}
+
+/* ==================== 周视图: 教学周 + 日期 + 当天高亮 ==================== */
+const teachingWeeks = ref<TeachingWeek[]>([])
+
+async function loadTeachingWeeks() {
+  if (!props.semesterId) { teachingWeeks.value = []; return }
+  try {
+    const res: any = await semesterApi.getWeeks(props.semesterId)
+    teachingWeeks.value = (res?.data || res || []) as TeachingWeek[]
+  } catch {
+    teachingWeeks.value = []
+  }
+}
+
+watch(() => props.semesterId, loadTeachingWeeks, { immediate: true })
+
+/** 当前显示周的 monday date (Date 对象), 没选周时取今天所在周 */
+const currentWeekMonday = computed<Date | null>(() => {
+  if (week.value && teachingWeeks.value.length > 0) {
+    const w = teachingWeeks.value.find(x => x.weekNumber === week.value)
+    if (w?.startDate) return new Date(w.startDate)
+  }
+  // 没选具体周 > 今天所在周
+  const today = new Date()
+  const day = today.getDay() // 0=周日
+  const diff = day === 0 ? -6 : 1 - day
+  const monday = new Date(today)
+  monday.setDate(today.getDate() + diff)
+  monday.setHours(0, 0, 0, 0)
+  return monday
+})
+
+/** weekday(1-7) > "M/D" 字符串 */
+const weekDates = computed<Record<number, string>>(() => {
+  const monday = currentWeekMonday.value
+  if (!monday) return {}
+  const out: Record<number, string> = {}
+  for (let i = 0; i < 7; i++) {
+    const d = new Date(monday)
+    d.setDate(monday.getDate() + i)
+    out[i + 1] = `${d.getMonth() + 1}/${d.getDate()}`
+  }
+  return out
+})
+
+/** 整个周的日期标签 e.g. "9/2 - 9/8" */
+const weekDateLabel = computed(() => {
+  const monday = currentWeekMonday.value
+  if (!monday) return ''
+  const sunday = new Date(monday)
+  sunday.setDate(monday.getDate() + 6)
+  const fmt = (d: Date) => `${d.getMonth() + 1}月${d.getDate()}日`
+  return `${fmt(monday)} - ${fmt(sunday)}`
+})
+
+/** 今天对应的 weekday(1-7), 如果不在当前显示的那一周, 返回 0 */
+const todayWeekday = computed<number>(() => {
+  const monday = currentWeekMonday.value
+  if (!monday) return 0
+  const today = new Date()
+  today.setHours(0, 0, 0, 0)
+  const diffDays = Math.round((today.getTime() - monday.getTime()) / 86400000)
+  if (diffDays < 0 || diffDays > 6) return 0
+  return diffDays + 1
+})
 const entries = ref<ScheduleEntry[]>([])
 const week = ref<number | undefined>()
 const weekType = ref(0)
@@ -747,6 +827,28 @@ watch(() => props.semesterId, (val) => {
   background: #eff6ff;
   border-bottom: 1px solid #e5e7eb;
   text-align: center;
+}
+
+/* 周视图日期 banner */
+.tv-week-date-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 14px;
+  font-size: 12.5px;
+  font-weight: 500;
+  color: #374151;
+  background: linear-gradient(90deg, #f8fafc 0%, #f1f5f9 100%);
+  border-bottom: 1px solid #e5e7eb;
+}
+.tv-today-pill {
+  padding: 2px 10px;
+  font-size: 11px;
+  font-weight: 600;
+  color: #fff;
+  background: #2563eb;
+  border-radius: 999px;
+  letter-spacing: 0.3px;
 }
 
 /* Detail drawer */

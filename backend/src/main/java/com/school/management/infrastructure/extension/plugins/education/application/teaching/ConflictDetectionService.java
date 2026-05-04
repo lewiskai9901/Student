@@ -106,13 +106,13 @@ public class ConflictDetectionService {
      * Post-scheduling conflict detection.
      * Checks: teacher, classroom, class conflicts.
      */
-    public List<ScheduleConflictRecord> detectConflicts(Long semesterId) {
+    public List<ScheduleConflictRecord> detectConflicts(Long semesterId, Long userId) {
         String batch = "DET-" + System.currentTimeMillis();
         List<ScheduleConflictRecord> conflicts = new ArrayList<>();
 
         // 1. Teacher conflicts: same teacher, same day+period, overlapping weeks
         List<Map<String, Object>> teacherConflicts = jdbcTemplate.queryForList(
-            "SELECT e1.id as id1, e2.id as id2, e1.teacher_id, " +
+            "SELECT e1.id as id1, e2.id as id2, e1.teacher_id, e1.org_unit_id as org_unit_id, " +
             "e1.weekday, e1.start_slot, e1.end_slot " +
             "FROM schedule_entries e1 " +
             "JOIN schedule_entries e2 ON e1.teacher_id = e2.teacher_id " +
@@ -131,14 +131,16 @@ public class ConflictDetectionService {
                 null,
                 ((Number) tc.get("id1")).longValue(),
                 ((Number) tc.get("id2")).longValue(),
-                null
+                null,
+                tc.get("org_unit_id") != null ? ((Number) tc.get("org_unit_id")).longValue() : null,
+                userId
             );
             conflicts.add(conflictRepo.save(r));
         }
 
         // 2. Classroom conflicts
         List<Map<String, Object>> roomConflicts = jdbcTemplate.queryForList(
-            "SELECT e1.id as id1, e2.id as id2, e1.classroom_id, " +
+            "SELECT e1.id as id1, e2.id as id2, e1.classroom_id, e1.org_unit_id as org_unit_id, " +
             "e1.weekday, e1.start_slot " +
             "FROM schedule_entries e1 " +
             "JOIN schedule_entries e2 ON e1.classroom_id = e2.classroom_id " +
@@ -158,7 +160,9 @@ public class ConflictDetectionService {
                 null,
                 ((Number) rc.get("id1")).longValue(),
                 ((Number) rc.get("id2")).longValue(),
-                null
+                null,
+                rc.get("org_unit_id") != null ? ((Number) rc.get("org_unit_id")).longValue() : null,
+                userId
             );
             conflicts.add(conflictRepo.save(r));
         }
@@ -184,7 +188,9 @@ public class ConflictDetectionService {
                 null,
                 ((Number) cc.get("id1")).longValue(),
                 ((Number) cc.get("id2")).longValue(),
-                null
+                null,
+                cc.get("org_unit_id") != null ? ((Number) cc.get("org_unit_id")).longValue() : null,
+                userId
             );
             conflicts.add(conflictRepo.save(r));
         }

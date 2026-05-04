@@ -28,7 +28,7 @@
         <div v-for="r in recentRows" :key="r.id" class="recent-item">
           <span class="recent-when">{{ timeAgo(r.createdAt) }}</span>
           <span class="recent-actor">{{ displayName(r, 'subject') }}</span>
-          <span class="recent-arrow">—{{ relationLabel(r.relation) }}→</span>
+          <span class="recent-arrow">—{{ relationLabel(r.relation) }}></span>
           <span class="recent-target">{{ displayName(r, 'resource') }}</span>
           <button class="recent-revoke" @click="revoke(r)">撤销</button>
         </div>
@@ -139,7 +139,7 @@
             的<em>{{ relationLabel(wizardMeta.relation) }}</em>
           </div>
           <div v-if="existingConflict" class="preview-warning">
-            ⚠️ 该资源已有 {{ existingConflict.count }} 个{{ relationLabel(wizardMeta.relation) }}，建议先撤销原有。
+            !️ 该资源已有 {{ existingConflict.count }} 个{{ relationLabel(wizardMeta.relation) }}，建议先撤销原有。
           </div>
         </div>
       </div>
@@ -166,11 +166,11 @@ const viewMode = ref<'scene' | 'data'>('scene')
 
 // ─── 场景定义 ───
 const scenes = [
-  { code: 'ASSIGN_CLASS_ADMIN', title: '指定班主任', desc: '给班级或年级绑定主管理员', emoji: '👨‍🏫', color: '#f59e0b' },
-  { code: 'ADD_GUARDIAN',       title: '添加监护人',   desc: '为学生绑定家长监护关系',   emoji: '👨‍👩‍👧', color: '#2563eb' },
-  { code: 'ASSIGN_PLACE_ADMIN', title: '场所负责人',   desc: '指定教室/宿舍/实验室负责人', emoji: '🏢', color: '#10b981' },
-  { code: 'ADD_MEMBER',         title: '加入组织',     desc: '把用户加入某组织作为成员',  emoji: '👥', color: '#8b5cf6' },
-  { code: 'PLACE_BELONGS_ORG',  title: '场所归属',     desc: '绑定场所到某组织',         emoji: '🏫', color: '#06b6d4' },
+  { code: 'ASSIGN_CLASS_ADMIN', title: '指定班主任', desc: '给班级或年级绑定主管理员', emoji: '‍', color: '#f59e0b' },
+  { code: 'ADD_GUARDIAN',       title: '添加监护人',   desc: '为学生绑定家长监护关系',   emoji: '‍‍', color: '#2563eb' },
+  { code: 'ASSIGN_PLACE_ADMIN', title: '场所负责人',   desc: '指定教室/宿舍/实验室负责人', emoji: '', color: '#10b981' },
+  { code: 'ADD_MEMBER',         title: '加入组织',     desc: '把用户加入某组织作为成员',  emoji: '', color: '#8b5cf6' },
+  { code: 'PLACE_BELONGS_ORG',  title: '场所归属',     desc: '绑定场所到某组织',         emoji: '', color: '#06b6d4' },
 ]
 
 const sceneMap: Record<string, {
@@ -375,7 +375,7 @@ function resetFilter() {
 
 async function revoke(row: any) {
   await ElMessageBox.confirm(
-    `撤销关系: ${displayName(row, 'subject')} —${relationLabel(row.relation)}→ ${displayName(row, 'resource')}`,
+    `撤销关系: ${displayName(row, 'subject')} —${relationLabel(row.relation)}> ${displayName(row, 'resource')}`,
     '确认撤销', { type: 'warning' }
   )
   try {

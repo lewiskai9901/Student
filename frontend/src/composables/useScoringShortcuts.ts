@@ -3,7 +3,7 @@
  *
  * 暴露的钩子供调用方实现具体动作:
  *   onPass / onFail   — 数字 1/2 键, 当前 detail 选择 通过/不通过
- *   onPrev / onNext   — j/k 或 ←/→ 切换目标
+ *   onPrev / onNext   — j/k 或 </> 切换目标
  *   onSubmit          — s, 提交任务
  *   onSearch          — / , 聚焦搜索框
  *

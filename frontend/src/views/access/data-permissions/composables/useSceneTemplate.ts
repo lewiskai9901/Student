@@ -1,5 +1,5 @@
 /**
- * 场景模板 ↔ 模块 scope 映射
+ * 场景模板 <> 模块 scope 映射
  * 核心创新: 让 "3 决策" 自动映射到 28 模块的具体 scope 配置
  *
  * 反推: 已有 modulePermissions 数据加载时自动反推出最接近的 SceneDecision,
@@ -102,11 +102,11 @@ export interface ScopeFallbackInfo {
 }
 
 /**
- * 核心映射: SceneDecision → 每个 module 的 scope 配置
+ * 核心映射: SceneDecision > 每个 module 的 scope 配置
  *
  * 规则:
- *   - EDU_STUDENT_MODULES 且 decision.studentScope 有值 → 用 studentScope
- *   - 其他所有 module → 用 primary (bizAutoFollow=true 时)
+ *   - EDU_STUDENT_MODULES 且 decision.studentScope 有值 > 用 studentScope
+ *   - 其他所有 module > 用 primary (bizAutoFollow=true 时)
  *   - CUSTOM 主决策时附带 scopeItems
  *   - 模块感知范围: 主决策 scope 不在模块 allowedScopes 时按 FALLBACK_CHAIN 降级
  *
@@ -168,7 +168,7 @@ export function sceneToModuleScopes(
 }
 
 /**
- * StudentScope → 系统 DataScope 代码.
+ * StudentScope > 系统 DataScope 代码.
  *
  * v2: BY_CLASS/BY_GRADE/BY_MAJOR 作为一等公民 (data_scope_dims 插件维度注册),
  *     直接传递; 当模块 allowed_scopes 不包含时会在 resolveScopeWithFallback 里降级.
@@ -178,10 +178,10 @@ function mapStudentScopeToSystemScope(s: StudentScope): string {
 }
 
 /**
- * 反推: 已有 modulePermissions → 最接近的 SceneDecision
+ * 反推: 已有 modulePermissions > 最接近的 SceneDecision
  *
  * round-trip 一致性:
- *   - 模板 → Scene → Modules → 存储 → 读取 → Modules → Scene (反推)
+ *   - 模板 > Scene > Modules > 存储 > 读取 > Modules > Scene (反推)
  *   - 一致性目标: 反推结果套用回去生成的 Modules 和原始 Modules 一致
  *
  * 策略:

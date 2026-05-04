@@ -93,9 +93,9 @@
       </table>
 
       <div v-if="total > filters.size" class="pagination">
-        <button class="insp-btn insp-btn--sm" :disabled="filters.page <= 1" @click="filters.page--; loadData()">← 上一页</button>
+        <button class="insp-btn insp-btn--sm" :disabled="filters.page <= 1" @click="filters.page--; loadData()">< 上一页</button>
         <span class="page-info insp-num">{{ filters.page }} / {{ totalPages }}</span>
-        <button class="insp-btn insp-btn--sm" :disabled="filters.page >= totalPages" @click="filters.page++; loadData()">下一页 →</button>
+        <button class="insp-btn insp-btn--sm" :disabled="filters.page >= totalPages" @click="filters.page++; loadData()">下一页 ></button>
       </div>
     </section>
   </div>

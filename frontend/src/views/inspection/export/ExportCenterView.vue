@@ -10,7 +10,7 @@
     <hr class="insp-rule insp-rule--strong" />
 
     <div class="hint-banner">
-      <span>📋 给 HR / 考核办 / 教务用 — 一键下载 Excel, 直接进考核系统</span>
+      <span> 给 HR / 考核办 / 教务用 — 一键下载 Excel, 直接进考核系统</span>
     </div>
 
     <div class="export-grid">
@@ -18,7 +18,7 @@
       <el-card shadow="never" class="export-card">
         <template #header>
           <div class="card-head">
-            <span class="card-title">📊 周期排名报表</span>
+            <span class="card-title"> 周期排名报表</span>
             <el-tag size="small" type="info">XLSX</el-tag>
           </div>
         </template>
@@ -47,7 +47,7 @@
       <el-card shadow="never" class="export-card">
         <template #header>
           <div class="card-head">
-            <span class="card-title">🔄 整改履约报表</span>
+            <span class="card-title"> 整改履约报表</span>
             <el-tag size="small" type="info">XLSX</el-tag>
           </div>
         </template>
@@ -77,7 +77,7 @@
       <el-card shadow="never" class="export-card">
         <template #header>
           <div class="card-head">
-            <span class="card-title">⚖ 申诉处理记录</span>
+            <span class="card-title"> 申诉处理记录</span>
             <el-tag size="small" type="info">XLSX</el-tag>
           </div>
         </template>
@@ -97,7 +97,7 @@
       <el-card shadow="never" class="export-card">
         <template #header>
           <div class="card-head">
-            <span class="card-title">📜 审计日志</span>
+            <span class="card-title"> 审计日志</span>
             <el-tag size="small" type="info">XLSX</el-tag>
           </div>
         </template>
@@ -125,7 +125,7 @@
     <!-- API 直连提示 -->
     <el-card shadow="never" class="api-hint">
       <template #header>
-        <div class="card-head"><span>🔗 给考核系统直接调用</span></div>
+        <div class="card-head"><span> 给考核系统直接调用</span></div>
       </template>
       <div class="api-row">
         <code>GET /api/inspection/export/ranking?projectId=&amp;startDate=&amp;endDate=</code>

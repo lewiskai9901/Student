@@ -7,13 +7,13 @@
  *  - URL query 同步 (view/status/period/showArchived/sort)
  *  - ARCHIVED 默认隐藏 + toggle 显示
  *  - 列头点击排序 (3 列: name/period/progress), 默认按 urgency
- *  - urgencyScore 加 DRAFT 衰减 (createdAt → daysSinceCreate)
+ *  - urgencyScore 加 DRAFT 衰减 (createdAt > daysSinceCreate)
  *  - 看板按角色分组 (管理员 vs 检查员)
  *  - 看板空"需要我处理"列友好引导
  *  - 时间线缩放: 季度/年/全部
  *  - 没起止日期的项目走"无日期"专列, 不静默丢
  *  - KPI 告警去重
- *  - 完成不可逆 → primary, 暂停 → ghost
+ *  - 完成不可逆 > primary, 暂停 > ghost
  */
 import { ref, computed, onMounted, onUnmounted, watch, nextTick } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
@@ -224,7 +224,7 @@ function fmtDate(s?: string | null) {
 function fmtRange(p: InspProject): string {
   if (!p.startDate) return '未设期'
   if (!p.endDate) return `${fmtDate(p.startDate)} 起`
-  return `${fmtDate(p.startDate)} → ${fmtDate(p.endDate)}`
+  return `${fmtDate(p.startDate)} > ${fmtDate(p.endDate)}`
 }
 function daysRemaining(p: InspProject): string | null {
   if (!p.endDate || (p.status !== 'PUBLISHED' && p.status !== 'PAUSED')) return null

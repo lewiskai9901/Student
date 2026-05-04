@@ -88,6 +88,7 @@
             <div class="tm-field" :class="{ 'tm-error': tcErrors.className }">
               <label class="tm-label">教学班名称 <span class="req">*</span></label>
               <input v-model="tcForm.className" class="tm-input" placeholder="如: 高一(1,2)班数学" />
+              <span v-if="tcErrors.className" class="tm-error-msg">教学班名称不能为空</span>
             </div>
             <div class="tm-field" :class="{ 'tm-error': tcErrors.courseId }">
               <label class="tm-label">课程 <span class="req">*</span></label>
@@ -95,6 +96,7 @@
                 <option :value="undefined" disabled>选择课程</option>
                 <option v-for="c in allCourses" :key="c.id" :value="c.id">{{ c.courseCode }} - {{ c.courseName }}</option>
               </select>
+              <span v-if="tcErrors.courseId" class="tm-error-msg">请选择课程</span>
             </div>
             <div class="tm-field">
               <label class="tm-label">教学班类型 <span class="req">*</span></label>

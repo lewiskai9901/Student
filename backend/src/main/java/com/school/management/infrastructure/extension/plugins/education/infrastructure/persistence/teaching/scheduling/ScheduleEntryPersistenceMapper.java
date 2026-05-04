@@ -1,6 +1,7 @@
 package com.school.management.infrastructure.extension.plugins.education.infrastructure.persistence.teaching.scheduling;
 
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
+import com.school.management.infrastructure.access.DataPermission;
 import org.apache.ibatis.annotations.Delete;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
@@ -8,6 +9,7 @@ import org.apache.ibatis.annotations.Select;
 import java.util.List;
 
 @Mapper
+@DataPermission(module = "schedule_entry", orgUnitField = "org_unit_id", creatorField = "created_by")
 public interface ScheduleEntryPersistenceMapper extends BaseMapper<ScheduleEntryPO> {
 
     @Select("SELECT * FROM schedule_entries WHERE semester_id = #{sid} AND teacher_id = #{tid} AND weekday = #{day} AND deleted = 0 AND entry_status = 1")

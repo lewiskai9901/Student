@@ -253,7 +253,7 @@
         </span>
       </div>
       <button v-if="allAssigned" class="tm-btn tm-btn-primary" @click="router.push('/teaching/scheduling')">
-        全部已就绪 — 进入排课 →
+        全部已就绪 — 进入排课 >
       </button>
     </div>
 

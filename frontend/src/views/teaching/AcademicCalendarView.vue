@@ -37,7 +37,7 @@
               v-if="year.isCurrent"
               class="absolute right-3 top-3 rounded-full bg-blue-50 px-2 py-0.5 text-xs font-medium text-blue-600"
             >当前学年</span>
-            <div class="mb-3 text-2xl">📅</div>
+            <div class="mb-3 text-2xl"></div>
             <div class="text-base font-semibold text-gray-900">{{ year.yearName }}</div>
             <div class="mt-1 text-xs text-gray-400">{{ year.startDate }} ~ {{ year.endDate }}</div>
             <div class="mt-3 flex items-center gap-4 text-sm">
@@ -53,7 +53,7 @@
 
         <!-- Empty state -->
         <div v-if="!academicYears.length" class="flex flex-col items-center justify-center py-20">
-          <div class="text-4xl">📆</div>
+          <div class="text-4xl"></div>
           <div class="mt-3 text-sm text-gray-400">暂无学年数据</div>
           <button
             class="mt-4 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
@@ -202,7 +202,7 @@
         <el-form-item label="学期类型" prop="semesterType">
           <div class="flex gap-3">
             <div
-              v-for="term in [{value: 1, label: '第一学期', icon: '①'}, {value: 2, label: '第二学期', icon: '②'}, {value: 3, label: '短学期', icon: '☀'}]"
+              v-for="term in [{value: 1, label: '第一学期', icon: '①'}, {value: 2, label: '第二学期', icon: '②'}, {value: 3, label: '短学期', icon: ''}]"
               :key="term.value"
               class="flex cursor-pointer items-center gap-2 rounded-lg border px-4 py-2.5 transition-all"
               :class="semesterForm.semesterType === term.value ? 'border-blue-300 bg-blue-50 text-blue-700' : 'border-gray-200 text-gray-600 hover:border-gray-300'"

@@ -130,7 +130,7 @@ function dayLabel(d: string): string {
 // ── Appeal status mapping ──
 function appealStatusForObservation(_o: Observation): InspAppeal | undefined {
   // observation 不直接关联 appeal, 我们能否找到对应 detail 已申诉?
-  // 简化: 若 itemName 匹配, 时间相近 → 视为同记录
+  // 简化: 若 itemName 匹配, 时间相近 > 视为同记录
   return undefined
 }
 

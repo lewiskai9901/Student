@@ -53,7 +53,7 @@
             <span class="truncate">{{ f.moduleName }}</span>
             <span class="text-amber-500">:</span>
             <code class="rounded bg-amber-100 px-1 text-[10px]">{{ scopeName(f.from) }}</code>
-            <span class="text-amber-500">→</span>
+            <span class="text-amber-500">></span>
             <code class="rounded bg-amber-100 px-1 text-[10px]">{{ scopeName(f.to) }}</code>
           </li>
           <li v-if="fallbacks.length > 6" class="text-[10px] text-amber-600">
@@ -108,7 +108,7 @@
             @click="runSimulate"
           >
             <Loader2 v-if="simulating" class="inline h-2.5 w-2.5 animate-spin" />
-            <span v-else>▶ 模拟</span>
+            <span v-else>> 模拟</span>
           </button>
         </div>
 

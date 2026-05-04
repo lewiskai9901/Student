@@ -549,15 +549,15 @@
                 <div class="fp-form-item full" style="margin-top:4px">
                   <label>编号方向</label>
                   <div v-if="batchForm.numberingScope === 'global'" class="fp-radio-group fp-radio-sm" style="margin-top:4px">
-                    <label :class="{ active: batchForm.numberingDir === 'ltr' }"><input type="radio" value="ltr" v-model="batchForm.numberingDir" />左→右</label>
-                    <label :class="{ active: batchForm.numberingDir === 'rtl' }"><input type="radio" value="rtl" v-model="batchForm.numberingDir" />右→左</label>
+                    <label :class="{ active: batchForm.numberingDir === 'ltr' }"><input type="radio" value="ltr" v-model="batchForm.numberingDir" />左>右</label>
+                    <label :class="{ active: batchForm.numberingDir === 'rtl' }"><input type="radio" value="rtl" v-model="batchForm.numberingDir" />右>左</label>
                     <label :class="{ active: batchForm.numberingDir === 'snake' }"><input type="radio" value="snake" v-model="batchForm.numberingDir" />蛇形</label>
                     <label :class="{ active: batchForm.numberingDir === 'column' }"><input type="radio" value="column" v-model="batchForm.numberingDir" />列优先</label>
                   </div>
                   <div v-else class="fp-radio-group fp-radio-sm" style="margin-top:4px">
-                    <label :class="{ active: batchForm.numberingDir === 'ltr' }"><input type="radio" value="ltr" v-model="batchForm.numberingDir" />左→右</label>
-                    <label :class="{ active: batchForm.numberingDir === 'rtl' }"><input type="radio" value="rtl" v-model="batchForm.numberingDir" />右→左</label>
-                    <label :class="{ active: batchForm.numberingDir === 'center' }"><input type="radio" value="center" v-model="batchForm.numberingDir" />中间→两边</label>
+                    <label :class="{ active: batchForm.numberingDir === 'ltr' }"><input type="radio" value="ltr" v-model="batchForm.numberingDir" />左>右</label>
+                    <label :class="{ active: batchForm.numberingDir === 'rtl' }"><input type="radio" value="rtl" v-model="batchForm.numberingDir" />右>左</label>
+                    <label :class="{ active: batchForm.numberingDir === 'center' }"><input type="radio" value="center" v-model="batchForm.numberingDir" />中间>两边</label>
                   </div>
                 </div>
                 <label class="fp-checkbox" style="margin-top:8px">

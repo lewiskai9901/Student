@@ -131,9 +131,9 @@ const genderIndicator = computed(() => {
   const g = props.node.effectiveGender || props.node.gender
   if (!g) return null
   const map: Record<string, { icon: string; color: string }> = {
-    'MALE': { icon: '♂', color: '#3b82f6' },
-    'FEMALE': { icon: '♀', color: '#ec4899' },
-    'MIXED': { icon: '⚥', color: '#8b5cf6' }
+    'MALE': { icon: '', color: '#3b82f6' },
+    'FEMALE': { icon: '', color: '#ec4899' },
+    'MIXED': { icon: '', color: '#8b5cf6' }
   }
   return map[g] || null
 })

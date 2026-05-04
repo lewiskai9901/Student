@@ -23,7 +23,7 @@
     </div>
 
     <template v-else>
-      <!-- 🟢 结果层 —— 1 行答案 -->
+      <!--  结果层 —— 1 行答案 -->
       <section class="result-banner" :class="resultClass">
         <div class="banner-main">
           <div class="banner-score">
@@ -51,7 +51,7 @@
         </div>
       </section>
 
-      <!-- 🟡 影响层 + 🟠 责任层 —— 2 列 -->
+      <!--  影响层 +  责任层 —— 2 列 -->
       <div class="grid-2">
         <!-- 趋势 -->
         <el-card shadow="never">
@@ -71,8 +71,8 @@
         <el-card shadow="never">
           <template #header>
             <div class="card-head">
-              <span>🔴 待整改 <el-tag size="small" type="danger" v-if="openCases.length">{{ openCases.length }}</el-tag></span>
-              <el-button size="small" link @click="goAllCases">全部 →</el-button>
+              <span> 待整改 <el-tag size="small" type="danger" v-if="openCases.length">{{ openCases.length }}</el-tag></span>
+              <el-button size="small" link @click="goAllCases">全部 ></el-button>
             </div>
           </template>
           <div class="case-list">
@@ -88,17 +88,17 @@
               </div>
             </div>
             <div v-if="!openCases.length" class="text-center text-gray-400 py-6 text-sm">
-              ✨ 当前无待整改单, 表现良好
+               当前无待整改单, 表现良好
             </div>
           </div>
         </el-card>
       </div>
 
-      <!-- 🟠 责任层 — Top 问题 + 鼓励 -->
+      <!--  责任层 — Top 问题 + 鼓励 -->
       <div class="grid-2">
         <el-card shadow="never">
           <template #header>
-            <div class="card-head"><span>🟠 高频扣分点 Top 3</span></div>
+            <div class="card-head"><span> 高频扣分点 Top 3</span></div>
           </template>
           <div v-if="!topIssues.length" class="text-center text-gray-400 py-6 text-sm">本期暂无扣分</div>
           <div v-else class="issue-list">
@@ -115,12 +115,12 @@
 
         <el-card shadow="never">
           <template #header>
-            <div class="card-head"><span>🟢 我做得好的</span></div>
+            <div class="card-head"><span> 我做得好的</span></div>
           </template>
           <div v-if="!goodItems.length" class="text-center text-gray-400 py-6 text-sm">继续努力</div>
           <div v-else class="good-list">
             <div v-for="(g, i) in goodItems" :key="i" class="good-item">
-              <span class="good-icon">✨</span>
+              <span class="good-icon"></span>
               <span class="good-text">{{ g.text }}</span>
             </div>
           </div>
@@ -131,7 +131,7 @@
       <div class="grid-2">
         <el-card shadow="never">
           <template #header>
-            <div class="card-head"><span>📊 申诉历史</span></div>
+            <div class="card-head"><span> 申诉历史</span></div>
           </template>
           <div v-if="!appealStats.total" class="text-center text-gray-400 py-6 text-sm">
             尚未提交过申诉
@@ -158,10 +158,10 @@
 
         <el-card shadow="never">
           <template #header>
-            <div class="card-head"><span>🔄 重复扣分项</span></div>
+            <div class="card-head"><span> 重复扣分项</span></div>
           </template>
           <div v-if="!repeatItems.length" class="text-center text-gray-400 py-6 text-sm">
-            ✨ 无重复扣分, 整改有效
+             无重复扣分, 整改有效
           </div>
           <div v-else class="repeat-list">
             <div v-for="r in repeatItems" :key="r.itemCode" class="repeat-item">
@@ -173,21 +173,21 @@
         </el-card>
       </div>
 
-      <!-- 🔵 明细层 — 默认折叠 -->
+      <!--  明细层 — 默认折叠 -->
       <el-card shadow="never" class="detail-card">
         <template #header>
           <div class="card-head">
             <el-button size="small" link @click="showDetails = !showDetails">
-              {{ showDetails ? '▾ 收起' : '▸ 展开' }} 完整明细 ({{ allDetails.length }} 条)
+              {{ showDetails ? 'v 收起' : '> 展开' }} 完整明细 ({{ allDetails.length }} 条)
             </el-button>
-            <span class="hint" v-if="showDetails">点击 ⚖ 申诉对扣分有异议的条目</span>
+            <span class="hint" v-if="showDetails">点击  申诉对扣分有异议的条目</span>
           </div>
         </template>
         <el-table v-if="showDetails" :data="allDetails" size="small" max-height="400" row-class-name="detail-row">
           <el-table-column prop="itemName" label="检查项" min-width="140">
             <template #default="{ row }">
               <span>{{ row.itemName }}</span>
-              <el-tag v-if="isRepeatItem(row.itemCode)" size="small" type="warning" class="ml-1">🔄 复发</el-tag>
+              <el-tag v-if="isRepeatItem(row.itemCode)" size="small" type="warning" class="ml-1"> 复发</el-tag>
             </template>
           </el-table-column>
           <el-table-column prop="sectionName" label="所属类别" min-width="100" show-overflow-tooltip />
@@ -214,7 +214,7 @@
           <el-table-column label="申诉" width="80">
             <template #default="{ row }">
               <el-button v-if="row.isFlagged || (row.score ?? 5) < 3" size="small" link type="primary"
-                @click="openAppeal(row)">⚖ 申诉</el-button>
+                @click="openAppeal(row)"> 申诉</el-button>
             </template>
           </el-table-column>
         </el-table>
@@ -333,7 +333,7 @@ const trendDelta = computed(() => {
 })
 const trendArrow = computed(() => {
   const d = parseFloat(trendDelta.value)
-  return d > 0 ? '↗' : d < 0 ? '↘' : '→'
+  return d > 0 ? '↑' : d < 0 ? '↓' : '>'
 })
 const trendClass = computed(() => {
   const d = parseFloat(trendDelta.value)
@@ -591,9 +591,9 @@ function priorityType(p: string) {
 function deadlineLabel(c: CorrectiveCase) {
   if (!c.deadline) return ''
   const days = Math.ceil((new Date(c.deadline).getTime() - Date.now()) / 86400000)
-  if (days < 0) return `⏰ 已超期 ${-days}d`
-  if (days === 0) return `⏰ 今日截止`
-  if (days <= 2) return `⏰ ${days} 天内`
+  if (days < 0) return ` 已超期 ${-days}d`
+  if (days === 0) return ` 今日截止`
+  if (days <= 2) return ` ${days} 天内`
   return `${days} 天后`
 }
 function caseUrgencyClass(c: CorrectiveCase) {

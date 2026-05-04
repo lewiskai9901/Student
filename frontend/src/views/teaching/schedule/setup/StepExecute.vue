@@ -49,7 +49,7 @@
     </div>
 
     <button class="tm-btn tm-btn-primary" :disabled="scheduling" @click="runSchedule" style="margin-bottom: 16px; padding: 10px 24px; font-size: 14px;">
-      {{ scheduling ? '排课中...' : '▶ 开始智能排课' }}
+      {{ scheduling ? '排课中...' : '> 开始智能排课' }}
     </button>
 
     <!-- Progress -->
@@ -70,7 +70,7 @@
         <span v-if="result.conflicts?.length > 0" style="color: #d97706; margin-left: 8px;">（{{ result.conflicts.length }} 个冲突）</span>
       </p>
       <p v-if="result.skippedNoTeacher > 0" style="font-size: 13px; color: #dc2626; margin-top: 6px; font-weight: 500;">
-        ⚠ {{ result.skippedNoTeacher }} 个任务因未分配教师被跳过，请在
+        ! {{ result.skippedNoTeacher }} 个任务因未分配教师被跳过，请在
         <a href="/teaching/offerings?tab=fulfillment" target="_blank" style="color: #2563eb;">任务落实</a>
         中完成教师分配后重新排课。
       </p>
@@ -103,11 +103,11 @@ const preset = ref<'fast' | 'standard' | 'precise'>('standard')
 const showAdvanced = ref(false)
 
 const presets = [
-  { key: 'fast', icon: '⚡', title: '快速', desc: '适合任务少或初次排课', timeEstimate: '10-30秒',
+  { key: 'fast', icon: '', title: '快速', desc: '适合任务少或初次排课', timeEstimate: '10-30秒',
     params: { maxIterations: 200, populationSize: 20, mutationRate: 0.15 } },
-  { key: 'standard', icon: '⚖️', title: '标准', desc: '兼顾速度和质量（推荐）', timeEstimate: '30秒-2分钟',
+  { key: 'standard', icon: '️', title: '标准', desc: '兼顾速度和质量（推荐）', timeEstimate: '30秒-2分钟',
     params: { maxIterations: 500, populationSize: 30, mutationRate: 0.1 } },
-  { key: 'precise', icon: '🎯', title: '精细', desc: '大量任务、复杂约束', timeEstimate: '2-5分钟',
+  { key: 'precise', icon: '', title: '精细', desc: '大量任务、复杂约束', timeEstimate: '2-5分钟',
     params: { maxIterations: 1500, populationSize: 50, mutationRate: 0.08 } },
 ] as const
 

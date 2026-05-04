@@ -10,7 +10,7 @@ test.describe('统计分析配置管理', () => {
     test('1. 登录获取 Token', async ({ authToken }) => {
       expect(authToken).toBeTruthy()
       expect(authToken.length).toBeGreaterThan(50)
-      console.log('✅ 登录成功，Token 获取成功')
+      console.log('√ 登录成功，Token 获取成功')
     })
 
     test('2. 获取配置列表 - 空列表', async ({ request, authToken }) => {
@@ -23,7 +23,7 @@ test.describe('统计分析配置管理', () => {
       const data = await response.json()
       expect(data.code).toBe(200)
       expect(data.data.records).toBeDefined()
-      console.log(`✅ 获取配置列表成功，当前记录数: ${data.data.total}`)
+      console.log(`√ 获取配置列表成功，当前记录数: ${data.data.total}`)
     })
 
     test('3. 创建分析配置', async ({ request, authToken }) => {
@@ -56,7 +56,7 @@ test.describe('统计分析配置管理', () => {
       expect(data.data.configName).toBe(configData.configName)
 
       createdConfigId = data.data.id
-      console.log(`✅ 创建配置成功，ID: ${createdConfigId}`)
+      console.log(`√ 创建配置成功，ID: ${createdConfigId}`)
     })
 
     test('4. 获取配置详情', async ({ request, authToken }) => {
@@ -92,7 +92,7 @@ test.describe('统计分析配置管理', () => {
       expect(data.data.id).toBe(configId)
       expect(data.data.metrics).toBeDefined()
       expect(data.data.categoryMappings).toBeDefined()
-      console.log(`✅ 获取配置详情成功，配置名: ${data.data.configName}`)
+      console.log(`√ 获取配置详情成功，配置名: ${data.data.configName}`)
 
       // 清理
       await request.delete(`${API_BASE_URL}/analysis/configs/${configId}`, {
@@ -143,7 +143,7 @@ test.describe('统计分析配置管理', () => {
       expect(data.data.configDesc).toBe(updateData.configDesc)
       expect(data.data.missingStrategy).toBe(updateData.missingStrategy)
       expect(data.data.isPublic).toBe(true)
-      console.log(`✅ 更新配置成功`)
+      console.log(`√ 更新配置成功`)
 
       // 清理
       await request.delete(`${API_BASE_URL}/analysis/configs/${configId}`, {
@@ -182,7 +182,7 @@ test.describe('统计分析配置管理', () => {
       )
 
       expect(disableResponse.ok()).toBeTruthy()
-      console.log(`✅ 禁用配置成功`)
+      console.log(`√ 禁用配置成功`)
 
       // 重新启用
       const enableResponse = await request.put(
@@ -193,7 +193,7 @@ test.describe('统计分析配置管理', () => {
       )
 
       expect(enableResponse.ok()).toBeTruthy()
-      console.log(`✅ 启用配置成功`)
+      console.log(`√ 启用配置成功`)
 
       // 清理
       await request.delete(`${API_BASE_URL}/analysis/configs/${configId}`, {
@@ -235,7 +235,7 @@ test.describe('统计分析配置管理', () => {
       const copyData = await copyResponse.json()
       expect(copyData.code).toBe(200)
       expect(copyData.data.id).not.toBe(sourceConfigId)
-      console.log(`✅ 复制配置成功，新配置ID: ${copyData.data.id}`)
+      console.log(`√ 复制配置成功，新配置ID: ${copyData.data.id}`)
 
       // 清理
       await request.delete(`${API_BASE_URL}/analysis/configs/${sourceConfigId}`, {
@@ -276,7 +276,7 @@ test.describe('统计分析配置管理', () => {
       expect(deleteResponse.ok()).toBeTruthy()
       const deleteData = await deleteResponse.json()
       expect(deleteData.code).toBe(200)
-      console.log(`✅ 删除配置成功`)
+      console.log(`√ 删除配置成功`)
 
       // 验证已删除 - 获取详情应该失败或返回不存在
       const getResponse = await request.get(`${API_BASE_URL}/analysis/configs/${configId}`, {
@@ -286,7 +286,7 @@ test.describe('统计分析配置管理', () => {
       const getData = await getResponse.json()
       // 删除后获取应该返回错误
       expect(getData.code).not.toBe(200)
-      console.log(`✅ 验证删除成功 - 配置已不存在`)
+      console.log(`√ 验证删除成功 - 配置已不存在`)
     })
 
     test('9. 按计划ID筛选配置', async ({ request, authToken }) => {
@@ -298,7 +298,7 @@ test.describe('统计分析配置管理', () => {
       const data = await response.json()
       expect(data.code).toBe(200)
       expect(Array.isArray(data.data)).toBeTruthy()
-      console.log(`✅ 按计划ID筛选成功，配置数量: ${data.data.length}`)
+      console.log(`√ 按计划ID筛选成功，配置数量: ${data.data.length}`)
     })
   })
 
@@ -310,7 +310,7 @@ test.describe('统计分析配置管理', () => {
 
       // 无认证应该返回 403 或 401
       expect(response.status()).toBeGreaterThanOrEqual(400)
-      console.log(`✅ 无 Token 访问正确返回 ${response.status()}`)
+      console.log(`√ 无 Token 访问正确返回 ${response.status()}`)
     })
 
     test('11. 无效 Token 访问应返回错误', async ({ request }) => {
@@ -320,7 +320,7 @@ test.describe('统计分析配置管理', () => {
       })
 
       expect(response.status()).toBeGreaterThanOrEqual(400)
-      console.log(`✅ 无效 Token 访问正确返回 ${response.status()}`)
+      console.log(`√ 无效 Token 访问正确返回 ${response.status()}`)
     })
   })
 
@@ -332,7 +332,7 @@ test.describe('统计分析配置管理', () => {
 
       const data = await response.json()
       expect(data.code).not.toBe(200)
-      console.log(`✅ 获取不存在配置正确返回错误`)
+      console.log(`√ 获取不存在配置正确返回错误`)
     })
 
     test('13. 创建配置 - 缺少必填字段应返回错误', async ({ request, authToken }) => {
@@ -347,7 +347,7 @@ test.describe('统计分析配置管理', () => {
       // 应该返回验证错误
       const data = await response.json()
       // 可能是 422 或 400
-      console.log(`✅ 缺少必填字段正确返回错误，code: ${data.code}`)
+      console.log(`√ 缺少必填字段正确返回错误，code: ${data.code}`)
     })
 
     test('14. 分页测试 - 大页码', async ({ request, authToken }) => {
@@ -360,7 +360,7 @@ test.describe('统计分析配置管理', () => {
       const data = await response.json()
       expect(data.code).toBe(200)
       expect(data.data.records).toHaveLength(0) // 超出范围应该返回空
-      console.log(`✅ 大页码分页正确返回空列表`)
+      console.log(`√ 大页码分页正确返回空列表`)
     })
   })
 })
@@ -369,7 +369,7 @@ test.describe('统计分析配置管理', () => {
  * 清理测试数据
  */
 test.afterAll(async ({ request }) => {
-  console.log('\n🧹 清理测试数据...')
+  console.log('\n 清理测试数据...')
 
   // 登录获取 token
   const loginResponse = await request.post(`${API_BASE_URL}/auth/login`, {
@@ -407,5 +407,5 @@ test.afterAll(async ({ request }) => {
     }
   }
 
-  console.log('✅ 测试数据清理完成')
+  console.log('√ 测试数据清理完成')
 })

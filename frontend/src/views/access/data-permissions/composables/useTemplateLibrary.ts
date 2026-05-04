@@ -1,6 +1,6 @@
 /**
  * 内置角色模板库 — 6 个覆盖 80% 场景的预置模板
- * 用户点击 "应用" → sceneToModuleScopes 展开为 28 模块 scope → PUT 保存
+ * 用户点击 "应用" > sceneToModuleScopes 展开为 28 模块 scope > PUT 保存
  */
 import type { SceneDecision } from './useSceneTemplate'
 

@@ -15,6 +15,7 @@ public class SemesterOfferingPO {
     private Long planCourseId;
     private Long courseId;
     private String applicableGrade;
+    private Long orgUnitId;
     private Integer weeklyHours;
     private Integer totalWeeks;
     private Integer startWeek;

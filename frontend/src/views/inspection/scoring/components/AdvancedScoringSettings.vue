@@ -32,7 +32,7 @@
             分。
           </p>
           <div class="adv-eg">
-            <b>例：</b>上次80分 → 这次85分，进步5% → 加 {{ (5 * (form.trendBonusPerPercent ?? 0.5)).toFixed(1) }} 分 = 最终 {{ (85 + 5 * (form.trendBonusPerPercent ?? 0.5)).toFixed(1) }} 分
+            <b>例：</b>上次80分 > 这次85分，进步5% > 加 {{ (5 * (form.trendBonusPerPercent ?? 0.5)).toFixed(1) }} 分 = 最终 {{ (85 + 5 * (form.trendBonusPerPercent ?? 0.5)).toFixed(1) }} 分
           </div>
         </template>
         <p v-else class="adv-off-hint">开启后，系统会自动对比上次检查分数，进步奖励、退步惩罚。</p>
@@ -66,7 +66,7 @@
             分。
           </p>
           <div class="adv-eg">
-            <b>例：</b>周一得95分 → 周五(4天后) =
+            <b>例：</b>周一得95分 > 周五(4天后) =
             <template v-if="form.decayMode === 'LINEAR'">
               {{ Math.max(95 - 4 * (form.decayRatePerDay ?? 0.5), form.decayFloor ?? 60).toFixed(1) }} 分
             </template>
@@ -121,7 +121,7 @@
             。
           </p>
           <div class="adv-eg">
-            <b>例：</b>3人打分 85、90、80 →
+            <b>例：</b>3人打分 85、90、80 >
             <template v-if="form.multiRaterMode === 'AVERAGE'">平均 = 85 分</template>
             <template v-else-if="form.multiRaterMode === 'WEIGHTED_AVERAGE'">主管(权重2)打90 + 普通(权重1)打80 = 86.7 分</template>
             <template v-else-if="form.multiRaterMode === 'MEDIAN'">取中间值 = 85 分</template>
@@ -164,7 +164,7 @@
             条记录才生效。
           </p>
           <div class="adv-eg">
-            <b>例：</b>张老师平均打72分，他给A栋80(算高分) / 李老师平均打91分，她给B栋88(算低分) → 校准后 A栋 > B栋
+            <b>例：</b>张老师平均打72分，他给A栋80(算高分) / 李老师平均打91分，她给B栋88(算低分) > 校准后 A栋 > B栋
           </div>
         </template>
         <p v-else class="adv-off-hint">多个检查员各管一片、打分松紧不一时开启，系统根据历史打分习惯自动校准，让排名更公平。</p>

@@ -56,7 +56,7 @@
                 <div
                   class="absolute right-2 top-2 rounded bg-blue-50 px-1.5 py-0.5 text-[10px] font-medium text-blue-600 opacity-0 transition group-hover:opacity-100"
                 >
-                  应用 →
+                  应用 >
                 </div>
               </button>
             </div>

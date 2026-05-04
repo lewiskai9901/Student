@@ -175,7 +175,7 @@ function getConfigSummary(ruleType: RuleType, configJson: string): string {
         const logic = c.conditionLogic === 'ALL' ? 'AND' : 'OR'
         const hasCount = (c.conditions || []).some((x: any) => (x.minCount || 1) > 1)
         const lookback = hasCount ? ` | ${c.lookbackDays ?? 30}天` : ''
-        return `${condCount}项${condCount > 1 ? `(${logic})` : ''}${lookback} | 否决→${c.vetoScore ?? 0}分`
+        return `${condCount}项${condCount > 1 ? `(${logic})` : ''}${lookback} | 否决>${c.vetoScore ?? 0}分`
       }
       case 'PENALTY': {
         const penLogic = c.conditionLogic === 'ALL' ? 'AND' : 'OR'
@@ -187,14 +187,14 @@ function getConfigSummary(ruleType: RuleType, configJson: string): string {
         const pCnt = (c.conditions || []).length
         const pLogic = pCnt > 1 ? `(${c.conditionLogic === 'ALL' ? 'AND' : 'OR'})` : ''
         const ts = c.thresholds || []
-        const thresholdStr = ts.map((t: any) => `${t.count}次→扣${t.penalty}`).join(', ') || '无阈值'
+        const thresholdStr = ts.map((t: any) => `${t.count}次>扣${t.penalty}`).join(', ') || '无阈值'
         return `${pCnt}项${pLogic} | ${c.lookbackDays ?? 30}天 | ${thresholdStr}`
       }
       case 'PROGRESSIVE_BONUS': {
         const pbCnt = (c.conditions || []).length
         const pbLogic = pbCnt > 1 ? `(${c.conditionLogic === 'ALL' ? 'AND' : 'OR'})` : ''
         const ts2 = c.thresholds || []
-        const thresholdStr2 = ts2.map((t: any) => `${t.count}次→+${t.bonus}`).join(', ') || '无阈值'
+        const thresholdStr2 = ts2.map((t: any) => `${t.count}次>+${t.bonus}`).join(', ') || '无阈值'
         return `${pbCnt}项${pbLogic} | ${c.lookbackDays ?? 30}天 | ${thresholdStr2}`
       }
       case 'BONUS': {

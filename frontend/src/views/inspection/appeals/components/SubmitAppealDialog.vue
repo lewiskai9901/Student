@@ -113,13 +113,13 @@ async function handleSubmit() {
         <div class="mt-1 flex items-center justify-between">
           <span class="text-xs text-gray-500">填写观察后, 可让 AI 给出独立判断, 帮你写申诉理由</span>
           <el-button size="small" type="primary" plain :loading="aiSuggesting" @click="askAi">
-            🤖 AI 评估
+             AI 评估
           </el-button>
         </div>
         <!-- AI 建议卡片 -->
         <div v-if="aiSuggestion" class="ai-card">
           <div class="ai-head">
-            <span class="ai-icon">🤖</span>
+            <span class="ai-icon"></span>
             <span class="ai-title">AI 第三方建议</span>
             <span class="ai-provider">{{ aiSuggestion.provider }} · 置信度 {{ Math.round((aiSuggestion.confidence||0)*100) }}%</span>
           </div>
@@ -131,7 +131,7 @@ async function handleSubmit() {
               </span>
             </div>
             <div class="ai-reasoning">{{ aiSuggestion.reasoning }}</div>
-            <div class="ai-hint">⚠ 仅供参考, 最终由审核员判定</div>
+            <div class="ai-hint">! 仅供参考, 最终由审核员判定</div>
           </div>
         </div>
       </el-form-item>

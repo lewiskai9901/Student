@@ -16,7 +16,7 @@
         <span v-if="pluginFilter" class="rl-filter-chip">
           <component :is="activeIcon" :size="11" />
           按插件 {{ pluginFilter }}
-          <button class="rl-chip-close" @click="$emit('clear-filter')">✕</button>
+          <button class="rl-chip-close" @click="$emit('clear-filter')">×</button>
         </span>
       </div>
     </header>
@@ -65,7 +65,7 @@
           <td>{{ r.relationName }}</td>
           <td>
             <span class="rl-muted">{{ subjectTypeLabel(r.fromType) }}</span>
-            <span class="rl-arrow">→</span>
+            <span class="rl-arrow">></span>
             <span class="rl-muted">{{ subjectTypeLabel(r.toType) }}</span>
           </td>
           <td>
@@ -76,7 +76,7 @@
           <td>
             <div v-if="parseImplied(r.impliedRelations).length">
               <div v-for="(imp, i) in parseImplied(r.impliedRelations)" :key="i" class="rl-implied">
-                → {{ imp.relation }} <span class="rl-muted">on</span> {{ subjectTypeLabel(imp.targetType) }}
+                > {{ imp.relation }} <span class="rl-muted">on</span> {{ subjectTypeLabel(imp.targetType) }}
               </div>
             </div>
             <span v-else class="rl-muted">—</span>

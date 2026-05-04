@@ -36,7 +36,7 @@
           {{ generating.tasks ? '生成中...' : '从开课计划生成' }}
         </button>
         <a v-if="r.tasks?.withoutTeacher > 0" href="/teaching/offerings?tab=fulfillment" target="_blank" style="font-size: 12px; color: #2563eb; white-space: nowrap;">
-          去分配教师 →
+          去分配教师 >
         </a>
       </div>
 

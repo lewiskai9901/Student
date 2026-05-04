@@ -72,6 +72,8 @@ public class ScheduleConflictRecordRepositoryImpl implements ScheduleConflictRec
         po.setDetail(r.getDetail());
         po.setEntryId1(r.getEntryId1());
         po.setEntryId2(r.getEntryId2());
+        po.setOrgUnitId(r.getOrgUnitId());
+        po.setCreatedBy(r.getCreatedBy());
         po.setConstraintId(r.getConstraintId());
         po.setResolutionStatus(r.getResolutionStatus());
         po.setResolutionNote(r.getResolutionNote());
@@ -85,7 +87,8 @@ public class ScheduleConflictRecordRepositoryImpl implements ScheduleConflictRec
                 po.getConflictCategory(), po.getConflictType(), po.getSeverity(),
                 po.getDescription(), po.getDetail(),
                 po.getEntryId1(), po.getEntryId2(), po.getConstraintId(),
-                po.getResolutionStatus(), po.getResolutionNote(), po.getResolvedBy()
+                po.getResolutionStatus(), po.getResolutionNote(), po.getResolvedBy(),
+                po.getOrgUnitId(), po.getCreatedBy()
         );
     }
 }

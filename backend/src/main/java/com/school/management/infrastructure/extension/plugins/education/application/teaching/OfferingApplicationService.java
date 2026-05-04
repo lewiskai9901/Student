@@ -13,6 +13,8 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.Collections;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -49,6 +51,7 @@ public class OfferingApplicationService {
             toLong(data.get("semesterId")),
             toLong(data.get("courseId")),
             (String) data.get("applicableGrade"),
+            toLong(data.get("orgUnitId")),
             toInt(data.get("weeklyHours")),
             toInt(data.getOrDefault("startWeek", 1)),
             toInt(data.get("endWeek")),
@@ -110,14 +113,15 @@ public class OfferingApplicationService {
         return assignmentRepo.findBySemesterId(semesterId);
     }
 
-    public ClassCourseAssignment createAssignment(Map<String, Object> data) {
+    public ClassCourseAssignment createAssignment(Map<String, Object> data, Long userId) {
         ClassCourseAssignment a = ClassCourseAssignment.create(
             toLong(data.get("semesterId")),
             toLong(data.get("orgUnitId")),
             toLong(data.get("offeringId")),
             toLong(data.get("courseId")),
             toInt(data.get("weeklyHours")),
-            toInt(data.get("studentCount"))
+            toInt(data.get("studentCount")),
+            userId
         );
         return assignmentRepo.save(a);
     }
@@ -156,7 +160,7 @@ public class OfferingApplicationService {
 
             Integer weeklyHours = pc.get("weekly_hours") != null ? Integer.valueOf(pc.get("weekly_hours").toString()) : 2;
             SemesterOffering offering = SemesterOffering.create(
-                semesterId, courseId, grade, weeklyHours, 1, null, userId);
+                semesterId, courseId, grade, null, weeklyHours, 1, null, userId);
             offeringRepo.save(offering);
             created++;
         }
@@ -168,7 +172,9 @@ public class OfferingApplicationService {
         assignments = assignments.stream()
             .filter(a -> a.getStatus() != null && a.getStatus() == 1)
             .collect(Collectors.toList());
+        if (assignments.isEmpty()) return 0;
 
+        // 已存在 task key 集合
         List<Map<String, Object>> existingTasks = jdbc.queryForList(
             "SELECT course_id, org_unit_id FROM teaching_tasks WHERE semester_id = ? AND deleted = 0",
             semesterId);
@@ -177,26 +183,44 @@ public class OfferingApplicationService {
             existingKeys.add(t.get("course_id") + "_" + t.get("org_unit_id"));
         }
 
+        // 批量预取 offerings 与班级学生数, 解决 N+1
+        Set<Long> offeringIds = new HashSet<>();
+        Set<Long> orgUnitIds = new HashSet<>();
+        for (ClassCourseAssignment a : assignments) {
+            if (a.getOfferingId() != null) offeringIds.add(a.getOfferingId());
+            if (a.getOrgUnitId() != null) orgUnitIds.add(a.getOrgUnitId());
+        }
+        Map<Long, SemesterOffering> offeringsById = new HashMap<>();
+        for (Long oid : offeringIds) {
+            offeringRepo.findById(oid).ifPresent(o -> offeringsById.put(oid, o));
+        }
+        Map<Long, Integer> studentCountByOrg = new HashMap<>();
+        if (!orgUnitIds.isEmpty()) {
+            String placeholders = String.join(",", Collections.nCopies(orgUnitIds.size(), "?"));
+            try {
+                List<Map<String, Object>> rows = jdbc.queryForList(
+                    "SELECT org_unit_id, COUNT(1) AS cnt FROM user_student " +
+                    "WHERE org_unit_id IN (" + placeholders + ") AND deleted = 0 GROUP BY org_unit_id",
+                    orgUnitIds.toArray());
+                for (Map<String, Object> row : rows) {
+                    Long oid = ((Number) row.get("org_unit_id")).longValue();
+                    studentCountByOrg.put(oid, ((Number) row.get("cnt")).intValue());
+                }
+            } catch (Exception ignored) { /* 表不存在时跳过 */ }
+        }
+
         int created = 0;
         for (ClassCourseAssignment a : assignments) {
             String key = a.getCourseId() + "_" + a.getOrgUnitId();
             if (existingKeys.contains(key)) continue;
 
-            SemesterOffering offering = a.getOfferingId() != null ?
-                offeringRepo.findById(a.getOfferingId()).orElse(null) : null;
+            SemesterOffering offering = a.getOfferingId() != null ? offeringsById.get(a.getOfferingId()) : null;
 
             int weeklyHours = a.getWeeklyHours() != null ? a.getWeeklyHours() :
                 (offering != null && offering.getWeeklyHours() != null ? offering.getWeeklyHours() : 2);
             int startWeek = offering != null && offering.getStartWeek() != null ? offering.getStartWeek() : 1;
             Integer endWeek = offering != null ? offering.getEndWeek() : null;
-
-            // 查班级学生数
-            int studentCount = 0;
-            try {
-                Long cnt = jdbc.queryForObject(
-                    "SELECT COUNT(1) FROM user_student WHERE org_unit_id = ? AND deleted = 0", Long.class, a.getOrgUnitId());
-                if (cnt != null) studentCount = cnt.intValue();
-            } catch (Exception ignored) {}
+            int studentCount = studentCountByOrg.getOrDefault(a.getOrgUnitId(), 0);
 
             long taskId = IdWorker.getId();
             TeachingTask task = TeachingTask.create(

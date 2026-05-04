@@ -9,7 +9,7 @@
       <button class="pp-search-trigger" @click="searchOpen = true">
         <Search :size="13" />
         <span>全局搜索</span>
-        <kbd>{{ macShortcut ? '⌘' : 'Ctrl' }} K</kbd>
+        <kbd>{{ macShortcut ? 'Cmd' : 'Ctrl' }} K</kbd>
       </button>
       <div class="pp-header-actions">
         <span v-if="metricsInfo" class="pp-metric" :title="'各 Registrar 启动耗时'">

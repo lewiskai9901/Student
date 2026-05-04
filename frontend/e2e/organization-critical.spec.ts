@@ -5,7 +5,7 @@ import { test, expect, type Page } from '@playwright/test'
  *
  * 覆盖场景：
  * 1. 组织树页面能加载并显示节点（早期审计曾误报"树点不动"）
- * 2. 点击组织节点 → 右侧面板显示详情（下级组织 / 成员 / 基本信息）
+ * 2. 点击组织节点 > 右侧面板显示详情（下级组织 / 成员 / 基本信息）
  * 3. 侧边栏不会把 /system/org-types 等原始路径直接当作菜单名渲染
  *    （回归 commit 421ebf2c：路由 meta.title 缺失导致菜单渲染为 path 字符串）
  *

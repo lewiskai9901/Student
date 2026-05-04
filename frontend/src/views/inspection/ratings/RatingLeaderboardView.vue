@@ -120,9 +120,9 @@ async function triggerCompute() {
 
 // ========== Helpers ==========
 function getRankEmoji(rank: number | null): string {
-  if (rank === 1) return '🥇'
-  if (rank === 2) return '🥈'
-  if (rank === 3) return '🥉'
+  if (rank === 1) return ''
+  if (rank === 2) return ''
+  if (rank === 3) return ''
   return ''
 }
 
@@ -259,7 +259,7 @@ onMounted(() => {
         <div v-if="selectedDimension" class="dim-header">
           <div class="dim-name">{{ selectedDimension.dimensionName }}</div>
           <div v-if="selectedDimension.awardName" class="dim-award">
-            🏆 {{ selectedDimension.awardName }}
+             {{ selectedDimension.awardName }}
           </div>
         </div>
 

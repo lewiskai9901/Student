@@ -13,6 +13,7 @@ public class ClassCourseAssignment implements Entity<Long> {
     private Integer weeklyHours;
     private Integer studentCount;
     private Integer status; // 0pending 1confirmed
+    private Long createdBy;
 
     protected ClassCourseAssignment() {}
 
@@ -20,7 +21,7 @@ public class ClassCourseAssignment implements Entity<Long> {
     public Long getId() { return id; }
 
     public static ClassCourseAssignment create(Long semesterId, Long orgUnitId, Long offeringId,
-            Long courseId, Integer weeklyHours, Integer studentCount) {
+            Long courseId, Integer weeklyHours, Integer studentCount, Long createdBy) {
         ClassCourseAssignment a = new ClassCourseAssignment();
         a.semesterId = semesterId;
         a.orgUnitId = orgUnitId;
@@ -29,11 +30,13 @@ public class ClassCourseAssignment implements Entity<Long> {
         a.weeklyHours = weeklyHours;
         a.studentCount = studentCount;
         a.status = 0;
+        a.createdBy = createdBy;
         return a;
     }
 
     public static ClassCourseAssignment reconstruct(Long id, Long semesterId, Long orgUnitId,
-            Long offeringId, Long courseId, Integer weeklyHours, Integer studentCount, Integer status) {
+            Long offeringId, Long courseId, Integer weeklyHours, Integer studentCount, Integer status,
+            Long createdBy) {
         ClassCourseAssignment a = new ClassCourseAssignment();
         a.id = id;
         a.semesterId = semesterId;
@@ -43,6 +46,7 @@ public class ClassCourseAssignment implements Entity<Long> {
         a.weeklyHours = weeklyHours;
         a.studentCount = studentCount;
         a.status = status;
+        a.createdBy = createdBy;
         return a;
     }
 

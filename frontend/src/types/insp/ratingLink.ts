@@ -1,6 +1,6 @@
 /**
  * 检查平台 - 评级关联类型定义
- * 桥接 检查项目 → 评级配置
+ * 桥接 检查项目 > 评级配置
  */
 
 export interface InspRatingLink {

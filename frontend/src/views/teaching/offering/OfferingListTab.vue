@@ -85,7 +85,7 @@
     <!-- 下一步引导 -->
     <div v-if="offerings.length > 0 && offerings.every(o => String(o.status) === '1')" style="text-align: center; padding: 16px 0;">
       <button class="tm-btn tm-btn-primary" style="padding: 8px 24px;" @click="emit('allConfirmed')">
-        全部已确认 — 去任务落实 →
+        全部已确认 — 去任务落实 >
       </button>
     </div>
   </div>
@@ -277,7 +277,7 @@ const filteredOfferings = computed(() => {
     return offerings.value.filter(o => o.applicableGrade === org.name)
   }
   if (org.type === EduOrgTypes.CLASS) {
-    // 从班级名提取年级，如 "经济2024-1班" → "2024级"
+    // 从班级名提取年级，如 "经济2024-1班" > "2024级"
     const m = org.name?.match(/(\d{4})/)
     if (m) {
       const grade = m[1] + '级'

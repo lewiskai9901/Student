@@ -16,7 +16,7 @@ import type { TemplateSection } from '@/types/insp/template'
 const router = useRouter()
 const templateStore = useInspTemplateStore()
 
-// ==================== 快捷入口 (替代假 tab — 4 个 ↗ 不再伪装成 tab) ====================
+// ==================== 快捷入口 (替代假 tab — 4 个 ↑ 不再伪装成 tab) ====================
 interface QuickAccess {
   key: string
   title: string
@@ -126,7 +126,7 @@ const loading = ref(false)
 const rootSections = ref<TemplateSection[]>([])
 const total = ref(0)
 const childSectionsMap = ref<Map<number, TemplateSection[]>>(new Map())
-// P1-160: 使用计数 (rootSectionId → 在用项目数)
+// P1-160: 使用计数 (rootSectionId > 在用项目数)
 const usageMap = ref<Record<number, number>>({})
 
 const query = reactive({
@@ -354,14 +354,14 @@ function onGlobalKey(e: KeyboardEvent) {
   if (tag === 'INPUT' || tag === 'TEXTAREA' || t?.isContentEditable) return
   if (createDialogVisible.value || versionsDialogVisible.value || precheckDialogVisible.value) return
   const cmdKey = e.metaKey || e.ctrlKey
-  // ⌘A 全选
+  // CmdA 全选
   if (cmdKey && e.key === 'a') { e.preventDefault(); toggleSelectAll(); return }
-  // ⌘E 导出选中
+  // CmdE 导出选中
   if (cmdKey && e.key === 'e') {
     if (selectedIds.value.size > 0) { e.preventDefault(); batchExport() }
     return
   }
-  // ⌘P 发布选中
+  // CmdP 发布选中
   if (cmdKey && e.key === 'p') {
     if (selectedIds.value.size > 0) { e.preventDefault(); batchPublish() }
     return
@@ -523,7 +523,7 @@ async function handlePublish(section: TemplateSection) {
 async function handleDeprecate(section: TemplateSection) {
   const inUse = usageMap.value[Number(section.id)] || 0
   const tip = inUse > 0
-    ? `⚠ 此模板正被 ${inUse} 个进行中的项目引用. 废弃后这些项目将继续运行 (使用快照), 但新项目无法选用此模板. 确认?`
+    ? `! 此模板正被 ${inUse} 个进行中的项目引用. 废弃后这些项目将继续运行 (使用快照), 但新项目无法选用此模板. 确认?`
     : '废弃后新项目无法使用此模板. 确认?'
   try {
     await ElMessageBox.confirm(tip, '确认废弃', { type: 'warning' })
@@ -537,7 +537,7 @@ async function handleDeprecate(section: TemplateSection) {
 async function handleArchive(section: TemplateSection) {
   const inUse = usageMap.value[Number(section.id)] || 0
   const tip = inUse > 0
-    ? `⚠ 此模板正被 ${inUse} 个项目引用. 归档后将从默认列表隐藏. 确认?`
+    ? `! 此模板正被 ${inUse} 个项目引用. 归档后将从默认列表隐藏. 确认?`
     : '归档后将不可见 (可在筛选中找回). 确认?'
   try {
     await ElMessageBox.confirm(tip, '确认归档', { type: 'warning' })
@@ -708,10 +708,10 @@ onMounted(() => { loadTemplates() })
         <kbd class="insp-kbd">/</kbd> 搜索
       </span>
       <span class="cfg-kbd-hint__group">
-        <kbd class="insp-kbd">⌘A</kbd> 全选
+        <kbd class="insp-kbd">CmdA</kbd> 全选
       </span>
       <span class="cfg-kbd-hint__group">
-        <kbd class="insp-kbd">⌘E</kbd> 导出
+        <kbd class="insp-kbd">CmdE</kbd> 导出
       </span>
       <button class="cfg-kbd-hint__close" @click="dismissKbdHint" title="不再显示">×</button>
     </div>

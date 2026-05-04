@@ -15,6 +15,8 @@ public class ScheduleConflictRecord implements Entity<Long> {
     private String detail; // JSON
     private Long entryId1;
     private Long entryId2;
+    private Long orgUnitId;   // 派生自 entry_id_1.org_unit_id, 数据权限过滤用
+    private Long createdBy;   // 检测发起人
     private Long constraintId;
     private Integer resolutionStatus; // 0pending 1resolved 2ignored
     private String resolutionNote;
@@ -27,7 +29,8 @@ public class ScheduleConflictRecord implements Entity<Long> {
 
     public static ScheduleConflictRecord create(Long semesterId, String detectionBatch,
             Integer conflictCategory, String conflictType, Integer severity,
-            String description, String detail, Long entryId1, Long entryId2, Long constraintId) {
+            String description, String detail, Long entryId1, Long entryId2, Long constraintId,
+            Long orgUnitId, Long createdBy) {
         ScheduleConflictRecord r = new ScheduleConflictRecord();
         r.semesterId = semesterId;
         r.detectionBatch = detectionBatch;
@@ -39,6 +42,8 @@ public class ScheduleConflictRecord implements Entity<Long> {
         r.entryId1 = entryId1;
         r.entryId2 = entryId2;
         r.constraintId = constraintId;
+        r.orgUnitId = orgUnitId;
+        r.createdBy = createdBy;
         r.resolutionStatus = 0;
         return r;
     }
@@ -47,7 +52,7 @@ public class ScheduleConflictRecord implements Entity<Long> {
             Integer conflictCategory, String conflictType, Integer severity,
             String description, String detail, Long entryId1, Long entryId2,
             Long constraintId, Integer resolutionStatus, String resolutionNote,
-            Long resolvedBy) {
+            Long resolvedBy, Long orgUnitId, Long createdBy) {
         ScheduleConflictRecord r = new ScheduleConflictRecord();
         r.id = id;
         r.semesterId = semesterId;
@@ -63,6 +68,8 @@ public class ScheduleConflictRecord implements Entity<Long> {
         r.resolutionStatus = resolutionStatus;
         r.resolutionNote = resolutionNote;
         r.resolvedBy = resolvedBy;
+        r.orgUnitId = orgUnitId;
+        r.createdBy = createdBy;
         return r;
     }
 

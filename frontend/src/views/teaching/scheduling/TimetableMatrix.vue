@@ -9,7 +9,9 @@
     <div v-else-if="matrixData.length > 0" class="matrix-table-wrap">
       <div class="matrix-toolbar">
         <span style="font-size: 12.5px; color: #6b7280;">已选 <b style="color:#2563eb;">{{ displayTargets.length }}</b> 个{{ modeLabel }}</span>
+        <span v-if="dragEnabled" class="matrix-drag-hint">· 拖动课程到空格可移动时段</span>
       </div>
+      <div v-if="dropConflict" class="matrix-conflict-toast">{{ dropConflict }}</div>
       <table class="matrix-table">
         <thead>
           <tr class="matrix-day-row">
@@ -44,9 +46,13 @@
                   'matrix-cell-has': !!findEntry(row, day.value, p.period),
                   'matrix-cell-day-start': pIdx === 0,
                   'matrix-cell-day-end': pIdx === periods.length - 1,
+                  'matrix-cell-drop-target': dragOverKey === `${row.id}-${day.value}-${p.period}`,
                 }"
                 :style="getCellStyle(row, day.value, p.period)"
                 :title="getCellTitle(row, day.value, p.period)"
+                @dragover="onDragOver($event, row, day.value, p.period)"
+                @dragleave="onDragLeave"
+                @drop="onDrop($event, row, day.value, p.period)"
               >
                 <template v-if="isEntryStart(row, day.value, p.period)">
                   <!-- 单双周同时存在：分两格 -->
@@ -66,7 +72,10 @@
                     </div>
                   </div>
                   <!-- 单条目（可能是每周/纯单周/纯双周）-->
-                  <div v-else class="matrix-cell-content">
+                  <div v-else class="matrix-cell-content"
+                       :class="{ 'matrix-cell-draggable': dragEnabled }"
+                       :draggable="dragEnabled"
+                       @dragstart="onDragStart($event, row, getSlotEntries(row, day.value, p.period).list[0])">
                     <span v-if="getSlotEntries(row, day.value, p.period).list[0]?.weekType === 1" class="matrix-week-tag tag-odd">单</span>
                     <span v-else-if="getSlotEntries(row, day.value, p.period).list[0]?.weekType === 2" class="matrix-week-tag tag-even">双</span>
                     <div class="matrix-cell-course">{{ getSlotEntries(row, day.value, p.period).list[0]?.courseName }}</div>
@@ -100,6 +109,12 @@ const props = defineProps<{
   selectedTargets?: { id: number | string; name: string }[]
   weekDates?: Record<number, string>
   dataSource?: 'schedule' | 'instance'
+  /** 启用拖拽排课. 仅在 dataSource='schedule' 且 mode!='classroom' 时建议开启 */
+  draggable?: boolean
+}>()
+
+const emit = defineEmits<{
+  (e: 'moved', entry: any): void
 }>()
 
 const weekdays = WEEKDAYS.slice(0, 5)
@@ -236,6 +251,83 @@ watch(() => [props.semesterId, props.mode], () => {
 watch(() => props.selectedTargets, () => {
   loadAllData()
 }, { deep: true, immediate: true })
+
+/* ==================== 拖拽排课 ==================== */
+const dragEntry = ref<any | null>(null)
+const dragRowId = ref<number | string | null>(null)
+const dragOverKey = ref<string | null>(null)
+const dropConflict = ref<string | null>(null)
+
+const dragEnabled = computed(() =>
+  props.draggable && props.dataSource !== 'instance' && props.mode !== 'classroom'
+)
+
+function onDragStart(e: DragEvent, row: any, entry: any) {
+  if (!dragEnabled.value) return
+  dragEntry.value = entry
+  dragRowId.value = row.id
+  if (e.dataTransfer) {
+    e.dataTransfer.effectAllowed = 'move'
+    e.dataTransfer.setData('text/plain', String(entry.id))
+  }
+}
+
+function onDragOver(e: DragEvent, row: any, day: number, period: number) {
+  if (!dragEnabled.value || !dragEntry.value) return
+  // 同行同位置不响应
+  if (dragRowId.value === row.id && dragEntry.value.dayOfWeek === day && dragEntry.value.periodStart === period) return
+  e.preventDefault()
+  if (e.dataTransfer) e.dataTransfer.dropEffect = 'move'
+  dragOverKey.value = `${row.id}-${day}-${period}`
+}
+
+function onDragLeave() {
+  dragOverKey.value = null
+}
+
+async function onDrop(e: DragEvent, row: any, day: number, period: number) {
+  if (!dragEnabled.value || !dragEntry.value) return
+  e.preventDefault()
+  dragOverKey.value = null
+
+  const entry = dragEntry.value
+  // 仅支持同一 row 内拖拽（教师拖到同教师不同时段，班级同理）
+  if (dragRowId.value !== row.id) {
+    dragEntry.value = null
+    return
+  }
+  // 落点已有课
+  if (findEntry(row, day, period)) return
+
+  try {
+    const checkRes: any = await scheduleApi.checkMoveConflict({
+      entryId: entry.id,
+      semesterId: props.semesterId!,
+      dayOfWeek: day,
+      periodStart: period,
+    })
+    const data = (checkRes as any).data || checkRes
+    if (data?.hasConflict) {
+      dropConflict.value = data.message || '该时段存在冲突, 不能移动'
+      setTimeout(() => (dropConflict.value = null), 3500)
+      dragEntry.value = null
+      return
+    }
+    await scheduleApi.moveEntry(entry.id, {
+      semesterId: props.semesterId!,
+      dayOfWeek: day,
+      periodStart: period,
+    })
+    emit('moved', { ...entry, dayOfWeek: day, periodStart: period })
+    await loadAllData()
+  } catch (err: any) {
+    dropConflict.value = err?.message || '移动失败'
+    setTimeout(() => (dropConflict.value = null), 3500)
+  } finally {
+    dragEntry.value = null
+    dragRowId.value = null
+  }
+}
 </script>
 
 <style scoped>
@@ -427,5 +519,41 @@ watch(() => props.selectedTargets, () => {
 /* 分裂后单元格要高些 */
 .matrix-cell-split {
   height: 100%;
+}
+
+/* 拖拽 */
+.matrix-drag-hint {
+  margin-left: 8px;
+  font-size: 12px;
+  color: #9ca3af;
+}
+.matrix-cell-draggable {
+  cursor: grab;
+}
+.matrix-cell-draggable:active {
+  cursor: grabbing;
+}
+.matrix-cell-drop-target {
+  background: #dbeafe !important;
+  outline: 2px dashed #2563eb;
+  outline-offset: -2px;
+}
+.matrix-conflict-toast {
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  margin: 8px 12px;
+  padding: 8px 12px;
+  background: #fef2f2;
+  color: #991b1b;
+  border: 1px solid #fecaca;
+  border-radius: 6px;
+  font-size: 12.5px;
+  text-align: center;
+  animation: tt-slide 0.2s;
+}
+@keyframes tt-slide {
+  from { opacity: 0; transform: translateY(-6px); }
+  to   { opacity: 1; transform: translateY(0); }
 }
 </style>

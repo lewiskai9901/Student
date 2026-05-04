@@ -73,13 +73,13 @@ function fmtTime(t?: string | null): string {
   return `${(d.getMonth()+1).toString().padStart(2,'0')}/${d.getDate().toString().padStart(2,'0')} ${d.getHours().toString().padStart(2,'0')}:${d.getMinutes().toString().padStart(2,'0')}`
 }
 
-// ==================== S+ 未保存改动指示 + 全局 ⌘S ====================
+// ==================== S+ 未保存改动指示 + 全局 CmdS ====================
 const hasUnsavedChanges = computed(() => rootInfoDirty.value || sfDirty.value)
 
 function onGlobalKeyTpl(e: KeyboardEvent) {
   const t = e.target as HTMLElement
   const tag = t?.tagName
-  // ⌘S 总是拦截 (即使在 input 内)
+  // CmdS 总是拦截 (即使在 input 内)
   if ((e.metaKey || e.ctrlKey) && e.key === 's') {
     e.preventDefault()
     if (isReadonly.value) {
@@ -605,10 +605,10 @@ function getItemTypeLabel(item: TemplateItem) {
 
         <div class="te-header-actions">
           <!-- 未保存改动指示 (S+) -->
-          <span v-if="hasUnsavedChanges && !isReadonly" class="te-unsaved" title="按 ⌘S 保存">
+          <span v-if="hasUnsavedChanges && !isReadonly" class="te-unsaved" title="按 CmdS 保存">
             <span class="te-unsaved__dot" />
             未保存改动
-            <kbd class="insp-kbd">⌘S</kbd>
+            <kbd class="insp-kbd">CmdS</kbd>
           </span>
           <template v-if="isReadonly">
             <span class="te-readonly-hint">

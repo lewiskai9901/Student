@@ -169,7 +169,7 @@ const headerGradient = computed(() => {
 // 获取方向显示文本
 const getDirectionDisplay = (direction: Direction) => {
   if (direction.isSegmented === 1) {
-    return `${direction.phase1Level}→${direction.phase2Level}`
+    return `${direction.phase1Level}>${direction.phase2Level}`
   }
   return direction.level || '未命名'
 }
@@ -177,7 +177,7 @@ const getDirectionDisplay = (direction: Direction) => {
 // 获取层次显示
 const getLevelDisplay = (direction: Direction) => {
   if (direction.isSegmented === 1) {
-    return `${direction.phase1Level}→${direction.phase2Level}`
+    return `${direction.phase1Level}>${direction.phase2Level}`
   }
   return direction.level || '-'
 }

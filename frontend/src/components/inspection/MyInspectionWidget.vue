@@ -1,8 +1,8 @@
 <template>
   <div class="my-widget" :class="resultClass" v-loading="loading">
     <div class="widget-head">
-      <span class="widget-title">📋 我的检查记录</span>
-      <button class="widget-link" @click="goRecord">查看完整 →</button>
+      <span class="widget-title"> 我的检查记录</span>
+      <button class="widget-link" @click="goRecord">查看完整 ></button>
     </div>
 
     <div v-if="!hasData" class="empty">暂无受检数据</div>
@@ -64,7 +64,7 @@ const trendDelta = computed(() => {
 })
 const trendArrow = computed(() => {
   const d = parseFloat(trendDelta.value)
-  return d > 0 ? '↗' : d < 0 ? '↘' : '→'
+  return d > 0 ? '↑' : d < 0 ? '↓' : '>'
 })
 const trendClass = computed(() => {
   const d = parseFloat(trendDelta.value)

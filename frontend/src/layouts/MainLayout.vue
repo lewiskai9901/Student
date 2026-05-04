@@ -437,7 +437,7 @@ const backendAllowedPaths = computed<Set<string>>(() => {
   return set
 })
 
-// 后端 path → order,用于覆盖前端路由 meta.order
+// 后端 path > order,用于覆盖前端路由 meta.order
 const backendOrderMap = computed<Record<string, number>>(() => {
   const map: Record<string, number> = {}
   const walk = (items: BackendMenuItem[]) => {
@@ -453,7 +453,7 @@ const backendOrderMap = computed<Record<string, number>>(() => {
 // 用后端结果过滤路由菜单(保持 component 由前端静态声明,仅受后端控制可见性/顺序)
 const applyBackendFilter = (items: MenuItem[]): MenuItem[] => {
   const allowed = backendAllowedPaths.value
-  if (allowed.size === 0) return items // 后端未就绪 → 全放行
+  if (allowed.size === 0) return items // 后端未就绪 > 全放行
   const orders = backendOrderMap.value
   return items
     .filter(m => allowed.has(m.path))

@@ -168,7 +168,7 @@ const filteredAttendees = computed(() => {
   )
 })
 
-// Convert assignments → PlaceOccupant[] for FloorPlanEditor
+// Convert assignments > PlaceOccupant[] for FloorPlanEditor
 const occupantsForFloorPlan = computed<PlaceOccupant[]>(() =>
   Object.entries(assignments.value).map(([positionNo, user]) => ({
     id: 0,
@@ -318,7 +318,7 @@ function findNearestSeat(clientX: number, clientY: number): string | null {
   const stageX = transform?.x ?? 0
   const stageY = transform?.y ?? 0
 
-  // Convert client coords → canvas coords (accounting for zoom/pan)
+  // Convert client coords > canvas coords (accounting for zoom/pan)
   const canvasX = (clientX - rect.left - stageX) / stageScale
   const canvasY = (clientY - rect.top - stageY) / stageScale
 

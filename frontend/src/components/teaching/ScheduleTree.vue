@@ -6,7 +6,7 @@
       <button v-if="(multiple && selectedIdSet.size > 0) || (!multiple && selectedId)" class="tree-clear" @click="clearSelection">清除</button>
     </div>
     <div class="tree-body">
-      <!-- CLASS mode: dept → grade → class -->
+      <!-- CLASS mode: dept > grade > class -->
       <template v-if="mode === 'class'">
         <div v-for="dept in classTree" :key="dept.id">
           <div class="tree-node tree-l1" :class="{ active: !multiple && selectedId === dept.id, selected: multiple && isNodeSelected(dept) }" @click="handleNodeClick(dept, 'DEPARTMENT')">
@@ -28,7 +28,7 @@
         </div>
       </template>
 
-      <!-- TEACHER mode: dept → teachers -->
+      <!-- TEACHER mode: dept > teachers -->
       <template v-if="mode === 'teacher'">
         <div v-for="dept in teacherTree" :key="dept.name">
           <div class="tree-node tree-l1" :class="{ selected: multiple && isTeacherDeptSelected(dept) }" @click="multiple && toggleTeacherDept(dept)">
@@ -45,7 +45,7 @@
         <div v-if="teacherTree.length === 0" class="tree-empty">暂无教师数据</div>
       </template>
 
-      <!-- CLASSROOM mode: building → floor → room -->
+      <!-- CLASSROOM mode: building > floor > room -->
       <template v-if="mode === 'classroom'">
         <div v-for="bldg in classroomTree" :key="bldg.id">
           <div class="tree-node tree-l1" :class="{ selected: multiple && isNodeSelected(bldg) }" @click="multiple && toggleBranch(bldg)">
