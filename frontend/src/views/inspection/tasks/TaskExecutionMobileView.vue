@@ -189,6 +189,8 @@ onMounted(async () => {
 </script>
 
 <template>
+  <!-- 移动端居中容器: 桌面浏览器看也是手机宽度, 真机 480px 以下全宽 -->
+  <div class="mobile-shell">
   <div class="flex flex-col h-screen bg-gray-50">
     <!-- 同步状态栏 -->
     <div :class="[statusBarClass, 'text-white text-xs px-4 py-1.5 flex items-center justify-between']">
@@ -391,4 +393,28 @@ onMounted(async () => {
       </div>
     </el-dialog>
   </div>
+  </div>
 </template>
+
+<style scoped>
+.mobile-shell {
+  max-width: 480px;
+  margin: 0 auto;
+  height: 100vh;
+  background: #f9fafb;
+  box-shadow: 0 0 32px rgba(0,0,0,0.06);
+  position: relative;
+}
+@media (min-width: 481px) {
+  .mobile-shell {
+    border-left: 1px solid #e5e7eb;
+    border-right: 1px solid #e5e7eb;
+  }
+}
+@media (max-width: 480px) {
+  .mobile-shell {
+    max-width: 100%;
+    box-shadow: none;
+  }
+}
+</style>
