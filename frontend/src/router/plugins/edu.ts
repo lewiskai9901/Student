@@ -28,7 +28,7 @@ const eduRoutes: RouteRecordRaw[] = [
       {
         path: '/my-class/list',
         name: 'MyClassList',
-        component: () => import('@/views/myclass/MyClassListView.vue'),
+        component: () => import('@/views/plugins/edu/myclass/MyClassListView.vue'),
         meta: {
           title: '班级列表',
           requiresAuth: true,
@@ -38,7 +38,7 @@ const eduRoutes: RouteRecordRaw[] = [
       {
         path: '/my-class/:orgUnitId',
         name: 'MyClassDetail',
-        component: () => import('@/views/myclass/MyClassDetailView.vue'),
+        component: () => import('@/views/plugins/edu/myclass/MyClassDetailView.vue'),
         meta: {
           title: '班级详情',
           requiresAuth: true,
@@ -64,7 +64,7 @@ const eduRoutes: RouteRecordRaw[] = [
       {
         path: '/academic/majors',
         name: 'AcademicMajors',
-        component: () => import('@/views/academic/MajorListView.vue'),
+        component: () => import('@/views/plugins/edu/academic/MajorListView.vue'),
         meta: {
           title: '专业管理',
           requiresAuth: true,
@@ -75,7 +75,7 @@ const eduRoutes: RouteRecordRaw[] = [
       {
         path: '/academic/courses',
         name: 'AcademicCourses',
-        component: () => import('@/views/academic/CourseListView.vue'),
+        component: () => import('@/views/plugins/edu/academic/CourseListView.vue'),
         meta: {
           title: '课程管理',
           requiresAuth: true,
@@ -86,7 +86,7 @@ const eduRoutes: RouteRecordRaw[] = [
       {
         path: '/academic/curriculum-plans',
         name: 'AcademicCurriculum',
-        component: () => import('@/views/academic/CurriculumPlanView.vue'),
+        component: () => import('@/views/plugins/edu/academic/CurriculumPlanView.vue'),
         meta: {
           title: '培养方案',
           requiresAuth: true,
@@ -113,7 +113,7 @@ const eduRoutes: RouteRecordRaw[] = [
       {
         path: '/student/enrollment',
         name: 'StudentEnrollment',
-        component: () => import('@/views/student/EnrollmentView.vue'),
+        component: () => import('@/views/plugins/edu/student/EnrollmentView.vue'),
         meta: {
           title: '招生管理',
           requiresAuth: true,
@@ -124,7 +124,7 @@ const eduRoutes: RouteRecordRaw[] = [
       {
         path: '/student/list',
         name: 'StudentList',
-        component: () => import('@/views/student/StudentList.vue'),
+        component: () => import('@/views/plugins/edu/student/StudentList.vue'),
         meta: {
           title: '学生列表',
           requiresAuth: true,
@@ -135,7 +135,7 @@ const eduRoutes: RouteRecordRaw[] = [
       {
         path: '/student/classes',
         name: 'ClassManagement',
-        component: () => import('@/views/student/ClassManagement.vue'),
+        component: () => import('@/views/plugins/edu/student/ClassManagement.vue'),
         meta: {
           title: '班级管理',
           requiresAuth: true,
@@ -146,7 +146,7 @@ const eduRoutes: RouteRecordRaw[] = [
       {
         path: '/student/grades',
         name: 'StudentGrades',
-        component: () => import('@/views/organization/grades/GradeManagementV2.vue'),
+        component: () => import('@/views/plugins/edu/organization/grades/GradeManagementV2.vue'),
         meta: {
           title: '年级管理',
           requiresAuth: true,
@@ -157,7 +157,7 @@ const eduRoutes: RouteRecordRaw[] = [
       {
         path: '/student/attendance',
         name: 'StudentAttendance',
-        component: () => import('@/views/student/AttendanceView.vue'),
+        component: () => import('@/views/plugins/edu/student/AttendanceView.vue'),
         meta: {
           title: '考勤管理',
           requiresAuth: true,
@@ -168,7 +168,7 @@ const eduRoutes: RouteRecordRaw[] = [
       {
         path: '/student/warnings',
         name: 'StudentWarnings',
-        component: () => import('@/views/student/AcademicWarningView.vue'),
+        component: () => import('@/views/plugins/edu/student/AcademicWarningView.vue'),
         meta: {
           title: '学业预警',
           requiresAuth: true,
@@ -195,7 +195,7 @@ const eduRoutes: RouteRecordRaw[] = [
       {
         path: '/teaching/workbench',
         name: 'TeachingWorkbench',
-        component: () => import('@/views/teaching/TeachingWorkbench.vue'),
+        component: () => import('@/views/plugins/edu/teaching/TeachingWorkbench.vue'),
         meta: {
           title: '教务工作台',
           requiresAuth: true,
@@ -206,7 +206,7 @@ const eduRoutes: RouteRecordRaw[] = [
       {
         path: '/teaching/calendar',
         name: 'TeachingCalendar',
-        component: () => import('@/views/teaching/CalendarCenter.vue'),
+        component: () => import('@/views/plugins/edu/teaching/CalendarCenter.vue'),
         meta: {
           title: '校历管理',
           requiresAuth: true,
@@ -227,7 +227,7 @@ const eduRoutes: RouteRecordRaw[] = [
       {
         path: '/teaching/offerings',
         name: 'TeachingOfferings',
-        component: () => import('@/views/teaching/OfferingManagementView.vue'),
+        component: () => import('@/views/plugins/edu/teaching/OfferingManagementView.vue'),
         meta: {
           title: '开课管理',
           requiresAuth: true,
@@ -239,7 +239,7 @@ const eduRoutes: RouteRecordRaw[] = [
       {
         path: '/teaching/scheduling',
         name: 'TeachingScheduling',
-        component: () => import('@/views/teaching/ScheduleCenter.vue'),
+        component: () => import('@/views/plugins/edu/teaching/ScheduleCenter.vue'),
         meta: {
           title: '排课中心',
           requiresAuth: true,
@@ -251,7 +251,7 @@ const eduRoutes: RouteRecordRaw[] = [
       {
         path: '/teaching/tasks',
         name: 'TeachingTasks',
-        component: () => import('@/views/teaching/TeachingTaskView.vue'),
+        component: () => import('@/views/plugins/edu/teaching/TeachingTaskView.vue'),
         meta: {
           title: '教学任务',
           requiresAuth: true,
@@ -263,7 +263,7 @@ const eduRoutes: RouteRecordRaw[] = [
       {
         path: '/teaching/examinations',
         name: 'TeachingExams',
-        component: () => import('@/views/teaching/ExaminationView.vue'),
+        component: () => import('@/views/plugins/edu/teaching/ExaminationView.vue'),
         meta: {
           title: '考试管理',
           requiresAuth: true,
@@ -274,7 +274,7 @@ const eduRoutes: RouteRecordRaw[] = [
       {
         path: '/teaching/grades',
         name: 'TeachingGrades',
-        component: () => import('@/views/teaching/GradeView.vue'),
+        component: () => import('@/views/plugins/edu/teaching/GradeView.vue'),
         meta: {
           title: '成绩管理',
           requiresAuth: true,
@@ -301,7 +301,7 @@ const eduRoutes: RouteRecordRaw[] = [
       {
         path: '/dormitory/overview',
         name: 'DormitoryOverview',
-        component: () => import('@/views/dormitory/DormitoryOverview.vue'),
+        component: () => import('@/views/plugins/edu/dormitory/DormitoryOverview.vue'),
         meta: {
           title: '宿舍总览',
           requiresAuth: true,
@@ -312,7 +312,7 @@ const eduRoutes: RouteRecordRaw[] = [
       {
         path: '/dormitory/students',
         name: 'StudentDormitory',
-        component: () => import('@/views/dormitory/StudentDormitoryView.vue'),
+        component: () => import('@/views/plugins/edu/dormitory/StudentDormitoryView.vue'),
         meta: {
           title: '住宿管理',
           requiresAuth: true,
@@ -323,7 +323,7 @@ const eduRoutes: RouteRecordRaw[] = [
       {
         path: '/dormitory/department',
         name: 'DormitoryDepartmentAssign',
-        component: () => import('@/views/dormitory/DepartmentDormitoryView.vue'),
+        component: () => import('@/views/plugins/edu/dormitory/DepartmentDormitoryView.vue'),
         meta: {
           title: '组织分配',
           requiresAuth: true,

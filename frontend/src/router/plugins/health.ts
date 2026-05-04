@@ -22,7 +22,7 @@ const healthRoutes: RouteRecordRaw[] = [
       {
         path: '/patient/list',
         name: 'PatientList',
-        component: () => import('@/views/healthcare/PatientList.vue'),
+        component: () => import('@/views/plugins/health/healthcare/PatientList.vue'),
         meta: {
           title: '病人列表',
           requiresAuth: true,
