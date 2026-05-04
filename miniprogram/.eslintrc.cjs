@@ -7,7 +7,7 @@ module.exports = {
     sourceType: 'module',
     extraFileExtensions: ['.vue']
   },
-  plugins: ['@typescript-eslint'],
+  plugins: ['@typescript-eslint', 'mp-boundary'],
   extends: [
     'eslint:recommended',
     'plugin:@typescript-eslint/recommended',
@@ -15,7 +15,10 @@ module.exports = {
   ],
   rules: {
     '@typescript-eslint/no-unused-vars': ['warn', { argsIgnorePattern: '^_' }],
-    'vue/multi-word-component-names': 'off'
-    // mp-boundary rules will be added in Task 7
+    'vue/multi-word-component-names': 'off',
+    'mp-boundary/no-core-importing-plugin': 'error',
+    'mp-boundary/no-cross-plugin-import': 'error',
+    'mp-boundary/no-bare-uni-api': 'error',
+    'mp-boundary/no-business-in-core': 'error'
   }
 }

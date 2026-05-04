@@ -35,6 +35,7 @@
     "@vue/tsconfig": "^0.5.1",
     "ajv": "^8.12.0",
     "eslint": "^8.57.0",
+    "eslint-plugin-mp-boundary": "file:./scripts/eslint-rules",
     "eslint-plugin-vue": "^9.21.0",
     "fast-glob": "^3.3.2",
     "sass": "^1.78.0",
