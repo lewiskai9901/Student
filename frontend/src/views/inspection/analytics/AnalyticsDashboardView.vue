@@ -232,9 +232,29 @@ async function loadProjects() {
     projects.value = (executionStore.projects || []).map((p: any) => ({ id: p.id, projectName: p.projectName }))
     if (projects.value.length > 0 && !filters.projectId) {
       filters.projectId = projects.value[0].id
+      // 选定项目后, 自动定位最近一个有数据的日期 (向前回溯 14 天)
+      await locateLatestDateWithData()
     }
   } catch {
     projects.value = []
+  }
+}
+
+/** 默认日期取今天, 若今天无 daily summary 则向前回溯到最近一个有数据的日期 */
+async function locateLatestDateWithData() {
+  if (!filters.projectId) return
+  const today = new Date()
+  for (let i = 0; i < 14; i++) {
+    const d = new Date(today)
+    d.setDate(today.getDate() - i)
+    const dateStr = d.toISOString().slice(0, 10)
+    try {
+      await store.fetchDailyRanking(filters.projectId, dateStr)
+      if (store.dailyRanking.length > 0) {
+        filters.date = dateStr
+        return
+      }
+    } catch { /* 继续回溯 */ }
   }
 }
 
