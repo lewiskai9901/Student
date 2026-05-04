@@ -160,6 +160,71 @@ public class InspTaskApplicationService {
         return saved;
     }
 
+    /**
+     * V108: 受检主体发起自查 (SELF_CHECK).
+     * - 项目必须 allow_self_check=1
+     * - 创建即 CLAIMED, inspector=自查者本人
+     * - 永不逾期
+     */
+    @Transactional
+    public InspTask createSelfCheckTask(Long projectId, Long userId, String userName, String reason) {
+        InspProject project = projectRepository.findById(projectId)
+                .orElseThrow(() -> new IllegalArgumentException("项目不存在: " + projectId));
+        try {
+            Integer allowed = jdbcTemplate.queryForObject(
+                    "SELECT allow_self_check FROM insp_projects WHERE id = ? AND deleted = 0",
+                    Integer.class, projectId);
+            if (allowed == null || allowed == 0) {
+                throw new IllegalStateException("该项目不允许自查 (allow_self_check=false)");
+            }
+        } catch (Exception e) {
+            if (e instanceof IllegalStateException) throw (IllegalStateException) e;
+        }
+        if (reason == null || reason.isBlank()) {
+            throw new IllegalArgumentException("自查必须填写原因");
+        }
+        preCheckTemplateDrift(project);
+
+        String taskCode = generateTaskCode();
+        InspTask task = InspTask.createSelfCheck(taskCode, projectId, userId, userName, reason);
+        InspTask saved = taskRepository.save(task);
+        eventPublisher.publishAll(saved.getDomainEvents());
+        saved.clearDomainEvents();
+        metrics.taskCreated();
+        metrics.taskClaimed();
+        populateSubmissions(saved);
+        return saved;
+    }
+
+    /**
+     * V108: 检查员发起互查 (CROSS_AUDIT).
+     * 业务约束 (本期暂留给前端): 不允许 inspector 检查自己人.
+     */
+    @Transactional
+    public InspTask createCrossAuditTask(Long projectId, Long inspectorId, String inspectorName,
+                                          java.time.LocalDate dueDate, String reason) {
+        InspProject project = projectRepository.findById(projectId)
+                .orElseThrow(() -> new IllegalArgumentException("项目不存在: " + projectId));
+        if (reason == null || reason.isBlank()) {
+            throw new IllegalArgumentException("互查必须填写原因");
+        }
+        if (dueDate == null) {
+            throw new IllegalArgumentException("互查必须指定截止日期 (有 SLA 约束)");
+        }
+        preCheckTemplateDrift(project);
+
+        String taskCode = generateTaskCode();
+        InspTask task = InspTask.createCrossAudit(taskCode, projectId, inspectorId, inspectorName,
+                dueDate, reason);
+        InspTask saved = taskRepository.save(task);
+        eventPublisher.publishAll(saved.getDomainEvents());
+        saved.clearDomainEvents();
+        metrics.taskCreated();
+        metrics.taskClaimed();
+        populateSubmissions(saved);
+        return saved;
+    }
+
     /** V108: 列出允许抽查的项目 (jdbcTemplate 直查 DB, 不依赖 InspProject 字段) */
     public java.util.List<java.util.Map<String, Object>> listAdHocAllowedProjects() {
         return jdbcTemplate.queryForList(

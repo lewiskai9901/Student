@@ -134,6 +134,47 @@ class InspTaskOverdueTest {
     }
 
     @Nested
+    @DisplayName("SELF_CHECK 自查")
+    class SelfCheckTests {
+        @Test
+        @DisplayName("createSelfCheck 工厂 — type=SELF_CHECK + policy=NONE + status=CLAIMED + inspector=本人")
+        void selfCheckFactoryBasic() {
+            InspTask t = InspTask.createSelfCheck("TSK-SC", 5L, 999L, "alice", "月度自评");
+            assertThat(t.getTaskType()).isEqualTo(TaskType.SELF_CHECK);
+            assertThat(t.getDeadlinePolicy()).isEqualTo(DeadlinePolicy.NONE);
+            assertThat(t.getStatus()).isEqualTo(TaskStatus.CLAIMED);
+            assertThat(t.getInspectorId()).isEqualTo(999L);
+            assertThat(t.isOverdue()).isFalse();
+            assertThat(t.getSource().reason()).isEqualTo("月度自评");
+            assertThat(t.getSource().isManual()).isTrue();
+        }
+    }
+
+    @Nested
+    @DisplayName("CROSS_AUDIT 互查")
+    class CrossAuditTests {
+        @Test
+        @DisplayName("createCrossAudit 工厂 — type=CROSS_AUDIT + policy=STRICT + dueDate 必填")
+        void crossAuditFactoryBasic() {
+            InspTask t = InspTask.createCrossAudit("TSK-CA", 5L, 100L, "auditor",
+                    LocalDate.now().plusDays(7), "互查");
+            assertThat(t.getTaskType()).isEqualTo(TaskType.CROSS_AUDIT);
+            assertThat(t.getDeadlinePolicy()).isEqualTo(DeadlinePolicy.STRICT);
+            assertThat(t.getStatus()).isEqualTo(TaskStatus.CLAIMED);
+            assertThat(t.getTaskDate()).isEqualTo(LocalDate.now().plusDays(7));
+            assertThat(t.isOverdue()).isFalse();  // 7 天后才到期
+        }
+
+        @Test
+        @DisplayName("CROSS_AUDIT 过 due → 逾期生效")
+        void crossAuditOverdueWhenPastDue() {
+            InspTask t = InspTask.createCrossAudit("TSK-CA-2", 5L, 100L, "auditor",
+                    LocalDate.now().minusDays(2), "互查超期");
+            assertThat(t.isOverdue()).isTrue();
+        }
+    }
+
+    @Nested
     @DisplayName("submit() lateSubmission 路由")
     class SubmitLateRouting {
         @Test

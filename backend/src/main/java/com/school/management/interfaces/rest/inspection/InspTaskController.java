@@ -48,6 +48,47 @@ public class InspTaskController {
         return Result.success(taskService.listAdHocAllowedProjects());
     }
 
+    /** V108: 受检主体发起自查 (SELF_CHECK) — 项目须 allow_self_check=1 */
+    @PostMapping("/self-check")
+    @CasbinAccess(resource = "insp:task", action = "execute")
+    public Result<InspTask> createSelfCheck(@RequestBody SelfCheckRequest request) {
+        Long me = com.school.management.common.util.SecurityUtils.getCurrentUserId();
+        String myName = com.school.management.common.util.SecurityUtils.getCurrentUsername();
+        return Result.success(taskService.createSelfCheckTask(
+                request.getProjectId(), me, myName, request.getReason()));
+    }
+
+    /** V108: 检查员发起互查 (CROSS_AUDIT) — 必填 dueDate */
+    @PostMapping("/cross-audit")
+    @CasbinAccess(resource = "insp:task", action = "execute")
+    public Result<InspTask> createCrossAudit(@RequestBody CrossAuditRequest request) {
+        Long me = com.school.management.common.util.SecurityUtils.getCurrentUserId();
+        String myName = com.school.management.common.util.SecurityUtils.getCurrentUsername();
+        return Result.success(taskService.createCrossAuditTask(
+                request.getProjectId(), me, myName, request.getDueDate(), request.getReason()));
+    }
+
+    public static class SelfCheckRequest {
+        private Long projectId;
+        private String reason;
+        public Long getProjectId() { return projectId; }
+        public void setProjectId(Long projectId) { this.projectId = projectId; }
+        public String getReason() { return reason; }
+        public void setReason(String reason) { this.reason = reason; }
+    }
+
+    public static class CrossAuditRequest {
+        private Long projectId;
+        private java.time.LocalDate dueDate;
+        private String reason;
+        public Long getProjectId() { return projectId; }
+        public void setProjectId(Long projectId) { this.projectId = projectId; }
+        public java.time.LocalDate getDueDate() { return dueDate; }
+        public void setDueDate(java.time.LocalDate dueDate) { this.dueDate = dueDate; }
+        public String getReason() { return reason; }
+        public void setReason(String reason) { this.reason = reason; }
+    }
+
     /** V108: 单独读项目检查模式配置 */
     @GetMapping("/projects/{id}/inspection-mode")
     @CasbinAccess(resource = "insp:project", action = "view")

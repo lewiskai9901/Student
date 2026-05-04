@@ -154,6 +154,50 @@ public class InspTask extends AggregateRoot<Long> {
         return task;
     }
 
+    /**
+     * V108: 创建自查任务 (SELF_CHECK) — 受检主体本人作为 inspector,
+     * 永不逾期, 完成后纳入"主动自评"统计 (单独 KPI).
+     */
+    public static InspTask createSelfCheck(String taskCode, Long projectId,
+                                            Long subjectUserId, String subjectName,
+                                            String reason) {
+        InspTask task = builder()
+                .taskCode(taskCode)
+                .projectId(projectId)
+                .taskDate(LocalDate.now())
+                .status(TaskStatus.CLAIMED)  // 自查创建即已"领取" — 自查者就是检查员
+                .inspectorId(subjectUserId)
+                .inspectorName(subjectName)
+                .build();
+        task.taskType = TaskType.SELF_CHECK;
+        task.deadlinePolicy = DeadlinePolicy.NONE;
+        task.source = TaskSource.manual(subjectUserId, reason);
+        task.registerEvent(new TaskCreatedEvent(null, taskCode, projectId, task.taskDate));
+        return task;
+    }
+
+    /**
+     * V108: 创建互查任务 (CROSS_AUDIT) — 检查员之间互查 (审计独立性).
+     * 不允许 inspector 检查自己人 (业务校验由调用方 application 层做).
+     */
+    public static InspTask createCrossAudit(String taskCode, Long projectId,
+                                             Long inspectorId, String inspectorName,
+                                             LocalDate dueDate, String reason) {
+        InspTask task = builder()
+                .taskCode(taskCode)
+                .projectId(projectId)
+                .taskDate(dueDate)  // 互查保留 deadline (有 SLA 要求)
+                .status(TaskStatus.CLAIMED)
+                .inspectorId(inspectorId)
+                .inspectorName(inspectorName)
+                .build();
+        task.taskType = TaskType.CROSS_AUDIT;
+        task.deadlinePolicy = DeadlinePolicy.STRICT;
+        task.source = TaskSource.manual(inspectorId, reason);
+        task.registerEvent(new TaskCreatedEvent(null, taskCode, projectId, dueDate));
+        return task;
+    }
+
     public static InspTask reconstruct(Builder builder) {
         return new InspTask(builder);
     }
