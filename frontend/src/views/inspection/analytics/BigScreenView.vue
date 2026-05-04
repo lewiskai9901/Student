@@ -1,18 +1,27 @@
 <template>
-  <div class="big-screen">
+  <div class="big-screen" :class="{ 'tv-mode': tvMode }">
     <header class="big-screen-header">
-      <h1>检查数据大屏</h1>
+      <h1>
+        检查数据大屏
+        <span v-if="tvMode" class="tv-badge">TV · 自动轮播</span>
+        <span v-if="tvMode && projects.length > 1" class="tv-progress">
+          {{ tvProjectIndex + 1 }} / {{ projects.length }}
+        </span>
+      </h1>
       <div class="header-right">
         <el-select v-model="projectId" size="small" class="!w-44 dark-select" placeholder="项目"
-          @change="loadAll">
+          @change="onManualProjectChange" :disabled="tvMode">
           <el-option v-for="p in projects" :key="p.id" :label="p.projectName" :value="p.id" />
         </el-select>
         <span class="datetime">{{ currentTime }}</span>
+        <el-button size="small" text :style="{color: tvMode ? '#fbbf24' : '#8cf'}" @click="toggleTvMode">
+          {{ tvMode ? '⏸ 退出 TV' : '▶ TV 模式' }}
+        </el-button>
         <el-button size="small" text style="color:#8cf" @click="loadAll">刷新</el-button>
         <el-button size="small" text style="color:#8cf" @click="toggleFullscreen">
           {{ isFullscreen ? '退出全屏' : '全屏' }}
         </el-button>
-        <el-button size="small" text style="color:#8cf" @click="$router.back()">返回</el-button>
+        <el-button size="small" text style="color:#8cf" @click="$router.back()" :disabled="tvMode">返回</el-button>
       </div>
     </header>
 
@@ -116,9 +125,72 @@ const liveFeed = ref<{ time: string; text: string; score: number | null }[]>([])
 
 let timer: ReturnType<typeof setInterval>
 let pollTimer: ReturnType<typeof setInterval>
+let tvRotateTimer: ReturnType<typeof setInterval> | null = null
+let feedScrollTimer: ReturnType<typeof setInterval> | null = null
+
+// TV 模式: 项目自动轮播 + 滚动 feed + 进入全屏
+const tvMode = ref(false)
+const tvProjectIndex = ref(0)
+const TV_ROTATE_MS = 30_000        // 30 秒切下一个项目
+const TV_FEED_SCROLL_MS = 4_000    // 4 秒滚一行 feed
 
 function updateTime() {
   currentTime.value = new Date().toLocaleString('zh-CN', { hour12: false })
+}
+
+async function onManualProjectChange() {
+  if (!tvMode.value) await loadAll()
+}
+
+function toggleTvMode() {
+  if (tvMode.value) stopTvMode()
+  else startTvMode()
+}
+
+async function startTvMode() {
+  if (projects.value.length === 0) await loadProjects()
+  tvMode.value = true
+  // 进入全屏 (失败/拒绝不影响 TV 轮播逻辑)
+  // 注意: 浏览器要求 requestFullscreen 必须由用户手势直接触发, 这里需 try/catch
+  if (!document.fullscreenElement) {
+    document.documentElement.requestFullscreen()
+      .then(() => { isFullscreen.value = true })
+      .catch(() => { /* 拒绝/不支持 — TV 模式仍生效, 只是没全屏 */ })
+  }
+  // 立即定位到第 0 个
+  tvProjectIndex.value = 0
+  if (projects.value.length > 0) {
+    projectId.value = projects.value[0].id
+    await loadAll()
+  }
+  // 30 秒轮播
+  if (projects.value.length > 1) {
+    tvRotateTimer = setInterval(async () => {
+      tvProjectIndex.value = (tvProjectIndex.value + 1) % projects.value.length
+      projectId.value = projects.value[tvProjectIndex.value].id
+      await loadAll()
+    }, TV_ROTATE_MS)
+  }
+  // 4 秒滚动 feed
+  feedScrollTimer = setInterval(() => {
+    const feed = document.querySelector('.live-feed') as HTMLElement | null
+    if (!feed) return
+    if (feed.scrollTop + feed.clientHeight + 4 >= feed.scrollHeight) {
+      feed.scrollTo({ top: 0, behavior: 'smooth' })
+    } else {
+      feed.scrollBy({ top: 60, behavior: 'smooth' })
+    }
+  }, TV_FEED_SCROLL_MS)
+}
+
+function stopTvMode() {
+  tvMode.value = false
+  if (tvRotateTimer) { clearInterval(tvRotateTimer); tvRotateTimer = null }
+  if (feedScrollTimer) { clearInterval(feedScrollTimer); feedScrollTimer = null }
+  if (document.fullscreenElement) {
+    try { document.exitFullscreen() } catch { /* ignore */ }
+    isFullscreen.value = false
+  }
 }
 
 function toggleFullscreen() {
@@ -261,6 +333,8 @@ onMounted(async () => {
 onUnmounted(() => {
   clearInterval(timer)
   clearInterval(pollTimer)
+  if (tvRotateTimer) clearInterval(tvRotateTimer)
+  if (feedScrollTimer) clearInterval(feedScrollTimer)
 })
 </script>
 
@@ -348,4 +422,37 @@ onUnmounted(() => {
 .ring-text { position: absolute; font-size: 28px; font-weight: 700; color: #60a5fa; }
 
 .empty-tip { text-align: center; color: #475569; padding: 32px 0; font-size: 13px; flex: 1; display: flex; align-items: center; justify-content: center; }
+
+/* ── TV 模式: 进度条 + 数字放大 + 隐藏滚动条 ── */
+.tv-badge {
+  margin-left: 12px; font-size: 11px; padding: 2px 8px;
+  background: linear-gradient(90deg, #fbbf24, #f59e0b);
+  color: #0f172a; border-radius: 10px; font-weight: 600;
+  -webkit-text-fill-color: #0f172a; -webkit-background-clip: initial;
+  background-clip: initial;
+}
+.tv-progress {
+  margin-left: 8px; font-size: 12px; color: #94a3b8; font-variant-numeric: tabular-nums;
+  -webkit-text-fill-color: #94a3b8; -webkit-background-clip: initial;
+  background-clip: initial;
+}
+.tv-mode .metric-value { font-size: 44px; }
+.tv-mode .chart-panel h3 { font-size: 16px; }
+.tv-mode .feed-text { font-size: 14px; }
+.tv-mode .ring-text { font-size: 36px; }
+.tv-mode .live-feed::-webkit-scrollbar { display: none; }
+.tv-mode .live-feed { scrollbar-width: none; }
+
+/* TV 项目轮播光顶部进度条 */
+.tv-mode::before {
+  content: ''; position: fixed; top: 0; left: 0; height: 3px;
+  background: linear-gradient(90deg, #60a5fa, #fbbf24, #60a5fa);
+  width: 100%;
+  animation: tv-progress-bar 30s linear infinite;
+  z-index: 1000;
+}
+@keyframes tv-progress-bar {
+  0% { transform: scaleX(0); transform-origin: left; }
+  100% { transform: scaleX(1); transform-origin: left; }
+}
 </style>
