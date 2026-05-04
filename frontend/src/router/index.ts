@@ -564,6 +564,19 @@ const routes: RouteRecordRaw[] = [
               order: 8
             }
           },
+          // 受检主体视角 — 班主任/楼长/部门负责人 用 (See: 角色驱动 IA 设计)
+          {
+            path: '/inspection/my-record',
+            name: 'InspMyRecord',
+            component: () => import('@/views/inspection/myrecord/MyRecordView.vue'),
+            meta: {
+              title: '我的成绩单',
+              icon: 'BadgeCheck',
+              requiresAuth: true,
+              permission: 'insp:analytics:view',
+              order: 3
+            }
+          },
           // 仪表盘
           {
             path: '/inspection/dashboard',
