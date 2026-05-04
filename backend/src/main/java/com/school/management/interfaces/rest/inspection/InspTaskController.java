@@ -41,6 +41,13 @@ public class InspTaskController {
         return Result.success(task);
     }
 
+    /** V108: 列出允许抽查的项目 (前端发起对话框用) */
+    @GetMapping("/ad-hoc/allowed-projects")
+    @CasbinAccess(resource = "insp:task", action = "view")
+    public Result<List<java.util.Map<String, Object>>> listAdHocAllowedProjects() {
+        return Result.success(taskService.listAdHocAllowedProjects());
+    }
+
     public static class AdHocRequest {
         private Long projectId;
         private String reason;

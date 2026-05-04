@@ -3,7 +3,7 @@
  * MyInspectionView — 我的检查任务 (Audit Console redesign)
  * 卷宗式分组列表 · 状态筛选 · 内联快速操作 · 键盘快捷键
  */
-import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted, reactive } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { useAuthStore } from '@/stores/auth'
@@ -12,6 +12,7 @@ import {
   claimTask, withdrawTask, startTask,
 } from '@/api/inspection/task'
 import { getProjects } from '@/api/inspection/project'
+import { http } from '@/utils/request'
 import type { InspTask, InspProject } from '@/types/insp/project'
 import { TaskStatusConfig, type TaskStatus } from '@/types/insp/enums'
 
@@ -24,7 +25,48 @@ const myTaskList = ref<InspTask[]>([])
 const availableTaskList = ref<InspTask[]>([])
 const projectMap = ref<Map<number, InspProject>>(new Map())
 const claimingIds = ref<Set<number>>(new Set())
-const filter = ref<'all' | 'available' | 'mine' | 'inprogress' | 'toreview' | 'overdue'>('all')
+const filter = ref<'all' | 'available' | 'mine' | 'inprogress' | 'toreview' | 'overdue' | 'adhoc'>('all')
+
+// V108: 抽查发起对话框
+const adhocDialog = ref(false)
+const adhocSubmitting = ref(false)
+const adhocLoadingProjects = ref(false)
+const adhocProjects = ref<{ id: number; projectName: string }[]>([])
+const adhocForm = reactive({ projectId: null as number | null, reason: '' })
+
+async function loadAdhocProjects() {
+  adhocLoadingProjects.value = true
+  try {
+    const list = await http.get<any[]>('/inspection/tasks/ad-hoc/allowed-projects')
+    adhocProjects.value = ((list as any) || []).map((p: any) => ({
+      id: p.id,
+      projectName: p.project_name || p.projectName || ('项目 #' + p.id),
+    }))
+  } catch { adhocProjects.value = [] }
+  finally { adhocLoadingProjects.value = false }
+}
+
+async function submitAdhoc() {
+  if (!adhocForm.projectId) { ElMessage.warning('请选择项目'); return }
+  if (!adhocForm.reason || adhocForm.reason.length < 10) { ElMessage.warning('请填写至少 10 字的发起原因'); return }
+  adhocSubmitting.value = true
+  try {
+    const r = await http.post<any>('/inspection/tasks/ad-hoc', {
+      projectId: adhocForm.projectId,
+      reason: adhocForm.reason,
+    })
+    ElMessage.success('抽查任务已发起 #' + (r as any).taskCode)
+    adhocDialog.value = false
+    adhocForm.projectId = null
+    adhocForm.reason = ''
+    await loadAll()
+    filter.value = 'adhoc'
+  } catch (e: any) {
+    ElMessage.error('发起失败: ' + (e?.response?.data?.message || e?.message || '未知'))
+  } finally {
+    adhocSubmitting.value = false
+  }
+}
 
 // 当前用户角色判定: 我在该任务里是检查员还是审核员?
 function roleInTask(t: InspTask): 'inspector' | 'reviewer' | null {
@@ -80,6 +122,7 @@ const counts = computed(() => {
     inprogress: myTaskList.value.filter(t => t.status === 'IN_PROGRESS').length,
     toreview: myTaskList.value.filter(isReviewable).length,
     overdue: allTasks.value.filter(isOverdue).length,
+    adhoc: allTasks.value.filter((t: any) => t.taskType === 'AD_HOC').length,
   }
 })
 
@@ -91,6 +134,7 @@ const filtered = computed(() => {
     case 'inprogress': list = myTaskList.value.filter(t => t.status === 'IN_PROGRESS'); break
     case 'toreview': list = myTaskList.value.filter(isReviewable); break
     case 'overdue': list = allTasks.value.filter(isOverdue); break
+    case 'adhoc': list = allTasks.value.filter((t: any) => t.taskType === 'AD_HOC'); break
     default: list = allTasks.value
   }
   return [...list].sort((a, b) => {
@@ -327,6 +371,7 @@ function onKey(e: KeyboardEvent) {
 
 onMounted(() => {
   loadAll()
+  loadAdhocProjects()
   window.addEventListener('keydown', onKey)
 })
 onUnmounted(() => window.removeEventListener('keydown', onKey))
@@ -396,13 +441,45 @@ onUnmounted(() => window.removeEventListener('keydown', onKey))
         <span class="filter-tab__label">逾期</span>
         <span class="filter-tab__count" :style="{ color: counts.overdue ? 'var(--insp-fail)' : '' }">{{ counts.overdue }}</span>
       </button>
+      <button v-if="counts.adhoc > 0 || filter === 'adhoc'" class="filter-tab filter-tab--adhoc"
+              :class="{ 'is-active': filter === 'adhoc' }" @click="filter = 'adhoc'">
+        <span class="filter-tab__label">⚡ 抽查</span>
+        <span class="filter-tab__count">{{ counts.adhoc }}</span>
+      </button>
       <div class="filter-spacer" />
       <div class="kbd-tray">
         <span class="kbd-pair"><kbd class="insp-kbd">J</kbd><kbd class="insp-kbd">K</kbd> 切换</span>
         <span class="kbd-pair"><kbd class="insp-kbd insp-kbd--inverted">⏎</kbd> 领取/继续</span>
       </div>
+      <button class="insp-btn insp-btn--accent" @click="adhocDialog = true">⚡ 发起抽查</button>
       <button class="insp-btn insp-btn--ghost" @click="loadAll">刷新</button>
     </nav>
+
+    <!-- ⚡ 抽查发起对话框 -->
+    <el-dialog v-model="adhocDialog" title="⚡ 发起临时抽查" width="500px" append-to-body>
+      <el-form :model="adhocForm" label-width="90px">
+        <el-form-item label="项目" required>
+          <el-select v-model="adhocForm.projectId" placeholder="选择允许抽查的项目" class="w-full"
+                     :loading="adhocLoadingProjects">
+            <el-option v-for="p in adhocProjects" :key="p.id" :label="p.projectName" :value="p.id" />
+          </el-select>
+          <div v-if="!adhocLoadingProjects && adhocProjects.length===0" class="mt-1 text-xs text-warning">
+            暂无项目允许抽查 (项目编辑里勾选 "允许抽查")
+          </div>
+        </el-form-item>
+        <el-form-item label="发起原因" required>
+          <el-input v-model="adhocForm.reason" type="textarea" :rows="3"
+                    placeholder="说明本次抽查的触发原因 (举报/投诉/突击等), 至少 10 字" maxlength="500" show-word-limit />
+        </el-form-item>
+        <div class="text-xs text-gray-500 px-2">
+          ℹ 抽查任务永不逾期, 不计入计划完成率, 但扣分计入受检主体总分 (×1.2 加权)
+        </div>
+      </el-form>
+      <template #footer>
+        <el-button @click="adhocDialog = false">取消</el-button>
+        <el-button type="primary" :loading="adhocSubmitting" @click="submitAdhoc">⚡ 立即发起</el-button>
+      </template>
+    </el-dialog>
 
     <!-- ── Date-grouped roster ─────────── -->
     <section v-loading="loading" class="roster">
@@ -598,6 +675,14 @@ onUnmounted(() => window.removeEventListener('keydown', onKey))
 .filter-tab.is-active .filter-tab__count { color: var(--insp-accent); }
 .filter-tab--review.is-active .filter-tab__count { color: var(--insp-info); }
 .filter-tab--review.is-active::after { background: var(--insp-info) !important; }
+
+.filter-tab--adhoc { color: #9a3412; }
+.filter-tab--adhoc.is-active { color: #ea580c; background: linear-gradient(180deg, #fff7ed, #ffedd5); }
+.filter-tab--adhoc.is-active::after { background: #ea580c !important; }
+.filter-tab--adhoc .filter-tab__count { background: #fed7aa; color: #9a3412; }
+
+.w-full { width: 100%; }
+.text-warning { color: #f59e0b; }
 
 /* 角色徽章 (审核员/延迟交付) */
 .role-chip {

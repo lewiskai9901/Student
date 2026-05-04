@@ -113,6 +113,14 @@ public class InspTaskApplicationService {
         return saved;
     }
 
+    /** V108: 列出允许抽查的项目 (jdbcTemplate 直查 DB, 不依赖 InspProject 字段) */
+    public java.util.List<java.util.Map<String, Object>> listAdHocAllowedProjects() {
+        return jdbcTemplate.queryForList(
+                "SELECT id, project_name, project_code, inspection_mode, allow_ad_hoc " +
+                "FROM insp_projects WHERE deleted = 0 AND allow_ad_hoc = 1 " +
+                "ORDER BY id DESC LIMIT 200");
+    }
+
     /** 反射读 InspProject 的字段 — 兼容 PO 是否已加 allowAdHoc 字段 */
     private Boolean readBooleanField(InspProject project, String fieldName) {
         try {
