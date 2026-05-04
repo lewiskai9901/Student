@@ -7,7 +7,12 @@
           <h2>我的整改</h2>
           <div class="head-sub">{{ kpi.total }} 单 · 按时关闭率 {{ kpi.closeRate }}%</div>
         </div>
-        <el-button :icon="RefreshRight" circle size="small" @click="loadData" :loading="loading" />
+        <div class="head-actions">
+          <router-link to="/inspection/received" class="head-link" title="返回受检中心">
+            受检中心 →
+          </router-link>
+          <el-button :icon="RefreshRight" circle size="small" @click="loadData" :loading="loading" />
+        </div>
       </header>
 
       <!-- 状态切换 -->
@@ -297,6 +302,17 @@ onMounted(loadData)
 .head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; }
 .head-title h2 { font-size: 28px; margin: 0; font-weight: 600; letter-spacing: -0.02em; }
 .head-sub { font-size: 13px; color: #6b7280; margin-top: 4px; }
+.head-actions { display: flex; align-items: center; gap: 10px; }
+.head-link {
+  font-size: 12px;
+  color: #6366f1;
+  text-decoration: none;
+  padding: 4px 10px;
+  border: 1px solid #c7d2fe;
+  border-radius: 4px;
+  transition: all 0.15s;
+}
+.head-link:hover { background: #eef2ff; border-color: #818cf8; }
 @media (max-width: 767px) {
   .head-title h2 { font-size: 22px; }
 }

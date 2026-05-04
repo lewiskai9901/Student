@@ -553,6 +553,18 @@ const routes: RouteRecordRaw[] = [
           },
           // 受检主体面 (C3) — 班主任/场所负责人/受检单位的"被检查"视角
           {
+            path: '/inspection/received',
+            name: 'InspMyReceivedHub',
+            component: () => import('@/views/inspection/received/MyReceivedHubView.vue'),
+            meta: {
+              title: '我的受检中心',
+              icon: 'Building2',
+              requiresAuth: true,
+              permission: 'insp:received:view',
+              order: 4.5,
+            },
+          },
+          {
             path: '/inspection/received/inspections',
             name: 'InspMyReceivedInspections',
             component: () => import('@/views/inspection/received/MyInspectionsView.vue'),

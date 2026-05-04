@@ -69,6 +69,7 @@ public class EducationMenuPlugin implements MenuContributionPlugin {
                 of("/inspection/my-record",        "我的成绩单",   "badge-check",       6),
                 of("/inspection/my-corrective",    "我的整改",     "wrench",            7),
                 of("/inspection/appeals/my",       "我的申诉",     "scale",             8),
+                of("/inspection/received",             "我的受检中心",   "building-2",     10),
                 of("/inspection/received/inspections", "我被检查的记录", "clipboard-list", 11),
                 of("/inspection/received/trends",      "检查趋势",       "trending-up",    12),
                 of("/inspection/received/recurring",   "高频问题",       "alert-triangle", 13),
