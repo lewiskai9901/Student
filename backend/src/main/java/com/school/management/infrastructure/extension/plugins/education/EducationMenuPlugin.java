@@ -65,13 +65,42 @@ public class EducationMenuPlugin implements MenuContributionPlugin {
                 of("/inspection/config",   "检查配置",     "settings",         1),
                 of("/inspection/projects", "检查项目",     "folder-search",    2),
                 of("/inspection/tasks",    "我的任务",     "list-todo",        3),
-                // 角色驱动 IA 新增 5 项 (受检主体/整改人/审核员/管理者/数据消费者)
+                of("/inspection/tasks/review",     "任务审核",   "check-square", 4),
+                // 角色驱动 IA 新增 5 项
                 of("/inspection/my-record",        "我的成绩单", "badge-check",  5),
                 of("/inspection/my-corrective",    "我的整改",   "wrench",       6),
                 of("/inspection/tasks/review-risk","待审风险池", "list-checks",  7),
                 of("/inspection/governance",       "治理工作台", "shield-check", 8),
                 of("/inspection/analytics","分析报表",     "bar-chart-3",      9),
-                of("/inspection/export",   "导出中心",     "download",        10)
+                of("/inspection/export",   "导出中心",     "download",        10),
+                of("/inspection/corrective",       "整改管理",   "hammer",       10),
+                of("/inspection/appeals/my",       "我的申诉",   "scale",        10),
+                of("/inspection/appeals/review",   "申诉审核",   "gavel",        10),
+                // 配置/资源 — 评分体系
+                of("/inspection/library",         "检查项库",     "library",      11),
+                of("/inspection/grade-schemes",   "等级方案",     "award",        12),
+                of("/inspection/scoring-profiles","评分方案",     "calculator",   13),
+                of("/inspection/scoring",         "评分配置",     "sliders",      14),
+                of("/inspection/issue-categories","问题分类",     "tags",         15),
+                of("/inspection/compliance",      "合规标准",     "shield",       16),
+                of("/inspection/holiday-calendar","假日日历",     "calendar",     17),
+                of("/inspection/report-templates","报表模板",     "file-text",    18),
+                // 监控/数据
+                of("/inspection/results",         "检查结果",     "trophy",       19),
+                of("/inspection/observations",    "评分观察",     "eye",          20),
+                of("/inspection/rankings",        "评级排名",     "trending-up",  21),
+                of("/inspection/ratings",         "评级排名榜",   "trophy",       22),
+                of("/inspection/alerts",          "预警看板",     "bell",         23),
+                of("/inspection/audit-trail",     "审计日志",     "file-search",  24),
+                of("/inspection/big-screen",      "数据大屏",     "monitor",      25),
+                of("/inspection/about-me",        "关于我的检查", "user-circle",  26),
+                // 集成/扩展
+                of("/inspection/notification-rules","通知规则",   "mail",         27),
+                of("/inspection/webhooks",        "Webhook",     "link-2",       28),
+                of("/inspection/knowledge",       "知识库",       "book-open",    29),
+                of("/inspection/nfc-tags",        "NFC 标签",    "scan-line",    30),
+                of("/inspection/iot-sensors",     "IoT 传感器",  "cpu",          31),
+                of("/inspection/admin/reassign-departed","离职重派","user-x",     90)
             )),
 
             // ─── 教务管理 ───

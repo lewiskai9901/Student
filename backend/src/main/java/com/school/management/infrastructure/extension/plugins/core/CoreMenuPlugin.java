@@ -32,7 +32,8 @@ public class CoreMenuPlugin implements MenuContributionPlugin {
                 of("/message/triggers", "事件触发器", "zap", 3)
                     .requiredPermissions(List.of("system:config:view")),
                 of("/message/subscriptions", "订阅与模板", "list-checks", 4)
-                    .requiredPermissions(List.of("system:config:view"))
+                    .requiredPermissions(List.of("system:config:view")),
+                of("/message/preferences", "消息偏好", "sliders", 5)
             )),
 
             // ─── 关系管理 ───
@@ -40,6 +41,8 @@ public class CoreMenuPlugin implements MenuContributionPlugin {
                 of("/access/relations", "关系管理", "link-2", 1)
                     .requiredPermissions(List.of("system:admin")),
                 of("/access/relation-types", "关系字典", "book", 2)
+                    .requiredPermissions(List.of("system:admin")),
+                of("/access/data-permissions", "数据权限", "shield-check", 3)
                     .requiredPermissions(List.of("system:admin"))
             )),
 
@@ -66,7 +69,23 @@ public class CoreMenuPlugin implements MenuContributionPlugin {
                 of("/system/entity-types", "类型配置", "layout-grid", 4)
                     .requiredPermissions(List.of("system:config:view")),
                 of("/system/plugins", "插件平台", "package", 5)
-                    .requiredPermissions(List.of("system:config:view"))
+                    .requiredPermissions(List.of("system:config:view")),
+                of("/system/configs", "系统配置", "sliders", 6)
+                    .requiredPermissions(List.of("system:config:view")),
+                of("/system/teachers", "教师档案", "users-round", 7)
+                    .requiredPermissions(List.of("system:admin")),
+                of("/system/semesters", "学期管理", "calendar", 8)
+                    .requiredPermissions(List.of("system:config:view")),
+                of("/system/tenants", "租户管理", "building", 9)
+                    .requiredPermissions(List.of("system:admin")),
+                of("/system/login-customization", "登录定制", "palette", 10)
+                    .requiredPermissions(List.of("system:admin")),
+                of("/system/audit", "系统审计", "history", 11)
+                    .requiredPermissions(List.of("system:admin")),
+                of("/system/operation-logs", "操作日志", "scroll-text", 12)
+                    .requiredPermissions(List.of("system:admin")),
+                of("/system/announcements", "系统公告", "megaphone", 13)
+                    .requiredPermissions(List.of("system:admin"))
             ))
         );
     }
