@@ -237,11 +237,16 @@ async function loadObservations() {
   try {
     const r = await observationApi.list({ projectId: projectId.value, isNegative: true, page: 1, size: 10 })
     const items = (r as any).records ?? r ?? []
-    liveFeed.value = items.slice(0, 10).map((o: any) => ({
-      time: (o.observedAt || o.createdAt || '').slice(11, 16) || '--:--',
-      text: `${o.subjectType || ''} ${o.subjectId || ''} ${o.itemName || o.eventTypeCode || ''} ${o.note || ''}`.trim(),
-      score: o.score ?? null,
-    }))
+    liveFeed.value = items.slice(0, 10).map((o: any) => {
+      const target = o.subjectName || o.orgUnitName || ''
+      const item = o.itemName || o.linkedEventTypeCode || ''
+      const desc = o.description || ''
+      return {
+        time: (o.observedAt || o.createdAt || '').slice(11, 16) || '--:--',
+        text: [target, item, desc].filter(Boolean).join(' · '),
+        score: o.score != null ? Number(o.score) : null,
+      }
+    })
   } catch { liveFeed.value = [] }
 }
 
