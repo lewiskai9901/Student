@@ -42,6 +42,31 @@ function isOverdue(): boolean {
   return new Date() > new Date(c.deadline)
 }
 
+// V110: 解析 explain_trace_json
+interface TraceEntry { layer: string; rule: string; input: string; output: string }
+const parsedTrace = computed<TraceEntry[]>(() => {
+  const raw = currentCase.value?.explainTraceJson
+  if (!raw) return []
+  try {
+    const obj = typeof raw === 'string' ? JSON.parse(raw) : raw
+    const arr = Array.isArray(obj) ? obj : (obj?.trace || [])
+    return Array.isArray(arr) ? arr : []
+  } catch {
+    return []
+  }
+})
+
+function traceLayerLabel(layer: string): string {
+  const map: Record<string, string> = {
+    normalize:  'L1 标准化',
+    itemRule:   'L2 检查项规则',
+    threshold:  'L3 阈值判定',
+    recurrence: 'L4 复发增强',
+    policy:     '项目策略',
+  }
+  return map[layer] || layer
+}
+
 async function loadData() {
   loading.value = true
   try {
@@ -282,6 +307,40 @@ onMounted(() => loadData())
           </el-descriptions>
         </el-card>
 
+        <!-- V110: 引擎决策审计链 -->
+        <el-card v-if="currentCase.suggestedBySystem === 1 || currentCase.explainTraceJson"
+                 shadow="never" class="trace-card">
+          <template #header>
+            <div class="trace-header">
+              <span class="font-medium">引擎判定追溯</span>
+              <span v-if="currentCase.suggestedBySystem === 1" class="trace-tag">系统建议</span>
+              <span v-if="currentCase.severityScore != null" class="trace-score">
+                严重度 {{ (currentCase.severityScore * 100).toFixed(0) }}%
+              </span>
+            </div>
+          </template>
+          <div v-if="currentCase.suggestionReason" class="trace-reason">
+            {{ currentCase.suggestionReason }}
+          </div>
+          <ul v-if="parsedTrace.length" class="trace-list">
+            <li v-for="(t, i) in parsedTrace" :key="i" class="trace-row">
+              <span class="trace-step">{{ i + 1 }}</span>
+              <div class="trace-body">
+                <div class="trace-line">
+                  <span class="trace-layer">{{ traceLayerLabel(t.layer) }}</span>
+                  <span class="trace-rule">{{ t.rule }}</span>
+                </div>
+                <div class="trace-io">
+                  <span class="trace-input">{{ t.input }}</span>
+                  <span class="trace-arrow">→</span>
+                  <span class="trace-output">{{ t.output }}</span>
+                </div>
+              </div>
+            </li>
+          </ul>
+          <div v-else class="trace-empty">未记录决策链 (可能为手动建单)</div>
+        </el-card>
+
         <!-- Assignment & Correction -->
         <el-card shadow="never">
           <template #header><span class="font-medium">整改信息</span></template>
@@ -367,6 +426,59 @@ onMounted(() => loadData())
 
 <style scoped>
 .case-detail { padding: 12px 16px; }
+
+/* V110 引擎追溯 */
+.trace-card { border-color: #ddd6fe !important; }
+.trace-header { display: flex; align-items: center; gap: 10px; }
+.trace-tag {
+  background: #ede9fe; color: #6d28d9;
+  padding: 2px 8px; border-radius: 4px;
+  font-size: 11px; font-weight: 600;
+}
+.trace-score {
+  font-size: 11px; color: #6b7280;
+  margin-left: auto;
+}
+.trace-reason {
+  background: #f5f3ff; border: 1px solid #e9d5ff;
+  border-radius: 4px;
+  padding: 8px 12px;
+  font-size: 13px; color: #4c1d95;
+  margin-bottom: 12px;
+}
+.trace-list { list-style: none; padding: 0; margin: 0; }
+.trace-row {
+  display: flex; gap: 10px;
+  padding: 8px 0;
+  border-bottom: 1px dashed #f3f4f6;
+}
+.trace-row:last-child { border-bottom: none; }
+.trace-step {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 22px; height: 22px;
+  background: #ede9fe; color: #6d28d9;
+  border-radius: 50%;
+  font-size: 11px; font-weight: 600;
+  flex-shrink: 0;
+}
+.trace-body { flex: 1; min-width: 0; }
+.trace-line { display: flex; gap: 8px; align-items: center; }
+.trace-layer { font-size: 12px; color: #6b7280; }
+.trace-rule {
+  font-size: 12px; color: #1f2937; font-weight: 500;
+  font-family: ui-monospace, monospace;
+  background: #f9fafb; padding: 1px 6px; border-radius: 3px;
+}
+.trace-io {
+  font-size: 11px; color: #6b7280;
+  margin-top: 2px;
+  font-family: ui-monospace, monospace;
+  word-break: break-all;
+}
+.trace-input { color: #94a3b8; }
+.trace-arrow { color: #cbd5e1; margin: 0 4px; }
+.trace-output { color: #1e40af; font-weight: 500; }
+.trace-empty { padding: 12px; color: #9ca3af; font-size: 12px; text-align: center; }
 
 .cd-head {
   background: var(--insp-bg-surface);

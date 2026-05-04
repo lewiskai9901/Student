@@ -221,4 +221,43 @@ public class CorrectiveSuggestionController {
         public Integer deadlineMedium;
         public Integer deadlineLow;
     }
+
+    // ==================== 检查项级 ItemRule GET / PUT ====================
+
+    /** 取检查项整改覆盖规则. 返回原 JSON (前端解析). */
+    @GetMapping("/template-items/{itemId}/override")
+    @CasbinAccess(resource = "insp:template", action = "view")
+    public Result<String> getItemOverride(@PathVariable Long itemId) {
+        try {
+            String json = jdbcTemplate.queryForObject(
+                    "SELECT corrective_override FROM insp_template_items WHERE id=?",
+                    String.class, itemId);
+            return Result.success(json);
+        } catch (Exception e) {
+            return Result.success(null);
+        }
+    }
+
+    /**
+     * 更新检查项整改覆盖规则.
+     * <p>请求体允许直接传 JSON 字符串 (overrideJson) 或结构化字段;
+     * null/空 → 清除覆盖, 退回到项目级策略.
+     */
+    @PutMapping("/template-items/{itemId}/override")
+    @CasbinAccess(resource = "insp:template", action = "update")
+    public Result<String> updateItemOverride(@PathVariable Long itemId,
+                                              @RequestBody(required = false) Map<String, Object> body) {
+        String json = null;
+        if (body != null && !body.isEmpty()) {
+            try {
+                json = new com.fasterxml.jackson.databind.ObjectMapper().writeValueAsString(body);
+            } catch (Exception e) {
+                throw new IllegalArgumentException("规则 JSON 序列化失败: " + e.getMessage());
+            }
+        }
+        jdbcTemplate.update(
+                "UPDATE insp_template_items SET corrective_override=? WHERE id=?",
+                json, itemId);
+        return Result.success(json);
+    }
 }

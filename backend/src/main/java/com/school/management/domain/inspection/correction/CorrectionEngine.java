@@ -33,7 +33,18 @@ public class CorrectionEngine {
     public CorrectionVerdict judge(SubmissionDetail detail,
                                    ProjectCorrectivePolicy policy,
                                    int recurrenceCount) {
+        return judge(detail, policy, ItemRule.EMPTY, recurrenceCount);
+    }
+
+    /**
+     * 单条判定 (含 ItemRule 检查项覆盖).
+     */
+    public CorrectionVerdict judge(SubmissionDetail detail,
+                                   ProjectCorrectivePolicy policy,
+                                   ItemRule itemRule,
+                                   int recurrenceCount) {
         if (policy == null) policy = ProjectCorrectivePolicy.normalDefault();
+        if (itemRule == null) itemRule = ItemRule.EMPTY;
 
         CorrectionVerdict.Builder b = CorrectionVerdict.builder()
                 .detailId(detail.getId())
@@ -45,6 +56,30 @@ public class CorrectionEngine {
             return b.severity(Severity.NONE)
                     .reason("项目策略为 OFF, 完全人工")
                     .addTrace("policy", "OFF", "—", "skip")
+                    .build();
+        }
+
+        // L2.1 ItemRule.neverCorrect: 永不建单
+        if (itemRule.isNeverCorrect()) {
+            return b.severity(Severity.NONE)
+                    .reason("检查项配置 neverCorrect=true")
+                    .addTrace("itemRule", "neverCorrect", "—", "skip")
+                    .build();
+        }
+
+        // L2.2 ItemRule.forceCorrect: 特定响应强制建 HIGH
+        if (itemRule.isForceCorrect(detail.getResponseValue())) {
+            int days = (itemRule.getDeadlineOverride() != null
+                    ? itemRule.getDeadlineOverride()
+                    : policy.deadlines()).forSeverity(Severity.HIGH);
+            return b.severity(Severity.HIGH)
+                    .severityScore(1.0)
+                    .mustCorrect(true)
+                    .deadlineDays(days)
+                    .reason(detail.getItemName() + ": 响应 " + detail.getResponseValue()
+                            + " 命中强制规则 → HIGH")
+                    .addTrace("itemRule", "forceCorrect",
+                            "resp=" + detail.getResponseValue(), "HIGH (forced)")
                     .build();
         }
 
@@ -64,10 +99,13 @@ public class CorrectionEngine {
                          detail.getScore(), detail.getItemWeight(), detail.getResponseValue()),
                  String.format("%.3f", sev));
 
-        // L3 项目阈值 → severity 等级
-        SeverityThresholds t = policy.thresholds();
+        // L3 阈值 → severity 等级 (ItemRule.thresholdOverride 优先, 其次 project)
+        SeverityThresholds t = itemRule.getThresholdOverride() != null
+                ? itemRule.getThresholdOverride() : policy.thresholds();
         Severity level = t.classify(sev);
-        b.addTrace("threshold", policy.strictness(),
+        String thresholdSrc = itemRule.getThresholdOverride() != null
+                ? "itemRule.override" : policy.strictness();
+        b.addTrace("threshold", thresholdSrc,
                 String.format("h=%.2f m=%.2f l=%.2f", t.high(), t.medium(), t.low()),
                 level.name());
 
@@ -89,7 +127,9 @@ public class CorrectionEngine {
         // 复发 ≥3 次强制建单
         if (recurrenceCount >= 3 && level.requiresCorrection()) must = true;
 
-        int days = policy.deadlines().forSeverity(level);
+        DeadlinePresets dp = itemRule.getDeadlineOverride() != null
+                ? itemRule.getDeadlineOverride() : policy.deadlines();
+        int days = dp.forSeverity(level);
 
         return b.severity(level)
                 .mustCorrect(must)
@@ -102,16 +142,32 @@ public class CorrectionEngine {
     public List<CorrectionVerdict> judgeAll(List<SubmissionDetail> details,
                                             ProjectCorrectivePolicy policy,
                                             RecurrenceLookup lookup) {
+        return judgeAll(details, policy, lookup, ItemRuleLookup.NONE);
+    }
+
+    /** 批量判定 (含 ItemRule 查询). */
+    public List<CorrectionVerdict> judgeAll(List<SubmissionDetail> details,
+                                            ProjectCorrectivePolicy policy,
+                                            RecurrenceLookup lookup,
+                                            ItemRuleLookup itemLookup) {
         List<CorrectionVerdict> verdicts = new ArrayList<>();
         for (SubmissionDetail d : details) {
             int rc = lookup == null ? 0 : lookup.countRecent(d);
+            ItemRule rule = itemLookup == null ? ItemRule.EMPTY : itemLookup.lookup(d);
             try {
-                verdicts.add(judge(d, policy, rc));
+                verdicts.add(judge(d, policy, rule, rc));
             } catch (Exception ex) {
                 log.warn("judge detail {} failed: {}", d.getId(), ex.getMessage());
             }
         }
         return verdicts;
+    }
+
+    /** 检查项级 ItemRule 查询接口. */
+    @FunctionalInterface
+    public interface ItemRuleLookup {
+        ItemRuleLookup NONE = d -> ItemRule.EMPTY;
+        ItemRule lookup(SubmissionDetail detail);
     }
 
     private String buildReason(SubmissionDetail d, ScoringMode mode, double sev,

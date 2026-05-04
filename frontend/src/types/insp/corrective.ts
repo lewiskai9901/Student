@@ -32,6 +32,11 @@ export interface CorrectiveCase {
   createdBy: number | null
   createdAt: string
   updatedAt: string | null
+  // V110 引擎产物
+  suggestedBySystem?: number | null
+  suggestionReason?: string | null
+  severityScore?: number | null
+  explainTraceJson?: string | null
 }
 
 export interface CreateCaseRequest {

@@ -80,6 +80,12 @@ public class CorrectiveCase extends AggregateRoot<Long> {
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 
+    // V110: 整改判定引擎产物
+    private Integer suggestedBySystem;
+    private String suggestionReason;
+    private java.math.BigDecimal severityScore;
+    private String explainTraceJson;
+
     protected CorrectiveCase() {
     }
 
@@ -121,7 +127,16 @@ public class CorrectiveCase extends AggregateRoot<Long> {
         this.createdBy = builder.createdBy;
         this.createdAt = builder.createdAt != null ? builder.createdAt : LocalDateTime.now();
         this.updatedAt = builder.updatedAt;
+        this.suggestedBySystem = builder.suggestedBySystem;
+        this.suggestionReason = builder.suggestionReason;
+        this.severityScore = builder.severityScore;
+        this.explainTraceJson = builder.explainTraceJson;
     }
+
+    public Integer getSuggestedBySystem() { return suggestedBySystem; }
+    public String getSuggestionReason() { return suggestionReason; }
+    public java.math.BigDecimal getSeverityScore() { return severityScore; }
+    public String getExplainTraceJson() { return explainTraceJson; }
 
     public static CorrectiveCase create(String caseCode, String issueDescription,
                                         CasePriority priority, Long createdBy) {
@@ -466,6 +481,10 @@ public class CorrectiveCase extends AggregateRoot<Long> {
         private Long createdBy;
         private LocalDateTime createdAt;
         private LocalDateTime updatedAt;
+        private Integer suggestedBySystem;
+        private String suggestionReason;
+        private java.math.BigDecimal severityScore;
+        private String explainTraceJson;
 
         public Builder id(Long id) { this.id = id; return this; }
         public Builder tenantId(Long tenantId) { this.tenantId = tenantId; return this; }
@@ -504,6 +523,10 @@ public class CorrectiveCase extends AggregateRoot<Long> {
         public Builder createdBy(Long createdBy) { this.createdBy = createdBy; return this; }
         public Builder createdAt(LocalDateTime createdAt) { this.createdAt = createdAt; return this; }
         public Builder updatedAt(LocalDateTime updatedAt) { this.updatedAt = updatedAt; return this; }
+        public Builder suggestedBySystem(Integer v) { this.suggestedBySystem = v; return this; }
+        public Builder suggestionReason(String v) { this.suggestionReason = v; return this; }
+        public Builder severityScore(java.math.BigDecimal v) { this.severityScore = v; return this; }
+        public Builder explainTraceJson(String v) { this.explainTraceJson = v; return this; }
 
         public CorrectiveCase build() { return new CorrectiveCase(this); }
     }

@@ -5,6 +5,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.school.management.domain.inspection.correction.CorrectionEngine;
 import com.school.management.domain.inspection.correction.CorrectionVerdict;
 import com.school.management.domain.inspection.correction.DeadlinePresets;
+import com.school.management.domain.inspection.correction.ItemRule;
 import com.school.management.domain.inspection.correction.ProjectCorrectivePolicy;
 import com.school.management.domain.inspection.correction.SeverityThresholds;
 import com.school.management.domain.inspection.model.execution.InspSubmission;
@@ -63,11 +64,25 @@ public class CorrectiveSuggestionService {
         Long subjectOrgId = submission.getTargetId();   // 用作复发查询 subject
         Long pid = projectId;
 
-        return engine.judgeAll(details, policy, d ->
-                countRecentRecurrence(pid, subjectOrgId, d.getItemCode()))
+        return engine.judgeAll(details, policy,
+                d -> countRecentRecurrence(pid, subjectOrgId, d.getItemCode()),
+                this::loadItemRule)
                 .stream()
                 .filter(CorrectionVerdict::shouldSuggest)
                 .toList();
+    }
+
+    /** 加载 insp_template_items.corrective_override → ItemRule. */
+    public ItemRule loadItemRule(SubmissionDetail detail) {
+        if (detail == null || detail.getTemplateItemId() == null) return ItemRule.EMPTY;
+        try {
+            String json = jdbcTemplate.queryForObject(
+                    "SELECT corrective_override FROM insp_template_items WHERE id=?",
+                    String.class, detail.getTemplateItemId());
+            return ItemRule.fromJson(json);
+        } catch (Exception e) {
+            return ItemRule.EMPTY;
+        }
     }
 
     /** 项目级策略加载: insp_projects.corrective_* 字段. */

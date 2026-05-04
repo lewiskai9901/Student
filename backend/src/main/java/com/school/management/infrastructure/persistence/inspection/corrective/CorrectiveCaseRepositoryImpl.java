@@ -133,6 +133,10 @@ public class CorrectiveCaseRepositoryImpl implements CorrectiveCaseRepository {
         po.setCreatedBy(d.getCreatedBy());
         po.setCreatedAt(d.getCreatedAt());
         po.setUpdatedAt(d.getUpdatedAt());
+        po.setSuggestedBySystem(d.getSuggestedBySystem());
+        po.setSuggestionReason(d.getSuggestionReason());
+        po.setSeverityScore(d.getSeverityScore());
+        po.setExplainTraceJson(d.getExplainTraceJson());
         return po;
     }
 
@@ -174,7 +178,11 @@ public class CorrectiveCaseRepositoryImpl implements CorrectiveCaseRepository {
                 .effectivenessNote(po.getEffectivenessNote())
                 .createdBy(po.getCreatedBy())
                 .createdAt(po.getCreatedAt())
-                .updatedAt(po.getUpdatedAt()));
+                .updatedAt(po.getUpdatedAt())
+                .suggestedBySystem(po.getSuggestedBySystem())
+                .suggestionReason(po.getSuggestionReason())
+                .severityScore(po.getSeverityScore())
+                .explainTraceJson(po.getExplainTraceJson()));
     }
 
     private String toJson(List<Long> ids) {

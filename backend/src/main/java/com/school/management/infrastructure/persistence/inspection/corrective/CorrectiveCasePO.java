@@ -49,6 +49,12 @@ public class CorrectiveCasePO {
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 
+    // V110: 整改判定引擎
+    private Integer suggestedBySystem;
+    private String suggestionReason;
+    private java.math.BigDecimal severityScore;
+    private String explainTraceJson;
+
     @TableLogic
     private Integer deleted;
 }
