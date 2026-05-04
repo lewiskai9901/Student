@@ -603,6 +603,19 @@ const routes: RouteRecordRaw[] = [
               order: 5
             }
           },
+          // 数据消费者导出中心 — HR/考核办/教务用 (Excel 下载 + 直连 API)
+          {
+            path: '/inspection/export',
+            name: 'InspExportCenter',
+            component: () => import('@/views/inspection/export/ExportCenterView.vue'),
+            meta: {
+              title: '导出中心',
+              icon: 'Download',
+              requiresAuth: true,
+              permission: 'insp:analytics:view',
+              order: 22
+            }
+          },
           // 治理工作台 — 校长/督查办主任/部门头 用 (红线/检查员/申诉/整改 4 象限)
           {
             path: '/inspection/governance',
