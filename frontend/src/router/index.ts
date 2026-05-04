@@ -590,6 +590,19 @@ const routes: RouteRecordRaw[] = [
               order: 4
             }
           },
+          // 审核员风险池 — 按风险分排序待审任务 (4 维度: 临期/突变/差异/延迟)
+          {
+            path: '/inspection/tasks/review-risk',
+            name: 'TaskReviewRiskQueue',
+            component: () => import('@/views/inspection/tasks/TaskReviewRiskQueueView.vue'),
+            meta: {
+              title: '待审风险池',
+              icon: 'ListChecks',
+              requiresAuth: true,
+              permission: 'insp:task:review',
+              order: 5
+            }
+          },
           // 治理工作台 — 校长/督查办主任/部门头 用 (红线/检查员/申诉/整改 4 象限)
           {
             path: '/inspection/governance',
