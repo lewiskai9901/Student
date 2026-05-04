@@ -84,21 +84,47 @@
         </div>
       </el-card>
 
-      <!-- 2. 检查员行为 — 任务量分布 (打分宽松度需更深聚合, 此处展示任务量) -->
+      <!-- 2. V108 检查行为分析 — 5 维度按 task_type 拆分 -->
       <el-card shadow="never">
         <template #header>
           <div class="card-head">
-            <span>👁 检查员行为</span>
-            <span class="hint">提交单数分布</span>
+            <span>🎲 检查行为分析 (V108)</span>
+            <span class="hint">按任务类型拆分 KPI</span>
           </div>
         </template>
-        <div v-if="!inspectorList.length" class="empty-card">无检查员数据</div>
-        <div v-else class="inspector-list">
-          <div v-for="i in inspectorList" :key="i.name" class="inspector-item">
-            <span class="rank">{{ i.rank }}</span>
-            <span class="name">{{ i.name }}</span>
-            <span class="bar-bg"><span class="bar" :style="{ width: i.pct + '%' }"></span></span>
-            <span class="num insp-num">{{ i.count }}</span>
+        <div v-if="!taskKpi" class="empty-card">加载中...</div>
+        <div v-else class="kpi-by-type">
+          <div class="kpi-line">
+            <span class="kpi-line__icon">📅</span>
+            <span class="kpi-line__name">计划完成率</span>
+            <span class="kpi-line__num" :class="kpiColor(taskKpi.scheduled?.completionRate)">
+              {{ taskKpi.scheduled?.completionRate ?? 0 }}%
+            </span>
+            <span class="kpi-line__sub">{{ taskKpi.scheduled?.completed ?? 0 }} / {{ taskKpi.scheduled?.total ?? 0 }}</span>
+          </div>
+          <div class="kpi-line">
+            <span class="kpi-line__icon">⚡</span>
+            <span class="kpi-line__name">抽查活跃度 (30 天)</span>
+            <span class="kpi-line__num text-warning">{{ taskKpi.adHoc?.last30d ?? 0 }}</span>
+            <span class="kpi-line__sub">{{ taskKpi.adHoc?.uniqueInspectors ?? 0 }} 检查员主动发起</span>
+          </div>
+          <div class="kpi-line">
+            <span class="kpi-line__icon">🔔</span>
+            <span class="kpi-line__name">事件响应时长</span>
+            <span class="kpi-line__num">{{ taskKpi.triggered?.avgResponseHours ?? 0 }}h</span>
+            <span class="kpi-line__sub">{{ taskKpi.triggered?.responded ?? 0 }} / {{ taskKpi.triggered?.total ?? 0 }} 已响应</span>
+          </div>
+          <div class="kpi-line">
+            <span class="kpi-line__icon">🔄</span>
+            <span class="kpi-line__name">自查参与度</span>
+            <span class="kpi-line__num text-success">{{ taskKpi.selfCheck?.uniqueSubjects ?? 0 }}</span>
+            <span class="kpi-line__sub">{{ taskKpi.selfCheck?.submitted ?? 0 }} 自查提交</span>
+          </div>
+          <div class="kpi-line">
+            <span class="kpi-line__icon">👁</span>
+            <span class="kpi-line__name">互查覆盖</span>
+            <span class="kpi-line__num">{{ taskKpi.crossAudit?.total ?? 0 }}</span>
+            <span class="kpi-line__sub">{{ taskKpi.crossAudit?.uniqueAuditors ?? 0 }} 审计员</span>
           </div>
         </div>
       </el-card>
@@ -228,6 +254,14 @@ const allDailyAgg = ref<Map<number, DailyTarget>>(new Map())
 const correctiveSummary = ref<any>(null)
 const activeAlerts = ref<AlertItem[]>([])
 const inspectorList = ref<{ name: string; count: number; rank: number; pct: number }[]>([])
+const taskKpi = ref<any>(null)
+
+function kpiColor(rate?: number) {
+  if (rate == null) return ''
+  if (rate >= 80) return 'text-success'
+  if (rate >= 60) return 'text-warning'
+  return 'text-danger'
+}
 const pendingAppeals = ref(0)
 const appealApproveRate = ref(0)
 const avgAppealDays = ref(0)
@@ -331,10 +365,19 @@ async function loadAppeals() {
   } catch { pendingAppeals.value = 0 }
 }
 
+async function loadTaskKpi() {
+  if (!projectId.value) return
+  try {
+    taskKpi.value = await http.get<any>('/inspection/tasks/kpi/by-type', {
+      params: { projectId: projectId.value }
+    })
+  } catch { taskKpi.value = null }
+}
+
 async function loadAll() {
   loading.value = true
   try {
-    await Promise.all([loadDailyAgg(), loadCorrective(), loadAlerts(), loadInspectors(), loadAppeals()])
+    await Promise.all([loadDailyAgg(), loadCorrective(), loadAlerts(), loadInspectors(), loadAppeals(), loadTaskKpi()])
   } finally { loading.value = false }
 }
 
@@ -419,4 +462,12 @@ onMounted(async () => {
 .text-danger { color: #ef4444; }
 .w-full { width: 100%; }
 .mt-2 { margin-top: 8px; }
+
+/* V108 KPI by type */
+.kpi-by-type { display: flex; flex-direction: column; gap: 10px; }
+.kpi-line { display: grid; grid-template-columns: 24px 110px 70px 1fr; gap: 8px; align-items: baseline; font-size: 13px; }
+.kpi-line__icon { font-size: 16px; }
+.kpi-line__name { color: #475569; }
+.kpi-line__num { font-size: 18px; font-weight: 700; color: #1e293b; font-variant-numeric: tabular-nums; text-align: right; }
+.kpi-line__sub { font-size: 11px; color: #94a3b8; text-align: left; }
 </style>

@@ -225,6 +225,99 @@ public class InspTaskApplicationService {
         return saved;
     }
 
+    /**
+     * V108: 治理面板 KPI 按 task_type 拆分.
+     *
+     * <p>返回 5 个维度的指标,用于 governance 工作台展示真实业务行为:
+     * <ul>
+     *   <li>scheduled: 计划完成率 (硬指标, 检查员 KPI)</li>
+     *   <li>adHoc: 抽查活跃度 (反映主动发现, 越高越好)</li>
+     *   <li>triggered: 事件响应平均时长 (申诉/告警 SLA)</li>
+     *   <li>selfCheck: 自查参与度 (受检主体主动性)</li>
+     *   <li>crossAudit: 互查覆盖率 (审计独立性)</li>
+     * </ul>
+     */
+    public java.util.Map<String, Object> getTaskTypeKpi(Long projectId) {
+        java.util.Map<String, Object> result = new java.util.LinkedHashMap<>();
+
+        String byType = projectId != null
+                ? "WHERE project_id = " + projectId.longValue() + " AND deleted = 0"
+                : "WHERE deleted = 0";
+
+        // 1) SCHEDULED 计划完成率
+        java.util.Map<String, Object> scheduled = jdbcTemplate.queryForMap(
+                "SELECT COUNT(*) AS total, " +
+                "SUM(CASE WHEN status IN ('PUBLISHED','REVIEWED') THEN 1 ELSE 0 END) AS completed, " +
+                "SUM(CASE WHEN late_submission = 1 THEN 1 ELSE 0 END) AS late " +
+                "FROM insp_tasks " + byType + " AND task_type = 'SCHEDULED'");
+        long sTotal = num(scheduled.get("total"));
+        long sCompleted = num(scheduled.get("completed"));
+        long sLate = num(scheduled.get("late"));
+        result.put("scheduled", java.util.Map.of(
+                "total", sTotal,
+                "completed", sCompleted,
+                "completionRate", sTotal > 0 ? Math.round(sCompleted * 100.0 / sTotal) : 0,
+                "lateCount", sLate,
+                "onTimeRate", sTotal > 0 ? Math.round((sTotal - sLate) * 100.0 / sTotal) : 0
+        ));
+
+        // 2) AD_HOC 抽查活跃度 (近 30 天)
+        java.util.Map<String, Object> adHoc = jdbcTemplate.queryForMap(
+                "SELECT COUNT(*) AS total, " +
+                "COUNT(DISTINCT inspector_id) AS uniqueInspectors, " +
+                "SUM(CASE WHEN created_at > DATE_SUB(NOW(), INTERVAL 30 DAY) THEN 1 ELSE 0 END) AS last30d " +
+                "FROM insp_tasks " + byType + " AND task_type = 'AD_HOC'");
+        result.put("adHoc", java.util.Map.of(
+                "total", num(adHoc.get("total")),
+                "uniqueInspectors", num(adHoc.get("uniqueInspectors")),
+                "last30d", num(adHoc.get("last30d"))
+        ));
+
+        // 3) TRIGGERED 事件响应 (从 created_at 到 submitted_at 的平均时长)
+        java.util.Map<String, Object> triggered = jdbcTemplate.queryForMap(
+                "SELECT COUNT(*) AS total, " +
+                "SUM(CASE WHEN status IN ('SUBMITTED','UNDER_REVIEW','REVIEWED','PUBLISHED') THEN 1 ELSE 0 END) AS responded, " +
+                "AVG(CASE WHEN submitted_at IS NOT NULL " +
+                "    THEN TIMESTAMPDIFF(HOUR, created_at, submitted_at) " +
+                "    ELSE NULL END) AS avgHours " +
+                "FROM insp_tasks " + byType + " AND task_type = 'TRIGGERED'");
+        Number avgHoursNum = (Number) triggered.get("avgHours");
+        result.put("triggered", java.util.Map.of(
+                "total", num(triggered.get("total")),
+                "responded", num(triggered.get("responded")),
+                "avgResponseHours", avgHoursNum == null ? 0 : Math.round(avgHoursNum.doubleValue())
+        ));
+
+        // 4) SELF_CHECK 自查参与度
+        java.util.Map<String, Object> selfCheck = jdbcTemplate.queryForMap(
+                "SELECT COUNT(*) AS total, " +
+                "SUM(CASE WHEN status IN ('SUBMITTED','REVIEWED','PUBLISHED') THEN 1 ELSE 0 END) AS submitted, " +
+                "COUNT(DISTINCT inspector_id) AS uniqueSubjects " +
+                "FROM insp_tasks " + byType + " AND task_type = 'SELF_CHECK'");
+        result.put("selfCheck", java.util.Map.of(
+                "total", num(selfCheck.get("total")),
+                "submitted", num(selfCheck.get("submitted")),
+                "uniqueSubjects", num(selfCheck.get("uniqueSubjects"))
+        ));
+
+        // 5) CROSS_AUDIT 互查覆盖
+        java.util.Map<String, Object> crossAudit = jdbcTemplate.queryForMap(
+                "SELECT COUNT(*) AS total, " +
+                "COUNT(DISTINCT inspector_id) AS uniqueAuditors " +
+                "FROM insp_tasks " + byType + " AND task_type = 'CROSS_AUDIT'");
+        result.put("crossAudit", java.util.Map.of(
+                "total", num(crossAudit.get("total")),
+                "uniqueAuditors", num(crossAudit.get("uniqueAuditors"))
+        ));
+
+        return result;
+    }
+
+    private long num(Object v) {
+        if (v instanceof Number n) return n.longValue();
+        return 0;
+    }
+
     /** V108: 列出允许抽查的项目 (jdbcTemplate 直查 DB, 不依赖 InspProject 字段) */
     public java.util.List<java.util.Map<String, Object>> listAdHocAllowedProjects() {
         return jdbcTemplate.queryForList(

@@ -48,6 +48,14 @@ public class InspTaskController {
         return Result.success(taskService.listAdHocAllowedProjects());
     }
 
+    /** V108: 治理面板 KPI 按 task_type 拆分 (5 维度) */
+    @GetMapping("/kpi/by-type")
+    @CasbinAccess(resource = "insp:analytics", action = "view")
+    public Result<java.util.Map<String, Object>> getTaskTypeKpi(
+            @RequestParam(required = false) Long projectId) {
+        return Result.success(taskService.getTaskTypeKpi(projectId));
+    }
+
     /** V108: 受检主体发起自查 (SELF_CHECK) — 项目须 allow_self_check=1 */
     @PostMapping("/self-check")
     @CasbinAccess(resource = "insp:task", action = "execute")
