@@ -80,6 +80,59 @@ public class InspTaskApplicationService {
         return saved;
     }
 
+    /**
+     * V108: 检查员发起临时抽查任务 (AD_HOC).
+     * - 项目必须 allow_ad_hoc=1
+     * - 创建即为 CLAIMED (发起人=检查员)
+     * - 永不逾期 (deadlinePolicy=NONE)
+     */
+    @Transactional
+    public InspTask createAdHocTask(Long projectId, Long inspectorId, String inspectorName,
+                                     String reason) {
+        InspProject project = projectRepository.findById(projectId)
+                .orElseThrow(() -> new IllegalArgumentException("项目不存在: " + projectId));
+        // 项目模式校验 — 只允许 SPOT_CHECK / HYBRID / EMERGENCY 项目发起抽查
+        Boolean allowAdHoc = readBooleanField(project, "allowAdHoc");
+        if (!Boolean.TRUE.equals(allowAdHoc)) {
+            throw new IllegalStateException("该项目不允许临时抽查 (项目配置 allow_ad_hoc=false)");
+        }
+        if (reason == null || reason.isBlank()) {
+            throw new IllegalArgumentException("抽查必须填写发起原因");
+        }
+        preCheckTemplateDrift(project);
+
+        String taskCode = generateTaskCode();
+        InspTask task = InspTask.createAdHoc(taskCode, projectId, inspectorId, inspectorName, reason);
+        InspTask saved = taskRepository.save(task);
+        eventPublisher.publishAll(saved.getDomainEvents());
+        saved.clearDomainEvents();
+        metrics.taskCreated();
+        metrics.taskClaimed();
+
+        populateSubmissions(saved);
+        return saved;
+    }
+
+    /** 反射读 InspProject 的字段 — 兼容 PO 是否已加 allowAdHoc 字段 */
+    private Boolean readBooleanField(InspProject project, String fieldName) {
+        try {
+            var f = project.getClass().getDeclaredField(fieldName);
+            f.setAccessible(true);
+            Object v = f.get(project);
+            if (v instanceof Boolean b) return b;
+            if (v instanceof Number n) return n.intValue() != 0;
+        } catch (NoSuchFieldException ignore) {
+            // 字段不存在 — 直接走 jdbcTemplate 查 DB
+            try {
+                Integer v = jdbcTemplate.queryForObject(
+                        "SELECT allow_ad_hoc FROM insp_projects WHERE id = ?",
+                        Integer.class, project.getId());
+                return v != null && v != 0;
+            } catch (Exception ignored) { return false; }
+        } catch (Exception ignored) { /* skip */ }
+        return false;
+    }
+
     /** review #6: 创建 task 前预检模板漂移 — 一致才允许创建 */
     private void preCheckTemplateDrift(InspProject project) {
         Long lockedVersionId = project.getTemplateVersionId();

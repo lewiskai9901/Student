@@ -43,6 +43,14 @@ public class InspTaskPO {
     private Long inspectionPlanId;
     private Integer rejectionCount;       // P1#5: 驳回次数
     private LocalDate extendedTo;         // P1#5: 驳回延期到的日期
+    // V108: 多类型支持
+    private String taskType;              // SCHEDULED/AD_HOC/TRIGGERED/SELF_CHECK/COMPLAINT/CROSS_AUDIT
+    private String deadlinePolicy;        // STRICT/RELAXED/NONE
+    private String sourceType;            // SCHEDULER/MANUAL/EVENT/IMPORT
+    private Long sourceActorId;
+    private String sourceReason;
+    private String sourceRefType;
+    private Long sourceRefId;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 

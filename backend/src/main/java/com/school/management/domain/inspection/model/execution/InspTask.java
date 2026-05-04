@@ -46,6 +46,10 @@ public class InspTask extends AggregateRoot<Long> {
     private Long inspectionPlanId;         // 关联的检查计划
     private Integer rejectionCount;        // P1#5: 驳回次数
     private LocalDate extendedTo;          // P1#5: 驳回后延期到的有效日期 (空=无延期, 用 task_date)
+    // V108: 多类型支持 — 默认 SCHEDULED 向后兼容
+    private TaskType taskType = TaskType.SCHEDULED;
+    private DeadlinePolicy deadlinePolicy = DeadlinePolicy.STRICT;
+    private TaskSource source;             // 来源溯源 (谁/为何/源单)
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 
@@ -88,6 +92,10 @@ public class InspTask extends AggregateRoot<Long> {
         this.inspectionPlanId = builder.inspectionPlanId;
         this.rejectionCount = builder.rejectionCount != null ? builder.rejectionCount : 0;
         this.extendedTo = builder.extendedTo;
+        this.taskType = builder.taskType != null ? builder.taskType : TaskType.SCHEDULED;
+        this.deadlinePolicy = builder.deadlinePolicy != null ? builder.deadlinePolicy
+                : DeadlinePolicy.defaultFor(this.taskType);
+        this.source = builder.source;
         this.createdAt = builder.createdAt != null ? builder.createdAt : LocalDateTime.now();
         this.updatedAt = builder.updatedAt;
     }
@@ -99,7 +107,50 @@ public class InspTask extends AggregateRoot<Long> {
                 .taskDate(taskDate)
                 .status(TaskStatus.PENDING)
                 .build();
+        task.taskType = TaskType.SCHEDULED;
+        task.deadlinePolicy = DeadlinePolicy.STRICT;
+        task.source = TaskSource.scheduler();
         task.registerEvent(new TaskCreatedEvent(null, taskCode, projectId, taskDate));
+        return task;
+    }
+
+    /**
+     * V108: 创建临时抽查任务 — 检查员手动发起, 无 task_date 要求, 永不逾期.
+     * 创建即处于 CLAIMED 状态 (发起人=检查员).
+     */
+    public static InspTask createAdHoc(String taskCode, Long projectId,
+                                        Long inspectorId, String inspectorName,
+                                        String reason) {
+        InspTask task = builder()
+                .taskCode(taskCode)
+                .projectId(projectId)
+                .taskDate(LocalDate.now())  // 创建当天作为参考, 不用于逾期判定
+                .status(TaskStatus.CLAIMED)
+                .inspectorId(inspectorId)
+                .inspectorName(inspectorName)
+                .build();
+        task.taskType = TaskType.AD_HOC;
+        task.deadlinePolicy = DeadlinePolicy.NONE;
+        task.source = TaskSource.manual(inspectorId, reason);
+        task.registerEvent(new TaskCreatedEvent(null, taskCode, projectId, task.taskDate));
+        return task;
+    }
+
+    /**
+     * V108: 创建事件触发任务 — 申诉/告警/事件 listener 调用.
+     */
+    public static InspTask createTriggered(String taskCode, Long projectId,
+                                            String refType, Long refId, String reason) {
+        InspTask task = builder()
+                .taskCode(taskCode)
+                .projectId(projectId)
+                .taskDate(LocalDate.now())
+                .status(TaskStatus.PENDING)
+                .build();
+        task.taskType = TaskType.TRIGGERED;
+        task.deadlinePolicy = DeadlinePolicy.RELAXED;
+        task.source = TaskSource.event(refType, refId, reason);
+        task.registerEvent(new TaskCreatedEvent(null, taskCode, projectId, task.taskDate));
         return task;
     }
 
@@ -409,6 +460,30 @@ public class InspTask extends AggregateRoot<Long> {
     public Long getInspectionPlanId() { return inspectionPlanId; }
     public Integer getRejectionCount() { return rejectionCount; }
     public LocalDate getExtendedTo() { return extendedTo; }
+    public TaskType getTaskType() { return taskType == null ? TaskType.SCHEDULED : taskType; }
+    public DeadlinePolicy getDeadlinePolicy() {
+        return deadlinePolicy == null ? DeadlinePolicy.STRICT : deadlinePolicy;
+    }
+    public TaskSource getSource() { return source; }
+    public void setTaskType(TaskType taskType) { this.taskType = taskType; }
+    public void setDeadlinePolicy(DeadlinePolicy deadlinePolicy) { this.deadlinePolicy = deadlinePolicy; }
+    public void setSource(TaskSource source) { this.source = source; }
+
+    /**
+     * V108: 是否逾期 — 按 deadlinePolicy 路由.
+     * - NONE: 永不逾期 (AD_HOC/SELF_CHECK)
+     * - STRICT: deadline 过且未审 = 逾期 (SCHEDULED)
+     * - RELAXED: 软逾期, 仅前端展示提示, 不影响 KPI (TRIGGERED)
+     */
+    public boolean isOverdue() {
+        if (deadlinePolicy == DeadlinePolicy.NONE) return false;
+        LocalDate effectiveDeadline = extendedTo != null ? extendedTo : taskDate;
+        if (effectiveDeadline == null) return false;
+        if (status == TaskStatus.REVIEWED || status == TaskStatus.PUBLISHED
+                || status == TaskStatus.CANCELLED) return false;
+        return effectiveDeadline.isBefore(LocalDate.now());
+    }
+
     public LocalDateTime getCreatedAt() { return createdAt; }
     public LocalDateTime getUpdatedAt() { return updatedAt; }
 
@@ -445,6 +520,9 @@ public class InspTask extends AggregateRoot<Long> {
         private Long inspectionPlanId;
         private Integer rejectionCount;
         private LocalDate extendedTo;
+        private TaskType taskType;
+        private DeadlinePolicy deadlinePolicy;
+        private TaskSource source;
         private LocalDateTime createdAt;
         private LocalDateTime updatedAt;
 
@@ -478,6 +556,9 @@ public class InspTask extends AggregateRoot<Long> {
         public Builder inspectionPlanId(Long inspectionPlanId) { this.inspectionPlanId = inspectionPlanId; return this; }
         public Builder rejectionCount(Integer rejectionCount) { this.rejectionCount = rejectionCount; return this; }
         public Builder extendedTo(LocalDate extendedTo) { this.extendedTo = extendedTo; return this; }
+        public Builder taskType(TaskType taskType) { this.taskType = taskType; return this; }
+        public Builder deadlinePolicy(DeadlinePolicy p) { this.deadlinePolicy = p; return this; }
+        public Builder source(TaskSource s) { this.source = s; return this; }
         public Builder createdAt(LocalDateTime createdAt) { this.createdAt = createdAt; return this; }
         public Builder updatedAt(LocalDateTime updatedAt) { this.updatedAt = updatedAt; return this; }
 

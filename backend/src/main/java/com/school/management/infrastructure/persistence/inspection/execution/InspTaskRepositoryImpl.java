@@ -139,6 +139,16 @@ public class InspTaskRepositoryImpl implements InspTaskRepository {
         po.setInspectionPlanId(d.getInspectionPlanId());
         po.setRejectionCount(d.getRejectionCount());
         po.setExtendedTo(d.getExtendedTo());
+        // V108
+        po.setTaskType(d.getTaskType() != null ? d.getTaskType().name() : "SCHEDULED");
+        po.setDeadlinePolicy(d.getDeadlinePolicy() != null ? d.getDeadlinePolicy().name() : "STRICT");
+        if (d.getSource() != null) {
+            po.setSourceType(d.getSource().sourceType());
+            po.setSourceActorId(d.getSource().actorId());
+            po.setSourceReason(d.getSource().reason());
+            po.setSourceRefType(d.getSource().refType());
+            po.setSourceRefId(d.getSource().refId());
+        }
         po.setCreatedAt(d.getCreatedAt());
         po.setUpdatedAt(d.getUpdatedAt());
         return po;
@@ -176,6 +186,18 @@ public class InspTaskRepositoryImpl implements InspTaskRepository {
                 .inspectionPlanId(po.getInspectionPlanId())
                 .rejectionCount(po.getRejectionCount())
                 .extendedTo(po.getExtendedTo())
+                // V108
+                .taskType(po.getTaskType() != null
+                        ? com.school.management.domain.inspection.model.execution.TaskType.valueOf(po.getTaskType())
+                        : com.school.management.domain.inspection.model.execution.TaskType.SCHEDULED)
+                .deadlinePolicy(po.getDeadlinePolicy() != null
+                        ? com.school.management.domain.inspection.model.execution.DeadlinePolicy.valueOf(po.getDeadlinePolicy())
+                        : null)
+                .source(po.getSourceType() != null
+                        ? new com.school.management.domain.inspection.model.execution.TaskSource(
+                                po.getSourceType(), po.getSourceActorId(), po.getSourceReason(),
+                                po.getSourceRefType(), po.getSourceRefId())
+                        : null)
                 .createdAt(po.getCreatedAt())
                 .updatedAt(po.getUpdatedAt()));
     }

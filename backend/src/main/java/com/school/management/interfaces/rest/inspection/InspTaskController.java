@@ -30,6 +30,26 @@ public class InspTaskController {
         return Result.success(task);
     }
 
+    /** V108: 检查员发起临时抽查任务 (AD_HOC) — 项目须 allow_ad_hoc=true */
+    @PostMapping("/ad-hoc")
+    @CasbinAccess(resource = "insp:task", action = "execute")
+    public Result<InspTask> createAdHoc(@RequestBody AdHocRequest request) {
+        Long me = com.school.management.common.util.SecurityUtils.getCurrentUserId();
+        String myName = com.school.management.common.util.SecurityUtils.getCurrentUsername();
+        InspTask task = taskService.createAdHocTask(request.getProjectId(),
+                me, myName, request.getReason());
+        return Result.success(task);
+    }
+
+    public static class AdHocRequest {
+        private Long projectId;
+        private String reason;
+        public Long getProjectId() { return projectId; }
+        public void setProjectId(Long projectId) { this.projectId = projectId; }
+        public String getReason() { return reason; }
+        public void setReason(String reason) { this.reason = reason; }
+    }
+
     @GetMapping("/{id}")
     @CasbinAccess(resource = "insp:task", action = "view")
     public Result<InspTask> getTask(@PathVariable Long id) {
