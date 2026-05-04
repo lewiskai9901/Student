@@ -1,5 +1,8 @@
 package com.school.management.application.inspection;
 
+import com.school.management.domain.inspection.correction.CorrectionVerdict;
+import com.school.management.domain.inspection.correction.ProjectCorrectivePolicy;
+import com.school.management.domain.inspection.correction.Severity;
 import com.school.management.domain.inspection.event.AutoCorrectiveCreationFailedEvent;
 import com.school.management.domain.inspection.event.SubmissionCompletedEvent;
 import com.school.management.domain.inspection.model.corrective.CasePriority;
@@ -20,7 +23,9 @@ import org.springframework.transaction.event.TransactionalEventListener;
 
 import java.time.Instant;
 import java.time.LocalDateTime;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.atomic.AtomicLong;
 
 /**
@@ -44,6 +49,7 @@ public class CorrectiveAutoCreationHandler {
     private final CorrectiveCaseApplicationService caseService;
     private final SpringDomainEventPublisher eventPublisher;
     private final TaskScheduler taskScheduler;
+    private final CorrectiveSuggestionService suggestionService;
 
     private static final AtomicLong CODE_SEQUENCE = new AtomicLong(System.currentTimeMillis() % 100000);
     private static final int MAX_RETRY_ATTEMPTS = 3;
@@ -52,16 +58,6 @@ public class CorrectiveAutoCreationHandler {
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT, fallbackExecution = true)
     public void handle(SubmissionCompletedEvent event) {
         log.info("Handling SubmissionCompletedEvent: submissionId={}", event.getSubmissionId());
-
-        List<SubmissionDetail> details = detailRepository.findBySubmissionId(event.getSubmissionId());
-        List<SubmissionDetail> flaggedDetails = details.stream()
-                .filter(d -> Boolean.TRUE.equals(d.getIsFlagged()))
-                .toList();
-
-        if (flaggedDetails.isEmpty()) {
-            log.debug("No flagged items found for submission {}", event.getSubmissionId());
-            return;
-        }
 
         InspSubmission submission = submissionRepository.findById(event.getSubmissionId())
                 .orElse(null);
@@ -85,9 +81,30 @@ public class CorrectiveAutoCreationHandler {
             return;
         }
 
-        // 第一次尝试同步执行 (绝大多数情况下成功). 失败的走调度器异步重试.
-        for (SubmissionDetail detail : flaggedDetails) {
-            tryCreateCase(event, detail, projectId, taskId, submission, 1);
+        // V110 引擎接入: 仅 STRICT 策略下自动建单. 其他策略下由前端确认对话框处理.
+        ProjectCorrectivePolicy policy = suggestionService.loadPolicy(projectId);
+        if (!"STRICT".equalsIgnoreCase(policy.strictness())) {
+            log.info("Project {} corrective_strictness={}, skip auto-create. " +
+                    "前端将通过 candidates API 让用户确认.",
+                    projectId, policy.strictness());
+            return;
+        }
+
+        List<CorrectionVerdict> verdicts = suggestionService.suggestForSubmission(event.getSubmissionId());
+        if (verdicts.isEmpty()) {
+            log.debug("No engine-suggested candidates for submission {}", event.getSubmissionId());
+            return;
+        }
+
+        // STRICT 模式: 引擎建议项 → 自动落库
+        List<SubmissionDetail> details = detailRepository.findBySubmissionId(event.getSubmissionId());
+        Map<Long, SubmissionDetail> byId = new HashMap<>();
+        for (SubmissionDetail d : details) byId.put(d.getId(), d);
+
+        for (CorrectionVerdict v : verdicts) {
+            SubmissionDetail d = byId.get(v.getDetailId());
+            if (d == null) continue;
+            tryCreateCase(event, d, v, projectId, taskId, submission, 1);
         }
     }
 
@@ -95,15 +112,18 @@ public class CorrectiveAutoCreationHandler {
      * 单次创建尝试 — 成功直接结束; 失败则调度延迟重试 (不 sleep, 不阻塞当前线程).
      */
     private void tryCreateCase(SubmissionCompletedEvent event, SubmissionDetail detail,
+                                CorrectionVerdict verdict,
                                 Long projectId, Long taskId, InspSubmission submission, int attempt) {
         try {
             String caseCode = generateCaseCode();
-            String issueDesc = buildIssueDescription(detail);
+            String issueDesc = buildIssueDescription(detail, verdict);
+            CasePriority priority = mapSeverity(verdict.getSeverity());
+            int days = verdict.getSuggestedDeadlineDays() > 0 ? verdict.getSuggestedDeadlineDays() : 7;
 
             caseService.createCase(
                     caseCode,
                     issueDesc,
-                    CasePriority.MEDIUM,
+                    priority,
                     event.getSubmissionId(),
                     detail.getId(),
                     projectId,
@@ -112,16 +132,16 @@ public class CorrectiveAutoCreationHandler {
                     event.getTargetId(),
                     submission.getTargetName(),
                     null,
-                    LocalDateTime.now().plusDays(7),
+                    LocalDateTime.now().plusDays(days),
                     null
             );
 
             if (attempt > 1) {
-                log.info("Auto-created corrective case (attempt {}/{}) for detail {}: {}",
-                        attempt, MAX_RETRY_ATTEMPTS, detail.getId(), detail.getItemName());
+                log.info("Auto-created corrective case (attempt {}/{}) for detail {}: {} severity={}",
+                        attempt, MAX_RETRY_ATTEMPTS, detail.getId(), detail.getItemName(), verdict.getSeverity());
             } else {
-                log.info("Auto-created corrective case {} for flagged item: {}",
-                        caseCode, detail.getItemName());
+                log.info("Auto-created corrective case {} for item: {} severity={}",
+                        caseCode, detail.getItemName(), verdict.getSeverity());
             }
         } catch (Exception e) {
             log.warn("Attempt {}/{} failed for detail {}: {}",
@@ -130,11 +150,21 @@ public class CorrectiveAutoCreationHandler {
                 long delaySeconds = 1L << (attempt - 1); // 1s, 2s, 4s
                 Instant runAt = Instant.now().plusSeconds(delaySeconds);
                 taskScheduler.schedule(
-                        () -> tryCreateCase(event, detail, projectId, taskId, submission, attempt + 1),
+                        () -> tryCreateCase(event, detail, verdict, projectId, taskId, submission, attempt + 1),
                         runAt);
             } else {
                 handleFinalFailure(event, detail, e);
             }
+        }
+    }
+
+    private CasePriority mapSeverity(Severity sev) {
+        if (sev == null) return CasePriority.MEDIUM;
+        switch (sev) {
+            case HIGH:   return CasePriority.HIGH;
+            case MEDIUM: return CasePriority.MEDIUM;
+            case LOW:    return CasePriority.LOW;
+            default:     return CasePriority.MEDIUM;
         }
     }
 
@@ -157,11 +187,13 @@ public class CorrectiveAutoCreationHandler {
         return "CC-" + System.currentTimeMillis() + "-" + CODE_SEQUENCE.incrementAndGet();
     }
 
-    private String buildIssueDescription(SubmissionDetail detail) {
+    private String buildIssueDescription(SubmissionDetail detail, CorrectionVerdict verdict) {
         StringBuilder sb = new StringBuilder();
         sb.append("[").append(detail.getSectionName()).append("] ");
         sb.append(detail.getItemName());
-        if (detail.getFlagReason() != null && !detail.getFlagReason().isBlank()) {
+        if (verdict != null && verdict.getReason() != null) {
+            sb.append(" — ").append(verdict.getReason());
+        } else if (detail.getFlagReason() != null && !detail.getFlagReason().isBlank()) {
             sb.append(" — ").append(detail.getFlagReason());
         }
         return sb.toString();

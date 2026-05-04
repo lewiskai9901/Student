@@ -83,6 +83,37 @@ export function escalateCase(id: number): Promise<CorrectiveCase> {
   return http.post<CorrectiveCase>(`${BASE}/${id}/escalate`)
 }
 
+// ==================== V110 引擎: 整改候选 ====================
+
+export interface CorrectiveCandidate {
+  detailId: number
+  itemCode: string
+  itemName: string
+  severity: 'HIGH' | 'MEDIUM' | 'LOW' | 'NONE'
+  severityScore: number
+  mustCorrect: boolean
+  suggestedDeadlineDays: number
+  reason: string
+}
+
+/** 拉取某 submission 的引擎建议候选项. */
+export function getCorrectiveCandidates(submissionId: number): Promise<CorrectiveCandidate[]> {
+  return http.get<CorrectiveCandidate[]>('/inspection/corrective/candidates', {
+    params: { submissionId },
+  })
+}
+
+/** 批量确认建单. */
+export function confirmCorrectiveCandidates(
+  submissionId: number,
+  detailIds: number[],
+): Promise<number[]> {
+  return http.post<number[]>('/inspection/corrective/candidates/confirm', {
+    submissionId,
+    detailIds,
+  })
+}
+
 export const inspCorrectiveCaseApi = {
   getCases,
   getCase,

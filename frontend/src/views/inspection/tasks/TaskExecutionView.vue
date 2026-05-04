@@ -35,6 +35,7 @@ import ViolationRecordInput from './components/ViolationRecordInput.vue'
 import PersonScoreGrid from './components/PersonScoreGrid.vue'
 import EventStreamRecorder from './components/EventStreamRecorder.vue'
 import AiSuggestionDialog from './components/AiSuggestionDialog.vue'
+import CorrectiveCandidatesDialog from './components/CorrectiveCandidatesDialog.vue'
 import type { SuggestScoreResponse } from '@/api/inspection/aiScoring'
 
 const route = useRoute()
@@ -1185,11 +1186,25 @@ async function handleStartTask() {
   }
 }
 
+// V110: 整改候选确认对话框
+const correctiveDialogVisible = ref(false)
+const correctiveDialogSubmissions = ref<number[]>([])
+
 async function handleSubmitTask() {
   try {
     await ElMessageBox.confirm('确认提交此检查任务？提交后如需修改可撤回。', '提交确认', { type: 'warning' })
     await store.submitTask(taskId)
     ElMessage.success('任务已提交')
+
+    // V110: 提交成功后弹整改建议确认对话框 (异步, 不阻塞 reload)
+    const submissionIds = submissions.value
+      .filter(s => s.status === 'COMPLETED')
+      .map(s => s.id)
+    if (submissionIds.length > 0) {
+      correctiveDialogSubmissions.value = submissionIds
+      correctiveDialogVisible.value = true
+    }
+
     await reloadAll(false)
   } catch (e: any) {
     if (e !== 'cancel' && e?.toString?.() !== 'cancel') { console.error('提交任务失败', e); ElMessage.error('提交任务失败，请重试') }
@@ -1665,6 +1680,12 @@ onMounted(() => loadData())
       :item-max-score="100"
       :scoring-mode="(aiDialogDetail.scoringMode === 'PASS_FAIL' ? 'PASS_FAIL' : aiDialogDetail.scoringMode === 'DEDUCTION' ? 'DEDUCTION' : 'SCORE')"
       @apply="handleAiApply"
+    />
+
+    <!-- V110: 整改候选确认对话框 -->
+    <CorrectiveCandidatesDialog
+      v-model="correctiveDialogVisible"
+      :submission-ids="correctiveDialogSubmissions"
     />
   </div>
 </template>
