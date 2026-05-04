@@ -158,6 +158,7 @@ public class CorePermissionProvider implements PermissionProvider {
             of("insp:project:manage", "项目管理", ""),
             of("insp:project:publish", "发布项目", ""),
             of("insp:project:update", "项目策略更新", ""),
+            of("insp:received:view", "受检主体面查看", ""),
             of("insp:project:view", "项目查看", ""),
             of("insp:rating:manage", "管理评分", ""),
             of("insp:rating:view", "查看评分", ""),

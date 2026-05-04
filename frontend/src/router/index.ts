@@ -551,6 +551,43 @@ const routes: RouteRecordRaw[] = [
               order: 4
             }
           },
+          // 受检主体面 (C3) — 班主任/场所负责人/受检单位的"被检查"视角
+          {
+            path: '/inspection/received/inspections',
+            name: 'InspMyReceivedInspections',
+            component: () => import('@/views/inspection/received/MyInspectionsView.vue'),
+            meta: {
+              title: '我被检查的记录',
+              icon: 'ClipboardList',
+              requiresAuth: true,
+              permission: 'insp:received:view',
+              order: 5,
+            },
+          },
+          {
+            path: '/inspection/received/trends',
+            name: 'InspMyReceivedTrends',
+            component: () => import('@/views/inspection/received/MyTrendsView.vue'),
+            meta: {
+              title: '检查趋势',
+              icon: 'TrendingUp',
+              requiresAuth: true,
+              permission: 'insp:received:view',
+              order: 6,
+            },
+          },
+          {
+            path: '/inspection/received/recurring',
+            name: 'InspMyReceivedRecurring',
+            component: () => import('@/views/inspection/received/MyRecurringView.vue'),
+            meta: {
+              title: '高频问题',
+              icon: 'AlertTriangle',
+              requiresAuth: true,
+              permission: 'insp:received:view',
+              order: 7,
+            },
+          },
           // 审核员风险池 — 按风险分排序待审任务 (4 维度: 临期/突变/差异/延迟)
           {
             path: '/inspection/tasks/review-risk',
