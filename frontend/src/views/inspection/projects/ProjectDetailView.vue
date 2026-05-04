@@ -147,6 +147,84 @@ const taskStats = computed(() => {
 })
 const progressPct = computed(() => taskStats.value.total === 0 ? 0 : Math.round(taskStats.value.done / taskStats.value.total * 100))
 
+// ========== A 级 KPI 集 (从 2 个升级到 8 个) ==========
+const today = new Date().toISOString().slice(0, 10)
+const richKpis = computed(() => {
+  const t = filteredTasks.value
+  const subs = filteredSubmissions.value
+  const overdue = t.filter(x =>
+    !['REVIEWED','PUBLISHED','CANCELLED','EXPIRED'].includes(x.status) &&
+    x.taskDate && (((x as any).extendedTo || x.taskDate) < today)
+  ).length
+  const reviewed = t.filter(x => ['REVIEWED','PUBLISHED'].includes(x.status)).length
+  const pendingReview = t.filter(x => x.status === 'SUBMITTED').length
+  const submittedSubs = subs.filter(s => ['COMPLETED','SUBMITTED','VERIFIED'].includes(s.status))
+  const scores = submittedSubs.map(s => Number(s.finalScore ?? 0)).filter(n => !isNaN(n))
+  const avgScore = scores.length === 0 ? 0 : scores.reduce((a, b) => a + b, 0) / scores.length
+  const passed = submittedSubs.filter(s => Number(s.finalScore ?? 0) >= 60).length
+  const passRate = submittedSubs.length === 0 ? 0 : Math.round(passed / submittedSubs.length * 100)
+  const completionRate = taskStats.value.total === 0 ? 0
+    : Math.round(taskStats.value.done / taskStats.value.total * 100)
+  return {
+    total: taskStats.value.total,
+    done: taskStats.value.done,
+    active: taskStats.value.active,
+    overdue,
+    pendingReview,
+    reviewed,
+    avgScore,
+    passRate,
+    completionRate,
+  }
+})
+
+// 顶部告警条 — 需要管理员关注的事项汇总
+const overviewAlerts = computed(() => {
+  const out: { type: 'warn' | 'info' | 'fail'; icon: string; text: string; action?: { label: string; tab: string } }[] = []
+  if (richKpis.value.overdue > 0) {
+    out.push({
+      type: 'fail', icon: '⚠',
+      text: `${richKpis.value.overdue} 个任务已逾期未提交`,
+      action: { label: '查看', tab: 'team' }
+    })
+  }
+  if (richKpis.value.pendingReview > 0) {
+    out.push({
+      type: 'warn', icon: '⏱',
+      text: `${richKpis.value.pendingReview} 个任务等待审核`,
+      action: { label: '去审核', tab: 'team' }
+    })
+  }
+  if (pendingAssignTasks.value.length > 0) {
+    out.push({
+      type: 'info', icon: '👥',
+      text: `${pendingAssignTasks.value.length} 个任务尚未分配检查员`,
+      action: { label: '分配', tab: 'team' }
+    })
+  }
+  return out
+})
+
+// 7 天滚动趋势 (按 taskDate)
+const weeklyTrend = computed(() => {
+  const days: { date: string; label: string; total: number; done: number }[] = []
+  const now = new Date()
+  for (let i = 6; i >= 0; i--) {
+    const d = new Date(now)
+    d.setDate(now.getDate() - i)
+    const iso = d.toISOString().slice(0, 10)
+    const label = `${d.getMonth() + 1}/${d.getDate()}`
+    const dayTasks = filteredTasks.value.filter(t => t.taskDate === iso)
+    days.push({
+      date: iso, label,
+      total: dayTasks.length,
+      done: dayTasks.filter(t => ['REVIEWED','PUBLISHED','SUBMITTED','UNDER_REVIEW'].includes(t.status)).length,
+    })
+  }
+  return days
+})
+const weeklyTrendMax = computed(() => Math.max(1, ...weeklyTrend.value.map(d => d.total)))
+
 // ========== 待分配任务 ==========
 const pendingAssignTasks = computed(() => filteredTasks.value.filter(t => t.status === 'PENDING' && !t.inspectorId))
 const assigningTaskId = ref<number | null>(null)
@@ -633,7 +711,15 @@ onMounted(async () => {
             <span v-if="rootSectionName" class="pdv-subtitle-sep">·</span>
             <span v-if="rootSectionName">{{ rootSectionName }}</span>
             <span v-if="inspectors.length" class="pdv-subtitle-sep">·</span>
-            <span v-if="inspectors.length"><span class="insp-num">{{ inspectors.length }}</span> 人</span>
+            <span v-if="inspectors.length" :title="`项目检查员 ${inspectors.length} 人`">
+              <span class="insp-num">{{ inspectors.length }}</span> 检查员
+            </span>
+            <template v-if="scopeOrgNames.length > 0">
+              <span class="pdv-subtitle-sep">·</span>
+              <span :title="scopeOrgNames.join(', ')">
+                <span class="insp-num">{{ scopeOrgNames.length }}</span> 受检组织
+              </span>
+            </template>
           </div>
         </div>
       </div>
@@ -714,16 +800,80 @@ onMounted(async () => {
         </div>
 
         <template v-else>
-          <!-- 统计卡片行 -->
-          <div class="pdv-stat-row">
-            <div class="pdv-stat-card">
-              <div class="pdv-stat-value">{{ taskStats.total }}</div>
-              <div class="pdv-stat-label">总任务数</div>
+          <!-- A 级升级: 顶部告警条 (有需关注事项才显示) -->
+          <div v-if="overviewAlerts.length > 0" class="pdv-alert-strip">
+            <div v-for="(a, i) in overviewAlerts" :key="i"
+                 class="pdv-alert" :class="`pdv-alert--${a.type}`">
+              <span class="pdv-alert__icon">{{ a.icon }}</span>
+              <span class="pdv-alert__text">{{ a.text }}</span>
+              <button v-if="a.action" class="pdv-alert__action"
+                      @click="activeTab = a.action.tab">{{ a.action.label }} →</button>
             </div>
-            <div class="pdv-stat-divider" />
-            <div class="pdv-stat-card">
-              <div class="pdv-stat-value text-green-600">{{ taskStats.done }}</div>
-              <div class="pdv-stat-label">已完成</div>
+          </div>
+
+          <!-- 8 KPI 网格 (替代之前 2 个 KPI) -->
+          <div class="pdv-kpi-grid">
+            <div class="pdv-kpi">
+              <div class="pdv-kpi__num">{{ richKpis.total }}</div>
+              <div class="pdv-kpi__label">总任务</div>
+            </div>
+            <div class="pdv-kpi">
+              <div class="pdv-kpi__num" style="color: #10b981">{{ richKpis.done }}</div>
+              <div class="pdv-kpi__label">已完成</div>
+            </div>
+            <div class="pdv-kpi">
+              <div class="pdv-kpi__num" style="color: #3b82f6">{{ richKpis.active }}</div>
+              <div class="pdv-kpi__label">进行中</div>
+            </div>
+            <div class="pdv-kpi" :class="{ 'pdv-kpi--alert': richKpis.overdue > 0 }">
+              <div class="pdv-kpi__num" :style="{ color: richKpis.overdue > 0 ? '#ef4444' : '#9ca3af' }">
+                {{ richKpis.overdue }}
+              </div>
+              <div class="pdv-kpi__label">逾期</div>
+            </div>
+            <div class="pdv-kpi" :class="{ 'pdv-kpi--alert': richKpis.pendingReview > 0 }">
+              <div class="pdv-kpi__num" :style="{ color: richKpis.pendingReview > 0 ? '#f59e0b' : '#9ca3af' }">
+                {{ richKpis.pendingReview }}
+              </div>
+              <div class="pdv-kpi__label">待审</div>
+            </div>
+            <div class="pdv-kpi">
+              <div class="pdv-kpi__num">{{ richKpis.avgScore.toFixed(1) }}</div>
+              <div class="pdv-kpi__label">平均得分</div>
+            </div>
+            <div class="pdv-kpi">
+              <div class="pdv-kpi__num" :style="{ color: richKpis.passRate >= 80 ? '#10b981' : richKpis.passRate >= 60 ? '#f59e0b' : '#ef4444' }">
+                {{ richKpis.passRate }}<span class="pdv-kpi__unit">%</span>
+              </div>
+              <div class="pdv-kpi__label">通过率</div>
+            </div>
+            <div class="pdv-kpi">
+              <div class="pdv-kpi__num">{{ richKpis.completionRate }}<span class="pdv-kpi__unit">%</span></div>
+              <div class="pdv-kpi__label">完成率</div>
+            </div>
+          </div>
+
+          <!-- 7 天趋势条形图 -->
+          <div v-if="weeklyTrend.some(d => d.total > 0)" class="pdv-trend">
+            <div class="pdv-trend__head">
+              <span class="pdv-trend__title">最近 7 天任务量</span>
+              <span class="pdv-trend__legend">
+                <span class="pdv-trend__legend-dot" style="background: #1a6dff" /> 总
+                <span class="pdv-trend__legend-dot" style="background: #10b981; margin-left: 8px" /> 完成
+              </span>
+            </div>
+            <div class="pdv-trend__chart">
+              <div v-for="d in weeklyTrend" :key="d.date" class="pdv-trend__col">
+                <div class="pdv-trend__bars">
+                  <div class="pdv-trend__bar pdv-trend__bar--total"
+                       :style="{ height: (d.total / weeklyTrendMax * 100) + '%' }"
+                       :title="`${d.label}: 总 ${d.total}`" />
+                  <div v-if="d.done > 0" class="pdv-trend__bar pdv-trend__bar--done"
+                       :style="{ height: (d.done / weeklyTrendMax * 100) + '%' }"
+                       :title="`${d.label}: 完成 ${d.done}`" />
+                </div>
+                <div class="pdv-trend__label">{{ d.label }}</div>
+              </div>
             </div>
           </div>
 
@@ -1510,6 +1660,173 @@ onMounted(async () => {
   justify-content: center;
   padding: 60px 0;
   text-align: center;
+}
+
+/* ========== A 级升级: 顶部告警条 ========== */
+.pdv-alert-strip {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 12px;
+}
+.pdv-alert {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 14px;
+  border-radius: 8px;
+  font-size: 12px;
+  border: 1px solid;
+}
+.pdv-alert--fail {
+  background: rgba(239, 68, 68, 0.08);
+  border-color: rgba(239, 68, 68, 0.3);
+  color: #b91c1c;
+}
+.pdv-alert--warn {
+  background: rgba(245, 158, 11, 0.08);
+  border-color: rgba(245, 158, 11, 0.3);
+  color: #b45309;
+}
+.pdv-alert--info {
+  background: rgba(59, 130, 246, 0.08);
+  border-color: rgba(59, 130, 246, 0.3);
+  color: #1d4ed8;
+}
+.pdv-alert__icon { font-size: 14px; flex-shrink: 0; }
+.pdv-alert__text { flex: 1; font-weight: 500; }
+.pdv-alert__action {
+  background: transparent;
+  border: 0;
+  color: inherit;
+  font-weight: 600;
+  font-size: 11px;
+  cursor: pointer;
+  padding: 2px 8px;
+  border-radius: 4px;
+  transition: background 0.15s;
+}
+.pdv-alert__action:hover { background: rgba(255, 255, 255, 0.4); }
+
+/* ========== A 级升级: 8 KPI 网格 ========== */
+.pdv-kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(8, 1fr);
+  gap: 1px;
+  background: #e5e7eb;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  overflow: hidden;
+  margin-bottom: 16px;
+}
+.pdv-kpi {
+  background: #fff;
+  text-align: center;
+  padding: 14px 8px;
+  transition: background 0.15s;
+}
+.pdv-kpi:hover { background: #f9fafb; }
+.pdv-kpi--alert { background: rgba(239, 68, 68, 0.04); }
+.pdv-kpi__num {
+  font-family: 'JetBrains Mono', 'SF Mono', monospace;
+  font-size: 22px;
+  font-weight: 700;
+  color: #1f2937;
+  line-height: 1;
+  letter-spacing: -0.02em;
+}
+.pdv-kpi__unit {
+  font-size: 13px;
+  font-weight: 500;
+  color: inherit;
+  opacity: 0.6;
+  margin-left: 2px;
+}
+.pdv-kpi__label {
+  font-size: 10px;
+  color: #9ca3af;
+  margin-top: 5px;
+  letter-spacing: 0.04em;
+}
+@media (max-width: 1280px) {
+  .pdv-kpi-grid { grid-template-columns: repeat(4, 1fr); }
+  .pdv-kpi { border-bottom: 1px solid #e5e7eb; }
+}
+
+/* ========== A 级升级: 7 天趋势条形图 ========== */
+.pdv-trend {
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  padding: 14px 18px 12px;
+  margin-bottom: 16px;
+}
+.pdv-trend__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+.pdv-trend__title {
+  font-size: 13px;
+  font-weight: 600;
+  color: #1f2937;
+}
+.pdv-trend__legend {
+  font-size: 11px;
+  color: #6b7280;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+.pdv-trend__legend-dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 2px;
+  margin-right: 2px;
+}
+.pdv-trend__chart {
+  display: flex;
+  align-items: flex-end;
+  height: 100px;
+  gap: 12px;
+  padding-bottom: 24px;
+  position: relative;
+  border-bottom: 1px solid #e5e7eb;
+}
+.pdv-trend__col {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  height: 100%;
+  position: relative;
+}
+.pdv-trend__bars {
+  flex: 1;
+  width: 100%;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  gap: 3px;
+  position: relative;
+}
+.pdv-trend__bar {
+  width: 14px;
+  border-radius: 3px 3px 0 0;
+  min-height: 2px;
+  transition: opacity 0.2s;
+}
+.pdv-trend__bar:hover { opacity: 0.85; }
+.pdv-trend__bar--total { background: linear-gradient(180deg, #3b82f6, #1a6dff); }
+.pdv-trend__bar--done { background: linear-gradient(180deg, #34d399, #10b981); }
+.pdv-trend__label {
+  position: absolute;
+  bottom: -20px;
+  font-size: 10px;
+  color: #9ca3af;
+  font-family: 'JetBrains Mono', monospace;
 }
 
 /* ========== Overview: Stat Row ========== */
