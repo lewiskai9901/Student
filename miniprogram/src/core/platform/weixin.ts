@@ -50,6 +50,9 @@ export function createWeixinCapability(): PlatformCapability {
           formData: opts.formData,
           header: opts.header,
           success: (r: any) => {
+            if (r.statusCode < 200 || r.statusCode >= 300) {
+              return reject(new Error(`upload failed: HTTP ${r.statusCode}`))
+            }
             try {
               const body = typeof r.data === 'string' ? JSON.parse(r.data) : r.data
               resolve({ url: body.url, key: body.key })
@@ -61,7 +64,14 @@ export function createWeixinCapability(): PlatformCapability {
     },
     requestSubscribeMessage(templateIds) {
       return new Promise((resolve, reject) => {
-        uni.requestSubscribeMessage({ tmplIds: templateIds, success: resolve, fail: reject })
+        uni.requestSubscribeMessage({
+          tmplIds: templateIds,
+          success: (r: any) => {
+            const { errMsg: _errMsg, ...result } = r
+            resolve(result)
+          },
+          fail: reject
+        })
       })
     }
   }
