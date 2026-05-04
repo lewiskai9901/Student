@@ -116,6 +116,16 @@ export interface InspTask {
   rejectionCount?: number | null
   /** P1#5: 驳回延期到的有效日期 (YYYY-MM-DD) */
   extendedTo?: string | null
+  /** V108: 任务类型 SCHEDULED/AD_HOC/TRIGGERED/SELF_CHECK/COMPLAINT/CROSS_AUDIT */
+  taskType?: 'SCHEDULED' | 'AD_HOC' | 'TRIGGERED' | 'SELF_CHECK' | 'COMPLAINT' | 'CROSS_AUDIT' | null
+  /** V108: 逾期策略 STRICT/RELAXED/NONE */
+  deadlinePolicy?: 'STRICT' | 'RELAXED' | 'NONE' | null
+  /** V108: 来源溯源 */
+  sourceType?: string | null
+  sourceActorId?: number | null
+  sourceReason?: string | null
+  sourceRefType?: string | null
+  sourceRefId?: number | null
   createdAt: string
   updatedAt: string
 }

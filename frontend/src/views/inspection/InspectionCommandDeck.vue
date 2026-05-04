@@ -134,7 +134,14 @@ async function loadAll() {
 }
 
 // ── Helpers ──
-function isOverdue(deadline?: string | null) {
+// V108: 接受 string deadline 或 task object (有 deadlinePolicy 字段)
+function isOverdue(deadlineOrTask?: any) {
+  if (!deadlineOrTask) return false
+  // 如果是 object 且 deadlinePolicy=NONE → 永不逾期
+  if (typeof deadlineOrTask === 'object' && deadlineOrTask?.deadlinePolicy === 'NONE') return false
+  const deadline = typeof deadlineOrTask === 'string'
+    ? deadlineOrTask
+    : (deadlineOrTask.taskDate || deadlineOrTask.deadline)
   if (!deadline) return false
   return new Date(deadline) < new Date()
 }

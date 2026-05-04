@@ -211,16 +211,25 @@ public class InspTask extends AggregateRoot<Long> {
         LocalDateTime now = LocalDateTime.now();
         this.submittedAt = now;
         this.updatedAt = now;
-        // P2: 延迟交付计算 — effective due date 优先 extendedTo, 否则 taskDate
-        LocalDate dueDate = this.extendedTo != null ? this.extendedTo : this.taskDate;
-        if (dueDate != null) {
-            LocalDate today = now.toLocalDate();
-            if (today.isAfter(dueDate)) {
-                this.lateSubmission = Boolean.TRUE;
-                this.lateDays = (int) java.time.temporal.ChronoUnit.DAYS.between(dueDate, today);
-            } else {
-                this.lateSubmission = Boolean.FALSE;
-                this.lateDays = 0;
+        // V108: 延迟交付计算按 deadlinePolicy 路由
+        // - NONE (AD_HOC/SELF_CHECK): 永不算延迟
+        // - STRICT (SCHEDULED/CROSS_AUDIT): 硬延迟 — 超过 effective due date 即标 late
+        // - RELAXED (TRIGGERED/COMPLAINT): 软延迟 — 标 late 但不影响 KPI (KPI 路由由 reporting 层处理)
+        DeadlinePolicy policy = getDeadlinePolicy();
+        if (policy == DeadlinePolicy.NONE) {
+            this.lateSubmission = Boolean.FALSE;
+            this.lateDays = 0;
+        } else {
+            LocalDate dueDate = this.extendedTo != null ? this.extendedTo : this.taskDate;
+            if (dueDate != null) {
+                LocalDate today = now.toLocalDate();
+                if (today.isAfter(dueDate)) {
+                    this.lateSubmission = Boolean.TRUE;
+                    this.lateDays = (int) java.time.temporal.ChronoUnit.DAYS.between(dueDate, today);
+                } else {
+                    this.lateSubmission = Boolean.FALSE;
+                    this.lateDays = 0;
+                }
             }
         }
         registerEvent(new TaskSubmittedEvent(this.id, this.taskCode, this.inspectorId, this.projectId));
