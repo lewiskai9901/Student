@@ -17,6 +17,7 @@ const props = defineProps<{ projectId: number }>()
 
 const loading = ref(false)
 const computing = ref(false)
+const lastComputedAt = ref<number | null>(null)
 const indicators = ref<Indicator[]>([])
 const gradeSchemes = ref<GradeScheme[]>([])
 const scoreMap = ref<Map<number, IndicatorScore[]>>(new Map())
@@ -198,10 +199,37 @@ onMounted(loadData)
 
 async function handleCompute() {
   computing.value = true
-  try { await computeIndicatorScores(props.projectId, periodRange.value.start, periodRange.value.end); ElMessage.success('计算完成'); await loadScores() }
+  try {
+    await computeIndicatorScores(props.projectId, periodRange.value.start, periodRange.value.end)
+    lastComputedAt.value = Date.now()
+    ElMessage.success('计算完成')
+    await loadScores()
+  }
   catch (e: any) { ElMessage.error(e.message || '计算失败') }
   finally { computing.value = false }
 }
+
+// 显示 "上次计算: X 分钟前"
+const computedTimeText = computed(() => {
+  if (!lastComputedAt.value) return ''
+  const seconds = Math.round((Date.now() - lastComputedAt.value) / 1000)
+  if (seconds < 10) return '刚刚'
+  if (seconds < 60) return `${seconds} 秒前`
+  const minutes = Math.round(seconds / 60)
+  if (minutes < 60) return `${minutes} 分钟前`
+  const hours = Math.round(minutes / 60)
+  if (hours < 24) return `${hours} 小时前`
+  return `${Math.round(hours / 24)} 天前`
+})
+
+// 每 30 秒刷新文案 (相对时间)
+import { onUnmounted } from 'vue'
+const computedTimeTicker = ref(0)
+let timeTickerInterval: any = null
+onMounted(() => {
+  timeTickerInterval = setInterval(() => { computedTimeTicker.value++ }, 30000)
+})
+onUnmounted(() => { if (timeTickerInterval) clearInterval(timeTickerInterval) })
 </script>
 
 <template>
@@ -241,8 +269,13 @@ async function handleCompute() {
         <Search class="w-3 h-3" />
         <input v-model="searchQuery" placeholder="搜索目标..." class="da-search-input" />
       </div>
+      <span v-if="lastComputedAt" class="da-last-computed" :title="new Date(lastComputedAt).toLocaleString()">
+        <span style="display:none">{{ computedTimeTicker }}</span>
+        上次计算 <b>{{ computedTimeText }}</b>
+      </span>
       <button class="da-compute" :disabled="computing" @click="handleCompute">
-        <RefreshCw class="w-3 h-3" :class="{ 'animate-spin': computing }" /> 重算
+        <RefreshCw class="w-3 h-3" :class="{ 'animate-spin': computing }" />
+        {{ computing ? '计算中...' : '重算' }}
       </button>
     </div>
 
@@ -486,5 +519,18 @@ async function handleCompute() {
 @media (max-width: 768px) {
   .da-section-grid { grid-template-columns: 1fr; }
   .da-stats { flex-wrap: wrap; }
+}
+
+/* 上次计算时间戳 */
+.da-last-computed {
+  font-size: 11px;
+  color: #9ca3af;
+  margin-right: 8px;
+  white-space: nowrap;
+}
+.da-last-computed b {
+  color: #6b7280;
+  font-weight: 600;
+  font-family: 'JetBrains Mono', monospace;
 }
 </style>
