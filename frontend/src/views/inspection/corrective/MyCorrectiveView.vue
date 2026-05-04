@@ -280,44 +280,62 @@ onMounted(loadData)
 </script>
 
 <style scoped>
+/* 响应式 — 桌面 PC ≥768px 全宽 + 多列, 平板/手机 单列 */
 .mobile-shell {
-  max-width: 480px; margin: 0 auto; min-height: 100vh;
-  background: #f9fafb; padding-bottom: 100px;
-  box-shadow: 0 0 32px rgba(0,0,0,0.06); position: relative;
+  max-width: 1500px; margin: 0 auto; min-height: 100vh;
+  background: #f9fafb; padding-bottom: 100px; position: relative;
 }
-@media (max-width: 480px) {
-  .mobile-shell { box-shadow: none; max-width: 100%; }
+@media (max-width: 767px) {
+  .mobile-shell { max-width: 100%; box-shadow: none; }
 }
 
-.my-corrective { padding: 16px; }
+.my-corrective { padding: 24px 32px; }
+@media (max-width: 767px) {
+  .my-corrective { padding: 16px; }
+}
 
-.head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
-.head-title h2 { font-size: 22px; margin: 0; font-weight: 600; }
-.head-sub { font-size: 12px; color: #6b7280; margin-top: 2px; }
+.head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; }
+.head-title h2 { font-size: 28px; margin: 0; font-weight: 600; letter-spacing: -0.02em; }
+.head-sub { font-size: 13px; color: #6b7280; margin-top: 4px; }
+@media (max-width: 767px) {
+  .head-title h2 { font-size: 22px; }
+}
 
 /* tabs */
-.tabs { display: flex; gap: 6px; background: #fff; border-radius: 10px; padding: 4px; margin-bottom: 12px;
-  border: 1px solid #e5e7eb; }
-.tab { flex: 1; padding: 8px 0; background: none; border: none; font-size: 13px; color: #4b5563;
-  border-radius: 8px; cursor: pointer; transition: 0.2s; display: flex; align-items: center; justify-content: center; gap: 4px; }
+.tabs { display: flex; gap: 6px; background: #fff; border-radius: 10px; padding: 4px; margin-bottom: 16px;
+  border: 1px solid #e5e7eb; max-width: 600px; }
+.tab { flex: 1; padding: 10px 14px; background: none; border: none; font-size: 14px; color: #4b5563;
+  border-radius: 8px; cursor: pointer; transition: 0.2s; display: flex; align-items: center; justify-content: center; gap: 6px; }
 .tab.is-active { background: #2563eb; color: white; font-weight: 500; }
 .tab-count { background: rgba(255,255,255,0.25); padding: 1px 6px; border-radius: 10px; font-size: 11px; min-width: 18px; }
 .tab:not(.is-active) .tab-count { background: #fee2e2; color: #b91c1c; }
 
 /* urgent banner */
 .urgent-banner {
-  display: flex; align-items: center; gap: 8px; padding: 10px 12px; margin-bottom: 12px;
+  display: flex; align-items: center; gap: 8px; padding: 10px 16px; margin-bottom: 16px;
   background: linear-gradient(90deg, #fff7ed, #ffedd5); border: 1px solid #fdba74;
   border-radius: 8px; color: #9a3412; font-size: 13px; font-weight: 500;
 }
 .urgent-icon { font-size: 18px; }
 
-/* case card */
-.case-list { display: flex; flex-direction: column; gap: 10px; }
+/* case grid — 桌面 3 列, 中屏 2 列, 手机 1 列 */
+.case-list {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 14px;
+}
+@media (max-width: 1199px) {
+  .case-list { grid-template-columns: repeat(2, 1fr); }
+}
+@media (max-width: 767px) {
+  .case-list { grid-template-columns: 1fr; gap: 10px; }
+}
+
 .case {
-  background: #fff; border-radius: 10px; padding: 12px;
+  background: #fff; border-radius: 10px; padding: 14px 16px;
   border: 1px solid #e5e7eb; transition: all 0.2s;
 }
+.case:hover { border-color: #93c5fd; box-shadow: 0 2px 12px rgba(0,0,0,0.05); }
 .case.urgency-overdue { border-color: #ef4444; background: #fef2f2; }
 .case.urgency-critical { border-color: #f97316; background: #fff7ed; }
 .case.urgency-soon { border-color: #f59e0b; }
@@ -342,16 +360,33 @@ onMounted(loadData)
 }
 .empty-emoji { font-size: 36px; margin-bottom: 8px; }
 
-/* 底部成绩单 */
+/* 底部成绩单 — 桌面浮动至右侧, 手机底部 sticky */
 .score-card {
-  position: sticky; bottom: 0; background: white;
-  border-top: 1px solid #e5e7eb; padding: 12px 16px;
-  margin-top: 16px;
+  background: white;
+  border-top: 1px solid #e5e7eb;
+  padding: 16px 24px;
+  margin-top: 24px;
+  border-radius: 10px;
+  border: 1px solid #e5e7eb;
 }
-.score-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; }
+@media (max-width: 767px) {
+  .score-card {
+    position: sticky; bottom: 0;
+    margin-top: 16px;
+    border-radius: 0;
+    border-left: none; border-right: none; border-bottom: none;
+    box-shadow: 0 -2px 12px rgba(0,0,0,0.05);
+    padding: 12px 16px;
+  }
+}
+.score-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; }
 .score-cell { text-align: center; }
-.score-num { font-size: 18px; font-weight: 700; color: #1e293b; line-height: 1.2; font-variant-numeric: tabular-nums; }
-.score-label { font-size: 11px; color: #6b7280; margin-top: 2px; }
+.score-num { font-size: 24px; font-weight: 700; color: #1e293b; line-height: 1.2; font-variant-numeric: tabular-nums; }
+.score-label { font-size: 12px; color: #6b7280; margin-top: 4px; }
+@media (max-width: 767px) {
+  .score-num { font-size: 18px; }
+  .score-label { font-size: 11px; }
+}
 .text-danger { color: #ef4444; }
 .text-warning { color: #f59e0b; }
 </style>
