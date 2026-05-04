@@ -55,6 +55,7 @@ public class InspAppealApplicationService {
     private final InspProjectRepository projectRepository;
     private final SpringDomainEventPublisher eventPublisher;
     private final InspectionAuditLogger auditLogger;
+    private final com.school.management.infrastructure.metrics.InspectionMetrics metrics;
 
     /** review #F: 系统默认申诉时效 (天) — 项目可通过 InspProject.appealWindowDays 覆盖 */
     private static final int DEFAULT_APPEAL_WINDOW_DAYS = 7;
@@ -151,6 +152,7 @@ public class InspAppealApplicationService {
         });
         log.info("Appeal submitted: code={}, detailId={}, submitter={}",
                 saved.getAppealCode(), submissionDetailId, submitterUserId);
+        metrics.appealSubmitted();
         return saved;
     }
 
@@ -181,6 +183,7 @@ public class InspAppealApplicationService {
                 Map.of("finalAdjustment", finalAdjustment != null ? finalAdjustment : BigDecimal.ZERO,
                         "submitterUserId", saved.getSubmitterUserId() != null ? saved.getSubmitterUserId() : 0L,
                         "submissionDetailId", saved.getSubmissionDetailId() != null ? saved.getSubmissionDetailId() : 0L));
+        metrics.appealResolved("approved");
         return saved;
     }
 
@@ -209,6 +212,7 @@ public class InspAppealApplicationService {
                 "APPEAL_REJECTED", comment,
                 Map.of("submitterUserId", saved.getSubmitterUserId() != null ? saved.getSubmitterUserId() : 0L,
                         "submissionDetailId", saved.getSubmissionDetailId() != null ? saved.getSubmissionDetailId() : 0L));
+        metrics.appealResolved("rejected");
         return saved;
     }
 

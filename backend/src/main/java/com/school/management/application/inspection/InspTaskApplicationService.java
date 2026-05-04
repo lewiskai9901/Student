@@ -49,6 +49,7 @@ public class InspTaskApplicationService {
     private final InspectionAuditLogger auditLogger;
     private final TransactionTemplate transactionTemplate;
     private final JdbcTemplate jdbcTemplate;
+    private final com.school.management.infrastructure.metrics.InspectionMetrics metrics;
 
     @Autowired(required = false)
     private TriggerService triggerService;
@@ -71,6 +72,7 @@ public class InspTaskApplicationService {
         InspTask saved = taskRepository.save(task);
         eventPublisher.publishAll(saved.getDomainEvents());
         saved.clearDomainEvents();
+        metrics.taskCreated();
 
         // 自动填充 submissions
         populateSubmissions(saved);
@@ -160,6 +162,7 @@ public class InspTaskApplicationService {
         InspTask saved = taskRepository.save(task);
         eventPublisher.publishAll(saved.getDomainEvents());
         saved.clearDomainEvents();
+        metrics.taskClaimed();
         return saved;
     }
 
@@ -176,6 +179,7 @@ public class InspTaskApplicationService {
 
     @Transactional
     public InspTask submitTask(Long id) {
+        var sample = metrics.startSubmitTimer();
         InspTask task = taskRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("任务不存在: " + id));
         task.submit();
@@ -186,6 +190,8 @@ public class InspTaskApplicationService {
         // 计算项目 ProjectScore
         tryComputeProjectScore(saved);
 
+        metrics.taskSubmitted();
+        metrics.recordSubmitDuration(sample);
         return saved;
     }
 
@@ -344,6 +350,7 @@ public class InspTaskApplicationService {
         InspTask saved = taskRepository.save(task);
         eventPublisher.publishAll(saved.getDomainEvents());
         saved.clearDomainEvents();
+        metrics.taskReviewed("approved");
         return saved;
     }
 
@@ -361,6 +368,7 @@ public class InspTaskApplicationService {
         InspTask saved = taskRepository.save(task);
         eventPublisher.publishAll(saved.getDomainEvents());
         saved.clearDomainEvents();
+        metrics.taskPublished();
 
         // Auto-recompute project score after task publish
         try {
