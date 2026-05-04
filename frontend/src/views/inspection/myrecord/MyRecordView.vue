@@ -127,6 +127,52 @@
         </el-card>
       </div>
 
+      <!-- 申诉成功率 + 历史对比 -->
+      <div class="grid-2">
+        <el-card shadow="never">
+          <template #header>
+            <div class="card-head"><span>📊 申诉历史</span></div>
+          </template>
+          <div v-if="!appealStats.total" class="text-center text-gray-400 py-6 text-sm">
+            尚未提交过申诉
+          </div>
+          <div v-else class="appeal-stats">
+            <div class="appeal-cell">
+              <div class="appeal-num">{{ appealStats.total }}</div>
+              <div class="appeal-lbl">累计申诉</div>
+            </div>
+            <div class="appeal-cell">
+              <div class="appeal-num text-success">{{ appealStats.approved }}</div>
+              <div class="appeal-lbl">已通过</div>
+            </div>
+            <div class="appeal-cell">
+              <div class="appeal-num text-warning">{{ appealStats.pending }}</div>
+              <div class="appeal-lbl">待处理</div>
+            </div>
+            <div class="appeal-cell">
+              <div class="appeal-num">{{ appealStats.rate }}%</div>
+              <div class="appeal-lbl">通过率</div>
+            </div>
+          </div>
+        </el-card>
+
+        <el-card shadow="never">
+          <template #header>
+            <div class="card-head"><span>🔄 重复扣分项</span></div>
+          </template>
+          <div v-if="!repeatItems.length" class="text-center text-gray-400 py-6 text-sm">
+            ✨ 无重复扣分, 整改有效
+          </div>
+          <div v-else class="repeat-list">
+            <div v-for="r in repeatItems" :key="r.itemCode" class="repeat-item">
+              <span class="repeat-tag">连续 {{ r.times }} 次</span>
+              <span class="repeat-name">{{ r.itemName }}</span>
+              <span class="repeat-section">{{ r.sectionName }}</span>
+            </div>
+          </div>
+        </el-card>
+      </div>
+
       <!-- 🔵 明细层 — 默认折叠 -->
       <el-card shadow="never" class="detail-card">
         <template #header>
@@ -134,34 +180,53 @@
             <el-button size="small" link @click="showDetails = !showDetails">
               {{ showDetails ? '▾ 收起' : '▸ 展开' }} 完整明细 ({{ allDetails.length }} 条)
             </el-button>
+            <span class="hint" v-if="showDetails">点击 ⚖ 申诉对扣分有异议的条目</span>
           </div>
         </template>
-        <el-table v-if="showDetails" :data="allDetails" size="small" max-height="400">
-          <el-table-column prop="itemName" label="检查项" min-width="140" show-overflow-tooltip />
+        <el-table v-if="showDetails" :data="allDetails" size="small" max-height="400" row-class-name="detail-row">
+          <el-table-column prop="itemName" label="检查项" min-width="140">
+            <template #default="{ row }">
+              <span>{{ row.itemName }}</span>
+              <el-tag v-if="isRepeatItem(row.itemCode)" size="small" type="warning" class="ml-1">🔄 复发</el-tag>
+            </template>
+          </el-table-column>
           <el-table-column prop="sectionName" label="所属类别" min-width="100" show-overflow-tooltip />
-          <el-table-column prop="itemType" label="类型" width="100" />
-          <el-table-column label="响应" min-width="100">
+          <el-table-column prop="itemType" label="类型" width="90" />
+          <el-table-column label="响应" min-width="80">
             <template #default="{ row }">
               <el-tag size="small" :type="row.responseValue === 'PASS' || (typeof row.responseValue === 'string' && /\d+/.test(row.responseValue) && +row.responseValue >= 80) ? 'success' : (row.responseValue === 'FAIL' ? 'danger' : 'info')">
                 {{ row.responseValue }}
               </el-tag>
             </template>
           </el-table-column>
-          <el-table-column label="得分" width="80" align="right">
+          <el-table-column label="得分" width="70" align="right">
             <template #default="{ row }">
               <span :class="(row.score ?? 0) >= 3 ? 'text-success' : (row.score ?? 0) > 0 ? 'text-warning' : 'text-danger'">
                 {{ row.score?.toFixed(1) }}
               </span>
             </template>
           </el-table-column>
-          <el-table-column label="标记" width="80">
+          <el-table-column label="标记" width="70">
             <template #default="{ row }">
               <el-tag v-if="row.isFlagged" size="small" type="danger">问题</el-tag>
+            </template>
+          </el-table-column>
+          <el-table-column label="申诉" width="80">
+            <template #default="{ row }">
+              <el-button v-if="row.isFlagged || (row.score ?? 5) < 3" size="small" link type="primary"
+                @click="openAppeal(row)">⚖ 申诉</el-button>
             </template>
           </el-table-column>
         </el-table>
       </el-card>
     </template>
+
+    <!-- 申诉对话框 -->
+    <SubmitAppealDialog v-if="appealRow" v-model="appealDialog"
+      :submission-detail-id="appealRow.id"
+      :item-name="appealRow.itemName"
+      :current-score="Number(appealRow.score)"
+      @submitted="onAppealSubmitted" />
   </div>
 </template>
 
@@ -178,6 +243,7 @@ import type { ECharts, EChartsCoreOption as EChartsOption } from 'echarts/core'
 import { http } from '@/utils/request'
 import * as analyticsApi from '@/api/inspection/analytics'
 import { useInspExecutionStore } from '@/stores/inspection/inspExecutionStore'
+import SubmitAppealDialog from '@/views/inspection/appeals/components/SubmitAppealDialog.vue'
 
 echarts.use([LineChart, GridComponent, TooltipComponent, MarkLineComponent, CanvasRenderer])
 
@@ -237,6 +303,18 @@ const showDetails = ref(false)
 
 const trendChartRef = ref<HTMLElement | null>(null)
 let trendChart: ECharts | null = null
+
+// 申诉对话框 state
+const appealDialog = ref(false)
+const appealRow = ref<SubmissionDetailRow | null>(null)
+
+// 申诉历史统计
+const appealStats = ref<{ total: number; approved: number; pending: number; rejected: number; rate: number }>({
+  total: 0, approved: 0, pending: 0, rejected: 0, rate: 0,
+})
+
+// 历史明细 (近 30 天) — 用于 "重复扣分项" 检测
+const historicalFlaggedItems = ref<Map<string, { itemName: string; sectionName: string; dates: Set<string> }>>(new Map())
 
 // ========== Derived ==========
 
@@ -300,6 +378,22 @@ const topIssues = computed(() => {
   }
   return Array.from(map.values()).sort((a, b) => b.totalDeduction - a.totalDeduction).slice(0, 3)
 })
+
+// 重复扣分项: 历史 ≥2 次出现的同一 itemCode (说明整改无效)
+const repeatItems = computed(() => {
+  const out: { itemCode: string; itemName: string; sectionName: string; times: number }[] = []
+  for (const [code, info] of historicalFlaggedItems.value.entries()) {
+    if (info.dates.size >= 2) {
+      out.push({ itemCode: code, itemName: info.itemName, sectionName: info.sectionName, times: info.dates.size })
+    }
+  }
+  return out.sort((a, b) => b.times - a.times).slice(0, 5)
+})
+
+function isRepeatItem(itemCode: string): boolean {
+  const info = historicalFlaggedItems.value.get(itemCode)
+  return info ? info.dates.size >= 2 : false
+}
 
 // 鼓励项: section 维度的零扣分集合
 const goodItems = computed(() => {
@@ -398,7 +492,62 @@ async function loadAll() {
     t => `${t.targetType}:${t.targetId}` === selectedTargetKey.value
   ) || null
   if (!current.value) return
-  await Promise.all([loadTrend(), loadCases(), loadLatestDetails()])
+  await Promise.all([
+    loadTrend(), loadCases(), loadLatestDetails(),
+    loadHistoricalFlagged(), loadAppealStats(),
+  ])
+}
+
+/** 拉历史 5 次提交的 details, 聚合 isFlagged itemCode 统计复发 */
+async function loadHistoricalFlagged() {
+  if (!current.value || !projectId.value) return
+  try {
+    const subsResp = await http.get<any>('/inspection/submissions', {
+      params: { projectId: projectId.value, targetType: current.value.targetType,
+        targetId: current.value.targetId, size: 6 }
+    })
+    const subs = (subsResp as any)?.records ?? subsResp ?? []
+    const map = new Map<string, { itemName: string; sectionName: string; dates: Set<string> }>()
+    for (const s of subs.slice(0, 6)) {
+      try {
+        const details = await http.get<any>('/inspection/submissions/' + s.id + '/details') as any[]
+        const date = (s.createdAt || s.completedAt || '').slice(0, 10) || s.id
+        for (const d of details) {
+          if (!d.isFlagged) continue
+          const key = d.itemCode || d.itemName
+          if (!map.has(key)) {
+            map.set(key, { itemName: d.itemName, sectionName: d.sectionName, dates: new Set() })
+          }
+          map.get(key)!.dates.add(date)
+        }
+      } catch { /* skip */ }
+    }
+    historicalFlaggedItems.value = map
+  } catch { historicalFlaggedItems.value = new Map() }
+}
+
+/** 拉申诉成功率 — 当前用户提交过的所有申诉 */
+async function loadAppealStats() {
+  try {
+    const r = await http.get<any[]>('/inspection/appeals/my')
+    const list = ((r as any) || []) as any[]
+    const total = list.length
+    const approved = list.filter(a => a.status === 'APPROVED').length
+    const pending = list.filter(a => a.status === 'PENDING').length
+    const rejected = list.filter(a => a.status === 'REJECTED').length
+    const reviewed = approved + rejected
+    const rate = reviewed > 0 ? Math.round((approved / reviewed) * 100) : 0
+    appealStats.value = { total, approved, pending, rejected, rate }
+  } catch { appealStats.value = { total: 0, approved: 0, pending: 0, rejected: 0, rate: 0 } }
+}
+
+function openAppeal(row: SubmissionDetailRow) {
+  appealRow.value = row
+  appealDialog.value = true
+}
+function onAppealSubmitted() {
+  appealDialog.value = false
+  loadAppealStats()
 }
 
 function drawTrend() {
@@ -570,8 +719,28 @@ onUnmounted(() => {
 .good-icon { font-size: 14px; }
 .good-text { font-size: 13px; color: #166534; }
 
+/* ── 申诉历史 ── */
+.appeal-stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+.appeal-cell { text-align: center; }
+.appeal-num { font-size: 26px; font-weight: 700; color: #1e293b; line-height: 1; font-variant-numeric: tabular-nums; }
+.appeal-lbl { font-size: 11px; color: #94a3b8; margin-top: 4px; }
+
+/* ── 重复扣分 ── */
+.repeat-list { display: flex; flex-direction: column; gap: 6px; }
+.repeat-item {
+  display: grid; grid-template-columns: 90px 1fr 100px; gap: 10px;
+  padding: 8px 10px; background: #fffbeb; border-radius: 6px;
+  border-left: 3px solid #f59e0b;
+  font-size: 13px; align-items: center;
+}
+.repeat-tag { background: #fef3c7; color: #92400e; padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: 500; text-align: center; }
+.repeat-name { color: #1e293b; font-weight: 500; }
+.repeat-section { color: #94a3b8; font-size: 11px; text-align: right; }
+
 /* ── 明细 ── */
 .detail-card { margin-top: 16px; }
+.detail-card .hint { font-size: 11px; color: #94a3b8; font-weight: normal; }
+.ml-1 { margin-left: 4px; }
 
 .text-success { color: #22c55e; }
 .text-warning { color: #f59e0b; }
