@@ -8,7 +8,7 @@
       </div>
       <div class="filter-bar">
         <span class="insp-caps">受检单元</span>
-        <el-select v-model="selectedTargetKey" placeholder="选择班级/部门"
+        <el-select v-model="selectedTargetKey" :placeholder="`选择${group}`"
           class="w-64" @change="loadAll" size="small" filterable>
           <el-option v-for="t in availableTargets" :key="t.key" :label="t.name" :value="t.key" />
         </el-select>
@@ -232,6 +232,9 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted, nextTick, watch } from 'vue'
+import { useEntityLabel } from '@/composables/useEntityLabel'
+
+const { group } = useEntityLabel()
 import { ElMessage } from 'element-plus'
 import { RefreshRight } from '@element-plus/icons-vue'
 import { useRouter } from 'vue-router'

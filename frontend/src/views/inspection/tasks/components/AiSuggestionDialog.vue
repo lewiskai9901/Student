@@ -9,6 +9,9 @@ import { ref, watch } from 'vue'
 import { ElMessage } from 'element-plus'
 import { Sparkles } from 'lucide-vue-next'
 import { suggestScore, type SuggestScoreResponse } from '@/api/inspection/aiScoring'
+import { useEntityLabel } from '@/composables/useEntityLabel'
+
+const { subject } = useEntityLabel()
 
 const props = defineProps<{
   modelValue: boolean
@@ -98,7 +101,7 @@ function confidenceLabel(conf: number): string {
         v-model="description"
         type="textarea"
         :rows="4"
-        placeholder="详细描述现场观察 (例如: 卫生区域多处脏污, 有异味, 学生纪律一般)"
+        :placeholder="`详细描述现场观察 (例如: 卫生区域多处脏污, 有异味, ${subject}纪律一般)`"
         maxlength="500"
         show-word-limit
       />

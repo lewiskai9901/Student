@@ -5,7 +5,8 @@
         <div class="rcv-eyebrow">受检主体 · Hub</div>
         <h1 class="rcv-title">我的受检中心</h1>
         <p class="hub-sub">
-          班主任 / 场所负责人 / 受检单位的"被检查"视角. 一站式查看检查记录、整改任务、趋势与高频问题.
+          {{ organizer }} / 场所负责人 / 受检{{ campus }}的"被检查"视角.
+          一站式查看检查记录、整改任务、趋势与高频问题.
         </p>
       </div>
       <div v-if="summary" class="hub-org">
@@ -51,9 +52,9 @@
 
       <!-- 提示: 如未挂任何组织 -->
       <div v-if="summary && summary.orgUnitCount === 0" class="hub-empty">
-        <h3>您当前未关联任何受检组织</h3>
+        <h3>您当前未关联任何受检{{ group }}</h3>
         <p>请联系管理员为您配置 access_relation (USER → MEMBER_OF/OWNER_OF/MANAGES → ORG_UNIT)
-          后, 即可在此查看您所负责组织的检查情况.</p>
+          后, 即可在此查看您所负责{{ group }}的检查情况.</p>
       </div>
 
       <!-- 快速入口 -->
@@ -110,6 +111,9 @@ import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { getMySummary, type ReceivedSummary } from '@/api/inspection/received'
+import { useEntityLabel } from '@/composables/useEntityLabel'
+
+const { organizer, campus, group } = useEntityLabel()
 
 const router = useRouter()
 const loading = ref(false)

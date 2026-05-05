@@ -59,7 +59,7 @@
             <th class="th-time">时间</th>
             <th>检查项</th>
             <th>主体</th>
-            <th>班级</th>
+            <th>{{ group }}</th>
             <th class="th-num">分数</th>
             <th>严重度</th>
             <th>事件类型</th>
@@ -103,6 +103,9 @@
 
 <script setup lang="ts">
 import { ref, reactive, computed, onMounted } from 'vue'
+import { useEntityLabel } from '@/composables/useEntityLabel'
+
+const { group } = useEntityLabel()
 import { ElMessage } from 'element-plus'
 import { observationApi } from '@/api/observation'
 import type { SubmissionObservation } from '@/types/observation'
