@@ -49,3 +49,28 @@ export async function request<T = unknown>(opts: RequestOpts): Promise<T> {
     })
   })
 }
+
+export interface ResultEnvelope<T> {
+  code: number
+  message: string
+  data: T
+  timestamp: number
+}
+
+export class BizError extends Error {
+  constructor(public code: number, public bizMessage: string) {
+    super(`[${code}] ${bizMessage}`)
+    this.name = 'BizError'
+  }
+}
+
+export async function requestWrapped<T>(opts: RequestOpts): Promise<T> {
+  const r = await request<ResultEnvelope<T>>(opts)
+  if (!r || typeof r.code !== 'number') {
+    throw new BizError(-1, 'malformed response envelope')
+  }
+  if (r.code !== 200) {
+    throw new BizError(r.code, r.message ?? 'unknown error')
+  }
+  return r.data
+}

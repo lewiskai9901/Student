@@ -1,0 +1,104 @@
+<script setup lang="ts">
+import { ref, computed } from 'vue'
+import { onShow } from '@dcloudio/uni-app'
+import { inspectionApi } from '../api/inspection'
+import { BizError } from '@core/api/request'
+import type { CorrectiveCase, CaseStatus } from '../api/types'
+import { caseStatusLabel, caseStatusColor, formatDateTime } from '../utils/format'
+
+declare const uni: any
+
+type Filter = 'all' | CaseStatus
+const filter = ref<Filter>('all')
+const cases = ref<CorrectiveCase[]>([])
+const loading = ref(false)
+const errMsg = ref('')
+
+const filterOptions: { key: Filter; label: string }[] = [
+  { key: 'all', label: '全部' },
+  { key: 'ASSIGNED', label: '已指派' },
+  { key: 'IN_PROGRESS', label: '处理中' },
+  { key: 'SUBMITTED', label: '已提交' },
+  { key: 'REJECTED', label: '已驳回' }
+]
+
+const visible = computed(() =>
+  filter.value === 'all' ? cases.value : cases.value.filter(c => c.status === filter.value)
+)
+
+async function load() {
+  loading.value = true
+  errMsg.value = ''
+  try {
+    cases.value = await inspectionApi.myCases()
+  } catch (e) {
+    errMsg.value = e instanceof BizError ? e.bizMessage : '加载失败,请稍后重试'
+  } finally {
+    loading.value = false
+  }
+}
+
+function go(id: number) {
+  uni.navigateTo({ url: `/plugins/inspection/pages/correction-detail?id=${id}` })
+}
+
+onShow(() => { load() })
+</script>
+
+<template>
+  <view class="page">
+    <view class="filter">
+      <view
+        v-for="opt in filterOptions"
+        :key="opt.key"
+        class="chip"
+        :class="{ active: filter === opt.key }"
+        @click="filter = opt.key"
+      >{{ opt.label }}</view>
+    </view>
+
+    <view v-if="loading" class="state">加载中…</view>
+    <view v-else-if="errMsg" class="state err">{{ errMsg }}</view>
+    <view v-else-if="visible.length === 0" class="state empty">暂无整改单</view>
+
+    <view v-else class="list">
+      <view v-for="c in visible" :key="c.id" class="item" @click="go(c.id)">
+        <view class="row">
+          <view class="title">{{ c.itemName || c.caseCode || `整改 #${c.id}` }}</view>
+          <view class="badge" :style="{ color: caseStatusColor(c.status), borderColor: caseStatusColor(c.status) }">
+            {{ caseStatusLabel(c.status) }}
+          </view>
+        </view>
+        <view class="meta">
+          <text>{{ c.projectName || '-' }}</text>
+          <text class="dot">·</text>
+          <text>截止: {{ formatDateTime(c.deadline) }}</text>
+        </view>
+        <view v-if="(c.rejectCount ?? 0) > 0 || (c.escalationLevel ?? 0) > 0" class="alerts">
+          <text v-if="(c.rejectCount ?? 0) > 0" class="alert reject">驳回 {{ c.rejectCount }} 次</text>
+          <text v-if="(c.escalationLevel ?? 0) > 0" class="alert escalate">已升级 L{{ c.escalationLevel }}</text>
+        </view>
+      </view>
+    </view>
+  </view>
+</template>
+
+<style lang="scss" scoped>
+.page { padding: 24rpx; }
+.filter { display: flex; gap: 16rpx; margin-bottom: 24rpx; flex-wrap: wrap; }
+.chip { padding: 12rpx 24rpx; border-radius: 999rpx; background: #fff; color: #5a6a7a; font-size: 24rpx; box-shadow: 0 1px 2px rgba(0,0,0,0.03); }
+.chip.active { background: #3a7bd5; color: #fff; }
+.state { padding: 80rpx 0; text-align: center; color: #a0aab4; }
+.state.err { color: #e0592a; }
+.list { display: flex; flex-direction: column; gap: 16rpx; }
+.item { background: #fff; border-radius: 14px; padding: 24rpx; box-shadow: 0 2px 6px rgba(58,123,213,0.06); }
+.row { display: flex; justify-content: space-between; align-items: center; }
+.title { font-size: 30rpx; font-weight: 700; color: #1a2840; flex: 1; margin-right: 16rpx; }
+.badge { font-size: 22rpx; padding: 4rpx 16rpx; border: 1rpx solid; border-radius: 999rpx; }
+.meta { margin-top: 12rpx; font-size: 24rpx; color: #5a6a7a; }
+.dot { margin: 0 12rpx; color: #a0aab4; }
+.alerts { margin-top: 12rpx; display: flex; gap: 12rpx; }
+.alert { font-size: 22rpx; padding: 4rpx 12rpx; border-radius: 6rpx; }
+.alert.reject { background: rgba(224,89,42,0.1); color: #e0592a; }
+.alert.escalate { background: rgba(212,160,48,0.12); color: #d4a030; }
+</style>
