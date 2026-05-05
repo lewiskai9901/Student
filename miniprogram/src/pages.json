@@ -38,6 +38,24 @@
       "pages": [
         "pages/hello"
       ]
+    },
+    {
+      "root": "plugins/healthcare",
+      "pages": [
+        "pages/index"
+      ]
+    },
+    {
+      "root": "plugins/inspection",
+      "pages": [
+        "pages/my-tasks",
+        "pages/task-detail",
+        "pages/scan-landing",
+        "pages/available-tasks",
+        "pages/my-corrections",
+        "pages/correction-detail",
+        "pages/my-appeals"
+      ]
     }
   ],
   "tabBar": {
