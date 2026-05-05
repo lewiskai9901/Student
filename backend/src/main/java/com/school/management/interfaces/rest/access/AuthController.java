@@ -44,6 +44,7 @@ public class AuthController {
     private final UserDomainMapper userDomainMapper;
     private final RedisTemplate<String, Object> redisTemplate;
     private final JdbcTemplate jdbcTemplate;
+    private final com.school.management.infrastructure.extension.TenantPluginService tenantPluginService;
 
     @PostMapping("/login")
     @Operation(summary = "用户登录")
@@ -167,11 +168,15 @@ public class AuthController {
 
     private LoginResponse buildLoginResponse(String accessToken, String refreshToken,
                                               CustomUserDetails userDetails, UserPO user) {
+        java.util.Set<String> enabledPlugins = userDetails.getTenantId() != null
+                ? tenantPluginService.enabledPlugins(userDetails.getTenantId())
+                : java.util.Set.of();
         return LoginResponse.builder()
                 .accessToken(accessToken)
                 .refreshToken(refreshToken)
                 .tokenType("Bearer")
                 .expiresIn(7200L)
+                .enabledPlugins(new java.util.ArrayList<>(enabledPlugins))
                 .userInfo(buildUserInfo(userDetails, user))
                 .build();
     }

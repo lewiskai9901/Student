@@ -18,6 +18,11 @@ public class LoginResponse {
     private String refreshToken;
     private String tokenType;
     private Long expiresIn;
+    /**
+     * 当前租户启用的插件 code 列表（来自 TenantPluginService.enabledPlugins）。
+     * 租户作用域，非用户作用域。小程序端用其驱动 dispatcher.activatePlugins。
+     */
+    private List<String> enabledPlugins;
     private UserInfo userInfo;
 
     @Data
