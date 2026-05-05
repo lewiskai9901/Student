@@ -1,9 +1,12 @@
-import { defineConfig } from 'vite'
-import uni from '@dcloudio/vite-plugin-uni'
+import { defineConfig } from 'vitest/config'
 import { resolve } from 'path'
 
 export default defineConfig({
-  plugins: [uni()],
+  test: {
+    environment: 'node',
+    globals: true,
+    include: ['src/**/*.{test,spec}.ts', 'scripts/**/*.test.{js,ts}']
+  },
   resolve: {
     alias: {
       '@': resolve(__dirname, 'src'),
