@@ -809,6 +809,17 @@ const routes: RouteRecordRaw[] = [
             }
           },
           {
+            path: '/system/design-system',
+            name: 'SystemDesignSystem',
+            component: () => import('@/views/system/DesignSystemView.vue'),
+            meta: {
+              title: '设计系统',
+              requiresAuth: true,
+              permission: 'system:config:view',
+              order: 9
+            }
+          },
+          {
             path: '/system/semesters',
             name: 'SystemSemesters',
             component: () => import('@/views/system/SemesterView.vue'),

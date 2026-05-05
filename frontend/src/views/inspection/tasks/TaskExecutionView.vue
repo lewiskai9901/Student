@@ -36,6 +36,7 @@ import PersonScoreGrid from './components/PersonScoreGrid.vue'
 import EventStreamRecorder from './components/EventStreamRecorder.vue'
 import AiSuggestionDialog from './components/AiSuggestionDialog.vue'
 import CorrectiveCandidatesDialog from './components/CorrectiveCandidatesDialog.vue'
+import TaskBanners from './components/TaskBanners.vue'
 import { getRecurrenceForSubject } from '@/api/inspection/correctiveCase'
 import type { SuggestScoreResponse } from '@/api/inspection/aiScoring'
 
@@ -1212,22 +1213,8 @@ function recurOf(itemCode?: string | null): number {
   return recurrenceMap.value[itemCode]?.recurCount || 0
 }
 
-// V110: 项目整改策略 banner
+// V110: 项目整改策略 banner (UI 拆到 TaskBanners.vue)
 const policyStrictness = ref<string | null>(null)
-function policyLabel(s: string): string {
-  return s === 'STRICT' ? '严格 (自动建单)'
-       : s === 'NORMAL' ? '标准 (引擎建议+确认)'
-       : s === 'LENIENT' ? '宽松 (仅严重)'
-       : s === 'OFF' ? '关闭 (人工)'
-       : ''
-}
-function policyHint(s: string): string {
-  return s === 'STRICT' ? '提交后任何不达标都会自动建立整改单'
-       : s === 'NORMAL' ? '提交后会弹出整改候选确认对话框, 你可勾选/跳过'
-       : s === 'LENIENT' ? '只有 HIGH 级别问题会建议建单'
-       : s === 'OFF' ? '不会自动判定, 整改单需手动建立'
-       : ''
-}
 async function loadPolicyForBanner() {
   if (!task.value?.projectId) return
   try {
@@ -1428,29 +1415,13 @@ onMounted(() => loadData())
       </div>
     </div>
 
-    <!-- V110: 项目策略提示 banner -->
-    <div v-if="policyStrictness" class="policy-banner" :class="`policy-${policyStrictness.toLowerCase()}`">
-      <span class="policy-icon">●</span>
-      <span class="policy-text">
-        本项目整改策略:
-        <strong>{{ policyLabel(policyStrictness) }}</strong>
-        ·
-        {{ policyHint(policyStrictness) }}
-      </span>
-    </div>
-
-    <!-- ===== 上次同类问题提示 ===== -->
-    <div v-if="prevIssuesHint.length" class="prev-issues-banner">
-      <span class="prev-icon">!</span>
-      <span class="prev-text">
-        上次检查 ({{ prevIssuesDate }}) 在该目标存在 {{ prevIssuesHint.length }} 个扣分项,
-        优先关注:
-        <span v-for="(p, i) in prevIssuesHint.slice(0, 3)" :key="i" class="prev-pill">
-          {{ p.itemName }}
-        </span>
-      </span>
-      <button class="prev-dismiss" @click="prevIssuesHint = []">×</button>
-    </div>
+    <!-- V110 + 上次问题提示 banners (拆分到 TaskBanners 子组件) -->
+    <TaskBanners
+      :policy-strictness="policyStrictness"
+      :prev-issues="prevIssuesHint"
+      :prev-issues-date="prevIssuesDate"
+      @dismiss-prev-issues="prevIssuesHint = []"
+    />
 
     <!-- ===== MAIN BODY ===== -->
     <div class="main-body">
@@ -1752,30 +1723,9 @@ onMounted(() => loadData())
 </template>
 
 <style scoped>
-/* ===== 上次问题提示 banner ===== */
-.prev-issues-banner {
-  display: flex; align-items: center; gap: 10px;
-  padding: 10px 16px;
-  background: linear-gradient(90deg, #fffbeb, #fef3c7);
-  border-bottom: 1px solid #fcd34d;
-  font-size: 13px; color: #92400e;
-}
+/* policy-banner / prev-issues-banner 样式已迁至 TaskBanners.vue */
 
-/* V110 项目策略 banner */
-.policy-banner {
-  display: flex; align-items: center; gap: 10px;
-  padding: 6px 16px;
-  border-bottom: 1px solid;
-  font-size: 12px;
-}
-.policy-strict  { background: #fef2f2; color: #991b1b; border-color: #fecaca; }
-.policy-normal  { background: #faf5ff; color: #6d28d9; border-color: #ddd6fe; }
-.policy-lenient { background: #f0fdf4; color: #047857; border-color: #bbf7d0; }
-.policy-off     { background: #f9fafb; color: #6b7280; border-color: #e5e7eb; }
-.policy-icon { font-size: 8px; }
-.policy-text strong { font-weight: 600; }
-
-/* V110 复发警示 chip (打分卡片) */
+/* V110 复发警示 chip (打分卡片仍在本视图) */
 .recur-chip {
   display: inline-block;
   padding: 1px 7px;
@@ -1793,20 +1743,6 @@ onMounted(() => loadData())
   0%, 100% { background: #fee2e2; }
   50%      { background: #fecaca; }
 }
-.prev-icon { font-size: 16px; }
-.prev-text { flex: 1; line-height: 1.5; }
-.prev-pill {
-  display: inline-block; margin: 0 4px;
-  padding: 2px 8px; background: rgba(255,255,255,0.7);
-  border: 1px solid #fcd34d; border-radius: 10px;
-  font-weight: 500; color: #78350f;
-}
-.prev-dismiss {
-  width: 22px; height: 22px; border-radius: 11px;
-  border: none; background: rgba(0,0,0,0.05); color: #78350f;
-  cursor: pointer; font-size: 14px; line-height: 1;
-}
-.prev-dismiss:hover { background: rgba(0,0,0,0.1); }
 
 /* ===== Root ===== */
 .exec-root {
