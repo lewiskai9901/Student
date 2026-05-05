@@ -7,6 +7,7 @@
 <script setup lang="ts">
 import { computed, onMounted } from 'vue'
 import { useConfigStore } from '@/stores/config'
+import { themeApi } from '@/composables/useTheme'
 
 const configStore = useConfigStore()
 
@@ -14,6 +15,9 @@ const configStore = useConfigStore()
 const themeStyle = computed(() => ({
   '--el-color-primary': configStore.themeColor
 }))
+
+// Phase 5: 应用启动立即初始化主题 (light/dark/system) 避免 FOUC
+themeApi.init()
 
 // 加载配置
 onMounted(async () => {

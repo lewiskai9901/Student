@@ -9,6 +9,17 @@
           替代 Storybook (~200MB 依赖) 的轻量展示, 集成到应用内, 修改 token 实时反映.
         </p>
       </div>
+      <div class="ds-theme-switch">
+        <span class="ds-theme-label">主题:</span>
+        <button
+          v-for="opt in themeOptions" :key="opt.value"
+          class="ds-theme-btn"
+          :class="{ 'is-active': theme === opt.value }"
+          @click="setTheme(opt.value)"
+        >
+          {{ opt.label }}
+        </button>
+      </div>
     </header>
 
     <!-- ─── 设计 token ─── -->
@@ -142,8 +153,15 @@
 import { computed } from 'vue'
 import { useEntityLabel } from '@/composables/useEntityLabel'
 import { hasFeature } from '@/composables/useFeature'
+import { useTheme } from '@/composables/useTheme'
 
 const { labels } = useEntityLabel()
+const { theme, setTheme } = useTheme()
+const themeOptions = [
+  { value: 'light' as const, label: '浅色' },
+  { value: 'dark' as const, label: '深色' },
+  { value: 'system' as const, label: '跟随系统' },
+]
 
 const activeIndustry = computed(() => {
   if (hasFeature('EDU')) return 'EDU (学校场景)'
@@ -175,9 +193,38 @@ const chipVariants = ['default', 'pass', 'warn', 'fail', 'pending', 'info', 'neu
   margin: 0 auto;
 }
 .ds-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 24px;
   padding: 16px 0 24px;
   border-bottom: 1px solid #e5e7eb;
   margin-bottom: 24px;
+}
+.ds-theme-switch {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: #6b7280;
+  flex-shrink: 0;
+}
+.ds-theme-label { color: #9ca3af; }
+.ds-theme-btn {
+  padding: 4px 10px;
+  border: 1px solid #e5e7eb;
+  background: #fff;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 12px;
+  color: #4b5563;
+  transition: all 0.15s;
+}
+.ds-theme-btn:hover { border-color: #93c5fd; color: #1e40af; }
+.ds-theme-btn.is-active {
+  background: #1f2937;
+  color: #fff;
+  border-color: #1f2937;
 }
 .ds-eyebrow { font-size: 11px; color: #9ca3af; letter-spacing: 0.05em; }
 .ds-title { font-size: 26px; font-weight: 700; color: #111827; margin: 6px 0; }

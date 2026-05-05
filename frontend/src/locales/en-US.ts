@@ -1,0 +1,57 @@
+/**
+ * English translations — keys mirror zh-CN.ts. Missing keys fall back to zh-CN.
+ */
+export default {
+  common: {
+    confirm: 'Confirm',
+    cancel: 'Cancel',
+    save: 'Save',
+    delete: 'Delete',
+    edit: 'Edit',
+    add: 'Add',
+    refresh: 'Refresh',
+    loading: 'Loading...',
+    empty: 'No data',
+    success: 'Success',
+    error: 'Failed',
+    backToHome: 'Back to Home',
+    confirmDelete: 'Confirm delete?',
+  },
+  inspection: {
+    project: 'Inspection Project',
+    task: 'Inspection Task',
+    template: 'Template',
+    submission: 'Submission',
+    correctiveCase: 'Corrective Case',
+    score: 'Score',
+    pass: 'Pass',
+    fail: 'Fail',
+  },
+  corrective: {
+    candidates: 'Corrective Candidates',
+    confirmAll: 'Confirm All',
+    skipAll: 'Skip All',
+    severityHigh: 'High',
+    severityMedium: 'Medium',
+    severityLow: 'Low',
+    severityNone: 'None',
+    sourceEngine: 'Engine Suggested',
+    sourceManual: 'Manual',
+    strictnessStrict: 'Strict',
+    strictnessNormal: 'Normal',
+    strictnessLenient: 'Lenient',
+    strictnessOff: 'Off',
+  },
+  received: {
+    title: 'My Inspection Hub',
+    inspections: 'My Inspection Records',
+    trends: 'Inspection Trends',
+    recurring: 'Recurring Issues',
+    summary: 'Summary',
+  },
+  theme: {
+    light: 'Light',
+    dark: 'Dark',
+    system: 'System',
+  },
+}

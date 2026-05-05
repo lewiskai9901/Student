@@ -401,3 +401,70 @@
     animation-iteration-count: 1 !important;
   }
 }
+
+/* ============================================================
+ * Phase 5 — Dark mode (data-theme="dark" 切换)
+ *
+ * 用法: <html data-theme="dark"> 或 useTheme().toggle()
+ * 反转灰阶 + 深色表面 + 调亮的语义色, 保留 accent 系列.
+ * ============================================================ */
+html[data-theme='dark'] {
+  /* 灰阶反转 */
+  --insp-gray-50:  #0f172a;
+  --insp-gray-100: #1e293b;
+  --insp-gray-200: #334155;
+  --insp-gray-300: #475569;
+  --insp-gray-400: #64748b;
+  --insp-gray-500: #94a3b8;
+  --insp-gray-600: #cbd5e1;
+  --insp-gray-700: #e2e8f0;
+  --insp-gray-800: #f1f5f9;
+  --insp-gray-900: #f8fafc;
+
+  /* 表面 (深色优化, 不直接复用反转灰阶以避免对比度过强) */
+  --insp-bg-page: #0f172a;
+  --insp-bg-surface: #1e293b;
+  --insp-bg-subtle: #1e293b;
+  --insp-bg-sunken: #0b1220;
+  --insp-bg-overlay: rgba(0, 0, 0, 0.6);
+
+  /* 文字 — 提高亮度对比度 */
+  --insp-ink-primary: #f1f5f9;
+  --insp-ink-secondary: #cbd5e1;
+  --insp-ink-tertiary: #94a3b8;
+  --insp-ink-quaternary: #64748b;
+  --insp-ink-disabled: #475569;
+
+  /* 边框 — 在深色下更接近表面色 */
+  --insp-border-subtle: #1e293b;
+  --insp-border-default: #334155;
+  --insp-border-strong: #475569;
+  --insp-border-ink: #94a3b8;
+
+  /* 语义色 — 调亮以适配深色背景 */
+  --insp-accent: #60a5fa;
+  --insp-accent-hover: #93c5fd;
+  --insp-accent-active: #3b82f6;
+  --insp-accent-pale: #1e3a8a;
+  --insp-accent-paler: #172554;
+
+  --insp-pass: #34d399;
+  --insp-pass-pale: #064e3b;
+  --insp-pass-border: #047857;
+
+  --insp-warn: #fbbf24;
+  --insp-warn-pale: #78350f;
+  --insp-warn-border: #b45309;
+
+  --insp-fail: #f87171;
+  --insp-fail-pale: #7f1d1d;
+  --insp-fail-border: #b91c1c;
+
+  /* 阴影 — 暗色下更深更扩散 */
+  --insp-shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.35);
+  --insp-shadow-sm: var(--insp-shadow-xs);
+  --insp-shadow-md: 0 4px 12px rgba(0, 0, 0, 0.4);
+  --insp-shadow-lg: 0 12px 28px rgba(0, 0, 0, 0.5);
+  --insp-shadow-press: inset 0 1px 2px rgba(0, 0, 0, 0.4);
+  --insp-shadow-focus: 0 0 0 3px rgba(96, 165, 250, 0.4);
+}
