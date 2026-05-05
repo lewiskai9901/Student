@@ -179,6 +179,13 @@ jobs:
         working-directory: ./frontend
         run: npm run type-check:ceiling
 
+      # Phase 6 (2026-05-05 前端冲 A+ 收官): vitest 单测必须全绿
+      # 当前 12 文件 / 155 例, 含 useFeature/useEntityLabel/useTheme/useI18n/
+      # sectionTree/token/date/RiskMatrixEditor 等核心 composable 与组件
+      - name: Run vitest unit tests
+        working-directory: ./frontend
+        run: npm run test
+
       - name: Build frontend
         working-directory: ./frontend
         run: npm run build
