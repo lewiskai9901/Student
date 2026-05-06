@@ -1,5 +1,5 @@
 import { requestWrapped } from '@core/api/request'
-import type { InspTask, CorrectiveCase, InspAppeal } from './types'
+import type { InspTask, CorrectiveCase, InspAppeal, InspEvidence, EvidenceType } from './types'
 
 export const inspectionApi = {
   // ===== Reads =====
@@ -27,10 +27,18 @@ export const inspectionApi = {
       url: `/inspection/corrective-cases/${id}/start-work`,
       method: 'POST'
     }),
-  submitCorrection: (id: number, correctionNote: string) =>
+  submitCorrection: (id: number, correctionNote: string, evidenceIds: number[] = []) =>
     requestWrapped<CorrectiveCase>({
       url: `/inspection/corrective-cases/${id}/submit-correction`,
       method: 'POST',
-      data: { correctionNote, evidenceIds: [] }
-    })
+      data: { correctionNote, evidenceIds }
+    }),
+  addEvidence: (
+    submissionId: number,
+    body: { detailId?: number; evidenceType: EvidenceType; fileName: string; fileUrl: string }
+  ) => requestWrapped<InspEvidence>({
+    url: `/inspection/submissions/${submissionId}/evidences`,
+    method: 'POST',
+    data: body
+  })
 }
