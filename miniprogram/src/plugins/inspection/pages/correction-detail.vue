@@ -1,32 +1,102 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, computed } from 'vue'
 import { onLoad } from '@dcloudio/uni-app'
 import { inspectionApi } from '../api/inspection'
 import { BizError } from '@core/api/request'
+import { useAuth } from '@core/stores/auth'
+import { usePluginRegistry } from '@core/stores/plugin-registry'
 import type { CorrectiveCase } from '../api/types'
 import { caseStatusLabel, caseStatusColor, formatDateTime } from '../utils/format'
 
 declare const uni: any
 
+const auth = useAuth()
+const registry = usePluginRegistry()
 const c = ref<CorrectiveCase | null>(null)
 const loading = ref(true)
+const submitting = ref(false)
 const errMsg = ref('')
+const note = ref('')
+let caseId = 0
 
 onLoad(async (query: any) => {
-  const id = Number(query?.id)
-  if (!Number.isFinite(id) || id <= 0) {
+  caseId = Number(query?.id)
+  if (!Number.isFinite(caseId) || caseId <= 0) {
     errMsg.value = '整改单 ID 缺失或非法'
     loading.value = false
     return
   }
+  await reload()
+})
+
+async function reload() {
+  loading.value = true
+  errMsg.value = ''
   try {
-    c.value = await inspectionApi.caseById(id)
+    c.value = await inspectionApi.caseById(caseId)
   } catch (e) {
     errMsg.value = e instanceof BizError ? e.bizMessage : '加载失败'
   } finally {
     loading.value = false
   }
+}
+
+const action = computed<'start' | 'submit' | null>(() => {
+  switch (c.value?.status) {
+    case 'PENDING':
+    case 'ASSIGNED':
+      return 'start'
+    case 'IN_PROGRESS':
+    case 'REJECTED':
+      return 'submit'
+    default:
+      return null
+  }
 })
+
+async function doStart() {
+  if (submitting.value) return
+  if (!auth.user) { uni.showToast({ title: '请先登录', icon: 'none' }); return }
+  submitting.value = true
+  try {
+    await inspectionApi.startCaseWork(caseId)
+    uni.showToast({ title: '已开始处理', icon: 'none' })
+    await reload()
+  } catch (e) {
+    if (e instanceof BizError) {
+      uni.showToast({ title: e.bizMessage, icon: 'none' })
+      await reload()
+    } else {
+      uni.showToast({ title: '操作失败', icon: 'none' })
+    }
+  } finally {
+    submitting.value = false
+  }
+}
+
+async function doSubmit() {
+  if (submitting.value) return
+  if (!auth.user) { uni.showToast({ title: '请先登录', icon: 'none' }); return }
+  const trimmed = note.value.trim()
+  if (trimmed.length < 5) { uni.showToast({ title: '整改说明至少 5 字', icon: 'none' }); return }
+  if (trimmed.length > 1000) { uni.showToast({ title: '整改说明最多 1000 字', icon: 'none' }); return }
+  submitting.value = true
+  try {
+    await inspectionApi.submitCorrection(caseId, trimmed)
+    registry.bus.emit('inspection.case.processed', { caseId, action: 'submitted' })
+    uni.showToast({ title: '已提交', icon: 'none' })
+    uni.reLaunch({ url: '/plugins/inspection/pages/my-corrections' })
+  } catch (e) {
+    if (e instanceof BizError) {
+      uni.showToast({ title: e.bizMessage, icon: 'none' })
+      await reload()
+    } else {
+      uni.showToast({ title: '操作失败', icon: 'none' })
+    }
+  } finally {
+    submitting.value = false
+  }
+}
 </script>
 
 <template>
@@ -66,8 +136,22 @@ onLoad(async (query: any) => {
         <view v-if="c.verifiedAt" class="kv"><text class="k">核实时间</text><text class="v">{{ formatDateTime(c.verifiedAt) }}</text></view>
       </view>
 
-      <view class="actions">
-        <wd-button block disabled>提交整改 (Phase D)</wd-button>
+      <view v-if="action === 'start'" class="actions">
+        <wd-button block :loading="submitting" @click="doStart">开始处理</wd-button>
+      </view>
+
+      <view v-else-if="action === 'submit'" class="submit-card">
+        <view class="card-title">整改说明 <text class="hint">(5-1000 字)</text></view>
+        <textarea
+          v-model="note"
+          class="note"
+          placeholder="描述本次整改情况"
+          maxlength="1000"
+          auto-height
+        />
+        <view class="actions">
+          <wd-button block :loading="submitting" @click="doSubmit">提交整改</wd-button>
+        </view>
       </view>
     </template>
   </view>
@@ -88,4 +172,7 @@ onLoad(async (query: any) => {
 .k { width: 160rpx; color: #5a6a7a; }
 .v { flex: 1; color: #1a2840; word-break: break-all; }
 .actions { margin-top: 24rpx; }
+.submit-card { background: #fff; border-radius: 14px; padding: 24rpx; margin-top: 16rpx; box-shadow: 0 2px 6px rgba(58,123,213,0.06); }
+.hint { color: #a0aab4; font-weight: 400; font-size: 22rpx; margin-left: 8rpx; }
+.note { width: 100%; min-height: 200rpx; padding: 16rpx; border: 1rpx solid #e0e6ee; border-radius: 8px; font-size: 26rpx; color: #1a2840; box-sizing: border-box; }
 </style>
