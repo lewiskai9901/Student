@@ -1,32 +1,90 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, computed } from 'vue'
 import { onLoad } from '@dcloudio/uni-app'
 import { inspectionApi } from '../api/inspection'
 import { BizError } from '@core/api/request'
+import { useAuth } from '@core/stores/auth'
+import { usePluginRegistry } from '@core/stores/plugin-registry'
 import type { InspTask } from '../api/types'
 import { taskStatusLabel, taskStatusColor, formatDateTime } from '../utils/format'
 
 declare const uni: any
 
+const auth = useAuth()
+const registry = usePluginRegistry()
 const task = ref<InspTask | null>(null)
 const loading = ref(true)
+const submitting = ref(false)
 const errMsg = ref('')
+let taskId = 0
 
 onLoad(async (query: any) => {
-  const id = Number(query?.id)
-  if (!Number.isFinite(id) || id <= 0) {
+  taskId = Number(query?.id)
+  if (!Number.isFinite(taskId) || taskId <= 0) {
     errMsg.value = '任务 ID 缺失或非法'
     loading.value = false
     return
   }
+  await reload()
+})
+
+async function reload() {
+  loading.value = true
+  errMsg.value = ''
   try {
-    task.value = await inspectionApi.taskById(id)
+    task.value = await inspectionApi.taskById(taskId)
   } catch (e) {
     errMsg.value = e instanceof BizError ? e.bizMessage : '加载失败'
   } finally {
     loading.value = false
   }
+}
+
+const action = computed<'claim' | 'start' | 'submit' | null>(() => {
+  switch (task.value?.status) {
+    case 'PENDING': return 'claim'
+    case 'CLAIMED': return 'start'
+    case 'IN_PROGRESS': return 'submit'
+    default: return null
+  }
 })
+
+const actionLabel = computed(() => {
+  if (action.value === 'claim') return '认领任务'
+  if (action.value === 'start') return '开始执行'
+  if (action.value === 'submit') return '提交检查'
+  return ''
+})
+
+async function doAction() {
+  if (!action.value || submitting.value) return
+  submitting.value = true
+  try {
+    if (action.value === 'claim') {
+      const name = auth.user?.name || auth.user?.username || ''
+      if (!name) { uni.showToast({ title: '未取到当前用户名', icon: 'none' }); return }
+      await inspectionApi.claimTask(taskId, name)
+      uni.showToast({ title: '已认领', icon: 'none' })
+      await reload()
+    } else if (action.value === 'start') {
+      await inspectionApi.startTask(taskId)
+      uni.showToast({ title: '已开始', icon: 'none' })
+      await reload()
+    } else if (action.value === 'submit') {
+      await inspectionApi.submitTask(taskId)
+      registry.bus.emit('inspection.task.submitted', {
+        taskId,
+        submitterId: auth.user?.id ?? 0
+      })
+      uni.showToast({ title: '已提交', icon: 'none' })
+      uni.reLaunch({ url: '/plugins/inspection/pages/my-tasks' })
+    }
+  } catch (e) {
+    uni.showToast({ title: e instanceof BizError ? e.bizMessage : '操作失败', icon: 'none' })
+  } finally {
+    submitting.value = false
+  }
+}
 </script>
 
 <template>
@@ -54,8 +112,8 @@ onLoad(async (query: any) => {
         <view class="kv"><text class="k">截止时间</text><text class="v">{{ formatDateTime(task.deadline) }}</text></view>
       </view>
 
-      <view class="actions">
-        <wd-button block disabled>提交检查 (Phase D)</wd-button>
+      <view v-if="action" class="actions">
+        <wd-button block :loading="submitting" @click="doAction">{{ actionLabel }}</wd-button>
       </view>
     </template>
   </view>
