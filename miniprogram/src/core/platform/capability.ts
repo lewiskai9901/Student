@@ -8,6 +8,14 @@ export interface UploadOpts { url: string; name: string; formData?: Record<strin
 export interface RemoteFile { url: string; key: string }
 export interface SubscribeResult { [templateId: string]: 'accept' | 'reject' | 'ban' | 'filter' }
 export interface SystemInfo { platform: string; sdkVersion: string }
+export interface WatermarkOpts {
+  canvasId: string
+  text: string
+  position?: 'bottom-right' | 'bottom-left' | 'top-right' | 'top-left'
+  fontSize?: number
+  color?: string
+  shadowColor?: string
+}
 
 export interface KVStorage {
   get<T = unknown>(key: string): T | undefined
@@ -22,6 +30,7 @@ export interface PlatformCapability {
   getLocation(opts?: LocationOpts): Promise<Location>
   takePhoto(opts: PhotoOpts): Promise<LocalFile[]>
   uploadFile(file: LocalFile, opts: UploadOpts): Promise<RemoteFile>
+  watermarkImage(file: LocalFile, opts: WatermarkOpts): Promise<LocalFile>
   requestSubscribeMessage(templateIds: string[]): Promise<SubscribeResult>
   storage: KVStorage
   systemInfo(): SystemInfo

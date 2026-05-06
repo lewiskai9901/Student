@@ -10,6 +10,9 @@ const uniMock = {
   setStorageSync: vi.fn(),
   removeStorageSync: vi.fn(),
   requestSubscribeMessage: vi.fn(),
+  getImageInfo: vi.fn(),
+  createCanvasContext: vi.fn(),
+  canvasToTempFilePath: vi.fn(),
   getSystemInfoSync: vi.fn(() => ({ platform: 'devtools', SDKVersion: '3.0.0' }))
 }
 ;(globalThis as any).uni = uniMock
@@ -59,6 +62,51 @@ describe('Weixin PlatformCapability', () => {
     const cap = createWeixinCapability()
     await expect(cap.uploadFile({ path: '/p', size: 1 }, { url: '/u', name: 'f' }))
       .rejects.toThrow(/HTTP 500/)
+  })
+
+  it('watermarkImage rejects when canvasId is empty', async () => {
+    const cap = createWeixinCapability()
+    await expect(
+      cap.watermarkImage({ path: 'x.jpg', size: 1 }, { canvasId: '', text: 't' })
+    ).rejects.toThrow(/canvasId/)
+  })
+
+  it('watermarkImage rejects when text is empty', async () => {
+    const cap = createWeixinCapability()
+    await expect(
+      cap.watermarkImage({ path: 'x.jpg', size: 1 }, { canvasId: 'c', text: '   ' })
+    ).rejects.toThrow(/text/)
+  })
+
+  it('watermarkImage happy path: getImageInfo → draw → canvasToTempFilePath', async () => {
+    uniMock.getImageInfo = vi.fn((opts: any) => opts.success({ path: 'resolved/x.jpg', width: 800, height: 600 }))
+    uniMock.canvasToTempFilePath = vi.fn((opts: any) => opts.success({ tempFilePath: '/tmp/wm-out.jpg' }))
+    const drawCalls: any[] = []
+    const ctxStub = {
+      drawImage: vi.fn(),
+      setFontSize: vi.fn(),
+      setFillStyle: vi.fn(),
+      setShadow: vi.fn(),
+      fillText: vi.fn(),
+      draw: vi.fn((reserve: boolean, cb: () => void) => { drawCalls.push({reserve}); cb() })
+    }
+    uniMock.createCanvasContext = vi.fn(() => ctxStub)
+
+    const cap = createWeixinCapability()
+    const result = await cap.watermarkImage(
+      { path: 'in.jpg', size: 99 },
+      { canvasId: 'wm', text: '2026-05-07 12:00 张三' }
+    )
+
+    expect(uniMock.getImageInfo).toHaveBeenCalled()
+    expect(uniMock.createCanvasContext).toHaveBeenCalledWith('wm')
+    expect(ctxStub.drawImage).toHaveBeenCalledWith('resolved/x.jpg', 0, 0, 800, 600)
+    expect(ctxStub.fillText).toHaveBeenCalled()
+    expect(drawCalls).toEqual([{reserve: false}])
+    expect(uniMock.canvasToTempFilePath).toHaveBeenCalledWith(
+      expect.objectContaining({ canvasId: 'wm' })
+    )
+    expect(result).toEqual({ path: '/tmp/wm-out.jpg', size: 99 })
   })
 
   it('requestSubscribeMessage() strips errMsg from result', async () => {
