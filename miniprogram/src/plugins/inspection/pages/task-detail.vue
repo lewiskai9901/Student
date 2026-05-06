@@ -58,11 +58,12 @@ const actionLabel = computed(() => {
 
 async function doAction() {
   if (!action.value || submitting.value) return
+  if (!auth.user) { uni.showToast({ title: '请先登录', icon: 'none' }); return }
+  const name = auth.user.name || auth.user.username || ''
+  if (!name) { uni.showToast({ title: '未取到当前用户名', icon: 'none' }); return }
   submitting.value = true
   try {
     if (action.value === 'claim') {
-      const name = auth.user?.name || auth.user?.username || ''
-      if (!name) { uni.showToast({ title: '未取到当前用户名', icon: 'none' }); return }
       await inspectionApi.claimTask(taskId, name)
       uni.showToast({ title: '已认领', icon: 'none' })
       await reload()
@@ -74,13 +75,18 @@ async function doAction() {
       await inspectionApi.submitTask(taskId)
       registry.bus.emit('inspection.task.submitted', {
         taskId,
-        submitterId: auth.user?.id ?? 0
+        submitterId: auth.user.id
       })
       uni.showToast({ title: '已提交', icon: 'none' })
       uni.reLaunch({ url: '/plugins/inspection/pages/my-tasks' })
     }
   } catch (e) {
-    uni.showToast({ title: e instanceof BizError ? e.bizMessage : '操作失败', icon: 'none' })
+    if (e instanceof BizError) {
+      uni.showToast({ title: e.bizMessage, icon: 'none' })
+      await reload()
+    } else {
+      uni.showToast({ title: '操作失败', icon: 'none' })
+    }
   } finally {
     submitting.value = false
   }

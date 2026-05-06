@@ -33,7 +33,7 @@ onShow(() => { load() })
 
 <template>
   <view class="page">
-    <view class="hint">下面是当前可领取的任务,认领功能将在后续版本上线。</view>
+    <view class="hint">下面是当前可领取的任务,点击进入查看详情。</view>
 
     <view v-if="loading" class="state">加载中…</view>
     <view v-else-if="errMsg" class="state err">{{ errMsg }}</view>
