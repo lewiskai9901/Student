@@ -327,11 +327,7 @@
       <!-- 页面内容 -->
       <main class="flex-1 overflow-auto">
         <div class="p-6 min-h-full">
-          <router-view v-slot="{ Component }">
-            <Transition name="fade" mode="out-in">
-              <component :is="Component" />
-            </Transition>
-          </router-view>
+          <router-view :key="$route.fullPath" />
         </div>
       </main>
     </div>

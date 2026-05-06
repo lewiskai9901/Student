@@ -19,10 +19,11 @@ spring:
     password: ${DB_PASSWORD}
     druid:
       # 连接池配置优化
-      initial-size: 10          # 初始连接数从5增加到10
-      min-idle: 10              # 最小空闲连接数从5增加到10
-      max-active: 50            # 最大活跃连接数从20增加到50
-      max-wait: 10000           # 最大等待时间从60秒减少到10秒
+      initial-size: 10          # 初始连接数
+      min-idle: 10              # 最小空闲连接数
+      max-active: 50            # 最大活跃连接数
+      max-wait: 3000            # 最大等待时间 3s (fail-fast, 不让 client 长等假死)
+      keep-alive: true          # 周期性 ping 闲置连接, 防 NAT/防火墙切断后假死连接 (Day 2 #5)
 
       # 连接保活配置
       time-between-eviction-runs-millis: 60000      # 60秒检测一次空闲连接
@@ -65,7 +66,7 @@ spring:
 
       # 连接泄漏检测
       remove-abandoned: true                          # 开启连接泄漏检测
-      remove-abandoned-timeout: 1800                  # 30分钟未关闭的连接视为泄漏
+      remove-abandoned-timeout: 300                   # 5 分钟未关闭的连接视为泄漏 (从 30min 缩短, 更快自愈, Day 2 #5)
       log-abandoned: true                             # 记录泄漏连接的堆栈信息
 
   # Redis配置

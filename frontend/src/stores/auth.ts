@@ -137,17 +137,32 @@ export const useAuthStore = defineStore('auth', () => {
     return userRoles.value.includes(role)
   }
 
-  // 初始化认证状态
-  const initAuth = () => {
+  // 初始化认证状态（自愈：token 有效但 user_info 缺失时 fetch /me 补齐）
+  const initAuth = async () => {
     const savedToken = getToken()
-    const savedRefreshToken = tokenStorage.getRefreshToken()
-    const savedUserInfo = tokenStorage.getUserInfo<LoginResponse['userInfo']>()
+    if (!savedToken || isTokenExpired(savedToken)) return
 
-    if (savedToken && savedRefreshToken && savedUserInfo) {
-      token.value = savedToken
-      refreshTokenValue.value = savedRefreshToken
+    token.value = savedToken
+    const savedRefreshToken = tokenStorage.getRefreshToken()
+    if (savedRefreshToken) refreshTokenValue.value = savedRefreshToken
+
+    const savedUserInfo = tokenStorage.getUserInfo<LoginResponse['userInfo']>()
+    if (savedUserInfo) {
       user.value = savedUserInfo
       permissions.value = user.value?.permissions || []
+      tenantId.value = savedUserInfo.tenantId
+      tenantName.value = savedUserInfo.tenantName
+      return
+    }
+
+    // token 仍有效但 user_info 丢失（被清/storage event/版本切换），fetch /me 补齐
+    try {
+      await getCurrentUserInfo()
+      tenantId.value = user.value?.tenantId
+      tenantName.value = user.value?.tenantName
+    } catch (e) {
+      console.warn('initAuth: token 有效但 /me 失败, 清空本地状态', e)
+      clearLocalAuthState()
     }
   }
 

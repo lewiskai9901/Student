@@ -29,9 +29,10 @@ installErrorReporter(app)
 app.use(createPinia())
 
 const authStore = useAuthStore()
-authStore.initAuth()
 
 async function bootstrap() {
+  // initAuth 现在是 async 且自愈: token 有效但 user_info 丢失时 fetch /me 补齐
+  await authStore.initAuth()
   // Phase 4A: 已登录则预装启用的插件路由 (未登录时 bootstrap 会静默 401 跳过)
   if (authStore.isAuthenticated) {
     await loadEnabledPlugins(router)

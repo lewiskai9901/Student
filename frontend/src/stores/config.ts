@@ -19,8 +19,8 @@ interface SystemConfigItem {
  * 用于管理从后端加载的系统配置
  */
 export const useConfigStore = defineStore('config', () => {
-  // 系统配置
-  const systemName = ref('学生管理系统')
+  // 系统配置 — 通用平台默认名, 行业可通过后台 system_config 覆盖
+  const systemName = ref('通用管理平台')
   const systemVersion = ref('1.0.0')
   const systemLogo = ref('/logo.png')
   const systemCopyright = ref('Copyright © 2025')
@@ -162,7 +162,7 @@ export const useConfigStore = defineStore('config', () => {
         systemConfigs.forEach((config: SystemConfigItem) => {
           switch (config.configKey) {
             case 'system.name':
-              systemName.value = config.configValue || '学生管理系统'
+              systemName.value = config.configValue || '通用管理平台'
               break
             case 'system.version':
               systemVersion.value = config.configValue || '1.0.0'

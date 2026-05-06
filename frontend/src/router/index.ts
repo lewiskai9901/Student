@@ -1099,9 +1099,15 @@ const router = createRouter({
 router.beforeEach(async (to, from, next) => {
   const authStore = useAuthStore()
 
-  // 设置页面标题
+  // 设置页面标题 — 系统名取自 configStore (后台 system_config 可覆盖)
   if (to.meta?.title) {
-    document.title = `${to.meta.title} - 学生管理系统`
+    try {
+      const { useConfigStore } = await import('@/stores/config')
+      const cs = useConfigStore()
+      document.title = `${to.meta.title} - ${cs.systemName || '通用管理平台'}`
+    } catch {
+      document.title = `${to.meta.title} - 通用管理平台`
+    }
   }
 
   // 检查是否需要登录

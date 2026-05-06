@@ -126,7 +126,7 @@
         <div v-if="uploadedFile" class="font-preview-box">
           <label class="text-sm text-gray-700">预览效果</label>
           <div class="preview-text" :style="previewStyle">
-            {{ fontName || '自定义字体' }} - 学生管理系统
+            {{ fontName || '自定义字体' }} - 通用管理平台
           </div>
         </div>
       </div>
