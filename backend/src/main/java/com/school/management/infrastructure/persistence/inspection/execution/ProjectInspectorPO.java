@@ -13,6 +13,7 @@ public class ProjectInspectorPO {
     private Long id;
 
     private Long tenantId;
+    private Long orgUnitId;               // 数据权限边界 (从 project 继承, MetaObjectHandler 自动填充)
     private Long projectId;
     private Long userId;
     private String userName;

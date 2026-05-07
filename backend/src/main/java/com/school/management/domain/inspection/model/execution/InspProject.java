@@ -111,15 +111,17 @@ public class InspProject extends AggregateRoot<Long> {
 
     /**
      * 创建新项目。rootSectionId 可为 null（多模板项目通过 InspectionPlan 关联模板）。
-     * orgUnitId 强制非空 — 数据权限过滤依赖此列, 缺失会导致下游所有 inspection
-     * 表 (task/submission/evidence) 无法继承到准确的 org_unit, 等于绕过数据权限.
+     * orgUnitId 是数据权限边界(被检对象的 org root, 非创建者归属). 可空 —
+     * 不传时由 InspectionDataPermissionFiller (MetaObjectHandler) 在持久化阶段
+     * 自动从 SecurityContext.currentUser.orgUnitId 注入(默认 = 创建者所在组织).
+     * 显式传值用于"集团 admin 审计某分公司项目"这类跨组织场景.
+     *
+     * 这一字段对齐 tenant_id / created_at / deleted 的横切关注点定位 —
+     * 业务模型不强校验, 由基础设施层填充并由 ArchUnit 守护覆盖.
      */
     public static InspProject create(String projectCode, String projectName,
                                      Long rootSectionId, LocalDate startDate,
                                      Long orgUnitId, Long createdBy) {
-        if (orgUnitId == null) {
-            throw new IllegalArgumentException("orgUnitId 不能为空 — 项目必须显式声明数据权限边界(覆盖到哪个组织)");
-        }
         return builder()
                 .projectCode(projectCode)
                 .projectName(projectName)

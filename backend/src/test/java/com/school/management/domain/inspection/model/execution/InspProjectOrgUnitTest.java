@@ -9,42 +9,41 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 /**
- * 守护: InspProject 创建必须显式提供 orgUnitId (覆盖范围的 org root).
+ * 守护: InspProject 的 orgUnitId 字段语义 (横切关注点 + 显式 override).
  *
- * 语义: org_unit_id 是数据权限过滤列, 标记"该项目覆盖到哪个组织单元".
- * 不是创建者归属, 而是被检对象边界. Migration V20260501_1 已说明:
- * 项目级别的 org_unit_id 用于过滤 — 集团审计某分公司项目, 这里就传分公司 ID.
+ * org_unit_id 是数据权限基础设施字段, 等同于 tenant_id / created_at / deleted —
+ * 由 InspectionDataPermissionFiller (MetaObjectHandler) 在 INSERT 阶段自动填充
+ * (默认 = SecurityContext.currentUser.orgUnitId). 业务可显式 override 用于
+ * "集团 admin 审计某分公司项目" 这类跨组织场景.
  *
- * Null = 数据权限边界丢失 → 整个 inspection 链路下游 (task/submission/evidence)
- * 都无法继承到准确的 org_unit, DataPermissionInterceptor 漏过滤 = 越权读.
+ * 因此聚合根层不强校验必填 — 校验在基础设施层 (handler 内 fail-fast / metric).
  */
-@DisplayName("InspProject orgUnitId 必填守护")
+@DisplayName("InspProject orgUnitId 字段语义守护")
 class InspProjectOrgUnitTest {
 
     @Test
-    @DisplayName("create 不传 orgUnitId 抛 IllegalArgumentException")
-    void createRejectsNullOrgUnitId() {
-        assertThatThrownBy(() -> InspProject.create(
+    @DisplayName("create 接受 null orgUnitId — 由基础设施层兜底填充")
+    void createAcceptsNullOrgUnitId() {
+        InspProject p = InspProject.create(
                 "PRJ-1", "测试项目", 100L, LocalDate.of(2026, 3, 1),
                 /* orgUnitId */ null,
-                /* createdBy */ 999L))
-                .isInstanceOf(IllegalArgumentException.class)
-                .hasMessageContaining("orgUnitId");
+                /* createdBy */ 999L);
+        assertThat(p.getOrgUnitId()).isNull();
+        assertThat(p.getStatus()).isEqualTo(ProjectStatus.DRAFT);
     }
 
     @Test
-    @DisplayName("create 传入合法 orgUnitId 后聚合根可读回")
-    void createKeepsOrgUnitIdInBuiltAggregate() {
+    @DisplayName("create 显式传入 orgUnitId 后聚合根可读回 (业务 override 通道)")
+    void createKeepsExplicitOrgUnitIdInBuiltAggregate() {
         InspProject p = InspProject.create(
                 "PRJ-1", "测试项目", 100L, LocalDate.of(2026, 3, 1),
                 /* orgUnitId */ 50L,
                 /* createdBy */ 999L);
         assertThat(p.getOrgUnitId()).isEqualTo(50L);
-        assertThat(p.getStatus()).isEqualTo(ProjectStatus.DRAFT);
     }
 
     @Test
-    @DisplayName("Builder 也必须支持 orgUnitId 字段持久化")
+    @DisplayName("Builder 支持 orgUnitId 字段持久化往返")
     void builderRoundTripsOrgUnitId() {
         InspProject p = InspProject.reconstruct(InspProject.builder()
                 .id(1L)
