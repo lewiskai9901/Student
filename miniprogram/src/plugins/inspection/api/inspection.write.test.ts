@@ -123,4 +123,23 @@ describe('inspectionApi write paths', () => {
     })
     expect(r.status).toBe('COMPLETED')
   })
+
+  it('submitAppeal POSTs body to /inspection/appeals', async () => {
+    requestWrappedMock.mockResolvedValueOnce({
+      id: 33, submissionDetailId: 21, submitterId: 7,
+      reason: '评分有误',
+      status: 'PENDING'
+    })
+    const r = await inspectionApi.submitAppeal({
+      submissionDetailId: 21,
+      submitterName: '张三',
+      reason: '评分有误'
+    })
+    expect(requestWrappedMock).toHaveBeenCalledWith({
+      url: '/inspection/appeals',
+      method: 'POST',
+      data: { submissionDetailId: 21, submitterName: '张三', reason: '评分有误' }
+    })
+    expect(r.id).toBe(33)
+  })
 })

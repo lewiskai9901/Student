@@ -64,5 +64,17 @@ export const inspectionApi = {
     requestWrapped<InspSubmission>({
       url: `/inspection/submissions/${submissionId}/complete`,
       method: 'POST'
-    })
+    }),
+
+  // === D-3b-2 write ===
+  submitAppeal: (body: {
+    submissionDetailId: number
+    submitterName: string
+    reason: string
+    attachments?: string
+  }) => requestWrapped<InspAppeal>({
+    url: '/inspection/appeals',
+    method: 'POST',
+    data: body
+  })
 }

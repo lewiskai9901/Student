@@ -114,6 +114,12 @@ async function saveDetail(
   }
 }
 
+function goAppeal(detail: SubmissionDetail) {
+  uni.navigateTo({
+    url: `/plugins/inspection/pages/submit-appeal?detailId=${detail.id}&itemName=${encodeURIComponent(detail.itemName ?? '')}`
+  })
+}
+
 async function doComplete() {
   if (!submission.value || submitting.value) return
   if (!allComplete.value) {
@@ -185,6 +191,10 @@ async function doComplete() {
             <view class="hint-text">请用 web 端填写此评分项</view>
             <view v-if="item.responseValue" class="cur-val">当前: {{ item.responseValue }}</view>
           </view>
+
+          <view v-if="item.score != null && item.scoringMode" class="item-footer">
+            <text class="appeal-link" @click="goAppeal(item)">申诉此项</text>
+          </view>
         </view>
       </view>
 
@@ -255,5 +265,10 @@ async function doComplete() {
 }
 .hint-text { font-size: 24rpx; color: #a0aab4; }
 .cur-val { font-size: 22rpx; color: #5a6a7a; }
+.item-footer { margin-top: 12rpx; text-align: right; }
+.appeal-link {
+  font-size: 22rpx; color: #e0592a;
+  text-decoration: underline;
+}
 .actions { margin-top: 24rpx; }
 </style>
