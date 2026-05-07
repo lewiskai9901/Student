@@ -11,6 +11,19 @@ export type CaseStatus =
 
 export type AppealStatus = 'PENDING' | 'APPROVED' | 'REJECTED' | 'WITHDRAWN'
 
+export type EvidenceType = 'PHOTO' | 'VIDEO' | 'DOCUMENT'
+
+export interface InspEvidence {
+  id: number
+  submissionId: number
+  detailId?: number
+  evidenceType: EvidenceType
+  fileName: string
+  fileUrl: string
+  fileSize?: number
+  capturedAt?: string
+}
+
 export interface InspTask {
   id: number
   projectId: number
@@ -42,6 +55,7 @@ export interface CorrectiveCase {
   projectName?: string
   taskId?: number
   submissionId?: number
+  detailId?: number
   itemName?: string
   observation?: string
   rootCause?: string

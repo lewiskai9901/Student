@@ -1,4 +1,4 @@
-import type { PlatformCapability, KVStorage } from './capability'
+import type { PlatformCapability, KVStorage, WatermarkOpts, LocalFile } from './capability'
 
 declare const uni: any
 
@@ -42,7 +42,7 @@ export function createWeixinCapability(): PlatformCapability {
       })
     },
     uploadFile(file, opts) {
-      return new Promise((resolve, reject) => {
+      return new Promise<unknown>((resolve, reject) => {
         uni.uploadFile({
           url: opts.url,
           filePath: file.path,
@@ -55,8 +55,59 @@ export function createWeixinCapability(): PlatformCapability {
             }
             try {
               const body = typeof r.data === 'string' ? JSON.parse(r.data) : r.data
-              resolve({ url: body.url, key: body.key })
+              resolve(body)
             } catch (e) { reject(e) }
+          },
+          fail: reject
+        })
+      })
+    },
+    watermarkImage(file: LocalFile, opts: WatermarkOpts): Promise<LocalFile> {
+      return new Promise((resolve, reject) => {
+        if (!opts.canvasId || !opts.canvasId.trim()) {
+          return reject(new Error('canvasId required'))
+        }
+        if (!opts.text || !opts.text.trim()) {
+          return reject(new Error('text required'))
+        }
+        const fontSize = opts.fontSize ?? 24
+        const color = opts.color ?? '#fff'
+        const shadowColor = opts.shadowColor ?? 'rgba(0,0,0,0.6)'
+        const position = opts.position ?? 'bottom-right'
+        const padding = 20
+        uni.getImageInfo({
+          src: file.path,
+          success: (info: any) => {
+            try {
+              const ctx = uni.createCanvasContext(opts.canvasId)
+              ctx.drawImage(info.path, 0, 0, info.width, info.height)
+              ctx.setFontSize(fontSize)
+              ctx.setFillStyle(color)
+              ctx.setShadow(2, 2, 4, shadowColor)
+              const textWidth = opts.text.length * fontSize * 0.55
+              let x = 0, y = 0
+              switch (position) {
+                case 'bottom-left':
+                  x = padding; y = info.height - padding; break
+                case 'top-right':
+                  x = info.width - textWidth - padding; y = padding + fontSize; break
+                case 'top-left':
+                  x = padding; y = padding + fontSize; break
+                case 'bottom-right':
+                default:
+                  x = info.width - textWidth - padding; y = info.height - padding; break
+              }
+              ctx.fillText(opts.text, x, y)
+              ctx.draw(false, () => {
+                uni.canvasToTempFilePath({
+                  canvasId: opts.canvasId,
+                  success: (r: any) => resolve({ path: r.tempFilePath, size: file.size }),
+                  fail: reject
+                })
+              })
+            } catch (e) {
+              reject(e)
+            }
           },
           fail: reject
         })

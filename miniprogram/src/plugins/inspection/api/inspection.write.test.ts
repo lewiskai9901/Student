@@ -58,4 +58,30 @@ describe('inspectionApi write paths', () => {
     })
     expect(r.status).toBe('SUBMITTED')
   })
+
+  it('addEvidence POSTs body to submissions evidences endpoint', async () => {
+    requestWrappedMock.mockResolvedValueOnce({
+      id: 99, submissionId: 7, evidenceType: 'PHOTO',
+      fileName: 'a.jpg', fileUrl: 'https://cdn/a.jpg'
+    })
+    const r = await inspectionApi.addEvidence(7, {
+      detailId: 21, evidenceType: 'PHOTO', fileName: 'a.jpg', fileUrl: 'https://cdn/a.jpg'
+    })
+    expect(requestWrappedMock).toHaveBeenCalledWith({
+      url: '/inspection/submissions/7/evidences',
+      method: 'POST',
+      data: { detailId: 21, evidenceType: 'PHOTO', fileName: 'a.jpg', fileUrl: 'https://cdn/a.jpg' }
+    })
+    expect(r.id).toBe(99)
+  })
+
+  it('submitCorrection passes evidenceIds when provided', async () => {
+    requestWrappedMock.mockResolvedValueOnce({ id: 9, status: 'SUBMITTED' })
+    await inspectionApi.submitCorrection(9, '已完成', [99, 100])
+    expect(requestWrappedMock).toHaveBeenCalledWith({
+      url: '/inspection/corrective-cases/9/submit-correction',
+      method: 'POST',
+      data: { correctionNote: '已完成', evidenceIds: [99, 100] }
+    })
+  })
 })
