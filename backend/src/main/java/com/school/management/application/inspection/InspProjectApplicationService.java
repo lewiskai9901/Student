@@ -73,13 +73,14 @@ public class InspProjectApplicationService {
 
     /**
      * 创建检查项目。rootSectionId 可为 null（多模板项目通过 InspectionPlan.rootSectionId 关联模板）。
+     * orgUnitId 强制非空 — 数据权限边界, 标记项目覆盖到哪个组织单元.
      */
     @Transactional
     public InspProject createProject(String projectName, Long rootSectionId,
-                                     LocalDate startDate, Long createdBy) {
+                                     LocalDate startDate, Long orgUnitId, Long createdBy) {
         String projectCode = generateProjectCode();
         // rootSectionId 可空：null 表示项目使用多模板，模板通过计划关联
-        InspProject project = InspProject.create(projectCode, projectName, rootSectionId, startDate, createdBy);
+        InspProject project = InspProject.create(projectCode, projectName, rootSectionId, startDate, orgUnitId, createdBy);
         return projectRepository.save(project);
     }
 

@@ -26,6 +26,12 @@ public class InspProject extends AggregateRoot<Long> {
     private String projectCode;
     private String projectName;
     /**
+     * 数据权限边界: 项目覆盖到哪个组织单元 (被检对象的 org root, 非创建者归属).
+     * 强制非空 — DataPermissionInterceptor 注入的 org_unit_id 过滤依赖该列.
+     * 集团审计某分公司项目, 这里就传分公司 ID; 多组织覆盖, 传最近公共祖先.
+     */
+    private Long orgUnitId;
+    /**
      * 向后兼容保留。V66 起新项目可为 null，模板通过 InspectionPlan.rootSectionId 关联。
      * 旧项目此字段仍有值，可作为"主模板"快速访问。
      */
@@ -70,6 +76,7 @@ public class InspProject extends AggregateRoot<Long> {
         this.tenantId = builder.tenantId;
         this.projectCode = builder.projectCode;
         this.projectName = builder.projectName;
+        this.orgUnitId = builder.orgUnitId;
         this.rootSectionId = builder.rootSectionId;
         this.templateVersionId = builder.templateVersionId;
         this.scoringProfileId = builder.scoringProfileId;
@@ -104,13 +111,20 @@ public class InspProject extends AggregateRoot<Long> {
 
     /**
      * 创建新项目。rootSectionId 可为 null（多模板项目通过 InspectionPlan 关联模板）。
+     * orgUnitId 强制非空 — 数据权限过滤依赖此列, 缺失会导致下游所有 inspection
+     * 表 (task/submission/evidence) 无法继承到准确的 org_unit, 等于绕过数据权限.
      */
     public static InspProject create(String projectCode, String projectName,
-                                     Long rootSectionId, LocalDate startDate, Long createdBy) {
+                                     Long rootSectionId, LocalDate startDate,
+                                     Long orgUnitId, Long createdBy) {
+        if (orgUnitId == null) {
+            throw new IllegalArgumentException("orgUnitId 不能为空 — 项目必须显式声明数据权限边界(覆盖到哪个组织)");
+        }
         return builder()
                 .projectCode(projectCode)
                 .projectName(projectName)
                 .rootSectionId(rootSectionId)   // nullable: null 表示通过计划关联模板
+                .orgUnitId(orgUnitId)
                 .startDate(startDate)
                 .status(ProjectStatus.DRAFT)
                 .createdBy(createdBy)
@@ -274,6 +288,7 @@ public class InspProject extends AggregateRoot<Long> {
     public Long getTenantId() { return tenantId; }
     public String getProjectCode() { return projectCode; }
     public String getProjectName() { return projectName; }
+    public Long getOrgUnitId() { return orgUnitId; }
     public Long getRootSectionId() { return rootSectionId; }
     public Long getTemplateVersionId() { return templateVersionId; }
     public Long getScoringProfileId() { return scoringProfileId; }
@@ -316,6 +331,7 @@ public class InspProject extends AggregateRoot<Long> {
         private Long tenantId;
         private String projectCode;
         private String projectName;
+        private Long orgUnitId;
         private Long rootSectionId;
         private Long templateVersionId;
         private Long scoringProfileId;
@@ -351,6 +367,7 @@ public class InspProject extends AggregateRoot<Long> {
         public Builder tenantId(Long tenantId) { this.tenantId = tenantId; return this; }
         public Builder projectCode(String projectCode) { this.projectCode = projectCode; return this; }
         public Builder projectName(String projectName) { this.projectName = projectName; return this; }
+        public Builder orgUnitId(Long orgUnitId) { this.orgUnitId = orgUnitId; return this; }
         public Builder rootSectionId(Long rootSectionId) { this.rootSectionId = rootSectionId; return this; }
         public Builder templateVersionId(Long templateVersionId) { this.templateVersionId = templateVersionId; return this; }
         public Builder scoringProfileId(Long scoringProfileId) { this.scoringProfileId = scoringProfileId; return this; }

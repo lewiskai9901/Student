@@ -16,6 +16,7 @@ public class InspProjectPO {
     private Long tenantId;
     private String projectCode;
     private String projectName;
+    private Long orgUnitId;           // 数据权限过滤列 (项目覆盖范围的 org root)
     private Long templateId;          // maps to rootSectionId in domain
     private Long templateVersionId;
     private Long scoringProfileId;

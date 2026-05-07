@@ -79,6 +79,7 @@ public class InspProjectRepositoryImpl implements InspProjectRepository {
         po.setTenantId(d.getTenantId() != null ? d.getTenantId() : 0L);
         po.setProjectCode(d.getProjectCode());
         po.setProjectName(d.getProjectName());
+        po.setOrgUnitId(d.getOrgUnitId());
         po.setTemplateId(d.getRootSectionId());    // domain rootSectionId → PO templateId
         po.setTemplateVersionId(d.getTemplateVersionId());
         po.setScoringProfileId(d.getScoringProfileId());
@@ -118,6 +119,7 @@ public class InspProjectRepositoryImpl implements InspProjectRepository {
                 .tenantId(po.getTenantId())
                 .projectCode(po.getProjectCode())
                 .projectName(po.getProjectName())
+                .orgUnitId(po.getOrgUnitId())
                 .rootSectionId(po.getTemplateId())    // PO templateId → domain rootSectionId
                 .templateVersionId(po.getTemplateVersionId())
                 .scoringProfileId(po.getScoringProfileId())

@@ -34,7 +34,7 @@ public class InspProjectController {
         Long userId = SecurityUtils.getCurrentUserId();
         InspProject project = projectService.createProject(
                 request.getProjectName(), request.getRootSectionId(),
-                request.getStartDate(), userId);
+                request.getStartDate(), request.getOrgUnitId(), userId);
         return Result.success(project);
     }
 
@@ -277,6 +277,7 @@ public class InspProjectController {
     public static class CreateProjectRequest {
         private String projectName;
         private Long rootSectionId;   // 可选：null 表示通过计划关联模板（多模板项目）
+        private Long orgUnitId;       // 必填：项目覆盖范围的 org root (数据权限边界)
         private LocalDate startDate;
     }
 

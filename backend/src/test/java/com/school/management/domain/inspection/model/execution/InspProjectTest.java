@@ -15,7 +15,7 @@ class InspProjectTest {
 
     private InspProject createDraftProject() {
         return InspProject.create("PROJ-001", "卫生检查项目",
-                100L, LocalDate.of(2026, 3, 1), 1L);
+                100L, LocalDate.of(2026, 3, 1), 50L, 1L);
     }
 
     private InspProject createPublishedProject() {
@@ -47,7 +47,7 @@ class InspProjectTest {
         void testCreate() {
             // When
             InspProject project = InspProject.create("PROJ-001", "卫生检查项目",
-                    100L, LocalDate.of(2026, 3, 1), 1L);
+                    100L, LocalDate.of(2026, 3, 1), 50L, 1L);
 
             // Then
             assertThat(project.getStatus()).isEqualTo(ProjectStatus.DRAFT);

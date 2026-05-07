@@ -31,7 +31,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 class InspProjectStateMachineTest {
 
     private static InspProject newDraft() {
-        return InspProject.create("PRJ-T-001", "测试项目", 100L, LocalDate.of(2026, 5, 1), 999L);
+        return InspProject.create("PRJ-T-001", "测试项目", 100L, LocalDate.of(2026, 5, 1), 50L, 999L);
     }
 
     private static InspProject inState(ProjectStatus status) {

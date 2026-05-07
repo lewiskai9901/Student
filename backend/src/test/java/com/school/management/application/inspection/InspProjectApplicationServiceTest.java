@@ -95,7 +95,7 @@ class InspProjectApplicationServiceTest {
         @DisplayName("生成 projectCode 并保存为 DRAFT")
         void shouldCreateAndSave() {
             when(projectRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
-            InspProject p = service.createProject("项目A", 100L, LocalDate.of(2026, 5, 1), 999L);
+            InspProject p = service.createProject("项目A", 100L, LocalDate.of(2026, 5, 1), 50L, 999L);
             assertThat(p.getProjectName()).isEqualTo("项目A");
             assertThat(p.getStatus()).isEqualTo(ProjectStatus.DRAFT);
             assertThat(p.getProjectCode()).startsWith("PRJ-");
