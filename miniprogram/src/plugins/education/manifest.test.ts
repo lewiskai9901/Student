@@ -20,14 +20,14 @@ describe('education manifest', () => {
     )
   })
 
-  it('declares 4 permissions / 2 menus / 4 routes', () => {
+  it('declares 5 permissions / 3 menus / 5 routes', () => {
     const counts = education.contributions.reduce((acc, c) => {
       acc[c.type] = (acc[c.type] ?? 0) + 1
       return acc
     }, {} as Record<string, number>)
-    expect(counts['permission']).toBe(4)
-    expect(counts['menu']).toBe(2)
-    expect(counts['route']).toBe(4)
+    expect(counts['permission']).toBe(5)
+    expect(counts['menu']).toBe(3)
+    expect(counts['route']).toBe(5)
   })
 
   it('every menu.perm references a declared permission', () => {

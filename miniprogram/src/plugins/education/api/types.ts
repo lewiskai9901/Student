@@ -55,3 +55,70 @@ export interface SchoolClass {
   headTeacherName?: string
   createdAt?: string
 }
+
+/** 我管理的班级 (后端 MyClassDTO) */
+export interface MyClass {
+  id: number
+  classCode: string
+  className: string
+  shortName?: string
+  currentSize?: number
+  standardSize?: number
+  status?: string
+  enrollmentYear?: number
+  majorName?: string
+  orgUnitName?: string
+  myRole?: string
+  weeklyRank?: number
+  totalClasses?: number
+  weeklyScore?: number
+  scoreTrend?: number[]
+}
+
+/** 班级概览 (后端 MyClassOverviewDTO) */
+export interface MyClassOverview {
+  orgUnitId: number
+  className: string
+  studentCount?: number
+  maleCount?: number
+  femaleCount?: number
+  classRank?: number
+  totalClasses?: number
+  averageScore?: number
+  scoreTrend?: number
+  pendingAppeals?: number
+  scoreTrendList?: { date: string; score: number }[]
+  recentRecords?: { id: number; checkDate: string; checkType: string; score: number; rank?: number }[]
+}
+
+/** 班级学生 (后端 MyClassStudentDTO) */
+export interface MyClassStudent {
+  id: number
+  studentNo: string
+  name: string
+  gender?: string
+  phone?: string
+  dormitoryName?: string
+  bedNo?: string
+  status?: string
+}
+
+/**
+ * 宿舍分布 (后端 DormitoryDistributionDTO)
+ * 注意: rooms[].user_student 字段名匹配后端 Java 字段 (DormitoryRoomDTO.user_student),
+ * Jackson 默认按字段名序列化 → JSON key 也是 user_student (snake_case)
+ */
+export interface DormitoryDistribution {
+  buildingId: number
+  buildingName: string
+  buildingType?: string
+  studentCount?: number
+  rooms: {
+    dormitoryId: number
+    roomNo: string
+    floor?: number
+    studentCount?: number
+    // matches backend Java field name (DormitoryRoomDTO.user_student)
+    user_student: { id: number; name: string; bedNo?: string }[]
+  }[]
+}
