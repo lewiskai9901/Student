@@ -8,6 +8,7 @@ interface State {
   permissions: string[]
   enabledPlugins: string[]
   tenantId: number | null
+  orgUnitId: number | null
 }
 
 export const useAuth = defineStore('auth', {
@@ -15,7 +16,8 @@ export const useAuth = defineStore('auth', {
     user: capability.storage.get<UserInfo>('user') ?? null,
     permissions: capability.storage.get<string[]>('permissions') ?? [],
     enabledPlugins: capability.storage.get<string[]>('enabledPlugins') ?? [],
-    tenantId: capability.storage.get<number>('tenantId') ?? null
+    tenantId: capability.storage.get<number>('tenantId') ?? null,
+    orgUnitId: capability.storage.get<number>('orgUnitId') ?? null
   }),
   getters: {
     loggedIn: (s) => s.user !== null,
@@ -28,6 +30,7 @@ export const useAuth = defineStore('auth', {
       const perms = r.userInfo.permissions ?? []
       const plugins = r.enabledPlugins ?? []
       const tenantId = r.userInfo.tenantId ?? null
+      const orgUnitId = r.userInfo.orgUnitId ?? null
 
       capability.storage.set('accessToken', r.accessToken)
       capability.storage.set('refreshToken', r.refreshToken)
@@ -35,11 +38,13 @@ export const useAuth = defineStore('auth', {
       capability.storage.set('permissions', perms)
       capability.storage.set('enabledPlugins', plugins)
       capability.storage.set('tenantId', tenantId)
+      capability.storage.set('orgUnitId', orgUnitId)
 
       this.user = u
       this.permissions = perms
       this.enabledPlugins = plugins
       this.tenantId = tenantId
+      this.orgUnitId = orgUnitId
       return r
     },
     logout() {
@@ -49,10 +54,12 @@ export const useAuth = defineStore('auth', {
       capability.storage.remove('permissions')
       capability.storage.remove('enabledPlugins')
       capability.storage.remove('tenantId')
+      capability.storage.remove('orgUnitId')
       this.user = null
       this.permissions = []
       this.enabledPlugins = []
       this.tenantId = null
+      this.orgUnitId = null
     }
   }
 })
