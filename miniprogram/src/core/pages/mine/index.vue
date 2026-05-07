@@ -32,6 +32,7 @@ onShow(async () => {
     }
     auth.permissions = fresh.permissions ?? []
     auth.tenantId = fresh.tenantId ?? null
+    auth.orgUnitId = fresh.orgUnitId ?? null
     // Stash extra fields on the store for this page (lightweight; not full schema)
     profileExtras.value = {
       phone: fresh.phone,
