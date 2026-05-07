@@ -42,7 +42,7 @@ export function createWeixinCapability(): PlatformCapability {
       })
     },
     uploadFile(file, opts) {
-      return new Promise((resolve, reject) => {
+      return new Promise<unknown>((resolve, reject) => {
         uni.uploadFile({
           url: opts.url,
           filePath: file.path,
@@ -55,7 +55,7 @@ export function createWeixinCapability(): PlatformCapability {
             }
             try {
               const body = typeof r.data === 'string' ? JSON.parse(r.data) : r.data
-              resolve({ url: body.url, key: body.key })
+              resolve(body)
             } catch (e) { reject(e) }
           },
           fail: reject

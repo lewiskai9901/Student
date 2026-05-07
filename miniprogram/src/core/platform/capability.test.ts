@@ -64,6 +64,18 @@ describe('Weixin PlatformCapability', () => {
       .rejects.toThrow(/HTTP 500/)
   })
 
+  it('uploadFile() resolves with parsed body on 2xx', async () => {
+    uniMock.uploadFile.mockImplementation((opts: any) =>
+      opts.success({
+        statusCode: 200,
+        data: JSON.stringify({ code: 200, message: 'OK', data: { fileUrl: 'https://cdn/x.jpg' }, timestamp: 1 })
+      })
+    )
+    const cap = createWeixinCapability()
+    const body = await cap.uploadFile({ path: '/p', size: 1 }, { url: '/u', name: 'f' })
+    expect(body).toEqual({ code: 200, message: 'OK', data: { fileUrl: 'https://cdn/x.jpg' }, timestamp: 1 })
+  })
+
   it('watermarkImage rejects when canvasId is empty', async () => {
     const cap = createWeixinCapability()
     await expect(

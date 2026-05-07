@@ -5,7 +5,6 @@ export interface Location { latitude: number; longitude: number; accuracy: numbe
 export interface PhotoOpts { count?: number; sourceType?: ('album' | 'camera')[]; sizeType?: ('original' | 'compressed')[] }
 export interface LocalFile { path: string; size: number }
 export interface UploadOpts { url: string; name: string; formData?: Record<string, string>; header?: Record<string, string> }
-export interface RemoteFile { url: string; key: string }
 export interface SubscribeResult { [templateId: string]: 'accept' | 'reject' | 'ban' | 'filter' }
 export interface SystemInfo { platform: string; sdkVersion: string }
 export interface WatermarkOpts {
@@ -29,7 +28,7 @@ export interface PlatformCapability {
   scan(opts?: ScanOpts): Promise<ScanResult>
   getLocation(opts?: LocationOpts): Promise<Location>
   takePhoto(opts: PhotoOpts): Promise<LocalFile[]>
-  uploadFile(file: LocalFile, opts: UploadOpts): Promise<RemoteFile>
+  uploadFile(file: LocalFile, opts: UploadOpts): Promise<unknown>
   watermarkImage(file: LocalFile, opts: WatermarkOpts): Promise<LocalFile>
   requestSubscribeMessage(templateIds: string[]): Promise<SubscribeResult>
   storage: KVStorage
