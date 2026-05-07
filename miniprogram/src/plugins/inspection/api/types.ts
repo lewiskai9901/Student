@@ -55,6 +55,7 @@ export interface CorrectiveCase {
   projectName?: string
   taskId?: number
   submissionId?: number
+  detailId?: number
   itemName?: string
   observation?: string
   rootCause?: string

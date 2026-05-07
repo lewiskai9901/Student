@@ -3,9 +3,11 @@ import { ref, computed } from 'vue'
 import { onLoad } from '@dcloudio/uni-app'
 import { inspectionApi } from '../api/inspection'
 import { BizError } from '@core/api/request'
+import { uploadWrapped } from '@core/api/upload'
+import { capability } from '@core/platform/auto'
 import { useAuth } from '@core/stores/auth'
 import { usePluginRegistry } from '@core/stores/plugin-registry'
-import type { CorrectiveCase } from '../api/types'
+import type { CorrectiveCase, EvidenceType } from '../api/types'
 import { caseStatusLabel, caseStatusColor, formatDateTime } from '../utils/format'
 
 declare const uni: any
@@ -17,6 +19,13 @@ const loading = ref(true)
 const submitting = ref(false)
 const errMsg = ref('')
 const note = ref('')
+interface AttachedEvidence {
+  evidenceId: number
+  fileUrl: string
+  fileName: string
+}
+const evidences = ref<AttachedEvidence[]>([])
+const adding = ref(false)
 let caseId = 0
 
 onLoad(async (query: any) => {
@@ -74,6 +83,87 @@ async function doStart() {
   }
 }
 
+function formatNow(): string {
+  const d = new Date()
+  const pad = (n: number) => String(n).padStart(2, '0')
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`
+}
+
+async function addPhoto() {
+  if (adding.value || submitting.value) return
+  if (!auth.user) { uni.showToast({ title: '请先登录', icon: 'none' }); return }
+  if (!c.value?.submissionId) { uni.showToast({ title: '案例数据不完整', icon: 'none' }); return }
+
+  // 1. takePhoto — silent on cancel
+  let local
+  try {
+    const files = await capability.takePhoto({ count: 1, sourceType: ['camera'], sizeType: ['compressed'] })
+    if (!files || files.length === 0) return
+    local = files[0]
+  } catch {
+    return // user cancel / permission denied — silent
+  }
+
+  adding.value = true
+  try {
+    // 2. watermark
+    const text = `${formatNow()} ${auth.user.name ?? auth.user.username}`
+    let watermarked
+    try {
+      watermarked = await capability.watermarkImage(local, { canvasId: 'watermark-canvas', text })
+    } catch {
+      uni.showToast({ title: '水印生成失败,请重试', icon: 'none' })
+      return
+    }
+
+    // 3. upload
+    let uploaded
+    try {
+      uploaded = await uploadWrapped<{ fileName: string; fileUrl: string; size: number }>(
+        watermarked,
+        { url: '/files/upload', formData: { directory: 'inspection' } }
+      )
+    } catch (e) {
+      uni.showToast({
+        title: e instanceof BizError ? e.bizMessage : '上传失败,请检查网络',
+        icon: 'none'
+      })
+      return
+    }
+
+    // 4. addEvidence
+    let evidence
+    try {
+      evidence = await inspectionApi.addEvidence(c.value.submissionId, {
+        detailId: c.value.detailId,
+        evidenceType: 'PHOTO' as EvidenceType,
+        fileName: uploaded.fileName,
+        fileUrl: uploaded.fileUrl
+      })
+    } catch (e) {
+      uni.showToast({
+        title: e instanceof BizError ? e.bizMessage : '附件登记失败',
+        icon: 'none'
+      })
+      return
+    }
+
+    // 5. push to local
+    evidences.value.push({
+      evidenceId: evidence.id,
+      fileUrl: evidence.fileUrl,
+      fileName: evidence.fileName
+    })
+    uni.showToast({ title: '已添加', icon: 'none' })
+  } finally {
+    adding.value = false
+  }
+}
+
+function removeEvidence(idx: number) {
+  evidences.value.splice(idx, 1)
+}
+
 async function doSubmit() {
   if (submitting.value) return
   if (!auth.user) { uni.showToast({ title: '请先登录', icon: 'none' }); return }
@@ -82,7 +172,8 @@ async function doSubmit() {
   if (trimmed.length > 1000) { uni.showToast({ title: '整改说明最多 1000 字', icon: 'none' }); return }
   submitting.value = true
   try {
-    await inspectionApi.submitCorrection(caseId, trimmed)
+    const evidenceIds = evidences.value.map(e => e.evidenceId)
+    await inspectionApi.submitCorrection(caseId, trimmed, evidenceIds)
     registry.bus.emit('inspection.case.processed', { caseId, action: 'submitted' })
     uni.showToast({ title: '已提交', icon: 'none' })
     uni.reLaunch({ url: '/plugins/inspection/pages/my-corrections' })
@@ -149,11 +240,27 @@ async function doSubmit() {
           maxlength="1000"
           auto-height
         />
+        <view class="card-title attachments-title">附件 <text class="hint">(可选,拍照自动加水印)</text></view>
+        <scroll-view scroll-x class="attachments">
+          <view v-for="(e, idx) in evidences" :key="e.evidenceId" class="thumb">
+            <image :src="e.fileUrl" class="thumb-img" mode="aspectFill" />
+            <view class="thumb-remove" @click.stop="removeEvidence(idx)">✕</view>
+          </view>
+          <view class="thumb thumb-add" :class="{ 'thumb-loading': adding }" @click="addPhoto">
+            <text v-if="adding">...</text>
+            <text v-else class="plus">+</text>
+          </view>
+        </scroll-view>
         <view class="actions">
           <wd-button block :loading="submitting" @click="doSubmit">提交整改</wd-button>
         </view>
       </view>
     </template>
+
+    <canvas
+      canvas-id="watermark-canvas"
+      class="watermark-canvas"
+    />
   </view>
 </template>
 
@@ -175,4 +282,54 @@ async function doSubmit() {
 .submit-card { background: #fff; border-radius: 14px; padding: 24rpx; margin-top: 16rpx; box-shadow: 0 2px 6px rgba(58,123,213,0.06); }
 .hint { color: #a0aab4; font-weight: 400; font-size: 22rpx; margin-left: 8rpx; }
 .note { width: 100%; min-height: 200rpx; padding: 16rpx; border: 1rpx solid #e0e6ee; border-radius: 8px; font-size: 26rpx; color: #1a2840; box-sizing: border-box; }
+.attachments-title { margin-top: 16rpx; }
+.attachments {
+  white-space: nowrap;
+  margin-top: 12rpx;
+}
+.thumb {
+  display: inline-block;
+  width: 160rpx;
+  height: 160rpx;
+  margin-right: 12rpx;
+  border-radius: 8px;
+  position: relative;
+  vertical-align: top;
+}
+.thumb-img {
+  width: 100%;
+  height: 100%;
+  border-radius: 8px;
+}
+.thumb-remove {
+  position: absolute;
+  top: -8rpx;
+  right: -8rpx;
+  width: 36rpx;
+  height: 36rpx;
+  background: rgba(0, 0, 0, 0.6);
+  color: #fff;
+  border-radius: 50%;
+  text-align: center;
+  line-height: 36rpx;
+  font-size: 22rpx;
+}
+.thumb-add {
+  border: 2rpx dashed #c0c8d2;
+  background: #f7f9fc;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: #a0aab4;
+}
+.thumb-add .plus { font-size: 44rpx; line-height: 1; }
+.thumb-loading { color: #5a6a7a; opacity: 0.6; }
+.watermark-canvas {
+  position: fixed;
+  left: -9999rpx;
+  top: -9999rpx;
+  width: 1080rpx;
+  height: 1080rpx;
+  pointer-events: none;
+}
 </style>
