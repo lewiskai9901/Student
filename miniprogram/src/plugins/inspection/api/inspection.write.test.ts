@@ -84,4 +84,43 @@ describe('inspectionApi write paths', () => {
       data: { correctionNote: '已完成', evidenceIds: [99, 100] }
     })
   })
+
+  it('submissionsByTask GETs with taskId query', async () => {
+    requestWrappedMock.mockResolvedValueOnce([{ id: 5, taskId: 1, status: 'IN_PROGRESS' }])
+    const r = await inspectionApi.submissionsByTask(1)
+    expect(requestWrappedMock).toHaveBeenCalledWith({
+      url: '/inspection/submissions?taskId=1'
+    })
+    expect(r[0].id).toBe(5)
+  })
+
+  it('submissionDetails GETs by submissionId', async () => {
+    requestWrappedMock.mockResolvedValueOnce([])
+    await inspectionApi.submissionDetails(5)
+    expect(requestWrappedMock).toHaveBeenCalledWith({
+      url: '/inspection/submissions/5/details'
+    })
+  })
+
+  it('updateDetailResponse PUTs body to detail response endpoint', async () => {
+    requestWrappedMock.mockResolvedValueOnce({ id: 21, submissionId: 5, templateItemId: 7, itemCode: 'I1', itemName: '项 1' })
+    await inspectionApi.updateDetailResponse(21, {
+      responseValue: 'PASS', scoringMode: 'PASS_FAIL', score: 100
+    })
+    expect(requestWrappedMock).toHaveBeenCalledWith({
+      url: '/inspection/submissions/details/21/response',
+      method: 'PUT',
+      data: { responseValue: 'PASS', scoringMode: 'PASS_FAIL', score: 100 }
+    })
+  })
+
+  it('completeSubmission POSTs without body', async () => {
+    requestWrappedMock.mockResolvedValueOnce({ id: 5, taskId: 1, status: 'COMPLETED' })
+    const r = await inspectionApi.completeSubmission(5)
+    expect(requestWrappedMock).toHaveBeenCalledWith({
+      url: '/inspection/submissions/5/complete',
+      method: 'POST'
+    })
+    expect(r.status).toBe('COMPLETED')
+  })
 })

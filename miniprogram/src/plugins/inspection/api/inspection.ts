@@ -1,5 +1,8 @@
 import { requestWrapped } from '@core/api/request'
-import type { InspTask, CorrectiveCase, InspAppeal, InspEvidence, EvidenceType } from './types'
+import type {
+  InspTask, CorrectiveCase, InspAppeal, InspEvidence, EvidenceType,
+  SubmissionDetail, InspSubmission, ScoringMode
+} from './types'
 
 export const inspectionApi = {
   // ===== Reads =====
@@ -40,5 +43,26 @@ export const inspectionApi = {
     url: `/inspection/submissions/${submissionId}/evidences`,
     method: 'POST',
     data: body
-  })
+  }),
+
+  // === D-3b-1 read ===
+  submissionsByTask: (taskId: number) =>
+    requestWrapped<InspSubmission[]>({ url: `/inspection/submissions?taskId=${taskId}` }),
+  submissionDetails: (submissionId: number) =>
+    requestWrapped<SubmissionDetail[]>({ url: `/inspection/submissions/${submissionId}/details` }),
+
+  // === D-3b-1 write ===
+  updateDetailResponse: (
+    detailId: number,
+    body: { responseValue?: string; scoringMode?: ScoringMode; score?: number; dimensions?: string }
+  ) => requestWrapped<SubmissionDetail>({
+    url: `/inspection/submissions/details/${detailId}/response`,
+    method: 'PUT',
+    data: body
+  }),
+  completeSubmission: (submissionId: number) =>
+    requestWrapped<InspSubmission>({
+      url: `/inspection/submissions/${submissionId}/complete`,
+      method: 'POST'
+    })
 }

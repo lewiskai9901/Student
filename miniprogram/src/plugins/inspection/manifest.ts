@@ -56,6 +56,7 @@ export default definePlugin({
     { type: 'route', path: 'plugins/inspection/pages/my-corrections',    inSubPackage: true, perm: 'inspection:correction:list' },
     { type: 'route', path: 'plugins/inspection/pages/correction-detail', inSubPackage: true, perm: 'inspection:correction:view' },
     { type: 'route', path: 'plugins/inspection/pages/my-appeals',        inSubPackage: true, perm: 'inspection:appeal:list' },
+    { type: 'route', path: 'plugins/inspection/pages/submission-detail', inSubPackage: true, perm: 'inspection:task:submit' },
 
     // ===== Scan Resolver (1) =====
     {
@@ -107,7 +108,8 @@ export default definePlugin({
       'pages/available-tasks',
       'pages/my-corrections',
       'pages/correction-detail',
-      'pages/my-appeals'
+      'pages/my-appeals',
+      'pages/submission-detail'
     ]
   }
 })

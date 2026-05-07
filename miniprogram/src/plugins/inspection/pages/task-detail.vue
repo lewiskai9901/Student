@@ -56,6 +56,10 @@ const actionLabel = computed(() => {
   return ''
 })
 
+function goFillForm() {
+  uni.navigateTo({ url: '/plugins/inspection/pages/submission-detail?taskId=' + taskId })
+}
+
 async function doAction() {
   if (!action.value || submitting.value) return
   if (!auth.user) { uni.showToast({ title: '请先登录', icon: 'none' }); return }
@@ -118,7 +122,11 @@ async function doAction() {
         <view class="kv"><text class="k">截止时间</text><text class="v">{{ formatDateTime(task.deadline) }}</text></view>
       </view>
 
-      <view v-if="action" class="actions">
+      <view v-if="action === 'submit'" class="actions stack">
+        <wd-button block @click="goFillForm">填写检查表</wd-button>
+        <wd-button block plain :loading="submitting" @click="doAction">提交任务</wd-button>
+      </view>
+      <view v-else-if="action" class="actions">
         <wd-button block :loading="submitting" @click="doAction">{{ actionLabel }}</wd-button>
       </view>
     </template>
@@ -138,4 +146,5 @@ async function doAction() {
 .k { width: 160rpx; color: #5a6a7a; }
 .v { flex: 1; color: #1a2840; word-break: break-all; }
 .actions { margin-top: 24rpx; }
+.actions.stack { display: flex; flex-direction: column; gap: 12rpx; }
 </style>

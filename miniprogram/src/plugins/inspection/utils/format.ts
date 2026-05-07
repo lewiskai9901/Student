@@ -1,4 +1,4 @@
-import type { TaskStatus, CaseStatus, AppealStatus } from '../api/types'
+import type { TaskStatus, CaseStatus, AppealStatus, ScoringMode } from '../api/types'
 
 const TASK_STATUS_LABEL: Record<string, string> = {
   PENDING: '待处理',
@@ -80,4 +80,15 @@ export function formatDateTime(s?: string): string {
   // 支持 ISO 'yyyy-MM-ddTHH:mm:ss[.SSS][Z]' → 'yyyy-MM-dd HH:mm'
   const m = s.match(/^(\d{4}-\d{2}-\d{2})[T ](\d{2}:\d{2})/)
   return m ? `${m[1]} ${m[2]}` : '-'
+}
+
+const SCORING_MODE_LABELS: Record<ScoringMode, string> = {
+  DEDUCTION: '扣分制', ADDITION: '加分制', DIRECT: '直接打分',
+  PASS_FAIL: '通过/不通过', LEVEL: '等级制', SCORE_TABLE: '评分表',
+  CUMULATIVE: '累计制', TIERED_DEDUCTION: '阶梯扣分', RATING_SCALE: '评分量表',
+  WEIGHTED_MULTI: '加权多选', RISK_MATRIX: '风险矩阵',
+  THRESHOLD: '阈值制', FORMULA: '公式制'
+}
+export function scoringModeLabel(m?: ScoringMode): string {
+  return m ? (SCORING_MODE_LABELS[m] ?? m) : '-'
 }
