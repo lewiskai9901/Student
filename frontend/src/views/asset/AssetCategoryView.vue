@@ -26,10 +26,10 @@ import EmptyState from '@/components/design-system/feedback/EmptyState.vue'
 
 const loading = ref(false)
 const categoryTree = ref<AssetCategory[]>([])
-const expandedKeys = ref<number[]>([])
+const expandedKeys = ref<(string | number)[]>([])
 
-// 计算分类层级的辅助Map
-const categoryLevelMap = ref<Map<number, number>>(new Map())
+// 计算分类层级的辅助Map (id 为 string|number 因 Snowflake)
+const categoryLevelMap = ref<Map<string | number, number>>(new Map())
 
 // 构建层级Map
 function buildLevelMap(categories: AssetCategory[], level: number = 0) {
@@ -50,7 +50,7 @@ function getCategoryLevel(categoryId: number): number {
 const dialogVisible = ref(false)
 const formRef = ref<FormInstance>()
 const isEdit = ref(false)
-const editingId = ref<number | null>(null)
+const editingId = ref<string | number | null>(null)
 
 const formData = ref<CreateCategoryRequest>({
   parentId: undefined,
@@ -157,8 +157,8 @@ function handleEdit(category: AssetCategory) {
     parentId: category.parentId ?? undefined,
     categoryCode: category.categoryCode,
     categoryName: category.categoryName,
-    categoryType: category.categoryType,
-    defaultManagementMode: category.defaultManagementMode ?? getDefaultManagementMode(category.categoryType),
+    categoryType: category.categoryType ?? CategoryType.FIXED_ASSET,
+    defaultManagementMode: category.defaultManagementMode ?? getDefaultManagementMode(category.categoryType ?? CategoryType.FIXED_ASSET),
     depreciationYears: category.depreciationYears ?? undefined,
     unit: category.unit || '',
     sortOrder: category.sortOrder ?? 0,
