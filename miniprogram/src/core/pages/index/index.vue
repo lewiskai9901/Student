@@ -41,11 +41,27 @@ const homeMenus = computed<MenuContribution[]>(() => {
 })
 
 function go(path: string) { uni.navigateTo({ url: path }) }
+
+interface CoreEntry { key: string; label: string; icon: string; path: string }
+const coreEntries: CoreEntry[] = [
+  { key: 'org', label: '组织架构', icon: 'O', path: '/core/pages/org/index' },
+  { key: 'directory', label: '通讯录', icon: 'D', path: '/core/pages/directory/index' },
+  { key: 'place', label: '场所', icon: 'P', path: '/core/pages/place/index' }
+]
 </script>
 
 <template>
   <view class="home">
     <view class="hello">Hi, {{ auth.user?.name ?? '' }}</view>
+
+    <view class="section-title">核心</view>
+    <view class="grid">
+      <view v-for="e in coreEntries" :key="e.key" class="grid-item" @click="go(e.path)">
+        <view class="icon">{{ e.icon }}</view>
+        <view class="label">{{ e.label }}</view>
+      </view>
+    </view>
+
     <view class="section-title">功能</view>
     <view class="grid">
       <view v-for="m in homeMenus" :key="m.key" class="grid-item" @click="go(m.path)">
