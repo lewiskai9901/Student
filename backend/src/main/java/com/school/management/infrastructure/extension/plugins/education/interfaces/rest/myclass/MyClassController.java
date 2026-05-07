@@ -35,7 +35,7 @@ public class MyClassController {
         return Result.success(classes);
     }
 
-    @GetMapping("/classes/{classId}/overview")
+    @GetMapping("/classes/{orgUnitId}/overview")
     @Operation(summary = "获取班级概览数据")
     public Result<MyClassOverviewDTO> getClassOverview(
             @PathVariable Long orgUnitId,
@@ -44,7 +44,7 @@ public class MyClassController {
         return Result.success(overview);
     }
 
-    @GetMapping("/classes/{classId}/user_student")
+    @GetMapping("/classes/{orgUnitId}/user_student")
     @Operation(summary = "获取班级学生列表")
     public Result<List<MyClassStudentDTO>> getClassStudents(
             @PathVariable Long orgUnitId,
@@ -56,7 +56,7 @@ public class MyClassController {
         return Result.success(user_student);
     }
 
-    @GetMapping("/classes/{classId}/dormitory-distribution")
+    @GetMapping("/classes/{orgUnitId}/dormitory-distribution")
     @Operation(summary = "获取班级宿舍分布")
     public Result<List<DormitoryDistributionDTO>> getDormitoryDistribution(
             @PathVariable Long orgUnitId,
