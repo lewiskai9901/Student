@@ -34,14 +34,14 @@ describe('inspection manifest', () => {
     expect(action!.params).toEqual({ id: '123' })
   })
 
-  it('declares 12 permissions / 5 menus / 7 routes / 3 events', () => {
+  it('declares 12 permissions / 5 menus / 9 routes / 3 events', () => {
     const counts = inspection.contributions.reduce((acc, c) => {
       acc[c.type] = (acc[c.type] ?? 0) + 1
       return acc
     }, {} as Record<string, number>)
     expect(counts['permission']).toBe(12)
     expect(counts['menu']).toBe(5)
-    expect(counts['route']).toBe(7)
+    expect(counts['route']).toBe(9)
     expect(counts['scan-resolver']).toBe(1)
     expect(counts['event']).toBe(3)
   })
