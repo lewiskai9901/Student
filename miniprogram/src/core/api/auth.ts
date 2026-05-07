@@ -33,7 +33,8 @@ export const authApi = {
       method: 'POST',
       data: { username, password },
       skipAuth: true
-    })
+    }),
+  me: () => requestWrapped<LoginUserInfo>({ url: '/auth/me' })
 }
 
 // Helper: flatten the rich LoginUserInfo into the narrow PluginContext.UserInfo

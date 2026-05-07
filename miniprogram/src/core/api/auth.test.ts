@@ -44,6 +44,27 @@ describe('authApi.login', () => {
     expect(r.userInfo.tenantId).toBe(1)
   })
 
+  it('me() GETs /auth/me without skipAuth and returns LoginUserInfo', async () => {
+    mockUni.request.mockImplementation((o: any) => o.success({
+      statusCode: 200,
+      data: {
+        code: 200, message: 'ok', timestamp: 1,
+        data: {
+          userId: 7, username: 'alice', realName: '艾丽斯', phone: '13800000000',
+          email: 'a@x.com', avatar: 'https://cdn/a.jpg', status: 1,
+          roles: ['INSPECTOR'], permissions: ['inspection:task:list'],
+          orgUnitId: 100, tenantId: 1, userTypeCode: 'STAFF'
+        }
+      }
+    }))
+    const r = await authApi.me()
+    expect(mockUni.request).toHaveBeenCalledWith(expect.objectContaining({
+      url: expect.stringContaining('/auth/me')
+    }))
+    expect(r.userId).toBe(7)
+    expect(r.realName).toBe('艾丽斯')
+  })
+
   it('POSTs /auth/login with username + password and skipAuth true', async () => {
     mockUni.request.mockImplementation((o: any) => o.success({
       statusCode: 200,
