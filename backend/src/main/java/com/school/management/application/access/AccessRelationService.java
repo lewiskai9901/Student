@@ -60,6 +60,8 @@ public class AccessRelationService {
     private final JdbcTemplate jdbcTemplate;
     /** check() 结果 Redis 缓存 (Phase 4 W4.2): 60s TTL, grant/revoke 主动 invalidate. */
     private final AccessCheckCache checkCache;
+    /** metadata 字段 schema 校验 (Phase 4 W4.3 骨架). */
+    private final MetadataSchemaValidator metadataSchemaValidator;
 
     /**
      * 关系推导索引: (targetType + targetRelation) → 所有可能派生出它的
@@ -363,6 +365,9 @@ public class AccessRelationService {
                 "[AccessRelation] 非法 relation: %s %s -> %s (未注册或未启用)",
                 r.relation, r.subjectType, r.resourceType));
         }
+
+        // 1b. 校验 metadata 满足关系的 schema 要求 (Phase 4 W4.3, 默认骨架放行未注册关系)
+        metadataSchemaValidator.validate(r.relation, r.metadata);
 
         // 2. 检查是否已有同样的活跃关系 (幂等)
         Optional<Long> existing = repo.findActiveByTuple(

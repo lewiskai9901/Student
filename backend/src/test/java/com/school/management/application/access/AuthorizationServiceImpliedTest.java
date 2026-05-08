@@ -74,7 +74,7 @@ class AuthorizationServiceImpliedTest {
             List.of(new FakeOccupantsDiscovery(),
                     new FakeMembersDiscovery(),
                     new FakeDescendantsDiscovery()),
-            jdbc, noopCheckCache());
+            jdbc, noopCheckCache(), new MetadataSchemaValidator(om));
     }
 
     /** Test helper: AccessCheckCache with caching disabled — pure pass-through to loader. */
@@ -266,7 +266,7 @@ class AuthorizationServiceImpliedTest {
                 return List.of(id + 1L);
             }
         };
-        AccessRelationService svc2 = new AccessRelationService(repo, events, om, List.of(infinite), jdbc, noopCheckCache());
+        AccessRelationService svc2 = new AccessRelationService(repo, events, om, List.of(infinite), jdbc, noopCheckCache(), new MetadataSchemaValidator(om));
 
         when(jdbc.queryForList(
             ArgumentMatchers.contains("WHERE is_enabled = 1 AND implied_relations IS NOT NULL")))
