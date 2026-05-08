@@ -14,7 +14,7 @@ import java.util.List;
  * "宿舍头领对室友拥有 viewer 关系" 的推导。
  *
  * <p>注册方式: 实现类加 {@code @Component}, Spring DI 会自动收集,
- * {@link com.school.management.application.access.AuthorizationService} 构造时
+ * {@link com.school.management.application.access.AccessRelationService} 构造时
  * 按 {@link #code()} 建索引并调用。
  *
  * @see com.school.management.infrastructure.extension.RelationTypePlugin.RelationTypeDef.Implied

@@ -2,7 +2,7 @@ package com.school.management.application.message;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.school.management.application.access.AuthorizationService;
+import com.school.management.application.access.AccessRelationService;
 import com.school.management.application.message.targetmode.ByRelationTargetMode;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -22,21 +22,21 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 /**
- * M1.2 — BY_RELATION 走 AuthorizationService.findSubjectsWithRelation,
+ * M1.2 — BY_RELATION 走 AccessRelationService.findSubjectsWithRelation,
  * 不再裸 SQL — 确保 implied 派生关系的订阅者能收到.
  *
  * M2 后重构为直接测试 {@link ByRelationTargetMode} resolver.
  */
 class MessageDispatcherImpliedTest {
 
-    private AuthorizationService authService;
+    private AccessRelationService authService;
     private JdbcTemplate jdbcTemplate;
     private ByRelationTargetMode resolver;
     private ObjectMapper objectMapper;
 
     @BeforeEach
     void setup() {
-        authService = mock(AuthorizationService.class);
+        authService = mock(AccessRelationService.class);
         jdbcTemplate = mock(JdbcTemplate.class);
         resolver = new ByRelationTargetMode(authService, jdbcTemplate);
         objectMapper = new ObjectMapper();
@@ -54,7 +54,7 @@ class MessageDispatcherImpliedTest {
     }
 
     @Test
-    void inward_callsAuthorizationServiceWithExpandImpliedTrue() throws Exception {
+    void inward_callsAccessRelationServiceWithExpandImpliedTrue() throws Exception {
         when(authService.findSubjectsWithRelation(
             eq("place"), eq(101L), eq("viewer"), eq("user"), eq(true)))
             .thenReturn(List.of(42L, 77L));
@@ -95,7 +95,7 @@ class MessageDispatcherImpliedTest {
 
     @Test
     void outward_doesNotCallAuthService_usesDirectJdbc() throws Exception {
-        // outward 路径仍用裸 JDBC, 不会走 AuthorizationService
+        // outward 路径仍用裸 JDBC, 不会走 AccessRelationService
         resolver.resolve(
             parseConfig("{\"relation\":\"guardian_of\",\"resource_type\":\"user\",\"direction\":\"outward\"}"),
             eventMap(100L, "USER"));

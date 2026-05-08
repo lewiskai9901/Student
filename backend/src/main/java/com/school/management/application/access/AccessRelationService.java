@@ -3,6 +3,10 @@ package com.school.management.application.access;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.school.management.domain.access.model.valueobject.AccessLevel;
+import com.school.management.domain.access.repository.AccessRelationRepository;
+import com.school.management.domain.access.repository.AccessRelationRepository.DirectRelationRef;
+import com.school.management.domain.access.repository.AccessRelationRepository.InsertDirectCommand;
+import com.school.management.domain.access.repository.AccessRelationRepository.RelationEdgeRef;
 import com.school.management.infrastructure.extension.RelationTypePlugin.RelationTypeDef.Implied;
 import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
@@ -17,12 +21,17 @@ import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
- * 统一授权服务 (Zanzibar 风格 6 API)
+ * 统一访问关系应用服务 (Zanzibar 风格 6 API).
  *
- * 所有业务代码查询关系**必须**走这里,不要直接拼 SQL。
+ * <p>历史名 {@code AuthorizationService} 与 {@link com.school.management.domain.access.service.AuthorizationService}
+ * (RBAC 接口) 重名, W1.3 起改名为 {@code AccessRelationService}, 语义更准确 — 它操作的就是 access_relations.
+ *
+ * <p>所有业务代码查询关系**必须**走这里, 不要直接拼 SQL。底层 SQL 已收回到
+ * {@link AccessRelationRepository}, 此服务只做编排 + implied BFS。
+ *
  * 语义:
  *   - check        (subject, relation, resource, at?): boolean
- *   - checkAt      同上,带时间点
+ *   - checkAt      同上, 带时间点
  *   - expand       (resource, relation) → 所有 subject
  *   - lookup       (subject, relation, resource_type) → 所有 resource
  *   - grant        (subject, relation, resource, ...) → 创建关系 + 发事件
@@ -31,27 +40,28 @@ import java.util.concurrent.ConcurrentHashMap;
  *
  * 时间语义:
  *   valid_from / valid_to 形成"生效窗口"。
- *   check() 默认只看"当前活跃"(valid_to IS NULL OR valid_to > NOW())。
+ *   check() 默认只看"当前活跃" (valid_to IS NULL OR valid_to > NOW())。
  *   checkAt(..., timestamp) 看该时间点的快照。
  *
  * 软删语义:
- *   deleted = 1 → 数据纠错,彻底排除(包括历史查询)。
- *   valid_to 到期 → 业务失效,保留在主表/history 供审计。
+ *   deleted = 1 → 数据纠错, 彻底排除 (包括历史查询)。
+ *   valid_to 到期 → 业务失效, 保留在主表/history 供审计。
  */
 @Slf4j
 @Service
 @RequiredArgsConstructor
-public class AuthorizationService {
+public class AccessRelationService {
 
-    private final JdbcTemplate jdbcTemplate;
+    private final AccessRelationRepository repo;
     private final ApplicationEventPublisher eventPublisher;
     private final ObjectMapper objectMapper;
     private final List<RelationDiscoveryRule> discoveryRules;
+    /** 仅 implied 缓存 refresh 时读 relation_types 配置表用; 业务查询全部走 repo. */
+    private final JdbcTemplate jdbcTemplate;
 
     /**
      * 关系推导索引: (targetType + targetRelation) → 所有可能派生出它的
      * (sourceRelation, fromType, Implied) 三元组。启动加载, 变更时 refresh。
-     * (保留用于历史语义兼容 — 非递归路径不再使用, 仍为 refresh 统一维护)
      */
     private final Map<String, List<ImpliedSource>> impliedIndex = new ConcurrentHashMap<>();
     /**
@@ -71,7 +81,7 @@ public class AuthorizationService {
             discoveryByCode.put(r.code(), r);
         }
         refreshImpliedCache();
-        log.info("[Authorization] implied relation cache ready — {} reverse entries, {} forward entries, {} discovery rules",
+        log.info("[AccessRelation] implied relation cache ready — {} reverse entries, {} forward entries, {} discovery rules",
             impliedIndex.size(), impliedOutgoing.size(), discoveryByCode.size());
     }
 
@@ -79,6 +89,7 @@ public class AuthorizationService {
     public void refreshImpliedCache() {
         Map<String, List<ImpliedSource>> freshReverse = new HashMap<>();
         Map<String, List<ImpliedTarget>> freshForward = new HashMap<>();
+        // 这条查询直接读 relation_types 配置表 (不在 access_relations 上), 保留 jdbcTemplate.
         List<Map<String, Object>> rows = jdbcTemplate.queryForList(
             "SELECT relation_code, from_type, to_type, implied_relations FROM relation_types " +
             "WHERE is_enabled = 1 AND implied_relations IS NOT NULL");
@@ -90,7 +101,7 @@ public class AuthorizationService {
             try {
                 implied = objectMapper.readValue(impliedJson, typeRef);
             } catch (Exception e) {
-                log.warn("[Authorization] skip malformed implied_relations for {}: {}",
+                log.warn("[AccessRelation] skip malformed implied_relations for {}: {}",
                     row.get("relation_code"), e.getMessage());
                 continue;
             }
@@ -101,9 +112,6 @@ public class AuthorizationService {
                 String revKey = impliedKey(i.targetType(), i.relation());
                 freshReverse.computeIfAbsent(revKey, k -> new ArrayList<>())
                     .add(new ImpliedSource(fromType, sourceRelation, sourceToType, i));
-                // 正向索引: (sourceToType + sourceRelation) → 派生目标
-                // 注意: BFS 展开时是从"已拥有的 (resourceType, relation)" 出发找派生,
-                // 所以 key 是 sourceToType (resource 类型) + sourceRelation
                 String fwdKey = impliedKey(sourceToType, sourceRelation);
                 freshForward.computeIfAbsent(fwdKey, k -> new ArrayList<>())
                     .add(new ImpliedTarget(i.targetType(), i.relation(), i.discoveryRule()));
@@ -148,17 +156,7 @@ public class AuthorizationService {
                                String relation,
                                String resourceType, Long resourceId,
                                LocalDateTime at) {
-        Integer cnt = jdbcTemplate.queryForObject(
-            "SELECT COUNT(1) FROM access_relations " +
-            "WHERE resource_type = ? AND resource_id = ? " +
-            "  AND relation = ? " +
-            "  AND subject_type = ? AND subject_id = ? " +
-            "  AND deleted = 0 " +
-            "  AND (valid_from IS NULL OR valid_from <= ?) " +
-            "  AND (valid_to IS NULL OR valid_to > ?)",
-            Integer.class,
-            resourceType, resourceId, relation, subjectType, subjectId, at, at);
-        return cnt != null && cnt > 0;
+        return repo.checkDirectActive(subjectType, subjectId, relation, resourceType, resourceId, at);
     }
 
     /**
@@ -181,24 +179,18 @@ public class AuthorizationService {
         if (impliedOutgoing.isEmpty()) return false;
 
         // 1. 起点: subject 所有直接关系
-        List<Map<String, Object>> directRows = jdbcTemplate.queryForList(
-            "SELECT resource_type, resource_id, relation FROM access_relations " +
-            "WHERE subject_type = ? AND subject_id = ? " +
-            "  AND deleted = 0 " +
-            "  AND (valid_from IS NULL OR valid_from <= ?) " +
-            "  AND (valid_to IS NULL OR valid_to > ?)",
-            subjectType, subjectId, at, at);
+        List<DirectRelationRef> directRows = repo.findActiveDirectRelationsBySubject(subjectType, subjectId, at);
 
         Deque<WorkItem> work = new ArrayDeque<>(directRows.size() + 8);
         Set<String> visited = new HashSet<>();
-        for (Map<String, Object> row : directRows) {
-            String rt = (String) row.get("resource_type");
-            Number rid = (Number) row.get("resource_id");
-            String rel = (String) row.get("relation");
+        for (DirectRelationRef row : directRows) {
+            String rt = row.resourceType();
+            Long rid = row.resourceId();
+            String rel = row.relation();
             if (rt == null || rid == null || rel == null) continue;
-            String key = rt + ":" + rid.longValue() + "#" + rel;
+            String key = rt + ":" + rid + "#" + rel;
             if (visited.add(key)) {
-                work.add(new WorkItem(rt, rid.longValue(), rel, 0));
+                work.add(new WorkItem(rt, rid, rel, 0));
             }
         }
 
@@ -209,13 +201,13 @@ public class AuthorizationService {
             if (cur.resourceType.equals(resourceType)
                 && cur.relation.equals(relation)
                 && cur.resourceId.equals(resourceId)) {
-                log.debug("[Authorization] implied 命中 (depth={}): {}:{} -> {}:{} {}",
+                log.debug("[AccessRelation] implied 命中 (depth={}): {}:{} -> {}:{} {}",
                     cur.depth, subjectType, subjectId, resourceType, resourceId, relation);
                 return true;
             }
             // 深度限制
             if (cur.depth >= MAX_IMPLIED_DEPTH) {
-                log.warn("[Authorization] implied BFS 深度超限 ({}), subject={}:{} stop at {}:{} {}",
+                log.warn("[AccessRelation] implied BFS 深度超限 ({}), subject={}:{} stop at {}:{} {}",
                     MAX_IMPLIED_DEPTH, subjectType, subjectId, cur.resourceType, cur.resourceId, cur.relation);
                 continue;
             }
@@ -225,7 +217,7 @@ public class AuthorizationService {
             for (ImpliedTarget d : derivations) {
                 RelationDiscoveryRule rule = discoveryByCode.get(d.discoveryRule());
                 if (rule == null) {
-                    log.debug("[Authorization] implied 跳过 — unknown discoveryRule: {}", d.discoveryRule());
+                    log.debug("[AccessRelation] implied 跳过 — unknown discoveryRule: {}", d.discoveryRule());
                     continue;
                 }
                 List<Long> derivedIds = rule.discover(cur.resourceType, cur.resourceId);
@@ -254,7 +246,6 @@ public class AuthorizationService {
     /** 批量判定(消息扇出等批处理场景) */
     public Map<String, Boolean> batchCheck(List<CheckRequest> requests) {
         Map<String, Boolean> result = new LinkedHashMap<>(requests.size());
-        // 简单实现:逐条查询;生产环境可优化为 IN 查询
         for (CheckRequest r : requests) {
             boolean ok = check(r.subjectType, r.subjectId, r.relation, r.resourceType, r.resourceId);
             result.put(r.key(), ok);
@@ -268,43 +259,14 @@ public class AuthorizationService {
 
     /** 某资源 + 某关系 → 授权的 subject 列表(只返 active) */
     public List<SubjectRef> expand(String resourceType, Long resourceId, String relation) {
-        return jdbcTemplate.query(
-            "SELECT subject_type, subject_id, access_level, valid_from, valid_to " +
-            "FROM access_relations " +
-            "WHERE resource_type = ? AND resource_id = ? AND relation = ? " +
-            "  AND deleted = 0 " +
-            "  AND (valid_to IS NULL OR valid_to > NOW())",
-            (rs, i) -> new SubjectRef(
-                rs.getString("subject_type"),
-                rs.getLong("subject_id"),
-                AccessLevel.parse(rs.getString("access_level")),
-                rs.getTimestamp("valid_from") != null ? rs.getTimestamp("valid_from").toLocalDateTime() : null,
-                rs.getTimestamp("valid_to")   != null ? rs.getTimestamp("valid_to").toLocalDateTime()   : null
-            ),
-            resourceType, resourceId, relation);
+        return repo.expandSubjects(resourceType, resourceId, relation).stream()
+            .map(p -> new SubjectRef(p.subjectType(), p.subjectId(), p.accessLevel(),
+                p.validFrom(), p.validTo()))
+            .toList();
     }
 
     /**
      * 找对给定 resource 拥有 relation 关系的所有 subject id (含 implied 派生).
-     *
-     * <p>直查 access_relations 获得直接授权的 subject, 再扫 impliedIndex 反向展开一层
-     * implied — 对于每个能派生到 (resourceType, relation) 的 (sourceFromType, sourceRelation),
-     * 通过 {@link RelationDiscoveryRule#reverseDiscover} 反查哪些 source resource 能派生到
-     * 当前 resourceId, 再查这些 source resource 上的直接关系 subject, 并入结果.
-     *
-     * <p>注意 (MVP 限制):
-     * <ul>
-     *   <li>只反展开一层 implied. 多层链 (A 派生 B 派生 C) 暂不覆盖; 如业务真的需要,
-     *       可升级为反向 BFS (对称于 {@code checkImplied}).</li>
-     *   <li>依赖具体 {@link RelationDiscoveryRule#reverseDiscover} 实现. 未覆写的规则
-     *       返回空列表并打 debug 日志, 相当于跳过该派生路径.</li>
-     * </ul>
-     *
-     * @param resourceType  资源类型 (如 "user" / "place" / "org_unit")
-     * @param resourceId    资源 ID
-     * @param relation      关系码 (如 "viewer" / "admin")
-     * @param expandImplied true 则展开 implied 派生; false 等价于 {@link #expand} 取 id 列表
-     * @return 拥有此关系的 subject id 列表 (subject_type 可混合; 调用方若只要 user 自行过滤)
      */
     public List<Long> findSubjectsWithRelation(String resourceType, Long resourceId,
                                                 String relation, boolean expandImplied) {
@@ -320,51 +282,32 @@ public class AuthorizationService {
                                                 String relation, String subjectTypeFilter,
                                                 boolean expandImplied) {
         // 1. 直查
-        String directSql = "SELECT DISTINCT subject_id FROM access_relations " +
-            "WHERE resource_type = ? AND resource_id = ? AND relation = ? " +
-            "  AND deleted = 0 " +
-            "  AND (valid_to IS NULL OR valid_to > NOW())" +
-            (subjectTypeFilter != null ? " AND subject_type = ?" : "");
-        List<Long> direct = subjectTypeFilter != null
-            ? jdbcTemplate.queryForList(directSql, Long.class, resourceType, resourceId, relation, subjectTypeFilter)
-            : jdbcTemplate.queryForList(directSql, Long.class, resourceType, resourceId, relation);
+        List<Long> direct = repo.findActiveSubjectIds(resourceType, resourceId, relation, subjectTypeFilter);
         if (!expandImplied) return direct;
 
         Set<Long> result = new LinkedHashSet<>(direct);
 
         // 2. 反向展开 implied (一层)
-        // impliedIndex key = targetType#relation, value = List<ImpliedSource>
-        //   每个 ImpliedSource(fromType, sourceRelation, sourceToType, implied) 表达:
-        //   "拥有 (sourceToType, sourceRelation) 的 subject (subject_type=fromType)
-        //    会派生到 (targetType, relation)"
         List<ImpliedSource> sources = impliedIndex.get(impliedKey(resourceType, relation));
         if (sources == null || sources.isEmpty()) {
             return new ArrayList<>(result);
         }
 
         for (ImpliedSource s : sources) {
-            // subject_type 过滤: source 端关系的 subject_type = ImpliedSource.fromType,
-            // 若调用方指定 subjectTypeFilter 且不匹配, 跳过该派生.
             if (subjectTypeFilter != null && !subjectTypeFilter.equals(s.fromType())) continue;
 
             RelationDiscoveryRule rule = discoveryByCode.get(s.implied().discoveryRule());
             if (rule == null) {
-                log.debug("[Authorization] findSubjectsWithRelation: 跳过未知 discoveryRule={}",
+                log.debug("[AccessRelation] findSubjectsWithRelation: 跳过未知 discoveryRule={}",
                     s.implied().discoveryRule());
                 continue;
             }
-            // 反查: 给定目标 (resourceType, resourceId), 哪些 source resource 能派生到它?
             List<Long> sourceResourceIds = rule.reverseDiscover(resourceType, resourceId);
             if (sourceResourceIds == null || sourceResourceIds.isEmpty()) continue;
 
             for (Long srcResId : sourceResourceIds) {
-                List<Long> implied = jdbcTemplate.queryForList(
-                    "SELECT DISTINCT subject_id FROM access_relations " +
-                    "WHERE resource_type = ? AND resource_id = ? " +
-                    "  AND relation = ? AND subject_type = ? " +
-                    "  AND deleted = 0 " +
-                    "  AND (valid_to IS NULL OR valid_to > NOW())",
-                    Long.class, s.sourceToType(), srcResId, s.sourceRelation(), s.fromType());
+                List<Long> implied = repo.findActiveSubjectIds(
+                    s.sourceToType(), srcResId, s.sourceRelation(), s.fromType());
                 result.addAll(implied);
             }
         }
@@ -373,22 +316,9 @@ public class AuthorizationService {
 
     /** 某资源上的所有关系(不限 relation) */
     public List<RelationEdge> expandAll(String resourceType, Long resourceId) {
-        return jdbcTemplate.query(
-            "SELECT relation, subject_type, subject_id, access_level, valid_from, valid_to " +
-            "FROM access_relations " +
-            "WHERE resource_type = ? AND resource_id = ? " +
-            "  AND deleted = 0 " +
-            "  AND (valid_to IS NULL OR valid_to > NOW()) " +
-            "ORDER BY relation, subject_type",
-            (rs, i) -> new RelationEdge(
-                rs.getString("relation"),
-                rs.getString("subject_type"), rs.getLong("subject_id"),
-                resourceType, resourceId,
-                AccessLevel.parse(rs.getString("access_level")),
-                rs.getTimestamp("valid_from") != null ? rs.getTimestamp("valid_from").toLocalDateTime() : null,
-                rs.getTimestamp("valid_to")   != null ? rs.getTimestamp("valid_to").toLocalDateTime()   : null
-            ),
-            resourceType, resourceId);
+        return repo.expandAllOnResource(resourceType, resourceId).stream()
+            .map(this::toRelationEdge)
+            .toList();
     }
 
     // ═══════════════════════════════════════════════════════════════
@@ -398,34 +328,17 @@ public class AuthorizationService {
     /** 某用户 + 某关系 + 某资源类型 → 用户能访问的资源 ID 列表 */
     public List<Long> lookup(String subjectType, Long subjectId,
                              String relation, String resourceType) {
-        return jdbcTemplate.queryForList(
-            "SELECT DISTINCT resource_id FROM access_relations " +
-            "WHERE subject_type = ? AND subject_id = ? " +
-            "  AND relation = ? AND resource_type = ? " +
-            "  AND deleted = 0 " +
-            "  AND (valid_to IS NULL OR valid_to > NOW())",
-            Long.class,
-            subjectType, subjectId, relation, resourceType);
+        return repo.lookupActiveResources(subjectType, subjectId, relation, resourceType).stream()
+            .map(RelationEdgeRef::resourceId)
+            .distinct()
+            .toList();
     }
 
     /** 某用户所有关系(整张画像) */
     public List<RelationEdge> lookupAll(String subjectType, Long subjectId) {
-        return jdbcTemplate.query(
-            "SELECT resource_type, resource_id, relation, access_level, valid_from, valid_to " +
-            "FROM access_relations " +
-            "WHERE subject_type = ? AND subject_id = ? " +
-            "  AND deleted = 0 " +
-            "  AND (valid_to IS NULL OR valid_to > NOW()) " +
-            "ORDER BY resource_type, relation",
-            (rs, i) -> new RelationEdge(
-                rs.getString("relation"),
-                subjectType, subjectId,
-                rs.getString("resource_type"), rs.getLong("resource_id"),
-                AccessLevel.parse(rs.getString("access_level")),
-                rs.getTimestamp("valid_from") != null ? rs.getTimestamp("valid_from").toLocalDateTime() : null,
-                rs.getTimestamp("valid_to")   != null ? rs.getTimestamp("valid_to").toLocalDateTime()   : null
-            ),
-            subjectType, subjectId);
+        return repo.lookupAllForSubject(subjectType, subjectId).stream()
+            .map(this::toRelationEdge)
+            .toList();
     }
 
     // ═══════════════════════════════════════════════════════════════
@@ -436,28 +349,18 @@ public class AuthorizationService {
     @Transactional
     public Long grant(GrantRequest r) {
         // 1. 校验 relation_types 是否存在且启用
-        Integer validRel = jdbcTemplate.queryForObject(
-            "SELECT COUNT(1) FROM relation_types " +
-            "WHERE relation_code = ? AND from_type = ? AND to_type = ? AND is_enabled = 1",
-            Integer.class, r.relation, r.subjectType, r.resourceType);
-        if (validRel == null || validRel == 0) {
+        if (!repo.isRelationRegistered(r.relation, r.subjectType, r.resourceType)) {
             throw new IllegalArgumentException(String.format(
-                "[Authorization] 非法 relation: %s %s -> %s (未注册或未启用)",
+                "[AccessRelation] 非法 relation: %s %s -> %s (未注册或未启用)",
                 r.relation, r.subjectType, r.resourceType));
         }
 
-        // 2. 检查是否已有同样的活跃关系(幂等)
-        Long existing = jdbcTemplate.query(
-            "SELECT id FROM access_relations " +
-            "WHERE resource_type = ? AND resource_id = ? AND relation = ? " +
-            "  AND subject_type = ? AND subject_id = ? AND deleted = 0 " +
-            "  AND (valid_to IS NULL OR valid_to > NOW()) " +
-            "LIMIT 1",
-            rs -> rs.next() ? rs.getLong("id") : null,
+        // 2. 检查是否已有同样的活跃关系 (幂等)
+        Optional<Long> existing = repo.findActiveByTuple(
             r.resourceType, r.resourceId, r.relation, r.subjectType, r.subjectId);
-        if (existing != null) {
-            log.info("[Authorization] grant 幂等命中,返回现有关系 id={}", existing);
-            return existing;
+        if (existing.isPresent()) {
+            log.info("[AccessRelation] grant 幂等命中,返回现有关系 id={}", existing.get());
+            return existing.get();
         }
 
         // 3. INSERT
@@ -467,26 +370,19 @@ public class AuthorizationService {
         } catch (Exception e) {
             metaJson = null;
         }
-        jdbcTemplate.update(
-            "INSERT INTO access_relations " +
-            "(resource_type, resource_id, relation, subject_type, subject_id, " +
-            " include_children, access_level, valid_from, valid_to, metadata, remark, " +
-            " tenant_id, created_by, created_at) " +
-            "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())",
-            r.resourceType, r.resourceId, r.relation, r.subjectType, r.subjectId,
-            r.includeChildren ? 1 : 0,
-            r.accessLevel != null ? r.accessLevel.name() : AccessLevel.FULL.name(),
-            r.validFrom != null ? r.validFrom : LocalDateTime.now(),
-            r.validTo,
+        Long newId = repo.insertDirect(new InsertDirectCommand(
+            r.resourceType, r.resourceId, r.relation,
+            r.subjectType, r.subjectId,
+            r.includeChildren,
+            r.accessLevel != null ? r.accessLevel : AccessLevel.FULL,
+            r.validFrom, r.validTo,
             metaJson, r.remark,
             r.tenantId != null ? r.tenantId : 1L,
-            r.grantedBy);
-
-        Long newId = jdbcTemplate.queryForObject("SELECT LAST_INSERT_ID()", Long.class);
-        log.info("[Authorization] grant: relation={} {} {}:{} -> {}:{} id={}",
+            r.grantedBy));
+        log.info("[AccessRelation] grant: relation={} {} {}:{} -> {}:{} id={}",
             r.relation, r.subjectType, r.subjectId, r.resourceType, r.resourceId, r.accessLevel, newId);
 
-        // 4. 发事件(本轮先打点,Day 8 再改用 TriggerService.fire)
+        // 4. 发事件
         eventPublisher.publishEvent(new RelationAssignedEvent(
             newId, r.resourceType, r.resourceId, r.relation,
             r.subjectType, r.subjectId, r.grantedBy));
@@ -498,47 +394,35 @@ public class AuthorizationService {
     @Transactional
     public void revoke(RevokeRequest r) {
         // 1. 查到关系 id
-        List<Long> ids = jdbcTemplate.queryForList(
-            "SELECT id FROM access_relations " +
-            "WHERE resource_type = ? AND resource_id = ? AND relation = ? " +
-            "  AND subject_type = ? AND subject_id = ? " +
-            "  AND deleted = 0 AND (valid_to IS NULL OR valid_to > NOW())",
-            Long.class,
+        List<Long> ids = repo.findActiveIdsByTuple(
             r.resourceType, r.resourceId, r.relation, r.subjectType, r.subjectId);
         if (ids.isEmpty()) {
-            log.warn("[Authorization] revoke 未找到活跃关系: {} {} -> {}:{}",
+            log.warn("[AccessRelation] revoke 未找到活跃关系: {} {} -> {}:{}",
                 r.relation, r.subjectId, r.resourceType, r.resourceId);
             return;
         }
 
         for (Long id : ids) {
-            // 2. 归档到 history
-            jdbcTemplate.update(
-                "INSERT INTO access_relations_history " +
-                "(original_id, resource_type, resource_id, relation, subject_type, subject_id, " +
-                " include_children, access_level, valid_from, valid_to, metadata, remark, " +
-                " archived_at, archived_reason, archived_by, tenant_id, created_by) " +
-                "SELECT id, resource_type, resource_id, relation, subject_type, subject_id, " +
-                "       include_children, access_level, valid_from, valid_to, metadata, remark, " +
-                "       NOW(), ?, ?, tenant_id, created_by " +
-                "FROM access_relations WHERE id = ?",
-                r.reason, r.revokedBy, id);
-
-            // 3. 软删
-            jdbcTemplate.update(
-                "UPDATE access_relations SET deleted = 1, deleted_at = NOW(), deleted_by = ?, " +
-                "valid_to = COALESCE(valid_to, NOW()) " +
-                "WHERE id = ?",
-                r.revokedBy, id);
-
-            // 4. 发事件
+            repo.archiveAndSoftDelete(id, r.reason, r.revokedBy);
             eventPublisher.publishEvent(new RelationRevokedEvent(
                 id, r.resourceType, r.resourceId, r.relation,
                 r.subjectType, r.subjectId, r.reason, r.revokedBy));
-
-            log.info("[Authorization] revoke id={} relation={} {} -> {}:{} reason={}",
+            log.info("[AccessRelation] revoke id={} relation={} {} -> {}:{} reason={}",
                 id, r.relation, r.subjectId, r.resourceType, r.resourceId, r.reason);
         }
+    }
+
+    // ═══════════════════════════════════════════════════════════════
+    // 投影映射
+    // ═══════════════════════════════════════════════════════════════
+
+    private RelationEdge toRelationEdge(RelationEdgeRef ref) {
+        return new RelationEdge(
+            ref.relation(),
+            ref.subjectType(), ref.subjectId(),
+            ref.resourceType(), ref.resourceId(),
+            ref.accessLevel(),
+            ref.validFrom(), ref.validTo());
     }
 
     // ═══════════════════════════════════════════════════════════════

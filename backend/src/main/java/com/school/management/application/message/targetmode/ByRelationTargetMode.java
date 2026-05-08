@@ -1,6 +1,6 @@
 package com.school.management.application.message.targetmode;
 
-import com.school.management.application.access.AuthorizationService;
+import com.school.management.application.access.AccessRelationService;
 import com.school.management.infrastructure.extension.TargetModeResolver;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -32,7 +32,7 @@ import java.util.stream.Collectors;
  *   - 学生扣分 (subject=学生 USER):
  *     {relation:"guardian_of", resource_type:"user", direction:"outward"}  → 通知该学生的家长
  *
- * inward 走 AuthorizationService.findSubjectsWithRelation(expandImplied=true).
+ * inward 走 AccessRelationService.findSubjectsWithRelation(expandImplied=true).
  * outward 走裸 SQL (当前 MVP 暂不覆盖派生, 需反向 BFS 后续扩展).
  */
 @Slf4j
@@ -40,7 +40,7 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class ByRelationTargetMode implements TargetModeResolver {
 
-    private final AuthorizationService authorizationService;
+    private final AccessRelationService accessRelationService;
     private final JdbcTemplate jdbcTemplate;
 
     @Override
@@ -101,7 +101,7 @@ public class ByRelationTargetMode implements TargetModeResolver {
                     : (subjectType != null ? subjectType.toLowerCase() : "org_unit");
             Set<Long> result = new LinkedHashSet<>();
             for (String rel : relations) {
-                List<Long> ids = authorizationService.findSubjectsWithRelation(
+                List<Long> ids = accessRelationService.findSubjectsWithRelation(
                     rt, subjectId, rel, /* subjectTypeFilter= */ "user", /* expandImplied= */ true);
                 result.addAll(ids);
             }
