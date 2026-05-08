@@ -25,8 +25,14 @@ export async function activatePlugins(d: ContributionDispatcher, input: Activate
     bus: input.bus ?? sharedBus
   }
   const all = d.allPlugins()
+  // Enable gate priority:
+  //   1. If manifest declares `enabled(ctx)`, that function is the sole gate (it can read ctx.tenantPlugins itself).
+  //   2. Otherwise default to "plugin key included in tenantPlugins".
+  // This lets core/通用 plugins (inspection) ship `enabled: () => true` while industry plugins (EDU)
+  // still gate on backend's enabledPlugins. Plugin keys (lowercase) and backend industry codes
+  // (often UPPERCASE like 'EDU') don't need to match — the manifest's enabled function handles the mapping.
   const active = all.filter(p =>
-    input.tenantPlugins.includes(p.key) && (p.enabled?.(ctx) ?? true)
+    p.enabled ? p.enabled(ctx) : input.tenantPlugins.includes(p.key)
   )
   for (const p of active) await p.bootstrap?.(ctx)
   return active

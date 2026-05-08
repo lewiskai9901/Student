@@ -18,7 +18,8 @@ describe('generatePagesJson', () => {
     expect(result.pages).toHaveLength(2)
     expect(result.subPackages).toHaveLength(1)
     expect(result.subPackages[0].root).toBe('plugins/demo')
-    expect(result.subPackages[0].pages).toEqual(['pages/hello'])
+    // uni-cli expects each entry as { path } object
+    expect(result.subPackages[0].pages).toEqual([{ path: 'pages/hello' }])
   })
 
   it('preserves tabBar from options', () => {

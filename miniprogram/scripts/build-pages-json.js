@@ -18,7 +18,11 @@ const DEFAULT_GLOBAL_STYLE = {
 function generatePagesJson(corePages, plugins, options = {}) {
   const subPackages = plugins
     .filter(p => p.subPackage)
-    .map(p => ({ root: p.subPackage.root, pages: [...p.subPackage.pages] }))
+    .map(p => ({
+      root: p.subPackage.root,
+      // uni-cli expects each entry as { path } object; manifests.json stores plain strings.
+      pages: p.subPackage.pages.map(pg => (typeof pg === 'string' ? { path: pg } : pg))
+    }))
 
   return {
     easycom: options.easycom || DEFAULT_EASYCOM,
@@ -34,10 +38,28 @@ function readCorePages() {
   const result = []
   if (!fs.existsSync(corePagesDir)) return result
   const dirs = fs.readdirSync(corePagesDir).sort()
-  for (const d of dirs) {
+  // login must be first (launch page); index/message/mine follow as tabBar pages; rest alphabetical.
+  const priority = ['login', 'index', 'message', 'mine']
+  const ordered = priority.filter(d => dirs.includes(d))
+    .concat(dirs.filter(d => !priority.includes(d)))
+  // Page-specific style: login uses custom (no nav bar — full-screen splash);
+  // tab pages and browse pages use default nav bar so users get a back arrow.
+  const customNav = new Set(['login'])
+  const pageTitles = {
+    index: '首页',
+    message: '消息',
+    mine: '我的',
+    org: '组织架构',
+    directory: '通讯录',
+    place: '场所'
+  }
+  for (const d of ordered) {
     const indexFile = path.join(corePagesDir, d, 'index.vue')
     if (fs.existsSync(indexFile)) {
-      result.push({ path: `core/pages/${d}/index`, style: { navigationStyle: 'custom' } })
+      const style = customNav.has(d)
+        ? { navigationStyle: 'custom' }
+        : { navigationBarTitleText: pageTitles[d] || d }
+      result.push({ path: `core/pages/${d}/index`, style })
     }
   }
   return result
@@ -51,15 +73,26 @@ function readPluginManifests() {
 
 function buildTabBar(corePages) {
   const known = new Set(corePages.map(p => p.path))
+  const path = require('path')
+  const fs = require('fs')
+  const staticDir = path.resolve(__dirname, '../src/static/tabbar')
+  const hasIcon = (file) => fs.existsSync(path.join(staticDir, file))
+  const withIcon = (entry, icon, active) => {
+    if (hasIcon(icon) && hasIcon(active)) {
+      entry.iconPath = `static/tabbar/${icon}`
+      entry.selectedIconPath = `static/tabbar/${active}`
+    }
+    return entry
+  }
   const list = []
   if (known.has('core/pages/index/index')) {
-    list.push({ pagePath: 'core/pages/index/index', text: '首页', iconPath: 'static/tabbar/home.png', selectedIconPath: 'static/tabbar/home-active.png' })
+    list.push(withIcon({ pagePath: 'core/pages/index/index', text: '首页' }, 'home.png', 'home-active.png'))
   }
   if (known.has('core/pages/message/index')) {
-    list.push({ pagePath: 'core/pages/message/index', text: '消息', iconPath: 'static/tabbar/message.png', selectedIconPath: 'static/tabbar/message-active.png' })
+    list.push(withIcon({ pagePath: 'core/pages/message/index', text: '消息' }, 'message.png', 'message-active.png'))
   }
   if (known.has('core/pages/mine/index')) {
-    list.push({ pagePath: 'core/pages/mine/index', text: '我的', iconPath: 'static/tabbar/mine.png', selectedIconPath: 'static/tabbar/mine-active.png' })
+    list.push(withIcon({ pagePath: 'core/pages/mine/index', text: '我的' }, 'mine.png', 'mine-active.png'))
   }
   if (list.length === 0) return undefined
   return {

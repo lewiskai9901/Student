@@ -24,5 +24,5 @@ export default definePlugin({
       _crossPluginAuditLog.push({ event: 'healthcare.patient.scanned', payload })
     })
   },
-  subPackage: { root: 'plugins/demo', pages: ['pages/hello'] }
+  subPackage: { root: 'plugins/demo/pages', pages: ['hello'] }
 })

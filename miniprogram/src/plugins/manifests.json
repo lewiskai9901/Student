@@ -3,7 +3,7 @@
     "key": "demo",
     "label": "演示",
     "schemaVersion": 1,
-    "subPackage": { "root": "plugins/demo", "pages": ["pages/hello"] },
+    "subPackage": { "root": "plugins/demo/pages", "pages": ["hello"] },
     "contributions": [
       { "type": "permission", "code": "demo:hello:view", "description": "Demo 页面访问" },
       { "type": "menu", "key": "demo.hello", "label": "Hello", "icon": "h", "path": "/plugins/demo/pages/hello", "perm": "demo:hello:view", "order": 1, "group": "home-grid" },
@@ -15,7 +15,7 @@
     "key": "healthcare",
     "label": "医疗",
     "schemaVersion": 1,
-    "subPackage": { "root": "plugins/healthcare", "pages": ["pages/index"] },
+    "subPackage": { "root": "plugins/healthcare/pages", "pages": ["index"] },
     "contributions": [
       { "type": "permission", "code": "healthcare:patient:view", "description": "患者档案查看" },
       { "type": "menu", "key": "healthcare.patients", "label": "患者档案", "icon": "p", "path": "/plugins/healthcare/pages/index", "perm": "healthcare:patient:view", "order": 10, "group": "home-grid" },
@@ -29,15 +29,17 @@
     "label": "检查",
     "schemaVersion": 1,
     "subPackage": {
-      "root": "plugins/inspection",
+      "root": "plugins/inspection/pages",
       "pages": [
-        "pages/my-tasks",
-        "pages/task-detail",
-        "pages/scan-landing",
-        "pages/available-tasks",
-        "pages/my-corrections",
-        "pages/correction-detail",
-        "pages/my-appeals"
+        "my-tasks",
+        "task-detail",
+        "scan-landing",
+        "available-tasks",
+        "my-corrections",
+        "correction-detail",
+        "my-appeals",
+        "submission-detail",
+        "submit-appeal"
       ]
     },
     "contributions": [
@@ -80,13 +82,13 @@
     "label": "教育",
     "schemaVersion": 1,
     "subPackage": {
-      "root": "plugins/education",
+      "root": "plugins/education/pages",
       "pages": [
-        "pages/students",
-        "pages/student-detail",
-        "pages/classes",
-        "pages/class-detail",
-        "pages/my-class"
+        "students",
+        "student-detail",
+        "classes",
+        "class-detail",
+        "my-class"
       ]
     },
     "contributions": [

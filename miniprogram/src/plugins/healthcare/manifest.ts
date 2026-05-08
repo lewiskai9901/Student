@@ -43,5 +43,5 @@ export default definePlugin({
       }
     }
   ],
-  subPackage: { root: 'plugins/healthcare', pages: ['pages/index'] }
+  subPackage: { root: 'plugins/healthcare/pages', pages: ['index'] }
 })

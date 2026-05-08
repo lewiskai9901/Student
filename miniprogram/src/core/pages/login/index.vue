@@ -51,6 +51,6 @@ async function submit() {
 .login { padding: 80rpx 48rpx; }
 .title { font-size: 44rpx; font-weight: 700; color: #1a2840; }
 .subtitle { font-size: 28rpx; color: #5a6a7a; margin-top: 8rpx; margin-bottom: 80rpx; }
-.form > * { margin-bottom: 24rpx; }
+.form { display: flex; flex-direction: column; gap: 24rpx; }
 .err { color: #e0592a; font-size: 26rpx; }
 </style>
