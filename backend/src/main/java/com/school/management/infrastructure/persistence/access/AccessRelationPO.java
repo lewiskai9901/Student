@@ -29,6 +29,10 @@ public class AccessRelationPO {
     private String metadata;
 
     private String remark;
+
+    private LocalDateTime validFrom;
+    private LocalDateTime validTo;
+
     private Long createdBy;
 
     @TableField(fill = FieldFill.INSERT)

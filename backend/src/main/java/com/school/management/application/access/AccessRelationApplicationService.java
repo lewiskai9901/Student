@@ -1,6 +1,7 @@
 package com.school.management.application.access;
 
 import com.school.management.domain.access.model.entity.AccessRelation;
+import com.school.management.domain.access.model.valueobject.AccessLevel;
 import com.school.management.domain.access.repository.AccessRelationRepository;
 import com.school.management.domain.organization.repository.OrgUnitRepository;
 import com.school.management.domain.place.model.aggregate.UniversalPlace;
@@ -16,6 +17,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -120,6 +122,8 @@ public class AccessRelationApplicationService {
                 .includeChildren(cmd.isIncludeChildren())
                 .accessLevel(cmd.getAccessLevel())
                 .metadata(cmd.getMetadata())
+                .validFrom(cmd.getValidFrom())
+                .validTo(cmd.getValidTo())
                 .remark(cmd.getRemark())
                 .createdBy(UserContextHolder.getUserId())
                 .build();
@@ -145,6 +149,8 @@ public class AccessRelationApplicationService {
             merged.putAll(cmd.getMetadata());
             relation.setMetadata(merged);
         }
+        if (cmd.getValidFrom() != null) relation.setValidFrom(cmd.getValidFrom());
+        if (cmd.getValidTo() != null) relation.setValidTo(cmd.getValidTo());
         if (cmd.getRemark() != null) relation.setRemark(cmd.getRemark());
         accessRelationRepository.update(relation);
     }
@@ -176,6 +182,8 @@ public class AccessRelationApplicationService {
                 .includeChildren(cmd.isIncludeChildren())
                 .accessLevel(cmd.getAccessLevel())
                 .metadata(cmd.getMetadata())
+                .validFrom(cmd.getValidFrom())
+                .validTo(cmd.getValidTo())
                 .remark(cmd.getRemark())
                 .createdBy(UserContextHolder.getUserId())
                 .build()).toList();
@@ -209,17 +217,21 @@ public class AccessRelationApplicationService {
         private String subjectType;
         private Long subjectId;
         private boolean includeChildren;
-        private String accessLevel = "FULL";
+        private AccessLevel accessLevel = AccessLevel.FULL;
         private Map<String, Object> metadata;
+        private LocalDateTime validFrom;
+        private LocalDateTime validTo;
         private String remark;
     }
 
     @Data
     public static class UpdateCommand {
         private String relation;
-        private String accessLevel;
+        private AccessLevel accessLevel;
         private Boolean includeChildren;
         private Map<String, Object> metadata;
+        private LocalDateTime validFrom;
+        private LocalDateTime validTo;
         private String remark;
     }
 }

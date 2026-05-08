@@ -1,6 +1,6 @@
 package com.school.management.interfaces.rest.system;
 
-import com.school.management.application.access.AuthorizationService;
+import com.school.management.application.access.AccessRelationService;
 import com.school.management.application.event.TriggerService;
 import com.school.management.common.result.Result;
 import com.school.management.infrastructure.access.PluginDataScopeRouter;
@@ -42,7 +42,7 @@ public class PluginSandboxController {
 
     private final PolicyRegistry policyRegistry;
     private final TriggerService triggerService;
-    private final AuthorizationService authorizationService;
+    private final AccessRelationService accessRelationService;
     private final PluginDataScopeRouter pluginDataScopeRouter;
     private final List<TargetModeResolver> targetModeResolvers;
     private final JdbcTemplate jdbc;
@@ -136,10 +136,10 @@ public class PluginSandboxController {
         List<Long> ids;
         try {
             if (subjectType != null && !subjectType.isBlank()) {
-                ids = authorizationService.findSubjectsWithRelation(
+                ids = accessRelationService.findSubjectsWithRelation(
                     resourceType, resourceId, relation, subjectType, expandImplied);
             } else {
-                ids = authorizationService.findSubjectsWithRelation(
+                ids = accessRelationService.findSubjectsWithRelation(
                     resourceType, resourceId, relation, expandImplied);
             }
         } catch (Exception e) {

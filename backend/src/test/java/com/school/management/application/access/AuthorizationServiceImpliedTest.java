@@ -1,6 +1,8 @@
 package com.school.management.application.access;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.school.management.domain.access.repository.AccessRelationRepository;
+import com.school.management.domain.access.repository.AccessRelationRepository.DirectRelationRef;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentMatchers;
@@ -14,18 +16,23 @@ import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 
 /**
- * W4.3 — AuthorizationService.check() 直接 + implied 推导 (BFS 多层递归)
+ * W4.3 — AccessRelationService.check() 直接 + implied 推导 (BFS 多层递归).
+ *
+ * <p>W1.3 改名后, SQL 收回到 AccessRelationRepository, 测试改用 mock repo.
+ * relation_types 配置查询仍走 JdbcTemplate (refresh 逻辑保留).
  */
 class AuthorizationServiceImpliedTest {
 
+    private AccessRelationRepository repo;
     private JdbcTemplate jdbc;
     private ApplicationEventPublisher events;
     private ObjectMapper om;
-    private AuthorizationService svc;
+    private AccessRelationService svc;
 
     /** 假 discovery: place 123 包含 occupants [777, 888] */
     static class FakeOccupantsDiscovery implements RelationDiscoveryRule {
@@ -59,22 +66,15 @@ class AuthorizationServiceImpliedTest {
 
     @BeforeEach
     void setup() {
+        repo = mock(AccessRelationRepository.class);
         jdbc = mock(JdbcTemplate.class);
         events = mock(ApplicationEventPublisher.class);
         om = new ObjectMapper();
-        svc = new AuthorizationService(jdbc, events, om,
+        svc = new AccessRelationService(repo, events, om,
             List.of(new FakeOccupantsDiscovery(),
                     new FakeMembersDiscovery(),
-                    new FakeDescendantsDiscovery()));
-    }
-
-    /** 便捷: 构造"subject 直接关系"行, BFS 起点 */
-    private static Map<String, Object> directRow(String resourceType, long resourceId, String relation) {
-        return Map.of(
-            "resource_type", resourceType,
-            "resource_id", resourceId,
-            "relation", relation
-        );
+                    new FakeDescendantsDiscovery()),
+            jdbc);
     }
 
     /** stub: relation_types 无 implied 声明 */
@@ -85,21 +85,16 @@ class AuthorizationServiceImpliedTest {
     }
 
     /** stub: subject 的直接关系 BFS 起点列表 */
-    @SuppressWarnings({"rawtypes", "unchecked"})
-    private void stubDirectRelations(List<Map<String, Object>> rows) {
-        when(jdbc.queryForList(
-            ArgumentMatchers.contains("SELECT resource_type, resource_id, relation FROM access_relations"),
-            any(Object[].class)))
-            .thenReturn((List) rows);
+    private void stubDirectRelations(List<DirectRelationRef> rows) {
+        when(repo.findActiveDirectRelationsBySubject(anyString(), any(), any(LocalDateTime.class)))
+            .thenReturn(rows);
     }
 
     @Test
     void check_directRelationHit_returnsTrue_withoutImpliedQuery() {
         // Direct checkDirect 命中
-        when(jdbc.queryForObject(
-            ArgumentMatchers.contains("SELECT COUNT(1) FROM access_relations"),
-            eq(Integer.class), any(Object[].class)))
-            .thenReturn(1);
+        when(repo.checkDirectActive(anyString(), any(), anyString(), anyString(), any(), any(LocalDateTime.class)))
+            .thenReturn(true);
         stubNoImplied();
 
         svc.bootImpliedCache();
@@ -110,11 +105,8 @@ class AuthorizationServiceImpliedTest {
 
     @Test
     void check_noDirect_butImpliedViaDormHead_returnsTrue() {
-        // checkDirect 不命中
-        when(jdbc.queryForObject(
-            ArgumentMatchers.contains("SELECT COUNT(1) FROM access_relations"),
-            eq(Integer.class), any(Object[].class)))
-            .thenReturn(0);
+        when(repo.checkDirectActive(anyString(), any(), anyString(), anyString(), any(), any(LocalDateTime.class)))
+            .thenReturn(false);
 
         // relation_types 里声明 dorm_head(user→place) 派生 viewer(user→user) via OCCUPANTS_OF_PLACE
         Map<String, Object> row = Map.of(
@@ -128,7 +120,7 @@ class AuthorizationServiceImpliedTest {
             .thenReturn(List.of(row));
 
         // 用户 42 的直接关系: dorm_head → place 123
-        stubDirectRelations(List.of(directRow("place", 123L, "dorm_head")));
+        stubDirectRelations(List.of(new DirectRelationRef("place", 123L, "dorm_head")));
 
         svc.bootImpliedCache();
 
@@ -142,10 +134,8 @@ class AuthorizationServiceImpliedTest {
 
     @Test
     void check_emptyImpliedIndex_fallsBackToFalse() {
-        when(jdbc.queryForObject(
-            ArgumentMatchers.contains("SELECT COUNT(1) FROM access_relations"),
-            eq(Integer.class), any(Object[].class)))
-            .thenReturn(0);
+        when(repo.checkDirectActive(anyString(), any(), anyString(), anyString(), any(), any(LocalDateTime.class)))
+            .thenReturn(false);
         stubNoImplied();
 
         svc.bootImpliedCache();
@@ -159,10 +149,8 @@ class AuthorizationServiceImpliedTest {
      */
     @Test
     void check_managesImpliesViewerOverOccupants_demoFromCorePlugin() {
-        when(jdbc.queryForObject(
-            ArgumentMatchers.contains("SELECT COUNT(1) FROM access_relations"),
-            eq(Integer.class), any(Object[].class)))
-            .thenReturn(0);
+        when(repo.checkDirectActive(anyString(), any(), anyString(), anyString(), any(), any(LocalDateTime.class)))
+            .thenReturn(false);
 
         Map<String, Object> row = Map.of(
             "relation_code", "manages",
@@ -175,51 +163,36 @@ class AuthorizationServiceImpliedTest {
             ArgumentMatchers.contains("WHERE is_enabled = 1 AND implied_relations IS NOT NULL")))
             .thenReturn(List.of(row));
 
-        stubDirectRelations(List.of(directRow("place", 123L, "manages")));
+        stubDirectRelations(List.of(new DirectRelationRef("place", 123L, "manages")));
 
         svc.bootImpliedCache();
 
-        // userA(42) managed place 123, userB(777) occupies 123 → viewer 推导命中
         assertThat(svc.check("user", 42L, "viewer", "user", 777L)).isTrue();
         assertThat(svc.check("user", 42L, "viewer", "user", 999L)).isFalse();
     }
 
     @Test
     void checkDirect_bypassesImpliedExpansion() {
-        when(jdbc.queryForObject(
-            ArgumentMatchers.contains("SELECT COUNT(1) FROM access_relations"),
-            eq(Integer.class), any(Object[].class)))
-            .thenReturn(0);
+        when(repo.checkDirectActive(anyString(), any(), anyString(), anyString(), any(), any(LocalDateTime.class)))
+            .thenReturn(false);
         stubNoImplied();
 
         svc.bootImpliedCache();
 
         boolean ok = svc.checkDirect("user", 1L, "viewer", "user", 2L, LocalDateTime.now());
         assertThat(ok).isFalse();
-        // 验证 checkDirect 不查 BFS 的 "SELECT resource_type, resource_id, relation"
-        verify(jdbc, never()).queryForList(
-            ArgumentMatchers.contains("SELECT resource_type, resource_id, relation"),
-            any(Object[].class));
+        // checkDirect 不应触发 BFS 起点查询
+        verify(repo, never()).findActiveDirectRelationsBySubject(anyString(), any(), any(LocalDateTime.class));
     }
-
-    // ═══════════════════════════════════════════════════════════════════
-    // 多层递归 BFS 测试
-    // ═══════════════════════════════════════════════════════════════════
 
     /**
      * 两层链: admin(user→org) →[DESCENDANTS_OF_ORG] admin(user→org) →[MEMBERS_OF_ORG] viewer(user→user)
-     * 用户对 org 10 有 admin, org 10 的子孙是 org 20, org 20 的 member 是 user 600
-     * ⇒ check(user 42, viewer, user, 600) = true (via 两层 implied)
      */
     @Test
     void check_twoLayerImplied_hitsViaDescendantsThenMembers() {
-        // checkDirect 不命中
-        when(jdbc.queryForObject(
-            ArgumentMatchers.contains("SELECT COUNT(1) FROM access_relations"),
-            eq(Integer.class), any(Object[].class)))
-            .thenReturn(0);
+        when(repo.checkDirectActive(anyString(), any(), anyString(), anyString(), any(), any(LocalDateTime.class)))
+            .thenReturn(false);
 
-        // implied 声明: 第一条 admin 派生 admin (子组织), 第二条 admin 派生 viewer (成员)
         List<Map<String, Object>> relTypeRows = new ArrayList<>();
         relTypeRows.add(Map.of(
             "relation_code", "admin",
@@ -233,33 +206,23 @@ class AuthorizationServiceImpliedTest {
             ArgumentMatchers.contains("WHERE is_enabled = 1 AND implied_relations IS NOT NULL")))
             .thenReturn(relTypeRows);
 
-        // 用户 42 的直接关系: admin on org 10
-        stubDirectRelations(List.of(directRow("org_unit", 10L, "admin")));
+        stubDirectRelations(List.of(new DirectRelationRef("org_unit", 10L, "admin")));
 
         svc.bootImpliedCache();
 
-        // 两层: admin(org 10) → admin(org 20 via DESCENDANTS) → viewer(user 600 via MEMBERS)
         assertThat(svc.check("user", 42L, "viewer", "user", 600L)).isTrue();
-        // 一层即命中: admin(org 10) → viewer(user 500 via MEMBERS)
         assertThat(svc.check("user", 42L, "viewer", "user", 500L)).isTrue();
-        // 越界: user 999 既不是 org 10 也不是 org 20 的 member
         assertThat(svc.check("user", 42L, "viewer", "user", 999L)).isFalse();
     }
 
     /**
-     * visited 去重: 构造自指派生 (admin → admin via DESCENDANTS),
-     * 如果 discovery 返回自身或已访问节点, BFS 不应死循环.
-     *
-     * 这里 FakeDescendantsDiscovery.discover(10) = [20, 21],
-     * 但我们虚构一条 admin 派生 admin 的规则 — 由于 discovery 不会 "回到" 已访问节点
-     * (模拟 DAG), BFS 应在有限步终止.
+     * visited 去重: 自指派生 (admin → admin via DESCENDANTS),
+     * BFS 在有限步终止 (DAG 模拟).
      */
     @Test
     void check_selfReferentialImplied_terminatesWithoutInfiniteLoop() {
-        when(jdbc.queryForObject(
-            ArgumentMatchers.contains("SELECT COUNT(1) FROM access_relations"),
-            eq(Integer.class), any(Object[].class)))
-            .thenReturn(0);
+        when(repo.checkDirectActive(anyString(), any(), anyString(), anyString(), any(), any(LocalDateTime.class)))
+            .thenReturn(false);
 
         when(jdbc.queryForList(
             ArgumentMatchers.contains("WHERE is_enabled = 1 AND implied_relations IS NOT NULL")))
@@ -271,13 +234,11 @@ class AuthorizationServiceImpliedTest {
                 "[{\"targetType\":\"org_unit\",\"relation\":\"admin\",\"discoveryRule\":\"DESCENDANTS_OF_ORG\"}]"
             )));
 
-        stubDirectRelations(List.of(directRow("org_unit", 10L, "admin")));
+        stubDirectRelations(List.of(new DirectRelationRef("org_unit", 10L, "admin")));
 
         svc.bootImpliedCache();
 
-        // org 99 不在任何 descendant 路径 → 不命中, 且 BFS 必须终止 (visited 防环)
         assertThat(svc.check("user", 42L, "admin", "org_unit", 99L)).isFalse();
-        // org 20 是 org 10 的 descendant → 命中
         assertThat(svc.check("user", 42L, "admin", "org_unit", 20L)).isTrue();
     }
 
@@ -287,21 +248,17 @@ class AuthorizationServiceImpliedTest {
      */
     @Test
     void check_maxDepthLimit_preventsInfiniteExpansion() {
-        when(jdbc.queryForObject(
-            ArgumentMatchers.contains("SELECT COUNT(1) FROM access_relations"),
-            eq(Integer.class), any(Object[].class)))
-            .thenReturn(0);
+        when(repo.checkDirectActive(anyString(), any(), anyString(), anyString(), any(), any(LocalDateTime.class)))
+            .thenReturn(false);
 
-        // 换一个会"无限"产生新 id 的 discovery
         RelationDiscoveryRule infinite = new RelationDiscoveryRule() {
             public String code() { return "OCCUPANTS_OF_PLACE"; }
             public List<Long> discover(String type, Long id) {
-                // 总是派生到下一个 place id (永远达不到 target 999)
                 if (!"place".equals(type)) return List.of();
                 return List.of(id + 1L);
             }
         };
-        AuthorizationService svc2 = new AuthorizationService(jdbc, events, om, List.of(infinite));
+        AccessRelationService svc2 = new AccessRelationService(repo, events, om, List.of(infinite), jdbc);
 
         when(jdbc.queryForList(
             ArgumentMatchers.contains("WHERE is_enabled = 1 AND implied_relations IS NOT NULL")))
@@ -313,16 +270,15 @@ class AuthorizationServiceImpliedTest {
                 "[{\"targetType\":\"place\",\"relation\":\"manages\",\"discoveryRule\":\"OCCUPANTS_OF_PLACE\"}]"
             )));
 
-        stubDirectRelations(List.of(directRow("place", 1L, "manages")));
+        when(repo.findActiveDirectRelationsBySubject(eq("user"), eq(42L), any(LocalDateTime.class)))
+            .thenReturn(List.of(new DirectRelationRef("place", 1L, "manages")));
 
         svc2.bootImpliedCache();
 
-        // 目标 place 999 (超出 depth 能达到的范围) — BFS 在 MAX_DEPTH 处停止, 返 false
         long t0 = System.currentTimeMillis();
         boolean ok = svc2.check("user", 42L, "manages", "place", 999L);
         long elapsed = System.currentTimeMillis() - t0;
         assertThat(ok).isFalse();
-        // 不应跑很久 — 5 层深度一次只派生一个 → 约 5 次 BFS 迭代
         assertThat(elapsed).as("BFS terminates fast due to depth cap").isLessThan(2000L);
     }
 }
