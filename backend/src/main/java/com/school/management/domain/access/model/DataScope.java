@@ -2,7 +2,23 @@ package com.school.management.domain.access.model;
 
 /**
  * 数据权限范围枚举 (v3 通用化,去教育术语"部门")
- * 定义用户可访问的数据范围级别
+ * 定义用户可访问的数据范围级别.
+ *
+ * <p><strong>注意:此 enum 是 {@code AccessRelation}
+ * (位于 {@code domain.access.model.entity.AccessRelation}) 的宏观快捷表达,
+ * 不是与之竞争的独立体系</strong>。详见
+ * {@code backend/docs/design/access/ADR-001-datascope-as-access-relation-macro.md}。
+ *
+ * <p>映射关系简要:
+ * <ul>
+ *   <li>{@code SELF} → AccessRelation 中 subject_id=me (落到 created_by 过滤)</li>
+ *   <li>{@code DEPARTMENT} → access_relations 中 member(user=me, org)</li>
+ *   <li>{@code DEPARTMENT_AND_BELOW} → DEPARTMENT + tree_path LIKE 子树递归</li>
+ *   <li>{@code CUSTOM} → 通过 access_relations / role_custom_scope 自定义授权</li>
+ *   <li>{@code ALL} → 绕过 interceptor,不映射任何 AccessRelation</li>
+ * </ul>
+ *
+ * <p>插件维度 (如 BY_MAJOR) 不进此 enum, 走 {@code PluginDataScopeRouter}.
  */
 public enum DataScope {
     ALL("ALL", "全部数据", 100, CalcType.NONE, "可访问系统中所有数据"),

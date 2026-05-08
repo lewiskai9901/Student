@@ -30,6 +30,19 @@ import java.util.stream.Collectors;
  * MyBatis interceptor that injects parameterized data permission filtering.
  * Supports scoped role assignments: each role's scope determines the org root
  * for data filtering. Multiple role conditions are OR-combined.
+ *
+ * <p>此拦截器是 {@link DataScope} (粗粒度 RBAC 视图) 与
+ * {@code access_relations} 表 (细粒度 ReBAC 视图) 的桥接,详见
+ * {@code backend/docs/design/access/ADR-001-datascope-as-access-relation-macro.md}。
+ *
+ * <p>实际行为:从角色读 MergedDataScope, 按 effectiveScope 决定走哪条路径:
+ * <ul>
+ *   <li>静态 scope (SELF / DEPARTMENT / DEPARTMENT_AND_BELOW) → 直接拼 WHERE 子句</li>
+ *   <li>module 配置了 resourceType → access_relations 子查询 (buildAccessRelationCondition)</li>
+ *   <li>插件维度 (如 BY_MAJOR) → PluginDataScopeRouter (buildPluginDimCondition)</li>
+ *   <li>CUSTOM → role_custom_scope (buildCustomCondition)</li>
+ * </ul>
+ * 二者职责清晰,不互斥; DataScope 是 AccessRelation 的宏观快捷表达。
  */
 @Slf4j
 @Component
