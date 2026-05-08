@@ -2,8 +2,11 @@ package com.school.management.infrastructure.inspection;
 
 import com.school.management.infrastructure.access.UserContext;
 import com.school.management.infrastructure.access.UserContextHolder;
+import com.school.management.infrastructure.metrics.InspectionMetrics;
 import com.school.management.infrastructure.persistence.inspection.corrective.CorrectiveCaseMapper;
 import com.school.management.infrastructure.persistence.inspection.execution.*;
+import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import org.apache.ibatis.reflection.MetaObject;
 import org.apache.ibatis.reflection.SystemMetaObject;
 import org.junit.jupiter.api.AfterEach;
@@ -30,6 +33,8 @@ class InspectionDataPermissionFillerTest {
     private InspSubmissionMapper submissionMapper;
     private CorrectiveCaseMapper caseMapper;
     private InspectionUpstreamRouter router;
+    private MeterRegistry meterRegistry;
+    private InspectionMetrics metrics;
     private InspectionDataPermissionFiller filler;
 
     @BeforeEach
@@ -38,7 +43,10 @@ class InspectionDataPermissionFillerTest {
         submissionMapper = mock(InspSubmissionMapper.class);
         caseMapper = mock(CorrectiveCaseMapper.class);
         router = new InspectionUpstreamRouter(projectMapper, submissionMapper, caseMapper);
-        filler = new InspectionDataPermissionFiller(router);
+        meterRegistry = new SimpleMeterRegistry();
+        metrics = new InspectionMetrics(meterRegistry);
+        metrics.init();  // @PostConstruct 手动触发 (单测无 Spring 上下文)
+        filler = new InspectionDataPermissionFiller(router, metrics);
     }
 
     @AfterEach
@@ -132,6 +140,57 @@ class InspectionDataPermissionFillerTest {
         filler.insertFill(SystemMetaObject.forObject(task));
 
         assertThat(task.getOrgUnitId()).isNull();
+    }
+
+    @Test
+    @DisplayName("Metric: upstream 命中 → counter strategy=upstream +1")
+    void metricCountsUpstreamHit() {
+        InspProjectPO project = new InspProjectPO();
+        project.setId(100L);
+        project.setOrgUnitId(50L);
+        when(projectMapper.selectById(100L)).thenReturn(project);
+
+        InspTaskPO task = new InspTaskPO();
+        task.setProjectId(100L);
+        filler.insertFill(SystemMetaObject.forObject(task));
+
+        assertThat(meterRegistry.counter("inspection_orgunit_filled_total", "strategy", "upstream").count())
+                .isEqualTo(1.0);
+    }
+
+    @Test
+    @DisplayName("Metric: SecurityContext 命中 → counter strategy=context +1")
+    void metricCountsContextHit() {
+        UserContextHolder.setContext(buildUserContext(999L, 70L));
+        InspProjectPO project = new InspProjectPO();
+        filler.insertFill(SystemMetaObject.forObject(project));
+
+        assertThat(meterRegistry.counter("inspection_orgunit_filled_total", "strategy", "context").count())
+                .isEqualTo(1.0);
+    }
+
+    @Test
+    @DisplayName("Metric: 全空 fallback 失败 → counter strategy=missed +1 (生产监控漏率)")
+    void metricCountsMissedHit() {
+        InspTaskPO task = new InspTaskPO();
+        task.setProjectId(100L);
+        when(projectMapper.selectById(100L)).thenReturn(null);
+
+        filler.insertFill(SystemMetaObject.forObject(task));
+
+        assertThat(meterRegistry.counter("inspection_orgunit_filled_total", "strategy", "missed").count())
+                .isEqualTo(1.0);
+    }
+
+    @Test
+    @DisplayName("Metric: 业务层显式 set → counter strategy=existing +1")
+    void metricCountsExistingHit() {
+        InspProjectPO project = new InspProjectPO();
+        project.setOrgUnitId(123L);
+        filler.insertFill(SystemMetaObject.forObject(project));
+
+        assertThat(meterRegistry.counter("inspection_orgunit_filled_total", "strategy", "existing").count())
+                .isEqualTo(1.0);
     }
 
     private UserContext buildUserContext(Long userId, Long orgUnitId) {

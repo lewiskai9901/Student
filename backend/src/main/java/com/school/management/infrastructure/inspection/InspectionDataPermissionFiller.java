@@ -2,6 +2,7 @@ package com.school.management.infrastructure.inspection;
 
 import com.baomidou.mybatisplus.core.handlers.MetaObjectHandler;
 import com.school.management.infrastructure.access.UserContextHolder;
+import com.school.management.infrastructure.metrics.InspectionMetrics;
 import org.apache.ibatis.reflection.MetaObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -31,9 +32,11 @@ public class InspectionDataPermissionFiller implements MetaObjectHandler {
     private static final String ORG_UNIT_FIELD = "orgUnitId";
 
     private final InspectionUpstreamRouter router;
+    private final InspectionMetrics metrics;
 
-    public InspectionDataPermissionFiller(InspectionUpstreamRouter router) {
+    public InspectionDataPermissionFiller(InspectionUpstreamRouter router, InspectionMetrics metrics) {
         this.router = router;
+        this.metrics = metrics;
     }
 
     @Override
@@ -47,12 +50,16 @@ public class InspectionDataPermissionFiller implements MetaObjectHandler {
 
         // 业务层已显式赋值 — 保留, 不覆盖
         Object existing = metaObject.getValue(ORG_UNIT_FIELD);
-        if (existing != null) return;
+        if (existing != null) {
+            metrics.orgUnitFilled("existing");
+            return;
+        }
 
         // 1. 反查上游
         Long resolved = router.resolve(target);
         if (resolved != null) {
             metaObject.setValue(ORG_UNIT_FIELD, resolved);
+            metrics.orgUnitFilled("upstream");
             return;
         }
 
@@ -60,10 +67,12 @@ public class InspectionDataPermissionFiller implements MetaObjectHandler {
         Long fallback = UserContextHolder.getOrgUnitId();
         if (fallback != null) {
             metaObject.setValue(ORG_UNIT_FIELD, fallback);
+            metrics.orgUnitFilled("context");
             return;
         }
 
-        // 3. 都失败 — 静默 + log (生产环境通过 metric 兜底)
+        // 3. 都失败 — 静默 + log + metric (生产环境监控漏率, 应≈0)
+        metrics.orgUnitFilled("missed");
         if (log.isWarnEnabled()) {
             log.warn("orgUnitId fill missed for {} — both upstream lookup and SecurityContext returned null. " +
                             "Row will INSERT with org_unit_id=NULL and bypass DataPermissionInterceptor filter.",
