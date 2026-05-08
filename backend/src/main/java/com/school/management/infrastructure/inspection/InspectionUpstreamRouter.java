@@ -9,6 +9,7 @@ import com.school.management.infrastructure.persistence.inspection.corrective.Co
 import com.school.management.infrastructure.persistence.inspection.corrective.CorrectiveCasePO;
 import com.school.management.infrastructure.persistence.inspection.corrective.CorrectiveSubtaskPO;
 import com.school.management.infrastructure.persistence.inspection.execution.*;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Component;
 
 import java.util.Collections;
@@ -36,9 +37,15 @@ public class InspectionUpstreamRouter {
 
     private final Map<Class<?>, Function<Object, Long>> routes = new LinkedHashMap<>();
 
-    public InspectionUpstreamRouter(InspProjectMapper projectMapper,
-                                    InspSubmissionMapper submissionMapper,
-                                    CorrectiveCaseMapper caseMapper) {
+    /**
+     * Mapper 注入加 {@code @Lazy}: 打破循环依赖
+     * (sqlSessionFactory → CompositeMetaObjectHandler → InspectionDataPermissionFiller →
+     * InspectionUpstreamRouter → InspProjectMapper → sqlSessionFactory).
+     * 启动时注入代理, 首次反查时才真正解析 mapper bean.
+     */
+    public InspectionUpstreamRouter(@Lazy InspProjectMapper projectMapper,
+                                    @Lazy InspSubmissionMapper submissionMapper,
+                                    @Lazy CorrectiveCaseMapper caseMapper) {
         // 源头: 项目无上游, 由 SecurityContext 兜底 (handler 内处理)
         register(InspProjectPO.class, po -> null);
 

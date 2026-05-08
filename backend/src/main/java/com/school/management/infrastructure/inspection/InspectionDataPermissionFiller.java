@@ -1,15 +1,18 @@
 package com.school.management.infrastructure.inspection;
 
-import com.baomidou.mybatisplus.core.handlers.MetaObjectHandler;
 import com.school.management.infrastructure.access.UserContextHolder;
 import com.school.management.infrastructure.metrics.InspectionMetrics;
+import com.school.management.infrastructure.persistence.fill.FieldFillerStrategy;
 import org.apache.ibatis.reflection.MetaObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
 
 /**
- * MyBatis-Plus MetaObjectHandler — 自动填充 inspection_* 表的 org_unit_id 字段.
+ * Inspection 表 org_unit_id 字段自动填充 — 实现 {@link FieldFillerStrategy}, 通过
+ * {@link com.school.management.infrastructure.persistence.fill.CompositeMetaObjectHandler}
+ * 集成到 MyBatis-Plus 唯一 MetaObjectHandler.
  *
  * <p>填充优先级:
  * <ol>
@@ -25,7 +28,8 @@ import org.springframework.stereotype.Component;
  * <p>UPDATE 阶段不动 — 防止 UPDATE 误改 org_unit_id 越权.
  */
 @Component
-public class InspectionDataPermissionFiller implements MetaObjectHandler {
+@Order(20)  // 通用审计字段 (Order 10) 之后, inspection-specific 业务字段
+public class InspectionDataPermissionFiller implements FieldFillerStrategy {
 
     private static final Logger log = LoggerFactory.getLogger(InspectionDataPermissionFiller.class);
 
@@ -40,7 +44,7 @@ public class InspectionDataPermissionFiller implements MetaObjectHandler {
     }
 
     @Override
-    public void insertFill(MetaObject metaObject) {
+    public void onInsert(MetaObject metaObject) {
         Object target = metaObject.getOriginalObject();
         if (target == null) return;
         // 仅处理已注册的 inspection PO 类型, 避免污染其他模块的 PO
@@ -81,7 +85,7 @@ public class InspectionDataPermissionFiller implements MetaObjectHandler {
     }
 
     @Override
-    public void updateFill(MetaObject metaObject) {
+    public void onUpdate(MetaObject metaObject) {
         // 永远不在 UPDATE 阶段填充 orgUnitId — 防止越权改边界
     }
 }

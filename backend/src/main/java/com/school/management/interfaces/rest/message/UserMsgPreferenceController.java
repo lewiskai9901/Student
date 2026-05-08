@@ -4,6 +4,7 @@ import com.school.management.application.message.preference.UserMsgPreferenceSer
 import com.school.management.common.result.Result;
 import com.school.management.common.util.SecurityUtils;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -17,6 +18,7 @@ import java.util.Map;
 @RestController
 @RequestMapping("/message/preferences")
 @RequiredArgsConstructor
+@PreAuthorize("isAuthenticated()")  // self-service: 用户管理自己偏好, SecurityUtils.getCurrentUserId() 自我隔离
 public class UserMsgPreferenceController {
 
     private final UserMsgPreferenceService preferenceService;

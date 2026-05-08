@@ -65,7 +65,7 @@ class InspectionDataPermissionFillerTest {
         InspTaskPO task = new InspTaskPO();
         task.setProjectId(100L);
 
-        filler.insertFill(SystemMetaObject.forObject(task));
+        filler.onInsert(SystemMetaObject.forObject(task));
 
         assertThat(task.getOrgUnitId()).isEqualTo(50L);
     }
@@ -78,7 +78,7 @@ class InspectionDataPermissionFillerTest {
         InspProjectPO project = new InspProjectPO();
         project.setProjectCode("PRJ-1");
 
-        filler.insertFill(SystemMetaObject.forObject(project));
+        filler.onInsert(SystemMetaObject.forObject(project));
 
         assertThat(project.getOrgUnitId()).isEqualTo(70L);
     }
@@ -91,7 +91,7 @@ class InspectionDataPermissionFillerTest {
         project.setProjectCode("PRJ-1");
         project.setOrgUnitId(123L);  // 业务层显式赋值
 
-        filler.insertFill(SystemMetaObject.forObject(project));
+        filler.onInsert(SystemMetaObject.forObject(project));
 
         assertThat(project.getOrgUnitId()).isEqualTo(123L);  // 保留, 不被 70L 覆盖
     }
@@ -108,7 +108,7 @@ class InspectionDataPermissionFillerTest {
         // 即使 SecurityContext 有值, 未注册的 PO 也不应被填
         UserContextHolder.setContext(buildUserContext(999L, 70L));
 
-        filler.insertFill(SystemMetaObject.forObject(plan));
+        filler.onInsert(SystemMetaObject.forObject(plan));
 
         // InspectionPlanPO 没有 orgUnitId 字段, getValue 会失败 — 这里只断言无异常
         // (handler 内必须先用 hasGetter 判断, 不能瞎写)
@@ -123,7 +123,7 @@ class InspectionDataPermissionFillerTest {
         project.setProjectCode("PRJ-1");
         project.setOrgUnitId(null);
 
-        filler.updateFill(SystemMetaObject.forObject(project));
+        filler.onUpdate(SystemMetaObject.forObject(project));
 
         assertThat(project.getOrgUnitId()).isNull();
     }
@@ -137,7 +137,7 @@ class InspectionDataPermissionFillerTest {
         task.setProjectId(100L);
         when(projectMapper.selectById(100L)).thenReturn(null);
 
-        filler.insertFill(SystemMetaObject.forObject(task));
+        filler.onInsert(SystemMetaObject.forObject(task));
 
         assertThat(task.getOrgUnitId()).isNull();
     }
@@ -152,7 +152,7 @@ class InspectionDataPermissionFillerTest {
 
         InspTaskPO task = new InspTaskPO();
         task.setProjectId(100L);
-        filler.insertFill(SystemMetaObject.forObject(task));
+        filler.onInsert(SystemMetaObject.forObject(task));
 
         assertThat(meterRegistry.counter("inspection_orgunit_filled_total", "strategy", "upstream").count())
                 .isEqualTo(1.0);
@@ -163,7 +163,7 @@ class InspectionDataPermissionFillerTest {
     void metricCountsContextHit() {
         UserContextHolder.setContext(buildUserContext(999L, 70L));
         InspProjectPO project = new InspProjectPO();
-        filler.insertFill(SystemMetaObject.forObject(project));
+        filler.onInsert(SystemMetaObject.forObject(project));
 
         assertThat(meterRegistry.counter("inspection_orgunit_filled_total", "strategy", "context").count())
                 .isEqualTo(1.0);
@@ -176,7 +176,7 @@ class InspectionDataPermissionFillerTest {
         task.setProjectId(100L);
         when(projectMapper.selectById(100L)).thenReturn(null);
 
-        filler.insertFill(SystemMetaObject.forObject(task));
+        filler.onInsert(SystemMetaObject.forObject(task));
 
         assertThat(meterRegistry.counter("inspection_orgunit_filled_total", "strategy", "missed").count())
                 .isEqualTo(1.0);
@@ -187,7 +187,7 @@ class InspectionDataPermissionFillerTest {
     void metricCountsExistingHit() {
         InspProjectPO project = new InspProjectPO();
         project.setOrgUnitId(123L);
-        filler.insertFill(SystemMetaObject.forObject(project));
+        filler.onInsert(SystemMetaObject.forObject(project));
 
         assertThat(meterRegistry.counter("inspection_orgunit_filled_total", "strategy", "existing").count())
                 .isEqualTo(1.0);

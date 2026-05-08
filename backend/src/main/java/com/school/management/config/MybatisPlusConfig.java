@@ -1,23 +1,19 @@
 package com.school.management.config;
 
 import com.baomidou.mybatisplus.annotation.DbType;
-import com.baomidou.mybatisplus.core.handlers.MetaObjectHandler;
 import com.baomidou.mybatisplus.extension.plugins.MybatisPlusInterceptor;
 import com.baomidou.mybatisplus.extension.plugins.inner.OptimisticLockerInnerInterceptor;
 import com.baomidou.mybatisplus.extension.plugins.inner.PaginationInnerInterceptor;
-import com.school.management.security.CustomUserDetails;
-import org.apache.ibatis.reflection.MetaObject;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.security.core.context.SecurityContextHolder;
-
-import java.time.LocalDateTime;
 
 /**
- * MyBatis Plus 配置
+ * MyBatis Plus 配置.
  *
- * @author system
- * @since 1.0.0
+ * <p>MetaObjectHandler 采用 Composite 模式 — 见
+ * {@link com.school.management.infrastructure.persistence.fill.CompositeMetaObjectHandler}
+ * 注入多个 {@link com.school.management.infrastructure.persistence.fill.FieldFillerStrategy}
+ * 策略 (审计字段 / inspection orgUnitId / 等). 不在本类直接 @Bean handler 以免冲突.
  */
 @Configuration
 public class MybatisPlusConfig {
@@ -36,47 +32,6 @@ public class MybatisPlusConfig {
         interceptor.addInnerInterceptor(new PaginationInnerInterceptor(DbType.MYSQL));
 
         return interceptor;
-    }
-
-    /**
-     * 自动填充配置
-     */
-    @Bean
-    public MetaObjectHandler metaObjectHandler() {
-        return new MetaObjectHandler() {
-            @Override
-            public void insertFill(MetaObject metaObject) {
-                LocalDateTime now = LocalDateTime.now();
-
-                this.strictInsertFill(metaObject, "createdAt", LocalDateTime.class, now);
-                this.strictInsertFill(metaObject, "updatedAt", LocalDateTime.class, now);
-                this.strictInsertFill(metaObject, "deleted", Integer.class, 0);
-
-                // 注意: createdBy 和 updatedBy 字段在数据库中不存在,已移除自动填充
-            }
-
-            @Override
-            public void updateFill(MetaObject metaObject) {
-                LocalDateTime now = LocalDateTime.now();
-
-                this.strictUpdateFill(metaObject, "updatedAt", LocalDateTime.class, now);
-
-                // 注意: updatedBy 字段在数据库中不存在,已移除自动填充
-            }
-
-            private Long getCurrentUserId() {
-                try {
-                    // 从Spring Security上下文获取当前用户ID
-                    Object principal = SecurityContextHolder.getContext().getAuthentication().getPrincipal();
-                    if (principal instanceof CustomUserDetails) {
-                        return ((CustomUserDetails) principal).getId();
-                    }
-                } catch (Exception e) {
-                    // 忽略异常，返回默认值
-                }
-                return 1L; // 默认系统用户ID
-            }
-        };
     }
 
 }

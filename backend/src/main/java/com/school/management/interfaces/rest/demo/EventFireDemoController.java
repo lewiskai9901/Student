@@ -3,6 +3,7 @@ package com.school.management.interfaces.rest.demo;
 import com.school.management.application.message.MessageDispatcher;
 import com.school.management.common.result.Result;
 import com.school.management.domain.event.model.EntityEvent;
+import com.school.management.infrastructure.casbin.CasbinAccess;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.*;
@@ -17,6 +18,7 @@ import java.util.Map;
 @RestController
 @RequestMapping("/admin/demo/event")
 @RequiredArgsConstructor
+@CasbinAccess(resource = "system:message", action = "manage")
 public class EventFireDemoController {
 
     private final MessageDispatcher messageDispatcher;

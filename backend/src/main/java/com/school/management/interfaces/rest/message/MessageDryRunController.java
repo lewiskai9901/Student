@@ -3,6 +3,7 @@ package com.school.management.interfaces.rest.message;
 import com.school.management.application.message.MessageDispatcher;
 import com.school.management.common.result.Result;
 import com.school.management.domain.event.model.EntityEvent;
+import com.school.management.infrastructure.casbin.CasbinAccess;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
@@ -22,6 +23,7 @@ import java.util.Map;
 @RestController
 @RequestMapping("/message/dry-run")
 @RequiredArgsConstructor
+@CasbinAccess(resource = "system:message", action = "manage")  // admin 调试工具
 public class MessageDryRunController {
 
     private final MessageDispatcher messageDispatcher;
