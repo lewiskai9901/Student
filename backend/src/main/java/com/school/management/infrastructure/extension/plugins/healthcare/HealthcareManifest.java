@@ -1,22 +1,31 @@
 package com.school.management.infrastructure.extension.plugins.healthcare;
 
+import com.school.management.infrastructure.extension.Contribution;
 import com.school.management.infrastructure.extension.PluginConfigSchema;
 import com.school.management.infrastructure.extension.PluginPackage;
+import com.school.management.infrastructure.extension.RelationTypeDef;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Stream;
 
 /**
  * 医疗行业插件包 (示例骨架) — 展示如何新增行业扩展.
  *
- * 当前规模: 1 个 EntityTypePlugin (Patient) + 1 个 MenuContributionPlugin,
+ * 当前规模: 1 个 EntityTypePlugin (Patient) + 1 个 MenuContributionPlugin
+ * + 4 个关系 (Phase 2 W2.2: HealthcareRelationsPlugin 已删, 直接在 contribute() 声明),
  * 足以证明 CORE + EDU + HEALTH 三方共存时启动/治理 API/前端加载都正常.
+ *
+ * 业务代码引用关系码请用 {@link HealthcareRelations} 常量.
  *
  * 真实医疗场景应继续扩展: 病历/药品/床位/排班/医嘱 等.
  */
 @Component
 public class HealthcareManifest implements PluginPackage {
+
+    private static final String SOURCE = "HealthcarePlugin";
+    private static final String TIER = "DOMAIN";
 
     @Override
     public String getIndustryCode() { return "HEALTH"; }
@@ -35,6 +44,36 @@ public class HealthcareManifest implements PluginPackage {
     @Override
     public boolean owns(Class<?> pluginClass) {
         return pluginClass.getPackageName().contains(".plugins.healthcare");
+    }
+
+    @Override
+    public Stream<Contribution> contribute() {
+        return Stream.of(
+            wrap(RelationTypeDef.of(HealthcareRelations.FAMILY_OF, "user", "user", "家属监护",
+                "ASSOCIATION",
+                "家属监护病人 (subject=家属, resource=病人). " +
+                "入院/出院消息扇出时用 BY_RELATION(family_of, inward) 查病人的家属")),
+
+            wrap(RelationTypeDef.of(HealthcareRelations.ATTENDING_OF, "user", "user", "主治医师",
+                "DELEGATION",
+                "医师主治某病人 (subject=医师, resource=病人). " +
+                "查病区/科室所有在治病人走 BY_RELATION(attending_of, outward)")),
+
+            wrap(RelationTypeDef.of(HealthcareRelations.NURSE_OF, "user", "user", "责任护士",
+                "DELEGATION",
+                "护士主责某病人 (subject=护士, resource=病人). " +
+                "排班/交接班时按 BY_RELATION(nurse_of) 查负责清单")),
+
+            wrap(RelationTypeDef.of(HealthcareRelations.IN_WARD, "user", "org_unit", "所在病区",
+                "MEMBERSHIP",
+                "病人或医护所在病区 (subject=user, resource=ORG_UNIT 病区). " +
+                "transitive=true, 若病区下有子区可继承")
+                .transitive())
+        );
+    }
+
+    private static Contribution.RelationTypeContribution wrap(RelationTypeDef def) {
+        return new Contribution.RelationTypeContribution(SOURCE, TIER, def);
     }
 
     /**

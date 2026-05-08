@@ -18,10 +18,10 @@ import java.util.concurrent.ConcurrentHashMap;
  *   RelationTypeRegistry.isRegistered(code, from, to)
  *
  * 启动时序:
- *   旧实现 @PostConstruct 会在 RelationTypePluginRegistrar(@Order 200, ApplicationRunner)
- *   写入之前就执行, 冷启动首次读到空表.
- *   现改为 @EventListener(ApplicationReadyEvent) — 在所有 ApplicationRunner 执行完毕后加载,
- *   保证字典与插件声明一致.
+ *   旧实现 @PostConstruct 会在 Registrar(ApplicationRunner) 写入之前就执行,
+ *   冷启动首次读到空表. 现改为 @EventListener(ApplicationReadyEvent) — 在所有
+ *   ApplicationRunner (含 ContributionDispatcher@Order 60 → RelationTypeUpserter)
+ *   执行完毕后加载, 保证字典与插件声明一致.
  */
 @Slf4j
 @Component

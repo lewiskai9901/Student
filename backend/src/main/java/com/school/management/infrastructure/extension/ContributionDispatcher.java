@@ -39,6 +39,7 @@ public class ContributionDispatcher implements ApplicationRunner {
 
     private final List<PluginPackage> packages;
     private final MessagingRegistrar messagingRegistrar;
+    private final RelationTypeUpserter relationTypeUpserter;
 
     @Override
     public void run(ApplicationArguments args) {
@@ -77,7 +78,18 @@ public class ContributionDispatcher implements ApplicationRunner {
                 total.incrementAndGet();
                 // Java 17 尚未 GA pattern-switch, 用 instanceof 链 (Phase 3 升级 21 后改 switch)
                 if (c instanceof Contribution.EntityTypeContribution)      entities.incrementAndGet();
-                else if (c instanceof Contribution.RelationTypeContribution) relations.incrementAndGet();
+                else if (c instanceof Contribution.RelationTypeContribution rtc) {
+                    relations.incrementAndGet();
+                    try {
+                        RelationTypeUpserter.Result r = relationTypeUpserter.upsert(
+                            rtc.sourceName(), rtc.tier(), rtc.def());
+                        log.debug("[ContributionDispatcher] {} RelationType: {} (source={}, tier={})",
+                            r, rtc.def().relationCode(), rtc.sourceName(), rtc.tier());
+                    } catch (Exception e) {
+                        log.error("[ContributionDispatcher] 关系类型写入失败 {}: {}",
+                            rtc.def().relationCode(), e.getMessage());
+                    }
+                }
                 else if (c instanceof Contribution.EventDomainContribution)  events.incrementAndGet();
                 else if (c instanceof Contribution.TriggerPointContribution tpc) {
                     triggerPoints.incrementAndGet();

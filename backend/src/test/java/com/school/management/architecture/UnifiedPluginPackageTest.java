@@ -76,11 +76,12 @@ class UnifiedPluginPackageTest {
     }
 
     @Test
-    @DisplayName("7 个旧 SPI 必须打 @Deprecated (迁移提示)")
+    @DisplayName("剩余 6 个旧 SPI 必须打 @Deprecated (迁移提示) — RelationTypePlugin 已删除 (W2.2)")
     void oldSpisAreDeprecated() {
+        // Phase 2 W2.2: RelationTypePlugin 已删除并完成迁移 (commit refactor(access)).
+        // 剩余 6 个 SPI 仍向下兼容, 需保持 @Deprecated 标注.
         List<Class<?>> oldSpis = List.of(
             EntityTypePlugin.class,
-            RelationTypePlugin.class,
             MessagingDomainPlugin.class,
             PermissionProvider.class,
             RolePresetPlugin.class,
@@ -129,10 +130,13 @@ class UnifiedPluginPackageTest {
     }
 
     @Test
-    @DisplayName("PluginPackage 默认 contribute() 返回空流, 默认 metadata() 非 null")
+    @DisplayName("PluginPackage 默认 metadata() 非 null; CoreManifest.contribute() 含 9 个核心关系 (W2.2 迁移)")
     void pluginPackageDefaultMethods() {
         PluginPackage core = new CoreManifest();
-        assertEquals(0, core.contribute().count(), "默认 contribute() 必须返回空流");
+        // Phase 2 W2.2: CoreManifest 已覆盖 contribute() 声明 9 个核心关系 (CoreRelationsPlugin 已删).
+        // 旧测试期望"默认空流"已不再适用; 改为校验内容契约.
+        long count = core.contribute().count();
+        assertEquals(9, count, "CoreManifest 应贡献 9 个核心关系类型");
         assertNotNull(core.metadata(), "默认 metadata() 必须非 null");
         assertEquals("CORE", core.metadata().industryCode());
     }

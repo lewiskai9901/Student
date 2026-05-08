@@ -144,7 +144,7 @@ class AuthorizationServiceImpliedTest {
     }
 
     /**
-     * W4.4 reference demo: CoreRelationsPlugin 的 manages(user→place) 声明了
+     * W4.4 reference demo: CoreManifest.contribute() 的 manages(user→place) 声明了
      * implied viewer(user→user) via OCCUPANTS_OF_PLACE。
      */
     @Test

@@ -7,7 +7,7 @@ import com.school.management.domain.access.repository.AccessRelationRepository;
 import com.school.management.domain.access.repository.AccessRelationRepository.DirectRelationRef;
 import com.school.management.domain.access.repository.AccessRelationRepository.InsertDirectCommand;
 import com.school.management.domain.access.repository.AccessRelationRepository.RelationEdgeRef;
-import com.school.management.infrastructure.extension.RelationTypePlugin.RelationTypeDef.Implied;
+import com.school.management.infrastructure.extension.RelationTypeDef.Implied;
 import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;

@@ -17,7 +17,7 @@ import java.util.List;
  * {@link com.school.management.application.access.AccessRelationService} 构造时
  * 按 {@link #code()} 建索引并调用。
  *
- * @see com.school.management.infrastructure.extension.RelationTypePlugin.RelationTypeDef.Implied
+ * @see com.school.management.infrastructure.extension.RelationTypeDef.Implied
  */
 public interface RelationDiscoveryRule {
 

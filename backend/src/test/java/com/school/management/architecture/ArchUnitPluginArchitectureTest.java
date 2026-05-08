@@ -5,7 +5,6 @@ import com.school.management.infrastructure.extension.MessagingDomainPlugin;
 import com.school.management.infrastructure.extension.PermissionProvider;
 import com.school.management.infrastructure.extension.PluginManifest;
 import com.school.management.infrastructure.extension.PluginPackage;
-import com.school.management.infrastructure.extension.RelationTypePlugin;
 import com.school.management.infrastructure.extension.RolePresetPlugin;
 import com.tngtech.archunit.core.domain.JavaClasses;
 import com.tngtech.archunit.core.importer.ClassFileImporter;
@@ -109,13 +108,8 @@ class ArchUnitPluginArchitectureTest {
         rule.check(classes);
     }
 
-    @Test
-    void all_RelationTypePlugin_implementations_must_be_components() {
-        ArchRule rule = classes()
-                .that().implement(RelationTypePlugin.class)
-                .should().beAnnotatedWith(Component.class);
-        rule.check(classes);
-    }
+    // RelationTypePlugin 已在 Phase 2 W2.2 删除 — 关系类型现在通过 PluginPackage.contribute()
+    // 返回 Stream<Contribution.RelationTypeContribution> 声明. 无需独立 SPI 实现校验.
 
     @Test
     void all_MessagingDomainPlugin_implementations_must_be_components() {
