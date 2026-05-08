@@ -17,6 +17,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -121,6 +122,8 @@ public class AccessRelationApplicationService {
                 .includeChildren(cmd.isIncludeChildren())
                 .accessLevel(cmd.getAccessLevel())
                 .metadata(cmd.getMetadata())
+                .validFrom(cmd.getValidFrom())
+                .validTo(cmd.getValidTo())
                 .remark(cmd.getRemark())
                 .createdBy(UserContextHolder.getUserId())
                 .build();
@@ -146,6 +149,8 @@ public class AccessRelationApplicationService {
             merged.putAll(cmd.getMetadata());
             relation.setMetadata(merged);
         }
+        if (cmd.getValidFrom() != null) relation.setValidFrom(cmd.getValidFrom());
+        if (cmd.getValidTo() != null) relation.setValidTo(cmd.getValidTo());
         if (cmd.getRemark() != null) relation.setRemark(cmd.getRemark());
         accessRelationRepository.update(relation);
     }
@@ -177,6 +182,8 @@ public class AccessRelationApplicationService {
                 .includeChildren(cmd.isIncludeChildren())
                 .accessLevel(cmd.getAccessLevel())
                 .metadata(cmd.getMetadata())
+                .validFrom(cmd.getValidFrom())
+                .validTo(cmd.getValidTo())
                 .remark(cmd.getRemark())
                 .createdBy(UserContextHolder.getUserId())
                 .build()).toList();
@@ -212,6 +219,8 @@ public class AccessRelationApplicationService {
         private boolean includeChildren;
         private AccessLevel accessLevel = AccessLevel.FULL;
         private Map<String, Object> metadata;
+        private LocalDateTime validFrom;
+        private LocalDateTime validTo;
         private String remark;
     }
 
@@ -221,6 +230,8 @@ public class AccessRelationApplicationService {
         private AccessLevel accessLevel;
         private Boolean includeChildren;
         private Map<String, Object> metadata;
+        private LocalDateTime validFrom;
+        private LocalDateTime validTo;
         private String remark;
     }
 }

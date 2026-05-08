@@ -43,6 +43,12 @@ public class AccessRelation {
     /** 扩展字段 */
     private Map<String, Object> metadata;
 
+    /** 关系开始生效时间. null 表示从创建时立即生效. */
+    private LocalDateTime validFrom;
+
+    /** 关系到期时间. null 表示永久有效(直到 revoke). */
+    private LocalDateTime validTo;
+
     private String remark;
     private Long createdBy;
     private LocalDateTime createdAt;
@@ -60,6 +66,19 @@ public class AccessRelation {
 
     public boolean isReadWrite() {
         return accessLevel != null && accessLevel.isReadWrite();
+    }
+
+    /** 在指定时间点是否仍生效(未到期 + 已开始 + 未删). */
+    public boolean isActiveAt(LocalDateTime at) {
+        if (at == null) at = LocalDateTime.now();
+        if (validFrom != null && at.isBefore(validFrom)) return false;
+        if (validTo != null && !at.isBefore(validTo)) return false;
+        return true;
+    }
+
+    /** 当前时刻是否生效. */
+    public boolean isCurrentlyActive() {
+        return isActiveAt(LocalDateTime.now());
     }
 
     @SuppressWarnings("unchecked")
