@@ -7,7 +7,7 @@ import com.school.management.domain.access.repository.AccessRelationRepository;
 import com.school.management.domain.access.repository.AccessRelationRepository.DirectRelationRef;
 import com.school.management.domain.access.repository.AccessRelationRepository.InsertDirectCommand;
 import com.school.management.domain.access.repository.AccessRelationRepository.RelationEdgeRef;
-import com.school.management.infrastructure.extension.RelationTypePlugin.RelationTypeDef.Implied;
+import com.school.management.infrastructure.extension.RelationTypeDef.Implied;
 import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -58,6 +58,10 @@ public class AccessRelationService {
     private final List<RelationDiscoveryRule> discoveryRules;
     /** 仅 implied 缓存 refresh 时读 relation_types 配置表用; 业务查询全部走 repo. */
     private final JdbcTemplate jdbcTemplate;
+    /** check() 结果 Redis 缓存 (Phase 4 W4.2): 60s TTL, grant/revoke 主动 invalidate. */
+    private final AccessCheckCache checkCache;
+    /** metadata 字段 schema 校验 (Phase 4 W4.3 骨架). */
+    private final MetadataSchemaValidator metadataSchemaValidator;
 
     /**
      * 关系推导索引: (targetType + targetRelation) → 所有可能派生出它的
@@ -131,11 +135,18 @@ public class AccessRelationService {
     // check / checkAt
     // ═══════════════════════════════════════════════════════════════
 
-    /** 当前时间点:某主体对某资源是否有某关系? (包含 implied 推导) */
+    /**
+     * 当前时间点:某主体对某资源是否有某关系? (包含 implied 推导)
+     *
+     * <p>结果走 Redis 缓存 (Phase 4 W4.2), TTL 默认 60s. grant/revoke 时主动失效.
+     * 注意: {@link #checkAt(String, Long, String, String, Long, LocalDateTime)}
+     * 不缓存 — 时间点快照查询语义不适合缓存.
+     */
     public boolean check(String subjectType, Long subjectId,
                          String relation,
                          String resourceType, Long resourceId) {
-        return checkAt(subjectType, subjectId, relation, resourceType, resourceId, LocalDateTime.now());
+        return checkCache.checkCached(subjectType, subjectId, relation, resourceType, resourceId,
+            () -> checkAt(subjectType, subjectId, relation, resourceType, resourceId, LocalDateTime.now()));
     }
 
     /** 指定时间点:某主体对某资源是否有某关系? (包含 implied 推导) */
@@ -355,6 +366,9 @@ public class AccessRelationService {
                 r.relation, r.subjectType, r.resourceType));
         }
 
+        // 1b. 校验 metadata 满足关系的 schema 要求 (Phase 4 W4.3, 默认骨架放行未注册关系)
+        metadataSchemaValidator.validate(r.relation, r.metadata);
+
         // 2. 检查是否已有同样的活跃关系 (幂等)
         Optional<Long> existing = repo.findActiveByTuple(
             r.resourceType, r.resourceId, r.relation, r.subjectType, r.subjectId);
@@ -387,6 +401,10 @@ public class AccessRelationService {
             newId, r.resourceType, r.resourceId, r.relation,
             r.subjectType, r.subjectId, r.grantedBy));
 
+        // 5. 失效 check() 缓存 (按 subject + resource 双向清, implied 派生也可能受影响)
+        checkCache.invalidateBySubject(r.subjectType, r.subjectId);
+        checkCache.invalidateByResource(r.resourceType, r.resourceId);
+
         return newId;
     }
 
@@ -410,6 +428,10 @@ public class AccessRelationService {
             log.info("[AccessRelation] revoke id={} relation={} {} -> {}:{} reason={}",
                 id, r.relation, r.subjectId, r.resourceType, r.resourceId, r.reason);
         }
+
+        // 失效 check() 缓存 (按 subject + resource 双向清, 与 grant 对称)
+        checkCache.invalidateBySubject(r.subjectType, r.subjectId);
+        checkCache.invalidateByResource(r.resourceType, r.resourceId);
     }
 
     // ═══════════════════════════════════════════════════════════════
@@ -451,6 +473,8 @@ public class AccessRelationService {
         public String relation;
         public String resourceType; public Long resourceId;
         public AccessLevel accessLevel;                  // READ_ONLY / FULL / OWNER
+        /** @deprecated 已废弃 — 传递性走 RelationTypeDef.isTransitive,详见 ADR-002 */
+        @Deprecated
         public boolean includeChildren = false;
         public LocalDateTime validFrom; public LocalDateTime validTo;
         public Map<String, Object> metadata;

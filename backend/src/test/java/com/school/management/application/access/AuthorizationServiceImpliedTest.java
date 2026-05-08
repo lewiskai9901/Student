@@ -74,7 +74,15 @@ class AuthorizationServiceImpliedTest {
             List.of(new FakeOccupantsDiscovery(),
                     new FakeMembersDiscovery(),
                     new FakeDescendantsDiscovery()),
-            jdbc);
+            jdbc, noopCheckCache(), new MetadataSchemaValidator(om));
+    }
+
+    /** Test helper: AccessCheckCache with caching disabled — pure pass-through to loader. */
+    private static AccessCheckCache noopCheckCache() {
+        AccessCheckCache c = new AccessCheckCache(mock(com.school.management.infrastructure.cache.CacheService.class));
+        org.springframework.test.util.ReflectionTestUtils.setField(c, "enabled", false);
+        org.springframework.test.util.ReflectionTestUtils.setField(c, "ttlSeconds", 60);
+        return c;
     }
 
     /** stub: relation_types 无 implied 声明 */
@@ -144,7 +152,7 @@ class AuthorizationServiceImpliedTest {
     }
 
     /**
-     * W4.4 reference demo: CoreRelationsPlugin 的 manages(user→place) 声明了
+     * W4.4 reference demo: CoreManifest.contribute() 的 manages(user→place) 声明了
      * implied viewer(user→user) via OCCUPANTS_OF_PLACE。
      */
     @Test
@@ -258,7 +266,7 @@ class AuthorizationServiceImpliedTest {
                 return List.of(id + 1L);
             }
         };
-        AccessRelationService svc2 = new AccessRelationService(repo, events, om, List.of(infinite), jdbc);
+        AccessRelationService svc2 = new AccessRelationService(repo, events, om, List.of(infinite), jdbc, noopCheckCache(), new MetadataSchemaValidator(om));
 
         when(jdbc.queryForList(
             ArgumentMatchers.contains("WHERE is_enabled = 1 AND implied_relations IS NOT NULL")))

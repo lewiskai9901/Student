@@ -36,13 +36,14 @@ import static org.assertj.core.api.Assertions.assertThat;
  */
 class NoNewDeprecatedSpiImplTest {
 
+    // Phase 2 W2.2: RelationTypePlugin 已彻底删除并迁移到 PluginPackage.contribute().
+    // 剩余 6 个仍向下兼容, 待后续 phase 继续迁移.
     private static final String[] DEPRECATED_SPIS = {
         "EntityTypePlugin",
         "MenuContributionPlugin",
         "MessagingDomainPlugin",
         "DataScopePlugin",
         "PermissionProvider",
-        "RelationTypePlugin",
         "RolePresetPlugin"
     };
 
@@ -96,10 +97,7 @@ class NoNewDeprecatedSpiImplTest {
         "plugins/core/CorePermissionProvider.java",
         "plugins/education/EducationPermissionProvider.java",
         "plugins/healthcare/HealthcarePermissionProvider.java",
-        // RelationTypePlugin (3)
-        "plugins/core/CoreRelationsPlugin.java",
-        "plugins/education/EducationRelationsPlugin.java",
-        "plugins/healthcare/HealthcareRelationsPlugin.java",
+        // RelationTypePlugin: 已在 W2.2 全部删除 — 无 baseline 条目.
         // RolePresetPlugin (3)
         "plugins/core/CoreRolePresetPlugin.java",
         "plugins/education/EducationRolePresetPlugin.java",

@@ -45,9 +45,9 @@ public sealed interface Contribution permits
         }
     }
 
-    /** 关系类型贡献 (对应旧 RelationTypePlugin 单条声明) */
+    /** 关系类型贡献 (Phase 2 W2.2: 直接持有顶层 {@link RelationTypeDef}, 不再依赖旧 RelationTypePlugin SPI) */
     record RelationTypeContribution(String sourceName, String tier,
-                                     RelationTypePlugin.RelationTypeDef def) implements Contribution {
+                                     RelationTypeDef def) implements Contribution {
         @Override public String uniqueKey() {
             return "relation:" + def.relationCode();
         }

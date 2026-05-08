@@ -48,7 +48,14 @@ class AuthorizationServiceFindSubjectsTest {
         events = mock(ApplicationEventPublisher.class);
         om = new ObjectMapper();
         svc = new AccessRelationService(repo, events, om,
-            List.of(new FakeOccupantsDiscovery()), jdbc);
+            List.of(new FakeOccupantsDiscovery()), jdbc, noopCheckCache(), new MetadataSchemaValidator(om));
+    }
+
+    private static AccessCheckCache noopCheckCache() {
+        AccessCheckCache c = new AccessCheckCache(mock(com.school.management.infrastructure.cache.CacheService.class));
+        org.springframework.test.util.ReflectionTestUtils.setField(c, "enabled", false);
+        org.springframework.test.util.ReflectionTestUtils.setField(c, "ttlSeconds", 60);
+        return c;
     }
 
     /** relation_types 无 implied 声明 */

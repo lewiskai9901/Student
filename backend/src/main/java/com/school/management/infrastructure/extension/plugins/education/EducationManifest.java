@@ -1,9 +1,13 @@
 package com.school.management.infrastructure.extension.plugins.education;
 
+import com.school.management.infrastructure.extension.Contribution;
 import com.school.management.infrastructure.extension.PluginPackage;
+import com.school.management.infrastructure.extension.RelationTypeDef;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Stream;
 
 /**
  * 教育行业插件包.
@@ -12,15 +16,20 @@ import java.util.List;
  *  - 用户类型: Student / Teacher / Parent / Counselor
  *  - 组织类型: School / Department / Grade / Class
  *  - 场所类型: Dormitory / Classroom
- *  - 关系: guardian_of / teaches / advisor_of / mentor_of (EducationRelationsPlugin)
+ *  - 关系: teaches / mentor_of
+ *    (Phase 2 W2.2: EducationRelationsPlugin 已删, 直接在 contribute() 声明)
+ *    (Phase 3 W3.2: guardian_of 上移到 COMMON_EXT.family_of, 本插件不再声明)
+ *    (Phase 3 W3.3: advisor_of 合并到 CORE.admin + metadata.role=ADVISOR, 本插件不再声明)
  *  - 预置角色: CLASS_TEACHER / SUBJECT_TEACHER / GRADE_DIRECTOR 等
  *  - 业务消息: 入学 / 成绩 / 入住 / 考勤 (后续阶段加)
  *
- * Phase 2: 升级为 PluginPackage (继承自 PluginManifest, 默认 contribute()=空流).
- * 现有所有贡献仍通过旧 @Component SPI 路径扫描, 行为不变.
+ * 业务代码引用关系码请用 {@link EducationRelations} 常量.
  */
 @Component
 public class EducationManifest implements PluginPackage {
+
+    private static final String SOURCE = "EducationPlugin";
+    private static final String TIER = "DOMAIN";
 
     @Override
     public String getIndustryCode() { return "EDU"; }
@@ -42,5 +51,24 @@ public class EducationManifest implements PluginPackage {
         // 包路径约定: .plugins.education 或 .plugins.education.* → 属于 EDU
         String pkg = pluginClass.getPackageName();
         return pkg.contains(".plugins.education");
+    }
+
+    @Override
+    public Stream<Contribution> contribute() {
+        return Stream.of(
+            // Phase 3 W3.2: guardian_of 已上移到 COMMON_EXT.family_of, 本插件不再声明.
+            // 教师任课: 按班级数量限制(例: 班级最多 10 个任课老师)
+            wrap(RelationTypeDef.of(EducationRelations.TEACHES, "user", "org_unit", "任课",
+                "ASSOCIATION", "教师任教班级,绑定课程和学期")
+                .withMaxBySubtype(Map.of("CLASS", 10))),
+
+            // Phase 3 W3.3: advisor_of 已合并到 CORE.admin (写 metadata.role='ADVISOR'/'CLASS_TEACHER').
+            wrap(RelationTypeDef.of(EducationRelations.MENTOR_OF, "user", "user", "导师",
+                "ASSOCIATION", "导师指导学生"))
+        );
+    }
+
+    private static Contribution.RelationTypeContribution wrap(RelationTypeDef def) {
+        return new Contribution.RelationTypeContribution(SOURCE, TIER, def);
     }
 }

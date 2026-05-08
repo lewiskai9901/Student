@@ -1,7 +1,7 @@
 package com.school.management.infrastructure.extension;
 
-import com.school.management.infrastructure.extension.RelationTypePlugin.RelationTypeDef;
-import com.school.management.infrastructure.extension.RelationTypePlugin.RelationTypeDef.Implied;
+import com.school.management.infrastructure.extension.RelationTypeDef;
+import com.school.management.infrastructure.extension.RelationTypeDef.Implied;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;

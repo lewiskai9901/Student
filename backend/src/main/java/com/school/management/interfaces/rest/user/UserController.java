@@ -1,6 +1,7 @@
 package com.school.management.interfaces.rest.user;
 
 import com.school.management.application.access.AccessApplicationService;
+import com.school.management.application.access.masking.MaskingService;
 import com.school.management.application.user.UserApplicationService;
 import com.school.management.application.user.command.CreateUserCommand;
 import com.school.management.application.user.command.UpdateUserCommand;
@@ -20,6 +21,8 @@ import com.school.management.infrastructure.casbin.CasbinAccess;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Objects;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 /**
@@ -36,6 +39,7 @@ public class UserController {
 
     private final UserApplicationService userApplicationService;
     private final AccessApplicationService accessApplicationService;
+    private final MaskingService maskingService;
 
     // ==================== 基础CRUD ====================
 
@@ -275,8 +279,17 @@ public class UserController {
                 orgUnitId, includeChildren, keyword);
         // TODO: includeChildren和keyword过滤待UserApplicationService扩展支持
         List<User> users = userApplicationService.getUsersByOrgUnit(orgUnitId);
+        Long viewerId = SecurityUtils.getCurrentUserId();
+        // 简化策略 (W5.1 骨架): 同 org_unit 视为 PEER 关系 → 脱敏 phone/email; 自己看自己 → 全显.
+        // 真细粒度的 viewer-target 关系判定留 W5.2 / Phase 6 接 AccessRelation 查询时处理.
         List<UserDomainResponse> responses = users.stream()
                 .map(UserDomainResponse::fromDomain)
+                .map(r -> {
+                    Set<String> maskFields = Objects.equals(viewerId, r.getId())
+                            ? Set.of()
+                            : Set.of("phone", "email");
+                    return r.applyMasking(maskingService, maskFields);
+                })
                 .collect(Collectors.toList());
         return Result.success(responses);
     }

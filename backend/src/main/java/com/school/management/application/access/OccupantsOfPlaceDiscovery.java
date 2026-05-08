@@ -1,6 +1,6 @@
 package com.school.management.application.access;
 
-import com.school.management.infrastructure.extension.RelationTypePlugin.RelationTypeDef.Implied;
+import com.school.management.infrastructure.extension.RelationTypeDef.Implied;
 import lombok.RequiredArgsConstructor;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Component;
