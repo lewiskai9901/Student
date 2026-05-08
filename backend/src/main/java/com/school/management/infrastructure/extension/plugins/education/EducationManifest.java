@@ -16,8 +16,9 @@ import java.util.stream.Stream;
  *  - 用户类型: Student / Teacher / Parent / Counselor
  *  - 组织类型: School / Department / Grade / Class
  *  - 场所类型: Dormitory / Classroom
- *  - 关系: guardian_of / teaches / advisor_of / mentor_of
+ *  - 关系: teaches / advisor_of / mentor_of
  *    (Phase 2 W2.2: EducationRelationsPlugin 已删, 直接在 contribute() 声明)
+ *    (Phase 3 W3.2: guardian_of 上移到 COMMON_EXT.family_of, 本插件不再声明)
  *  - 预置角色: CLASS_TEACHER / SUBJECT_TEACHER / GRADE_DIRECTOR 等
  *  - 业务消息: 入学 / 成绩 / 入住 / 考勤 (后续阶段加)
  *
@@ -54,11 +55,7 @@ public class EducationManifest implements PluginPackage {
     @Override
     public Stream<Contribution> contribute() {
         return Stream.of(
-            wrap(RelationTypeDef.of(EducationRelations.GUARDIAN_OF, "user", "user", "监护",
-                "ASSOCIATION",
-                "家长监护学生 (subject=家长, resource=学生). " +
-                "消息扇出时用 BY_RELATION(guardian_of, inward) 查学生的家长")),
-
+            // Phase 3 W3.2: guardian_of 已上移到 COMMON_EXT.family_of, 本插件不再声明.
             // 教师任课: 按班级数量限制(例: 班级最多 10 个任课老师)
             wrap(RelationTypeDef.of(EducationRelations.TEACHES, "user", "org_unit", "任课",
                 "ASSOCIATION", "教师任教班级,绑定课程和学期")

@@ -9,8 +9,7 @@ package com.school.management.infrastructure.extension.plugins.healthcare;
  * 声明.
  */
 public final class HealthcareRelations {
-    /** 家属监护病人 (subject=家属, resource=病人) */
-    public static final String FAMILY_OF    = "family_of";
+    // Phase 3 W3.2: FAMILY_OF 已删, 业务请改用 CommonExtRelations.FAMILY_OF.
     /** 主治医师 (subject=医师, resource=病人) */
     public static final String ATTENDING_OF = "attending_of";
     /** 责任护士 (subject=护士, resource=病人) */

@@ -9,8 +9,7 @@ package com.school.management.infrastructure.extension.plugins.education;
  * 声明.
  */
 public final class EducationRelations {
-    /** 家长监护学生 (subject=家长, resource=学生) */
-    public static final String GUARDIAN_OF = "guardian_of";
+    // Phase 3 W3.2: GUARDIAN_OF 已删, 业务请改用 CommonExtRelations.FAMILY_OF.
     /** 教师任教班级 (subject=教师, resource=org_unit class) */
     public static final String TEACHES     = "teaches";
     /** 辅导员负责年级或班级 (subject=user, resource=org_unit) */

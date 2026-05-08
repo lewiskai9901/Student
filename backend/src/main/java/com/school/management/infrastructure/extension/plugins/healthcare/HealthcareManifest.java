@@ -14,7 +14,8 @@ import java.util.stream.Stream;
  * 医疗行业插件包 (示例骨架) — 展示如何新增行业扩展.
  *
  * 当前规模: 1 个 EntityTypePlugin (Patient) + 1 个 MenuContributionPlugin
- * + 4 个关系 (Phase 2 W2.2: HealthcareRelationsPlugin 已删, 直接在 contribute() 声明),
+ * + 3 个关系 (Phase 2 W2.2: HealthcareRelationsPlugin 已删, 直接在 contribute() 声明;
+ *   Phase 3 W3.2: family_of 上移到 COMMON_EXT, 本插件不再声明),
  * 足以证明 CORE + EDU + HEALTH 三方共存时启动/治理 API/前端加载都正常.
  *
  * 业务代码引用关系码请用 {@link HealthcareRelations} 常量.
@@ -49,11 +50,7 @@ public class HealthcareManifest implements PluginPackage {
     @Override
     public Stream<Contribution> contribute() {
         return Stream.of(
-            wrap(RelationTypeDef.of(HealthcareRelations.FAMILY_OF, "user", "user", "家属监护",
-                "ASSOCIATION",
-                "家属监护病人 (subject=家属, resource=病人). " +
-                "入院/出院消息扇出时用 BY_RELATION(family_of, inward) 查病人的家属")),
-
+            // Phase 3 W3.2: family_of 已上移到 COMMON_EXT, 本插件不再声明.
             wrap(RelationTypeDef.of(HealthcareRelations.ATTENDING_OF, "user", "user", "主治医师",
                 "DELEGATION",
                 "医师主治某病人 (subject=医师, resource=病人). " +
