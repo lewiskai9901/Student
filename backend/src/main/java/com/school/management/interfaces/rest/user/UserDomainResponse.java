@@ -80,4 +80,23 @@ public class UserDomainResponse {
 
         return response;
     }
+
+    /**
+     * 应用脱敏 — 修改本对象的指定字段为脱敏后的值. 返回 this 便于链式调用.
+     *
+     * <p>注意: idCard 字段已由 getter 自动脱敏 (幂等), 此处不重复处理.
+     *
+     * @param service       脱敏工具
+     * @param maskFields    要脱敏的字段名集合 (如 ["phone","email"])
+     */
+    public UserDomainResponse applyMasking(
+            com.school.management.application.access.masking.MaskingService service,
+            java.util.Set<String> maskFields) {
+        if (maskFields == null || maskFields.isEmpty()) return this;
+        if (maskFields.contains("phone")) this.phone = service.maskPhone(this.phone);
+        if (maskFields.contains("email")) this.email = service.maskEmail(this.email);
+        // idCard 已由 getter 自动脱敏,不重复处理
+        if (maskFields.contains("realName")) this.realName = service.maskName(this.realName);
+        return this;
+    }
 }
