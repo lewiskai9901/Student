@@ -14,6 +14,7 @@ public class InspEvidencePO {
     private Long id;
 
     private Long tenantId;
+    @TableField(fill = FieldFill.INSERT)
     private Long orgUnitId;               // 数据权限边界 (从 submission 继承, MetaObjectHandler 自动填充)
     private Long submissionId;
     private Long detailId;

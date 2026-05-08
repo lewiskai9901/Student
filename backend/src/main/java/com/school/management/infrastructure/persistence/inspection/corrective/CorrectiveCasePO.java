@@ -44,6 +44,7 @@ public class CorrectiveCasePO {
     private java.time.LocalDate effectivenessCheckDate;
     private String effectivenessStatus;
     private String effectivenessNote;
+    @TableField(fill = FieldFill.INSERT)
     private Long orgUnitId;
     private Long createdBy;
     private LocalDateTime createdAt;

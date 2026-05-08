@@ -33,6 +33,7 @@ public class SubmissionDetailPO {
     private Boolean isFlagged;
     private String flagReason;
     private String remark;
+    @TableField(fill = FieldFill.INSERT)
     private Long orgUnitId;
     private Long createdBy;
     private LocalDateTime createdAt;

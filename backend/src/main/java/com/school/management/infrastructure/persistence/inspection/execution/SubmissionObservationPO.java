@@ -27,6 +27,7 @@ public class SubmissionObservationPO {
     private String subjectType;
     private Long subjectId;
     private String subjectName;
+    @TableField(fill = FieldFill.INSERT)
     private Long orgUnitId;
     private String orgUnitName;
 

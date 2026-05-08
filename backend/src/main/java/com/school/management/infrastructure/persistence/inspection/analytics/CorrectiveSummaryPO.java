@@ -28,6 +28,7 @@ public class CorrectiveSummaryPO {
     private BigDecimal onTimeRate;
     private Integer effectivenessConfirmed;
     private Integer effectivenessFailed;
+    @TableField(fill = FieldFill.INSERT)
     private Long orgUnitId;
     private Long createdBy;
     private LocalDateTime createdAt;

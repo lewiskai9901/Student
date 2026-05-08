@@ -23,6 +23,7 @@ public class CorrectiveSubtaskPO {
     private LocalDate dueDate;
     private LocalDateTime completedAt;
     private Integer sortOrder;
+    @TableField(fill = FieldFill.INSERT)
     private Long orgUnitId;
     private Long createdBy;
     private LocalDateTime createdAt;

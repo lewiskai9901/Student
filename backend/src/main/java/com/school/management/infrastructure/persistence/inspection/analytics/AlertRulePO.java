@@ -13,6 +13,7 @@ public class AlertRulePO {
     private Long id;
 
     private Long tenantId;
+    @TableField(fill = FieldFill.INSERT)
     private Long orgUnitId;               // 数据权限边界 (从 project 继承, MetaObjectHandler 自动填充)
     private String ruleName;
     private String metricType;

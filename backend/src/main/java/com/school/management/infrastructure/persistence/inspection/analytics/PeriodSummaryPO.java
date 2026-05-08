@@ -22,6 +22,7 @@ public class PeriodSummaryPO {
     private String targetType;
     private Long targetId;
     private String targetName;
+    @TableField(fill = FieldFill.INSERT)
     private Long orgUnitId;
     private String orgUnitName;
     private Integer inspectionDays;

@@ -1,4 +1,4 @@
-package com.school.management.infrastructure.persistence.fill;
+package com.school.management.infrastructure.fill;
 
 import com.baomidou.mybatisplus.core.handlers.MetaObjectHandler;
 import org.apache.ibatis.reflection.MetaObject;

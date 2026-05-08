@@ -21,6 +21,7 @@ public class InspSubmissionPO {
     private String targetName;
     private Long rootTargetId;
     private String rootTargetName;
+    @TableField(fill = FieldFill.INSERT)
     private Long orgUnitId;
     private String orgUnitName;
     private BigDecimal weightRatio;

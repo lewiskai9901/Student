@@ -2,7 +2,7 @@ package com.school.management.infrastructure.inspection;
 
 import com.school.management.infrastructure.access.UserContextHolder;
 import com.school.management.infrastructure.metrics.InspectionMetrics;
-import com.school.management.infrastructure.persistence.fill.FieldFillerStrategy;
+import com.school.management.infrastructure.fill.FieldFillerStrategy;
 import org.apache.ibatis.reflection.MetaObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -11,7 +11,7 @@ import org.springframework.stereotype.Component;
 
 /**
  * Inspection 表 org_unit_id 字段自动填充 — 实现 {@link FieldFillerStrategy}, 通过
- * {@link com.school.management.infrastructure.persistence.fill.CompositeMetaObjectHandler}
+ * {@link com.school.management.infrastructure.fill.CompositeMetaObjectHandler}
  * 集成到 MyBatis-Plus 唯一 MetaObjectHandler.
  *
  * <p>填充优先级:

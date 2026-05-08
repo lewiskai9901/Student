@@ -17,6 +17,7 @@ public class InspTaskPO {
     private Long tenantId;
     private String taskCode;
     private Long projectId;
+    @TableField(fill = FieldFill.INSERT)
     private Long orgUnitId;               // 数据权限边界 (从 project 继承, MetaObjectHandler 自动填充)
     private LocalDate taskDate;
     private String timeSlotCode;

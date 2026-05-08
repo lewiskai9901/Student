@@ -26,6 +26,7 @@ public class ViolationRecordPO {
     private String description;
     private String evidenceUrls;
     private BigDecimal score;
+    @TableField(fill = FieldFill.INSERT)
     private Long orgUnitId;
     private Long createdBy;
     private LocalDateTime createdAt;

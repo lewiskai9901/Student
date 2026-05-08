@@ -29,6 +29,7 @@ public class InspectorSummaryPO {
     private Integer totalSubmissions;
     private Integer flaggedSubmissions;
     private BigDecimal complianceRate;
+    @TableField(fill = FieldFill.INSERT)
     private Long orgUnitId;
     private Long createdBy;
     private LocalDateTime createdAt;

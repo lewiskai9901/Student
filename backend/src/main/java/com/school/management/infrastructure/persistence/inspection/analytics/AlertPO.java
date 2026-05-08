@@ -27,6 +27,7 @@ public class AlertPO {
     private LocalDateTime acknowledgedAt;
     private LocalDateTime resolvedAt;
     private LocalDateTime triggeredAt;
+    @TableField(fill = FieldFill.INSERT)
     private Long orgUnitId;
     private Long createdBy;
 

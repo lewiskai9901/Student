@@ -27,6 +27,7 @@ public class ItemFrequencySummaryPO {
     private BigDecimal totalDeduction;
     private BigDecimal avgDeduction;
     private BigDecimal cumulativePercentage;
+    @TableField(fill = FieldFill.INSERT)
     private Long orgUnitId;
     private Long createdBy;
     private LocalDateTime createdAt;

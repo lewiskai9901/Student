@@ -1,6 +1,8 @@
 package com.school.management.infrastructure.persistence.inspection.appeal;
 
+import com.baomidou.mybatisplus.annotation.FieldFill;
 import com.baomidou.mybatisplus.annotation.IdType;
+import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableLogic;
 import com.baomidou.mybatisplus.annotation.TableName;
@@ -17,6 +19,7 @@ public class InspAppealPO {
     private Long id;
 
     private Long tenantId;
+    @TableField(fill = FieldFill.INSERT)
     private Long orgUnitId;
     private String appealCode;
     private Long submissionDetailId;
