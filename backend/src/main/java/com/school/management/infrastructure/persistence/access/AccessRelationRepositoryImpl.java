@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.school.management.domain.access.model.entity.AccessRelation;
+import com.school.management.domain.access.model.valueobject.AccessLevel;
 import com.school.management.domain.access.repository.AccessRelationRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -170,7 +171,7 @@ public class AccessRelationRepositoryImpl implements AccessRelationRepository {
                 .subjectType(po.getSubjectType())
                 .subjectId(po.getSubjectId())
                 .includeChildren(Boolean.TRUE.equals(po.getIncludeChildren()))
-                .accessLevel(po.getAccessLevel() != null ? po.getAccessLevel() : "FULL")
+                .accessLevel(AccessLevel.parse(po.getAccessLevel()))
                 .metadata(meta)
                 .remark(po.getRemark())
                 .createdBy(po.getCreatedBy())
@@ -188,7 +189,7 @@ public class AccessRelationRepositoryImpl implements AccessRelationRepository {
         po.setSubjectType(domain.getSubjectType());
         po.setSubjectId(domain.getSubjectId());
         po.setIncludeChildren(domain.isIncludeChildren());
-        po.setAccessLevel(domain.getAccessLevel());
+        po.setAccessLevel(domain.getAccessLevel() != null ? domain.getAccessLevel().name() : AccessLevel.FULL.name());
         po.setRemark(domain.getRemark());
         po.setCreatedBy(domain.getCreatedBy());
 

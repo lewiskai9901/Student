@@ -1,5 +1,6 @@
 package com.school.management.domain.access.model.entity;
 
+import com.school.management.domain.access.model.valueobject.AccessLevel;
 import lombok.Builder;
 import lombok.Data;
 
@@ -37,7 +38,7 @@ public class AccessRelation {
 
     /** 访问级别: READ_ONLY / FULL / OWNER */
     @Builder.Default
-    private String accessLevel = "FULL";
+    private AccessLevel accessLevel = AccessLevel.FULL;
 
     /** 扩展字段 */
     private Map<String, Object> metadata;
@@ -58,7 +59,7 @@ public class AccessRelation {
     }
 
     public boolean isReadWrite() {
-        return "FULL".equals(accessLevel) || "OWNER".equals(accessLevel);
+        return accessLevel != null && accessLevel.isReadWrite();
     }
 
     @SuppressWarnings("unchecked")

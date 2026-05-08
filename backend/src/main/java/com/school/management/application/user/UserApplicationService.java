@@ -6,6 +6,7 @@ import com.school.management.domain.shared.event.DomainEventPublisher;
 import com.school.management.domain.access.model.Role;
 import com.school.management.domain.access.repository.RoleRepository;
 import com.school.management.domain.access.model.entity.AccessRelation;
+import com.school.management.domain.access.model.valueobject.AccessLevel;
 import com.school.management.domain.access.repository.AccessRelationRepository;
 import com.school.management.domain.access.repository.UserRoleRepository;
 import com.school.management.domain.place.model.entity.UniversalPlaceOccupant;
@@ -149,7 +150,7 @@ public class UserApplicationService {
                     .relation("member")
                     .subjectType("user")
                     .subjectId(user.getId())
-                    .accessLevel("FULL")
+                    .accessLevel(AccessLevel.FULL)
                     .metadata(java.util.Map.of("isPrimary", true, "relationType", "PRIMARY"))
                     .createdBy(command.getCreatedBy())
                     .build());
@@ -163,7 +164,7 @@ public class UserApplicationService {
                     .relation("occupant")
                     .subjectType("user")
                     .subjectId(user.getId())
-                    .accessLevel("FULL")
+                    .accessLevel(AccessLevel.FULL)
                     .metadata(java.util.Map.of("isPrimary", true, "relationType", "ASSIGNED"))
                     .createdBy(command.getCreatedBy())
                     .build());
@@ -253,7 +254,7 @@ public class UserApplicationService {
                             .relation("member")
                             .subjectType("user")
                             .subjectId(userId)
-                            .accessLevel("FULL")
+                            .accessLevel(AccessLevel.FULL)
                             .metadata(java.util.Map.of("isPrimary", true, "relationType", "PRIMARY"))
                             .createdBy(command.getUpdatedBy())
                             .build());
@@ -265,7 +266,7 @@ public class UserApplicationService {
                         .relation("member")
                         .subjectType("user")
                         .subjectId(userId)
-                        .accessLevel("FULL")
+                        .accessLevel(AccessLevel.FULL)
                         .metadata(java.util.Map.of("isPrimary", true, "relationType", "PRIMARY"))
                         .createdBy(command.getUpdatedBy())
                         .build());

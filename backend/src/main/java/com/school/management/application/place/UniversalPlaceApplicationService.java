@@ -9,6 +9,7 @@ import com.school.management.domain.place.repository.UniversalPlaceOccupantRepos
 import com.school.management.domain.place.repository.UniversalPlaceRepository;
 import com.school.management.domain.place.service.PlaceInheritanceService;
 import com.school.management.domain.access.model.entity.AccessRelation;
+import com.school.management.domain.access.model.valueobject.AccessLevel;
 import com.school.management.domain.access.repository.AccessRelationRepository;
 import com.school.management.domain.shared.model.EntityTypeConfig;
 import com.school.management.domain.shared.model.valueobject.FieldChange;
@@ -862,7 +863,7 @@ public class UniversalPlaceApplicationService {
                     .subjectType("user").subjectId(command.getOccupantId())
                     .resourceType("place").resourceId(placeId)
                     .relation("occupies")
-                    .accessLevel("FULL")
+                    .accessLevel(AccessLevel.FULL)
                     .metadata(meta)
                     .build());
         } catch (Exception e) {

@@ -1,6 +1,7 @@
 package com.school.management.application.access;
 
 import com.school.management.domain.access.model.entity.AccessRelation;
+import com.school.management.domain.access.model.valueobject.AccessLevel;
 import com.school.management.domain.access.repository.AccessRelationRepository;
 import com.school.management.domain.organization.repository.OrgUnitRepository;
 import com.school.management.domain.place.model.aggregate.UniversalPlace;
@@ -209,7 +210,7 @@ public class AccessRelationApplicationService {
         private String subjectType;
         private Long subjectId;
         private boolean includeChildren;
-        private String accessLevel = "FULL";
+        private AccessLevel accessLevel = AccessLevel.FULL;
         private Map<String, Object> metadata;
         private String remark;
     }
@@ -217,7 +218,7 @@ public class AccessRelationApplicationService {
     @Data
     public static class UpdateCommand {
         private String relation;
-        private String accessLevel;
+        private AccessLevel accessLevel;
         private Boolean includeChildren;
         private Map<String, Object> metadata;
         private String remark;

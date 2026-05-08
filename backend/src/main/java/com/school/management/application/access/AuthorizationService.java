@@ -2,6 +2,7 @@ package com.school.management.application.access;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.school.management.domain.access.model.valueobject.AccessLevel;
 import com.school.management.infrastructure.extension.RelationTypePlugin.RelationTypeDef.Implied;
 import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
@@ -276,7 +277,7 @@ public class AuthorizationService {
             (rs, i) -> new SubjectRef(
                 rs.getString("subject_type"),
                 rs.getLong("subject_id"),
-                rs.getString("access_level"),
+                AccessLevel.parse(rs.getString("access_level")),
                 rs.getTimestamp("valid_from") != null ? rs.getTimestamp("valid_from").toLocalDateTime() : null,
                 rs.getTimestamp("valid_to")   != null ? rs.getTimestamp("valid_to").toLocalDateTime()   : null
             ),
@@ -383,7 +384,7 @@ public class AuthorizationService {
                 rs.getString("relation"),
                 rs.getString("subject_type"), rs.getLong("subject_id"),
                 resourceType, resourceId,
-                rs.getString("access_level"),
+                AccessLevel.parse(rs.getString("access_level")),
                 rs.getTimestamp("valid_from") != null ? rs.getTimestamp("valid_from").toLocalDateTime() : null,
                 rs.getTimestamp("valid_to")   != null ? rs.getTimestamp("valid_to").toLocalDateTime()   : null
             ),
@@ -420,7 +421,7 @@ public class AuthorizationService {
                 rs.getString("relation"),
                 subjectType, subjectId,
                 rs.getString("resource_type"), rs.getLong("resource_id"),
-                rs.getString("access_level"),
+                AccessLevel.parse(rs.getString("access_level")),
                 rs.getTimestamp("valid_from") != null ? rs.getTimestamp("valid_from").toLocalDateTime() : null,
                 rs.getTimestamp("valid_to")   != null ? rs.getTimestamp("valid_to").toLocalDateTime()   : null
             ),
@@ -474,7 +475,7 @@ public class AuthorizationService {
             "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())",
             r.resourceType, r.resourceId, r.relation, r.subjectType, r.subjectId,
             r.includeChildren ? 1 : 0,
-            r.accessLevel != null ? r.accessLevel : "FULL",
+            r.accessLevel != null ? r.accessLevel.name() : AccessLevel.FULL.name(),
             r.validFrom != null ? r.validFrom : LocalDateTime.now(),
             r.validTo,
             metaJson, r.remark,
@@ -544,13 +545,13 @@ public class AuthorizationService {
     // Data classes
     // ═══════════════════════════════════════════════════════════════
 
-    public record SubjectRef(String subjectType, Long subjectId, String accessLevel,
+    public record SubjectRef(String subjectType, Long subjectId, AccessLevel accessLevel,
                              LocalDateTime validFrom, LocalDateTime validTo) {}
 
     public record RelationEdge(String relation,
                                String subjectType, Long subjectId,
                                String resourceType, Long resourceId,
-                               String accessLevel,
+                               AccessLevel accessLevel,
                                LocalDateTime validFrom, LocalDateTime validTo) {}
 
     public record CheckRequest(String subjectType, Long subjectId,
@@ -565,7 +566,7 @@ public class AuthorizationService {
         public String subjectType; public Long subjectId;
         public String relation;
         public String resourceType; public Long resourceId;
-        public String accessLevel;                      // READ_ONLY / FULL / OWNER
+        public AccessLevel accessLevel;                  // READ_ONLY / FULL / OWNER
         public boolean includeChildren = false;
         public LocalDateTime validFrom; public LocalDateTime validTo;
         public Map<String, Object> metadata;
