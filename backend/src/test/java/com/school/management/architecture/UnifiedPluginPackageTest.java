@@ -130,13 +130,14 @@ class UnifiedPluginPackageTest {
     }
 
     @Test
-    @DisplayName("PluginPackage 默认 metadata() 非 null; CoreManifest.contribute() 含 9 个核心关系 (W2.2 迁移)")
+    @DisplayName("PluginPackage 默认 metadata() 非 null; CoreManifest.contribute() 含 15 个核心关系 (W3.1 扩充)")
     void pluginPackageDefaultMethods() {
         PluginPackage core = new CoreManifest();
         // Phase 2 W2.2: CoreManifest 已覆盖 contribute() 声明 9 个核心关系 (CoreRelationsPlugin 已删).
+        // Phase 3 W3.1: 加 viewer + responsible_for 各 3 个 (覆盖 user/org/place) → 9+6=15.
         // 旧测试期望"默认空流"已不再适用; 改为校验内容契约.
         long count = core.contribute().count();
-        assertEquals(9, count, "CoreManifest 应贡献 9 个核心关系类型");
+        assertEquals(15, count, "CoreManifest 应贡献 15 个核心关系类型 (9 base + 3 viewer + 3 responsible_for)");
         assertNotNull(core.metadata(), "默认 metadata() 必须非 null");
         assertEquals("CORE", core.metadata().industryCode());
     }

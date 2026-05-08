@@ -87,7 +87,23 @@ public class CoreManifest implements PluginPackage {
 
             // 订阅
             wrap(RelationTypeDef.of(CoreRelations.WATCHES, "user", "org_unit", "关注",
-                "SUBSCRIPTION", "用户订阅某组织的动态"))
+                "SUBSCRIPTION", "用户订阅某组织的动态")),
+
+            // W3.1 viewer — 通用只读访问 (3 条覆盖 user/org/place)
+            wrap(RelationTypeDef.of(CoreRelations.VIEWER, "user", "user", "查阅者(用户)",
+                "ASSOCIATION", "通用只读访问 — 直接 grant 给某用户对某用户档案的查阅权")),
+            wrap(RelationTypeDef.of(CoreRelations.VIEWER, "user", "org_unit", "查阅者(组织)",
+                "ASSOCIATION", "通用只读访问 — grant 给某用户对某组织的查阅权")),
+            wrap(RelationTypeDef.of(CoreRelations.VIEWER, "user", "place", "查阅者(场所)",
+                "ASSOCIATION", "通用只读访问 — grant 给某用户对某场所的查阅权")),
+
+            // W3.1 responsible_for — 通用责任人 (3 条覆盖 user/org/place)
+            wrap(RelationTypeDef.of(CoreRelations.RESPONSIBLE_FOR, "user", "user", "责任人(对人)",
+                "OWNERSHIP", "通用责任 — 对某用户负责 (如导师对学生,医师对病人)")),
+            wrap(RelationTypeDef.of(CoreRelations.RESPONSIBLE_FOR, "user", "org_unit", "责任人(对组织)",
+                "OWNERSHIP", "通用责任 — 对某组织负责 (如部门主管,班主任)")),
+            wrap(RelationTypeDef.of(CoreRelations.RESPONSIBLE_FOR, "user", "place", "责任人(对场所)",
+                "OWNERSHIP", "通用责任 — 对某场所负责 (如设备责任人,场地负责人)"))
         );
     }
 

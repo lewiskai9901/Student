@@ -25,6 +25,10 @@ public final class CoreRelations {
     public static final String DELEGATED_TO = "delegated_to";
     /** 用户订阅某组织的动态 (subject=user, resource=org_unit) */
     public static final String WATCHES      = "watches";
+    /** 通用只读访问 (subject=user, resource=user|org_unit|place) — Phase 3 W3.1 */
+    public static final String VIEWER       = "viewer";
+    /** 通用责任人 (subject=user, resource=user|org_unit|place) — Phase 3 W3.1 */
+    public static final String RESPONSIBLE_FOR = "responsible_for";
 
     private CoreRelations() {}
 }
