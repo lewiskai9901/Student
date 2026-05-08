@@ -74,7 +74,15 @@ class AuthorizationServiceImpliedTest {
             List.of(new FakeOccupantsDiscovery(),
                     new FakeMembersDiscovery(),
                     new FakeDescendantsDiscovery()),
-            jdbc);
+            jdbc, noopCheckCache());
+    }
+
+    /** Test helper: AccessCheckCache with caching disabled — pure pass-through to loader. */
+    private static AccessCheckCache noopCheckCache() {
+        AccessCheckCache c = new AccessCheckCache(mock(com.school.management.infrastructure.cache.CacheService.class));
+        org.springframework.test.util.ReflectionTestUtils.setField(c, "enabled", false);
+        org.springframework.test.util.ReflectionTestUtils.setField(c, "ttlSeconds", 60);
+        return c;
     }
 
     /** stub: relation_types 无 implied 声明 */
@@ -258,7 +266,7 @@ class AuthorizationServiceImpliedTest {
                 return List.of(id + 1L);
             }
         };
-        AccessRelationService svc2 = new AccessRelationService(repo, events, om, List.of(infinite), jdbc);
+        AccessRelationService svc2 = new AccessRelationService(repo, events, om, List.of(infinite), jdbc, noopCheckCache());
 
         when(jdbc.queryForList(
             ArgumentMatchers.contains("WHERE is_enabled = 1 AND implied_relations IS NOT NULL")))

@@ -58,6 +58,8 @@ public class AccessRelationService {
     private final List<RelationDiscoveryRule> discoveryRules;
     /** 仅 implied 缓存 refresh 时读 relation_types 配置表用; 业务查询全部走 repo. */
     private final JdbcTemplate jdbcTemplate;
+    /** check() 结果 Redis 缓存 (Phase 4 W4.2): 60s TTL, grant/revoke 主动 invalidate. */
+    private final AccessCheckCache checkCache;
 
     /**
      * 关系推导索引: (targetType + targetRelation) → 所有可能派生出它的
@@ -131,11 +133,18 @@ public class AccessRelationService {
     // check / checkAt
     // ═══════════════════════════════════════════════════════════════
 
-    /** 当前时间点:某主体对某资源是否有某关系? (包含 implied 推导) */
+    /**
+     * 当前时间点:某主体对某资源是否有某关系? (包含 implied 推导)
+     *
+     * <p>结果走 Redis 缓存 (Phase 4 W4.2), TTL 默认 60s. grant/revoke 时主动失效.
+     * 注意: {@link #checkAt(String, Long, String, String, Long, LocalDateTime)}
+     * 不缓存 — 时间点快照查询语义不适合缓存.
+     */
     public boolean check(String subjectType, Long subjectId,
                          String relation,
                          String resourceType, Long resourceId) {
-        return checkAt(subjectType, subjectId, relation, resourceType, resourceId, LocalDateTime.now());
+        return checkCache.checkCached(subjectType, subjectId, relation, resourceType, resourceId,
+            () -> checkAt(subjectType, subjectId, relation, resourceType, resourceId, LocalDateTime.now()));
     }
 
     /** 指定时间点:某主体对某资源是否有某关系? (包含 implied 推导) */
@@ -387,6 +396,10 @@ public class AccessRelationService {
             newId, r.resourceType, r.resourceId, r.relation,
             r.subjectType, r.subjectId, r.grantedBy));
 
+        // 5. 失效 check() 缓存 (按 subject + resource 双向清, implied 派生也可能受影响)
+        checkCache.invalidateBySubject(r.subjectType, r.subjectId);
+        checkCache.invalidateByResource(r.resourceType, r.resourceId);
+
         return newId;
     }
 
@@ -410,6 +423,10 @@ public class AccessRelationService {
             log.info("[AccessRelation] revoke id={} relation={} {} -> {}:{} reason={}",
                 id, r.relation, r.subjectId, r.resourceType, r.resourceId, r.reason);
         }
+
+        // 失效 check() 缓存 (按 subject + resource 双向清, 与 grant 对称)
+        checkCache.invalidateBySubject(r.subjectType, r.subjectId);
+        checkCache.invalidateByResource(r.resourceType, r.resourceId);
     }
 
     // ═══════════════════════════════════════════════════════════════
