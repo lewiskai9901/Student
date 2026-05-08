@@ -16,9 +16,10 @@ import java.util.stream.Stream;
  *  - 用户类型: Student / Teacher / Parent / Counselor
  *  - 组织类型: School / Department / Grade / Class
  *  - 场所类型: Dormitory / Classroom
- *  - 关系: teaches / advisor_of / mentor_of
+ *  - 关系: teaches / mentor_of
  *    (Phase 2 W2.2: EducationRelationsPlugin 已删, 直接在 contribute() 声明)
  *    (Phase 3 W3.2: guardian_of 上移到 COMMON_EXT.family_of, 本插件不再声明)
+ *    (Phase 3 W3.3: advisor_of 合并到 CORE.admin + metadata.role=ADVISOR, 本插件不再声明)
  *  - 预置角色: CLASS_TEACHER / SUBJECT_TEACHER / GRADE_DIRECTOR 等
  *  - 业务消息: 入学 / 成绩 / 入住 / 考勤 (后续阶段加)
  *
@@ -61,11 +62,7 @@ public class EducationManifest implements PluginPackage {
                 "ASSOCIATION", "教师任教班级,绑定课程和学期")
                 .withMaxBySubtype(Map.of("CLASS", 10))),
 
-            // 辅导员: 班级 1 人 (班主任),年级可多人 (年级主任团队),其他组织不限
-            wrap(RelationTypeDef.of(EducationRelations.ADVISOR_OF, "user", "org_unit", "辅导员",
-                "OWNERSHIP", "辅导员负责年级或班级").transitive()
-                .withMaxBySubtype(Map.of("CLASS", 1, "GRADE", 3))),
-
+            // Phase 3 W3.3: advisor_of 已合并到 CORE.admin (写 metadata.role='ADVISOR'/'CLASS_TEACHER').
             wrap(RelationTypeDef.of(EducationRelations.MENTOR_OF, "user", "user", "导师",
                 "ASSOCIATION", "导师指导学生"))
         );

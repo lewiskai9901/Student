@@ -10,10 +10,9 @@ package com.school.management.infrastructure.extension.plugins.education;
  */
 public final class EducationRelations {
     // Phase 3 W3.2: GUARDIAN_OF 已删, 业务请改用 CommonExtRelations.FAMILY_OF.
+    // Phase 3 W3.3: ADVISOR_OF 已删, 业务请用 CoreRelations.ADMIN + metadata.role='ADVISOR'.
     /** 教师任教班级 (subject=教师, resource=org_unit class) */
     public static final String TEACHES     = "teaches";
-    /** 辅导员负责年级或班级 (subject=user, resource=org_unit) */
-    public static final String ADVISOR_OF  = "advisor_of";
     /** 导师指导学生 (subject=导师, resource=学生) */
     public static final String MENTOR_OF   = "mentor_of";
 
