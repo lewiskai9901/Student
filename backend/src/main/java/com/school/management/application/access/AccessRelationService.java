@@ -451,6 +451,8 @@ public class AccessRelationService {
         public String relation;
         public String resourceType; public Long resourceId;
         public AccessLevel accessLevel;                  // READ_ONLY / FULL / OWNER
+        /** @deprecated 已废弃 — 传递性走 RelationTypeDef.isTransitive,详见 ADR-002 */
+        @Deprecated
         public boolean includeChildren = false;
         public LocalDateTime validFrom; public LocalDateTime validTo;
         public Map<String, Object> metadata;
