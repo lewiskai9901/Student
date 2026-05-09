@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<definitions xmlns="http://www.omg.org/spec/BPMN/20100524/MODEL"
+             xmlns:flowable="http://flowable.org/bpmn"
+             targetNamespace="http://flowable.org/bpmn"
+             id="helloWorldDefinitions">
+
+    <process id="hello_world" name="Hello World 流程" isExecutable="true">
+
+        <startEvent id="start" name="开始"/>
+
+        <sequenceFlow id="flow1" sourceRef="start" targetRef="approve_task"/>
+
+        <userTask id="approve_task" name="审批 hello world"
+                  flowable:assignee="${approver}"/>
+
+        <sequenceFlow id="flow2" sourceRef="approve_task" targetRef="end"/>
+
+        <endEvent id="end" name="结束"/>
+    </process>
+</definitions>
