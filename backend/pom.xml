@@ -37,6 +37,27 @@
     </properties>
 
     <dependencies>
+        <!-- Phase 7 W7.2: JSON Schema 校验 (AccessRelation.metadata) -->
+        <dependency>
+            <groupId>com.networknt</groupId>
+            <artifactId>json-schema-validator</artifactId>
+            <version>1.5.0</version>
+        </dependency>
+
+        <!-- Phase 7 W7.5: JMH 微基准 (test scope only, 显式触发不入默认 mvn test 流程) -->
+        <dependency>
+            <groupId>org.openjdk.jmh</groupId>
+            <artifactId>jmh-core</artifactId>
+            <version>1.37</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.openjdk.jmh</groupId>
+            <artifactId>jmh-generator-annprocess</artifactId>
+            <version>1.37</version>
+            <scope>test</scope>
+        </dependency>
+
         <!-- Spring Boot Starters -->
         <dependency>
             <groupId>org.springframework.boot</groupId>

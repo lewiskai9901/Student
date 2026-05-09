@@ -344,18 +344,20 @@ public class AccessRelationRepositoryImpl implements AccessRelationRepository {
     }
 
     @Override
-    public void archiveAndSoftDelete(Long id, String reason, Long actorId) {
-        // 1. INSERT … SELECT 归档到 history
+    public void archiveAndSoftDelete(Long id, String reason, Long actorId,
+                                     String operatorIp, String userAgent) {
+        // 1. INSERT … SELECT 归档到 history (Phase 7 W7.3: + operator_ip / operator_user_agent / operation)
         jdbcTemplate.update(
             "INSERT INTO access_relations_history " +
             "(original_id, resource_type, resource_id, relation, subject_type, subject_id, " +
             " include_children, access_level, valid_from, valid_to, metadata, remark, " +
-            " archived_at, archived_reason, archived_by, tenant_id, created_by) " +
+            " archived_at, archived_reason, archived_by, operator_ip, operator_user_agent, operation, " +
+            " tenant_id, created_by) " +
             "SELECT id, resource_type, resource_id, relation, subject_type, subject_id, " +
             "       include_children, access_level, valid_from, valid_to, metadata, remark, " +
-            "       NOW(), ?, ?, tenant_id, created_by " +
+            "       NOW(), ?, ?, ?, ?, 'REVOKE', tenant_id, created_by " +
             "FROM access_relations WHERE id = ?",
-            reason, actorId, id);
+            reason, actorId, operatorIp, userAgent, id);
 
         // 2. 软删原表 + valid_to 截断到 NOW()
         jdbcTemplate.update(

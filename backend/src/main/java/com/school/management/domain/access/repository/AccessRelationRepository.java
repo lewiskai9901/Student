@@ -147,8 +147,19 @@ public interface AccessRelationRepository {
     /**
      * 把指定关系归档到 history 表 + 软删原表.
      * 必须在事务内调用 (调用方加 @Transactional).
+     *
+     * <p>Phase 7 W7.3: 旧签名 default 委托到带 IP/UA 的新签名, 兼容既有调用方.
      */
-    void archiveAndSoftDelete(Long id, String reason, Long actorId);
+    default void archiveAndSoftDelete(Long id, String reason, Long actorId) {
+        archiveAndSoftDelete(id, reason, actorId, null, null);
+    }
+
+    /**
+     * 同上 + HTTP context (operator_ip / user_agent), 写 history.operator_*.
+     * Phase 7 W7.3 新增.
+     */
+    void archiveAndSoftDelete(Long id, String reason, Long actorId,
+                               String operatorIp, String userAgent);
 
     // ═══════════════════════════════════════════════════════════════
     // Zanzibar 查询投影 records

@@ -1,5 +1,6 @@
 package com.school.management.interfaces.rest.access;
 
+import com.school.management.application.access.AccessRelationService;
 import com.school.management.application.access.RelationApprovalService;
 import com.school.management.common.result.Result;
 import com.school.management.domain.access.model.entity.PendingRelationApproval;
@@ -8,9 +9,13 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Optional;
 
 /**
  * 关系审批 REST 接口.
+ *
+ * <p>审批通过后(approve), 自动调 {@link AccessRelationService#applyApprovedRequest}
+ * 把 pending 记录落到 access_relations, 返回新关系 id.
  */
 @RestController
 @RequestMapping("/access-relations/approvals")
@@ -18,6 +23,7 @@ import java.util.List;
 public class RelationApprovalController {
 
     private final RelationApprovalService approvalService;
+    private final AccessRelationService accessRelationService;
 
     @GetMapping
     @PreAuthorize("isAuthenticated()")
@@ -27,9 +33,13 @@ public class RelationApprovalController {
 
     @PostMapping("/{id}/approve")
     @PreAuthorize("hasAuthority('access:approval:review')")
-    public Result<Void> approve(@PathVariable Long id, @RequestBody ApproveRequest req) {
-        approvalService.approve(id, req.getApproverId());
-        return Result.success(null);
+    public Result<Long> approve(@PathVariable Long id, @RequestBody ApproveRequest req) {
+        Optional<PendingRelationApproval> p = approvalService.approve(id, req.getApproverId());
+        if (p.isEmpty()) {
+            return Result.error("审批失败 — 状态非 PENDING 或 ID 不存在");
+        }
+        Long newRelationId = accessRelationService.applyApprovedRequest(id, req.getApproverId());
+        return Result.success(newRelationId);
     }
 
     @PostMapping("/{id}/reject")
