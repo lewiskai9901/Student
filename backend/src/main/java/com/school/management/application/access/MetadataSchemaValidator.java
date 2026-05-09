@@ -1,62 +1,108 @@
 package com.school.management.application.access;
 
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import lombok.RequiredArgsConstructor;
+import com.networknt.schema.JsonSchema;
+import com.networknt.schema.JsonSchemaFactory;
+import com.networknt.schema.SpecVersion;
+import com.networknt.schema.ValidationMessage;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.stream.Collectors;
 
 /**
- * AccessRelation.metadata JSON Schema 校验器 (Phase 4 W4.3 骨架).
+ * AccessRelation.metadata JSON Schema 校验器.
  *
- * <p>当前最小实现: 支持插件通过 {@link #registerRequiredKeys(String, String...)}
- * 注册 schema, {@link #validate(String, java.util.Map)} 时校验。
+ * <p>Phase 7 W7.2 — 接 networknt-json-schema-validator (draft 2020-12) 完整库.
  *
- * <p>暂未集成 everit-json-schema 库 (避免新依赖) — 当前实现只做基础校验:
+ * <p>支持两种注册方式:
  * <ul>
- *   <li>未注册 schema 的关系不校验 (默认通过)</li>
- *   <li>注册了 schema 但是空内容 → 通过</li>
- *   <li>注册了 schema 且 metadata 为 null → 失败 (required 字段缺失)</li>
- *   <li>注册了 required 字段列表 → metadata 必须含这些 key</li>
+ *   <li>{@link #registerRequiredKeys(String, String...)} — 旧 API,
+ *       仅声明 required keys, 内部转 schema 等价物</li>
+ *   <li>{@link #registerSchema(String, String)} — 注册完整 JSON Schema 字符串
+ *       (含 type / properties / enum / pattern / minimum / maxLength 等)</li>
  * </ul>
  *
- * <p>未来 (Phase 5) 集成 everit / networknt 库可在 {@link #validate} 中引入完整
- * JSON Schema 校验, DB 列 {@code relation_types.metadata_schema} 已在 V20260509_4 预留。
+ * <p>未注册的关系直接放行 (默认通过).
+ *
+ * <p>DB 列 {@code relation_types.metadata_schema} 已在 V20260509_4 预留,
+ * Phase 5 启动后可由 {@code RelationTypeBootstrap} 自动注册.
  */
 @Slf4j
 @Component
-@RequiredArgsConstructor
 public class MetadataSchemaValidator {
 
-    @SuppressWarnings("unused")
     private final ObjectMapper objectMapper;
+    private final JsonSchemaFactory schemaFactory;
 
-    /** relation_code → simplified schema (required keys list) */
-    private final Map<String, String[]> requiredKeysIndex = new ConcurrentHashMap<>();
+    /** relation_code → 编译好的 JSON Schema. */
+    private final Map<String, JsonSchema> compiledSchemaIndex = new ConcurrentHashMap<>();
+
+    public MetadataSchemaValidator(ObjectMapper objectMapper) {
+        this.objectMapper = objectMapper;
+        this.schemaFactory = JsonSchemaFactory.getInstance(SpecVersion.VersionFlag.V202012);
+    }
 
     /**
-     * 注册某关系的必要 metadata key。
-     * 启动期由插件调用, 运行时静态。
+     * 兼容旧 API — 仅声明 required keys.
+     * 内部转换成 {@code {"type":"object","required":[...]}} 等价 schema.
      */
     public void registerRequiredKeys(String relationCode, String... requiredKeys) {
-        if (requiredKeys != null && requiredKeys.length > 0) {
-            requiredKeysIndex.put(relationCode, requiredKeys);
+        if (requiredKeys == null || requiredKeys.length == 0) return;
+        try {
+            StringBuilder sb = new StringBuilder("{\"type\":\"object\",\"required\":[");
+            for (int i = 0; i < requiredKeys.length; i++) {
+                if (i > 0) sb.append(",");
+                sb.append("\"").append(requiredKeys[i]).append("\"");
+            }
+            sb.append("]}");
+            JsonSchema schema = schemaFactory.getSchema(sb.toString());
+            compiledSchemaIndex.put(relationCode, schema);
             log.debug("[MetadataSchema] 注册关系 {} 必填 keys: {}",
                 relationCode, String.join(",", requiredKeys));
+        } catch (Exception e) {
+            log.warn("[MetadataSchema] 编译 required keys schema 失败 {}: {}",
+                relationCode, e.getMessage());
+        }
+    }
+
+    /** 注册完整 JSON Schema. */
+    public void registerSchema(String relationCode, String schemaJson) {
+        if (schemaJson == null || schemaJson.isBlank()) return;
+        try {
+            JsonSchema schema = schemaFactory.getSchema(schemaJson);
+            compiledSchemaIndex.put(relationCode, schema);
+            log.debug("[MetadataSchema] 注册关系 {} JSON Schema (字符数 {})",
+                relationCode, schemaJson.length());
+        } catch (Exception e) {
+            log.warn("[MetadataSchema] 注册 schema 失败 {}: {}", relationCode, e.getMessage());
         }
     }
 
     /** 验证 metadata 满足关系的 schema 要求。失败抛 IllegalArgumentException。 */
     public void validate(String relationCode, Map<String, Object> metadata) {
-        String[] required = requiredKeysIndex.get(relationCode);
-        if (required == null) return;  // 未注册 schema, 跳过
-        for (String key : required) {
-            if (metadata == null || !metadata.containsKey(key)) {
+        JsonSchema schema = compiledSchemaIndex.get(relationCode);
+        if (schema == null) return;  // 未注册 → 不校验
+
+        try {
+            JsonNode node = objectMapper.valueToTree(metadata != null ? metadata : Map.of());
+            Set<ValidationMessage> errors = schema.validate(node);
+            if (!errors.isEmpty()) {
+                String detail = errors.stream()
+                    .map(ValidationMessage::getMessage)
+                    .collect(Collectors.joining("; "));
                 throw new IllegalArgumentException(
-                    "关系 '" + relationCode + "' 的 metadata 缺少必填字段: " + key);
+                    "关系 '" + relationCode + "' 的 metadata 校验失败: " + detail);
             }
+        } catch (IllegalArgumentException e) {
+            throw e;
+        } catch (Exception e) {
+            log.error("[MetadataSchema] validate 异常 (relation={}): {}", relationCode, e.getMessage(), e);
+            throw new IllegalArgumentException("metadata 校验异常: " + e.getMessage(), e);
         }
     }
 }
