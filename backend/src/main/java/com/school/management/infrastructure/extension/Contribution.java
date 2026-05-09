@@ -117,7 +117,7 @@ public sealed interface Contribution permits
      * 当前 ContributionDispatcher 只登记不下发到前端. Phase 8 可加 endpoint
      * /api/plugin-platform/routes 让前端动态构造.
      *
-     * @param industryCode 所属行业 (EDU/HEALTH/...), 供前端 router/plugins/loader 查找
+     * @param industryCode 所属行业 (EDU/...), 供前端 router/plugins/loader 查找
      * @param routePath    顶级路由路径 (如 /patient, /student), 与前端一致
      * @param title        导航显示名
      * @param requiresAuth 是否需要登录 (默认 true)

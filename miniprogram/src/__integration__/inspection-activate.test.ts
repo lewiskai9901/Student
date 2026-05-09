@@ -9,31 +9,26 @@ import type { MenuContribution } from '@core/plugin/contribution'
 describe('inspection activation integration', () => {
   beforeEach(() => { setActivePinia(createPinia()) })
 
+  // Note: inspection.enabled 是 () => true (后端核心通用层),所以 tenantPlugins 不影响激活.
+  // perm 字符串在 Phase 6 真机测试时对齐到后端实际下发的 perm code.
   const baseInput = () => ({
     user: { id: 1, username: 'u', name: 'U', roles: [] },
     permissions: [
-      'inspection:task:list',
-      'inspection:task:view',
-      'inspection:correction:list',
-      'inspection:correction:view',
-      'inspection:appeal:list'
+      'inspection:task:view',          // 我的任务/可领任务/扫码
+      'inspection:corrective:view',    // 我的整改
+      'inspection:appeal:view'         // 我的申诉
     ],
     capability: { platform: 'mp-weixin' } as any,
     bus: createEventBus()
   })
 
-  it('does NOT activate when tenantPlugins lacks inspection', async () => {
+  it('activates regardless of tenantPlugins (核心通用层)', async () => {
     const d = new ContributionDispatcher('1.0.0')
     d.register(inspection)
-    const active = await activatePlugins(d, { ...baseInput(), tenantPlugins: [] })
-    expect(active).toHaveLength(0)
-  })
-
-  it('activates when tenantPlugins includes inspection', async () => {
-    const d = new ContributionDispatcher('1.0.0')
-    d.register(inspection)
-    const active = await activatePlugins(d, { ...baseInput(), tenantPlugins: ['inspection'] })
-    expect(active.map(p => p.key)).toEqual(['inspection'])
+    const empty = await activatePlugins(d, { ...baseInput(), tenantPlugins: [] })
+    expect(empty.map(p => p.key)).toEqual(['inspection'])
+    const withTenant = await activatePlugins(d, { ...baseInput(), tenantPlugins: ['inspection'] })
+    expect(withTenant.map(p => p.key)).toEqual(['inspection'])
   })
 
   it('home menu computes 5 inspection entries when permissions match', async () => {
@@ -57,13 +52,13 @@ describe('inspection activation integration', () => {
   it('home menu hides entries when user lacks permission', async () => {
     const d = new ContributionDispatcher('1.0.0')
     d.register(inspection)
-    const ctx = { ...baseInput(), permissions: ['inspection:task:view'], tenantPlugins: ['inspection'] }
+    const ctx = { ...baseInput(), permissions: ['inspection:appeal:view'], tenantPlugins: ['inspection'] }
     await activatePlugins(d, ctx)
 
     const menus = d.query<MenuContribution>('menu')
       .filter(m => m.group === 'home-grid')
       .filter(m => !m.perm || ctx.permissions.includes(m.perm))
-    // Only inspection.scan has perm 'inspection:task:view'
-    expect(menus.map(m => m.key)).toEqual(['inspection.scan'])
+    // 仅 inspection.my-appeals 用 perm 'inspection:appeal:view' (P3 后真后端 perm)
+    expect(menus.map(m => m.key)).toEqual(['inspection.my-appeals'])
   })
 })

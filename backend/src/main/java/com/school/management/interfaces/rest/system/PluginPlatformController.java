@@ -217,7 +217,6 @@ public class PluginPlatformController {
         if (fqcn == null) return "UNKNOWN";
         // 行业插件优先匹配
         if (fqcn.contains(".plugins.education.")) return "EDU";
-        if (fqcn.contains(".plugins.healthcare.")) return "HEALTH";
         if (fqcn.contains(".plugins.eldercare."))  return "CARE";
         // core 匹配: 既包括 .plugins.core.* 也包括 application/infrastructure 里的 core SPI 实现
         // (例: BySubjectTargetMode 在 application.message.targetmode, 属 core 内置)

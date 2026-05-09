@@ -44,7 +44,6 @@ class ArchUnitPluginArchitectureTest {
         ArchRule rule = noClasses()
                 .that().resideInAPackage("..plugins.education..")
                 .should().dependOnClassesThat().resideInAnyPackage(
-                        "..plugins.healthcare..",
                         "..plugins.eldercare..",
                         "..plugins.finance.."
                 );
@@ -57,7 +56,6 @@ class ArchUnitPluginArchitectureTest {
                 .that().resideInAPackage("..plugins.core..")
                 .should().dependOnClassesThat().resideInAnyPackage(
                         "..plugins.education..",
-                        "..plugins.healthcare..",
                         "..plugins.eldercare.."
                 );
         rule.check(classes);

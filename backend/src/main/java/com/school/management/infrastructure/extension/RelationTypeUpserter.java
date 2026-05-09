@@ -17,7 +17,7 @@ import org.springframework.transaction.annotation.Transactional;
  * <p>关键约束:
  * <ul>
  *   <li>industry 解析: 通过 {@code PluginPackageRegistrar.resolveIndustryBySource(sourceName)} —
- *       与旧实现兼容 ("CORE" / "EducationPlugin" / "HealthcarePlugin" → CORE/EDU/HEALTH).</li>
+ *       与旧实现兼容 ("CORE" / "EducationPlugin" → CORE/EDU).</li>
  *   <li>CUSTOM 保护: 已被管理员标记 industry=CUSTOM 的记录不被插件覆盖.</li>
  *   <li>UPSERT 语义: 复合 key = (relation_code, from_type, to_type, tenant_id=1).</li>
  * </ul>

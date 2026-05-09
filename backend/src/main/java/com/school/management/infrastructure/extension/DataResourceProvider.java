@@ -9,7 +9,7 @@ import java.util.List;
  * 不同模块支持的数据权限 scope 不同 — 例如:
  *   - CORE 组织向模块 (user/org_unit): ALL / DEPARTMENT_AND_BELOW / DEPARTMENT / SELF / CUSTOM
  *   - EDU 学生类 (student/attendance): + BY_GRADE / BY_CLASS / BY_MAJOR
- *   - HEALTH 病人类 (patient): + BY_WARD / BY_ATTENDING_DOCTOR
+ *   - 行业插件类资源: + 自定义维度 (插件用 DataScopeProvider SPI 贡献)
  *
  * 本 SPI 让每个插件维护自己这块语义, 不用再改 SQL migration.
  *

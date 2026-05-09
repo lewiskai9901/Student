@@ -18,7 +18,7 @@ public class DataResourcePO {
     private String domainCode;
     private String domainName;
 
-    /** 所属行业 CORE/EDU/HEALTH/CARE/CUSTOM — 插件生命周期级联用 */
+    /** 所属行业 CORE/EDU/CARE/CUSTOM — 插件生命周期级联用 */
     private String industry;
 
     /** access_relations 表里对应的 resource_type(可为 NULL,表示不走关系子查询) */

@@ -2,18 +2,16 @@ import { describe, it, expect } from 'vitest'
 import { ContributionDispatcher } from '@core/plugin/dispatcher'
 import inspection from './manifest'
 import demo from '../demo/manifest'
-import healthcare from '../healthcare/manifest'
 import type { MenuContribution, RouteContribution, PermissionContribution, ScanResolverContribution, EventContribution } from '@core/plugin/contribution'
 
 describe('inspection manifest', () => {
-  it('registers without conflict alongside demo + healthcare', () => {
+  it('registers without conflict alongside demo', () => {
     const d = new ContributionDispatcher('1.0.0')
     expect(() => {
       d.register(demo)
-      d.register(healthcare)
       d.register(inspection)
     }).not.toThrow()
-    expect(d.allPlugins().map(p => p.key).sort()).toEqual(['demo', 'healthcare', 'inspection'])
+    expect(d.allPlugins().map(p => p.key).sort()).toEqual(['demo', 'inspection'])
   })
 
   it('declares INSPECTION:TASK: scan prefix', () => {
@@ -61,7 +59,7 @@ describe('inspection manifest', () => {
     }
   })
 
-  it('enabled gate: tenantPlugins must include inspection', () => {
+  it('enabled gate: always true (inspection 是后端核心通用层,不受 tenantPlugins 控制)', () => {
     const ctxBase = {
       user: {} as any,
       permissions: [] as string[],
@@ -69,7 +67,7 @@ describe('inspection manifest', () => {
       bus: {} as any
     }
     expect(inspection.enabled?.({ ...ctxBase, tenantPlugins: ['inspection'] })).toBe(true)
-    expect(inspection.enabled?.({ ...ctxBase, tenantPlugins: [] })).toBe(false)
-    expect(inspection.enabled?.({ ...ctxBase, tenantPlugins: ['demo'] })).toBe(false)
+    expect(inspection.enabled?.({ ...ctxBase, tenantPlugins: [] })).toBe(true)
+    expect(inspection.enabled?.({ ...ctxBase, tenantPlugins: ['demo'] })).toBe(true)
   })
 })

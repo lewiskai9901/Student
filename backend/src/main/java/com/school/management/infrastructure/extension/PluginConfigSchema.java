@@ -12,12 +12,12 @@ import java.util.List;
  *
  * 典型用法:
  * <pre>
- * public class HealthcareManifest implements PluginPackage {
+ * public class EducationManifest implements PluginPackage {
  *   &#64;Override
  *   public PluginConfigSchema configSchema() {
  *       return new PluginConfigSchema(List.of(
- *           PluginConfigSchema.Field.stringField("admissionWardPrefix", "入院病区前缀", "A-", false),
- *           PluginConfigSchema.Field.booleanField("autoAssignBed", "自动床位分配", true)
+ *           PluginConfigSchema.Field.stringField("defaultGradePrefix", "默认年级前缀", "高一", false),
+ *           PluginConfigSchema.Field.booleanField("autoAssignClass", "自动班级分配", true)
  *       ));
  *   }
  * }

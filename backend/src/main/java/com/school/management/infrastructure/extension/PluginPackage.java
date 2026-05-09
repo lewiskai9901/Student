@@ -49,7 +49,7 @@ public interface PluginPackage extends PluginManifest {
      * Phase 7.5: 声明本插件接受的运行时配置项.
      *
      * 默认返回空 schema — 插件不接受任何配置. 若需要让管理员配置
-     * (如 HEALTH 的"默认病区前缀"、"自动床位分配"开关), 覆盖此方法.
+     * (如 EDU 的"默认年级前缀"、"自动班级分配"开关), 覆盖此方法.
      *
      * 读配置走 {@code TenantPluginService.getConfig()}.
      */

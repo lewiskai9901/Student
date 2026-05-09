@@ -5,7 +5,7 @@ import java.util.List;
 /**
  * 插件包元信息 SPI.
  *
- * 每个行业(如 CORE / EDU / HEALTH)提供一个 {@code @Component} Manifest 实现,
+ * 每个行业(如 CORE / EDU)提供一个 {@code @Component} Manifest 实现,
  * 启动时由 {@code PluginPackageRegistrar} 扫描并落 {@code plugin_packages} 表.
  *
  * Manifest 负责:
@@ -15,7 +15,7 @@ import java.util.List;
  */
 public interface PluginManifest {
 
-    /** 行业码,作为 plugin_packages 主键,如 "CORE" / "EDU" / "HEALTH" */
+    /** 行业码,作为 plugin_packages 主键,如 "CORE" / "EDU" */
     String getIndustryCode();
 
     /** 行业显示名 */
