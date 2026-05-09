@@ -2,6 +2,8 @@ package com.school.management.application.access;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.school.management.domain.access.event.RelationApprovalRequestedEvent;
+import com.school.management.domain.access.model.entity.PendingRelationApproval;
 import com.school.management.domain.access.model.valueobject.AccessLevel;
 import com.school.management.domain.access.repository.AccessRelationRepository;
 import com.school.management.domain.access.repository.AccessRelationRepository.DirectRelationRef;
@@ -62,6 +64,8 @@ public class AccessRelationService {
     private final AccessCheckCache checkCache;
     /** metadata 字段 schema 校验 (Phase 4 W4.3 骨架). */
     private final MetadataSchemaValidator metadataSchemaValidator;
+    /** 审批流路由 (Phase 7 W7.1) — 关系类型 approval_required=1 时走两步 grant. */
+    private final RelationApprovalService relationApprovalService;
 
     /**
      * 关系推导索引: (targetType + targetRelation) → 所有可能派生出它的
@@ -356,7 +360,19 @@ public class AccessRelationService {
     // grant / revoke
     // ═══════════════════════════════════════════════════════════════
 
-    /** 创建关系 → 发 RelationAssigned 事件 */
+    /**
+     * 创建关系 → 发 RelationAssigned 事件.
+     *
+     * <p>Phase 7 W7.1: 当 {@code relation_types.approval_required=1} 时,
+     * 不直接 INSERT 而是走两步审批流:
+     * <ol>
+     *   <li>写 {@code pending_relation_approvals} status=PENDING</li>
+     *   <li>发 {@link RelationApprovalRequestedEvent}</li>
+     *   <li>返回 <b>负数</b> {@code -pendingId} 表示"审批中,未真正生效"</li>
+     * </ol>
+     * 审批人调 {@code POST /approvals/{id}/approve} 后, 控制器再调
+     * {@link #applyApprovedRequest(Long, Long)} 接通真正落库.
+     */
     @Transactional
     public Long grant(GrantRequest r) {
         // 1. 校验 relation_types 是否存在且启用
@@ -366,18 +382,39 @@ public class AccessRelationService {
                 r.relation, r.subjectType, r.resourceType));
         }
 
-        // 1b. 校验 metadata 满足关系的 schema 要求 (Phase 4 W4.3, 默认骨架放行未注册关系)
+        // 1a. 审批路由 — 该关系类型需要审批 → 写 pending 表, 不落 access_relations
+        if (relationApprovalService.requiresApproval(r.relation)) {
+            log.info("[AccessRelation] grant 转入审批流: relation={} {}:{} -> {}:{}",
+                r.relation, r.subjectType, r.subjectId, r.resourceType, r.resourceId);
+            Long pendingId = relationApprovalService.requestApproval(toPending(r));
+            eventPublisher.publishEvent(new RelationApprovalRequestedEvent(
+                pendingId, r.resourceType, r.resourceId, r.relation,
+                r.subjectType, r.subjectId, r.grantedBy));
+            // 负数返回值约定: 调用方按 Math.abs(...) 拿 pendingId, < 0 表示进入审批队列
+            return -pendingId;
+        }
+
+        // 1b. 不需审批 → 走非审批分支 (forceGrant 复用)
+        return forceGrant(r);
+    }
+
+    /**
+     * 内部方法: 不走审批检查的 grant. 仅用于 {@link #applyApprovedRequest(Long, Long)}
+     * 与 {@link #grant(GrantRequest)} 非审批分支共用底层 INSERT 逻辑.
+     */
+    @Transactional
+    public Long forceGrant(GrantRequest r) {
+        // 校验 metadata 满足关系的 schema 要求
         metadataSchemaValidator.validate(r.relation, r.metadata);
 
-        // 2. 检查是否已有同样的活跃关系 (幂等)
+        // 幂等检查
         Optional<Long> existing = repo.findActiveByTuple(
             r.resourceType, r.resourceId, r.relation, r.subjectType, r.subjectId);
         if (existing.isPresent()) {
-            log.info("[AccessRelation] grant 幂等命中,返回现有关系 id={}", existing.get());
+            log.info("[AccessRelation] forceGrant 幂等命中,返回现有关系 id={}", existing.get());
             return existing.get();
         }
 
-        // 3. INSERT
         String metaJson;
         try {
             metaJson = r.metadata != null ? objectMapper.writeValueAsString(r.metadata) : null;
@@ -396,16 +433,59 @@ public class AccessRelationService {
         log.info("[AccessRelation] grant: relation={} {} {}:{} -> {}:{} id={}",
             r.relation, r.subjectType, r.subjectId, r.resourceType, r.resourceId, r.accessLevel, newId);
 
-        // 4. 发事件
         eventPublisher.publishEvent(new RelationAssignedEvent(
             newId, r.resourceType, r.resourceId, r.relation,
             r.subjectType, r.subjectId, r.grantedBy));
 
-        // 5. 失效 check() 缓存 (按 subject + resource 双向清, implied 派生也可能受影响)
         checkCache.invalidateBySubject(r.subjectType, r.subjectId);
         checkCache.invalidateByResource(r.resourceType, r.resourceId);
 
         return newId;
+    }
+
+    /**
+     * 审批通过后接通真正 grant.
+     * 调用方先 {@link RelationApprovalService#approve(Long, Long)}, 再调此方法.
+     */
+    @Transactional
+    public Long applyApprovedRequest(Long pendingId, Long approverId) {
+        Optional<PendingRelationApproval> pendingOpt = relationApprovalService.findById(pendingId);
+        if (pendingOpt.isEmpty()) {
+            throw new IllegalArgumentException("pending 记录不存在: " + pendingId);
+        }
+        PendingRelationApproval p = pendingOpt.get();
+        if (p.getStatus() != PendingRelationApproval.Status.APPROVED) {
+            throw new IllegalStateException("pending 状态非 APPROVED: " + p.getStatus());
+        }
+
+        Long newId = forceGrant(toGrantRequest(p, approverId));
+        relationApprovalService.linkGrantedRelation(pendingId, newId);
+        return newId;
+    }
+
+    private PendingRelationApproval toPending(GrantRequest r) {
+        return PendingRelationApproval.builder()
+            .resourceType(r.resourceType).resourceId(r.resourceId).relation(r.relation)
+            .subjectType(r.subjectType).subjectId(r.subjectId)
+            .accessLevel(r.accessLevel).validFrom(r.validFrom).validTo(r.validTo)
+            .metadata(r.metadata).remark(r.remark)
+            .status(PendingRelationApproval.Status.PENDING)
+            .requestedBy(r.grantedBy)
+            .tenantId(r.tenantId != null ? r.tenantId : 1L)
+            .build();
+    }
+
+    private GrantRequest toGrantRequest(PendingRelationApproval p, Long approverId) {
+        GrantRequest r = GrantRequest.of(p.getSubjectType(), p.getSubjectId(),
+            p.getRelation(), p.getResourceType(), p.getResourceId());
+        r.accessLevel = p.getAccessLevel();
+        r.validFrom = p.getValidFrom();
+        r.validTo = p.getValidTo();
+        r.metadata = p.getMetadata();
+        r.remark = p.getRemark();
+        r.grantedBy = p.getRequestedBy();  // 审批落库时 createdBy=申请人, approverId 仅用于审计
+        r.tenantId = p.getTenantId();
+        return r;
     }
 
     /** 撤销关系:软删 + 归档 + 发事件 */

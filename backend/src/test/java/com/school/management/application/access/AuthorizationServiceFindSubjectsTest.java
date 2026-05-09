@@ -48,7 +48,8 @@ class AuthorizationServiceFindSubjectsTest {
         events = mock(ApplicationEventPublisher.class);
         om = new ObjectMapper();
         svc = new AccessRelationService(repo, events, om,
-            List.of(new FakeOccupantsDiscovery()), jdbc, noopCheckCache(), new MetadataSchemaValidator(om));
+            List.of(new FakeOccupantsDiscovery()), jdbc, noopCheckCache(), new MetadataSchemaValidator(om),
+            new RelationApprovalService(jdbc, om, events));
     }
 
     private static AccessCheckCache noopCheckCache() {

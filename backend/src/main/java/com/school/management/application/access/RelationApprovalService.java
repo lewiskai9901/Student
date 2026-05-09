@@ -96,6 +96,14 @@ public class RelationApprovalService {
         log.info("[Approval] reject id={} by user={} reason={}", pendingId, approverId, reason);
     }
 
+    /** 审批通过后回填真实落库的 access_relations id, 形成可追溯链路. */
+    @Transactional
+    public void linkGrantedRelation(Long pendingId, Long grantedRelationId) {
+        jdbcTemplate.update(
+            "UPDATE pending_relation_approvals SET granted_relation_id=? WHERE id=?",
+            grantedRelationId, pendingId);
+    }
+
     /** 申请人撤回 */
     @Transactional
     public void cancel(Long pendingId, Long requesterId) {
