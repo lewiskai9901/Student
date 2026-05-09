@@ -74,6 +74,11 @@ export interface Student {
 
   // 宿舍信息已统一到 place_occupants 管理体系
   // 通过 /v9/places API 查询学生入住信息
+  // 这几个字段是后端 JOIN 出来的临时显示字段
+  buildingName?: string
+  buildingNo?: string
+  roomNo?: string
+  bedNumber?: string | number
 
   // 家庭信息
   homeAddress?: string
@@ -209,7 +214,6 @@ export interface StudentQueryParams {
   enrollmentDateEnd?: string
   pageNum?: number
   pageSize?: number
-  orgUnitIds?: (number | string)[]
   orgUnitIds?: (number | string)[]
   selfUserId?: number | string
 }

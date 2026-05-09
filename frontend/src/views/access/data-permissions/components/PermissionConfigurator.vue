@@ -59,7 +59,7 @@
       </div>
       <button
         class="flex-shrink-0 rounded-md border border-amber-300 bg-white px-2.5 py-1 text-[11px] font-medium text-amber-700 hover:bg-amber-100"
-        @click="$emit('enable-industry', currentRole.industry)"
+        @click="$emit('enable-industry', currentRole.industry || '')"
       >
         一键启用
       </button>

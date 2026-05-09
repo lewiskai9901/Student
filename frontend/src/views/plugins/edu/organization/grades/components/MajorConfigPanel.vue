@@ -140,7 +140,7 @@
               :key="direction.id"
               class="flex items-center gap-3 rounded-lg border border-gray-100 p-2 transition-colors hover:bg-gray-50"
             >
-              <el-checkbox v-model="selectedDirectionIds" :label="direction.id">
+              <el-checkbox v-model="selectedDirectionIds" :value="direction.id">
                 <span class="text-sm">{{ direction.directionName || direction.level }}</span>
                 <span class="ml-2 text-xs text-gray-400">{{ direction.years }}年制</span>
               </el-checkbox>
@@ -270,7 +270,7 @@ const selectedMajorDirections = computed(() => {
 })
 
 // 其他年级（用于复制配置）
-const otherGrades = computed(() => {
+const otherGrades = computed<Array<{ id: number | string; gradeName: string }>>(() => {
   // 这里需要从父组件传入其他年级列表
   return []
 })

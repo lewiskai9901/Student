@@ -94,8 +94,14 @@ export function getUserByUsername(username: string): Promise<User> {
 /**
  * 根据组织单元获取用户列表
  */
-export function getUsersByOrgUnit(orgUnitId: number | string): Promise<User[]> {
-  return http.get<User[]>(`${USER_URL}/by-org-unit/${orgUnitId}`)
+export function getUsersByOrgUnit(
+  orgUnitId: number | string,
+  includeChildren?: boolean,
+  keyword?: string
+): Promise<User[]> {
+  return http.get<User[]>(`${USER_URL}/by-org-unit/${orgUnitId}`, {
+    params: { includeChildren, keyword }
+  })
 }
 
 /**

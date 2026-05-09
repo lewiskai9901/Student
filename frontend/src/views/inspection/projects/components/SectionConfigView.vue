@@ -520,7 +520,7 @@ function openEditEval(sectionId: number) {
       evalCompositeAgg.value = 'WEIGHTED_AVG'
       evalMissingPolicy.value = 'SKIP'
     }
-    normConfig.value = { countType: 'USER', relation: 'member', value: 50 }
+    normConfig.value = { countType: 'USER', relation: 'member', value: 50, typeFilter: '' }
     if (existing.normalizationConfig) {
       try { Object.assign(normConfig.value, JSON.parse(existing.normalizationConfig)) } catch {}
     }
@@ -543,7 +543,7 @@ function openEditEval(sectionId: number) {
     }
     evalCompositeAgg.value = 'WEIGHTED_AVG'
     evalMissingPolicy.value = 'SKIP'
-    normConfig.value = { countType: 'USER', relation: 'member', value: 50 }
+    normConfig.value = { countType: 'USER', relation: 'member', value: 50, typeFilter: '' }
     thresholdMap.value = {}
     minScoreMap.value = {}
   }
@@ -659,7 +659,7 @@ function openAddComposite() {
     missingPolicy: 'SKIP', gradeSchemeId: null, evaluationMethod: 'PERCENT_RANGE',
     normalization: 'NONE',
   }
-  compositeNormConfig.value = { countType: 'USER', relation: 'member', value: 50 }
+  compositeNormConfig.value = { countType: 'USER', relation: 'member', value: 50, typeFilter: '' }
   compositeThresholdMap.value = {}
   compositeMinScoreMap.value = {}
   compositeDialogVisible.value = true
@@ -676,7 +676,7 @@ function openEditComposite(ind: Indicator) {
     evaluationMethod: ind.evaluationMethod || 'PERCENT_RANGE',
     normalization: ind.normalization || 'NONE',
   }
-  compositeNormConfig.value = { countType: 'USER', relation: 'member', value: 50 }
+  compositeNormConfig.value = { countType: 'USER', relation: 'member', value: 50, typeFilter: '' }
   if (ind.normalizationConfig) {
     try { Object.assign(compositeNormConfig.value, JSON.parse(ind.normalizationConfig)) } catch {}
   }

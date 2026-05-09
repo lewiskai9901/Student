@@ -75,7 +75,7 @@ const saving = ref(false)
 const tenants = ref<Tenant[]>([])
 const dialogVisible = ref(false)
 const isEditing = ref(false)
-const editingId = ref<number | null>(null)
+const editingId = ref<number | string | null>(null)
 const formRef = ref<FormInstance>()
 
 const form = ref({

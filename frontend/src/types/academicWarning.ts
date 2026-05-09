@@ -4,7 +4,7 @@ export interface WarningRule {
   ruleType: string
   warningLevel: 1 | 2 | 3
   conditionParams: Record<string, any>
-  applicableGrades?: string
+  applicableGrades?: string | null
   enabled: boolean
   createdAt?: string
 }

@@ -116,14 +116,16 @@ export const MyRoleConfig: Record<string, { label: string; color: string }> = {
 }
 
 /**
- * 班级状态显示配置
+ * 班级状态显示配置 (myClass-specific tag-friendly variant)
+ * NOTE: 主要的 ClassStatusConfig 在 organization.ts. 此处保留旧 alias 仅供 myClass 内部 tag 使用.
  */
-export const ClassStatusConfig: Record<string, { label: string; type: 'success' | 'warning' | 'info' | 'danger' }> = {
+const _ClassStatusConfigMyClass: Record<string, { label: string; type: 'success' | 'warning' | 'info' | 'danger' }> = {
   PREPARING: { label: '筹建中', type: 'warning' },
   ACTIVE: { label: '正常', type: 'success' },
   GRADUATED: { label: '已毕业', type: 'info' },
   DISSOLVED: { label: '已解散', type: 'danger' }
 }
+export { _ClassStatusConfigMyClass as MyClassStatusConfig }
 
 /**
  * 学生状态显示配置

@@ -79,7 +79,7 @@ const SUBJECT_OPTIONS = [
   { value: 'ASSET', label: 'ASSET' },
 ]
 
-function parseSubjects(json: string | null): string[] {
+function parseSubjects(json: string | null | undefined): string[] {
   if (!json) return []
   try { return JSON.parse(json) } catch { return [] }
 }

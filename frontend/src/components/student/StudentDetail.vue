@@ -322,7 +322,7 @@ import type { Student, StudentStatusChange } from '@/types/student'
 import { StudentStatusMap, ChangeTypeMap } from '@/types/student'
 
 // 信息项组件
-const InfoItem = (props: { label: string; value?: string | null; class?: string }) => {
+const InfoItem = (props: { label: string; value?: string | number | null; class?: string }) => {
   return h('div', { class: ['flex items-start', props.class] }, [
     h('span', { class: 'text-sm text-gray-500 w-28 flex-shrink-0' }, props.label + ':'),
     h('span', { class: 'text-sm text-gray-900 break-all' }, props.value || '-')
@@ -330,7 +330,7 @@ const InfoItem = (props: { label: string; value?: string | null; class?: string 
 }
 
 interface Props {
-  studentId: number | null
+  studentId: number | string | null
 }
 
 const props = defineProps<Props>()

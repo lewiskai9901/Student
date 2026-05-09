@@ -483,10 +483,10 @@ async function loadBaseData() {
 
 // ==================== Tab 1: Checkin ====================
 const checkin = reactive({
-  semesterId: null as number | null,
-  orgUnitId: null as number | null,
+  semesterId: null as number | string | null,
+  orgUnitId: null as number | string | null,
   date: new Date().toISOString().split('T')[0],
-  courseId: null as number | null,
+  courseId: null as number | string | null,
   period: null as number | null,
 })
 const checkinRows = ref<any[]>([])
@@ -562,8 +562,8 @@ async function saveBatchAttendance() {
 
 // ==================== Tab 2: Records ====================
 const recordFilter = reactive({
-  semesterId: null as number | null,
-  orgUnitId: null as number | null,
+  semesterId: null as number | string | null,
+  orgUnitId: null as number | string | null,
   dateRange: null as [string, string] | null,
   status: null as number | null,
 })
@@ -656,8 +656,8 @@ async function delRecord(id: number) {
 
 // ==================== Tab 3: Statistics ====================
 const statsFilter = reactive({
-  semesterId: null as number | null,
-  orgUnitId: null as number | null,
+  semesterId: null as number | string | null,
+  orgUnitId: null as number | string | null,
   dateRange: null as [string, string] | null,
 })
 const stats = ref<AttendanceStats | null>(null)
@@ -796,9 +796,11 @@ function getStatusLabel(status: number) {
   return opt?.label || '未知'
 }
 
-function getStatusTag(status: number): string {
+function getStatusTag(status: number): 'primary' | 'success' | 'warning' | 'info' | 'danger' {
   const opt = statusOptions.find((o) => o.value === status)
-  return opt?.color || ''
+  const c = opt?.color
+  if (c === 'primary' || c === 'success' || c === 'warning' || c === 'info' || c === 'danger') return c
+  return 'info'
 }
 
 // ==================== Init ====================

@@ -56,14 +56,14 @@
 
     <!-- Tab 内容 -->
     <div class="tab-content">
-      <OverviewTab 
-        v-if="activeTab === 'overview'" 
-        :class-id="currentClassId" 
+      <OverviewTab
+        v-if="activeTab === 'overview'"
+        :org-unit-id="currentClassId"
         @change-tab="changeTab"
       />
-      <StudentsTab v-else-if="activeTab === 'students'" :class-id="currentClassId" />
-      <DormitoryTab v-else-if="activeTab === 'dormitory'" :class-id="currentClassId" />
-      <AnalyticsTab v-else-if="activeTab === 'analytics'" :class-id="currentClassId" />
+      <StudentsTab v-else-if="activeTab === 'students'" :org-unit-id="currentClassId" />
+      <DormitoryTab v-else-if="activeTab === 'dormitory'" :org-unit-id="currentClassId" />
+      <AnalyticsTab v-else-if="activeTab === 'analytics'" :org-unit-id="currentClassId" />
     </div>
   </div>
 </template>

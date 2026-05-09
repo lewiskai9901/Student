@@ -91,6 +91,7 @@ export interface OrgUnitTreeNode extends OrgUnit {
   children?: OrgUnitTreeNode[]
   label?: string // 用于树形选择器
   value?: number | string // 用于树形选择器
+  name?: string // 兼容某些后端别名字段
   // Extension fields now stored in attributes JSON (via SPI plugins)
 }
 

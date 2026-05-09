@@ -3,7 +3,7 @@
  * 在每个测试文件运行前执行
  */
 import { config } from '@vue/test-utils'
-import { vi } from 'vitest'
+import { vi, beforeEach, afterEach } from 'vitest'
 
 // 模拟 localStorage
 const localStorageMock = {

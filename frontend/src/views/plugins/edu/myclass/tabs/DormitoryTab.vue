@@ -271,7 +271,7 @@ const drawerTitle = computed(() => {
 
 // 扁平化房间列表（用于列表视图）
 interface FlatRoom extends DormitoryRoom {
-  buildingId: number
+  buildingId: number | string
   buildingName: string
   buildingType: 'MALE' | 'FEMALE' | 'MIXED'
 }
@@ -292,9 +292,9 @@ const flatRoomList = computed<FlatRoom[]>(() => {
 })
 
 // 获取楼栋类型标签样式
-const getBuildingTypeTag = (type: string): '' | 'success' | 'warning' | 'info' | 'danger' => {
-  const typeMap: Record<string, '' | 'success' | 'warning' | 'info' | 'danger'> = {
-    MALE: '',
+const getBuildingTypeTag = (type: string): 'primary' | 'success' | 'warning' | 'info' | 'danger' => {
+  const typeMap: Record<string, 'primary' | 'success' | 'warning' | 'info' | 'danger'> = {
+    MALE: 'primary',
     FEMALE: 'danger',
     MIXED: 'warning'
   }

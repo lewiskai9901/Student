@@ -14,7 +14,7 @@ export interface AttributeSelectOption {
 export interface AttributeFieldDefinition {
   key: string
   label: string
-  type: 'string' | 'number' | 'select' | 'textarea' | 'boolean' | 'date'
+  type: 'string' | 'number' | 'select' | 'textarea' | 'boolean' | 'date' | 'user' | 'relation'
   required?: boolean
   placeholder?: string
   defaultValue?: any
@@ -28,6 +28,14 @@ export interface AttributeFieldDefinition {
   format?: string
   multiple?: boolean
   options?: AttributeSelectOption[]
+  /** 扩展配置（user/relation 类型可用 config.target / config.options 等） */
+  config?: {
+    min?: number
+    max?: number
+    target?: string
+    options?: AttributeSelectOption[]
+    [k: string]: any
+  }
   showInTree?: boolean
   showInDetail?: boolean
   sortOrder?: number

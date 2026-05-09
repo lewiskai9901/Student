@@ -65,12 +65,12 @@ async function loadTreeData() {
     // In production, this would call orgUnitApi.getTree() or placeApi.getTree()
     if (props.scopeType === 'ORG') {
       const { orgUnitApi } = await import('@/api/organization')
-      const res = await orgUnitApi.getTree()
-      treeData.value = mapOrgTree(res.data ?? res)
+      const res: any = await orgUnitApi.getTree()
+      treeData.value = mapOrgTree(res?.data ?? res)
     } else {
       const { universalPlaceApi } = await import('@/api/universalPlace')
-      const res = await universalPlaceApi.getTree()
-      treeData.value = mapPlaceTree(res.data ?? res ?? [])
+      const res: any = await universalPlaceApi.getTree()
+      treeData.value = mapPlaceTree(res?.data ?? res ?? [])
     }
   } catch {
     treeData.value = []
@@ -99,9 +99,9 @@ function mapPlaceTree(nodes: any[]): TreeNode[] {
 
 // ---------- Tree Filter ----------
 
-function filterNode(value: string, data: TreeNode): boolean {
-  if (!value) return true
-  return data.label.includes(value)
+function filterNode(value: string | number | undefined | null, data: any): boolean {
+  if (!value || typeof value !== 'string') return true
+  return (data as TreeNode).label?.includes(value) ?? false
 }
 
 watch(filterText, (val) => {

@@ -573,13 +573,13 @@ const filteredBuildings = computed(() => {
   // Gender filter
   if (genderFilter.value === 'male') {
     result = result.filter(b => {
-      const g = b.effectiveGender || b.gender
-      return g === 1 || g === 'MALE'
+      const g = String(b.effectiveGender || b.gender || '')
+      return g === '1' || g === 'MALE'
     })
   } else if (genderFilter.value === 'female') {
     result = result.filter(b => {
-      const g = b.effectiveGender || b.gender
-      return g === 2 || g === 'FEMALE'
+      const g = String(b.effectiveGender || b.gender || '')
+      return g === '2' || g === 'FEMALE'
     })
   }
 

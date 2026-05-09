@@ -62,7 +62,7 @@
       <div class="flex-1 overflow-hidden p-6">
         <MajorConfigPanel
           v-if="selectedGrade"
-          :key="selectedGradeId"
+          :key="selectedGradeId ?? ''"
           :grade="selectedGrade"
           :theme="selectedGradeTheme"
           :configured-directions="configuredDirections"

@@ -50,7 +50,7 @@
         :selected-ids="selectedIds"
         :expanded-keys="expandedKeys"
         @toggle="$emit('toggle', $event)"
-        @check="$emit('check', $event.id, $event.checked)"
+        @check="(payload: { id: number | string; checked: boolean }) => $emit('check', payload)"
       />
     </div>
   </div>

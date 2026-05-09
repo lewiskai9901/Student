@@ -103,7 +103,7 @@ function rateColor(percent: number): string {
   return '#F56C6C'
 }
 
-function performanceTag(row: InspectorPerformanceItem): { label: string; type: string } {
+function performanceTag(row: InspectorPerformanceItem): { label: string; type: 'primary' | 'success' | 'warning' | 'info' | 'danger' } {
   const score = row.avgScore ?? 0
   const rate = toPercent(row.onTimeRate)
 

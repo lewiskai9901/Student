@@ -69,7 +69,7 @@
                 v-if="multiple"
                 type="checkbox"
                 :checked="isSelected(user.id)"
-                :disabled="!isSelected(user.id) && maxSelect && selectedUsers.length >= maxSelect"
+                :disabled="!isSelected(user.id) && !!maxSelect && selectedUsers.length >= maxSelect"
                 class="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
                 @change="toggleUser(user)"
               />
@@ -130,7 +130,8 @@
 <script setup lang="ts">
 import { ref, computed, watch, onMounted } from 'vue'
 import { getDepartmentTree, type DepartmentResponse } from '@/api/organization'
-import { getUsersByOrgUnit, getUsersWithDepartments, type User } from '@/api/user'
+import { getUsersByOrgUnit, getUsersWithDepartments } from '@/api/user'
+import type { User } from '@/types/user'
 import DepartmentTreeNode from './DepartmentTreeNode.vue'
 
 interface SelectedUser {

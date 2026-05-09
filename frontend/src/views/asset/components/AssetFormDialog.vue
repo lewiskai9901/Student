@@ -99,7 +99,7 @@ const rules: FormRules = {
 
 // 展开分类选项
 const flatCategories = computed(() => {
-  const result: { id: number; label: string; level: number }[] = []
+  const result: { id: number | string; label: string; level: number }[] = []
 
   const flatten = (items: AssetCategory[], level = 0) => {
     items.forEach(item => {

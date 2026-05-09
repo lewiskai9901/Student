@@ -28,7 +28,7 @@ export interface ConfigurableType {
  * Generic tree node wrapping any ConfigurableType.
  * Backend uses @JsonUnwrapped so entity fields are flattened into the node.
  */
-export interface TypeTreeNode<T extends ConfigurableType> extends T {
+export type TypeTreeNode<T extends ConfigurableType> = T & {
   children: TypeTreeNode<T>[]
 }
 

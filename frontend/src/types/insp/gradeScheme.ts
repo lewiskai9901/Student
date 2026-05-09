@@ -44,8 +44,9 @@ export interface CloneGradeSchemeRequest {
 export interface GradeDefinitionInput {
   code: string
   name: string
-  minValue: number
-  maxValue: number
+  /** PERCENT_RANGE 模式下后端按 sortOrder 自动分桶, 前端可不传 */
+  minValue?: number
+  maxValue?: number
   color?: string | null
   icon?: string | null
   sortOrder?: number
