@@ -113,7 +113,13 @@ public class CoreManifest implements PluginPackage {
             new Contribution.WorkflowContribution(
                 getIndustryCode(),
                 "processes/hello-world.bpmn20.xml",
-                "Hello World 测试流程")
+                "Hello World 测试流程"),
+
+            // Phase 6 (workflow-engine) — access RelationApproval 走 Flowable
+            new Contribution.WorkflowContribution(
+                getIndustryCode(),
+                "processes/access-relation-approval.bpmn20.xml",
+                "关系授权审批流程")
         );
     }
 

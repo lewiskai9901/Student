@@ -14,6 +14,8 @@ import com.school.management.infrastructure.extension.RelationTypeDef.Implied;
 import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
@@ -67,6 +69,17 @@ public class AccessRelationService {
     private final MetadataSchemaValidator metadataSchemaValidator;
     /** 审批流路由 (Phase 7 W7.1) — 关系类型 approval_required=1 时走两步 grant. */
     private final RelationApprovalService relationApprovalService;
+
+    /**
+     * Phase 6 (workflow-engine): 审批引擎模式切换. INLINE = pending_relation_approvals 表 (默认),
+     * FLOWABLE = 走 Flowable 流程引擎 (要求 RelationApprovalWorkflowService bean 存在).
+     */
+    @Value("${access.approval.engine:INLINE}")
+    private String approvalEngineMode;
+
+    /** Phase 6: 仅 FLOWABLE 模式下使用 — Flowable autoconfig 未启用时为 null. */
+    @Autowired(required = false)
+    private RelationApprovalWorkflowService relationApprovalWorkflowService;
 
     /**
      * 关系推导索引: (targetType + targetRelation) → 所有可能派生出它的
@@ -385,6 +398,16 @@ public class AccessRelationService {
 
         // 1a. 审批路由 — 该关系类型需要审批 → 写 pending 表, 不落 access_relations
         if (relationApprovalService.requiresApproval(r.relation)) {
+            // Phase 6 (workflow-engine): 升级路径 — 切换到 Flowable 流程引擎
+            if ("FLOWABLE".equalsIgnoreCase(approvalEngineMode) && relationApprovalWorkflowService != null) {
+                String processInstanceId = relationApprovalWorkflowService.startApproval(r);
+                log.info("[AccessRelation] grant 转入 Flowable 审批流: relation={} {}:{} -> {}:{} processInstance={}",
+                    r.relation, r.subjectType, r.subjectId, r.resourceType, r.resourceId, processInstanceId);
+                // 负数约定与 INLINE 兼容: PID 是字符串, 用 hashCode 转 long 后取负
+                return -Math.abs((long) processInstanceId.hashCode());
+            }
+
+            // 默认 INLINE 路径
             log.info("[AccessRelation] grant 转入审批流: relation={} {}:{} -> {}:{}",
                 r.relation, r.subjectType, r.subjectId, r.resourceType, r.resourceId);
             Long pendingId = relationApprovalService.requestApproval(toPending(r));

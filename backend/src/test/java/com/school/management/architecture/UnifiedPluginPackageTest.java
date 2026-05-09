@@ -130,15 +130,16 @@ class UnifiedPluginPackageTest {
     }
 
     @Test
-    @DisplayName("PluginPackage 默认 metadata() 非 null; CoreManifest.contribute() 含 17 个 contribution (Phase 5: +2 workflow)")
+    @DisplayName("PluginPackage 默认 metadata() 非 null; CoreManifest.contribute() 含 18 个 contribution (Phase 6: +1 workflow)")
     void pluginPackageDefaultMethods() {
         PluginPackage core = new CoreManifest();
         // Phase 2 W2.2: CoreManifest 已覆盖 contribute() 声明 9 个核心关系 (CoreRelationsPlugin 已删).
         // Phase 3 W3.1: 加 viewer + responsible_for 各 3 个 (覆盖 user/org/place) → 9+6=15.
         // Phase 5: 加 2 个 WorkflowContribution (leave-approval + hello-world) → 15+2=17.
+        // Phase 6 (workflow-engine): 加 access-relation-approval workflow → 17+1=18.
         // 旧测试期望"默认空流"已不再适用; 改为校验内容契约.
         long count = core.contribute().count();
-        assertEquals(17, count, "CoreManifest 应贡献 17 个 contribution (15 关系类型 + 2 workflow)");
+        assertEquals(18, count, "CoreManifest 应贡献 18 个 contribution (15 关系类型 + 3 workflow)");
         assertNotNull(core.metadata(), "默认 metadata() 必须非 null");
         assertEquals("CORE", core.metadata().industryCode());
     }

@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<definitions xmlns="http://www.omg.org/spec/BPMN/20100524/MODEL"
+             xmlns:flowable="http://flowable.org/bpmn"
+             xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+             targetNamespace="http://flowable.org/bpmn"
+             id="accessRelationApprovalDefs">
+
+    <process id="access_relation_approval" name="关系授权审批" isExecutable="true">
+
+        <startEvent id="start" name="发起授权申请">
+            <extensionElements>
+                <flowable:formProperty id="resourceType" name="资源类型" type="string" required="true"/>
+                <flowable:formProperty id="resourceId" name="资源ID" type="long" required="true"/>
+                <flowable:formProperty id="relation" name="关系码" type="string" required="true"/>
+                <flowable:formProperty id="subjectType" name="主体类型" type="string" required="true"/>
+                <flowable:formProperty id="subjectId" name="主体ID" type="long" required="true"/>
+                <flowable:formProperty id="requesterId" name="申请人ID" type="long" required="true"/>
+            </extensionElements>
+        </startEvent>
+
+        <sequenceFlow id="flow1" sourceRef="start" targetRef="approve_task"/>
+
+        <userTask id="approve_task" name="审批关系授权"
+                  flowable:assignee="${workflowApprover.findFirstApprover(relation, resourceType, resourceId, requesterId)}">
+            <documentation>由 ApproverFinder 路由审批人</documentation>
+        </userTask>
+
+        <sequenceFlow id="flow2" sourceRef="approve_task" targetRef="check_outcome"/>
+
+        <exclusiveGateway id="check_outcome" name="审批结果"/>
+
+        <sequenceFlow id="to_grant" sourceRef="check_outcome" targetRef="grant_relation">
+            <conditionExpression xsi:type="tFormalExpression">${approved == true}</conditionExpression>
+        </sequenceFlow>
+
+        <sequenceFlow id="to_reject" sourceRef="check_outcome" targetRef="rejected_end">
+            <conditionExpression xsi:type="tFormalExpression">${approved == false}</conditionExpression>
+        </sequenceFlow>
+
+        <serviceTask id="grant_relation" name="授权关系"
+                     flowable:expression="${flowableRelationGrantBridge.grant(execution)}"/>
+
+        <sequenceFlow id="flow3" sourceRef="grant_relation" targetRef="approved_end"/>
+
+        <endEvent id="approved_end" name="授权成功"/>
+        <endEvent id="rejected_end" name="审批拒绝"/>
+    </process>
+</definitions>
