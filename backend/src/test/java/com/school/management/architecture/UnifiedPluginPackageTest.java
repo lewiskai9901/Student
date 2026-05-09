@@ -55,11 +55,11 @@ class UnifiedPluginPackageTest {
     }
 
     @Test
-    @DisplayName("Contribution 恰好有 13 个 permitted 子类型")
-    void contributionPermitsExactly13Subtypes() {
+    @DisplayName("Contribution 恰好有 14 个 permitted 子类型 (Phase 5: +workflow)")
+    void contributionPermitsExactly14Subtypes() {
         Class<?>[] permitted = Contribution.class.getPermittedSubclasses();
-        assertEquals(13, permitted.length,
-            "Track M3 扩展后约定 13 种 Contribution: entity/relation/event-domain/trigger-point/event-type/perm/role/menu/data-scope/route/policy/target-mode/domain, 实际=" + permitted.length);
+        assertEquals(14, permitted.length,
+            "Phase 5 扩展后约定 14 种 Contribution: entity/relation/event-domain/trigger-point/event-type/perm/role/menu/data-scope/route/policy/target-mode/domain/workflow, 实际=" + permitted.length);
     }
 
     @Test
@@ -130,14 +130,15 @@ class UnifiedPluginPackageTest {
     }
 
     @Test
-    @DisplayName("PluginPackage 默认 metadata() 非 null; CoreManifest.contribute() 含 15 个核心关系 (W3.1 扩充)")
+    @DisplayName("PluginPackage 默认 metadata() 非 null; CoreManifest.contribute() 含 17 个 contribution (Phase 5: +2 workflow)")
     void pluginPackageDefaultMethods() {
         PluginPackage core = new CoreManifest();
         // Phase 2 W2.2: CoreManifest 已覆盖 contribute() 声明 9 个核心关系 (CoreRelationsPlugin 已删).
         // Phase 3 W3.1: 加 viewer + responsible_for 各 3 个 (覆盖 user/org/place) → 9+6=15.
+        // Phase 5: 加 2 个 WorkflowContribution (leave-approval + hello-world) → 15+2=17.
         // 旧测试期望"默认空流"已不再适用; 改为校验内容契约.
         long count = core.contribute().count();
-        assertEquals(15, count, "CoreManifest 应贡献 15 个核心关系类型 (9 base + 3 viewer + 3 responsible_for)");
+        assertEquals(17, count, "CoreManifest 应贡献 17 个 contribution (15 关系类型 + 2 workflow)");
         assertNotNull(core.metadata(), "默认 metadata() 必须非 null");
         assertEquals("CORE", core.metadata().industryCode());
     }

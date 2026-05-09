@@ -62,6 +62,7 @@ public class ContributionDispatcher implements ApplicationRunner {
         AtomicInteger policies = new AtomicInteger();
         AtomicInteger targetModes = new AtomicInteger();
         AtomicInteger domains = new AtomicInteger();
+        AtomicInteger workflows = new AtomicInteger();
 
         Set<String> seenKeys = new HashSet<>();
 
@@ -132,16 +133,21 @@ public class ContributionDispatcher implements ApplicationRunner {
                     // TargetModeResolverRegistry 通过 Spring DI 直接收集 bean, 这里只登记日志 (与 Policy 同模式)
                 }
                 else if (c instanceof Contribution.DomainContribution)       domains.incrementAndGet();
+                else if (c instanceof Contribution.WorkflowContribution) {
+                    workflows.incrementAndGet();
+                    // 部署由 WorkflowContributionDeployer 在 ApplicationReadyEvent 时统一做
+                    // (避免 dispatcher 启动早期触发 Flowable bean 装配时序问题)
+                }
                 log.debug("[ContributionDispatcher]   {} ← {}", key, industry);
             });
         }
 
         log.info("[ContributionDispatcher] 扫描 {} 个包, 收到 {} 条 Contribution " +
-                "(entity {}, relation {}, event-domain {}, trigger-point {}, event-type {}, perm {}, role {}, menu {}, scope {}, route {}, policy {}, target-mode {}, domain {})",
+                "(entity {}, relation {}, event-domain {}, trigger-point {}, event-type {}, perm {}, role {}, menu {}, scope {}, route {}, policy {}, target-mode {}, domain {}, workflow {})",
             packages.size(), total.get(),
             entities.get(), relations.get(), events.get(),
             triggerPoints.get(), eventTypes.get(),
             perms.get(), roles.get(), menus.get(), scopes.get(), routes.get(),
-            policies.get(), targetModes.get(), domains.get());
+            policies.get(), targetModes.get(), domains.get(), workflows.get());
     }
 }

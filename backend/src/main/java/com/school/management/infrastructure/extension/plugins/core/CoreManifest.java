@@ -103,7 +103,17 @@ public class CoreManifest implements PluginPackage {
             wrap(RelationTypeDef.of(CoreRelations.RESPONSIBLE_FOR, "user", "org_unit", "责任人(对组织)",
                 "OWNERSHIP", "通用责任 — 对某组织负责 (如部门主管,班主任)")),
             wrap(RelationTypeDef.of(CoreRelations.RESPONSIBLE_FOR, "user", "place", "责任人(对场所)",
-                "OWNERSHIP", "通用责任 — 对某场所负责 (如设备责任人,场地负责人)"))
+                "OWNERSHIP", "通用责任 — 对某场所负责 (如设备责任人,场地负责人)")),
+
+            // Phase 5 — sample workflows (BPMN 文件在 classpath:processes/)
+            new Contribution.WorkflowContribution(
+                getIndustryCode(),
+                "processes/leave-approval.bpmn20.xml",
+                "请假审批流程示例"),
+            new Contribution.WorkflowContribution(
+                getIndustryCode(),
+                "processes/hello-world.bpmn20.xml",
+                "Hello World 测试流程")
         );
     }
 
