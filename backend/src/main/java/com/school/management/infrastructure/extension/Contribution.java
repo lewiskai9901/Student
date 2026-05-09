@@ -31,7 +31,8 @@ public sealed interface Contribution permits
     Contribution.RouteContribution,
     Contribution.PolicyContribution,
     Contribution.TargetModeResolverContribution,
-    Contribution.DomainContribution {
+    Contribution.DomainContribution,
+    Contribution.WorkflowContribution {
 
     /** 跨 Contribution 唯一标识, 用于冲突检测/日志 */
     String uniqueKey();
@@ -159,5 +160,25 @@ public sealed interface Contribution permits
      */
     record DomainContribution(String key, String description) implements Contribution {
         @Override public String uniqueKey() { return "domain:" + key; }
+    }
+
+    /**
+     * 工作流贡献 (Phase 5) — 插件声明自带的 BPMN 文件.
+     *
+     * <p>启动期 {@code WorkflowContributionDeployer} 自动从 classpath 加载并 deploy
+     * 到 Flowable {@code RepositoryService}.
+     *
+     * <p>插件 namespacing: 推荐 BPMN 内 process id 用 {@code "{industry}_{domain}_{action}"}
+     * 格式 (如 {@code "edu_leave_approval"}), 避免跨插件冲突.
+     *
+     * @param industryCode 所属行业 (CORE/EDU/...)
+     * @param resourcePath classpath 资源路径 (如 {@code "processes/leave-approval.bpmn20.xml"})
+     * @param description  人类可读描述, 写入 Flowable Deployment.name
+     */
+    record WorkflowContribution(String industryCode, String resourcePath, String description)
+            implements Contribution {
+        @Override public String uniqueKey() {
+            return "workflow:" + industryCode + ":" + resourcePath;
+        }
     }
 }

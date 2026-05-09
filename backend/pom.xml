@@ -288,6 +288,13 @@
             <version>${flowable.version}</version>
         </dependency>
 
+        <!-- H2 in-memory database for Flowable test profile (smoke test) -->
+        <dependency>
+            <groupId>com.h2database</groupId>
+            <artifactId>h2</artifactId>
+            <scope>test</scope>
+        </dependency>
+
         <!-- Casbin for Authorization -->
         <dependency>
             <groupId>org.casbin</groupId>

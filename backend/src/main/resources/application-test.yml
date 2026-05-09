@@ -1,0 +1,27 @@
+# Test profile — Flowable 引擎启用 + H2 内存库
+#
+# NOTE (Phase 1): FlowableSmokeTest 不依赖此 profile —— 它用 sliced
+# @SpringBootTest(classes = FlowableTestConfig) + @TestPropertySource 覆写,
+# 因为本项目主上下文紧耦合 MySQL (AccessRelationService bootImpliedCache 等
+# 启动期 raw SQL), 不能在 H2 装配整个应用. 此 profile 保留作为 Phase 2+ 的
+# 集成测试基础设施 (Testcontainers MySQL) 落位的目标位置.
+
+spring:
+  # 覆盖 application-dev.yml 的 Flowable autoconfig exclude (test 必须启用 Flowable)
+  autoconfigure:
+    exclude:
+  main:
+    lazy-initialization: false
+  datasource:
+    url: jdbc:h2:mem:flowable_test;MODE=MYSQL;DB_CLOSE_DELAY=-1
+    driver-class-name: org.h2.Driver
+    username: sa
+    password:
+  jpa:
+    database-platform: org.hibernate.dialect.H2Dialect
+
+flowable:
+  database-schema-update: create-drop
+  async-executor-activate: false
+  history-level: audit
+  process-definition-location-prefix: classpath*:/processes/

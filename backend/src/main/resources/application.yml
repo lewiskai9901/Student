@@ -191,6 +191,13 @@ cors:
   allow-credentials: true
   max-age: 3600
 
+# 关系授权审批引擎 (Phase 6 workflow-engine)
+# INLINE   - 走 pending_relation_approvals 表 (默认, 不依赖 Flowable)
+# FLOWABLE - 走 Flowable 流程引擎 (要求 Flowable autoconfig 启用)
+access:
+  approval:
+    engine: INLINE
+
 # Flowable工作流配置
 flowable:
   # 数据库表更新策略: true=自动创建/更新表, false=不自动创建

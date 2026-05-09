@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<definitions xmlns="http://www.omg.org/spec/BPMN/20100524/MODEL"
+             xmlns:flowable="http://flowable.org/bpmn"
+             targetNamespace="http://flowable.org/bpmn"
+             id="leaveApprovalDefinitions">
+
+    <process id="leave_approval" name="请假审批" isExecutable="true">
+
+        <startEvent id="start" name="发起请假">
+            <extensionElements>
+                <flowable:formProperty id="days" name="请假天数" type="long" required="true"/>
+                <flowable:formProperty id="reason" name="请假原因" type="string"/>
+            </extensionElements>
+        </startEvent>
+
+        <sequenceFlow id="flow1" sourceRef="start" targetRef="manager_approve"/>
+
+        <userTask id="manager_approve" name="主管审批"
+                  flowable:assignee="${workflowApprover.findFirstApprover('admin', 'org_unit', orgUnitId, requesterId)}">
+            <extensionElements>
+                <flowable:taskListener event="create" delegateExpression="${leaveApprovalListener}"/>
+            </extensionElements>
+            <documentation>主管审批申请 — assignee 自动找申请人所在 org 的 admin</documentation>
+        </userTask>
+
+        <sequenceFlow id="flow2" sourceRef="manager_approve" targetRef="check_days"/>
+
+        <exclusiveGateway id="check_days" name="天数判断"/>
+
+        <sequenceFlow id="to_director" sourceRef="check_days" targetRef="director_approve">
+            <conditionExpression xsi:type="tFormalExpression"
+                                  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+                ${days &gt; 3}
+            </conditionExpression>
+        </sequenceFlow>
+
+        <sequenceFlow id="to_end" sourceRef="check_days" targetRef="end">
+            <conditionExpression xsi:type="tFormalExpression"
+                                  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+                ${days &lt;= 3}
+            </conditionExpression>
+        </sequenceFlow>
+
+        <userTask id="director_approve" name="部门主任审批 (>3天)"
+                  flowable:assignee="${workflowApprover.findFirstApprover('admin', 'org_unit', parentOrgUnitId, requesterId)}"/>
+
+        <sequenceFlow id="flow3" sourceRef="director_approve" targetRef="end"/>
+
+        <endEvent id="end" name="审批完成"/>
+    </process>
+</definitions>

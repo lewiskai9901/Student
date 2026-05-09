@@ -21,6 +21,8 @@
     "@element-plus/icons-vue": "^2.1.0",
     "@heroicons/vue": "^2.1.1",
     "axios": "^1.5.0",
+    "bpmn-js": "^17.11.1",
+    "diagram-js": "^14.11.3",
     "echarts": "^6.0.0",
     "element-plus": "^2.4.1",
     "konva": "^10.2.0",
