@@ -15,7 +15,7 @@ public class DataModulePO {
     private String moduleName;
     private String domainCode;
     private String domainName;
-    /** 所属行业 CORE/EDU/HEALTH/CARE/CUSTOM — 从 data_resources.industry 透传 */
+    /** 所属行业 CORE/EDU/CARE/CUSTOM — 从 data_resources.industry 透传 */
     private String industry;
     private String resourceType;
     private String orgUnitField;

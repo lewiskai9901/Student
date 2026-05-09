@@ -68,10 +68,6 @@ class NoNewDeprecatedSpiImplTest {
         "plugins/education/StudentPlugin.java",
         "plugins/education/SuperAdminPlugin.java",
         "plugins/education/TeacherPlugin.java",
-        "plugins/healthcare/DoctorTypePlugin.java",
-        "plugins/healthcare/NurseTypePlugin.java",
-        "plugins/healthcare/PatientPlugin.java",
-        "plugins/healthcare/WardTypePlugin.java",
         // MessagingDomainPlugin (11)
         "plugins/core/messaging/InspectionMessagingPlugin.java",
         "plugins/core/messaging/NotificationMessagingPlugin.java",
@@ -86,22 +82,18 @@ class NoNewDeprecatedSpiImplTest {
         "plugins/education/messaging/EnrollmentMessagingPlugin.java",
         "plugins/education/messaging/GradeMessagingPlugin.java",
         "plugins/education/messaging/TeachingMessagingPlugin.java",
-        // MenuContributionPlugin (3)
+        // MenuContributionPlugin (2)
         "plugins/core/CoreMenuPlugin.java",
         "plugins/education/EducationMenuPlugin.java",
-        "plugins/healthcare/HealthcareMenuPlugin.java",
-        // DataScopePlugin (2)
+        // DataScopePlugin (1)
         "plugins/education/EducationDataScopePlugin.java",
-        "plugins/healthcare/HealthcareDataScopePlugin.java",
-        // PermissionProvider (3)
+        // PermissionProvider (2)
         "plugins/core/CorePermissionProvider.java",
         "plugins/education/EducationPermissionProvider.java",
-        "plugins/healthcare/HealthcarePermissionProvider.java",
         // RelationTypePlugin: 已在 W2.2 全部删除 — 无 baseline 条目.
-        // RolePresetPlugin (3)
+        // RolePresetPlugin (2)
         "plugins/core/CoreRolePresetPlugin.java",
-        "plugins/education/EducationRolePresetPlugin.java",
-        "plugins/healthcare/HealthcareRolePresetPlugin.java"
+        "plugins/education/EducationRolePresetPlugin.java"
     );
 
     /** 匹配 {@code class Xxx ... implements ... <SpiName>} (允许多接口列表 + 跨行) */

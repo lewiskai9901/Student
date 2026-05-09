@@ -6,7 +6,7 @@ export default definePlugin({
   schemaVersion: 1,
   minCoreVersion: '0.1.0',
   // inspection 在后端是核心通用层(不在 plugin_packages 表),所有租户默认启用。
-  // 行业插件(EDU/HEALTH 等)才用 tenantPlugins.includes(...) 做 gate。
+  // 行业插件(EDU 等)才用 tenantPlugins.includes(...) 做 gate。
   enabled: () => true,
   contributions: [
     // ===== Permissions (12) =====

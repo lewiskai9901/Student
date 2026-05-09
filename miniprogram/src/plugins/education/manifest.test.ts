@@ -2,21 +2,19 @@ import { describe, it, expect } from 'vitest'
 import { ContributionDispatcher } from '@core/plugin/dispatcher'
 import education from './manifest'
 import demo from '../demo/manifest'
-import healthcare from '../healthcare/manifest'
 import inspection from '../inspection/manifest'
 import type { MenuContribution, PermissionContribution } from '@core/plugin/contribution'
 
 describe('education manifest', () => {
-  it('registers without conflict alongside demo + healthcare + inspection', () => {
+  it('registers without conflict alongside demo + inspection', () => {
     const d = new ContributionDispatcher('1.0.0')
     expect(() => {
       d.register(demo)
-      d.register(healthcare)
       d.register(inspection)
       d.register(education)
     }).not.toThrow()
     expect(d.allPlugins().map(p => p.key).sort()).toEqual(
-      ['demo', 'education', 'healthcare', 'inspection']
+      ['demo', 'education', 'inspection']
     )
   })
 

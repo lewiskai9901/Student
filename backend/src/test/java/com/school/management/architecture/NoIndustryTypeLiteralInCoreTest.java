@@ -15,7 +15,7 @@ import static org.assertj.core.api.Assertions.assertThat;
  * 守护: core Java 代码 (非 plugins.* / 非 inspection.* 目录)
  * 不得出现行业类型字符串字面量.
  *
- * 这些类型码由对应行业插件 (EducationPlugin / HealthcarePlugin) 在启动时
+ * 这些类型码由对应行业插件 (EducationPlugin 等) 在启动时
  * 通过 EntityTypeContribution 动态注册到 entity_type_configs 表. core 代码
  * 不应感知, 也不能硬编码引用.
  *
@@ -31,9 +31,7 @@ class NoIndustryTypeLiteralInCoreTest {
         "\"GRADE\"",
         "\"MAJOR\"",
         "\"DORMITORY\"",
-        "\"CLASSROOM\"",
-        "\"PATIENT\"",
-        "\"WARD\""
+        "\"CLASSROOM\""
     };
 
     /** 排除的子包 (插件 / 仍保留在 core 的历史包) */

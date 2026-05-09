@@ -20,8 +20,8 @@ export default definePlugin({
     { type: 'event', eventName: 'demo.hello.clicked', payloadSchema: { type: 'object' } }
   ],
   bootstrap: (ctx) => {
-    ctx.bus.on('healthcare.patient.scanned', (payload) => {
-      _crossPluginAuditLog.push({ event: 'healthcare.patient.scanned', payload })
+    ctx.bus.on('inspection.task.submitted', (payload) => {
+      _crossPluginAuditLog.push({ event: 'inspection.task.submitted', payload })
     })
   },
   subPackage: { root: 'plugins/demo/pages', pages: ['hello'] }

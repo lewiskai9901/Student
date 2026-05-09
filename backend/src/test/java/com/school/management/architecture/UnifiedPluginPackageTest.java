@@ -162,28 +162,8 @@ class UnifiedPluginPackageTest {
     }
 
     @Test
-    @DisplayName("Phase 7.5: HealthcareManifest 覆盖 configSchema() 返回若干字段")
-    void healthcareHasConfigSchema() {
-        PluginPackage health =
-            new com.school.management.infrastructure.extension.plugins.healthcare.HealthcareManifest();
-        var schema = health.configSchema();
-        assertNotNull(schema);
-        assertFalse(schema.isEmpty(), "HealthcareManifest 应该覆盖 configSchema() 返回非空");
-        // schema 内容会演化, 仅守护"非空且核心字段在"
-        assertTrue(schema.fields().size() >= 3,
-            "HEALTH 至少 3 个核心配置字段");
-        var keys = schema.fields().stream().map(f -> f.key()).toList();
-        assertTrue(keys.contains("admissionWardPrefix"));
-        assertTrue(keys.contains("autoAssignBed"));
-        assertTrue(keys.contains("dischargeNotifyChannel"));
-    }
-
-    @Test
-    @DisplayName("Phase 7.4: PluginPackage.schemaVersion() 默认 0, HEALTH 覆盖为 1")
+    @DisplayName("Phase 7.4: PluginPackage.schemaVersion() 默认 0")
     void schemaVersionDefault() {
         assertEquals(0, new CoreManifest().schemaVersion(), "CoreManifest 未覆盖 schemaVersion() 应返回 0");
-        assertEquals(1,
-            new com.school.management.infrastructure.extension.plugins.healthcare.HealthcareManifest().schemaVersion(),
-            "HealthcareManifest 覆盖 schemaVersion() 应返回 1");
     }
 }

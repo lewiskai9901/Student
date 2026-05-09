@@ -61,11 +61,11 @@ class PluginLifecycleServiceTest {
     void disable_throwsIfDependedOn() {
         // dependency check returns dependents
         when(jdbc.queryForList(anyString(), eq(String.class), any(), any()))
-            .thenReturn(List.of("HEALTH"));
+            .thenReturn(List.of("DEPENDENT_X"));
 
         IllegalStateException ex = assertThrows(IllegalStateException.class,
             () -> service.disable("CORE_REF"));
-        assertTrue(ex.getMessage().contains("HEALTH"));
+        assertTrue(ex.getMessage().contains("DEPENDENT_X"));
         // 未进入级联阶段
         verify(jdbc, never()).update(startsWith("UPDATE plugin_packages SET enabled=0"), eq("CORE_REF"));
     }

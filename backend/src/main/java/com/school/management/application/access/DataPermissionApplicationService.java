@@ -246,7 +246,7 @@ public class DataPermissionApplicationService {
      *
      * 3 层规则 (优先级):
      *   1. SUPER_ADMIN 豁免 — 返全部 28 模块, relevant=all, advanced=[]
-     *   2. industry 对齐 — role.industry=HEALTH → 只允许 CORE+HEALTH; role.industry=CUSTOM/NULL → 全部;
+     *   2. industry 对齐 — role.industry=EDU → 只允许 CORE+EDU; role.industry=CUSTOM/NULL → 全部;
      *   3. 功能权限反查 — 非 CORE 模块 必须有 role_permissions 的 permission_code 前缀匹配
      *
      * 返回 {relevant: [...], advanced: [...], meta: {...}}.
@@ -305,7 +305,7 @@ public class DataPermissionApplicationService {
         allowedIndustries.add("CORE");
         if (industry == null || industry.isBlank() || "CUSTOM".equals(industry)) {
             // CUSTOM/NULL 角色 — 管理员自主选, 所有行业都允许
-            allowedIndustries.addAll(Arrays.asList("CORE", "EDU", "HEALTH", "CARE", "CUSTOM"));
+            allowedIndustries.addAll(Arrays.asList("CORE", "EDU", "CARE", "CUSTOM"));
         } else {
             allowedIndustries.add(industry);
         }
@@ -454,7 +454,7 @@ public class DataPermissionApplicationService {
         private String name;
         /** 领域 code (CORE / education / inspection ...) — 保留为二级标签 */
         private String domainCode;
-        /** 行业 code (CORE / EDU / HEALTH / CARE / CUSTOM) — 一级分组 */
+        /** 行业 code (CORE / EDU / CARE / CUSTOM) — 一级分组 */
         private String industry;
         /** 所属插件是否启用 (false 时前端灰显 + banner) */
         private Boolean pluginEnabled;

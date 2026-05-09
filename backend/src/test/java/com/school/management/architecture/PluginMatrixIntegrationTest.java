@@ -22,7 +22,7 @@ import static org.junit.jupiter.api.Assertions.*;
  *   4. getDependsOnWithVersion 的 range 语法合法 (SemVer)
  *   5. 没有循环依赖
  *
- * 加入新行业后 (如 HEALTH), 本测试应继续绿色.
+ * 加入新行业后, 本测试应继续绿色.
  * 如果出现冲突,本测试先于启动 crash.
  */
 class PluginMatrixIntegrationTest {
@@ -67,8 +67,8 @@ class PluginMatrixIntegrationTest {
         // Track M3 后语义放宽: 允许多个 PluginPackage bean 共享同一 industry_code,
         // 只要它们的 Manifest 描述一致 (industryName/version/dependsOn 相同即同一行业的扩展声明).
         //
-        // 例: HealthcareManifest + PatientAdmissionMessagingPlugin 都声明 industry=HEALTH,
-        //     后者只是 contribute() 通道下细粒度 messaging 声明. UPSERT 到 plugin_packages
+        // 例: 同一行业的多个 PluginPackage bean (Manifest + Messaging 等) 共享 industry_code,
+        //     不同 bean 只是 contribute() 通道下细粒度的扩展声明. UPSERT 到 plugin_packages
         //     同行幂等.
         List<PluginManifest> manifests = discoverManifests();
         java.util.Map<String, PluginManifest> firstByCode = new java.util.HashMap<>();

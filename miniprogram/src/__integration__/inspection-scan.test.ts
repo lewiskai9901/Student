@@ -2,14 +2,12 @@ import { describe, it, expect } from 'vitest'
 import { ContributionDispatcher } from '@core/plugin/dispatcher'
 import inspection from '@plugins/inspection/manifest'
 import demo from '@plugins/demo/manifest'
-import healthcare from '@plugins/healthcare/manifest'
 import type { ScanResolverContribution } from '@core/plugin/contribution'
 
 describe('inspection scan-resolver integration', () => {
   function newDispatcher() {
     const d = new ContributionDispatcher('1.0.0')
     d.register(demo)
-    d.register(healthcare)
     d.register(inspection)
     return d
   }
@@ -43,22 +41,11 @@ describe('inspection scan-resolver integration', () => {
     expect(pickByPrefix(d, 'OTHER:THING:1')).toBeNull()
   })
 
-  it('PATIENT: still routes via healthcare resolver — no priority conflict', () => {
-    const d = newDispatcher()
-    const r = pickByPrefix(d, 'PATIENT:P-001')
-    expect(r).not.toBeNull()
-    expect(r!.prefix).toBe('PATIENT:')
-  })
-
-  it('inspection has higher priority than healthcare for clarity', () => {
+  it('inspection resolver has positive priority', () => {
     const d = newDispatcher()
     const all = d.query<ScanResolverContribution>('scan-resolver')
     const insp = all.find(r => r.prefix === 'INSPECTION:TASK:')
-    const hc = all.find(r => r.prefix === 'PATIENT:')
     expect(insp).toBeDefined()
-    expect(hc).toBeDefined()
-    // Both registered, no overlap; priorities don't conflict because prefixes differ.
     expect(insp!.priority).toBeGreaterThanOrEqual(0)
-    expect(hc!.priority).toBeGreaterThanOrEqual(0)
   })
 })

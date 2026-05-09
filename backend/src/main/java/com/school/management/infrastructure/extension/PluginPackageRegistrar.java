@@ -115,7 +115,6 @@ public class PluginPackageRegistrar implements ApplicationRunner {
         String lower = source.toLowerCase();
         // 先试别名映射
         if (lower.contains("education")) return "EDU";
-        if (lower.contains("healthcare") || lower.contains("health")) return "HEALTH";
         if (lower.contains("eldercare")) return "CARE";
         for (PluginManifest m : sortedManifests) {
             if (m.getIndustryCode().equals("CORE")) continue;

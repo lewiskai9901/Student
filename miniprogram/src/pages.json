@@ -40,12 +40,6 @@
       ]
     },
     {
-      "root": "plugins/healthcare",
-      "pages": [
-        "pages/index"
-      ]
-    },
-    {
       "root": "plugins/inspection",
       "pages": [
         "pages/my-tasks",
