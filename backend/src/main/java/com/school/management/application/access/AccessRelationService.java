@@ -2,6 +2,7 @@ package com.school.management.application.access;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.school.management.common.web.RequestContextHelper;
 import com.school.management.domain.access.event.RelationApprovalRequestedEvent;
 import com.school.management.domain.access.model.entity.PendingRelationApproval;
 import com.school.management.domain.access.model.valueobject.AccessLevel;
@@ -488,7 +489,10 @@ public class AccessRelationService {
         return r;
     }
 
-    /** 撤销关系:软删 + 归档 + 发事件 */
+    /**
+     * 撤销关系:软删 + 归档 + 发事件.
+     * Phase 7 W7.3: 抓 HTTP 上下文写到 history.operator_ip / operator_user_agent.
+     */
     @Transactional
     public void revoke(RevokeRequest r) {
         // 1. 查到关系 id
@@ -500,13 +504,17 @@ public class AccessRelationService {
             return;
         }
 
+        // 抓当前 HTTP 上下文 (非 web 调用 — 如事件 listener — 返 null, 不影响落库)
+        String ip = RequestContextHelper.clientIp();
+        String ua = RequestContextHelper.userAgent();
+
         for (Long id : ids) {
-            repo.archiveAndSoftDelete(id, r.reason, r.revokedBy);
+            repo.archiveAndSoftDelete(id, r.reason, r.revokedBy, ip, ua);
             eventPublisher.publishEvent(new RelationRevokedEvent(
                 id, r.resourceType, r.resourceId, r.relation,
                 r.subjectType, r.subjectId, r.reason, r.revokedBy));
-            log.info("[AccessRelation] revoke id={} relation={} {} -> {}:{} reason={}",
-                id, r.relation, r.subjectId, r.resourceType, r.resourceId, r.reason);
+            log.info("[AccessRelation] revoke id={} relation={} {} -> {}:{} reason={} ip={}",
+                id, r.relation, r.subjectId, r.resourceType, r.resourceId, r.reason, ip);
         }
 
         // 失效 check() 缓存 (按 subject + resource 双向清, 与 grant 对称)
