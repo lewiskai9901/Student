@@ -1,0 +1,2 @@
+# 占位文件 — 保证空目录被 git 跟踪
+# 启用 HTTPS 时把 cert.pem / key.pem 放到此目录, docker-compose nginx 服务会挂载到容器 /etc/nginx/ssl
