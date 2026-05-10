@@ -17,10 +17,10 @@
 
         <userTask id="manager_approve" name="主管审批"
                   flowable:assignee="${workflowApprover.findFirstApprover('admin', 'org_unit', orgUnitId, requesterId)}">
+            <documentation>主管审批申请 — assignee 自动找申请人所在 org 的 admin</documentation>
             <extensionElements>
                 <flowable:taskListener event="create" delegateExpression="${leaveApprovalListener}"/>
             </extensionElements>
-            <documentation>主管审批申请 — assignee 自动找申请人所在 org 的 admin</documentation>
         </userTask>
 
         <sequenceFlow id="flow2" sourceRef="manager_approve" targetRef="check_days"/>
