@@ -31,6 +31,15 @@ services:
     networks:
       - app-network
     restart: unless-stopped
+    # P1-8: 资源限制 — JVM 在 Dockerfile 设 MaxRAMPercentage=75, 容器无 mem_limit
+    # 时取宿主机内存; 这里限定 backend 最多 2G mem / 2 cores. 生产可调.
+    deploy:
+      resources:
+        limits:
+          memory: 2G
+          cpus: "2.0"
+        reservations:
+          memory: 1G
     healthcheck:
       test: ["CMD", "wget", "--spider", "-q", "http://localhost:8080/api/actuator/health"]
       interval: 30s

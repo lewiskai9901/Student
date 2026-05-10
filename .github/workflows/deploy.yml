@@ -102,12 +102,25 @@ jobs:
       url: https://staging.example.com
 
     steps:
-      - name: Deploy to staging server
+      # TODO(P1-6): 部署目标未定 (SSH / k8s / GHCR Webhook 任一). 真实部署时把
+      # 下方 echo 占位换成具体命令. 几种典型实现:
+      #   - SSH: appleboy/ssh-action@master + docker compose pull && up -d
+      #   - K8s: azure/setup-kubectl@v3 + kubectl set image
+      #   - Webhook: 服务器自维 watchtower/docker-rollout 拉镜像
+      # 现状: release 触发后只 build + push GHCR, 真服务器无动作.
+      - name: Deploy to staging server (PLACEHOLDER)
         run: |
-          echo "Deploying to staging environment..."
-          echo "Image: ${{ needs.build-image.outputs.image-tag }}"
-          # Add your deployment commands here
-          # e.g., kubectl apply, docker-compose up, etc.
+          echo "[STAGING] image=${{ needs.build-image.outputs.image-tag }}"
+          echo "[STAGING] deployment target not configured — see TODO(P1-6) above"
+          # 示例 SSH 部署:
+          # - uses: appleboy/ssh-action@master
+          #   with:
+          #     host: ${{ secrets.STAGING_HOST }}
+          #     username: ${{ secrets.STAGING_USER }}
+          #     key: ${{ secrets.STAGING_SSH_KEY }}
+          #     script: |
+          #       cd /opt/student-management
+          #       docker compose pull app && docker compose up -d --no-deps app
 
   # Deploy to Production
   deploy-production:
@@ -120,25 +133,25 @@ jobs:
       url: https://example.com
 
     steps:
-      - name: Deploy to production server
+      # TODO(P1-6): 见 deploy-staging step 注释
+      - name: Deploy to production server (PLACEHOLDER)
         run: |
-          echo "Deploying to production environment..."
-          echo "Image: ${{ needs.build-image.outputs.image-tag }}"
-          # Add your deployment commands here
+          echo "[PROD] image=${{ needs.build-image.outputs.image-tag }}"
+          echo "[PROD] deployment target not configured — see TODO(P1-6) above"
 
-      - name: Health check
+      - name: Health check (PLACEHOLDER)
         run: |
-          echo "Running health check..."
-          # curl -f https://example.com/api/actuator/health || exit 1
+          echo "[PROD] health check not configured"
+          # curl -fsS https://prod.example.com/api/actuator/health | jq -e '.status == "UP"' || exit 1
 
       - name: Notify deployment success
         if: success()
         run: |
-          echo "Deployment successful!"
-          # Add notification (Slack, Teams, etc.)
+          echo "[PROD] Deployment success notification not configured"
+          # 示例: curl -X POST $SLACK_WEBHOOK_URL -d "{\"text\":\"Deploy success: ${{ github.ref_name }}\"}"
 
       - name: Rollback on failure
         if: failure()
         run: |
-          echo "Deployment failed, initiating rollback..."
-          # Add rollback commands
+          echo "[PROD] Rollback not configured — manual intervention required"
+          # 典型回滚: docker compose pull <prev-tag> && docker compose up -d
