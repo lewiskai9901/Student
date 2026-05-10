@@ -50,7 +50,7 @@ const queryParams = reactive({
 // 弹窗控制
 const createDialogVisible = ref(false)
 const detailDialogVisible = ref(false)
-const currentInventoryId = ref<number | undefined>()
+const currentInventoryId = ref<number | string | undefined>()
 
 // 状态选项
 const statusOptions = [

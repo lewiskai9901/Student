@@ -11,6 +11,7 @@ import router from './router'
 import { loadEnabledPlugins } from './router/bootstrap'
 import { useAuthStore } from './stores/auth'
 import { installErrorReporter } from './utils/errorReporter'
+import i18n from '@/locales'
 
 // 引入设计系统令牌 (最高优先级)
 import '@/styles/design-tokens.css'
@@ -38,6 +39,7 @@ async function bootstrap() {
     await loadEnabledPlugins(router)
   }
   app.use(router)
+  app.use(i18n)
   app.use(VueKonva)
   app.use(ElementPlus, { locale: zhCn })
   app.mount('#app')

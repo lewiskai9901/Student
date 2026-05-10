@@ -115,6 +115,7 @@ export function getScoreTree(projectId: number): Promise<any> {
 export function previewTargetCount(data: {
   scopeType: string
   scopeConfig: string
+  targetType?: string
 }): Promise<number> {
   return http.post<number>(`${BASE}/target-preview`, data)
 }

@@ -203,7 +203,7 @@ onMounted(() => loadSchemes())
           </div>
           <div class="gs-card-desc" v-if="s.description">{{ s.description }}</div>
           <div class="gs-grade-list">
-            <span v-for="g in s.grades" :key="g.code" class="gs-grade" :style="{ background: g.color + '18', color: g.color, borderColor: g.color + '40' }">
+            <span v-for="g in s.grades" :key="g.code" class="gs-grade" :style="{ background: (g.color ?? '#999') + '18', color: g.color ?? '#999', borderColor: (g.color ?? '#999') + '40' }">
               {{ g.name }}
             </span>
           </div>
@@ -228,7 +228,7 @@ onMounted(() => loadSchemes())
           </div>
           <div class="gs-card-desc" v-if="s.description">{{ s.description }}</div>
           <div class="gs-grade-list">
-            <span v-for="g in s.grades" :key="g.code" class="gs-grade" :style="{ background: g.color + '18', color: g.color, borderColor: g.color + '40' }">
+            <span v-for="g in s.grades" :key="g.code" class="gs-grade" :style="{ background: (g.color ?? '#999') + '18', color: g.color ?? '#999', borderColor: (g.color ?? '#999') + '40' }">
               {{ g.name }}
             </span>
           </div>

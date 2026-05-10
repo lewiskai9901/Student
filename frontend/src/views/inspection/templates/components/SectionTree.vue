@@ -5,7 +5,7 @@ import { TargetTypeConfig, ItemTypeConfig, ScoringModeConfig, type TargetType, t
 
 const props = defineProps<{
   sections: TemplateSection[]
-  itemsBySection: Map<string, TemplateItem[]>
+  itemsBySection: Map<number | string, TemplateItem[]>
   selectedId: string | null  // "section:123" or "item:456"
   readonly?: boolean
   rootSectionId?: number

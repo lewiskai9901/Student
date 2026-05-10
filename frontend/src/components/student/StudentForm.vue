@@ -457,7 +457,7 @@ import { getDirectionsByYear } from '@/api/gradeMajorDirection'
 
 interface Props {
   mode: 'add' | 'edit'
-  studentId?: number | null
+  studentId?: number | string | null
 }
 
 const props = defineProps<Props>()
@@ -669,7 +669,7 @@ const loadGradeListData = async () => {
 const loadClassListData = async () => {
   try {
     // getClassList 已经返回 records 数组，不需要再访问 .records
-    const classes = await getClassList({ pageNum: 1, pageSize: 1000 })
+    const classes = await getClassList()
     classList.value = classes || []
   } catch (error) {
     console.error('加载班级列表失败:', error)

@@ -74,20 +74,24 @@ const statusOptions: { value: AlertStatus; label: string }[] = [
   { value: 'DISMISSED', label: '已忽略' },
 ]
 
-function severityTagType(severity: AlertSeverity): string {
+type ElTagType = 'primary' | 'success' | 'warning' | 'info' | 'danger'
+
+function severityTagType(severity: AlertSeverity): ElTagType {
   switch (severity) {
-    case 'INFO': return ''
+    case 'INFO': return 'info'
     case 'WARNING': return 'warning'
     case 'CRITICAL': return 'danger'
+    default: return 'info'
   }
 }
 
-function statusTagType(status: AlertStatus): string {
+function statusTagType(status: AlertStatus): ElTagType {
   switch (status) {
     case 'OPEN': return 'danger'
     case 'ACKNOWLEDGED': return 'warning'
     case 'RESOLVED': return 'success'
     case 'DISMISSED': return 'info'
+    default: return 'info'
   }
 }
 

@@ -294,12 +294,14 @@ const offeringTotalWeeklyHours = computed(() => filteredOfferings.value.reduce((
 
 // ==================== Helpers ====================
 
-function getCourseTypeName(type: number) {
+function getCourseTypeName(type: number | undefined) {
+  if (type == null) return '其他'
   const map: Record<number, string> = { 1: '必修', 2: '选修', 3: '通识' }
   return map[type] || '其他'
 }
 
-function getCourseTypeChip(type: number) {
+function getCourseTypeChip(type: number | undefined) {
+  if (type == null) return 'tm-chip-gray'
   const map: Record<number, string> = { 1: 'tm-chip-red', 2: 'tm-chip-blue', 3: 'tm-chip-gray' }
   return map[type] || 'tm-chip-gray'
 }

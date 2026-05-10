@@ -428,7 +428,7 @@ onMounted(() => loadAll())
             <label class="dlg-label">阈值设置</label>
             <div class="thresh-list">
               <div v-for="g in selectedSchemeGrades" :key="g.code" class="thresh-row">
-                <span class="thresh-grade" :style="{ color: g.color }">{{ g.name }}</span>
+                <span class="thresh-grade" :style="{ color: g.color ?? undefined }">{{ g.name }}</span>
                 <span class="thresh-op">{{ form.evaluationMethod === 'RANK_COUNT' ? '前' : form.evaluationMethod === 'RANK_PERCENT' ? '前' : '≥' }}</span>
                 <input v-model.number="thresholdMap[g.code]" type="number" class="thresh-input" />
                 <span class="thresh-unit">{{ form.evaluationMethod === 'RANK_COUNT' ? '名' : form.evaluationMethod === 'RANK_PERCENT' ? '%' : form.evaluationMethod === 'PERCENT_RANGE' ? '%' : '分' }}</span>

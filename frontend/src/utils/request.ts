@@ -183,10 +183,10 @@ class HttpClient {
   }
 
   download(url: string, filename?: string, config?: AxiosRequestConfig): Promise<void> {
-    return service.get(url, {
+    return (service.get(url, {
       ...config,
       responseType: 'blob'
-    }).then((blob: Blob) => {
+    }) as unknown as Promise<Blob>).then((blob: Blob) => {
       const downloadUrl = window.URL.createObjectURL(blob)
       const link = document.createElement('a')
       link.href = downloadUrl

@@ -82,7 +82,7 @@ const totalValue = computed(() => {
 
 // 展开分类选项
 const flatCategories = computed(() => {
-  const result: { id: number; label: string; level: number; code: string }[] = []
+  const result: { id: number | string; label: string; level: number; code: string }[] = []
 
   const flatten = (items: AssetCategory[], level = 0) => {
     items.forEach(item => {
@@ -213,7 +213,7 @@ async function handleSubmit() {
         assetIds: [],
         totalValue: formData.value.originalValue
           ? formData.value.originalValue * formData.value.quantity
-          : undefined
+          : null
       }
       showResult.value = true
       ElMessage.success(`成功入库 ${formData.value.quantity} 件资产（批量管理）`)

@@ -390,9 +390,10 @@ const statusLabel = (status: number) => {
   const item = WARNING_STATUS.find(s => s.value === status)
   return item?.label || '未知'
 }
-const statusType = (status: number): '' | 'success' | 'warning' | 'info' | 'danger' => {
+const statusType = (status: number): 'primary' | 'success' | 'warning' | 'info' | 'danger' => {
   const item = WARNING_STATUS.find(s => s.value === status)
-  return (item?.type || 'info') as '' | 'success' | 'warning' | 'info' | 'danger'
+  const t: any = item?.type || 'info'
+  return (t === '' ? 'info' : t) as 'primary' | 'success' | 'warning' | 'info' | 'danger'
 }
 const formatTime = (t: string) => {
   if (!t) return '-'

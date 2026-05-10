@@ -80,7 +80,7 @@
                     {{ dir.level || '方向' + (idx + 1) }}
                   </span>
                   <span v-if="(major.directions?.length || 0) > 2" class="text-xs text-gray-400">
-                    +{{ major.directions.length - 2 }}
+                    +{{ (major.directions?.length || 0) - 2 }}
                   </span>
                 </div>
                 <button

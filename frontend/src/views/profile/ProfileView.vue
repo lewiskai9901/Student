@@ -353,7 +353,9 @@ const handleSaveProfile = async () => {
     // 刷新用户信息
     await loadUserInfo()
     // 更新 store 中的用户名
-    authStore.userName = profileForm.realName || userInfo.value.username
+    if (authStore.user) {
+      authStore.user.realName = profileForm.realName || userInfo.value.username
+    }
   } catch (error: any) {
     if (error !== 'cancel') {
       console.error('保存失败:', error)

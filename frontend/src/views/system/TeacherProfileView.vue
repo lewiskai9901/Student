@@ -619,7 +619,7 @@ const statusCounts = computed(() => {
 
 // Org tree
 const orgTree = ref<OrgUnitTreeNode[]>([])
-interface FlatOrgItem { id: number; label: string }
+interface FlatOrgItem { id: number | string; label: string }
 const flatOrgUnits = computed<FlatOrgItem[]>(() => {
   const result: FlatOrgItem[] = []
   const flatten = (nodes: OrgUnitTreeNode[], depth: number) => {

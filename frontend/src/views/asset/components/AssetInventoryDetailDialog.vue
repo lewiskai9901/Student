@@ -20,7 +20,7 @@ const emit = defineEmits<{
 const loading = ref(false)
 const inventory = ref<AssetInventory | null>(null)
 const searchKeyword = ref('')
-const editingDetailId = ref<number | null>(null)
+const editingDetailId = ref<number | string | null>(null)
 const editForm = ref<UpdateInventoryDetailRequest>({ actualQuantity: 0, remark: '' })
 const saving = ref(false)
 

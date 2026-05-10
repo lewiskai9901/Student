@@ -7,6 +7,8 @@ export interface CorrectiveCase {
   id: number
   tenantId: number
   caseCode: string
+  /** 整改标题(后端 JOIN 出的派生字段) */
+  title?: string | null
   submissionId: number | null
   detailId: number | null
   projectId: number | null

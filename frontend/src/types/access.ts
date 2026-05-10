@@ -9,6 +9,9 @@ export type PermissionType = 'MENU' | 'BUTTON' | 'API'
 // 权限作用域: PUBLIC=公共, SELF=个人空间, MANAGEMENT=管理后台
 export type PermissionScope = 'PUBLIC' | 'SELF' | 'MANAGEMENT'
 
+// 数据范围（5 种核心 + 插件可贡献）
+export type DataScope = 'ALL' | 'DEPARTMENT_AND_BELOW' | 'DEPARTMENT' | 'CUSTOM' | 'SELF'
+
 // 权限
 export interface Permission {
   id: string | number

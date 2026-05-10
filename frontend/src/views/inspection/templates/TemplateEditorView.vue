@@ -275,7 +275,7 @@ async function handleSelectItemType(type: ItemType | null, isScored: boolean, sc
 }
 async function handleSaveItem(data: Partial<TemplateItem>) {
   if (!selectedItem.value) return
-  try { await editor.editItem(selectedItem.value.id, data); const items = editor.itemsBySection.value.get(selectedItem.value.sectionId) || []; selectedItem.value = items.find(i => i.id === selectedItem.value!.id) || null; ElMessage.success('已保存') }
+  try { await editor.editItem(selectedItem.value.id, data); const items = editor.itemsBySection.value.get(String(selectedItem.value.sectionId)) || []; selectedItem.value = items.find(i => i.id === selectedItem.value!.id) || null; ElMessage.success('已保存') }
   catch (e: any) { ElMessage.error(e.message || '保存失败') }
 }
 async function handleDeleteItem(item: TemplateItem) {

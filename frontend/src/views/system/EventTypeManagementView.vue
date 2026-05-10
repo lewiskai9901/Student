@@ -257,7 +257,7 @@ function getPolarityColor(p: string): string {
   return { POSITIVE: '#22c55e', NEGATIVE: '#ef4444', NEUTRAL: '#9ca3af' }[p] || '#9ca3af'
 }
 
-function parseSubjects(json: string | null): string[] {
+function parseSubjects(json: string | null | undefined): string[] {
   if (!json) return []
   try { return JSON.parse(json) } catch { return [] }
 }
@@ -419,7 +419,7 @@ function openTypeDialog(categoryCode: string, categoryName: string, existing?: E
     typeForm.typeName = existing.typeName
     typeForm.color = existing.color || '#6b7280'
     typeForm.selectedSubjects = parseSubjects(existing.applicableSubjects)
-    typeForm.sortOrder = existing.sortOrder
+    typeForm.sortOrder = existing.sortOrder ?? 0
   } else {
     typeForm.id = null
     typeForm.categoryCode = categoryCode

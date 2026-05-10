@@ -8,7 +8,7 @@
       </div>
       <span class="inline-flex items-center gap-1.5 rounded-full bg-green-50 px-3 py-1 text-xs font-medium text-green-700">
         <span class="h-1.5 w-1.5 rounded-full bg-green-500"></span>
-        系统运行正常
+        {{ t('dashboard.systemNormal') }}
       </span>
     </div>
 
@@ -121,7 +121,7 @@
 
     <!-- System stats bar -->
     <div class="rounded-lg border border-gray-200 bg-white px-5 py-4">
-      <div class="mb-2 text-sm font-medium text-gray-500">系统状态</div>
+      <div class="mb-2 text-sm font-medium text-gray-500">{{ t('dashboard.systemStatus') }}</div>
       <div class="flex items-baseline gap-6 text-sm">
         <div>
           <span class="text-gray-500">用户总数</span>
@@ -153,9 +153,13 @@
 <script setup lang="ts">
 import { ref, reactive, computed, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
+import { useI18n } from 'vue-i18n'
 import { useAuthStore } from '@/stores/auth'
 import { getDashboardOverview, type DashboardOverview } from '@/api/dashboard'
 import MyInspectionWidget from '@/components/inspection/MyInspectionWidget.vue'
+
+// F7 i18n 演示 — 后续按模块逐步把硬编码文案改为 t()
+const { t } = useI18n()
 
 const router = useRouter()
 const authStore = useAuthStore()

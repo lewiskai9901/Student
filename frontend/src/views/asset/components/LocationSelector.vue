@@ -14,14 +14,14 @@ import type { RoomType } from '@/types/place'
 type PlaceDTO = PlaceTreeNode
 
 const props = defineProps<{
-  locationType: string
-  locationId?: number
+  locationType?: string
+  locationId?: number | string
   locationName?: string
 }>()
 
 const emit = defineEmits<{
   'update:locationType': [value: string]
-  'update:locationId': [value: number | undefined]
+  'update:locationId': [value: number | string | undefined]
   'update:locationName': [value: string]
 }>()
 
@@ -41,7 +41,7 @@ const roomTypeOptions: { value: RoomType; label: string }[] = [
 ]
 
 // 级联选择的值
-const cascaderValue = ref<number[]>([])
+const cascaderValue = ref<(number | string)[]>([])
 
 // 级联选择器配置
 const cascaderProps = {
@@ -66,11 +66,13 @@ async function loadPlaceTree() {
   }
 }
 
+type IdLike = number | string
+
 // 根据ID查找完整路径
-function findPathById(tree: PlaceDTO[], targetId: number, path: number[] = []): number[] | null {
+function findPathById(tree: PlaceDTO[], targetId: IdLike, path: IdLike[] = []): IdLike[] | null {
   for (const node of tree) {
     const currentPath = [...path, node.id]
-    if (node.id === targetId) {
+    if (String(node.id) === String(targetId)) {
       return currentPath
     }
     if (node.children?.length) {
@@ -82,9 +84,9 @@ function findPathById(tree: PlaceDTO[], targetId: number, path: number[] = []): 
 }
 
 // 根据ID查找节点
-function findNodeById(tree: PlaceDTO[], targetId: number): PlaceDTO | null {
+function findNodeById(tree: PlaceDTO[], targetId: IdLike): PlaceDTO | null {
   for (const node of tree) {
-    if (node.id === targetId) return node
+    if (String(node.id) === String(targetId)) return node
     if (node.children?.length) {
       const result = findNodeById(node.children, targetId)
       if (result) return result
@@ -94,12 +96,12 @@ function findNodeById(tree: PlaceDTO[], targetId: number): PlaceDTO | null {
 }
 
 // 构建位置名称
-function buildLocationName(path: number[]): string {
+function buildLocationName(path: IdLike[]): string {
   const names: string[] = []
   let currentNodes = placeTree.value
 
   for (const id of path) {
-    const node = currentNodes.find(n => n.id === id)
+    const node = currentNodes.find(n => String(n.id) === String(id))
     if (node) {
       // 跳过校区和楼层，取楼栋和房间名称
       if (node.typeCode && !['CAMPUS', 'FLOOR'].includes(node.typeCode.toUpperCase())) {
@@ -121,11 +123,11 @@ function handleTypeChange(value: string) {
 }
 
 // 根据楼栋类型推断房间类型
-function inferRoomTypeFromBuilding(path: number[]): RoomType | null {
+function inferRoomTypeFromBuilding(path: IdLike[]): RoomType | null {
   // 查找路径中的楼栋节点
   let currentNodes = placeTree.value
   for (const id of path) {
-    const node = currentNodes.find(n => n.id === id)
+    const node = currentNodes.find(n => String(n.id) === String(id))
     if (node) {
       if (node.typeCode) {
         const tc = node.typeCode.toUpperCase()
@@ -142,7 +144,8 @@ function inferRoomTypeFromBuilding(path: number[]): RoomType | null {
 }
 
 // 处理级联选择变化
-function handleCascaderChange(value: number[]) {
+function handleCascaderChange(rawValue: any) {
+  const value = (Array.isArray(rawValue) ? rawValue : []) as IdLike[]
   if (value && value.length > 0) {
     const selectedId = value[value.length - 1]
     const selectedNode = findNodeById(placeTree.value, selectedId)

@@ -64,12 +64,10 @@ const itemTypeOptions: { value: ItemType; label: string }[] = [
   { value: 'FILE_UPLOAD', label: '文件上传' },
   { value: 'GPS', label: 'GPS' },
   { value: 'BARCODE', label: '条码' },
-  { value: 'RATING', label: '评分' },
-  { value: 'PASS_FAIL', label: '通过/不通过' },
   { value: 'SLIDER', label: '滑块' },
   { value: 'RICH_TEXT', label: '富文本' },
-  { value: 'CALCULATED', label: '计算字段' },
-  { value: 'CHECKLIST', label: '检查清单' },
+  { value: 'PERSON_SCORE', label: '人员评分' },
+  { value: 'VIOLATION_RECORD', label: '违规记录' },
 ]
 
 const filteredItems = computed(() => items.value)

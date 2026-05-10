@@ -381,7 +381,7 @@ function scopeLabel(code: PrimaryScope): string {
 
 function jumpToRole(id: number | string) {
   showCompareDialog.value = false
-  selectedRoleId.value = id
+  selectedRoleId.value = String(id)
 }
 
 onMounted(async () => {

@@ -378,11 +378,7 @@ const maskIdCard = (idCard?: string) => {
 const handleDownloadTemplate = async () => {
   try {
     downloadingTemplate.value = true
-    const response = await downloadImportTemplate()
-    // 从 axios 响应中获取 blob 数据
-    const blob = response.data instanceof Blob
-      ? response.data
-      : new Blob([response.data || response], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' })
+    const blob = await downloadImportTemplate()
     const url = window.URL.createObjectURL(blob)
     const link = document.createElement('a')
     link.href = url
@@ -400,8 +396,7 @@ const handleDownloadTemplate = async () => {
 // 加载班级列表
 const loadClassList = async () => {
   try {
-    const response = await getClassList({ pageSize: 1000 })
-    classList.value = response.records || []
+    classList.value = (await getClassList()) || []
   } catch (error) {
     console.error('加载班级列表失败:', error)
   }

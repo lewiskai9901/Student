@@ -46,10 +46,14 @@ export interface EntityEventStats {
 export interface CreateEntityEventTypeCommand {
   categoryCode: string
   categoryName: string
+  /** 分类极性 POSITIVE/NEGATIVE/NEUTRAL */
+  categoryPolarity?: string
   typeCode: string
   typeName: string
-  hasScore: boolean
-  hasSeverity: boolean
+  /** 创建时是否启用 (兼容旧调用方传 number) */
+  isEnabled?: boolean | number
+  hasScore?: boolean
+  hasSeverity?: boolean
   severityLevels?: string | null
   icon?: string | null
   color?: string | null
@@ -57,6 +61,6 @@ export interface CreateEntityEventTypeCommand {
   sortOrder?: number
 }
 
-export interface UpdateEntityEventTypeCommand extends Partial<CreateEntityEventTypeCommand> {
-  isEnabled?: boolean
+export interface UpdateEntityEventTypeCommand extends Omit<Partial<CreateEntityEventTypeCommand>, 'isEnabled'> {
+  isEnabled?: boolean | number
 }

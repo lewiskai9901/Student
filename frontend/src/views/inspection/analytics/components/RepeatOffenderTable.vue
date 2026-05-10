@@ -74,7 +74,7 @@ function formatDate(dateStr: string): string {
   return `${date.getFullYear()}-${m}-${d}`
 }
 
-function frequencyTagType(occurrences: number): string {
+function frequencyTagType(occurrences: number): 'primary' | 'success' | 'warning' | 'info' | 'danger' {
   if (occurrences >= 10) return 'danger'
   if (occurrences >= 5) return 'warning'
   if (occurrences >= 3) return 'primary'

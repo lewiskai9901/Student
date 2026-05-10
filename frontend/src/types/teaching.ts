@@ -437,9 +437,9 @@ export const WEEKDAYS = [
 // =====================================================
 
 export interface SemesterOffering {
-  id: number
-  semesterId: number
-  courseId: number
+  id: number | string
+  semesterId: number | string
+  courseId: number | string
   courseName?: string
   courseCode?: string
   applicableGrade: string
@@ -458,12 +458,12 @@ export interface SemesterOffering {
 }
 
 export interface ClassCourseAssignment {
-  id: number
-  semesterId: number
-  orgUnitId: number
+  id: number | string
+  semesterId: number | string
+  orgUnitId: number | string
   className?: string
-  offeringId: number
-  courseId: number
+  offeringId: number | string
+  courseId: number | string
   courseName?: string
   weeklyHours: number
   studentCount?: number
@@ -475,11 +475,11 @@ export interface ClassCourseAssignment {
 // =====================================================
 
 export interface TeachingClass {
-  id: number
-  semesterId: number
+  id: number | string
+  semesterId: number | string
   className: string
   classCode?: string
-  courseId: number
+  courseId: number | string
   courseName?: string
   classType: 1 | 2 | 3
   weeklyHours: number

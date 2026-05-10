@@ -36,7 +36,7 @@ const formData = ref({
   locationType: '',
   locationId: undefined as number | undefined,
   locationName: '',
-  responsibleUserId: undefined as number | undefined,
+  responsibleUserId: undefined as number | string | undefined,
   responsibleUserName: '',
   remark: ''
 })
