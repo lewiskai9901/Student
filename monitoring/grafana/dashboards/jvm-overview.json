@@ -2,56 +2,176 @@
   "title": "JVM Overview — Student Management",
   "uid": "sm-jvm-overview",
   "schemaVersion": 38,
-  "tags": ["student-management", "jvm"],
+  "tags": [
+    "student-management",
+    "jvm"
+  ],
   "timezone": "Asia/Shanghai",
   "refresh": "30s",
   "panels": [
     {
       "type": "timeseries",
       "title": "Heap Memory",
-      "gridPos": {"h": 8, "w": 12, "x": 0, "y": 0},
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 0
+      },
       "targets": [
-        {"expr": "sum(jvm_memory_used_bytes{area=\"heap\"})", "legendFormat": "used"},
-        {"expr": "sum(jvm_memory_max_bytes{area=\"heap\"})", "legendFormat": "max"}
+        {
+          "expr": "sum(jvm_memory_used_bytes{area=\"heap\"})",
+          "legendFormat": "used",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          }
+        },
+        {
+          "expr": "sum(jvm_memory_max_bytes{area=\"heap\"})",
+          "legendFormat": "max",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          }
+        }
       ],
-      "fieldConfig": {"defaults": {"unit": "bytes"}}
+      "fieldConfig": {
+        "defaults": {
+          "unit": "bytes"
+        }
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      }
     },
     {
       "type": "timeseries",
       "title": "Non-Heap Memory",
-      "gridPos": {"h": 8, "w": 12, "x": 12, "y": 0},
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 0
+      },
       "targets": [
-        {"expr": "sum(jvm_memory_used_bytes{area=\"nonheap\"})", "legendFormat": "used"}
+        {
+          "expr": "sum(jvm_memory_used_bytes{area=\"nonheap\"})",
+          "legendFormat": "used",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          }
+        }
       ],
-      "fieldConfig": {"defaults": {"unit": "bytes"}}
+      "fieldConfig": {
+        "defaults": {
+          "unit": "bytes"
+        }
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      }
     },
     {
       "type": "timeseries",
       "title": "Live Threads",
-      "gridPos": {"h": 8, "w": 8, "x": 0, "y": 8},
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 0,
+        "y": 8
+      },
       "targets": [
-        {"expr": "jvm_threads_live_threads", "legendFormat": "live"},
-        {"expr": "jvm_threads_daemon_threads", "legendFormat": "daemon"}
-      ]
+        {
+          "expr": "jvm_threads_live_threads",
+          "legendFormat": "live",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          }
+        },
+        {
+          "expr": "jvm_threads_daemon_threads",
+          "legendFormat": "daemon",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          }
+        }
+      ],
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      }
     },
     {
       "type": "timeseries",
       "title": "GC Pause",
-      "gridPos": {"h": 8, "w": 8, "x": 8, "y": 8},
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 8,
+        "y": 8
+      },
       "targets": [
-        {"expr": "rate(jvm_gc_pause_seconds_sum[1m])", "legendFormat": "{{action}} {{cause}}"}
+        {
+          "expr": "rate(jvm_gc_pause_seconds_sum[1m])",
+          "legendFormat": "{{action}} {{cause}}",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          }
+        }
       ],
-      "fieldConfig": {"defaults": {"unit": "s"}}
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s"
+        }
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      }
     },
     {
       "type": "timeseries",
       "title": "CPU",
-      "gridPos": {"h": 8, "w": 8, "x": 16, "y": 8},
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 16,
+        "y": 8
+      },
       "targets": [
-        {"expr": "process_cpu_usage", "legendFormat": "process"},
-        {"expr": "system_cpu_usage", "legendFormat": "system"}
+        {
+          "expr": "process_cpu_usage",
+          "legendFormat": "process",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          }
+        },
+        {
+          "expr": "system_cpu_usage",
+          "legendFormat": "system",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          }
+        }
       ],
-      "fieldConfig": {"defaults": {"unit": "percentunit"}}
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit"
+        }
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      }
     }
   ]
 }

@@ -2,48 +2,136 @@
   "title": "Plugin Platform — Student Management",
   "uid": "sm-plugin-platform",
   "schemaVersion": 38,
-  "tags": ["student-management", "plugin"],
+  "tags": [
+    "student-management",
+    "plugin"
+  ],
   "timezone": "Asia/Shanghai",
   "refresh": "60s",
   "panels": [
     {
       "type": "stat",
       "title": "Uptime",
-      "gridPos": {"h": 4, "w": 6, "x": 0, "y": 0},
-      "targets": [{"expr": "process_uptime_seconds"}],
-      "fieldConfig": {"defaults": {"unit": "s"}}
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 0,
+        "y": 0
+      },
+      "targets": [
+        {
+          "expr": "process_uptime_seconds",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s"
+        }
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      }
     },
     {
       "type": "stat",
       "title": "Start Time",
-      "gridPos": {"h": 4, "w": 6, "x": 6, "y": 0},
-      "targets": [{"expr": "process_start_time_seconds * 1000"}],
-      "fieldConfig": {"defaults": {"unit": "dateTimeAsIso"}}
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 6,
+        "y": 0
+      },
+      "targets": [
+        {
+          "expr": "process_start_time_seconds * 1000",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "dateTimeAsIso"
+        }
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      }
     },
     {
       "type": "stat",
       "title": "Total Plugin API Calls (1h)",
-      "gridPos": {"h": 4, "w": 6, "x": 12, "y": 0},
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 12,
+        "y": 0
+      },
       "targets": [
-        {"expr": "sum(increase(http_server_requests_seconds_count{uri=~\"/api/plugin-platform.*\"}[1h]))"}
-      ]
+        {
+          "expr": "sum(increase(http_server_requests_seconds_count{uri=~\"/api/plugin-platform.*\"}[1h]))",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          }
+        }
+      ],
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      }
     },
     {
       "type": "stat",
       "title": "Plugin Overview API QPS",
-      "gridPos": {"h": 4, "w": 6, "x": 18, "y": 0},
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 18,
+        "y": 0
+      },
       "targets": [
-        {"expr": "rate(http_server_requests_seconds_count{uri=\"/api/plugin-platform/overview\"}[5m])"}
+        {
+          "expr": "rate(http_server_requests_seconds_count{uri=\"/api/plugin-platform/overview\"}[5m])",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          }
+        }
       ],
-      "fieldConfig": {"defaults": {"unit": "reqps"}}
+      "fieldConfig": {
+        "defaults": {
+          "unit": "reqps"
+        }
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      }
     },
     {
       "type": "text",
       "title": "Notes",
-      "gridPos": {"h": 6, "w": 24, "x": 0, "y": 4},
+      "gridPos": {
+        "h": 6,
+        "w": 24,
+        "x": 0,
+        "y": 4
+      },
       "options": {
         "mode": "markdown",
         "content": "## Plugin Platform 监控\n- **Uptime** / **Start Time**: JVM 实例运行与启动时刻\n- **Plugin API Calls**: 最近 1 小时 `/api/plugin-platform/*` 累计\n\n### 进一步埋点 (TODO)\n业务维度指标 `plugin_loaded_total{code}` / `plugin_enabled{code}` 待 ContributionDispatcher/PluginPackageRegistrar 发布时写入 MeterRegistry."
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
       }
     }
   ]
