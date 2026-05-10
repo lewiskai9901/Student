@@ -46,11 +46,18 @@ public sealed interface Contribution permits
         }
     }
 
-    /** 关系类型贡献 (Phase 2 W2.2: 直接持有顶层 {@link RelationTypeDef}, 不再依赖旧 RelationTypePlugin SPI) */
+    /**
+     * 关系类型贡献 (Phase 2 W2.2: 直接持有顶层 {@link RelationTypeDef}, 不再依赖旧 RelationTypePlugin SPI)
+     *
+     * uniqueKey 包含 (relationCode, fromType, toType): 同 relationCode 在不同
+     * (subject, resource) 对下是独立关系定义 (例 admin 同时用于 (user,org_unit) 与 (user,place),
+     * viewer/responsible_for 跨 user/org_unit/place 三对). PK 与 relation_types 表
+     * (relation_code, from_type, to_type) 唯一索引一致.
+     */
     record RelationTypeContribution(String sourceName, String tier,
                                      RelationTypeDef def) implements Contribution {
         @Override public String uniqueKey() {
-            return "relation:" + def.relationCode();
+            return "relation:" + def.relationCode() + ":" + def.fromType() + "/" + def.toType();
         }
     }
 

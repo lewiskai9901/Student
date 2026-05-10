@@ -17,7 +17,7 @@ import java.util.stream.Collectors;
 /**
  * 用户任务管理 — 我的待办/认领/完成/转办.
  */
-@RestController
+@RestController("workflowTaskController")
 @RequestMapping("/workflow/tasks")
 @RequiredArgsConstructor
 public class TaskController {
