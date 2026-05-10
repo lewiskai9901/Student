@@ -7,9 +7,11 @@ app:
     default-password: admin123
 
 spring:
-  # Phase 6.3: 开发态启动优化 — lazy bean init 可砍 20-40s 启动时间
+  # Phase 6.3 旧默认 lazy-initialization=true 砍 20-40s 启动, 但导致 ApplicationRunner /
+  # @EventListener 在 dev 下不可靠装配 (WorkflowContributionDeployer 启动期不跑 →
+  # CoreManifest 3 个 BPMN 没真部署). E2E 联调起改 false, 接受启动延迟.
   main:
-    lazy-initialization: true
+    lazy-initialization: false
   # Phase 6.3 之前 dev 默认 exclude 全部 Flowable AutoConfiguration 省 22s 启动,
   # 但导致 /api/workflow/* 端点 NoSuchBeanDefinitionException 500 (RepositoryService 缺失).
   # E2E 联调起改: dev 默认装配 Flowable, 启动延迟可接受.

@@ -7,10 +7,9 @@ import lombok.extern.slf4j.Slf4j;
 import org.flowable.engine.RepositoryService;
 import org.flowable.engine.repository.Deployment;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
-import org.springframework.boot.context.event.ApplicationReadyEvent;
+import org.springframework.boot.ApplicationArguments;
+import org.springframework.boot.ApplicationRunner;
 import org.springframework.context.annotation.Lazy;
-import org.springframework.context.event.EventListener;
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.ResourceLoader;
 import org.springframework.stereotype.Component;
@@ -33,16 +32,24 @@ import java.util.List;
  */
 @Slf4j
 @Component
-@Lazy(false)  // spring.main.lazy-initialization=true (dev) 下 @EventListener bean 必须 eager 创建才能注册监听器
-@ConditionalOnBean(RepositoryService.class)
+@Lazy(false)  // spring.main.lazy-initialization=true (dev) 下必须强制 eager 创建, 否则 ApplicationRunner 不被调用
 @RequiredArgsConstructor
-public class WorkflowContributionDeployer {
+public class WorkflowContributionDeployer implements ApplicationRunner {
+    // E2E 排查: 历史 @ConditionalOnBean(RepositoryService.class) 在 @Component 上
+    // 不可靠 — condition 在 component scan 阶段评估, 此时 Flowable 自动配置还未注册
+    // RepositoryService bean → 整个 deployer bean 被跳过, ApplicationRunner.run 永远不调.
+    // 现 dev profile 已默认装配 Flowable (application-dev.yml exclude 已移除), 不再需 conditional.
+
 
     private final RepositoryService repositoryService;
     private final ResourceLoader resourceLoader;
     @Autowired(required = false) private List<PluginPackage> plugins = List.of();
 
-    @EventListener(ApplicationReadyEvent.class)
+    @Override
+    public void run(ApplicationArguments args) {
+        deployAll();
+    }
+
     public void deployAll() {
         int total = 0, deployed = 0, skipped = 0;
 

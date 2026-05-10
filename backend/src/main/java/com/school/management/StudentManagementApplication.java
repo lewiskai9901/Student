@@ -19,13 +19,19 @@ import org.springframework.transaction.annotation.EnableTransactionManagement;
 @EnableAsync
 @EnableTransactionManagement
 @EnableScheduling
-@MapperScan({
-    "com.school.management.infrastructure.persistence",
-    "com.school.management.infrastructure.external",
-    "com.school.management.infrastructure.activity.impl",
-    // Phase 3.5: 教育插件迁入的 mappers (calendar/teaching/academic/student)
-    "com.school.management.infrastructure.extension.plugins.education.infrastructure.persistence"
-})
+@MapperScan(
+    // annotationClass=Mapper.class: 只把带 @Mapper 注解的 interface 注册为 Mapper bean,
+    // 跳过同包的 Service interface (FileStorageService / NotificationService).
+    // 项目所有 78 个 Mapper 都已显式 @Mapper, 无回归.
+    annotationClass = org.apache.ibatis.annotations.Mapper.class,
+    basePackages = {
+        "com.school.management.infrastructure.persistence",
+        "com.school.management.infrastructure.external",
+        "com.school.management.infrastructure.activity.impl",
+        // Phase 3.5: 教育插件迁入的 mappers (calendar/teaching/academic/student)
+        "com.school.management.infrastructure.extension.plugins.education.infrastructure.persistence"
+    }
+)
 public class StudentManagementApplication {
 
     public static void main(String[] args) {
