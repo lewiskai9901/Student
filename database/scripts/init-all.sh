@@ -47,7 +47,12 @@ for f in $(ls "${SCRIPT_DIR}/database/migrations/V"*.sql 2>/dev/null | sort); do
   $MYSQL_CMD "${DB_NAME}" < "$f" || { echo "[init-all] FAILED at $f"; exit 1; }
 done
 
-echo "[init-all] 5. seed: database/init/init_data.sql"
-$MYSQL_CMD "${DB_NAME}" < "${SCRIPT_DIR}/database/init/init_data.sql"
+echo "[init-all] 5. seed: database/init/*.sql (按文件名顺序, 跳过 verify_*)"
+for f in $(ls "${SCRIPT_DIR}/database/init/"*.sql 2>/dev/null | sort); do
+  base=$(basename "$f")
+  [[ "$base" == verify_* ]] && { echo "   skip $base"; continue; }
+  echo "   apply $base"
+  $MYSQL_CMD "${DB_NAME}" < "$f" || { echo "[init-all] FAILED at $base"; exit 1; }
+done
 
 echo "[init-all] DONE"
