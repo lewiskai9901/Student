@@ -22,6 +22,27 @@ const TOKEN_REFRESH_THRESHOLD = 5 * 60 * 1000 // 5 minutes in milliseconds
 // 防止并发刷新的标志
 let isRefreshing = false
 
+/**
+ * F6: 路由 meta.permissions 守护 — 纯函数, 单测可直接调用
+ *
+ * 决策:
+ *   - 'pass' → next() 放行
+ *   - 'redirect' → next('/403') + 警告
+ *
+ * @param meta 当前路由的 meta 对象
+ * @param hasPermission 来自 useAuthStore() 的权限检查函数
+ * @returns 'pass' 或 'redirect'
+ */
+export function checkRoutePermissions(
+  meta: { permissions?: string[] | readonly string[] } | undefined,
+  hasPermission: (p: string) => boolean
+): 'pass' | 'redirect' {
+  const required = (meta?.permissions ?? []) as readonly string[]
+  if (required.length === 0) return 'pass'
+  const ok = required.every((p) => hasPermission(p))
+  return ok ? 'pass' : 'redirect'
+}
+
 const routes: RouteRecordRaw[] = [
   {
     path: '/login',
@@ -143,7 +164,7 @@ router.beforeEach(async (to, from, next) => {
       return
     }
 
-    // 检查权限
+    // 检查权限 — 单 permission (string) 走兼容老路径
     if (to.meta.permission && !authStore.hasPermission(to.meta.permission as string)) {
       // /dashboard 专属兜底：教师或任何无 dashboard:view 权限的用户改去 /my/dashboard
       // —— /my/dashboard 不受权限门控，对所有已登录用户开放
@@ -151,6 +172,20 @@ router.beforeEach(async (to, from, next) => {
         next('/my/dashboard')
         return
       }
+      next('/403')
+      return
+    }
+
+    // F6: meta.permissions (string[]) — AND 语义, 全部满足才放行
+    const decision = checkRoutePermissions(
+      to.meta as { permissions?: string[] },
+      (p) => authStore.hasPermission(p)
+    )
+    if (decision === 'redirect') {
+      // 异步 import 避免 Element Plus 入测试环境时崩溃
+      import('element-plus').then(({ ElMessage }) => {
+        ElMessage?.warning?.('无权访问该页面')
+      }).catch(() => {/* SSR/test env: noop */})
       next('/403')
       return
     }

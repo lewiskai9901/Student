@@ -22,6 +22,7 @@ const workflowRoutes: RouteRecordRaw[] = [
           title: '流程定义',
           icon: 'FileText',
           requiresAuth: true,
+          permissions: ['workflow:definition:view'],
           order: 1
         }
       },
@@ -33,6 +34,8 @@ const workflowRoutes: RouteRecordRaw[] = [
           title: 'BPMN 设计器',
           icon: 'Palette',
           requiresAuth: true,
+          // 设计器属于敏感操作 — 同时要求查看 + 编辑
+          permissions: ['workflow:definition:view', 'workflow:definition:edit'],
           order: 2
         }
       },
@@ -44,6 +47,7 @@ const workflowRoutes: RouteRecordRaw[] = [
           title: '我的待办',
           icon: 'ClipboardList',
           requiresAuth: true,
+          // 我的待办对所有登录用户开放, 不加 permissions (走 fallthrough)
           order: 3
         }
       }

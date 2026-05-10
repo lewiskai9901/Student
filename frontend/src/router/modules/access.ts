@@ -30,7 +30,14 @@ const accessRoutes: RouteRecordRaw[] = [
         path: '/access/data-permissions',
         name: 'DataPermissions',
         component: () => import('@/views/access/data-permissions/DataPermissionsLayout.vue'),
-        meta: { title: '数据权限', requiresAuth: true, permission: 'system:role:view', order: 3 }
+        // 数据权限配置高敏 — 同时要求 role:view 和 config:view
+        meta: {
+          title: '数据权限',
+          requiresAuth: true,
+          permission: 'system:role:view',
+          permissions: ['system:role:view', 'system:config:view'],
+          order: 3
+        }
       }
     ]
   },

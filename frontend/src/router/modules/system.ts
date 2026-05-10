@@ -148,6 +148,8 @@ const systemRoutes: RouteRecordRaw[] = [
           title: '租户管理',
           requiresAuth: true,
           permission: 'system:tenant:view',
+          // 多租户管理高敏 — 强制叠加 admin 配置权限
+          permissions: ['system:tenant:view', 'system:config:view'],
           order: 12
         }
       },
@@ -170,6 +172,8 @@ const systemRoutes: RouteRecordRaw[] = [
           title: '审计日志',
           requiresAuth: true,
           permission: 'system:audit:view',
+          // 审计日志可能含敏感数据 — 同时要求 audit:view 和 operlog:view
+          permissions: ['system:audit:view', 'system:operlog:view'],
           order: 14
         }
       },

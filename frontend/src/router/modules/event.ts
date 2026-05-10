@@ -9,6 +9,7 @@ const eventRoutes: RouteRecordRaw[] = [
     meta: {
       title: '事件时间线',
       requiresAuth: true,
+      permissions: ['event:timeline:view'],
       hidden: true
     }
   },
