@@ -15,7 +15,9 @@
     "test:ui": "vitest --ui",
     "test:coverage": "vitest run --coverage",
     "test:e2e": "playwright test",
-    "test:e2e:ui": "playwright test --ui"
+    "test:e2e:ui": "playwright test --ui",
+    "depcheck": "depcruise --config .dependency-cruiser.cjs src",
+    "depcheck:graph": "depcruise --config .dependency-cruiser.cjs src --output-type dot --output-to dependency-graph.dot"
   },
   "dependencies": {
     "@element-plus/icons-vue": "^2.1.0",
@@ -48,6 +50,7 @@
     "@vue/eslint-config-typescript": "^12.0.0",
     "@vue/test-utils": "^2.4.3",
     "autoprefixer": "^10.4.22",
+    "dependency-cruiser": "^17.4.0",
     "eslint": "^8.49.0",
     "eslint-plugin-unused-imports": "^4.4.1",
     "eslint-plugin-vue": "^9.17.0",
