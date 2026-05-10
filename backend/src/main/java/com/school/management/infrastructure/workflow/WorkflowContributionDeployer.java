@@ -9,6 +9,7 @@ import org.flowable.engine.repository.Deployment;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.context.event.EventListener;
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.ResourceLoader;
@@ -32,6 +33,7 @@ import java.util.List;
  */
 @Slf4j
 @Component
+@Lazy(false)  // spring.main.lazy-initialization=true (dev) 下 @EventListener bean 必须 eager 创建才能注册监听器
 @ConditionalOnBean(RepositoryService.class)
 @RequiredArgsConstructor
 public class WorkflowContributionDeployer {
