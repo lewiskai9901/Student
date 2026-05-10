@@ -5,6 +5,8 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
+    "build:check-size": "npm run build && bash scripts/bundle-size-ceiling.sh",
+    "bundle-size:ceiling": "bash scripts/bundle-size-ceiling.sh",
     "type-check": "vue-tsc --noEmit",
     "type-check:ceiling": "bash scripts/type-check-ceiling.sh",
     "preview": "vite preview",

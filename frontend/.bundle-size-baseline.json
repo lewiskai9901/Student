@@ -1,0 +1,6 @@
+{
+  "totalBytes": 5734076,
+  "largestChunkBytes": 866148,
+  "comment": "ceiling — 实际值的 +5% 余量。新功能可能增长,但单 PR 不应突破此线。如确认合理,更新此文件。baseline 测量于 2026-05-10: total=5461025 / largest=824903 (vendor-*.js)",
+  "lastUpdated": "2026-05-10"
+}
