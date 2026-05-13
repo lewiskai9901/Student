@@ -1,4 +1,5 @@
-import { test, expect, type Page } from '@playwright/test'
+import { test, expect } from './fixtures/auth.fixture'
+import type { Page } from '@playwright/test'
 
 /**
  * 离职检查员批量重派 e2e — Tier 5 业务深测 Block A-5
@@ -12,25 +13,13 @@ import { test, expect, type Page } from '@playwright/test'
  * 设计哲学: 不真造离职数据 — 验证错误路径 + 接口契约即可.
  */
 
-async function login(page: Page) {
-  await page.goto('/login')
-  await page.locator('input[placeholder="请输入账号"]').first().fill('admin')
-  await page.locator('input[placeholder="请输入密码"]').first().fill('admin123')
-  await page.locator('button[type="submit"]:has-text("登录")').first().click()
-  await page.waitForFunction(() => !location.pathname.startsWith('/login'), null, { timeout: 30000 })
-}
-
 async function getToken(page: Page): Promise<string | null> {
-  await page.waitForFunction(() => !!sessionStorage.getItem('access_token'), null, { timeout: 5000 })
+  if (!page.url() || page.url() === 'about:blank') await page.goto('/')
   return page.evaluate(() => sessionStorage.getItem('access_token'))
 }
 
 test.describe('Inspection 离职重派 — Block A-5', () => {
   test.describe.configure({ retries: 1, timeout: 60000 })
-
-  test.beforeEach(async ({ page }) => {
-    await login(page)
-  })
 
   test('fallbackInspectorId 不存在 — 立即拒 (用户存在性校验)', async ({ page }) => {
     const tok = await getToken(page)

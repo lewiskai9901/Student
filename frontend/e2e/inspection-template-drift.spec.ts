@@ -1,4 +1,5 @@
-import { test, expect, type Page } from '@playwright/test'
+import { test, expect } from './fixtures/auth.fixture'
+import type { Page } from '@playwright/test'
 
 /**
  * 模板快照漂移 e2e — Tier 5 业务深测 Block A-1
@@ -12,18 +13,14 @@ import { test, expect, type Page } from '@playwright/test'
  *   - 多模板项目 (rootSectionId=null) → multiTemplate=true, 不在 project 层升级
  *
  * 设计哲学: 自愈型 — 无可用项目时 skip 而非 fail. 不依赖具体业务数据 seed.
+ *           token 由 worker-scoped fixture 注入 sessionStorage, 不需要 beforeEach 登录.
  */
 
-async function login(page: Page) {
-  await page.goto('/login')
-  await page.locator('input[placeholder="请输入账号"]').first().fill('admin')
-  await page.locator('input[placeholder="请输入密码"]').first().fill('admin123')
-  await page.locator('button[type="submit"]:has-text("登录")').first().click()
-  await page.waitForFunction(() => !location.pathname.startsWith('/login'), null, { timeout: 30000 })
-}
-
 async function getToken(page: Page): Promise<string | null> {
-  await page.waitForFunction(() => !!sessionStorage.getItem('access_token'), null, { timeout: 5000 })
+  // fixture 已通过 addInitScript 注入 access_token, 但需先 goto 触发脚本
+  if (!page.url() || page.url() === 'about:blank') {
+    await page.goto('/')
+  }
   return page.evaluate(() => sessionStorage.getItem('access_token'))
 }
 
@@ -40,10 +37,6 @@ async function listProjects(page: Page): Promise<any[]> {
 
 test.describe('Inspection 模板漂移 — Block A-1', () => {
   test.describe.configure({ retries: 1, timeout: 60000 })
-
-  test.beforeEach(async ({ page }) => {
-    await login(page)
-  })
 
   test('GET /template-version-status 返回标准结构', async ({ page }) => {
     const projects = await listProjects(page)

@@ -1,4 +1,5 @@
-import { test, expect, type Page } from '@playwright/test'
+import { test, expect } from './fixtures/auth.fixture'
+import type { Page } from '@playwright/test'
 
 /**
  * 审计日志 e2e — Tier 5 业务深测 Block A-4
@@ -11,16 +12,8 @@ import { test, expect, type Page } from '@playwright/test'
  * 触发链: PUT /policy → audit log 落 entityType=InspProject + action 应固定.
  */
 
-async function login(page: Page) {
-  await page.goto('/login')
-  await page.locator('input[placeholder="请输入账号"]').first().fill('admin')
-  await page.locator('input[placeholder="请输入密码"]').first().fill('admin123')
-  await page.locator('button[type="submit"]:has-text("登录")').first().click()
-  await page.waitForFunction(() => !location.pathname.startsWith('/login'), null, { timeout: 30000 })
-}
-
 async function getToken(page: Page): Promise<string | null> {
-  await page.waitForFunction(() => !!sessionStorage.getItem('access_token'), null, { timeout: 5000 })
+  if (!page.url() || page.url() === 'about:blank') await page.goto('/')
   return page.evaluate(() => sessionStorage.getItem('access_token'))
 }
 
@@ -37,10 +30,6 @@ async function listProjects(page: Page): Promise<any[]> {
 
 test.describe('Inspection 审计日志 — Block A-4', () => {
   test.describe.configure({ retries: 1, timeout: 60000 })
-
-  test.beforeEach(async ({ page }) => {
-    await login(page)
-  })
 
   test('GET /audit-logs by entity 返回结构正确 (字段齐)', async ({ page }) => {
     const projects = await listProjects(page)
