@@ -11,6 +11,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "verify-manifest": "node scripts/verify-manifest.js",
+    "smoke:h5": "bash scripts/smoke-h5.sh",
     "ci": "npm run lint && npm run type-check && npm run verify-manifest && npm run test"
   },
   "dependencies": {
