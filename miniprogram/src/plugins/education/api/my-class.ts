@@ -1,3 +1,4 @@
+import type { LongId } from '@core/types'
 import { requestWrapped } from '@core/api/request'
 import type {
   MyClass,
@@ -15,10 +16,10 @@ export const myClassApi = {
   list: () =>
     requestWrapped<MyClass[]>({ url: '/my-class/classes' }),
 
-  overview: (classId: number) =>
+  overview: (classId: LongId) =>
     requestWrapped<MyClassOverview>({ url: `/my-class/classes/${classId}/overview` }),
 
-  students: (classId: number, params: { keyword?: string; status?: string } = {}) => {
+  students: (classId: LongId, params: { keyword?: string; status?: string } = {}) => {
     const qs = new URLSearchParams()
     if (params.keyword) qs.set('keyword', params.keyword)
     if (params.status) qs.set('status', params.status)
@@ -28,7 +29,7 @@ export const myClassApi = {
     })
   },
 
-  dormitoryDistribution: (classId: number) =>
+  dormitoryDistribution: (classId: LongId) =>
     requestWrapped<DormitoryDistribution[]>({
       url: `/my-class/classes/${classId}/dormitory-distribution`
     })

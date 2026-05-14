@@ -5,13 +5,14 @@
  * TemplateModuleRef 被 refSectionId 替代。
  * targetType 下沉到一级分区。
  */
+import type { LongId } from '@/types/common'
 import type { ItemType, TargetType, TemplateStatus } from './enums'
 
 // ==================== 模板分类 ====================
 
 export interface TemplateCatalog {
-  id: number
-  parentId: number | null
+  id: LongId
+  parentId: LongId | null
   catalogCode: string
   catalogName: string
   description: string | null
@@ -29,7 +30,7 @@ export interface TemplateCatalogTreeNode extends TemplateCatalog {
 export interface CreateCatalogRequest {
   catalogCode: string
   catalogName: string
-  parentId?: number | null
+  parentId?: LongId | null
   description?: string
   icon?: string
   sortOrder?: number
@@ -38,7 +39,7 @@ export interface CreateCatalogRequest {
 export interface UpdateCatalogRequest {
   catalogName?: string
   description?: string
-  parentId?: number | null
+  parentId?: LongId | null
   icon?: string
   sortOrder?: number
   isEnabled?: boolean
@@ -51,10 +52,10 @@ export interface UpdateCatalogRequest {
 // refSectionId 替代旧的 refTemplateId / TemplateModuleRef。
 
 export interface TemplateSection {
-  id: number
-  templateId: number | null
-  parentSectionId: number | null
-  refSectionId: number | null
+  id: LongId
+  templateId: LongId | null
+  parentSectionId: LongId | null
+  refSectionId: LongId | null
   sectionCode: string
   sectionName: string
   targetType: TargetType | null
@@ -62,7 +63,7 @@ export interface TemplateSection {
   targetTypeFilter: string | null
   description: string | null
   tags: string | null
-  catalogId: number | null
+  catalogId: LongId | null
   status: TemplateStatus
   latestVersion: number
   sortOrder: number
@@ -81,7 +82,7 @@ export interface TemplateQueryParams {
   page?: number
   size?: number
   status?: TemplateStatus
-  catalogId?: number
+  catalogId?: LongId
   keyword?: string
 }
 
@@ -90,7 +91,7 @@ export interface TemplateQueryParams {
 export interface CreateRootSectionRequest {
   name: string
   description?: string
-  catalogId?: number | null
+  catalogId?: LongId | null
   tags?: string
   /** 检查对象类型 — 创建时即必填, 避免进编辑器后再补 (P0 修复) */
   targetType?: 'ORG' | 'USER' | 'PLACE' | string
@@ -99,7 +100,7 @@ export interface CreateRootSectionRequest {
 export interface UpdateRootSectionRequest {
   name?: string
   description?: string
-  catalogId?: number | null
+  catalogId?: LongId | null
   tags?: string
 }
 
@@ -108,7 +109,7 @@ export interface UpdateRootSectionRequest {
 export interface CreateSectionRequest {
   sectionCode: string
   sectionName: string
-  parentSectionId?: number | null
+  parentSectionId?: LongId | null
   targetType?: string
   weight?: number
   isRepeatable?: boolean
@@ -145,8 +146,8 @@ export interface GradeBand {
 // ==================== 模板版本 ====================
 
 export interface TemplateVersion {
-  id: number
-  templateId: number
+  id: LongId
+  templateId: LongId
   version: number
   structureSnapshot: string
   scoringProfileSnapshot: string | null
@@ -157,17 +158,17 @@ export interface TemplateVersion {
 // ==================== 模板字段 ====================
 
 export interface TemplateItem {
-  id: number
-  sectionId: number
+  id: LongId
+  sectionId: LongId
   itemCode: string
   itemName: string
   description: string | null
   itemType: ItemType
   config: string | null
   validationRules: string | null
-  responseSetId: number | null
+  responseSetId: LongId | null
   scoringConfig: string | null
-  dimensionId: number | null
+  dimensionId: LongId | null
   helpContent: string | null
   isRequired: boolean
   isScored: boolean
@@ -175,7 +176,7 @@ export interface TemplateItem {
   itemWeight: number
   sortOrder: number
   conditionLogic: string | null
-  libraryItemId: number | null
+  libraryItemId: LongId | null
   inputMode?: 'INLINE' | 'EVENT_STREAM'
   syncWithLibrary: boolean
   visibilityLogic: string | null
@@ -191,9 +192,9 @@ export interface CreateItemRequest {
   itemType: ItemType
   config?: string
   validationRules?: string
-  responseSetId?: number | null
+  responseSetId?: LongId | null
   scoringConfig?: string
-  dimensionId?: number | null
+  dimensionId?: LongId | null
   helpContent?: string
   isRequired?: boolean
   isScored?: boolean
@@ -209,9 +210,9 @@ export interface UpdateItemRequest {
   itemType?: ItemType
   config?: string
   validationRules?: string
-  responseSetId?: number | null
+  responseSetId?: LongId | null
   scoringConfig?: string
-  dimensionId?: number | null
+  dimensionId?: LongId | null
   helpContent?: string
   isRequired?: boolean
   isScored?: boolean
@@ -223,8 +224,8 @@ export interface UpdateItemRequest {
 // ==================== 选项集 ====================
 
 export interface ResponseSet {
-  id: number
-  tenantId: number
+  id: LongId
+  tenantId: LongId
   setCode: string
   setName: string
   isGlobal: boolean
@@ -235,8 +236,8 @@ export interface ResponseSet {
 }
 
 export interface ResponseSetOption {
-  id: number
-  responseSetId: number
+  id: LongId
+  responseSetId: LongId
   optionValue: string
   optionLabel: string
   optionColor: string | null
@@ -277,7 +278,7 @@ export interface UpdateOptionRequest {
 // ==================== 检查项库 ====================
 
 export interface LibraryItem {
-  id: number
+  id: LongId
   itemCode: string
   itemName: string
   description: string | null
@@ -325,10 +326,10 @@ export interface UpdateLibraryItemRequest {
 // ==================== 检查计划 ====================
 
 export interface InspectionPlan {
-  id: number
-  projectId: number
+  id: LongId
+  projectId: LongId
   planName: string
-  rootSectionId: number | null  // V66: 该计划绑定的模板根分区ID
+  rootSectionId: LongId | null  // V66: 该计划绑定的模板根分区ID
   sectionIds: string  // JSON
   scheduleMode: 'REGULAR' | 'ON_DEMAND'
   cycleType: string
@@ -344,9 +345,9 @@ export interface InspectionPlan {
 }
 
 export interface CreatePlanRequest {
-  projectId: number
+  projectId: LongId
   planName: string
-  rootSectionId?: number | null
+  rootSectionId?: LongId | null
   sectionIds: string
   inspectorIds?: string
   scheduleMode?: string
@@ -359,7 +360,7 @@ export interface CreatePlanRequest {
 
 export interface UpdatePlanRequest {
   planName?: string
-  rootSectionId?: number | null
+  rootSectionId?: LongId | null
   sectionIds?: string
   inspectorIds?: string
   scheduleMode?: string
@@ -373,8 +374,8 @@ export interface UpdatePlanRequest {
 // ==================== 评级维度 ====================
 
 export interface RatingDimension {
-  id: number
-  projectId: number
+  id: LongId
+  projectId: LongId
   dimensionName: string
   sectionIds: string
   aggregation: string
@@ -387,9 +388,9 @@ export interface RatingDimension {
 }
 
 export interface RatingResult {
-  id: number
-  dimensionId: number
-  targetId: number
+  id: LongId
+  dimensionId: LongId
+  targetId: LongId
   targetName: string
   targetType: string
   cycleDate: string
@@ -402,12 +403,12 @@ export interface RatingResult {
 // ==================== 违纪记录 ====================
 
 export interface ViolationRecord {
-  id: number
-  submissionId: number
-  submissionDetailId: number
-  sectionId: number | null
-  itemId: number | null
-  userId: number
+  id: LongId
+  submissionId: LongId
+  submissionDetailId: LongId
+  sectionId: LongId | null
+  itemId: LongId | null
+  userId: LongId
   userName: string
   classInfo: string | null
   occurredAt: string

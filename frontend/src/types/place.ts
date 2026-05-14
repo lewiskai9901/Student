@@ -1,3 +1,5 @@
+import type { LongId } from '@/types/common'
+
 /**
  * 统一场所管理类型定义
  *
@@ -73,11 +75,11 @@ export interface RoomTypeOption extends EnumOption {
 
 /** 场所DTO */
 export interface PlaceDTO {
-  id: number | string
+  id: LongId | string
   placeCode: string
   placeName: string
   placeType: PlaceType
-  categoryId?: number | string  // V10: 分类ID
+  categoryId?: LongId | string  // V10: 分类ID
   categoryName?: string         // V10: 分类名称
   roomType?: RoomType           // 兼容旧字段
   buildingType?: BuildingType   // 兼容旧字段
@@ -89,17 +91,17 @@ export interface PlaceDTO {
   parentBuildingNo?: number     // 所属楼栋的楼号（房间查询时用）
 
   // 层级
-  parentId?: number | string
+  parentId?: LongId | string
   parentName?: string
   path?: string
   level: number
 
   // 位置
-  campusId?: number | string
+  campusId?: LongId | string
   campusName?: string
-  buildingId?: number | string
+  buildingId?: LongId | string
   buildingName?: string
-  floorId?: number | string
+  floorId?: LongId | string
   floorName?: string
   floorNumber?: number
 
@@ -110,13 +112,13 @@ export interface PlaceDTO {
   occupancyRate?: number
 
   // 归属
-  orgUnitId?: number | string
+  orgUnitId?: LongId | string
   orgUnitName?: string
-  responsibleUserId?: number | string
+  responsibleUserId?: LongId | string
   responsibleUserName?: string
 
   className?: string
-  classTeacherId?: number | string
+  classTeacherId?: LongId | string
   classTeacherName?: string
   classTeacherPhone?: string
 
@@ -154,14 +156,14 @@ export interface DormitoryExtDTO {
   facilities?: string
   assignedClassIds?: string
   assignedClassNames?: string
-  supervisorId?: number | string
+  supervisorId?: LongId | string
   supervisorName?: string
 }
 
 /** 教室扩展DTO */
 export interface ClassroomExtDTO {
   classroomCategory?: string
-  assignedClassId?: number | string
+  assignedClassId?: LongId | string
   assignedClassName?: string
   hasProjector?: boolean
   hasAirConditioner?: boolean
@@ -173,7 +175,7 @@ export interface ClassroomExtDTO {
 export interface LabExtDTO {
   labCategory?: string
   safetyLevel?: number
-  majorId?: number | string
+  majorId?: LongId | string
   majorName?: string
   equipmentList?: string
   safetyNotice?: string
@@ -182,7 +184,7 @@ export interface LabExtDTO {
 /** 办公室扩展DTO */
 export interface OfficeExtDTO {
   officeType?: string
-  departmentId?: number | string
+  departmentId?: LongId | string
   departmentName?: string
   workstationCount?: number
   phoneNumber?: string
@@ -190,11 +192,11 @@ export interface OfficeExtDTO {
 
 /** 场所占用者DTO */
 export interface PlaceOccupantDTO {
-  id: number | string
-  placeId: number | string
+  id: LongId | string
+  placeId: LongId | string
   placeName?: string
   occupantType: OccupantType
-  occupantId: number | string
+  occupantId: LongId | string
   occupantName?: string
   occupantNo?: string
   positionNo?: number
@@ -247,17 +249,17 @@ export interface CreatePlaceRequest {
   placeType: PlaceType
   placeCode?: string
   placeName: string
-  categoryId?: number | string  // V10: 分类ID
+  categoryId?: LongId | string  // V10: 分类ID
   roomType?: RoomType         // 兼容旧字段
   buildingType?: BuildingType // 兼容旧字段
   buildingNo?: number         // V10: 楼号（数字，仅BUILDING类型）
   roomNo?: number             // V10: 房间号（数字，仅ROOM类型）
   floorCount?: number         // V10: 楼层数（仅BUILDING类型）
-  parentId?: number | string
+  parentId?: LongId | string
   floorNumber?: number
   capacity?: number
-  orgUnitId?: number | string
-  responsibleUserId?: number | string
+  orgUnitId?: LongId | string
+  responsibleUserId?: LongId | string
   genderType?: GenderType
   description?: string
   attributes?: Record<string, any>
@@ -267,13 +269,13 @@ export interface CreatePlaceRequest {
 export interface UpdatePlaceRequest {
   placeName?: string
   description?: string
-  categoryId?: number | string  // V10: 分类ID
+  categoryId?: LongId | string  // V10: 分类ID
   buildingNo?: number         // V10: 楼号（数字，仅BUILDING类型）
   roomNo?: number             // V10: 房间号（数字，仅ROOM类型）
   floorCount?: number         // V10: 楼层数（仅BUILDING类型）
   capacity?: number
-  orgUnitId?: number | string
-  responsibleUserId?: number | string
+  orgUnitId?: LongId | string
+  responsibleUserId?: LongId | string
   genderType?: GenderType
   attributes?: Record<string, any>
 }
@@ -281,7 +283,7 @@ export interface UpdatePlaceRequest {
 /** 入住请求 */
 export interface CheckInRequest {
   occupantType: OccupantType
-  occupantId: number | string
+  occupantId: LongId | string
   positionNo?: number
   remark?: string
 }
@@ -289,7 +291,7 @@ export interface CheckInRequest {
 /** 批量分配组织单元请求 */
 export interface BatchAssignOrgUnitRequest {
   placeIds: (number | string)[]
-  orgUnitId: number | string  // 0 表示取消分配
+  orgUnitId: LongId | string  // 0 表示取消分配
 }
 
 /** 场所查询条件 */
@@ -297,9 +299,9 @@ export interface PlaceQueryParams {
   placeType?: PlaceType
   roomType?: RoomType
   buildingType?: BuildingType
-  buildingId?: number | string
+  buildingId?: LongId | string
   floorNumber?: number
-  orgUnitId?: number | string
+  orgUnitId?: LongId | string
   status?: PlaceStatus
   keyword?: string
   page?: number
@@ -318,7 +320,7 @@ export interface PlacePageResult {
 // ========== 类型配置 ==========
 
 export interface PlaceTypeConfig {
-  id: number | string
+  id: LongId | string
   typeCode: string
   typeName: string
   parentType: string

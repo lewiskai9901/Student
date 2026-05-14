@@ -1,8 +1,9 @@
+import type { LongId } from '@core/types'
 import { requestWrapped } from '@core/api/request'
 import type { Student, PageResult } from './types'
 
 export const studentApi = {
-  list: (params: { keyword?: string; orgUnitId?: number; pageNum?: number; pageSize?: number } = {}) => {
+  list: (params: { keyword?: string; orgUnitId?: LongId; pageNum?: number; pageSize?: number } = {}) => {
     const qs = new URLSearchParams()
     if (params.keyword) qs.set('keyword', params.keyword)
     if (params.orgUnitId != null) qs.set('orgUnitId', String(params.orgUnitId))
@@ -10,8 +11,8 @@ export const studentApi = {
     qs.set('pageSize', String(params.pageSize ?? 20))
     return requestWrapped<PageResult<Student>>({ url: `/user_student?${qs.toString()}` })
   },
-  byId: (id: number) =>
+  byId: (id: LongId) =>
     requestWrapped<Student>({ url: `/user_student/${id}` }),
-  byClass: (classId: number) =>
+  byClass: (classId: LongId) =>
     requestWrapped<Student[]>({ url: `/user_student/by-class/${classId}` })
 }

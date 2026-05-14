@@ -1,3 +1,5 @@
+import type { LongId } from '@/types/common'
+
 /**
  * 用户管理类型定义 - DDD架构适配
  */
@@ -12,7 +14,7 @@ export type UserStatus = '启用' | '禁用' | 1 | 2
  * 用户领域实体
  */
 export interface User {
-  id: number | string
+  id: LongId | string
   username: string
   realName: string
   phone?: string
@@ -23,7 +25,7 @@ export interface User {
   idCard?: string
   userTypeCode?: string
   userType?: string
-  orgUnitId?: number | string
+  orgUnitId?: LongId | string
   orgUnitName?: string
   status?: UserStatus
   lastLoginTime?: string
@@ -48,8 +50,8 @@ export interface CreateUserRequest {
   gender?: number
   birthDate?: string
   idCard?: string
-  orgUnitId?: number | string
-  placeId?: number | string
+  orgUnitId?: LongId | string
+  placeId?: LongId | string
   userTypeCode?: string
   roleIds?: (number | string)[]
 }
@@ -64,7 +66,7 @@ export interface UpdateUserRequest {
   gender?: number
   birthDate?: string
   idCard?: string
-  orgUnitId?: number | string
+  orgUnitId?: LongId | string
   userTypeCode?: string
   roleIds?: (number | string)[]
 }
@@ -78,7 +80,7 @@ export interface UserQueryParams {
   username?: string
   realName?: string
   phone?: string
-  orgUnitId?: number | string
+  orgUnitId?: LongId | string
   status?: number
 }
 
@@ -86,13 +88,13 @@ export interface UserQueryParams {
  * 简单用户信息（用于选择器）
  */
 export interface SimpleUser {
-  id: number | string
+  id: LongId | string
   username: string
   realName: string
   orgUnitName?: string
   userType?: string
   gender?: number
-  primaryOrgUnitId?: number | string
+  primaryOrgUnitId?: LongId | string
   primaryOrgUnitName?: string
 }
 
@@ -108,7 +110,7 @@ export interface UserFormData {
   gender?: number
   birthDate?: string
   idCard?: string
-  orgUnitId?: number | string
+  orgUnitId?: LongId | string
   userTypeCode?: string
   status?: number
   password?: string

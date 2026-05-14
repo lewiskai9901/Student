@@ -1,37 +1,39 @@
+import type { LongId } from '@/types/common'
+
 export interface MsgNotification {
-  id: number
-  userId: number
+  id: LongId
+  userId: LongId
   title: string
   content: string | null
   msgType: 'SYSTEM' | 'EVENT' | 'EVALUATION' | 'MANUAL'
   sourceEventType: string | null
   sourceRefType: string | null
-  sourceRefId: number | null
+  sourceRefId: LongId | null
   subjectType: string | null
-  subjectId: number | null
+  subjectId: LongId | null
   subjectName: string | null
   eventCategory: string | null
   sourceModule: string | null
-  eventId: number | null
+  eventId: LongId | null
   isRead: boolean
   readAt: string | null
   createdAt: string
 }
 
 export interface MsgSubscriptionRule {
-  id: number
+  id: LongId
   ruleName: string
   eventCategory: string | null
   eventType: string | null
   targetMode: 'BY_SUBJECT' | 'BY_RELATION' | 'BY_ROLE' | 'BY_FEATURE'
   targetConfig: string | null
   channel: 'IN_APP' | 'EMAIL' | 'WECHAT'
-  templateId: number | null
+  templateId: LongId | null
   isEnabled: boolean
 }
 
 export interface MsgTemplate {
-  id: number
+  id: LongId
   templateCode: string
   templateName: string
   titleTemplate: string

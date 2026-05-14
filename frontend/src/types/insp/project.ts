@@ -4,6 +4,7 @@
  * 核心变更：Project 不再持有 targetType/cycleType/cycleConfig 等调度字段，
  * templateId 改为 rootSectionId。调度由 InspectionPlan 管理。
  */
+import type { LongId } from '@/types/common'
 import type {
   ProjectStatus,
   TaskStatus,
@@ -19,13 +20,13 @@ import type {
 // ==================== 检查项目 ====================
 
 export interface InspProject {
-  id: number
-  tenantId: number
+  id: LongId
+  tenantId: LongId
   projectCode: string
   projectName: string
-  rootSectionId: number
-  templateVersionId: number | null
-  scoringProfileId: number | null
+  rootSectionId: LongId
+  templateVersionId: LongId | null
+  scoringProfileId: LongId | null
   scopeType: ScopeType | null
   scopeConfig: string | null
   /** 目标类型(STUDENT/CLASS/...) — 决定每个 scope 节点展开成多少个检查目标 */
@@ -44,14 +45,14 @@ export interface InspProject {
 
 export interface CreateProjectRequest {
   projectName: string
-  rootSectionId: number
+  rootSectionId: LongId
   startDate: string
 }
 
 export interface UpdateProjectRequest {
   projectName?: string
-  rootSectionId?: number
-  scoringProfileId?: number | null
+  rootSectionId?: LongId
+  scoringProfileId?: LongId | null
   scopeType?: ScopeType
   scopeConfig?: string
   startDate?: string
@@ -62,16 +63,16 @@ export interface UpdateProjectRequest {
 }
 
 export interface PublishProjectRequest {
-  templateVersionId: number
+  templateVersionId: LongId
 }
 
 // ==================== 项目检查员 ====================
 
 export interface ProjectInspector {
-  id: number
-  tenantId: number
-  projectId: number
-  userId: number
+  id: LongId
+  tenantId: LongId
+  projectId: LongId
+  userId: LongId
   userName: string
   role: InspectorRole
   isActive: boolean
@@ -80,7 +81,7 @@ export interface ProjectInspector {
 }
 
 export interface AddInspectorRequest {
-  userId: number
+  userId: LongId
   userName: string
   role: InspectorRole
 }
@@ -88,21 +89,21 @@ export interface AddInspectorRequest {
 // ==================== 检查任务 ====================
 
 export interface InspTask {
-  id: number
-  tenantId: number
+  id: LongId
+  tenantId: LongId
   taskCode: string
-  projectId: number
+  projectId: LongId
   taskDate: string
   timeSlotCode: string | null
   timeSlotStart: string | null
   timeSlotEnd: string | null
-  inspectorId: number | null
+  inspectorId: LongId | null
   inspectorName: string | null
-  reviewerId: number | null
+  reviewerId: LongId | null
   reviewerName: string | null
   assignedSectionIds: string | null
   assignedTargetIds: string | null
-  inspectionPlanId: number | null
+  inspectionPlanId: LongId | null
   status: TaskStatus
   totalTargets: number
   completedTargets: number
@@ -124,16 +125,16 @@ export interface InspTask {
   deadlinePolicy?: 'STRICT' | 'RELAXED' | 'NONE' | null
   /** V108: 来源溯源 */
   sourceType?: string | null
-  sourceActorId?: number | null
+  sourceActorId?: LongId | null
   sourceReason?: string | null
   sourceRefType?: string | null
-  sourceRefId?: number | null
+  sourceRefId?: LongId | null
   createdAt: string
   updatedAt: string
 }
 
 export interface CreateTaskRequest {
-  projectId: number
+  projectId: LongId
   taskDate: string
   timeSlotCode?: string
   timeSlotStart?: string
@@ -150,23 +151,23 @@ export interface ReviewTaskRequest {
 }
 
 export interface AssignTaskRequest {
-  inspectorId: number
+  inspectorId: LongId
   inspectorName: string
 }
 
 // ==================== 提交 ====================
 
 export interface InspSubmission {
-  id: number
-  tenantId: number
-  taskId: number
-  sectionId: number | null
+  id: LongId
+  tenantId: LongId
+  taskId: LongId
+  sectionId: LongId | null
   targetType: TargetType
-  targetId: number
+  targetId: LongId
   targetName: string
-  rootTargetId: number | null
+  rootTargetId: LongId | null
   rootTargetName: string | null
-  orgUnitId: number | null
+  orgUnitId: LongId | null
   orgUnitName: string | null
   weightRatio: number
   status: SubmissionStatus
@@ -185,9 +186,9 @@ export interface InspSubmission {
 }
 
 export interface CreateSubmissionRequest {
-  taskId: number
+  taskId: LongId
   targetType: TargetType
-  targetId: number
+  targetId: LongId
   targetName: string
 }
 
@@ -208,13 +209,13 @@ export interface SaveFormDataRequest {
 // ==================== 提交明细 ====================
 
 export interface SubmissionDetail {
-  id: number
-  tenantId: number
-  submissionId: number
-  templateItemId: number
+  id: LongId
+  tenantId: LongId
+  submissionId: LongId
+  templateItemId: LongId
   itemCode: string
   itemName: string
-  sectionId: number | null
+  sectionId: LongId | null
   sectionName: string | null
   itemType: string
   responseValue: string | null
@@ -233,7 +234,7 @@ export interface SubmissionDetail {
 }
 
 export interface CreateDetailRequest {
-  templateItemId: number
+  templateItemId: LongId
   itemCode: string
   itemName: string
   itemType: string
@@ -253,10 +254,10 @@ export interface FlagDetailRequest {
 // ==================== 证据 ====================
 
 export interface InspEvidence {
-  id: number
-  tenantId: number
-  submissionId: number
-  detailId: number | null
+  id: LongId
+  tenantId: LongId
+  submissionId: LongId
+  detailId: LongId | null
   evidenceType: EvidenceType
   fileName: string
   filePath: string | null
@@ -272,7 +273,7 @@ export interface InspEvidence {
 }
 
 export interface AddEvidenceRequest {
-  detailId?: number
+  detailId?: LongId
   evidenceType: EvidenceType
   fileName: string
   fileUrl: string
@@ -281,9 +282,9 @@ export interface AddEvidenceRequest {
 // ==================== 项目分数 ====================
 
 export interface ProjectScore {
-  id: number
-  tenantId: number
-  projectId: number
+  id: LongId
+  tenantId: LongId
+  projectId: LongId
   cycleDate: string
   score: number | null
   grade: string | null
@@ -296,8 +297,8 @@ export interface ProjectScore {
 // ==================== 检查计划 ====================
 
 export interface InspectionPlan {
-  id: number
-  projectId: number
+  id: LongId
+  projectId: LongId
   planName: string
   sectionIds: string  // JSON array
   scheduleMode: 'REGULAR' | 'ON_DEMAND'
@@ -313,7 +314,7 @@ export interface InspectionPlan {
 }
 
 export interface CreateInspectionPlanRequest {
-  projectId: number
+  projectId: LongId
   planName: string
   sectionIds: string
   scheduleMode?: string
@@ -339,8 +340,8 @@ export interface UpdateInspectionPlanRequest {
 // ==================== 评级维度 ====================
 
 export interface RatingDimension {
-  id: number
-  projectId: number
+  id: LongId
+  projectId: LongId
   dimensionName: string
   sectionIds: string  // JSON array
   aggregation: string
@@ -353,7 +354,7 @@ export interface RatingDimension {
 }
 
 export interface CreateRatingDimensionRequest {
-  projectId: number
+  projectId: LongId
   dimensionName: string
   sectionIds: string
   aggregation?: string
@@ -372,9 +373,9 @@ export interface UpdateRatingDimensionRequest {
 }
 
 export interface RatingResult {
-  id: number
-  dimensionId: number
-  targetId: number
+  id: LongId
+  dimensionId: LongId
+  targetId: LongId
   targetName: string
   targetType: string
   cycleDate: string
@@ -387,12 +388,12 @@ export interface RatingResult {
 // ==================== 违纪记录 ====================
 
 export interface ViolationRecord {
-  id: number
-  submissionId: number
-  submissionDetailId: number
-  sectionId: number | null
-  itemId: number | null
-  userId: number
+  id: LongId
+  submissionId: LongId
+  submissionDetailId: LongId
+  sectionId: LongId | null
+  itemId: LongId | null
+  userId: LongId
   userName: string
   classInfo: string | null
   occurredAt: string
@@ -404,11 +405,11 @@ export interface ViolationRecord {
 }
 
 export interface CreateViolationRecordRequest {
-  submissionId: number
-  submissionDetailId: number
-  sectionId?: number
-  itemId?: number
-  userId: number
+  submissionId: LongId
+  submissionDetailId: LongId
+  sectionId?: LongId
+  itemId?: LongId
+  userId: LongId
   userName: string
   classInfo?: string
   occurredAt: string

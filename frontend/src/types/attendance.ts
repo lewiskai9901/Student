@@ -1,15 +1,17 @@
+import type { LongId } from '@/types/common'
+
 /**
  * 考勤管理类型定义
  */
 
 export interface AttendanceRecord {
-  id: number
-  semesterId: number
-  courseId?: number
+  id: LongId
+  semesterId: LongId
+  courseId?: LongId
   courseName?: string
-  orgUnitId: number
+  orgUnitId: LongId
   className?: string
-  studentId: number
+  studentId: LongId
   studentName?: string
   studentNo?: string
   attendanceDate: string
@@ -23,11 +25,11 @@ export interface AttendanceRecord {
 }
 
 export interface LeaveRequest {
-  id: number
-  studentId: number
+  id: LongId
+  studentId: LongId
   studentName?: string
   studentNo?: string
-  orgUnitId?: number
+  orgUnitId?: LongId
   leaveType: 1 | 2 | 3 // 1事假 2病假 3公假
   startDate: string
   endDate: string
@@ -36,7 +38,7 @@ export interface LeaveRequest {
   reason: string
   attachmentUrls?: string
   approvalStatus: 0 | 1 | 2 // 0待审 1通过 2拒绝
-  approverId?: number
+  approverId?: LongId
   approverName?: string
   approvalTime?: string
   approvalComment?: string
@@ -55,17 +57,17 @@ export interface AttendanceStats {
 }
 
 export interface StudentAttendanceStats extends AttendanceStats {
-  studentId: number
+  studentId: LongId
   recentRecords?: AttendanceRecord[]
 }
 
 export interface ClassAttendanceRow {
-  studentId: number
+  studentId: LongId
   studentNo: string
   studentName: string
   status: number | null
   remark: string | null
-  recordId: number | null
+  recordId: LongId | null
 }
 
 export const ATTENDANCE_STATUS = [

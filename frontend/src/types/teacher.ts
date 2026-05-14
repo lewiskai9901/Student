@@ -1,16 +1,18 @@
+import type { LongId } from '@/types/common'
+
 /**
  * Teacher profile types
  */
 export interface TeacherProfile {
-  id: number
-  userId: number
+  id: LongId
+  userId: LongId
   userName?: string
   realName?: string
   phone?: string
   employeeNo?: string
   title?: string
   titleLevel?: string
-  orgUnitId?: number
+  orgUnitId?: LongId
   orgUnitName?: string
   teachingGroup?: string
   maxWeeklyHours: number
@@ -24,9 +26,9 @@ export interface TeacherProfile {
 }
 
 export interface TeacherCourseQualification {
-  id: number
-  teacherProfileId: number
-  courseId: number
+  id: LongId
+  teacherProfileId: LongId
+  courseId: LongId
   courseName?: string
   courseCode?: string
   qualificationLevel: number

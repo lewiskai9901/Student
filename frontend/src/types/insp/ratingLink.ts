@@ -1,13 +1,15 @@
+import type { LongId } from '@/types/common'
+
 /**
  * 检查平台 - 评级关联类型定义
  * 桥接 检查项目 > 评级配置
  */
 
 export interface InspRatingLink {
-  id: number
-  tenantId: number
-  projectId: number
-  ratingConfigId: number
+  id: LongId
+  tenantId: LongId
+  projectId: LongId
+  ratingConfigId: LongId
   periodType: string
   autoCalculate: boolean
   createdBy: number | null
@@ -16,8 +18,8 @@ export interface InspRatingLink {
 }
 
 export interface CreateRatingLinkRequest {
-  projectId: number
-  ratingConfigId: number
+  projectId: LongId
+  ratingConfigId: LongId
   periodType: string
   autoCalculate?: boolean
   createdBy?: number
@@ -29,7 +31,7 @@ export interface UpdateRatingLinkRequest {
 }
 
 export interface CalculateRatingRequest {
-  projectId: number
+  projectId: LongId
   periodType: string
   periodStart: string
   periodEnd: string

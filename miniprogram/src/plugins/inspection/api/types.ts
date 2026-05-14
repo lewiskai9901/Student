@@ -1,3 +1,5 @@
+import type { LongId } from '@core/types'
+
 // Inspection API types — manually maintained TS mirror of backend DTOs.
 // Phase E may switch to openapi-typescript for auto-generation.
 
@@ -14,9 +16,9 @@ export type AppealStatus = 'PENDING' | 'APPROVED' | 'REJECTED' | 'WITHDRAWN'
 export type EvidenceType = 'PHOTO' | 'VIDEO' | 'DOCUMENT'
 
 export interface InspEvidence {
-  id: number
-  submissionId: number
-  detailId?: number
+  id: LongId
+  submissionId: LongId
+  detailId?: LongId
   evidenceType: EvidenceType
   fileName: string
   fileUrl: string
@@ -25,20 +27,20 @@ export interface InspEvidence {
 }
 
 export interface InspTask {
-  id: number
-  projectId: number
+  id: LongId
+  projectId: LongId
   projectName?: string
-  templateId: number
+  templateId: LongId
   templateVersion?: number
-  inspectorId?: number
+  inspectorId?: LongId
   inspectorName?: string
   status: TaskStatus
   type?: string
   title?: string
   targetType?: string
-  targetId?: number
+  targetId?: LongId
   targetName?: string
-  orgUnitId?: number
+  orgUnitId?: LongId
   orgUnitName?: string
   scheduledStartAt?: string
   scheduledEndAt?: string
@@ -49,18 +51,18 @@ export interface InspTask {
 }
 
 export interface CorrectiveCase {
-  id: number
+  id: LongId
   caseCode?: string
-  projectId: number
+  projectId: LongId
   projectName?: string
-  taskId?: number
-  submissionId?: number
-  detailId?: number
+  taskId?: LongId
+  submissionId?: LongId
+  detailId?: LongId
   itemName?: string
   observation?: string
   rootCause?: string
   status: CaseStatus
-  assigneeId?: number
+  assigneeId?: LongId
   assigneeName?: string
   deadline?: string
   rejectCount?: number
@@ -71,16 +73,16 @@ export interface CorrectiveCase {
 }
 
 export interface InspAppeal {
-  id: number
-  submissionDetailId: number
-  submitterId: number
+  id: LongId
+  submissionDetailId: LongId
+  submitterId: LongId
   submitterName?: string
   reason: string
   attachments?: string
   expectedAdjustment?: number
   finalAdjustment?: number
   status: AppealStatus
-  reviewerId?: number
+  reviewerId?: LongId
   reviewerName?: string
   reviewComment?: string
   createdAt?: string
@@ -93,9 +95,9 @@ export type ScoringMode =
   | 'RISK_MATRIX' | 'THRESHOLD' | 'FORMULA'
 
 export interface SubmissionDetail {
-  id: number
-  submissionId: number
-  templateItemId: number
+  id: LongId
+  submissionId: LongId
+  templateItemId: LongId
   itemCode: string
   itemName: string
   sectionName?: string
@@ -118,11 +120,11 @@ export type SubmissionStatus =
   | 'DRAFT' | 'IN_PROGRESS' | 'COMPLETED' | 'LOCKED' | 'CANCELLED'
 
 export interface InspSubmission {
-  id: number
-  tenantId?: number
-  taskId: number
+  id: LongId
+  tenantId?: LongId
+  taskId: LongId
   targetType?: string
-  targetId?: number
+  targetId?: LongId
   targetName?: string
   status: SubmissionStatus
   totalScore?: number

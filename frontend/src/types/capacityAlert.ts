@@ -1,3 +1,5 @@
+import type { LongId } from '@/types/common'
+
 /**
  * 容量告警相关类型定义
  * 对标: AWS CloudWatch Alarms
@@ -16,7 +18,7 @@ export type AlertLevel =
  */
 export interface CapacityAlertDTO {
   /** 场所ID */
-  placeId: number | string
+  placeId: LongId | string
   /** 场所编码 */
   placeCode: string
   /** 场所名称 */
@@ -34,11 +36,11 @@ export interface CapacityAlertDTO {
   /** 告警级别 */
   alertLevel: AlertLevel
   /** 所属组织单元ID */
-  orgUnitId?: number | string
+  orgUnitId?: LongId | string
   /** 所属组织单元名称 */
   orgUnitName?: string
   /** 负责人ID */
-  responsibleUserId?: number | string
+  responsibleUserId?: LongId | string
   /** 负责人姓名 */
   responsibleUserName?: string
   /** 首次告警时间 */
@@ -68,7 +70,7 @@ export interface TypeAlertSummary {
  */
 export interface AlertCheckResponse {
   /** 场所ID */
-  placeId: number | string
+  placeId: LongId | string
   /** 是否应该告警 */
   shouldAlert: boolean
 }

@@ -1,3 +1,5 @@
+import type { LongId } from '@/types/common'
+
 /**
  * 学生管理类型定义 - DDD架构适配
  */
@@ -33,9 +35,9 @@ export const GenderMap: Record<Gender, string> = {
  * 学生实体 - V2 DDD架构字段名
  */
 export interface Student {
-  id: number | string
+  id: LongId | string
   studentNo: string
-  userId?: number | string
+  userId?: LongId | string
   username?: string
 
   // V2 使用 name 代替 realName
@@ -54,7 +56,7 @@ export interface Student {
   avatarUrl?: string
 
   // 班级信息 (gradeId/majorId/majorDirectionId are on class, not student)
-  orgUnitId?: number | string
+  orgUnitId?: LongId | string
   className?: string
   gradeName?: string
   gradeLevel?: number
@@ -140,7 +142,7 @@ export interface CreateStudentRequest {
   nativePlace?: string
 
   // 班级信息 (gradeId/majorId/majorDirectionId are on class, not student)
-  orgUnitId?: number | string
+  orgUnitId?: LongId | string
 
   // 学籍信息
   educationLevel?: string
@@ -193,7 +195,7 @@ export interface CreateStudentRequest {
  * 更新学生请求
  */
 export interface UpdateStudentRequest extends Partial<CreateStudentRequest> {
-  id?: number | string
+  id?: LongId | string
 }
 
 /**
@@ -204,8 +206,8 @@ export interface StudentQueryParams {
   // V2 使用 name 代替 realName (keyword 用于综合搜索)
   name?: string
   keyword?: string
-  orgUnitId?: number | string
-  gradeId?: number | string // UI-only: used to filter class dropdown, not a student field
+  orgUnitId?: LongId | string
+  gradeId?: LongId | string // UI-only: used to filter class dropdown, not a student field
   gradeLevel?: number
   // V2 使用 status 代替 studentStatus
   status?: StudentStatus
@@ -215,7 +217,7 @@ export interface StudentQueryParams {
   pageNum?: number
   pageSize?: number
   orgUnitIds?: (number | string)[]
-  selfUserId?: number | string
+  selfUserId?: LongId | string
 }
 
 /**
@@ -223,7 +225,7 @@ export interface StudentQueryParams {
  */
 export interface StudentSearchParams {
   keyword: string
-  orgUnitId?: number | string
+  orgUnitId?: LongId | string
   limit?: number
 }
 
@@ -240,20 +242,20 @@ export interface ResetPasswordRequest {
  * 学籍异动记录
  */
 export interface StudentStatusChange {
-  id: number
-  studentId: number
+  id: LongId
+  studentId: LongId
   studentNo?: string
   studentName?: string
   changeType: string
   fromStatus?: string
   toStatus?: string
-  fromClassId?: number
+  fromClassId?: LongId
   fromClassName?: string
-  toClassId?: number
+  toClassId?: LongId
   toClassName?: string
   reason?: string
   effectiveDate?: string
-  operatorId?: number
+  operatorId?: LongId
   operatorName?: string
   remark?: string
   createdAt: string

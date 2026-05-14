@@ -1,3 +1,5 @@
+import type { LongId } from '@/types/common'
+
 /**
  * 批量作业相关类型定义
  * 对标: AWS S3 Batch Operations
@@ -66,7 +68,7 @@ export interface BatchAssignOrgRequest {
   /** 场所ID列表 */
   placeIds: (number | string)[]
   /** 目标组织单元ID（null表示清除覆盖） */
-  targetOrgUnitId: number | string | null
+  targetOrgUnitId: LongId | string | null
   /** 操作原因 */
   reason?: string
 }
@@ -78,7 +80,7 @@ export interface BatchAssignResponsibleRequest {
   /** 场所ID列表 */
   placeIds: (number | string)[]
   /** 目标负责人ID（null表示清除） */
-  targetResponsibleUserId: number | string | null
+  targetResponsibleUserId: LongId | string | null
   /** 操作原因 */
   reason?: string
 }

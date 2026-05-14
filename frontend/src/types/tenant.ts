@@ -1,9 +1,11 @@
+import type { LongId } from '@/types/common'
+
 /**
  * 租户管理类型定义
  */
 
 export interface Tenant {
-  id: number | string
+  id: LongId | string
   tenantCode: string
   tenantName: string
   domain?: string

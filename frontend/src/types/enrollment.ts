@@ -1,11 +1,13 @@
+import type { LongId } from '@/types/common'
+
 export interface EnrollmentPlan {
-  id: number
+  id: LongId
   academicYear: number
-  majorId: number
+  majorId: LongId
   majorName?: string
-  majorDirectionId?: number
+  majorDirectionId?: LongId
   majorDirectionName?: string
-  orgUnitId?: number
+  orgUnitId?: LongId
   orgUnitName?: string
   plannedCount: number
   actualCount: number
@@ -17,8 +19,8 @@ export interface EnrollmentPlan {
 }
 
 export interface EnrollmentApplication {
-  id: number
-  planId: number
+  id: LongId
+  planId: LongId
   academicYear: number
   applicantName: string
   gender?: number
@@ -27,17 +29,17 @@ export interface EnrollmentApplication {
   guardianName?: string
   guardianPhone?: string
   graduateFrom?: string
-  majorId: number
+  majorId: LongId
   majorName?: string
-  majorDirectionId?: number
+  majorDirectionId?: LongId
   majorDirectionName?: string
   applicationDate?: string
   examScore?: number
   status: number // 0待审核 1已录取 2未录取 3已报到 4已放弃
   reviewComment?: string
-  assignedClassId?: number
+  assignedClassId?: LongId
   assignedClassName?: string
-  assignedStudentId?: number
+  assignedStudentId?: LongId
   remark?: string
   createdAt?: string
   registeredAt?: string

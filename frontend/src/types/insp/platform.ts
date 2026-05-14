@@ -1,3 +1,5 @@
+import type { LongId } from '@/types/common'
+
 /**
  * 检查平台 - Platform BC 类型定义
  */
@@ -5,9 +7,9 @@
 // ==================== 通知规则 ====================
 
 export interface NotificationRule {
-  id: number
-  tenantId?: number
-  projectId?: number
+  id: LongId
+  tenantId?: LongId
+  projectId?: LongId
   ruleName: string
   eventType: string
   condition?: string // JSON condition expression
@@ -21,7 +23,7 @@ export interface NotificationRule {
 }
 
 export interface CreateNotificationRuleRequest {
-  projectId?: number
+  projectId?: LongId
   ruleName: string
   eventType: string
   channels: string
@@ -44,8 +46,8 @@ export interface UpdateNotificationRuleRequest {
 // ==================== 报表模板 ====================
 
 export interface ReportTemplate {
-  id: number
-  tenantId?: number
+  id: LongId
+  tenantId?: LongId
   templateName: string
   templateCode: string
   reportType: string // DAILY_SUMMARY, PERIOD_REPORT, CORRECTIVE_REPORT, INSPECTOR_REPORT, CUSTOM
@@ -59,7 +61,7 @@ export interface ReportTemplate {
 }
 
 export interface CreateReportTemplateRequest {
-  tenantId?: number
+  tenantId?: LongId
   templateName: string
   templateCode: string
   reportType: string
@@ -79,9 +81,9 @@ export interface UpdateReportTemplateRequest {
 // ==================== Webhook 订阅 ====================
 
 export interface WebhookSubscription {
-  id: number
-  tenantId?: number
-  projectId?: number
+  id: LongId
+  tenantId?: LongId
+  projectId?: LongId
   subscriptionName: string
   targetUrl: string
   secret?: string
@@ -95,7 +97,7 @@ export interface WebhookSubscription {
 }
 
 export interface CreateWebhookRequest {
-  projectId?: number
+  projectId?: LongId
   subscriptionName: string
   targetUrl: string
   secret?: string
@@ -114,13 +116,13 @@ export interface UpdateWebhookRequest {
 // ==================== 审计日志 ====================
 
 export interface AuditTrailEntry {
-  id: number
-  tenantId?: number
-  userId: number
+  id: LongId
+  tenantId?: LongId
+  userId: LongId
   userName?: string
   action: string
   resourceType: string
-  resourceId?: number
+  resourceId?: LongId
   resourceName?: string
   details?: string // JSON
   ipAddress?: string
@@ -130,11 +132,11 @@ export interface AuditTrailEntry {
 // ==================== 问题分类 ====================
 
 export interface IssueCategory {
-  id: number
-  tenantId?: number
+  id: LongId
+  tenantId?: LongId
   categoryCode: string
   categoryName: string
-  parentId?: number
+  parentId?: LongId
   icon?: string
   sortOrder: number
   isEnabled: boolean
@@ -146,8 +148,8 @@ export interface IssueCategory {
 // ==================== 假期日历 ====================
 
 export interface HolidayCalendar {
-  id: number
-  tenantId?: number
+  id: LongId
+  tenantId?: LongId
   calendarName: string
   year: number
   holidays: string // JSON array of dates

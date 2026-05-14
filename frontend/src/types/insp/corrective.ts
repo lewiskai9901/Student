@@ -1,33 +1,34 @@
 /**
  * 检查平台 - 整改管理类型
  */
+import type { LongId } from '@/types/common'
 import type { CaseStatus, CasePriority } from './enums'
 
 export interface CorrectiveCase {
-  id: number
-  tenantId: number
+  id: LongId
+  tenantId: LongId
   caseCode: string
   /** 整改标题(后端 JOIN 出的派生字段) */
   title?: string | null
-  submissionId: number | null
-  detailId: number | null
-  projectId: number | null
-  taskId: number | null
+  submissionId: LongId | null
+  detailId: LongId | null
+  projectId: LongId | null
+  taskId: LongId | null
   targetType: string | null
-  targetId: number | null
+  targetId: LongId | null
   targetName: string | null
   issueDescription: string
   requiredAction: string | null
   priority: CasePriority
   deadline: string | null
-  assigneeId: number | null
+  assigneeId: LongId | null
   assigneeName: string | null
   escalationLevel: number
   status: CaseStatus
   correctionNote: string | null
   correctionEvidenceIds: number[] | null
   correctedAt: string | null
-  verifierId: number | null
+  verifierId: LongId | null
   verifierName: string | null
   verifiedAt: string | null
   verificationNote: string | null
@@ -45,19 +46,19 @@ export interface CreateCaseRequest {
   caseCode: string
   issueDescription: string
   priority: CasePriority
-  submissionId?: number
-  detailId?: number
-  projectId?: number
-  taskId?: number
+  submissionId?: LongId
+  detailId?: LongId
+  projectId?: LongId
+  taskId?: LongId
   targetType?: string
-  targetId?: number
+  targetId?: LongId
   targetName?: string
   requiredAction?: string
   deadline?: string
 }
 
 export interface AssignCaseRequest {
-  assigneeId: number
+  assigneeId: LongId
   assigneeName: string
 }
 

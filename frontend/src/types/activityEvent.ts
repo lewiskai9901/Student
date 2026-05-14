@@ -1,3 +1,5 @@
+import type { LongId } from '@/types/common'
+
 /** 字段变更 */
 export interface FieldChange {
   fieldName: string
@@ -23,7 +25,7 @@ export interface ActivityEvent {
   beforeSnapshot: string | null
   afterSnapshot: string | null
 
-  userId: number | null
+  userId: LongId | null
   userName: string | null
 
   sourceIp: string | null
@@ -44,7 +46,7 @@ export interface ActivityEventQuery {
   resourceType?: string
   resourceId?: string
   action?: string
-  userId?: number
+  userId?: LongId
   result?: string
   startTime?: string
   endTime?: string

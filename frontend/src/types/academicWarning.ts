@@ -1,5 +1,7 @@
+import type { LongId } from '@/types/common'
+
 export interface WarningRule {
-  id: number
+  id: LongId
   ruleName: string
   ruleType: string
   warningLevel: 1 | 2 | 3
@@ -10,23 +12,23 @@ export interface WarningRule {
 }
 
 export interface AcademicWarning {
-  id: number
-  studentId: number
+  id: LongId
+  studentId: LongId
   studentNo?: string
   studentName?: string
-  orgUnitId?: number
+  orgUnitId?: LongId
   className?: string
-  ruleId?: number
+  ruleId?: LongId
   ruleName?: string
   warningType: string
   warningLevel: 1 | 2 | 3
   description: string
   detail?: Record<string, any>
   status: 0 | 1 | 2 | 3
-  handlerId?: number
+  handlerId?: LongId
   handleNote?: string
   handledAt?: string
-  semesterId?: number
+  semesterId?: LongId
   createdAt: string
 }
 

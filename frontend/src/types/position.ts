@@ -1,18 +1,20 @@
+import type { LongId } from '@/types/common'
+
 /**
  * 岗位与变更日志类型定义
  */
 
 // 岗位
 export interface Position {
-  id: number | string
+  id: LongId | string
   positionCode: string
   positionName: string
-  orgUnitId: number | string
+  orgUnitId: LongId | string
   orgUnitName?: string
   jobLevel?: string
   headcount: number
   currentCount?: number
-  reportsToId?: number | string
+  reportsToId?: LongId | string
   reportsToName?: string
   responsibilities?: string
   requirements?: string
@@ -25,7 +27,7 @@ export interface Position {
 
 // 岗位编制情况
 export interface PositionStaffing {
-  positionId: number | string
+  positionId: LongId | string
   positionCode: string
   positionName: string
   headcount: number
@@ -37,8 +39,8 @@ export interface PositionStaffing {
 
 // 简易在岗信息
 export interface UserPositionSimple {
-  id: number | string
-  userId: number | string
+  id: LongId | string
+  userId: LongId | string
   userName?: string
   isPrimary: boolean
   appointmentType?: string
@@ -47,10 +49,10 @@ export interface UserPositionSimple {
 
 // 用户岗位
 export interface UserPosition {
-  id: number | string
-  userId: number | string
+  id: LongId | string
+  userId: LongId | string
   userName?: string
-  positionId: number | string
+  positionId: LongId | string
   positionName?: string
   orgUnitName?: string
   isPrimary: boolean
@@ -124,10 +126,10 @@ export const AppointmentTypeLabels: Record<string, string> = {
 export interface CreatePositionRequest {
   positionCode: string
   positionName: string
-  orgUnitId: number | string
+  orgUnitId: LongId | string
   jobLevel?: string
   headcount?: number
-  reportsToId?: number | string
+  reportsToId?: LongId | string
   responsibilities?: string
   requirements?: string
   isKeyPosition?: boolean
@@ -138,7 +140,7 @@ export interface UpdatePositionRequest {
   positionName?: string
   jobLevel?: string
   headcount?: number
-  reportsToId?: number | string
+  reportsToId?: LongId | string
   responsibilities?: string
   requirements?: string
   isKeyPosition?: boolean
@@ -147,8 +149,8 @@ export interface UpdatePositionRequest {
 
 // 任命请求
 export interface AppointRequest {
-  userId: number | string
-  positionId: number | string
+  userId: LongId | string
+  positionId: LongId | string
   isPrimary?: boolean
   appointmentType?: string
   startDate?: string
@@ -163,9 +165,9 @@ export interface EndAppointmentRequest {
 
 // 调岗请求
 export interface TransferRequest {
-  userId: number | string
-  fromPositionId: number | string
-  toPositionId: number | string
+  userId: LongId | string
+  fromPositionId: LongId | string
+  toPositionId: LongId | string
   transferDate?: string
   reason?: string
 }

@@ -1,6 +1,8 @@
+import type { LongId } from '@/types/common'
+
 export interface EntityEventType {
-  id: number
-  tenantId?: number
+  id: LongId
+  tenantId?: LongId
   categoryCode: string
   categoryName: string
   categoryPolarity?: string // POSITIVE/NEGATIVE/NEUTRAL
@@ -18,9 +20,9 @@ export interface EntityEventType {
 }
 
 export interface EntityEvent {
-  id: number
+  id: LongId
   subjectType: string
-  subjectId: number
+  subjectId: LongId
   subjectName: string | null
   eventCategory: string
   eventType: string
@@ -28,7 +30,7 @@ export interface EntityEvent {
   payload: string | null  // JSON
   sourceModule: string | null
   sourceRefType: string | null
-  sourceRefId: number | null
+  sourceRefId: LongId | null
   tags: string | null  // JSON array
   createdBy: number | null
   createdByName: string | null
@@ -37,7 +39,7 @@ export interface EntityEvent {
 
 export interface EntityEventStats {
   subjectType: string
-  subjectId: number
+  subjectId: LongId
   totalCount: number
   categoryBreakdown: Record<string, number>
   recentCount: number

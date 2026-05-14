@@ -1,3 +1,5 @@
+import type { LongId } from '@/types/common'
+
 /**
  * 我的班级 - 类型定义
  */
@@ -35,7 +37,7 @@ export interface ScoreTrendItem {
  * 最近检查记录
  */
 export interface RecentCheckRecord {
-  id: number | string
+  id: LongId | string
   checkDate: string
   checkType: string
   score: number
@@ -46,7 +48,7 @@ export interface RecentCheckRecord {
  * 班级概览数据
  */
 export interface MyClassOverview {
-  orgUnitId: number | string
+  orgUnitId: LongId | string
   className: string
   studentCount: number
   maleCount: number
@@ -64,7 +66,7 @@ export interface MyClassOverview {
  * 班级学生列表项
  */
 export interface MyClassStudent {
-  id: number | string
+  id: LongId | string
   studentNo: string
   name: string
   gender: '男' | '女'
@@ -78,7 +80,7 @@ export interface MyClassStudent {
  * 宿舍分布信息
  */
 export interface DormitoryDistribution {
-  buildingId: number | string
+  buildingId: LongId | string
   buildingName: string
   buildingType: 'MALE' | 'FEMALE' | 'MIXED'
   rooms: DormitoryRoom[]
@@ -89,7 +91,7 @@ export interface DormitoryDistribution {
  * 宿舍房间信息
  */
 export interface DormitoryRoom {
-  dormitoryId: number | string
+  dormitoryId: LongId | string
   roomNo: string
   floor: number
   studentCount: number
@@ -100,7 +102,7 @@ export interface DormitoryRoom {
  * 宿舍学生信息
  */
 export interface DormitoryStudent {
-  id: number | string
+  id: LongId | string
   name: string
   bedNo: string
 }

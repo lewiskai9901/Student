@@ -1,3 +1,5 @@
+import type { LongId } from '@/types/common'
+
 /**
  * 宿舍管理类型定义 - DDD架构适配
  */
@@ -56,7 +58,7 @@ export const BuildingTypeMap: Record<BuildingType, string> = {
  * 学生简单信息
  */
 export interface StudentSimpleInfo {
-  id: number | string
+  id: LongId | string
   studentNo: string
   realName: string
   bedNumber?: string
@@ -67,11 +69,11 @@ export interface StudentSimpleInfo {
  * 宿舍实体
  */
 export interface Dormitory {
-  id: number | string
-  buildingId: number | string
+  id: LongId | string
+  buildingId: LongId | string
   buildingName?: string
   buildingNo?: string
-  orgUnitId?: number | string
+  orgUnitId?: LongId | string
   orgUnitName?: string
   dormitoryNo: string
   roomNo?: string
@@ -107,7 +109,7 @@ export interface Dormitory {
  * 楼宇实体
  */
 export interface Building {
-  id: number | string
+  id: LongId | string
   buildingNo: string
   buildingName: string
   buildingType: BuildingType
@@ -127,7 +129,7 @@ export interface Building {
  */
 export interface BedAllocation {
   bedNumber: string
-  studentId?: number | string
+  studentId?: LongId | string
   studentNo?: string
   studentName?: string
   className?: string
@@ -140,8 +142,8 @@ export interface BedAllocation {
  * 创建宿舍请求
  */
 export interface CreateDormitoryRequest {
-  buildingId: number | string
-  orgUnitId?: number | string
+  buildingId: LongId | string
+  orgUnitId?: LongId | string
   dormitoryNo: string
   floorNumber: number
   roomUsageType: RoomUsageType
@@ -157,7 +159,7 @@ export interface CreateDormitoryRequest {
  * 更新宿舍请求
  */
 export interface UpdateDormitoryRequest extends Partial<CreateDormitoryRequest> {
-  id?: number | string
+  id?: LongId | string
 }
 
 /**
@@ -165,12 +167,12 @@ export interface UpdateDormitoryRequest extends Partial<CreateDormitoryRequest> 
  */
 export interface DormitoryQueryParams {
   dormitoryNo?: string
-  buildingId?: number | string
+  buildingId?: LongId | string
   buildingName?: string
   floorNumber?: number
   roomType?: number
   genderType?: GenderType
-  supervisorId?: number | string
+  supervisorId?: LongId | string
   status?: DormitoryStatus
   buildingIds?: (number | string)[]
   orgUnitIds?: (number | string)[]
@@ -184,7 +186,7 @@ export interface DormitoryQueryParams {
  * 批量创建宿舍请求
  */
 export interface BatchCreateDormitoryRequest {
-  buildingId: number | string
+  buildingId: LongId | string
   startFloor: number
   endFloor: number
   roomsPerFloor: number
@@ -199,8 +201,8 @@ export interface BatchCreateDormitoryRequest {
  * 分配学生到宿舍请求
  */
 export interface AssignStudentRequest {
-  studentId: number | string
-  dormitoryId: number | string
+  studentId: LongId | string
+  dormitoryId: LongId | string
   bedNumber?: string
 }
 
@@ -208,8 +210,8 @@ export interface AssignStudentRequest {
  * 交换学生宿舍请求
  */
 export interface SwapStudentsRequest {
-  studentAId: number | string
-  studentBId: number | string
+  studentAId: LongId | string
+  studentBId: LongId | string
 }
 
 /**
@@ -218,16 +220,16 @@ export interface SwapStudentsRequest {
  */
 export interface BatchUpdateOrgUnitRequest {
   dormitoryIds: (number | string)[]
-  orgUnitId?: number | string | null
+  orgUnitId?: LongId | string | null
 }
 
 /**
  * 按楼层批量更新组织单元请求
  */
 export interface BatchUpdateOrgUnitByFloorRequest {
-  buildingId: number | string
+  buildingId: LongId | string
   floor: number
-  orgUnitId?: number | string | null
+  orgUnitId?: LongId | string | null
 }
 
 // 别名（兼容API命名）
@@ -251,7 +253,7 @@ export interface CreateBuildingRequest {
  * 更新楼宇请求
  */
 export interface UpdateBuildingRequest extends Partial<CreateBuildingRequest> {
-  id?: number | string
+  id?: LongId | string
 }
 
 /**

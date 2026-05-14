@@ -1,17 +1,19 @@
+import type { LongId } from '@/types/common'
+
 export interface SubmissionObservation {
-  id: number
-  submissionId: number
-  detailId: number
-  projectId: number | null
-  taskId: number | null
+  id: LongId
+  submissionId: LongId
+  detailId: LongId
+  projectId: LongId | null
+  taskId: LongId | null
   itemCode: string | null
   itemName: string | null
   itemType: string | null
   sectionName: string | null
   subjectType: string
-  subjectId: number
+  subjectId: LongId
   subjectName: string | null
-  orgUnitId: number | null
+  orgUnitId: LongId | null
   className: string | null
   score: number
   isNegative: boolean | number

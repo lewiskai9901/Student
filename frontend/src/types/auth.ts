@@ -1,3 +1,5 @@
+import type { LongId } from '@/types/common'
+
 // 认证相关类型定义
 
 export interface LoginRequest {
@@ -28,14 +30,14 @@ export interface RoleDetail {
 
 // 分配的班级信息
 export interface AssignedClass {
-  id: number | string
+  id: LongId | string
   className: string
   role: ClassRole
 }
 
 export interface UserInfo {
   userId: string
-  id?: number | string
+  id?: LongId | string
   username: string
   realName: string
   phone?: string
@@ -51,7 +53,7 @@ export interface UserInfo {
   roleDetails?: RoleDetail[]
   permissions: string[]
   lastLoginTime?: string
-  tenantId?: number | string
+  tenantId?: LongId | string
   tenantName?: string
   // 用户类型编码（TEACHER / STUDENT / ADMIN / …），用于登录落地页路由决策
   userTypeCode?: string

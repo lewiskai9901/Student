@@ -1,3 +1,5 @@
+import type { LongId } from '@/types/common'
+
 /**
  * 权限管理模块类型定义 - V6 动态化重构
  * 删除所有硬编码枚举常量，改为从 API 动态获取
@@ -39,7 +41,7 @@ export interface CreatePermissionRequest {
   permissionName: string
   type: PermissionType
   scope?: PermissionScope
-  parentId?: number | string
+  parentId?: LongId | string
   path?: string
   icon?: string
   sortOrder?: number
@@ -66,7 +68,7 @@ export interface Role {
   level: number
   description?: string
   enabled: boolean
-  tenantId?: number | string
+  tenantId?: LongId | string
   permissionIds: (string | number)[]
   permissions?: Permission[]
   createdAt: string
@@ -101,13 +103,13 @@ export type ScopeTypeValue = 'ALL' | 'ORG_UNIT'
 
 // 用户角色（带作用域）
 export interface UserRole {
-  id: number | string
-  userId: number | string
-  roleId: number | string
+  id: LongId | string
+  userId: LongId | string
+  roleId: LongId | string
   roleName: string
   roleCode: string
   scopeType: ScopeTypeValue
-  scopeId: number | string
+  scopeId: LongId | string
   scopeName?: string
   assignedAt: string
   assignedBy?: number | string
@@ -118,16 +120,16 @@ export interface UserRole {
 // 分配角色请求（带作用域）
 export interface AssignRoleWithScopeRequest {
   scopeType?: ScopeTypeValue
-  scopeId?: number | string
+  scopeId?: LongId | string
   expiresAt?: string
   reason?: string
 }
 
 // 角色分配项（用于批量设置）
 export interface RoleAssignmentItem {
-  roleId: number | string
+  roleId: LongId | string
   scopeType?: ScopeTypeValue
-  scopeId?: number | string
+  scopeId?: LongId | string
   expiresAt?: string
   reason?: string
 }
@@ -150,7 +152,7 @@ export interface RoleQueryParams {
 export interface PermissionQueryParams {
   type?: PermissionType
   enabled?: boolean
-  parentId?: number | string
+  parentId?: LongId | string
   keyword?: string
 }
 
@@ -160,8 +162,8 @@ export interface PermissionQueryParams {
  * 数据模块 DTO（从 GET /api/data-modules 获取）
  */
 export interface DataModuleDTO {
-  id: number | string
-  tenantId: number | string
+  id: LongId | string
+  tenantId: LongId | string
   moduleCode: string
   moduleName: string
   domainCode: string
@@ -183,8 +185,8 @@ export interface DataModuleDTO {
  * 范围项类型 DTO（从 GET /api/data-modules/scope-item-types 获取）
  */
 export interface ScopeItemTypeDTO {
-  id: number | string
-  tenantId: number | string
+  id: LongId | string
+  tenantId: LongId | string
   itemTypeCode: string
   itemTypeName: string
   refTable: string
@@ -211,7 +213,7 @@ export interface DataScopeOption {
  */
 export interface ScopeItem {
   itemTypeCode: string
-  scopeId: number | string
+  scopeId: LongId | string
   scopeName: string
   includeChildren: boolean
 }

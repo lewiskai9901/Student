@@ -1,3 +1,5 @@
+import type { LongId } from '@/types/common'
+
 /**
  * 检查平台 - 预警系统类型
  */
@@ -9,15 +11,15 @@ export type AlertSeverity = 'INFO' | 'WARNING' | 'CRITICAL'
 export type AlertStatus = 'OPEN' | 'ACKNOWLEDGED' | 'RESOLVED' | 'DISMISSED'
 
 export interface AlertRule {
-  id: number
-  tenantId?: number
+  id: LongId
+  tenantId?: LongId
   ruleName: string
   metricType: MetricType
   thresholdConfig: string // JSON
   severity: AlertSeverity
   notificationChannels: string | null // JSON
   isEnabled: boolean
-  projectId: number | null
+  projectId: LongId | null
   createdBy: number | null
   createdAt: string
   updatedAt: string | null
@@ -29,7 +31,7 @@ export interface CreateAlertRuleRequest {
   thresholdConfig: string
   severity: AlertSeverity
   notificationChannels?: string
-  projectId?: number
+  projectId?: LongId
 }
 
 export interface UpdateAlertRuleRequest {
@@ -39,16 +41,16 @@ export interface UpdateAlertRuleRequest {
   severity?: AlertSeverity
   notificationChannels?: string
   isEnabled?: boolean
-  projectId?: number
+  projectId?: LongId
 }
 
 // ==================== 预警记录 ====================
 
 export interface Alert {
-  id: number
-  tenantId?: number
-  alertRuleId: number
-  targetId: number | null
+  id: LongId
+  tenantId?: LongId
+  alertRuleId: LongId
+  targetId: LongId | null
   targetType: string | null
   targetName: string | null
   metricValue: number | null
@@ -65,7 +67,7 @@ export interface Alert {
 // ==================== 热力图 ====================
 
 export interface HeatmapDataPoint {
-  targetId: number
+  targetId: LongId
   targetName: string
   date: string
   score: number

@@ -1,3 +1,4 @@
+import type { LongId } from '@core/types'
 import { requestWrapped } from '@core/api/request'
 import type {
   InspTask, CorrectiveCase, InspAppeal, InspEvidence, EvidenceType,
@@ -8,37 +9,37 @@ export const inspectionApi = {
   // ===== Reads =====
   myTasks: () => requestWrapped<InspTask[]>({ url: '/inspection/tasks/my-tasks' }),
   availableTasks: () => requestWrapped<InspTask[]>({ url: '/inspection/tasks/available' }),
-  taskById: (id: number) => requestWrapped<InspTask>({ url: `/inspection/tasks/${id}` }),
+  taskById: (id: LongId) => requestWrapped<InspTask>({ url: `/inspection/tasks/${id}` }),
   myCases: () => requestWrapped<CorrectiveCase[]>({ url: '/inspection/corrective-cases/my-cases' }),
-  caseById: (id: number) => requestWrapped<CorrectiveCase>({ url: `/inspection/corrective-cases/${id}` }),
+  caseById: (id: LongId) => requestWrapped<CorrectiveCase>({ url: `/inspection/corrective-cases/${id}` }),
   myAppeals: () => requestWrapped<InspAppeal[]>({ url: '/inspection/appeals/my' }),
-  appealById: (id: number) => requestWrapped<InspAppeal>({ url: `/inspection/appeals/${id}` }),
+  appealById: (id: LongId) => requestWrapped<InspAppeal>({ url: `/inspection/appeals/${id}` }),
 
   // ===== Writes (Phase D-2) =====
-  claimTask: (id: number, inspectorName: string) =>
+  claimTask: (id: LongId, inspectorName: string) =>
     requestWrapped<InspTask>({
       url: `/inspection/tasks/${id}/claim`,
       method: 'POST',
       data: { inspectorName }
     }),
-  startTask: (id: number) =>
+  startTask: (id: LongId) =>
     requestWrapped<InspTask>({ url: `/inspection/tasks/${id}/start`, method: 'POST' }),
-  submitTask: (id: number) =>
+  submitTask: (id: LongId) =>
     requestWrapped<InspTask>({ url: `/inspection/tasks/${id}/submit`, method: 'POST' }),
-  startCaseWork: (id: number) =>
+  startCaseWork: (id: LongId) =>
     requestWrapped<CorrectiveCase>({
       url: `/inspection/corrective-cases/${id}/start-work`,
       method: 'POST'
     }),
-  submitCorrection: (id: number, correctionNote: string, evidenceIds: number[] = []) =>
+  submitCorrection: (id: LongId, correctionNote: string, evidenceIds: number[] = []) =>
     requestWrapped<CorrectiveCase>({
       url: `/inspection/corrective-cases/${id}/submit-correction`,
       method: 'POST',
       data: { correctionNote, evidenceIds }
     }),
   addEvidence: (
-    submissionId: number,
-    body: { detailId?: number; evidenceType: EvidenceType; fileName: string; fileUrl: string }
+    submissionId: LongId,
+    body: { detailId?: LongId; evidenceType: EvidenceType; fileName: string; fileUrl: string }
   ) => requestWrapped<InspEvidence>({
     url: `/inspection/submissions/${submissionId}/evidences`,
     method: 'POST',
@@ -46,21 +47,21 @@ export const inspectionApi = {
   }),
 
   // === D-3b-1 read ===
-  submissionsByTask: (taskId: number) =>
+  submissionsByTask: (taskId: LongId) =>
     requestWrapped<InspSubmission[]>({ url: `/inspection/submissions?taskId=${taskId}` }),
-  submissionDetails: (submissionId: number) =>
+  submissionDetails: (submissionId: LongId) =>
     requestWrapped<SubmissionDetail[]>({ url: `/inspection/submissions/${submissionId}/details` }),
 
   // === D-3b-1 write ===
   updateDetailResponse: (
-    detailId: number,
+    detailId: LongId,
     body: { responseValue?: string; scoringMode?: ScoringMode; score?: number; dimensions?: string }
   ) => requestWrapped<SubmissionDetail>({
     url: `/inspection/submissions/details/${detailId}/response`,
     method: 'PUT',
     data: body
   }),
-  completeSubmission: (submissionId: number) =>
+  completeSubmission: (submissionId: LongId) =>
     requestWrapped<InspSubmission>({
       url: `/inspection/submissions/${submissionId}/complete`,
       method: 'POST'
@@ -68,7 +69,7 @@ export const inspectionApi = {
 
   // === D-3b-2 write ===
   submitAppeal: (body: {
-    submissionDetailId: number
+    submissionDetailId: LongId
     submitterName: string
     reason: string
     attachments?: string

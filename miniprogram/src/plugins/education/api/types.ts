@@ -1,3 +1,5 @@
+import type { LongId } from '@core/types'
+
 /** 后端 PageResult 形状 (com.school.management.common.PageResult) */
 export interface PageResult<T> {
   records: T[]
@@ -12,7 +14,7 @@ export interface PageResult<T> {
 
 /** 学生 (后端 StudentDTO 子集) */
 export interface Student {
-  id: number
+  id: LongId
   studentNo: string
   name: string
   gender?: number
@@ -21,7 +23,7 @@ export interface Student {
   email?: string
   enrollmentDate?: string
   expectedGraduationDate?: string
-  orgUnitId?: number
+  orgUnitId?: LongId
   className?: string
   status?: number
   statusText?: string
@@ -36,11 +38,11 @@ export interface Student {
  * headTeacherName 而非 classTeacherName; currentSize 而非 headcount
  */
 export interface SchoolClass {
-  id: number
+  id: LongId
   classCode: string
   className: string
   shortName?: string
-  orgUnitId?: number
+  orgUnitId?: LongId
   orgUnitName?: string
   enrollmentYear?: number
   gradeLevel?: number
@@ -58,7 +60,7 @@ export interface SchoolClass {
 
 /** 我管理的班级 (后端 MyClassDTO) */
 export interface MyClass {
-  id: number
+  id: LongId
   classCode: string
   className: string
   shortName?: string
@@ -77,7 +79,7 @@ export interface MyClass {
 
 /** 班级概览 (后端 MyClassOverviewDTO) */
 export interface MyClassOverview {
-  orgUnitId: number
+  orgUnitId: LongId
   className: string
   studentCount?: number
   maleCount?: number
@@ -88,12 +90,12 @@ export interface MyClassOverview {
   scoreTrend?: number
   pendingAppeals?: number
   scoreTrendList?: { date: string; score: number }[]
-  recentRecords?: { id: number; checkDate: string; checkType: string; score: number; rank?: number }[]
+  recentRecords?: { id: LongId; checkDate: string; checkType: string; score: number; rank?: number }[]
 }
 
 /** 班级学生 (后端 MyClassStudentDTO) */
 export interface MyClassStudent {
-  id: number
+  id: LongId
   studentNo: string
   name: string
   gender?: string
@@ -109,16 +111,16 @@ export interface MyClassStudent {
  * Jackson 默认按字段名序列化 → JSON key 也是 user_student (snake_case)
  */
 export interface DormitoryDistribution {
-  buildingId: number
+  buildingId: LongId
   buildingName: string
   buildingType?: string
   studentCount?: number
   rooms: {
-    dormitoryId: number
+    dormitoryId: LongId
     roomNo: string
     floor?: number
     studentCount?: number
     // matches backend Java field name (DormitoryRoomDTO.user_student)
-    user_student: { id: number; name: string; bedNo?: string }[]
+    user_student: { id: LongId; name: string; bedNo?: string }[]
   }[]
 }

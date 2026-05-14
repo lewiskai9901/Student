@@ -1,7 +1,8 @@
+import type { LongId } from '@core/types'
 import { requestWrapped } from './request'
 
 export interface UserListItem {
-  id: number
+  id: LongId
   username: string
   realName: string
   phone?: string
@@ -9,7 +10,7 @@ export interface UserListItem {
   avatar?: string
   gender?: number
   userType?: string
-  orgUnitId?: number
+  orgUnitId?: LongId
   orgUnitName?: string
   status?: string
   roleNames?: string[]
@@ -17,6 +18,6 @@ export interface UserListItem {
 }
 
 export const userApi = {
-  byOrgUnit: (orgUnitId: number) =>
+  byOrgUnit: (orgUnitId: LongId) =>
     requestWrapped<UserListItem[]>({ url: `/users/by-org-unit/${orgUnitId}` })
 }

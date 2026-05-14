@@ -1,9 +1,11 @@
+import type { LongId } from '@/types/common'
+
 // 教务管理模块类型定义
 
 // ==================== 校历管理 ====================
 
 export interface AcademicYear {
-  id: number | string
+  id: LongId | string
   yearCode?: string
   yearName: string
   startDate: string
@@ -15,8 +17,8 @@ export interface AcademicYear {
 }
 
 export interface Semester {
-  id: number | string
-  academicYearId?: number | string
+  id: LongId | string
+  academicYearId?: LongId | string
   semesterName: string
   semesterCode: string
   startDate: string
@@ -32,8 +34,8 @@ export interface Semester {
 }
 
 export interface TeachingWeek {
-  id: number | string
-  semesterId: number | string
+  id: LongId | string
+  semesterId: LongId | string
   weekNumber: number
   startDate: string
   endDate: string
@@ -42,9 +44,9 @@ export interface TeachingWeek {
 }
 
 export interface AcademicEvent {
-  id: number | string
-  yearId?: number | string
-  semesterId?: number | string
+  id: LongId | string
+  yearId?: LongId | string
+  semesterId?: LongId | string
   title: string
   eventType: number // 1-开学, 2-放假, 3-考试, 4-活动, 5-其他
   startDate: string
@@ -66,14 +68,14 @@ export type {
 // ==================== 教学任务 ====================
 
 export interface TeachingTask {
-  id: number | string
+  id: LongId | string
   taskCode?: string
-  semesterId: number | string
+  semesterId: LongId | string
   semesterName?: string
-  courseId: number | string
+  courseId: LongId | string
   courseName?: string
   courseCode?: string
-  orgUnitId: number | string
+  orgUnitId: LongId | string
   className?: string
   studentCount: number
   weeklyHours: number
@@ -95,9 +97,9 @@ export interface TeachingTask {
 }
 
 export interface TaskTeacher {
-  id?: number | string
-  taskId?: number | string
-  teacherId: number | string
+  id?: LongId | string
+  taskId?: LongId | string
+  teacherId: LongId | string
   teacherName?: string
   real_name?: string               // enriched from backend JOIN
   teacher_id?: number | string     // snake_case from backend
@@ -108,10 +110,10 @@ export interface TaskTeacher {
 }
 
 export interface TeachingTaskQueryParams {
-  semesterId?: number | string
-  courseId?: number | string
-  orgUnitId?: number | string
-  teacherId?: number | string
+  semesterId?: LongId | string
+  courseId?: LongId | string
+  orgUnitId?: LongId | string
+  teacherId?: LongId | string
   status?: number
   page?: number
   size?: number
@@ -120,8 +122,8 @@ export interface TeachingTaskQueryParams {
 // ==================== 排课管理 ====================
 
 export interface CourseSchedule {
-  id: number | string
-  semesterId: number | string
+  id: LongId | string
+  semesterId: LongId | string
   semesterName?: string
   name: string
   description?: string
@@ -136,13 +138,13 @@ export interface CourseSchedule {
 }
 
 export interface ScheduleEntry {
-  id: number | string
-  scheduleId: number | string
-  taskId: number | string
+  id: LongId | string
+  scheduleId: LongId | string
+  taskId: LongId | string
   courseName?: string
   className?: string
   teacherName?: string
-  classroomId: number | string
+  classroomId: LongId | string
   classroomName?: string
   dayOfWeek: number // 1-7
   periodStart: number // 开始节次
@@ -160,7 +162,7 @@ export interface ScheduleConflict {
 }
 
 export interface AutoScheduleParams {
-  scheduleId: number | string
+  scheduleId: LongId | string
   maxIterations?: number
   populationSize?: number
   mutationRate?: number
@@ -176,11 +178,11 @@ export interface AutoScheduleResult {
 // ==================== 调课管理 ====================
 
 export interface ScheduleAdjustment {
-  id: number | string
-  entryId: number | string
+  id: LongId | string
+  entryId: LongId | string
   originalEntry?: ScheduleEntry
   adjustmentType: number // 1-调课, 2-停课, 3-补课
-  newClassroomId?: number | string
+  newClassroomId?: LongId | string
   newClassroomName?: string
   newDayOfWeek?: number
   newPeriodStart?: number
@@ -188,9 +190,9 @@ export interface ScheduleAdjustment {
   newWeek?: number
   reason: string
   status: number // 0-待审批, 1-已批准, 2-已驳回, 3-已执行, 4-已取消
-  applicantId: number | string
+  applicantId: LongId | string
   applicantName?: string
-  approverId?: number | string
+  approverId?: LongId | string
   approverName?: string
   approvalRemark?: string
   appliedAt: string
@@ -199,10 +201,10 @@ export interface ScheduleAdjustment {
 }
 
 export interface AdjustmentQueryParams {
-  entryId?: number | string
+  entryId?: LongId | string
   adjustmentType?: number
   status?: number
-  applicantId?: number | string
+  applicantId?: LongId | string
   startDate?: string
   endDate?: string
   page?: number
@@ -212,8 +214,8 @@ export interface AdjustmentQueryParams {
 // ==================== 考试管理 ====================
 
 export interface ExamBatch {
-  id: number | string
-  semesterId: number | string
+  id: LongId | string
+  semesterId: LongId | string
   semesterName?: string
   name: string
   examType: number // 1-期中考试, 2-期末考试, 3-补考, 4-重修考试
@@ -227,9 +229,9 @@ export interface ExamBatch {
 }
 
 export interface ExamArrangement {
-  id: number | string
-  batchId: number | string
-  courseId: number | string
+  id: LongId | string
+  batchId: LongId | string
+  courseId: LongId | string
   courseName?: string
   courseCode?: string
   orgUnitIds: (number | string)[]
@@ -243,9 +245,9 @@ export interface ExamArrangement {
 }
 
 export interface ExamRoom {
-  id: number | string
-  arrangementId: number | string
-  classroomId: number | string
+  id: LongId | string
+  arrangementId: LongId | string
+  classroomId: LongId | string
   classroomName?: string
   capacity: number
   actualCount: number
@@ -253,15 +255,15 @@ export interface ExamRoom {
 }
 
 export interface ExamInvigilator {
-  id: number | string
-  roomId: number | string
-  teacherId: number | string
+  id: LongId | string
+  roomId: LongId | string
+  teacherId: LongId | string
   teacherName?: string
   isMain: boolean // 是否主监考
 }
 
 export interface ExamBatchQueryParams {
-  semesterId?: number | string
+  semesterId?: LongId | string
   examType?: number
   status?: number
   page?: number
@@ -271,13 +273,13 @@ export interface ExamBatchQueryParams {
 // ==================== 成绩管理 ====================
 
 export interface GradeBatch {
-  id: number | string
-  semesterId: number | string
+  id: LongId | string
+  semesterId: LongId | string
   semesterName?: string
-  courseId: number | string
+  courseId: LongId | string
   courseName?: string
   courseCode?: string
-  orgUnitId: number | string
+  orgUnitId: LongId | string
   className?: string
   batchName: string
   gradeType: number // 1-平时成绩, 2-期中成绩, 3-期末成绩, 4-总评成绩
@@ -291,14 +293,14 @@ export interface GradeBatch {
 }
 
 export interface StudentGrade {
-  id: number | string
-  batchId: number | string
-  studentId: number | string
+  id: LongId | string
+  batchId: LongId | string
+  studentId: LongId | string
   studentName?: string
   studentNo?: string
-  semesterId: number | string
-  courseId: number | string
-  orgUnitId: number | string
+  semesterId: LongId | string
+  courseId: LongId | string
+  orgUnitId: LongId | string
   batchName?: string
   gradeType: number
   totalScore?: number
@@ -312,18 +314,18 @@ export interface StudentGrade {
 }
 
 export interface GradeItem {
-  id: number | string
-  gradeId: number | string
+  id: LongId | string
+  gradeId: LongId | string
   itemName: string // 如：作业1, 实验2, 考勤
   score: number
   weight: number // 权重百分比
 }
 
 export interface GradeQueryParams {
-  semesterId?: number | string
-  courseId?: number | string
-  orgUnitId?: number | string
-  studentId?: number | string
+  semesterId?: LongId | string
+  courseId?: LongId | string
+  orgUnitId?: LongId | string
+  studentId?: LongId | string
   gradeType?: number
   status?: number
   page?: number
@@ -351,7 +353,7 @@ export interface GradeDistribution {
 // ==================== 教学楼/教室 ====================
 
 export interface TeachingBuilding {
-  id: number | string
+  id: LongId | string
   buildingNo: string
   buildingName: string
   buildingType: number
@@ -364,8 +366,8 @@ export interface TeachingBuilding {
 }
 
 export interface Classroom {
-  id: number | string
-  buildingId: number | string
+  id: LongId | string
+  buildingId: LongId | string
   buildingName?: string
   roomNo: string
   roomName?: string
@@ -380,7 +382,7 @@ export interface Classroom {
 }
 
 export interface ClassroomQueryParams {
-  buildingId?: number | string
+  buildingId?: LongId | string
   floorNumber?: number
   roomType?: number
   status?: number
@@ -437,9 +439,9 @@ export const WEEKDAYS = [
 // =====================================================
 
 export interface SemesterOffering {
-  id: number | string
-  semesterId: number | string
-  courseId: number | string
+  id: LongId | string
+  semesterId: LongId | string
+  courseId: LongId | string
   courseName?: string
   courseCode?: string
   applicableGrade: string
@@ -458,12 +460,12 @@ export interface SemesterOffering {
 }
 
 export interface ClassCourseAssignment {
-  id: number | string
-  semesterId: number | string
-  orgUnitId: number | string
+  id: LongId | string
+  semesterId: LongId | string
+  orgUnitId: LongId | string
   className?: string
-  offeringId: number | string
-  courseId: number | string
+  offeringId: LongId | string
+  courseId: LongId | string
   courseName?: string
   weeklyHours: number
   studentCount?: number
@@ -475,11 +477,11 @@ export interface ClassCourseAssignment {
 // =====================================================
 
 export interface TeachingClass {
-  id: number | string
-  semesterId: number | string
+  id: LongId | string
+  semesterId: LongId | string
   className: string
   classCode?: string
-  courseId: number | string
+  courseId: LongId | string
   courseName?: string
   classType: 1 | 2 | 3
   weeklyHours: number
@@ -494,12 +496,12 @@ export interface TeachingClass {
 }
 
 export interface TeachingClassMember {
-  id: number
-  teachingClassId: number
+  id: LongId
+  teachingClassId: LongId
   memberType: 1 | 2
-  adminClassId?: number
+  adminClassId?: LongId
   adminClassName?: string
-  studentId?: number
+  studentId?: LongId
   studentName?: string
 }
 
@@ -514,11 +516,11 @@ export const TEACHING_CLASS_TYPES = [
 // =====================================================
 
 export interface SchedulingConstraint {
-  id: number
-  semesterId: number
+  id: LongId
+  semesterId: LongId
   constraintName: string
   constraintLevel: 1 | 2 | 3 | 4
-  targetId?: number
+  targetId?: LongId
   targetName?: string
   constraintType: string
   isHard: boolean
@@ -564,8 +566,8 @@ export interface TimeSlotStatus {
 export type TimeMatrix = TimeSlotStatus[][]
 
 export interface DetectedConflict {
-  id: number
-  semesterId: number
+  id: LongId
+  semesterId: LongId
   detectionBatch?: string
   conflictCategory: 1 | 2 | 3
   conflictType: string
@@ -574,7 +576,7 @@ export interface DetectedConflict {
   detail?: Record<string, any>
   entryId1?: number
   entryId2?: number
-  constraintId?: number
+  constraintId?: LongId
   resolutionStatus: 0 | 1 | 2
   resolutionNote?: string
 }
@@ -600,7 +602,7 @@ export interface CalendarDay {
   dayType: 'TEACHING' | 'WEEKEND' | 'HOLIDAY' | 'MAKEUP' | 'EXAM'
   eventName?: string
   followWeekday?: number
-  eventId?: number | string
+  eventId?: LongId | string
 }
 
 export interface CalendarWeek {

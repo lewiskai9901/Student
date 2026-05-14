@@ -1,8 +1,10 @@
+import type { LongId } from '@/types/common'
+
 // ==================== 触发点 ====================
 
 /** 触发点 */
 export interface TriggerPoint {
-  id: number
+  id: LongId
   moduleCode: string
   moduleName: string
   pointCode: string
@@ -11,7 +13,7 @@ export interface TriggerPoint {
   contextSchema?: Record<string, unknown> | string
   isEnabled: number
   sortOrder: number
-  tenantId?: number
+  tenantId?: LongId
   createdAt?: string
   updatedAt?: string
 }
@@ -43,7 +45,7 @@ export interface SubjectConfig {
 
 /** 事件触发器 */
 export interface EventTrigger {
-  id: number
+  id: LongId
   name: string
   triggerPointCode: string
   conditionJson?: ConditionGroup | string | null
@@ -54,7 +56,7 @@ export interface EventTrigger {
   description?: string
   isEnabled: number
   sortOrder: number
-  tenantId?: number
+  tenantId?: LongId
   createdAt?: string
   updatedAt?: string
   // JOIN fields
@@ -70,7 +72,7 @@ export type Polarity = 'POSITIVE' | 'NEGATIVE' | 'NEUTRAL' | 'INFO'
 
 /** 事件类��� */
 export interface EventType {
-  id: number
+  id: LongId
   typeCode: string
   typeName: string
   categoryCode: string
@@ -82,7 +84,7 @@ export interface EventType {
   description?: string
   isEnabled: number
   sortOrder: number
-  tenantId?: number
+  tenantId?: LongId
   createdAt?: string
   updatedAt?: string
 }
@@ -98,10 +100,10 @@ export interface EventTypeCategory {
 
 /** 实体事件 */
 export interface EntityEvent {
-  id: number
-  tenantId?: number
+  id: LongId
+  tenantId?: LongId
   subjectType: string
-  subjectId: number
+  subjectId: LongId
   subjectName: string
   eventCategory: string
   eventType: string

@@ -1,9 +1,10 @@
+import type { LongId } from '@core/types'
 import { requestWrapped } from './request'
 import type { UserInfo } from '../plugin/context'
 
 // Backend LoginResponse.UserInfo subset — fields the miniprogram UI consumes.
 export interface LoginUserInfo {
-  userId: number
+  userId: LongId
   username: string
   realName: string
   phone?: string
@@ -12,8 +13,8 @@ export interface LoginUserInfo {
   status?: number
   roles: string[]
   permissions: string[]
-  orgUnitId?: number
-  tenantId?: number
+  orgUnitId?: LongId
+  tenantId?: LongId
   userTypeCode?: string
 }
 

@@ -1,16 +1,18 @@
+import type { LongId } from '@/types/common'
+
 /**
  * 检查平台 - 评价指标类型定义
  */
 
 export interface Indicator {
-  id: number
-  tenantId: number
-  projectId: number
-  parentIndicatorId: number | null
+  id: LongId
+  tenantId: LongId
+  projectId: LongId
+  parentIndicatorId: LongId | null
   name: string
   indicatorType: 'LEAF' | 'COMPOSITE'
   // LEAF fields
-  sourceSectionId: number | null
+  sourceSectionId: LongId | null
   sourceAggregation: string | null
   // COMPOSITE fields
   compositeAggregation: string | null
@@ -20,7 +22,7 @@ export interface Indicator {
   normalizationConfig: string | null
   // Common
   evaluationPeriod: string
-  gradeSchemeId: number | null
+  gradeSchemeId: LongId | null
   evaluationMethod: string | null
   gradeThresholds: string | null
   sortOrder: number
@@ -31,9 +33,9 @@ export interface Indicator {
 }
 
 export interface IndicatorScore {
-  id: number
-  indicatorId: number
-  targetId: number
+  id: LongId
+  indicatorId: LongId
+  targetId: LongId
   targetName: string | null
   targetType: string | null
   periodStart: string
@@ -47,13 +49,13 @@ export interface IndicatorScore {
 }
 
 export interface CreateLeafIndicatorRequest {
-  projectId: number
-  parentIndicatorId: number | null
+  projectId: LongId
+  parentIndicatorId: LongId | null
   name: string
-  sourceSectionId: number | null
+  sourceSectionId: LongId | null
   sourceAggregation: string
   evaluationPeriod: string
-  gradeSchemeId?: number | null
+  gradeSchemeId?: LongId | null
   normalization?: string
   normalizationConfig?: string
   evaluationMethod?: string
@@ -62,14 +64,14 @@ export interface CreateLeafIndicatorRequest {
 }
 
 export interface CreateCompositeIndicatorRequest {
-  projectId: number
-  parentIndicatorId: number | null
+  projectId: LongId
+  parentIndicatorId: LongId | null
   name: string
   compositeAggregation: string
   missingPolicy: string
   evaluationPeriod: string
-  sourceSectionId?: number
-  gradeSchemeId?: number | null
+  sourceSectionId?: LongId
+  gradeSchemeId?: LongId | null
   normalization?: string
   normalizationConfig?: string
   evaluationMethod?: string
@@ -80,8 +82,8 @@ export interface CreateCompositeIndicatorRequest {
 export interface UpdateIndicatorRequest {
   name?: string
   evaluationPeriod?: string
-  gradeSchemeId?: number | null
-  sourceSectionId?: number | null
+  gradeSchemeId?: LongId | null
+  sourceSectionId?: LongId | null
   sourceAggregation?: string
   compositeAggregation?: string
   missingPolicy?: string

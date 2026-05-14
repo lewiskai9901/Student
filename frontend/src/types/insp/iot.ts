@@ -1,3 +1,5 @@
+import type { LongId } from '@/types/common'
+
 /**
  * 检查平台 - IoT/NFC 集成类型
  */
@@ -5,12 +7,12 @@
 // ==================== NFC 标签 ====================
 
 export interface NfcTag {
-  id: number
-  tenantId?: number
+  id: LongId
+  tenantId?: LongId
   tagUid: string
   locationName: string
-  placeId: number | null
-  orgUnitId: number | null
+  placeId: LongId | null
+  orgUnitId: LongId | null
   isActive: boolean
   createdAt: string
 }
@@ -18,14 +20,14 @@ export interface NfcTag {
 export interface CreateNfcTagRequest {
   tagUid: string
   locationName: string
-  placeId?: number
-  orgUnitId?: number
+  placeId?: LongId
+  orgUnitId?: LongId
 }
 
 export interface UpdateNfcTagRequest {
   locationName?: string
-  placeId?: number
-  orgUnitId?: number
+  placeId?: LongId
+  orgUnitId?: LongId
 }
 
 // ==================== IoT 传感器 ====================
@@ -33,13 +35,13 @@ export interface UpdateNfcTagRequest {
 export type SensorType = 'TEMPERATURE' | 'HUMIDITY' | 'AIR_QUALITY' | 'NOISE' | 'LIGHT' | 'SMOKE' | 'WATER'
 
 export interface IoTSensor {
-  id: number
-  tenantId?: number
+  id: LongId
+  tenantId?: LongId
   sensorCode: string
   sensorName: string
   sensorType: SensorType
   locationName: string | null
-  placeId: number | null
+  placeId: LongId | null
   mqttTopic: string | null
   dataUnit: string | null
   isActive: boolean
@@ -53,7 +55,7 @@ export interface CreateSensorRequest {
   sensorName: string
   sensorType: SensorType
   locationName?: string
-  placeId?: number
+  placeId?: LongId
   mqttTopic?: string
   dataUnit?: string
 }
@@ -62,14 +64,14 @@ export interface UpdateSensorRequest {
   sensorName?: string
   sensorType?: SensorType
   locationName?: string
-  placeId?: number
+  placeId?: LongId
   mqttTopic?: string
   dataUnit?: string
 }
 
 export interface SensorReading {
-  id: number
-  sensorId: number
+  id: LongId
+  sensorId: LongId
   readingValue: number
   readingUnit: string | null
   recordedAt: string
@@ -84,10 +86,10 @@ export interface RecordReadingRequest {
 // ==================== 检查项-传感器绑定 ====================
 
 export interface ItemSensorBinding {
-  id: number
-  tenantId?: number
-  templateItemId: number
-  sensorId: number
+  id: LongId
+  tenantId?: LongId
+  templateItemId: LongId
+  sensorId: LongId
   autoFill: boolean
   autoScore: boolean
   scoringThresholds: string | null // JSON
@@ -95,8 +97,8 @@ export interface ItemSensorBinding {
 }
 
 export interface CreateBindingRequest {
-  templateItemId: number
-  sensorId: number
+  templateItemId: LongId
+  sensorId: LongId
   autoFill?: boolean
   autoScore?: boolean
   scoringThresholds?: string

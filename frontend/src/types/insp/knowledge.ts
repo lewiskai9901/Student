@@ -1,16 +1,18 @@
+import type { LongId } from '@/types/common'
+
 /**
  * 检查平台 - 知识库类型
  */
 
 export interface KnowledgeArticle {
-  id: number
-  tenantId?: number
+  id: LongId
+  tenantId?: LongId
   title: string
   content: string
   category: string | null
   tags: string | null
   relatedItemCodes: string | null // JSON array
-  sourceCaseId: number | null
+  sourceCaseId: LongId | null
   viewCount: number
   helpfulCount: number
   isPinned: boolean
@@ -25,7 +27,7 @@ export interface CreateArticleRequest {
   category?: string
   tags?: string
   relatedItemCodes?: string
-  sourceCaseId?: number
+  sourceCaseId?: LongId
 }
 
 export interface UpdateArticleRequest {
@@ -48,12 +50,12 @@ export interface CreateFromCaseRequest {
 export type SubtaskStatus = 'PENDING' | 'IN_PROGRESS' | 'COMPLETED' | 'BLOCKED'
 
 export interface CorrectiveSubtask {
-  id: number
-  tenantId?: number
-  caseId: number
+  id: LongId
+  tenantId?: LongId
+  caseId: LongId
   subtaskName: string
   description: string | null
-  assigneeId: number
+  assigneeId: LongId
   status: SubtaskStatus
   priority: number
   dueDate: string | null
@@ -67,7 +69,7 @@ export interface CorrectiveSubtask {
 export interface CreateSubtaskRequest {
   subtaskName: string
   description?: string
-  assigneeId: number
+  assigneeId: LongId
   priority?: number
   dueDate?: string
   sortOrder?: number
@@ -76,7 +78,7 @@ export interface CreateSubtaskRequest {
 export interface UpdateSubtaskRequest {
   subtaskName?: string
   description?: string
-  assigneeId?: number
+  assigneeId?: LongId
   priority?: number
   dueDate?: string
   sortOrder?: number

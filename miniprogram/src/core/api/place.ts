@@ -1,8 +1,9 @@
+import type { LongId } from '@core/types'
 import { requestWrapped } from './request'
 
 export interface PlaceTreeNode {
-  id: number
-  parentId?: number | null
+  id: LongId
+  parentId?: LongId | null
   placeCode: string
   placeName: string
   typeCode: string
@@ -12,7 +13,7 @@ export interface PlaceTreeNode {
   level?: number
   capacity?: number
   currentOccupancy?: number
-  orgUnitId?: number
+  orgUnitId?: LongId
   orgUnitName?: string
   responsibleUserName?: string
   status?: number

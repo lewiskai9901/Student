@@ -1,3 +1,5 @@
+import type { LongId } from '@/types/common'
+
 /**
  * 组织管理模块类型定义 - DDD架构适配
  */
@@ -30,7 +32,7 @@ export const ScopeTypeConfig: Record<ScopeType, { label: string }> = {
 // 组织类型配置 (from org_unit_types table)
 // NOTE: 推荐使用 @/types/orgType.ts 中的 OrgType，此接口保留兼容
 export interface OrgUnitTypeConfig {
-  id: number | string
+  id: LongId | string
   typeCode: string
   typeName: string
   category?: string | null
@@ -64,14 +66,14 @@ export const OrgUnitStatusConfig: Record<OrgUnitStatusType, { label: string; typ
 
 // 组织单元
 export interface OrgUnit {
-  id: number | string
+  id: LongId | string
   unitCode: string
   unitName: string
   unitType: OrgUnitType        // typeCode string
   typeName?: string            // display name from org_unit_types
   typeIcon?: string            // icon from org_unit_types
   typeColor?: string           // color from org_unit_types
-  parentId: number | string | null
+  parentId: LongId | string | null
   treePath: string
   treeLevel: number
   sortOrder: number
@@ -79,7 +81,7 @@ export interface OrgUnit {
   statusLabel?: string
   headcount?: number
   attributes?: Record<string, unknown>
-  mergedIntoId?: number | string
+  mergedIntoId?: LongId | string
   dissolvedAt?: string
   dissolvedReason?: string
   createdAt: string
@@ -100,7 +102,7 @@ export interface CreateOrgUnitRequest {
   unitCode: string
   unitName: string
   unitType: string             // typeCode from org_unit_types
-  parentId?: number | string
+  parentId?: LongId | string
   sortOrder?: number
   selectedPositions?: Array<{ positionName: string; headcount: number }>
 }
@@ -122,7 +124,7 @@ export type TeacherRole = 'HEAD_TEACHER' | 'DEPUTY_HEAD_TEACHER' | 'SUBJECT_TEAC
 
 // 教师任职记录
 export interface TeacherAssignment {
-  teacherId: number | string
+  teacherId: LongId | string
   teacherName: string
   role: TeacherRole
   startDate: string
@@ -132,16 +134,16 @@ export interface TeacherAssignment {
 
 // 班级
 export interface SchoolClass {
-  id: number | string
+  id: LongId | string
   classCode: string
   className: string
   shortName?: string
-  orgUnitId: number | string
+  orgUnitId: LongId | string
   orgUnitName?: string
   enrollmentYear: number
   gradeLevel: number
-  gradeId?: number | string  // 年级ID，用于关联年级表
-  majorDirectionId?: number | string
+  gradeId?: LongId | string  // 年级ID，用于关联年级表
+  majorDirectionId?: LongId | string
   majorName?: string  // 专业名称
   majorDirectionName?: string  // 专业方向名称（学制类型）
   schoolingYears: number
@@ -164,10 +166,10 @@ export interface CreateClassRequest {
   classCode: string
   className: string
   shortName?: string
-  orgUnitId: number | string
+  orgUnitId: LongId | string
   enrollmentYear: number
   gradeLevel?: number
-  majorDirectionId?: number | string
+  majorDirectionId?: LongId | string
   schoolingYears?: number
   standardSize?: number
 }
@@ -182,16 +184,16 @@ export interface UpdateClassRequest {
 
 // 分配班主任请求
 export interface AssignHeadTeacherRequest {
-  teacherId: number | string
+  teacherId: LongId | string
   teacherName: string
 }
 
 // 班级查询参数
 export interface ClassQueryParams {
-  orgUnitId?: number | string
+  orgUnitId?: LongId | string
   enrollmentYear?: number
   status?: ClassStatus
-  majorDirectionId?: number | string
+  majorDirectionId?: LongId | string
   keyword?: string
   pageNum?: number
   pageSize?: number

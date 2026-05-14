@@ -1,3 +1,5 @@
+import type { LongId } from '@/types/common'
+
 /**
  * 检查平台 - 合规映射类型
  */
@@ -5,8 +7,8 @@
 // ==================== 合规标准 ====================
 
 export interface ComplianceStandard {
-  id: number
-  tenantId?: number
+  id: LongId
+  tenantId?: LongId
   standardCode: string
   standardName: string
   issuingBody: string | null
@@ -37,13 +39,13 @@ export interface UpdateStandardRequest {
 // ==================== 合规条款 ====================
 
 export interface ComplianceClause {
-  id: number
-  tenantId?: number
-  standardId: number
+  id: LongId
+  tenantId?: LongId
+  standardId: LongId
   clauseNumber: string
   clauseTitle: string
   clauseContent: string | null
-  parentClauseId: number | null
+  parentClauseId: LongId | null
   sortOrder: number
   createdAt: string
   children?: ComplianceClause[]
@@ -53,7 +55,7 @@ export interface CreateClauseRequest {
   clauseNumber: string
   clauseTitle: string
   clauseContent?: string
-  parentClauseId?: number
+  parentClauseId?: LongId
   sortOrder?: number
 }
 
@@ -61,7 +63,7 @@ export interface UpdateClauseRequest {
   clauseNumber?: string
   clauseTitle?: string
   clauseContent?: string
-  parentClauseId?: number
+  parentClauseId?: LongId
   sortOrder?: number
 }
 
@@ -70,17 +72,17 @@ export interface UpdateClauseRequest {
 export type CoverageLevel = 'FULL' | 'PARTIAL' | 'REFERENCE'
 
 export interface ItemComplianceMapping {
-  id: number
-  tenantId?: number
-  templateItemId: number
-  clauseId: number
+  id: LongId
+  tenantId?: LongId
+  templateItemId: LongId
+  clauseId: LongId
   coverageLevel: CoverageLevel
   notes: string | null
   createdAt: string
 }
 
 export interface CreateMappingRequest {
-  clauseId: number
+  clauseId: LongId
   coverageLevel?: CoverageLevel
   notes?: string
 }

@@ -1,3 +1,5 @@
+import type { LongId } from '@/types/common'
+
 // /my/dashboard 首页相关类型定义
 // 后端来源: com.school.management.interfaces.rest.my.MyDashboardController 内部 record
 
@@ -12,7 +14,7 @@ export interface DashboardSummary {
 export type LessonStatus = 0 | 1 | 2 | 3 | 4
 
 export interface TodayLesson {
-  instanceId: number
+  instanceId: LongId
   startSlot: number | null
   endSlot: number | null
   startTime: string | null
@@ -25,7 +27,7 @@ export interface TodayLesson {
 }
 
 export interface MyClass {
-  classId: number
+  classId: LongId
   className: string | null
   studentCount: number
   isHeadTeacher: boolean
@@ -33,7 +35,7 @@ export interface MyClass {
 }
 
 export interface SubstituteTask {
-  taskId: number
+  taskId: LongId
   courseName: string | null
   scheduledDate: string | null
   startSlot: number | null

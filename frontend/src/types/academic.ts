@@ -1,12 +1,14 @@
+import type { LongId } from '@/types/common'
+
 // Academic domain types - majors, courses, curriculum plans
 
 // ==================== Major (from types/major.ts) ====================
 
 export interface Major {
-  id: number | string
+  id: LongId | string
   majorName: string
   majorCode: string
-  orgUnitId: number | string
+  orgUnitId: LongId | string
   orgUnitName?: string
   description?: string
   status: number
@@ -15,7 +17,7 @@ export interface Major {
   majorCategoryCode?: string
   enrollmentTarget?: string
   educationForm?: string
-  leadTeacherId?: number | string
+  leadTeacherId?: LongId | string
   leadTeacherName?: string
   approvalYear?: number
   majorStatus?: string
@@ -27,7 +29,7 @@ export interface Major {
 export interface MajorQueryParams {
   majorName?: string
   majorCode?: string
-  orgUnitId?: number | string | null
+  orgUnitId?: LongId | string | null
   status?: number | null
   pageNum?: number
   pageSize?: number
@@ -36,21 +38,21 @@ export interface MajorQueryParams {
 export interface MajorFormData {
   majorName: string
   majorCode: string
-  orgUnitId: number | string | null
+  orgUnitId: LongId | string | null
   description?: string
   status: number
   majorCategoryCode?: string
   enrollmentTarget?: string
   educationForm?: string
-  leadTeacherId?: number | string
+  leadTeacherId?: LongId | string
   approvalYear?: number
 }
 
 // ==================== MajorDirection (from api/majorDirection.ts) ====================
 
 export interface MajorDirection {
-  id?: number
-  majorId: number
+  id?: LongId
+  majorId: LongId
   directionName: string
   directionCode: string
   level: string           // layer: intermediate/advanced/preparatory-technician/technician
@@ -81,7 +83,7 @@ export interface MajorDirection {
 export interface MajorDirectionQueryParams {
   pageNum?: number
   pageSize?: number
-  majorId?: number
+  majorId?: LongId
   directionName?: string
   level?: string
 }
@@ -89,7 +91,7 @@ export interface MajorDirectionQueryParams {
 // ==================== Course ====================
 
 export interface Course {
-  id: number | string
+  id: LongId | string
   courseCode: string
   courseName: string
   courseNameEn?: string
@@ -106,7 +108,7 @@ export interface Course {
   weeklyHours: number
   /** 考核方式: 1-考试 2-考查 */
   examType: number
-  orgUnitId?: number | string
+  orgUnitId?: LongId | string
   description?: string
   status: number
   createdAt?: string
@@ -125,10 +127,10 @@ export interface CourseQueryParams {
 // ==================== CurriculumPlan ====================
 
 export interface CurriculumPlan {
-  id: number | string
+  id: LongId | string
   planCode: string
   planName: string
-  majorId: number | string
+  majorId: LongId | string
   majorName?: string
   gradeYear: number
   totalCredits: number
@@ -147,9 +149,9 @@ export interface CurriculumPlan {
 }
 
 export interface PlanCourse {
-  id: number | string
-  planId: number | string
-  courseId: number | string
+  id: LongId | string
+  planId: LongId | string
+  courseId: LongId | string
   courseName?: string
   courseCode?: string
   semesterNumber: number
@@ -168,7 +170,7 @@ export interface PlanCourse {
 }
 
 export interface CurriculumPlanQueryParams {
-  majorId?: number | string
+  majorId?: LongId | string
   gradeYear?: number
   status?: number
   pageNum?: number

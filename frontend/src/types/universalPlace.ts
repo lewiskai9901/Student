@@ -2,6 +2,7 @@
  * 通用空间管理类型定义
  */
 
+import type { LongId } from '@/types/common'
 import type { ConfigurableType, TypeTreeNode } from './configurableType'
 
 // ==================== 属性 Schema ====================
@@ -152,14 +153,14 @@ export const PlaceStatusColors: Record<PlaceStatus, string> = {
  * 空间实例
  */
 export interface UniversalPlace {
-  id: number | string
+  id: LongId | string
   placeCode: string
   placeName: string
   typeCode: string
   typeName?: string
   description?: string
 
-  parentId?: number | string
+  parentId?: LongId | string
   parentName?: string
   path?: string
   level: number
@@ -167,20 +168,20 @@ export interface UniversalPlace {
   capacity?: number
   currentOccupancy?: number
 
-  orgUnitId?: number | string
+  orgUnitId?: LongId | string
   orgUnitName?: string
 
   // V23: NULL继承模型
-  parentOrgUnitId?: number | string      // 父级的组织单元ID
+  parentOrgUnitId?: LongId | string      // 父级的组织单元ID
   isOrgInherited?: boolean      // 是否继承父级组织（orgUnitId为null时为true）
-  effectiveOrgUnitId?: number | string   // 有效的组织单元ID（经过继承计算）
+  effectiveOrgUnitId?: LongId | string   // 有效的组织单元ID（经过继承计算）
   effectiveOrgUnitName?: string // 有效组织名称（继承时填充）
 
-  responsibleUserId?: number | string
+  responsibleUserId?: LongId | string
   responsibleUserName?: string
 
   // 负责人继承
-  effectiveResponsibleUserId?: number | string
+  effectiveResponsibleUserId?: LongId | string
   effectiveResponsibleUserName?: string
   isResponsibleInherited?: boolean
 
@@ -211,9 +212,9 @@ export interface PlaceTreeNode extends UniversalPlace {
   effectiveGender?: string
 
   // V23: 继承模型（已在UniversalPlace中定义，这里继承）
-  parentOrgUnitId?: number | string
+  parentOrgUnitId?: LongId | string
   isOrgInherited?: boolean
-  effectiveOrgUnitId?: number | string
+  effectiveOrgUnitId?: LongId | string
 
   // 占用率（用于告警显示）
   occupancyRate?: number
@@ -230,12 +231,12 @@ export interface CreatePlaceRequest {
   placeName: string
   typeCode: string
   description?: string
-  parentId?: number | string
+  parentId?: LongId | string
   status?: number
   capacity?: number
   gender?: string
-  orgUnitId?: number | string
-  responsibleUserId?: number | string
+  orgUnitId?: LongId | string
+  responsibleUserId?: LongId | string
   attributes?: Record<string, any>
 }
 
@@ -249,8 +250,8 @@ export interface UpdatePlaceRequest {
   status?: number
   capacity?: number
   gender?: string
-  orgUnitId?: number | string
-  responsibleUserId?: number | string
+  orgUnitId?: LongId | string
+  responsibleUserId?: LongId | string
   attributes?: Record<string, any>
 }
 
@@ -260,11 +261,11 @@ export interface UpdatePlaceRequest {
  * 空间占用记录
  */
 export interface PlaceOccupant {
-  id: number | string
-  placeId: number | string
+  id: LongId | string
+  placeId: LongId | string
   placeName?: string
   occupantType: string
-  occupantId: number | string
+  occupantId: LongId | string
   occupantName?: string
   username?: string
   orgUnitName?: string
@@ -291,7 +292,7 @@ export interface PlaceOccupantWithPlace extends PlaceOccupant {
  */
 export interface CheckInRequest {
   occupantType: string
-  occupantId: number | string
+  occupantId: LongId | string
   occupantName?: string
   username?: string
   orgUnitName?: string
@@ -326,16 +327,16 @@ export const BookingStatusLabels: Record<BookingStatus, string> = {
  * 空间预订记录
  */
 export interface BookingAttendeeInfo {
-  userId: number | string
+  userId: LongId | string
   username: string
   realName: string
 }
 
 export interface PlaceBooking {
-  id: number | string
-  placeId: number | string
+  id: LongId | string
+  placeId: LongId | string
   placeName?: string
-  bookerId: number | string
+  bookerId: LongId | string
   bookerName?: string
   title?: string
   startTime: string
@@ -347,16 +348,16 @@ export interface PlaceBooking {
 }
 
 export interface BookingSeatAssignment {
-  id: number | string
-  bookingId: number | string
+  id: LongId | string
+  bookingId: LongId | string
   positionNo: string
-  userId: number | string
+  userId: LongId | string
   userName: string
 }
 
 export interface SaveSeatAssignmentRequest {
   positionNo: string
-  userId: number | string
+  userId: LongId | string
   userName: string
 }
 

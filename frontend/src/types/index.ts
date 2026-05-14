@@ -1,3 +1,5 @@
+import type { LongId } from '@/types/common'
+
 /**
  * 类型定义索引
  */
@@ -39,7 +41,7 @@ export interface PageParams {
 
 // 通用ID响应
 export interface IdResponse {
-  id: number | string
+  id: LongId | string
 }
 
 // 批量操作响应

@@ -1,17 +1,18 @@
 /**
  * 检查平台 - 分析报表类型
  */
+import type { LongId } from '@/types/common'
 import type { PeriodType, TrendDirection } from './enums'
 
 export interface DailySummary {
-  id: number
-  tenantId: number
-  projectId: number
+  id: LongId
+  tenantId: LongId
+  projectId: LongId
   summaryDate: string
   targetType: string | null
-  targetId: number | null
+  targetId: LongId | null
   targetName: string | null
-  orgUnitId: number | null
+  orgUnitId: LongId | null
   orgUnitName: string | null
   inspectionCount: number
   avgScore: number | null
@@ -29,16 +30,16 @@ export interface DailySummary {
 }
 
 export interface PeriodSummary {
-  id: number
-  tenantId: number
-  projectId: number
+  id: LongId
+  tenantId: LongId
+  projectId: LongId
   periodType: PeriodType
   periodStart: string
   periodEnd: string
   targetType: string | null
-  targetId: number | null
+  targetId: LongId | null
   targetName: string | null
-  orgUnitId: number | null
+  orgUnitId: LongId | null
   orgUnitName: string | null
   inspectionDays: number
   avgScore: number | null
@@ -76,12 +77,12 @@ export interface CorrectiveSummary {
 }
 
 export interface RebuildDailyRequest {
-  projectId: number
+  projectId: LongId
   date: string
 }
 
 export interface RebuildPeriodRequest {
-  projectId: number
+  projectId: LongId
   periodType: PeriodType
   periodStart: string
 }
@@ -89,10 +90,10 @@ export interface RebuildPeriodRequest {
 // ==================== Inspector Performance 读模型 ====================
 
 export interface InspectorSummary {
-  id: number
-  tenantId?: number
-  projectId: number
-  inspectorId: number
+  id: LongId
+  tenantId?: LongId
+  projectId: LongId
+  inspectorId: LongId
   inspectorName?: string
   periodType: string
   periodStart: string
@@ -113,15 +114,15 @@ export interface InspectorSummary {
 // ==================== 检查项频率统计 (Pareto 分析) ====================
 
 export interface ItemFrequencySummary {
-  id: number
-  tenantId?: number
-  projectId: number
+  id: LongId
+  tenantId?: LongId
+  projectId: LongId
   periodType: string
   periodStart: string
   periodEnd?: string
   itemCode?: string
   itemName?: string
-  sectionId?: number
+  sectionId?: LongId
   sectionName?: string
   occurrenceCount: number
   flaggedCount: number
@@ -135,9 +136,9 @@ export interface ItemFrequencySummary {
 // ==================== 整改周期汇总 (读模型) ====================
 
 export interface CorrectivePeriodSummary {
-  id: number
-  tenantId?: number
-  projectId: number
+  id: LongId
+  tenantId?: LongId
+  projectId: LongId
   periodType: string
   periodStart: string
   periodEnd?: string

@@ -1,6 +1,8 @@
+import type { LongId } from '@/types/common'
+
 export interface GradeScheme {
-  id: number
-  tenantId: number
+  id: LongId
+  tenantId: LongId
   displayName: string
   description: string | null
   schemeType: 'SCORE_RANGE' | 'PERCENT_RANGE'
@@ -12,8 +14,8 @@ export interface GradeScheme {
 }
 
 export interface GradeDefinition {
-  id?: number
-  gradeSchemeId?: number
+  id?: LongId
+  gradeSchemeId?: LongId
   code: string
   name: string
   minValue: number
@@ -37,7 +39,7 @@ export interface UpdateGradeSchemeRequest {
 }
 
 export interface CloneGradeSchemeRequest {
-  sourceSchemeId: number
+  sourceSchemeId: LongId
   displayName: string
 }
 

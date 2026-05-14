@@ -1,25 +1,26 @@
+import type { LongId } from '@/types/common'
 import type { AppealStatus } from './enums'
 
 /** 检查申诉 — 与后端 InspAppeal 聚合根字段对齐 */
 export interface InspAppeal {
-  id: number
-  tenantId?: number
-  orgUnitId?: number
+  id: LongId
+  tenantId?: LongId
+  orgUnitId?: LongId
   appealCode: string
-  submissionDetailId: number
-  submissionId?: number
-  taskId?: number
-  projectId?: number
+  submissionDetailId: LongId
+  submissionId?: LongId
+  taskId?: LongId
+  projectId?: LongId
   subjectType?: string
-  subjectId?: number
-  submitterUserId: number
+  subjectId?: LongId
+  submitterUserId: LongId
   submitterName?: string
   reason: string
   attachments?: string
   expectedAdjustment?: number
   finalAdjustment?: number
   status: AppealStatus
-  reviewerId?: number
+  reviewerId?: LongId
   reviewerName?: string
   reviewerComment?: string
   reviewedAt?: string
@@ -28,7 +29,7 @@ export interface InspAppeal {
 }
 
 export interface SubmitAppealRequest {
-  submissionDetailId: number
+  submissionDetailId: LongId
   submitterName?: string
   reason: string
   attachments?: string

@@ -1,14 +1,16 @@
+import type { LongId } from '@/types/common'
+
 /**
  * 统一访问关系类型定义 (Zanzibar Simplified)
  */
 
 export interface AccessRelation {
-  id: number | string
+  id: LongId | string
   resourceType: string
-  resourceId: number | string
+  resourceId: LongId | string
   relation: string
   subjectType: string
-  subjectId: number | string
+  subjectId: LongId | string
   includeChildren: boolean
   accessLevel: number
   metadata: Record<string, any> | null
@@ -20,10 +22,10 @@ export interface AccessRelation {
 
 export interface CreateAccessRelationRequest {
   resourceType: string
-  resourceId: number | string
+  resourceId: LongId | string
   relation: string
   subjectType: string
-  subjectId: number | string
+  subjectId: LongId | string
   includeChildren?: boolean
   accessLevel?: number
   metadata?: Record<string, any>

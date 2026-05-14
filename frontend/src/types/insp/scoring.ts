@@ -1,3 +1,5 @@
+import type { LongId } from '@/types/common'
+
 /**
  * 检查平台 - 评分引擎类型定义
  */
@@ -20,9 +22,9 @@ export const RuleTypeConfig: Record<RuleType, { label: string; description: stri
 // ==================== 评分配置 ====================
 
 export interface ScoringProfile {
-  id: number
-  tenantId: number
-  sectionId: number
+  id: LongId
+  tenantId: LongId
+  sectionId: LongId
   maxScore: number
   minScore: number
   precisionDigits: number
@@ -55,7 +57,7 @@ export interface ScoringProfile {
 }
 
 export interface CreateProfileRequest {
-  sectionId: number
+  sectionId: LongId
 }
 
 export interface UpdateProfileRequest {
@@ -86,16 +88,16 @@ export interface UpdateAdvancedSettingsRequest {
 // ==================== 评分维度 ====================
 
 export interface ScoreDimension {
-  id: number
-  tenantId: number
-  scoringProfileId: number
+  id: LongId
+  tenantId: LongId
+  scoringProfileId: LongId
   dimensionCode: string
   dimensionName: string
   weight: number
   baseScore: number
   passThreshold: number | null
   sourceType: 'SECTION' | 'MODULE' | 'ITEM'
-  moduleTemplateId: number | null
+  moduleTemplateId: LongId | null
   sortOrder: number
   createdAt: string
   updatedAt: string | null
@@ -120,10 +122,10 @@ export interface UpdateDimensionRequest {
 // ==================== 等级区间 ====================
 
 export interface GradeBand {
-  id: number
-  tenantId: number
-  scoringProfileId: number
-  dimensionId: number | null
+  id: LongId
+  tenantId: LongId
+  scoringProfileId: LongId
+  dimensionId: LongId | null
   gradeCode: string
   gradeName: string
   minScore: number
@@ -136,7 +138,7 @@ export interface GradeBand {
 }
 
 export interface CreateGradeBandRequest {
-  dimensionId?: number | null
+  dimensionId?: LongId | null
   gradeCode: string
   gradeName: string
   minScore: number
@@ -159,9 +161,9 @@ export interface UpdateGradeBandRequest {
 export type ScopeType = 'GLOBAL' | 'DIMENSION' | 'CROSS_DIMENSION'
 
 export interface CalculationRule {
-  id: number
-  tenantId: number
-  scoringProfileId: number
+  id: LongId
+  tenantId: LongId
+  scoringProfileId: LongId
   ruleCode: string
   ruleName: string
   priority: number
@@ -213,9 +215,9 @@ export interface UpdateRuleRequest {
 // ==================== 版本快照 (1.7) ====================
 
 export interface ScoringProfileVersion {
-  id: number
-  tenantId: number
-  profileId: number
+  id: LongId
+  tenantId: LongId
+  profileId: LongId
   version: number
   snapshot: string  // JSON
   publishedAt: string

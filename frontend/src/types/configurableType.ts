@@ -1,3 +1,5 @@
+import type { LongId } from '@/types/common'
+
 /**
  * Shared base types for the unified type system (OrgType, UserType, PlaceType).
  * Eliminates duplicated interface definitions across orgType.ts, userType.ts, universalPlace.ts.
@@ -8,7 +10,7 @@
  * Matches the 13 core fields from backend ConfigurableType.java.
  */
 export interface ConfigurableType {
-  id: number | string
+  id: LongId | string
   typeCode: string
   typeName: string
   category: string | null
