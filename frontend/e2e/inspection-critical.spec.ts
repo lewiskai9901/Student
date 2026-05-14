@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test'
+import { test, expect } from './fixtures/auth.fixture'
 
 /**
  * Inspection 检查平台 关键路径 e2e (Track 1 — Road to A)
@@ -14,23 +14,12 @@ import { test, expect } from '@playwright/test'
  *   8. 详情页 5 tab 顺序正确 (总览>检查配置>人员与任务>成绩统计>设置)
  *   9. 详情页切到 "检查配置" tab 内容渲染
  *   10. 时间轴 "本季" 缩放: URL scale=quarter
+ *
+ * 登录由 fixture (auth.fixture.ts) 自动注入 sessionStorage token, 不需要 beforeEach.
  */
-
-async function login(page) {
-  await page.goto('/login')
-  await page.locator('input[placeholder="请输入账号"]').first().fill('admin')
-  await page.locator('input[placeholder="请输入密码"]').first().fill('admin123')
-  await page.locator('button[type="submit"]:has-text("登录")').first().click()
-  // 登录后任意非 /login 即可
-  await page.waitForFunction(() => !location.pathname.startsWith('/login'), null, { timeout: 30000 })
-}
 
 test.describe('Inspection 检查项目页', () => {
   test.describe.configure({ retries: 1, timeout: 60000 })
-
-  test.beforeEach(async ({ page }) => {
-    await login(page)
-  })
 
   test('1. 进入 /inspection/projects 加载完成', async ({ page }) => {
     await page.goto('/inspection/projects')

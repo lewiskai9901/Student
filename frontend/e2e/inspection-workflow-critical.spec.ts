@@ -1,4 +1,4 @@
-import { test, expect, type Page } from '@playwright/test'
+import { test, expect } from './fixtures/auth.fixture'
 
 /**
  * Inspection 主链路 e2e — 检查员打分 > 提交 > 审核 > 发布
@@ -11,22 +11,11 @@ import { test, expect, type Page } from '@playwright/test'
  *   - 模板配置 S+ UI (悬浮预览/键盘流/搜索高亮)
  *
  * 设计哲学: 守护已修 bug, 不再重现. self-healing — 没数据时 skip 不 fail.
+ * 登录由 fixture 自动注入 token.
  */
-
-async function login(page: Page) {
-  await page.goto('/login')
-  await page.locator('input[placeholder="请输入账号"]').first().fill('admin')
-  await page.locator('input[placeholder="请输入密码"]').first().fill('admin123')
-  await page.locator('button[type="submit"]:has-text("登录")').first().click()
-  await page.waitForFunction(() => !location.pathname.startsWith('/login'), null, { timeout: 30000 })
-}
 
 test.describe('主链路 — 检查员/审核员双视角', () => {
   test.describe.configure({ retries: 1, timeout: 90000 })
-
-  test.beforeEach(async ({ page }) => {
-    await login(page)
-  })
 
   test('我的任务 — 至少能打开列表页, 4 filter tabs 都渲染', async ({ page }) => {
     await page.goto('/inspection/tasks')
@@ -119,8 +108,6 @@ test.describe('主链路 — 检查员/审核员双视角', () => {
 test.describe('S+ UI 规范守护 — 检查配置页', () => {
   test.describe.configure({ retries: 1, timeout: 60000 })
 
-  test.beforeEach(async ({ page }) => { await login(page) })
-
   test('键盘流: J K 浏览 / / 搜索 / V 切视图 都不报错', async ({ page }) => {
     await page.goto('/inspection/config')
     await expect(page.locator('h1:has-text("检查配置中心")')).toBeVisible({ timeout: 10000 })
@@ -177,8 +164,6 @@ test.describe('S+ UI 规范守护 — 检查配置页', () => {
 test.describe('S+ UI 规范守护 — 模板编辑器', () => {
   test.describe.configure({ retries: 1, timeout: 60000 })
 
-  test.beforeEach(async ({ page }) => { await login(page) })
-
   test('字段属性面板: 评分模式分组 + 数字键徽章 + 折叠按钮', async ({ page }) => {
     // 找一个模板进编辑器
     const tok = await page.evaluate(() => localStorage.getItem('access_token'))
@@ -214,8 +199,6 @@ test.describe('S+ UI 规范守护 — 模板编辑器', () => {
 
 test.describe('性能回归 — P0 缓存 + 索引', () => {
   test.describe.configure({ retries: 1, timeout: 60000 })
-
-  test.beforeEach(async ({ page }) => { await login(page) })
 
   test('热缓存命中: 第二次调用 /grade-schemes < 200ms', async ({ page }) => {
     await page.waitForFunction(() => !!sessionStorage.getItem('access_token'), null, { timeout: 5000 })

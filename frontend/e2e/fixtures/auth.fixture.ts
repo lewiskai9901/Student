@@ -56,15 +56,18 @@ export const test = base.extend<AuthFixtures, { sharedToken: SharedToken }>({
 
   // 覆盖默认 page fixture: 每个 test page 一打开自动注入 token
   // tokenStorage.ts 约定: access_token → sessionStorage; refresh_token → localStorage
+  // sessionStorage 是 origin-scoped, 必须先 goto baseURL 才能 setItem 生效.
   page: async ({ page, sharedToken }, use) => {
     await page.addInitScript(({ at, rt }) => {
       try {
         sessionStorage.setItem('access_token', at)
         localStorage.setItem('refresh_token', rt)
       } catch {
-        // 某些 about:blank 阶段 sessionStorage 不可写, 忽略 — 后续路由会重新触发
+        // 某些 about:blank 阶段 sessionStorage 不可写, 忽略
       }
     }, { at: sharedToken.accessToken, rt: sharedToken.refreshToken })
+    // 触发一次 navigation 让 addInitScript 真正生效, 后续 test 直接 evaluate fetch 也能拿到 token
+    await page.goto('/')
     await use(page)
   },
 

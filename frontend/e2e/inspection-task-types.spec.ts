@@ -1,4 +1,4 @@
-import { test, expect, type Page } from '@playwright/test'
+import { test, expect } from './fixtures/auth.fixture'
 
 /**
  * 任务多类型 e2e — 守护 V108 核心契约:
@@ -6,22 +6,12 @@ import { test, expect, type Page } from '@playwright/test'
  *  - 项目 inspection_mode 配置 GET/PUT 工作
  *  - allowed-projects API 只返回 allow_ad_hoc=1 的项目
  *  - 抽查发起对话框 + 端到端创建链路
+ *
+ * 登录由 fixture 自动注入 token.
  */
-
-async function login(page: Page) {
-  await page.goto('/login')
-  await page.locator('input[placeholder="请输入账号"]').first().fill('admin')
-  await page.locator('input[placeholder="请输入密码"]').first().fill('admin123')
-  await page.locator('button[type="submit"]:has-text("登录")').first().click()
-  await page.waitForFunction(() => !location.pathname.startsWith('/login'), null, { timeout: 30000 })
-}
 
 test.describe('V108 任务多类型', () => {
   test.describe.configure({ retries: 1, timeout: 60000 })
-
-  test.beforeEach(async ({ page }) => {
-    await login(page)
-  })
 
   test('GET /inspection/tasks/projects/{id}/inspection-mode 返回项目模式配置', async ({ page }) => {
     const result = await page.evaluate(async () => {

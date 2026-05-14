@@ -1,4 +1,5 @@
-import { test, expect, type Page } from '@playwright/test'
+import { test, expect } from './fixtures/auth.fixture'
+import type { Page } from '@playwright/test'
 
 /**
  * 离线同步 e2e — 验证 useOfflineSync 在 offline > online 切换时的 4 条核心路径:
@@ -9,15 +10,9 @@ import { test, expect, type Page } from '@playwright/test'
  *
  * 测试在浏览器内通过 page.evaluate 直接调 IndexedDB + composable, 不依赖
  * 移动端真实 UI (避免相机/定位权限弹窗). 用 context.setOffline 模拟断网.
+ *
+ * 登录由 fixture 自动注入 token.
  */
-
-async function login(page: Page) {
-  await page.goto('/login')
-  await page.locator('input[placeholder="请输入账号"]').first().fill('admin')
-  await page.locator('input[placeholder="请输入密码"]').first().fill('admin123')
-  await page.locator('button[type="submit"]:has-text("登录")').first().click()
-  await page.waitForFunction(() => !location.pathname.startsWith('/login'), null, { timeout: 30000 })
-}
 
 const DB_NAME = 'insp_offline_db'
 
@@ -87,7 +82,7 @@ test.describe('离线同步 — IndexedDB + setOffline 模拟', () => {
   test.describe.configure({ retries: 1, timeout: 60000 })
 
   test.beforeEach(async ({ page }) => {
-    await login(page)
+    // fixture 已经 goto('/'), token 已注入. 此处只需清 IndexedDB
     await clearOfflineDb(page)
   })
 
